@@ -1,4 +1,5 @@
 import os
+import json
 import time
 from pathlib import Path
 
@@ -46,6 +47,16 @@ model = garnet.load_model(
 )
 status = model.runtime_status()
 assert bool(status["ready"]), status
+assert bool(status["engines_prepared"]), status
+assert float(status["engine_prepare_ms"]) > 0.0, status
+assert bool(status["frontend_prepared"]), status
+plan = json.loads(status["execution_plan_json"])
+assert status["engine_partition_count"] >= 2, status
+assert any(
+    operation["partition_reason"].startswith("preferred:")
+    for operation in plan["operations"]
+), plan
+assert all(Path(partition["engine_path"]).exists() for partition in plan["engine_partitions"])
 load_ms = (time.perf_counter() - load_start) * 1000.0
 request = {
     "image_path": str(image_path),
@@ -59,6 +70,11 @@ cold = model.forward(request)
 assert cold["status"] == "ok", cold
 cold_ms = (time.perf_counter() - cold_start) * 1000.0
 assert int(cold["visual_token_count"]) == 60, cold
+assert cold_ms < 1000.0, (
+    "ready model performed lazy engine refit/context creation during first request",
+    cold_ms,
+    status,
+)
 warm_start = time.perf_counter()
 warm = model.forward(request)
 assert warm["status"] == "ok", warm
@@ -83,6 +99,8 @@ for frame in frames:
 print(
     "Qwen VLM 60-visual-token generation passed: "
     f"state={status['state']}, load_ms={load_ms:.2f}, cold_ms={cold_ms:.2f}, "
+    f"engine_prepare_ms={float(status['engine_prepare_ms']):.2f}, "
+    f"frontend_prepare_ms={float(status['frontend_prepare_ms']):.2f}, "
     f"warm_ms={warm_ms:.2f}, prompt_tokens={warm['prompt_token_count']}, "
     f"generated={warm['generated_token_count']}, token_ids={list(warm['token_ids'])}, "
     f"text={warm['text']!r}"
