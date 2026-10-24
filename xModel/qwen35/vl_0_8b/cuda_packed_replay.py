@@ -14,6 +14,7 @@ class CUDAPackedDeltaReplayVerifier(CUDATargetVerifier):
             raise ValueError('Packed replay requires retained packed decoder projections')
         self.replay_graph=None;self.cache_spans=None;self.native_prefix=None
         self.deferred=bool(getattr(decoder,'deferred_state_commit',False))
+        self.kv_delta=bool(getattr(decoder,'kv_delta_state',False))
         if native_prefix_commit is None:native_prefix_commit=bool(getattr(decoder,'native_prefix_commit',False))
         self.reuse_verified_head=bool(getattr(decoder,'reuse_verified_head',False))
         # Accepted hidden rows and their authoritative predictions survive
@@ -22,6 +23,7 @@ class CUDAPackedDeltaReplayVerifier(CUDATargetVerifier):
         # require register128 arithmetic or a different state-commit policy.
         if native_prefix_commit and (not self.deferred or not decoder.register_delta_128):
             raise ValueError('Native prefix commit requires deferred state and register128 arithmetic')
+        if self.kv_delta and (not self.deferred or native_prefix_commit):raise ValueError('Canonical KV requires deferred compact final commit, excluding the old native replay helper')
         super().__init__(decoder,checkpoint,max_tokens)
         try:
             p=decoder.programs[decoder.decode_chunk_size];b=decoder.batch;t=decoder.decode_chunk_size
@@ -31,9 +33,10 @@ class CUDAPackedDeltaReplayVerifier(CUDATargetVerifier):
                     'batch':b,'tokens':t,'capacity':decoder.capacity,'state_width':p.state_width,
                     'packed_width':p.output_width,'hidden_width':p.hidden_width}))
                 return
-            self.cache_spans=self.io.zeros([decoder.batch,2])
+            if not self.kv_delta:self.cache_spans=self.io.zeros([decoder.batch,2])
+            shapes=([b,p.output_width],[b,p.state_width],[b,t]) if self.kv_delta else ([b,p.output_width],[b,p.state_width],[b,t],[b,2])
             symbols=[tensor.input('whole_replay_'+str(i),shape=s,dtype=tensor.float32)
-                for i,s in enumerate(([b,p.output_width],[b,p.state_width],[b,t],[b,2]))]
+                for i,s in enumerate(shapes)]
             self.replay_graph=garnet.compiled_graph()
             self.replay_graph.build(self._forward(p)(*symbols),symbols,checkpoint);self.replay_graph.enable_cuda_graph(True)
             self.replay_graph.enable_serial_graph_reuse(bool(getattr(decoder,'serial_target_graph_reuse',False)))
@@ -42,9 +45,10 @@ class CUDAPackedDeltaReplayVerifier(CUDATargetVerifier):
     def _forward(self,program):
         c=self.decoder.config;b=self.decoder.batch;t=self.decoder.decode_chunk_size;h=c['hidden_size'];join=flat_concat if program.flat_concat else concat
         @T.fusion(name='qwen35_whole_prefix_replay',boundary='required')
-        def replay(packed,backup,active,spans):
+        def replay(packed,backup,active,spans=None):
             states=[]
             for layer in program.layout:
+                if self.kv_delta and layer['kind']=='full_attention':continue
                 offset=layer['offset'];w1=layer['state1_width'];w2=layer['state2_width']
                 old1=packed_view(backup,offset,w1,layer['state1_shape']);old2=packed_view(backup,offset+w1,w2,layer['state2_shape'])
                 if layer['kind']=='linear_attention':
@@ -89,7 +93,11 @@ class CUDAPackedDeltaReplayVerifier(CUDATargetVerifier):
         finally:self.decoder._release_state_transaction(self)
 
     def _write_canonical(self,source,packed):
-        if packed:self.io.slice_into(source,self.decoder.programs[self.decoder.decode_chunk_size].hidden_width,self.decoder.state)
+        if self.kv_delta:
+            spans=[]
+            for start,count in zip(self.saved_slots,self._kv_delta_counts):spans.extend([start,count])
+            self.decoder.delta_commit.commit(self.decoder.last_packed,source,self.decoder.state,spans)
+        elif packed:self.io.slice_into(source,self.decoder.programs[self.decoder.decode_chunk_size].hidden_width,self.decoder.state)
         else:self.io.copy_into(source,self.decoder.state)
 
     def _commit_canonical(self,source,packed):
@@ -117,6 +125,9 @@ class CUDAPackedDeltaReplayVerifier(CUDATargetVerifier):
         d=self.decoder;b=d.batch
         if len(counts)!=b or any(not isinstance(n,int) or n<0 or n>limit for n,limit in zip(counts,self.submitted)):
             raise ValueError('Accepted prefix exceeds submitted tokens')
+        if self.kv_delta:
+            if any(type(n) is not int for n in counts):raise ValueError('Canonical KV accepted lengths must be integers')
+            self._kv_delta_counts=list(counts)
         if counts==self.submitted:
             predictions=[self.predictions[row*self.max_tokens+n-1] if n else None for row,n in enumerate(counts)]
             if self.deferred:self._commit_canonical(d.last_packed,True)
@@ -131,9 +142,11 @@ class CUDAPackedDeltaReplayVerifier(CUDATargetVerifier):
         try:
             self.io.update(d.active,flags);self.io.update(d.slot_tensor,slots)
             if self.native_prefix is None:
-                self.io.update(self.cache_spans,spans)
                 old_state=d.state if self.deferred else self.backups[5]
-                result=self.replay_graph.run_device([d.last_packed,old_state,d.active,self.cache_spans])
+                if self.kv_delta:result=self.replay_graph.run_device([d.last_packed,old_state,d.active])
+                else:
+                    self.io.update(self.cache_spans,spans)
+                    result=self.replay_graph.run_device([d.last_packed,old_state,d.active,self.cache_spans])
                 if not self.deferred:self.io.copy_into(result,d.state)
             self.io.mask_chunk(d.hidden,d.active)
             self.io.copy_into(self.backups[1],d.last_hidden);self.io.copy_last_chunk(d.hidden,d.active,d.last_hidden)
@@ -166,7 +179,7 @@ class CUDAPackedDeltaReplayVerifier(CUDATargetVerifier):
         result.update({'packed_replay_graph':stats,'native_prefix_commit':native,'cache_span_bytes':spans,
             'reuse_verified_head':self.reuse_verified_head,
             'head_reuse_scope':'Accepted rows within one verified window; masked normalization is refreshed. Active zero-prefix rows force a full read.',
-            'partial_commit_method':'native_inplace_state_only_replay' if native is not None else 'single_graph_delta_replay_and_kv_selection'})
+            'partial_commit_method':'native_inplace_state_only_replay' if native is not None else ('linear_only_replay_and_final_KV_scatter' if self.kv_delta else 'single_graph_delta_replay_and_kv_selection')})
         result.update({'deferred_state_commit':self.deferred,'canonical_state_backup_bytes':0 if self.deferred else self.io.tensor_bytes(self.decoder.state),
             'canonical_state_scope':'Borrowed and unchanged until final commit; parent mutation is blocked while pending. Final-write failures poison the decoder.' if self.deferred else 'Owned full canonical backup'})
         result['owned_helper_bytes']=result['owned_helper_bytes']+spans+extra if extra is not None and result['owned_helper_bytes'] is not None else None

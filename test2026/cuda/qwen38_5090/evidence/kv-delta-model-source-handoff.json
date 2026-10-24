@@ -1,0 +1,45 @@
+{
+  "status": "compact_model_source_handoff_prepared_not_run",
+  "source_zip_sha256": "9fc339669f352c216cd2019db0f377d3ac617766be2cf654ff05a6cc5a94c6c9",
+  "default_off_archive_sha256": "58a8c56aee2bffd7c03313ba02d62ae8262d84becabd8acb355576fbcfd9bc6e",
+  "runner_sha256": "8862266ae60fc754ac4d330c046edea46e9549ace4d13e5f9dd6f0c810586814",
+  "required_existing_files": [
+    "xModel/qwen35/vl_0_8b/cuda_chunk.py",
+    "xModel/qwen35/vl_0_8b/cuda_packed_program.py",
+    "xModel/qwen35/vl_0_8b/cuda_packed_decoder.py",
+    "xModel/qwen35/vl_0_8b/cuda_packed_replay.py"
+  ],
+  "base_normalized_sha256": {
+    "xModel/qwen35/vl_0_8b/cuda_chunk.py": "d7914f19b37b89106a36872b4fa7681222daadb9f6338272f78073c01ed93134",
+    "xModel/qwen35/vl_0_8b/cuda_packed_program.py": "a23a6b16bb64fd87bd45fd00b07f75050605aff2cc215fde4e29f9a0af61e32f",
+    "xModel/qwen35/vl_0_8b/cuda_packed_decoder.py": "7598e9871a38c97444885ab0804a3152af26b6661cfa0565165bca306c38988c",
+    "xModel/qwen35/vl_0_8b/cuda_packed_replay.py": "c3bd5979383048000dc218010ee0164ac6f299adb5759fb79b7c999802d96ced",
+    "xModel/qwen35/vl_0_8b/kv_delta_layout.py": "764bca54215e7a57b18b8697f42f4dacc1d39331f9353c48c86cb56cd30e66cf",
+    "test2026/cuda/qwen38_5090/test_kv_delta_layout.py": "847d8fa4fc21ddb6a9ca84f16322264ea239bf1329c9861729bf2f0ddccc6037",
+    "test2026/cuda/qwen38_5090/test_host_embedding_policy.py": "b35f02fd432ccb3840b44ce83c6e21a62faa36847412e2e853338f83806da17c",
+    "test2026/cuda/qwen38_5090/test_verified_head_reuse.py": "e025e43a1dbbc0e01fa22195ebd357e51c23353e2619f349049a439e45913e3e"
+  },
+  "candidate_source_sha256": {
+    "xModel/qwen35/vl_0_8b/cuda_chunk.py": "fbbd903518dd0a60c2c6d5f7bd15792de933b8e2285871eca87b70a7542a60c0",
+    "xModel/qwen35/vl_0_8b/cuda_packed_program.py": "40cf5a6de565da08d54a3db589c450d7dcd1477cc5f0ac9f08c460e7e16a31be",
+    "xModel/qwen35/vl_0_8b/cuda_packed_decoder.py": "9776bfd5a7372e06bb5d252fc0a4793e48611213dbf40141467d870148469bc7",
+    "xModel/qwen35/vl_0_8b/cuda_packed_replay.py": "5cf0275754b120f294c186f53714e60cca2f781c3ee08a0c066a1f1f58fafeba",
+    "xModel/qwen35/vl_0_8b/kv_delta_layout.py": "7346605581781fa7a9726af6ce9b1edffd8250994c91977401ab8f140e37ead7",
+    "test2026/cuda/qwen38_5090/test_kv_delta_graph_contract.py": "9126b43bd7b30bfb925c21c0484257d6d94509ccc4ada6cbe9ed3955a53ff880",
+    "test2026/cuda/qwen38_5090/test_kv_delta_layout.py": "847d8fa4fc21ddb6a9ca84f16322264ea239bf1329c9861729bf2f0ddccc6037",
+    "test2026/cuda/qwen38_5090/test_kv_delta_transactions.py": "1272a3b05081c122656ffdafb31e27320d57afb771aaf1138c688fee34dd331c",
+    "test2026/cuda/qwen38_5090/test_host_embedding_policy.py": "7a96d564b80174e07f0f91e314dc22208f0670413731adbc1b219b4108796f0e",
+    "test2026/cuda/qwen38_5090/test_verified_head_reuse.py": "4d10546670b538121dd536f29a526ce423941dd7ba031d1d3ff358a0998bd3b1",
+    "test2026/cuda/qwen38_5090/evidence/kv-delta-disabled-graph-golden.json": "c63565cf5d1d9326615d599f4f8d5bdd123bbeaee51eaad8bc01716e05c0ce88",
+    "test2026/cuda/qwen38_5090/evidence/kv-delta-model-cpu-tests.json": "b961e8cef259686b997824da8660dc0ad52378efde1eeaa05754881d4760f43d",
+    "test2026/cuda/qwen38_5090/probe_kv_delta_full_b4_t4.py": "3fba44d6c6f21ac8e35f91caef38c086c863d57dd140603d3282ff45a8b7d25b",
+    "test2026/cuda/qwen38_5090/test_kv_delta_full_b4_t4.bat": "efb0e03506968d5ca574d86c8eb626fe427e621ef81461fc1a5832b223ff9917",
+    "test2026/cuda/qwen38_5090/evidence/kv-delta-full-probe-preparation.json": "4e590684484122fdf1ddbb690620c4238c5f51d3e4375b22ff204a51d99683bb"
+  },
+  "native_library_sha256": "34bea267ff667ff12936183c17188435a350a483d9641a3103e27243b711fbed",
+  "cpu_contract_tests": 27,
+  "timing_enabled": false,
+  "gpu_run": false,
+  "performance_admitted": false,
+  "scope": "Five explicitly gated Python model modules plus CPU/probe provenance. Four ordinary/MTP model cases with retained same-DLL default-off state/IDs/8raw hidden,136malformed metadata/11negative commits/twozero-prefix modes planned. No serving or performance admission."
+}
