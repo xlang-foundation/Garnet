@@ -162,7 +162,7 @@ with zipfile.ZipFile(archive) as z:
     assert measured == 64
     metadata = doc(native+'metadata.json')
     policy_path='Garnet/test2026/cuda/qwen38_5090/evidence/b4-joined-mlp-source-policy.json'
-    policy=doc(policy_path);assert sha(z.read(policy_path))==workflow['joined_policy_sha256']
+    policy=doc(policy_path);assert sha(z.read(policy_path))==doc(base+'workflow.json')['joined_policy_sha256']
     assert sha(z.read('Garnet/'+policy['file']))==policy['new_sha256']
     assert metadata['joined_mlp_projections'] and ready[0]['joined_mlp_projections'] and protocol['joined_mlp_projections']
     assert metadata['deferred_state_commit'] == ready[0]['deferred_state_commit'] == True
@@ -204,7 +204,7 @@ with zipfile.ZipFile(archive) as z:
         assert cohort['requests']==parent['run']['cohorts'][key]['requests']
         parent_ratios[key]={m:cohort['metrics'][m]/parent['run']['cohorts'][key]['metrics'][m] for m in ('ttft_median_ms','decode_median_tokens_per_second','output_tokens_per_second')}
     result = {'status':'b4_joined_delay10_http_pilot_replayed','grouping_delay_ms':10,'ratios_to_parent_pilot':parent_ratios,'archive_sha256':sha(archive.read_bytes()),
-        'library_sha256':evidence['library_sha256'],'files_verified':len(evidence['files']),'serialization_regression_captures':4,'measured_sse_worker_pairs':measured,'physical_batch':4,
+        'library_sha256':evidence['library_sha256'],'files_verified':len(evidence['files']),'replay_verifier_sha256':sha(Path(__file__).read_bytes()),'archived_replay_verifier_sha256':sha(z.read('Garnet/test2026/cuda/qwen38_5090/verify_b4_joined_delay10_http.py')) ,'serialization_regression_captures':4,'measured_sse_worker_pairs':measured,'physical_batch':4,
         'actual_dispatch_by_cohort':dispatch_by_cohort,
         'dispatch_group_sizes':{str(n):sum(g['real_rows']==n for g in dispatch) for n in (1,2,3,4)},
         'run':run,'references':references,'comparison':compare(run,references),'raw_cohorts':manifest['cohorts'],
