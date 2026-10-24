@@ -1,0 +1,42 @@
+{
+  "status": "kv_delta_timing_driver_prepared_cpu_only",
+  "base_driver": "attention_kv_delta_test.cu",
+  "base_driver_sha256": "6789c0d3b3e36e730e9b65a8d0f8d449d7d5d3e11cab84e01afb0e3fad5fe0b4",
+  "driver_derivation": [
+    [
+      "if(argc!=2)throw std::runtime_error(\"Correctness-only KV delta test requires one raw output prefix\");\n const bool timing=false;",
+      "if(argc<2||argc>3||(argc==3&&std::string(argv[2])!=\"--timing\"))throw std::runtime_error(\"Raw prefix and optional --timing required\");\n const bool timing=argc==3;"
+    ],
+    [
+      "Graph graphs[5];std::vector<float> baseline;",
+      "Graph graphs[5];std::vector<std::vector<float>> witnessed(5);std::vector<float> baseline;"
+    ],
+    [
+      "auto actual=outputs[0]->read();",
+      "auto actual=outputs[0]->read();witnessed[mode]=actual;"
+    ]
+  ],
+  "timing_block": "\n  // Both legacy and delta graphs observe the same frozen slots and canonical\n  // cache values; candidate canonical KV is already the full accepted result.\n  // Only the delta graph performs explicit in-place accepted-slot commit.\n  if(!Equal(inputs[4]->read(),nextKey)||!Equal(inputs[5]->read(),nextValue))throw std::runtime_error(\"Timing canonical cache initialization mismatch\");\n  for(int mode=0;mode<5;++mode)for(int warmup=0;warmup<5;++warmup)Check(cudaGraphLaunch(graphs[mode].executable,stream));Check(cudaStreamSynchronize(stream));\n  std::vector<float> milliseconds[5];\n  for(int round=0;round<3;++round)for(int mode:{0,1,2,3,4,4,3,2,1,0}){\n   Check(cudaEventRecord(start,stream));for(int repeat=0;repeat<20;++repeat)Check(cudaGraphLaunch(graphs[mode].executable,stream));Check(cudaEventRecord(stop,stream));Check(cudaEventSynchronize(stop));\n   float elapsed=0;Check(cudaEventElapsedTime(&elapsed,start,stop));milliseconds[mode].push_back(elapsed/20);\n   // Readback/byte comparisons are outside the CUDA-event interval.\n   if(!Equal(outputs[0]->read(),witnessed[mode]))throw std::runtime_error(\"Timed context changed\");\n   if(!Equal((mode==4?inputs[4]:outputs[1])->read(),nextKey)||!Equal((mode==4?inputs[5]:outputs[2])->read(),nextValue))throw std::runtime_error(\"Timed full KV state changed\");\n  }\n  for(auto& p:inputs)p->guards();for(auto& p:outputs)p->guards();accepted.guards();workspace.guards();splitWorkspace.guards();\n  printf(\"{\\\"case\\\":%zu,\\\"batch\\\":4,\\\"tokens\\\":4,\\\"heads\\\":24,\\\"kv\\\":4,\\\"capacity\\\":4096,\\\"dim\\\":256,\\\"prefix_parameter\\\":%d,\\\"pattern\\\":%d,\\\"order\\\":\\\"ABCDEEDCBAx3\\\",\\\"iterations_per_sample\\\":20,\\\"warmups_per_variant\\\":5,\\\"overlay_legacy_bit_exact\\\":true,\\\"timed_context_exact\\\":true,\\\"timed_full_kv_exact\\\":true\",ci,a.prefix,a.pattern);\n  const char* keys[5]={\"baseline_ms\",\"compact_ms\",\"tiled_ms\",\"split_ms\",\"overlay_commit_ms\"};\n  for(int mode=0;mode<5;++mode){printf(\",\\\"%s\\\":[\",keys[mode]);for(size_t i=0;i<milliseconds[mode].size();++i)printf(\"%s%.9g\",i?\",\":\"\",milliseconds[mode][i]);printf(\"]\");}\n  printf(\",\\\"scope\\\":\\\"Synthetic frozen-slot component; legacy full-cache outputs versus readonly KV overlay plus explicit in-place accepted-prefix commit. Different ownership/output contract. No full-model, HTTP, DRAM-traffic or2x claim.\\\"}\\n\");fflush(stdout);\n",
+  "driver": "attention_kv_delta_timing_test.cu",
+  "driver_sha256": "914bb8cc4912c6ebe8127d5ef3845f9efceaf1203a0a02dd9c6911fd2c96815e",
+  "unchanged_source_sha256": {
+    "attention_kv_delta_core.cu": "253bf11c8f154b4b23c1bd6cbb08462aec59717be71cec56fc0816bee704b120",
+    "attention_kv_delta_core.cuh": "c53534e70b1acdf307bcd15d470aa51fe3bd040bafa37db54af0b068fdef92f9"
+  },
+  "native_source_sha256": {
+    "src/cuda/qwen35_attention_core.cu": "3ad24bb00acc2f77a5b7258e4b7fecb248c682b3ad257d28af8bc8f336635165",
+    "src/cuda/qwen35_attention_core.cuh": "1a3997a15f4aa897f2bc69bf6a3afbef9a58f166fb094bfb858fac1b170e166f"
+  },
+  "timing_order": "ABCDEEDCBAx3",
+  "timing_samples_per_variant": 6,
+  "iterations_per_sample": 20,
+  "qualification_before_timing": true,
+  "gpu_run": false,
+  "compiled": false,
+  "model_integration_admitted": false,
+  "scope": "Separate standalone timing source, unchanged kernels. Includes delta accepted-prefix commit; different output/cache ownership from legacy full-cache return. Frozen slots and common initialized canonical cache; per-sample output checks outside events. Not model or serving timing.",
+  "method_sha256": {
+    "build_attention_kv_delta_timing.bat": "2eb9bc80e1f5877349dd9e35d2aa399a586569f85452b4fcd189ae5aba5a5e3b",
+    "run_attention_kv_delta_timing.py": "3fd83a1737419f84d921ac3a85d7ffbec1a17b5d56f010b7bc89fd25e5ae498e"
+  }
+}
