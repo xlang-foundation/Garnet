@@ -23,7 +23,7 @@ for col,case in enumerate(['text','image']):
    ax.annotate(f'{vals[-1]:.1f}',(8,vals[-1]),xytext=(6,[0,7,-7][labels.index(label)]),textcoords='offset points',fontsize=9,color=color)
   ax.set_title(case.title()+' · '+title,loc='left',fontsize=11)
   ax.set_ylim(bottom=0);ax.set_xlim(.7,9.3)
-  if row==0:ax.legend(fontsize=8,loc='upper right')
+  if row==0 and col==0:fig.legend(*ax.get_legend_handles_labels(),loc='center',bbox_to_anchor=(.5,.915),ncol=3,fontsize=10)
  ax=axes[3,col];coh=[next(c for c in d['raw_cohorts'] if c['case']==case and c['concurrency']==n) for n in cs]
  ax.plot(cs,[c['sampled_peak_adapter_used_bytes']/2**30 for c in coh],'o-',color=colors[0],label='Garnet sampled adapter peak')
  ax.set_ylim(0,32);ax.set_title(case.title()+' · sampled GPU memory / GiB',loc='left',fontsize=11);ax.legend(fontsize=8)
@@ -34,8 +34,9 @@ fig.text(.07,.94,'Qwen3.8-27B · RTX 5090 32GB · physical Garnet batch 2 · all
 fig.text(.07,.065,'41 text / 104 image prompt tokens, 128 outputs, 8 requests/cohort. 4096 capacity; actual 4K prompts pending.',fontsize=9)
 fig.text(.07,.045,'Garnet singles use greedy; equal-limit pairs use MTP3. C2 dispatch is mixed. References are ordinary, untuned pilots.',fontsize=9)
 fig.text(.07,.025,'Single pilot; no error bars. 22.3 s text-C4 / 14.6 s image-C2 sampler gaps, cause unknown. Clean repeats required; 2× not established.',fontsize=9)
-fig.subplots_adjust(left=.08,right=.95,top=.90,bottom=.12,hspace=.65,wspace=.25)
+fig.subplots_adjust(left=.08,right=.95,top=.88,bottom=.12,hspace=.65,wspace=.25)
 for ext in ['png','svg']:fig.savefig(out/('Garnet-Latest-Host-Embedding-Comparison.'+ext),dpi=160,facecolor=fig.get_facecolor())
 (out/'Garnet-Latest-Host-Embedding-Chart-Provenance.json').write_text(json.dumps({'verified_input_sha256':sha(raw),'archive_sha256':d['archive_sha256'],'generator_sha256':sha(Path(__file__).read_bytes()),'all_8_cohorts_retained':True,'two_x_established':False},indent=2))
+
 
 
