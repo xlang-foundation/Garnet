@@ -48,7 +48,7 @@ files = [Path(__file__), launcher, candidate, root/'Garnet'/prep['base_file'], p
          proof_path, archive, library] + core
 report = {'status':'running','library_sha256':sha(library.read_bytes()),
           'parent_archive_sha256':proof['archive_sha256'],
-          'source_sha256':{str(p.relative_to(root)):sha(p.read_bytes()) for p in files if p != archive},
+          'source_sha256':{p.relative_to(root).as_posix():sha(p.read_bytes()) for p in files if p != archive},
           'scope':'Standalone synthetic B4/T4 FP32 attention with full KV copies. Existing kernels unchanged; independent double CPU oracle, cache/input/guard/graph checks precede CUDA-event timing. Not full-model correctness, actual4K prompts, serving latency or2x evidence.'}
 manifest = out/'manifest.json'
 def save(): manifest.write_text(json.dumps(report,indent=2),encoding='utf8')
@@ -82,6 +82,6 @@ except BaseException as error:
 finally:
     report['exit_code']=code
     report['library_unchanged']=sha(library.read_bytes())==report['library_sha256']
-    report['source_after_sha256']={str(p.relative_to(root)):sha(p.read_bytes()) for p in core+[candidate]}
+    report['source_after_sha256']={p.relative_to(root).as_posix():sha(p.read_bytes()) for p in core+[candidate]}
     save()
 raise SystemExit(code)
