@@ -182,6 +182,8 @@ option(GARNET_QWEN35_WHOLE_PROGRAM_CUDA "Compile self-contained Qwen3.5 state ke
 if(GARNET_QWEN35_WHOLE_PROGRAM_CUDA)
     set(GARNET_QWEN35_STATE_SOURCES
         "${CMAKE_CURRENT_SOURCE_DIR}/src/cuda/qwen35_delta.cu"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/cuda/qwen35_canonical_kv_overlay.cu"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/cuda/qwen35_kv_delta_commit.cu"
         "${CMAKE_CURRENT_SOURCE_DIR}/src/cuda/qwen35_packed_commit.cu")
     list(REMOVE_ITEM Cuda_SRC ${GARNET_QWEN35_STATE_SOURCES})
     add_library(garnet_qwen35_state_kernels OBJECT ${GARNET_QWEN35_STATE_SOURCES})
