@@ -5517,6 +5517,7 @@ namespace Garnet {
                 auto bindings=qwen35Bindings[TensorId(input1)];
                 const std::set<std::string> allowed={"qwen35_conv_bind_state","qwen35_conv_bind_active",
                     "qwen35_delta_bind_state","qwen35_attention_bind_key","qwen35_attention_bind_value",
+                    "qwen35_attention_bind_canonical",
                     "qwen35_attention_bind_positions","qwen35_attention_bind_slots","qwen35_attention_bind_active",
                     "qwen35_mtp_bind_embedding","qwen35_cache_bind_backup","qwen35_cache_bind_spans"};
                 if(allowed.count(opName)) {
@@ -6188,9 +6189,23 @@ namespace Garnet {
                         b["qwen35_conv_bind_active"],keywordText("layer_prefix"),keywordInt("hidden_dim",0),keywordInt("tokens",0),
                         keywordInt("key_heads",0),keywordInt("value_heads",0),keywordInt("key_dim",0),keywordInt("value_dim",0),float(number("eps",1e-6)),keywordInt("register_delta_128",0)!=0);
                 }else if(opName=="qwen35_full_decoder_chunk") {
+                    auto* overlayAttribute=FindKeyword(kwParams,"canonical_kv_overlay");
+                    const auto overlayMode=overlayAttribute?overlayAttribute->second.ToLongLong():0;
+                    if(overlayMode!=0&&overlayMode!=1)throw std::invalid_argument("Canonical KV opt-in must be0 or1");
+                    CanonicalKVOverlayConfig overlay{};
+                    if(overlayMode){
+                        if(capturedWeightProfile!="modelopt_mixed"||!FindKeyword(kwParams,"external_compressed_weights")||external.empty()||FindKeyword(kwParams,"external_weights")||
+                            keywordInt("fused_attention",0)!=1||keywordInt("joined_mlp_projections",0)!=1)
+                            throw std::invalid_argument("Canonical KV requires shared mixed compressed joined projections");
+                        auto exact=[&](const char* key)->int64_t{auto* item=FindKeyword(kwParams,key);if(!item)throw std::invalid_argument("Missing canonical KV metadata");return item->second.ToLongLong();};
+                        const auto strategy=exact("kv_overlay_strategy");
+                        if(strategy!=0&&strategy!=1)throw std::invalid_argument("Unqualified canonical KV strategy");
+                        overlay={{4,4,24,4,4096,256},exact("canonical_state_width"),exact("canonical_key_offset"),exact("canonical_value_offset"),int(strategy)};
+                        if(!ValidCanonicalKVOverlayConfig(overlay))throw std::invalid_argument("Unqualified canonical KV layout");
+                    }
                     auto* stageAttribute=FindKeyword(kwParams,"diagnostic_full_stages");
                     const auto diagnostic=stageAttribute?stageAttribute->second.ToLongLong():0;
-                    if(diagnostic!=0&&diagnostic!=1)throw std::invalid_argument("Full attention stage diagnostic must be0 or1");
+                    if((diagnostic!=0&&diagnostic!=1)||(diagnostic&&overlayMode))throw std::invalid_argument("Full attention stage diagnostic must be0 or1 and exclude canonical KV");
                     auto dimensions=ops.shape(source);
                     if(diagnostic&&(capturedWeightProfile!="modelopt_mixed"||!external.empty()||
                         dimensions.size()!=3||(dimensions[0]!=1&&dimensions[0]!=2)||dimensions[1]!=16||dimensions[2]!=5120||
@@ -6209,7 +6224,8 @@ namespace Garnet {
                         b["qwen35_attention_bind_positions"],b["qwen35_attention_bind_slots"],b["qwen35_attention_bind_active"],
                         keywordText("layer_prefix"),keywordInt("num_heads",0),keywordInt("num_kv_heads",0),keywordInt("head_dim",0),
                         keywordInt("rotary_dim",0),{keywordInt("mrope_t",0),keywordInt("mrope_h",0),keywordInt("mrope_w",0)},
-                        float(number("rope_theta",1e7)),float(number("eps",1e-6)),keywordInt("fused_attention",0)!=0,keywordInt("joined_mlp_projections",0)!=0,diagnostic?&diagnosticStages:nullptr);
+                        float(number("rope_theta",1e7)),float(number("eps",1e-6)),keywordInt("fused_attention",0)!=0,keywordInt("joined_mlp_projections",0)!=0,diagnostic?&diagnosticStages:nullptr,
+                        overlayMode?b["qwen35_attention_bind_canonical"]:nullptr,overlayMode?&overlay:nullptr);
                     if(diagnostic){
                         if(diagnosticStages.size()!=10)throw std::runtime_error("Full attention stage contract changed");
                         std::vector<ITensor*> parts{lastOutput};

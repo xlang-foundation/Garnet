@@ -15,6 +15,7 @@
 #include "bf16_projection_plugin.h"
 #include "qwen35_delta_plugin.h"
 #include "qwen35_attention_core_plugin.h"
+#include "qwen35_canonical_kv_overlay_plugin.h"
 #include "qwen35_f32_barrier_plugin.h"
 
 namespace Garnet {
@@ -388,10 +389,21 @@ public:
         return cat({reshape(result->getOutput(1),{batch,channels*kernel}),reshape(result->getOutput(2),{batch,vh*kd*vd})},1);
     }
     T* fullDecoderChunk(T* x,T* key,T* value,T* positions,T* slots,T* active,const std::string& layer,
-        int heads,int kv,int dim,int rotary,std::array<int,3> sections,float theta,float eps,bool fusedAttention=false,bool joinedMLPProjections=false,std::vector<T*>* diagnosticStages=nullptr) {
-        auto xs=shape(x),ks=shape(key);
+        int heads,int kv,int dim,int rotary,std::array<int,3> sections,float theta,float eps,bool fusedAttention=false,bool joinedMLPProjections=false,std::vector<T*>* diagnosticStages=nullptr,
+        T* canonical=nullptr,const CanonicalKVOverlayConfig* overlay=nullptr) {
+        const bool delta=canonical!=nullptr||overlay!=nullptr;
+        if(delta&&(!canonical||!overlay||!ValidCanonicalKVOverlayConfig(*overlay)||!fusedAttention||!joinedMLPProjections||diagnosticStages))
+            throw std::invalid_argument("Canonical KV requires qualified fused joined B4/T4 mode");
+        auto xs=shape(x),ks=delta?std::vector<int>{4,4,4096,256}:shape(key);
         if(xs.size()!=3||xs[1]>128||ks.size()!=4||kv<=0||dim<=0)throw std::invalid_argument("Qwen3.5 full chunk dimensions invalid");
         const int batch=xs[0],tokens=xs[1],hidden=xs[2],capacity=ks[2],width=kv*capacity*dim;
+        if(delta){
+            if(xs!=std::vector<int>{4,4,5120}||heads!=24||kv!=4||dim!=256||rotary!=64||sections!=std::array<int,3>{11,11,10}||
+                layer!="model.language_model.layers."+std::to_string(4*((overlay->key_offset-2482176)/10870784)+3)||key||value)
+                throw std::invalid_argument("Canonical KV layer/geometry/binding mismatch");
+            require(canonical,{batch,int(overlay->state_width)});
+            if(canonical->getType()!=nvinfer1::DataType::kFLOAT)throw std::invalid_argument("Canonical KV state must be FP32");
+        }
         require(active,{batch,tokens});require(positions,{batch,tokens,3});require(slots,{batch,tokens});
         x=select(reshape(active,{batch,tokens,1}),x,scalar(0,3));
         T* normalized=norm(x,layer+".input_layernorm.weight",eps);std::vector<T*> outputs;
@@ -408,7 +420,7 @@ public:
             if(heads<=0||heads%kv||rotary<=0||rotary>dim||rotary%2||
                 sections[0]<0||sections[1]<0||sections[2]<0||sections[0]+sections[1]+sections[2]!=rotary/2||!(theta>0)||!(eps>0))
                 throw std::invalid_argument("Qwen3.5 fused attention dimensions invalid");
-            require(key,{batch,kv,capacity,dim});require(value,shape(key));
+            if(!delta){require(key,{batch,kv,capacity,dim});require(value,shape(key));}
             auto* projectedQGate=reshape(qg,{batch,tokens,heads,2*dim});
             T* q=rms(slice(projectedQGate,-1,0,dim),weight(prefix+".q_norm.weight"),eps,true);
             T* gate=slice(projectedQGate,-1,dim,dim);
@@ -430,13 +442,22 @@ public:
                 auto* out=add(mul(part,cosine),mul(half,sine));
                 return rotary==dim?out:cat({out,slice(input,-1,rotary,dim-rotary)},3);
             };
-            if(!EnsureQwen35AttentionCorePluginRegistered())throw std::runtime_error("Qwen3.5 attention plugin registration failed");
-            auto* plugin=new Qwen35AttentionCorePlugin({batch,tokens,heads,kv,capacity,dim});plugins.push_back(plugin);
-            T* inputs[]={cast(rotate(q)),cast(rotate(k)),cast(reshape(projectedV,{batch,tokens,kv,dim})),
-                cast(gate),cast(key),cast(value),cast(slots),cast(active)};
-            auto* result=n.addPluginV2(inputs,8,*plugin);if(!result)throw std::runtime_error("Qwen3.5 fused attention construction failed");
-            coreOutput=reshape(result->getOutput(0),{batch,tokens,contextWidth});
-            key=result->getOutput(1);value=result->getOutput(2);
+            if(delta){
+                if(!EnsureCanonicalKVOverlayPluginRegistered())throw std::runtime_error("Canonical KV plugin registration failed");
+                auto* plugin=new CanonicalKVOverlayPlugin(*overlay);plugins.push_back(plugin);
+                key=cast(rotate(k));value=cast(reshape(projectedV,{batch,tokens,kv,dim}));
+                T* inputs[]={cast(rotate(q)),key,value,cast(gate),canonical,cast(slots),cast(active)};
+                auto* result=n.addPluginV2(inputs,7,*plugin);if(!result)throw std::runtime_error("Canonical KV attention construction failed");
+                coreOutput=reshape(result->getOutput(0),{batch,tokens,contextWidth});
+            }else{
+                if(!EnsureQwen35AttentionCorePluginRegistered())throw std::runtime_error("Qwen3.5 attention plugin registration failed");
+                auto* plugin=new Qwen35AttentionCorePlugin({batch,tokens,heads,kv,capacity,dim});plugins.push_back(plugin);
+                T* inputs[]={cast(rotate(q)),cast(rotate(k)),cast(reshape(projectedV,{batch,tokens,kv,dim})),
+                    cast(gate),cast(key),cast(value),cast(slots),cast(active)};
+                auto* result=n.addPluginV2(inputs,8,*plugin);if(!result)throw std::runtime_error("Qwen3.5 fused attention construction failed");
+                coreOutput=reshape(result->getOutput(0),{batch,tokens,contextWidth});
+                key=result->getOutput(1);value=result->getOutput(2);
+            }
         }else for(int t=0;t<tokens;++t) {
             auto* packed=attentionProjected(
                 reshape(slice(qg,1,t,1),{batch,heads,2*dim}),
@@ -456,7 +477,8 @@ public:
         auto* mlpInput=norm(residual,layer+".post_attention_layernorm.weight",eps);
         T* output=add(residual,joinedMLPProjections?joinedMLP(mlpInput,layer+".mlp"):mlp(mlpInput,layer+".mlp"));
         if(diagnosticStages)diagnosticStages->insert(diagnosticStages->end(),{attention,residual,mlpInput,output});
-        return cat({reshape(output,{batch,tokens*hidden}),reshape(key,{batch,width}),reshape(value,{batch,width})},1);
+        const int stateOutputWidth=delta?tokens*kv*dim:width;
+        return cat({reshape(output,{batch,tokens*hidden}),reshape(key,{batch,stateOutputWidth}),reshape(value,{batch,stateOutputWidth})},1);
     }
     T* mtpChunk(T* normalizedTarget,T* embedding,T* key,T* value,T* positions,T* slots,T* active,
         int heads,int kv,int dim,int rotary,std::array<int,3> sections,float theta,float eps) {
