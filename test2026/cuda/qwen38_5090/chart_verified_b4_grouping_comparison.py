@@ -37,7 +37,9 @@ fig.text(.07,.94,'Qwen3.8-27B VLM | RTX 5090 32GB | all eight measured cohorts r
 fig.text(.07,.08,'Same request bytes: 41 text / 104 image prompt tokens, 128 outputs, 8 requests/cohort; capacity 4096.',fontsize=9)
 fig.text(.07,.06,'Full-four equal-limit groups use MTP3; partial/unequal groups use greedy. Client concurrency does not guarantee MTP.',fontsize=9)
 fig.text(.07,.02,'Separate single pilots; no error bars or causal speedup claim. Clean repeats, tuned references, actual 4K and broad quality pending.',fontsize=9)
-fig.text(.07,.04,'C4 MTP requests (10 ms / 2 ms): text 4/8 / 0/8; image 8/8 / 0/8. C8: both cases and profiles 8/8.',fontsize=9)
+counts=lambda d,case:d['actual_dispatch_by_cohort'][case+'-c4']['mtp_requests']
+assert all(d['actual_dispatch_by_cohort'][case+'-c8']['mtp_requests']==8 for d in proofs for case in ('text','image'))
+fig.text(.07,.04,f"C4 MTP requests (10 ms / 2 ms): text {counts(current,'text')}/8 / {counts(parent,'text')}/8; image {counts(current,'image')}/8 / {counts(parent,'image')}/8. C8: both cases and profiles 8/8.",fontsize=9)
 fig.subplots_adjust(left=.08,right=.96,top=.875,bottom=.14,hspace=.65,wspace=.25)
 for ext in ['png','svg']:fig.savefig(out/('Garnet-B4-Grouping-Delay-Comparison.'+ext),dpi=160,facecolor=fig.get_facecolor())
 (out/'Garnet-B4-Grouping-Chart-Provenance.json').write_text(json.dumps({'inputs':inputs,'generator_sha256':sha(Path(__file__).read_bytes()),'all_cohorts_retained':True,'causal_speedup_established':False},indent=2))
