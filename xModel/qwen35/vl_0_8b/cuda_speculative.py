@@ -24,8 +24,10 @@ class CUDASpeculativeSession:
             raise ValueError('MTP draft depth1/3/7 must fit the target chunk')
         vocab=json.loads(decoder.io.memory_json())['vocab_size']
         if head_candidates<0 or head_candidates>min(65536,vocab):raise ValueError('Invalid MTP head candidate count')
-        if type(draft_builder_workspace_bytes) is not int or draft_builder_workspace_bytes not in (0,128<<20):
-            raise ValueError('MTP draft builder workspace must preserve default0 or opt in to128MiB')
+        if type(draft_builder_workspace_bytes) is not int or draft_builder_workspace_bytes not in (0,128<<20,256<<20):
+            raise ValueError('MTP draft builder workspace requires default0,128MiB or bounded B4/T4 study256MiB')
+        if draft_builder_workspace_bytes==256<<20 and (type(decoder.batch) is not int or decoder.batch!=4 or type(decoder.capacity) is not int or decoder.capacity!=4096 or type(decoder.chunk_size) is not int or decoder.chunk_size!=4 or draft_chunk_size not in (None,4)):
+            raise ValueError('256MiB MTP draft builder study requires B4/T4/cap4096')
         self.draft_builder_workspace_bytes=draft_builder_workspace_bytes
         self.head_candidates=head_candidates;self.candidates=None
         self.prefix_replay=prefix_replay

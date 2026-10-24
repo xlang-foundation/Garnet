@@ -38,4 +38,15 @@ class WorkspaceTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError,'setter failure'):self.make(klass,builder_workspace_bytes=128<<20)
         self.assertTrue(graphs[0].closed)
 
+    def test_b4_t4_256mib_budget_and_shape_admission(self):
+        klass,graphs=self.load();program=self.make(klass,batch=4,capacity=4096,chunk_size=4,builder_workspace_bytes=256<<20)
+        self.assertEqual(graphs[0].workspace,[256<<20]);program.close();self.assertTrue(graphs[0].closed)
+        for profile in ({'batch':2,'capacity':4096,'chunk_size':4},{'batch':4,'capacity':512,'chunk_size':4},{'batch':4,'capacity':4096,'chunk_size':8},{'batch':8,'capacity':4096,'chunk_size':4},{'batch':4.0,'capacity':4096,'chunk_size':4}):
+            with self.assertRaises(ValueError):self.make(klass,builder_workspace_bytes=256<<20,**profile)
+        self.assertEqual(len(graphs),1)
+    def test_b4_256mib_setter_failure_retires_graph(self):
+        klass,graphs=self.load(fail=True)
+        with self.assertRaisesRegex(RuntimeError,'setter failure'):self.make(klass,batch=4,capacity=4096,chunk_size=4,builder_workspace_bytes=256<<20)
+        self.assertTrue(graphs[0].closed)
+
 if __name__=='__main__':unittest.main()

@@ -1,0 +1,20 @@
+{
+  "status": "mtp_b4_t4_256mib_validation_only_source_policy_prepared",
+  "native_library_sha256": "96b5e82e1b944d58bc53876a593902f02851a743c0b53400b78096e12e528590",
+  "prior_failed_archive_sha256": "120f75fdddf13e0ff2db82137601081497988f0f88feab9b619139ab3c9090df",
+  "files": {
+    "xModel/qwen35/vl_0_8b/cuda_mtp.py": {
+      "old_sha256": "161f6111fee399b084a87538b5f1af9598295985a601bd9238729ea9aac5f639",
+      "new_sha256": "5d865cc90d04328ddc1661ecb25db81b5f0615db92dc8594b20920a9bf005d6c",
+      "old_validation": "        if type(builder_workspace_bytes) is not int or builder_workspace_bytes not in (0,128<<20):\n            raise ValueError('MTP builder workspace must preserve default0 or opt in to128MiB')\n",
+      "new_validation": "        if type(builder_workspace_bytes) is not int or builder_workspace_bytes not in (0,128<<20,256<<20):\n            raise ValueError('MTP builder workspace requires default0,128MiB or bounded B4/T4 study256MiB')\n        if builder_workspace_bytes==256<<20 and (type(batch) is not int or batch!=4 or type(capacity) is not int or capacity!=4096 or type(chunk_size) is not int or chunk_size!=4):\n            raise ValueError('256MiB MTP builder study requires B4/T4/cap4096')\n"
+    },
+    "xModel/qwen35/vl_0_8b/cuda_speculative.py": {
+      "old_sha256": "a983481a620f85bd3f6e08cd52cc88386f86d135c8281e90e064dd641bdf3279",
+      "new_sha256": "ae1214029877bd32c758686014b0c2c0dceffee369cadb6d74d42d28a3b7e997",
+      "old_validation": "        if type(draft_builder_workspace_bytes) is not int or draft_builder_workspace_bytes not in (0,128<<20):\n            raise ValueError('MTP draft builder workspace must preserve default0 or opt in to128MiB')\n",
+      "new_validation": "        if type(draft_builder_workspace_bytes) is not int or draft_builder_workspace_bytes not in (0,128<<20,256<<20):\n            raise ValueError('MTP draft builder workspace requires default0,128MiB or bounded B4/T4 study256MiB')\n        if draft_builder_workspace_bytes==256<<20 and (type(decoder.batch) is not int or decoder.batch!=4 or type(decoder.capacity) is not int or decoder.capacity!=4096 or type(decoder.chunk_size) is not int or decoder.chunk_size!=4 or draft_chunk_size not in (None,4)):\n            raise ValueError('256MiB MTP draft builder study requires B4/T4/cap4096')\n"
+    }
+  },
+  "scope": "Only builder-budget validation changes; default0/128MiB and all post-validation model/generation code unchanged.256MiB restricted to B4/T4/cap4096. No GPU qualification or native DLL change."
+}
