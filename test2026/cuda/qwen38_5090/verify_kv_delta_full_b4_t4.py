@@ -32,10 +32,12 @@ with zipfile.ZipFile(archive) as z:
     with zipfile.ZipFile(out/(parent+'-evidence.zip')) as previous:
         oldbase='results/'+parent+'/';oldreport=json.loads(previous.read(oldbase+'native/report.json'));oldcases={(c['group'],c['repeat']):c for c in oldreport['cases']}
         assert sha(previous.read('build/bin/garnet-native-kv-delta-attempt1.dll'))==m['library_sha256']
-        probe=previous.read(methods+'probe_b4_host_joined_mtp.py').decode()
+        # Preparation used Path.read_text(), which applies universal newlines.
+        # Retain exact candidate-byte equality after reproducing that conversion.
+        probe=previous.read(methods+'probe_b4_host_joined_mtp.py').decode().replace('\r\n','\n')
         for before,after,count in recipe['probe_derivation']:assert probe.count(before)==count;probe=probe.replace(before,after)
         assert probe.encode()==z.read(methods+'probe_kv_delta_full_b4_t4.py') and sha(probe.encode())==recipe['probe_sha256']
-        launcher=previous.read('test-b4-host-joined-mtp.bat').decode();assert launcher.count('probe_b4_host_joined_mtp.py')==1
+        launcher=previous.read('test-b4-host-joined-mtp.bat').decode().replace('\r\n','\n');assert launcher.count('probe_b4_host_joined_mtp.py')==1
         launcher=launcher.replace('probe_b4_host_joined_mtp.py','probe_kv_delta_full_b4_t4.py').encode()
         assert launcher==z.read('test-kv-delta-full-b4-t4.bat')==z.read(methods+'test_kv_delta_full_b4_t4.bat') and sha(launcher)==w['launcher_sha256']==recipe['launcher_sha256']
         def canonical_function(raw):return ast.dump(next(n for n in ast.parse(raw).body if isinstance(n,ast.FunctionDef) and n.name=='decoder_state_layout'),include_attributes=False)

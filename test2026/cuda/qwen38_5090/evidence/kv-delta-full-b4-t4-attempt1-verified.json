@@ -1,0 +1,135 @@
+{
+  "status": "compact_kv_delta_full_model_replayed",
+  "archive_sha256": "41efc66d39e8e68d6df05b85a2db795c5422ba58aa0602b290b10af98690a1df",
+  "library_sha256": "34bea267ff667ff12936183c17188435a350a483d9641a3103e27243b711fbed",
+  "files_verified": 70,
+  "cases": [
+    {
+      "group": 0,
+      "repeat": 0,
+      "same_DLL_default_off_exact": true,
+      "same_profile_state_exact": true,
+      "ids_exact": true
+    },
+    {
+      "group": 0,
+      "repeat": 1,
+      "same_DLL_default_off_exact": true,
+      "same_profile_state_exact": true,
+      "ids_exact": true
+    },
+    {
+      "group": 1,
+      "repeat": 0,
+      "same_DLL_default_off_exact": true,
+      "same_profile_state_exact": true,
+      "ids_exact": true
+    },
+    {
+      "group": 1,
+      "repeat": 1,
+      "same_DLL_default_off_exact": true,
+      "same_profile_state_exact": true,
+      "ids_exact": true
+    }
+  ],
+  "raw_last_hidden_arrays_compared": 8,
+  "raw_last_hidden_all_exact": true,
+  "negative_commit_gate": {
+    "status": "passed",
+    "metadata_rejections": 136,
+    "rejected_calls": [
+      {
+        "label": "length",
+        "error": "RuntimeError('KV delta span count mismatch')"
+      },
+      {
+        "label": "negative-start",
+        "error": "RuntimeError('KV delta spans out of range')"
+      },
+      {
+        "label": "fractional-start",
+        "error": "RuntimeError('KV delta spans out of range')"
+      },
+      {
+        "label": "nonfinite-count",
+        "error": "RuntimeError('KV delta spans out of range')"
+      },
+      {
+        "label": "too-many",
+        "error": "RuntimeError('KV delta spans out of range')"
+      },
+      {
+        "label": "capacity-overrun",
+        "error": "RuntimeError('KV delta spans out of range')"
+      },
+      {
+        "label": "invalid-empty-start",
+        "error": "RuntimeError('KV delta spans out of range')"
+      },
+      {
+        "label": "target-canonical-overlap",
+        "error": "RuntimeError('KV delta final write failed; canonical completion is unknown')"
+      },
+      {
+        "label": "linear-canonical-overlap",
+        "error": "RuntimeError('KV delta final write failed; canonical completion is unknown')"
+      },
+      {
+        "label": "target-width",
+        "error": "RuntimeError('KV delta requires matching FP32 CUDA matrices')"
+      },
+      {
+        "label": "closed-helper",
+        "error": "RuntimeError('KV delta commit is closed')"
+      }
+    ],
+    "valid_zero_prefix_modes": 2,
+    "before": {
+      "state_row_sha256": [
+        "42ae2aa1b4530fe43e0c64e0ec24e4e31030115cc1d2771b03c3cab780931244",
+        "42ae2aa1b4530fe43e0c64e0ec24e4e31030115cc1d2771b03c3cab780931244",
+        "42ae2aa1b4530fe43e0c64e0ec24e4e31030115cc1d2771b03c3cab780931244",
+        "42ae2aa1b4530fe43e0c64e0ec24e4e31030115cc1d2771b03c3cab780931244"
+      ],
+      "last_hidden_sha256": "fa569e2360c540e6280e34a4627516770f1a5f34d81d35689334a99cc1013357",
+      "last_hidden_pair_sha256": [
+        "02b1c2234680617802901a77eae606ad02e4ddb4282ccbc60061eac5b2d90bba",
+        "02b1c2234680617802901a77eae606ad02e4ddb4282ccbc60061eac5b2d90bba"
+      ],
+      "slots": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "state_words_per_row": 173932544
+    },
+    "after": {
+      "state_row_sha256": [
+        "42ae2aa1b4530fe43e0c64e0ec24e4e31030115cc1d2771b03c3cab780931244",
+        "42ae2aa1b4530fe43e0c64e0ec24e4e31030115cc1d2771b03c3cab780931244",
+        "42ae2aa1b4530fe43e0c64e0ec24e4e31030115cc1d2771b03c3cab780931244",
+        "42ae2aa1b4530fe43e0c64e0ec24e4e31030115cc1d2771b03c3cab780931244"
+      ],
+      "last_hidden_sha256": "fa569e2360c540e6280e34a4627516770f1a5f34d81d35689334a99cc1013357",
+      "last_hidden_pair_sha256": [
+        "02b1c2234680617802901a77eae606ad02e4ddb4282ccbc60061eac5b2d90bba",
+        "02b1c2234680617802901a77eae606ad02e4ddb4282ccbc60061eac5b2d90bba"
+      ],
+      "slots": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "state_words_per_row": 173932544
+    },
+    "scope": "In-process full-state/last-hidden hash witnesses after malformed metadata/spans/overlap/width/closed-helper calls and two valid zero-prefix modes; raw full canonical arrays absent."
+  },
+  "sampled_peak_adapter_used_bytes": 27952226304,
+  "replay_verifier_sha256": "832f12d6d040460b5cf53588c60b916e69a316eb7b6dd50282c98b246d10d114",
+  "archived_replay_verifier_sha256": "0a3a8b5fac7f0e0c0e7d94121e3285d78081a548c7cfd98279d0909b48c97aa1",
+  "performance_admitted": false,
+  "scope": "Compact B4/T4 same-DLL default-off ordinary/MTP raw IDs/eight hidden arrays exact and full-state hash witnesses, final-write invalid/zero-prefix checks and sources. Raw full canonical state absent; no independent CUDA arithmetic on replay, stream/HTTP, actual4K, broad-quality or2x qualification."
+}
