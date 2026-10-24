@@ -18,6 +18,14 @@ class JoinedMLPProfileTests(unittest.TestCase):
         # The new opt-in must not narrow the pre-existing disabled path.
         validate_joined_mlp_profile(False,8,8192,16,False)
 
+    def test_bounded_batch4_admission(self):
+        validate_joined_mlp_profile(True,4,4096,4,True)
+        for batch,capacity,size in ((2,4096,4),(8,4096,4),(4,4095,4),(4,512,4),(4,4096,128),(4,4096,16),(4,4096,True),(4,4096.0,4)):
+            with self.subTest(profile=(batch,capacity,size)),self.assertRaises(ValueError):
+                validate_joined_mlp_profile(True,batch,capacity,size,True)
+        for external,embedded,joined in ((False,False,False),(True,True,False),(True,False,True)):
+            with self.assertRaises(ValueError):validate_joined_mlp_profile(True,4,4096,4,external,embedded,joined)
+
     def test_factory_forwards_optin_and_rejects_wrong_native_counts(self):
         config=json.loads((Path(__file__).parent/'evidence/nvfp4-config.json').read_text());instances=[];corrupt={}
         class FakeDecoder:
