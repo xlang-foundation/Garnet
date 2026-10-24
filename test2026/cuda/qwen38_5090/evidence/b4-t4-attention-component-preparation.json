@@ -1,0 +1,70 @@
+{
+  "status": "b4_t4_component_geometry_prepared_cpu_only",
+  "base_file": "test2026/cuda/qwen38_5090/attention_compact_test.cu",
+  "base_sha256": "b80558c5578435022f805e0665f969ef6dd4d1c74d8b9da6cd6e3ee27edf7400",
+  "candidate_file": "test2026/cuda/qwen38_5090/attention_b4_t4_test.cu",
+  "candidate_sha256": "f3930ac99397cd1b47043acf0185dfdd0f936dd8898f559958c984fb5f05b101",
+  "derivation": [
+    {
+      "old": "struct Case {int batch,tokens,heads,kv,capacity,dim,prefix;bool all;};",
+      "new": "struct Case {int batch,tokens,heads,kv,capacity,dim,prefix,pattern;};"
+    },
+    {
+      "old": "std::vector<Case> cases={{1,16,24,4,4096,256,32,false},{1,16,24,4,4096,256,128,false},{1,16,24,4,4096,256,512,false},{1,16,24,4,4096,256,4096,false},{1,16,24,4,4096,256,32,true},{2,4,24,4,33,64,32,true},{1,16,24,4,8192,256,8192,false}};",
+      "new": "std::vector<Case> cases={{4,4,24,4,4096,256,32,0},{4,4,24,4,4096,256,128,0},{4,4,24,4,4096,256,512,0},{4,4,24,4,4096,256,3968,0},{4,4,24,4,4096,256,4096,0},{4,4,24,4,4096,256,128,1},{4,4,24,4,4096,256,128,2},{4,4,24,4,4096,256,128,3}};"
+    },
+    {
+      "old": "for(int b=0;b<c.batch;++b){int count=c.batch>1?2:(a.all?c.tokens:1),slot=std::min(c.capacity-count,a.prefix-1);\n   for(int t=0;t<c.tokens;++t){bool active=(c.batch==1||b==0)&&(c.batch>1?t%2==0:(a.all||t==0));host[6][b*c.tokens+t]=float(slot);host[7][b*c.tokens+t]=active?1.f:0.f;if(active)++slot;}\n  }",
+      "new": "auto isActive=[&](int b,int t){return a.pattern==0 || (a.pattern==1 && b!=3 && t%2==0) || (a.pattern==3 && (b==0 || (b==1 && t==0) || (b==2 && t%2==0)));};\n  for(int b=0;b<c.batch;++b){\n   int count=0;for(int t=0;t<c.tokens;++t)count+=isActive(b,t)?1:0;\n   const int mixedPrefixes[4]={32,128,512,3968};\n   int prefix=a.pattern==3?mixedPrefixes[b]:a.prefix,slot=std::min(c.capacity-std::max(count,1),prefix-1);\n   for(int t=0;t<c.tokens;++t){bool active=isActive(b,t);host[6][b*c.tokens+t]=float(std::min(slot,c.capacity-1));host[7][b*c.tokens+t]=active?1.f:0.f;if(active)++slot;}\n  }\n  printf(\"B4_ATTENTION_CONTROLS case=%zu pattern=%d slots=\",ci,a.pattern);\n  for(float v:host[6])printf(\"%.0f,\",v);printf(\" active=\");for(float v:host[7])printf(\"%.0f,\",v);printf(\"\\n\");fflush(stdout);"
+    },
+    {
+      "old": "Warm attention-core CUDA graph only, includes KV copies; not model TTFT/decode/throughput or2x result",
+      "new": "B4 T4 synthetic warm attention-core CUDA graph only, includes full KV copies; not actual4K model, TTFT/decode/throughput or2x result"
+    }
+  ],
+  "profiles": {
+    "batch": 4,
+    "tokens": 4,
+    "heads": 24,
+    "kv_heads": 4,
+    "capacity": 4096,
+    "dim": 256,
+    "full_active_prefix_parameters": [
+      32,
+      128,
+      512,
+      3968,
+      4096
+    ],
+    "additional_patterns": [
+      "three rows alternating tokens",
+      "all inactive",
+      "mixed row prefixes and masks"
+    ]
+  },
+  "unchanged_checks": [
+    "independent double CPU context oracle",
+    "all four existing native variants",
+    "row/tiled bitwise legacy comparison",
+    "split predeclared numerical tolerance",
+    "full output KV exactness",
+    "input immutability",
+    "buffer guards",
+    "three graph replays",
+    "invalid geometry rejection",
+    "ABCDDCBAx3 CUDA events"
+  ],
+  "gpu_run": false,
+  "compiled": false,
+  "native_source_changed": false,
+  "performance_admitted": false,
+  "scope": "Synthetic B4/T4 component qualification preparation. Existing native kernels unchanged; source and DLL deployment deferred until original layer diagnostic closes. Not model qualification or a performance result.",
+  "native_source_sha256": {
+    "src/cuda/qwen35_attention_core.cu": "3ad24bb00acc2f77a5b7258e4b7fecb248c682b3ad257d28af8bc8f336635165",
+    "src/cuda/qwen35_attention_core.cuh": "1a3997a15f4aa897f2bc69bf6a3afbef9a58f166fb094bfb858fac1b170e166f"
+  },
+  "method_sha256": {
+    "build_attention_b4_t4_component.bat": "99f468b06eea29f46eff3512e644678825d789e3cd6870d87fd43b33c8489cf0",
+    "run_attention_b4_t4_component.py": "322427c8f866ce9a59aee2d8d3dc891149bc665183e53ae5b750b63ada36f1c7"
+  }
+}
