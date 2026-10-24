@@ -29,8 +29,10 @@ class CUDAMTPProgram:
         if batch not in (1,2,4,8) or not 32<=capacity<=8192 or chunk_size not in (1,4,8,16):
             raise ValueError('Unsupported MTP batch/capacity/chunk profile')
         if projection_workspace_bytes not in (0,16384):raise ValueError('MTP workspace must be0 or16384bytes')
-        if type(builder_workspace_bytes) is not int or builder_workspace_bytes not in (0,128<<20):
-            raise ValueError('MTP builder workspace must preserve default0 or opt in to128MiB')
+        if type(builder_workspace_bytes) is not int or builder_workspace_bytes not in (0,128<<20,256<<20):
+            raise ValueError('MTP builder workspace requires default0,128MiB or bounded B4/T4 study256MiB')
+        if builder_workspace_bytes==256<<20 and (type(batch) is not int or batch!=4 or type(capacity) is not int or capacity!=4096 or type(chunk_size) is not int or chunk_size!=4):
+            raise ValueError('256MiB MTP builder study requires B4/T4/cap4096')
         if config.get('mtp_num_hidden_layers',1)!=1:raise ValueError('MTP supports exactly one checkpoint layer')
         hidden=config['hidden_size'];cache=[batch,config['num_key_value_heads'],capacity,config['head_dim']]
         shapes=[[batch,chunk_size,hidden],[batch,chunk_size,hidden],cache,cache,
