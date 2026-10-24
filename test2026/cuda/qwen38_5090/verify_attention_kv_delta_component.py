@@ -28,18 +28,19 @@ with zipfile.ZipFile(archive) as z:
     assert core.count(helpers)==1
     start=native.index('template<bool tiled> __global__ void compact(')
     kernel=native[start:native.index('// Split-key research path:',start)]
-    for change in prep['kernel_derivation']:
-        assert kernel.count(change['old'])==1;kernel=kernel.replace(change['old'],change['new'])
+    for old,new in prep['kernel_derivation']:
+        assert kernel.count(old)==1;kernel=kernel.replace(old,new)
     assert core.count(kernel)==1
     driver=z.read(methods+'attention_b4_t4_test.cu')
     assert sha(driver)==prep['driver_base_sha256']
     driver=driver.decode().replace('\r\n','\n')
-    for change in prep['driver_derivation']:
-        assert driver.count(change['old'])==1;driver=driver.replace(change['old'],change['new'])
+    for old,new in prep['driver_derivation']:
+        assert driver.count(old)==1;driver=driver.replace(old,new)
     start=driver.index('  for(int mode=0;mode<4;++mode)for(int i=0;i<5;')
     end=driver.index('\n }\n Check(cudaEventDestroy',start)
     driver=driver[:start]+driver[end:]
     assert z.read(methods+'attention_kv_delta_test.cu')==driver.encode()
+    archived_verifier_sha256=sha(z.read(methods+'verify_attention_kv_delta_component.py'))
     parent=doc('results/attention-b4-t4-component-attempt1-verified.json')
     assert parent['status']=='attention_b4_t4_component_replayed' and len(parent['checks'])==16
     assert parent['archive_sha256']==report['parent_archive_sha256']==m['linked_archives']['attention-b4-t4-component-attempt1-evidence.zip']
@@ -94,6 +95,7 @@ with zipfile.ZipFile(archive) as z:
         assert monitor['sampled_memory']['sampled_peak_adapter_used_bytes']==max(s['used_bytes'] for s in samples)
 result={'status':'attention_kv_delta_component_replayed' if passed else 'attention_kv_delta_component_failure_preserved',
         'archive_sha256':sha(archive.read_bytes()),'files_verified':len(m['files']),'cases':checks,'raw_context_arrays':arrays,'raw_prefix_count_vectors':count_vectors,
+        'replay_verifier_sha256':sha(Path(__file__).read_bytes()),'archived_replay_verifier_sha256':archived_verifier_sha256,
         'performance_admitted':False,'model_integration_admitted':False,
         'scope':'Standalone synthetic readonly KV overlay plus explicit accepted-prefix commit; no existing native/plugin changes. Retained CPU-context and legacy/overlay byte comparisons independently replayed; full cache/prefix/guards/input checks remain in-process witnesses, raw full caches absent. No model correctness, timing, DRAM-traffic or speed claim.'}
 (out/(name+'-verified.json')).write_text(json.dumps(result,indent=2),encoding='utf8');print(json.dumps(result,indent=2))
