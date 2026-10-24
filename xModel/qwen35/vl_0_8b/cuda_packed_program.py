@@ -13,6 +13,7 @@ import tensor
 from .decoder_layer import T
 from .cuda_chunk import Qwen35CUDAChunk
 from .joined_mlp_profile import validate_joined_mlp_profile
+from .kv_delta_layout import build_kv_delta_layout
 
 def packed_view(value,start,width,shape):
     return value*T.unary_op('qwen35_packed_view',start=start,width=width,shape=shape)
@@ -44,10 +45,14 @@ def decoder_state_layout(config,batch,capacity):
     return result,offset
 
 class CUDAPackedDecoderProgram:
-    def __init__(self,checkpoint,config,io,batch=1,capacity=512,chunk_size=4,retain_linear_inputs=False,projection_workspace_bytes=0,register_delta_128=False,flat_concat=False,join_input_projections=False,embedded_projection_weights=False,external_compressed_weights=False,joined_mlp_projections=False):
+    def __init__(self,checkpoint,config,io,batch=1,capacity=512,chunk_size=4,retain_linear_inputs=False,projection_workspace_bytes=0,register_delta_128=False,flat_concat=False,join_input_projections=False,embedded_projection_weights=False,external_compressed_weights=False,joined_mlp_projections=False,kv_delta_state=False,kv_overlay_strategy=1):
         if batch not in (1,2,4,8) or not 32<=capacity<=8192 or chunk_size not in (4,8,16,32,64,128):raise ValueError('Unsupported packed decoder profile')
         if projection_workspace_bytes not in (0,16384):raise ValueError('Invalid projection workspace')
         validate_joined_mlp_profile(joined_mlp_projections,batch,capacity,chunk_size,external_compressed_weights,embedded_projection_weights,join_input_projections)
+        if type(kv_delta_state) is not bool or type(kv_overlay_strategy) is not int or kv_overlay_strategy not in (0,1):raise ValueError('Invalid explicit canonical KV profile')
+        if kv_delta_state and ((batch,capacity,chunk_size)!=(4,4096,4) or retain_linear_inputs is not True or external_compressed_weights is not True or joined_mlp_projections is not True or embedded_projection_weights or join_input_projections):
+            raise ValueError('Canonical KV program requires retained shared mixed joined B4/T4/cap4096')
+        self.kv_delta_state=kv_delta_state;self.kv_overlay_strategy=kv_overlay_strategy;self.delta_layout=None
         self.joined_mlp_projections=joined_mlp_projections
         self.config=config;self.io=io;self.batch=batch;self.capacity=capacity;self.size=chunk_size;self.retain=retain_linear_inputs
         self.register_delta_128=register_delta_128;self.flat_concat=flat_concat
@@ -58,6 +63,7 @@ class CUDAPackedDecoderProgram:
         if self.embedded_projection_weights and self.join_input_projections:raise ValueError('Embedded projections do not support BF16 joined input pools')
         if self.join_input_projections and chunk_size!=4:raise ValueError('Joined input projections require decode width4')
         self.workspace=projection_workspace_bytes;self.layout,self.state_width=decoder_state_layout(config,batch,capacity)
+        if kv_delta_state:self.delta_layout=build_kv_delta_layout(self.layout,batch,capacity,chunk_size,config['hidden_size'])
         self.hidden_width=chunk_size*config['hidden_size'];self.payload_width=0;self.weight_names=[];self.weight_layers=[];self.weight_slots=[];self.weights=[];self.graph=None
         symbols=[tensor.input('packed_hidden',shape=[batch,chunk_size,config['hidden_size']],dtype=tensor.float32),
             tensor.input('packed_state',shape=[batch,self.state_width],dtype=tensor.float32),
@@ -111,6 +117,10 @@ class CUDAPackedDecoderProgram:
                 layer['payload_width']=chunk_size*(channels+config['linear_num_value_heads']*config['linear_value_head_dim']+2*config['linear_num_value_heads'])
                 layer['payload_offset']=self.hidden_width+self.state_width+self.payload_width;self.payload_width+=layer['payload_width']
         self.output_width=self.hidden_width+self.state_width+self.payload_width
+        if self.delta_layout is not None:
+            self.output_width=self.delta_layout['output_width']
+            for layer,compact in zip(self.layout,self.delta_layout['layers']):
+                if layer['payload_width']:layer['payload_offset']=compact['payload_offset']
         self.graph=garnet.compiled_graph();self.graph.set_builder_workspace_bytes(256<<20)
         try:self.graph.build(self._forward()(*symbols),symbols,checkpoint);self.graph.enable_cuda_graph(True)
         except:self.close();raise
@@ -122,12 +132,18 @@ class CUDAPackedDecoderProgram:
             state_outputs=[];payload_outputs=[]
             for layer,indices in zip(layout,self.weight_layers):
                 w1=layer['state1_width'];w2=layer['state2_width'];offset=layer['offset']
-                first=packed_view(state,offset,w1,layer['state1_shape']);second=packed_view(state,offset+w1,w2,layer['state2_shape'])
+                compact=self.delta_layout['layers'][layer['index']] if self.delta_layout is not None else None
+                canonical=compact if compact is not None and layer['kind']=='full_attention' else None
+                first=second=None
+                if canonical is None:
+                    first=packed_view(state,offset,w1,layer['state1_shape']);second=packed_view(state,offset+w1,w2,layer['state2_shape'])
                 external={} if self.external_compressed_weights else {self.weight_names[i]:weights[self.weight_slots[i][0]] for i in indices}
                 compressed={self.weight_names[i]:[weights[j] for j in self.weight_slots[i]] for i in indices} if self.external_compressed_weights else None
                 packed=Qwen35CUDAChunk(hidden,first,second,active,positions,slots,config,layer['index'],layer['kind'],True,True,
-                    self.workspace,self.retain,external,self.register_delta_128,self.join_input_projections and layer['kind']=='linear_attention',external_compressed_weights=compressed,joined_mlp_projections=self.joined_mlp_projections)
+                    self.workspace,self.retain,external,self.register_delta_128,self.join_input_projections and layer['kind']=='linear_attention',external_compressed_weights=compressed,joined_mlp_projections=self.joined_mlp_projections,
+                    canonical_kv_state=state if canonical is not None else None,canonical_kv_layout=canonical,kv_overlay_strategy=self.kv_overlay_strategy)
                 hidden=packed_view(packed,0,t*h,[b,t,h])
+                if compact is not None:w1=compact['output_state1_width'];w2=compact['output_state2_width']
                 state_outputs.append(packed_view(packed,t*h,w1+w2,[b,w1+w2]))
                 if layer['payload_width']:
                     payload_outputs.append(packed_view(packed,t*h+w1+w2,layer['payload_width'],[b,layer['payload_width']]))
@@ -144,7 +160,7 @@ class CUDAPackedDecoderProgram:
     def memory_info(self):
         if self.graph is None:raise ValueError('Packed decoder program is closed')
         return {'graph':json.loads(self.graph.stats_json()),'embedded_projection_weights':self.embedded_projection_weights,'joined_mlp_projections':self.joined_mlp_projections,'external_compressed_weights':self.external_compressed_weights,'register_delta_128':self.register_delta_128,'flat_concat':self.flat_concat,'joined_input_projections':self.join_input_projections,'state_width':self.state_width,'hidden_width':self.hidden_width,
-            'payload_width':self.payload_width,'external_weight_count':len(self.weights),'external_projection_matrix_count':len(self.weight_names),'fp32_layer_barriers':max(0,len(self.layout)-1),
+            'payload_width':self.payload_width,'kv_delta_state':self.kv_delta_state,'kv_overlay_strategy':self.kv_overlay_strategy if self.kv_delta_state else None,'output_width':self.output_width,'external_weight_count':len(self.weights),'external_projection_matrix_count':len(self.weight_names),'fp32_layer_barriers':max(0,len(self.layout)-1),
             'scope':'Program graph only; embedded weights belong to its engine, external projection pools belong to caller; canonical state and request buffers are separate. Not process peak.'}
 
     def close(self):

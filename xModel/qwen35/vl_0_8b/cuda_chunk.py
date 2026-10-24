@@ -9,10 +9,12 @@ from .tensor_compat import tensor
 T=tensor()
 
 @T.fusion(name='qwen35_cuda_decoder_chunk',role='decoder_layer',boundary='required')
-def Qwen35CUDAChunk(hidden,state1,state2,active,positions,slots,config,layer_idx,kind,fused_delta=False,fused_attention=False,projection_workspace_bytes=0,retain_linear_inputs=False,external_weights=None,register_delta_128=False,join_input_projections=False,external_compressed_weights=None,joined_mlp_projections=False):
+def Qwen35CUDAChunk(hidden,state1,state2,active,positions,slots,config,layer_idx,kind,fused_delta=False,fused_attention=False,projection_workspace_bytes=0,retain_linear_inputs=False,external_weights=None,register_delta_128=False,join_input_projections=False,external_compressed_weights=None,joined_mlp_projections=False,canonical_kv_state=None,canonical_kv_layout=None,kv_overlay_strategy=1):
     p='model.language_model.layers.'+str(layer_idx)
     extra={'external_weights':external_weights} if external_weights else {}
     if external_compressed_weights:extra['external_compressed_weights']=external_compressed_weights
+    if canonical_kv_state is not None and (kind!='full_attention' or canonical_kv_layout is None or state1 is not None or state2 is not None):
+        raise ValueError('Canonical KV requires only the full-attention packed-state binding')
     if kind=='linear_attention':
         bound=hidden*T.binary_op('qwen35_conv_bind_state')*state1
         bound=bound*T.binary_op('qwen35_delta_bind_state')*state2
@@ -20,8 +22,13 @@ def Qwen35CUDAChunk(hidden,state1,state2,active,positions,slots,config,layer_idx
         return bound*T.unary_op('qwen35_linear_decoder_chunk',layer_prefix=p,
             key_heads=config['linear_num_key_heads'],value_heads=config['linear_num_value_heads'],
             key_dim=config['linear_key_head_dim'],value_dim=config['linear_value_head_dim'],eps=config['rms_norm_eps'],fused_delta=int(fused_delta),projection_workspace_bytes=projection_workspace_bytes,retain_linear_inputs=int(retain_linear_inputs),register_delta_128=int(register_delta_128),joined_input_projections=int(join_input_projections),joined_mlp_projections=int(joined_mlp_projections),**extra)
-    bound=hidden*T.binary_op('qwen35_attention_bind_key')*state1
-    bound=bound*T.binary_op('qwen35_attention_bind_value')*state2
+    if canonical_kv_state is not None:
+        bound=hidden*T.binary_op('qwen35_attention_bind_canonical')*canonical_kv_state
+        extra.update(canonical_kv_overlay=1,kv_overlay_strategy=kv_overlay_strategy,
+            canonical_state_width=canonical_kv_layout['cache_batch_stride'],canonical_key_offset=canonical_kv_layout['key_offset'],canonical_value_offset=canonical_kv_layout['value_offset'])
+    else:
+        bound=hidden*T.binary_op('qwen35_attention_bind_key')*state1
+        bound=bound*T.binary_op('qwen35_attention_bind_value')*state2
     bound=bound*T.binary_op('qwen35_attention_bind_positions')*positions
     bound=bound*T.binary_op('qwen35_attention_bind_slots')*slots
     bound=bound*T.binary_op('qwen35_attention_bind_active')*active

@@ -1,10 +1,10 @@
 # SPDX-License-Identifier: Apache-2.0
-"""Unwired B4/T4 KV-delta layout/dispatch contract; no GPU imports.
+"""Explicit B4/T4 KV-delta layout/dispatch contract; no GPU imports.
 
-Canonical state offsets stay unchanged. A future opt-in target may return full
+Canonical state offsets stay unchanged. The experimental opt-in target returns full
 linear-attention states plus only current-chunk full-attention K/V. Committing
 those deltas is a separate transaction-final operation, never plugin aliasing.
-This module alone does not enable that contract in a decoder or native runtime.
+This module alone does not enable that contract; decoder admission is explicit.
 """
 
 def validate_kv_delta_profile(enabled, batch, capacity, prefill_chunk, decode_chunk,
@@ -98,7 +98,7 @@ def build_kv_delta_layout(canonical, batch=4, capacity=4096, chunk=4, hidden=512
 def choose_kv_overlay_strategy(slots, active):
     """Choose compact0 for all-short controls, otherwise legacy-geometry1.
 
-    A future decoder can select between two captured engines sharing output
+    The opt-in decoder selects between two captured engines sharing output
     storage, using controls it already owns on the CPU. No device readback or
     changing a captured graph's native environment flags is needed.512 is the
     declared study cutoff, not an automatically tuned or universal threshold.

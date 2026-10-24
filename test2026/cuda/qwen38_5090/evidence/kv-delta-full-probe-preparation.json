@@ -1,0 +1,47 @@
+{
+  "status": "compact_full_model_probe_prepared_cpu_only",
+  "probe_sha256": "3fba44d6c6f21ac8e35f91caef38c086c863d57dd140603d3282ff45a8b7d25b",
+  "probe_derivation": [
+    [
+      "qualified_path=root/'results/shared-mtp3-full-b4-t4-host-embedding-workspace-attempt1/native/report.json'",
+      "qualified_path=root/'results/native-kv-delta-default-off-attempt1/native/report.json'",
+      1
+    ],
+    [
+      "'unjoined_b4_ids_and_state_exact'",
+      "'default_off_ids_and_state_exact'",
+      2
+    ],
+    [
+      "host_embedding_lookup=host_lookup,joined_mlp_projections=True)",
+      "host_embedding_lookup=host_lookup,joined_mlp_projections=True,shared_output_storage=True,kv_delta_state=True)",
+      1
+    ],
+    [
+      " for program in decoder.programs.values():",
+      " for program in decoder._all_programs():",
+      1
+    ],
+    [
+      " groups=[cases[:2]*2,cases[2:]*2]",
+      " # Final-write API guards are checked before any model request. State hashes\n # witness the complete canonical allocation; raw full state is not archived.\n negative_before=state_hashes('kv-negative-before')\n metadata=decoder.programs[4].delta_layout\n invalid_helper=garnet.cuda_kv_delta_commit();metadata_rejections=0\n def rejects(call,label):\n  try:call()\n  except Exception as error:return {'label':label,'error':repr(error)}\n  raise AssertionError('Invalid final-write operation was accepted: '+label)\n for key in ('batch','capacity','chunk','hidden_width','canonical_state_width','output_width','linear_replay_width','payload_width'):\n  invalid=json.loads(json.dumps(metadata));invalid[key]+=1\n  rejects(lambda:invalid_helper.build(json.dumps(invalid)),'summary-'+key);metadata_rejections+=1\n for layer in range(64):\n  invalid=json.loads(json.dumps(metadata));invalid['layers'][layer]['output_offset']+=1\n  rejects(lambda:invalid_helper.build(json.dumps(invalid)),'output-offset-'+str(layer));metadata_rejections+=1\n for layer in range(64):\n  key='value_offset' if layer%4==3 else 'replay_offset'\n  invalid=json.loads(json.dumps(metadata));invalid['layers'][layer][key]+=1\n  rejects(lambda:invalid_helper.build(json.dumps(invalid)),'state-offset-'+str(layer));metadata_rejections+=1\n assert metadata_rejections==136 and not json.loads(invalid_helper.stats_json())['ready']\n target=decoder.output_pool;linear=io.storage_view(target,[4,39714816]);alias_target=io.storage_view(decoder.state,[4,43030528]);alias_linear=io.storage_view(decoder.state,[4,39714816])\n rejected=[]\n for label,spans in [('length',[0]*7),('negative-start',[-1,1]+[0,0]*3),('fractional-start',[0.5,1]+[0,0]*3),('nonfinite-count',[0,float('nan')]+[0,0]*3),('too-many',[0,5]+[0,0]*3),('capacity-overrun',[4096,1]+[0,0]*3),('invalid-empty-start',[4097,0]+[0,0]*3)]:\n  rejected.append(rejects(lambda:decoder.delta_commit.commit(target,target,decoder.state,spans),label))\n rejected.append(rejects(lambda:decoder.delta_commit.commit(alias_target,alias_target,decoder.state,[0,1]*4),'target-canonical-overlap'))\n rejected.append(rejects(lambda:decoder.delta_commit.commit(target,alias_linear,decoder.state,[0,1]*4),'linear-canonical-overlap'))\n wrong=io.storage_view(target,[4,43030527])\n rejected.append(rejects(lambda:decoder.delta_commit.commit(wrong,wrong,decoder.state,[0,1]*4),'target-width'))\n rejected.append(rejects(lambda:invalid_helper.commit(target,target,decoder.state,[0,0]*4),'closed-helper'))\n invalid_helper.close()\n decoder.delta_commit.commit(target,target,decoder.state,[4096,0]*4)\n decoder.delta_commit.commit(target,linear,decoder.state,[4096,0]*4)\n negative_after=state_hashes('kv-negative-after')\n assert negative_before==negative_after,'Rejected or zero-prefix commits changed canonical state'\n report['negative_commit_gate']={'status':'passed','metadata_rejections':metadata_rejections,'rejected_calls':rejected,'valid_zero_prefix_modes':2,'before':negative_before,'after':negative_after,'scope':'In-process full-state/last-hidden hash witnesses after malformed metadata/spans/overlap/width/closed-helper calls and two valid zero-prefix modes; raw full canonical arrays absent.'}\n report['kv_delta_contract']={'canonical_state_width':decoder.programs[4].state_width,'target_output_width':decoder.programs[4].output_width,'linear_replay_width':metadata['linear_replay_width'],'strategies':sorted(p.kv_overlay_strategy for p in decoder._all_programs()),'commit':json.loads(decoder.delta_commit.stats_json())}\n assert report['kv_delta_contract']['canonical_state_width']==173932544 and report['kv_delta_contract']['target_output_width']==43030528 and report['kv_delta_contract']['linear_replay_width']==39714816 and report['kv_delta_contract']['strategies']==[0,1]\n path.write_text(json.dumps(report,indent=2))\n del target,linear,alias_target,alias_linear,wrong\n groups=[cases[:2]*2,cases[2:]*2]",
+      1
+    ],
+    [
+      "'scope':'Unrun joined gate/up B4 T4 host-embedding/deferred MTP3 candidate, two repeated distinct real row pairs. All retained B1 IDs and same-profile ordinary/MTP state hashes must match exactly. Old B2 T16 state comparison is a cross-profile diagnostic. Raw last-hidden bytes retained; full state arrays absent. No tokenizer/HTTP, broad quality, memory fit or speed admission.'",
+      "'kv_delta_state':True,'shared_output_storage':True,'scope':'Experimental compact-state B4/T4 host/deferred MTP3. Two fixed context-only canonical-view engines share compact output storage. Strict same-DLL default-off and retained B1 IDs/ordinary/MTP state hash witnesses and raw last-hidden; negative/zero-prefix final-write guards. Full raw state absent, no broad quality/actual4K/HTTP/speed admission.'",
+      1
+    ],
+    [
+      "'Joined projections differ from qualified same-profile unjoined B4 states or IDs'",
+      "'Compact canonical KV differs from qualified same-DLL default-off states or IDs'",
+      1
+    ]
+  ],
+  "launcher_sha256": "efb0e03506968d5ca574d86c8eb626fe427e621ef81461fc1a5832b223ff9917",
+  "metadata_rejections_planned": 136,
+  "negative_commits_planned": 11,
+  "valid_zero_prefix_modes_planned": 2,
+  "gpu_run": false,
+  "performance_admitted": false
+}

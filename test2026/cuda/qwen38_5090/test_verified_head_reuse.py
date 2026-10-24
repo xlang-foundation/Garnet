@@ -12,7 +12,7 @@ class Fixture:
     commit_prefix=method('cuda_packed_replay.py','CUDAPackedDeltaReplayVerifier','commit_prefix')
     _read=method('cuda_verify.py','CUDATargetVerifier','_read')
     def __init__(self,submitted,reuse=True):
-        b=len(submitted);self.pending=True;self.submitted=submitted;self.saved_slots=[5]*b;self.deferred=False;self.native_prefix=None
+        b=len(submitted);self.pending=True;self.submitted=submitted;self.saved_slots=[5]*b;self.deferred=False;self.native_prefix=None;self.kv_delta=False
         self.reuse_verified_head=reuse;self.max_tokens=4;self.head_evaluations=0;self.head_reuses=0;self._reuse_accepted_head=False
         self.decoder=types.SimpleNamespace(batch=b,chunk_size=4,active=object(),slot_tensor=object(),state=object(),hidden=object(),last_hidden=object(),last_packed=object(),slots=[9]*b)
         self.backups=[object() for _ in range(6)];self.cache_spans=object();self.head_input=object();self.predictions=list(range(10,10+b*4));self.calls=[]
