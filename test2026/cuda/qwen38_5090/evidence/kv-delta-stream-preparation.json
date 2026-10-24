@@ -1,0 +1,73 @@
+{
+  "status": "compact_stream_protocol_prepared_unrun",
+  "worker_derivation": [
+    [
+      "shared-mtp3-full-b4-t4-host-joined-attempt1-verified.json",
+      "kv-delta-full-b4-t4-attempt1-verified.json",
+      2
+    ],
+    [
+      "proof['status'] == 'b4_host_joined_mtp_correctness_replayed' and proof['model_gate_passed']",
+      "proof['status'] == 'compact_kv_delta_full_model_replayed' and proof['raw_last_hidden_all_exact']",
+      1
+    ],
+    [
+      "c['retained_unjoined_exact']",
+      "c['same_DLL_default_off_exact']",
+      2
+    ],
+    [
+      "mtp_proof['model_gate_passed']",
+      "mtp_proof['raw_last_hidden_all_exact']",
+      1
+    ],
+    [
+      "mtp_proof['status'] == 'b4_host_joined_mtp_correctness_replayed'",
+      "mtp_proof['status'] == 'compact_kv_delta_full_model_replayed'",
+      1
+    ],
+    [
+      "host_embedding_lookup=True,joined_mlp_projections=True)",
+      "host_embedding_lookup=True,joined_mlp_projections=True,shared_output_storage=True,kv_delta_state=True)",
+      1
+    ],
+    [
+      "    for program in decoder.programs.values():",
+      "    for program in decoder._all_programs():",
+      1
+    ],
+    [
+      "'chunk': 4, 'joined_mlp_projections': True,",
+      "'chunk': 4, 'joined_mlp_projections': True, 'kv_delta_state': True, 'shared_output_storage': True,",
+      1
+    ],
+    [
+      "    decoder.io.enable_nvfp4_head(True)\n",
+      "    decoder.io.enable_nvfp4_head(True)\n    assert decoder.kv_delta_state and decoder.shared_output_storage and decoder.programs[4].output_width == 43030528\n    assert json.loads(decoder.delta_commit.stats_json())['ready']\n",
+      1
+    ]
+  ],
+  "probe_derivation": [
+    [
+      "serve-native-b4-host-joined-mtp-worker.bat",
+      "serve-native-kv-delta-worker.bat",
+      1
+    ],
+    [
+      "assert ready[0]['mtp_policy']=='four_real_rows_equal_limits_else_greedy' and ready[0]['embedding_table_bytes']==0",
+      "assert ready[0]['mtp_policy']=='four_real_rows_equal_limits_else_greedy' and ready[0]['embedding_table_bytes']==0\nassert ready[0]['kv_delta_state'] and ready[0]['shared_output_storage']",
+      1
+    ]
+  ],
+  "files": {
+    "native_kv_delta_stream_worker.py": "0d611026fe80519ea17c0f455cd182379c3719a3c225da332d8fc94f7cb5c589",
+    "probe_kv_delta_stream.py": "2bc528ac83b95c474e3016e3a8914cb2f19d567dcef003c0bef293f9224862cb",
+    "serve_native_kv_delta_worker.bat": "709728692aef7afd3c5305669392b25639e1304149bd4ca1d47035244c554ee3",
+    "test_kv_delta_stream.bat": "08c0dd8fda7faab9c18c00d46f107d42db8665ce06118521c1fe8a7b0d5f0504"
+  },
+  "groups": 13,
+  "requests": 40,
+  "gpu_run": false,
+  "performance_admitted": false,
+  "scope": "Current joined-host B4/T4 protocol and same immutable teacher/wire recipe; only compact decoder/proof/ready metadata and launcher selection changed. Requires closed, independently replayed compact full model before deployment/run."
+}
