@@ -44,7 +44,8 @@ assert int(subprocess.check_output(['nvidia-smi','--query-gpu=memory.used','--fo
 out.mkdir()
 launcher = root/'build-attention-b4-t4-component.bat'
 core = [root/'Garnet/src/cuda'/n for n in ('qwen35_attention_core.cu','qwen35_attention_core.cuh')]
-files = [Path(__file__), launcher, candidate, prep_path, proof_path, archive, library] + core
+files = [Path(__file__), launcher, candidate, root/'Garnet'/prep['base_file'], prep_path,
+         proof_path, archive, library] + core
 report = {'status':'running','library_sha256':sha(library.read_bytes()),
           'parent_archive_sha256':proof['archive_sha256'],
           'source_sha256':{str(p.relative_to(root)):sha(p.read_bytes()) for p in files if p != archive},
