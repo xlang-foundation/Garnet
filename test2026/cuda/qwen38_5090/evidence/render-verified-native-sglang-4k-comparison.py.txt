@@ -1,0 +1,114 @@
+from pathlib import Path
+import base64
+import hashlib
+import html
+import json
+
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+from matplotlib.ticker import FuncFormatter
+
+work = Path(__file__).resolve().parent
+out = work.parent / 'outputs'
+sha = lambda path: hashlib.sha256(path.read_bytes()).hexdigest()
+native_path = out / 'Garnet-Native-4K-Verified-Results.json'
+native = json.loads(native_path.read_bytes())
+native_proof_path = out / 'fixed-length-http-study-attempt1-verified.json'
+native_proof = json.loads(native_proof_path.read_bytes())
+assert native_proof == json.loads((out / 'fixed-length-http-study-attempt1-remote-verified.json').read_bytes())
+assert native['native_archive_sha256'] == native_proof['archive_sha256'] == sha(out / 'fixed-length-http-study-attempt1-evidence.zip')
+name = 'sglang-observed-fixed4k-ordinary-attempt1'
+proof_path = out / (name + '-verified.json')
+sg = json.loads(proof_path.read_bytes())
+assert sg == json.loads((out / (name + '-remote-verified.json')).read_bytes())
+assert sg['status'] == 'reference_fixed4k_observed_profile_replayed'
+assert sg['archive_sha256'] == sha(out / (name + '-evidence.zip'))
+profile = sg['profiles'][0]
+series = {}
+for p in native['profiles']:
+    label = 'Garnet ordinary' if p['mode'] == 'ordinary' else 'Garnet MTP3'
+    series[label] = {row['case'] + '-c' + str(row['concurrency']): row for row in p['cohorts']}
+series['SGLang ordinary'] = {}
+for key, row in profile['raw_replay']['cohorts'].items():
+    series['SGLang ordinary'][key] = dict(row['metrics'], sampled_peak_adapter_used_bytes=
+        profile['sampled_memory'][key]['sampled_peak_adapter_used_bytes'])
+expected = {case + '-c' + str(c) for case in ('text', 'image') for c in (1, 2, 4, 8)}
+assert all(set(rows) == expected for rows in series.values())
+assert all(row['requests'] == 8 and row['generated_tokens'] == 1024 for rows in series.values() for row in rows.values())
+plt.rcParams.update({'font.family': 'DejaVu Sans', 'font.size': 11,
+                     'axes.spines.top': False, 'axes.spines.right': False})
+specs = [('Time to first token (seconds, log scale; lower is better)', 'ttft_median_ms', .001),
+         ('Decode rate (tokens/s; higher is better)', 'decode_median_tokens_per_second', 1),
+         ('Total output throughput (tokens/s; higher is better)', 'output_tokens_per_second', 1),
+         ('Sampled adapter VRAM (GiB; lower is better)', 'sampled_peak_adapter_used_bytes', 1 / 2**30)]
+fig, axes = plt.subplots(4, 2, figsize=(15, 14))
+fig.patch.set_facecolor('#f5f8fc')
+fig.subplots_adjust(left=.08, right=.97, bottom=.14, top=.84, hspace=.50, wspace=.22)
+fig.text(.055, .965, 'Actual 4K workload: Garnet vs SGLang', fontsize=25, weight='bold')
+fig.text(.055, .932, 'One RTX 5090 32GB | pinned Qwen3.8-27B mixed NVFP4/FP8 | independently replayed single trials', color='#43546b', fontsize=12)
+fig.text(.055, .904, '3968 input + 128 output tokens | 8 measured requests per group | text and image | HTTP streaming', color='#43546b', fontsize=12)
+colors = ['#277bb5', '#d06b26', '#439a82']
+for col, case in enumerate(('text', 'image')):
+    for index, (title, key, scale) in enumerate(specs):
+        ax = axes[index, col]
+        for (label, rows), color, marker in zip(series.items(), colors, ('o', 's', '^')):
+            cs = [1, 2, 4, 8]
+            ys = [rows[case + '-c' + str(c)][key] * scale for c in cs]
+            ax.plot(cs, ys, color=color, marker=marker, lw=2, label=label)
+        ax.set_title(case.title() + ' | ' + title, loc='left', fontsize=11)
+        ax.set_xticks([1, 2, 4, 8])
+        ax.set_xlabel('Concurrent client requests')
+        ax.grid(axis='y', alpha=.20)
+        if index == 0:
+            ax.set_yscale('log')
+            ax.yaxis.set_major_formatter(FuncFormatter(lambda value, _: f'{value:g}'))
+        else:
+            ax.set_ylim(bottom=0)
+handles, labels = axes[0, 0].get_legend_handles_labels()
+fig.legend(handles, labels, loc='upper center', bbox_to_anchor=(.51, .886), ncol=3, frameon=False, fontsize=12)
+fig.text(.055, .092, 'Native: physical GPU batch1, concurrent clients queue. SGLang: up to8 running requests. Native Windows / SGLang WSL.', fontsize=10)
+fig.text(.055, .070, 'Same frozen request corpus; native MTP IDs match ordinary. SGLang concurrent text variants retained; cross-engine quality parity unproven.', fontsize=10)
+fig.text(.055, .048, 'VRAM is sampled adapter-wide, including background allocations. Ordinary SGLang only; strongest tuned/MTP and vLLM4K results remain open.', fontsize=10)
+fig.text(.055, .026, 'No repeated-trial uncertainty estimates. Overall2x decode/throughput and half-TTFT objectives remain unproven.', fontsize=10, color='#9a4521')
+stem = 'Garnet-vs-SGLang-Verified-4K'
+for ext in ('png', 'svg'):
+    fig.savefig(out / (stem + '.' + ext), dpi=160, facecolor=fig.get_facecolor())
+plt.close(fig)
+table = []
+for case in ('text', 'image'):
+    for c in (1, 8):
+        key = case + '-c' + str(c)
+        a, b = series['Garnet MTP3'][key], series['SGLang ordinary'][key]
+        table.append({'case': case, 'clients': c, 'native_mtp_decode_tps': a['decode_median_tokens_per_second'],
+                      'sglang_decode_tps': b['decode_median_tokens_per_second'],
+                      'decode_ratio_native_over_sglang': a['decode_median_tokens_per_second'] / b['decode_median_tokens_per_second'],
+                      'native_mtp_ttft_ms': a['ttft_median_ms'], 'sglang_ttft_ms': b['ttft_median_ms'],
+                      'native_mtp_throughput_tps': a['output_tokens_per_second'], 'sglang_throughput_tps': b['output_tokens_per_second']})
+data = {'status': 'complete_native_and_ordinary_sglang_actual4k_single_trials_replayed_on_both_machines',
+        'hardware': native['hardware'], 'checkpoint_revision': native['checkpoint_revision'],
+        'series': series, 'selected_comparisons': table, 'new_benchmark_execution': False,
+        'screening': {'native': '502/805', 'sglang': str(sg['screening']['score']['correct']) + '/805', 'scope': 'Adapted screening, not official MMMU or proof of broad quality parity.'},
+        'input_sha256': {path.name: sha(path) for path in (native_path, native_proof_path, proof_path)},
+        'archive_sha256': {'native': native_proof['archive_sha256'], 'sglang': sg['archive_sha256']},
+        'two_times_target_achieved': False,
+        'scope': 'Same actual3968+128 corpus and hardware, separate complete single trials. Ordinary SGLang profile; strongest tuned/MTP/vLLM4K/repetitions/quality parity open. Native physical batch1 versus SGLang maximum8; different nativeWindows/WSL serving stacks. No causal code-change speedup claim.'}
+(out / (stem + '-Data.json')).write_text(json.dumps(data, indent=2), encoding='utf8')
+cells = []
+for row in table:
+    cells.append('<tr>' + ''.join('<td>' + html.escape(value) + '</td>' for value in (
+        row['case'].title(), str(row['clients']), f"{row['native_mtp_decode_tps']:.2f} / {row['sglang_decode_tps']:.2f}",
+        f"{row['decode_ratio_native_over_sglang']:.2f}x", f"{row['native_mtp_ttft_ms']/1000:.2f} / {row['sglang_ttft_ms']/1000:.2f}",
+        f"{row['native_mtp_throughput_tps']:.2f} / {row['sglang_throughput_tps']:.2f}")) + '</tr>')
+raw = base64.b64encode((out / (stem + '.png')).read_bytes()).decode()
+report = '''<!doctype html><html><head><meta charset="utf-8"><title>Verified Garnet vs SGLang4K</title>
+<style>body{font:17px/1.5 system-ui,sans-serif;max-width:1300px;margin:36px auto;padding:0 24px;color:#203044;background:#f5f8fc}img{width:100%;height:auto}table{border-collapse:collapse;width:100%;font-size:15px}td,th{padding:10px;border-bottom:1px solid #ccd5df;text-align:left}.lead{padding:16px;background:white;border-left:5px solid #d06b26}</style></head><body>
+<h1>Garnet vs SGLang: complete actual4K comparison</h1>
+<p class="lead"><b>The overall2x target remains unmet.</b> Native MTP has faster decode in these measurements, while ordinary SGLang has much lower first-token latency and higher total throughput. These are complete single trials over the same frozen3968+128 token workload. Matched vLLM4K and stronger tuned/MTP references remain pending.</p>
+<p>Values below are Garnet MTP3 / SGLang ordinary. Decode measures token delivery after generation starts; total throughput includes the first-token wait and queueing. A decode advantage does not establish a throughput or latency advantage.</p>
+<table><tr><th>Input</th><th>Clients</th><th>Decode tok/s</th><th>Decode ratio</th><th>First token, seconds</th><th>Total output tok/s</th></tr>''' + ''.join(cells) + '</table>'
+report += '<img alt="Complete actual4K text/image comparison" src="data:image/png;base64,' + raw + '">'
+report += '<p>Adapted quality screen: native502/805; SGLang' + str(sg['screening']['score']['correct']) + '/805. This is not official MMMU or proof of broad quality parity. SGLang output variants under concurrency are preserved; streamed individual token IDs are not inferred. Native ordinary/MTP IDs match.</p>'
+report += '<p>Physical batch: native1 with queued clients; SGLang up to8 running requests. NativeWindows and WSL reference stacks. Same pinned checkpoint and hardware, single trials with no confidence intervals. VRAM is adapter-wide and sampled. Selected decode ratios do not establish2x against the strongest feasible reference.</p></body></html>'
+(out / 'Garnet-Verified-4K-Comparison-Report.html').write_text(report, encoding='utf8')
+print(json.dumps({'status': data['status'], 'cohorts': 24, 'selected_comparisons': table}, indent=2))

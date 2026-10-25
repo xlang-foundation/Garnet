@@ -5729,3 +5729,49 @@ uploaded during active SGLang timing. Original48577 supervisor now reports full4
 timing has begun and first textC1 cohort emitted; wait terminal archive and both
 independent replays before charts/metrics promotion. Profiling remains next onGPU;
 strongest tuned/MTP references/repeats, INT4/4B and overall2x remain open.
+
+
+### 2026-10-25 — complete ordinary SGLang actual4K baseline closed/replayed twice
+
+Original48577 supervisor reports sglang-observed-fixed4k-ordinary-attempt1 terminal0.
+Archive63461ebf577a6bb0c4beacc7ce30ceffbb41b13a8b2f07dba2fd2f7f67cb1900,
+101948863bytes/3988files. Remote independent replay terminal0; actual full SFTP
+acknowledged before local replay. Local terminal0; proof JSONs identical, SHA
+d635f14aa14dd51cfaeff7a0ab7970281e2ff788e29a9afd82471ce240d14b0a.
+Actual60CPU pass8.847s,197installed+19context sources/eight checkpoint metadata,
+owned LinuxPID294 verified; actual SIGTERM ownership/stop0/wrapper0/idle/cleanup
+and unchanged source/runtime pass. Same ordinary profile; engine4098 reserves2
+slots for actual3968+128/4096usage, BF16KV/F32SSM, all cachesoff, full decodegraphs
+1/2/4/8, prefillgraphs/autotune disabled. Strongest tuning/MTP not established.
+
+Two early full4K boundaries/fourVLM/16short controls and fresh805screen pass:
+487/805 adapted score; all124actual serial-ID controls and124streams/eight measured
+text/image C1/2/4/8 cohorts independently replay.124post-timing comparison sidecars:
+26serial-text exact/98variants retained, no hidden streamed IDs, numerical cause,
+harmlessness or long-output semantic equivalence inferred. Serving sampled peak
+29589413888bytes; whole quality/client peak29655699456bytes. Maximum serving gap
+0.050200600002426654s. Samples adapter-wide incl background; no process/instantaneous
+VRAM claim. Old strict failed attempts remain unchanged and are not promoted.
+
+New complete8panel chart/report compares actual frozen4K nativeordinary/MTP with
+ordinary SGLang. Single-client text MTP75.14vs64.07decode, TTFT5.98vs0.307s,
+total output16.61vs55.80tok/s. Image87.20vs60.68decode, TTFT5.96vs0.334s,
+17.16vs52.62total. At8clients: native MTP text75.09vs44.39decode but16.60vs151.79
+throughput; image90.40vs42.61decode(2.12x this one ordinary-reference point),
+17.26vs146.54throughput. Overall2x/halfTTFT target remains unmet. Native physical
+batch1 queues clients; SGLang up to8, nativeWindows vsWSL. Native screen502/805;
+cross-engine broad quality parity/unrepeated uncertainty and vLLM4K remain open.
+
+After all transfers/replays and idle/source preflight,13absent host diagnostic
+methods installed: bundle74268f9a38ba437ad3a1e19c24262c025278842d1670d1326a10832adc2ca12e.
+Original48577 started native-host-stage-full4k-attempt1 with actual closed SGLang
+and nativefull4K archive identities. Last running, actual27remoteCPU controls pass
+0.626s. Initial preparation expected29: local audit finds the old worker-I/O test
+module omitted from file pins; four diagnostic/contract modules are pinned. Actual
+remote IO source not yet observed. Preserve discrepancy, original preparation,
+verifier and GPU run. No proof admitted yet and no model restart. A unique new
+test_native_host_stage_worker_io copy pins all five local IO tests; all29local CPU
+controls pass0.819s with source hashes. After original job closes, retain original
+strict verifier count-check failure and explicitly pin/run supplemental CPU tests
+before diagnostic admission. No numerical/state/timing guard or tolerance changed.
+Only original supervisor polled remotely during the live host diagnostic.
