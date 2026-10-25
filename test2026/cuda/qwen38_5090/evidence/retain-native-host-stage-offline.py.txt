@@ -1,0 +1,66 @@
+from pathlib import Path
+import ast,datetime,hashlib,json,shutil,time
+w=Path(__file__).resolve().parent;r=Path('D:/CantorAI/work/qwen38-5090');m=r/'test2026/cuda/qwen38_5090';e=m/'evidence';o=w.parent/'outputs';sha=lambda raw:hashlib.sha256(raw).hexdigest()
+ledgers=('native-host-stage-cpu-ledger','native-host-stage-final-cpu-ledger','native-host-stage-probe-cpu-ledger','native-host-stage-probe-final-cpu-ledger','native-host-stage-final-marker-cpu-ledger')
+for name in ledgers:
+ target=e/name
+ if target.exists():
+  assert {p.relative_to(target).as_posix():sha(p.read_bytes()) for p in target.rglob('*') if p.is_file()}=={p.relative_to(w/name).as_posix():sha(p.read_bytes()) for p in (w/name).rglob('*') if p.is_file()}
+ else:shutil.copytree(w/name,target)
+events=[json.loads(line) for line in (w/'native-host-stage-probe-cpu-ledger/commands.jsonl').read_bytes().splitlines()];assert events[-1]['exit_code']==1
+old_test=(m/'test_native_host_stage_probe.py').read_text()
+old_test=old_test.replace("self.mode=command[4];self.tick=0.0;self.trace=NativeHostStageTrace(outer.root,self.mode,command[-1],clock=self.clock)","self.mode=command[4];self.trace=NativeHostStageTrace(outer.root,self.mode,command[-1])")
+old_test=old_test.replace('            def clock(self):self.tick+=1.0;return self.tick\n','').replace('started=self.clock();values=[]','started=time.monotonic();values=[]').replace("'native_monotonic_seconds':self.clock()","'native_monotonic_seconds':time.monotonic()").replace("'native_elapsed_seconds':self.clock()-started","'native_elapsed_seconds':time.monotonic()-started")
+old_trace=(m/'native_host_stage_trace.py').read_text();start=old_trace.index("        info=time.get_clock_info('monotonic')\n");stop=old_trace.index("        self.stream=path.open",start);old_trace=old_trace[:start]+old_trace[stop:];old_trace=old_trace.replace("row['ready']=self.ready;row['clock_info']=self.clock_info","row['ready']=self.ready")
+for name,text in (('test_native_host_stage_probe.py',old_test),('native_host_stage_trace.py',old_trace)):
+ variants=(text.encode(),text.replace('\n','\r\n').encode());matches=[raw for raw in variants if sha(raw)==events[0]['artifact_sha256'][str(m/name)]];assert len(matches)==1,('Recover exact failed CPU source',name);raw=matches[0]
+ target=e/(name+'.failed-cpu-source.txt');assert not target.exists();target.write_bytes(raw)
+for name in ('derive-native-host-stage-worker.py','retain-native-host-stage-offline.py'):
+ target=e/(name+'.txt');assert not target.exists();target.write_bytes((w/name).read_bytes())
+methods=('native_host_stage_trace.py','native_host_stage_stream_worker.py','replay_native_host_stage_trace.py','test_native_host_stage_trace.py','prepare_native_host_stage_cases.py','probe_native_host_stage.py','test_native_host_stage_probe.py','serve_native_host_stage_worker.bat')
+for name in methods:
+ if name.endswith('.py'):ast.parse((m/name).read_bytes())
+ci=time.get_clock_info('monotonic');cases=json.loads((e/'native-host-stage-cases.json').read_bytes());assert len(cases['cases'])==4 and len(cases['orders'])==3
+summary={'status':'native_host_stage_diagnostic_cpu_qualified_real_run_unrun','recorded_utc':datetime.datetime.now(datetime.timezone.utc).isoformat(),'method_sha256':{n:sha((m/n).read_bytes()) for n in methods},'retained_cases_sha256':sha((e/'native-host-stage-cases.json').read_bytes()),'actual_retained_cases_inspected':4,'future_real_requests':24,'future_modes':['ordinary','mtp'],'actual_broad_cpu_tests_passed':23,'actual_broad_cpu_test_seconds':0.207,'actual_final_marker_cpu_tests_passed':8,'actual_final_marker_cpu_test_seconds':0.165,'cpu_fixture_scope':'Explicit synthetic temp-only archives/library bytes, fake children and injected fixture clocks; no native/GPU/model benchmark or quality result. Exact original worker AST after removing trace-only operations; negative raw/count/ID/image/chronology and owned-child cleanup checks.','initial_invocation_failure':{'actual_total_tests_reported':17,'actual_errors':1,'actual_report_seconds':0.059,'reason':'Existing test_native_worker_io imports sibling as top-level module; first invocation lacked its directory on PYTHONPATH. Existing module unchanged; subsequent logged commands set child process search path.'},'initial_controller_cpu_failure':{'actual_total_tests_reported':23,'actual_failures':1,'actual_report_seconds':0.144,'reason':'Local monotonic clock yielded zero elapsed intervals in fast synthetic CPU requests. Replayer retained strict positive full4K request duration; fixture changed to explicit injected clock only. Exact failed sources recovered and hash-matched to original ledger. Actual tracer records runtime clock implementation/resolution and never assumes kernel timing.'},'local_clock_info_observed':{'implementation':ci.implementation,'resolution_seconds':ci.resolution,'monotonic':ci.monotonic,'adjustable':ci.adjustable},'original_model_worker_ast_unchanged':True,'remote_install_or_gpu_execution':False,'model_source_or_runtime_changed':False,'two_times_target_achieved':False,'scope':'Local opt-in diagnostic with frozen real3968+128 request/target-ID/image bindings, flat request host phases and explicit first-token event placement. Ordinary emits first returned target token in generation loop; MTP can emit first target token before its draft-prefill hook finishes. No isolated GPU/kernel time, HTTP/queue timing, throughput or speed claim. Actual GPU run/terminal archive/independent replay and Nsight follow-up remain required.'}
+for target in (e/'native-host-stage-offline-preparation.json',o/'Garnet-Native-Host-Stage-Diagnostic-Preparation.json'):
+ assert not target.exists();target.write_text(json.dumps(summary,indent=2),encoding='utf8')
+entry='''
+
+### 2026-10-25 — current B1 full4K host-stage diagnosis prepared and CPU checked
+
+Prepared a separate explicit diagnostic copy of the qualified native fixed-length
+worker. Removing tracing imports/setup/event wrapper/phase contexts reproduces
+the entire original AST. Existing model math, input construction, policy, MTP
+configuration and qualified runtime/defaults remain unchanged. Flat host phases:
+reset, text/image input processing, embedding/row preparation, target/MTP prefill,
+generation. Actual same-process token events mark first/last observations; MTP
+may emit its first target token before draft prefill finishes. Phase duration is
+not TTFT, GPU-only or kernel time. Runtime clock implementation/resolution is
+recorded. No cross-process timestamp epoch comparisons or HTTP timing admitted.
+
+Four actual parent C1 requests (two text/two distinct JPEG nonces) are selected
+before execution,3968+128 each. Their raw request bytes/corpus hashes and both
+actual ordinary/MTP prompt/output IDs are bound through replayed immutable native
+HTTP evidence. Future24requests use original/rotated/reset-repeat orders for each
+mode, including first-use observations; no synthetic IDs stand in for real data.
+
+Actual23CPU tests pass0.207s including synthetic temp-only24request/two-owned-child
+success/failure, raw/count/ID/image/chronology mutations, exact whole-worker AST and
+unchanged wire controls. Final first-token phase labels/scope pass8CPU0.165s.
+Earlier21CPU stages and failure ledgers retained. Initial old sibling-import test
+invocation failed1/17; corrected process-only test search path, no old source edit.
+Initial synthetic controller failed1/23 because local coarse monotonic intervals
+could be zero for a CPU stub. Fixed fixture clock injection only; real strict4K
+positive durations unchanged, exact failed source hashes recovered/preserved.
+
+No remote deployment, GPU profile or performance result for this diagnostic yet.
+Original wider-MTP qualification supervisor remains the sole GPU job; do not
+mutate its frozen sources or restart from silence. After its actual closure,
+replay/retain it, execute prepared SGLang output/isolation diagnosis and strongest
+matched references. Run current B1 host/GPU-stage profiling before choosing wider
+target prefill, input packing or tiled-kernel integration. Full optimized4K/
+805quality/repeated timings, externalB8/HTTP/MTP, INT4/4B and2x remain open.
+'''
+for name in ('qwen38-5090-development-log.md','qwen38-5090-implementation-task.md'):
+ p=r/'docs/research'/name;raw=p.read_bytes();assert b'current B1 full4K host-stage diagnosis prepared and CPU checked' not in raw;p.write_bytes(raw+entry.replace('\n','\r\n').encode())
+print(json.dumps(summary))

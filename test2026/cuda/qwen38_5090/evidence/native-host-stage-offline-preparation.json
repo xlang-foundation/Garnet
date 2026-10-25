@@ -1,0 +1,49 @@
+{
+  "status": "native_host_stage_diagnostic_cpu_qualified_real_run_unrun",
+  "recorded_utc": "2026-10-25T18:42:43.928146+00:00",
+  "method_sha256": {
+    "native_host_stage_trace.py": "0ae1ef949b8f7585544cd50cccc95bd9024715746385a70ac9c20554321248ac",
+    "native_host_stage_stream_worker.py": "40a441552def457eec5a1d34f83682f327a22c2dbf1870b94e98b899a2437e75",
+    "replay_native_host_stage_trace.py": "268b003805f5604d138883b0716911322f851c02e88c7408ba249f67ae01e112",
+    "test_native_host_stage_trace.py": "5734bf0cfbfd77a647637e8f314ae15cdaaa929d7fbe185ab344d0a300bad568",
+    "prepare_native_host_stage_cases.py": "16f8883bbe07dc906e4176de1c9b6722d15efb9afa62948449dc534c7950f0e3",
+    "probe_native_host_stage.py": "c56101115a01611709f4f7a0db1a6e198c553594ff6bfcbf5344616dbb3d666c",
+    "test_native_host_stage_probe.py": "6cf311fc9d083bc6cd3fd02584e422bc86fd4bf1df68155a1c30ad6488e6962c",
+    "serve_native_host_stage_worker.bat": "6c061a21762a5a322bbe59f4b5422a4974a5a3eab71749e128094fe14d677c53"
+  },
+  "retained_cases_sha256": "e3771da6f1646743cc3d0f8e24db744d41ad9bc3f2aaeba836f68e31b82d74bf",
+  "actual_retained_cases_inspected": 4,
+  "future_real_requests": 24,
+  "future_modes": [
+    "ordinary",
+    "mtp"
+  ],
+  "actual_broad_cpu_tests_passed": 23,
+  "actual_broad_cpu_test_seconds": 0.207,
+  "actual_final_marker_cpu_tests_passed": 8,
+  "actual_final_marker_cpu_test_seconds": 0.165,
+  "cpu_fixture_scope": "Explicit synthetic temp-only archives/library bytes, fake children and injected fixture clocks; no native/GPU/model benchmark or quality result. Exact original worker AST after removing trace-only operations; negative raw/count/ID/image/chronology and owned-child cleanup checks.",
+  "initial_invocation_failure": {
+    "actual_total_tests_reported": 17,
+    "actual_errors": 1,
+    "actual_report_seconds": 0.059,
+    "reason": "Existing test_native_worker_io imports sibling as top-level module; first invocation lacked its directory on PYTHONPATH. Existing module unchanged; subsequent logged commands set child process search path."
+  },
+  "initial_controller_cpu_failure": {
+    "actual_total_tests_reported": 23,
+    "actual_failures": 1,
+    "actual_report_seconds": 0.144,
+    "reason": "Local monotonic clock yielded zero elapsed intervals in fast synthetic CPU requests. Replayer retained strict positive full4K request duration; fixture changed to explicit injected clock only. Exact failed sources recovered and hash-matched to original ledger. Actual tracer records runtime clock implementation/resolution and never assumes kernel timing."
+  },
+  "local_clock_info_observed": {
+    "implementation": "GetTickCount64()",
+    "resolution_seconds": 0.015625,
+    "monotonic": true,
+    "adjustable": false
+  },
+  "original_model_worker_ast_unchanged": true,
+  "remote_install_or_gpu_execution": false,
+  "model_source_or_runtime_changed": false,
+  "two_times_target_achieved": false,
+  "scope": "Local opt-in diagnostic with frozen real3968+128 request/target-ID/image bindings, flat request host phases and explicit first-token event placement. Ordinary emits first returned target token in generation loop; MTP can emit first target token before its draft-prefill hook finishes. No isolated GPU/kernel time, HTTP/queue timing, throughput or speed claim. Actual GPU run/terminal archive/independent replay and Nsight follow-up remain required."
+}

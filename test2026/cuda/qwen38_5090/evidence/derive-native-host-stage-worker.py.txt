@@ -1,0 +1,25 @@
+from pathlib import Path
+import ast,hashlib,json
+m=Path('D:/CantorAI/work/qwen38-5090/test2026/cuda/qwen38_5090');source=m/'native_fixed_length_stream_worker.py';raw=source.read_bytes();text=raw.decode().replace('\r\n','\n');original=text
+def replace(old,new):
+ global text
+ assert text.count(old)==1,old
+ text=text.replace(old,new)
+def wrap(begin,end,label):
+ global text
+ start=text.index(begin);stop=text.index(end,start);part=text[start:stop];indent=begin[:len(begin)-len(begin.lstrip())]
+ text=text[:start]+indent+"with trace.stage('"+label+"'):\n"+''.join(' '+line if line.strip() else line for line in part.splitlines(True))+text[stop:]
+replace('from test2026.cuda.qwen38_5090.native_worker_io import requests,emit','from test2026.cuda.qwen38_5090.native_worker_io import requests,emit as _emit\nfrom test2026.cuda.qwen38_5090.native_host_stage_trace import NativeHostStageTrace')
+replace("decoder=vision=session=None\ntry:","trace=NativeHostStageTrace(root,mode,sys.argv[3])\ndef emit(event):\n trace.observe(event);_emit(event)\n\ndecoder=vision=session=None\ntry:")
+replace(" for job in requests():\n"," for job in requests():\n  trace.start(job['id'])\n")
+wrap('  if session is None:decoder.reset()','  if isinstance(content,str):','reset')
+wrap('  if isinstance(content,str):ids=','  embeddings=io.embedding(ids);','input_text_or_image')
+wrap('  embeddings=io.embedding(ids);','  # Row/VisualToken','embedding_and_rows')
+replace("   session.prefill(hidden,[position],[len(ids)],[current],on_first_token=lambda values:notify(0,values[0],1));result=session.generate(limit,on_token=notify)","   with trace.stage('mtp_prefill'):\n    session.prefill(hidden,[position],[len(ids)],[current],on_first_token=lambda values:notify(0,values[0],1))\n   with trace.stage('mtp_generate'):\n    result=session.generate(limit,on_token=notify)")
+replace("   prediction=decoder.prefill_sequence(hidden,[position],[len(ids)])","   with trace.stage('target_prefill'):\n    prediction=decoder.prefill_sequence(hidden,[position],[len(ids)])")
+wrap('   for step in range(limit):',"  emit({'event':'completed'",'target_generate')
+replace("finally:\n if session is not None:session.close()","  trace.finish()\nfinally:\n trace.close()\n if session is not None:session.close()")
+text=text.replace('Prepared single-slot B1 research worker; real model/protocol gates required.','Explicit host-stage diagnostic copy; original model operations retained.')
+ast.parse(text);target=m/'native_host_stage_stream_worker.py';assert not target.exists();target.write_bytes(text.replace('\n','\r\n').encode())
+p={'status':'native_host_stage_worker_derived_unrun','source':source.name,'source_sha256':hashlib.sha256(raw).hexdigest(),'candidate':target.name,'candidate_sha256':hashlib.sha256(target.read_bytes()).hexdigest(),'original_model_source_changed':False,'gpu_or_performance_qualified':False,'scope':'Explicit phase timers plus observation of unchanged emitted token/completion events. Removing tracer-only imports/setup/event wrapper/stages must reproduce the complete original AST.'}
+out=m/'evidence/native-host-stage-worker-derivation.json';assert not out.exists();out.write_text(json.dumps(p,indent=2),encoding='utf8');print(json.dumps(p))

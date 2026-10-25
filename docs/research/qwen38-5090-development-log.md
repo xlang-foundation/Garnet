@@ -5389,3 +5389,39 @@ archive/workflow and idle adapter/process. No simultaneous GPU jobs. The real
 controls before changing future benchmark policy. Current strict failed reference
 archive/helpers are preserved. Strongest matched refs, full4Koptimized quality/
 repeated timings, externalB8/HTTP/MTP, INT4/4B and2x/halfTTFT remain open.
+
+
+### 2026-10-25 — current B1 full4K host-stage diagnosis prepared and CPU checked
+
+Prepared a separate explicit diagnostic copy of the qualified native fixed-length
+worker. Removing tracing imports/setup/event wrapper/phase contexts reproduces
+the entire original AST. Existing model math, input construction, policy, MTP
+configuration and qualified runtime/defaults remain unchanged. Flat host phases:
+reset, text/image input processing, embedding/row preparation, target/MTP prefill,
+generation. Actual same-process token events mark first/last observations; MTP
+may emit its first target token before draft prefill finishes. Phase duration is
+not TTFT, GPU-only or kernel time. Runtime clock implementation/resolution is
+recorded. No cross-process timestamp epoch comparisons or HTTP timing admitted.
+
+Four actual parent C1 requests (two text/two distinct JPEG nonces) are selected
+before execution,3968+128 each. Their raw request bytes/corpus hashes and both
+actual ordinary/MTP prompt/output IDs are bound through replayed immutable native
+HTTP evidence. Future24requests use original/rotated/reset-repeat orders for each
+mode, including first-use observations; no synthetic IDs stand in for real data.
+
+Actual23CPU tests pass0.207s including synthetic temp-only24request/two-owned-child
+success/failure, raw/count/ID/image/chronology mutations, exact whole-worker AST and
+unchanged wire controls. Final first-token phase labels/scope pass8CPU0.165s.
+Earlier21CPU stages and failure ledgers retained. Initial old sibling-import test
+invocation failed1/17; corrected process-only test search path, no old source edit.
+Initial synthetic controller failed1/23 because local coarse monotonic intervals
+could be zero for a CPU stub. Fixed fixture clock injection only; real strict4K
+positive durations unchanged, exact failed source hashes recovered/preserved.
+
+No remote deployment, GPU profile or performance result for this diagnostic yet.
+Original wider-MTP qualification supervisor remains the sole GPU job; do not
+mutate its frozen sources or restart from silence. After its actual closure,
+replay/retain it, execute prepared SGLang output/isolation diagnosis and strongest
+matched references. Run current B1 host/GPU-stage profiling before choosing wider
+target prefill, input packing or tiled-kernel integration. Full optimized4K/
+805quality/repeated timings, externalB8/HTTP/MTP, INT4/4B and2x remain open.

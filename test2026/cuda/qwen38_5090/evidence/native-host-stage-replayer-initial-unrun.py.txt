@@ -1,0 +1,49 @@
+"""Bind instrumented host stages to actual worker events and retained 4K IDs."""
+import math
+
+
+def replay(rows,events,expected):
+    ready=[e for e in events if e['event']=='ready']
+    assert len(ready)==1 and ready[0]['batch']==1 and ready[0]['capacity']==4096
+    assert ready[0]['queued_concurrency'] is True and ready[0]['explicit_ignore_eos_supported'] is True
+    grouped={};finished=set()
+    for event in events:
+        if event['event']=='ready':continue
+        key=event['id'];assert key in expected and key not in finished
+        assert event['event'] in ('token','completed')
+        grouped.setdefault(key,[]).append(event)
+        if event['event']=='completed':finished.add(key)
+    assert finished==set(grouped)==set(expected) and len(rows)==len(expected)
+    assert len({r['id'] for r in rows})==len(rows)
+    result=[]
+    for row in rows:
+        key=row['id'];control=expected[key];assert row['status']=='instrumented_request_completed' and row['completed'] is True
+        assert row['ready']==ready[0] and row['mode']==ready[0]['generation_mode']
+        group=grouped[key];tokens=group[:-1];end=group[-1]
+        assert end['event']=='completed' and len(tokens)==row['token_events']==row['output_tokens']==128
+        assert all(e['event']=='token' and e['sampled_tokens']==i+1 for i,e in enumerate(tokens))
+        assert end['prompt_ids']==control['prompt_ids'] and len(end['prompt_ids'])==row['prompt_tokens']==3968
+        assert end['generated_ids']==control['generated_ids']==[e['token_id'] for e in tokens]
+        assert end['ignore_eos'] is True and end['finish_reason']==row['finish_reason']=='length'
+        assert end['physical_batch']==end['real_rows']==1 and end['padded_rows']==0
+        suffix=['mtp_prefill','mtp_generate'] if row['mode']=='mtp' else ['target_prefill','target_generate']
+        phases=row['phases'];assert [p['name'] for p in phases]==['reset','input_text_or_image','embedding_and_rows']+suffix
+        times=[row[k] for k in ('started','first_token_observed','last_token_observed','completion_observed','finished')]
+        assert all(type(v) in (int,float) and math.isfinite(v) for v in times) and times==sorted(times)
+        previous=row['started'];durations={}
+        for phase in phases:
+            start,stop=phase['started'],phase['finished']
+            assert phase['status']=='completed' and 'error' not in phase
+            assert all(type(v) in (int,float) and math.isfinite(v) for v in (start,stop))
+            assert previous<=start<=stop<=row['finished'];previous=stop;durations[phase['name']]=stop-start
+        prefill=phases[3]
+        assert prefill['started']<=tokens[0]['native_monotonic_seconds']<=row['first_token_observed']<=prefill['finished']
+        assert phases[-1]['started']<=tokens[-1]['native_monotonic_seconds']<=row['last_token_observed']<=phases[-1]['finished']
+        native_times=[e['native_monotonic_seconds'] for e in tokens]
+        assert all(type(t) in (int,float) and math.isfinite(t) for t in native_times) and native_times==sorted(native_times)
+        assert type(end['native_elapsed_seconds']) in (int,float) and math.isfinite(end['native_elapsed_seconds']) and 0<end['native_elapsed_seconds']<=row['finished']-row['started']
+        duration=row['finished']-row['started'];unassigned=duration-math.fsum(durations.values());assert unassigned>=0
+        result.append({'id':key,'case':control['case'],'mode':row['mode'],'host_wall_seconds':duration,'host_stage_seconds':durations,'host_wall_outside_stages_seconds':unassigned,'tokens_bound_to_retained_4k_control':True})
+    return {'status':'native_instrumented_host_stages_replayed','requests':result,'performance_admitted':False,
+            'isolated_gpu_or_kernel_time_measured':False,'two_times_target_achieved':False,
+            'scope':'Flat instrumented host-wall intervals bound to actual same-process token/completion events and retained3968+128IDs. No cross-process epoch comparison, HTTP timing, benchmark speedup, causal kernel attribution or isolated GPU-active timing.'}

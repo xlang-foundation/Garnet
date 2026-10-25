@@ -1,0 +1,25 @@
+
+{"id": "88103c4fc427465190d1f9b8d2a3d026", "kind": "correctness", "label": "Explicit synthetic temp-only24request controller/child cleanup and failure replay, flat stages/full source AST plus unchanged wire controls; no native library or GPU", "argv": ["D:\\CantorAI\\Garnet\\.venv\\Scripts\\python.exe", "-m", "unittest", "test2026.cuda.qwen38_5090.test_native_host_stage_trace", "test2026.cuda.qwen38_5090.test_native_host_stage_probe", "test2026.cuda.qwen38_5090.test_fixed_length_worker_contract", "test2026.cuda.qwen38_5090.test_native_worker_io"]}
+......F................
+======================================================================
+FAIL: test_full24_synthetic_requests_and_both_owned_children_close (test2026.cuda.qwen38_5090.test_native_host_stage_probe.ProbeControls.test_full24_synthetic_requests_and_both_owned_children_close)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "D:\CantorAI\work\qwen38-5090\test2026\cuda\qwen38_5090\test_native_host_stage_probe.py", line 49, in test_full24_synthetic_requests_and_both_owned_children_close
+    result,report=self.run_probe('synthetic-pass');self.assertEqual(result,0);self.assertEqual(report['status'],'native_host_stage_diagnostic_collected_needs_independent_replay');self.assertFalse(report['performance_admitted']);self.assertEqual(len(self.created),2)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\CantorAI\work\qwen38-5090\test2026\cuda\qwen38_5090\test_native_host_stage_probe.py", line 46, in run_probe
+    result=probe.main()
+           ^^^^^^^^^^^^
+  File "D:\CantorAI\work\qwen38-5090\test2026\cuda\qwen38_5090\probe_native_host_stage.py", line 46, in main
+    result=replay(rows,events,expected);assert len(result['requests'])==12;record['replay']=result;record['non_json_stdout_lines']=ignored;record['status']='instrumented_host_stages_replayed';save()
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\CantorAI\work\qwen38-5090\test2026\cuda\qwen38_5090\replay_native_host_stage_trace.py", line 49, in replay
+    assert type(end['native_elapsed_seconds']) in (int,float) and math.isfinite(end['native_elapsed_seconds']) and 0<end['native_elapsed_seconds']<=row['finished']-row['started']
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError
+
+----------------------------------------------------------------------
+Ran 23 tests in 0.144s
+
+FAILED (failures=1)
