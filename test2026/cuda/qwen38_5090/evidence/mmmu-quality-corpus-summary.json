@@ -1,0 +1,93 @@
+{
+  "status": "adapted_mmmu_quality_corpus_cpu_prepared_unrun",
+  "dataset": "MMMU/MMMU",
+  "revision": "876ce5cb130f7f7e290ce4d9984357737d4db5cf",
+  "checkpoint": "nvidia/Qwen3.8-27B-NVFP4",
+  "checkpoint_revision": "482ca0f3832238542f8f5295dde86b5f22711d80",
+  "source_rows": 900,
+  "structural_candidates": 805,
+  "requests": 805,
+  "excluded_rows": 95,
+  "requests_per_subject": {
+    "Accounting": 30,
+    "Agriculture": 29,
+    "Architecture_and_Engineering": 28,
+    "Art": 30,
+    "Art_Theory": 25,
+    "Basic_Medical_Science": 28,
+    "Biology": 27,
+    "Chemistry": 18,
+    "Clinical_Medicine": 29,
+    "Computer_Science": 25,
+    "Design": 30,
+    "Diagnostics_and_Laboratory_Medicine": 29,
+    "Economics": 27,
+    "Electronics": 16,
+    "Energy_and_Power": 30,
+    "Finance": 22,
+    "Geography": 26,
+    "History": 28,
+    "Literature": 29,
+    "Manage": 24,
+    "Marketing": 29,
+    "Materials": 27,
+    "Math": 27,
+    "Mechanical_Engineering": 29,
+    "Music": 25,
+    "Pharmacy": 24,
+    "Physics": 29,
+    "Psychology": 25,
+    "Public_Health": 30,
+    "Sociology": 30
+  },
+  "exclusion_reason_occurrences": {
+    "embedded_image_count_not_one": 43,
+    "question_type_not_multiple_choice": 53,
+    "invalid_or_unsupported_options": 53
+  },
+  "gpu_executed": false,
+  "model_responses": 0,
+  "runtime_prompt_ids_verified": false,
+  "runtime_image_preprocessing_verified": false,
+  "broad_quality_qualified": false,
+  "performance_admitted": false,
+  "scope": "Pre-inference adapted low-resolution screening subset. Not full official900-question MMMU, a quality-promotion threshold, high-resolution VLM qualification or performance evidence.",
+  "archive_bytes": 58097753,
+  "archive_sha256": "ac3d9dd53a509f1884fe80c15b7c2737666013c7bd6a40e844672ecd2c00f6ae",
+  "manifest_sha256": "108d017c7db5be56c58f490c2a985dfbcde2e6ded0860a97e797cfac9cea1589",
+  "protocol": {
+    "name": "mmmu_validation_single_image_mc_256_letterbox_strict_letter_v1",
+    "image_size": [
+      256,
+      256
+    ],
+    "image_grid": [
+      1,
+      16,
+      16
+    ],
+    "merged_image_tokens": 64,
+    "image_method": "EXIF transpose; composite transparency on white; aspect-preserving LANCZOS fit; centered white RGB256 canvas; JPEG quality100/subsampling0",
+    "prompt_method": "One image then question and A.-labelled choices; sole-image reference markers become [Image]; exact uppercase letter instruction; no thinking",
+    "context_capacity": 4096,
+    "reserved_output_tokens": 32,
+    "temperature": 0,
+    "score_method": "Strip surrounding whitespace; accept exactly one valid uppercase option letter. Any other complete response is unparseable and incorrect. Never guess/randomize/drop failures.",
+    "engine_request_adapters": "Add only installed-engine token-ID return flags to canonical semantic requests, retaining both wire hashes. Model alias may change only for declared INT4/4B comparisons.",
+    "required_runtime_checks": "Actual prompt IDs,64image tokens/grid, prompt+completion<=4096, same checkpoint/semantic payload and complete output records; exact preprocessing equality is not established by CPU preparation.",
+    "scope": "Pre-inference adapted low-resolution screening subset. Not full official900-question MMMU, a quality-promotion threshold, high-resolution VLM qualification or performance evidence."
+  },
+  "methods_sha256": {
+    "prepare_mmmu_quality_corpus.py": "98c8d61a35ff27335c08494cf79d2617b05d06ecc16ba4dbb29adf94c2bd2edf",
+    "mmmu_quality_protocol.py": "50434e5a85f64249829184577a4415519d99cf3d3e133da91c8a67385e4d4b00",
+    "fixed_context_workload.py": "a99ef010ab4302ed6439311e330b545d63f5cd483de439db6c481ac0de12cbea"
+  },
+  "environment": {
+    "python": "3.12.10",
+    "duckdb": "2.0.0",
+    "duckdb_extension_sha256": "d76f91a658596313787fc4e6cdfb8b6d1889f9ecc695f3e6d456db1b98f6ff15",
+    "pillow": "12.2.0",
+    "tokenizers": "0.22.2",
+    "jinja2": "3.1.6"
+  }
+}

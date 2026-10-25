@@ -1,0 +1,14 @@
+$ProgressPreference='SilentlyContinue'
+$observation=[pscustomobject]@{
+utc=[DateTime]::UtcNow.ToString('o')
+scope='Read-only observation during correctness; not HTTP or model timing evidence'
+os=Get-CimInstance Win32_OperatingSystem | Select-Object TotalVisibleMemorySize,FreePhysicalMemory,TotalVirtualMemorySize,FreeVirtualMemory
+memory=Get-CimInstance Win32_PerfFormattedData_PerfOS_Memory | Select-Object AvailableMBytes,CommittedBytes,CommitLimit,PageReadsPersec,PagesInputPersec,PagesOutputPersec
+processes=Get-CimInstance Win32_Process -Filter "Name='xlang3.exe'" | Select-Object ProcessId,ParentProcessId,ExecutablePath,CommandLine,PageFaults,WorkingSetSize,PrivatePageCount,ReadOperationCount,ReadTransferCount,WriteOperationCount,WriteTransferCount
+cpu=Get-Process -Name xlang3 | Select-Object Id,CPU,StartTime,WorkingSet64,PrivateMemorySize64
+disks=Get-CimInstance Win32_PerfFormattedData_PerfDisk_PhysicalDisk | Select-Object Name,DiskReadBytesPersec,DiskReadsPersec,AvgDisksecPerRead,PercentDiskTime
+gpu=(& nvidia-smi --query-gpu=utilization.gpu,memory.used,power.draw --format=csv,noheader)
+}
+$line=$observation | ConvertTo-Json -Depth 6 -Compress
+Add-Content -LiteralPath 'D:\CantorAI\5090-study-20261023\results\lifecycle-scope-fixed-readonly-observations.jsonl' -Value $line -Encoding UTF8
+Write-Output $line

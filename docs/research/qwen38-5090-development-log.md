@@ -3856,3 +3856,78 @@ model-quality promotion, new benchmark or serving-memory claim follows from
 these changes. After the complete production/model/protocol gates, measure its
 actual end-to-end effect and continue the larger matrix/batching, B8, public
 quality, actual4K and matched reference/4B work required by the original goal.
+
+
+## Frozen public quality requests while the original lifecycle worker remains live
+
+The preceding goal turn made progress: guarded production dispatch was implemented,
+compiled/tested locally and pushed at9683b5762; the single original full lifecycle
+retry was launched. This continuation re-polled that same handle live. No runtime,
+SDK, CUDA source or model worker was replaced/restarted for silence or elapsed time.
+A read-only report observation still had one completed case; this is not full14case
+qualification and never substitutes for the final independent archive replay.
+
+The pinned MMMU source-only audit is now materialized into a concrete adapted
+single-image multiple-choice screening corpus. All805 structural candidates across
+30subjects produce requests; no further rows are dropped for context or images.
+The same95 source exclusions (43multi-image,53open-answer, with one overlap) remain
+explicit. Images undergo EXIF orientation, white alpha compositing, aspect-preserving
+LANCZOS fit to a centered white RGB256 canvas, then JPEG quality100/subsampling0.
+This is a declared low-resolution adaptation, not official900question/high-resolution
+MMMU qualification. Original questions/images/options/answers stay in the one fixed
+private work/mmmu cache, with only methods, hashes, counts and frozen metadata in Git.
+
+One image precedes the question and ordered lettered choices. Sole-image references
+become [Image]; an explicit instruction requests exactly one uppercase choice letter.
+The pinned no-thinking Jinja template and independent current native template agree
+on every prompt ID list. All prompts contain64image slots and112..627total input
+IDs, reserving32output tokens within4096. Source-linked replay regenerates every
+JPEG byte exactly using independent integer fit geometry, checks all source labels,
+request/image/ID hashes,900source records and30subject counts. Archive58097753B:
+ac3d9dd53a509f1884fe80c15b7c2737666013c7bd6a40e844672ecd2c00f6ae;
+manifest108d017c7db5be56c58f490c2a985dfbcde2e6ded0860a97e797cfac9cea1589.
+CPU replay method735a76b0... passes. Three synthetic protocol controls pass; their
+fixtures are unit tests and are not model responses or benchmark accuracy results.
+
+Scoring strips only surrounding whitespace and accepts one valid uppercase option
+letter. Unparseable complete responses count incorrect; no random/heuristic fallback.
+Missing/error/duplicate/unknown/request-hash-mismatched responses prevent a full-corpus
+score. Paired reporting retains every row and both directions of answer differences;
+no quality-promotion threshold or margin is silently introduced. Actual model
+responses remain zero. Installed-engine return-ID flags need explicit recorded wire
+adapters, with actual server IDs, image-grid/preprocessing and complete output checks
+before inference comparisons. The corpus does not establish model quality or speed.
+
+A separate read-only resource snapshot at2026-10-25T07:05:38Z identifies original
+study worker31856 and two unrelated CantorInstall/WorldSense XLang processes outside
+the study tree. They were left untouched. Visible RAM95.63GiB/free80.55GiB, sampled
+page reads/input0 and both disks sampled read0 do not indicate current paging pressure
+at that instant. GPU snapshot3percent/25356MiB belongs to correctness observation,
+not serving peak/timing or an explanation of the prior16second HTTP gaps. The
+original supervised handle remains authoritative; no timeout is treated as terminal.
+
+The local five-file production source packet is also frozen (24302B, SHA9174869a...).
+Its source hashes still match the passing local compilation and unchanged qualified
+kernel. A guarded source-only installer is prepared, syntax checked and unrun; it
+requires actual full14case/102vector parent proof pins, all original sources/runtime
+digests, idle GPU and no live study executable before preserving/replacing sources.
+It does not build/load a DLL or change SDK files. Runtime preparation remains absent
+until the parent closes and both independent replays pass. New speed and2x claims
+remain unadmitted; broader batching/C1 optimization, full quality, actual4K, tuned
+references, INT4 and matched4B work stay in the goal.
+
+
+A bounded CPU-only byte-helper diagnostic then completed exit0 in native runtime
+3.14.7 and CPython3.12.3 on the remote, compared with local CPython3.12.10. It imports
+no Garnet/tensor/CUDA/model. All raw/expanded SHA256 values match for16/4096/65536
+words, using unchanged helper69628275.... At65536words native expansion/hash take
+about2.68/2.31ms in this one untuned diagnostic; remote CPython about0.53/0.16ms.
+These are CPU helper execution durations, never model/HTTP timing or an optimization
+speedup. They do not establish the cause of the long live complete-state gate or
+previous HTTP gaps. Native stderr retains the known missing unused hash algorithms;
+SHA256 works and all three-size outputs match. The original model worker remains
+untouched/live; no source/DLL/runtime replacement or restart occurred.
+
+Latest read-only report observation subsequently advanced to5of14cases, with
+prefix phase not yet reached. This is progress, not full-corpus qualification;
+continue observing the same original handle and require both final replays.
