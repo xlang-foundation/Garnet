@@ -4367,3 +4367,35 @@ Original integrated full-model handle remains LIVE: disabled14/102closed and
 locally observed; enabled11partial records, prefix checks report passed, no
 recorded error. Remote sources/DLL/SDK unchanged. B1 component/run/native/model
 gates, quality/preprocessing, actual4K, tuned/INT4/4B/repetitions and2x remain open.
+
+
+### 2026-10-25: closed integrated model and B1 cache-update correctness
+
+Original supervised integrated-batch-top1-model-lifecycle-attempt1 closed with
+exit 0, cleanup complete and source/runtime unchanged. The immutable 391-file
+archive independently replays on the 5090 and local CPU with identical proofs.
+Disabled and enabled processes each match all 14 cases and 102 raw vectors
+against the retained parent. Actual host dispatch counters are 4078 legacy/0
+parallel when disabled and 0 legacy/4078 parallel when enabled. Counters include
+capture construction and exclude graph replay; they establish routing only.
+The first local wrapper failed before verifier execution because a terminal-wrap
+checksum transcription had 65 characters. Original method preserved; corrected
+64-character digest agrees with archive and machine remote proof. No data,
+verifier, source, assertion or tolerance change. Actual successful replay ledger
+and correction receipt retained alongside both proofs.
+
+After that closure, the B1 runtime factory positive path ran; launch preflight
+reported 109 MiB adapter memory and no source/runtime/tool drift or occupied
+outputs. The 18 missing inputs were uploaded once, each acknowledged. Original
+bf16-low-batch-commit-native-attempt1 then closed exit 0. Actual remote compiler
+passed 17 CPU tests and 63 shape controls. All 20 B1/T4,T32 full-state cases,
+three graph profiles with three replays each, 66 rejected calls, readonly inputs
+and canaries pass. Independent remote/local replays agree exactly on all 104704
+frozen witness bytes and all 205 archived files. The Garnet DLL was not loaded
+or changed; only standalone private compiler outputs were created.
+
+These are correctness results. Neither run measures HTTP TTFT, decode speed,
+concurrent throughput or serving VRAM. Sampled adapter memory is retained only
+as correctness-run provenance. B1 plugin/helper/model qualification, broad
+quality, actual 4K, B8, tuned/MTP references, INT4, matched 4B, clean repeated
+HTTP comparisons and the original 2x objective remain open.
