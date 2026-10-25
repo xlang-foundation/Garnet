@@ -7,23 +7,29 @@ B4/T4 full-model replay matches the same-DLL default-off token IDs, state-hash
 witnesses and eight raw hidden arrays. Streaming replay covers13groups/40requests.
 Matched loopback HTTP pilots and ordinary vLLM/SGLang references retain identical
 request bytes, prompt/output counts, GPU identity and transport. See current
-`evidence/kv-delta-http-pilot-attempt1-verified.json` and complete chart provenance.
+`evidence/kv-delta-qpc-http-pilot-attempt1-verified.json` and complete chart provenance.
 
-The latest compact pilot measures C8 aggregate196.64text/86.19image tok/s versus
-faster ordinary references445.77/439.86. Image C4/C8 regress against the previous
-Garnet pilot, with fewer full groups and MTP requests. The2x target is unmet.
+The latest QPC compact pilot measures C8 aggregate198.07text/164.29image tok/s
+versus faster ordinary references445.77/439.86. Image C4/C8 improve against the
+preceding compact pilot with more full groups/MTP requests, while textC2/C4 and
+imageC2 throughput regress. Multi-second sampler gaps remain unexplained.
+The2x target is unmet.
 All cohorts and failures remain in the evidence; comparisons are single pilots,
 with untuned references and bounded quality checks.4096capacity is not an actual
 4K prompt test. General serving admission remains closed. Historical BF16 vision
 and strict-token mismatches remain preserved; no broad-quality claim is made.
 
-Immediate experiment: correct the Windows Python3.12 batching clock/deadline and
-retain queue-entry/grouping/dispatch QPC timestamps. A1024trial CPU experiment
-reproduces early closure in178/512legacy trials and0/512QPC trials; producer/queue
-scheduling misses remain and this does not prove an HTTP speedup.21CPU protocol,
-deadline, streaming and comparison tests pass locally. The prospective matched
-QPC HTTP pilot must rerun CPU and token/serialization gates before any timings.
-Then profile warm target/draft/head/state execution and evaluate resident controls
+The Windows Python3.12 batching deadline now uses QPC, retaining queue-entry,
+grouping and dispatch timestamps. A1024trial CPU experiment reproduces early
+closure in178/512legacy trials and0/512QPC trials; scheduling misses remain.
+The QPC HTTP archive passed independent replay remotely/locally, including21CPU
+tests,20HTTP/twoSSE/fourserialization gates and64measured SSE/native pairs. All
+partial groups met the10ms QPC deadline; later handler arrivals and occupancy
+variation remain. This does not establish a consistent causal serving gain.
+Current experiment: separate buffered warm host API trace after two warmups,
+with eight strict batched token/state cases and16raw hidden arrays required.
+It adds no per-stage GPU barriers or log writes; host spans are not CUDA kernel
+times. Use this to guide warm target/draft/head/state profiling and evaluate resident controls
 or graph-binding reuse with strict state/token checks. Scaling the physical batch
 or speculative depth requires new shape/kernel/transaction qualification; flags
 alone do not qualify it. Actual4K, broad-quality/repeated runs, tuned references,

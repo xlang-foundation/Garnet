@@ -1,0 +1,108 @@
+{
+  "status": "cpu_native_json_pipe_drain_observed",
+  "python": "3.12.10 (tags/v3.12.10:0cc8128, Apr  8 2025, 12:21:36) [MSC v.1943 64 bit (AMD64)]",
+  "source_sha256": "9b88d8d744b342b92e7a65ac584cfcd50e0875dada2f9d8cd20d1527d5a65dd7",
+  "archive_sha256": "91ae86ef0ee6535179cdd64e5c88d6b49c3946ef25991fdb972b2d8c4b9c27ec",
+  "fixture_sha256": "6f9ddea153a9e4dff543a65cf116e656b224eb887df237bd25320799c4939a31",
+  "fixture_bytes": 1017754,
+  "fixture_lines": 2048,
+  "read_call_experiment": [
+    {
+      "buffered": false,
+      "readinto_calls": 1017755,
+      "requested_sizes": {
+        "1": 1017755
+      }
+    },
+    {
+      "buffered": true,
+      "readinto_calls": 17,
+      "requested_sizes": {
+        "65536": 17
+      }
+    }
+  ],
+  "raw_pipe_trials": [
+    {
+      "trial": 0,
+      "buffered": false,
+      "buffer_size": 0,
+      "drain_wall_seconds": 0.2953482000157237,
+      "parent_cpu_seconds": 0.265625,
+      "lines": 2048,
+      "sha256": "6f9ddea153a9e4dff543a65cf116e656b224eb887df237bd25320799c4939a31",
+      "exit_code": 0
+    },
+    {
+      "trial": 1,
+      "buffered": true,
+      "buffer_size": 65536,
+      "drain_wall_seconds": 0.0052758000092580914,
+      "parent_cpu_seconds": 0.0,
+      "lines": 2048,
+      "sha256": "6f9ddea153a9e4dff543a65cf116e656b224eb887df237bd25320799c4939a31",
+      "exit_code": 0
+    },
+    {
+      "trial": 2,
+      "buffered": true,
+      "buffer_size": 65536,
+      "drain_wall_seconds": 0.005267999978968874,
+      "parent_cpu_seconds": 0.0,
+      "lines": 2048,
+      "sha256": "6f9ddea153a9e4dff543a65cf116e656b224eb887df237bd25320799c4939a31",
+      "exit_code": 0
+    },
+    {
+      "trial": 3,
+      "buffered": false,
+      "buffer_size": 0,
+      "drain_wall_seconds": 0.297128000005614,
+      "parent_cpu_seconds": 0.28125,
+      "lines": 2048,
+      "sha256": "6f9ddea153a9e4dff543a65cf116e656b224eb887df237bd25320799c4939a31",
+      "exit_code": 0
+    },
+    {
+      "trial": 4,
+      "buffered": false,
+      "buffer_size": 0,
+      "drain_wall_seconds": 0.29687079999712296,
+      "parent_cpu_seconds": 0.28125,
+      "lines": 2048,
+      "sha256": "6f9ddea153a9e4dff543a65cf116e656b224eb887df237bd25320799c4939a31",
+      "exit_code": 0
+    },
+    {
+      "trial": 5,
+      "buffered": true,
+      "buffer_size": 65536,
+      "drain_wall_seconds": 0.005351199972210452,
+      "parent_cpu_seconds": 0.0,
+      "lines": 2048,
+      "sha256": "6f9ddea153a9e4dff543a65cf116e656b224eb887df237bd25320799c4939a31",
+      "exit_code": 0
+    },
+    {
+      "trial": 6,
+      "buffered": true,
+      "buffer_size": 65536,
+      "drain_wall_seconds": 0.00559600000269711,
+      "parent_cpu_seconds": 0.0,
+      "lines": 2048,
+      "sha256": "6f9ddea153a9e4dff543a65cf116e656b224eb887df237bd25320799c4939a31",
+      "exit_code": 0
+    },
+    {
+      "trial": 7,
+      "buffered": false,
+      "buffer_size": 0,
+      "drain_wall_seconds": 0.29577890000655316,
+      "parent_cpu_seconds": 0.296875,
+      "lines": 2048,
+      "sha256": "6f9ddea153a9e4dff543a65cf116e656b224eb887df237bd25320799c4939a31",
+      "exit_code": 0
+    }
+  ],
+  "scope": "CPU memory read-call counts and unpaced OS-pipe drain inABBAABBAorder. Fixture is first2048retained decoded native token JSON lines re-encodedUTF8 plusLF. Allbytes/lines verified identical. Process startup excluded by READY/GO handshake. Writer, reader and hash work remain included; instrumentation/platform differ from actual serving. No GPU/model/HTTP speed or2x claim."
+}
