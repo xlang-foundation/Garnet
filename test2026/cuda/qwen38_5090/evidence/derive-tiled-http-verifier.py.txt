@@ -1,0 +1,25 @@
+from pathlib import Path
+import hashlib,json
+m=Path('D:/CantorAI/work/qwen38-5090/test2026/cuda/qwen38_5090')
+source=m/'verify_prefill16_http.py';text=source.read_text();changes=[]
+def replace(before,after,count=1):
+    global text
+    assert text.count(before)==count,(before,text.count(before),count)
+    text=text.replace(before,after);changes.append([before,after,count])
+replace('from cohort_memory_replay import replay_cohort_memory','from cohort_memory_replay import replay_cohort_memory\nfrom test2026.cuda.qwen38_5090.native_tiled_scores_http_admission import BASELINE,CANDIDATE\nfrom test2026.cuda.qwen38_5090.tiled_scores_http_study import validate_lifecycle,replay_tiled_parent')
+replace("name='prefill16-fixed4k-http-attempt1'","name='tiled-scores-fixed4k-http-attempt1'")
+replace('evidence/prefill16-http-run-preparation.json','evidence/tiled-scores-http-preparation.json')
+replace("assert w['source_sha256']==w['source_after_sha256']==p['files'] and w['runtime_dependencies']==w['runtime_dependencies_after']==p['runtime_dependencies'] and w['library_unchanged'] and w['cleanup_finished'] and not w['performance_admitted']","validate_lifecycle(w,p);replay_tiled_parent(args.proofs,z,w,p)")
+replace("parent_proof['library_sha256']==w['library_sha256']","parent_proof['library_sha256']==BASELINE")
+replace("eq['library_sha256']==w['library_sha256']","eq['library_sha256']==BASELINE")
+replace("'mmmu_quality_protocol.py'):","'mmmu_quality_protocol.py','tiled_scores_http_study.py','native_tiled_scores_http_admission.py'):")
+replace("w['status']=='prefill16_fixed4k_http_collected_needs_replay'","w['status']=='tiled_scores_fixed4k_http_collected_needs_replay'")
+replace("admitted['http_quality_or_performance_qualified'] is False","admitted['http_quality_or_performance_qualified'] is False and admitted['candidate_library_sha256']==CANDIDATE and admitted['baseline_library_sha256']==BASELINE and admitted['tiled_scores_enabled'] is True and admitted['tiled_model_proof_sha256']==p['tiled_model_parent']['proof_sha256']")
+replace("archived=sha(z.read(methods+'verify_prefill16_http.py'))","archived=sha(z.read(methods+'verify_tiled_scores_http.py'));assert archived==sha(Path(__file__).read_bytes())")
+replace("'status':'prefill16_fixed4k_http_replayed' if passed else 'prefill16_fixed4k_http_failure_preserved'","'status':'tiled_scores_fixed4k_http_replayed' if passed else 'tiled_scores_fixed4k_http_failure_preserved'")
+replace("'library_sha256':w['library_sha256'],'profiles':profiles","'library_sha256':w['library_sha256'],'baseline_library_sha256':BASELINE,'tiled_model_parent':p['tiled_model_parent'],'baseline_source_and_runtime_restored':True,'profiles':profiles")
+replace('Actual wider-draft-prefill12protocol','Actual tiled-score/wider-draft-prefill12protocol')
+replace('print(json.dumps(report,indent=2));return 0 if passed else 1',"print(json.dumps({'status':report['status'],'archive_sha256':report['archive_sha256'],'files_verified':report['files_verified'],'proof_sha256':sha(raw),'actual_profiles':len(profiles)}));return 0 if passed else 1")
+target=m/'verify_tiled_scores_http.py';assert not target.exists();target.write_bytes(text.encode())
+row={'source':source.name,'source_sha256':hashlib.sha256(source.read_bytes()).hexdigest(),'source_newlines_normalized_to_lf':True,'changes':changes,'result':target.name,'result_sha256':hashlib.sha256(target.read_bytes()).hexdigest(),'scope':'All raw protocol/805quality/two4Kboundaries/124stream/943native completion/metrics/VRAM/corpus replay arithmetic retained. Explicit candidate2533 vs baseline1a1d lifecycle/restoration and actual tiled-model proof added. No new model results.'}
+(m/'evidence/tiled-scores-http-verifier-derivation.json').write_bytes(json.dumps(row,indent=2).encode());print(json.dumps({'status':'tiled_http_checker_derived','sha256':row['result_sha256'],'changes':len(changes)}))

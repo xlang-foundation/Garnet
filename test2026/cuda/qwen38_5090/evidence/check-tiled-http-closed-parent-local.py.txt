@@ -1,0 +1,20 @@
+from pathlib import Path
+import hashlib,json,sys,zipfile
+repo=Path('D:/CantorAI/work/qwen38-5090');m=repo/'test2026/cuda/qwen38_5090';w=Path(__file__).resolve().parent;out=w.parent/'outputs'
+sys.path.insert(0,str(repo))
+from test2026.cuda.qwen38_5090.native_tiled_scores_http_admission import MODEL,CANDIDATE
+from test2026.cuda.qwen38_5090.tiled_scores_http_study import replay_tiled_parent,validate_lifecycle
+from test2026.cuda.qwen38_5090.test_tiled_scores_http_study import fixture
+p=json.loads((m/'evidence/tiled-scores-http-preparation.json').read_bytes())
+class ActualProofBytes:
+    def read(self,name):
+        assert name=='results/'+MODEL+'-verified.json'
+        return (out/(MODEL+'-verified.json')).read_bytes()
+q=replay_tiled_parent(out,ActualProofBytes(),{'exit_code':1},p)
+assert q==json.loads((out/(MODEL+'-remote-verified.json')).read_bytes())
+wf,synthetic=fixture();validate_lifecycle(wf,synthetic)
+with zipfile.ZipFile(out/(MODEL+'-evidence.zip')) as z:model=json.loads(z.read('results/'+MODEL+'/workflow.json'))
+result={'status':'actual_closed_tiled_model_parent_admitted_by_http_checker_cpu_only','actual_model_proof_sha256':hashlib.sha256((out/(MODEL+'-verified.json')).read_bytes()).hexdigest(),
+        'actual_parent_source_pins_checked':len(model['source_after_sha256']),'candidate_library_sha256':CANDIDATE,
+        'http_source_pins':len(p['files']),'cpu_controls':p['expected_cpu_test_count'],'http_gpu_executed':False,'new_benchmark_collected':False}
+(w/'tiled-scores-http-closed-parent-cpu-check.json').write_bytes(json.dumps(result,indent=2).encode());print(json.dumps(result))

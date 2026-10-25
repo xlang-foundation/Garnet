@@ -1,0 +1,80 @@
+{
+  "source": "verify_prefill16_http.py",
+  "source_sha256": "349e994a200f82536c10a0df7b92e83208066c00a7b286c80a5cc590ae0ca04f",
+  "source_newlines_normalized_to_lf": true,
+  "changes": [
+    [
+      "from cohort_memory_replay import replay_cohort_memory",
+      "from cohort_memory_replay import replay_cohort_memory\nfrom test2026.cuda.qwen38_5090.native_tiled_scores_http_admission import BASELINE,CANDIDATE\nfrom test2026.cuda.qwen38_5090.tiled_scores_http_study import validate_lifecycle,replay_tiled_parent",
+      1
+    ],
+    [
+      "name='prefill16-fixed4k-http-attempt1'",
+      "name='tiled-scores-fixed4k-http-attempt1'",
+      1
+    ],
+    [
+      "evidence/prefill16-http-run-preparation.json",
+      "evidence/tiled-scores-http-preparation.json",
+      1
+    ],
+    [
+      "assert w['source_sha256']==w['source_after_sha256']==p['files'] and w['runtime_dependencies']==w['runtime_dependencies_after']==p['runtime_dependencies'] and w['library_unchanged'] and w['cleanup_finished'] and not w['performance_admitted']",
+      "validate_lifecycle(w,p);replay_tiled_parent(args.proofs,z,w,p)",
+      1
+    ],
+    [
+      "parent_proof['library_sha256']==w['library_sha256']",
+      "parent_proof['library_sha256']==BASELINE",
+      1
+    ],
+    [
+      "eq['library_sha256']==w['library_sha256']",
+      "eq['library_sha256']==BASELINE",
+      1
+    ],
+    [
+      "'mmmu_quality_protocol.py'):",
+      "'mmmu_quality_protocol.py','tiled_scores_http_study.py','native_tiled_scores_http_admission.py'):",
+      1
+    ],
+    [
+      "w['status']=='prefill16_fixed4k_http_collected_needs_replay'",
+      "w['status']=='tiled_scores_fixed4k_http_collected_needs_replay'",
+      1
+    ],
+    [
+      "admitted['http_quality_or_performance_qualified'] is False",
+      "admitted['http_quality_or_performance_qualified'] is False and admitted['candidate_library_sha256']==CANDIDATE and admitted['baseline_library_sha256']==BASELINE and admitted['tiled_scores_enabled'] is True and admitted['tiled_model_proof_sha256']==p['tiled_model_parent']['proof_sha256']",
+      1
+    ],
+    [
+      "archived=sha(z.read(methods+'verify_prefill16_http.py'))",
+      "archived=sha(z.read(methods+'verify_tiled_scores_http.py'));assert archived==sha(Path(__file__).read_bytes())",
+      1
+    ],
+    [
+      "'status':'prefill16_fixed4k_http_replayed' if passed else 'prefill16_fixed4k_http_failure_preserved'",
+      "'status':'tiled_scores_fixed4k_http_replayed' if passed else 'tiled_scores_fixed4k_http_failure_preserved'",
+      1
+    ],
+    [
+      "'library_sha256':w['library_sha256'],'profiles':profiles",
+      "'library_sha256':w['library_sha256'],'baseline_library_sha256':BASELINE,'tiled_model_parent':p['tiled_model_parent'],'baseline_source_and_runtime_restored':True,'profiles':profiles",
+      1
+    ],
+    [
+      "Actual wider-draft-prefill12protocol",
+      "Actual tiled-score/wider-draft-prefill12protocol",
+      1
+    ],
+    [
+      "print(json.dumps(report,indent=2));return 0 if passed else 1",
+      "print(json.dumps({'status':report['status'],'archive_sha256':report['archive_sha256'],'files_verified':report['files_verified'],'proof_sha256':sha(raw),'actual_profiles':len(profiles)}));return 0 if passed else 1",
+      1
+    ]
+  ],
+  "result": "verify_tiled_scores_http.py",
+  "result_sha256": "fe611ebcf46f2ea23ae9c9344666f1c6923fab89feb3dcd7beca37734ab3a336",
+  "scope": "All raw protocol/805quality/two4Kboundaries/124stream/943native completion/metrics/VRAM/corpus replay arithmetic retained. Explicit candidate2533 vs baseline1a1d lifecycle/restoration and actual tiled-model proof added. No new model results."
+}
