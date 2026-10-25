@@ -1,0 +1,28 @@
+from pathlib import Path
+import hashlib
+import json
+import subprocess
+import sys
+
+work = Path(__file__).resolve().parent
+out = work.parent / 'outputs'
+methods = Path('D:/CantorAI/work/qwen38-5090/test2026/cuda/qwen38_5090')
+name = 'native-host-stage-full4k-attempt1'
+log = out / (name + '-supplemented-local-replay.log')
+command = [sys.executable, str(methods / 'verify_native_host_stage_cpu_source.py'), '--proofs', str(out)]
+with log.open('xb') as stream:
+    code = subprocess.run(command, stdout=stream, stderr=subprocess.STDOUT).returncode
+result = {'exit_code': code, 'argv': command, 'log_sha256': hashlib.sha256(log.read_bytes()).hexdigest(), 'gpu_model_rerun': False}
+if code == 0:
+    local = json.loads((out / (name + '-verified.json')).read_bytes())
+    remote = json.loads((out / (name + '-remote-verified.json')).read_bytes())
+    assert local == remote
+    result.update(status=local['status'], proof_pair_identical=True,
+                  archive_sha256=local['archive_sha256'], cpu_source_supplement=local['cpu_source_supplement'])
+else:
+    print(log.read_text(encoding='utf8', errors='replace')[-5000:])
+target = work / 'native-host-stage-supplemented-local-replay-receipt.json'
+assert not target.exists()
+target.write_text(json.dumps(result, indent=2), encoding='utf8')
+print(json.dumps(result))
+raise SystemExit(code)

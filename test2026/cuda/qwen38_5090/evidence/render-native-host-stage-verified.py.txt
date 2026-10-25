@@ -1,0 +1,82 @@
+from pathlib import Path
+import hashlib
+import json
+import math
+import statistics
+import zipfile
+
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+from matplotlib.lines import Line2D
+
+work = Path(__file__).resolve().parent
+out = work.parent / 'outputs'
+name = 'native-host-stage-full4k-attempt1'
+proof_path = out / (name + '-verified.json')
+p = json.loads(proof_path.read_bytes())
+assert p == json.loads((out / (name + '-remote-verified.json')).read_bytes())
+assert p['status'] == 'native_host_stage_full4k_replayed'
+archive = out / (name + '-evidence.zip')
+sha = lambda path: hashlib.sha256(path.read_bytes()).hexdigest()
+assert sha(archive) == p['archive_sha256']
+supplement = out / 'native-host-stage-cpu-source-supplement-attempt1-evidence.zip'
+assert sha(supplement) == p['cpu_source_supplement']['archive_sha256']
+groups = {}
+with zipfile.ZipFile(archive) as z:
+    for mode, record in p['replayed_diagnostic']['modes'].items():
+        raw_rows = {row['id']: row for row in [json.loads(line) for line in z.read(
+            'results/' + name + '/native/' + mode + '/host-stages.jsonl').splitlines()]}
+        for case in ('text', 'image'):
+            rows = [row for row in record['requests'] if row['case'] == case]
+            assert len(rows) == 6
+            phases = list(rows[0]['host_stage_seconds'])
+            means = {phase: statistics.mean(row['host_stage_seconds'][phase] for row in rows) for phase in phases}
+            means['outside_stages'] = statistics.mean(row['host_wall_outside_stages_seconds'] for row in rows)
+            wall = statistics.mean(row['host_wall_seconds'] for row in rows)
+            assert math.isclose(math.fsum(means.values()), wall, abs_tol=1e-12)
+            first = statistics.mean(raw_rows[row['id']]['first_token_observed'] - raw_rows[row['id']]['started'] for row in rows)
+            groups[mode + '-' + case] = {'requests': 6, 'mean_host_wall_seconds': wall,
+                'mean_phase_seconds': means, 'median_phase_seconds': {phase: statistics.median(row['host_stage_seconds'][phase] for row in rows) for phase in phases},
+                'mean_first_token_observed_seconds': first, 'raw_replayed_requests': rows}
+colors = ['#8996a8', '#50a299', '#3278b2', '#d1762b', '#6caa62', '#c9ced5']
+labels = ['Reset', 'Input / image preparation', 'Embeddings / rows', 'Prefill', 'Generation', 'Other host work']
+plt.rcParams.update({'font.family': 'DejaVu Sans', 'font.size': 12, 'axes.spines.top': False, 'axes.spines.right': False})
+fig, axes = plt.subplots(1, 2, figsize=(14, 7.5), sharey=True)
+fig.patch.set_facecolor('#f5f8fc')
+fig.subplots_adjust(left=.075, right=.97, bottom=.30, top=.77, wspace=.20)
+fig.text(.06, .94, 'Where Garnet spends request time', fontsize=25, weight='bold')
+fig.text(.06, .89, 'RTX 5090 | 3968 input + 128 output tokens | 24 instrumented requests | physical GPU batch1', color='#43546b', fontsize=12)
+fig.text(.06, .85, 'Source, token IDs and raw intervals independently replayed on both machines', color='#43546b', fontsize=12)
+for ax, mode in zip(axes, ('ordinary', 'mtp')):
+    bottom = [0., 0.]
+    for index in range(6):
+        values = [list(groups[mode + '-' + case]['mean_phase_seconds'].values())[index] for case in ('text', 'image')]
+        ax.bar([0, 1], values, bottom=bottom, color=colors[index], width=.48, label=labels[index])
+        bottom = [a + b for a, b in zip(bottom, values)]
+    first = [groups[mode + '-' + case]['mean_first_token_observed_seconds'] for case in ('text', 'image')]
+    ax.scatter([0, 1], first, marker='D', color='#1b2739', s=48, zorder=4)
+    for x, total in enumerate(bottom): ax.text(x, total + .15, f'{total:.2f}s', ha='center', weight='bold')
+    ax.set_title('Ordinary' if mode == 'ordinary' else 'MTP3 (original draft prefill)', loc='left', weight='bold')
+    ax.set_xticks([0, 1], ['Text', 'Image']); ax.set_xlim(-.6, 1.6)
+    ax.set_ylim(0, max(group['mean_host_wall_seconds'] for group in groups.values()) * 1.14)
+    ax.set_axisbelow(True); ax.grid(axis='y', alpha=.18)
+axes[0].set_ylabel('Mean instrumented host-wall seconds per request')
+handles, legend_labels = axes[0].get_legend_handles_labels()
+handles.append(Line2D([], [], color='#1b2739', marker='D', linestyle='None'))
+legend_labels.append('First token observed in worker')
+fig.legend(handles, legend_labels, loc='lower center', bbox_to_anchor=(.51, .125), ncol=4, frameon=False, fontsize=10)
+fig.text(.06, .095, 'All six requests per input/mode included: first-use and late-repeat delays retained; their causes are not isolated.', fontsize=10)
+fig.text(.06, .065, 'These are host-wall phases, not isolated GPU/kernel time or HTTP benchmarks. Model construction is outside request intervals.', fontsize=10)
+fig.text(.06, .035, 'MTP can emit its first token before its full prefill phase ends. No speedup, kernel-cause or overall2x claim from this diagnostic.', fontsize=10, color='#9a4521')
+stem = 'Garnet-Native-Host-Stage-Verified'
+for ext in ('png', 'svg'): fig.savefig(out / (stem + '.' + ext), dpi=160, facecolor=fig.get_facecolor())
+plt.close(fig)
+result = {'status': 'native_host_stage_verified_phase_aggregation', 'archive_sha256': p['archive_sha256'],
+          'proof_sha256': sha(proof_path), 'cpu_source_supplement': p['cpu_source_supplement'],
+          'groups': groups, 'requests': 24, 'isolated_gpu_or_kernel_time_measured': False,
+          'performance_admitted': False, 'two_times_target_achieved': False,
+          'scope': 'All actual24instrumented requests, complete retained prompt/output IDs and source hashes checked. Mean stacks sum to mean host wall; phase medians separately reported. Includes first-use/reset repeats. Worker first-token markers use the same process clock; they are not HTTP TTFT. Original27count/fresh29source supplement preserved. No model rerun or kernel-cause/speedup claim.'}
+(out / (stem + '-Data.json')).write_text(json.dumps(result, indent=2), encoding='utf8')
+print(json.dumps({'status': result['status'], 'requests': 24,
+                  'phase_medians': {key: group['median_phase_seconds'] for key, group in groups.items()}}, indent=2))

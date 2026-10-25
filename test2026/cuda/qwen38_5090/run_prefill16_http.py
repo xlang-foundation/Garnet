@@ -31,6 +31,7 @@ def main():
     preparation = methods / 'evidence/prefill16-http-run-preparation.json'
     p = json.loads(preparation.read_bytes())
     assert p['status'] == 'prefill16_http_prepared_gpu_unrun'
+    assert all('Garnet/' + module.replace('.', '/') + '.py' in p['files'] for module in p['test_modules'])
     for name, digest in p['files'].items():
         assert sha(root / name) == digest, ('HTTP method/source/input drift', name)
     for name, digest in p['runtime_dependencies'].items():
