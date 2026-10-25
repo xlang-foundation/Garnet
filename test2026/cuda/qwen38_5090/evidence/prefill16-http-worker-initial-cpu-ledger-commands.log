@@ -1,0 +1,82 @@
+
+{"id": "c9acfd64c3de4a00ada1193fa2527a21", "kind": "correctness", "label": "Explicit candidate HTTP worker/probe AST preservation and synthetic closed4K/runtime guards; no model/GPU", "argv": ["D:\\CantorAI\\Garnet\\.venv\\Scripts\\python.exe", "-m", "unittest", "test2026.cuda.qwen38_5090.test_prefill16_http_worker", "test2026.cuda.qwen38_5090.test_mtp_prefill16_study", "test2026.cuda.qwen38_5090.test_fixed_length_worker_contract"]}
+..E...................
+======================================================================
+ERROR: test_entire_worker_ast_only_explicit_class_proof_gate_and_ready_identity_differ (test2026.cuda.qwen38_5090.test_prefill16_http_worker.Controls.test_entire_worker_ast_only_explicit_class_proof_gate_and_ready_identity_differ)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "D:\CantorAI\work\qwen38-5090\test2026\cuda\qwen38_5090\test_prefill16_http_worker.py", line 87, in test_entire_worker_ast_only_explicit_class_proof_gate_and_ready_identity_differ
+    candidate = OriginalWorker().visit(ast.parse((M / 'native_prefill16_stream_worker.py').read_bytes()))
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Python\Python312\Lib\ast.py", line 407, in visit
+    return visitor(node)
+           ^^^^^^^^^^^^^
+  File "C:\Python\Python312\Lib\ast.py", line 483, in generic_visit
+    value = self.visit(value)
+            ^^^^^^^^^^^^^^^^^
+  File "C:\Python\Python312\Lib\ast.py", line 407, in visit
+    return visitor(node)
+           ^^^^^^^^^^^^^
+  File "C:\Python\Python312\Lib\ast.py", line 483, in generic_visit
+    value = self.visit(value)
+            ^^^^^^^^^^^^^^^^^
+  File "C:\Python\Python312\Lib\ast.py", line 407, in visit
+    return visitor(node)
+           ^^^^^^^^^^^^^
+  File "C:\Python\Python312\Lib\ast.py", line 492, in generic_visit
+    new_node = self.visit(old_value)
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Python\Python312\Lib\ast.py", line 407, in visit
+    return visitor(node)
+           ^^^^^^^^^^^^^
+  File "C:\Python\Python312\Lib\ast.py", line 483, in generic_visit
+    value = self.visit(value)
+            ^^^^^^^^^^^^^^^^^
+  File "C:\Python\Python312\Lib\ast.py", line 407, in visit
+    return visitor(node)
+           ^^^^^^^^^^^^^
+  File "C:\Python\Python312\Lib\ast.py", line 492, in generic_visit
+    new_node = self.visit(old_value)
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Python\Python312\Lib\ast.py", line 407, in visit
+    return visitor(node)
+           ^^^^^^^^^^^^^
+  File "C:\Python\Python312\Lib\ast.py", line 492, in generic_visit
+    new_node = self.visit(old_value)
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Python\Python312\Lib\ast.py", line 407, in visit
+    return visitor(node)
+           ^^^^^^^^^^^^^
+  File "C:\Python\Python312\Lib\ast.py", line 492, in generic_visit
+    new_node = self.visit(old_value)
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Python\Python312\Lib\ast.py", line 407, in visit
+    return visitor(node)
+           ^^^^^^^^^^^^^
+  File "C:\Python\Python312\Lib\ast.py", line 492, in generic_visit
+    new_node = self.visit(old_value)
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Python\Python312\Lib\ast.py", line 407, in visit
+    return visitor(node)
+           ^^^^^^^^^^^^^
+  File "C:\Python\Python312\Lib\ast.py", line 492, in generic_visit
+    new_node = self.visit(old_value)
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Python\Python312\Lib\ast.py", line 407, in visit
+    return visitor(node)
+           ^^^^^^^^^^^^^
+  File "C:\Python\Python312\Lib\ast.py", line 483, in generic_visit
+    value = self.visit(value)
+            ^^^^^^^^^^^^^^^^^
+  File "C:\Python\Python312\Lib\ast.py", line 407, in visit
+    return visitor(node)
+           ^^^^^^^^^^^^^
+  File "D:\CantorAI\work\qwen38-5090\test2026\cuda\qwen38_5090\test_prefill16_http_worker.py", line 33, in visit_Dict
+    node.keys, node.values = map(list, zip(*pairs))
+    ^^^^^^^^^^^^^^^^^^^^^^
+ValueError: not enough values to unpack (expected 2, got 0)
+
+----------------------------------------------------------------------
+Ran 22 tests in 0.159s
+
+FAILED (errors=1)

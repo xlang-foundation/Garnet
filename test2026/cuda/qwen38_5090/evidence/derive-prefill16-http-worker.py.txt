@@ -1,0 +1,54 @@
+from pathlib import Path
+import ast
+import hashlib
+import json
+
+methods = Path('D:/CantorAI/work/qwen38-5090/test2026/cuda/qwen38_5090')
+sha = lambda raw: hashlib.sha256(raw).hexdigest()
+source = methods / 'native_fixed_length_stream_worker.py'
+assert sha(source.read_bytes()) == '46c2565ac3a5cd9df08a2129071bd75cc698f0a4da091c1fdb28f8857b7a781c'
+text = source.read_text()
+old = 'from xModel.qwen35.vl_0_8b.cuda_speculative import CUDASpeculativeSession'
+new = 'from xModel.qwen35.vl_0_8b.cuda_mtp_prefill16_study import CUDAMTPPrefill16StudySession as CUDASpeculativeSession'
+assert text.count(old) == 1
+text = text.replace(old, new)
+marker = "b1=[v for v in proof['variants']"
+assert text.count(marker) == 1
+text = text.replace(marker,
+    "from test2026.cuda.qwen38_5090.native_prefill16_http_admission import require as require_prefill16\n"
+    "prefill16_admission=require_prefill16(root,mode,library)\n" + marker)
+marker = "'broad_quality_qualified':False,'performance_admitted':False})"
+assert text.count(marker) == 1
+text = text.replace(marker, "'broad_quality_qualified':False,'performance_admitted':False,'mtp_prefill16_admission':prefill16_admission})")
+target = methods / 'native_prefill16_stream_worker.py'
+assert not target.exists()
+ast.parse(text)
+target.write_text(text, encoding='utf8')
+bat_source = methods / 'serve_native_fixed_length_worker.bat'
+bat = bat_source.read_bytes().replace(b'native_fixed_length_stream_worker.py', b'native_prefill16_stream_worker.py')
+assert bat != bat_source.read_bytes()
+(methods / 'serve_native_prefill16_worker.bat').write_bytes(bat)
+probe_source = methods / 'probe_fixed_length_http.py'
+probe = probe_source.read_text()
+for before, after in [('serve_native_fixed_length_worker.bat', 'serve_native_prefill16_worker.bat'),
+                      ("sha(m/'native_fixed_length_stream_worker.py')", "sha(m/'native_prefill16_stream_worker.py')")]:
+    assert probe.count(before) == 1
+    probe = probe.replace(before, after)
+marker = ' root=args.root;out=args.output;'
+assert probe.count(marker) == 1
+probe = probe.replace(marker, " assert args.mode=='mtp','Explicit candidate probe requires MTP and actual ordinary controls'\n" + marker)
+marker = "  report['ready']=ready;save();server="
+assert probe.count(marker) == 1
+probe = probe.replace(marker,
+    "  assert ready['mtp_prefill16_admission']['draft_prefill_chunk']==16 and ready['mtp_prefill16_admission']['draft_decode_chunk']==4\n" + marker)
+ast.parse(probe)
+probe_target = methods / 'probe_prefill16_http.py'
+assert not probe_target.exists()
+probe_target.write_text(probe, encoding='utf8')
+result = {'status': 'explicit_prefill16_http_worker_and_probe_derived_gpu_unrun',
+          'source_worker_sha256': sha(source.read_bytes()), 'candidate_worker_sha256': sha(target.read_bytes()),
+          'source_probe_sha256': sha(probe_source.read_bytes()), 'candidate_probe_sha256': sha(probe_target.read_bytes()),
+          'defaults_changed': False, 'gpu_executed': False, 'performance_admitted': False,
+          'scope': 'Only explicit wider draft-prefill class substitution, actual full4K closure gate and ready identity added. Existing target, decoding, all12protocol/805screen/two4Kboundaries/124frozenstreams and ordinary-token comparisons retained. Separate owner, preparation and independent HTTP archive replay still required before execution.'}
+(methods / 'evidence/prefill16-http-worker-derivation.json').write_text(json.dumps(result, indent=2), encoding='utf8')
+print(json.dumps(result))
