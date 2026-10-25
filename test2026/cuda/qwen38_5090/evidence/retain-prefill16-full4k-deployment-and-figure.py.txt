@@ -1,0 +1,45 @@
+from pathlib import Path
+import datetime,hashlib,json,zipfile
+w=Path(__file__).resolve().parent;r=Path('D:/CantorAI/work/qwen38-5090');e=r/'test2026/cuda/qwen38_5090/evidence';o=w.parent/'outputs';sha=lambda raw:hashlib.sha256(raw).hexdigest()
+pre=json.loads((w/'prefill16-full4k-preflight.json').read_bytes());install=json.loads((w/'prefill16-full4k-install.json').read_bytes());bundle=json.loads((w/'prefill16-full4k-bundle-preparation.json').read_bytes())
+assert pre['status']=='prefill16_full4k_preflight_passed' and not pre['conflicts'] and not pre['existing_input_drift'] and not pre['runtime_drift']
+assert install['status']=='prefill16_full4k_methods_installed' and install['new_targets_verified']==install['all_targets_verified']==12 and install['bundle_sha256']==bundle['bundle_sha256']==sha((w/'prefill16-full4k-methods.zip').read_bytes())
+for name in ('prefill16-full4k-preflight.json','prefill16-full4k-install.json','prefill16-full4k-bundle-preparation.json','prefill16-full4k-preflight-start-request.json','mtp-prefill16-full4k-start-request.json'):
+ target=e/name;assert not target.exists();target.write_bytes((w/name).read_bytes())
+for name in ('render-sglang-output-stability.py','retain-prefill16-full4k-deployment-and-figure.py'):
+ target=e/(name+'.txt');assert not target.exists();target.write_bytes((w/name).read_bytes())
+figure=json.loads((o/'Garnet-SGLang-Output-Stability-Figure-Data.json').read_bytes());assert figure['source_analysis_sha256']==sha((o/'Garnet-SGLang-Output-Variation-Results.json').read_bytes()) and not figure['performance_admitted']
+target=e/'sglang-output-stability-figure-data.json';assert not target.exists();target.write_bytes((o/'Garnet-SGLang-Output-Stability-Figure-Data.json').read_bytes())
+summary={'status':'mtp_prefill16_full4k_explicit_study_installed_and_actual_run_live','recorded_utc':datetime.datetime.now(datetime.timezone.utc).isoformat(),'job':'mtp-prefill16-full4k-admission-attempt1','original_supervisor_session':48577,'last_authoritative_process_poll':'running','actual_remote_cpu_tests_passed':50,'actual_remote_cpu_test_seconds':0.675,'preparation_sha256':sha((e/'mtp-prefill16-full4k-run-preparation.json').read_bytes()),'existing_inputs_verified':575,'new_absent_targets_installed':12,'bundle_sha256':bundle['bundle_sha256'],'bundle_bytes':bundle['bytes'],'actual_4k_case_success_observed':False,'full4k_model_quality_or_performance_admitted':False,'source_runtime_default_or_sdk_replaced':False,'sglang_variation_figure':{'panels':4,'visual_inspection_passed':True,'files_sha256':{n:sha((o/n).read_bytes()) for n in ('Garnet-SGLang-Output-Stability.png','Garnet-SGLang-Output-Stability.svg','Garnet-SGLang-Output-Stability-Figure-Data.json')},'scope':'Exact token-ID/text stability versus serial controls under client concurrency only. Colour/spatial semantic controls passed. No speed, accuracy or numerical-cause claim.'},'two_times_target_achieved':False,'scope':'Actual source/runtime/closed reference/native/short-model/idle preflight and absent-only deployment complete. Full4K candidate correctness process live after50CPU controls; wait original supervisor for actual target-state/token/reset/memory results and independent archive replay. Known embedded optional-hash warnings persist; SHA256 evidence path unchanged. Strongest matched references/quality/repeated speed, INT4/4B and2x remain open.'}
+for target in (e/'prefill16-full4k-deployment-closure.json',o/'Garnet-MTP-Prefill16-4K-Run-Status.json'):
+ assert not target.exists();target.write_text(json.dumps(summary,indent=2),encoding='utf8')
+entry='''
+
+### 2026-10-25 — wider MTP full4K admission deployed and running; diagnostic figure
+
+After actual SGLang diagnostic closure and identical independent proofs, new
+preflight verifies all575existing inputs/runtime, prior native/B8/short-MTP and
+actual characterization archive/workflow/proof, and idle adapter/process. All12
+targets absent. Bundle6521c8625dbc4498400ee409e5f58ef3346aa55b3b9a4892e93bcec72f13bf3d,
+49265bytes, installed only reviewed new methods/evidence. Existing native runtime,
+qualified model/defaults/SDK/checkpoint remain unchanged; fixed root/cache reused.
+Original supervisor48577 started mtp-prefill16-full4k-admission-attempt1. Actual
+50remote CPU tests pass0.675s; last handle poll running, no4Kcase success yet.
+Embedded optional-hash warnings again observed; no SHA256 evidence-path change.
+Do not infer failure/restart from quiet construction; await actual closed archive
+and independently replay full target-state/raw-vector/token/reset/memory results.
+
+Four-panel raw-derived SGLang output-stability PNG/SVG visually inspected. Actual
+text/image nonstream token-ID and streamed-text exact matches versus serial:
+C1=8/8, C2=0/16IDs and0/8texts, C4=0/16IDs and0/8texts, C8=2/16IDs and1/8texts
+per group. Nonstream C2/4/8 combines original and rotated observations; streaming
+IDs are unobserved. All96color/spatial semantic checks pass;24serial repeats match.
+This figure describes output stability, not speed or an accuracy/cause verdict.
+Full raw variants/source/lifecycle retained. Stronger ordinary/tuned/MTP reference
+timings must preserve these observations without dropping the faster normal engine
+or rewriting the prior strict failure. Candidate805quality/HTTP/repeated speed,
+host/GPU bottleneck work, externalB8/HTTP/MTP, INT4/4B and2x remain open.
+'''
+for name in ('qwen38-5090-development-log.md','qwen38-5090-implementation-task.md'):
+ p=r/'docs/research'/name;raw=p.read_bytes();assert b'wider MTP full4K admission deployed and running; diagnostic figure' not in raw;p.write_bytes(raw+entry.replace('\n','\r\n').encode())
+print(json.dumps({'status':summary['status'],'actual_remote_cpu_tests':50,'figure_visual_inspection_passed':True,'two_times_target_achieved':False}))
