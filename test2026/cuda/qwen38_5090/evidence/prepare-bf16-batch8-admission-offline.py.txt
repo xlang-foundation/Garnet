@@ -1,0 +1,32 @@
+from pathlib import Path
+import ast,hashlib,json,sys,zipfile
+w=Path(__file__).resolve().parent;r=Path('D:/CantorAI/work/qwen38-5090');m=r/'test2026/cuda/qwen38_5090';sys.path.insert(0,str(r))
+from xModel.qwen35.vl_0_8b.bf16_kv_profile import validate_bf16_kv_decoder
+from xModel.qwen35.vl_0_8b.kv_bf16_study_layout import build_bf16_kv_study_layout
+from test2026.cuda.qwen38_5090.bf16_batch8_admission import ORDERS
+sha=lambda raw:hashlib.sha256(raw).hexdigest();source=m/'probe_bf16_batch8_admission.py';raw=source.read_bytes();compile(raw,str(source),'exec');tree=ast.parse(raw)
+calls=[n for n in ast.walk(tree) if isinstance(n,ast.Call) and isinstance(n.func,ast.Name) and n.func.id=='CUDAPackedDecoder'];assert len(calls)==1;call=calls[0]
+dims=[ast.literal_eval(n) for n in call.args[2:]];assert dims==[8,4096,32,4]
+options={n.arg:ast.literal_eval(n.value) for n in call.keywords}
+assert options=={'flat_concat':True,'external_compressed_weights':True,'retain_linear_inputs':True,'deferred_state_commit':True,'host_embedding_lookup':True,'joined_mlp_projections':True,'shared_output_storage':True,'bf16_kv_state':True,'register_delta_128':True}
+parent=w.parent/'outputs/tokenizer-nfc-model-consistency-attempt1-evidence.zip';assert sha(parent.read_bytes())=='90098fe581655c8c7eb3bdf3e43d6baed2b899b41388be601f2fe840b6a7b65c'
+with zipfile.ZipFile(parent) as z:
+ config_raw=z.read('models/Qwen3.8-27B-NVFP4/config.json');config=json.loads(config_raw)
+ assert sha(config_raw)=='71fa01bb64de20971045cd82a82c0ebb25a54e1b0a3f09ef23cf5479e9c54df8'
+ short=[]
+ for key in ('s3-text-c1-r0-greedy','s3-image-c1-r0-greedy','red','green'):
+  raw=z.read('results/native-mtp3-http/'+key+'-response.json');ids=json.loads(raw)['choices'][0]['prompt_token_ids'];assert len(ids)+8<=4096;short.append({'key':key,'prompt_tokens':len(ids),'response_sha256':sha(raw)})
+validate_bf16_kv_decoder(True,8,4096,32,4,config['text_config'],retain_linear_inputs=True,deferred_state_commit=True,shared_output_storage=True,host_embedding_lookup=True,external_compressed_weights=True,joined_mlp_projections=True)
+layouts=[build_bf16_kv_study_layout(8,chunk=n,retain_linear_inputs=n==4) for n in (4,32)]
+assert [v['canonical_state_width'] for v in layouts]==[106823680]*2
+with zipfile.ZipFile(m/'evidence/fixed-length-4096-corpus.zip') as z:
+ frozen=json.loads(z.read('manifest.json'));groups=[]
+ for case in ('text','image'):
+  keys=next(c['measured'] for c in frozen['cohorts'] if c['case']==case and c['concurrency']==8);assert len(keys)==len(set(keys))==8
+  rows={v['key']:v for v in frozen['rows']}
+  for key in keys:
+   row=rows[key];ids=z.read(row['expected_prompt_ids_file']);assert len(json.loads(ids))==3968 and sha(ids)==row['expected_prompt_ids_sha256']
+   body=z.read(row['request_file']);assert sha(body)==row['request_sha256'] and json.loads(body)['ignore_eos'] is True
+  groups.append({'case':case,'keys':keys,'actual_input_ids_each':3968,'required_actual_generated_tokens_each':128})
+receipt={'status':'bf16_batch8_admission_probe_prepared_gpu_unrun','source_sha256':sha(source.read_bytes()),'helper_sha256':sha((m/'bf16_batch8_admission.py').read_bytes()),'test_sha256':sha((m/'test_bf16_batch8_admission.py').read_bytes()),'native_parent_archive_sha256':sha(parent.read_bytes()),'config_sha256':sha(config_raw),'actual_probe_syntax_compile_passed':True,'current_python_profile_validation_passed':True,'constructor_dimensions':dims,'constructor_options':options,'short_inputs_twice':short,'full_context_groups':groups,'orders':[list(v) for v in ORDERS],'expected_gpu_cases':9,'logical_canonical_bytes_only':8*106823680*4,'logical_output_bytes_by_chunk':{str(v['chunk']):8*v['output_width']*4 for v in layouts},'gpu_model_executed':False,'memory_fit_proven':False,'mtp_executed':False,'performance_admitted':False,'two_times_target_achieved':False,'scope':'Actual source syntax compile only, literal constructor AST/current pure Python profile+layout validation against archived pinned checkpoint config, frozen actual input-ID/request hashes. These do not build/run the GPU graph or prove B8 VRAM fit, row math, vision, MTP, broad quality or throughput. Logical buffer sizes omit other allocations; never sum/label them as measured VRAM. After exclusive original HTTP terminal, actual B8 correctness may use otherwise idle GPU during archive transfer; it is not a timing run.'}
+target=m/'evidence/bf16-batch8-admission-offline-preparation.json';assert not target.exists();target.write_text(json.dumps(receipt,indent=2),encoding='utf8');print(json.dumps({'status':receipt['status'],'expected_gpu_cases':9,'syntax_and_profile_passed':True,'gpu_model_executed':False}))

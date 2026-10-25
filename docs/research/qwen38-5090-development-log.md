@@ -5058,3 +5058,53 @@ output. No other remote commands, transfers, source changes or observers were
 issued during possible timing. Next actual milestone remains native terminal
 and raw replay, then real matched references and GPU optimization qualification.
 The2x target, stronger-reference tuning, INT4/4B and repetitions remain unmet.
+
+
+### 2026-10-25: B8 whole-model admission probe prepared; GPU unrun
+
+Prepared probe_bf16_batch8_admission.py using the current existing B8 BF16-cache
+T32/T4 constructor and unchanged256MiB target-program builder limit. No MTP
+workspace/profile changes. It will build model+vision, exercise8short mixed
+rows and8actual3968+128 text/image rows from the frozen corpus, each in original,
+rotated and reset-repeat order. Nine actual GPU cases remain unrun. Complete
+state-component/physical/logical hashes and raw hidden/normalized vectors must
+match after inverse row permutation. Full snapshots include unused cache slots;
+only hashes, not multi-GB raw caches, are retained. All raw vectors are saved.
+
+New pure B8 gate selects complete rows through the unchanged B1/B4 representation
+validator and validates every8row component before comparing, so malformed later
+metadata cannot hide behind an earlier mismatch. Actual20CPU tests pass in0.105s;
+literal constructor/current pure Python profile/layout and frozen input hashes
+check against the actual archived checkpoint config, and Python syntax compiles
+without importing/executing the model. These are no B8GPU/memory-fit/quality/speed
+proof. Buffer byte figures in the offline receipt are logical allocations only.
+
+Native HTTP original48577 now emits MTP4Kcohorts, still live; no remote mutation,
+extra observations or transfers during possible timing. After its actual terminal
+and cleanup, isolated correctness work can use otherwise idle GPU during native
+archive transfer, with no official timing overlap. The full reference/matched
+2x/INT4/4B/repetition scope remains active and unmet.
+
+
+### 2026-10-25: compiled score-tiling GPU correctness launch prepared; unrun
+
+Prepared isolated run/prepare/verify_bf16_scores_tiled methods bound to the actual
+495104byte privately compiled SM120 executable, unchanged source/header/fixture
+hashes and actual NFC model proof pair.24upload targets are prepared; existing
+matching files should be reused. No executable is added to the Garnet runtime.
+Actual10CPU profile/FP64-oracle controls pass in0.081s; preparation executed and
+retained. Original HTTP supervisor must first be observed terminal; runner also
+checks its exact completed archive SHA/workflow/cleanup and idle GPU before any
+probe. This prerequisite is no permission to infer termination from silence.
+
+Standalone probe intends44realGPU cases: full forward output/workspace bytes,
+3candidate graph-output replays,40full cached-prefix output checks, readonly/
+canaries and104malformed input cases rejected by both baseline and candidate
+(208actual reject calls).119040selected scalars require independent FP64 replay.
+Closed raw archives preserve failures and sampled correctness memory. No model
+DLL loads/replacements, timing, B8, MTP, broad quality or2x qualification occur
+in this isolated experiment. Numerical correctness alone will not prove speed.
+
+Current full native HTTP remains live with MTP4Ktext/image cohort observations.
+Matched reference speed/tuning/quality, target2x, INT4/4B and repetitions stay
+open. No new graph/kernel/model performance number is admitted by this change.
