@@ -1,0 +1,7 @@
+
+{"id": "9be1386918364e3fb7f4be95c4c91874", "kind": "correctness", "label": "Preserve original archive checker refusal on shared filename and NVCC flag spelling", "argv": ["D:\\CantorAI\\Garnet\\.venv\\Scripts\\python.exe", "D:\\CantorAI\\work\\qwen38-5090\\test2026\\cuda\\qwen38_5090\\verify_integrated_batch_top1_native_build.py", "C:\\Users\\developer\\Documents\\Codex\\2026-10-23\\referenced-chatgpt-conversation-this-is-an\\outputs"]}
+Traceback (most recent call last):
+  File "D:\CantorAI\work\qwen38-5090\test2026\cuda\qwen38_5090\verify_integrated_batch_top1_native_build.py", line 56, in <module>
+    blocks=[b for b in ninja.split('\n\n') if b.startswith('build ') and '/'+unit+'.obj:' in b];assert len(blocks)==1 and ' -MT ' in blocks[0] and '/MD ' not in blocks[0] and '-MD ' not in blocks[0]
+                                                                                                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError

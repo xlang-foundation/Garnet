@@ -1,0 +1,17 @@
+{
+  "status": "native_build_checker_target_and_flag_grammar_corrected",
+  "original_sha256": "f4635cafd42235c01708d2d7b3ec9c68005aee7499b688b2d97ac11fdf7f31db",
+  "result_sha256": "db9e79dfdb75f9d53eb0a7f66a0d14b6f38ed9416b9c4754abb476b3801777f6",
+  "changes": [
+    [
+      "  for unit in ('cuda_tensor_io.cpp','logits_sampler_kernel.cu','logits_top1_batch_policy_test.cpp'):\n   blocks=[b for b in ninja.split('\\n\\n') if b.startswith('build ') and '/'+unit+'.obj:' in b];assert len(blocks)==1 and ' -MT ' in blocks[0] and '/MD ' not in blocks[0] and '-MD ' not in blocks[0]\n",
+      "  for target,unit in (('garnet.dir','cuda_tensor_io.cpp'),('garnet.dir','logits_sampler_kernel.cu'),('garnet_batch_top1_policy_test.dir','logits_top1_batch_policy_test.cpp')):\n   blocks=[b for b in ninja.split('\\n\\n') if b.startswith('build garnet/CMakeFiles/'+target+'/') and '/'+unit+'.obj:' in b.splitlines()[0]]\n   assert len(blocks)==1\n   flags=[line.split(' = ',1)[1] for line in blocks[0].splitlines() if line.startswith('  FLAGS = ')];assert len(flags)==1\n   assert re.search(r'(?<![A-Za-z0-9_])[-/]MT(?=\\s|$|\")',flags[0])\n   assert not re.search(r'(?<![A-Za-z0-9_])[-/]MDd?(?=\\s|$|\")',flags[0])\n"
+    ],
+    [
+      "(out/(name+'-verified.json')).write_text(json.dumps(report,indent=2),encoding='utf8');print(json.dumps(report,indent=2))",
+      "correction_path=Path(__file__).with_name('evidence')/'integrated-top1-native-build-verifier-correction.json';correction_raw=correction_path.read_bytes();correction=json.loads(correction_raw)\nwith zipfile.ZipFile(archive) as old_zip:original=old_zip.read(methods+'verify_integrated_batch_top1_native_build.py')\nassert sha(original)==correction['original_sha256']==archived\ntext=original.decode()\nfor before,after in correction['changes']:assert text.count(before)==1;text=text.replace(before,after,1)\nassert text.encode()==Path(__file__).read_bytes() and sha(text.encode())==correction['result_sha256']\nreport['checker_correction_sha256']=sha(correction_raw)\n(out/(name+'-verified.json')).write_text(json.dumps(report,indent=2),encoding='utf8');print(json.dumps(report,indent=2))"
+    ]
+  ],
+  "original_local_exit_code": 1,
+  "scope": "Preserve original checker failure. Select the intended garnet DLL object rather than also counting the repetition-test object with the same source filename. Recognize actual NVCC -Xcompiler=-MT and end-of-line CXX -MT; still reject dynamic MD/MDd. Same immutable successful build/archive/native DLL/63CPU tests and all other checks, no rebuild, GPU run or tolerance/quality change."
+}

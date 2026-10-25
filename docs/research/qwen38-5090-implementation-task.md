@@ -4,10 +4,15 @@ Status: full packed BF16 ordinary/MTP corpus is closed/replayed. Lifecycle
 attempt1 is closed FAILED after ten cases, due a harness closure NameError;
 failure is preserved/replayed on both machines. The full scope-fixed rerun
 passed all14cases and102raw vectors on both independent replays, using the
-unchanged97c native binary. Standalone parallel batch-top1 passes
-330GPU cases/1000raw observations on both replays. Local default-off production
-dispatch now compiles; it is not deployed, model-qualified or timed. Work continues
-on `qwen38-5090`; original2x decode/concurrency and half-TTFT remain unmet.
+unchanged97c native binary. Standalone parallel batch-top1 passes330cases/
+1000observations; actual production API0/1/unset/01 modes now each pass
+352cases/1066observations on both independent replays. Preserving source install
+and actual SDK native build also pass both replays: new5ac61e3a...DLL,63CPUtests,
+9settings/112CPU policy boundaries, old97c and five runtime dependencies retained.
+Original checker failures/corrections remain recorded. Complete14case/102vector
+model corpus is now running in separate disabled/enabled processes; new model,
+protocol and speed remain unqualified. Work continues on `qwen38-5090`; original
+2x decode/concurrency and half-TTFT remain unmet.
 
 The pinned 27B checkpoint uses Qwen3.5 architecture. Garnet supports its mixed
 NVFP4/FP8 projections, BF16 vision/MTP, host embedding and joined MLP. Latest
@@ -148,10 +153,10 @@ Next gates, in order:
    agree exactly:102raw vectors,224files, archived5650c97..., unchanged97cDLL. Source install
    observer/factory/replay and actual prerequisite refusal guards are ready;
    expected-exit2 checks leave runtime preparations absent while parent is live.
-   After the B1 component below, qualify default-off dispatch through its four
-   guarded GPU processes, build on the actual remote SDK, and on that chosen
-   native binary require old-profile regressions,
-   all14scope-fixed lifecycle cases and protocol controls before timing. Retain
+   DONE after B1 operator: preserving source install, four production API GPU
+   processes, actual SDK native build and both independent replays. Next require
+   complete14case/102vector parity in separate disabled/enabled processes on5ac,
+   with actual dispatch counters, then protocol controls before timing. Retain
    original failed harness/FP32 comparisons and require broad-quality evidence;
    no operator or partial-case result substitutes for complete model/serving gates.
 2. After full parent closure/replay and before source installation, qualify

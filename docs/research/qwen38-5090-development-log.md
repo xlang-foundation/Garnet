@@ -4029,3 +4029,50 @@ Production model B1 admission, commit/helper/plugin/lowering/quality/protocol
 and speed remain unqualified. No GPU worker remains live. Next: preserving
 sampler source install and actual API checks/build/model gates, then qualify
 the explicit low-batch complete model path and original4K/reference goals.
+
+Sampler source installation and actual GPU API qualification now closed.
+Source-only installer archive73101B/SHAe4233c62f2cba6abc11894505b9aca88b455dc2227a9afed517771d741858d15;
+both source replays identical, three old files preserved, five candidates installed.
+Original integrated-batch-top1-correctness-attempt1 exit0/cleanup, archive789394B/
+130files/SHAeeb534bec8ef0b1f05c523398b1cb0c39bc0a0665b968e8959bee697e86f4e4d.
+Allfour independent0/1/unset/01 processes pass352cases/1066raw observations,
+2graph/12negative controls each. Both independent replays agree except declared
+Python/NumPy environments; enabled host dispatch466parallel/594legacy matches
+shape inventory, other modes0/1060. Allfour correctness peaks1135943680B; not
+model memory or serving evidence. Original97cDLL remained unchanged throughout.
+
+Native SDK build now closed exit0/cleanup; actual63explicit CPU tests, native
+policy9settings/112boundaries pass. Two inherited preparatory checker errors
+are retained: prospective inventory said62though actual50+7+3+3=63, corrected
+before creating/running the build; original archive checker counted repetition
+test and Garnet object together and assumed CXX spelling for NVCC MT flags.
+Corrected checker selects the intended target and recognizes -Xcompiler=-MT
+and trailing CXX -MT, still rejecting dynamic MD/MDd. Original checker/source,
+failed raw ledgers and exact correction recipe74cd8ce4... retained; builder,
+archive/native DLL and allother checks unchanged, no rebuild. Both actual
+corrected replays are identical. Build archive2571565B/127files/SHA
+5cbb238e29fe8b6bd294abb2bd85bce42853871d90cbedbb2eac94135833f3ab.
+New DLL5ac61e3a15466be3cea151190eb52c0403732bb3ad2abdb39a6ba086a5c21473
+retained separately; original97cDLL and allfive runtime dependencies preserved.
+Actual Release/sm120/MT source commands recorded, vendor staging/whole-program
+CUDA OFF, no SDK or VM replacement. Native model and speed remain unqualified.
+
+Prepared full-corpus disabled/enabled model gate, original14cases/102rawvectors
+per process, exact full parent report/state/IDs/callbacks/metrics and raw parity,
+positive selected-route host counters and unchanged other route. Disabled mode
+must finish raw parity before enabled mode. No lifecycle case/prefix/retirement
+weakening. Seven synthetic checker mutation controls on the actual closed parent
+pass locally; these are CPU checker tests, not new model observations. Current
+preparationebcae8ee... pins167source/method/inputs and both actual build/parent
+proofs. This is still an unrun preparation; preflight/upload/controller follow.
+
+Full model preflight passes actual167pins/new5acDLL and allfive unchanged runtime
+dependencies, GPU109MiB, privateSSD750385430528B free. Original controller
+integrated-batch-top1-model-lifecycle-attempt1 started only after all13new
+method/receipt uploads acknowledged and both build replays. Original handle
+confirmed RUNNING; actual remote7synthetic checker and11state CPU controls
+pass, native disabled-mode process has started. Full28case/204vector model
+result is NOT yet available or qualified. Known unused hash-module warnings
+from native Python initialization are retained; SHA256 remains the unchanged
+study witness mechanism. Do not alter deployed methods/source/DLL/runtime/SDK
+or start a second GPU worker while this original controller is live.
