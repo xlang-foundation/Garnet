@@ -1,0 +1,84 @@
+{
+  "status": "compact_qpc_http_prepared_unrun",
+  "probe_derivation": [
+    [
+      "        'grouping_delay_ms': 10, 'precision':",
+      "        'grouping_delay_ms': 10, 'grouping_clock': 'perf_counter', 'precision':",
+      1
+    ]
+  ],
+  "probe_sha256": "c0c6429691c420ab226133e26b6eb639642fba230a3849e2ecdf163d382ea08c",
+  "launcher_sha256": "8a614c4fb3c5d07942aa1e9075db9b20ae72d69c826a318117d07d086cb0b108",
+  "grouping_delay_ms": 10,
+  "physical_batch": 4,
+  "concurrency": [
+    1,
+    2,
+    4,
+    8
+  ],
+  "requests_per_cohort": 8,
+  "warmups": 2,
+  "max_tokens": 128,
+  "seed": 3,
+  "files": {
+    "native_batch_http_bridge.py": "fc0190a1d8cad344eb955a7ba82f7c412ec9a43394d5531d3bd90b513f751d57",
+    "native_http_bridge.py": "0279af2fbbabf03886be8d041ffe50c2e1f461a95166ebf6c20b717933249d5b",
+    "benchmark_stream.py": "d35d1a933c6207f24c743d3023f55e7e4645a5b685e4f1e70bf4e52dd34cbdc3",
+    "metrics.py": "8620e5f08c0bd5f05cc1cbb8982a6379fd944f195e7db1780a49c209e3e20871",
+    "compare_http_runs.py": "aec306c5d310b3faea03fc08552984ef119ea4421437d7c4d9a10030406785d3",
+    "native_worker_io.py": "763d61a0e7f34794bca269e4214fa03ff64b95b913778182e7c34fe40292dc84",
+    "probe_reference_http.py": "cf6b47de8de590d4a24f7c1ca53da5a476e930ce6946b0eb7e83bd31229c26d0"
+  },
+  "gpu_run": false,
+  "performance_admitted": false,
+  "scope": "Matched short-prompt compact B4/T4 pilot with corrected QPC10ms grouping deadline and queue tracing. Requires terminal replayed parent91ae, unchanged model/DLL and quality gates. No assumed gain or2x admission.",
+  "runner_sha256": "6e1c5109b18c89a839e0b844701fc3b65a90d6f338b0df7d1a36e23aa8cbace0",
+  "retained_http_archive_sha256": "91ae86ef0ee6535179cdd64e5c88d6b49c3946ef25991fdb972b2d8c4b9c27ec",
+  "newly_recorded_helper_sources": [],
+  "historical_source_gap": "The retained HTTP/reference archives omit probe_reference_http.py. Its current source is pinned here; exact request-image bytes against all retained reference bodies must be verified after the run.",
+  "verifier_retained_blocks": [
+    {
+      "begin": "    quality = doc(native+'quality.json')",
+      "end": "    def final(path):",
+      "sha256": "7b5205d9a6f1d2c8393f6411b7ddae45acec5b29eda10d4b7033014045807609"
+    },
+    {
+      "begin": "    def final(path):",
+      "end": "    metadata=doc(native+'metadata.json')",
+      "sha256": "2090fee557f5c947d3a80565e2379d2defc25069b046da47ea1c2200db8e23e4"
+    },
+    {
+      "begin": "    references = []",
+      "end": "    parent_ratios={}",
+      "sha256": "5ef1ac42d9a2714bbaea3bb4958e1b0b5a0f84c89da39ee0e19ba1c0f6472604"
+    }
+  ],
+  "method_sha256": {
+    "probe_kv_delta_qpc_http.py": "c0c6429691c420ab226133e26b6eb639642fba230a3849e2ecdf163d382ea08c",
+    "test_kv_delta_qpc_http.bat": "8a614c4fb3c5d07942aa1e9075db9b20ae72d69c826a318117d07d086cb0b108",
+    "run_kv_delta_qpc_http.py": "6e1c5109b18c89a839e0b844701fc3b65a90d6f338b0df7d1a36e23aa8cbace0",
+    "archive_kv_delta_qpc_http.py": "be4195ec1ffddc72bebd10eaed034e03620096adea286f7ce0ad31585d56a581",
+    "verify_kv_delta_qpc_http.py": "8645e6305e5ca86a9869c48ebafa8773fab52f1fad61e52c0e09b927e54179e7"
+  },
+  "modified_helper_sources": {
+    "native_batch_http_bridge.py": {
+      "before_sha256": "a118cef3cdc04e4b09417beaa240b8659572d54406280441fd43f0d78f5ee190",
+      "after_sha256": "fc0190a1d8cad344eb955a7ba82f7c412ec9a43394d5531d3bd90b513f751d57",
+      "scope": "QPC grouping deadline, retry early queue timeout and same-clock queue/dispatch traces. Fixed10ms budget, unchanged requests/model/native."
+    }
+  },
+  "grouping_clock": "perf_counter",
+  "cpu_sources": {
+    "test_native_batch_bridge.py": "f2dd79a72a7887841831105d0fedc34907827a22daf04cf69a42d4beeaac506f",
+    "test_native_http_bridge.py": "b18c6cf0636dee41276c2df39e7515f99f1ec10a3ba120804ae30e0d1c551f31",
+    "test_benchmark_stream.py": "d413c31bd31e6ac8690a0f4e7151dec2bea234a1a79f43ae3637583c529e8926",
+    "test_compare_http_runs.py": "172a109a2db724d03fae4d834357cff46c21dec6c63bc416d6b12b0d0d02974d",
+    "probe_batch_group_deadlines.py": "5a53263e73e3018502c2ff8c3aa6af7bdc307a0658d861c70ed2739b0ed5b136",
+    "probe_batch_group_clock_phase.py": "d108c88eee867469b25ae9f889b0d5be623bd27dc3a8150b6d154762a9b37908"
+  },
+  "cpu_results": {
+    "batch-group-deadline-cpu-attempt1.json": "984cad6939af35d27141d98b088991e5f707a791b091e51b82a88440c39f3480",
+    "batch-group-clock-phase-cpu-attempt1.json": "4e72a2845398f5dbf6e235cea658350e80da9fd07a42324a97cd5ba1f6ab3687"
+  }
+}

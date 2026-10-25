@@ -1,5 +1,6 @@
 """CPU process/HTTP protocol fixtures only, never model speed measurements."""
-import concurrent.futures,json,sys,tempfile,threading,time,unittest
+import concurrent.futures,json,queue,sys,tempfile,threading,time,unittest
+from unittest.mock import patch
 from pathlib import Path
 from native_batch_http_bridge import BatchWorker,BatchHandler,ThreadingHTTPServer
 from benchmark_stream import payload,request
@@ -19,6 +20,37 @@ for line in sys.stdin:
 """
 
 class NativeBatchBridgeTests(unittest.TestCase):
+ def collector(self,steps,capacity=4,wait=.010):
+  worker=BatchWorker.__new__(BatchWorker);worker.capacity=capacity;worker.wait_seconds=wait;worker.stop=threading.Event()
+  clock=[100.0];timeouts=[]
+  class Jobs:
+   def get(self,timeout):
+    timeouts.append(timeout);elapsed,value=steps.pop(0);clock[0]+=elapsed
+    if value=='empty':raise queue.Empty
+    return value
+  worker.jobs=Jobs()
+  return worker,clock,timeouts
+ def test_early_queue_timeout_does_not_close_group_before_qpc_deadline(self):
+  worker,clock,timeouts=self.collector([(.002,'empty'),(.001,'second'),(.007,'empty')])
+  with patch('native_batch_http_bridge.time.perf_counter',side_effect=lambda:clock[0]):
+   group,started,deadline=worker._collect_group('first')
+  self.assertEqual(group,['first','second']);self.assertAlmostEqual(deadline-started,.010)
+  self.assertEqual(len(timeouts),3);self.assertAlmostEqual(timeouts[1],.008)
+ def test_full_group_dispatches_immediately_without_consuming_wait_budget(self):
+  worker,clock,timeouts=self.collector([(.001,'second')],capacity=2)
+  with patch('native_batch_http_bridge.time.perf_counter',side_effect=lambda:clock[0]):
+   group,started,deadline=worker._collect_group('first')
+  self.assertEqual(group,['first','second']);self.assertLess(clock[0],deadline);self.assertEqual(len(timeouts),1)
+ def test_shutdown_sentinel_stops_partial_group(self):
+  worker,clock,timeouts=self.collector([(.001,None)])
+  with patch('native_batch_http_bridge.time.perf_counter',side_effect=lambda:clock[0]):
+   group,_,_=worker._collect_group('first')
+  self.assertEqual(group,['first']);self.assertTrue(worker.stop.is_set())
+ def test_zero_wait_never_reads_another_ticket(self):
+  worker,clock,timeouts=self.collector([],wait=0)
+  with patch('native_batch_http_bridge.time.perf_counter',side_effect=lambda:clock[0]):
+   group,_,_=worker._collect_group('first')
+  self.assertEqual(group,['first']);self.assertEqual(timeouts,[])
  def worker(self,root,source=FIXTURE):
   p=root/'fixture.py';p.write_text(source,encoding='utf8');worker=BatchWorker([sys.executable,'-u',str(p)],root,2,20)
   deadline=time.monotonic()+5
