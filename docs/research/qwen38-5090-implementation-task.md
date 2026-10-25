@@ -2,7 +2,8 @@
 
 Status: native BF16 cache integration is built; retained-output quality gate failed.
 Precision/prefill diagnostics and independent attention GPU/FP64 and wrapper
-CPU metadata gates are closed. Same-precision model reference integration is next.
+CPU metadata gates are closed. The default-off same-precision model reference
+is built (97c364...DLL); five-profile full-model comparison is next.
 Work continues on branch `qwen38-5090` (implementation commit `d43b20f42`). The
 full 2x decode/concurrency and half-TTFT objectives below remain unmet.
 

@@ -4,6 +4,8 @@ from pathlib import Path
 from types import SimpleNamespace
 import unittest
 from xModel.qwen35.vl_0_8b.kv_delta_layout import validate_kv_delta_profile
+from xModel.qwen35.vl_0_8b.bf16_float_reference_profile import validate_bf16_float_reference_decoder
+from xModel.qwen35.vl_0_8b.joined_mlp_profile import validate_joined_mlp_profile
 
 class BuildReached(RuntimeError):pass
 
@@ -28,7 +30,8 @@ class HostEmbeddingPolicyTests(unittest.TestCase):
         cls=next(n for n in tree.body if isinstance(n,ast.ClassDef) and n.name=='CUDAPackedDecoder')
         cls.body=[n for n in cls.body if isinstance(n,ast.FunctionDef) and n.name in ('__init__','close','_all_programs')]
         namespace={'garnet':SimpleNamespace(cuda_tensor_io=io),
-            'validate_joined_mlp_profile':lambda *args:None,'validate_kv_delta_profile':validate_kv_delta_profile,'CUDAPackedDecoderProgram':program}
+            'validate_bf16_float_reference_decoder':validate_bf16_float_reference_decoder,
+            'validate_joined_mlp_profile':validate_joined_mlp_profile,'validate_kv_delta_profile':validate_kv_delta_profile,'CUDAPackedDecoderProgram':program}
         exec(compile(ast.Module(body=[cls],type_ignores=[]),str(path),'exec'),namespace)
         return namespace['CUDAPackedDecoder'],events
     def test_default_keeps_existing_gpu_policy(self):
