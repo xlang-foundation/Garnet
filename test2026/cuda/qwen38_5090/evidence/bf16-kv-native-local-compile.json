@@ -1,0 +1,39 @@
+{
+  "status": "bf16_kv_sm120_native_compile_passed_gpu_unrun",
+  "compiler_exit_codes": {
+    "operators": 0,
+    "commit_probe_link": 0
+  },
+  "compiler": "C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v13.2/bin/nvcc.exe",
+  "compiler_sha256": "537980c3892ecddbb278de6497f849cd896f9e359a5bf0001167d82f3a3cc2e3",
+  "host_environment": "VS2022 Community vcvars64.bat, v17.14.15 banner; x64",
+  "flags": [
+    "-std=c++17",
+    "-arch=sm_120",
+    "-Xcompiler=/utf-8"
+  ],
+  "evidence_type": "Operator compile exits transcribed from successful tool results; commit probe compile/link stdout captured in separate raw log. Current source and produced binary hashes retained.",
+  "probe_compile_log_sha256": "e6a3e4ef685cfcead2fb2652cf23e15327f79a48e27f442319b5caa4773be9e8",
+  "source_sha256": {
+    "src/cuda/qwen38_bf16_kv_commit.cu": "bad0f3434934dda780a2723cee43fa956222b6be1bc6e1b2c9be05e02a631723",
+    "src/cuda/qwen38_bf16_kv_commit.cuh": "82ffd816bbafcbc86f44d044d2ab5468ac400f617e5aa2b5ae107bb30b3ffb59",
+    "src/cuda/qwen38_bf16_kv_overlay.cu": "0016cd0fbeb003e73ec05f545b7718b5d0572b0474759706331fb8fe5dfe969e",
+    "src/cuda/qwen38_bf16_kv_overlay.cuh": "ed89d1947a6153121416b480e1cf1a0540d2b2b646fd7293e5d6a8f3f237fa0c",
+    "test2026/cuda/qwen38_5090/prepare_bf16_kv_operator_fixture.py": "8f08f2cf4f3597ac3183b2b9267ec6f040f926c02fa075eada7e5b68460355eb",
+    "test2026/cuda/qwen38_5090/probe_bf16_kv_commit_native.cu": "e2731d2ad53070b24ba407973096a7a339b09dda96def240f919e8709844881f",
+    "xModel/qwen35/vl_0_8b/kv_bf16_study_layout.py": "1c2071308de589bff10b3e980d377dc3049416bbe96c0bfbc16c9d184a989311"
+  },
+  "local_artifact_sha256": {
+    "bf16_kv_fixture_layout.h": "fe42d2ea44d3b4fd99d503ddddaaf12407459d839a4e353a767e557c59a7b8e1",
+    "qwen38_bf16_kv_commit.obj": "c173aca13f5638836978a45487c8b13fc52e114e923ea2f5c6a3a1d95c18f98e",
+    "qwen38_bf16_kv_overlay.obj": "20928fd6eaac9b60c0dde378a7b8a63ee7fc769fd43914e48f8cf64159cd9594",
+    "probe_bf16_kv_commit_native.exe": "9bfe54457ac432422d2b374ef57f5cc51fa786387931eda81a538fe32d19231c"
+  },
+  "build_recipe_sha256": {
+    "compile_bf16_kv_native.bat": "47305f690cda044c6dc82f51f43b568cca9b64b35813fa5480879014f1791e4c",
+    "compile_bf16_kv_commit_probe.bat": "febd6e8732455bf759f42550ed6347c9e399945c45bf27a0d05c74d795edd7d2"
+  },
+  "scope": "Compile/link only, no CUDA context opened and no GPU used. No native DLL rebuilt or deployed. Standalone commit probe uses independently emitted Python layer tables, verifies every canonical byte including untouched/zero-prefix rows, full/replay sources, accepted-prefix/cache-boundary cases, rejected spans/aliases and readonly inputs. Probe not executed; overlay numerical/readonly/alias tests, helper/plugin wiring, model parity, B8/T32 memory fit and timing remain open.",
+  "runtime_qualified": false,
+  "performance_admitted": false
+}

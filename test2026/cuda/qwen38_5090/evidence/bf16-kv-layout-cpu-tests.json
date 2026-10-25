@@ -1,0 +1,16 @@
+{
+  "status": "bf16_kv_study_layout_cpu_checked_unwired",
+  "exit_code": 0,
+  "stdout": "",
+  "stderr": "......\n----------------------------------------------------------------------\nRan 6 tests in 0.001s\n\nOK\n",
+  "source_sha256": {
+    "xModel\\qwen35\\vl_0_8b\\kv_bf16_study_layout.py": "1c2071308de589bff10b3e980d377dc3049416bbe96c0bfbc16c9d184a989311",
+    "test2026\\cuda\\qwen38_5090\\test_kv_bf16_study_layout.py": "de86dae72441572b65ed238d895de8aa7a5c71f48adc86361ad21d22fa3f1446"
+  },
+  "logical_b8_canonical_bytes": 3418357760,
+  "logical_b8_decode_output_bytes": 1376976896,
+  "logical_b8_prefill_output_bytes": 1309671424,
+  "logical_b8_linear_replay_bytes": 1270874112,
+  "logical_saved_kv_bytes_vs_fp32_b8": 2147483648,
+  "scope": "CPU layout boundaries only. New contract tag, FP32 GDN state and packed BF16 KV carriers; T4 retains replay payload, T32 prefill does not. No CUDA operator implementation/integration/math/quality/timing or measured GPU memory fit."
+}

@@ -1,0 +1,7 @@
+@echo off
+call "C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvars64.bat"
+if errorlevel 1 exit /b %errorlevel%
+"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v13.2\bin\nvcc.exe" -std=c++17 -arch=sm_120 -c D:\CantorAI\work\qwen38-5090\src\cuda\qwen38_bf16_kv_commit.cu -o "%~dp0qwen38_bf16_kv_commit.obj" -Xcompiler=/utf-8
+if errorlevel 1 exit /b %errorlevel%
+"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v13.2\bin\nvcc.exe" -std=c++17 -arch=sm_120 -c D:\CantorAI\work\qwen38-5090\src\cuda\qwen38_bf16_kv_overlay.cu -o "%~dp0qwen38_bf16_kv_overlay.obj" -Xcompiler=/utf-8
+exit /b %errorlevel%
