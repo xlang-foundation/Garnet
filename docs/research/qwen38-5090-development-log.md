@@ -4430,3 +4430,27 @@ text/image row0, then true B1 four prompts/two repeats and ordinary/MTP/prefix
 0/1/2/4/reset/callback behavior. It records B1-vs-B4 differences explicitly.
 Prepared work is not an execution/pass. Current8ae full-model, broad quality,
 actual4K, HTTP, serving memory, tuned references and2x target remain unqualified.
+
+
+### 2026-10-25: true B1 HTTP worker prepared locally during model collection
+
+The original bf16-low-batch-model-consistency-attempt1 handle is running. Read-only
+observation sees B4 decoder metadata and the complete empty-state witness, no
+completed case or recorded error yet. Remote sources/runtime remain unchanged.
+Native hash-library warnings match retained runtime behavior; SHA256 works.
+
+Local-only native_bf16_low_batch_stream_worker.py prepares ordinary or verified
+MTP3 with physicalB1, T32/T4, cap4096 and128MiB draft workspace. It requires the
+actual closed/replayed current-DLL model proof before initializing. Existing
+single-slot HTTP bridge can queue concurrent clients; no GPU batching is implied.
+Its request validator is AST-identical to the established bridge policy, copied
+locally so the embedded model runtime need not import an HTTP server. Seven
+actual CPU controls pass: text/image/invalid request admission, single-row and
+ordinal guards, and exact one-event handling of prefill-first/MTP-duplicate-first
+notifications. Actual output retained as an exec-tool transcript, not presented
+as a run_logged command. All805frozen adapted-MMMU canonical request bodies also
+pass extracted CPU policy after full frozen corpus hash validation, with a real
+separate command ledger. No native worker import/upload, HTTP requests, model
+responses, image pixel/grid qualification, quality score or benchmark occurred.
+Actual B1 model completion/replay, HTTP event/ID correctness and quality/4K gates
+still precede admitted comparisons. Original2x goal remains unmet.
