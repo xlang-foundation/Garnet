@@ -1,0 +1,28 @@
+from pathlib import Path
+import ast,hashlib,json,sys
+r=Path('D:/CantorAI/work/qwen38-5090');m=r/'test2026/cuda/qwen38_5090';e=m/'evidence';w=Path('C:/Users/developer/Documents/Codex/2026-10-23/referenced-chatgpt-conversation-this-is-an');sys.path.insert(0,str(m));from run_logged import run
+sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest();source_recipe=json.loads((e/'bf16-low-batch-commit-source-derivation.json').read_bytes());probe_recipe=json.loads((e/'bf16-low-batch-commit-probe-derivation.json').read_bytes())
+for target,recipe in source_recipe['files'].items():
+ source=(r/recipe['source']).read_bytes();assert hashlib.sha256(source).hexdigest()==recipe['source_sha256'];text=source.decode().replace('\r\n','\n')
+ for before,after,count in recipe['changes']:assert text.count(before)==count;text=text.replace(before,after)
+ assert text.encode()==(m/target).read_bytes() and sha(m/target)==recipe['result_sha256']
+source=(r/probe_recipe['source']).read_bytes();assert hashlib.sha256(source).hexdigest()==probe_recipe['source_sha256'];text=source.decode().replace('\r\n','\n');text=text[:text.index(probe_recipe['prefix_before_marker'])]
+for before,after,count in probe_recipe['prefix_changes']:assert text.count(before)==count;text=text.replace(before,after)
+assert (text+probe_recipe['new_body']).encode()==(m/'probe_bf16_low_batch_commit.cu').read_bytes()
+header=w/'work/bf16_kv_fixture_layout.h';assert sha(header)=='fe42d2ea44d3b4fd99d503ddddaaf12407459d839a4e353a767e557c59a7b8e1'
+inputs=[r/recipe['source'] for recipe in source_recipe['files'].values()]+[r/probe_recipe['source'],r/'src/cuda/qwen38_bf16_kv_commit.cuh',header]+[m/n for n in ('bf16_low_batch_commit_candidate.cu','bf16_low_batch_commit_candidate.h','probe_bf16_low_batch_commit.cu','probe_bf16_low_batch_commit_policy.cpp','bf16_low_batch_layout.py','bf16_low_batch_commit_oracle.py','test_bf16_low_batch_commit.py')]+[e/'bf16-low-batch-commit-source-derivation.json',e/'bf16-low-batch-commit-probe-derivation.json']
+before={str(p):sha(p) for p in inputs};ledger=e/'bf16-low-batch-commit-local-ledger'
+for n in ('bf16-low-batch-commit-policy.exe','bf16-low-batch-commit.exe'):assert not (w/'work'/n).exists()
+setup='@echo off\ncall "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Auxiliary\\Build\\vcvars64.bat" -vcvars_ver=14.29\nif errorlevel 1 exit /b %errorlevel%\nset "TMP=%~dp0"\nset "TEMP=%TMP%"\n'
+policy=w/'work/compile-bf16-low-batch-commit-policy.bat';assert not policy.exists();policy.write_text(setup+'cl /nologo /EHsc /std:c++17 /MT /utf-8 /I"'+str(r/'src/cuda')+'" /I"C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v13.2\\include" "'+str(m/'probe_bf16_low_batch_commit_policy.cpp')+'" /Fo"%~dp0bf16-low-batch-commit-policy.obj" /Fe"%~dp0bf16-low-batch-commit-policy.exe"\nif errorlevel 1 exit /b %errorlevel%\ndumpbin /imports "%~dp0bf16-low-batch-commit-policy.exe" > "%~dp0bf16-low-batch-commit-policy-imports.txt"\nexit /b %errorlevel%\n',encoding='utf8')
+gpu=w/'work/compile-bf16-low-batch-commit.bat';assert not gpu.exists();gpu.write_text(setup+'"C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v13.2\\bin\\nvcc.exe" --version\nif errorlevel 1 exit /b %errorlevel%\n"C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v13.2\\bin\\nvcc.exe" -std=c++17 -arch=sm_120 -O3 -Xcompiler=/MT,/utf-8 "'+str(m/'bf16_low_batch_commit_candidate.cu')+'" "'+str(m/'probe_bf16_low_batch_commit.cu')+'" -I"'+str(r/'src/cuda')+'" -I"'+str(w/'work')+'" -o "%~dp0bf16-low-batch-commit.exe"\nexit /b %errorlevel%\n',encoding='utf8')
+code=run([sys.executable,'-m','unittest','test2026.cuda.qwen38_5090.test_bf16_low_batch_commit'],ledger,'correctness','Five CPU B1 layout/exact byte oracle and mutation/legacy isolation controls',inputs);assert code==0
+code=run(['cmd.exe','/d','/c',str(policy)],ledger,'build','Private CPU-only B1 commit shape policy; inspect imports before execution',[policy]+inputs);assert code==0
+imports=w/'work/bf16-low-batch-commit-policy-imports.txt';raw=imports.read_bytes().lower();assert not any(v in raw for v in (b'cudart',b'nvcuda',b'cublas',b'nvinfer',b'garnet.dll'))
+code=run([str(w/'work/bf16-low-batch-commit-policy.exe')],ledger,'correctness','63CPU shape controls; executable has no CUDA or Garnet imports',[w/'work/bf16-low-batch-commit-policy.exe',imports]+inputs);assert code==0
+code=run(['cmd.exe','/d','/c',str(gpu)],ledger,'build','Private sm120 candidate/raw collector compile and link only; DO NOT execute GPU binary',[gpu]+inputs);assert code==0
+assert all(sha(Path(p))==h for p,h in before.items())
+result={'status':'b1_commit_cpu_policy_oracle_and_private_compile_passed_gpu_unrun','input_sha256':before,'policy_executable_sha256':sha(w/'work/bf16-low-batch-commit-policy.exe'),'policy_no_cuda_imports_verified':True,'gpu_executable_sha256':sha(w/'work/bf16-low-batch-commit.exe'),'fixture_header_sha256':sha(header),'cpu_tests':5,'cpu_policy_cases':63,'gpu_executed':False,'production_admission_changed':False,'scope':'CPU shape/byte oracle, exact source derivations and private sm120 compile/link only. Dedicated5090 running the original full-model lifecycle job; no GPU executable run/upload and no deployed mutation. B1 commit/helper/plugin/model/quality/speed remain unqualified.'}
+(e/'bf16-low-batch-commit-local-build.json').write_text(json.dumps(result,indent=2),encoding='utf8')
+for path in (policy,gpu,imports):(e/(path.name+'.txt')).write_bytes(path.read_bytes())
+print(json.dumps({'status':result['status'],'cpu_tests':5,'policy_cases':63,'gpu_executed':False,'gpu_executable_sha256':result['gpu_executable_sha256']}))

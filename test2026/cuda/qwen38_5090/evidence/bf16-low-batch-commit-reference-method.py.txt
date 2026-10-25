@@ -1,0 +1,20 @@
+from pathlib import Path
+import hashlib,json,sys
+r=Path('D:/CantorAI/work/qwen38-5090');m=r/'test2026/cuda/qwen38_5090';e=m/'evidence';w=Path('C:/Users/developer/Documents/Codex/2026-10-23/referenced-chatgpt-conversation-this-is-an');sys.path.insert(0,str(m));from run_logged import run
+from bf16_low_batch_commit_oracle import case_plan,expected,samples
+from bf16_low_batch_layout import build_bf16_low_batch_layout
+sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+output=w/'work/bf16-low-batch-commit-expected.bin';assert not output.exists();records=[];offset=0
+with output.open('xb') as stream:
+ for c in case_plan():
+  data=expected(c);stream.write(data);records.append({'case':c,'offset':offset,'bytes':len(data),'samples':len(samples(c)),'sha256':hashlib.sha256(data).hexdigest()});offset+=len(data)
+assert len(records)==20 and output.stat().st_size==offset
+text=['// Generated from the separate Python byte-layout contract.\n#pragma once\n','struct BF16LayerFixture { long long canonical,target,replay,width; bool full; };\n']
+for chunk in (4,32):
+ layout=build_bf16_low_batch_layout(chunk=chunk,retain_linear_inputs=chunk==4);text.append('static const BF16LayerFixture bf16Layers'+str(chunk)+'[64]={\n')
+ for layer in layout['layers']:
+  values=(layer['offset'],layer['target_offset'],layer['replay_offset'] or 0,layer['state1_width']+layer['state2_width']);text.append(' {'+','.join(map(str,values))+','+str(layer['kind']=='full_attention').lower()+'},\n')
+ text.append('};\n')
+header=''.join(text).encode();existing=w/'work/bf16_kv_fixture_layout.h';assert header==existing.read_bytes();assert hashlib.sha256(header).hexdigest()=='fe42d2ea44d3b4fd99d503ddddaaf12407459d839a4e353a767e557c59a7b8e1'
+ref={'status':'b1_commit_integer_byte_reference_frozen_gpu_unrun','cases':records,'bytes':offset,'sha256':sha(output),'file':output.name,'oracle_sha256':{n:sha(m/n) for n in ('bf16_low_batch_commit_oracle.py','bf16_low_batch_layout.py')},'fixture_regenerated_from_b1_layout_sha256':hashlib.sha256(header).hexdigest(),'gpu_executed':False,'model_outputs':0,'tolerance':'Exact byte equality; no floating tolerance','scope':'Pure CPU expected sparse byte witnesses for20predeclared standalone B1 commit cases. Reconstructed B1 row-offset header is byte-identical to the earlier qualified fixture; metadata contract still rejects legacy B4/B8 admission. Not GPU, model or benchmark observations.'}
+(e/'bf16-low-batch-commit-byte-reference.json').write_text(json.dumps(ref,indent=2),encoding='utf8');print(json.dumps({'status':ref['status'],'bytes':offset,'cases':len(records),'samples':sum(x['samples'] for x in records),'sha256':ref['sha256']}))

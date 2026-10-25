@@ -1,0 +1,9 @@
+{
+  "status": "local_build_launcher_cwd_corrected_before_compile",
+  "original_method_sha256": "6c3b8c2e43451cb8ebdaae28cbfe65224349e2e6784bacdc9862b1672867d562",
+  "corrected_method_sha256": "8a579a8f2d144800be2c4d1996396b29dedc6e15c27642ed5076c71dc58e9f06",
+  "preserved_failure": "bf16-low-batch-commit-local-ledger/commands.jsonl",
+  "reason": "First local unittest launcher ran from the chat folder and could not import test2026; five same tests had separately passed from repository root. Set repository cwd explicitly. Existing prospective private batch scripts must remain byte-identical; no test/source/tolerance change. No compiler or GPU executable ran in the failed launch.",
+  "gpu_executed": false,
+  "existing_batch_comparison": "Preserve original Windows CRLF batch bytes; preflight idempotency now compares the same newline encoding instead of LF-only bytes."
+}

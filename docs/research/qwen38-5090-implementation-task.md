@@ -165,7 +165,10 @@ Next gates, in order:
    DONE: actual5090compile/CPU33/10Python controls and44GPU cases pass both
    independent FP64 replays (archive2eeb8aa8...,119040scalars,maxabs1.87e-7).
    Actual pre-GPU frozen FP64 bytes also pass unchanged tolerance; fresh
-   oracle-vector hash/error last-bit differences are preserved. Require separate typed
+   oracle-vector hash/error last-bit differences are preserved. Separate B1
+   commit/layout code now privately compiles;5CPU oracle/legacy isolation tests
+   and63CPU shape checks pass.20raw-case/3graph/66negative GPU gate remains
+   UNRUN while the original full-model sampler job owns the GPU. Require typed
    commit/helper/plugin/lowering and complete model/lifecycle/4K/quality/protocol
    admission for C1. Existing B4/B8 guards remain unchanged. Canonical427294720B
    for B1 versus1709178880B for physical B4 is a layout calculation, not total

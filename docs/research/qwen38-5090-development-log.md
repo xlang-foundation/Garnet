@@ -4076,3 +4076,43 @@ result is NOT yet available or qualified. Known unused hash-module warnings
 from native Python initialization are retained; SHA256 remains the unchanged
 study witness mechanism. Do not alter deployed methods/source/DLL/runtime/SDK
 or start a second GPU worker while this original controller is live.
+
+Offline explicit B1 accepted-prefix commit candidate prepared while original
+integrated-batch-top1-model-lifecycle-attempt1 remains live. No remote upload,
+source/DLL/runtime/SDK change or second GPU executable. Literal old commit
+kernel math/offsets/span/alias/width guards retained; only separate function/header
+name and strict B1-only shape policy. Existing B4/B8 operator/profile/layout
+reject1 unchanged. New CPU metadata contract and byte-reference are isolated
+in test2026/cuda/qwen38_5090, no production model admission.
+
+Private CPU5layout/legacy isolation/exact integer-byte/tie/mutation tests and
+63shape policy controls pass. CPU executable imports inspected before execution:
+no CUDA/Garnet imports. Private sm120/MT compile/link passes, GPU executable
+581ccbff0db15147352db581d6b8754f4b02ceb51420e0ee7b44cdc732f606a9
+is NOT run. Compiler emits one unused sourceWidth-variable warning, retained.
+Initial local build launcher failed to import test2026 from chat cwd before
+compiler execution; actual raw failure and original method retained. Correct
+repository cwd and preserve existing Windows CRLF private batch bytes under
+idempotent comparison; no test/code/tolerance relaxation. Corrected actual
+build/test ledgers and method hashes preserved.
+
+Prospective B1 commit probe declares20raw cases, independent GPU and host checks
+of all427294720canonical bytes per case, all-buffer canaries,3graph profiles/
+3replays each,66negative calls inclall7unused span rows and readonly inputs.
+GPU behavior UNQUALIFIED. Separate pure CPU integer byte oracle freezes49472
+sparse observations/104704B expected bytes, SHA
+bf4dde202004993cf53d3c20ff7a4edfa3ffc90a6ff75444aa587a5782880c69,
+20predeclared cases; exact bytes, no floating tolerance. B1 CPU metadata
+regenerates byte-identical fe42d2ea... row-offset fixture. Preparation bundle
+25files/57325B/SHA938c233df5607d329b95c7c7a01774bb247016d46012a1c7fc7bb751305e8116.
+These are CPU reference/preparation files, not GPU/model responses or metrics.
+
+Read-only current model observation shows original workflow RUNNING, disabled
+mode unfinished, pool open, first case record present, exact mode=false with
+zero initial host counters. This partial observation is not a closed model
+qualification. Keep polling the same original handle, never restart for quiet
+output. After full28case/204vector job closure and both strict replays, bind a
+new B1 commit runtime preparation to actual model/attention proofs, compile on
+actual remote SDK and run/replay the full20case byte/graph/negative corpus.
+Typed helper/plugin/lowering/model, actual4K/quality/HTTP/reference/4B/B8 and
+original2x/halfTTFT targets remain required.
