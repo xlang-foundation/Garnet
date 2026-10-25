@@ -1,0 +1,5 @@
+Traceback (most recent call last):
+  File "D:\CantorAI\work\qwen38-5090\test2026\cuda\qwen38_5090\audit_decode_cuda_operation_counts.py", line 37, in <module>
+    assert actual==expected,(window['call'],actual,expected)
+           ^^^^^^^^^^^^^^^^
+AssertionError: (2, {'nvfp4_matmul': 6241, 'nvfp4_quantizer': 6241, 'fp8_matmul': 11280, 'fp8_quantizer': 9776, 'bf16_small_tile': 5358, 'bf16_larger_tile': 282, 'gdn_recurrence': 4032, 'short_context_attention': 752, 'canonical_linear_commit': 47, 'canonical_kv_scatter': 47}, {'nvfp4_matmul': 6241, 'nvfp4_quantizer': 6241, 'fp8_matmul': 9776, 'fp8_quantizer': 9776, 'bf16_small_tile': 5358, 'bf16_larger_tile': 282, 'gdn_recurrence': 4032, 'short_context_attention': 752, 'canonical_linear_commit': 47, 'canonical_kv_scatter': 47})

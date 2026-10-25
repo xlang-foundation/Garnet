@@ -1,0 +1,108 @@
+{
+  "status": "cpu_interval_arithmetic_checked",
+  "source_sha256": "b8027733c5e9dc87b5a96d81a6b2606f2754f9c842eaa2ade44d3c6737a765b3",
+  "cases": [
+    {
+      "method": "duration",
+      "left": [
+        [
+          1,
+          5
+        ],
+        [
+          3,
+          7
+        ],
+        [
+          7,
+          9
+        ],
+        [
+          12,
+          15
+        ]
+      ],
+      "expected": 11,
+      "actual": 11
+    },
+    {
+      "method": "intersection_ns",
+      "left": [
+        [
+          1,
+          5
+        ],
+        [
+          3,
+          7
+        ],
+        [
+          12,
+          15
+        ]
+      ],
+      "right": [
+        [
+          2,
+          4
+        ],
+        [
+          6,
+          13
+        ]
+      ],
+      "expected": 4,
+      "actual": 4
+    },
+    {
+      "method": "intersection_ns",
+      "left": [],
+      "right": [],
+      "expected": 0,
+      "actual": 0
+    },
+    {
+      "method": "intersection_ns",
+      "left": [
+        [
+          1,
+          2
+        ]
+      ],
+      "right": [
+        [
+          2,
+          3
+        ]
+      ],
+      "expected": 0,
+      "actual": 0
+    },
+    {
+      "method": "intersection_ns",
+      "left": [
+        [
+          1,
+          9
+        ],
+        [
+          2,
+          3
+        ]
+      ],
+      "right": [
+        [
+          2,
+          8
+        ],
+        [
+          4,
+          5
+        ]
+      ],
+      "expected": 6,
+      "actual": 6
+    }
+  ],
+  "scope": "Synthetic CPU interval fixtures only. Actual current source functions extracted by AST; not CUDA/model/performance evidence."
+}
