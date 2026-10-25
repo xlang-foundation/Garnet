@@ -1,0 +1,11 @@
+{
+  "status": "auxiliary_cpu_file_observations_transcribed",
+  "archive_sha256": "ceb182e066a9f97df985d5e6fb0e8a0f5eb25253773abbe44026e37b4dafa14c",
+  "exact_observation_timestamps_recorded": false,
+  "method": "Two separate CPython processes read only workflow.json, native/trace-report.json and native/correctness/report.json during the profiler workflow. No GPU or OS-process query, source mutation or additional GPU worker.",
+  "observations": [
+    {"workflow_status": "running", "trace_status": "running", "captures": 1, "correctness_status": "starting", "cases": 3},
+    {"workflow_status": "running", "trace_status": "running", "captures": 2, "correctness_status": "starting", "cases": 7}
+  ],
+  "scope": "Transcribed tool observations, not a timestamped profiler export. The first read may overlap a marked generate call; CPU scheduling overhead was not isolated. Preserve as a possible host-side diagnostic confound. Profile durations remain instrumented diagnostics, never clean HTTP timings or causal optimization gains. Immutable raw profiler archive is unchanged."
+}

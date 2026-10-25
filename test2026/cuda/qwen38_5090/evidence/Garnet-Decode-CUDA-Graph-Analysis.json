@@ -1,0 +1,5386 @@
+{
+  "status": "marked_decode_cuda_graphs_reconstructed",
+  "archive_sha256": "ceb182e066a9f97df985d5e6fb0e8a0f5eb25253773abbe44026e37b4dafa14c",
+  "proof_sha256": "349476e614b7afdfffd590f71cb0f2489d0d42a996cf3e93f4d88c5f2aa71202",
+  "analyzer_sha256": "b8027733c5e9dc87b5a96d81a6b2606f2754f9c842eaa2ade44d3c6737a765b3",
+  "window_selector_sha256": "f2253e4f603b512faa7f6ef480b06c9e975df62f3a6188d7de2a7650e4363099",
+  "windows": [
+    {
+      "call": 2,
+      "marker_span_ns": 2092837325,
+      "kernel_union_ns": 1733543436,
+      "kernel_copy_memset_union_ns": 1782749549,
+      "unobserved_interval_ns": 310087776,
+      "largest_unobserved_intervals_ns": [
+        2714881,
+        2427522,
+        2040801,
+        1954017,
+        1921186,
+        1888866,
+        1882401,
+        1841601,
+        1821025,
+        1814977,
+        1794145,
+        1788769,
+        1779457,
+        1779105,
+        1772385,
+        1747713,
+        1739906,
+        1727265,
+        1724961,
+        1719841
+      ],
+      "memory_copy_records": 6238,
+      "memory_copy_bytes": 39031280048,
+      "memset_records": 3834,
+      "graphs": [
+        {
+          "graph_id": 2,
+          "kernel_records": 87232,
+          "graph_node_records": 87232,
+          "kernel_sum_duration_ns": 1182680122,
+          "kernel_interval_union_ns": 1182679322,
+          "kernels_by_name": [
+            {
+              "name": "cutlass3x_sm120_bstensorop_s16864gemm_block_scaled_ue4m3xe2m1_ue4m3xe2m1_f32_bf16_bf16_128x128x256_1x1x1_0_tnn_align32_o_vs16_bias_bf16_relu",
+              "count": 6016,
+              "sum_duration_ns": 422523138,
+              "interval_union_ns": 422523138,
+              "registers_per_thread": [
+                168
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "void cutlass::Kernel2<cutlass_80_wmma_tensorop_bf16_s161616gemm_bf16_16x16_128x2_tn_align8>(T1::Params)",
+              "count": 4512,
+              "sum_duration_ns": 121124460,
+              "interval_union_ns": 121124460,
+              "registers_per_thread": [
+                124
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "Garnet::<unnamed>::recurrence(Garnet::Qwen35DeltaConfig, int, const float *, const float *, const float *, const float *, const float *, const float *, const float *, const float *, const float *, float *, float *)",
+              "count": 2256,
+              "sum_duration_ns": 113463733,
+              "interval_union_ns": 113463733,
+              "registers_per_thread": [
+                48
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "nvjet_sm120_qqtst_mma_64x64x64_12_32x32x64_tmaAB_alignCD4_bz_TNNN",
+              "count": 2256,
+              "sum_duration_ns": 107640527,
+              "interval_union_ns": 107640527,
+              "registers_per_thread": [
+                255
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "nvjet_sm120_qqtst_mma_64x32x64_16_32x16x64_tmaAB_alignCD4_bz_TNNN",
+              "count": 3008,
+              "sum_duration_ns": 88474447,
+              "interval_union_ns": 88474447,
+              "registers_per_thread": [
+                255
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "void Garnet::<unnamed>::compactCached<(bool)0>(Garnet::Qwen35AttentionCoreConfig, const float *, const float *, const float *, const float *, const float *, const float *, const float *, const float *, float *, unsigned long long)",
+              "count": 752,
+              "sum_duration_ns": 69886771,
+              "interval_union_ns": 69886771,
+              "registers_per_thread": [
+                40
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "sm89_xmma_gemm_e4m3bf16_e4m3f32_f32_tn_n_tilesize32x64x64_stage5_warpsize2x2x1_tensor16x8x32_execute_kernel__5x_cublas",
+              "count": 3008,
+              "sum_duration_ns": 69835122,
+              "interval_union_ns": 69835122,
+              "registers_per_thread": [
+                74
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_MoveMoveMoveMoveMoveMoveMoveMoveMoveMoveMoveMoveMoveMoveMoveMoveMoveMoveMoveMoveMoveMoveEtc_0x48c9334afaf8e0d41b03e04b584c57a9",
+              "count": 47,
+              "sum_duration_ns": 40527483,
+              "interval_union_ns": 40527483,
+              "registers_per_thread": [
+                18
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "Garnet::<unnamed>::QuantizeActivation(const __nv_bfloat16 *, unsigned char *, unsigned char *, float, int, int, int, unsigned long long)",
+              "count": 6016,
+              "sum_duration_ns": 24314541,
+              "interval_union_ns": 24314541,
+              "registers_per_thread": [
+                42
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_ReshReshReshReshReshReshReshCastAddReshConcSlic_0x96c1b5d83fa27b256f59ea37f50d3c50",
+              "count": 2256,
+              "sum_duration_ns": 21558735,
+              "interval_union_ns": 21558735,
+              "registers_per_thread": [
+                22
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_ReshCastReshCastSeleAddMulMeanAddSqrtDivMulMul_0x1c10dc9db774dd96c86a3e745f0ce4b0",
+              "count": 3008,
+              "sum_duration_ns": 10510024,
+              "interval_union_ns": 10510024,
+              "registers_per_thread": [
+                40
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_ReshCastSeleMulMeanAddSqrtDivMulMulCastReshMoveMoveMove_0x18a580c5acfd5714f0a84bf4c3933caa",
+              "count": 2256,
+              "sum_duration_ns": 9103491,
+              "interval_union_ns": 9103491,
+              "registers_per_thread": [
+                40
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "sm89_xmma_gemm_e4m3bf16_e4m3f32_f32_tn_n_tilesize64x64x64_stage6_warpsize2x2x1_tensor16x8x32_execute_kernel__5x_cublas",
+              "count": 1504,
+              "sum_duration_ns": 8879397,
+              "interval_union_ns": 8879397,
+              "registers_per_thread": [
+                100
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "Garnet::<unnamed>::Quantize(const __nv_bfloat16 *, unsigned char *, float, unsigned long long)",
+              "count": 9776,
+              "sum_duration_ns": 6974787,
+              "interval_union_ns": 6974787,
+              "registers_per_thread": [
+                24
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "Garnet::<unnamed>::convolution(Garnet::Qwen35DeltaConfig, int, int, const float *, const float *, const float *, const float *, float *, float *)",
+              "count": 2256,
+              "sum_duration_ns": 6846052,
+              "interval_union_ns": 6846052,
+              "registers_per_thread": [
+                40
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_ReshCastSlicSiluSlicMul_0xe6893db6c5b16b2d00529429eecaa05c",
+              "count": 3008,
+              "sum_duration_ns": 5616674,
+              "interval_union_ns": 5616674,
+              "registers_per_thread": [
+                20
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_GathMulConcReshSinCosAddSqrtDivMulMulSlicSlicMulSlicSlicNegConcMulAddConcAddSqrtDivMulMulEtc_0xd06f7daeef3a6b55e0fd8f155c52c281",
+              "count": 752,
+              "sum_duration_ns": 4396068,
+              "interval_union_ns": 4396068,
+              "registers_per_thread": [
+                32
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_ReshCast_0xd6cd286264244fb761e2224e60175cc9",
+              "count": 4512,
+              "sum_duration_ns": 3870883,
+              "interval_union_ns": 3870883,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Move_0x60f1a4ef80aed241192041c54e812fe4",
+              "count": 4512,
+              "sum_duration_ns": 3830881,
+              "interval_union_ns": 3830433,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "sm89_xmma_gemm_e4m3bf16_e4m3f32_f32_tn_n_tilesize64x64x64_stage6_warpsize2x2x1_tensor16x8x32_execute_split_k_kernel__5x_cublas",
+              "count": 1504,
+              "sum_duration_ns": 3631923,
+              "interval_union_ns": 3631923,
+              "registers_per_thread": [
+                62
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Cast_0x8f18ca95162ba4bb47ca199a44b0f3fe",
+              "count": 3008,
+              "sum_duration_ns": 2446306,
+              "interval_union_ns": 2446306,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_ReshCastSeleMulMeanAddSqrtDivMulMulCastReshMoveMove_0xbbdcddf9f8357caab188eda29594fd38",
+              "count": 752,
+              "sum_duration_ns": 2418369,
+              "interval_union_ns": 2418369,
+              "registers_per_thread": [
+                40
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Move_0x62f646d24f97fec42ecb88076c8068ea",
+              "count": 2256,
+              "sum_duration_ns": 2041057,
+              "interval_union_ns": 2041057,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Move_0xdab72d3ab0cf2d499046a47c1d25ba44",
+              "count": 2256,
+              "sum_duration_ns": 2037794,
+              "interval_union_ns": 2037794,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_ReshCast_0xeb9b30d8dc2618d7fd9de1562b41ba95",
+              "count": 2256,
+              "sum_duration_ns": 1999714,
+              "interval_union_ns": 1999714,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Cast_0x9e083f8e1c5a1d927fd1469d71d24162",
+              "count": 3008,
+              "sum_duration_ns": 1723136,
+              "interval_union_ns": 1723136,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Cast_0xee3d7ab64cdac674824220e14e941cb0",
+              "count": 3008,
+              "sum_duration_ns": 1669152,
+              "interval_union_ns": 1669152,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_ReshCast_0x9c8fdc4c32a6e05b7b3d4b903c20ba1a",
+              "count": 2256,
+              "sum_duration_ns": 1459265,
+              "interval_union_ns": 1459265,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_ReshCastSlicSlicMulMean_0xf22c94be3718217a8bf71f2ee58872be",
+              "count": 752,
+              "sum_duration_ns": 1031201,
+              "interval_union_ns": 1031201,
+              "registers_per_thread": [
+                22
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_ReshReshReshCastAddReshConcSlic_0xf9c6144ee4608dc2da139759aebb993e",
+              "count": 705,
+              "sum_duration_ns": 907968,
+              "interval_union_ns": 907968,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_ReshCastMulMean_0x9005fcdf426496b97e434162cafc2945",
+              "count": 752,
+              "sum_duration_ns": 754209,
+              "interval_union_ns": 754209,
+              "registers_per_thread": [
+                20
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_ReshCast_0x7746c3f51af2322edee87d73dfaca4ee",
+              "count": 752,
+              "sum_duration_ns": 505152,
+              "interval_union_ns": 505152,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0x79a1bf204b380450f9374bf235fae086",
+              "count": 47,
+              "sum_duration_ns": 447485,
+              "interval_union_ns": 447485,
+              "registers_per_thread": [
+                18
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0xb8686f8d2a179b81f4511c40e3fdc9ae",
+              "count": 47,
+              "sum_duration_ns": 446845,
+              "interval_union_ns": 446845,
+              "registers_per_thread": [
+                18
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0xa90b5d30f627633077af002f8bb7ba86",
+              "count": 47,
+              "sum_duration_ns": 445758,
+              "interval_union_ns": 445758,
+              "registers_per_thread": [
+                18
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0x93048202c13a18f91823f977a7575a0c",
+              "count": 47,
+              "sum_duration_ns": 444064,
+              "interval_union_ns": 444064,
+              "registers_per_thread": [
+                18
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0xf01257c784e56ff61ce1fcf04ec4cc9d",
+              "count": 47,
+              "sum_duration_ns": 443679,
+              "interval_union_ns": 443679,
+              "registers_per_thread": [
+                18
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0x8ae186cd051dc6f89b61d92f9d2a10cb",
+              "count": 47,
+              "sum_duration_ns": 442591,
+              "interval_union_ns": 442591,
+              "registers_per_thread": [
+                18
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0xc012360fdc2ae3e2845914814588481d",
+              "count": 47,
+              "sum_duration_ns": 442465,
+              "interval_union_ns": 442465,
+              "registers_per_thread": [
+                18
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0x10a5692e3d7e00f5baf5fc5464da538e",
+              "count": 47,
+              "sum_duration_ns": 442111,
+              "interval_union_ns": 442111,
+              "registers_per_thread": [
+                18
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0xbd0635e8167522c32a07659b7c79776d",
+              "count": 47,
+              "sum_duration_ns": 441728,
+              "interval_union_ns": 441728,
+              "registers_per_thread": [
+                18
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0xa3942030c41e64e98e46eaa3889dfd3a",
+              "count": 47,
+              "sum_duration_ns": 440544,
+              "interval_union_ns": 440544,
+              "registers_per_thread": [
+                18
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0x76bc3fe07ec6896254eb46275deff731",
+              "count": 47,
+              "sum_duration_ns": 439519,
+              "interval_union_ns": 439519,
+              "registers_per_thread": [
+                18
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0xc00914fa46bfb86dbc19706708ebfb7f",
+              "count": 47,
+              "sum_duration_ns": 438847,
+              "interval_union_ns": 438847,
+              "registers_per_thread": [
+                18
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0xa2ab6f7ac046dacf91358a3ec37e1714",
+              "count": 47,
+              "sum_duration_ns": 438688,
+              "interval_union_ns": 438688,
+              "registers_per_thread": [
+                18
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0x6203e04def2b0a16414d7934c1ba3a20",
+              "count": 47,
+              "sum_duration_ns": 435232,
+              "interval_union_ns": 435232,
+              "registers_per_thread": [
+                18
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0x5d2aa670d6cd16d6ef457e812898ec3e",
+              "count": 47,
+              "sum_duration_ns": 434526,
+              "interval_union_ns": 434526,
+              "registers_per_thread": [
+                18
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0x16626d85122f001e21419d9487af1d0f",
+              "count": 47,
+              "sum_duration_ns": 433823,
+              "interval_union_ns": 433823,
+              "registers_per_thread": [
+                18
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0x8117bae72ca9a1689fff45ea58f0197e",
+              "count": 47,
+              "sum_duration_ns": 433470,
+              "interval_union_ns": 433470,
+              "registers_per_thread": [
+                18
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0x0cc7a506cef00e6e4bf2ed5d496b98f4",
+              "count": 47,
+              "sum_duration_ns": 433373,
+              "interval_union_ns": 433373,
+              "registers_per_thread": [
+                18
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0x43b54ec028d2afa6d7eefbaa44dcea6d",
+              "count": 47,
+              "sum_duration_ns": 433246,
+              "interval_union_ns": 433246,
+              "registers_per_thread": [
+                18
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0x0acedfb0ffea7ee57560157863b89ac6",
+              "count": 47,
+              "sum_duration_ns": 433024,
+              "interval_union_ns": 433024,
+              "registers_per_thread": [
+                18
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0xe2e2086129f44121adfd87c7d3c4dd5d",
+              "count": 47,
+              "sum_duration_ns": 432575,
+              "interval_union_ns": 432575,
+              "registers_per_thread": [
+                18
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0x8c8bc98061d6c9c12be93f349d49afc8",
+              "count": 47,
+              "sum_duration_ns": 431359,
+              "interval_union_ns": 431359,
+              "registers_per_thread": [
+                18
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0x17d318b5d5473cfe5f8034faa83369ae",
+              "count": 47,
+              "sum_duration_ns": 430878,
+              "interval_union_ns": 430878,
+              "registers_per_thread": [
+                18
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0xa8df506c1da1033d1a5bc68433dd8801",
+              "count": 47,
+              "sum_duration_ns": 430656,
+              "interval_union_ns": 430656,
+              "registers_per_thread": [
+                18
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0x0ac5279fd0c5ca6d3c65d9fdda8b8978",
+              "count": 47,
+              "sum_duration_ns": 430493,
+              "interval_union_ns": 430493,
+              "registers_per_thread": [
+                18
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0xa79189afbc7ee1e85bcd68116cf71c53",
+              "count": 47,
+              "sum_duration_ns": 429311,
+              "interval_union_ns": 429311,
+              "registers_per_thread": [
+                18
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0x3f1b0ca513e2e8ae924919146e7dbf68",
+              "count": 47,
+              "sum_duration_ns": 429088,
+              "interval_union_ns": 429088,
+              "registers_per_thread": [
+                18
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0x91dd72b1627ed6bb8e32304c82655477",
+              "count": 47,
+              "sum_duration_ns": 429055,
+              "interval_union_ns": 429055,
+              "registers_per_thread": [
+                18
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0x3e3e28ba3d13c560fc34f4ec2af5aeb4",
+              "count": 47,
+              "sum_duration_ns": 428926,
+              "interval_union_ns": 428926,
+              "registers_per_thread": [
+                18
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0xecf531cd6e75df3009090e82d7d06a46",
+              "count": 47,
+              "sum_duration_ns": 427965,
+              "interval_union_ns": 427965,
+              "registers_per_thread": [
+                18
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0xe29d2f817019e9d3ae342edd53ddadff",
+              "count": 47,
+              "sum_duration_ns": 426303,
+              "interval_union_ns": 426303,
+              "registers_per_thread": [
+                18
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0x61716c114069372b6243966297105809",
+              "count": 47,
+              "sum_duration_ns": 425983,
+              "interval_union_ns": 425983,
+              "registers_per_thread": [
+                18
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0xf2b20644841617fe0a1eabe2542cdf3a",
+              "count": 47,
+              "sum_duration_ns": 425950,
+              "interval_union_ns": 425950,
+              "registers_per_thread": [
+                18
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0x23bf2d885ea9c048e12369e5d199d73b",
+              "count": 47,
+              "sum_duration_ns": 424607,
+              "interval_union_ns": 424607,
+              "registers_per_thread": [
+                18
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0x5bf37832c1f6d50532563146b2c82ebb",
+              "count": 47,
+              "sum_duration_ns": 424000,
+              "interval_union_ns": 424000,
+              "registers_per_thread": [
+                18
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0x5126e5c987319b743c63c1fb8b0bf9a4",
+              "count": 47,
+              "sum_duration_ns": 423359,
+              "interval_union_ns": 423359,
+              "registers_per_thread": [
+                18
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0xc57e8127fff99d3bb69498d50a338f16",
+              "count": 47,
+              "sum_duration_ns": 421724,
+              "interval_union_ns": 421724,
+              "registers_per_thread": [
+                18
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0x2d64b3439c7922c43d6e0ccf01b657d5",
+              "count": 47,
+              "sum_duration_ns": 421341,
+              "interval_union_ns": 421341,
+              "registers_per_thread": [
+                18
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0x3f482f240fbed64de03a80fe8d244ed2",
+              "count": 47,
+              "sum_duration_ns": 421214,
+              "interval_union_ns": 421214,
+              "registers_per_thread": [
+                18
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0x47f1cc78c75ede1ff9b4ddef0cc5cff0",
+              "count": 47,
+              "sum_duration_ns": 421023,
+              "interval_union_ns": 421023,
+              "registers_per_thread": [
+                18
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0x3e9f852d6f20d8c5e8de7d648b8f9e90",
+              "count": 47,
+              "sum_duration_ns": 420768,
+              "interval_union_ns": 420768,
+              "registers_per_thread": [
+                18
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0x38f8afdeafc75ded546a85da32142efb",
+              "count": 47,
+              "sum_duration_ns": 420542,
+              "interval_union_ns": 420542,
+              "registers_per_thread": [
+                18
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0x11b87347e2ae49425ff58d4c8f84d0f4",
+              "count": 47,
+              "sum_duration_ns": 420289,
+              "interval_union_ns": 420289,
+              "registers_per_thread": [
+                18
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0xe0cf0507dfcbae81e927491614aafeba",
+              "count": 47,
+              "sum_duration_ns": 419390,
+              "interval_union_ns": 419390,
+              "registers_per_thread": [
+                18
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0xef51e71348e315f5a74a967be6bc29d0",
+              "count": 47,
+              "sum_duration_ns": 418972,
+              "interval_union_ns": 418972,
+              "registers_per_thread": [
+                18
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0x94b7280871934c2c5a02a82e77f27e77",
+              "count": 47,
+              "sum_duration_ns": 417950,
+              "interval_union_ns": 417950,
+              "registers_per_thread": [
+                18
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0x0e1e6189c5b9208297446e95a77ce211",
+              "count": 47,
+              "sum_duration_ns": 417630,
+              "interval_union_ns": 417630,
+              "registers_per_thread": [
+                18
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0xf81453649ffc318f4a00986ba7369b23",
+              "count": 47,
+              "sum_duration_ns": 415293,
+              "interval_union_ns": 415293,
+              "registers_per_thread": [
+                18
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            }
+          ]
+        },
+        {
+          "graph_id": null,
+          "kernel_records": 1256,
+          "graph_node_records": 0,
+          "kernel_sum_duration_ns": 244599259,
+          "kernel_interval_union_ns": 244599259,
+          "kernels_by_name": [
+            {
+              "name": "cutlass3x_sm120_bstensorop_s16864gemm_block_scaled_ue4m3xe2m1_ue4m3xe2m1_f32_bf16_bf16_128x128x256_1x1x1_0_tnn_align32_o_vs16_bias_bf16_relu",
+              "count": 225,
+              "sum_duration_ns": 125945091,
+              "interval_union_ns": 125945091,
+              "registers_per_thread": [
+                168
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "<unnamed>::logitsTop1BatchBF16Kernel(const __nv_bfloat16 *, long long *, float *, int)",
+              "count": 225,
+              "sum_duration_ns": 70243195,
+              "interval_union_ns": 70243195,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "Garnet::<unnamed>::copyLinear(const float *, long long, float *, const Garnet::Qwen35KVDeltaLinearLayout *, Garnet::Qwen35KVDeltaSpans)",
+              "count": 47,
+              "sum_duration_ns": 46473117,
+              "interval_union_ns": 46473117,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "Garnet::<unnamed>::QuantizeActivation(const __nv_bfloat16 *, unsigned char *, unsigned char *, float, int, int, int, unsigned long long)",
+              "count": 225,
+              "sum_duration_ns": 994816,
+              "interval_union_ns": 994816,
+              "registers_per_thread": [
+                42
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "Garnet::<unnamed>::CopyLast(const float *, const float *, float *, int, int, int)",
+              "count": 225,
+              "sum_duration_ns": 389472,
+              "interval_union_ns": 389472,
+              "registers_per_thread": [
+                27
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "Garnet::<unnamed>::scatterKV(const float *, float *, const Garnet::Qwen35KVDeltaFullLayout *, Garnet::Qwen35KVDeltaSpans)",
+              "count": 47,
+              "sum_duration_ns": 333600,
+              "interval_union_ns": 333600,
+              "registers_per_thread": [
+                20
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "void astypeKernel<float, __nv_bfloat16>(const T1 *, T2 *, int)",
+              "count": 225,
+              "sum_duration_ns": 182048,
+              "interval_union_ns": 182048,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "Garnet::<unnamed>::mask(unsigned int *, const float *, unsigned long long, int)",
+              "count": 37,
+              "sum_duration_ns": 37920,
+              "interval_union_ns": 37920,
+              "registers_per_thread": [
+                24
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            }
+          ]
+        },
+        {
+          "graph_id": 11,
+          "kernel_records": 3948,
+          "graph_node_records": 3948,
+          "kernel_sum_duration_ns": 153866108,
+          "kernel_interval_union_ns": 153866108,
+          "kernels_by_name": [
+            {
+              "name": "void cutlass::Kernel2<cutlass_80_wmma_tensorop_bf16_s161616gemm_bf16_16x16_128x2_tn_align8>(T1::Params)",
+              "count": 846,
+              "sum_duration_ns": 57145660,
+              "interval_union_ns": 57145660,
+              "registers_per_thread": [
+                124
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "void cutlass::Kernel2<cutlass_80_wmma_tensorop_bf16_s161616gemm_bf16_32x32_128x2_tn_align8>(T1::Params)",
+              "count": 282,
+              "sum_duration_ns": 33645488,
+              "interval_union_ns": 33645488,
+              "registers_per_thread": [
+                84
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_AddSqrtDivMulMulReshConc_0x942793b74dba5380a59ff14e314211bd",
+              "count": 141,
+              "sum_duration_ns": 24205524,
+              "interval_union_ns": 24205524,
+              "registers_per_thread": [
+                18
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_ReshReshReshCastAddReshConcSlicSlic_0x9efb82832c31ae78d7e8cf9f1226a8ac",
+              "count": 141,
+              "sum_duration_ns": 18268811,
+              "interval_union_ns": 18268811,
+              "registers_per_thread": [
+                22
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "Garnet::<unnamed>::scores(Garnet::Qwen35AttentionCoreConfig, const float *, const float *, const float *, const float *, float *)",
+              "count": 141,
+              "sum_duration_ns": 14428268,
+              "interval_union_ns": 14428268,
+              "registers_per_thread": [
+                39
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "Garnet::<unnamed>::context(Garnet::Qwen35AttentionCoreConfig, const float *, const float *, const float *, const float *, const float *, float *)",
+              "count": 141,
+              "sum_duration_ns": 859937,
+              "interval_union_ns": 859937,
+              "registers_per_thread": [
+                40
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_GathMulConcReshSinCosAddSqrtDivMulMulSlicSlicMulSlicSlicNegConcMulAddConcAddSqrtDivMulMulEtc_0xd06f7daeef3a6b55e0fd8f155c52c281",
+              "count": 141,
+              "sum_duration_ns": 824417,
+              "interval_union_ns": 824417,
+              "registers_per_thread": [
+                32
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_ReshCastReshCastSeleAddMulMeanAddSqrtDivMulMulCastReshMove_0xf8ba4e7248630acac1200735a091c464",
+              "count": 141,
+              "sum_duration_ns": 652800,
+              "interval_union_ns": 652800,
+              "registers_per_thread": [
+                40
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "Garnet::<unnamed>::normalize(Garnet::Qwen35AttentionCoreConfig, const float *, float *)",
+              "count": 141,
+              "sum_duration_ns": 647296,
+              "interval_union_ns": 647296,
+              "registers_per_thread": [
+                38
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_MoveMulMeanAddSqrt_0x200f5d34041e89377e43bd1d13e0f65b",
+              "count": 282,
+              "sum_duration_ns": 517728,
+              "interval_union_ns": 517728,
+              "registers_per_thread": [
+                17
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_ReshMulMean_0xe0ebcaea391ce510cf0f62a4517d7af6",
+              "count": 141,
+              "sum_duration_ns": 511648,
+              "interval_union_ns": 511648,
+              "registers_per_thread": [
+                26
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_ReshCastReshCastSeleMulMeanAddSqrtDivMulMulCastReshMoveMove_0x3f0286009f40f7b9bfeede0335cb4034",
+              "count": 141,
+              "sum_duration_ns": 445473,
+              "interval_union_ns": 445473,
+              "registers_per_thread": [
+                40
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "Garnet::<unnamed>::writeKeys(Garnet::Qwen35AttentionCoreConfig, const float *, const float *, const float *, const float *, float *, float *)",
+              "count": 141,
+              "sum_duration_ns": 421088,
+              "interval_union_ns": 421088,
+              "registers_per_thread": [
+                21
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_ReshCastSiluReshCastMul_0x1d6d7892fdfae5d4c4bd3a3a9c3b0fe2",
+              "count": 141,
+              "sum_duration_ns": 320129,
+              "interval_union_ns": 320129,
+              "registers_per_thread": [
+                17
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_DivMulMulDivMulMulConc_0xc522418bfe3474e12743f24e68abe3df",
+              "count": 141,
+              "sum_duration_ns": 266112,
+              "interval_union_ns": 266112,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_ReshCastSlicSlicMulMean_0xf22c94be3718217a8bf71f2ee58872be",
+              "count": 141,
+              "sum_duration_ns": 188864,
+              "interval_union_ns": 188864,
+              "registers_per_thread": [
+                22
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_ReshCastMulMean_0x9005fcdf426496b97e434162cafc2945",
+              "count": 141,
+              "sum_duration_ns": 137888,
+              "interval_union_ns": 137888,
+              "registers_per_thread": [
+                20
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Cast_0x8f18ca95162ba4bb47ca199a44b0f3fe",
+              "count": 141,
+              "sum_duration_ns": 114624,
+              "interval_union_ns": 114624,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_ReshCast_0x7746c3f51af2322edee87d73dfaca4ee",
+              "count": 141,
+              "sum_duration_ns": 98144,
+              "interval_union_ns": 98144,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Cast_0x876c953bf8a975dbd782b8d21ce1eae0",
+              "count": 141,
+              "sum_duration_ns": 87265,
+              "interval_union_ns": 87265,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Cast_0x9e083f8e1c5a1d927fd1469d71d24162",
+              "count": 141,
+              "sum_duration_ns": 78944,
+              "interval_union_ns": 78944,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            }
+          ]
+        },
+        {
+          "graph_id": 14,
+          "kernel_records": 14282,
+          "graph_node_records": 14282,
+          "kernel_sum_duration_ns": 152101819,
+          "kernel_interval_union_ns": 152101499,
+          "kernels_by_name": [
+            {
+              "name": "Garnet::<unnamed>::recurrence(Garnet::Qwen35DeltaConfig, int, const float *, const float *, const float *, const float *, const float *, const float *, const float *, const float *, const float *, float *, float *)",
+              "count": 1776,
+              "sum_duration_ns": 82306583,
+              "interval_union_ns": 82306583,
+              "registers_per_thread": [
+                48
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_ReshReshConcReshReshConcReshReshConcReshReshConcReshReshConcReshReshConcReshReshConcReshEtc_0x1849f07c81a77a7b8ea1dcf635ea4228",
+              "count": 37,
+              "sum_duration_ns": 30312207,
+              "interval_union_ns": 30312207,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "Garnet::<unnamed>::convolution(Garnet::Qwen35DeltaConfig, int, int, const float *, const float *, const float *, const float *, float *, float *)",
+              "count": 1776,
+              "sum_duration_ns": 7293442,
+              "interval_union_ns": 7293442,
+              "registers_per_thread": [
+                40
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Move_0x60f1a4ef80aed241192041c54e812fe4",
+              "count": 3552,
+              "sum_duration_ns": 5016484,
+              "interval_union_ns": 5016484,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Move_0x62f646d24f97fec42ecb88076c8068ea",
+              "count": 1776,
+              "sum_duration_ns": 2652993,
+              "interval_union_ns": 2652993,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_SlicSlicSlicConcSlicSlicSlicSlicSlicSlicConcSlicSlicSlicSlicSlicSlicConcSlicSlicSlicSlicEtc_0x675d288c399b49022f25ecc95efdb326",
+              "count": 37,
+              "sum_duration_ns": 2215906,
+              "interval_union_ns": 2215906,
+              "registers_per_thread": [
+                20
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Move_0xdab72d3ab0cf2d499046a47c1d25ba44",
+              "count": 1776,
+              "sum_duration_ns": 1771009,
+              "interval_union_ns": 1771009,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0xb1d84c5fb70ae87116847bbfc49d3b78",
+              "count": 37,
+              "sum_duration_ns": 344064,
+              "interval_union_ns": 344064,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0xd037111d9f3065a6847c2101ecd98ffc",
+              "count": 37,
+              "sum_duration_ns": 341184,
+              "interval_union_ns": 341184,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0x3c2483b97c715087eb856b74f411584c",
+              "count": 37,
+              "sum_duration_ns": 340992,
+              "interval_union_ns": 340992,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0xf5313ee9526ae2166cd76834150a64f7",
+              "count": 37,
+              "sum_duration_ns": 340864,
+              "interval_union_ns": 340864,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0xf91ab9ad55e2bc7269da984a7731d389",
+              "count": 37,
+              "sum_duration_ns": 340672,
+              "interval_union_ns": 340672,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0xf3a264497bb618a381531fc3efbb3752",
+              "count": 37,
+              "sum_duration_ns": 340608,
+              "interval_union_ns": 340608,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0x591fdbba81ba10792cab35ed035d70d3",
+              "count": 37,
+              "sum_duration_ns": 340000,
+              "interval_union_ns": 340000,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0x9cdb971be87233804c60d99bd3d477cb",
+              "count": 37,
+              "sum_duration_ns": 339456,
+              "interval_union_ns": 339456,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0xe690340394ee381adafa8c950e016310",
+              "count": 37,
+              "sum_duration_ns": 339264,
+              "interval_union_ns": 339264,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0x7649e97f79027b308ea46f761a8a3bb1",
+              "count": 37,
+              "sum_duration_ns": 339008,
+              "interval_union_ns": 339008,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0x36f40b653893476e63bef778e6b175a9",
+              "count": 37,
+              "sum_duration_ns": 338689,
+              "interval_union_ns": 338689,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0x05bd59af7c70c41cbd3c6a1f7f241472",
+              "count": 37,
+              "sum_duration_ns": 337952,
+              "interval_union_ns": 337952,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0x6760cf5bcdec8f31fe1b2daa7506ca98",
+              "count": 37,
+              "sum_duration_ns": 337792,
+              "interval_union_ns": 337792,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0x44072e6931869d182c6975f6bddd8e02",
+              "count": 37,
+              "sum_duration_ns": 337600,
+              "interval_union_ns": 337600,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0xa7f344e3c18099f5603258b3448b3dd5",
+              "count": 37,
+              "sum_duration_ns": 337441,
+              "interval_union_ns": 337441,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0x425e621316ba62b79860d70e78416a19",
+              "count": 37,
+              "sum_duration_ns": 336672,
+              "interval_union_ns": 336672,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0xd88b8ed2aea5cb01cc9695d9fc899cbf",
+              "count": 37,
+              "sum_duration_ns": 336385,
+              "interval_union_ns": 336385,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0xd650fc3b130ac78028840fe8f99d6fd5",
+              "count": 37,
+              "sum_duration_ns": 335424,
+              "interval_union_ns": 335424,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0x76bc90d654698bedeaf7a864040c1b45",
+              "count": 37,
+              "sum_duration_ns": 334945,
+              "interval_union_ns": 334945,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0xa45fcbcdce3047196df2d6a894638b27",
+              "count": 37,
+              "sum_duration_ns": 334944,
+              "interval_union_ns": 334944,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0x9c0980a5ed5aaf5c9d3c8a2cb3e4ca8e",
+              "count": 37,
+              "sum_duration_ns": 334784,
+              "interval_union_ns": 334784,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0xb92d42555b6035ee1286a5618fecf130",
+              "count": 37,
+              "sum_duration_ns": 334240,
+              "interval_union_ns": 334240,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0x20ecbdd10cd09f7184f915f9cd2fa346",
+              "count": 37,
+              "sum_duration_ns": 334176,
+              "interval_union_ns": 334176,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0xfa12bd92361a6c609c0a72b07c6b3296",
+              "count": 37,
+              "sum_duration_ns": 334176,
+              "interval_union_ns": 334176,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0xf30e2e595bcf36280b4dd8baf161d7b3",
+              "count": 37,
+              "sum_duration_ns": 333984,
+              "interval_union_ns": 333984,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0xd99609385a1b62c51d0ad2512434e170",
+              "count": 37,
+              "sum_duration_ns": 333793,
+              "interval_union_ns": 333793,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0x98ac91113b075e4bca28a055eddcd85d",
+              "count": 37,
+              "sum_duration_ns": 333472,
+              "interval_union_ns": 333472,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0x53f208bc372d0ad098bac166760f310d",
+              "count": 37,
+              "sum_duration_ns": 333312,
+              "interval_union_ns": 333312,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0x0d763e2dee48cbf5cb8d110eba8ff56d",
+              "count": 37,
+              "sum_duration_ns": 332544,
+              "interval_union_ns": 332544,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0xe03f493e1fe7e6354d97bf5d929bff80",
+              "count": 37,
+              "sum_duration_ns": 332160,
+              "interval_union_ns": 332160,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0x70e82e8301ae07eab5f2f3536f5b0950",
+              "count": 37,
+              "sum_duration_ns": 332032,
+              "interval_union_ns": 332032,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0x5fb9b3c61706a8b8fcb96ea9bcfd77ef",
+              "count": 37,
+              "sum_duration_ns": 331744,
+              "interval_union_ns": 331744,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0xa93fe33f1fe43b0b5f07d4791a171cd5",
+              "count": 37,
+              "sum_duration_ns": 331616,
+              "interval_union_ns": 331616,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0xdd825ece6234531d19dbfb32c7624ae0",
+              "count": 37,
+              "sum_duration_ns": 331488,
+              "interval_union_ns": 331488,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0xb4038d46af2fca97ced2f70e6b4d7d75",
+              "count": 37,
+              "sum_duration_ns": 331392,
+              "interval_union_ns": 331392,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0x4fecb69f207e09f9c9c436c3caaaf75d",
+              "count": 37,
+              "sum_duration_ns": 331328,
+              "interval_union_ns": 331328,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0xa7a2f841ee42c4ce09c9473b43895ed0",
+              "count": 37,
+              "sum_duration_ns": 331296,
+              "interval_union_ns": 331296,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0x996329acdda2a1b453e812ceca2420f0",
+              "count": 37,
+              "sum_duration_ns": 330850,
+              "interval_union_ns": 330850,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0x27474632f6d3f4ed39af252cf4dcb759",
+              "count": 37,
+              "sum_duration_ns": 330176,
+              "interval_union_ns": 330176,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0x1db1bc0e257d6438603ac1eb13dde5ac",
+              "count": 37,
+              "sum_duration_ns": 330113,
+              "interval_union_ns": 330113,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0xa93d9214c69e030c6577a4d116cf52f2",
+              "count": 37,
+              "sum_duration_ns": 329984,
+              "interval_union_ns": 329984,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0x78c1ab3f53ccede42e7e9f83002d260d",
+              "count": 37,
+              "sum_duration_ns": 329280,
+              "interval_union_ns": 329280,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0x632621d8536f4939982f5b7d7d18001c",
+              "count": 37,
+              "sum_duration_ns": 328864,
+              "interval_union_ns": 328864,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0x28398115b856a3d80899e77b366bf262",
+              "count": 37,
+              "sum_duration_ns": 328864,
+              "interval_union_ns": 328864,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0x5159baf9227e2a6cd7504ad2e8981b33",
+              "count": 37,
+              "sum_duration_ns": 328800,
+              "interval_union_ns": 328800,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0x87870d42fd4c5b19238d190145499bf0",
+              "count": 37,
+              "sum_duration_ns": 328096,
+              "interval_union_ns": 328096,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0x4bfa86580f435651a77e1b156719a052",
+              "count": 37,
+              "sum_duration_ns": 325152,
+              "interval_union_ns": 325152,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0x3284527af82577485bcd40f35676f212",
+              "count": 37,
+              "sum_duration_ns": 321824,
+              "interval_union_ns": 321824,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0x9ec49cc9f5359fe14d40c89d564ec3d4",
+              "count": 37,
+              "sum_duration_ns": 102688,
+              "interval_union_ns": 102688,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0x8620e622d07988d11a615772600c1505",
+              "count": 37,
+              "sum_duration_ns": 101792,
+              "interval_union_ns": 101792,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0x064b1e6c1f1b497ec883772830cfefcb",
+              "count": 37,
+              "sum_duration_ns": 101760,
+              "interval_union_ns": 101760,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0x37f71e4496bad04cce718294fbb4854f",
+              "count": 37,
+              "sum_duration_ns": 101056,
+              "interval_union_ns": 101056,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0x16a08896972b5a83dfd545eaf8356f93",
+              "count": 37,
+              "sum_duration_ns": 100768,
+              "interval_union_ns": 100768,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0x6f18091cbbe60fe8e1a3933043fd079b",
+              "count": 37,
+              "sum_duration_ns": 100672,
+              "interval_union_ns": 100672,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0x3f12bf519d145dd1199892c2f6aa9e27",
+              "count": 37,
+              "sum_duration_ns": 98912,
+              "interval_union_ns": 98912,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0xfc4e5e2a0c407af58ce485c8c15ebec4",
+              "count": 37,
+              "sum_duration_ns": 98720,
+              "interval_union_ns": 98720,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0xf5e99db1679bd7fb41e311c5aed3b6f1",
+              "count": 37,
+              "sum_duration_ns": 98688,
+              "interval_union_ns": 98688,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0xfcd94d63d8f3ee395bfb38f42b996b68",
+              "count": 37,
+              "sum_duration_ns": 98561,
+              "interval_union_ns": 98561,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0xdd584738724e2455c589dd1aadb2db69",
+              "count": 37,
+              "sum_duration_ns": 98208,
+              "interval_union_ns": 98208,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0xd606f891ed2a67e24ffd53a433289f05",
+              "count": 37,
+              "sum_duration_ns": 97761,
+              "interval_union_ns": 97761,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0x72fce15157e499eb4e0e2f4ed4e945df",
+              "count": 37,
+              "sum_duration_ns": 97056,
+              "interval_union_ns": 97056,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0x03342e5b7364db33c7a3b1e30b34cad2",
+              "count": 37,
+              "sum_duration_ns": 97056,
+              "interval_union_ns": 97056,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0x874aaf348ca9952103f2c4accc2bf914",
+              "count": 37,
+              "sum_duration_ns": 97024,
+              "interval_union_ns": 97024,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0xdbe2b24911a121d4520552a5c25e9103",
+              "count": 37,
+              "sum_duration_ns": 96960,
+              "interval_union_ns": 96960,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0x3b30c1f4b8669f62c009fa6c3004aab9",
+              "count": 37,
+              "sum_duration_ns": 96032,
+              "interval_union_ns": 96032,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0x0fe182d648797c534af9d3066a5597cf",
+              "count": 37,
+              "sum_duration_ns": 95712,
+              "interval_union_ns": 95712,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0x59469b37911b0beada7e7d9892d9249d",
+              "count": 37,
+              "sum_duration_ns": 95136,
+              "interval_union_ns": 95136,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0xad1f135763f731f0fd7acf2b0d84df3f",
+              "count": 37,
+              "sum_duration_ns": 95040,
+              "interval_union_ns": 95040,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0xe3f7a75f439ed5f765bdada3d8db0219",
+              "count": 37,
+              "sum_duration_ns": 94209,
+              "interval_union_ns": 94209,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0x2be7b8c0d410e2fa04e4845c76d657f1",
+              "count": 37,
+              "sum_duration_ns": 93824,
+              "interval_union_ns": 93824,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0x896b2439a96c516f53e790cc8db9a05c",
+              "count": 37,
+              "sum_duration_ns": 93120,
+              "interval_union_ns": 93120,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0xdea49ed4633d2b5932f3118bf8eb3a35",
+              "count": 37,
+              "sum_duration_ns": 93088,
+              "interval_union_ns": 93088,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0xc21ff18bdca9967b754110848e160872",
+              "count": 37,
+              "sum_duration_ns": 93088,
+              "interval_union_ns": 93088,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0x89205215997f0468ab54029e259a8afa",
+              "count": 37,
+              "sum_duration_ns": 92480,
+              "interval_union_ns": 92480,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0xd7593b3c55027ceff70857598db062bd",
+              "count": 37,
+              "sum_duration_ns": 92416,
+              "interval_union_ns": 92416,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0x3a1a112fa78820ddc9c5428853021411",
+              "count": 37,
+              "sum_duration_ns": 91680,
+              "interval_union_ns": 91680,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0x7c979de189ade3c702a2ec7fada89974",
+              "count": 37,
+              "sum_duration_ns": 91456,
+              "interval_union_ns": 91456,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0x5309b04f572c2ec2bf090465b3f7135a",
+              "count": 37,
+              "sum_duration_ns": 91072,
+              "interval_union_ns": 91072,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0x64a4bf9868f8d6f8f9dbbfe6a98f1e9f",
+              "count": 37,
+              "sum_duration_ns": 91008,
+              "interval_union_ns": 91008,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0xbe64cf7e350774a4fb1bc502e5e6cfb0",
+              "count": 37,
+              "sum_duration_ns": 90976,
+              "interval_union_ns": 90976,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0x62de6277ff98533ff712aa7b4b4593c7",
+              "count": 37,
+              "sum_duration_ns": 90592,
+              "interval_union_ns": 90592,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0xdcd78a13d943639f2eb6789a61faae07",
+              "count": 37,
+              "sum_duration_ns": 90272,
+              "interval_union_ns": 90272,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0xe8701bda7481d755da1164313b03d331",
+              "count": 37,
+              "sum_duration_ns": 90176,
+              "interval_union_ns": 90176,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0x457be7c9f04afcacff2caaff338f5908",
+              "count": 37,
+              "sum_duration_ns": 89984,
+              "interval_union_ns": 89984,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0xc98fac063bac19b7619d1c8acccc287e",
+              "count": 37,
+              "sum_duration_ns": 89536,
+              "interval_union_ns": 89536,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0x7c144a6c50bb2942a6d9c16e72ab5c74",
+              "count": 37,
+              "sum_duration_ns": 89440,
+              "interval_union_ns": 89440,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0xab3409890ea77be16326041448008582",
+              "count": 37,
+              "sum_duration_ns": 89088,
+              "interval_union_ns": 89088,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0xb1704e5303a1e9f253ff49fa4391b8db",
+              "count": 37,
+              "sum_duration_ns": 88960,
+              "interval_union_ns": 88960,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0x14ff9759dac41855661db6f9ce59c536",
+              "count": 37,
+              "sum_duration_ns": 88704,
+              "interval_union_ns": 88704,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0x88b6543e9a7a25ac8de4732a6f93722e",
+              "count": 37,
+              "sum_duration_ns": 87840,
+              "interval_union_ns": 87840,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0xe03a75b41822b544b97d21f0b6a09a36",
+              "count": 37,
+              "sum_duration_ns": 87584,
+              "interval_union_ns": 87584,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0xfacdc22e6713dcc318d991264ac2ff73",
+              "count": 37,
+              "sum_duration_ns": 87296,
+              "interval_union_ns": 87296,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0x9c725d7f3c6d4dd79d77a310b88bd943",
+              "count": 37,
+              "sum_duration_ns": 85824,
+              "interval_union_ns": 85824,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0xea80662f70722ac16e0f40088d3e109d",
+              "count": 37,
+              "sum_duration_ns": 85600,
+              "interval_union_ns": 85600,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0x872339bf223b2a11b3ee34cb9fb7ca1d",
+              "count": 37,
+              "sum_duration_ns": 85568,
+              "interval_union_ns": 85568,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0xcc207be0da7d1f1843f4fdefe9fb5d64",
+              "count": 37,
+              "sum_duration_ns": 85216,
+              "interval_union_ns": 85216,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            }
+          ]
+        },
+        {
+          "graph_id": 8,
+          "kernel_records": 84,
+          "graph_node_records": 84,
+          "kernel_sum_duration_ns": 297248,
+          "kernel_interval_union_ns": 297248,
+          "kernels_by_name": [
+            {
+              "name": "__myl_MoveMulMeanAddSqrtDivMulMul_0xed5d1aff0981b949af62d188b23305ee",
+              "count": 84,
+              "sum_duration_ns": 297248,
+              "interval_union_ns": 297248,
+              "registers_per_thread": [
+                38
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            }
+          ]
+        }
+      ],
+      "host_api_overlap": [
+        {
+          "name": "cudaFree_v3020",
+          "count": 1014,
+          "sum_duration_ns": 1169849594,
+          "interval_union_ns": 1169849594,
+          "overlap_with_observed_gpu_ns": 1130451528
+        },
+        {
+          "name": "cudaMemcpyAsync_v3020",
+          "count": 1830,
+          "sum_duration_ns": 464275503,
+          "interval_union_ns": 464275503,
+          "overlap_with_observed_gpu_ns": 433990309
+        },
+        {
+          "name": "cudaGraphLaunch_v10000",
+          "count": 309,
+          "sum_duration_ns": 122898745,
+          "interval_union_ns": 122898745,
+          "overlap_with_observed_gpu_ns": 100893055
+        },
+        {
+          "name": "cudaStreamSynchronize_v3020",
+          "count": 1334,
+          "sum_duration_ns": 49371278,
+          "interval_union_ns": 49371278,
+          "overlap_with_observed_gpu_ns": 39476938
+        },
+        {
+          "name": "cudaMemcpy2DAsync_v3020",
+          "count": 1165,
+          "sum_duration_ns": 14985428,
+          "interval_union_ns": 14985428,
+          "overlap_with_observed_gpu_ns": 7311627
+        },
+        {
+          "name": "cudaMalloc_v3020",
+          "count": 1015,
+          "sum_duration_ns": 6352789,
+          "interval_union_ns": 6352789,
+          "overlap_with_observed_gpu_ns": 4485619
+        },
+        {
+          "name": "cudaEventSynchronize_v3020",
+          "count": 1464,
+          "sum_duration_ns": 1478468,
+          "interval_union_ns": 1478468,
+          "overlap_with_observed_gpu_ns": 148355
+        }
+      ]
+    },
+    {
+      "call": 3,
+      "marker_span_ns": 2097350280,
+      "kernel_union_ns": 1731092749,
+      "kernel_copy_memset_union_ns": 1780300545,
+      "unobserved_interval_ns": 317049735,
+      "largest_unobserved_intervals_ns": [
+        2368544,
+        2202977,
+        2189601,
+        2021025,
+        1995936,
+        1949217,
+        1893537,
+        1886080,
+        1879553,
+        1875232,
+        1847744,
+        1801376,
+        1798593,
+        1784481,
+        1775009,
+        1754144,
+        1753409,
+        1745153,
+        1739073,
+        1731424
+      ],
+      "memory_copy_records": 6238,
+      "memory_copy_bytes": 39031280048,
+      "memset_records": 3834,
+      "graphs": [
+        {
+          "graph_id": 2,
+          "kernel_records": 87232,
+          "graph_node_records": 87232,
+          "kernel_sum_duration_ns": 1181125349,
+          "kernel_interval_union_ns": 1181125349,
+          "kernels_by_name": [
+            {
+              "name": "cutlass3x_sm120_bstensorop_s16864gemm_block_scaled_ue4m3xe2m1_ue4m3xe2m1_f32_bf16_bf16_128x128x256_1x1x1_0_tnn_align32_o_vs16_bias_bf16_relu",
+              "count": 6016,
+              "sum_duration_ns": 422426234,
+              "interval_union_ns": 422426234,
+              "registers_per_thread": [
+                168
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "void cutlass::Kernel2<cutlass_80_wmma_tensorop_bf16_s161616gemm_bf16_16x16_128x2_tn_align8>(T1::Params)",
+              "count": 4512,
+              "sum_duration_ns": 119607657,
+              "interval_union_ns": 119607657,
+              "registers_per_thread": [
+                124
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "Garnet::<unnamed>::recurrence(Garnet::Qwen35DeltaConfig, int, const float *, const float *, const float *, const float *, const float *, const float *, const float *, const float *, const float *, float *, float *)",
+              "count": 2256,
+              "sum_duration_ns": 113465383,
+              "interval_union_ns": 113465383,
+              "registers_per_thread": [
+                48
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "nvjet_sm120_qqtst_mma_64x64x64_12_32x32x64_tmaAB_alignCD4_bz_TNNN",
+              "count": 2256,
+              "sum_duration_ns": 107693469,
+              "interval_union_ns": 107693469,
+              "registers_per_thread": [
+                255
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "nvjet_sm120_qqtst_mma_64x32x64_16_32x16x64_tmaAB_alignCD4_bz_TNNN",
+              "count": 3008,
+              "sum_duration_ns": 88456897,
+              "interval_union_ns": 88456897,
+              "registers_per_thread": [
+                255
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "void Garnet::<unnamed>::compactCached<(bool)0>(Garnet::Qwen35AttentionCoreConfig, const float *, const float *, const float *, const float *, const float *, const float *, const float *, const float *, float *, unsigned long long)",
+              "count": 752,
+              "sum_duration_ns": 69934160,
+              "interval_union_ns": 69934160,
+              "registers_per_thread": [
+                40
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "sm89_xmma_gemm_e4m3bf16_e4m3f32_f32_tn_n_tilesize32x64x64_stage5_warpsize2x2x1_tensor16x8x32_execute_kernel__5x_cublas",
+              "count": 3008,
+              "sum_duration_ns": 69869592,
+              "interval_union_ns": 69869592,
+              "registers_per_thread": [
+                74
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_MoveMoveMoveMoveMoveMoveMoveMoveMoveMoveMoveMoveMoveMoveMoveMoveMoveMoveMoveMoveMoveMoveEtc_0x48c9334afaf8e0d41b03e04b584c57a9",
+              "count": 47,
+              "sum_duration_ns": 40517549,
+              "interval_union_ns": 40517549,
+              "registers_per_thread": [
+                18
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "Garnet::<unnamed>::QuantizeActivation(const __nv_bfloat16 *, unsigned char *, unsigned char *, float, int, int, int, unsigned long long)",
+              "count": 6016,
+              "sum_duration_ns": 24317766,
+              "interval_union_ns": 24317766,
+              "registers_per_thread": [
+                42
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_ReshReshReshReshReshReshReshCastAddReshConcSlic_0x96c1b5d83fa27b256f59ea37f50d3c50",
+              "count": 2256,
+              "sum_duration_ns": 21538287,
+              "interval_union_ns": 21538287,
+              "registers_per_thread": [
+                22
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_ReshCastReshCastSeleAddMulMeanAddSqrtDivMulMul_0x1c10dc9db774dd96c86a3e745f0ce4b0",
+              "count": 3008,
+              "sum_duration_ns": 10526690,
+              "interval_union_ns": 10526690,
+              "registers_per_thread": [
+                40
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_ReshCastSeleMulMeanAddSqrtDivMulMulCastReshMoveMoveMove_0x18a580c5acfd5714f0a84bf4c3933caa",
+              "count": 2256,
+              "sum_duration_ns": 9093669,
+              "interval_union_ns": 9093669,
+              "registers_per_thread": [
+                40
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "sm89_xmma_gemm_e4m3bf16_e4m3f32_f32_tn_n_tilesize64x64x64_stage6_warpsize2x2x1_tensor16x8x32_execute_kernel__5x_cublas",
+              "count": 1504,
+              "sum_duration_ns": 8873508,
+              "interval_union_ns": 8873508,
+              "registers_per_thread": [
+                100
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "Garnet::<unnamed>::Quantize(const __nv_bfloat16 *, unsigned char *, float, unsigned long long)",
+              "count": 9776,
+              "sum_duration_ns": 6982979,
+              "interval_union_ns": 6982979,
+              "registers_per_thread": [
+                24
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "Garnet::<unnamed>::convolution(Garnet::Qwen35DeltaConfig, int, int, const float *, const float *, const float *, const float *, float *, float *)",
+              "count": 2256,
+              "sum_duration_ns": 6852545,
+              "interval_union_ns": 6852545,
+              "registers_per_thread": [
+                40
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_ReshCastSlicSiluSlicMul_0xe6893db6c5b16b2d00529429eecaa05c",
+              "count": 3008,
+              "sum_duration_ns": 5611938,
+              "interval_union_ns": 5611938,
+              "registers_per_thread": [
+                20
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_GathMulConcReshSinCosAddSqrtDivMulMulSlicSlicMulSlicSlicNegConcMulAddConcAddSqrtDivMulMulEtc_0xd06f7daeef3a6b55e0fd8f155c52c281",
+              "count": 752,
+              "sum_duration_ns": 4396769,
+              "interval_union_ns": 4396769,
+              "registers_per_thread": [
+                32
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_ReshCast_0xd6cd286264244fb761e2224e60175cc9",
+              "count": 4512,
+              "sum_duration_ns": 3875299,
+              "interval_union_ns": 3875299,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Move_0x60f1a4ef80aed241192041c54e812fe4",
+              "count": 4512,
+              "sum_duration_ns": 3805762,
+              "interval_union_ns": 3805762,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "sm89_xmma_gemm_e4m3bf16_e4m3f32_f32_tn_n_tilesize64x64x64_stage6_warpsize2x2x1_tensor16x8x32_execute_split_k_kernel__5x_cublas",
+              "count": 1504,
+              "sum_duration_ns": 3633866,
+              "interval_union_ns": 3633866,
+              "registers_per_thread": [
+                62
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Cast_0x8f18ca95162ba4bb47ca199a44b0f3fe",
+              "count": 3008,
+              "sum_duration_ns": 2447010,
+              "interval_union_ns": 2447010,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_ReshCastSeleMulMeanAddSqrtDivMulMulCastReshMoveMove_0xbbdcddf9f8357caab188eda29594fd38",
+              "count": 752,
+              "sum_duration_ns": 2416641,
+              "interval_union_ns": 2416641,
+              "registers_per_thread": [
+                40
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Move_0x62f646d24f97fec42ecb88076c8068ea",
+              "count": 2256,
+              "sum_duration_ns": 2047329,
+              "interval_union_ns": 2047329,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Move_0xdab72d3ab0cf2d499046a47c1d25ba44",
+              "count": 2256,
+              "sum_duration_ns": 2041281,
+              "interval_union_ns": 2041281,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_ReshCast_0xeb9b30d8dc2618d7fd9de1562b41ba95",
+              "count": 2256,
+              "sum_duration_ns": 2016640,
+              "interval_union_ns": 2016640,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Cast_0x9e083f8e1c5a1d927fd1469d71d24162",
+              "count": 3008,
+              "sum_duration_ns": 1723873,
+              "interval_union_ns": 1723873,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Cast_0xee3d7ab64cdac674824220e14e941cb0",
+              "count": 3008,
+              "sum_duration_ns": 1668992,
+              "interval_union_ns": 1668992,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_ReshCast_0x9c8fdc4c32a6e05b7b3d4b903c20ba1a",
+              "count": 2256,
+              "sum_duration_ns": 1461376,
+              "interval_union_ns": 1461376,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_ReshCastSlicSlicMulMean_0xf22c94be3718217a8bf71f2ee58872be",
+              "count": 752,
+              "sum_duration_ns": 1030465,
+              "interval_union_ns": 1030465,
+              "registers_per_thread": [
+                22
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_ReshReshReshCastAddReshConcSlic_0xf9c6144ee4608dc2da139759aebb993e",
+              "count": 705,
+              "sum_duration_ns": 907264,
+              "interval_union_ns": 907264,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_ReshCastMulMean_0x9005fcdf426496b97e434162cafc2945",
+              "count": 752,
+              "sum_duration_ns": 751649,
+              "interval_union_ns": 751649,
+              "registers_per_thread": [
+                20
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_ReshCast_0x7746c3f51af2322edee87d73dfaca4ee",
+              "count": 752,
+              "sum_duration_ns": 505088,
+              "interval_union_ns": 505088,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0x79a1bf204b380450f9374bf235fae086",
+              "count": 47,
+              "sum_duration_ns": 447680,
+              "interval_union_ns": 447680,
+              "registers_per_thread": [
+                18
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0xa90b5d30f627633077af002f8bb7ba86",
+              "count": 47,
+              "sum_duration_ns": 447550,
+              "interval_union_ns": 447550,
+              "registers_per_thread": [
+                18
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0xb8686f8d2a179b81f4511c40e3fdc9ae",
+              "count": 47,
+              "sum_duration_ns": 447359,
+              "interval_union_ns": 447359,
+              "registers_per_thread": [
+                18
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0xc012360fdc2ae3e2845914814588481d",
+              "count": 47,
+              "sum_duration_ns": 442527,
+              "interval_union_ns": 442527,
+              "registers_per_thread": [
+                18
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0x93048202c13a18f91823f977a7575a0c",
+              "count": 47,
+              "sum_duration_ns": 441951,
+              "interval_union_ns": 441951,
+              "registers_per_thread": [
+                18
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0x10a5692e3d7e00f5baf5fc5464da538e",
+              "count": 47,
+              "sum_duration_ns": 441118,
+              "interval_union_ns": 441118,
+              "registers_per_thread": [
+                18
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0xa3942030c41e64e98e46eaa3889dfd3a",
+              "count": 47,
+              "sum_duration_ns": 440991,
+              "interval_union_ns": 440991,
+              "registers_per_thread": [
+                18
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0xf01257c784e56ff61ce1fcf04ec4cc9d",
+              "count": 47,
+              "sum_duration_ns": 440766,
+              "interval_union_ns": 440766,
+              "registers_per_thread": [
+                18
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0x8ae186cd051dc6f89b61d92f9d2a10cb",
+              "count": 47,
+              "sum_duration_ns": 440031,
+              "interval_union_ns": 440031,
+              "registers_per_thread": [
+                18
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0xa2ab6f7ac046dacf91358a3ec37e1714",
+              "count": 47,
+              "sum_duration_ns": 439903,
+              "interval_union_ns": 439903,
+              "registers_per_thread": [
+                18
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0xc00914fa46bfb86dbc19706708ebfb7f",
+              "count": 47,
+              "sum_duration_ns": 438879,
+              "interval_union_ns": 438879,
+              "registers_per_thread": [
+                18
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0xbd0635e8167522c32a07659b7c79776d",
+              "count": 47,
+              "sum_duration_ns": 438461,
+              "interval_union_ns": 438461,
+              "registers_per_thread": [
+                18
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0x76bc3fe07ec6896254eb46275deff731",
+              "count": 47,
+              "sum_duration_ns": 437726,
+              "interval_union_ns": 437726,
+              "registers_per_thread": [
+                18
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0x0acedfb0ffea7ee57560157863b89ac6",
+              "count": 47,
+              "sum_duration_ns": 433085,
+              "interval_union_ns": 433085,
+              "registers_per_thread": [
+                18
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0x8c8bc98061d6c9c12be93f349d49afc8",
+              "count": 47,
+              "sum_duration_ns": 432799,
+              "interval_union_ns": 432799,
+              "registers_per_thread": [
+                18
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0x16626d85122f001e21419d9487af1d0f",
+              "count": 47,
+              "sum_duration_ns": 431999,
+              "interval_union_ns": 431999,
+              "registers_per_thread": [
+                18
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0x6203e04def2b0a16414d7934c1ba3a20",
+              "count": 47,
+              "sum_duration_ns": 430687,
+              "interval_union_ns": 430687,
+              "registers_per_thread": [
+                18
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0x5d2aa670d6cd16d6ef457e812898ec3e",
+              "count": 47,
+              "sum_duration_ns": 430271,
+              "interval_union_ns": 430271,
+              "registers_per_thread": [
+                18
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0x8117bae72ca9a1689fff45ea58f0197e",
+              "count": 47,
+              "sum_duration_ns": 430240,
+              "interval_union_ns": 430240,
+              "registers_per_thread": [
+                18
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0x43b54ec028d2afa6d7eefbaa44dcea6d",
+              "count": 47,
+              "sum_duration_ns": 429917,
+              "interval_union_ns": 429917,
+              "registers_per_thread": [
+                18
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0x3f1b0ca513e2e8ae924919146e7dbf68",
+              "count": 47,
+              "sum_duration_ns": 429726,
+              "interval_union_ns": 429726,
+              "registers_per_thread": [
+                18
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0x0cc7a506cef00e6e4bf2ed5d496b98f4",
+              "count": 47,
+              "sum_duration_ns": 429375,
+              "interval_union_ns": 429375,
+              "registers_per_thread": [
+                18
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0xa79189afbc7ee1e85bcd68116cf71c53",
+              "count": 47,
+              "sum_duration_ns": 428959,
+              "interval_union_ns": 428959,
+              "registers_per_thread": [
+                18
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0x0ac5279fd0c5ca6d3c65d9fdda8b8978",
+              "count": 47,
+              "sum_duration_ns": 428827,
+              "interval_union_ns": 428827,
+              "registers_per_thread": [
+                18
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0x17d318b5d5473cfe5f8034faa83369ae",
+              "count": 47,
+              "sum_duration_ns": 428734,
+              "interval_union_ns": 428734,
+              "registers_per_thread": [
+                18
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0xa8df506c1da1033d1a5bc68433dd8801",
+              "count": 47,
+              "sum_duration_ns": 428544,
+              "interval_union_ns": 428544,
+              "registers_per_thread": [
+                18
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0xe2e2086129f44121adfd87c7d3c4dd5d",
+              "count": 47,
+              "sum_duration_ns": 428157,
+              "interval_union_ns": 428157,
+              "registers_per_thread": [
+                18
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0xe29d2f817019e9d3ae342edd53ddadff",
+              "count": 47,
+              "sum_duration_ns": 427777,
+              "interval_union_ns": 427777,
+              "registers_per_thread": [
+                18
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0x91dd72b1627ed6bb8e32304c82655477",
+              "count": 47,
+              "sum_duration_ns": 427038,
+              "interval_union_ns": 427038,
+              "registers_per_thread": [
+                18
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0x61716c114069372b6243966297105809",
+              "count": 47,
+              "sum_duration_ns": 426654,
+              "interval_union_ns": 426654,
+              "registers_per_thread": [
+                18
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0x3e3e28ba3d13c560fc34f4ec2af5aeb4",
+              "count": 47,
+              "sum_duration_ns": 426271,
+              "interval_union_ns": 426271,
+              "registers_per_thread": [
+                18
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0x5126e5c987319b743c63c1fb8b0bf9a4",
+              "count": 47,
+              "sum_duration_ns": 425789,
+              "interval_union_ns": 425789,
+              "registers_per_thread": [
+                18
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0xf2b20644841617fe0a1eabe2542cdf3a",
+              "count": 47,
+              "sum_duration_ns": 425373,
+              "interval_union_ns": 425373,
+              "registers_per_thread": [
+                18
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0xecf531cd6e75df3009090e82d7d06a46",
+              "count": 47,
+              "sum_duration_ns": 424574,
+              "interval_union_ns": 424574,
+              "registers_per_thread": [
+                18
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0x23bf2d885ea9c048e12369e5d199d73b",
+              "count": 47,
+              "sum_duration_ns": 424479,
+              "interval_union_ns": 424479,
+              "registers_per_thread": [
+                18
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0x5bf37832c1f6d50532563146b2c82ebb",
+              "count": 47,
+              "sum_duration_ns": 424160,
+              "interval_union_ns": 424160,
+              "registers_per_thread": [
+                18
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0x11b87347e2ae49425ff58d4c8f84d0f4",
+              "count": 47,
+              "sum_duration_ns": 422333,
+              "interval_union_ns": 422333,
+              "registers_per_thread": [
+                18
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0x38f8afdeafc75ded546a85da32142efb",
+              "count": 47,
+              "sum_duration_ns": 421151,
+              "interval_union_ns": 421151,
+              "registers_per_thread": [
+                18
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0x3f482f240fbed64de03a80fe8d244ed2",
+              "count": 47,
+              "sum_duration_ns": 420826,
+              "interval_union_ns": 420826,
+              "registers_per_thread": [
+                18
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0x2d64b3439c7922c43d6e0ccf01b657d5",
+              "count": 47,
+              "sum_duration_ns": 419998,
+              "interval_union_ns": 419998,
+              "registers_per_thread": [
+                18
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0xc57e8127fff99d3bb69498d50a338f16",
+              "count": 47,
+              "sum_duration_ns": 419933,
+              "interval_union_ns": 419933,
+              "registers_per_thread": [
+                18
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0x47f1cc78c75ede1ff9b4ddef0cc5cff0",
+              "count": 47,
+              "sum_duration_ns": 419903,
+              "interval_union_ns": 419903,
+              "registers_per_thread": [
+                18
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0xef51e71348e315f5a74a967be6bc29d0",
+              "count": 47,
+              "sum_duration_ns": 419516,
+              "interval_union_ns": 419516,
+              "registers_per_thread": [
+                18
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0x94b7280871934c2c5a02a82e77f27e77",
+              "count": 47,
+              "sum_duration_ns": 418112,
+              "interval_union_ns": 418112,
+              "registers_per_thread": [
+                18
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0x0e1e6189c5b9208297446e95a77ce211",
+              "count": 47,
+              "sum_duration_ns": 418011,
+              "interval_union_ns": 418011,
+              "registers_per_thread": [
+                18
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0x3e9f852d6f20d8c5e8de7d648b8f9e90",
+              "count": 47,
+              "sum_duration_ns": 417983,
+              "interval_union_ns": 417983,
+              "registers_per_thread": [
+                18
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0xe0cf0507dfcbae81e927491614aafeba",
+              "count": 47,
+              "sum_duration_ns": 417632,
+              "interval_union_ns": 417632,
+              "registers_per_thread": [
+                18
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0xf81453649ffc318f4a00986ba7369b23",
+              "count": 47,
+              "sum_duration_ns": 413947,
+              "interval_union_ns": 413947,
+              "registers_per_thread": [
+                18
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            }
+          ]
+        },
+        {
+          "graph_id": null,
+          "kernel_records": 1256,
+          "graph_node_records": 0,
+          "kernel_sum_duration_ns": 243696751,
+          "kernel_interval_union_ns": 243696751,
+          "kernels_by_name": [
+            {
+              "name": "cutlass3x_sm120_bstensorop_s16864gemm_block_scaled_ue4m3xe2m1_ue4m3xe2m1_f32_bf16_bf16_128x128x256_1x1x1_0_tnn_align32_o_vs16_bias_bf16_relu",
+              "count": 225,
+              "sum_duration_ns": 125148292,
+              "interval_union_ns": 125148292,
+              "registers_per_thread": [
+                168
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "<unnamed>::logitsTop1BatchBF16Kernel(const __nv_bfloat16 *, long long *, float *, int)",
+              "count": 225,
+              "sum_duration_ns": 70143039,
+              "interval_union_ns": 70143039,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "Garnet::<unnamed>::copyLinear(const float *, long long, float *, const Garnet::Qwen35KVDeltaLinearLayout *, Garnet::Qwen35KVDeltaSpans)",
+              "count": 47,
+              "sum_duration_ns": 46474091,
+              "interval_union_ns": 46474091,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "Garnet::<unnamed>::QuantizeActivation(const __nv_bfloat16 *, unsigned char *, unsigned char *, float, int, int, int, unsigned long long)",
+              "count": 225,
+              "sum_duration_ns": 993792,
+              "interval_union_ns": 993792,
+              "registers_per_thread": [
+                42
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "Garnet::<unnamed>::CopyLast(const float *, const float *, float *, int, int, int)",
+              "count": 225,
+              "sum_duration_ns": 385792,
+              "interval_union_ns": 385792,
+              "registers_per_thread": [
+                27
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "Garnet::<unnamed>::scatterKV(const float *, float *, const Garnet::Qwen35KVDeltaFullLayout *, Garnet::Qwen35KVDeltaSpans)",
+              "count": 47,
+              "sum_duration_ns": 332928,
+              "interval_union_ns": 332928,
+              "registers_per_thread": [
+                20
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "void astypeKernel<float, __nv_bfloat16>(const T1 *, T2 *, int)",
+              "count": 225,
+              "sum_duration_ns": 179745,
+              "interval_union_ns": 179745,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "Garnet::<unnamed>::mask(unsigned int *, const float *, unsigned long long, int)",
+              "count": 37,
+              "sum_duration_ns": 39072,
+              "interval_union_ns": 39072,
+              "registers_per_thread": [
+                24
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            }
+          ]
+        },
+        {
+          "graph_id": 11,
+          "kernel_records": 3948,
+          "graph_node_records": 3948,
+          "kernel_sum_duration_ns": 153880581,
+          "kernel_interval_union_ns": 153880581,
+          "kernels_by_name": [
+            {
+              "name": "void cutlass::Kernel2<cutlass_80_wmma_tensorop_bf16_s161616gemm_bf16_16x16_128x2_tn_align8>(T1::Params)",
+              "count": 846,
+              "sum_duration_ns": 57151437,
+              "interval_union_ns": 57151437,
+              "registers_per_thread": [
+                124
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "void cutlass::Kernel2<cutlass_80_wmma_tensorop_bf16_s161616gemm_bf16_32x32_128x2_tn_align8>(T1::Params)",
+              "count": 282,
+              "sum_duration_ns": 33638566,
+              "interval_union_ns": 33638566,
+              "registers_per_thread": [
+                84
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_AddSqrtDivMulMulReshConc_0x942793b74dba5380a59ff14e314211bd",
+              "count": 141,
+              "sum_duration_ns": 24207270,
+              "interval_union_ns": 24207270,
+              "registers_per_thread": [
+                18
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_ReshReshReshCastAddReshConcSlicSlic_0x9efb82832c31ae78d7e8cf9f1226a8ac",
+              "count": 141,
+              "sum_duration_ns": 18277319,
+              "interval_union_ns": 18277319,
+              "registers_per_thread": [
+                22
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "Garnet::<unnamed>::scores(Garnet::Qwen35AttentionCoreConfig, const float *, const float *, const float *, const float *, float *)",
+              "count": 141,
+              "sum_duration_ns": 14427875,
+              "interval_union_ns": 14427875,
+              "registers_per_thread": [
+                39
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "Garnet::<unnamed>::context(Garnet::Qwen35AttentionCoreConfig, const float *, const float *, const float *, const float *, const float *, float *)",
+              "count": 141,
+              "sum_duration_ns": 856000,
+              "interval_union_ns": 856000,
+              "registers_per_thread": [
+                40
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_GathMulConcReshSinCosAddSqrtDivMulMulSlicSlicMulSlicSlicNegConcMulAddConcAddSqrtDivMulMulEtc_0xd06f7daeef3a6b55e0fd8f155c52c281",
+              "count": 141,
+              "sum_duration_ns": 825473,
+              "interval_union_ns": 825473,
+              "registers_per_thread": [
+                32
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_ReshCastReshCastSeleAddMulMeanAddSqrtDivMulMulCastReshMove_0xf8ba4e7248630acac1200735a091c464",
+              "count": 141,
+              "sum_duration_ns": 651616,
+              "interval_union_ns": 651616,
+              "registers_per_thread": [
+                40
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "Garnet::<unnamed>::normalize(Garnet::Qwen35AttentionCoreConfig, const float *, float *)",
+              "count": 141,
+              "sum_duration_ns": 649793,
+              "interval_union_ns": 649793,
+              "registers_per_thread": [
+                38
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_MoveMulMeanAddSqrt_0x200f5d34041e89377e43bd1d13e0f65b",
+              "count": 282,
+              "sum_duration_ns": 518237,
+              "interval_union_ns": 518237,
+              "registers_per_thread": [
+                17
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_ReshMulMean_0xe0ebcaea391ce510cf0f62a4517d7af6",
+              "count": 141,
+              "sum_duration_ns": 509600,
+              "interval_union_ns": 509600,
+              "registers_per_thread": [
+                26
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_ReshCastReshCastSeleMulMeanAddSqrtDivMulMulCastReshMoveMove_0x3f0286009f40f7b9bfeede0335cb4034",
+              "count": 141,
+              "sum_duration_ns": 446272,
+              "interval_union_ns": 446272,
+              "registers_per_thread": [
+                40
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "Garnet::<unnamed>::writeKeys(Garnet::Qwen35AttentionCoreConfig, const float *, const float *, const float *, const float *, float *, float *)",
+              "count": 141,
+              "sum_duration_ns": 428257,
+              "interval_union_ns": 428257,
+              "registers_per_thread": [
+                21
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_ReshCastSiluReshCastMul_0x1d6d7892fdfae5d4c4bd3a3a9c3b0fe2",
+              "count": 141,
+              "sum_duration_ns": 322144,
+              "interval_union_ns": 322144,
+              "registers_per_thread": [
+                17
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_DivMulMulDivMulMulConc_0xc522418bfe3474e12743f24e68abe3df",
+              "count": 141,
+              "sum_duration_ns": 265025,
+              "interval_union_ns": 265025,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_ReshCastSlicSlicMulMean_0xf22c94be3718217a8bf71f2ee58872be",
+              "count": 141,
+              "sum_duration_ns": 189664,
+              "interval_union_ns": 189664,
+              "registers_per_thread": [
+                22
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_ReshCastMulMean_0x9005fcdf426496b97e434162cafc2945",
+              "count": 141,
+              "sum_duration_ns": 139041,
+              "interval_union_ns": 139041,
+              "registers_per_thread": [
+                20
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Cast_0x8f18ca95162ba4bb47ca199a44b0f3fe",
+              "count": 141,
+              "sum_duration_ns": 114272,
+              "interval_union_ns": 114272,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_ReshCast_0x7746c3f51af2322edee87d73dfaca4ee",
+              "count": 141,
+              "sum_duration_ns": 96256,
+              "interval_union_ns": 96256,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Cast_0x876c953bf8a975dbd782b8d21ce1eae0",
+              "count": 141,
+              "sum_duration_ns": 87168,
+              "interval_union_ns": 87168,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Cast_0x9e083f8e1c5a1d927fd1469d71d24162",
+              "count": 141,
+              "sum_duration_ns": 79296,
+              "interval_union_ns": 79296,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            }
+          ]
+        },
+        {
+          "graph_id": 14,
+          "kernel_records": 14282,
+          "graph_node_records": 14282,
+          "kernel_sum_duration_ns": 152094420,
+          "kernel_interval_union_ns": 152094100,
+          "kernels_by_name": [
+            {
+              "name": "Garnet::<unnamed>::recurrence(Garnet::Qwen35DeltaConfig, int, const float *, const float *, const float *, const float *, const float *, const float *, const float *, const float *, const float *, float *, float *)",
+              "count": 1776,
+              "sum_duration_ns": 82288443,
+              "interval_union_ns": 82288443,
+              "registers_per_thread": [
+                48
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_ReshReshConcReshReshConcReshReshConcReshReshConcReshReshConcReshReshConcReshReshConcReshEtc_0x1849f07c81a77a7b8ea1dcf635ea4228",
+              "count": 37,
+              "sum_duration_ns": 30315146,
+              "interval_union_ns": 30315146,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "Garnet::<unnamed>::convolution(Garnet::Qwen35DeltaConfig, int, int, const float *, const float *, const float *, const float *, float *, float *)",
+              "count": 1776,
+              "sum_duration_ns": 7300421,
+              "interval_union_ns": 7300421,
+              "registers_per_thread": [
+                40
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Move_0x60f1a4ef80aed241192041c54e812fe4",
+              "count": 3552,
+              "sum_duration_ns": 5006849,
+              "interval_union_ns": 5006849,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Move_0x62f646d24f97fec42ecb88076c8068ea",
+              "count": 1776,
+              "sum_duration_ns": 2649281,
+              "interval_union_ns": 2649281,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_SlicSlicSlicConcSlicSlicSlicSlicSlicSlicConcSlicSlicSlicSlicSlicSlicConcSlicSlicSlicSlicEtc_0x675d288c399b49022f25ecc95efdb326",
+              "count": 37,
+              "sum_duration_ns": 2217857,
+              "interval_union_ns": 2217857,
+              "registers_per_thread": [
+                20
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Move_0xdab72d3ab0cf2d499046a47c1d25ba44",
+              "count": 1776,
+              "sum_duration_ns": 1769313,
+              "interval_union_ns": 1769313,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0xb1d84c5fb70ae87116847bbfc49d3b78",
+              "count": 37,
+              "sum_duration_ns": 345792,
+              "interval_union_ns": 345792,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0xd037111d9f3065a6847c2101ecd98ffc",
+              "count": 37,
+              "sum_duration_ns": 343456,
+              "interval_union_ns": 343456,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0x3c2483b97c715087eb856b74f411584c",
+              "count": 37,
+              "sum_duration_ns": 343264,
+              "interval_union_ns": 343264,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0xf3a264497bb618a381531fc3efbb3752",
+              "count": 37,
+              "sum_duration_ns": 341568,
+              "interval_union_ns": 341568,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0xf5313ee9526ae2166cd76834150a64f7",
+              "count": 37,
+              "sum_duration_ns": 341024,
+              "interval_union_ns": 341024,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0x9cdb971be87233804c60d99bd3d477cb",
+              "count": 37,
+              "sum_duration_ns": 340640,
+              "interval_union_ns": 340640,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0xf91ab9ad55e2bc7269da984a7731d389",
+              "count": 37,
+              "sum_duration_ns": 340448,
+              "interval_union_ns": 340448,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0xe690340394ee381adafa8c950e016310",
+              "count": 37,
+              "sum_duration_ns": 340384,
+              "interval_union_ns": 340384,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0x36f40b653893476e63bef778e6b175a9",
+              "count": 37,
+              "sum_duration_ns": 338624,
+              "interval_union_ns": 338624,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0xd88b8ed2aea5cb01cc9695d9fc899cbf",
+              "count": 37,
+              "sum_duration_ns": 338272,
+              "interval_union_ns": 338272,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0x591fdbba81ba10792cab35ed035d70d3",
+              "count": 37,
+              "sum_duration_ns": 337856,
+              "interval_union_ns": 337856,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0x05bd59af7c70c41cbd3c6a1f7f241472",
+              "count": 37,
+              "sum_duration_ns": 337632,
+              "interval_union_ns": 337632,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0x6760cf5bcdec8f31fe1b2daa7506ca98",
+              "count": 37,
+              "sum_duration_ns": 337600,
+              "interval_union_ns": 337600,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0x7649e97f79027b308ea46f761a8a3bb1",
+              "count": 37,
+              "sum_duration_ns": 337440,
+              "interval_union_ns": 337440,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0xa7f344e3c18099f5603258b3448b3dd5",
+              "count": 37,
+              "sum_duration_ns": 337440,
+              "interval_union_ns": 337440,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0xfa12bd92361a6c609c0a72b07c6b3296",
+              "count": 37,
+              "sum_duration_ns": 337408,
+              "interval_union_ns": 337408,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0x98ac91113b075e4bca28a055eddcd85d",
+              "count": 37,
+              "sum_duration_ns": 336000,
+              "interval_union_ns": 336000,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0x9c0980a5ed5aaf5c9d3c8a2cb3e4ca8e",
+              "count": 37,
+              "sum_duration_ns": 335968,
+              "interval_union_ns": 335968,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0xd650fc3b130ac78028840fe8f99d6fd5",
+              "count": 37,
+              "sum_duration_ns": 335552,
+              "interval_union_ns": 335552,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0x44072e6931869d182c6975f6bddd8e02",
+              "count": 37,
+              "sum_duration_ns": 335361,
+              "interval_union_ns": 335361,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0x76bc90d654698bedeaf7a864040c1b45",
+              "count": 37,
+              "sum_duration_ns": 334816,
+              "interval_union_ns": 334816,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0x53f208bc372d0ad098bac166760f310d",
+              "count": 37,
+              "sum_duration_ns": 334432,
+              "interval_union_ns": 334432,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0x425e621316ba62b79860d70e78416a19",
+              "count": 37,
+              "sum_duration_ns": 334112,
+              "interval_union_ns": 334112,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0x5fb9b3c61706a8b8fcb96ea9bcfd77ef",
+              "count": 37,
+              "sum_duration_ns": 334080,
+              "interval_union_ns": 334080,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0x0d763e2dee48cbf5cb8d110eba8ff56d",
+              "count": 37,
+              "sum_duration_ns": 333408,
+              "interval_union_ns": 333408,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0xe03f493e1fe7e6354d97bf5d929bff80",
+              "count": 37,
+              "sum_duration_ns": 333376,
+              "interval_union_ns": 333376,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0x996329acdda2a1b453e812ceca2420f0",
+              "count": 37,
+              "sum_duration_ns": 333216,
+              "interval_union_ns": 333216,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0x20ecbdd10cd09f7184f915f9cd2fa346",
+              "count": 37,
+              "sum_duration_ns": 333184,
+              "interval_union_ns": 333184,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0xa45fcbcdce3047196df2d6a894638b27",
+              "count": 37,
+              "sum_duration_ns": 332961,
+              "interval_union_ns": 332961,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0xb92d42555b6035ee1286a5618fecf130",
+              "count": 37,
+              "sum_duration_ns": 332480,
+              "interval_union_ns": 332480,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0x70e82e8301ae07eab5f2f3536f5b0950",
+              "count": 37,
+              "sum_duration_ns": 332385,
+              "interval_union_ns": 332385,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0xa93fe33f1fe43b0b5f07d4791a171cd5",
+              "count": 37,
+              "sum_duration_ns": 331521,
+              "interval_union_ns": 331521,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0x78c1ab3f53ccede42e7e9f83002d260d",
+              "count": 37,
+              "sum_duration_ns": 331520,
+              "interval_union_ns": 331520,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0xd99609385a1b62c51d0ad2512434e170",
+              "count": 37,
+              "sum_duration_ns": 331264,
+              "interval_union_ns": 331264,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0xa93d9214c69e030c6577a4d116cf52f2",
+              "count": 37,
+              "sum_duration_ns": 331264,
+              "interval_union_ns": 331264,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0x4fecb69f207e09f9c9c436c3caaaf75d",
+              "count": 37,
+              "sum_duration_ns": 330848,
+              "interval_union_ns": 330848,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0x27474632f6d3f4ed39af252cf4dcb759",
+              "count": 37,
+              "sum_duration_ns": 330848,
+              "interval_union_ns": 330848,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0xdd825ece6234531d19dbfb32c7624ae0",
+              "count": 37,
+              "sum_duration_ns": 330784,
+              "interval_union_ns": 330784,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0xa7a2f841ee42c4ce09c9473b43895ed0",
+              "count": 37,
+              "sum_duration_ns": 330528,
+              "interval_union_ns": 330528,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0x87870d42fd4c5b19238d190145499bf0",
+              "count": 37,
+              "sum_duration_ns": 330112,
+              "interval_union_ns": 330112,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0x1db1bc0e257d6438603ac1eb13dde5ac",
+              "count": 37,
+              "sum_duration_ns": 330048,
+              "interval_union_ns": 330048,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0xf30e2e595bcf36280b4dd8baf161d7b3",
+              "count": 37,
+              "sum_duration_ns": 329984,
+              "interval_union_ns": 329984,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0xb4038d46af2fca97ced2f70e6b4d7d75",
+              "count": 37,
+              "sum_duration_ns": 329760,
+              "interval_union_ns": 329760,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0x28398115b856a3d80899e77b366bf262",
+              "count": 37,
+              "sum_duration_ns": 328673,
+              "interval_union_ns": 328673,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0x5159baf9227e2a6cd7504ad2e8981b33",
+              "count": 37,
+              "sum_duration_ns": 328672,
+              "interval_union_ns": 328672,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0x632621d8536f4939982f5b7d7d18001c",
+              "count": 37,
+              "sum_duration_ns": 326528,
+              "interval_union_ns": 326528,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0x4bfa86580f435651a77e1b156719a052",
+              "count": 37,
+              "sum_duration_ns": 325760,
+              "interval_union_ns": 325760,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0x3284527af82577485bcd40f35676f212",
+              "count": 37,
+              "sum_duration_ns": 321088,
+              "interval_union_ns": 321088,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0x9ec49cc9f5359fe14d40c89d564ec3d4",
+              "count": 37,
+              "sum_duration_ns": 102848,
+              "interval_union_ns": 102848,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0x064b1e6c1f1b497ec883772830cfefcb",
+              "count": 37,
+              "sum_duration_ns": 102304,
+              "interval_union_ns": 102304,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0x37f71e4496bad04cce718294fbb4854f",
+              "count": 37,
+              "sum_duration_ns": 101824,
+              "interval_union_ns": 101824,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0x16a08896972b5a83dfd545eaf8356f93",
+              "count": 37,
+              "sum_duration_ns": 101728,
+              "interval_union_ns": 101728,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0x6f18091cbbe60fe8e1a3933043fd079b",
+              "count": 37,
+              "sum_duration_ns": 101152,
+              "interval_union_ns": 101152,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0x8620e622d07988d11a615772600c1505",
+              "count": 37,
+              "sum_duration_ns": 99104,
+              "interval_union_ns": 99104,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0xfc4e5e2a0c407af58ce485c8c15ebec4",
+              "count": 37,
+              "sum_duration_ns": 98784,
+              "interval_union_ns": 98784,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0xd606f891ed2a67e24ffd53a433289f05",
+              "count": 37,
+              "sum_duration_ns": 98593,
+              "interval_union_ns": 98593,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0xf5e99db1679bd7fb41e311c5aed3b6f1",
+              "count": 37,
+              "sum_duration_ns": 98560,
+              "interval_union_ns": 98560,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0x72fce15157e499eb4e0e2f4ed4e945df",
+              "count": 37,
+              "sum_duration_ns": 98144,
+              "interval_union_ns": 98144,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0xad1f135763f731f0fd7acf2b0d84df3f",
+              "count": 37,
+              "sum_duration_ns": 98016,
+              "interval_union_ns": 98016,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0x3f12bf519d145dd1199892c2f6aa9e27",
+              "count": 37,
+              "sum_duration_ns": 97760,
+              "interval_union_ns": 97760,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0xdd584738724e2455c589dd1aadb2db69",
+              "count": 37,
+              "sum_duration_ns": 97472,
+              "interval_union_ns": 97472,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0xfcd94d63d8f3ee395bfb38f42b996b68",
+              "count": 37,
+              "sum_duration_ns": 96288,
+              "interval_union_ns": 96288,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0x0fe182d648797c534af9d3066a5597cf",
+              "count": 37,
+              "sum_duration_ns": 96288,
+              "interval_union_ns": 96288,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0x874aaf348ca9952103f2c4accc2bf914",
+              "count": 37,
+              "sum_duration_ns": 96192,
+              "interval_union_ns": 96192,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0xdbe2b24911a121d4520552a5c25e9103",
+              "count": 37,
+              "sum_duration_ns": 95424,
+              "interval_union_ns": 95424,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0x59469b37911b0beada7e7d9892d9249d",
+              "count": 37,
+              "sum_duration_ns": 94976,
+              "interval_union_ns": 94976,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0x3b30c1f4b8669f62c009fa6c3004aab9",
+              "count": 37,
+              "sum_duration_ns": 94176,
+              "interval_union_ns": 94176,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0xe3f7a75f439ed5f765bdada3d8db0219",
+              "count": 37,
+              "sum_duration_ns": 94048,
+              "interval_union_ns": 94048,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0xc21ff18bdca9967b754110848e160872",
+              "count": 37,
+              "sum_duration_ns": 94016,
+              "interval_union_ns": 94016,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0xdea49ed4633d2b5932f3118bf8eb3a35",
+              "count": 37,
+              "sum_duration_ns": 93376,
+              "interval_union_ns": 93376,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0x2be7b8c0d410e2fa04e4845c76d657f1",
+              "count": 37,
+              "sum_duration_ns": 93344,
+              "interval_union_ns": 93344,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0x3a1a112fa78820ddc9c5428853021411",
+              "count": 37,
+              "sum_duration_ns": 93312,
+              "interval_union_ns": 93312,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0x03342e5b7364db33c7a3b1e30b34cad2",
+              "count": 37,
+              "sum_duration_ns": 93216,
+              "interval_union_ns": 93216,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0xbe64cf7e350774a4fb1bc502e5e6cfb0",
+              "count": 37,
+              "sum_duration_ns": 92928,
+              "interval_union_ns": 92928,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0x14ff9759dac41855661db6f9ce59c536",
+              "count": 37,
+              "sum_duration_ns": 92800,
+              "interval_union_ns": 92800,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0x7c979de189ade3c702a2ec7fada89974",
+              "count": 37,
+              "sum_duration_ns": 92640,
+              "interval_union_ns": 92640,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0x896b2439a96c516f53e790cc8db9a05c",
+              "count": 37,
+              "sum_duration_ns": 92320,
+              "interval_union_ns": 92320,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0x64a4bf9868f8d6f8f9dbbfe6a98f1e9f",
+              "count": 37,
+              "sum_duration_ns": 92320,
+              "interval_union_ns": 92320,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0x62de6277ff98533ff712aa7b4b4593c7",
+              "count": 37,
+              "sum_duration_ns": 92032,
+              "interval_union_ns": 92032,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0x89205215997f0468ab54029e259a8afa",
+              "count": 37,
+              "sum_duration_ns": 91680,
+              "interval_union_ns": 91680,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0xe8701bda7481d755da1164313b03d331",
+              "count": 37,
+              "sum_duration_ns": 91520,
+              "interval_union_ns": 91520,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0xd7593b3c55027ceff70857598db062bd",
+              "count": 37,
+              "sum_duration_ns": 91297,
+              "interval_union_ns": 91297,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0xb1704e5303a1e9f253ff49fa4391b8db",
+              "count": 37,
+              "sum_duration_ns": 91103,
+              "interval_union_ns": 91103,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0xc98fac063bac19b7619d1c8acccc287e",
+              "count": 37,
+              "sum_duration_ns": 91008,
+              "interval_union_ns": 91008,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0xdcd78a13d943639f2eb6789a61faae07",
+              "count": 37,
+              "sum_duration_ns": 90048,
+              "interval_union_ns": 90048,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0x457be7c9f04afcacff2caaff338f5908",
+              "count": 37,
+              "sum_duration_ns": 89664,
+              "interval_union_ns": 89664,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0x88b6543e9a7a25ac8de4732a6f93722e",
+              "count": 37,
+              "sum_duration_ns": 89664,
+              "interval_union_ns": 89664,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0xab3409890ea77be16326041448008582",
+              "count": 37,
+              "sum_duration_ns": 88992,
+              "interval_union_ns": 88992,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0xcc207be0da7d1f1843f4fdefe9fb5d64",
+              "count": 37,
+              "sum_duration_ns": 88768,
+              "interval_union_ns": 88768,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0x7c144a6c50bb2942a6d9c16e72ab5c74",
+              "count": 37,
+              "sum_duration_ns": 88416,
+              "interval_union_ns": 88416,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0x5309b04f572c2ec2bf090465b3f7135a",
+              "count": 37,
+              "sum_duration_ns": 88320,
+              "interval_union_ns": 88320,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0xfacdc22e6713dcc318d991264ac2ff73",
+              "count": 37,
+              "sum_duration_ns": 88000,
+              "interval_union_ns": 88000,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0x872339bf223b2a11b3ee34cb9fb7ca1d",
+              "count": 37,
+              "sum_duration_ns": 87360,
+              "interval_union_ns": 87360,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0xe03a75b41822b544b97d21f0b6a09a36",
+              "count": 37,
+              "sum_duration_ns": 85664,
+              "interval_union_ns": 85664,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0x9c725d7f3c6d4dd79d77a310b88bd943",
+              "count": 37,
+              "sum_duration_ns": 85216,
+              "interval_union_ns": 85216,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            },
+            {
+              "name": "__myl_Slic_0xea80662f70722ac16e0f40088d3e109d",
+              "count": 37,
+              "sum_duration_ns": 85024,
+              "interval_union_ns": 85024,
+              "registers_per_thread": [
+                16
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            }
+          ]
+        },
+        {
+          "graph_id": 8,
+          "kernel_records": 84,
+          "graph_node_records": 84,
+          "kernel_sum_duration_ns": 295968,
+          "kernel_interval_union_ns": 295968,
+          "kernels_by_name": [
+            {
+              "name": "__myl_MoveMulMeanAddSqrtDivMulMul_0xed5d1aff0981b949af62d188b23305ee",
+              "count": 84,
+              "sum_duration_ns": 295968,
+              "interval_union_ns": 295968,
+              "registers_per_thread": [
+                38
+              ],
+              "reported_local_memory_per_thread_bytes": [
+                0
+              ]
+            }
+          ]
+        }
+      ],
+      "host_api_overlap": [
+        {
+          "name": "cudaFree_v3020",
+          "count": 1014,
+          "sum_duration_ns": 1167065860,
+          "interval_union_ns": 1167065860,
+          "overlap_with_observed_gpu_ns": 1130101790
+        },
+        {
+          "name": "cudaMemcpyAsync_v3020",
+          "count": 1830,
+          "sum_duration_ns": 462377617,
+          "interval_union_ns": 462377617,
+          "overlap_with_observed_gpu_ns": 431562022
+        },
+        {
+          "name": "cudaGraphLaunch_v10000",
+          "count": 309,
+          "sum_duration_ns": 120932362,
+          "interval_union_ns": 120932362,
+          "overlap_with_observed_gpu_ns": 98923868
+        },
+        {
+          "name": "cudaStreamSynchronize_v3020",
+          "count": 1333,
+          "sum_duration_ns": 50472863,
+          "interval_union_ns": 50472863,
+          "overlap_with_observed_gpu_ns": 39294427
+        },
+        {
+          "name": "cudaMemcpy2DAsync_v3020",
+          "count": 1165,
+          "sum_duration_ns": 17702246,
+          "interval_union_ns": 17702246,
+          "overlap_with_observed_gpu_ns": 8125495
+        },
+        {
+          "name": "cudaMalloc_v3020",
+          "count": 1015,
+          "sum_duration_ns": 6651443,
+          "interval_union_ns": 6651443,
+          "overlap_with_observed_gpu_ns": 4667263
+        },
+        {
+          "name": "cudaEventSynchronize_v3020",
+          "count": 1464,
+          "sum_duration_ns": 1589353,
+          "interval_union_ns": 1589353,
+          "overlap_with_observed_gpu_ns": 239670
+        }
+      ]
+    }
+  ],
+  "auxiliary_cpu_file_reads": 2,
+  "auxiliary_cpu_observer_receipt_sha256": "d6e9220a0e808b384eee933f9d2a8ad1562f1e64c5c0a9290819d65cca500446",
+  "performance_admitted": false,
+  "two_x_established": false,
+  "scope": "Two correctness-checked marked decode windows only. Graph IDs group recorded kernels without assigning graph/stage semantics. Kernel/copy/memset union measures recorded work; remaining gaps do not prove device idleness or its cause. Host API elapsed intervals can overlap pending GPU work and are not allocation/computation costs. Other profiled host threads may contribute APIs; API and GPU times must not be added. Profiler overhead applies; no HTTP speedup or2x claim."
+}

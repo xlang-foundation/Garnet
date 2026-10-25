@@ -1,0 +1,184 @@
+{
+  "status": "register128_padded_state_prepared_unrun",
+  "parent_full_archive_sha256": "41efc66d39e8e68d6df05b85a2db795c5422ba58aa0602b290b10af98690a1df",
+  "parent_probe_sha256": "3fba44d6c6f21ac8e35f91caef38c086c863d57dd140603d3282ff45a8b7d25b",
+  "probe_derivation": [
+    [
+      "'scope':'Experimental compact-state B4/T4 host/deferred MTP3. Two fixed context-only canonical-view engines share compact output storage. Strict same-DLL default-off and retained B1 IDs/ordinary/MTP state hash witnesses and raw last-hidden; negative/zero-prefix final-write guards. Full raw state absent, no broad quality/actual4K/HTTP/speed admission.'",
+      "'private_padding':True,'scope':'Compact physicalB4/T4 with1/2/3/4real rows. Ordinary target leaves dummy generation rows inactive; MTP privately advances first-row duplicates. Strict real-row state hash/slot/rawhidden and retained IDs must agree, complete reset witnesses retained, and full-four controls retain same-DLL default-off parity. Full canonical arrays absent; no streaming/HTTP/actual4K/broadquality/speed admission.'",
+      1
+    ],
+    [
+      "  pair_bytes=2*config['text_config']['hidden_size']*4",
+      "  row_bytes=config['text_config']['hidden_size']*4\n  pair_bytes=2*row_bytes",
+      1
+    ],
+    [
+      "    'last_hidden_pair_sha256':[hashlib.sha256(last_hidden[offset:offset+pair_bytes]).hexdigest() for offset in range(0,len(last_hidden),pair_bytes)],",
+      "    'last_hidden_pair_sha256':[hashlib.sha256(last_hidden[offset:offset+pair_bytes]).hexdigest() for offset in range(0,len(last_hidden),pair_bytes)],\n    'last_hidden_row_sha256':[hashlib.sha256(last_hidden[offset:offset+row_bytes]).hexdigest() for offset in range(0,len(last_hidden),row_bytes)],",
+      1
+    ],
+    [
+      " groups=[cases[:2]*2,cases[2:]*2]",
+      " groups=[cases[:1],cases[1:2],cases[:2],cases[:2]+cases[:1],cases[2:]+cases[2:3],cases[:2]*2]",
+      1
+    ],
+    [
+      "   speculative.reset();rows=[]",
+      "   speculative.reset();reset_state=state_hashes('group-'+str(group_index)+'-repeat-'+str(repeat)+'-reset')\n   assert reset_state==negative_before,'Private row state survived a complete request reset'\n   rows=[]",
+      1
+    ],
+    [
+      "   count=max(len(r['ids']) for r in rows);zero=io.zeros([1,config['text_config']['hidden_size']])",
+      "   real_rows=len(rows);physical_rows=rows+[rows[0]]*(batch-real_rows)\n   count=max(len(r['ids']) for r in physical_rows);zero=io.zeros([1,config['text_config']['hidden_size']])",
+      1
+    ],
+    [
+      "   hidden=[io.stack_rows([r['hidden'][t] if t<len(r['hidden']) else zero for r in rows]) for t in range(count)]\n   lengths=[len(r['ids']) for r in rows];positions=[r['positions']+[[0,0,0]]*(count-len(r['ids'])) for r in rows]",
+      "   hidden=[io.stack_rows([r['hidden'][t] if t<len(r['hidden']) else zero for r in physical_rows]) for t in range(count)]\n   lengths=[len(r['ids']) for r in physical_rows];positions=[r['positions']+[[0,0,0]]*(count-len(r['ids'])) for r in physical_rows]",
+      1
+    ],
+    [
+      "   ordinary=[[] for _ in rows];active=[1]*batch;current=[r['current'] for r in rows]",
+      "   ordinary=[[] for _ in rows];active=[int(row<real_rows) for row in range(batch)];current=[r['current'] for r in physical_rows]",
+      1
+    ],
+    [
+      "   speculative.prefill(hidden,positions,lengths,[r['current'] for r in rows])",
+      "   speculative.prefill(hidden,positions,lengths,[r['current'] for r in physical_rows])",
+      1
+    ],
+    [
+      "   generated=[list(v) for v in mtp_result['generated_token_ids']]\n   for row,stop in enumerate(mtp_result['stop_token_ids']):",
+      "   generated=[list(v) for v in mtp_result['generated_token_ids'][:real_rows]]\n   for row,stop in enumerate(mtp_result['stop_token_ids'][:real_rows]):",
+      1
+    ],
+    [
+      "'full_target_state_exact':ordinary_state==mtp_state,",
+      "'all_physical_rows_state_equal':ordinary_state==mtp_state,'real_rows':real_rows,'padded_rows':batch-real_rows,'reset_state':reset_state,",
+      1
+    ],
+    [
+      "   old=qualified_cases[(group_index,repeat)]\n   result['default_off_ids_and_state_exact']=generated==old['generated_ids'] and ordinary_state==old['ordinary_state'] and mtp_state==old['mtp_state']\n   retained=prior_cases[(group_index,repeat)]\n   def legacy_matches(state,old):\n    return state['state_row_sha256']==old['state_row_sha256']*2 and state['slots']==old['slots']*2 and state['state_words_per_row']==old['state_words_per_row'] and state['last_hidden_pair_sha256']==[old['last_hidden_sha256']]*2\n   result['cross_profile_legacy_state_exact_diagnostic']=legacy_matches(ordinary_state,retained['ordinary_state']) and legacy_matches(mtp_state,retained['mtp_state'])\n   result['duplicate_pair_isolation_exact']=all(state['state_row_sha256'][:2]==state['state_row_sha256'][2:] and state['last_hidden_pair_sha256'][0]==state['last_hidden_pair_sha256'][1] and state['slots'][:2]==state['slots'][2:] for state in (ordinary_state,mtp_state))\n",
+      "   def real_state_equal(a,b):\n    return a['state_words_per_row']==b['state_words_per_row'] and all(a[key][:real_rows]==b[key][:real_rows] for key in ('state_row_sha256','last_hidden_row_sha256','slots'))\n   result['real_rows_state_exact']=real_state_equal(ordinary_state,mtp_state)\n   duplicates=[(i,j) for i in range(real_rows) for j in range(i) if group[i]['key']==group[j]['key']]\n   result['duplicate_real_rows_exact']=all(state[key][i]==state[key][j] for state in (ordinary_state,mtp_state) for key in ('state_row_sha256','last_hidden_row_sha256','slots') for i,j in duplicates)\n   result['same_DLL_default_off_full_control_exact']=None\n   if real_rows==4:\n    old=qualified_cases[(0,repeat)]\n    strip=lambda state:{k:v for k,v in state.items() if k!='last_hidden_row_sha256'}\n    result['same_DLL_default_off_full_control_exact']=generated==old['generated_ids'] and strip(ordinary_state)==old['ordinary_state'] and strip(mtp_state)==old['mtp_state']\n",
+      1
+    ],
+    [
+      "   assert result['default_off_ids_and_state_exact'],'Compact canonical KV differs from qualified same-DLL default-off states or IDs'\n   assert result['duplicate_pair_isolation_exact'],'Duplicate real row pairs diverged'",
+      "   assert result['same_DLL_default_off_full_control_exact'] is not False,'Full-four control differs from same-DLL default-off state or IDs'\n   assert result['duplicate_real_rows_exact'],'Duplicate real rows diverged'",
+      1
+    ],
+    [
+      "   assert ordinary_state==mtp_state,'MTP target state differs from ordinary; strict hashes retained'",
+      "   assert result['real_rows_state_exact'],'Real MTP target state differs from ordinary; private dummy state is separate'",
+      1
+    ],
+    [
+      " report['status']='backend_smoke_completed'",
+      " report['status']='padded_mtp_state_passed_needs_replay'",
+      1
+    ],
+    [
+      "shared_output_storage=True,kv_delta_state=True)",
+      "shared_output_storage=True,kv_delta_state=True,register_delta_128=True)",
+      1
+    ],
+    [
+      " decoder.io.enable_nvfp4_head(True)",
+      " assert decoder.register_delta_128 and all(p.register_delta_128 for p in decoder._all_programs())\n decoder.io.enable_nvfp4_head(True)",
+      1
+    ],
+    [
+      "'private_padding':True,'scope':",
+      "'private_padding':True,'register_delta_128':True,'scope':",
+      1
+    ]
+  ],
+  "probe_sha256": "112f7b40648b9d2ced9b8fe36ef2b3fef8c4d14ead4991ed27aa67ab0edd97db",
+  "physical_batch": 4,
+  "cases": 12,
+  "real_rows_by_group": [
+    1,
+    1,
+    2,
+    3,
+    3,
+    4
+  ],
+  "repeats": 2,
+  "raw_ordinary_mtp_hidden_arrays": 24,
+  "reset_hidden_arrays": 12,
+  "same_DLL_default_off_full_controls": 2,
+  "gpu_run": false,
+  "performance_admitted": false,
+  "scope": "Existing default-off register128 recurrent-state implementation on unchanged34bea DLL; only explicit decoder/program profile flag changes. Same12full/partial text/image state cases,24ordinary-MTP hidden arrays,12reset arrays,two full-four controls and negative guards; additionally all38rawhidden and every physical state hash/slot/counter must match retained register-off12case archive. Candidate worker unrun until separate40request protocol gate. No timing, broadquality,actual4K or2x admission.",
+  "full_model_archive_sha256": "41efc66d39e8e68d6df05b85a2db795c5422ba58aa0602b290b10af98690a1df",
+  "keys_by_group": [
+    [
+      "s3-text-c1-r0-greedy"
+    ],
+    [
+      "s3-image-c1-r0-greedy"
+    ],
+    [
+      "s3-text-c1-r0-greedy",
+      "s3-image-c1-r0-greedy"
+    ],
+    [
+      "s3-text-c1-r0-greedy",
+      "s3-image-c1-r0-greedy",
+      "s3-text-c1-r0-greedy"
+    ],
+    [
+      "red",
+      "green",
+      "red"
+    ],
+    [
+      "s3-text-c1-r0-greedy",
+      "s3-image-c1-r0-greedy",
+      "s3-text-c1-r0-greedy",
+      "s3-image-c1-r0-greedy"
+    ]
+  ],
+  "files": {
+    "probe_register128_padded_state.py": "112f7b40648b9d2ced9b8fe36ef2b3fef8c4d14ead4991ed27aa67ab0edd97db",
+    "native_kv_delta_register128_padded_mtp_stream_worker.py": "fd8ce24e5dca72b5bc9a718970e92993f47d155f804d580ab9d0e1d566ee539d",
+    "test_register128_padded_policy.py": "7d3a620c2d2754a4a0c0a358132571289f61b2393d64c28e87d4de5f3253e95d",
+    "test_register128_padded_state.bat": "960271e6e234dbccc3e7c7c49dc7747f279cdf96f3ae68809e496f4d51336642",
+    "run_register128_padded_state.py": "99f0c044a13db1def7e4837501d84d9e7c1b30ce9361efed8263cbc1d9df70a6",
+    "archive_register128_padded_state.py": "d381606c0be05a40979ae56e5425877e924ba6bf33508b5b51ebaf8be22763b7",
+    "verify_register128_padded_state.py": "18c9acb808d75f0d7313d33c1fba6d07dbdd7763f883f6ca3be106616efb821e",
+    "padded_mtp_policy.py": "7cc69ec4fa224ee6866e4f4b579986fb62dae67b77a034eef15c38c0fe3fa05b"
+  },
+  "register_delta_128": true,
+  "required_decode_trace_archive_sha256": "ceb182e066a9f97df985d5e6fb0e8a0f5eb25253773abbe44026e37b4dafa14c",
+  "retained_padding_archive_sha256": "1035fe34eb215c3d46ee572c48da47f1c402bbd273e21d8e65b7a81beaa61b34",
+  "worker_derivation": [
+    [
+      "padded-mtp-state-attempt1",
+      "register128-padded-state-attempt1",
+      2
+    ],
+    [
+      "'compact_padded_mtp_state_replayed'",
+      "'compact_register128_padded_state_replayed'",
+      1
+    ],
+    [
+      "shared_output_storage=True,kv_delta_state=True)",
+      "shared_output_storage=True,kv_delta_state=True,register_delta_128=True)",
+      1
+    ],
+    [
+      "    decoder.io.enable_nvfp4_head(True)",
+      "    assert decoder.register_delta_128 and all(p.register_delta_128 for p in decoder._all_programs())\n    decoder.io.enable_nvfp4_head(True)",
+      1
+    ],
+    [
+      "'research_only': True, 'precision':",
+      "'register_delta_128': True, 'research_only': True, 'precision':",
+      1
+    ]
+  ]
+}
