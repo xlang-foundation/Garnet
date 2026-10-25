@@ -3541,3 +3541,47 @@ change or rebuild while worker live. Read-only progress command was untimed.
 Current GPU gate result remains pending. Broad quality, partial/reset/retired
 row/protocol, B8, actual4K, matched clean HTTP timing, fastest tuned/MTP references,
 INT4 quality and matched4B comparisons remain open.2x/halfTTFT targets unmet.
+
+
+2026-10-25 UTC: current packed ordinary/MTP gate remains live by original handle.
+Its own report records4valid metadata profiles/4rebuild rejections/8856invalid
+layouts and all16negative/3zero-prefix checks passing, with0completed generation
+cases/noerror at last read-only observation. No restart, runtime mutation or
+additional sampler; no live partial report is treated as final evidence. Pushed
+full-reference closure and current MTP methods as38462d8af onqwen38-5090.
+
+While GPU job continues, prepared UNRUN bf16-padded-lifecycle-attempt1 methods
+locally only. Exact retained prefix/setup derivation from current packed probe;
+new body uses7groups repeated twice with1/1/2/3/3/4/3real rows. Require real-row
+IDs, all128logical-component witnesses and raw hidden+normalized rows against
+independent full-cache same-precision reference by explicit key/row mapping.
+Validate complete witness metadata BEFORE selecting rows; malformed dummy rows
+cannot be hidden. Allfour prefill rows checked; ordinary dummy canonical rows
+must freeze and MTP dummy rows must duplicate first real row. Allphysical raw
+arrays retained, private rows excluded from real request counts.
+
+Prospective explicit prefix control consumes retained first4primary IDs with
+counts0/1/2/4, compares ordinary vs accepted-prefix state/vectors/predictions,
+checks full rollback, six pending-owner/typed-count rejections and full reset.
+Mixed text/red/green group runs common128horizon, preserving color EOS2 and
+original request-limit observations, and requires retired rows count0 while text
+continues. Callback token/ordinal completeness and exact repeats are checked;
+this is not SSE/HTTP qualification. Planned102raw81920B hidden/normalized arrays
+include reset/prefix controls; no such GPU arrays exist from this new method yet.
+Runner requires closed/replayed parent with4cases/20arrays, unchanged60sources/
+DLL, owned96GiBfree cache,11CPU tests and guarded finally/archive cleanup.
+Prospective verifier covers manifest/pins/derivation/linked parent inputs, each
+raw vector/row/reference/state, prefixes/zeros/reset/retirement/callbacks/repeats
+and resources. No successful replay claimed before data exists.
+
+Three new independent CPU row-gate controls exercise nontrivial row permutation,
+readonly observations, wrong-row/component/slot exclusion and malformed indices/
+unselected-row metadata. With existing8controls, all11pass. Five new Python
+methods compile; exact probe derivation replayed. Standalone replay import from
+outside repo was checked and its dependency import corrected before any upload.
+Raw CPU log/offline hashes retained. Newmethods are notuploaded; guarded runtime
+preparation is deliberately absent until current parent's authoritative terminal
+and both replays. No new native/runtime/SDK changes or local GPU use. Broad quality,
+B8, actual4K, clean matched HTTP, fastest tuned/MTP refs, INT4/4B comparisons and
+original2x/halfTTFT goals remain unmet. Current goal turn makes concrete progress;
+no external blocker or completion claim.
