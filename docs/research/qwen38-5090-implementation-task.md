@@ -1,7 +1,8 @@
 # Qwen3.8-27B on one RTX 5090: implementation task
 
 Status: native BF16 cache integration is built; retained-output quality gate failed.
-Controlled precision/prefill diagnostics are running.
+Precision/prefill diagnostics are closed; independent same-precision reference
+validation is next.
 Work continues on branch `qwen38-5090` (implementation commit `d43b20f42`). The
 full 2x decode/concurrency and half-TTFT objectives below remain unmet.
 
@@ -33,19 +34,29 @@ runtime helper metadata/negative/zero-prefix controls pass. Archive287fafd1...
 is independently replayed on both machines as a preserved failure. It does not
 qualify broad BF16 model quality or permit timing. All failures stay recorded.
 
-Current process: original `bf16-prefill-diagnostic-attempt1` on unchanged native
-DLL/source. Three sequential teacher-forced32step controls use identical histories
-and compare FP32/T4, BF16/T4 (existing graph/manual ordinary prefill) and BF16/T32.
-The FP32/T4 and BF16/T4 controls completed; BF16/T32 is live. Independent
-raw-vector replay and interpretation remain pending. Do not assume precision drift is harmless or attribute it to
-prefill without evidence. No app/runtime/DLL/active harness changes while live.
-Unrun B8/128MiB drafts are retained locally, outside the repository, pending model
-quality resolution; legacy256MiB guards stay unchanged.
+The controlled diagnostic is now closed and independently replayed on both
+machines (archive84d1cd07...,192raw hidden/normalized arrays). Under identical
+32token teacher histories, FP32/T4 has no mismatches; BF16/T4 changes image at19;
+BF16/T32 changes text26/image8. Normalized hidden differences are substantial
+(minimum cosines about0.75-0.80 across the paired comparisons). These correlated
+observations do not qualify broad accuracy or establish harmless rounding. All
+runtime sources/DLL stayed unchanged; private engine cleanup finished. No GPU
+worker remains live after the original terminal0/closed archive.
+
+Current implementation: a separate unwired BF16-in-FP32 full-cache reference
+primitive compiles offline for sm120, without local GPU execution or deployment.
+It rounds currentK/V then invokes the unchanged legacy dense FP32 attention core,
+using independent full caches and no packed offsets or compact commits. Require
+its past-cache BF16-roundtrip invariant, GPU/FP64/readonly/noalias/canary tests,
+separate plugin/engine contracts and same-precision full-model comparison before
+using it as a reference. Preserve failed old-precision output comparisons.
+Unrun B8/128MiB drafts remain outside the repository pending model qualification;
+legacy256MiB guards stay unchanged. No new performance result exists.
 
 Next gates, in order:
 
-1. Close/replay the precision/prefill diagnostic and investigate the retained
-   output mismatch. Require justified independent BF16 reference and broad
+1. Qualify the separate same-precision full-cache reference operator and
+   plugin/engine/model path; use it to investigate the retained-output mismatch. Require justified independent BF16 reference and broad
    quality checks or a correction before promotion; retain the failed FP32
    golden comparison. Validate lifetime/failure handling, partial/reset/retired
    rows and cache boundaries before model/serving qualification.

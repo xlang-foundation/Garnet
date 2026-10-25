@@ -1,0 +1,58 @@
+{
+  "status": "bf16_prefill_diagnostic_summary",
+  "archive_sha256": "84d1cd0729b18c57afffc3966672193314b5f0ff1942c0a7883abf560f4bdb4f",
+  "replay_verifier_sha256": "6ebd1b87d91e1195d6e2adada2cba506516875a824f3049cb4a716c255609a5f",
+  "first_teacher_mismatch": {
+    "fp32-t4": [
+      null,
+      null,
+      null,
+      null
+    ],
+    "bf16-t4": [
+      null,
+      19,
+      null,
+      19
+    ],
+    "bf16-t32": [
+      26,
+      8,
+      26,
+      8
+    ]
+  },
+  "comparisons": [
+    {
+      "left": "fp32-t4",
+      "right": "bf16-t4",
+      "prediction_agreements": 63,
+      "points": 64,
+      "normalized_bit_exact_points": 0,
+      "maximum_absolute_difference": 8.309852600097656,
+      "maximum_relative_l2_difference": 0.6740971634191039,
+      "minimum_cosine": 0.773789287202833
+    },
+    {
+      "left": "bf16-t4",
+      "right": "bf16-t32",
+      "prediction_agreements": 61,
+      "points": 64,
+      "normalized_bit_exact_points": 0,
+      "maximum_absolute_difference": 7.124525547027588,
+      "maximum_relative_l2_difference": 0.7078268318438395,
+      "minimum_cosine": 0.749209374110834
+    },
+    {
+      "left": "fp32-t4",
+      "right": "bf16-t32",
+      "prediction_agreements": 60,
+      "points": 64,
+      "normalized_bit_exact_points": 0,
+      "maximum_absolute_difference": 7.284759521484375,
+      "maximum_relative_l2_difference": 0.6370641717945865,
+      "minimum_cosine": 0.7977307542529347
+    }
+  ],
+  "scope": "32teacher-forced positions x2unique prompts, one process per profile and duplicate physical rows. Correlated diagnostic points, not independent dataset samples or broad accuracy. Substantial intermediate differences are not presumed harmless. No model promotion or performance/2x claim."
+}
