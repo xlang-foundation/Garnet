@@ -1,8 +1,8 @@
 # Qwen3.8-27B on one RTX 5090: implementation task
 
 Status: native BF16 cache integration is built; retained-output quality gate failed.
-Precision/prefill diagnostics are closed; independent same-precision reference
-validation is next.
+Precision/prefill diagnostics and independent attention GPU/FP64 and wrapper
+CPU metadata gates are closed. Same-precision model reference integration is next.
 Work continues on branch `qwen38-5090` (implementation commit `d43b20f42`). The
 full 2x decode/concurrency and half-TTFT objectives below remain unmet.
 

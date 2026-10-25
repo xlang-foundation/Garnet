@@ -1,0 +1,42 @@
+{
+  "status": "bf16_float_reference_plugin_cpu_prepared_unrun",
+  "files": {
+    "Garnet/src/backends/tensorrt/qwen38_bf16_kv_float_reference_plugin.cpp": "4347d2c13828cb1f0f5bba0605df0daa7bb6d35c1442dee37bf6b451351701c7",
+    "Garnet/src/backends/tensorrt/qwen38_bf16_kv_float_reference_plugin.h": "0d4d22076fc8558fd111fe448e17441c08801b4f3bd1345fc2514ddb5be26c2c",
+    "Garnet/test2026/cuda/qwen38_5090/probe_bf16_kv_float_reference_plugin_contract.cpp": "6cc4e3c1085451933f6aa9ea2622e70b087ef6d5c3c473c839592b8635c58b95",
+    "Garnet/src/cuda/qwen38_bf16_kv_float_reference.cu": "e6d538d062e96b96dd37c8ea451289bb264c8794112a97eac520455f7eb7c95c",
+    "Garnet/src/cuda/qwen38_bf16_kv_float_reference.cuh": "6ff092e0614e91f005101df65d9a902101ed9a0d4e830cd61e774eea0d227168",
+    "Garnet/src/cuda/qwen35_attention_core.cu": "3ad24bb00acc2f77a5b7258e4b7fecb248c682b3ad257d28af8bc8f336635165",
+    "Garnet/src/cuda/qwen35_attention_core.cuh": "1a3997a15f4aa897f2bc69bf6a3afbef9a58f166fb094bfb858fac1b170e166f",
+    "Garnet/test2026/cuda/qwen38_5090/run_bf16_float_reference_plugin_cpu.py": "a858c38677a1af5e54ceb2306b50d2a036ffb717e21e3014ca0bc3407df6a1f0",
+    "Garnet/test2026/cuda/qwen38_5090/verify_bf16_float_reference_plugin_cpu.py": "7feec6a62919e1181d04fdcdccbfae5c84bd5bb0ba045411be19bfde4073a4e2",
+    "Garnet/test2026/cuda/qwen38_5090/evidence/bf16-float-reference-plugin-cpu-local-build.json": "a13aa7c2d26fd889601172bee2fa6d5d5ff4a33ee482193d5319aa15af7d033f",
+    "Garnet/test2026/cuda/qwen38_5090/evidence/bf16-float-reference-plugin-cpu-build.log": "3c4df254982224dbe788991fbce458028f41789183ff2e2839c75cd1524500be",
+    "Garnet/test2026/cuda/qwen38_5090/evidence/build_bf16_float_reference_plugin_cpu.bat.txt": "8318bc132982ff0b7e90a1ee136edfdb27260dc335c46de557a997be393b40ad",
+    "Garnet/test2026/cuda/qwen38_5090/run_logged.py": "3ac96f2f006cb02ecfe4d159186f7e12fcc11b8acf98e4b93728aa31e6a0407b",
+    "Garnet/test2026/cuda/qwen38_5090/evidence/bf16-kv-float-reference-probe-local-compile.json": "adeeba91a2221549dd11413ee59b9d8311f3ad3be75c7a9c6b67b3a6d3cba01c",
+    "Garnet/test2026/cuda/qwen38_5090/evidence/bf16-plugin-sdk-runtime-observation.json": "c7a36eb96efd458acb58bb0025a02acd46049f9f619ff6c68869c7e8af824d1a",
+    "tools/bf16-kv-native/probe_bf16_float_reference_plugin_cpu.exe": "dfe706aa47e633ccc90c133fbd0329d4b67610b8029f3bc0168150e3bd7dc225"
+  },
+  "sdk_sha256": {
+    "tools/TensorRT/include/NvInfer.h": "19a5e854a3c9c5029ef715c0e732b2b7e68313e07d04d779dfbd565081d13537",
+    "tools/TensorRT/include/NvInferRuntime.h": "4554517f01de87f8dd9f0b5c38bf400a72edbad5c5861d2e554bde5d5a60b050",
+    "tools/TensorRT/include/NvInferRuntimePlugin.h": "b6f531b4cf6d918e6a0199a7a100d3fc7f8852e868cc0abaeff7228669a01e41",
+    "tools/TensorRT/include/NvInferVersion.h": "29cda498d28c090987be1ad649a4f1108b9811abf59d89b111bd151393742b15",
+    "tools/TensorRT/lib/nvinfer_10.lib": "339cd22131899effc8c33b69ff42d63ad9235f5adbd4c0810f40f55e9ef5c201",
+    "tools/TensorRT/bin/nvinfer_10.dll": "73fd99ba7448ebe7b75f3a97bca5fd996f166fa75760f616c0b0eda5c2f7005b"
+  },
+  "expected_unused_library_sha256": "01a3d784a5b780898e128828e846c6e2c4019f30a65a43a44b32e17fe76d6b8f",
+  "allowed_new_files": [
+    "Garnet/src/backends/tensorrt/qwen38_bf16_kv_float_reference_plugin.cpp",
+    "Garnet/src/backends/tensorrt/qwen38_bf16_kv_float_reference_plugin.h",
+    "Garnet/test2026/cuda/qwen38_5090/probe_bf16_kv_float_reference_plugin_contract.cpp",
+    "Garnet/test2026/cuda/qwen38_5090/run_bf16_float_reference_plugin_cpu.py",
+    "Garnet/test2026/cuda/qwen38_5090/verify_bf16_float_reference_plugin_cpu.py",
+    "Garnet/test2026/cuda/qwen38_5090/evidence/bf16-float-reference-plugin-cpu-local-build.json",
+    "Garnet/test2026/cuda/qwen38_5090/evidence/bf16-float-reference-plugin-cpu-build.log",
+    "Garnet/test2026/cuda/qwen38_5090/evidence/build_bf16_float_reference_plugin_cpu.bat.txt",
+    "tools/bf16-kv-native/probe_bf16_float_reference_plugin_cpu.exe"
+  ],
+  "scope": "CPU metadata contracts only on installed pinned TensorRT101601, with consistent /MT objects. Separate48byte reference plugin wire and B4/T4/T32 ordinary FP32 full-cache descriptors;2profiles/clones/roundtrips,72bad wire records,60bad constructors,98bad format controls,118bad descriptor/envelope controls and118invalid enqueue admission controls. No valid CUDA enqueue, engine/model construction, model quality or speed claim. Prior independent reference GPU/FP64 test must be closed/replayed; deployed Garnet DLL/runtime/SDK remain unchanged."
+}
