@@ -1937,3 +1937,35 @@ TTFT summary, physical GPUbatch, numerical cause/harmlessness or2x admitted.
 While this HTTP study is active, use only its original supervisor remotely;
 perform independent source preparation and CPU checks locally. Next full4K wider
 MTP/quality/memory, host/GPU profiling and stronger matched reference timings.
+
+
+### 2026-10-25 — full4K wider-MTP target-state admission prepared, CPU qualified
+
+Actual short-model T16 qualification is closed/replayed; next owner/probe/replayer
+is prepared for actual3968+128 full4K. Use four retained native C1 inputs (two text,
+two distinct JPEG nonces), then first-text/image reset repeats. Six cases compare
+ordinary versus explicit candidate target canonical hashes and finite hidden/
+normalized raw vectors at prefill/final, all actual prompt/output/callback IDs,
+empty/final reset and actual249draft-prefill calls. Fixed128outputs explicitly
+ignore EOS; target slots must be3968after prefill and4095at final prediction.
+No805quality, HTTP, throughput or speed admission from this correctness study.
+
+Actual29CPU tests pass0.406s. Complete owner suite50CPU pass0.775s, including
+synthetic six-case/32state raw/count/ID/image/reset/callback/slot fault rejection,
+closed-reference source/runtime/server/proof lifecycle and unchanged target/MTP
+guards. CPU fixture bytes/hashes are explicitly synthetic, not model evidence.
+Before deployment, source audit corrected an unrun replayer metadata expectation:
+CUDACompiledGraph output storage is absent before first execution (0bytes) and
+33882112bytes after T16 execution. Initial verifier/preparation/plan preserved;
+model, raw-state/count gates and admitted results unchanged. Final checker parses;
+CPU-tested modules unchanged by this checker-only metadata correction.
+
+Final preparation pins586files/12targets; absent-only deployment preflight is
+prepared with575existing inputs and explicit actual reference-characterization
+closure/proof plus previous HTTP/B8/short-MTP closure and idle guards. No remote
+installation or GPU execution yet. Active SGLang characterization remains the
+sole remote HTTP/GPU study; only its original supervisor is polled. After actual
+closure, archive/replay all variants and color/isolation results, then select the
+next matched reference benchmark policy from evidence. Qualify candidate4K,
+805quality and current host/GPU bottlenecks before repeated speed comparison.
+Stronger tuned/MTP vLLM/SGLang, externalB8/HTTP/MTP, INT4/4B and2x remain open.
