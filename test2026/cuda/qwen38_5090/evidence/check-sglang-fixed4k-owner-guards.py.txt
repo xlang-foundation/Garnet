@@ -1,0 +1,14 @@
+from pathlib import Path
+import json,subprocess,sys
+w=Path(__file__).resolve().parent;r=Path('D:/CantorAI/work/qwen38-5090');m=r/'test2026/cuda/qwen38_5090'
+empty=w/'sglang-fixed4k-absent-proof';empty.mkdir(exist_ok=True);assert not any(empty.iterdir())
+plan=w/'sglang-fixed4k-uncreated-upload-plan.json';prep=m/'evidence/sglang-fixed4k-run-preparation.json'
+assert not plan.exists() and not prep.exists()
+commands=[([sys.executable,str(m/'prepare_sglang_fixed4k_run.py'),'--proofs',str(empty),'--plan',str(plan)],'sglang_fixed4k_native_proof_pair_missing_no_preparation')]
+remote=Path('D:/CantorAI/5090-study-20261023');assert not (remote/'results/fixed-length-http-study-attempt1-verified.json').exists()
+commands.append(([sys.executable,str(m/'run_sglang_fixed4k.py'),'--root',str(remote),'--job','sglang-fixed4k-ordinary-attempt1','--mode','ordinary','--preparation',str(prep)],'sglang_fixed4k_native_proof_missing_no_start_no_output'))
+for command,status in commands:
+ result=subprocess.run(command,capture_output=True,text=True);assert result.returncode==2,(command,result.stdout,result.stderr)
+ value=json.loads(result.stdout);assert value['status']==status;print(json.dumps({'command':command,'actual_child_exit_code':result.returncode,'response':value}))
+assert not plan.exists() and not prep.exists() and not any(empty.iterdir()) and not (remote/'results/sglang-fixed4k-ordinary-attempt1').exists()
+print(json.dumps({'status':'two_actual_missing_proof_guards_passed','gpu_or_server_started':False,'preparation_or_run_output_created':False}))

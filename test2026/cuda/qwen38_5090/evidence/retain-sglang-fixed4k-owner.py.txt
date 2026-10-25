@@ -1,0 +1,50 @@
+from pathlib import Path
+from datetime import datetime,timezone
+import hashlib,json,shutil
+w=Path(__file__).resolve().parent;r=Path('D:/CantorAI/work/qwen38-5090');m=r/'test2026/cuda/qwen38_5090';e=m/'evidence';sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+for stem in ('sglang-fixed4k-owner-cpu-ledger','sglang-fixed4k-owner-guard-ledger'):
+ source=w/stem;rows=[json.loads(line) for line in (source/'commands.jsonl').read_bytes().splitlines()]
+ assert len(rows)==2 and rows[-1]['exit_code']==0
+ target=e/stem;target.mkdir(exist_ok=True)
+ for f in source.iterdir():
+  t=target/f.name;assert not t.exists() or t.read_bytes()==f.read_bytes()
+  if not t.exists():shutil.copyfile(f,t)
+for name in ('check-sglang-fixed4k-owner-guards.py','retain-sglang-fixed4k-owner.py'):
+ source=w/name;target=e/(name+'.txt');assert not target.exists() or target.read_bytes()==source.read_bytes()
+ if not target.exists():shutil.copyfile(source,target)
+cpu=(e/'sglang-fixed4k-owner-cpu-ledger/commands.log').read_bytes();guard=(e/'sglang-fixed4k-owner-guard-ledger/commands.log').read_bytes()
+assert b'Ran 26 tests' in cpu and b'\nOK' in cpu and b'two_actual_missing_proof_guards_passed' in guard
+report={'status':'sglang_fixed4k_owner_prepared_cpu_controls_passed_remote_unrun','recorded_utc':datetime.now(timezone.utc).isoformat(),'actual_cpu_tests':26,'actual_missing_proof_refusals':2,'method_sha256':{name:sha(m/name) for name in ('run_sglang_fixed4k.py','prepare_sglang_fixed4k_run.py','test_sglang_fixed4k_owner.py')},'ledger_sha256':{name:sha(e/name) for name in ('sglang-fixed4k-owner-cpu-ledger/commands.jsonl','sglang-fixed4k-owner-cpu-ledger/commands.log','sglang-fixed4k-owner-guard-ledger/commands.jsonl','sglang-fixed4k-owner-guard-ledger/commands.log')},'reference_server_started':False,'gpu_executed':False,'performance_admitted':False,'two_times_target_achieved':False,'scope':'Offline owned SGLang lifecycle/controller and full-native-proof preparation. Actual26CPU controls and two real missing-proof CLI refusals; preparation/launch outputs absent. No server/GPU/remote invocation or new speed/quality result. Full native archive proof pair, actual source/config/PID checks, fixed4K collection and independent reference replay remain required. Whole-client sampling includes quality; cohort sampler provides serving-memory scope. Readiness timeout is observation failure and never an automatic restart.'}
+target=e/'sglang-fixed4k-owner-offline-preparation.json';assert not target.exists();target.write_text(json.dumps(report,indent=2),encoding='utf8')
+entry='''
+
+### 2026-10-25: owned SGLang fixed4K controller prepared; runtime unrun
+
+Added run_sglang_fixed4k.py and prepare_sglang_fixed4k_run.py to carry the
+matched reference through real server startup, ready configuration/PID/source
+checks, fourVLM/16greedy/805screen and124IDcontrols/124frozen4Kstreams, verified
+owned-parent SIGTERM, actual terminal/idle checks and immutable raw archive.
+Reuse the existing WSL environment/checkpoint/cache and fixed study folders.
+Require the completed full native proof pair before deriving deployment pins;
+MTP additionally requires the closed independently replayed ordinary attempt.
+Pin eight checkpoint metadata files before/after; no weight/model copies.
+
+Actual26CPU identity/owner/fixed-output/cache/MTP controls pass in2.112s;
+two real missing-proof CLI attempts return2 without preparation/run output or
+server/GPU startup. Retain both executed ledgers and exact methods. These do
+not qualify actual server startup, model correctness, timing or2x. Controller
+preserves readiness failures, observes the original owned wrapper, and never
+interprets a timeout as process termination or permission to restart. Whole
+client monitor includes quality; only cohort phase samples are serving memory.
+Reference archive replay still needs implementation/execution against real data.
+
+Current native fixed-length HTTP original48577 remains live; ordinary4Kcohorts
+have emitted console records and separate short pilot is ongoing. No remote
+source replacement or extra observers/transfer during possible timing. Await
+terminal/archive/raw replay; then execute strongest feasible SGLang/vLLM
+profiles and GPU-qualify the attention candidate/real B8batching. Full matched
+INT4/4B/repetitions remain open; no new benchmark/2x admission in this change.
+'''
+for name in ('qwen38-5090-development-log.md','qwen38-5090-implementation-task.md'):
+ target=r/'docs/research'/name;raw=target.read_bytes();assert b'owned SGLang fixed4K controller prepared' not in raw;target.write_bytes(raw+entry.replace('\n','\r\n').encode())
+print(json.dumps({'status':report['status'],'actual_cpu_tests':26,'missing_proof_refusals':2,'gpu_executed':False}))
