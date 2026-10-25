@@ -1,0 +1,44 @@
+{
+  "status": "sglang_fixed4k_actual_control_failure_diagnosed",
+  "workflow_exit_code": 1,
+  "cleanup_finished": true,
+  "controls": [
+    {
+      "key": "ctx4096-s3-text-c1-warmup-0-0",
+      "request_ignore_eos": true,
+      "request_max_tokens": 128,
+      "prompt_ids_type": "list",
+      "prompt_ids_count": 3968,
+      "completion_ids_type": "list",
+      "completion_ids_count": 126,
+      "usage": {
+        "prompt_tokens": 3968,
+        "total_tokens": 4094,
+        "completion_tokens": 126,
+        "prompt_tokens_details": null,
+        "reasoning_tokens": 0
+      },
+      "finish_reason": "length",
+      "request_sha256": "a15d778ce1c8bb73bb4f1ee1117c0a05f79cc0923fc660524e99dad71d98bf76",
+      "response_sha256": "2c907316d09c7877dd71be8fd92d6d72269bb44f4eaafc863ae90004652e3b60"
+    }
+  ],
+  "screening": {
+    "completed": 805,
+    "correct": 487,
+    "count": 805,
+    "official_or_broad_quality": false
+  },
+  "actual_server_settings": {
+    "version": "0.5.22",
+    "context_length": 4096,
+    "max_total_tokens": 32768,
+    "max_running_requests": 8,
+    "quantization": null,
+    "dtype": "bfloat16",
+    "kv_cache_dtype": "bfloat16",
+    "mamba_ssm_dtype": "float32"
+  },
+  "installed_source_limit_hits": [],
+  "scope": "Actual failed raw controls, usage/IDs, completed adapted screen and retained installed primary-source snippets; no benchmark rewrite, retry, timing or2x claim."
+}

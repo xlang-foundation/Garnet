@@ -1,0 +1,10 @@
+from pathlib import Path
+import hashlib,json
+w=Path(__file__).resolve().parent;m=Path('D:/CantorAI/work/qwen38-5090/test2026/cuda/qwen38_5090');changes=[]
+for name in ('serve_sglang_reserved_fixed4k.sh','serve_sglang_reserved_mtp3_fixed4k.sh'):
+ p=m/name;old=p.read_bytes();new=old.replace(b'\r\n',b'\n');assert b'\r' not in new and old!=new;p.write_bytes(new)
+ changes.append({'name':name,'old_sha256':hashlib.sha256(old).hexdigest(),'new_sha256':hashlib.sha256(new).hexdigest()})
+for p in (m/'evidence/sglang-reserved-fixed4k-run-preparation.json',w/'sglang-reserved-fixed4k-upload-plan.json',w/'sglang-reserved-fixed4k-preflight-input.json'):
+ target=w/(p.name+'.unrun-crlf-preparation');assert not target.exists();target.write_bytes(p.read_bytes());p.unlink()
+receipt={'status':'offline_launcher_line_endings_corrected_before_any_preflight_execution_or_install','changes':changes,'remote_old_preflight_input_uploaded_but_never_executed':True,'source_runtime_or_model_changed':False}
+(w/'sglang-reserved-launcher-line-endings-correction.json').write_text(json.dumps(receipt,indent=2),encoding='utf8');print(json.dumps(receipt))

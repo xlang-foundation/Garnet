@@ -5145,3 +5145,42 @@ from64490byte bundle09b238574aea762aeb5473fc33f80d9bab9dc0dbc9a350594152f345fe49
 ordinary fixed4K then strongest feasible MTP/vLLM profiles;2x/halfTTFT, B8GPUfit,
 tiled whole-model speed, INT4/4B and repetitions remain open. Only the owned
 reference supervisor may be polled while official timing is possible.
+
+
+### 2026-10-25: SGLang actual two-slot context reserve; preserve failed attempt
+
+Ordinary attempt1 terminal1, owned server stopped/idle, source/runtime unchanged.
+Archive551e50256cb6efc417d06c454e893fd9a29ff5da84191a9aca45a18b48674a74,
+99941597bytes/3158files. Independent base failure proofs are identical. Separate
+partial-control checker replays actual ready-server/config/source/PID/stop,
+four image smoke/16greedy controls, all805 raw adapted screen responses and the
+first frozen4K response. Both partial replay proofs are identical:487/805screen,
+not broad/official quality; actual3968promptIDs+126completionIDs/4094usage,
+requested128/ignore_eos true, finish length. Strict128 gate still rejects this.
+No timed streams; no SGLang latency/throughput admitted.
+
+Primary installed source archive7b58470f0436466b1488ccb359416de5b6c581f9158457d7a9bc71e4ed37e92f
+contains19 named files. tp_worker.get_worker_info bounds max_req_len to
+min(context_len-1,kv_capacity-1); scheduler.init_req_max_new_tokens then bounds
+new tokens to max_req_len-input_len-1. Configured4096 therefore permits126after
+3968inputs. Separately named launch/metadata/client/controller/preparer/replayer
+use explicit configured-engine4098/pool32784 with unchanged actual3968+128/4096
+workload; engine settings and workload capacity are separately labelled. No
+installed SGLang code, precision, cache/graph controls or frozen requests changed.
+The new attempt must pass early text+image full-ID boundaries before805screen.
+Original attempt1 methods/preparation/archive remain intact.
+
+Actual37CPU controls pass1.761s; six new reserve/metadata/frozen-ID/126negative
+controls. Eleven Python files parse; controller differs only by named candidate
+paths after CRLF normalization. Initial byte-exact derivation assertion failed
+only on generated CRLF-vs-LF; normalized text is exact. Offline QA caught CRLF
+in proposed bash scripts before preflight/install; corrected to LF and retained
+unused original preparation/plan and explicit correction receipt. No server
+ran those CRLF scripts. Remote preflight passes existing433source/pin/runtime
+checks and64targets:32absent/32matching, no conflict, about591.7GiB free. Only
+absent methods/primary-source evidence are bundled296277bytes, SHA
+861935c9c28ba68ee3ac80c023295956b61f55d820fcac22559f3a006c6abd80.
+
+New reference attempt, strongest feasible MTP/tuning/vLLM, broad quality,
+repetitions, actual B8/model-level tiled optimization, INT4/4B and2x/halfTTFT
+remain open. This receipt is preparation history, not a new performance result.
