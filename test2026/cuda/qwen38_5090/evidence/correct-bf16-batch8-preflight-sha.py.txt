@@ -1,0 +1,10 @@
+from pathlib import Path
+import hashlib,json
+w=Path(__file__).resolve().parent;out=w.parent/'outputs';proof=json.loads((out/'sglang-fixed4k-ordinary-attempt2-remote-verified.json').read_bytes());digest=proof['archive_sha256'];assert len(digest)==64 and proof['status']=='reference_fixed4k_failure_preserved'
+old=w/'preflight-bf16-batch8-admission.py';raw=old.read_bytes();typo=b'e17f3aff00fd9502a8708115f194dc4464706320baa399426855b8bf1533c0b9d';assert len(typo)==65 and raw.count(typo)==1
+target=w/'preflight-bf16-batch8-admission-v2.py';assert not target.exists();target.write_bytes(raw.replace(typo,digest.encode()))
+receipt={'status':'copied_65_character_archive_id_typo_corrected_from_actual_saved_remote_proof','initial_preflight_exit_code':1,'initial_preflight_gpu_executed':False,'initial_preflight_receipt_created':False,'old_sha256':hashlib.sha256(raw).hexdigest(),'corrected_method_sha256':hashlib.sha256(target.read_bytes()).hexdigest(),'actual_closed_archive_sha256':digest,'source':'sglang-fixed4k-ordinary-attempt2-remote-verified.json','source_proof_sha256':hashlib.sha256((out/'sglang-fixed4k-ordinary-attempt2-remote-verified.json').read_bytes()).hexdigest(),'scope':'Preserve original preflight method/log. Correct the copied identifier, not an archive, measured result, model/runtime source or correctness threshold.'}
+(w/'bf16-batch8-preflight-sha-correction.json').write_text(json.dumps(receipt,indent=2),encoding='utf8')
+for name in ('Garnet-Parallel-Top1-Integration-Status.json','Garnet-Tokenizer-NFC-Status.json'):
+ p=out/name;v=json.loads(p.read_bytes());v['sglang_fixed4k_reference']['archive_sha256']=digest;p.write_text(json.dumps(v,indent=2),encoding='utf8')
+print(json.dumps(receipt))
