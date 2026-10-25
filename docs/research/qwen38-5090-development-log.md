@@ -4553,3 +4553,31 @@ batching. Paired outer controller preserves failures, whole-stage/cohort memory,
 source/runtime hashes and only retires its newly created private engine files.
 HTTP data and native4K metrics are not yet collected; reference4K/tuned/MTP,
 INT4 W4A16, matched4B, clean repetitions and original2x target remain open.
+
+
+### 2026-10-25: installed reference API source audit and prepared fixed4K client
+
+While the fixed805corpus upload remains live, a CPU-only WSL source snapshot
+captures98installed API/protocol/package-metadata files. Archivef029c4ba... is
+384735bytes; remote/local CRC/member-hash replays agree on its actual digest.
+Installed versions are vLLM0.32.0 and SGLang0.5.22. SGLang serving_chat explicitly
+rejects return_prompt_token_ids and return_token_ids when stream=true. vLLM has
+streaming token fields; a common reference protocol cannot assume those IDs.
+The first manually transcribed digest had an extra6 and rejected before ZIP
+replay. A machine-readable remote digest now agrees with local bytes. The first
+logged audit then hit the Windows GBK text default; explicit UTF8 fixed decoding.
+Original audit source and actual failure/pass ledger are preserved. No installed
+package, GPU/runtime or archived source changed.
+
+Prepared benchmark_fixed_context_reference performs124actual nonstreaming
+prompt/completion-ID controls before timing the exact same frozen streaming
+request bodies as native. Each control requires3968exact prompt IDs,128actual
+completion IDs,4096usage, uncached prompt and no-thinking assistant text. Timed
+streams require actual3968/128usage and exact same-engine text versus that
+control; streamed IDs are explicitly unobserved and never reconstructed from
+text. Failures/early stops remain recorded with no retries.8cohorts/64measured/
+60warmup, phase memory and raw SSE use the established measurement arithmetic.
+Five synthetic CPU tests pass; final module compile passes. These methods remain
+local and unrun on reference servers. A pinned source/runtime/launch controller,
+actual805reference screening, raw replay, tuned/MTP configurations and repetition
+are still required; no new measured reference speed or original2x claim.

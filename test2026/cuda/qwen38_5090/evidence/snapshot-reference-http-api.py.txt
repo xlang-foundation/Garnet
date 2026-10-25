@@ -1,0 +1,19 @@
+from pathlib import Path
+import datetime,hashlib,json,zipfile
+root=Path('/mnt/d/CantorAI/5090-study-20261023');target=root/'results/reference-http-api-installed-source.zip';assert not target.exists();raw={}
+for engine in ('vllm','sglang'):
+ site=Path('/opt/cantorai5090')/engine/'lib/python3.12/site-packages';package=site/engine;assert package.is_dir()
+ candidates=list((package/('entrypoints/openai' if engine=='vllm' else 'srt/entrypoints/openai')).rglob('*.py'))
+ for f in package.rglob('*.py'):
+  if f.name in ('protocol.py','serving_chat.py','openai_api.py'):candidates.append(f)
+ for f in set(candidates):raw[engine+'/'+f.relative_to(site).as_posix()]=f.read_bytes()
+ for d in site.glob(engine+'-*.dist-info'):
+  for name in ('METADATA','WHEEL'):
+   f=d/name
+   if f.is_file():raw[engine+'/'+f.relative_to(site).as_posix()]=f.read_bytes()
+ assert any(n.startswith(engine+'/') for n in raw)
+manifest={'utc':datetime.datetime.now(datetime.timezone.utc).isoformat(),'files':{n:hashlib.sha256(b).hexdigest() for n,b in raw.items()},'scope':'Read-only installed Python HTTP/OpenAI API sources and package metadata. No package import, GPU/model load or server launch.'}
+with zipfile.ZipFile(target,'x',zipfile.ZIP_DEFLATED) as z:
+ for n,b in raw.items():z.writestr(n,b)
+ z.writestr('evidence-manifest.json',json.dumps(manifest,indent=2))
+print(json.dumps({'files':len(raw),'bytes':target.stat().st_size,'sha256':hashlib.sha256(target.read_bytes()).hexdigest()}))
