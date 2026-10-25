@@ -5505,3 +5505,35 @@ closure, archive/replay all variants and color/isolation results, then select th
 next matched reference benchmark policy from evidence. Qualify candidate4K,
 805quality and current host/GPU bottlenecks before repeated speed comparison.
 Stronger tuned/MTP vLLM/SGLang, externalB8/HTTP/MTP, INT4/4B and2x remain open.
+
+
+### 2026-10-25 — SGLang raw output/isolation diagnosis closed and replayed twice
+
+Original supervisor48577 observed sglang-output-characterization-attempt1 terminal0,
+owned Linux parent271 stopped, wrapper terminal and adapter/process idle. Actual
+33CPU tests passed11.691s. Source/runtime unchanged. Complete70670636byte/1612file
+archive transferred and independently replayed on both machines; proofs identical.
+All288requests/135observed client-overlap waves meet strict full4K/nonstream-ID/
+raw-SSE/count/semantic-control coverage and ownership/config/source cleanup gates.
+
+All24serial after IDs/texts equal their serial-before controls. Actual concurrent
+nonstream outputs differ95times, streamed text differs47times versus serial
+controls; all96mixed-color/spatial semantic controls (72concurrent) pass. This is
+not a numerical-cause/harmlessness, global request-isolation or long-output
+semantic-equivalence proof. Rotated concurrent IDs and later streams also vary
+relative to earlier same-concurrency controls. Actual physical GPUbatch was not
+observed. Detailed per-phase raw-derived counts/variants retained. No timing,
+accuracy score, broad quality or2x admitted from this correctness study.
+
+The previous strict baseline/helper/archive remain immutable. A separate successor
+must retain3968+128counts/prompt IDs/precision/cache/source/GPU checks, raw actual
+nonstream IDs, all observed stream-text variants, semantic controls and quality
+screening rather than excluding the faster normal reference for serial-text
+inequality. Complete C1/2/4/8text/image timings, strongest tuned/MTP SGLang/vLLM and
+repetitions before any2x claim. Do not infer unobserved streamed IDs or harmlessness.
+
+First independent replay CLI failed at existing-scratch-directory assertion before
+reading archive. Same checker succeeded using existing results scratch location;
+failure observation retained, no guard/data change. Next wider MTP actual full4K
+correctness owner/preflight pins qualified native/short-model proofs and requires
+this actual closed/replayed reference archive plus idle guards before execution.
