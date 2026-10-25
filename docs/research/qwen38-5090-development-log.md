@@ -5629,3 +5629,40 @@ successor is ordinary same-profile reference; stronger tuned/MTP SGLang and vLLM
 repeated matched native candidate timings/805quality, host/GPU optimization,
 real GPUbatching, INT4/4B and2x remain open. Once HTTP timing starts, only its
 original supervisor may be polled remotely until terminal closure.
+
+
+### 2026-10-25 — full ordinary SGLang successor started; host diagnostic owner prepared
+
+Actual absent-only deployment passed:511existing pinned inputs/runtime hashes,
+15absent methods installed, bundle4c49c4558726cb32dee91c6e5146a931c00a81ca2fca3ca2c151ebd4e5fab634.
+Commit126e7428d is pushed to qwen38-5090. Actual original48577 supervisor started
+sglang-observed-fixed4k-ordinary-attempt1 using the actual saved closed wider-MTP
+full4K archive/proof; remote60CPU tests passed8.847s. Last observed running, no
+terminal timing result yet. Preserve original strict failures. During this job,
+only its original supervisor may be polled remotely; no transfers/other observers.
+
+Prepared exclusive next native-host-stage-full4k-attempt1 owner/preparer/verifier,
+never run before current reference terminal closure and independent replay. Pins
+599files/13upload targets,587existing inputs. Actual29CPU controls pass0.922s:
+whole-worker AST equivalence, two owned synthetic children/24requests, raw stage/
+event/ID/order mutations and closed-reference namespace/hash/proof/lifecycle guards.
+Independent read-only rebinding also verifies four actual3968+128 request bodies,
+distinct image bytes and eight actual ordinary/MTP completion controls directly
+against the retained native HTTP archive. No synthetic timings enter model metrics.
+
+Initial preparer rejected a nonexistent test_fixed_length_policy import before
+writing a preparation; preserve initial source, use existing tested
+test_fixed_length_worker_contract instead. CPU child explicitly resolves the
+unchanged sibling native_worker_io import without global environment mutation.
+The host diagnostic will retain reset/input+vision/embedding+rows/prefill/generation
+host-wall phases for three request orders per mode. MTP first token occurs inside
+prefill before draft work may finish; full prefill duration is notTTFT. No isolated
+GPU time, causal kernel bottleneck, HTTP speed improvement or2x claim.
+
+User chart report combines historical short-prompt B1 wins and C1/2/4/8 throughput
+with actual4K native ordinary/MTP and the clearly hatched one-cohort SGLang failed
+attempt2 observation. No zero for missing vLLM4K, no complete/strongest SGLang
+baseline claimed, no new benchmark generation. Source and input hashes retained.
+Next: close/replay full SGLang successor, then actual native host-stage profiling,
+follow evidence to prefill/batching/kernel optimizations, qualify805quality/HTTP
+before speed. Tuned/MTP vLLM/SGLang, repeats, INT4/4B and2x remain open.

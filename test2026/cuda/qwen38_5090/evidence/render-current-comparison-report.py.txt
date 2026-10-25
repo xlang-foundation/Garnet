@@ -1,0 +1,109 @@
+import base64
+import hashlib
+import html
+import json
+from pathlib import Path
+
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+
+ROOT = Path(__file__).resolve().parents[1]
+OUT = ROOT / 'outputs'
+native_path = OUT / 'Garnet-Native-4K-Verified-Results.json'
+sg_path = OUT / 'sglang-fixed4k-ordinary-attempt2-partial-verified.json'
+native = json.loads(native_path.read_text())
+sg = json.loads(sg_path.read_text())
+assert native['status'] == 'native_4k_single_trial_metrics_independently_replayed'
+assert sg['status'] == 'reference_fixed4k_attempt2_failure_partial_evidence_replayed'
+assert native['actual_prompt_tokens_each'] == 3968
+assert native['actual_output_tokens_each'] == 128
+rows = []
+for p in native['profiles']:
+    c = next(c for c in p['cohorts'] if c['case'] == 'text' and c['concurrency'] == 1)
+    rows.append({'label': 'Garnet ordinary' if p['mode'] == 'ordinary' else 'Garnet MTP3',
+                 'evidence_scope': 'complete native single trial', **c})
+sp = sg['profiles'][0]
+assert len(sp['raw_replay']['cohorts']) == 1
+sc = sp['raw_replay']['cohorts'][0]
+assert sc['case'] == 'text' and sc['concurrency'] == 1
+rows.append({'label': 'SGLang ordinary*', 'evidence_scope': 'one completed cohort; overall run failed',
+             **sc['raw_recomputed_metrics'],
+             'sampled_peak_adapter_used_bytes': sp['sampled_memory']['text-c1']['sampled_peak_adapter_used_bytes']})
+assert all(r['requests'] == 8 and r['generated_tokens'] == 1024 for r in rows)
+colors = ['#287bb4', '#d46624', '#4c9d8a']
+plt.rcParams.update({'font.family': 'DejaVu Sans', 'font.size': 12, 'axes.spines.top': False,
+                     'axes.spines.right': False, 'figure.facecolor': '#f5f8fc'})
+fig, axes = plt.subplots(2, 2, figsize=(15, 10))
+fig.subplots_adjust(left=.09, right=.97, top=.80, bottom=.20, wspace=.28, hspace=.50)
+fig.text(.055, .945, 'Actual 4K text requests: current retained evidence', fontsize=23, weight='bold')
+fig.text(.055, .902, 'Qwen3.8-27B mixed NVFP4/FP8 | one RTX 5090 32GB | HTTP streaming | one client', color='#43546b')
+fig.text(.055, .866, '3968 input + 128 output tokens per request | 8 measured requests per cohort | single trials', color='#43546b')
+specs = [
+    ('Time to first token (seconds; lower is better)', 'ttft_median_ms', .001),
+    ('Decode rate (tokens/s; higher is better)', 'decode_median_tokens_per_second', 1),
+    ('Total output throughput (tokens/s; higher is better)', 'output_tokens_per_second', 1),
+    ('Sampled adapter VRAM (GiB; lower is better)', 'sampled_peak_adapter_used_bytes', 1 / 2**30),
+]
+for ax, (title, key, scale) in zip(axes.flat, specs):
+    vals = [r[key] * scale for r in rows]
+    bars = ax.bar(range(3), vals, color=colors, width=.60)
+    bars[-1].set_hatch('///')
+    bars[-1].set_edgecolor('#244a40')
+    ax.set_xticks(range(3), [r['label'] for r in rows])
+    ax.set_title(title, loc='left', fontsize=13, pad=14)
+    ax.set_ylim(0, max(vals) * 1.23)
+    ax.set_axisbelow(True)
+    ax.grid(axis='y', alpha=.17)
+    ax.bar_label(bars, labels=[f'{v:.2f}' for v in vals], padding=5, weight='bold')
+fig.text(.055, .132, '* SGLang: one raw-replayed text C1 cohort from a run that later failed its concurrent-output equality check.', fontsize=11)
+fig.text(.055, .103, 'No complete matched 4K SGLang baseline or vLLM baseline is shown. Missing measurements are not zero.', fontsize=11)
+fig.text(.055, .074, 'MTP3 output IDs matched native ordinary. Cross-engine quality parity and strongest tuned/MTP references remain open.', fontsize=11)
+fig.text(.055, .045, 'VRAM is adapter-wide and sampled, including background allocations. Overall 2x target remains unproven.', fontsize=11, color='#9a4521')
+stem = 'Garnet-Current-4K-Comparison'
+for ext in ['png', 'svg']:
+    fig.savefig(OUT / f'{stem}.{ext}', dpi=150, facecolor=fig.get_facecolor())
+plt.close(fig)
+inputs = [native_path, sg_path, OUT / 'Garnet-B1-Charts-Provenance.json',
+          OUT / 'Garnet-Register128-MTP-HTTP-Chart-Provenance.json']
+data = {'status': 'report_of_existing_measurements_only', 'new_benchmarks': False,
+        'two_times_target_achieved': False, 'text_4k_c1_rows': rows,
+        'input_sha256': {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in inputs},
+        'scope': 'Separate historical short-prompt pilots and actual4K evidence. SGLang4K is partial failed-run evidence; no full baseline, tuned/MTP parity, repeat statistics or global2x claim.'}
+(OUT / f'{stem}-Data.json').write_text(json.dumps(data, indent=2) + '\n', encoding='utf-8')
+sections = [
+    ('Single-request short-prompt comparison',
+     'Historical pilots: 41 text / 104 image input tokens, 128 output tokens. Garnet MTP3 versus ordinary references. '
+     'Garnet decode was 5.5% ahead of the faster reference for text and 8.3% for images. Text first-token latency was 2.35x faster; image latency was 1.51x faster. '
+     'These results do not establish a general 2x advantage.', 'Garnet-B1-Verified-Wins.png'),
+    ('Concurrency throughput on short prompts',
+     'Separate historical B4 MTP3 pilot. At eight clients, Garnet measured 208.5 text / 167.9 image output tokens per second; '
+     'ordinary vLLM measured 445.8 / 439.9, and SGLang 435.1 / 404.8. Garnet trails both references in this pilot. '
+     'All concurrency levels are shown, including the slower C2 result.', 'Garnet-Register128-MTP-HTTP-Throughput.png'),
+    ('Actual 4K text comparison: incomplete reference coverage',
+     '3968 input + 128 output tokens, one client. Native results are complete single-trial results. '
+     'The hatched SGLang bars are one completed cohort from an overall failed run. '
+     'SGLang delivered lower first-token latency and higher total throughput in that cohort; Garnet MTP3 had a higher decode rate and lower sampled VRAM. '
+     'No complete matched vLLM4K result is available in this report.', f'{stem}.png'),
+    ('Complete native 4K text and image results',
+     'Ordinary versus MTP3, C1/C2/C4/C8. Physical GPU batch is one, so concurrent clients queue. '
+     'MTP improves decode speed but has a longer first-token wait at C1. This is an internal Garnet comparison.',
+     'Garnet-Native-4K-Verified-Dashboard.png'),
+]
+parts = ['<!doctype html><html><head><meta charset="utf-8"><title>Garnet RTX5090 comparison report</title>',
+         '<style>body{font:17px/1.55 system-ui,sans-serif;max-width:1200px;margin:40px auto;padding:0 24px;color:#203044;background:#f5f8fc}h1{font-size:34px}h2{margin-top:44px}img{width:100%;height:auto;background:white;border:1px solid #dce4ec}p{max-width:1050px}.lead{padding:18px;background:white;border-left:5px solid #d46624}a{color:#2268aa}</style></head><body>',
+         '<h1>Garnet on RTX 5090: comparison report</h1>',
+         '<p class="lead"><b>Overall 2x faster than vLLM and SGLang: not established.</b> '
+         'Saved measurements show single-request wins on short prompts, weaker concurrency throughput, and incomplete actual4K reference coverage. '
+         'This report generates no new benchmark numbers.</p>',
+         '<p>HTTP benchmarking measures what an application receives from the model server: request-to-first-token latency, '
+         'streamed decode rate, and total output throughput, including server handling and queueing. It is broader than timing a GPU kernel.</p>']
+for title, caption, filename in sections:
+    raw = base64.b64encode((OUT / filename).read_bytes()).decode('ascii')
+    parts.extend([f'<h2>{html.escape(title)}</h2><p>{html.escape(caption)}</p>',
+                  f'<img alt="{html.escape(title)}" src="data:image/png;base64,{raw}">'])
+parts.append('<p>Evidence: figures link to saved proof and archive identifiers in their associated provenance JSON files. '
+             'These are single trials without uncertainty estimates; broader quality parity, tuned/MTP references and clean repetitions remain open.</p></body></html>')
+report = OUT / 'Garnet-Current-Comparison-Report.html'
+report.write_text('\n'.join(parts), encoding='utf-8')
+print(json.dumps({'report': str(report), 'chart': str(OUT / f'{stem}.png'), 'rows': len(rows), 'new_benchmarks': False}))

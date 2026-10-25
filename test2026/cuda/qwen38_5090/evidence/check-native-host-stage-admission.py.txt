@@ -1,0 +1,35 @@
+from pathlib import Path
+import hashlib
+import json
+import os
+import sys
+
+work = Path(__file__).resolve().parent
+repo = Path('D:/CantorAI/work/qwen38-5090')
+methods = repo / 'test2026/cuda/qwen38_5090'
+sys.path[:0] = [str(repo), str(methods)]
+from test2026.cuda.qwen38_5090.run_logged import run
+from test2026.cuda.qwen38_5090.verify_native_host_stage import bind_actual_retained_cases
+
+preparation = methods / 'evidence/native-host-stage-run-preparation.json'
+p = json.loads(preparation.read_bytes())
+assert p['expected_cpu_test_count'] == 29
+os.chdir(repo)
+test_code = ('import sys,unittest;sys.path.insert(0,' + repr(str(methods)) + ');'
+             'unittest.main(module=None,argv=' + repr(['unittest', *p['test_modules']]) + ')')
+code = run([sys.executable, '-c', test_code], work / 'native-host-stage-admission-cpu-ledger',
+           'correctness', 'CPU synthetic host trace/event/retained-ID/order/closed-reference mutation tests; no real model/GPU',
+           [preparation] + [repo / path.removeprefix('Garnet/') for path in p['files'] if path.startswith('Garnet/')])
+assert code == 0
+cases_path = methods / 'evidence/native-host-stage-cases.json'
+cases = json.loads(cases_path.read_bytes())
+binding = bind_actual_retained_cases(cases, work.parent / 'outputs')
+result = {'status': 'native_host_stage_owner_cpu_prepared_actual_retained_cases_rebound',
+          'cpu_tests_passed': 29, 'preparation_sha256': hashlib.sha256(preparation.read_bytes()).hexdigest(),
+          'actual_retained_case_binding': binding, 'new_gpu_execution': False,
+          'performance_admitted': False, 'two_times_target_achieved': False,
+          'initial_preparer_failure': 'Nonexistent test_fixed_length_policy import rejected before writing preparation. Corrected to existing test_fixed_length_worker_contract. Initial source preserved.'}
+target = work / 'native-host-stage-admission-offline-check.json'
+assert not target.exists()
+target.write_text(json.dumps(result, indent=2), encoding='utf8')
+print(json.dumps(result))

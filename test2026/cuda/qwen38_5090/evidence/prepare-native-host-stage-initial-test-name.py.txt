@@ -1,0 +1,85 @@
+"""Pin the real host diagnostic to closed native full4K and exact retained cases."""
+from pathlib import Path
+import argparse
+import hashlib
+import json
+import sys
+import zipfile
+
+sha = lambda path: hashlib.sha256(path.read_bytes()).hexdigest()
+METHODS = ('native_host_stage_trace.py', 'native_host_stage_stream_worker.py',
+           'replay_native_host_stage_trace.py', 'probe_native_host_stage.py',
+           'serve_native_host_stage_worker.bat', 'test_native_host_stage_trace.py',
+           'test_native_host_stage_probe.py', 'native_host_stage_admission.py',
+           'test_native_host_stage_admission.py', 'run_native_host_stage.py',
+           'prepare_native_host_stage_run.py', 'verify_native_host_stage.py')
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--proofs', type=Path, required=True)
+    parser.add_argument('--plan', type=Path, required=True)
+    args = parser.parse_args()
+    methods = Path(__file__).resolve().parent
+    repo = methods.parents[2]
+    name = 'mtp-prefill16-full4k-admission-attempt1'
+    proof_path = args.proofs / (name + '-verified.json')
+    proof = json.loads(proof_path.read_bytes())
+    assert proof == json.loads((args.proofs / (name + '-remote-verified.json')).read_bytes())
+    assert proof['status'] == 'mtp_prefill16_full4k_target_state_replayed'
+    archive = args.proofs / (name + '-evidence.zip')
+    assert sha(archive) == proof['archive_sha256']
+    with zipfile.ZipFile(archive) as z:
+        manifest = json.loads(z.read('evidence-manifest.json'))
+        assert z.testzip() is None and len(z.namelist()) == len(set(z.namelist())) == len(manifest['files']) + 1
+        for path, digest in manifest['files'].items():
+            assert hashlib.sha256(z.read(path)).hexdigest() == digest
+        w = json.loads(z.read('results/' + name + '/workflow.json'))
+    assert type(w['exit_code']) is int and w['exit_code'] == 0 and w['cleanup_finished'] is True
+    assert w['library_unchanged'] is True and w['source_sha256'] == w['source_after_sha256']
+    assert w['runtime_dependencies'] == w['runtime_dependencies_after']
+    files = dict(w['source_sha256'])
+    for path in METHODS:
+        files['Garnet/test2026/cuda/qwen38_5090/' + path] = sha(methods / path)
+    for path in ('run_sglang_observed_fixed4k.py',):
+        files['Garnet/test2026/cuda/qwen38_5090/' + path] = sha(methods / path)
+    for path, digest in files.items():
+        if path.startswith('Garnet/'):
+            assert sha(repo / path.removeprefix('Garnet/')) == digest, ('Qualified source drift', path)
+    tests = ['test2026.cuda.qwen38_5090.' + name for name in (
+        'test_native_host_stage_trace', 'test_native_host_stage_probe',
+        'test_native_host_stage_admission', 'test_fixed_length_policy', 'test_native_worker_io')]
+    sys.path[:0] = [str(repo), str(methods)]
+    import unittest
+    loader = unittest.TestLoader()
+    count = loader.loadTestsFromNames(tests).countTestCases()
+    assert not loader.errors
+    scope = ('One exclusive B1 native full4K instrumented host diagnosis after the actual observed-output SGLang job is closed and independently replayed. '
+             'Four actual retained text/image requests in three orders per ordinary/MTP mode,24requests; exact3968+128 IDs/image bytes and every raw trace/event interval replayed. '
+             'Complete worker AST equals the qualified worker after trace-only nodes are removed. Existing1a1d DLL/defaults/SDK/checkpoint unchanged. '
+             'Host intervals include synchronizations and CPU work; they are not isolated GPU time or HTTP metrics. MTP first token may precede the end of draft prefill. '
+             'First-use/rotated/reset repeats retained, owned children closed and new private caches retired. No causal kernel bottleneck, performance improvement or2x claim.')
+    result = {'status': 'native_host_stage_prepared_gpu_unrun', 'files': files,
+              'runtime_dependencies': w['runtime_dependencies'], 'test_modules': tests,
+              'expected_cpu_test_count': count, 'scope': scope,
+              'full4k_parent': {'job': name, 'archive_sha256': proof['archive_sha256'], 'proof_sha256': sha(proof_path)}}
+    target = methods / 'evidence/native-host-stage-run-preparation.json'
+    raw = json.dumps(result, indent=2).encode()
+    assert not target.exists() or target.read_bytes() == raw
+    if not target.exists():
+        target.write_bytes(raw)
+    uploads = [{'local': str(methods / path), 'target': 'Garnet/test2026/cuda/qwen38_5090/' + path,
+                'sha256': sha(methods / path)} for path in METHODS]
+    uploads.append({'local': str(target), 'target': 'Garnet/test2026/cuda/qwen38_5090/evidence/' + target.name,
+                    'sha256': sha(target)})
+    raw = json.dumps({'uploads': uploads, 'scope': scope}, indent=2).encode()
+    assert not args.plan.exists() or args.plan.read_bytes() == raw
+    if not args.plan.exists():
+        args.plan.write_bytes(raw)
+    print(json.dumps({'status': result['status'], 'preparation_sha256': sha(target),
+                      'pinned_files': len(files), 'upload_targets': len(uploads), 'cpu_tests': count, 'gpu_executed': False}))
+    return 0
+
+
+if __name__ == '__main__':
+    raise SystemExit(main())
