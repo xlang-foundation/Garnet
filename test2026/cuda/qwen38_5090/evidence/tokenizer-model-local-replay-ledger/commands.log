@@ -1,0 +1,65 @@
+
+{"id": "040a41f316d64196af792d549e57abd7", "kind": "correctness", "label": "Independent actual closed model archive replay, source/runtime/state/raw vector/IDs/callbacks; no GPU import", "argv": ["D:\\CantorAI\\Garnet\\.venv\\Scripts\\python.exe", "test2026/cuda/qwen38_5090/verify_tokenizer_nfc_model.py", "C:/Users/developer/Documents/Codex/2026-10-23/referenced-chatgpt-conversation-this-is-an/outputs"]}
+{
+  "status": "tokenizer_nfc_model_consistency_replayed",
+  "archive_sha256": "90098fe581655c8c7eb3bdf3e43d6baed2b899b41388be601f2fe840b6a7b65c",
+  "files_verified": 583,
+  "library_sha256": "1a1d0229a1c0c24a8397a4dee7a614bcedf97b3bd3293e58d752ed7de30eb498",
+  "variants": [
+    {
+      "label": "b4-smoke",
+      "physical_batch": 4,
+      "cases": 4,
+      "ordinary_mtp_exact": true,
+      "prefix_counts": [],
+      "retained_b4_token_difference_cases": [],
+      "retained_b4_row0_exact": true,
+      "broad_quality_qualified": false,
+      "performance_admitted": false
+    },
+    {
+      "label": "b1",
+      "physical_batch": 1,
+      "cases": 8,
+      "ordinary_mtp_exact": true,
+      "prefix_counts": [
+        0,
+        1,
+        2,
+        4
+      ],
+      "retained_b4_token_difference_cases": [
+        {
+          "key": "s3-text-c1-r0-greedy",
+          "repeat": 0
+        },
+        {
+          "key": "s3-text-c1-r0-greedy",
+          "repeat": 1
+        },
+        {
+          "key": "s3-image-c1-r0-greedy",
+          "repeat": 0
+        },
+        {
+          "key": "s3-image-c1-r0-greedy",
+          "repeat": 1
+        }
+      ],
+      "retained_b4_row0_exact": false,
+      "broad_quality_qualified": false,
+      "performance_admitted": false
+    }
+  ],
+  "correctness_sampled_peak_adapter_bytes": {
+    "b4-smoke": 27035906048,
+    "b1": 23010648064
+  },
+  "replay_verifier_sha256": "cb9dcac104950e6282e0ca898f5d8d8730d019c3d0821e354a974c83181a8a99",
+  "archived_replay_verifier_sha256": "cb9dcac104950e6282e0ca898f5d8d8730d019c3d0821e354a974c83181a8a99",
+  "broad_quality_qualified": false,
+  "actual_4k_qualified": false,
+  "streaming_http_qualified": false,
+  "performance_admitted": false,
+  "scope": "Fresh unchanged4B4/8B1 text/image/color ordinary/MTP/callback/prefix/reset corpus on rebuilt tokenizer DLL;24CPU controls. Original probe/launcher and thresholds unchanged. Additionally compare every captured full logical state and all raw vectors/IDs/callbacks to retained8ae model evidence. Both old failures remain preserved. Source/runtime and owned cache freeze/cleanup; not broad quality, actual4K/HTTP/performance or2x."
+}

@@ -1212,3 +1212,27 @@ server_info must verify these values before timing. Both Bash syntax checks and
 reference Python compilation pass. Source recipe/actual CPU ledger retained.
 These methods are local only while original NFC model runs; no deployment,
 runtime compatibility,805quality/4K metric or2x admission follows.
+
+
+### 2026-10-25: rebuilt tokenizer model closes and independently replays
+
+Original tokenizer-nfc-model-consistency-attempt1 exited0, preserved all393
+source/input/method hashes and six runtime hashes, and finished owned cleanup.
+Immutable archive90098fe581655c8c7eb3bdf3e43d6baed2b899b41388be601f2fe840b6a7b65c
+contains583files/9134964bytes. Actual remote/local independent replays match;
+both use cb9dcac1... verifier identical to archived method.24CPU/4B4/8B1cases,
+ordinary/MTP exact IDs/callbacks, full reported canonical states/raw vectors,
+repeats/resets/prefix0/1/2/4 and dialect/pending negative guards pass.
+
+Supplemental independent all-file auditor also passes: all44B4 and124B1 .f32
+files (168total), including transient prefix snapshots absent from report state
+objects, match retained8ae file sets and every raw byte. B1 versus oldB4 text/
+image token differences remain documented, exactly as retained8ae behavior;
+do not claim external/batch precision equivalence. Correctness monitor maxima
+B4=27035906048B,B1=23010648064B are not serving memory measurements.
+
+Only after actual closure and identical proof pair did fresh HTTP factory pass,
+materializing27method preparation49d72442... and29target upload plan. Earlier
+negative absent-proof guard remains preserved. Read-only target/source/runtime/
+parent/cache preflight and uploading only absent new files precede one HTTP job.
+Actual805score/4K/HTTP/timings and original2x remain unmeasured at this entry.
