@@ -5452,3 +5452,24 @@ manual wrapped-terminal archive-hash copy duplicated one character (65hex). Fail
 and original script retained. Corrected invocation reads all three closed archive
 hashes directly from saved proof JSONs and requires64lowercasehex. No qualified
 source/runtime/old failure archive or metric rewritten.
+
+
+### 2026-10-25 — actual SGLang output/isolation study deployed and running
+
+After current MTP supervisor terminal0 and identical independent proofs, corrected
+preflight read archive hashes from proof JSONs and passed498existing-input checks,
+all runtime hashes and12target checks. Absent-only bundle installed8new methods/
+evidence files with4existing matches,41958bytes,
+SHA2200ffa6b76222a5b708a51001405211e001c9a1785f6f84371740b578aa773d.
+Existing native/checkpoint/SDK/defaults unchanged; strict prior reference failure
+remains preserved. Original supervisor48577 started sglang-output-characterization-
+attempt1; actual33remote CPU tests pass11.691s. Last process poll is running.
+
+No actual client success or final diagnosis observed yet. Owned server config,
+PID/installed sources, raw288requests/135client-overlap waves, actual full4K budgets,
+nonstream IDs, streamed and nonstream mixed-color/spatial isolation, variants and
+cleanup must pass independent archive replay before interpretation. No throughput/
+TTFT summary, physical GPUbatch, numerical cause/harmlessness or2x admitted.
+While this HTTP study is active, use only its original supervisor remotely;
+perform independent source preparation and CPU checks locally. Next full4K wider
+MTP/quality/memory, host/GPU profiling and stronger matched reference timings.

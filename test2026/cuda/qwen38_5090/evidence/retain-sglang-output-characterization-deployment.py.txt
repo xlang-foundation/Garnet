@@ -1,0 +1,42 @@
+from pathlib import Path
+import datetime,hashlib,json,zipfile
+w=Path(__file__).resolve().parent;e=Path('D:/CantorAI/work/qwen38-5090/test2026/cuda/qwen38_5090/evidence');o=w.parent/'outputs';sha=lambda raw:hashlib.sha256(raw).hexdigest()
+pre=json.loads((w/'sglang-output-characterization-preflight.json').read_bytes());install=json.loads((w/'sglang-output-characterization-install.json').read_bytes());bundle=json.loads((w/'sglang-output-characterization-bundle-preparation.json').read_bytes())
+assert pre['status']=='sglang_output_characterization_preflight_passed' and not pre['existing_input_drift'] and not pre['runtime_drift'] and not pre['conflicts']
+assert install['status']=='sglang_output_characterization_methods_installed' and install['bundle_sha256']==bundle['bundle_sha256']==sha((w/'sglang-output-characterization-methods.zip').read_bytes()) and install['new_targets_verified']==8 and install['all_targets_verified']==12
+with zipfile.ZipFile(w/'sglang-output-characterization-methods.zip') as z:
+ manifest=json.loads(z.read('install-manifest.json'));assert z.testzip() is None and len(manifest['files'])==8
+ for n,d in manifest['files'].items():assert sha(z.read(n))==d
+for name in ('sglang-output-characterization-preflight.json','sglang-output-characterization-install.json','sglang-output-characterization-bundle-preparation.json','sglang-output-characterization-start-request.json'):
+ target=e/name;assert not target.exists();target.write_bytes((w/name).read_bytes())
+for name in ('preflight-sglang-output-characterization.py','package-sglang-output-characterization-methods.py','install-sglang-output-characterization-methods.py'):
+ assert (e/(name+'.txt')).read_bytes()==(w/name).read_bytes()
+target=e/'retain-sglang-output-characterization-deployment.py.txt';assert not target.exists();target.write_bytes(Path(__file__).read_bytes())
+summary={'status':'sglang_output_characterization_installed_and_actual_run_live','recorded_utc':datetime.datetime.now(datetime.timezone.utc).isoformat(),'job':'sglang-output-characterization-attempt1','original_supervisor_session':48577,'last_authoritative_process_poll':'running','actual_remote_cpu_tests_passed':33,'actual_remote_cpu_test_seconds':11.691,'preparation_sha256':sha((e/'sglang-output-characterization-run-preparation.json').read_bytes()),'preflight_existing_inputs_verified':498,'bundle_sha256':bundle['bundle_sha256'],'bundle_bytes':bundle['bytes'],'absent_new_files_installed':8,'previous_matching_targets_verified':4,'closed_native_b8_and_mtp_archives_verified':True,'existing_source_runtime_drift':False,'actual_client_requests_or_success_not_yet_observed':True,'performance_admitted':False,'two_times_target_achieved':False,'scope':'One owned SGLang0.5.22 ordinary correctness/overlap diagnosis on current pinned GPU/checkpoint, configured4098/two reservedslots exposing3968+128 actual4K. Frozen source/runtime/PID/server config and raw288requests/135overlap waves must be independently replayed after actual terminal cleanup. All variants retained; no broad quality/physical GPUbatch/speed or numerical cause claim. Previous strict failure and native source/runtime preserved.'}
+for target in (e/'sglang-output-characterization-deployment-closure.json',o/'Garnet-SGLang-Output-Study-Status.json'):
+ assert not target.exists();target.write_text(json.dumps(summary,indent=2),encoding='utf8')
+entry='''
+
+### 2026-10-25 — actual SGLang output/isolation study deployed and running
+
+After current MTP supervisor terminal0 and identical independent proofs, corrected
+preflight read archive hashes from proof JSONs and passed498existing-input checks,
+all runtime hashes and12target checks. Absent-only bundle installed8new methods/
+evidence files with4existing matches,41958bytes,
+SHA2200ffa6b76222a5b708a51001405211e001c9a1785f6f84371740b578aa773d.
+Existing native/checkpoint/SDK/defaults unchanged; strict prior reference failure
+remains preserved. Original supervisor48577 started sglang-output-characterization-
+attempt1; actual33remote CPU tests pass11.691s. Last process poll is running.
+
+No actual client success or final diagnosis observed yet. Owned server config,
+PID/installed sources, raw288requests/135client-overlap waves, actual full4K budgets,
+nonstream IDs, streamed and nonstream mixed-color/spatial isolation, variants and
+cleanup must pass independent archive replay before interpretation. No throughput/
+TTFT summary, physical GPUbatch, numerical cause/harmlessness or2x admitted.
+While this HTTP study is active, use only its original supervisor remotely;
+perform independent source preparation and CPU checks locally. Next full4K wider
+MTP/quality/memory, host/GPU profiling and stronger matched reference timings.
+'''
+for name in ('qwen38-5090-development-log.md','qwen38-5090-implementation-task.md'):
+ p=e.parents[3]/'docs/research'/name;raw=p.read_bytes();assert b'actual SGLang output/isolation study deployed and running' not in raw;p.write_bytes(raw+entry.replace('\n','\r\n').encode())
+print(json.dumps(summary))
