@@ -1,0 +1,34 @@
+{
+  "status": "prefill16_model_actual_run_live_reference_deployment_prepared_unrun",
+  "recorded_utc": "2026-10-25T18:33:08.719399+00:00",
+  "live_job": "mtp-prefill16-model-consistency-attempt1",
+  "original_supervisor_session": 48577,
+  "last_authoritative_process_poll": "running",
+  "actual_remote_cpu_tests": 41,
+  "actual_remote_cpu_test_seconds": 0.201,
+  "cpu_log_sha256": "a938630364da8c8aa7c0a70edc7dc9760bcdcaaf1dfdead023facf79e94ffb5c",
+  "last_readonly_model_snapshot": {
+    "study_status": "running",
+    "sessions_constructed": 0,
+    "model_status": "starting",
+    "cases": 0,
+    "error": null
+  },
+  "model_correctness_or_speed_passed": false,
+  "reference_deployment": {
+    "status": "local_prepared_unrun",
+    "targets": 12,
+    "existing_inputs": 498,
+    "methods_sha256": {
+      "prepare-sglang-output-characterization-deployment.py": "8894648f7710ff207c767765360dd2c3d1527d682b1462e42726c3e066333bcd",
+      "preflight-sglang-output-characterization.py": "94e614ff055d3bb33471aaaaf4f6cd90f46154ba3109aa17595077c403c1bc4e",
+      "package-sglang-output-characterization-methods.py": "b6bf5f231658d114ad52c17abdc5a773145c0f4b1462ef5f78c829e46c43c2f8",
+      "install-sglang-output-characterization-methods.py": "1746ee786bb81a4ee92f315f3ffaaf5a9221bb24df2c064cb07f9437bcc0ddd7",
+      "retain-prefill16-live-and-characterization-deployment.py": "f370508a96d240b040b7ad99b65949691a7a48f052195da4f8c2d318179ce789"
+    },
+    "preflight_input_sha256": "73d109263dca9e2ca1eae712c91b85e7ded6111e4e20203d316c744deab318fc",
+    "guards": "Requires actual closed B8 and MTP immutable archives, previous SGLang failure closure, source/runtime identity and idle adapter/process before installation. Absent-only reviewed methods; no source/runtime/default/SDK/checkpoint replacement."
+  },
+  "two_times_target_achieved": false,
+  "scope": "Live observation only. Remote model construction/correctness is unfinished; inspect original supervisor, never restart because observation is quiet. The next SGLang output/isolation study remains unrun. Current native source/runtime frozen; no concurrent GPU study or performance measurement."
+}

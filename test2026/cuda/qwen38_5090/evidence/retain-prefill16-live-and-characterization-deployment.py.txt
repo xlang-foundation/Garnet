@@ -1,0 +1,41 @@
+from pathlib import Path
+import ast,datetime,hashlib,json
+w=Path(__file__).resolve().parent;r=Path('D:/CantorAI/work/qwen38-5090');e=r/'test2026/cuda/qwen38_5090/evidence';o=w.parent/'outputs';sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+cpu=w/'mtp-prefill16-model-remote-cpu.log';raw=cpu.read_bytes();assert b'Ran 41 tests in 0.201s' in raw and b'\nOK' in raw
+target=e/cpu.name;assert not target.exists();target.write_bytes(raw)
+names=('prepare-sglang-output-characterization-deployment.py','preflight-sglang-output-characterization.py','package-sglang-output-characterization-methods.py','install-sglang-output-characterization-methods.py','retain-prefill16-live-and-characterization-deployment.py')
+for name in names:
+ raw=(w/name).read_bytes();ast.parse(raw);target=e/(name+'.txt');assert not target.exists();target.write_bytes(raw)
+name='sglang-output-characterization-preflight-input.json';target=e/name;assert not target.exists();target.write_bytes((w/name).read_bytes())
+summary={'status':'prefill16_model_actual_run_live_reference_deployment_prepared_unrun','recorded_utc':datetime.datetime.now(datetime.timezone.utc).isoformat(),'live_job':'mtp-prefill16-model-consistency-attempt1','original_supervisor_session':48577,'last_authoritative_process_poll':'running','actual_remote_cpu_tests':41,'actual_remote_cpu_test_seconds':0.201,'cpu_log_sha256':sha(cpu),'last_readonly_model_snapshot':{'study_status':'running','sessions_constructed':0,'model_status':'starting','cases':0,'error':None},'model_correctness_or_speed_passed':False,'reference_deployment':{'status':'local_prepared_unrun','targets':12,'existing_inputs':498,'methods_sha256':{n:sha(w/n) for n in names},'preflight_input_sha256':sha(w/name),'guards':'Requires actual closed B8 and MTP immutable archives, previous SGLang failure closure, source/runtime identity and idle adapter/process before installation. Absent-only reviewed methods; no source/runtime/default/SDK/checkpoint replacement.'},'two_times_target_achieved':False,'scope':'Live observation only. Remote model construction/correctness is unfinished; inspect original supervisor, never restart because observation is quiet. The next SGLang output/isolation study remains unrun. Current native source/runtime frozen; no concurrent GPU study or performance measurement.'}
+for target in (e/'prefill16-live-and-characterization-deployment-preparation.json',o/'Garnet-Prefill16-Run-Status.json'):
+ assert not target.exists();target.write_text(json.dumps(summary,indent=2),encoding='utf8')
+entry='''
+
+### 2026-10-25 — wider MTP prefill actual run started; reference deployment prepared
+
+After B8 terminal0 and independent identical proofs, absent-only installation of
+11explicit prefill16module/method/evidence files passed555existing-input/runtime
+hash checks and21target checks (10already matched). Bundle52b8176bcbcd3c93f66ae6acba8944f78aab4e1fa9b5c392789a57bf2327cb8f,
+37902bytes; existing qualified source/runtime/defaults/checkpoint/SDK unchanged.
+Original supervisor48577 started mtp-prefill16-model-consistency-attempt1 with
+actual immutable SGLang2 and B8 archive hashes. Actual remote41CPU tests passed
+0.201s; raw log retained. Last authoritative poll is running; last read-only
+snapshot showed model starting,0completed cases,0constructed sessions,no error.
+Embedded Python again printed previously observed unsupported optional-hash
+warnings; the SHA256 evidence path remains unchanged. Do not infer failure or
+restart from a quiet observation. Target-state/ID/extra-memory/model/performance
+results require terminal cleanup/archive and independent replays.
+
+Local next SGLang output/isolation deployment is syntactically prepared, unrun:
+12targets/498existing inputs. In addition to successful closed B8 proof and prior
+native/failed SGLang closures, preflight now requires the actual closed MTP
+archive/workflow and idle adapter/process. No simultaneous GPU jobs. The real
+288request/135overlap-wave study must retain raw variants and mixed-color/spatial
+controls before changing future benchmark policy. Current strict failed reference
+archive/helpers are preserved. Strongest matched refs, full4Koptimized quality/
+repeated timings, externalB8/HTTP/MTP, INT4/4B and2x/halfTTFT remain open.
+'''
+for name in ('qwen38-5090-development-log.md','qwen38-5090-implementation-task.md'):
+ p=r/'docs/research'/name;raw=p.read_bytes();assert b'wider MTP prefill actual run started; reference deployment prepared' not in raw;p.write_bytes(raw+entry.replace('\n','\r\n').encode())
+print(json.dumps(summary))

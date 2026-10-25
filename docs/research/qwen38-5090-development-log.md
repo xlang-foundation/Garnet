@@ -5364,3 +5364,28 @@ MTP and performance remain open. No2x or halfTTFT claim is admitted. Next qualif
 the explicit wider MTP draft-prefill candidate against retained B1 target state,
 then full4K/quality/memory and repeated matched timings; diagnose actual SGLang
 concurrent output variation without rewriting its preserved strict failure.
+
+
+### 2026-10-25 — wider MTP prefill actual run started; reference deployment prepared
+
+After B8 terminal0 and independent identical proofs, absent-only installation of
+11explicit prefill16module/method/evidence files passed555existing-input/runtime
+hash checks and21target checks (10already matched). Bundle52b8176bcbcd3c93f66ae6acba8944f78aab4e1fa9b5c392789a57bf2327cb8f,
+37902bytes; existing qualified source/runtime/defaults/checkpoint/SDK unchanged.
+Original supervisor48577 started mtp-prefill16-model-consistency-attempt1 with
+actual immutable SGLang2 and B8 archive hashes. Actual remote41CPU tests passed
+0.201s; raw log retained. Last authoritative poll is running; last read-only
+snapshot showed model starting,0completed cases,0constructed sessions,no error.
+Embedded Python again printed previously observed unsupported optional-hash
+warnings; the SHA256 evidence path remains unchanged. Do not infer failure or
+restart from a quiet observation. Target-state/ID/extra-memory/model/performance
+results require terminal cleanup/archive and independent replays.
+
+Local next SGLang output/isolation deployment is syntactically prepared, unrun:
+12targets/498existing inputs. In addition to successful closed B8 proof and prior
+native/failed SGLang closures, preflight now requires the actual closed MTP
+archive/workflow and idle adapter/process. No simultaneous GPU jobs. The real
+288request/135overlap-wave study must retain raw variants and mixed-color/spatial
+controls before changing future benchmark policy. Current strict failed reference
+archive/helpers are preserved. Strongest matched refs, full4Koptimized quality/
+repeated timings, externalB8/HTTP/MTP, INT4/4B and2x/halfTTFT remain open.
