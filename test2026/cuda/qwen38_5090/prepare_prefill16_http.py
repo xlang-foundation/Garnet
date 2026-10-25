@@ -12,7 +12,7 @@ METHODS = ('native_prefill16_http_admission.py', 'native_prefill16_stream_worker
            'prefill16_http_study.py', 'test_prefill16_http_study.py', 'run_prefill16_http.py',
            'verify_prefill16_http.py', 'prepare_prefill16_http.py', 'test_prefill16_http_replay.py',
            'evidence/prefill16-http-worker-derivation.json', 'evidence/prefill16-http-verifier-derivation.json',
-           'cohort_memory_replay.py', 'verify_fixed_length_http_snapshot.py')
+           'cohort_memory_replay.py', 'verify_fixed_length_http_snapshot.py', 'test_prefill16_cohort_memory.py')
 
 
 def main():
@@ -54,7 +54,8 @@ def main():
         'test_prefill16_http_worker', 'test_prefill16_http_study', 'test_prefill16_http_replay',
         'test_mtp_prefill16_study', 'test_fixed_length_worker_contract', 'test_mmmu_http_quality',
         'test_mmmu_quality_protocol', 'test_fixed_length_native_stream', 'test_fixed_length_reference',
-        'test_cohort_memory_replay')]
+        'test_prefill16_cohort_memory')]
+    assert all('Garnet/' + module.replace('.', '/') + '.py' in files for module in tests)
     sys.path[:0] = [str(repo), str(methods)]
     import unittest
     loader = unittest.TestLoader()

@@ -1,0 +1,441 @@
+{
+  "status": "native_host_stage_full4k_replayed",
+  "archive_sha256": "59c529869f970f40935ee463c62e7c06eaa06bbf6d7171090360dee5e2a97dd4",
+  "files_verified": 618,
+  "library_sha256": "1a1d0229a1c0c24a8397a4dee7a614bcedf97b3bd3293e58d752ed7de30eb498",
+  "retained_case_binding": {
+    "retained_cases": 4,
+    "ordinary_and_mtp_controls": 8,
+    "parent_archive_sha256": "6fbf308714e90bf68046c8080258e6ba9981931f18f902ce1408cf735f5b7320",
+    "actual_worker_ids_and_request_bytes_bound": true
+  },
+  "cpu_source_supplement": {
+    "status": "native_host_stage_cpu_source_supplement_replayed",
+    "archive_sha256": "c04d6e591cfab740c9ea67f72585a4fe7de36c342224dd31b921ebaf70469031",
+    "original_archive_sha256": "59c529869f970f40935ee463c62e7c06eaa06bbf6d7171090360dee5e2a97dd4",
+    "original_tests_before_model": 27,
+    "original_metadata_expected": 29,
+    "fresh_pinned_tests_after_model": 29,
+    "original_archive_unchanged": true,
+    "gpu_model_rerun": false,
+    "scope": "Explicit source-pinned supplemental CPU qualification only. Original27test ledger and29count mismatch preserved. Every host trace/token/state/metric guard remains in the original diagnostic verifier. Original IO source is observed post-run, not retroactively certified for its earlier execution."
+  },
+  "replayed_diagnostic": {
+    "status": "native_host_stage_report_replayed",
+    "modes": {
+      "ordinary": {
+        "status": "native_instrumented_host_stages_replayed",
+        "requests": [
+          {
+            "id": "ordinary-r0-ctx4096-s3-text-c1-r0",
+            "case": "text",
+            "mode": "ordinary",
+            "host_wall_seconds": 8.468187399994349,
+            "host_stage_seconds": {
+              "reset": 0.0008598000276833773,
+              "input_text_or_image": 0.012505599996075034,
+              "embedding_and_rows": 0.182010500022443,
+              "target_prefill": 4.929069800011348,
+              "target_generate": 3.319152200012468
+            },
+            "host_wall_outside_stages_seconds": 0.024589499924331903,
+            "first_token_observation_phase": "target_generate",
+            "tokens_bound_to_retained_4k_control": true
+          },
+          {
+            "id": "ordinary-r0-ctx4096-s3-text-c1-r1",
+            "case": "text",
+            "mode": "ordinary",
+            "host_wall_seconds": 8.249153600016143,
+            "host_stage_seconds": {
+              "reset": 0.00017099999240599573,
+              "input_text_or_image": 0.009164899995084852,
+              "embedding_and_rows": 0.161456800007727,
+              "target_prefill": 4.779666000016732,
+              "target_generate": 3.276396300003398
+            },
+            "host_wall_outside_stages_seconds": 0.022298600000794977,
+            "first_token_observation_phase": "target_generate",
+            "tokens_bound_to_retained_4k_control": true
+          },
+          {
+            "id": "ordinary-r0-ctx4096-s3-image-c1-r0",
+            "case": "image",
+            "mode": "ordinary",
+            "host_wall_seconds": 8.315412900003139,
+            "host_stage_seconds": {
+              "reset": 0.00019329998758621514,
+              "input_text_or_image": 0.07045150001067668,
+              "embedding_and_rows": 0.15277590000187047,
+              "target_prefill": 4.778025900013745,
+              "target_generate": 3.2906179999990854
+            },
+            "host_wall_outside_stages_seconds": 0.023348299990175292,
+            "first_token_observation_phase": "target_generate",
+            "tokens_bound_to_retained_4k_control": true
+          },
+          {
+            "id": "ordinary-r0-ctx4096-s3-image-c1-r1",
+            "case": "image",
+            "mode": "ordinary",
+            "host_wall_seconds": 8.244079299998702,
+            "host_stage_seconds": {
+              "reset": 0.00017300000763498247,
+              "input_text_or_image": 0.0213676999846939,
+              "embedding_and_rows": 0.1521915000048466,
+              "target_prefill": 4.767319499980658,
+              "target_generate": 3.2792243999720085
+            },
+            "host_wall_outside_stages_seconds": 0.023803200048860162,
+            "first_token_observation_phase": "target_generate",
+            "tokens_bound_to_retained_4k_control": true
+          },
+          {
+            "id": "ordinary-r1-ctx4096-s3-image-c1-r0",
+            "case": "image",
+            "mode": "ordinary",
+            "host_wall_seconds": 8.255179800005862,
+            "host_stage_seconds": {
+              "reset": 0.0001587000151630491,
+              "input_text_or_image": 0.019033400021726266,
+              "embedding_and_rows": 0.15082629999960773,
+              "target_prefill": 4.805025500012562,
+              "target_generate": 3.257749699987471
+            },
+            "host_wall_outside_stages_seconds": 0.022386199969332665,
+            "first_token_observation_phase": "target_generate",
+            "tokens_bound_to_retained_4k_control": true
+          },
+          {
+            "id": "ordinary-r1-ctx4096-s3-text-c1-r0",
+            "case": "text",
+            "mode": "ordinary",
+            "host_wall_seconds": 8.257469600008335,
+            "host_stage_seconds": {
+              "reset": 0.00021399999968707561,
+              "input_text_or_image": 0.00877849999233149,
+              "embedding_and_rows": 0.14574820001143962,
+              "target_prefill": 4.795031500019832,
+              "target_generate": 3.2823298999865074
+            },
+            "host_wall_outside_stages_seconds": 0.025367499998537824,
+            "first_token_observation_phase": "target_generate",
+            "tokens_bound_to_retained_4k_control": true
+          },
+          {
+            "id": "ordinary-r1-ctx4096-s3-image-c1-r1",
+            "case": "image",
+            "mode": "ordinary",
+            "host_wall_seconds": 8.26196410000557,
+            "host_stage_seconds": {
+              "reset": 0.00013950001448392868,
+              "input_text_or_image": 0.0250196999986656,
+              "embedding_and_rows": 0.14837020001141354,
+              "target_prefill": 4.774973299994599,
+              "target_generate": 3.2900249999947846
+            },
+            "host_wall_outside_stages_seconds": 0.023436399991624057,
+            "first_token_observation_phase": "target_generate",
+            "tokens_bound_to_retained_4k_control": true
+          },
+          {
+            "id": "ordinary-r1-ctx4096-s3-text-c1-r1",
+            "case": "text",
+            "mode": "ordinary",
+            "host_wall_seconds": 8.240825399989262,
+            "host_stage_seconds": {
+              "reset": 0.00016039999900385737,
+              "input_text_or_image": 0.009912099980283529,
+              "embedding_and_rows": 0.15207109999028035,
+              "target_prefill": 4.771223199990345,
+              "target_generate": 3.2822662999969907
+            },
+            "host_wall_outside_stages_seconds": 0.025192300032358617,
+            "first_token_observation_phase": "target_generate",
+            "tokens_bound_to_retained_4k_control": true
+          },
+          {
+            "id": "ordinary-r2-ctx4096-s3-text-c1-r0",
+            "case": "text",
+            "mode": "ordinary",
+            "host_wall_seconds": 22.68115280001075,
+            "host_stage_seconds": {
+              "reset": 0.0001483999949414283,
+              "input_text_or_image": 0.008707200002390891,
+              "embedding_and_rows": 0.14996730000711977,
+              "target_prefill": 4.76926299999468,
+              "target_generate": 17.731398299976718
+            },
+            "host_wall_outside_stages_seconds": 0.02166860003490001,
+            "first_token_observation_phase": "target_generate",
+            "tokens_bound_to_retained_4k_control": true
+          },
+          {
+            "id": "ordinary-r2-ctx4096-s3-text-c1-r1",
+            "case": "text",
+            "mode": "ordinary",
+            "host_wall_seconds": 8.21770470001502,
+            "host_stage_seconds": {
+              "reset": 0.00019160000374540687,
+              "input_text_or_image": 0.008686299988767132,
+              "embedding_and_rows": 0.1335798999934923,
+              "target_prefill": 4.76445300001069,
+              "target_generate": 3.2958199999993667
+            },
+            "host_wall_outside_stages_seconds": 0.014973900018958375,
+            "first_token_observation_phase": "target_generate",
+            "tokens_bound_to_retained_4k_control": true
+          },
+          {
+            "id": "ordinary-r2-ctx4096-s3-image-c1-r0",
+            "case": "image",
+            "mode": "ordinary",
+            "host_wall_seconds": 8.198657299974002,
+            "host_stage_seconds": {
+              "reset": 0.0001543999824207276,
+              "input_text_or_image": 0.01596590000553988,
+              "embedding_and_rows": 0.1302072000107728,
+              "target_prefill": 4.751147500006482,
+              "target_generate": 3.286319499980891
+            },
+            "host_wall_outside_stages_seconds": 0.014862799987895414,
+            "first_token_observation_phase": "target_generate",
+            "tokens_bound_to_retained_4k_control": true
+          },
+          {
+            "id": "ordinary-r2-ctx4096-s3-image-c1-r1",
+            "case": "image",
+            "mode": "ordinary",
+            "host_wall_seconds": 8.262737600016408,
+            "host_stage_seconds": {
+              "reset": 0.00012959999730810523,
+              "input_text_or_image": 0.01572729999315925,
+              "embedding_and_rows": 0.16920000000391155,
+              "target_prefill": 4.764904700015904,
+              "target_generate": 3.297925499995472
+            },
+            "host_wall_outside_stages_seconds": 0.014850500010652468,
+            "first_token_observation_phase": "target_generate",
+            "tokens_bound_to_retained_4k_control": true
+          }
+        ],
+        "performance_admitted": false,
+        "isolated_gpu_or_kernel_time_measured": false,
+        "two_times_target_achieved": false,
+        "scope": "Flat instrumented host-wall intervals bound to actual same-process token/completion events and retained3968+128IDs. MTP may emit the first target token before draft prefill finishes; full prefill phase duration is not TTFT. No cross-process epoch comparison, HTTP timing, benchmark speedup, causal kernel attribution or isolated GPU-active timing."
+      },
+      "mtp": {
+        "status": "native_instrumented_host_stages_replayed",
+        "requests": [
+          {
+            "id": "mtp-r0-ctx4096-s3-text-c1-r0",
+            "case": "text",
+            "mode": "mtp",
+            "host_wall_seconds": 7.900462299992796,
+            "host_stage_seconds": {
+              "reset": 0.0004985000123269856,
+              "input_text_or_image": 0.009432699996978045,
+              "embedding_and_rows": 0.15995609998935834,
+              "mtp_prefill": 5.976693700009491,
+              "mtp_generate": 1.7208519999985583
+            },
+            "host_wall_outside_stages_seconds": 0.03302929998608306,
+            "first_token_observation_phase": "mtp_prefill",
+            "tokens_bound_to_retained_4k_control": true
+          },
+          {
+            "id": "mtp-r0-ctx4096-s3-text-c1-r1",
+            "case": "text",
+            "mode": "mtp",
+            "host_wall_seconds": 7.5008662000182085,
+            "host_stage_seconds": {
+              "reset": 0.00039590001688338816,
+              "input_text_or_image": 0.01073429998359643,
+              "embedding_and_rows": 0.15348639999865554,
+              "mtp_prefill": 5.785448699985864,
+              "mtp_generate": 1.5084255999827292
+            },
+            "host_wall_outside_stages_seconds": 0.04237530005048029,
+            "first_token_observation_phase": "mtp_prefill",
+            "tokens_bound_to_retained_4k_control": true
+          },
+          {
+            "id": "mtp-r0-ctx4096-s3-image-c1-r0",
+            "case": "image",
+            "mode": "mtp",
+            "host_wall_seconds": 7.559007200004999,
+            "host_stage_seconds": {
+              "reset": 0.0009432999941054732,
+              "input_text_or_image": 0.04612839999026619,
+              "embedding_and_rows": 0.16624429999501444,
+              "mtp_prefill": 5.806119799992302,
+              "mtp_generate": 1.5078249999787658
+            },
+            "host_wall_outside_stages_seconds": 0.03174640005454421,
+            "first_token_observation_phase": "mtp_prefill",
+            "tokens_bound_to_retained_4k_control": true
+          },
+          {
+            "id": "mtp-r0-ctx4096-s3-image-c1-r1",
+            "case": "image",
+            "mode": "mtp",
+            "host_wall_seconds": 13.604854500008514,
+            "host_stage_seconds": {
+              "reset": 0.00023899998632259667,
+              "input_text_or_image": 0.016222999984165654,
+              "embedding_and_rows": 0.15531559998635203,
+              "mtp_prefill": 5.807526999997208,
+              "mtp_generate": 7.594051299995044
+            },
+            "host_wall_outside_stages_seconds": 0.03149860005942173,
+            "first_token_observation_phase": "mtp_prefill",
+            "tokens_bound_to_retained_4k_control": true
+          },
+          {
+            "id": "mtp-r1-ctx4096-s3-image-c1-r0",
+            "case": "image",
+            "mode": "mtp",
+            "host_wall_seconds": 7.509395900007803,
+            "host_stage_seconds": {
+              "reset": 0.0002722000062931329,
+              "input_text_or_image": 0.02203910000389442,
+              "embedding_and_rows": 0.14185670000733808,
+              "mtp_prefill": 5.801700799987884,
+              "mtp_generate": 1.5101926000206731
+            },
+            "host_wall_outside_stages_seconds": 0.03333449998172,
+            "first_token_observation_phase": "mtp_prefill",
+            "tokens_bound_to_retained_4k_control": true
+          },
+          {
+            "id": "mtp-r1-ctx4096-s3-text-c1-r0",
+            "case": "text",
+            "mode": "mtp",
+            "host_wall_seconds": 7.661157299997285,
+            "host_stage_seconds": {
+              "reset": 0.00027740001678466797,
+              "input_text_or_image": 0.009492200013482943,
+              "embedding_and_rows": 0.15174479997949675,
+              "mtp_prefill": 5.794663500011666,
+              "mtp_generate": 1.6725535000150558
+            },
+            "host_wall_outside_stages_seconds": 0.03242589996079914,
+            "first_token_observation_phase": "mtp_prefill",
+            "tokens_bound_to_retained_4k_control": true
+          },
+          {
+            "id": "mtp-r1-ctx4096-s3-image-c1-r1",
+            "case": "image",
+            "mode": "mtp",
+            "host_wall_seconds": 7.516432300006272,
+            "host_stage_seconds": {
+              "reset": 0.00023109998437575996,
+              "input_text_or_image": 0.019590899988543242,
+              "embedding_and_rows": 0.14149909999105148,
+              "mtp_prefill": 5.87123999997857,
+              "mtp_generate": 1.4529550000152085
+            },
+            "host_wall_outside_stages_seconds": 0.030916200048523024,
+            "first_token_observation_phase": "mtp_prefill",
+            "tokens_bound_to_retained_4k_control": true
+          },
+          {
+            "id": "mtp-r1-ctx4096-s3-text-c1-r1",
+            "case": "text",
+            "mode": "mtp",
+            "host_wall_seconds": 7.490405299991835,
+            "host_stage_seconds": {
+              "reset": 0.00024679998750798404,
+              "input_text_or_image": 0.010001799993915483,
+              "embedding_and_rows": 0.14282780000939965,
+              "mtp_prefill": 5.810507599991979,
+              "mtp_generate": 1.4944452999916393
+            },
+            "host_wall_outside_stages_seconds": 0.03237600001739338,
+            "first_token_observation_phase": "mtp_prefill",
+            "tokens_bound_to_retained_4k_control": true
+          },
+          {
+            "id": "mtp-r2-ctx4096-s3-text-c1-r0",
+            "case": "text",
+            "mode": "mtp",
+            "host_wall_seconds": 7.6631334999983665,
+            "host_stage_seconds": {
+              "reset": 0.0002514999941922724,
+              "input_text_or_image": 0.008701100014150143,
+              "embedding_and_rows": 0.16003079997608438,
+              "mtp_prefill": 5.808746900002006,
+              "mtp_generate": 1.652987799985567
+            },
+            "host_wall_outside_stages_seconds": 0.032415400026366115,
+            "first_token_observation_phase": "mtp_prefill",
+            "tokens_bound_to_retained_4k_control": true
+          },
+          {
+            "id": "mtp-r2-ctx4096-s3-text-c1-r1",
+            "case": "text",
+            "mode": "mtp",
+            "host_wall_seconds": 7.485342800006038,
+            "host_stage_seconds": {
+              "reset": 0.00021729999571107328,
+              "input_text_or_image": 0.011743899987777695,
+              "embedding_and_rows": 0.14981589998933487,
+              "mtp_prefill": 5.798327399999835,
+              "mtp_generate": 1.4924938000040129
+            },
+            "host_wall_outside_stages_seconds": 0.03274450002936646,
+            "first_token_observation_phase": "mtp_prefill",
+            "tokens_bound_to_retained_4k_control": true
+          },
+          {
+            "id": "mtp-r2-ctx4096-s3-image-c1-r0",
+            "case": "image",
+            "mode": "mtp",
+            "host_wall_seconds": 14.123121700016782,
+            "host_stage_seconds": {
+              "reset": 0.0002468000166118145,
+              "input_text_or_image": 0.021619799983454868,
+              "embedding_and_rows": 0.1422962000069674,
+              "mtp_prefill": 5.828447700012475,
+              "mtp_generate": 8.109067500015954
+            },
+            "host_wall_outside_stages_seconds": 0.021443699981318787,
+            "first_token_observation_phase": "mtp_prefill",
+            "tokens_bound_to_retained_4k_control": true
+          },
+          {
+            "id": "mtp-r2-ctx4096-s3-image-c1-r1",
+            "case": "image",
+            "mode": "mtp",
+            "host_wall_seconds": 7.474095599987777,
+            "host_stage_seconds": {
+              "reset": 0.00022819999139755964,
+              "input_text_or_image": 0.024996599997393787,
+              "embedding_and_rows": 0.17867789999581873,
+              "mtp_prefill": 5.820963999984087,
+              "mtp_generate": 1.4288336000172421
+            },
+            "host_wall_outside_stages_seconds": 0.020395300001837313,
+            "first_token_observation_phase": "mtp_prefill",
+            "tokens_bound_to_retained_4k_control": true
+          }
+        ],
+        "performance_admitted": false,
+        "isolated_gpu_or_kernel_time_measured": false,
+        "two_times_target_achieved": false,
+        "scope": "Flat instrumented host-wall intervals bound to actual same-process token/completion events and retained3968+128IDs. MTP may emit the first target token before draft prefill finishes; full prefill phase duration is not TTFT. No cross-process epoch comparison, HTTP timing, benchmark speedup, causal kernel attribution or isolated GPU-active timing."
+      }
+    },
+    "requests": 24,
+    "performance_admitted": false,
+    "isolated_gpu_or_kernel_time_measured": false,
+    "two_times_target_achieved": false
+  },
+  "correctness_sampled_peak_adapter_used_bytes": 22808047616,
+  "performance_admitted": false,
+  "isolated_gpu_or_kernel_time_measured": false,
+  "two_times_target_achieved": false,
+  "replay_verifier_sha256": "8685afae2eb86ac6d71270526d9675f9ecce7a44c4d69b1886ba279000f7f26a",
+  "archived_replay_verifier_sha256": "6b78486e7fc9d2b10a7ea72c58524d258bc803a5d9de4cf19aa1cbfb8fadfa59",
+  "scope": "One exclusive B1 native full4K instrumented host diagnosis after the actual observed-output SGLang job is closed and independently replayed. Four actual retained text/image requests in three orders per ordinary/MTP mode,24requests; exact3968+128 IDs/image bytes and every raw trace/event interval replayed. Complete worker AST equals the qualified worker after trace-only nodes are removed. Existing1a1d DLL/defaults/SDK/checkpoint unchanged. Host intervals include synchronizations and CPU work; they are not isolated GPU time or HTTP metrics. MTP first token may precede the end of draft prefill. First-use/rotated/reset repeats retained, owned children closed and new private caches retired. No causal kernel bottleneck, performance improvement or2x claim."
+}

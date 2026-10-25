@@ -5775,3 +5775,68 @@ controls pass0.819s with source hashes. After original job closes, retain origin
 strict verifier count-check failure and explicitly pin/run supplemental CPU tests
 before diagnostic admission. No numerical/state/timing guard or tolerance changed.
 Only original supervisor polled remotely during the live host diagnostic.
+
+
+### 2026-10-25 — actual native host phases closed and replayed twice, wider-MTP HTTP started
+
+Original native-host-stage-full4k-attempt1 terminal0,24actual retained3968+128
+requests in two modes/threeorders. Archive59c529869f970f40935ee463c62e7c06eaa06bbf6d7171090360dee5e2a97dd4,
+66604875bytes/618files. Existing1a1d DLL/model source/runtime unchanged; owned
+children closed and caches retired. Adapter-wide construction/correctness peak
+22808047616bytes, not serving peak. Entire diagnostic worker AST remains qualified
+worker operations after trace-only nodes removed; every actual prompt/output ID,
+image byte/control and raw same-process timing interval independently replayed.
+
+Preserve original preparation expected29 vs actual27CPU count failure, local and
+remote strict checker logs. Post-run remote old IO file has three tests, hash
+bbe22691c974b15149b22fe0970ca65d62c8311aedd67d69ed9032d837447796; it was omitted
+from original file pins. Post-run observation is not historical certification.
+Separate CPU-only supplement installs8absent files,6already exact/14targets.
+All five test modules/29IDs explicitly pinned including a new unique5IOtest copy.
+Actual remote29pass0.575s; local34controls pass0.817s including five archive/
+mutation/full-verifier-AST tests. Original599source/runtime hashes checked before/
+after CPU supplement. Supplement archivec04d6e591cfab740c9ea67f72585a4fe7de36c342224dd31b921ebaf70469031,
+118472bytes. Original model/archive unchanged; no GPU rerun. Separate verifier
+8685afae2eb86ac6d71270526d9675f9ecce7a44c4d69b1886ba279000f7f26a requires the
+actual supplement and keeps all original raw trace/token/case/memory arithmetic.
+Remote/local independent replays pass with identical proof JSONs, SHA
+fa9e8c05f10038f961b056baab7e6a85292ff91bcf87f34a38edad524ca5284d.
+
+Phase medians: ordinary target prefill4.775text/4.771image seconds, generation
+3.289/3.288; oldMTP prefill5.804/5.814 and generation1.581/1.509. Embeddings/rows
+about0.15s; input processing about0.01text/0.02image. These are host-wall call
+intervals, not isolated GPU time or HTTP TTFT. MTP first token may precede the
+end of prefill. All24requests retained. Late-repeat stalls remain unexplained:
+ordinary-r2-text-c1-r0 whole22.681s; mtp-r2-image-c1-r0 whole14.123s. Plot uses
+means including delays and source data retains phase medians/allindividualrows;
+no trimming, causal graph/kernel assertion or performance comparison from profile.
+Initial plot clipping corrected by automatic axis range; final visually checked.
+
+Future wider-MTP HTTP preparation also lacked an explicit memory-test module pin.
+Preserve initial unrun601file/16target preparation/plan/input/source. Freeze a
+unique copied memory-test module; preparer and owner now require every test-module
+file in source pins. Initial local cross-drive rename error left work files intact;
+verified backup copies/same-drive renames used. Initial64CPU run with missing-module
+error retained. Final68pass6.939s; new preparationc08ec706c955a67dce42cecfc035fe6759b5760d88f22e1e14d4a9f8bff997e6
+pins602files/17targets. Actual closed-parent/source/runtime/idle preflight passes,
+15absent files installed/2exact shared helpers skipped, bundle
+6f28d434fe823044f413ff62230344c6716ba772a6654b7a73589005e174ca62.
+Original48577 supervisor started prefill16-fixed4k-http-attempt1; actual68remoteCPU
+controls pass7.462s. It must pass
+12protocol/805natural-stop ordinary-ID parity/two4Kboundaries before124frozen4K
+streams; no short pilot. No serving result yet. Only original supervisor polling
+permitted remotely while this job may time; all transfers acknowledged beforehand.
+
+Next optimization path follows actual dominant prefill call interval. Collect a
+current B1/full4K CUDA graph/kernel/API trace with verified same-process markers,
+investigate late-repeat stalls and inspect actual capture/replay/kernel coverage.
+Then explicit target-prefill128 study with compactBF16KV and unchangedT4decode:
+new native metadata/commit/plugin contract and numerical admission are required;
+current Python/native profile guards remain4/32. M32 FP8 policy applies specific
+projections at rows32, so wider arithmetic/prefix/state equivalence must be proven.
+CPU metadata/invalid-input, GPU BF16 score/PV/commit reference cases and complete
+model state/raw-vector/128ID/reset/prefix checks precede805quality/HTTP timing.
+For concurrency, B8MTP workspace128MiB is allowed by current MTP program but actual
+memory fit, external math/quality, partial-row serving and throughput remain
+unqualified; qualify before any real batching claim. Strongest tuned/MTP SGLang/
+vLLM4K references/repetitions, INT4/4B and overall2x/halfTTFT remain open.

@@ -1,0 +1,21 @@
+from pathlib import Path
+import os
+import sys
+import json
+
+work = Path(__file__).resolve().parent
+repo = Path('D:/CantorAI/work/qwen38-5090')
+methods = repo / 'test2026/cuda/qwen38_5090'
+sys.path[:0] = [str(repo), str(methods)]
+from test2026.cuda.qwen38_5090.run_logged import run
+
+prep = methods / 'evidence/native-host-stage-cpu-source-preparation.json'
+p = json.loads(prep.read_bytes())
+modules = p['test_modules'] + ['test2026.cuda.qwen38_5090.test_native_host_stage_cpu_source']
+os.chdir(repo)
+test_code = ('import sys,unittest;sys.path.insert(0,' + repr(str(methods)) + ');'
+             'unittest.main(module=None,argv=' + repr(['unittest', *modules]) + ')')
+code = run([sys.executable, '-c', test_code], work / 'native-host-stage-cpu-source-local-ledger',
+           'correctness', '34CPU controls:29explicit pinned host/IO tests plus5source-supplement archive/mutation/whole-verifier AST controls; no model/GPU',
+           [prep] + [repo / name.removeprefix('Garnet/') for name in p['files']])
+raise SystemExit(code)

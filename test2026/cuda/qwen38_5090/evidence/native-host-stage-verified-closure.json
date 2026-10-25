@@ -1,0 +1,192 @@
+{
+  "status": "native_host_stage_full4k_replayed",
+  "recorded_utc": "2026-10-25T20:58:46.005711+00:00",
+  "archive_sha256": "59c529869f970f40935ee463c62e7c06eaa06bbf6d7171090360dee5e2a97dd4",
+  "archive_bytes": 66604875,
+  "files_verified": 618,
+  "proof_pair_identical": true,
+  "proof_sha256": "fa9e8c05f10038f961b056baab7e6a85292ff91bcf87f34a38edad524ca5284d",
+  "library_sha256": "1a1d0229a1c0c24a8397a4dee7a614bcedf97b3bd3293e58d752ed7de30eb498",
+  "actual_instrumented_requests": 24,
+  "cpu_source_supplement": {
+    "status": "native_host_stage_cpu_source_supplement_replayed",
+    "archive_sha256": "c04d6e591cfab740c9ea67f72585a4fe7de36c342224dd31b921ebaf70469031",
+    "original_archive_sha256": "59c529869f970f40935ee463c62e7c06eaa06bbf6d7171090360dee5e2a97dd4",
+    "original_tests_before_model": 27,
+    "original_metadata_expected": 29,
+    "fresh_pinned_tests_after_model": 29,
+    "original_archive_unchanged": true,
+    "gpu_model_rerun": false,
+    "scope": "Explicit source-pinned supplemental CPU qualification only. Original27test ledger and29count mismatch preserved. Every host trace/token/state/metric guard remains in the original diagnostic verifier. Original IO source is observed post-run, not retroactively certified for its earlier execution."
+  },
+  "remote_fresh_cpu_tests": 29,
+  "remote_fresh_cpu_test_report_seconds": 0.575,
+  "local_pipeline_guard_tests": 34,
+  "local_pipeline_guard_test_report_seconds": 0.817,
+  "source_runtime_unchanged_and_owned_cache_cleanup": true,
+  "construction_and_correctness_sampled_peak_adapter_bytes": 22808047616,
+  "groups": {
+    "ordinary-text": {
+      "requests": 6,
+      "mean_host_wall_seconds": 10.68574891667231,
+      "mean_phase_seconds": {
+        "reset": 0.00029086666957785684,
+        "input_text_or_image": 0.009625766659155488,
+        "embedding_and_rows": 0.15413896667208368,
+        "target_prefill": 4.801451083340605,
+        "target_generate": 5.697893833329242,
+        "outside_stages": 0.02234840000164695
+      },
+      "median_phase_seconds": {
+        "reset": 0.0001812999980757013,
+        "input_text_or_image": 0.008971699993708171,
+        "embedding_and_rows": 0.15101919999870006,
+        "target_prefill": 4.775444600003539,
+        "target_generate": 3.289074949992937
+      },
+      "mean_first_token_observed_seconds": 4.966086416665348
+    },
+    "ordinary-image": {
+      "requests": 6,
+      "mean_host_wall_seconds": 8.256338500000615,
+      "mean_phase_seconds": {
+        "reset": 0.00015808333409950137,
+        "input_text_or_image": 0.027927583335743595,
+        "embedding_and_rows": 0.15059518333873712,
+        "target_prefill": 4.773566066670658,
+        "target_generate": 3.283643683321619,
+        "outside_stages": 0.020447899999756675
+      },
+      "median_phase_seconds": {
+        "reset": 0.00015654999879188836,
+        "input_text_or_image": 0.020200550003210083,
+        "embedding_and_rows": 0.15150890000222716,
+        "target_prefill": 4.771146399987629,
+        "target_generate": 3.288172249987838
+      },
+      "mean_first_token_observed_seconds": 4.952760900002128
+    },
+    "mtp-text": {
+      "requests": 6,
+      "mean_host_wall_seconds": 7.616894566667422,
+      "mean_phase_seconds": {
+        "reset": 0.0003145666705677286,
+        "input_text_or_image": 0.010017666664983457,
+        "embedding_and_rows": 0.15297696665705493,
+        "mtp_prefill": 5.8290646333334735,
+        "mtp_generate": 1.5902929999962605,
+        "outside_stages": 0.03422773334508141
+      },
+      "median_phase_seconds": {
+        "reset": 0.0002644500054884702,
+        "input_text_or_image": 0.009747000003699213,
+        "embedding_and_rows": 0.15261559998907614,
+        "mtp_prefill": 5.8035371500009205,
+        "mtp_generate": 1.5807066999841481
+      },
+      "mean_first_token_observed_seconds": 5.981967050004944
+    },
+    "mtp-image": {
+      "requests": 6,
+      "mean_host_wall_seconds": 9.631151200005357,
+      "mean_phase_seconds": {
+        "reset": 0.0003600999965177228,
+        "input_text_or_image": 0.025099633324619692,
+        "embedding_and_rows": 0.15431496666375702,
+        "mtp_prefill": 5.822666549992088,
+        "mtp_generate": 3.600487500007148,
+        "outside_stages": 0.028222450021227512
+      },
+      "median_phase_seconds": {
+        "reset": 0.00024290000146720558,
+        "input_text_or_image": 0.021829449993674643,
+        "embedding_and_rows": 0.14880589999665972,
+        "mtp_prefill": 5.814245499990648,
+        "mtp_generate": 1.5090087999997195
+      },
+      "mean_first_token_observed_seconds": 5.990964550001081
+    }
+  },
+  "longest_request_each_group": {
+    "ordinary-text": {
+      "id": "ordinary-r2-ctx4096-s3-text-c1-r0",
+      "case": "text",
+      "mode": "ordinary",
+      "host_wall_seconds": 22.68115280001075,
+      "host_stage_seconds": {
+        "reset": 0.0001483999949414283,
+        "input_text_or_image": 0.008707200002390891,
+        "embedding_and_rows": 0.14996730000711977,
+        "target_prefill": 4.76926299999468,
+        "target_generate": 17.731398299976718
+      },
+      "host_wall_outside_stages_seconds": 0.02166860003490001,
+      "first_token_observation_phase": "target_generate",
+      "tokens_bound_to_retained_4k_control": true
+    },
+    "ordinary-image": {
+      "id": "ordinary-r0-ctx4096-s3-image-c1-r0",
+      "case": "image",
+      "mode": "ordinary",
+      "host_wall_seconds": 8.315412900003139,
+      "host_stage_seconds": {
+        "reset": 0.00019329998758621514,
+        "input_text_or_image": 0.07045150001067668,
+        "embedding_and_rows": 0.15277590000187047,
+        "target_prefill": 4.778025900013745,
+        "target_generate": 3.2906179999990854
+      },
+      "host_wall_outside_stages_seconds": 0.023348299990175292,
+      "first_token_observation_phase": "target_generate",
+      "tokens_bound_to_retained_4k_control": true
+    },
+    "mtp-text": {
+      "id": "mtp-r0-ctx4096-s3-text-c1-r0",
+      "case": "text",
+      "mode": "mtp",
+      "host_wall_seconds": 7.900462299992796,
+      "host_stage_seconds": {
+        "reset": 0.0004985000123269856,
+        "input_text_or_image": 0.009432699996978045,
+        "embedding_and_rows": 0.15995609998935834,
+        "mtp_prefill": 5.976693700009491,
+        "mtp_generate": 1.7208519999985583
+      },
+      "host_wall_outside_stages_seconds": 0.03302929998608306,
+      "first_token_observation_phase": "mtp_prefill",
+      "tokens_bound_to_retained_4k_control": true
+    },
+    "mtp-image": {
+      "id": "mtp-r2-ctx4096-s3-image-c1-r0",
+      "case": "image",
+      "mode": "mtp",
+      "host_wall_seconds": 14.123121700016782,
+      "host_stage_seconds": {
+        "reset": 0.0002468000166118145,
+        "input_text_or_image": 0.021619799983454868,
+        "embedding_and_rows": 0.1422962000069674,
+        "mtp_prefill": 5.828447700012475,
+        "mtp_generate": 8.109067500015954
+      },
+      "host_wall_outside_stages_seconds": 0.021443699981318787,
+      "first_token_observation_phase": "mtp_prefill",
+      "tokens_bound_to_retained_4k_control": true
+    }
+  },
+  "late_stall_cause_proven": false,
+  "figure_visual_check_passed": true,
+  "initial_figure_clipping_corrected": true,
+  "new_model_or_gpu_execution_for_cpu_correction": false,
+  "isolated_gpu_or_kernel_time_measured": false,
+  "next_http_job": "prefill16-fixed4k-http-attempt1",
+  "original_supervisor": 48577,
+  "next_http_last_observed_state": "running; actual68remote CPU controls passed7.462s",
+  "next_http_preparation_sha256": "c08ec706c955a67dce42cecfc035fe6759b5760d88f22e1e14d4a9f8bff997e6",
+  "next_http_local_cpu_tests": 68,
+  "next_http_local_cpu_test_report_seconds": 6.939,
+  "next_http_pinned_files": 602,
+  "next_http_upload_targets": 17,
+  "next_http_benchmark_result_available": false,
+  "performance_admitted": false,
+  "two_times_target_achieved": false
+}
