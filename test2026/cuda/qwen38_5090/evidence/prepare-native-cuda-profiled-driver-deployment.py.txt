@@ -1,0 +1,36 @@
+from pathlib import Path
+import ast,hashlib,json
+
+work=Path(__file__).resolve().parent
+m=Path('D:/CantorAI/work/qwen38-5090/test2026/cuda/qwen38_5090')
+sha=lambda raw:hashlib.sha256(raw).hexdigest()
+p=json.loads((m/'evidence/native-cuda-phase-run-preparation.json').read_bytes())
+plan=json.loads((work/'native-cuda-profiled-driver-upload-plan.json').read_bytes())
+targets={row['target']:row['sha256'] for row in plan['uploads']}
+for row in plan['uploads']:assert sha(Path(row['local']).read_bytes())==row['sha256']
+data={'expected':targets,'existing':{key:value for key,value in p['files'].items() if key not in targets},
+      'runtime_dependencies':p['runtime_dependencies'],'profiler':p['profiler'],
+      'parents':{p['host_parent']['job']:dict(p['host_parent'],status='native_host_stage_full4k_replayed')}}
+path=work/'native-cuda-profiled-driver-preflight-input.json';raw=json.dumps(data,indent=2).encode()
+assert not path.exists() or path.read_bytes()==raw
+if not path.exists():path.write_bytes(raw)
+for old,new in (('package-prefill16-http-methods.py','package-native-cuda-profiled-driver-methods.py'),
+                ('install-prefill16-http-methods.py','install-native-cuda-profiled-driver-methods.py')):
+ text=(work/old).read_text().replace('prefill16-http','native-cuda-profiled-driver').replace('prefill16_http','native_cuda_profiled_driver').replace('explicit wider-MTP HTTP methods/evidence','explicit full4K CUDA diagnostic methods/evidence')
+ ast.parse(text);path=work/new
+ assert not path.exists() or path.read_text()==text
+ if not path.exists():path.write_text(text,encoding='utf8')
+text=(work/'preflight-prefill16-http.py').read_text()
+for old,new in [('prefill16-http','native-cuda-profiled-driver'),('prefill16_http','native_cuda_profiled_driver'),
+ ('--closed-host-archive-sha256','--closed-prefill16-http-archive-sha256'),
+ ('args.closed_host_archive_sha256','args.closed_prefill16_http_archive_sha256'),
+ ("host = 'native-host-stage-full4k-attempt1'","host = 'prefill16-fixed4k-http-attempt1'"),
+ ("'native_host_stage_full4k_replayed' if w['exit_code'] == 0 else 'native_host_stage_full4k_failure_preserved'","'prefill16_fixed4k_http_replayed' if w['exit_code'] == 0 else 'prefill16_fixed4k_http_failure_preserved'"),
+ ("idle()\ntargets, drift, runtime = {}, {}, {}", "tool=p['profiler']\nassert sha(root/tool['path'])==tool['sha256'] and sha(root/tool['setup_path'])==tool['setup_sha256']\nassert shutil.disk_usage(root).free>=32*1024**3\nidle()\ntargets, drift, runtime = {}, {}, {}")]:
+ assert old in text,old
+ text=text.replace(old,new)
+ast.parse(text);path=work/'preflight-native-cuda-profiled-driver.py'
+assert not path.exists() or path.read_text()==text
+if not path.exists():path.write_text(text,encoding='utf8')
+print(json.dumps({'status':'native_cuda_profiled_driver_deployment_prepared_unrun','targets':len(targets),
+                  'existing_inputs':len(data['existing']),'input_sha256':sha(raw),'gpu_executed':False}))

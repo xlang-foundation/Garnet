@@ -15,6 +15,8 @@ METHODS = ('native_cuda_phase_trace.py', 'replay_native_cuda_phases.py', 'native
            'serve_native_cuda_phase_worker.bat', 'probe_native_cuda_phases.py', 'native_cuda_phase_study.py',
            'run_native_cuda_phases.py', 'verify_native_cuda_phases.py', 'prepare_native_cuda_phases.py',
            'test_native_cuda_phases.py', 'test_native_cuda_phase_study.py',
+           'collect_native_cuda_phases.py', 'test_native_cuda_profiled_driver.py',
+           'evidence/native-cuda-phase-profiled-driver-smoke-report.json',
            'evidence/native-cuda-phase-worker-derivation.json', 'evidence/native-cuda-phase-probe-derivation.json')
 
 
@@ -66,7 +68,7 @@ def main():
     tool = {'setup_path': setup_path, 'setup_sha256': hashlib.sha256(setup_raw).hexdigest(),
             'path': 'tools/n26/target-windows-x64/nsys.exe', 'sha256': NSYS_SHA256, 'version': setup['version']}
     tests = ['test2026.cuda.qwen38_5090.' + name for name in (
-        'test_native_cuda_phases', 'test_native_cuda_phase_study', 'test_native_host_stage_trace',
+        'test_native_cuda_phases', 'test_native_cuda_phase_study', 'test_native_cuda_profiled_driver', 'test_native_host_stage_trace',
         'test_native_host_stage_probe', 'test_native_host_stage_admission',
         'test_fixed_length_worker_contract', 'test_native_host_stage_worker_io')]
     assert all('Garnet/' + module.replace('.', '/') + '.py' in files for module in tests)
@@ -78,6 +80,7 @@ def main():
     result = {'status': 'native_cuda_phases_prepared_gpu_unrun', 'files': files,
               'runtime_dependencies': w['runtime_dependencies'], 'test_modules': tests,
               'test_ids': names, 'expected_cpu_test_count': len(names), 'profiler': tool,
+              'profiled_driver_cpu_smoke_sha256': sha(methods / 'evidence/native-cuda-phase-profiled-driver-smoke-report.json'),
               'host_parent': {'job': host, 'archive_sha256': proof['archive_sha256'], 'proof_sha256': hashlib.sha256(raw).hexdigest()},
               'scope': 'Exclusive native Windows B1/full4096 ordinary and originalT4MTP CUDA diagnosis after wider-MTP HTTP terminal closure and replay. Existing1a1d source/runtime/checkpoint unchanged. Four actual retained3968+128 text/image controls,three orders eachmode,24requests; all IDs/imagebytes and raw worker/host intervals replayed. Nsight2026 node collection from launch;144 unique HtoD markers permode bind request/phase windows, never translate Python and Nsight clocks. First-use/late-repeat delays retained. Clipped kernel/copy/memset unions and separate API durations include profiler/marker overhead; do not attribute inactive gaps or claim uninstrumented speed/HTTP/2x. Fixed root, pinned CPU test IDs, owned cleanup/cache retirement and streamed raw archive.'}
     target = methods / 'evidence/native-cuda-phase-run-preparation.json'

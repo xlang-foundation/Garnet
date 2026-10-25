@@ -1,0 +1,89 @@
+"""Render only complete two-machine-replayed measurements, no synthetic results."""
+from pathlib import Path
+import base64,copy,hashlib,html,json
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+from matplotlib.ticker import FuncFormatter
+
+work=Path(__file__).resolve().parent;out=work.parent/'outputs'
+sha=lambda path:hashlib.sha256(path.read_bytes()).hexdigest()
+old_path=out/'Garnet-vs-SGLang-Verified-4K-Data.json';old=json.loads(old_path.read_bytes())
+assert old['status']=='complete_native_and_ordinary_sglang_actual4k_single_trials_replayed_on_both_machines'
+for job,key in [('fixed-length-http-study-attempt1','native'),('sglang-observed-fixed4k-ordinary-attempt1','sglang')]:
+ p=json.loads((out/(job+'-verified.json')).read_bytes())
+ assert p==json.loads((out/(job+'-remote-verified.json')).read_bytes())
+ assert p['archive_sha256']==old['archive_sha256'][key]==sha(out/(job+'-evidence.zip'))
+job='prefill16-fixed4k-http-attempt1';proof_path=out/(job+'-verified.json');p=json.loads(proof_path.read_bytes())
+assert p==json.loads((out/(job+'-remote-verified.json')).read_bytes())
+assert p['status']=='prefill16_fixed4k_http_replayed' and p['native_fixed_4k_metrics_replayed'] is True
+assert p['archive_sha256']==sha(out/(job+'-evidence.zip'))
+assert len(p['profiles'])==1 and p['profiles'][0]['mode']=='mtp'
+profile=p['profiles'][0];fixed=profile['fixed_4k_benchmark'];new={}
+assert profile['protocol_controls']==12 and profile['actual_4k_boundary_controls']==2 and profile['short_pilot'] is None
+for key,row in fixed['raw_replay']['cohorts'].items():
+ new[key]=dict(row['metrics'],sampled_peak_adapter_used_bytes=fixed['sampled_memory'][key]['sampled_peak_adapter_used_bytes'],
+               observed_sample_gap_max_seconds=fixed['sampled_memory'][key]['observed_sample_gap_max_seconds'])
+series={'Garnet ordinary':copy.deepcopy(old['series']['Garnet ordinary']),
+        'Garnet MTP3 / draft prefill4':copy.deepcopy(old['series']['Garnet MTP3']),
+        'Garnet MTP3 / draft prefill16':new,'SGLang ordinary':copy.deepcopy(old['series']['SGLang ordinary'])}
+expected={case+'-c'+str(c) for case in ('text','image') for c in (1,2,4,8)}
+assert all(set(rows)==expected for rows in series.values())
+assert all(row['requests']==8 and row['generated_tokens']==1024 for rows in series.values() for row in rows.values())
+plt.rcParams.update({'font.family':'DejaVu Sans','font.size':10,'axes.spines.top':False,'axes.spines.right':False})
+specs=[('First-token wait (seconds, log scale; lower is better)','ttft_median_ms',.001),
+       ('Decode per request (tokens/s; higher is better)','decode_median_tokens_per_second',1),
+       ('Total output throughput (tokens/s; higher is better)','output_tokens_per_second',1),
+       ('Sampled adapter VRAM (GiB; lower is better)','sampled_peak_adapter_used_bytes',1/2**30)]
+fig,axes=plt.subplots(4,2,figsize=(16,15));fig.patch.set_facecolor('#f5f8fc')
+fig.subplots_adjust(left=.075,right=.97,bottom=.16,top=.83,hspace=.52,wspace=.22)
+fig.text(.05,.966,'Garnet draft-prefill study: actual 4K comparison',fontsize=25,weight='bold')
+fig.text(.05,.936,'Single RTX 5090 32GB | Qwen3.8-27B mixed NVFP4/FP8 | complete independently replayed single trials',fontsize=12,color='#43546b')
+fig.text(.05,.91,'3968 input + 128 output tokens | text and image | 8 measured requests per cohort | HTTP streaming',fontsize=12,color='#43546b')
+styles=[('#7790a6','o','--'),('#d06b26','s','--'),('#7650a1','D','-'),('#32977b','^','-')]
+for column,case in enumerate(('text','image')):
+ for index,(title,key,scale) in enumerate(specs):
+  ax=axes[index,column]
+  for (label,rows),(color,marker,line) in zip(series.items(),styles):
+   cs=[1,2,4,8];ax.plot(cs,[rows[case+'-c'+str(c)][key]*scale for c in cs],color=color,marker=marker,linestyle=line,lw=2,label=label)
+  ax.set_title(case.title()+' | '+title,loc='left',fontsize=11);ax.set_xticks([1,2,4,8]);ax.set_xlabel('Concurrent client requests');ax.grid(axis='y',alpha=.2)
+  if index==0:ax.set_yscale('log');ax.yaxis.set_major_formatter(FuncFormatter(lambda value,_:f'{value:g}'))
+  else:ax.set_ylim(bottom=0)
+handles,labels=axes[0,0].get_legend_handles_labels();fig.legend(handles,labels,loc='upper center',bbox_to_anchor=(.52,.89),ncol=2,frameon=False,fontsize=11)
+notes=[
+ 'Native physical GPU batch1; clients queue. SGLang: up to8 running requests. Native Windows / SGLang WSL.',
+ 'T16 changes draft prefill only: target prefill32 and draft decode4 remain. Extra draft-engine weights consume additional VRAM.',
+ 'Native candidate/control output IDs match across805adapted screen cases and all124fixed4K streams. Cross-engine quality parity unproven.',
+ 'All measured requests and delays retained. VRAM is sampled adapter-wide; sampling gaps are included in the data. No instantaneous-peak claim.',
+ 'Separate single trials, no confidence intervals or causal code-change speedup claim. Tuned/MTP and matched vLLM4K references remain open.',
+ 'Overall2x decode/throughput and half-TTFT objectives remain unmet/unproven.'
+]
+for index,text in enumerate(notes):fig.text(.05,.12-index*.019,text,fontsize=9.3,color='#9a4521' if index==5 else '#24364c')
+stem='Garnet-Prefill16-vs-References-Verified-4K'
+for ext in ('png','svg'):fig.savefig(out/(stem+'.'+ext),dpi=160,facecolor=fig.get_facecolor())
+plt.close(fig)
+comparisons=[]
+for case in ('text','image'):
+ for c in (1,2,4,8):
+  key=case+'-c'+str(c);a=new[key];b=old['series']['Garnet MTP3'][key];ref=series['SGLang ordinary'][key]
+  comparisons.append({'case':case,'clients':c,'new_draft_prefill16':a,'old_draft_prefill4':b,'sglang_ordinary':ref,
+   'new_over_sglang_decode':a['decode_median_tokens_per_second']/ref['decode_median_tokens_per_second'],
+   'new_over_sglang_total_throughput':a['output_tokens_per_second']/ref['output_tokens_per_second'],
+   'new_over_old_ttft':a['ttft_median_ms']/b['ttft_median_ms'],
+   'new_over_old_total_throughput':a['output_tokens_per_second']/b['output_tokens_per_second']})
+data={'status':'prefill16_http_and_prior_4k_comparisons_two_machine_replayed','series':series,'comparisons':comparisons,
+      'input_sha256':{old_path.name:sha(old_path),proof_path.name:sha(proof_path)},'archive_sha256':dict(old['archive_sha256'],prefill16=p['archive_sha256']),
+      'notes':notes,'new_benchmark_execution_by_renderer':False,'two_times_target_achieved':False}
+(out/(stem+'-Data.json')).write_bytes(json.dumps(data,indent=2).encode())
+rows=[]
+for comparison in comparisons:
+ a,b,r=[comparison[k] for k in ('new_draft_prefill16','old_draft_prefill4','sglang_ordinary')]
+ values=[comparison['case'],str(comparison['clients']),f"{a['ttft_median_ms']/1000:.3f} / {b['ttft_median_ms']/1000:.3f} / {r['ttft_median_ms']/1000:.3f}",
+  f"{a['decode_median_tokens_per_second']:.2f} / {b['decode_median_tokens_per_second']:.2f} / {r['decode_median_tokens_per_second']:.2f}",
+  f"{a['output_tokens_per_second']:.2f} / {b['output_tokens_per_second']:.2f} / {r['output_tokens_per_second']:.2f}",
+  f"{a['sampled_peak_adapter_used_bytes']/2**30:.2f} / {b['sampled_peak_adapter_used_bytes']/2**30:.2f} / {r['sampled_peak_adapter_used_bytes']/2**30:.2f}"]
+ rows.append('<tr>'+''.join('<td>'+html.escape(value)+'</td>' for value in values)+'</tr>')
+png=base64.b64encode((out/(stem+'.png')).read_bytes()).decode()
+report='''<!doctype html><html><head><meta charset="utf-8"><title>Garnet wider draft-prefill: verified4K comparison</title><style>body{font:17px/1.5 system-ui,sans-serif;max-width:1400px;margin:32px auto;padding:0 24px;color:#24364c;background:#f5f8fc}img{width:100%;height:auto}table{border-collapse:collapse;width:100%;font-size:14px}td,th{padding:9px;border-bottom:1px solid #ccd5df;text-align:left}.lead{padding:16px;background:white;border-left:5px solid #7650a1}</style></head><body><h1>Garnet draft-prefill: complete actual4K comparison</h1><p class="lead"><b>The overall2x target remains unmet.</b> This report compares complete single trials. Candidate output IDs match the native ordinary controls. Decode, first-token wait and total throughput remain separate metrics.</p><p>Table values: new draft-prefill16 / previous draft-prefill4 / SGLang ordinary. All native draft decode chunks remain4.</p><table><tr><th>Input</th><th>Clients</th><th>First token,seconds</th><th>Decode,tok/s</th><th>Total output,tok/s</th><th>Sampled VRAM,GiB</th></tr>'''+''.join(rows)+'</table><img alt="Complete verified text/image4K comparison" src="data:image/png;base64,'+png+'"><ul>'+''.join('<li>'+html.escape(text)+'</li>' for text in notes)+'</ul></body></html>'
+(out/'Garnet-Prefill16-Verified-4K-Comparison-Report.html').write_bytes(report.encode())
+print(json.dumps({'status':data['status'],'cohorts':32,'comparisons':[{k:v for k,v in c.items() if not isinstance(v,dict)} for c in comparisons]},indent=2))

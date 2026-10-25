@@ -44,6 +44,12 @@ def main():
         assert w['library_sha256'] == p['runtime_dependencies']['garnet.dll']
         assert w['profiler'] == w['profiler_after'] == p['profiler']
         assert w['profiler']['sha256'] == NSYS_SHA256
+        smoke_raw = z.read('results/native-cuda-phase-profiled-driver-smoke-attempt1/report.json')
+        assert hashlib.sha256(smoke_raw).hexdigest() == w['profiled_driver_cpu_smoke_sha256'] == p['profiled_driver_cpu_smoke_sha256']
+        smoke = json.loads(smoke_raw)
+        assert smoke['status'] == 'profiled_cpu_driver_ipc_verified' and smoke['gpu_model_executed'] is False
+        assert [row['requested_driver_exit_code'] for row in smoke['cases']] == [0, 7]
+        assert [row['actual_nsys_wrapper_exit_code'] for row in smoke['cases']] == [0, 7]
         assert hashlib.sha256(z.read(w['profiler']['setup_path'])).hexdigest() == w['profiler']['setup_sha256']
         for name, digest in p['files'].items():
             assert hashlib.sha256(z.read(name)).hexdigest() == digest
@@ -92,6 +98,9 @@ def main():
             actual = {}
             for mode in ('ordinary', 'mtp'):
                 prefix = base + 'native/' + mode + '/'
+                profile_events = [json.loads(line) for line in z.read(base + 'native/' + mode + '-profile-ledger/commands.jsonl').splitlines()]
+                assert len(profile_events) == 2 and profile_events[-1]['event'] == 'finished'
+                assert type(profile_events[-1]['exit_code']) is int and profile_events[-1]['exit_code'] == 0
                 stats = [json.loads(line) for line in z.read(prefix + 'stats-ledger/commands.jsonl').splitlines()]
                 assert len(stats) == 2 and stats[-1]['event'] == 'finished' and type(stats[-1]['exit_code']) is int and stats[-1]['exit_code'] == 0
                 assert report['modes'][mode]['stats_exit_code'] == 0
