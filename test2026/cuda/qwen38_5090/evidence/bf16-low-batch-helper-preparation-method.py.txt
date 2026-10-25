@@ -1,0 +1,77 @@
+from pathlib import Path
+import datetime,hashlib,json,os,sys,zipfile
+r=Path('D:/CantorAI/work/qwen38-5090');m=r/'test2026/cuda/qwen38_5090';e=m/'evidence';w=Path(__file__).resolve().parent;o=w.parent/'outputs';sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+sys.path.insert(0,str(m));from run_logged import run
+recipe=json.loads((e/'bf16-low-batch-helper-source-derivation.json').read_bytes())
+for name,row in recipe['files'].items():
+ raw=(r/row['source']).read_bytes();assert hashlib.sha256(raw).hexdigest()==row['source_sha256'];text=raw.decode().replace('\r\n','\n')
+ for before,after,count in row['changes']:assert text.count(before)==count;text=text.replace(before,after)
+ assert text.encode()==(m/name).read_bytes() and sha(m/name)==row['result_sha256']
+build=json.loads((e/'bf16-low-batch-helper-local-build.json').read_bytes())
+assert not any(build[k] for k in ['linked','runtime_executed','gpu_used','remote_mutated','native_helper_model_admitted','performance_admitted'])
+for n,h in build['input_sha256'].items():assert sha(Path(n))==h
+for n,h in build['object_sha256'].items():assert sha(w/(n+'.obj'))==h
+sdk={'status':'b1_helper_public_sdk_headers_match_observed_remote','main_header_sha256':'cffd02c2195ec0c980c526b69bae73cd2bbb16c7812de3b54c007382f5a365b4','compat_header_sha256':'852e5c3c287736498380115a154e31dff0ff1d2834e5b9041e6f2d5890887c1b','main_header_source':'Actual integrated native-build tool input pin','compat_header_source':'Current read-only SHA256 observation via authenticated remote command','scope':'Public header identity only; no XLang runtime ABI/lifetime/behavior or GPU qualification.'}
+(e/'bf16-low-batch-helper-sdk-header-observation.json').write_text(json.dumps(sdk,indent=2),encoding='utf8')
+correction={'status':'initial_header_pin_preflight_failed_then_corrected','observed_error':'FileNotFoundError: third_party/json.hpp','scope':'Observed launcher exception summarized; not an independently captured raw traceback archive. Initial method preserved verbatim. Corrected pin path to actual third_party/nlohmann/json.hpp; include directory was already correct. Failure occurred before compilation. No native C++/kernel/guard/tolerance change.'}
+(e/'bf16-low-batch-helper-local-preflight-correction.json').write_text(json.dumps(correction,indent=2),encoding='utf8')
+os.chdir(r);ledger=e/'integrated-top1-disabled-observation-ledger';snapshot=o/'integrated-batch-top1-disabled-observation.zip'
+artifacts=[snapshot,o/'bf16-padded-lifecycle-scope-fixed-attempt2-evidence.zip',o/'bf16-padded-lifecycle-scope-fixed-attempt2-verified.json',o/'bf16-padded-lifecycle-scope-fixed-attempt2-remote-verified.json',m/'evidence/integrated-top1-model-preparation.json',m/'integrated_top1_model_replay.py',m/'verify_integrated_top1_disabled_observation.py']
+assert run([sys.executable,str(m/'verify_integrated_top1_disabled_observation.py'),str(o)],ledger,'correctness','Local replay of immutable closed disabled mode snapshot only; original enabled model remains live',artifacts)==0
+observed=json.loads((o/'Garnet-Parallel-Top1-Disabled-Observation.json').read_bytes());(e/'integrated-top1-disabled-observation.json').write_text(json.dumps(observed,indent=2),encoding='utf8')
+collection={'status':'closed_variant_snapshot_collection_observed','snapshot_sha256':sha(snapshot),'snapshot_bytes':snapshot.stat().st_size,'payload_files':105,'deployed_source_runtime_changed':False,'live_gpu_worker_stopped':False,'remote_evidence_file':'results/integrated-batch-top1-disabled-observation.zip','scope':'After disabled exit0/parity, a single fixed evidence-only ZIP was created outside the live job directory from disabled102vectors/report, closed parity and one workflow snapshot plus SHA manifest. No source/runtime/binary mutation. One new local transfer helper awaited an interactive password and was canceled before network work. Bulk terminal input yielded no download acknowledgements; sequential reads copied19vectors before collection orchestration stopped. Finished one-file ZIP transfer and exact SHA/manifest replay supersede those incomplete local copies, which remain preserved in fixed work folder. Original GPU supervisor was never stopped/restarted. Transfer/sourcepreflight process elapsed time is not model timing.'}
+(e/'integrated-top1-disabled-observation-collection.json').write_text(json.dumps(collection,indent=2),encoding='utf8')
+summary={'status':'b1_native_helper_private_compile_and_source_derivation_passed_runtime_unrun','recorded_utc':datetime.datetime.now(datetime.timezone.utc).isoformat(),'branch':'qwen38-5090','source_derivations_replayed':True,'b1_and_legacy_helpers_private_compile_passed':True,'public_sdk_header_identity_matches_remote':True,'object_sha256':build['object_sha256'],'native_package_registered':False,'linked':False,'runtime_executed':False,'gpu_used':False,'production_admission_changed':False,'model_qualified':False,'performance_admitted':False,'two_times_target_met':False,'scope':'Separate B1 helper/package uses already CPU-qualified B1 metadata parser and prepared B1 commit operator. Literal derivation retains all old runtime ownership/descriptor/device/stride/writeability/size/alignment/alias/span/lease/mutex/poison/lifetime guards; old class/parser untouched. Private object compilation against matching public SDK headers only. Runtime/GPU/plugin/helper/lowering/model/quality/4K/HTTP gates remain open.'}
+(e/'bf16-low-batch-helper-preparation-verified.json').write_text(json.dumps(summary,indent=2),encoding='utf8')
+(e/'bf16-low-batch-helper-preparation-method.py.txt').write_bytes(Path(__file__).read_bytes())
+files=[m/n for n in ['cuda_bf16_low_batch_kv_delta_commit.h','cuda_bf16_low_batch_kv_delta_commit.cpp','bf16_low_batch_layout_contract.h','bf16_low_batch_commit_candidate.h']]
+files += [r/n for n in ['src/backends/tensorrt/cuda_bf16_kv_delta_commit.h','src/backends/tensorrt/cuda_bf16_kv_delta_commit.cpp','src/backends/tensorrt/qwen38_bf16_kv_layout_contract.h','src/cuda/qwen38_bf16_kv_commit.cuh','src/tensor/tensor_helper.h','src/tensor/execution_stream.h']]
+files += list(e.glob('bf16-low-batch-helper*.json'))+list(e.glob('bf16-low-batch-helper*.txt'))+list((e/'bf16-low-batch-helper-local-build-ledger').glob('*'))
+raw={f.relative_to(r).as_posix():f.read_bytes() for f in files};manifest={'files':{n:hashlib.sha256(v).hexdigest() for n,v in raw.items()},'scope':summary['scope']};target=o/'Garnet-B1-Native-Helper-Preparation.zip'
+with zipfile.ZipFile(target,'w',zipfile.ZIP_DEFLATED) as z:
+ for n,b in raw.items():z.writestr(n,b)
+ z.writestr('evidence-manifest.json',json.dumps(manifest,indent=2))
+with zipfile.ZipFile(target) as z:
+ for n,h in manifest['files'].items():assert hashlib.sha256(z.read(n)).hexdigest()==h
+summary.update(archive_sha256=sha(target),archive_bytes=target.stat().st_size,files=len(raw));(o/'Garnet-B1-Native-Helper-Preparation.json').write_text(json.dumps(summary,indent=2),encoding='utf8')
+status=o/'Garnet-Parallel-Top1-Integration-Status.json';s=json.loads(status.read_bytes());s['disabled_mode_observation']=observed;s['b1_native_helper_preparation']=summary
+status.write_text(json.dumps(s,indent=2),encoding='utf8')
+note='''
+
+2026-10-25: Disabled mode closes, enabled mode lives; isolated B1 helper compile.
+Original integrated-batch-top1-model-lifecycle-attempt1 controller remains LIVE.
+Disabled mode now exits0, controller exact-parent comparison passes14cases and
+102raw vectors; final reset completes and eight owned private engine files are
+hashed/retired by original method. Enabled mode starts in a separate process.
+Same retained native hashlib warnings remain visible; SHA256 continues working.
+
+Single fixed evidence-only snapshot outside live job directory is4,869,668bytes/
+105payload files, SHA f0269fb8e0a797465df20a8c5199f68edff99a17c496f430e08dc36d2b532692.
+Local independent CPU replay verifies every snapshot/224parent manifest member,
+all14case report/ID/state/callback/prefix/reset/retirement fields and102raw vectors
+(8,355,840bytes); equals original controller parity. Actual sampler host dispatch
+counters0->4078legacy and0->0parallel, correct for disabled mode. Counters exclude
+GPU graph replays and are not speed. Snapshot is explicitly whole-run UNFINISHED:
+no final source/runtime-after closure, enabled completion or final model proof.
+It cannot unblock B1 runtime factories or serving. Transfer/auth-prompt/bulk-input
+issues and preserved partial copies are recorded separately; no GPU restart,
+deployed source/DLL/SDK mutation or competing GPU work occurred.
+
+Prepared CUDABF16LowBatchKVDeltaCommit as a distinct unregistered native package.
+Literal old helper with new B1-only metadata dialect/class and B1 commit call;
+all tensor/runtime ownership, descriptors/types/strides/device/writable/byte-size/
+alignment, overflow/alias, strict integer span, lease/Finish, mutex and poison/
+close/rebuild guards remain. Original B4/B8 helper/parser sources unchanged.
+Private local /MT compilation of B1 and unchanged legacy helper succeeds against
+main public SDK header cffd02c2...matching actual remote native build; current
+remote compatibility header852e5c3c...also matches. Objects c8943217.../ec1848fe...,
+never linked, loaded, registered or executed. Initial wrong JSON-header pin
+path failed before compilation; original method/observed-failure summary retained,
+only pin path corrected. No C++/kernel/control/tolerance change for correction.
+Actual build/source/hash methods and preparation ZIP/JSON preserved. Native
+ownership/lifetime/GPU helper behavior, plugin/lowering/full-model, broad quality,
+actual4K, HTTP, tuned/INT4/4B and repetitions remain open; original2x/halfTTFT unmet.
+'''
+for name in ['docs/research/qwen38-5090-development-log.md','docs/research/qwen38-5090-implementation-task.md']:
+ path=r/name;data=path.read_bytes();assert b'2026-10-25: Disabled mode closes, enabled mode lives; isolated B1 helper compile.' not in data;path.write_bytes(data+note.replace('\n','\r\n').encode())
+print(json.dumps({'helper_preparation':summary,'disabled_observation_status':observed['status']},indent=2))

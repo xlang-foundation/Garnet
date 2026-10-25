@@ -1,0 +1,65 @@
+{
+  "status": "b1_native_helper_literal_derivation_prepared_unrun",
+  "files": {
+    "cuda_bf16_low_batch_kv_delta_commit.h": {
+      "source": "src/backends/tensorrt/cuda_bf16_kv_delta_commit.h",
+      "source_sha256": "15e1a9cb5cc027db9985e08086e3405f1116d031e47dd15768ee64d85f161ecc",
+      "changes": [
+        [
+          "CUDABF16KVDeltaCommit",
+          "CUDABF16LowBatchKVDeltaCommit",
+          6
+        ],
+        [
+          "BF16KVLayoutSpec",
+          "BF16LowBatchKVLayoutSpec",
+          1
+        ],
+        [
+          "\"qwen38_bf16_kv_layout_contract.h\"",
+          "\"bf16_low_batch_layout_contract.h\"",
+          1
+        ]
+      ],
+      "result_sha256": "e1714479c8c816f31774ffa957268c3bba09275fcc0aa2660dab9d61a96adc86"
+    },
+    "cuda_bf16_low_batch_kv_delta_commit.cpp": {
+      "source": "src/backends/tensorrt/cuda_bf16_kv_delta_commit.cpp",
+      "source_sha256": "bd8b4ce54bdbcd3b649345ece884b88cb0d46f2ce5198f4ade1bbfa1366e4181",
+      "changes": [
+        [
+          "CUDABF16KVDeltaCommit",
+          "CUDABF16LowBatchKVDeltaCommit",
+          4
+        ],
+        [
+          "BF16KVLayoutSpec",
+          "BF16LowBatchKVLayoutSpec",
+          1
+        ],
+        [
+          "\"cuda_bf16_kv_delta_commit.h\"",
+          "\"cuda_bf16_low_batch_kv_delta_commit.h\"",
+          1
+        ],
+        [
+          "\"../../cuda/qwen38_bf16_kv_commit.cuh\"",
+          "\"bf16_low_batch_commit_candidate.h\"",
+          1
+        ],
+        [
+          "BF16KVContract::Parse",
+          "BF16LowBatchKVContract::Parse",
+          1
+        ],
+        [
+          "RunQwen38BF16KVCommit(",
+          "RunQwen38BF16LowBatchCommitCandidate(",
+          1
+        ]
+      ],
+      "result_sha256": "b8b6938e2e6cd0f4e18726bd0d0678f01bb4bf7f325065d25b6453a99530d850"
+    }
+  },
+  "scope": "Separate native class/package name, strict B1 layout parser and B1 commit candidate only. All runtime ownership checks, tensor descriptor/type/stride/device/writeability/size/alignment/alias guards, integer span checks, leases/Finish, mutex, poison/lifetime and metadata statistics retained verbatim. No production class/registration/build/model guard changed. B1 commit GPU collection and plugin checks still pending; native runtime integration/behavior unqualified."
+}

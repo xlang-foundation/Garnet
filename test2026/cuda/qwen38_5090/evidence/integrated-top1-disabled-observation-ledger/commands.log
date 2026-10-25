@@ -1,0 +1,37 @@
+
+{"id": "96a6d1a4048f4edb86a7312ad869edaf", "kind": "correctness", "label": "Local replay of immutable closed disabled mode snapshot only; original enabled model remains live", "argv": ["D:\\CantorAI\\Garnet\\.venv\\Scripts\\python.exe", "D:\\CantorAI\\work\\qwen38-5090\\test2026\\cuda\\qwen38_5090\\verify_integrated_top1_disabled_observation.py", "C:\\Users\\developer\\Documents\\Codex\\2026-10-23\\referenced-chatgpt-conversation-this-is-an\\outputs"]}
+{
+  "status": "disabled_mode_parent_parity_observed_whole_run_pending",
+  "snapshot_archive_sha256": "f0269fb8e0a797465df20a8c5199f68edff99a17c496f430e08dc36d2b532692",
+  "snapshot_files_verified": 105,
+  "parent_archive_sha256": "d5650c9736c6b562c41afb67017329a2c22a6f24216f937c16c49069884f7854",
+  "parent_files_verified": 224,
+  "mode": "0",
+  "cases": 14,
+  "raw_vectors_exact": 102,
+  "raw_vector_bytes": 8355840,
+  "dispatch_before": {
+    "batch_top1_parallel_enabled": false,
+    "batch_top1_parallel_max_rows": 128,
+    "batch_top1_parallel_min_vocab": 8192,
+    "batch_top1_legacy_host_dispatch_calls": 0,
+    "batch_top1_parallel_host_dispatch_calls": 0,
+    "batch_top1_counter_scope": "host dispatch attempts including capture construction; excludes GPU graph replays"
+  },
+  "dispatch_after": {
+    "batch_top1_parallel_enabled": false,
+    "batch_top1_parallel_max_rows": 128,
+    "batch_top1_parallel_min_vocab": 8192,
+    "batch_top1_legacy_host_dispatch_calls": 4078,
+    "batch_top1_parallel_host_dispatch_calls": 0,
+    "batch_top1_counter_scope": "host dispatch attempts including capture construction; excludes GPU graph replays"
+  },
+  "library_sha256": "5ac61e3a15466be3cea151190eb52c0403732bb3ad2abdb39a6ba086a5c21473",
+  "preparation_sha256": "ebcae8ee124d65b548d1ec9f54ad1980e0750d0b5415e2b2ca96b106974878c6",
+  "final_source_runtime_closure_available": false,
+  "enabled_mode_finished": false,
+  "model_qualified": false,
+  "performance_admitted": false,
+  "observer_verifier_sha256": "8734e5912b4a7d60eed99886b3f6f6fe9448b7ffd5d7daacfc127ca492ec332c",
+  "scope": "Independent local CPU replay of the actual finished disabled-mode snapshot agrees with remote controller parity: all14case report/ID/state/callback/prefix/reset/retirement fields and102raw vectors. Enabled mode remains live; no final source/runtime-after proof or whole-job archive exists in this snapshot. This is not the final model proof and does not unblock B1 runtime factories, broad quality, actual4K, HTTP or speed."
+}
