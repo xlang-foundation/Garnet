@@ -1,0 +1,19 @@
+{
+  "status": "paged_prompt_source_cpu_controls_passed_native_and_model_unrun",
+  "source_sha256": {
+    "paged_prompt_rows.py": "7d6658b7f35684a37b9d4a4ebec1498ca71d2b4539c14659d3dee53989554583",
+    "test_paged_prompt_rows.py": "38c50af903464f2b9ff9ba0f4b8514fff7016934126538ca413586a5eb105247"
+  },
+  "cpu_tests": 6,
+  "cpu_seconds": 0.014,
+  "native_gpu_executed": false,
+  "runtime_qualified": false,
+  "serving_integrated": false,
+  "retained_b8_archive_sha256": "bdd7978b9969c26fbe931da134ec66b7bd73fdf5247c0033f9b8fd98100aa01f",
+  "retained_b8_final_pool_adapter_used_bytes": 28968419328,
+  "retained_b8_decoder_memory_accounting_complete": false,
+  "two_page_logical_payload_bound_b8_t128_bytes": 41943040,
+  "performance_admitted": false,
+  "two_times_target_achieved": false,
+  "scope": "Study-only sequence backed by CPU IDs and caller-owned exact64x5120 encoder visuals; lazy existing native embedding/flat-slice/PackPrompt calls, at most two retained packed pages. CPU fixture checks B8/3968 targetT32 and shifted MTP accesses, image intervals across pages, unequal lengths/padding, eviction/failure and close. Logical cache bound excludes source visual tensors, transient allocations/fences and caller-retained views; no measured VRAM-saving or speed claim. Existing B8 decoder TRT live allocation accounting is null; do not infer full fit from logical tensors. Next actual native packed-row bytes versus independent BF16 embedding/synthetic visual oracle, followed by B8 whole-model state/IDs and real MTP memory/prefix/quality/HTTP admission."
+}

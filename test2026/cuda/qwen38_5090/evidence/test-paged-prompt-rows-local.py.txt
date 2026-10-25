@@ -1,0 +1,7 @@
+from pathlib import Path
+import os,sys
+repo=Path('D:/CantorAI/work/qwen38-5090');m=repo/'test2026/cuda/qwen38_5090';work=Path(__file__).resolve().parent;sys.path.insert(0,str(m));from run_logged import run
+os.chdir(repo)
+raise SystemExit(run([sys.executable,'-m','unittest','test2026.cuda.qwen38_5090.test_paged_prompt_rows'],work/'paged-prompt-rows-cpu-ledger','correctness',
+    'CPU bounded B8/3968 target/MTP access, visual-boundary/padding, eviction/failure/close controls; no native calls',
+    [m/'paged_prompt_rows.py',m/'test_paged_prompt_rows.py']))
