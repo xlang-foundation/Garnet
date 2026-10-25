@@ -1,0 +1,39 @@
+{
+  "status": "bf16_scores_tiled16_candidate_unwired_unrun",
+  "source": "src/cuda/qwen38_bf16_kv_low_batch_overlay.cu",
+  "source_sha256": "fe4a826eb8a03324780afa13fad1da238882e57ecda58cd61d988287502d6193",
+  "candidate_sha256": "45c841fe6422506022e8be7de09a62f3f73c580c74c10bfc1c586a4fab77f533",
+  "header_sha256": "c2262ebb5e70e195b7a0f170d483506899df82955973d8f651a89e5d0757c912",
+  "changes": [
+    [
+      "__global__ void scores(Qwen35AttentionCoreConfig c,const float* query,const __nv_bfloat16* key,\n    const float* chunkKey,const float* slots,const float* active,float* scratch){\n    const int row=blockIdx.y,b=row/(c.tokens*c.heads),t=(row/c.heads)%c.tokens;\n    if(active[b*c.tokens+t]==0)return;\n    const int lane=threadIdx.x%32,warp=threadIdx.x/32,p=blockIdx.x*8+warp;\n    const int slot=int(slots[b*c.tokens+t]),kh=(row%c.heads)/(c.heads/c.kv);\n    if(p>=c.capacity)return;\n    float sum=0;\n    if(p<=slot){\n        const int current=replacement(slots,active,b,c.tokens,p);\n        for(int d=lane;d<c.dim;d+=32)sum=fmaf(query[size_t(row)*c.dim+d],readKV(key,chunkKey,b,current,kh,p,d,c.tokens),sum);\n        sum=warpSum(sum);\n    }\n    if(!lane)scratch[size_t(row)*c.capacity+p]=p<=slot?sum*rsqrtf(float(c.dim)):-1e30f;\n}\n",
+      "// Sixteen positions per warp: preserve each dot's eight-FMA/warp-reduction order.\n__global__ void scoresTiled16(Qwen35AttentionCoreConfig c,const float* query,const __nv_bfloat16* key,\n    const float* chunkKey,const float* slots,const float* active,float* scratch){\n    const int row=blockIdx.y,b=row/(c.tokens*c.heads),t=(row/c.heads)%c.tokens;\n    if(active[b*c.tokens+t]==0)return;\n    const int lane=threadIdx.x%32,warp=threadIdx.x/32;\n    const int slot=int(slots[b*c.tokens+t]),kh=(row%c.heads)/(c.heads/c.kv);\n    float q[8];\n    #pragma unroll\n    for(int i=0;i<8;++i)q[i]=query[size_t(row)*256+lane+32*i];\n    #pragma unroll 1\n    for(int tile=0;tile<16;++tile){\n        const int p=blockIdx.x*128+warp+8*tile;\n        if(p>=c.capacity)continue;\n        float sum=0;\n        if(p<=slot){\n            const int current=replacement(slots,active,b,c.tokens,p);\n            #pragma unroll\n            for(int i=0;i<8;++i)sum=fmaf(q[i],readKV(key,chunkKey,b,current,kh,p,lane+32*i,c.tokens),sum);\n            sum=warpSum(sum);\n        }\n        if(!lane)scratch[size_t(row)*c.capacity+p]=p<=slot?sum*rsqrtf(float(c.dim)):-1e30f;\n    }\n}\n",
+      1
+    ],
+    [
+      "#include \"qwen38_bf16_kv_low_batch_overlay.cuh\"",
+      "#include \"bf16_low_batch_scores_tiled.cuh\"",
+      1
+    ],
+    [
+      "Qwen38BF16KVLowBatchCandidateWorkspace",
+      "Qwen38BF16KVTiledScoresWorkspace",
+      2
+    ],
+    [
+      "RunQwen38BF16KVLowBatchCandidate",
+      "RunQwen38BF16KVTiledScores",
+      1
+    ],
+    [
+      "scores<<<dim3((c.capacity+7)/8,rows)",
+      "scoresTiled16<<<dim3((c.capacity+127)/128,rows)",
+      1
+    ]
+  ],
+  "old_score_grid_x": 512,
+  "candidate_score_grid_x": 32,
+  "positions_per_warp": 16,
+  "valid_profile": "B1/T4orT32/H24/KV4/C4096/D256 unchanged",
+  "scope": "Only score-kernel work assignment/query reuse and diagnostic export names change. Source roundtrip proves normalization/context/alias/workspace/profile guards retained byte-exact. Each score intends the same ordered eight fmaf operations and warp reduction; GPU bitwise output/workspace, FP64/graph/prefix/negative guards and actual timing remain required. No Garnet target integration or source/runtime/SDK/deployment mutation; block-count reduction is not a speedup measurement."
+}
