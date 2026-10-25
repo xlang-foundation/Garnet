@@ -4,7 +4,7 @@ import argparse,hashlib,json,zipfile
 
 sha=lambda raw:hashlib.sha256(raw).hexdigest()
 METHODS=(
-    'run_sglang_fixed4k.py','prepare_sglang_fixed4k_run.py',
+    'run_sglang_fixed4k.py','prepare_sglang_fixed4k_run.py','verify_sglang_fixed4k.py',
     'prepare_sglang_fixed4k_metadata.py','reference_fixed4k_sglang_identity.py',
     'inspect_reference_fixed4k_linux.py','stop_reference_server.py',
     'probe_reference_fixed4k.py','serve_sglang_fixed4k.sh','serve_sglang_mtp3_fixed4k.sh',
