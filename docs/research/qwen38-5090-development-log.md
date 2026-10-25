@@ -4281,3 +4281,48 @@ only pin path corrected. No C++/kernel/control/tolerance change for correction.
 Actual build/source/hash methods and preparation ZIP/JSON preserved. Native
 ownership/lifetime/GPU helper behavior, plugin/lowering/full-model, broad quality,
 actual4K, HTTP, tuned/INT4/4B and repetitions remain open; original2x/halfTTFT unmet.
+
+
+2026-10-25: True physical B1 route now wired LOCALLY, default OFF, runtime UNQUALIFIED.
+Added bf16_kv_low_batch_state keyword to packed program/decoder and separate
+create_cuda_bf16_low_batch_study_decoder factory. It pins B1/cap4096/T32 prefill/
+T4 decode, retained/deferred/shared/host/register128/joined mixed projections;
+verifies128NVFP4+208FP8 pool, native NVFP4 W4A4 head/host BF16 embedding and graph
+binding counts. Strict type/architecture/mode gates precede allocation; missing
+matching native helper raises before tensor I/O. Existing default factories and
+old B4/B8/reference validators remain separate. Capacity4096 is not actual4K.
+
+Distinct B1 layout/module, native class/package, serialized plugin type and
+canonical_bf16_low_batch_kv_overlay lowering keyword connect the path. Existing
+transaction machinery handles compact BF16 state; no private B4 padding in this
+physicalB1 profile. Native lowering checks exact B1 geometry/offsets/modes and
+pinned RoPE theta/epsilon, selects B1 plugin; old B4/B8 plugin/metadata/kernel
+sources unchanged. CUDA candidates relocate by include-path changes only, not
+new arithmetic. CMake existing globs collect new native units on future build.
+No active DLL was built/loaded/installed and no remote source/runtime changed.
+
+Actual49CPU tests pass: seven new strict metadata profile tests, twelve new
+graph/factory/default-off/unsupported-profile/native-absence/pool/head/batch/
+cleanup tests, plus30existing BF16/reference/joined/graph/transaction controls.
+AST construction traces preserve63FP32 barriers,48GDN/16full layers, exact B1
+offsets/new marker, no dense FP32 cache views, and T4-only replay. Trace buffers
+and fake factory metadata are CPU controls, never model/GPU evidence.
+Six selected native units compile privately /MT C++17/sm120: helper, plugin,
+actual TRT builder and native entry, both CUDA units. Full DLL link/ABI/native
+helper/lowering behavior UNRUN. Actual ledgers, source/object hashes and19-file
+derivations against83f5ad146 retained. Review restored unrelated mixed line
+endings without changing normalized code; initial recipes/build receipt remain.
+Final compilation repeats against corrected bytes and the extra B1-only theta/
+epsilon gate. No dropped assertion, control or tolerance to obtain a pass.
+
+Original integrated sampler full-model handle still LIVE: disabled14case/
+102vector comparison closes and local observer agrees; enabled7partial case
+records, no recorded error. Newly wired local branch is ahead of deployed5ac
+source/DLL and cannot be deployed or built on that host while worker lives.
+Next: terminal full archive/both replays, actual B1commit then CPU/plugin forward
+gates, preserve/install source and native build, native helper/ownership checks,
+old B4 regression and full B1 ordinary/MTP/text/image/state/prefix/reset quality,
+actual4K/protocol checks before timing. B1M4/M32 projections use existing admitted
+row ranges; M32 policy/precision and full-model numerics still need measurement.
+Original2x/halfTTFT, broad quality, actual4K, tuned refs, INT4,4B,B8/concurrency and
+clean repetitions remain open. No benchmark chart or claimed gain is updated.

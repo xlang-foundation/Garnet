@@ -1,0 +1,44 @@
+{
+  "status": "b1_profile_cpu_prototype_prepared_unrun",
+  "source": "xModel/qwen35/vl_0_8b/bf16_kv_profile.py",
+  "source_sha256": "9ca7ad036e38c46aad78e751301e340d3f905f025924e7f13659b55d493b7c48",
+  "changes": [
+    [
+      "\"\"\"Explicit experimental BF16-cache admission, separate from legacy FP32 B4.\"\"\"",
+      "\"\"\"CPU-only B1 prototype admission; no production/native/model admission changes.\"\"\"",
+      1
+    ],
+    [
+      "validate_bf16_kv_program",
+      "validate_bf16_low_batch_kv_program",
+      3
+    ],
+    [
+      "validate_bf16_kv_decoder",
+      "validate_bf16_low_batch_kv_decoder",
+      1
+    ],
+    [
+      "batch not in (4,8)",
+      "batch!=1",
+      1
+    ],
+    [
+      "B4/B8,cap4096,T4/T32",
+      "B1,cap4096,T4/T32",
+      1
+    ],
+    [
+      "joined_mlp_projections,embedded_projection_weights=False,",
+      "joined_mlp_projections,embedded_projection_weights=False,legacy_bf16_kv_state=False,bf16_kv_float_reference=False,",
+      1
+    ],
+    [
+      "    if not enabled:return\n    if any(type(v)",
+      "    if not enabled:return\n    if legacy_bf16_kv_state is not False or bf16_kv_float_reference is not False:\n        raise ValueError('B1 packed BF16 excludes legacy B4/B8 and full FP32 carrier reference modes')\n    if any(type(v)",
+      1
+    ]
+  ],
+  "result_sha256": "dcb08772319b1149bf0b7485c0a1f5606ed646ece0723f155c009854ffdda799",
+  "scope": "Literal old model/program guard with separate B1-only function names and legacy/reference exclusion. Exact pinned64layer architecture, cap4096,T4/T32 retained/deferred/shared mixed joined/host embedding guards retained. CPU-only study module, not wired into production program/decoder/lowering/helper, not GPU/model/performance admission."
+}

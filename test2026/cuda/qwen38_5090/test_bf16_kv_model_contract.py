@@ -4,17 +4,19 @@ from pathlib import Path
 from xModel.qwen35.vl_0_8b.bf16_kv_profile import validate_bf16_kv_decoder,validate_bf16_kv_program
 from xModel.qwen35.vl_0_8b.joined_mlp_profile import validate_joined_mlp_profile
 from xModel.qwen35.vl_0_8b.kv_bf16_study_layout import build_bf16_kv_study_layout
+from xModel.qwen35.vl_0_8b.kv_bf16_low_batch_study_layout import build_bf16_low_batch_layout
 from test2026.cuda.qwen38_5090.test_kv_delta_graph_contract import Trace,functions,member,MODEL,CONFIG
 
 def options():return dict(external_compressed_weights=True,joined_mlp_projections=True)
 def decoder_options():return dict(retain_linear_inputs=True,deferred_state_commit=True,shared_output_storage=True,host_embedding_lookup=True,**options())
 
-def build_trace(batch,chunk):
+def build_trace(batch,chunk,*,low_batch=False):
     trace=Trace();ns={'T':trace};source=(MODEL/'cuda_packed_program.py').read_bytes()
     functions(source,('packed_view','concat','flat_concat'),ns);functions((MODEL/'cuda_chunk.py').read_bytes(),('Qwen35CUDAChunk',),ns)
-    delta=build_bf16_kv_study_layout(batch,chunk=chunk,retain_linear_inputs=chunk==4)
+    builder=build_bf16_low_batch_layout if low_batch else build_bf16_kv_study_layout
+    delta=builder(batch,chunk=chunk,retain_linear_inputs=chunk==4)
     p=types.SimpleNamespace(config=CONFIG,batch=batch,size=chunk,hidden_width=chunk*5120,state_width=delta['canonical_state_width'],
-        layout=copy.deepcopy(delta['layers']),flat_concat=True,delta_layout=delta,bf16_kv_state=True,
+        layout=copy.deepcopy(delta['layers']),flat_concat=True,delta_layout=delta,bf16_kv_state=True,bf16_kv_low_batch_state=low_batch,
         external_compressed_weights=True,workspace=0,retain=chunk==4,register_delta_128=True,join_input_projections=False,
         joined_mlp_projections=True,kv_overlay_strategy=1,weight_names=[],weight_slots=[],weight_layers=[])
     inputs=[trace.input(n) for n in ('hidden','canonical','active','positions','slots')];weights=[]
