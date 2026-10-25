@@ -1,0 +1,5 @@
+from pathlib import Path
+import hashlib,json
+chat=Path(__file__).resolve().parents[1];repo=Path('D:/CantorAI/work/qwen38-5090');out=chat/'work/tokenizer-parity';out.mkdir(exist_ok=True);source=repo/'src/tokenizer/qwen_tokenizer.cpp';target=out/'qwen_tokenizer_before.cpp';assert not target.exists();target.write_bytes(source.read_bytes())
+lines=['@echo off','call "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Auxiliary\\Build\\vcvars64.bat" -vcvars_ver=14.29','if errorlevel 1 exit /b %errorlevel%','cd /d "%~dp0"','set "TMP=%~dp0"','set "TEMP=%TMP%"','cl /nologo /EHsc /std:c++17 /MT /O2 /utf-8 /LD /I"'+str(repo/'third_party')+'" /I"'+str(repo/'src/tokenizer')+'" "'+str(target)+'" /Fo"%~dp0tokenizer-before.obj" /link /OUT:"%~dp0tokenizer-before.dll"','exit /b %errorlevel%']
+(out/'build-before.bat').write_text('\r\n'.join(lines)+'\r\n',encoding='utf8');print(json.dumps({'source_sha256':hashlib.sha256(target.read_bytes()).hexdigest(),'scope':'Private CPU-only isolated tokenizer library; no existing Garnet build, SDK, runtime or GPU mutation.'}))

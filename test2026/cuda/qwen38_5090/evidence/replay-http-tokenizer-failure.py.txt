@@ -1,0 +1,30 @@
+from pathlib import Path
+import ctypes,hashlib,json,sys,tempfile,zipfile
+chat=Path(__file__).resolve().parents[1];repo=Path('D:/CantorAI/work/qwen38-5090');sys.path.insert(0,str(repo));from test2026.cuda.qwen38_5090.verify_mmmu_http_quality import replay
+from test2026.cuda.qwen38_5090.fixed_context_workload import study_prompt_ids
+sha=lambda b:hashlib.sha256(b).hexdigest();name='bf16-low-batch-http-study-attempt1';archive=chat/'outputs'/(name+'-evidence.zip');proof=json.loads((chat/'outputs'/(name+'-verified.json')).read_bytes());assert proof==json.loads((chat/'outputs'/(name+'-remote-verified.json')).read_bytes()) and proof['status']=='bf16_low_batch_http_study_failure_preserved' and sha(archive.read_bytes())==proof['archive_sha256']
+lib=ctypes.CDLL(str(chat/'work/tokenizer-parity/tokenizer-before.dll'));fn=lib.GarnetQwenTokenizerEncode;fn.argtypes=[ctypes.c_char_p,ctypes.c_char_p,ctypes.POINTER(ctypes.c_longlong),ctypes.c_int,ctypes.POINTER(ctypes.c_int),ctypes.c_char_p,ctypes.c_int];fn.restype=ctypes.c_int
+def encode(s):
+ buf=(ctypes.c_longlong*8192)();count=ctypes.c_int();error=ctypes.create_string_buffer(512);assert fn(str(chat/'work/long-context-assets').encode(),s.encode('utf8'),buf,len(buf),ctypes.byref(count),error,len(error))==0;return list(buf[:count.value])
+base='results/'+name+'/';prefix=base+'ordinary/';quality=prefix+'mmmu-quality/';corpus=chat/'work/mmmu/quality-corpus';manifest=json.loads((corpus/'manifest.json').read_bytes());rows={r['id']:r for r in manifest['rows'] if r['request_prepared']}
+with zipfile.ZipFile(archive) as z:
+ workflow=json.loads(z.read(base+'workflow.json'));assert workflow['exit_code']==1 and workflow['cleanup_finished'] and workflow['source_sha256']==workflow['source_after_sha256'] and workflow['runtime_dependencies']==workflow['runtime_dependencies_after']
+ report=json.loads(z.read(prefix+'report.json'));assert report['status']=='failed' and len(report['protocol_cases'])==12
+ model=json.loads(z.read('results/bf16-low-batch-model-consistency-attempt2/b1/report.json'));expected={c['key']:c['generated_ids'][0] for c in model['cases']}
+ for item in report['protocol_cases']:
+  key=item['key']
+  if key.startswith('protocol-'):
+   original=key.split('-',2)[2];response=json.loads(z.read(prefix+key+'-response.json'));assert response['choices'][0]['response_token_ids']==expected[original]
+  else:
+   original=key.removeprefix('stream-');events=[json.loads(line) for line in z.read(prefix+key+'-events.jsonl').splitlines()];packets=[json.loads(r['data']) for r in events if r['data']!='[DONE]'];final=[v for v in packets if 'response_token_ids' in v];assert len(final)==1 and final[0]['response_token_ids']==expected[original] and [v['token_id'] for v in packets if 'token_id' in v]==expected[original]
+ with tempfile.TemporaryDirectory(prefix='http-failure-raw-',dir=chat/'work') as temporary:
+  folder=Path(temporary).resolve();assert folder.is_relative_to((chat/'work').resolve())
+  for n in z.namelist():
+   if n.startswith(quality):
+    target=folder/n.removeprefix(quality);assert target.resolve().is_relative_to(folder);target.parent.mkdir(parents=True,exist_ok=True);target.write_bytes(z.read(n))
+  raw_replay=replay(corpus,folder);assert raw_replay['attempted_requests']==11 and raw_replay['completed_requests']==10 and raw_replay['score'] is None and raw_replay['status']=='adapted_mmmu_http_quality_incomplete_failure_preserved'
+  cases=list((folder/'cases').iterdir());assert len(cases)==11
+  for case in cases:
+   body=json.loads((corpus/rows[case.name]['request_file']).read_bytes());actual=json.loads((case/'response.bin').read_bytes())['choices'][0]['prompt_token_ids'];assert study_prompt_ids(body,encode,248056)==actual
+  failed=next(c for c in cases if json.loads((c/'record.json').read_bytes())['status']=='failed');actual=json.loads((failed/'response.bin').read_bytes())['choices'][0]['prompt_token_ids'];frozen=json.loads((corpus/rows[failed.name]['prompt_ids_file']).read_bytes());difference=next(i for i,(a,b) in enumerate(zip(actual,frozen)) if a!=b);assert failed.name=='validation_Accounting_11' and difference==225 and len(actual)==len(frozen)==252
+result={'status':'actual_http_failure_and_tokenizer_root_cause_replayed','archive_sha256':proof['archive_sha256'],'protocol_completion_id_controls_replayed':12,'quality_raw_replay':raw_replay,'actual_native_prompt_ids_match_standalone_old_cpu_tokenizer':11,'failed_case':failed.name,'prompt_tokens':252,'first_difference_zero_based':difference,'input_unchanged':True,'initial_directory_first_case_observation_was_not_the_failure':True,'performance_admitted':False,'scope':'Actual archived12protocol IDs and11quality responses/wire replay.10quality replies accepted; request11 failed strict prompt IDs. No partial accuracy score or timing. Standalone old native tokenizer exactly reproduces all11actual prompt-ID sequences, including the frozen mismatch.'};(chat/'outputs/Garnet-HTTP-Tokenizer-Failure-Reanalysis.json').write_text(json.dumps(result,indent=2),encoding='utf8');print(json.dumps({k:v for k,v in result.items() if k!='quality_raw_replay'},indent=2))

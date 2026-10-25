@@ -1,0 +1,11 @@
+from pathlib import Path
+import hashlib,json,zipfile
+site=Path('/opt/cantorai5090/sglang/lib/python3.12/site-packages');package=site/'sglang/srt';target=Path('/mnt/d/CantorAI/5090-study-20261023/results/sglang-mtp-arguments-installed-source.zip');assert not target.exists();files={}
+for folder in ('arg_groups','speculative'):
+ for f in (package/folder).rglob('*.py'):files[f.relative_to(site).as_posix()]=f.read_bytes()
+for name in ('server_args.py','models/qwen3_5_mtp.py','models/qwen3_5.py','configs/qwen3_5.py'):
+ f=package/name;assert f.is_file();files[f.relative_to(site).as_posix()]=f.read_bytes()
+with zipfile.ZipFile(target,'x',zipfile.ZIP_DEFLATED) as z:
+ for n,b in files.items():z.writestr(n,b)
+ z.writestr('evidence-manifest.json',json.dumps({'files':{n:hashlib.sha256(b).hexdigest() for n,b in files.items()},'scope':'Installed source only; no imports, model/server/GPU or compatibility/performance proof.'},indent=2))
+print(json.dumps({'files':len(files),'bytes':target.stat().st_size,'archive_sha256':hashlib.sha256(target.read_bytes()).hexdigest()}))

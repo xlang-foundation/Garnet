@@ -4581,3 +4581,77 @@ Five synthetic CPU tests pass; final module compile passes. These methods remain
 local and unrun on reference servers. A pinned source/runtime/launch controller,
 actual805reference screening, raw replay, tuned/MTP configurations and repetition
 are still required; no new measured reference speed or original2x claim.
+
+
+### 2026-10-25: actual native HTTP study launched; reference MTP candidate prepared
+
+All18missing input uploads completed with individual acknowledgments, including
+the fixed58MB805corpus; no existing remote file needed replacement. Original SSH
+supervisor48577 acknowledged bf16-low-batch-http-study-attempt1 started. Its first
+poll reports29actual CPU tests passed in9.110s; this is test execution duration,
+not TTFT/model speed. Before that stage the controller checked all pinned inputs,
+model2 proof/archive and runtime hashes, idle GPU, free owned cache and loopback
+port. Original job remains running. After launch only that handle is polled;
+no other remote commands, source/runtime/cache changes or GPU job. Ordinary then
+MTP protocol/805quality/long-context/short timings and both independent raw
+replays remain pending; no new speed/quality score or2x qualification.
+
+Additional installed SGLang151file argument/speculation source ZIP is acquired
+before launch; local CRC/all-member-hash replay passes (archive5027ba7f...).
+Its Qwen3.5MTP source hash matches the earlier installed-source audit. Five
+declared argument fields are present. Two CPU calls of the exact extracted pure
+mixed-MTP quantization selector confirm BF16 selection when mtp.* is unlisted,
+and preserved quantization when it is listed. These source/selector facts do
+not establish actual VLM draft-loader, quantization, cache or GPU compatibility.
+Remote machine-readable archive digest proof will be collected after the native
+job is terminal; it is not inferred from the wrapped console digest.
+
+Prepared serve_sglang_mtp3_candidate.sh is a literal derivation of the retained
+ordinary corrected-grid launcher. Only log/banner and three NEXTN/same-checkpoint/
+3steps-topk1-4verify-token flag lines change. Context4096, seq8,32768-token pool,
+BF16 KV, FP32 SSM, radix-off and full decode-graph settings remain pinned. Initial
+factory assumed CRLF while the parent is LF-only and rejected before writing a
+candidate; original method and actual fail/pass ledger are preserved. Corrected
+exact LF anchor passes; Git Bash syntax check passes. Candidate stays local,
+unuploaded and runtime-unrun. Actual resolved startup, ordinary/MTP greedy/805
+screen, matched4K and short timings/repetitions still precede admission. No
+installed package or native benchmark source changed during this preparation.
+
+
+### 2026-10-25: HTTP attempt1 closed failed; tokenizer root cause and CPU candidate
+
+Original HTTP supervisor is terminal exit1. Immutable304file/61417525byte archive
+6bb464e9... passes identical remote/local integrity/source/runtime/cleanup replays.
+All12protocol completion-ID controls independently replay; raw adapted quality
+replay preserves10accepted replies and the failed11th case, with no score. Actual
+failure is validation_Accounting_11,252tokens, first difference zero-based225:
+double space before possible splits differently. Initial quick directory-first
+inspection selected a passing case; selecting the actual failed record corrects
+that observation. Standalone old native CPU tokenizer exactly reproduces all11
+archived runtime prompt-ID sequences, proving this is input tokenization behavior.
+No MTP process,4Kboundary or timing ran. Original failure remains failed.
+
+Private CPU-only old/candidate tokenizer libraries compile in this chat's work
+folder; existing local Garnet build/runtime/SDK and GPUs are untouched. Actual
+import reports have no CUDA/TRT/Garnet/XLang dependency. First build launcher used
+a relative slash path that cmd rejected; the absolute Windows batch path passes;
+actual failure/pass ledger retained. Differential probe preserves955actual input
+texts/expected IDs unchanged:805frozen screen,124frozen4K and26edge cases. Old
+native differs on122/805 and17/26edge cases, with0/124long-prompt differences.
+
+Candidate follows the actual Unicode L/M/N/whitespace regex order, retains the
+last prefix whitespace before words, handles newline whitespace, preserves case
+in contractions and validates UTF8scalars. Portable category tables are generated
+from the pinned tokenizers0.22.2 Rust regex on all1112064Unicode scalars (677letter,
+321mark,144number,10space ranges); no host-locale or Python-UCD substitution.
+Actual candidate matches805/805screen and124/124fixed4K inputs;25/26edge cases
+pass. The remaining decomposed-accent edge reveals the pinned NFC normalizer
+is absent in native. Do not drop/alter that case or deploy this partial candidate.
+Its source/DLL, raw records, original failures and generation/build methods are
+frozen in tokenizer-unicode-split-candidate-cpu-evidence.zip; NFC and broader
+differential/model/runtime/HTTP requalification remain required. Remote8ae stays
+unchanged. Original2x and the full reference/INT4/4B/repetition scope stay open.
+
+The151file installed SGLang MTP argument source also now has a machine-readable
+remote archive/member-hash proof matching the local archive; candidate still
+runtime-unrun. No benchmark or upstream fastest-baseline claim follows.

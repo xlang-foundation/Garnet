@@ -1,0 +1,43 @@
+{
+  "status": "actual_http_failure_and_tokenizer_root_cause_replayed",
+  "archive_sha256": "6bb464e98b9ea0ac4860f8b9b0c9a1fe60f38bbddb7daf66004eaa5fbf17fd0d",
+  "protocol_completion_id_controls_replayed": 12,
+  "quality_raw_replay": {
+    "status": "adapted_mmmu_http_quality_incomplete_failure_preserved",
+    "corpus_manifest_sha256": "108d017c7db5be56c58f490c2a985dfbcde2e6ded0860a97e797cfac9cea1589",
+    "run_file_manifest_sha256": "c484bcaa4d3576ec9bf0a14ff4ef2695d596bdb9c39d7becdb46238791f45d5c",
+    "files_verified": 35,
+    "engine": "native",
+    "model_alias": "qwen38-27b-nvfp4",
+    "attempted_requests": 11,
+    "completed_requests": 10,
+    "failed_or_interrupted_cases": [
+      {
+        "id": "validation_Accounting_11",
+        "status": "failed",
+        "error_type": "ValueError",
+        "error": "Actual prompt IDs/image-token count differ from frozen corpus",
+        "response_sha256": "f76d2318d6170e88c1c7e440ea35d13d6e049666b0899de6cd275296ebe8cfc2",
+        "scope": "Historical transport/error cause is preserved, not re-executed or promoted."
+      }
+    ],
+    "score": null,
+    "unadmitted_score_file_preserved": false,
+    "official_mmmu_score": false,
+    "server_identity_attested_by_client": false,
+    "runtime_image_grid_verified": false,
+    "runtime_image_preprocessing_verified": false,
+    "quality_promotion_admitted": false,
+    "performance_admitted": false,
+    "verifier_sha256": "79cecb6fc41c8e5e2a4e8ff8abca94c84537fcd786e2d7b4acbd78862e3e8b56",
+    "scope": "Raw response/wire/prompt-ID screening replay. This805single-image256pixel adaptation is not the full official900-question MMMU, an independent server/model identity attestation, pixel-preprocessing proof, broad quality promotion or timing result."
+  },
+  "actual_native_prompt_ids_match_standalone_old_cpu_tokenizer": 11,
+  "failed_case": "validation_Accounting_11",
+  "prompt_tokens": 252,
+  "first_difference_zero_based": 225,
+  "input_unchanged": true,
+  "initial_directory_first_case_observation_was_not_the_failure": true,
+  "performance_admitted": false,
+  "scope": "Actual archived12protocol IDs and11quality responses/wire replay.10quality replies accepted; request11 failed strict prompt IDs. No partial accuracy score or timing. Standalone old native tokenizer exactly reproduces all11actual prompt-ID sequences, including the frozen mismatch."
+}
