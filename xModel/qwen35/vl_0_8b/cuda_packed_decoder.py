@@ -14,20 +14,30 @@ from .cuda_decoder import CUDADecoder
 from .cuda_packed_program import CUDAPackedDecoderProgram
 from .joined_mlp_profile import validate_joined_mlp_profile
 from .kv_delta_layout import validate_kv_delta_profile,choose_kv_overlay_strategy
+from .bf16_kv_profile import validate_bf16_kv_decoder
 
 class CUDAPackedDecoder:
-    def __init__(self,checkpoint,config,batch=1,capacity=512,prefill_chunk=64,decode_chunk=4,projection_workspace_bytes=0,retain_linear_inputs=False,register_delta_128=False,flat_concat=False,deferred_state_commit=False,shared_output_storage=False,join_decode_input_projections=False,embedded_projection_weights=False,external_compressed_weights=False,joined_mlp_projections=False,host_embedding_lookup=False,kv_delta_state=False):
+    def __init__(self,checkpoint,config,batch=1,capacity=512,prefill_chunk=64,decode_chunk=4,projection_workspace_bytes=0,retain_linear_inputs=False,register_delta_128=False,flat_concat=False,deferred_state_commit=False,shared_output_storage=False,join_decode_input_projections=False,embedded_projection_weights=False,external_compressed_weights=False,joined_mlp_projections=False,host_embedding_lookup=False,kv_delta_state=False,bf16_kv_state=False):
+        if type(bf16_kv_state) is not bool:raise ValueError('BF16 KV opt-in must be boolean')
+        if bf16_kv_state:validate_bf16_kv_decoder(True,batch,capacity,prefill_chunk,decode_chunk,config,
+            retain_linear_inputs=retain_linear_inputs,deferred_state_commit=deferred_state_commit,shared_output_storage=shared_output_storage,
+            host_embedding_lookup=host_embedding_lookup,external_compressed_weights=external_compressed_weights,
+            joined_mlp_projections=joined_mlp_projections,embedded_projection_weights=embedded_projection_weights,
+            join_input_projections=join_decode_input_projections,kv_delta_state=kv_delta_state)
         validate_kv_delta_profile(kv_delta_state,batch,capacity,prefill_chunk,decode_chunk,
             external_compressed_weights=external_compressed_weights,retain_linear_inputs=retain_linear_inputs,
             deferred_state_commit=deferred_state_commit,shared_output_storage=shared_output_storage,
             joined_mlp_projections=joined_mlp_projections,host_embedding_lookup=host_embedding_lookup,
             embedded_projection_weights=embedded_projection_weights,join_input_projections=join_decode_input_projections)
         self.kv_delta_state=kv_delta_state
+        self.bf16_kv_state=bf16_kv_state;self.bf16_prefill_commit=None
         if type(host_embedding_lookup) is not bool:raise ValueError('Host embedding lookup requires an explicit bool')
         self.host_embedding_lookup=host_embedding_lookup
         if decode_chunk not in (4,8,16) or prefill_chunk not in (4,8,16,32,64,128) or prefill_chunk<decode_chunk:
             raise ValueError('Packed decoder requires bounded prefill>=decode chunk')
-        for size in (prefill_chunk,decode_chunk):validate_joined_mlp_profile(joined_mlp_projections,batch,capacity,size,external_compressed_weights,embedded_projection_weights,join_decode_input_projections)
+        for size in (prefill_chunk,decode_chunk):
+            if bf16_kv_state:validate_joined_mlp_profile(joined_mlp_projections,batch,capacity,size,external_compressed_weights,embedded_projection_weights,join_decode_input_projections,bf16_cache_profile=True)
+            else:validate_joined_mlp_profile(joined_mlp_projections,batch,capacity,size,external_compressed_weights,embedded_projection_weights,join_decode_input_projections)
         self.joined_mlp_projections=joined_mlp_projections
         self.config=config;self.batch=batch;self.capacity=capacity;self.checkpoint=str(checkpoint)
         self.embedded_projection_weights=bool(embedded_projection_weights)
@@ -54,7 +64,8 @@ class CUDAPackedDecoder:
                 self.io.enable_nvfp4_head(True)
                 self.io.enable_host_embedding(True)
             for size in dict.fromkeys((decode_chunk,prefill_chunk)):
-                program=CUDAPackedDecoderProgram(checkpoint,config,self.io,batch,capacity,size,retain_linear_inputs and size==decode_chunk,projection_workspace_bytes,register_delta_128,flat_concat,self.join_decode_input_projections and size==decode_chunk,self.embedded_projection_weights,self.external_compressed_weights,self.joined_mlp_projections,kv_delta_state=kv_delta_state)
+                options={'bf16_kv_state':True} if bf16_kv_state else {}
+                program=CUDAPackedDecoderProgram(checkpoint,config,self.io,batch,capacity,size,retain_linear_inputs and size==decode_chunk,projection_workspace_bytes,register_delta_128,flat_concat,self.join_decode_input_projections and size==decode_chunk,self.embedded_projection_weights,self.external_compressed_weights,self.joined_mlp_projections,kv_delta_state=kv_delta_state,**options)
                 self.programs[size]=program
                 if kv_delta_state:
                     self.short_programs[size]=CUDAPackedDecoderProgram(checkpoint,config,self.io,batch,capacity,size,True,projection_workspace_bytes,register_delta_128,flat_concat,False,False,True,True,kv_delta_state=True,kv_overlay_strategy=0)
@@ -68,6 +79,9 @@ class CUDAPackedDecoder:
             if kv_delta_state:
                 self.delta_commit=garnet.cuda_kv_delta_commit()
                 self.delta_commit.build(json.dumps(self.programs[decode_chunk].delta_layout))
+            elif bf16_kv_state:
+                self.delta_commit=garnet.cuda_bf16_kv_delta_commit();self.delta_commit.build(json.dumps(self.programs[decode_chunk].delta_layout))
+                self.bf16_prefill_commit=garnet.cuda_bf16_kv_delta_commit();self.bf16_prefill_commit.build(json.dumps(self.programs[prefill_chunk].delta_layout))
             self.last_hidden=self.io.zeros([batch,config['hidden_size']])
             symbol=tensor.input('whole_final_hidden',shape=[batch,config['hidden_size']],dtype=tensor.float32)
             @T.fusion(name='qwen35_whole_final_norm',boundary='required')
@@ -137,7 +151,8 @@ class CUDAPackedDecoder:
                 if active and next_slots[row]>=self.capacity:raise ValueError('Packed decoder context exhausted')
                 flags.append(active);slots.append(next_slots[row]);next_slots[row]+=active
                 pos.extend(positions[row][t] if t<count else [0,0,0])
-        if self.kv_delta_state:
+        compact_kv=self.kv_delta_state or getattr(self,'bf16_kv_state',False)
+        if compact_kv:
             # The final scatter uses contiguous accepted prefixes. Reject holes
             # before writing request buffers or beginning any GPU operation.
             for row in range(b):
@@ -158,14 +173,15 @@ class CUDAPackedDecoder:
         if self.kv_delta_state and choose_kv_overlay_strategy(slots,flags)==0:program=self.short_programs[size]
         packed=program.run([self.hidden,self.state,self.active,self.position,self.slot_tensor])
         self.io.slice_into(packed,0,self.hidden)
-        if not deferred and not self.kv_delta_state:self.io.slice_into(packed,program.hidden_width,self.state)
+        if not deferred and not compact_kv:self.io.slice_into(packed,program.hidden_width,self.state)
         if size==self.decode_chunk_size:self.last_packed=packed
         self.io.copy_last_chunk(self.hidden,self.active,self.last_hidden)
         prediction=self.io.predict(self.head.run_device([self.last_hidden])) if predict else None
-        if not deferred and self.kv_delta_state:
+        if not deferred and compact_kv:
             spans=[]
             for row in range(b):spans.extend([starts[row],next_slots[row]-starts[row]])
-            self.delta_commit.commit(packed,packed,self.state,spans)
+            helper=self.bf16_prefill_commit if getattr(self,'bf16_kv_state',False) and size==self.prefill_chunk_size else self.delta_commit
+            helper.commit(packed,packed,self.state,spans)
         self.slots=next_slots;self.last_layer_enqueue_ms=[program.graph.last_inference_ms];self.poisoned=False
         return prediction
 
@@ -200,7 +216,7 @@ class CUDAPackedDecoder:
         outputs=sum(g.get('owned_device_output_bytes',g['device_output_bytes']) for g in graphs)+pool_bytes
         proposal=sum(info.get(key,0) for key in ('candidate_workspace_bytes','candidate_index_bytes','indexed_head_buffers_bytes'))
         shared=info.get('embedding_table_bytes',info.get('embedding_head_shared_bytes',0))+sum(info.get(key,0) for key in ('untied_head_bytes','native_head_workspace_bytes','head_input_bytes','head_output_bytes','projection_weight_pool_bytes','compressed_projection_weight_bytes','compressed_projection_scale_bytes'))
-        return {'embedding_mode':info.get('embedding_mode','device_bf16'),'host_embedding_mapped_tensor_bytes':info.get('host_embedding_mapped_tensor_bytes',0),
+        result={'embedding_mode':info.get('embedding_mode','device_bf16'),'host_embedding_mapped_tensor_bytes':info.get('host_embedding_mapped_tensor_bytes',0),
             'graphs':graphs,'state_bytes':states,'request_buffer_bytes':requests,'engine_output_bytes':outputs,'shared_output_pool_bytes':pool_bytes,
             'embedding_head_shared_bytes':info['embedding_head_shared_bytes'],'head_input_bytes':info['head_input_bytes'],'head_output_bytes':info['head_output_bytes'],
             'compressed_projection_weight_bytes':info.get('compressed_projection_weight_bytes',0),'compressed_projection_scale_bytes':info.get('compressed_projection_scale_bytes',0),'compressed_projection_pool_entries':info.get('compressed_projection_pool_entries',0),
@@ -209,6 +225,10 @@ class CUDAPackedDecoder:
             'joined_projection_group_count':info.get('joined_projection_group_count',0),'joined_projection_group_bytes':info.get('joined_projection_group_bytes',0),
             'packed_profiles':{'prefill':self.prefill_chunk_size,'decode':self.decode_chunk_size,'single_canonical_state':True,'embedded_projection_weights':self.embedded_projection_weights,'external_compressed_weights':self.external_compressed_weights,'joined_mlp_projections':self.joined_mlp_projections,'host_embedding_lookup':self.host_embedding_lookup,'register_delta_128':self.register_delta_128,'flat_concat':self.flat_concat,'deferred_state_commit':self.deferred_state_commit,'shared_output_storage':self.shared_output_storage,'join_decode_input_projections':self.join_decode_input_projections,'kv_delta_state':self.kv_delta_state},
             'scope':'Retained canonical state, request/output buffers, one readonly projection pool/table and tracked TRT runtime. Excludes builder/driver/library/transient allocations; not process peak.'}
+        if getattr(self,'bf16_kv_state',False):
+            result['packed_profiles']['bf16_kv_state']=True;result['packed_profiles']['kv_cache_dtype']='bf16'
+            result['bf16_prefill_commit']=json.loads(self.bf16_prefill_commit.stats_json()) if self.bf16_prefill_commit is not None else None
+        return result
 
     def close(self):
         if self.state_transaction is not None:raise ValueError('Close or roll back the verifier before closing its borrowed decoder')
@@ -216,6 +236,7 @@ class CUDAPackedDecoder:
             if self.head is not None:self.head.close()
             for program in self._all_programs():program.close()
             if self.delta_commit is not None:self.delta_commit.close()
+            if getattr(self,'bf16_prefill_commit',None) is not None:self.bf16_prefill_commit.close();self.bf16_prefill_commit=None
         finally:
             self.head=None;self.programs={};self.short_programs={};self.delta_commit=None;self.requests={};self.state=None;self.last_hidden=None;self.last_packed=None
             self.output_pool=None

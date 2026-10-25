@@ -1,0 +1,31 @@
+{
+  "status": "bf16_b4_t32_model_gate_prepared_unrun",
+  "methods": {
+    "probe_bf16_model_b4_t32.py": "eb94098a5f19c7c1cac5b3908212cc8e5b391adc9458192c2b850be300a47f79",
+    "run_bf16_model_b4_t32.py": "4e8e8c0f5daba0e359679c6460250f01f58445a288b198941813edef2db6b014",
+    "test_bf16_model_b4_t32.bat": "227d42c838337af0ee541f899c3ffe9b519a3bdf476d6fcf3866d10bc3a017c4",
+    "archive_bf16_model_b4_t32.py": "352b57d772e5fcca1353640510a3894e0898dd4cea7e48b5c0f17f7bfab32406",
+    "verify_bf16_model_b4_t32.py": "d87ce10a7ce9af0a7ece4f7cc0b255b9c02ffd17af4914a6d99d25f0bfeb5ef6",
+    "probe_kv_delta_full_b4_t4.py": "3fba44d6c6f21ac8e35f91caef38c086c863d57dd140603d3282ff45a8b7d25b",
+    "run_logged.py": "3ac96f2f006cb02ecfe4d159186f7e12fcc11b8acf98e4b93728aa31e6a0407b",
+    "monitor_native_probe.py": "49cb5cc0d787aa5ecb11b72bc040578a2d15df37a7ad111344f84da98266100c",
+    "sample_vram.py": "29e0956f151e662adb93431ac9d02ba516e03eb8c1c7d7f0936045acb5c45b4e",
+    "evidence/bf16-model-b4-t32-probe-derivation.json": "87ec6319cf6876a1e6ec8ad349730641545fd8d2f04f99acc7b3762b88f4422c",
+    "evidence/bf16-model-b4-t32-runner-derivation.json": "c4a39ed3210e9c44cc4d59bd5d55bd6182c8b21af4e97f080860e8703dcceb27"
+  },
+  "pinned_inputs": {
+    "results/native-kv-delta-default-off-attempt1/native/report.json": "ee1c05b5b766421a1e2999a8da40efa7cc9446743107789e1dee30d639b038fd",
+    "results/native-mtp3-http/s3-text-c1-r0-greedy-request.json": "a01e94f21ea82d5a50bf403584a7a4bed6727ffe34a9452de3b780aef8e3a4b0",
+    "results/native-mtp3-http/s3-text-c1-r0-greedy-response.json": "5ddc47fbc550e16b2e8d8f989a9fd6675c463e9836e3f1b6059c147b14cf5eed",
+    "results/native-mtp3-http/s3-image-c1-r0-greedy-request.json": "a3bacdbe650f2e2f0952df2f727648ec62fa70d1bed37602fd80ec54fec5b792",
+    "results/native-mtp3-http/s3-image-c1-r0-greedy-response.json": "0327ab2230ffcd93f1c9fdab1e35d259bd2a0f901e45bb0d40f2e2e1e34ac849",
+    "results/native-mtp3-http/red-request.json": "498958bad1884424788e8d8de34d92c3edd0f83365d70138d8ffcdcf4db3cbc4",
+    "results/native-mtp3-http/red-response.json": "b296350e9d5067e8305a8bda254065514fc28011b7efd91318473ad2e9593f1b",
+    "results/native-mtp3-http/green-request.json": "8a3b8f89cb92991a98ce06a69e00bbaf2b07e517e54f3abbb354992a01de1bb3",
+    "results/native-mtp3-http/green-response.json": "f7f8eaef45f7b34ee8c11bec3aa97675c3054b179e3fe5a7effcb1fd92a033a4",
+    "results/shared-mtp3-full-b2-deferred-attempt1/native/report.json": "9282747acc75148b688c99aeb793e999240353212f7aa4dc460d74d3c1bf8de6"
+  },
+  "fixture_sha256": "7481110b5ec6c84c0f11d2d0f3dac2baa56fc5cd4399921a4ab3f3ef7e61ee5d",
+  "model_config_sha256": "71fa01bb64de20971045cd82a82c0ebb25a54e1b0a3f09ef23cf5479e9c54df8",
+  "scope": "Actual BF16 helper/lowering and B4/T32prefill/T4decode, register128, mixed NVFP4/FP8, FP32 GDN, host embedding, shared output and verified MTP3. Four fixed text/image cases repeated twice by row groups. Require exact retained FP32 token IDs and exact same-BF16 ordinary/MTP state hash witnesses/raw hidden plus4valid/8856invalid runtime metadata and16bad calls/threezero-prefix modes. Full raw state absent; no broad-quality/actual4K/B8/protocol/performance/2x admission. Readonly lease and unknown-completion failure injection remain separate unfinished gates."
+}
