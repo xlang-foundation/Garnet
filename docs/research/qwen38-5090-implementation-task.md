@@ -2,9 +2,10 @@
 
 Status: full packed BF16 ordinary/MTP corpus is closed/replayed. Lifecycle
 attempt1 is closed FAILED after ten cases, due a harness closure NameError;
-failure is preserved/replayed on both machines. Full scope-fixed rerun is pending.
-Standalone parallel batch-top1 now passes330GPU cases/1000raw observations on
-both independent replays, but is not integrated or benchmarked. Work continues
+failure is preserved/replayed on both machines. The full scope-fixed rerun is
+now live on the unchanged97c native binary. Standalone parallel batch-top1 passes
+330GPU cases/1000raw observations on both replays. Local default-off production
+dispatch now compiles; it is not deployed, model-qualified or timed. Work continues
 on `qwen38-5090`; original2x decode/concurrency and half-TTFT remain unmet.
 
 The pinned 27B checkpoint uses Qwen3.5 architecture. Garnet supports its mixed
@@ -75,7 +76,9 @@ Sources/DLL unchanged; prefix/retirement/full14case qualification remain open.
 A CPU-only native-runtime reproducer fails on the original closure and passes
 direct/default-bound calls; normal CPython passes allthree. Prepared scope-fixed
 probe retains all14cases, six identical guard calls/inputs and assertions, adding
-interim prefix witnesses. It is not uploaded or rerun. External rotary/cache
+interim prefix witnesses. Scope-fixed attempt2 is now running after seven
+acknowledged uploads, idle/source/DLL preflight and11remote CPU checks. The
+original supervised attempt2 handle remains authoritative. External rotary/cache
 checker correction is now uploaded only AFTER original terminal/archive; archived
 51451a54...checker preserved, current0d5e52f7... used for failure replay.
 
@@ -86,8 +89,9 @@ CPU/legacy/candidate raw IDs+bits, readonly/canaries/nullable outputs all exact.
 Data reports agree except declared Python/NumPy versions; no mismatch or speed
 result. Actual compiler13.2.78/VS14.44 was observed and forced before build; all
 19files/60inherited sources/3tools matched, nine uploads acknowledged. Failed
-model parent remains unqualified. Next prepare default-off native integration,
-then require full model/protocol correctness including scope-fixed14case corpus
+model parent remains unqualified. Default-off native integration is prepared
+locally, with19CPU tests and private host/CUDA compilation passing. Require full
+model/protocol correctness including the scope-fixed14case corpus
 on the chosen binary before any matched timing. Correctness memory is not serving
 memory. B8/broad quality/actual4K/reference/4B/repetition requirements stay open.
 
@@ -95,13 +99,23 @@ Offline retained-trace analysis identifies BF16 top1 selection at70.24/70.14ms,
 about4.05percent of kernel union in its two marked windows. The standalone
 parallel batch-top1 candidate now passes330CPU/legacy/candidate GPU comparisons,
 tie/signed-zero/nonfinite, capture/readonly/canary checks and independent replay.
-Production integration, full model/protocol gates and matched timing are pending.
+Local production dispatch is implemented and compiled; remote deployment, full
+model/protocol gates and matched timing are pending.
 This small subset cannot explain2x by itself; dominant matrix/batching/low-batch
 work stays in scope.
 Raw-observation probe and seven CPU controls now pass on the actual5090, with
 all330predeclared fixture outputs and1000raw observations independently replayed.
 Existing sampler/header files and observed compiler sources were pinned exactly.
-No production integration or new speed result; do not promote the failed parent.
+No remote production integration or new speed result; do not promote the failed
+parent. Configure GARNET_PARALLEL_BATCH_TOP1=1 before the first sampler or
+memory_json call to opt in. Only batch top1 with1..128rows andvocab>=8192
+uses the candidate; allother valid shapes retain the legacy route. The process
+freezes its mode. memory_json reports mode/bounds and separate host dispatch
+attempt counters; CUDA graph replays do not increment those host counters.
+Four-process production-API controls (0/1/unset/01) are prepared but GPU-unrun.
+Each requires352cases/1066raw observations, original330fixture preservation,
+row129 fallback,2capture profiles and12invalid calls. Candidate kernels remain
+byte-identical to the qualified standalone operator.
 
 Broader quality preparation now includes a pinned public MMMU validation source
 audit (revision876ce5cb..., October2026 corrections included). All30Parquet blobs/
@@ -121,8 +135,10 @@ profile guards remain unchanged. Wider batching cannot establish C1 decode gain.
 
 Next gates, in order:
 
-1. Prepare separately gated/default-off parallel-top1 integration from its now-
-   verified operator. On the chosen native binary, require old-profile regressions,
+1. Close/replay live scope-fixed attempt2 on97c, retaining the failed attempt1.
+   Then qualify the prepared default-off production dispatch through its four
+   guarded GPU processes, build on the actual remote SDK, and on that chosen
+   native binary require old-profile regressions,
    all14scope-fixed lifecycle cases and protocol controls before timing. Retain
    original failed harness/FP32 comparisons and require broad-quality evidence;
    no operator or partial-case result substitutes for complete model/serving gates.

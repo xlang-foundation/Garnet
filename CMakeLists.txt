@@ -290,6 +290,10 @@ add_executable(garnet_debug_logits_sampler_native_smoke
 )
 target_link_libraries(garnet_debug_logits_sampler_native_smoke ${CUDA_LIBRARIES} ${CUDA_CUDA_LIBRARY})
 
+add_executable(garnet_batch_top1_policy_test test2026/native/logits_top1_batch_policy_test.cpp)
+target_compile_features(garnet_batch_top1_policy_test PRIVATE cxx_std_17)
+add_test(NAME garnet_batch_top1_policy COMMAND garnet_batch_top1_policy_test)
+
 add_executable(garnet_repetition_sampler_test
     test2026/native/repetition_sampler_test.cpp
     src/cuda/logits_sampler_kernel.cu)

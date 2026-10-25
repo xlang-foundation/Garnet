@@ -1,0 +1,73 @@
+{
+  "source": "probe_parallel_batch_top1.cu",
+  "source_sha256": "f7398d58ae4b0c760a7e543880928f644252e15c8ee703aeb7e2345c66e81ee1",
+  "replacements": [
+    [
+      "// Standalone candidate test. No production caller or runtime DLL changes.",
+      "// Production batch entry-point controls; both opt-in and fallback processes required.",
+      1
+    ],
+    [
+      "#include \"../../../src/cuda/logits_top1_batch_parallel_candidate.cuh\"",
+      "#include \"../../../src/cuda/logits_top1_batch_dispatch.h\"\n#include <cstdlib>",
+      1
+    ],
+    [
+      "namespace candidate = Garnet::ParallelBatchTop1Candidate;",
+      "extern \"C\" cudaError_t runReferenceLogitsTop1BatchFP32(const float*,long long*,float*,int,int,cudaStream_t);\nextern \"C\" cudaError_t runReferenceLogitsTop1BatchBF16(const bfloat16*,long long*,float*,int,int,cudaStream_t);\ntemplate<class T> cudaError_t integrated(const T*,long long*,float*,int,int,cudaStream_t);\ntemplate<> cudaError_t integrated(const float* x,long long* ids,float* scores,int rows,int vocab,cudaStream_t stream) {\n    return runLogitsTop1BatchFP32(x,ids,scores,rows,vocab,stream);\n}\ntemplate<> cudaError_t integrated(const __nv_bfloat16* x,long long* ids,float* scores,int rows,int vocab,cudaStream_t stream) {\n    return runLogitsTop1BatchBF16(x,ids,scores,rows,vocab,stream);\n}",
+      1
+    ],
+    [
+      "check(runLogitsTop1BatchFP32(x, ids, scores, rows, vocab, s));",
+      "check(runReferenceLogitsTop1BatchFP32(x, ids, scores, rows, vocab, s));",
+      1
+    ],
+    [
+      "check(runLogitsTop1BatchBF16(x, ids, scores, rows, vocab, s));",
+      "check(runReferenceLogitsTop1BatchBF16(x, ids, scores, rows, vocab, s));",
+      1
+    ],
+    [
+      "candidate::run(",
+      "integrated(",
+      6
+    ],
+    [
+      "{128,248320},{4,248321}}",
+      "{128,248320},{4,248321},{129,7}}",
+      1
+    ],
+    [
+      "{129,vocab}",
+      "{-1,vocab}",
+      1
+    ],
+    [
+      "if(argc!=2) return 2;",
+      "if(argc!=3 || (std::string(argv[2])!=\"0\" && std::string(argv[2])!=\"1\")) return 2;",
+      1
+    ],
+    [
+      "        int cases=0,graphs=0,rejected=0;",
+      "        const bool enabled=std::string(argv[2])==\"1\";\n        auto before=Garnet::GetBatchTop1DispatchSnapshot();\n        require(before.enabled==enabled && !before.legacyHostCalls && !before.parallelHostCalls,\"unexpected initial dispatch\");\n        // Freeze the process choice even if the environment changes later.\n#ifdef _WIN32\n        require(_putenv_s(\"GARNET_PARALLEL_BATCH_TOP1\",enabled?\"0\":\"1\")==0,\"environment control failed\");\n#else\n        require(setenv(\"GARNET_PARALLEL_BATCH_TOP1\",enabled?\"0\":\"1\",1)==0,\"environment control failed\");\n#endif\n        require(Garnet::GetBatchTop1DispatchSnapshot().enabled==enabled,\"dispatch mode changed after initialization\");\n        log << \"{\\\"kind\\\":\\\"dispatch_start\\\",\\\"parallel_enabled\\\":\" << (enabled?\"true\":\"false\")\n            << \",\\\"legacy_host_calls\\\":0,\\\"parallel_host_calls\\\":0,\\\"environment_changed_after_snapshot\\\":true}\\n\";log.flush();\n        int cases=0,graphs=0,rejected=0;",
+      1
+    ],
+    [
+      "require(cases==330 && graphs==2 && rejected==12,\"incomplete control inventory\");",
+      "require(cases==352 && graphs==2 && rejected==12,\"incomplete control inventory\");\n        auto after=Garnet::GetBatchTop1DispatchSnapshot();\n        // Seven large-vocabulary shapes x eleven patterns x three calls x two dtypes,\n        // plus nullable-score and capture construction for each dtype. Graph replays\n        // and rejected calls do not invoke a successful host dispatch.\n        const uint64_t expectedParallel=enabled?466:0;\n        require(after.enabled==enabled && after.parallelHostCalls==expectedParallel\n            && after.legacyHostCalls==1060-expectedParallel,\"production route counts differ\");\n        log << \"{\\\"kind\\\":\\\"dispatch_end\\\",\\\"parallel_enabled\\\":\" << (enabled?\"true\":\"false\")\n            << \",\\\"legacy_host_calls\\\":\" << after.legacyHostCalls << \",\\\"parallel_host_calls\\\":\" << after.parallelHostCalls\n            << \",\\\"counter_scope\\\":\\\"host dispatch attempts including capture construction; excludes graph replays\\\"}\\n\";log.flush();",
+      1
+    ],
+    [
+      "parallel_batch_top1_correctness_passed",
+      "integrated_batch_top1_correctness_passed",
+      1
+    ],
+    [
+      "PARALLEL_BATCH_TOP1_CORRECTNESS_PASS",
+      "INTEGRATED_BATCH_TOP1_CORRECTNESS_PASS",
+      1
+    ]
+  ],
+  "result_sha256": "3321e17009f96ccbec41d6178e616ba0cecb536d9e2e0947e5365047eaa87a97",
+  "scope": "Derived raw352case production API probe for separate disabled/enabled processes. Frozen legacy GPU source remains03fe834a..., independent NumPy expected IDs/scores required. No GPU execution or timing yet."
+}

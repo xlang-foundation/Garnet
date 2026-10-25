@@ -1,0 +1,102 @@
+"""Derive a full-scope retry without changing the failed attempt or native binary."""
+from pathlib import Path
+import hashlib,json
+
+chat=Path(__file__).resolve().parents[1]
+repo=Path('D:/CantorAI/work/qwen38-5090');m=repo/'test2026/cuda/qwen38_5090'
+sha=lambda b:hashlib.sha256(b).hexdigest()
+old='bf16-padded-lifecycle-attempt1';name='bf16-padded-lifecycle-scope-fixed-attempt2'
+proofraw=(chat/'outputs'/(old+'-remote-verified.json')).read_bytes();proof=json.loads(proofraw)
+assert proof==json.loads((chat/'outputs'/(old+'-verified.json')).read_bytes())
+assert proof['status']=='bf16_padded_lifecycle_failure_preserved'
+assert sha((chat/'outputs'/(old+'-evidence.zip')).read_bytes())==proof['archive_sha256']
+recipe=json.loads((m/'evidence/bf16-padded-lifecycle-scope-fixed-probe-derivation.json').read_bytes())
+s=(m/recipe['source']).read_bytes();assert sha(s)==recipe['source_sha256']
+s=s.decode().replace('\r\n','\n')
+for before,after in recipe['changes']:
+ assert s.count(before)==1;s=s.replace(before,after,1)
+assert s.encode()==(m/'probe_bf16_padded_lifecycle_scope_fixed.py').read_bytes()
+assert sha(s.encode())==recipe['result_sha256']
+
+changes={}
+def derive(source,target,replacements):
+ s=(m/source).read_bytes().decode().replace('\r\n','\n')
+ for before,after,count in replacements:
+  assert s.count(before)==count,(source,before,s.count(before));s=s.replace(before,after)
+ data=s.encode();dest=m/target;assert not dest.exists();dest.write_bytes(data)
+ changes[target]={'source':source,'source_sha256':sha((m/source).read_bytes()),'replacements':replacements,'result_sha256':sha(data)}
+
+extra_guard="""prior=json.loads((results/'bf16-padded-lifecycle-attempt1/workflow.json').read_bytes())
+assert prior['exit_code']!=0 and prior['cleanup_finished'] and prior['library_unchanged']
+priorproof=results/'bf16-padded-lifecycle-attempt1-verified.json'
+assert sha(priorproof.read_bytes())==p['preserved_failure_proof_sha256']
+assert json.loads(priorproof.read_bytes())['status']=='bf16_padded_lifecycle_failure_preserved'
+"""
+derive('run_bf16_padded_lifecycle.py','run_bf16_padded_lifecycle_scope_fixed.py',[
+ (old,name,1),('bf16-padded-lifecycle-preparation.json','bf16-padded-lifecycle-scope-fixed-preparation.json',1),
+ ('test_bf16_padded_lifecycle.bat','test_bf16_padded_lifecycle_scope_fixed.bat',1),
+ ('idle();out.mkdir();',extra_guard+'idle();out.mkdir();',1)])
+derive('test_bf16_padded_lifecycle.bat','test_bf16_padded_lifecycle_scope_fixed.bat',[
+ ('probe_bf16_padded_lifecycle.py','probe_bf16_padded_lifecycle_scope_fixed.py',1)])
+extra_replay=""" fixed_recipe=doc(methods+'evidence/bf16-padded-lifecycle-scope-fixed-probe-derivation.json')
+ assert fixed_recipe['source']=='probe_bf16_padded_lifecycle.py' and fixed_recipe['source_sha256']==sha(result)
+ fixed=result.decode()
+ for before,after in fixed_recipe['changes']:
+  assert fixed.count(before)==1;fixed=fixed.replace(before,after,1)
+ assert fixed.encode()==z.read(methods+'probe_bf16_padded_lifecycle_scope_fixed.py')
+ assert sha(fixed.encode())==fixed_recipe['result_sha256']
+ oldproof=doc('results/bf16-padded-lifecycle-attempt1-verified.json')
+ assert oldproof['status']=='bf16_padded_lifecycle_failure_preserved'
+ assert sha(z.read('results/bf16-padded-lifecycle-attempt1-verified.json'))==p['preserved_failure_proof_sha256']
+ assert oldproof['archive_sha256']==manifest['linked_archives']['bf16-padded-lifecycle-attempt1-evidence.zip']
+"""
+derive('verify_bf16_padded_lifecycle.py','verify_bf16_padded_lifecycle_scope_fixed.py',[
+ (old,name,1),('bf16-padded-lifecycle-preparation.json','bf16-padded-lifecycle-scope-fixed-preparation.json',1),
+ (" with zipfile.ZipFile(out/(parent+'-evidence.zip')) as parent_zip:",extra_replay+" with zipfile.ZipFile(out/(parent+'-evidence.zip')) as parent_zip:",1),
+ ("   prefix=r['prefix_controls'][0];", "   assert r['prefix_progress']['phase']=='passed'\n   prefix=r['prefix_controls'][0];",1),
+ ("sha(z.read(methods+'verify_bf16_padded_lifecycle.py'))","sha(z.read(methods+'verify_bf16_padded_lifecycle_scope_fixed.py'))",1)])
+# The prior failure proof is explicitly archived in addition to the successful arithmetic parent.
+runner=m/'run_bf16_padded_lifecycle_scope_fixed.py'
+s=runner.read_text();needle="+[prep_path,proofpath,receipt,fixture]";assert s.count(needle)==1
+s=s.replace(needle,"+[prep_path,proofpath,receipt,fixture,priorproof]")
+runner.write_bytes(s.encode());changes[runner.name]['replacements'].append((needle,"+[prep_path,proofpath,receipt,fixture,priorproof]",1));changes[runner.name]['result_sha256']=sha(runner.read_bytes())
+for n in changes:
+ if n.endswith('.py'):compile((m/n).read_bytes(),n,'exec')
+methodrecipe=m/'evidence/bf16-padded-lifecycle-scope-fixed-method-derivation.json'
+assert not methodrecipe.exists();methodrecipe.write_text(json.dumps(changes,indent=2),encoding='utf8')
+
+p=json.loads((m/'evidence/bf16-padded-lifecycle-preparation.json').read_bytes())
+new_names=['probe_bf16_padded_lifecycle_scope_fixed.py']+list(changes)+[
+ 'evidence/bf16-padded-lifecycle-scope-fixed-probe-derivation.json',methodrecipe.relative_to(m).as_posix()]
+for n,h in p['methods'].items():
+ if n!='verify_bf16_padded_lifecycle.py':assert sha((m/n).read_bytes())==h,('Unexpected method drift',n)
+p['methods']['verify_bf16_padded_lifecycle.py']=sha((m/'verify_bf16_padded_lifecycle.py').read_bytes())
+for n in new_names:assert n not in p['methods'];p['methods'][n]=sha((m/n).read_bytes())
+p['linked_archives'][old+'-evidence.zip']=proof['archive_sha256']
+p['preserved_failure_proof_sha256']=sha(proofraw)
+p['scope']+=' Full14case scope-fixed attempt2; prior harness failure remains failed. Same native97c binary. Only direct identical six guard calls and interim progress preservation replace the unsupported closure.'
+target=m/'evidence/bf16-padded-lifecycle-scope-fixed-preparation.json';assert not target.exists();target.write_text(json.dumps(p,indent=2),encoding='utf8')
+preflight="""from pathlib import Path
+import hashlib,json,subprocess,shutil
+r=Path('D:/CantorAI/5090-study-20261023');m=r/'Garnet/test2026/cuda/qwen38_5090'
+"""+'p='+repr(p)+'\nnew_names='+repr(new_names)+"""
+sha=lambda f:hashlib.sha256(f.read_bytes()).hexdigest()
+for n,h in p['source_sha256'].items():assert sha(r/'Garnet'/n)==h,('Source drift',n)
+for n,h in p['methods'].items():
+ if n in new_names:assert not (m/n).exists(),('New method exists',n)
+ else:assert sha(m/n)==h,('Existing method drift',n)
+for n,h in p['pinned_inputs'].items():assert sha(r/n)==h,('Input drift',n)
+for n,h in p['linked_archives'].items():assert sha(r/'results'/n)==h,('Archive drift',n)
+assert sha(r/'build/bin/garnet.dll')==p['library_sha256']
+for parent,code in [('bf16-padded-lifecycle-attempt1',1),('parallel-batch-top1-correctness-attempt1',0)]:
+ w=json.loads((r/'results'/parent/'workflow.json').read_bytes());assert w['exit_code']==code and w['cleanup_finished']
+assert sha(r/'results/bf16-padded-lifecycle-attempt1-verified.json')==p['preserved_failure_proof_sha256']
+assert not (r/'results/bf16-padded-lifecycle-scope-fixed-attempt2').exists()
+assert not (m/'evidence/bf16-padded-lifecycle-scope-fixed-preparation.json').exists()
+assert int(subprocess.check_output(['nvidia-smi','--query-gpu=memory.used','--format=csv,noheader,nounits'],text=True).strip())<1024
+scratch=json.loads((r/'results/study-ssd-engine-cache/receipt.json').read_bytes());cache=Path(scratch['cache_root'])
+assert json.loads((cache/'study-owner.json').read_bytes())['study']==str(r) and shutil.disk_usage(cache).free>=96*1024**3
+print(json.dumps({'status':'scope_fixed_full_lifecycle_preflight_passed','sources':len(p['source_sha256']),'methods':len(p['methods']),'new_methods':len(new_names),'gpu_idle':True}))
+"""
+dest=chat/'work/lifecycle-scope-fixed-preflight.py';assert not dest.exists();dest.write_bytes(preflight.encode());compile(preflight,str(dest),'exec')
+print(json.dumps({'new_names':new_names,'preparation_sha256':sha(target.read_bytes())}))
