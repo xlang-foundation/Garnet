@@ -1,0 +1,48 @@
+from pathlib import Path
+from datetime import datetime,timezone
+import hashlib,json,shutil
+w=Path(__file__).resolve().parent;o=w.parent/'outputs';r=Path('D:/CantorAI/work/qwen38-5090');m=r/'test2026/cuda/qwen38_5090';e=m/'evidence';name='tokenizer-nfc-model-consistency-attempt1';sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+proof=json.loads((o/(name+'-verified.json')).read_bytes());assert proof==json.loads((o/(name+'-remote-verified.json')).read_bytes()) and proof['status']=='tokenizer_nfc_model_consistency_replayed' and proof['archive_sha256']==sha(o/(name+'-evidence.zip'))
+audit=json.loads((o/(name+'-all-vectors-verified.json')).read_bytes());assert audit['model_archive_sha256']==proof['archive_sha256'] and audit['total_raw_vectors']==168
+def copy(source,target):
+ assert not target.exists() or target.read_bytes()==source.read_bytes(),target
+ if not target.exists():shutil.copyfile(source,target)
+for suffix in ('-verified.json','-remote-verified.json','-all-vectors-verified.json','-replay-remote.log'):copy(o/(name+suffix),e/(name+suffix))
+for ledger in ('tokenizer-model-local-replay-ledger','tokenizer-model-all-vector-audit-ledger','tokenizer-http-positive-preparation-ledger'):
+ target=e/ledger;target.mkdir(exist_ok=True)
+ for source in (w/ledger).iterdir():copy(source,target/source.name)
+for method in ('retain-tokenizer-model-closure.py','prepare-tokenizer-http-launch-preflight.py'):
+ copy(w/method,e/(method+'.txt'))
+now=datetime.now(timezone.utc).isoformat()
+for filename in ('Garnet-Tokenizer-NFC-Status.json','Garnet-Parallel-Top1-Integration-Status.json'):
+ target=o/filename;s=json.loads(target.read_bytes());s.update(recorded_utc=now,status='tokenizer_nfc_model_closed_http_prepared',model_results_closed=True,model_proof_pair_identical=True,tokenizer_nfc_model=proof,tokenizer_nfc_all_vectors=audit,last_original_handle_poll='completed_exit0',streaming_http_qualified=False,new_speed_measurement=False,two_times_target_achieved=False,pushed_commit='7050ccacb',next_gates=['Actual ordinary/MTP HTTP protocol,805screen and3968+128 measurements','Matched vLLM/SGLang strongest feasible tuning/MTP and uncached image controls','Optimize to2x; INT4/4B comparisons and clean repetitions'],scope='CPU/native tokenizer and narrow model consistency are closed. New HTTP plan materialized after identical current model replays; no new HTTP/quality/4K/speed result yet. Full original2x objective remains open.')
+ s['native_build']['gpu_model_qualified']=True if 'native_build' in s else False
+ target.write_text(json.dumps(s,indent=2)+'\n',encoding='utf8')
+entry='''
+
+### 2026-10-25: rebuilt tokenizer model closes and independently replays
+
+Original tokenizer-nfc-model-consistency-attempt1 exited0, preserved all393
+source/input/method hashes and six runtime hashes, and finished owned cleanup.
+Immutable archive90098fe581655c8c7eb3bdf3e43d6baed2b899b41388be601f2fe840b6a7b65c
+contains583files/9134964bytes. Actual remote/local independent replays match;
+both use cb9dcac1... verifier identical to archived method.24CPU/4B4/8B1cases,
+ordinary/MTP exact IDs/callbacks, full reported canonical states/raw vectors,
+repeats/resets/prefix0/1/2/4 and dialect/pending negative guards pass.
+
+Supplemental independent all-file auditor also passes: all44B4 and124B1 .f32
+files (168total), including transient prefix snapshots absent from report state
+objects, match retained8ae file sets and every raw byte. B1 versus oldB4 text/
+image token differences remain documented, exactly as retained8ae behavior;
+do not claim external/batch precision equivalence. Correctness monitor maxima
+B4=27035906048B,B1=23010648064B are not serving memory measurements.
+
+Only after actual closure and identical proof pair did fresh HTTP factory pass,
+materializing27method preparation49d72442... and29target upload plan. Earlier
+negative absent-proof guard remains preserved. Read-only target/source/runtime/
+parent/cache preflight and uploading only absent new files precede one HTTP job.
+Actual805score/4K/HTTP/timings and original2x remain unmeasured at this entry.
+'''
+for filename in ('qwen38-5090-development-log.md','qwen38-5090-implementation-task.md'):
+ target=r/'docs/research'/filename;raw=target.read_bytes();assert b'rebuilt tokenizer model closes and independently replays' not in raw;target.write_bytes(raw+entry.replace('\n','\r\n').encode())
+print(json.dumps({'status':'model_closure_retained','archive_sha256':proof['archive_sha256'],'raw_vectors':168,'http_executed':False}))
