@@ -2551,3 +2551,47 @@ then same B8 ordinary complete-state/raw-vector/ID permutation/reset controls an
 real B8MTP construction, prefix commits,805quality, padded HTTP and measured peak.
 Current tiled B1 model trial remains owned by original48577; no concurrent remote
 GPU work or other probes while live. Overall goal and pending reference scope intact.
+
+
+### 2026-10-25 — native B8 input-byte gate prepared; default-route4K model cases passed in process
+
+Original48577 bf16-scores-tiled-api-model-admission-attempt1 remains running.
+Actual six default-route text/image3968+128/reset-repeat cases emitted PASS and
+its resource report saved; second opt-in tiled process started. No terminal
+archive/independent replay yet, so no promotion or new benchmark. One read-only
+operational check confirmed native process35548, cases_running report and active
+GPU; output silence was not treated as termination. No restart/input/DLL/SDK edits.
+
+Prepared PagedPromptRows native component byte gate, not installed/executed.
+Eight matrix cases B1/2/4/8, page32/64/128, variable lengths/zero-ID padding,
+64x5120channel-distinct dyadic visuals crossing page boundaries, new visuals and
+rotated rows; long B8/3968 case. TargetT32 slices and shifted MTP reads plus held
+views after iteration/close total11274observations. Actual first-page eviction is
+recorded separately; some short cases have only two pages. Old source already
+uses two-page cache; returned native views can outlive its eviction/close.
+
+Retain every actual native row byte string once by SHA256 content filename and
+ordered event row references. This is lossless deduplication, not a hash-only
+capture: independent replay reconstructs every original read and compares all
+FP32 bytes to checkpoint BF16 integer-word conversion or deterministic visual
+oracle. Source/read count/order/shape/lifetime and missing/corrupt/stale bytes
+checked. Tampering with data plus its saved digest still fails the oracle.
+
+Actual12CPUcontrols pass, final.540s after oracle/eviction metadata changes.
+Earlier source-pinned CPU runs retained in append-only ledger. Actual retained
+15unique embedding rows/[248320,5120] also replayed on CPU from archive
+7a7a7effcd1af201f103b5df5f7a74ef4b8aca67eda5c2c219eea86e57d75801;
+raw fixture SHA b2a77e1a661fb958b186dee18b32ae24a570c67944879b1b76bf151506521bd9.
+No native execution or observed memory reduction claimed. Eight new Python/batch
+method sources syntax-inspected. Owner requires same twelve tests in actual
+embedded runtime too, before checkpoint preparation or GPU calls. Fresh CPU
+fixture must match all31retained fixture files. Explicit parent archive/proof and
+source/RTE/SDK/idle guards prevent overlapping the live model or using its private
+candidate DLL; this I/O gate requires baseline1a1d. Next preparation refuses while
+actual closed two-machine parent proof is missing, as observed before GPU work.
+
+After native byte admission, integrate source in B8 ordinary model and compare
+retained complete states/raw hidden vectors/IDs across all nine old groups/orders;
+then real B8MTP memory/prefix commits/quality/HTTP. Component memory sampling is
+untimed construction/correctness only. No serving-memory saving or2x claim;
+matched vLLM4K/tuned refs, repeated trials, INT4/4B and full objective remain open.
