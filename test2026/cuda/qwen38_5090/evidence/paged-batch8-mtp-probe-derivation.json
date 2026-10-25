@@ -1,0 +1,95 @@
+{
+  "source": "probe_paged_batch8_model.py",
+  "source_sha256": "84e881d43b2eae91268102bb6321c31bd00448063e6e74ff5c76a06fd7b9a850",
+  "source_newlines_normalized_to_lf": true,
+  "changes": [
+    [
+      "\"\"\"Actual B8 model/vision/full4K admission, unrun; no performance measurements.\n\nAn outer owner must first observe the original HTTP supervisor terminal, check\nidle GPU/source/runtime identity, monitor memory and preserve the raw attempt.\nNo MTP, HTTP serving, broad quality or speed qualification is performed here.\n\"\"\"\n",
+      "\"\"\"Actual B8 MTP model/state trial, unrun; no HTTP or performance measurements.\n\nRequires actual closed/replayed paged ordinary B8 admission before construction.\nUses existing MTP3/T4/128MiB prefix replay and all nine ordinary oracle cases.\n\"\"\"\n",
+      1
+    ],
+    [
+      "from test2026.cuda.qwen38_5090.paged_batch8_model import same_case,replay_preserved",
+      "from test2026.cuda.qwen38_5090.paged_batch8_model import same_case\nfrom test2026.cuda.qwen38_5090.paged_batch8_mtp import require_parent,replay_mtp\nfrom xModel.qwen35.vl_0_8b.cuda_speculative import CUDASpeculativeSession",
+      1
+    ],
+    [
+      "prior='bf16-batch8-model-admission-attempt1';archive=",
+      "parent_admission=require_parent(root,library)\n    prior='paged-batch8-model-preservation-attempt1';archive=",
+      1
+    ],
+    [
+      "admission['baseline_archive_sha256']",
+      "parent_admission['archive_sha256']",
+      1
+    ],
+    [
+      "'mtp_executed':False,'http_executed':False",
+      "'mtp_executed':True,'mtp_depth':3,'draft_chunk':4,'draft_builder_workspace_bytes':128<<20,'prefix_replay':True,'mtp_stop_ids':[],'ordinary_parent':parent_admission,'http_executed':False",
+      1
+    ],
+    [
+      "'scope':'Existing opt-in B8 BF16-cache/T32prefill/T4decode mixedNVFP4/FP8 model. Ordinary fixed-count8short/128full4K generated tokens, original/rotated/reset-repeat row order. Complete state-component hashes and raw hidden/normalized vectors compare after inverse permutation. Paged prompt input only; compare every complete state/raw vector/ID to retained existing B8 model. Construction/vision/paged input/full4K memory must actually fit. External B1/B4 math remains unqualified. No MTP, broad805quality, HTTP batching or performance admission.'",
+      "'scope':'Existing opt-in B8 BF16-cache/T32prefill/T4decode target and existing MTP3/T4/128MiB/prefix-replay session; no core guard or arithmetic changes. Bounded128two-page prompt input. Fixed-count8short/128full4K tokens with empty stop list exactly matching ordinary oracle semantics. Nine mixed text/image/original/rotated/reset cases;29complete target-state witnesses/58raw vectors/all IDs must match actual retained paged ordinary B8. Actual construction/memory fit must be observed; no estimate promoted. External B1/B4 math, natural-stop805quality, HTTP serving/performance and2x remain unqualified.'",
+      1
+    ],
+    [
+      "decoder=vision=None;save()",
+      "decoder=vision=speculative=None;save()",
+      1
+    ],
+    [
+      "suffix='<|im_end|>",
+      "speculative=CUDASpeculativeSession(decoder,str(checkpoint),[],3,head_candidates=0,prefix_replay=True,draft_chunk_size=4,draft_builder_workspace_bytes=128<<20)\n        report['memory_after_mtp_construction']=speculative.memory_info();save()\n        suffix='<|im_end|>",
+      1
+    ],
+    [
+      "assert decoder.state_transaction is None and not decoder.poisoned",
+      "assert decoder.state_transaction is None and not decoder.poisoned and not speculative.verifier.pending",
+      1
+    ],
+    [
+      "decoder.reset()",
+      "speculative.reset()",
+      3
+    ],
+    [
+      "try:prediction=decoder.prefill_sequence(hidden,positions,lengths);prompt_cache=hidden.stats()",
+      "try:prediction=speculative.prefill(hidden,positions,lengths,current);prompt_cache=hidden.stats()",
+      1
+    ],
+    [
+      "                generated=[[] for _ in range(8)]\n                for step in range(limit):\n                    assert len(prediction)==8\n                    for row,token in enumerate(prediction):\n                        assert type(token) is int and 0<=token<248320;generated[row].append(token)\n                    if step+1<limit:prediction=decoder.step(prediction,[1]*8,[[position]*3 for position in current]);current=[n+1 for n in current]\n",
+      "                mtp_result=speculative.generate(limit)\n                generated=[list(v) for v in mtp_result['generated_token_ids']]\n                assert mtp_result['stop_token_ids']==[None]*8 and mtp_result['sampled_tokens_including_stop']==[limit]*8\n",
+      1
+    ],
+    [
+      "'inverse_permutation_exact':False,'performance_admitted':False,'prompt_cache':prompt_cache",
+      "'inverse_permutation_exact':False,'performance_admitted':False,'prompt_cache':prompt_cache,'mtp_result':mtp_result,'mtp_memory':speculative.memory_info()",
+      1
+    ],
+    [
+      "report['status']='bf16_batch8_ordinary_admission_collected_needs_replay'",
+      "report['status']='paged_batch8_mtp_collected_needs_replay'",
+      1
+    ],
+    [
+      "report['retained_baseline_replay']=replay_preserved(report",
+      "report['retained_baseline_replay']=replay_mtp(report",
+      1
+    ],
+    [
+      "PAGED_B8_MODEL_CASE_PASS",
+      "PAGED_B8_MTP_CASE_PASS",
+      1
+    ],
+    [
+      "        if vision is not None:vision.close()",
+      "        if speculative is not None:speculative.close()\n        if vision is not None:vision.close()",
+      1
+    ]
+  ],
+  "result": "probe_paged_batch8_mtp.py",
+  "result_sha256": "77802c80f9b8aabb137cb345c104792461b62dea5668e1a86a49067f3e6c9cad",
+  "scope": "Retain target/vision/native input/state/retained oracle/permutation/reset code. Replace ordinary generation with existing MTP3/T4/128MiB session and require actual paged B8 parent closure. All guards and core MTP arithmetic unchanged; GPU unrun."
+}

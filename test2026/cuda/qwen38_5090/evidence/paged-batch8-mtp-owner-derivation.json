@@ -1,0 +1,65 @@
+{
+  "source": "run_paged_batch8_model.py",
+  "source_sha256": "1d1e9eebfe6689df36aa50eb256f2a6965fc95d82b2a447dd0a7ff4ac2299902",
+  "source_newlines_normalized_to_lf": true,
+  "changes": [
+    [
+      "Exclusive preserved-profile B8 input integration; no MTP or timing admission.",
+      "Exclusive existing-session B8 MTP correctness and memory trial; no timing admission.",
+      1
+    ],
+    [
+      "paged-batch8-model-preservation-attempt1",
+      "paged-batch8-mtp-admission-attempt1",
+      1
+    ],
+    [
+      "evidence/paged-batch8-model-preparation.json",
+      "evidence/paged-batch8-mtp-preparation.json",
+      1
+    ],
+    [
+      "Paged B8 source drift",
+      "Paged B8 MTP source drift",
+      1
+    ],
+    [
+      "26strict old/new B8 witness, independent retained-oracle and paged input fault controls",
+      "30strict old/new B8 witness, MTP target-state/token/count/parent and paged input fault controls",
+      1
+    ],
+    [
+      "CPU preservation gate failed",
+      "CPU B8 MTP gate failed",
+      1
+    ],
+    [
+      "test_paged_batch8_model.bat",
+      "test_paged_batch8_mtp.bat",
+      1
+    ],
+    [
+      "Actual nine B8 short/full3968+128 text/image/permutation/reset cases; compare retained29complete states and58raw vectors/IDs, no model arithmetic or timing change",
+      "Actual existing MTP3/T4/128MiB session: nine B8 short/full3968+128 text/image/permutation/reset cases; retained29complete target states and58raw vectors/IDs; no HTTP/timing admission",
+      1
+    ],
+    [
+      "Actual paged B8 model/state preservation failed",
+      "Actual paged B8 MTP target-state/token gate failed",
+      1
+    ],
+    [
+      "report['retained_baseline_replay']['status']=='paged_batch8_retained_model_preserved'",
+      "report['retained_baseline_replay']['status']=='paged_batch8_mtp_retained_ordinary_exact'",
+      1
+    ],
+    [
+      "paged_batch8_model_collected_needs_replay",
+      "paged_batch8_mtp_collected_needs_replay",
+      1
+    ]
+  ],
+  "result": "run_paged_batch8_mtp.py",
+  "result_sha256": "f11b8d3b77ca5fdecc324569f28801ea8e5d4c1ced2c5f4962a7e9f19aa36848",
+  "scope": "Preserve exclusive idle/identity/SSD-cache guard, resource monitor, actual CPU/GPU ledgers, source/runtime/SDK restoration, owned engine retirement and raw archive. Select separately pinned B8 MTP probe. GPU unrun."
+}
