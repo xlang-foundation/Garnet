@@ -847,3 +847,28 @@ Those runtime checks are UNRUN. Future remote registry/ABI and valid GPU enqueue
 B1 commit/helper/lowering/model, quality, actual4K and HTTP remain unqualified.
 Archive/JSON in outputs Garnet-B1-Overlay-Plugin-Preparation; this is preparation,
 not numerical/performance admission. Original2x/halfTTFT and all comparisons remain.
+
+
+2026-10-25: B1 wrapper GPU forwarding probe prepared; GPU UNRUN.
+Same44case/119040scalar source fixture is pinned byte-for-byte to closed
+2eeb8aa8...operator archive, with unchanged candidate CU/header. The only
+positive-dispatch change sends87host calls through new B1 plugin descriptors,
+workspace validation and enqueue:44ordinary,3capture construction,40cached
+prefix calls. Original3graph replays, full canonical readonly/canaries and
+104direct-kernel negatives remain. Negatives are explicitly not wrapper checks.
+Separate32profile CPU registry/serialization/negative wrapper probe is required.
+
+Private local /MT sm120 compile/link passes; EXE94c6f9b3a20bf95890812c94ddc47c2d9924242802b657827c13c0ba978aef7b,
+imports nvinfer_10.dll/KERNEL32.dll (CUDA static runtime linked). Actual NVCC
+inherited-overload warnings retained unsuppressed. No local or remote GPU run.
+Strict future replay requires all90observation records (except declared final
+wrapper fields), all476160selected raw bytes and exact87dispatch count against
+qualified same-kernel parent. Whole-model/quality/performance are never admitted.
+Six actual CPU synthetic mutation controls pass: raw byte corruption/truncation,
+stream order/incompletion, GPU/control/boolean types, dispatch/admission counters,
+and wrong parent corpus. Both original independent FP64 proofs remain the parent;
+no synthetic transformed stream is counted as a new GPU result. Build/method/
+mutation ledgers and derivations archived. Original model handle re-polled LIVE;
+deployment unchanged. Next: close/replay original model, collect standalone B1
+commit and CPU/plugin forwarding checks, then helper/lowering/full-model gates.
+Original2x/halfTTFT, broad quality, actual4K, tuned/INT4/4B and repetitions open.
