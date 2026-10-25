@@ -90,8 +90,19 @@ with zipfile.ZipFile(archive) as z:
    assert [x['label'] for x in prefix['rejected']]==['parent-reset','parent-step','nested-verify','prefix-overrun','prefix-bool','prefix-wrong-length']
    expected_tokens=[[ref_for(('s3-text-c1-r0-greedy','s3-image-c1-r0-greedy')[row%2],0)[0]['generated_ids'][row%2][t] for row in range(4)] for t in range(4)]
    assert prefix['tokens']==expected_tokens and prefix['submitted_flags']==[[1]*4]*4
-   assert prefix['positions']==[[[p+t]*3 for t in range(4)] for p in (41,104,41,104)]
-   assert prefix['before']['slots']==[41,104,41,104] and prefix['committed']['slots']==[41,105,43,108]
+   config=doc('models/Qwen3.8-27B-NVFP4/config.json');lengths=[];next_positions=[]
+   for key in ('s3-text-c1-r0-greedy','s3-image-c1-r0-greedy')*2:
+    ids=doc('results/native-mtp3-http/'+key+'-response.json')['choices'][0]['prompt_token_ids']
+    lengths.append(len(ids))
+    if key=='s3-image-c1-r0-greedy':
+     image_id=config['image_token_id'];start=ids.index(image_id)
+     assert ids.count(image_id)==64 and ids[start:start+64]==[image_id]*64
+     # Independent fixed8x8 merged-grid cursor:64cache slots advance
+     # rotary THW coordinates by8, so cache length104 has next position48.
+     next_positions.append(len(ids)-64+8)
+    else:next_positions.append(len(ids))
+   assert prefix['positions']==[[[p+t]*3 for t in range(4)] for p in next_positions]
+   assert prefix['before']['slots']==lengths and prefix['committed']['slots']==[p+n for p,n in zip(lengths,counts)]
    expected_predictions=[ref_for(('s3-text-c1-r0-greedy','s3-image-c1-r0-greedy')[row%2],0)[0]['generated_ids'][row%2][n] if n else None for row,n in enumerate(counts)]
    assert prefix['predictions']==prefix['ordinary_predictions']==expected_predictions
    for key in ('before','restored','rollback','ordinary','committed'):raw_state('prefix-'+key,prefix[key])
