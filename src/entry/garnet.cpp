@@ -1989,10 +1989,12 @@ namespace Garnet
             (requestedModelId.empty() &&
                 !fs::is_regular_file(xmodelRoot / "qwen_vl_prefill.py") &&
                 fs::is_regular_file(xmodelRoot / "prefill.py")));
+        const bool vision4B = requestedModelId == "Qwen3-VL-4B-Instruct";
         const std::string modelId = asrModel
             ? "Qwen3-ASR-0.6B"
             : (ttsModel ? requestedModelId :
-                (textModel ? "Qwen3-1.7B" : "Qwen3-VL-2B-Instruct"));
+                (textModel ? "Qwen3-1.7B" :
+                    (vision4B ? requestedModelId : "Qwen3-VL-2B-Instruct")));
         if (!requestedModelId.empty() && requestedModelId != modelId) {
             retValue = NativeValue(Host(), GarnetJsonError(
                 "model_unsupported",
@@ -2073,6 +2075,25 @@ namespace Garnet
             return retValue;
         }
 
+        // Dense Qwen3-VL variants share the configuration-driven model program.
+        // The 4B checkpoint has 36 decoder layers, rather than the 2B model's 28.
+        int visionLayers = 28;
+        if (vision4B) {
+            try {
+                std::ifstream input(modelRoot / "config.json");
+                const auto checkpoint = json::parse(input);
+                const auto text = checkpoint.at("text_config");
+                if (checkpoint.value("model_type", "") != "qwen3_vl" ||
+                    text.value("hidden_size", 0) != 2560 || text.value("num_hidden_layers", 0) != 36 ||
+                    text.value("num_attention_heads", 0) != 32 || text.value("num_key_value_heads", 0) != 8 ||
+                    text.value("head_dim", 0) != 128 || checkpoint.at("vision_config").value("out_hidden_size", 0) != 2560)
+                    throw std::runtime_error("checkpoint does not match Qwen3-VL-4B-Instruct");
+                visionLayers = text.at("num_hidden_layers").get<int>();
+            } catch (const std::exception& error) {
+                return NativeValue(Host(), GarnetJsonError("model_configuration_mismatch", error.what()));
+            }
+        }
+
         std::lock_guard<std::mutex> guard(m_servingMutex);
         const auto existing = m_servingInstances.find(modelId);
         if (existing != m_servingInstances.end() && existing->second->model.IsValid()) {
@@ -2135,7 +2156,7 @@ namespace Garnet
                     {patchCount, 4}, {patchCount, 4}, {patchCount, 2}, {2},
                     {1, maxInputTokens}, {1, maxInputTokens},
                     {3, 1, maxInputTokens}, {1, 1},
-                    {28, kvPages, 16, 8, 128}, {28, kvPages, 16, 8, 128},
+                    {visionLayers, kvPages, 16, 8, 128}, {visionLayers, kvPages, 16, 8, 128},
                     {kvPages}, {1}};
             const std::vector<std::string> inputDataTypes = asrModel
                 ? std::vector<std::string>{
