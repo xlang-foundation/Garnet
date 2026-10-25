@@ -2001,3 +2001,29 @@ reading archive. Same checker succeeded using existing results scratch location;
 failure observation retained, no guard/data change. Next wider MTP actual full4K
 correctness owner/preflight pins qualified native/short-model proofs and requires
 this actual closed/replayed reference archive plus idle guards before execution.
+
+
+### 2026-10-25 — wider MTP full4K admission deployed and running; diagnostic figure
+
+After actual SGLang diagnostic closure and identical independent proofs, new
+preflight verifies all575existing inputs/runtime, prior native/B8/short-MTP and
+actual characterization archive/workflow/proof, and idle adapter/process. All12
+targets absent. Bundle6521c8625dbc4498400ee409e5f58ef3346aa55b3b9a4892e93bcec72f13bf3d,
+49265bytes, installed only reviewed new methods/evidence. Existing native runtime,
+qualified model/defaults/SDK/checkpoint remain unchanged; fixed root/cache reused.
+Original supervisor48577 started mtp-prefill16-full4k-admission-attempt1. Actual
+50remote CPU tests pass0.675s; last handle poll running, no4Kcase success yet.
+Embedded optional-hash warnings again observed; no SHA256 evidence-path change.
+Do not infer failure/restart from quiet construction; await actual closed archive
+and independently replay full target-state/raw-vector/token/reset/memory results.
+
+Four-panel raw-derived SGLang output-stability PNG/SVG visually inspected. Actual
+text/image nonstream token-ID and streamed-text exact matches versus serial:
+C1=8/8, C2=0/16IDs and0/8texts, C4=0/16IDs and0/8texts, C8=2/16IDs and1/8texts
+per group. Nonstream C2/4/8 combines original and rotated observations; streaming
+IDs are unobserved. All96color/spatial semantic checks pass;24serial repeats match.
+This figure describes output stability, not speed or an accuracy/cause verdict.
+Full raw variants/source/lifecycle retained. Stronger ordinary/tuned/MTP reference
+timings must preserve these observations without dropping the faster normal engine
+or rewriting the prior strict failure. Candidate805quality/HTTP/repeated speed,
+host/GPU bottleneck work, externalB8/HTTP/MTP, INT4/4B and2x remain open.
