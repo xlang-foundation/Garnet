@@ -21,12 +21,12 @@ def main():
  _,corpus_rows,gold=load_corpus(args.corpus)
  if args.mode=='mtp':
   assert args.ordinary_controls is not None,'MTP requires actual completed ordinary controls'
-  ordinary_report=json.loads((args.ordinary_controls/'report.json').read_bytes());assert ordinary_report['status']=='protocol_screening_and_two_boundary_controls_passed' and ordinary_report['mode']=='ordinary' and ordinary_report['library_sha256']==library and ordinary_report['model_proof_sha256']==sha(proof_path)
+  ordinary_report=json.loads((args.ordinary_controls/'report.json').read_bytes());assert ordinary_report['status']=='bf16_low_batch_http_profile_collected' and ordinary_report['fixed_context_benchmark_collected'] and ordinary_report['mode']=='ordinary' and ordinary_report['library_sha256']==library and ordinary_report['model_proof_sha256']==sha(proof_path)
   assert replay(args.corpus,args.ordinary_controls/'mmmu-quality')['status']=='adapted_mmmu_http_quality_responses_replayed'
  assert not out.exists();out.mkdir()
  cache=json.loads((root/'results/study-ssd-engine-cache/receipt.json').read_bytes())['cache_root']
  worker=Worker(['cmd.exe','/d','/c',str(m/'serve_native_bf16_low_batch_worker.bat'),args.mode,cache],out/'worker');server=thread=None;url='http://127.0.0.1:18082'
- report={'status':'running','mode':args.mode,'physical_batch':1,'queued_concurrency':True,'model_proof_sha256':sha(proof_path),'library_sha256':library,'protocol_cases':[],'boundary_controls':[],'broad_quality_qualified':False,'performance_admitted':False,'scope':'Actual single-slot serving controls plus adapted805 screening and two frozen3968-input/128-output-reserve controls. Optional short-prompt pilot is exploratory; no automatic4Kbenchmark, broad-quality or2x admission.'}
+ report={'status':'running','mode':args.mode,'physical_batch':1,'queued_concurrency':True,'model_proof_sha256':sha(proof_path),'library_sha256':library,'protocol_cases':[],'boundary_controls':[],'broad_quality_qualified':False,'performance_admitted':False,'scope':'Actual single-slot serving controls, adapted805 screening and two frozen3968-input/128-output-reserve controls precede complete124request fixed4Kcohorts. MTP4Kmust match actual ordinary IDs. Optional short-prompt pilot and all timings remain exploratory; no broad-quality/reference-equivalence/2x admission.'}
  def save():(out/'report.json').write_text(json.dumps(report,indent=2),encoding='utf8')
  save()
  def expected(key):
@@ -76,10 +76,15 @@ def main():
     result=nonstream('boundary-'+case,json.loads(wire),ids,completion);assert result['completion_tokens']==128
     report['boundary_controls'].append(result);save()
   report['status']='protocol_screening_and_two_boundary_controls_passed';save()
+  context_metadata=out/'fixed-context-metadata.json';context_metadata.write_text(json.dumps({'ready':ready,'physical_batch':1,'queued_concurrency':True,'generation_mode':args.mode,'library_sha256':library,'model_proof_sha256':sha(proof_path),'protocol_report_sha256_before_timing':sha(out/'report.json'),'broad_quality_qualified':False,'performance_admitted':False,'scope':'Actual fixed3968input/128output native cohorts; ordinary/MTP paired IDs, frozen corpus, no matched-reference or2x admission.'},indent=2),encoding='utf8')
+  context_command=[sys.executable,str(m/'benchmark_fixed_context_native.py'),'--url',url,'--corpus-archive',str(m/'evidence/fixed-context-4096-corpus.zip'),'--output',str(out/'benchmark4k'),'--metadata',str(context_metadata)]
+  if args.mode=='mtp':context_command+=['--ordinary-benchmark',str(args.ordinary_controls/'benchmark4k')]
+  subprocess.run(context_command,check=True);report['fixed_context_benchmark_collected']=True;save()
   if args.exploratory_pilot:
    metadata=out/'benchmark-metadata.json';metadata.write_text(json.dumps({'ready':ready,'physical_batch':1,'queued_concurrency':True,'generation_mode':args.mode,'library_sha256':library,'model_proof_sha256':sha(proof_path),'protocol_report_sha256_before_pilot':sha(out/'report.json'),'corpus_manifest_sha256':screening['corpus_manifest_sha256'],'boundary_controls':report['boundary_controls'],'broad_quality_qualified':False,'performance_admitted':False,'scope':'Exploratory short-prompt C1/2/4/8 pilot after actual B1 protocol/screen/boundary controls; not the full4Kbenchmark or2x qualification.'},indent=2),encoding='utf8')
    subprocess.run([sys.executable,str(m/'benchmark_stream.py'),'--url',url,'--engine','garnet','--output',str(out/'benchmark'),'--metadata',str(metadata),'--concurrency','1','2','4','8','--requests','8','--warmups','2','--max-tokens','128','--workload-seed','3','--image-format','jpeg','--image-order','image-first','--image-nonce-pattern','binary-grid'],check=True)
    report['exploratory_short_pilot_collected']=True;save()
+  report['status']='bf16_low_batch_http_profile_collected';save()
  except BaseException as error:report.update(status='failed',error=repr(error));save();raise
  finally:
   if server is not None:server.shutdown();server.server_close()

@@ -1,0 +1,29 @@
+"""Synthetic CPU stream-schema controls; no actual HTTP or model execution."""
+import copy,json,unittest
+from .benchmark_fixed_context_native import final_ids
+def sample():
+ prompt=list(range(3968));completion=list(range(128));events=[{'data':json.dumps({'token_id':n})} for n in completion];events.append({'data':json.dumps({'id':'synthetic-cpu','prompt_token_ids':prompt,'response_token_ids':completion,'usage':{'prompt_tokens':3968,'completion_tokens':128,'total_tokens':4096}})});events.append({'data':'[DONE]'});return prompt,events
+class FixedContextSchema(unittest.TestCase):
+ def test_actual_id_schema_and_counts(self):
+  prompt,events=sample();self.assertEqual(final_ids(events,prompt)['response_token_ids'],list(range(128)))
+ def test_same_length_wrong_prompt_is_rejected(self):
+  prompt,events=sample();prompt[21]=9999
+  with self.assertRaises(ValueError):final_ids(events,prompt)
+ def test_missing_or_duplicate_final_record_is_rejected(self):
+  prompt,events=sample()
+  for mutated in (events[:-2],events[:-1]+[events[-2],events[-1]]):
+   with self.assertRaises(ValueError):final_ids(mutated,prompt)
+ def test_stream_id_mutation_and_early_stop_are_rejected(self):
+  prompt,events=sample();changed=copy.deepcopy(events);changed[2]['data']=json.dumps({'token_id':999})
+  with self.assertRaises(ValueError):final_ids(changed,prompt)
+  changed=copy.deepcopy(events);value=json.loads(changed[-2]['data']);value['response_token_ids']=value['response_token_ids'][:-1];changed[-2]['data']=json.dumps(value)
+  with self.assertRaises(ValueError):final_ids(changed,prompt)
+ def test_usage_and_boolean_ids_are_rejected(self):
+  prompt,events=sample()
+  for name in ('usage','boolean'):
+   changed=copy.deepcopy(events);value=json.loads(changed[-2]['data'])
+   if name=='usage':value['usage']['prompt_tokens']=3967
+   else:value['response_token_ids'][2]=True
+   changed[-2]['data']=json.dumps(value)
+   with self.assertRaises(ValueError):final_ids(changed,prompt)
+if __name__=='__main__':unittest.main()

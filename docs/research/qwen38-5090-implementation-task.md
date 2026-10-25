@@ -1,18 +1,17 @@
 # Qwen3.8-27B on one RTX 5090: implementation task
 
-Status: full packed BF16 ordinary/MTP corpus is closed/replayed. Lifecycle
-attempt1 is closed FAILED after ten cases, due a harness closure NameError;
-failure is preserved/replayed on both machines. The full scope-fixed rerun
-passed all14cases and102raw vectors on both independent replays, using the
-unchanged97c native binary. Standalone parallel batch-top1 passes330cases/
-1000observations; actual production API0/1/unset/01 modes now each pass
-352cases/1066observations on both independent replays. Preserving source install
-and actual SDK native build also pass both replays: new5ac61e3a...DLL,63CPUtests,
-9settings/112CPU policy boundaries, old97c and five runtime dependencies retained.
-Original checker failures/corrections remain recorded. Complete14case/102vector
-model corpus is now running in separate disabled/enabled processes; new model,
-protocol and speed remain unqualified. Work continues on `qwen38-5090`; original
-2x decode/concurrency and half-TTFT remain unmet.
+Status: current8ae native B1 integration has passed independent remote/local
+model-consistency replays: all4B4 smoke and8B1 cases, ordinary/MTP, callbacks,
+repeat/reset and prefix0/1/2/4 controls. Complete state witnesses/raw vectors
+and393archived files replay successfully. Prior first-attempt harness failure
+remains failed and preserved; correction changed the typed comparison only.
+B1 text/image token IDs differ from retained B4 outputs, so broad quality is
+unqualified. Physical B1 HTTP study is prepared from this actual proof pair:
+805image screening cases, protocol controls,3968input/128output text/image
+C1/2/4/8 cohorts and paired ordinary/MTP IDs. HTTP has not yet run. Matched4K,
+tuned/MTP references, INT4 W4A16, matched4B and clean repetitions remain open.
+Work continues on `qwen38-5090`; original2x decode/concurrency and half-TTFT
+objectives remain unmet. See chronological development log and pinned evidence.
 
 The pinned 27B checkpoint uses Qwen3.5 architecture. Garnet supports its mixed
 NVFP4/FP8 projections, BF16 vision/MTP, host embedding and joined MLP. Latest

@@ -1,0 +1,72 @@
+{
+  "status": "b1_model2_closed_http_prepared_unrun",
+  "utc": "2026-10-25T12:19:54.378730+00:00",
+  "model_proof": {
+    "status": "bf16_low_batch_model_consistency_replayed",
+    "archive_sha256": "052e3bd9ae047acc95fdd924fe9ccd68ab4483b00a6d638a5250fa9006916565",
+    "files_verified": 393,
+    "library_sha256": "8ae63a41b532f6e2d67cf01ca60b7684b86451105711dbb3573f2e325f63521b",
+    "variants": [
+      {
+        "label": "b4-smoke",
+        "physical_batch": 4,
+        "cases": 4,
+        "ordinary_mtp_exact": true,
+        "prefix_counts": [],
+        "retained_b4_token_difference_cases": [],
+        "retained_b4_row0_exact": true,
+        "broad_quality_qualified": false,
+        "performance_admitted": false
+      },
+      {
+        "label": "b1",
+        "physical_batch": 1,
+        "cases": 8,
+        "ordinary_mtp_exact": true,
+        "prefix_counts": [
+          0,
+          1,
+          2,
+          4
+        ],
+        "retained_b4_token_difference_cases": [
+          {
+            "key": "s3-text-c1-r0-greedy",
+            "repeat": 0
+          },
+          {
+            "key": "s3-text-c1-r0-greedy",
+            "repeat": 1
+          },
+          {
+            "key": "s3-image-c1-r0-greedy",
+            "repeat": 0
+          },
+          {
+            "key": "s3-image-c1-r0-greedy",
+            "repeat": 1
+          }
+        ],
+        "retained_b4_row0_exact": false,
+        "broad_quality_qualified": false,
+        "performance_admitted": false
+      }
+    ],
+    "correctness_sampled_peak_adapter_bytes": {
+      "b4-smoke": 27035906048,
+      "b1": 22583652352
+    },
+    "replay_verifier_sha256": "d90f650a6ae15f6923237e1999943495b66033a21421ad65dcdcd05a9228924b",
+    "archived_replay_verifier_sha256": "d90f650a6ae15f6923237e1999943495b66033a21421ad65dcdcd05a9228924b",
+    "broad_quality_qualified": false,
+    "actual_4k_qualified": false,
+    "streaming_http_qualified": false,
+    "performance_admitted": false,
+    "scope": "Fresh full unchanged4B4smoke/8B1case plan after immutable first-attempt typed-predicate failure and actual partial-data reanalysis. New packed-versus-packed gate requires real packed geometry/flags plus complete physical/logical/component/slot hashes; old packed-versus-FP32-reference gate untouched.18CPU controls precede fresh B4/B1 model collection. No product math/native DLL/tolerance change, broad quality, actual4K, HTTP timing or2x admission."
+  },
+  "local_remote_json_identical": true,
+  "local_replay_launcher_failure_preserved": true,
+  "http_preparation_sha256": "fad72a5050895f729bfd6a60ebe3a9a2dfee931ad2af44056ee62bc96b96317e",
+  "http_preflight_sha256": "6846368777d0946fc0a5ab99ef86608fc000df2fffd392f806528c62ac40a761",
+  "scope": "Actual closed model proof and current positive HTTP preparation only. The initial local replay launcher failed before verifier execution due to nonexistent relative Python path; corrected absolute path passed with no input/verifier change. Both actual executions are in the append-only ledger. Prior fixed4K synthetic CPU client import failure and original sources remain preserved separately; remote29CPU controls and all actual HTTP still pending. No benchmark or2x promotion."
+}
