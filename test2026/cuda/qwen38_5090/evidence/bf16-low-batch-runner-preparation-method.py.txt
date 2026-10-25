@@ -1,0 +1,33 @@
+"""Derive the isolated B1 numeric controller from the closed standalone controller."""
+from pathlib import Path
+import hashlib,json
+m=Path('D:/CantorAI/work/qwen38-5090/test2026/cuda/qwen38_5090');source=m/'run_parallel_batch_top1.py';text=source.read_bytes().decode().replace('\r\n','\n');changes=[]
+def change(before,after,count=1):
+ global text
+ assert text.count(before)==count,(before,text.count(before),count);text=text.replace(before,after);changes.append([before,after,count])
+change('Standalone correctness only, after the original model worker is terminal.','Isolated B1 numerical correctness only, after the full model worker is terminal/replayed.')
+change('parallel-batch-top1-correctness-attempt1','bf16-low-batch-attention-native-attempt1')
+change('parallel-batch-top1-preparation.json','bf16-low-batch-attention-preparation.json')
+change("closed['exit_code'] in (0,1)","closed['exit_code']==0")
+change("expected_status='bf16_padded_lifecycle_replayed' if closed['exit_code']==0 else 'bf16_padded_lifecycle_failure_preserved'","expected_status='bf16_padded_lifecycle_replayed'")
+change("verify_bf16_padded_lifecycle.py","verify_bf16_padded_lifecycle_scope_fixed.py")
+change("scratch=root/'tools/parallel-batch-top1';assert not scratch.exists()","scratch=root/'tools/bf16-kv-native';assert scratch.is_dir()")
+change("scratch.mkdir();(scratch/'study-owner.json').write_text", "assert not (scratch/'low-batch-study-owner.json').exists()\n(scratch/'low-batch-study-owner.json').write_text")
+change("'component':'parallel-batch-top1'","'component':'bf16-low-batch-attention'")
+change("out.mkdir();os.chdir(repo);code=1;exe=scratch/'probe.exe'","assert not (scratch/'bf16-low-batch-attention.exe').exists() and not (scratch/'low-batch-policy.exe').exists()\nassert sha(scratch/'bf16_kv_fixture_layout.h')==p['fixture_header_sha256']\nos.environ['CUDA_VISIBLE_DEVICES']='0'\nout.mkdir();os.chdir(repo);code=1;exe=scratch/'bf16-low-batch-attention.exe'")
+change("'test2026.cuda.qwen38_5090.test_parallel_top1_oracle'","'test2026.cuda.qwen38_5090.test_bf16_low_batch_candidate','test2026.cuda.qwen38_5090.test_bf16_kv_overlay_oracle'")
+change('Independent top1 fixture oracle controls','B1 numerical profile isolation, full-chunk/boundary coverage and independent FP64 controls')
+change('compile_parallel_batch_top1.bat','compile_bf16_low_batch_attention.bat')
+change('Standalone sm120 candidate plus unchanged legacy sampler','CPU-only33policy controls/import guard, plus separate sm120 B1 attention numerical probe')
+change('Standalone top1 compiler/linker failed','Low-batch attention compiler/linker or CPU policy failed')
+change('host-compiler.txt','low-batch-host-compiler.txt',3)
+change("str(out/'observations.jsonl')","str(out/'witnesses.f32')")
+change('330top1 cases/1000raw observations against serial CPU and unchanged legacy GPU sampler','44B1 attention cases/119040selected scalars; independent FP64 replay mandatory,3captures/104negative/40cache-equivalence checks')
+change('Standalone parallel top1 controls failed','Low-batch attention collection failed')
+change('parallel_batch_top1_correctness_finished_needs_replay','bf16_low_batch_attention_collected_needs_fp64_replay')
+change("[scratch/'study-owner.json']","[scratch/'low-batch-study-owner.json',scratch/'bf16_kv_fixture_layout.h']")
+change(" if exe.exists():files.append(exe)"," for extra in (scratch/'low-batch-policy.exe',scratch/'low-batch-policy-imports.txt'):\n  if extra.exists():files.append(extra)\n if exe.exists():files.append(exe)")
+target=m/'run_bf16_low_batch_attention.py';assert not target.exists();compile(text,str(target),'exec');target.write_bytes(text.encode())
+receipt={'source':source.name,'source_sha256':hashlib.sha256(source.read_bytes()).hexdigest(),'replacements':changes,'result_sha256':hashlib.sha256(target.read_bytes()).hexdigest(),
+ 'scope':'Prepared standalone B1 numeric controller only. Parent must be fully closed/replayed14cases; source/runtime/SDK stay unchanged. No runtime preparation or GPU execution yet.'}
+(m/'evidence/bf16-low-batch-runner-derivation.json').write_text(json.dumps(receipt,indent=2),encoding='utf8');print(receipt['result_sha256'])

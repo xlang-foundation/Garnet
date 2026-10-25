@@ -1,0 +1,30 @@
+from pathlib import Path
+import hashlib,json,sys,zipfile
+import numpy as np
+w=Path('C:/Users/developer/Documents/Codex/2026-10-23/referenced-chatgpt-conversation-this-is-an');m=Path('D:/CantorAI/work/qwen38-5090/test2026/cuda/qwen38_5090');sys.path.insert(0,str(m))
+from bf16_low_batch_attention_oracle import ATOL,RTOL,case_plan
+sha=lambda b:hashlib.sha256(b).hexdigest();name='bf16-low-batch-attention-native-attempt1';e=m/'evidence';out=w/'outputs';proofs=[json.loads((out/(name+s)).read_bytes()) for s in ('-verified.json','-remote-verified.json')]
+f=json.loads((e/'bf16-low-batch-fp64-reference-values.json').read_bytes());fraw=(w/'work'/f['file']).read_bytes();assert sha(fraw)==f['sha256'] and len(fraw)==f['bytes'];assert ATOL==f['atol'] and RTOL==f['rtol']
+assert all(p['status']=='bf16_low_batch_attention_fp64_replayed' and not p['numerical_failures'] for p in proofs)
+keys=[k for k in proofs[0] if proofs[0][k]!=proofs[1][k]];assert set(keys)<={'cases','predeclared_reference_fp64_different_vector_hash_ids','replay_environment'}
+assert len(proofs[0]['cases'])==len(proofs[1]['cases'])==44
+for a,b in zip(proofs[0]['cases'],proofs[1]['cases']):
+ for k in ('id','samples','scalars'):assert a[k]==b[k]
+ assert max(a['max_tolerance_fraction'],b['max_tolerance_fraction'])<=1
+archive=out/(name+'-evidence.zip');assert sha(archive.read_bytes())==proofs[0]['archive_sha256']==proofs[1]['archive_sha256']
+records=[];cursor=0;frozen_cursor=0
+with zipfile.ZipFile(archive) as z:
+ manifest=json.loads(z.read('evidence-manifest.json'))
+ for n,h in manifest['files'].items():assert sha(z.read(n))==h
+ assert json.loads(z.read('Garnet/test2026/cuda/qwen38_5090/evidence/bf16-low-batch-fp64-reference-values.json'))==f
+ gpu=z.read('results/'+name+'/witnesses.f32')
+ for case,row in zip(case_plan(),f['cases']):
+  assert case==row['case'] and row['offset']==frozen_cursor
+  wantedraw=fraw[row['offset']:row['offset']+row['bytes']];assert sha(wantedraw)==row['sha256'];wanted=np.frombuffer(wantedraw,dtype='<f8');frozen_cursor+=len(wantedraw)
+  length=row['scalars']*4;actual=np.frombuffer(gpu[cursor:cursor+length],dtype='<f4').astype(np.float64);cursor+=length
+  assert actual.size==wanted.size and np.isfinite(actual).all() and np.isfinite(wanted).all()
+  error=np.abs(actual-wanted);fraction=error/(ATOL+RTOL*np.abs(wanted));assert not np.any(fraction>1)
+  records.append({'id':case['id'],'scalars':actual.size,'max_absolute_error':float(error.max()) if error.size else 0.,'max_tolerance_fraction':float(fraction.max()) if fraction.size else 0.})
+ assert cursor==len(gpu)==119040*4 and frozen_cursor==len(fraw)==119040*8
+report={'status':'b1_gpu_witnesses_pass_unchanged_pre_gpu_frozen_fp64_reference','archive_sha256':sha(archive.read_bytes()),'method_sha256':sha(Path(__file__).read_bytes()),'frozen_reference_sha256':sha(fraw),'frozen_metadata_sha256':sha((e/'bf16-low-batch-fp64-reference-values.json').read_bytes()),'independent_proofs_sha256':{s:sha((out/(name+s)).read_bytes()) for s in ('-verified.json','-remote-verified.json')},'independent_report_difference_keys':keys,'largest_cross_replay_error_report_delta':max(abs(a['max_absolute_error']-b['max_absolute_error']) for a,b in zip(proofs[0]['cases'],proofs[1]['cases'])),'cases':records,'scalars':sum(r['scalars'] for r in records),'atol':ATOL,'rtol':RTOL,'scope':'Additional CPU replay of the same raw GPU witnesses against actual pre-GPU frozen FP64 bytes. Both fresh independent FP64 replays also pass; their FP64 vector hashes/error last bits differ, retained without changing tolerance. Numerical standalone attention only; model/quality/performance remain unqualified.'}
+p=e/'bf16-low-batch-frozen-reference-replay.json';assert not p.exists();p.write_text(json.dumps(report,indent=2),encoding='utf8');print(json.dumps({'status':report['status'],'scalars':report['scalars'],'max_absolute_error':max(r['max_absolute_error'] for r in records),'largest_cross_replay_error_report_delta':report['largest_cross_replay_error_report_delta']}))

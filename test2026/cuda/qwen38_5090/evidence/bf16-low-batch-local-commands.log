@@ -1,0 +1,29 @@
+
+{"id": "894fa8a407624609b5302be9f5c213c6", "kind": "build", "label": "CPU-only B1 policy; imports inspected before executing", "argv": ["cmd.exe", "/d", "/c", "C:\\Users\\developer\\Documents\\Codex\\2026-10-23\\referenced-chatgpt-conversation-this-is-an\\work\\compile-bf16-low-batch-policy.bat"]}
+**********************************************************************
+** Visual Studio 2026 Developer Command Prompt v18.10.1
+** Copyright (c) 2026 Microsoft Corporation
+**********************************************************************
+[vcvarsall.bat] Environment initialized for: 'x64'
+probe_bf16_low_batch_policy.cpp
+
+{"id": "a048f6c4c2944b8b8f6681c3e1a88dea", "kind": "correctness", "label": "33CPU policy cases; executable has no CUDA/Garnet imports", "argv": ["C:\\Users\\developer\\Documents\\Codex\\2026-10-23\\referenced-chatgpt-conversation-this-is-an\\work\\bf16-low-batch-policy.exe"]}
+LOW_BATCH_CPU_PROFILE_PASS cases=33
+
+{"id": "9b2c36df1c504fa9ace19d437b630f42", "kind": "build", "label": "Separate B1/T4,T32 attention candidate plus full raw-witness probe; GPU executable is not run", "argv": ["cmd.exe", "/d", "/c", "C:\\Users\\developer\\Documents\\Codex\\2026-10-23\\referenced-chatgpt-conversation-this-is-an\\work\\compile-bf16-low-batch-attention.bat"]}
+**********************************************************************
+** Visual Studio 2026 Developer Command Prompt v18.10.1
+** Copyright (c) 2026 Microsoft Corporation
+**********************************************************************
+[vcvarsall.bat] Environment initialized for: 'x64'
+bf16_kv_low_batch_candidate.cu
+tmpxft_0000e19c_00000000-7_bf16_kv_low_batch_candidate.cudafe1.cpp
+probe_bf16_low_batch_attention.cu
+tmpxft_0000e19c_00000000-11_probe_bf16_low_batch_attention.cudafe1.cpp
+
+{"id": "ecf9921c47644356b3eec0c3e7f24f52", "kind": "correctness", "label": "B1 full-T32 boundary/all-layer coverage, unchanged production rejection and independent FP64 oracle controls", "argv": ["D:\\CantorAI\\Garnet\\.venv\\Scripts\\python.exe", "-m", "unittest", "test2026.cuda.qwen38_5090.test_bf16_low_batch_candidate", "test2026.cuda.qwen38_5090.test_bf16_kv_overlay_oracle"]}
+..........
+----------------------------------------------------------------------
+Ran 10 tests in 0.067s
+
+OK

@@ -1,0 +1,116 @@
+{
+  "status": "bf16_padded_lifecycle_replayed",
+  "archive_sha256": "d5650c9736c6b562c41afb67017329a2c22a6f24216f937c16c49069884f7854",
+  "files_verified": 224,
+  "library_sha256": "97c364653161f9252032815e644ef4a22758cc78bf7226317aba21f118f00844",
+  "cases": [
+    {
+      "group": 0,
+      "repeat": 0,
+      "real_rows": 1,
+      "ids_state_vectors_exact": true,
+      "retired_rows_while_primary_continues": null
+    },
+    {
+      "group": 0,
+      "repeat": 1,
+      "real_rows": 1,
+      "ids_state_vectors_exact": true,
+      "retired_rows_while_primary_continues": null
+    },
+    {
+      "group": 1,
+      "repeat": 0,
+      "real_rows": 1,
+      "ids_state_vectors_exact": true,
+      "retired_rows_while_primary_continues": null
+    },
+    {
+      "group": 1,
+      "repeat": 1,
+      "real_rows": 1,
+      "ids_state_vectors_exact": true,
+      "retired_rows_while_primary_continues": null
+    },
+    {
+      "group": 2,
+      "repeat": 0,
+      "real_rows": 2,
+      "ids_state_vectors_exact": true,
+      "retired_rows_while_primary_continues": null
+    },
+    {
+      "group": 2,
+      "repeat": 1,
+      "real_rows": 2,
+      "ids_state_vectors_exact": true,
+      "retired_rows_while_primary_continues": null
+    },
+    {
+      "group": 3,
+      "repeat": 0,
+      "real_rows": 3,
+      "ids_state_vectors_exact": true,
+      "retired_rows_while_primary_continues": null
+    },
+    {
+      "group": 3,
+      "repeat": 1,
+      "real_rows": 3,
+      "ids_state_vectors_exact": true,
+      "retired_rows_while_primary_continues": null
+    },
+    {
+      "group": 4,
+      "repeat": 0,
+      "real_rows": 3,
+      "ids_state_vectors_exact": true,
+      "retired_rows_while_primary_continues": null
+    },
+    {
+      "group": 4,
+      "repeat": 1,
+      "real_rows": 3,
+      "ids_state_vectors_exact": true,
+      "retired_rows_while_primary_continues": null
+    },
+    {
+      "group": 5,
+      "repeat": 0,
+      "real_rows": 4,
+      "ids_state_vectors_exact": true,
+      "retired_rows_while_primary_continues": null
+    },
+    {
+      "group": 5,
+      "repeat": 1,
+      "real_rows": 4,
+      "ids_state_vectors_exact": true,
+      "retired_rows_while_primary_continues": null
+    },
+    {
+      "group": 6,
+      "repeat": 0,
+      "real_rows": 3,
+      "ids_state_vectors_exact": true,
+      "retired_rows_while_primary_continues": true
+    },
+    {
+      "group": 6,
+      "repeat": 1,
+      "real_rows": 3,
+      "ids_state_vectors_exact": true,
+      "retired_rows_while_primary_continues": true
+    }
+  ],
+  "raw_hidden_and_normalized_arrays": 102,
+  "correctness_sampled_peak_adapter_bytes": 27073519616,
+  "replay_verifier_sha256": "15cde1d41f6de69afddfffbaa88a96a212085daedb4a80619bb83b482c921dfe",
+  "archived_replay_verifier_sha256": "15cde1d41f6de69afddfffbaa88a96a212085daedb4a80619bb83b482c921dfe",
+  "broad_quality_qualified": false,
+  "b8_qualified": false,
+  "actual_4k_qualified": false,
+  "streaming_http_qualified": false,
+  "performance_admitted": false,
+  "scope": "Prospective physical B4/T32prefill/T4decode BF16 private-padding/lifecycle gate after closed full packed MTP parent and both replays. Fourteen repeated cases,1/2/3/4real rows; independent same-precision real-row IDs/logical states/raw hidden+normalized; allprefill/dummy freeze/duplicate checks, explicit0/1/2/4prefix commits, rollback/pending ownership, full reset, mixed EOS retirement and callback ordinals. No broad quality, B8, actual4K, SSE/HTTP, serving memory, speed or2x admission. Full14case scope-fixed attempt2; prior harness failure remains failed. Same native97c binary. Only direct identical six guard calls and interim progress preservation replace the unsupported closure."
+}

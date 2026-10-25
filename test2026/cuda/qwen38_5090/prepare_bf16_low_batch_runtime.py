@@ -1,0 +1,56 @@
+"""Local B1 operator preparation; the real full14case parent is mandatory."""
+from pathlib import Path
+import argparse,hashlib,json,zipfile
+
+sha=lambda f:hashlib.sha256(f.read_bytes()).hexdigest()
+METHODS=('bf16_kv_low_batch_candidate.h','bf16_kv_low_batch_candidate.cu','probe_bf16_low_batch_attention.cu',
+ 'probe_bf16_low_batch_policy.cpp','bf16_low_batch_attention_oracle.py','bf16_kv_overlay_oracle.py',
+ 'probe_bf16_kv_overlay_native.cu','test_bf16_low_batch_candidate.py','test_bf16_kv_overlay_oracle.py',
+ 'run_bf16_low_batch_attention.py','verify_bf16_low_batch_attention.py','compile_bf16_low_batch_attention.bat','prepare_bf16_low_batch_runtime.py',
+ 'run_logged.py','monitor_native_probe.py','sample_vram.py','verify_bf16_padded_lifecycle_scope_fixed.py',
+ 'evidence/bf16-low-batch-attention-offline-preparation.json','evidence/bf16-low-batch-runner-derivation.json',
+ 'evidence/bf16-low-batch-fp64-reference-values.json','evidence/nvfp4-config.json')
+
+def main():
+ parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('--proofs',type=Path,required=True);parser.add_argument('--observation',type=Path,required=True);parser.add_argument('--plan',type=Path,required=True)
+ args=parser.parse_args();m=Path(__file__).resolve().parent;repo=m.parents[2];parent='bf16-padded-lifecycle-scope-fixed-attempt2'
+ inputs=[args.proofs/(parent+suffix) for suffix in ('-verified.json','-remote-verified.json','-evidence.zip')]+[args.observation]
+ missing=[str(f) for f in inputs if not f.is_file()]
+ if missing:print(json.dumps({'status':'b1_operator_prerequisites_not_ready_no_preparation','missing':missing}));return 2
+ raw=(args.proofs/(parent+'-remote-verified.json')).read_bytes();proof=json.loads(raw)
+ assert proof==json.loads((args.proofs/(parent+'-verified.json')).read_bytes())
+ assert proof['status']=='bf16_padded_lifecycle_replayed' and len(proof['cases'])==14 and proof['raw_hidden_and_normalized_arrays']==102 and not proof['performance_admitted']
+ assert proof['replay_verifier_sha256']==proof['archived_replay_verifier_sha256']==sha(m/'verify_bf16_padded_lifecycle_scope_fixed.py')
+ assert sha(args.proofs/(parent+'-evidence.zip'))==proof['archive_sha256']
+ observed=json.loads(args.observation.read_bytes())
+ assert observed['status']=='integrated_top1_post_lifecycle_install_observed' and observed['parent_proof_sha256']==hashlib.sha256(raw).hexdigest() and observed['parent_archive_sha256']==proof['archive_sha256']
+ assert observed['observer_sha256']==sha(m/'observe_integrated_batch_top1_install.py') and not observed['live_study_executables'] and observed['gpu_used_mib']<1024
+ offline=json.loads((m/'evidence/bf16-low-batch-attention-offline-preparation.json').read_bytes());compiled=json.loads((m/'evidence/bf16-low-batch-attention-local-build.json').read_bytes())
+ assert compiled['status']=='low_batch_cpu_policy_oracle_and_local_compile_passed_gpu_unrun' and not compiled['gpu_executed']
+ assert offline['source_sha256']==compiled['source_sha256'] and len(offline['case_plan'])==44 and offline['planned_fp64_witness_scalars']==119040
+ for n,h in offline['source_sha256'].items():assert sha(repo/n)==h,('Source drift',n)
+ files={'Garnet/'+n:h for n,h in offline['source_sha256'].items()}
+ files.update({'Garnet/test2026/cuda/qwen38_5090/'+n:sha(m/n) for n in METHODS})
+ header_path='tools/bf16-kv-native/bf16_kv_fixture_layout.h';files[header_path]=compiled['fixture_header_sha256']
+ files['results/integrated-top1-install-observation.json']=sha(args.observation)
+ with zipfile.ZipFile(args.proofs/(parent+'-evidence.zip')) as z:
+  w=json.loads(z.read('results/'+parent+'/workflow.json'))
+  assert w['exit_code']==0 and w['cleanup_finished'] and w['source_sha256']==w['source_after_sha256']==observed['qualified_parent_source_sha256']
+ p={'status':'isolated_b1_attention_operator_prepared_unrun','files':files,'inherited_model_sources':observed['qualified_parent_source_sha256'],
+  'tools':observed['tools'],'vcvars':observed['vcvars'],'nvcc':observed['nvcc'],'host_compiler':observed['host_compiler'],
+  'parent':parent,'parent_proof_sha256':hashlib.sha256(raw).hexdigest(),'parent_archive_sha256':proof['archive_sha256'],
+  'observed_unused_library_sha256':proof['library_sha256'],'fixture_header_sha256':compiled['fixture_header_sha256'],
+  'scope':'Separate B1/T4,T32/cap4096 attention numerical operator only, before any production source change.44predeclared cases,119040selected FP64 scalars,3graph profiles/104negative/40chunk-cache equivalence controls, complete readonly canonical and small inputs/canaries. Native Garnet DLL not loaded/replaced; old B4/B8 admission unchanged. Commit/helper/plugin/lowering/model/actual4K/quality/HTTP/speed remain unqualified.'}
+ target=m/'evidence/bf16-low-batch-attention-preparation.json';data=json.dumps(p,indent=2).encode()
+ if target.exists():assert target.read_bytes()==data
+ else:target.write_bytes(data)
+ plan={'status':'b1_operator_method_upload_plan_prepared_unrun',
+  'methods':[{'local':str(m/n),'target':'Garnet/test2026/cuda/qwen38_5090/'+n,'sha256':sha(m/n)} for n in METHODS],
+  'preparation':{'local':str(target),'target':'Garnet/test2026/cuda/qwen38_5090/evidence/'+target.name,'sha256':sha(target)},
+  'scope':'Check existing remote files against desired/known parent pins, preserve unexpected bytes, acknowledge each upload, verify unchanged base/header/tool/library and absent output/owned low-batch executables before the one original controller start. Use fixed tools/bf16-kv-native; never run beside another GPU worker.'}
+ data=json.dumps(plan,indent=2).encode()
+ if args.plan.exists():assert args.plan.read_bytes()==data
+ else:args.plan.write_bytes(data)
+ print(json.dumps({'status':plan['status'],'methods':len(METHODS),'preparation_sha256':sha(target)}));return 0
+
+if __name__=='__main__':raise SystemExit(main())
