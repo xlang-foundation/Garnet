@@ -4246,3 +4246,38 @@ model stays failed; plugin qualification cannot promote model/quality/HTTP.
 Current integrated full-model original handle remains LIVE; no remote upload,
 source/build/runtime mutation or competing GPU worker. B1 helper/lowering/full
 model, broad quality, actual4K, tuned/INT4/4B, repetitions and2x goals stay open.
+
+
+2026-10-25: Disabled mode closes, enabled mode lives; isolated B1 helper compile.
+Original integrated-batch-top1-model-lifecycle-attempt1 controller remains LIVE.
+Disabled mode now exits0, controller exact-parent comparison passes14cases and
+102raw vectors; final reset completes and eight owned private engine files are
+hashed/retired by original method. Enabled mode starts in a separate process.
+Same retained native hashlib warnings remain visible; SHA256 continues working.
+
+Single fixed evidence-only snapshot outside live job directory is4,869,668bytes/
+105payload files, SHA f0269fb8e0a797465df20a8c5199f68edff99a17c496f430e08dc36d2b532692.
+Local independent CPU replay verifies every snapshot/224parent manifest member,
+all14case report/ID/state/callback/prefix/reset/retirement fields and102raw vectors
+(8,355,840bytes); equals original controller parity. Actual sampler host dispatch
+counters0->4078legacy and0->0parallel, correct for disabled mode. Counters exclude
+GPU graph replays and are not speed. Snapshot is explicitly whole-run UNFINISHED:
+no final source/runtime-after closure, enabled completion or final model proof.
+It cannot unblock B1 runtime factories or serving. Transfer/auth-prompt/bulk-input
+issues and preserved partial copies are recorded separately; no GPU restart,
+deployed source/DLL/SDK mutation or competing GPU work occurred.
+
+Prepared CUDABF16LowBatchKVDeltaCommit as a distinct unregistered native package.
+Literal old helper with new B1-only metadata dialect/class and B1 commit call;
+all tensor/runtime ownership, descriptors/types/strides/device/writable/byte-size/
+alignment, overflow/alias, strict integer span, lease/Finish, mutex and poison/
+close/rebuild guards remain. Original B4/B8 helper/parser sources unchanged.
+Private local /MT compilation of B1 and unchanged legacy helper succeeds against
+main public SDK header cffd02c2...matching actual remote native build; current
+remote compatibility header852e5c3c...also matches. Objects c8943217.../ec1848fe...,
+never linked, loaded, registered or executed. Initial wrong JSON-header pin
+path failed before compilation; original method/observed-failure summary retained,
+only pin path corrected. No C++/kernel/control/tolerance change for correction.
+Actual build/source/hash methods and preparation ZIP/JSON preserved. Native
+ownership/lifetime/GPU helper behavior, plugin/lowering/full-model, broad quality,
+actual4K, HTTP, tuned/INT4/4B and repetitions remain open; original2x/halfTTFT unmet.

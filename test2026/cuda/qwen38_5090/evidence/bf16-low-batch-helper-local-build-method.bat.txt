@@ -1,0 +1,10 @@
+@echo off
+call "C:\Program Files\Microsoft Visual Studio\18\Community\VC\Auxiliary\Build\vcvars64.bat" -vcvars_ver=14.29
+if errorlevel 1 exit /b %errorlevel%
+set "TMP=%~dp0"
+set "TEMP=%TMP%"
+cl /nologo /EHsc /std:c++17 /MT /utf-8 /DNOMINMAX /DXLANG3_USE_SHARED /DGARNET_SERVING_EXPORTS /I"D:\CantorAI\work\qwen38-5090\test2026\cuda\qwen38_5090" /I"D:\CantorAI\work\qwen38-5090\src" /I"D:\CantorAI\work\qwen38-5090\src\tensor" /I"D:\CantorAI\work\qwen38-5090\src\cuda" /I"D:\CantorAI\work\qwen38-5090\src\backends\tensorrt" /I"D:\CantorAI\work\qwen38-5090\third_party" /I"D:\CantorAI\xlang3\sdk" /I"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v13.2\include" /c "D:\CantorAI\work\qwen38-5090\test2026\cuda\qwen38_5090\cuda_bf16_low_batch_kv_delta_commit.cpp" /Fo"%~dp0b1-helper-candidate.obj"
+if errorlevel 1 exit /b %errorlevel%
+cl /nologo /EHsc /std:c++17 /MT /utf-8 /DNOMINMAX /DXLANG3_USE_SHARED /DGARNET_SERVING_EXPORTS /I"D:\CantorAI\work\qwen38-5090\test2026\cuda\qwen38_5090" /I"D:\CantorAI\work\qwen38-5090\src" /I"D:\CantorAI\work\qwen38-5090\src\tensor" /I"D:\CantorAI\work\qwen38-5090\src\cuda" /I"D:\CantorAI\work\qwen38-5090\src\backends\tensorrt" /I"D:\CantorAI\work\qwen38-5090\third_party" /I"D:\CantorAI\xlang3\sdk" /I"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v13.2\include" /c "D:\CantorAI\work\qwen38-5090\src\backends\tensorrt\cuda_bf16_kv_delta_commit.cpp" /Fo"%~dp0b1-helper-unchanged-legacy.obj"
+if errorlevel 1 exit /b %errorlevel%
+exit /b 0
