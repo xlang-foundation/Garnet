@@ -11,6 +11,7 @@
 #include "../backends/tensorrt/cuda_tensor_io.h"
 #include "../backends/tensorrt/cuda_packed_prefix.h"
 #include "../backends/tensorrt/cuda_kv_delta_commit.h"
+#include "../backends/tensorrt/cuda_bf16_kv_delta_commit.h"
 #include "../backends/cpu/tokenizer_api.h"
 #include <string>
 #include <deque>
@@ -190,6 +191,7 @@ namespace Garnet
             APISET().AddClass<0,CUDATensorIO>("cuda_tensor_io");
             APISET().AddClass<0,CUDAPackedPrefix>("cuda_packed_prefix");
             APISET().AddClass<0,CUDAKVDeltaCommit>("cuda_kv_delta_commit");
+            APISET().AddClass<0,CUDABF16KVDeltaCommit>("cuda_bf16_kv_delta_commit");
             APISET().AddClass<0,CPUTokenizer>("tokenizer");
 			APISET().AddVarFunc("replace_rows_by_mask", &GarnetAPI::ReplaceRowsByMask);
 			APISET().AddVarFunc("tensor_last_row", &GarnetAPI::TensorLastRow);

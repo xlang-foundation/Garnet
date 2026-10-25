@@ -374,7 +374,7 @@ namespace Garnet {
                 cached.allocator = std::make_unique<TRTSyncAllocator>(device);
                 cached.runtime->setGpuAllocator(cached.allocator.get());
             }
-            if(!EnsureBF16ProjectionPluginRegistered()||!EnsureQwen35DeltaPluginRegistered()||!EnsureModelOptNVFP4PluginRegistered()||!EnsureModelOptFP8PluginRegistered()||!EnsureCTInt4G128PluginRegistered())return nullptr;
+            if(!EnsureBF16ProjectionPluginRegistered()||!EnsureQwen35DeltaPluginRegistered()||!EnsureModelOptNVFP4PluginRegistered()||!EnsureModelOptFP8PluginRegistered()||!EnsureCTInt4G128PluginRegistered()||!EnsureBF16KVOverlayPluginRegistered())return nullptr;
             LogTRTMemoryCheckpoint("before_engine_deserialize",enginePath);
             cached.engine = cached.runtime->deserializeCudaEngine(engineStream);
             if (!cached.engine) {
@@ -6189,9 +6189,29 @@ namespace Garnet {
                         b["qwen35_conv_bind_active"],keywordText("layer_prefix"),keywordInt("hidden_dim",0),keywordInt("tokens",0),
                         keywordInt("key_heads",0),keywordInt("value_heads",0),keywordInt("key_dim",0),keywordInt("value_dim",0),float(number("eps",1e-6)),keywordInt("register_delta_128",0)!=0);
                 }else if(opName=="qwen35_full_decoder_chunk") {
+                    auto* bf16Attribute=FindKeyword(kwParams,"canonical_bf16_kv_overlay");
+                    if(bf16Attribute&&!(bf16Attribute->second.IsInt64()||bf16Attribute->second.IsUInt64()))throw std::invalid_argument("BF16 canonical KV opt-in requires integer0 or1");
+                    const auto bf16Mode=bf16Attribute?bf16Attribute->second.ToLongLong():0;
+                    if(bf16Mode!=0&&bf16Mode!=1)throw std::invalid_argument("BF16 canonical KV opt-in must be0 or1");
                     auto* overlayAttribute=FindKeyword(kwParams,"canonical_kv_overlay");
                     const auto overlayMode=overlayAttribute?overlayAttribute->second.ToLongLong():0;
                     if(overlayMode!=0&&overlayMode!=1)throw std::invalid_argument("Canonical KV opt-in must be0 or1");
+                    if(bf16Mode&&overlayMode)throw std::invalid_argument("FP32 and BF16 canonical KV modes are exclusive");
+                    BF16KVOverlayConfig bf16Overlay{};
+                    if(bf16Mode){
+                        const auto dims=ops.shape(source);
+                        if(dims.size()!=3||(dims[0]!=4&&dims[0]!=8)||(dims[1]!=4&&dims[1]!=32)||dims[2]!=5120||
+                            capturedWeightProfile!="modelopt_mixed"||!FindKeyword(kwParams,"external_compressed_weights")||external.empty()||FindKeyword(kwParams,"external_weights")||
+                            keywordInt("fused_attention",0)!=1||keywordInt("joined_mlp_projections",0)!=1)
+                            throw std::invalid_argument("BF16 canonical KV requires explicit shared mixed joined B4/8,T4/32 geometry");
+                        auto exact=[&](const char* key)->int64_t{auto* item=FindKeyword(kwParams,key);
+                            if(!item||!(item->second.IsInt64()||item->second.IsUInt64())||
+                                (item->second.IsUInt64()&&item->second.ToUInt64()>uint64_t(INT64_MAX)))throw std::invalid_argument("BF16 canonical KV metadata requires bounded integers");
+                            return item->second.ToLongLong();};
+                        if(exact("kv_overlay_strategy")!=1)throw std::invalid_argument("BF16 canonical KV has one fixed reduction strategy");
+                        bf16Overlay={{dims[0],dims[1],24,4,4096,256},exact("canonical_state_width"),exact("canonical_key_offset"),exact("canonical_value_offset")};
+                        if(!ValidBF16KVOverlayConfig(bf16Overlay))throw std::invalid_argument("Unqualified BF16 canonical KV layout");
+                    }
                     CanonicalKVOverlayConfig overlay{};
                     if(overlayMode){
                         if(capturedWeightProfile!="modelopt_mixed"||!FindKeyword(kwParams,"external_compressed_weights")||external.empty()||FindKeyword(kwParams,"external_weights")||
@@ -6205,7 +6225,7 @@ namespace Garnet {
                     }
                     auto* stageAttribute=FindKeyword(kwParams,"diagnostic_full_stages");
                     const auto diagnostic=stageAttribute?stageAttribute->second.ToLongLong():0;
-                    if((diagnostic!=0&&diagnostic!=1)||(diagnostic&&overlayMode))throw std::invalid_argument("Full attention stage diagnostic must be0 or1 and exclude canonical KV");
+                    if((diagnostic!=0&&diagnostic!=1)||(diagnostic&&(overlayMode||bf16Mode)))throw std::invalid_argument("Full attention stage diagnostic must be0 or1 and exclude canonical KV");
                     auto dimensions=ops.shape(source);
                     if(diagnostic&&(capturedWeightProfile!="modelopt_mixed"||!external.empty()||
                         dimensions.size()!=3||(dimensions[0]!=1&&dimensions[0]!=2)||dimensions[1]!=16||dimensions[2]!=5120||
@@ -6225,7 +6245,7 @@ namespace Garnet {
                         keywordText("layer_prefix"),keywordInt("num_heads",0),keywordInt("num_kv_heads",0),keywordInt("head_dim",0),
                         keywordInt("rotary_dim",0),{keywordInt("mrope_t",0),keywordInt("mrope_h",0),keywordInt("mrope_w",0)},
                         float(number("rope_theta",1e7)),float(number("eps",1e-6)),keywordInt("fused_attention",0)!=0,keywordInt("joined_mlp_projections",0)!=0,diagnostic?&diagnosticStages:nullptr,
-                        overlayMode?b["qwen35_attention_bind_canonical"]:nullptr,overlayMode?&overlay:nullptr);
+                        (overlayMode||bf16Mode)?b["qwen35_attention_bind_canonical"]:nullptr,overlayMode?&overlay:nullptr,bf16Mode?&bf16Overlay:nullptr);
                     if(diagnostic){
                         if(diagnosticStages.size()!=10)throw std::runtime_error("Full attention stage contract changed");
                         std::vector<ITensor*> parts{lastOutput};

@@ -14,7 +14,7 @@ class CUDAPackedDeltaReplayVerifier(CUDATargetVerifier):
             raise ValueError('Packed replay requires retained packed decoder projections')
         self.replay_graph=None;self.cache_spans=None;self.native_prefix=None
         self.deferred=bool(getattr(decoder,'deferred_state_commit',False))
-        self.kv_delta=bool(getattr(decoder,'kv_delta_state',False))
+        self.kv_delta=bool(getattr(decoder,'kv_delta_state',False) or getattr(decoder,'bf16_kv_state',False))
         if native_prefix_commit is None:native_prefix_commit=bool(getattr(decoder,'native_prefix_commit',False))
         self.reuse_verified_head=bool(getattr(decoder,'reuse_verified_head',False))
         # Accepted hidden rows and their authoritative predictions survive

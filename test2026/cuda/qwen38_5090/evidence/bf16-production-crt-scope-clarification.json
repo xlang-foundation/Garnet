@@ -1,0 +1,8 @@
+{
+  "status": "production_crt_scope_clarified",
+  "cmake_sha256": "253fa11ae888a569d2e1a63923d12297ca928c33a83a69dc56d2d6a50a81cc19",
+  "production_setting": "CMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded (Release /MT); CUDA host flags replace /MD with /MT. Study wrapper imports the preserved XLang3 C ABI runtime.",
+  "earlier_cpu_wrapper_setting": "Standalone CPU wrapper executable and its link objects used /MD consistently. It passed wire/shape tests only, never enqueue/model execution.",
+  "correction": "The archived earlier build receipt phrase match the plugin/production host runtime was inaccurate about production. It meant internal standalone test link consistency. Archived evidence remains unchanged; this addendum records actual CMake behavior.",
+  "scope": "New helper and metadata CLI compile /MT. The actual Garnet /MT DLL, engine enqueue and helper leases still require runtime tests; standalone /MD contracts are not production ABI qualification."
+}

@@ -16,6 +16,7 @@
 #include "qwen35_delta_plugin.h"
 #include "qwen35_attention_core_plugin.h"
 #include "qwen35_canonical_kv_overlay_plugin.h"
+#include "qwen38_bf16_kv_overlay_plugin.h"
 #include "qwen35_f32_barrier_plugin.h"
 
 namespace Garnet {
@@ -390,14 +391,23 @@ public:
     }
     T* fullDecoderChunk(T* x,T* key,T* value,T* positions,T* slots,T* active,const std::string& layer,
         int heads,int kv,int dim,int rotary,std::array<int,3> sections,float theta,float eps,bool fusedAttention=false,bool joinedMLPProjections=false,std::vector<T*>* diagnosticStages=nullptr,
-        T* canonical=nullptr,const CanonicalKVOverlayConfig* overlay=nullptr) {
-        const bool delta=canonical!=nullptr||overlay!=nullptr;
-        if(delta&&(!canonical||!overlay||!ValidCanonicalKVOverlayConfig(*overlay)||!fusedAttention||!joinedMLPProjections||diagnosticStages))
+        T* canonical=nullptr,const CanonicalKVOverlayConfig* overlay=nullptr,const BF16KVOverlayConfig* bf16Overlay=nullptr) {
+        const bool bf16Delta=bf16Overlay!=nullptr;
+        const bool delta=canonical!=nullptr||overlay!=nullptr||bf16Delta;
+        if(bf16Delta&&(!canonical||overlay||!ValidBF16KVOverlayConfig(*bf16Overlay)||!fusedAttention||!joinedMLPProjections||diagnosticStages))
+            throw std::invalid_argument("BF16 canonical KV requires explicit shared joined B4/8,T4/32 profile");
+        if(delta&&!bf16Delta&&(!canonical||!overlay||!ValidCanonicalKVOverlayConfig(*overlay)||!fusedAttention||!joinedMLPProjections||diagnosticStages))
             throw std::invalid_argument("Canonical KV requires qualified fused joined B4/T4 mode");
-        auto xs=shape(x),ks=delta?std::vector<int>{4,4,4096,256}:shape(key);
+        auto xs=shape(x),ks=bf16Delta?std::vector<int>{bf16Overlay->attention.batch,4,4096,256}:(delta?std::vector<int>{4,4,4096,256}:shape(key));
         if(xs.size()!=3||xs[1]>128||ks.size()!=4||kv<=0||dim<=0)throw std::invalid_argument("Qwen3.5 full chunk dimensions invalid");
         const int batch=xs[0],tokens=xs[1],hidden=xs[2],capacity=ks[2],width=kv*capacity*dim;
-        if(delta){
+        if(bf16Delta){
+            if(xs!=std::vector<int>{bf16Overlay->attention.batch,bf16Overlay->attention.tokens,5120}||heads!=24||kv!=4||dim!=256||rotary!=64||sections!=std::array<int,3>{11,11,10}||
+                layer!="model.language_model.layers."+std::to_string(4*((bf16Overlay->key_offset-2482176)/6676480)+3)||key||value)
+                throw std::invalid_argument("BF16 canonical KV layer/geometry/binding mismatch");
+            require(canonical,{batch,int(bf16Overlay->state_width)});
+            if(canonical->getType()!=nvinfer1::DataType::kFLOAT)throw std::invalid_argument("BF16 canonical KV requires an FP32 carrier");
+        }else if(delta){
             if(xs!=std::vector<int>{4,4,5120}||heads!=24||kv!=4||dim!=256||rotary!=64||sections!=std::array<int,3>{11,11,10}||
                 layer!="model.language_model.layers."+std::to_string(4*((overlay->key_offset-2482176)/10870784)+3)||key||value)
                 throw std::invalid_argument("Canonical KV layer/geometry/binding mismatch");
@@ -443,8 +453,15 @@ public:
                 return rotary==dim?out:cat({out,slice(input,-1,rotary,dim-rotary)},3);
             };
             if(delta){
-                if(!EnsureCanonicalKVOverlayPluginRegistered())throw std::runtime_error("Canonical KV plugin registration failed");
-                auto* plugin=new CanonicalKVOverlayPlugin(*overlay);plugins.push_back(plugin);
+                nvinfer1::IPluginV2DynamicExt* plugin=nullptr;
+                if(bf16Delta){
+                    if(!EnsureBF16KVOverlayPluginRegistered())throw std::runtime_error("BF16 canonical KV plugin registration failed");
+                    plugin=new BF16KVOverlayPlugin(*bf16Overlay);
+                }else{
+                    if(!EnsureCanonicalKVOverlayPluginRegistered())throw std::runtime_error("Canonical KV plugin registration failed");
+                    plugin=new CanonicalKVOverlayPlugin(*overlay);
+                }
+                plugins.push_back(plugin);
                 key=cast(rotate(k));value=cast(reshape(projectedV,{batch,tokens,kv,dim}));
                 T* inputs[]={cast(rotate(q)),key,value,cast(gate),canonical,cast(slots),cast(active)};
                 auto* result=n.addPluginV2(inputs,7,*plugin);if(!result)throw std::runtime_error("Canonical KV attention construction failed");

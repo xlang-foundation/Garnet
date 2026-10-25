@@ -1,0 +1,76 @@
+{
+  "source": "probe_kv_delta_full_b4_t4.py",
+  "source_sha256": "3fba44d6c6f21ac8e35f91caef38c086c863d57dd140603d3282ff45a8b7d25b",
+  "changes": [
+    [
+      "import base64,hashlib,json,os,sys",
+      "import base64,copy,hashlib,json,os,sys"
+    ],
+    [
+      "'shared_output_storage':True,'scope':'Experimental compact-state B4/T4 host/deferred MTP3. Two fixed context-only canonical-view engines share compact output storage. Strict same-DLL default-off and retained B1 IDs/ordinary/MTP state hash witnesses and raw last-hidden; negative/zero-prefix final-write guards. Full raw state absent, no broad quality/actual4K/HTTP/speed admission.'",
+      "'shared_output_storage':True,'bf16_kv_state':True,'prefill_chunk':32,'register_delta_128':True,'scope':'Opt-in BF16 full KV and FP32 GDN B4/T32prefill/T4decode with register128 and MTP3. Exact fixed-corpus retained FP32/B1 token IDs and same-BF16-profile ordinary/MTP full-state hashes/raw hidden are required. BF16 physical state is never compared numerically or byte-exactly against FP32 KV. Metadata/negative/zero-prefix checks precede generation. Full raw canonical arrays absent; broad quality/actual4K/HTTP/speed admission remain open.'"
+    ],
+    [
+      "'kv_delta_state':True",
+      "'kv_delta_state':False"
+    ],
+    [
+      " decoder=CUDAPackedDecoder(str(checkpoint),config['text_config'],batch,4096,4,4,",
+      " decoder=CUDAPackedDecoder(str(checkpoint),config['text_config'],batch,4096,32,4,"
+    ],
+    [
+      "shared_output_storage=True,kv_delta_state=True)",
+      "shared_output_storage=True,bf16_kv_state=True,register_delta_128=True)"
+    ],
+    [
+      " metadata=decoder.programs[4].delta_layout\n invalid_helper=garnet.cuda_kv_delta_commit();metadata_rejections=0\n def rejects(call,label):\n  try:call()\n  except Exception as error:return {'label':label,'error':repr(error)}\n  raise AssertionError('Invalid final-write operation was accepted: '+label)\n for key in ('batch','capacity','chunk','hidden_width','canonical_state_width','output_width','linear_replay_width','payload_width'):\n  invalid=json.loads(json.dumps(metadata));invalid[key]+=1\n  rejects(lambda:invalid_helper.build(json.dumps(invalid)),'summary-'+key);metadata_rejections+=1\n for layer in range(64):\n  invalid=json.loads(json.dumps(metadata));invalid['layers'][layer]['output_offset']+=1\n  rejects(lambda:invalid_helper.build(json.dumps(invalid)),'output-offset-'+str(layer));metadata_rejections+=1\n for layer in range(64):\n  key='value_offset' if layer%4==3 else 'replay_offset'\n  invalid=json.loads(json.dumps(metadata));invalid['layers'][layer][key]+=1\n  rejects(lambda:invalid_helper.build(json.dumps(invalid)),'state-offset-'+str(layer));metadata_rejections+=1\n assert metadata_rejections==136 and not json.loads(invalid_helper.stats_json())['ready']\n",
+      " metadata=decoder.programs[4].delta_layout\n invalid_helper=garnet.cuda_bf16_kv_delta_commit();metadata_rejections=0\n def rejects(call,label):\n  try:call()\n  except Exception as error:return {'label':label,'error':repr(error)}\n  raise AssertionError('Invalid BF16 final-write operation accepted: '+label)\n fixture_path=root/'results/bf16-kv-metadata-fixture.json';fixture_raw=fixture_path.read_bytes();fixture=json.loads(fixture_raw)\n assert len(fixture['bases'])==4 and len(fixture['mutations'])==8856\n for base in fixture['bases']:\n  invalid_helper.build(json.dumps(base));stats=json.loads(invalid_helper.stats_json())\n  assert stats['ready'] and not stats['poisoned'] and stats['owned_layout_bytes']==0 and stats['commits']==0\n  rejects(lambda:invalid_helper.build(json.dumps(base)),'rebuild-without-close');invalid_helper.close()\n for item in fixture['mutations']:\n  invalid=copy.deepcopy(fixture['bases'][item['base']]);patch=item['patch'];keys=patch['path'].split('/')[1:];parent=invalid\n  for key in keys[:-1]:parent=parent[int(key)] if isinstance(parent,list) else parent[key]\n  key=int(keys[-1]) if isinstance(parent,list) else keys[-1]\n  if patch['op']=='remove':del parent[key]\n  else:parent[key]=patch['value']\n  rejects(lambda:invalid_helper.build(json.dumps(invalid)),'metadata-'+str(metadata_rejections));metadata_rejections+=1\n assert metadata_rejections==8856 and not json.loads(invalid_helper.stats_json())['ready']\n report['runtime_metadata_gate']={'valid_profiles':4,'rebuild_rejections':4,'invalid_layouts':metadata_rejections,'fixture_sha256':hashlib.sha256(fixture_raw).hexdigest()}\n path.write_text(json.dumps(report,indent=2))\n"
+    ],
+    [
+      "('nonfinite-count',[0,float('nan')]+[0,0]*3)",
+      "('nonfinite-count',[0,float('nan')]+[0,0]*3),('boolean-start',[True,1]+[0,0]*3),('boolean-count',[0,True]+[0,0]*3),('fractional-count',[0,1.0]+[0,0]*3),('negative-count',[0,-1]+[0,0]*3)"
+    ],
+    [
+      " invalid_helper.close()\n decoder.delta_commit.commit",
+      " invalid_helper.close()\n prefill_target=io.storage_view(target,[4,40927232])\n rejected.append(rejects(lambda:decoder.bf16_prefill_commit.commit(prefill_target,linear,decoder.state,[0,0]*4),'T32-replay-source'))\n decoder.bf16_prefill_commit.commit(prefill_target,prefill_target,decoder.state,[4096,0]*4)\n decoder.delta_commit.commit"
+    ],
+    [
+      "'valid_zero_prefix_modes':2",
+      "'valid_zero_prefix_modes':3"
+    ],
+    [
+      "and two valid zero-prefix modes;",
+      "and three valid zero-prefix modes;"
+    ],
+    [
+      "'canonical_state_width']==173932544",
+      "'canonical_state_width']==106823680"
+    ],
+    [
+      "'strategies']==[0,1]",
+      "'strategies']==[1,1]"
+    ],
+    [
+      " del target,linear,alias_target,alias_linear,wrong",
+      " del target,linear,alias_target,alias_linear,wrong,prefill_target"
+    ],
+    [
+      "   result['default_off_ids_and_state_exact']=generated==old['generated_ids'] and ordinary_state==old['ordinary_state'] and mtp_state==old['mtp_state']",
+      "   result['retained_fp32_reference_ids_exact']=generated==old['generated_ids']"
+    ],
+    [
+      "   retained=prior_cases[(group_index,repeat)]\n   def legacy_matches(state,old):\n    return state['state_row_sha256']==old['state_row_sha256']*2 and state['slots']==old['slots']*2 and state['state_words_per_row']==old['state_words_per_row'] and state['last_hidden_pair_sha256']==[old['last_hidden_sha256']]*2\n   result['cross_profile_legacy_state_exact_diagnostic']=legacy_matches(ordinary_state,retained['ordinary_state']) and legacy_matches(mtp_state,retained['mtp_state'])\n",
+      "   # FP32 canonical words have a different layout/precision; no cross-precision state equality claim.\n"
+    ],
+    [
+      "   assert result['default_off_ids_and_state_exact'],'Compact canonical KV differs from qualified same-DLL default-off states or IDs'",
+      "   assert result['retained_fp32_reference_ids_exact'],'BF16 candidate differs from retained fixed-corpus FP32 token IDs; quality gate fails, raw outputs retained'"
+    ],
+    [
+      "\"\"\"Unrun B4 T4 host-embedding MTP3 candidate; strict same-profile state and retained IDs.\"\"\"",
+      "\"\"\"BF16 B4/T32prefill/T4decode integration: strict ordinary/MTP state and fixed-corpus IDs.\"\"\""
+    ]
+  ],
+  "result_sha256": "eb94098a5f19c7c1cac5b3908212cc8e5b391adc9458192c2b850be300a47f79",
+  "scope": "Deterministic probe derivation. Fixed corpus IDs remain strict; cross-precision FP32 physical-state comparison is explicitly removed because cache layout/precision differs. New BF16 ordinary/MTP physical state must agree exactly. No model execution or performance result."
+}

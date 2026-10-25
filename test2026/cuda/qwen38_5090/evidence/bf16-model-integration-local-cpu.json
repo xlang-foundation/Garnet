@@ -1,0 +1,29 @@
+{
+  "status": "bf16_model_integration_local_cpu_checked_native_build_pending",
+  "helper_compile_exit_code": 0,
+  "metadata_compile_exit_code": 0,
+  "metadata_test_exit_code": 0,
+  "metadata_profiles": 4,
+  "invalid_metadata_layouts": 8856,
+  "python_cpu_tests": 33,
+  "python_cpu_exit_code": 0,
+  "source_sha256": {
+    "src/backends/tensorrt/cuda_bf16_kv_delta_commit.cpp": "bd8b4ce54bdbcd3b649345ece884b88cb0d46f2ce5198f4ade1bbfa1366e4181",
+    "src/backends/tensorrt/cuda_bf16_kv_delta_commit.h": "15e1a9cb5cc027db9985e08086e3405f1116d031e47dd15768ee64d85f161ecc",
+    "src/backends/tensorrt/qwen38_bf16_kv_layout_contract.h": "cb8edd0f2b1e393bb83d3b16b448cf2a992084f885fcc31e1316d56c2d0adbc5",
+    "test2026/cuda/qwen38_5090/probe_bf16_kv_metadata_contract.cpp": "7903f1fc33eb606740229c4d2ba6b12991d4e86bf72ef3f280dfd82b541e8727",
+    "test2026/cuda/qwen38_5090/prepare_bf16_kv_metadata_fixture.py": "bdbefe6fa342c3c7c35d19a697d9c80a5fc199aa85c7843c87a7e0247b165bdf"
+  },
+  "raw_logs_sha256": {
+    "bf16-kv-helper-compile.log": "5d966ce83d3ed58505f001831b5fab21f6cda56952332d1c52483189cb29c5de",
+    "bf16-kv-metadata-compile.log": "3147bf53c10c2c7e73ceb760e1bad63f3c26c4731b43e59cf93d2145263562dd",
+    "bf16-kv-metadata-cpu.log": "42fa7513d5bbe5ba931c2688ff9995c48df14a9531d1f63bc7bd992d7a0922a3",
+    "bf16-kv-model-cpu-contracts.log": "da3224d3c65574e2fd38f06ed9a81f2014a4cd5252d3c53db6974b4d03fedf8e"
+  },
+  "metadata_fixture_sha256": "7481110b5ec6c84c0f11d2d0f3dac2baa56fc5cd4399921a4ab3f3ef7e61ee5d",
+  "metadata_fixture_bytes": 996367,
+  "metadata_executable_sha256": "7e2a8716a25eaa9045c93978a5931fbbf53e1e37878b93a13a8ad4e1e1022085",
+  "helper_object_sha256": "e9df8a5941a8f63ee17615e1f8accd517fc2c86c1b0b7742e275e6ec82f25cb7",
+  "scope": "No local GPU used. Existing27CPU contracts/default graph fingerprint and six new BF16 construction/admission/transaction checks pass. Native metadata validator accepts four layouts and rejects8856 independently generated field/shape/type mutations. Only helper translation unit and pure metadata CLI compiled locally /MT; full native build, helper GPU leases/poisoning, TensorRT enqueue, full-model/B8 fit/quality/HTTP remain unqualified.",
+  "initial_test_fixture_error": "Added pending-close test incorrectly unpacked a helper that returns one decoder object. Corrected test setup to read d.events; subsequent full33test run passed. The runtime close-order guard was moved before touching the BF16 prefill helper."
+}
