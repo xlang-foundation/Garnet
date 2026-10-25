@@ -1,0 +1,11 @@
+from pathlib import Path
+import json,re
+w=Path(__file__).resolve().parent;o=w.parent/'outputs';rows=[]
+for name,suffix,flag,status in (
+ ('fixed-length-http-study-attempt1','-verified.json','--closed-http-archive-sha256','fixed_length_http_study_replayed'),
+ ('bf16-batch8-model-admission-attempt1','-verified.json','--closed-native-archive-sha256','bf16_batch8_internal_model_admission_replayed'),
+ ('mtp-prefill16-model-consistency-attempt1','-verified.json','--closed-mtp-archive-sha256','mtp_prefill16_short_target_model_replayed'),
+ ('sglang-output-characterization-attempt1','-remote-verified.json','--closed-characterization-archive-sha256','sglang_output_characterization_replayed')):
+ d=json.loads((o/(name+suffix)).read_bytes());assert d['status']==status and re.fullmatch('[0-9a-f]{64}',d['archive_sha256']);rows.extend((flag,d['archive_sha256']))
+command='C:/Python312/python.exe D:/CantorAI/5090-study-20261023/results/preflight-prefill16-full4k.py '+' '.join(rows)+' --closed-characterization-job sglang-output-characterization-attempt1'
+request={'start':command,'id':'prefill16-full4k-deployment-preflight-attempt1'};target=w/'prefill16-full4k-preflight-start-request.json';assert not target.exists();target.write_text(json.dumps(request,indent=2),encoding='utf8');print(json.dumps(request))

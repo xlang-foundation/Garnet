@@ -1,0 +1,48 @@
+{
+  "status": "sglang_output_characterization_closed_and_independently_replayed",
+  "recorded_utc": "2026-10-25T19:06:21.448639+00:00",
+  "archive_sha256": "73edaa3845cf5d57eda11eddfe1e1b393611cf17241a43ee456b1dbf88de4745",
+  "archive_bytes": 70670636,
+  "archive_files_verified": 1612,
+  "independent_proofs_identical": true,
+  "proof_sha256": "5fb911d98254a9793d88a2f74804765b2190b24008c3e734507766e64a059aec",
+  "actual_requests": 288,
+  "actual_client_overlap_waves": 135,
+  "serial_before_after": {
+    "text": {
+      "cases": 8,
+      "ids_exact": 8,
+      "texts_exact": 8
+    },
+    "image": {
+      "cases": 8,
+      "ids_exact": 8,
+      "texts_exact": 8
+    },
+    "mixed-color": {
+      "cases": 8,
+      "ids_exact": 8,
+      "texts_exact": 8
+    }
+  },
+  "changed_concurrent_nonstream_outputs": 95,
+  "changed_stream_texts": 47,
+  "mixed_color_spatial_semantic_controls_passed": 96,
+  "concurrent_mixed_color_controls_passed": 72,
+  "actual_remote_cpu_tests": 33,
+  "actual_remote_cpu_seconds": 11.691,
+  "server_exit_code": 0,
+  "stop_exit_code": 0,
+  "source_runtime_identity_and_cleanup_verified": true,
+  "correctness_sampled_peak_adapter_used_bytes": 29488750592,
+  "initial_replay_setup_failure": {
+    "supervisor_job": "sglang-output-characterization-independent-replay-attempt1",
+    "actual_exit_code": 1,
+    "failed_check": "args.scratch.is_dir()",
+    "scope": "First CLI used an absent scratch directory and stopped before reading/replaying the archive. Same verifier rerun with existing results directory succeeded; raw archive/checker/guards unchanged."
+  },
+  "physical_gpu_batch_or_numerical_cause_proven": false,
+  "new_broad_quality_or_performance_qualified": false,
+  "two_times_target_achieved": false,
+  "scope": "Post-run analysis of the already independently replayed correctness/overlap study. All output variants and source/PID/stop/runtime evidence preserved. Client concurrency correlates with observed changes; cause and semantic equivalence of long outputs are unproven. No new model run, model latency/throughput/quality-accuracy measurement or benchmark promotion."
+}
