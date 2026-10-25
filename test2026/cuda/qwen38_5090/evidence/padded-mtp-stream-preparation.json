@@ -1,0 +1,164 @@
+{
+  "status": "padded_mtp_stream_prepared_unrun",
+  "groups": 13,
+  "requests": 40,
+  "retained_stream_archive_sha256": "98b121a5d2d057f565f7bd2b152d856a53afbf5f43271b24f2b0a42636167d56",
+  "request_wire_sha256": "1456a5cb58a8a1c3709611f89b1fed7faacea609c428d1428def7704957b1b96",
+  "probe_derivation": [
+    [
+      "use_mtp=len(jobs)==4 and len({job['body']['max_tokens'] for job in jobs})==1",
+      "use_mtp=len({job['body']['max_tokens'] for job in jobs})==1",
+      1
+    ],
+    [
+      "for job in jobs:expected[job['id']]['mode']='verified_mtp' if use_mtp else 'greedy_target'",
+      "for job in jobs:\n        expected[job['id']]['mode']='verified_mtp' if use_mtp else 'greedy_target'\n        expected[job['id']]['real_rows']=len(jobs)",
+      1
+    ],
+    [
+      "serve-native-kv-delta-worker.bat",
+      "serve-native-kv-delta-padded-mtp-worker.bat",
+      1
+    ],
+    [
+      "        assert event['generation_mode'] == expected[key]['mode']",
+      "        assert event['generation_mode'] == expected[key]['mode']\n        if event['generation_mode']=='verified_mtp':\n            assert event['physical_batch']==4 and event['real_rows']==expected[key]['real_rows'] and event['padded_rows']==4-expected[key]['real_rows']\n            assert event['padding_policy']=='duplicate_first_real_row_no_public_dummy_events'",
+      1
+    ],
+    [
+      "ready[0]['mtp_policy']=='four_real_rows_equal_limits_else_greedy'",
+      "ready[0]['mtp_policy']=='equal_real_limits_private_padding_to_four_else_greedy' and ready[0]['padding_policy']=='duplicate_first_real_row_no_public_dummy_events'",
+      1
+    ]
+  ],
+  "worker_derivation": [
+    [
+      "from test2026.cuda.qwen38_5090.native_worker_io import requests, emit",
+      "from test2026.cuda.qwen38_5090.native_worker_io import requests, emit\nfrom test2026.cuda.qwen38_5090.padded_mtp_policy import use_padded_mtp,is_public_mtp_row",
+      1
+    ],
+    [
+      "validate_cuda_batch_study_profile(config, 4096, 4)",
+      "validate_cuda_batch_study_profile(config, 4096, 4)\npadding_proof=json.loads((root/'results/padded-mtp-state-attempt1-verified.json').read_bytes())\nassert padding_proof['status']=='compact_padded_mtp_state_replayed' and padding_proof['real_state_all_exact']\nassert len(padding_proof['cases'])==12 and padding_proof['raw_ordinary_mtp_hidden_arrays']==24 and padding_proof['reset_hidden_arrays']==12\nassert padding_proof['library_sha256']==library_sha\nassert hashlib.sha256((root/'results/padded-mtp-state-attempt1-evidence.zip').read_bytes()).hexdigest()==padding_proof['archive_sha256']\nassert hashlib.sha256(Path(__file__).read_bytes()).hexdigest()==padding_proof['candidate_worker_sha256']\nassert hashlib.sha256(Path(__file__).with_name('padded_mtp_policy.py').read_bytes()).hexdigest()==padding_proof['padding_policy_sha256']",
+      1
+    ],
+    [
+      "'mtp_policy': 'four_real_rows_equal_limits_else_greedy'",
+      "'mtp_policy': 'equal_real_limits_private_padding_to_four_else_greedy', 'padding_policy': 'duplicate_first_real_row_no_public_dummy_events'",
+      1
+    ],
+    [
+      "# Keep dummy rows and unequal limits on the previously qualified greedy path.\n        if len(rows) == 4 and len({r['limit'] for r in rows}) == 1:",
+      "# Private duplicate rows run MTP; only real rows may emit public events.\n        # Unequal real limits retain the qualified greedy path.\n        if use_padded_mtp([r['limit'] for r in rows]):",
+      1
+    ],
+    [
+      "            def notify(row, token, sampled):\n                r = rows[row]",
+      "            def notify(row, token, sampled):\n                if not is_public_mtp_row(row,len(rows)):return\n                r = rows[row]",
+      1
+    ],
+    [
+      "speculative.prefill(hidden, positions, [len(r['ids']) for r in rows],\n                [r['current'] for r in rows], on_first_token=first)",
+      "speculative.prefill(hidden, positions, [len(r['ids']) for r in physical_rows],\n                [r['current'] for r in physical_rows], on_first_token=first)",
+      1
+    ],
+    [
+      "'generation_mode': 'verified_mtp', 'speculative_metrics': result['speculative_metrics'],",
+      "'generation_mode': 'verified_mtp', 'speculative_metrics': result['speculative_metrics'],\n                    'physical_batch': 4, 'real_rows': len(rows), 'padded_rows': 4-len(rows),\n                    'padding_policy': 'duplicate_first_real_row_no_public_dummy_events',",
+      1
+    ]
+  ],
+  "expected_policy_by_group": [
+    {
+      "group": 0,
+      "real_rows": 4,
+      "generation_mode": "greedy_target"
+    },
+    {
+      "group": 1,
+      "real_rows": 4,
+      "generation_mode": "greedy_target"
+    },
+    {
+      "group": 2,
+      "real_rows": 1,
+      "generation_mode": "verified_mtp"
+    },
+    {
+      "group": 3,
+      "real_rows": 1,
+      "generation_mode": "verified_mtp"
+    },
+    {
+      "group": 4,
+      "real_rows": 2,
+      "generation_mode": "verified_mtp"
+    },
+    {
+      "group": 5,
+      "real_rows": 3,
+      "generation_mode": "greedy_target"
+    },
+    {
+      "group": 6,
+      "real_rows": 2,
+      "generation_mode": "greedy_target"
+    },
+    {
+      "group": 7,
+      "real_rows": 4,
+      "generation_mode": "verified_mtp"
+    },
+    {
+      "group": 8,
+      "real_rows": 4,
+      "generation_mode": "verified_mtp"
+    },
+    {
+      "group": 9,
+      "real_rows": 4,
+      "generation_mode": "verified_mtp"
+    },
+    {
+      "group": 10,
+      "real_rows": 4,
+      "generation_mode": "verified_mtp"
+    },
+    {
+      "group": 11,
+      "real_rows": 3,
+      "generation_mode": "verified_mtp"
+    },
+    {
+      "group": 12,
+      "real_rows": 4,
+      "generation_mode": "greedy_target"
+    }
+  ],
+  "gpu_run": false,
+  "performance_admitted": false,
+  "scope": "Same retained13group/40realrequest wire and ordinary-target teachers. Equal real limits allow private duplicate padding to physicalB4MTP3; unequal limits retain greedy. Unknown/dummy/retired row events rejected; full-four MTP counters remain control witnesses. Requires independently replayed12case padded-state proof first. No HTTP/timing/actual4K/broadquality/2x admission.",
+  "verifier_retained_blocks": [
+    {
+      "begin": "                if kind=='token':",
+      "end": "                else:",
+      "sha256": "a4197c7882e46e85c5161a34191c289ab0b8ca24ad7fb8a4ab3f230901410cbc"
+    },
+    {
+      "begin": "                        metrics=event['speculative_metrics'];",
+      "end": "                    modes[key]=",
+      "sha256": "d85802c5cfadc8516452de229e910d4cc9575b166c452bf4bc3b9602cb0d9999"
+    }
+  ],
+  "files": {
+    "native_kv_delta_padded_mtp_stream_worker.py": "e3e607b3d101243ff6451efaf622461f17cbcf491de99c988f7222542092a206",
+    "padded_mtp_policy.py": "7cc69ec4fa224ee6866e4f4b579986fb62dae67b77a034eef15c38c0fe3fa05b",
+    "probe_padded_mtp_stream.py": "5e85043aa46b06310ff4b1b82f8faf5d716e8281e167dea48480f7dc116ab49b",
+    "serve_native_kv_delta_padded_mtp_worker.bat": "c6a8678d3d6335985ca0596e131478a057ac46a36e67347a0f6cdb22ec26ea21",
+    "test_padded_mtp_stream.bat": "be3804407853d08511a4f74fa91d96b28a6ade8b6588926e205cc33240df5708",
+    "run_padded_mtp_stream.py": "97528d4dac482a14d2d5d2daf007afe2c1bc749eed75b3239ff6c7fba1981691",
+    "archive_padded_mtp_stream.py": "abfb3a51c147109444b7dfe65116a268954dc6f1beb2f2edecce60ac4b53d9c6",
+    "verify_padded_mtp_stream.py": "bd2dcff2cefb0c52dfd2a2210d45bc94da0e15083afa3cf02dc4eb9d2350f97e"
+  },
+  "runner_sha256": "97528d4dac482a14d2d5d2daf007afe2c1bc749eed75b3239ff6c7fba1981691"
+}

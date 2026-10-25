@@ -1,0 +1,113 @@
+{
+  "status": "padded_mtp_http_prepared_unrun",
+  "probe_derivation": [
+    [
+      "kv-delta-stream-attempt1-verified.json",
+      "padded-mtp-stream-attempt1-verified.json",
+      1
+    ],
+    [
+      "'compact_kv_delta_stream_replayed'",
+      "'compact_padded_mtp_stream_replayed'",
+      1
+    ],
+    [
+      "serve-native-kv-delta-worker.bat",
+      "serve-native-kv-delta-padded-mtp-worker.bat",
+      2
+    ],
+    [
+      "native_kv_delta_stream_worker.py",
+      "native_kv_delta_padded_mtp_stream_worker.py",
+      1
+    ],
+    [
+      "four_real_rows_equal_limits_else_greedy",
+      "equal_real_limits_private_padding_to_four_else_greedy",
+      2
+    ],
+    [
+      "    assert worker.ready_info['host_embedding_lookup']",
+      "    assert worker.ready_info['padding_policy']=='duplicate_first_real_row_no_public_dummy_events'\n    assert worker.ready_info['host_embedding_lookup']",
+      1
+    ],
+    [
+      "        'grouping_delay_ms': 10, 'grouping_clock':",
+      "        'padding_policy':'duplicate_first_real_row_no_public_dummy_events',\n        'grouping_delay_ms': 10, 'grouping_clock':",
+      1
+    ]
+  ],
+  "probe_sha256": "b5ceada7800d1da4fa1f4e24ccd54f9de86f64ef484857bbe341b2e6a3865664",
+  "launcher_sha256": "9e59a6603e3cda14be8bfaf1fae551ff61830c728b8c5435d905f9e078a0db2a",
+  "grouping_delay_ms": 10,
+  "physical_batch": 4,
+  "concurrency": [
+    1,
+    2,
+    4,
+    8
+  ],
+  "requests_per_cohort": 8,
+  "warmups": 2,
+  "max_tokens": 128,
+  "seed": 3,
+  "files": {
+    "native_batch_http_bridge.py": "fc0190a1d8cad344eb955a7ba82f7c412ec9a43394d5531d3bd90b513f751d57",
+    "native_http_bridge.py": "0279af2fbbabf03886be8d041ffe50c2e1f461a95166ebf6c20b717933249d5b",
+    "benchmark_stream.py": "d35d1a933c6207f24c743d3023f55e7e4645a5b685e4f1e70bf4e52dd34cbdc3",
+    "metrics.py": "8620e5f08c0bd5f05cc1cbb8982a6379fd944f195e7db1780a49c209e3e20871",
+    "compare_http_runs.py": "aec306c5d310b3faea03fc08552984ef119ea4421437d7c4d9a10030406785d3",
+    "native_worker_io.py": "763d61a0e7f34794bca269e4214fa03ff64b95b913778182e7c34fe40292dc84",
+    "probe_reference_http.py": "cf6b47de8de590d4a24f7c1ca53da5a476e930ce6946b0eb7e83bd31229c26d0"
+  },
+  "gpu_run": false,
+  "performance_admitted": false,
+  "scope": "Same short seed3 64-request HTTP corpus, QPC10ms queue, unchanged bridge/benchmark/reference helpers. Equal-limit private padding admits MTP for1/2/3/4 real rows; full physical counters include dummy work, throughput counts real responses only. Requires independently replayed padded state and40request stream. Keep20HTTP oracle,2SSE,4serialization gates; no assumed speedup, actual4K, tunedrefs or broad-quality/2x admission.",
+  "runner_sha256": "0f06748f7b642782f7657444ffbb25ce8eb09c2b2b37d8a3bcd8004bfb7905a0",
+  "retained_http_archive_sha256": "30bfd0940c210726e034b4e302662293d8ccca3ae16ff652a8bd28f6780ea770",
+  "newly_recorded_helper_sources": [],
+  "historical_source_gap": "The retained HTTP/reference archives omit probe_reference_http.py. Its current source is pinned here; exact request-image bytes against all retained reference bodies must be verified after the run.",
+  "verifier_retained_blocks": [
+    {
+      "begin": "    quality = doc(native+'quality.json')",
+      "end": "    workers = {}",
+      "sha256": "8235eec89df83fdf4f718e843a77ba937fc592aee75d3fe05d9763c241e4fd2c"
+    },
+    {
+      "begin": "    workers = {}",
+      "end": "    for key, work in workers.items():",
+      "sha256": "3c4af872695edf99cb48381b40b2eecfa2258258c12d321cd430d163e26b7428"
+    },
+    {
+      "begin": "    def final(path):",
+      "end": "    metadata=doc(native+'metadata.json')",
+      "sha256": "dcc3a198f6c0e00b21119b5f81aa9d3bac41032981eadab85dda23e4f64dd054"
+    },
+    {
+      "begin": "    references = []",
+      "end": "    parent_ratios={}",
+      "sha256": "5ef1ac42d9a2714bbaea3bb4958e1b0b5a0f84c89da39ee0e19ba1c0f6472604"
+    }
+  ],
+  "method_sha256": {
+    "probe_padded_mtp_http.py": "b5ceada7800d1da4fa1f4e24ccd54f9de86f64ef484857bbe341b2e6a3865664",
+    "test_padded_mtp_http.bat": "9e59a6603e3cda14be8bfaf1fae551ff61830c728b8c5435d905f9e078a0db2a",
+    "run_padded_mtp_http.py": "0f06748f7b642782f7657444ffbb25ce8eb09c2b2b37d8a3bcd8004bfb7905a0",
+    "archive_padded_mtp_http.py": "d928a9c751e93d2a73184c483aeb2bf584519ed242598e4eaa4d9d52a119ebbb",
+    "verify_padded_mtp_http.py": "548fe95aef8e82aeb42ff9f0d4a25d1574dade86a9b072a088234a0a1831dd85"
+  },
+  "modified_helper_sources": {},
+  "grouping_clock": "perf_counter",
+  "cpu_sources": {
+    "test_native_batch_bridge.py": "f2dd79a72a7887841831105d0fedc34907827a22daf04cf69a42d4beeaac506f",
+    "test_native_http_bridge.py": "b18c6cf0636dee41276c2df39e7515f99f1ec10a3ba120804ae30e0d1c551f31",
+    "test_benchmark_stream.py": "d413c31bd31e6ac8690a0f4e7151dec2bea234a1a79f43ae3637583c529e8926",
+    "test_compare_http_runs.py": "172a109a2db724d03fae4d834357cff46c21dec6c63bc416d6b12b0d0d02974d",
+    "probe_batch_group_deadlines.py": "5a53263e73e3018502c2ff8c3aa6af7bdc307a0658d861c70ed2739b0ed5b136",
+    "probe_batch_group_clock_phase.py": "d108c88eee867469b25ae9f889b0d5be623bd27dc3a8150b6d154762a9b37908"
+  },
+  "cpu_results": {
+    "batch-group-deadline-cpu-attempt1.json": "984cad6939af35d27141d98b088991e5f707a791b091e51b82a88440c39f3480",
+    "batch-group-clock-phase-cpu-attempt1.json": "4e72a2845398f5dbf6e235cea658350e80da9fd07a42324a97cd5ba1f6ab3687"
+  }
+}
