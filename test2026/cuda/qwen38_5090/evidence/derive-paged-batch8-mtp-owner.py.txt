@@ -1,0 +1,22 @@
+from pathlib import Path
+import hashlib,json
+m=Path('D:/CantorAI/work/qwen38-5090/test2026/cuda/qwen38_5090');source=m/'run_paged_batch8_model.py';text=source.read_text();changes=[]
+def replace(before,after,count=1):
+    global text
+    assert text.count(before)==count,(before,text.count(before))
+    text=text.replace(before,after);changes.append([before,after,count])
+replace('Exclusive preserved-profile B8 input integration; no MTP or timing admission.','Exclusive existing-session B8 MTP correctness and memory trial; no timing admission.')
+replace('paged-batch8-model-preservation-attempt1','paged-batch8-mtp-admission-attempt1')
+replace('evidence/paged-batch8-model-preparation.json','evidence/paged-batch8-mtp-preparation.json')
+replace('Paged B8 source drift','Paged B8 MTP source drift')
+replace('26strict old/new B8 witness, independent retained-oracle and paged input fault controls','30strict old/new B8 witness, MTP target-state/token/count/parent and paged input fault controls')
+replace('CPU preservation gate failed','CPU B8 MTP gate failed')
+replace('test_paged_batch8_model.bat','test_paged_batch8_mtp.bat')
+replace('Actual nine B8 short/full3968+128 text/image/permutation/reset cases; compare retained29complete states and58raw vectors/IDs, no model arithmetic or timing change','Actual existing MTP3/T4/128MiB session: nine B8 short/full3968+128 text/image/permutation/reset cases; retained29complete target states and58raw vectors/IDs; no HTTP/timing admission')
+replace('Actual paged B8 model/state preservation failed','Actual paged B8 MTP target-state/token gate failed')
+replace("report['retained_baseline_replay']['status']=='paged_batch8_retained_model_preserved'","report['retained_baseline_replay']['status']=='paged_batch8_mtp_retained_ordinary_exact'")
+replace('paged_batch8_model_collected_needs_replay','paged_batch8_mtp_collected_needs_replay')
+target=m/'run_paged_batch8_mtp.py';assert not target.exists();target.write_bytes(text.encode())
+row={'source':source.name,'source_sha256':hashlib.sha256(source.read_bytes()).hexdigest(),'source_newlines_normalized_to_lf':True,'changes':changes,'result':target.name,'result_sha256':hashlib.sha256(target.read_bytes()).hexdigest(),
+     'scope':'Preserve exclusive idle/identity/SSD-cache guard, resource monitor, actual CPU/GPU ledgers, source/runtime/SDK restoration, owned engine retirement and raw archive. Select separately pinned B8 MTP probe. GPU unrun.'}
+(m/'evidence/paged-batch8-mtp-owner-derivation.json').write_bytes(json.dumps(row,indent=2).encode());print(json.dumps({'status':'paged_batch8_mtp_owner_derived_gpu_unrun','changes':len(changes),'owner_sha256':row['result_sha256']}))

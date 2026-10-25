@@ -1,0 +1,33 @@
+from pathlib import Path
+import ast,copy,hashlib,json,os,sys,unittest,zipfile
+repo=Path('D:/CantorAI/work/qwen38-5090');m=repo/'test2026/cuda/qwen38_5090';w=Path(__file__).resolve().parent;out=w.parent/'outputs';sys.path[:0]=[str(repo),str(m)]
+from test2026.cuda.qwen38_5090.prepare_paged_batch8_mtp import METHODS
+from test2026.cuda.qwen38_5090.run_logged import run
+from test2026.cuda.qwen38_5090.paged_batch8_mtp import BASELINE,replay_mtp
+modules=['test2026.cuda.qwen38_5090.'+n for n in ('test_bf16_batch8_admission','test_bf16_batch8_replay','test_paged_batch8_model','test_paged_prompt_rows','test_paged_prompt_component','test_paged_batch8_mtp')]
+def ids(s):
+    for t in s:
+        if isinstance(t,unittest.TestSuite):yield from ids(t)
+        else:yield t.id()
+tests=sorted(ids(unittest.defaultTestLoader.loadTestsFromNames(modules)));assert len(tests)==30
+for n in METHODS:
+    if n.endswith('.py'):ast.parse((m/n).read_bytes())
+os.chdir(repo);code=run([sys.executable,'-m','unittest',*tests],w/'paged-batch8-mtp-offline-cpu-ledger','correctness',
+    '30B8 retained-state/vector/paged/native-I/O CPU controls and MTP state/token/count/closed-parent faults; no native Garnet import or GPU', [m/n for n in METHODS]);assert code==0
+job='bf16-batch8-model-admission-attempt1';sha=lambda raw:hashlib.sha256(raw).hexdigest()
+with zipfile.ZipFile(out/(job+'-evidence.zip')) as z:
+    prefix='results/'+job+'/model/';reference=json.loads(z.read(prefix+'report.json'));assert reference['library_sha256']==BASELINE
+    actual=copy.deepcopy(reference);actual.update(status='paged_batch8_mtp_collected_needs_replay',mtp_executed=True,mtp_depth=3,draft_chunk=4,draft_builder_workspace_bytes=128<<20,mtp_stop_ids=[],prefix_replay=True)
+    for c in actual['cases']:
+        lengths=[len(v['prompt_ids']) for v in c['inputs']];n=max(lengths);limit=c['actual_limit'];steps=[];processed=0
+        while processed<limit-1:
+            count=min(4,limit-1-processed);processed+=count;steps.append({'processed_target_counts':[count]*8,'sampled_so_far':[processed]*8})
+        c['prompt_cache']={'physical_batch':8,'tokens':n,'lengths':lengths,'page_size':128,'pack_calls':(n+127)//128,'cached_pages':[0],'peak_cached_packed_logical_bytes':min(n,128)*8*20480}
+        c['mtp_result']={'generated_token_ids':c['generated_ids'],'sampled_tokens_including_stop':[limit]*8,'finish_reasons':['length']*8,'stop_token_ids':[None]*8,'decode_steps':limit-1,'speculative_metrics':{'iterations':steps,'target_verification_calls':len(steps)}}
+        c['mtp_memory']={'draft_builder_workspace_bytes':128<<20,'draft_chunk':4,'target_prefill_chunk':32}
+    replay=replay_mtp(actual,lambda n:z.read(prefix+n),reference,lambda n:z.read(prefix+n))
+result={'status':'b8_mtp_offline_fault_controls_passed_gpu_unrun','cpu_tests':30,'original_b8_ordinary_archive_sha256':sha((out/(job+'-evidence.zip')).read_bytes()),
+        'actual_retained_ordinary_bytes_checked_with_synthetic_mtp_metadata':replay,'native_mtp_executed':False,'remote_installed':False,
+        'preparation_requires_actual_paged_b8_two_machine_proof':True,'http_executed':False,'benchmark_collected':False,'two_times_target_achieved':False,
+        'scope':'CPU checker exercise only: original actual ordinary B8 target states/raw vectors/IDs plus explicitly synthetic MTP counters. No MTP model result, fit, speed or correctness claim. Final preparation and native trial remain gated on current live ordinary paged B8 closure/replay.'}
+(w/'paged-batch8-mtp-offline-cpu-check.json').write_bytes(json.dumps(result,indent=2).encode());print(json.dumps({'status':result['status'],'cpu_tests':30,'retained_ordinary_states_checked':29,'native_mtp_executed':False}))
