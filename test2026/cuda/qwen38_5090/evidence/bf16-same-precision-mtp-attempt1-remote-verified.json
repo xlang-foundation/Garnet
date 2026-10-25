@@ -1,0 +1,70 @@
+{
+  "status": "bf16_same_precision_mtp_corpus_replayed",
+  "archive_sha256": "009de8839828b010313afb1d93569b82567cdcf9bfe2361b21119a152a53a32f",
+  "files_verified": 126,
+  "library_sha256": "97c364653161f9252032815e644ef4a22758cc78bf7226317aba21f118f00844",
+  "cases": [
+    {
+      "group": 0,
+      "repeat": 0,
+      "ids_exact": true,
+      "packed_ordinary_mtp_physical_state_exact": true,
+      "independent_reference_prefill_exact": true,
+      "independent_reference_final_exact": true,
+      "independent_reference_vectors_exact": {
+        "hidden": true,
+        "normalized": true
+      },
+      "retained_fp32_reference_ids_exact": false
+    },
+    {
+      "group": 0,
+      "repeat": 1,
+      "ids_exact": true,
+      "packed_ordinary_mtp_physical_state_exact": true,
+      "independent_reference_prefill_exact": true,
+      "independent_reference_final_exact": true,
+      "independent_reference_vectors_exact": {
+        "hidden": true,
+        "normalized": true
+      },
+      "retained_fp32_reference_ids_exact": false
+    },
+    {
+      "group": 1,
+      "repeat": 0,
+      "ids_exact": true,
+      "packed_ordinary_mtp_physical_state_exact": true,
+      "independent_reference_prefill_exact": true,
+      "independent_reference_final_exact": true,
+      "independent_reference_vectors_exact": {
+        "hidden": true,
+        "normalized": true
+      },
+      "retained_fp32_reference_ids_exact": true
+    },
+    {
+      "group": 1,
+      "repeat": 1,
+      "ids_exact": true,
+      "packed_ordinary_mtp_physical_state_exact": true,
+      "independent_reference_prefill_exact": true,
+      "independent_reference_final_exact": true,
+      "independent_reference_vectors_exact": {
+        "hidden": true,
+        "normalized": true
+      },
+      "retained_fp32_reference_ids_exact": true
+    }
+  ],
+  "raw_hidden_and_normalized_arrays": 20,
+  "correctness_sampled_peak_adapter_bytes": 27058839552,
+  "replay_verifier_sha256": "ca5f326d674c7926d8814e22c240ee3d09ed14965cf7397bb435434c682b95f3",
+  "archived_replay_verifier_sha256": "ca5f326d674c7926d8814e22c240ee3d09ed14965cf7397bb435434c682b95f3",
+  "historical_fp32_gate_reclassified": false,
+  "broad_quality_qualified": false,
+  "b8_qualified": false,
+  "actual_4k_qualified": false,
+  "performance_admitted": false,
+  "scope": "New prospective SAME-PRECISION B4/T32prefill/T4decode packed BF16 ordinary/MTP3 test after both independently verified full-reference128/32token corpus replays. Preserve old FP32 producer/archive/failure unchanged and equality flags as observations. Require4repeated cases exact against independent reference IDs, complete logical prefill/final states, raw hidden/normalized vectors, plus exact packed ordinary/MTP physical states; retain all8856metadata/16negative/3zero-prefix controls.8CPU state/witness guards first. No broad quality, B8, protocol, actual4K, serving memory, HTTP/timing or2x admission."
+}

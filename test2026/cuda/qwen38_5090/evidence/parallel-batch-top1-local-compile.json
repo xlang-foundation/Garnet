@@ -1,0 +1,47 @@
+{
+  "status": "local_cpu_compile_and_link_only",
+  "compiler_version": "nvcc: NVIDIA (R) Cuda compiler driver\nCopyright (c) 2005-2026 NVIDIA Corporation\nBuilt on Thu_Mar_19_22:28:55_Pacific_Daylight_Time_2026\nCuda compilation tools, release 13.2, V13.2.78\nBuild cuda_13.2.r13.2/compiler.37668154_0\n",
+  "host_toolset": "14.29",
+  "target": "sm_120",
+  "flags": [
+    "--std=c++17",
+    "-arch=sm_120",
+    "-O3",
+    "-Xcompiler",
+    "/MT"
+  ],
+  "compile_exit_code": 0,
+  "link_exit_code": 0,
+  "gpu_executable_run": false,
+  "local_gpu_used": false,
+  "production_caller_added": false,
+  "remote_uploaded": false,
+  "runtime_dll_rebuilt": false,
+  "source_sha256_post_build_readback": {
+    "src/cuda/logits_top1_batch_parallel_candidate.cuh": "e5fa722cf71cc8f66f87c6b0aafa16f35aa0f12b7626a39fa41a72816539892f",
+    "src/cuda/logits_sampler_kernel.cu": "03fe834a8c1c66a3c0d1961ce25e8beed90c2818a53966a878c85bda8fbb1cf6",
+    "src/cuda/cuda_lib.h": "9e0bfea9404cdb96c11813a0af732210fa82052d7044a7e0553d3ee1e8872941",
+    "src/cuda/repetition_sampler.h": "a33a3256e47bd0a6aaf4e227715fc1c0cd774d9c9ae34c8970a9708627a43655",
+    "test2026/cuda/qwen38_5090/probe_parallel_batch_top1.cu": "04f5150fef31255fc75d97334cf9e113c983ccdf5d39fe608c6f1870eb66908b"
+  },
+  "artifacts": {
+    "probe.obj": {
+      "bytes": 571183,
+      "sha256": "89bb7285be62de21b55b2228fcc7635c5700ce713f9ad63455d20e5b03211c79"
+    },
+    "probe.exe": {
+      "bytes": 425984,
+      "sha256": "8e2ba8fd0c90aecf117c4b9481b8222b26de106abc84fffda25328951708fb44"
+    }
+  },
+  "planned_gpu_controls": {
+    "full_cpu_legacy_candidate_cases": 330,
+    "per_case_repeats": 3,
+    "capture_profiles": 2,
+    "capture_replays_each": 3,
+    "invalid_calls": 12,
+    "nullable_score": true,
+    "readonly_and_output_canaries": true
+  },
+  "scope": "Unintegrated candidate header and standalone probe compile/link on CPU only. Current legacy sampler is unchanged. Sources are post-build readback, not a retroactive per-command prelaunch ledger. CUDA/SDK/shared builds untouched; private chat work artifacts only. SDK codepage936 warnings retained. No330case GPU, model, quality, serving or speed qualification; GPU controls must run alone after current lifecycle job terminal/verified."
+}

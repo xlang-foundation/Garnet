@@ -1,7 +1,8 @@
 # Qwen3.8-27B on one RTX 5090: implementation task
 
-Status: the five-profile same-precision model diagnostic is closed and replayed.
-Packed BF16 matches its independent reference in both T4/T32 on these cases. Work continues on `qwen38-5090`, with
+Status: full packed BF16 ordinary/MTP corpus is closed and replayed on both
+machines; exact same-precision IDs/state/vectors pass on allfour repeated cases.
+Private-padding/lifecycle qualification is now running on `qwen38-5090`, with
 reference integration at `2fc4d1abd`. The full 2x decode/concurrency and half-TTFT
 objectives remain unmet.
 
@@ -57,20 +58,31 @@ original32token limits. Red/green IDs match the old FP32 outputs; primary
 128token IDs still differ, preserving the old precision-change observation.
 This is a prospective same-precision arithmetic oracle, not broad quality.
 
-Next packed ordinary/MTP comparison uses these independent oracles for exact
-IDs, full logical prefill/final state and raw hidden/normalized vectors, plus
-exact packed ordinary/MTP physical state. Historical FP32 producer/failure remain
-unchanged. Its old8856metadata/16negative/3zero-prefix block is retained verbatim
-(after newline normalization). Eight CPU witness/cross-layout admission controls
-pass locally and remotely; original bf16-same-precision-mtp-attempt1 is running.
-All eight uploads were acknowledged after guarded preflight. No runtime rebuild.
-Partial/reset/retired-row, broad-quality, B8, actual4K and serving/timing gates
-remain open. Correctness adapter peaks are not serving-memory claims.
-A prospective14case private-padding/lifecycle probe, guarded runner and replay
-checker are prepared locally, with11CPU controls passing. They cover1/2/3/4real
-rows, unequal0/1/2/4accepted prefixes, rollback/pending ownership, full resets
-and early-finished color rows while a descriptive row continues. No upload or
-GPU execution yet; require the current packed MTP corpus terminal/both replays.
+The full packed ordinary/MTP comparison is now closed/replayed on both machines
+(archive009de883...,126files/20raw hidden+normalized arrays). Allfour cases have
+exact independent-reference IDs and complete logical prefill/final state witnesses
+and raw final vectors; packed ordinary/MTP physical states also agree exactly.
+Historical FP32 producer/failure remain unchanged. Its old8856metadata/16negative/
+3zero-prefix block is retained verbatim after newline normalization and passes.
+Eight CPU controls pass on both machines; no source/DLL/runtime drift or rebuild.
+This qualifies this arithmetic corpus only; broad quality remains unqualified.
+
+Original bf16-padded-lifecycle-attempt1 is now running after parent terminal and
+both replays. Preparation50c49dc8... pins60sources/24methods/20inputs; allten uploads
+acknowledged after source/DLL/cache/idle preflight. Eleven CPU controls also pass
+remotely. Fourteen prospective cases cover1/2/3/4real rows, unequal0/1/2/4accepted
+prefixes, rollback/pending ownership, full resets, frozen/duplicated private rows
+and early-finished color rows while a descriptive row continues. Model result is
+pending. Broad quality, B8, actual4K, protocol/serving and timing gates remain open.
+Correctness adapter peaks are not serving-memory claims.
+
+Offline retained-trace analysis identifies BF16 top1 selection at70.24/70.14ms,
+about4.05percent of kernel union in its two marked windows. An unintegrated
+parallel batch-top1 header/probe compiles and links locally forsm120; no GPU run,
+production caller, deployed change or speed result. Require330CPU/legacy/candidate
+GPU comparisons, tie/signed-zero/nonfinite, capture/readonly/canary controls before
+integration, then full model/protocol gates and matched timing. This small subset
+cannot explain2x by itself; dominant matrix/batching/low-batch work stays in scope.
 
 Actual4K request fixtures are CPU-prepared/replayed using the pinned tokenizer,
 exact chat template and64image slots:124requests,3968input tokens each plus
@@ -81,11 +93,10 @@ profile guards remain unchanged. Wider batching cannot establish C1 decode gain.
 
 Next gates, in order:
 
-1. Extend the independently validated same-precision reference to the repeated
-   full ordinary corpus, then packed ordinary/MTP128-token/state/vector checks.
-   Require broad quality checks or a correction before promotion; retain the
-   failed FP32 golden comparison. Validate lifetime/failure handling, partial/reset/retired
-   rows and cache boundaries before model/serving qualification.
+1. Close/replay the running packed lifecycle gate after the now-verified full
+   ordinary/MTP corpus. Require broad quality checks or a correction before
+   promotion; retain the failed FP32 golden comparison. Validate lifetime/failure
+   handling, partial/reset/retired rows and actual cache boundaries before serving.
 2. Qualify a distinct B8 MTP/workspace profile and actual M32 projection behavior,
    allocation fit, text/image quality and protocol correctness. Preserve legacy
    B4 admission guards. Wider batching does not establish C1 decode speed.
