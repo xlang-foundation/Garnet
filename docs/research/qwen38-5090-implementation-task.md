@@ -1572,3 +1572,40 @@ in this isolated experiment. Numerical correctness alone will not prove speed.
 Current full native HTTP remains live with MTP4Ktext/image cohort observations.
 Matched reference speed/tuning/quality, target2x, INT4/4B and repetitions stay
 open. No new graph/kernel/model performance number is admitted by this change.
+
+
+### 2026-10-25: full native HTTP closed/replayed; tiled-score GPU math passes
+
+Original48577 full native job terminal0. Archive6fbf308714e90bf68046c8080258e6ba9981931f18f902ce1408cf735f5b7320,
+132951412bytes/6860files. Both805natural-stop screens score502/805 with exact
+ordinary/MTP IDs; all12protocol/2boundary/124full4K/124short requests per mode
+replay.16measured4Kcohorts and16short cohorts are native-only single trial.
+No source/runtime changes, and owned cache cleanup finished. Native dashboard
+and4metric figures rendered only from independently replayed measurements.
+
+Original memory checker failed because4final phase samples arrived after the
+saved summaries. Actual raw diagnosis checks all32cohorts: every saved snapshot
+exactly equals its raw phase prefix and brackets all measured requests; all4
+extra samples are after completion. Original checker/failure log/archive stay
+unchanged. Separate verify_fixed_length_http_snapshot plus strict prefix/end
+bracketing helper retains full-phase and in-request-window statistics. All
+other gates reverse-derive byte-exact to original9ff06c4c...checker. Remote and
+local snapshot proofs are identical.5CPU memory-mutation controls pass; current
+SGLang owner31CPU controls pass in2.134s and reuses unchanged sampler overhead.
+
+Then actual RTX5090 standalone tiled-score probe terminal0: archiveb790522e63d93c4c9b0eb7e1a8ee58f608a464692ecda0d67c2f46818846b0ff,
+683942bytes/40files.44forward output/workspace comparisons,3candidate graph-output
+replays,40prefix-output checks and104malformed cases through both implementations
+pass, readonly/canaries intact. Both independent119040scalar FP64 replays pass
+unchanged atol3e-5/rtol2e-5; maximum absolute error about1.868e-7. Exact proof JSON
+equality initially failed on62derived CPU error floats; all other fields/raw
+archive match and both pass. Retain every difference and actual Python/numpy/
+BLAS/CPU metadata. No rounding of reports or tolerance relaxation. This proves
+isolated math, not a whole-model integration or speed benefit.
+
+SGLang33target source/native-proof/runtime preflight passed;17absent files installed
+from64490byte bundle09b238574aea762aeb5473fc33f80d9bab9dc0dbc9a350594152f345fe495d59,
+16matching targets skipped. No checkpoint/corpus/runtime duplication. Next run
+ordinary fixed4K then strongest feasible MTP/vLLM profiles;2x/halfTTFT, B8GPUfit,
+tiled whole-model speed, INT4/4B and repetitions remain open. Only the owned
+reference supervisor may be polled while official timing is possible.

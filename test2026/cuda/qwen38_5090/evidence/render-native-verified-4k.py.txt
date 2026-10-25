@@ -1,0 +1,52 @@
+from pathlib import Path
+import hashlib,json,os
+w=Path(__file__).resolve().parent;out=w.parent/'outputs';os.environ['MPLCONFIGDIR']=str(w/'mpl-cache')
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+proof_path=out/'fixed-length-http-study-attempt1-verified.json';proof=json.loads(proof_path.read_bytes())
+assert proof==json.loads((out/'fixed-length-http-study-attempt1-remote-verified.json').read_bytes()) and proof['status']=='fixed_length_http_study_replayed'
+data={'status':'native_4k_single_trial_metrics_independently_replayed','native_archive_sha256':proof['archive_sha256'],'proof_sha256':hashlib.sha256(proof_path.read_bytes()).hexdigest(),
+      'hardware':'CD-RTX5090, one RTX 5090 32GB','checkpoint':'nvidia/Qwen3.8-27B-NVFP4','checkpoint_revision':'482ca0f3832238542f8f5295dde86b5f22711d80',
+      'physical_gpu_batch':1,'concurrency_is_queued_requests':True,'actual_prompt_tokens_each':3968,'actual_output_tokens_each':128,'measured_requests_per_cohort':8,
+      'profiles':[],'matched_vllm_sglang_comparison_qualified':False,'two_times_target_achieved':False,
+      'scope':'Actual complete source/runtime-bound ordinary/MTP single trial,128physical output IDs per request, exact same native outputs across modes. All raw accounting independently replayed. Prefix memory snapshots bracket each measurement; all trailing samples preserved in proofs.805adapted screening is not official/broad quality. Matched strongest references, tuning and repetitions pending; not a2x claim.'}
+for profile in proof['profiles']:
+    raw=profile['fixed_4k_benchmark']['raw_replay'];memory=profile['fixed_4k_benchmark']['sampled_memory'];cohorts=[]
+    for name,row in raw['cohorts'].items():
+        case,c=name.split('-c');metric=row['metrics'];assert metric['requests']==8 and metric['generated_tokens']==1024
+        cohorts.append({'case':case,'concurrency':int(c),**metric,**memory[name]})
+    assert len(cohorts)==8
+    data['profiles'].append({'mode':profile['mode'],'screen_correct':profile['screening']['score']['correct'],'screen_count':805,'cohorts':cohorts})
+target=out/'Garnet-Native-4K-Verified-Results.json';assert not target.exists();target.write_text(json.dumps(data,indent=2),encoding='utf8')
+metrics=[('TTFT p50 (seconds)','ttft_median_ms',.001,'TTFT',None),('Decode (tokens/s)','decode_median_tokens_per_second',1,'Decode',(0,110)),
+         ('Total output throughput (tokens/s)','output_tokens_per_second',1,'Throughput',(0,22)),('Sampled adapter VRAM (GiB)','sampled_peak_adapter_used_bytes',1/(1024**3),'VRAM',(0,32))]
+plt.rcParams.update({'font.family':'DejaVu Sans','font.size':10,'axes.spines.top':False,'axes.spines.right':False,'figure.facecolor':'#f8fafc','axes.facecolor':'white','savefig.facecolor':'#f8fafc'})
+def panel(ax,case,metric):
+    label,key,scale,_,limits=metric
+    for profile,color,marker in zip(data['profiles'],('#2563eb','#e77817'),('o','s')):
+        rows=sorted((r for r in profile['cohorts'] if r['case']==case),key=lambda r:r['concurrency'])
+        ax.plot([r['concurrency'] for r in rows],[r[key]*scale for r in rows],marker=marker,color=color,lw=2,label='Ordinary' if profile['mode']=='ordinary' else 'MTP3 (same output IDs)')
+    ax.set_title(('Text' if case=='text' else 'Image')+' · '+label,loc='left',fontweight='bold');ax.set_xlabel('Concurrent requests (GPU batch remains 1)');ax.set_ylabel(label)
+    ax.set_xticks([1,2,4,8]);ax.grid(axis='y',alpha=.2);ax.set_axisbelow(True)
+    if limits:ax.set_ylim(*limits)
+    else:ax.set_ylim(bottom=0)
+    ax.legend(fontsize=8,loc='best',frameon=False)
+fig,axes=plt.subplots(4,2,figsize=(13,13),constrained_layout=False)
+for i,metric in enumerate(metrics):
+    for j,case in enumerate(('text','image')):panel(axes[i,j],case,metric)
+fig.suptitle('Garnet on RTX 5090 — verified native 4K results',fontsize=20,fontweight='bold',x=.06,ha='left',y=.985)
+fig.text(.06,.95,'3968 input tokens + 128 output tokens · single trial · ordinary vs verified MTP3',fontsize=12,color='#475569')
+fig.text(.06,.018,'Physical GPU batch 1: concurrent requests queue. Adapter-wide sampled VRAM includes background allocations.\nMatched vLLM/SGLang baselines, tuning and repetitions remain pending. This figure does not establish the 2× target.',fontsize=10,color='#475569')
+fig.subplots_adjust(left=.08,right=.98,top=.91,bottom=.085,hspace=.55,wspace=.25)
+for ext in ('png','svg'):
+    target=out/('Garnet-Native-4K-Verified-Dashboard.'+ext);assert not target.exists();fig.savefig(target,dpi=160)
+plt.close(fig)
+for metric in metrics:
+    fig,axes=plt.subplots(1,2,figsize=(13,4.5))
+    for ax,case in zip(axes,('text','image')):panel(ax,case,metric)
+    fig.suptitle('Garnet native 4K · '+metric[3]+' · one RTX 5090',fontweight='bold',fontsize=16,y=.98)
+    fig.text(.06,.015,'Single trial,3968+128tokens; physical batch1/queued requests. vLLM/SGLang comparison pending; no2× claim.',fontsize=9,color='#475569')
+    fig.subplots_adjust(left=.08,right=.98,top=.8,bottom=.18,wspace=.25)
+    target=out/('Garnet-Native-4K-Verified-'+metric[3]+'.png');assert not target.exists();fig.savefig(target,dpi=160);plt.close(fig)
+print(json.dumps({'status':'native_4k_verified_dashboard_and_four_metric_figures_rendered','source_archive_sha256':proof['archive_sha256'],'native_measured_cohorts':16,'comparison_with_vllm_sglang_pending':True,'two_times_target_achieved':False}))
