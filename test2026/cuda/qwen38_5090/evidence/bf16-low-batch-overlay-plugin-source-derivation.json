@@ -1,0 +1,60 @@
+{
+  "status": "separate_b1_overlay_plugin_prepared_unrun",
+  "files": {
+    "bf16_low_batch_overlay_plugin.h": {
+      "source": "src/backends/tensorrt/qwen38_bf16_kv_overlay_plugin.h",
+      "source_sha256": "963ce9cf2c1b50cfac85036dbadb86b0c58b32c9f1a3df7b22708b8b7e0ae68d",
+      "changes": [
+        [
+          "\"../../cuda/qwen38_bf16_kv_overlay.cuh\"",
+          "\"bf16_kv_low_batch_candidate.h\"",
+          1
+        ],
+        [
+          "BF16KVOverlay",
+          "BF16KVLowBatchOverlay",
+          9
+        ]
+      ],
+      "result_sha256": "ff2f841498ded811dd73172710a5d11580462918d3c864ddb848f03fa1df7876"
+    },
+    "bf16_low_batch_overlay_plugin.cpp": {
+      "source": "src/backends/tensorrt/qwen38_bf16_kv_overlay_plugin.cpp",
+      "source_sha256": "08977743c761bf91b99c6bd26f40345f914e9010f23819dc973650006bd8e4b7",
+      "changes": [
+        [
+          "\"qwen38_bf16_kv_overlay_plugin.h\"",
+          "\"bf16_low_batch_overlay_plugin.h\"",
+          1
+        ],
+        [
+          "\"../../cuda/qwen38_bf16_kv_commit.cuh\"",
+          "\"qwen38_bf16_kv_commit.cuh\"",
+          1
+        ],
+        [
+          "BF16KVOverlay",
+          "BF16KVLowBatchOverlay",
+          24
+        ],
+        [
+          "(a.batch==4||a.batch==8)",
+          "a.batch==1",
+          1
+        ],
+        [
+          "Qwen38BF16KVLowBatchOverlayWorkspace",
+          "Qwen38BF16KVLowBatchCandidateWorkspace",
+          1
+        ],
+        [
+          "RunQwen38BF16KVLowBatchOverlay",
+          "RunQwen38BF16KVLowBatchCandidate",
+          1
+        ]
+      ],
+      "result_sha256": "43d540e67c63bf1a1266aef8e934a9b2921df6e20c0c60b8f3a6ab649a3f4ac7"
+    }
+  },
+  "scope": "Literal old wrapper with new B1-only config/class/creator/type identity, qualified B1 candidate calls and stable nine-int64 wire format. Old B4/B8 wrapper and wire admission unchanged. Not registered in Garnet, built into a native runtime, or GPU/model/quality/performance qualified."
+}

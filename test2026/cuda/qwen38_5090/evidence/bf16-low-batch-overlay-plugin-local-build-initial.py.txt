@@ -1,0 +1,29 @@
+from pathlib import Path
+import hashlib,json,os,re,sys
+r=Path('D:/CantorAI/work/qwen38-5090');m=r/'test2026/cuda/qwen38_5090';e=m/'evidence'
+w=Path(__file__).resolve().parent;sys.path.insert(0,str(m));from run_logged import run
+sdk=Path('D:/CantorAI/ThirdPartySDK/TensorRT');cuda=Path('C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v13.2')
+units=[(m/'bf16_low_batch_overlay_plugin.cpp','b1-overlay-plugin'),(r/'src/backends/tensorrt/qwen38_bf16_kv_overlay_plugin.cpp','b1-overlay-legacy-plugin'),(m/'bf16_low_batch_plugin_cpu_operators.cpp','b1-overlay-cpu-adapter'),(m/'probe_bf16_low_batch_plugin_contract.cpp','b1-overlay-probe')]
+pins=[p for p,_ in units]+[m/'bf16_low_batch_overlay_plugin.h',m/'bf16_kv_low_batch_candidate.h',r/'src/backends/tensorrt/qwen38_bf16_kv_overlay_plugin.h',r/'src/cuda/qwen38_bf16_kv_overlay.cuh',r/'src/cuda/qwen38_bf16_kv_commit.cuh',m/'bf16_kv_fixture_layout.h']+[sdk/n for n in ['include/NvInfer.h','include/NvInferRuntime.h','include/NvInferRuntimePlugin.h','include/NvInferVersion.h','lib/nvinfer_10.lib']]
+sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+before={str(p):sha(p) for p in pins}
+includes=' '.join('/I"'+str(p)+'"' for p in [sdk/'include',cuda/'include',r/'src/cuda',r/'src/backends/tensorrt',m])
+lines=['@echo off','call "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Auxiliary\\Build\\vcvars64.bat" -vcvars_ver=14.29','if errorlevel 1 exit /b %errorlevel%','set "TMP=%~dp0"','set "TEMP=%TMP%"']
+for source,name in units:
+ lines+=['cl /nologo /EHsc /std:c++17 /MT /utf-8 '+includes+' /c "'+str(source)+'" /Fo"%~dp0'+name+'.obj"','if errorlevel 1 exit /b %errorlevel%']
+lines+=['link /nologo '+ ' '.join('"%~dp0'+name+'.obj"' for _,name in units)+' "'+str(sdk/'lib/nvinfer_10.lib')+'" /OUT:"%~dp0bf16-low-batch-overlay-plugin-cpu.exe"','if errorlevel 1 exit /b %errorlevel%','dumpbin /imports "%~dp0bf16-low-batch-overlay-plugin-cpu.exe" > "%~dp0bf16-low-batch-overlay-plugin-cpu-imports.txt"','exit /b %errorlevel%']
+bat=w/'compile-bf16-low-batch-overlay-plugin-cpu.bat';bat.write_bytes(('\r\n'.join(lines)+'\r\n').encode())
+os.chdir(r);ledger=e/'bf16-low-batch-overlay-plugin-local-build-ledger'
+code=run(['cmd.exe','/d','/c',str(bat)],ledger,'build','b1-overlay-plugin-private-local-compile-link-only',pins+[bat,Path(__file__)])
+assert before=={str(p):sha(p) for p in pins},'Build source inputs changed'
+if code:raise SystemExit(code)
+imports=(w/'bf16-low-batch-overlay-plugin-cpu-imports.txt').read_text(errors='replace');dlls=re.findall(r'^\s+([A-Za-z0-9_.-]+\.dll)\s*$',imports,re.M|re.I)
+assert 'nvinfer_10.dll' in [s.lower() for s in dlls],dlls
+assert not any(any(v in s.lower() for v in ['cudart','cublas','garnet','nvcuda']) for s in dlls),dlls
+exe=w/'bf16-low-batch-overlay-plugin-cpu.exe'
+receipt={'status':'b1_overlay_plugin_private_compile_link_passed_runtime_unrun','source_sha256':before,'executable_sha256':sha(exe),'imports':dlls,'unexpected_gpu_dependencies':False,'runtime_executed':False,'gpu_used':False,'remote_mutated':False,'model_qualified':False,'performance_admitted':False,'scope':'Private CPU compile/link only against matching remote TensorRT headers/import library. Actual registry/runtime ABI, enumerated contract controls and GPU enqueue remain unrun. Local TensorRT runtime DLL differs from remote and is not loaded or copied.'}
+(e/'bf16-low-batch-overlay-plugin-local-build.json').write_text(json.dumps(receipt,indent=2),encoding='utf8')
+(e/'bf16-low-batch-overlay-plugin-local-build-method.py.txt').write_bytes(Path(__file__).read_bytes())
+(e/'bf16-low-batch-overlay-plugin-local-build-method.bat.txt').write_bytes(bat.read_bytes())
+(e/'bf16-low-batch-overlay-plugin-local-imports.txt').write_bytes((w/'bf16-low-batch-overlay-plugin-cpu-imports.txt').read_bytes())
+print(json.dumps(receipt,indent=2))
