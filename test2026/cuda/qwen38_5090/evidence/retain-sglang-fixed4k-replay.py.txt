@@ -1,0 +1,41 @@
+from pathlib import Path
+from datetime import datetime,timezone
+import hashlib,json,shutil
+w=Path(__file__).resolve().parent;r=Path('D:/CantorAI/work/qwen38-5090');m=r/'test2026/cuda/qwen38_5090';e=m/'evidence';sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+for stem in ('sglang-fixed4k-replay-cpu-ledger','sglang-fixed4k-replay-final-cpu-ledger'):
+ source=w/stem;rows=[json.loads(line) for line in (source/'commands.jsonl').read_bytes().splitlines()];assert len(rows)==2 and rows[-1]['exit_code']==0
+ assert b'Ran 18 tests' in (source/'commands.log').read_bytes()
+ target=e/stem;target.mkdir(exist_ok=True)
+ for f in source.iterdir():
+  t=target/f.name;assert not t.exists();shutil.copyfile(f,t)
+source=Path(__file__);target=e/(source.name+'.txt');assert not target.exists();shutil.copyfile(source,target)
+receipt={'status':'sglang_fixed4k_archive_replayer_prepared_real_archive_unrun','recorded_utc':datetime.now(timezone.utc).isoformat(),'method_sha256':{n:sha(m/n) for n in ('verify_sglang_fixed4k.py','test_sglang_fixed4k_replay.py','prepare_sglang_fixed4k_run.py')},'actual_final_cpu_tests':18,'synthetic_stream_mutation_tests':5,'actual_reference_archive_replayed':False,'reference_server_started':False,'performance_admitted':False,'two_times_target_achieved':False,'scope':'Prepared source/config/PID/stop/whole-client-memory archive replay, raw4VLM/16greedy/805screen and all124nonstreamIDcontrols/124frozenstreams with raw cohort arithmetic/phase-memory gaps. Only actual CPU18test results exist; five new tests use explicitly synthetic in-memory events and do not constitute measurements. Timed reference streams attest usage/text, not individual token IDs. Real server/archive and independent remote/local replay, tuning/repetitions/native comparison remain required.'}
+target=e/'sglang-fixed4k-replay-offline-preparation.json';assert not target.exists();target.write_text(json.dumps(receipt,indent=2),encoding='utf8')
+entry='''
+
+### 2026-10-25: SGLang independent fixed4K archive replay prepared; real run pending
+
+Added verify_sglang_fixed4k.py before freezing reference deployment. It checks
+all raw archive/source pins, completed native parent, actual ready config,
+Linux PID/argv/starttime/source copies and stop receipt, closed lifecycle,
+4VLM/16greedy/805screen, all124nonstreamIDcontrols and124frozen request streams,
+raw cohort arithmetic and phase-memory samples/gaps. MTP also replays ordinary
+pairing. Reference streaming IDs remain unobserved; only counts/text and
+separate actual nonstreaming IDs are claimed. Whole client/quality peak is
+labelled separately from cohort serving peaks; no process-memory attribution.
+
+Actual final18CPU controls pass in0.017s. Five new tests are synthetic in-memory
+mutations, checking timestamp/request/text/cache/stop-length tampering; none
+are measurements. Initial18test ledger also retained before adding whole-archive
+greedy/VLM/control metadata checks. Full archive verifier execution remains
+pending real SGLang data; passing unit controls does not qualify that run.
+
+Native original48577 still reports running after ordinary4Kand short pilot
+output. No other remote commands, transfers, source changes or observers were
+issued during possible timing. Next actual milestone remains native terminal
+and raw replay, then real matched references and GPU optimization qualification.
+The2x target, stronger-reference tuning, INT4/4B and repetitions remain unmet.
+'''
+for name in ('qwen38-5090-development-log.md','qwen38-5090-implementation-task.md'):
+ target=r/'docs/research'/name;raw=target.read_bytes();assert b'SGLang independent fixed4K archive replay prepared' not in raw;target.write_bytes(raw+entry.replace('\n','\r\n').encode())
+print(json.dumps({'status':receipt['status'],'actual_cpu_tests':18,'real_reference_archive_replayed':False}))

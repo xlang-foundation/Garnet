@@ -1498,3 +1498,27 @@ emitted all8cohorts; last short-imageC8 sampler maxgap23.660419899999397s retain
 as unexplained pending raw replay, no causal/performance promotion. Only that
 original supervisor is polled remotely. Full references/INT4/4B/repetitions and
 2x remain unmet; do not substitute CPU routing tests for GPU qualification.
+
+
+### 2026-10-25: SGLang independent fixed4K archive replay prepared; real run pending
+
+Added verify_sglang_fixed4k.py before freezing reference deployment. It checks
+all raw archive/source pins, completed native parent, actual ready config,
+Linux PID/argv/starttime/source copies and stop receipt, closed lifecycle,
+4VLM/16greedy/805screen, all124nonstreamIDcontrols and124frozen request streams,
+raw cohort arithmetic and phase-memory samples/gaps. MTP also replays ordinary
+pairing. Reference streaming IDs remain unobserved; only counts/text and
+separate actual nonstreaming IDs are claimed. Whole client/quality peak is
+labelled separately from cohort serving peaks; no process-memory attribution.
+
+Actual final18CPU controls pass in0.017s. Five new tests are synthetic in-memory
+mutations, checking timestamp/request/text/cache/stop-length tampering; none
+are measurements. Initial18test ledger also retained before adding whole-archive
+greedy/VLM/control metadata checks. Full archive verifier execution remains
+pending real SGLang data; passing unit controls does not qualify that run.
+
+Native original48577 still reports running after ordinary4Kand short pilot
+output. No other remote commands, transfers, source changes or observers were
+issued during possible timing. Next actual milestone remains native terminal
+and raw replay, then real matched references and GPU optimization qualification.
+The2x target, stronger-reference tuning, INT4/4B and repetitions remain unmet.
