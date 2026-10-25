@@ -1,0 +1,42 @@
+from pathlib import Path
+from datetime import datetime,timezone
+import hashlib,json,shutil
+r=Path('D:/CantorAI/work/qwen38-5090');m=r/'test2026/cuda/qwen38_5090';e=m/'evidence';w=Path(__file__).resolve().parent;o=w.parent/'outputs';sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest();now=datetime.now(timezone.utc).isoformat()
+for name in ('check-b1-http-worker-corpus.py','run-b1-http-worker-corpus-check.py'):shutil.copyfile(w/name,e/(name+'.txt'))
+raw='.......\n----------------------------------------------------------------------\nRan 7 tests in 0.014s\n\nOK\n'
+(e/'bf16-low-batch-http-worker-cpu-tool-output.txt').write_text(raw,encoding='utf8')
+receipt={'status':'b1_http_worker_cpu_contract_tests_passed_actual_http_unrun','recorded_utc':now,'tests_passed':7,'command':['D:/CantorAI/Garnet/.venv/Scripts/python.exe','-m','unittest','test2026.cuda.qwen38_5090.test_bf16_low_batch_worker_contract'],'observed_tool_exit_code':0,'source_sha256':{n:sha(m/n) for n in ('native_bf16_low_batch_stream_worker.py','test_bf16_low_batch_worker_contract.py','native_http_bridge.py')},'actual_test_output_sha256':sha(e/'bf16-low-batch-http-worker-cpu-tool-output.txt'),'scope':'Output copied from the actual successful exec tool test transcript, LF normalized; not a run_logged invocation. CPU controls check identical established request policy and correct prefill/MTP token-notification dedup, ordinals and single-row guard. No model import/execution, HTTP request or performance result.'}
+(e/'bf16-low-batch-http-worker-cpu-contract.json').write_text(json.dumps(receipt,indent=2),encoding='utf8')
+p=json.loads((e/'bf16-low-batch-http-worker-preparation.json').read_bytes());assert p['requests_checked']==805 and p['worker_sha256']==receipt['source_sha256']['native_bf16_low_batch_stream_worker.py'] and p['actual_http_requests_sent']==0
+status_path=o/'Garnet-Parallel-Top1-Integration-Status.json';s=json.loads(status_path.read_bytes());s.update(recorded_utc=now,status='b1_native_build_closed_model_consistency_running',pushed_commit='01bb2a2df',current_native_full_model_lifecycle_qualified=False,new_model_speed_measurement=False,two_times_target_achieved=False)
+s['b1_model_consistency'].update(status='original_supervised_job_running',last_authoritative_handle_state='running',last_readonly_b4_case_records=0,last_readonly_b4_empty_state_recorded=True,last_readonly_b4_error=None,actual_gpu_model_cases_verified=0)
+s['b1_http_worker_preparation']=dict(p,cpu_contract_tests_passed=7,worker_uploaded=False)
+status_path.write_text(json.dumps(s,indent=2)+'\n',encoding='utf8')
+addition='''
+
+### 2026-10-25: true B1 HTTP worker prepared locally during model collection
+
+The original bf16-low-batch-model-consistency-attempt1 handle is running. Read-only
+observation sees B4 decoder metadata and the complete empty-state witness, no
+completed case or recorded error yet. Remote sources/runtime remain unchanged.
+Native hash-library warnings match retained runtime behavior; SHA256 works.
+
+Local-only native_bf16_low_batch_stream_worker.py prepares ordinary or verified
+MTP3 with physicalB1, T32/T4, cap4096 and128MiB draft workspace. It requires the
+actual closed/replayed current-DLL model proof before initializing. Existing
+single-slot HTTP bridge can queue concurrent clients; no GPU batching is implied.
+Its request validator is AST-identical to the established bridge policy, copied
+locally so the embedded model runtime need not import an HTTP server. Seven
+actual CPU controls pass: text/image/invalid request admission, single-row and
+ordinal guards, and exact one-event handling of prefill-first/MTP-duplicate-first
+notifications. Actual output retained as an exec-tool transcript, not presented
+as a run_logged command. All805frozen adapted-MMMU canonical request bodies also
+pass extracted CPU policy after full frozen corpus hash validation, with a real
+separate command ledger. No native worker import/upload, HTTP requests, model
+responses, image pixel/grid qualification, quality score or benchmark occurred.
+Actual B1 model completion/replay, HTTP event/ID correctness and quality/4K gates
+still precede admitted comparisons. Original2x goal remains unmet.
+'''
+for name in ('docs/research/qwen38-5090-development-log.md','docs/research/qwen38-5090-implementation-task.md'):
+ f=r/name;data=f.read_bytes();assert b'true B1 HTTP worker prepared locally during model collection' not in data;f.write_bytes(data+addition.replace('\n','\r\n').encode())
+shutil.copyfile(Path(__file__),e/'b1-http-worker-preparation-record-method.py.txt');print(json.dumps({'status':'b1_http_preparation_recorded','cpu_tests':7,'frozen_requests_checked':805,'actual_http_requests':0,'model_job':'running','performance_admitted':False}))
