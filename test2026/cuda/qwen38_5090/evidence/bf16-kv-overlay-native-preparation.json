@@ -1,0 +1,526 @@
+{
+  "status": "bf16_kv_overlay_native_prepared_gpu_unrun",
+  "files": {
+    "Garnet/src/cuda/qwen38_bf16_kv_overlay.cu": "ddafabdb6e5cd04a0beb5ee8c39526397cf9d26ac3c8deded2dc6bc63e37b2fc",
+    "Garnet/src/cuda/qwen38_bf16_kv_overlay.cuh": "0e2a75461a4869107a694bf91bdbde278def41b689b86bc5b37182acdba4a372",
+    "Garnet/src/cuda/qwen38_bf16_kv_commit.cuh": "82ffd816bbafcbc86f44d044d2ab5468ac400f617e5aa2b5ae107bb30b3ffb59",
+    "Garnet/test2026/cuda/qwen38_5090/probe_bf16_kv_overlay_native.cu": "6f656761aed4cae81a8251bc53d81079144476708b76bac778b85ea5ee41a602",
+    "Garnet/xModel/qwen35/vl_0_8b/kv_bf16_study_layout.py": "1c2071308de589bff10b3e980d377dc3049416bbe96c0bfbc16c9d184a989311",
+    "Garnet/test2026/cuda/qwen38_5090/bf16_kv_overlay_oracle.py": "b34b10f012178b1076809677d3c9ae3c70d6f4ab99ff8ee4d0302aee384bb151",
+    "Garnet/test2026/cuda/qwen38_5090/test_bf16_kv_overlay_oracle.py": "10a03c320a22096fcece6c20662d7399779828a64c4556bd4126e1f9c1743d97",
+    "Garnet/test2026/cuda/qwen38_5090/prepare_bf16_kv_operator_fixture.py": "8f08f2cf4f3597ac3183b2b9267ec6f040f926c02fa075eada7e5b68460355eb",
+    "Garnet/test2026/cuda/qwen38_5090/run_bf16_kv_overlay_native.py": "c091269f73e8ed40eb7b4596634dc682838bab9d327e489a3f26d494ab3a2130",
+    "Garnet/test2026/cuda/qwen38_5090/verify_bf16_kv_overlay_native.py": "b40767c221822886db01800b0d8d5c77228e726ade182f31982386df22134ee5",
+    "Garnet/test2026/cuda/qwen38_5090/run_logged.py": "3ac96f2f006cb02ecfe4d159186f7e12fcc11b8acf98e4b93728aa31e6a0407b",
+    "Garnet/test2026/cuda/qwen38_5090/monitor_native_probe.py": "49cb5cc0d787aa5ecb11b72bc040578a2d15df37a7ad111344f84da98266100c",
+    "Garnet/test2026/cuda/qwen38_5090/sample_vram.py": "29e0956f151e662adb93431ac9d02ba516e03eb8c1c7d7f0936045acb5c45b4e",
+    "Garnet/test2026/cuda/qwen38_5090/evidence/bf16-kv-overlay-local-compile.json": "38f499378dcd32e4fe7d1d2814fce31a49d0a5b76788f7e2d01e9b01dacd5187",
+    "Garnet/test2026/cuda/qwen38_5090/evidence/bf16-kv-overlay-probe-compile.log": "9f88eb778c00c0c0c42d5dd280f32bc64418e538888377d9896328864945f96e",
+    "Garnet/test2026/cuda/qwen38_5090/evidence/compile_bf16_kv_overlay_probe.bat.txt": "6bc28d21fb8a59a273dc4283257bf3db1ff9f122cb8634161c66af6d540de893",
+    "tools/bf16-kv-native/probe_bf16_kv_overlay_native.exe": "3e5944ad415556b05ec571716ed9b14b495725fab66b15e78a2b2a484ab1b872",
+    "tools/bf16-kv-native/bf16_kv_fixture_layout.h": "fe42d2ea44d3b4fd99d503ddddaaf12407459d839a4e353a767e557c59a7b8e1"
+  },
+  "fixture_header_sha256": "fe42d2ea44d3b4fd99d503ddddaaf12407459d839a4e353a767e557c59a7b8e1",
+  "gpu_uuid": "GPU-265ee66c-9b79-cd3b-0c63-dd6942ddb5e6",
+  "observed_unused_library_sha256": "34bea267ff667ff12936183c17188435a350a483d9641a3103e27243b711fbed",
+  "cases": [
+    {
+      "batch": 4,
+      "chunk": 4,
+      "layer": 3,
+      "end": 0,
+      "id": 0
+    },
+    {
+      "batch": 4,
+      "chunk": 4,
+      "layer": 3,
+      "end": 1,
+      "id": 1
+    },
+    {
+      "batch": 4,
+      "chunk": 4,
+      "layer": 3,
+      "end": 511,
+      "id": 2
+    },
+    {
+      "batch": 4,
+      "chunk": 4,
+      "layer": 3,
+      "end": 512,
+      "id": 3
+    },
+    {
+      "batch": 4,
+      "chunk": 4,
+      "layer": 3,
+      "end": 513,
+      "id": 4
+    },
+    {
+      "batch": 4,
+      "chunk": 4,
+      "layer": 3,
+      "end": 4095,
+      "id": 5
+    },
+    {
+      "batch": 4,
+      "chunk": 4,
+      "layer": 3,
+      "end": 4096,
+      "id": 6
+    },
+    {
+      "batch": 4,
+      "chunk": 4,
+      "layer": 63,
+      "end": 0,
+      "id": 7
+    },
+    {
+      "batch": 4,
+      "chunk": 4,
+      "layer": 63,
+      "end": 1,
+      "id": 8
+    },
+    {
+      "batch": 4,
+      "chunk": 4,
+      "layer": 63,
+      "end": 511,
+      "id": 9
+    },
+    {
+      "batch": 4,
+      "chunk": 4,
+      "layer": 63,
+      "end": 512,
+      "id": 10
+    },
+    {
+      "batch": 4,
+      "chunk": 4,
+      "layer": 63,
+      "end": 513,
+      "id": 11
+    },
+    {
+      "batch": 4,
+      "chunk": 4,
+      "layer": 63,
+      "end": 4095,
+      "id": 12
+    },
+    {
+      "batch": 4,
+      "chunk": 4,
+      "layer": 63,
+      "end": 4096,
+      "id": 13
+    },
+    {
+      "batch": 4,
+      "chunk": 32,
+      "layer": 3,
+      "end": 0,
+      "id": 14
+    },
+    {
+      "batch": 4,
+      "chunk": 32,
+      "layer": 3,
+      "end": 1,
+      "id": 15
+    },
+    {
+      "batch": 4,
+      "chunk": 32,
+      "layer": 3,
+      "end": 511,
+      "id": 16
+    },
+    {
+      "batch": 4,
+      "chunk": 32,
+      "layer": 3,
+      "end": 512,
+      "id": 17
+    },
+    {
+      "batch": 4,
+      "chunk": 32,
+      "layer": 3,
+      "end": 513,
+      "id": 18
+    },
+    {
+      "batch": 4,
+      "chunk": 32,
+      "layer": 3,
+      "end": 4095,
+      "id": 19
+    },
+    {
+      "batch": 4,
+      "chunk": 32,
+      "layer": 3,
+      "end": 4096,
+      "id": 20
+    },
+    {
+      "batch": 4,
+      "chunk": 32,
+      "layer": 63,
+      "end": 0,
+      "id": 21
+    },
+    {
+      "batch": 4,
+      "chunk": 32,
+      "layer": 63,
+      "end": 1,
+      "id": 22
+    },
+    {
+      "batch": 4,
+      "chunk": 32,
+      "layer": 63,
+      "end": 511,
+      "id": 23
+    },
+    {
+      "batch": 4,
+      "chunk": 32,
+      "layer": 63,
+      "end": 512,
+      "id": 24
+    },
+    {
+      "batch": 4,
+      "chunk": 32,
+      "layer": 63,
+      "end": 513,
+      "id": 25
+    },
+    {
+      "batch": 4,
+      "chunk": 32,
+      "layer": 63,
+      "end": 4095,
+      "id": 26
+    },
+    {
+      "batch": 4,
+      "chunk": 32,
+      "layer": 63,
+      "end": 4096,
+      "id": 27
+    },
+    {
+      "batch": 8,
+      "chunk": 4,
+      "layer": 3,
+      "end": 0,
+      "id": 28
+    },
+    {
+      "batch": 8,
+      "chunk": 4,
+      "layer": 3,
+      "end": 1,
+      "id": 29
+    },
+    {
+      "batch": 8,
+      "chunk": 4,
+      "layer": 3,
+      "end": 511,
+      "id": 30
+    },
+    {
+      "batch": 8,
+      "chunk": 4,
+      "layer": 3,
+      "end": 512,
+      "id": 31
+    },
+    {
+      "batch": 8,
+      "chunk": 4,
+      "layer": 3,
+      "end": 513,
+      "id": 32
+    },
+    {
+      "batch": 8,
+      "chunk": 4,
+      "layer": 3,
+      "end": 4095,
+      "id": 33
+    },
+    {
+      "batch": 8,
+      "chunk": 4,
+      "layer": 3,
+      "end": 4096,
+      "id": 34
+    },
+    {
+      "batch": 8,
+      "chunk": 4,
+      "layer": 63,
+      "end": 0,
+      "id": 35
+    },
+    {
+      "batch": 8,
+      "chunk": 4,
+      "layer": 63,
+      "end": 1,
+      "id": 36
+    },
+    {
+      "batch": 8,
+      "chunk": 4,
+      "layer": 63,
+      "end": 511,
+      "id": 37
+    },
+    {
+      "batch": 8,
+      "chunk": 4,
+      "layer": 63,
+      "end": 512,
+      "id": 38
+    },
+    {
+      "batch": 8,
+      "chunk": 4,
+      "layer": 63,
+      "end": 513,
+      "id": 39
+    },
+    {
+      "batch": 8,
+      "chunk": 4,
+      "layer": 63,
+      "end": 4095,
+      "id": 40
+    },
+    {
+      "batch": 8,
+      "chunk": 4,
+      "layer": 63,
+      "end": 4096,
+      "id": 41
+    },
+    {
+      "batch": 8,
+      "chunk": 32,
+      "layer": 3,
+      "end": 0,
+      "id": 42
+    },
+    {
+      "batch": 8,
+      "chunk": 32,
+      "layer": 3,
+      "end": 1,
+      "id": 43
+    },
+    {
+      "batch": 8,
+      "chunk": 32,
+      "layer": 3,
+      "end": 511,
+      "id": 44
+    },
+    {
+      "batch": 8,
+      "chunk": 32,
+      "layer": 3,
+      "end": 512,
+      "id": 45
+    },
+    {
+      "batch": 8,
+      "chunk": 32,
+      "layer": 3,
+      "end": 513,
+      "id": 46
+    },
+    {
+      "batch": 8,
+      "chunk": 32,
+      "layer": 3,
+      "end": 4095,
+      "id": 47
+    },
+    {
+      "batch": 8,
+      "chunk": 32,
+      "layer": 3,
+      "end": 4096,
+      "id": 48
+    },
+    {
+      "batch": 8,
+      "chunk": 32,
+      "layer": 63,
+      "end": 0,
+      "id": 49
+    },
+    {
+      "batch": 8,
+      "chunk": 32,
+      "layer": 63,
+      "end": 1,
+      "id": 50
+    },
+    {
+      "batch": 8,
+      "chunk": 32,
+      "layer": 63,
+      "end": 511,
+      "id": 51
+    },
+    {
+      "batch": 8,
+      "chunk": 32,
+      "layer": 63,
+      "end": 512,
+      "id": 52
+    },
+    {
+      "batch": 8,
+      "chunk": 32,
+      "layer": 63,
+      "end": 513,
+      "id": 53
+    },
+    {
+      "batch": 8,
+      "chunk": 32,
+      "layer": 63,
+      "end": 4095,
+      "id": 54
+    },
+    {
+      "batch": 8,
+      "chunk": 32,
+      "layer": 63,
+      "end": 4096,
+      "id": 55
+    },
+    {
+      "batch": 8,
+      "chunk": 4,
+      "layer": 7,
+      "end": 513,
+      "id": 56
+    },
+    {
+      "batch": 8,
+      "chunk": 4,
+      "layer": 11,
+      "end": 513,
+      "id": 57
+    },
+    {
+      "batch": 8,
+      "chunk": 4,
+      "layer": 15,
+      "end": 513,
+      "id": 58
+    },
+    {
+      "batch": 8,
+      "chunk": 4,
+      "layer": 19,
+      "end": 513,
+      "id": 59
+    },
+    {
+      "batch": 8,
+      "chunk": 4,
+      "layer": 23,
+      "end": 513,
+      "id": 60
+    },
+    {
+      "batch": 8,
+      "chunk": 4,
+      "layer": 27,
+      "end": 513,
+      "id": 61
+    },
+    {
+      "batch": 8,
+      "chunk": 4,
+      "layer": 31,
+      "end": 513,
+      "id": 62
+    },
+    {
+      "batch": 8,
+      "chunk": 4,
+      "layer": 35,
+      "end": 513,
+      "id": 63
+    },
+    {
+      "batch": 8,
+      "chunk": 4,
+      "layer": 39,
+      "end": 513,
+      "id": 64
+    },
+    {
+      "batch": 8,
+      "chunk": 4,
+      "layer": 43,
+      "end": 513,
+      "id": 65
+    },
+    {
+      "batch": 8,
+      "chunk": 4,
+      "layer": 47,
+      "end": 513,
+      "id": 66
+    },
+    {
+      "batch": 8,
+      "chunk": 4,
+      "layer": 51,
+      "end": 513,
+      "id": 67
+    },
+    {
+      "batch": 8,
+      "chunk": 4,
+      "layer": 55,
+      "end": 513,
+      "id": 68
+    },
+    {
+      "batch": 8,
+      "chunk": 4,
+      "layer": 59,
+      "end": 513,
+      "id": 69
+    }
+  ],
+  "expected_cases": 70,
+  "expected_rejected_calls": 200,
+  "expected_graph_replays": 4,
+  "expected_prefix_cache_exact_cases": 62,
+  "expected_fp64_scalars": 1172480,
+  "model_qualified": false,
+  "performance_admitted": false,
+  "scope": "Standalone BF16 attention only; no Garnet DLL/model loading or timing claim. Active-prefix/integer slots=slot0+t explicit contract, now constant-time overlay lookup.70dense finite-input cases, all16full-attention offsets, B4/B8,T4/T32, end0/1/511/512/513/4095/4096;200negative null/geometry/offset/exact-and-partial-alias calls,4nondefault-stream graph replays,62chunk-to-cached-prefix bit-exact controls, complete readonly carrier/small-input and output/workspace canary checks. Raw selected dense-query results replay against independent NumPy FP64 causal softmax/gate arithmetic (atol3e-5,rtol2e-5), including signed BF16 rounding ties. This bounded operator gate does not qualify non-prefix masks, nonfinite values, public helper/plugin serialization/lifetime, model/B8T32fit/broadquality/HTTP/actual4K or2x. Parent BF16commit operator must be terminal and replayed first."
+}

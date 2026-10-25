@@ -1,0 +1,50 @@
+{
+  "status": "bf16_plugin_cpu_probe_compile_and_link_passed_remote_unrun",
+  "compile_exit_code": 0,
+  "link_exit_code": 0,
+  "source_sha256": {
+    "src/backends/tensorrt/qwen38_bf16_kv_overlay_plugin.cpp": "08977743c761bf91b99c6bd26f40345f914e9010f23819dc973650006bd8e4b7",
+    "src/backends/tensorrt/qwen38_bf16_kv_overlay_plugin.h": "963ce9cf2c1b50cfac85036dbadb86b0c58b32c9f1a3df7b22708b8b7e0ae68d",
+    "src/cuda/qwen38_bf16_kv_overlay.cu": "ddafabdb6e5cd04a0beb5ee8c39526397cf9d26ac3c8deded2dc6bc63e37b2fc",
+    "src/cuda/qwen38_bf16_kv_overlay.cuh": "0e2a75461a4869107a694bf91bdbde278def41b689b86bc5b37182acdba4a372",
+    "src/cuda/qwen38_bf16_kv_commit.cuh": "82ffd816bbafcbc86f44d044d2ab5468ac400f617e5aa2b5ae107bb30b3ffb59",
+    "src/cuda/qwen35_attention_core.cuh": "1a3997a15f4aa897f2bc69bf6a3afbef9a58f166fb094bfb858fac1b170e166f",
+    "test2026/cuda/qwen38_5090/probe_bf16_kv_plugin_contract.cpp": "37c9e771606f793f523eb6490b8eb3d4f165d4bfc3ef2948045f0ced1e734efd"
+  },
+  "sdk_sha256": {
+    "tools/TensorRT/include/NvInfer.h": "19a5e854a3c9c5029ef715c0e732b2b7e68313e07d04d779dfbd565081d13537",
+    "tools/TensorRT/include/NvInferRuntime.h": "4554517f01de87f8dd9f0b5c38bf400a72edbad5c5861d2e554bde5d5a60b050",
+    "tools/TensorRT/include/NvInferRuntimePlugin.h": "b6f531b4cf6d918e6a0199a7a100d3fc7f8852e868cc0abaeff7228669a01e41",
+    "tools/TensorRT/include/NvInferVersion.h": "29cda498d28c090987be1ad649a4f1108b9811abf59d89b111bd151393742b15",
+    "tools/TensorRT/lib/nvinfer_10.lib": "339cd22131899effc8c33b69ff42d63ad9235f5adbd4c0810f40f55e9ef5c201",
+    "tools/TensorRT/bin/nvinfer_10.dll": "73fd99ba7448ebe7b75f3a97bca5fd996f166fa75760f616c0b0eda5c2f7005b"
+  },
+  "local_sdk_runtime_sha256": "8760df9f4591a7da50bffc12920c745a5efb16aaf603dc33e44ef67dba0b171d",
+  "observed_remote_runtime": {
+    "path": "D:\\CantorAI\\5090-study-20261023\\tools\\TensorRT\\bin\\nvinfer_10.dll",
+    "bytes": 375812208,
+    "sha256": "73fd99ba7448ebe7b75f3a97bca5fd996f166fa75760f616c0b0eda5c2f7005b",
+    "version": {
+      "FileVersion": null,
+      "ProductVersion": null
+    },
+    "observed_utc": "2026-10-25T02:34:38.740175+00:00",
+    "producer_sha256": "345449b4cff8f26bad8080a9478de84a0d182ea01c02e4dbcf6af6458f7c415d",
+    "scope": "Read-only byte hash and Windows file version of installed study SDK. No DLL loaded/replaced, no benchmark or wrapper execution."
+  },
+  "header_sha256": "fe42d2ea44d3b4fd99d503ddddaaf12407459d839a4e353a767e557c59a7b8e1",
+  "executable_sha256": "cf6b0c7e635a6e2896b833f70d1891bde8bacfabea7452b7a7d523a39b93f6a5",
+  "plugin_object_sha256": "c08b91e1db417953217f78a0ecb093d9c5a667546dfeed25c9e72d488d3f0842",
+  "unused_operator_md_object_sha256": "633c9ecc92e33825d5ab9620862b18a02a34876c0ca078b6a495668675940eca",
+  "build_logs_sha256": {
+    "bf16-kv-plugin-compile.log": "944eff7a7ab62e25545e08a252193d8e4640faf474554547c29eb41a0866f0c9",
+    "bf16-kv-plugin-probe-link.log": "3c89a4620dff5edc6ac927ed58fb96a5d7e57a4843185a524b9f37a8bc449915",
+    "bf16-kv-plugin-probe-link-initial-failure.log": "879669a2b170b52be6865dd2ffa361016444de3988be89814e514f9867f043f5",
+    "compile_bf16_kv_plugin.bat": "26fde5db95dd43946e19a66ea34ac547c868507d8ecad12bd73206ba18113cef",
+    "link_bf16_kv_plugin_probe.bat": "6d24169d827bd5bb4e2b674b3c1e808b05a531950bb626300046ce2a84d6c9da",
+    "link_bf16_kv_plugin_probe.initial.bat.txt": "d40b8f617a9b911f457863334ccad377790227c4c65ea7b44a973783e53aa163",
+    "probe_bf16_kv_plugin_contract_initial.cpp.txt": "0f8d10f6fc28d46bdd76a81b277cb9325486d0f7b86519724ed8eba2cf978848"
+  },
+  "initial_failure": "Local test link LNK2038: plugin /MD object versus default nvcc /MT probe. Initial raw output and recipe preserved. Recompiled the unused operator link object and probe with /MD to match the plugin/production host runtime; no source/kernel math changed to fix linking.",
+  "scope": "CPU compile/link only. Public plugin is separate/unwired, nine-int64 wire format/new type name, fixed B4/B8,T4/T32 geometry and BF16 carrier stride. Probe never calls CUDA, enqueue, a TensorRT builder or model. Runtime CPU contract execution still unrun; no model/performance admission."
+}

@@ -1,0 +1,13 @@
+**********************************************************************
+** Visual Studio 2022 Developer Command Prompt v17.14.15
+** Copyright (c) 2025 Microsoft Corporation
+**********************************************************************
+[vcvarsall.bat] Environment initialized for: 'x64'
+probe_bf16_kv_plugin_contract.cpp
+qwen38_bf16_kv_overlay_attempt1.obj
+qwen38_bf16_kv_overlay_plugin.obj
+qwen38_bf16_kv_overlay_plugin.obj : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MD_DynamicRelease' doesn't match value 'MT_StaticRelease' in tmpxft_0000edf0_00000000-6_probe_bf16_kv_plugin_contract.obj
+LINK : warning LNK4098: defaultlib 'MSVCRT' conflicts with use of other libs; use /NODEFAULTLIB:library
+LINK : warning LNK4217: symbol '_invoke_watson' defined in 'libucrt.lib(invalid_parameter.obj)' is imported by 'qwen38_bf16_kv_overlay_plugin.obj' in function '"void * __cdecl std::_Allocate_manually_vector_aligned<struct std::_Default_allocate_traits>(unsigned __int64)" (??$_Allocate_manually_vector_aligned@U_Default_allocate_traits@std@@@std@@YAPEAX_K@Z)'
+LINK : warning LNK4217: symbol 'abort' defined in 'libucrt.lib(abort.obj)' is imported by 'qwen38_bf16_kv_overlay_plugin.obj' in function '"void __cdecl std::call_once<class <lambda_0fc36e9ea28d537004cd788ebe3f8de6> >(struct std::once_flag &,class <lambda_0fc36e9ea28d537004cd788ebe3f8de6> &&)" (??$call_once@V<lambda_0fc36e9ea28d537004cd788ebe3f8de6>@@$$V@std@@YAXAEAUonce_flag@0@$$QEAV<lambda_0fc36e9ea28d537004cd788ebe3f8de6>@@@Z)'
+C:\Users\developer\Documents\Codex\2026-10-23\referenced-chatgpt-conversation-this-is-an\work\probe_bf16_kv_plugin_contract.exe : fatal error LNK1319: 1 mismatches detected
