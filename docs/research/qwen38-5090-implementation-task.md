@@ -1,59 +1,58 @@
 # Qwen3.8-27B on one RTX 5090: implementation task
 
-Status (2026-10-24): native Windows mixed NVFP4/FP8 text/image inference,
-verified MTP3, joined MLP weights, host embedding lookup and opt-in compact KV
-state are implemented and qualified on the retained short-prompt cases. Compact
-B4/T4 full-model replay matches the same-DLL default-off token IDs, state-hash
-witnesses and eight raw hidden arrays. Streaming replay covers13groups/40requests.
-Matched loopback HTTP pilots and ordinary vLLM/SGLang references retain identical
-request bytes, prompt/output counts, GPU identity and transport. See current
-`evidence/kv-delta-qpc-http-pilot-attempt1-verified.json` and complete chart provenance.
+Status: native BF16 cache integration is built; model qualification is in progress.
+Work continues on branch `qwen38-5090` (implementation commit `d43b20f42`). The
+full 2x decode/concurrency and half-TTFT objectives below remain unmet.
 
-The latest QPC compact pilot measures C8 aggregate198.07text/164.29image tok/s
-versus faster ordinary references445.77/439.86. Image C4/C8 improve against the
-preceding compact pilot with more full groups/MTP requests, while textC2/C4 and
-imageC2 throughput regress. Multi-second sampler gaps remain unexplained.
-The2x target is unmet.
-All cohorts and failures remain in the evidence; comparisons are single pilots,
-with untuned references and bounded quality checks.4096capacity is not an actual
-4K prompt test. General serving admission remains closed. Historical BF16 vision
-and strict-token mismatches remain preserved; no broad-quality claim is made.
+The pinned 27B checkpoint uses Qwen3.5 architecture. Current Garnet supports its
+mixed NVFP4/FP8 projections, BF16 vision/MTP, host embedding, joined MLP and
+verified MTP3. The retained short-prompt register128 HTTP pilot measures C1
+decode72.54text/70.70image tok/s and C8aggregate208.53/167.86 versus faster ordinary
+references445.77/439.86. Every cohort, regression and sampler gap remains in the
+report. These are single pilots, not stable causal estimates.4096cache capacity
+is not an actual4K prompt test; broad model quality and serving admission remain
+open. See the development log and immutable evidence for historical experiments.
 
-The Windows Python3.12 batching deadline now uses QPC, retaining queue-entry,
-grouping and dispatch timestamps. A1024trial CPU experiment reproduces early
-closure in178/512legacy trials and0/512QPC trials; scheduling misses remain.
-The QPC HTTP archive passed independent replay remotely/locally, including21CPU
-tests,20HTTP/twoSSE/fourserialization gates and64measured SSE/native pairs. All
-partial groups met the10ms QPC deadline; later handler arrivals and occupancy
-variation remain. This does not establish a consistent causal serving gain.
-The separate buffered warm host trace now passes independent replay: eight strict
-batched token/state cases,16raw hidden arrays,1148host intervals and no new captures
-within the four selected generate calls. Target verification contains about68%
-of the mixed text/image generate interval, including pending GPU completion;
-this does not isolate device operators. The pinned2026Nsight startup/marker
-workflow is available for the next CUDA kernel attribution study.
+The new default-off BF16 cache path keeps GDN FP32 and has separately named
+metadata/helper/plugin contracts for B4/B8,T4decode/T32prefill. It builds as an
+actual /MT Garnet DLL,01a3d784..., with the old34bea DLL and original source retained.
+The build passes33CPU model contracts and independent build replay on both
+machines (archivec8d0d802...). Earlier standalone plugin /MD contracts were not
+production ABI qualification; an explicit correction preserves that limitation.
 
-Current experiment: private padding enables MTP3 for equal-limit1/2/3real requests
-on the existing physicalB4 profile. Dummy duplicate rows stay private; unequal
-real limits retain greedy decoding. The existing worker remains unchanged. Five
-CPU policy/callback/state-scope tests pass. A12case GPU gate requires per-real-row
-ordinary/MTP canonical-state hash/slot/rawhidden parity,12complete reset witnesses
-and two full-four same-DLL default-off controls. It retains all physical hidden
-arrays, including dummy differences. Only after state replay and the unchanged
-13group/40request streaming corpus pass may matched HTTP timings begin. Physical
-MTP counters include padding; serving throughput counts real outputs only.
-Continue with kernel attribution and evaluate resident controls
-or graph-binding reuse with strict state/token checks. Scaling the physical batch
-or speculative depth requires new shape/kernel/transaction qualification; flags
-alone do not qualify it. Actual4K, broad-quality/repeated runs, tuned references,
-SGLang MTP and matched4B reference comparisons remain explicit required work.
+Fresh actual-model default-off regression passes on the new DLL: allfour
+text/image group/repeat controls preserve exact token IDs, ordinary/MTP full-state
+hashes and eight raw hidden arrays. Archive8d87b816... passes independent replay
+on both machines. It does not qualify the enabled BF16 model path or speed.
 
-Audit date: 2026-10-23. The preserved source baseline was
-`5b0dc7ff8e5c1a77807138db310605bcd12aa390` plus inherited local edits, captured
-separately at2355fc4b5. Work continues on qwen38-5090; command ledgers retain exact
-commit/patch manifests. Do not reset the original checkout or infer tested source
-identity from a parent commit alone. Research method/failures are in the development
-log; no matched full-model throughput or successful2x comparison is claimed.
+Current process: original `bf16-model-b4-t32-attempt1`, after nine acknowledged
+uploads and all method/source/input pins matched. It tests actual BF16 helper
+metadata and final writes, plugin/engine construction and model execution,
+T32prefill/T4decode with register128, fixed text/image token IDs and exact
+same-BF16 ordinary/MTP state/hidden. Never compare packed BF16 carrier words as
+FP32 KV. No deployed source, DLL, runtime or active harness mutation while this
+worker is live; poll its original handle and preserve any failure.
+
+Next gates, in order:
+
+1. Close and independently replay the current BF16 B4 model gate. Validate
+   lifetime/failure handling, partial/reset/retired rows and cache boundaries.
+2. Qualify a distinct B8 MTP/workspace profile and actual M32 projection behavior,
+   allocation fit, text/image quality and protocol correctness. Preserve legacy
+   B4 admission guards. Wider batching does not establish C1 decode speed.
+3. Optimize C1 from measured dominant work, including an explicit low-batch
+   compact-state profile if useful. Preserve correctness before timing.
+4. Run actual4K prompts and broad text/image quality controls against pinned
+   references; then matched HTTP cohorts and clean repetitions. Tune feasible
+   vLLM/SGLang MTP references, preserve INT4 quality differences and complete
+   matched4B reference comparisons. Count only real emitted tokens, retain raw
+   methods/results/failures, and assess the original target without weakening it.
+
+The preserved source baseline was `5b0dc7ff8e5c1a77807138db310605bcd12aa390`
+plus inherited edits captured at2355fc4b5. Preserve unrelated local edits and
+existing deployment/model assets; reuse the fixed remote study/build/cache paths.
+Detailed methods, exact hashes, negative results and historical observations are
+in `docs/research/qwen38-5090-development-log.md` and the evidence archives.
 
 ## Objective and acceptance
 
