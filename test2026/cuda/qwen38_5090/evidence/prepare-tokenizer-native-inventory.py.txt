@@ -1,0 +1,12 @@
+from pathlib import Path
+import hashlib,json,zipfile
+chat=Path(__file__).resolve().parents[1];repo=Path('D:/CantorAI/work/qwen38-5090');m=repo/'test2026/cuda/qwen38_5090';out=chat/'outputs';sha=lambda b:hashlib.sha256(b).hexdigest()
+name='bf16-low-batch-model-consistency-attempt2';proof=json.loads((out/(name+'-verified.json')).read_bytes());assert proof==json.loads((out/(name+'-remote-verified.json')).read_bytes()) and proof['status']=='bf16_low_batch_model_consistency_replayed'
+with zipfile.ZipFile(out/(name+'-evidence.zip')) as z:w=json.loads(z.read('results/'+name+'/workflow.json'));assert w['exit_code']==0 and w['cleanup_finished']
+previous=json.loads((m/'evidence/bf16-low-batch-native-build-preparation.json').read_bytes())
+with zipfile.ZipFile(out/'bf16-low-batch-native-build-attempt1-evidence.zip') as z:cache=sha(z.read('build/CMakeCache.txt'))
+with zipfile.ZipFile(out/'tokenizer-unicode-split-candidate-cpu-evidence.zip') as z:baseline={n:sha(z.read('Garnet/'+n)) for n in ('src/tokenizer/qwen_tokenizer.h','src/tokenizer/tokenizer.h')}
+baseline['src/tokenizer/qwen_tokenizer.cpp']='256f9df342d0154713c2c2ba463f3c8e8475de65e4c2a5099232ecbf6ae2861c'
+for n in ('src/tokenizer/qwen_unicode_categories.h','src/tokenizer/qwen_unicode_normalization.h','src/tokenizer/qwen_unicode_normalization_data.h'):baseline[n]=None
+data={'base_files':w['source_sha256'],'runtime':w['runtime_dependencies'],'environment':previous['environment_files'],'tokenizer_base':baseline,'cache_sha256':cache,'model_proof_sha256':sha((out/(name+'-remote-verified.json')).read_bytes()),'model_archive_sha256':proof['archive_sha256']}
+(chat/'work/tokenizer-native-inventory-input.json').write_text(json.dumps(data,indent=2),encoding='utf8');print(json.dumps({'base_files':len(data['base_files']),'tokenizer_base':baseline}))

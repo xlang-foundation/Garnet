@@ -3,6 +3,7 @@
 
 #include "qwen_tokenizer.h"
 #include "qwen_unicode_categories.h"
+#include "qwen_unicode_normalization.h"
 
 #include <algorithm>
 #include <cctype>
@@ -195,6 +196,7 @@ namespace Garnet::Tokenization
         m_specialIds.clear();
         m_mergeRanks.clear();
         m_maxAddedTokenLength = 0;
+        m_normalizeNfc = false;
 
         std::string jsonText;
         std::string path = modelDir + "/tokenizer.json";
@@ -242,6 +244,14 @@ namespace Garnet::Tokenization
             if (!root.contains("model") || !root["model"].is_object()) {
                 if (error) *error = "tokenizer.json missing model object";
                 return false;
+            }
+            if (root.contains("normalizer") && !root["normalizer"].is_null()) {
+                const auto& normalizer=root["normalizer"];
+                if (!normalizer.is_object() || normalizer.value("type", std::string())!="NFC") {
+                    if (error) *error="Qwen tokenizer supports only NFC or no normalizer";
+                    return false;
+                }
+                m_normalizeNfc=true;
             }
             const nlohmann::json& model = root["model"];
             if (!model.contains("vocab") || !model["vocab"].is_object()) {
@@ -414,31 +424,20 @@ namespace Garnet::Tokenization
         return parts;
     }
 
-    std::vector<std::string> QwenTokenizer::PreTokenizeAscii(const std::string& text) const
+    std::vector<std::string> QwenTokenizer::PreTokenizeAscii(const std::string& input) const
     {
-        // Historical method name: match the Qwen Unicode regex in priority
-        // order, preserving original UTF-8 bytes and case for subsequent BPE.
+        // Match the configured NFC stage and Qwen Unicode regex, preserving
+        // case and normalized UTF-8 bytes for BPE. Added special tokens are
+        // recognized before this plain-segment operation.
+        auto scalars=Unicode::DecodeUtf8(input);
+        if (m_normalizeNfc) scalars=Unicode::NormalizeNfc(scalars);
         struct Character { std::uint32_t cp; size_t byte; unsigned flags; };
         constexpr unsigned letter=1, mark=2, number=4, space=8;
         std::vector<Character> characters;
-        for (size_t pos=0; pos<text.size();) {
-            const size_t begin=pos;
-            const unsigned char first=static_cast<unsigned char>(text[pos++]);
-            std::uint32_t cp=first;
-            unsigned extra=0;
-            if (first>=0xC2 && first<=0xDF) { cp=first&0x1F; extra=1; }
-            else if (first>=0xE0 && first<=0xEF) { cp=first&0x0F; extra=2; }
-            else if (first>=0xF0 && first<=0xF4) { cp=first&0x07; extra=3; }
-            else if (first>=0x80) throw std::invalid_argument("invalid tokenizer UTF-8 lead byte");
-            for (unsigned k=0; k<extra; ++k) {
-                if (pos==text.size()) throw std::invalid_argument("truncated tokenizer UTF-8");
-                const unsigned char next=static_cast<unsigned char>(text[pos++]);
-                if ((next&0xC0)!=0x80) throw std::invalid_argument("invalid tokenizer UTF-8 continuation");
-                cp=(cp<<6)|(next&0x3F);
-            }
-            if ((extra==1 && cp<0x80) || (extra==2 && cp<0x800) ||
-                (extra==3 && cp<0x10000) || (cp>=0xD800 && cp<=0xDFFF) || cp>0x10FFFF)
-                throw std::invalid_argument("invalid tokenizer Unicode scalar");
+        std::string text;
+        for (auto cp:scalars) {
+            const size_t begin=text.size();
+            Unicode::AppendUtf8(text,cp);
             unsigned flags=0;
             if (cp<0x80) {
                 if (IsAsciiLetter(static_cast<unsigned char>(cp))) flags|=letter;

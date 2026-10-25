@@ -1,0 +1,27 @@
+
+{"id": "59ddd68da18644d0af998b25c8062670", "kind": "correctness", "label": "NFC candidate actual native CPU IDs on unchanged805screen,124fixed4K and26edge cases", "argv": ["D:/CantorAI/Garnet/.venv/Scripts/python.exe", "D:/CantorAI/work/qwen38-5090/test2026/cuda/qwen38_5090/probe_tokenizer_corpus_parity.py", "--library", "work/tokenizer-parity/tokenizer-after2.dll", "--source", "D:/CantorAI/work/qwen38-5090/src/tokenizer/qwen_tokenizer.cpp", "--assets", "work/long-context-assets", "--corpus", "work/mmmu/quality-corpus", "--output", "work/tokenizer-parity/after2"]}
+{
+  "status": "cpu_tokenizer_corpus_exact",
+  "library_sha256": "e5aa300d4e60d6d8c7eb2f324dcba5b2609553b3a32de04bf955f03c01e43baa",
+  "source_sha256": "5866134890f5f01957395deed5590fd6f53e06b6aea340fe113a2c351656c865",
+  "tokenizer_json_sha256": "0997f410c57a1f4e53b09e4be8f4a172d90edd9564368fb0847030937229b9f3",
+  "tokenizers_version": "0.22.2",
+  "counts": {
+    "frozen805": {
+      "cases": 805,
+      "mismatches": 0
+    },
+    "frozen4k": {
+      "cases": 124,
+      "mismatches": 0
+    },
+    "edge": {
+      "cases": 26,
+      "mismatches": 0
+    }
+  },
+  "mismatch_keys": [],
+  "raw_cases_sha256": "df64f9b4e3460922365d06b6da229d9fe02e74a4c633fe251d93f8094aee5a76",
+  "gpu_executed": false,
+  "scope": "Actual standalone native CPU encode IDs compared to pinned Rust/frozen IDs. All inputs unchanged; no model, GPU, HTTP quality or timing promotion."
+}

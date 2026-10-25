@@ -1,18 +1,18 @@
 # Qwen3.8-27B on one RTX 5090: implementation task
 
-Status: current8ae B1 model consistency passes independent remote/local replay
-(4B4/8B1 cases). Actual HTTP attempt1 is terminal FAILED before any benchmark:
-12protocol controls passed;805screen accepted10responses, then prompt IDs differ
-at request11. Immutable304file archive and both independent failure replays agree;
-source/runtime unchanged and cleanup complete. Actual partial HTTP/CPU reanalysis
-reproduces all11native input sequences and identifies native tokenizer splitting.
-Private CPU Unicode/whitespace/case candidate reduces frozen805mismatches122to0;
-all124fixed4Kprompts still match. One of26added edge cases remains failed because
-native NFC normalization is missing. This candidate is unqualified/un-deployed.
-Next: implement NFC, rerun strict CPU differential gates, preserve/rebuild and
-qualify the new runtime/model before a fresh HTTP attempt. Keep all frozen inputs.
-Matched4K/tuned/MTP reference, INT4 W4A16, matched4B and repetitions remain open.
-Original2x decode/concurrency and half-TTFT objectives remain unmet.
+Status: native tokenizer whitespace/Unicode and declared NFC input normalization
+are corrected. Unchanged955frozen/edge prompts,1112064single-scalar normalizations,
+30012normalization sequences and5027full encodes pass actual private native/Rust
+CPU differential checks. Original failures remain preserved. Native Windows
+rebuild on5090 is closed/replayed on both hosts: new1a1d DLL,49CPU regressions,
+955actual full-DLL C API matches, all32CUDA objects bitwise unchanged. Old8ae and
+five runtime dependencies retained. Fresh4B4/8B1 model corpus now runs, with24CPU
+gates and additional every-captured-state/raw-vector comparison against8ae.
+New model/HTTP/quality/speed remain unqualified until actual completion/replay.
+Original HTTP attempt1 remains failed after10accepted replies and request11
+input-ID mismatch; no timing ran. Restart only as a fresh proof-bound study.
+Matched4K/tuned/MTP references, INT4 W4A16, matched4B and repetitions stay open;
+original2x decode/concurrency and half-TTFT objectives remain unmet.
 
 The pinned 27B checkpoint uses Qwen3.5 architecture. Garnet supports its mixed
 NVFP4/FP8 projections, BF16 vision/MTP, host embedding and joined MLP. Latest
