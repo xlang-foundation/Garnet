@@ -1,0 +1,5 @@
+@echo off
+call "C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvars64.bat"
+if errorlevel 1 exit /b %errorlevel%
+cl.exe /nologo /std:c++17 /EHsc /MD /utf-8 /c D:\CantorAI\work\qwen38-5090\src\backends\tensorrt\qwen38_bf16_kv_overlay_plugin.cpp /I D:\CantorAI\ThirdPartySDK\TensorRT\include /I "C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v13.2\include" /Fo"%~dp0qwen38_bf16_kv_overlay_plugin.obj"
+exit /b %errorlevel%

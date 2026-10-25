@@ -1,0 +1,26 @@
+{
+  "status": "bf16_plugin_cpu_contract_replayed",
+  "archive_sha256": "4dda3fb6ff530a290aef3b20786812d4e194c4323f76b1b94c7277cd13cff4f5",
+  "files_verified": 32,
+  "contract": {
+    "status": "bf16_plugin_cpu_contract_passed",
+    "profiles": 64,
+    "roundtrips": 64,
+    "clones": 64,
+    "bad_wires": 3328,
+    "bad_descriptors": 1984,
+    "bad_formats": 1344,
+    "runtime_version": 101601,
+    "header_version": 101601,
+    "loaded_tensorrt_dll": "D:/CantorAI/5090-study-20261023/tools/TensorRT/bin/nvinfer_10.dll",
+    "enqueue_tested": false,
+    "model_qualified": false,
+    "performance_admitted": false
+  },
+  "replay_verifier_sha256": "d81dd8ff9fc1a781e94a168f21b71d9ec2c991e8a60b00c4c66fd0e306b19a05",
+  "archived_replay_verifier_sha256": "d81dd8ff9fc1a781e94a168f21b71d9ec2c991e8a60b00c4c66fd0e306b19a05",
+  "enqueue_tested": false,
+  "model_qualified": false,
+  "performance_admitted": false,
+  "scope": "CPU TensorRT plugin wire/clone/format/shape guards only on the dedicated5090 host; explicit no CUDA/enqueue/builder/model calls in probe.64 B4/B8,T4/T32 x16layer configurations,64clone and factory roundtrips,3328bad-wire/1984bad-descriptor/1344bad-format controls; expected matching10.16.1 runtime and header version101601. SDK headers/import-library hashes match installed study SDK; actual DLL pinned. Separate plugin identity prevents FP32-wire confusion. Requires archived/replayed70case FP64 operator parent. Enqueue through TensorRT, helper/lifetime, model integration, B8/T32fit, quality/HTTP/repeats/actual4K/tunedrefs/4B and2x remain open."
+}

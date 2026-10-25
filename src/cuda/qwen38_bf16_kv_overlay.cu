@@ -26,8 +26,10 @@ __device__ float reduce(float v,bool maximum,float* temporary,float* result){
     __syncthreads();return *result;
 }
 __device__ int replacement(const float* slots,const float* active,int batch,int tokens,int position){
-    for(int t=0;t<tokens;++t)if(active[batch*tokens+t]!=0&&int(slots[batch*tokens+t])==position)return t;
-    return -1;
+    // Explicit study contract: active tokens are a prefix; slots are slot0+t.
+    // Resolve a cache overlay in O(1), including the T32 prefill profile.
+    const int t=position-int(slots[batch*tokens]);
+    return t>=0&&t<tokens&&active[batch*tokens+t]!=0?t:-1;
 }
 __device__ float readKV(const __nv_bfloat16* cache,const float* chunk,
     int b,int t,int h,int p,int d,int tokens){
