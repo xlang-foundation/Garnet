@@ -2157,3 +2157,39 @@ counts only, not a speedup. Current SGLang observed-output job remains live unde
 its original supervisor; no remote competing observer/transfer. Actual4VLM and
 16short128token controls passed after ready identity verification. No timing or
 2x result yet. Host-stage diagnostic remains the next exclusive profiling job.
+
+
+### 2026-10-25 — wider-MTP full HTTP owner/verifier CPU qualified, timing unrun
+
+Prepared exclusive prefill16-fixed4k-http-attempt1 owner/preparation/independent
+verifier. Requires actual terminal independently replayed host-stage job and actual
+full4K wider-MTP target-state/source/runtime proof, pinned closed native ordinary
+HTTP archive.16targets/601files/586existing inputs,68CPU controls. Separate explicit
+worker only, target/T4decode/defaults/SDK/DLL unchanged. Actual worker exit now
+recorded/requires integer0; unknown/nonzero/boolean exits preserved and rejected.
+Retain prior probe source/derivation before exit-receipt change.
+
+Before any timing:12protocol cases, fresh805natural-stop adapted screening with
+every prompt/completion ID exact to actual closed native ordinary, two3968+128
+boundaries. Then124frozen streams/eight text/image C1/2/4/8 cohorts, actual ordinary
+IDs exact; physical batch1 remains queued. No short-prompt pilot. Raw stream/worker
+IDs/usage/corpus/timing/sample-memory/gap arithmetic retained from snapshot checker.
+Independent verifier binds closed native/full4K/host proofs/archives, executing
+helper hashes and clean worker exit. No invented combined archive. CPU AST controls
+prove whole benchmark replay arithmetic unchanged after ordinary-archive routing;
+whole candidate worker/probe model/quality/stream operations remain as documented.
+
+Actual68CPU tests pass7.403s. Initial68 failure1 due generatedCRLF vs recordedLF
+byte derivation; retain failed ledger/checker/test/derivation. Generator explicitly
+writesLF and records source newline normalization; final exact-byte derivation and
+all guards pass. No actual data tolerance/math/precision guard relaxed.
+
+Additional read-only actual-data check executes the new benchmark replay helper
+against all124previously closed nativeT4MTP streams. All eight raw timing/memory
+cohorts and ordinary output IDs match the existing independently replayed result
+exactly. This validates helper arithmetic only: oldT4run is unchanged, no newT16
+model/quality/speed result. Absent-only deployment helpers prepared locally, not
+uploaded during active SGLang timing. Original48577 supervisor now reports full4K
+timing has begun and first textC1 cohort emitted; wait terminal archive and both
+independent replays before charts/metrics promotion. Profiling remains next onGPU;
+strongest tuned/MTP references/repeats, INT4/4B and overall2x remain open.

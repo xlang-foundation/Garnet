@@ -1,0 +1,31 @@
+from pathlib import Path
+import ast
+import hashlib
+import json
+
+work = Path(__file__).resolve().parent
+methods = Path('D:/CantorAI/work/qwen38-5090/test2026/cuda/qwen38_5090')
+sha = lambda raw: hashlib.sha256(raw).hexdigest()
+p = json.loads((methods / 'evidence/prefill16-http-run-preparation.json').read_bytes())
+plan = json.loads((work / 'prefill16-http-upload-plan.json').read_bytes())
+targets = {row['target']: row['sha256'] for row in plan['uploads']}
+for row in plan['uploads']:
+    assert sha(Path(row['local']).read_bytes()) == row['sha256']
+data = {'expected': targets, 'existing': {key: value for key, value in p['files'].items() if key not in targets},
+        'runtime_dependencies': p['runtime_dependencies'], 'parents': {
+            'fixed-length-http-study-attempt1': dict(p['native_parent'], status='fixed_length_http_study_replayed'),
+            'mtp-prefill16-full4k-admission-attempt1': dict(p['full4k_parent'], status='mtp_prefill16_full4k_target_state_replayed')}}
+target = work / 'prefill16-http-preflight-input.json'
+raw = json.dumps(data, indent=2).encode()
+assert not target.exists()
+target.write_bytes(raw)
+for old, new in (('package-native-host-stage-methods.py', 'package-prefill16-http-methods.py'),
+                 ('install-native-host-stage-methods.py', 'install-prefill16-http-methods.py')):
+    text = (work / old).read_text().replace('native-host-stage', 'prefill16-http').replace(
+        'native_host_stage', 'prefill16_http').replace('explicit host diagnostic methods/evidence', 'explicit wider-MTP HTTP methods/evidence')
+    ast.parse(text)
+    path = work / new
+    assert not path.exists()
+    path.write_text(text, encoding='utf8')
+print(json.dumps({'status': 'prefill16_http_deployment_prepared_unrun', 'targets': len(targets),
+                  'existing_inputs': len(data['existing']), 'input_sha256': sha(raw), 'gpu_executed': False}))

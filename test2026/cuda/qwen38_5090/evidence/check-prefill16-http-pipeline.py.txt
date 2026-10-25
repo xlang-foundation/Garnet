@@ -1,0 +1,24 @@
+from pathlib import Path
+import os
+import sys
+
+work = Path(__file__).resolve().parent
+repo = Path('D:/CantorAI/work/qwen38-5090')
+methods = repo / 'test2026/cuda/qwen38_5090'
+sys.path[:0] = [str(repo), str(methods)]
+from test2026.cuda.qwen38_5090.run_logged import run
+
+names = ('test_prefill16_http_worker', 'test_prefill16_http_study', 'test_prefill16_http_replay',
+         'test_mtp_prefill16_study', 'test_fixed_length_worker_contract', 'test_mmmu_http_quality',
+         'test_mmmu_quality_protocol', 'test_fixed_length_native_stream', 'test_fixed_length_reference',
+         'test_cohort_memory_replay')
+modules = ['test2026.cuda.qwen38_5090.' + name for name in names]
+artifacts = [methods / name for name in ('native_prefill16_http_admission.py', 'native_prefill16_stream_worker.py',
+    'probe_prefill16_http.py', 'prefill16_http_study.py', 'test_prefill16_http_worker.py',
+    'test_prefill16_http_study.py', 'test_prefill16_http_replay.py', 'verify_prefill16_http.py',
+    'prepare_prefill16_http.py', 'run_prefill16_http.py', 'evidence/prefill16-http-verifier-derivation.json')]
+os.chdir(repo)
+test_code = ('import sys,unittest;sys.path.insert(0,' + repr(str(methods)) + ');'
+             'unittest.main(module=None,argv=' + repr(['unittest', *modules]) + ')')
+raise SystemExit(run([sys.executable, '-c', test_code], work / sys.argv[1], 'correctness',
+    'CPU synthetic full candidate HTTP ownership/proof/AST/quality/stream/timing/memory replay fault controls; no model/GPU', artifacts))

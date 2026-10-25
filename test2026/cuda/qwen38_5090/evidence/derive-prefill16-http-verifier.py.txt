@@ -1,0 +1,79 @@
+from pathlib import Path
+import ast
+import hashlib
+import json
+
+methods = Path('D:/CantorAI/work/qwen38-5090/test2026/cuda/qwen38_5090')
+source = methods / 'verify_fixed_length_http_snapshot.py'
+text = source.read_text()
+changes = []
+def replace(before, after, count=1):
+    global text
+    assert text.count(before) == count, (before, text.count(before))
+    text = text.replace(before, after)
+    changes.append([before, after, count])
+
+replace("name='fixed-length-http-study-attempt1'", "name='prefill16-fixed4k-http-attempt1'")
+replace('evidence/fixed-length-http-preparation.json', 'evidence/prefill16-http-run-preparation.json')
+marker = "  passed=w['exit_code']==0"
+extra = """  assert type(w['exit_code']) is int
+  assert w['native_parent']==p['native_parent'] and w['full4k_parent']==p['full4k_parent']
+  parent_checks=[dict(p['native_parent'],job='fixed-length-http-study-attempt1',proof_status='fixed_length_http_study_replayed'),dict(p['full4k_parent'],job='mtp-prefill16-full4k-admission-attempt1',proof_status='mtp_prefill16_full4k_target_state_replayed'),w['closed_host_diagnostic']]
+  for entry in parent_checks:
+   prior_path=args.proofs/(entry['job']+'-evidence.zip');assert sha(prior_path.read_bytes())==entry['archive_sha256']
+   raw=z.read('results/'+entry['job']+'-verified.json');q=json.loads(raw);assert sha(raw)==entry['proof_sha256'] and q['archive_sha256']==entry['archive_sha256'] and q['status']==entry['proof_status']
+   with zipfile.ZipFile(prior_path) as parent_archive:
+    parent_manifest=json.loads(parent_archive.read('evidence-manifest.json'));assert parent_archive.testzip() is None and len(parent_archive.namelist())==len(set(parent_archive.namelist()))==len(parent_manifest['files'])+1
+    for path,digest in parent_manifest['files'].items():assert sha(parent_archive.read(path))==digest
+    closed=json.loads(parent_archive.read('results/'+entry['job']+'/workflow.json'))
+   assert type(closed['exit_code']) is int and closed['cleanup_finished'] is True and closed['library_unchanged'] is True and closed['source_sha256']==closed['source_after_sha256'] and closed['runtime_dependencies']==closed['runtime_dependencies_after']
+   if entry['job']=='native-host-stage-full4k-attempt1':assert closed==doc('results/'+entry['job']+'/workflow.json') and closed['exit_code']==entry['exit_code']
+   else:assert closed['exit_code']==0
+  ordinary_base='results/fixed-length-http-study-attempt1/ordinary/'
+  prior=zipfile.ZipFile(args.proofs/'fixed-length-http-study-attempt1-evidence.zip');prior_doc=lambda name:json.loads(prior.read(name));prior_manifest=prior_doc('evidence-manifest.json')
+"""
+replace(marker, extra + marker)
+replace("   assert w['status']=='fixed_length_http_study_collected_needs_replay' and [v['mode'] for v in w['variants']]==['ordinary','mtp'] and all(v['finished'] and v['exit_code']==0 for v in w['variants'])",
+        "   assert w['status']=='prefill16_fixed4k_http_collected_needs_replay'")
+replace("b'Ran 43 tests'", "('Ran '+str(p['expected_cpu_test_count'])+' tests').encode()")
+replace("    for mode in ('ordinary','mtp'):", "    for mode in ('mtp',):")
+replace("and report['exploratory_short_pilot_collected'] and report['fixed_context_benchmark_collected']", "and not report.get('exploratory_short_pilot_collected',False) and report['fixed_context_benchmark_collected']")
+marker = "     def native_match(key,prompt,completion,ignore_eos=False):"
+extra = """     assert ready[0]['generation_mode']=='mtp' and ready[0]['prefill_chunk']==32 and ready[0]['chunk']==4 and ready[0]['explicit_ignore_eos_supported'] is True
+     admitted=ready[0]['mtp_prefill16_admission'];assert admitted==w['admission'] and admitted['full4k_archive_sha256']==p['full4k_parent']['archive_sha256'] and admitted['full4k_proof_sha256']==p['full4k_parent']['proof_sha256'] and admitted['draft_prefill_chunk']==16 and admitted['draft_decode_chunk']==4 and admitted['extra_draft_engine_weights_duplicated'] is True and admitted['http_quality_or_performance_qualified'] is False
+     exit_record=doc(prefix+'worker-exit.json');assert type(exit_record['exit_code']) is int and exit_record['exit_code']==0
+"""
+replace(marker, extra + marker)
+replace("doc(base+'ordinary/boundary-'+case+'-response.json')", "prior_doc(ordinary_base+'boundary-'+case+'-response.json')")
+replace("a=doc(base+'ordinary/'+suffix)", "a=prior_doc(ordinary_base+suffix)")
+replace("ordinary_manifests=[v for v in manifest['files'] if v.startswith(base+'ordinary/benchmark4k/')",
+        "ordinary_manifests=[v for v in prior_manifest['files'] if v.startswith(ordinary_base+'benchmark4k/')")
+replace('ordinary=doc(ordinary_manifests[0])', 'ordinary=prior_doc(ordinary_manifests[0])')
+replace('sha(z.read(ordinary_manifests[0]))', 'sha(prior.read(ordinary_manifests[0]))')
+replace("z.read(base+'ordinary/benchmark4k/'+ordinary['run_id']+'-'+key+'-events.jsonl')",
+        "prior.read(ordinary_base+'benchmark4k/'+ordinary['run_id']+'-'+key+'-events.jsonl')")
+replace("short=benchmark_replay('benchmark',False);fixed=benchmark_replay('benchmark4k',True)",
+        "short=None;fixed=benchmark_replay('benchmark4k',True)")
+replace('len(used)==1067', 'len(used)==943')
+replace("archived=sha(z.read(methods+'verify_fixed_length_http.py'))", "archived=sha(z.read(methods+'verify_prefill16_http.py'));prior.close()")
+replace("'fixed_length_http_study_replayed' if passed else 'fixed_length_http_study_failure_preserved'",
+        "'prefill16_fixed4k_http_replayed' if passed else 'prefill16_fixed4k_http_failure_preserved'")
+replace("'checker_in_runtime_archive':False", "'checker_in_runtime_archive':True")
+replace(" (args.proofs/(name+'-verified.json')).write_text(json.dumps(report,indent=2),encoding='utf8');print(json.dumps(report,indent=2));return 0 if passed else 1",
+        " target=args.proofs/(name+'-verified.json');raw=json.dumps(report,indent=2).encode();assert not target.exists() or target.read_bytes()==raw\n if not target.exists():target.write_bytes(raw)\n print(json.dumps(report,indent=2));return 0 if passed else 1")
+replace('Actual raw805screen,two4Kcontrols and complete124request4K/short cohorts.',
+        'Actual wider-draft-prefill12protocol/805screen/two4Kcontrols/124fixed4Kstreams; all actual ordinary IDs exact. No short pilot.')
+marker = "  parent='tokenizer-nfc-model-consistency-attempt1';"
+replace(marker, "  for helper in ('compare_http_runs.py','benchmark_stream.py','benchmark_fixed_length_native.py','cohort_memory_replay.py','mmmu_http_quality.py','verify_mmmu_http_quality.py','mmmu_quality_protocol.py'):\n   assert sha(Path(__file__).with_name(helper).read_bytes())==sha(z.read(methods+helper))\n" + marker)
+ast.parse(text)
+target = methods / 'verify_prefill16_http.py'
+if target.exists():
+    previous = json.loads((methods / 'evidence/prefill16-http-verifier-derivation.json').read_bytes())
+    assert hashlib.sha256(target.read_bytes()).hexdigest() == previous['result_sha256']
+target.write_bytes(text.encode())
+derivation = {'source': source.name, 'source_sha256': hashlib.sha256(source.read_bytes()).hexdigest(),
+              'result': target.name, 'result_sha256': hashlib.sha256(target.read_bytes()).hexdigest(),
+              'changes': changes, 'source_newlines_normalized_to_lf': True,
+              'scope': 'Separate explicit candidate single-profile verifier; original raw805/token/SSE/usage/metric/memory arithmetic remains, binds all comparisons to actual closed ordinary archive. No invented combined archive or promoted old profile.'}
+(methods / 'evidence/prefill16-http-verifier-derivation.json').write_text(json.dumps(derivation, indent=2), encoding='utf8')
+print(json.dumps({key: value for key, value in derivation.items() if key != 'changes'}))

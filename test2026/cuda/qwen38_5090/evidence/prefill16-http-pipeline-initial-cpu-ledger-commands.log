@@ -1,0 +1,15 @@
+
+{"id": "7c76e42d34c946e38cdd402dd2f9f1c1", "kind": "correctness", "label": "CPU synthetic full candidate HTTP ownership/proof/AST/quality/stream/timing/memory replay fault controls; no model/GPU", "argv": ["D:\\CantorAI\\Garnet\\.venv\\Scripts\\python.exe", "-c", "import sys,unittest;sys.path.insert(0,'D:\\\\CantorAI\\\\work\\\\qwen38-5090\\\\test2026\\\\cuda\\\\qwen38_5090');unittest.main(module=None,argv=['unittest', 'test2026.cuda.qwen38_5090.test_prefill16_http_worker', 'test2026.cuda.qwen38_5090.test_prefill16_http_study', 'test2026.cuda.qwen38_5090.test_prefill16_http_replay', 'test2026.cuda.qwen38_5090.test_mtp_prefill16_study', 'test2026.cuda.qwen38_5090.test_fixed_length_worker_contract', 'test2026.cuda.qwen38_5090.test_mmmu_http_quality', 'test2026.cuda.qwen38_5090.test_mmmu_quality_protocol', 'test2026.cuda.qwen38_5090.test_fixed_length_native_stream', 'test2026.cuda.qwen38_5090.test_fixed_length_reference', 'test2026.cuda.qwen38_5090.test_cohort_memory_replay'])"]}
+.............F......................................................
+======================================================================
+FAIL: test_whole_independent_checker_is_exact_recorded_derivation (test2026.cuda.qwen38_5090.test_prefill16_http_replay.Controls.test_whole_independent_checker_is_exact_recorded_derivation)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "D:\CantorAI\work\qwen38-5090\test2026\cuda\qwen38_5090\test_prefill16_http_replay.py", line 43, in test_whole_independent_checker_is_exact_recorded_derivation
+    self.assertEqual(text.encode(), actual)
+AssertionError: b'"""[79 chars]."""\nfrom pathlib import Path\nimport argpars[17714 chars]))\n' != b'"""[79 chars]."""\r\nfrom pathlib import Path\r\nimport arg[17960 chars]\r\n'
+
+----------------------------------------------------------------------
+Ran 68 tests in 11.743s
+
+FAILED (failures=1)
