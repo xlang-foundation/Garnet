@@ -9,10 +9,13 @@ from .tensor_compat import tensor
 T=tensor()
 
 @T.fusion(name='qwen35_cuda_decoder_chunk',role='decoder_layer',boundary='required')
-def Qwen35CUDAChunk(hidden,state1,state2,active,positions,slots,config,layer_idx,kind,fused_delta=False,fused_attention=False,projection_workspace_bytes=0,retain_linear_inputs=False,external_weights=None,register_delta_128=False,join_input_projections=False,external_compressed_weights=None,joined_mlp_projections=False,canonical_kv_state=None,canonical_kv_layout=None,kv_overlay_strategy=1,bf16_canonical_kv=False):
+def Qwen35CUDAChunk(hidden,state1,state2,active,positions,slots,config,layer_idx,kind,fused_delta=False,fused_attention=False,projection_workspace_bytes=0,retain_linear_inputs=False,external_weights=None,register_delta_128=False,join_input_projections=False,external_compressed_weights=None,joined_mlp_projections=False,canonical_kv_state=None,canonical_kv_layout=None,kv_overlay_strategy=1,bf16_canonical_kv=False,bf16_kv_float_reference=False):
     p='model.language_model.layers.'+str(layer_idx)
     extra={'external_weights':external_weights} if external_weights else {}
     if external_compressed_weights:extra['external_compressed_weights']=external_compressed_weights
+    if type(bf16_kv_float_reference) is not bool or (bf16_kv_float_reference and (kind!='full_attention' or canonical_kv_state is not None or bf16_canonical_kv or state1 is None or state2 is None)):
+        raise ValueError('BF16 float reference requires ordinary full-attention cache bindings')
+    if bf16_kv_float_reference:extra['bf16_kv_float_reference']=1
     if type(bf16_canonical_kv) is not bool or (bf16_canonical_kv and canonical_kv_state is None):raise ValueError('BF16 canonical KV requires an explicit full-attention binding')
     if canonical_kv_state is not None and (kind!='full_attention' or canonical_kv_layout is None or state1 is not None or state2 is not None):
         raise ValueError('Canonical KV requires only the full-attention packed-state binding')

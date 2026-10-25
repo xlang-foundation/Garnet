@@ -3295,3 +3295,66 @@ No packed offsets/commit helper in reference mode. Compare full-model same-
 precision T4/T32 paths before wider batching, quality or performance admission.
 Preserve old-precision failed goldens. Current2x/halfTTFT, actual4K prompts,
 broadquality, tuned/MTP references, cleanrepeats and matched4B remain open.
+
+
+2026-10-25 UTC: default-off independent full-cache reference model integration
+built on original bf16-float-reference-model-build-attempt1, terminalexit0.
+Current DLL97c364653161f9252032815e644ef4a22758cc78bf7226317aba21f118f00844,
+retained original01a3... and candidate at fixed study/build/bin paths. Allfive
+runtime dependencies unchanged, actual /MT new plugin/trt_builder build flags,
+whole-programCUDA and vendorDLLstaging bothOFF. Ordinary glob includes the new
+reference CUDA unit; unlike self-contained optional units it calls legacy core
+in a separate translation unit. Immutable330539B/30file build archive
+822613bec1b25b27763578275ed8967c5cc80cce5aa1fe841ae1e1971ffad19f.
+Original52source pins/13candidate files/preparation e2c0c9c94032f38b9a79dd1312bf0ad9bc56b74da0e51d90c682df9abce4cd8f
+checked before install; allfour method/sourceZIP upload acknowledgements observed.
+
+Separate explicit bf16_kv_float_reference flag defaultsfalse in chunk/program/
+decoder and is mutually exclusive with compact FP32/BF16 paths. Strict pinned27B
+B4/cap4096/T4decode/T32prefill admission, shared mixed joined/host/deferred profile.
+Full173932544word FP32 state layout and old full-state copies/replay remain;
+no canonical packed binding, offsets or compact helper in reference mode. Current
+K/V round toBF16 then unchanged legacy full-cache attention math. Strict C++
+geometry/type/boolean/diagnostic-exclusion gates and engine creator registration.
+Disabled1126node graphSHA50d299... unchanged. Legacy guards retained.
+
+Initial local broader CPU suite exposed an AST harness missing the new validator;
+raw failure preserved, harness now injects real validators and keeps lifecycle
+assertions. Local50 pass. Remote original build CPU suite passed49 versus promised50;
+original replay correctly failed count assertion. CPU inventory/raw9source ZIP
+proves only older joined-profile fixture normalized-different, missing existing
+bounded-B4 test. Guarded bf16-float-reference-cpu-completion-attempt1 preserved
+old test, installed only that test and passed exact50IDs without rebuilding DLL
+or changing product sources. Immutable62705B/19file archive
+a0c6732dcfe7ab331e0f73634aba0aa9b7452d99ab656f9fb5a05dcbc7ec89dd.
+Corrected build verifier requires both original49test build and50test completion,
+never rewrites original archive. Currentfcc7e741f8f1e4c6c020343b986aa30118237e2580250a8dfc264d56d78b4a79,
+archived03fc1460defda83222e38afa7e6d6734ae3967b83a3f58d5c6e608ebdf248d9f;
+independent reports identical on both machines. Preparation also rejected manual
+raw/normalized line-ending hash assumptions before any upload/install; final
+host-policy pin derives from acknowledged downloaded original normalized-equal
+toGit HEAD. No runtime/SDK replacement or live-worker mutation; no native build
+restart. No valid plugin enqueue/model qualification yet by build/CPU evidence.
+
+Prepared five-profile same-precision model diagnostic: fresh FP32/T4 default-off
+must match all retained teacher IDs, raw32hidden/normalized snapshots and full
+physical cache/state witnesses before enabled profiles. Then recollect packed
+BF16/T4,T32 and independent full-FP32 reference with BF16 values/T4,T32 on oneDLL.
+Byte-only CPU expansion of BF16 carriers has known-bit/signed-zero/boundary/
+corruption controls, plus actual decoder-method prefix-before-IO/full-state-copy
+routing tests: six pass. Complete state observed in bounded chunks; per-layer
+logical FP32 hashes expand BF16 carriers without sharing native offset formulas.
+Every FP32-reference cache word must have zero low16 bits. Full raw state arrays
+are not archived; raw hidden/normalized vectors and complete hash witnesses are.
+No MTP, quality promotion, actual4K input, serving memory or timing claim. Remote
+preflight matches60source pins/11methods namespace/input/DLL/idleGPU and scratch
+free750369947648B; preparation0d0a0174c7d68e09356dfc5c995ccb0eaa8dec83e4a0e8efab6335cac35113dd.
+Original2x/halfTTFT, broadquality, actual4K, tuned/MTPrefs, cleanrepeats and matched4B
+remain open. These correctness controls are needed to diagnose the failed BF16
+full-model comparison before admitting wider batching or performance claims.
+
+All eight new same-precision method/preparation uploads acknowledged. Started only
+original bf16-same-precision-diagnostic-attempt1 after both build replays. Original
+handle confirms running; six CPU controls pass remotely, first FP32/T4 process
+started with the known optional hashlib startup warnings. No result inferred from
+warnings or silence, no restart, auxiliary GPU job or deployed source/DLL mutation.

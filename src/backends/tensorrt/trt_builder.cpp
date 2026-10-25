@@ -374,7 +374,7 @@ namespace Garnet {
                 cached.allocator = std::make_unique<TRTSyncAllocator>(device);
                 cached.runtime->setGpuAllocator(cached.allocator.get());
             }
-            if(!EnsureBF16ProjectionPluginRegistered()||!EnsureQwen35DeltaPluginRegistered()||!EnsureModelOptNVFP4PluginRegistered()||!EnsureModelOptFP8PluginRegistered()||!EnsureCTInt4G128PluginRegistered()||!EnsureBF16KVOverlayPluginRegistered())return nullptr;
+            if(!EnsureBF16ProjectionPluginRegistered()||!EnsureQwen35DeltaPluginRegistered()||!EnsureModelOptNVFP4PluginRegistered()||!EnsureModelOptFP8PluginRegistered()||!EnsureCTInt4G128PluginRegistered()||!EnsureBF16KVOverlayPluginRegistered()||!EnsureBF16KVFloatReferencePluginRegistered())return nullptr;
             LogTRTMemoryCheckpoint("before_engine_deserialize",enginePath);
             cached.engine = cached.runtime->deserializeCudaEngine(engineStream);
             if (!cached.engine) {
@@ -6197,6 +6197,18 @@ namespace Garnet {
                     const auto overlayMode=overlayAttribute?overlayAttribute->second.ToLongLong():0;
                     if(overlayMode!=0&&overlayMode!=1)throw std::invalid_argument("Canonical KV opt-in must be0 or1");
                     if(bf16Mode&&overlayMode)throw std::invalid_argument("FP32 and BF16 canonical KV modes are exclusive");
+                    auto* referenceAttribute=FindKeyword(kwParams,"bf16_kv_float_reference");
+                    if(referenceAttribute&&!(referenceAttribute->second.IsInt64()||referenceAttribute->second.IsUInt64()))throw std::invalid_argument("BF16 float reference requires integer0 or1");
+                    if(referenceAttribute&&referenceAttribute->second.IsUInt64()&&referenceAttribute->second.ToUInt64()>1)throw std::invalid_argument("BF16 float reference must be0 or1");
+                    const auto referenceMode=referenceAttribute?referenceAttribute->second.ToLongLong():0;
+                    if((referenceMode!=0&&referenceMode!=1)||(referenceMode&&(bf16Mode||overlayMode)))throw std::invalid_argument("BF16 float reference requires exclusive explicit0 or1");
+                    if(referenceMode){
+                        const auto dims=ops.shape(source);
+                        if(dims!=std::vector<int>{4,4,5120}&&dims!=std::vector<int>{4,32,5120})throw std::invalid_argument("BF16 float reference requires B4,T4/T32");
+                        if(capturedWeightProfile!="modelopt_mixed"||!FindKeyword(kwParams,"external_compressed_weights")||external.empty()||FindKeyword(kwParams,"external_weights")||
+                            keywordInt("fused_attention",0)!=1||keywordInt("joined_mlp_projections",0)!=1)
+                            throw std::invalid_argument("BF16 float reference requires shared mixed compressed joined projections");
+                    }
                     BF16KVOverlayConfig bf16Overlay{};
                     if(bf16Mode){
                         const auto dims=ops.shape(source);
@@ -6225,7 +6237,7 @@ namespace Garnet {
                     }
                     auto* stageAttribute=FindKeyword(kwParams,"diagnostic_full_stages");
                     const auto diagnostic=stageAttribute?stageAttribute->second.ToLongLong():0;
-                    if((diagnostic!=0&&diagnostic!=1)||(diagnostic&&(overlayMode||bf16Mode)))throw std::invalid_argument("Full attention stage diagnostic must be0 or1 and exclude canonical KV");
+                    if((diagnostic!=0&&diagnostic!=1)||(diagnostic&&(overlayMode||bf16Mode||referenceMode)))throw std::invalid_argument("Full attention stage diagnostic must be0 or1 and exclude canonical KV");
                     auto dimensions=ops.shape(source);
                     if(diagnostic&&(capturedWeightProfile!="modelopt_mixed"||!external.empty()||
                         dimensions.size()!=3||(dimensions[0]!=1&&dimensions[0]!=2)||dimensions[1]!=16||dimensions[2]!=5120||
@@ -6245,7 +6257,7 @@ namespace Garnet {
                         keywordText("layer_prefix"),keywordInt("num_heads",0),keywordInt("num_kv_heads",0),keywordInt("head_dim",0),
                         keywordInt("rotary_dim",0),{keywordInt("mrope_t",0),keywordInt("mrope_h",0),keywordInt("mrope_w",0)},
                         float(number("rope_theta",1e7)),float(number("eps",1e-6)),keywordInt("fused_attention",0)!=0,keywordInt("joined_mlp_projections",0)!=0,diagnostic?&diagnosticStages:nullptr,
-                        (overlayMode||bf16Mode)?b["qwen35_attention_bind_canonical"]:nullptr,overlayMode?&overlay:nullptr,bf16Mode?&bf16Overlay:nullptr);
+                        (overlayMode||bf16Mode)?b["qwen35_attention_bind_canonical"]:nullptr,overlayMode?&overlay:nullptr,bf16Mode?&bf16Overlay:nullptr,referenceMode!=0);
                     if(diagnostic){
                         if(diagnosticStages.size()!=10)throw std::runtime_error("Full attention stage contract changed");
                         std::vector<ITensor*> parts{lastOutput};

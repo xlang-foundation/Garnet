@@ -17,6 +17,7 @@
 #include "qwen35_attention_core_plugin.h"
 #include "qwen35_canonical_kv_overlay_plugin.h"
 #include "qwen38_bf16_kv_overlay_plugin.h"
+#include "qwen38_bf16_kv_float_reference_plugin.h"
 #include "qwen35_f32_barrier_plugin.h"
 
 namespace Garnet {
@@ -391,9 +392,11 @@ public:
     }
     T* fullDecoderChunk(T* x,T* key,T* value,T* positions,T* slots,T* active,const std::string& layer,
         int heads,int kv,int dim,int rotary,std::array<int,3> sections,float theta,float eps,bool fusedAttention=false,bool joinedMLPProjections=false,std::vector<T*>* diagnosticStages=nullptr,
-        T* canonical=nullptr,const CanonicalKVOverlayConfig* overlay=nullptr,const BF16KVOverlayConfig* bf16Overlay=nullptr) {
+        T* canonical=nullptr,const CanonicalKVOverlayConfig* overlay=nullptr,const BF16KVOverlayConfig* bf16Overlay=nullptr,bool bf16FloatReference=false) {
         const bool bf16Delta=bf16Overlay!=nullptr;
         const bool delta=canonical!=nullptr||overlay!=nullptr||bf16Delta;
+        if(bf16FloatReference&&(delta||!key||!value||!fusedAttention||!joinedMLPProjections||diagnosticStages))
+            throw std::invalid_argument("BF16 float reference excludes compact state and requires fused joined mode");
         if(bf16Delta&&(!canonical||overlay||!ValidBF16KVOverlayConfig(*bf16Overlay)||!fusedAttention||!joinedMLPProjections||diagnosticStages))
             throw std::invalid_argument("BF16 canonical KV requires explicit shared joined B4/8,T4/32 profile");
         if(delta&&!bf16Delta&&(!canonical||!overlay||!ValidCanonicalKVOverlayConfig(*overlay)||!fusedAttention||!joinedMLPProjections||diagnosticStages))
@@ -401,6 +404,12 @@ public:
         auto xs=shape(x),ks=bf16Delta?std::vector<int>{bf16Overlay->attention.batch,4,4096,256}:(delta?std::vector<int>{4,4,4096,256}:shape(key));
         if(xs.size()!=3||xs[1]>128||ks.size()!=4||kv<=0||dim<=0)throw std::invalid_argument("Qwen3.5 full chunk dimensions invalid");
         const int batch=xs[0],tokens=xs[1],hidden=xs[2],capacity=ks[2],width=kv*capacity*dim;
+        if(bf16FloatReference){
+            if(batch!=4||(tokens!=4&&tokens!=32)||hidden!=5120||heads!=24||kv!=4||dim!=256||capacity!=4096||rotary!=64||
+                sections!=std::array<int,3>{11,11,10}||theta!=1e7f||eps!=1e-6f||
+                key->getType()!=nvinfer1::DataType::kFLOAT||!value||value->getType()!=nvinfer1::DataType::kFLOAT)
+                throw std::invalid_argument("BF16 float reference requires pinned B4,T4/T32 full FP32 cache geometry");
+        }
         if(bf16Delta){
             if(xs!=std::vector<int>{bf16Overlay->attention.batch,bf16Overlay->attention.tokens,5120}||heads!=24||kv!=4||dim!=256||rotary!=64||sections!=std::array<int,3>{11,11,10}||
                 layer!="model.language_model.layers."+std::to_string(4*((bf16Overlay->key_offset-2482176)/6676480)+3)||key||value)
@@ -467,8 +476,15 @@ public:
                 auto* result=n.addPluginV2(inputs,7,*plugin);if(!result)throw std::runtime_error("Canonical KV attention construction failed");
                 coreOutput=reshape(result->getOutput(0),{batch,tokens,contextWidth});
             }else{
-                if(!EnsureQwen35AttentionCorePluginRegistered())throw std::runtime_error("Qwen3.5 attention plugin registration failed");
-                auto* plugin=new Qwen35AttentionCorePlugin({batch,tokens,heads,kv,capacity,dim});plugins.push_back(plugin);
+                nvinfer1::IPluginV2DynamicExt* plugin=nullptr;
+                if(bf16FloatReference){
+                    if(!EnsureBF16KVFloatReferencePluginRegistered())throw std::runtime_error("BF16 float reference registration failed");
+                    plugin=new BF16KVFloatReferencePlugin({batch,tokens,heads,kv,capacity,dim});
+                }else{
+                    if(!EnsureQwen35AttentionCorePluginRegistered())throw std::runtime_error("Qwen3.5 attention plugin registration failed");
+                    plugin=new Qwen35AttentionCorePlugin({batch,tokens,heads,kv,capacity,dim});
+                }
+                plugins.push_back(plugin);
                 T* inputs[]={cast(rotate(q)),cast(rotate(k)),cast(reshape(projectedV,{batch,tokens,kv,dim})),
                     cast(gate),cast(key),cast(value),cast(slots),cast(active)};
                 auto* result=n.addPluginV2(inputs,8,*plugin);if(!result)throw std::runtime_error("Qwen3.5 fused attention construction failed");
