@@ -90,18 +90,23 @@ for metric,title,unit,stem in definitions:
     if metric=='sampled_peak_adapter_gib':fig.text(.055,.03,'Includes background allocations and reserved caches; configured physical capacity differs. Not process-only or instantaneous peak.',fontsize=9,color='#45536a')
     fig.subplots_adjust(left=.07,right=.98,top=.76,bottom=.26,wspace=.22);save(fig,stem)
 
-fig,ax=plt.subplots(figsize=(13,4.4));fig.set_facecolor('#f7f9fc')
+fig,axes=plt.subplots(2,1,figsize=(13,7));fig.set_facecolor('#f7f9fc')
 matrix=np.array([[receipt['actual_dispatch_by_cohort'][key]['mtp_requests'] for key in cohorts] for receipt in (old,proof)])
 assert matrix.shape==(2,8) and np.all((matrix>=0)&(matrix<=8))
-ax.imshow(matrix,cmap='Blues',vmin=0,vmax=8,aspect='auto')
-for row in range(2):
-    for col in range(8):ax.text(col,row,f'{matrix[row,col]}/8',ha='center',va='center',color='white' if matrix[row,col]>=5 else '#1f3550',fontweight='bold')
-ax.set_xticks(range(8),[case.title()+' C'+str(c) for case in cases for c in concurrency]);ax.set_yticks([0,1],['Garnet previous','Garnet compact']);ax.tick_params(length=0);ax.set_xticks(np.arange(-.5,8,1),minor=True);ax.set_yticks(np.arange(-.5,2,1),minor=True);ax.grid(which='minor',color='white',linewidth=2)
-fig.suptitle('Actual MTP dispatch · requests served through verified MTP',x=.055,y=.97,ha='left',fontsize=17,fontweight='bold');fig.text(.055,.865,'Counts come from saved worker events and dispatch membership. Client concurrency alone does not establish physical batch occupancy.',fontsize=10,color='#45536a')
-fig.text(.055,.13,'Each cell shows MTP requests / 8 measured requests. Remaining requests used greedy decoding; no outputs were omitted.',fontsize=10,color='#45536a');fig.text(.055,.065,limitations,fontsize=9,color='#45536a')
-fig.subplots_adjust(left=.14,right=.98,top=.75,bottom=.27);save(fig,'Garnet-Compact-HTTP-Dispatch')
+batch_matrix=np.array([[8/receipt['actual_dispatch_by_cohort'][key]['groups'] for key in cohorts] for receipt in (old,proof)])
+assert np.all((batch_matrix>=1)&(batch_matrix<=4))
+for ax,values,maximum,title in zip(axes,(matrix,batch_matrix),(8,4),('Verified MTP requests / 8 measured requests','Average real request rows per dispatch · physical capacity 4')):
+    ax.imshow(values,cmap='Blues',vmin=0,vmax=maximum,aspect='auto')
+    for row in range(2):
+        for col in range(8):
+            label=f'{int(values[row,col])}/8' if maximum==8 else f'{values[row,col]:.2f}'
+            ax.text(col,row,label,ha='center',va='center',color='white' if values[row,col]>maximum/2 else '#1f3550',fontweight='bold')
+    ax.set_title(title,loc='left',fontsize=11,pad=8);ax.set_xticks(range(8),[case.title()+' C'+str(c) for case in cases for c in concurrency]);ax.set_yticks([0,1],['Garnet previous','Garnet compact']);ax.tick_params(length=0);ax.set_xticks(np.arange(-.5,8,1),minor=True);ax.set_yticks(np.arange(-.5,2,1),minor=True);ax.grid(which='minor',color='white',linewidth=2)
+fig.suptitle('Actual MTP and batch occupancy',x=.055,y=.97,ha='left',fontsize=18,fontweight='bold');fig.text(.055,.9,'Saved worker events and dispatch membership; client concurrency alone does not establish real batch occupancy.',fontsize=10,color='#45536a')
+fig.text(.055,.105,'MTP cells count eligible requests; remaining requests used greedy decoding. Batch averages exclude padding; no outputs were omitted.',fontsize=9,color='#45536a');fig.text(.055,.055,limitations,fontsize=9,color='#45536a')
+fig.subplots_adjust(left=.14,right=.98,top=.81,bottom=.21,hspace=.55);save(fig,'Garnet-Compact-HTTP-Dispatch')
 
 provenance={'status':'verified_pilot_charts_generated','proof_sha256':sha(proof_path.read_bytes()),'parent_proof_sha256':sha(parent_path.read_bytes()),'generator_sha256':sha(Path(__file__).read_bytes()),
-    'archives':archives,'gpu':gpu,'all_cohorts_included':cohorts,'series':data,'actual_mtp_requests':matrix.tolist(),'two_x_established':False,
+    'archives':archives,'gpu':gpu,'all_cohorts_included':cohorts,'series':data,'actual_mtp_requests':matrix.tolist(),'real_rows_per_dispatch':batch_matrix.tolist(),'two_x_established':False,
     'scope':footer+' '+limitations,'artifacts':{p.name:sha(p.read_bytes()) for p in artifacts}}
 p=destination/'Garnet-Compact-HTTP-Chart-Provenance.json';p.write_text(json.dumps(provenance,indent=2),encoding='utf8');print(json.dumps({'charts':len(artifacts)//2,'files':[p.name for p in artifacts]+[p.name]}))
