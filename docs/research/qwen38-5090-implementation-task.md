@@ -49,12 +49,22 @@ GDN layer1 before the first attention cache. Thus the observed precision and
 prefill effects are not explained by packed-cache corruption on these fixtures;
 this does not identify every upstream operator or prove harmless rounding.
 
-Next prepare the ordinary-only B4/T32 reference for allfour retained text/image
-keys/two repeated groups, original128/32output limits, raw final vectors and
-complete logical state witnesses. Then compare packed ordinary/MTP against the
-independent SAME-PRECISION reference, preserving old FP32 failures. Five new CPU
-state-witness controls pass; the longer ordinary-reference GPU run has started.
-Full128-token/protocol/reset/partial/retired-row, broad quality and timing gates
+The independent ordinary-only B4/T32 reference is now closed/replayed on both
+machines (archive2d086ee0...,8raw final hidden/normalized arrays). Allfour cases
+(two groups repeated twice) have exact repeated IDs/state/vectors. Descriptive
+text/image rows generate128tokens; red/green rows stop after2tokens under their
+original32token limits. Red/green IDs match the old FP32 outputs; primary
+128token IDs still differ, preserving the old precision-change observation.
+This is a prospective same-precision arithmetic oracle, not broad quality.
+
+Next packed ordinary/MTP comparison uses these independent oracles for exact
+IDs, full logical prefill/final state and raw hidden/normalized vectors, plus
+exact packed ordinary/MTP physical state. Historical FP32 producer/failure remain
+unchanged. Its old8856metadata/16negative/3zero-prefix block is retained verbatim
+(after newline normalization). Eight CPU witness/cross-layout admission controls
+pass locally and remotely; original bf16-same-precision-mtp-attempt1 is running.
+All eight uploads were acknowledged after guarded preflight. No runtime rebuild.
+Partial/reset/retired-row, broad-quality, B8, actual4K and serving/timing gates
 remain open. Correctness adapter peaks are not serving-memory claims.
 
 Actual4K request fixtures are CPU-prepared/replayed using the pinned tokenizer,

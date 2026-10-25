@@ -1,0 +1,84 @@
+{
+  "status": "bf16_full_reference_corpus_replayed",
+  "archive_sha256": "2d086ee0ec8234d40f23c3bb985be33d62ac75cb669b0084be17c71866132680",
+  "files_verified": 98,
+  "library_sha256": "97c364653161f9252032815e644ef4a22758cc78bf7226317aba21f118f00844",
+  "cases": [
+    {
+      "group": 0,
+      "repeat": 0,
+      "keys": [
+        "s3-text-c1-r0-greedy",
+        "s3-image-c1-r0-greedy",
+        "s3-text-c1-r0-greedy",
+        "s3-image-c1-r0-greedy"
+      ],
+      "generated_token_counts": [
+        128,
+        128,
+        128,
+        128
+      ],
+      "retained_fp32_ids_exact": false
+    },
+    {
+      "group": 0,
+      "repeat": 1,
+      "keys": [
+        "s3-text-c1-r0-greedy",
+        "s3-image-c1-r0-greedy",
+        "s3-text-c1-r0-greedy",
+        "s3-image-c1-r0-greedy"
+      ],
+      "generated_token_counts": [
+        128,
+        128,
+        128,
+        128
+      ],
+      "retained_fp32_ids_exact": false
+    },
+    {
+      "group": 1,
+      "repeat": 0,
+      "keys": [
+        "red",
+        "green",
+        "red",
+        "green"
+      ],
+      "generated_token_counts": [
+        2,
+        2,
+        2,
+        2
+      ],
+      "retained_fp32_ids_exact": true
+    },
+    {
+      "group": 1,
+      "repeat": 1,
+      "keys": [
+        "red",
+        "green",
+        "red",
+        "green"
+      ],
+      "generated_token_counts": [
+        2,
+        2,
+        2,
+        2
+      ],
+      "retained_fp32_ids_exact": true
+    }
+  ],
+  "raw_final_hidden_and_normalized_arrays": 8,
+  "correctness_sampled_peak_adapter_bytes": 32417062912,
+  "replay_verifier_sha256": "2e741d56ca1af1b648718eae1798c19b6b33a04eb438ea965d2f804ae5979ab5",
+  "archived_replay_verifier_sha256": "2e741d56ca1af1b648718eae1798c19b6b33a04eb438ea965d2f804ae5979ab5",
+  "packed_mtp_qualified": false,
+  "broad_quality_qualified": false,
+  "performance_admitted": false,
+  "scope": "After both independent replays of exact T4/T32 packed-versus-full-cache32teacher cases, run one ordinary-only B4/T32/T4 BF16-in-FP32 reference process on unchanged97c364DLL/source. Same4keys/two groups/two repeats, original128/32output limits and stopping, complete logical state witnesses plus8raw final hidden/normalized arrays. This provides prospective same-precision128token oracles for later packed ordinary/MTP checks, not a waiver of old FP32 failures or broad model-quality/serving/performance admission.5CPU state-witness controls precede GPU; preserve failures and retire only newly owned private engine files."
+}
