@@ -5011,3 +5011,26 @@ source replacement or extra observers/transfer during possible timing. Await
 terminal/archive/raw replay; then execute strongest feasible SGLang/vLLM
 profiles and GPU-qualify the attention candidate/real B8batching. Full matched
 INT4/4B/repetitions remain open; no new benchmark/2x admission in this change.
+
+
+### 2026-10-25: opt-in B8 fixed-length dispatcher CPU path ready; GPU unrun
+
+Existing model/layout/StackRows/head sources admit8rows, but the current study
+batch bridge only admits2/4. Retained its original bytes and changed only the
+capacity lookup to a class declaration, keeping default2/4 and the ready-message
+capacity check. New native_fixed_length_batch_http_bridge reuses that bounded
+dispatcher with explicit4/8 and the strict fixed-length EOS HTTP handler.
+
+Actual final14CPU tests pass in1.508s, including unchanged8legacy bridge tests,
+8client child-process token routing, deterministic8ready-ticket group with no
+ninth wait, actual HTTP IDs/count/health and EOS boolean/malformed400. Earlier
+13test pass retained too. Fixtures are explicitly CPU-only; none qualify real
+GPU batching or speed. No B8model worker/deployment/runtime default added.
+Next B8gate is actual full-model/vision/4Kmemory-fit, row-isolation/reset/state
+and token/quality checks, then real HTTP coalescing and measured profiles.
+
+Native fixed-length job original48577 still running. Ordinary4Kand short pilot
+emitted all8cohorts; last short-imageC8 sampler maxgap23.660419899999397s retained
+as unexplained pending raw replay, no causal/performance promotion. Only that
+original supervisor is polled remotely. Full references/INT4/4B/repetitions and
+2x remain unmet; do not substitute CPU routing tests for GPU qualification.

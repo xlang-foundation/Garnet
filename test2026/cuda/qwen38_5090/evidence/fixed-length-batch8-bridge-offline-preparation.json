@@ -1,0 +1,41 @@
+{
+  "status": "fixed_length_batch8_bridge_cpu_qualified_gpu_worker_unrun",
+  "recorded_utc": "2026-10-25T15:43:58.164277+00:00",
+  "source_before_sha256": "fc0190a1d8cad344eb955a7ba82f7c412ec9a43394d5531d3bd90b513f751d57",
+  "source_after_sha256": "a2e2329cb6def8296c34835ad63b9a3f4937c32bf18344e4158613a524b61b2c",
+  "source_changes": [
+    [
+      "class BatchWorker(Worker):\n",
+      "class BatchWorker(Worker):\n    # Separate research bridges may declare a different physical profile.\n    # The worker's ready message must still attest that exact capacity.\n    supported_capacities=(2,4)\n"
+    ],
+    [
+      "batch not in (2,4)",
+      "batch not in self.supported_capacities"
+    ],
+    [
+      "Fixed study batch2/4 and bounded grouping delay required",
+      "Supported fixed study batch and bounded grouping delay required"
+    ]
+  ],
+  "previous_source_archive_sha256": "06549a053a338aa23d641f9663de65c8f6af57ee82f55542ef3a47192f64f8c0",
+  "method_sha256": {
+    "native_fixed_length_batch_http_bridge.py": "46e1189442acdcea94d23953a4cbc6a9d98505df3eeba49a515ca9fa64df69d4",
+    "test_native_fixed_length_batch_bridge.py": "99b2dc00bd4e27d151f928824ffba3aa78b57bc7d99e3b2d33414ad44292c718"
+  },
+  "actual_final_cpu_tests": 14,
+  "earlier_actual_cpu_tests": 13,
+  "default_capacities": [
+    2,
+    4
+  ],
+  "explicit_fixed_length_bridge_capacities": [
+    4,
+    8
+  ],
+  "matching_worker_ready_required": true,
+  "gpu_model_worker_qualified": false,
+  "real_gpu_batching_executed": false,
+  "performance_admitted": false,
+  "two_times_target_achieved": false,
+  "scope": "Reuse actual bounded grouping/routing and strict fixed-length HTTP handler. Actual CPU child-process fixtures route8clients independently, exact8ready-ticket group does not await9th, HTTP nonstream IDs/counts/health verified, explicit EOS true preserved and string rejected400, original B2/B4 regressions/default refusal of8 retained. This is no GPU batching, memory-fit, model/quality, streaming-performance or2x proof. B8model/vision/4Kmemory/full-state/quality and real HTTP benchmark remain required before deployment/admission. Native current HTTP source/runtime untouched remotely."
+}

@@ -1,0 +1,47 @@
+from pathlib import Path
+from datetime import datetime,timezone
+import hashlib,json,shutil,zipfile
+w=Path(__file__).resolve().parent;r=Path('D:/CantorAI/work/qwen38-5090');m=r/'test2026/cuda/qwen38_5090';e=m/'evidence';sha=lambda b:hashlib.sha256(b).hexdigest()
+old=(w/'native-batch-http-before-capacity-extension.py').read_bytes();current=(m/'native_batch_http_bridge.py').read_bytes()
+changes=[(b'class BatchWorker(Worker):\n',b'class BatchWorker(Worker):\n    # Separate research bridges may declare a different physical profile.\n    # The worker\'s ready message must still attest that exact capacity.\n    supported_capacities=(2,4)\n'),(b'batch not in (2,4)',b'batch not in self.supported_capacities'),(b'Fixed study batch2/4 and bounded grouping delay required',b'Supported fixed study batch and bounded grouping delay required')]
+rebuilt=old
+for before,after in changes:assert rebuilt.count(before)==1;rebuilt=rebuilt.replace(before,after)
+assert rebuilt==current
+archive=e/'batch8-bridge-previous-source.zip';assert not archive.exists()
+with zipfile.ZipFile(archive,'x',zipfile.ZIP_DEFLATED) as z:z.writestr('native_batch_http_bridge.py',old)
+for stem,count in (('fixed-length-batch8-bridge-cpu-ledger',13),('fixed-length-batch8-http-cpu-ledger',14)):
+ source=w/stem;rows=[json.loads(line) for line in (source/'commands.jsonl').read_bytes().splitlines()];assert len(rows)==2 and rows[-1]['exit_code']==0
+ assert ('Ran '+str(count)+' tests').encode() in (source/'commands.log').read_bytes()
+ target=e/stem;target.mkdir(exist_ok=True)
+ for f in source.iterdir():
+  t=target/f.name;assert not t.exists();shutil.copyfile(f,t)
+method=e/'retain-fixed-length-batch8-bridge.py.txt';assert not method.exists();shutil.copyfile(Path(__file__),method)
+data={'status':'fixed_length_batch8_bridge_cpu_qualified_gpu_worker_unrun','recorded_utc':datetime.now(timezone.utc).isoformat(),'source_before_sha256':sha(old),'source_after_sha256':sha(current),'source_changes':[[a.decode(),b.decode()] for a,b in changes],'previous_source_archive_sha256':sha(archive.read_bytes()),'method_sha256':{n:sha((m/n).read_bytes()) for n in ('native_fixed_length_batch_http_bridge.py','test_native_fixed_length_batch_bridge.py')},'actual_final_cpu_tests':14,'earlier_actual_cpu_tests':13,'default_capacities':[2,4],'explicit_fixed_length_bridge_capacities':[4,8],'matching_worker_ready_required':True,'gpu_model_worker_qualified':False,'real_gpu_batching_executed':False,'performance_admitted':False,'two_times_target_achieved':False,'scope':'Reuse actual bounded grouping/routing and strict fixed-length HTTP handler. Actual CPU child-process fixtures route8clients independently, exact8ready-ticket group does not await9th, HTTP nonstream IDs/counts/health verified, explicit EOS true preserved and string rejected400, original B2/B4 regressions/default refusal of8 retained. This is no GPU batching, memory-fit, model/quality, streaming-performance or2x proof. B8model/vision/4Kmemory/full-state/quality and real HTTP benchmark remain required before deployment/admission. Native current HTTP source/runtime untouched remotely.'}
+target=e/'fixed-length-batch8-bridge-offline-preparation.json';assert not target.exists();target.write_text(json.dumps(data,indent=2),encoding='utf8')
+entry='''
+
+### 2026-10-25: opt-in B8 fixed-length dispatcher CPU path ready; GPU unrun
+
+Existing model/layout/StackRows/head sources admit8rows, but the current study
+batch bridge only admits2/4. Retained its original bytes and changed only the
+capacity lookup to a class declaration, keeping default2/4 and the ready-message
+capacity check. New native_fixed_length_batch_http_bridge reuses that bounded
+dispatcher with explicit4/8 and the strict fixed-length EOS HTTP handler.
+
+Actual final14CPU tests pass in1.508s, including unchanged8legacy bridge tests,
+8client child-process token routing, deterministic8ready-ticket group with no
+ninth wait, actual HTTP IDs/count/health and EOS boolean/malformed400. Earlier
+13test pass retained too. Fixtures are explicitly CPU-only; none qualify real
+GPU batching or speed. No B8model worker/deployment/runtime default added.
+Next B8gate is actual full-model/vision/4Kmemory-fit, row-isolation/reset/state
+and token/quality checks, then real HTTP coalescing and measured profiles.
+
+Native fixed-length job original48577 still running. Ordinary4Kand short pilot
+emitted all8cohorts; last short-imageC8 sampler maxgap23.660419899999397s retained
+as unexplained pending raw replay, no causal/performance promotion. Only that
+original supervisor is polled remotely. Full references/INT4/4B/repetitions and
+2x remain unmet; do not substitute CPU routing tests for GPU qualification.
+'''
+for name in ('qwen38-5090-development-log.md','qwen38-5090-implementation-task.md'):
+ target=r/'docs/research'/name;raw=target.read_bytes();assert b'opt-in B8 fixed-length dispatcher CPU path ready' not in raw;target.write_bytes(raw+entry.replace('\n','\r\n').encode())
+print(json.dumps({'status':data['status'],'actual_final_cpu_tests':14,'gpu_executed':False}))
