@@ -1374,3 +1374,41 @@ true. This source/config tooling is unrun remotely. Reference client now require
 the future successful fixed-length HTTP proof and uses its exact new corpus.
 Old failed proof cannot be promoted. Full strongest references/tuning/MTP,
 INT4/4B, real batching/profile optimization and repetitions remain required.
+
+
+### 2026-10-25: real EOS regression closes; full fixed-length HTTP starts
+
+Original fixed-length-eos-consistency-attempt1 exited0 and finished owned cleanup.
+Immutable archivea18679e271eb5eb65fb2749fcdb8b17bdfb53deac01cfa0f64b4288d646cb136
+contains457files/6017911bytes. Both independent actual replays match using
+separately versioned checker cbd5ffb2... (Git80836a43d); the checker was not
+injected into the original runtime archive.43remote CPU tests pass in7.418s.
+All8real requests verify natural74/forced128/natural74restore/forced128SSE,
+old74token prefix including EOS at73, complete stream/native IDs/usage and
+ordinary/MTP equivalence. Native1a1dDLL/source/runtime stay unchanged. Correctness
+only; these request timings are not serving benchmark or2x evidence.
+
+Three fresh full-workflow methods derive exactly from immutable failed2ef0d7c0...
+sources. New factory requires identical actual native-model/EOS proof pairs and
+same checked EOS-policy sources.43CPU gates,805natural-stop adapted screening,
+12protocol/2explicit fixed-length boundary controls, complete124request
+3968+128actual-token cohorts and separate124request short pilot run ordinary
+thenMTP. Old native-model protocol oracle remains unchanged; verifier additionally
+checks actual per-request ignore_eos flags and every frozen4Krequest body, full
+IDs/usage and MTP pairing. Original natural-stop trial remains failed.
+
+Actual factory materializes32method preparation e0a433d4... and34target plan.
+Passed idle/source/runtime preflight; a33619byte verified bundle installs only
+six absent workflow/receipt files and verifies all34targets, skipping28matching
+files including both corpora. No product/DLL/SDK rebuild or model/data recopy.
+Original48577started fixed-length-http-study-attempt1 and confirms it running;
+43actual remote CPU tests pass in6.807s. Only its original handle will be polled
+while timing is possible. No current full fixed-length metric or2x result yet.
+
+Future reference runs must use the exact same explicit-ignore_eos corpus and
+match the whole-probe plus cohort NVML instrumentation used here; retain actual
+sample gaps. Do not discard a faster reference merely by selecting an easier
+ordinary configuration: preserve MTP numerical divergences/quality evidence,
+assess strongest feasible settings and report limitations before any2x claim.
+Actual references/tuning, INT4/4B, real batching/kernel work and clean repetitions
+remain part of the original objective, not replaced by this correctness fix.

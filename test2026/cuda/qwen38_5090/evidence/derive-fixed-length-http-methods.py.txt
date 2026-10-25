@@ -1,0 +1,35 @@
+from pathlib import Path
+import hashlib,json,zipfile
+w=Path(__file__).resolve().parent;m=Path('D:/CantorAI/work/qwen38-5090/test2026/cuda/qwen38_5090');archive=w.parent/'outputs/tokenizer-nfc-http-study-attempt1-evidence.zip';sha=lambda b:hashlib.sha256(b).hexdigest();prefix='Garnet/test2026/cuda/qwen38_5090/';summary=json.loads((m/'evidence/fixed-length-4096-preparation.json').read_bytes());recipes={}
+assert sha(archive.read_bytes())=='2ef0d7c0036ceb8e578ea64673131464d45191e0cebafaa68824583e396406c4'
+pairs=(('probe_tokenizer_nfc_http.py','probe_fixed_length_http.py'),('run_tokenizer_nfc_http.py','run_fixed_length_http.py'),('verify_tokenizer_nfc_http.py','verify_fixed_length_http.py'))
+replacements=[*pairs,('prepare_tokenizer_nfc_http.py','prepare_fixed_length_http.py'),('native_tokenizer_nfc_stream_worker.py','native_fixed_length_stream_worker.py'),('serve_native_tokenizer_nfc_worker.bat','serve_native_fixed_length_worker.bat'),('native_http_bridge','native_fixed_length_http_bridge'),('benchmark_fixed_context_native','benchmark_fixed_length_native'),('test_tokenizer_nfc_worker_contract','test_fixed_length_worker_contract'),('test_fixed_context_native_stream','test_fixed_length_native_stream'),('evidence/fixed-context-4096-corpus.zip','evidence/fixed-length-4096-corpus.zip'),('829d7770f2d749e30a66e027940224e8ab77a488d0b5f9c456e4809ae845987c',summary['manifest_sha256']),('tokenizer-nfc-http-study-attempt1','fixed-length-http-study-attempt1'),('tokenizer-nfc-http-preparation.json','fixed-length-http-preparation.json'),('tokenizer_nfc_http_','fixed_length_http_')]
+eos_guard='''eos='fixed-length-eos-consistency-attempt1';eos_path=ROOT/'results'/(eos+'-verified.json');eq=json.loads(eos_path.read_bytes());ew=json.loads((ROOT/'results'/eos/'workflow.json').read_bytes())
+assert sha(eos_path)==p['eos_proof_sha256'] and eq['status']=='fixed_length_eos_consistency_replayed' and eq['library_sha256']==digest and sha(ROOT/'results'/(eos+'-evidence.zip'))==eq['archive_sha256']==p['eos_archive_sha256']
+assert ew['cleanup_finished'] and ew['exit_code']==0 and ew['library_unchanged'] and ew['source_sha256']==ew['source_after_sha256'] and ew['runtime_dependencies']==ew['runtime_dependencies_after']==p['runtime_dependencies']
+'''
+with zipfile.ZipFile(archive) as z:
+ for source,target in pairs:
+  raw=z.read(prefix+source);text=raw.decode();changes=[]
+  def replace(before,after,count=None):
+   global text
+   actual=text.count(before);assert actual>0 and (count is None or actual==count),(source,before,actual);text=text.replace(before,after);changes.append([before,after,actual])
+  for before,after in replacements:
+   if before in text:replace(before,after)
+  if source.startswith('run_'):
+   replace("'test2026.cuda.qwen38_5090.test_fixed_length_native_stream'],OUT", "'test2026.cuda.qwen38_5090.test_fixed_length_native_stream','test2026.cuda.qwen38_5090.test_fixed_length_reference'],OUT",1)
+   replace('29CPU','43CPU');replace("receipt=ROOT/'results/study-ssd-engine-cache/receipt.json'",eos_guard+"receipt=ROOT/'results/study-ssd-engine-cache/receipt.json'",1)
+  elif source.startswith('probe_'):
+   replace("assert ready['batch']==1", "assert ready['explicit_ignore_eos_supported'] and ready['batch']==1",1)
+  else:
+   replace('Ran 29 tests','Ran 43 tests',1)
+   before="  passed=w['exit_code']==0";after="""  eos='fixed-length-eos-consistency-attempt1';eos_raw=z.read('results/'+eos+'-verified.json');eq=json.loads(eos_raw);assert sha(eos_raw)==p['eos_proof_sha256'] and eq['status']=='fixed_length_eos_consistency_replayed' and eq['archive_sha256']==p['eos_archive_sha256'] and eq['library_sha256']==w['library_sha256'] and eq['replay_verifier_sha256']==sha(z.read(methods+'verify_fixed_length_eos.py'))
+"""+before;replace(before,after,1)
+   replace('def native_match(key,prompt,completion):','def native_match(key,prompt,completion,ignore_eos=False):',1)
+   replace("record['generated_ids']==completion;used.add(key)","record['generated_ids']==completion and record['ignore_eos'] is ignore_eos;used.add(key)",1)
+   old="native_match(response['id'],choice['prompt_token_ids'],choice['response_token_ids'])\n       if mode=='mtp'";new="native_match(response['id'],choice['prompt_token_ids'],choice['response_token_ids'],True)\n       if mode=='mtp'";replace(old,new,1)
+   replace("context_ids={r['key']:json.loads(context.read(r['expected_prompt_ids_file'])) for r in context_manifest['rows']}","context_ids={r['key']:json.loads(context.read(r['expected_prompt_ids_file'])) for r in context_manifest['rows']};context_requests={r['key']:json.loads(context.read(r['request_file'])) for r in context_manifest['rows']}",1)
+   replace("actual_context_keys.add(key)","actual_context_keys.add(key);assert doc(root+benchmark['run_id']+'-'+key+'-request.json')==context_requests[key] and context_requests[key]['ignore_eos'] is True",1)
+   replace("\n       native_match(final[0]['id'],final[0]['prompt_token_ids'],final[0]['response_token_ids'])","\n       native_match(final[0]['id'],final[0]['prompt_token_ids'],final[0]['response_token_ids'],fixed)",1)
+  path=m/target;assert not path.exists();path.write_bytes(text.encode());recipes[target]={'source':prefix+source,'source_sha256':sha(raw),'changes':changes,'result_sha256':sha(text.encode())}
+target=m/'evidence/fixed-length-http-method-derivation.json';assert not target.exists();target.write_text(json.dumps({'parent_source_archive_sha256':sha(archive.read_bytes()),'files':recipes,'scope':'Fresh full ordinary/MTP workflow from immutable natural-stop failure. Explicit new worker/bridge/corpus/client names;43CPU gates; additionally require actual qualified8requestEOS proof and verify ignore_eos metadata and exact frozen request bytes. Native model proof and all original workload/token/usage/failure checks retained. Old failure is not relabeled.'},indent=2),encoding='utf8');print(json.dumps({'status':'fixed_length_http_methods_derived_unrun','methods':len(recipes)}))
