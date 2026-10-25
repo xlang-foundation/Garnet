@@ -1,0 +1,45 @@
+{
+  "status": "reference4k_cache_controls_prepared_unrun",
+  "installed_sglang_argument_source": {
+    "archive_sha256": "5027ba7f67aef19312ac2ce367b0163d632009999f861a7f6554fba904fff077",
+    "file": "sglang/srt/arg_groups/fields/mm.py",
+    "sha256": "cc409a9a77acd92543ae5337afa49d48272a9d0639155bda68e99477f741265e"
+  },
+  "recipes": {
+    "serve_sglang_fixed4k.sh": {
+      "source": "serve_sglang_corrected_grid.sh",
+      "source_sha256": "00b00b0900ee5792036fb641a2cd4f69b19763852d7416f4c513c27a3cf1ba2c",
+      "changes": [
+        [
+          "sglang-corrected-grid-server.log",
+          "sglang_fixed4k-server.log",
+          2
+        ],
+        [
+          "  --max-total-tokens 32768 \\\n",
+          "  --mm-preprocess-cache-size-mb 0 \\\n  --max-total-tokens 32768 \\\n",
+          1
+        ]
+      ],
+      "result_sha256": "4510dd8a53778f8e0d90309010cae3e94ffa31c497595691cee135deedb8b472"
+    },
+    "serve_sglang_mtp3_fixed4k.sh": {
+      "source": "serve_sglang_mtp3_candidate.sh",
+      "source_sha256": "7ad94d37820cbe08daf6475220f9ffe6a8af4c845d08511b69056dd21ea2dbb1",
+      "changes": [
+        [
+          "sglang-mtp3-server.log",
+          "sglang_mtp3_fixed4k-server.log",
+          2
+        ],
+        [
+          "  --max-total-tokens 32768 \\\n",
+          "  --mm-preprocess-cache-size-mb 0 \\\n  --max-total-tokens 32768 \\\n",
+          1
+        ]
+      ],
+      "result_sha256": "e437df088259aadee097553ce4faedb40b844c095e5745b6737bf9768b13b138"
+    }
+  },
+  "scope": "SGLang CPU preprocessing cache explicitly zero; prefix-MM/global embedding caches remain default disabled, verify actual server_info before timing. vLLM common4K client resets both idle processor/encoder caches after repeated controls, then requires positive query delta and zero new processor hits. No reference server started or runtime/quality/performance claim."
+}

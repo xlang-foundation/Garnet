@@ -4727,3 +4727,24 @@ It has not yet run on a completed new archive. B4 report comparisons cover all
 reported vectors; do not broaden that claim to all transient files before audit.
 Original2x, full4K/quality, strongest reference/tuned/MTP, INT4/4B and repetition
 requirements remain open. Single-slot HTTP queues do not imply GPU batching.
+
+
+### 2026-10-25: reference4K repeated-image cache boundary addressed
+
+Reference4K nonstream token controls reuse every later timed image. The prepared
+client now performs the established idle-only vLLM dual reset after all124ID
+controls and before NVML/timing, records both endpoint acknowledgements/raw
+counters, and rejects timing completion unless processor queries increase with
+zero new hits and unchanged server process. Timed corpus JPEGs are unique;
+encoder reset acknowledgement alone is not a universal cache-residency proof.
+Existing API schemas/cache-negative controls pass10actual CPU tests (0.631s).
+No vLLM server/model run occurred; config source was read without GPU imports.
+
+New SGLang ordinary/MTP3 fixed4K launchers are exact current launcher derivatives
+changing only dedicated log paths and explicit --mm-preprocess-cache-size-mb0.
+Actual installed mm.py from5027ba7f... archive defines0as disabling this CPU
+cache. Prefix-MM/global embedding caches remain default off and actual
+server_info must verify these values before timing. Both Bash syntax checks and
+reference Python compilation pass. Source recipe/actual CPU ledger retained.
+These methods are local only while original NFC model runs; no deployment,
+runtime compatibility,805quality/4K metric or2x admission follows.

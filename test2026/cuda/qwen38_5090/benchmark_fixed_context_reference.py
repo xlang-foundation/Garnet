@@ -14,6 +14,7 @@ from benchmark_fixed_context_native import ARCHIVE_SHA256,MANIFEST_SHA256
 from benchmark_stream import request
 from metrics import summarize
 from sample_vram import Sampler
+from vllm_cache_control import reset_idle_caches,verify_after_run
 sha=lambda raw:hashlib.sha256(raw).hexdigest()
 
 def control_request(body,engine):
@@ -70,6 +71,10 @@ def main():
   return result
  save()
  try:
+  # Controls reuse the frozen images. Retire their processor/encoder entries
+  # before timing; all images within the timed corpus are distinct.
+  if args.engine=='vllm':
+   reset=reset_idle_caches(args.url,out/'cache-control',model='qwen38-27b-nvfp4');manifest['image_cache_reset']=reset;save()
   sampler=Sampler(out/(prefix+'vram.jsonl'));manifest['gpu']=sampler.device;sampler.start()
   for cohort in corpus['cohorts']:
    case=cohort['case'];c=cohort['concurrency'];sampler.phase='warmup-'+case+'-c'+str(c)
@@ -79,6 +84,7 @@ def main():
    phase=case+'-c'+str(c);sampler.phase=phase;sampler.sample()
    with concurrent.futures.ThreadPoolExecutor(max_workers=c) as pool:measured=[f.result() for f in [pool.submit(send,key) for key in cohort['measured']]]
    sampler.sample();summary=summarize(measured);summary.update(sampler.peak(phase));summary.update(case=case,concurrency=c,request_keys=[r['key'] for r in measured],single_token_arrivals=all(r['single_token_arrivals'] for r in measured),prompt_tokens=[r['prompt_tokens'] for r in measured]);cohorts.append(summary);save();print(json.dumps(summary),flush=True)
+  if args.engine=='vllm':manifest['image_cache_counter_delta']=verify_after_run(args.url,out/'cache-control',reset['after_reset'])
   manifest['status']='completed'
  except BaseException as error:manifest.update(status='failed',error=repr(error));raise
  finally:

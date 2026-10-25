@@ -1,0 +1,23 @@
+from pathlib import Path
+import hashlib,json,zipfile
+chat=Path(__file__).resolve().parents[1];repo=Path('D:/CantorAI/work/qwen38-5090');m=repo/'test2026/cuda/qwen38_5090'
+sha=lambda b:hashlib.sha256(b).hexdigest()
+archive=chat/'outputs/sglang-mtp-arguments-installed-source.zip'
+with zipfile.ZipFile(archive) as z:
+ matches=[n for n in z.namelist() if n.endswith('arg_groups/fields/mm.py')]
+ assert len(matches)==1
+ raw=z.read(matches[0]);assert b'mm_preprocess_cache_size_mb' in raw and b'0 disables the cache' in raw
+ proof=json.loads((chat/'outputs/sglang-mtp-arguments-installed-source-remote-verified.json').read_bytes());assert proof['archive_sha256']==sha(archive.read_bytes())
+ source={'archive_sha256':sha(archive.read_bytes()),'file':matches[0],'sha256':sha(raw)}
+recipes={}
+for old,new in (('serve_sglang_corrected_grid.sh','serve_sglang_fixed4k.sh'),('serve_sglang_mtp3_candidate.sh','serve_sglang_mtp3_fixed4k.sh')):
+ raw=(m/old).read_bytes();text=raw.decode();changes=[]
+ log='sglang-corrected-grid-server.log' if 'corrected' in old else 'sglang-mtp3-server.log'
+ for before,after in ((log,new.removeprefix('serve_').removesuffix('.sh')+'-server.log'),('  --max-total-tokens 32768 \\\n','  --mm-preprocess-cache-size-mb 0 \\\n  --max-total-tokens 32768 \\\n')):
+  assert before in text;count=text.count(before);text=text.replace(before,after);changes.append([before,after,count])
+ target=m/new;data=text.encode();assert not target.exists() or target.read_bytes()==data
+ if not target.exists():target.write_bytes(data)
+ recipes[new]={'source':old,'source_sha256':sha(raw),'changes':changes,'result_sha256':sha(data)}
+target=m/'evidence/reference4k-cache-launcher-preparation.json';data=json.dumps({'status':'reference4k_cache_controls_prepared_unrun','installed_sglang_argument_source':source,'recipes':recipes,'scope':'SGLang CPU preprocessing cache explicitly zero; prefix-MM/global embedding caches remain default disabled, verify actual server_info before timing. vLLM common4K client resets both idle processor/encoder caches after repeated controls, then requires positive query delta and zero new processor hits. No reference server started or runtime/quality/performance claim.'},indent=2).encode();assert not target.exists() or target.read_bytes()==data
+if not target.exists():target.write_bytes(data)
+print(json.dumps({'launchers':len(recipes),'source_verified':source,'server_executed':False}))
