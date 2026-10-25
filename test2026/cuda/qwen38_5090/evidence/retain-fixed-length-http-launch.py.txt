@@ -1,0 +1,63 @@
+from pathlib import Path
+from datetime import datetime,timezone
+import hashlib,json,shutil
+w=Path(__file__).resolve().parent;o=w.parent/'outputs';r=Path('D:/CantorAI/work/qwen38-5090');m=r/'test2026/cuda/qwen38_5090';e=m/'evidence';name='fixed-length-eos-consistency-attempt1';sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+q=json.loads((o/(name+'-verified.json')).read_bytes());assert q==json.loads((o/(name+'-remote-verified.json')).read_bytes()) and q['status']=='fixed_length_eos_consistency_replayed' and q['archive_sha256']==sha(o/(name+'-evidence.zip'))
+installation=json.loads((w/'fixed-length-http-install.json').read_bytes());assert installation['status']=='fixed_length_http_methods_installed' and installation['new_targets_verified']==6 and installation['all_targets_verified']==34
+def copy(source,target):
+ assert not target.exists() or source.read_bytes()==target.read_bytes()
+ if not target.exists():shutil.copyfile(source,target)
+for suffix in ('-verified.json','-remote-verified.json','-replay-remote.log'):copy(o/(name+suffix),e/(name+suffix))
+for ledger in ('fixed-length-eos-local-replay-ledger','fixed-length-http-preparation-ledger'):
+ target=e/ledger;target.mkdir(exist_ok=True)
+ for source in (w/ledger).iterdir():copy(source,target/source.name)
+for method in ('derive-fixed-length-http-methods.py','prepare-fixed-length-http-preflight.py','derive-fixed-length-http-package.py','package-fixed-length-http-methods.py','install-fixed-length-http-methods.py','fixed-length-http-preflight.py','retain-fixed-length-http-launch.py'):
+ copy(w/method,e/(method+'.txt'))
+for artifact in ('fixed-length-http-preflight-input.json','fixed-length-http-preflight.json','fixed-length-http-upload-plan.json','fixed-length-http-bundle-preparation.json','fixed-length-http-install.json','fixed-length-http-methods.zip'):
+ copy(w/artifact,e/artifact)
+now=datetime.now(timezone.utc).isoformat();receipt={'status':'fixed_length_http_original_supervisor_running','recorded_utc':now,'eos_proof_pair':q,'runtime_dll_sha256':q['library_sha256'],'job':'fixed-length-http-study-attempt1','original_supervisor_session':48577,'last_authoritative_handle_state':'running','actual_remote_cpu_tests_passed':43,'actual_remote_cpu_test_report_seconds':6.807,'installation':installation,'preparation_sha256':sha(e/'fixed-length-http-preparation.json'),'tool_observation':'Original48577handle confirmed running and emitted actual43CPUtests/OK. This is an explicit tool observation, not a fabricated run_logged ledger.','performance_admitted':False,'two_times_target_achieved':False,'scope':'Eight-request EOS regression closed and identically replayed. One fresh source/runtime/proof-bound ordinary/MTP HTTP job now owns GPU:805natural-stop quality, exact explicit-ignore_eos4Kcohorts and separate short pilot. Only original handle polling during possible timing. Full run/replay and matched strongest references/quality/INT4/4B/optimization/repetition still required.'}
+target=e/'fixed-length-http-launch-observation.json';assert not target.exists();target.write_text(json.dumps(receipt,indent=2),encoding='utf8')
+for filename in ('Garnet-Tokenizer-NFC-Status.json','Garnet-Parallel-Top1-Integration-Status.json'):
+ target=o/filename;s=json.loads(target.read_bytes());s.update(recorded_utc=now,status='fixed_length_http_running',fixed_length_http=receipt,current_job=receipt['job'],new_speed_measurement=False,admitted_new_speed_measurement=False,two_times_target_achieved=False,pushed_commit='80836a43d',scope=receipt['scope']);target.write_text(json.dumps(s,indent=2)+'\n',encoding='utf8')
+entry='''
+
+### 2026-10-25: real EOS regression closes; full fixed-length HTTP starts
+
+Original fixed-length-eos-consistency-attempt1 exited0 and finished owned cleanup.
+Immutable archivea18679e271eb5eb65fb2749fcdb8b17bdfb53deac01cfa0f64b4288d646cb136
+contains457files/6017911bytes. Both independent actual replays match using
+separately versioned checker cbd5ffb2... (Git80836a43d); the checker was not
+injected into the original runtime archive.43remote CPU tests pass in7.418s.
+All8real requests verify natural74/forced128/natural74restore/forced128SSE,
+old74token prefix including EOS at73, complete stream/native IDs/usage and
+ordinary/MTP equivalence. Native1a1dDLL/source/runtime stay unchanged. Correctness
+only; these request timings are not serving benchmark or2x evidence.
+
+Three fresh full-workflow methods derive exactly from immutable failed2ef0d7c0...
+sources. New factory requires identical actual native-model/EOS proof pairs and
+same checked EOS-policy sources.43CPU gates,805natural-stop adapted screening,
+12protocol/2explicit fixed-length boundary controls, complete124request
+3968+128actual-token cohorts and separate124request short pilot run ordinary
+thenMTP. Old native-model protocol oracle remains unchanged; verifier additionally
+checks actual per-request ignore_eos flags and every frozen4Krequest body, full
+IDs/usage and MTP pairing. Original natural-stop trial remains failed.
+
+Actual factory materializes32method preparation e0a433d4... and34target plan.
+Passed idle/source/runtime preflight; a33619byte verified bundle installs only
+six absent workflow/receipt files and verifies all34targets, skipping28matching
+files including both corpora. No product/DLL/SDK rebuild or model/data recopy.
+Original48577started fixed-length-http-study-attempt1 and confirms it running;
+43actual remote CPU tests pass in6.807s. Only its original handle will be polled
+while timing is possible. No current full fixed-length metric or2x result yet.
+
+Future reference runs must use the exact same explicit-ignore_eos corpus and
+match the whole-probe plus cohort NVML instrumentation used here; retain actual
+sample gaps. Do not discard a faster reference merely by selecting an easier
+ordinary configuration: preserve MTP numerical divergences/quality evidence,
+assess strongest feasible settings and report limitations before any2x claim.
+Actual references/tuning, INT4/4B, real batching/kernel work and clean repetitions
+remain part of the original objective, not replaced by this correctness fix.
+'''
+for filename in ('qwen38-5090-development-log.md','qwen38-5090-implementation-task.md'):
+ target=r/'docs/research'/filename;raw=target.read_bytes();assert b'real EOS regression closes; full fixed-length HTTP starts' not in raw;target.write_bytes(raw+entry.replace('\n','\r\n').encode())
+print(json.dumps({'status':receipt['status'],'eos_actual_requests_replayed':8,'remote_cpu_tests_passed':43,'performance_admitted':False}))

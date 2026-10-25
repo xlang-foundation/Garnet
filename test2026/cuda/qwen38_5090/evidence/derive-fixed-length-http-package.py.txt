@@ -1,0 +1,7 @@
+from pathlib import Path
+import json
+w=Path(__file__).resolve().parent;preflight=json.loads((w/'fixed-length-http-preflight.json').read_bytes());assert preflight['status']=='fixed_length_http_launch_preflight_passed';missing=sum(not row['exists'] for row in preflight['targets'].values());assert missing==6
+text=(w/'package-fixed-length-eos-methods.py').read_text()
+for old,new in (('fixed-length-eos','fixed-length-http'),('fixed_length_eos','fixed_length_http'),('fixed-length-http-consistency-attempt1','fixed-length-http-study-attempt1'),('len(files)==17','len(files)==6'),('Only17','Only6'),('Exact17','Exact6'),('all30targets','all34targets')):
+ assert old in text;text=text.replace(old,new)
+target=w/'package-fixed-length-http-methods.py';assert not target.exists();target.write_text(text,encoding='utf8');print(json.dumps({'status':'fixed_length_http_package_method_derived','missing':missing,'preflight_gpu_used_mib':preflight['gpu_used_mib_preflight_only']}))

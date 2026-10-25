@@ -1,0 +1,18 @@
+from pathlib import Path
+import argparse,hashlib,json,sys,zipfile
+ROOT=Path('D:/CantorAI/5090-study-20261023');M=ROOT/'Garnet/test2026/cuda/qwen38_5090';sys.path.insert(0,str(M))
+from run_bf16_low_batch_native_build import idle
+sha=lambda b:hashlib.sha256(b).hexdigest()
+a=argparse.ArgumentParser();a.add_argument('--sha256',required=True);args=a.parse_args();archive=ROOT/'results/fixed-length-http-methods.zip';assert sha(archive.read_bytes())==args.sha256
+preflight=json.loads((ROOT/'results/fixed-length-http-study-attempt1-preflight.json').read_bytes());assert preflight['status']=='fixed_length_http_launch_preflight_passed';idle();rows=[]
+with zipfile.ZipFile(archive) as z:
+ manifest=json.loads(z.read('install-manifest.json'));assert z.testzip() is None and len(z.namelist())==len(set(z.namelist()))==len(manifest['files'])+1
+ for name,digest in manifest['files'].items():
+  target=ROOT/name;assert target.resolve().is_relative_to(M.resolve()) and target.parent.is_dir() and not(getattr(target.parent.lstat(),'st_file_attributes',0)&0x400);assert not preflight['targets'][name]['exists'] and preflight['targets'][name]['expected_sha256']==digest;raw=z.read(name);assert sha(raw)==digest
+  assert not target.exists() or (target.is_file() and not(getattr(target.lstat(),'st_file_attributes',0)&0x400) and sha(target.read_bytes())==digest);rows.append((target,raw,digest,target.exists()))
+ for target,raw,digest,exists in rows:
+  if not exists:
+   with target.open('xb') as f:f.write(raw)
+  assert sha(target.read_bytes())==digest
+for name,row in preflight['targets'].items():assert sha((ROOT/name).read_bytes())==row['expected_sha256']
+result={'status':'fixed_length_http_methods_installed','bundle_sha256':args.sha256,'new_targets_verified':len(rows),'all_targets_verified':len(preflight['targets']),'scope':'Exact6new method/corpus/receipt files only; all34targets match after install. No product/runtime replacement, shared805corpus copy, model/server or GPU execution.'};target=ROOT/'results/fixed-length-http-install.json';assert not target.exists();target.write_text(json.dumps(result,indent=2),encoding='utf8');print(json.dumps(result))

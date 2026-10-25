@@ -1,0 +1,37 @@
+
+{"id": "27f436d9c4a04e63bc89a43be36bba26", "kind": "correctness", "label": "Independent closed EOS-policy/source/runtime/native and HTTP ID replay; separately versioned checker, no timing", "argv": ["D:\\CantorAI\\Garnet\\.venv\\Scripts\\python.exe", "test2026/cuda/qwen38_5090/verify_fixed_length_eos.py", "--proofs", "C:/Users/developer/Documents/Codex/2026-10-23/referenced-chatgpt-conversation-this-is-an/outputs"]}
+{
+  "status": "fixed_length_eos_consistency_replayed",
+  "archive_sha256": "a18679e271eb5eb65fb2749fcdb8b17bdfb53deac01cfa0f64b4288d646cb136",
+  "files_verified": 457,
+  "library_sha256": "1a1d0229a1c0c24a8397a4dee7a614bcedf97b3bd3293e58d752ed7de30eb498",
+  "profiles": [
+    {
+      "mode": "ordinary",
+      "actual_requests": 4,
+      "natural_stop_tokens": 74,
+      "forced_actual_tokens": 128,
+      "prefix74_exact": true,
+      "normal_stop_restored": true,
+      "forced_stream_ids_exact": true,
+      "ordinary_mtp_exact": false,
+      "performance_admitted": false
+    },
+    {
+      "mode": "mtp",
+      "actual_requests": 4,
+      "natural_stop_tokens": 74,
+      "forced_actual_tokens": 128,
+      "prefix74_exact": true,
+      "normal_stop_restored": true,
+      "forced_stream_ids_exact": true,
+      "ordinary_mtp_exact": true,
+      "performance_admitted": false
+    }
+  ],
+  "replay_verifier_sha256": "cbd5ffb24bedbcd3ae31e94a5582a5c6be2a09a9a8510c2473c9aa871996d4f7",
+  "checker_in_runtime_archive": false,
+  "performance_admitted": false,
+  "two_times_target_achieved": false,
+  "scope": "Actual closed8request EOS-policy/source/runtime/normal-reset/ordinary-MTP/SSE replay. Checker is separately versioned on study branch, not injected into immutable runtime archive. No full805quality/fixed-length performance/reference/tuning/2x admission."
+}

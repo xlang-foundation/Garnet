@@ -1,0 +1,7 @@
+from pathlib import Path
+import json
+w=Path(__file__).resolve().parent;m=Path('D:/CantorAI/work/qwen38-5090/test2026/cuda/qwen38_5090');p=json.loads((m/'evidence/fixed-length-http-preparation.json').read_bytes());plan=json.loads((w/'fixed-length-http-upload-plan.json').read_bytes());expected={row['target']:row['sha256'] for row in plan['uploads']};data={'expected':expected,'previous':{},'existing':{n:h for n,h in p['files'].items() if n not in expected},'runtime':p['runtime_dependencies'],'parent_proof_sha256':p['parent_proof_sha256'],'parent_archive_sha256':p['parent_archive_sha256']}
+target=w/'fixed-length-http-preflight-input.json';assert not target.exists();target.write_text(json.dumps(data,indent=2),encoding='utf8');text=(w/'tokenizer-http-launch-preflight.py').read_text()
+for old,new in (('tokenizer-http-launch-preflight-input.json','fixed-length-http-preflight-input.json'),('tokenizer-nfc-http-study-attempt1','fixed-length-http-study-attempt1'),('tokenizer_nfc_http_launch_preflight_','fixed_length_http_launch_preflight_')):
+ assert old in text;text=text.replace(old,new)
+target=w/'fixed-length-http-preflight.py';assert not target.exists();target.write_text(text,encoding='utf8');print(json.dumps({'status':'fixed_length_http_preflight_prepared','targets':len(expected)}))
