@@ -1,0 +1,91 @@
+{
+  "status": "bf16_score_tiling_private_cpu_compile_and_link_passed",
+  "recorded_utc": "2026-10-25T15:29:46.552026+00:00",
+  "input_sha256": {
+    "D:\\CantorAI\\work\\qwen38-5090\\src\\cuda\\qwen38_bf16_kv_low_batch_overlay.cu": "fe4a826eb8a03324780afa13fad1da238882e57ecda58cd61d988287502d6193",
+    "D:\\CantorAI\\work\\qwen38-5090\\test2026\\cuda\\qwen38_5090\\bf16_low_batch_scores_tiled.cu": "45c841fe6422506022e8be7de09a62f3f73c580c74c10bfc1c586a4fab77f533",
+    "D:\\CantorAI\\work\\qwen38-5090\\test2026\\cuda\\qwen38_5090\\probe_bf16_scores_tiled.cu": "50cabfde0c6a32ed5bc7ad5e3badc50098d57bd238261a7b46e56b0245039708",
+    "D:\\CantorAI\\work\\qwen38-5090\\test2026\\cuda\\qwen38_5090\\bf16_low_batch_scores_tiled.cuh": "c6ecfc03ff9ccbbafa0819c8303bd2b7fffa1ddcb2a49779e6dafbdc903b77c8",
+    "D:\\CantorAI\\work\\qwen38-5090\\src\\cuda\\qwen38_bf16_kv_low_batch_overlay.cuh": "96a7fb647619f6a227d5855832df3ab4fa74d5842197a18063c22d0286f43139",
+    "D:\\CantorAI\\work\\qwen38-5090\\src\\cuda\\qwen38_bf16_kv_commit.cuh": "82ffd816bbafcbc86f44d044d2ab5468ac400f617e5aa2b5ae107bb30b3ffb59",
+    "D:\\CantorAI\\work\\qwen38-5090\\src\\cuda\\qwen35_attention_core.cuh": "1a3997a15f4aa897f2bc69bf6a3afbef9a58f166fb094bfb858fac1b170e166f",
+    "C:\\Users\\developer\\Documents\\Codex\\2026-10-23\\referenced-chatgpt-conversation-this-is-an\\work\\bf16_kv_fixture_layout.h": "fe42d2ea44d3b4fd99d503ddddaaf12407459d839a4e353a767e557c59a7b8e1",
+    "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v13.2\\bin\\nvcc.exe": "537980c3892ecddbb278de6497f849cd896f9e359a5bf0001167d82f3a3cc2e3",
+    "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.44.35207\\bin\\Hostx64\\x64\\cl.exe": "edfde23829794777a8f4872cdefe1d569546ff4bf0fa49f5af872b6da7b8eabb",
+    "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Auxiliary\\Build\\vcvars64.bat": "6b516d8fcf543c14b2d861e1f45661e0029230fe0dc48e86ce78522801822209",
+    "C:\\Users\\developer\\Documents\\Codex\\2026-10-23\\referenced-chatgpt-conversation-this-is-an\\work\\bf16-score-tiling-build\\compile-only.bat": "d4861e00bb8ce5926bf8266db01ef511f2c2759707250879517121415d1c40bb"
+  },
+  "output_sha256": {
+    "baseline.obj": "82e8bce9004b5e023769bc229ddd32f81569551ba6c285e577b548da4d3e36b4",
+    "candidate.obj": "241c98a0269d3c83019f1f05c72c092d99f443cf88fcf21ec8da9d582ba618d1",
+    "probe.obj": "749fe918d5b9a11e0c862af03766f1095c17eb9b9ba46f96c70854906c48c87c",
+    "bf16-scores-tiled.exe": "4acd1ff9ac747f666bda178afae6ba67bae6d9379ca8ccc97809aace00b27b6a"
+  },
+  "compiler_properties": [
+    {
+      "symbol": "_ZN6Garnet68_GLOBAL__N__bec79d58_35_qwen38_bf16_kv_low_batch_overlay_cu_710ee1697contextENS_25Qwen35AttentionCoreConfigEPK13__nv_bfloat16PKfS6_S6_S6_S6_Pf",
+      "stack_bytes": 0,
+      "spill_store_bytes": 0,
+      "spill_load_bytes": 0,
+      "registers": 40
+    },
+    {
+      "symbol": "_ZN6Garnet68_GLOBAL__N__bec79d58_35_qwen38_bf16_kv_low_batch_overlay_cu_710ee1699normalizeENS_25Qwen35AttentionCoreConfigEPKfPf",
+      "stack_bytes": 0,
+      "spill_store_bytes": 0,
+      "spill_load_bytes": 0,
+      "registers": 38
+    },
+    {
+      "symbol": "_ZN6Garnet68_GLOBAL__N__bec79d58_35_qwen38_bf16_kv_low_batch_overlay_cu_710ee1696scoresENS_25Qwen35AttentionCoreConfigEPKfPK13__nv_bfloat16S3_S3_S3_Pf",
+      "stack_bytes": 0,
+      "spill_store_bytes": 0,
+      "spill_load_bytes": 0,
+      "registers": 39
+    },
+    {
+      "symbol": "_ZN6Garnet63_GLOBAL__N__f3e04ee9_30_bf16_low_batch_scores_tiled_cu_cbff96257contextENS_25Qwen35AttentionCoreConfigEPK13__nv_bfloat16PKfS6_S6_S6_S6_Pf",
+      "stack_bytes": 0,
+      "spill_store_bytes": 0,
+      "spill_load_bytes": 0,
+      "registers": 40
+    },
+    {
+      "symbol": "_ZN6Garnet63_GLOBAL__N__f3e04ee9_30_bf16_low_batch_scores_tiled_cu_cbff96259normalizeENS_25Qwen35AttentionCoreConfigEPKfPf",
+      "stack_bytes": 0,
+      "spill_store_bytes": 0,
+      "spill_load_bytes": 0,
+      "registers": 38
+    },
+    {
+      "symbol": "_ZN6Garnet63_GLOBAL__N__f3e04ee9_30_bf16_low_batch_scores_tiled_cu_cbff962513scoresTiled16ENS_25Qwen35AttentionCoreConfigEPKfPK13__nv_bfloat16S3_S3_S3_Pf",
+      "stack_bytes": 0,
+      "spill_store_bytes": 0,
+      "spill_load_bytes": 0,
+      "registers": 40
+    },
+    {
+      "symbol": "_ZN55_GLOBAL__N__60c022a1_26_probe_bf16_scores_tiled_cu_main14checkCanonicalEPKfiiixNS_5SpansEbPy",
+      "stack_bytes": 0,
+      "spill_store_bytes": 0,
+      "spill_load_bytes": 0,
+      "registers": 54
+    },
+    {
+      "symbol": "_ZN55_GLOBAL__N__60c022a1_26_probe_bf16_scores_tiled_cu_main9fillCacheEPfiiixNS_5SpansEb",
+      "stack_bytes": 0,
+      "spill_store_bytes": 0,
+      "spill_load_bytes": 0,
+      "registers": 38
+    }
+  ],
+  "cuda_version": "13.2.78",
+  "msvc_toolset": "14.44.35207",
+  "windows_sdk": "10.0.28000.0",
+  "probe_executed": false,
+  "gpu_parity_tests_executed": false,
+  "model_integrated": false,
+  "performance_admitted": false,
+  "two_times_target_achieved": false,
+  "scope": "Actual compiler/linker and ptxas output only, CUDA_VISIBLE_DEVICES=-1. Source/compiler/header/fixture hashes unchanged before/after. Private object/executable outputs only; no local GPU calls, existing build/runtime/SDK or remote mutation.39vs40registers/zero spills are compile metadata, not throughput. Full-output/workspace/GPU44case/104badcall graph-prefix-canary and FP64 replay remain required before timing."
+}

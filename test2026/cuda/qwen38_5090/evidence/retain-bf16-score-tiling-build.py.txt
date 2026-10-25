@@ -1,0 +1,58 @@
+from pathlib import Path
+from datetime import datetime,timezone
+import hashlib,json,re,shutil
+w=Path(__file__).resolve().parent;r=Path('D:/CantorAI/work/qwen38-5090');m=r/'test2026/cuda/qwen38_5090';e=m/'evidence';out=w/'bf16-score-tiling-build';sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest();before=json.loads((out/'inputs.json').read_bytes())
+for name,digest in before['input_sha256'].items():assert sha(Path(name))==digest,('Compile input mutation',name)
+records=[json.loads(line) for line in (out/'ledger/commands.jsonl').read_bytes().splitlines()];assert len(records)==2 and records[1]['exit_code']==0
+log=(out/'ledger/commands.log').read_text(encoding='utf8');properties=[]
+for name,stack,stores,loads,registers in re.findall(r"Function properties for ([^\r\n]+)\r?\n\s*(\d+) bytes stack frame, (\d+) bytes spill stores, (\d+) bytes spill loads\r?\nptxas info\s*: Used (\d+) registers",log):
+ properties.append({'symbol':name,'stack_bytes':int(stack),'spill_store_bytes':int(stores),'spill_load_bytes':int(loads),'registers':int(registers)})
+baseline=[p for p in properties if '6scoresENS' in p['symbol']];candidate=[p for p in properties if '13scoresTiled16ENS' in p['symbol']];assert len(baseline)==len(candidate)==1 and baseline[0]['registers']==39 and candidate[0]['registers']==40 and all(p['stack_bytes']==p['spill_store_bytes']==p['spill_load_bytes']==0 for p in properties)
+def copy(source,target):
+ assert not target.exists() or source.read_bytes()==target.read_bytes()
+ if not target.exists():shutil.copyfile(source,target)
+for method in ('prepare-bf16-score-tiling.py','prepare-bf16-score-tiling-probe.py','build-bf16-score-tiling-private.py','retain-bf16-score-tiling-build.py'):copy(w/method,e/(method+'.txt'))
+for name in ('inputs.json','compile-only.bat'):copy(out/name,e/('bf16-score-tiling-private-'+name))
+target=e/'bf16-score-tiling-private-build-ledger';target.mkdir(exist_ok=True)
+for source in (out/'ledger').iterdir():copy(source,target/source.name)
+receipt={'status':'bf16_score_tiling_private_cpu_compile_and_link_passed','recorded_utc':datetime.now(timezone.utc).isoformat(),'input_sha256':before['input_sha256'],'output_sha256':{name:sha(out/name) for name in ('baseline.obj','candidate.obj','probe.obj','bf16-scores-tiled.exe')},'compiler_properties':properties,'cuda_version':'13.2.78','msvc_toolset':'14.44.35207','windows_sdk':'10.0.28000.0','probe_executed':False,'gpu_parity_tests_executed':False,'model_integrated':False,'performance_admitted':False,'two_times_target_achieved':False,'scope':'Actual compiler/linker and ptxas output only, CUDA_VISIBLE_DEVICES=-1. Source/compiler/header/fixture hashes unchanged before/after. Private object/executable outputs only; no local GPU calls, existing build/runtime/SDK or remote mutation.39vs40registers/zero spills are compile metadata, not throughput. Full-output/workspace/GPU44case/104badcall graph-prefix-canary and FP64 replay remain required before timing.'}
+target=e/'bf16-score-tiling-private-build.json';assert not target.exists();target.write_text(json.dumps(receipt,indent=2),encoding='utf8')
+entry='''
+
+### 2026-10-25: isolated attention score tiling candidate compiles; GPU unrun
+
+Read current B1 attention source: scores launches512position tiles per query at
+capacity4096, eight positions per256thread block. Inactive T4rows still enter
+the launch and return; this is a source work-assignment observation, not a
+measured bottleneck or causal explanation for whole-model38tok/s.
+
+Prepared separate unwired bf16_low_batch_scores_tiled CUDA/header under study
+tests. Each warp processes16positions, score gridX32instead of512, query vector
+reused in eight registers. Every score intends identical eight ordered fmaf
+operations and warp reduction. Exact reverse transformation proves production
+source, normalization/context, workspace/profile/alias guards unchanged. No new
+shape/default admission or Garnet target integration. Sixteenfold block-count
+reduction is not a measured speedup. Native benchmark DLL/source remain frozen.
+
+Prepared44case GPU probe inherits all original case specs/FP64 witnesses and
+104negative calls, additionally rejects each malformed call through candidate,
+compares every full output and score/softmax workspace byte versus baseline,
+captures/replays candidate graph and checks full cached-prefix output. GPU probe
+is not executed. Actual private CPU-only CUDA13.2.78/VS14.44/SM120 compilation
+and link pass; all input/tool/header/fixture hashes unchanged after build.
+Compiler emits39baseline versus40candidate score registers, zero stack/spills;
+normalization/context resources unchanged. These are compile facts, not model
+parity/speed. Outputs stay in a fixed private work folder, CUDA_VISIBLE_DEVICES=-1;
+no local GPU/runtime/SDK/existing-build or remote deployment mutation occurred.
+
+Current full fixed-length HTTP original48577 remains live; only its handle is
+polled remotely. First ordinary4Ktext cohort console reports38.4995decode tok/s,
+4948.35ms TTFT and15.3692aggregate tok/s, pending full archive/raw replay. Sample
+gap1.6437291s retained. Do not admit partial measurements or claim2x. After
+baseline closure, strongest feasible matched references and source-based
+profiling, qualify/timestamp this candidate and actual B8batching; keep full
+INT4/4B/quality/repetition scope. No speed benefit has been demonstrated here.
+'''
+for name in ('qwen38-5090-development-log.md','qwen38-5090-implementation-task.md'):
+ target=r/'docs/research'/name;raw=target.read_bytes();assert b'isolated attention score tiling candidate compiles; GPU unrun' not in raw;target.write_bytes(raw+entry.replace('\n','\r\n').encode())
+print(json.dumps({'status':receipt['status'],'baseline_score_registers':39,'candidate_score_registers':40,'all_spills_zero':True,'gpu_executed':False}))

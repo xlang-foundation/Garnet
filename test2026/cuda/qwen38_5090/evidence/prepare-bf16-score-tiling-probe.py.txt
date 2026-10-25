@@ -1,0 +1,31 @@
+from pathlib import Path
+import hashlib,json
+w=Path(__file__).resolve().parent;r=Path('D:/CantorAI/work/qwen38-5090');m=r/'test2026/cuda/qwen38_5090';source=m/'probe_bf16_low_batch_attention.cu';raw=source.read_bytes();text=raw.decode();changes=[]
+def replace(before,after,count=1):
+ global text
+ assert text.count(before)==count,(before,text.count(before));text=text.replace(before,after);changes.append([before,after,count])
+replace('#include "bf16_kv_low_batch_candidate.h"','#include "qwen38_bf16_kv_low_batch_overlay.cuh"\n#include "bf16_low_batch_scores_tiled.cuh"')
+replace('int rejected=0;','int rejected=0;')
+replace('require(RunQwen38BF16KVLowBatchCandidate(config,in,dst,tmp,key,value,s)!=0,"Malformed/aliased operator call accepted");++rejected;', 'require(RunQwen38BF16KVLowBatchCandidate(config,in,dst,tmp,key,value,s)!=0,"Malformed/aliased baseline call accepted");require(RunQwen38BF16KVTiledScores(config,in,dst,tmp,key,value,s)!=0,"Malformed/aliased tiled call accepted");++rejected;')
+replace('require(scratch==size_t(batch)*chunk*24*4096*4,"Workspace geometry mismatch");','require(scratch==size_t(batch)*chunk*24*4096*4&&scratch==Qwen38BF16KVTiledScoresWorkspace(c),"Workspace geometry mismatch");')
+replace('require(Qwen38BF16KVLowBatchCandidateWorkspace(bad)==0,','require(Qwen38BF16KVLowBatchCandidateWorkspace(bad)==0&&Qwen38BF16KVTiledScoresWorkspace(bad)==0,',2)
+before='    const bool graph=(id==1||id==15||id==63);'
+comparison='''    std::vector<unsigned char> originalWorkspace(scratch);
+    check(cudaMemcpyAsync(originalWorkspace.data(),workspace,scratch,cudaMemcpyDeviceToHost,s));check(cudaStreamSynchronize(s));
+    check(cudaMemsetAsync(output.p,0xa5,output.bytes,s));check(cudaMemsetAsync(work.p,0xa5,work.bytes,s));
+    require(RunQwen38BF16KVTiledScores(c,inputs,result,workspace,ko,vo,s)==0,"Tiled valid overlay failed");
+    std::vector<float> candidate(nq);std::vector<unsigned char> candidateWorkspace(scratch);
+    check(cudaMemcpyAsync(candidate.data(),result,nq*4,cudaMemcpyDeviceToHost,s));check(cudaMemcpyAsync(candidateWorkspace.data(),workspace,scratch,cudaMemcpyDeviceToHost,s));check(cudaStreamSynchronize(s));
+    require(std::memcmp(candidate.data(),original.data(),nq*4)==0,"Tiled full output differs from baseline");
+    require(candidateWorkspace==originalWorkspace,"Tiled full score/softmax workspace differs from baseline");
+'''
+replace(before,comparison+before)
+replace('require(RunQwen38BF16KVLowBatchCandidate(c,inputs,result,workspace,ko,vo,s)==0,"Captured overlay failed");','require(RunQwen38BF16KVTiledScores(c,inputs,result,workspace,ko,vo,s)==0,"Captured tiled overlay failed");')
+before='        for(int b=0;b<batch;++b){\n            require(std::memcmp(back.data()+b*chunk*24*256'
+prefix='''        std::vector<float> baselinePrefix=back;check(cudaMemsetAsync(result,0xa5,nq*4,s));
+        require(RunQwen38BF16KVTiledScores(c,inputs,result,workspace,ko,vo,s)==0,"Tiled cached-prefix overlay failed");
+        check(cudaMemcpyAsync(back.data(),result,nq*4,cudaMemcpyDeviceToHost,s));check(cudaStreamSynchronize(s));require(std::memcmp(back.data(),baselinePrefix.data(),nq*4)==0,"Tiled full cached-prefix output differs from baseline");
+'''
+replace(before,prefix+before)
+replace('bf16_low_batch_overlay_collected_needs_fp64_replay','bf16_scores_tiled16_collected_needs_fp64_replay')
+target=m/'probe_bf16_scores_tiled.cu';assert not target.exists();target.write_bytes(text.encode());sha=lambda b:hashlib.sha256(b).hexdigest();target=m/'evidence/bf16-score-tiling-probe-preparation.json';assert not target.exists();target.write_text(json.dumps({'status':'bf16_score_tiling_gpu_probe_prepared_unrun','source':'test2026/cuda/qwen38_5090/probe_bf16_low_batch_attention.cu','source_sha256':sha(raw),'probe_sha256':sha(text.encode()),'changes':changes,'scope':'Retain all44actual GPU case specifications, FP64 witness sampling, graph/prefix/readonly/canary and104baseline rejects. Additionally call tiled candidate on the same104bad calls, compare every forward output byte and full score/softmax workspace byte, capture/replay tiled graph and compare every cached-prefix output byte. Source prepared only; no GPU tests or speed results yet.'},indent=2),encoding='utf8');print(json.dumps({'status':'bf16_score_tiling_gpu_probe_prepared_unrun','baseline_case_specs':44,'full_output_and_workspace_comparison_added':True}))

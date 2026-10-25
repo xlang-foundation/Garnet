@@ -4948,3 +4948,38 @@ ordinary configuration: preserve MTP numerical divergences/quality evidence,
 assess strongest feasible settings and report limitations before any2x claim.
 Actual references/tuning, INT4/4B, real batching/kernel work and clean repetitions
 remain part of the original objective, not replaced by this correctness fix.
+
+
+### 2026-10-25: isolated attention score tiling candidate compiles; GPU unrun
+
+Read current B1 attention source: scores launches512position tiles per query at
+capacity4096, eight positions per256thread block. Inactive T4rows still enter
+the launch and return; this is a source work-assignment observation, not a
+measured bottleneck or causal explanation for whole-model38tok/s.
+
+Prepared separate unwired bf16_low_batch_scores_tiled CUDA/header under study
+tests. Each warp processes16positions, score gridX32instead of512, query vector
+reused in eight registers. Every score intends identical eight ordered fmaf
+operations and warp reduction. Exact reverse transformation proves production
+source, normalization/context, workspace/profile/alias guards unchanged. No new
+shape/default admission or Garnet target integration. Sixteenfold block-count
+reduction is not a measured speedup. Native benchmark DLL/source remain frozen.
+
+Prepared44case GPU probe inherits all original case specs/FP64 witnesses and
+104negative calls, additionally rejects each malformed call through candidate,
+compares every full output and score/softmax workspace byte versus baseline,
+captures/replays candidate graph and checks full cached-prefix output. GPU probe
+is not executed. Actual private CPU-only CUDA13.2.78/VS14.44/SM120 compilation
+and link pass; all input/tool/header/fixture hashes unchanged after build.
+Compiler emits39baseline versus40candidate score registers, zero stack/spills;
+normalization/context resources unchanged. These are compile facts, not model
+parity/speed. Outputs stay in a fixed private work folder, CUDA_VISIBLE_DEVICES=-1;
+no local GPU/runtime/SDK/existing-build or remote deployment mutation occurred.
+
+Current full fixed-length HTTP original48577 remains live; only its handle is
+polled remotely. First ordinary4Ktext cohort console reports38.4995decode tok/s,
+4948.35ms TTFT and15.3692aggregate tok/s, pending full archive/raw replay. Sample
+gap1.6437291s retained. Do not admit partial measurements or claim2x. After
+baseline closure, strongest feasible matched references and source-based
+profiling, qualify/timestamp this candidate and actual B8batching; keep full
+INT4/4B/quality/repetition scope. No speed benefit has been demonstrated here.

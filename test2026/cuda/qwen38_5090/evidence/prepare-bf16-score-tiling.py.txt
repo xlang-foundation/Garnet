@@ -1,0 +1,48 @@
+from pathlib import Path
+import hashlib,json
+w=Path(__file__).resolve().parent;r=Path('D:/CantorAI/work/qwen38-5090');m=r/'test2026/cuda/qwen38_5090';source=r/'src/cuda/qwen38_bf16_kv_low_batch_overlay.cu';raw=source.read_bytes();text=raw.decode();sha=lambda b:hashlib.sha256(b).hexdigest();start=text.index('__global__ void scores(');end=text.index('__global__ void normalize(',start);old_kernel=text[start:end]
+new_kernel='''// Sixteen positions per warp: preserve each dot's eight-FMA/warp-reduction order.
+__global__ void scoresTiled16(Qwen35AttentionCoreConfig c,const float* query,const __nv_bfloat16* key,
+    const float* chunkKey,const float* slots,const float* active,float* scratch){
+    const int row=blockIdx.y,b=row/(c.tokens*c.heads),t=(row/c.heads)%c.tokens;
+    if(active[b*c.tokens+t]==0)return;
+    const int lane=threadIdx.x%32,warp=threadIdx.x/32;
+    const int slot=int(slots[b*c.tokens+t]),kh=(row%c.heads)/(c.heads/c.kv);
+    float q[8];
+    #pragma unroll
+    for(int i=0;i<8;++i)q[i]=query[size_t(row)*256+lane+32*i];
+    #pragma unroll 1
+    for(int tile=0;tile<16;++tile){
+        const int p=blockIdx.x*128+warp+8*tile;
+        if(p>=c.capacity)continue;
+        float sum=0;
+        if(p<=slot){
+            const int current=replacement(slots,active,b,c.tokens,p);
+            #pragma unroll
+            for(int i=0;i<8;++i)sum=fmaf(q[i],readKV(key,chunkKey,b,current,kh,p,lane+32*i,c.tokens),sum);
+            sum=warpSum(sum);
+        }
+        if(!lane)scratch[size_t(row)*c.capacity+p]=p<=slot?sum*rsqrtf(float(c.dim)):-1e30f;
+    }
+}
+'''
+changes=[]
+def replace(before,after,count):
+ global text
+ assert text.count(before)==count,(before,text.count(before));text=text.replace(before,after);changes.append([before,after,count])
+replace(old_kernel,new_kernel,1);replace('#include "qwen38_bf16_kv_low_batch_overlay.cuh"','#include "bf16_low_batch_scores_tiled.cuh"',1);replace('Qwen38BF16KVLowBatchCandidateWorkspace','Qwen38BF16KVTiledScoresWorkspace',2);replace('RunQwen38BF16KVLowBatchCandidate','RunQwen38BF16KVTiledScores',1);replace('scores<<<dim3((c.capacity+7)/8,rows)','scoresTiled16<<<dim3((c.capacity+127)/128,rows)',1)
+target=m/'bf16_low_batch_scores_tiled.cu';assert not target.exists();target.write_bytes(text.encode())
+header='''// SPDX-License-Identifier: Apache-2.0
+#pragma once
+#include "qwen38_bf16_kv_low_batch_overlay.cuh"
+namespace Garnet {
+// Unwired B1 research candidate. Full GPU parity/FP64 replay and timing required.
+size_t Qwen38BF16KVTiledScoresWorkspace(const Qwen35AttentionCoreConfig&) noexcept;
+int RunQwen38BF16KVTiledScores(const Qwen35AttentionCoreConfig&,const void* const*,
+    void* output,void* workspace,int64_t keyOffset,int64_t valueOffset,cudaStream_t) noexcept;
+}
+''';target=m/'bf16_low_batch_scores_tiled.cuh';assert not target.exists();target.write_text(header,encoding='utf8')
+proof=text
+for before,after,count in reversed(changes):assert proof.count(after)==count;proof=proof.replace(after,before)
+assert proof.encode()==raw and source.read_bytes()==raw
+target=m/'evidence/bf16-score-tiling-candidate.json';assert not target.exists();target.write_text(json.dumps({'status':'bf16_scores_tiled16_candidate_unwired_unrun','source':'src/cuda/qwen38_bf16_kv_low_batch_overlay.cu','source_sha256':sha(raw),'candidate_sha256':sha(text.encode()),'header_sha256':sha(header.encode()),'changes':changes,'old_score_grid_x':512,'candidate_score_grid_x':32,'positions_per_warp':16,'valid_profile':'B1/T4orT32/H24/KV4/C4096/D256 unchanged','scope':'Only score-kernel work assignment/query reuse and diagnostic export names change. Source roundtrip proves normalization/context/alias/workspace/profile guards retained byte-exact. Each score intends the same ordered eight fmaf operations and warp reduction; GPU bitwise output/workspace, FP64/graph/prefix/negative guards and actual timing remain required. No Garnet target integration or source/runtime/SDK/deployment mutation; block-count reduction is not a speedup measurement.'},indent=2),encoding='utf8');print(json.dumps({'status':'bf16_scores_tiled16_candidate_unwired_unrun','production_source_unchanged':True,'old_grid_x':512,'candidate_grid_x':32}))

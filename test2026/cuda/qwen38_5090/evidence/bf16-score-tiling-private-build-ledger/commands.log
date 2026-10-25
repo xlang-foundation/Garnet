@@ -1,0 +1,66 @@
+
+{"id": "f2bfcf6758be4d61b6bbdd6499654fcf", "kind": "build", "label": "Private CPU-only SM120 baseline/candidate/probe compile and link; never execute GPU probe or alter existing runtime/build/SDK", "argv": ["cmd.exe", "/d", "/c", "C:\\Users\\developer\\Documents\\Codex\\2026-10-23\\referenced-chatgpt-conversation-this-is-an\\work\\bf16-score-tiling-build\\compile-only.bat"]}
+**********************************************************************
+** Visual Studio 2022 Developer Command Prompt v17.14.15
+** Copyright (c) 2025 Microsoft Corporation
+**********************************************************************
+[vcvarsall.bat] Environment initialized for: 'x64'
+VCToolsVersion=14.44.35207
+WindowsSDKVersion=10.0.28000.0\
+nvcc: NVIDIA (R) Cuda compiler driver
+Copyright (c) 2005-2026 NVIDIA Corporation
+Built on Thu_Mar_19_22:28:55_Pacific_Daylight_Time_2026
+Cuda compilation tools, release 13.2, V13.2.78
+Build cuda_13.2.r13.2/compiler.37668154_0
+ptxas info    : 0 bytes gmem
+ptxas info    : Compiling entry function '_ZN6Garnet68_GLOBAL__N__bec79d58_35_qwen38_bf16_kv_low_batch_overlay_cu_710ee1697contextENS_25Qwen35AttentionCoreConfigEPK13__nv_bfloat16PKfS6_S6_S6_S6_Pf' for 'sm_120'
+ptxas info    : Function properties for _ZN6Garnet68_GLOBAL__N__bec79d58_35_qwen38_bf16_kv_low_batch_overlay_cu_710ee1697contextENS_25Qwen35AttentionCoreConfigEPK13__nv_bfloat16PKfS6_S6_S6_S6_Pf
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 40 registers, used 1 barriers, 1024 bytes smem
+ptxas info    : Compile time = 0.000 ms
+ptxas info    : Compiling entry function '_ZN6Garnet68_GLOBAL__N__bec79d58_35_qwen38_bf16_kv_low_batch_overlay_cu_710ee1699normalizeENS_25Qwen35AttentionCoreConfigEPKfPf' for 'sm_120'
+ptxas info    : Function properties for _ZN6Garnet68_GLOBAL__N__bec79d58_35_qwen38_bf16_kv_low_batch_overlay_cu_710ee1699normalizeENS_25Qwen35AttentionCoreConfigEPKfPf
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 38 registers, used 1 barriers, 36 bytes smem
+ptxas info    : Compile time = 0.000 ms
+ptxas info    : Compiling entry function '_ZN6Garnet68_GLOBAL__N__bec79d58_35_qwen38_bf16_kv_low_batch_overlay_cu_710ee1696scoresENS_25Qwen35AttentionCoreConfigEPKfPK13__nv_bfloat16S3_S3_S3_Pf' for 'sm_120'
+ptxas info    : Function properties for _ZN6Garnet68_GLOBAL__N__bec79d58_35_qwen38_bf16_kv_low_batch_overlay_cu_710ee1696scoresENS_25Qwen35AttentionCoreConfigEPKfPK13__nv_bfloat16S3_S3_S3_Pf
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 39 registers, used 0 barriers
+ptxas info    : Compile time = 0.000 ms
+qwen38_bf16_kv_low_batch_overlay.cu
+tmpxft_000099d4_00000000-7_qwen38_bf16_kv_low_batch_overlay.cudafe1.cpp
+ptxas info    : 0 bytes gmem
+ptxas info    : Compiling entry function '_ZN6Garnet63_GLOBAL__N__f3e04ee9_30_bf16_low_batch_scores_tiled_cu_cbff96257contextENS_25Qwen35AttentionCoreConfigEPK13__nv_bfloat16PKfS6_S6_S6_S6_Pf' for 'sm_120'
+ptxas info    : Function properties for _ZN6Garnet63_GLOBAL__N__f3e04ee9_30_bf16_low_batch_scores_tiled_cu_cbff96257contextENS_25Qwen35AttentionCoreConfigEPK13__nv_bfloat16PKfS6_S6_S6_S6_Pf
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 40 registers, used 1 barriers, 1024 bytes smem
+ptxas info    : Compile time = 0.000 ms
+ptxas info    : Compiling entry function '_ZN6Garnet63_GLOBAL__N__f3e04ee9_30_bf16_low_batch_scores_tiled_cu_cbff96259normalizeENS_25Qwen35AttentionCoreConfigEPKfPf' for 'sm_120'
+ptxas info    : Function properties for _ZN6Garnet63_GLOBAL__N__f3e04ee9_30_bf16_low_batch_scores_tiled_cu_cbff96259normalizeENS_25Qwen35AttentionCoreConfigEPKfPf
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 38 registers, used 1 barriers, 36 bytes smem
+ptxas info    : Compile time = 0.000 ms
+ptxas info    : Compiling entry function '_ZN6Garnet63_GLOBAL__N__f3e04ee9_30_bf16_low_batch_scores_tiled_cu_cbff962513scoresTiled16ENS_25Qwen35AttentionCoreConfigEPKfPK13__nv_bfloat16S3_S3_S3_Pf' for 'sm_120'
+ptxas info    : Function properties for _ZN6Garnet63_GLOBAL__N__f3e04ee9_30_bf16_low_batch_scores_tiled_cu_cbff962513scoresTiled16ENS_25Qwen35AttentionCoreConfigEPKfPK13__nv_bfloat16S3_S3_S3_Pf
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 40 registers, used 0 barriers
+ptxas info    : Compile time = 0.000 ms
+bf16_low_batch_scores_tiled.cu
+tmpxft_0000b8d8_00000000-7_bf16_low_batch_scores_tiled.cudafe1.cpp
+ptxas info    : 0 bytes gmem
+ptxas info    : Compiling entry function '_ZN55_GLOBAL__N__60c022a1_26_probe_bf16_scores_tiled_cu_main14checkCanonicalEPKfiiixNS_5SpansEbPy' for 'sm_120'
+ptxas info    : Function properties for _ZN55_GLOBAL__N__60c022a1_26_probe_bf16_scores_tiled_cu_main14checkCanonicalEPKfiiixNS_5SpansEbPy
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 54 registers, used 0 barriers
+ptxas info    : Compile time = 0.000 ms
+ptxas info    : Compiling entry function '_ZN55_GLOBAL__N__60c022a1_26_probe_bf16_scores_tiled_cu_main9fillCacheEPfiiixNS_5SpansEb' for 'sm_120'
+ptxas info    : Function properties for _ZN55_GLOBAL__N__60c022a1_26_probe_bf16_scores_tiled_cu_main9fillCacheEPfiiixNS_5SpansEb
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 38 registers, used 0 barriers
+ptxas info    : Compile time = 0.000 ms
+probe_bf16_scores_tiled.cu
+tmpxft_00013cec_00000000-7_probe_bf16_scores_tiled.cudafe1.cpp
+baseline.obj
+candidate.obj
+probe.obj
