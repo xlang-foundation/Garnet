@@ -1,0 +1,68 @@
+{
+  "status": "reference4k_owned_launchers_prepared_unrun",
+  "vllm_dev_router_primary_source": {
+    "archive_sha256": "114eb8f1361fda431fd39ae7b4c942d7ecabd861f7ecc8c7b363b3062ef8ac7a",
+    "file": "results/vllm-int4-mm-cache-router-audit/source/entrypoints/launchers/api_server/routers.py",
+    "sha256": "641fbd7b21eb97c64986bd2ee0c2421366cff0628b27e4083c47d6f5aecb4a77"
+  },
+  "recipes": {
+    "serve_vllm_fixed4k.sh": {
+      "source": "serve_vllm_graph.sh",
+      "source_sha256": "d5296f5b25f53c5e9985798000d4e76b7b1459a13d6c028fcdffd3528196b01d",
+      "changes": [
+        [
+          "log=${GARNET_VLLM_LOG:-$study/results/vllm-graph-server.log}\n",
+          "# A single controller owns this exact server and its fresh log.\n: \"${GARNET_REF_PIDFILE:?Controller-owned PID path required}\"\n: \"${GARNET_REF_LOGFILE:?Controller-owned log path required}\"\ncase \"$GARNET_REF_PIDFILE\" in \"$study\"/results/*/server.pid) ;; *) exit 2;; esac\ncase \"$GARNET_REF_LOGFILE\" in \"$study\"/results/*/server.log) ;; *) exit 2;; esac\n(set -o noclobber; printf '%s\\n' \"$$\" > \"$GARNET_REF_PIDFILE\")\n(set -o noclobber; : > \"$GARNET_REF_LOGFILE\")\nlog=$GARNET_REF_LOGFILE\n",
+          1
+        ],
+        [
+          "export HF_HUB_OFFLINE=1\n",
+          "export VLLM_SERVER_DEV_MODE=1\nexport HF_HUB_OFFLINE=1\n",
+          1
+        ],
+        [
+          "study=/mnt/d/CantorAI/5090-study-20261023\n",
+          "/opt/cantorai5090/vllm/bin/python - <<'PY'\nimport socket\nwith socket.socket() as probe: probe.bind(('127.0.0.1',18080))\nPY\nstudy=/mnt/d/CantorAI/5090-study-20261023\n",
+          1
+        ]
+      ],
+      "result_sha256": "25ccefca148c8c8141436358582093ba2d1a9e4e1cf5ff8e983b070fee80b90e"
+    },
+    "serve_sglang_fixed4k.sh": {
+      "source": "serve_sglang_fixed4k.sh",
+      "source_sha256": "4510dd8a53778f8e0d90309010cae3e94ffa31c497595691cee135deedb8b472",
+      "changes": [
+        [
+          "study=/mnt/d/CantorAI/5090-study-20261023\n",
+          "study=/mnt/d/CantorAI/5090-study-20261023\n# A single controller owns this exact server and its fresh log.\n: \"${GARNET_REF_PIDFILE:?Controller-owned PID path required}\"\n: \"${GARNET_REF_LOGFILE:?Controller-owned log path required}\"\ncase \"$GARNET_REF_PIDFILE\" in \"$study\"/results/*/server.pid) ;; *) exit 2;; esac\ncase \"$GARNET_REF_LOGFILE\" in \"$study\"/results/*/server.log) ;; *) exit 2;; esac\n(set -o noclobber; printf '%s\\n' \"$$\" > \"$GARNET_REF_PIDFILE\")\n(set -o noclobber; : > \"$GARNET_REF_LOGFILE\")\nlog=$GARNET_REF_LOGFILE\n",
+          1
+        ],
+        [
+          "\"$study/results/sglang_fixed4k-server.log\"",
+          "\"$log\"",
+          2
+        ]
+      ],
+      "result_sha256": "f9b79cc57afbbfd1788dd2301bb2242571ce1742f2b05969ab6c6f90d0e8d1a7"
+    },
+    "serve_sglang_mtp3_fixed4k.sh": {
+      "source": "serve_sglang_mtp3_fixed4k.sh",
+      "source_sha256": "e437df088259aadee097553ce4faedb40b844c095e5745b6737bf9768b13b138",
+      "changes": [
+        [
+          "study=/mnt/d/CantorAI/5090-study-20261023\n",
+          "study=/mnt/d/CantorAI/5090-study-20261023\n# A single controller owns this exact server and its fresh log.\n: \"${GARNET_REF_PIDFILE:?Controller-owned PID path required}\"\n: \"${GARNET_REF_LOGFILE:?Controller-owned log path required}\"\ncase \"$GARNET_REF_PIDFILE\" in \"$study\"/results/*/server.pid) ;; *) exit 2;; esac\ncase \"$GARNET_REF_LOGFILE\" in \"$study\"/results/*/server.log) ;; *) exit 2;; esac\n(set -o noclobber; printf '%s\\n' \"$$\" > \"$GARNET_REF_PIDFILE\")\n(set -o noclobber; : > \"$GARNET_REF_LOGFILE\")\nlog=$GARNET_REF_LOGFILE\n",
+          1
+        ],
+        [
+          "\"$study/results/sglang_mtp3_fixed4k-server.log\"",
+          "\"$log\"",
+          2
+        ]
+      ],
+      "result_sha256": "595ff693b0a3a5393183377e204ba8ccdb66b23772cd07fe5e875875fd0abd42"
+    }
+  },
+  "scope": "Exact owned Linux parent PID, exclusive fresh per-job log and occupied-port guard. VLLM_SERVER_DEV_MODE enables local reset/server_info routes in installed source; no installed package changes. Configuration/quality/runtime compatibility/timing still unrun.",
+  "source_git_commit_verified": "c8e965dea8dd395eeca29d2696786ab347a0c2c2"
+}

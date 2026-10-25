@@ -1,12 +1,22 @@
 """Synthetic CPU protocol controls; no actual reference/server performance."""
 import copy,unittest
-from .benchmark_fixed_context_reference import control_request,control_response
+from .benchmark_fixed_context_reference import control_request,control_response,paired_control
 def sample(engine):
  prompt=list(range(3968));choice={'index':0,'finish_reason':'length','message':{'role':'assistant','content':'synthetic only'}};value={'choices':[choice],'usage':{'prompt_tokens':3968,'completion_tokens':128,'total_tokens':4096}}
  if engine=='vllm':value['prompt_token_ids']=prompt;choice['token_ids']=list(range(128))
  else:choice['prompt_token_ids']=prompt;choice['response_token_ids']=list(range(128))
  return value,prompt
 class ReferenceControls(unittest.TestCase):
+ def test_mtp_changed_ids_are_rejected_even_if_text_matches(self):
+  value,prompt=sample('sglang');ordinary=control_response(value,'sglang',prompt);changed=copy.deepcopy(ordinary);changed['completion_token_ids'][27]+=1
+  with self.assertRaises(ValueError):paired_control(changed,ordinary)
+ def test_mtp_changed_text_and_prompt_are_rejected(self):
+  value,prompt=sample('vllm');ordinary=control_response(value,'vllm',prompt);paired_control(copy.deepcopy(ordinary),ordinary)
+  for field in ('prompt_token_ids','text'):
+   changed=copy.deepcopy(ordinary)
+   if field=='text':changed[field]+='!'
+   else:changed[field][225]+=1
+   with self.assertRaises(ValueError):paired_control(changed,ordinary)
  def test_both_actual_nonstream_schemas(self):
   for engine in ('vllm','sglang'):
    value,prompt=sample(engine);self.assertEqual(control_response(value,engine,prompt)['completion_token_ids'],list(range(128)))

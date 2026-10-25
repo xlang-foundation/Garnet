@@ -1,0 +1,27 @@
+{
+  "status": "existing_b8_profile_source_audited_no_gpu_run",
+  "source_sha256": {
+    "xModel/qwen35/vl_0_8b/bf16_kv_profile.py": "9ca7ad036e38c46aad78e751301e340d3f905f025924e7f13659b55d493b7c48",
+    "xModel/qwen35/vl_0_8b/kv_bf16_study_layout.py": "1c2071308de589bff10b3e980d377dc3049416bbe96c0bfbc16c9d184a989311",
+    "src/backends/tensorrt/qwen38_bf16_kv_layout_contract.h": "cb8edd0f2b1e393bb83d3b16b448cf2a992084f885fcc31e1316d56c2d0adbc5",
+    "xModel/qwen35/vl_0_8b/cuda_speculative.py": "ae1214029877bd32c758686014b0c2c0dceffee369cadb6d74d42d28a3b7e997",
+    "xModel/qwen35/vl_0_8b/cuda_mtp.py": "5d865cc90d04328ddc1661ecb25db81b5f0615db92dc8594b20920a9bf005d6c"
+  },
+  "facts": [
+    "Existing BF16 study Python program/layout and C++ layout parser admit B4/B8; this is profile admission, not model/runtime/memory qualification.",
+    "128MiB MTP builder option is admitted without a batch restriction; actual B8 build success is unknown.",
+    "256MiB MTP option remains explicitly B4/T4/cap4096 only. Do not relax this guard on an assumption."
+  ],
+  "logical_allocation_lower_bounds_only": {
+    "canonical_bytes_per_row": 427294720,
+    "linear_replay_bytes_per_row": 158859264,
+    "b4_canonical_bytes": 1709178880,
+    "b8_canonical_bytes": 3418357760,
+    "b8_vs_b4_additional_canonical_and_one_linear_replay_bytes": 2344615936,
+    "scope": "Arithmetic for only these two named buffers. Excludes target outputs, activations, MTP/vision, graph/workspace and allocator overhead. Not actual VRAM, a fit prediction or a performance result."
+  },
+  "next_execution": "After current nativeHTTP closure and matched reference baseline, use existing B8 profile for one isolated memory/correctness admission. If it fits, integrate actual batch coalescing and profile B1/B8 dominant kernels. Preserve any failed128MiB build before considering a separate bounded B8 workspace option.",
+  "gpu_model_executed": false,
+  "performance_admitted": false,
+  "two_times_target_achieved": false
+}

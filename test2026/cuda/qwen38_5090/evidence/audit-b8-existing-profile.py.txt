@@ -1,0 +1,12 @@
+from pathlib import Path
+import json,hashlib
+r=Path('D:/CantorAI/work/qwen38-5090');e=r/'test2026/cuda/qwen38_5090/evidence'
+names=('xModel/qwen35/vl_0_8b/bf16_kv_profile.py','xModel/qwen35/vl_0_8b/kv_bf16_study_layout.py','src/backends/tensorrt/qwen38_bf16_kv_layout_contract.h','xModel/qwen35/vl_0_8b/cuda_speculative.py','xModel/qwen35/vl_0_8b/cuda_mtp.py')
+raw={name:(r/name).read_bytes() for name in names}
+assert b'batch not in (4,8)' in raw[names[0]] and b'batch not in (4,8)' in raw[names[1]]
+assert b'j.at("batch")==4||j.at("batch")==8' in raw[names[2]]
+assert b'decoder.batch!=4' in raw[names[3]] and b'batch!=4' in raw[names[4]]
+assert b'(0,128<<20,256<<20)' in raw[names[3]]
+canonical=106823680*4;replay=39714816*4
+result={'status':'existing_b8_profile_source_audited_no_gpu_run','source_sha256':{name:hashlib.sha256(data).hexdigest() for name,data in raw.items()},'facts':['Existing BF16 study Python program/layout and C++ layout parser admit B4/B8; this is profile admission, not model/runtime/memory qualification.','128MiB MTP builder option is admitted without a batch restriction; actual B8 build success is unknown.','256MiB MTP option remains explicitly B4/T4/cap4096 only. Do not relax this guard on an assumption.'], 'logical_allocation_lower_bounds_only':{'canonical_bytes_per_row':canonical,'linear_replay_bytes_per_row':replay,'b4_canonical_bytes':4*canonical,'b8_canonical_bytes':8*canonical,'b8_vs_b4_additional_canonical_and_one_linear_replay_bytes':4*(canonical+replay),'scope':'Arithmetic for only these two named buffers. Excludes target outputs, activations, MTP/vision, graph/workspace and allocator overhead. Not actual VRAM, a fit prediction or a performance result.'},'next_execution':'After current nativeHTTP closure and matched reference baseline, use existing B8 profile for one isolated memory/correctness admission. If it fits, integrate actual batch coalescing and profile B1/B8 dominant kernels. Preserve any failed128MiB build before considering a separate bounded B8 workspace option.','gpu_model_executed':False,'performance_admitted':False,'two_times_target_achieved':False}
+target=e/'bf16-b8-existing-profile-source-audit.json';assert not target.exists();target.write_text(json.dumps(result,indent=2),encoding='utf8');(e/'audit-b8-existing-profile.py.txt').write_bytes(Path(__file__).read_bytes());print(json.dumps(result))

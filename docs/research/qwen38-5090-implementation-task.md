@@ -1254,3 +1254,63 @@ timing result is claimed. One controller owns29CPU gates,12protocol/805screen/
 IDs and immutable failure archive/owned cleanup. Only that original handle will
 be polled while timing may run; no auxiliary remote observers/uploads/jobs.
 Original2x and matched/tuned/MTP references, INT4/4B, repetitions remain open.
+
+
+### 2026-10-25: reference4K owner/driver and strict MTP controls prepared
+
+Native tokenizer-nfc-http-study-attempt1 original48577 remains running. Only its
+original handle is observed remotely. No deployed method/source/runtime changes,
+reference server, extra GPU job or remote probe occurs while it lives.
+
+Prepared benchmark reference client now requires explicit ordinary/MTP mode.
+MTP compares all124actual nonstream prompt/completion IDs and text to completed
+same-engine ordinary controls, with identical request bytes, before any timing.
+Changed27th output token with identical decoded text is rejected. Fifteen actual
+CPU schema/cache/short-MTP/new4Kmutation tests pass in1.819s; no GPU imports.
+
+Prepared probe_reference_fixed4k requires closed successful native HTTP proof,
+its actual archive digest/cleanup and separately verified outer server metadata,
+PID/source/launcher/cache policy before requests. Four VLM/sixteen short greedy
+controls and805raw screening precede124full-ID controls/124frozen4Kstreams.
+MTP requires same-engine ordinary full captures, all805completion-ID equality
+and all124control-ID/text equality. Two actual local absent-proof CLI controls
+return2with no output/network requests. These are explicitly CPU fixtures, not
+remote state or native HTTP completion observations. Probe syntax passes.
+
+Installed archived vLLM router641fbd7b... registers reset/server_info routes only
+when VLLM_SERVER_DEV_MODE is enabled. New ordinary fixed4K launcher sets it on
+literal loopback, retains existing graph/cache/precision/scheduling flags, binds
+port before load and requires fresh controller-owned LinuxPID/log paths. Both
+SGLang fixed4K launchers gain the same PID/log ownership guards; CPU preprocess
+cache0and default prefix-MM/global-MM off remain. All three Bash syntax checks
+pass. Recipe source bytes independently match recorded Git parent; methods and
+actual CPU ledgers/absent-proof results retained. No launcher deployed/executed.
+
+Next reference execution must wait for native HTTP terminal/replay, confirm idle
+GPU and unchanged checkpoint/installed-source pins, launch exactly one owned
+server and verify real server_info, model alias/context/cache/SSM/graph settings,
+PID and source after startup. Only then declare metadata guards true and run the
+probe. Stop verified PID and observe original server exit, archive/replay raw
+results before ratios. SGLang ordinary/MTP3 and vLLM ordinary are candidates;
+retained vLLM MTP divergence remains failed, fastest feasible tuning and actual
+4K/805/INT4/4B/repetitions remain open. No benchmark/quality/2x claim follows.
+
+
+### 2026-10-25: existing B8 route identified for real concurrency optimization
+
+Read current Python BF16 profile/layout and C++ layout parser: they already
+admit B4/B8, separate from the B1-only route. B8 requires actual whole-model
+build/memory/numerical/ordinary-MTP/prefix/stream admission, not a blanket guard
+relaxation. Existing128MiB MTP option has no batch-specific restriction in these
+constructors; actual B8 tactic/build success remains unknown.256MiB option stays
+explicitly B4/T4/cap4096. Preserve an actual128MiB failure before considering a
+separate bounded B8 option; defaults/known profiles remain intact.
+
+Two named state buffers alone add2344615936B fromB4toB8. This is only canonical
+BF16 carrier plus one linear replay buffer arithmetic, excluding target/output,
+activation, vision/MTP, graph/workspace and allocator overhead. It is neither
+measured VRAM nor a fit/speed prediction. Source hashes/arithmetic/method retained.
+After current native HTTP and matched baselines, attempt isolated existing B8
+memory/correctness admission and actual HTTP batch coalescing, then profile B1/
+B8 dominant GPU work. Current single-slot B1 queued concurrency cannot be labeled
+GPU batching. No B8 runtime or2x measurement has occurred.

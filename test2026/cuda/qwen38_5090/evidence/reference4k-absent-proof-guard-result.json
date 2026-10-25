@@ -1,0 +1,58 @@
+{
+  "status": "reference4k_absent_proof_guard_passed",
+  "cases": [
+    {
+      "engine": "vllm",
+      "actual_child_argv": [
+        "D:\\CantorAI\\Garnet\\.venv\\Scripts\\python.exe",
+        "D:\\CantorAI\\work\\qwen38-5090\\test2026\\cuda\\qwen38_5090\\probe_reference_fixed4k.py",
+        "--root",
+        "C:\\Users\\developer\\Documents\\Codex\\2026-10-23\\referenced-chatgpt-conversation-this-is-an",
+        "--engine",
+        "vllm",
+        "--mode",
+        "ordinary",
+        "--output",
+        "C:\\Users\\developer\\Documents\\Codex\\2026-10-23\\referenced-chatgpt-conversation-this-is-an\\work\\reference4k-absent-proof-must-not-be-created",
+        "--metadata",
+        "C:\\Users\\developer\\Documents\\Codex\\2026-10-23\\referenced-chatgpt-conversation-this-is-an\\work\\unused-reference4k-metadata.json",
+        "--launcher",
+        "D:\\CantorAI\\work\\qwen38-5090\\test2026\\cuda\\qwen38_5090\\serve_vllm_fixed4k.sh",
+        "--server-log",
+        "C:\\Users\\developer\\Documents\\Codex\\2026-10-23\\referenced-chatgpt-conversation-this-is-an\\work\\unused-reference4k-server.log"
+      ],
+      "actual_child_exit": 2,
+      "stdout": {
+        "status": "reference4k_native_http_proof_missing_no_requests_no_output"
+      }
+    },
+    {
+      "engine": "sglang",
+      "actual_child_argv": [
+        "D:\\CantorAI\\Garnet\\.venv\\Scripts\\python.exe",
+        "D:\\CantorAI\\work\\qwen38-5090\\test2026\\cuda\\qwen38_5090\\probe_reference_fixed4k.py",
+        "--root",
+        "C:\\Users\\developer\\Documents\\Codex\\2026-10-23\\referenced-chatgpt-conversation-this-is-an",
+        "--engine",
+        "sglang",
+        "--mode",
+        "ordinary",
+        "--output",
+        "C:\\Users\\developer\\Documents\\Codex\\2026-10-23\\referenced-chatgpt-conversation-this-is-an\\work\\reference4k-absent-proof-must-not-be-created",
+        "--metadata",
+        "C:\\Users\\developer\\Documents\\Codex\\2026-10-23\\referenced-chatgpt-conversation-this-is-an\\work\\unused-reference4k-metadata.json",
+        "--launcher",
+        "D:\\CantorAI\\work\\qwen38-5090\\test2026\\cuda\\qwen38_5090\\serve_sglang_fixed4k.sh",
+        "--server-log",
+        "C:\\Users\\developer\\Documents\\Codex\\2026-10-23\\referenced-chatgpt-conversation-this-is-an\\work\\unused-reference4k-server.log"
+      ],
+      "actual_child_exit": 2,
+      "stdout": {
+        "status": "reference4k_native_http_proof_missing_no_requests_no_output"
+      }
+    }
+  ],
+  "output_created": false,
+  "reference_http_requests_sent": 0,
+  "scope": "Actual child CLI CPU controls against an explicitly absent proof. No remote observation, server/model/GPU or timing execution."
+}

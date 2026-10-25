@@ -1,0 +1,31 @@
+from pathlib import Path
+import hashlib,json,zipfile
+w=Path(__file__).resolve().parent;m=Path('D:/CantorAI/work/qwen38-5090/test2026/cuda/qwen38_5090');sha=lambda b:hashlib.sha256(b).hexdigest()
+archive=w.parent/'outputs/vllm-int4-cache-self-qualified-evidence.zip'
+with zipfile.ZipFile(archive) as z:
+ router='results/vllm-int4-mm-cache-router-audit/source/entrypoints/launchers/api_server/routers.py';raw=z.read(router);assert b'if envs.VLLM_SERVER_DEV_MODE:' in raw and b'register_vllm_dev_api_routers(app)' in raw
+ source={'archive_sha256':sha(archive.read_bytes()),'file':router,'sha256':sha(raw)}
+ownership='''# A single controller owns this exact server and its fresh log.
+: "${GARNET_REF_PIDFILE:?Controller-owned PID path required}"
+: "${GARNET_REF_LOGFILE:?Controller-owned log path required}"
+case "$GARNET_REF_PIDFILE" in "$study"/results/*/server.pid) ;; *) exit 2;; esac
+case "$GARNET_REF_LOGFILE" in "$study"/results/*/server.log) ;; *) exit 2;; esac
+(set -o noclobber; printf '%s\\n' "$$" > "$GARNET_REF_PIDFILE")
+(set -o noclobber; : > "$GARNET_REF_LOGFILE")
+log=$GARNET_REF_LOGFILE
+'''
+recipes={}
+for old,new in (('serve_vllm_graph.sh','serve_vllm_fixed4k.sh'),('serve_sglang_fixed4k.sh','serve_sglang_fixed4k.sh'),('serve_sglang_mtp3_fixed4k.sh','serve_sglang_mtp3_fixed4k.sh')):
+ raw=(m/old).read_bytes();text=raw.decode();changes=[]
+ if old=='serve_vllm_graph.sh':
+  oldline='log=${GARNET_VLLM_LOG:-$study/results/vllm-graph-server.log}\n';assert text.count(oldline)==1;text=text.replace(oldline,ownership);changes.append([oldline,ownership,1])
+  before='export HF_HUB_OFFLINE=1\n';after="export VLLM_SERVER_DEV_MODE=1\n"+before;text=text.replace(before,after);changes.append([before,after,1])
+  before='study=/mnt/d/CantorAI/5090-study-20261023\n';after="/opt/cantorai5090/vllm/bin/python - <<'PY'\nimport socket\nwith socket.socket() as probe: probe.bind(('127.0.0.1',18080))\nPY\n"+before;assert text.count(before)==1;text=text.replace(before,after);changes.append([before,after,1])
+ else:
+  before='study=/mnt/d/CantorAI/5090-study-20261023\n';after=before+ownership;assert text.count(before)==1;text=text.replace(before,after);changes.append([before,after,1])
+  oldlog='"$study/results/'+old.removeprefix('serve_').removesuffix('.sh')+'-server.log"';assert text.count(oldlog)==2;text=text.replace(oldlog,'"$log"');changes.append([oldlog,'"$log"',2])
+ target=m/new;data=text.encode()
+ if target!=m/old:assert not target.exists()
+ target.write_bytes(data);recipes[new]={'source':old,'source_sha256':sha(raw),'changes':changes,'result_sha256':sha(data)}
+target=m/'evidence/reference4k-owned-launcher-preparation.json';assert not target.exists();target.write_text(json.dumps({'status':'reference4k_owned_launchers_prepared_unrun','vllm_dev_router_primary_source':source,'recipes':recipes,'scope':'Exact owned Linux parent PID, exclusive fresh per-job log and occupied-port guard. VLLM_SERVER_DEV_MODE enables local reset/server_info routes in installed source; no installed package changes. Configuration/quality/runtime compatibility/timing still unrun.'},indent=2),encoding='utf8')
+print(json.dumps({'status':'reference4k_owned_launchers_prepared_unrun','launchers':len(recipes),'server_executed':False}))

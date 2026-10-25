@@ -1,0 +1,66 @@
+from pathlib import Path
+from datetime import datetime,timezone
+import hashlib,json,shutil,subprocess
+w=Path(__file__).resolve().parent;r=Path('D:/CantorAI/work/qwen38-5090');m=r/'test2026/cuda/qwen38_5090';e=m/'evidence';sha=lambda b:hashlib.sha256(b).hexdigest()
+def copy(source,target):
+ assert not target.exists() or target.read_bytes()==source.read_bytes()
+ if not target.exists():shutil.copyfile(source,target)
+for name in ('reference4k-mtp-controls-cpu-ledger','reference4k-absent-proof-guard-ledger'):
+ target=e/name;target.mkdir(exist_ok=True)
+ for source in (w/name).iterdir():copy(source,target/source.name)
+for name in ('prepare-owned-reference4k-launchers.py','check-reference4k-absent-proof-guard.py','retain-reference4k-probe-preparation.py'):
+ copy(w/name,e/(name+'.txt'))
+copy(w/'reference4k-absent-proof-guard-result.json',e/'reference4k-absent-proof-guard-result.json')
+owned=e/'reference4k-owned-launcher-preparation.json';data=json.loads(owned.read_bytes());commit=subprocess.check_output(['git','rev-parse','HEAD'],cwd=r,text=True).strip()
+for row in data['recipes'].values():
+ original=subprocess.check_output(['git','show',commit+':test2026/cuda/qwen38_5090/'+row['source']],cwd=r);assert sha(original)==row['source_sha256']
+data['source_git_commit_verified']=commit;owned.write_text(json.dumps(data,indent=2),encoding='utf8')
+methods=('probe_reference_fixed4k.py','benchmark_fixed_context_reference.py','serve_vllm_fixed4k.sh','serve_sglang_fixed4k.sh','serve_sglang_mtp3_fixed4k.sh','test_fixed_context_reference.py')
+receipt={'status':'reference4k_probe_prepared_locally_unrun','recorded_utc':datetime.now(timezone.utc).isoformat(),'source_sha256':{name:sha((m/name).read_bytes()) for name in methods},'cpu_unit_tests_passed':15,'cpu_test_report_seconds':1.819,'actual_absent_proof_child_controls':2,'bash_syntax_checks_passed':3,'uploaded':False,'reference_server_started':False,'reference_http_requests_sent':0,'performance_admitted':False,'scope':'Local actual mutation/schema/cache controls and explicit absent-proof CLI checks. New probe requires actual native HTTP closure and separately established outer server metadata/PID/source/config guards. No reference model/runtime compatibility,805screen,4Ktiming, strongest-tuning or2x admission.'}
+target=e/'reference4k-probe-local-preparation.json';assert not target.exists();target.write_text(json.dumps(receipt,indent=2),encoding='utf8')
+entry='''
+
+### 2026-10-25: reference4K owner/driver and strict MTP controls prepared
+
+Native tokenizer-nfc-http-study-attempt1 original48577 remains running. Only its
+original handle is observed remotely. No deployed method/source/runtime changes,
+reference server, extra GPU job or remote probe occurs while it lives.
+
+Prepared benchmark reference client now requires explicit ordinary/MTP mode.
+MTP compares all124actual nonstream prompt/completion IDs and text to completed
+same-engine ordinary controls, with identical request bytes, before any timing.
+Changed27th output token with identical decoded text is rejected. Fifteen actual
+CPU schema/cache/short-MTP/new4Kmutation tests pass in1.819s; no GPU imports.
+
+Prepared probe_reference_fixed4k requires closed successful native HTTP proof,
+its actual archive digest/cleanup and separately verified outer server metadata,
+PID/source/launcher/cache policy before requests. Four VLM/sixteen short greedy
+controls and805raw screening precede124full-ID controls/124frozen4Kstreams.
+MTP requires same-engine ordinary full captures, all805completion-ID equality
+and all124control-ID/text equality. Two actual local absent-proof CLI controls
+return2with no output/network requests. These are explicitly CPU fixtures, not
+remote state or native HTTP completion observations. Probe syntax passes.
+
+Installed archived vLLM router641fbd7b... registers reset/server_info routes only
+when VLLM_SERVER_DEV_MODE is enabled. New ordinary fixed4K launcher sets it on
+literal loopback, retains existing graph/cache/precision/scheduling flags, binds
+port before load and requires fresh controller-owned LinuxPID/log paths. Both
+SGLang fixed4K launchers gain the same PID/log ownership guards; CPU preprocess
+cache0and default prefix-MM/global-MM off remain. All three Bash syntax checks
+pass. Recipe source bytes independently match recorded Git parent; methods and
+actual CPU ledgers/absent-proof results retained. No launcher deployed/executed.
+
+Next reference execution must wait for native HTTP terminal/replay, confirm idle
+GPU and unchanged checkpoint/installed-source pins, launch exactly one owned
+server and verify real server_info, model alias/context/cache/SSM/graph settings,
+PID and source after startup. Only then declare metadata guards true and run the
+probe. Stop verified PID and observe original server exit, archive/replay raw
+results before ratios. SGLang ordinary/MTP3 and vLLM ordinary are candidates;
+retained vLLM MTP divergence remains failed, fastest feasible tuning and actual
+4K/805/INT4/4B/repetitions remain open. No benchmark/quality/2x claim follows.
+'''
+for name in ('qwen38-5090-development-log.md','qwen38-5090-implementation-task.md'):
+ target=r/'docs/research'/name;raw=target.read_bytes();assert b'reference4K owner/driver and strict MTP controls prepared' not in raw;target.write_bytes(raw+entry.replace('\n','\r\n').encode())
+for filename in ('Garnet-Tokenizer-NFC-Status.json','Garnet-Parallel-Top1-Integration-Status.json'):
+ target=w.parent/'outputs'/filename;s=json.loads(target.read_bytes());s.update(reference4k_probe_preparation=receipt,pushed_commit=commit);target.write_text(json.dumps(s,indent=2)+'\n',encoding='utf8')
+print(json.dumps({'status':receipt['status'],'cpu_tests':15,'negative_cli_controls':2,'server_executed':False}))
