@@ -1,0 +1,392 @@
+{
+  "status": "closed_same_precision_state_localization",
+  "parent_archive_sha256": "5ab8f15a0709b3a7f712137051f68b91c35cb715ec4392d2035b1b065fca5020",
+  "analysis_source_sha256": "552c4f49f0a12f1b6c5cd67a7eadab4a1a76d05f083c9945ed5b3fbea98ccf7c",
+  "comparisons": [
+    {
+      "left": "fp32-t4",
+      "right": "bf16-t4",
+      "phases": {
+        "prefill_state": {
+          "different_components": 121,
+          "first_differences": [
+            {
+              "layer": 3,
+              "role": 1,
+              "kind": "full_attention",
+              "rows_equal": [
+                false,
+                false,
+                false,
+                false
+              ]
+            },
+            {
+              "layer": 4,
+              "role": 1,
+              "kind": "linear_attention",
+              "rows_equal": [
+                false,
+                false,
+                false,
+                false
+              ]
+            },
+            {
+              "layer": 4,
+              "role": 2,
+              "kind": "linear_attention",
+              "rows_equal": [
+                false,
+                false,
+                false,
+                false
+              ]
+            },
+            {
+              "layer": 5,
+              "role": 1,
+              "kind": "linear_attention",
+              "rows_equal": [
+                false,
+                false,
+                false,
+                false
+              ]
+            },
+            {
+              "layer": 5,
+              "role": 2,
+              "kind": "linear_attention",
+              "rows_equal": [
+                false,
+                false,
+                false,
+                false
+              ]
+            },
+            {
+              "layer": 6,
+              "role": 1,
+              "kind": "linear_attention",
+              "rows_equal": [
+                false,
+                false,
+                false,
+                false
+              ]
+            },
+            {
+              "layer": 6,
+              "role": 2,
+              "kind": "linear_attention",
+              "rows_equal": [
+                false,
+                false,
+                false,
+                false
+              ]
+            },
+            {
+              "layer": 7,
+              "role": 1,
+              "kind": "full_attention",
+              "rows_equal": [
+                false,
+                false,
+                false,
+                false
+              ]
+            }
+          ]
+        },
+        "final_state": {
+          "different_components": 121,
+          "first_differences": [
+            {
+              "layer": 3,
+              "role": 1,
+              "kind": "full_attention",
+              "rows_equal": [
+                false,
+                false,
+                false,
+                false
+              ]
+            },
+            {
+              "layer": 4,
+              "role": 1,
+              "kind": "linear_attention",
+              "rows_equal": [
+                false,
+                false,
+                false,
+                false
+              ]
+            },
+            {
+              "layer": 4,
+              "role": 2,
+              "kind": "linear_attention",
+              "rows_equal": [
+                false,
+                false,
+                false,
+                false
+              ]
+            },
+            {
+              "layer": 5,
+              "role": 1,
+              "kind": "linear_attention",
+              "rows_equal": [
+                false,
+                false,
+                false,
+                false
+              ]
+            },
+            {
+              "layer": 5,
+              "role": 2,
+              "kind": "linear_attention",
+              "rows_equal": [
+                false,
+                false,
+                false,
+                false
+              ]
+            },
+            {
+              "layer": 6,
+              "role": 1,
+              "kind": "linear_attention",
+              "rows_equal": [
+                false,
+                false,
+                false,
+                false
+              ]
+            },
+            {
+              "layer": 6,
+              "role": 2,
+              "kind": "linear_attention",
+              "rows_equal": [
+                false,
+                false,
+                false,
+                false
+              ]
+            },
+            {
+              "layer": 7,
+              "role": 1,
+              "kind": "full_attention",
+              "rows_equal": [
+                false,
+                false,
+                false,
+                false
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "left": "reference-t4",
+      "right": "reference-t32",
+      "phases": {
+        "prefill_state": {
+          "different_components": 126,
+          "first_differences": [
+            {
+              "layer": 1,
+              "role": 1,
+              "kind": "linear_attention",
+              "rows_equal": [
+                false,
+                true,
+                false,
+                true
+              ]
+            },
+            {
+              "layer": 1,
+              "role": 2,
+              "kind": "linear_attention",
+              "rows_equal": [
+                false,
+                false,
+                false,
+                false
+              ]
+            },
+            {
+              "layer": 2,
+              "role": 1,
+              "kind": "linear_attention",
+              "rows_equal": [
+                false,
+                false,
+                false,
+                false
+              ]
+            },
+            {
+              "layer": 2,
+              "role": 2,
+              "kind": "linear_attention",
+              "rows_equal": [
+                false,
+                false,
+                false,
+                false
+              ]
+            },
+            {
+              "layer": 3,
+              "role": 1,
+              "kind": "full_attention",
+              "rows_equal": [
+                false,
+                false,
+                false,
+                false
+              ]
+            },
+            {
+              "layer": 3,
+              "role": 2,
+              "kind": "full_attention",
+              "rows_equal": [
+                false,
+                false,
+                false,
+                false
+              ]
+            },
+            {
+              "layer": 4,
+              "role": 1,
+              "kind": "linear_attention",
+              "rows_equal": [
+                false,
+                false,
+                false,
+                false
+              ]
+            },
+            {
+              "layer": 4,
+              "role": 2,
+              "kind": "linear_attention",
+              "rows_equal": [
+                false,
+                false,
+                false,
+                false
+              ]
+            }
+          ]
+        },
+        "final_state": {
+          "different_components": 125,
+          "first_differences": [
+            {
+              "layer": 1,
+              "role": 2,
+              "kind": "linear_attention",
+              "rows_equal": [
+                false,
+                false,
+                false,
+                false
+              ]
+            },
+            {
+              "layer": 2,
+              "role": 1,
+              "kind": "linear_attention",
+              "rows_equal": [
+                true,
+                false,
+                true,
+                false
+              ]
+            },
+            {
+              "layer": 2,
+              "role": 2,
+              "kind": "linear_attention",
+              "rows_equal": [
+                false,
+                false,
+                false,
+                false
+              ]
+            },
+            {
+              "layer": 3,
+              "role": 1,
+              "kind": "full_attention",
+              "rows_equal": [
+                false,
+                false,
+                false,
+                false
+              ]
+            },
+            {
+              "layer": 3,
+              "role": 2,
+              "kind": "full_attention",
+              "rows_equal": [
+                false,
+                false,
+                false,
+                false
+              ]
+            },
+            {
+              "layer": 4,
+              "role": 1,
+              "kind": "linear_attention",
+              "rows_equal": [
+                false,
+                false,
+                false,
+                false
+              ]
+            },
+            {
+              "layer": 4,
+              "role": 2,
+              "kind": "linear_attention",
+              "rows_equal": [
+                false,
+                false,
+                false,
+                false
+              ]
+            },
+            {
+              "layer": 5,
+              "role": 1,
+              "kind": "linear_attention",
+              "rows_equal": [
+                false,
+                false,
+                false,
+                false
+              ]
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "scope": "Complete state hash witness localization from closed/replayed model archive. FP32/T4 versus BF16/T4 agrees for GDN layers0-2 and first differs at K cache layer3; first V cache agrees. Independent BF16 reference T4 versus T32 first differs at GDN layer1 before first attention cache. Observed locations separate two numerical effects on these fixtures, not proof of a global quality cause or harmlessness. No speed or broad-quality admission."
+}

@@ -3407,3 +3407,89 @@ boundary ordinary/MTP behavior, uncached vision/KV controls, quality, matching
 settings and clean repeats must precede actual4K timing. All original2x/halfTTFT,
 C1/concurrency, broadquality, tuned/MTP references, INT4 and matched4B requirements
 remain intact and unmet. Source+compressed fixture+proofs kept reviewable onbranch.
+
+
+2026-10-25 UTC: five-profile same-precision diagnostic closed exit0 with private
+cache cleanup. Previous goal turn made actual progress by preparing/replaying
+124exact4K CPU request fixtures and pushingb67ec7fd3; this turn revalidated the
+current branch/unrelated untracked file and original live handle before reads.
+No restart on silence. During untimed correctness, acknowledged read-only
+workflow and four already closed mode-report downloads were inspected locally;
+no live report was treated as final and no timing/GPU observer was introduced.
+Interim T4 producer state/vector hash comparison was explicitly pending final
+archive and both independent replays, which are now complete.
+
+Immutable24726354B/427file archive
+5ab8f15a0709b3a7f712137051f68b91c35cb715ec4392d2035b1b065fca5020
+replayed independently on RTX5090host and local CPU after both transfer
+acknowledgements. Reports are byte-data-equivalent JSON on both machines;
+current/archived verifierbae52cf4a75d034dd96e2ce494339f46e1849e838594a6b01bcb1b8cae6a3286.
+Five modes/320raw81920B hidden+normalized arrays retained. Packed BF16 versus
+independent BF16-in-FP32 reference agrees bitwise in EVERY raw vector,32teacher
+predictions and all128logical state-component row hashes at prefill and final,
+for BOTH T4 and T32 routing. All four physical rows match each respective
+reference, with duplicate pairs exact; these remain two unique short prompts.
+Reference cache values passed zero-low16-bit checks on every observed FP32
+cache word. Complete cache hash witnesses are retained; complete raw cache
+arrays are not archived. Valid native reference plugin model build/load/enqueue
+and CUDA graph use were exercised on97c364...DLL, beyond prior CPU-only wrapper
+tests. Source60pins and DLL unchanged; guarded cleanup complete. No runtime/SDK
+replacement or concurrent worker/source mutation.
+
+Fresh FP32/T4 exactly reproduces saved32teacher predictions, all64raw vectors
+and complete state witnesses. First old-FP32 token differences remain BF16/T4
+image19 and BF16/T32 text26/image8; independent full-cache reference reproduces
+the same differences. Thus packed-cache implementation agrees with independent
+same-precision math on these fixtures; old FP32 failure remains valid, not
+waived or converted into broad-quality/performance success. Cross-prefill T4
+versus T32 is NOT bit-exact in either cache representation. Closed-state
+localization method/source retained: FP32/T4 versus BF16/T4 first differs in
+K cache layer3 after exact GDN layers0-2; first V cache agrees. Independent
+referenceT4/T32 first differs at GDN layer1, before any full-attention cache.
+This localizes observed precision and prefill effects; it does not identify
+every upstream operator, establish harmless rounding or broadly validate quality.
+Decoded prior failed128token outputs were also inspected with pinned tokenizer;
+no semantic grader or quality score was applied and no admission followed.
+
+Correctness sampled adapter peaks, not serving peaks or model allocation gains:
+FP32T4 29189545984B, BF16T4 24984756224B, BF16T32 24684863488B,
+referenceT4/referenceT32 each32423354368B. No TTFT/tok/s/concurrency benchmark
+was run here. Latest HTTP numbers, regressions/gaps and unmet2x/halfTTFT remain.
+
+Offline read-only decomposition of immutable profiled SQLite (raw SHA matched
+its retained archive manifest) groups BF16 GEMMs by actual launch grid. In each
+of two marked windows,4512kernels at grid4x1x1/block32 account121.12446/119.607657ms,
+about6.99/6.91% of kernel union. Archived source has two BF16 a/b projections per
+48GDNlayers, and exactly96x47target-verification calls match these counts; this
+mapping is INFERRED, not proven by per-operator NVTX labels. Counterfactual
+removal of only these durations gives marker ratios1.06143/1.06048, not predicted
+model speed. Do not claim2x from this subset; larger matrix costs, state/batch
+and low-batch behavior remain the main optimization work. No new GPU trace or
+performance measurement. Current closed reports also show T4body aux_streams0,
+compiledT32body2 and final norm0; auxiliary streams are not globally forced off.
+No untested stream-policy change was deployed.
+
+Prepared next ordinary-only full reference corpus on unchanged97c364DLL/source:
+allfour existing text/image keys, two groups repeated twice, original128/32token
+limits/stops, full logical state witnesses and8raw final hidden/normalized arrays.
+Old FP32 IDs remain explicit observations, not success criteria silently removed
+from a historical test. This new prospective SAME-PRECISION oracle is needed
+before packed ordinary/MTP full128token/state/vector checks. New bounded witness
+module has5CPU controls over independent host arrays: both physical layouts,
+all chunk boundaries, full coverage, readonly inputs, GDN low-bit preservation,
+cache BF16 invariant, malformed metadata and truncated reads. They pass locally;
+producer/runner/verifier syntax checked. No native runtime changes or rebuild.
+New preflight matches60unchanged source pins/11methods/9input pins/closed parent
+proof/DLL/idleGPU, allsix new method paths absent. Preparation
+ a437d89c45d47d95fe5c94efdee779be559c561e3473a45136e8837abda5fbf7.
+Allseven method/preparation uploads acknowledged; started only original
+bf16-full-reference-corpus-attempt1 after both closed diagnostic replays.
+Actual full-corpus result remains pending. This is neither packed/MTP128-token,
+broad-quality, B8/4K/HTTP/serving-memory nor2x admission. Keep native B1/C1
+optimization, larger-batch/workspace support, fastest feasible tuned/MTP baselines,
+INT4 quality comparison, matched4B, actual4K inputs and clean repeats in scope.
+
+Original bf16-full-reference-corpus-attempt1 confirmed running; all5newCPU
+state-witness controls pass remotely before native model construction. Known
+optional hashlib startup warnings retained; SHA256 available as in parent runs.
+No actual full-corpus result or speed inferred, no restart/source/DLL mutation.

@@ -1,0 +1,158 @@
+{
+  "status": "immutable_decode_bf16_grid_analysis",
+  "archive_sha256": "ceb182e066a9f97df985d5e6fb0e8a0f5eb25253773abbe44026e37b4dafa14c",
+  "sqlite_sha256": "06917d566bb87d6c3f4474731283ba0598fff3e4510eeb8a5731f6f624a79fb7",
+  "proof_sha256": "349476e614b7afdfffd590f71cb0f2489d0d42a996cf3e93f4d88c5f2aa71202",
+  "archived_lowerer_sha256": "09d3b732d9187ed44bd3c429ff5a1cb160643cc485c16fe6a9318859828241d8",
+  "analysis_source_sha256": "cc993b012af097947ed81144d2637ca7235d97a8dcabcf3cddedeb0ff14a4937",
+  "windows": [
+    {
+      "call": 2,
+      "marker_interval_ns": [
+        317091837325,
+        319184674650
+      ],
+      "marker_span_ns": 2092837325,
+      "kernel_interval_union_ns": 1733543436,
+      "bf16_launch_groups": [
+        {
+          "name": "void cutlass::Kernel2<cutlass_80_wmma_tensorop_bf16_s161616gemm_bf16_16x16_128x2_tn_align8>(T1::Params)",
+          "gridX": 4,
+          "gridY": 1,
+          "gridZ": 1,
+          "blockX": 32,
+          "registersPerThread": 124,
+          "count": 4512,
+          "duration_ns": 121124460,
+          "max_ns": 28096
+        },
+        {
+          "name": "void cutlass::Kernel2<cutlass_80_wmma_tensorop_bf16_s161616gemm_bf16_16x16_128x2_tn_align8>(T1::Params)",
+          "gridX": 8,
+          "gridY": 40,
+          "gridZ": 1,
+          "blockX": 32,
+          "registersPerThread": 124,
+          "count": 423,
+          "duration_ns": 37786324,
+          "max_ns": 130656
+        },
+        {
+          "name": "void cutlass::Kernel2<cutlass_80_wmma_tensorop_bf16_s161616gemm_bf16_32x32_128x2_tn_align8>(T1::Params)",
+          "gridX": 8,
+          "gridY": 68,
+          "gridZ": 1,
+          "blockX": 128,
+          "registersPerThread": 84,
+          "count": 282,
+          "duration_ns": 33645488,
+          "max_ns": 125216
+        },
+        {
+          "name": "void cutlass::Kernel2<cutlass_80_wmma_tensorop_bf16_s161616gemm_bf16_16x16_128x2_tn_align8>(T1::Params)",
+          "gridX": 8,
+          "gridY": 96,
+          "gridZ": 1,
+          "blockX": 32,
+          "registersPerThread": 124,
+          "count": 141,
+          "duration_ns": 11559787,
+          "max_ns": 84992
+        },
+        {
+          "name": "void cutlass::Kernel2<cutlass_80_wmma_tensorop_bf16_s161616gemm_bf16_16x16_128x2_tn_align8>(T1::Params)",
+          "gridX": 8,
+          "gridY": 8,
+          "gridZ": 1,
+          "blockX": 32,
+          "registersPerThread": 124,
+          "count": 282,
+          "duration_ns": 7799549,
+          "max_ns": 28352
+        }
+      ],
+      "small_grid_kernel_count": 4512,
+      "small_grid_duration_ns": 121124460,
+      "target_verification_calls": 47,
+      "small_grid_fraction_of_kernel_union": 0.06987102687169126,
+      "small_grid_fraction_of_marker_span": 0.057875716642238305,
+      "counterfactual_marker_ratio_if_only_these_durations_vanished": 1.061431084692953,
+      "attribution": "Inferred GDN a/b projections from archived source and exact96-per-target-call count; no logical operator labels prove this mapping."
+    },
+    {
+      "call": 3,
+      "marker_interval_ns": [
+        357300159283,
+        359397509563
+      ],
+      "marker_span_ns": 2097350280,
+      "kernel_interval_union_ns": 1731092749,
+      "bf16_launch_groups": [
+        {
+          "name": "void cutlass::Kernel2<cutlass_80_wmma_tensorop_bf16_s161616gemm_bf16_16x16_128x2_tn_align8>(T1::Params)",
+          "gridX": 4,
+          "gridY": 1,
+          "gridZ": 1,
+          "blockX": 32,
+          "registersPerThread": 124,
+          "count": 4512,
+          "duration_ns": 119607657,
+          "max_ns": 27712
+        },
+        {
+          "name": "void cutlass::Kernel2<cutlass_80_wmma_tensorop_bf16_s161616gemm_bf16_16x16_128x2_tn_align8>(T1::Params)",
+          "gridX": 8,
+          "gridY": 40,
+          "gridZ": 1,
+          "blockX": 32,
+          "registersPerThread": 124,
+          "count": 423,
+          "duration_ns": 37786476,
+          "max_ns": 130784
+        },
+        {
+          "name": "void cutlass::Kernel2<cutlass_80_wmma_tensorop_bf16_s161616gemm_bf16_32x32_128x2_tn_align8>(T1::Params)",
+          "gridX": 8,
+          "gridY": 68,
+          "gridZ": 1,
+          "blockX": 128,
+          "registersPerThread": 84,
+          "count": 282,
+          "duration_ns": 33638566,
+          "max_ns": 124640
+        },
+        {
+          "name": "void cutlass::Kernel2<cutlass_80_wmma_tensorop_bf16_s161616gemm_bf16_16x16_128x2_tn_align8>(T1::Params)",
+          "gridX": 8,
+          "gridY": 96,
+          "gridZ": 1,
+          "blockX": 32,
+          "registersPerThread": 124,
+          "count": 141,
+          "duration_ns": 11562151,
+          "max_ns": 84672
+        },
+        {
+          "name": "void cutlass::Kernel2<cutlass_80_wmma_tensorop_bf16_s161616gemm_bf16_16x16_128x2_tn_align8>(T1::Params)",
+          "gridX": 8,
+          "gridY": 8,
+          "gridZ": 1,
+          "blockX": 32,
+          "registersPerThread": 124,
+          "count": 282,
+          "duration_ns": 7802810,
+          "max_ns": 28544
+        }
+      ],
+      "small_grid_kernel_count": 4512,
+      "small_grid_duration_ns": 119607657,
+      "target_verification_calls": 47,
+      "small_grid_fraction_of_kernel_union": 0.06909373115281878,
+      "small_grid_fraction_of_marker_span": 0.05702798342296929,
+      "counterfactual_marker_ratio_if_only_these_durations_vanished": 1.0604768565985443,
+      "attribution": "Inferred GDN a/b projections from archived source and exact96-per-target-call count; no logical operator labels prove this mapping."
+    }
+  ],
+  "performance_admitted": false,
+  "scope": "Two retained profiler windows on prior34bea...DLL, register128 off. Launch durations/critical paths are not additive end-to-end predictions. Grid/count mapping is an explicit inference, not per-operator NVTX attribution. Small-grid BF16 work is roughly7% of kernel union, so removing only its recorded durations cannot explain2x within these windows. No new GPU work, C1/B8 or current BF16-model measurement and no speed claim; use only to prioritize future screening."
+}
