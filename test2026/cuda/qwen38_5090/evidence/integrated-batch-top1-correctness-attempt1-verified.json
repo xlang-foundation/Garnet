@@ -1,0 +1,81 @@
+{
+  "status": "integrated_batch_top1_correctness_replayed",
+  "archive_sha256": "eeb534bec8ef0b1f05c523398b1cb0c39bc0a0665b968e8959bee697e86f4e4d",
+  "files_verified": 130,
+  "variants": [
+    {
+      "label": "disabled",
+      "status": "integrated_top1_raw_observations_replayed",
+      "parallel_enabled": false,
+      "cases": 352,
+      "raw_observations": 1066,
+      "observations_sha256": "c0f1dea657f8ea9096d0f5a5366d0956ac479d5d94da63cda0e3b4f854963bf0",
+      "legacy_host_calls": 1060,
+      "parallel_host_calls": 0,
+      "graphs": 2,
+      "invalid_calls": 12,
+      "model_qualified": false,
+      "performance_admitted": false
+    },
+    {
+      "label": "enabled",
+      "status": "integrated_top1_raw_observations_replayed",
+      "parallel_enabled": true,
+      "cases": 352,
+      "raw_observations": 1066,
+      "observations_sha256": "f88220949fd7b8ab9bda3f6d304a33f17e3b7462034790f95ecd0eff732f5e61",
+      "legacy_host_calls": 594,
+      "parallel_host_calls": 466,
+      "graphs": 2,
+      "invalid_calls": 12,
+      "model_qualified": false,
+      "performance_admitted": false
+    },
+    {
+      "label": "unset",
+      "status": "integrated_top1_raw_observations_replayed",
+      "parallel_enabled": false,
+      "cases": 352,
+      "raw_observations": 1066,
+      "observations_sha256": "c0f1dea657f8ea9096d0f5a5366d0956ac479d5d94da63cda0e3b4f854963bf0",
+      "legacy_host_calls": 1060,
+      "parallel_host_calls": 0,
+      "graphs": 2,
+      "invalid_calls": 12,
+      "model_qualified": false,
+      "performance_admitted": false
+    },
+    {
+      "label": "malformed",
+      "status": "integrated_top1_raw_observations_replayed",
+      "parallel_enabled": false,
+      "cases": 352,
+      "raw_observations": 1066,
+      "observations_sha256": "c0f1dea657f8ea9096d0f5a5366d0956ac479d5d94da63cda0e3b4f854963bf0",
+      "legacy_host_calls": 1060,
+      "parallel_host_calls": 0,
+      "graphs": 2,
+      "invalid_calls": 12,
+      "model_qualified": false,
+      "performance_admitted": false
+    }
+  ],
+  "failed_raw_preserved": [],
+  "observed_unused_library_sha256": "97c364653161f9252032815e644ef4a22758cc78bf7226317aba21f118f00844",
+  "correctness_sampled_peak_adapter_bytes": {
+    "disabled": 1135943680,
+    "enabled": 1135943680,
+    "unset": 1135943680,
+    "malformed": 1135943680
+  },
+  "replay_verifier_sha256": "fbf98104b3f59dc8917d7c45181c1f3b0b485bc32145d22037213c6df89773a4",
+  "archived_replay_verifier_sha256": "fbf98104b3f59dc8917d7c45181c1f3b0b485bc32145d22037213c6df89773a4",
+  "replay_environment": {
+    "python": "3.12.10",
+    "numpy": "1.26.4"
+  },
+  "native_runtime_built": false,
+  "model_quality_qualified": false,
+  "performance_admitted": false,
+  "scope": "Four independent production API processes:0/1/unset/01;352cases/1066raw observations each against frozen legacy GPU and independent CPU oracle, both exact modes/fallback/capture/canary/readonly/negative controls. Source-only installation must be independently replayed first. No Garnet runtime DLL loaded/rebuilt, model quality, serving memory, performance or2x admission."
+}

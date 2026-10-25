@@ -1,0 +1,17 @@
+{
+  "status": "complete_model_probe_derived_unrun",
+  "source": "probe_bf16_padded_lifecycle_scope_fixed.py",
+  "source_sha256": "8ae06b9144daf48de90c13c14c0c86bba92c6fe1382b1c4f339dd9167e8432dc",
+  "result_sha256": "226747eb0d477bde4bf104fb916badf278f2a491c28349a108eb2c41a82638e6",
+  "changes": [
+    [
+      " pool=json.loads(decoder.io.memory_json()); report['external_compressed_pool']=pool",
+      " pool=json.loads(decoder.io.memory_json()); report['external_compressed_pool']=pool\n assert sys.argv[5] in ('0','1') and os.environ.get('GARNET_PARALLEL_BATCH_TOP1')==sys.argv[5]\n report['sampler_mode']=sys.argv[5]\n report['batch_top1_dispatch_before']={'batch_top1_parallel_enabled':pool['batch_top1_parallel_enabled'],'batch_top1_parallel_max_rows':pool['batch_top1_parallel_max_rows'],'batch_top1_parallel_min_vocab':pool['batch_top1_parallel_min_vocab'],'batch_top1_legacy_host_dispatch_calls':pool['batch_top1_legacy_host_dispatch_calls'],'batch_top1_parallel_host_dispatch_calls':pool['batch_top1_parallel_host_dispatch_calls'],'batch_top1_counter_scope':pool['batch_top1_counter_scope']}\n assert pool['batch_top1_parallel_enabled']==(sys.argv[5]=='1') and pool['batch_top1_parallel_max_rows']==128 and pool['batch_top1_parallel_min_vocab']==8192"
+    ],
+    [
+      " report['status']='bf16_padded_lifecycle_finished_needs_replay';save()",
+      " final_pool=json.loads(decoder.io.memory_json())\n report['batch_top1_dispatch_after']={'batch_top1_parallel_enabled':final_pool['batch_top1_parallel_enabled'],'batch_top1_parallel_max_rows':final_pool['batch_top1_parallel_max_rows'],'batch_top1_parallel_min_vocab':final_pool['batch_top1_parallel_min_vocab'],'batch_top1_legacy_host_dispatch_calls':final_pool['batch_top1_legacy_host_dispatch_calls'],'batch_top1_parallel_host_dispatch_calls':final_pool['batch_top1_parallel_host_dispatch_calls'],'batch_top1_counter_scope':final_pool['batch_top1_counter_scope']}\n assert final_pool['batch_top1_parallel_enabled']==(sys.argv[5]=='1')\n if sys.argv[5]=='1':\n  assert final_pool['batch_top1_parallel_host_dispatch_calls']>pool['batch_top1_parallel_host_dispatch_calls'] and final_pool['batch_top1_legacy_host_dispatch_calls']==pool['batch_top1_legacy_host_dispatch_calls']\n else:\n  assert final_pool['batch_top1_legacy_host_dispatch_calls']>pool['batch_top1_legacy_host_dispatch_calls'] and final_pool['batch_top1_parallel_host_dispatch_calls']==pool['batch_top1_parallel_host_dispatch_calls']\n report['status']='bf16_padded_lifecycle_finished_needs_replay';save()"
+    ]
+  ],
+  "scope": "Preserve full14case/102raw-vector lifecycle and all model generation/state math. Add only required exact process mode and before/after production batch-top1 telemetry assertions. Separate processes, no mode switching. Not broad quality, actual4K or HTTP timing."
+}
