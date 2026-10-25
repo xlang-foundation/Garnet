@@ -1,0 +1,52 @@
+
+{"id": "913a0955d708403692be02200999b69c", "kind": "build", "label": "B1 plugin forwarding private sm120 compile/link only; no GPU execution", "argv": ["cmd.exe", "/d", "/c", "C:\\Users\\developer\\Documents\\Codex\\2026-10-23\\referenced-chatgpt-conversation-this-is-an\\work\\compile-bf16-low-batch-plugin-forwarding.bat"]}
+**********************************************************************
+** Visual Studio 2026 Developer Command Prompt v18.10.1
+** Copyright (c) 2026 Microsoft Corporation
+**********************************************************************
+[vcvarsall.bat] Environment initialized for: 'x64'
+bf16_low_batch_overlay_plugin.cpp
+bf16_kv_low_batch_candidate.cu
+tmpxft_0000fe60_00000000-7_bf16_kv_low_batch_candidate.cudafe1.cpp
+D:\CantorAI\work\qwen38-5090\test2026\cuda\qwen38_5090\bf16_low_batch_overlay_plugin.h(20): warning #997-D: function "nvinfer1::IPluginV2::getOutputDimensions(int32_t, const nvinfer1::Dims *, int32_t) noexcept" is hidden by "Garnet::BF16KVLowBatchOverlayPlugin::getOutputDimensions" -- virtual function override intended?
+      nvinfer1::DimsExprs getOutputDimensions(int,const nvinfer1::DimsExprs*,int,nvinfer1::IExprBuilder&) noexcept override;
+                          ^
+
+Remark: The warnings can be suppressed with "-diag-suppress <warning-number>"
+
+D:\CantorAI\work\qwen38-5090\test2026\cuda\qwen38_5090\bf16_low_batch_overlay_plugin.h(23): warning #997-D: function "nvinfer1::IPluginV2::getWorkspaceSize(int32_t) const noexcept" is hidden by "Garnet::BF16KVLowBatchOverlayPlugin::getWorkspaceSize" -- virtual function override intended?
+      size_t getWorkspaceSize(const nvinfer1::PluginTensorDesc*,int,const nvinfer1::PluginTensorDesc*,int) const noexcept override;
+             ^
+
+D:\CantorAI\work\qwen38-5090\test2026\cuda\qwen38_5090\bf16_low_batch_overlay_plugin.h(24): warning #997-D: function "nvinfer1::IPluginV2::enqueue(int32_t, const void *const *, void *const *, void *, cudaStream_t) noexcept" is hidden by "Garnet::BF16KVLowBatchOverlayPlugin::enqueue" -- virtual function override intended?
+      int enqueue(const nvinfer1::PluginTensorDesc*,const nvinfer1::PluginTensorDesc*,const void* const*,void* const*,void*,cudaStream_t) noexcept override;
+          ^
+
+D:\CantorAI\work\qwen38-5090\test2026\cuda\qwen38_5090\bf16_low_batch_overlay_plugin.h(22): warning #997-D: function "nvinfer1::IPluginV2Ext::configurePlugin(const nvinfer1::Dims *, int32_t, const nvinfer1::Dims *, int32_t, const nvinfer1::DataType *, const nvinfer1::DataType *, const bool *, const bool *, nvinfer1::PluginFormat, int32_t) noexcept" is hidden by "Garnet::BF16KVLowBatchOverlayPlugin::configurePlugin" -- virtual function override intended?
+      void configurePlugin(const nvinfer1::DynamicPluginTensorDesc*,int,const nvinfer1::DynamicPluginTensorDesc*,int) noexcept override{}
+           ^
+
+D:\CantorAI\work\qwen38-5090\test2026\cuda\qwen38_5090\bf16_low_batch_overlay_plugin.h(20): warning #997-D: function "nvinfer1::IPluginV2::getOutputDimensions(int32_t, const nvinfer1::Dims *, int32_t) noexcept" is hidden by "Garnet::BF16KVLowBatchOverlayPlugin::getOutputDimensions" -- virtual function override intended?
+      nvinfer1::DimsExprs getOutputDimensions(int,const nvinfer1::DimsExprs*,int,nvinfer1::IExprBuilder&) noexcept override;
+                          ^
+
+Remark: The warnings can be suppressed with "-diag-suppress <warning-number>"
+
+D:\CantorAI\work\qwen38-5090\test2026\cuda\qwen38_5090\bf16_low_batch_overlay_plugin.h(23): warning #997-D: function "nvinfer1::IPluginV2::getWorkspaceSize(int32_t) const noexcept" is hidden by "Garnet::BF16KVLowBatchOverlayPlugin::getWorkspaceSize" -- virtual function override intended?
+      size_t getWorkspaceSize(const nvinfer1::PluginTensorDesc*,int,const nvinfer1::PluginTensorDesc*,int) const noexcept override;
+             ^
+
+D:\CantorAI\work\qwen38-5090\test2026\cuda\qwen38_5090\bf16_low_batch_overlay_plugin.h(24): warning #997-D: function "nvinfer1::IPluginV2::enqueue(int32_t, const void *const *, void *const *, void *, cudaStream_t) noexcept" is hidden by "Garnet::BF16KVLowBatchOverlayPlugin::enqueue" -- virtual function override intended?
+      int enqueue(const nvinfer1::PluginTensorDesc*,const nvinfer1::PluginTensorDesc*,const void* const*,void* const*,void*,cudaStream_t) noexcept override;
+          ^
+
+D:\CantorAI\work\qwen38-5090\test2026\cuda\qwen38_5090\bf16_low_batch_overlay_plugin.h(22): warning #997-D: function "nvinfer1::IPluginV2Ext::configurePlugin(const nvinfer1::Dims *, int32_t, const nvinfer1::Dims *, int32_t, const nvinfer1::DataType *, const nvinfer1::DataType *, const __nv_bool *, const __nv_bool *, nvinfer1::PluginFormat, int32_t) noexcept" is hidden by "Garnet::BF16KVLowBatchOverlayPlugin::configurePlugin" -- virtual function override intended?
+      void configurePlugin(const nvinfer1::DynamicPluginTensorDesc*,int,const nvinfer1::DynamicPluginTensorDesc*,int) noexcept override{}
+           ^
+
+probe_bf16_low_batch_plugin_attention.cu
+tmpxft_00008fcc_00000000-7_probe_bf16_low_batch_plugin_attention.cudafe1.cpp
+b1-forwarding-plugin.obj
+b1-forwarding-kernel.obj
+b1-forwarding-probe.obj
+nvinfer_10.lib

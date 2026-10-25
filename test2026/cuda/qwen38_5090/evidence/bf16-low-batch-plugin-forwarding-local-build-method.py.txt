@@ -1,0 +1,25 @@
+from pathlib import Path
+import hashlib,json,os,re,sys
+r=Path('D:/CantorAI/work/qwen38-5090');m=r/'test2026/cuda/qwen38_5090';e=m/'evidence';w=Path(__file__).resolve().parent
+sys.path.insert(0,str(m));from run_logged import run
+sdk=Path('D:/CantorAI/ThirdPartySDK/TensorRT');cuda=Path('C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v13.2')
+units=[(m/'bf16_low_batch_overlay_plugin.cpp','b1-forwarding-plugin'),(m/'bf16_kv_low_batch_candidate.cu','b1-forwarding-kernel'),(m/'probe_bf16_low_batch_plugin_attention.cu','b1-forwarding-probe')]
+pins=[p for p,_ in units]+[m/'bf16_low_batch_overlay_plugin.h',m/'bf16_kv_low_batch_candidate.h',r/'src/cuda/qwen38_bf16_kv_commit.cuh',w/'bf16_kv_fixture_layout.h']+[sdk/n for n in ['include/NvInfer.h','include/NvInferRuntime.h','include/NvInferRuntimePlugin.h','include/NvInferVersion.h','lib/nvinfer_10.lib']]
+sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest();before={str(p):sha(p) for p in pins}
+includes=' '.join('-I"'+str(p)+'"' for p in [sdk/'include',cuda/'include',r/'src/cuda',m,w]);nvcc='"'+str(cuda/'bin/nvcc.exe')+'"'
+lines=['@echo off','call "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Auxiliary\\Build\\vcvars64.bat" -vcvars_ver=14.29','if errorlevel 1 exit /b %errorlevel%','set "TMP=%~dp0"','set "TEMP=%TMP%"','cd /d "%~dp0"']
+for source,name in units:
+ if source.suffix=='.cpp':command='cl /nologo /EHsc /std:c++17 /MT /utf-8 '+includes.replace('-I','/I')+' /c "'+str(source)+'" /Fo"%~dp0'+name+'.obj"'
+ else:command=nvcc+' -std=c++17 -arch=sm_120 -O3 -ccbin "C:/Program Files/Microsoft Visual Studio/18/Community/VC/Tools/MSVC/14.29.30133/bin/Hostx64/x64" -Xcompiler=/MT,/utf-8 '+includes+' -c "'+str(source)+'" -o "%~dp0'+name+'.obj"'
+ lines+=[command,'if errorlevel 1 exit /b %errorlevel%']
+lines+=[nvcc+' -std=c++17 -arch=sm_120 -ccbin "C:/Program Files/Microsoft Visual Studio/18/Community/VC/Tools/MSVC/14.29.30133/bin/Hostx64/x64" -Xcompiler=/MT '+ ' '.join('"%~dp0'+name+'.obj"' for _,name in units)+' "'+str(sdk/'lib/nvinfer_10.lib')+'" -o "%~dp0bf16-low-batch-plugin-forwarding.exe"','if errorlevel 1 exit /b %errorlevel%','dumpbin /imports "%~dp0bf16-low-batch-plugin-forwarding.exe" > "%~dp0bf16-low-batch-plugin-forwarding-imports.txt"','exit /b %errorlevel%']
+bat=w/'compile-bf16-low-batch-plugin-forwarding.bat';bat.write_bytes(('\r\n'.join(lines)+'\r\n').encode());os.chdir(r)
+code=run(['cmd.exe','/d','/c',str(bat)],e/'bf16-low-batch-plugin-forwarding-local-build-ledger','build','B1 plugin forwarding private sm120 compile/link only; no GPU execution',pins+[bat,Path(__file__)])
+assert before=={str(p):sha(p) for p in pins},'Source inputs changed'
+if code:raise SystemExit(code)
+exe=w/'bf16-low-batch-plugin-forwarding.exe';imports=w/'bf16-low-batch-plugin-forwarding-imports.txt';dlls=re.findall(r'^\s+([A-Za-z0-9_.-]+\.dll)\s*$',imports.read_text(errors='replace'),re.M|re.I)
+assert 'nvinfer_10.dll' in [v.lower() for v in dlls] and not any('garnet' in v.lower() for v in dlls),dlls
+receipt={'status':'b1_plugin_forwarding_private_sm120_compile_link_passed_gpu_unrun','source_sha256':before,'executable_sha256':sha(exe),'imports':dlls,'gpu_executed':False,'remote_mutated':False,'runtime_abi_qualified':False,'model_qualified':False,'performance_admitted':False,'scope':'Private local compile/link only. Exact qualified candidate CUDA math plus new B1 plugin forwarding and unchanged44case witness corpus. No GPU launch, TensorRT runtime load, model execution or timing.'}
+(e/'bf16-low-batch-plugin-forwarding-local-build.json').write_text(json.dumps(receipt,indent=2),encoding='utf8')
+for target,source in [('bf16-low-batch-plugin-forwarding-local-build-method.py.txt',Path(__file__)),('bf16-low-batch-plugin-forwarding-local-build-method.bat.txt',bat),('bf16-low-batch-plugin-forwarding-local-imports.txt',imports)]: (e/target).write_bytes(source.read_bytes())
+print(json.dumps(receipt,indent=2))
