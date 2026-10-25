@@ -1,10 +1,11 @@
 # Qwen3.8-27B on one RTX 5090: implementation task
 
-Status: full packed BF16 ordinary/MTP corpus is closed and replayed on both
-machines; exact same-precision IDs/state/vectors pass on allfour repeated cases.
-Private-padding/lifecycle qualification is now running on `qwen38-5090`, with
-reference integration at `2fc4d1abd`. The full 2x decode/concurrency and half-TTFT
-objectives remain unmet.
+Status: full packed BF16 ordinary/MTP corpus is closed/replayed. Lifecycle
+attempt1 is closed FAILED after ten cases, due a harness closure NameError;
+failure is preserved/replayed on both machines. Full scope-fixed rerun is pending.
+Standalone parallel batch-top1 now passes330GPU cases/1000raw observations on
+both independent replays, but is not integrated or benchmarked. Work continues
+on `qwen38-5090`; original2x decode/concurrency and half-TTFT remain unmet.
 
 The pinned 27B checkpoint uses Qwen3.5 architecture. Garnet supports its mixed
 NVFP4/FP8 projections, BF16 vision/MTP, host embedding and joined MLP. Latest
@@ -67,31 +68,40 @@ Historical FP32 producer/failure remain unchanged. Its old8856metadata/16negativ
 Eight CPU controls pass on both machines; no source/DLL/runtime drift or rebuild.
 This qualifies this arithmetic corpus only; broad quality remains unqualified.
 
-Original bf16-padded-lifecycle-attempt1 is now running after parent terminal and
-both replays. Preparation50c49dc8... pins60sources/24methods/20inputs; allten uploads
-acknowledged after source/DLL/cache/idle preflight. Eleven CPU controls also pass
-remotely. Fourteen prospective cases cover1/2/3/4real rows, unequal0/1/2/4accepted
-prefixes, rollback/pending ownership, full resets, frozen/duplicated private rows
-and early-finished color rows while a descriptive row continues. Model result is
-pending; last read-only observation has eight completed cases/noerror. External
-replay position check needs a prepared correction: image cursor48 differs from
-104cache slots. Original verifier/probe/preparation remain deployed unchanged;
-upload corrected checker only after original terminal/archive, retaining both
-checker versions. Broad quality, B8, actual4K, protocol/serving and timing stay open.
-Correctness adapter peaks are not serving-memory claims.
+Original bf16-padded-lifecycle-attempt1 closed exit1 after10cases, failing on
+free variable base in a nested lambda/comprehension test guard. Archivefa5acbd6...
+(187files/72rawvectors) and both matching failure replays preserve it as FAILED.
+Sources/DLL unchanged; prefix/retirement/full14case qualification remain open.
+A CPU-only native-runtime reproducer fails on the original closure and passes
+direct/default-bound calls; normal CPython passes allthree. Prepared scope-fixed
+probe retains all14cases, six identical guard calls/inputs and assertions, adding
+interim prefix witnesses. It is not uploaded or rerun. External rotary/cache
+checker correction is now uploaded only AFTER original terminal/archive; archived
+51451a54...checker preserved, current0d5e52f7... used for failure replay.
+
+Standalone parallel-batch-top1-correctness-attempt1 closed exit0 on unchanged
+97c364DLL, which it never loaded. Archive4675c545... (94files/483857B) passes both
+independent replays:330cases/1000raw observations,2captures,12invalid calls,
+CPU/legacy/candidate raw IDs+bits, readonly/canaries/nullable outputs all exact.
+Data reports agree except declared Python/NumPy versions; no mismatch or speed
+result. Actual compiler13.2.78/VS14.44 was observed and forced before build; all
+19files/60inherited sources/3tools matched, nine uploads acknowledged. Failed
+model parent remains unqualified. Next prepare default-off native integration,
+then require full model/protocol correctness including scope-fixed14case corpus
+on the chosen binary before any matched timing. Correctness memory is not serving
+memory. B8/broad quality/actual4K/reference/4B/repetition requirements stay open.
 
 Offline retained-trace analysis identifies BF16 top1 selection at70.24/70.14ms,
-about4.05percent of kernel union in its two marked windows. An unintegrated
-parallel batch-top1 header/probe compiles and links locally forsm120; no GPU run,
-production caller, deployed change or speed result. Require330CPU/legacy/candidate
-GPU comparisons, tie/signed-zero/nonfinite, capture/readonly/canary controls before
-integration, then full model/protocol gates and matched timing. This small subset
-cannot explain2x by itself; dominant matrix/batching/low-batch work stays in scope.
-Raw-observation probe now compiles/links with source pins before/after; seven
-independent CPU oracle controls pass.330fixture outputs are predeclared with
-1000GPU observations planned. Guarded standalone runner/replay/toolchain observer
-are prepared locally, not uploaded/run. Existing three remote sampler/header
-files match local bytes exactly. No production integration or new speed result.
+about4.05percent of kernel union in its two marked windows. The standalone
+parallel batch-top1 candidate now passes330CPU/legacy/candidate GPU comparisons,
+tie/signed-zero/nonfinite, capture/readonly/canary checks and independent replay.
+Production integration, full model/protocol gates and matched timing are pending.
+This small subset cannot explain2x by itself; dominant matrix/batching/low-batch
+work stays in scope.
+Raw-observation probe and seven CPU controls now pass on the actual5090, with
+all330predeclared fixture outputs and1000raw observations independently replayed.
+Existing sampler/header files and observed compiler sources were pinned exactly.
+No production integration or new speed result; do not promote the failed parent.
 
 Broader quality preparation now includes a pinned public MMMU validation source
 audit (revision876ce5cb..., October2026 corrections included). All30Parquet blobs/
@@ -111,10 +121,11 @@ profile guards remain unchanged. Wider batching cannot establish C1 decode gain.
 
 Next gates, in order:
 
-1. Close/replay the running packed lifecycle gate after the now-verified full
-   ordinary/MTP corpus. Require broad quality checks or a correction before
-   promotion; retain the failed FP32 golden comparison. Validate lifetime/failure
-   handling, partial/reset/retired rows and actual cache boundaries before serving.
+1. Prepare separately gated/default-off parallel-top1 integration from its now-
+   verified operator. On the chosen native binary, require old-profile regressions,
+   all14scope-fixed lifecycle cases and protocol controls before timing. Retain
+   original failed harness/FP32 comparisons and require broad-quality evidence;
+   no operator or partial-case result substitutes for complete model/serving gates.
 2. Qualify a distinct B8 MTP/workspace profile and actual M32 projection behavior,
    allocation fit, text/image quality and protocol correctness. Preserve legacy
    B4 admission guards. Wider batching does not establish C1 decode speed.

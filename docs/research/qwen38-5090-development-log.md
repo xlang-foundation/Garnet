@@ -3747,3 +3747,57 @@ questions remain privatecache, not Git; compact metadata/audit/methods retained
 onbranch and source audit delivered inoutputs. This broad-source preparation
 advances an open quality requirement without replacing actual4K/tuned-MTPref/
 INT4/matched4B/clean-repeat or original2x/halfTTFT goals. All remain open/unmet.
+
+
+2026-10-25 UTC: later authoritative original lifecycle handle returned terminal1,
+not silence/timeout. Ten cases (groups0..4 repeated) printed completion, then
+prefix-controls parent-step guard raised NameError free variable base is not
+defined inside nested lambda/list comprehension. No assertion of model numeric
+mismatch, but experiment is FAILED and full14case/prefix/retirement gates remain
+unqualified. Original worker finally closed/cleanup completed and archived
+4599351B/187files SHA256fa5acbd6db4d02b562096487eb7c289a300ef8544dd12a7058795b30e646698c.
+Only AFTER terminal/archive, corrected external replay checker upload acknowledged.
+Both remote/local failure replays pass and their JSON is identical:72raw81920B
+arrays retained, original51451a54...archived checker/current0d5e52f7...external.
+Correctness sampled adapter peak27050450944B is not serving memory. All60source
+pins and97c364DLL unchanged. No failed result converted to successful lifecycle
+qualification, and old archive/raw source remains immutable.
+
+CPU-only scope reproducer (no Garnet/CUDA/model calls) normal CPython passes
+original/direct/default-bound variants; actual xlang3 runtime reproduces original
+free-variable NameError while direct/default-bound variants pass. Raw both-host
+logs/source retained. Scope-fixed prospective probe8ae06b9144daf48de90c13c14c0c86bba92c6fe1382b1c4f339dd9167e8432dc
+literal derivation keeps all14groups/repeats/profile/dtypes/limits and six exact
+pending-owner/typed-count calls, replacing closures with direct dispatch. Interim
+prefix state witnesses saved before guard assertions for failure diagnosis. No
+GPU rerun/qualification yet; complete original workload remains required.
+
+After both failure replays, actual CPU compiler observer ran while adapteridle:
+NVCC13.2.78 (actual March2026 build), VS14.44.35207/SDK10.0.26100.0, explicit host
+compiler path and binary/tool hashes recorded. Runtimepreparation
+c7a909924cc1053875a2d8fcaa666f9b5bd5ac5c35e421e4fdf62997c548fcde
+binds19files,60inherited model sources,3tools and predeclared330CPU fixtures.
+Preflight passed all hashes/newpath absence/GPUidle. Allnine method/header/prep
+uploads acknowledged, then original parallel-batch-top1-correctness-attempt1
+started. Standalone CUDA test does NOT load or replace Garnet DLL/runtime/SDK,
+models or engine caches. A failed model parent is observational only, never
+promoted by independent operator work. Fixed ownedtools/parallel-batch-top1 used.
+
+Original standalone handle later terminal0:330CPU-serial/unchanged-legacy-GPU/
+candidate cases,1000raw observations/1675JSONL records,2capture profiles/3replays,
+12invalid calls, nullable scores, readonly/full-output canaries all pass. Actual
+7CPU oracle tests also pass remotely. Immutable483857B/94file archiveSHA256
+4675c5459a8829a02daefb981dbea64c9b051f32e2bf414ce35e91dc503d2191.
+Both independent replays6e525cc3dc2ea4acd45b8f239d6ea48288971093989737c36bef10aa698a7018
+pass after archive/proof transfer acknowledgements. Every raw ID/score bit/record
+and predeclared oracle agrees exactly; reports differ ONLY declared environment:
+remotePython3.12.3/NumPy2.4.4 versuslocal3.12.10/1.26.4. Comparison receipt explicitly
+removes only that environment field, not numeric/result discrepancies. No raw
+mismatches/truncated data. Operator correctness sampled adapter peak1135943680B
+is not model/serving memory. All19/60sources/tools after-hashes match; observed
+unused97c364DLL unchanged, no production caller or component/model timing.
+No GPU worker remains live after original standalone terminal. Next safe work is
+separately gated native integration plus full model/protocol qualification with
+scope-fixed harness, not a2x claim from a roughly4percent old-trace component.
+Full2x/halfTTFT, actual4K, broad quality with real responses, fastest tuned/MTP
+references, INT4/matched4B and clean repeated HTTP still remain open/unmet.

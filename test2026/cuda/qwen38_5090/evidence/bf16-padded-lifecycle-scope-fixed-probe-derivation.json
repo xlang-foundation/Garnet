@@ -1,0 +1,21 @@
+{
+  "status": "scope_fixed_probe_prepared_unrun",
+  "source": "probe_bf16_padded_lifecycle.py",
+  "source_sha256": "cc290eb0f65ba0ba4f8aa05680fb818353809c225195d07b54f454a51cac005c",
+  "changes": [
+    [
+      "  for label,call in [\n   ('parent-reset',lambda:decoder.reset()),\n   ('parent-step',lambda:decoder.step(tokens[0],[1]*4,[[p]*3 for p in base])),\n   ('nested-verify',lambda:v.verify(tokens,flags,pos)),\n   ('prefix-overrun',lambda:v.commit_prefix([0,1,2,5])),\n   ('prefix-bool',lambda:v.commit_prefix([True,1,2,4])),\n   ('prefix-wrong-length',lambda:v.commit_prefix([0,1,2]))]:\n   try:call()\n",
+      "  report['prefix_progress']={'phase':'guards_pending','counts':counts,'before':before,'ordinary':ordinary,'restored':restored,'rejected':rejected};save()\n  for label in ('parent-reset','parent-step','nested-verify','prefix-overrun','prefix-bool','prefix-wrong-length'):\n   report['prefix_progress']['phase']=label;save()\n   try:\n    if label=='parent-reset':decoder.reset()\n    elif label=='parent-step':decoder.step(tokens[0],[1]*4,[[p]*3 for p in base])\n    elif label=='nested-verify':v.verify(tokens,flags,pos)\n    elif label=='prefix-overrun':v.commit_prefix([0,1,2,5])\n    elif label=='prefix-bool':v.commit_prefix([True,1,2,4])\n    elif label=='prefix-wrong-length':v.commit_prefix([0,1,2])\n"
+    ],
+    [
+      "  report['prefix_controls'].append(record);save()",
+      "  report['prefix_controls'].append(record);report['prefix_progress']['phase']='committed_needs_assertions';save()"
+    ],
+    [
+      "  speculative.reset();assert state_hashes('prefix-reset')==empty",
+      "  speculative.reset();assert state_hashes('prefix-reset')==empty\n  report['prefix_progress']['phase']='passed';save()"
+    ]
+  ],
+  "result_sha256": "8ae06b9144daf48de90c13c14c0c86bba92c6fe1382b1c4f339dd9167e8432dc",
+  "scope": "Exact same14case full workload, direct six identical pending/typed-count guard calls without lambda/comprehension closures. Adds prefix-progress witness preservation before guard assertions. No model, math, dtype, profile, stopping or admission change. Original attempt1 failure remains failed; no GPU rerun yet."
+}
