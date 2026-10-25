@@ -1,0 +1,125 @@
+{
+  "status": "verified_warm_host_diagnostic_chart_generated",
+  "archive_sha256": "13b64d6ba6d2a2c9c7a7fdd3b6f2ab5521a433d2fcb623ad353ff1e781e8f113",
+  "proof_sha256": "24aa4daeb0169cd13ab0b43ac5dd3282b50af81536fe697c5ef364b602745e19",
+  "generator_sha256": "9b726f0146bcd0e6da7c1df15cd0b9c56ecccb0095c2f401c1bc3f88b5ff5cf9",
+  "all_capture_tags": [
+    "group-0-repeat-2",
+    "group-0-repeat-3",
+    "group-1-repeat-2",
+    "group-1-repeat-3"
+  ],
+  "data": [
+    {
+      "tag": "group-0-repeat-2",
+      "group": 0,
+      "repeat": 2,
+      "total_generate_host_seconds": 2.028951500004041,
+      "disjoint_top_level_host_seconds": {
+        "target_verify": 1.3748536000930471,
+        "draft": 0.2564457999978913,
+        "prefix_commit": 0.20507869998982642,
+        "draft_correct": 0.18540999993274454,
+        "other": 0.007163399990531616
+      },
+      "keys": [
+        "s3-text-c1-r0-greedy",
+        "s3-image-c1-r0-greedy",
+        "s3-text-c1-r0-greedy",
+        "s3-image-c1-r0-greedy"
+      ],
+      "output_tokens_per_real_row": [
+        128,
+        128,
+        128,
+        128
+      ],
+      "target_verification_host_fraction": 0.6776177745452806
+    },
+    {
+      "tag": "group-0-repeat-3",
+      "group": 0,
+      "repeat": 3,
+      "total_generate_host_seconds": 2.030340099998284,
+      "disjoint_top_level_host_seconds": {
+        "target_verify": 1.3729749000340234,
+        "draft": 0.2564836999808904,
+        "prefix_commit": 0.20682980002311524,
+        "draft_correct": 0.1867339000600623,
+        "other": 0.007317799900192767
+      },
+      "keys": [
+        "s3-text-c1-r0-greedy",
+        "s3-image-c1-r0-greedy",
+        "s3-text-c1-r0-greedy",
+        "s3-image-c1-r0-greedy"
+      ],
+      "output_tokens_per_real_row": [
+        128,
+        128,
+        128,
+        128
+      ],
+      "target_verification_host_fraction": 0.6762290219432615
+    },
+    {
+      "tag": "group-1-repeat-2",
+      "group": 1,
+      "repeat": 2,
+      "total_generate_host_seconds": 0.0313317999971332,
+      "disjoint_top_level_host_seconds": {
+        "target_verify": 0.02756990000489168,
+        "draft": 6.10999995842576e-05,
+        "prefix_commit": 0.00024029999622143805,
+        "draft_correct": 0.003126499999780208,
+        "other": 0.00033399999665562063
+      },
+      "keys": [
+        "red",
+        "green",
+        "red",
+        "green"
+      ],
+      "output_tokens_per_real_row": [
+        2,
+        2,
+        2,
+        2
+      ],
+      "target_verification_host_fraction": 0.8799334863434042
+    },
+    {
+      "tag": "group-1-repeat-3",
+      "group": 1,
+      "repeat": 3,
+      "total_generate_host_seconds": 0.03032859999802895,
+      "disjoint_top_level_host_seconds": {
+        "target_verify": 0.02701560000423342,
+        "draft": 6.289999873843044e-05,
+        "prefix_commit": 0.00015189999248832464,
+        "draft_correct": 0.00289580000389833,
+        "other": 0.0002023999986704439
+      },
+      "keys": [
+        "red",
+        "green",
+        "red",
+        "green"
+      ],
+      "output_tokens_per_real_row": [
+        2,
+        2,
+        2,
+        2
+      ],
+      "target_verification_host_fraction": 0.890763174231226
+    }
+  ],
+  "sampled_correctness_peak_adapter_used_bytes": 27950129152,
+  "artifacts": {
+    "Garnet-Warm-Host-Stage-Trace.png": "138047017943a3417107811f64a3b5bdee84135f9d4fbb8fede53403ad8ffc39",
+    "Garnet-Warm-Host-Stage-Trace.svg": "d45a330f1f56fb433f4aeffb2954e21279657004f9626a3e765c60476f861549"
+  },
+  "performance_admitted": false,
+  "scope": "Buffered nested host API intervals after two retained-case warmups per group. No added GPU barriers, per-call disk writes or native/model changes. Asynchronous launches and existing head synchronization remain; not kernel time, HTTP latency or a speedup. All eight strict token/state-hash cases and16raw hidden arrays required. Full canonical state remains a hash witness; raw full state absent. Parent spans include children. No CUDA kernel time or speed claim. Plot stacks disjoint top-level host intervals only; nested child intervals are not added twice."
+}

@@ -26,10 +26,23 @@ The QPC HTTP archive passed independent replay remotely/locally, including21CPU
 tests,20HTTP/twoSSE/fourserialization gates and64measured SSE/native pairs. All
 partial groups met the10ms QPC deadline; later handler arrivals and occupancy
 variation remain. This does not establish a consistent causal serving gain.
-Current experiment: separate buffered warm host API trace after two warmups,
-with eight strict batched token/state cases and16raw hidden arrays required.
-It adds no per-stage GPU barriers or log writes; host spans are not CUDA kernel
-times. Use this to guide warm target/draft/head/state profiling and evaluate resident controls
+The separate buffered warm host trace now passes independent replay: eight strict
+batched token/state cases,16raw hidden arrays,1148host intervals and no new captures
+within the four selected generate calls. Target verification contains about68%
+of the mixed text/image generate interval, including pending GPU completion;
+this does not isolate device operators. The pinned2026Nsight startup/marker
+workflow is available for the next CUDA kernel attribution study.
+
+Current experiment: private padding enables MTP3 for equal-limit1/2/3real requests
+on the existing physicalB4 profile. Dummy duplicate rows stay private; unequal
+real limits retain greedy decoding. The existing worker remains unchanged. Five
+CPU policy/callback/state-scope tests pass. A12case GPU gate requires per-real-row
+ordinary/MTP canonical-state hash/slot/rawhidden parity,12complete reset witnesses
+and two full-four same-DLL default-off controls. It retains all physical hidden
+arrays, including dummy differences. Only after state replay and the unchanged
+13group/40request streaming corpus pass may matched HTTP timings begin. Physical
+MTP counters include padding; serving throughput counts real outputs only.
+Continue with kernel attribution and evaluate resident controls
 or graph-binding reuse with strict state/token checks. Scaling the physical batch
 or speculative depth requires new shape/kernel/transaction qualification; flags
 alone do not qualify it. Actual4K, broad-quality/repeated runs, tuned references,
