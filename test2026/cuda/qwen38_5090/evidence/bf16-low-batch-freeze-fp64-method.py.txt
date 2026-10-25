@@ -1,0 +1,24 @@
+"""CPU FP64 reference values only, frozen before any low-batch GPU run."""
+from pathlib import Path
+import hashlib,json,platform,sys
+import numpy as np
+repo=Path('D:/CantorAI/work/qwen38-5090');m=repo/'test2026/cuda/qwen38_5090';sys.path.insert(0,str(m))
+from bf16_low_batch_attention_oracle import case_plan,sample_triples,reference_case,ATOL,RTOL
+work=Path(__file__).resolve().parents[1]/'work';output=work/'bf16-low-batch-expected.f64';assert not output.exists()
+records=[];offset=0
+with output.open('xb') as stream:
+ for case in case_plan():
+  triples=sample_triples(case);reference=reference_case(case)
+  values=np.stack([reference[triple] for triple in triples]).reshape(-1).astype('<f8') if triples else np.array([],dtype='<f8')
+  assert np.isfinite(values).all() and values.size==len(triples)*256
+  data=values.tobytes();stream.write(data)
+  records.append({'case':case,'sample_triples':[list(t) for t in triples],'offset':offset,'bytes':len(data),'scalars':int(values.size),'sha256':hashlib.sha256(data).hexdigest()});offset+=len(data)
+assert len(records)==44 and offset==119040*8
+receipt={'status':'low_batch_fp64_cpu_reference_values_frozen_gpu_unrun','file':output.name,'bytes':offset,'sha256':hashlib.sha256(output.read_bytes()).hexdigest(),
+ 'cases':records,'atol':ATOL,'rtol':RTOL,'python':platform.python_version(),'numpy':np.__version__,
+ 'method_sha256':hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
+ 'oracle_sha256':{n:hashlib.sha256((m/n).read_bytes()).hexdigest() for n in ('bf16_low_batch_attention_oracle.py','bf16_kv_overlay_oracle.py')},
+ 'gpu_executed':False,'model_outputs':0,'model_qualified':False,'performance_admitted':False,
+ 'scope':'Synthetic independent dense FP64 reference values for the predeclared44case standalone B1 attention plan. These are not GPU observations, model outputs, quality scores or performance measurements. The tolerance is the unchanged predeclared bounded operator tolerance; no model-quality margin is introduced.'}
+(m/'evidence/bf16-low-batch-fp64-reference-values.json').write_text(json.dumps(receipt,indent=2),encoding='utf8')
+print(json.dumps({'status':receipt['status'],'cases':len(records),'scalars':offset//8,'bytes':offset,'sha256':receipt['sha256']}))

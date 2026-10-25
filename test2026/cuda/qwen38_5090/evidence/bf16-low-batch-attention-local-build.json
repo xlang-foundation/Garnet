@@ -1,0 +1,25 @@
+{
+  "status": "low_batch_cpu_policy_oracle_and_local_compile_passed_gpu_unrun",
+  "source_sha256": {
+    "src/cuda/qwen38_bf16_kv_overlay.cu": "ddafabdb6e5cd04a0beb5ee8c39526397cf9d26ac3c8deded2dc6bc63e37b2fc",
+    "src/cuda/qwen38_bf16_kv_overlay.cuh": "0e2a75461a4869107a694bf91bdbde278def41b689b86bc5b37182acdba4a372",
+    "src/cuda/qwen38_bf16_kv_commit.cuh": "82ffd816bbafcbc86f44d044d2ab5468ac400f617e5aa2b5ae107bb30b3ffb59",
+    "src/cuda/qwen35_attention_core.cuh": "1a3997a15f4aa897f2bc69bf6a3afbef9a58f166fb094bfb858fac1b170e166f",
+    "test2026/cuda/qwen38_5090/bf16_kv_low_batch_candidate.h": "96a7fb647619f6a227d5855832df3ab4fa74d5842197a18063c22d0286f43139",
+    "test2026/cuda/qwen38_5090/bf16_kv_low_batch_candidate.cu": "63e7fa5b7544711bae044b853cb5adbf6db754d335fa7b0c82e4f5116d129185",
+    "test2026/cuda/qwen38_5090/probe_bf16_low_batch_attention.cu": "b6776d79c22acbf042aacdf3aced4a0b2b25e77e31afcccd4e01db238caaf1af",
+    "test2026/cuda/qwen38_5090/probe_bf16_low_batch_policy.cpp": "0b45c8e182a71af24bec6903973120b12f9ce9270639cbb42ba27e43f27b1f09",
+    "test2026/cuda/qwen38_5090/bf16_low_batch_attention_oracle.py": "9e148543be1a301ae776b31b360e4c02e0a01f6077d8c4224baea9523b7ac334",
+    "test2026/cuda/qwen38_5090/bf16_kv_overlay_oracle.py": "b34b10f012178b1076809677d3c9ae3c70d6f4ab99ff8ee4d0302aee384bb151"
+  },
+  "policy_executable_sha256": "c3479f7cd3e93353c26ca975f766bc3de04e70661b989330a7a95323b0421bf9",
+  "policy_no_cuda_imports_verified": true,
+  "gpu_executable_sha256": "ee346bdc6cb3040c63ff5ad7d25e9ebd06c59efc8f7e6a40e634710f4f58f041",
+  "fixture_header_sha256": "fe42d2ea44d3b4fd99d503ddddaaf12407459d839a4e353a767e557c59a7b8e1",
+  "gpu_executed": false,
+  "production_admission_changed": false,
+  "native_plugin_built": false,
+  "model_qualified": false,
+  "performance_admitted": false,
+  "scope": "Private CPU-only33configuration controls, low-batch corpus coverage and original independent FP64 oracle tests, sm120 compile/link. No native model profile, plugin/helper admission, allocation fit, numerical GPU or serving speed result."
+}

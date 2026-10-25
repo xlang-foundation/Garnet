@@ -27,6 +27,14 @@ assert sha(opproofpath)==p['operator_proof_sha256'] and opproof['status']=='para
 assert opproof['cases_checked']==330 and opproof['raw_observations_checked']==1000 and not opproof['performance_admitted']
 assert sha(results/(operator+'-evidence.zip'))==p['operator_archive_sha256']==opproof['archive_sha256']
 library=root/'build/bin/garnet.dll';assert sha(library)==p['observed_unused_library_sha256']==proof['library_sha256']
+install='integrated-batch-top1-source-install-attempt1';installproofpath=results/(install+'-verified.json');installed=json.loads(installproofpath.read_bytes())
+assert installed['status']=='integrated_batch_top1_sources_installed_replayed'
+assert installed['preparation_sha256']==p['source_install_preparation_sha256']
+assert installed['source_zip_sha256']==p['installed_source_zip_sha256'] and installed['candidate_source_sha256']==p['installed_candidate_source_sha256']
+assert installed['observed_unused_library_sha256']==p['observed_unused_library_sha256']
+assert not installed['native_runtime_built'] and not installed['model_qualified'] and not installed['performance_admitted']
+assert installed['replay_verifier_sha256']==installed['archived_replay_verifier_sha256']==sha(m/'verify_integrated_batch_top1_source_install.py')
+assert sha(results/(install+'-evidence.zip'))==installed['archive_sha256']
 scratch=root/'tools/parallel-batch-top1';owner=scratch/'study-owner.json'
 assert scratch.resolve(strict=True).parent==(root/'tools').resolve(strict=True)
 assert json.loads(owner.read_bytes())['study']==str(root) and json.loads(owner.read_bytes())['component']=='parallel-batch-top1'
@@ -40,9 +48,10 @@ w={'status':'running','preparation_sha256':sha(prep_path),'source_sha256':p['fil
  'runtime_dependencies':p['runtime_dependencies'],'observed_unused_library_sha256':sha(library),
  'parent_proof_sha256':sha(proofpath),'parent_archive_sha256':proof['archive_sha256'],
  'operator_proof_sha256':sha(opproofpath),'operator_archive_sha256':opproof['archive_sha256'],
- 'runtime_loaded':False,'cleanup_finished':False,'variants':[],'scope':p['scope']}
+ 'runtime_loaded':False,'cleanup_finished':False,'variants':[],
+ 'source_install_proof_sha256':sha(installproofpath),'source_install_archive_sha256':installed['archive_sha256'],'scope':p['scope']}
 def save():(out/'workflow.json').write_text(json.dumps(w,indent=2),encoding='utf8')
-common=[root/n for n in p['files']]+[prep_path,proofpath,opproofpath]
+common=[root/n for n in p['files']]+[prep_path,proofpath,opproofpath,installproofpath]
 save();code=1;prior_env=os.environ.get('GARNET_PARALLEL_BATCH_TOP1')
 try:
  code=run([sys.executable,'-m','unittest','test2026.cuda.qwen38_5090.test_parallel_top1_oracle','test2026.cuda.qwen38_5090.test_integrated_top1_oracle'],out/'cpu-ledger','correctness','Independent original and extended fixed fixture oracle controls',common)
@@ -76,7 +85,7 @@ finally:
  files=[f for f in out.rglob('*') if f.is_file()]+common+[owner]
  files+=[f for f in (exe,policy,scratch/'integrated-host-compiler.txt') if f.exists()]
  raw={f.relative_to(root).as_posix():f.read_bytes() for f in files}
- manifest={'files':{n:hashlib.sha256(b).hexdigest() for n,b in raw.items()},'parent_archive_sha256':proof['archive_sha256'],'operator_archive_sha256':opproof['archive_sha256'],'scope':p['scope']}
+ manifest={'files':{n:hashlib.sha256(b).hexdigest() for n,b in raw.items()},'parent_archive_sha256':proof['archive_sha256'],'operator_archive_sha256':opproof['archive_sha256'],'source_install_archive_sha256':installed['archive_sha256'],'scope':p['scope']}
  archive=results/(name+'-evidence.zip')
  with zipfile.ZipFile(archive,'x',zipfile.ZIP_DEFLATED) as z:
   for n,b in raw.items():z.writestr(n,b)

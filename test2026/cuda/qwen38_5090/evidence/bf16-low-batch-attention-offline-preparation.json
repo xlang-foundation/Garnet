@@ -1,0 +1,427 @@
+{
+  "status": "separate_low_batch_attention_candidate_prepared_gpu_unrun",
+  "files": {
+    "bf16_kv_low_batch_candidate.cu": {
+      "source": "src/cuda/qwen38_bf16_kv_overlay.cu",
+      "source_sha256": "ddafabdb6e5cd04a0beb5ee8c39526397cf9d26ac3c8deded2dc6bc63e37b2fc",
+      "replacements": [
+        [
+          "#include \"qwen38_bf16_kv_overlay.cuh\"",
+          "#include \"bf16_kv_low_batch_candidate.h\"",
+          1
+        ],
+        [
+          "return (c.batch==4||c.batch==8)&&(c.tokens==4||c.tokens==32)&&\n        c.heads==24&&c.kv==4&&c.capacity==4096&&c.dim==256;",
+          "return BF16KVLowBatchCandidateProfile(c);",
+          1
+        ],
+        [
+          "Qwen38BF16KVOverlayWorkspace",
+          "Qwen38BF16KVLowBatchCandidateWorkspace",
+          2
+        ],
+        [
+          "RunQwen38BF16KVOverlay",
+          "RunQwen38BF16KVLowBatchCandidate",
+          1
+        ]
+      ],
+      "result_sha256": "63e7fa5b7544711bae044b853cb5adbf6db754d335fa7b0c82e4f5116d129185"
+    },
+    "probe_bf16_low_batch_attention.cu": {
+      "source": "test2026/cuda/qwen38_5090/probe_bf16_kv_overlay_native.cu",
+      "source_sha256": "6f656761aed4cae81a8251bc53d81079144476708b76bac778b85ea5ee41a602",
+      "replacements": [
+        [
+          "#include \"qwen38_bf16_kv_overlay.cuh\"",
+          "#include \"bf16_kv_low_batch_candidate.h\"",
+          1
+        ],
+        [
+          "Qwen38BF16KVOverlayWorkspace",
+          "Qwen38BF16KVLowBatchCandidateWorkspace",
+          2
+        ],
+        [
+          "RunQwen38BF16KVOverlay",
+          "RunQwen38BF16KVLowBatchCandidate",
+          4
+        ],
+        [
+          "if(id==0||id==14||id==28||id==42)",
+          "if(id==0||id==14)",
+          1
+        ],
+        [
+          "const bool graph=(id==1||id==15||id==29||id==43);",
+          "const bool graph=(id==1||id==15||id==63);",
+          1
+        ],
+        [
+          "for(int batch:{4,8})",
+          "for(int batch:{1})",
+          1
+        ],
+        [
+          "execute(id++,8,4,layer,513,witnesses,offset);",
+          "execute(id++,1,4,layer,513,witnesses,offset);\n        execute(63,1,32,3,32,witnesses,offset);execute(95,1,32,63,4096,witnesses,offset);id+=2;",
+          1
+        ],
+        [
+          "id==70",
+          "id==44",
+          1
+        ],
+        [
+          "bf16_overlay_collected_needs_fp64_replay",
+          "bf16_low_batch_overlay_collected_needs_fp64_replay",
+          1
+        ],
+        [
+          "void execute(int id,int batch,int chunk,int layer,int end,std::ofstream& witnesses,uint64_t& witnessOffset){",
+          "void execute(int id,int batch,int chunk,int layer,int end,std::ofstream& witnesses,uint64_t& witnessOffset){\n    std::printf(\"{\\\"event\\\":\\\"case_started\\\",\\\"id\\\":%d,\\\"batch\\\":%d,\\\"chunk\\\":%d,\\\"layer\\\":%d,\\\"end\\\":%d}\\n\",id,batch,chunk,layer,end);std::fflush(stdout);",
+          1
+        ],
+        [
+          "        for(auto key:{int64_t(-1),ko+1",
+          "        for(int badBatch:{4,8}){auto bad=c;bad.batch=badBatch;require(Qwen38BF16KVLowBatchCandidateWorkspace(bad)==0,\"Legacy batch admitted into low-batch profile\");reject(bad,inputs,result,workspace,ko,vo);}\n        for(auto key:{int64_t(-1),ko+1",
+          1
+        ]
+      ],
+      "result_sha256": "b6776d79c22acbf042aacdf3aced4a0b2b25e77e31afcccd4e01db238caaf1af"
+    }
+  },
+  "case_plan": [
+    {
+      "batch": 1,
+      "chunk": 4,
+      "layer": 3,
+      "end": 0,
+      "id": 0
+    },
+    {
+      "batch": 1,
+      "chunk": 4,
+      "layer": 3,
+      "end": 1,
+      "id": 1
+    },
+    {
+      "batch": 1,
+      "chunk": 4,
+      "layer": 3,
+      "end": 511,
+      "id": 2
+    },
+    {
+      "batch": 1,
+      "chunk": 4,
+      "layer": 3,
+      "end": 512,
+      "id": 3
+    },
+    {
+      "batch": 1,
+      "chunk": 4,
+      "layer": 3,
+      "end": 513,
+      "id": 4
+    },
+    {
+      "batch": 1,
+      "chunk": 4,
+      "layer": 3,
+      "end": 4095,
+      "id": 5
+    },
+    {
+      "batch": 1,
+      "chunk": 4,
+      "layer": 3,
+      "end": 4096,
+      "id": 6
+    },
+    {
+      "batch": 1,
+      "chunk": 4,
+      "layer": 63,
+      "end": 0,
+      "id": 7
+    },
+    {
+      "batch": 1,
+      "chunk": 4,
+      "layer": 63,
+      "end": 1,
+      "id": 8
+    },
+    {
+      "batch": 1,
+      "chunk": 4,
+      "layer": 63,
+      "end": 511,
+      "id": 9
+    },
+    {
+      "batch": 1,
+      "chunk": 4,
+      "layer": 63,
+      "end": 512,
+      "id": 10
+    },
+    {
+      "batch": 1,
+      "chunk": 4,
+      "layer": 63,
+      "end": 513,
+      "id": 11
+    },
+    {
+      "batch": 1,
+      "chunk": 4,
+      "layer": 63,
+      "end": 4095,
+      "id": 12
+    },
+    {
+      "batch": 1,
+      "chunk": 4,
+      "layer": 63,
+      "end": 4096,
+      "id": 13
+    },
+    {
+      "batch": 1,
+      "chunk": 32,
+      "layer": 3,
+      "end": 0,
+      "id": 14
+    },
+    {
+      "batch": 1,
+      "chunk": 32,
+      "layer": 3,
+      "end": 1,
+      "id": 15
+    },
+    {
+      "batch": 1,
+      "chunk": 32,
+      "layer": 3,
+      "end": 511,
+      "id": 16
+    },
+    {
+      "batch": 1,
+      "chunk": 32,
+      "layer": 3,
+      "end": 512,
+      "id": 17
+    },
+    {
+      "batch": 1,
+      "chunk": 32,
+      "layer": 3,
+      "end": 513,
+      "id": 18
+    },
+    {
+      "batch": 1,
+      "chunk": 32,
+      "layer": 3,
+      "end": 4095,
+      "id": 19
+    },
+    {
+      "batch": 1,
+      "chunk": 32,
+      "layer": 3,
+      "end": 4096,
+      "id": 20
+    },
+    {
+      "batch": 1,
+      "chunk": 32,
+      "layer": 63,
+      "end": 0,
+      "id": 21
+    },
+    {
+      "batch": 1,
+      "chunk": 32,
+      "layer": 63,
+      "end": 1,
+      "id": 22
+    },
+    {
+      "batch": 1,
+      "chunk": 32,
+      "layer": 63,
+      "end": 511,
+      "id": 23
+    },
+    {
+      "batch": 1,
+      "chunk": 32,
+      "layer": 63,
+      "end": 512,
+      "id": 24
+    },
+    {
+      "batch": 1,
+      "chunk": 32,
+      "layer": 63,
+      "end": 513,
+      "id": 25
+    },
+    {
+      "batch": 1,
+      "chunk": 32,
+      "layer": 63,
+      "end": 4095,
+      "id": 26
+    },
+    {
+      "batch": 1,
+      "chunk": 32,
+      "layer": 63,
+      "end": 4096,
+      "id": 27
+    },
+    {
+      "batch": 1,
+      "chunk": 4,
+      "layer": 7,
+      "end": 513,
+      "id": 28
+    },
+    {
+      "batch": 1,
+      "chunk": 4,
+      "layer": 11,
+      "end": 513,
+      "id": 29
+    },
+    {
+      "batch": 1,
+      "chunk": 4,
+      "layer": 15,
+      "end": 513,
+      "id": 30
+    },
+    {
+      "batch": 1,
+      "chunk": 4,
+      "layer": 19,
+      "end": 513,
+      "id": 31
+    },
+    {
+      "batch": 1,
+      "chunk": 4,
+      "layer": 23,
+      "end": 513,
+      "id": 32
+    },
+    {
+      "batch": 1,
+      "chunk": 4,
+      "layer": 27,
+      "end": 513,
+      "id": 33
+    },
+    {
+      "batch": 1,
+      "chunk": 4,
+      "layer": 31,
+      "end": 513,
+      "id": 34
+    },
+    {
+      "batch": 1,
+      "chunk": 4,
+      "layer": 35,
+      "end": 513,
+      "id": 35
+    },
+    {
+      "batch": 1,
+      "chunk": 4,
+      "layer": 39,
+      "end": 513,
+      "id": 36
+    },
+    {
+      "batch": 1,
+      "chunk": 4,
+      "layer": 43,
+      "end": 513,
+      "id": 37
+    },
+    {
+      "batch": 1,
+      "chunk": 4,
+      "layer": 47,
+      "end": 513,
+      "id": 38
+    },
+    {
+      "batch": 1,
+      "chunk": 4,
+      "layer": 51,
+      "end": 513,
+      "id": 39
+    },
+    {
+      "batch": 1,
+      "chunk": 4,
+      "layer": 55,
+      "end": 513,
+      "id": 40
+    },
+    {
+      "batch": 1,
+      "chunk": 4,
+      "layer": 59,
+      "end": 513,
+      "id": 41
+    },
+    {
+      "batch": 1,
+      "chunk": 32,
+      "layer": 3,
+      "end": 32,
+      "id": 63
+    },
+    {
+      "batch": 1,
+      "chunk": 32,
+      "layer": 63,
+      "end": 4096,
+      "id": 95
+    }
+  ],
+  "source_sha256": {
+    "src/cuda/qwen38_bf16_kv_overlay.cu": "ddafabdb6e5cd04a0beb5ee8c39526397cf9d26ac3c8deded2dc6bc63e37b2fc",
+    "src/cuda/qwen38_bf16_kv_overlay.cuh": "0e2a75461a4869107a694bf91bdbde278def41b689b86bc5b37182acdba4a372",
+    "src/cuda/qwen38_bf16_kv_commit.cuh": "82ffd816bbafcbc86f44d044d2ab5468ac400f617e5aa2b5ae107bb30b3ffb59",
+    "src/cuda/qwen35_attention_core.cuh": "1a3997a15f4aa897f2bc69bf6a3afbef9a58f166fb094bfb858fac1b170e166f",
+    "test2026/cuda/qwen38_5090/bf16_kv_low_batch_candidate.h": "96a7fb647619f6a227d5855832df3ab4fa74d5842197a18063c22d0286f43139",
+    "test2026/cuda/qwen38_5090/bf16_kv_low_batch_candidate.cu": "63e7fa5b7544711bae044b853cb5adbf6db754d335fa7b0c82e4f5116d129185",
+    "test2026/cuda/qwen38_5090/probe_bf16_low_batch_attention.cu": "b6776d79c22acbf042aacdf3aced4a0b2b25e77e31afcccd4e01db238caaf1af",
+    "test2026/cuda/qwen38_5090/probe_bf16_low_batch_policy.cpp": "0b45c8e182a71af24bec6903973120b12f9ce9270639cbb42ba27e43f27b1f09",
+    "test2026/cuda/qwen38_5090/bf16_low_batch_attention_oracle.py": "9e148543be1a301ae776b31b360e4c02e0a01f6077d8c4224baea9523b7ac334",
+    "test2026/cuda/qwen38_5090/bf16_kv_overlay_oracle.py": "b34b10f012178b1076809677d3c9ae3c70d6f4ab99ff8ee4d0302aee384bb151"
+  },
+  "planned_fp64_witness_scalars": 119040,
+  "planned_graph_profiles": 3,
+  "planned_negative_calls": 104,
+  "canonical_carrier_words_per_row": 106823680,
+  "b1_canonical_bytes": 427294720,
+  "b4_canonical_bytes": 1709178880,
+  "production_admission_changed": false,
+  "gpu_executed": false,
+  "model_qualified": false,
+  "performance_admitted": false,
+  "scope": "Explicit unintegrated B1/T4,T32/cap4096 attention numerical profile to support C1 compact-state work. Identical kernel math and cache offsets, separate exported names and strict CPU policy; old B4/B8 source remains unchanged.44FP64 cases cover all16full-attention layers and0/1/511/512/513/4095/4096 boundaries, including full32active-token first/last boundaries through predeclared fixture IDs63/95. Operator correctness, commit/profile/lowering/model/4K/protocol/memory fit and real speed remain unqualified."
+}

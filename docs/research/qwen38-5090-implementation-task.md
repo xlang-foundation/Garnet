@@ -2,8 +2,9 @@
 
 Status: full packed BF16 ordinary/MTP corpus is closed/replayed. Lifecycle
 attempt1 is closed FAILED after ten cases, due a harness closure NameError;
-failure is preserved/replayed on both machines. The full scope-fixed rerun is
-now live on the unchanged97c native binary. Standalone parallel batch-top1 passes
+failure is preserved/replayed on both machines. The full scope-fixed rerun
+passed all14cases and102raw vectors on both independent replays, using the
+unchanged97c native binary. Standalone parallel batch-top1 passes
 330GPU cases/1000raw observations on both replays. Local default-off production
 dispatch now compiles; it is not deployed, model-qualified or timed. Work continues
 on `qwen38-5090`; original2x decode/concurrency and half-TTFT remain unmet.
@@ -142,18 +143,31 @@ profile guards remain unchanged. Wider batching cannot establish C1 decode gain.
 
 Next gates, in order:
 
-1. Close/replay live scope-fixed attempt2 on97c, retaining the failed attempt1.
-   Then qualify the prepared default-off production dispatch through its four
+1. DONE: close/replay scope-fixed attempt2 on97c; retain failed attempt1.
+   Full14case scope-fixed parent now closes exit0 and both independent replays
+   agree exactly:102raw vectors,224files, archived5650c97..., unchanged97cDLL. Source install
+   observer/factory/replay and actual prerequisite refusal guards are ready;
+   expected-exit2 checks leave runtime preparations absent while parent is live.
+   After the B1 component below, qualify default-off dispatch through its four
    guarded GPU processes, build on the actual remote SDK, and on that chosen
    native binary require old-profile regressions,
    all14scope-fixed lifecycle cases and protocol controls before timing. Retain
    original failed harness/FP32 comparisons and require broad-quality evidence;
    no operator or partial-case result substitutes for complete model/serving gates.
-2. Qualify a distinct B8 MTP/workspace profile and actual M32 projection behavior,
+2. After full parent closure/replay and before source installation, qualify
+   the separate B1 attention candidate:44predeclared FP64 cases/119040selected
+   scalars, fullT32first/last boundaries,3graph/104negative/40cache controls.
+   DONE: actual5090compile/CPU33/10Python controls and44GPU cases pass both
+   independent FP64 replays (archive2eeb8aa8...,119040scalars,maxabs1.87e-7).
+   Actual pre-GPU frozen FP64 bytes also pass unchanged tolerance; fresh
+   oracle-vector hash/error last-bit differences are preserved. Require separate typed
+   commit/helper/plugin/lowering and complete model/lifecycle/4K/quality/protocol
+   admission for C1. Existing B4/B8 guards remain unchanged. Canonical427294720B
+   for B1 versus1709178880B for physical B4 is a layout calculation, not total
+   model VRAM fit or speed evidence. Continue measured dominant C1 work.
+3. Qualify a distinct B8 MTP/workspace profile and actual M32 projection behavior,
    allocation fit, text/image quality and protocol correctness. Preserve legacy
    B4 admission guards. Wider batching does not establish C1 decode speed.
-3. Optimize C1 from measured dominant work, including an explicit low-batch
-   compact-state profile if useful. Preserve correctness before timing.
 4. Run actual4K prompts and broad text/image quality controls against pinned
    references; then matched HTTP cohorts and clean repetitions. Tune feasible
    vLLM/SGLang MTP references, preserve INT4 quality differences and complete

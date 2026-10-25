@@ -3931,3 +3931,101 @@ untouched/live; no source/DLL/runtime replacement or restart occurred.
 Latest read-only report observation subsequently advanced to5of14cases, with
 prefix phase not yet reached. This is progress, not full-corpus qualification;
 continue observing the same original handle and require both final replays.
+
+
+## Separate C1 attention candidate and post-parent execution pipeline
+
+This continuation re-polled the original scope-fixed lifecycle handle live,
+observing6then10then13recorded cases. Prefix phase now reports passed, beyond
+the preserved attempt1 harness failure point. Final case/reset/cleanup/archive
+and both independent replays remain required. No partial report is promoted.
+No deployed source/runtime/SDK was modified or rebuilt while the worker lived.
+
+Current production compact-cache admission is B4/B8. An isolated B1/T4,T32/
+cap4096 attention candidate now lives under test2026 with separate exported
+names and a CPU-only policy. Kernel math/cache offsets are literal derivations
+of the current production CUDA source; only host admission hooks the new B1
+policy. Old B4/B8 code/admission remain unchanged. A CPU test confirms existing
+public Python BF16 program admission still rejects B1. No commit/helper/plugin/
+lowering/full-model admission is added. This advances the C1 work without
+claiming a working B1 model or a model-performance/memory-fit result.
+
+The predeclared plan has44cases/119040selected FP64 scalars, all16full-attention
+layer offsets, both chunks, end0/1/511/512/513/4095/4096. Fixture IDs63/95 force
+all32active tokens at first/last boundaries through the unchanged mask generator;
+coverage was added before any GPU run. Require3captures,104negative calls
+(including rejecting B4/B8 in the new distinct profile),40chunk/cache equivalence
+controls, complete canonical/small-input readonly and output/work canaries.
+
+Private local sm120 compilation/link passes. CPU policy PE imports were checked
+before execution: no CUDA/Garnet dependency;33configuration cases pass. Ten
+independent FP64-oracle/coverage/legacy-isolation CPU tests pass. No CUDA executable
+was run locally; shared build/SDK/runtime were untouched. Literal source/runner
+derivations, compiler commands/logs/imports and input hashes are retained.
+Canonical427294720B for B1 versus1709178880B for physical B4 is calculated
+state-buffer size only, never total model VRAM or measured savings/speedup.
+
+Independent NumPy FP64 reference values are frozen before GPU work:44cases,
+119040scalars,952320B,SHA48d3df8bef89a0438859156471f4db24afb65e24e69dc9447795664d162716b8.
+They are synthetic operator reference values, not GPU/model outputs, accuracy or
+performance. Existing operator atol3e-5/rtol2e-5 is unchanged; no model-quality
+margin is introduced. Controller/compiler/archive FP64 replay/runtime factory are
+prepared but GPU-unrun. Actual missing-parent refusal returns expected exit2
+without creating runtime preparation or an upload plan. Successful preparation,
+operator/model admission and all performance gates remain unqualified.
+
+Sampler execution pipeline now includes a read-only post-parent observer, a
+24method/known-existing-byte inventory, actual-proof runtime factory, preserving
+installer and independent source-install replay. Production API controller/replay
+also require the successful source-install proof/archive tied to the exact packet,
+parent and unused runtime hashes. Actual incomplete-parent refusal returns exit2
+with both runtime preparations absent. No source packet/runtime preparation was
+uploaded/installed. After full parent closure/replay, run B1 numeric collection
+before source changes, then sampler API controls and actual SDK build/model/
+protocol gates. Reuse fixed study/tool/cache folders and retain failures. All
+original2x/halfTTFT, B8, actual4K, broad-quality, tuned reference, INT4, matched4B
+and repeated-trial requirements remain open; there is no new speed result.
+
+
+Original scope-fixed attempt2 subsequently closed exit0, cleanup complete. Both
+independent replays now agree exactly: bf16_padded_lifecycle_replayed,14cases,
+102raw81920B vectors,224files, archive6791423B/SHA
+ d5650c9736c6b562c41afb67017329a2c22a6f24216f937c16c49069884f7854.
+Current/archived checker15cde1d41f6de69afddfffbaa88a96a212085daedb4a80619bb83b482c921dfe
+matches on both machines; library remains97c36465.... All real-row IDs/logical
+states/raw hidden+normalized, dummy freeze/duplication, unequal0/1/2/4accepted
+prefixes, rollback/pending guards/reset and mixed EOS retirement pass. The original
+attempt1 remains FAILED and preserved. Correctness adapter peak27073519616B is
+not serving-memory or performance evidence. Broad quality, actual4K, B8, protocol
+and original2x/halfTTFT requirements remain open.
+Three new read-only post-parent tool/inventory inputs were uploaded only after
+original terminal/archive and both matching replays. No deployed source/runtime
+has been changed. The post-lifecycle observer now checks actual idle/source/tool/
+unused runtime state before either isolated B1 collection or preserving install.
+
+B1 prospective dependency-pin correction: before any GPU execution, the CPU
+admission test was found to consume evidence/nvfp4-config.json, omitted from
+the first unrun preparation. Preserve original factory/preparation/upload plan.
+Correct only that config pin and the factory hash; no kernel, fixture, tests or
+tolerance change. Corrected preparation1f596ec6...,27files/21methods.
+Both original and corrected remote read-only upload preflights pass, GPU109MiB,
+60inherited sources/3compiler tools/current97cDLL/header unchanged. Raw preflight
+receipts retained. Stage isolated B1 methods only; numerical GPU/FP64 replay is
+still required and does not admit a model, quality or HTTP speed claim.
+
+Isolated B1 attention attempt1 now terminal exit0/cleanup, archive993849B,
+100files/SHA2eeb8aa8c74330a84075e7cc48802c28f1be99b8a2df6136ccdc30e8c91685c6.
+Both actual independent FP64 replays pass44cases/119040selected scalar outputs;
+3capture profiles/104negative/40prefix-cache equivalence controls pass. Remote
+compile/CPU33 and10Python controls pass; original97cDLL/60base sources unchanged.
+Maximum absolute error1.8677675384104475e-7; sampled correctness adapter peak
+1452613632B is not model-memory/serving evidence. Fresh replay FP64 vector hashes
+and error last bits differ: largest cross-host reported error delta
+5.724587470723463e-17, both raw receipts retained. A separate additional replay
+against the actual unchanged pre-GPU frozen FP64 binary also passes all119040
+scalars under the original3e-5atol/2e-5rtol; reference bytes/method/log/receipts
+preserved in a supplemental archive. No tolerance/test/kernel modification.
+Production model B1 admission, commit/helper/plugin/lowering/quality/protocol
+and speed remain unqualified. No GPU worker remains live. Next: preserving
+sampler source install and actual API checks/build/model gates, then qualify
+the explicit low-batch complete model path and original4K/reference goals.

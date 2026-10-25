@@ -25,6 +25,14 @@ with zipfile.ZipFile(archive) as z:
  assert parent_proof['status']=='bf16_padded_lifecycle_replayed' and len(parent_proof['cases'])==14 and parent_proof['raw_hidden_and_normalized_arrays']==102 and not parent_proof['performance_admitted']
  assert sha((out/(parent+'-evidence.zip')).read_bytes())==parent_proof['archive_sha256']==p['parent_archive_sha256']==w['parent_archive_sha256']==manifest['parent_archive_sha256']
  assert parent_proof['library_sha256']==p['observed_unused_library_sha256']
+ install='integrated-batch-top1-source-install-attempt1';install_raw=z.read('results/'+install+'-verified.json');installed=json.loads(install_raw)
+ assert sha(install_raw)==w['source_install_proof_sha256'] and installed['status']=='integrated_batch_top1_sources_installed_replayed'
+ assert installed['preparation_sha256']==p['source_install_preparation_sha256']
+ assert installed['source_zip_sha256']==p['installed_source_zip_sha256'] and installed['candidate_source_sha256']==p['installed_candidate_source_sha256']
+ assert installed['observed_unused_library_sha256']==p['observed_unused_library_sha256']
+ assert not installed['native_runtime_built'] and not installed['model_qualified'] and not installed['performance_admitted']
+ assert installed['replay_verifier_sha256']==installed['archived_replay_verifier_sha256']==sha(z.read(methods+'verify_integrated_batch_top1_source_install.py'))
+ assert sha((out/(install+'-evidence.zip')).read_bytes())==installed['archive_sha256']==w['source_install_archive_sha256']==manifest['source_install_archive_sha256']
  with zipfile.ZipFile(out/(parent+'-evidence.zip')) as parent_zip:
   parent_w=json.loads(parent_zip.read('results/'+parent+'/workflow.json'))
   assert parent_w['source_sha256']==parent_w['source_after_sha256']==p['qualified_parent_source_sha256'] and parent_w['exit_code']==0 and parent_w['cleanup_finished']
