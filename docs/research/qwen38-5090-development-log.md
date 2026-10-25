@@ -5666,3 +5666,30 @@ baseline claimed, no new benchmark generation. Source and input hashes retained.
 Next: close/replay full SGLang successor, then actual native host-stage profiling,
 follow evidence to prefill/batching/kernel optimizations, qualify805quality/HTTP
 before speed. Tuned/MTP vLLM/SGLang, repeats, INT4/4B and2x remain open.
+
+
+### 2026-10-25 — wider-MTP HTTP worker/probe CPU qualified, model unrun
+
+Separate explicit native_prefill16_stream_worker and probe_prefill16_http use the
+already full4K-model-qualified CUDAMTPPrefill16StudySession; original workers,
+target/defaults/runtime/SDK unchanged. Actual closed full4K archive/proof,
+source/runtime/DLL and candidate source hashes required before construction.
+Ordinary mode rejected by new entry. Ready identity declares16draft-prefill/4draft-
+decode/extra resident draft weights and no HTTP quality/performance admission.
+
+Actual22CPU tests pass0.166s. After removing only the extra proof/ready fields and
+explicit class substitution, whole worker AST equals qualified source46c2565a.
+Whole HTTP probe AST equals old probe after entry/identity assertions removed:
+all12protocol cases,805quality+actual ordinary-token comparisons, two full4K
+boundaries and124frozen streams are retained. Launcher changes worker entry only.
+Synthetic fake-file tests reject wrong mode/unqualified proof/archive/source/
+runtime drift and unfinished workflow before any real model import. Initial AST
+normalizer empty-dictionary error and22test failure source/ledger retained; fixed
+test utility, production candidate source unchanged.
+
+GPU/HTTP worker unrun; exclusive owner/preparation/independent HTTP archive replay
+must precede805quality and speed.249vs993 actual draft-prefill calls are workload
+counts only, not a speedup. Current SGLang observed-output job remains live under
+its original supervisor; no remote competing observer/transfer. Actual4VLM and
+16short128token controls passed after ready identity verification. No timing or
+2x result yet. Host-stage diagnostic remains the next exclusive profiling job.

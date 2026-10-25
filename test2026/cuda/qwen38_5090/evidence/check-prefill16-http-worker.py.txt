@@ -1,0 +1,19 @@
+from pathlib import Path
+import os
+import sys
+
+work = Path(__file__).resolve().parent
+repo = Path('D:/CantorAI/work/qwen38-5090')
+methods = repo / 'test2026/cuda/qwen38_5090'
+sys.path[:0] = [str(repo), str(methods)]
+from test2026.cuda.qwen38_5090.run_logged import run
+
+os.chdir(repo)
+modules = ['test2026.cuda.qwen38_5090.test_prefill16_http_worker',
+           'test2026.cuda.qwen38_5090.test_mtp_prefill16_study',
+           'test2026.cuda.qwen38_5090.test_fixed_length_worker_contract']
+artifacts = [methods / name for name in ('native_prefill16_http_admission.py',
+    'native_prefill16_stream_worker.py', 'probe_prefill16_http.py',
+    'serve_native_prefill16_worker.bat', 'test_prefill16_http_worker.py')]
+raise SystemExit(run([sys.executable, '-m', 'unittest', *modules], work / sys.argv[1], 'correctness',
+    'Explicit candidate HTTP worker/probe AST preservation and synthetic closed4K/runtime guards; no model/GPU', artifacts))
