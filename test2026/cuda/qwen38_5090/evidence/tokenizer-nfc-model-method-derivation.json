@@ -1,0 +1,95 @@
+{
+  "parent_archive_sha256": "052e3bd9ae047acc95fdd924fe9ccd68ab4483b00a6d638a5250fa9006916565",
+  "files": {
+    "run_tokenizer_nfc_model.py": {
+      "source": "Garnet/test2026/cuda/qwen38_5090/run_bf16_low_batch_model_fixed.py",
+      "source_sha256": "2fdd18985cf7620ae25457003a458bb989b39b5ffbae221a1907a176771664e7",
+      "changes": [
+        [
+          "NAME='bf16-low-batch-model-consistency-attempt2'",
+          "NAME='tokenizer-nfc-model-consistency-attempt1'",
+          1
+        ],
+        [
+          "bf16-low-batch-model-preparation-attempt2.json",
+          "tokenizer-nfc-model-preparation.json",
+          1
+        ],
+        [
+          "closed['exit_code']==(1 if parent=='bf16-low-batch-model-consistency-attempt1' else 0)",
+          "closed['exit_code']==0",
+          1
+        ],
+        [
+          "garnet-native-bf16-low-batch-attempt1.dll",
+          "garnet-native-tokenizer-nfc-attempt1.dll",
+          1
+        ],
+        [
+          "'test2026.cuda.qwen38_5090.test_bf16_padded_state_gate'",
+          "'test2026.cuda.qwen38_5090.test_bf16_padded_state_gate','test2026.cuda.qwen38_5090.test_tokenizer_model_parent'",
+          1
+        ],
+        [
+          "bf16_low_batch_model_consistency_collected_needs_replay",
+          "tokenizer_nfc_model_consistency_collected_needs_replay",
+          1
+        ],
+        [
+          "   report=json.loads((OUT/label/'report.json').read_bytes());assert report['status']==('bf16_low_batch_b4_smoke_finished' if batch==4 else 'bf16_low_batch_model_consistency_finished')",
+          "   report=json.loads((OUT/label/'report.json').read_bytes());assert report['status']==('bf16_low_batch_b4_smoke_finished' if batch==4 else 'bf16_low_batch_model_consistency_finished')\n   from compare_tokenizer_model_parent import compare_reports\n   parent_folder=ROOT/'results/bf16-low-batch-model-consistency-attempt2'/label\n   comparison=compare_reports(report,json.loads((parent_folder/'report.json').read_bytes()),lambda n:(OUT/label/n).read_bytes(),lambda n:(parent_folder/n).read_bytes())\n   (OUT/label/'parent8ae-comparison.json').write_text(json.dumps(comparison,indent=2),encoding='utf8');entry['prior_8ae_comparison']=comparison;save()",
+          1
+        ]
+      ],
+      "result_sha256": "2b9aeb26d9b65b4ddd19ea159ebf7af2e057f2c2905ceb8d45b1261b09f604bf"
+    },
+    "verify_tokenizer_nfc_model.py": {
+      "source": "Garnet/test2026/cuda/qwen38_5090/verify_bf16_low_batch_model_fixed.py",
+      "source_sha256": "d90f650a6ae15f6923237e1999943495b66033a21421ad65dcdcd05a9228924b",
+      "changes": [
+        [
+          "name='bf16-low-batch-model-consistency-attempt2'",
+          "name='tokenizer-nfc-model-consistency-attempt1'",
+          1
+        ],
+        [
+          "bf16-low-batch-model-preparation-attempt2.json",
+          "tokenizer-nfc-model-preparation.json",
+          2
+        ],
+        [
+          "bf16_low_batch_model_consistency_collected_needs_replay",
+          "tokenizer_nfc_model_consistency_collected_needs_replay",
+          1
+        ],
+        [
+          "bf16_low_batch_model_consistency_replayed",
+          "tokenizer_nfc_model_consistency_replayed",
+          1
+        ],
+        [
+          "bf16_low_batch_model_consistency_failure_preserved",
+          "tokenizer_nfc_model_consistency_failure_preserved",
+          1
+        ],
+        [
+          "verify_bf16_low_batch_model_fixed.py",
+          "verify_tokenizer_nfc_model.py",
+          1
+        ],
+        [
+          "b'Ran 18 tests'",
+          "b'Ran 24 tests'",
+          1
+        ],
+        [
+          "  r=doc(report_path)",
+          "  r=doc(report_path)\n  if passed:\n   from compare_tokenizer_model_parent import compare_reports\n   retained_prefix='results/bf16-low-batch-model-consistency-attempt2/'+label+'/'\n   comparison=compare_reports(r,doc(retained_prefix+'report.json'),lambda n:z.read(prefix+n),lambda n:z.read(retained_prefix+n))\n   assert comparison==doc(prefix+'parent8ae-comparison.json')==entry['prior_8ae_comparison']",
+          1
+        ]
+      ],
+      "result_sha256": "cb9dcac104950e6282e0ca898f5d8d8730d019c3d0821e354a974c83181a8a99"
+    }
+  },
+  "scope": "Literal parent controller/checker derivations: fresh name/prep/alias,24CPU controls and strict extra comparison against all retained8ae states/raw vectors. Existing original model probe/launcher and comparisons unchanged."
+}

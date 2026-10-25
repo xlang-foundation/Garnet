@@ -4655,3 +4655,47 @@ unchanged. Original2x and the full reference/INT4/4B/repetition scope stay open.
 The151file installed SGLang MTP argument source also now has a machine-readable
 remote archive/member-hash proof matching the local archive; candidate still
 runtime-unrun. No benchmark or upstream fastest-baseline claim follows.
+
+
+### 2026-10-25: portable NFC closes CPU/native tokenizer gates; model rerun active
+
+Pinned tokenizer.json declares NFC. Generated portable canonical decomposition,
+composition and combining-order tables from actual tokenizers0.22.2 Rust NFD/NFC,
+without substituting a different Python/OS Unicode database.1112064scalars were
+enumerated;11172Hangul decompositions checked,2060full decompositions/3404values,
+810nonzero combining leaves/54ordered classes and940composition pairs derived.
+Garnet now honors declared NFC, preserves no-normalizer behavior and rejects
+unsupported/malformed normalizers. UTF8validation/category splitting and public
+C API remain covered. The private study wrapper is outside the Garnet target.
+
+Actual private native CPU library e5aa300d... passes unchanged955input cases
+(805screen/124fixed4K/26edge), all1112064single-scalar normalizations,30012seeded
+normalization sequences and5027real full encodes,4configuration and9negative
+controls. Raw native/reference witnesses, sources, DLLs, import reports and all
+earlier failures are in6255a9e9...65file/6978187byte CPU archive. Fresh Rust replay
+passes. Initial replay completed comparisons but read oracle metadata after its
+ZIP context closed; original failed checker/archive and actual ledger retained.
+Corrected only metadata digest lifetime/reporting; no expected inputs/assertions
+or threshold changed. Current/archived checker hashes and exact diff are recorded.
+
+Read-only remote inventory first used a wrong object directory and rejected
+before product changes. Existing Ninja graph shows build/garnet/CMakeFiles/
+garnet.dir; corrected lookup records32actual CUDA objects, all other source,
+runtime/SDK/cache/target guards unchanged. Native rebuild then passed49unchanged
+CPU profile regressions and955actual full rebuilt DLL C API encodes.237file/
+7461490byte archived7150f07... passes identical remote/local replays. New library
+1a1d0229..., old8ae retained, five other runtime files and all SDK hashes unchanged;
+all32CUDA object bytes are unchanged.5CPU tokenizer files installed,2replaced
+files preserved. This is not new model/HTTP/quality/speed qualification.
+
+Fresh tokenizer-nfc-model-consistency-attempt1 is live on original supervisor
+48577.24CPU gates pass remotely (18unchanged plus6mutation controls for the new
+retained-model comparator). Original model probe/launcher remain unchanged;
+derived controller/checker rerun full4B4smoke and8B1cases and additionally compare
+every captured full canonical state/raw vector and IDs/callbacks to retained8ae.
+393source/input/method hashes are pinned. Early relative-path derivation launcher
+failure and byte-preserving relocation of its misplaced local ledger are noted
+separately; corrected absolute launch succeeded. No remote deployed source/runtime
+or cache is changed while this original model job lives. Actual model closure,
+805quality,4K/shortHTTP, strongest feasible reference MTP/tuning, INT4/4B and clean
+repetitions still precede original2x admission. No new benchmark result is claimed.

@@ -1,0 +1,31 @@
+from pathlib import Path
+import hashlib
+repo=Path('D:/CantorAI/work/qwen38-5090');cpp=repo/'src/tokenizer/qwen_tokenizer.cpp';header=repo/'src/tokenizer/qwen_tokenizer.h';raw=cpp.read_bytes();assert hashlib.sha256(raw).hexdigest()=='d5c0bfc1b48382a273acf3d864dc044d3816d4621f8c6adffd1351c874a79cf6';ending=b'\r\n' if b'\r\n' in raw else b'\n'
+def block(s):return s.replace('\n',ending.decode()).encode()
+needle=b'#include "qwen_unicode_categories.h"';assert raw.count(needle)==1;raw=raw.replace(needle,needle+ending+b'#include "qwen_unicode_normalization.h"')
+needle=b'        m_maxAddedTokenLength = 0;';assert raw.count(needle)==1;raw=raw.replace(needle,needle+ending+b'        m_normalizeNfc = false;')
+needle=b'            const nlohmann::json& model = root["model"];';assert raw.count(needle)==1;raw=raw.replace(needle,block('''            if (root.contains("normalizer") && !root["normalizer"].is_null()) {
+                const auto& normalizer=root["normalizer"];
+                if (!normalizer.is_object() || normalizer.value("type", std::string())!="NFC") {
+                    if (error) *error="Qwen tokenizer supports only NFC or no normalizer";
+                    return false;
+                }
+                m_normalizeNfc=true;
+            }
+''')+needle)
+needle=b'QwenTokenizer::PreTokenizeAscii(const std::string& text) const';assert raw.count(needle)==1;raw=raw.replace(needle,b'QwenTokenizer::PreTokenizeAscii(const std::string& input) const')
+start=raw.index(b'        // Historical method name:');stop=raw.index(b'            unsigned flags=0;',start)
+raw=raw[:start]+block('''        // Match the configured NFC stage and Qwen Unicode regex, preserving
+        // case and normalized UTF-8 bytes for BPE. Added special tokens are
+        // recognized before this plain-segment operation.
+        auto scalars=Unicode::DecodeUtf8(input);
+        if (m_normalizeNfc) scalars=Unicode::NormalizeNfc(scalars);
+        struct Character { std::uint32_t cp; size_t byte; unsigned flags; };
+        constexpr unsigned letter=1, mark=2, number=4, space=8;
+        std::vector<Character> characters;
+        std::string text;
+        for (auto cp:scalars) {
+            const size_t begin=text.size();
+            Unicode::AppendUtf8(text,cp);
+''')+raw[stop:];cpp.write_bytes(raw)
+r=header.read_bytes();line=b'        size_t m_maxAddedTokenLength = 0;';assert r.count(line)==1;he=b'\r\n' if b'\r\n' in r else b'\n';header.write_bytes(r.replace(line,line+he+b'        bool m_normalizeNfc = false;'));print(hashlib.sha256(raw).hexdigest())

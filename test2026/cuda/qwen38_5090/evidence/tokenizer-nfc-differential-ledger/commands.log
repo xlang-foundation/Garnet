@@ -1,0 +1,25 @@
+
+{"id": "9668c52540294dbcb8c2e60500065493", "kind": "correctness", "label": "Actual shared C++ NFC all1112064scalars,30012seeded sequences,5027full encodes and config/negative controls vs pinned Rust", "argv": ["D:/CantorAI/Garnet/.venv/Scripts/python.exe", "D:/CantorAI/work/qwen38-5090/test2026/cuda/qwen38_5090/probe_tokenizer_nfc_differential.py", "--library", "work/tokenizer-parity/tokenizer-after2.dll", "--assets", "work/long-context-assets", "--output", "work/tokenizer-parity/nfc-differential"]}
+{"stage": "all_unicode_scalars_exact", "cases": 1112064}
+{"stage": "seeded_normalization_sequences_exact", "cases": 30012}
+{
+  "status": "native_nfc_and_encode_differential_exact",
+  "library_sha256": "e5aa300d4e60d6d8c7eb2f324dcba5b2609553b3a32de04bf955f03c01e43baa",
+  "counts": {
+    "scalar": 1112064,
+    "sequence": 30012,
+    "encode": 5027,
+    "configuration": 4,
+    "negative": 9
+  },
+  "failures": [],
+  "gpu_executed": false,
+  "artifact_sha256": {
+    "configuration-controls.json": "0f1fc9853baa3589a535de20e9b764c7bdfe1fdccb6b0d8ce78ac3839da6082a",
+    "encode-witness.jsonl": "93b336fa9f84a60b95a0d0146395a19cbfe45868c6479461456df663cafac632",
+    "negative-controls.json": "db5190943768ba325ab97a22c3f383d86e7aef2e48db879686621edbb1d4fa42",
+    "scalar-witness.u32": "65edf57cd8b120fafd4b8ebe4cd1c38573e8a8beecac43207b9e6571edde5bcd",
+    "sequence-witness.jsonl": "0e6b075a9be94d166a9bce861f8f27b804d3c4caa9840e137930a7b2e5ca6311"
+  },
+  "scope": "Actual standalone native CPU normalization for every Unicode scalar and seeded sequences, real encode IDs and config/invalid input controls. No GPU/model/HTTP or performance claim."
+}

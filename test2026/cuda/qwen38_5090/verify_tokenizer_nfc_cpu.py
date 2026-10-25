@@ -1,0 +1,44 @@
+"""Fresh Rust replay of actual standalone CPU normalization/encode witnesses."""
+from pathlib import Path
+import argparse,hashlib,io,json,struct,zipfile
+sha=lambda b:hashlib.sha256(b).hexdigest()
+
+def main():
+ p=argparse.ArgumentParser(description=__doc__);p.add_argument('--archive',type=Path,required=True);p.add_argument('--assets',type=Path,required=True);p.add_argument('--output',type=Path,required=True);a=p.parse_args()
+ import tokenizers
+ from tokenizers import normalizers,Tokenizer
+ assert tokenizers.__version__=='0.22.2';nfc=normalizers.NFC().normalize_str;reference=Tokenizer.from_file(str(a.assets/'tokenizer.json'))
+ with zipfile.ZipFile(a.archive) as z:
+  manifest=json.loads(z.read('evidence-manifest.json'));assert z.testzip() is None and len(z.namelist())==len(set(z.namelist()))==len(manifest['files'])+1
+  for n,h in manifest['files'].items():assert sha(z.read(n))==h
+  doc=lambda n:json.loads(z.read(n));prefix='work/tokenizer-parity/';differential=doc(prefix+'nfc-differential/report.json');corpus=doc(prefix+'after2/report.json');assert differential['status']=='native_nfc_and_encode_differential_exact' and not differential['failures'] and differential['counts']=={'scalar':1112064,'sequence':30012,'encode':5027,'configuration':4,'negative':9}
+  assert corpus['status']=='cpu_tokenizer_corpus_exact' and corpus['library_sha256']==differential['library_sha256']==sha(z.read(prefix+'tokenizer-after2.dll'))
+  assert corpus['counts']=={'frozen805':{'cases':805,'mismatches':0},'frozen4k':{'cases':124,'mismatches':0},'edge':{'cases':26,'mismatches':0}}
+  observation=doc('Garnet/test2026/cuda/qwen38_5090/evidence/fixed-context-tokenizer-source-observation.json');assert sha((a.assets/'tokenizer.json').read_bytes())==observation['files']['tokenizer.json']['sha256']==corpus['tokenizer_json_sha256']
+  for n,h in differential['artifact_sha256'].items():assert sha(z.read(prefix+'nfc-differential/'+n))==h
+  witness=io.BytesIO(z.read(prefix+'nfc-differential/scalar-witness.u32'));scalars=0
+  def u32():return struct.unpack('<I',witness.read(4))[0]
+  def values():
+   length=u32();assert length<=32;return list(struct.unpack('<'+'I'*length,witness.read(length*4)))
+  for cp in range(0x110000):
+   if 0xD800<=cp<=0xDFFF:continue
+   assert u32()==cp;expected=values();actual=values();assert expected==actual==list(map(ord,nfc(chr(cp))));scalars+=1
+  assert scalars==1112064 and not witness.read()
+  sequences=[json.loads(line) for line in z.read(prefix+'nfc-differential/sequence-witness.jsonl').splitlines()];assert len(sequences)==30012
+  for row in sequences:assert row['expected']==row['actual']==list(map(ord,nfc(row['text'])))
+  encodes=[json.loads(line) for line in z.read(prefix+'nfc-differential/encode-witness.jsonl').splitlines()];assert len(encodes)==5027
+  for row in encodes:assert row['code']==0 and row['actual']==row['expected']==reference.encode(row['text'],add_special_tokens=False).ids
+  before=[json.loads(line) for line in z.read(prefix+'before/cases.jsonl').splitlines()];initial=[json.loads(line) for line in z.read(prefix+'after/cases.jsonl').splitlines()];current=[json.loads(line) for line in z.read(prefix+'after2/cases.jsonl').splitlines()];assert len(before)==len(initial)==len(current)==955
+  assert sum(not r['exact'] for r in before)==139 and [r['key'] for r in initial if not r['exact']]==['edge-18']
+  for old,first,new in zip(before,initial,current):assert (old['key'],old['text'],old['expected_ids'])==(first['key'],first['text'],first['expected_ids'])==(new['key'],new['text'],new['expected_ids']) and new['actual_ids']==new['expected_ids'] and new['exact']
+  with zipfile.ZipFile(io.BytesIO(z.read('tokenizer-nfc-cpu-oracles.zip'))) as oracle:
+   rows=[json.loads(line) for line in oracle.read('cases.jsonl').splitlines()];assert len(rows)==955
+   for row,new in zip(rows,current):assert row['key']==new['key'] and row['expected_ids']==new['actual_ids']==reference.encode(row['text'],add_special_tokens=False).ids
+  for n in ('tokenizer-after2-imports.txt',):
+   imports=z.read(prefix+n).lower();assert not any(v in imports for v in (b'nvcuda',b'cudart',b'nvinfer',b'xlang',b'garnet.dll'))
+  source={n.removeprefix('Garnet/'):h for n,h in manifest['files'].items() if n.startswith('Garnet/src/tokenizer/')};assert corpus['source_sha256']==source['src/tokenizer/qwen_tokenizer.cpp']
+  oracle_sha256=sha(z.read('tokenizer-nfc-cpu-oracles.zip'));archived_verifier_sha256=sha(z.read('Garnet/test2026/cuda/qwen38_5090/verify_tokenizer_nfc_cpu.py'))
+ report={'status':'tokenizer_nfc_cpu_evidence_replayed','archive_sha256':sha(a.archive.read_bytes()),'files_verified':len(manifest['files']),'private_library_sha256':corpus['library_sha256'],'source_sha256':source,'oracle_archive_sha256':oracle_sha256,'corpus_cases_exact':955,'normalization_scalar_cases_exact':scalars,'normalization_sequence_cases_exact':30012,'full_encode_cases_exact':5027,'configuration_cases':4,'negative_cases':9,'old_failures_preserved':True,'candidate_initial_nfc_failure_preserved':True,'replay_verifier_sha256':sha(Path(__file__).read_bytes()),'archived_replay_verifier_sha256':archived_verifier_sha256,'runtime_deployed':False,'gpu_model_qualified':False,'performance_admitted':False,'scope':'Fresh CPU Rust replay of all actual stored normalization/encode witnesses and unchanged frozen-input IDs. Private CPU library only; full remote native DLL, GPU model/HTTP and original2x scope remain open.'};data=json.dumps(report,indent=2).encode();assert not a.output.exists() or a.output.read_bytes()==data
+ if not a.output.exists():a.output.write_bytes(data)
+ print(json.dumps(report,indent=2));return 0
+if __name__=='__main__':raise SystemExit(main())

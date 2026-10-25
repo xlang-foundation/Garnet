@@ -1,0 +1,21 @@
+from pathlib import Path
+import hashlib,json,zipfile
+chat=Path(__file__).resolve().parents[1];repo=Path('D:/CantorAI/work/qwen38-5090');m=repo/'test2026/cuda/qwen38_5090';work=chat/'work/tokenizer-parity';corpus=chat/'work/mmmu/quality-corpus';rows=[r for r in json.loads((corpus/'manifest.json').read_bytes())['rows'] if r['request_prepared']];records=[json.loads(line) for line in (work/'after2/cases.jsonl').read_bytes().splitlines()];assert len(records)==955 and all(r['exact'] for r in records);prepared=[];suffix='<|im_end|>\n<|im_start|>assistant\n<think>\n\n</think>\n\n'
+def prompt(body):
+ c=body['messages'][0]['content']
+ if isinstance(c,str):return '<|im_start|>user\n'+c+suffix
+ return '<|im_start|>user\n<|vision_start|>'+'<|image_pad|>'*64+'<|vision_end|>'+c[1]['text']+suffix
+for row,record in zip(rows,records):assert row['id']==record['key'];prepared.append({'key':record['key'],'kind':record['kind'],'text':prompt(json.loads((corpus/row['request_file']).read_bytes())),'expected_ids':record['expected_ids']})
+with zipfile.ZipFile(m/'evidence/fixed-context-4096-corpus.zip') as z:
+ fixed=json.loads(z.read('manifest.json'))
+ for row,record in zip(fixed['rows'],records[805:929]):assert row['key']==record['key'];prepared.append({'key':record['key'],'kind':record['kind'],'text':prompt(json.loads(z.read(row['request_file']))),'expected_ids':record['expected_ids']})
+prepared.extend({n:r[n] for n in ('key','kind','text','expected_ids')} for r in records[929:]);assert len(prepared)==955
+oracle=chat/'work/tokenizer-nfc-cpu-oracles.zip';assert not oracle.exists();raw=b''.join((json.dumps(r,ensure_ascii=True)+'\n').encode() for r in prepared)
+with zipfile.ZipFile(oracle,'x',zipfile.ZIP_DEFLATED) as z:z.writestr('cases.jsonl',raw);z.writestr('manifest.json',json.dumps({'cases':955,'sha256':hashlib.sha256(raw).hexdigest(),'scope':'Frozen text-tokenization CPU oracle only; includes64image-placeholder tokens but no image preprocessing or model execution.'},indent=2))
+files={f.relative_to(chat).as_posix():f.read_bytes() for f in work.rglob('*') if f.is_file() and f.suffix.lower() not in ('.obj','.lib','.exp')};files[oracle.name]=oracle.read_bytes()
+for f in list((repo/'src/tokenizer').glob('qwen_*'))+[repo/'src/tokenizer/tokenizer.h',m/'generate_qwen_nfc_data.py',m/'generate_qwen_unicode_categories.py',m/'probe_tokenizer_corpus_parity.py',m/'probe_tokenizer_nfc_differential.py',m/'qwen_tokenizer_nfc_study.cpp',m/'verify_tokenizer_nfc_cpu.py',m/'evidence/fixed-context-tokenizer-source-observation.json']:files['Garnet/'+f.relative_to(repo).as_posix()]=f.read_bytes()
+files['work/integrate-nfc-tokenizer.py']=(chat/'work/integrate-nfc-tokenizer.py').read_bytes();manifest={'files':{n:hashlib.sha256(b).hexdigest() for n,b in files.items()},'scope':'Actual CPU build/source/private libraries/raw differential witnesses and preserved initial failures. No remote build, model/HTTP or performance admission.'};target=chat/'outputs/tokenizer-nfc-cpu-qualified-evidence.zip';assert not target.exists()
+with zipfile.ZipFile(target,'x',zipfile.ZIP_DEFLATED) as z:
+ for n,b in files.items():z.writestr(n,b)
+ z.writestr('evidence-manifest.json',json.dumps(manifest,indent=2))
+print(json.dumps({'archive_sha256':hashlib.sha256(target.read_bytes()).hexdigest(),'bytes':target.stat().st_size,'files':len(files),'oracle_bytes':oracle.stat().st_size}))
