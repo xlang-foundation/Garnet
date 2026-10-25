@@ -3585,3 +3585,71 @@ and both replays. No new native/runtime/SDK changes or local GPU use. Broad qual
 B8, actual4K, clean matched HTTP, fastest tuned/MTP refs, INT4/4B comparisons and
 original2x/halfTTFT goals remain unmet. Current goal turn makes concrete progress;
 no external blocker or completion claim.
+
+
+2026-10-25 UTC: previous goal turn made concrete progress by pushing38462d8af/
+f6ee2ecaa, closing full-reference evidence and preparing lifecycle methods. This
+turn revalidated original MTP handle and clean branch apart from preserved
+unrelated external-prefix file. Untimed read-only report initially had0cases,
+then group0repeat0 exact. Never restarted on silence or optional hash warnings.
+Original bf16-same-precision-mtp-attempt1 later terminal exit0/cleanup complete.
+Archive2694170B/126files SHA256
+009de8839828b010313afb1d93569b82567cdcf9bfe2361b21119a152a53a32f.
+Remote and local verifierca5f326d674c7926d8814e22c240ee3d09ed14965cf7397bb435434c682b95f3
+both pass with identical JSON after both transfer acknowledgements. Allfour
+repeated cases match independent BF16-values-in-full-FP32 reference exactly in
+IDs, complete128component/four-row logical prefill/final witnesses and final
+raw hidden+normalized vectors. Packed ordinary/MTP physical state also exact.
+20raw81920B vectors include4negative-control arrays.8856metadata/16negative/
+3zero-prefix controls pass, CPU8remote/localpass, source60pins and97c364DLL stable.
+Correctness sampled adapter peak27058839552B is not serving memory or a speed
+result. Primary128token sequences still differ from old FP32; color2token outputs
+match. Historical failure remains failed; broad quality is not established.
+
+Only after original terminal/both replays, materialized guarded lifecycle runtime
+preparation50c49dc8dda1b143d421f56dfa07425505e6d5879c1e594589e44f47c300cc28
+from authoritative remote parent proof. Guarded preflight verified60sources,
+24methods/20inputs, absent9newmethod paths, DLL/parent/fixture/linked archives,
+owned C:cache96GiB reserve and GPU idle. Allten method/preparation uploads were
+acknowledged before start. Original bf16-padded-lifecycle-attempt1 is live; its
+11CPU tests pass remotely. Last untimed read-only report starting/0cases/0prefix
+controls/noerror. No second worker/native rebuild or runtime/SDK/source replacement.
+Await actual14case model result and both archive replays; planned102vectors are
+not claimed as generated. Keep all broad quality/B8/actual4K/protocol/clean HTTP,
+fastest tuned/MTP references, INT4/4B comparison and2x/halfTTFT requirements open.
+
+Offline optimization evidence: immutable archive/SQLite hash checked against
+retained trace manifest, selecting ONLY its two decode markers. BF16 top1 kernel
+groups grid4/16 with256threads show141draft-head launches after subtracting one
+prefill head, plus84target-head launches matching reported cumulative count.
+Durations70.243195/70.143039ms, each4.052percent of kernel union. Initial CPU
+analysis incorrectly tried subtracting an absent pre-generate target-head field;
+KeyError/source snapshot retained. Corrected analysis asserts absence and labels
+the available after-count cumulative; never silently substitutes missing0.
+Current sampler source shows one256thread block per batch row. Its source hash
+is current review, not a retroactive complete source attestation for old DLL.
+Actual symbol/grid/count/durations are archived observations; caller mapping is
+supported inference without per-operator NVTX. No new GPU trace or HTTP timing;
+removing this small subset alone cannot establish2x.
+
+Prepared UNINTEGRATED parallel BF16/FP32 batch-top1 candidate header plus standalone
+GPU probe. Reuses caller-owned ID storage,1024element chunks, packed atomic max,
+then exact original-logit value readback. No production caller or old sampler API
+changed. Preserve lowest-index ties, signed-zero payload and legacy initial
+-FLT_MAX/index0 behavior, including allNaN/-infinity and accepted+infinity; no
+unannounced semantic correction. Prospective330CPU-serial/legacy/candidate cases,
+3repeats each,15shapes (including4/16/128rows, vocab248320 and boundaries), eleven
+value patterns, nullable score,2capture profiles/3replays,12invalid calls and
+readonly/full-output canaries. These are PLANNED GPU checks, not passed checks.
+
+Local CUDA13.2/VS14.29 /MT sm120 compilation AND link pass on CPU using only fixed
+private chatwork/parallel-top1 paths. Standalone executable was NOT RUN, local
+4080 remains unused; no shared SDK/build/runtime change. Raw logs retain SDK
+codepage936 warnings. Post-build source readback/artifact hashes explicitly
+labelled as such, not retrospective prelaunch ledger. Object571183B/exe425984B.
+No component speed measurement or production/model qualification. New header/
+probe were not uploaded while lifecycle worker live. Existing draft candidate
+shortlist cannot be simply enabled here: current PredictIndexed explicitly
+rejects packed NVFP4 heads; no flag changed. Plan component GPU controls alone
+only after lifecycle job terminal/verified, before deciding integration. Larger
+matrix/state/batching and direct C1 work remain necessary for full2x target.

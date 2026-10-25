@@ -1,0 +1,84 @@
+{
+  "status": "immutable_decode_argmax_analysis",
+  "archive_sha256": "ceb182e066a9f97df985d5e6fb0e8a0f5eb25253773abbe44026e37b4dafa14c",
+  "sqlite_sha256": "06917d566bb87d6c3f4474731283ba0598fff3e4510eeb8a5731f6f624a79fb7",
+  "proof_sha256": "349476e614b7afdfffd590f71cb0f2489d0d42a996cf3e93f4d88c5f2aa71202",
+  "analysis_source_sha256": "fded98cc44e7d8d1c32531fbde8e87879536042b5297b08131cb85ddd0c9a79b",
+  "current_sampler_source_sha256": "03fe834a8c1c66a3c0d1961ce25e8beed90c2818a53966a878c85bda8fbb1cf6",
+  "sampler_source_in_trace_archive": false,
+  "windows": [
+    {
+      "call": 2,
+      "marker_interval_ns": [
+        317091837325,
+        319184674650
+      ],
+      "selection_kernel_groups": [
+        {
+          "name": "<unnamed>::logitsTop1BatchBF16Kernel(const __nv_bfloat16 *, long long *, float *, int)",
+          "gridX": 4,
+          "gridY": 1,
+          "gridZ": 1,
+          "blockX": 256,
+          "count": 141,
+          "duration_ns": 44137540
+        },
+        {
+          "name": "<unnamed>::logitsTop1BatchBF16Kernel(const __nv_bfloat16 *, long long *, float *, int)",
+          "gridX": 16,
+          "gridY": 1,
+          "gridZ": 1,
+          "blockX": 256,
+          "count": 84,
+          "duration_ns": 26105655
+        }
+      ],
+      "selection_sum_duration_ns": 70243195,
+      "fraction_of_kernel_union": 0.04052000863738381,
+      "fraction_of_marker_span": 0.03356361918860559,
+      "counterfactual_marker_ratio_if_only_selection_durations_vanished": 1.0347292588058683,
+      "draft_head_count_after_subtracting_prefill": 141,
+      "target_head_count_cumulative_since_reset": 84,
+      "target_counter_scope": "Reported cumulative value after generate; before snapshot has no such field, so it is not silently replaced with zero or subtracted.",
+      "caller_mapping": "Grid4/16 and exact draft/target head counters support this mapping; no logical operator NVTX labels."
+    },
+    {
+      "call": 3,
+      "marker_interval_ns": [
+        357300159283,
+        359397509563
+      ],
+      "selection_kernel_groups": [
+        {
+          "name": "<unnamed>::logitsTop1BatchBF16Kernel(const __nv_bfloat16 *, long long *, float *, int)",
+          "gridX": 4,
+          "gridY": 1,
+          "gridZ": 1,
+          "blockX": 256,
+          "count": 141,
+          "duration_ns": 44067732
+        },
+        {
+          "name": "<unnamed>::logitsTop1BatchBF16Kernel(const __nv_bfloat16 *, long long *, float *, int)",
+          "gridX": 16,
+          "gridY": 1,
+          "gridZ": 1,
+          "blockX": 256,
+          "count": 84,
+          "duration_ns": 26075307
+        }
+      ],
+      "selection_sum_duration_ns": 70143039,
+      "fraction_of_kernel_union": 0.04051951522558194,
+      "fraction_of_marker_span": 0.03344364537906372,
+      "counterfactual_marker_ratio_if_only_selection_durations_vanished": 1.0346008230344517,
+      "draft_head_count_after_subtracting_prefill": 141,
+      "target_head_count_cumulative_since_reset": 84,
+      "target_counter_scope": "Reported cumulative value after generate; before snapshot has no such field, so it is not silently replaced with zero or subtracted.",
+      "caller_mapping": "Grid4/16 and exact draft/target head counters support this mapping; no logical operator NVTX labels."
+    }
+  ],
+  "new_gpu_work": false,
+  "performance_admitted": false,
+  "scope": "Two previously verified marked decode windows on prior34bea DLL/register128off. Actual BF16 top1 symbols/grids/durations are retained observations. Current source uses one256thread block per row; its current hash is prospective source review, not a retroactive complete build-source attestation. Profiler overhead applies; kernel sums/host waits do not predict HTTP gains. Removing only this roughly4percent kernel-union subset cannot establish2x. Unintegrated parallel candidate needs GPU semantic/capture/canary qualification, then production integration, model/quality/protocol gates and matched HTTP repetitions. No current BF16-profile, C1, B8 or model-speed result."
+}
