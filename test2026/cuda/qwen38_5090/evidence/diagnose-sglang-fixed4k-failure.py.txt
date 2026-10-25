@@ -1,0 +1,17 @@
+from pathlib import Path
+import hashlib,json
+root=Path('D:/CantorAI/5090-study-20261023');job=root/'results/sglang-fixed4k-ordinary-attempt1';target=root/'results/sglang-fixed4k-ordinary-attempt1-diagnosis.json';assert not target.exists()
+w=json.loads((job/'workflow.json').read_bytes());assert w['cleanup_finished'] and w['exit_code']==1 and w['source_sha256']==w['source_after_sha256'] and w['runtime_dependencies']==w['runtime_dependencies_after']
+controls=job/'client/benchmark4k/controls';paths=list(controls.glob('*-response.json'));records=[]
+for path in paths:
+ key=path.name.removesuffix('-response.json');value=json.loads(path.read_bytes());request=json.loads((controls/(key+'-request.json')).read_bytes());choice=value['choices'][0]
+ prompt=choice.get('prompt_token_ids');completion=choice.get('response_token_ids')
+ records.append({'key':key,'request_ignore_eos':request.get('ignore_eos'),'request_max_tokens':request.get('max_tokens'),'prompt_ids_type':type(prompt).__name__,'prompt_ids_count':len(prompt) if isinstance(prompt,list) else None,'completion_ids_type':type(completion).__name__,'completion_ids_count':len(completion) if isinstance(completion,list) else None,'usage':value.get('usage'),'finish_reason':choice.get('finish_reason'),'request_sha256':hashlib.sha256((controls/(key+'-request.json')).read_bytes()).hexdigest(),'response_sha256':hashlib.sha256(path.read_bytes()).hexdigest()})
+report=json.loads((job/'client/report.json').read_bytes());score=report.get('screening',{}).get('score',{});info=json.loads((job/'server-info-raw.json').read_bytes());hits=[]
+for path in (job/'installed-source').rglob('*.py'):
+ lines=path.read_text(encoding='utf8').splitlines()
+ for i,line in enumerate(lines):
+  if 'max_new_tokens' in line and any(word in line for word in ('context','max_req','input_len','len(')):
+   hits.append({'file':path.relative_to(job).as_posix(),'sha256':hashlib.sha256(path.read_bytes()).hexdigest(),'line':i+1,'context':lines[max(0,i-3):i+5]})
+result={'status':'sglang_fixed4k_actual_control_failure_diagnosed','workflow_exit_code':w['exit_code'],'cleanup_finished':w['cleanup_finished'],'controls':records,'screening':{'completed':report.get('screening',{}).get('completed_requests'),'correct':score.get('correct'),'count':score.get('count'),'official_or_broad_quality':False},'actual_server_settings':{k:info.get(k) for k in ('version','context_length','max_total_tokens','max_running_requests','quantization','dtype','kv_cache_dtype','mamba_ssm_dtype')},'installed_source_limit_hits':hits,'scope':'Actual failed raw controls, usage/IDs, completed adapted screen and retained installed primary-source snippets; no benchmark rewrite, retry, timing or2x claim.'}
+target.write_text(json.dumps(result,indent=2),encoding='utf8');print(json.dumps(result))

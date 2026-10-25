@@ -1,0 +1,79 @@
+{
+  "status": "sglang_attempt1_context_failure_closed_replayed_separate_reserve_aware_attempt_prepared",
+  "recorded_utc": "2026-10-25T17:10:38.470522+00:00",
+  "failed_attempt": {
+    "job": "sglang-fixed4k-ordinary-attempt1",
+    "exit_code": 1,
+    "archive_sha256": "551e50256cb6efc417d06c454e893fd9a29ff5da84191a9aca45a18b48674a74",
+    "archive_bytes": 99941597,
+    "files_verified": 3158,
+    "base_replay_proof_pair_identical": true,
+    "partial_control_replay_proof_pair_identical": true,
+    "adapted_screen_correct": 487,
+    "adapted_screen_count": 805,
+    "official_or_broad_quality": false,
+    "vlm_smoke_controls_replayed": 4,
+    "short_greedy_controls_replayed": 16,
+    "full4k_control": {
+      "key": "ctx4096-s3-text-c1-warmup-0-0",
+      "request_sha256": "a15d778ce1c8bb73bb4f1ee1117c0a05f79cc0923fc660524e99dad71d98bf76",
+      "response_sha256": "2c907316d09c7877dd71be8fd92d6d72269bb44f4eaafc863ae90004652e3b60",
+      "prompt_ids_exact": true,
+      "actual_prompt_ids": 3968,
+      "actual_completion_ids": 126,
+      "requested_completion_ids": 128,
+      "usage": {
+        "prompt_tokens": 3968,
+        "total_tokens": 4094,
+        "completion_tokens": 126,
+        "prompt_tokens_details": null,
+        "reasoning_tokens": 0
+      },
+      "strict128_gate_rejection": "Actual reference IDs missing or invalid",
+      "timed_streams": 0
+    },
+    "cleanup_finished": true,
+    "source_and_runtime_unchanged": true,
+    "timed_streams": 0
+  },
+  "installed_primary_source_derivation": {
+    "worker": "max_req_len=min(context_len-1,kv_capacity-1)",
+    "scheduler": "max_new_tokens=min(requested,max_req_len-input_len-1)",
+    "old_configured_context": 4096,
+    "old_actual_input": 3968,
+    "old_bounded_output": 126,
+    "new_configured_context": 4098,
+    "new_actual_input": 3968,
+    "new_requested_output": 128,
+    "configured_token_pool": 32784
+  },
+  "installed_context_source_archive_sha256": "7b58470f0436466b1488ccb359416de5b6c581f9158457d7a9bc71e4ed37e92f",
+  "context_source_files": 19,
+  "separate_preparation": {
+    "preparation_sha256": "21787dea12b8c92e9bc793053c05b071444be9d9f6512aa8b0dbfaf5891caad1",
+    "actual_cpu_tests_passed": 37,
+    "actual_cpu_test_report_seconds": 1.761,
+    "syntax_and_controller_derivation": {
+      "status": "reserved_context_syntax_and_controller_derivation_passed",
+      "python_ast_files": 11,
+      "controller_reverse_derivation_after_CRLF_to_LF_exact": true,
+      "bash_line_endings_LF": true,
+      "existing_controller_changed": false
+    },
+    "preflight": "sglang_fixed4k_preflight_passed",
+    "bundle": {
+      "status": "sglang_fixed4k_method_bundle_prepared",
+      "bundle_sha256": "861935c9c28ba68ee3ac80c023295956b61f55d820fcac22559f3a006c6abd80",
+      "bytes": 296277,
+      "absent_files": 32,
+      "matching_targets_skipped": 32
+    },
+    "server_started": false,
+    "early_text_image_full4k_controls_required_before_screen": true,
+    "old_attempt_methods_modified": false,
+    "installed_engine_modified": false
+  },
+  "performance_admitted": false,
+  "two_times_target_achieved": false,
+  "scope": "Closed attempt1 remains failed, no timed reference result. Installed worker/scheduler bounds exactly explain3968+126 at configured4096. New explicitly configured4098/pool32784 exposes unchanged3968+128 workload; two early actual-ID boundary checks precede805screen. Archive replay/strongest MTP+tuned SGLang and vLLM, native optimizations, repetitions and INT4/4B matched comparisons remain open."
+}

@@ -1,0 +1,49 @@
+from pathlib import Path
+import hashlib,json
+r=Path('D:/CantorAI/work/qwen38-5090');m=r/'test2026/cuda/qwen38_5090'
+def new(name,text):
+ p=m/name;assert not p.exists();p.write_bytes(text.replace('\r\n','\n').replace('\n','\r\n').encode())
+text=(m/'verify_sglang_fixed4k.py').read_text().replace('from reference_fixed4k_sglang_identity import validate,CHECKPOINT','from reference_fixed4k_sglang_reserved_identity import validate,CHECKPOINT').replace("evidence/sglang-fixed4k-run-preparation.json","evidence/sglang-reserved-fixed4k-run-preparation.json").replace("b'Ran 31 tests'","b'Ran 37 tests'").replace('serve_sglang_fixed4k.sh','serve_sglang_reserved_fixed4k.sh').replace('serve_sglang_mtp3_fixed4k.sh','serve_sglang_reserved_mtp3_fixed4k.sh')
+text=text.replace("'mmmu_http_quality.py','mmmu_quality_protocol.py'","'reference_fixed4k_sglang_reserved_identity.py','reference_fixed4k_boundary.py','mmmu_http_quality.py','mmmu_quality_protocol.py'",1)
+needle="            report=doc(base+'client/report.json');"
+assert text.count(needle)==1
+insertion='''            context_pins=doc(METHODS+'evidence/sglang-context-limit-source-pins.json');context_identity=doc(base+'context-limit-identity.json')
+            assert sha(z.read(base+'context-limit-identity.json'))==metadata['installed_context_limit_identity_sha256']
+            assert context_identity['status']=='installed_context_limit_sources_verified' and context_identity['source_modified'] is False
+            assert context_identity['pins_sha256']==sha(z.read(METHODS+'evidence/sglang-context-limit-source-pins.json'))
+            assert context_identity['configured_engine_context_capacity']==4098 and context_identity['actual_workload_context_capacity']==4096
+            assert set(context_identity['files'])==set(context_pins['files']) and len(context_pins['files'])==19
+            for name,row in context_identity['files'].items():
+                assert row['sha256']==context_pins['files'][name]==sha(z.read(base+row['archived_copy']))==sha(z.read(METHODS+'evidence/sglang-context-limit-source/'+name))
+'''
+text=text.replace(needle,insertion+needle)
+needle="            greedy=doc(base+'client/greedy-controls/greedy/equivalence.json');"
+assert text.count(needle)==1
+insertion='''            from reference_fixed4k_boundary import replay as replay_boundary
+            with tempfile.TemporaryDirectory(prefix='sglang4k-boundary-replay-',dir=args.scratch) as temporary:
+                folder=Path(temporary).resolve();prefix=base+'client/boundary-controls/'
+                for name in manifest['files']:
+                    if name.startswith(prefix):
+                        target=folder/name.removeprefix(prefix);assert target.resolve().is_relative_to(folder);target.parent.mkdir(parents=True,exist_ok=True);target.write_bytes(z.read(name))
+                boundary=replay_boundary(Path(__file__).with_name('evidence')/'fixed-length-4096-corpus.zip',folder)
+                assert boundary==report['early_full4k_controls']
+                for row in boundary['cases']:
+                    assert row['ordinary_ids_exact'] is (w['mode']=='mtp')
+                    if prior is not None:
+                        key=row['key'];root='client/boundary-controls/';left=json.loads(prior.read(prior_base+root+key+'-response.json'));right=json.loads(z.read(base+root+key+'-response.json'))
+                        expected=left['choices'][0]['prompt_token_ids'];paired_control(control_response(left,'sglang',expected),control_response(right,'sglang',expected))
+'''
+text=text.replace(needle,insertion+needle)
+text=text.replace("archived=sha(z.read(METHODS+'verify_sglang_fixed4k.py'))","archived=sha(z.read(METHODS+'verify_sglang_reserved_fixed4k.py'))")
+text=text.replace("'engine':'sglang','mode':w['mode'],", "'engine':'sglang','mode':w['mode'],'configured_engine_context_capacity':4098,'actual_workload_context_capacity':4096,'engine_context_reserved_slots':2,",1)
+new('verify_sglang_reserved_fixed4k.py',text)
+text=(m/'prepare_sglang_fixed4k_run.py').read_text()
+extra=('run_sglang_reserved_fixed4k.py','prepare_sglang_reserved_fixed4k_run.py','verify_sglang_reserved_fixed4k.py','prepare_sglang_reserved_fixed4k_metadata.py','reference_fixed4k_sglang_reserved_identity.py','probe_reference_reserved_fixed4k.py','serve_sglang_reserved_fixed4k.sh','serve_sglang_reserved_mtp3_fixed4k.sh','inspect_reference_context_limits_linux.py','reference_fixed4k_boundary.py','test_reference_reserved_context.py','evidence/sglang-context-limit-source-pins.json')
+extra+=tuple('evidence/sglang-context-limit-source/'+name for name in json.loads((m/'evidence/sglang-context-limit-source-pins.json').read_bytes())['files'])
+text=text.replace('METHODS=(\n','METHODS=(\n'+''.join('    '+repr(name)+',\n' for name in extra),1)
+text=text.replace("    'test_cohort_memory_replay',", "    'test_cohort_memory_replay','test_reference_reserved_context',",1)
+text=text.replace('context4096/BF16KV/F32SSM','actual-workload4096/configured-engine4098(two reserved slots)/pool32784/BF16KV/F32SSM',1)
+text=text.replace('fourVLM/16greedy/805adapted screening,','two early actual3968+128 text/image boundaries, fourVLM/16greedy/805adapted screening,',1)
+text=text.replace("target=m/'evidence/sglang-fixed4k-run-preparation.json'", "target=m/'evidence/sglang-reserved-fixed4k-run-preparation.json'")
+new('prepare_sglang_reserved_fixed4k_run.py',text)
+print(json.dumps({'status':'reserved_context_preparation_and_replayer_written_unrun','additional_methods':len(extra),'expected_cpu_tests':37,'performance_admitted':False}))

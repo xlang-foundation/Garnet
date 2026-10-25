@@ -1,0 +1,20 @@
+from pathlib import Path
+import hashlib,json,zipfile
+root=Path('/mnt/d/CantorAI/5090-study-20261023');package=Path('/opt/cantorai5090/sglang/lib/python3.12/site-packages/sglang');out=root/'results/sglang-fixed4k-context-limit-source-audit';assert not out.exists();out.mkdir();records=[];files={}
+for path in (package/'srt').rglob('*.py'):
+ raw=path.read_bytes();text=raw.decode('utf8');lines=text.splitlines()
+ hits=[i for i,line in enumerate(lines) if 'max_req_len' in line or 'max_req_input_len' in line]
+ if not hits:continue
+ name='source/sglang/'+path.relative_to(package).as_posix();files[name]=raw
+ records.append({'path':path.as_posix(),'archived_file':name,'sha256':hashlib.sha256(raw).hexdigest(),'hits':[{'line':i+1,'context':lines[max(0,i-3):i+6]} for i in hits]})
+report={'status':'installed_sglang_request_context_limits_source_collected','files':records,'scope':'Actual installed primary Python source only; no GPU/framework imports or package modifications. Derive any reserve adjustment from these actual limits and re-test exact3968+128 usage, never trim the frozen workload.'}
+files['report.json']=json.dumps(report,indent=2).encode();archive=root/'results/sglang-fixed4k-context-limit-source.zip';assert not archive.exists()
+with zipfile.ZipFile(archive,'x',zipfile.ZIP_DEFLATED) as z:
+ for name,raw in files.items():z.writestr(name,raw)
+ z.writestr('file-manifest.json',json.dumps({'files':{name:hashlib.sha256(raw).hexdigest() for name,raw in files.items()}},indent=2))
+(out/'report.json').write_bytes(files['report.json']);selected=[]
+for row in records:
+ for hit in row['hits']:
+  context='\n'.join(hit['context'])
+  if any(value in context for value in ('max_req_len =','self.max_req_len -','self.max_req_len,','context_len -','max_req_input_len =')):selected.append({'file':row['archived_file'],**hit})
+print(json.dumps({'status':report['status'],'archive_sha256':hashlib.sha256(archive.read_bytes()).hexdigest(),'bytes':archive.stat().st_size,'files':len(records),'selected_contexts':selected}))

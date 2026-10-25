@@ -1,0 +1,36 @@
+from pathlib import Path
+import hashlib,json
+r=Path('D:/CantorAI/work/qwen38-5090');m=r/'test2026/cuda/qwen38_5090'
+source=m/'verify_sglang_fixed4k.py';original=source.read_text();text=original
+text=text.replace('        if passed:\n','        assert not passed and w[\'exit_code\']==1\n        if True:\n',1)
+text=text.replace("assert w['status']=='reference_fixed4k_collected_needs_replay'", "assert w['status']=='failed'",1)
+text=text.replace("records[1]['exit_code']==0", "records[1]['exit_code']==(1 if ledger=='client-ledger' else 0)",1)
+text=text.replace("assert report['status']=='reference_fixed4k_profile_collected'", "assert report['status']=='failed'",1)
+start=text.index('            corpus_raw=z.read(');end=text.index('        archived=sha(',start)
+replacement='''            # The failed request remains invalid under the unchanged128-ID gate.
+            corpus_raw=z.read(METHODS+'evidence/fixed-length-4096-corpus.zip');assert sha(corpus_raw)==ARCHIVE_SHA256
+            with zipfile.ZipFile(io.BytesIO(corpus_raw)) as corpus:
+                raw=corpus.read('manifest.json');assert sha(raw)==MANIFEST_SHA256;frozen=json.loads(raw);row=frozen['rows'][0];key=row['key']
+                root=base+'client/benchmark4k/controls/';request=z.read(root+key+'-request.json');raw=z.read(root+key+'-response.json');response=json.loads(raw)
+                expected_prompt=json.loads(corpus.read(row['expected_prompt_ids_file']));body=json.loads(corpus.read(row['request_file']))
+                assert request==json.dumps(control_request(body,'sglang'),separators=(',',':')).encode() and body['ignore_eos'] is True and body['max_tokens']==128
+                choice=response['choices'][0];assert choice['prompt_token_ids']==expected_prompt and len(expected_prompt)==3968
+                completion=choice['response_token_ids'];assert len(completion)==126 and all(type(v) is int and 0<=v<248320 for v in completion)
+                assert choice['finish_reason']=='length' and response['usage']['prompt_tokens']==3968 and response['usage']['completion_tokens']==126 and response['usage']['total_tokens']==4094
+                try:control_response(response,'sglang',expected_prompt)
+                except ValueError as error:rejection=str(error)
+                else:raise AssertionError('Unchanged strict128 gate incorrectly accepted126')
+                controls=doc(root+'report.json');assert controls['status']=='failed' and controls['cases']==[]
+                assert len([n for n in names if n.startswith(root) and n.endswith('-response.json')])==1
+                assert not any(n.startswith(base+'client/benchmark4k/') and n.endswith('-events.jsonl') for n in names)
+                failure={'key':key,'request_sha256':sha(request),'response_sha256':sha(raw),'prompt_ids_exact':True,'actual_prompt_ids':3968,'actual_completion_ids':126,'requested_completion_ids':128,'usage':response['usage'],'strict128_gate_rejection':rejection,'timed_streams':0}
+'''
+text=text[:start]+replacement+text[end:]
+text=text.replace("'reference_fixed4k_profile_replayed' if passed else 'reference_fixed4k_failure_preserved'", "'reference_fixed4k_failure_partial_controls_replayed'",1)
+text=text.replace("'profiles':profiles,", "'profiles':profiles,'failed_full4k_control':failure,'short_greedy_controls_replayed':16,'vlm_smoke_controls_replayed':4,",1)
+text=text.replace("(args.job+'-verified.json')", "(args.job+'-failure-controls-verified.json')",1)
+text=text.replace("return 0 if passed else 1", "return 0",1)
+text=text.replace('Replay a closed SGLang reference archive, never execute a model or infer IDs.', 'Replay actual pre-failure controls/screen; preserve126-token rejection and no timings.',1)
+target=m/'verify_sglang_fixed4k_failure_controls.py';assert not target.exists();target.write_bytes(text.replace('\n','\r\n').encode())
+receipt={'status':'failed_reference_partial_control_checker_derived','original_sha256':hashlib.sha256(source.read_bytes()).hexdigest(),'derived_sha256':hashlib.sha256(target.read_bytes()).hexdigest(),'scope':'Separately named checker derived from original startup/source/PID/stop/4VLM/16greedy/805screen replay. Original checker/archive untouched. Failed client ledger/status explicitly expected; actual126-token control must be rejected by unchanged strict128 gate and no timed streams may exist.'}
+(m/'evidence/sglang-fixed4k-failure-controls-checker-derivation.json').write_text(json.dumps(receipt,indent=2),encoding='utf8');print(json.dumps(receipt))
