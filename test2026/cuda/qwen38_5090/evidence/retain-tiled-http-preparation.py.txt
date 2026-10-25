@@ -1,0 +1,36 @@
+from pathlib import Path
+import hashlib,json,shutil
+w=Path(__file__).resolve().parent;out=w.parent/'outputs';repo=Path('D:/CantorAI/work/qwen38-5090');m=repo/'test2026/cuda/qwen38_5090';e=m/'evidence'
+sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+for name in ('derive-tiled-http-verifier.py','package-tiled-scores-http-methods.py','install-tiled-scores-http-methods.py','check-tiled-http-closed-parent-local.py','retain-tiled-http-preparation.py'):
+    shutil.copyfile(w/name,e/(name+'.txt'))
+for name in ('tiled-scores-http-bundle-preparation.json','tiled-scores-http-closed-parent-cpu-check.json','tiled-scores-http-upload-plan.json','tiled-scores-http-upload-plan.before-replay-helper-pins.json','tiled-scores-http-preparation.json.before-replay-helper-pins','tiled-scores-http-verifier-derivation.json.before-replay-helper-pins','verify_tiled_scores_http.py.before-replay-helper-pins'):
+    shutil.copyfile(w/name,e/name)
+for f in (w/'tiled-scores-http-cpu-ledger').iterdir():
+    assert f.name in ('commands.log','commands.jsonl');shutil.copyfile(f,e/('tiled-scores-http-cpu-ledger-'+f.name))
+p=json.loads((e/'tiled-scores-http-preparation.json').read_bytes());bundle=json.loads((w/'tiled-scores-http-bundle-preparation.json').read_bytes())
+result={'status':'tiled_http_pipeline_prepared_cpu_passed_remote_unrun','cpu_tests_each_run':77,'successful_local_cpu_runs':2,
+        'preparation_sha256':sha(e/'tiled-scores-http-preparation.json'),'source_pins':len(p['files']),
+        'candidate_library_sha256':p['runtime_dependencies']['garnet.dll'],'baseline_library_sha256':p['runtime_baseline']['garnet.dll'],
+        'method_bundle':bundle,'actual_closed_model_parent_check':json.loads((w/'tiled-scores-http-closed-parent-cpu-check.json').read_bytes()),
+        'remote_live_job':'paged-batch8-model-preservation-attempt1','remote_installed':False,'http_gpu_executed':False,
+        'new_benchmark_collected':False,'two_times_target_achieved':False,
+        'scope':p['scope'],
+        'predeployment_correction':'Initial CPU-only checker pinned old replay helpers but not its two new lifecycle/model helpers. Added exact archived-vs-live hashes and checker self-identity; retained original unrun preparation/derivation/checker and reran all77CPU controls. No remote installation or GPU attempt occurred under initial preparation.'}
+(e/'tiled-scores-http-preparation-closure.json').write_bytes(json.dumps(result,indent=2).encode())
+(out/'Garnet-Tiled-HTTP-Preparation-Status.json').write_bytes(json.dumps(result,indent=2).encode())
+addition='''
+
+### 2026-10-25 — tiled HTTP owner/checker prepared; GPU run not started
+
+Committed prior tiled whole-model and paged native-byte closure as `07d887d7c` and pushed the dedicated branch. The original `paged-batch8-model-preservation-attempt1` supervisor is still authoritatively live. A read-only observation confirmed native PID31364, report status `constructing`, zero completed cases, and active native allocations. Do not start a second GPU job or infer a hang/performance result from silence.
+
+Prepared an explicit candidate2533 tiled-score MTP3/T16 draft-prefill HTTP owner, independent raw checker and absent-only deployment package. Its fixed workload remains12protocol controls,805adapted natural-stop quality cases, two actual3968+128 boundaries, then all124frozen streams in eight text/image C1/2/4/8cohorts. Complete generation/request body and probe AST are unchanged except explicit candidate/baseline admission and worker entry names. Every raw benchmark/SSE/native request matching function remains AST-identical to the qualified previous checker. No short pilot, batch/profile relaxation or model arithmetic change.
+
+Both local runs passed all77CPU controls (11.399s initial,6.510s after replay-helper/self-identity pins). Source/proof/SDK/DLL/selector restoration and wrong-route/shared-state failures are covered. The new checker also admitted the actual two-machine closed tiled-model proof and checked its662source pins. Preparation pins696files and six runtime dependencies plus15SDK/environment files; bundle contains13new targets and does not overwrite existing inputs. The old1a1d NFC/EOS/ordinary/full4K proof identities remain distinct from candidate2533. Owner temporarily selects candidate DLL/exact flag1, records runtime before restoration, restores baseline DLL and caller selector, and retires owned cache only after the child closes.
+
+CPU-only preparation initially omitted live-vs-archived pins for the two new replay helpers; corrected before deployment, preserved the initial unrun manifests/checker/derivation, and reran the full77controls. See `evidence/tiled-scores-http-preparation-closure.json`, append-only CPU ledgers and exact derivations/install methods. No remote installation, new HTTP/GPU measurement, chart update, speedup or2x claim is supported by this preparation. Once the live B8 owner closes and its terminal source/runtime/cleanup are checked, install absent-only methods and execute/replay the complete HTTP trial. Keep the broader matched vLLM4K/strongest MTP baselines, B8 math/MTP/serving, repeat statistics, INT4/4B and overall2x goal open.
+'''
+for name in ('qwen38-5090-development-log.md','qwen38-5090-implementation-task.md'):
+    path=repo/'docs/research'/name;assert addition.encode() not in path.read_bytes();path.write_bytes(path.read_bytes()+addition.encode())
+print(json.dumps({'status':result['status'],'source_pins':len(p['files']),'cpu_controls':77,'preparation_sha256':result['preparation_sha256']}))

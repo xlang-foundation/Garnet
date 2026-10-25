@@ -6184,3 +6184,14 @@ model proof schema passes new gate on CPU. Owner/independent HTTP replay and rea
 805/124request execution still required. No new timing/plot or2x claim. Preserve
 full scope: real B8MTP/math/quality/HTTP, matched vLLM4K/tuned references, repeated
 trials, INT4/4B, and overall2xdecode+throughput/halfTTFT remain open.
+
+
+### 2026-10-25 — tiled HTTP owner/checker prepared; GPU run not started
+
+Committed prior tiled whole-model and paged native-byte closure as `07d887d7c` and pushed the dedicated branch. The original `paged-batch8-model-preservation-attempt1` supervisor is still authoritatively live. A read-only observation confirmed native PID31364, report status `constructing`, zero completed cases, and active native allocations. Do not start a second GPU job or infer a hang/performance result from silence.
+
+Prepared an explicit candidate2533 tiled-score MTP3/T16 draft-prefill HTTP owner, independent raw checker and absent-only deployment package. Its fixed workload remains12protocol controls,805adapted natural-stop quality cases, two actual3968+128 boundaries, then all124frozen streams in eight text/image C1/2/4/8cohorts. Complete generation/request body and probe AST are unchanged except explicit candidate/baseline admission and worker entry names. Every raw benchmark/SSE/native request matching function remains AST-identical to the qualified previous checker. No short pilot, batch/profile relaxation or model arithmetic change.
+
+Both local runs passed all77CPU controls (11.399s initial,6.510s after replay-helper/self-identity pins). Source/proof/SDK/DLL/selector restoration and wrong-route/shared-state failures are covered. The new checker also admitted the actual two-machine closed tiled-model proof and checked its662source pins. Preparation pins696files and six runtime dependencies plus15SDK/environment files; bundle contains13new targets and does not overwrite existing inputs. The old1a1d NFC/EOS/ordinary/full4K proof identities remain distinct from candidate2533. Owner temporarily selects candidate DLL/exact flag1, records runtime before restoration, restores baseline DLL and caller selector, and retires owned cache only after the child closes.
+
+CPU-only preparation initially omitted live-vs-archived pins for the two new replay helpers; corrected before deployment, preserved the initial unrun manifests/checker/derivation, and reran the full77controls. See `evidence/tiled-scores-http-preparation-closure.json`, append-only CPU ledgers and exact derivations/install methods. No remote installation, new HTTP/GPU measurement, chart update, speedup or2x claim is supported by this preparation. Once the live B8 owner closes and its terminal source/runtime/cleanup are checked, install absent-only methods and execute/replay the complete HTTP trial. Keep the broader matched vLLM4K/strongest MTP baselines, B8 math/MTP/serving, repeat statistics, INT4/4B and overall2x goal open.
