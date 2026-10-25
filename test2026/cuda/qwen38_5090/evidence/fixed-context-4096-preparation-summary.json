@@ -1,0 +1,31 @@
+{
+  "status": "fixed_context_corpus_prepared_unrun",
+  "archive_sha256": "ca78cdc12239810851e9943ccf6b318e8b29074b0fb0908728dd58132ae6923f",
+  "archive_bytes": 193369,
+  "manifest_sha256": "829d7770f2d749e30a66e027940224e8ab77a488d0b5f9c456e4809ae845987c",
+  "requests": 124,
+  "measured_requests": 64,
+  "warmup_requests": 60,
+  "image_nonces": 62,
+  "input_tokens_each": 3968,
+  "reserved_output_tokens_each": 128,
+  "short_controls": [
+    {
+      "case": "text",
+      "request_sha256": "a01e94f21ea82d5a50bf403584a7a4bed6727ffe34a9452de3b780aef8e3a4b0",
+      "response_sha256": "5ddc47fbc550e16b2e8d8f989a9fd6675c463e9836e3f1b6059c147b14cf5eed",
+      "tokens": 41,
+      "retained_ids_exact": true,
+      "independent_jinja_exact": true
+    },
+    {
+      "case": "image",
+      "request_sha256": "a3bacdbe650f2e2f0952df2f727648ec62fa70d1bed37602fd80ec54fec5b792",
+      "response_sha256": "0327ab2230ffcd93f1c9fdab1e35d259bd2a0f901e45bb0d40f2e2e1e34ac849",
+      "tokens": 104,
+      "retained_ids_exact": true,
+      "independent_jinja_exact": true
+    }
+  ],
+  "scope": "CPU-prepared artificial repeated-note exact3968-input/128-output-reserve requests including chat template and64image tokens. JPEG/pixel nonces retained from existing preparation. Actual server prompt IDs/image tokenization/cache misses, boundary correctness, ordinary/MTP and model quality must be checked before timing. No GPU use, model execution, generated outputs, 4K benchmark result, broad-quality or 2x admission."
+}
