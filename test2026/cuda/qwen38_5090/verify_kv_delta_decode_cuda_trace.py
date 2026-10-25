@@ -100,6 +100,12 @@ with zipfile.ZipFile(archive) as z:
                 assert after['graph_replays']>=before['graph_replays']
             case=next(c for c in current['cases'] if c['group']==0 and c['repeat']==capture['repeat'])
             assert capture['speculative_metrics']==case['speculative_metrics']
+            before=capture['metrics_before_generate'];after=capture['speculative_metrics']
+            assert before['mtp_prefill_calls']>0 and before['mtp_head_calls']==1
+            assert before['iterations']==[]
+            for key in ('target_verification_calls','target_prefix_replays','target_prefix_recomputes','mtp_draft_calls','mtp_correction_calls'):
+                assert before[key]==0
+            assert before['mtp_prefill_calls']==after['mtp_prefill_calls']
         # Extract only into this output's fixed scratch directory; open read-only.
         scratch=out/'replay-scratch';scratch.mkdir(exist_ok=True)
         sql=scratch/(name+'.sqlite');sql.write_bytes(z.read(base+'startup-trace.sqlite'))
@@ -121,7 +127,8 @@ with zipfile.ZipFile(archive) as z:
                     'kernel_sum_duration_ns':sum(k['end']-k['start'] for k in selected),
                     'kernel_interval_union_ns':union_ns(selected),'kernels_by_name':aggregate(selected),
                     'graph_node_kernels_by_name':aggregate(node),'non_graph_node_kernels_by_name':aggregate(outside),
-                    'apis_by_name':aggregate(selected_apis),'speculative_metrics':capture['speculative_metrics']})
+                    'apis_by_name':aggregate(selected_apis),'speculative_metrics':capture['speculative_metrics'],
+                    'metrics_before_generate':capture['metrics_before_generate']})
             assert windows[0]['marker_interval_ns'][1]<windows[1]['marker_interval_ns'][0]
         finally:connection.close()
         resource=doc(base+'resources/resource-monitor.json');samples=[json.loads(l) for l in z.read(base+'resources/resource-vram.jsonl').splitlines()]
