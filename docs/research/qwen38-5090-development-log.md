@@ -5184,3 +5184,31 @@ absent methods/primary-source evidence are bundled296277bytes, SHA
 New reference attempt, strongest feasible MTP/tuning/vLLM, broad quality,
 repetitions, actual B8/model-level tiled optimization, INT4/4B and2x/halfTTFT
 remain open. This receipt is preparation history, not a new performance result.
+
+
+### 2026-10-25: B8 outer owner/raw replayer prepared while SGLang runs
+
+No remote activity beyond original48577 SGLang attempt2 polls. Actual remote37
+CPU reference controls passed1.800s; readiness/boundary/screen/timing not yet
+observed at this offline preparation. Existing B8 probe remains unchanged.
+New outer owner requires a named reference archive with actual closed workflow,
+terminal server code and source/runtime unchanged, then idle GPU/process guard.
+It reuses existing bounded owned SSD engine cache, logs every new retired engine
+file hash/size and preserves older/unknown files. No new model/runtime/SDK build.
+
+B8 independent raw replayer binds unchanged frozen inputs/images and all9
+eight-row short/full3968+128 text/image cases, complete logical/component hashes,
+finite hidden/normalized bytes, inverse row mapping, reset-repeat and sampled
+construction/correctness memory. This is internal consistency only: it does not
+prove external B1/B4 model-math equivalence or broad quality/serving/speed.
+Actual28CPU controls pass3.099s, including4new synthetic mutation replay cases;
+initial24ownership/state controls passed0.222s. Missing/active/drifted reference,
+unowned/unknown cache files, last-row state/input/generated IDs, changed finite
+vectors with consistent hashes and nonfinite vectors remain rejected.
+
+Five Python sources parse; new launcher reverse-derives exactly to existing
+model launcher with only probe path/argument replacement. Preparation freezes
+444files and20upload targets against both actual closed native proof pairs.
+Remote deployment, GPUfit/model admission and independent raw replay are unrun;
+no GPU or timing evidence claimed. Next deploy only after official reference
+supervisor is authoritatively terminal.2x/halfTTFT and full scope remain open.
