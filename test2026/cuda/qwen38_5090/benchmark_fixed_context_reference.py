@@ -40,11 +40,18 @@ def control_response(value,engine,expected_prompt):
  if not isinstance(message,dict) or message.get('role')!='assistant' or not isinstance(message.get('content'),str) or message.get('reasoning_content'):raise ValueError('Plain no-thinking assistant text required')
  return {'prompt_token_ids':prompt,'completion_token_ids':completion,'text':message['content'],'streamed_ids_observed':False}
 
+def paired_control(current,ordinary):
+ for field in ('prompt_token_ids','completion_token_ids','text'):
+  if current[field]!=ordinary[field]:raise ValueError('MTP differs from ordinary4K control: '+field)
+
 def main():
- a=argparse.ArgumentParser(description=__doc__);a.add_argument('--engine',choices=('vllm','sglang'),required=True);a.add_argument('--url',required=True);a.add_argument('--corpus-archive',type=Path,required=True);a.add_argument('--output',type=Path,required=True);a.add_argument('--metadata',type=Path,required=True);args=a.parse_args()
+ a=argparse.ArgumentParser(description=__doc__);a.add_argument('--engine',choices=('vllm','sglang'),required=True);a.add_argument('--url',required=True);a.add_argument('--corpus-archive',type=Path,required=True);a.add_argument('--output',type=Path,required=True);a.add_argument('--metadata',type=Path,required=True);a.add_argument('--ordinary-controls',type=Path);args=a.parse_args()
  assert args.url=='http://127.0.0.1:'+('18080' if args.engine=='vllm' else '18081') and not args.output.exists() and sha(args.corpus_archive.read_bytes())==ARCHIVE_SHA256
  metadata_raw=args.metadata.read_bytes();metadata=json.loads(metadata_raw)
  assert metadata['engine']==args.engine and metadata['checkpoint_revision']=='482ca0f3832238542f8f5295dde86b5f22711d80' and metadata['context_capacity']==4096
+ assert metadata['generation_mode'] in ('ordinary','mtp') and (args.ordinary_controls is not None)==(metadata['generation_mode']=='mtp')
+ if args.ordinary_controls is not None:
+  previous=json.loads((args.ordinary_controls/'report.json').read_bytes());assert previous['status']=='all124_nonstream_id_controls_collected' and previous['engine']==args.engine and len(previous['cases'])==124
  with zipfile.ZipFile(args.corpus_archive) as z:
   assert z.testzip() is None and len(z.namelist())==len(set(z.namelist()));raw=z.read('manifest.json');assert sha(raw)==MANIFEST_SHA256;corpus=json.loads(raw);assert len(corpus['rows'])==124 and len(corpus['cohorts'])==8;prepared={}
   for row in corpus['rows']:
@@ -60,7 +67,11 @@ def main():
    try:
     with urlopen(Request(args.url+'/v1/chat/completions',data=wire,headers={'Content-Type':'application/json'}),timeout=300) as response:raw=response.read()
    except HTTPError as error:(controls/(key+'-error.bin')).write_bytes(error.read());raise
-   (controls/(key+'-response.json')).write_bytes(raw);actual[key]=control_response(json.loads(raw),args.engine,ids);control_report['cases'].append({'key':key,'request_sha256':sha(wire),'response_sha256':sha(raw),'prompt_ids_exact':True,'output_tokens':128});save_controls()
+   (controls/(key+'-response.json')).write_bytes(raw);actual[key]=control_response(json.loads(raw),args.engine,ids)
+   if args.ordinary_controls is not None:
+    assert (args.ordinary_controls/(key+'-request.json')).read_bytes()==wire
+    paired_control(actual[key],control_response(json.loads((args.ordinary_controls/(key+'-response.json')).read_bytes()),args.engine,ids))
+   control_report['cases'].append({'key':key,'request_sha256':sha(wire),'response_sha256':sha(raw),'prompt_ids_exact':True,'output_tokens':128,'ordinary_ids_exact':args.ordinary_controls is not None});save_controls()
   control_report['status']='all124_nonstream_id_controls_collected';save_controls()
  except BaseException as error:control_report.update(status='failed',error=repr(error));save_controls();raise
  run=uuid.uuid4().hex;prefix=run+'-';cohorts=[];sampler=None;manifest={'run_id':run,'status':'running','engine':args.engine,'utc':datetime.datetime.now(datetime.timezone.utc).isoformat(),'argv':sys.argv,'corpus_archive_sha256':ARCHIVE_SHA256,'corpus_manifest_sha256':MANIFEST_SHA256,'context_capacity':4096,'actual_input_tokens_required':3968,'actual_completion_tokens_required':128,'engine_metadata':metadata,'engine_metadata_sha256':sha(metadata_raw),'cohorts':cohorts,'nonstream_controls_sha256':sha((controls/'report.json').read_bytes()),'streamed_ids_observed':False,'performance_admitted':False,'scope':'Actual frozen4K loopback requests with continuous usage; actual separate prompt/completion-ID controls and same-engine exact text checked. Streamed IDs are unavailable in the common reference protocol. No matched quality/tuning/repetition/2x promotion.'}

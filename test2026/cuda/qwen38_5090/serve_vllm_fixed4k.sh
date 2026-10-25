@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+set -euo pipefail
+/opt/cantorai5090/vllm/bin/python - <<'PY'
+import socket
+with socket.socket() as probe: probe.bind(('127.0.0.1',18080))
+PY
+study=/mnt/d/CantorAI/5090-study-20261023
+# A single controller owns this exact server and its fresh log.
+: "${GARNET_REF_PIDFILE:?Controller-owned PID path required}"
+: "${GARNET_REF_LOGFILE:?Controller-owned log path required}"
+case "$GARNET_REF_PIDFILE" in "$study"/results/*/server.pid) ;; *) exit 2;; esac
+case "$GARNET_REF_LOGFILE" in "$study"/results/*/server.log) ;; *) exit 2;; esac
+(set -o noclobber; printf '%s\n' "$$" > "$GARNET_REF_PIDFILE")
+(set -o noclobber; : > "$GARNET_REF_LOGFILE")
+log=$GARNET_REF_LOGFILE
+export VLLM_SERVER_DEV_MODE=1
+export HF_HUB_OFFLINE=1
+export HF_HOME=/opt/cantorai5090/huggingface
+export CUDA_VISIBLE_DEVICES=0
+export PATH="/opt/cantorai5090/vllm/bin:$PATH"
+export CUDA_HOME=/opt/cantorai5090/vllm/lib/python3.12/site-packages/nvidia/cu13
+export LIBRARY_PATH="/usr/lib/wsl/lib${LIBRARY_PATH:+:$LIBRARY_PATH}"
+export VLLM_CACHE_ROOT=/opt/cantorai5090/vllm-cache
+export TRITON_CACHE_DIR=/opt/cantorai5090/triton-cache
+printf '\n=== vLLM decode-graph NVFP4 VLM candidate, %s ===\n' "$(date -u +%FT%TZ)" >> "$log"
+# Candidate only: actual graph replay, admission, quality and timing must pass.
+# Explicit cache budget is not evidence of eight full4K admissions; inspect
+# resolved cache capacity and test admission before claiming that profile.
+export MAX_JOBS=2
+export CMAKE_BUILD_PARALLEL_LEVEL=2
+export TORCHINDUCTOR_COMPILE_THREADS=1
+exec /opt/cantorai5090/vllm/bin/vllm serve "$study/models/Qwen3.8-27B-NVFP4" \
+  --served-model-name qwen38-27b-nvfp4 --host 127.0.0.1 --port 18080 \
+  --tensor-parallel-size 1 --max-model-len 4096 --max-num-seqs 8 \
+  --max-num-batched-tokens 4096 --gpu-memory-utilization 0.88 \
+  --dtype bfloat16 --kv-cache-dtype bfloat16 --mamba-ssm-cache-dtype float32 \
+  --no-enable-prefix-caching --kv-cache-memory-bytes 4294967296 \
+  --max-cudagraph-capture-size 8 \
+  --compilation-config '{"cudagraph_mode":"FULL_DECODE_ONLY","cudagraph_capture_sizes":[1,2,4,8]}' \
+  >> "$log" 2>&1

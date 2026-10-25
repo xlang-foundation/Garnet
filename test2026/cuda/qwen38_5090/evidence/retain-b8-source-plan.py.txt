@@ -1,0 +1,27 @@
+from pathlib import Path
+import json
+w=Path(__file__).resolve().parent;r=Path('D:/CantorAI/work/qwen38-5090');e=r/'test2026/cuda/qwen38_5090/evidence';a=json.loads((e/'bf16-b8-existing-profile-source-audit.json').read_bytes());assert a['status']=='existing_b8_profile_source_audited_no_gpu_run' and not a['gpu_model_executed']
+entry='''
+
+### 2026-10-25: existing B8 route identified for real concurrency optimization
+
+Read current Python BF16 profile/layout and C++ layout parser: they already
+admit B4/B8, separate from the B1-only route. B8 requires actual whole-model
+build/memory/numerical/ordinary-MTP/prefix/stream admission, not a blanket guard
+relaxation. Existing128MiB MTP option has no batch-specific restriction in these
+constructors; actual B8 tactic/build success remains unknown.256MiB option stays
+explicitly B4/T4/cap4096. Preserve an actual128MiB failure before considering a
+separate bounded B8 option; defaults/known profiles remain intact.
+
+Two named state buffers alone add2344615936B fromB4toB8. This is only canonical
+BF16 carrier plus one linear replay buffer arithmetic, excluding target/output,
+activation, vision/MTP, graph/workspace and allocator overhead. It is neither
+measured VRAM nor a fit/speed prediction. Source hashes/arithmetic/method retained.
+After current native HTTP and matched baselines, attempt isolated existing B8
+memory/correctness admission and actual HTTP batch coalescing, then profile B1/
+B8 dominant GPU work. Current single-slot B1 queued concurrency cannot be labeled
+GPU batching. No B8 runtime or2x measurement has occurred.
+'''
+for name in ('qwen38-5090-development-log.md','qwen38-5090-implementation-task.md'):
+ target=r/'docs/research'/name;raw=target.read_bytes();assert b'existing B8 route identified for real concurrency optimization' not in raw;target.write_bytes(raw+entry.replace('\n','\r\n').encode())
+(e/'retain-b8-source-plan.py.txt').write_bytes(Path(__file__).read_bytes());print(json.dumps({'status':'b8_optimization_next_stage_recorded','runtime_executed':False}))
