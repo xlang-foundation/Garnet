@@ -1,0 +1,16 @@
+{
+  "status": "bf16_float_reference_compile_only",
+  "exit_code": 0,
+  "source_sha256": {
+    "src/cuda/qwen38_bf16_kv_float_reference.cu": "e6d538d062e96b96dd37c8ea451289bb264c8794112a97eac520455f7eb7c95c",
+    "src/cuda/qwen38_bf16_kv_float_reference.cuh": "6ff092e0614e91f005101df65d9a902101ed9a0d4e830cd61e774eea0d227168",
+    "src/cuda/qwen35_attention_core.cuh": "1a3997a15f4aa897f2bc69bf6a3afbef9a58f166fb094bfb858fac1b170e166f"
+  },
+  "object_sha256": "d09087af8be1b07a62a25e4c2b96af16773525510d95574c030e377dd7939877",
+  "recipe_sha256": "170d9633140205f4c1b24839297ea3b69fff212e519770a27f773cc35fcc429f",
+  "log_sha256": "11200084ed9373d3d773e4d053eca248230aa3fa7d51c4aa4a4631ef4a24aeb9",
+  "linked": false,
+  "executed": false,
+  "model_qualified": false,
+  "scope": "Separate unwired B4/T4/T32 reference. Offline sm120 CUDA13.2/VS2022 compile only; no local GPU or program execution. Rounds current K/V to BF16 then FP32 and invokes unchanged legacy full-cache FP32 attention, with independent dense F32 cache ownership/alias guards. Past caches must maintain BF16-roundtrip FP32 invariant. Requires standalone GPU/FP64/canary/readonly/alias/roundtrip tests, separate plugin/lowering and same-precision full-model comparison before any admission. No runtime/DLL/source deployed or CMake registration changed."
+}
