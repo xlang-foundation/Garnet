@@ -5278,3 +5278,67 @@ output variation; keep strict failed experiments immutable. Complete strongest
 SGLang MTP/tuning and vLLM, repetitions, independent B1/B4-vs-B8 math/805quality,
 MTP16short/4Kmodel and memory gates, and current B1full4K kernel profiling before
 selecting whole-model optimizations.2x/halfTTFT, INT4/4B and full scope remain open.
+
+
+### 2026-10-25: prefill16 model owner; reference output/isolation diagnosis prepared
+
+Original48577 B8 model admission remains authoritatively running. Actual saved
+report observations progress through all3short-mixed and all3full3968+128text
+rows/permutations/repeats, then first full4Kimage case, each internal inverse
+mapping exact. Decoder construction/vision/empty state had completed. These are
+live partial observations, not a closed attempt, independent replay, external
+B1/B4 equivalence, broad quality, serving or performance proof. Known embedded
+hashlib warnings did not establish terminal failure and no restart was issued.
+Correctness-only read of existing NVML sample showed28355711808adapter bytes used
+with5833805824free at that moment; not an instantaneous/serving peak or final
+memory-fit claim. A separate read-only instantaneous utilization query returned
+0percent/22.20W between test work; not a power/performance benchmark or causal
+kernel diagnosis. Existing runtime, SDK, model source and probe are unchanged.
+
+Prepared explicit prefill16 whole short8B1 ordinary/MTP/text/image/color/prefix/
+reset owner/preparer/independent raw replayer. Both the actual closed B8 archive
+and closed SGLang reference archive plus idle GPU/process guard are required;
+no automatic restart after observation timeout. Reuse bounded owned SSD cache,
+archive every failure/source/runtime/raw target-state/vector/counter/sample and
+compare to actual retained1a1d B1 snapshots. Extra T16 draft engine/buffers are
+counted, primary/decode/verifier source unchanged. Actual41CPU controls pass
+0.244s. Initial package import failed before GPU; preserved initial owner/log,
+then package/script sibling import corrected. A following doc-only edit fixes
+inherited no-MTP wording. Reversing both changes exactly restores original owner
+derivation bytes. First unused preparation/plan also retained. Current preparation
+pins575files/21uploads; no remote install, GPU model or new speed result.
+
+Prepared separate ordinary SGLang output/isolation diagnosis and owned server
+lifecycle/preparer/raw archive replayer.16actual frozen4K inputs and8instances
+of four retained color/spatial cases load/validate from immutable prior evidence.
+The future288requests comprise192actual nonstream-ID controls and96streams,
+with135observed-overlap waves: serial before/after, C1/2/4/8, rotated inputs,
+64full3968+128streams and32short color streams.48nonstream plus24stream mixed
+color concurrent controls must remain semantically correct. Every actual output
+ID/text variation is retained, with no inferred cause or harmlessness. Short
+color replies may arrive all at once; no decode rate is measured. Full4K budgets,
+actual IDs/nonstream usage, raw SSE totals/lengths and complete request/row/wave
+coverage remain strict. These source changes never alter the old failed strict
+benchmark/helper/archive, and do not choose a weaker deterministic reference.
+
+Actual33CPU suite passes10.169s, including a synthetic local HTTP288request/
+135wave integration and independent raw replay with wrong counts, wrong colors,
+false overlap and missing rows rejected. Earlier actual16/18CPU stages and raw
+logs are retained, including the intermediate synthetic256request nonstream-only
+color coverage before streamed-color coverage was added. All fixture data are
+explicitly synthetic; no SGLang/GPU/benchmark/quality result is fabricated.
+Current reference preparation pins509files/12uploads, engine4098/two reserved
+slots/pool32784 and actual4096workload capacity, BF16KV/F32SSM/cache/graph settings
+unchanged. Model server run and real independent archive replay are unrun.
+
+After B8 closes, replay/retain its full attempt before admission. Next use real
+reference diagnosis to distinguish serial repeat variation, concurrent ID/text
+variation, stream differences and request isolation, without assuming harmless
+roundoff or a bug. Complete stronger tuned/MTP SGLang and vLLM full4K timings;
+qualify prefill16short then full4K/805quality/memory and matched repeated HTTP.
+Current primary prefill invokes T32 target chunks124times for3968tokens; inspect
+actual CPU input/tokenizer versus GPU prefill/kernel costs before choosing wider
+primary-prefill/tiling or packing changes. Do not infer a kernel bottleneck from
+wall-time subtraction alone. Existing tiled-score44case correctness is not model
+speed. B8external numerical/quality/padded-worker/MTP/serving, INT4/4B and2x/
+halfTTFT remain open. No stage here establishes the requested speed target.
