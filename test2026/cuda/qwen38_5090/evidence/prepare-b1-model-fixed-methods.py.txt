@@ -1,0 +1,19 @@
+from pathlib import Path
+import hashlib,json,zipfile
+r=Path('D:/CantorAI/work/qwen38-5090');m=r/'test2026/cuda/qwen38_5090';w=Path(__file__).resolve().parent;o=w.parent/'outputs';sha=lambda b:hashlib.sha256(b).hexdigest();records={}
+rules={
+ 'probe_bf16_low_batch_model.py':[('from test2026.cuda.qwen38_5090.bf16_padded_state_gate import same_logical_row','from test2026.cuda.qwen38_5090.bf16_packed_state_gate import same_packed_bf16_row',1),('same_logical_row(ordinary_state','same_packed_bf16_row(ordinary_state',1)],
+ 'test_bf16_low_batch_model.bat':[('probe_bf16_low_batch_model.py','probe_bf16_low_batch_model_fixed.py',1)],
+ 'run_bf16_low_batch_model.py':[('bf16-low-batch-model-consistency-attempt1','bf16-low-batch-model-consistency-attempt2',1),('evidence/bf16-low-batch-model-preparation.json','evidence/bf16-low-batch-model-preparation-attempt2.json',1),('test_bf16_low_batch_model.bat','test_bf16_low_batch_model_fixed.bat',1),('assert closed[\'exit_code\']==0 and closed[\'cleanup_finished\']',"assert closed['cleanup_finished'] and closed['exit_code']==(1 if parent=='bf16-low-batch-model-consistency-attempt1' else 0)",1),('try:\n for label,batch',"try:\n code=run([sys.executable,'-m','unittest','test2026.cuda.qwen38_5090.test_bf16_packed_state_gate','test2026.cuda.qwen38_5090.test_bf16_model_state_witness','test2026.cuda.qwen38_5090.test_bf16_same_precision_gate','test2026.cuda.qwen38_5090.test_bf16_padded_state_gate'],OUT/'cpu-ledger','correctness','New packed representation controls and unchanged reference/witness guards',common)\n if code:raise RuntimeError('Packed-state checker CPU controls failed')\n for label,batch",1)],
+ 'verify_bf16_low_batch_model.py':[('from bf16_padded_state_gate import same_logical_row','from bf16_packed_state_gate import same_packed_bf16_row',1),('bf16-low-batch-model-consistency-attempt1','bf16-low-batch-model-consistency-attempt2',1),('evidence/bf16-low-batch-model-preparation.json','evidence/bf16-low-batch-model-preparation-attempt2.json',2),('same_logical_row(c[','same_packed_bf16_row(c[',1),('verify_bf16_low_batch_model.py','verify_bf16_low_batch_model_fixed.py',1),(" if passed:assert w['status']==", " if passed:\n  assert b'Ran 18 tests' in z.read(base+'cpu-ledger/commands.log') and b'\\nOK' in z.read(base+'cpu-ledger/commands.log')\n  assert w['status']==",1)],
+}
+with zipfile.ZipFile(o/'bf16-low-batch-model-consistency-attempt1-evidence.zip') as z:
+ for name,changes in rules.items():
+  prefix='Garnet/test2026/cuda/qwen38_5090/';raw=z.read(prefix+name);assert raw==(m/name).read_bytes();text=raw.decode()
+  for before,after,count in changes:assert text.count(before)==count,(name,before,text.count(before));text=text.replace(before,after)
+  target=name.rsplit('.',1)[0]+'_fixed.'+name.rsplit('.',1)[1];result=text.encode();path=m/target
+  if path.exists():assert path.read_bytes()==result
+  else:path.write_bytes(result)
+  records[target]={'source':prefix+name,'source_sha256':sha(raw),'changes':changes,'result_sha256':sha(result)}
+receipt={'status':'b1_model_fixed_harness_methods_derived_gpu_unrun','parent_failed_archive_sha256':sha((o/'bf16-low-batch-model-consistency-attempt1-evidence.zip').read_bytes()),'files':records,'new_packed_gate_sha256':sha((m/'bf16_packed_state_gate.py').read_bytes()),'product_source_or_native_library_changed':False,'reference_representation_guard_changed':False,'tolerance_changed':False,'scope':'Literal method-only derivation from immutable failed attempt. New explicit packed-versus-packed comparator validates full geometry and physical/logical/component/slot hashes; no fake FP32-reference flag or guard relaxation. Fresh full B4/B1 plan remains unrun.'}
+(m/'evidence/bf16-low-batch-model-fixed-method-derivation.json').write_text(json.dumps(receipt,indent=2),encoding='utf8');print(json.dumps({'status':receipt['status'],'methods':len(records)}))

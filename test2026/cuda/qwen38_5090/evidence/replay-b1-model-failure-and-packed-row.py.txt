@@ -1,0 +1,19 @@
+from pathlib import Path
+import hashlib,json,os,sys,zipfile
+r=Path('D:/CantorAI/work/qwen38-5090');m=r/'test2026/cuda/qwen38_5090';w=Path(__file__).resolve().parent;o=w.parent/'outputs';sys.path.insert(0,str(m));from run_logged import run
+from bf16_packed_state_gate import same_packed_bf16_row
+name='bf16-low-batch-model-consistency-attempt1';archive=o/(name+'-evidence.zip');remote=json.loads((o/(name+'-remote-verified.json')).read_bytes());assert remote['status']=='bf16_low_batch_model_consistency_failure_preserved' and hashlib.sha256(archive.read_bytes()).hexdigest()==remote['archive_sha256']
+os.chdir(r);code=run([sys.executable,str(m/'verify_bf16_low_batch_model.py'),str(o)],m/'evidence/bf16-low-batch-model-failure-local-replay-ledger','correctness','Preserve actual closed first-attempt checker failure, not a model pass',[archive,m/'verify_bf16_low_batch_model.py',o/(name+'-remote-verified.json'),Path(__file__)])
+assert code==1 and json.loads((o/(name+'-verified.json')).read_bytes())==remote
+with zipfile.ZipFile(archive) as z:
+ doc=lambda n:json.loads(z.read(n));base='results/'+name+'/';workflow=doc(base+'workflow.json');assert workflow['exit_code']==1 and workflow['cleanup_finished'] and workflow['library_unchanged']
+ assert workflow['source_sha256']==workflow['source_after_sha256'] and workflow['runtime_dependencies']==workflow['runtime_dependencies_after']
+ new=doc(base+'b4-smoke/report.json');assert new['status']=='failed' and 'Unqualified same-precision state representation' in new['error'] and len(new['cases'])==1
+ actual=new['cases'][0];parent_prefix='results/integrated-batch-top1-model-lifecycle-attempt1/enabled/';parent=doc(parent_prefix+'report.json');old=next(c for c in parent['cases'] if c['group']==0 and c['repeat']==0)
+ left=actual['ordinary_state']['logical'];right=old['ordinary_state']['logical_state']
+ checks={'ordinary_mtp_internal_exact':actual['ordinary_mtp_exact'],'callbacks_exact':actual['callbacks_exact'],'parent_token_ids_exact':actual['ordinary_ids'][0]==old['ordinary_ids'][0],'packed_row_gate_exact':same_packed_bf16_row(left,0,right,0),'physical_row_sha256_exact':left['physical_row_sha256'][0]==right['physical_row_sha256'][0],'logical_row_sha256_exact':left['logical_row_sha256'][0]==right['logical_row_sha256'][0],'all128component_hashes_exact':all(a['row_sha256'][0]==b['row_sha256'][0] for a,b in zip(left['components'],right['components']))}
+ for kind in ('hidden','normalized'):
+  raw=z.read(base+'b4-smoke/'+actual['ordinary_state']['vectors'][kind]['file']);oldraw=z.read(parent_prefix+'group-0-repeat-0-ordinary-last-'+kind+'.f32');checks[kind+'_raw_row_exact']=raw[:20480]==oldraw[:20480]
+ assert all(checks.values()),checks
+ report={'status':'failed_attempt_preserved_first_observed_packed_row_reanalysis_passed','archive_sha256':remote['archive_sha256'],'library_sha256':remote['library_sha256'],'original_workflow_exit_code':1,'original_failure_preserved':True,'actual_partial_cases_reanalyzed':1,'checks':checks,'packed_gate_sha256':hashlib.sha256((m/'bf16_packed_state_gate.py').read_bytes()).hexdigest(),'parent_verifier_unchanged':True,'product_math_or_tolerance_changed':False,'full_model_qualified':False,'b1_executed':False,'performance_admitted':False,'scope':'CPU replay of saved first B4 text case only. Both native states are packed BF16; the old mixed-representation predicate rejected before numeric comparison. Actual saved IDs, selected full canonical/logical/component hashes and both full hidden/normalized rows match the retained5ac parent. Original failure remains failed. Remaining B4/B1 cases and all quality/performance gates are unrun/unqualified.'}
+(o/'Garnet-B1-Model-First-Attempt-Reanalysis.json').write_text(json.dumps(report,indent=2),encoding='utf8');(m/'evidence/bf16-low-batch-model-attempt1-packed-reanalysis.json').write_text(json.dumps(report,indent=2),encoding='utf8');print(json.dumps(report,indent=2))

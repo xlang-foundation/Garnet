@@ -4454,3 +4454,56 @@ separate command ledger. No native worker import/upload, HTTP requests, model
 responses, image pixel/grid qualification, quality score or benchmark occurred.
 Actual B1 model completion/replay, HTTP event/ID correctness and quality/4K gates
 still precede admitted comparisons. Original2x goal remains unmet.
+
+
+### 2026-10-25: model attempt1 typed-comparator failure and guarded correction
+
+Original bf16-low-batch-model-consistency-attempt1 is terminal exit1, cleanup
+complete, source/runtime unchanged. Actual first B4 text ordinary/MTP/callback
+checks passed internally, then the harness incorrectly called same_logical_row
+with two packed witnesses. That predicate deliberately requires its second
+input to be the independently BF16-rounded FP32 reference. It rejected the real
+packed metadata before comparing values. Original221-file archive and methods
+are immutable; remote/local failure replays agree. B1 never executed in attempt1.
+
+Independent CPU replay of the actual saved first case checks the complete
+selected canonical/logical row, all128component hashes and both full raw hidden/
+normalized rows against the retained5ac parent: all exact, including token IDs.
+This is one archived B4 case, not a completed model qualification. Original
+failure stays failed. New bf16_packed_state_gate validates both real packed
+representations, full128component geometry/hash metadata and selected physical/
+logical/component/slot hashes. Original packed-versus-reference predicate stays
+unchanged; no fake reference flag, product math or tolerance change. Seven new
+and six unchanged CPU controls pass (13actual tests; raw tool output retained).
+
+Four fixed model methods are literal derivations from failed archived sources;
+new factory binds the original failure proof and actual partial-data reanalysis.
+Fresh attempt2 retains all4B4 and8B1 cases and adds18remote CPU controls before
+GPU execution. Same8ae DLL, old libraries and shared scratch/cache retained;
+no rebuild or runtime replacement. Read-only preflight reports no source/runtime
+drift, competing study process or target conflict. Prepared attempt2 is not a
+pass. Broad quality, actual4K, HTTP metrics and original2x objective remain open.
+
+
+### 2026-10-25: fresh model attempt2 active; next actual HTTP stage prepared
+
+Original supervised attempt2 is live. All18CPU controls passed on the5090;
+read-only report now records the first fresh B4 text case with its retained
+complete canonical/logical row0 and raw hidden/normalized vectors exact, no
+recorded error. This is partial, not a closed model pass; remote source/runtime
+remain frozen until the original controller is terminal.
+
+Local HTTP worker now binds the corrected attempt2 proof/verifier instead of
+the permanently failed first attempt. Seven CPU policy/notification tests and
+all805frozen request-admission checks pass on these actual new bytes, with real
+two-command ledger. Prepared launcher/server probe remain local and unrun. The
+probe first requires a real positive current-model proof, then actual queued
+nonstream/stream token-ID controls, complete805screen and two exact3968-input/
+128-output-reserve boundary controls. MTP also requires actual completed ordinary
+controls and exact ordinary/MTP IDs across all805screens and both long-context
+controls. Optional short41/104-token exploratory pilot remains explicitly
+different from a full4Kbenchmark or2x qualification. Corpus paths and both frozen
+boundary wire hashes/3968prompt counts were checked on CPU; no runtime4Krequest
+was sent. A guarded outer ownership/archive/scratch controller and actual corpus
+installation still precede execution. No new HTTP/model-quality/benchmark score
+or2x admission is claimed.

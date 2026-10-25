@@ -22,11 +22,11 @@ def validate_body(body,model='qwen38-27b-nvfp4'):
         raise ValueError('Inline JPEG required')
 
 root=Path(sys.argv[1]);mode=sys.argv[2];assert mode in ('ordinary','mtp')
-name='bf16-low-batch-model-consistency-attempt1';proof=json.loads((root/'results'/(name+'-verified.json')).read_bytes())
+name='bf16-low-batch-model-consistency-attempt2';proof=json.loads((root/'results'/(name+'-verified.json')).read_bytes())
 sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest();library=sha(root/'build/bin/garnet.dll')
 assert proof['status']=='bf16_low_batch_model_consistency_replayed' and proof['library_sha256']==library
 assert sha(root/'results'/(name+'-evidence.zip'))==proof['archive_sha256']
-assert proof['replay_verifier_sha256']==proof['archived_replay_verifier_sha256']==sha(Path(__file__).with_name('verify_bf16_low_batch_model.py'))
+assert proof['replay_verifier_sha256']==proof['archived_replay_verifier_sha256']==sha(Path(__file__).with_name('verify_bf16_low_batch_model_fixed.py'))
 b1=[v for v in proof['variants'] if v['label']=='b1'];assert len(b1)==1 and b1[0]['cases']==8 and b1[0]['ordinary_mtp_exact'] and b1[0]['prefix_counts']==[0,1,2,4]
 closed=json.loads((root/'results'/name/'workflow.json').read_bytes());assert closed['exit_code']==0 and closed['cleanup_finished'] and closed['library_unchanged'] and closed['source_sha256']==closed['source_after_sha256']
 for n,h in closed['source_sha256'].items():assert sha(root/n)==h,('Qualified model source drift',n)
