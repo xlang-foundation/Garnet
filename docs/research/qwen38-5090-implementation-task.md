@@ -73,7 +73,11 @@ acknowledged after source/DLL/cache/idle preflight. Eleven CPU controls also pas
 remotely. Fourteen prospective cases cover1/2/3/4real rows, unequal0/1/2/4accepted
 prefixes, rollback/pending ownership, full resets, frozen/duplicated private rows
 and early-finished color rows while a descriptive row continues. Model result is
-pending. Broad quality, B8, actual4K, protocol/serving and timing gates remain open.
+pending; last read-only observation has eight completed cases/noerror. External
+replay position check needs a prepared correction: image cursor48 differs from
+104cache slots. Original verifier/probe/preparation remain deployed unchanged;
+upload corrected checker only after original terminal/archive, retaining both
+checker versions. Broad quality, B8, actual4K, protocol/serving and timing stay open.
 Correctness adapter peaks are not serving-memory claims.
 
 Offline retained-trace analysis identifies BF16 top1 selection at70.24/70.14ms,
@@ -83,6 +87,20 @@ production caller, deployed change or speed result. Require330CPU/legacy/candida
 GPU comparisons, tie/signed-zero/nonfinite, capture/readonly/canary controls before
 integration, then full model/protocol gates and matched timing. This small subset
 cannot explain2x by itself; dominant matrix/batching/low-batch work stays in scope.
+Raw-observation probe now compiles/links with source pins before/after; seven
+independent CPU oracle controls pass.330fixture outputs are predeclared with
+1000GPU observations planned. Guarded standalone runner/replay/toolchain observer
+are prepared locally, not uploaded/run. Existing three remote sampler/header
+files match local bytes exactly. No production integration or new speed result.
+
+Broader quality preparation now includes a pinned public MMMU validation source
+audit (revision876ce5cb..., October2026 corrections included). All30Parquet blobs/
+341234748B hash-verify and900rows are CPU-inspected:805single-embedded-image MC
+candidates across30subjects;95excluded source rows with explicit reasons. This
+is structural selection before outputs, not a quality score or full official
+MMMU evaluation. Actual token/context/preprocessing and shared request/scoring
+protocol remain unprepared; no arbitrary quality margin adopted. Source images
+remain in fixed local cache, not Git. Actual inference/reference comparison is open.
 
 Actual4K request fixtures are CPU-prepared/replayed using the pinned tokenizer,
 exact chat template and64image slots:124requests,3968input tokens each plus

@@ -78,6 +78,24 @@ template<class T> void runType(std::ofstream& log, const char* type, int& cases,
             check(cudaMemcpyAsync(baselineScores.data(), gpuBaselineScores, scores.size()*4, cudaMemcpyDeviceToHost, stream));
             check(cudaStreamSynchronize(stream));
         };
+        auto observe = [&](const char* phase, int pattern, int repeat) {
+            log << "{\"kind\":\"observation\",\"dtype\":\"" << type << "\",\"rows\":" << rows << ",\"vocab\":" << vocab
+                << ",\"pattern\":" << pattern << ",\"phase\":\"" << phase << "\",\"repeat\":" << repeat;
+            auto integers = [&](const char* name, const auto& data) {
+                log << ",\"" << name << "\":[";
+                for (size_t i=0;i<data.size();++i) log << (i ? "," : "") << data[i];
+                log << "]";
+            };
+            auto floats = [&](const char* name, const auto& data) {
+                log << ",\"" << name << "\":[";
+                for (size_t i=0;i<data.size();++i) log << (i ? "," : "") << bits(data[i]);
+                log << "]";
+            };
+            integers("candidate_ids",ids);floats("candidate_score_bits",scores);
+            integers("legacy_ids",baselineIds);floats("legacy_score_bits",baselineScores);
+            integers("cpu_ids",expectedIds);floats("cpu_score_bits",expectedScores);
+            log << "}\n";log.flush();
+        };
         auto verify = [&] {
             require(ids == baselineIds, "candidate/legacy ID or canary difference");
             require(std::memcmp(scores.data(), baselineScores.data(), scores.size()*4) == 0, "candidate/legacy value or canary difference");
@@ -89,6 +107,8 @@ template<class T> void runType(std::ofstream& log, const char* type, int& cases,
             }
         };
         for (int pattern = 0; pattern < 11; ++pattern) {
+            log << "{\"kind\":\"case_started\",\"dtype\":\"" << type << "\",\"rows\":" << rows
+                << ",\"vocab\":" << vocab << ",\"pattern\":" << pattern << "}\n";log.flush();
             for (int row = 0; row < rows; ++row) {
                 float best = -std::numeric_limits<float>::max(); long long index = 0;
                 for (int col = 0; col < vocab; ++col) {
@@ -105,7 +125,7 @@ template<class T> void runType(std::ofstream& log, const char* type, int& cases,
             clear(); legacy(x,gpuBaselineIds+2,gpuBaselineScores+2,rows,vocab,stream);
             for (int repeat = 0; repeat < 3; ++repeat) {
                 check(candidate::run(x,gpuIds+2,gpuScores+2,rows,vocab,stream));
-                readOutputs(); verify();
+                readOutputs();observe("normal",pattern,repeat);verify();
             }
             check(cudaMemcpyAsync(after.data(),x,host.size()*sizeof(T),cudaMemcpyDeviceToHost,stream));
             check(cudaStreamSynchronize(stream));
@@ -120,13 +140,13 @@ template<class T> void runType(std::ofstream& log, const char* type, int& cases,
             // actual current B4 vocabulary. No performance numbers are taken.
             if (rows==4 && vocab==248320 && pattern==0) {
                 check(candidate::run(x,gpuIds+2,static_cast<float*>(nullptr),rows,vocab,stream));
-                readOutputs();verify();
+                readOutputs();observe("nullable_score",pattern,0);verify();
                 cudaGraph_t graph;cudaGraphExec_t executable;
                 check(cudaStreamBeginCapture(stream,cudaStreamCaptureModeGlobal));
                 check(candidate::run(x,gpuIds+2,gpuScores+2,rows,vocab,stream));
                 check(cudaStreamEndCapture(stream,&graph));
                 check(cudaGraphInstantiate(&executable,graph,nullptr,nullptr,0));
-                for (int repeat=0;repeat<3;++repeat) {check(cudaGraphLaunch(executable,stream));readOutputs();verify();}
+                for (int repeat=0;repeat<3;++repeat) {check(cudaGraphLaunch(executable,stream));readOutputs();observe("graph",pattern,repeat);verify();}
                 check(cudaMemcpyAsync(after.data(),x,host.size()*sizeof(T),cudaMemcpyDeviceToHost,stream));
                 check(cudaStreamSynchronize(stream));
                 require(std::memcmp(host.data(),after.data(),host.size()*sizeof(T))==0,"captured readonly input changed");
@@ -135,12 +155,18 @@ template<class T> void runType(std::ofstream& log, const char* type, int& cases,
             }
         }
         if (rows==4 && vocab==248320) {
+            auto reject = [&](const char* label, cudaError_t status) {
+                log << "{\"kind\":\"rejection\",\"dtype\":\"" << type << "\",\"label\":\"" << label
+                    << "\",\"status\":" << int(status) << ",\"expected\":" << int(cudaErrorInvalidValue) << "}\n";log.flush();
+                require(status==cudaErrorInvalidValue,"invalid candidate call accepted");++rejected;
+            };
             for (auto args : std::vector<std::pair<int,int>>{{0,vocab},{129,vocab},{rows,0},{rows,-1}}) {
-                require(candidate::run(x,gpuIds+2,gpuScores+2,args.first,args.second,stream)==cudaErrorInvalidValue,"invalid dimensions accepted");++rejected;
+                const std::string label="dimensions-"+std::to_string(args.first)+"-"+std::to_string(args.second);
+                reject(label.c_str(),candidate::run(x,gpuIds+2,gpuScores+2,args.first,args.second,stream));
             }
-            require(candidate::run(static_cast<const T*>(nullptr),gpuIds+2,gpuScores+2,rows,vocab,stream)==cudaErrorInvalidValue,"null input accepted");++rejected;
-            require(candidate::run(x,static_cast<long long*>(nullptr),gpuScores+2,rows,vocab,stream)==cudaErrorInvalidValue,"null IDs accepted");++rejected;
-            readOutputs();verify();
+            reject("null-input",candidate::run(static_cast<const T*>(nullptr),gpuIds+2,gpuScores+2,rows,vocab,stream));
+            reject("null-ids",candidate::run(x,static_cast<long long*>(nullptr),gpuScores+2,rows,vocab,stream));
+            readOutputs();observe("after_rejections",10,0);verify();
         }
         check(cudaFree(x));check(cudaFree(gpuIds));check(cudaFree(gpuBaselineIds));check(cudaFree(gpuScores));check(cudaFree(gpuBaselineScores));
     }

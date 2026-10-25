@@ -3653,3 +3653,97 @@ shortlist cannot be simply enabled here: current PredictIndexed explicitly
 rejects packed NVFP4 heads; no flag changed. Plan component GPU controls alone
 only after lifecycle job terminal/verified, before deciding integration. Larger
 matrix/state/batching and direct C1 work remain necessary for full2x target.
+
+
+2026-10-25 UTC: previous goal turn made concrete progress by closing/replaying
+full packed ordinary/MTP corpus and starting lifecycle qualification, pushed
+fa549e9ec. This turn original bf16-padded-lifecycle-attempt1 repeatedly confirmed
+live; no restart on silence. At06:14UTC its own report records8completed cases
+(groups0..3 repeated),1/1/2/3real rows, empty-state witness ready,0prefix controls/
+noerror. These are live observations only, not final archive qualification.
+No live deployed source/DLL/runtime mutation. Unrelated external-prefix file kept.
+
+Prospective raw token-selector probe now saves candidate/legacy GPU IDs+score
+bits and independent serial CPU IDs+bits BEFORE each admission assertion, with
+phase/repeat/control metadata.330cases planned,3normal repeats each plus capture/
+nullable/invalid-call observations =1000raw observations;1675JSONL records expected
+only on complete success. Failure raw values/truncated tails are preserved rather
+than turning flags into unobserved success. Independent NumPy fixture generator
+uses integer BF16 RN-even then vector maxima/first index, not candidate packed
+keys or CUDA conversion. Seven CPU analytical/serial controls pass: sentinel/
+NaN/-infinity/+infinity, lowest-index boundary ties, signed zero, BF16 subnormal
+rounding, seeded separate serial scan and typed metadata/cache-key rejection.
+330CPU fixture outputs predeclared BEFORE any GPU execution:194663B,
+ed5e9742cb732b56f6126eba89cbb4fd0f29f156c1e61b504f7bb1444268ca5d.
+They are synthetic CPU expected data, not GPU observations or model benchmarks.
+
+Raw probe compilation/link pass on local CPU forsm120 with9source/batch artifacts
+hashed BEFORE/after commands. Original unrun probe/source/compile evidence kept;
+new raw build uses separate fixedwork outputs and ledger. First local CPU unittest
+ran from chat cwd and could not importtest2026; raw failure preserved, corrected
+by using actual repo cwd without rebuilding/altering GPU code. Corrected7tests
+pass, Python3.12.10/NumPy1.26.4 recorded. No local4080 use/shared SDK/runtime/venv
+mutation. Standalone guarded runner/replayer/compile and actual-compiler observer
+prepared, notuploaded or GPUexecuted. Explicit compiler path forced and hashed;
+future standalone job requires original current worker terminal, parent archive
+replayed, owned fixed scratch and GPUidle. A preserved model failure may be only
+an observational parent for independent operator controls; no model promotion.
+No loaded runtime DLL, production caller, component timing or model speed claim.
+
+Untimed read-only remote source/tool-path inspection (one separate evidence log
+written outside worker results) confirms cuda_lib.h, logits_sampler_kernel.cu and
+repetition_sampler.h byte-identical to local; compiler paths exist, new candidate
+header and fixed componenttools folder absent. Metadata transfer acknowledged and
+validated before local use. No new GPU query/sampler or deployed file mutation.
+Current lifecycle verifier remains its original51451a54... version on remote.
+
+Static review found its prospective external replay conflates rotary positions
+with cache slots in explicit prefix control. Independent real archived prompt-ID
+CPU regression confirms text41/image104cache slots, but next rotary cursor is
+41/48, because64image tokens occupy an8x8merged grid. Prefix after-slots41/105/
+43/108 stay correct. Preserved original verifier snapshot51451a54670a29625cd0279cec1a3c836f5badebaf1b0195bc72c00fc7cf4779;
+prepared corrected external verifier0d5e52f7337282395670749357bf28f54a132d08b8d167130fd4e99e0b1e3a20
+locally only. It derives positions independently from pinned original prompt IDs/
+image geometry while preserving exact slot, prediction/state/vector/control
+checks. This is NOT a model/GPU failure or a successful replay yet; do not run a
+known-bad checker to manufacture a historical failure. Require original worker
+terminal/archive before corrected-verifier upload; preserve archive/its original
+verifier bytes and report current vs archived verifier hashes separately.
+
+Broader-quality evidence preparation: consulted primary official MMMU dataset
+card and evaluator via GitHub connector, not third-party leaderboard scores.
+Current HF revision876ce5cb130f7f7e290ce4d9984357737d4db5cf, lastmodified2026-10-05,
+includes reported July2026label and October2026question corrections. Pinned API
+metadata1ceaac8ee4e5a08f8d0a601acc37f16f419e403dff5246c1094d169f58179e2e,
+recursive tree98291189705e400edc63456e463a3704752dbcc1bf1ed953df8e4c852a9fa58e.
+Downloaded only30validation Parquets into one fixed localwork/mmmu/parquet cache;
+all341234748B match provider LFS SHA256/size, source URLs pinned to revision.
+Acquisition original local handle completed0 and raw ledger/events retained.
+No dev/test splits, model weights, remote dataset copy or inference requests.
+
+No bundled/repo Parquet reader existed. Loaded a private CPU-only DuckDB2.0.0
+CP312abi3win_amd64 wheel,15368860B, verified official PyPI SHA256
+f61c96547ed432f54dae42a717fd88563eda55cb47549715fac9f61f770c205a,
+into only fixedchatwork/mmmu/duckdb-runtime; shared venv/SDK untouched. Initial
+wheel lookup assumedCP312-specific ABI and rejected the newerabi3tag; compatible
+wheel selected with actual packaging.sys_tags, no arbitrary wheel/ABI assumed.
+CPU SQL smoke and hash-bound Parquet read work, autoinstall/autoload extensions
+disabled, memory512MB/oneCPUthread. Official evaluator text Git blob
+a2cf3099f86393ce51acfe7b832ded9870358635 verified (one extra serialization newline
+removed before exact blob check), retained as local reference text, neverexecuted.
+It uses random-choice fallback on unparsed MC responses; any adapted strict
+scoring protocol must be explicit and cannot claim official leaderboard score.
+
+Actual CPU coverage audit ofALL900rows/30subjects:847MC/53open; image counts
+1:857,2:24,3:5,4:8,5:6.805single-embedded-image MC candidates selected solely from
+source structure before any model response;95source rows excluded, with every
+ID/reason, question/options/answer hashes, per-subject counts and source hashes
+retained. Reason occurrences can overlap (53open also lack MC options;43multi-
+image rows). No unsupported gold label or unresolved image reference detected.
+Actual prompt/context IDs, image preprocessing, requests, scoring and model/
+reference results are still UNPREPARED. No quality threshold/waiver adopted,
+no inferred accuracy or full900question/MMMUleaderboard claim. Dataset images/
+questions remain privatecache, not Git; compact metadata/audit/methods retained
+onbranch and source audit delivered inoutputs. This broad-source preparation
+advances an open quality requirement without replacing actual4K/tuned-MTPref/
+INT4/matched4B/clean-repeat or original2x/halfTTFT goals. All remain open/unmet.
