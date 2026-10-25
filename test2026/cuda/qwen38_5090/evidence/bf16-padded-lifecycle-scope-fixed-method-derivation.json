@@ -1,0 +1,78 @@
+{
+  "run_bf16_padded_lifecycle_scope_fixed.py": {
+    "source": "run_bf16_padded_lifecycle.py",
+    "source_sha256": "d1ab99d98fe035660a2eca5eadf06980db013d72110d985c5f06233cec58ec6c",
+    "replacements": [
+      [
+        "bf16-padded-lifecycle-attempt1",
+        "bf16-padded-lifecycle-scope-fixed-attempt2",
+        1
+      ],
+      [
+        "bf16-padded-lifecycle-preparation.json",
+        "bf16-padded-lifecycle-scope-fixed-preparation.json",
+        1
+      ],
+      [
+        "test_bf16_padded_lifecycle.bat",
+        "test_bf16_padded_lifecycle_scope_fixed.bat",
+        1
+      ],
+      [
+        "idle();out.mkdir();",
+        "prior=json.loads((results/'bf16-padded-lifecycle-attempt1/workflow.json').read_bytes())\nassert prior['exit_code']!=0 and prior['cleanup_finished'] and prior['library_unchanged']\npriorproof=results/'bf16-padded-lifecycle-attempt1-verified.json'\nassert sha(priorproof.read_bytes())==p['preserved_failure_proof_sha256']\nassert json.loads(priorproof.read_bytes())['status']=='bf16_padded_lifecycle_failure_preserved'\nidle();out.mkdir();",
+        1
+      ],
+      [
+        "+[prep_path,proofpath,receipt,fixture]",
+        "+[prep_path,proofpath,receipt,fixture,priorproof]",
+        1
+      ]
+    ],
+    "result_sha256": "c9d902f2979fc3663c0b7a25ab0a87c375b249bf05a43aa03617def2c6edb007"
+  },
+  "test_bf16_padded_lifecycle_scope_fixed.bat": {
+    "source": "test_bf16_padded_lifecycle.bat",
+    "source_sha256": "683704e91abcdbcecb0c69d809361d759ee087f8ce979ee82e38a9e47f2d57d7",
+    "replacements": [
+      [
+        "probe_bf16_padded_lifecycle.py",
+        "probe_bf16_padded_lifecycle_scope_fixed.py",
+        1
+      ]
+    ],
+    "result_sha256": "7dc309a786a776750f1ffb1e99289e6f075588fdcc73246126e60bbe3046b529"
+  },
+  "verify_bf16_padded_lifecycle_scope_fixed.py": {
+    "source": "verify_bf16_padded_lifecycle.py",
+    "source_sha256": "0d5e52f7337282395670749357bf28f54a132d08b8d167130fd4e99e0b1e3a20",
+    "replacements": [
+      [
+        "bf16-padded-lifecycle-attempt1",
+        "bf16-padded-lifecycle-scope-fixed-attempt2",
+        1
+      ],
+      [
+        "bf16-padded-lifecycle-preparation.json",
+        "bf16-padded-lifecycle-scope-fixed-preparation.json",
+        1
+      ],
+      [
+        " with zipfile.ZipFile(out/(parent+'-evidence.zip')) as parent_zip:",
+        " fixed_recipe=doc(methods+'evidence/bf16-padded-lifecycle-scope-fixed-probe-derivation.json')\n assert fixed_recipe['source']=='probe_bf16_padded_lifecycle.py' and fixed_recipe['source_sha256']==sha(result)\n fixed=result.decode()\n for before,after in fixed_recipe['changes']:\n  assert fixed.count(before)==1;fixed=fixed.replace(before,after,1)\n assert fixed.encode()==z.read(methods+'probe_bf16_padded_lifecycle_scope_fixed.py')\n assert sha(fixed.encode())==fixed_recipe['result_sha256']\n oldproof=doc('results/bf16-padded-lifecycle-attempt1-verified.json')\n assert oldproof['status']=='bf16_padded_lifecycle_failure_preserved'\n assert sha(z.read('results/bf16-padded-lifecycle-attempt1-verified.json'))==p['preserved_failure_proof_sha256']\n assert oldproof['archive_sha256']==manifest['linked_archives']['bf16-padded-lifecycle-attempt1-evidence.zip']\n with zipfile.ZipFile(out/(parent+'-evidence.zip')) as parent_zip:",
+        1
+      ],
+      [
+        "   prefix=r['prefix_controls'][0];",
+        "   assert r['prefix_progress']['phase']=='passed'\n   prefix=r['prefix_controls'][0];",
+        1
+      ],
+      [
+        "sha(z.read(methods+'verify_bf16_padded_lifecycle.py'))",
+        "sha(z.read(methods+'verify_bf16_padded_lifecycle_scope_fixed.py'))",
+        1
+      ]
+    ],
+    "result_sha256": "15cde1d41f6de69afddfffbaa88a96a212085daedb4a80619bb83b482c921dfe"
+  }
+}

@@ -1,0 +1,31 @@
+"""Private CPU policy execution and compile/link only. Never runs CUDA code."""
+from pathlib import Path
+import hashlib,json,sys
+repo=Path('D:/CantorAI/work/qwen38-5090');m=repo/'test2026/cuda/qwen38_5090'
+sys.path.insert(0,str(m));from run_logged import run
+chat=Path(__file__).resolve().parents[1];work=chat/'work/parallel-top1';e=m/'evidence'
+sha=lambda f:hashlib.sha256(f.read_bytes()).hexdigest()
+names=['src/cuda/logits_sampler_kernel.cu','src/cuda/logits_top1_batch_dispatch.h','src/cuda/logits_top1_batch_parallel_candidate.cuh',
+ 'src/cuda/cuda_lib.h','src/cuda/repetition_sampler.h','src/backends/tensorrt/cuda_tensor_io.cpp','CMakeLists.txt',
+ 'test2026/native/logits_top1_batch_policy_test.cpp']
+names+=['test2026/cuda/qwen38_5090/'+n for n in ['probe_integrated_batch_top1.cu','probe_legacy_batch_top1.cu',
+ 'evidence/parallel-batch-top1-legacy-sampler.cu.txt','evidence/integrated-batch-top1-probe-derivation.json']]
+pins={n:sha(repo/n) for n in names}
+assert pins['test2026/cuda/qwen38_5090/evidence/parallel-batch-top1-legacy-sampler.cu.txt']=='03fe834a8c1c66a3c0d1961ce25e8beed90c2818a53966a878c85bda8fbb1cf6'
+setup='@echo off\ncall "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Auxiliary\\Build\\vcvars64.bat" -vcvars_ver=14.29\nif errorlevel 1 exit /b %errorlevel%\nset "TMP=%~dp0"\nset "TEMP=%TMP%"\n'
+policy=work/'integration-policy-local.bat'
+policy.write_text(setup+'cl /nologo /EHsc /std:c++17 /MT "'+str(repo/names[7])+'" /Fo"%~dp0integration-policy.obj" /Fe"%~dp0integration-policy.exe"\nif errorlevel 1 exit /b %errorlevel%\n"%~dp0integration-policy.exe"\nexit /b %errorlevel%\n',encoding='utf8')
+build=work/'integration-link-local.bat'
+args=' '.join('"'+str(f)+'"' for f in (m/'probe_integrated_batch_top1.cu',m/'probe_legacy_batch_top1.cu',repo/'src/cuda/logits_sampler_kernel.cu'))
+build.write_text(setup+'"C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v13.2\\bin\\nvcc.exe" --std c++17 -arch=sm_120 -O3 -Xcompiler /MT -I"'+str(repo/'src/cuda')+'" '+args+' -o "%~dp0integration-probe.exe"\nexit /b %errorlevel%\n',encoding='utf8')
+for bat,kind,label in [(policy,'correctness','CPU exact opt-in and fallback boundaries'),(build,'build','Compile/link production dispatch and frozen legacy GPU controls; executable deliberately not run')]:
+ code=run(['cmd.exe','/d','/c',str(bat)],work/'integration-local-ledger',kind,label,[bat]+[repo/n for n in names])
+ if code:raise SystemExit(code)
+assert pins=={n:sha(repo/n) for n in names}
+receipt={'status':'integrated_top1_cpu_policy_and_compile_link_passed_gpu_unrun','source_sha256':pins,
+ 'binary_sha256':sha(work/'integration-probe.exe'),'cpu_policy_binary_sha256':sha(work/'integration-policy.exe'),
+ 'gpu_executed':False,'native_plugin_built':False,'remote_uploaded':False,'performance_admitted':False,
+ 'scope':'Private local sm120 compile/link and CPU policy execution. CUDA executable is not run; tensor-IO compilation and model qualification still pending.'}
+(e/'integrated-batch-top1-local-build.json').write_text(json.dumps(receipt,indent=2),encoding='utf8')
+for n in ('commands.jsonl','commands.log'):(e/('integrated-batch-top1-local-'+n)).write_bytes((work/'integration-local-ledger'/n).read_bytes())
+print(json.dumps(receipt,indent=2))

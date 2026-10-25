@@ -1,0 +1,9 @@
+@echo off
+call "C:\Program Files\Microsoft Visual Studio\18\Community\VC\Auxiliary\Build\vcvars64.bat" -vcvars_ver=14.29
+if errorlevel 1 exit /b %errorlevel%
+set "TMP=%~dp0"
+set "TEMP=%TMP%"
+cl /nologo /EHsc /std:c++17 /MT "D:\CantorAI\work\qwen38-5090\test2026\native\logits_top1_batch_policy_test.cpp" /Fo"%~dp0integration-policy.obj" /Fe"%~dp0integration-policy.exe"
+if errorlevel 1 exit /b %errorlevel%
+"%~dp0integration-policy.exe"
+exit /b %errorlevel%

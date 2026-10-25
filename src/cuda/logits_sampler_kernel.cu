@@ -3,9 +3,32 @@
 
 #include "cuda_lib.h"
 #include "repetition_sampler.h"
+#include "logits_top1_batch_dispatch.h"
+#include "logits_top1_batch_parallel_candidate.cuh"
+#include <atomic>
+#include <cstdlib>
 
 #include <cuda_bf16.h>
 #include <cuda_runtime.h>
+
+namespace Garnet {
+namespace {
+std::atomic<std::uint64_t> batchTop1LegacyHostCalls{0}, batchTop1ParallelHostCalls{0};
+bool ParallelBatchTop1Enabled() {
+    static const bool enabled = ParseParallelBatchTop1(std::getenv("GARNET_PARALLEL_BATCH_TOP1"));
+    return enabled;
+}
+bool DispatchParallelBatchTop1(int rows, int vocab) {
+    const bool parallel = SelectParallelBatchTop1(ParallelBatchTop1Enabled(), rows, vocab);
+    (parallel ? batchTop1ParallelHostCalls : batchTop1LegacyHostCalls).fetch_add(1, std::memory_order_relaxed);
+    return parallel;
+}
+}
+BatchTop1DispatchSnapshot GetBatchTop1DispatchSnapshot() {
+    return {ParallelBatchTop1Enabled(), batchTop1LegacyHostCalls.load(std::memory_order_relaxed),
+        batchTop1ParallelHostCalls.load(std::memory_order_relaxed)};
+}
+}
 
 namespace
 {
@@ -343,6 +366,8 @@ extern "C" cudaError_t runLogitsTop1BatchFP32(
     if (!logits || !outputTokenIds || rows <= 0 || vocabSize <= 0) {
         return cudaErrorInvalidValue;
     }
+    if (Garnet::DispatchParallelBatchTop1(rows, vocabSize))
+        return Garnet::ParallelBatchTop1Candidate::run(logits, outputTokenIds, outputTokenValues, rows, vocabSize, stream);
     logitsTop1BatchKernel<<<rows, 256, 0, stream>>>(
         logits, outputTokenIds, outputTokenValues, vocabSize);
     return cudaGetLastError();
@@ -359,6 +384,8 @@ extern "C" cudaError_t runLogitsTop1BatchBF16(
     if (!logits || !outputTokenIds || rows <= 0 || vocabSize <= 0) {
         return cudaErrorInvalidValue;
     }
+    if (Garnet::DispatchParallelBatchTop1(rows, vocabSize))
+        return Garnet::ParallelBatchTop1Candidate::run(reinterpret_cast<const __nv_bfloat16*>(logits), outputTokenIds, outputTokenValues, rows, vocabSize, stream);
     logitsTop1BatchBF16Kernel<<<rows, 256, 0, stream>>>(
         reinterpret_cast<const __nv_bfloat16*>(logits),
         outputTokenIds, outputTokenValues, vocabSize);

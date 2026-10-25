@@ -3801,3 +3801,58 @@ separately gated native integration plus full model/protocol qualification with
 scope-fixed harness, not a2x claim from a roughly4percent old-trace component.
 Full2x/halfTTFT, actual4K, broad quality with real responses, fastest tuned/MTP
 references, INT4/matched4B and clean repeated HTTP still remain open/unmet.
+
+
+## Full lifecycle scope retry and local production dispatch preparation
+
+The preceding HTTP explanation was informational and added no experiment evidence.
+This continuation preserves the original scope and advances the actual implementation.
+Original lifecycle attempt1 and standalone operator handles were re-polled terminal
+(exit1 and exit0 respectively). The remote preflight then verified60sources,
+30methods, old97c DLL, preserved archives and owned SSD scratch; GPU use was109MiB.
+Seven new method/preparation uploads were acknowledged before starting the single
+original handle `bf16-padded-lifecycle-scope-fixed-attempt2`. Eleven remote CPU
+controls passed. The native worker is still live at the latest original-handle
+poll; no model result is admitted and there was no restart for silence. The
+read-only intermediate report showed construction status with zero completed
+cases. Full14cases,102raw vectors, unequal prefixes, resets, dummy isolation and
+retirement remain mandatory. Old failure remains failed, not superseded as a pass.
+
+Local integration now routes only batch FP32/BF16 top1 when the exact environment
+value `GARNET_PARALLEL_BATCH_TOP1=1` is observed before first sampler/memory query.
+The mode is process-static, with rows1..128 and vocabulary>=8192; otherwise the
+original legacy sampler remains. Null/nonpositive inputs still reject before
+routing; row129 remains valid legacy fallback. Single-last-row and repetition
+samplers are unchanged. The qualified parallel kernel header is byte-identical.
+`memory_json` exposes mode, bounds and relaxed atomic host dispatch-attempt counters;
+these include capture construction and exclude CUDA graph replays, so they are
+not token counts or completed GPU kernel counts. No remote source/DLL/runtime
+or SDK was changed while the lifecycle worker was live.
+
+Private local compilation succeeded for the production dispatch plus preserved
+legacy GPU comparator, CPU parser/boundary executable (9parse/112boundary checks),
+and the changed tensor-IO host translation unit. All objects/executables were
+written under the existing chat `work/parallel-top1` directory, without invoking
+the shared native build or running local CUDA code. The local SDK identity is
+recorded and does not qualify the different remote ABI. Raw compiler warnings
+are retained. Final19CPU tests passed: original/extended independent fixture
+oracles, existing model/profile guards and private-padding contracts. New Python
+methods and literal probe/runner derivations also passed syntax/identity checks.
+
+The prepared production-API GPU workload retains all330 original expected outputs
+and adds22 row129/vocab7 fallback cases. Each of four processes (explicit0,
+explicit1, unset and malformed01) must produce352cases/1066raw observations,
+2capture profiles and12invalid-call results, with serial CPU, frozen legacy GPU,
+raw IDs/score bits, canaries, readonly and nullable-output controls. It changes
+the environment after the first mode snapshot to test that dispatch stays frozen.
+Expected1060host attempts split466parallel/594legacy for enabled and0/1060 for
+allother modes, independently derived from shape inventory. Separate guarded
+runner, compiler and archive/raw replay methods are prepared. Runtime preparation
+is deliberately absent until the full lifecycle parent is closed/replayed and
+remote installation is safe; these new methods have not run on the GPU.
+
+The selector occupies about4percent of the retained prior trace. No2x claim,
+model-quality promotion, new benchmark or serving-memory claim follows from
+these changes. After the complete production/model/protocol gates, measure its
+actual end-to-end effect and continue the larger matrix/batching, B8, public
+quality, actual4K and matched reference/4B work required by the original goal.

@@ -6,6 +6,7 @@
 #include "modelopt_joined_mlp.h"
 #include "tensor_helper.h"
 #include "cuda_lib.h"
+#include "../../cuda/logits_top1_batch_dispatch.h"
 #include "../../cuda/qwen35_indexed_head.cuh"
 #include "../../cuda/qwen35_prefix_commit.cuh"
 #include "../../cuda/modelopt_nvfp4.cuh"
@@ -698,9 +699,13 @@ std::string CUDATensorIO::MemoryJson() const{
         compressedBytes+=bytes(item.second.packed);compressedScaleBytes+=bytes(item.second.scales);++compressedEntries;
         if(item.second.nvfp4)++nvfp4Entries;else ++fp8Entries;
     }
+    const auto batchTop1 = GetBatchTop1DispatchSnapshot();
     return nlohmann::json{{"vocab_size",vocab_},{"hidden_size",width_},{"embedding_head_tied",!untiedHead_.IsValid()&&!packedHead_.IsValid()},
         {"embedding_table_bytes",bytes(table_)},{"model_open",modelOpen_},
         {"embedding_mode",hostEmbedding_?"host_mapped_bf16":"device_bf16"},{"host_embedding_mapped_tensor_bytes",hostEmbeddingSize_},{"untied_head_bytes",bytes(untiedHead_)+bytes(packedHead_)+bytes(packedHeadScales_)},
+        {"batch_top1_parallel_enabled",batchTop1.enabled},{"batch_top1_parallel_max_rows",128},{"batch_top1_parallel_min_vocab",8192},
+        {"batch_top1_legacy_host_dispatch_calls",batchTop1.legacyHostCalls},{"batch_top1_parallel_host_dispatch_calls",batchTop1.parallelHostCalls},
+        {"batch_top1_counter_scope","host dispatch attempts including capture construction; excludes GPU graph replays"},
         {"head_precision",nativeNVFP4Head_?"modelopt_nvfp4_w4a4":(packedHead_.IsValid()?"modelopt_nvfp4_w4a16":"bf16")},
         {"native_head_workspace_bytes",bytes(nativeHeadTiledScales_)+bytes(nativeHeadPackedInput_)+bytes(nativeHeadInputScales_)+bytes(nativeHeadWorkspace_)},
         {"native_head_tiled_weight_scales_bytes",bytes(nativeHeadTiledScales_)},
