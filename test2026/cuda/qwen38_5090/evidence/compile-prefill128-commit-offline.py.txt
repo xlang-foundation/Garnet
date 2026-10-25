@@ -1,0 +1,42 @@
+"""Offline SM120 object compilation only; never load/execute a CUDA program."""
+from pathlib import Path
+import hashlib,json,os,sys
+repo=Path('D:/CantorAI/work/qwen38-5090');m=repo/'test2026/cuda/qwen38_5090';w=Path(__file__).resolve().parent
+build=w/'prefill128-commit-offline-build';assert not build.exists();build.mkdir();(build/'keep').mkdir()
+sdk=Path('C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v13.2')
+vcvars=Path('C:/Program Files/Microsoft Visual Studio/18/Community/VC/Auxiliary/Build/vcvars64.bat')
+sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+inputs={str(p):sha(p) for p in (m/'qwen38_bf16_prefill128_commit.cu',m/'qwen38_bf16_prefill128_commit.cuh',repo/'src/cuda/qwen38_bf16_kv_commit.cuh',vcvars)}
+sdk_names=('bin/nvcc.exe','bin/ptxas.exe','nvvm/bin/cicc.exe','include/crt/host_config.h','include/cuda_runtime.h','include/cuda_runtime_api.h','include/cuda_bf16.h','include/cuda_bf16.hpp')
+sdk_hashes={str(sdk/n):sha(sdk/n) for n in sdk_names}
+nvcc=sdk/'bin/nvcc.exe';obj=build/'prefill128_commit.obj'
+common=f'"{nvcc}" -std=c++17 -arch=sm_120 -c -I"{repo}/src/cuda" -Xcompiler /MT --keep --keep-dir "{build}/keep" "{m}/qwen38_bf16_prefill128_commit.cu" -o "{obj}"'
+bat=build/'compile.bat'
+text=f'''@echo off
+setlocal
+call "{vcvars}" -vcvars_ver=14.29
+if errorlevel 1 exit /b %errorlevel%
+set "TMP={build}"
+set "TEMP={build}"
+"{nvcc}" --version
+if errorlevel 1 exit /b %errorlevel%
+{common} --dryrun > "{build}/nvcc-dryrun.txt" 2>&1
+if errorlevel 1 exit /b %errorlevel%
+{common} --ptxas-options=-v
+if errorlevel 1 exit /b %errorlevel%
+dumpbin /headers "{obj}" > "{build}/object-headers.txt"
+exit /b %errorlevel%
+'''
+bat.write_bytes(text.replace('\n','\r\n').encode());sys.path.insert(0,str(repo))
+from test2026.cuda.qwen38_5090.run_logged import run
+os.chdir(repo)
+code=run(['cmd.exe','/d','/c',str(bat)],build/'ledger','build','Offline nvcc13.2 SM120 compilation of isolated T128 final-prefill commit object only; explicit architecture, no model/GPU/CUDA-target execution or production build-tree changes',[Path(p) for p in inputs]+[bat])
+assert all(sha(Path(p))==h for p,h in inputs.items()) and all(sha(Path(p))==h for p,h in sdk_hashes.items())
+outputs={p.relative_to(build).as_posix():{'bytes':p.stat().st_size,'sha256':sha(p)} for p in build.rglob('*') if p.is_file()}
+result={'status':'prefill128_commit_offline_sm120_object_compiled' if code==0 else 'prefill128_commit_offline_compile_failure_preserved','exit_code':code,
+        'compiler_family':'CUDA13.2 local offline only; remote production uses different pinned CUDA13.0 and must rebuild/qualify separately',
+        'inputs':inputs,'sdk_before_after_unchanged':sdk_hashes,'outputs':outputs,'object_sha256':sha(obj) if obj.exists() else None,
+        'cuda_program_executed':False,'gpu_executed':False,'runtime_or_sdk_or_production_build_mutated':False,'full_target_prefill128_implemented':False,
+        'component_gpu_math_qualified':False,'model_qualified':False,'performance_admitted':False,'two_times_target_achieved':False,
+        'scope':'Compile existing isolated new B1/T128 final-prefill commit CUDA source to a private relocatable SM120 COFF object using nvcc/cl/cicc/ptxas CPU tools. No executable produced or launched, no Garnet runtime load, no local GPU query/context, no SDK/source/default-glob changes. This is syntax/architecture compilation evidence only. Actual remote component canaries/BF16 math/full model/memory/HTTP/performance and T128 forward operators remain unimplemented or unqualified.'}
+(build/'result.json').write_bytes(json.dumps(result,indent=2).encode());print(json.dumps({'status':result['status'],'exit_code':code,'object_sha256':result['object_sha256'],'gpu_executed':False}));raise SystemExit(code)

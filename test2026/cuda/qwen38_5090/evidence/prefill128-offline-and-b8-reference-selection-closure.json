@@ -1,0 +1,31 @@
+{
+  "status": "prefill128_offline_object_and_b8_reference_selection_cpu_only",
+  "offline_object_compilation": {
+    "archive_sha256": "c2667091dc6208760f6869714791eb791247ff1b7e1efb964bffd1274db619e2",
+    "archive_bytes": 38480,
+    "files": 10,
+    "object_sha256": "4bd87f1c7f474a81e1ff26817308942c57a6b627b1584c1b541609e51082b7af",
+    "exit_code": 0,
+    "gpu_executed": false,
+    "source_and_sdk_unchanged": true
+  },
+  "reference_selection_controls": {
+    "status": "batch8_reference_row_projection_cpu_controls_passed",
+    "cpu_controls": 9,
+    "retained_actual_b8_archive_sha256": "bdd7978b9969c26fbe931da134ec66b7bd73fdf5247c0033f9b8fd98100aa01f",
+    "actual_b8_state_witnesses_validated": 29,
+    "four_row_witness_projections": 58,
+    "raw_vector_projection_checks": 116,
+    "independent_fresh_b4_model_executed": false,
+    "external_b8_b4_numerical_equivalence_qualified": false,
+    "gpu_executed": false,
+    "performance_admitted": false,
+    "two_times_target_achieved": false,
+    "scope": "CPU-only selection and schema/finite-vector controls over actual retained B8 ordinary witnesses. Reference sides here are subsets of those same B8 bytes, not fresh independent B4 outputs. Existing strict B4 same-precision validator and native B4 profile guards remain unchanged. Actual fresh same-input B4 FP32-cache/BF16-value model runs and exact all-component/raw-vector/ID comparison are still required."
+  },
+  "live_job": "paged-batch8-model-preservation-attempt1",
+  "last_partial_cases_passed": 6,
+  "new_benchmark_collected": false,
+  "two_times_target_achieved": false,
+  "scope": "Offline CUDA13.2 SM120 object compilation only; remote CUDA13.0 must rebuild and run independent component tests. T128 complete forward model/runtime/math/memory/HTTP/performance still unqualified. CPU B8-to-B4 row selection cannot establish independent numerical equivalence; fresh B4 reference runs remain required. Original live B8 owner is preserved; no new remote GPU job/upload or local GPU program executed."
+}

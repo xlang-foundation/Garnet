@@ -1,0 +1,23 @@
+from pathlib import Path
+import hashlib,json,os,sys,zipfile
+repo=Path('D:/CantorAI/work/qwen38-5090');m=repo/'test2026/cuda/qwen38_5090';w=Path(__file__).resolve().parent;out=w.parent/'outputs';sys.path.insert(0,str(repo))
+from test2026.cuda.qwen38_5090.run_logged import run
+from test2026.cuda.qwen38_5090.bf16_batch8_reference_gate import four_complete_rows,same_reference_vectors
+os.chdir(repo);code=run([sys.executable,'-m','unittest','test2026.cuda.qwen38_5090.test_bf16_batch8_reference_gate','test2026.cuda.qwen38_5090.test_bf16_same_precision_gate'],w/'batch8-reference-gate-cpu-ledger','correctness',
+    'Nine synthetic complete-state/independent-layout/row-map/raw-vector/NaN/fault controls, durable source-pinned ledger; no model execution',
+    [m/n for n in ('bf16_batch8_reference_gate.py','test_bf16_batch8_reference_gate.py','bf16_same_precision_gate.py','bf16_batch8_admission.py')]);assert code==0
+name='bf16-batch8-model-admission-attempt1';archive=out/(name+'-evidence.zip');sha=lambda raw:hashlib.sha256(raw).hexdigest();q=json.loads((out/(name+'-verified.json')).read_bytes());assert sha(archive.read_bytes())==q['archive_sha256']
+with zipfile.ZipFile(archive) as z:
+    prefix='results/'+name+'/model/';r=json.loads(z.read(prefix+'report.json'));states=[r['empty_state'],r['final_reset']]+[c[k] for c in r['cases'] for k in ('reset_state','prefill_state','final_state')];assert len(states)==29
+    projections=raw_checks=0
+    for state in states:
+        for rows in ([0,1,2,3],[4,5,6,7]):
+            projected=four_complete_rows(state['logical'],rows);assert projected['physical_words_per_row']==106823680 and len(projected['components'])==128;projections+=1
+            for kind in ('hidden','normalized'):
+                raw=z.read(prefix+state['vectors'][kind]['file']);width=5120*4;selected=b''.join(raw[i*width:(i+1)*width] for i in rows)
+                assert same_reference_vectors(raw,selected,rows);raw_checks+=1
+result={'status':'batch8_reference_row_projection_cpu_controls_passed','cpu_controls':9,'retained_actual_b8_archive_sha256':q['archive_sha256'],
+        'actual_b8_state_witnesses_validated':29,'four_row_witness_projections':projections,'raw_vector_projection_checks':raw_checks,
+        'independent_fresh_b4_model_executed':False,'external_b8_b4_numerical_equivalence_qualified':False,'gpu_executed':False,'performance_admitted':False,'two_times_target_achieved':False,
+        'scope':'CPU-only selection and schema/finite-vector controls over actual retained B8 ordinary witnesses. Reference sides here are subsets of those same B8 bytes, not fresh independent B4 outputs. Existing strict B4 same-precision validator and native B4 profile guards remain unchanged. Actual fresh same-input B4 FP32-cache/BF16-value model runs and exact all-component/raw-vector/ID comparison are still required.'}
+(w/'batch8-reference-gate-cpu-result.json').write_bytes(json.dumps(result,indent=2).encode());print(json.dumps(result))
