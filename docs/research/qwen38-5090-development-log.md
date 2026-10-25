@@ -5892,3 +5892,71 @@ stalls without trimming cases. Wider target-prefill128 needs explicit native
 metadata/commit/plugin and math/state/ID validation. Throughput still requires
 actual B8MTP fit/externalmath/quality/padding/HTTP qualification. Strongest feasible
 tuned/MTP SGLang/vLLM4K/repetitions and INT4/4B comparisons remain open.
+
+
+### 2026-10-25 — wider-MTP HTTP closed/replayed; verified charts; outer-profiled driver installed
+
+Original48577 prefill16-fixed4k-http-attempt1 terminal0, source/runtime/1a1d unchanged,
+owned nativeworker exit0 and cache retirement complete. Archive
+d64adb0cdba9d7c3446f15034b34d095025394815d28c4dae463b0056377e748,
+99391572bytes/3446files downloaded with explicit SFTP ACK. Remote independent replay
+terminal0 and local replay exit0; proof JSONs identical SHA
+b43f4adfd3d04989312b3e1f637bb6eed61e3bf1706151660e8fec7be5ee7c27.
+All805screen cases,12protocol/two4Kboundaries/124fixed4Kstreams and943actual worker
+completions bound to raw events; all actual native ordinary output IDs exact.
+Adapted502/805 matches old native, not officialMMMU/broad cross-engine quality parity.
+
+Actual3968+128, eight measured requests per group, C1/2/4/8. New text C1 TTFT
+5327.85ms/decode75.69tok/s/total18.19tok/s; image C1 5324.77ms/88.26/17.66.
+C8text29858.89ms/73.75/18.23; C8image28624.57ms/91.45/19.08. Compared to old
+T4draft-prefill single trial, first-token medians about9-11%lower and text total
+throughput about9-10%higher; imageC2total15.45vsold17.20 is a regression retained
+without exclusions. These are independent single trials with no uncertainty or
+causal optimization-speed admission. T16 extra draft weights raise sampled memory
+to23831457792bytes=22.195GiB; maximum imageC1sample gap3.67318s preserved. All
+raw samples/summary-prefix/trailing accounting independently replayed; no instant
+or process-attributed memory peak claim.
+
+New C8image per-request decode91.45vsSGLangordinary42.61=2.1465x this one ordinary
+reference point. Total19.08vs146.54 and TTFT28.62vs1.604s remain much worse.
+Native physicalbatch1queue vsSGLangmax8. No overall2x/halfTTFT claim; strongest
+tuned/MTP and matchedvLLM4K/repetitions/INT4/4B/broadquality remain required.
+New eight-panel4K PNG/SVG, standalone HTML and all32cohort data generated only
+after identical two-machine proofs. All curves/delays/regressions retained; old
+historical charts unchanged. Final new figure visually inspected.
+
+Actual CPU Nsight IPC qualification caught a pre-model transport issue: two
+90sreadiness smoke attempts, unchanged and explicitshow-outputtrue, receive no
+live forwarded ready event. Both terminal1, no model/GPU constructed. Do not
+launch the model worker behind that direct live Nsight pipe. Reused successful
+prior process-tree architecture: outer Nsight profiles the request driver while
+its normal nativeworker pipes stay internal. Actual CPU driver/child Unicode
+echo and cleanexit checks pass, observed Nsight wrapper mirrors requested driver
+exits0and7. Raw three attempts/scripts/logs/tinyreports archived separately:
+0846e405501a70ba5dadd4e7444b55ae9cf534563f2dda29c6685f0ae6591d36,
+33103bytes/22files; local rawmanifest replay passes. No GPU model or benchmark.
+
+Final driver retains each ordinary/MTP actual worker exit, marker/nativeclose
+witness and all12retained-ID requests, merges mode reports with explicit negative
+guards. Nsight collection surrounds each full driver; export/replay follows its
+closure, without live Nsight stdout dependency. Entire worker model AST still
+equals qualified ordinary source after trace-only removal; source derivations and
+earlier unrun pipe-launch preparation retained. Local46CPU pass1.493s, all eight
+module files and46testIDs pinned. New preparation
+8d96a7783b95012c14215bcfa30258f50a6550c90bea8a0bb01ad661682f087e,
+633files/17targets. Actual read-only closed-parent/source/runtime/profiler/idle/disk
+preflight terminal0; all617existing inputs exact, no conflicts. Absent-only bundle
+f47dfa4cd78060d6aca57ae077ed95a02ec67d2aaa4a369b8214560c0c96a4c1,
+58871bytes installed17new/all17verified, no baseline/SDK/model change. GPU trace
+has not executed in this preparation snapshot. Next original supervisor owns
+native-cuda-phase-full4k-attempt1: actual46remoteCPU IDs before model,24full4K
+requests/288markers, source/runtime/cleanup/rawarchive and two-machine replay.
+Use collected kernel/API evidence for target-prefill and realB8MTP work; no causal
+kernel bottleneck or speedup is inferred from host phases or offline preparation.
+
+
+Actual native-cuda-phase-full4k-attempt1 started on original48577 after every setup
+transfer ACK. Actual source-pinned46remote CPU checks pass1.297s. Original handle
+confirmed live, outer profile driver now proceeds toward native model readiness.
+No collected GPU trace, kernel bottleneck or new performance result yet. Only
+original-handle polling remotely while this exclusive diagnosis runs.

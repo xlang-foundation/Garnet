@@ -11,5 +11,5 @@ set PATH=%GARNET_RUNTIME_ROOT%;D:\CantorAI\5090-study-20261023\tools\TensorRT\bi
 set "TMP=%~2"
 set "TEMP=%TMP%"
 cd /d D:\CantorAI\5090-study-20261023\Garnet
-D:\CantorAI\5090-study-20261023\tools\n26\target-windows-x64\nsys.exe profile --trace=cuda --sample=none --cpuctxsw=none --cuda-graph-trace=node --force-overwrite=false --output="%~dp3cuda-trace" %GARNET_RUNTIME_ROOT%\xlang3.exe D:/CantorAI/5090-study-20261023/Garnet/test2026/cuda/qwen38_5090/native_cuda_phase_stream_worker.py D:/CantorAI/5090-study-20261023 %~1 "%~3"
+%GARNET_RUNTIME_ROOT%\xlang3.exe D:/CantorAI/5090-study-20261023/Garnet/test2026/cuda/qwen38_5090/native_cuda_phase_stream_worker.py D:/CantorAI/5090-study-20261023 %~1 "%~3"
 exit /b %errorlevel%

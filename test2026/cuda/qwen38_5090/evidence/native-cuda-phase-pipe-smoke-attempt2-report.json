@@ -1,0 +1,27 @@
+{
+  "status": "failed",
+  "gpu_model_executed": false,
+  "cases": [
+    {
+      "requested_child_exit_code": 0,
+      "argv": [
+        "D:\\CantorAI\\5090-study-20261023\\tools\\n26\\target-windows-x64\\nsys.exe",
+        "profile",
+        "--trace=cuda",
+        "--show-output=true",
+        "--sample=none",
+        "--cpuctxsw=none",
+        "--cuda-graph-trace=node",
+        "--force-overwrite=false",
+        "--output=D:\\CantorAI\\5090-study-20261023\\results\\native-cuda-phase-pipe-smoke-attempt2\\exit0\\pipe-trace",
+        "C:\\Python312\\python.exe",
+        "-u",
+        "D:\\CantorAI\\5090-study-20261023\\results\\native-cuda-phase-pipe-smoke-attempt2\\cpu-echo-target.py",
+        "D:\\CantorAI\\5090-study-20261023\\results\\native-cuda-phase-pipe-smoke-attempt2\\exit0\\child-closed.json",
+        "0"
+      ]
+    }
+  ],
+  "scope": "CPU echo child under actual retained Nsight executable; validates pipe forwarding and records distinct child/wrapper exit behavior. No CUDA model or performance result.",
+  "error": "Empty()"
+}

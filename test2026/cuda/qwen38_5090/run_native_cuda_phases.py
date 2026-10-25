@@ -66,6 +66,12 @@ def main():
     trial = closed_trial(root, args.closed_prefill16_http_archive_sha256)
     tool = profiler(root)
     assert tool == p['profiler']
+    smoke_path = root / 'results/native-cuda-phase-profiled-driver-smoke-attempt1/report.json'
+    smoke = json.loads(smoke_path.read_bytes())
+    assert sha(smoke_path) == p['profiled_driver_cpu_smoke_sha256']
+    assert smoke['status'] == 'profiled_cpu_driver_ipc_verified' and smoke['gpu_model_executed'] is False
+    assert [row['requested_driver_exit_code'] for row in smoke['cases']] == [0, 7]
+    assert [row['actual_nsys_wrapper_exit_code'] for row in smoke['cases']] == [0, 7]
     receipt = root / 'results/study-ssd-engine-cache/receipt.json'
     scratch = json.loads(receipt.read_bytes())
     cache = Path(scratch['cache_root'])
@@ -82,12 +88,14 @@ def main():
     code = 1
     before = {path.name for path in cache.iterdir()}
     started = time.time()
-    common = [root / name for name in p['files']] + [preparation, receipt, root / tool['setup_path']]
+    common = [root / name for name in p['files']] + [preparation, receipt, root / tool['setup_path'], smoke_path]
+    common.extend(path for path in smoke_path.parent.rglob('*') if path.is_file() and path.suffix in ('.json', '.py', '.log'))
     for parent in (host, trial):
         common.extend([root / 'results' / parent['job'] / 'workflow.json', root / 'results' / (parent['job'] + '-verified.json')])
     workflow = {'status': 'running', 'preparation_sha256': sha(preparation), 'source_sha256': p['files'],
                 'runtime_dependencies': p['runtime_dependencies'], 'library_sha256': sha(root / 'build/bin/garnet.dll'),
                 'closed_host': host, 'closed_prefill16_http': trial, 'profiler': tool,
+                'profiled_driver_cpu_smoke_sha256': sha(smoke_path),
                 'cleanup_finished': False, 'performance_admitted': False, 'scope': p['scope']}
     def save():
         (out / 'workflow.json').write_text(json.dumps(workflow, indent=2), encoding='utf8')
@@ -98,7 +106,7 @@ def main():
         if code:
             raise RuntimeError('CUDA diagnostic CPU controls failed')
         code = run([sys.executable, str(methods / 'monitor_native_probe.py'), '--study', str(root),
-                    '--output', str(out / 'resources'), '--', sys.executable, str(methods / 'probe_native_cuda_phases.py'),
+                    '--output', str(out / 'resources'), '--', sys.executable, str(methods / 'collect_native_cuda_phases.py'),
                     '--root', str(root), '--output', str(out / 'native'), '--cache', str(cache)],
                    out / 'gpu-ledger', 'correctness', '24 actual3968+128 retained-ID requests, two Nsight node traces; all first-use and rotated repeats retained', common)
         if code:

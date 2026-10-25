@@ -25,11 +25,11 @@
   "serve_native_cuda_phase_worker.bat": {
     "source": "serve_native_host_stage_worker.bat",
     "source_sha256": "6c061a21762a5a322bbe59f4b5422a4974a5a3eab71749e128094fe14d677c53",
-    "candidate_sha256": "fa1f43376f881965d9abf5c044a51402f7481b33d8764d2551f1421346f270af",
+    "candidate_sha256": "83fad2e36017c4fa29a82764a963d82ca9f4dbe3ff052ef91f00d7fb52d3892d",
     "replacements": [
       [
-        "%GARNET_RUNTIME_ROOT%\\xlang3.exe D:/CantorAI/5090-study-20261023/Garnet/test2026/cuda/qwen38_5090/native_host_stage_stream_worker.py D:/CantorAI/5090-study-20261023 %~1 \"%~3\"",
-        "D:\\CantorAI\\5090-study-20261023\\tools\\n26\\target-windows-x64\\nsys.exe profile --trace=cuda --sample=none --cpuctxsw=none --cuda-graph-trace=node --force-overwrite=false --output=\"%~dp3cuda-trace\" %GARNET_RUNTIME_ROOT%\\xlang3.exe D:/CantorAI/5090-study-20261023/Garnet/test2026/cuda/qwen38_5090/native_cuda_phase_stream_worker.py D:/CantorAI/5090-study-20261023 %~1 \"%~3\""
+        "native_host_stage_stream_worker.py",
+        "native_cuda_phase_stream_worker.py"
       ]
     ]
   }

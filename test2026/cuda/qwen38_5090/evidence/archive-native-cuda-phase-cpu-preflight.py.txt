@@ -1,0 +1,19 @@
+from pathlib import Path
+import hashlib,json,zipfile
+
+root=Path('D:/CantorAI/5090-study-20261023')
+names=['native-cuda-phase-pipe-smoke-attempt1','native-cuda-phase-pipe-smoke-attempt2','native-cuda-phase-profiled-driver-smoke-attempt1']
+reports={name:json.loads((root/'results'/name/'report.json').read_bytes()) for name in names}
+assert all(reports[name]['status']=='failed' and reports[name]['gpu_model_executed'] is False for name in names[:2])
+assert reports[names[-1]]['status']=='profiled_cpu_driver_ipc_verified' and reports[names[-1]]['gpu_model_executed'] is False
+assert [row['actual_nsys_wrapper_exit_code'] for row in reports[names[-1]]['cases']]==[0,7]
+archive=root/'results/native-cuda-phase-cpu-preflight-evidence.zip';assert not archive.exists()
+paths=[p for name in names for p in (root/'results'/name).rglob('*') if p.is_file()]
+paths.extend(root/name for name in ['check-native-cuda-phase-profiler-pipes.py','check-native-cuda-phase-profiler-pipes-show-output.py','check-native-cuda-phase-profiled-driver.py'])
+paths.append(Path(__file__))
+sha=lambda path:hashlib.sha256(path.read_bytes()).hexdigest()
+files={path.relative_to(root).as_posix():path for path in paths}
+with zipfile.ZipFile(archive,'x',zipfile.ZIP_DEFLATED) as z:
+ for name,path in files.items():z.write(path,name)
+ z.writestr('evidence-manifest.json',json.dumps({'files':{name:sha(path) for name,path in files.items()},'gpu_model_executed':False,'scope':'Two actual failed live-Nsight-output CPU readiness checks, unchanged first/explicitshow-outputtrue, and successful outer-profiled CPU driver normal-child-pipe checks with0/7exit propagation. Raw source/reports/output and tiny CPU-only profiler files retained; no model/benchmark.'},indent=2))
+print(json.dumps({'status':'cpu_profiler_preflight_attempts_archived','archive_sha256':sha(archive),'bytes':archive.stat().st_size,'files':len(files),'gpu_model_executed':False}))

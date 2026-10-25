@@ -1,0 +1,57 @@
+"""Actual Nsight stdin/stdout/exit behavior with CPU echo children, no GPU model."""
+from pathlib import Path
+import hashlib,json,queue,subprocess,sys,threading,time
+
+root=Path('D:/CantorAI/5090-study-20261023')
+out=root/'results/native-cuda-phase-pipe-smoke-attempt2'
+nsys=root/'tools/n26/target-windows-x64/nsys.exe'
+assert hashlib.sha256(nsys.read_bytes()).hexdigest()=='e597347ef6cb45456612c0c9593401bb6d1b85497bb18534968f309955831291'
+assert not out.exists();out.mkdir()
+target=out/'cpu-echo-target.py'
+target.write_bytes(b'''import json,sys
+from pathlib import Path
+print(json.dumps({'event':'ready','cpu_only':True}),flush=True)
+for line in sys.stdin.buffer:
+ body=json.loads(line)
+ sys.stdout.buffer.write((json.dumps({'event':'completed','body':body},ensure_ascii=False)+'\\n').encode('utf8'));sys.stdout.buffer.flush()
+Path(sys.argv[1]).write_text(json.dumps({'status':'cpu_echo_child_closed','requested_exit_code':int(sys.argv[2])}),encoding='utf8')
+raise SystemExit(int(sys.argv[2]))
+''')
+report={'status':'running','gpu_model_executed':False,'cases':[],'scope':'CPU echo child under actual retained Nsight executable; validates pipe forwarding and records distinct child/wrapper exit behavior. No CUDA model or performance result.'}
+def save():(out/'report.json').write_bytes(json.dumps(report,indent=2).encode())
+save()
+try:
+ for requested in (0,7):
+  folder=out/('exit'+str(requested));folder.mkdir();closed=folder/'child-closed.json'
+  command=[str(nsys),'profile','--trace=cuda','--show-output=true','--sample=none','--cpuctxsw=none','--cuda-graph-trace=node','--force-overwrite=false','--output='+str(folder/'pipe-trace'),sys.executable,'-u',str(target),str(closed),str(requested)]
+  row={'requested_child_exit_code':requested,'argv':command};report['cases'].append(row);save()
+  messages=queue.Queue();raw=[]
+  with (folder/'stderr.log').open('xb') as err:
+   process=subprocess.Popen(command,stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=err,bufsize=0)
+   def read():
+    with (folder/'stdout.log').open('xb') as stream:
+     for line in process.stdout:
+      stream.write(line);stream.flush();raw.append(line)
+      try:value=json.loads(line)
+      except (ValueError,UnicodeDecodeError):continue
+      if isinstance(value,dict):messages.put(value)
+   reader=threading.Thread(target=read,daemon=True);reader.start()
+   try:
+    ready=messages.get(timeout=90);assert ready=={'event':'ready','cpu_only':True}
+    body={'id':'explicit-cpu-pipe-fixture','text':'\u4e2d\u6587 \U0001f680','count':128}
+    wire=(json.dumps(body,ensure_ascii=False)+'\n').encode()
+    while wire:
+     count=process.stdin.write(wire);assert count;wire=wire[count:]
+    process.stdin.flush();response=messages.get(timeout=30);assert response=={'event':'completed','body':body}
+    process.stdin.close();code=process.wait(timeout=300)
+   finally:
+    if not process.stdin.closed:process.stdin.close()
+    if process.poll() is None:
+     try:process.wait(timeout=30)
+     except subprocess.TimeoutExpired:process.terminate();process.wait(timeout=30)
+    reader.join(timeout=30);assert not reader.is_alive();process.stdout.close()
+  child=json.loads(closed.read_bytes());assert child=={'status':'cpu_echo_child_closed','requested_exit_code':requested}
+  row.update(pipe_ready_exact=True,utf8_echo_exact=True,child_close_witness=child,actual_nsys_wrapper_exit_code=code);save()
+  if requested==0:assert type(code) is int and code==0
+ report['status']='actual_profiler_cpu_pipes_verified';save();print(json.dumps(report),flush=True)
+except BaseException as error:report.update(status='failed',error=repr(error));save();raise
