@@ -1,0 +1,69 @@
+{
+  "source": "probe_bf16_model_b4_t32.py",
+  "source_sha256": "eb94098a5f19c7c1cac5b3908212cc8e5b391adc9458192c2b850be300a47f79",
+  "changes": [
+    [
+      "\"\"\"BF16 B4/T32prefill/T4decode integration: strict ordinary/MTP state and fixed-corpus IDs.\"\"\"",
+      "\"\"\"Prospective same-precision reference parity; retain historical FP32 failures.\"\"\""
+    ],
+    [
+      "from test2026.cuda.qwen38_5090.run_logged import source_identity",
+      "from test2026.cuda.qwen38_5090.run_logged import source_identity\nfrom test2026.cuda.qwen38_5090.bf16_model_state_witness import logical_state_witness\nfrom test2026.cuda.qwen38_5090.bf16_same_precision_gate import same_logical_state"
+    ],
+    [
+      "qualified_cases={(c['group'],c['repeat']):c for c in qualified['cases']}",
+      "qualified_cases={(c['group'],c['repeat']):c for c in qualified['cases']}\nreference_root=root/'results/bf16-full-reference-corpus-attempt1/native'\nreference_raw=(reference_root/'report.json').read_bytes();reference_report=json.loads(reference_raw)\nassert reference_report['status']=='bf16_full_reference_corpus_finished' and reference_report['bf16_kv_float_reference'] and reference_report['batch']==4 and reference_report['prefill_chunk']==32 and reference_report['decode_chunk']==4\nreference_cases={(c['group'],c['repeat']):c for c in reference_report['cases']};assert len(reference_cases)==4"
+    ],
+    [
+      "report={'joined_mlp_projections':True,",
+      "report={'independent_reference_report_sha256':hashlib.sha256(reference_raw).hexdigest(),'joined_mlp_projections':True,"
+    ],
+    [
+      "'scope':'Opt-in BF16 full KV and FP32 GDN B4/T32prefill/T4decode with register128 and MTP3. Exact fixed-corpus retained FP32/B1 token IDs and same-BF16-profile ordinary/MTP full-state hashes/raw hidden are required. BF16 physical state is never compared numerically or byte-exactly against FP32 KV. Metadata/negative/zero-prefix checks precede generation. Full raw canonical arrays absent; broad quality/actual4K/HTTP/speed admission remain open.'",
+      "'scope':'Prospective same-precision B4/T32/T4 packed BF16 ordinary/MTP3 parity against independently validated ordinary BF16-values-in-full-FP32-cache reference. Same4keys/two repeated groups and original128/32token limits/stops. Require exact IDs, prefill/final complete logical state witnesses and raw hidden/normalized vectors. Retain old FP32 expected IDs/equality as observations and immutable historical failed gate; no conversion to quality success. Keep all runtime metadata/negative/zero-prefix controls. Raw full canonical arrays absent; broad quality/B8/actual4K/HTTP/speed remain unqualified.'"
+    ],
+    [
+      " width=decoder.programs[4].state_width\n sizes={min(1048576,width-offset) for offset in range(0,width,1048576)}\n hash_buffers={size:io.zeros([batch,size]) for size in sizes}\n def state_hashes(label):\n  assert decoder.state_transaction is None and not speculative.verifier.pending,'State hash requires closed transaction'\n  digests=[hashlib.sha256() for _ in range(batch)]\n  for offset in range(0,width,1048576):\n   size=min(1048576,width-offset);part=hash_buffers[size]\n   io.slice_into(decoder.state,offset,part)\n   for row in range(batch):digests[row].update(bytes(io.finite_f32_bytes(io.row(part,row))))\n  last_hidden=bytes(io.finite_f32_bytes(decoder.last_hidden))\n  (out/(label+'-last-hidden.f32')).write_bytes(last_hidden)\n  pair_bytes=2*config['text_config']['hidden_size']*4\n  return {'state_row_sha256':[h.hexdigest() for h in digests],\n    'last_hidden_sha256':hashlib.sha256(last_hidden).hexdigest(),\n    'last_hidden_pair_sha256':[hashlib.sha256(last_hidden[offset:offset+pair_bytes]).hexdigest() for offset in range(0,len(last_hidden),pair_bytes)],\n    'slots':list(decoder.slots),'state_words_per_row':width}\n",
+      " width=decoder.programs[4].state_width\n def logical_state():\n  assert decoder.state_transaction is None and not speculative.verifier.pending,'State hash requires closed transaction'\n  return logical_state_witness(io,decoder.state,decoder.programs[4].layout,batch,width,decoder.slots,packed_bf16=True)\n def state_hashes(label):\n  witness=logical_state();last_hidden=bytes(io.finite_f32_bytes(decoder.last_hidden))\n  normalized=bytes(io.finite_f32_bytes(decoder.head.run_device([decoder.last_hidden])))\n  assert len(last_hidden)==len(normalized)==81920\n  (out/(label+'-last-hidden.f32')).write_bytes(last_hidden)\n  (out/(label+'-last-normalized.f32')).write_bytes(normalized)\n  pair_bytes=2*config['text_config']['hidden_size']*4\n  return {'state_row_sha256':witness['physical_row_sha256'],'logical_state':witness,\n    'last_hidden_sha256':hashlib.sha256(last_hidden).hexdigest(),'last_normalized_sha256':hashlib.sha256(normalized).hexdigest(),\n    'last_hidden_pair_sha256':[hashlib.sha256(last_hidden[offset:offset+pair_bytes]).hexdigest() for offset in range(0,len(last_hidden),pair_bytes)],\n    'slots':list(decoder.slots),'state_words_per_row':width}\n"
+    ],
+    [
+      "   prediction=decoder.prefill_sequence(hidden,positions,lengths)\n   ordinary=",
+      "   prediction=decoder.prefill_sequence(hidden,positions,lengths)\n   ordinary_prefill=logical_state()\n   ordinary="
+    ],
+    [
+      "   speculative.prefill(hidden,positions,lengths,[r['current'] for r in rows])\n   mtp_result",
+      "   speculative.prefill(hidden,positions,lengths,[r['current'] for r in rows])\n   mtp_prefill=logical_state()\n   mtp_result"
+    ],
+    [
+      "   expected=[c['choice']['response_token_ids'] for c in group]",
+      "   reference=reference_cases[(group_index,repeat)];assert reference['keys']==[c['key'] for c in group] and reference['prompt_lengths']==lengths and reference['limits']==limits\n   expected=reference['generated_ids'];retained_expected=[c['choice']['response_token_ids'] for c in group]"
+    ],
+    [
+      "'exact_b1_ids_match':generated==expected",
+      "'same_precision_reference_ids_exact':generated==expected,'retained_b1_ids_exact':generated==retained_expected"
+    ],
+    [
+      "   # FP32 canonical words have a different layout/precision; no cross-precision state equality claim.",
+      "   result['ordinary_prefill_state']=ordinary_prefill;result['mtp_prefill_state']=mtp_prefill\n   result['reference_prefill_exact']=same_logical_state(ordinary_prefill,reference['prefill_state']) and same_logical_state(mtp_prefill,reference['prefill_state'])\n   result['reference_final_exact']=same_logical_state(ordinary_state['logical_state'],reference['final_state']) and same_logical_state(mtp_state['logical_state'],reference['final_state'])\n   result['reference_raw_vectors_exact']={}\n   for label in ('hidden','normalized'):\n    filename='group-'+str(group_index)+'-repeat-'+str(repeat)+'-reference-'+label+'.f32';assert reference['raw'][label]['file']==filename\n    raw=(reference_root/filename).read_bytes();assert hashlib.sha256(raw).hexdigest()==reference['raw'][label]['sha256'] and len(raw)==81920\n    result['reference_raw_vectors_exact'][label]=all((out/('group-'+str(group_index)+'-repeat-'+str(repeat)+'-'+mode+'-last-'+label+'.f32')).read_bytes()==raw for mode in ('ordinary','mtp'))\n   # Physical FP32 and packed BF16 arrays have different widths; logical byte witnesses expand the latter."
+    ],
+    [
+      "   assert result['retained_fp32_reference_ids_exact'],'BF16 candidate differs from retained fixed-corpus FP32 token IDs; quality gate fails, raw outputs retained'",
+      "   assert result['same_precision_reference_ids_exact'] and result['reference_prefill_exact'] and result['reference_final_exact'] and all(result['reference_raw_vectors_exact'].values()),'Packed ordinary/MTP differs from independent same-precision reference; raw results retained'"
+    ],
+    [
+      "   assert generated==expected==ordinary,'Batched greedy output differs from B1 oracle; raw IDs saved'",
+      "   assert generated==expected==ordinary,'Packed ordinary/MTP differs from independent BF16-value reference IDs; raw IDs retained'"
+    ],
+    [
+      "   old=qualified_cases[(group_index,repeat)]",
+      "   report['cases'].append(result);path.write_text(json.dumps(report,indent=2))\n   old=qualified_cases[(group_index,repeat)]"
+    ],
+    [
+      "   report['cases'].append(result);path.write_text(json.dumps(report,indent=2))\n   assert result['same_precision_reference_ids_exact']",
+      "   path.write_text(json.dumps(report,indent=2))\n   assert result['same_precision_reference_ids_exact']"
+    ]
+  ],
+  "result_sha256": "ca72784176c0cdd7840ccd5f5f2ac8ce26223042c2e7e51aa5a57757e513f2b1",
+  "retained_metadata_negative_zero_prefix_block_sha256": "8bb1a84b8971f4f1c902b832557abc9d0519fc068eb2d3fb915ddb2f64abb7ec",
+  "scope": "New prospective same-precision test; historical failed producer remains untouched. Metadata/negative/zero-prefix block retained exactly after newline normalization. New oracle must be actually run/closed/replayed before this method may run; no result or quality/performance admission yet."
+}

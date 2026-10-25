@@ -3493,3 +3493,51 @@ Original bf16-full-reference-corpus-attempt1 confirmed running; all5newCPU
 state-witness controls pass remotely before native model construction. Known
 optional hashlib startup warnings retained; SHA256 available as in parent runs.
 No actual full-corpus result or speed inferred, no restart/source/DLL mutation.
+
+
+2026-10-25 UTC: independent full ordinary BF16 reference closed exit0 and private
+cache cleanup completed. Archive1119546B/98files SHA256
+2d086ee0ec8234d40f23c3bb985be33d62ac75cb669b0084be17c71866132680.
+Both remote and local replays passed bf16_full_reference_corpus_replayed with
+identical JSON, verifier2e741d56ca1af1b648718eae1798c19b6b33a04eb438ea965d2f804ae5979ab5.
+Four repeated B4/T32 cases, all128logical component/4row prefill/final witnesses,
+8raw81920B final hidden/normalized arrays and duplicate-pair isolation retained.
+Primary text/image outputs each128tokens; red/green each2tokens including EOS
+under original32token limit. Reference FP32 caches passed BF16-roundtrip checks.
+Primary IDs still differ from old FP32; red/green IDs match. No historical gate
+waiver, broad quality, serving memory or timing admission. Source60pins and DLL
+97c364653161f9252032815e644ef4a22758cc78bf7226317aba21f118f00844 unchanged.
+Correctness-only sampled adapter peak32417062912B is not a serving-memory result.
+During this untimed job, read-only workflow/report and its own existing sampler
+observations were made while the original handle remained authoritative; no
+additional GPU sampler or timed measurement. Original handle later confirmed
+terminal0. Archive/proof transfers acknowledged before both replays.
+Archived old failed packed group's ordinary/MTP IDs and ordinary raw final
+hidden match this independent128token reference group0. This is single-group
+lineage only; the old failed test remains failed and lacked logical-state proof.
+
+Prepared prospective packed BF16 ordinary/MTP3 comparison from that closed
+independent full reference.15literal changes from unchanged historical failed
+probe; derivation replayed exactly. Entire8856metadata/16negative/3zero-prefix
+block unchanged after newline normalization. Require4repeated cases of exact
+IDs, full logical prefill/final state witnesses, raw hidden AND normalized vectors
+against independent reference, plus packed ordinary/MTP physical-state equality.
+Old FP32/B1 ID equality remains explicit observation; no reclassification.
+Case saved before new admission computations, preserving partial failures.
+Three CPU cross-layout gate tests plus5state-witness tests pass locally; raw
+8test log retained. Additional actual archived witness checks accept packed vs
+reference prefill/final, accept32/128run prefill equality, reject different-length
+final state. Only schema names adapted; source/archive hashes retained.
+
+Preparationa7d739cf577aaeae0907c75d96e4f273f15d5a07d89887c33e721cdbd68e40ea
+pins60source/15method/20input files, DLL, metadata fixture, closed parent proof,
+parent8vectors and immutable linked archives. Guarded preflight verified hashes,
+new paths absent, owned C:engine cache with96GiB reserve, GPU idle. All8uploads
+acknowledged before original supervised bf16-same-precision-mtp-attempt1 start.
+2026-10-25 05:21 UTC original handle is confirmed running; remote CPU ledger
+has Ran8tests/OK; native report starting with0cases/noerror. Known optional
+hashlib startup warnings retained, SHA256 available. No source/DLL/runtime/SDK
+change or rebuild while worker live. Read-only progress command was untimed.
+Current GPU gate result remains pending. Broad quality, partial/reset/retired
+row/protocol, B8, actual4K, matched clean HTTP timing, fastest tuned/MTP references,
+INT4 quality and matched4B comparisons remain open.2x/halfTTFT targets unmet.
