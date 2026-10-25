@@ -1,0 +1,14 @@
+"""Generate SSH supervisor request from saved hashes, never terminal copies."""
+from pathlib import Path
+import hashlib,json,re
+w=Path(__file__).resolve().parent;o=w.parent/'outputs';rows=[]
+for name,suffix,flag,status in (
+ ('fixed-length-http-study-attempt1','-verified.json','--closed-http-archive-sha256','fixed_length_http_study_replayed'),
+ ('bf16-batch8-model-admission-attempt1','-verified.json','--closed-native-archive-sha256','bf16_batch8_internal_model_admission_replayed'),
+ ('mtp-prefill16-model-consistency-attempt1','-remote-verified.json','--closed-mtp-archive-sha256','mtp_prefill16_short_target_model_replayed')):
+ p=o/(name+suffix);d=json.loads(p.read_bytes());digest=d['archive_sha256'];assert d['status']==status and re.fullmatch('[0-9a-f]{64}',digest);rows.extend((flag,digest))
+command='C:\\Python312\\python.exe D:\\CantorAI\\5090-study-20261023\\results\\preflight-sglang-output-characterization.py '+' '.join(rows)
+request={'start':command,'id':'sglang-output-characterization-preflight-attempt2'}
+target=w/'sglang-output-characterization-corrected-preflight-request.json';raw=json.dumps(request,indent=2).encode();assert not target.exists() or target.read_bytes()==raw
+if not target.exists():target.write_bytes(raw)
+print(json.dumps(request))

@@ -1,0 +1,51 @@
+from pathlib import Path
+import datetime,hashlib,json,zipfile
+w=Path(__file__).resolve().parent;r=Path('D:/CantorAI/work/qwen38-5090');e=r/'test2026/cuda/qwen38_5090/evidence';o=w.parent/'outputs';sha=lambda raw:hashlib.sha256(raw).hexdigest();name='mtp-prefill16-model-consistency-attempt1'
+archive=o/(name+'-evidence.zip');proof=json.loads((o/(name+'-verified.json')).read_bytes());assert proof==json.loads((o/(name+'-remote-verified.json')).read_bytes()) and proof['status']=='mtp_prefill16_short_target_model_replayed' and sha(archive.read_bytes())==proof['archive_sha256']
+with zipfile.ZipFile(archive) as z:
+ base='results/'+name+'/';wf=json.loads(z.read(base+'workflow.json'));study=json.loads(z.read(base+'native/study-report.json'));report=json.loads(z.read(base+'native/model/report.json'))
+ assert wf['exit_code']==0 and wf['cleanup_finished'] and wf['library_unchanged'] and wf['source_sha256']==wf['source_after_sha256'] and wf['runtime_dependencies']==wf['runtime_dependencies_after']
+ assert len(proof['cases'])==8 and all(v['complete_target_state_and_raw_vectors_exact'] for v in proof['cases']) and study['retained_b1_comparison']['full_canonical_and_raw_vectors_exact']
+ assert b'Ran 41 tests in 0.201s' in z.read(base+'cpu-ledger/commands.log') and b'\nOK' in z.read(base+'cpu-ledger/commands.log')
+ for suffix in ('-verified.json','-remote-verified.json'):
+  target=e/(name+suffix);assert not target.exists();target.write_bytes((o/(name+suffix)).read_bytes())
+ summary={'status':'mtp_prefill16_short_model_closed_and_independently_replayed','recorded_utc':datetime.datetime.now(datetime.timezone.utc).isoformat(),'archive_sha256':proof['archive_sha256'],'archive_bytes':archive.stat().st_size,'archive_files_verified':proof['files_verified'],'independent_proofs_identical':True,'proof_sha256':sha((o/(name+'-verified.json')).read_bytes()),'library_sha256':proof['library_sha256'],'actual_remote_cpu_tests_passed':41,'actual_remote_cpu_test_seconds':0.201,'actual_cases':proof['cases'],'retained_b1_comparison':study['retained_b1_comparison'],'actual_prefill_call_controls':study['prefill_call_controls'],'extra_engine_memory_observations':study['close_observations'],'correctness_sampled_peak_adapter_used_bytes':proof['correctness_sampled_peak_adapter_used_bytes'],'correctness_sampled_peak_adapter_used_gib':proof['correctness_sampled_peak_adapter_used_bytes']/2**30,'closed_cleanup_and_source_runtime_identity_verified':True,'actual_full4k_qualified':False,'broad_quality_qualified':False,'http_or_repeated_speed_qualified':False,'two_times_target_achieved':False,'scope':proof['scope']}
+for target in (e/'mtp-prefill16-short-model-closure.json',o/'Garnet-MTP-Prefill16-Short-Model-Results.json'):
+ assert not target.exists();target.write_text(json.dumps(summary,indent=2),encoding='utf8')
+failure={'status':'sglang_characterization_initial_preflight_argument_failure_preserved','job':'sglang-output-characterization-preflight-attempt1','original_supervisor_session':95279,'actual_exit_code':1,'failed_script_line':20,'failed_check':'sha(closed MTP archive)==--closed-mtp-archive-sha256','supplied_archive_sha256':'0370f067ea998ef11aacc817c47d1bc49c47d0f5df497b76bf12a2d069fd863a8','actual_archive_sha256_from_saved_proof':proof['archive_sha256'],'reason':'Manual transcription from wrapped PTY output duplicated a character, yielding65hex; preflight stopped before receipt/install/model startup. Corrected request is generated directly from saved proof JSONs and validates all hashes as64lowercasehex. Original helper/source and failed observation preserved.','model_or_gpu_started':False}
+assert len(failure['supplied_archive_sha256'])==65 and len(failure['actual_archive_sha256_from_saved_proof'])==64
+target=e/'sglang-characterization-preflight-argument-correction.json';assert not target.exists();target.write_text(json.dumps(failure,indent=2),encoding='utf8')
+for name in ('start-sglang-characterization-preflight-from-proofs.py','retain-mtp-prefill16-short-model.py'):
+ target=e/(name+'.txt');assert not target.exists();target.write_bytes((w/name).read_bytes())
+name='sglang-output-characterization-corrected-preflight-request.json';target=e/name;assert not target.exists();target.write_bytes((w/name).read_bytes())
+entry='''
+
+### 2026-10-25 — wider MTP short-model correctness closed and replayed twice
+
+Original supervisor48577 observed mtp-prefill16-model-consistency-attempt1 terminal0.
+All8actual B1 short text/image/red/green/reset/prefix/rejection cases completed.
+The complete captured target logical state and raw hidden/normalized vectors,
+output IDs and callbacks match retained1a1d B1. Both machines independently replay
+the immutable68759719byte/715file archive; proof JSONs are identical. Actual41CPU
+tests passed0.201s on remote. Workflow cleanup, qualified source/runtime identity
+and owned-cache retirement passed. Actual counters:41token text12→4draft-prefill
+calls,104token image27→8,93token colors25→7, across both repeats. These are call
+counts, not speedups. Extra T16 engine weights are resident separately; captured
+graph/buffer/memory details retained. Sampled correctness adapter peak23527370752
+bytes (~21.91GiB), not full4K construction/serving peak or performance admission.
+
+Actual4Ktarget state/memory,805quality, HTTP/repeated speed and strongest matched
+vLLM/SGLang remain unqualified. No2x or halfTTFT claim. Current native default
+factories/source/runtime remain unchanged; candidate remains explicit study opt-in.
+Next execute prepared SGLang output/isolation diagnosis after its closed-job/source/
+idle preflight, then qualify wider MTP at4K and run host/GPU stage diagnostics.
+
+First SGLang diagnostic preflight failed before any receipt/install/model startup:
+manual wrapped-terminal archive-hash copy duplicated one character (65hex). Failure
+and original script retained. Corrected invocation reads all three closed archive
+hashes directly from saved proof JSONs and requires64lowercasehex. No qualified
+source/runtime/old failure archive or metric rewritten.
+'''
+for name in ('qwen38-5090-development-log.md','qwen38-5090-implementation-task.md'):
+ p=r/'docs/research'/name;raw=p.read_bytes();assert b'wider MTP short-model correctness closed and replayed twice' not in raw;p.write_bytes(raw+entry.replace('\n','\r\n').encode())
+print(json.dumps({'status':summary['status'],'archive_sha256':proof['archive_sha256'],'actual_cases':len(proof['cases']),'sampled_correctness_peak_gib':summary['correctness_sampled_peak_adapter_used_gib'],'actual_full4k_qualified':False,'two_times_target_achieved':False}))
