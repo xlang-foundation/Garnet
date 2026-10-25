@@ -1,0 +1,42 @@
+from pathlib import Path
+import hashlib,json,zipfile,datetime
+w=Path(__file__).resolve().parent;o=w.parent/'outputs';r=Path('D:/CantorAI/work/qwen38-5090');e=r/'test2026/cuda/qwen38_5090/evidence'
+sha=lambda raw:hashlib.sha256(raw).hexdigest()
+name='bf16-batch8-model-admission-attempt1';archive=o/(name+'-evidence.zip');a=json.loads((o/(name+'-verified.json')).read_bytes());b=json.loads((o/(name+'-remote-verified.json')).read_bytes())
+assert a==b and a['status']=='bf16_batch8_internal_model_admission_replayed' and sha(archive.read_bytes())==a['archive_sha256']=='bdd7978b9969c26fbe931da134ec66b7bd73fdf5247c0033f9b8fd98100aa01f'
+with zipfile.ZipFile(archive) as z:
+ workflow=json.loads(z.read('results/'+name+'/workflow.json'));report=json.loads(z.read('results/'+name+'/model/report.json'))
+ assert workflow['exit_code']==0 and workflow['cleanup_finished'] and workflow['library_unchanged'] and workflow['source_sha256']==workflow['source_after_sha256'] and workflow['runtime_dependencies']==workflow['runtime_dependencies_after']
+ assert len(a['cases'])==9 and all(v['complete_state_and_raw_vectors_inverse_permutation_exact'] for v in a['cases'])
+summary={'status':'bf16_batch8_internal_model_admission_closed_and_independently_replayed','recorded_utc':datetime.datetime.now(datetime.timezone.utc).isoformat(),'archive_sha256':a['archive_sha256'],'archive_bytes':archive.stat().st_size,'archive_files_verified':a['files_verified'],'independent_proofs_identical':True,'proof_sha256':sha((o/(name+'-verified.json')).read_bytes()),'library_sha256':a['library_sha256'],'cases':a['cases'],'correctness_sampled_peak_adapter_used_bytes':a['correctness_sampled_peak_adapter_used_bytes'],'correctness_sampled_peak_adapter_used_gib':a['correctness_sampled_peak_adapter_used_bytes']/2**30,'closed_cleanup_and_source_runtime_identity_verified':True,'source_file_count':len(workflow['source_sha256']),'external_b1_b4_math_quality_mtp_http_or_speed_admitted':False,'two_times_target_achieved':False,'scope':a['scope']}
+for suffix in ('-verified.json','-remote-verified.json'):
+ target=e/(name+suffix);assert not target.exists();target.write_bytes((o/(name+suffix)).read_bytes())
+for target in (e/'bf16-batch8-model-admission-closure.json',o/'Garnet-Batch8-Model-Admission-Results.json'):
+ assert not target.exists();target.write_text(json.dumps(summary,indent=2),encoding='utf8')
+(e/'retain-bf16-batch8-model-admission.py.txt').write_bytes(Path(__file__).read_bytes())
+entry='''
+
+### 2026-10-25 — physical B8 model admission closed and independently replayed
+
+Original supervisor48577 reported bf16-batch8-model-admission-attempt1 terminal0.
+Actual unchanged1a1d runtime completed all9cases:8short mixed rows and3968prompt+
+128output text/image rows, identity/rotate3/identity-repeat. Full canonical state
+component hashes, finite hidden/normalized raw vectors and output IDs match after
+inverse permutation; every reset including final reset matches empty state.
+Archive bdd7978b9969c26fbe931da134ec66b7bd73fdf5247c0033f9b8fd98100aa01f,
+71041774bytes/527files, was fully transferred and independently replayed with the
+unchanged verifier on both machines. Proof JSONs are identical. Actual28CPU tests
+passed remotely. Workflow cleanup, original source/runtime identity and adapter
+idle guard passed. Sampled correctness peak adapter use30854819840bytes (~28.74GiB)
+is a construction/correctness observation, not serving peak or throughput.
+
+This establishes full physical8row internal permutation/reset execution at4K.
+Independent B1/B4 numerical equivalence,805quality, padded HTTP worker/streaming,
+MTP and performance remain open. No2x or halfTTFT claim is admitted. Next qualify
+the explicit wider MTP draft-prefill candidate against retained B1 target state,
+then full4K/quality/memory and repeated matched timings; diagnose actual SGLang
+concurrent output variation without rewriting its preserved strict failure.
+'''
+for name in ('qwen38-5090-development-log.md','qwen38-5090-implementation-task.md'):
+ p=r/'docs/research'/name;raw=p.read_bytes();assert b'physical B8 model admission closed and independently replayed' not in raw;p.write_bytes(raw+entry.replace('\n','\r\n').encode())
+print(json.dumps(summary))
