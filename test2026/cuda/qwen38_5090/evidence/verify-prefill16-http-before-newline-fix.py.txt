@@ -1,0 +1,123 @@
+"""Replay raw B1 HTTP study evidence; scores/timings remain explicitly provisional."""
+from pathlib import Path
+import argparse,hashlib,io,json,statistics,sys,tempfile,zipfile
+sys.path.insert(0,str(Path(__file__).resolve().parents[3]))
+from compare_http_runs import verify_run
+from benchmark_stream import TokenEvents
+from benchmark_fixed_length_native import final_ids
+from cohort_memory_replay import replay_cohort_memory
+from test2026.cuda.qwen38_5090.verify_mmmu_http_quality import replay
+from test2026.cuda.qwen38_5090.mmmu_http_quality import load_corpus
+sha=lambda b:hashlib.sha256(b).hexdigest()
+def main():
+ a=argparse.ArgumentParser(description=__doc__);a.add_argument('--proofs',type=Path,required=True);a.add_argument('--corpus',type=Path,required=True);a.add_argument('--scratch',type=Path,required=True);args=a.parse_args();assert args.scratch.is_dir()
+ name='prefill16-fixed4k-http-attempt1';archive=args.proofs/(name+'-evidence.zip');base='results/'+name+'/';methods='Garnet/test2026/cuda/qwen38_5090/';profiles=[]
+ with zipfile.ZipFile(archive) as z:
+  doc=lambda n:json.loads(z.read(n));manifest=doc('evidence-manifest.json');assert z.testzip() is None and len(z.namelist())==len(set(z.namelist()))==len(manifest['files'])+1
+  for n,h in manifest['files'].items():assert sha(z.read(n))==h
+  w=doc(base+'workflow.json');raw=z.read(methods+'evidence/prefill16-http-run-preparation.json');p=json.loads(raw);assert sha(raw)==w['preparation_sha256']
+  assert w['source_sha256']==w['source_after_sha256']==p['files'] and w['runtime_dependencies']==w['runtime_dependencies_after']==p['runtime_dependencies'] and w['library_unchanged'] and w['cleanup_finished'] and not w['performance_admitted']
+  assert w['library_sha256']==p['runtime_dependencies']['garnet.dll'] and w['parent_proof_sha256']==p['parent_proof_sha256'] and w['parent_archive_sha256']==p['parent_archive_sha256']==manifest['parent_archive_sha256']
+  for n,h in p['files'].items():assert sha(z.read(n))==h
+  for helper in ('compare_http_runs.py','benchmark_stream.py','benchmark_fixed_length_native.py','cohort_memory_replay.py','mmmu_http_quality.py','verify_mmmu_http_quality.py','mmmu_quality_protocol.py'):
+   assert sha(Path(__file__).with_name(helper).read_bytes())==sha(z.read(methods+helper))
+  parent='tokenizer-nfc-model-consistency-attempt1';raw=z.read('results/'+parent+'-verified.json');parent_proof=json.loads(raw);assert sha(raw)==p['parent_proof_sha256'] and parent_proof['status']=='tokenizer_nfc_model_consistency_replayed' and parent_proof['archive_sha256']==p['parent_archive_sha256'] and parent_proof['library_sha256']==w['library_sha256']
+  eos='fixed-length-eos-consistency-attempt1';eos_raw=z.read('results/'+eos+'-verified.json');eq=json.loads(eos_raw);assert sha(eos_raw)==p['eos_proof_sha256'] and eq['status']=='fixed_length_eos_consistency_replayed' and eq['archive_sha256']==p['eos_archive_sha256'] and eq['library_sha256']==w['library_sha256'] and eq['replay_verifier_sha256']==sha(z.read(methods+'verify_fixed_length_eos.py'))
+  assert type(w['exit_code']) is int
+  assert w['native_parent']==p['native_parent'] and w['full4k_parent']==p['full4k_parent']
+  parent_checks=[dict(p['native_parent'],job='fixed-length-http-study-attempt1',proof_status='fixed_length_http_study_replayed'),dict(p['full4k_parent'],job='mtp-prefill16-full4k-admission-attempt1',proof_status='mtp_prefill16_full4k_target_state_replayed'),w['closed_host_diagnostic']]
+  for entry in parent_checks:
+   prior_path=args.proofs/(entry['job']+'-evidence.zip');assert sha(prior_path.read_bytes())==entry['archive_sha256']
+   raw=z.read('results/'+entry['job']+'-verified.json');q=json.loads(raw);assert sha(raw)==entry['proof_sha256'] and q['archive_sha256']==entry['archive_sha256'] and q['status']==entry['proof_status']
+   with zipfile.ZipFile(prior_path) as parent_archive:
+    parent_manifest=json.loads(parent_archive.read('evidence-manifest.json'));assert parent_archive.testzip() is None and len(parent_archive.namelist())==len(set(parent_archive.namelist()))==len(parent_manifest['files'])+1
+    for path,digest in parent_manifest['files'].items():assert sha(parent_archive.read(path))==digest
+    closed=json.loads(parent_archive.read('results/'+entry['job']+'/workflow.json'))
+   assert type(closed['exit_code']) is int and closed['cleanup_finished'] is True and closed['library_unchanged'] is True and closed['source_sha256']==closed['source_after_sha256'] and closed['runtime_dependencies']==closed['runtime_dependencies_after']
+   if entry['job']=='native-host-stage-full4k-attempt1':assert closed==doc('results/'+entry['job']+'/workflow.json') and closed['exit_code']==entry['exit_code']
+   else:assert closed['exit_code']==0
+  ordinary_base='results/fixed-length-http-study-attempt1/ordinary/'
+  prior=zipfile.ZipFile(args.proofs/'fixed-length-http-study-attempt1-evidence.zip');prior_doc=lambda name:json.loads(prior.read(name));prior_manifest=prior_doc('evidence-manifest.json')
+  passed=w['exit_code']==0
+  if passed:
+   assert w['status']=='prefill16_fixed4k_http_collected_needs_replay'
+   assert ('Ran '+str(p['expected_cpu_test_count'])+' tests').encode() in z.read(base+'cpu-ledger/commands.log') and b'\nOK' in z.read(base+'cpu-ledger/commands.log')
+   _,rows,_=load_corpus(args.corpus)
+   with tempfile.TemporaryDirectory(prefix='b1-http-replay-',dir=args.scratch) as temporary:
+    folder=Path(temporary).resolve();assert folder.is_relative_to(args.scratch.resolve())
+    for mode in ('mtp',):
+     prefix=base+mode+'/';report=doc(prefix+'report.json');assert report['status']=='fixed_length_http_profile_collected' and report['mode']==mode and report['library_sha256']==w['library_sha256'] and report['physical_batch']==1 and report['queued_concurrency'] and not report['performance_admitted'] and not report['broad_quality_qualified']
+     assert len(report['protocol_cases'])==12 and len(report['boundary_controls'])==2 and not report.get('exploratory_short_pilot_collected',False) and report['fixed_context_benchmark_collected']
+     quality_prefix=prefix+'mmmu-quality/';destination=folder/mode;destination.mkdir()
+     for n in manifest['files']:
+      if not n.startswith(quality_prefix):continue
+      relative=n.removeprefix(quality_prefix);target=destination/relative;assert target.resolve().is_relative_to(destination.resolve());target.parent.mkdir(parents=True,exist_ok=True);target.write_bytes(z.read(n))
+     screening=replay(args.corpus,destination);assert screening==doc(prefix+'mmmu-quality-replayed.json')==report['adapted_screening'] and screening['status']=='adapted_mmmu_http_quality_responses_replayed'
+     model_report=doc('results/'+parent+'/b1/report.json');expected={c['key']:c['generated_ids'][0] for c in model_report['cases']}
+     native_tokens={};native_completed={};ready=[];used=set()
+     for line in z.read(prefix+'worker/worker-stdout.jsonl').splitlines():
+      try:event=json.loads(json.loads(line)['line'])
+      except ValueError:continue
+      if not isinstance(event,dict):continue
+      if event.get('event')=='ready':ready.append(event)
+      elif event.get('event')=='token':
+       key=event['id'];assert key not in native_completed;native_tokens.setdefault(key,[]).append(event['token_id']);assert event['sampled_tokens']==len(native_tokens[key])
+      elif event.get('event')=='completed':
+       key=event['id'];assert key not in native_completed and native_tokens[key]==event['generated_ids'] and event['physical_batch']==event['real_rows']==1 and event['padded_rows']==0;native_completed[key]=event
+      elif event.get('event')=='error':raise AssertionError(event)
+     assert len(ready)==1 and ready[0]==report['ready'] and ready[0]['library_sha256']==w['library_sha256']
+     assert ready[0]['generation_mode']=='mtp' and ready[0]['prefill_chunk']==32 and ready[0]['chunk']==4 and ready[0]['explicit_ignore_eos_supported'] is True
+     admitted=ready[0]['mtp_prefill16_admission'];assert admitted==w['admission'] and admitted['full4k_archive_sha256']==p['full4k_parent']['archive_sha256'] and admitted['full4k_proof_sha256']==p['full4k_parent']['proof_sha256'] and admitted['draft_prefill_chunk']==16 and admitted['draft_decode_chunk']==4 and admitted['extra_draft_engine_weights_duplicated'] is True and admitted['http_quality_or_performance_qualified'] is False
+     exit_record=doc(prefix+'worker-exit.json');assert type(exit_record['exit_code']) is int and exit_record['exit_code']==0
+     def native_match(key,prompt,completion,ignore_eos=False):
+      assert key not in used and key in native_completed;record=native_completed[key];assert record['prompt_ids']==prompt and record['generated_ids']==completion and record['ignore_eos'] is ignore_eos;used.add(key)
+     for row in rows:
+      response=doc(quality_prefix+'cases/'+row['id']+'/response.bin');choice=response['choices'][0];native_match(response['id'],choice['prompt_token_ids'],choice['response_token_ids'])
+     for item in report['protocol_cases']:
+      key=item['key']
+      if key.startswith('protocol-'):
+       original=key.split('-',2)[2];response=doc(prefix+key+'-response.json');choice=response['choices'][0];request=doc(prefix+key+'-request.json');oracle=doc('results/native-mtp3-http/'+original+'-response.json')['choices'][0];assert choice['prompt_token_ids']==oracle['prompt_token_ids'] and choice['response_token_ids']==expected[original] and item['completion_ids_exact'];native_match(response['id'],choice['prompt_token_ids'],choice['response_token_ids'])
+      else:
+       original=key.removeprefix('stream-');events=[json.loads(line) for line in z.read(prefix+key+'-events.jsonl').splitlines()];data=[json.loads(v['data']) for v in events if v['data']!='[DONE]'];final=[v for v in data if 'response_token_ids' in v];assert len(final)==1 and final[0]['response_token_ids']==expected[original] and final[0]['prompt_token_ids']==doc('results/native-mtp3-http/'+original+'-response.json')['choices'][0]['prompt_token_ids'];native_match(final[0]['id'],final[0]['prompt_token_ids'],final[0]['response_token_ids'])
+       state=TokenEvents()
+       for event in events:state.feed(event['data'],event['monotonic'])
+       result=doc(prefix+key+'-result.json');fresh=state.result(result['submitted'],result['completed'],doc(prefix+key+'-request.json')['max_tokens']);assert fresh['generated_tokens']==len(expected[original]) and result['status']=='completed'
+     with zipfile.ZipFile(io.BytesIO(z.read(methods+'evidence/fixed-length-4096-corpus.zip'))) as context:
+      manifest_raw=context.read('manifest.json');assert sha(manifest_raw)=='25808fff53f326b6a1a970bb389173b2a54c1d1189248d40122fcdb959cb6987';context_manifest=json.loads(manifest_raw);context_ids={r['key']:json.loads(context.read(r['expected_prompt_ids_file'])) for r in context_manifest['rows']};context_requests={r['key']:json.loads(context.read(r['request_file'])) for r in context_manifest['rows']}
+      for case in ('text','image'):
+       row=next(r for r in context_manifest['rows'] if r['key']=='ctx4096-s3-'+case+'-c1-warmup-0-0');expected_ids=json.loads(context.read(row['expected_prompt_ids_file']));body=json.loads(context.read(row['request_file']));body['stream']=False;assert doc(prefix+'boundary-'+case+'-request.json')==body
+       response=doc(prefix+'boundary-'+case+'-response.json');choice=response['choices'][0];assert choice['prompt_token_ids']==expected_ids and len(expected_ids)==3968 and len(choice['response_token_ids'])==128 and response['usage']=={'prompt_tokens':3968,'completion_tokens':128,'total_tokens':4096};native_match(response['id'],choice['prompt_token_ids'],choice['response_token_ids'],True)
+       if mode=='mtp':assert choice==prior_doc(ordinary_base+'boundary-'+case+'-response.json')['choices'][0]
+     if mode=='mtp':
+      assert report['ordinary_mtp_screening_token_mismatches']==[]
+      for row in rows:
+       suffix='mmmu-quality/cases/'+row['id']+'/response.bin';a=prior_doc(ordinary_base+suffix)['choices'][0];b=doc(prefix+suffix)['choices'][0];assert (a['prompt_token_ids'],a['response_token_ids'])==(b['prompt_token_ids'],b['response_token_ids'])
+     def benchmark_replay(directory,fixed):
+      root=prefix+directory+'/';benchmarks=[n for n in manifest['files'] if n.startswith(root) and n.endswith('-manifest.json')];assert len(benchmarks)==1;benchmark=doc(benchmarks[0]);result=verify_run(benchmark,lambda n:z.read(root+n));assert len(result['cohorts'])==8 and benchmark['gpu']['uuid']=='GPU-265ee66c-9b79-cd3b-0c63-dd6942ddb5e6'
+      if fixed:assert benchmark['corpus_manifest_sha256']=='25808fff53f326b6a1a970bb389173b2a54c1d1189248d40122fcdb959cb6987' and benchmark['actual_input_tokens_required']==3968 and benchmark['actual_completion_tokens_required']==128
+      samples=[json.loads(line) for line in z.read(root+benchmark['run_id']+'-vram.jsonl').splitlines()];memory={}
+      for cohort in benchmark['cohorts']:
+       phase=cohort['case']+'-c'+str(cohort['concurrency']);requests=[doc(root+key+'-result.json') for key in cohort['request_keys']]
+       memory[phase]=replay_cohort_memory(samples,phase,cohort,requests)
+       if fixed:assert cohort['prompt_tokens']==[3968]*8 and cohort['generated_tokens']==1024
+      actual_context_keys=set()
+      for n in manifest['files']:
+       if not(n.startswith(root) and n.endswith('-events.jsonl')):continue
+       events=[json.loads(line) for line in z.read(n).splitlines()];values=[json.loads(v['data']) for v in events if v['data']!='[DONE]'];final=[v for v in values if 'response_token_ids' in v];assert len(final)==1
+       if fixed:
+        key=Path(n).name.removesuffix('-events.jsonl').removeprefix(benchmark['run_id']+'-');actual=final_ids(events,context_ids[key]);actual_context_keys.add(key);assert doc(root+benchmark['run_id']+'-'+key+'-request.json')==context_requests[key] and context_requests[key]['ignore_eos'] is True
+        if mode=='mtp':
+         ordinary_manifests=[v for v in prior_manifest['files'] if v.startswith(ordinary_base+'benchmark4k/') and v.endswith('-manifest.json')];assert len(ordinary_manifests)==1;ordinary=prior_doc(ordinary_manifests[0]);assert benchmark['ordinary_manifest_sha256']==sha(prior.read(ordinary_manifests[0]));previous=[json.loads(line) for line in prior.read(ordinary_base+'benchmark4k/'+ordinary['run_id']+'-'+key+'-events.jsonl').splitlines()];assert actual['response_token_ids']==final_ids(previous,context_ids[key])['response_token_ids']
+       native_match(final[0]['id'],final[0]['prompt_token_ids'],final[0]['response_token_ids'],fixed)
+      if fixed:assert actual_context_keys==set(context_ids) and len(actual_context_keys)==124
+      return {'raw_replay':result,'sampled_memory':memory,'actual_input_tokens_each':3968 if fixed else None}
+     short=None;fixed=benchmark_replay('benchmark4k',True)
+     assert used==set(native_completed) and len(used)==943
+     resource=doc(base+mode+'-resources/resource-monitor.json');all_samples=[json.loads(line) for line in z.read(base+mode+'-resources/resource-vram.jsonl').splitlines()];whole_peak=max(s['used_bytes'] for s in all_samples);assert resource['child_exit_code']==0 and resource['gpu']['uuid']=='GPU-265ee66c-9b79-cd3b-0c63-dd6942ddb5e6' and resource['sampled_memory']['sampled_peak_adapter_used_bytes']==whole_peak
+     profiles.append({'mode':mode,'screening':screening,'protocol_controls':12,'actual_4k_boundary_controls':2,'short_pilot':short,'fixed_4k_benchmark':fixed,'whole_study_sampled_peak_adapter_bytes':whole_peak,'scope':'Actual wider-draft-prefill12protocol/805screen/two4Kcontrols/124fixed4Kstreams; all actual ordinary IDs exact. No short pilot. Single-slot queued native serving; whole-study memory includes startup/quality while benchmark memory is cohort-specific. Adapter-wide sampled maxima. Matched references,broad quality and2x remain open.'})
+  archived=sha(z.read(methods+'verify_prefill16_http.py'));prior.close()
+ report={'status':'prefill16_fixed4k_http_replayed' if passed else 'prefill16_fixed4k_http_failure_preserved','archive_sha256':sha(archive.read_bytes()),'files_verified':len(manifest['files']),'library_sha256':w['library_sha256'],'profiles':profiles,'replay_verifier_sha256':sha(Path(__file__).read_bytes()),'archived_replay_verifier_sha256':archived,'native_fixed_4k_metrics_replayed':passed,'memory_summary_snapshot_replayed':passed,'checker_in_runtime_archive':True,'memory_replay_helper_sha256':sha(Path(__file__).with_name('cohort_memory_replay.py').read_bytes()),'matched_4k_reference_comparison_qualified':False,'broad_quality_qualified':False,'matched_tuned_reference_comparison_qualified':False,'performance_admitted':False,'two_times_target_achieved':False,'scope':p['scope']}
+ target=args.proofs/(name+'-verified.json');raw=json.dumps(report,indent=2).encode();assert not target.exists() or target.read_bytes()==raw
+ if not target.exists():target.write_bytes(raw)
+ print(json.dumps(report,indent=2));return 0 if passed else 1
+if __name__=='__main__':raise SystemExit(main())

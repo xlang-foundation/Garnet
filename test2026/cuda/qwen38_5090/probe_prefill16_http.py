@@ -7,6 +7,7 @@ from pathlib import Path
 import argparse,concurrent.futures,copy,hashlib,json,subprocess,sys,threading,time,zipfile
 from urllib.request import Request,urlopen
 from urllib.error import HTTPError
+from prefill16_http_study import finish_worker as finish_prefill16_worker
 from native_fixed_length_http_bridge import Worker,Handler,ThreadingHTTPServer
 from benchmark_stream import request as stream_request
 
@@ -91,6 +92,6 @@ def main():
  finally:
   if server is not None:server.shutdown();server.server_close()
   if thread is not None:thread.join()
-  worker.close()
+  finish_prefill16_worker(worker,out)
  return 0
 if __name__=='__main__':raise SystemExit(main())

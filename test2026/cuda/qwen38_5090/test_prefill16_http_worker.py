@@ -36,6 +36,16 @@ class OriginalWorker(ast.NodeTransformer):
 
 
 class OriginalProbe(ast.NodeTransformer):
+    def visit_ImportFrom(self, node):
+        if node.module == 'prefill16_http_study' or (node.module and node.module.endswith('.prefill16_http_study')):
+            return None
+        return node
+
+    def visit_Expr(self, node):
+        if isinstance(node.value, ast.Call) and isinstance(node.value.func, ast.Name) and node.value.func.id == 'finish_prefill16_worker':
+            return ast.Expr(value=ast.Call(func=ast.Attribute(value=ast.Name(id='worker', ctx=ast.Load()), attr='close', ctx=ast.Load()), args=[], keywords=[]))
+        return self.generic_visit(node)
+
     def visit_Assert(self, node):
         if (isinstance(node.msg, ast.Constant) and node.msg.value == 'Explicit candidate probe requires MTP and actual ordinary controls'):
             return None
