@@ -1,0 +1,41 @@
+{
+  "status": "offline_prepared_only",
+  "gpu_executed": false,
+  "remote_files_uploaded": false,
+  "native_source_or_runtime_changed": false,
+  "cases_planned": 14,
+  "physical_batch": 4,
+  "prefill_chunk": 32,
+  "decode_chunk": 4,
+  "capacity": 4096,
+  "real_row_counts": [
+    1,
+    1,
+    2,
+    3,
+    3,
+    4,
+    3
+  ],
+  "unequal_prefix_counts": [
+    0,
+    1,
+    2,
+    4
+  ],
+  "cpu_tests_passed": 11,
+  "required_parent": "bf16-same-precision-mtp-attempt1",
+  "required_parent_status": "bf16_same_precision_mtp_corpus_replayed",
+  "closed_parent_and_both_replays_required": true,
+  "files": {
+    "probe_bf16_padded_lifecycle.py": "cc290eb0f65ba0ba4f8aa05680fb818353809c225195d07b54f454a51cac005c",
+    "run_bf16_padded_lifecycle.py": "d1ab99d98fe035660a2eca5eadf06980db013d72110d985c5f06233cec58ec6c",
+    "verify_bf16_padded_lifecycle.py": "51451a54670a29625cd0279cec1a3c836f5badebaf1b0195bc72c00fc7cf4779",
+    "test_bf16_padded_lifecycle.bat": "683704e91abcdbcecb0c69d809361d759ee087f8ce979ee82e38a9e47f2d57d7",
+    "bf16_padded_state_gate.py": "a22ec2af9ff0d0547ef07fa7600986cb979911689e17c80e0f4acd79be783044",
+    "test_bf16_padded_state_gate.py": "34f1ce189be927f225f28cabb35d192730714c1df011845e2cfde280aa8b40b4",
+    "evidence/bf16-padded-lifecycle-probe-derivation.json": "98de762981967db80dbd1cf954f21b69eefae8a99bea5ca93496a955cec89df9",
+    "evidence/bf16-padded-lifecycle-local-cpu.log": "4cb4936bd442906085e644b842d17840fdc32dab093ce00e8f02d8c192bc404c"
+  },
+  "scope": "Offline methods only, no packed lifecycle GPU result. Complete guarded preparation from authoritative terminal parent and remote preflight before any upload/start. No B8, broad quality, actual4K, protocol, HTTP, memory or speed qualification."
+}

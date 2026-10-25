@@ -66,6 +66,11 @@ pass locally and remotely; original bf16-same-precision-mtp-attempt1 is running.
 All eight uploads were acknowledged after guarded preflight. No runtime rebuild.
 Partial/reset/retired-row, broad-quality, B8, actual4K and serving/timing gates
 remain open. Correctness adapter peaks are not serving-memory claims.
+A prospective14case private-padding/lifecycle probe, guarded runner and replay
+checker are prepared locally, with11CPU controls passing. They cover1/2/3/4real
+rows, unequal0/1/2/4accepted prefixes, rollback/pending ownership, full resets
+and early-finished color rows while a descriptive row continues. No upload or
+GPU execution yet; require the current packed MTP corpus terminal/both replays.
 
 Actual4K request fixtures are CPU-prepared/replayed using the pinned tokenizer,
 exact chat template and64image slots:124requests,3968input tokens each plus
