@@ -1,0 +1,11 @@
+from pathlib import Path
+import hashlib,json,subprocess,sys,zipfile
+chat=Path(__file__).resolve().parents[1];repo=Path('D:/CantorAI/work/qwen38-5090');m=repo/'test2026/cuda/qwen38_5090';target=m/'evidence/tokenizer-nfc-http-preparation.json';plan=chat/'work/tokenizer-nfc-http-upload-plan.json';assert not target.exists() and not plan.exists()
+recipe=json.loads((m/'evidence/tokenizer-nfc-http-method-derivation.json').read_bytes());archive=chat/'outputs/bf16-low-batch-http-study-attempt1-evidence.zip';sha=lambda b:hashlib.sha256(b).hexdigest();assert sha(archive.read_bytes())==recipe['parent_failed_archive_sha256']
+with zipfile.ZipFile(archive) as z:
+ for name,row in recipe['files'].items():
+  raw=z.read(row['source']);assert sha(raw)==row['source_sha256'];text=raw.decode()
+  for before,after,count in row['changes']:assert text.count(before)==count;text=text.replace(before,after)
+  assert text.encode()==(m/name).read_bytes() and sha((m/name).read_bytes())==row['result_sha256']
+command=[sys.executable,str(m/'prepare_tokenizer_nfc_http.py'),'--proofs',str(chat/'outputs'),'--corpus-archive',str(chat/'work/mmmu/quality-corpus.zip'),'--plan',str(plan)];process=subprocess.run(command,stdout=subprocess.PIPE,stderr=subprocess.PIPE);print(process.stdout.decode(),end='');assert process.returncode==2 and not process.stderr and not target.exists() and not plan.exists()
+report={'status':'tokenizer_http_derivation_and_absent_model_guard_passed','actual_child_exit_code':process.returncode,'actual_child_argv':command,'derived_methods_exact':7,'preparation_file_created':False,'upload_plan_created':False,'gpu_or_http_executed':False,'source_sha256':{n:sha((m/n).read_bytes()) for n in recipe['files']},'scope':'Actual CPU replay of seven literal methods and expected missing-current-model-proof exit2; source/model/HTTP runtime unchanged.'};(chat/'work/tokenizer-nfc-http-guard-result.json').write_text(json.dumps(report,indent=2),encoding='utf8');print(json.dumps(report,indent=2))
