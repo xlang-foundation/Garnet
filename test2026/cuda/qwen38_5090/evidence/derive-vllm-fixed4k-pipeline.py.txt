@@ -1,0 +1,84 @@
+from pathlib import Path
+import hashlib,json
+m=Path('D:/CantorAI/work/qwen38-5090/test2026/cuda/qwen38_5090');rows=[]
+def derive(source,result,extra=()):
+    original=(m/source).read_bytes();text=original.decode().replace('\r\n','\n');changes=[]
+    for before,after,count in extra:
+        assert text.count(before)==count,(source,before,text.count(before),count)
+        text=text.replace(before,after);changes.append([before,after,count])
+    target=m/result;assert not target.exists();target.write_bytes(text.encode())
+    rows.append({'source':source,'source_sha256':hashlib.sha256(original).hexdigest(),'source_newlines_normalized_to_lf':True,'changes':changes,'result':result,'result_sha256':hashlib.sha256(target.read_bytes()).hexdigest()})
+def replacements(source,pairs):
+    text=(m/source).read_text();result=[]
+    for before,after in pairs:
+        count=text.count(before);assert count>0,(source,before)
+        result.append((before,after,count));text=text.replace(before,after)
+    return result
+
+source='reference_fixed4k_boundary.py'
+derive(source,'reference_fixed4k_vllm_boundary.py',replacements(source,[('sglang','vllm'),('18081','18080')]))
+source='probe_reference_reserved_fixed4k.py'
+derive(source,'probe_vllm_fixed4k.py',replacements(source,[
+    ("choices=('vllm','sglang')","choices=('vllm',)"),
+    ("choices=('ordinary','mtp')","choices=('ordinary',)"),
+    ("metadata['configured_engine_context_capacity']==4098 and metadata['engine_context_reserved_slots']==2","metadata['configured_engine_context_capacity']==4096 and metadata['engine_context_reserved_slots']==0"),
+    ('from reference_fixed4k_boundary import collect','from reference_fixed4k_vllm_boundary import collect')]))
+source='run_sglang_fixed4k.py'
+derive(source,'run_vllm_fixed4k.py',replacements(source,[('SGLang','vLLM'),('sglang','vllm'),('18081','18080'),("choices=('ordinary','mtp')","choices=('ordinary',)"),
+    ("for name,digest in p['files'].items():", "for parent_name,parent_row in p['parents'].items():\n        parent_path=root/'results'/(parent_name+'-verified.json');parent_proof=json.loads(parent_path.read_bytes());parent_workflow=json.loads((root/'results'/parent_name/'workflow.json').read_bytes())\n        assert sha(parent_path)==parent_row['proof_sha256'] and parent_proof['status']==parent_row['status'] and sha(root/'results'/(parent_name+'-evidence.zip'))==parent_proof['archive_sha256']==parent_row['archive_sha256']\n        assert type(parent_workflow['exit_code']) is int and parent_workflow['exit_code']==0 and parent_workflow['cleanup_finished'] is True and parent_workflow['source_sha256']==parent_workflow['source_after_sha256'] and parent_workflow['runtime_dependencies']==parent_workflow['runtime_dependencies_after']\n    for name,digest in p['files'].items():"),
+    ("common=[root/name for name in p['files']]+[args.preparation,proofpath]", "common=[root/name for name in p['files']]+[args.preparation,proofpath]+[root/'results'/(name+'-verified.json') for name in p['parents']]")]))
+
+source='verify_sglang_fixed4k.py'
+changes=replacements(source,[('SGLang','vLLM'),('sglang','vllm'),('18081','18080')])
+text=(m/source).read_text()
+for before,after,count in changes:text=text.replace(before,after)
+def add(before,after):
+    global text
+    count=text.count(before);assert count==1,(before,count)
+    changes.append((before,after,count));text=text.replace(before,after)
+add("w['mode'] in ('ordinary','mtp')","w['mode']=='ordinary'")
+add("passed=w['exit_code']==0",'''for parent_name,parent_row in p['parents'].items():
+            parent_raw=z.read('results/'+parent_name+'-verified.json');parent_proof=json.loads(parent_raw)
+            assert parent_raw==(args.proofs/(parent_name+'-verified.json')).read_bytes() and sha(parent_raw)==parent_row['proof_sha256']
+            assert parent_proof['status']==parent_row['status'] and parent_proof['archive_sha256']==parent_row['archive_sha256']==sha((args.proofs/(parent_name+'-evidence.zip')).read_bytes())
+        passed=w['exit_code']==0''')
+add("assert b'Ran 31 tests' in z.read(base+'cpu-ledger/commands.log')","assert ('Ran '+str(p['expected_cpu_tests'])+' tests').encode() in z.read(base+'cpu-ledger/commands.log')")
+add("expected=validate(info,w['mode'])","expected=validate(info,doc(base+'server-version-raw.json'),z.read(base+'server.log').decode('utf8','replace'),w['mode'])")
+add("'verify_mmmu_http_quality.py'):","'verify_mmmu_http_quality.py','reference_fixed4k_vllm_boundary.py','vllm_cache_control.py'):")
+add("body.pop('return_token_ids');body.pop('return_prompt_token_ids');", "assert 'return_prompt_token_ids' not in body;body.pop('return_token_ids');")
+add("report=doc(base+'client/report.json');",'''assert metadata['server_version_sha256']==sha(z.read(base+'server-version-raw.json'))
+            config_identity=doc(base+'vllm-config-identity.json');schema=doc(METHODS+'evidence/vllm-fixed4k-config-schema-attempt1.json')
+            assert sha(z.read(base+'vllm-config-identity.json'))==metadata['installed_config_identity_sha256']
+            assert config_identity['status']=='installed_vllm_fixed4k_config_sources_verified' and config_identity['source_modified'] is config_identity['gpu_executed'] is False
+            assert config_identity['pins_sha256']==sha(z.read(METHODS+'evidence/vllm-fixed4k-config-schema-attempt1.json')) and len(config_identity['files'])==5
+            assert set(config_identity['files'])==set(schema['files'])
+            for name,row in config_identity['files'].items():assert row['sha256']==schema['files'][name]['sha256']==sha(z.read(base+row['archived_copy']))
+            report=doc(base+'client/report.json');''')
+add("greedy=doc(base+'client/greedy-controls/greedy/equivalence.json');",'''from reference_fixed4k_vllm_boundary import replay as replay_boundary
+            with tempfile.TemporaryDirectory(prefix='vllm4k-boundary-replay-',dir=args.scratch) as temporary:
+                folder=Path(temporary).resolve();boundary_prefix=base+'client/boundary-controls/'
+                for name in manifest['files']:
+                    if name.startswith(boundary_prefix):
+                        target=folder/name.removeprefix(boundary_prefix);assert target.resolve().is_relative_to(folder);target.parent.mkdir(parents=True,exist_ok=True);target.write_bytes(z.read(name))
+                assert replay_boundary(Path(__file__).with_name('evidence')/'fixed-length-4096-corpus.zip',folder)==report['early_full4k_controls']
+            greedy=doc(base+'client/greedy-controls/greedy/equivalence.json');''')
+add("control_report=doc(root+'controls/report.json');",'''from vllm_cache_control import parse_metrics
+                reset=doc(root+'cache-control/reset.json');assert reset['status']=='reset_acknowledged' and reset==benchmark['image_cache_reset']
+                assert reset['idle_before']['running']==reset['idle_before']['waiting']==0
+                assert [(r['endpoint'],r['status']) for r in reset['reset_responses']]==[('/reset_mm_cache',200),('/reset_encoder_cache',200)]
+                before=parse_metrics(z.read(root+'cache-control/after-reset.prom'));after=parse_metrics(z.read(root+'cache-control/after-run.prom'))
+                assert before==reset['after_reset'] and before['running']==before['waiting']==after['running']==after['waiting']==0
+                assert before['process_start']==after['process_start']==reset['idle_before']['process_start']
+                counters=doc(root+'cache-control/counter-delta.json');assert counters==benchmark['image_cache_counter_delta']
+                assert counters['before']==before and counters['after']==after and counters['query_delta']==after['queries']-before['queries']>0 and counters['hit_delta']==after['hits']-before['hits']==0
+                control_report=doc(root+'controls/report.json');''')
+add("archived=sha(z.read(METHODS+'verify_vllm_fixed4k.py'))","archived=sha(z.read(METHODS+'verify_vllm_fixed4k.py'));assert archived==sha(Path(__file__).read_bytes())")
+add('print(json.dumps(result,indent=2));return 0 if passed else 1',"print(json.dumps({'status':result['status'],'engine':result['engine'],'archive_sha256':result['archive_sha256'],'files_verified':result['files_verified'],'proof_sha256':sha(data),'profiles':len(profiles)}));return 0 if passed else 1")
+derive(source,'verify_vllm_fixed4k.py',changes)
+source='test_sglang_fixed4k_owner.py'
+# Preserve the invalid other-engine name while selecting the new owner/port.
+pairs=[('from .run_sglang_fixed4k import','from .run_vllm_fixed4k import'),("'vllm-fixed4k-ordinary-attempt1'","'other-engine-fixed4k-ordinary-attempt1'"),('sglang-fixed4k','vllm-fixed4k'),('18081','18080')]
+derive(source,'test_vllm_fixed4k_owner.py',replacements(source,pairs))
+target=m/'evidence/vllm-fixed4k-pipeline-derivation.json';assert not target.exists()
+target.write_bytes(json.dumps({'status':'vllm_fixed4k_pipeline_derived_unrun','rows':rows,'scope':'Preserve common native-proof ownership, fixed3968+128corpus, actual ID/quality controls, raw streaming/count/latency/throughput/VRAM replay and owned PID cleanup. Select actual vLLM0.32 structured config/capacity/source checks, its nonstream ID schema and existing dual idle image-cache reset. Ordinary only; no actual server/benchmark/MTP result.'},indent=2).encode())
+print(json.dumps({'status':'vllm_fixed4k_pipeline_derived_unrun','files':len(rows)}))

@@ -1,0 +1,19 @@
+from pathlib import Path
+import ast,hashlib,json,zipfile
+w=Path(__file__).resolve().parent;sha=lambda raw:hashlib.sha256(raw).hexdigest();plan=json.loads((w/'vllm-fixed4k-upload-plan.json').read_bytes());files={}
+for row in plan['uploads']:
+    raw=Path(row['local']).read_bytes();assert sha(raw)==row['sha256'];files[row['target']]=raw
+assert len(files)==14
+archive=w/'vllm-fixed4k-methods.zip';assert not archive.exists()
+with zipfile.ZipFile(archive,'x',zipfile.ZIP_DEFLATED) as z:
+    for name,raw in files.items():z.writestr(name,raw)
+    z.writestr('install-manifest.json',json.dumps({'files':{n:sha(raw) for n,raw in files.items()},'scope':'Absent-only matched ordinary vLLM4K source/config/PID/protocol/quality/raw benchmark replay methods. Existing launcher, corpus, source, model, RTE and Windows/WSL SDK unchanged. No server/GPU launch.'},indent=2))
+old=(w/'install-tiled-scores-http-methods.py').read_text()
+text=old.replace('tiled-scores-http-methods.zip','vllm-fixed4k-methods.zip').replace('tiled-scores-http-install.json','vllm-fixed4k-install.json')
+text=text.replace('==14\n','==15\n').replace('tiled-scores-http-preparation.json','vllm-fixed4k-run-preparation.json')
+text=text.replace("p['runtime_baseline']","p['runtime_dependencies']")
+text=text.replace("    candidate=root/'build/bin/garnet-native-bf16-scores-tiled-api-attempt1.dll'\n    assert sha(candidate.read_bytes())==p['runtime_dependencies']['garnet.dll']\n",'')
+text=text.replace('tiled_scores_http_methods_installed','vllm_fixed4k_methods_installed');ast.parse(text)
+installer=w/'install-vllm-fixed4k-methods.py';assert not installer.exists();installer.write_bytes(text.encode())
+result={'status':'vllm_fixed4k_method_bundle_prepared','bundle_sha256':sha(archive.read_bytes()),'bytes':archive.stat().st_size,'new_targets':14,'installer_sha256':sha(installer.read_bytes())}
+(w/'vllm-fixed4k-bundle-preparation.json').write_bytes(json.dumps(result,indent=2).encode());print(json.dumps(result))

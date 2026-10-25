@@ -1,0 +1,44 @@
+from pathlib import Path
+import hashlib,json,shutil
+w=Path(__file__).resolve().parent;repo=Path('D:/CantorAI/work/qwen38-5090');m=repo/'test2026/cuda/qwen38_5090';e=m/'evidence';out=w.parent/'outputs';sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+for name in ('derive-vllm-fixed4k-pipeline.py','package-vllm-fixed4k-methods.py','install-vllm-fixed4k-methods.py','retain-vllm-fixed4k-preparation.py'):
+    shutil.copyfile(w/name,e/(name+'.txt'))
+for name in ('vllm-fixed4k-bundle-preparation.json','vllm-fixed4k-upload-plan.json','vllm-fixed4k-preparation-before-stable-derivation.json','vllm-fixed4k-upload-plan-before-stable-derivation.json'):
+    shutil.copyfile(w/name,e/name)
+for file in (w/'vllm-fixed4k-cpu-ledger').iterdir():
+    assert file.name in ('commands.log','commands.jsonl');shutil.copyfile(file,e/('vllm-fixed4k-cpu-ledger-'+file.name))
+initial=w/'vllm-fixed4k-before-parent-proof-pins'
+initial_files={}
+for file in initial.iterdir():
+    if file.is_file():
+        target=e/('vllm-fixed4k-unrun-initial-'+file.name+'.txt');shutil.copyfile(file,target);initial_files[file.name]=sha(file)
+p=json.loads((e/'vllm-fixed4k-run-preparation.json').read_bytes());bundle=json.loads((w/'vllm-fixed4k-bundle-preparation.json').read_bytes())
+result={'status':'vllm_fixed4k_pipeline_prepared_cpu_passed_remote_server_unrun','final_cpu_controls':43,'final_cpu_test_elapsed_seconds':1.807,
+        'preparation_sha256':sha(e/'vllm-fixed4k-run-preparation.json'),'source_pins':len(p['files']),'method_bundle':bundle,
+        'installed_config_schema_sha256':sha(e/'vllm-fixed4k-config-schema-attempt1.json'),
+        'native_parent':p['parents']['fixed-length-http-study-attempt1'],'sglang_parent':p['parents']['sglang-observed-fixed4k-ordinary-attempt1'],
+        'new_remote_methods_installed':False,'vllm_gpu_server_started':False,'new_benchmark_collected':False,'two_times_target_achieved':False,
+        'live_job':'paged-batch8-model-preservation-attempt1','latest_partial_model_cases':[{'group':'short-mixed','repeat':i,'inverse_permutation_exact':True} for i in range(3)]+[{'group':'full4k-text','repeat':i,'inverse_permutation_exact':True} for i in range(2)],
+        'scope':p['scope'],
+        'predeployment_corrections':{'status_schema':'Initial preparer expected reference_observed_fixed4k_profile_replayed; actual immutable SGLang proof is reference_fixed4k_observed_profile_replayed. Exact schema corrected before any new GPU/server launch.',
+            'local_overlap':'An owned local file-copy step was still live while a derivative/preparation command was attempted. Initial derivative refused existing targets; an unrun initial43CPU preparation was produced against the old methods. Original copy later completed; a subsequent local cleanup copy was cancelled by exact owned pwsh PID13316 after identity checks, and its tool handle7939 was observed terminal-1. Superseded preparation/plan, source snapshots and append-only CPU logs retained. Then all five derivatives were generated sequentially and the complete43CPU suite reran successfully against stable782file pins. No remote installation or model/server attempt occurred under superseded preparation.',
+            'initial_preparation_sha256':sha(w/'vllm-fixed4k-preparation-before-stable-derivation.json'),'retained_initial_files':initial_files}}
+(e/'vllm-fixed4k-preparation-closure.json').write_bytes(json.dumps(result,indent=2).encode())
+(out/'Garnet-vLLM-4K-Preparation-Status.json').write_bytes(json.dumps(result,indent=2).encode())
+addition='''
+
+### 2026-10-25 — matched ordinary vLLM4K pipeline prepared; live B8 has five exact cases
+
+Prepared an explicit ordinary vLLM0.32.0 WSL trial using the already existing shared fixed-length reference HTTP client and unchanged decode-graph launcher. Same frozen actual3968+128 requests, eight text/image C1/2/4/8cohorts, dual idle processor/encoder resets before timing and zero new cache hits. Two early full4K boundaries, four actual VLM/16short ID controls, fresh805adapted screen and all124serial4KID controls precede all124warmup/timed streams. Common streamed individual IDs remain unobserved; no reconstruction from text. Strict same-engine text mismatches remain failures requiring diagnosis; never omit/cherry-pick those requests or claim quality parity.
+
+Read actual installed vLLM config/router source declarations through CPU-only WSL commands, without model/torch/GPU imports or source edits. Structured `/server_info?config_format=json` is supported by the exact installed router. Saved1809byte schema/hash record `vllm-fixed4k-config-schema-attempt1.json` SHAa8b9431b47317d00341945e79ad5110ae4e95afba77735a6b32839e6f56a4229; five installed source hashes cover model/cache/scheduler/compilation/router. One CPU inspection reported a systemd root user-session warning but returned0 and source data; no systemd repair, reference server or package change was made. Startup metadata collector separately requires actual JSON/version, pinned checkpoint/modelopt_mixed/BF16KV/F32SSM/TP1/graph settings, reported resolved capacity for at least eight actual full4Krequests, exact named installed sources and owned PID. A configured4GiB budget alone is not admitted as memory fit. Existing historical short-prompt cache-capacity observations remain historical, not a new matched4Kbenchmark.
+
+Final stable43CPU controls passed in1.807s. Every new boundary/probe/owner/raw-checker/owner-test file has an exact recorded derivation; stream timing/count/text replay arithmetic is unchanged. Independent checker adds actual config/source/version/boundary and raw cache-reset/counter replay. It retains all protocol, actual quality/ID/rawSSE/count/usage/metrics/cohort memory/gap and verified owned PID shutdown checks. Preparation pins782files and the actual replayed native/SGLang ordinary parents. Absent-only bundle contains14new targets; existing launcher/corpus/checkpoint/runtime/source/SDK are not overwritten. See `evidence/vllm-fixed4k-preparation-closure.json`, CPU ledgers and exact install/package/derivation methods.
+
+Two predeployment corrections are preserved: initial expected SGLang proof-status spelling differed from the actual immutable schema; corrected to the exact actual status. A local copy/preparation overlap produced a superseded unrun preparation; cancelled only the identity-checked owned local copy process, observed its tool handle terminal, retained initial source/preparation/plan/append-only CPU logs, then regenerated and tested sequentially. No GPU, remote installation or reference server occurred under that preparation. Final preparation and bundle hashes in closure, not the superseded manifest, are authoritative.
+
+The original `paged-batch8-model-preservation-attempt1` supervisor was re-polled live. Latest partial report contains five cases with `inverse_permutation_exact=true`: all three short-mixed orders and first two full4Ktext orders; no reported error. Probe leaves its status string `constructing` until final completion, so partial progress is read from cases/actual process, not that string. These are partial ordinary-model preservation results, not terminal admission, serving memory savings or timings. Do not install/upload/start another GPU/reference job until the original supervisor is terminal and cleanup/source/runtime are checked. Tiled HTTP and B8 MTP pipelines remain separately prepared/unrun. Matched full vLLM baseline execution/replay, strongest MTP/tuning, B8 external math/MTP/805quality/HTTP, repetitions, INT4/4B and overall2x/halfTTFT remain open.
+'''
+for name in ('qwen38-5090-development-log.md','qwen38-5090-implementation-task.md'):
+    path=repo/'docs/research'/name;assert addition.encode() not in path.read_bytes();path.write_bytes(path.read_bytes()+addition.encode())
+print(json.dumps({'status':result['status'],'source_pins':len(p['files']),'cpu_controls':43,'new_benchmark_collected':False}))
