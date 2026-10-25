@@ -1,0 +1,56 @@
+{
+  "source": "probe_bf16_kv_overlay_native.cu",
+  "source_sha256": "6f656761aed4cae81a8251bc53d81079144476708b76bac778b85ea5ee41a602",
+  "changes": [
+    [
+      "#include \"qwen38_bf16_kv_overlay.cuh\"",
+      "#include \"qwen38_bf16_kv_overlay.cuh\"\n#include \"qwen38_bf16_kv_float_reference.cuh\""
+    ],
+    [
+      "void copied(const std::vector<float>& host,Device& gpu,cudaStream_t s){",
+      "// Dense reference caches are initialized directly from analytic coordinates;\n// they are never unpacked from the candidate's packed carrier or commit outputs.\n__global__ void fillDense(float* key,float* value,int chunk,int layer,Spans spans,size_t words){\n    for(size_t i=size_t(blockIdx.x)*blockDim.x+threadIdx.x;i<words;i+=size_t(gridDim.x)*blockDim.x){\n        size_t u=i;const int d=u%256;u/=256;const int p=u%4096;u/=4096;const int h=u%4,b=u/4;\n        key[i]=__uint_as_float(uint32_t(cacheBits(b,0,h,p,d,layer,chunk,spans,false))<<16);\n        value[i]=__uint_as_float(uint32_t(cacheBits(b,1,h,p,d,layer,chunk,spans,false))<<16);\n    }\n}\n__global__ void verifyDense(const float* key,const float* value,int chunk,int layer,Spans spans,bool updated,size_t words,unsigned long long* errors){\n    for(size_t i=size_t(blockIdx.x)*blockDim.x+threadIdx.x;i<words;i+=size_t(gridDim.x)*blockDim.x){\n        size_t u=i;const int d=u%256;u/=256;const int p=u%4096;u/=4096;const int h=u%4,b=u/4;\n        for(int which=0;which<2;++which){\n            uint16_t expected=cacheBits(b,which,h,p,d,layer,chunk,spans,false);\n            if(updated&&p>=spans.start[b]&&p<spans.start[b]+spans.count[b]){\n                const int t=p-spans.start[b];expected=bf16(currentBits(((b*chunk+t)*4+h)*256+d,which!=0));\n            }\n            if(__float_as_uint(which?value[i]:key[i])!=(uint32_t(expected)<<16))atomicAdd(errors,1ull);\n        }\n    }\n}\nvoid denseExact(const float* key,const float* value,int chunk,int layer,Spans spans,bool updated,size_t words,Device& errors,cudaStream_t s){\n    check(cudaMemsetAsync(errors.p,0,8,s));verifyDense<<<4096,256,0,s>>>(key,value,chunk,layer,spans,updated,words,(unsigned long long*)errors.p);\n    check(cudaGetLastError());unsigned long long count=0;check(cudaMemcpyAsync(&count,errors.p,8,cudaMemcpyDeviceToHost,s));check(cudaStreamSynchronize(s));\n    require(count==0,updated?\"Reference full FP32 cache differs from BF16-rounded oracle\":\"Readonly dense reference cache changed\");\n}\nvoid copied(const std::vector<float>& host,Device& gpu,cudaStream_t s){"
+    ],
+    [
+      "    if(id==0||id==14||id==28||id==42){",
+      "    if(id==0||id==14){"
+    ],
+    [
+      "const bool graph=(id==1||id==15||id==29||id==43);",
+      "const bool graph=(id==1||id==15);"
+    ],
+    [
+      "    const bool graph=(id==1||id==15);",
+      "    // Independent dense-FP32 cache reference, current K/V explicitly BF16-rounded.\n    const size_t cacheWords=size_t(batch)*4*4096*256,cacheBytes=cacheWords*4;\n    const size_t refScratch=Qwen38BF16KVFloatReferenceWorkspace(c);\n    require(refScratch==scratch+2*nkv*4,\"Reference scratch formula differs\");\n    Device denseK(cacheBytes+64),denseV(cacheBytes+64),refK(cacheBytes+64),refV(cacheBytes+64),refOut(nq*4+64),refWork(refScratch+64);\n    for(Device* buffer:{&denseK,&denseV,&refK,&refV,&refOut,&refWork})check(cudaMemsetAsync(buffer->p,0xa5,buffer->bytes,s));\n    float *dk=denseK.f()+8,*dv=denseV.f()+8,*rk=refK.f()+8,*rv=refV.f()+8,*ro=refOut.f()+8;\n    void* rw=refWork.f()+8;fillDense<<<4096,256,0,s>>>(dk,dv,chunk,layer,spans,cacheWords);check(cudaGetLastError());\n    const void* referenceInputs[8]={q.p,k.p,v.p,gate.p,dk,dv,slots.p,active.p};void* referenceOutputs[3]={ro,rk,rv};int referenceRejected=0;\n    auto rejectReference=[&](Qwen35AttentionCoreConfig cfg,const void* const* in,void* const* out,void* tmp){\n        require(RunQwen38BF16KVFloatReference(cfg,in,out,tmp,s)!=0,\"Invalid dense reference call accepted\");++referenceRejected;\n    };\n    if(id==0||id==14){\n        rejectReference(c,nullptr,referenceOutputs,rw);rejectReference(c,referenceInputs,nullptr,rw);rejectReference(c,referenceInputs,referenceOutputs,nullptr);\n        for(int i=0;i<8;++i){\n            const void* bad[8];std::copy(referenceInputs,referenceInputs+8,bad);bad[i]=nullptr;rejectReference(c,bad,referenceOutputs,rw);\n            for(int j=0;j<3;++j)for(int shift:{0,4}){void* out[3];std::copy(referenceOutputs,referenceOutputs+3,out);out[j]=(char*)const_cast<void*>(referenceInputs[i])+shift;rejectReference(c,referenceInputs,out,rw);}\n            for(int shift:{0,4})rejectReference(c,referenceInputs,referenceOutputs,(char*)const_cast<void*>(referenceInputs[i])+shift);\n            std::copy(referenceInputs,referenceInputs+8,bad);bad[i]=(char*)const_cast<void*>(referenceInputs[i])+1;rejectReference(c,bad,referenceOutputs,rw);\n        }\n        for(int j=0;j<3;++j){\n            void* out[3];std::copy(referenceOutputs,referenceOutputs+3,out);out[j]=nullptr;rejectReference(c,referenceInputs,out,rw);\n            std::copy(referenceOutputs,referenceOutputs+3,out);out[j]=(char*)referenceOutputs[j]+1;rejectReference(c,referenceInputs,out,rw);\n            for(int shift:{0,4})rejectReference(c,referenceInputs,referenceOutputs,(char*)referenceOutputs[j]+shift);\n            for(int k=j+1;k<3;++k)for(int shift:{0,4}){std::copy(referenceOutputs,referenceOutputs+3,out);out[k]=(char*)referenceOutputs[j]+shift;rejectReference(c,referenceInputs,out,rw);}\n        }\n        rejectReference(c,referenceInputs,referenceOutputs,(char*)rw+1);\n        for(int mode=0;mode<6;++mode){auto bad=c;if(mode==0)bad.batch=2;if(mode==1)bad.tokens=8;if(mode==2)bad.heads=23;if(mode==3)bad.kv=3;if(mode==4)bad.capacity=2048;if(mode==5)bad.dim=128;\n            require(Qwen38BF16KVFloatReferenceWorkspace(bad)==0,\"Invalid reference workspace admitted\");rejectReference(bad,referenceInputs,referenceOutputs,rw);}\n        require(referenceRejected==108,\"Reference negative control count changed\");\n    }\n    require(RunQwen38BF16KVFloatReference(c,referenceInputs,referenceOutputs,rw,s)==0,\"Dense reference execution failed\");\n    std::vector<float> referenceContext(nq);check(cudaMemcpyAsync(referenceContext.data(),ro,nq*4,cudaMemcpyDeviceToHost,s));check(cudaStreamSynchronize(s));\n    require(std::memcmp(referenceContext.data(),original.data(),nq*4)==0,\"Packed overlay differs from independent dense reference\");\n    const bool referenceGraph=(id==1||id==15);\n    if(referenceGraph){\n        cudaGraph_t captured=nullptr;cudaGraphExec_t execution=nullptr;check(cudaStreamBeginCapture(s,cudaStreamCaptureModeGlobal));\n        require(RunQwen38BF16KVFloatReference(c,referenceInputs,referenceOutputs,rw,s)==0,\"Reference graph capture failed\");\n        check(cudaStreamEndCapture(s,&captured));check(cudaGraphInstantiate(&execution,captured,0));check(cudaMemsetAsync(ro,0xa5,nq*4,s));check(cudaGraphLaunch(execution,s));\n        std::vector<float> back(nq);check(cudaMemcpyAsync(back.data(),ro,nq*4,cudaMemcpyDeviceToHost,s));check(cudaStreamSynchronize(s));\n        check(cudaGraphExecDestroy(execution));check(cudaGraphDestroy(captured));require(std::memcmp(back.data(),referenceContext.data(),nq*4)==0,\"Reference graph changed context\");\n    }\n    denseExact(dk,dv,chunk,layer,spans,false,cacheWords,errors,s);denseExact(rk,rv,chunk,layer,spans,true,cacheWords,errors,s);\n    for(Device* buffer:{&denseK,&denseV,&refK,&refV})guards(*buffer,cacheBytes,s);\n    guards(refOut,nq*4,s);guards(refWork,refScratch,s);\n    std::printf(\"{\\\"event\\\":\\\"reference_case_verified\\\",\\\"id\\\":%d,\\\"context_bit_exact\\\":true,\\\"full_cache_words_checked\\\":%llu,\\\"dense_readonly_exact\\\":true,\\\"canaries_exact\\\":true,\\\"rejected_calls\\\":%d,\\\"graph_replay_exact\\\":%s}\\n\",id,(unsigned long long)(2*cacheWords),referenceRejected,referenceGraph?\"true\":\"false\");std::fflush(stdout);\n    const bool graph=(id==1||id==15);"
+    ],
+    [
+      "const float* row=original.data()+((b*chunk+t)*24+h)*256;",
+      "const float* row=referenceContext.data()+((b*chunk+t)*24+h)*256;"
+    ],
+    [
+      "        checkState(state,errors,batch,chunk,layer,ko,spans,true,s);",
+      "        // Ping-pong the reference's rounded full-cache outputs back as past\n        // inputs. Original dense source buffers become separate destinations.\n        const void* againInputs[8]={q.p,k.p,v.p,gate.p,rk,rv,slots.p,active.p};void* againOutputs[3]={ro,dk,dv};\n        require(RunQwen38BF16KVFloatReference(c,againInputs,againOutputs,rw,s)==0,\"Reference cache roundtrip failed\");\n        std::vector<float> again(nq);check(cudaMemcpyAsync(again.data(),ro,nq*4,cudaMemcpyDeviceToHost,s));check(cudaStreamSynchronize(s));\n        for(int b=0;b<batch;++b)require(std::memcmp(again.data()+b*chunk*24*256,original.data()+(b*chunk+spans.count[b]-1)*24*256,24*256*4)==0,\"Reference current/cache precision differs\");\n        denseExact(rk,rv,chunk,layer,spans,true,cacheWords,errors,s);denseExact(dk,dv,chunk,layer,spans,true,cacheWords,errors,s);\n        for(Device* buffer:{&denseK,&denseV,&refK,&refV})guards(*buffer,cacheBytes,s);guards(refOut,nq*4,s);guards(refWork,refScratch,s);\n        std::printf(\"{\\\"event\\\":\\\"reference_roundtrip_verified\\\",\\\"id\\\":%d,\\\"context_bit_exact\\\":true,\\\"full_cache_exact\\\":true,\\\"readonly_previous_output_exact\\\":true,\\\"canaries_exact\\\":true}\\n\",id);std::fflush(stdout);\n        checkState(state,errors,batch,chunk,layer,ko,spans,true,s);"
+    ],
+    [
+      "        int id=0;uint64_t offset=0;",
+      "        int runtime=0,driver=0;check(cudaRuntimeGetVersion(&runtime));check(cudaDriverGetVersion(&driver));\n        std::printf(\"{\\\"event\\\":\\\"reference_runtime\\\",\\\"cuda_runtime_version\\\":%d,\\\"cuda_driver_version\\\":%d}\\n\",runtime,driver);std::fflush(stdout);\n        int id=0;uint64_t offset=0;"
+    ],
+    [
+      "for(int batch:{4,8})for(int chunk:{4,32})",
+      "for(int batch:{4})for(int chunk:{4,32})"
+    ],
+    [
+      "execute(id++,8,4,layer,513,witnesses,offset);",
+      "execute(id++,4,4,layer,513,witnesses,offset);"
+    ],
+    [
+      "&&id==70",
+      "&&id==42"
+    ],
+    [
+      "bf16_overlay_collected_needs_fp64_replay",
+      "bf16_float_reference_collected_needs_fp64_replay"
+    ]
+  ],
+  "result_sha256": "7fe6e596f00993637aae5a7c320df824de0272de3d40d29d6e1f627c26525652",
+  "scope": "Unrun separate dense-FP32 reference and packed BF16 overlay compare, B4/T4/T32,42dense cases/all16layers,108negative controls perprofile, full output-cache RNE and readonly/source/canary/graph checks. Raw reference context samples go to the existing independent FP64 oracle. No model or performance admission."
+}

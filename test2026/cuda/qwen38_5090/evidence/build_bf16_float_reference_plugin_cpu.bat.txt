@@ -1,0 +1,7 @@
+@echo off
+call "C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvars64.bat"
+if errorlevel 1 exit /b %errorlevel%
+cl.exe /nologo /std:c++17 /EHsc /MT /utf-8 /c "D:\CantorAI\work\qwen38-5090\src\backends\tensorrt\qwen38_bf16_kv_float_reference_plugin.cpp" /I D:\CantorAI\ThirdPartySDK\TensorRT\include /I "C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v13.2\include" /Fo"%~dp0bf16_float_reference_plugin_cpu.obj"
+if errorlevel 1 exit /b %errorlevel%
+"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v13.2\bin\nvcc.exe" -std=c++17 -arch=sm_120 "D:\CantorAI\work\qwen38-5090\test2026\cuda\qwen38_5090\probe_bf16_kv_float_reference_plugin_contract.cpp" "%~dp0bf16_float_reference_plugin_cpu.obj" "%~dp0float_reference_legacy_core.obj" "%~dp0float_reference_rounding.obj" -I D:\CantorAI\ThirdPartySDK\TensorRT\include -I "D:\CantorAI\work\qwen38-5090\src\backends\tensorrt" -L D:\CantorAI\ThirdPartySDK\TensorRT\lib -lnvinfer_10 -o "%~dp0probe_bf16_float_reference_plugin_cpu.exe" -Xcompiler=/MT,/utf-8
+exit /b %errorlevel%

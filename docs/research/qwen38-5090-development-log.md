@@ -3255,3 +3255,43 @@ Original bf16-prefill-diagnostic-attempt1 subsequently terminal0; allthree seque
 Independent normalized-vector summaries over32positions x2unique prompts: FP32/T4 versusBF16/T4 agrees63/64next predictions, maxrelativeL2difference0.6740971634191039,mincosine0.773789287202833; BF16/T4 versusBF16/T32 agrees61/64,maxrelativeL2difference0.7078268318438395,mincosine0.749209374110834; FP32/T4 versusBF16/T32 agrees60/64,maxrelativeL2difference0.6370641717945865,mincosine0.7977307542529347. None of the normalized vectors is bit-exact across profiles. These are correlated controlled observations, not64independent quality samples and not broad model accuracy. Differences are substantial; no tiny-rounding/harmlessness assumption. Adapter correctness peaks28795281408/24984756224/24984756224B are diagnostic process samples, not serving peaks or causal memory gains. Ordinary/MTP exactness in the failed first group remains bounded; old FP32 output gate stays failed. No serving or speed measurement was started.
 Next implement a genuinely separate same-precision reference: ordinary dense FP32 full KV buffers whose values are BF16-roundtrip FP32, with explicitly rounded currentK/V, using the unchanged legacy attention core and old full-cache writes rather than new packed offsets/compact commit. Compare operator FP64/readonly/alias/roundtrip/cache behavior, separate plugin/engine contracts, then exact same-precision model IDs/hidden/GDN/logical cache witnesses where applicable. Wider-prefill needs its own qualified profile; broad independent model quality and actual4K remain required before performance. Keep the failed old-precision goldens and all raw data.
 Added only an unwired native reference primitive locally: qwen38_bf16_kv_float_reference.cu/.cuh. B4/T4/T32 geometry, explicit currentK/V BF16-to-FP32 rounding in private scratch and call through existing RunQwen35AttentionCore, independent dense F32 cache storage, no packed offsets/helper. Past-cache invariant is initialized zeros or exact BF16-roundtrip FP32 values, then maintained by rounded outputs. Complete noalias/alignment guards cover outputs/workspace/inputs. Legacy attention source, product admission, native DLL and remote sources remain unchanged; no plugin/CMake wiring or model mode added. Offline CUDA13.2/VS2022 sm120 compile0 in private chatwork; objectd09087af8be1b07a62a25e4c2b96af16773525510d95574c030e377dd7939877/sourcee6d538d062e96b96dd37c8ea451289bb264c8794112a97eac520455f7eb7c95c/header6ff092e0614e91f005101df65d9a902101ed9a0d4e830cd61e774eea0d227168. Captured raw compiler log11200084ed9373d3d773e4d053eca248230aa3fa7d51c4aa4a4631ef4a24aeb9 and recipe170d9633140205f4c1b24839297ea3b69fff212e519770a27f773cc35fcc429f. Compile only, not linked/executed/GPU/model qualified. No local GPU or shared4080/source/build/SDK mutation. GPU operator/reference qualification and full model reference remain next. Full2x/halfTTFT and all original benchmark/model/reference requirements remain intact and unmet.
+
+
+Independent BF16-in-FP32 attention reference and wrapper metadata gates closed.
+The previous user question was explanatory and yielded no new optimization
+evidence; this continuation revalidated the current source and original terminal
+jobs, then completed local/remote archive replay. No job was restarted.
+Native attempt bf16-kv-float-reference-native-attempt1 exited0 with cleanup;
+archive2029360B/40files SHA5d423ea850d20392baa26eb6e4929762c10f75ac8c1793c215109891d9812b32.
+All42 B4,T4/T32 cases match the packed BF16 overlay output bitwise while using
+independently initialized dense FP32 caches and unchanged legacy attention math.
+Full cache/readonly/canary controls,216reference and100overlay badcalls,
+two reference/two overlay nondefault-stream graphs and38cache-roundtrip controls
+per path pass.442880selected scalars pass the unchanged independent FP64 oracle,
+maximum absolute error7.382845412795547e-08 and tolerance fraction0.0016710146906963863.
+Runtime/driver APIs13040; compiler install version is not runtime-version proof.
+Standalone correctness adapter peak3115655168B is not full-model fit/performance.
+Both replays pass against identical raw bytes. Their JSON summaries differ in58
+per-case FP64 last-digit statistics plus Python/NumPy versions (largest numeric
+delta1.576462051178229e-12); explicitly retained comparison sidecar, no threshold
+change or claim of bit-identical replay summaries. Current/archived verifier
+b0a08756521d86aa07dc997f976474f5dadaeee5cc444712edc58704d20e6478.
+
+Separate GarnetQwen38BF16KVFloatReference/v1 wrapper compiled with consistent/MT
+objects, matching production CRT setting; this alone does not prove DLL/enqueue
+ABI. The original bf16-float-reference-plugin-cpu-attempt1 exited0, archive
+210520B/21files SHAf4f7610e23f07da6d2b05215b4381a1bbe7c5237c908bad3a0b659ba0b2a5df4.
+Both replay reports are identical, verifier7feec6a62919e1181d04fdcdccbfae5c84bd5bb0ba045411be19bfde4073a4e2.
+Two strict B4/T4/T32 profiles/clones/factory roundtrips;72bad48byte wires,
+60bad constructors,98badformats,118bad descriptor/envelope controls and118invalid
+enqueue controls pass against installed pinned TensorRT runtime/header101601.
+Actual loaded DLL path and73fd99...hash confirmed; SDK/runtime/Garnet01a3...DLL
+unchanged. No valid CUDA enqueue, engine/model construction or model quality
+qualification by this CPU test. All upload/download acknowledgements observed.
+
+Next wire an explicit default-off model reference that retains full FP32 cache
+storage, rounds values to BF16 and uses independent legacy full-cache attention.
+No packed offsets/commit helper in reference mode. Compare full-model same-
+precision T4/T32 paths before wider batching, quality or performance admission.
+Preserve old-precision failed goldens. Current2x/halfTTFT, actual4K prompts,
+broadquality, tuned/MTP references, cleanrepeats and matched4B remain open.
