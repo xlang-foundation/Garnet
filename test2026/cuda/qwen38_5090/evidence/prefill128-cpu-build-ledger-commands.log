@@ -1,0 +1,29 @@
+
+{"id": "1ddcdb4a06454197b956a2a1abaefe30", "kind": "correctness", "label": "Target-prefill128 CPU layout canonical equality offsets and unchanged qualified profile rejection", "argv": ["D:\\CantorAI\\Garnet\\.venv\\Scripts\\python.exe", "-m", "unittest", "test2026.cuda.qwen38_5090.test_bf16_prefill128_layout", "test2026.cuda.qwen38_5090.test_bf16_low_batch_profile", "-v"]}
+test_canonical_layout_is_unchanged_and_target_intervals_cover_exactly (test2026.cuda.qwen38_5090.test_bf16_prefill128_layout.Controls.test_canonical_layout_is_unchanged_and_target_intervals_cover_exactly) ... ok
+test_dimensions_retain_and_malformed_indices_rejected (test2026.cuda.qwen38_5090.test_bf16_prefill128_layout.Controls.test_dimensions_retain_and_malformed_indices_rejected) ... ok
+test_first_last_and_head_boundaries_map_to_distinct_kv_intervals (test2026.cuda.qwen38_5090.test_bf16_prefill128_layout.Controls.test_first_last_and_head_boundaries_map_to_distinct_kv_intervals) ... ok
+test_qualified_python_profiles_still_reject_prefill128 (test2026.cuda.qwen38_5090.test_bf16_prefill128_layout.Controls.test_qualified_python_profiles_still_reject_prefill128) ... ok
+test_actual_metadata_positive_and_legacy_cross_rejection (test2026.cuda.qwen38_5090.test_bf16_low_batch_profile.LowBatchProfileControls.test_actual_metadata_positive_and_legacy_cross_rejection) ... ok
+test_decoder_lifecycle_flags_and_chunk_limits (test2026.cuda.qwen38_5090.test_bf16_low_batch_profile.LowBatchProfileControls.test_decoder_lifecycle_flags_and_chunk_limits) ... ok
+test_explicit_boolean_optin_and_disabled_semantics (test2026.cuda.qwen38_5090.test_bf16_low_batch_profile.LowBatchProfileControls.test_explicit_boolean_optin_and_disabled_semantics) ... ok
+test_foreign_small_model_geometry_rejected (test2026.cuda.qwen38_5090.test_bf16_low_batch_profile.LowBatchProfileControls.test_foreign_small_model_geometry_rejected) ... ok
+test_full_architecture_mutations (test2026.cuda.qwen38_5090.test_bf16_low_batch_profile.LowBatchProfileControls.test_full_architecture_mutations) ... ok
+test_mode_and_shared_projection_exclusions (test2026.cuda.qwen38_5090.test_bf16_low_batch_profile.LowBatchProfileControls.test_mode_and_shared_projection_exclusions) ... ok
+test_strict_scalar_geometry_and_retain (test2026.cuda.qwen38_5090.test_bf16_low_batch_profile.LowBatchProfileControls.test_strict_scalar_geometry_and_retain) ... ok
+
+----------------------------------------------------------------------
+Ran 11 tests in 0.010s
+
+OK
+
+{"id": "6abc819a8a8f4e559083cfdbf20d1220", "kind": "build", "label": "Private CPU-only T128 metadata and inline profile contract; compile, inspect imports before execution", "argv": ["cmd.exe", "/d", "/c", "C:/Users/developer/Documents/Codex/2026-10-23/referenced-chatgpt-conversation-this-is-an/work/prefill128-cpu-build/compile-metadata.bat"]}
+**********************************************************************
+** Visual Studio 2026 Developer Command Prompt v18.10.1
+** Copyright (c) 2026 Microsoft Corporation
+**********************************************************************
+[vcvarsall.bat] Environment initialized for: 'x64'
+probe_bf16_prefill128_metadata.cpp
+
+{"id": "64c2adf9a22644a386cd9d02a4d71e63", "kind": "correctness", "label": "Actual CPU native contract parse and strict old-profile cross-rejection after no-GPU-import inspection", "argv": ["C:/Users/developer/Documents/Codex/2026-10-23/referenced-chatgpt-conversation-this-is-an/work/prefill128-cpu-build/metadata.exe", "C:/Users/developer/Documents/Codex/2026-10-23/referenced-chatgpt-conversation-this-is-an/work/prefill128-cpu-build/fixture.json"]}
+{"status":"prefill128_cpu_metadata_passed_gpu_unrun","qualified_old_profiles":2,"invalid_metadata":2241,"native_profile_tuples":2827,"gpu_executed":false,"runtime_qualified":false}

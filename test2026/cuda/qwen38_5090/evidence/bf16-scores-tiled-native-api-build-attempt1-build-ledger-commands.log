@@ -1,0 +1,263 @@
+
+{"id": "5726a93ebce94d0a937a83e93ed54bb8", "kind": "build", "label": "Same tiled CUDA source; minimal native API selector bridge for embedded runtime", "argv": ["cmd.exe", "/d", "/c", "D:\\CantorAI\\5090-study-20261023\\Garnet\\test2026\\cuda\\qwen38_5090\\build_integrated_batch_top1_native.bat", "C:\\Program Files (x86)\\Microsoft Visual Studio\\2022\\BuildTools\\VC\\Auxiliary\\Build\\vcvars64.bat"]}
+**********************************************************************
+** Visual Studio 2022 Developer Command Prompt v17.14.42
+** Copyright (c) 2025 Microsoft Corporation
+**********************************************************************
+[vcvarsall.bat] Environment initialized for: 'x64'
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\bin\Hostx64\x64\cl.exe
+VCToolsVersion=14.44.35207
+WindowsSDKVersion=10.0.26100.0\
+cmake version 4.4.4
+
+CMake suite maintained and supported by Kitware (kitware.com/cmake).
+CMake Warning (policy) at D:/CantorAI/5090-study-20261023/Garnet/CMakeLists.txt:42 (find_package):
+  Policy CMP0146 is not set: The FindCUDA module is removed.  Run "cmake
+  --help-policy CMP0146" for policy details.  Use the cmake_policy command to
+  set the policy and suppress this warning.
+This warning is for project developers.  Use -Wno-author or -Wno-policy to
+suppress it.
+
+CMAKE_MODULE_PATH=D:/CantorAI/5090-study-20261023/Garnet/cmake
+-- Garnet OpenVINO backend disabled (OpenVINO SDK not found)
+-- Garnet native CPU INT4 OpenMP enabled
+-- Configuring done (3.8s)
+-- Generating done (0.1s)
+-- Build files have been written to: D:/CantorAI/5090-study-20261023/build
+[1/6] Building CXX object garnet\CMakeFiles\garnet.dir\src\entry\main.cpp.obj
+[2/6] Building CXX object garnet\CMakeFiles\garnet.dir\src\entry\garnet.cpp.obj
+[3/6] Building CXX object garnet\CMakeFiles\garnet.dir\src\entry\multi_gpu.cpp.obj
+[4/6] Building CUDA object garnet\CMakeFiles\garnet.dir\src\cuda\qwen38_bf16_kv_low_batch_overlay.cu.obj
+qwen38_bf16_kv_low_batch_overlay.cu
+tmpxft_00009b0c_00000000-7_qwen38_bf16_kv_low_batch_overlay.cudafe1.cpp
+[5/6] Linking CXX shared library garnet\CMakeFiles\garnet.dir\cmake_device_link.obj
+cpu_main.cpp.obj
+garnet.cpp.obj
+main.cpp.obj
+multi_gpu.cpp.obj
+garnet_tensor.cpp.obj
+graph_capture.cpp.obj
+tensor_helper.cpp.obj
+bf16_projection.cu.obj
+ct_int4.cu.obj
+cuda_lib.cu.obj
+gather_kernel.cu.obj
+init_ops_kernel.cu.obj
+int_scalar_update.cu.obj
+linear_bias_kernel.cu.obj
+logits_sampler_kernel.cu.obj
+matrixMulTensorCore_kernel.cu.obj
+modelopt_fp8.cu.obj
+modelopt_nvfp4.cu.obj
+ptxGemm_kernel.cu.obj
+ptxGemm_kernel_16.cu.obj
+qwen35_attention_core.cu.obj
+qwen35_canonical_kv_overlay.cu.obj
+qwen35_delta.cu.obj
+qwen35_indexed_head.cu.obj
+qwen35_io.cu.obj
+qwen35_kv_delta_commit.cu.obj
+qwen35_packed_commit.cu.obj
+qwen35_prefix_commit.cu.obj
+qwen38_bf16_kv_commit.cu.obj
+qwen38_bf16_kv_float_reference.cu.obj
+qwen38_bf16_kv_low_batch_overlay.cu.obj
+qwen38_bf16_kv_overlay.cu.obj
+qwen38_bf16_low_batch_kv_commit.cu.obj
+qwen_vl_image_preprocess_kernel.cu.obj
+qwen_vl_vision_metadata_kernel.cu.obj
+tensor_ops_kernel.cu.obj
+text_kv_attention_kernel.cu.obj
+typeconvert_kernel.cu.obj
+vision_attention_kernel.cu.obj
+Locker.cpp.obj
+help_func.cpp.obj
+md5.cpp.obj
+lowering_context.cpp.obj
+compiled_graph_capture.cpp.obj
+compiled_model_runtime.cpp.obj
+model.cpp.obj
+model_catalog.cpp.obj
+operator_execution_group.cpp.obj
+operator_plugins.cpp.obj
+qwen_asr_compiled_frontend.cpp.obj
+qwen_text_compiled_frontend.cpp.obj
+qwen_tts_compiled_frontend.cpp.obj
+qwen_vl_compiled_frontend.cpp.obj
+safetensors_index.cpp.obj
+weight_quantization.cpp.obj
+acceleration_detector.cpp.obj
+compiled_decode_batch_executor.cpp.obj
+paged_kv_pool.cpp.obj
+continuous_batch_scheduler.cpp.obj
+log.cpp.obj
+jpeg_decode_nvjpeg.cpp.obj
+qwen_vl_image_preprocessor.cpp.obj
+qwen_vl_vision_metadata.cpp.obj
+qwen_tokenizer.cpp.obj
+compiled_graph.cpp.obj
+gated_delta.cpp.obj
+q4q8_linear.cpp.obj
+qwen3_native_decode_engine.cpp.obj
+openvino_builder.cpp.obj
+bf16_projection_plugin.cpp.obj
+ct_int4_lowering.cpp.obj
+ct_int4_plugin.cpp.obj
+cuda_bf16_kv_delta_commit.cpp.obj
+cuda_bf16_low_batch_kv_delta_commit.cpp.obj
+cuda_compiled_graph.cpp.obj
+cuda_kv_delta_commit.cpp.obj
+cuda_packed_prefix.cpp.obj
+cuda_projection_io.cpp.obj
+cuda_prompt_io.cpp.obj
+cuda_tensor_io.cpp.obj
+gpt_oss_extension.cpp.obj
+gpt_oss_lowering.cpp.obj
+modelopt_cublaslt.cpp.obj
+modelopt_fp8_lowering.cpp.obj
+modelopt_fp8_plugin.cpp.obj
+modelopt_nvfp4_lowering.cpp.obj
+modelopt_nvfp4_plugin.cpp.obj
+paged_kv_plugin.cpp.obj
+qwen35_attention_core_plugin.cpp.obj
+qwen35_canonical_kv_overlay_plugin.cpp.obj
+qwen35_delta_plugin.cpp.obj
+qwen35_f32_barrier_plugin.cpp.obj
+qwen38_bf16_kv_float_reference_plugin.cpp.obj
+qwen38_bf16_kv_overlay_plugin.cpp.obj
+qwen38_bf16_low_batch_kv_overlay_plugin.cpp.obj
+trt_builder.cpp.obj
+trt_code_generator.cpp.obj
+cudart_static.lib
+cublas.lib
+cublasLt.lib
+nvinfer_10.lib
+nppc.lib
+nppig.lib
+nvjpeg.lib
+cuda.lib
+delayimp.lib
+cudadevrt.lib
+cudart.lib
+kernel32.lib
+user32.lib
+gdi32.lib
+winspool.lib
+shell32.lib
+ole32.lib
+oleaut32.lib
+uuid.lib
+comdlg32.lib
+advapi32.lib
+[6/6] Linking CXX shared library bin\garnet.dll
+Microsoft (R) COFF/PE Dumper Version 14.44.35229.0
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+Dump of file D:\CantorAI\5090-study-20261023\build\bin\garnet_batch_top1_policy_test.exe
+
+File Type: EXECUTABLE IMAGE
+
+  Section contains the following imports:
+
+    KERNEL32.dll
+             140020000 Import Address Table
+             140030170 Import Name Table
+                     0 time date stamp
+                     0 Index of first forwarder reference
+
+                         153 EncodePointer
+                         128 DecodePointer
+                         157 EnterCriticalSection
+                         3F0 LeaveCriticalSection
+                         397 InitializeCriticalSectionEx
+                         12F DeleteCriticalSection
+                         423 MultiByteToWideChar
+                         64C WideCharToMultiByte
+                         3E3 LCMapStringEx
+                         308 GetStringTypeW
+                         1EA GetCPInfo
+                         509 RtlCaptureContext
+                         511 RtlLookupFunctionEntry
+                         518 RtlVirtualUnwind
+                         5FB UnhandledExceptionFilter
+                         5B8 SetUnhandledExceptionFilter
+                         241 GetCurrentProcess
+                         5D8 TerminateProcess
+                         3B8 IsProcessorFeaturePresent
+                         481 QueryPerformanceCounter
+                         242 GetCurrentProcessId
+                         246 GetCurrentThreadId
+                         31A GetSystemTimeAsFileTime
+                         39A InitializeSListHead
+                         3B0 IsDebuggerPresent
+                         301 GetStartupInfoW
+                         2A5 GetModuleHandleW
+                         513 RtlPcToFileHeader
+                         498 RaiseException
+                         517 RtlUnwindEx
+                         28D GetLastError
+                         578 SetLastError
+                         396 InitializeCriticalSectionAndSpinCount
+                         5EA TlsAlloc
+                         5EC TlsGetValue
+                         5EE TlsSetValue
+                         5EB TlsFree
+                         1D4 FreeLibrary
+                         2DD GetProcAddress
+                         3F6 LoadLibraryExW
+                         303 GetStdHandle
+                         660 WriteFile
+                         2A1 GetModuleFileNameW
+                         186 ExitProcess
+                         2A4 GetModuleHandleExW
+                         1FF GetCommandLineA
+                         200 GetCommandLineW
+                         37C HeapAlloc
+                         380 HeapFree
+                         1C2 FlsAlloc
+                         1C4 FlsGetValue
+                         1C6 FlsSetValue
+                         1C3 FlsFree
+                         61A VirtualProtect
+                          B3 CompareStringW
+                         3E4 LCMapStringW
+                         291 GetLocaleInfoW
+                         3C0 IsValidLocale
+                         349 GetUserDefaultLCID
+                         17B EnumSystemLocalesW
+                         27A GetFileType
+                          9D CloseHandle
+                         1C8 FlushFileBuffers
+                         229 GetConsoleOutputCP
+                         225 GetConsoleMode
+                         4A9 ReadFile
+                         278 GetFileSizeEx
+                         569 SetFilePointerEx
+                         4A6 ReadConsoleW
+                         383 HeapReAlloc
+                         19D FindClose
+                         1A3 FindFirstFileExW
+                         1B4 FindNextFileW
+                         3BE IsValidCodePage
+                         1DB GetACP
+                         2C6 GetOEMCP
+                         262 GetEnvironmentStringsW
+                         1D3 FreeEnvironmentStringsW
+                         55A SetEnvironmentVariableW
+                         593 SetStdHandle
+                         2E4 GetProcessHeap
+                         385 HeapSize
+                          E6 CreateFileW
+                         65F WriteConsoleW
+                         516 RtlUnwind
+
+  Summary
+
+        3000 .data
+        1000 .fptable
+        2000 .pdata
+       11000 .rdata
+        1000 .reloc
+        1000 .rsrc
+       1F000 .text

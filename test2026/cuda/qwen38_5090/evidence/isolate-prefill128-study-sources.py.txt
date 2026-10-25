@@ -1,0 +1,10 @@
+from pathlib import Path
+import hashlib,json
+repo=Path('D:/CantorAI/work/qwen38-5090').resolve();m=repo/'test2026/cuda/qwen38_5090';e=m/'evidence';moves=[]
+for name in ('src/cuda/qwen38_bf16_prefill128_commit.cu','src/cuda/qwen38_bf16_prefill128_commit.cuh','src/backends/tensorrt/qwen38_bf16_prefill128_layout_contract.h'):
+    source=(repo/name).resolve();target=(m/source.name).resolve()
+    assert source.is_relative_to(repo) and target.is_relative_to(repo) and source.is_file() and not target.exists()
+    raw=source.read_bytes();source.rename(target);assert target.read_bytes()==raw
+    moves.append({'from':name,'to':target.relative_to(repo).as_posix(),'sha256':hashlib.sha256(raw).hexdigest()})
+result={'status':'unbuilt_prefill128_sources_isolated_from_default_cuda_glob','moves':moves,'bytes_unchanged':True,'reason':'T128 GPU source remains uncompiled and unadmitted; keep it outside src/cuda recursive production build glob until its native qualification. Earlier CPU evidence retains original coordinates. CPU metadata includes resolve same study headers and original src/cuda dependencies.','runtime_qualified':False}
+(e/'prefill128-study-source-isolation.json').write_bytes(json.dumps(result,indent=2).encode());print(json.dumps(result))

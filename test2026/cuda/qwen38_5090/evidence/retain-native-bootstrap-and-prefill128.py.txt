@@ -1,0 +1,78 @@
+from pathlib import Path
+import hashlib,json,zipfile
+
+work=Path(__file__).resolve().parent;out=work.parent/'outputs';repo=Path('D:/CantorAI/work/qwen38-5090');m=repo/'test2026/cuda/qwen38_5090';e=m/'evidence'
+sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+def keep(path,raw):
+    assert not path.exists() or path.read_bytes()==raw,path
+    if not path.exists():path.write_bytes(raw)
+jobs={}
+for name,status,code in [('native-cuda-phase-full4k-attempt1','native_cuda_phases_full4k_failure_preserved',1),('native-cuda-phase-logged-bootstrap-attempt1','native_cuda_logged_bootstrap_replayed',0)]:
+    proof=out/(name+'-verified.json');p=json.loads(proof.read_bytes());assert p==json.loads((out/(name+'-remote-verified.json')).read_bytes()) and p['status']==status
+    archive=out/(name+'-evidence.zip');assert sha(archive)==p['archive_sha256']
+    with zipfile.ZipFile(archive) as z:
+        w=json.loads(z.read('results/'+name+'/workflow.json'));assert w['exit_code']==code and w['cleanup_finished'] and w['source_sha256']==w['source_after_sha256'] and w['runtime_dependencies']==w['runtime_dependencies_after']
+    jobs[name]={'status':status,'exit_code':code,'archive_sha256':sha(archive),'archive_bytes':archive.stat().st_size,'proof_pair_sha256':sha(proof),'files_verified':p['files_verified']}
+    for suffix in ('-verified.json','-remote-verified.json'):keep(e/(name+suffix),(out/(name+suffix)).read_bytes())
+keep(e/'native-cuda-phase-full4k-attempt1-local-failure-replay.log',(out/'native-cuda-phase-full4k-attempt1-local-failure-replay.log').read_bytes())
+for name in ('native-cuda-phase-failed-local-replay-receipt.json','native-cuda-logged-bootstrap-preflight.json','native-cuda-logged-bootstrap-install.json','native-cuda-logged-bootstrap-bundle-preparation.json','native-cuda-logged-bootstrap-upload-plan.json'):
+    keep(e/name,(work/name).read_bytes())
+for name in ('prepare-prefill128-cpu-contract.py','prepare-native-cuda-logged-bootstrap-deployment.py','preflight-native-cuda-logged-bootstrap.py','package-native-cuda-logged-bootstrap-methods.py','install-native-cuda-logged-bootstrap-methods.py','retain-native-bootstrap-and-prefill128.py'):
+    keep(e/(name+'.txt'),(work/name).read_bytes())
+for directory in ('native-cuda-bootstrap-log-cpu-ledger','prefill128-cpu-build/ledger'):
+    for f in (work/directory).iterdir():
+        if f.is_file():keep(e/(directory.replace('/','-')+'-'+f.name),f.read_bytes())
+build=work/'prefill128-cpu-build'
+for name in ('preparation.json','metadata-imports.txt','compile-metadata.bat'):keep(e/('prefill128-cpu-'+name),(build/name).read_bytes())
+sources=['src/backends/tensorrt/qwen38_bf16_prefill128_layout_contract.h','src/cuda/qwen38_bf16_prefill128_commit.cu','src/cuda/qwen38_bf16_prefill128_commit.cuh','test2026/cuda/qwen38_5090/bf16_prefill128_layout.py','test2026/cuda/qwen38_5090/probe_bf16_prefill128_metadata.cpp','test2026/cuda/qwen38_5090/test_bf16_prefill128_layout.py']
+closure={'status':'failed_profile_preserved_unprofiled_control_replayed_cpu_prefill128_scaffold','jobs':jobs,'prefill128':{'source_sha256':{n:sha(repo/n) for n in sources},'python_cpu_tests':11,'native_metadata_invalid_cases':2241,'native_profile_tuples':2827,'fixture_sha256':sha(build/'fixture.json'),'metadata_executable_sha256':sha(build/'metadata.exe'),'imports_sha256':sha(build/'metadata-imports.txt'),'gpu_compiled':False,'runtime_qualified':False,'target_logical_bytes':178257920},'performance_admitted':False,'two_times_target_achieved':False}
+keep(e/'native-bootstrap-and-prefill128-closure.json',json.dumps(closure,indent=2).encode())
+keep(out/'Garnet-Native-Bootstrap-and-Prefill128-Status.json',json.dumps(closure,indent=2).encode())
+text='''
+
+### 2026-10-25 — failed CUDA profile preserved; direct native bootstrap passes; T128 CPU contract
+
+Original48577 native-cuda-phase-full4k-attempt1 terminal1 after actual46CPU pass,
+before native ready/any request. Archive a698a95d3f2b8a3e7f7fa60794260cb4451ae2712785be6ecff9266e0283297f,
+68326635bytes/663files, remote/local independent failure-preserving replay exit1,
+identical proof8a269e39ab2410ce3c097c2054f624d9b830b472f122c53aef921e103083d703.
+No request GPU timings, kernel bottleneck attribution or performance admission.
+Postrun Nsight stats/ProcessStreams expose the driver's exited-before-ready error
+and a finally assertion masking it; native worker stdout/stderr remain empty.
+Derived SQLite/stream export is separate from original immutable raw archive.
+
+Logged unprofiled successor preserves source633 and runtime1a1d; ten new helpers,
+643source pins. Actual13remoteCPU tests/.130s and embedded-Python trace class/
+intentional-exception fake-IO compatibility pass. One actual3968+128text control
+then completes with original retained IDs,12marker requests, workerexit0 and
+native cleanup witness. Archive8104499a0eace60c00e9af1add17640b5d29e0810894eee8e1b264164b31a9b7,
+151303bytes/33files linked to failed parent. Both independent replays exit0,
+identical proof9d5b3a3f4f0fad830d53c66be2b64dea5f5ec34c88ad5ec197412d3b747e57107.
+This proves the logged worker operates without Nsight; original profiled failure
+cause remains unresolved. Host intervals are not isolated GPU or benchmark time.
+
+Separate opt-in targetT128/B1/BF16 layout/commit source scaffold keeps canonical
+106823680words and linear39714816words unchanged; target delta44564480words/
+178257920logical bytes. Actual11PythonCPU pass/.010s; private CPU/MT metadata
+compile, import inspection without GPU/Garnet dependencies, native execution pass
+2241malformed metadata and2827profile tuples; oldT4/T32 still reject new layout.
+CUDA source is unbuilt/unexecuted, no runtime integration, memory-fit or speed
+claim. Current-chunk and prefix KV both round BF16 per actual admitted source.
+
+Next: whole-model trial of the already GPU-qualified tiled score kernel. Existing
+B1/T4,T32 attention launches one warp per key; tiled16 retains eight-FMA and warp
+sum order while reducing score-grid blocks16x. CTA counts are not speed evidence.
+Keep baseline1a1d/source and SDK preserved; build a separate candidate, then exact
+state/token/quality gates before matched HTTP timing. Real B8MTP/serving admission
+is also needed: source inspection finds Row allocates/copies GPU data, so old B8
+probe retains embeddings, copied rows and stacked rows concurrently. Existing
+PackPrompt returns views but caps each packed allocation256MiB; full B8/3968x5120
+cannot use one such allocation. A chunked view source needs exact prompt/state
+qualification, including images/unequal lengths, before memory/speed claims.
+Matched vLLM4K, strongest MTP references, repeated trials, INT4/4B and overall2x/
+halfTTFT targets remain open; scope is unchanged.
+'''
+for name in ('qwen38-5090-development-log.md','qwen38-5090-implementation-task.md'):
+    path=repo/'docs/research'/name;raw=path.read_bytes()
+    if b'failed CUDA profile preserved; direct native bootstrap passes; T128 CPU contract' not in raw:path.write_bytes(raw+text.encode())
+print(json.dumps(closure))

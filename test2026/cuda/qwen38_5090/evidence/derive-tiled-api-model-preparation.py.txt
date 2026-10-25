@@ -1,0 +1,7 @@
+from pathlib import Path
+work=Path(__file__).resolve().parent;old=work/'prepare-native-tiled-model.py';text=old.read_text()
+text=text.replace('bf16-scores-tiled-native-build','bf16-scores-tiled-native-api-build').replace('verify_bf16_scores_tiled_native_build','verify_bf16_scores_tiled_native_api_build').replace('native_tiled_scores_build_cpu_replayed','native_tiled_scores_api_build_cpu_replayed')
+text=text.replace('bf16-scores-tiled-model','bf16-scores-tiled-api-model').replace('bf16_scores_tiled_model','bf16_scores_tiled_api_model').replace('native-tiled-model-','native-tiled-api-model-')
+text=text.replace("'tiled_scores_model.py','test_tiled_scores_model.py',",'').replace('bf16-scores-tiled-api-model-probe-derivation.json','bf16-scores-tiled-api-model-derivation.json')
+text=text.replace('Separate90e candidate DLL','Separate2533 native-API-qualified candidate DLL').replace('Baseline source643/SDK/RTE','Baseline source657/SDK/RTE')
+target=work/'prepare-native-tiled-api-model.py';assert not target.exists();target.write_bytes(text.encode());print(str(target))

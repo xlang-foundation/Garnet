@@ -1,0 +1,12 @@
+from pathlib import Path
+import hashlib,json,os,sys
+repo=Path('D:/CantorAI/work/qwen38-5090');m=repo/'test2026/cuda/qwen38_5090';work=Path(__file__).resolve().parent
+sys.path.insert(0,str(m));from run_logged import run
+base=(m/'evidence/bf16-low-batch-scores-original-overlay.cu.txt').read_bytes().replace(b'\r\n',b'\n')
+tiled=(m/'bf16_low_batch_scores_tiled.cu').read_bytes().replace(b'\r\n',b'\n')
+assert base[base.index(b'bool valid('):base.index(b'__global__ void scores(')]==tiled[tiled.index(b'bool valid('):tiled.index(b'// Sixteen positions per warp:')]
+p=json.loads((m/'evidence/bf16-scores-tiled-native-build-preparation.json').read_bytes())
+os.chdir(repo)
+code=run([sys.executable,'-m','unittest',*p['test_ids']],work/'native-tiled-build-cpu-ledger','correctness','49 unchanged CPU constructor/state regressions before separate native candidate build',
+         [m/'evidence/bf16-scores-tiled-native-build-preparation.json',repo/'src/cuda/qwen38_bf16_kv_low_batch_overlay.cu'])
+raise SystemExit(code)

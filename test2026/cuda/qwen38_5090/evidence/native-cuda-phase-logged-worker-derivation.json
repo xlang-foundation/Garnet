@@ -1,0 +1,10 @@
+{
+  "source": "native_cuda_phase_stream_worker.py",
+  "source_sha256": "4a891e45269be7428100300ce269cddfb2745c1f4afecb6ff8b365f55d32784e",
+  "result_sha256": "c3af81f240cffdf0ed1e5be6994e69975a5d9ff1d79b92f95d019b6aa6d56070",
+  "replacement": {
+    "before": "from test2026.cuda.qwen38_5090.native_cuda_phase_trace import NativeCUDAPhaseTrace as NativeHostStageTrace",
+    "after": "from test2026.cuda.qwen38_5090.native_cuda_phase_bootstrap_log import NativeCUDAPhaseLoggedTrace as NativeHostStageTrace"
+  },
+  "scope": "Explicit bootstrap exception logging only; unchanged qualified worker model operations after trace-only AST removal."
+}

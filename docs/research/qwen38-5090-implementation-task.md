@@ -2424,3 +2424,102 @@ transfer ACK. Actual source-pinned46remote CPU checks pass1.297s. Original handl
 confirmed live, outer profile driver now proceeds toward native model readiness.
 No collected GPU trace, kernel bottleneck or new performance result yet. Only
 original-handle polling remotely while this exclusive diagnosis runs.
+
+
+### 2026-10-25 — failed CUDA profile preserved; direct native bootstrap passes; T128 CPU contract
+
+Original48577 native-cuda-phase-full4k-attempt1 terminal1 after actual46CPU pass,
+before native ready/any request. Archive a698a95d3f2b8a3e7f7fa60794260cb4451ae2712785be6ecff9266e0283297f,
+68326635bytes/663files, remote/local independent failure-preserving replay exit1,
+identical proof8a269e39ab2410ce3c097c2054f624d9b830b472f122c53aef921e103083d703.
+No request GPU timings, kernel bottleneck attribution or performance admission.
+Postrun Nsight stats/ProcessStreams expose the driver's exited-before-ready error
+and a finally assertion masking it; native worker stdout/stderr remain empty.
+Derived SQLite/stream export is separate from original immutable raw archive.
+
+Logged unprofiled successor preserves source633 and runtime1a1d; ten new helpers,
+643source pins. Actual13remoteCPU tests/.130s and embedded-Python trace class/
+intentional-exception fake-IO compatibility pass. One actual3968+128text control
+then completes with original retained IDs,12marker requests, workerexit0 and
+native cleanup witness. Archive8104499a0eace60c00e9af1add17640b5d29e0810894eee8e1b264164b31a9b7,
+151303bytes/33files linked to failed parent. Both independent replays exit0,
+identical proof9d5b3a3f4f0fad830d53c66be2b64dea5f5ec34c88ad5ec197412d3b747e57107.
+This proves the logged worker operates without Nsight; original profiled failure
+cause remains unresolved. Host intervals are not isolated GPU or benchmark time.
+
+Separate opt-in targetT128/B1/BF16 layout/commit source scaffold keeps canonical
+106823680words and linear39714816words unchanged; target delta44564480words/
+178257920logical bytes. Actual11PythonCPU pass/.010s; private CPU/MT metadata
+compile, import inspection without GPU/Garnet dependencies, native execution pass
+2241malformed metadata and2827profile tuples; oldT4/T32 still reject new layout.
+CUDA source is unbuilt/unexecuted, no runtime integration, memory-fit or speed
+claim. Current-chunk and prefix KV both round BF16 per actual admitted source.
+
+Next: whole-model trial of the already GPU-qualified tiled score kernel. Existing
+B1/T4,T32 attention launches one warp per key; tiled16 retains eight-FMA and warp
+sum order while reducing score-grid blocks16x. CTA counts are not speed evidence.
+Keep baseline1a1d/source and SDK preserved; build a separate candidate, then exact
+state/token/quality gates before matched HTTP timing. Real B8MTP/serving admission
+is also needed: source inspection finds Row allocates/copies GPU data, so old B8
+probe retains embeddings, copied rows and stacked rows concurrently. Existing
+PackPrompt returns views but caps each packed allocation256MiB; full B8/3968x5120
+cannot use one such allocation. A chunked view source needs exact prompt/state
+qualification, including images/unequal lengths, before memory/speed claims.
+Matched vLLM4K, strongest MTP references, repeated trials, INT4/4B and overall2x/
+halfTTFT targets remain open; scope is unchanged.
+
+
+### 2026-10-25 — opt-in tiled attention integrated/built; native API qualified; actual model trial started
+
+The exact44-case/FP64-qualified tiled score kernel body is now an explicit opt-in
+in src/cuda/qwen38_bf16_kv_low_batch_overlay.cu. Exact environment value1 selects
+GARNET_QWEN38_BF16_LOW_BATCH_TILED_SCORES, frozen on first native query/enqueue.
+Default path, B1/T4,T32 geometry, BF16 rounding, normalize/context and workspace
+checks are unchanged. Exported selector and Garnet's read-only native API query
+use one selector. Existing model/precision/cache/default settings are unchanged.
+
+Native build attempt1 terminal0, only intended CUDA object changed. Actual49CPU
+(.248s), ten fresh native-export selector subprocesses and955native tokenizer
+cases passed. Separate90e2825ddd96b4029eff110805692fe5cbfdb276c9a32b27fdb936bccb01579c
+DLL retained. Source643/runtime/SDK restored to baseline1a1d. Raw archive
+2ebe8fef4a952cd8b16bc5cc3beaa8d83bb6b65e49eabd7b0d868a02c674f0b3,
+2691896bytes/44files; independent local/remote replay passes with identical proofs.
+
+Actual first model admission stopped before model construction: embedded Python
+ctypes cannot invoke the exported query because libffi is unavailable. Actual ten
+CPU replay faults passed/.831s first. Failure archive
+027f2f5c544320c0610de15a82b27f1590320157969dfa045e8f765194c4b45b,
+92747bytes/17files, both independent replays preserve exit1 and zero model routes.
+No correctness, model timing, memory fit or speed claim. Baseline653/source/RTE
+restored, actual child exited1. Earlier failure/helper files remain immutable.
+
+Safe correction exposes bf16_low_batch_tiled_scores_enabled through GarnetAPI;
+no ctypes, libffi, SDK or runtime dependency change. Native API build terminal0:
+same tiled CUDA source plus minimal entry header, only intended CUDA object may
+change; actual49CPU/.231s, ten external selector, ten actual embedded native API
+fresh processes and955tokenizer cases all pass. Default/invalid/exact1 values and
+post-query environment flips checked. Candidate
+2533ad6867bb33137420272c975d33a26fb3637c1229fa58f5ad5dfaf1657ff7.
+Archive3dd4c289fe7a26c6aec98e92066ce19c8a9e8c6e005182f4534d5f3b4bfe046c,
+2712172bytes/68files, local/remote independent replay passes identical proofs.
+Both candidate source files and baseline1a1d DLL always restored, SDK unchanged.
+
+Successor bf16-scores-tiled-api-model-admission-attempt1 started on original48577
+after all six absent-target uploads received ACK. Preparation
+94e0f475712baa1d08cdc5ef67c41a2ea17decbc0c2003ce6ab96dd0da606fb3,
+662source pins, five new helpers. Two fresh processes with candidate2533 DLL:
+default/tiled, each six actual3968+128text/image cases and ordinary/T16draft MTP.
+Each compares32complete state witnesses and64raw finite hidden/normalized vectors
+to retained1a1d full4K archive92eef543, plus exact128IDs/callbacks/reset repeats.
+Mutual ordinary/MTP agreement alone cannot pass; CPU fault controls reject shared
+state/vector drift. Current trial results are pending in this start snapshot.
+Observe resource memory only for construction/correctness, not HTTP serving peak.
+No new benchmark or speed claim until whole-model and broad805/protocol gates,
+then matched actual4K HTTP with source/runtime pinning and independent replay.
+
+Uncompiled T128 CUDA/header/metadata scaffold moved byte-exact to study directory
+test2026/cuda/qwen38_5090, outside production src/cuda glob. Isolation receipt maps
+old coordinates from earlier CPU evidence. No accidental default compilation or
+runtime qualification. Further target prefill and realB8MTP/memory/HTTP work,
+matched vLLM4K/tuned MTP references, repeated trials, INT4/4B comparisons and
+overall2xdecode+throughput/halfTTFT remain required. Goal stays active.

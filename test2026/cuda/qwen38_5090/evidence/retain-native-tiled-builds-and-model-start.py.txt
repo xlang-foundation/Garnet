@@ -1,0 +1,90 @@
+from pathlib import Path
+import hashlib,json,zipfile
+work=Path(__file__).resolve().parent;out=work.parent/'outputs';repo=Path('D:/CantorAI/work/qwen38-5090');m=repo/'test2026/cuda/qwen38_5090';e=m/'evidence';sha=lambda f:hashlib.sha256(f.read_bytes()).hexdigest()
+def keep(path,raw):
+    assert not path.exists() or path.read_bytes()==raw,path
+    if not path.exists():path.write_bytes(raw)
+jobs={}
+for name,status,code in [('bf16-scores-tiled-native-build-attempt1','native_tiled_scores_build_cpu_replayed',0),('bf16-scores-tiled-model-admission-attempt1','native_tiled_scores_model_failure_preserved',1),('bf16-scores-tiled-native-api-build-attempt1','native_tiled_scores_api_build_cpu_replayed',0)]:
+    local=out/(name+'-verified.json');p=json.loads(local.read_bytes());assert p==json.loads((out/(name+'-remote-verified.json')).read_bytes()) and p['status']==status
+    archive=out/(name+'-evidence.zip');assert sha(archive)==p['archive_sha256']
+    with zipfile.ZipFile(archive) as z:
+        w=json.loads(z.read('results/'+name+'/workflow.json'));assert w['exit_code']==code and w['cleanup_finished']
+        if 'source_before' in w:assert w['source_before']==w['source_after'] and w['runtime_before']==w['runtime_after']
+        else:assert w['source_sha256']==w['source_after_sha256'] and w['runtime_dependencies']==w['runtime_dependencies_after']
+        for n in z.namelist():
+            if n.endswith('commands.jsonl') or n.endswith('commands.log') or n.endswith('report.json'):
+                target=e/(name+'-'+n.removeprefix('results/'+name+'/').replace('/','-'));keep(target,z.read(n))
+    jobs[name]={'status':status,'exit_code':code,'archive_sha256':sha(archive),'bytes':archive.stat().st_size,'files_verified':p['files_verified'],'proof_pair_sha256':sha(local),'candidate_library_sha256':p['candidate_library_sha256']}
+    for suffix in ('-verified.json','-remote-verified.json'):keep(e/(name+suffix),(out/(name+suffix)).read_bytes())
+for name in ('native-tiled-build-upload-plan.json','native-tiled-model-upload-plan.json','native-tiled-api-build-upload-plan.json','native-tiled-api-model-upload-plan.json','native-tiled-model-retained-cpu-replay.json','native-tiled-api-model-retained-cpu-replay.json'):
+    keep(e/name,(work/name).read_bytes())
+for directory in ('native-tiled-build-cpu-ledger','native-tiled-model-cpu-ledger','native-tiled-api-model-cpu-ledger'):
+    for f in (work/directory).iterdir():
+        if f.is_file():keep(e/(directory+'-'+f.name),f.read_bytes())
+for name in ('derive-native-tiled-attention.py','prepare-native-tiled-build.py','check-native-tiled-build-local.py','derive-native-tiled-model-probe.py','prepare-native-tiled-model.py','prepare-native-tiled-api-build.py','derive-tiled-api-model-retry.py','derive-tiled-api-model-preparation.py','prepare-native-tiled-api-model.py','isolate-prefill128-study-sources.py','retain-native-tiled-builds-and-model-start.py'):
+    keep(e/(name+'.txt'),(work/name).read_bytes())
+prep=e/'bf16-scores-tiled-api-model-preparation.json';p=json.loads(prep.read_bytes());assert len(p['files'])==662 and len(p['new_files'])==5
+result={'status':'native_tiled_builds_replayed_embedded_api_qualified_model_trial_started','jobs':jobs,'model_trial':{'id':'bf16-scores-tiled-api-model-admission-attempt1','supervisor_session':48577,'preparation_sha256':sha(prep),'source_pins':662,'new_upload_targets':6,'all_uploads_acknowledged':True,'terminal_result':None},'performance_admitted':False,'two_times_target_achieved':False}
+keep(e/'native-tiled-builds-and-model-start-closure.json',json.dumps(result,indent=2).encode());keep(out/'Garnet-Tiled-Attention-Implementation-Status.json',json.dumps(result,indent=2).encode())
+text='''
+
+### 2026-10-25 — opt-in tiled attention integrated/built; native API qualified; actual model trial started
+
+The exact44-case/FP64-qualified tiled score kernel body is now an explicit opt-in
+in src/cuda/qwen38_bf16_kv_low_batch_overlay.cu. Exact environment value1 selects
+GARNET_QWEN38_BF16_LOW_BATCH_TILED_SCORES, frozen on first native query/enqueue.
+Default path, B1/T4,T32 geometry, BF16 rounding, normalize/context and workspace
+checks are unchanged. Exported selector and Garnet's read-only native API query
+use one selector. Existing model/precision/cache/default settings are unchanged.
+
+Native build attempt1 terminal0, only intended CUDA object changed. Actual49CPU
+(.248s), ten fresh native-export selector subprocesses and955native tokenizer
+cases passed. Separate90e2825ddd96b4029eff110805692fe5cbfdb276c9a32b27fdb936bccb01579c
+DLL retained. Source643/runtime/SDK restored to baseline1a1d. Raw archive
+2ebe8fef4a952cd8b16bc5cc3beaa8d83bb6b65e49eabd7b0d868a02c674f0b3,
+2691896bytes/44files; independent local/remote replay passes with identical proofs.
+
+Actual first model admission stopped before model construction: embedded Python
+ctypes cannot invoke the exported query because libffi is unavailable. Actual ten
+CPU replay faults passed/.831s first. Failure archive
+027f2f5c544320c0610de15a82b27f1590320157969dfa045e8f765194c4b45b,
+92747bytes/17files, both independent replays preserve exit1 and zero model routes.
+No correctness, model timing, memory fit or speed claim. Baseline653/source/RTE
+restored, actual child exited1. Earlier failure/helper files remain immutable.
+
+Safe correction exposes bf16_low_batch_tiled_scores_enabled through GarnetAPI;
+no ctypes, libffi, SDK or runtime dependency change. Native API build terminal0:
+same tiled CUDA source plus minimal entry header, only intended CUDA object may
+change; actual49CPU/.231s, ten external selector, ten actual embedded native API
+fresh processes and955tokenizer cases all pass. Default/invalid/exact1 values and
+post-query environment flips checked. Candidate
+2533ad6867bb33137420272c975d33a26fb3637c1229fa58f5ad5dfaf1657ff7.
+Archive3dd4c289fe7a26c6aec98e92066ce19c8a9e8c6e005182f4534d5f3b4bfe046c,
+2712172bytes/68files, local/remote independent replay passes identical proofs.
+Both candidate source files and baseline1a1d DLL always restored, SDK unchanged.
+
+Successor bf16-scores-tiled-api-model-admission-attempt1 started on original48577
+after all six absent-target uploads received ACK. Preparation
+94e0f475712baa1d08cdc5ef67c41a2ea17decbc0c2003ce6ab96dd0da606fb3,
+662source pins, five new helpers. Two fresh processes with candidate2533 DLL:
+default/tiled, each six actual3968+128text/image cases and ordinary/T16draft MTP.
+Each compares32complete state witnesses and64raw finite hidden/normalized vectors
+to retained1a1d full4K archive92eef543, plus exact128IDs/callbacks/reset repeats.
+Mutual ordinary/MTP agreement alone cannot pass; CPU fault controls reject shared
+state/vector drift. Current trial results are pending in this start snapshot.
+Observe resource memory only for construction/correctness, not HTTP serving peak.
+No new benchmark or speed claim until whole-model and broad805/protocol gates,
+then matched actual4K HTTP with source/runtime pinning and independent replay.
+
+Uncompiled T128 CUDA/header/metadata scaffold moved byte-exact to study directory
+test2026/cuda/qwen38_5090, outside production src/cuda glob. Isolation receipt maps
+old coordinates from earlier CPU evidence. No accidental default compilation or
+runtime qualification. Further target prefill and realB8MTP/memory/HTTP work,
+matched vLLM4K/tuned MTP references, repeated trials, INT4/4B comparisons and
+overall2xdecode+throughput/halfTTFT remain required. Goal stays active.
+'''
+for name in ('qwen38-5090-development-log.md','qwen38-5090-implementation-task.md'):
+    path=repo/'docs/research'/name;raw=path.read_bytes()
+    if b'opt-in tiled attention integrated/built; native API qualified; actual model trial started' not in raw:path.write_bytes(raw+text.encode())
+print(json.dumps(result))

@@ -1,0 +1,38 @@
+from pathlib import Path
+import ast,hashlib,json,zipfile
+
+work=Path(__file__).resolve().parent;out=work.parent/'outputs';repo=Path('D:/CantorAI/work/qwen38-5090');m=repo/'test2026/cuda/qwen38_5090';e=m/'evidence'
+sha=lambda f:hashlib.sha256(f.read_bytes()).hexdigest()
+bootstrap=out/'native-cuda-phase-logged-bootstrap-attempt1-verified.json';proof=json.loads(bootstrap.read_bytes())
+assert proof==json.loads((out/'native-cuda-phase-logged-bootstrap-attempt1-remote-verified.json').read_bytes()) and proof['status']=='native_cuda_logged_bootstrap_replayed'
+with zipfile.ZipFile(out/'native-cuda-phase-logged-bootstrap-attempt1-evidence.zip') as z:
+    w=json.loads(z.read('results/native-cuda-phase-logged-bootstrap-attempt1/workflow.json'));assert w['exit_code']==0 and w['cleanup_finished']
+base=w['source_after_sha256'];runtime=w['runtime_dependencies_after']
+prior=json.loads((e/'tokenizer-nfc-native-build-preparation.json').read_bytes())
+with zipfile.ZipFile(out/'tokenizer-nfc-native-build-attempt1-evidence.zip') as z:
+    old=json.loads(z.read('results/tokenizer-nfc-native-build-attempt1/workflow.json'));cache=hashlib.sha256(z.read('build/CMakeCache.txt')).hexdigest()
+    assert old['exit_code']==0 and old['library_sha256']==runtime['garnet.dll']
+    objects=old['cuda_objects_after']
+names=['run_bf16_scores_tiled_native_build.py','probe_native_tiled_scores_selector_cpu.py']
+for name in names:ast.parse((m/name).read_text())
+methods={'Garnet/test2026/cuda/qwen38_5090/'+n:sha(m/n) for n in names}
+for n in ('probe_native_tokenizer_frozen_cpu.py','build_integrated_batch_top1_native.bat'):
+    path='Garnet/test2026/cuda/qwen38_5090/'+n
+    assert sha(m/n)==prior['methods'].get(path,sha(m/n))
+    methods[path]=sha(m/n)
+candidate=repo/'src/cuda/qwen38_bf16_kv_low_batch_overlay.cu';d=json.loads((e/'bf16-low-batch-scores-native-derivation.json').read_bytes())
+assert sha(candidate)==d['candidate_sha256'] and base['Garnet/'+d['file']]==d['base_sha256']
+for n,h in base.items():
+    if n.startswith('Garnet/') and n!='Garnet/'+d['file']:assert sha(repo/n.removeprefix('Garnet/'))==h,n
+bundle=work/'bf16-scores-tiled-native-source.zip';assert not bundle.exists()
+with zipfile.ZipFile(bundle,'x',zipfile.ZIP_DEFLATED) as z:z.write(candidate,d['file'])
+p={'status':'native_tiled_scores_build_prepared_unrun','base_files':base,'runtime':runtime,'environment':prior['environment'],'cache_before_sha256':cache,'cuda_objects_before':objects,
+   'candidate_source_sha256':sha(candidate),'bootstrap_proof_sha256':sha(bootstrap),'component_archive_sha256':d['component_parent_archive_sha256'],
+   'bundle':'results/'+bundle.name,'bundle_sha256':sha(bundle),'methods':methods,'vcvars':prior['vcvars'],'test_ids':prior['test_modules'],
+   'scope':'Preserve actual closed bootstrap/source643/1a1d baseline and SDK. Temporarily install one CUDA file containing exact admitted tiled score kernel plus process-frozen exact-value1 opt-in/default-off selector. Reuse current Release/MT/sm120 build; require only one CUDA object changed. Actual49existing CPU regressions, ten new native-export selector CPU subprocesses,955native C API tokenizer oracles. Retain candidate DLL separately, restore baseline DLL/source always. No GPU model or new performance/quality/2x admission.'}
+assert len(p['test_ids'])==49
+prep=e/'bf16-scores-tiled-native-build-preparation.json';assert not prep.exists();prep.write_bytes(json.dumps(p,indent=2).encode())
+uploads=[{'local':str(m/n),'target':'Garnet/test2026/cuda/qwen38_5090/'+n,'sha256':sha(m/n)} for n in names]
+uploads += [{'local':str(bundle),'target':p['bundle'],'sha256':sha(bundle)},{'local':str(prep),'target':'Garnet/test2026/cuda/qwen38_5090/evidence/'+prep.name,'sha256':sha(prep)}]
+(work/'native-tiled-build-upload-plan.json').write_bytes(json.dumps({'uploads':uploads},indent=2).encode())
+print(json.dumps({'status':p['status'],'targets':len(uploads),'source_pins':len(base),'cpu_ids':len(p['test_ids']),'preparation_sha256':sha(prep),'bundle_sha256':sha(bundle)}))

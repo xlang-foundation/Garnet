@@ -21,6 +21,10 @@
 #include <unordered_map>
 #include <vector>
 
+#if !defined(GARNET_CPU_ONLY) && !defined(GARNET_METAL)
+extern "C" int GarnetQwen38BF16LowBatchTiledScoresEnabled() noexcept;
+#endif
+
 namespace Garnet
 {
 	class QwenVLRequestContext
@@ -159,12 +163,23 @@ namespace Garnet
 		bool LoadModelFromFile(std::string modelPath, X::Value& model);
 	public:
 		X::Value CudaDevicesJson(const X::ARGS&, const X::KWARGS&);
+		// Same process-frozen selector used by the low-batch CUDA enqueue path.
+		// No CUDA call: available to the embedded runtime without ctypes/libffi.
+		bool BF16LowBatchTiledScoresEnabled()
+		{
+#if !defined(GARNET_CPU_ONLY) && !defined(GARNET_METAL)
+			return ::GarnetQwen38BF16LowBatchTiledScoresEnabled() != 0;
+#else
+			return false;
+#endif
+		}
 		X::Value CudaSetDevice(const X::ARGS&, const X::KWARGS&);
 		X::Value CudaSynchronize(const X::ARGS&, const X::KWARGS&);
 		X::Value TensorToDevice(const X::ARGS&, const X::KWARGS&);
 		X::Value TensorZeros(const X::ARGS&, const X::KWARGS&);
 		X::Value BindOperatorModuleAPI(const X::ARGS&, const X::KWARGS&);
 		BEGIN_PACKAGE(GarnetAPI)
+			APISET().AddFunc<0>("bf16_low_batch_tiled_scores_enabled", &GarnetAPI::BF16LowBatchTiledScoresEnabled);
 			APISET().AddVarFunc("cuda_devices_json", &GarnetAPI::CudaDevicesJson);
 			APISET().AddVarFunc("cuda_set_device", &GarnetAPI::CudaSetDevice);
 			APISET().AddVarFunc("cuda_synchronize", &GarnetAPI::CudaSynchronize);
