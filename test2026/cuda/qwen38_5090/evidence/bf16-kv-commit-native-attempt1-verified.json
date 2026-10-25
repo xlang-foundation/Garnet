@@ -1,0 +1,47 @@
+{
+  "status": "bf16_kv_commit_native_operator_replayed",
+  "archive_sha256": "70f0446c36366accc042c53152e9a7c06937628572058dca03df9e9c58db37ea",
+  "files_verified": 31,
+  "profiles": [
+    {
+      "event": "profile_passed",
+      "batch": 4,
+      "chunk": 4,
+      "full_state_byte_cases": 11,
+      "rejected_calls": 16,
+      "readonly_inputs_exact": true
+    },
+    {
+      "event": "profile_passed",
+      "batch": 4,
+      "chunk": 32,
+      "full_state_byte_cases": 6,
+      "rejected_calls": 16,
+      "readonly_inputs_exact": true
+    },
+    {
+      "event": "profile_passed",
+      "batch": 8,
+      "chunk": 4,
+      "full_state_byte_cases": 11,
+      "rejected_calls": 15,
+      "readonly_inputs_exact": true
+    },
+    {
+      "event": "profile_passed",
+      "batch": 8,
+      "chunk": 32,
+      "full_state_byte_cases": 6,
+      "rejected_calls": 15,
+      "readonly_inputs_exact": true
+    }
+  ],
+  "full_state_byte_cases": 34,
+  "rejected_calls": 62,
+  "sampled_correctness_adapter_peak_bytes": 7075078144,
+  "replay_verifier_sha256": "918556fadfd136cc3cd605d3d607e45789a4343f7ff6f70c7db1d06a87fae3f7",
+  "archived_replay_verifier_sha256": "918556fadfd136cc3cd605d3d607e45789a4343f7ff6f70c7db1d06a87fae3f7",
+  "model_qualified": false,
+  "performance_admitted": false,
+  "scope": "Standalone BF16 accepted-prefix commit operator only; no Garnet DLL loading/build, model/checkpoint loading or serving benchmark. Source/executable/header pins, six CPU layout checks, regenerated independent tables,34full canonical-state finite-value byte controls and62rejected calls with readonly source checks; RTX5090 identity and sampled correctness memory. Require closed/replayed register128HTTP parent before GPU launch. Overlay numerical/readonly/alias controls, public helper/plugin contracts, model integration, broad precision quality, B8/T32 allocation fit and timings remain open."
+}
