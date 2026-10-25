@@ -1,0 +1,260 @@
+{
+  "parent_failed_archive_sha256": "6bb464e98b9ea0ac4860f8b9b0c9a1fe60f38bbddb7daf66004eaa5fbf17fd0d",
+  "files": {
+    "native_tokenizer_nfc_stream_worker.py": {
+      "source": "Garnet/test2026/cuda/qwen38_5090/native_bf16_low_batch_stream_worker.py",
+      "source_sha256": "576002a2a79e43469841d086ccfc4b800543e3d188bbcf62c0fb554051cecbf0",
+      "changes": [
+        [
+          "bf16-low-batch-model-consistency-attempt2",
+          "tokenizer-nfc-model-consistency-attempt1",
+          1
+        ],
+        [
+          "bf16_low_batch_model_consistency_replayed",
+          "tokenizer_nfc_model_consistency_replayed",
+          1
+        ],
+        [
+          "verify_bf16_low_batch_model_fixed.py",
+          "verify_tokenizer_nfc_model.py",
+          1
+        ]
+      ],
+      "result_sha256": "636878b5cafa4136a2a5526ef5b01b383af55122866fee7ab233a5ceb78cedf6"
+    },
+    "serve_native_tokenizer_nfc_worker.bat": {
+      "source": "Garnet/test2026/cuda/qwen38_5090/serve_native_bf16_low_batch_worker.bat",
+      "source_sha256": "3db7a15de720e683ae590e263bea403a12d33828dbd0f588b458c0548ca9a6b7",
+      "changes": [
+        [
+          "native_bf16_low_batch_stream_worker.py",
+          "native_tokenizer_nfc_stream_worker.py",
+          1
+        ]
+      ],
+      "result_sha256": "8f244789102cc406fce56f95045f871df369ed876d83af9295dd537474d611e0"
+    },
+    "probe_tokenizer_nfc_http.py": {
+      "source": "Garnet/test2026/cuda/qwen38_5090/probe_bf16_low_batch_http.py",
+      "source_sha256": "d2e1cd2211c68f854e545e5ad544278684fe27b93d12fa57cf8bd1578786cb5c",
+      "changes": [
+        [
+          "native_bf16_low_batch_stream_worker.py",
+          "native_tokenizer_nfc_stream_worker.py",
+          1
+        ],
+        [
+          "serve_native_bf16_low_batch_worker.bat",
+          "serve_native_tokenizer_nfc_worker.bat",
+          1
+        ],
+        [
+          "bf16-low-batch-model-consistency-attempt2",
+          "tokenizer-nfc-model-consistency-attempt1",
+          1
+        ],
+        [
+          "bf16_low_batch_model_consistency_replayed",
+          "tokenizer_nfc_model_consistency_replayed",
+          1
+        ],
+        [
+          "bf16_low_batch_http_profile_collected",
+          "tokenizer_nfc_http_profile_collected",
+          2
+        ]
+      ],
+      "result_sha256": "72dee83812797208b5c912fd8f5382d115274241f3a8389171d94984f36dce4b"
+    },
+    "run_tokenizer_nfc_http.py": {
+      "source": "Garnet/test2026/cuda/qwen38_5090/run_bf16_low_batch_http.py",
+      "source_sha256": "a5f9df6473d46948624045783ba60032b4a348368d12e018ecbddc2067fa8616",
+      "changes": [
+        [
+          "probe_bf16_low_batch_http.py",
+          "probe_tokenizer_nfc_http.py",
+          1
+        ],
+        [
+          "test_bf16_low_batch_worker_contract",
+          "test_tokenizer_nfc_worker_contract",
+          1
+        ],
+        [
+          "bf16-low-batch-model-consistency-attempt2",
+          "tokenizer-nfc-model-consistency-attempt1",
+          1
+        ],
+        [
+          "bf16_low_batch_model_consistency_replayed",
+          "tokenizer_nfc_model_consistency_replayed",
+          1
+        ],
+        [
+          "garnet-native-bf16-low-batch-attempt1.dll",
+          "garnet-native-tokenizer-nfc-attempt1.dll",
+          1
+        ],
+        [
+          "bf16-low-batch-http-study-attempt1",
+          "tokenizer-nfc-http-study-attempt1",
+          1
+        ],
+        [
+          "bf16-low-batch-http-preparation.json",
+          "tokenizer-nfc-http-preparation.json",
+          1
+        ],
+        [
+          "bf16_low_batch_http_study_collected_needs_replay",
+          "tokenizer_nfc_http_study_collected_needs_replay",
+          1
+        ]
+      ],
+      "result_sha256": "9c66be1d88767b02d81039b28de1fc6e8ac2f8c1234b2db279918a5b9ff5e4bc"
+    },
+    "prepare_tokenizer_nfc_http.py": {
+      "source": "Garnet/test2026/cuda/qwen38_5090/prepare_bf16_low_batch_http.py",
+      "source_sha256": "b3b89b3a1e963e6c44fd4baefd5edb49d3200cd3e9b9af55211dcb1bd7972009",
+      "changes": [
+        [
+          "native_bf16_low_batch_stream_worker.py",
+          "native_tokenizer_nfc_stream_worker.py",
+          1
+        ],
+        [
+          "serve_native_bf16_low_batch_worker.bat",
+          "serve_native_tokenizer_nfc_worker.bat",
+          1
+        ],
+        [
+          "probe_bf16_low_batch_http.py",
+          "probe_tokenizer_nfc_http.py",
+          1
+        ],
+        [
+          "run_bf16_low_batch_http.py",
+          "run_tokenizer_nfc_http.py",
+          1
+        ],
+        [
+          "prepare_bf16_low_batch_http.py",
+          "prepare_tokenizer_nfc_http.py",
+          1
+        ],
+        [
+          "verify_bf16_low_batch_http.py",
+          "verify_tokenizer_nfc_http.py",
+          1
+        ],
+        [
+          "test_bf16_low_batch_worker_contract.py",
+          "test_tokenizer_nfc_worker_contract.py",
+          1
+        ],
+        [
+          "bf16-low-batch-model-consistency-attempt2",
+          "tokenizer-nfc-model-consistency-attempt1",
+          1
+        ],
+        [
+          "bf16_low_batch_model_consistency_replayed",
+          "tokenizer_nfc_model_consistency_replayed",
+          1
+        ],
+        [
+          "verify_bf16_low_batch_model_fixed.py",
+          "verify_tokenizer_nfc_model.py",
+          1
+        ],
+        [
+          "bf16-low-batch-http-preparation.json",
+          "tokenizer-nfc-http-preparation.json",
+          1
+        ],
+        [
+          "b1_http_study_prepared_unrun",
+          "tokenizer_nfc_http_study_prepared_unrun",
+          1
+        ],
+        [
+          "'evidence/fixed-context-4096-corpus.zip')",
+          "'evidence/fixed-context-4096-corpus.zip','evidence/tokenizer-nfc-http-method-derivation.json')",
+          1
+        ],
+        [
+          " files.update({'Garnet/test2026/cuda/qwen38_5090/'+n:sha(m/n) for n in METHODS})",
+          " derivation=json.loads((m/'evidence/tokenizer-nfc-http-method-derivation.json').read_bytes());failed='bf16-low-batch-http-study-attempt1';failure_raw=(args.proofs/(failed+'-remote-verified.json')).read_bytes();failure=json.loads(failure_raw)\n assert failure==json.loads((args.proofs/(failed+'-verified.json')).read_bytes()) and failure['status']=='bf16_low_batch_http_study_failure_preserved' and failure['archive_sha256']==sha(args.proofs/(failed+'-evidence.zip'))==derivation['parent_failed_archive_sha256']\n with zipfile.ZipFile(args.proofs/(failed+'-evidence.zip')) as previous:\n  for target,row in derivation['files'].items():\n   original=previous.read(row['source']);assert hashlib.sha256(original).hexdigest()==row['source_sha256'];text=original.decode()\n   for before,after,count in row['changes']:assert text.count(before)==count;text=text.replace(before,after)\n   assert text.encode()==(m/target).read_bytes() and sha(m/target)==row['result_sha256']\n files['results/'+failed+'-verified.json']=hashlib.sha256(failure_raw).hexdigest()\n files.update({'Garnet/test2026/cuda/qwen38_5090/'+n:sha(m/n) for n in METHODS})",
+          1
+        ]
+      ],
+      "result_sha256": "377d6be5d08d374f2388f85f90c6a60e86133b262d7cd237066f7239c2ea4e42"
+    },
+    "verify_tokenizer_nfc_http.py": {
+      "source": "Garnet/test2026/cuda/qwen38_5090/verify_bf16_low_batch_http.py",
+      "source_sha256": "7bb5c5059bd16abd9d71bf5587ec0d80cf9dff0f4de7f96b3285c9f46a1fe613",
+      "changes": [
+        [
+          "verify_bf16_low_batch_http.py",
+          "verify_tokenizer_nfc_http.py",
+          1
+        ],
+        [
+          "bf16-low-batch-model-consistency-attempt2",
+          "tokenizer-nfc-model-consistency-attempt1",
+          1
+        ],
+        [
+          "bf16_low_batch_model_consistency_replayed",
+          "tokenizer_nfc_model_consistency_replayed",
+          1
+        ],
+        [
+          "bf16-low-batch-http-study-attempt1",
+          "tokenizer-nfc-http-study-attempt1",
+          1
+        ],
+        [
+          "bf16-low-batch-http-preparation.json",
+          "tokenizer-nfc-http-preparation.json",
+          1
+        ],
+        [
+          "bf16_low_batch_http_study_collected_needs_replay",
+          "tokenizer_nfc_http_study_collected_needs_replay",
+          1
+        ],
+        [
+          "bf16_low_batch_http_study_replayed",
+          "tokenizer_nfc_http_study_replayed",
+          1
+        ],
+        [
+          "bf16_low_batch_http_study_failure_preserved",
+          "tokenizer_nfc_http_study_failure_preserved",
+          1
+        ],
+        [
+          "bf16_low_batch_http_profile_collected",
+          "tokenizer_nfc_http_profile_collected",
+          1
+        ]
+      ],
+      "result_sha256": "d155aaf28a7ca5385d9bb8049eb35b51b6f307520d6d9760a84ed667fbe78692"
+    },
+    "test_tokenizer_nfc_worker_contract.py": {
+      "source": "Garnet/test2026/cuda/qwen38_5090/test_bf16_low_batch_worker_contract.py",
+      "source_sha256": "12d4314da8ca9c6ca9ddb38ef0326c76e49ec6211c623ebdfd756edcdab18e10",
+      "changes": [
+        [
+          "native_bf16_low_batch_stream_worker.py",
+          "native_tokenizer_nfc_stream_worker.py",
+          3
+        ]
+      ],
+      "result_sha256": "078c86b86fb29c0f32644fd607c3cdb4079960f74ff1566e4b889a6d464856bf"
+    }
+  },
+  "scope": "Fresh named HTTP study from immutable failed attempt1. Bind new actual model proof/verifier/retained alias, use new worker-targeted CPU test and require exact source derivation/failed-parent proof. All805quality,4K/short workloads, request/token checks and immutable failure policy unchanged. No model proof/plan materialized until actual current model closes and both replays pass."
+}

@@ -4699,3 +4699,31 @@ separately; corrected absolute launch succeeded. No remote deployed source/runti
 or cache is changed while this original model job lives. Actual model closure,
 805quality,4K/shortHTTP, strongest feasible reference MTP/tuning, INT4/4B and clean
 repetitions still precede original2x admission. No new benchmark result is claimed.
+
+
+### 2026-10-25: NFC HTTP methods prepared; B4 model comparison passes
+
+Original supervisor48577 confirms tokenizer-nfc-model-consistency-attempt1
+running. Read-only workflow observation records all4B4cases complete, exit0:
+18reported states/36raw vectors and full canonical metadata, IDs and callbacks
+exactly match retained8ae. B1 remains active; observation sees3completed cases.
+This is partial correctness evidence, not final model/quality/speed admission.
+
+Seven fresh HTTP methods are literal-derived from the immutable failed HTTP1
+archive, binding the new model proof/verifier and saved tokenizer DLL alias.
+An initial module-stem substitution was caught before testing and added to the
+derivation recipe; final bytes passed29actual CPU tests in8.642s. Original
+805screen,12protocol,2boundary,124full4K and124short requests per mode, strict
+ID/usage matching, ordinary/MTP pairing and failure preservation remain intact.
+The factory replays all seven derivations and binds the original failed proof.
+Actual negative run returns2 on missing new model proof and creates neither a
+preparation nor upload plan. Methods, receipts and real command ledgers retained.
+No deployed method/runtime/cache mutation or HTTP execution occurred.
+
+Supplemental all-vector auditor is prepared to compare every persisted .f32
+file, including transient prefix snapshots absent from report state objects,
+against retained8ae after actual model closure and both independent replays.
+It has not yet run on a completed new archive. B4 report comparisons cover all
+reported vectors; do not broaden that claim to all transient files before audit.
+Original2x, full4K/quality, strongest reference/tuned/MTP, INT4/4B and repetition
+requirements remain open. Single-slot HTTP queues do not imply GPU batching.
