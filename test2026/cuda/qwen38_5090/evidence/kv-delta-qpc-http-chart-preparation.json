@@ -1,0 +1,53 @@
+{
+  "status": "qpc_http_chart_generator_prepared_unrun",
+  "base_sha256": "58075157aecd0d5b50f68c6b57349985226d318b8b49128d17f8f3f42e26a6e1",
+  "generator_sha256": "d4ded267d9f4e100e24d7383c8ea0b5ea8b82f483c4c1f01d28d0981eb589bb5",
+  "recipe": [
+    [
+      "pilot='kv-delta-http-pilot-attempt1';parent='b4-joined-delay10-http-pilot-attempt1'",
+      "pilot='kv-delta-qpc-http-pilot-attempt1';parent='kv-delta-http-pilot-attempt1'",
+      1
+    ],
+    [
+      "proof['status']=='compact_kv_delta_http_pilot_replayed'",
+      "proof['status']=='compact_kv_delta_qpc_http_pilot_replayed'",
+      1
+    ],
+    [
+      "old['status']=='b4_joined_delay10_http_pilot_replayed'",
+      "old['status']=='compact_kv_delta_http_pilot_replayed'",
+      1
+    ],
+    [
+      "Garnet compact B4",
+      "Garnet QPC B4",
+      1
+    ],
+    [
+      "Garnet previous B4",
+      "Garnet coarse-clock B4",
+      1
+    ],
+    [
+      "Garnet-Compact-HTTP",
+      "Garnet-QPC-HTTP",
+      6
+    ],
+    [
+      "'Garnet previous','Garnet compact'",
+      "'Garnet coarse clock','Garnet QPC'",
+      1
+    ],
+    [
+      "footer='Single pilots; ordinary untuned references. Native physical B4 + MTP3 where eligible; C8 queues B4 groups. Grouping delay 10ms.'",
+      "footer='Single pilots; untuned refs. Native B4/MTP3 where eligible; C8 queues B4 groups. QPC vs coarse clock 10ms grouping.'",
+      1
+    ],
+    [
+      "assert proof['status']=='compact_kv_delta_qpc_http_pilot_replayed' and proof['measured_sse_worker_pairs']==64 and not proof['two_x_established']",
+      "assert proof['status']=='compact_kv_delta_qpc_http_pilot_replayed' and proof['measured_sse_worker_pairs']==64 and not proof['two_x_established']\nassert proof['grouping_clock']=='perf_counter'",
+      1
+    ]
+  ],
+  "scope": "Requires successfully replayed QPC HTTP proof and immutable archives. Includes all8cohorts and regressions, both ordinary references, parent and actual dispatch. No placeholder metrics and no2x admission."
+}
