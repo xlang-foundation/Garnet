@@ -1,0 +1,7 @@
+{
+  "status": "observed_comparison_recording_deferred_before_any_real_benchmark",
+  "initial_source_sha256": "83cd8b8b62fa1b787ae95bb7ac96f0713ea3b62d861912106338eccc4cdb46fe",
+  "source_sha256": "d6ad7e2289edd10ccfffe718a1749096a29ec7169fe986aaea0ff0809e2a939f",
+  "reason": "Hashing full serial prompt/control IDs and writing variant sidecars inside send could add CPU work while peer streams are timed. Keep the original cheap status/count/finish checks in send; compute cohort text counts only after all cohort futures complete, and hash/write every comparison only after all timing and serving-memory sampling closes. Raw client timestamps, requests, precision, fixed lengths and old failure remain unchanged.",
+  "actual_model_or_benchmark_executed": false
+}

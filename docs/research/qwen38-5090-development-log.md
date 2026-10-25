@@ -5563,3 +5563,69 @@ Full raw variants/source/lifecycle retained. Stronger ordinary/tuned/MTP referen
 timings must preserve these observations without dropping the faster normal engine
 or rewriting the prior strict failure. Candidate805quality/HTTP/repeated speed,
 host/GPU bottleneck work, externalB8/HTTP/MTP, INT4/4B and2x remain open.
+
+
+### 2026-10-25 — wider MTP actual full4K correctness closed and replayed twice
+
+Original supervisor48577 observed mtp-prefill16-full4k-admission-attempt1 terminal0.
+Six3968+128 cases (four retained text/image inputs plus reset repeats) match actual
+ordinary target IDs, callbacks and complete canonical state/raw hidden/normalized
+vectors at prefill/final. All32captured target states replay. Actual50remote CPU
+tests pass0.675s. Qualified1a1d source/runtime and cleanup unchanged. Immutable
+67594006byte/666file archive fully transferred/replayed on both machines; properly
+named proof JSONs identical. Actual sampled correctness adapter peak23688986624
+bytes (~22.06GiB), construction/full4K fit observed, not serving peak or speed.
+
+Actual candidate draft-prefill counter249in every case. The same four prior native
+MTP HTTP worker records have993calls, with exact matching prompt/output IDs. These
+are invocation counts, not speedups.805quality, HTTP, repeated matched timing and
+strongest tuned/MTP references are still required before performance admission.
+
+Initial checker verified all data but wrote results/memory_after-verified.json:
+memory-loop variable shadowed the original job-name variable. Preserve that initial
+proof/source. Separate named checker changes only the literal output expression;
+2CPU whole-AST/filename regressions pass0.006s. Replayed on both machines again,
+all proof fields except executing checker SHA equal the original successful proof.
+No model run, archive, numeric/state guard or metric changed for this correction.
+
+Next exclusive ordinary SGLang successor retains all lengths/precision/cache/
+source/PID/805screen guards and raw output variants with comparison bookkeeping
+outside timing. Keep old strict failures immutable; measure complete C1/2/4/8
+text/image cohorts. Native candidate805quality/HTTP, host/GPU bottlenecks and real
+GPUbatching/INT4/4B/stronger tuned/MTP vLLM/SGLang and2x remain open.
+
+
+### 2026-10-25 — ordinary observed-output reference successor CPU qualified
+
+Prepared separate ordinary SGLang benchmark/controller/probe/independent verifier.
+Old strict helper/archive remain unchanged. Require actual replayed same-profile
+288request diagnosis and closed native full4K proof before startup. Actual serial
+prompt/completion IDs,3968+128/4096usage, metadata precision/cache/context/source/
+owned-PID/stop, two early full4K boundaries, fourVLM/16short and fresh805adapted
+screening remain mandatory. All124controls and124raw streams remain frozen.
+Every stream-text variant is recorded; no hidden streamed IDs or long-output
+semantic/numeric equivalence inferred. Source helper protocol ASTs unchanged.
+
+Comparison hashes and sidecar file writing are deferred until all timing and
+serving-memory sampling closes, avoiding added CPU work while peer streams are
+measured. Actual60owner CPU tests pass11.180s; final36protocol/HTTP/metrics tests
+pass10.080s. Explicit ephemeral synthetic HTTP integration sends124ID controls+
+124streams, completes8cohorts/124sidecars and independently replays raw results.
+It proves126-token clamping still fails before a completed cohort, original failure
+retained, sampler closes, false sidecar assertions rejected. Fake CPU sampler/
+responses are not model metrics. Earlier23/36stages and failed36case ledger/source
+are retained; finalizer no longer masks the primary invalid-budget error.
+
+Read-only actual retained-data policy check binds current diagnosis metadata and
+all12old SGLang2raw streams to their real serial IDs:10text matches/2variants,
+strict lengths/hash/usage preserved. The old failed manifest stays failed; no
+retrospective cohort or benchmark promotion. Source derivation/import and initial
+preparer package-path assertion corrections preserved; no model/GPU run involved.
+
+Preparation pins525files/15targets, expected60CPU controls. Absent-only deployment
+preflight prepared with511existing inputs plus actual closed native/characterization
+proofs and idle adapter/process guards. No new reference server/timing yet. Initial
+successor is ordinary same-profile reference; stronger tuned/MTP SGLang and vLLM,
+repeated matched native candidate timings/805quality, host/GPU optimization,
+real GPUbatching, INT4/4B and2x remain open. Once HTTP timing starts, only its
+original supervisor may be polled remotely until terminal closure.
