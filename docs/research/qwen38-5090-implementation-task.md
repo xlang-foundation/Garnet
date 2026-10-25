@@ -2523,3 +2523,31 @@ old coordinates from earlier CPU evidence. No accidental default compilation or
 runtime qualification. Further target prefill and realB8MTP/memory/HTTP work,
 matched vLLM4K/tuned MTP references, repeated trials, INT4/4B comparisons and
 overall2xdecode+throughput/halfTTFT remain required. Goal stays active.
+
+
+### 2026-10-25 — bounded B8 prompt source CPU controls; native qualification pending
+
+Added study-only PagedPromptRows, no model/serving default change. Uses existing
+native embedding, storage_view, packed slice and PackPrompt APIs. CPU IDs retained;
+materialize128tokens per page and retain two pages. TargetT32 slices and MTP's
+shifted single-token lookups keep ordinary model interfaces. Visual64x5120 tensors
+come from the pinned caller-owned encoder, stay unchanged/alive until close;
+cross-page intervals use exact FP32 slices. Unequal rows pad token0 under existing
+active/length controls. Failure never installs a partial page or returns stale data.
+
+Actual six CPU fixture tests pass/.014s, covering B8/3968 whole target/MTP access,
+image boundaries, different lengths, cache eviction, malformed metadata, failures,
+negative/slice bounds and releasing refs.31native-pack call requests in the CPU
+access fixture; not observed native calls or performance. Two B8/128 packed pages
+have41943040logical bytes, excluding visuals/transient embedding/slices/fences and
+outstanding caller views. Native/GPU/whole-model qualification unrun, no allocator
+or serving-VRAM saving, speed or2x claim. Class remains outside serving code.
+
+Read exact retained B8 model report (not nested historical source reports): final
+pool adapter-wide snapshot28968419328bytes, TRT allocator live/owned totals null.
+Keep this unknown accounting explicit. Next actual native component comparison
+to independent checkpoint BF16 embeddings and deterministic visual-row oracle;
+then same B8 ordinary complete-state/raw-vector/ID permutation/reset controls and
+real B8MTP construction, prefix commits,805quality, padded HTTP and measured peak.
+Current tiled B1 model trial remains owned by original48577; no concurrent remote
+GPU work or other probes while live. Overall goal and pending reference scope intact.

@@ -1,0 +1,51 @@
+from pathlib import Path
+import hashlib,json,zipfile
+work=Path(__file__).resolve().parent;out=work.parent/'outputs';repo=Path('D:/CantorAI/work/qwen38-5090');m=repo/'test2026/cuda/qwen38_5090';e=m/'evidence';sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+def keep(path,raw):
+    assert not path.exists() or path.read_bytes()==raw,path
+    if not path.exists():path.write_bytes(raw)
+archive=out/'bf16-batch8-model-admission-attempt1-evidence.zip';proof=json.loads((out/'bf16-batch8-model-admission-attempt1-verified.json').read_bytes());assert sha(archive)==proof['archive_sha256']
+with zipfile.ZipFile(archive) as z:r=json.loads(z.read('results/bf16-batch8-model-admission-attempt1/model/report.json'))
+assert r['performance_admitted'] is False and len(r['cases'])==9
+result={'status':'paged_prompt_source_cpu_controls_passed_native_and_model_unrun','source_sha256':{n:sha(m/n) for n in ('paged_prompt_rows.py','test_paged_prompt_rows.py')},'cpu_tests':6,'cpu_seconds':0.014,'native_gpu_executed':False,'runtime_qualified':False,'serving_integrated':False,
+        'retained_b8_archive_sha256':proof['archive_sha256'],'retained_b8_final_pool_adapter_used_bytes':r['pool_after']['device_used_bytes'],
+        'retained_b8_decoder_memory_accounting_complete':False,'two_page_logical_payload_bound_b8_t128_bytes':2*128*8*5120*4,
+        'performance_admitted':False,'two_times_target_achieved':False,
+        'scope':'Study-only sequence backed by CPU IDs and caller-owned exact64x5120 encoder visuals; lazy existing native embedding/flat-slice/PackPrompt calls, at most two retained packed pages. CPU fixture checks B8/3968 targetT32 and shifted MTP accesses, image intervals across pages, unequal lengths/padding, eviction/failure and close. Logical cache bound excludes source visual tensors, transient allocations/fences and caller-retained views; no measured VRAM-saving or speed claim. Existing B8 decoder TRT live allocation accounting is null; do not infer full fit from logical tensors. Next actual native packed-row bytes versus independent BF16 embedding/synthetic visual oracle, followed by B8 whole-model state/IDs and real MTP memory/prefix/quality/HTTP admission.'}
+keep(e/'paged-prompt-rows-cpu-closure.json',json.dumps(result,indent=2).encode());keep(out/'Garnet-Batch8-Prompt-Memory-Study-Status.json',json.dumps(result,indent=2).encode())
+for f in (work/'paged-prompt-rows-cpu-ledger').iterdir():
+    if f.is_file():keep(e/('paged-prompt-rows-cpu-'+f.name),f.read_bytes())
+for name in ('test-paged-prompt-rows-local.py','retain-paged-prompt-cpu.py'):keep(e/(name+'.txt'),(work/name).read_bytes())
+text='''
+
+### 2026-10-25 — bounded B8 prompt source CPU controls; native qualification pending
+
+Added study-only PagedPromptRows, no model/serving default change. Uses existing
+native embedding, storage_view, packed slice and PackPrompt APIs. CPU IDs retained;
+materialize128tokens per page and retain two pages. TargetT32 slices and MTP's
+shifted single-token lookups keep ordinary model interfaces. Visual64x5120 tensors
+come from the pinned caller-owned encoder, stay unchanged/alive until close;
+cross-page intervals use exact FP32 slices. Unequal rows pad token0 under existing
+active/length controls. Failure never installs a partial page or returns stale data.
+
+Actual six CPU fixture tests pass/.014s, covering B8/3968 whole target/MTP access,
+image boundaries, different lengths, cache eviction, malformed metadata, failures,
+negative/slice bounds and releasing refs.31native-pack call requests in the CPU
+access fixture; not observed native calls or performance. Two B8/128 packed pages
+have41943040logical bytes, excluding visuals/transient embedding/slices/fences and
+outstanding caller views. Native/GPU/whole-model qualification unrun, no allocator
+or serving-VRAM saving, speed or2x claim. Class remains outside serving code.
+
+Read exact retained B8 model report (not nested historical source reports): final
+pool adapter-wide snapshot28968419328bytes, TRT allocator live/owned totals null.
+Keep this unknown accounting explicit. Next actual native component comparison
+to independent checkpoint BF16 embeddings and deterministic visual-row oracle;
+then same B8 ordinary complete-state/raw-vector/ID permutation/reset controls and
+real B8MTP construction, prefix commits,805quality, padded HTTP and measured peak.
+Current tiled B1 model trial remains owned by original48577; no concurrent remote
+GPU work or other probes while live. Overall goal and pending reference scope intact.
+'''
+for name in ('qwen38-5090-development-log.md','qwen38-5090-implementation-task.md'):
+    f=repo/'docs/research'/name;raw=f.read_bytes()
+    if b'bounded B8 prompt source CPU controls; native qualification pending' not in raw:f.write_bytes(raw+text.encode())
+print(json.dumps(result))
