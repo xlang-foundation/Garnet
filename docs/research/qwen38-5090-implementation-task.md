@@ -1,7 +1,7 @@
 # Qwen3.8-27B on one RTX 5090: implementation task
 
-Status: the default-off BF16-in-FP32 model reference is built; the five-profile
-same-precision diagnostic is running. Work continues on `qwen38-5090`, with
+Status: the five-profile same-precision model diagnostic is closed and replayed.
+Packed BF16 matches its independent reference in both T4/T32 on these cases. Work continues on `qwen38-5090`, with
 reference integration at `2fc4d1abd`. The full 2x decode/concurrency and half-TTFT
 objectives remain unmet.
 
@@ -33,15 +33,29 @@ and corrected replay require both immutable archives; both machines agree.
 Six separate state-byte/reference-routing CPU controls also pass. No speed or
 full-model quality claim follows from component/CPU/build checks.
 
-The original five-profile model job is live on unchanged97c364...DLL/source:
-FP32/T4, packed BF16/T4,T32, then BF16-values-in-FP32 reference/T4,T32. Its first
-fresh FP32 case passed32teacher histories,64raw hidden/normalized vectors and
-complete physical state hash witnesses against the retained diagnostic before
-starting enabled cases. This is producer evidence pending final archive/replay;
-it does not replace full128-token ordinary/MTP/default-off/protocol regression.
-Logical state witnesses expand BF16 carriers to FP32 bytes and compare all
-layers; complete raw caches are not archived. The reference must keep zero low16
-bits in every FP32 cache word. No full-model same-precision result is admitted yet.
+The five-profile model diagnostic is closed/replayed on both machines, with
+identical replay reports (archive5ab8f15a...,320raw hidden/normalized arrays).
+Packed BF16 and independent BF16-in-FP32 reference match all32teacher predictions,
+all raw vectors and complete logical state hash witnesses under BOTH T4 and T32
+prefill routing. The fresh FP32/T4 control reproduces retained vectors/state.
+The independent reference reproduces the old-FP32 token differences as well;
+this supports packed-cache correctness on these cases, not broad quality or
+serving admission. Full raw caches are not archived. Every FP32-reference cache
+word passed the zero-low16-bit BF16-roundtrip check. No DLL/source drift.
+
+Localization: FP32/T4 versus BF16/T4 first differs at K cache layer3 after exact
+GDN layers0-2 (first V cache agrees). Reference T4 versus T32 first differs in
+GDN layer1 before the first attention cache. Thus the observed precision and
+prefill effects are not explained by packed-cache corruption on these fixtures;
+this does not identify every upstream operator or prove harmless rounding.
+
+Next prepare the ordinary-only B4/T32 reference for allfour retained text/image
+keys/two repeated groups, original128/32output limits, raw final vectors and
+complete logical state witnesses. Then compare packed ordinary/MTP against the
+independent SAME-PRECISION reference, preserving old FP32 failures. Five new CPU
+state-witness controls pass; the longer ordinary-reference GPU run has started.
+Full128-token/protocol/reset/partial/retired-row, broad quality and timing gates
+remain open. Correctness adapter peaks are not serving-memory claims.
 
 Actual4K request fixtures are CPU-prepared/replayed using the pinned tokenizer,
 exact chat template and64image slots:124requests,3968input tokens each plus
@@ -52,10 +66,10 @@ profile guards remain unchanged. Wider batching cannot establish C1 decode gain.
 
 Next gates, in order:
 
-1. Qualify the separate same-precision full-cache reference operator and
-   plugin/engine/model path; use it to investigate the retained-output mismatch. Require justified independent BF16 reference and broad
-   quality checks or a correction before promotion; retain the failed FP32
-   golden comparison. Validate lifetime/failure handling, partial/reset/retired
+1. Extend the independently validated same-precision reference to the repeated
+   full ordinary corpus, then packed ordinary/MTP128-token/state/vector checks.
+   Require broad quality checks or a correction before promotion; retain the
+   failed FP32 golden comparison. Validate lifetime/failure handling, partial/reset/retired
    rows and cache boundaries before model/serving qualification.
 2. Qualify a distinct B8 MTP/workspace profile and actual M32 projection behavior,
    allocation fit, text/image quality and protocol correctness. Preserve legacy
