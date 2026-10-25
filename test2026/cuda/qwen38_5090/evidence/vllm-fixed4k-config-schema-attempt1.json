@@ -1,0 +1,46 @@
+{
+  "status": "installed_vllm_config_source_schema_read_cpu_only",
+  "source_root": "/opt/cantorai5090/vllm/lib/python3.12/site-packages/vllm",
+  "files": {
+    "config/model.py": {
+      "sha256": "04ca37ea1d50128a7ddede30e7baa4e0a56bccec85091577a2c81c5de1a8fab8",
+      "field_declarations": [
+        "dtype: ModelDType | torch.dtype = \"auto\"",
+        "max_model_len: int = Field(default=None, ge=-1)",
+        "quantization: QuantizationMethods | str | None = None",
+        "served_model_name: str | list[str] | None = None"
+      ]
+    },
+    "config/cache.py": {
+      "sha256": "d37db21e7a6a1b477a580b54d90011d8708c4e7f6e3903221432d9a39830559b",
+      "field_declarations": [
+        "cache_dtype: CacheDType = \"auto\"",
+        "enable_prefix_caching: bool = True",
+        "mamba_ssm_cache_dtype: MambaDType = \"auto\"",
+        "kv_cache_memory_bytes: int | None = None"
+      ]
+    },
+    "config/scheduler.py": {
+      "sha256": "2fb86b1572a4925be59f304d13b4f6ec03d496b67a7c4abbb976ecda2232839a",
+      "field_declarations": [
+        "max_model_len: InitVar[int]",
+        "max_num_batched_tokens: int = Field(default=DEFAULT_MAX_NUM_BATCHED_TOKENS, ge=1)",
+        "max_num_seqs: int = Field(default=DEFAULT_MAX_NUM_SEQS, ge=1)"
+      ]
+    },
+    "config/compilation.py": {
+      "sha256": "d8a8086166e3f344b75d98d8350a77592f7b6c145319b3a9f0b9c8cb36bc39cb",
+      "field_declarations": [
+        "cudagraph_mode: CUDAGraphMode = None",
+        "cudagraph_capture_sizes: list[int] = None",
+        "max_cudagraph_capture_size: int = None"
+      ]
+    },
+    "entrypoints/serve/dev/server_info/api_router.py": {
+      "sha256": "06af82ff18d062d0b4035c27c8454fd2062ae758df1ee4b7053aaa7f0d411901",
+      "field_declarations": []
+    }
+  },
+  "source_modified": false,
+  "gpu_executed": false
+}
