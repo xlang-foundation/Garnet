@@ -1,0 +1,62 @@
+from pathlib import Path
+from datetime import datetime,timezone
+import hashlib,json,shutil,zipfile
+r=Path('D:/CantorAI/work/qwen38-5090');m=r/'test2026/cuda/qwen38_5090';e=m/'evidence';w=Path(__file__).resolve().parent;o=w.parent/'outputs';sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest();now=datetime.now(timezone.utc).isoformat()
+def write(path,obj):path.write_text(json.dumps(obj,indent=2)+'\n',encoding='utf8')
+proofs={}
+for name in ('bf16-low-batch-plugin-native-attempt1','bf16-low-batch-native-build-attempt1'):
+ local=o/(name+'-verified.json');remote=o/(name+'-remote-verified.json');archive=o/(name+'-evidence.zip');p=json.loads(local.read_bytes());assert p==json.loads(remote.read_bytes()) and sha(archive)==p['archive_sha256'] and not p['performance_admitted'];proofs[name]=p
+ assert p['replay_verifier_sha256']==p['archived_replay_verifier_sha256']
+ for f in (local,remote,o/(name+'-replay-remote.log')):shutil.copyfile(f,e/f.name)
+ with zipfile.ZipFile(archive) as z:
+  closed=json.loads(z.read('results/'+name+'/workflow.json'));assert closed['exit_code']==0 and closed['cleanup_finished']
+  write(e/(name+'-closure.json'),{'recorded_utc':now,'job':name,'original_handle_state':'completed','exit_code':0,'archive_sha256':p['archive_sha256'],'archive_bytes':archive.stat().st_size,'files_verified':p['files_verified'],'both_replays_identical':True,'cleanup_finished':True,'performance_admitted':False,'scope':p['scope']})
+for method in ('replay-b1-plugin-local.py','replay-b1-native-build-local.py','prepare-b1-plugin-launch-preflight.py','prepare-b1-native-build-launch-preflight.py','prepare-b1-model-launch-preflight.py'):
+ shutil.copyfile(w/method,e/(method+'.txt'))
+for name in ('bf16-low-batch-plugin-native-attempt1-preflight.json','bf16-low-batch-native-build-attempt1-preflight2.json','bf16-low-batch-model-consistency-attempt1-preflight.json'):
+ f=w/name
+ if f.is_file():shutil.copyfile(f,e/name)
+initial=json.loads((e/'bf16-low-batch-native-build-attempt1-preflight.json').read_bytes());assert initial['status']=='b1_native_build_launch_preflight_failed' and initial['conflicts']==['Garnet/test2026/cuda/qwen38_5090/test_bf16_kv_model_contract.py'] and not any(initial['drift'].values())
+old=e/'bf16-low-batch-native-build-original-shared-fixture.py.txt';parent=json.loads((e/'integrated-top1-model-preparation.json').read_bytes());key='Garnet/test2026/cuda/qwen38_5090/test_bf16_kv_model_contract.py';assert sha(old)==parent['files'][key]
+write(e/'bf16-low-batch-native-build-fixture-correction.json',{'recorded_utc':now,'initial_preflight_sha256':sha(e/'bf16-low-batch-native-build-attempt1-preflight.json'),'initial_preparation_sha256':sha(e/'bf16-low-batch-native-build-initial-preparation.json'),'original_shared_fixture_sha256':sha(old),'qualified_parent_fixture_sha256':parent['files'][key],'branch_fixture_sha256':sha(m/'test_bf16_kv_model_contract.py'),'reason':'Shared CPU build_trace fixture gained explicit default-false low_batch option/import/metadata in the prior reviewed local integration. It was initially misclassified as a missing-or-matching method upload. Read-only guard correctly rejected the differing parent-pinned file before any upload/install.','correction':'Include the already reviewed fixture in the guarded source bundle with all original bytes preserved, alongside19product files. Nine replaced files are archived;49existing/new CPU checks pass on the actual remote host.','product_code_changed_for_correction':False,'assertions_or_thresholds_relaxed':False,'guarded_source_install_entries':20,'product_entries':19,'shared_test_entries':1})
+plugin=proofs['bf16-low-batch-plugin-native-attempt1'];native=proofs['bf16-low-batch-native-build-attempt1'];assert plugin['status']=='bf16_low_batch_plugin_exact_parent_replayed' and native['status']=='bf16_low_batch_native_build_replayed'
+path=o/'Garnet-Parallel-Top1-Integration-Status.json';s=json.loads(path.read_bytes());s.update(recorded_utc=now,status='b1_plugin_and_native_build_closed_model_consistency_prepared',remote_native_dll_sha256=native['library_sha256'],current_native_full_model_lifecycle_qualified=False,new_model_speed_measurement=False,two_times_target_achieved=False)
+s['scope']='Current8ae native DLL is built and independently replayed; B1 plugin forwarding qualified. Prior5ac full lifecycle qualification remains linked to that retained library. Current8ae model/quality/4K/HTTP/performance remain unqualified. Historical sections retain prior observations.'
+s['b1_plugin_runtime_closure']=plugin;s['b1_native_build_closure']=native
+s['b1_model_consistency']={'job':'bf16-low-batch-model-consistency-attempt1','status':'prepared_unrun','library_sha256':native['library_sha256'],'planned_b4_smoke_cases':4,'planned_b1_cases':8,'planned_b1_prefix_counts':[0,1,2,4],'actual_gpu_model_cases_verified':0,'broad_quality_qualified':False,'actual_4k_qualified':False,'performance_admitted':False}
+s['next_gates']=['Close and independently replay B4 text/image smoke and true B1 ordinary/MTP/prefix model consistency','Qualify actual image preprocessing, adapted quality, actual4K and streaming HTTP before new matched timings','Complete tuned/MTP, INT4, matched4B and repeated B1/concurrency comparisons toward original2x goal'];write(path,s)
+addition='''
+
+### 2026-10-25: actual B1 plugin forwarding and native DLL build
+
+The original bf16-low-batch-plugin-native-attempt1 closed exit0 and independently
+replays on both machines with identical proofs. Actual TensorRT10.16.1 matches
+its pinned DLL/header:32profiles/roundtrips/clones,1632bad wires,992bad descriptors,
+672bad formats,96cross-dialect rejects,64legacy roundtrips and zero CPU operator
+calls. The44case GPU forwarding stream matches all119040selected FP32 scalars
+and complete records from the already qualified B1 kernel, with87host enqueues,
+three graph replays and40cache-prefix controls. The104negative GPU calls remain
+direct-kernel tests, not wrapper negative-enqueue coverage. No model/speed claim.
+
+Native install preflight correctly rejected an older shared CPU trace fixture;
+downloaded bytes match the qualified parent's exact hash. The branch fixture's
+existing default-false B1 option is now included explicitly in the source bundle.
+Initial factory/preparation/verifier/failed receipt and original fixture retained;
+no product code, assertion or tolerance change to bypass a failure. Revised
+preflight passes.19product files plus1test fixture installed, all9original files
+archived, old5ac DLL retained, existing build tree and SDK reused.
+
+Actual bf16-low-batch-native-build-attempt1 closes exit0:49remote CPU controls
+pass, both new CUDA units/helper/plugin/builder/entry link successfully into
+8ae63a41b532f6e2d67cf01ca60b7684b86451105711dbb3573f2e325f63521b.
+Both independent build replays agree across199archived files. All non-Garnet
+runtime dependencies and build SDK remain unchanged; native DLL was not loaded
+during the build. Next prepared model collection first checks retained B4
+text/image row0, then true B1 four prompts/two repeats and ordinary/MTP/prefix
+0/1/2/4/reset/callback behavior. It records B1-vs-B4 differences explicitly.
+Prepared work is not an execution/pass. Current8ae full-model, broad quality,
+actual4K, HTTP, serving memory, tuned references and2x target remain unqualified.
+'''
+for name in ('docs/research/qwen38-5090-development-log.md','docs/research/qwen38-5090-implementation-task.md'):
+ p=r/name;raw=p.read_bytes();assert b'actual B1 plugin forwarding and native DLL build' not in raw;p.write_bytes(raw+addition.replace('\n','\r\n').encode())
+shutil.copyfile(Path(__file__),e/'b1-plugin-and-native-build-closure-method.py.txt');print(json.dumps({'status':'plugin_and_native_build_receipts_saved','library_sha256':native['library_sha256'],'performance_admitted':False}))

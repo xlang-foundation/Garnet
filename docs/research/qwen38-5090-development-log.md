@@ -4399,3 +4399,34 @@ concurrent throughput or serving VRAM. Sampled adapter memory is retained only
 as correctness-run provenance. B1 plugin/helper/model qualification, broad
 quality, actual 4K, B8, tuned/MTP references, INT4, matched 4B, clean repeated
 HTTP comparisons and the original 2x objective remain open.
+
+
+### 2026-10-25: actual B1 plugin forwarding and native DLL build
+
+The original bf16-low-batch-plugin-native-attempt1 closed exit0 and independently
+replays on both machines with identical proofs. Actual TensorRT10.16.1 matches
+its pinned DLL/header:32profiles/roundtrips/clones,1632bad wires,992bad descriptors,
+672bad formats,96cross-dialect rejects,64legacy roundtrips and zero CPU operator
+calls. The44case GPU forwarding stream matches all119040selected FP32 scalars
+and complete records from the already qualified B1 kernel, with87host enqueues,
+three graph replays and40cache-prefix controls. The104negative GPU calls remain
+direct-kernel tests, not wrapper negative-enqueue coverage. No model/speed claim.
+
+Native install preflight correctly rejected an older shared CPU trace fixture;
+downloaded bytes match the qualified parent's exact hash. The branch fixture's
+existing default-false B1 option is now included explicitly in the source bundle.
+Initial factory/preparation/verifier/failed receipt and original fixture retained;
+no product code, assertion or tolerance change to bypass a failure. Revised
+preflight passes.19product files plus1test fixture installed, all9original files
+archived, old5ac DLL retained, existing build tree and SDK reused.
+
+Actual bf16-low-batch-native-build-attempt1 closes exit0:49remote CPU controls
+pass, both new CUDA units/helper/plugin/builder/entry link successfully into
+8ae63a41b532f6e2d67cf01ca60b7684b86451105711dbb3573f2e325f63521b.
+Both independent build replays agree across199archived files. All non-Garnet
+runtime dependencies and build SDK remain unchanged; native DLL was not loaded
+during the build. Next prepared model collection first checks retained B4
+text/image row0, then true B1 four prompts/two repeats and ordinary/MTP/prefix
+0/1/2/4/reset/callback behavior. It records B1-vs-B4 differences explicitly.
+Prepared work is not an execution/pass. Current8ae full-model, broad quality,
+actual4K, HTTP, serving memory, tuned references and2x target remain unqualified.

@@ -1,0 +1,44 @@
+from pathlib import Path
+import base64,hashlib,json,zlib
+w=Path(__file__).resolve().parent;plan=json.loads((w/'bf16-low-batch-plugin-upload-plan.json').read_bytes());p=json.loads(Path(plan['preparation']['local']).read_bytes());uploads=plan['uploads']+[plan['preparation']]
+for row in uploads:assert hashlib.sha256(Path(row['local']).read_bytes()).hexdigest()==row['sha256']
+expected={entry['target']:entry['sha256'] for entry in uploads}
+inherited_hash=hashlib.sha256(json.dumps(p['inherited_model_sources'],sort_keys=True).encode()).hexdigest()
+embedded={key:p[key] for key in ('sdk_sha256','runtime_dependencies','tools','parents','fixture_header_sha256')}
+embedded['inherited_model_sources_sha256']=inherited_hash
+script='''from pathlib import Path
+import base64,datetime,hashlib,json,subprocess
+root=Path('D:/CantorAI/5090-study-20261023');sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+expected=EXPECTED
+p=PREPARATION
+closed_model=json.loads((root/'results/integrated-batch-top1-model-lifecycle-attempt1/workflow.json').read_bytes())
+inherited=closed_model['source_sha256'];assert hashlib.sha256(json.dumps(inherited,sort_keys=True).encode()).hexdigest()==p['inherited_model_sources_sha256'] and closed_model['source_after_sha256']==inherited
+p['inherited_model_sources']=inherited
+targets={}
+for n,h in expected.items():
+ f=root/n;assert f.resolve().is_relative_to(root.resolve()) and f.parent.is_dir();targets[n]={'exists':f.exists(),'is_file':f.is_file(),'matches':sha(f)==h if f.is_file() else None,'expected_sha256':h}
+conflicts=[n for n,row in targets.items() if row['exists'] and row['matches'] is not True]
+drift={field:[n for n,h in p[field].items() if not(root/n).is_file() or sha(root/n)!=h] for field in ('inherited_model_sources','sdk_sha256')}
+drift['runtime_dependencies']=[n for n,h in p['runtime_dependencies'].items() if not(root/'build/bin'/n).is_file() or sha(root/'build/bin'/n)!=h]
+drift['tools']=[n for n,h in p['tools'].items() if not Path(n).is_file() or sha(Path(n))!=h]
+for n,row in p['parents'].items():
+ raw=(root/'results'/(n+'-verified.json')).read_bytes();proof=json.loads(raw)
+ assert hashlib.sha256(raw).hexdigest()==row['proof_sha256'] and proof['status']==row['status'] and sha(root/'results'/(n+'-evidence.zip'))==row['archive_sha256']==proof['archive_sha256']
+for n in ('integrated-batch-top1-model-lifecycle-attempt1','bf16-low-batch-commit-native-attempt1'):
+ closed=json.loads((root/'results'/n/'workflow.json').read_bytes());assert closed['exit_code']==0 and closed['cleanup_finished'] and closed['library_unchanged']
+scratch=root/'tools/bf16-kv-native';assert sha(scratch/'bf16_kv_fixture_layout.h')==p['fixture_header_sha256']
+outputs=['bf16-low-batch-plugin-cpu.exe','bf16-low-batch-plugin-forwarding.exe','low-batch-plugin-owner.json','low-batch-plugin-host-compiler.txt','low-batch-plugin-cpu-imports.txt','low-batch-plugin-forwarding-imports.txt']+['low-batch-plugin-'+n+'.obj' for n in ('wrapper','legacy-wrapper','cpu-operators','cpu-probe','kernel','gpu-probe')]
+occupied=[n for n in outputs if (scratch/n).exists()]
+assert not (root/'results/bf16-low-batch-plugin-native-attempt1').exists() and not(root/'results/bf16-low-batch-plugin-native-attempt1-evidence.zip').exists()
+memory=int(subprocess.check_output(['nvidia-smi','--query-gpu=memory.used','--format=csv,noheader,nounits'],text=True).strip())
+ps=r"$ProgressPreference='SilentlyContinue'; Get-CimInstance Win32_Process | Where-Object { $_.ExecutablePath -and $_.ExecutablePath.StartsWith('D:\\CantorAI\\5090-study-20261023\\',[System.StringComparison]::OrdinalIgnoreCase) } | Select-Object ProcessId,ExecutablePath | ConvertTo-Json -Compress"
+live=subprocess.check_output(['powershell.exe','-NoProfile','-EncodedCommand',base64.b64encode(ps.encode('utf-16le')).decode()],text=True).strip()
+ready=not(conflicts or any(drift.values()) or occupied or live) and memory<1024
+result={'status':'b1_plugin_launch_preflight_passed' if ready else 'b1_plugin_launch_preflight_failed','recorded_utc':datetime.datetime.now(datetime.timezone.utc).isoformat(),'targets':targets,'target_conflicts':conflicts,'drift':drift,'occupied_outputs':occupied,'gpu_used_mib_preflight_only':memory,'live_study_processes':live,'parents':p['parents'],'scope':'Read-only input/SDK/tool/runtime/parent/idleGPU observation before standalone plugin upload; no source/DLL installation or performance measurement.'}
+target=root/'results/bf16-low-batch-plugin-native-attempt1-preflight.json'
+with target.open('xb') as f:f.write(json.dumps(result,indent=2).encode())
+print(json.dumps({'status':result['status'],'sha256':sha(target),'new_uploads':sum(not v['exists'] for v in targets.values()),'targets':len(targets),'gpu_used_mib_preflight_only':memory,'drift':drift,'conflicts':conflicts,'occupied':occupied,'live':live}));assert ready
+'''.replace('EXPECTED',repr(expected)).replace('PREPARATION',repr(embedded))
+payload=base64.b64encode(zlib.compress(script.encode())).decode();command='C:\\Python312\\python.exe -c "import base64,zlib;exec(zlib.decompress(base64.b64decode(\''+payload+'\')).decode())"'
+assert len(command)<7500
+(w/'b1-plugin-launch-preflight-request.json').write_text(json.dumps({'command':command,'timeout':60}),encoding='utf8');print(json.dumps({'command_bytes':len(command),'targets':len(expected)}))
