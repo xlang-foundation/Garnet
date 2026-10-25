@@ -5425,3 +5425,30 @@ replay/retain it, execute prepared SGLang output/isolation diagnosis and stronge
 matched references. Run current B1 host/GPU-stage profiling before choosing wider
 target prefill, input packing or tiled-kernel integration. Full optimized4K/
 805quality/repeated timings, externalB8/HTTP/MTP, INT4/4B and2x remain open.
+
+
+### 2026-10-25 — wider MTP short-model correctness closed and replayed twice
+
+Original supervisor48577 observed mtp-prefill16-model-consistency-attempt1 terminal0.
+All8actual B1 short text/image/red/green/reset/prefix/rejection cases completed.
+The complete captured target logical state and raw hidden/normalized vectors,
+output IDs and callbacks match retained1a1d B1. Both machines independently replay
+the immutable68759719byte/715file archive; proof JSONs are identical. Actual41CPU
+tests passed0.201s on remote. Workflow cleanup, qualified source/runtime identity
+and owned-cache retirement passed. Actual counters:41token text12→4draft-prefill
+calls,104token image27→8,93token colors25→7, across both repeats. These are call
+counts, not speedups. Extra T16 engine weights are resident separately; captured
+graph/buffer/memory details retained. Sampled correctness adapter peak23527370752
+bytes (~21.91GiB), not full4K construction/serving peak or performance admission.
+
+Actual4Ktarget state/memory,805quality, HTTP/repeated speed and strongest matched
+vLLM/SGLang remain unqualified. No2x or halfTTFT claim. Current native default
+factories/source/runtime remain unchanged; candidate remains explicit study opt-in.
+Next execute prepared SGLang output/isolation diagnosis after its closed-job/source/
+idle preflight, then qualify wider MTP at4K and run host/GPU stage diagnostics.
+
+First SGLang diagnostic preflight failed before any receipt/install/model startup:
+manual wrapped-terminal archive-hash copy duplicated one character (65hex). Failure
+and original script retained. Corrected invocation reads all three closed archive
+hashes directly from saved proof JSONs and requires64lowercasehex. No qualified
+source/runtime/old failure archive or metric rewritten.
