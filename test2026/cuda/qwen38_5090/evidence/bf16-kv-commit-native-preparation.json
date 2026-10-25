@@ -1,0 +1,49 @@
+{
+  "status": "bf16_kv_commit_native_prepared_gpu_unrun",
+  "files": {
+    "Garnet/src/cuda/qwen38_bf16_kv_commit.cu": "bad0f3434934dda780a2723cee43fa956222b6be1bc6e1b2c9be05e02a631723",
+    "Garnet/src/cuda/qwen38_bf16_kv_commit.cuh": "82ffd816bbafcbc86f44d044d2ab5468ac400f617e5aa2b5ae107bb30b3ffb59",
+    "Garnet/src/cuda/qwen38_bf16_kv_overlay.cu": "0016cd0fbeb003e73ec05f545b7718b5d0572b0474759706331fb8fe5dfe969e",
+    "Garnet/src/cuda/qwen38_bf16_kv_overlay.cuh": "ed89d1947a6153121416b480e1cf1a0540d2b2b646fd7293e5d6a8f3f237fa0c",
+    "Garnet/test2026/cuda/qwen38_5090/prepare_bf16_kv_operator_fixture.py": "8f08f2cf4f3597ac3183b2b9267ec6f040f926c02fa075eada7e5b68460355eb",
+    "Garnet/test2026/cuda/qwen38_5090/probe_bf16_kv_commit_native.cu": "e2731d2ad53070b24ba407973096a7a339b09dda96def240f919e8709844881f",
+    "Garnet/xModel/qwen35/vl_0_8b/kv_bf16_study_layout.py": "1c2071308de589bff10b3e980d377dc3049416bbe96c0bfbc16c9d184a989311",
+    "Garnet/test2026/cuda/qwen38_5090/run_bf16_kv_commit_native.py": "3bf42a4ce9a271265fef8ae791f1f55fa698b65c64e9fd29b66e3345350ab639",
+    "Garnet/test2026/cuda/qwen38_5090/verify_bf16_kv_commit_native.py": "918556fadfd136cc3cd605d3d607e45789a4343f7ff6f70c7db1d06a87fae3f7",
+    "Garnet/test2026/cuda/qwen38_5090/test_kv_bf16_study_layout.py": "de86dae72441572b65ed238d895de8aa7a5c71f48adc86361ad21d22fa3f1446",
+    "Garnet/test2026/cuda/qwen38_5090/run_logged.py": "3ac96f2f006cb02ecfe4d159186f7e12fcc11b8acf98e4b93728aa31e6a0407b",
+    "Garnet/test2026/cuda/qwen38_5090/monitor_native_probe.py": "49cb5cc0d787aa5ecb11b72bc040578a2d15df37a7ad111344f84da98266100c",
+    "Garnet/test2026/cuda/qwen38_5090/sample_vram.py": "29e0956f151e662adb93431ac9d02ba516e03eb8c1c7d7f0936045acb5c45b4e",
+    "Garnet/test2026/cuda/qwen38_5090/evidence/bf16-kv-native-local-compile.json": "c7b210a953649586dd197af5149fd54a46d6b2c1587b9315b60e978728a22a63",
+    "Garnet/test2026/cuda/qwen38_5090/evidence/bf16-kv-commit-probe-compile.log": "e6a3e4ef685cfcead2fb2652cf23e15327f79a48e27f442319b5caa4773be9e8",
+    "Garnet/test2026/cuda/qwen38_5090/evidence/bf16-kv-layout-cpu-tests.json": "ad965f31927847bacbcfdb5c1d79560a998ffcd43b42585f93cc6a42ccf897a3",
+    "Garnet/test2026/cuda/qwen38_5090/evidence/bf16-kv-layout-study-contract.json": "b095abaef9f5fa72fe4300c4461523037447934fa8a8973e24a45983e9b63a9e",
+    "tools/bf16-kv-native/probe_bf16_kv_commit_native.exe": "9bfe54457ac432422d2b374ef57f5cc51fa786387931eda81a538fe32d19231c",
+    "tools/bf16-kv-native/bf16_kv_fixture_layout.h": "fe42d2ea44d3b4fd99d503ddddaaf12407459d839a4e353a767e557c59a7b8e1"
+  },
+  "fixture_header_sha256": "fe42d2ea44d3b4fd99d503ddddaaf12407459d839a4e353a767e557c59a7b8e1",
+  "gpu_uuid": "GPU-265ee66c-9b79-cd3b-0c63-dd6942ddb5e6",
+  "expected_profiles": [
+    [
+      4,
+      4
+    ],
+    [
+      4,
+      32
+    ],
+    [
+      8,
+      4
+    ],
+    [
+      8,
+      32
+    ]
+  ],
+  "expected_full_state_byte_cases": 34,
+  "expected_rejected_calls": 62,
+  "model_qualified": false,
+  "performance_admitted": false,
+  "scope": "Standalone BF16 accepted-prefix commit operator only; no Garnet DLL loading/build, model/checkpoint loading or serving benchmark. Source/executable/header pins, six CPU layout checks, regenerated independent tables,34full canonical-state finite-value byte controls and62rejected calls with readonly source checks; RTX5090 identity and sampled correctness memory. Require closed/replayed register128HTTP parent before GPU launch. Overlay numerical/readonly/alias controls, public helper/plugin contracts, model integration, broad precision quality, B8/T32 allocation fit and timings remain open."
+}

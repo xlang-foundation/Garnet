@@ -1,0 +1,107 @@
+{
+  "status": "register128_http_charts_prepared_unrun",
+  "files": {
+    "chart_register128_padded_mtp_http.py": {
+      "parent": "chart_padded_mtp_http.py",
+      "parent_sha256": "1209e7018c25cc3558d85eb3ec78cfba85414358fd6f878425c82c22f1bf6319",
+      "recipe": [
+        [
+          "pilot='padded-mtp-http-pilot-attempt1';parent='kv-delta-qpc-http-pilot-attempt1'",
+          "pilot='register128-padded-http-pilot-attempt1';parent='padded-mtp-http-pilot-attempt1'",
+          1
+        ],
+        [
+          "old['status']=='compact_kv_delta_qpc_http_pilot_replayed'",
+          "old['status']=='padded_mtp_http_pilot_replayed'",
+          1
+        ],
+        [
+          "Garnet padded MTP B4",
+          "Garnet register128 B4",
+          1
+        ],
+        [
+          "Garnet full-group MTP B4",
+          "Garnet register-off B4",
+          1
+        ],
+        [
+          "['Full-group MTP','Padded MTP']",
+          "['Register off','Register128']",
+          1
+        ],
+        [
+          "Both use QPC 10ms grouping.",
+          "Both use QPC 10ms grouping; only recurrence selection changed.",
+          1
+        ],
+        [
+          "proof['status']=='padded_mtp_http_pilot_replayed'",
+          "proof['status']=='register128_padded_http_pilot_replayed'",
+          1
+        ],
+        [
+          "Garnet-Padded-MTP-HTTP",
+          "Garnet-Register128-MTP-HTTP",
+          6
+        ]
+      ],
+      "sha256": "37a4b6e644ccb9c78bece42d1badc98a91559d2848d7646bbfda10e78582285f"
+    },
+    "report_register128_padded_mtp_http.py": {
+      "parent": "report_padded_mtp_http.py",
+      "parent_sha256": "02a3df18ee447823220f1b08fe95fbf3c04439e1eb9d5c446286c6f89167aa3b",
+      "recipe": [
+        [
+          "padded-MTP HTTP pilot",
+          "register128 HTTP pilot",
+          2
+        ],
+        [
+          "causal estimates of the padding change",
+          "causal estimates of the recurrence selection",
+          1
+        ],
+        [
+          "both native pilots use the same QPC 10ms grouping window.",
+          "both native pilots use the same QPC 10ms grouping window. The candidate selects the existing register128 recurrence specialization; the preceding padded pilot has that flag off.",
+          1
+        ],
+        [
+          "proof['status']=='padded_mtp_http_pilot_replayed'",
+          "proof['status']=='register128_padded_http_pilot_replayed'",
+          1
+        ],
+        [
+          "padded-mtp-http-pilot-attempt1",
+          "register128-padded-http-pilot-attempt1",
+          1
+        ],
+        [
+          "Garnet-Padded-MTP-HTTP",
+          "Garnet-Register128-MTP-HTTP",
+          3
+        ]
+      ],
+      "sha256": "7038d6a915a4b058b9474292e497d958d4b6b129b8c515e419b153d6f958f829"
+    },
+    "analyze_register128_padded_mtp_http_queue.py": {
+      "parent": "analyze_padded_mtp_http_queue.py",
+      "parent_sha256": "d7841373c65a5348bae52e5489c57bebb57ec74be99d1a85a5df4df85af2a92d",
+      "recipe": [
+        [
+          "proof['status']=='padded_mtp_http_pilot_replayed'",
+          "proof['status']=='register128_padded_http_pilot_replayed'",
+          1
+        ],
+        [
+          "padded-mtp-http-pilot-attempt1",
+          "register128-padded-http-pilot-attempt1",
+          1
+        ]
+      ],
+      "sha256": "313a640e9c46a20bae44c5799f7ecb00d03a50efba8a35666ba59d70d5c700c0"
+    }
+  },
+  "scope": "No results generated yet. Same data/target/dispatch logic, prior register-off padded pilot now parent. Every cohort retained; only candidate identifiers and legends changed."
+}
