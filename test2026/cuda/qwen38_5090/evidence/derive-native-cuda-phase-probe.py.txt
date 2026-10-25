@@ -1,0 +1,39 @@
+from pathlib import Path
+import ast,hashlib,json
+m=Path('D:/CantorAI/work/qwen38-5090/test2026/cuda/qwen38_5090')
+source=m/'probe_native_host_stage.py';raw=source.read_bytes();text=raw.decode().replace('\r\n','\n')
+replacements=[
+ ('sys.path.insert(0,str(Path(__file__).resolve().parent))','sys.path.insert(0,str(Path(__file__).resolve().parent))\nsys.path.insert(0,str(Path(__file__).resolve().parents[3]))'),
+ ('"""Sequential instrumented native host diagnosis; no HTTP benchmark."""','"""Sequential Nsight phase diagnosis; exact retained4K IDs, no HTTP benchmark."""'),
+ ('import argparse,hashlib,json,sys,time','import argparse,hashlib,json,sqlite3,sys,time'),
+ ('from replay_native_host_stage_trace import replay','from replay_native_host_stage_trace import replay\nfrom test2026.cuda.qwen38_5090.replay_native_cuda_phases import replay as replay_cuda\nfrom run_logged import run'),
+ ('serve_native_host_stage_worker.bat','serve_native_cuda_phase_worker.bat'),
+ ("'scope':'Actual unchanged1a1d B1 fixed4K model with explicit host-phase timers. Four retained requests in three orders for each ordinary/MTP mode. Exact target IDs and image bytes required. No HTTP/concurrent throughput, isolated GPU/kernel time, comparative benchmark or speed claim.'",
+  "'scope':'Actual unchanged1a1d B1 fixed4K model under Nsight node tracing, with explicit unique HtoD request/phase markers. Four retained requests in three orders for each ordinary/MTP mode. Exact target IDs and image bytes required. Preserve first-use and late repeats. Instrumented GPU/API durations only, no HTTP, uninstrumented speedup or causal bottleneck claim.'"),
+ ("record['status']='instrumented_host_stages_replayed';save()",
+  "record['status']='instrumented_host_stages_replayed';save()\n"
+  "            cleanup=json.loads(trace.with_suffix('.model-closed.json').read_bytes())\n"
+  "            assert cleanup['status']=='native_model_close_calls_returned' and cleanup['mode']==mode and cleanup['marker_count']==144 and cleanup['library_sha256']==p['library_sha256']\n"
+  "            record['native_model_cleanup']=cleanup;save()\n"
+  "            nsys=root/'tools/n26/target-windows-x64/nsys.exe'\n"
+  "            code=run([str(nsys),'stats','--report','cuda_gpu_kern_sum,cuda_api_sum','--format','csv',str(target/'cuda-trace.nsys-rep')],target/'stats-ledger','correctness','Export actual full4K trace; all phase windows require real unique HtoD markers',[nsys,m/'replay_native_cuda_phases.py'])\n"
+  "            record['stats_exit_code']=code;save();assert type(code) is int and code==0\n"
+  "            markers=[json.loads(line) for line in trace.with_suffix('.cuda-markers.jsonl').read_bytes().splitlines()]\n"
+  "            with sqlite3.connect('file:'+(target/'cuda-trace.sqlite').as_posix()+'?mode=ro',uri=True) as connection:gpu=replay_cuda(connection,markers,rows)\n"
+  "            assert gpu['requests']==12 and gpu['unique_markers']==144\n"
+  "            (target/'cuda-phases-replayed.json').write_text(json.dumps(gpu,indent=2),encoding='utf8')\n"
+  "            record['cuda_phase_replay']={key:gpu[key] for key in ('status','requests','unique_markers','owner')};save()"),
+ ("report['status']='native_host_stage_diagnostic_collected_needs_independent_replay';save()",
+  "report['status']='native_host_stage_diagnostic_collected_needs_independent_replay';report['cuda_phase_status']='both_modes_actual_cuda_markers_collected_needs_independent_replay';save()"),
+ ('NATIVE_HOST_STAGE_DIAGNOSTIC_SAVED','NATIVE_CUDA_PHASE_DIAGNOSTIC_SAVED')]
+for old,new in replacements:
+ assert text.count(old)==1,old
+ text=text.replace(old,new)
+out=text.encode();ast.parse(out);target=m/'probe_native_cuda_phases.py'
+assert not target.exists() or target.read_bytes()==out
+if not target.exists():target.write_bytes(out)
+result={'source':'probe_native_host_stage.py','source_sha256':hashlib.sha256(raw).hexdigest(),'candidate_sha256':hashlib.sha256(out).hexdigest(),'replacements':replacements}
+target=m/'evidence/native-cuda-phase-probe-derivation.json';out=json.dumps(result,indent=2).encode()
+assert not target.exists() or target.read_bytes()==out
+if not target.exists():target.write_bytes(out)
+print(json.dumps({'status':'cuda_phase_probe_derived_gpu_unrun','sha256':result['candidate_sha256']}))

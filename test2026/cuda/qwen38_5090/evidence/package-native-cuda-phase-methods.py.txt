@@ -1,0 +1,16 @@
+from pathlib import Path
+import hashlib,json,zipfile
+w=Path(__file__).resolve().parent;sha=lambda raw:hashlib.sha256(raw).hexdigest()
+preflight=json.loads((w/'native-cuda-phase-preflight.json').read_bytes());plan=json.loads((w/'native-cuda-phase-upload-plan.json').read_bytes())
+assert preflight['status']=='native_cuda_phase_preflight_passed' and not preflight['conflicts'] and not preflight['existing_input_drift'] and not preflight['runtime_drift']
+files={}
+for row in plan['uploads']:
+ raw=Path(row['local']).read_bytes();assert sha(raw)==row['sha256'];actual=preflight['targets'][row['target']];assert actual['expected_sha256']==row['sha256']
+ if actual['exists']:assert actual['matches']
+ else:files[row['target']]=raw
+target=w/'native-cuda-phase-methods.zip';assert not target.exists()
+with zipfile.ZipFile(target,'x',zipfile.ZIP_DEFLATED) as z:
+ for name,raw in files.items():z.writestr(name,raw)
+ z.writestr('install-manifest.json',json.dumps({'files':{name:sha(raw) for name,raw in files.items()},'scope':'Only absent pinned explicit full4K CUDA diagnostic methods/evidence. No runtime/product/SDK/model/corpus replacement.'},indent=2))
+receipt={'status':'native_cuda_phase_method_bundle_prepared','bundle_sha256':sha(target.read_bytes()),'bytes':target.stat().st_size,'absent_files':len(files),'matching_targets_skipped':len(preflight['targets'])-len(files)}
+p=w/'native-cuda-phase-bundle-preparation.json';assert not p.exists();p.write_text(json.dumps(receipt,indent=2),encoding='utf8');print(json.dumps(receipt))

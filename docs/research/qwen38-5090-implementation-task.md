@@ -2304,3 +2304,55 @@ For concurrency, B8MTP workspace128MiB is allowed by current MTP program but act
 memory fit, external math/quality, partial-row serving and throughput remain
 unqualified; qualify before any real batching claim. Strongest tuned/MTP SGLang/
 vLLM4K references/repetitions, INT4/4B and overall2x/halfTTFT remain open.
+
+
+### 2026-10-25 — current B1/full4K CUDA phase diagnosis prepared, not executed
+
+Previous chart-report turn was a verified wait: original48577 supervisor confirmed
+prefill16-fixed4k-http-attempt1 live. Current turn continues polling the same owned
+job only; no remote command/upload/probe competes with its official HTTP timing.
+Actual text C1/2/4/8 and image C1 cohorts appeared on the live supervisor; their
+numbers remain provisional until terminal closure and independent raw replay.
+Earlier complete comparison charts remain the admitted result. Overall2x and
+halfTTFT targets remain unmet/unproven.
+
+Committed/pushed1ac05f7f7 records actual host24request closure, explicit original
+27vs29CPU source supplement and widerHTTP68test source pins. Source/model/runtime
+were not changed in this follow-up. New explicit CUDA-phase diagnostic source is
+prepared against actual current1a1d B1/full4K model. Original ordinary/T4MTP host
+worker operations remain identical after trace-only AST removal; generation,
+token/image/context/retained-case checks are unchanged. Full worker/launcher/probe
+derivations retained. Existing native/SDK/default/checkpoint/corpus untouched.
+
+Nsight2026 node collection runs from worker launch, avoiding the previously failed
+interactive capture method. Twelve unique HtoD copies bracket request and five
+flat phases,144markers each mode/288total. All24actual3968+128 requests in the
+three original orders remain. Raw SQLite must contain exactly one matching HtoD
+copy per marker, same process/device/context/stream and ordered GPU timestamps.
+No Python/Nsight epoch conversion. Real kernel/graph-node records required in
+prefill/generation; separate API/kernel/copy/memset activity is recomputed, crossing
+records clipped/count retained, overlaps combined by interval union. Activity gaps
+are not attributed to CPU/GIL/scheduling/thermals/capture. Profiler/marker overhead
+prevents uninstrumented model-speed claims. No HTTP timing in this diagnosis.
+
+Separate witness is written only after native session/vision/decoder close calls
+return. Nsight wrapper exit is not assumed to prove native model cleanup. Initial
+unrun preparation is retained before adding that witness. Initial9CPU and full42
+CPU pass; final43CPU pass0.979s with all test IDs and seven module sources pinned.
+Direct probe CLI import-path smoke passes without loading Garnet/GPU. New
+preparation27ed5e53806dbc0b68bef8b9d388713e88486411688a8c7b6bdf7d4fd0dedec3 pins
+630files/14uploadtargets;617existing inputs. Read-only profiler executable SHA
+e597347ef6cb45456612c0c9593401bb6d1b85497bb18534968f309955831291 and original
+signed-tool setup proof required. Prior short trace CPU schema audit confirms
+runtime thread/process encoding,0copy-correlation PID mismatches; it is not a new
+full4K trace or bottleneck result. Final all630source/runtime/profiler checks and
+43actualremote CPU IDs precede model construction. Reserve96GiB engine scratch/
+32GiB study disk; stream large trace archives rather than buffer them all in RAM.
+
+Deployment has not run while HTTP timing is live. After its closure/archive/replay,
+preflight/install only absent new methods, then profile current B1/full4K and replay
+on both machines. Investigate actual dominant prefill operations and late-repeat
+stalls without trimming cases. Wider target-prefill128 needs explicit native
+metadata/commit/plugin and math/state/ID validation. Throughput still requires
+actual B8MTP fit/externalmath/quality/padding/HTTP qualification. Strongest feasible
+tuned/MTP SGLang/vLLM4K/repetitions and INT4/4B comparisons remain open.
