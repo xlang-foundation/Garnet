@@ -4983,3 +4983,31 @@ gap1.6437291s retained. Do not admit partial measurements or claim2x. After
 baseline closure, strongest feasible matched references and source-based
 profiling, qualify/timestamp this candidate and actual B8batching; keep full
 INT4/4B/quality/repetition scope. No speed benefit has been demonstrated here.
+
+
+### 2026-10-25: owned SGLang fixed4K controller prepared; runtime unrun
+
+Added run_sglang_fixed4k.py and prepare_sglang_fixed4k_run.py to carry the
+matched reference through real server startup, ready configuration/PID/source
+checks, fourVLM/16greedy/805screen and124IDcontrols/124frozen4Kstreams, verified
+owned-parent SIGTERM, actual terminal/idle checks and immutable raw archive.
+Reuse the existing WSL environment/checkpoint/cache and fixed study folders.
+Require the completed full native proof pair before deriving deployment pins;
+MTP additionally requires the closed independently replayed ordinary attempt.
+Pin eight checkpoint metadata files before/after; no weight/model copies.
+
+Actual26CPU identity/owner/fixed-output/cache/MTP controls pass in2.112s;
+two real missing-proof CLI attempts return2 without preparation/run output or
+server/GPU startup. Retain both executed ledgers and exact methods. These do
+not qualify actual server startup, model correctness, timing or2x. Controller
+preserves readiness failures, observes the original owned wrapper, and never
+interprets a timeout as process termination or permission to restart. Whole
+client monitor includes quality; only cohort phase samples are serving memory.
+Reference archive replay still needs implementation/execution against real data.
+
+Current native fixed-length HTTP original48577 remains live; ordinary4Kcohorts
+have emitted console records and separate short pilot is ongoing. No remote
+source replacement or extra observers/transfer during possible timing. Await
+terminal/archive/raw replay; then execute strongest feasible SGLang/vLLM
+profiles and GPU-qualify the attention candidate/real B8batching. Full matched
+INT4/4B/repetitions remain open; no new benchmark/2x admission in this change.
