@@ -1,6 +1,7 @@
 # Qwen3.8-27B on one RTX 5090: implementation task
 
-Status: native BF16 cache integration is built; model qualification is in progress.
+Status: native BF16 cache integration is built; retained-output quality gate failed.
+Controlled precision/prefill diagnostics are running.
 Work continues on branch `qwen38-5090` (implementation commit `d43b20f42`). The
 full 2x decode/concurrency and half-TTFT objectives below remain unmet.
 
@@ -25,18 +26,29 @@ text/image group/repeat controls preserve exact token IDs, ordinary/MTP full-sta
 hashes and eight raw hidden arrays. Archive8d87b816... passes independent replay
 on both machines. It does not qualify the enabled BF16 model path or speed.
 
-Current process: original `bf16-model-b4-t32-attempt1`, after nine acknowledged
-uploads and all method/source/input pins matched. It tests actual BF16 helper
-metadata and final writes, plugin/engine construction and model execution,
-T32prefill/T4decode with register128, fixed text/image token IDs and exact
-same-BF16 ordinary/MTP state/hidden. Never compare packed BF16 carrier words as
-FP32 KV. No deployed source, DLL, runtime or active harness mutation while this
-worker is live; poll its original handle and preserve any failure.
+The BF16 B4/T32prefill/T4decode attempt failed its retained-FP32 token gate:
+first differences at zero-based text26/image8 in group0/repeat0. Ordinary/MTP
+IDs and canonical hash/slot/rawhidden witnesses agree for that first group, and
+runtime helper metadata/negative/zero-prefix controls pass. Archive287fafd1...
+is independently replayed on both machines as a preserved failure. It does not
+qualify broad BF16 model quality or permit timing. All failures stay recorded.
+
+Current process: original `bf16-prefill-diagnostic-attempt1` on unchanged native
+DLL/source. Three sequential teacher-forced32step controls use identical histories
+and compare FP32/T4, BF16/T4 (existing graph/manual ordinary prefill) and BF16/T32.
+The FP32/T4 and BF16/T4 controls completed; BF16/T32 is live. Independent
+raw-vector replay and interpretation remain pending. Do not assume precision drift is harmless or attribute it to
+prefill without evidence. No app/runtime/DLL/active harness changes while live.
+Unrun B8/128MiB drafts are retained locally, outside the repository, pending model
+quality resolution; legacy256MiB guards stay unchanged.
 
 Next gates, in order:
 
-1. Close and independently replay the current BF16 B4 model gate. Validate
-   lifetime/failure handling, partial/reset/retired rows and cache boundaries.
+1. Close/replay the precision/prefill diagnostic and investigate the retained
+   output mismatch. Require justified independent BF16 reference and broad
+   quality checks or a correction before promotion; retain the failed FP32
+   golden comparison. Validate lifetime/failure handling, partial/reset/retired
+   rows and cache boundaries before model/serving qualification.
 2. Qualify a distinct B8 MTP/workspace profile and actual M32 projection behavior,
    allocation fit, text/image quality and protocol correctness. Preserve legacy
    B4 admission guards. Wider batching does not establish C1 decode speed.
