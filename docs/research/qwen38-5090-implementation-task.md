@@ -1806,3 +1806,25 @@ primary-prefill/tiling or packing changes. Do not infer a kernel bottleneck from
 wall-time subtraction alone. Existing tiled-score44case correctness is not model
 speed. B8external numerical/quality/padded-worker/MTP/serving, INT4/4B and2x/
 halfTTFT remain open. No stage here establishes the requested speed target.
+
+
+### 2026-10-25 — physical B8 model admission closed and independently replayed
+
+Original supervisor48577 reported bf16-batch8-model-admission-attempt1 terminal0.
+Actual unchanged1a1d runtime completed all9cases:8short mixed rows and3968prompt+
+128output text/image rows, identity/rotate3/identity-repeat. Full canonical state
+component hashes, finite hidden/normalized raw vectors and output IDs match after
+inverse permutation; every reset including final reset matches empty state.
+Archive bdd7978b9969c26fbe931da134ec66b7bd73fdf5247c0033f9b8fd98100aa01f,
+71041774bytes/527files, was fully transferred and independently replayed with the
+unchanged verifier on both machines. Proof JSONs are identical. Actual28CPU tests
+passed remotely. Workflow cleanup, original source/runtime identity and adapter
+idle guard passed. Sampled correctness peak adapter use30854819840bytes (~28.74GiB)
+is a construction/correctness observation, not serving peak or throughput.
+
+This establishes full physical8row internal permutation/reset execution at4K.
+Independent B1/B4 numerical equivalence,805quality, padded HTTP worker/streaming,
+MTP and performance remain open. No2x or halfTTFT claim is admitted. Next qualify
+the explicit wider MTP draft-prefill candidate against retained B1 target state,
+then full4K/quality/memory and repeated matched timings; diagnose actual SGLang
+concurrent output variation without rewriting its preserved strict failure.

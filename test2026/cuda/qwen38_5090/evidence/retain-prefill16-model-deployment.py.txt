@@ -1,0 +1,15 @@
+from pathlib import Path
+import ast,hashlib,json,datetime
+w=Path(__file__).resolve().parent;r=Path('D:/CantorAI/work/qwen38-5090');e=r/'test2026/cuda/qwen38_5090/evidence';o=w.parent/'outputs';sha=lambda raw:hashlib.sha256(raw).hexdigest()
+pre=json.loads((w/'prefill16-model-preflight.json').read_bytes());install=json.loads((w/'prefill16-model-install.json').read_bytes());bundle=json.loads((w/'prefill16-model-bundle-preparation.json').read_bytes())
+assert pre['status']=='prefill16_model_preflight_passed' and not pre['conflicts'] and not pre['existing_input_drift'] and not pre['runtime_drift']
+assert install['status']=='prefill16_model_methods_installed' and install['bundle_sha256']==bundle['bundle_sha256']==sha((w/'prefill16-model-methods.zip').read_bytes()) and install['new_targets_verified']==11 and install['all_targets_verified']==21
+methods=('prepare-prefill16-model-deployment.py','preflight-prefill16-model.py','package-prefill16-model-methods.py','install-prefill16-model-methods.py','retain-prefill16-model-deployment.py')
+for name in methods:
+ raw=(w/name).read_bytes();ast.parse(raw);target=e/(name+'.txt');assert not target.exists();target.write_bytes(raw)
+for name in ('prefill16-model-preflight-input.json','prefill16-model-preflight.json','prefill16-model-bundle-preparation.json','prefill16-model-install.json'):
+ target=e/name;assert not target.exists();target.write_bytes((w/name).read_bytes())
+summary={'status':'prefill16_model_explicit_candidate_deployment_verified','recorded_utc':datetime.datetime.now(datetime.timezone.utc).isoformat(),'preparation_sha256':sha((e/'mtp-prefill16-model-run-preparation.json').read_bytes()),'bundle_sha256':bundle['bundle_sha256'],'bundle_bytes':bundle['bytes'],'installed_absent_files':11,'matching_targets_verified':10,'existing_input_count':555,'existing_input_or_runtime_drift':False,'requires_closed_b8_archive_sha256':'bdd7978b9969c26fbe931da134ec66b7bd73fdf5247c0033f9b8fd98100aa01f','method_sha256':{n:sha((w/n).read_bytes()) for n in methods},'gpu_correctness_or_speed_admitted':False,'two_times_target_achieved':False,'scope':'Absent-only opt-in study module/methods/evidence installation after closed successful B8 and source/runtime/idle preflight. Existing runtime, qualified model defaults, SDKs, checkpoint and closed archives preserved. Actual next model correctness and speed require their own terminal archive and independent replay.'}
+for target in (e/'prefill16-model-deployment-closure.json',o/'Garnet-Prefill16-Model-Deployment.json'):
+ assert not target.exists();target.write_text(json.dumps(summary,indent=2),encoding='utf8')
+print(json.dumps(summary))
