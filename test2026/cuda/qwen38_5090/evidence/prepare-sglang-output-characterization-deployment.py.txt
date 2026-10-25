@@ -1,0 +1,18 @@
+from pathlib import Path
+import ast,hashlib,json
+w=Path(__file__).resolve().parent;m=Path('D:/CantorAI/work/qwen38-5090/test2026/cuda/qwen38_5090');sha=lambda raw:hashlib.sha256(raw).hexdigest()
+p=json.loads((m/'evidence/sglang-output-characterization-run-preparation.json').read_bytes());plan=json.loads((w/'sglang-output-characterization-upload-plan.json').read_bytes());targets={v['target']:v['sha256'] for v in plan['uploads']}
+for row in plan['uploads']:assert sha(Path(row['local']).read_bytes())==row['sha256']
+target=w/'sglang-output-characterization-preflight-input.json';assert not target.exists();target.write_text(json.dumps({'expected':targets,'existing':{k:v for k,v in p['files'].items() if k not in targets},'library_sha256':p['runtime_dependencies']['garnet.dll']},indent=2),encoding='utf8')
+for old,new in (('preflight-prefill16-model.py','preflight-sglang-output-characterization.py'),('package-prefill16-model-methods.py','package-sglang-output-characterization-methods.py'),('install-prefill16-model-methods.py','install-sglang-output-characterization-methods.py')):
+ text=(w/old).read_text().replace('prefill16-model','sglang-output-characterization').replace('prefill16_model','sglang_output_characterization')
+ text=text.replace('mtp-sglang-output-characterization-upload-plan.json','sglang-output-characterization-upload-plan.json')
+ if old.startswith('preflight'):
+  text=text.replace("a.add_argument('--closed-native-archive-sha256',required=True)","a.add_argument('--closed-native-archive-sha256',required=True);a.add_argument('--closed-mtp-archive-sha256',required=True)")
+  needle='idle();p=json.loads(';assert text.count(needle)==1
+  text=text.replace(needle,"name='mtp-prefill16-model-consistency-attempt1';prior=root/'results'/(name+'-evidence.zip');assert sha(prior)==args.closed_mtp_archive_sha256\nwith zipfile.ZipFile(prior) as z:\n previous=json.loads(z.read('results/'+name+'/workflow.json'));assert previous==json.loads((root/'results'/name/'workflow.json').read_bytes())\n assert type(previous['exit_code']) is int and previous['cleanup_finished'] and previous['library_unchanged'] and previous['source_sha256']==previous['source_after_sha256'] and previous['runtime_dependencies']==previous['runtime_dependencies_after']\n"+needle)
+ if old.startswith('install'):
+  text=text.replace(" or resolved==(root/'Garnet/xModel/qwen35/vl_0_8b/cuda_mtp_prefill16_study.py').resolve()",'')
+ text=text.replace('explicit prefill16 model methods/module/evidence','reference output-characterization methods/evidence')
+ path=w/new;assert not path.exists();ast.parse(text);path.write_text(text,encoding='utf8')
+print(json.dumps({'status':'sglang_output_characterization_deployment_prepared_unrun','targets':len(targets),'existing_inputs':len(p['files'])-len(set(p['files'])&set(targets)),'requires_closed_b8_and_mtp_archives_and_idle':True}))
