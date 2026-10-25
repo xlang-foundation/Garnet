@@ -1,0 +1,26 @@
+from pathlib import Path
+import json,hashlib
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+import numpy as np
+root=Path(__file__).resolve().parent.parent;out=root/'outputs';data=json.loads((out/'Garnet-Native-4K-Worker-Breakdown.json').read_bytes());assert data['measured_requests_reconciled']==128
+plt.rcParams.update({'font.family':'DejaVu Sans','font.size':11,'axes.spines.top':False,'axes.spines.right':False,'axes.titleweight':'bold','figure.facecolor':'#f7f9fc','axes.facecolor':'#ffffff'})
+fig,axes=plt.subplots(1,2,figsize=(14,7));fig.subplots_adjust(top=.80,bottom=.34,wspace=.28,left=.07,right=.98)
+labels=['Ordinary\ntext','Ordinary\nimage','MTP3\ntext','MTP3\nimage'];colors=['#4e79a7','#59a14f','#e6a34a'];fields=['worker_wall_outside_first_to_last_token_seconds','worker_first_to_last_token_seconds','client_wall_minus_worker_wall_seconds']
+for ax,c in zip(axes,(1,8)):
+ rows=[next(v for v in data['cohorts'] if v['mode']==mode and v['case']==case and v['concurrency']==c) for mode,case in [('ordinary','text'),('ordinary','image'),('mtp','text'),('mtp','image')]]
+ bottom=np.zeros(4)
+ for field,color in zip(fields,colors):
+  values=np.array([v[field]['mean'] for v in rows]);ax.bar(range(4),values,bottom=bottom,color=color,width=.65);bottom+=values
+ for i,total in enumerate(bottom):ax.text(i,total+.2,f'{total:.2f}s',ha='center',va='bottom',weight='bold')
+ assert all(abs(bottom[i]-rows[i]['client_wall_seconds']['mean'])<1e-8 for i in range(4))
+ ax.set_xticks(range(4),labels);ax.set_ylabel('Mean request wall time (seconds)');ax.set_title(f'{c} concurrent request'+('s' if c>1 else ''));ax.set_ylim(0,max(bottom)*1.18);ax.grid(axis='y',alpha=.2);ax.set_axisbelow(True)
+fig.suptitle('Garnet 4K: where the request time goes',x=.07,y=.955,ha='left',fontsize=20,weight='bold')
+fig.text(.07,.895,'RTX 5090 32GB · 3,968 input + 128 output tokens · physical GPU batch 1 · one trial',fontsize=12,color='#435166')
+from matplotlib.patches import Patch
+fig.legend([Patch(facecolor=c) for c in colors],['Worker before first token + finalization','Worker first-to-last token','Queue + HTTP/handling outside worker'],loc='lower center',bbox_to_anchor=(.51,.13),ncol=1,frameon=False,fontsize=11)
+fig.text(.07,.055,'8 measured requests per bar. Durations use each process’s own clock; absolute clock epochs are never compared.\nOutside-worker time includes queuing and transport/handling; it does not isolate network cost. No GPU-kernel attribution or reference comparison.',fontsize=9,color='#526174',va='bottom')
+for suffix in ('png','svg'):
+ target=out/('Garnet-Native-4K-Worker-Breakdown.'+suffix);assert not target.exists();fig.savefig(target,dpi=180,facecolor=fig.get_facecolor())
+plt.close(fig);print(json.dumps({'status':'native_worker_breakdown_figures_rendered','source_archive_sha256':data['archive_sha256'],'method_sha256':hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),'new_benchmark':False}))

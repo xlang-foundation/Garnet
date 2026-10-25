@@ -1,0 +1,93 @@
+from pathlib import Path
+from datetime import datetime,timezone
+import hashlib,json,shutil
+w=Path(__file__).resolve().parent;r=Path('D:/CantorAI/work/qwen38-5090');m=r/'test2026/cuda/qwen38_5090';e=m/'evidence';out=w.parent/'outputs';sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+def copy(a,b):
+ assert a.is_file() and (not b.exists() or a.read_bytes()==b.read_bytes())
+ if not b.exists():b.parent.mkdir(parents=True,exist_ok=True);shutil.copyfile(a,b)
+names=('sglang-fixed4k-ordinary-attempt2-verified.json','sglang-fixed4k-ordinary-attempt2-remote-verified.json','sglang-fixed4k-ordinary-attempt2-partial-verified.json','sglang-fixed4k-ordinary-attempt2-partial-remote-verified.json','sglang-fixed4k-ordinary-attempt2-diagnosis.json','sglang-fixed4k-ordinary-attempt2-partial-replay-remote.log','Garnet-Native-4K-Worker-Breakdown.json')
+for name in names:copy(out/name,e/name)
+for name,code in (('native-fixed4k-worker-intervals-ledger',0),('native-worker-breakdown-render-ledger',0),('native-worker-breakdown-final-render-ledger',0),('mtp-prefill16-cpu-ledger',0),('mtp-prefill16-final-cpu-ledger',0),('sglang-attempt2-base-local-replay-ledger',1),('sglang-attempt2-partial-local-replay-ledger',0)):
+ ledger=w/name;events=[json.loads(line) for line in (ledger/'commands.jsonl').read_bytes().splitlines()];assert len(events)==2 and events[-1]['exit_code']==code
+ for p in ledger.iterdir():copy(p,e/name/p.name)
+methods=('analyze-native-fixed4k-worker-intervals.py','render-native-fixed4k-worker-breakdown.py','diagnose-sglang-attempt2-stream-difference.py','derive-sglang-attempt2-partial-replay.py','prepare-bf16-batch8-deployment.py','correct-bf16-batch8-preflight-sha.py','preflight-bf16-batch8-admission.py','preflight-bf16-batch8-admission-v2.py','package-bf16-batch8-admission-methods.py','install-bf16-batch8-admission-methods.py','retain-worker-diagnosis-prefill16-and-sglang-partial.py')
+for name in methods:copy(w/name,e/(name+'.txt'))
+for name in ('bf16-batch8-admission-preflight-input.json','bf16-batch8-admission-preflight-initial-failure.log','bf16-batch8-preflight-sha-correction.json','bf16-batch8-admission-preflight.json','bf16-batch8-admission-bundle-preparation.json','bf16-batch8-admission-install.json'):copy(w/name,e/name)
+base=json.loads((out/'sglang-fixed4k-ordinary-attempt2-verified.json').read_bytes());assert base==json.loads((out/'sglang-fixed4k-ordinary-attempt2-remote-verified.json').read_bytes())
+partial=json.loads((out/'sglang-fixed4k-ordinary-attempt2-partial-verified.json').read_bytes());assert partial==json.loads((out/'sglang-fixed4k-ordinary-attempt2-partial-remote-verified.json').read_bytes())
+assert sha(out/'sglang-fixed4k-ordinary-attempt2-evidence.zip')==base['archive_sha256']
+native=json.loads((out/'Garnet-Native-4K-Worker-Breakdown.json').read_bytes());assert native['measured_requests_reconciled']==128 and not native['new_gpu_or_http_execution']
+candidate=json.loads((e/'mtp-prefill16-study-offline-preparation.json').read_bytes());assert sha(r/'xModel/qwen35/vl_0_8b/cuda_mtp_prefill16_study.py')==candidate['module_sha256'] and sha(m/'probe_mtp_prefill16_model.py')==candidate['probe_sha256']
+summary={'status':'existing_worker_time_reconciled_prefill16_cpu_candidate_and_sglang_attempt2_partial_failure_replayed','recorded_utc':datetime.now(timezone.utc).isoformat(),'native_worker_breakdown':{'archive_sha256':native['archive_sha256'],'requests_reconciled':128,'cohorts':16,'new_gpu_execution':False,'clock_epochs_compared':False,'kernel_bottleneck_proven':False,'figures':['Garnet-Native-4K-Worker-Breakdown.png','Garnet-Native-4K-Worker-Breakdown.svg'],'figure_final_visual_check_passed':True,'initial_legend_overlap_corrected':True},'prefill16_candidate':candidate,'sglang_attempt2':{'archive_sha256':base['archive_sha256'],'archive_bytes':100968830,'files_verified':3498,'actual_exit_code':1,'source_runtime_unchanged_cleanup_finished':True,'base_failure_proof_pair_identical':True,'partial_raw_proof_pair_identical':True,'early_full4k_boundaries':2,'vlm_controls':4,'short128id_controls':16,'adapted_screen_correct':487,'adapted_screen_count':805,'serial_full4k128id_controls':124,'raw_streams_replayed':12,'changed_concurrent_stream_texts_preserved':2,'completed_timed_cohorts':1,'complete_or_strongest_baseline_admitted':False,'cause_or_harmlessness_of_text_variation_proven':False},'batch8_deployment':{'preflight_status':json.loads((w/'bf16-batch8-admission-preflight.json').read_bytes())['status'],'install':json.loads((w/'bf16-batch8-admission-install.json').read_bytes()),'initial_archive_id_typo_caught_before_gpu':True,'correction_source':'Actual saved remote verifier64hexSHA, not a modified archive/threshold','original_supervisor_session':48577,'job':'bf16-batch8-model-admission-attempt1','last_observed_handle_state':'started','gpu_memory_fit_or_model_result_observed':False},'performance_comparison_admitted':False,'two_times_target_achieved':False,'scope':'Native arithmetic is over existing admitted single-trial evidence. Additional MTP engine is explicit/off by default, CPU-only candidate with unproven extra VRAM/full-model/4K/quality/speed. SGLang attempt2 remains failed despite fully replayed controls and one completed timing cohort. No text mismatch erased or full reference substituted. B8 is a live untimed internal-consistency attempt; whole-scope strongest refs, numerical/quality checks, repetitions, actual optimized performance, INT4/4B and2x remain open.'}
+for p in (e/'worker-prefill16-sglang-attempt2-closure.json',out/'Garnet-Worker-Prefill16-And-SGLang-Partial-Report.json'):
+ assert not p.exists();p.write_text(json.dumps(summary,indent=2),encoding='utf8')
+entry='''
+
+### 2026-10-25: actual worker-time breakdown; prefill16 CPU candidate; SGLang2 partial failure
+
+All128 measured native full4K streams from immutable6fbf3087...archive reconcile
+by request ID, actual3968prompt/128completion IDs and raw worker token sequence.
+Only durations within each clock are subtracted: never equate absolute native
+and HTTP clock epochs. C1 median client-wall minus worker-wall is about22-37ms;
+worker wall is7.4-8.2s. Worker time outside first-to-last emitted token is about
+4.94s ordinary and5.96-5.98s MTP, including pre-first processing and finalization,
+not an isolated GPU/prefill measurement. C8 median outside-worker time is about
+25.8-29.0s, including queuing/transport/handling. Additive mean-wall figures are
+from existing evidence only; initial legend overlap was caught visually and
+corrected. Neither kernel cost nor a new benchmark is inferred.
+
+Actual retained MTP full4K counter shows993draft-prefill calls. New explicit
+CUDAMTPPrefill16StudySession keeps the existing B1/T32target/T4decode, depth3,
+full-head/prefix-replay/128MiB policies and shared explicit draft KV/last hidden,
+but uses a second T16draft engine only during target-prefill hooks. A finally
+restores every narrow decode binding after success/failure/reentrance. Existing
+factories, validators, target/speculative source and native DLL remain unchanged.
+Extra engine duplicates resident draft weights; additional buffers/engine memory
+are included in session reporting and require actual full4KVRAM measurement.
+Proposed249prefill calls are derived from loop bounds, not a GPU measurement or
+speedup. Actual11CPU policy/lifecycle/binding/extra-resource controls pass0.013s.
+The unchanged eight-case real B1 target ordinary/MTP/prefix/reset/full-state/raw
+vector probe wrapper is prepared but unrun. Actual short/4Kmodel,805quality,
+VRAMfit and matched repeated performance gates remain mandatory.
+
+SGLang ordinary attempt2 terminal1, source/runtime unchanged and owned cleanup
+finished. Archivee17f3af00fd9502a8708115f194dc4464706320baa399426855b8bf1533c0b9d,
+100968830bytes/3498files. Two early full4K boundaries,4VLM/16greedy128ID controls,
+805adapted screen487/805 and124serial3968+128ID controls actually completed.
+One textC1 timed cohort completed: raw arithmetic310.8568ms TTFT,64.0726decode
+tok/s,55.7582total outputtok/s, sampled adapter peak29281132544bytes. The first
+C2warmup then failed serial-control text equality: both streams still return
+3968+128/4096usage/length; text first differs at character290and225. Twelve saved
+streams replay10serial-text-exact/twochanged. Cause and harmlessness unproven.
+Original failed manifest/archive/helper remain intact. Separate partial checker
+replays all startup/source/PID/stop/early boundaries/VLM/greedy/805screen/124IDs,
+all12SSE bodies/counts/times/text and completed C1 arithmetic/memory without
+changing the failed manifest status or inventing seven missing cohorts. Both
+independent base-failure and partial raw proof pairs are identical. This is
+partial failed-profile evidence, not a complete/strongest/tuned reference.
+
+B8preflight initially refused a copied65-character archive identifier before
+GPU execution. Preserve method/log; separately named v2 derives the real64hex
+SHA from saved remote proof. Corrected preflight passes425existing source files,
+20targets and runtime with no drift/conflict;11absent methods installed from
+39408byte bundle47af7bb265b9664457368357a9fedc34e00c82bf65a3dfcd5b9832e581b6082e,
+nine matching files skipped. No runtime/model/SDK duplication. Original48577
+acknowledged bf16-batch8-model-admission-attempt1 start only after actual SGLang
+terminal cleanup/archive observation. Untimed construction/9internal8row cases,
+full4K text/image/state/raw vectors and correctness VRAM are still unobserved.
+
+Next: finish/replay B8 and classify source/config/VRAM/row findings before any
+real batched serving/performance. Characterize reference output variation with
+serial repeats, concurrent nonstream IDs, same-byte streams and mixed-color
+isolation/reordered rows atC1/2/4/8. Preserve all variations; do not infer benign
+batch arithmetic or a bug from text alone, or replace fastest ordinary reference
+with a weaker deterministic setting. Any new full-throughput protocol must keep
+strict actual token budgets/quality controls and explicitly retain batch-related
+output variation; keep strict failed experiments immutable. Complete strongest
+SGLang MTP/tuning and vLLM, repetitions, independent B1/B4-vs-B8 math/805quality,
+MTP16short/4Kmodel and memory gates, and current B1full4K kernel profiling before
+selecting whole-model optimizations.2x/halfTTFT, INT4/4B and full scope remain open.
+'''
+for name in ('qwen38-5090-development-log.md','qwen38-5090-implementation-task.md'):
+ p=r/'docs/research'/name;raw=p.read_bytes();assert b'actual worker-time breakdown; prefill16 CPU candidate; SGLang2 partial failure' not in raw;p.write_bytes(raw+entry.replace('\n','\r\n').encode())
+print(json.dumps({'status':summary['status'],'native_requests_reconciled':128,'cpu_candidate_tests':11,'sglang_complete_baseline_admitted':False,'two_times_target_achieved':False}))

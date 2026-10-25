@@ -1676,3 +1676,69 @@ model launcher with only probe path/argument replacement. Preparation freezes
 Remote deployment, GPUfit/model admission and independent raw replay are unrun;
 no GPU or timing evidence claimed. Next deploy only after official reference
 supervisor is authoritatively terminal.2x/halfTTFT and full scope remain open.
+
+
+### 2026-10-25: actual worker-time breakdown; prefill16 CPU candidate; SGLang2 partial failure
+
+All128 measured native full4K streams from immutable6fbf3087...archive reconcile
+by request ID, actual3968prompt/128completion IDs and raw worker token sequence.
+Only durations within each clock are subtracted: never equate absolute native
+and HTTP clock epochs. C1 median client-wall minus worker-wall is about22-37ms;
+worker wall is7.4-8.2s. Worker time outside first-to-last emitted token is about
+4.94s ordinary and5.96-5.98s MTP, including pre-first processing and finalization,
+not an isolated GPU/prefill measurement. C8 median outside-worker time is about
+25.8-29.0s, including queuing/transport/handling. Additive mean-wall figures are
+from existing evidence only; initial legend overlap was caught visually and
+corrected. Neither kernel cost nor a new benchmark is inferred.
+
+Actual retained MTP full4K counter shows993draft-prefill calls. New explicit
+CUDAMTPPrefill16StudySession keeps the existing B1/T32target/T4decode, depth3,
+full-head/prefix-replay/128MiB policies and shared explicit draft KV/last hidden,
+but uses a second T16draft engine only during target-prefill hooks. A finally
+restores every narrow decode binding after success/failure/reentrance. Existing
+factories, validators, target/speculative source and native DLL remain unchanged.
+Extra engine duplicates resident draft weights; additional buffers/engine memory
+are included in session reporting and require actual full4KVRAM measurement.
+Proposed249prefill calls are derived from loop bounds, not a GPU measurement or
+speedup. Actual11CPU policy/lifecycle/binding/extra-resource controls pass0.013s.
+The unchanged eight-case real B1 target ordinary/MTP/prefix/reset/full-state/raw
+vector probe wrapper is prepared but unrun. Actual short/4Kmodel,805quality,
+VRAMfit and matched repeated performance gates remain mandatory.
+
+SGLang ordinary attempt2 terminal1, source/runtime unchanged and owned cleanup
+finished. Archivee17f3af00fd9502a8708115f194dc4464706320baa399426855b8bf1533c0b9d,
+100968830bytes/3498files. Two early full4K boundaries,4VLM/16greedy128ID controls,
+805adapted screen487/805 and124serial3968+128ID controls actually completed.
+One textC1 timed cohort completed: raw arithmetic310.8568ms TTFT,64.0726decode
+tok/s,55.7582total outputtok/s, sampled adapter peak29281132544bytes. The first
+C2warmup then failed serial-control text equality: both streams still return
+3968+128/4096usage/length; text first differs at character290and225. Twelve saved
+streams replay10serial-text-exact/twochanged. Cause and harmlessness unproven.
+Original failed manifest/archive/helper remain intact. Separate partial checker
+replays all startup/source/PID/stop/early boundaries/VLM/greedy/805screen/124IDs,
+all12SSE bodies/counts/times/text and completed C1 arithmetic/memory without
+changing the failed manifest status or inventing seven missing cohorts. Both
+independent base-failure and partial raw proof pairs are identical. This is
+partial failed-profile evidence, not a complete/strongest/tuned reference.
+
+B8preflight initially refused a copied65-character archive identifier before
+GPU execution. Preserve method/log; separately named v2 derives the real64hex
+SHA from saved remote proof. Corrected preflight passes425existing source files,
+20targets and runtime with no drift/conflict;11absent methods installed from
+39408byte bundle47af7bb265b9664457368357a9fedc34e00c82bf65a3dfcd5b9832e581b6082e,
+nine matching files skipped. No runtime/model/SDK duplication. Original48577
+acknowledged bf16-batch8-model-admission-attempt1 start only after actual SGLang
+terminal cleanup/archive observation. Untimed construction/9internal8row cases,
+full4K text/image/state/raw vectors and correctness VRAM are still unobserved.
+
+Next: finish/replay B8 and classify source/config/VRAM/row findings before any
+real batched serving/performance. Characterize reference output variation with
+serial repeats, concurrent nonstream IDs, same-byte streams and mixed-color
+isolation/reordered rows atC1/2/4/8. Preserve all variations; do not infer benign
+batch arithmetic or a bug from text alone, or replace fastest ordinary reference
+with a weaker deterministic setting. Any new full-throughput protocol must keep
+strict actual token budgets/quality controls and explicitly retain batch-related
+output variation; keep strict failed experiments immutable. Complete strongest
+SGLang MTP/tuning and vLLM, repetitions, independent B1/B4-vs-B8 math/805quality,
+MTP16short/4Kmodel and memory gates, and current B1full4K kernel profiling before
+selecting whole-model optimizations.2x/halfTTFT, INT4/4B and full scope remain open.

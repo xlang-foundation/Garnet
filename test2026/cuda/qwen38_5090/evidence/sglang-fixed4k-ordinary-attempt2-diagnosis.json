@@ -1,0 +1,72 @@
+{
+  "status": "sglang_attempt2_failed_stream_difference_collected",
+  "workflow_exit_code": 1,
+  "cleanup_finished": true,
+  "source_and_runtime_unchanged": true,
+  "benchmark_status": "failed",
+  "benchmark_error": "ValueError('Preserved failed or nonmatching same-engine4Kstream: ctx4096-s3-text-c2-warmup-0-0')",
+  "completed_cohorts": [
+    {
+      "case": "text",
+      "concurrency": 1,
+      "requests": 8,
+      "ttft_median_ms": 310.8567999879597,
+      "decode_median_tokens_per_second": 64.07261062845893,
+      "output_tokens_per_second": 55.75818719679946,
+      "sampled_peak_adapter_used_bytes": 29281132544
+    }
+  ],
+  "saved_stream_results": 12,
+  "all_nonstream_controls": "all124_nonstream_id_controls_collected",
+  "changed_streams": [
+    {
+      "key": "ctx4096-s3-text-c2-warmup-0-0",
+      "result_sha256": "cdb926c4610036b65b7f5c4d4a840f44c648901d49ff71b0db512db5e82f4c91",
+      "status": "completed",
+      "prompt_tokens": 3968,
+      "output_tokens": 128,
+      "finish_reason": "length",
+      "nonstream_usage": {
+        "prompt_tokens": 3968,
+        "total_tokens": 4096,
+        "completion_tokens": 128,
+        "prompt_tokens_details": null,
+        "reasoning_tokens": 0
+      },
+      "nonstream_prompt_ids": 3968,
+      "nonstream_output_ids": 128,
+      "same_engine_text_exact": false,
+      "first_different_character": 290,
+      "control_context": " From Evaporation to Rain\n\nRain is the result of a continuous process known as the **water cycle**. The background notes highlight the initial phase: *\"Water evaporates, rises, cools, and condenses into cloud droplets.\"* To understand how this leads to rain, we must look at the subsequent steps in d",
+      "stream_context": " From Evaporation to Rain\n\nRain is the result of a continuous process known as the **water cycle**. It involves the movement of water from the Earth's surface into the atmosphere and back down again. Here is the detailed breakdown:\n\n#### Step 1: Evaporation\nThe process begins with **evaporation**. T",
+      "streamed_individual_ids_observed": false
+    },
+    {
+      "key": "ctx4096-s3-text-c2-warmup-0-1",
+      "result_sha256": "0b8bb23a5e19a2be24c67a8fcdfb91330c4fbd97d77c33403be3db07f4ab8f97",
+      "status": "completed",
+      "prompt_tokens": 3968,
+      "output_tokens": 128,
+      "finish_reason": "length",
+      "nonstream_usage": {
+        "prompt_tokens": 3968,
+        "total_tokens": 4096,
+        "completion_tokens": 128,
+        "prompt_tokens_details": null,
+        "reasoning_tokens": 0
+      },
+      "nonstream_prompt_ids": 3968,
+      "nonstream_output_ids": 128,
+      "same_engine_text_exact": false,
+      "first_different_character": 225,
+      "control_context": " rain forms, suitable for a science lesson.\n\n### The Water Cycle: From Evaporation to Rain\n\nRain is a key part of the **water cycle**, the continuous movement of water on, above, and below the surface of the Earth. The process described in your notes\u2014*water evaporates, rises, cools, and condenses in",
+      "stream_context": " rain forms, suitable for a science lesson.\n\n### The Water Cycle: From Evaporation to Rain\n\nRain is the result of a continuous process known as the **water cycle**. It involves the movement of water from the Earth's surface into the atmosphere and back down again. Here is the detailed breakdown:\n\n##",
+      "streamed_individual_ids_observed": false
+    }
+  ],
+  "adapted_screening": {
+    "correct": 487,
+    "count": 805
+  },
+  "scope": "Actual failed attempt2 raw protocol/text comparison only. Cause and harmlessness not inferred. Completed C1 cohort is retained as partial evidence, not a complete or tuned reference baseline."
+}

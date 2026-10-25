@@ -1,0 +1,27 @@
+from pathlib import Path
+import argparse,hashlib,json,shutil,sys,zipfile
+root=Path('D:/CantorAI/5090-study-20261023');m=root/'Garnet/test2026/cuda/qwen38_5090';sys.path.insert(0,str(m))
+from run_bf16_low_batch_native_build import idle
+sha=lambda path:hashlib.sha256(path.read_bytes()).hexdigest()
+a=argparse.ArgumentParser();a.add_argument('--closed-http-archive-sha256',required=True);args=a.parse_args()
+out=root/'results/bf16-batch8-admission-preflight.json';assert not out.exists()
+native='fixed-length-http-study-attempt1';archive=root/'results'/(native+'-evidence.zip');assert sha(archive)==args.closed_http_archive_sha256
+closed=json.loads((root/'results'/native/'workflow.json').read_bytes());assert closed['cleanup_finished'] and closed['exit_code']==0 and closed['library_unchanged']
+assert closed['source_sha256']==closed['source_after_sha256'] and closed['runtime_dependencies']==closed['runtime_dependencies_after']
+with zipfile.ZipFile(archive) as z:assert z.testzip() is None and json.loads(z.read('results/'+native+'/workflow.json'))==closed
+reference=root/'results/sglang-fixed4k-ordinary-attempt2';closed_reference=json.loads((reference/'workflow.json').read_bytes());assert closed_reference['exit_code']==1 and closed_reference['cleanup_finished'] and type(closed_reference['server_exit_code']) is int and closed_reference['source_sha256']==closed_reference['source_after_sha256'] and closed_reference['runtime_dependencies']==closed_reference['runtime_dependencies_after']
+assert sha(root/'results/sglang-fixed4k-ordinary-attempt2-evidence.zip')=='e17f3af00fd9502a8708115f194dc4464706320baa399426855b8bf1533c0b9d'
+idle();p=json.loads((root/'results/bf16-batch8-admission-preflight-input.json').read_bytes());targets={};drift={};runtime={}
+for name,expected in p['expected'].items():
+ f=root/name;assert f.resolve().is_relative_to(root.resolve());exists=f.exists();actual=sha(f) if exists and f.is_file() else None
+ targets[name]={'exists':exists,'sha256':actual,'expected_sha256':expected,'matches':exists and actual==expected}
+for name,expected in p['existing'].items():
+ f=root/name;actual=sha(f) if f.is_file() else None
+ if actual!=expected:drift[name]={'expected':expected,'actual':actual}
+for name,expected in closed['runtime_dependencies'].items():
+ actual=sha(root/'build/bin'/name)
+ if actual!=expected:runtime[name]={'expected':expected,'actual':actual}
+conflicts={name:row for name,row in targets.items() if row['exists'] and not row['matches']}
+passed=not drift and not runtime and not conflicts and sha(root/'build/bin/garnet.dll')==p['library_sha256']
+result={'status':'bf16_batch8_admission_preflight_passed' if passed else 'bf16_batch8_admission_preflight_failed','closed_http_archive_sha256':args.closed_http_archive_sha256,'input_sha256':sha(root/'results/bf16-batch8-admission-preflight-input.json'),'targets':targets,'existing_input_drift':drift,'runtime_drift':runtime,'conflicts':conflicts,'free_study_disk_bytes':shutil.disk_usage(root).free,'scope':'Actual closed native archive/workflow, idle adapter/process guard and existing target/source/runtime hashes; read-only except this receipt. No model, SDK/source replacement or GPU probe.'}
+out.write_text(json.dumps(result,indent=2),encoding='utf8');print(json.dumps(result));raise SystemExit(0 if passed else 1)
