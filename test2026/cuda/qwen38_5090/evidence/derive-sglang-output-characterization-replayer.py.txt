@@ -1,0 +1,39 @@
+from pathlib import Path
+import ast,hashlib,json
+m=Path('D:/CantorAI/work/qwen38-5090/test2026/cuda/qwen38_5090');original=m/'verify_sglang_reserved_fixed4k.py';text=original.read_text()
+text=text.replace('from run_sglang_fixed4k import job_path','from run_sglang_output_characterization import job_path')
+text=text.replace("a.add_argument('--corpus',type=Path,required=True);",'')
+text=text.replace('evidence/sglang-reserved-fixed4k-run-preparation.json','evidence/sglang-output-characterization-run-preparation.json').replace('sglang_fixed4k_run_prepared_unrun','sglang_output_characterization_prepared_unrun')
+text=text.replace("w['mode'] in ('ordinary','mtp') and args.job.startswith('sglang-fixed4k-'+w['mode']+'-')", "w['mode']=='ordinary' and args.job.startswith('sglang-output-characterization-attempt')",1)
+text=text.replace("'reference_fixed4k_sglang_reserved_identity.py','reference_fixed4k_boundary.py'", "'reference_fixed4k_sglang_reserved_identity.py','reference_concurrency_characterization.py','replay_reference_concurrency_characterization.py','reference_fixed4k_boundary.py'",1)
+text=text.replace("w['status']=='reference_fixed4k_collected_needs_replay'", "w['status']=='sglang_output_characterization_collected_needs_replay'",1).replace("b'Ran 37 tests'","b'Ran 33 tests'",1)
+start=text.index("            report=doc(base+'client/report.json');");end=text.index('        archived=sha(',start)
+replacement='''            prior_raw=z.read('results/sglang-fixed4k-ordinary-attempt2-partial-verified.json');prior_proof=json.loads(prior_raw)
+            assert sha(prior_raw)==p['prior_partial_proof_sha256']==w['prior_partial_proof_sha256']
+            assert prior_proof['status']=='reference_fixed4k_attempt2_failure_partial_evidence_replayed' and prior_proof['archive_sha256']==p['prior_archive_sha256']==w['prior_archive_sha256']
+            prior_archive=args.proofs/'sglang-fixed4k-ordinary-attempt2-evidence.zip';assert sha(prior_archive.read_bytes())==prior_proof['archive_sha256']
+            native_closed=w['closed_native_admission'];assert native_closed['job']=='bf16-batch8-model-admission-attempt1' and native_closed['cleanup_finished'] is True
+            native_archive=args.proofs/(native_closed['job']+'-evidence.zip');assert sha(native_archive.read_bytes())==native_closed['archive_sha256']
+            with zipfile.ZipFile(native_archive) as previous:
+                closed=json.loads(previous.read('results/'+native_closed['job']+'/workflow.json'));assert closed==doc('results/'+native_closed['job']+'/workflow.json') and closed['exit_code']==native_closed['exit_code'] and closed['cleanup_finished'] is True and closed['library_unchanged'] is True
+                assert closed['source_sha256']==closed['source_after_sha256'] and closed['runtime_dependencies']==closed['runtime_dependencies_after']
+            from reference_concurrency_characterization import load_cases
+            from replay_reference_concurrency_characterization import replay as replay_characterization
+            def read_case(name):
+                if name=='results/sglang-fixed4k-ordinary-attempt2-evidence.zip':return prior_archive.read_bytes()
+                return z.read(name)
+            groups=load_cases(read=read_case);report=doc(base+'client/report.json');assert report['metadata']==metadata
+            client_manifest=doc(base+'client/file-manifest.json');assert {n.removeprefix(base+'client/') for n in manifest['files'] if n.startswith(base+'client/')}==set(client_manifest['files'])|{'file-manifest.json'}
+            replayed=replay_characterization(lambda name:z.read(base+'client/'+name),groups)
+            resource=doc(base+'resources/resource-monitor.json');samples=[json.loads(line) for line in z.read(base+'resources/resource-vram.jsonl').splitlines()];peak=max(v['used_bytes'] for v in samples)
+            assert resource['child_exit_code']==0 and resource['gpu']['uuid']==GPU and resource['sampled_memory']['sampled_peak_adapter_used_bytes']==peak
+            profiles.append({'raw_characterization':replayed,'correctness_sampled_peak_adapter_used_bytes':peak})
+'''
+text=text[:start]+replacement+text[end:]
+text=text.replace("archived=sha(z.read(METHODS+'verify_sglang_reserved_fixed4k.py'))", "archived=sha(z.read(METHODS+'verify_sglang_output_characterization.py'))",1)
+text=text.replace("'reference_fixed4k_profile_replayed' if passed else 'reference_fixed4k_failure_preserved'", "'sglang_output_characterization_replayed' if passed else 'sglang_output_characterization_failure_preserved'",1)
+text=text.replace('Replay a closed SGLang reference archive, never execute a model or infer IDs.', 'Replay closed output/overlap/color characterization, never infer streamed IDs.',1)
+text=text.replace("'scope':'Closed source/config/PID/lifecycle and actual raw request/response/control/SSE/metric/memory replay. Timed streams expose counts/text, no individual IDs reconstructed.805adapted screening and fourVLM controls are not broad/official quality. Strongest feasible tuning, repetitions, native comparison and2x remain open.'", "'scope':'Closed owned source/config/PID/lifecycle and raw288request/135overlap-wave output/isolation replay. All text/ID variants retained; short color bursts do not require measurable decode intervals. No physical GPU batch, numerical cause/harmlessness/equivalence, broad quality or performance/2x admission.'")
+ast.parse(text);target=m/'verify_sglang_output_characterization.py';assert not target.exists();target.write_bytes(text.encode())
+receipt={'status':'output_characterization_archive_replayer_derived_unrun','source_sha256':hashlib.sha256(original.read_bytes()).hexdigest(),'result_sha256':hashlib.sha256(target.read_bytes()).hexdigest(),'scope':'Retain original reserved source/config/PID/checkpoint/context-source/native-proof/stop/closure gates. Replace fixed4K benchmark/805client block with separately declared288request characterization raw replay and linked prior partial/native-closure checks; original verifier/failed archives unchanged. No model or benchmark run.'}
+(m/'evidence/sglang-output-characterization-replayer-derivation.json').write_text(json.dumps(receipt,indent=2),encoding='utf8');print(json.dumps(receipt))

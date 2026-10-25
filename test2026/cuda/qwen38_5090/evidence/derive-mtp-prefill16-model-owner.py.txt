@@ -1,0 +1,31 @@
+from pathlib import Path
+import ast,hashlib,json
+r=Path('D:/CantorAI/work/qwen38-5090');m=r/'test2026/cuda/qwen38_5090';source=m/'run_bf16_batch8_admission.py';text=source.read_text();start=text.index('def main():');text=text[:text.index('def closed_reference(')]+'from run_bf16_batch8_admission import closed_reference,retire\n\n'+text[start:]
+text=text.replace('"""Own an untimed B8 model admission after an explicitly closed reference job.', '"""Own explicit prefill16 short-model admission after both previous jobs close.',1)
+text=text.replace("a.add_argument('--closed-reference-archive-sha256',required=True);args=a.parse_args()", "a.add_argument('--closed-reference-archive-sha256',required=True);a.add_argument('--closed-native-archive-sha256',required=True);args=a.parse_args()",1)
+text=text.replace('bf16-batch8-admission-run-preparation.json','mtp-prefill16-model-run-preparation.json').replace('bf16_batch8_model_admission_prepared_gpu_unrun','mtp_prefill16_model_prepared_gpu_unrun').replace('B8 input drift','Prefill16 input drift')
+needle=" reference=closed_reference(root,args.closed_reference_job,args.closed_reference_archive_sha256)"
+text=text.replace(needle,needle+"\n native_closed=closed_native_admission(root,args.closed_native_archive_sha256)",1)
+text=text.replace("name='bf16-batch8-model-admission-attempt1'", "name='mtp-prefill16-model-consistency-attempt1'",1)
+text=text.replace("root/'results'/args.closed_reference_job/'workflow.json'", "root/'results'/args.closed_reference_job/'workflow.json',root/'results/bf16-batch8-model-admission-attempt1/workflow.json'",1)
+text=text.replace("'closed_reference':reference,", "'closed_reference':reference,'closed_native_admission':native_closed,",1)
+text=text.replace('test_bf16_batch8_admission.bat','test_mtp_prefill16_model.bat').replace("str(out/'model')","str(out/'native')")
+text=text.replace("out/'model/report.json'", "out/'native/study-report.json'").replace('bf16_batch8_ordinary_admission_collected_needs_replay','mtp_prefill16_short_model_collected_needs_replay').replace('bf16_batch8_model_admission_collected_needs_replay','mtp_prefill16_model_collected_needs_replay')
+text=text.replace('B8 CPU admission controls failed','Prefill16 CPU admission controls failed').replace('B8 model admission failed','Prefill16 short-model admission failed')
+text=text.replace('Strict full-row state/permutation/profile and closed-reference/cache ownership controls','Existing target state/witness/prefix guards and prefill16 policy/ownership/exception controls')
+text=text.replace('Actual B8 construction/vision/short mixed and full3968+128 text/image, three row permutations/reset; full-state/raw-vector witnesses, no timing','Actual unchanged8B1 short ordinary/MTP/image/prefix/reset cases; compare every captured target state/raw vector to retained1a1d, record extra draft engine/memory; no4K or timing')
+insert='''def closed_native_admission(root,digest):
+ if not re.fullmatch(r'[0-9a-f]{64}',digest):raise ValueError('Actual closed B8 archive SHA256 required')
+ name='bf16-batch8-model-admission-attempt1';archive=root/'results'/(name+'-evidence.zip');assert sha(archive)==digest
+ with zipfile.ZipFile(archive) as z:
+  manifest=json.loads(z.read('evidence-manifest.json'));assert z.testzip() is None and len(z.namelist())==len(set(z.namelist()))==len(manifest['files'])+1
+  for path,expected in manifest['files'].items():assert hashlib.sha256(z.read(path)).hexdigest()==expected
+  w=json.loads(z.read('results/'+name+'/workflow.json'))
+ assert w==json.loads((root/'results'/name/'workflow.json').read_bytes()) and type(w['exit_code']) is int and w['cleanup_finished'] is True and w['library_unchanged'] is True
+ assert w['source_sha256']==w['source_after_sha256'] and w['runtime_dependencies']==w['runtime_dependencies_after']
+ return {'job':name,'archive_sha256':digest,'exit_code':w['exit_code'],'cleanup_finished':True}
+
+'''
+text=text.replace('def main():',insert+'def main():',1);ast.parse(text);target=m/'run_mtp_prefill16_model.py';assert not target.exists();target.write_bytes(text.encode())
+receipt={'status':'mtp_prefill16_owner_derived_unrun','source_sha256':hashlib.sha256(source.read_bytes()).hexdigest(),'result_sha256':hashlib.sha256(target.read_bytes()).hexdigest(),'scope':'Reuse frozen B8 owner lifecycle and its pure closed-reference/owned-cache helpers. New explicit prior-native closed-archive gate, prepared prefill16 methods and unchanged8B1 model wrapper only. No existing owner, runtime, target/speculative source or thresholds changed; CPU/GPU actual qualification required.'}
+(m/'evidence/mtp-prefill16-owner-derivation.json').write_text(json.dumps(receipt,indent=2),encoding='utf8');print(json.dumps(receipt))

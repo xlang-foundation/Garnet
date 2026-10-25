@@ -1,0 +1,87 @@
+from pathlib import Path
+from datetime import datetime,timezone
+import ast,hashlib,json,shutil
+w=Path(__file__).resolve().parent;r=Path('D:/CantorAI/work/qwen38-5090');m=r/'test2026/cuda/qwen38_5090';e=m/'evidence';out=w.parent/'outputs';sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+def copy(a,b):
+ assert a.is_file() and (not b.exists() or a.read_bytes()==b.read_bytes())
+ if not b.exists():b.parent.mkdir(parents=True,exist_ok=True);shutil.copyfile(a,b)
+ledgers=(('mtp-prefill16-model-owner-cpu-ledger',1),('mtp-prefill16-model-owner-final-cpu-ledger',0),('reference-concurrency-characterization-cpu-ledger',0),('reference-concurrency-characterization-final-cpu-ledger',0),('reference-concurrency-characterization-stream-isolation-cpu-ledger',0),('sglang-output-characterization-owner-cpu-ledger',0))
+for name,code in ledgers:
+ folder=w/name;events=[json.loads(line) for line in (folder/'commands.jsonl').read_bytes().splitlines()];assert len(events)==2 and events[-1]['exit_code']==code
+ for p in folder.iterdir():copy(p,e/name/p.name)
+for name in ('derive-mtp-prefill16-model-owner.py','derive-sglang-output-characterization-replayer.py','retain-prefill16-and-characterization-owners.py'):copy(w/name,e/(name+'.txt'))
+for name in ('mtp-prefill16-model-upload-plan.json','sglang-output-characterization-upload-plan.json','mtp-prefill16-model-run-preparation-initial-doc.json','mtp-prefill16-model-upload-plan-initial-doc.json'):copy(w/name,e/name)
+models=json.loads((e/'mtp-prefill16-model-run-preparation.json').read_bytes());characterization=json.loads((e/'sglang-output-characterization-run-preparation.json').read_bytes());assert models['status']=='mtp_prefill16_model_prepared_gpu_unrun' and characterization['status']=='sglang_output_characterization_prepared_unrun'
+methods=('run_mtp_prefill16_model.py','prepare_mtp_prefill16_model_run.py','verify_mtp_prefill16_model.py','run_sglang_output_characterization.py','prepare_sglang_output_characterization_run.py','verify_sglang_output_characterization.py','reference_concurrency_characterization.py','replay_reference_concurrency_characterization.py')
+for name in methods:ast.parse((m/name).read_bytes(),filename=name)
+summary={'status':'prefill16_native_owner_and_reference_output_characterization_prepared_cpu_only','recorded_utc':datetime.now(timezone.utc).isoformat(),'method_sha256':{name:sha(m/name) for name in methods},'prefill16_model_admission':{'preparation_sha256':sha(e/'mtp-prefill16-model-run-preparation.json'),'pinned_files':len(models['files']),'upload_targets':21,'actual_final_cpu_tests_passed':41,'actual_final_cpu_test_report_seconds':0.244,'initial_cpu_import_failure_preserved':True,'initial_reason':'Sibling absolute import failed under package tests; corrected package/script import only, then inherited no-MTP docstring corrected without executable change.','retained_baseline':'Actual tokenizer-nfc1a1d B1 report and all captured raw vectors pinned from immutable archive','native_or_gpu_executed':False,'scope':'Whole short8B1 ordinary/MTP/text/image/color/prefix/reset plus exact retained target-state/raw-vector/ID/callback replay, extra engine memory/call-count accounting. Full4K/805quality/HTTP/speed remain unqualified.'},'reference_characterization':{'preparation_sha256':sha(e/'sglang-output-characterization-run-preparation.json'),'pinned_files':len(characterization['files']),'upload_targets':12,'actual_final_cpu_tests_passed':33,'actual_final_cpu_test_report_seconds':10.169,'actual_synthetic_http_requests_per_integration_test':288,'actual_synthetic_overlap_waves':135,'synthetic_nonstream_id_responses':192,'synthetic_full4k_streams':64,'synthetic_color_streams':32,'concurrent_color_nonstreams':48,'concurrent_color_streams':24,'actual_frozen_inputs_inspected_full4k':16,'actual_frozen_color_instances':8,'model_or_remote_requests_executed':False,'scope':'Separate correctness/overlap diagnosis; keep strict full4K actual counts/IDs/usage and raw variants. Mixed-color/spatial streams and nonstreams check request isolation; valid burst-only short color replies need no decode interval because no rate is measured. CPU local HTTP stub is explicitly synthetic, never benchmark/quality data. Real server/PID/source/metadata/closed prior-native lifecycle and independent archive replay remain mandatory.'},'batch8_live_observation':{'original_supervisor_session':48577,'job':'bf16-batch8-model-admission-attempt1','last_authoritative_handle_state':'running','saved_report_cases_observed':[['short-mixed',0,True],['short-mixed',1,True],['short-mixed',2,True],['full4k-text',0,True],['full4k-text',1,True],['full4k-text',2,True],['full4k-image',0,True]],'observation_source':'Actual SSH read of saved report paired with original supervisor live poll; not a terminal/independent replay proof.','completed_whole_attempt_observed':False,'external_b1_b4_math_quality_or_speed_admitted':False},'performance_comparison_admitted':False,'two_times_target_achieved':False,'scope':'Current native runtime/source frozen while B8 correctness runs; all new sources are local unrun explicit studies. No existing benchmark equality/precision/length/tolerance guard is weakened, no archive or metric rewritten. Strongest matched SGLang/vLLM, real optimized quality/repeated speed, INT4/4B and2x remain open.'}
+for p in (e/'prefill16-and-characterization-owner-offline-closure.json',out/'Garnet-Prefill16-And-Reference-Characterization-Preparation.json'):
+ assert not p.exists();p.write_text(json.dumps(summary,indent=2),encoding='utf8')
+entry='''
+
+### 2026-10-25: prefill16 model owner; reference output/isolation diagnosis prepared
+
+Original48577 B8 model admission remains authoritatively running. Actual saved
+report observations progress through all3short-mixed and all3full3968+128text
+rows/permutations/repeats, then first full4Kimage case, each internal inverse
+mapping exact. Decoder construction/vision/empty state had completed. These are
+live partial observations, not a closed attempt, independent replay, external
+B1/B4 equivalence, broad quality, serving or performance proof. Known embedded
+hashlib warnings did not establish terminal failure and no restart was issued.
+Correctness-only read of existing NVML sample showed28355711808adapter bytes used
+with5833805824free at that moment; not an instantaneous/serving peak or final
+memory-fit claim. A separate read-only instantaneous utilization query returned
+0percent/22.20W between test work; not a power/performance benchmark or causal
+kernel diagnosis. Existing runtime, SDK, model source and probe are unchanged.
+
+Prepared explicit prefill16 whole short8B1 ordinary/MTP/text/image/color/prefix/
+reset owner/preparer/independent raw replayer. Both the actual closed B8 archive
+and closed SGLang reference archive plus idle GPU/process guard are required;
+no automatic restart after observation timeout. Reuse bounded owned SSD cache,
+archive every failure/source/runtime/raw target-state/vector/counter/sample and
+compare to actual retained1a1d B1 snapshots. Extra T16 draft engine/buffers are
+counted, primary/decode/verifier source unchanged. Actual41CPU controls pass
+0.244s. Initial package import failed before GPU; preserved initial owner/log,
+then package/script sibling import corrected. A following doc-only edit fixes
+inherited no-MTP wording. Reversing both changes exactly restores original owner
+derivation bytes. First unused preparation/plan also retained. Current preparation
+pins575files/21uploads; no remote install, GPU model or new speed result.
+
+Prepared separate ordinary SGLang output/isolation diagnosis and owned server
+lifecycle/preparer/raw archive replayer.16actual frozen4K inputs and8instances
+of four retained color/spatial cases load/validate from immutable prior evidence.
+The future288requests comprise192actual nonstream-ID controls and96streams,
+with135observed-overlap waves: serial before/after, C1/2/4/8, rotated inputs,
+64full3968+128streams and32short color streams.48nonstream plus24stream mixed
+color concurrent controls must remain semantically correct. Every actual output
+ID/text variation is retained, with no inferred cause or harmlessness. Short
+color replies may arrive all at once; no decode rate is measured. Full4K budgets,
+actual IDs/nonstream usage, raw SSE totals/lengths and complete request/row/wave
+coverage remain strict. These source changes never alter the old failed strict
+benchmark/helper/archive, and do not choose a weaker deterministic reference.
+
+Actual33CPU suite passes10.169s, including a synthetic local HTTP288request/
+135wave integration and independent raw replay with wrong counts, wrong colors,
+false overlap and missing rows rejected. Earlier actual16/18CPU stages and raw
+logs are retained, including the intermediate synthetic256request nonstream-only
+color coverage before streamed-color coverage was added. All fixture data are
+explicitly synthetic; no SGLang/GPU/benchmark/quality result is fabricated.
+Current reference preparation pins509files/12uploads, engine4098/two reserved
+slots/pool32784 and actual4096workload capacity, BF16KV/F32SSM/cache/graph settings
+unchanged. Model server run and real independent archive replay are unrun.
+
+After B8 closes, replay/retain its full attempt before admission. Next use real
+reference diagnosis to distinguish serial repeat variation, concurrent ID/text
+variation, stream differences and request isolation, without assuming harmless
+roundoff or a bug. Complete stronger tuned/MTP SGLang and vLLM full4K timings;
+qualify prefill16short then full4K/805quality/memory and matched repeated HTTP.
+Current primary prefill invokes T32 target chunks124times for3968tokens; inspect
+actual CPU input/tokenizer versus GPU prefill/kernel costs before choosing wider
+primary-prefill/tiling or packing changes. Do not infer a kernel bottleneck from
+wall-time subtraction alone. Existing tiled-score44case correctness is not model
+speed. B8external numerical/quality/padded-worker/MTP/serving, INT4/4B and2x/
+halfTTFT remain open. No stage here establishes the requested speed target.
+'''
+for name in ('qwen38-5090-development-log.md','qwen38-5090-implementation-task.md'):
+ p=r/'docs/research'/name;raw=p.read_bytes();assert b'prefill16 model owner; reference output/isolation diagnosis prepared' not in raw;p.write_bytes(raw+entry.replace('\n','\r\n').encode())
+print(json.dumps({'status':summary['status'],'actual_prefill16_cpu_tests':41,'actual_characterization_cpu_tests':33,'new_gpu_or_remote_study_executed':False,'two_times_target_achieved':False}))

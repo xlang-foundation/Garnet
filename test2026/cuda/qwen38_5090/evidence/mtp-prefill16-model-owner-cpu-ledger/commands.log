@@ -1,0 +1,22 @@
+
+{"id": "5e08a3f9c53e4385937ebb15de68b04e", "kind": "correctness", "label": "Prefill16 prior-job closure, source/cache ownership and unchanged target witness/prefix/model-parent controls", "argv": ["D:/CantorAI/Garnet/.venv/Scripts/python.exe", "-m", "unittest", "test2026.cuda.qwen38_5090.test_mtp_prefill16_study", "test2026.cuda.qwen38_5090.test_mtp_builder_workspace", "test2026.cuda.qwen38_5090.test_bf16_batch8_owner", "test2026.cuda.qwen38_5090.test_mtp_prefill16_model_owner", "test2026.cuda.qwen38_5090.test_bf16_packed_state_gate", "test2026.cuda.qwen38_5090.test_bf16_model_state_witness", "test2026.cuda.qwen38_5090.test_bf16_same_precision_gate", "test2026.cuda.qwen38_5090.test_bf16_padded_state_gate", "test2026.cuda.qwen38_5090.test_tokenizer_model_parent"]}
+...............E........................
+======================================================================
+ERROR: test_mtp_prefill16_model_owner (unittest.loader._FailedTest.test_mtp_prefill16_model_owner)
+----------------------------------------------------------------------
+ImportError: Failed to import test module: test_mtp_prefill16_model_owner
+Traceback (most recent call last):
+  File "C:\Python\Python312\Lib\unittest\loader.py", line 137, in loadTestsFromName
+    module = __import__(module_name)
+             ^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\CantorAI\work\qwen38-5090\test2026\cuda\qwen38_5090\test_mtp_prefill16_model_owner.py", line 4, in <module>
+    from .run_mtp_prefill16_model import closed_native_admission
+  File "D:\CantorAI\work\qwen38-5090\test2026\cuda\qwen38_5090\run_mtp_prefill16_model.py", line 9, in <module>
+    from run_bf16_batch8_admission import closed_reference,retire
+ModuleNotFoundError: No module named 'run_bf16_batch8_admission'
+
+
+----------------------------------------------------------------------
+Ran 40 tests in 0.156s
+
+FAILED (errors=1)
