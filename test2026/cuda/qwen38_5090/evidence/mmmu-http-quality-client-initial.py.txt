@@ -1,0 +1,98 @@
+"""Adapted MMMU HTTP collection primitives. Raw screening accuracy is not promotion."""
+from pathlib import Path
+import gzip,hashlib,json,re
+from urllib.error import HTTPError
+from urllib.parse import urlsplit
+from urllib.request import HTTPRedirectHandler,Request,build_opener
+from .mmmu_quality_protocol import PROTOCOL,score_complete
+
+MANIFEST_SHA256='108d017c7db5be56c58f490c2a985dfbcde2e6ded0860a97e797cfac9cea1589'
+MODELS=('qwen38-27b-nvfp4','qwen38-27b-int4','qwen35-4b-bf16')
+sha=lambda raw:hashlib.sha256(raw).hexdigest()
+def require(ok,message):
+ if not ok:raise ValueError(message)
+def encoded(value):return json.dumps(value,ensure_ascii=False,separators=(',',':'),allow_nan=False).encode('utf8')
+def decoded(raw):
+ def invalid(value):raise ValueError('Nonfinite JSON value: '+value)
+ return json.loads(raw,parse_constant=invalid)
+def child(root,name):
+ path=(root/name).resolve();require(path.is_relative_to(root.resolve()),'Path escapes corpus/run');return path
+def load_corpus(root):
+ root=Path(root).resolve(strict=True);raw=(root/'manifest.json').read_bytes();require(sha(raw)==MANIFEST_SHA256,'Frozen corpus manifest differs');manifest=json.loads(raw)
+ require(manifest['protocol']==PROTOCOL and manifest['requests']==805 and manifest['source_rows']==900 and manifest['excluded_rows']==95,'Corpus scope differs')
+ require(manifest['revision']=='876ce5cb130f7f7e290ce4d9984357737d4db5cf' and manifest['checkpoint_revision']=='482ca0f3832238542f8f5295dde86b5f22711d80','Corpus revision differs')
+ for name,identity in manifest['files'].items():
+  data=child(root,name).read_bytes();require(len(data)==identity['bytes'] and sha(data)==identity['sha256'],'Corpus file differs: '+name)
+ rows=[r for r in manifest['rows'] if r['request_prepared']];gold=json.loads((root/'gold.json').read_bytes())
+ require(len(rows)==len(gold)==805 and len({r['id'] for r in rows})==805,'Corpus request identities differ')
+ require([r['id'] for r in rows]==[r['id'] for r in gold],'Gold/request ordering differs')
+ for row,answer in zip(rows,gold):
+  require(row['canonical_request_sha256']==answer['canonical_request_sha256'],'Gold request binding differs')
+  ids=json.loads(child(root,row['prompt_ids_file']).read_bytes());require(type(row['prompt_tokens']) is int and len(ids)==row['prompt_tokens'] and ids.count(248056)==64 and len(ids)+32<=4096,'Frozen prompt geometry differs')
+ return manifest,rows,gold
+def adapt_request(canonical,engine,model_alias):
+ require(engine in ('native','vllm','sglang') and model_alias in MODELS,'Unsupported declared engine/model')
+ body=json.loads(canonical);require(set(body)=={'model','messages','max_tokens','temperature','stream','chat_template_kwargs'},'Unexpected canonical request fields')
+ require(body['model']==MODELS[0] and type(body['max_tokens']) is int and body['max_tokens']==32 and type(body['temperature']) is int and body['temperature']==0 and body['stream'] is False and isinstance(body['chat_template_kwargs'],dict) and set(body['chat_template_kwargs'])=={'enable_thinking'} and body['chat_template_kwargs']['enable_thinking'] is False,'Canonical generation settings differ')
+ if engine=='native' and model_alias==body['model']:return canonical
+ body['model']=model_alias
+ if engine in ('vllm','sglang'):body['return_token_ids']=True
+ if engine=='sglang':body['return_prompt_token_ids']=True
+ return encoded(body)
+def token_ids(values,label):
+ require(isinstance(values,list) and bool(values) and all(type(n) is int and 0<=n<248320 for n in values),'Missing/invalid actual '+label+' IDs');return values
+def validate_response(raw,engine,model_alias,expected_prompt):
+ require(engine in ('native','vllm','sglang'),'Unknown response adapter');body=decoded(raw);require(isinstance(body,dict) and 'error' not in body,'HTTP inference error')
+ if 'model' in body:require(body['model']==model_alias,'Response model alias differs')
+ choices=body.get('choices');require(isinstance(choices,list) and len(choices)==1,'Exactly one completion required');choice=choices[0]
+ require(isinstance(choice,dict),'Completion must be an object')
+ require(type(choice.get('index')) is int and choice['index']==0 and choice.get('finish_reason') in ('stop','length'),'Incomplete or ambiguous choice')
+ message=choice.get('message');require(isinstance(message,dict) and message.get('role')=='assistant' and isinstance(message.get('content'),str),'Assistant text missing')
+ if engine=='vllm':prompt=body.get('prompt_token_ids');completion=choice.get('token_ids')
+ else:prompt=choice.get('prompt_token_ids');completion=choice.get('response_token_ids')
+ prompt=token_ids(prompt,'prompt');completion=token_ids(completion,'completion');token_ids(expected_prompt,'expected prompt')
+ require(prompt==expected_prompt and prompt.count(248056)==64,'Actual prompt IDs/image-token count differ from frozen corpus')
+ require(len(completion)<=32 and len(prompt)+len(completion)<=4096,'Completion/context budget exceeded')
+ usage=body.get('usage');require(isinstance(usage,dict),'Usage missing')
+ for key,wanted in [('prompt_tokens',len(prompt)),('completion_tokens',len(completion)),('total_tokens',len(prompt)+len(completion))]:require(type(usage.get(key)) is int and usage[key]==wanted,'Actual usage/ID count differs: '+key)
+ return {'text':message['content'],'finish_reason':choice['finish_reason'],'prompt_token_ids':prompt,'completion_token_ids':completion,'usage':usage,'actual_prompt_ids_exact':True,'merged_image_tokens_observed':64,'runtime_image_grid_verified':False,'runtime_image_preprocessing_verified':False}
+def endpoint(url):
+ parsed=urlsplit(url);require(parsed.scheme=='http' and parsed.hostname in ('127.0.0.1','localhost','::1') and not parsed.username and not parsed.password and not parsed.query and not parsed.fragment and parsed.path in ('','/'),'Use the declared loopback server base URL')
+ return url.rstrip('/')+'/v1/chat/completions'
+class NoRedirect(HTTPRedirectHandler):
+ def redirect_request(self,*args,**kwargs):return None
+def post(url,wire,timeout):
+ try:
+  with build_opener(NoRedirect()).open(Request(url,data=wire,headers={'Content-Type':'application/json'}),timeout=timeout) as response:return response.status,response.read()
+ except HTTPError as error:return error.code,error.read()
+def collect(root,rows,gold,output,engine,model_alias,url,identity,*,transport=post,timeout=180):
+ """Sequential, no retries. Caller must establish exclusive/qualified server first."""
+ root=Path(root);out=Path(output);target=endpoint(url);require(engine in ('native','vllm','sglang') and model_alias in MODELS,'Unsupported declared engine/model')
+ require(type(timeout) in (int,float) and 0<timeout<=600,'Invalid HTTP timeout')
+ require(isinstance(identity,dict) and identity.get('engine')==engine and identity.get('model_alias')==model_alias,'Declared server identity differs')
+ require(not out.exists(),'Preserve previous quality attempt');out.mkdir(parents=True);(out/'cases').mkdir()
+ (out/'server-identity.json').write_bytes(encoded(identity));outputs=[];failure=None
+ methods=lambda:{n:sha(Path(__file__).with_name(n).read_bytes()) for n in ('mmmu_http_quality.py','mmmu_quality_protocol.py')}
+ workflow={'status':'collecting','engine':engine,'model_alias':model_alias,'endpoint':target,'corpus_manifest_sha256':MANIFEST_SHA256,'protocol':PROTOCOL,'expected_requests':len(rows),'attempted_requests':0,'completed_requests':0,'server_identity_sha256':sha(encoded(identity)),'server_identity_attested_by_client':False,'method_sha256':methods(),'retries':0,'concurrency':1,'runtime_image_preprocessing_verified':False,'quality_promotion_admitted':False,'performance_admitted':False,'scope':'HTTP correctness/quality collection only. Caller owns server/model identity and exclusive GPU scheduling. No timing benchmark. Image pixels/grid are not exposed by these responses; matching64prompt image tokens alone does not verify preprocessing.'}
+ def save():(out/'workflow.json').write_bytes(encoded(workflow))
+ save()
+ try:
+  for row in rows:
+   identity=row['id'];require(re.fullmatch(r'[A-Za-z0-9_]+',identity) is not None,'Unsafe corpus identity');folder=out/'cases'/identity;folder.mkdir();record={'id':identity,'canonical_request_sha256':row['canonical_request_sha256'],'status':'started'};raw=b''
+   try:
+    canonical=child(root,row['request_file']).read_bytes();require(sha(canonical)==row['canonical_request_sha256'],'Canonical request changed')
+    wire=adapt_request(canonical,engine,model_alias);(folder/'wire-request.json.gz').write_bytes(gzip.compress(wire,mtime=0));record.update(wire_request_sha256=sha(wire),wire_request_bytes=len(wire));workflow['attempted_requests']+=1;save()
+    status,raw=transport(target,wire,timeout)
+    if not isinstance(raw,bytes):raw=b'';raise ValueError('HTTP response body must be raw bytes')
+    (folder/'response.bin').write_bytes(raw);record.update(http_status=status,response_sha256=sha(raw),response_bytes=len(raw));require(type(status) is int and status==200,'HTTP status is not200')
+    expected=json.loads(child(root,row['prompt_ids_file']).read_bytes());record.update(validate_response(raw,engine,model_alias,expected));record['status']='completed';outputs.append(record);workflow['completed_requests']=len(outputs)
+   except Exception as error:
+    if not (folder/'response.bin').exists():(folder/'response.bin').write_bytes(raw)
+    record.update(status='failed',error_type=type(error).__name__,error=str(error),response_sha256=sha(raw),response_bytes=len(raw));raise
+   finally:(folder/'record.json').write_bytes(encoded(record));save()
+  require(methods()==workflow['method_sha256'],'Collection method changed during run');score=score_complete(gold,outputs);(out/'score.json').write_bytes(encoded(score));workflow['status']='completed_needs_independent_replay'
+ except Exception as error:workflow.update(status='failed',error_type=type(error).__name__,error=str(error));failure=error
+ finally:
+  workflow['method_after_sha256']=methods();save();files={p.relative_to(out).as_posix():{'sha256':sha(p.read_bytes()),'bytes':p.stat().st_size} for p in out.rglob('*') if p.is_file()};(out/'file-manifest.json').write_bytes(encoded({'files':files,'scope':workflow['scope']}))
+ if failure:raise failure
+ return workflow

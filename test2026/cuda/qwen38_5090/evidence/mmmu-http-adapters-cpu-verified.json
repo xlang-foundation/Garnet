@@ -1,0 +1,82 @@
+{
+  "status": "mmmu_http_frozen_corpus_adapters_cpu_verified",
+  "manifest_sha256": "108d017c7db5be56c58f490c2a985dfbcde2e6ded0860a97e797cfac9cea1589",
+  "source_rows": 900,
+  "requests": 805,
+  "subjects": 30,
+  "gold_records": 805,
+  "adapter_variants": [
+    {
+      "engine": "native",
+      "model_alias": "qwen38-27b-nvfp4",
+      "requests": 805,
+      "wire_bytes_total": 40058459,
+      "ordered_id_length_wire_sha256": "e997e6d06e5cdc0e662c741b55343849a8aa6e4cf10663f9f3bc863d81d35034"
+    },
+    {
+      "engine": "native",
+      "model_alias": "qwen38-27b-int4",
+      "requests": 805,
+      "wire_bytes_total": 40057654,
+      "ordered_id_length_wire_sha256": "3d2428657fa4b2d05107f8996bb6c959a52031a8f1be135485341e36caece4ef"
+    },
+    {
+      "engine": "native",
+      "model_alias": "qwen35-4b-bf16",
+      "requests": 805,
+      "wire_bytes_total": 40056849,
+      "ordered_id_length_wire_sha256": "4d9b4de696a279c0d5ba476ebfcdcd74a2c0e3ccc1957382b1de8df6eeaf73bd"
+    },
+    {
+      "engine": "vllm",
+      "model_alias": "qwen38-27b-nvfp4",
+      "requests": 805,
+      "wire_bytes_total": 40077779,
+      "ordered_id_length_wire_sha256": "54193941abedfd6715f593f803343b34fb6d3bd534abb4cf60550f27da90721c"
+    },
+    {
+      "engine": "vllm",
+      "model_alias": "qwen38-27b-int4",
+      "requests": 805,
+      "wire_bytes_total": 40076974,
+      "ordered_id_length_wire_sha256": "373de3584e34d56baff6bb6a937bd4aac7a350330d9c0a3966d4a30040640595"
+    },
+    {
+      "engine": "vllm",
+      "model_alias": "qwen35-4b-bf16",
+      "requests": 805,
+      "wire_bytes_total": 40076169,
+      "ordered_id_length_wire_sha256": "41bc71ba4bf9b124a7d3572110565954747375dc869af2da206940b54adc599e"
+    },
+    {
+      "engine": "sglang",
+      "model_alias": "qwen38-27b-nvfp4",
+      "requests": 805,
+      "wire_bytes_total": 40102734,
+      "ordered_id_length_wire_sha256": "4cf33c53bd86ae8d6fd6404ba3368f531453eed98d26894e8b7d80bd729b6d19"
+    },
+    {
+      "engine": "sglang",
+      "model_alias": "qwen38-27b-int4",
+      "requests": 805,
+      "wire_bytes_total": 40101929,
+      "ordered_id_length_wire_sha256": "aa87283e8be7704c61677f86aa0ace13db8e388b53b124af38a9a48e7d9972fa"
+    },
+    {
+      "engine": "sglang",
+      "model_alias": "qwen35-4b-bf16",
+      "requests": 805,
+      "wire_bytes_total": 40101124,
+      "ordered_id_length_wire_sha256": "5ef53c086ea8ef905c17c9ac21bc668a9cee83812ddb823403f440017b4d394e"
+    }
+  ],
+  "adapted_wires_checked": 7245,
+  "model_responses": 0,
+  "http_requests_sent": 0,
+  "gpu_used": false,
+  "runtime_prompt_ids_verified": false,
+  "runtime_image_preprocessing_verified": false,
+  "quality_promotion_admitted": false,
+  "performance_admitted": false,
+  "scope": "All frozen files/hash/size and805ordered requests checked on CPU. Nine explicit engine/model alias wire adapters preserve semantic payload and only add installed-engine ID flags/declared model alias. No server requests or responses, tokenizer compatibility for alternate models, runtime preprocessing, actual quality or performance admission."
+}

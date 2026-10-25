@@ -1,0 +1,121 @@
+"""Synthetic CPU transport/response mutation controls. No real model inference."""
+from pathlib import Path
+from tempfile import TemporaryDirectory
+from unittest.mock import patch
+import copy,gzip,json,unittest
+from .mmmu_http_quality import adapt_request,collect,encoded,endpoint,load_corpus,sha,validate_response
+from .verify_mmmu_http_quality import replay
+
+PROMPT=[10]+[248056]*64+[11]
+CANONICAL=encoded({'model':'qwen38-27b-nvfp4','messages':[{'role':'user','content':[{'type':'image_url','image_url':{'url':'data:image/jpeg;base64,CPU_TEST_ONLY'}},{'type':'text','text':'Synthetic choice question'}]}],'max_tokens':32,'temperature':0,'stream':False,'chat_template_kwargs':{'enable_thinking':False}})
+def response(engine='native',text='A'):
+ choice={'index':0,'message':{'role':'assistant','content':text},'finish_reason':'stop'};value={'choices':[choice],'usage':{'prompt_tokens':len(PROMPT),'completion_tokens':1,'total_tokens':len(PROMPT)+1}}
+ if engine=='vllm':value['prompt_token_ids']=list(PROMPT);choice['token_ids']=[32]
+ else:choice.update(prompt_token_ids=list(PROMPT),response_token_ids=[32])
+ return value
+class HTTPQualityControls(unittest.TestCase):
+ def fixture(self,root,count=2):
+  root.mkdir();(root/'manifest.json').write_bytes(b'{"status":"synthetic_cpu_fixture"}');(root/'request.json').write_bytes(CANONICAL);(root/'ids.json').write_bytes(encoded(PROMPT));rows=[{'id':'synthetic_'+str(i),'canonical_request_sha256':sha(CANONICAL),'request_file':'request.json','prompt_ids_file':'ids.json'} for i in range(count)]
+  gold=[{'id':r['id'],'answer':'A','option_count':2,'canonical_request_sha256':sha(CANONICAL)} for r in rows];return rows,gold
+ def test_adapter_preserves_canonical_and_installed_id_flags(self):
+  self.assertEqual(adapt_request(CANONICAL,'native','qwen38-27b-nvfp4'),CANONICAL)
+  for engine in ('vllm','sglang'):
+   value=json.loads(adapt_request(CANONICAL,engine,'qwen38-27b-nvfp4'));self.assertIs(value.pop('return_token_ids'),True)
+   if engine=='sglang':self.assertIs(value.pop('return_prompt_token_ids'),True)
+   self.assertEqual(value,json.loads(CANONICAL))
+  changed=json.loads(adapt_request(CANONICAL,'vllm','qwen35-4b-bf16'));self.assertEqual(changed['model'],'qwen35-4b-bf16')
+ def test_adapter_rejects_changed_semantics_and_unknown_models(self):
+  for key,value in [('max_tokens',64),('temperature',0.),('stream',True),('chat_template_kwargs',{'enable_thinking':0})]:
+   body=json.loads(CANONICAL);body[key]=value
+   with self.assertRaises(ValueError):adapt_request(encoded(body),'native','qwen38-27b-nvfp4')
+  with self.assertRaises(ValueError):adapt_request(CANONICAL,'unknown','qwen38-27b-nvfp4')
+ def test_three_actual_id_layouts_and_nonletter_text(self):
+  for engine in ('native','vllm','sglang'):
+   actual=validate_response(encoded(response(engine,'Answer: A')),engine,'qwen38-27b-nvfp4',PROMPT)
+   self.assertEqual(actual['text'],'Answer: A');self.assertEqual(actual['prompt_token_ids'],PROMPT);self.assertIs(actual['runtime_image_preprocessing_verified'],False)
+ def test_no_token_inference_from_text_or_invalid_id_types(self):
+  for target in ('prompt_token_ids','response_token_ids'):
+   for value in (None,[],[True],[-1],[248320]):
+    body=response();body['choices'][0][target]=value
+    with self.assertRaises(ValueError):validate_response(encoded(body),'native','qwen38-27b-nvfp4',PROMPT)
+ def test_prompt_budget_usage_and_completion_mutations(self):
+  samples=[];v=response();v['choices'][0]['prompt_token_ids'][0]=12;samples.append(v)
+  v=response();v['choices'][0]['response_token_ids']=[32]*33;samples.append(v)
+  for key in ('prompt_tokens','completion_tokens','total_tokens'):
+   v=response();v['usage'][key]=True;samples.append(v)
+  v=response();v['usage']['completion_tokens']=2;samples.append(v)
+  for v in samples:
+   with self.assertRaises(ValueError):validate_response(encoded(v),'native','qwen38-27b-nvfp4',PROMPT)
+ def test_bad_choice_finish_model_and_nonfinite_json(self):
+  samples=[]
+  for key,value in [('index',True),('finish_reason',None),('message',{'role':'assistant','content':None})]:
+   v=response();v['choices'][0][key]=value;samples.append(v)
+  v=response();v['model']='wrong';samples.append(v)
+  v=response();v['choices']*=2;samples.append(v)
+  for v in samples:
+   with self.assertRaises(ValueError):validate_response(encoded(v),'native','qwen38-27b-nvfp4',PROMPT)
+  with self.assertRaises(ValueError):validate_response(b'{"unused":NaN}','native','qwen38-27b-nvfp4',PROMPT)
+ def test_loopback_endpoint_and_redirect_scope(self):
+  self.assertEqual(endpoint('http://127.0.0.1:18082/'),'http://127.0.0.1:18082/v1/chat/completions')
+  for value in ('https://127.0.0.1','http://example.com','http://user:secret@localhost','http://localhost/path','http://localhost?x=1'):
+   with self.assertRaises(ValueError):endpoint(value)
+ def test_synthetic_collection_binds_wire_and_raw_reply(self):
+  with TemporaryDirectory() as t:
+   root=Path(t)/'corpus';rows,gold=self.fixture(root);out=Path(t)/'run';seen=[]
+   def transport(url,wire,timeout):seen.append(wire);return 200,encoded(response())
+   result=collect(root,rows,gold,out,'native','qwen38-27b-nvfp4','http://127.0.0.1:1',{'engine':'native','model_alias':'qwen38-27b-nvfp4','synthetic_cpu_fixture':True},transport=transport)
+   self.assertEqual(len(seen),2);self.assertEqual(result['completed_requests'],2)
+   self.assertEqual(gzip.decompress((out/'cases/synthetic_0/wire-request.json.gz').read_bytes()),CANONICAL)
+   self.assertEqual(json.loads((out/'score.json').read_bytes())['correct'],2);self.assertIs(result['performance_admitted'],False)
+   with self.assertRaises(ValueError):replay(root,out) # Synthetic fixture can never replace the frozen805corpus.
+ def test_failure_preserves_raw_prefix_and_never_retries_or_scores(self):
+  with TemporaryDirectory() as t:
+   root=Path(t)/'corpus';rows,gold=self.fixture(root,3);out=Path(t)/'run';count=[]
+   def transport(*args):count.append(1);return (200,encoded(response())) if len(count)==1 else (503,b'raw error body')
+   with self.assertRaises(ValueError):collect(root,rows,gold,out,'native','qwen38-27b-nvfp4','http://localhost:1',{'engine':'native','model_alias':'qwen38-27b-nvfp4'},transport=transport)
+   self.assertEqual(len(count),2);self.assertFalse((out/'score.json').exists());self.assertEqual((out/'cases/synthetic_1/response.bin').read_bytes(),b'raw error body')
+   self.assertEqual(json.loads((out/'workflow.json').read_bytes())['completed_requests'],1)
+   self.assertFalse((out/'cases/synthetic_2').exists())
+ def test_transport_exception_and_existing_attempt_are_preserved(self):
+  with TemporaryDirectory() as t:
+   root=Path(t)/'corpus';rows,gold=self.fixture(root);out=Path(t)/'run'
+   def transport(*args):raise TimeoutError('synthetic timeout')
+   with self.assertRaises(TimeoutError):collect(root,rows,gold,out,'vllm','qwen38-27b-nvfp4','http://localhost:1',{'engine':'vllm','model_alias':'qwen38-27b-nvfp4'},transport=transport)
+   self.assertEqual(json.loads((out/'cases/synthetic_0/record.json').read_bytes())['error_type'],'TimeoutError')
+   before=(out/'file-manifest.json').read_bytes()
+   with self.assertRaises(ValueError):collect(root,rows,gold,out,'vllm','qwen38-27b-nvfp4','http://localhost:1',{'engine':'vllm','model_alias':'qwen38-27b-nvfp4'},transport=transport)
+   self.assertEqual((out/'file-manifest.json').read_bytes(),before)
+ def test_identity_rejection_precedes_output_and_network(self):
+  with TemporaryDirectory() as t:
+   out=Path(t)/'run'
+   with self.assertRaises(ValueError):collect(Path(t),[],[],out,'native','qwen38-27b-nvfp4','http://localhost:1',{'engine':'wrong','model_alias':'qwen38-27b-nvfp4'})
+   self.assertFalse(out.exists())
+ def test_synthetic_complete805_raw_replay(self):
+  with TemporaryDirectory() as t:
+   root=Path(t)/'corpus';rows,gold=self.fixture(root,805);out=Path(t)/'run';count=[]
+   def transport(*args):count.append(1);return 200,encoded(response(text='A' if len(count)%2 else 'B'))
+   collect(root,rows,gold,out,'native','qwen38-27b-nvfp4','http://localhost:1',{'engine':'native','model_alias':'qwen38-27b-nvfp4','synthetic_cpu_fixture':True},transport=transport)
+   # The real CLI never bypasses the frozen manifest; only this CPU fixture does.
+   with patch('test2026.cuda.qwen38_5090.verify_mmmu_http_quality.load_corpus',return_value=({},rows,gold)):report=replay(root,out)
+   self.assertEqual(report['score']['correct'],403);self.assertEqual(report['completed_requests'],805);self.assertIs(report['performance_admitted'],False);self.assertIs(report['runtime_image_preprocessing_verified'],False)
+ def failed805(self,base):
+  root=base/'corpus';rows,gold=self.fixture(root,805);out=base/'run';count=[]
+  def transport(*args):count.append(1);return (200,encoded(response())) if len(count)==1 else (500,b'synthetic raw failure')
+  with self.assertRaises(ValueError):collect(root,rows,gold,out,'native','qwen38-27b-nvfp4','http://localhost:1',{'engine':'native','model_alias':'qwen38-27b-nvfp4','synthetic_cpu_fixture':True},transport=transport)
+  return root,rows,gold,out
+ def test_independent_failure_replay_preserves_prefix_without_score(self):
+  with TemporaryDirectory() as t:
+   root,rows,gold,out=self.failed805(Path(t))
+   with patch('test2026.cuda.qwen38_5090.verify_mmmu_http_quality.load_corpus',return_value=({},rows,gold)):report=replay(root,out)
+   self.assertEqual(report['status'],'adapted_mmmu_http_quality_incomplete_failure_preserved');self.assertIsNone(report['score']);self.assertEqual(report['completed_requests'],1);self.assertEqual(report['attempted_requests'],2)
+ def test_raw_prompt_mutation_rejected_even_with_recomputed_file_hashes(self):
+  with TemporaryDirectory() as t:
+   root,rows,gold,out=self.failed805(Path(t));folder=out/'cases/synthetic_0';body=response();body['choices'][0]['prompt_token_ids'][0]=12;raw=encoded(body);(folder/'response.bin').write_bytes(raw)
+   record=json.loads((folder/'record.json').read_bytes());record.update(response_sha256=sha(raw),response_bytes=len(raw));(folder/'record.json').write_bytes(encoded(record))
+   manifest=json.loads((out/'file-manifest.json').read_bytes())
+   for name in ('cases/synthetic_0/response.bin','cases/synthetic_0/record.json'):
+    raw=(out/name).read_bytes();manifest['files'][name]={'sha256':sha(raw),'bytes':len(raw)}
+   (out/'file-manifest.json').write_bytes(encoded(manifest))
+   with patch('test2026.cuda.qwen38_5090.verify_mmmu_http_quality.load_corpus',return_value=({},rows,gold)),self.assertRaises(ValueError):replay(root,out)
+
+if __name__=='__main__':unittest.main()

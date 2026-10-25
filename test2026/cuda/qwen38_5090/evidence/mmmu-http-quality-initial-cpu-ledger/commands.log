@@ -1,0 +1,28 @@
+
+{"id": "a2473ba2e21742c49e888f4f65d9b1c4", "kind": "correctness", "label": "Preserved initial synthetic fixture error before correction", "argv": ["D:\\CantorAI\\Garnet\\.venv\\Scripts\\python.exe", "-m", "unittest", "test2026.cuda.qwen38_5090.test_mmmu_http_quality", "test2026.cuda.qwen38_5090.test_mmmu_quality_protocol"]}
+........E.....
+======================================================================
+ERROR: test_synthetic_collection_binds_wire_and_raw_reply (test2026.cuda.qwen38_5090.test_mmmu_http_quality.HTTPQualityControls.test_synthetic_collection_binds_wire_and_raw_reply)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "D:\CantorAI\work\qwen38-5090\test2026\cuda\qwen38_5090\test_mmmu_http_quality.py", line 70, in test_synthetic_collection_binds_wire_and_raw_reply
+    with self.assertRaises(ValueError):replay(root,out) # Synthetic fixture can never replace the frozen805corpus.
+                                       ^^^^^^^^^^^^^^^^
+  File "D:\CantorAI\work\qwen38-5090\test2026\cuda\qwen38_5090\verify_mmmu_http_quality.py", line 8, in replay
+    corpus=Path(corpus).resolve(strict=True);run=Path(run).resolve(strict=True);_,rows,gold=load_corpus(corpus)
+                                                                                            ^^^^^^^^^^^^^^^^^^^
+  File "D:\CantorAI\work\qwen38-5090\test2026\cuda\qwen38_5090\mmmu_http_quality.py", line 21, in load_corpus
+    root=Path(root).resolve(strict=True);raw=(root/'manifest.json').read_bytes();require(sha(raw)==MANIFEST_SHA256,'Frozen corpus manifest differs');manifest=json.loads(raw)
+                                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Python\Python312\Lib\pathlib.py", line 1019, in read_bytes
+    with self.open(mode='rb') as f:
+         ^^^^^^^^^^^^^^^^^^^^
+  File "C:\Python\Python312\Lib\pathlib.py", line 1013, in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: 'C:\\Users\\developer\\AppData\\Local\\Temp\\tmpv1ply1v2\\corpus\\manifest.json'
+
+----------------------------------------------------------------------
+Ran 14 tests in 0.042s
+
+FAILED (errors=1)

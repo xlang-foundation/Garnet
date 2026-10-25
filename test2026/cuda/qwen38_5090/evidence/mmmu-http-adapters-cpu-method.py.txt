@@ -1,0 +1,20 @@
+from pathlib import Path
+import hashlib,json,sys
+r=Path('D:/CantorAI/work/qwen38-5090');m=r/'test2026/cuda/qwen38_5090';w=Path(__file__).resolve().parent;sys.path.insert(0,str(r))
+from test2026.cuda.qwen38_5090.mmmu_http_quality import load_corpus,adapt_request,MODELS,MANIFEST_SHA256,sha
+root=w/'mmmu/quality-corpus';manifest,rows,gold=load_corpus(root);variants=[]
+for engine in ('native','vllm','sglang'):
+ for model in MODELS:
+  digest=hashlib.sha256();total=0
+  for row in rows:
+   canonical=(root/row['request_file']).read_bytes();wire=adapt_request(canonical,engine,model);body=json.loads(wire);original=json.loads(canonical)
+   expected={**original,'model':model}
+   if engine in ('vllm','sglang'):expected['return_token_ids']=True
+   if engine=='sglang':expected['return_prompt_token_ids']=True
+   assert json.dumps(body,sort_keys=True,ensure_ascii=False,allow_nan=False)==json.dumps(expected,sort_keys=True,ensure_ascii=False,allow_nan=False)
+   assert sha(canonical)==row['canonical_request_sha256'] and body['messages']==original['messages']
+   if engine=='native' and model==MODELS[0]:assert wire==canonical
+   digest.update(row['id'].encode()+b'\0'+len(wire).to_bytes(8,'little')+wire);total+=len(wire)
+  variants.append({'engine':engine,'model_alias':model,'requests':len(rows),'wire_bytes_total':total,'ordered_id_length_wire_sha256':digest.hexdigest()})
+result={'status':'mmmu_http_frozen_corpus_adapters_cpu_verified','manifest_sha256':MANIFEST_SHA256,'source_rows':900,'requests':len(rows),'subjects':len(manifest['requests_per_subject']),'gold_records':len(gold),'adapter_variants':variants,'adapted_wires_checked':len(rows)*len(variants),'model_responses':0,'http_requests_sent':0,'gpu_used':False,'runtime_prompt_ids_verified':False,'runtime_image_preprocessing_verified':False,'quality_promotion_admitted':False,'performance_admitted':False,'scope':'All frozen files/hash/size and805ordered requests checked on CPU. Nine explicit engine/model alias wire adapters preserve semantic payload and only add installed-engine ID flags/declared model alias. No server requests or responses, tokenizer compatibility for alternate models, runtime preprocessing, actual quality or performance admission.'}
+(m/'evidence/mmmu-http-adapters-cpu-verified.json').write_text(json.dumps(result,indent=2),encoding='utf8');print(json.dumps(result,indent=2))

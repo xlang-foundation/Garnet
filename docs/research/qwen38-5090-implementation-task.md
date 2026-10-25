@@ -982,3 +982,44 @@ actual4K/protocol checks before timing. B1M4/M32 projections use existing admitt
 row ranges; M32 policy/precision and full-model numerics still need measurement.
 Original2x/halfTTFT, broad quality, actual4K, tuned refs, INT4,4B,B8/concurrency and
 clean repetitions remain open. No benchmark chart or claimed gain is updated.
+
+
+2026-10-25: Adapted805MMMU HTTP quality collector/replayer prepared, real inference UNRUN.
+Added standalone stdlib client and independent raw-file replay for already-ready
+native/vLLM/SGLang servers, with no server launch or GPU work. Caller must first
+establish exclusive GPU ownership/native-model correctness and externally bind
+server/checkpoint/runtime identity. Native and SGLang choice-level actual IDs,
+vLLM root prompt/choice output IDs follow installed-study reference adapters.
+Only ID-return flags and declared NVFP4/INT4/4B alias may change canonical wire.
+
+Every frozen805request/prompt/JPEG/gold hash and protocol-source hash is checked.
+Actual CPU replay checks7245wire adaptations (3engines x3aliases x805requests),
+semantic payload unchanged; alternate-model tokenizer compatibility is unproven.
+Sequential no-retry HTTP collection preserves gzipped exact wire, raw success/
+error reply, IDs/usage/finish metadata, errors, source-before/after hashes, UTC
+and file manifests in one explicit attempt directory; existing attempts cannot
+be overwritten. No latency/tok/s numbers are collected by this quality client.
+
+Independent replay recomputes all raw parsing, frozen prompt IDs/64image tokens,
+context/output/usage counts, wire adaptation, strict letter scoring and complete
+805cohort. Completed non-letter answers remain incorrect. Failed/interrupted
+cohorts retain raw prefix/failure and any unadmitted score artifact, no verified
+complete accuracy. No token inference from text or hidden retry/drop selection.
+Provided server identity is explicitly not attested by client. Actual pixel/grid
+preprocessing remains unverified even when image-token count agrees; external
+runtime pixel/grid evidence is still required. This adapted single-image256px
+MC screen is not full900MMMU, broad/high-resolution quality or speed promotion.
+
+Actual17CPU tests pass, including synthetic complete805 raw replay, failure
+prefix/no-retry/timeout/unsupported schema and prompt mutation despite refreshed
+file hashes. All transport responses are synthetic temporary CPU fixtures;
+actualHTTP requests/model responses/GPU executions remain0. Initial14test run
+failed because the synthetic fixture omitted its manifest; original raw failure
+and bytes kept. Added explicit synthetic manifest to reach unchanged frozen
+hash rejection, no assertion/protocol/threshold relaxation. Methods/logs/pins and
+preparation ZIP/JSON preserved. No actual quality score is claimed or published.
+
+Original integrated full-model handle remains LIVE: disabled14/102closed and
+locally observed; enabled11partial records, prefix checks report passed, no
+recorded error. Remote sources/DLL/SDK unchanged. B1 component/run/native/model
+gates, quality/preprocessing, actual4K, tuned/INT4/4B/repetitions and2x remain open.
