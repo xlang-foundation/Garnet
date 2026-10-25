@@ -1,0 +1,29 @@
+{
+  "status": "native_host_stage_cpu_test_source_gap_identified_supplement_prepared_locally",
+  "original_preparation_expected_count": 29,
+  "observed_original_remote_cpu_count": 27,
+  "observed_original_remote_cpu_passed": true,
+  "original_missing_test_source_pin": "Garnet/test2026/cuda/qwen38_5090/test_native_worker_io.py",
+  "original_preparation_changed": false,
+  "original_gpu_run_interrupted_or_restarted": false,
+  "current_local_frozen_supplement_test_count": 29,
+  "frozen_test_sources_sha256": {
+    "test_native_host_stage_trace.py": "5734bf0cfbfd77a647637e8f314ae15cdaaa929d7fbe185ab344d0a300bad568",
+    "test_native_host_stage_probe.py": "6cf311fc9d083bc6cd3fd02584e422bc86fd4bf1df68155a1c30ad6488e6962c",
+    "test_native_host_stage_admission.py": "d4f90417956b5d77a77b77e0661700fce224e7ddedbc6268db21cee46aa740b3",
+    "test_fixed_length_worker_contract.py": "1bcc99fc83a35d55a1e317f62bf4e8a25a8244cebe3866bbb9c7d22cfc237ea9",
+    "test_native_host_stage_worker_io.py": "a5e3035b567916144851fb96eb629ac7bc4200706666dd413cb500381b0810a1",
+    "native_worker_io.py": "763d61a0e7f34794bca269e4214fa03ff64b95b913778182e7c34fe40292dc84"
+  },
+  "test_modules": [
+    "test2026.cuda.qwen38_5090.test_native_host_stage_trace",
+    "test2026.cuda.qwen38_5090.test_native_host_stage_probe",
+    "test2026.cuda.qwen38_5090.test_native_host_stage_admission",
+    "test2026.cuda.qwen38_5090.test_fixed_length_worker_contract",
+    "test2026.cuda.qwen38_5090.test_native_host_stage_worker_io"
+  ],
+  "original_remote_io_source_not_yet_observed": true,
+  "remote_supplement_executed": false,
+  "diagnostic_proof_admitted": false,
+  "scope": "Actual original supervisor reported27passed while metadata expected29. Four diagnostic/contract modules are pinned; old worker-I/O test source was omitted. Unique new IO test copy has five local tests; all29local controls pass with source hashes. Wait original model closure, retain original count-check failure, then independently pin and run supplemental CPU controls before diagnostic proof admission. No numeric/state/timing tolerance changed."
+}
