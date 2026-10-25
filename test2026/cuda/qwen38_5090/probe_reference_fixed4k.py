@@ -15,9 +15,9 @@ REVISION='482ca0f3832238542f8f5295dde86b5f22711d80'
 
 def main():
  a=argparse.ArgumentParser(description=__doc__);a.add_argument('--root',type=Path,required=True);a.add_argument('--engine',choices=('vllm','sglang'),required=True);a.add_argument('--mode',choices=('ordinary','mtp'),required=True);a.add_argument('--output',type=Path,required=True);a.add_argument('--metadata',type=Path,required=True);a.add_argument('--launcher',type=Path,required=True);a.add_argument('--server-log',type=Path,required=True);a.add_argument('--ordinary',type=Path);args=a.parse_args()
- root=args.root;methods=Path(__file__).resolve().parent;out=args.output;parent='tokenizer-nfc-http-study-attempt1';proofpath=root/'results'/(parent+'-verified.json')
+ root=args.root;methods=Path(__file__).resolve().parent;out=args.output;parent='fixed-length-http-study-attempt1';proofpath=root/'results'/(parent+'-verified.json')
  if not proofpath.is_file():print(json.dumps({'status':'reference4k_native_http_proof_missing_no_requests_no_output'}));return 2
- proof=json.loads(proofpath.read_bytes());assert proof['status']=='tokenizer_nfc_http_study_replayed' and proof['native_fixed_4k_metrics_replayed'] and proof['archive_sha256']==sha(root/'results'/(parent+'-evidence.zip'))
+ proof=json.loads(proofpath.read_bytes());assert proof['status']=='fixed_length_http_study_replayed' and proof['native_fixed_4k_metrics_replayed'] and proof['archive_sha256']==sha(root/'results'/(parent+'-evidence.zip'))
  closed=json.loads((root/'results'/parent/'workflow.json').read_bytes());assert closed['cleanup_finished'] and closed['exit_code']==0 and closed['library_unchanged']
  metadata=json.loads(args.metadata.read_bytes());assert metadata['engine']==args.engine and metadata['generation_mode']==args.mode and metadata['context_capacity']==4096 and metadata['checkpoint_revision']==REVISION
  assert (args.ordinary is not None)==(args.mode=='mtp') and not out.exists()
@@ -48,7 +48,7 @@ def main():
     previous=validate_response((args.ordinary/relative).read_bytes(),args.engine,'qwen38-27b-nvfp4',expected);current=validate_response((out/relative).read_bytes(),args.engine,'qwen38-27b-nvfp4',expected)
     assert previous['completion_token_ids']==current['completion_token_ids'],('MTP screening differs from ordinary',row['id'])
    report['all805_ordinary_mtp_completion_ids_exact']=True;save()
-  command=[sys.executable,str(methods/'benchmark_fixed_context_reference.py'),'--engine',args.engine,'--url',url,'--corpus-archive',str(methods/'evidence/fixed-context-4096-corpus.zip'),'--output',str(out/'benchmark4k'),'--metadata',str(args.metadata)]
+  command=[sys.executable,str(methods/'benchmark_fixed_length_reference.py'),'--engine',args.engine,'--url',url,'--corpus-archive',str(methods/'evidence/fixed-length-4096-corpus.zip'),'--output',str(out/'benchmark4k'),'--metadata',str(args.metadata)]
   if args.ordinary is not None:command+=['--ordinary-controls',str(args.ordinary/'benchmark4k/controls')]
   subprocess.run(command,check=True);report['fixed_4k_cohorts_collected']=True;report['status']='reference_fixed4k_profile_collected';save()
  except BaseException as error:report.update(status='failed',error=repr(error));save();raise

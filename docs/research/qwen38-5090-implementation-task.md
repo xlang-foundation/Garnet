@@ -1314,3 +1314,63 @@ After current native HTTP and matched baselines, attempt isolated existing B8
 memory/correctness admission and actual HTTP batch coalescing, then profile B1/
 B8 dominant GPU work. Current single-slot B1 queued concurrency cannot be labeled
 GPU batching. No B8 runtime or2x measurement has occurred.
+
+
+### 2026-10-25: native natural-EOS trial closes failed; fixed-length regression active
+
+Original tokenizer-nfc-http-study-attempt1 exited1 during ordinary imageC2r0.
+Immutable archive2ef0d7c0036ceb8e578ea64673131464d45191e0cebafaa68824583e396406c4
+contains3140files/96542443bytes; source/runtime unchanged and cleanup finished.
+Actual remote/local failure replays agree with archived d155aaf2... checker;
+expected child1preserves the failed status. No MTP process or short pilot ran.
+
+Actual stream has74IDs, all exactly matching final IDs and native worker IDs;
+prompt3968, usage4042, stop=<|im_end|>/248046, finish_reason=stop. Frozen request
+had max_tokens128but no ignore_eos. This is valid natural stopping, not lost
+tokens. It violates the predeclared exact128output workload, so keep the entire
+trial failed. Independent raw replay validates all805screen replies and computes
+502correct/805=0.6236024844720497, zero unparseable responses. This is the adapted
+256pixel screen, not official900MMMU or broad quality promotion. Five completed
+partial cohorts replay actual event accounting/arithmetic; they remain excluded
+from admitted comparisons/charts. ImageC1sample gap2.6454064s is retained with
+sampled memory maxima. No2x result follows.
+
+Initial independent replay completed comparisons but requested an events digest
+after its ZIP context closed. Initial method a6d3abfa... and actual failed ledger
+retained. Corrected only digest lifetime/report construction; final d4dd7e34...
+reruns the unchanged archive and passes. No comparisons/thresholds were removed.
+
+Created separate explicit fixed-length corpus596991dd.../manifest25808fff...:
+add ignore_eos:true to all124request bodies, leaving every prompt-ID byte,
+message/image/nonce/cohort unchanged. Both actual installed reference protocols
+support this field. Natural-stop corpus/trial remain untouched. New named native
+worker/bridge preserve default stopping and implement per-request ignored EOS,
+restore the normal stop set on the next request and retain/count EOS token events.
+No product math/native DLL/SDK change or rebuild.32initial worker/quality/schema
+CPU controls pass; final client suite43tests passes in5.756s. Initial client
+43test fixture incorrectly assumed an empty final delta; static real-bridge
+inspection caught it before deployment. Retained that source/recipe/ledger,
+corrected the fixture to actual delta.content and only require choice0/length,
+keeping exact128IDs/usage. Final43CPU source/ledger retained separately.
+
+Focused fixed-length-eos-consistency-attempt1 requires actual normal74/forced128/
+normal74restore plus forced128SSE on the same old image, ordinary thenMTP. Prefix
+74must remain exact (including EOS at73), full128MTP IDs match ordinary, and all
+stream/native IDs/usage/length must agree. A real-model control precedes new
+performance runs. Passed preflight sees no source/runtime drift, GPU125MiB used,
+750910033920B owned scratch free. A146248byte verified bundle installs17absent
+methods/corpus/receipts and verifies all30targets, skips13matching files and
+reuses the existing805corpus. Original48577 supervises the new correctness job;
+43remote CPU tests passed in7.418s. It is running; no new model-policy or timing
+qualification yet. Original cache-retirement function AST is unchanged.
+
+Local reference metadata preparation pins74vLLM/197SGLang installed named files
+and8checkpoint metadata files from retained archives. Historical actual server
+schema plus synthetic cache0/resolved-MTP mutation tests:4CPU passes. Installed
+SGLang NEXTN resolves to EAGLE; identity checks use the primary-source resolved
+value. Linux helper checks/copies named installed sources and owned PID/argv/
+starttime; actual ready-server config must pass before metadata guards become
+true. This source/config tooling is unrun remotely. Reference client now requires
+the future successful fixed-length HTTP proof and uses its exact new corpus.
+Old failed proof cannot be promoted. Full strongest references/tuning/MTP,
+INT4/4B, real batching/profile optimization and repetitions remain required.

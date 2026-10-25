@@ -1,0 +1,6 @@
+from pathlib import Path
+import hashlib,json
+m=Path('D:/CantorAI/work/qwen38-5090/test2026/cuda/qwen38_5090');p=m/'replay_native_natural_eos_failure.py';before=p.read_bytes();target=m/'evidence/replay_native_natural_eos_failure-initial.py.txt';assert not target.exists();target.write_bytes(before)
+needle=b"  partial=[];samples=";assert before.count(needle)==1;after=before.replace(needle,b"  early_events_sha256=sha(z.read(root+key+'-events.jsonl'))\n"+needle)
+needle=b"'early_eos_events_sha256':sha(z.read(root+key+'-events.jsonl'))";assert after.count(needle)==1;after=after.replace(needle,b"'early_eos_events_sha256':early_events_sha256");p.write_bytes(after)
+sha=lambda b:hashlib.sha256(b).hexdigest();result={'status':'natural_eos_replay_report_lifetime_corrected','initial_sha256':sha(before),'corrected_sha256':sha(after),'change':'Compute early-events digest inside the existing ZIP context and use the cached digest in the final report. Actual comparisons, thresholds, source/data checks and expected failure status are unchanged. Initial reporting failure and source retained.'};(m/'evidence/natural-eos-replay-report-correction.json').write_text(json.dumps(result,indent=2),encoding='utf8');print(json.dumps(result))

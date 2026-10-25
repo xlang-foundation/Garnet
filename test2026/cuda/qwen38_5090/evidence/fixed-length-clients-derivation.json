@@ -1,0 +1,98 @@
+{
+  "status": "fixed_length_clients_derived_unrun",
+  "recipes": {
+    "benchmark_fixed_length_native.py": {
+      "source": "benchmark_fixed_context_native.py",
+      "source_sha256": "ca594554390d323c5449a5181e180ffc91360e2fe2e12d2fc087470aa651492d",
+      "changes": [
+        [
+          "ca78cdc12239810851e9943ccf6b318e8b29074b0fb0908728dd58132ae6923f",
+          "596991dd0907ccb8ae8ffb090737f59ba8da3faac181bb18fadc74ae0e4ef3ce",
+          1
+        ],
+        [
+          "829d7770f2d749e30a66e027940224e8ab77a488d0b5f9c456e4809ae845987c",
+          "25808fff53f326b6a1a970bb389173b2a54c1d1189248d40122fcdb959cb6987",
+          1
+        ],
+        [
+          " return value\n",
+          " choices=value.get('choices')\n if not isinstance(choices,list) or len(choices)!=1 or type(choices[0].get('index')) is not int or choices[0]['index']!=0 or choices[0].get('finish_reason')!='length':raise ValueError('Fixed-length stream must finish at length, with one choice')\n return value\n",
+          1
+        ],
+        [
+          "assert body['stream'] and body['max_tokens']==128 and len(ids)==3968",
+          "assert body['stream'] and body['max_tokens']==128 and body.get('ignore_eos') is True and len(ids)==3968",
+          1
+        ]
+      ],
+      "result_sha256": "0025e9538911fe35b9f59f2947455fa6f33c5ec9c791aea02506597b1e68946c",
+      "extra_semantic_tests": false
+    },
+    "benchmark_fixed_length_reference.py": {
+      "source": "benchmark_fixed_context_reference.py",
+      "source_sha256": "ae284bbf2d58cb5db79b881ddc269850ed7fcbedb064aaf4fe04c8c098ad5acf",
+      "changes": [
+        [
+          "from benchmark_fixed_context_native import",
+          "from benchmark_fixed_length_native import",
+          1
+        ],
+        [
+          "assert body['stream'] and body['model']=='qwen38-27b-nvfp4' and body['max_tokens']==128",
+          "assert body['stream'] and body['model']=='qwen38-27b-nvfp4' and body['max_tokens']==128 and body.get('ignore_eos') is True",
+          1
+        ]
+      ],
+      "result_sha256": "a4eb4e77fbca7a291a9e6c795ad43a1e421ef18c05f2f034bb2bfa8628844bc1",
+      "extra_semantic_tests": false
+    },
+    "test_fixed_length_native_stream.py": {
+      "source": "test_fixed_context_native_stream.py",
+      "source_sha256": "a9fdea525960b16c6cb0827e6c7c307ffb285f9a564698e5e367b0f59e8cdd38",
+      "changes": [
+        [
+          "benchmark_fixed_context_native",
+          "benchmark_fixed_length_native",
+          1
+        ],
+        [
+          "'id':'synthetic-cpu','prompt_token_ids'",
+          "'id':'synthetic-cpu','choices':[{'index':0,'delta':{'content':''},'finish_reason':'length'}],'prompt_token_ids'",
+          1
+        ]
+      ],
+      "result_sha256": "d68777ad5274ad131c0a96f6627cbdd29398301d38b1ab1417bda88296a3c8b8",
+      "extra_semantic_tests": true
+    },
+    "test_fixed_length_reference.py": {
+      "source": "test_fixed_context_reference.py",
+      "source_sha256": "5faf551f75d0932ab2f50a3c31154044fe342078e1b788e5f8e260ed62ed5fa0",
+      "changes": [
+        [
+          "benchmark_fixed_context_reference",
+          "benchmark_fixed_length_reference",
+          1
+        ]
+      ],
+      "result_sha256": "1156bd78a4b897b13e2323e82c07e1793b8ead4dac3bfcae0c1f0e9353477a42",
+      "extra_semantic_tests": true
+    }
+  },
+  "fixed_length_corpus": {
+    "status": "fixed_length_corpus_prepared_unrun",
+    "archive_sha256": "596991dd0907ccb8ae8ffb090737f59ba8da3faac181bb18fadc74ae0e4ef3ce",
+    "manifest_sha256": "25808fff53f326b6a1a970bb389173b2a54c1d1189248d40122fcdb959cb6987",
+    "requests": 124,
+    "unchanged_image_nonces": 62,
+    "unchanged_prompt_ids_each": 3968,
+    "fixed_length_policy": {
+      "ignore_eos": true,
+      "input_tokens": 3968,
+      "required_output_tokens": 128,
+      "capacity": 4096
+    },
+    "scope": "Explicit fixed-length generation benchmark:3968actual input IDs plus128actual output tokens, ignoring EOS for this workload only. Natural-stop original trial remains failed/preserved. Same raw request bodies must be used for native/vLLM/SGLang.805adapted quality continues normal stopping and is separate. CPU corpus derivation is not actual model/HTTP/timing qualification."
+  },
+  "scope": "Common explicit-ignore_eos body checks, unchanged128actual-ID/usage/cohort metrics and native length-finish requirement. EOS tokens remain counted as actual generated tokens. Separate old natural-stop failure stays failed. No actual HTTP/server/model run yet."
+}
