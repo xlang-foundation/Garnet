@@ -55,7 +55,9 @@ try:
    ids=leading+[config['image_token_id']]*64+tokenizer.encode('<|vision_end|>'+content[1]['text']+suffix);position,current=image_positions(len(ids),image_start,64,8)
   assert ids and len(ids)+limit<=4096
   embeddings=io.embedding(ids);hidden=[io.visual_token(visual,i-image_start) if visual is not None and image_start<=i<image_start+64 else io.row(embeddings,i) for i in range(len(ids))]
-  hidden=[io.stack_rows([value]) for value in hidden];generated=[];text=''
+  # Row/VisualToken already return [1,hidden]. Native StackRows([x]) returns x;
+  # avoid that extra ABI call while retaining each row through the request.
+  generated=[];text=''
   def notify(row,token,n):
    global text
    assert row==0

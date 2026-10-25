@@ -4507,3 +4507,49 @@ boundary wire hashes/3968prompt counts were checked on CPU; no runtime4Krequest
 was sent. A guarded outer ownership/archive/scratch controller and actual corpus
 installation still precede execution. No new HTTP/model-quality/benchmark score
 or2x admission is claimed.
+
+
+### 2026-10-25: B1 model attempt2 closed; full4K HTTP study prepared
+
+Actual original supervisor is terminal exit0. All4B4 smoke and8B1 cases passed;
+18CPU controls preceded collection. Remote and independent local replay JSONs
+are identical; archive052e3bd9... contains393files/6073686bytes. Current8ae DLL,
+all source/runtime pins and owned scratch cleanup are unchanged. Ordinary/MTP
+IDs, complete canonical state, raw hidden/normalized vectors, notifications,
+repeats and prefix0/1/2/4 match within the B1 study. B1 text/image cases differ
+from retained B4 outputs on both repeats; red/green do not. This is correctness
+within the declared B1 path, not broad quality, serving memory or speed.
+One local replay launcher path was wrong and failed before verifier execution;
+the absolute CPU Python launcher passed. Both commands and raw failure/pass
+are retained in b1-model2-local-replay-ledger. No verifier/input/tolerance change.
+
+Positive HTTP factory now requires actual identical model2 proof pair/archive,
+current verifier, source/runtime and cache receipt. It materialized28upload
+entries/26methods with preparationfad72a50.... Earlier absent-proof guard had
+actual Python exit2 and created neither prep nor plan (shell wrapper reported1).
+Read-only remote preflight passes:200unchanged source/input files, all runtime
+pins,125MiB adapter use and750402330624bytes free in the owned SSD scratch.
+18missing inputs, zero existing replacements; use the same fixed study root.
+
+New native fixed-context client uses the immutable124request corpus:3968actual
+prompt IDs plus128actual generated IDs, text/image C1/2/4/8,64measured and60warmup
+requests per mode. Actual complete prompt/token IDs, usage, raw SSE and timestamps
+are retained; early stop/missing IDs fail without retries or fabricated padding.
+MTP must match ordinary actual IDs on all805screens, two boundaries and all124
+long requests.29CPU controls cover worker policy/notification, quality protocol
+and synthetic4Kstream schemas. Prior local tool output reported29passes; first
+new client test import failed before running due to sibling module lookup. The
+original client/test bytes are retained as fixed-context-native-initial-*.txt;
+path initialization corrected the import without relaxing assertions. These
+synthetic CPU observations are not HTTP/model measurements. Actual remote CPU
+ledger and server replies remain required. Frozen805 corpus installer validates
+every byte and reuses exact existing files; prior CPU reuse was0created/2417reused.
+
+Worker removes redundant StackRows([row]) ABI calls. Native source confirms
+one-element StackRows returns its argument; Row/VisualToken already produce
+[1,hidden]. Per-token row allocations still exist. No measured speed benefit
+is inferred. Native single-slot queue remains; concurrency does not mean GPU
+batching. Paired outer controller preserves failures, whole-stage/cohort memory,
+source/runtime hashes and only retires its newly created private engine files.
+HTTP data and native4K metrics are not yet collected; reference4K/tuned/MTP,
+INT4 W4A16, matched4B, clean repetitions and original2x target remain open.
