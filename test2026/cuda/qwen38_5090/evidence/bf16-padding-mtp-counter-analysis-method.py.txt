@@ -1,0 +1,17 @@
+from pathlib import Path
+import hashlib,json,zipfile
+w=Path('C:/Users/developer/Documents/Codex/2026-10-23/referenced-chatgpt-conversation-this-is-an');name='bf16-padded-lifecycle-scope-fixed-attempt2';archive=w/'outputs'/(name+'-evidence.zip');a=json.loads((w/'outputs'/(name+'-verified.json')).read_bytes());b=json.loads((w/'outputs'/(name+'-remote-verified.json')).read_bytes());assert a==b and a['status']=='bf16_padded_lifecycle_replayed' and len(a['cases'])==14
+assert hashlib.sha256(archive.read_bytes()).hexdigest()==a['archive_sha256']
+with zipfile.ZipFile(archive) as z:
+ manifest=json.loads(z.read('evidence-manifest.json'));assert z.testzip() is None
+ for n,h in manifest['files'].items():assert hashlib.sha256(z.read(n)).hexdigest()==h
+ report=json.loads(z.read('results/'+name+'/native/report.json'));assert report['garnet_dll_sha256']==a['library_sha256'] and len(report['cases'])==14
+ rows=[]
+ for c in report['cases']:
+  m=c['speculative_metrics'];physical=len(c['physical_keys']);real=c['real_rows'];assert physical==4 and real+c['padded_rows']==physical
+  proposed,accepted=m['proposed_draft_tokens'],m['accepted_draft_tokens'];assert 0<=accepted<=proposed
+  rows.append({'group':c['group'],'repeat':c['repeat'],'real_rows':real,'physical_rows':physical,'padded_rows':c['padded_rows'],'physical_rows_per_real_row':physical/real,'proposed_draft_tokens_physical':proposed,'accepted_draft_tokens_physical':accepted,'accepted_fraction_physical':accepted/proposed if proposed else None,'target_verification_calls':m['target_verification_calls'],'target_forward_calls':m['target_forward_calls'],'mtp_draft_calls':m['mtp_draft_calls'],'target_head_evaluations':m['target_head_evaluations'],'real_emitted_tokens_including_stop':sum(len(ids) for ids in c['generated_ids']),'physical_emitted_tokens_including_stop':sum(len(ids) for ids in c['all_physical_generated_ids'])})
+ for group in range(7):
+  x,y=[r for r in rows if r['group']==group];assert {k:v for k,v in x.items() if k!='repeat'}=={k:v for k,v in y.items() if k!='repeat'}
+output={'status':'closed_parent_physical_padding_and_mtp_counters_replayed','archive_sha256':a['archive_sha256'],'library_sha256':a['library_sha256'],'method_sha256':hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),'cases':rows,'c1_physical_rows_per_real_row':4,'full_real_mixed_group_accepted_fraction':next(r['accepted_fraction_physical'] for r in rows if r['group']==5 and r['repeat']==0),'scope':'Descriptive counters from the closed/replayed97c14case corpus only. Draft/acceptance/head counters include physical private-padding rows; real emitted counts are separate. No times, tok/s, speedup, general acceptance estimate, broader quality or performance eligibility. Static row reduction does not imply proportional GPU speedup; tile padding and memory traffic may remain.'}
+p=w/'outputs/Garnet-BF16-Padding-MTP-Counters.json';assert not p.exists();p.write_text(json.dumps(output,indent=2),encoding='utf8');print(json.dumps({'status':output['status'],'cases':len(rows),'c1_physical_rows_per_real_row':4,'full_real_mixed_group_accepted_fraction':output['full_real_mixed_group_accepted_fraction']}))

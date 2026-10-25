@@ -1,0 +1,17 @@
+from pathlib import Path
+import json,hashlib,sys
+r=Path('D:/CantorAI/work/qwen38-5090');m=r/'test2026/cuda/qwen38_5090';sys.path.insert(0,str(m));from run_logged import run
+w=Path('C:/Users/developer/Documents/Codex/2026-10-23/referenced-chatgpt-conversation-this-is-an');fixture=w/'work/bf16-low-batch-metadata-fixture.json';assert not fixture.exists();e=m/'evidence';ledger=e/'bf16-low-batch-metadata-local-ledger';source=m/'prepare_bf16_low_batch_metadata_fixture.py'
+code=run([sys.executable,str(source),str(fixture)],ledger,'setup','Generate CPU B1 metadata mutation and legacy cross-admission fixture',[source,m/'bf16_low_batch_layout.py',r/'xModel/qwen35/vl_0_8b/kv_bf16_study_layout.py']);assert code==0
+p=json.loads(fixture.read_bytes());print(json.dumps({'profiles':len(p['bases']),'legacy':len(p['legacy_bases']),'mutations':len(p['mutations'])}))
+bat=w/'work/compile-bf16-low-batch-metadata.bat';assert not bat.exists();exe=w/'work/bf16-low-batch-metadata.exe';assert not exe.exists()
+bat.write_text('@echo off\ncall "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Auxiliary\\Build\\vcvars64.bat" -vcvars_ver=14.29\nif errorlevel 1 exit /b %errorlevel%\nset "TMP=%~dp0"\nset "TEMP=%TMP%"\ncl /nologo /EHsc /std:c++17 /MT /utf-8 /I"'+str(r/'third_party')+'" /I"'+str(r/'src/backends/tensorrt')+'" "'+str(m/'probe_bf16_low_batch_metadata.cpp')+'" /Fo"%~dp0bf16-low-batch-metadata.obj" /Fe"%~dp0bf16-low-batch-metadata.exe"\nif errorlevel 1 exit /b %errorlevel%\ndumpbin /imports "%~dp0bf16-low-batch-metadata.exe" > "%~dp0bf16-low-batch-metadata-imports.txt"\nexit /b %errorlevel%\n',encoding='utf8')
+inputs=[m/'bf16_low_batch_layout_contract.h',r/'src/backends/tensorrt/qwen38_bf16_kv_layout_contract.h',m/'probe_bf16_low_batch_metadata.cpp',source,fixture,m/'bf16_low_batch_layout.py'];before={str(n):hashlib.sha256(n.read_bytes()).hexdigest() for n in inputs}
+code=run(['cmd.exe','/d','/c',str(bat)],ledger,'build','Private CPU metadata validator build only; inspect imports before running',[bat]+inputs);assert code==0
+imports=w/'work/bf16-low-batch-metadata-imports.txt';raw=imports.read_bytes().lower();assert not any(n in raw for n in (b'cudart',b'nvcuda',b'cublas',b'nvinfer',b'garnet.dll'))
+code=run([str(exe),str(fixture)],ledger,'correctness','B1 full metadata mutation corpus and unchanged old B4/B8 cross-dialect gates',[exe,imports]+inputs);assert code==0
+assert all(hashlib.sha256(Path(n).read_bytes()).hexdigest()==h for n,h in before.items())
+p={'status':'b1_metadata_cpu_contract_and_cross_admission_passed','source_sha256':before,'b1_profiles':2,'legacy_profiles':4,'cross_dialect_rejections':12,'invalid_layouts':len(p['mutations']),'cpu_executable_sha256':hashlib.sha256(exe.read_bytes()).hexdigest(),'no_cuda_garnet_trt_imports_verified':True,'gpu_used':False,'native_helper_plugin_model_admitted':False,'scope':'New B1-only metadata parser and unchanged B4/B8 public parser; complete local CPU mutation/cross-admission checks. No allocation, native helper/plugin/SDK ABI, GPU enqueue/model/quality/speed result.'}
+(e/'bf16-low-batch-metadata-local-build.json').write_text(json.dumps(p,indent=2),encoding='utf8')
+for path in (bat,imports):(e/(path.name+'.txt')).write_bytes(path.read_bytes())
+print(json.dumps(p))

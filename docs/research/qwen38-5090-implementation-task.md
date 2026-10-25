@@ -168,7 +168,12 @@ Next gates, in order:
    oracle-vector hash/error last-bit differences are preserved. Separate B1
    commit/layout code now privately compiles;5CPU oracle/legacy isolation tests
    and63CPU shape checks pass.20raw-case/3graph/66negative GPU gate remains
-   UNRUN while the original full-model sampler job owns the GPU. Require typed
+   UNRUN while the original full-model sampler job owns the GPU. Standalone
+   runner/checker now pass17CPU controls; actual missing-parent refusal creates
+   no runtime preparation. Separate B1 metadata validator passes7820malformed
+   layouts and12cross-dialect rejections while old B4/B8 parser still accepts
+   its four profiles. After actual model closure/both replays, collect/replay
+   isolated B1 operator; a failed model parent remains failed. Require typed
    commit/helper/plugin/lowering and complete model/lifecycle/4K/quality/protocol
    admission for C1. Existing B4/B8 guards remain unchanged. Canonical427294720B
    for B1 versus1709178880B for physical B4 is a layout calculation, not total
