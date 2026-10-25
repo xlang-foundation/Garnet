@@ -1,0 +1,23 @@
+{
+  "status": "cpu_only_workspace_adapter_and_forbidden_enqueue_stubs",
+  "source_functions": {
+    "Legacy": {
+      "source": "src/cuda/qwen38_bf16_kv_overlay.cu",
+      "source_sha256": "ddafabdb6e5cd04a0beb5ee8c39526397cf9d26ac3c8deded2dc6bc63e37b2fc",
+      "valid_function": "bool valid(Qwen35AttentionCoreConfig c){\n    return (c.batch==4||c.batch==8)&&(c.tokens==4||c.tokens==32)&&\n        c.heads==24&&c.kv==4&&c.capacity==4096&&c.dim==256;\n}",
+      "renamed_valid_function": "bool validLegacy(Qwen35AttentionCoreConfig c){\n    return (c.batch==4||c.batch==8)&&(c.tokens==4||c.tokens==32)&&\n        c.heads==24&&c.kv==4&&c.capacity==4096&&c.dim==256;\n}",
+      "workspace_function": "size_t Qwen38BF16KVOverlayWorkspace(const Qwen35AttentionCoreConfig& c) noexcept {\n    return valid(c)?size_t(c.batch)*c.tokens*c.heads*c.capacity*sizeof(float):0;\n}",
+      "renamed_workspace_function": "size_t Qwen38BF16KVOverlayWorkspace(const Qwen35AttentionCoreConfig& c) noexcept {\n    return validLegacy(c)?size_t(c.batch)*c.tokens*c.heads*c.capacity*sizeof(float):0;\n}"
+    },
+    "LowBatch": {
+      "source": "test2026/cuda/qwen38_5090/bf16_kv_low_batch_candidate.cu",
+      "source_sha256": "63e7fa5b7544711bae044b853cb5adbf6db754d335fa7b0c82e4f5116d129185",
+      "valid_function": "bool valid(Qwen35AttentionCoreConfig c){\n    return BF16KVLowBatchCandidateProfile(c);\n}",
+      "renamed_valid_function": "bool validLowBatch(Qwen35AttentionCoreConfig c){\n    return BF16KVLowBatchCandidateProfile(c);\n}",
+      "workspace_function": "size_t Qwen38BF16KVLowBatchCandidateWorkspace(const Qwen35AttentionCoreConfig& c) noexcept {\n    return valid(c)?size_t(c.batch)*c.tokens*c.heads*c.capacity*sizeof(float):0;\n}",
+      "renamed_workspace_function": "size_t Qwen38BF16KVLowBatchCandidateWorkspace(const Qwen35AttentionCoreConfig& c) noexcept {\n    return validLowBatch(c)?size_t(c.batch)*c.tokens*c.heads*c.capacity*sizeof(float):0;\n}"
+    }
+  },
+  "result_sha256": "66fc1a2fe059dfdc32756ae05df2fea5ff12af3d2629f350aace0aac39e1c771",
+  "scope": "Extracted exact pure host validity/workspace functions from qualified kernels, with names only disambiguated. Both Run symbols are CPU-only refusal stubs with a call counter. No CUDA code/runtime calls. This tests wrapper CPU metadata/serialization only; actual GPU enqueue and ABI remain unqualified."
+}

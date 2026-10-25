@@ -817,3 +817,33 @@ BF16 integration status update: helper/package, strict64layer metadata, default-
 
 Original bf16-model-default-off-attempt1 now terminal exit0 with private-cache cleanup complete. Actual new /MT DLL retains exact four-group/repeat token IDs, ordinary/MTP full-state hash witnesses, allfour real-row duplicate-pair checks and all eight raw last-hidden arrays versus the retained original default-off model. Immutable870224B/68file archive8d87b81661cf02b003f3b16d6e4c1b88439957b950e6a01abe626aeeb884b46c independently replayed on both machines; current/archived verifierf24a58bdaf8b9e52054d5e2df582700429fbe0ce18bd23e8eabda5673baa91f0 match. Correctness adapter peak33727782912B is not serving memory or a BF16-fit/performance result. Candidate23sources pinned before launch and unchanged after; extra inherited18source files match retained old pins on post-process readback. This last readback is explicitly not retroactive prelaunch evidence. BF16 enabled path remains unqualified.
 Prepared hash-bound BF16 model probe/runner and independent archive/replay methods. Preparation488dd08013862de61160991250db3188efeb60ef993d87eddafc213e25e95ffb binds11methods and10retained oracle/report inputs, checkpoint config71fa01bb..., metadata fixture7481110b... (996367B). Runner now pins the complete inherited-plus-candidate source set before/after launch, gates on both verified default-off/build archives and byte-derives the new probe from the retained full-model probe. Four runtime metadata profiles/8856invalid metadata records,16malformed commit calls andthreezero-prefix modes are planned, not yet passed; then B4/T32prefill/T4decode fixed text/image groups repeated with exact retained token IDs and exact same-BF16 ordinary/MTP state/rawhidden. No broad quality, actual4K, B8, protocol or2x timing claim. No restart of a silent process; original default-off handle completed before any of the new BF16 method uploads.
+
+
+2026-10-25: Separate B1 overlay plugin preparation (runtime UNRUN).
+Original integrated-batch-top1-model-lifecycle-attempt1 handle re-polled LIVE;
+read-only native disabled report advanced to11/14cases with prefix phase passed,
+no recorded error, neither complete mode closed/replayed. No remote mutation.
+
+Prepared separate GarnetQwen38BF16KVLowBatchOverlay type/version1 with strict
+batch1, T4/T32, all16full-attention layers and unchanged72byte nine-int64 wire.
+Literal old-wrapper derivations preserve all shape/format/workspace/offset
+guards and forward to the already GPU-qualified B1 attention candidate. Old
+B4/B8 plugin sources remain unchanged; new files are isolated under test2026,
+not linked or registered in Garnet. CPU-only workspace adapter extracts exact
+host validity/workspace formulas; Run symbols refuse and count any call.
+
+Private local /MT C++17 compile/link against matching remote TensorRT10.16.1
+headers/import library passed. EXE4326d674a1793f63d7fd2675e8aeb1f550fa81f81d052c95ee9f9f2469b5f7c8
+imports only nvinfer_10.dll/KERNEL32.dll; no CUDA or Garnet dependency. Executable
+NOT RUN: local runtime DLL differs from remote. Actual build ledger and unchanged
+source hashes retained; literal wrapper/probe/adapter derivations replay passed.
+Initial preflight wrong fixture path failed before compilation; original method
+and explicitly summarized observed failure retained. Corrected generated fixture
+include/path only. No C++/kernel/control-count/tolerance change for that correction.
+
+Probe plans32roundtrips/clones,1632bad wires,992bad descriptors,672bad formats,
+96cross-dialect rejections and64legacy-positive roundtrips, zero Run calls.
+Those runtime checks are UNRUN. Future remote registry/ABI and valid GPU enqueue,
+B1 commit/helper/lowering/model, quality, actual4K and HTTP remain unqualified.
+Archive/JSON in outputs Garnet-B1-Overlay-Plugin-Preparation; this is preparation,
+not numerical/performance admission. Original2x/halfTTFT and all comparisons remain.

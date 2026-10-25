@@ -4161,3 +4161,33 @@ padding, not timings, general acceptance estimates or2x speed evidence. Row
 reduction is an implementation direction; minimum GPU tiles/memory bandwidth
 can prevent proportional speedup. Original2x/halfTTFT goal and all reference/
 4K/broad-quality/INT4/4B/B8/repetition requirements remain unchanged.
+
+
+2026-10-25: Separate B1 overlay plugin preparation (runtime UNRUN).
+Original integrated-batch-top1-model-lifecycle-attempt1 handle re-polled LIVE;
+read-only native disabled report advanced to11/14cases with prefix phase passed,
+no recorded error, neither complete mode closed/replayed. No remote mutation.
+
+Prepared separate GarnetQwen38BF16KVLowBatchOverlay type/version1 with strict
+batch1, T4/T32, all16full-attention layers and unchanged72byte nine-int64 wire.
+Literal old-wrapper derivations preserve all shape/format/workspace/offset
+guards and forward to the already GPU-qualified B1 attention candidate. Old
+B4/B8 plugin sources remain unchanged; new files are isolated under test2026,
+not linked or registered in Garnet. CPU-only workspace adapter extracts exact
+host validity/workspace formulas; Run symbols refuse and count any call.
+
+Private local /MT C++17 compile/link against matching remote TensorRT10.16.1
+headers/import library passed. EXE4326d674a1793f63d7fd2675e8aeb1f550fa81f81d052c95ee9f9f2469b5f7c8
+imports only nvinfer_10.dll/KERNEL32.dll; no CUDA or Garnet dependency. Executable
+NOT RUN: local runtime DLL differs from remote. Actual build ledger and unchanged
+source hashes retained; literal wrapper/probe/adapter derivations replay passed.
+Initial preflight wrong fixture path failed before compilation; original method
+and explicitly summarized observed failure retained. Corrected generated fixture
+include/path only. No C++/kernel/control-count/tolerance change for that correction.
+
+Probe plans32roundtrips/clones,1632bad wires,992bad descriptors,672bad formats,
+96cross-dialect rejections and64legacy-positive roundtrips, zero Run calls.
+Those runtime checks are UNRUN. Future remote registry/ABI and valid GPU enqueue,
+B1 commit/helper/lowering/model, quality, actual4K and HTTP remain unqualified.
+Archive/JSON in outputs Garnet-B1-Overlay-Plugin-Preparation; this is preparation,
+not numerical/performance admission. Original2x/halfTTFT and all comparisons remain.
