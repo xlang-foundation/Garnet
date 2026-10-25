@@ -1,0 +1,8 @@
+from pathlib import Path
+import hashlib,json,os,sys
+r=Path('D:/CantorAI/work/qwen38-5090');m=r/'test2026/cuda/qwen38_5090';w=Path(__file__).resolve().parent;o=w.parent/'outputs';sys.path.insert(0,str(m));from run_logged import run
+name='integrated-batch-top1-model-lifecycle-attempt1';archive=o/(name+'-evidence.zip');expected='2bec2ce611410554757d079cf7ee5ed9aeea9fbdd0170ee35240a5326c798459';remote=json.loads((o/(name+'-remote-verified.json')).read_bytes())
+assert len(expected)==64 and hashlib.sha256(archive.read_bytes()).hexdigest()==remote['archive_sha256']==expected
+prep=m/'evidence/integrated-top1-model-preparation.json';p=json.loads(prep.read_bytes());artifacts=[archive,prep,m/'verify_integrated_batch_top1_model.py',m/'integrated_top1_model_replay.py']+[o/(n+'-evidence.zip') for n in p['parents']]
+os.chdir(r);code=run([sys.executable,str(m/'verify_integrated_batch_top1_model.py'),str(o)],m/'evidence/integrated-top1-full-model-local-replay-ledger','correctness','Actual closed two-mode model archive: full14case/102raw-vector source/runtime/lifecycle replay for eachmode',artifacts+[Path(__file__)])
+assert code==0

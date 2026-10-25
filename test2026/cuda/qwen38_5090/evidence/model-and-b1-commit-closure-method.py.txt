@@ -1,0 +1,77 @@
+from pathlib import Path
+from datetime import datetime,timezone
+import hashlib,json,shutil,zipfile
+r=Path('D:/CantorAI/work/qwen38-5090');m=r/'test2026/cuda/qwen38_5090';e=m/'evidence';w=Path(__file__).resolve().parent;o=w.parent/'outputs'
+sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+now=datetime.now(timezone.utc).isoformat()
+def write(path,value):path.write_text(json.dumps(value,indent=2)+'\n',encoding='utf8')
+jobs=['integrated-batch-top1-model-lifecycle-attempt1','bf16-low-batch-commit-native-attempt1']
+proofs={}
+for name in jobs:
+ local=o/(name+'-verified.json');remote=o/(name+'-remote-verified.json');archive=o/(name+'-evidence.zip')
+ p=json.loads(local.read_bytes());assert p==json.loads(remote.read_bytes())
+ assert sha(archive)==p['archive_sha256'] and len(p['archive_sha256'])==64
+ assert p['replay_verifier_sha256']==p['archived_replay_verifier_sha256']
+ assert not p['performance_admitted'];proofs[name]=p
+ for f in (local,remote,o/(name+'-replay-remote.log')):shutil.copyfile(f,e/f.name)
+ for method in ('replay-integrated-top1-full-model-local.py','replay-b1-commit-local.py'):
+  src=w/method;shutil.copyfile(src,e/(method+'.txt'))
+ with zipfile.ZipFile(archive) as z:
+  workflow=json.loads(z.read('results/'+name+'/workflow.json'))
+  assert workflow['cleanup_finished'] and workflow['library_unchanged'] and workflow['exit_code']==0
+  write(e/(name+'-closure.json'),{'recorded_utc':now,'job':name,'original_handle_state':'completed','original_handle_exit':0,'archive_sha256':p['archive_sha256'],'archive_bytes':archive.stat().st_size,'files_verified':p['files_verified'],'both_replay_jsons_identical':True,'cleanup_finished':True,'library_unchanged':True,'performance_admitted':False,'scope':p['scope']})
+model=proofs[jobs[0]];commit=proofs[jobs[1]]
+assert model['status']=='integrated_top1_full_model_lifecycle_replayed' and len(model['variants'])==2
+assert all(v['cases']==14 and v['raw_vectors_exact']==102 for v in model['variants'])
+assert commit['status']=='bf16_low_batch_commit_exact_bytes_replayed' and len(commit['cases'])==20
+initial=e/'integrated-top1-full-model-local-replay-initial.py.txt'
+assert initial.exists()
+write(e/'integrated-top1-full-model-local-replay-correction.json',{'recorded_utc':now,'initial_method_sha256':sha(initial),'corrected_method_sha256':sha(w/'replay-integrated-top1-full-model-local.py'),'failure':'65-character checksum manually transcribed from wrapped terminal caused wrapper preflight assertion before independent verifier executed.','correction':'Use the 64-character SHA256 of the downloaded archive and independently generated remote machine proof; both equal the immutable archive digest.','archive_sha256':model['archive_sha256'],'source_or_data_or_verifier_changed':False,'checks_or_tolerances_relaxed':False,'corrected_replay_exit':0,'both_replays_identical':True})
+shutil.copyfile(w/'bf16-low-batch-commit-native-attempt1-preflight.json',e/'bf16-low-batch-commit-native-attempt1-preflight.json')
+path=o/'Garnet-Parallel-Top1-Integration-Status.json';s=json.loads(path.read_bytes());s.update(recorded_utc=now,status='full_model_lifecycle_and_isolated_b1_commit_closed_replayed',last_handle_poll_state='completed',full_model_lifecycle_correctness_qualified=True,pushed_commit='d4c2f2ad4',new_model_speed_measurement=False,two_times_target_achieved=False)
+s['next_gates']=['Qualify the isolated B1 TensorRT plugin and native helper before deploying the prepared B1 route','Preserve and rebuild the native package, then qualify B1 full-model state, streaming HTTP, quality and actual 4K','Collect repeated matched B1 and concurrency HTTP timings including tuned/MTP, INT4 and 4B references toward the original 2x goal']
+s['scope']='Current closure receipt. New 5ac DLL passes the unchanged two-mode lifecycle corpus and isolated B1 commit passes exact-byte replay. Historical preparation sections retain their original observations. Neither correctness run is an HTTP speed measurement; broad quality, actual 4K, B8 and the 2x goal remain open.'
+n=s['new_native_model_worker'];n.update(last_handle_poll_state='completed',completed_model_modes_verified=2,full_model_lifecycle_correctness_qualified=True,model_qualified=False,archive_sha256=model['archive_sha256'],both_independent_replays_pass=True,last_readonly_observed_case_records={'disabled':14,'enabled':14},last_readonly_observation_scope='Superseded by immutable closed archive and identical independent remote/local replays.',scope=model['scope'])
+s['full_model_lifecycle_closure']={k:model[k] for k in ('status','archive_sha256','files_verified','library_sha256','correctness_sampled_peak_adapter_bytes','broad_quality_qualified','actual_4k_qualified','b8_qualified','streaming_http_qualified','performance_admitted','scope')}
+s['full_model_lifecycle_closure']['both_replays_identical']=True
+s['b1_commit_runtime_closure']={'status':commit['status'],'archive_sha256':commit['archive_sha256'],'files_verified':commit['files_verified'],'cases_exact':20,'witness_bytes':104704,'graph_profiles':3,'graph_replays_each':3,'negative_calls':66,'both_replays_identical':True,'source_runtime_unchanged':True,'native_helper_plugin_model_admitted':False,'performance_admitted':False,'scope':commit['scope']}
+s['b1_commit_runner_preparation'].update(runtime_preparation_materialized=True,original_model_last_poll_state='completed')
+write(path,s)
+addition='''
+
+### 2026-10-25: closed integrated model and B1 cache-update correctness
+
+Original supervised integrated-batch-top1-model-lifecycle-attempt1 closed with
+exit 0, cleanup complete and source/runtime unchanged. The immutable 391-file
+archive independently replays on the 5090 and local CPU with identical proofs.
+Disabled and enabled processes each match all 14 cases and 102 raw vectors
+against the retained parent. Actual host dispatch counters are 4078 legacy/0
+parallel when disabled and 0 legacy/4078 parallel when enabled. Counters include
+capture construction and exclude graph replay; they establish routing only.
+The first local wrapper failed before verifier execution because a terminal-wrap
+checksum transcription had 65 characters. Original method preserved; corrected
+64-character digest agrees with archive and machine remote proof. No data,
+verifier, source, assertion or tolerance change. Actual successful replay ledger
+and correction receipt retained alongside both proofs.
+
+After that closure, the B1 runtime factory positive path ran; launch preflight
+reported 109 MiB adapter memory and no source/runtime/tool drift or occupied
+outputs. The 18 missing inputs were uploaded once, each acknowledged. Original
+bf16-low-batch-commit-native-attempt1 then closed exit 0. Actual remote compiler
+passed 17 CPU tests and 63 shape controls. All 20 B1/T4,T32 full-state cases,
+three graph profiles with three replays each, 66 rejected calls, readonly inputs
+and canaries pass. Independent remote/local replays agree exactly on all 104704
+frozen witness bytes and all 205 archived files. The Garnet DLL was not loaded
+or changed; only standalone private compiler outputs were created.
+
+These are correctness results. Neither run measures HTTP TTFT, decode speed,
+concurrent throughput or serving VRAM. Sampled adapter memory is retained only
+as correctness-run provenance. B1 plugin/helper/model qualification, broad
+quality, actual 4K, B8, tuned/MTP references, INT4, matched 4B, clean repeated
+HTTP comparisons and the original 2x objective remain open.
+'''
+for relative in ('docs/research/qwen38-5090-development-log.md','docs/research/qwen38-5090-implementation-task.md'):
+ p=r/relative;raw=p.read_bytes();assert b'closed integrated model and B1 cache-update correctness' not in raw
+ p.write_bytes(raw+addition.replace('\n','\r\n').encode())
+shutil.copyfile(Path(__file__),e/'model-and-b1-commit-closure-method.py.txt')
+print(json.dumps({'status':'closed_correctness_records_saved','model_archive':model['archive_sha256'],'b1_commit_archive':commit['archive_sha256'],'performance_admitted':False}))
