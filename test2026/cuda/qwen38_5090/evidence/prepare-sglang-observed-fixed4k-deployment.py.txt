@@ -1,0 +1,14 @@
+from pathlib import Path
+import ast,hashlib,json
+w=Path(__file__).resolve().parent;m=Path('D:/CantorAI/work/qwen38-5090/test2026/cuda/qwen38_5090');sha=lambda raw:hashlib.sha256(raw).hexdigest();p=json.loads((m/'evidence/sglang-observed-fixed4k-run-preparation.json').read_bytes());plan=json.loads((w/'sglang-observed-fixed4k-upload-plan.json').read_bytes());targets={v['target']:v['sha256'] for v in plan['uploads']}
+for row in plan['uploads']:assert sha(Path(row['local']).read_bytes())==row['sha256']
+target=w/'sglang-observed-fixed4k-preflight-input.json';assert not target.exists();target.write_text(json.dumps({'expected':targets,'existing':{k:v for k,v in p['files'].items() if k not in targets},'library_sha256':p['runtime_dependencies']['garnet.dll']},indent=2),encoding='utf8')
+for old,new in (('preflight-prefill16-full4k.py','preflight-sglang-observed-fixed4k.py'),('package-prefill16-full4k-methods.py','package-sglang-observed-fixed4k-methods.py'),('install-prefill16-full4k-methods.py','install-sglang-observed-fixed4k-methods.py')):
+ text=(w/old).read_text().replace('prefill16-full4k','sglang-observed-fixed4k').replace('prefill16_full4k','sglang_observed_fixed4k').replace('mtp-sglang-observed-fixed4k-upload-plan.json','sglang-observed-fixed4k-upload-plan.json')
+ if old.startswith('preflight'):
+  text=text.replace("a.add_argument('--closed-characterization-archive-sha256',required=True)","a.add_argument('--closed-characterization-archive-sha256',required=True);a.add_argument('--closed-full4k-native-archive-sha256',required=True)")
+  needle='idle();p=json.loads(';assert text.count(needle)==1
+  text=text.replace(needle,"name='mtp-prefill16-full4k-admission-attempt1';digest=args.closed_full4k_native_archive_sha256;assert re.fullmatch('[0-9a-f]{64}',digest);prior=root/'results'/(name+'-evidence.zip');assert sha(prior)==digest\nwith zipfile.ZipFile(prior) as z:\n previous=json.loads(z.read('results/'+name+'/workflow.json'));assert previous==json.loads((root/'results'/name/'workflow.json').read_bytes())\n assert previous['exit_code']==0 and previous['cleanup_finished'] and previous['library_unchanged'] and previous['source_sha256']==previous['source_after_sha256'] and previous['runtime_dependencies']==previous['runtime_dependencies_after']\n proof=json.loads((root/'results'/(name+'-verified.json')).read_bytes());assert proof['status']=='mtp_prefill16_full4k_target_state_replayed' and proof['archive_sha256']==digest\n"+needle)
+ text=text.replace('explicit full4K MTP correctness methods/evidence','explicit ordinary reference methods/evidence')
+ path=w/new;assert not path.exists();ast.parse(text);path.write_text(text,encoding='utf8')
+print(json.dumps({'status':'sglang_observed_reference_deployment_prepared_unrun','targets':len(targets),'existing_inputs':len(p['files'])-len(set(p['files'])&set(targets)),'requires_closed_native_full4k_and_characterization_and_idle':True,'gpu_executed':False}))

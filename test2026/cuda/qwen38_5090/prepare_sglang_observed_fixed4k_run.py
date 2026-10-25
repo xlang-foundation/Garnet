@@ -1,0 +1,34 @@
+"""Prepare the explicit observed-output ordinary reference from replayed proofs."""
+from pathlib import Path
+import argparse,hashlib,json,sys,unittest,zipfile
+sys.path.insert(0,str(Path(__file__).resolve().parent))
+from prepare_sglang_reserved_fixed4k_run import TEST_MODULES as PREVIOUS_TESTS
+sha=lambda raw:hashlib.sha256(raw).hexdigest()
+METHODS=('run_sglang_observed_fixed4k.py','probe_reference_observed_fixed4k.py','verify_sglang_observed_fixed4k.py','prepare_sglang_observed_fixed4k_run.py','reference_observed_output.py','benchmark_observed_output_reference.py','test_reference_observed_output.py','test_observed_output_benchmark_http.py','test_sglang_observed_fixed4k_owner.py','evidence/observed-output-reference-benchmark-derivation.json','evidence/observed-output-reference-pipeline-derivation.json','evidence/observed-output-reference-timing-scope-correction.json','evidence/observed-output-reference-invalid-budget-finalizer-correction.json','evidence/observed-output-policy-retained-data-check.json')
+TEST_MODULES=(*PREVIOUS_TESTS,*('test2026.cuda.qwen38_5090.'+n for n in ('test_reference_observed_output','test_observed_output_benchmark_http','test_sglang_observed_fixed4k_owner','test_benchmark_stream','test_metrics')))
+
+
+def main():
+    a=argparse.ArgumentParser(description=__doc__);a.add_argument('--proofs',type=Path,required=True);a.add_argument('--plan',type=Path,required=True);args=a.parse_args();m=Path(__file__).resolve().parent;repo=m.parents[2];parents={};native='fixed-length-http-study-attempt1';observation='sglang-output-characterization-attempt1';full='mtp-prefill16-full4k-admission-attempt1'
+    for name,status in ((native,'fixed_length_http_study_replayed'),(observation,'sglang_output_characterization_replayed'),(full,'mtp_prefill16_full4k_target_state_replayed')):
+        raw=(args.proofs/(name+'-verified.json')).read_bytes();q=json.loads(raw);assert q==json.loads((args.proofs/(name+'-remote-verified.json')).read_bytes()) and q['status']==status and sha((args.proofs/(name+'-evidence.zip')).read_bytes())==q['archive_sha256']
+        with zipfile.ZipFile(args.proofs/(name+'-evidence.zip')) as z:
+            w=json.loads(z.read('results/'+name+'/workflow.json'));assert w['exit_code']==0 and w['cleanup_finished'] is True and w['source_sha256']==w['source_after_sha256'] and w['runtime_dependencies']==w['runtime_dependencies_after']
+            if name==observation:assert type(w['server_exit_code']) is int;files=dict(w['source_sha256']);runtime=w['runtime_dependencies']
+            else:assert w['library_unchanged'] is True
+        parents[name]={'proof_sha256':sha(raw),'archive_sha256':q['archive_sha256'],'status':status}
+    for method in METHODS:files['Garnet/test2026/cuda/qwen38_5090/'+method]=sha((m/method).read_bytes())
+    for name,row in parents.items():files['results/'+name+'-verified.json']=row['proof_sha256']
+    for name,digest in files.items():
+        if name.startswith('Garnet/'):assert sha((repo/name.removeprefix('Garnet/')).read_bytes())==digest,('Qualified source drift',name)
+    sys.path.insert(0,str(repo));loader=unittest.TestLoader();suite=loader.loadTestsFromNames(TEST_MODULES);assert not loader.errors,loader.errors;count=suite.countTestCases()
+    scope='One exclusive ordinary SGLang0.5.22 same-profile successor after actual full4K native proof and288request output/isolation diagnosis are independently replayed and closed, adapter/process idle. Existing4098configured/two reservedslots/actual3968+128 workload, BF16KV/F32SSM, cache/graph/precision/source/PID checks unchanged. Two early full4K boundaries, fourVLM/16short controls and fresh805adapted quality screen,124actual serial prompt/completion-ID controls then124frozenstreams across C1/2/4/8text/image. Preserve every raw stream/text variant; no individual streamed IDs or long-output semantic/numerical equivalence inferred. Comparison hashes/files only after all timing and serving-memory sampling ends. Original strict failure preserved. Stronger tuned/MTP/vLLM, repetitions/INT4/4B and2x remain open.'
+    p={'status':'sglang_observed_fixed4k_prepared_unrun','files':files,'runtime_dependencies':runtime,'native_proof_sha256':parents[native]['proof_sha256'],'native_archive_sha256':parents[native]['archive_sha256'],'observation_proof_sha256':parents[observation]['proof_sha256'],'observation_archive_sha256':parents[observation]['archive_sha256'],'native_full4k_parent':parents[full],'expected_cpu_tests':count,'test_modules':TEST_MODULES,'scope':scope}
+    target=m/'evidence/sglang-observed-fixed4k-run-preparation.json';raw=json.dumps(p,indent=2).encode();assert not target.exists() or target.read_bytes()==raw
+    if not target.exists():target.write_bytes(raw)
+    uploads=[{'local':str(m/n),'target':'Garnet/test2026/cuda/qwen38_5090/'+n,'sha256':sha((m/n).read_bytes())} for n in METHODS]+[{'local':str(target),'target':'Garnet/test2026/cuda/qwen38_5090/evidence/'+target.name,'sha256':sha(target.read_bytes())}];raw=json.dumps({'uploads':uploads,'scope':scope},indent=2).encode();assert not args.plan.exists() or args.plan.read_bytes()==raw
+    if not args.plan.exists():args.plan.write_bytes(raw)
+    print(json.dumps({'status':p['status'],'expected_cpu_tests':count,'preparation_sha256':sha(target.read_bytes()),'pinned_files':len(files),'upload_targets':len(uploads),'gpu_or_server_executed':False}));return 0
+
+
+if __name__=='__main__':raise SystemExit(main())

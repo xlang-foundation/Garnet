@@ -1,0 +1,20 @@
+from pathlib import Path
+import hashlib,io,json,sys,zipfile
+w=Path(__file__).resolve().parent;o=w.parent/'outputs';m=Path('D:/CantorAI/work/qwen38-5090/test2026/cuda/qwen38_5090');sys.path.insert(0,str(m));from reference_observed_output import admit_observation,stream_comparison
+from benchmark_fixed_length_reference import control_response
+sha=lambda raw:hashlib.sha256(raw).hexdigest();name='sglang-output-characterization-attempt1';proof_raw=(o/(name+'-verified.json')).read_bytes();assert json.loads(proof_raw)==json.loads((o/(name+'-remote-verified.json')).read_bytes());current=(o/(name+'-evidence.zip')).read_bytes()
+with zipfile.ZipFile(io.BytesIO(current)) as z:metadata=json.loads(z.read('results/'+name+'/metadata.json'))
+admission=admit_observation(proof_raw,current,metadata)
+name='sglang-fixed4k-ordinary-attempt2';proof=json.loads((o/(name+'-partial-verified.json')).read_bytes());assert proof==json.loads((o/(name+'-partial-remote-verified.json')).read_bytes()) and proof['status']=='reference_fixed4k_attempt2_failure_partial_evidence_replayed';archive=o/(name+'-evidence.zip');assert sha(archive.read_bytes())==proof['archive_sha256'];comparisons=[]
+with zipfile.ZipFile(archive) as z:
+ prior_metadata=json.loads(z.read('results/'+name+'/metadata.json'));admit_observation(proof_raw,current,prior_metadata)
+ prefix='results/'+name+'/client/benchmark4k/';paths=[n for n in z.namelist() if n.startswith(prefix) and n.endswith('-manifest.json')];assert len(paths)==1;manifest=json.loads(z.read(paths[0]));assert manifest['status']=='failed'
+ assert sha(z.read('Garnet/test2026/cuda/qwen38_5090/benchmark_fixed_length_reference.py'))==sha((m/'benchmark_fixed_length_reference.py').read_bytes())
+ with zipfile.ZipFile(io.BytesIO(z.read('Garnet/test2026/cuda/qwen38_5090/evidence/fixed-length-4096-corpus.zip'))) as corpus:
+  rows={r['key']:r for r in json.loads(corpus.read('manifest.json'))['rows']}
+  for path in sorted(n for n in z.namelist() if n.startswith(prefix) and n.endswith('-result.json')):
+   raw=json.loads(z.read(path));key=raw['key'];case_key=key.removeprefix(manifest['run_id']+'-');row=rows[case_key];ids_raw=corpus.read(row['expected_prompt_ids_file']);assert sha(ids_raw)==row['expected_prompt_ids_sha256'];ids=json.loads(ids_raw);body=json.loads(z.read(prefix+key+'-request.json'));control=control_response(json.loads(z.read(prefix+'controls/'+case_key+'-response.json')),'sglang',ids)
+   comparisons.append(stream_comparison(raw,control,key,body))
+assert len(comparisons)==12 and sum(c['serial_control_text_exact'] for c in comparisons)==10
+result={'status':'observed_output_policy_bound_to_actual_profile_and_twelve_retained_streams','diagnosis_admission':admission,'retained_failed_archive_sha256':proof['archive_sha256'],'retained_failed_manifest_status':'failed','observations':comparisons,'actual_retained_streams_checked':12,'actual_text_matches_serial':10,'actual_text_variants':2,'old_archive_or_manifest_or_metric_changed':False,'new_server_model_or_http_requests':False,'performance_admitted':False,'two_times_target_achieved':False,'method_sha256':sha(Path(__file__).read_bytes()),'scope':'Read-only policy qualification against the independently replayed current288request diagnosis and actual original failed-profile raw streams/serial IDs. Strict actual3968+128 counts, usage, input hashes and current-profile metadata retained. Variants are recorded, never reinterpreted as harmlessness or retrospective completion of the old failed benchmark.'}
+target=w/'observed-output-policy-retained-data-check.json';assert not target.exists();target.write_text(json.dumps(result,indent=2),encoding='utf8');print(json.dumps({k:v for k,v in result.items() if k not in ('diagnosis_admission','observations')}))

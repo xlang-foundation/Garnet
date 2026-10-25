@@ -1,0 +1,11 @@
+from pathlib import Path
+import json,re
+w=Path(__file__).resolve().parent;o=w.parent/'outputs';rows=[]
+for name,flag,status in (
+ ('fixed-length-http-study-attempt1','--closed-http-archive-sha256','fixed_length_http_study_replayed'),
+ ('bf16-batch8-model-admission-attempt1','--closed-native-archive-sha256','bf16_batch8_internal_model_admission_replayed'),
+ ('mtp-prefill16-model-consistency-attempt1','--closed-mtp-archive-sha256','mtp_prefill16_short_target_model_replayed'),
+ ('sglang-output-characterization-attempt1','--closed-characterization-archive-sha256','sglang_output_characterization_replayed'),
+ ('mtp-prefill16-full4k-admission-attempt1','--closed-full4k-native-archive-sha256','mtp_prefill16_full4k_target_state_replayed')):
+ d=json.loads((o/(name+'-verified.json')).read_bytes());assert d==json.loads((o/(name+'-remote-verified.json')).read_bytes()) and d['status']==status and re.fullmatch('[0-9a-f]{64}',d['archive_sha256']);rows.extend((flag,d['archive_sha256']))
+command='C:/Python312/python.exe D:/CantorAI/5090-study-20261023/results/preflight-sglang-observed-fixed4k.py '+' '.join(rows)+' --closed-characterization-job sglang-output-characterization-attempt1';request={'start':command,'id':'sglang-observed-fixed4k-deployment-preflight-attempt1'};target=w/'sglang-observed-fixed4k-preflight-start-request.json';assert not target.exists();target.write_text(json.dumps(request,indent=2),encoding='utf8');print(json.dumps(request))

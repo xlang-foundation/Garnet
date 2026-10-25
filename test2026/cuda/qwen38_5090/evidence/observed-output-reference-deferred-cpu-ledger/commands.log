@@ -1,0 +1,47 @@
+
+{"id": "b98d2b4398754ed9be8cb28c1e60a7ea", "kind": "correctness", "label": "Explicit synthetic HTTP124+124, all sidecar comparisons after timing/sampler closure;126clamp rejected and raw replay mutations caught, no GPU/model metrics", "argv": ["D:\\CantorAI\\Garnet\\.venv\\Scripts\\python.exe", "-m", "unittest", "test2026.cuda.qwen38_5090.test_reference_observed_output", "test2026.cuda.qwen38_5090.test_observed_output_benchmark_http", "test2026.cuda.qwen38_5090.test_fixed_length_reference", "test2026.cuda.qwen38_5090.test_benchmark_stream", "test2026.cuda.qwen38_5090.test_metrics", "test2026.cuda.qwen38_5090.test_reference_mtp_equivalence", "test2026.cuda.qwen38_5090.test_reference_fixed4k_identity"]}
+.......F............................
+======================================================================
+FAIL: test_126_token_clamp_still_fails_before_any_completed_cohort (test2026.cuda.qwen38_5090.test_observed_output_benchmark_http.HTTPIntegration.test_126_token_clamp_still_fails_before_any_completed_cohort)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "D:\CantorAI\work\qwen38-5090\test2026\cuda\qwen38_5090\benchmark_observed_output_reference.py", line 94, in main
+    for f in [pool.submit(send,key) for key in wave]:f.result()
+                                                     ^^^^^^^^^^
+  File "C:\Python\Python312\Lib\concurrent\futures\_base.py", line 456, in result
+    return self.__get_result()
+           ^^^^^^^^^^^^^^^^^^^
+  File "C:\Python\Python312\Lib\concurrent\futures\_base.py", line 401, in __get_result
+    raise self._exception
+  File "C:\Python\Python312\Lib\concurrent\futures\thread.py", line 59, in run
+    result = self.fn(*self.args, **self.kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\CantorAI\work\qwen38-5090\test2026\cuda\qwen38_5090\benchmark_observed_output_reference.py", line 81, in send
+    if result['status']!='completed' or result['prompt_tokens']!=3968 or result['generated_tokens']!=128 or result['finish_reason']!='length':raise ValueError('Preserved failed or invalid4Kstream: '+key)
+                                                                                                                                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ValueError: Preserved failed or invalid4Kstream: ctx4096-s3-text-c1-warmup-0-0
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\CantorAI\work\qwen38-5090\test2026\cuda\qwen38_5090\test_observed_output_benchmark_http.py", line 70, in test_126_token_clamp_still_fails_before_any_completed_cohort
+    def test_126_token_clamp_still_fails_before_any_completed_cohort(self):self.run_fixture(short=True)
+                                                                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\CantorAI\work\qwen38-5090\test2026\cuda\qwen38_5090\test_observed_output_benchmark_http.py", line 56, in run_fixture
+    with self.assertRaises(ValueError):bench.main()
+                                       ^^^^^^^^^^^^
+  File "D:\CantorAI\work\qwen38-5090\test2026\cuda\qwen38_5090\benchmark_observed_output_reference.py", line 116, in main
+    comparison=stream_comparison(result,actual[key],prefix+key,body)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\CantorAI\work\qwen38-5090\test2026\cuda\qwen38_5090\test_observed_output_benchmark_http.py", line 49, in comparison_after_sampling
+    return stream_comparison(*args)
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\CantorAI\work\qwen38-5090\test2026\cuda\qwen38_5090\reference_observed_output.py", line 30, in stream_comparison
+    assert result['status']=='completed' and type(result['prompt_tokens']) is int and result['prompt_tokens']==3968 and type(result['generated_tokens']) is int and result['generated_tokens']==128 and result['finish_reason']=='length'
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError
+
+----------------------------------------------------------------------
+Ran 36 tests in 9.664s
+
+FAILED (failures=1)

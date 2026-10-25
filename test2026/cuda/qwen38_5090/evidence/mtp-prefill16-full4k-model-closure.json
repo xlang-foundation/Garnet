@@ -1,0 +1,126 @@
+{
+  "status": "mtp_prefill16_full4k_correctness_closed_and_independently_replayed",
+  "recorded_utc": "2026-10-25T19:34:31.086834+00:00",
+  "archive_sha256": "92eef5433c946f4f2f9dc831902cb80f48b060a92bc6d91879f07137367b1ea5",
+  "archive_bytes": 67594006,
+  "archive_files_verified": 666,
+  "proof_sha256": "ff99229ddf1dcc006134448ddc2965c5174bf2e557238e2cf67338752de3fc03",
+  "independent_proofs_identical": true,
+  "actual_remote_cpu_tests_passed": 50,
+  "actual_remote_cpu_seconds": 0.675,
+  "actual_full4k_cases": [
+    {
+      "sequence": 0,
+      "key": "ctx4096-s3-text-c1-r0",
+      "case": "text",
+      "actual_prompt_tokens": 3968,
+      "actual_output_tokens": 128,
+      "target_complete_state_and_raw_vectors_exact": true,
+      "actual_candidate_draft_prefill_calls": 249,
+      "reset_repeat": false
+    },
+    {
+      "sequence": 1,
+      "key": "ctx4096-s3-text-c1-r1",
+      "case": "text",
+      "actual_prompt_tokens": 3968,
+      "actual_output_tokens": 128,
+      "target_complete_state_and_raw_vectors_exact": true,
+      "actual_candidate_draft_prefill_calls": 249,
+      "reset_repeat": false
+    },
+    {
+      "sequence": 2,
+      "key": "ctx4096-s3-image-c1-r0",
+      "case": "image",
+      "actual_prompt_tokens": 3968,
+      "actual_output_tokens": 128,
+      "target_complete_state_and_raw_vectors_exact": true,
+      "actual_candidate_draft_prefill_calls": 249,
+      "reset_repeat": false
+    },
+    {
+      "sequence": 3,
+      "key": "ctx4096-s3-image-c1-r1",
+      "case": "image",
+      "actual_prompt_tokens": 3968,
+      "actual_output_tokens": 128,
+      "target_complete_state_and_raw_vectors_exact": true,
+      "actual_candidate_draft_prefill_calls": 249,
+      "reset_repeat": false
+    },
+    {
+      "sequence": 4,
+      "key": "ctx4096-s3-text-c1-r0",
+      "case": "text",
+      "actual_prompt_tokens": 3968,
+      "actual_output_tokens": 128,
+      "target_complete_state_and_raw_vectors_exact": true,
+      "actual_candidate_draft_prefill_calls": 249,
+      "reset_repeat": true
+    },
+    {
+      "sequence": 5,
+      "key": "ctx4096-s3-image-c1-r0",
+      "case": "image",
+      "actual_prompt_tokens": 3968,
+      "actual_output_tokens": 128,
+      "target_complete_state_and_raw_vectors_exact": true,
+      "actual_candidate_draft_prefill_calls": 249,
+      "reset_repeat": true
+    }
+  ],
+  "actual_target_states": 32,
+  "actual_full4k_correctness_qualified": true,
+  "actual_full4k_memory_fit_observed": true,
+  "actual_call_controls_from_old_native_archive": [
+    {
+      "key": "ctx4096-s3-text-c1-r0",
+      "baseline_worker_request_id": "1cf456d3a1844d48991ffd87fce36386",
+      "actual_baseline_draft_prefill_calls": 993,
+      "actual_candidate_draft_prefill_calls": 249,
+      "scope": "Invocation counts, never elapsed speedup."
+    },
+    {
+      "key": "ctx4096-s3-text-c1-r1",
+      "baseline_worker_request_id": "dbd10cc76e5a4b63b27973d238c31876",
+      "actual_baseline_draft_prefill_calls": 993,
+      "actual_candidate_draft_prefill_calls": 249,
+      "scope": "Invocation counts, never elapsed speedup."
+    },
+    {
+      "key": "ctx4096-s3-image-c1-r0",
+      "baseline_worker_request_id": "00aa8e8091284702afc232f893ffecf7",
+      "actual_baseline_draft_prefill_calls": 993,
+      "actual_candidate_draft_prefill_calls": 249,
+      "scope": "Invocation counts, never elapsed speedup."
+    },
+    {
+      "key": "ctx4096-s3-image-c1-r1",
+      "baseline_worker_request_id": "5fc919b0178f4c198695a2e3434d5056",
+      "actual_baseline_draft_prefill_calls": 993,
+      "actual_candidate_draft_prefill_calls": 249,
+      "scope": "Invocation counts, never elapsed speedup."
+    }
+  ],
+  "correctness_sampled_peak_adapter_used_bytes": 23688986624,
+  "correctness_sampled_peak_adapter_used_gib": 22.062088012695312,
+  "library_sha256": "1a1d0229a1c0c24a8397a4dee7a614bcedf97b3bd3293e58d752ed7de30eb498",
+  "source_runtime_identity_and_cleanup_verified": true,
+  "proof_output_name_correction": {
+    "original_checker_sha256": "aabe36389d4e920ad2377e2723cdae9338cda6031175083a48c35929e76a5123",
+    "named_checker_sha256": "460cc5bbcf5f00438a57aafb5e39fc65fba0987e26277921aac65d1f1a38f673",
+    "archived_original_checker_sha256": "aabe36389d4e920ad2377e2723cdae9338cda6031175083a48c35929e76a5123",
+    "initial_actual_replay_exit_code": 0,
+    "initial_proof_remote_path": "results/memory_after-verified.json",
+    "corrected_proof_remote_path": "results/mtp-prefill16-full4k-admission-attempt1-verified.json",
+    "correction": "Literal output filename only; entire verifier AST otherwise identical. A loop variable had shadowed job name. Original checker/source/archive/initial proof preserved; model not repeated.",
+    "actual_cpu_ast_and_filename_regression_tests": 2,
+    "actual_cpu_seconds": 0.006,
+    "all_proof_data_other_than_executing_checker_sha_identical": true
+  },
+  "broad_quality_qualified": false,
+  "http_or_repeated_speed_qualified": false,
+  "two_times_target_achieved": false,
+  "scope": "Actual B1 full4K wider MTP target-state/raw-vector/ID/callback/reset-repeat and construction/correctness memory replay. No805quality, HTTP, repeated matched speed/throughput, isolated timing or2x admission."
+}
