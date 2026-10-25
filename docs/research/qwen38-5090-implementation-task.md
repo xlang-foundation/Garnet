@@ -1236,3 +1236,21 @@ materializing27method preparation49d72442... and29target upload plan. Earlier
 negative absent-proof guard remains preserved. Read-only target/source/runtime/
 parent/cache preflight and uploading only absent new files precede one HTTP job.
 Actual805score/4K/HTTP/timings and original2x remain unmeasured at this entry.
+
+
+### 2026-10-25: fresh proof-bound native HTTP study starts
+
+Read-only tokenizer-nfc-http-study-attempt1 preflight passed: no392pinned-file or
+six-runtime drift, no target conflicts/occupied result, GPU125MiB used before
+launch and750900301824B free in owned C scratch.20of29targets matched and were
+skipped, including the existing805corpus. Nine absent new methods/recipe/prep
+files received individual acknowledged uploads. No product source/DLL changed.
+Actual preflight/input/upload plan/method and explicit tool observation retained.
+
+Only original supervisor48577 started tokenizer-nfc-http-study-attempt1 and
+confirms it running with CPU-test progress. No completed HTTP/quality/4K or new
+timing result is claimed. One controller owns29CPU gates,12protocol/805screen/
+2boundary/124full4K/124short requests for ordinary then MTP with actual paired
+IDs and immutable failure archive/owned cleanup. Only that original handle will
+be polled while timing may run; no auxiliary remote observers/uploads/jobs.
+Original2x and matched/tuned/MTP references, INT4/4B, repetitions remain open.
