@@ -1,0 +1,67 @@
+{
+  "status": "bf16_model_failure_analyzed",
+  "archive_sha256": "287fafd19507187993af60047cd99d95cfc89d1161747bc6007d7ca4fa37a13e",
+  "report_sha256": "e6147504ec92cc8487e526806166c3bb540daef47536b8d5ac95e1da64e1a4d4",
+  "producer_sha256": "33e8d863d7f849c25ca66adcee6f6de92fc1e08ef1f374bf54f27095495825cb",
+  "rows": [
+    {
+      "row": 0,
+      "key": "s3-text-c1-r0-greedy",
+      "ordinary_mtp_first_mismatch": null,
+      "ordinary_fp32_first_mismatch": 26,
+      "output_counts": [
+        128,
+        128,
+        128
+      ]
+    },
+    {
+      "row": 1,
+      "key": "s3-image-c1-r0-greedy",
+      "ordinary_mtp_first_mismatch": null,
+      "ordinary_fp32_first_mismatch": 8,
+      "output_counts": [
+        128,
+        128,
+        128
+      ]
+    },
+    {
+      "row": 2,
+      "key": "s3-text-c1-r0-greedy",
+      "ordinary_mtp_first_mismatch": null,
+      "ordinary_fp32_first_mismatch": 26,
+      "output_counts": [
+        128,
+        128,
+        128
+      ]
+    },
+    {
+      "row": 3,
+      "key": "s3-image-c1-r0-greedy",
+      "ordinary_mtp_first_mismatch": null,
+      "ordinary_fp32_first_mismatch": 8,
+      "output_counts": [
+        128,
+        128,
+        128
+      ]
+    }
+  ],
+  "ordinary_mtp_full_state_hash_witnesses_exact": true,
+  "ordinary_mtp_raw_hidden_exact": true,
+  "duplicate_pair_raw_hidden_exact": true,
+  "runtime_metadata_gate": {
+    "valid_profiles": 4,
+    "rebuild_rejections": 4,
+    "invalid_layouts": 8856,
+    "fixture_sha256": "7481110b5ec6c84c0f11d2d0f3dac2baa56fc5cd4399921a4ab3f3ef7e61ee5d"
+  },
+  "negative_commit_calls": 16,
+  "negative_zero_prefix_state_unchanged": true,
+  "precision_and_prefill_effect_not_separated": true,
+  "quality_gate_passed": false,
+  "performance_admitted": false,
+  "scope": "One failed group/repeat only. BF16 KV/T32 prefill/register128 changes were combined. MTP agrees with ordinary but does not justify retained-FP32 divergence or broad quality. Full canonical arrays absent."
+}

@@ -1,0 +1,24 @@
+{
+  "status": "bf16_prefill_diagnostic_prepared_unrun",
+  "methods": {
+    "probe_bf16_prefill_diagnostic.py": "51f06f76c738dfac6b302a96dd1d00c24f50fa49849d8a9169d1f671165df94e",
+    "run_bf16_prefill_diagnostic.py": "d016176174c9cb5446c6001195eefeecc23675cfcb6c8d65a17cef68de7c7b54",
+    "test_bf16_prefill_diagnostic.bat": "8d7e6bde3d5cf15e43a464f132ff60e7fa44cd4de285250c281d26c7a5f84cca",
+    "run_logged.py": "3ac96f2f006cb02ecfe4d159186f7e12fcc11b8acf98e4b93728aa31e6a0407b",
+    "monitor_native_probe.py": "49cb5cc0d787aa5ecb11b72bc040578a2d15df37a7ad111344f84da98266100c",
+    "sample_vram.py": "29e0956f151e662adb93431ac9d02ba516e03eb8c1c7d7f0936045acb5c45b4e"
+  },
+  "pinned_inputs": {
+    "results/native-kv-delta-default-off-attempt1/native/report.json": "ee1c05b5b766421a1e2999a8da40efa7cc9446743107789e1dee30d639b038fd",
+    "results/native-mtp3-http/s3-text-c1-r0-greedy-request.json": "a01e94f21ea82d5a50bf403584a7a4bed6727ffe34a9452de3b780aef8e3a4b0",
+    "results/native-mtp3-http/s3-text-c1-r0-greedy-response.json": "5ddc47fbc550e16b2e8d8f989a9fd6675c463e9836e3f1b6059c147b14cf5eed",
+    "results/native-mtp3-http/s3-image-c1-r0-greedy-request.json": "a3bacdbe650f2e2f0952df2f727648ec62fa70d1bed37602fd80ec54fec5b792",
+    "results/native-mtp3-http/s3-image-c1-r0-greedy-response.json": "0327ab2230ffcd93f1c9fdab1e35d259bd2a0f901e45bb0d40f2e2e1e34ac849",
+    "models/Qwen3.8-27B-NVFP4/config.json": "71fa01bb64de20971045cd82a82c0ebb25a54e1b0a3f09ef23cf5479e9c54df8"
+  },
+  "additional_source_sha256": {
+    "xModel/qwen35/vl_0_8b/cuda_decoder.py": "5ba9ebfd5408290516e300356f581e1da1c915a01aebf13220ea5a1125d35101",
+    "xModel/qwen35/vl_0_8b/decoder_layer.py": "443a0560114f076af43c875ff280f3a454af467318d6fdefa03c04b7f8270fa5"
+  },
+  "scope": "Diagnostic, not timing or quality promotion. After closed/replayed BF16 model failure, run3sequential native processes on unchanged01a3DLL/source: FP32/T4 register128 reference, BF16/T4 manual ordinary prefill using existing T4 program, BF16/T32 normal prefill. Same physicalB4,41text/104image,teacher-forced32steps,identical expected histories/positions/JPEGs/weights/nativeNVFP4head. Require FP32 retained teacher IDs and all duplicate pair predictions. Capture raw hidden/normalized vectors, complete canonical hash witnesses and adapter correctness memory; analyze BF16 precision versus prefill effect without assuming either is harmless. No BF16/B8 serving, broaderquality/actual4K/protocol/throughput/2x admission."
+}
