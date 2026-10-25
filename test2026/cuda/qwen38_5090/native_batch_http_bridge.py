@@ -13,9 +13,12 @@ class Ticket:
         self.created_perf_counter=time.perf_counter();self.queue_put_started_perf_counter=None
 
 class BatchWorker(Worker):
+    # Separate research bridges may declare a different physical profile.
+    # The worker's ready message must still attest that exact capacity.
+    supported_capacities=(2,4)
     def __init__(self,command,root,batch=2,wait_ms=2):
-        if type(batch) is not int or batch not in (2,4) or not 0<=wait_ms<=20:
-            raise ValueError('Fixed study batch2/4 and bounded grouping delay required')
+        if type(batch) is not int or batch not in self.supported_capacities or not 0<=wait_ms<=20:
+            raise ValueError('Supported fixed study batch and bounded grouping delay required')
         self.capacity=batch;self.wait_seconds=wait_ms/1000
         self.tickets={};self.ticket_lock=threading.Lock();self.jobs=queue.Queue(maxsize=64);self.stop=threading.Event()
         super().__init__(command,root)
