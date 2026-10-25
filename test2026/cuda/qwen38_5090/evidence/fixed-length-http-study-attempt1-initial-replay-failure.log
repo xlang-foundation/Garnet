@@ -1,0 +1,11 @@
+Traceback (most recent call last):
+  File "D:\CantorAI\5090-study-20261023\Garnet\test2026\cuda\qwen38_5090\verify_fixed_length_http.py", line 101, in <module>
+    if __name__=='__main__':raise SystemExit(main())
+                                             ^^^^^^
+  File "D:\CantorAI\5090-study-20261023\Garnet\test2026\cuda\qwen38_5090\verify_fixed_length_http.py", line 94, in main
+    short=benchmark_replay('benchmark',False);fixed=benchmark_replay('benchmark4k',True)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\CantorAI\5090-study-20261023\Garnet\test2026\cuda\qwen38_5090\verify_fixed_length_http.py", line 80, in benchmark_replay
+    assert peak==cohort['sampled_peak_adapter_used_bytes'] and len(selected)==cohort['samples'] and cohort['requested_interval_seconds']==.02 and cohort['observed_sample_gap_median_seconds']==(statistics.median(gaps) if gaps else None) and cohort['observed_sample_gap_max_seconds']==(max(gaps) if gaps else None)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError

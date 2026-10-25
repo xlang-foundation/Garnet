@@ -1,0 +1,25 @@
+from pathlib import Path
+import hashlib,json
+w=Path(__file__).resolve().parent;m=Path('D:/CantorAI/work/qwen38-5090/test2026/cuda/qwen38_5090');source=m/'verify_fixed_length_http.py';raw=source.read_bytes();sha=lambda b:hashlib.sha256(b).hexdigest();assert sha(raw)=='9ff06c4cd18031441897586deaff08ac5fb89f703e03c3a12681315f9e55564a'
+text=raw.decode();changes=[]
+def replace(before,after):
+ global text
+ assert text.count(before)==1,(before,text.count(before));text=text.replace(before,after);changes.append([before,after,1])
+replace('from benchmark_fixed_length_native import final_ids\n','from benchmark_fixed_length_native import final_ids\nfrom cohort_memory_replay import replay_cohort_memory\n')
+before="""       phase=cohort['case']+'-c'+str(cohort['concurrency']);selected=[s for s in samples if s['phase']==phase];gaps=[b['monotonic']-a['monotonic'] for a,b in zip(selected,selected[1:])];peak=max(s['used_bytes'] for s in selected)
+       assert peak==cohort['sampled_peak_adapter_used_bytes'] and len(selected)==cohort['samples'] and cohort['requested_interval_seconds']==.02 and cohort['observed_sample_gap_median_seconds']==(statistics.median(gaps) if gaps else None) and cohort['observed_sample_gap_max_seconds']==(max(gaps) if gaps else None)
+       if fixed:assert cohort['prompt_tokens']==[3968]*8 and cohort['generated_tokens']==1024
+       memory[phase]={'sampled_peak_adapter_used_bytes':peak,'samples':len(selected),'scope':cohort['scope']}
+"""
+after="""       phase=cohort['case']+'-c'+str(cohort['concurrency']);requests=[doc(root+key+'-result.json') for key in cohort['request_keys']]
+       memory[phase]=replay_cohort_memory(samples,phase,cohort,requests)
+       if fixed:assert cohort['prompt_tokens']==[3968]*8 and cohort['generated_tokens']==1024
+"""
+replace(before,after)
+replace("'native_fixed_4k_metrics_replayed':passed,","'native_fixed_4k_metrics_replayed':passed,'memory_summary_snapshot_replayed':passed,'checker_in_runtime_archive':False,'memory_replay_helper_sha256':sha(Path(__file__).with_name('cohort_memory_replay.py').read_bytes()),")
+target=m/'verify_fixed_length_http_snapshot.py';assert not target.exists();target.write_bytes(text.encode());compile(text,str(target),'exec')
+proof=text
+for before,after,count in reversed(changes):assert proof.count(after)==count;proof=proof.replace(after,before)
+assert proof.encode()==raw and source.read_bytes()==raw
+receipt={'status':'separate_fixed_length_http_snapshot_replay_prepared_unrun','parent_archive_sha256':'6fbf308714e90bf68046c8080258e6ba9981931f18f902ce1408cf735f5b7320','original_verifier_sha256':sha(raw),'new_verifier_sha256':sha(text.encode()),'memory_helper_sha256':sha((m/'cohort_memory_replay.py').read_bytes()),'changes':changes,'scope':'Exact original source roundtrip except memory phase snapshot-prefix accounting and explicit separate checker/helper provenance. Original checker and failed replay log remain preserved. All timing/IDs/body/source/runtime/quality/MTP gates unchanged; no stored benchmark field or immutable archive is modified.32cohort raw diagnosis found4trailing final samples; every saved snapshot prefix exactly matched and bracketed all measured requests. Actual whole-archive replay still required.'}
+target=m/'evidence/fixed-length-http-snapshot-replay-derivation.json';assert not target.exists();target.write_text(json.dumps(receipt,indent=2),encoding='utf8');print(json.dumps({'status':receipt['status'],'original_source_unchanged':True,'new_verifier_sha256':receipt['new_verifier_sha256']}))

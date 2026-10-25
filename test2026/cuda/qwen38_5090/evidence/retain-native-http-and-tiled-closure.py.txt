@@ -1,0 +1,80 @@
+from pathlib import Path
+from datetime import datetime,timezone
+import hashlib,json,platform,shutil,zipfile
+import numpy as np
+w=Path(__file__).resolve().parent;out=w.parent/'outputs';r=Path('D:/CantorAI/work/qwen38-5090');m=r/'test2026/cuda/qwen38_5090';e=m/'evidence';sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+def copy(source,target):
+ assert source.is_file() and (not target.exists() or target.read_bytes()==source.read_bytes())
+ if not target.exists():target.parent.mkdir(parents=True,exist_ok=True);shutil.copyfile(source,target)
+for name in ('fixed-length-http-study-attempt1-verified.json','fixed-length-http-study-attempt1-remote-verified.json','fixed-length-http-memory-diagnosis.json','fixed-length-http-study-attempt1-initial-replay-failure.log','bf16-scores-tiled-correctness-attempt1-verified.json','bf16-scores-tiled-correctness-attempt1-remote-verified.json','bf16-scores-tiled-correctness-attempt1-replay-remote.log','Garnet-Native-4K-Verified-Results.json'):copy(out/name,e/name)
+for stem in ('cohort-memory-snapshot-cpu-ledger','fixed-length-http-snapshot-local-replay-ledger','bf16-scores-tiled-local-replay-ledger','sglang-fixed4k-snapshot-owner-cpu-ledger','native-verified-4k-render-ledger'):
+ source=w/stem;records=[json.loads(line) for line in (source/'commands.jsonl').read_bytes().splitlines()];assert len(records)==2 and records[-1]['exit_code']==0
+ for f in source.iterdir():copy(f,e/stem/f.name)
+for name in ('derive-fixed-length-http-snapshot-replay.py','diagnose-fixed-length-http-memory.py','preflight-bf16-scores-tiled.py','package-bf16-scores-tiled-methods.py','install-bf16-scores-tiled-methods.py','preflight-sglang-fixed4k.py','package-sglang-fixed4k-methods.py','install-sglang-fixed4k-methods.py','render-native-verified-4k.py','retain-native-http-and-tiled-closure.py'):copy(w/name,e/(name+'.txt'))
+for name in ('bf16-scores-tiled-preflight-input.json','bf16-scores-tiled-preflight.json','bf16-scores-tiled-bundle-preparation.json','bf16-scores-tiled-install.json','sglang-fixed4k-preflight-input.json','sglang-fixed4k-preflight.json','sglang-fixed4k-bundle-preparation.json','sglang-fixed4k-install.json'):copy(w/name,e/name)
+native=json.loads((out/'fixed-length-http-study-attempt1-verified.json').read_bytes());assert native==json.loads((out/'fixed-length-http-study-attempt1-remote-verified.json').read_bytes()) and native['status']=='fixed_length_http_study_replayed'
+tile=json.loads((out/'bf16-scores-tiled-correctness-attempt1-verified.json').read_bytes());remote=json.loads((out/'bf16-scores-tiled-correctness-attempt1-remote-verified.json').read_bytes());assert tile['status']==remote['status']=='bf16_scores_tiled_fp64_replayed'
+assert {k:v for k,v in tile.items() if k!='cases'}=={k:v for k,v in remote.items() if k!='cases'}
+differences=[]
+for left,right in zip(tile['cases'],remote['cases']):
+ assert left['id']==right['id'] and left['scalars']==right['scalars']
+ for field in ('max_absolute_error','max_tolerance_fraction'):
+  if left[field]!=right[field]:differences.append({'id':left['id'],'field':field,'local':left[field],'remote':right[field],'absolute_difference':abs(left[field]-right[field])})
+blas=getattr(np.__config__,'CONFIG',{}).get('Build Dependencies',{}).get('blas',{})
+environments={'local':{'python':platform.python_version(),'numpy':np.__version__,'processor':platform.processor(),'blas':{k:blas.get(k) for k in ('name','version','openblas configuration')}},'remote':{'python':'3.12.3','numpy':'2.4.4','processor':'Intel64 Family 6 Model 198 Stepping 2, GenuineIntel','blas':{'name':'scipy-openblas','version':'0.3.31.188.0','openblas configuration':'OpenBLAS 0.3.31.188.0  USE64BITINT DYNAMIC_ARCH NO_AFFINITY Haswell MAX_THREADS=24'}},'remote_source':'Actual inline SSH CPU-only platform/numpy/config introspection tool output, recorded after the successful replays; not a fabricated run_logged event.'}
+diagnosis=json.loads((out/'fixed-length-http-memory-diagnosis.json').read_bytes());assert len(diagnosis['cohorts'])==32 and all(v['summary_matches_prefix'] and v['prefix_brackets_all_measured_requests'] and v['all_trailing_after_measured_completion'] for v in diagnosis['cohorts'])
+with zipfile.ZipFile(out/'bf16-scores-tiled-correctness-attempt1-evidence.zip') as z:
+ records=[]
+ for line in z.read('results/bf16-scores-tiled-correctness-attempt1/gpu-ledger/commands.log').splitlines():
+  if line.startswith(b'{'):
+   value=json.loads(line)
+   if value.get('event')=='case_collected':records.append(value)
+ assert len(records)==44
+ case_counts={'actual_forward_cases':len(records),'candidate_graph_output_replays':sum(v['graph_replay_exact'] for v in records),'full_cached_prefix_outputs':sum(v['prefix_cache_exact'] for v in records),'malformed_input_cases_each_implementation':sum(v['rejected_calls'] for v in records)}
+summary={'status':'native_full_http_closed_replayed_and_tiled_score_gpu_correctness_replayed','recorded_utc':datetime.now(timezone.utc).isoformat(),'native':{'archive_sha256':native['archive_sha256'],'archive_bytes':132951412,'files_verified':native['files_verified'],'observed_original_supervisor_exit_code':0,'independent_proof_pair_identical':True,'ordinary_screen_correct':502,'mtp_screen_correct':502,'screen_cases_each':805,'screen_is_official_or_broad_quality':False,'fixed4k_measured_cohorts':16,'short_pilot_cohorts':16,'initial_checker_exit_code':1,'initial_failure':'Original checker compared summary snapshot against extra final phase samples appended at Sampler.close. No runtime/workload failure or metric rewrite.','snapshot_cohorts_checked':32,'trailing_final_samples_preserved':sum(v['trailing_samples'] for v in diagnosis['cohorts']),'original_checker_sha256':native['archived_replay_verifier_sha256'],'separate_checker_sha256':native['replay_verifier_sha256'],'separate_helper_sha256':native['memory_replay_helper_sha256'],'checker_in_runtime_archive':False},
+ 'tiled_attention':{'archive_sha256':tile['archive_sha256'],'archive_bytes':683942,'files_verified':tile['files_verified'],'observed_original_supervisor_exit_code':0,**case_counts,'fp64_scalars_each_replay':sum(v['scalars'] for v in tile['cases']),'numerical_failures_both':[],'max_absolute_error_local':max(v['max_absolute_error'] for v in tile['cases']),'max_absolute_error_remote':max(v['max_absolute_error'] for v in remote['cases']),'atol':tile['atol'],'rtol':tile['rtol'],'both_independent_replays_passed':True,'proofs_bitwise_identical':tile==remote,'derived_error_statistic_differences':differences,'replay_cpu_environments':environments,'model_integrated':False,'speed_measured':False},
+ 'reference_preparation':{'actual_cpu_tests_passed':31,'preparation_sha256':sha(m/'evidence/sglang-fixed4k-run-preparation.json'),'install':json.loads((w/'sglang-fixed4k-install.json').read_bytes()),'next_job':'sglang-fixed4k-ordinary-attempt1','server_started':False},
+ 'performance_comparison_admitted':False,'two_times_target_achieved':False,'scope':'Actual immutable raw archives and successful independent replays. Original memory checker failure and all raw samples preserved. FP64 exact-report equality initially failed on tiny derived CPU error statistics; both pass unchanged tolerances on the same GPU bytes, and all differences/environments are retained. No tiled kernel/model speed, B8fit/serving/quality, fastest matched references, INT4/4B or repetition completion claimed.'}
+for target in (e/'native-http-and-tiled-closure.json',out/'Garnet-Native-HTTP-And-Tiled-Correctness-Closure.json'):
+ assert not target.exists();target.write_text(json.dumps(summary,indent=2),encoding='utf8')
+entry='''
+
+### 2026-10-25: full native HTTP closed/replayed; tiled-score GPU math passes
+
+Original48577 full native job terminal0. Archive6fbf308714e90bf68046c8080258e6ba9981931f18f902ce1408cf735f5b7320,
+132951412bytes/6860files. Both805natural-stop screens score502/805 with exact
+ordinary/MTP IDs; all12protocol/2boundary/124full4K/124short requests per mode
+replay.16measured4Kcohorts and16short cohorts are native-only single trial.
+No source/runtime changes, and owned cache cleanup finished. Native dashboard
+and4metric figures rendered only from independently replayed measurements.
+
+Original memory checker failed because4final phase samples arrived after the
+saved summaries. Actual raw diagnosis checks all32cohorts: every saved snapshot
+exactly equals its raw phase prefix and brackets all measured requests; all4
+extra samples are after completion. Original checker/failure log/archive stay
+unchanged. Separate verify_fixed_length_http_snapshot plus strict prefix/end
+bracketing helper retains full-phase and in-request-window statistics. All
+other gates reverse-derive byte-exact to original9ff06c4c...checker. Remote and
+local snapshot proofs are identical.5CPU memory-mutation controls pass; current
+SGLang owner31CPU controls pass in2.134s and reuses unchanged sampler overhead.
+
+Then actual RTX5090 standalone tiled-score probe terminal0: archiveb790522e63d93c4c9b0eb7e1a8ee58f608a464692ecda0d67c2f46818846b0ff,
+683942bytes/40files.44forward output/workspace comparisons,3candidate graph-output
+replays,40prefix-output checks and104malformed cases through both implementations
+pass, readonly/canaries intact. Both independent119040scalar FP64 replays pass
+unchanged atol3e-5/rtol2e-5; maximum absolute error about1.868e-7. Exact proof JSON
+equality initially failed on62derived CPU error floats; all other fields/raw
+archive match and both pass. Retain every difference and actual Python/numpy/
+BLAS/CPU metadata. No rounding of reports or tolerance relaxation. This proves
+isolated math, not a whole-model integration or speed benefit.
+
+SGLang33target source/native-proof/runtime preflight passed;17absent files installed
+from64490byte bundle09b238574aea762aeb5473fc33f80d9bab9dc0dbc9a350594152f345fe495d59,
+16matching targets skipped. No checkpoint/corpus/runtime duplication. Next run
+ordinary fixed4K then strongest feasible MTP/vLLM profiles;2x/halfTTFT, B8GPUfit,
+tiled whole-model speed, INT4/4B and repetitions remain open. Only the owned
+reference supervisor may be polled while official timing is possible.
+'''
+for name in ('qwen38-5090-development-log.md','qwen38-5090-implementation-task.md'):
+ target=r/'docs/research'/name;raw=target.read_bytes();assert b'full native HTTP closed/replayed; tiled-score GPU math passes' not in raw;target.write_bytes(raw+entry.replace('\n','\r\n').encode())
+print(json.dumps({'status':summary['status'],'native_proofs_identical':True,'tiled_fp64_both_passed':True,'tiled_report_float_differences':len(differences),'actual_gpu_cases':44,'matched_2x_admitted':False}))

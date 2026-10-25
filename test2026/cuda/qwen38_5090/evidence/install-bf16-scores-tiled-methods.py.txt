@@ -1,0 +1,30 @@
+from pathlib import Path
+import argparse,hashlib,json,sys,zipfile
+root=Path('D:/CantorAI/5090-study-20261023');methods=root/'Garnet/test2026/cuda/qwen38_5090';sys.path.insert(0,str(methods))
+from run_bf16_low_batch_native_build import idle
+sha=lambda raw:hashlib.sha256(raw).hexdigest()
+a=argparse.ArgumentParser();a.add_argument('--sha256',required=True);args=a.parse_args()
+archive=root/'results/bf16-scores-tiled-methods.zip';assert sha(archive.read_bytes())==args.sha256
+preflight=json.loads((root/'results/bf16-scores-tiled-preflight.json').read_bytes());assert preflight['status']=='bf16_scores_tiled_preflight_passed'
+target_receipt=root/'results/bf16-scores-tiled-install.json';assert not target_receipt.exists();idle();rows=[]
+with zipfile.ZipFile(archive) as z:
+ manifest=json.loads(z.read('install-manifest.json'));assert z.testzip() is None and len(z.namelist())==len(set(z.namelist()))==len(manifest['files'])+1
+ for name,digest in manifest['files'].items():
+  target=root/name;resolved=target.resolve();assert resolved.is_relative_to(methods.resolve()) or resolved==(root/'tools/bf16-kv-native/bf16-scores-tiled.exe').resolve()
+  assert not preflight['targets'][name]['exists'] and preflight['targets'][name]['expected_sha256']==digest
+  parent=target.parent
+  while parent!=root:
+   assert parent.resolve().is_relative_to(root.resolve())
+   if parent.exists():assert not(getattr(parent.lstat(),'st_file_attributes',0)&0x400)
+   parent=parent.parent
+  raw=z.read(name);assert sha(raw)==digest
+  assert not target.exists() or (target.is_file() and not(getattr(target.lstat(),'st_file_attributes',0)&0x400) and sha(target.read_bytes())==digest)
+  rows.append((target,raw,digest,target.exists()))
+ for target,raw,digest,exists in rows:
+  target.parent.mkdir(parents=True,exist_ok=True)
+  if not exists:
+   with target.open('xb') as stream:stream.write(raw)
+  assert sha(target.read_bytes())==digest
+for name,row in preflight['targets'].items():assert sha((root/name).read_bytes())==row['expected_sha256']
+result={'status':'bf16_scores_tiled_methods_installed','bundle_sha256':args.sha256,'new_targets_verified':len(rows),'all_targets_verified':len(preflight['targets']),'scope':'Only absent reviewed test source/evidence and separate495104byte correctness executable. No runtime/product/SDK/model/corpus mutation or GPU probe.'}
+target_receipt.write_text(json.dumps(result,indent=2),encoding='utf8');print(json.dumps(result))

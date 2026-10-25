@@ -1,0 +1,25 @@
+{
+  "status": "separate_fixed_length_http_snapshot_replay_prepared_unrun",
+  "parent_archive_sha256": "6fbf308714e90bf68046c8080258e6ba9981931f18f902ce1408cf735f5b7320",
+  "original_verifier_sha256": "9ff06c4cd18031441897586deaff08ac5fb89f703e03c3a12681315f9e55564a",
+  "new_verifier_sha256": "c8c478c079381e54b2857439c8f3fcc59c87cb66eb0322670dd1bf5d71fefa06",
+  "memory_helper_sha256": "f17e4be9fe0a64509463fe4126fb561a3dad9e2f0b3a01b11234cf5a4ebd4fce",
+  "changes": [
+    [
+      "from benchmark_fixed_length_native import final_ids\n",
+      "from benchmark_fixed_length_native import final_ids\nfrom cohort_memory_replay import replay_cohort_memory\n",
+      1
+    ],
+    [
+      "       phase=cohort['case']+'-c'+str(cohort['concurrency']);selected=[s for s in samples if s['phase']==phase];gaps=[b['monotonic']-a['monotonic'] for a,b in zip(selected,selected[1:])];peak=max(s['used_bytes'] for s in selected)\n       assert peak==cohort['sampled_peak_adapter_used_bytes'] and len(selected)==cohort['samples'] and cohort['requested_interval_seconds']==.02 and cohort['observed_sample_gap_median_seconds']==(statistics.median(gaps) if gaps else None) and cohort['observed_sample_gap_max_seconds']==(max(gaps) if gaps else None)\n       if fixed:assert cohort['prompt_tokens']==[3968]*8 and cohort['generated_tokens']==1024\n       memory[phase]={'sampled_peak_adapter_used_bytes':peak,'samples':len(selected),'scope':cohort['scope']}\n",
+      "       phase=cohort['case']+'-c'+str(cohort['concurrency']);requests=[doc(root+key+'-result.json') for key in cohort['request_keys']]\n       memory[phase]=replay_cohort_memory(samples,phase,cohort,requests)\n       if fixed:assert cohort['prompt_tokens']==[3968]*8 and cohort['generated_tokens']==1024\n",
+      1
+    ],
+    [
+      "'native_fixed_4k_metrics_replayed':passed,",
+      "'native_fixed_4k_metrics_replayed':passed,'memory_summary_snapshot_replayed':passed,'checker_in_runtime_archive':False,'memory_replay_helper_sha256':sha(Path(__file__).with_name('cohort_memory_replay.py').read_bytes()),",
+      1
+    ]
+  ],
+  "scope": "Exact original source roundtrip except memory phase snapshot-prefix accounting and explicit separate checker/helper provenance. Original checker and failed replay log remain preserved. All timing/IDs/body/source/runtime/quality/MTP gates unchanged; no stored benchmark field or immutable archive is modified.32cohort raw diagnosis found4trailing final samples; every saved snapshot prefix exactly matched and bracketed all measured requests. Actual whole-archive replay still required."
+}

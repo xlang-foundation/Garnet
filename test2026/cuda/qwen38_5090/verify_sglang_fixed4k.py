@@ -12,6 +12,7 @@ from benchmark_fixed_length_reference import control_request,control_response,pa
 from benchmark_fixed_length_native import ARCHIVE_SHA256,MANIFEST_SHA256
 from benchmark_stream import TokenEvents
 from compare_http_runs import verify_run
+from cohort_memory_replay import replay_cohort_memory
 from prepare_vlm_reference import reference_tokens
 from reference_mtp_equivalence import compare_pair
 from test2026.cuda.qwen38_5090.verify_mmmu_http_quality import replay
@@ -48,7 +49,7 @@ def main():
         assert w['runtime_dependencies']==w['runtime_dependencies_after']==p['runtime_dependencies'] and not w['performance_admitted']
         for name,digest in p['files'].items():assert sha(z.read(name))==digest
         # Local replay helpers must match the versions that actually collected.
-        for name in ('benchmark_stream.py','metrics.py','compare_http_runs.py','benchmark_fixed_length_reference.py','benchmark_fixed_length_native.py','reference_fixed4k_sglang_identity.py','prepare_vlm_reference.py','reference_mtp_equivalence.py','mmmu_http_quality.py','mmmu_quality_protocol.py','verify_mmmu_http_quality.py'):
+        for name in ('benchmark_stream.py','metrics.py','compare_http_runs.py','cohort_memory_replay.py','benchmark_fixed_length_reference.py','benchmark_fixed_length_native.py','reference_fixed4k_sglang_identity.py','prepare_vlm_reference.py','reference_mtp_equivalence.py','mmmu_http_quality.py','mmmu_quality_protocol.py','verify_mmmu_http_quality.py'):
             assert sha(Path(__file__).with_name(name).read_bytes())==sha(z.read(METHODS+name)),('Replay helper differs',name)
         parent='fixed-length-http-study-attempt1';parent_raw=z.read('results/'+parent+'-verified.json');native=json.loads(parent_raw)
         assert native['status']=='fixed_length_http_study_replayed' and native['native_fixed_4k_metrics_replayed']
@@ -61,7 +62,7 @@ def main():
             for ledger in ('cpu-ledger','metadata-ledger','client-ledger','stop-ledger'):
                 records=[json.loads(line) for line in z.read(base+ledger+'/commands.jsonl').splitlines()]
                 assert len(records)==2 and records[0]['event']=='started' and records[1]['event']=='finished' and records[1]['exit_code']==0
-            assert b'Ran 26 tests' in z.read(base+'cpu-ledger/commands.log') and b'\nOK' in z.read(base+'cpu-ledger/commands.log')
+            assert b'Ran 31 tests' in z.read(base+'cpu-ledger/commands.log') and b'\nOK' in z.read(base+'cpu-ledger/commands.log')
             metadata=doc(base+'metadata.json');info=doc(base+'server-info-raw.json');expected=validate(info,w['mode'])
             for key,value in expected.items():assert metadata[key]==value
             launcher='serve_sglang_fixed4k.sh' if w['mode']=='ordinary' else 'serve_sglang_mtp3_fixed4k.sh'
@@ -143,10 +144,8 @@ def main():
                 samples=[json.loads(line) for line in z.read(root+run+'-vram.jsonl').splitlines()];memory={}
                 for saved,cohort in zip(benchmark['cohorts'],frozen['cohorts']):
                     assert saved['request_keys']==[run+'-'+key for key in cohort['measured']] and saved['prompt_tokens']==[3968]*8 and saved['generated_tokens']==1024
-                    phase=saved['case']+'-c'+str(saved['concurrency']);selected=[s for s in samples if s['phase']==phase];gaps=[b['monotonic']-a['monotonic'] for a,b in zip(selected,selected[1:])];peak=max(s['used_bytes'] for s in selected)
-                    assert saved['sampled_peak_adapter_used_bytes']==peak and saved['samples']==len(selected) and saved['requested_interval_seconds']==.02
-                    assert saved['observed_sample_gap_median_seconds']==statistics.median(gaps) and saved['observed_sample_gap_max_seconds']==max(gaps)
-                    memory[phase]={'sampled_peak_adapter_used_bytes':peak,'samples':len(selected),'observed_sample_gap_max_seconds':max(gaps),'scope':saved['scope']}
+                    phase=saved['case']+'-c'+str(saved['concurrency']);requests=[doc(root+key+'-result.json') for key in saved['request_keys']]
+                    memory[phase]=replay_cohort_memory(samples,phase,saved,requests)
                 resource=doc(base+'resources/resource-monitor.json');samples=[json.loads(line) for line in z.read(base+'resources/resource-vram.jsonl').splitlines()]
                 peak=max(v['used_bytes'] for v in samples);assert resource['child_exit_code']==0 and resource['gpu']['uuid']==GPU and resource['sampled_memory']['sampled_peak_adapter_used_bytes']==peak
                 profiles.append({'raw_replay':fresh,'sampled_memory':memory,'whole_client_and_quality_sampled_peak_adapter_bytes':peak,'actual_nonstream_id_controls':124,'actual_timed_and_warmup_streams':124,'streamed_individual_ids_observed':False})

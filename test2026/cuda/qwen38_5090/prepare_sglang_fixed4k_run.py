@@ -5,6 +5,7 @@ import argparse,hashlib,json,zipfile
 sha=lambda raw:hashlib.sha256(raw).hexdigest()
 METHODS=(
     'run_sglang_fixed4k.py','prepare_sglang_fixed4k_run.py','verify_sglang_fixed4k.py',
+    'cohort_memory_replay.py','test_cohort_memory_replay.py',
     'prepare_sglang_fixed4k_metadata.py','reference_fixed4k_sglang_identity.py',
     'inspect_reference_fixed4k_linux.py','stop_reference_server.py',
     'probe_reference_fixed4k.py','serve_sglang_fixed4k.sh','serve_sglang_mtp3_fixed4k.sh',
@@ -23,6 +24,7 @@ TEST_MODULES=tuple('test2026.cuda.qwen38_5090.'+name for name in (
     'test_reference_fixed4k_identity','test_sglang_fixed4k_owner',
     'test_fixed_length_reference','test_vllm_cache_control',
     'test_reference_mtp_equivalence',
+    'test_cohort_memory_replay',
 ))
 
 def main():
