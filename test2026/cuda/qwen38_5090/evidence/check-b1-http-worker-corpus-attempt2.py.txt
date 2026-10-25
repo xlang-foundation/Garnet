@@ -1,0 +1,12 @@
+from pathlib import Path
+import ast,hashlib,json,sys
+r=Path('D:/CantorAI/work/qwen38-5090');m=r/'test2026/cuda/qwen38_5090';w=Path(__file__).resolve().parent;sys.path.insert(0,str(r))
+from test2026.cuda.qwen38_5090.mmmu_http_quality import load_corpus
+corpus=w/'mmmu/quality-corpus';manifest,rows,gold=load_corpus(corpus)
+node=next(n for n in ast.parse((m/'native_bf16_low_batch_stream_worker.py').read_bytes()).body if isinstance(n,ast.FunctionDef) and n.name=='validate_body');scope={};exec(compile(ast.fix_missing_locations(ast.Module(body=[node],type_ignores=[])),'b1-worker-policy','exec'),scope)
+identities=[]
+for row in rows:
+ raw=(corpus/row['request_file']).read_bytes();scope['validate_body'](json.loads(raw));identities.append(hashlib.sha256(raw).hexdigest())
+assert len(identities)==805
+report={'status':'b1_http_worker_frozen_request_policy_cpu_checked_actual_http_unrun','requests_checked':805,'manifest_sha256':hashlib.sha256((corpus/'manifest.json').read_bytes()).hexdigest(),'request_identity_sequence_sha256':hashlib.sha256(json.dumps(identities).encode()).hexdigest(),'worker_sha256':hashlib.sha256((m/'native_bf16_low_batch_stream_worker.py').read_bytes()).hexdigest(),'worker_uploaded':False,'actual_http_requests_sent':0,'actual_model_responses':0,'gpu_executed':False,'streaming_protocol_qualified':False,'runtime_image_preprocessing_verified':False,'quality_qualified':False,'performance_admitted':False,'scope':'Actual frozen805canonical requests and all corpus hashes validated on CPU; extracted request admission policy only, no model worker import, HTTP transport or inference. Local prepared single-slot B1 worker offers ordinary/MTP modes and requires actual closed native model proof before initialization.'}
+(m/'evidence/bf16-low-batch-http-worker-attempt2-preparation.json').write_text(json.dumps(report,indent=2),encoding='utf8');print(json.dumps(report,indent=2))

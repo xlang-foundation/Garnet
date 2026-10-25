@@ -1,0 +1,37 @@
+from pathlib import Path
+from datetime import datetime,timezone
+import hashlib,json,shutil
+r=Path('D:/CantorAI/work/qwen38-5090');m=r/'test2026/cuda/qwen38_5090';e=m/'evidence';w=Path(__file__).resolve().parent;o=w.parent/'outputs';now=datetime.now(timezone.utc).isoformat();sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+for name in ('run-b1-http-corrected-preparation.py','check-b1-http-worker-corpus-attempt2.py'):shutil.copyfile(w/name,e/(name+'.txt'))
+preparation=json.loads((e/'bf16-low-batch-http-worker-attempt2-preparation.json').read_bytes());assert preparation['worker_sha256']==sha(m/'native_bf16_low_batch_stream_worker.py') and preparation['requests_checked']==805 and preparation['actual_http_requests_sent']==0
+report={'status':'corrected_b1_model_job_running_http_stage_prepared_unrun','recorded_utc':now,'model_job':'bf16-low-batch-model-consistency-attempt2','last_authoritative_handle_state':'running','actual_remote_cpu_tests_passed':18,'last_readonly_b4_cases':1,'last_readonly_b4_cases_with_retained_full_row_and_vectors_exact':1,'last_readonly_model_error':None,'http_worker_sha256':preparation['worker_sha256'],'http_cpu_contract_tests_passed':7,'frozen_request_policy_checks':805,'new_http_methods':{n:sha(m/n) for n in ('native_bf16_low_batch_stream_worker.py','serve_native_bf16_low_batch_worker.bat','probe_bf16_low_batch_http.py')},'http_worker_or_probe_uploaded':False,'actual_http_requests_sent':0,'actual_4k_runtime_controls_executed':0,'prepared_boundary_control_input_tokens':3968,'prepared_boundary_control_reserved_output_tokens':128,'new_server_probe_pycompile_passed':True,'streaming_protocol_qualified':False,'broad_quality_qualified':False,'performance_admitted':False,'two_times_target_achieved':False,'scope':'Observed current supervisor plus one fresh B4 record, not closed full-model qualification. Corrected HTTP worker requires actual attempt2 positive replay. Prepared server probe performs real token-ID/SSE/queued-reset checks,805screen,two4Kboundary controls and optional short exploratory pilot; MTP additionally requires actual ordinary805/4Kresults and exact IDs. Outer ownership/archive/scratch controller and actual corpus installation still required before execution. No new HTTP or benchmark result.'}
+(e/'bf16-low-batch-fixed-run-http-stage-preparation.json').write_text(json.dumps(report,indent=2),encoding='utf8')
+p=o/'Garnet-Parallel-Top1-Integration-Status.json';s=json.loads(p.read_bytes());s.update(recorded_utc=now,status=report['status'],current_native_full_model_lifecycle_qualified=False,new_model_speed_measurement=False,two_times_target_achieved=False);s['b1_model_consistency'].update(status='original_supervised_job_running',last_authoritative_handle_state='running',actual_remote_cpu_tests_passed=18,last_readonly_b4_case_records=1,last_readonly_b4_parent_row_and_vectors_exact=1,last_readonly_b4_error=None,actual_gpu_model_cases_verified=0);s['b1_http_corrected_preparation']=report;p.write_text(json.dumps(s,indent=2)+'\n',encoding='utf8')
+addition='''
+
+### 2026-10-25: fresh model attempt2 active; next actual HTTP stage prepared
+
+Original supervised attempt2 is live. All18CPU controls passed on the5090;
+read-only report now records the first fresh B4 text case with its retained
+complete canonical/logical row0 and raw hidden/normalized vectors exact, no
+recorded error. This is partial, not a closed model pass; remote source/runtime
+remain frozen until the original controller is terminal.
+
+Local HTTP worker now binds the corrected attempt2 proof/verifier instead of
+the permanently failed first attempt. Seven CPU policy/notification tests and
+all805frozen request-admission checks pass on these actual new bytes, with real
+two-command ledger. Prepared launcher/server probe remain local and unrun. The
+probe first requires a real positive current-model proof, then actual queued
+nonstream/stream token-ID controls, complete805screen and two exact3968-input/
+128-output-reserve boundary controls. MTP also requires actual completed ordinary
+controls and exact ordinary/MTP IDs across all805screens and both long-context
+controls. Optional short41/104-token exploratory pilot remains explicitly
+different from a full4Kbenchmark or2x qualification. Corpus paths and both frozen
+boundary wire hashes/3968prompt counts were checked on CPU; no runtime4Krequest
+was sent. A guarded outer ownership/archive/scratch controller and actual corpus
+installation still precede execution. No new HTTP/model-quality/benchmark score
+or2x admission is claimed.
+'''
+for name in ('docs/research/qwen38-5090-development-log.md','docs/research/qwen38-5090-implementation-task.md'):
+ p=r/name;raw=p.read_bytes();assert b'fresh model attempt2 active; next actual HTTP stage prepared' not in raw;p.write_bytes(raw+addition.replace('\n','\r\n').encode())
+shutil.copyfile(Path(__file__),e/'b1-fixed-run-http-stage-record-method.py.txt');print(json.dumps({'status':report['status'],'actual_remote_cpu_tests':18,'partial_b4_parent_exact_cases':1,'actual_new_http_requests':0,'performance_admitted':False}))
