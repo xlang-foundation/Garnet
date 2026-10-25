@@ -1,0 +1,110 @@
+{
+  "status": "bounded_cpu_byte_helper_hashes_match_three_environments",
+  "runs": {
+    "local-cpython": {
+      "python": "3.12.10",
+      "file_sha256": "66072108deaccfa09efd3a3387b4b1ad4d84fca715812dce82909f84d7e3a810",
+      "observations": [
+        {
+          "event": "completed",
+          "words": 16,
+          "expand_seconds": 4.1000021155923605e-06,
+          "hash_seconds": 3.1999952625483274e-06,
+          "raw_sha256": "fdeab9acf3710362bd2658cdc9a29e8f9c757fcf9811603a8c447cd1d9151108",
+          "expanded_sha256": "b597a4fe40bdd58a6bd8559812f5bb184031aa31fe94fc64434e4efac5b9a586",
+          "expanded_bytes": 128
+        },
+        {
+          "event": "completed",
+          "words": 4096,
+          "expand_seconds": 3.090000245720148e-05,
+          "hash_seconds": 2.5200017262250185e-05,
+          "raw_sha256": "a1f259d4365ed4320c377ce26f5c8c56dcdc9a89e7b641bfd8eabfbbeac86654",
+          "expanded_sha256": "99cc02e9e0a9e848b00a43dfa332f7a890797db7d5188a7e66a12fe556e23df7",
+          "expanded_bytes": 32768
+        },
+        {
+          "event": "completed",
+          "words": 65536,
+          "expand_seconds": 0.00044579998939298093,
+          "hash_seconds": 0.0004087999986950308,
+          "raw_sha256": "2312394bd99545d9de131c24efb781e765ac1aec243f2ed9347597a793a415e9",
+          "expanded_sha256": "397253a7d541b36ddcfbe3d70da150afa11c2cdbbe33bd0245afe8bc14a07c79",
+          "expanded_bytes": 524288
+        }
+      ]
+    },
+    "remote-cpython": {
+      "python": "3.12.3",
+      "file_sha256": "a042abf50fb948f91e93631b624b57fc52705e6d6a2eebe6825b252bebfb04f6",
+      "observations": [
+        {
+          "event": "completed",
+          "words": 16,
+          "expand_seconds": 2.900007530115545e-06,
+          "hash_seconds": 2.7999922167509794e-06,
+          "raw_sha256": "fdeab9acf3710362bd2658cdc9a29e8f9c757fcf9811603a8c447cd1d9151108",
+          "expanded_sha256": "b597a4fe40bdd58a6bd8559812f5bb184031aa31fe94fc64434e4efac5b9a586",
+          "expanded_bytes": 128
+        },
+        {
+          "event": "completed",
+          "words": 4096,
+          "expand_seconds": 2.989999484270811e-05,
+          "hash_seconds": 1.1899988749064505e-05,
+          "raw_sha256": "a1f259d4365ed4320c377ce26f5c8c56dcdc9a89e7b641bfd8eabfbbeac86654",
+          "expanded_sha256": "99cc02e9e0a9e848b00a43dfa332f7a890797db7d5188a7e66a12fe556e23df7",
+          "expanded_bytes": 32768
+        },
+        {
+          "event": "completed",
+          "words": 65536,
+          "expand_seconds": 0.0005302999925334007,
+          "hash_seconds": 0.00016480000340379775,
+          "raw_sha256": "2312394bd99545d9de131c24efb781e765ac1aec243f2ed9347597a793a415e9",
+          "expanded_sha256": "397253a7d541b36ddcfbe3d70da150afa11c2cdbbe33bd0245afe8bc14a07c79",
+          "expanded_bytes": 524288
+        }
+      ]
+    },
+    "native-runtime": {
+      "python": "3.14.7",
+      "file_sha256": "070ef5b9ed26606a48205d2b92f31715c92924b19c28a14bfc64f61ed8475a00",
+      "observations": [
+        {
+          "event": "completed",
+          "words": 16,
+          "expand_seconds": 1.6999998479150236e-05,
+          "hash_seconds": 8.90000956133008e-06,
+          "raw_sha256": "fdeab9acf3710362bd2658cdc9a29e8f9c757fcf9811603a8c447cd1d9151108",
+          "expanded_sha256": "b597a4fe40bdd58a6bd8559812f5bb184031aa31fe94fc64434e4efac5b9a586",
+          "expanded_bytes": 128
+        },
+        {
+          "event": "completed",
+          "words": 4096,
+          "expand_seconds": 8.950001210905612e-05,
+          "hash_seconds": 0.00012910000805277377,
+          "raw_sha256": "a1f259d4365ed4320c377ce26f5c8c56dcdc9a89e7b641bfd8eabfbbeac86654",
+          "expanded_sha256": "99cc02e9e0a9e848b00a43dfa332f7a890797db7d5188a7e66a12fe556e23df7",
+          "expanded_bytes": 32768
+        },
+        {
+          "event": "completed",
+          "words": 65536,
+          "expand_seconds": 0.0026806000096257776,
+          "hash_seconds": 0.0023087000008672476,
+          "raw_sha256": "2312394bd99545d9de131c24efb781e765ac1aec243f2ed9347597a793a415e9",
+          "expanded_sha256": "397253a7d541b36ddcfbe3d70da150afa11c2cdbbe33bd0245afe8bc14a07c79",
+          "expanded_bytes": 524288
+        }
+      ]
+    }
+  },
+  "method_sha256": "04214fa4a1c9283f0eac37c7b71e8ac5c43bdef3fb039b5e742e54d38af5200c",
+  "native_supervised_job": "bf16-state-byte-cpu-diagnostic-attempt1",
+  "native_job_exit_code": 0,
+  "gpu_executed": false,
+  "model_timing_admitted": false,
+  "scope": "Pure byte-only helper durations and hashes, three bounded sizes. No CUDA/Garnet/model import. Native stderr reported the same missing unused hashlib algorithms seen previously; SHA256 worked and all outputs matched. Does not establish the cause of the live full-state run or prior HTTP gaps."
+}

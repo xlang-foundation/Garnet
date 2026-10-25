@@ -122,9 +122,16 @@ audit (revision876ce5cb..., October2026 corrections included). All30Parquet blob
 341234748B hash-verify and900rows are CPU-inspected:805single-embedded-image MC
 candidates across30subjects;95excluded source rows with explicit reasons. This
 is structural selection before outputs, not a quality score or full official
-MMMU evaluation. Actual token/context/preprocessing and shared request/scoring
-protocol remain unprepared; no arbitrary quality margin adopted. Source images
-remain in fixed local cache, not Git. Actual inference/reference comparison is open.
+MMMU evaluation. All805requests are now CPU-prepared and source-replayed: exact
+aspect-preserving white256px letterbox JPEGs,64image tokens,112..627prompt tokens
+plus32output reserve, pinned no-thinking template and strict single-letter scoring.
+All95source exclusions remain explicit; no additional rows were dropped. Archive
+ac3d9dd5... is58097753B; source JPEG transforms, gold labels and independent
+Jinja/native prompt IDs replay exactly. Three synthetic CPU protocol tests pass.
+Full source payloads remain in fixed private cache; Git retains compact metadata.
+This low-resolution adapted screen is not official900question/high-resolution
+qualification. No model responses, runtime preprocessing/ID checks, quality margin
+or quality promotion is admitted. Actual inference/reference comparison is open.
 
 Actual4K request fixtures are CPU-prepared/replayed using the pinned tokenizer,
 exact chat template and64image slots:124requests,3968input tokens each plus

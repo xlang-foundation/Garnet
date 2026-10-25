@@ -1,0 +1,21 @@
+"""CPU byte-helper diagnostic only. No garnet, tensor, CUDA or model import."""
+from pathlib import Path
+import hashlib,json,platform,sys,time
+repo=Path(sys.argv[1]);output=Path(sys.argv[2]);assert not output.exists()
+sys.path.insert(0,str(repo))
+from test2026.cuda.qwen38_5090.bf16_float_reference_state import expand_bf16_carrier
+helper=repo/'test2026/cuda/qwen38_5090/bf16_float_reference_state.py'
+with output.open('x',encoding='utf8') as log:
+ def emit(value):
+  log.write(json.dumps(value)+'\n');log.flush();print(json.dumps(value),flush=True)
+ emit({'event':'identity','python':platform.python_version(),'helper_sha256':hashlib.sha256(helper.read_bytes()).hexdigest(),
+       'scope':'Bounded CPU helper execution duration only. Not a GPU/model/HTTP benchmark or diagnosis of the live worker.'})
+ for words in (16,4096,65536):
+  raw=(bytes(range(256))*((words*4+255)//256))[:words*4]
+  emit({'event':'started','words':words})
+  began=time.perf_counter();expanded=expand_bf16_carrier(raw);ended=time.perf_counter()
+  assert len(expanded)==8*words
+  began_hash=time.perf_counter();physical=hashlib.sha256(raw).hexdigest();logical=hashlib.sha256(expanded).hexdigest();ended_hash=time.perf_counter()
+  emit({'event':'completed','words':words,'expand_seconds':ended-began,'hash_seconds':ended_hash-began_hash,
+        'raw_sha256':physical,'expanded_sha256':logical,'expanded_bytes':len(expanded)})
+ emit({'event':'summary','status':'cpu_byte_helper_completed','cases':3,'gpu_executed':False,'model_timing_admitted':False})
