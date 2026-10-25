@@ -1,0 +1,37 @@
+from pathlib import Path
+import base64,hashlib,json,zlib
+w=Path(__file__).resolve().parent;plan=json.loads((w/'bf16-low-batch-model-upload-plan.json').read_bytes());rows=plan['uploads'];p=json.loads(Path(rows[-1]['local']).read_bytes())
+for row in rows:assert hashlib.sha256(Path(row['local']).read_bytes()).hexdigest()==row['sha256']
+expected={row['target']:row['sha256'] for row in rows};existing={n:h for n,h in p['files'].items() if n not in expected}
+data={'expected':expected,'existing_map_sha256':hashlib.sha256(json.dumps(existing,sort_keys=True).encode()).hexdigest(),'runtime':p['runtime_dependencies'],'parents':p['parents']}
+script='''from pathlib import Path
+import base64,datetime,hashlib,json,shutil,subprocess,zipfile
+root=Path('D:/CantorAI/5090-study-20261023');sha=lambda f:hashlib.sha256(f.read_bytes()).hexdigest();p=DATA
+build=json.loads((root/'results/bf16-low-batch-native-build-attempt1/workflow.json').read_bytes());assert build['exit_code']==0 and build['cleanup_finished'];files=dict(build['installed_source']);files.update(build['methods'])
+parent='integrated-batch-top1-model-lifecycle-attempt1'
+with zipfile.ZipFile(root/'results'/(parent+'-evidence.zip')) as z:
+ for suffix in ['report.json']+['group-'+str(g)+'-repeat-'+str(r)+'-ordinary-last-'+k+'.f32' for g in (0,1) for r in (0,1) for k in ('hidden','normalized')]:
+  n='results/'+parent+'/enabled/'+suffix;files[n]=hashlib.sha256(z.read(n)).hexdigest()
+assert hashlib.sha256(json.dumps(files,sort_keys=True).encode()).hexdigest()==p['existing_map_sha256']
+targets={}
+for n,h in p['expected'].items():
+ f=root/n;assert f.resolve().is_relative_to(root.resolve()) and f.parent.is_dir();targets[n]={'exists':f.exists(),'matches':sha(f)==h if f.is_file() else None,'expected_sha256':h}
+conflicts=[n for n,row in targets.items() if row['exists'] and row['matches'] is not True]
+drift={'files':[n for n,h in files.items() if not(root/n).is_file() or sha(root/n)!=h],'runtime':[n for n,h in p['runtime'].items() if not(root/'build/bin'/n).is_file() or sha(root/'build/bin'/n)!=h]}
+for n,row in p['parents'].items():
+ f=root/'results'/(n+'-verified.json');q=json.loads(f.read_bytes());state=json.loads((root/'results'/n/'workflow.json').read_bytes())
+ assert sha(f)==row['proof_sha256'] and q['status']==row['status'] and sha(root/'results'/(n+'-evidence.zip'))==row['archive_sha256']==q['archive_sha256'] and state['exit_code']==0 and state['cleanup_finished']
+assert sha(root/'build/bin/garnet-native-bf16-low-batch-attempt1.dll')==p['runtime']['garnet.dll']
+occupied=[str(f) for f in (root/'results/bf16-low-batch-model-consistency-attempt1',root/'results/bf16-low-batch-model-consistency-attempt1-evidence.zip') if f.exists()]
+receipt=json.loads((root/'results/study-ssd-engine-cache/receipt.json').read_bytes());cache=Path(receipt['cache_root']);assert receipt['status']=='ssd_engine_scratch_prepared' and cache.resolve().drive.upper()=='C:' and json.loads((cache/'study-owner.json').read_bytes())['study']==str(root);free=shutil.disk_usage(cache).free
+memory=int(subprocess.check_output(['nvidia-smi','--query-gpu=memory.used','--format=csv,noheader,nounits'],text=True).strip())
+ps=r"$ProgressPreference='SilentlyContinue'; Get-CimInstance Win32_Process | Where-Object { $_.ExecutablePath -and $_.ExecutablePath.StartsWith('D:\\CantorAI\\5090-study-20261023\\',[System.StringComparison]::OrdinalIgnoreCase) } | Select-Object ProcessId,ExecutablePath | ConvertTo-Json -Compress"
+live=subprocess.check_output(['powershell.exe','-NoProfile','-EncodedCommand',base64.b64encode(ps.encode('utf-16le')).decode()],text=True).strip()
+ready=not(conflicts or any(drift.values()) or occupied or live) and memory<1024 and free>=96*1024**3
+result={'status':'b1_model_launch_preflight_passed' if ready else 'b1_model_launch_preflight_failed','recorded_utc':datetime.datetime.now(datetime.timezone.utc).isoformat(),'targets':targets,'drift':drift,'conflicts':conflicts,'occupied':occupied,'gpu_used_mib_preflight_only':memory,'live':live,'owned_scratch_free_bytes':free,'scope':'Read-only source/runtime/parent/target/owned-scratch/idle observation. No model launch or performance measurement.'}
+target=root/'results/bf16-low-batch-model-consistency-attempt1-preflight.json'
+with target.open('xb') as f:f.write(json.dumps(result,indent=2).encode())
+print(json.dumps({'status':result['status'],'new_uploads':sum(not row['exists'] for row in targets.values()),'drift':drift,'conflicts':conflicts,'occupied':occupied,'gpu_used_mib_preflight_only':memory,'owned_scratch_free_bytes':free,'live':live}));assert ready
+'''.replace('DATA',repr(data))
+payload=base64.b64encode(zlib.compress(script.encode())).decode();command='C:\\Python312\\python.exe -c "import base64,zlib;exec(zlib.decompress(base64.b64decode(\''+payload+'\')).decode())"';assert len(command)<7500
+(w/'b1-model-launch-preflight-request.json').write_text(json.dumps({'command':command,'timeout':60}),encoding='utf8');print(json.dumps({'command_bytes':len(command),'targets':len(rows)}))

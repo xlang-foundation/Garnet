@@ -1,0 +1,73 @@
+"""Materialize native B1 installation only from actual closed component proofs."""
+from pathlib import Path
+import argparse,hashlib,json,sys,unittest,zipfile
+sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+
+def main():
+ a=argparse.ArgumentParser(description=__doc__);a.add_argument('--proofs',type=Path,required=True);a.add_argument('--work',type=Path,required=True);args=a.parse_args()
+ m=Path(__file__).resolve().parent;repo=m.parents[2];e=m/'evidence'
+ statuses={'integrated-batch-top1-model-lifecycle-attempt1':'integrated_top1_full_model_lifecycle_replayed','bf16-low-batch-commit-native-attempt1':'bf16_low_batch_commit_exact_bytes_replayed','bf16-low-batch-plugin-native-attempt1':'bf16_low_batch_plugin_exact_parent_replayed'}
+ required=[args.proofs/(n+s) for n in statuses for s in ('-verified.json','-remote-verified.json','-evidence.zip')]
+ missing=[str(p) for p in required if not p.is_file()]
+ if missing:print(json.dumps({'status':'b1_native_prerequisites_not_ready','missing':missing}));return 2
+ parents={};proofs={}
+ for n,status in statuses.items():
+  raw=(args.proofs/(n+'-remote-verified.json')).read_bytes();p=json.loads(raw);assert p==json.loads((args.proofs/(n+'-verified.json')).read_bytes())
+  assert p['status']==status and not p['performance_admitted'] and sha(args.proofs/(n+'-evidence.zip'))==p['archive_sha256']
+  with zipfile.ZipFile(args.proofs/(n+'-evidence.zip')) as z:
+   closed=json.loads(z.read('results/'+n+'/workflow.json'));assert closed['exit_code']==0 and closed['cleanup_finished'] and closed['library_unchanged']
+   if n.startswith('integrated-'):model_closed=closed
+   if n=='bf16-low-batch-plugin-native-attempt1':plugin_closed=closed
+  parents[n]={'status':status,'proof_sha256':hashlib.sha256(raw).hexdigest(),'archive_sha256':p['archive_sha256']};proofs[n]=p
+ assert len(proofs[next(iter(statuses))]['variants'])==2
+ assert len(proofs['bf16-low-batch-commit-native-attempt1']['cases'])==20
+ plugin=proofs['bf16-low-batch-plugin-native-attempt1'];assert not plugin['forwarding_failures'] and plugin['cpu_contract']['profiles']==32
+ recipes={}
+ for n in ('bf16-low-batch-native-local-wiring.json','bf16-low-batch-python-local-wiring.json'):recipes.update(json.loads((e/n).read_bytes())['files'])
+ model=json.loads((e/'bf16-low-batch-model-factory-wiring.json').read_bytes());recipes[model['file']]=model
+ assert len(recipes)==19
+ product_files=sorted(recipes)
+ shared_fixture='test2026/cuda/qwen38_5090/test_bf16_kv_model_contract.py'
+ recipes[shared_fixture]={'result_sha256':sha(repo/shared_fixture),'base_sha256':model_closed['source_sha256']['Garnet/'+shared_fixture]}
+ candidate={n:sha(repo/n) for n in recipes};assert all(candidate[n]==row['result_sha256'] for n,row in recipes.items())
+ base=model_closed['source_sha256'];assert base==model_closed['source_after_sha256']
+ candidate_base={n:row.get('base_sha256') for n,row in recipes.items()}
+ for n,h in candidate_base.items():
+  if h is not None:assert base['Garnet/'+n]==h
+  else:assert 'Garnet/'+n not in base
+ with zipfile.ZipFile(args.proofs/'integrated-batch-top1-native-build-attempt1-evidence.zip') as z:
+  cache_hash=hashlib.sha256(z.read('build/CMakeCache.txt')).hexdigest()
+ previous=json.loads((e/'integrated-batch-top1-native-build-preparation.json').read_bytes())
+ environment=dict(previous['environment_files'])
+ environment.update({str(Path('D:/CantorAI/5090-study-20261023')/n):h for n,h in plugin_closed['sdk_sha256'].items()})
+ local_build=json.loads((e/'bf16-low-batch-wired-local-build.json').read_bytes())
+ for suffix in ('xlang3.h','charconv_compat.h'):
+  local=Path('D:/CantorAI/xlang3/sdk/xlang3')/suffix;h=local_build['source_sha256'][str(local)];assert sha(local)==h
+  environment[str(Path('D:/CantorAI/5090-study-20261023/xlang3/sdk/xlang3')/suffix)]=h
+ modules=['test2026.cuda.qwen38_5090.'+n for n in ('test_bf16_low_batch_model_contract','test_bf16_low_batch_profile','test_bf16_kv_model_contract','test_bf16_float_reference_model_contract','test_joined_mlp_profile','test_kv_delta_graph_contract','test_kv_delta_transactions')]
+ sys.path.insert(0,str(repo))
+ def ids(suite):
+  for t in suite:
+   if isinstance(t,unittest.TestSuite):yield from ids(t)
+   else:yield t.id()
+ tests=sorted(t for module in modules for t in ids(unittest.defaultTestLoader.loadTestsFromName(module)));assert len(tests)==49
+ inputs=[n.replace('.','/')+'.py' for n in modules if n.replace('.','/')+'.py'!=shared_fixture]+['test2026/cuda/qwen38_5090/bf16_low_batch_profile.py','test2026/cuda/qwen38_5090/run_bf16_low_batch_native_build.py','test2026/cuda/qwen38_5090/verify_bf16_low_batch_native_build.py','test2026/cuda/qwen38_5090/prepare_bf16_low_batch_native_build.py','test2026/cuda/qwen38_5090/build_integrated_batch_top1_native.bat']
+ methods={'Garnet/'+n:sha(repo/n) for n in inputs}
+ bundle=args.work/'bf16-low-batch-native-source-with-fixture.zip'
+ if bundle.exists():
+  with zipfile.ZipFile(bundle) as z:assert set(z.namelist())==set(candidate) and all(hashlib.sha256(z.read(n)).hexdigest()==h for n,h in candidate.items())
+ else:
+  with zipfile.ZipFile(bundle,'x',zipfile.ZIP_DEFLATED) as z:
+   for n in candidate:z.writestr(n,(repo/n).read_bytes())
+ p={'status':'b1_native_build_prepared_unrun','parents':parents,'base_files':base,'candidate_files':candidate,'product_files':product_files,'shared_test_fixture':shared_fixture,'candidate_base':candidate_base,'methods':methods,'source_zip':'results/'+bundle.name,'source_zip_sha256':sha(bundle),'environment_files':environment,'runtime_dependencies':model_closed['runtime_dependencies'],'cmake_cache_before_sha256':cache_hash,'vcvars':previous['vcvars'],'test_modules':tests,'scope':'Install19 reviewed default-off B1 product files plus1 reviewed shared CPU trace fixture after actual model, B1 commit and plugin closures. Preserve all9 replaced files and qualified5ac DLL; reuse existing build tree and actual preserved SDK Release/MT/sm120. Run49CPU construction/legacy regressions. Initial read-only preflight rejected older shared fixture; its exact parent-pinned bytes and failed receipt retained. No Garnet load, GPU model, broad quality, actual4K, HTTP timing, serving memory or2x admission. Build failure preserves candidate DLL and attempts guarded source/library restore.'}
+ target=e/'bf16-low-batch-native-build-preparation.json';data=json.dumps(p,indent=2).encode()
+ if target.exists():assert target.read_bytes()==data
+ else:target.write_bytes(data)
+ rows=[{'local':str(repo/n.removeprefix('Garnet/')),'target':n,'sha256':h} for n,h in methods.items()]
+ rows +=[{'local':str(bundle),'target':p['source_zip'],'sha256':sha(bundle)},{'local':str(target),'target':'Garnet/test2026/cuda/qwen38_5090/evidence/'+target.name,'sha256':sha(target)}]
+ plan=args.work/'bf16-low-batch-native-build-upload-plan.json';data=json.dumps({'uploads':rows,'scope':p['scope']},indent=2).encode()
+ if plan.exists():assert plan.read_bytes()==data
+ else:plan.write_bytes(data)
+ print(json.dumps({'status':p['status'],'source_files':len(candidate),'replaced_files':sum(h is not None for h in candidate_base.values()),'cpu_tests':len(tests),'preparation_sha256':sha(target),'source_zip_sha256':sha(bundle)}));return 0
+
+if __name__=='__main__':raise SystemExit(main())

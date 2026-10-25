@@ -1,0 +1,35 @@
+from pathlib import Path
+import base64,hashlib,json,zlib
+w=Path(__file__).resolve().parent;plan=json.loads((w/'bf16-low-batch-native-build-upload-plan.json').read_bytes());rows=plan['uploads'];prep=next(row for row in rows if row['target'].endswith('native-build-preparation.json'));p=json.loads(Path(prep['local']).read_bytes())
+for row in rows:assert hashlib.sha256(Path(row['local']).read_bytes()).hexdigest()==row['sha256']
+data={'expected':{row['target']:row['sha256'] for row in rows},'candidate_base':p['candidate_base'],'base_map_sha256':hashlib.sha256(json.dumps(p['base_files'],sort_keys=True).encode()).hexdigest(),'environment_files':p['environment_files'],'runtime_dependencies':p['runtime_dependencies'],'cache_sha256':p['cmake_cache_before_sha256'],'parents':p['parents']}
+script='''from pathlib import Path
+import base64,datetime,hashlib,json,subprocess
+root=Path('D:/CantorAI/5090-study-20261023');sha=lambda f:hashlib.sha256(f.read_bytes()).hexdigest();p=DATA
+targets={}
+for n,h in p['expected'].items():
+ f=root/n;assert f.resolve().is_relative_to(root.resolve()) and f.parent.is_dir();targets[n]={'exists':f.exists(),'matches':sha(f)==h if f.is_file() else None,'expected_sha256':h}
+conflicts=[n for n,row in targets.items() if row['exists'] and row['matches'] is not True]
+closed=json.loads((root/'results/integrated-batch-top1-model-lifecycle-attempt1/workflow.json').read_bytes());base=closed['source_sha256'];assert closed['source_after_sha256']==base and hashlib.sha256(json.dumps(base,sort_keys=True).encode()).hexdigest()==p['base_map_sha256']
+drift={'base':[n for n,h in base.items() if not(root/n).is_file() or sha(root/n)!=h],'environment':[n for n,h in p['environment_files'].items() if not Path(n).is_file() or sha(Path(n))!=h],'runtime':[n for n,h in p['runtime_dependencies'].items() if not(root/'build/bin'/n).is_file() or sha(root/'build/bin'/n)!=h]}
+for n,h in p['candidate_base'].items():
+ f=root/'Garnet'/n;assert f.parent.is_dir()
+ assert (not f.exists()) if h is None else (f.is_file() and sha(f)==h),('Candidate base conflict',n)
+for n,row in p['parents'].items():
+ f=root/'results'/(n+'-verified.json');proof=json.loads(f.read_bytes());state=json.loads((root/'results'/n/'workflow.json').read_bytes())
+ assert sha(f)==row['proof_sha256'] and proof['status']==row['status'] and sha(root/'results'/(n+'-evidence.zip'))==row['archive_sha256']==proof['archive_sha256']
+ assert state['exit_code']==0 and state['cleanup_finished'] and state['library_unchanged']
+assert sha(root/'build/CMakeCache.txt')==p['cache_sha256']
+assert sha(root/'build/bin/garnet-native-integrated-batch-top1-attempt1.dll')==p['runtime_dependencies']['garnet.dll']
+occupied=[str(f.relative_to(root)) for f in (root/'results/bf16-low-batch-native-build-attempt1',root/'results/bf16-low-batch-native-build-attempt1-evidence.zip',root/'build/bin/garnet-native-bf16-low-batch-attempt1.dll') if f.exists()]
+memory=int(subprocess.check_output(['nvidia-smi','--query-gpu=memory.used','--format=csv,noheader,nounits'],text=True).strip())
+ps=r"$ProgressPreference='SilentlyContinue'; Get-CimInstance Win32_Process | Where-Object { $_.ExecutablePath -and $_.ExecutablePath.StartsWith('D:\\CantorAI\\5090-study-20261023\\',[System.StringComparison]::OrdinalIgnoreCase) } | Select-Object ProcessId,ExecutablePath | ConvertTo-Json -Compress"
+live=subprocess.check_output(['powershell.exe','-NoProfile','-EncodedCommand',base64.b64encode(ps.encode('utf-16le')).decode()],text=True).strip()
+ready=not(conflicts or any(drift.values()) or occupied or live) and memory<1024
+result={'status':'b1_native_build_launch_preflight_passed' if ready else 'b1_native_build_launch_preflight_failed','recorded_utc':datetime.datetime.now(datetime.timezone.utc).isoformat(),'targets':targets,'conflicts':conflicts,'drift':drift,'occupied':occupied,'gpu_used_mib_preflight_only':memory,'live':live,'scope':'Read-only native-source/build/runtime/SDK/target/parent/idle observation; no install/build/load/GPU benchmark.'}
+target=root/'results/bf16-low-batch-native-build-attempt1-preflight.json'
+with target.open('xb') as f:f.write(json.dumps(result,indent=2).encode())
+print(json.dumps({'status':result['status'],'new_uploads':sum(not row['exists'] for row in targets.values()),'targets':len(targets),'drift':drift,'conflicts':conflicts,'occupied':occupied,'gpu_used_mib_preflight_only':memory,'live':live}));assert ready
+'''.replace('DATA',repr(data))
+payload=base64.b64encode(zlib.compress(script.encode())).decode();command='C:\\Python312\\python.exe -c "import base64,zlib;exec(zlib.decompress(base64.b64decode(\''+payload+'\')).decode())"';assert len(command)<7500
+(w/'b1-native-build-launch-preflight-request.json').write_text(json.dumps({'command':command,'timeout':60}),encoding='utf8');print(json.dumps({'command_bytes':len(command),'targets':len(rows)}))
