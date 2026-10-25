@@ -374,7 +374,7 @@ namespace Garnet {
                 cached.allocator = std::make_unique<TRTSyncAllocator>(device);
                 cached.runtime->setGpuAllocator(cached.allocator.get());
             }
-            if(!EnsureBF16ProjectionPluginRegistered()||!EnsureQwen35DeltaPluginRegistered()||!EnsureModelOptNVFP4PluginRegistered()||!EnsureModelOptFP8PluginRegistered()||!EnsureCTInt4G128PluginRegistered()||!EnsureBF16KVOverlayPluginRegistered()||!EnsureBF16KVFloatReferencePluginRegistered())return nullptr;
+            if(!EnsureBF16ProjectionPluginRegistered()||!EnsureQwen35DeltaPluginRegistered()||!EnsureModelOptNVFP4PluginRegistered()||!EnsureModelOptFP8PluginRegistered()||!EnsureCTInt4G128PluginRegistered()||!EnsureBF16KVOverlayPluginRegistered()||!EnsureBF16KVLowBatchOverlayPluginRegistered()||!EnsureBF16KVFloatReferencePluginRegistered())return nullptr;
             LogTRTMemoryCheckpoint("before_engine_deserialize",enginePath);
             cached.engine = cached.runtime->deserializeCudaEngine(engineStream);
             if (!cached.engine) {
@@ -6209,6 +6209,25 @@ namespace Garnet {
                             keywordInt("fused_attention",0)!=1||keywordInt("joined_mlp_projections",0)!=1)
                             throw std::invalid_argument("BF16 float reference requires shared mixed compressed joined projections");
                     }
+                    auto* lowBatchAttribute=FindKeyword(kwParams,"canonical_bf16_low_batch_kv_overlay");
+                    if(lowBatchAttribute&&(!(lowBatchAttribute->second.IsInt64()||lowBatchAttribute->second.IsUInt64())||
+                        (lowBatchAttribute->second.IsUInt64()&&lowBatchAttribute->second.ToUInt64()>1)))throw std::invalid_argument("B1 BF16 cache opt-in requires integer0 or1");
+                    const auto lowBatchMode=lowBatchAttribute?lowBatchAttribute->second.ToLongLong():0;
+                    if((lowBatchMode!=0&&lowBatchMode!=1)||(lowBatchMode&&(bf16Mode||overlayMode||referenceMode)))throw std::invalid_argument("B1 BF16 cache requires an exclusive explicit cache type");
+                    BF16KVLowBatchOverlayConfig lowBatchOverlay{};
+                    if(lowBatchMode){
+                        const auto dims=ops.shape(source);
+                        if(dims.size()!=3||dims[0]!=1||(dims[1]!=4&&dims[1]!=32)||dims[2]!=5120||
+                            capturedWeightProfile!="modelopt_mixed"||!FindKeyword(kwParams,"external_compressed_weights")||external.empty()||FindKeyword(kwParams,"external_weights")||
+                            keywordInt("fused_attention",0)!=1||keywordInt("joined_mlp_projections",0)!=1)
+                            throw std::invalid_argument("B1 BF16 cache requires shared mixed joined B1,T4/T32 geometry");
+                        auto exact=[&](const char* key)->int64_t{auto* item=FindKeyword(kwParams,key);
+                            if(!item||!(item->second.IsInt64()||item->second.IsUInt64())||(item->second.IsUInt64()&&item->second.ToUInt64()>uint64_t(INT64_MAX)))
+                                throw std::invalid_argument("B1 BF16 cache metadata requires bounded integers");return item->second.ToLongLong();};
+                        if(exact("kv_overlay_strategy")!=1)throw std::invalid_argument("B1 BF16 cache requires fixed reduction strategy1");
+                        lowBatchOverlay={{1,dims[1],24,4,4096,256},exact("canonical_state_width"),exact("canonical_key_offset"),exact("canonical_value_offset")};
+                        if(!ValidBF16KVLowBatchOverlayConfig(lowBatchOverlay))throw std::invalid_argument("Unqualified B1 BF16 cache layout");
+                    }
                     BF16KVOverlayConfig bf16Overlay{};
                     if(bf16Mode){
                         const auto dims=ops.shape(source);
@@ -6237,7 +6256,7 @@ namespace Garnet {
                     }
                     auto* stageAttribute=FindKeyword(kwParams,"diagnostic_full_stages");
                     const auto diagnostic=stageAttribute?stageAttribute->second.ToLongLong():0;
-                    if((diagnostic!=0&&diagnostic!=1)||(diagnostic&&(overlayMode||bf16Mode||referenceMode)))throw std::invalid_argument("Full attention stage diagnostic must be0 or1 and exclude canonical KV");
+                    if((diagnostic!=0&&diagnostic!=1)||(diagnostic&&(overlayMode||bf16Mode||referenceMode||lowBatchMode)))throw std::invalid_argument("Full attention stage diagnostic must be0 or1 and exclude canonical KV");
                     auto dimensions=ops.shape(source);
                     if(diagnostic&&(capturedWeightProfile!="modelopt_mixed"||!external.empty()||
                         dimensions.size()!=3||(dimensions[0]!=1&&dimensions[0]!=2)||dimensions[1]!=16||dimensions[2]!=5120||
@@ -6257,7 +6276,7 @@ namespace Garnet {
                         keywordText("layer_prefix"),keywordInt("num_heads",0),keywordInt("num_kv_heads",0),keywordInt("head_dim",0),
                         keywordInt("rotary_dim",0),{keywordInt("mrope_t",0),keywordInt("mrope_h",0),keywordInt("mrope_w",0)},
                         float(number("rope_theta",1e7)),float(number("eps",1e-6)),keywordInt("fused_attention",0)!=0,keywordInt("joined_mlp_projections",0)!=0,diagnostic?&diagnosticStages:nullptr,
-                        (overlayMode||bf16Mode)?b["qwen35_attention_bind_canonical"]:nullptr,overlayMode?&overlay:nullptr,bf16Mode?&bf16Overlay:nullptr,referenceMode!=0);
+                        (overlayMode||bf16Mode||lowBatchMode)?b["qwen35_attention_bind_canonical"]:nullptr,overlayMode?&overlay:nullptr,bf16Mode?&bf16Overlay:nullptr,referenceMode!=0,lowBatchMode?&lowBatchOverlay:nullptr);
                     if(diagnostic){
                         if(diagnosticStages.size()!=10)throw std::runtime_error("Full attention stage contract changed");
                         std::vector<ITensor*> parts{lastOutput};

@@ -1,0 +1,99 @@
+from pathlib import Path
+import ast,datetime,difflib,hashlib,json,os,re,subprocess,sys,zipfile
+r=Path('D:/CantorAI/work/qwen38-5090');m=r/'test2026/cuda/qwen38_5090';e=m/'evidence';w=Path(__file__).resolve().parent;o=w.parent/'outputs';base='83f5ad146';sha=lambda b:hashlib.sha256(b).hexdigest()
+sys.path.insert(0,str(m));from run_logged import run
+files={}
+for name in ('bf16-low-batch-native-local-wiring.json','bf16-low-batch-python-local-wiring.json'):
+ recipe=json.loads((e/name).read_bytes())
+ for target,row in recipe['files'].items():
+  raw=(r/row['source']).read_bytes() if 'source' in row else subprocess.check_output(['git','show',base+':'+target],cwd=r)
+  assert sha(raw)==row.get('source_sha256',row.get('base_sha256'));text=raw.decode().replace('\r\n','\n')
+  for before,after,count in row['changes']:assert text.count(before)==count;text=text.replace(before,after)
+  if 'source' in row:result=text.encode()
+  else:
+   result=text.replace('\n','\r\n').encode() if b'\r\n' in raw else text.encode()
+   a=raw.splitlines(keepends=True);b=result.splitlines(keepends=True);result=b''
+   matcher=difflib.SequenceMatcher(a=[v.rstrip(b'\r\n') for v in a],b=[v.rstrip(b'\r\n') for v in b],autojunk=False)
+   for tag,i,j,k,l in matcher.get_opcodes():result+=b''.join(a[i:j] if tag=='equal' else b[k:l])
+  assert result==(r/target).read_bytes() and sha(result)==row['result_sha256'],target
+  files[target]=sha(result)
+recipe=json.loads((e/'bf16-low-batch-model-factory-wiring.json').read_bytes());target=recipe['file'];raw=subprocess.check_output(['git','show',base+':'+target],cwd=r);assert sha(raw)==recipe['base_sha256'];marker=recipe['insert_before'].encode();assert raw.count(marker)==1
+text=recipe['inserted_text'];insert=text.replace('\n','\r\n').encode() if b'\r\n' in raw else text.encode();result=raw.replace(marker,insert+marker);assert result==(r/target).read_bytes() and sha(result)==recipe['result_sha256'];files[target]=sha(result)
+assert len(files)==19
+for n in ('src/backends/tensorrt/qwen38_bf16_kv_overlay_plugin.h','src/backends/tensorrt/qwen38_bf16_kv_overlay_plugin.cpp','src/backends/tensorrt/qwen38_bf16_kv_layout_contract.h','src/cuda/qwen38_bf16_kv_commit.cu','src/cuda/qwen38_bf16_kv_overlay.cu','xModel/qwen35/vl_0_8b/bf16_kv_profile.py','xModel/qwen35/vl_0_8b/kv_bf16_study_layout.py'):
+ assert (r/n).read_bytes()==subprocess.check_output(['git','show',base+':'+n],cwd=r),('Legacy source changed',n)
+build=json.loads((e/'bf16-low-batch-wired-local-build.json').read_bytes());assert len(build['compiled_units'])==6 and not any(build[n] for n in ('native_dll_linked','runtime_loaded','gpu_executed','deployed_source_runtime_changed','model_qualified','performance_admitted'))
+for n,h in build['source_sha256'].items():assert sha(Path(n).read_bytes())==h
+for n,h in build['object_sha256'].items():assert sha((w/(n+'.obj')).read_bytes())==h
+modules=['test_bf16_low_batch_model_contract','test_bf16_low_batch_profile','test_bf16_kv_model_contract','test_bf16_float_reference_model_contract','test_joined_mlp_profile','test_kv_delta_graph_contract','test_kv_delta_transactions']
+source_files=[r/n for n in files]+[m/(n+'.py') for n in modules]+[m/'bf16_low_batch_profile.py',e/'nvfp4-config.json']
+for p in source_files:
+ if p.suffix=='.py':ast.parse(p.read_bytes(),filename=str(p))
+os.chdir(r);ledger=e/'bf16-low-batch-local-integration-cpu-ledger';assert run([sys.executable,'-m','unittest']+['test2026.cuda.qwen38_5090.'+n for n in modules],ledger,'correctness','B1 explicit factory/admission/64layer graph markers and unchanged BF16/reference/joined/deferred transaction regressions',source_files+[Path(__file__)])==0
+events=[json.loads(line) for line in (ledger/'commands.jsonl').read_text().splitlines()];last=events[-1];log=(ledger/'commands.log').read_bytes()[last['raw_start_offset']:last['raw_end_offset']];assert int(re.search(rb'Ran (\d+) tests',log)[1])==49 and b'\nOK' in log
+summary={'status':'b1_native_and_model_route_wired_locally_cpu_checked_deployment_pending','recorded_utc':datetime.datetime.now(datetime.timezone.utc).isoformat(),'base_commit':base,'branch':'qwen38-5090','implementation_files':19,'implementation_sha256':files,'literal_derivations_replayed':True,'legacy_cache_sources_unchanged':True,'cpu_construction_and_regression_tests_passed':49,'selected_native_units_compile_passed':6,'private_sm120_cuda_units_compiled':2,'new_factory':'xModel.qwen38.vl_27b.model.create_cuda_bf16_low_batch_study_decoder','explicit_optin':'bf16_kv_low_batch_state=True','physical_batch':1,'cache_capacity':4096,'prefill_chunk':32,'decode_chunk':4,'default_enabled':False,'native_dll_linked':False,'deployed_source_runtime_changed':False,'component_commit_gpu_qualified':False,'component_plugin_runtime_qualified':False,'native_helper_runtime_qualified':False,'model_qualified':False,'actual_4k_qualified':False,'quality_qualified':False,'performance_admitted':False,'two_times_target_met':False,
+ 'scope':'Actual local opt-in route now connects strict B1 metadata/guards, packed program/chunk lowering marker, distinct native class/cache/plugin and include-only CUDA candidate relocations. New factory fixes mixed128NVFP4/208FP8 pool, host BF16 embedding/native NVFP4 head, joined/deferred/shared/register128 and B1/T32,T4. Existing default factories/B4/B8/reference routes stay separate.49CPU tests and six selected native-unit compilations only. No complete native DLL build/load/install or new GPU/model/HTTP/performance result. Original remote5ac model worker remains authoritative/live; finish/replay it, collect/replay B1 commit and plugin gates, then preserve/install/build and verify native helper/B4 regressions/B1 full model/quality/4K/protocol before timing. Full original tuned/INT4/4B/concurrency/repetition/2x scope remains open.'}
+(e/'bf16-low-batch-local-integration-verified.json').write_text(json.dumps(summary,indent=2),encoding='utf8');(e/'bf16-low-batch-local-integration-method.py.txt').write_bytes(Path(__file__).read_bytes())
+preparation=[e/n for n in ['bf16-low-batch-native-local-wiring.json','bf16-low-batch-python-local-wiring.json','bf16-low-batch-model-factory-wiring.json','bf16-low-batch-profile-source-derivation.json','bf16-low-batch-local-integration-verified.json','bf16-low-batch-local-integration-method.py.txt','bf16-low-batch-wiring-line-ending-preservation.json']]
+preparation+=list(e.glob('bf16-low-batch-wired-local-build*.json'))+list(e.glob('bf16-low-batch-wired-local-build*.txt'))+list(e.glob('bf16-low-batch-*-local-wiring-initial-eol-normalized.json'))
+for folder in [ledger,e/'bf16-low-batch-wired-local-build-ledger']:preparation+=list(folder.glob('*'))
+raw={p.relative_to(r).as_posix():p.read_bytes() for p in dict.fromkeys(source_files+preparation)};manifest={'files':{n:sha(b) for n,b in raw.items()},'scope':summary['scope']};target=o/'Garnet-B1-Local-Integration-Preparation.zip'
+with zipfile.ZipFile(target,'w',zipfile.ZIP_DEFLATED) as z:
+ for n,b in raw.items():z.writestr(n,b)
+ z.writestr('evidence-manifest.json',json.dumps(manifest,indent=2))
+with zipfile.ZipFile(target) as z:
+ for n,h in manifest['files'].items():assert sha(z.read(n))==h
+summary.update(archive_sha256=sha(target.read_bytes()),archive_bytes=target.stat().st_size,files=len(raw));(o/'Garnet-B1-Local-Integration-Preparation.json').write_text(json.dumps(summary,indent=2),encoding='utf8')
+status=o/'Garnet-Parallel-Top1-Integration-Status.json';s=json.loads(status.read_bytes());s['b1_local_integration_preparation']=summary
+for v in s.values():
+ if isinstance(v,dict) and 'last_readonly_observed_case_records' in v:v['last_readonly_observed_case_records']={'disabled':14,'enabled':7}
+status.write_text(json.dumps(s,indent=2),encoding='utf8')
+note='''
+
+2026-10-25: True physical B1 route now wired LOCALLY, default OFF, runtime UNQUALIFIED.
+Added bf16_kv_low_batch_state keyword to packed program/decoder and separate
+create_cuda_bf16_low_batch_study_decoder factory. It pins B1/cap4096/T32 prefill/
+T4 decode, retained/deferred/shared/host/register128/joined mixed projections;
+verifies128NVFP4+208FP8 pool, native NVFP4 W4A4 head/host BF16 embedding and graph
+binding counts. Strict type/architecture/mode gates precede allocation; missing
+matching native helper raises before tensor I/O. Existing default factories and
+old B4/B8/reference validators remain separate. Capacity4096 is not actual4K.
+
+Distinct B1 layout/module, native class/package, serialized plugin type and
+canonical_bf16_low_batch_kv_overlay lowering keyword connect the path. Existing
+transaction machinery handles compact BF16 state; no private B4 padding in this
+physicalB1 profile. Native lowering checks exact B1 geometry/offsets/modes and
+pinned RoPE theta/epsilon, selects B1 plugin; old B4/B8 plugin/metadata/kernel
+sources unchanged. CUDA candidates relocate by include-path changes only, not
+new arithmetic. CMake existing globs collect new native units on future build.
+No active DLL was built/loaded/installed and no remote source/runtime changed.
+
+Actual49CPU tests pass: seven new strict metadata profile tests, twelve new
+graph/factory/default-off/unsupported-profile/native-absence/pool/head/batch/
+cleanup tests, plus30existing BF16/reference/joined/graph/transaction controls.
+AST construction traces preserve63FP32 barriers,48GDN/16full layers, exact B1
+offsets/new marker, no dense FP32 cache views, and T4-only replay. Trace buffers
+and fake factory metadata are CPU controls, never model/GPU evidence.
+Six selected native units compile privately /MT C++17/sm120: helper, plugin,
+actual TRT builder and native entry, both CUDA units. Full DLL link/ABI/native
+helper/lowering behavior UNRUN. Actual ledgers, source/object hashes and19-file
+derivations against83f5ad146 retained. Review restored unrelated mixed line
+endings without changing normalized code; initial recipes/build receipt remain.
+Final compilation repeats against corrected bytes and the extra B1-only theta/
+epsilon gate. No dropped assertion, control or tolerance to obtain a pass.
+
+Original integrated sampler full-model handle still LIVE: disabled14case/
+102vector comparison closes and local observer agrees; enabled7partial case
+records, no recorded error. Newly wired local branch is ahead of deployed5ac
+source/DLL and cannot be deployed or built on that host while worker lives.
+Next: terminal full archive/both replays, actual B1commit then CPU/plugin forward
+gates, preserve/install source and native build, native helper/ownership checks,
+old B4 regression and full B1 ordinary/MTP/text/image/state/prefix/reset quality,
+actual4K/protocol checks before timing. B1M4/M32 projections use existing admitted
+row ranges; M32 policy/precision and full-model numerics still need measurement.
+Original2x/halfTTFT, broad quality, actual4K, tuned refs, INT4,4B,B8/concurrency and
+clean repetitions remain open. No benchmark chart or claimed gain is updated.
+'''
+for name in ['docs/research/qwen38-5090-development-log.md','docs/research/qwen38-5090-implementation-task.md']:
+ path=r/name;data=path.read_bytes();assert b'2026-10-25: True physical B1 route now wired LOCALLY' not in data;path.write_bytes(data+note.replace('\n','\r\n').encode())
+print(json.dumps({k:v for k,v in summary.items() if k!='implementation_sha256'},indent=2))

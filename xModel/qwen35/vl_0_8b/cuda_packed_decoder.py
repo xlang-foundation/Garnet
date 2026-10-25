@@ -15,10 +15,21 @@ from .cuda_packed_program import CUDAPackedDecoderProgram
 from .joined_mlp_profile import validate_joined_mlp_profile
 from .kv_delta_layout import validate_kv_delta_profile,choose_kv_overlay_strategy
 from .bf16_kv_profile import validate_bf16_kv_decoder
+from .bf16_low_batch_kv_profile import validate_bf16_low_batch_kv_decoder
 from .bf16_float_reference_profile import validate_bf16_float_reference_decoder
 
 class CUDAPackedDecoder:
-    def __init__(self,checkpoint,config,batch=1,capacity=512,prefill_chunk=64,decode_chunk=4,projection_workspace_bytes=0,retain_linear_inputs=False,register_delta_128=False,flat_concat=False,deferred_state_commit=False,shared_output_storage=False,join_decode_input_projections=False,embedded_projection_weights=False,external_compressed_weights=False,joined_mlp_projections=False,host_embedding_lookup=False,kv_delta_state=False,bf16_kv_state=False,bf16_kv_float_reference=False):
+    def __init__(self,checkpoint,config,batch=1,capacity=512,prefill_chunk=64,decode_chunk=4,projection_workspace_bytes=0,retain_linear_inputs=False,register_delta_128=False,flat_concat=False,deferred_state_commit=False,shared_output_storage=False,join_decode_input_projections=False,embedded_projection_weights=False,external_compressed_weights=False,joined_mlp_projections=False,host_embedding_lookup=False,kv_delta_state=False,bf16_kv_state=False,bf16_kv_float_reference=False,bf16_kv_low_batch_state=False):
+        if type(bf16_kv_low_batch_state) is not bool:raise ValueError('B1 BF16 KV opt-in must be boolean')
+        low_batch_helper_factory=None
+        if bf16_kv_low_batch_state:
+            validate_bf16_low_batch_kv_decoder(True,batch,capacity,prefill_chunk,decode_chunk,config,
+                retain_linear_inputs=retain_linear_inputs,deferred_state_commit=deferred_state_commit,shared_output_storage=shared_output_storage,
+                host_embedding_lookup=host_embedding_lookup,external_compressed_weights=external_compressed_weights,joined_mlp_projections=joined_mlp_projections,
+                embedded_projection_weights=embedded_projection_weights,join_input_projections=join_decode_input_projections,kv_delta_state=kv_delta_state,
+                legacy_bf16_kv_state=bf16_kv_state,bf16_kv_float_reference=bf16_kv_float_reference)
+            try:low_batch_helper_factory=garnet.cuda_bf16_low_batch_kv_delta_commit
+            except AttributeError as error:raise ValueError('B1 BF16 requires the matching experimental native build') from error
         validate_bf16_float_reference_decoder(bf16_kv_float_reference,batch,capacity,prefill_chunk,decode_chunk,config,
             bf16_kv_state=bf16_kv_state,retain_linear_inputs=retain_linear_inputs,deferred_state_commit=deferred_state_commit,shared_output_storage=shared_output_storage,
             host_embedding_lookup=host_embedding_lookup,external_compressed_weights=external_compressed_weights,joined_mlp_projections=joined_mlp_projections,
@@ -36,13 +47,14 @@ class CUDAPackedDecoder:
             joined_mlp_projections=joined_mlp_projections,host_embedding_lookup=host_embedding_lookup,
             embedded_projection_weights=embedded_projection_weights,join_input_projections=join_decode_input_projections)
         self.kv_delta_state=kv_delta_state
-        self.bf16_kv_state=bf16_kv_state;self.bf16_prefill_commit=None
+        self.bf16_kv_state=bf16_kv_state or bf16_kv_low_batch_state;self.bf16_kv_low_batch_state=bf16_kv_low_batch_state;self.bf16_prefill_commit=None
         if type(host_embedding_lookup) is not bool:raise ValueError('Host embedding lookup requires an explicit bool')
         self.host_embedding_lookup=host_embedding_lookup
         if decode_chunk not in (4,8,16) or prefill_chunk not in (4,8,16,32,64,128) or prefill_chunk<decode_chunk:
             raise ValueError('Packed decoder requires bounded prefill>=decode chunk')
         for size in (prefill_chunk,decode_chunk):
             if bf16_kv_state:validate_joined_mlp_profile(joined_mlp_projections,batch,capacity,size,external_compressed_weights,embedded_projection_weights,join_decode_input_projections,bf16_cache_profile=True)
+            elif bf16_kv_low_batch_state:validate_joined_mlp_profile(joined_mlp_projections,batch,capacity,size,external_compressed_weights,embedded_projection_weights,join_decode_input_projections,bf16_low_batch_cache_profile=True)
             else:validate_joined_mlp_profile(joined_mlp_projections,batch,capacity,size,external_compressed_weights,embedded_projection_weights,join_decode_input_projections,bf16_float_reference=bf16_kv_float_reference)
         self.joined_mlp_projections=joined_mlp_projections
         self.config=config;self.batch=batch;self.capacity=capacity;self.checkpoint=str(checkpoint)
@@ -70,7 +82,7 @@ class CUDAPackedDecoder:
                 self.io.enable_nvfp4_head(True)
                 self.io.enable_host_embedding(True)
             for size in dict.fromkeys((decode_chunk,prefill_chunk)):
-                options={'bf16_kv_state':True} if bf16_kv_state else ({'bf16_kv_float_reference':True} if bf16_kv_float_reference else {})
+                options={'bf16_kv_low_batch_state':True} if bf16_kv_low_batch_state else ({'bf16_kv_state':True} if bf16_kv_state else ({'bf16_kv_float_reference':True} if bf16_kv_float_reference else {}))
                 program=CUDAPackedDecoderProgram(checkpoint,config,self.io,batch,capacity,size,retain_linear_inputs and size==decode_chunk,projection_workspace_bytes,register_delta_128,flat_concat,self.join_decode_input_projections and size==decode_chunk,self.embedded_projection_weights,self.external_compressed_weights,self.joined_mlp_projections,kv_delta_state=kv_delta_state,**options)
                 self.programs[size]=program
                 if kv_delta_state:
@@ -85,9 +97,10 @@ class CUDAPackedDecoder:
             if kv_delta_state:
                 self.delta_commit=garnet.cuda_kv_delta_commit()
                 self.delta_commit.build(json.dumps(self.programs[decode_chunk].delta_layout))
-            elif bf16_kv_state:
-                self.delta_commit=garnet.cuda_bf16_kv_delta_commit();self.delta_commit.build(json.dumps(self.programs[decode_chunk].delta_layout))
-                self.bf16_prefill_commit=garnet.cuda_bf16_kv_delta_commit();self.bf16_prefill_commit.build(json.dumps(self.programs[prefill_chunk].delta_layout))
+            elif bf16_kv_state or bf16_kv_low_batch_state:
+                helper_factory=low_batch_helper_factory if bf16_kv_low_batch_state else garnet.cuda_bf16_kv_delta_commit
+                self.delta_commit=helper_factory();self.delta_commit.build(json.dumps(self.programs[decode_chunk].delta_layout))
+                self.bf16_prefill_commit=helper_factory();self.bf16_prefill_commit.build(json.dumps(self.programs[prefill_chunk].delta_layout))
             self.last_hidden=self.io.zeros([batch,config['hidden_size']])
             symbol=tensor.input('whole_final_hidden',shape=[batch,config['hidden_size']],dtype=tensor.float32)
             @T.fusion(name='qwen35_whole_final_norm',boundary='required')
@@ -237,6 +250,7 @@ class CUDAPackedDecoder:
         if getattr(self,'bf16_kv_state',False):
             result['packed_profiles']['bf16_kv_state']=True;result['packed_profiles']['kv_cache_dtype']='bf16'
             result['bf16_prefill_commit']=json.loads(self.bf16_prefill_commit.stats_json()) if self.bf16_prefill_commit is not None else None
+        if getattr(self,'bf16_kv_low_batch_state',False):result['packed_profiles']['bf16_kv_low_batch_state']=True
         return result
 
     def close(self):

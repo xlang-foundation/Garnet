@@ -9,10 +9,12 @@ from .tensor_compat import tensor
 T=tensor()
 
 @T.fusion(name='qwen35_cuda_decoder_chunk',role='decoder_layer',boundary='required')
-def Qwen35CUDAChunk(hidden,state1,state2,active,positions,slots,config,layer_idx,kind,fused_delta=False,fused_attention=False,projection_workspace_bytes=0,retain_linear_inputs=False,external_weights=None,register_delta_128=False,join_input_projections=False,external_compressed_weights=None,joined_mlp_projections=False,canonical_kv_state=None,canonical_kv_layout=None,kv_overlay_strategy=1,bf16_canonical_kv=False,bf16_kv_float_reference=False):
+def Qwen35CUDAChunk(hidden,state1,state2,active,positions,slots,config,layer_idx,kind,fused_delta=False,fused_attention=False,projection_workspace_bytes=0,retain_linear_inputs=False,external_weights=None,register_delta_128=False,join_input_projections=False,external_compressed_weights=None,joined_mlp_projections=False,canonical_kv_state=None,canonical_kv_layout=None,kv_overlay_strategy=1,bf16_canonical_kv=False,bf16_kv_float_reference=False,bf16_low_batch_canonical_kv=False):
     p='model.language_model.layers.'+str(layer_idx)
     extra={'external_weights':external_weights} if external_weights else {}
     if external_compressed_weights:extra['external_compressed_weights']=external_compressed_weights
+    if type(bf16_low_batch_canonical_kv) is not bool or (bf16_low_batch_canonical_kv and (bf16_canonical_kv or bf16_kv_float_reference or canonical_kv_state is None)):
+        raise ValueError("B1 BF16 canonical KV requires its own exclusive explicit binding")
     if type(bf16_kv_float_reference) is not bool or (bf16_kv_float_reference and (kind!='full_attention' or canonical_kv_state is not None or bf16_canonical_kv or state1 is None or state2 is None)):
         raise ValueError('BF16 float reference requires ordinary full-attention cache bindings')
     if bf16_kv_float_reference:extra['bf16_kv_float_reference']=1
@@ -28,7 +30,7 @@ def Qwen35CUDAChunk(hidden,state1,state2,active,positions,slots,config,layer_idx
             key_dim=config['linear_key_head_dim'],value_dim=config['linear_value_head_dim'],eps=config['rms_norm_eps'],fused_delta=int(fused_delta),projection_workspace_bytes=projection_workspace_bytes,retain_linear_inputs=int(retain_linear_inputs),register_delta_128=int(register_delta_128),joined_input_projections=int(join_input_projections),joined_mlp_projections=int(joined_mlp_projections),**extra)
     if canonical_kv_state is not None:
         bound=hidden*T.binary_op('qwen35_attention_bind_canonical')*canonical_kv_state
-        extra.update({('canonical_bf16_kv_overlay' if bf16_canonical_kv else 'canonical_kv_overlay'):1})
+        extra.update({('canonical_bf16_low_batch_kv_overlay' if bf16_low_batch_canonical_kv else ('canonical_bf16_kv_overlay' if bf16_canonical_kv else 'canonical_kv_overlay')):1})
         extra.update(kv_overlay_strategy=kv_overlay_strategy,
             canonical_state_width=canonical_kv_layout['cache_batch_stride'],canonical_key_offset=canonical_kv_layout['key_offset'],canonical_value_offset=canonical_kv_layout['value_offset'])
     else:
