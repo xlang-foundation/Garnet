@@ -6131,3 +6131,56 @@ retained complete states/raw hidden vectors/IDs across all nine old groups/order
 then real B8MTP memory/prefix commits/quality/HTTP. Component memory sampling is
 untimed construction/correctness only. No serving-memory saving or2x claim;
 matched vLLM4K/tuned refs, repeated trials, INT4/4B and full objective remain open.
+
+
+### 2026-10-25 — tiled whole-model and paged native bytes closed/replayed; B8 model preservation started
+
+Original48577 bf16-scores-tiled-api-model-admission-attempt1 terminal0. Both
+default/tiled candidate2533 processes complete six3968+128text/image/reset cases:
+64complete canonical-state witnesses and128raw hidden/normalized vectors total,
+all exact to retained1a1d baseline including all token IDs. Both workers exit0,
+source662/RTE/SDK unchanged and baseline1a1d restored/cache retirement complete.
+Archivecb4effcb8021b4a8320b304646e49f70e17f4161b2447a9acf1c006231f276c2,
+2577890bytes/153files. Download ACK; independent remote/local replay exit0,
+identical proof80f974e9aca3adad82c13eed8c812f15e81a727914f5fad62a5d5c5d947cd8f2.
+Construction/correctness resource samples freshly recomputed: default peak
+23868383232bytes/maxgap9.4791534s; tiled23682560000bytes/maxgap16.6060927s.
+Retain gaps; these are adapter-wide sampled correctness peaks, not serving memory
+or evidence of savings. No new benchmark or kernel-speed claim from this trial.
+
+Native paged input gate then actual terminal0:12CPython tests/.461s, same12 in
+real embedded runtime, fresh independent BF16 fixture exactly matches all31old
+fixture files, eight actual GPU I/O cases. All11274read events reconstruct
+1703301120observed bytes exactly to independent BF16 integer-word/visual oracles;
+held views survive iteration/eviction/close. Raw rows retained losslessly once per
+content digest; archive deda4bac52c095871633d2ffc615ef9b0fa6d6e197ea3d4c72e4d6408e4357ee,
+6934610bytes/975files. Both independent replays exit0 with identical proof files.
+Baseline1a1d/source672/SDK/runtime unchanged, no decoder or model constructed.
+This admits input bytes/lifetimes only, not B8 model/MTP/serving-memory savings.
+
+Next actual B8 model uses the admitted128two-page input source in unchanged
+baseline1a1d B8/T32prefill/T4decode/BF16-cache model. Existing decoder, vision,
+generation/reset/permutation operations retained; input source closes after
+prefill. Compare all nine short/full4Ktext/image/order/reset cases against actual
+old B8 baselinebdd7978b:29complete states/58raw vectors and all inputs/tokens.
+Mutual permutation agreement alone cannot pass shared numerical drift. Actual
+26CPUcontrols pass8.403s plus actual retained old B8 report replays on CPU.
+Initial preparation caught four older B8 helper/test files absent from current
+lineage inventory; bound all four to actual old archive hashes and existing local
+bytes before any GPU/deployment. A preparation variable-shadow error was fixed
+before inputs were installed. No existing source file replaced. Absent-only
+bundle8c8f5291 installs nine new targets;676existing/all684source pins/runtime/SDK
+verified. Preparation15d9e2b98f62e327604f19968bd47b00c440526b897812de7a2d75a4b0da46f3.
+Original48577 paged-batch8-model-preservation-attempt1 started; terminal result
+pending. Existing B8 external B1/B4 math/MTP/805quality/HTTP remain unqualified.
+
+Tiled HTTP admission/worker/probe/launcher prepared but GPU-unrun: new candidate
+DLL proof distinguished from old baseline1a1d NFC/EOS/ordinary controls. Actual
+native API must select tiled route before model construction. Entire generation
+and request body is literal unchanged; full protocol/805/two-boundary/frozen124
+HTTP probe AST differs only in worker filename and explicit baseline-vs-candidate
+library checks. Five CPU guard/AST/launcher controls pass/.012s and actual closed
+model proof schema passes new gate on CPU. Owner/independent HTTP replay and real
+805/124request execution still required. No new timing/plot or2x claim. Preserve
+full scope: real B8MTP/math/quality/HTTP, matched vLLM4K/tuned references, repeated
+trials, INT4/4B, and overall2xdecode+throughput/halfTTFT remain open.

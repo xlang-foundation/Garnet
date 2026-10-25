@@ -1,0 +1,8 @@
+{
+  "status": "paged_batch8_model_probe_derived_gpu_unrun",
+  "base_file": "probe_bf16_batch8_admission.py",
+  "base_sha256": "0b5cbe9a68041720ed9482a042e97db1491bf2777d9c7feb3ef50719ecd38a60",
+  "candidate_sha256": "84e881d43b2eae91268102bb6321c31bd00448063e6e74ff5c76a06fd7b9a850",
+  "launcher_sha256": "559d44e8daa207a4757566afe11b1ac9b43cdc094988fc4e1b219250dbce16c3",
+  "changes": "Remove full-prompt embeddings/copied rows/stacked tensor retention, store caller-owned visuals and starts; page only through admitted128two-page source and close after prefill. Add actual component/retained B8 source/runtime guards and exact prior-state/raw-vector/ID checks. Decoder/vision/config/generation/reset/permutation operations unchanged. No MTP, external B1/B4 math, quality, HTTP, speed or2x qualification."
+}

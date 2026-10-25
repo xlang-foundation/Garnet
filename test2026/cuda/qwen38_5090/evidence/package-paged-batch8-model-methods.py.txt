@@ -1,0 +1,19 @@
+from pathlib import Path
+import ast,hashlib,json,zipfile
+work=Path(__file__).resolve().parent;sha=lambda raw:hashlib.sha256(raw).hexdigest();plan=json.loads((work/'paged-batch8-model-upload-plan.json').read_bytes());files={}
+for row in plan['uploads']:
+    raw=Path(row['local']).read_bytes();assert sha(raw)==row['sha256'];files[row['target']]=raw
+assert len(files)==9;target=work/'paged-batch8-model-methods.zip';assert not target.exists()
+with zipfile.ZipFile(target,'x',zipfile.ZIP_DEFLATED) as z:
+    for n,raw in files.items():z.writestr(n,raw)
+    z.writestr('install-manifest.json',json.dumps({'files':{n:sha(raw) for n,raw in files.items()},'scope':'Absent-only paged B8 model-preservation methods/evidence after actual native byte admission. Existing model/source/runtime/SDK/corpus unchanged.'},indent=2))
+old=(work/'install-paged-native-methods.py').read_text();new=old.replace('paged-prompt-native-methods.zip','paged-batch8-model-methods.zip').replace('paged-prompt-native-install.json','paged-batch8-model-install.json')
+new=new.replace("==12\n","==10\n").replace('paged-prompt-native-component-preparation.json','paged-batch8-model-preparation.json')
+new=new.replace("parent='bf16-scores-tiled-api-model-admission-attempt1'","parent='paged-prompt-native-component-attempt1'")
+new=new.replace("p['closed_native_proof_sha256']","p['parents'][parent]['proof_sha256']").replace("p['closed_native_archive_sha256']","p['parents'][parent]['archive_sha256']")
+new=new.replace("q['status']=='native_tiled_scores_model_replayed'","q['status']=='paged_prompt_native_component_bytes_replayed'")
+new=new.replace("w['baseline_library_restored']","(w['runtime_dependencies']==w['runtime_dependencies_after'])").replace("{**existing,**p['retained_fixture_files']}","existing")
+new=new.replace('paged_prompt_native_methods_installed','paged_batch8_model_methods_installed')
+ast.parse(new);installer=work/'install-paged-batch8-model-methods.py';assert not installer.exists();installer.write_bytes(new.encode())
+result={'status':'paged_batch8_method_bundle_prepared','bundle_sha256':sha(target.read_bytes()),'bytes':target.stat().st_size,'new_targets':9,'installer_sha256':sha(installer.read_bytes())}
+(work/'paged-batch8-model-bundle-preparation.json').write_bytes(json.dumps(result,indent=2).encode());print(json.dumps(result))

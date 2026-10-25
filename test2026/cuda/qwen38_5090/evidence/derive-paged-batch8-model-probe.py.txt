@@ -1,0 +1,41 @@
+from pathlib import Path
+import ast,hashlib,json
+repo=Path('D:/CantorAI/work/qwen38-5090');m=repo/'test2026/cuda/qwen38_5090';e=m/'evidence';sha=lambda raw:hashlib.sha256(raw).hexdigest()
+source=m/'probe_bf16_batch8_admission.py';raw=source.read_bytes();text=raw.decode()
+needle='from test2026.cuda.qwen38_5090.bf16_batch8_admission import ORDERS,compare_permuted,compare_vector_rows'
+assert text.count(needle)==1;text=text.replace(needle,needle+'\nfrom test2026.cuda.qwen38_5090.paged_prompt_rows import PagedPromptRows\nfrom test2026.cuda.qwen38_5090.paged_batch8_model import same_case,replay_preserved')
+needle="    for flag in ('GARNET_FP8_FULL_ATTN_M32_CANONICAL'"
+position=text.index(needle)
+guard='''    admission=json.loads((root/'Garnet/test2026/cuda/qwen38_5090/evidence/paged-batch8-model-preparation.json').read_bytes())
+    assert library==admission['runtime']['garnet.dll']
+    for n,h in admission['files'].items():assert sha((root/n).read_bytes())==h,('Paged B8 source drift',n)
+    for n,h in admission['runtime'].items():assert sha((root/'build/bin'/n).read_bytes())==h
+    prior='bf16-batch8-model-admission-attempt1';archive=root/'results'/(prior+'-evidence.zip')
+    assert sha(archive.read_bytes())==admission['baseline_archive_sha256']
+    with zipfile.ZipFile(archive) as z:
+        prefix='results/'+prior+'/model/';retained=json.loads(z.read(prefix+'report.json'))
+        retained_vectors={v.filename.removeprefix(prefix):z.read(v) for v in z.infolist() if v.filename.startswith(prefix) and v.filename.endswith('.f32')}
+'''
+text=text[:position]+guard+text[position:]
+needle="                embeddings=io.embedding(ids);hidden=[io.visual_token(visual,i-start) if visual is not None and start<=i<start+64 else io.row(embeddings,i) for i in range(len(ids))]\n"
+assert text.count(needle)==1;text=text.replace(needle,'')
+text=text.replace("'embeddings':embeddings,'hidden':hidden,'visual':visual","'visual':visual,'visual_start':start")
+text=text.replace(";zero=io.zeros([1,5120])",'')
+needle="                hidden=[io.stack_rows([row['hidden'][t] if t<len(row['prompt_ids']) else zero for row in physical]) for t in range(count)]"
+assert text.count(needle)==1;text=text.replace(needle,"                hidden=PagedPromptRows(io,[row['prompt_ids'] for row in physical],[row['visual'] for row in physical],[row['visual_start'] for row in physical],page_size=128)")
+needle="                prediction=decoder.prefill_sequence(hidden,positions,lengths);prefill,prefill_raw=snapshot(stem+'-prefill')"
+assert text.count(needle)==1;text=text.replace(needle,"                try:prediction=decoder.prefill_sequence(hidden,positions,lengths);prompt_cache=hidden.stats()\n                finally:hidden.close()\n                prefill,prefill_raw=snapshot(stem+'-prefill')")
+needle="'inverse_permutation_exact':False,'performance_admitted':False}"
+assert text.count(needle)==1;text=text.replace(needle,"'inverse_permutation_exact':False,'performance_admitted':False,'prompt_cache':prompt_cache}")
+needle="                report['cases'].append(record);save()"
+assert text.count(needle)==1;text=text.replace(needle,needle+"\n                same_case(record,retained['cases'][len(report['cases'])-1],lambda n:(out/n).read_bytes(),retained_vectors.__getitem__)")
+text=text.replace('del prepared,physical,embeddings,visual,zero','del prepared,physical,visual').replace('B8_ADMISSION_CASE_PASS','PAGED_B8_MODEL_CASE_PASS')
+needle="report['status']='bf16_batch8_ordinary_admission_collected_needs_replay';save()"
+assert text.count(needle)==1;text=text.replace(needle,needle+"\n        report['retained_baseline_replay']=replay_preserved(report,lambda n:(out/n).read_bytes(),retained,retained_vectors.__getitem__);save()")
+text=text.replace('Construction/vision/prompt stacking/full4K memory must actually fit.','Paged prompt input only; compare every complete state/raw vector/ID to retained existing B8 model. Construction/vision/paged input/full4K memory must actually fit. External B1/B4 math remains unqualified.')
+target=m/'probe_paged_batch8_model.py';assert not target.exists();ast.parse(text);target.write_bytes(text.encode())
+old=(m/'test_bf16_batch8_admission.bat').read_bytes();batch=old.replace(b'probe_bf16_batch8_admission.py',b'probe_paged_batch8_model.py')
+target_bat=m/'test_paged_batch8_model.bat';assert not target_bat.exists();target_bat.write_bytes(batch)
+result={'status':'paged_batch8_model_probe_derived_gpu_unrun','base_file':source.name,'base_sha256':sha(raw),'candidate_sha256':sha(target.read_bytes()),'launcher_sha256':sha(batch),
+        'changes':'Remove full-prompt embeddings/copied rows/stacked tensor retention, store caller-owned visuals and starts; page only through admitted128two-page source and close after prefill. Add actual component/retained B8 source/runtime guards and exact prior-state/raw-vector/ID checks. Decoder/vision/config/generation/reset/permutation operations unchanged. No MTP, external B1/B4 math, quality, HTTP, speed or2x qualification.'}
+(e/'paged-batch8-model-probe-derivation.json').write_bytes(json.dumps(result,indent=2).encode());print(json.dumps(result))
