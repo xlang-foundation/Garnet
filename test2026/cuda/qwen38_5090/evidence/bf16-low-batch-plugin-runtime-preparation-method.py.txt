@@ -1,0 +1,65 @@
+from pathlib import Path
+import ast,datetime,hashlib,json,os,sys,zipfile
+r=Path('D:/CantorAI/work/qwen38-5090');m=r/'test2026/cuda/qwen38_5090';e=m/'evidence';w=Path(__file__).resolve().parent;o=w.parent/'outputs';sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+sys.path.insert(0,str(m));from run_logged import run
+from prepare_bf16_low_batch_plugin_runtime import METHODS,SOURCES
+for n in METHODS:
+ if n.endswith('.py'):ast.parse((m/n).read_bytes(),filename=n)
+prep=e/'bf16-low-batch-plugin-preparation.json';plan=w/'bf16-low-batch-plugin-upload-plan.json';assert not prep.exists() and not plan.exists()
+os.chdir(r);ledger=e/'bf16-low-batch-plugin-runner-cpu-ledger'
+command=[sys.executable,str(m/'prepare_bf16_low_batch_plugin_runtime.py'),'--proofs',str(o),'--fixture',str(w/'bf16_kv_fixture_layout.h'),'--plan',str(plan)]
+code=run(command,ledger,'correctness','Actual missing-parent guard must return2 and materialize no launch inputs',[m/n for n in METHODS]+[Path(__file__)])
+assert code==2 and not prep.exists() and not plan.exists()
+events=[json.loads(line) for line in (ledger/'commands.jsonl').read_text().splitlines()];last=events[-1];raw=(ledger/'commands.log').read_bytes()[last['raw_start_offset']:last['raw_end_offset']];guard=json.loads(raw)
+assert guard['status']=='b1_plugin_prerequisites_not_ready_no_preparation' and len(guard['missing'])==6
+test_ledger=e/'bf16-low-batch-plugin-runner-checker-ledger'
+assert run([sys.executable,str(m/'test_bf16_low_batch_plugin_attention_replay.py'),str(o/'bf16-low-batch-attention-native-attempt1-evidence.zip')],test_ledger,'correctness','Six unchanged synthetic forwarding-stream controls with actual closed B1 parent',[m/'replay_bf16_low_batch_plugin_attention.py',m/'test_bf16_low_batch_plugin_attention_replay.py',o/'bf16-low-batch-attention-native-attempt1-evidence.zip'])==0
+summary={'status':'b1_plugin_runtime_controller_prepared_positive_path_unexercised','recorded_utc':datetime.datetime.now(datetime.timezone.utc).isoformat(),'branch':'qwen38-5090','methods':len(METHODS),'python_methods_parse':True,'synthetic_checker_tests_passed':6,'actual_missing_parent_guard_exit':code,'expected_missing_parent_guard_exit':2,'actual_missing_prerequisite_files':guard['missing'],'runtime_preparation_materialized':False,'upload_plan_materialized':False,'remote_compile_method_executed':False,'positive_factory_path_exercised':False,'remote_uploaded':False,'gpu_executed':False,'model_qualified':False,'performance_admitted':False,'two_times_target_met':False,
+ 'scope':'Controller/factory/archive checker prepared. Real terminal independently replayed model and successful B1commit proofs plus qualified B1attention are mandatory. Actual guard refuses while real proofs are missing. Isolated CPU contract and GPU forwarding executables share exact same wrapper object but link refusal versus real qualified operator separately. Fixed scratch ownership, actual toolchain/SDK/runtime hashes, sequential checks and immutable failure/result archives. Native Garnet DLL is never loaded/changed by this collector. No helper/lowering/model/quality/4K/HTTP or speed admission.'}
+(e/'bf16-low-batch-plugin-runtime-guard.json').write_text(json.dumps(summary,indent=2),encoding='utf8')
+(e/'bf16-low-batch-plugin-runtime-preparation-method.py.txt').write_bytes(Path(__file__).read_bytes())
+files=[m/n for n in METHODS]+[r/n for n in SOURCES]
+files += [e/'bf16-low-batch-plugin-runtime-guard.json',e/'bf16-low-batch-plugin-runtime-preparation-method.py.txt']
+for folder in (ledger,test_ledger):files+=list(folder.glob('*'))
+raw={f.relative_to(r).as_posix():f.read_bytes() for f in files};manifest={'files':{n:hashlib.sha256(v).hexdigest() for n,v in raw.items()},'scope':summary['scope']};target=o/'Garnet-B1-Plugin-Runner-Preparation.zip'
+with zipfile.ZipFile(target,'w',zipfile.ZIP_DEFLATED) as z:
+ for n,v in raw.items():z.writestr(n,v)
+ z.writestr('evidence-manifest.json',json.dumps(manifest,indent=2))
+with zipfile.ZipFile(target) as z:
+ for n,h in manifest['files'].items():assert hashlib.sha256(z.read(n)).hexdigest()==h
+summary.update(archive_sha256=sha(target),archive_bytes=target.stat().st_size,files=len(raw));(o/'Garnet-B1-Plugin-Runner-Preparation.json').write_text(json.dumps(summary,indent=2),encoding='utf8')
+status=o/'Garnet-Parallel-Top1-Integration-Status.json';s=json.loads(status.read_bytes());s['b1_plugin_runtime_preparation']=summary;status.write_text(json.dumps(s,indent=2),encoding='utf8')
+note='''
+
+2026-10-25: B1 plugin controller/factory/archive replay prepared, runtime UNRUN.
+Added actual-toolchain build recipe for two isolated executables in fixed
+tools/bf16-kv-native. Both link one B1 wrapper object; CPU contracts separately
+link exact host workspace/refusal stubs and old B4/B8 wrapper, while GPU forwarder
+links the qualified B1 CUDA candidate. No deployment source/DLL/SDK installation.
+Preserve all unknown/existing target outputs; new distinct owner marker only.
+
+Factory requires actual terminal model cleanup and equal independent replay
+pair, actual successful20case B1commit proof pair, and both44case B1attention
+FP64 passes with declared fresh-FP64 last-bit/environment differences retained.
+It verifies parent archives, unchanged source/runtime lineage, source recipes,
+compiled-source pins, local/remote header+import-library correspondence and
+actual remote TensorRT DLL versus closed-model runtime. Positive path UNEXERCISED.
+Actual current guard returned2 with six missing real files and created neither
+preparation nor upload plan; raw expected nonzero ledger preserved. AllPython
+methods parse, six synthetic forwarding stream mutation tests pass. Remote
+build/controller/archive checker UNRUN; no test data is treated as actualGPU.
+
+Future collector enforces idleGPU/no study executable and one sequential CPU
+contract then GPU forwarding run; hashes sources/tools/SDK/runtime before/after,
+keeps executable/import/compiler/resource logs and archives failures in place.
+Independent checker replays literal wrappers/probes/refusal adapter, verifies
+actual32profile CPU result and intended87host forwarding calls, all90observations
+and476160selected bytes against actual closed same-kernel GPU archive. Failed
+model stays failed; plugin qualification cannot promote model/quality/HTTP.
+Current integrated full-model original handle remains LIVE; no remote upload,
+source/build/runtime mutation or competing GPU worker. B1 helper/lowering/full
+model, broad quality, actual4K, tuned/INT4/4B, repetitions and2x goals stay open.
+'''
+for name in ['docs/research/qwen38-5090-development-log.md','docs/research/qwen38-5090-implementation-task.md']:
+ path=r/name;data=path.read_bytes();assert b'2026-10-25: B1 plugin controller/factory/archive replay prepared, runtime UNRUN.' not in data;path.write_bytes(data+note.replace('\n','\r\n').encode())
+print(json.dumps(summary,indent=2))

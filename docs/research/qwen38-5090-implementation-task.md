@@ -872,3 +872,33 @@ mutation ledgers and derivations archived. Original model handle re-polled LIVE;
 deployment unchanged. Next: close/replay original model, collect standalone B1
 commit and CPU/plugin forwarding checks, then helper/lowering/full-model gates.
 Original2x/halfTTFT, broad quality, actual4K, tuned/INT4/4B and repetitions open.
+
+
+2026-10-25: B1 plugin controller/factory/archive replay prepared, runtime UNRUN.
+Added actual-toolchain build recipe for two isolated executables in fixed
+tools/bf16-kv-native. Both link one B1 wrapper object; CPU contracts separately
+link exact host workspace/refusal stubs and old B4/B8 wrapper, while GPU forwarder
+links the qualified B1 CUDA candidate. No deployment source/DLL/SDK installation.
+Preserve all unknown/existing target outputs; new distinct owner marker only.
+
+Factory requires actual terminal model cleanup and equal independent replay
+pair, actual successful20case B1commit proof pair, and both44case B1attention
+FP64 passes with declared fresh-FP64 last-bit/environment differences retained.
+It verifies parent archives, unchanged source/runtime lineage, source recipes,
+compiled-source pins, local/remote header+import-library correspondence and
+actual remote TensorRT DLL versus closed-model runtime. Positive path UNEXERCISED.
+Actual current guard returned2 with six missing real files and created neither
+preparation nor upload plan; raw expected nonzero ledger preserved. AllPython
+methods parse, six synthetic forwarding stream mutation tests pass. Remote
+build/controller/archive checker UNRUN; no test data is treated as actualGPU.
+
+Future collector enforces idleGPU/no study executable and one sequential CPU
+contract then GPU forwarding run; hashes sources/tools/SDK/runtime before/after,
+keeps executable/import/compiler/resource logs and archives failures in place.
+Independent checker replays literal wrappers/probes/refusal adapter, verifies
+actual32profile CPU result and intended87host forwarding calls, all90observations
+and476160selected bytes against actual closed same-kernel GPU archive. Failed
+model stays failed; plugin qualification cannot promote model/quality/HTTP.
+Current integrated full-model original handle remains LIVE; no remote upload,
+source/build/runtime mutation or competing GPU worker. B1 helper/lowering/full
+model, broad quality, actual4K, tuned/INT4/4B, repetitions and2x goals stay open.
