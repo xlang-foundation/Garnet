@@ -1,0 +1,29 @@
+{
+  "status": "separate_b1_metadata_contract_prepared_cpu_unrun",
+  "source": "src/backends/tensorrt/qwen38_bf16_kv_layout_contract.h",
+  "source_sha256": "cb8edd0f2b1e393bb83d3b16b448cf2a992084f885fcc31e1316d56c2d0adbc5",
+  "changes": [
+    [
+      "BF16KVLayoutSpec",
+      "BF16LowBatchKVLayoutSpec",
+      2
+    ],
+    [
+      "namespace BF16KVContract {",
+      "namespace BF16LowBatchKVContract {",
+      1
+    ],
+    [
+      "garnet_qwen38_bf16_kv_delta_study_v1",
+      "garnet_qwen38_bf16_low_batch_delta_study_v1",
+      1
+    ],
+    [
+      "(j.at(\"batch\")==4||j.at(\"batch\")==8)",
+      "j.at(\"batch\")==1",
+      1
+    ]
+  ],
+  "result_sha256": "06b866191f512df166319d1b2c4dc370877fbace8743c4215def4b87f98a52dd",
+  "scope": "Literal complete CPU metadata validator with only new struct/namespace/contract tag and strict B1-only batch admission. Old B4/B8 public validator remains byte-identical. Not native helper/plugin/model or runtime allocation/quality/performance qualification."
+}

@@ -4116,3 +4116,48 @@ new B1 commit runtime preparation to actual model/attention proofs, compile on
 actual remote SDK and run/replay the full20case byte/graph/negative corpus.
 Typed helper/plugin/lowering/model, actual4K/quality/HTTP/reference/4B/B8 and
 original2x/halfTTFT targets remain required.
+
+B1 standalone runtime methods prepared locally; no deployed upload/change while
+original model worker remains live. Pinned actual compiler CPU policy/import
+guard, private fixed scratch paths,20case104704B raw collector, all-source/
+runtime invariants and archive-on-failure controller. Independent verifier
+reconstructs both candidate sources and original GPU checker prefix, replays
+all raw bytes against fresh integer oracle and pre-GPU frozen reference,
+requires exact profiles/graph/negative/canary/readonly counts and current UUID.
+Positive runtime preparation path remains unexercised until actual model proof
+pair/archive exists; current actual guard returns2 and creates no preparation
+or upload plan. Closure/replay of a failed model can permit only a separate
+unloaded operator collection; that model failure stays failed and cannot be
+promoted by this gate. Existing model/quality/protocol/timing gates unchanged.
+
+Actual17CPU tests pass: original B1 byte/layout controls, six additional
+synthetic stream checks against corruption/truncation/order/identity/counters/
+bool/canary/offset/model-admission tampering, and unchanged old B4/B8 layouts.
+CPU synthetic records are never GPU evidence. All runner/verifier/factory
+methods parse; actual guard and test ledgers archived. No second GPU process.
+
+Separate B1 full CPU metadata validator is a literal old-validator derivation:
+new struct/namespace/dialect tag and strict B1-only batch, all per-layer/type/
+geometry/interval/replay guards retained. Original cb8edd0f...B4/B8 header
+unchanged. Private CPU /MT build imports checked before execution: no CUDA,
+Garnet or TensorRT. Actual2B1 and4legacy positive profiles,12cross-dialect
+rejections (including retagged layouts) and7820malformed-layout rejections pass.
+Valid patch application occurs outside rejection catch. Fixture869201B/SHA
+a69bc96865c640194ce039488121b4d143c93f948a28baf37fba2e3d427e7837;
+CPUexeef0808c0d2c2b413da370cf56f792243e3aab8eec4f0250415e2480203bdaeeb.
+This is not native SDK helper/plugin ABI, allocation fit, GPU/model/quality or
+speed qualification. Methods/fixture/logs preserved in32file101890B preparation
+bundle SHA99d8abf288e263bd77d8b620849f14d65d1e8c3884a6a02b78dc9a4b08ed3be4.
+
+New read-only partial model observation: original controller RUNNING, disabled
+mode unfinished, native report has7case records through group3/repeat0 and
+no recorded error; not closed or qualified. Continue same original handle.
+Offline analysis of CLOSED prior d5650c97...14case/102vector parent verifies
+all224manifest files and both identical proofs. C1 groups use4physical rows
+for1real request. Mixed full-real group5 has332accepted/530proposed physical
+draft tokens (~0.6264); repeats match. Separate actual real/physical emitted
+counts retained. These are fixed-corpus descriptive counters with private
+padding, not timings, general acceptance estimates or2x speed evidence. Row
+reduction is an implementation direction; minimum GPU tiles/memory bandwidth
+can prevent proportional speedup. Original2x/halfTTFT goal and all reference/
+4K/broad-quality/INT4/4B/B8/repetition requirements remain unchanged.
