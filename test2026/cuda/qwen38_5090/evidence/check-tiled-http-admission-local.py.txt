@@ -1,0 +1,15 @@
+from pathlib import Path
+import hashlib,json,os,sys,zipfile
+repo=Path('D:/CantorAI/work/qwen38-5090');m=repo/'test2026/cuda/qwen38_5090';work=Path(__file__).resolve().parent;out=work.parent/'outputs'
+sys.path.insert(0,str(repo));from test2026.cuda.qwen38_5090.run_logged import run
+from test2026.cuda.qwen38_5090.native_tiled_scores_http_admission import validate_model,CANDIDATE
+os.chdir(repo);code=run([sys.executable,'-m','unittest','test2026.cuda.qwen38_5090.test_tiled_scores_http_worker'],work/'tiled-http-worker-cpu-ledger','correctness',
+    'Five admission fault and entire unchanged generation/HTTP probe AST/launcher controls; no Garnet or GPU load',
+    [m/n for n in ('native_tiled_scores_http_admission.py','native_tiled_scores_stream_worker.py','probe_tiled_scores_http.py','serve_native_tiled_scores_worker.bat','test_tiled_scores_http_worker.py')]);assert code==0
+job='bf16-scores-tiled-api-model-admission-attempt1';proof=out/(job+'-verified.json');q=json.loads(proof.read_bytes());assert q==json.loads((out/(job+'-remote-verified.json')).read_bytes())
+with zipfile.ZipFile(out/(job+'-evidence.zip')) as z:w=json.loads(z.read('results/'+job+'/workflow.json'))
+validate_model(q,w,CANDIDATE)
+result={'status':'tiled_http_worker_admission_cpu_controls_passed_gpu_unrun','cpu_tests':5,'actual_model_proof_sha256':hashlib.sha256(proof.read_bytes()).hexdigest(),
+        'actual_closed_model_schema_admitted':True,'worker_model_generation_body_unchanged':True,'probe_all805_fixed124_protocol_ast_preserved':True,
+        'gpu_executed':False,'http_protocol_and_quality_executed':False,'benchmark_executed':False,'two_times_target_achieved':False}
+(work/'tiled-http-worker-cpu-preparation.json').write_bytes(json.dumps(result,indent=2).encode());print(json.dumps(result))

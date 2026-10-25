@@ -1,0 +1,74 @@
+{
+  "status": "tiled_model_and_native_paged_bytes_independently_replayed_b8_model_started",
+  "jobs": {
+    "bf16-scores-tiled-api-model-admission-attempt1": {
+      "status": "native_tiled_scores_model_replayed",
+      "archive_sha256": "cb4effcb8021b4a8320b304646e49f70e17f4161b2447a9acf1c006231f276c2",
+      "archive_bytes": 2577890,
+      "files_verified": 153,
+      "proof_pair_sha256": "80f974e9aca3adad82c13eed8c812f15e81a727914f5fad62a5d5c5d947cd8f2",
+      "correctness_resource_samples_recomputed": {
+        "default": {
+          "sampled_peak_adapter_used_bytes": 23868383232,
+          "samples": 18228,
+          "requested_interval_seconds": 0.02,
+          "observed_sample_gap_median_seconds": 0.03165710001485422,
+          "observed_sample_gap_max_seconds": 9.479153399995994,
+          "scope": "NVML adapter-wide used memory, including background allocations; sampled maximum, not instantaneous or process-attributed peak"
+        },
+        "tiled": {
+          "sampled_peak_adapter_used_bytes": 23682560000,
+          "samples": 18943,
+          "requested_interval_seconds": 0.02,
+          "observed_sample_gap_median_seconds": 0.03162819999852218,
+          "observed_sample_gap_max_seconds": 16.60609270000714,
+          "scope": "NVML adapter-wide used memory, including background allocations; sampled maximum, not instantaneous or process-attributed peak"
+        }
+      },
+      "performance_admitted": false
+    },
+    "paged-prompt-native-component-attempt1": {
+      "status": "paged_prompt_native_component_bytes_replayed",
+      "archive_sha256": "deda4bac52c095871633d2ffc615ef9b0fa6d6e197ea3d4c72e4d6408e4357ee",
+      "archive_bytes": 6934610,
+      "files_verified": 975,
+      "proof_pair_sha256": "d451971f28e5c1a6fdf4f1e87e7fc5a120b41c1f9513129197ca992f8976a8e2",
+      "correctness_resource_samples_recomputed": {
+        "component": {
+          "sampled_peak_adapter_used_bytes": 4355207168,
+          "samples": 2247,
+          "requested_interval_seconds": 0.02,
+          "observed_sample_gap_median_seconds": 0.03147190000163391,
+          "observed_sample_gap_max_seconds": 4.426829900010489,
+          "scope": "NVML adapter-wide used memory, including background allocations; sampled maximum, not instantaneous or process-attributed peak"
+        }
+      },
+      "performance_admitted": false
+    }
+  },
+  "tiled_model": {
+    "routes": 2,
+    "actual_comparison_cases": 12,
+    "complete_states": 64,
+    "raw_hidden_and_normalized_vectors": 128,
+    "retained_baseline_exact": true
+  },
+  "paged_component": {
+    "cases": 8,
+    "native_read_events": 11274,
+    "observed_bytes_reconstructed_and_verified": 1703301120,
+    "decoder_constructed": false
+  },
+  "b8_model_trial": {
+    "id": "paged-batch8-model-preservation-attempt1",
+    "supervisor_session": 48577,
+    "preparation_sha256": "15d9e2b98f62e327604f19968bd47b00c440526b897812de7a2d75a4b0da46f3",
+    "source_pins": 684,
+    "test_ids": 26,
+    "terminal_result": null
+  },
+  "http_candidate_worker_cpu_tests": 5,
+  "http_candidate_executed": false,
+  "new_benchmark_executed": false,
+  "two_times_target_achieved": false
+}
