@@ -1,0 +1,32 @@
+
+{"id": "7efd51ed21204bef92d0e559706d3cfd", "kind": "build", "label": "CPU-only raw-observation probe compile-raw-local.bat", "argv": ["cmd.exe", "/d", "/c", "C:\\Users\\developer\\Documents\\Codex\\2026-10-23\\referenced-chatgpt-conversation-this-is-an\\work\\parallel-top1\\compile-raw-local.bat"]}
+
+{"id": "59f167cab9ee490eb54233d0bd25b44a", "kind": "build", "label": "CPU-only raw-observation probe link-raw-local.bat", "argv": ["cmd.exe", "/d", "/c", "C:\\Users\\developer\\Documents\\Codex\\2026-10-23\\referenced-chatgpt-conversation-this-is-an\\work\\parallel-top1\\link-raw-local.bat"]}
+
+{"id": "98b8ad1425fd42cc95fa970c24ec9901", "kind": "correctness", "label": "Independent top1 replay CPU oracle controls", "argv": ["D:/CantorAI/Garnet/.venv/Scripts/python.exe", "-m", "unittest", "test2026.cuda.qwen38_5090.test_parallel_top1_oracle"]}
+E
+======================================================================
+ERROR: test2026 (unittest.loader._FailedTest.test2026)
+----------------------------------------------------------------------
+ImportError: Failed to import test module: test2026
+Traceback (most recent call last):
+  File "C:\Python\Python312\Lib\unittest\loader.py", line 137, in loadTestsFromName
+    module = __import__(module_name)
+             ^^^^^^^^^^^^^^^^^^^^^^^
+ModuleNotFoundError: No module named 'test2026'
+
+
+----------------------------------------------------------------------
+Ran 1 test in 0.000s
+
+FAILED (errors=1)
+
+{"id": "9f7c2497a5964ff28f01e1763c1665c1", "kind": "correctness", "label": "Independent top1 replay CPU oracle controls from actual repository cwd", "argv": ["D:/CantorAI/Garnet/.venv/Scripts/python.exe", "-m", "unittest", "test2026.cuda.qwen38_5090.test_parallel_top1_oracle"]}
+.......
+----------------------------------------------------------------------
+Ran 7 tests in 0.009s
+
+OK
+
+{"id": "2d8353fa983c473fada98bca12a95166", "kind": "setup", "label": "CPU replay tool identity", "argv": ["D:/CantorAI/Garnet/.venv/Scripts/python.exe", "-c", "import platform,numpy,json; print(json.dumps(dict(python=platform.python_version(),numpy=numpy.__version__,gpu_work=False)))"]}
+{"python": "3.12.10", "numpy": "1.26.4", "gpu_work": false}

@@ -1,0 +1,56 @@
+"""Materialize preparation only from closed independently replayed parent data."""
+from pathlib import Path
+import hashlib,json
+
+repo=Path('D:/CantorAI/work/qwen38-5090');methods=repo/'test2026/cuda/qwen38_5090'
+outputs=Path(__file__).resolve().parents[1]/'outputs';sha=lambda b:hashlib.sha256(b).hexdigest()
+parent='bf16-same-precision-mtp-attempt1'
+local=json.loads((outputs/(parent+'-verified.json')).read_bytes())
+remote_raw=(outputs/(parent+'-remote-verified.json')).read_bytes();remote=json.loads(remote_raw)
+assert local==remote and remote['status']=='bf16_same_precision_mtp_corpus_replayed'
+assert len(remote['cases'])==4 and remote['raw_hidden_and_normalized_arrays']==20 and not remote['historical_fp32_gate_reclassified']
+assert remote['archived_replay_verifier_sha256']==remote['replay_verifier_sha256']==sha((methods/'verify_bf16_same_precision_mtp.py').read_bytes())
+old=json.loads((methods/'evidence/bf16-same-precision-mtp-preparation.json').read_bytes())
+offline=json.loads((methods/'evidence/bf16-padded-lifecycle-offline-preparation.json').read_bytes())
+assert offline['status']=='offline_prepared_only' and not offline['gpu_executed'] and not offline['remote_files_uploaded']
+new_names=list(offline['files'])+['evidence/bf16-padded-lifecycle-offline-preparation.json']
+pins=dict(old['methods'])
+for n,h in pins.items():assert sha((methods/n).read_bytes())==h
+for n in new_names:
+ digest=sha((methods/n).read_bytes())
+ if n in offline['files']:assert digest==offline['files'][n]
+ assert n not in pins;pins[n]=digest
+linked=dict(old['linked_archives']);linked[parent+'-evidence.zip']=remote['archive_sha256']
+for n,h in linked.items():assert sha((outputs/n).read_bytes())==h
+p={'status':'bf16_padded_lifecycle_prepared_unrun','source_sha256':old['source_sha256'],'methods':pins,
+   'pinned_inputs':old['pinned_inputs'],'parent_proof_sha256':sha(remote_raw),'library_sha256':remote['library_sha256'],
+   'fixture_sha256':old['fixture_sha256'],'local_cpu_log_sha256':pins['evidence/bf16-padded-lifecycle-local-cpu.log'],
+   'linked_archives':linked,'scope':'Prospective physical B4/T32prefill/T4decode BF16 private-padding/lifecycle gate after closed full packed MTP parent and both replays. Fourteen repeated cases,1/2/3/4real rows; independent same-precision real-row IDs/logical states/raw hidden+normalized; allprefill/dummy freeze/duplicate checks, explicit0/1/2/4prefix commits, rollback/pending ownership, full reset, mixed EOS retirement and callback ordinals. No broad quality, B8, actual4K, SSE/HTTP, serving memory, speed or2x admission.'}
+target=methods/'evidence/bf16-padded-lifecycle-preparation.json';assert not target.exists()
+target.write_text(json.dumps(p,indent=2),encoding='utf8')
+preflight="""from pathlib import Path
+import hashlib,json,shutil,subprocess
+r=Path('D:/CantorAI/5090-study-20261023');repo=r/'Garnet';m=repo/'test2026/cuda/qwen38_5090'
+"""+'p='+repr(p)+'\nnew_names='+repr(new_names)+"""
+sha=lambda f:hashlib.sha256(f.read_bytes()).hexdigest()
+for n,h in p['source_sha256'].items():assert sha(repo/n)==h,('Source drift',n)
+for n,h in p['methods'].items():
+ f=m/n
+ if n in new_names:assert not f.exists(),('New method already exists',n)
+ else:assert sha(f)==h,('Existing method drift',n)
+assert not (m/'evidence/bf16-padded-lifecycle-preparation.json').exists()
+for n,h in p['pinned_inputs'].items():assert sha(r/n)==h,('Input drift',n)
+parent='bf16-same-precision-mtp-attempt1'
+proof=r/'results'/(parent+'-verified.json');assert sha(proof)==p['parent_proof_sha256']
+verified=json.loads(proof.read_bytes());assert verified['status']=='bf16_same_precision_mtp_corpus_replayed' and len(verified['cases'])==4 and verified['raw_hidden_and_normalized_arrays']==20
+w=json.loads((r/'results'/parent/'workflow.json').read_bytes());assert w['exit_code']==0 and w['cleanup_finished'] and w['source_sha256']==w['source_after_sha256']==p['source_sha256']
+for n,h in p['linked_archives'].items():assert sha(r/'results'/n)==h
+assert sha(r/'results/bf16-kv-metadata-fixture.json')==p['fixture_sha256']
+assert sha(r/'build/bin/garnet.dll')==p['library_sha256'] and not (r/'results/bf16-padded-lifecycle-attempt1').exists()
+assert int(subprocess.check_output(['nvidia-smi','--query-gpu=memory.used','--format=csv,noheader,nounits'],text=True).strip())<1024
+scratch=json.loads((r/'results/study-ssd-engine-cache/receipt.json').read_bytes());cache=Path(scratch['cache_root'])
+assert cache.resolve().drive.upper()=='C:' and json.loads((cache/'study-owner.json').read_bytes())['study']==str(r) and shutil.disk_usage(cache).free>=96*1024**3
+print(json.dumps({'status':'bf16_padded_lifecycle_preflight_passed','source_pins':len(p['source_sha256']),'methods':len(p['methods']),'new_methods':len(new_names),'input_pins':len(p['pinned_inputs']),'gpu_idle':True}))
+"""
+path=Path(__file__).with_name('bf16-padded-lifecycle-preflight.py');assert not path.exists();compile(preflight,str(path),'exec');path.write_bytes(preflight.encode())
+print(json.dumps({'preparation_sha256':sha(target.read_bytes()),'source_pins':len(p['source_sha256']),'methods':len(p['methods']),'new_uploads_with_preparation':len(new_names)+1}))

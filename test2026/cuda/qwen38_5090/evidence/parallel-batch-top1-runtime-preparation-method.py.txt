@@ -1,0 +1,59 @@
+"""Require terminal/replayed model evidence and an observed actual compiler."""
+from pathlib import Path
+import hashlib,json
+
+chat=Path(__file__).resolve().parents[1];outputs=chat/'outputs';work=chat/'work/parallel-top1'
+repo=Path('D:/CantorAI/work/qwen38-5090');m=repo/'test2026/cuda/qwen38_5090';sha=lambda b:hashlib.sha256(b).hexdigest()
+parent='bf16-padded-lifecycle-attempt1'
+local=json.loads((outputs/(parent+'-verified.json')).read_bytes())
+remote_raw=(outputs/(parent+'-remote-verified.json')).read_bytes();proof=json.loads(remote_raw)
+assert local==proof and proof['status'] in ('bf16_padded_lifecycle_replayed','bf16_padded_lifecycle_failure_preserved')
+if proof['status']=='bf16_padded_lifecycle_replayed':assert len(proof['cases'])==14 and proof['raw_hidden_and_normalized_arrays']==102
+assert proof['replay_verifier_sha256']==sha((m/'verify_bf16_padded_lifecycle.py').read_bytes())
+assert sha((outputs/(parent+'-evidence.zip')).read_bytes())==proof['archive_sha256']
+toolraw=(work/'remote-toolchain-observation.json').read_bytes();tool=json.loads(toolraw)
+assert tool['status']=='parallel_top1_toolchain_observed' and tool['observer_sha256']==sha((m/'observe_parallel_top1_toolchain.py').read_bytes())
+source_raw=(work/'remote-source-observation.json').read_bytes();observed=json.loads(source_raw)
+for n,h in observed['baseline_sources'].items():assert sha((repo/n).read_bytes())==h['sha256']
+base=json.loads((m/'evidence/bf16-padded-lifecycle-preparation.json').read_bytes())
+files={}
+for n in ('src/cuda/cuda_lib.h','src/cuda/repetition_sampler.h','src/cuda/logits_sampler_kernel.cu','src/cuda/logits_top1_batch_parallel_candidate.cuh'):
+ files['Garnet/'+n]=sha((repo/n).read_bytes())
+new_names=['Garnet/src/cuda/logits_top1_batch_parallel_candidate.cuh']
+new_methods=['probe_parallel_batch_top1.cu','parallel_top1_oracle.py','test_parallel_top1_oracle.py','compile_parallel_batch_top1.bat','run_parallel_batch_top1.py','verify_parallel_batch_top1.py','evidence/parallel-top1-fixture-oracles.json']
+for n in new_methods+['run_logged.py','monitor_native_probe.py','sample_vram.py','verify_bf16_padded_lifecycle.py']:
+ path='Garnet/test2026/cuda/qwen38_5090/'+n;files[path]=sha((m/n).read_bytes())
+ if n in new_methods:new_names.append(path)
+files.update({'results/parallel-top1-toolchain-observation.json':sha(toolraw),
+ 'results/parallel-top1-source-observation.json':sha(source_raw),
+ 'tools/observe-parallel-top1-toolchain.py':tool['observer_sha256'],
+ 'tools/parallel-top1-toolchain-observation.bat':tool['batch_sha256']})
+fixture=json.loads((m/'evidence/parallel-top1-fixture-oracles.json').read_bytes())
+for n,h in fixture['source_sha256'].items():assert sha((repo/n).read_bytes())==h
+p={'status':'parallel_batch_top1_prepared_unrun','parent':parent,'parent_proof_sha256':sha(remote_raw),
+ 'parent_archive_sha256':proof['archive_sha256'],'observed_unused_library_sha256':proof['library_sha256'],
+ 'files':files,'inherited_model_sources':base['source_sha256'],'tools':tool['tools'],
+ 'vcvars':tool['vcvars'],'nvcc':tool['nvcc'],'host_compiler':tool['host_compiler'],
+ 'scope':'Standalone BF16/FP32 parallel batch-top1 correctness only, after original model worker terminal and independently replayed. A preserved model failure is allowed as an observational parent solely for this independent operator test; it does not promote that model.330synthetic CPU/unchanged legacy GPU/candidate cases,1000raw observations,7independent CPU oracle controls, capture/nullable/canary/readonly/invalid-call checks. No runtime DLL loaded/replaced, production integration, model/broad quality, component timing, serving memory or speed/2x admission.'}
+target=m/'evidence/parallel-batch-top1-preparation.json';assert not target.exists();target.write_text(json.dumps(p,indent=2),encoding='utf8')
+script="""from pathlib import Path
+import hashlib,json,subprocess
+r=Path('D:/CantorAI/5090-study-20261023');repo=r/'Garnet'
+"""+'p='+repr(p)+'\nnew_names='+repr(new_names)+"""
+sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+for n,h in p['files'].items():
+ if n in new_names:assert not (r/n).exists(),('New path already exists',n)
+ else:assert sha(r/n)==h,('Source/method/input drift',n)
+for n,h in p['inherited_model_sources'].items():assert sha(repo/n)==h,('Inherited source drift',n)
+for n,h in p['tools'].items():assert sha(Path(n))==h,('Compiler drift',n)
+assert not (r/'Garnet/test2026/cuda/qwen38_5090/evidence/parallel-batch-top1-preparation.json').exists()
+assert not (r/'tools/parallel-batch-top1').exists() and not (r/'results/parallel-batch-top1-correctness-attempt1').exists()
+assert sha(r/'results'/(p['parent']+'-verified.json'))==p['parent_proof_sha256']
+assert sha(r/'results'/(p['parent']+'-evidence.zip'))==p['parent_archive_sha256']
+w=json.loads((r/'results'/p['parent']/'workflow.json').read_bytes());assert w['cleanup_finished'] and w['exit_code'] in (0,1) and w['source_sha256']==w['source_after_sha256']==p['inherited_model_sources']
+assert sha(r/'build/bin/garnet.dll')==p['observed_unused_library_sha256']
+assert int(subprocess.check_output(['nvidia-smi','--query-gpu=memory.used','--format=csv,noheader,nounits'],text=True).strip())<1024
+print(json.dumps({'status':'parallel_top1_preflight_passed','files':len(p['files']),'inherited_sources':len(p['inherited_model_sources']),'new_paths':len(new_names),'tools':len(p['tools']),'gpu_idle':True}))
+"""
+preflight=chat/'work/parallel-top1-preflight.py';assert not preflight.exists();compile(script,str(preflight),'exec');preflight.write_bytes(script.encode())
+print(json.dumps({'preparation_sha256':sha(target.read_bytes()),'new_files_with_preparation':len(new_names)+1,'runtime_loaded':False}))
