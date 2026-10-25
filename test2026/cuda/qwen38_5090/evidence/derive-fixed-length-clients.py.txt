@@ -1,0 +1,41 @@
+from pathlib import Path
+import hashlib,json
+w=Path(__file__).resolve().parent;m=Path('D:/CantorAI/work/qwen38-5090/test2026/cuda/qwen38_5090');sha=lambda b:hashlib.sha256(b).hexdigest();summary=json.loads((m/'evidence/fixed-length-4096-preparation.json').read_bytes());recipes={};prior=m/'evidence/fixed-length-clients-derivation.json';previous=json.loads(prior.read_bytes())['recipes'] if prior.exists() else {}
+pairs=(('benchmark_fixed_context_native.py','benchmark_fixed_length_native.py'),('benchmark_fixed_context_reference.py','benchmark_fixed_length_reference.py'),('test_fixed_context_native_stream.py','test_fixed_length_native_stream.py'),('test_fixed_context_reference.py','test_fixed_length_reference.py'))
+for source,target in pairs:
+ raw=(m/source).read_bytes();text=raw.decode();changes=[]
+ def replace(before,after,count=1):
+  global text
+  assert text.count(before)==count,(source,before,text.count(before));text=text.replace(before,after);changes.append([before,after,count])
+ if source.startswith('benchmark_'):
+  if source.endswith('native.py'):
+   replace('ca78cdc12239810851e9943ccf6b318e8b29074b0fb0908728dd58132ae6923f',summary['archive_sha256']);replace('829d7770f2d749e30a66e027940224e8ab77a488d0b5f9c456e4809ae845987c',summary['manifest_sha256'])
+   replace(' return value\n'," choices=value.get('choices')\n if not isinstance(choices,list) or len(choices)!=1 or type(choices[0].get('index')) is not int or choices[0]['index']!=0 or choices[0].get('finish_reason')!='length':raise ValueError('Fixed-length stream must finish at length, with one choice')\n return value\n")
+  else:replace('from benchmark_fixed_context_native import','from benchmark_fixed_length_native import')
+  if source.endswith('native.py'):replace("assert body['stream'] and body['max_tokens']==128 and len(ids)==3968", "assert body['stream'] and body['max_tokens']==128 and body.get('ignore_eos') is True and len(ids)==3968")
+  else:replace("assert body['stream'] and body['model']=='qwen38-27b-nvfp4' and body['max_tokens']==128", "assert body['stream'] and body['model']=='qwen38-27b-nvfp4' and body['max_tokens']==128 and body.get('ignore_eos') is True")
+ else:
+  replace('benchmark_fixed_context_native','benchmark_fixed_length_native') if source.endswith('native_stream.py') else replace('benchmark_fixed_context_reference','benchmark_fixed_length_reference')
+  if source.endswith('native_stream.py'):
+   replace("'id':'synthetic-cpu','prompt_token_ids'","'id':'synthetic-cpu','choices':[{'index':0,'delta':{'content':''},'finish_reason':'length'}],'prompt_token_ids'")
+   text+='''\nclass FixedLengthSemantics(unittest.TestCase):
+ def test_eos_in_middle_is_counted_as_a_real_generated_token(self):
+  prompt,events=sample();events[73]['data']=json.dumps({'token_id':248046});value=json.loads(events[-2]['data']);value['response_token_ids'][73]=248046;events[-2]['data']=json.dumps(value);self.assertEqual(len(final_ids(events,prompt)['response_token_ids']),128)
+ def test_stop_finish_is_rejected_even_with128ids(self):
+  prompt,events=sample();value=json.loads(events[-2]['data']);value['choices'][0]['finish_reason']='stop';events[-2]['data']=json.dumps(value)
+  with self.assertRaises(ValueError):final_ids(events,prompt)
+'''
+  else:
+   text+='''\nclass FixedLengthSemantics(unittest.TestCase):
+ def test_untimed_id_controls_preserve_explicit_ignore_eos_flag(self):
+  body={'stream':True,'ignore_eos':True,'messages':[]};original=copy.deepcopy(body)
+  for engine in ('vllm','sglang'):
+   self.assertIs(control_request(body,engine)['ignore_eos'],True);self.assertEqual(body,original)
+ def test_stop_finish_is_rejected_even_with128ids(self):
+  for engine in ('vllm','sglang'):
+   value,prompt=sample(engine);value['choices'][0]['finish_reason']='stop'
+   with self.assertRaises(ValueError):control_response(value,engine,prompt)
+'''
+  entry="if __name__=='__main__':unittest.main()\n";assert text.count(entry)==1;text=text.replace(entry,'')+'\n'+entry
+ path=m/target;assert not path.exists() or sha(path.read_bytes())==previous[target]['result_sha256'];path.write_bytes(text.encode());recipes[target]={'source':source,'source_sha256':sha(raw),'changes':changes,'result_sha256':sha(text.encode()),'extra_semantic_tests':source.startswith('test_')}
+target=m/'evidence/fixed-length-clients-derivation.json';target.write_text(json.dumps({'status':'fixed_length_clients_derived_unrun','recipes':recipes,'fixed_length_corpus':summary,'scope':'Common explicit-ignore_eos body checks, unchanged128actual-ID/usage/cohort metrics and native length-finish requirement. EOS tokens remain counted as actual generated tokens. Separate old natural-stop failure stays failed. No actual HTTP/server/model run yet.'},indent=2),encoding='utf8');print(json.dumps({'status':'fixed_length_clients_derived_unrun','methods':len(recipes)}))

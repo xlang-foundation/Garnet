@@ -1,0 +1,37 @@
+
+{"id": "fd095a572b2945b283e8bb7cb7606047", "kind": "correctness", "label": "Independent actual805screen/raw74EOS/partial-cohort replay; failed overall trial remains unadmitted", "argv": ["D:\\CantorAI\\Garnet\\.venv\\Scripts\\python.exe", "test2026/cuda/qwen38_5090/replay_native_natural_eos_failure.py", "--proofs", "C:/Users/developer/Documents/Codex/2026-10-23/referenced-chatgpt-conversation-this-is-an/outputs", "--corpus", "C:/Users/developer/Documents/Codex/2026-10-23/referenced-chatgpt-conversation-this-is-an/work/mmmu/quality-corpus", "--scratch", "C:/Users/developer/Documents/Codex/2026-10-23/referenced-chatgpt-conversation-this-is-an/work", "--tokenizer", "C:/Users/developer/Documents/Codex/2026-10-23/referenced-chatgpt-conversation-this-is-an/work/long-context-assets/tokenizer.json"]}
+Traceback (most recent call last):
+  File "D:\CantorAI\work\qwen38-5090\test2026\cuda\qwen38_5090\replay_native_natural_eos_failure.py", line 51, in <module>
+    if __name__=='__main__':raise SystemExit(main())
+                                             ^^^^^^
+  File "D:\CantorAI\work\qwen38-5090\test2026\cuda\qwen38_5090\replay_native_natural_eos_failure.py", line 50, in main
+    report={'status':'native_natural_eos_failure_and_complete_screen_replayed','archive_sha256':proof['archive_sha256'],'screening':screening,'failed_fixed_length_case':key,'actual_stream_and_final_and_native_ids_exact':True,'actual_prompt_tokens':3968,'actual_generated_tokens':74,'declared_max_tokens':128,'ignore_eos_requested':False,'terminal_token_id':stop_id,'terminal_token_name':'<|im_end|>','finish_reason':'stop','early_eos_events_file':root+key+'-events.jsonl','early_eos_events_sha256':sha(z.read(root+key+'-events.jsonl')),'completed_partial_cohorts':partial,'verifier_sha256':sha(Path(__file__).read_bytes()),'performance_admitted':False,'two_times_target_achieved':False,'scope':'Original trial remains failed: valid74token natural-stop response violates its predeclared128output workload. All805raw screen replies independently replayed; partial cohort metrics are retained observations from a failed overall trial, excluded from admitted comparisons/charts. No MTP run or completed fixed4Kprofile. New explicit ignore_eos profile must keep all original failures and establish actual128tokens on every engine.'};target=args.proofs/'Garnet-Native-Natural-EOS-Failure-Reanalysis.json';assert not target.exists();target.write_text(json.dumps(report,indent=2),encoding='utf8');print(json.dumps({k:v for k,v in report.items() if k not in ('screening','completed_partial_cohorts')},indent=2));print(json.dumps({'screening_count':screening['score']['count'],'screening_correct':screening['score']['correct'],'screening_accuracy':screening['score']['accuracy'],'partial_completed_cohorts':len(partial)}));return 0
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Python\Python312\Lib\zipfile\__init__.py", line 1571, in read
+    with self.open(name, "r", pwd) as fp:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Python\Python312\Lib\zipfile\__init__.py", line 1595, in open
+    raise ValueError(
+ValueError: Attempt to use ZIP archive that was already closed
+
+{"id": "70e1684ff41a4ec9961c98b1f87057af", "kind": "correctness", "label": "Repeat actual805/raw74EOS/partial-cohort replay after report-digest ZIP lifetime correction only; failed overall trial remains unadmitted", "argv": ["D:\\CantorAI\\Garnet\\.venv\\Scripts\\python.exe", "test2026/cuda/qwen38_5090/replay_native_natural_eos_failure.py", "--proofs", "C:/Users/developer/Documents/Codex/2026-10-23/referenced-chatgpt-conversation-this-is-an/outputs", "--corpus", "C:/Users/developer/Documents/Codex/2026-10-23/referenced-chatgpt-conversation-this-is-an/work/mmmu/quality-corpus", "--scratch", "C:/Users/developer/Documents/Codex/2026-10-23/referenced-chatgpt-conversation-this-is-an/work", "--tokenizer", "C:/Users/developer/Documents/Codex/2026-10-23/referenced-chatgpt-conversation-this-is-an/work/long-context-assets/tokenizer.json"]}
+{
+  "status": "native_natural_eos_failure_and_complete_screen_replayed",
+  "archive_sha256": "2ef0d7c0036ceb8e578ea64673131464d45191e0cebafaa68824583e396406c4",
+  "failed_fixed_length_case": "bdc22131d72745628bb8328cce6454c4-ctx4096-s3-image-c2-r0",
+  "actual_stream_and_final_and_native_ids_exact": true,
+  "actual_prompt_tokens": 3968,
+  "actual_generated_tokens": 74,
+  "declared_max_tokens": 128,
+  "ignore_eos_requested": false,
+  "terminal_token_id": 248046,
+  "terminal_token_name": "<|im_end|>",
+  "finish_reason": "stop",
+  "early_eos_events_file": "results/tokenizer-nfc-http-study-attempt1/ordinary/benchmark4k/bdc22131d72745628bb8328cce6454c4-ctx4096-s3-image-c2-r0-events.jsonl",
+  "early_eos_events_sha256": "fbcf44f5ce480aac573ae18c46d28bbc007905e3492ccf28616608f95bd72d6a",
+  "verifier_sha256": "d4dd7e34a952192a81c815de9e46b91117ab43e2ebc4e6a741f4d4bb32c63159",
+  "performance_admitted": false,
+  "two_times_target_achieved": false,
+  "scope": "Original trial remains failed: valid74token natural-stop response violates its predeclared128output workload. All805raw screen replies independently replayed; partial cohort metrics are retained observations from a failed overall trial, excluded from admitted comparisons/charts. No MTP run or completed fixed4Kprofile. New explicit ignore_eos profile must keep all original failures and establish actual128tokens on every engine."
+}
+{"screening_count": 805, "screening_correct": 502, "screening_accuracy": 0.6236024844720497, "partial_completed_cohorts": 5}

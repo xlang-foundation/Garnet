@@ -1,0 +1,41 @@
+from pathlib import Path
+import hashlib,json
+w=Path(__file__).resolve().parent;m=Path('D:/CantorAI/work/qwen38-5090/test2026/cuda/qwen38_5090');sha=lambda b:hashlib.sha256(b).hexdigest();p=json.loads((m/'evidence/tokenizer-nfc-http-preparation.json').read_bytes());prefix='Garnet/test2026/cuda/qwen38_5090/';recipes={}
+pairs=(('native_tokenizer_nfc_stream_worker.py','native_fixed_length_stream_worker.py'),('native_http_bridge.py','native_fixed_length_http_bridge.py'),('serve_native_tokenizer_nfc_worker.bat','serve_native_fixed_length_worker.bat'),('test_tokenizer_nfc_worker_contract.py','test_fixed_length_worker_contract.py'))
+for source,target in pairs:
+ raw=(m/source).read_bytes();assert sha(raw)==p['files'][prefix+source];text=raw.decode();changes=[]
+ def replace(before,after,count=1):
+  global text
+  assert text.count(before)==count,(source,before,text.count(before));text=text.replace(before,after);changes.append([before,after,count])
+ if source in ('native_tokenizer_nfc_stream_worker.py','native_http_bridge.py'):
+  before="    messages=body.get('messages')";replace(before,"    if type(body.get('ignore_eos',False)) is not bool:raise ValueError('ignore_eos requires an explicit boolean')\n"+before)
+ if source=='native_tokenizer_nfc_stream_worker.py':
+  replace('from test2026.cuda.qwen38_5090.native_worker_io import requests,emit','from test2026.cuda.qwen38_5090.native_worker_io import requests,emit\nfrom test2026.cuda.qwen38_5090.fixed_length_policy import generation_stop_ids')
+  replace("'research_only':True,'broad_quality_qualified'","'research_only':True,'explicit_ignore_eos_supported':True,'broad_quality_qualified'")
+  replace('  if session is None:decoder.reset()\n  else:session.reset()',"  request_stops=generation_stop_ids(body,stops)\n  if session is None:decoder.reset()\n  else:session.reset();session.stops=set(request_stops)")
+  replace("'stop':token in stops","'stop':token in request_stops")
+  replace('if generated[-1] in stops or len(generated)==limit:break','if generated[-1] in request_stops or len(generated)==limit:break')
+  replace("'finish_reason':'stop' if generated[-1] in stops else 'length'","'ignore_eos':body.get('ignore_eos',False),'finish_reason':'stop' if generated[-1] in request_stops else 'length'")
+ elif source=='serve_native_tokenizer_nfc_worker.bat':replace('native_tokenizer_nfc_stream_worker.py','native_fixed_length_stream_worker.py')
+ elif source=='test_tokenizer_nfc_worker_contract.py':
+  replace('native_tokenizer_nfc_stream_worker.py','native_fixed_length_stream_worker.py',3);replace('native_http_bridge.py','native_fixed_length_http_bridge.py');replace("'stops':[2],","'stops':[2],'request_stops':[2],")
+  text+='''\nclass FixedLengthPolicy(unittest.TestCase):
+ def test_explicit_ignore_eos_and_default_restore(self):
+  from .fixed_length_policy import generation_stop_ids
+  stops=[2,3];self.assertEqual(generation_stop_ids({'ignore_eos':True},stops),[]);self.assertEqual(generation_stop_ids({},stops),stops);self.assertEqual(generation_stop_ids({'ignore_eos':False},stops),stops);self.assertIsNot(generation_stop_ids({},stops),stops)
+ def test_invalid_flag_types_are_rejected_by_worker_bridge_and_policy(self):
+  from .fixed_length_policy import generation_stop_ids
+  worker=load(function(M/'native_fixed_length_stream_worker.py','validate_body'),{});bridge=load(function(M/'native_fixed_length_http_bridge.py','validate_body'),{})
+  for value in (0,1,None,'true',1.0,[],{}):
+   body=RequestPolicy().body();body['ignore_eos']=value
+   for validator in (worker,bridge):
+    with self.assertRaises(ValueError):validator(body)
+   with self.assertRaises(ValueError):generation_stop_ids(body,[2])
+ def test_ignored_eos_remains_an_actual_token_event(self):
+  notify,namespace,events=TokenNotifications().scope();namespace['request_stops']=[];notify(0,2,1);notify(0,10,2);self.assertEqual(namespace['generated'],[2,10]);self.assertEqual([e['sampled_tokens'] for e in events],[1,2]);self.assertFalse(events[0]['stop']);self.assertEqual(namespace['text'],'10')
+'''
+ # All test classes must exist before direct-script unittest discovery.
+ if source.startswith('test_'):
+  entry="if __name__=='__main__':unittest.main()\n";assert text.count(entry)==1;text=text.replace(entry,'')+'\n'+entry
+ path=m/target;assert not path.exists();path.write_bytes(text.encode());recipes[target]={'source':source,'source_sha256':sha(raw),'changes':changes,'result_sha256':sha(text.encode()),'test_class_addition':source.startswith('test_')}
+target=m/'evidence/fixed-length-worker-derivation.json';assert not target.exists();target.write_text(json.dumps({'status':'fixed_length_worker_derived_unrun','recipes':recipes,'policy_sha256':sha((m/'fixed_length_policy.py').read_bytes()),'scope':'Only explicit ignore_eos stop behavior and strict boolean validation change. All ordinary default-stop model/template/projection/stream paths otherwise retained. New bridge/worker names preserve original failed methods. Real prefix74EOS/128ordinary-MTP controls are still required before timing.'},indent=2),encoding='utf8');print(json.dumps({'methods':len(recipes),'status':'fixed_length_worker_derived_unrun'}))
