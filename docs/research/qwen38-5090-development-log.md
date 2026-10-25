@@ -3358,3 +3358,52 @@ original bf16-same-precision-diagnostic-attempt1 after both build replays. Origi
 handle confirms running; six CPU controls pass remotely, first FP32/T4 process
 started with the known optional hashlib startup warnings. No result inferred from
 warnings or silence, no restart, auxiliary GPU job or deployed source/DLL mutation.
+
+
+2026-10-25 UTC: previous goal turn made concrete progress: independent reference
+model source/lowering was built, both build replays completed,50CPU model and
+six state controls passed, original five-profile GPU job started. This turn
+revalidates current branch/status and original live handle before more work.
+Same original bf16-same-precision-diagnostic-attempt1 remains running with no
+restarts or source/DLL/runtime mutation. Producer FP32/T4 finished exit0 and
+passed all32teacher IDs,64raw hidden/normalized snapshots and complete physical
+state witnesses against retained diagnostic before packed BF16/T4 began.
+Packed BF16/T4 subsequently finished; packed BF16/T32 started. Final five-profile
+archive/replay and full reference results still pending. No new speed result.
+One read-only progress JSON observation during correctness saw first constructing;
+no inference was made from silence or optional hashlib warnings. Additional
+read-only tokenizer file inventory/hash observation and five small tokenizer/
+processor asset downloads (~12.8MB total, no weights) used fixed local work paths
+while this untimed job lived. These were not HTTP measurement intervals.
+
+Prepared actual4K future text/image corpus locally, rather than treating4096KV
+capacity as input length. Current installed pinned tokenizer/config/template/
+processor hashes observed remotely in receipt26921a7b37c218cbe937aa96538adc9e3c8b5bc225057fa8a9b648643a3e1bc8;
+all downloaded bytes match before use. No asset replacement. Rust tokenizers
+0.22.2 and independent Jinja rendering reproduce retained short text41/image104
+prompt IDs exactly. Source checkpoint remains nvidia/Qwen3.8-27B-NVFP4 pinned
+482ca0f3832238542f8f5295dde86b5f22711d80; config71fa01bb...unchanged.
+
+CPU-only fixed_context_workload performs bounded searches over repeated natural
+notes plus filler, then re-encodes actual strings to exactly3968input tokens.
+It preserves the final question, same image bytes/order, max128output and all
+other request policies. Input budget includes chat template and64image slots;
+never slices token IDs or silently truncates. Six policy/source-preservation/
+invalid-budget/template/determinism controls pass. Separate prepared-corpus
+verifier replays all124requests through the actual pinned tokenizer and Jinja,
+all62unique JPEG/decodedRGB nonces, expected prompt-ID hashes, exact3968+128=4096
+budgets, planned C1/2/4/8 warmup/measurement schedule and249archive members.
+Existing image fixtures are224x224JPEG; actual native/reference preprocessing
+and64image-token usage must still be asserted at execution, not inferred merely
+from raw dimensions. No model/checkpoint weights loaded and no local GPU used.
+Immutable193369B corpusSHAca78cdc12239810851e9943ccf6b318e8b29074b0fb0908728dd58132ae6923f,
+manifest829d7770f2d749e30a66e027940224e8ab77a488d0b5f9c456e4809ae845987c,
+verifierf4807fa609c71cd202f3cf2d0b400e609cf854f9401e84f7c5b46323853eaf27.
+This contains64PLANNEDmeasurement and60PLANNEDwarmup requests, zero executed
+requests or generated outputs. Artificial repeated-note context corpus is not
+broad quality. Frozen original benchmark_stream remains unchanged; no long-
+context serving or performance admission. Actual native/WSLserver IDs, context
+boundary ordinary/MTP behavior, uncached vision/KV controls, quality, matching
+settings and clean repeats must precede actual4K timing. All original2x/halfTTFT,
+C1/concurrency, broadquality, tuned/MTP references, INT4 and matched4B requirements
+remain intact and unmet. Source+compressed fixture+proofs kept reviewable onbranch.

@@ -1,58 +1,54 @@
 # Qwen3.8-27B on one RTX 5090: implementation task
 
-Status: native BF16 cache integration is built; retained-output quality gate failed.
-Precision/prefill diagnostics and independent attention GPU/FP64 and wrapper
-CPU metadata gates are closed. The default-off same-precision model reference
-is built (97c364...DLL); five-profile full-model comparison is next.
-Work continues on branch `qwen38-5090` (implementation commit `d43b20f42`). The
-full 2x decode/concurrency and half-TTFT objectives below remain unmet.
+Status: the default-off BF16-in-FP32 model reference is built; the five-profile
+same-precision diagnostic is running. Work continues on `qwen38-5090`, with
+reference integration at `2fc4d1abd`. The full 2x decode/concurrency and half-TTFT
+objectives remain unmet.
 
-The pinned 27B checkpoint uses Qwen3.5 architecture. Current Garnet supports its
-mixed NVFP4/FP8 projections, BF16 vision/MTP, host embedding, joined MLP and
-verified MTP3. The retained short-prompt register128 HTTP pilot measures C1
-decode72.54text/70.70image tok/s and C8aggregate208.53/167.86 versus faster ordinary
-references445.77/439.86. Every cohort, regression and sampler gap remains in the
-report. These are single pilots, not stable causal estimates.4096cache capacity
-is not an actual4K prompt test; broad model quality and serving admission remain
-open. See the development log and immutable evidence for historical experiments.
+The pinned 27B checkpoint uses Qwen3.5 architecture. Garnet supports its mixed
+NVFP4/FP8 projections, BF16 vision/MTP, host embedding and joined MLP. Latest
+measured short-prompt register128 HTTP C1 decode is72.54text/70.70image tok/s;
+C8aggregate208.53/167.86 versus faster ordinary references445.77/439.86. All
+cohorts, regressions and sampler gaps remain recorded. These are single pilots
+on the prior qualified DLL, not results for the new reference DLL or causal
+estimates.4096cache capacity is not an actual4K-input benchmark.
 
-The new default-off BF16 cache path keeps GDN FP32 and has separately named
-metadata/helper/plugin contracts for B4/B8,T4decode/T32prefill. It builds as an
-actual /MT Garnet DLL,01a3d784..., with the old34bea DLL and original source retained.
-The build passes33CPU model contracts and independent build replay on both
-machines (archivec8d0d802...). Earlier standalone plugin /MD contracts were not
-production ABI qualification; an explicit correction preserves that limitation.
+The packed BF16 integration on01a3...DLL passed its full default-off model check,
+but its enabled B4/T32 case failed retained FP32 token IDs at text26/image8.
+Ordinary/MTP state and hidden agree for that failed case. Controlled32-step
+teacher-forced FP32/T4, BF16/T4 and BF16/T32 diagnostics are closed/replayed;
+BF16/T4 image first differs at19, BF16/T32 at text26/image8, with substantial
+normalized-vector differences. Preserve every failure; broad BF16 quality is
+unqualified. These correlated short controls are not a broad-quality benchmark.
 
-Fresh actual-model default-off regression passes on the new DLL: allfour
-text/image group/repeat controls preserve exact token IDs, ordinary/MTP full-state
-hashes and eight raw hidden arrays. Archive8d87b816... passes independent replay
-on both machines. It does not qualify the enabled BF16 model path or speed.
+The independent full-cache reference rounds currentK/V toBF16 and uses unchanged
+legacy dense FP32 attention math, independent FP32 caches and no packed offsets
+or compact commit helper. Its42GPU cases,442880selected independent FP64 scalar
+witnesses and readonly/alias/graph/cache controls pass; maximum absolute error
+7.38e-8. Separate wrapper CPU metadata contracts pass. The default-off B4/T4/T32
+model path now builds as97c364...DLL, with old sources/DLL and allfive runtime
+libraries retained. Original remote build ran49CPUtests versus promised50 because
+one older fixture lacked an existing batch4 test. The preserved50-test completion
+and corrected replay require both immutable archives; both machines agree.
+Six separate state-byte/reference-routing CPU controls also pass. No speed or
+full-model quality claim follows from component/CPU/build checks.
 
-The BF16 B4/T32prefill/T4decode attempt failed its retained-FP32 token gate:
-first differences at zero-based text26/image8 in group0/repeat0. Ordinary/MTP
-IDs and canonical hash/slot/rawhidden witnesses agree for that first group, and
-runtime helper metadata/negative/zero-prefix controls pass. Archive287fafd1...
-is independently replayed on both machines as a preserved failure. It does not
-qualify broad BF16 model quality or permit timing. All failures stay recorded.
+The original five-profile model job is live on unchanged97c364...DLL/source:
+FP32/T4, packed BF16/T4,T32, then BF16-values-in-FP32 reference/T4,T32. Its first
+fresh FP32 case passed32teacher histories,64raw hidden/normalized vectors and
+complete physical state hash witnesses against the retained diagnostic before
+starting enabled cases. This is producer evidence pending final archive/replay;
+it does not replace full128-token ordinary/MTP/default-off/protocol regression.
+Logical state witnesses expand BF16 carriers to FP32 bytes and compare all
+layers; complete raw caches are not archived. The reference must keep zero low16
+bits in every FP32 cache word. No full-model same-precision result is admitted yet.
 
-The controlled diagnostic is now closed and independently replayed on both
-machines (archive84d1cd07...,192raw hidden/normalized arrays). Under identical
-32token teacher histories, FP32/T4 has no mismatches; BF16/T4 changes image at19;
-BF16/T32 changes text26/image8. Normalized hidden differences are substantial
-(minimum cosines about0.75-0.80 across the paired comparisons). These correlated
-observations do not qualify broad accuracy or establish harmless rounding. All
-runtime sources/DLL stayed unchanged; private engine cleanup finished. No GPU
-worker remains live after the original terminal0/closed archive.
-
-Current implementation: a separate unwired BF16-in-FP32 full-cache reference
-primitive compiles offline for sm120, without local GPU execution or deployment.
-It rounds currentK/V then invokes the unchanged legacy dense FP32 attention core,
-using independent full caches and no packed offsets or compact commits. Require
-its past-cache BF16-roundtrip invariant, GPU/FP64/readonly/noalias/canary tests,
-separate plugin/engine contracts and same-precision full-model comparison before
-using it as a reference. Preserve failed old-precision output comparisons.
-Unrun B8/128MiB drafts remain outside the repository pending model qualification;
-legacy256MiB guards stay unchanged. No new performance result exists.
+Actual4K request fixtures are CPU-prepared/replayed using the pinned tokenizer,
+exact chat template and64image slots:124requests,3968input tokens each plus
+128output reserve. The immutable193369B corpus is on the research branch.
+Actual server IDs, boundary behavior, quality and matched timing remain pending.
+Unrun B8/128MiB drafts remain outside the repository; legacy256MiB/B4 and other
+profile guards remain unchanged. Wider batching cannot establish C1 decode gain.
 
 Next gates, in order:
 
