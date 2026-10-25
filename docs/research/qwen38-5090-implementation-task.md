@@ -1,21 +1,33 @@
 # Qwen3.8-27B on one RTX 5090: implementation task
 
-Status: pinned architecture/quantization audit, native SM120 build, NVFP4/FP8
-projection/plugin tests, real layer0 MLP parity, real GDN/full-attention decoder-layer
-parity at4K capacity, and native W4A4 head checks have passed. Both references have
-passed text/image smoke; SGLang's initial eager profile now has raw streaming and
-concurrency measurements. The34 CPU tests pass. Full64-layer native text smoke
-also reproduces the reference token IDs. Four native VLM color/spatial answers
-are semantically correct; strict reference token parity is2/4 due to capitalization.
-Broader vision/precision validation,
-serving integration, tuned matched comparisons and the2x target remain incomplete.
-A direct-call native text pilot measured37.3 decode tokens/s and1060ms first-token
-time over eight32-token requests. This excludes HTTP and is not a matched2x result.
-The full BF16-projection vision tower executes but has failed both the F32 and
-mixed-projection CPU comparison limits. A separate full27-layer F32-projection
-structural diagnostic passed with max error0.000576 and relative L2 error2.874e-6.
-Keep serving admission closed and retain the BF16/strict-token failures. Broader
-quality, real streaming, fused prefill and matched comparisons are the next gates.
+Status (2026-10-24): native Windows mixed NVFP4/FP8 text/image inference,
+verified MTP3, joined MLP weights, host embedding lookup and opt-in compact KV
+state are implemented and qualified on the retained short-prompt cases. Compact
+B4/T4 full-model replay matches the same-DLL default-off token IDs, state-hash
+witnesses and eight raw hidden arrays. Streaming replay covers13groups/40requests.
+Matched loopback HTTP pilots and ordinary vLLM/SGLang references retain identical
+request bytes, prompt/output counts, GPU identity and transport. See current
+`evidence/kv-delta-http-pilot-attempt1-verified.json` and complete chart provenance.
+
+The latest compact pilot measures C8 aggregate196.64text/86.19image tok/s versus
+faster ordinary references445.77/439.86. Image C4/C8 regress against the previous
+Garnet pilot, with fewer full groups and MTP requests. The2x target is unmet.
+All cohorts and failures remain in the evidence; comparisons are single pilots,
+with untuned references and bounded quality checks.4096capacity is not an actual
+4K prompt test. General serving admission remains closed. Historical BF16 vision
+and strict-token mismatches remain preserved; no broad-quality claim is made.
+
+Immediate experiment: correct the Windows Python3.12 batching clock/deadline and
+retain queue-entry/grouping/dispatch QPC timestamps. A1024trial CPU experiment
+reproduces early closure in178/512legacy trials and0/512QPC trials; producer/queue
+scheduling misses remain and this does not prove an HTTP speedup.21CPU protocol,
+deadline, streaming and comparison tests pass locally. The prospective matched
+QPC HTTP pilot must rerun CPU and token/serialization gates before any timings.
+Then profile warm target/draft/head/state execution and evaluate resident controls
+or graph-binding reuse with strict state/token checks. Scaling the physical batch
+or speculative depth requires new shape/kernel/transaction qualification; flags
+alone do not qualify it. Actual4K, broad-quality/repeated runs, tuned references,
+SGLang MTP and matched4B reference comparisons remain explicit required work.
 
 Audit date: 2026-10-23. The preserved source baseline was
 `5b0dc7ff8e5c1a77807138db310605bcd12aa390` plus inherited local edits, captured
