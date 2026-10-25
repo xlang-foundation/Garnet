@@ -44,6 +44,7 @@ def generate_marked(self,*args,**kwargs):
     if call not in (2,3):return generate(self,*args,**kwargs)
     start_words,end_words={2:(8973,8977),3:(8981,8989)}[call]
     before=stats(self)
+    metrics_before=json.loads(json.dumps(self.metrics))
     markers.append(decoder.io.from_host([.125]*start_words,[1,start_words]))
     started=time.perf_counter()
     try:
@@ -60,6 +61,7 @@ def generate_marked(self,*args,**kwargs):
     report['captures'].append({'call':call,'group':group,'repeat':repeat,
         'start_copy_bytes':start_words*4,'end_copy_bytes':end_words*4,
         'graphs_before':before,'graphs_after':after,'generate_host_seconds':elapsed,
+        'metrics_before_generate':metrics_before,
         'speculative_metrics':result['speculative_metrics']})
     save();return result
 patch.replace(CUDASpeculativeSession,'generate',generate_marked)
