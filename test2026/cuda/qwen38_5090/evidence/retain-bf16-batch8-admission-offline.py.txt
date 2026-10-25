@@ -1,0 +1,40 @@
+from pathlib import Path
+import json,shutil
+w=Path(__file__).resolve().parent;r=Path('D:/CantorAI/work/qwen38-5090');e=r/'test2026/cuda/qwen38_5090/evidence'
+for stem in ('bf16-batch8-admission-cpu-ledger','bf16-batch8-admission-offline-ledger'):
+ source=w/stem;records=[json.loads(line) for line in (source/'commands.jsonl').read_bytes().splitlines()];assert len(records)==2 and records[-1]['exit_code']==0
+ target=e/stem;target.mkdir(exist_ok=True)
+ for f in source.iterdir():assert not (target/f.name).exists();shutil.copyfile(f,target/f.name)
+for name in ('prepare-bf16-batch8-admission-offline.py','retain-bf16-batch8-admission-offline.py'):
+ target=e/(name+'.txt');assert not target.exists();shutil.copyfile(w/name,target)
+assert b'Ran 20 tests' in (e/'bf16-batch8-admission-cpu-ledger/commands.log').read_bytes()
+entry='''
+
+### 2026-10-25: B8 whole-model admission probe prepared; GPU unrun
+
+Prepared probe_bf16_batch8_admission.py using the current existing B8 BF16-cache
+T32/T4 constructor and unchanged256MiB target-program builder limit. No MTP
+workspace/profile changes. It will build model+vision, exercise8short mixed
+rows and8actual3968+128 text/image rows from the frozen corpus, each in original,
+rotated and reset-repeat order. Nine actual GPU cases remain unrun. Complete
+state-component/physical/logical hashes and raw hidden/normalized vectors must
+match after inverse row permutation. Full snapshots include unused cache slots;
+only hashes, not multi-GB raw caches, are retained. All raw vectors are saved.
+
+New pure B8 gate selects complete rows through the unchanged B1/B4 representation
+validator and validates every8row component before comparing, so malformed later
+metadata cannot hide behind an earlier mismatch. Actual20CPU tests pass in0.105s;
+literal constructor/current pure Python profile/layout and frozen input hashes
+check against the actual archived checkpoint config, and Python syntax compiles
+without importing/executing the model. These are no B8GPU/memory-fit/quality/speed
+proof. Buffer byte figures in the offline receipt are logical allocations only.
+
+Native HTTP original48577 now emits MTP4Kcohorts, still live; no remote mutation,
+extra observations or transfers during possible timing. After its actual terminal
+and cleanup, isolated correctness work can use otherwise idle GPU during native
+archive transfer, with no official timing overlap. The full reference/matched
+2x/INT4/4B/repetition scope remains active and unmet.
+'''
+for name in ('qwen38-5090-development-log.md','qwen38-5090-implementation-task.md'):
+ target=r/'docs/research'/name;raw=target.read_bytes();assert b'B8 whole-model admission probe prepared' not in raw;target.write_bytes(raw+entry.replace('\n','\r\n').encode())
+print(json.dumps({'status':'bf16_batch8_offline_methods_and_actual_cpu_ledgers_retained','cpu_tests':20,'gpu_model_executed':False}))
