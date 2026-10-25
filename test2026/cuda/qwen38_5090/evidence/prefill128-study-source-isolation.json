@@ -1,0 +1,23 @@
+{
+  "status": "unbuilt_prefill128_sources_isolated_from_default_cuda_glob",
+  "moves": [
+    {
+      "from": "src/cuda/qwen38_bf16_prefill128_commit.cu",
+      "to": "test2026/cuda/qwen38_5090/qwen38_bf16_prefill128_commit.cu",
+      "sha256": "970ffcb160b321032b8238580d4c00830bf9de7ea81ac95a6ee976575e67e6f5"
+    },
+    {
+      "from": "src/cuda/qwen38_bf16_prefill128_commit.cuh",
+      "to": "test2026/cuda/qwen38_5090/qwen38_bf16_prefill128_commit.cuh",
+      "sha256": "037371b8aaae91afb108e857ee51468a331ef0409a5dc38c75b42e8e3624c9a0"
+    },
+    {
+      "from": "src/backends/tensorrt/qwen38_bf16_prefill128_layout_contract.h",
+      "to": "test2026/cuda/qwen38_5090/qwen38_bf16_prefill128_layout_contract.h",
+      "sha256": "75bd1a283fd8ca27ed3eced85d0079bd40c21978a4cf02addba0f598ce5c6998"
+    }
+  ],
+  "bytes_unchanged": true,
+  "reason": "T128 GPU source remains uncompiled and unadmitted; keep it outside src/cuda recursive production build glob until its native qualification. Earlier CPU evidence retains original coordinates. CPU metadata includes resolve same study headers and original src/cuda dependencies.",
+  "runtime_qualified": false
+}

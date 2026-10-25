@@ -1,0 +1,98 @@
+{
+  "status": "native_cuda_logged_bootstrap_replayed",
+  "archive_sha256": "8104499a0eace60c00e9af1add17640b5d29e0810894eee8e1b264164b31a9b7",
+  "linked_parent_archive_sha256": "a698a95d3f2b8a3e7f7fa60794260cb4451ae2712785be6ecff9266e0283297f",
+  "files_verified": 33,
+  "library_sha256": "1a1d0229a1c0c24a8397a4dee7a614bcedf97b3bd3293e58d752ed7de30eb498",
+  "control_replay": {
+    "status": "native_instrumented_host_stages_replayed",
+    "requests": [
+      {
+        "id": "ordinary-logged-bootstrap-retained-text",
+        "case": "text",
+        "mode": "ordinary",
+        "host_wall_seconds": 8.719705099996645,
+        "host_stage_seconds": {
+          "reset": 0.016302899981383234,
+          "input_text_or_image": 0.01598329999251291,
+          "embedding_and_rows": 0.19816390000050887,
+          "target_prefill": 5.09328210001695,
+          "target_generate": 3.3600940000033006
+        },
+        "host_wall_outside_stages_seconds": 0.03587890000198968,
+        "first_token_observation_phase": "target_generate",
+        "tokens_bound_to_retained_4k_control": true
+      }
+    ],
+    "performance_admitted": false,
+    "isolated_gpu_or_kernel_time_measured": false,
+    "two_times_target_achieved": false,
+    "scope": "Flat instrumented host-wall intervals bound to actual same-process token/completion events and retained3968+128IDs. MTP may emit the first target token before draft prefill finishes; full prefill phase duration is not TTFT. No cross-process epoch comparison, HTTP timing, benchmark speedup, causal kernel attribution or isolated GPU-active timing."
+  },
+  "bootstrap_logs": {
+    "embedded-cpu/synthetic-trace.bootstrap.jsonl": [
+      {
+        "stage": "trace_constructor_entered",
+        "mode": "ordinary"
+      },
+      {
+        "stage": "trace_constructor_completed",
+        "exception": null
+      },
+      {
+        "stage": "decoder_constructed_and_io_bound",
+        "exception": null
+      },
+      {
+        "stage": "native_ready_observed_before_pipe_emit",
+        "exception": null
+      },
+      {
+        "stage": "native_worker_finally_entered",
+        "exception": {
+          "type": "RuntimeError",
+          "repr": "RuntimeError('explicit embedded CPU fixture error')",
+          "traceback": "Traceback (most recent call last):\n  File \"D:\\CantorAI\\5090-study-20261023\\Garnet\\test2026\\cuda\\qwen38_5090\\probe_native_cuda_trace_embedded_cpu.py\", line 22, in <module>\n        with trace.stage('reset'):\n        ^^^^^^^^^^^^^^^^^^^^^^^^^^\n            raise RuntimeError('explicit embedded CPU fixture error')\n            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n    except RuntimeError as error:\n    ^^^^\n  File \"D:\\CantorAI\\5090-study-20261023\\Garnet\\test2026\\cuda\\qwen38_5090\\probe_native_cuda_trace_embedded_cpu.py\", line 23, in <module>\n    raise RuntimeError('explicit embedded CPU fixture error')\nRuntimeError: explicit embedded CPU fixture error\n"
+        }
+      },
+      {
+        "stage": "trace_closed",
+        "exception": null
+      }
+    ],
+    "native/host-stages.bootstrap.jsonl": [
+      {
+        "stage": "trace_constructor_entered",
+        "mode": "ordinary"
+      },
+      {
+        "stage": "trace_constructor_completed",
+        "exception": null
+      },
+      {
+        "stage": "decoder_constructed_and_io_bound",
+        "exception": null
+      },
+      {
+        "stage": "native_ready_observed_before_pipe_emit",
+        "exception": null
+      },
+      {
+        "stage": "native_worker_finally_entered",
+        "exception": null
+      },
+      {
+        "stage": "trace_closed",
+        "exception": null
+      },
+      {
+        "stage": "native_model_close_calls_returned",
+        "exception": null
+      }
+    ]
+  },
+  "profiled": false,
+  "performance_admitted": false,
+  "two_times_target_achieved": false,
+  "scope": "One exclusive unprofiled bootstrap after original failed profile terminal closure and identical two-machine failure replay. Unchanged1a1d model/default/runtime/SDK/source633, explicit logger subclass only. Actual13CPU guards and embedded-Python fake-IO compatibility precede native model construction. One actual retained3968+128text control with original IDs; persistent bootstrap and Python exception logs, actual worker close, host intervals/12synthetic-copy-request records and owned cache retirement. Unprofiled markers are requests, not GPU timing evidence. No HTTP benchmark, new numerical-kernel admission, quality parity or2x claim. Base source remains linked to original archive rather than duplicated."
+}

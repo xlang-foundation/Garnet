@@ -1,0 +1,41 @@
+from pathlib import Path
+import ast,hashlib,json
+
+repo=Path('D:/CantorAI/work/qwen38-5090');m=repo/'test2026/cuda/qwen38_5090';e=m/'evidence'
+sha=lambda raw:hashlib.sha256(raw).hexdigest()
+source=m/'probe_mtp_prefill16_full4k.py';raw=source.read_bytes();text=raw.decode()
+begin=text.index('    root,out=map(Path,sys.argv[1:3]);');end=text.index("    sys.path.insert(0,os.environ['GARNET_RUNTIME_ROOT'])")
+prelude='''    root,out=map(Path,sys.argv[1:3]);mode=sys.argv[3];assert mode in ('default','tiled') and not out.exists()
+    m=root/'Garnet/test2026/cuda/qwen38_5090';repo=root/'Garnet'
+    admission=json.loads((m/'evidence/bf16-scores-tiled-model-preparation.json').read_bytes())
+    library=sha((root/'build/bin/garnet.dll').read_bytes());assert library==admission['candidate_library_sha256']
+    for path,digest in admission['files'].items():assert sha((root/path).read_bytes())==digest,('Model input/source drift',path)
+    for path,digest in admission['runtime'].items():
+        if path!='garnet.dll':assert sha((root/'build/bin'/path).read_bytes())==digest
+    flag='GARNET_QWEN38_BF16_LOW_BATCH_TILED_SCORES';assert os.environ.get(flag)==('1' if mode=='tiled' else '0')
+    import ctypes
+    native=ctypes.CDLL(str(root/'build/bin/garnet.dll'));query=native.GarnetQwen38BF16LowBatchTiledScoresEnabled;query.argtypes=[];query.restype=ctypes.c_int
+    route=query();assert route==int(mode=='tiled')
+    for flag in ('GARNET_FP8_FULL_ATTN_M32_CANONICAL','GARNET_FP8_GDN_M32_CANONICAL','GARNET_PARALLEL_BATCH_TOP1'):assert os.environ.get(flag)=='1'
+    parent='mtp-prefill16-full4k-admission-attempt1';baseline_proof=json.loads((root/'results'/(parent+'-verified.json')).read_bytes())
+    assert baseline_proof['status']=='mtp_prefill16_full4k_target_state_replayed' and baseline_proof['archive_sha256']==admission['baseline_archive_sha256']
+    archive=root/'results'/(parent+'-evidence.zip');assert sha(archive.read_bytes())==admission['baseline_archive_sha256']
+    with zipfile.ZipFile(archive) as z:
+        reference=json.loads(z.read('results/'+parent+'/native/report.json'));reference_files={v.filename.removeprefix('results/'+parent+'/native/'):z.read(v) for v in z.infolist() if v.filename.startswith('results/'+parent+'/native/') and v.filename.endswith('.f32')}
+    cases_path=m/'evidence/native-host-stage-cases.json';p=json.loads(cases_path.read_bytes());cases=p['cases'];assert len(cases)==4 and p['library_sha256']==admission['runtime']['garnet.dll']
+'''
+text=text[:begin]+prelude+text[end:]
+text=text.replace("from test2026.cuda.qwen38_5090.mtp_prefill16_full4k import ORDER,replay_report","from test2026.cuda.qwen38_5090.mtp_prefill16_full4k import ORDER,replay_report\n    from test2026.cuda.qwen38_5090.tiled_scores_model import same_record,replay_tiled_model")
+text=text.replace("'short_model_archive_sha256':proof['archive_sha256']","'baseline_full4k_archive_sha256':baseline_proof['archive_sha256'],'tiled_scores_enabled':bool(route)")
+oldscope='Explicit wider MTP prefill actual4K target-state/ID/reset/callback/memory qualification only. Six cases include four retained text/image3968+128 inputs and first-text/image repeats. Ordinary target source/runtime unchanged, T4 decode/verifier unchanged. No broad805quality, HTTP or speed admission.'
+text=text.replace(oldscope,'Separate candidate DLL default/tiled route versus retained1a1d full4K baseline. Same ordinary and T16draft-prefill MTP operations, six3968+128text/image/reset-repeat cases, complete target state and raw vectors/IDs. No broad805quality, HTTP or speed admission.')
+needle="            report['cases'].append(record);save();assert ordinary==generated"
+assert text.count(needle)==1
+text=text.replace(needle,"            report['cases'].append(record);save()\n            same_record(record,reference['cases'][sequence],lambda name:(out/name).read_bytes(),reference_files.__getitem__)\n            assert ordinary==generated")
+needle="        report['local_replay']=replay_report(report,lambda name:(out/name).read_bytes(),cases);save()"
+assert text.count(needle)==1
+text=text.replace(needle,"        report['local_replay']=replay_tiled_model(report,lambda name:(out/name).read_bytes(),reference,reference_files.__getitem__,cases);save()")
+text=text.replace('MTP_PREFILL16_FULL4K_CASE_PASS','TILED_SCORES_FULL4K_CASE_PASS')
+target=m/'probe_bf16_scores_tiled_model.py';assert not target.exists();ast.parse(text);target.write_bytes(text.encode())
+derivation={'status':'native_tiled_model_probe_derived_unrun','base_file':source.name,'base_sha256':sha(raw),'candidate_sha256':sha(target.read_bytes()),'changes':'Explicit new-DLL/source/route guards; retained full4K parent state/raw-vector comparison after each unchanged model case; full report replay against retained parent. Exact original ordinary/MTP/model operations retained.','performance_admitted':False}
+(e/'bf16-scores-tiled-model-probe-derivation.json').write_bytes(json.dumps(derivation,indent=2).encode());print(json.dumps(derivation))

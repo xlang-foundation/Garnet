@@ -5,6 +5,22 @@
 #include <cuda_runtime.h>
 #include <math_constants.h>
 #include <limits>
+#include <cstdlib>
+#include <cstring>
+#if defined(_WIN32)
+#define GARNET_TILED_STUDY_EXPORT __declspec(dllexport)
+#else
+#define GARNET_TILED_STUDY_EXPORT __attribute__((visibility("default")))
+#endif
+// Process-frozen opt-in: changing the environment after first query has no effect.
+// Capture and eager launches therefore select the same admitted B1/T4,T32 path.
+extern "C" GARNET_TILED_STUDY_EXPORT int GarnetQwen38BF16LowBatchTiledScoresEnabled() noexcept {
+    static const bool enabled=[](){
+        const char* value=std::getenv("GARNET_QWEN38_BF16_LOW_BATCH_TILED_SCORES");
+        return value&&std::strcmp(value,"1")==0;
+    }();
+    return enabled?1:0;
+}
 namespace Garnet { namespace {
 bool valid(Qwen35AttentionCoreConfig c){
     return BF16KVLowBatchCandidateProfile(c);
@@ -49,6 +65,30 @@ __global__ void scores(Qwen35AttentionCoreConfig c,const float* query,const __nv
         sum=warpSum(sum);
     }
     if(!lane)scratch[size_t(row)*c.capacity+p]=p<=slot?sum*rsqrtf(float(c.dim)):-1e30f;
+}
+// Sixteen positions per warp: preserve each dot's eight-FMA/warp-reduction order.
+__global__ void scoresTiled16(Qwen35AttentionCoreConfig c,const float* query,const __nv_bfloat16* key,
+    const float* chunkKey,const float* slots,const float* active,float* scratch){
+    const int row=blockIdx.y,b=row/(c.tokens*c.heads),t=(row/c.heads)%c.tokens;
+    if(active[b*c.tokens+t]==0)return;
+    const int lane=threadIdx.x%32,warp=threadIdx.x/32;
+    const int slot=int(slots[b*c.tokens+t]),kh=(row%c.heads)/(c.heads/c.kv);
+    float q[8];
+    #pragma unroll
+    for(int i=0;i<8;++i)q[i]=query[size_t(row)*256+lane+32*i];
+    #pragma unroll 1
+    for(int tile=0;tile<16;++tile){
+        const int p=blockIdx.x*128+warp+8*tile;
+        if(p>=c.capacity)continue;
+        float sum=0;
+        if(p<=slot){
+            const int current=replacement(slots,active,b,c.tokens,p);
+            #pragma unroll
+            for(int i=0;i<8;++i)sum=fmaf(q[i],readKV(key,chunkKey,b,current,kh,p,lane+32*i,c.tokens),sum);
+            sum=warpSum(sum);
+        }
+        if(!lane)scratch[size_t(row)*c.capacity+p]=p<=slot?sum*rsqrtf(float(c.dim)):-1e30f;
+    }
 }
 __global__ void normalize(Qwen35AttentionCoreConfig c,const float* active,float* scratch){
     const int row=blockIdx.x,b=row/(c.tokens*c.heads),t=(row/c.heads)%c.tokens;
@@ -101,6 +141,9 @@ int RunQwen38BF16KVLowBatchCandidate(const Qwen35AttentionCoreConfig& c,const vo
     const auto* key=reinterpret_cast<const __nv_bfloat16*>(canonical+keyOffset);
     const auto* value=reinterpret_cast<const __nv_bfloat16*>(canonical+valueOffset);
     const int rows=c.batch*c.tokens*c.heads;
+    if(GarnetQwen38BF16LowBatchTiledScoresEnabled())
+        scoresTiled16<<<dim3((c.capacity+127)/128,rows),256,0,stream>>>(c,(const float*)in[0],key,(const float*)in[1],(const float*)in[5],(const float*)in[6],(float*)workspace);
+    else
     scores<<<dim3((c.capacity+7)/8,rows),256,0,stream>>>(c,(const float*)in[0],key,(const float*)in[1],(const float*)in[5],(const float*)in[6],(float*)workspace);
     if(cudaPeekAtLastError()!=cudaSuccess)return 1;
     normalize<<<rows,256,0,stream>>>(c,(const float*)in[6],(float*)workspace);

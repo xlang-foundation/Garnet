@@ -1,0 +1,37 @@
+from pathlib import Path
+import ast,hashlib,json,os,sys,unittest,zipfile
+
+work=Path(__file__).resolve().parent;out=work.parent/'outputs';repo=Path('D:/CantorAI/work/qwen38-5090');m=repo/'test2026/cuda/qwen38_5090';e=m/'evidence'
+sha=lambda f:hashlib.sha256(f.read_bytes()).hexdigest()
+proof=out/'bf16-scores-tiled-native-api-build-attempt1-verified.json';b=json.loads(proof.read_bytes());assert b==json.loads((out/'bf16-scores-tiled-native-api-build-attempt1-remote-verified.json').read_bytes()) and b['status']=='native_tiled_scores_api_build_cpu_replayed'
+prior=json.loads((e/'bf16-scores-tiled-native-api-build-preparation.json').read_bytes())
+base={**prior['base_files'],**prior['methods'],'Garnet/test2026/cuda/qwen38_5090/verify_bf16_scores_tiled_native_api_build.py':sha(m/'verify_bf16_scores_tiled_native_api_build.py')}
+names=['probe_bf16_scores_tiled_api_model.py','run_bf16_scores_tiled_api_model.py','test_bf16_scores_tiled_api_model.bat','verify_bf16_scores_tiled_api_model.py','evidence/bf16-scores-tiled-api-model-derivation.json']
+new={'Garnet/test2026/cuda/qwen38_5090/'+n:sha(m/n) for n in names};assert not set(new)&set(base)
+for n in names:
+    if n.endswith('.py'):ast.parse((m/n).read_text())
+sys.path.insert(0,str(repo));from test2026.cuda.qwen38_5090.run_logged import run
+from test2026.cuda.qwen38_5090.tiled_scores_model import replay_tiled_model
+modules=['test2026.cuda.qwen38_5090.test_tiled_scores_model','test2026.cuda.qwen38_5090.test_mtp_prefill16_full4k']
+def ids(suite):
+    for t in suite:
+        if isinstance(t,unittest.TestSuite):yield from ids(t)
+        else:yield t.id()
+tests=sorted(t for name in modules for t in ids(unittest.defaultTestLoader.loadTestsFromName(name)));assert len(tests)==10
+os.chdir(repo);code=run([sys.executable,'-m','unittest',*tests],work/'native-tiled-api-model-cpu-ledger','correctness','Ten retained-baseline and full4K model fault controls',[m/n for n in names]);assert code==0
+archive=out/'mtp-prefill16-full4k-admission-attempt1-evidence.zip';baseline_sha=sha(archive)
+assert baseline_sha=='92eef5433c946f4f2f9dc831902cb80f48b060a92bc6d91879f07137367b1ea5'
+with zipfile.ZipFile(archive) as z:
+    prefix='results/mtp-prefill16-full4k-admission-attempt1/native/';reference=json.loads(z.read(prefix+'report.json'))
+    cases=json.loads(z.read('Garnet/test2026/cuda/qwen38_5090/evidence/native-host-stage-cases.json'))['cases'];replays=[]
+    for route in (False,True):
+        actual=dict(reference,tiled_scores_enabled=route);replays.append(replay_tiled_model(actual,lambda n:z.read(prefix+n),reference,lambda n:z.read(prefix+n),cases))
+(work/'native-tiled-api-model-retained-cpu-replay.json').write_bytes(json.dumps({'status':'actual_retained_model_32states_replayed_in_both_route_labels_cpu_only','routes':replays,'gpu_executed':False},indent=2).encode())
+p={'status':'native_tiled_scores_model_prepared_gpu_unrun','files':{**base,**new},'new_files':new,'runtime':prior['runtime'],'environment':prior['environment'],'candidate_library_sha256':b['candidate_library_sha256'],
+   'build_proof_sha256':sha(proof),'baseline_archive_sha256':baseline_sha,'test_ids':tests,
+   'scope':'Separate2533 native-API-qualified candidate DLL default-off and opt-in tiled routes, two fresh native processes. Each runs same admitted ordinary and T16draft-prefill MTP six3968+128text/image/reset-repeat cases. Compare32complete canonical state witnesses and64raw finite hidden/normalized vectors per route against actual retained1a1d baseline, not only mutual candidate agreement. Ten CPU fault controls before model. Observe construction/correctness adapter memory. Baseline source657/SDK/RTE retained and baseline DLL always restored. No805quality, HTTP, serving-memory/timing/speed or2x admission.'}
+prep=e/'bf16-scores-tiled-api-model-preparation.json';assert not prep.exists();prep.write_bytes(json.dumps(p,indent=2).encode())
+rows=[{'local':str(m/n),'target':'Garnet/test2026/cuda/qwen38_5090/'+n,'sha256':sha(m/n)} for n in names]
+rows.append({'local':str(prep),'target':'Garnet/test2026/cuda/qwen38_5090/evidence/'+prep.name,'sha256':sha(prep)})
+(work/'native-tiled-api-model-upload-plan.json').write_bytes(json.dumps({'uploads':rows},indent=2).encode())
+print(json.dumps({'status':p['status'],'files':len(p['files']),'new_targets':len(rows),'cpu_tests':10,'preparation_sha256':sha(prep)}))

@@ -1,0 +1,17 @@
+from pathlib import Path
+import ast,hashlib,json
+repo=Path('D:/CantorAI/work/qwen38-5090');m=repo/'test2026/cuda/qwen38_5090';e=m/'evidence';sha=lambda b:hashlib.sha256(b).hexdigest();derived=[]
+for old,new in [('probe_bf16_scores_tiled_model.py','probe_bf16_scores_tiled_api_model.py'),('run_bf16_scores_tiled_model.py','run_bf16_scores_tiled_api_model.py'),('test_bf16_scores_tiled_model.bat','test_bf16_scores_tiled_api_model.bat'),('verify_bf16_scores_tiled_model.py','verify_bf16_scores_tiled_api_model.py')]:
+    raw=(m/old).read_bytes();text=raw.decode()
+    text=text.replace('bf16-scores-tiled-model-','bf16-scores-tiled-api-model-').replace('bf16_scores_tiled_model','bf16_scores_tiled_api_model')
+    text=text.replace('bf16-scores-tiled-native-build-attempt1','bf16-scores-tiled-native-api-build-attempt1').replace('verify_bf16_scores_tiled_native_build.py','verify_bf16_scores_tiled_native_api_build.py')
+    text=text.replace('native_tiled_scores_build_cpu_replayed','native_tiled_scores_api_build_cpu_replayed').replace('garnet-native-bf16-scores-tiled-attempt1.dll','garnet-native-bf16-scores-tiled-api-attempt1.dll')
+    text=text.replace('bf16-scores-tiled-native-build-preparation.json','bf16-scores-tiled-native-api-build-preparation.json')
+    if old.startswith('probe_'):
+        first=text.index('    import ctypes\n');end=text.index("    for flag in ('GARNET_FP8_FULL_ATTN_M32_CANONICAL'",first)
+        text=text[:first]+"    sys.path.insert(0,os.environ['GARNET_RUNTIME_ROOT']);sys.path.insert(0,str(repo))\n    import garnet\n    route=garnet.bf16_low_batch_tiled_scores_enabled();assert type(route) is bool and route==(mode=='tiled')\n"+text[end:]
+    target=m/new;assert not target.exists()
+    if new.endswith('.py'):ast.parse(text)
+    target.write_bytes(text.encode());derived.append({'base_file':old,'base_sha256':sha(raw),'file':new,'sha256':sha(target.read_bytes())})
+result={'status':'api_model_retry_derived_unrun','files':derived,'change':'Unique successor inputs/job after libffi failure preserved. Same six4K model operations, complete raw-state/oracle comparisons and two routes. New DLL and actual native Garnet API selector query, already qualified by ten embedded processes.','performance_admitted':False}
+(e/'bf16-scores-tiled-api-model-derivation.json').write_bytes(json.dumps(result,indent=2).encode());print(json.dumps(result))
