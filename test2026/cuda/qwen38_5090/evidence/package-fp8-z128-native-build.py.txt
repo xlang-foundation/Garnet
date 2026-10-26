@@ -1,0 +1,52 @@
+"""Pin current native28 candidate and authoritative restored remote baseline."""
+from pathlib import Path
+import hashlib,json,os,sys,unittest,zipfile
+work=Path(__file__).resolve().parent;out=work.parent/'outputs';repo=Path('D:/CantorAI/work/qwen38-5090');m=repo/'test2026/cuda/qwen38_5090';e=m/'evidence';sha=lambda raw:hashlib.sha256(raw).hexdigest();sys.path[:0]=[str(repo),str(m)]
+prior=json.loads((e/'gdn-chunk-stage-native-build-preparation.json').read_bytes());candidate=dict(prior['candidate_files']);base=dict(prior['candidate_base']);integration=json.loads((e/'fp8-z128-native-integration-derivation.json').read_bytes());native=json.loads((e/'fp8-z128-native-source-derivation.json').read_bytes())
+for row in integration['modified_files']:
+    assert candidate[row['target']]==row['before_sha256'];candidate[row['target']]=row['target_sha256']
+for row in native['files']:
+    name=row['target'];assert name not in candidate;candidate[name]=row['target_sha256'];base[name]=None
+assert len(candidate)==len(base)==28 and sum(value is not None for value in base.values())==8
+for name,h in candidate.items():assert sha((repo/name).read_bytes())==h
+bundle=work/'fp8-z128-native-source.zip';assert not bundle.exists()
+with zipfile.ZipFile(bundle,'x',zipfile.ZIP_DEFLATED) as z:
+    for name in candidate:z.write(repo/name,name)
+helperprep=json.loads((e/'fp8-z128-native-control-preparation.json').read_bytes());helper=json.loads((e/'fp8-z128-native-control-attempt1-workflow.json').read_bytes());assert helper['exit_code']==0 and helper['cleanup_finished'] and helper['before']==helper['after']
+new=('run_fp8_z128_native_build.py','verify_fp8_z128_native_build.py','prepare_fp8_z128_native_build.py','test_fp8_z128_native_build.py','fp8_z128_native_build_contract.py','test_fp8_z128_native_integration.py','evidence/fp8-z128-native-build-derivation.json','evidence/fp8-z128-native-integration-derivation.json','evidence/fp8-z128-native-control-attempt1-verified.json')+tuple(row['original_snapshot'].removeprefix('test2026/cuda/qwen38_5090/') for row in integration['modified_files'])
+methods={**prior['methods'],**helperprep['methods'],**{'Garnet/test2026/cuda/qwen38_5090/'+name:sha((m/name).read_bytes()) for name in new}}
+# Candidate method copies exist on the remote study only; verify local canonical origin.
+for name,h in methods.items():
+    relative=name.removeprefix('Garnet/');path=repo/relative
+    if '/native_fp8_z128_candidate/' in name:
+        row=helperprep['candidate_copies'][relative.removeprefix('test2026/cuda/qwen38_5090/')];assert sha((repo/row['production_source']).read_bytes())==h
+    else:assert sha(path.read_bytes())==h
+def ids(suite):
+    for test in suite:
+        if isinstance(test,unittest.TestSuite):yield from ids(test)
+        else:yield test.id()
+tests=list(prior['test_ids'])
+for name in ('test_fp8_z128_native_source','test_fp8_z128_native_control','test_gdn_z_projection','test_gdn_z_algorithm_log','test_fp8_z128_native_build'):
+    tests += list(ids(unittest.defaultTestLoader.loadTestsFromName('test2026.cuda.qwen38_5090.'+name)))
+assert len(tests)==len(set(tests))==77
+import run_logged as ledger
+pins={**methods,**{'Garnet/'+name:h for name,h in candidate.items()}};ledger.source_identity=lambda:{'scope':'Explicit owned native28 source/package CPU inventory; unrelated untracked excluded','owned_source_sha256':pins};os.chdir(repo)
+artifacts=[repo/name.removeprefix('Garnet/') for name in methods if '/native_fp8_z128_candidate/' not in name]
+code=ledger.run([sys.executable,'-m','unittest',*tests],work/'fp8-z128-native-build-local-cpu-ledger','correctness','62retained build/transaction/contracts plus13typedZ/real128 faults and2new buildreport/provenance controls; no local native/GPU',artifacts);assert code==0
+parents={}
+for job,status in (('gdn-chunk-stage-native-build-attempt1','gdn_chunk_stage_native_build_cpu_replayed'),('gdn-chunk-stage-witness-attempt2','gdn_chunk_stage_witness_arrays_replayed'),('fp8-z128-native-control-attempt1','fp8_z128_actual_typed_helper_and_plugin_fully_replayed')):
+    raw=(out/(job+'-verified.json')).read_bytes();assert raw==(out/(job+'-remote-verified.json')).read_bytes();q=json.loads(raw);assert q['status']==status and sha((out/(job+'-evidence.zip')).read_bytes())==q['archive_sha256'];parents[job]={'status':status,'exit_code':0,'proof_sha256':sha(raw),'archive_sha256':q['archive_sha256']}
+baseline=dict(helper['after']['source'])
+for name,value in (('config.json',helper['after']['checkpoints']['config']),('model.safetensors.index.json',helper['after']['checkpoints']['index'])):
+    key='models/Qwen3.8-27B-NVFP4/'+name;assert key not in baseline or baseline[key]==value;baseline[key]=value
+for name,h in base.items():
+    if h is not None:assert baseline['Garnet/'+name]==h
+p={'status':'fp8_z128_native_build_proposed_unrun','base_files':baseline,'methods':methods,'runtime':helper['after']['runtime'],'environment':helper['after']['environment'],'parents':parents,'candidate_files':candidate,'candidate_base':base,'vcvars':prior['vcvars'],'test_ids':tests,'expected_cpu_test_count':77,'bundle':'results/fp8-z128-native-source.zip','bundle_sha256':sha(bundle.read_bytes()),'scope':'28native-source combined T128/GDNstage/typedZ128 route. Exact qualified5newhelper files plus5additive builder/lowering/graphcounter edits, strict defaultoff originalB1T128 Zsuffix/N6144K5120, noB4T32/B8T16 selection.8originalsource targets restored/20ownednew removed, baseline1a1dDLL/runtime/SDK preserved,34CUDAobject set unchanged andonlyintendedprior3mayrecompile.77preCPU/6postinstallsource controls; actualold16profile overlaywire/M128FP8wire/newZwire/GDNprofile/10external+10embeddedselector/955tokenizer, fullGarnetlink. No actualGPUfrontend/stageprimary/model/805quality/HTTP/servingmemory/timing/2xadmission frombuild.'}
+proposal=work/'fp8-z128-native-proposal.json';assert not proposal.exists();proposal.write_bytes(json.dumps(p,indent=2).encode())
+files={'Garnet/test2026/cuda/qwen38_5090/'+name:(m/name).read_bytes() for name in new};files[p['bundle']]=bundle.read_bytes();files['results/fp8-z128-native-proposal.json']=proposal.read_bytes()
+package=work/'fp8-z128-native-build-deployment.zip';assert not package.exists()
+with zipfile.ZipFile(package,'x',zipfile.ZIP_DEFLATED) as z:
+    for name,raw in files.items():z.writestr(name,raw)
+    z.writestr('install-manifest.json',json.dumps({'files':{name:sha(raw) for name,raw in files.items()}},indent=2))
+old=(work/'install-gdn-chunk-stage-native-build.py').read_bytes();installer=old.replace(b'gdn-chunk-stage-native-build-deployment',b'fp8-z128-native-build-deployment').replace(b'gdn-chunk-stage-native-build-install',b'fp8-z128-native-build-install').replace(b'gdn-chunk-stage-native-proposal',b'fp8-z128-native-proposal').replace(b'gdn_chunk_stage_native_build_proposed_unrun',b'fp8_z128_native_build_proposed_unrun').replace(b'==62',b'==77').replace(b'==23',b'==28').replace(b'+1==14',('+1=='+str(len(files)+1)).encode());target=work/'install-fp8-z128-native-build.py';assert not target.exists();target.write_bytes(installer)
+result={'status':p['status'],'deployment_sha256':sha(package.read_bytes()),'bytes':package.stat().st_size,'targets':len(files),'native_source_count':28,'baseline_source_pins':len(baseline),'method_pins':len(methods),'cpu_tests':77,'installer_sha256':sha(installer)};(work/'fp8-z128-native-build-package.json').write_bytes(json.dumps(result,indent=2).encode());print(json.dumps(result))
