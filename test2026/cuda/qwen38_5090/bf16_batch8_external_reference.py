@@ -4,6 +4,25 @@ import re
 from .bf16_batch8_reference_gate import same_reference_state, same_reference_vectors
 from .verify_bf16_batch8_admission import replay_cases
 
+PARENT = 'paged-batch8-model-preservation-attempt1'
+BASELINE = '1a1d0229a1c0c24a8397a4dee7a614bcedf97b3bd3293e58d752ed7de30eb498'
+
+
+def validate_parent(proof, workflow, library, archive_sha256):
+    assert library == proof['library_sha256'] == workflow['library_sha256'] == BASELINE
+    assert proof['status'] == 'paged_batch8_model_preservation_replayed'
+    assert proof['archive_sha256'] == archive_sha256
+    assert type(workflow['exit_code']) is int and workflow['exit_code'] == 0
+    assert workflow['cleanup_finished'] is workflow['library_unchanged'] is True
+    assert workflow['source_sha256'] == workflow['source_after_sha256']
+    assert workflow['runtime_dependencies'] == workflow['runtime_dependencies_after']
+    assert workflow['runtime_dependencies']['garnet.dll'] == library
+    assert workflow['environment_before'] == workflow['environment_after']
+    assert proof['preserved_model']['complete_states'] == 29 and proof['preserved_model']['raw_vectors'] == 58
+    assert proof['preserved_model']['all_retained_states_vectors_tokens_exact'] is True
+    assert proof['external_b1_b4_math_qualified'] is proof['mtp_qualified'] is proof['http_qualified'] is False
+    assert proof['performance_admitted'] is proof['two_times_target_achieved'] is False
+
 
 def capture_exact(actual_b4, original_b8, rows, read_b4, read_b8):
     assert same_reference_state(original_b8['logical'], actual_b4['logical'], rows)

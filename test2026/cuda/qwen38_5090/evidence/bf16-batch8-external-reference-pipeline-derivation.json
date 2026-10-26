@@ -1,0 +1,233 @@
+{
+  "status": "exact_existing_owner_checker_preparer_launcher_derivation_gpu_unrun",
+  "files": {
+    "test_bf16_batch8_external_reference.bat": {
+      "source": "test_paged_batch8_mtp.bat",
+      "source_sha256": "55de597bb57b117539a95397cf516cb46d3204eae4e2c9dec04914f0f4e1cb26",
+      "target_sha256": "d2cac64245e1817891d91964bd21baca76d27accc03de385048f26284ea7bc65",
+      "replacements": [
+        {
+          "before": "probe_paged_batch8_mtp.py",
+          "after": "probe_bf16_batch8_external_reference.py",
+          "count": 1
+        }
+      ],
+      "source_text": "@echo off\nsetlocal\nset GARNET_RUNTIME_ROOT=D:\\CantorAI\\5090-study-20261023\\build\\bin\nset CUDA_VISIBLE_DEVICES=0\nset GARNET_NVFP4_DOWN_CANDIDATE=0\nset GARNET_PROFILE_DECODE_LAYERS=\nset GARNET_FP8_GDN_M32_CANONICAL=1\nset GARNET_FP8_FULL_ATTN_M32_CANONICAL=1\nset GARNET_PARALLEL_BATCH_TOP1=1\nset PATH=%GARNET_RUNTIME_ROOT%;D:\\CantorAI\\5090-study-20261023\\tools\\TensorRT\\bin;D:\\CantorAI\\5090-study-20261023\\tools\\cuda13\\nvidia\\cu13\\bin\\x86_64;%PATH%\nset \"TMP=%~2\"\nset \"TEMP=%TMP%\"\ncd /d D:\\CantorAI\\5090-study-20261023\\Garnet\n%GARNET_RUNTIME_ROOT%\\xlang3.exe D:/CantorAI/5090-study-20261023/Garnet/test2026/cuda/qwen38_5090/probe_paged_batch8_mtp.py D:/CantorAI/5090-study-20261023 \"%~1\"\nexit /b %errorlevel%\n"
+    },
+    "run_bf16_batch8_external_reference.py": {
+      "source": "run_paged_batch8_mtp.py",
+      "source_sha256": "f11b8d3b77ca5fdecc324569f28801ea8e5d4c1ced2c5f4962a7e9f19aa36848",
+      "target_sha256": "0beb6e52b301701f73cf3c70dee1d3b2ca58a14a02be2c9beff40068a8aaa012",
+      "replacements": [
+        {
+          "before": "Exclusive existing-session B8 MTP correctness and memory trial; no timing admission.",
+          "after": "Exclusive fresh B4 full-cache reference for actual closed B8 inputs; no timing admission.",
+          "count": 1
+        },
+        {
+          "before": "paged-batch8-mtp-admission-attempt1",
+          "after": "bf16-batch8-external-reference-attempt1",
+          "count": 1
+        },
+        {
+          "before": "paged-batch8-mtp-preparation.json",
+          "after": "bf16-batch8-external-reference-preparation.json",
+          "count": 1
+        },
+        {
+          "before": "Paged B8 MTP source drift",
+          "after": "B8 external B4 reference source drift",
+          "count": 1
+        },
+        {
+          "before": "30strict old/new B8 witness, MTP target-state/token/count/parent and paged input fault controls",
+          "after": "Complete ordinary B8/state/paged and fresh B4 reference metadata/raw-vector/lifecycle dependency faults",
+          "count": 1
+        },
+        {
+          "before": "CPU B8 MTP gate failed",
+          "after": "CPU B8 external-reference gate failed",
+          "count": 1
+        },
+        {
+          "before": "test_paged_batch8_mtp.bat",
+          "after": "test_bf16_batch8_external_reference.bat",
+          "count": 1
+        },
+        {
+          "before": "Actual existing MTP3/T4/128MiB session: nine B8 short/full3968+128 text/image/permutation/reset cases; retained29complete target states and58raw vectors/IDs; no HTTP/timing admission",
+          "after": "Actual B4/T32/T4 full-FP32-cache/BF16-value ordinary reference:18same-input halves of nine closed B8 cases;58complete captures/116raw vectors/all IDs; no MTP/HTTP/timing admission",
+          "count": 1
+        },
+        {
+          "before": "Actual paged B8 MTP target-state/token gate failed",
+          "after": "Actual B8 vs B4 external cache reference gate failed",
+          "count": 1
+        },
+        {
+          "before": "report['retained_baseline_replay']['status']=='paged_batch8_mtp_retained_ordinary_exact'",
+          "after": "report['local_replay']['status']=='bf16_batch8_external_b4_cache_reference_exact'",
+          "count": 1
+        },
+        {
+          "before": "paged_batch8_mtp_collected_needs_replay",
+          "after": "bf16_batch8_external_reference_collected_needs_replay",
+          "count": 1
+        }
+      ],
+      "source_text": "\"\"\"Exclusive existing-session B8 MTP correctness and memory trial; no timing admission.\"\"\"\nfrom pathlib import Path\nimport hashlib,json,os,shutil,sys,time,zipfile\nROOT=Path('D:/CantorAI/5090-study-20261023');M=ROOT/'Garnet/test2026/cuda/qwen38_5090';JOB='paged-batch8-mtp-admission-attempt1'\nsha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()\ndef main():\n    assert Path(__file__).resolve().parent==M.resolve();sys.path.insert(0,str(M))\n    from run_logged import run\n    from run_bf16_low_batch_native_build import idle\n    from run_bf16_batch8_admission import retire\n    prep=M/'evidence/paged-batch8-mtp-preparation.json';p=json.loads(prep.read_bytes())\n    for n,h in p['files'].items():assert sha(ROOT/n)==h,('Paged B8 MTP source drift',n)\n    for n,h in p['runtime'].items():assert sha(ROOT/'build/bin'/n)==h\n    for n,h in p['environment'].items():assert sha(Path(n))==h\n    for name,row in p['parents'].items():\n        proof=ROOT/'results'/(name+'-verified.json');q=json.loads(proof.read_bytes());assert sha(proof)==row['proof_sha256'] and q['status']==row['status'] and sha(ROOT/'results'/(name+'-evidence.zip'))==q['archive_sha256']==row['archive_sha256']\n        w=json.loads((ROOT/'results'/name/'workflow.json').read_bytes());assert w['exit_code']==0 and w['cleanup_finished'] and w['source_sha256']==w['source_after_sha256'] and w['runtime_dependencies']==w['runtime_dependencies_after']\n    receipt=ROOT/'results/study-ssd-engine-cache/receipt.json';cache=Path(json.loads(receipt.read_bytes())['cache_root'])\n    assert cache.resolve().drive.upper()=='C:' and json.loads((cache/'study-owner.json').read_bytes())['study']==str(ROOT) and shutil.disk_usage(cache).free>=96*1024**3\n    out=ROOT/'results'/JOB;archive=ROOT/'results'/(JOB+'-evidence.zip');assert not out.exists() and not archive.exists()\n    idle();out.mkdir();os.chdir(ROOT/'Garnet');before={f.name for f in cache.iterdir()};started=time.time();code=1\n    w={'status':'running','source_sha256':p['files'],'runtime_dependencies':p['runtime'],'environment_before':p['environment'],'preparation_sha256':sha(prep),'parents':p['parents'],\n       'library_sha256':sha(ROOT/'build/bin/garnet.dll'),'cleanup_finished':False,'performance_admitted':False,'scope':p['scope']}\n    def save():(out/'workflow.json').write_bytes(json.dumps(w,indent=2).encode())\n    save();common=[prep,receipt]+[ROOT/n for n in p['new_files']]+[ROOT/'results'/(name+'-verified.json') for name in p['parents']]\n    try:\n        code=run([sys.executable,'-m','unittest',*p['test_ids']],out/'cpu-ledger','correctness','30strict old/new B8 witness, MTP target-state/token/count/parent and paged input fault controls',common)\n        if code:raise RuntimeError('CPU B8 MTP gate failed')\n        command=[sys.executable,str(M/'monitor_native_probe.py'),'--study',str(ROOT),'--output',str(out/'resources'),'--','cmd.exe','/d','/c',str(M/'test_paged_batch8_mtp.bat'),str(out/'model'),str(cache)]\n        code=run(command,out/'gpu-ledger','correctness','Actual existing MTP3/T4/128MiB session: nine B8 short/full3968+128 text/image/permutation/reset cases; retained29complete target states and58raw vectors/IDs; no HTTP/timing admission',common)\n        if code:raise RuntimeError('Actual paged B8 MTP target-state/token gate failed')\n        report=json.loads((out/'model/report.json').read_bytes());assert report['retained_baseline_replay']['status']=='paged_batch8_mtp_retained_ordinary_exact'\n        w['status']='paged_batch8_mtp_collected_needs_replay'\n    except BaseException as error:w.update(status='failed',error=repr(error));code=code or 1\n    finally:\n        w.update(exit_code=code,source_after_sha256={n:sha(ROOT/n) for n in p['files']},runtime_dependencies_after={n:sha(ROOT/'build/bin'/n) for n in p['runtime']},\n                 environment_after={n:sha(Path(n)) for n in p['environment']},library_unchanged=sha(ROOT/'build/bin/garnet.dll')==w['library_sha256']);save()\n        idle();w['retired_private_engine_files']=retire(cache,ROOT,before,started);w['cleanup_finished']=True;save()\n        paths=[f for f in out.rglob('*') if f.is_file()]+common;names={f.relative_to(ROOT).as_posix():f for f in paths}\n        with zipfile.ZipFile(archive,'x',zipfile.ZIP_DEFLATED) as z:\n            for n,f in names.items():z.write(f,n)\n            z.writestr('evidence-manifest.json',json.dumps({'files':{n:sha(f) for n,f in names.items()},'linked_parent_archives':{n:v['archive_sha256'] for n,v in p['parents'].items()},'scope':p['scope']},indent=2))\n        print(json.dumps({'status':w['status'],'archive_sha256':sha(archive),'bytes':archive.stat().st_size,'files':len(names)}),flush=True)\n    return code\nif __name__=='__main__':raise SystemExit(main())\n"
+    },
+    "verify_bf16_batch8_external_reference.py": {
+      "source": "verify_paged_batch8_mtp.py",
+      "source_sha256": "c314c4dd3b15dbd2392946acf6c7833b00042a07ca9e3c928d4ddb512ae82899",
+      "target_sha256": "46bef5ae70ccc9a54bcda834b7ab20b5876923a37c09d1d525ff54876baf2ec0",
+      "replacements": [
+        {
+          "before": "Replay every B8 MTP target state/vector/ID against actual closed ordinary bytes.",
+          "after": "Independently replay fresh B4 full-cache reference states/vectors/IDs against actual closed B8 bytes.",
+          "count": 1
+        },
+        {
+          "before": "from test2026.cuda.qwen38_5090.paged_batch8_mtp import PARENT, BASELINE, replay_mtp, validate_parent",
+          "after": "from test2026.cuda.qwen38_5090.bf16_batch8_external_reference import PARENT, BASELINE, replay_reference, validate_parent",
+          "count": 1
+        },
+        {
+          "before": "paged-batch8-mtp-admission-attempt1",
+          "after": "bf16-batch8-external-reference-attempt1",
+          "count": 1
+        },
+        {
+          "before": "paged-batch8-mtp-preparation.json",
+          "after": "bf16-batch8-external-reference-preparation.json",
+          "count": 1
+        },
+        {
+          "before": "paged_batch8_mtp_prepared_gpu_unrun",
+          "after": "bf16_batch8_external_reference_prepared_gpu_unrun",
+          "count": 1
+        },
+        {
+          "before": "('verify_paged_batch8_mtp.py', 'paged_batch8_mtp.py', 'paged_batch8_model.py',\n                     'verify_bf16_batch8_admission.py', 'bf16_batch8_admission.py', 'bf16_packed_state_gate.py')",
+          "after": "('verify_bf16_batch8_external_reference.py', 'bf16_batch8_external_reference.py', 'bf16_batch8_reference_gate.py',\n                     'bf16_same_precision_gate.py', 'verify_bf16_batch8_admission.py', 'bf16_batch8_admission.py', 'bf16_packed_state_gate.py')",
+          "count": 1
+        },
+        {
+          "before": "paged_batch8_mtp_collected_needs_replay",
+          "after": "bf16_batch8_external_reference_collected_needs_replay",
+          "count": 1
+        },
+        {
+          "before": "assert report['ordinary_parent'] == {'job': PARENT, 'archive_sha256': parent_digest,\n                'proof_sha256': sha(parent_raw), 'ordinary_model_preserved': True, 'mtp_or_http_or_performance_admitted': False}",
+          "after": "assert report['baseline_archive_sha256'] == parent_digest and report['baseline_proof_sha256'] == sha(parent_raw)",
+          "count": 1
+        },
+        {
+          "before": "replay_mtp(report,",
+          "after": "replay_reference(report,",
+          "count": 1
+        },
+        {
+          "before": "report['retained_baseline_replay']",
+          "after": "report['local_replay']",
+          "count": 1
+        },
+        {
+          "before": "paged_batch8_mtp_target_state_replayed",
+          "after": "bf16_batch8_external_reference_replayed",
+          "count": 1
+        },
+        {
+          "before": "paged_batch8_mtp_failure_preserved",
+          "after": "bf16_batch8_external_reference_failure_preserved",
+          "count": 1
+        },
+        {
+          "before": "'mtp_target_state_replay': replayed",
+          "after": "'b4_reference_replay': replayed",
+          "count": 1
+        },
+        {
+          "before": "'broad_quality_qualified': False, 'http_qualified': False, 'serving_memory_saving_qualified': False,",
+          "after": "'b8_vs_b4_same_input_cache_arithmetic_cases_qualified': passed, 'b1_math_qualified': False,\n                  'broad_quality_qualified': False, 'mtp_qualified': False, 'http_qualified': False, 'serving_memory_saving_qualified': False,",
+          "count": 1
+        },
+        {
+          "before": "'target_states': 29 if passed else None",
+          "after": "'reference_states': 58 if passed else None",
+          "count": 1
+        }
+      ],
+      "source_text": "\"\"\"Replay every B8 MTP target state/vector/ID against actual closed ordinary bytes.\"\"\"\nfrom pathlib import Path\nimport argparse\nimport hashlib\nimport json\nimport statistics\nimport sys\nimport zipfile\nsys.path.insert(0, str(Path(__file__).resolve().parents[3]))\nfrom test2026.cuda.qwen38_5090.paged_batch8_mtp import PARENT, BASELINE, replay_mtp, validate_parent\n\nJOB = 'paged-batch8-mtp-admission-attempt1'\nMETHODS = 'Garnet/test2026/cuda/qwen38_5090/'\nsha = lambda raw: hashlib.sha256(raw).hexdigest()\n\n\ndef checked_archive(path):\n    z = zipfile.ZipFile(path)\n    manifest = json.loads(z.read('evidence-manifest.json'))\n    assert z.testzip() is None and len(z.namelist()) == len(set(z.namelist())) == len(manifest['files']) + 1\n    for name, digest in manifest['files'].items():\n        assert sha(z.read(name)) == digest\n    return z, manifest\n\n\ndef main():\n    parser = argparse.ArgumentParser(description=__doc__)\n    parser.add_argument('--proofs', type=Path, required=True)\n    args = parser.parse_args()\n    archive = args.proofs / (JOB + '-evidence.zip')\n    z, manifest = checked_archive(archive)\n    old, _ = checked_archive(args.proofs / (PARENT + '-evidence.zip'))\n    with z, old:\n        doc = lambda name: json.loads(z.read(name))\n        prefix = 'results/' + JOB + '/'\n        raw = z.read(METHODS + 'evidence/paged-batch8-mtp-preparation.json')\n        p = json.loads(raw)\n        w = doc(prefix + 'workflow.json')\n        assert sha(raw) == w['preparation_sha256'] and p['status'] == 'paged_batch8_mtp_prepared_gpu_unrun'\n        assert w['source_sha256'] == w['source_after_sha256'] == p['files']\n        assert w['runtime_dependencies'] == w['runtime_dependencies_after'] == p['runtime']\n        assert w['environment_before'] == w['environment_after'] == p['environment']\n        assert w['library_sha256'] == p['runtime']['garnet.dll'] == BASELINE\n        assert w['cleanup_finished'] is w['library_unchanged'] is True and type(w['exit_code']) is int\n        assert w['parents'] == p['parents'] and set(p['parents']) == {PARENT}\n        for name, digest in p['new_files'].items():\n            assert sha(z.read(name)) == digest\n        for name in ('verify_paged_batch8_mtp.py', 'paged_batch8_mtp.py', 'paged_batch8_model.py',\n                     'verify_bf16_batch8_admission.py', 'bf16_batch8_admission.py', 'bf16_packed_state_gate.py'):\n            assert sha(Path(__file__).with_name(name).read_bytes()) == p['files'][METHODS + name]\n        parent_raw = z.read('results/' + PARENT + '-verified.json')\n        assert parent_raw == (args.proofs / (PARENT + '-verified.json')).read_bytes()\n        q = json.loads(parent_raw)\n        row = p['parents'][PARENT]\n        parent_digest = sha((args.proofs / (PARENT + '-evidence.zip')).read_bytes())\n        assert sha(parent_raw) == row['proof_sha256'] and q['status'] == row['status']\n        assert parent_digest == row['archive_sha256'] == manifest['linked_parent_archives'][PARENT]\n        closed = json.loads(old.read('results/' + PARENT + '/workflow.json'))\n        validate_parent(q, closed, BASELINE, parent_digest)\n        assert closed['runtime_dependencies_after'] == p['runtime'] and closed['environment_after'] == p['environment']\n        assert p['files'] == {**closed['source_after_sha256'], **p['new_files']}\n        passed = w['exit_code'] == 0\n        replayed = memory = None\n        if passed:\n            assert w['status'] == 'paged_batch8_mtp_collected_needs_replay'\n            for ledger in ('cpu-ledger', 'gpu-ledger'):\n                rows = [json.loads(line) for line in z.read(prefix + ledger + '/commands.jsonl').splitlines()]\n                assert len(rows) == 2 and rows[-1]['event'] == 'finished' and type(rows[-1]['exit_code']) is int and rows[-1]['exit_code'] == 0\n            log = z.read(prefix + 'cpu-ledger/commands.log')\n            assert ('Ran ' + str(p['expected_cpu_test_count']) + ' tests').encode() in log and b'\\nOK' in log\n            report = doc(prefix + 'model/report.json')\n            reference = json.loads(old.read('results/' + PARENT + '/model/report.json'))\n            assert report['ordinary_parent'] == {'job': PARENT, 'archive_sha256': parent_digest,\n                'proof_sha256': sha(parent_raw), 'ordinary_model_preserved': True, 'mtp_or_http_or_performance_admitted': False}\n            replayed = replay_mtp(report, lambda name: z.read(prefix + 'model/' + name), reference,\n                                  lambda name: old.read('results/' + PARENT + '/model/' + name))\n            assert replayed == report['retained_baseline_replay']\n            resource = doc(prefix + 'resources/resource-monitor.json')\n            samples = [json.loads(line) for line in z.read(prefix + 'resources/resource-vram.jsonl').splitlines()]\n            assert type(resource['child_exit_code']) is int and resource['child_exit_code'] == 0 and resource['gpu']['uuid'] == p['gpu_uuid']\n            assert samples and all(s['phase'] == 'construction-and-correctness' for s in samples)\n            gaps = [b['monotonic'] - a['monotonic'] for a, b in zip(samples, samples[1:])]\n            assert all(g > 0 for g in gaps)\n            memory = resource['sampled_memory']\n            assert memory['samples'] == len(samples) and memory['sampled_peak_adapter_used_bytes'] == max(s['used_bytes'] for s in samples)\n            assert memory['observed_sample_gap_median_seconds'] == (statistics.median(gaps) if gaps else None)\n            assert memory['observed_sample_gap_max_seconds'] == (max(gaps) if gaps else None)\n        result = {'status': 'paged_batch8_mtp_target_state_replayed' if passed else 'paged_batch8_mtp_failure_preserved',\n                  'archive_sha256': sha(archive.read_bytes()), 'files_verified': len(manifest['files']),\n                  'library_sha256': BASELINE, 'ordinary_parent': row, 'mtp_target_state_replay': replayed,\n                  'construction_correctness_adapter_sampled_memory': memory, 'external_b1_b4_math_qualified': False,\n                  'broad_quality_qualified': False, 'http_qualified': False, 'serving_memory_saving_qualified': False,\n                  'performance_admitted': False, 'two_times_target_achieved': False, 'scope': p['scope']}\n    target = args.proofs / (JOB + '-verified.json')\n    raw = json.dumps(result, indent=2).encode()\n    assert not target.exists() or target.read_bytes() == raw\n    if not target.exists():\n        target.write_bytes(raw)\n    print(json.dumps({'status': result['status'], 'archive_sha256': result['archive_sha256'],\n                      'files_verified': result['files_verified'], 'proof_sha256': sha(raw), 'target_states': 29 if passed else None}))\n    return 0 if passed else 1\n\n\nif __name__ == '__main__':\n    raise SystemExit(main())\n"
+    },
+    "prepare_bf16_batch8_external_reference.py": {
+      "source": "prepare_paged_batch8_mtp.py",
+      "source_sha256": "3467fb24aa1b79e239b843d8f7fac94372223dff7e5efd159c2bbd34c805981b",
+      "target_sha256": "0d85a5a27120dfc86772ac771d3912ec7dffdb28cdd8d639700a4484c899de37",
+      "replacements": [
+        {
+          "before": "Require actual two-machine B8 preservation proof before pinning an MTP trial.",
+          "after": "Bind actual two-machine B8 preservation proof before preparing a fresh full-cache B4 reference.",
+          "count": 1
+        },
+        {
+          "before": "METHODS = ('paged_batch8_mtp.py', 'test_paged_batch8_mtp.py', 'probe_paged_batch8_mtp.py', 'test_paged_batch8_mtp.bat',\n           'run_paged_batch8_mtp.py', 'verify_paged_batch8_mtp.py', 'prepare_paged_batch8_mtp.py',\n           'evidence/paged-batch8-mtp-probe-derivation.json', 'evidence/paged-batch8-mtp-owner-derivation.json')",
+          "after": "METHODS = ('bf16_batch8_reference_gate.py', 'test_bf16_batch8_reference_gate.py', 'bf16_batch8_external_reference.py', 'test_bf16_batch8_external_reference.py', 'probe_bf16_batch8_external_reference.py', 'test_bf16_batch8_external_reference.bat', 'run_bf16_batch8_external_reference.py', 'verify_bf16_batch8_external_reference.py', 'test_bf16_batch8_external_pipeline.py', 'prepare_bf16_batch8_external_reference.py', 'evidence/bf16-batch8-external-reference-pipeline-derivation.json')",
+          "count": 1
+        },
+        {
+          "before": "from test2026.cuda.qwen38_5090.paged_batch8_mtp import PARENT, BASELINE, validate_parent",
+          "after": "from test2026.cuda.qwen38_5090.bf16_batch8_external_reference import PARENT, BASELINE, validate_parent",
+          "count": 1
+        },
+        {
+          "before": "'test_paged_batch8_model', 'test_paged_prompt_rows', 'test_paged_prompt_component', 'test_paged_batch8_mtp'",
+          "after": "'test_paged_batch8_model', 'test_paged_prompt_rows', 'test_paged_prompt_component',\n               'test_bf16_same_precision_gate', 'test_bf16_batch8_reference_gate', 'test_bf16_batch8_external_reference', 'test_bf16_batch8_external_pipeline'",
+          "count": 1
+        },
+        {
+          "before": "== 30",
+          "after": "== 43",
+          "count": 1
+        },
+        {
+          "before": "paged-batch8-mtp-cpu-ledger",
+          "after": "bf16-batch8-external-reference-cpu-ledger",
+          "count": 1
+        },
+        {
+          "before": "30existing B8 ordinary/state/paged native controls and new independent MTP target-state/token/count/closed-parent faults",
+          "after": "43existing B8/state/paged controls and strict fresh B4 cache/raw-vector/metadata/parent/lifecycle dependency faults",
+          "count": 1
+        },
+        {
+          "before": "paged_batch8_mtp_prepared_gpu_unrun",
+          "after": "bf16_batch8_external_reference_prepared_gpu_unrun",
+          "count": 1
+        },
+        {
+          "before": "         'scope': 'Existing baseline1a1d B8 BF16-cache/T32prefill/T4decode mixedNVFP4/FP8 target plus existing MTP3/T4/128MiB prefix-replay session. No guard/default/kernel changes. Actual closed two-machine paged B8 ordinary proof required. All nine short/full3968+128text/image/original/rotated/reset cases must exactly preserve29complete target-state witnesses/58raw vectors/all output IDs against actual ordinary bytes. Empty stop list preserves fixed-count oracle semantics; not natural-stop quality admission. Paged128two-page input, actual model/MTP/vision construction and memory must fit; retain failure otherwise. Construction/correctness adapter-wide sampled peaks/gaps are not serving memory savings or timings. Existing source/runtime/SDK unchanged, actual ledgers/cache retirement/independent replay mandatory. External B1/B4 math,805quality,HTTP/throughput, strongest vLLM/SGLang references, repetitions and overall2x remain open.'}",
+          "after": "         'scope': 'Actual fresh ordinary B4/T32prefill/T4decode full-FP32-cache with explicit BF16-value roundtrip using baseline1a1d and bounded128/two-page input. Require actual two-machine closed paged B8 parent, all nine same-input cases split into18four-row references;58complete logical captures/116raw finite vectors/all IDs exact to original B8. Existing guards and shared projections/linear arithmetic unchanged. This isolates cache representation/batch geometry only, not independent framework or B1/all-model math. Actual full-cache model/vision must fit; preserve failures. Source/runtime/SDK unchanged, raw CPU/GPU ledgers/memory samples/gaps/cache retirement and independent replay mandatory. No MTP/805quality/HTTP/timing/performance admission; serving peaks, strongest tuned references, matched vLLM4K/repetitions/INT4/4B and overall2x remain open.'}",
+          "count": 1
+        },
+        {
+          "before": "paged-batch8-mtp-preparation.json",
+          "after": "bf16-batch8-external-reference-preparation.json",
+          "count": 1
+        },
+        {
+          "before": "paged-batch8-mtp-upload-plan.json",
+          "after": "bf16-batch8-external-reference-upload-plan.json",
+          "count": 1
+        },
+        {
+          "before": "'cpu_tests': 30",
+          "after": "'cpu_tests': 43",
+          "count": 1
+        }
+      ],
+      "source_text": "\"\"\"Require actual two-machine B8 preservation proof before pinning an MTP trial.\"\"\"\nfrom pathlib import Path\nimport argparse\nimport ast\nimport hashlib\nimport json\nimport os\nimport sys\nimport unittest\nimport zipfile\n\nMETHODS = ('paged_batch8_mtp.py', 'test_paged_batch8_mtp.py', 'probe_paged_batch8_mtp.py', 'test_paged_batch8_mtp.bat',\n           'run_paged_batch8_mtp.py', 'verify_paged_batch8_mtp.py', 'prepare_paged_batch8_mtp.py',\n           'evidence/paged-batch8-mtp-probe-derivation.json', 'evidence/paged-batch8-mtp-owner-derivation.json')\nsha = lambda raw: hashlib.sha256(raw).hexdigest()\n\n\ndef main():\n    parser = argparse.ArgumentParser(description=__doc__)\n    parser.add_argument('--proofs', type=Path, required=True)\n    parser.add_argument('--work', type=Path, required=True)\n    args = parser.parse_args()\n    args.proofs = args.proofs.resolve(strict=True)\n    args.work = args.work.resolve(strict=True)\n    methods = Path(__file__).resolve().parent\n    repo = methods.parents[2]\n    sys.path[:0] = [str(repo), str(methods)]\n    from test2026.cuda.qwen38_5090.paged_batch8_mtp import PARENT, BASELINE, validate_parent\n    from test2026.cuda.qwen38_5090.run_logged import run\n    path = args.proofs / (PARENT + '-verified.json')\n    proof = json.loads(path.read_bytes())\n    assert proof == json.loads((args.proofs / (PARENT + '-remote-verified.json')).read_bytes())\n    archive = args.proofs / (PARENT + '-evidence.zip')\n    digest = sha(archive.read_bytes())\n    with zipfile.ZipFile(archive) as z:\n        manifest = json.loads(z.read('evidence-manifest.json'))\n        assert z.testzip() is None and len(z.namelist()) == len(set(z.namelist())) == len(manifest['files']) + 1\n        for name, expected in manifest['files'].items():\n            assert sha(z.read(name)) == expected\n        w = json.loads(z.read('results/' + PARENT + '/workflow.json'))\n    validate_parent(proof, w, BASELINE, digest)\n    files = dict(w['source_after_sha256'])\n    new = {'Garnet/test2026/cuda/qwen38_5090/' + name: sha((methods / name).read_bytes()) for name in METHODS}\n    assert not set(new) & set(files)\n    files.update(new)\n    candidate = json.loads((methods / 'evidence/bf16-scores-tiled-native-api-build-preparation.json').read_bytes())['candidate_files']\n    for name, expected in files.items():\n        if name.startswith('Garnet/'):\n            relative = name.removeprefix('Garnet/')\n            assert sha((repo / relative).read_bytes()) == candidate.get(relative, expected), ('Baseline/candidate source drift', name)\n    for name in METHODS:\n        if name.endswith('.py'):\n            ast.parse((methods / name).read_bytes())\n    modules = ['test2026.cuda.qwen38_5090.' + name for name in ('test_bf16_batch8_admission', 'test_bf16_batch8_replay',\n               'test_paged_batch8_model', 'test_paged_prompt_rows', 'test_paged_prompt_component', 'test_paged_batch8_mtp')]\n    assert all('Garnet/' + name.replace('.', '/') + '.py' in files for name in modules)\n    def ids(suite):\n        for test in suite:\n            if isinstance(test, unittest.TestSuite): yield from ids(test)\n            else: yield test.id()\n    loader = unittest.TestLoader()\n    tests = sorted(ids(loader.loadTestsFromNames(modules)))\n    assert not loader.errors and len(tests) == len(set(tests)) == 30\n    os.chdir(repo)\n    code = run([sys.executable, '-m', 'unittest', *tests], args.work / 'paged-batch8-mtp-cpu-ledger', 'correctness',\n               '30existing B8 ordinary/state/paged native controls and new independent MTP target-state/token/count/closed-parent faults',\n               [methods / name for name in METHODS])\n    assert code == 0\n    p = {'status': 'paged_batch8_mtp_prepared_gpu_unrun', 'files': files, 'new_files': new,\n         'runtime': w['runtime_dependencies_after'], 'environment': w['environment_after'],\n         'parents': {PARENT: {'status': proof['status'], 'proof_sha256': sha(path.read_bytes()), 'archive_sha256': digest}},\n         'test_ids': tests, 'expected_cpu_test_count': len(tests), 'gpu_uuid': 'GPU-265ee66c-9b79-cd3b-0c63-dd6942ddb5e6',\n         'scope': 'Existing baseline1a1d B8 BF16-cache/T32prefill/T4decode mixedNVFP4/FP8 target plus existing MTP3/T4/128MiB prefix-replay session. No guard/default/kernel changes. Actual closed two-machine paged B8 ordinary proof required. All nine short/full3968+128text/image/original/rotated/reset cases must exactly preserve29complete target-state witnesses/58raw vectors/all output IDs against actual ordinary bytes. Empty stop list preserves fixed-count oracle semantics; not natural-stop quality admission. Paged128two-page input, actual model/MTP/vision construction and memory must fit; retain failure otherwise. Construction/correctness adapter-wide sampled peaks/gaps are not serving memory savings or timings. Existing source/runtime/SDK unchanged, actual ledgers/cache retirement/independent replay mandatory. External B1/B4 math,805quality,HTTP/throughput, strongest vLLM/SGLang references, repetitions and overall2x remain open.'}\n    target = methods / 'evidence/paged-batch8-mtp-preparation.json'\n    raw = json.dumps(p, indent=2).encode()\n    assert not target.exists() or target.read_bytes() == raw\n    if not target.exists(): target.write_bytes(raw)\n    rows = [{'local': str(methods / name), 'target': 'Garnet/test2026/cuda/qwen38_5090/' + name,\n             'sha256': sha((methods / name).read_bytes())} for name in METHODS]\n    rows.append({'local': str(target), 'target': 'Garnet/test2026/cuda/qwen38_5090/evidence/' + target.name, 'sha256': sha(raw)})\n    (args.work / 'paged-batch8-mtp-upload-plan.json').write_bytes(json.dumps({'uploads': rows}, indent=2).encode())\n    print(json.dumps({'status': p['status'], 'source_pins': len(files), 'cpu_tests': 30, 'new_targets': len(rows), 'preparation_sha256': sha(raw)}))\n    return 0\n\n\nif __name__ == '__main__':\n    raise SystemExit(main())\n"
+    }
+  },
+  "scope": "Lifecycle/source/cache/ledger/archive/resource replay unchanged; reference report/strict comparator/parent/scope and explicit CPU dependencies differ. No GPU result."
+}

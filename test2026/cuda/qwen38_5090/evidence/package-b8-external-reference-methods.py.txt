@@ -1,0 +1,30 @@
+from pathlib import Path
+import ast,hashlib,json,zipfile
+
+work=Path(__file__).resolve().parent;sha=lambda raw:hashlib.sha256(raw).hexdigest()
+plan=json.loads((work/'bf16-batch8-external-reference-upload-plan.json').read_bytes());files={}
+for row in plan['uploads']:
+    raw=Path(row['local']).read_bytes();assert sha(raw)==row['sha256']
+    assert row['target'] not in files;files[row['target']]=raw
+assert len(files)==12
+target=work/'bf16-batch8-external-reference-methods.zip';assert not target.exists()
+with zipfile.ZipFile(target,'x',zipfile.ZIP_DEFLATED) as z:
+    for n,raw in files.items():z.writestr(n,raw)
+    z.writestr('install-manifest.json',json.dumps({'files':{n:sha(raw) for n,raw in files.items()},
+        'scope':'Absent-only fresh B4 full-cache same-input reference for actual closed B8 ordinary model. Existing model/guards/source/runtime/SDK unchanged; no timing admission.'},indent=2))
+old=(work/'install-paged-batch8-mtp-methods.py').read_text();new=old
+for a,b in (
+    ('paged-batch8-mtp-methods.zip','bf16-batch8-external-reference-methods.zip'),
+    ('paged-batch8-mtp-install.json','bf16-batch8-external-reference-install.json'),
+    ('==11\n','==13\n'),
+    ('paged-batch8-mtp-preparation.json','bf16-batch8-external-reference-preparation.json'),
+    ('paged_batch8_mtp_methods_installed','bf16_batch8_external_reference_methods_installed')):
+    assert new.count(a)==1,(a,new.count(a));new=new.replace(a,b)
+ast.parse(new);installer=work/'install-b8-external-reference-methods.py';assert not installer.exists();installer.write_bytes(new.encode())
+result={'status':'b8_external_b4_reference_packaged_gpu_unrun','bundle_sha256':sha(target.read_bytes()),
+        'bytes':target.stat().st_size,'new_targets':12,'installer_sha256':sha(installer.read_bytes()),
+        'preparation_sha256':sha(files['Garnet/test2026/cuda/qwen38_5090/evidence/bf16-batch8-external-reference-preparation.json']),
+        'source_pins':695,'cpu_tests':43,'local_unittest_seconds':17.813,'actual_reference_executed':False,
+        'b8_vs_b4_math_cases_qualified':False,'performance_admitted':False,'two_times_target_achieved':False}
+(work/'bf16-batch8-external-reference-bundle-preparation.json').write_bytes(json.dumps(result,indent=2).encode())
+print(json.dumps(result))

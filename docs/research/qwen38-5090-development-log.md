@@ -6313,3 +6313,38 @@ actual closed ordinary run; actual model/draft/vision fit is required. No natura
 stop/805quality/HTTP or performance admission is implied by this preparation.
 The independent B4 full-cache reference producer remains prepared separately;
 shared operator numerical drift still requires that fresh reference gate.
+
+
+### 2026-10-25 — complete fresh B4 cache-reference pipeline prepared; vLLM loading actual model
+
+Prepared the exclusive owner/launcher/independent checker for the already committed
+fresh same-input B4 full-FP32-cache/BF16-value reference producer. It preserves the
+old B4 guards and ordinary target projections/linear operations, splitting every
+actual B8 case into ordered halves:18fresh cases,58complete captures/116raw finite
+vectors, all input/output IDs/text and reset/prefill/final state components required.
+Only batch/cache representation is an independent reference here; shared operators
+and B1/framework/official broad quality/performance remain unqualified.
+
+Parent admission requires actual closed B8 archive/proof/state/vector/source/runtime/
+SDK and cleanup identities. Eleven malformed parent transitions, falsely promoted
+prior flags, exact lifecycle/checker/preparer/launcher derivation and mandatory new
+method/test fixture dependencies are exercised. Fresh43CPUcontrols pass17.813s;
+these include previous full state/raw-vector/input/row-map/padding/page faults.
+Preparer verifies695source pins and actual closed two-machine parent, producing
+fafaf5a3fa360bc65f8fcb60e259be6e1915b30db6e100f2766edca8191eb4a4.
+See bf16-batch8-external-reference-bundle-preparation.json for exact12target absent-
+only package and installer hashes. Derived owner retains exclusive idle guards,
+actual raw ledgers, memory sampling gaps, full source/runtime/SDK checks, cache
+retirement and failure archive. Independent checker replays actual raw vectors,
+128components and real parent bytes; synthetic fixtures never enter result replay.
+No B4 model executed or math/performance admission from CPU preparation.
+
+The original vllm-fixed4k-ordinary-attempt2 supervisor remains live after47CPU
+controls. Actual startup source reports vLLM0.32.0/Qwen3_5ForConditionalGeneration,
+4096max length, BF16KV/F32SSM, TP1, eight max sequences, decodegraphs1/2/4/8;
+selected native NVFP4 CUTLASS/FP8 FlashInfer kernels and GDN prefill. Checkpoint
+loading is in progress from existing shared9P directory, with no extra copy.
+FlashInfer missing precompiled-kernel warning is retained; no package/kernel-cache
+mutation or restart while this owner is live. Startup selection is not benchmark
+evidence. No remote transfers/installations/second model during the reference run.
+Matched timing/quality/replay and all remaining scope including2x remain open.
