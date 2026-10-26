@@ -1,0 +1,37 @@
+{
+  "status": "pinned_fp8_m32_policy_m128_investigation",
+  "sources": {
+    "src/backends/tensorrt/modelopt_fp8_lowering.cpp": {
+      "sha256": "eed54fcc67195d79e814ed9e5c78ab25a5c3d628b3c7336b98ed27996fce76a2",
+      "checked_code_markers": [
+        "const bool canonicalM32=rows==32&&",
+        "rows*=shape.d[i]",
+        "GARNET_FP8_GDN_M32_CANONICAL"
+      ],
+      "marker_lines": {
+        "const bool canonicalM32=rows==32&&": 77,
+        "rows*=shape.d[i]": 52,
+        "GARNET_FP8_GDN_M32_CANONICAL": 59
+      }
+    },
+    "src/backends/tensorrt/modelopt_cublaslt.cpp": {
+      "sha256": "f1283406460ecf8d0b633ff49959709d86941009a73cd3bd596d86a2e4792f35",
+      "checked_code_markers": [
+        "if(batch!=32||",
+        "outputProjection?35:67",
+        "cublasLtGetVersion()!=130400"
+      ],
+      "marker_lines": {
+        "if(batch!=32||": 157,
+        "outputProjection?35:67": 172,
+        "cublasLtGetVersion()!=130400": 94
+      }
+    }
+  },
+  "source_observation": "FP8 lowering multiplies leading input dimensions and enables the existing canonical intervention only for exactly32input rows. Native helper also requires32rows and pins M16-selected algorithm35 for5120x6144 output or67 for12288x5120query.",
+  "inference": "B1/T128 target uses128flattened projection rows and therefore does not select this existing M32-only intervention. This is a candidate mechanism to test, not a demonstrated cause of the full-model mismatch.",
+  "next_control": "Preserve the actual real-layer0 FP8 fixture and reproduce its archived M16/M32 outputs first; then compare128rows made from identical replicated actual inputs under default heuristic and AlgoCheck-qualified M16 algorithm. Independently compare every BF16 output word and actual cast/quantized input bytes, record opaque algorithm choices. If it passes, prepare a separate opt-in M128 native policy and repeat strict full-model/quality gates before timing.",
+  "cause_established": false,
+  "production_source_changed": false,
+  "performance_admitted": false
+}
