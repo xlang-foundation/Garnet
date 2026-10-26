@@ -1,0 +1,34 @@
+from pathlib import Path
+import argparse,hashlib,io,json,sys,zipfile
+ROOT=Path('D:/CantorAI/5090-study-20261023');M=ROOT/'Garnet/test2026/cuda/qwen38_5090';sys.path.insert(0,str(M));from run_bf16_low_batch_native_build import idle
+sha=lambda raw:hashlib.sha256(raw).hexdigest();parser=argparse.ArgumentParser();parser.add_argument('--sha256',required=True);args=parser.parse_args();bundle=ROOT/'results/fa3-prefix-cache-witness-deployment.zip';receipt=ROOT/'results/fa3-prefix-cache-witness-install.json';assert sha(bundle.read_bytes())==args.sha256 and not receipt.exists();idle()
+with zipfile.ZipFile(bundle) as z:
+    manifest=json.loads(z.read('install-manifest.json'));assert z.testzip() is None and len(z.namelist())==len(set(z.namelist()))==len(manifest['files'])+1
+    prep='Garnet/test2026/cuda/qwen38_5090/evidence/fa3-prefix-cache-witness-preparation.json';p=json.loads(z.read(prep));assert p['status']=='fa3_prefix_cache_witness_prepared_gpu_unrun' and p['expected_cpu_test_count']==74 and len(p['candidate_files'])==35 and len(manifest['files'])==len(p['new_files'])+3
+    for name,h in p['files'].items():
+        if name not in p['new_files']:assert sha((ROOT/name).read_bytes())==h
+    for name,h in p['runtime'].items():assert sha((ROOT/'build/bin'/name).read_bytes())==h
+    for name,h in p['environment'].items():assert sha(Path(name).read_bytes())==h
+    for name,h in p['checkpoints'].items():assert sha((ROOT/name).read_bytes())==h
+    for name,h in p['candidate_base'].items():
+        path=ROOT/'Garnet'/name
+        if h is None:assert not path.exists()
+        else:assert sha(path.read_bytes())==h
+    raw=z.read(p['source_bundle']);assert sha(raw)==p['source_bundle_sha256']
+    with zipfile.ZipFile(io.BytesIO(raw)) as source:
+        assert source.testzip() is None and len(source.namelist())==len(set(source.namelist()))==35 and set(source.namelist())==set(p['candidate_files'])
+        for name,h in p['candidate_files'].items():assert sha(source.read(name))==h
+    pending=[];same=[]
+    for name,h in manifest['files'].items():
+        path=ROOT/name;assert path.resolve().is_relative_to(M.resolve()) or name==p['source_bundle'];assert path.parent.is_dir() and '..' not in Path(name).parts;parent=path.parent
+        while parent!=ROOT:
+            assert parent.resolve().is_relative_to(ROOT.resolve()) and not(getattr(parent.lstat(),'st_file_attributes',0)&0x400);parent=parent.parent
+        raw=z.read(name);assert sha(raw)==h
+        if name not in (prep,p['source_bundle'],'Garnet/test2026/cuda/qwen38_5090/evidence/fp8-z128-full4k-model-preparation.json'):assert p['new_files'][name]==h
+        if path.exists():assert path.is_file() and sha(path.read_bytes())==h;same.append(name)
+        else:pending.append((path,raw))
+    for path,raw in pending:
+        with path.open('xb') as stream:stream.write(raw)
+        assert path.read_bytes()==raw
+    for name,h in p['files'].items():assert sha((ROOT/name).read_bytes())==h
+receipt.write_bytes(json.dumps({'status':'fa3_prefix_cache_witness_methods_installed_gpu_unrun','deployment_sha256':args.sha256,'new_targets':len(pending),'unchanged_targets':same,'candidate_source_installed':False},indent=2).encode());print(receipt.read_text())

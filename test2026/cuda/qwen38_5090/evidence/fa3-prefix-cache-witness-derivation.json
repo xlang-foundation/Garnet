@@ -1,0 +1,88 @@
+{
+  "status": "exact_owner_and_environment_derivations_for_ordinary_cache_observation",
+  "derivations": [
+    {
+      "base": "test_fp8_z128_full4k_model.bat",
+      "target": "test_fa3_prefix_cache_witness.bat",
+      "base_sha256": "49205cff530eba2b32d7a0a8ad9df244b680b7835cc210a79c928e36461aa86b",
+      "target_sha256": "a1ab5d20d831f1ef85e595672030e7fa9c98989e6c1f73670508a44235503ecc",
+      "changes": [
+        {
+          "before": "set GARNET_FP8_GDN_M128_CANONICAL=%~3",
+          "after": "set GARNET_FP8_GDN_M128_CANONICAL=0\nif \"%~3\"==\"128\" set GARNET_FP8_GDN_M128_CANONICAL=1",
+          "count": 1
+        },
+        {
+          "before": "set GARNET_FP8_GDN_Z128_CANONICAL=%~3",
+          "after": "set GARNET_FP8_GDN_Z128_CANONICAL=%GARNET_FP8_GDN_M128_CANONICAL%",
+          "count": 1
+        },
+        {
+          "before": "if not \"%~3\"==\"0\" if not \"%~3\"==\"1\" exit /b 2",
+          "after": "if not \"%~3\"==\"32\" if not \"%~3\"==\"128\" exit /b 2",
+          "count": 1
+        },
+        {
+          "before": "probe_fp8_z128_full4k_model.py",
+          "after": "probe_fa3_prefix_cache_witness.py",
+          "count": 1
+        },
+        {
+          "before": "\"%~1\" %~4",
+          "after": "\"%~1\" %~3",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "base": "run_fp8_z128_full4k_model.py",
+      "target": "run_fa3_prefix_cache_witness.py",
+      "base_sha256": "c7a582ad939431cf0bc014eef5c1ae2630a8e43bd42a0e933291400eb3115dbe",
+      "target_sha256": "59d182c20ffbe69b980fb001d2fb3fad4b6cb0a25a5183e31b8a579be48857ab",
+      "changes": [
+        {
+          "before": "\"\"\"Exclusive full-model T128 trial; preserve and restore the complete native/Python profile.\"\"\"",
+          "after": "\"\"\"Exclusive read-only cache witness; preserve and restore the complete native/Python profile.\"\"\"",
+          "count": 1
+        },
+        {
+          "before": "JOB='fp8-z128-full4k-model-admission-attempt1'",
+          "after": "JOB='fa3-prefix-cache-witness-attempt1'",
+          "count": 1
+        },
+        {
+          "before": "evidence/fp8-z128-full4k-model-preparation.json",
+          "after": "evidence/fa3-prefix-cache-witness-preparation.json",
+          "count": 1
+        },
+        {
+          "before": "p['status']=='fp8_z128_full4k_model_prepared_gpu_unrun'",
+          "after": "p['status']=='fa3_prefix_cache_witness_prepared_gpu_unrun'",
+          "count": 1
+        },
+        {
+          "before": "    for phase in ('off','native'):assert not (ROOT/'results/fp8-z128-native-package-audit-attempt1'/('full4k-model-attempt1-'+phase+'-context.json')).exists()\n",
+          "after": "",
+          "count": 1
+        },
+        {
+          "before": "70CPU composed native28/Python7 source/routing/factory, oldB1/B4 guards, old/new MTP binding, both FP8 counters and unchanged strict retained4K oracle",
+          "after": "74CPU retained70 model/state/vector/ID/MTP controls plus4 bounded cache/geometry/finite/index/oracle faults",
+          "count": 1
+        },
+        {
+          "before": "        off_command=[sys.executable,str(M/'monitor_native_probe.py'),'--study',str(ROOT),'--output',str(out/'selection-off-resources'),'--','cmd.exe','/d','/c',str(M/'test_fp8_z128_full4k_model.bat'),str(out/'selection-off'),str(cache),'0','--selection-off']\n        code=ledger.run(off_command,out/'selection-off-ledger','correctness','Separate default/off target graph construction only; M128 graph counters must both be0, close model before enabled process',common+[library])\n        idle()\n        if code:raise RuntimeError('M128 default/off construction control failed')\n        off=json.loads((out/'selection-off/report.json').read_bytes())\n        from test2026.cuda.qwen38_5090.fp8_z128_full4k_model import validate_targets\n        assert off['status']=='fp8_m128_selection_off_constructed' and off['fp8_m128_policy']==off['fp8_z128_policy']=='0' and off['cases']==[] and off['ordinary_observations']==[]\n        w['selection_off_counts']=validate_targets(off['fp8_target_graphs'],'0');save()\n        command=[sys.executable,str(M/'monitor_native_probe.py'),'--study',str(ROOT),'--output',str(out/'native-resources'),'--','cmd.exe','/d','/c',str(M/'test_fp8_z128_full4k_model.bat'),str(out/'native'),str(cache),'1']\n        code=ledger.run(command,out/'native-ledger','correctness','Actual B1 targetT128/decodeT4/draftT16 six3968+128text/image/reset-repeat ordinary and verifiedMTP versus retained T32 complete state/raw-vector/ID oracle; no timing admission',common+[library])\n        idle()\n        if code:raise RuntimeError('T128 full4K model/state gate failed; preserve raw observations, no performance')\n        report=json.loads((out/'native/report.json').read_bytes());assert report['local_replay']['status']=='prefill128_full4k_retained_target_state_exact'\n",
+          "after": "        for phase,tokens in (('baseline',32),('native',128)):\n            command=[sys.executable,str(M/'monitor_native_probe.py'),'--study',str(ROOT),'--output',str(out/(phase+'-resources')),'--','cmd.exe','/d','/c',str(M/'test_fa3_prefix_cache_witness.bat'),str(out/phase),str(cache),str(tokens)]\n            code=ledger.run(command,out/(phase+'-ledger'),'correctness','Read-only complete layer3 KV prefix observations; ordinary3968+128 control must reproduce retained exact states/vectors/IDs; no timing admission',common+[library])\n            idle()\n            if code:raise RuntimeError('Ordinary cache capture/control failed; preserve raw evidence')\n            report=json.loads((out/phase/'report.json').read_bytes());assert report['status']=='fa3_prefix_caches_collected_retained_ordinary_control_exact'\n",
+          "count": 1
+        },
+        {
+          "before": "w['status']='fp8_z128_full4k_model_collected_needs_replay'",
+          "after": "w['status']='fa3_prefix_cache_witness_collected_needs_replay'",
+          "count": 1
+        }
+      ]
+    }
+  ],
+  "candidate_native_or_model_math_changed": false,
+  "full4k_admission_replaced": false
+}
