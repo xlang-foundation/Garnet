@@ -1,0 +1,1732 @@
+{
+  "contract": "garnet_qwen38_bf16_prefill128_delta_study_v1",
+  "batch": 1,
+  "capacity": 4096,
+  "chunk": 128,
+  "hidden": 5120,
+  "canonical_dtype": "fp32_carrier_with_bf16_kv",
+  "kv_dtype": "bf16",
+  "linear_dtype": "fp32",
+  "canonical_state_width": 106823680,
+  "hidden_width": 655360,
+  "target_state_end": 44564480,
+  "payload_width": 0,
+  "output_width": 44564480,
+  "linear_replay_width": 39714816,
+  "retain_linear_inputs": false,
+  "layers": [
+    {
+      "index": 0,
+      "kind": "linear_attention",
+      "offset": 0,
+      "state1_shape": [
+        1,
+        10240,
+        4
+      ],
+      "state2_shape": [
+        1,
+        48,
+        128,
+        128
+      ],
+      "state1_width": 40960,
+      "state2_width": 786432,
+      "state_precision": "fp32",
+      "target_offset": 655360,
+      "output_state1_width": 40960,
+      "output_state2_width": 786432,
+      "replay_offset": 0,
+      "payload_width": 0,
+      "payload_offset": null
+    },
+    {
+      "index": 1,
+      "kind": "linear_attention",
+      "offset": 827392,
+      "state1_shape": [
+        1,
+        10240,
+        4
+      ],
+      "state2_shape": [
+        1,
+        48,
+        128,
+        128
+      ],
+      "state1_width": 40960,
+      "state2_width": 786432,
+      "state_precision": "fp32",
+      "target_offset": 1482752,
+      "output_state1_width": 40960,
+      "output_state2_width": 786432,
+      "replay_offset": 827392,
+      "payload_width": 0,
+      "payload_offset": null
+    },
+    {
+      "index": 2,
+      "kind": "linear_attention",
+      "offset": 1654784,
+      "state1_shape": [
+        1,
+        10240,
+        4
+      ],
+      "state2_shape": [
+        1,
+        48,
+        128,
+        128
+      ],
+      "state1_width": 40960,
+      "state2_width": 786432,
+      "state_precision": "fp32",
+      "target_offset": 2310144,
+      "output_state1_width": 40960,
+      "output_state2_width": 786432,
+      "replay_offset": 1654784,
+      "payload_width": 0,
+      "payload_offset": null
+    },
+    {
+      "index": 3,
+      "kind": "full_attention",
+      "offset": 2482176,
+      "state1_shape": [
+        1,
+        4,
+        4096,
+        128
+      ],
+      "state2_shape": [
+        1,
+        4,
+        4096,
+        128
+      ],
+      "state1_width": 2097152,
+      "state2_width": 2097152,
+      "state_precision": "packed_bf16",
+      "target_offset": 3137536,
+      "output_state1_width": 131072,
+      "output_state2_width": 131072,
+      "replay_offset": null,
+      "payload_width": 0,
+      "payload_offset": null,
+      "logical_kv_shape": [
+        1,
+        4,
+        4096,
+        256
+      ]
+    },
+    {
+      "index": 4,
+      "kind": "linear_attention",
+      "offset": 6676480,
+      "state1_shape": [
+        1,
+        10240,
+        4
+      ],
+      "state2_shape": [
+        1,
+        48,
+        128,
+        128
+      ],
+      "state1_width": 40960,
+      "state2_width": 786432,
+      "state_precision": "fp32",
+      "target_offset": 3399680,
+      "output_state1_width": 40960,
+      "output_state2_width": 786432,
+      "replay_offset": 2482176,
+      "payload_width": 0,
+      "payload_offset": null
+    },
+    {
+      "index": 5,
+      "kind": "linear_attention",
+      "offset": 7503872,
+      "state1_shape": [
+        1,
+        10240,
+        4
+      ],
+      "state2_shape": [
+        1,
+        48,
+        128,
+        128
+      ],
+      "state1_width": 40960,
+      "state2_width": 786432,
+      "state_precision": "fp32",
+      "target_offset": 4227072,
+      "output_state1_width": 40960,
+      "output_state2_width": 786432,
+      "replay_offset": 3309568,
+      "payload_width": 0,
+      "payload_offset": null
+    },
+    {
+      "index": 6,
+      "kind": "linear_attention",
+      "offset": 8331264,
+      "state1_shape": [
+        1,
+        10240,
+        4
+      ],
+      "state2_shape": [
+        1,
+        48,
+        128,
+        128
+      ],
+      "state1_width": 40960,
+      "state2_width": 786432,
+      "state_precision": "fp32",
+      "target_offset": 5054464,
+      "output_state1_width": 40960,
+      "output_state2_width": 786432,
+      "replay_offset": 4136960,
+      "payload_width": 0,
+      "payload_offset": null
+    },
+    {
+      "index": 7,
+      "kind": "full_attention",
+      "offset": 9158656,
+      "state1_shape": [
+        1,
+        4,
+        4096,
+        128
+      ],
+      "state2_shape": [
+        1,
+        4,
+        4096,
+        128
+      ],
+      "state1_width": 2097152,
+      "state2_width": 2097152,
+      "state_precision": "packed_bf16",
+      "target_offset": 5881856,
+      "output_state1_width": 131072,
+      "output_state2_width": 131072,
+      "replay_offset": null,
+      "payload_width": 0,
+      "payload_offset": null,
+      "logical_kv_shape": [
+        1,
+        4,
+        4096,
+        256
+      ]
+    },
+    {
+      "index": 8,
+      "kind": "linear_attention",
+      "offset": 13352960,
+      "state1_shape": [
+        1,
+        10240,
+        4
+      ],
+      "state2_shape": [
+        1,
+        48,
+        128,
+        128
+      ],
+      "state1_width": 40960,
+      "state2_width": 786432,
+      "state_precision": "fp32",
+      "target_offset": 6144000,
+      "output_state1_width": 40960,
+      "output_state2_width": 786432,
+      "replay_offset": 4964352,
+      "payload_width": 0,
+      "payload_offset": null
+    },
+    {
+      "index": 9,
+      "kind": "linear_attention",
+      "offset": 14180352,
+      "state1_shape": [
+        1,
+        10240,
+        4
+      ],
+      "state2_shape": [
+        1,
+        48,
+        128,
+        128
+      ],
+      "state1_width": 40960,
+      "state2_width": 786432,
+      "state_precision": "fp32",
+      "target_offset": 6971392,
+      "output_state1_width": 40960,
+      "output_state2_width": 786432,
+      "replay_offset": 5791744,
+      "payload_width": 0,
+      "payload_offset": null
+    },
+    {
+      "index": 10,
+      "kind": "linear_attention",
+      "offset": 15007744,
+      "state1_shape": [
+        1,
+        10240,
+        4
+      ],
+      "state2_shape": [
+        1,
+        48,
+        128,
+        128
+      ],
+      "state1_width": 40960,
+      "state2_width": 786432,
+      "state_precision": "fp32",
+      "target_offset": 7798784,
+      "output_state1_width": 40960,
+      "output_state2_width": 786432,
+      "replay_offset": 6619136,
+      "payload_width": 0,
+      "payload_offset": null
+    },
+    {
+      "index": 11,
+      "kind": "full_attention",
+      "offset": 15835136,
+      "state1_shape": [
+        1,
+        4,
+        4096,
+        128
+      ],
+      "state2_shape": [
+        1,
+        4,
+        4096,
+        128
+      ],
+      "state1_width": 2097152,
+      "state2_width": 2097152,
+      "state_precision": "packed_bf16",
+      "target_offset": 8626176,
+      "output_state1_width": 131072,
+      "output_state2_width": 131072,
+      "replay_offset": null,
+      "payload_width": 0,
+      "payload_offset": null,
+      "logical_kv_shape": [
+        1,
+        4,
+        4096,
+        256
+      ]
+    },
+    {
+      "index": 12,
+      "kind": "linear_attention",
+      "offset": 20029440,
+      "state1_shape": [
+        1,
+        10240,
+        4
+      ],
+      "state2_shape": [
+        1,
+        48,
+        128,
+        128
+      ],
+      "state1_width": 40960,
+      "state2_width": 786432,
+      "state_precision": "fp32",
+      "target_offset": 8888320,
+      "output_state1_width": 40960,
+      "output_state2_width": 786432,
+      "replay_offset": 7446528,
+      "payload_width": 0,
+      "payload_offset": null
+    },
+    {
+      "index": 13,
+      "kind": "linear_attention",
+      "offset": 20856832,
+      "state1_shape": [
+        1,
+        10240,
+        4
+      ],
+      "state2_shape": [
+        1,
+        48,
+        128,
+        128
+      ],
+      "state1_width": 40960,
+      "state2_width": 786432,
+      "state_precision": "fp32",
+      "target_offset": 9715712,
+      "output_state1_width": 40960,
+      "output_state2_width": 786432,
+      "replay_offset": 8273920,
+      "payload_width": 0,
+      "payload_offset": null
+    },
+    {
+      "index": 14,
+      "kind": "linear_attention",
+      "offset": 21684224,
+      "state1_shape": [
+        1,
+        10240,
+        4
+      ],
+      "state2_shape": [
+        1,
+        48,
+        128,
+        128
+      ],
+      "state1_width": 40960,
+      "state2_width": 786432,
+      "state_precision": "fp32",
+      "target_offset": 10543104,
+      "output_state1_width": 40960,
+      "output_state2_width": 786432,
+      "replay_offset": 9101312,
+      "payload_width": 0,
+      "payload_offset": null
+    },
+    {
+      "index": 15,
+      "kind": "full_attention",
+      "offset": 22511616,
+      "state1_shape": [
+        1,
+        4,
+        4096,
+        128
+      ],
+      "state2_shape": [
+        1,
+        4,
+        4096,
+        128
+      ],
+      "state1_width": 2097152,
+      "state2_width": 2097152,
+      "state_precision": "packed_bf16",
+      "target_offset": 11370496,
+      "output_state1_width": 131072,
+      "output_state2_width": 131072,
+      "replay_offset": null,
+      "payload_width": 0,
+      "payload_offset": null,
+      "logical_kv_shape": [
+        1,
+        4,
+        4096,
+        256
+      ]
+    },
+    {
+      "index": 16,
+      "kind": "linear_attention",
+      "offset": 26705920,
+      "state1_shape": [
+        1,
+        10240,
+        4
+      ],
+      "state2_shape": [
+        1,
+        48,
+        128,
+        128
+      ],
+      "state1_width": 40960,
+      "state2_width": 786432,
+      "state_precision": "fp32",
+      "target_offset": 11632640,
+      "output_state1_width": 40960,
+      "output_state2_width": 786432,
+      "replay_offset": 9928704,
+      "payload_width": 0,
+      "payload_offset": null
+    },
+    {
+      "index": 17,
+      "kind": "linear_attention",
+      "offset": 27533312,
+      "state1_shape": [
+        1,
+        10240,
+        4
+      ],
+      "state2_shape": [
+        1,
+        48,
+        128,
+        128
+      ],
+      "state1_width": 40960,
+      "state2_width": 786432,
+      "state_precision": "fp32",
+      "target_offset": 12460032,
+      "output_state1_width": 40960,
+      "output_state2_width": 786432,
+      "replay_offset": 10756096,
+      "payload_width": 0,
+      "payload_offset": null
+    },
+    {
+      "index": 18,
+      "kind": "linear_attention",
+      "offset": 28360704,
+      "state1_shape": [
+        1,
+        10240,
+        4
+      ],
+      "state2_shape": [
+        1,
+        48,
+        128,
+        128
+      ],
+      "state1_width": 40960,
+      "state2_width": 786432,
+      "state_precision": "fp32",
+      "target_offset": 13287424,
+      "output_state1_width": 40960,
+      "output_state2_width": 786432,
+      "replay_offset": 11583488,
+      "payload_width": 0,
+      "payload_offset": null
+    },
+    {
+      "index": 19,
+      "kind": "full_attention",
+      "offset": 29188096,
+      "state1_shape": [
+        1,
+        4,
+        4096,
+        128
+      ],
+      "state2_shape": [
+        1,
+        4,
+        4096,
+        128
+      ],
+      "state1_width": 2097152,
+      "state2_width": 2097152,
+      "state_precision": "packed_bf16",
+      "target_offset": 14114816,
+      "output_state1_width": 131072,
+      "output_state2_width": 131072,
+      "replay_offset": null,
+      "payload_width": 0,
+      "payload_offset": null,
+      "logical_kv_shape": [
+        1,
+        4,
+        4096,
+        256
+      ]
+    },
+    {
+      "index": 20,
+      "kind": "linear_attention",
+      "offset": 33382400,
+      "state1_shape": [
+        1,
+        10240,
+        4
+      ],
+      "state2_shape": [
+        1,
+        48,
+        128,
+        128
+      ],
+      "state1_width": 40960,
+      "state2_width": 786432,
+      "state_precision": "fp32",
+      "target_offset": 14376960,
+      "output_state1_width": 40960,
+      "output_state2_width": 786432,
+      "replay_offset": 12410880,
+      "payload_width": 0,
+      "payload_offset": null
+    },
+    {
+      "index": 21,
+      "kind": "linear_attention",
+      "offset": 34209792,
+      "state1_shape": [
+        1,
+        10240,
+        4
+      ],
+      "state2_shape": [
+        1,
+        48,
+        128,
+        128
+      ],
+      "state1_width": 40960,
+      "state2_width": 786432,
+      "state_precision": "fp32",
+      "target_offset": 15204352,
+      "output_state1_width": 40960,
+      "output_state2_width": 786432,
+      "replay_offset": 13238272,
+      "payload_width": 0,
+      "payload_offset": null
+    },
+    {
+      "index": 22,
+      "kind": "linear_attention",
+      "offset": 35037184,
+      "state1_shape": [
+        1,
+        10240,
+        4
+      ],
+      "state2_shape": [
+        1,
+        48,
+        128,
+        128
+      ],
+      "state1_width": 40960,
+      "state2_width": 786432,
+      "state_precision": "fp32",
+      "target_offset": 16031744,
+      "output_state1_width": 40960,
+      "output_state2_width": 786432,
+      "replay_offset": 14065664,
+      "payload_width": 0,
+      "payload_offset": null
+    },
+    {
+      "index": 23,
+      "kind": "full_attention",
+      "offset": 35864576,
+      "state1_shape": [
+        1,
+        4,
+        4096,
+        128
+      ],
+      "state2_shape": [
+        1,
+        4,
+        4096,
+        128
+      ],
+      "state1_width": 2097152,
+      "state2_width": 2097152,
+      "state_precision": "packed_bf16",
+      "target_offset": 16859136,
+      "output_state1_width": 131072,
+      "output_state2_width": 131072,
+      "replay_offset": null,
+      "payload_width": 0,
+      "payload_offset": null,
+      "logical_kv_shape": [
+        1,
+        4,
+        4096,
+        256
+      ]
+    },
+    {
+      "index": 24,
+      "kind": "linear_attention",
+      "offset": 40058880,
+      "state1_shape": [
+        1,
+        10240,
+        4
+      ],
+      "state2_shape": [
+        1,
+        48,
+        128,
+        128
+      ],
+      "state1_width": 40960,
+      "state2_width": 786432,
+      "state_precision": "fp32",
+      "target_offset": 17121280,
+      "output_state1_width": 40960,
+      "output_state2_width": 786432,
+      "replay_offset": 14893056,
+      "payload_width": 0,
+      "payload_offset": null
+    },
+    {
+      "index": 25,
+      "kind": "linear_attention",
+      "offset": 40886272,
+      "state1_shape": [
+        1,
+        10240,
+        4
+      ],
+      "state2_shape": [
+        1,
+        48,
+        128,
+        128
+      ],
+      "state1_width": 40960,
+      "state2_width": 786432,
+      "state_precision": "fp32",
+      "target_offset": 17948672,
+      "output_state1_width": 40960,
+      "output_state2_width": 786432,
+      "replay_offset": 15720448,
+      "payload_width": 0,
+      "payload_offset": null
+    },
+    {
+      "index": 26,
+      "kind": "linear_attention",
+      "offset": 41713664,
+      "state1_shape": [
+        1,
+        10240,
+        4
+      ],
+      "state2_shape": [
+        1,
+        48,
+        128,
+        128
+      ],
+      "state1_width": 40960,
+      "state2_width": 786432,
+      "state_precision": "fp32",
+      "target_offset": 18776064,
+      "output_state1_width": 40960,
+      "output_state2_width": 786432,
+      "replay_offset": 16547840,
+      "payload_width": 0,
+      "payload_offset": null
+    },
+    {
+      "index": 27,
+      "kind": "full_attention",
+      "offset": 42541056,
+      "state1_shape": [
+        1,
+        4,
+        4096,
+        128
+      ],
+      "state2_shape": [
+        1,
+        4,
+        4096,
+        128
+      ],
+      "state1_width": 2097152,
+      "state2_width": 2097152,
+      "state_precision": "packed_bf16",
+      "target_offset": 19603456,
+      "output_state1_width": 131072,
+      "output_state2_width": 131072,
+      "replay_offset": null,
+      "payload_width": 0,
+      "payload_offset": null,
+      "logical_kv_shape": [
+        1,
+        4,
+        4096,
+        256
+      ]
+    },
+    {
+      "index": 28,
+      "kind": "linear_attention",
+      "offset": 46735360,
+      "state1_shape": [
+        1,
+        10240,
+        4
+      ],
+      "state2_shape": [
+        1,
+        48,
+        128,
+        128
+      ],
+      "state1_width": 40960,
+      "state2_width": 786432,
+      "state_precision": "fp32",
+      "target_offset": 19865600,
+      "output_state1_width": 40960,
+      "output_state2_width": 786432,
+      "replay_offset": 17375232,
+      "payload_width": 0,
+      "payload_offset": null
+    },
+    {
+      "index": 29,
+      "kind": "linear_attention",
+      "offset": 47562752,
+      "state1_shape": [
+        1,
+        10240,
+        4
+      ],
+      "state2_shape": [
+        1,
+        48,
+        128,
+        128
+      ],
+      "state1_width": 40960,
+      "state2_width": 786432,
+      "state_precision": "fp32",
+      "target_offset": 20692992,
+      "output_state1_width": 40960,
+      "output_state2_width": 786432,
+      "replay_offset": 18202624,
+      "payload_width": 0,
+      "payload_offset": null
+    },
+    {
+      "index": 30,
+      "kind": "linear_attention",
+      "offset": 48390144,
+      "state1_shape": [
+        1,
+        10240,
+        4
+      ],
+      "state2_shape": [
+        1,
+        48,
+        128,
+        128
+      ],
+      "state1_width": 40960,
+      "state2_width": 786432,
+      "state_precision": "fp32",
+      "target_offset": 21520384,
+      "output_state1_width": 40960,
+      "output_state2_width": 786432,
+      "replay_offset": 19030016,
+      "payload_width": 0,
+      "payload_offset": null
+    },
+    {
+      "index": 31,
+      "kind": "full_attention",
+      "offset": 49217536,
+      "state1_shape": [
+        1,
+        4,
+        4096,
+        128
+      ],
+      "state2_shape": [
+        1,
+        4,
+        4096,
+        128
+      ],
+      "state1_width": 2097152,
+      "state2_width": 2097152,
+      "state_precision": "packed_bf16",
+      "target_offset": 22347776,
+      "output_state1_width": 131072,
+      "output_state2_width": 131072,
+      "replay_offset": null,
+      "payload_width": 0,
+      "payload_offset": null,
+      "logical_kv_shape": [
+        1,
+        4,
+        4096,
+        256
+      ]
+    },
+    {
+      "index": 32,
+      "kind": "linear_attention",
+      "offset": 53411840,
+      "state1_shape": [
+        1,
+        10240,
+        4
+      ],
+      "state2_shape": [
+        1,
+        48,
+        128,
+        128
+      ],
+      "state1_width": 40960,
+      "state2_width": 786432,
+      "state_precision": "fp32",
+      "target_offset": 22609920,
+      "output_state1_width": 40960,
+      "output_state2_width": 786432,
+      "replay_offset": 19857408,
+      "payload_width": 0,
+      "payload_offset": null
+    },
+    {
+      "index": 33,
+      "kind": "linear_attention",
+      "offset": 54239232,
+      "state1_shape": [
+        1,
+        10240,
+        4
+      ],
+      "state2_shape": [
+        1,
+        48,
+        128,
+        128
+      ],
+      "state1_width": 40960,
+      "state2_width": 786432,
+      "state_precision": "fp32",
+      "target_offset": 23437312,
+      "output_state1_width": 40960,
+      "output_state2_width": 786432,
+      "replay_offset": 20684800,
+      "payload_width": 0,
+      "payload_offset": null
+    },
+    {
+      "index": 34,
+      "kind": "linear_attention",
+      "offset": 55066624,
+      "state1_shape": [
+        1,
+        10240,
+        4
+      ],
+      "state2_shape": [
+        1,
+        48,
+        128,
+        128
+      ],
+      "state1_width": 40960,
+      "state2_width": 786432,
+      "state_precision": "fp32",
+      "target_offset": 24264704,
+      "output_state1_width": 40960,
+      "output_state2_width": 786432,
+      "replay_offset": 21512192,
+      "payload_width": 0,
+      "payload_offset": null
+    },
+    {
+      "index": 35,
+      "kind": "full_attention",
+      "offset": 55894016,
+      "state1_shape": [
+        1,
+        4,
+        4096,
+        128
+      ],
+      "state2_shape": [
+        1,
+        4,
+        4096,
+        128
+      ],
+      "state1_width": 2097152,
+      "state2_width": 2097152,
+      "state_precision": "packed_bf16",
+      "target_offset": 25092096,
+      "output_state1_width": 131072,
+      "output_state2_width": 131072,
+      "replay_offset": null,
+      "payload_width": 0,
+      "payload_offset": null,
+      "logical_kv_shape": [
+        1,
+        4,
+        4096,
+        256
+      ]
+    },
+    {
+      "index": 36,
+      "kind": "linear_attention",
+      "offset": 60088320,
+      "state1_shape": [
+        1,
+        10240,
+        4
+      ],
+      "state2_shape": [
+        1,
+        48,
+        128,
+        128
+      ],
+      "state1_width": 40960,
+      "state2_width": 786432,
+      "state_precision": "fp32",
+      "target_offset": 25354240,
+      "output_state1_width": 40960,
+      "output_state2_width": 786432,
+      "replay_offset": 22339584,
+      "payload_width": 0,
+      "payload_offset": null
+    },
+    {
+      "index": 37,
+      "kind": "linear_attention",
+      "offset": 60915712,
+      "state1_shape": [
+        1,
+        10240,
+        4
+      ],
+      "state2_shape": [
+        1,
+        48,
+        128,
+        128
+      ],
+      "state1_width": 40960,
+      "state2_width": 786432,
+      "state_precision": "fp32",
+      "target_offset": 26181632,
+      "output_state1_width": 40960,
+      "output_state2_width": 786432,
+      "replay_offset": 23166976,
+      "payload_width": 0,
+      "payload_offset": null
+    },
+    {
+      "index": 38,
+      "kind": "linear_attention",
+      "offset": 61743104,
+      "state1_shape": [
+        1,
+        10240,
+        4
+      ],
+      "state2_shape": [
+        1,
+        48,
+        128,
+        128
+      ],
+      "state1_width": 40960,
+      "state2_width": 786432,
+      "state_precision": "fp32",
+      "target_offset": 27009024,
+      "output_state1_width": 40960,
+      "output_state2_width": 786432,
+      "replay_offset": 23994368,
+      "payload_width": 0,
+      "payload_offset": null
+    },
+    {
+      "index": 39,
+      "kind": "full_attention",
+      "offset": 62570496,
+      "state1_shape": [
+        1,
+        4,
+        4096,
+        128
+      ],
+      "state2_shape": [
+        1,
+        4,
+        4096,
+        128
+      ],
+      "state1_width": 2097152,
+      "state2_width": 2097152,
+      "state_precision": "packed_bf16",
+      "target_offset": 27836416,
+      "output_state1_width": 131072,
+      "output_state2_width": 131072,
+      "replay_offset": null,
+      "payload_width": 0,
+      "payload_offset": null,
+      "logical_kv_shape": [
+        1,
+        4,
+        4096,
+        256
+      ]
+    },
+    {
+      "index": 40,
+      "kind": "linear_attention",
+      "offset": 66764800,
+      "state1_shape": [
+        1,
+        10240,
+        4
+      ],
+      "state2_shape": [
+        1,
+        48,
+        128,
+        128
+      ],
+      "state1_width": 40960,
+      "state2_width": 786432,
+      "state_precision": "fp32",
+      "target_offset": 28098560,
+      "output_state1_width": 40960,
+      "output_state2_width": 786432,
+      "replay_offset": 24821760,
+      "payload_width": 0,
+      "payload_offset": null
+    },
+    {
+      "index": 41,
+      "kind": "linear_attention",
+      "offset": 67592192,
+      "state1_shape": [
+        1,
+        10240,
+        4
+      ],
+      "state2_shape": [
+        1,
+        48,
+        128,
+        128
+      ],
+      "state1_width": 40960,
+      "state2_width": 786432,
+      "state_precision": "fp32",
+      "target_offset": 28925952,
+      "output_state1_width": 40960,
+      "output_state2_width": 786432,
+      "replay_offset": 25649152,
+      "payload_width": 0,
+      "payload_offset": null
+    },
+    {
+      "index": 42,
+      "kind": "linear_attention",
+      "offset": 68419584,
+      "state1_shape": [
+        1,
+        10240,
+        4
+      ],
+      "state2_shape": [
+        1,
+        48,
+        128,
+        128
+      ],
+      "state1_width": 40960,
+      "state2_width": 786432,
+      "state_precision": "fp32",
+      "target_offset": 29753344,
+      "output_state1_width": 40960,
+      "output_state2_width": 786432,
+      "replay_offset": 26476544,
+      "payload_width": 0,
+      "payload_offset": null
+    },
+    {
+      "index": 43,
+      "kind": "full_attention",
+      "offset": 69246976,
+      "state1_shape": [
+        1,
+        4,
+        4096,
+        128
+      ],
+      "state2_shape": [
+        1,
+        4,
+        4096,
+        128
+      ],
+      "state1_width": 2097152,
+      "state2_width": 2097152,
+      "state_precision": "packed_bf16",
+      "target_offset": 30580736,
+      "output_state1_width": 131072,
+      "output_state2_width": 131072,
+      "replay_offset": null,
+      "payload_width": 0,
+      "payload_offset": null,
+      "logical_kv_shape": [
+        1,
+        4,
+        4096,
+        256
+      ]
+    },
+    {
+      "index": 44,
+      "kind": "linear_attention",
+      "offset": 73441280,
+      "state1_shape": [
+        1,
+        10240,
+        4
+      ],
+      "state2_shape": [
+        1,
+        48,
+        128,
+        128
+      ],
+      "state1_width": 40960,
+      "state2_width": 786432,
+      "state_precision": "fp32",
+      "target_offset": 30842880,
+      "output_state1_width": 40960,
+      "output_state2_width": 786432,
+      "replay_offset": 27303936,
+      "payload_width": 0,
+      "payload_offset": null
+    },
+    {
+      "index": 45,
+      "kind": "linear_attention",
+      "offset": 74268672,
+      "state1_shape": [
+        1,
+        10240,
+        4
+      ],
+      "state2_shape": [
+        1,
+        48,
+        128,
+        128
+      ],
+      "state1_width": 40960,
+      "state2_width": 786432,
+      "state_precision": "fp32",
+      "target_offset": 31670272,
+      "output_state1_width": 40960,
+      "output_state2_width": 786432,
+      "replay_offset": 28131328,
+      "payload_width": 0,
+      "payload_offset": null
+    },
+    {
+      "index": 46,
+      "kind": "linear_attention",
+      "offset": 75096064,
+      "state1_shape": [
+        1,
+        10240,
+        4
+      ],
+      "state2_shape": [
+        1,
+        48,
+        128,
+        128
+      ],
+      "state1_width": 40960,
+      "state2_width": 786432,
+      "state_precision": "fp32",
+      "target_offset": 32497664,
+      "output_state1_width": 40960,
+      "output_state2_width": 786432,
+      "replay_offset": 28958720,
+      "payload_width": 0,
+      "payload_offset": null
+    },
+    {
+      "index": 47,
+      "kind": "full_attention",
+      "offset": 75923456,
+      "state1_shape": [
+        1,
+        4,
+        4096,
+        128
+      ],
+      "state2_shape": [
+        1,
+        4,
+        4096,
+        128
+      ],
+      "state1_width": 2097152,
+      "state2_width": 2097152,
+      "state_precision": "packed_bf16",
+      "target_offset": 33325056,
+      "output_state1_width": 131072,
+      "output_state2_width": 131072,
+      "replay_offset": null,
+      "payload_width": 0,
+      "payload_offset": null,
+      "logical_kv_shape": [
+        1,
+        4,
+        4096,
+        256
+      ]
+    },
+    {
+      "index": 48,
+      "kind": "linear_attention",
+      "offset": 80117760,
+      "state1_shape": [
+        1,
+        10240,
+        4
+      ],
+      "state2_shape": [
+        1,
+        48,
+        128,
+        128
+      ],
+      "state1_width": 40960,
+      "state2_width": 786432,
+      "state_precision": "fp32",
+      "target_offset": 33587200,
+      "output_state1_width": 40960,
+      "output_state2_width": 786432,
+      "replay_offset": 29786112,
+      "payload_width": 0,
+      "payload_offset": null
+    },
+    {
+      "index": 49,
+      "kind": "linear_attention",
+      "offset": 80945152,
+      "state1_shape": [
+        1,
+        10240,
+        4
+      ],
+      "state2_shape": [
+        1,
+        48,
+        128,
+        128
+      ],
+      "state1_width": 40960,
+      "state2_width": 786432,
+      "state_precision": "fp32",
+      "target_offset": 34414592,
+      "output_state1_width": 40960,
+      "output_state2_width": 786432,
+      "replay_offset": 30613504,
+      "payload_width": 0,
+      "payload_offset": null
+    },
+    {
+      "index": 50,
+      "kind": "linear_attention",
+      "offset": 81772544,
+      "state1_shape": [
+        1,
+        10240,
+        4
+      ],
+      "state2_shape": [
+        1,
+        48,
+        128,
+        128
+      ],
+      "state1_width": 40960,
+      "state2_width": 786432,
+      "state_precision": "fp32",
+      "target_offset": 35241984,
+      "output_state1_width": 40960,
+      "output_state2_width": 786432,
+      "replay_offset": 31440896,
+      "payload_width": 0,
+      "payload_offset": null
+    },
+    {
+      "index": 51,
+      "kind": "full_attention",
+      "offset": 82599936,
+      "state1_shape": [
+        1,
+        4,
+        4096,
+        128
+      ],
+      "state2_shape": [
+        1,
+        4,
+        4096,
+        128
+      ],
+      "state1_width": 2097152,
+      "state2_width": 2097152,
+      "state_precision": "packed_bf16",
+      "target_offset": 36069376,
+      "output_state1_width": 131072,
+      "output_state2_width": 131072,
+      "replay_offset": null,
+      "payload_width": 0,
+      "payload_offset": null,
+      "logical_kv_shape": [
+        1,
+        4,
+        4096,
+        256
+      ]
+    },
+    {
+      "index": 52,
+      "kind": "linear_attention",
+      "offset": 86794240,
+      "state1_shape": [
+        1,
+        10240,
+        4
+      ],
+      "state2_shape": [
+        1,
+        48,
+        128,
+        128
+      ],
+      "state1_width": 40960,
+      "state2_width": 786432,
+      "state_precision": "fp32",
+      "target_offset": 36331520,
+      "output_state1_width": 40960,
+      "output_state2_width": 786432,
+      "replay_offset": 32268288,
+      "payload_width": 0,
+      "payload_offset": null
+    },
+    {
+      "index": 53,
+      "kind": "linear_attention",
+      "offset": 87621632,
+      "state1_shape": [
+        1,
+        10240,
+        4
+      ],
+      "state2_shape": [
+        1,
+        48,
+        128,
+        128
+      ],
+      "state1_width": 40960,
+      "state2_width": 786432,
+      "state_precision": "fp32",
+      "target_offset": 37158912,
+      "output_state1_width": 40960,
+      "output_state2_width": 786432,
+      "replay_offset": 33095680,
+      "payload_width": 0,
+      "payload_offset": null
+    },
+    {
+      "index": 54,
+      "kind": "linear_attention",
+      "offset": 88449024,
+      "state1_shape": [
+        1,
+        10240,
+        4
+      ],
+      "state2_shape": [
+        1,
+        48,
+        128,
+        128
+      ],
+      "state1_width": 40960,
+      "state2_width": 786432,
+      "state_precision": "fp32",
+      "target_offset": 37986304,
+      "output_state1_width": 40960,
+      "output_state2_width": 786432,
+      "replay_offset": 33923072,
+      "payload_width": 0,
+      "payload_offset": null
+    },
+    {
+      "index": 55,
+      "kind": "full_attention",
+      "offset": 89276416,
+      "state1_shape": [
+        1,
+        4,
+        4096,
+        128
+      ],
+      "state2_shape": [
+        1,
+        4,
+        4096,
+        128
+      ],
+      "state1_width": 2097152,
+      "state2_width": 2097152,
+      "state_precision": "packed_bf16",
+      "target_offset": 38813696,
+      "output_state1_width": 131072,
+      "output_state2_width": 131072,
+      "replay_offset": null,
+      "payload_width": 0,
+      "payload_offset": null,
+      "logical_kv_shape": [
+        1,
+        4,
+        4096,
+        256
+      ]
+    },
+    {
+      "index": 56,
+      "kind": "linear_attention",
+      "offset": 93470720,
+      "state1_shape": [
+        1,
+        10240,
+        4
+      ],
+      "state2_shape": [
+        1,
+        48,
+        128,
+        128
+      ],
+      "state1_width": 40960,
+      "state2_width": 786432,
+      "state_precision": "fp32",
+      "target_offset": 39075840,
+      "output_state1_width": 40960,
+      "output_state2_width": 786432,
+      "replay_offset": 34750464,
+      "payload_width": 0,
+      "payload_offset": null
+    },
+    {
+      "index": 57,
+      "kind": "linear_attention",
+      "offset": 94298112,
+      "state1_shape": [
+        1,
+        10240,
+        4
+      ],
+      "state2_shape": [
+        1,
+        48,
+        128,
+        128
+      ],
+      "state1_width": 40960,
+      "state2_width": 786432,
+      "state_precision": "fp32",
+      "target_offset": 39903232,
+      "output_state1_width": 40960,
+      "output_state2_width": 786432,
+      "replay_offset": 35577856,
+      "payload_width": 0,
+      "payload_offset": null
+    },
+    {
+      "index": 58,
+      "kind": "linear_attention",
+      "offset": 95125504,
+      "state1_shape": [
+        1,
+        10240,
+        4
+      ],
+      "state2_shape": [
+        1,
+        48,
+        128,
+        128
+      ],
+      "state1_width": 40960,
+      "state2_width": 786432,
+      "state_precision": "fp32",
+      "target_offset": 40730624,
+      "output_state1_width": 40960,
+      "output_state2_width": 786432,
+      "replay_offset": 36405248,
+      "payload_width": 0,
+      "payload_offset": null
+    },
+    {
+      "index": 59,
+      "kind": "full_attention",
+      "offset": 95952896,
+      "state1_shape": [
+        1,
+        4,
+        4096,
+        128
+      ],
+      "state2_shape": [
+        1,
+        4,
+        4096,
+        128
+      ],
+      "state1_width": 2097152,
+      "state2_width": 2097152,
+      "state_precision": "packed_bf16",
+      "target_offset": 41558016,
+      "output_state1_width": 131072,
+      "output_state2_width": 131072,
+      "replay_offset": null,
+      "payload_width": 0,
+      "payload_offset": null,
+      "logical_kv_shape": [
+        1,
+        4,
+        4096,
+        256
+      ]
+    },
+    {
+      "index": 60,
+      "kind": "linear_attention",
+      "offset": 100147200,
+      "state1_shape": [
+        1,
+        10240,
+        4
+      ],
+      "state2_shape": [
+        1,
+        48,
+        128,
+        128
+      ],
+      "state1_width": 40960,
+      "state2_width": 786432,
+      "state_precision": "fp32",
+      "target_offset": 41820160,
+      "output_state1_width": 40960,
+      "output_state2_width": 786432,
+      "replay_offset": 37232640,
+      "payload_width": 0,
+      "payload_offset": null
+    },
+    {
+      "index": 61,
+      "kind": "linear_attention",
+      "offset": 100974592,
+      "state1_shape": [
+        1,
+        10240,
+        4
+      ],
+      "state2_shape": [
+        1,
+        48,
+        128,
+        128
+      ],
+      "state1_width": 40960,
+      "state2_width": 786432,
+      "state_precision": "fp32",
+      "target_offset": 42647552,
+      "output_state1_width": 40960,
+      "output_state2_width": 786432,
+      "replay_offset": 38060032,
+      "payload_width": 0,
+      "payload_offset": null
+    },
+    {
+      "index": 62,
+      "kind": "linear_attention",
+      "offset": 101801984,
+      "state1_shape": [
+        1,
+        10240,
+        4
+      ],
+      "state2_shape": [
+        1,
+        48,
+        128,
+        128
+      ],
+      "state1_width": 40960,
+      "state2_width": 786432,
+      "state_precision": "fp32",
+      "target_offset": 43474944,
+      "output_state1_width": 40960,
+      "output_state2_width": 786432,
+      "replay_offset": 38887424,
+      "payload_width": 0,
+      "payload_offset": null
+    },
+    {
+      "index": 63,
+      "kind": "full_attention",
+      "offset": 102629376,
+      "state1_shape": [
+        1,
+        4,
+        4096,
+        128
+      ],
+      "state2_shape": [
+        1,
+        4,
+        4096,
+        128
+      ],
+      "state1_width": 2097152,
+      "state2_width": 2097152,
+      "state_precision": "packed_bf16",
+      "target_offset": 44302336,
+      "output_state1_width": 131072,
+      "output_state2_width": 131072,
+      "replay_offset": null,
+      "payload_width": 0,
+      "payload_offset": null,
+      "logical_kv_shape": [
+        1,
+        4,
+        4096,
+        256
+      ]
+    }
+  ],
+  "runtime_qualified": false
+}

@@ -1,0 +1,20 @@
+{
+  "status": "prefill128_commit_full_state_probe_prepared_gpu_unrun",
+  "files": {
+    "bf16_prefill128_commit_oracle.py": "43a6f038181215111c828141796ec800b46d9253af9ab318c2664ab3a87c06e8",
+    "test_bf16_prefill128_commit_oracle.py": "74b3e4d5ed9e0de468d5687d348f1e7a7fdce50d31941167497bfb90c6b010b4",
+    "probe_bf16_prefill128_commit.cu": "1f4a977ae6a2a98ec3d703754cd115684b70a08a06d40f4b8b0368c6fd96e69f",
+    "prefill128_commit_fixture.h": "088408373005fae4263fc53d607a5c964d37418f11f21266b2428345c6f90706",
+    "qwen38_bf16_prefill128_commit.cu": "970ffcb160b321032b8238580d4c00830bf9de7ea81ac95a6ee976575e67e6f5",
+    "qwen38_bf16_prefill128_commit.cuh": "037371b8aaae91afb108e857ee51468a331ef0409a5dc38c75b42e8e3624c9a0",
+    "evidence/prefill128-commit-probe-layout.json": "2ef6c34f44454a1e7934d713d469e2dd5eca721a19da926602cef0b76038b91b"
+  },
+  "planned_valid_cases": 16,
+  "planned_invalid_cases": 35,
+  "planned_graph_replays": 3,
+  "canonical_body_words": 106823680,
+  "target_body_words": 44564480,
+  "guard_words_each_end": 32,
+  "codec": "GNP128R1 lossless repeated32-word blocks, complete canonical outputs and full target input/final snapshots",
+  "scope": "Only separate T128 final-state commit component. Actual remote CUDA13.0 build, GPU full-state/readonly/canary/graph controls and independent raw NumPy oracle replay remain required. No forward operators/runtime/model/HTTP/performance qualification."
+}
