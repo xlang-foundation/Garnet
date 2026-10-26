@@ -1,0 +1,19 @@
+from pathlib import Path
+import hashlib,json,os,sys,zipfile
+repo=Path('D:/CantorAI/work/qwen38-5090');m=repo/'test2026/cuda/qwen38_5090';w=Path(__file__).resolve().parent;out=w.parent/'outputs';sys.path.insert(0,str(repo))
+from test2026.cuda.qwen38_5090.run_logged import run
+from test2026.cuda.qwen38_5090.test_bf16_batch8_external_reference import synthetic_reference
+from test2026.cuda.qwen38_5090.bf16_batch8_external_reference import replay_reference
+os.chdir(repo);code=run([sys.executable,'-m','unittest','test2026.cuda.qwen38_5090.test_bf16_batch8_external_reference','test2026.cuda.qwen38_5090.test_bf16_batch8_reference_gate','test2026.cuda.qwen38_5090.test_bf16_same_precision_gate'],w/'b8-external-reference-probe-cpu-ledger','correctness',
+    '13strict complete row/state/vector/ID/geometry/counter faults and existing full-cache B4 constructor AST; no model/GPU execution',
+    [m/n for n in ('bf16_batch8_external_reference.py','probe_bf16_batch8_external_reference.py','test_bf16_batch8_external_reference.py','bf16_batch8_reference_gate.py','bf16_same_precision_gate.py')]);assert code==0
+name='bf16-batch8-model-admission-attempt1';archive=out/(name+'-evidence.zip');sha=lambda raw:hashlib.sha256(raw).hexdigest();q=json.loads((out/(name+'-verified.json')).read_bytes());assert sha(archive.read_bytes())==q['archive_sha256']
+with zipfile.ZipFile(archive) as z:
+    prefix='results/'+name+'/model/';baseline=json.loads(z.read(prefix+'report.json'));original={n.removeprefix(prefix):z.read(n) for n in z.namelist() if n.startswith(prefix) and n.endswith('.f32')}
+    fixture,raw=synthetic_reference(baseline,original);summary=replay_reference(fixture,raw.__getitem__,baseline,original.__getitem__)
+result={'status':'b8_external_b4_probe_and_checker_cpu_controls_passed_gpu_unrun','cpu_controls':13,
+        'retained_b8_archive_sha256':q['archive_sha256'],'checker_exercise_with_explicitly_synthetic_f32_reference_metadata':summary,
+        'fresh_b4_reference_model_executed':False,'external_b8_b4_numerical_equivalence_qualified':False,'new_reference_preparation_or_owner_executed':False,
+        'gpu_executed':False,'http_executed':False,'new_benchmark_collected':False,'two_times_target_achieved':False,
+        'scope':'Only CPU checker/producer AST tests and actual retained B8 bytes projected into explicitly synthetic B4 metadata. Not fresh full-cache reference output or model-math admission. New producer requires an actual terminal/replayed B8 parent and separate preparation/owner before GPU use.'}
+(w/'b8-external-reference-probe-cpu-result.json').write_bytes(json.dumps(result,indent=2).encode());print(json.dumps({'status':result['status'],'cpu_controls':13,'synthetic_reference_cases_checked':summary['fresh_reference_cases'],'gpu_executed':False}))

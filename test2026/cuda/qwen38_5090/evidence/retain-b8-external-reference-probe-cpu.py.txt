@@ -1,0 +1,32 @@
+from pathlib import Path
+import hashlib,json,shutil
+w=Path(__file__).resolve().parent;out=w.parent/'outputs';repo=Path('D:/CantorAI/work/qwen38-5090');m=repo/'test2026/cuda/qwen38_5090';e=m/'evidence';sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+for name in ('check-b8-external-reference-probe-cpu.py','retain-b8-external-reference-probe-cpu.py'):
+    shutil.copyfile(w/name,e/(name+'.txt'))
+shutil.copyfile(w/'b8-external-reference-probe-cpu-result.json',e/'b8-external-reference-probe-cpu-result.json')
+for file in (w/'b8-external-reference-probe-cpu-ledger').iterdir():
+    assert file.name in ('commands.log','commands.jsonl');shutil.copyfile(file,e/('b8-external-reference-probe-cpu-'+file.name))
+r=json.loads((w/'b8-external-reference-probe-cpu-result.json').read_bytes())
+result={'status':r['status'],'cpu_controls':13,'producer_sha256':sha(m/'probe_bf16_batch8_external_reference.py'),
+        'case_replay_helper_sha256':sha(m/'bf16_batch8_external_reference.py'),
+        'planned_actual_reference_cases':18,'planned_complete_reference_captures':58,'planned_raw_reference_vectors':116,
+        'fresh_reference_model_executed':False,'independent_reference_math_qualified':False,
+        'new_preparation_owner_and_gpu_trial_pending':True,'new_benchmark_collected':False,'two_times_target_achieved':False,
+        'live_job':'paged-batch8-model-preservation-attempt1','last_partial_per_case_checks_passed':9,
+        'original_supervisor_terminal_observed':False,
+        'scope':'Exact existing B4/T32/T4 full-FP32-cache/BF16-value constructor, complete-state/raw-vector/ID comparisons against actual closed B8 input rows. CPU-only synthetic fixture/checker work; actual reference run, preparation/owner and independent two-machine archive replay remain required. Last current B8 observation had all9per-case checks but owner still live, final reset/complete replay/cleanup unclosed. Do not promote partial state or start a competing GPU job.'}
+(e/'b8-external-reference-probe-cpu-closure.json').write_bytes(json.dumps(result,indent=2).encode())
+(out/'Garnet-B8-Independent-Reference-Preparation.json').write_bytes(json.dumps(result,indent=2).encode())
+addition='''
+
+### 2026-10-26 — same-input full-cache B4 reference producer/checker prepared offline
+
+Added a fresh ordinary B4/T32/T4 full-FP32-cache/BF16-value producer for actual closed paged B8 inputs. It retains the existing native profile guard and constructor (`retain_linear_inputs`, deferred commit, shared output and mapped embedding enabled; `bf16_kv_float_reference=true`), explicitly requires no compact commit/delta layout and actual173932544word physical canonical rows, and uses the existing full-cache roundtrip witness. No native/CUDA/default profile is changed. Same B8 actual request/image/prompt bytes split by physical rows0..3/4..7 produce18fresh B4cases covering original/rotated/reset text/image inputs and fixed8short/128full4K output semantics. Explicit two-half empty/final-reset captures plus18x3per-case captures yield58complete reference states and116raw hidden/normalized vectors. Every output ID, complete expanded state component, logical hash, slot and finite raw vector must match the retained B8 row selection exactly. The comparison is specifically independent cache-layout arithmetic within Garnet; target projections/linear operators remain shared, so no independent-framework or broad model-quality claim.
+
+Thirteen synthetic producer-AST/old-new gate/malformed metadata/shared-drift/vector/row-map/boolean/count controls passed in7.561s under a durable source-pinned CPU ledger. An additional CPU checker exercise used actual retained B8 bytes with explicitly synthetic F32-reference metadata; no new B4 model output was generated and no numerical equivalence is admitted. Actual preparation/owner/GPU run and two-machine archive replay still require current terminal/replayed B8 closure; the producer refuses to construct without that preparation/parent. See `evidence/b8-external-reference-probe-cpu-closure.json` and raw CPU logs. The old real full-cache B4 corpus proof retains its actual historical library97c36465 identity; it is not relabeled as current1a1d. New producer must run fresh on current baseline.
+
+Latest read-only original B8 observation contained all nine cases with exact inverse-permutation checks and no model error. At that observation, the original supervisor remained live, workflow status running, exit code absent, cleanup false and no archive yet. Final reset/complete replay/cleanup must still finish. Last image-order2 reset/prefill/final raw vectors were observed as163840bytes each; those files do not establish owner completion. Do not restart or run another model based on partial reports. Once original terminal/source/runtime/cleanup are observed, run the existing strict paged-B8 archive verifier on both machines, then start the prepared matched ordinary vLLM4K baseline. Tiled HTTP/B8 MTP, fresh B4 reference, wider-prefill GPU correctness, strongest tuned/MTP baselines,805quality/HTTP/repetitions/INT4/4B and overall2x/halfTTFT remain open.
+'''
+for name in ('qwen38-5090-development-log.md','qwen38-5090-implementation-task.md'):
+    path=repo/'docs/research'/name;assert addition.encode() not in path.read_bytes();path.write_bytes(path.read_bytes()+addition.encode())
+print(json.dumps({'status':result['status'],'cpu_controls':13,'fresh_reference_model_executed':False,'last_partial_b8_cases':9}))

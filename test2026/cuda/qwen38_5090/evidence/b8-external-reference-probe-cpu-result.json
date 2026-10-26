@@ -1,0 +1,29 @@
+{
+  "status": "b8_external_b4_probe_and_checker_cpu_controls_passed_gpu_unrun",
+  "cpu_controls": 13,
+  "retained_b8_archive_sha256": "bdd7978b9969c26fbe931da134ec66b7bd73fdf5247c0033f9b8fd98100aa01f",
+  "checker_exercise_with_explicitly_synthetic_f32_reference_metadata": {
+    "status": "bf16_batch8_external_b4_cache_reference_exact",
+    "baseline_cases": 9,
+    "fresh_reference_cases": 18,
+    "reference_complete_state_captures": 58,
+    "reference_raw_vectors": 116,
+    "all_output_ids_states_and_raw_vectors_exact": true,
+    "b8_vs_b4_same_input_cache_arithmetic_cases_qualified": true,
+    "b1_math_qualified": false,
+    "broad_quality_qualified": false,
+    "mtp_qualified": false,
+    "http_qualified": false,
+    "performance_admitted": false,
+    "two_times_target_achieved": false,
+    "scope": "Only these actual same-input B8 packed-cache vs B4 full-FP32-cache/BF16-value ordinary cases. Shared target projections/linear operators remain shared; not an independent framework/official quality or all-model mathematical proof."
+  },
+  "fresh_b4_reference_model_executed": false,
+  "external_b8_b4_numerical_equivalence_qualified": false,
+  "new_reference_preparation_or_owner_executed": false,
+  "gpu_executed": false,
+  "http_executed": false,
+  "new_benchmark_collected": false,
+  "two_times_target_achieved": false,
+  "scope": "Only CPU checker/producer AST tests and actual retained B8 bytes projected into explicitly synthetic B4 metadata. Not fresh full-cache reference output or model-math admission. New producer requires an actual terminal/replayed B8 parent and separate preparation/owner before GPU use."
+}
