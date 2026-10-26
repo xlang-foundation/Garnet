@@ -1,0 +1,29 @@
+{
+  "status": "bf16_prefill128_native_build_cpu_replayed",
+  "archive_sha256": "bf46f67c88bdedb762095c084f4e36e18eb7424d527835b25d44370122955332",
+  "files_verified": 82,
+  "candidate_library_sha256": "897d2fc05f55229416cca8f1b420e6c27a70b1707298c24c311eab5db7a22da4",
+  "baseline_library_sha256": "1a1d0229a1c0c24a8397a4dee7a614bcedf97b3bd3293e58d752ed7de30eb498",
+  "source_and_runtime_restored": true,
+  "plugin_wire_cpu_contract": {
+    "status": "prefill128_plugin_cpu_contract_passed",
+    "profiles": 16,
+    "roundtrips": 16,
+    "clones": 16,
+    "bad_wires": 832,
+    "bad_descriptors": 496,
+    "bad_formats": 336,
+    "cross_dialect_rejections": 128,
+    "legacy_roundtrips": 96,
+    "unexpected_operator_calls": 0,
+    "enqueue_tested": false,
+    "model_qualified": false,
+    "performance_admitted": false
+  },
+  "gpu_model_executed": false,
+  "full_forward_or_model_qualified": false,
+  "performance_admitted": false,
+  "two_times_target_achieved": false,
+  "verifier_sha256": "ff74c5cdcf34b6f4f2c9bc6814889c7c05a68392b1b2dd3b248981a22b272d86",
+  "scope": "Complete native T128 forward candidate only:12T128 native source targets plus paired optional tiled API overlay, one preserved Windows Release/MT/sm120 CMake build tree reconfigured for new globbed files. Existing6Python candidate files remain local until model admission. Actual56CPU regressions, nativeGarnet build with exactly2newCUDA objects and no unrelatedCUDA change, isolated real plugin creator/wire/descriptor checks with CPU-only stubs never linked intoGarnet, external+embedded selector and955tokenizer checks. Preserve original4modified source bytes and9absent targets, runtime1a1d and SDK; restore exact source and baselineDLL on exit, save separate candidate. No model, HTTP, quality, performance or2x admission. Both-machine build replay required. Prior packedB4 matches actualfullB4 but both differ fromB8 on first short8-ID case; original strict failure retained, batch-geometry contrast only, cause unproven."
+}

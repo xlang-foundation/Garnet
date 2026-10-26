@@ -1,0 +1,8 @@
+Traceback (most recent call last):
+  File "D:\CantorAI\work\qwen38-5090\test2026\cuda\qwen38_5090\verify_bf16_prefill128_native_build.py", line 76, in <module>
+    if __name__=='__main__':raise SystemExit(main())
+                                             ^^^^^^
+  File "D:\CantorAI\work\qwen38-5090\test2026\cuda\qwen38_5090\verify_bf16_prefill128_native_build.py", line 41, in main
+    assert proof==(args.proofs/(job+'-verified.json')).read_bytes() and sha((args.proofs/(job+'-evidence.zip')).read_bytes())==row['archive_sha256']
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError

@@ -1,0 +1,43 @@
+{
+  "status": "full_prefill128_native_build_cpu_qualification_closed_model_unrun",
+  "archive_sha256": "bf46f67c88bdedb762095c084f4e36e18eb7424d527835b25d44370122955332",
+  "archive_bytes": 3453235,
+  "archive_members": 83,
+  "proof_pair_sha256": "e35b93c4dd7f5188f7e2aa12148bc32e28ef487c6e81552149a022562b8adc14",
+  "candidate_library_sha256": "897d2fc05f55229416cca8f1b420e6c27a70b1707298c24c311eab5db7a22da4",
+  "baseline_library_sha256": "1a1d0229a1c0c24a8397a4dee7a614bcedf97b3bd3293e58d752ed7de30eb498",
+  "remote_cpu_tests": 56,
+  "plugin_cpu_contract": {
+    "status": "prefill128_plugin_cpu_contract_passed",
+    "profiles": 16,
+    "roundtrips": 16,
+    "clones": 16,
+    "bad_wires": 832,
+    "bad_descriptors": 496,
+    "bad_formats": 336,
+    "cross_dialect_rejections": 128,
+    "legacy_roundtrips": 96,
+    "unexpected_operator_calls": 0,
+    "runtime_version": 101601,
+    "header_version": 101601,
+    "loaded_tensorrt_dll": "D:/CantorAI/5090-study-20261023/tools/TensorRT/bin/nvinfer_10.dll",
+    "enqueue_tested": false,
+    "model_qualified": false,
+    "performance_admitted": false
+  },
+  "native_tokenizer_cases": 955,
+  "external_selector_cases": 10,
+  "embedded_selector_cases": 10,
+  "added_cuda_objects": [
+    "build/garnet/CMakeFiles/garnet.dir/src/cuda/qwen38_bf16_prefill128_attention.cu.obj",
+    "build/garnet/CMakeFiles/garnet.dir/src/cuda/qwen38_bf16_prefill128_commit.cu.obj"
+  ],
+  "changed_old_cuda_objects": [
+    "build/garnet/CMakeFiles/garnet.dir/src/cuda/qwen38_bf16_kv_low_batch_overlay.cu.obj"
+  ],
+  "source_runtime_environment_restored": true,
+  "full_forward_or_model_qualified": false,
+  "performance_admitted": false,
+  "two_times_target_achieved": false,
+  "next_required": "Separate model owner installs paired native/Python T128 profile temporarily, verifies actual full forward/IDs/states/image/reset/quality before any HTTP performance. Continue independent B8 arithmetic diagnosis and matched tuned/MTP/repeated/INT4/4B references."
+}
