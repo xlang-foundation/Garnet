@@ -1,0 +1,46 @@
+from pathlib import Path
+import hashlib,json,zipfile
+work=Path(__file__).resolve().parent;out=work.parent/'outputs';repo=Path('D:/CantorAI/work/qwen38-5090');m=repo/'test2026/cuda/qwen38_5090';e=m/'evidence';paths=[];sha=lambda raw:hashlib.sha256(raw).hexdigest()
+def keep(name,raw):
+    path=e/name;assert not path.exists() or path.read_bytes()==raw,path
+    if not path.exists():path.write_bytes(raw)
+    paths.append(path.relative_to(repo).as_posix())
+job='bf16-prefill128-model-admission-attempt1';archive=out/(job+'-evidence.zip');raw=(out/(job+'-verified.json')).read_bytes();q=json.loads(raw)
+assert raw==(out/(job+'-remote-verified.json')).read_bytes() and q['status']=='bf16_prefill128_full4k_model_failure_preserved' and sha(archive.read_bytes())==q['archive_sha256']
+with zipfile.ZipFile(archive) as z:
+    manifest=json.loads(z.read('evidence-manifest.json'));assert z.testzip() is None and len(z.namelist())==len(set(z.namelist()))==len(manifest['files'])+1
+    for name,h in manifest['files'].items():assert sha(z.read(name))==h
+    prefix='results/'+job+'/';w=json.loads(z.read(prefix+'workflow.json'));assert w['exit_code']==1 and w['cleanup_finished'] and w['baseline_source_restored'] and w['baseline_library_restored']
+    assert w['source_before_sha256']==w['source_after_sha256'] and w['runtime_dependencies']==w['runtime_dependencies_after'] and w['environment_before']==w['environment_after']
+    assert not any(name.startswith(prefix+'native-ledger/') for name in z.namelist()) and prefix+'native/report.json' not in z.namelist()
+    keep(job+'-evidence-manifest.json',z.read('evidence-manifest.json'))
+    for name in z.namelist():
+        if name.startswith(prefix) and name.endswith(('.json','.jsonl','.log')):keep(job+'-'+name.removeprefix(prefix).replace('/','-'),z.read(name))
+for suffix in ('-verified.json','-remote-verified.json','-local-replay.log'):keep(job+suffix,(out/(job+suffix)).read_bytes())
+p=json.loads((e/'bf16-prefill128-model-bound-preparation.json').read_bytes());original=json.loads((e/'bf16-prefill128-model-preparation.json').read_bytes())
+assert p['candidate_files']==original['candidate_files'] and p['candidate_library_sha256']==original['candidate_library_sha256'] and p['source_bundle_sha256']==original['source_bundle_sha256']
+assert len(p['files'])==757 and len(p['installed_files'])==769 and p['expected_cpu_test_count']==58
+for name,h in p['new_files'].items():
+    path=repo/name.removeprefix('Garnet/');assert sha(path.read_bytes())==h;paths.append(path.relative_to(repo).as_posix())
+for name,h in p['candidate_files'].items():
+    path=repo/name;assert sha(path.read_bytes())==h;paths.append(path.relative_to(repo).as_posix())
+paths.append((e/'bf16-prefill128-model-bound-preparation.json').relative_to(repo).as_posix())
+for name in ('derive-prefill128-model.py','package-prefill128-model.py','install-prefill128-model.py','derive-prefill128-model-bound.py','package-prefill128-model-bound.py','install-prefill128-model-bound.py','retain-prefill128-model-preflight-and-retry.py'):
+    keep(name+'.txt',(work/name).read_bytes())
+for name in ('prefill128-model-upload-plan.json','prefill128-model-deployment.json','prefill128-model-install.json','prefill128-model-bound-upload-plan.json','prefill128-model-bound-deployment.json','prefill128-model-bound-install.json'):keep(name,(work/name).read_bytes())
+for folder in ('prefill128-model-local-cpu-ledger','prefill128-model-bound-local-cpu-ledger'):
+    for path in (work/folder).iterdir():
+        if path.is_file():keep(folder+'-'+path.name,path.read_bytes())
+install=json.loads((work/'prefill128-model-bound-install.json').read_bytes());assert install['new_targets']==9 and len(install['unchanged_targets'])==26 and install['runtime_and_sdk_unchanged'] is True
+r={'status':'prefill128_original_cpu_preflight_failure_closed_complete_dependency_retry_running','failed_archive_sha256':q['archive_sha256'],'failed_archive_bytes':archive.stat().st_size,'failed_archive_members':len(manifest['files'])+1,'failed_proof_pair_sha256':sha(raw),'original_gpu_model_executed':False,'failure':'CPU provenance test missing qwen38_bf16_prefill128_layout_contract.h; five recorded component provenance sources were unbound in original preparation','original_55_remote_cpu_tests':'55tests,1error,1.611seconds; no native-ledger/model process','corrected_local_cpu_tests':58,'corrected_local_cpu_seconds':1.908,'corrected_remote_cpu_tests':58,'corrected_remote_cpu_seconds':1.582,'candidate20_sources_unchanged':True,'candidate_library_sha256':p['candidate_library_sha256'],'candidate_source_bundle_sha256':p['source_bundle_sha256'],'baseline_source_pins':757,'installed_source_pins':769,'install':install,'retry_job':'bf16-prefill128-model-admission-attempt2','supervisor_session':48577,'last_observed_state':'running after58remoteCPU controls; actual embedded collector started','terminal_result':None,'full4k_or_quality_or_performance_qualified':False,'two_times_target_achieved':False}
+status=json.dumps(r,indent=2).encode();keep('prefill128-model-preflight-failure-and-retry-start.json',status);(out/'Garnet-Prefill128-Full4K-Trial-Status.json').write_bytes(status)
+title='T128 full4K model pipeline; missing provenance preflight preserved and corrected retry started'
+text='\n\n### 2026-10-25 — '+title+'\n\n'
+text+='Added a separate exact-derivative T16draft session restricted to the explicit T128target/T4decode profile; old T32class and guards remain unchanged. Draft prefill hook/reset/memory/close ASTs are identical to exercised old implementation. New constructor requires true T128opt-in, batch1/cap4096, unchanged depth3/full-head/prefix replay/T4/128MiB policy. Eight binding/exception/ownership/old-guard controls pass. Added strict full4K T128 replay wrapper and five source/profile/raw-evidence faults; frozen6case ORDER and exact ordinary/MTP/retained32state/64raw-vector/ID/callback gates remain. Actual ordinary observations saved before equality assertions, so a genuine math failure is retained rather than discarded.\n\n'
+text+='Prepared55local CPU controls pass1.776s; native/Python20source bundle pairs CPU-qualified897d candidate with unchanged1a1d baseline oracle. First remote attempt stops at55CPU tests (1error,1.611s), before any embedded model process: recorded native derivation needs m/qwen38_bf16_prefill128_layout_contract.h, omitted from installer. All eight original native/Python source files and baselineDLL restored,12new candidate paths removed, source/runtime/SDK unchanged, cleanup done. Archive '+q['archive_sha256']+' ('+str(archive.stat().st_size)+'bytes/'+str(r['failed_archive_members'])+'members). Original full checker returns expected1 on both machines, byte-identical failure proof '+r['failed_proof_pair_sha256']+'. No model or timing result from attempt1.\n\n'
+text+='Corrected separate bound preparation declares every recorded provenance source, including four already-present component CUDA files and the missing header. Three controls reproduce all five omissions in actual old preparation, remove each required input in turn, and check exact recorded method-only retry transforms. All recorded source dependencies are now in installed inventory.58local tests pass1.908s; candidate20sources/nativeDLL/source bundle and all math/request/state/ID gates are unchanged. Retain original immutable owner/probe/preparer/archive and use distinct attempt2/preparation/launcher/checker paths.\n\n'
+text+='Actual absent-or-identical corrected installation:35targets,9new/26identical,757baseline/769temporary-installed source pins, sixruntime and15SDK/environment dependencies unchanged. Receipt downloaded/acknowledged before supervisor48577 starts bf16-prefill128-model-admission-attempt2. Actual58remote CPU tests pass1.582s and embedded collector starts; exact job handle confirmed running. Remote source/transfers frozen and no second GPU model while live. Native runtime optional hashlib warnings are known and preserved; SHA256 works. Required next evidence: actual six3968+128text/image ordinary/MTP/reset-repeat completion, restoration/cache cleanup and both-machine full replay, then805quality/HTTP performance. Overall2xdecode/concurrency throughput and halfTTFT remain unmet/unproven; current charts unchanged.\n'
+for name in ('qwen38-5090-development-log.md','qwen38-5090-implementation-task.md'):
+    path=repo/'docs/research'/name;before=path.read_bytes();assert title.encode() not in before
+    path.write_bytes(before+text.encode());paths.append(path.relative_to(repo).as_posix())
+(work/'prefill128-model-preflight-retry-retained-paths.json').write_bytes(json.dumps(sorted(set(paths)),indent=2).encode());print(json.dumps({'status':r['status'],'retained_paths':len(set(paths))}))
