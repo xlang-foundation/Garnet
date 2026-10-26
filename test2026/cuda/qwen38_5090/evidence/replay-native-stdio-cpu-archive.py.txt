@@ -1,0 +1,38 @@
+from pathlib import Path
+import ast,hashlib,json,zipfile
+work=Path(__file__).resolve().parent;out=work.parent/'outputs';m=Path('D:/CantorAI/work/qwen38-5090/test2026/cuda/qwen38_5090')
+archive=out/'native-embedded-stdio-cpu-diagnosis-attempt1-evidence.zip';sha=lambda b:hashlib.sha256(b).hexdigest()
+meta=json.loads((work/'native-embedded-stdio-cpu-diagnosis-archive.json').read_bytes())
+assert sha(archive.read_bytes())==meta['archive_sha256'] and archive.stat().st_size==meta['bytes']
+with zipfile.ZipFile(archive) as z:
+    manifest=json.loads(z.read('evidence-manifest.json'));assert len(z.namelist())==len(set(z.namelist()))==len(manifest['files'])+1==21
+    for n,h in manifest['files'].items():assert sha(z.read(n))==h
+    base='results/native-embedded-stdio-cpu-diagnosis-attempt1/';r=json.loads(z.read(base+'report.json'))
+    assert r['status']=='actual_embedded_ordinary_and_profiled_cpu_stdio_observed' and type(r['exit_code']) is int and r['exit_code']==0
+    assert r['runtime_before']==r['runtime_after'] and len(r['runtime_before'])==6 and r['profiler']==r['profiler_after']
+    observations={}
+    for case in r['cases']:
+        label=case['label'];assert case['child_exit_code']==0 and type(case['child_exit_code']) is int
+        target=case['target'];assert target['status']=='cpu_stdio_observations_collected' and target['actual_native_model_executed'] is False
+        ops={row['operation']:row for row in target['operations']};assert len(ops)==len(target['operations'])==7
+        captured=[json.loads(v) for v in z.read(base+label+'/stdout.bin').splitlines()]
+        assert len(z.read(base+label+'/stdout.bin'))==case['stdout_bytes']
+        assert ast.literal_eval(ops['os.read.stdin']['returned'])==b'{"probe":"native.stdin","cpu_only":true}\n'
+        if label=='ordinary':
+            assert all(v['completed'] is True for v in ops.values())
+            assert {v['probe'] for v in captured}=={'os.write.stdout','sys.stdout.write','sys.__stdout__.write','fdopen.stdout'} and len(captured)==4
+        else:
+            assert label=='profiled' and [v['probe'] for v in captured]==['sys.stdout.write','sys.__stdout__.write']
+            for name in ('os.write.stdout','os.fdopen.stdout','os.write.stderr'):
+                assert ops[name]['completed'] is False and ops[name]['exception_type']=='OSError' and ops[name]['errno']==9
+            assert all(ops[name]['completed'] is True for name in ('sys.stdout.write','sys.__stdout__.write','os.read.stdin','owned_file.write'))
+        assert json.loads(z.read(base+label+'/embedded/file-output.json'))=={'probe':'owned.file','cpu_only':True}
+        observations[label]={'stdout_labels':[v['probe'] for v in captured],'operations':target['operations']}
+    for name,h in r['sources'].items():assert sha((m/name).read_bytes())==h==sha(z.read('Garnet/test2026/cuda/qwen38_5090/'+name))
+result={'status':'embedded_stdio_cpu_archive_observations_replayed','archive_sha256':meta['archive_sha256'],'files_verified':20,
+        'observations':observations,'runtime_and_profiler_hashes_preserved':True,'live_delivery_observed':False,
+        'only_end_of_process_capture':True,'model_executed':False,'request_gpu_phase_metrics_admitted':False,'performance_admitted':False,
+        'scope':'Actual ordinary/profiled CPU embedded-runtime observations and captured pipe bytes. Raw descriptor9failure is reproducible under Nsight; text-stream writes and stdin complete. End-of-process capture alone does not prove prompt live delivery. Preloaded profiling control must use native markers, not arrival times.'}
+p=out/'native-embedded-stdio-cpu-diagnosis-attempt1-verified.json';raw=json.dumps(result,indent=2).encode();assert not p.exists() or p.read_bytes()==raw
+if not p.exists():p.write_bytes(raw)
+print(json.dumps({'status':result['status'],'files_verified':20,'archive_sha256':meta['archive_sha256'],'live_delivery_observed':False}))

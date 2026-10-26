@@ -1,0 +1,59 @@
+{
+  "status": "embedded_cpu_stdio_driver_collected",
+  "argv": [
+    "cmd.exe",
+    "/d",
+    "/c",
+    "D:\\CantorAI\\5090-study-20261023\\results\\native-embedded-stdio-cpu-diagnosis-attempt1\\ordinary\\cpu-native-target.bat",
+    "D:\\CantorAI\\5090-study-20261023\\results\\native-embedded-stdio-cpu-diagnosis-attempt1\\ordinary\\embedded"
+  ],
+  "child_exit_code": 0,
+  "target": {
+    "status": "cpu_stdio_observations_collected",
+    "pid": 35376,
+    "operations": [
+      {
+        "operation": "os.write.stdout",
+        "returned": "28",
+        "completed": true
+      },
+      {
+        "operation": "sys.stdout.write",
+        "returned": "(29, None)",
+        "completed": true
+      },
+      {
+        "operation": "sys.__stdout__.write",
+        "returned": "(33, None)",
+        "completed": true
+      },
+      {
+        "operation": "os.fdopen.stdout",
+        "returned": "(26, None)",
+        "completed": true
+      },
+      {
+        "operation": "os.write.stderr",
+        "returned": "28",
+        "completed": true
+      },
+      {
+        "operation": "os.read.stdin",
+        "returned": "b'{\"probe\":\"native.stdin\",\"cpu_only\":true}\\n'",
+        "completed": true
+      },
+      {
+        "operation": "owned_file.write",
+        "returned": "39",
+        "completed": true
+      }
+    ],
+    "actual_native_model_executed": false,
+    "scope": "CPU-only embedded Python stdio observations; failures are recorded, not suppressed in a model worker.",
+    "sys_stdout_type": "TextIOWrapper",
+    "sys_stdin_type": "TextIOWrapper"
+  },
+  "stdout_bytes": 118,
+  "stderr_bytes": 29,
+  "actual_native_model_executed": false
+}
