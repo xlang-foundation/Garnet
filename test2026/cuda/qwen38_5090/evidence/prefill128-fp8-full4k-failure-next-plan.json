@@ -1,0 +1,28 @@
+{
+  "status": "native_m128_selected_but_full4k_failed_first_state_boundary_layer2",
+  "observations": {
+    "first_different_output_zero_based": 11,
+    "equal_ids": 11,
+    "prefill_first_different_component": {
+      "layer": 2,
+      "kind": "linear_attention",
+      "role": 2,
+      "logical_words": 786432
+    },
+    "prefill_different_components": 123,
+    "prefill_hidden_relative_l2": 0.22054152219154508,
+    "complete_raw_vector_scalars_compared": 40960,
+    "cause_established": false
+  },
+  "next_steps": [
+    "Retain failed candidate/default-off control and untouched T32 baseline. Do not time or enable this path by default. Existing actual repeated16-row FP8 matrix control does not prove arbitrary real128-token activations or full-model equivalence.",
+    "Add a distinct default-off diagnostic profile for pinned B1 GDN layers0/1, T32 andT128, register128 and joinedMLP with the same external compressed weights used by candidate. Existing embedded B1/2 T16 diagnostic flag/guards remain unchanged. Reject wrong shape/layer/heads/quantization/mixed profile combinations; CPU contracts/private objects then preserved-source remote native build and original compatibility gates.",
+    "Use actual first128 distinct tokens from frozen3968prompt, not replicated16 rows. Compare oneT128 versus fourT32 chunks over equal token/active sequences and matching initial GDN states. Replay through initial128boundaries as needed to find first differing hidden/state chunk before layer2. Export maskedinput/norm/qkv/z/beta/a/GDNcore/FP8attention/residual/MLPnorm/output for layer0 then layer1 with unchanged native kernels and pinned weights.",
+    "Before attributing a stage difference, require diagnostic primary hidden/history/state outputs exactly match ordinary same-profile control, repeatability and exact native policy counts. Extra outputs can change TensorRT fusion. Retain allfailed controls. Primary packed rows and128x10240QKV exceed1Miword; serialize/read in bounded pieces no larger than existing1Miword reader guard and independently concatenate/replay every word.",
+    "For first actual projection mismatch, retain real distinct128input bytes and calibrated weight/scales; separately run actual native M128 helper versus four canonicalM32 calls and full CPU cast/FP8 quantization replay. Do not extend policy to untested query/attention geometry or assume selected algorithm alone fixes unrelated operations.",
+    "Only after unchanged strict sixcasefull4K model gate and805quality resume matchedHTTP text/image TTFT/decode/concurrency throughput/sampleVRAM and allchart updates. Keep original2xdecodeANDthroughput/halfTTFTextra, B8diagnosis, matchedINT4/4B, strongest feasible tuned/MTP/repeated references active."
+  ],
+  "full_model_qualified": false,
+  "performance_admitted": false,
+  "two_times_target_achieved": false
+}

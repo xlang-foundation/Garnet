@@ -1,0 +1,45 @@
+{
+  "status": "m128_fp8_full_model_failure_analysis_derived_unrun",
+  "source": "analyze_bf16_prefill128_model_failure.py",
+  "source_sha256": "363d92165a3b0f1b89706b0d44a671fb2406b7f3c36fd4749fc29232c8e2cda1",
+  "target": "analyze_bf16_prefill128_fp8_model_failure.py",
+  "target_sha256": "501e065c391e750cbd8422605ec56054f8cccd6515f2dc7d61bae416604f8136",
+  "replacements": [
+    {
+      "old": "from test2026.cuda.qwen38_5090.verify_bf16_prefill128_model_bound import checked,JOB,PARENT,METHODS",
+      "new": "from test2026.cuda.qwen38_5090.verify_bf16_prefill128_fp8_model import checked,JOB,PARENT,METHODS\nfrom test2026.cuda.qwen38_5090.prefill128_fp8_model import validate_selection",
+      "count": 1
+    },
+    {
+      "old": "bf16-prefill128-model-bound-preparation.json",
+      "new": "bf16-prefill128-fp8-model-preparation.json",
+      "count": 1
+    },
+    {
+      "old": "failure['status']=='bf16_prefill128_full4k_model_failure_preserved'",
+      "new": "failure['status']=='bf16_prefill128_fp8_full4k_model_failure_preserved'",
+      "count": 1
+    },
+    {
+      "old": "        assert r['cases']==[]",
+      "new": "        assert failure['default_off_selection']=={'4':0,'128':0} and failure['enabled_native_selection']==r['fp8_selection']==validate_selection(r)\n        assert r['cases']==[]",
+      "count": 1
+    },
+    {
+      "old": "b'Ran 58 tests'",
+      "new": "b'Ran 64 tests'",
+      "count": 1
+    },
+    {
+      "old": "'verify_bf16_prefill128_model_bound.py'",
+      "new": "'verify_bf16_prefill128_fp8_model.py','prefill128_fp8_model.py'",
+      "count": 1
+    },
+    {
+      "old": "'status':'bf16_prefill128_first_full4k_failure_analyzed'",
+      "new": "'status':'bf16_prefill128_fp8_first_full4k_failure_analyzed','default_off_selection':failure['default_off_selection'],'enabled_native_selection':failure['enabled_native_selection']",
+      "count": 1
+    }
+  ],
+  "scope": "Original full component/vector/ID failure analysis unchanged, distinct new job/proof and64CPU controls, exact observed off/on graph selection gate."
+}

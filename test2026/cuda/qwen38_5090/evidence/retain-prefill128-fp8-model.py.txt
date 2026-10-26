@@ -1,0 +1,42 @@
+"""Retain actual completed model evidence only; no fabricated admission or timing."""
+from pathlib import Path
+import hashlib,json,zipfile
+work=Path(__file__).resolve().parent;out=work.parent/'outputs';repo=Path('D:/CantorAI/work/qwen38-5090');m=repo/'test2026/cuda/qwen38_5090';e=m/'evidence';paths=[];sha=lambda raw:hashlib.sha256(raw).hexdigest()
+def keep(name,raw):
+    target=e/name;assert not target.exists() or target.read_bytes()==raw,target
+    if not target.exists():target.write_bytes(raw)
+    paths.append(target.relative_to(repo).as_posix())
+job='bf16-prefill128-fp8-model-admission-attempt1';proof=(out/(job+'-verified.json')).read_bytes();q=json.loads(proof);assert proof==(out/(job+'-remote-verified.json')).read_bytes() and q['status'] in ('bf16_prefill128_fp8_full4k_model_replayed','bf16_prefill128_fp8_full4k_model_failure_preserved')
+archive=out/(job+'-evidence.zip');assert sha(archive.read_bytes())==q['archive_sha256']
+with zipfile.ZipFile(archive) as z:
+    manifest=json.loads(z.read('evidence-manifest.json'));assert z.testzip() is None and len(z.namelist())==len(set(z.namelist()))==len(manifest['files'])+1
+    for name,h in manifest['files'].items():assert sha(z.read(name))==h
+    prefix='results/'+job+'/';w=json.loads(z.read(prefix+'workflow.json'));praw=z.read('Garnet/test2026/cuda/qwen38_5090/evidence/bf16-prefill128-fp8-model-preparation.json');p=json.loads(praw)
+    assert w['cleanup_finished'] and w['baseline_source_restored'] and w['baseline_library_restored']
+    assert w['source_before_sha256']==w['source_after_sha256']==p['files'] and w['runtime_dependencies']==w['runtime_dependencies_after']==p['runtime'] and w['environment_before']==w['environment_after']==p['environment']
+    assert len(p['candidate_files'])==29 and sum(value is not None for value in p['candidate_base'].values())==12
+    keep(job+'-evidence-manifest.json',z.read('evidence-manifest.json'))
+    for name in z.namelist():
+        if name.startswith(prefix) and name.endswith(('.json','.jsonl','.log')):keep(job+'-'+name.removeprefix(prefix).replace('/','-'),z.read(name))
+    report=json.loads(z.read(prefix+'native/report.json')) if prefix+'native/report.json' in manifest['files'] else None
+    off=json.loads(z.read(prefix+'selection-off/report.json')) if prefix+'selection-off/report.json' in manifest['files'] else None
+for suffix in ('-verified.json','-remote-verified.json','-local-replay.log'):keep(job+suffix,(out/(job+suffix)).read_bytes())
+for name in ('prefill128-fp8-model-package.json','prefill128-fp8-model-install.json'):keep(name,(work/name).read_bytes())
+for path in (work/'prefill128-fp8-model-local-cpu-ledger').iterdir():
+    if path.is_file():keep('prefill128-fp8-model-local-cpu-'+path.name,path.read_bytes())
+for name in ('derive-prefill128-fp8-model.py','install-prefill128-fp8-model.py','retain-prefill128-fp8-model.py'):keep(name+'.txt',(work/name).read_bytes())
+for name,h in p['new_files'].items():
+    target=repo/name.removeprefix('Garnet/');assert sha(target.read_bytes())==h;paths.append(target.relative_to(repo).as_posix())
+paths.append('test2026/cuda/qwen38_5090/evidence/bf16-prefill128-fp8-model-preparation.json')
+passed=w['exit_code']==0;assert passed==(q['status']=='bf16_prefill128_fp8_full4k_model_replayed')
+result={'status':q['status']+'_on_both_machines','archive_sha256':q['archive_sha256'],'archive_bytes':archive.stat().st_size,'archive_members':len(manifest['files'])+1,'proof_pair_sha256':sha(proof),'source_pins':len(p['files']),'installed_source_pins':len(p['installed_files']),'candidate_sources':29,'existing_targets_restored':12,'new_targets_removed':17,'runtime_pins':len(p['runtime']),'selected_sdk_environment_pins':len(p['environment']),'expected_cpu_tests':64,'owner_exit_code':w['exit_code'],'candidate_library_sha256':p['candidate_library_sha256'],'default_off_selection':q['default_off_selection'],'enabled_native_selection':q['enabled_native_selection'],'ordinary_observations_collected':q['ordinary_observations_collected'],'complete_cases_collected':len(report['cases']) if report else 0,'model_replay':q['model_replay'],'baseline_source_runtime_sdk_restored':True,'full_model_qualified':passed,'broad_quality_qualified':False,'performance_admitted':False,'two_times_target_achieved':False,'next_action':'Run805quality before actual fixed4KHTTP timing, preserve full original2x/INT4/4B/reference scope' if passed else 'Analyze retained actual failure before further operator changes; preserve strict full4K state/vector/ID gate and all original goals'}
+raw=json.dumps(result,indent=2).encode();keep('prefill128-fp8-model-closure.json',raw);(out/'Garnet-Prefill128-FP8-Model-Verified.json').write_bytes(raw)
+title='Combined T128 FP8 strict model trial '+('passed' if passed else 'failed; complete evidence preserved')
+text='\n\n### 2026-10-25 — '+title+'\n\n'
+text+='Distinct model methods derived exactly from preserved attempt2; original ID/state/vector oracle, six3968+128cases, T4verification andT16draft unchanged. Adds separate switch0 target construction then switch1 selection counters, saves graph metadata and completed ordinary observations before assertions. Paired29native/Python source candidate;12existing bytes restored/17new removed.64local CPU tests1.836s pass; combined source suite substitutes3exact composedT128+M128 provenance checks for old single-stage check, original test untouched. All49declared method/provenance inputs bound before owner; source812/installed829/runtime6/selectedSDK20.\n\n'
+text+='Actual owner '+job+' exits'+str(w['exit_code'])+'. Switch-off result '+json.dumps(q['default_off_selection'],sort_keys=True)+'. Enabled native selection '+json.dumps(q['enabled_native_selection'],sort_keys=True)+'. Completed ordinary observations '+str(q['ordinary_observations_collected'])+', fullcases '+str(result['complete_cases_collected'])+'. Model report status '+str(report.get('status') if report else None)+', raw error '+repr(report.get('error') if report else w.get('error'))+'. No broad805quality or timing admission from this run.\n\n'
+text+='Archive '+q['archive_sha256']+' ('+str(archive.stat().st_size)+'bytes/'+str(len(manifest['files'])+1)+'members); original new full checker independently replayed both machines, identical proof '+sha(proof)+'. Source, baseline1a1d library, runtime andSDK restored; only owned new cache entries retired. Raw vectors/resources/logs/selection metadata and all failures retained. CandidateDLL '+p['candidate_library_sha256']+'. Known embeddedPython optional hash import warnings remain in raw logs; SHA256checks work, SDK untouched.\n\n'
+text+=result['next_action']+'. Existing performancecharts unchanged; overall2xdecodeANDthroughput andhalfTTFTadditional, matchedINT4/4B andstrongest feasible tuned/MTP/repeated reference goals remain active.\n'
+for name in ('qwen38-5090-development-log.md','qwen38-5090-implementation-task.md'):
+    target=repo/'docs/research'/name;before=target.read_bytes();assert title.encode() not in before;target.write_bytes(before+text.encode());paths.append(target.relative_to(repo).as_posix())
+(work/'prefill128-fp8-model-retained-paths.json').write_bytes(json.dumps(sorted(set(paths)),indent=2).encode());print(json.dumps({'status':result['status'],'retained_paths':len(set(paths)),'ordinary_observations':q['ordinary_observations_collected'],'owner_exit_code':w['exit_code']}))

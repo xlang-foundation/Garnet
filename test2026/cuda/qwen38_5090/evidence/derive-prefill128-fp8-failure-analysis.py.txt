@@ -1,0 +1,14 @@
+from pathlib import Path
+import hashlib,json
+repo=Path('D:/CantorAI/work/qwen38-5090');m=repo/'test2026/cuda/qwen38_5090';sha=lambda raw:hashlib.sha256(raw).hexdigest();source=m/'analyze_bf16_prefill128_model_failure.py';text=source.read_bytes().decode();steps=[]
+changes=[('from test2026.cuda.qwen38_5090.verify_bf16_prefill128_model_bound import checked,JOB,PARENT,METHODS','from test2026.cuda.qwen38_5090.verify_bf16_prefill128_fp8_model import checked,JOB,PARENT,METHODS\nfrom test2026.cuda.qwen38_5090.prefill128_fp8_model import validate_selection',1),
+ ('bf16-prefill128-model-bound-preparation.json','bf16-prefill128-fp8-model-preparation.json',1),
+ ("failure['status']=='bf16_prefill128_full4k_model_failure_preserved'","failure['status']=='bf16_prefill128_fp8_full4k_model_failure_preserved'",1),
+ ("        assert r['cases']==[]", "        assert failure['default_off_selection']=={'4':0,'128':0} and failure['enabled_native_selection']==r['fp8_selection']==validate_selection(r)\n        assert r['cases']==[]",1),
+ ("b'Ran 58 tests'","b'Ran 64 tests'",1),
+ ("'verify_bf16_prefill128_model_bound.py'","'verify_bf16_prefill128_fp8_model.py','prefill128_fp8_model.py'",1),
+ ("'status':'bf16_prefill128_first_full4k_failure_analyzed'","'status':'bf16_prefill128_fp8_first_full4k_failure_analyzed','default_off_selection':failure['default_off_selection'],'enabled_native_selection':failure['enabled_native_selection']",1)]
+for old,new,count in changes:
+    assert text.count(old)==count,(old,text.count(old));text=text.replace(old,new);steps.append({'old':old,'new':new,'count':count})
+target=m/'analyze_bf16_prefill128_fp8_model_failure.py';assert not target.exists();target.write_bytes(text.encode());record={'status':'m128_fp8_full_model_failure_analysis_derived_unrun','source':source.name,'source_sha256':sha(source.read_bytes()),'target':target.name,'target_sha256':sha(target.read_bytes()),'replacements':steps,'scope':'Original full component/vector/ID failure analysis unchanged, distinct new job/proof and64CPU controls, exact observed off/on graph selection gate.'}
+path=m/'evidence/prefill128-fp8-model-analysis-derivation.json';assert not path.exists();path.write_bytes(json.dumps(record,indent=2).encode());print(json.dumps({'analyzer_sha256':sha(target.read_bytes())}))
