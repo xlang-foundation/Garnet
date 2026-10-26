@@ -1,0 +1,26 @@
+from pathlib import Path
+import ast,hashlib,json,os,sys,zipfile
+W=Path(__file__).resolve().parent;OUT=W.parent/'outputs';R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';P='Garnet/test2026/cuda/qwen38_5090/';sha=lambda b:hashlib.sha256(b).hexdigest()
+sys.path[:0]=[str(M),str(R)]
+names=['z128_reconstructed_plugin_source.py','test_z128_reconstructed_plugin.py','probe_z128_reconstructed_plugin_wire.cpp','z128_reconstructed_plugin_wire_stubs.cpp','build_z128_reconstructed_plugin_wire_cpu.bat','z128_reconstructed_plugin_init_stubs.cpp','probe_z128_reconstructed_plugin_init.cpp','z128_reconstructed_plugin_init_contract.py','run_z128_reconstructed_plugin_init_cpu.py','build_z128_reconstructed_plugin_init_cpu.bat','probe_z128_reconstructed_profile.cpp','build_z128_reconstructed_profile_cpu.bat','prepare_z128_reconstructed_plugin_build.py','run_z128_reconstructed_plugin_build.py','verify_z128_reconstructed_plugin_build.py','evidence/z128-reconstructed-plugin-derivation.json','evidence/z128-reconstructed-plugin-controls-derivation.json','evidence/z128-reconstructed-plugin-parent-source.zip']
+names += [p.relative_to(M).as_posix() for p in (M/'native_z128_reconstructed_plugin_candidate').iterdir() if p.is_file()]
+methods={P+n:sha((M/n).read_bytes()) for n in names};assert len(methods)==len(names)
+for n in names:
+    if n.endswith('.py'):ast.parse((M/n).read_bytes())
+import run_logged as ledger
+ledger.source_identity=lambda:{'scope':'Explicit owned reconstructed-plugin implementation/tests; unrelated untracked excluded','owned_source_sha256':methods};os.chdir(R)
+assert ledger.run([sys.executable,'-m','unittest','test2026.cuda.qwen38_5090.test_z128_reconstructed_plugin'],W/'z128-reconstructed-plugin-local-cpu-ledger','correctness','Six controls including86frozen historical source assertions; no local native/GPU invocation',[M/n for n in names])==0
+latest=json.loads((M/'evidence/z128-reconstruct-hybrid-preparation.json').read_bytes());base={**latest['files'],**latest['methods']};base[P+'evidence/z128-reconstruct-hybrid-preparation.json']=sha((M/'evidence/z128-reconstruct-hybrid-preparation.json').read_bytes())
+old=json.loads((M/'evidence/z128-factory-trace-native-build-preparation.json').read_bytes());d=json.loads((M/'evidence/z128-reconstructed-plugin-derivation.json').read_bytes());candidate=d['candidate_files'];candidate_base={**old['candidate_base'],**{n:None for n in d['new_files']}};assert len(candidate_base)==43 and sum(v is not None for v in candidate_base.values())==14
+parents={}
+for job in ('z128-factory-trace-native-build-attempt1','z128-reconstruct-hybrid-attempt1'):
+    proof=(OUT/(job+'-verified.json')).read_bytes();q=json.loads(proof);assert sha((OUT/(job+'-evidence.zip')).read_bytes())==q['archive_sha256'];parents[job]={'status':q['status'],'proof_sha256':sha(proof),'archive_sha256':q['archive_sha256']}
+bundle=W/'z128-reconstructed-plugin-source.zip'
+p={'status':'reconstructed_Z128_plugin_build_proposed_unrun','base_files':base,'methods':methods,'candidate_files':candidate,'candidate_base':candidate_base,'bundle':'results/'+bundle.name,'bundle_sha256':sha(bundle.read_bytes()),'runtime':old['runtime'],'environment':old['environment'],'checkpoints':old['checkpoints'],'vcvars':old['vcvars'],'parents':parents,'scope':'Separate explicit reconstructed publicAPI Z128 plugin on current Garnet; new marker0x52313238/type/defaultoff policy requires old canonical optin. Legacy plugin/wire/quantizer/enqueue unchanged. Same qualified32-call constructor/9readbacks/M32+M128Check. CPU new/old/crosswire/profile/initialization/defaultoff controls before remote fullnative Release/MT/sm120.43candidate sources/14old+29new targets restored. No GPU model/numerical/performance claim. Original full4096/matchedbaseline/quality/2x objectives remain unmet.'}
+proposal=W/'z128-reconstructed-plugin-proposal.json';assert not proposal.exists();proposal.write_bytes(json.dumps(p,indent=2).encode())
+deploy={P+n:(M/n).read_bytes() for n in names};deploy[p['bundle']]=bundle.read_bytes();deploy['results/'+proposal.name]=proposal.read_bytes()
+package=W/'z128-reconstructed-plugin-deployment.zip';assert not package.exists()
+with zipfile.ZipFile(package,'x',zipfile.ZIP_DEFLATED) as z:
+    for n,b in deploy.items():z.writestr(n,b)
+    z.writestr('install-manifest.json',json.dumps({'files':{n:sha(b) for n,b in deploy.items()}},indent=2))
+result={'package_sha256':sha(package.read_bytes()),'package_bytes':package.stat().st_size,'source_pins':len(base),'method_pins':len(methods),'candidate_files':43,'proposal_sha256':sha(proposal.read_bytes())};(W/'z128-reconstructed-plugin-package.json').write_bytes(json.dumps(result,indent=2).encode());print(json.dumps(result))

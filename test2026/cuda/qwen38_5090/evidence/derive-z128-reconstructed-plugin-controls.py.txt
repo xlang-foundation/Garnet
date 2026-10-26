@@ -1,0 +1,39 @@
+from pathlib import Path
+import hashlib,json
+R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';rows=[]
+def derive(src,dst,replacements):
+    raw=(M/src).read_bytes();original=raw
+    for a,b,n in replacements:
+        assert raw.count(a.encode())==n,(src,a,raw.count(a.encode()));raw=raw.replace(a.encode(),b.encode())
+    (M/dst).write_bytes(raw);rows.append(dict(source=src,target=dst,source_sha256=hashlib.sha256(original).hexdigest(),target_sha256=hashlib.sha256(raw).hexdigest(),changes=[dict(before=a,after=b,count=n) for a,b,n in replacements]))
+derive('modelopt_init_trace_cpu_stubs.cpp','z128_reconstructed_plugin_init_stubs.cpp',[
+('factories{0},operators{0}','factories{0},operators{0},newZ{0},oldZ{0}',1),
+('mode=value;factories=0;operators=0;','mode=value;factories=0;operators=0;newZ=0;oldZ=0;',1),
+('int ModelOptInitCPUOperatorCalls(){return operators.load();}','int ModelOptInitCPUOperatorCalls(){return operators.load();}\nint ModelOptInitCPUNewZCalls(){return newZ.load();}\nint ModelOptInitCPUOldZCalls(){return oldZ.load();}',1),
+('CreateModelOptFP8Z128Context(){return fake<ModelOptFP8Z128Context>();}','CreateModelOptFP8Z128Context(){++oldZ;return fake<ModelOptFP8Z128Context>();}\nstd::shared_ptr<ModelOptFP8Z128Context> CreateModelOptFP8Z128ReconstructedContext(){++newZ;return fake<ModelOptFP8Z128Context>();}',1)])
+derive('probe_modelopt_init_trace_cpu.cpp','probe_z128_reconstructed_plugin_init.cpp',[
+('#include "modelopt_fp8_z128_plugin.h"','#include "modelopt_fp8_z128_plugin.h"\n#include "modelopt_fp8_z128_reconstructed_plugin.h"',1),
+('int ModelOptInitCPUOperatorCalls();','int ModelOptInitCPUOperatorCalls();int ModelOptInitCPUNewZCalls();int ModelOptInitCPUOldZCalls();',1),
+('    return OwnedPlugin(new ModelOptFP8Z128Plugin','    if(route==4)return OwnedPlugin(new ModelOptFP8Z128ReconstructedPlugin(6144,5120,.5f,.25f));\n    return OwnedPlugin(new ModelOptFP8Z128Plugin',1),
+('route<4','route<5',1),
+('            value->serialize(after.data());require(before==after,','            require(ModelOptInitCPUNewZCalls()==(route==4?(mode==1?1:2):0),"Reconstructed factory route changed");\n            require(ModelOptInitCPUOldZCalls()==(route==3?(mode==1?1:2):0),"Legacy factory route changed");\n            value->serialize(after.data());require(before==after,',1),
+('calls==36&&factories==28&&successes==12&&failures==24&&clones==4','calls==45&&factories==35&&successes==15&&failures==30&&clones==5',1),
+('actual_modelopt_plugin_initialize_cpu_controls_passed','actual_reconstructed_plugin_initialize_cpu_controls_passed',1)])
+derive('modelopt_init_trace_contract.py','z128_reconstructed_plugin_init_contract.py',[
+("ROUTES={'fp8','nvfp4','fp8_m128','fp8_z128'}","ROUTES={'fp8','nvfp4','fp8_m128','fp8_z128','fp8_z128_reconstructed'}",1),
+("        elif row['route']=='fp8':","        elif row['route']=='fp8_z128_reconstructed':assert (row['rows'],row['columns'],row['policy'])==(6144,5120,0x52313238)\n        elif row['route']=='fp8':",1),
+('actual_modelopt_plugin_initialize_cpu_controls_passed','actual_reconstructed_plugin_initialize_cpu_controls_passed',1),
+("'actual_initialize_calls':36,'factory_calls':28,'successes':12,'failures':24,'cached_clone_initializations':4","'actual_initialize_calls':45,'factory_calls':35,'successes':15,'failures':30,'cached_clone_initializations':5",1),
+("'initialize_calls':36,'factory_calls':28","'initialize_calls':45,'factory_calls':35",2),
+('expected_calls=36','expected_calls=45',1),
+("q['factory_calls']==28 and q['cached_context_initializations']==8 and q['exception_returns']==16 and len(q['failures'])==24","q['factory_calls']==35 and q['cached_context_initializations']==10 and q['exception_returns']==20 and len(q['failures'])==30",1)])
+derive('run_modelopt_init_trace_cpu_contract.py','run_z128_reconstructed_plugin_init_cpu.py',[
+('qwen38_5090.modelopt_init_trace_contract','qwen38_5090.z128_reconstructed_plugin_init_contract',1),
+('actual_modelopt_initialize_CPU_policy_contracts_replayed','actual_reconstructed_plugin_initialize_CPU_policy_contracts_replayed',1),
+("'actual_plugin_initialize_calls':360,'actual_factory_stub_calls':280","'actual_plugin_initialize_calls':450,'actual_factory_stub_calls':350",2)])
+derive('build_modelopt_init_trace_cpu.bat','build_z128_reconstructed_plugin_init_cpu.bat',[
+('"%CANDIDATE%\\modelopt_fp8_z128_plugin.cpp"','"%CANDIDATE%\\modelopt_fp8_z128_plugin.cpp" "%CANDIDATE%\\modelopt_fp8_z128_reconstructed_plugin.cpp"',1),
+('modelopt_init_trace_cpu_stubs.cpp','z128_reconstructed_plugin_init_stubs.cpp',1),
+('probe_modelopt_init_trace_cpu.cpp','probe_z128_reconstructed_plugin_init.cpp',1)])
+(M/'evidence/z128-reconstructed-plugin-controls-derivation.json').write_bytes(json.dumps({'files':rows,'new_initialize_route':'fp8_z128_reconstructed','old_parser_unchanged':True,'no_GPU_calls':True},indent=2).encode())
+print('derived',len(rows),'exact CPU controls')

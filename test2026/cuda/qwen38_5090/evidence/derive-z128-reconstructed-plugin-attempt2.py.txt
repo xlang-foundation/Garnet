@@ -1,0 +1,18 @@
+from pathlib import Path
+import hashlib,json,zipfile
+W=Path(__file__).resolve().parent;R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';rows=[];sha=lambda b:hashlib.sha256(b).hexdigest()
+def derive(src,dst,changes):
+    original=(M/src).read_bytes();raw=original
+    for a,b,n in changes:assert raw.count(a.encode())==n,(src,a,raw.count(a.encode()));raw=raw.replace(a.encode(),b.encode())
+    assert not (M/dst).exists();(M/dst).write_bytes(raw);rows.append(dict(source=src,target=dst,source_sha256=sha(original),target_sha256=sha(raw),changes=[dict(before=a,after=b,count=n) for a,b,n in changes]))
+derive('build_z128_reconstructed_plugin_init_cpu.bat','build_z128_reconstructed_plugin_init_cpu_attempt2.bat',[(r'set "CANDIDATE=%METHODS%\native_modelopt_init_trace_candidate"',r'set "CANDIDATE=%SRC%\backends\tensorrt"',1)])
+derive('prepare_z128_reconstructed_plugin_build.py','prepare_z128_reconstructed_plugin_build_attempt2.py',[('z128-reconstructed-plugin-proposal.json','z128-reconstructed-plugin-proposal-attempt2.json',1),('z128-reconstructed-plugin-build-preparation.json','z128-reconstructed-plugin-build-preparation-attempt2.json',1)])
+derive('run_z128_reconstructed_plugin_build.py','run_z128_reconstructed_plugin_build_attempt2.py',[
+('z128-reconstructed-plugin-build-attempt1','z128-reconstructed-plugin-build-attempt2',1),('z128-reconstructed-plugin-build-preparation.json','z128-reconstructed-plugin-build-preparation-attempt2.json',1),('garnet-native-z128-reconstructed-plugin-attempt1.dll','garnet-native-z128-reconstructed-plugin-attempt2.dll',1),('build_z128_reconstructed_plugin_init_cpu.bat','build_z128_reconstructed_plugin_init_cpu_attempt2.bat',1),
+("'test2026.cuda.qwen38_5090.test_z128_reconstructed_plugin']","'test2026.cuda.qwen38_5090.test_z128_reconstructed_plugin','test2026.cuda.qwen38_5090.test_z128_reconstructed_plugin_retry']",1),('Six new source/route/negative controls','Seven new source/route/negative/retry controls',1)])
+derive('verify_z128_reconstructed_plugin_build.py','verify_z128_reconstructed_plugin_build_attempt2.py',[
+('z128-reconstructed-plugin-build-attempt1','z128-reconstructed-plugin-build-attempt2',1),('z128-reconstructed-plugin-build-preparation.json','z128-reconstructed-plugin-build-preparation-attempt2.json',1),("b'Ran 6 tests'","b'Ran 7 tests'",1),("'CPU_source_controls':6 if passed","'CPU_source_controls':7 if passed",1)])
+(M/'evidence/z128-reconstructed-plugin-attempt2-derivation.json').write_bytes(json.dumps({'status':'only_CPU_build_source_directory_repaired_no_plugin_factory_or_model_changes','derivations':rows,'failed_archive_sha256':'c62e40d9403e555989a5d4165a46933a23dd33872d7bc7306d5f0a153f03037f'},indent=2).encode())
+with zipfile.ZipFile(W.parent/'outputs/z128-reconstructed-plugin-build-attempt1-evidence.zip') as z:
+    name='Garnet/test2026/cuda/qwen38_5090/evidence/z128-reconstructed-plugin-build-preparation.json';(M/'evidence/z128-reconstructed-plugin-build-preparation.json').write_bytes(z.read(name))
+print('derived',len(rows),'retry methods; all43 candidate sources unchanged')

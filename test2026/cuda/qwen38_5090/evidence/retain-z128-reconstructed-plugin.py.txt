@@ -1,0 +1,44 @@
+from pathlib import Path
+import hashlib,json,zipfile
+W=Path(__file__).resolve().parent;OUT=W.parent/'outputs';R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';E=M/'evidence';P='Garnet/test2026/cuda/qwen38_5090/';sha=lambda b:hashlib.sha256(b).hexdigest();paths=[];records=[]
+def keep(name,raw):
+    target=E/name;assert not target.exists() or target.read_bytes()==raw;target.write_bytes(raw);paths.append(target.relative_to(R).as_posix())
+for attempt in (1,2):
+    job='z128-reconstructed-plugin-build-attempt'+str(attempt);archive=OUT/(job+'-evidence.zip');proof=(OUT/(job+'-verified.json')).read_bytes();assert proof==(OUT/(job+'-remote-verified.json')).read_bytes();q=json.loads(proof);assert sha(archive.read_bytes())==q['archive_sha256'] and q['source_runtime_SDK_checkpoint_CMake_restored'];keep(job+'-verified.json',proof)
+    with zipfile.ZipFile(archive) as z:
+        manifest=json.loads(z.read('evidence-manifest.json'));assert z.testzip() is None and len(z.namelist())==len(manifest['files'])+1
+        for n,h in manifest['files'].items():assert sha(z.read(n))==h
+        prepname='z128-reconstructed-plugin-build-preparation'+('-attempt2' if attempt==2 else '')+'.json';p=json.loads(z.read(P+'evidence/'+prepname));keep(prepname,z.read(P+'evidence/'+prepname));keep(job+'-evidence-manifest.json',z.read('evidence-manifest.json'))
+        base='results/'+job+'/';w=json.loads(z.read(base+'workflow.json'));assert w['source_before']==w['source_after']==p['base_files'] and w['methods']==w['methods_after']==p['methods'] and w['runtime_before']==w['runtime_after']==p['runtime'] and w['environment_before']==w['environment_after']==p['environment'] and w['cache_after_sha256']==p['cache_before_sha256'] and w['checkpoint_after']==p['checkpoints']
+        for n in z.namelist():
+            if n.startswith(base):
+                tail=n[len(base):]
+                if tail.endswith(('.json','.jsonl','.log','.txt','.map')):keep(job+'-'+tail.replace('/','-'),z.read(n))
+        for n,h in p['methods'].items():
+            local=R/n.removeprefix('Garnet/');assert sha(local.read_bytes())==h;paths.append(local.relative_to(R).as_posix())
+        rec={'job':job,'archive_sha256':q['archive_sha256'],'archive_bytes':archive.stat().st_size,'archive_members':len(z.namelist()),'paired_proof_sha256':sha(proof),'exit_code':w['exit_code'],'candidate_files':43,'source_pins':len(p['base_files']),'method_pins':len(p['methods']),'source_runtime_SDK_checkpoint_CMake_restored':True,'candidate_library_sha256':q['candidate_library_sha256'],'error':w.get('error')};records.append(rec)
+        if attempt==1:
+            assert w['exit_code']==2 and w['error']=="RuntimeError('new-init-build failed')";log=z.read(base+'new-init-build-ledger/commands.log');assert b'C1083' in log and b'modelopt_fp8_z128_reconstructed_plugin.cpp' in log
+            firstcandidate=p['candidate_files']
+        else:
+            assert w['exit_code']==0 and p['candidate_files']==firstcandidate;assert q['actual_CPU_initialize_calls']==450 and q['actual_CPU_factory_stub_calls']==350
+            wire=json.loads(z.read(base+'new-wire/report.json'));profile=json.loads(z.read(base+'new-profile/report.json'));assert wire['cross_wire_rejections']==7 and profile['cases']==158 and profile['rejections']==62
+    for suffix in ('remote-replay.log','local-replay.log'):
+        file=OUT/(job+'-'+suffix)
+        if file.exists():keep(file.name,file.read_bytes())
+for name in ('derive-z128-reconstructed-plugin.py','derive-z128-reconstructed-plugin-controls.py','package-z128-reconstructed-plugin.py','install-z128-reconstructed-plugin.py','derive-z128-reconstructed-plugin-attempt2.py','package-z128-reconstructed-plugin-attempt2.py','install-z128-reconstructed-plugin-attempt2.py','retain-z128-reconstructed-plugin.py'):keep(name+'.txt',(W/name).read_bytes())
+for name in ('z128-reconstructed-plugin-package.json','z128-reconstructed-plugin-package-attempt2.json'):keep(name,(W/name).read_bytes())
+for name in ('z128-reconstructed-plugin-local-cpu-ledger','z128-reconstructed-plugin-attempt2-local-cpu-ledger'):
+    for file in (W/name).iterdir():
+        if file.is_file():keep(name+'-'+file.name,file.read_bytes())
+result={'status':'separate_reconstructed_Z128_plugin_native_build_CPU_qualified_real_model_gate_next','attempts':records,'actual_CPU_initialize_calls':450,'actual_CPU_factory_stub_calls':350,'profile_CPU_cases':158,'profile_rejections':62,'new_plugin_wire_bytes':20,'new_plugin_marker':0x52313238,'old_plugin_marker_unchanged':0x5a313238,'wire_cross_family_rejections':7,'unchanged_candidate_source_files_across_retry':43,'existing_targets_restored':14,'new_targets_removed':29,'model_or_numerical_or_quality_or_performance_qualified':False,'two_times_target_achieved':False,'next_gate':'Actual real-input layer2 T32/T128 all73finite entries/original58T32entry parity; exact655360hiddenwords/history/state thenfullGDN/FA3/unchangedfull4096oracle/quality before benchmarks'}
+raw=json.dumps(result,indent=2).encode();keep('z128-reconstructed-plugin-build-closure.json',raw);(OUT/'Garnet-Z128-Reconstructed-Plugin-Native-Build-Verified.json').write_bytes(raw)
+title='Separate reconstructed Z128 plugin builds in actual native Garnet; real layer2 correctness pending'
+text='\n\n### '+title+'\n\n'
+text+='2026-10-26: New private ModelOptFP8Z128ReconstructedPlugin/Creator uses distinct type and20byte marker0x52313238, qualified explicit CreateModelOptFP8Z128ReconstructedContext, strict defaultoff GARNET_FP8_GDN_Z128_RECONSTRUCT requiring canonicalZ128=1 and exact B1/T128/128rows/6144x5120/logicalGDNZ. Independent reconstructed counter reset/copy/stats; old family/wire/default behavior and quantizer/enqueue/math remain exact compositions.43native/Python candidatefiles,14old/29newtargets restored after every attempt. Seven source/retry controls retain86historical assertions in explicit frozen parent-source view; this is source evidence, not new-route arithmetic admission.\n\n'
+text+='Attempt1 passed newwire34badwires/18badconstructors/23baddescriptors/11badformats/8policyrejections/7crossfamily rejections/workspace4849664bytes; next initializationCPU build failed C1083 because inherited script selected earlier private source directory lacking newpluginCPP (and mixed canonical headers). No fullnative/GPU model ran. Retain original failed source/checker and raw logs: archive '+records[0]['archive_sha256']+', pairedproof '+records[0]['paired_proof_sha256']+'. Attempt2 changes onlyCPUbuild source directory to installedsrc/backends/tensorrt plus exact attempt artifact/test bookkeeping; all43candidatefile hashes unchanged.\n\n'
+text+='Attempt2 actual remoteCPU controls pass: tenfresh tracepolicy processes450initializecalls/350CPUfactory calls, old/newroute counts, success/null/standard+nonstandardexceptions/cache/clone/wire,0GPUoperators; onlyexact1 emits90events, other9silent. Newprofile158cases/62rejections/onequalifiedselection; newandoldwirecontracts pass. Fullremote Release/MT/sm120 Garnet builds, no addedCUDAobjects, allowedunchangedkernel recomposition only; actual native/embeddedselectors andtokenizerpass. SavedDLL '+records[1]['candidate_library_sha256']+'. Archive '+records[1]['archive_sha256']+' ('+str(records[1]['archive_bytes'])+'bytes/'+str(records[1]['archive_members'])+'members), both-machine proof '+records[1]['paired_proof_sha256']+'. Source/runtime/SDK/checkpoint/CMake restored and allfailed/compiler/resource/provenance evidence retained.\n\n'
+text+='No GPUmatmul/model or newbenchmark value follows from this nativebuild. Actual realinput layer2 T32/T128/new1old0 gate is next; require full73finite/readonly/carried-state/repeat controls, retained58T32entries, all655360hiddenF32words andfinalhistory/state byteexact, thenGDN/FA3/full4096ordinary/MTP/quality before timing. INT4/4B/strongesttunedMTPbaseline/repetitions/trueconcurrency and2xdecodeANDthroughput remainunmet.\n'
+for name in ('qwen38-5090-development-log.md','qwen38-5090-implementation-task.md'):
+    target=R/'docs/research'/name;old=target.read_bytes();assert title.encode() not in old;target.write_bytes(old+text.encode());paths.append(target.relative_to(R).as_posix())
+(W/'z128-reconstructed-plugin-retained-paths.json').write_bytes(json.dumps(sorted(set(paths)),indent=2).encode());print(json.dumps({'retained_paths':len(set(paths)),'status':result['status'],'paired_proof_sha256':records[1]['paired_proof_sha256']}))

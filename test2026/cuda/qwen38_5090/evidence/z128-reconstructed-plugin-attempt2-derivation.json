@@ -1,0 +1,103 @@
+{
+  "status": "only_CPU_build_source_directory_repaired_no_plugin_factory_or_model_changes",
+  "derivations": [
+    {
+      "source": "build_z128_reconstructed_plugin_init_cpu.bat",
+      "target": "build_z128_reconstructed_plugin_init_cpu_attempt2.bat",
+      "source_sha256": "cc87616ef906e65db02d41fa4817d78dd6bafe60ea2eea296313e22fb3863345",
+      "target_sha256": "475fed32ddb4aa483b968475a0cf51f8a57d1d7a86c1193c79ca81ceeba7b7f9",
+      "changes": [
+        {
+          "before": "set \"CANDIDATE=%METHODS%\\native_modelopt_init_trace_candidate\"",
+          "after": "set \"CANDIDATE=%SRC%\\backends\\tensorrt\"",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "prepare_z128_reconstructed_plugin_build.py",
+      "target": "prepare_z128_reconstructed_plugin_build_attempt2.py",
+      "source_sha256": "49b6d8ca8647706b7b3bf39988db47543d432155104255547728dedb4bf272eb",
+      "target_sha256": "81ed456a46610ce19d822bfefe451f0ad37e9831db44668a83f8f2dcff54e05e",
+      "changes": [
+        {
+          "before": "z128-reconstructed-plugin-proposal.json",
+          "after": "z128-reconstructed-plugin-proposal-attempt2.json",
+          "count": 1
+        },
+        {
+          "before": "z128-reconstructed-plugin-build-preparation.json",
+          "after": "z128-reconstructed-plugin-build-preparation-attempt2.json",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "run_z128_reconstructed_plugin_build.py",
+      "target": "run_z128_reconstructed_plugin_build_attempt2.py",
+      "source_sha256": "8ec3ab6b01ebe11b15e92c4a40215e34e3b74a20e86004fa954a6948071a5797",
+      "target_sha256": "fd2a7ff0b7f874cd14c787c15bbd84c3c07ac2bedc1656171765e44c46cf5cc0",
+      "changes": [
+        {
+          "before": "z128-reconstructed-plugin-build-attempt1",
+          "after": "z128-reconstructed-plugin-build-attempt2",
+          "count": 1
+        },
+        {
+          "before": "z128-reconstructed-plugin-build-preparation.json",
+          "after": "z128-reconstructed-plugin-build-preparation-attempt2.json",
+          "count": 1
+        },
+        {
+          "before": "garnet-native-z128-reconstructed-plugin-attempt1.dll",
+          "after": "garnet-native-z128-reconstructed-plugin-attempt2.dll",
+          "count": 1
+        },
+        {
+          "before": "build_z128_reconstructed_plugin_init_cpu.bat",
+          "after": "build_z128_reconstructed_plugin_init_cpu_attempt2.bat",
+          "count": 1
+        },
+        {
+          "before": "'test2026.cuda.qwen38_5090.test_z128_reconstructed_plugin']",
+          "after": "'test2026.cuda.qwen38_5090.test_z128_reconstructed_plugin','test2026.cuda.qwen38_5090.test_z128_reconstructed_plugin_retry']",
+          "count": 1
+        },
+        {
+          "before": "Six new source/route/negative controls",
+          "after": "Seven new source/route/negative/retry controls",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "verify_z128_reconstructed_plugin_build.py",
+      "target": "verify_z128_reconstructed_plugin_build_attempt2.py",
+      "source_sha256": "0779e6e4dd061e24955b8a76a5c57386ecf00b526b4fd945cb4bd3989c3796c4",
+      "target_sha256": "fd780aacf73ff11667a55ed29f79c444631818e933f9478e77e2b2eb629c799b",
+      "changes": [
+        {
+          "before": "z128-reconstructed-plugin-build-attempt1",
+          "after": "z128-reconstructed-plugin-build-attempt2",
+          "count": 1
+        },
+        {
+          "before": "z128-reconstructed-plugin-build-preparation.json",
+          "after": "z128-reconstructed-plugin-build-preparation-attempt2.json",
+          "count": 1
+        },
+        {
+          "before": "b'Ran 6 tests'",
+          "after": "b'Ran 7 tests'",
+          "count": 1
+        },
+        {
+          "before": "'CPU_source_controls':6 if passed",
+          "after": "'CPU_source_controls':7 if passed",
+          "count": 1
+        }
+      ]
+    }
+  ],
+  "failed_archive_sha256": "c62e40d9403e555989a5d4165a46933a23dd33872d7bc7306d5f0a153f03037f"
+}
