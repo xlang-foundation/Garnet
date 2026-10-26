@@ -1,0 +1,76 @@
+{
+  "status": "real_fp8_m128_checked8mib_algorithm_control_replayed_on_both_machines",
+  "studies": {
+    "prefill128-fp8-projection-attempt1": {
+      "status": "prefill128_fp8_projection_failure_preserved",
+      "archive_sha256": "72f704a39d4ce59f997173763bebf4b45a2329add7dfd724db19767bfa4a8880",
+      "archive_bytes": 11047914,
+      "archive_members": 56,
+      "proof_pair_sha256": "deeac880675ade77395cdde2a31a2d03cf3c6ffff4a47cae7af313afd6ddfc91",
+      "source_pins": 765,
+      "runtime_pins": 6,
+      "selected_sdk_tool_environment_pins": 20,
+      "owner_exit_code": 2,
+      "runtime_library_unchanged": true
+    },
+    "prefill128-fp8-workspace8-attempt1": {
+      "status": "prefill128_fp8_real_projection_replayed",
+      "archive_sha256": "23799699c3a5bc81e60fa529f614db29e8b6c95d02313b5d1998afa23e5f9026",
+      "archive_bytes": 13157388,
+      "archive_members": 62,
+      "proof_pair_sha256": "281d6c5ce91ab234f79b947402201ecc3a75abfb9b65f97e790804e990d91641",
+      "source_pins": 770,
+      "runtime_pins": 6,
+      "selected_sdk_tool_environment_pins": 20,
+      "owner_exit_code": 0,
+      "runtime_library_unchanged": true
+    }
+  },
+  "real_fixture": "Actual retained layer0 GDN output projection weights and16real token rows, replicated identically for32/128; not the full3968prompt activation sequence",
+  "default_algorithm_ids": [
+    35,
+    67,
+    67
+  ],
+  "shared_algorithm_ids": [
+    35,
+    35,
+    35
+  ],
+  "default128_different_bf16_output_words_each_repeat": [
+    64,
+    64
+  ],
+  "shared128_different_bf16_output_words_each_repeat": [
+    0,
+    0
+  ],
+  "checked_m128_workspace_required_bytes": 5246879,
+  "shared_m128_workspace_supplied_bytes": 8388608,
+  "all_other_calls_workspace_bytes": 4194304,
+  "bf16_output_words_independently_replayed": 3604480,
+  "input_cast_and_fp8_quantization_independently_replayed": true,
+  "original4mib_failure_preserved": true,
+  "application_source_runtime_sdk_and_fixture_unchanged": true,
+  "native_m128_policy_integrated": false,
+  "full_model_mismatch_cause_established": false,
+  "model_or_quality_or_performance_qualified": false,
+  "two_times_target_achieved": false,
+  "next_plan": {
+    "status": "m128_fp8_native_policy_implementation_pending",
+    "goal_unchanged": "Original>=2xfaster-reference matched decode AND concurrency throughput; halfTTFT extra; mixed NVFP4/FP8/INT4/4B, strongest feasible refs, complete quality/performance evidence still required",
+    "candidate_scope": "Start with the tested GDN output projection geometry only: M128,N5120,K6144, pinned cuBLASLt130400/SM120, checked M16 algorithm35,8MiB BLAS scratch plus aligned quantized input. Do not extend untested query geometry or existing M32 policy guards.",
+    "implementation_steps": [
+      "Add separate modelopt_fp8_m128_canonical.h/.cpp context/helper with strict SM120/version/geometry/scales/workspace guards; obtain the same M16 algorithm using the original4MiB preference, AlgoCheck it forM128 and provide8MiB. Keep the existing helper body and M32 guard unchanged.",
+      "Add a distinct TensorRT M128 FP8 plugin/creator/wire identity. ExactM128 N5120 K6144 profile; finite positive scales;8MiB BLAS plus aligned activation bytes; old/new wire cross-rejections, clone/namespace/serialization/shape/format/enqueue failure contracts. Existing FP8 plugin identity and 16/20byte legacy wire stay unchanged.",
+      "Add strict default-off GARNET_FP8_GDN_M128_CANONICAL selection only for pinned logical .linear_attn.out_proj.weight at128flattened input rows. Preserve old M32 flags, source guards and all default paths. Confirm actual selection via explicit graph metadata/counters and safe engine-cache identity/fresh owned namespace before model testing.",
+      "Private local CPU object compilation only, then preserved-DLL native candidate build on5090 using fixed study build directory. Actual plugin CPU contracts, old native selector/tokenizer regressions and source/runtime/SDK restoration; retain failed candidates and raw logs.",
+      "Retry original strict six3968+128 ordinary/MTP text/image/reset-repeat model cases with pairedT128target/T4decode/T16draft, full states/raw vectors/IDs against untouched1a1d T32 oracle. No tolerance or retained-ID relaxation. If another boundary remains, independently control that actual projection/operator before extending policy.",
+      "Only after model gates, run805quality and matched HTTP metrics with warmup/concurrency/memory sampling; update all charts from actual verified results. Retain B8 arithmetic work, tuned/MTP/repeated references, matched INT4/4B and all unmet objectives."
+    ],
+    "full_model_mismatch_cause_established": false,
+    "native_policy_integrated": false,
+    "performance_admitted": false,
+    "two_times_target_achieved": false
+  }
+}

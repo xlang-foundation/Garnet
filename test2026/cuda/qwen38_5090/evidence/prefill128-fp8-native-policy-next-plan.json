@@ -1,0 +1,17 @@
+{
+  "status": "m128_fp8_native_policy_implementation_pending",
+  "goal_unchanged": "Original>=2xfaster-reference matched decode AND concurrency throughput; halfTTFT extra; mixed NVFP4/FP8/INT4/4B, strongest feasible refs, complete quality/performance evidence still required",
+  "candidate_scope": "Start with the tested GDN output projection geometry only: M128,N5120,K6144, pinned cuBLASLt130400/SM120, checked M16 algorithm35,8MiB BLAS scratch plus aligned quantized input. Do not extend untested query geometry or existing M32 policy guards.",
+  "implementation_steps": [
+    "Add separate modelopt_fp8_m128_canonical.h/.cpp context/helper with strict SM120/version/geometry/scales/workspace guards; obtain the same M16 algorithm using the original4MiB preference, AlgoCheck it forM128 and provide8MiB. Keep the existing helper body and M32 guard unchanged.",
+    "Add a distinct TensorRT M128 FP8 plugin/creator/wire identity. ExactM128 N5120 K6144 profile; finite positive scales;8MiB BLAS plus aligned activation bytes; old/new wire cross-rejections, clone/namespace/serialization/shape/format/enqueue failure contracts. Existing FP8 plugin identity and 16/20byte legacy wire stay unchanged.",
+    "Add strict default-off GARNET_FP8_GDN_M128_CANONICAL selection only for pinned logical .linear_attn.out_proj.weight at128flattened input rows. Preserve old M32 flags, source guards and all default paths. Confirm actual selection via explicit graph metadata/counters and safe engine-cache identity/fresh owned namespace before model testing.",
+    "Private local CPU object compilation only, then preserved-DLL native candidate build on5090 using fixed study build directory. Actual plugin CPU contracts, old native selector/tokenizer regressions and source/runtime/SDK restoration; retain failed candidates and raw logs.",
+    "Retry original strict six3968+128 ordinary/MTP text/image/reset-repeat model cases with pairedT128target/T4decode/T16draft, full states/raw vectors/IDs against untouched1a1d T32 oracle. No tolerance or retained-ID relaxation. If another boundary remains, independently control that actual projection/operator before extending policy.",
+    "Only after model gates, run805quality and matched HTTP metrics with warmup/concurrency/memory sampling; update all charts from actual verified results. Retain B8 arithmetic work, tuned/MTP/repeated references, matched INT4/4B and all unmet objectives."
+  ],
+  "full_model_mismatch_cause_established": false,
+  "native_policy_integrated": false,
+  "performance_admitted": false,
+  "two_times_target_achieved": false
+}

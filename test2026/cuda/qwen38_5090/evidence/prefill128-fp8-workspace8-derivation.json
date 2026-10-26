@@ -1,0 +1,153 @@
+{
+  "status": "m128_shared8mib_control_gpu_unrun",
+  "files": [
+    {
+      "source": "actual_prefill128_fp8_projection.cu",
+      "source_sha256": "147db041b5799d9652f8c8ebee3a54183466a7c554c30f79742fa3f0630a48fa",
+      "target": "actual_prefill128_fp8_workspace8.cu",
+      "target_sha256": "2cd4cea2e87bd6e1c7d2d26f1d32876680f99333755bc0bbe725ed26a65913bf",
+      "replacements": [
+        {
+          "old": "Device w(weights.size()), workspace(4ULL << 20);",
+          "new": "Device w(weights.size()), workspace(8ULL << 20);",
+          "count": 1
+        },
+        {
+          "old": "workspace.p, 4ULL << 20, nullptr,nativeCanonical&&m==32);",
+          "new": "workspace.p, sameAlgorithm && m == 128 ? (8ULL << 20) : (4ULL << 20), nullptr,nativeCanonical&&m==32);",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "build_prefill128_fp8_projection.bat",
+      "source_sha256": "744c0624d225a7a79942cf261a749a6b624a03045890e1aa6dec124546b589b6",
+      "target": "build_prefill128_fp8_workspace8.bat",
+      "target_sha256": "44ee744123c87deaa44c4dc79432acb0d2bf515433089b2fef262d267fbf9514",
+      "replacements": [
+        {
+          "old": "actual_prefill128_fp8_projection.cu",
+          "new": "actual_prefill128_fp8_workspace8.cu",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "run_prefill128_fp8_projection.py",
+      "source_sha256": "cfb24d4827e88db41e293fcef3e6908bdce907f9357ad63ae9cbfa7525bee828",
+      "target": "run_prefill128_fp8_workspace8.py",
+      "target_sha256": "8f80716320d904e3752fe77fb685b18422bd13a23dbfc079a7557648e26c1fe0",
+      "replacements": [
+        {
+          "old": "JOB='prefill128-fp8-projection-attempt1'",
+          "new": "JOB='prefill128-fp8-workspace8-attempt1'",
+          "count": 1
+        },
+        {
+          "old": "NAMES=('actual_prefill128_fp8_projection.cu','actual_layer0_fp8_control.cu','build_prefill128_fp8_projection.bat','run_prefill128_fp8_projection.py','verify_prefill128_fp8_projection.py','prefill128_fp8_projection.py','test_prefill128_fp8_projection.py','evidence/prefill128-fp8-projection-derivation.json')",
+          "new": "NAMES=('actual_prefill128_fp8_workspace8.cu','actual_prefill128_fp8_projection.cu','actual_layer0_fp8_control.cu','build_prefill128_fp8_workspace8.bat','run_prefill128_fp8_workspace8.py','verify_prefill128_fp8_workspace8.py','prefill128_fp8_projection.py','test_prefill128_fp8_projection.py','test_prefill128_fp8_workspace8.py','evidence/prefill128-fp8-projection-derivation.json','evidence/prefill128-fp8-workspace8-derivation.json')",
+          "count": 1
+        },
+        {
+          "old": "def prepare():",
+          "new": "PRIMITIVES=('src/backends/tensorrt/modelopt_cublaslt.cpp','src/backends/tensorrt/modelopt_cublaslt.h','src/cuda/modelopt_fp8.cu','src/cuda/modelopt_fp8.cuh')\n\ndef primitive_source_hashes(repo):\n    return {'Garnet/'+name:sha(repo/name) for name in PRIMITIVES}\n\ndef prepare():",
+          "count": 1
+        },
+        {
+          "old": "files={**w['source_after_sha256'],**methods}",
+          "new": "files={**w['source_after_sha256'],**methods,**primitive_source_hashes(ROOT/'Garnet')}",
+          "count": 1
+        },
+        {
+          "old": "    p={'status':",
+          "new": "    previous=json.loads((results/'prefill128-fp8-projection-attempt1-verified.json').read_bytes())\n    assert previous['status']=='prefill128_fp8_projection_failure_preserved' and previous['workspace_failure']['required_workspace_bytes']==5246879\n    assert sha(results/'prefill128-fp8-projection-attempt1-evidence.zip')==previous['archive_sha256']\n    parents={name:{'proof_sha256':sha(results/(name+'-verified.json')),'archive_sha256':data['archive_sha256'],'status':data['status']} for name,data in ((FAILED,q),(OLD,old))}\n    parents['prefill128-fp8-projection-attempt1']={'proof_sha256':sha(results/'prefill128-fp8-projection-attempt1-verified.json'),'archive_sha256':previous['archive_sha256'],'status':previous['status']}\n    p={'status':",
+          "count": 1
+        },
+        {
+          "old": "'parents':{name:{'proof_sha256':sha(results/(name+'-verified.json')),'archive_sha256':data['archive_sha256'],'status':data['status']} for name,data in ((FAILED,q),(OLD,old))}",
+          "new": "'parents':parents",
+          "count": 1
+        },
+        {
+          "old": "prefill128-fp8-projection-preparation.json",
+          "new": "prefill128-fp8-workspace8-preparation.json",
+          "count": 2
+        },
+        {
+          "old": "'cpu_tests':4",
+          "new": "'cpu_tests':6",
+          "count": 1
+        },
+        {
+          "old": "'test2026.cuda.qwen38_5090.test_prefill128_fp8_projection']",
+          "new": "'test2026.cuda.qwen38_5090.test_prefill128_fp8_projection','test2026.cuda.qwen38_5090.test_prefill128_fp8_workspace8']",
+          "count": 1
+        },
+        {
+          "old": "Four synthetic input/last-output-word/replication/provenance faults; no model",
+          "new": "Six synthetic input/word/provenance/workspace and complete-native-source closure faults; no model",
+          "count": 1
+        },
+        {
+          "old": "build_prefill128_fp8_projection.bat",
+          "new": "build_prefill128_fp8_workspace8.bat",
+          "count": 1
+        },
+        {
+          "old": "Untimed standalone real-layer0 FP8 matrix control only.",
+          "new": "Untimed standalone real-layer0 FP8 matrix control only. Preserve failed4MiB attempt. Allocate8MiB privately; only sharedM128 call receives8MiB, all M16/M32 and defaultM128 calls retain4MiB. Declare every native CUDA/header source before compilation.",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "verify_prefill128_fp8_projection.py",
+      "source_sha256": "ef4d73910cde8a6d27ecab82c5d35295bd59e9eeb3df8ac01f5adbd56962c37e",
+      "target": "verify_prefill128_fp8_workspace8.py",
+      "target_sha256": "f9c8404a153d3359072e3f2695e84942becc1d64514d6905803301bb89db194a",
+      "replacements": [
+        {
+          "old": "JOB='prefill128-fp8-projection-attempt1'",
+          "new": "JOB='prefill128-fp8-workspace8-attempt1'",
+          "count": 1
+        },
+        {
+          "old": "prefill128-fp8-projection-preparation.json",
+          "new": "prefill128-fp8-workspace8-preparation.json",
+          "count": 1
+        },
+        {
+          "old": "('prefill128_fp8_projection.py','verify_prefill128_fp8_projection.py')",
+          "new": "('prefill128_fp8_projection.py','verify_prefill128_fp8_workspace8.py')",
+          "count": 1
+        },
+        {
+          "old": "record=doc(METHODS+'evidence/prefill128-fp8-projection-derivation.json')",
+          "new": "record=doc(METHODS+'evidence/prefill128-fp8-workspace8-derivation.json')['files'][0]",
+          "count": 1
+        },
+        {
+          "old": "b'Ran 4 tests'",
+          "new": "b'Ran 6 tests'",
+          "count": 1
+        },
+        {
+          "old": "assert len(selected)==6 and all(row[:2]==('0','0') and int(row[3])==4<<20 for row in selected)",
+          "new": "assert len(selected)==6 and all(row[:2]==('0','0') and int(row[3])==(8<<20 if mode=='shared' and i>=4 else 4<<20) for i,row in enumerate(selected))",
+          "count": 1
+        },
+        {
+          "old": "assert all(row==selected[0] for row in selected)",
+          "new": "assert all(row[:3]+row[4:]==selected[0][:3]+selected[0][4:] for row in selected)",
+          "count": 1
+        },
+        {
+          "old": "assert len(checks)==4 and all(a==b=='0' and int(c)<=4<<20 for a,b,c in checks)",
+          "new": "assert len(checks)==4 and all(a==b=='0' and int(c)<=(4<<20 if i<2 else 8<<20) for i,(a,b,c) in enumerate(checks))",
+          "count": 1
+        }
+      ]
+    }
+  ],
+  "scope": "Preserve original4MiB rejection and replay repair. Only private allocation and sharedM128 call workspace8MiB; baselineM16/M32/defaultM128 remain4MiB with unchanged arithmetic/inputs/outputs. Distinct job/method/prep paths; complete CUDA primitive source declaration. No GarnetDLL/model/serving change or performance claim."
+}

@@ -1,0 +1,14 @@
+from pathlib import Path
+import hashlib,json,os,sys,zipfile
+work=Path(__file__).resolve().parent;repo=Path('D:/CantorAI/work/qwen38-5090');m=repo/'test2026/cuda/qwen38_5090';sys.path[:0]=[str(repo),str(m)]
+from run_prefill128_fp8_projection import NAMES
+sha=lambda raw:hashlib.sha256(raw).hexdigest();files={'Garnet/test2026/cuda/qwen38_5090/'+name:(m/name).read_bytes() for name in NAMES};assert len(files)==8
+import test2026.cuda.qwen38_5090.run_logged as ledger
+ledger.source_identity=lambda:{'scope':'Explicit owned standalone FP8 control sources; unrelated untracked files excluded','owned_source_sha256':{name:sha(raw) for name,raw in files.items()}}
+os.chdir(repo);code=ledger.run([sys.executable,'-m','unittest','test2026.cuda.qwen38_5090.test_prefill128_fp8_projection'],work/'prefill128-fp8-projection-local-cpu-ledger','correctness','Four synthetic full-word/input-cast/replication/provenance fault controls; no local runtime/GPU',[m/name for name in NAMES]);assert code==0
+bundle=work/'prefill128-fp8-projection-methods.zip';assert not bundle.exists()
+with zipfile.ZipFile(bundle,'x',zipfile.ZIP_DEFLATED) as z:
+    for name,raw in files.items():z.writestr(name,raw)
+    z.writestr('install-manifest.json',json.dumps({'files':{name:sha(raw) for name,raw in files.items()}},indent=2))
+r={'status':'prefill128_fp8_projection_packaged_gpu_unrun','sha256':sha(bundle.read_bytes()),'bytes':bundle.stat().st_size,'targets':8,'cpu_tests':4}
+(work/'prefill128-fp8-projection-package.json').write_bytes(json.dumps(r,indent=2).encode());print(json.dumps(r))

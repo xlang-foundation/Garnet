@@ -1,0 +1,48 @@
+from pathlib import Path
+import hashlib,json
+m=Path('D:/CantorAI/work/qwen38-5090/test2026/cuda/qwen38_5090');sha=lambda raw:hashlib.sha256(raw).hexdigest();records=[]
+def derive(source,target,steps):
+    raw=(m/source).read_bytes();text=raw.decode();saved=[]
+    for old,new,count in steps:
+        assert text.count(old)==count,(source,old,text.count(old));text=text.replace(old,new);saved.append({'old':old,'new':new,'count':count})
+    path=m/target;assert not path.exists();path.write_bytes(text.encode());records.append({'source':source,'source_sha256':sha(raw),'target':target,'target_sha256':sha(text.encode()),'replacements':saved})
+derive('actual_prefill128_fp8_projection.cu','actual_prefill128_fp8_workspace8.cu',[
+ ('Device w(weights.size()), workspace(4ULL << 20);','Device w(weights.size()), workspace(8ULL << 20);',1),
+ ('workspace.p, 4ULL << 20, nullptr,nativeCanonical&&m==32);','workspace.p, sameAlgorithm && m == 128 ? (8ULL << 20) : (4ULL << 20), nullptr,nativeCanonical&&m==32);',1)])
+derive('build_prefill128_fp8_projection.bat','build_prefill128_fp8_workspace8.bat',[('actual_prefill128_fp8_projection.cu','actual_prefill128_fp8_workspace8.cu',1)])
+source=(m/'run_prefill128_fp8_projection.py').read_text();names=next(line for line in source.splitlines() if line.startswith('NAMES='))
+newnames="NAMES=('actual_prefill128_fp8_workspace8.cu','actual_prefill128_fp8_projection.cu','actual_layer0_fp8_control.cu','build_prefill128_fp8_workspace8.bat','run_prefill128_fp8_workspace8.py','verify_prefill128_fp8_workspace8.py','prefill128_fp8_projection.py','test_prefill128_fp8_projection.py','test_prefill128_fp8_workspace8.py','evidence/prefill128-fp8-projection-derivation.json','evidence/prefill128-fp8-workspace8-derivation.json')"
+parents="{name:{'proof_sha256':sha(results/(name+'-verified.json')),'archive_sha256':data['archive_sha256'],'status':data['status']} for name,data in ((FAILED,q),(OLD,old))}"
+derive('run_prefill128_fp8_projection.py','run_prefill128_fp8_workspace8.py',[
+ ("JOB='prefill128-fp8-projection-attempt1'","JOB='prefill128-fp8-workspace8-attempt1'",1),
+ (names,newnames,1),
+ ("def prepare():", """PRIMITIVES=('src/backends/tensorrt/modelopt_cublaslt.cpp','src/backends/tensorrt/modelopt_cublaslt.h','src/cuda/modelopt_fp8.cu','src/cuda/modelopt_fp8.cuh')
+
+def primitive_source_hashes(repo):
+    return {'Garnet/'+name:sha(repo/name) for name in PRIMITIVES}
+
+def prepare():""",1),
+ ("files={**w['source_after_sha256'],**methods}","files={**w['source_after_sha256'],**methods,**primitive_source_hashes(ROOT/'Garnet')}",1),
+ ("    p={'status':", """    previous=json.loads((results/'prefill128-fp8-projection-attempt1-verified.json').read_bytes())
+    assert previous['status']=='prefill128_fp8_projection_failure_preserved' and previous['workspace_failure']['required_workspace_bytes']==5246879
+    assert sha(results/'prefill128-fp8-projection-attempt1-evidence.zip')==previous['archive_sha256']
+    parents="""+parents+"""
+    parents['prefill128-fp8-projection-attempt1']={'proof_sha256':sha(results/'prefill128-fp8-projection-attempt1-verified.json'),'archive_sha256':previous['archive_sha256'],'status':previous['status']}
+    p={'status':""",1),
+ ("'parents':"+parents,"'parents':parents",1),
+ ('prefill128-fp8-projection-preparation.json','prefill128-fp8-workspace8-preparation.json',2),
+ ("'cpu_tests':4","'cpu_tests':6",1),
+ ("'test2026.cuda.qwen38_5090.test_prefill128_fp8_projection']","'test2026.cuda.qwen38_5090.test_prefill128_fp8_projection','test2026.cuda.qwen38_5090.test_prefill128_fp8_workspace8']",1),
+ ('Four synthetic input/last-output-word/replication/provenance faults; no model','Six synthetic input/word/provenance/workspace and complete-native-source closure faults; no model',1),
+ ('build_prefill128_fp8_projection.bat','build_prefill128_fp8_workspace8.bat',1),
+ ('Untimed standalone real-layer0 FP8 matrix control only.','Untimed standalone real-layer0 FP8 matrix control only. Preserve failed4MiB attempt. Allocate8MiB privately; only sharedM128 call receives8MiB, all M16/M32 and defaultM128 calls retain4MiB. Declare every native CUDA/header source before compilation.',1)])
+derive('verify_prefill128_fp8_projection.py','verify_prefill128_fp8_workspace8.py',[
+ ("JOB='prefill128-fp8-projection-attempt1'","JOB='prefill128-fp8-workspace8-attempt1'",1),
+ ('prefill128-fp8-projection-preparation.json','prefill128-fp8-workspace8-preparation.json',1),
+ ("('prefill128_fp8_projection.py','verify_prefill128_fp8_projection.py')","('prefill128_fp8_projection.py','verify_prefill128_fp8_workspace8.py')",1),
+ ("record=doc(METHODS+'evidence/prefill128-fp8-projection-derivation.json')","record=doc(METHODS+'evidence/prefill128-fp8-workspace8-derivation.json')['files'][0]",1),
+ ("b'Ran 4 tests'","b'Ran 6 tests'",1),
+ ("assert len(selected)==6 and all(row[:2]==('0','0') and int(row[3])==4<<20 for row in selected)","assert len(selected)==6 and all(row[:2]==('0','0') and int(row[3])==(8<<20 if mode=='shared' and i>=4 else 4<<20) for i,row in enumerate(selected))",1),
+ ("assert all(row==selected[0] for row in selected)","assert all(row[:3]+row[4:]==selected[0][:3]+selected[0][4:] for row in selected)",1),
+ ("assert len(checks)==4 and all(a==b=='0' and int(c)<=4<<20 for a,b,c in checks)","assert len(checks)==4 and all(a==b=='0' and int(c)<=(4<<20 if i<2 else 8<<20) for i,(a,b,c) in enumerate(checks))",1)])
+path=m/'evidence/prefill128-fp8-workspace8-derivation.json';assert not path.exists();path.write_bytes(json.dumps({'status':'m128_shared8mib_control_gpu_unrun','files':records,'scope':'Preserve original4MiB rejection and replay repair. Only private allocation and sharedM128 call workspace8MiB; baselineM16/M32/defaultM128 remain4MiB with unchanged arithmetic/inputs/outputs. Distinct job/method/prep paths; complete CUDA primitive source declaration. No GarnetDLL/model/serving change or performance claim.'},indent=2).encode());print(json.dumps({'derived_methods':len(records)}))

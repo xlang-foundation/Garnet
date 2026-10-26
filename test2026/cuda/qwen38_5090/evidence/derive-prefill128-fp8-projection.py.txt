@@ -1,0 +1,29 @@
+from pathlib import Path
+import hashlib,json
+m=Path('D:/CantorAI/work/qwen38-5090/test2026/cuda/qwen38_5090');raw=(m/'actual_layer0_fp8_control.cu').read_bytes();text=raw.decode();steps=[];sha=lambda raw:hashlib.sha256(raw).hexdigest()
+target=m/'actual_prefill128_fp8_projection.cu';p=m/'evidence/prefill128-fp8-projection-derivation.json'
+if target.exists():assert p.exists() and sha(target.read_bytes())==json.loads(p.read_bytes())['target_sha256']
+for old,new,count in (
+ ('#include <cuda_runtime.h>', '#define WIN32_LEAN_AND_MEAN\n#define NOMINMAX\n#include <windows.h>\n#include <cuda_runtime.h>',1),
+ ('printf("CUBLASLT_VERSION %zu\\n", cublasLtGetVersion());',r'''printf("CUBLASLT_VERSION %zu\n", cublasLtGetVersion());
+        char loaded[MAX_PATH]{};
+        const auto length = GetModuleFileNameA(GetModuleHandleA("cublasLt64_13.dll"), loaded, MAX_PATH);
+        if (!length || length >= MAX_PATH) throw std::runtime_error("Cannot identify actual cuBLASLt DLL");
+        for (DWORD i = 0; i < length; ++i) if (loaded[i] == '\\') loaded[i] = '/';
+        printf("CUBLASLT_DLL %s\n", loaded);''',1),
+ ('sameAlgorithm && m == 32','sameAlgorithm && (m == 32 || m == 128)',1),
+ ('for (int m : {16, 32})','for (int m : {16, 32, 128})',1),
+ ('const auto input = Read(fixture + "input-m" + std::to_string(m) + "-k6144.f32", m * k * 4);\n            const auto expected = Read(fixture + "expected-m" + std::to_string(m) + "-n5120.bf16", m * n * 2);',
+  'const int sourceM = m == 128 ? 16 : m;\n            auto input = Read(fixture + "input-m" + std::to_string(sourceM) + "-k6144.f32", sourceM * k * 4);\n            auto expected = Read(fixture + "expected-m" + std::to_string(sourceM) + "-n5120.bf16", sourceM * n * 2);\n            if (m == 128) {\n                const auto seed = input, reference = expected;\n                for (int copy = 1; copy < 8; ++copy) { input.insert(input.end(), seed.begin(), seed.end()); expected.insert(expected.end(), reference.begin(), reference.end()); }\n            }',1),
+ ('(sameAlgorithm || nativeCanonical) && m == 32','(sameAlgorithm || nativeCanonical) && (m == 32 || m == 128)',1),
+ ('} else changed = archiveChanged;','} else changed = m == 128 ? 0 : archiveChanged; // Default M128 is an observation, not an admitted equivalence.',1),
+ ('ARCHIVED_OUTPUT_DELTA','REFERENCE_OUTPUT_DELTA',1),
+ ('EXACT_CONTROL','GATED_CONTROL',1),
+ ('SHARED_ALGORITHM_CANDIDATE_FAILED','M16_ALGORITHM_M128_CANDIDATE_FAILED',1),
+ ('SHARED_ALGORITHM_CANDIDATE_PASSED','M16_ALGORITHM_M128_CANDIDATE_PASSED',1),
+ ('REAL_PROJECTION_CONTROL_FAILED','M16_M32_BASELINE_AND_M128_OBSERVATION_FAILED',1),
+ ('REAL_PROJECTION_CONTROL_PASSED','M16_M32_BASELINE_AND_M128_OBSERVATION_PASSED',1)):
+    assert text.count(old)==count,(old,text.count(old));text=text.replace(old,new);steps.append({'old':old,'new':new,'count':count})
+target.write_bytes(text.encode())
+record={'status':'untimed_real_fp8_m128_projection_gpu_unrun','source':'actual_layer0_fp8_control.cu','source_sha256':sha(raw),'target':target.name,'target_sha256':sha(text.encode()),'replacements':steps,'scope':'Same native helper, actual old M16/M32 real fixture and repetitions. AddM128 by exact8fold actualM16input replication; require oldcontrol16/32 reproduction, retain default128 differences as observations, then AlgoCheck-qualified M16algorithm on32/128 with every BF16 output word exact. No native DLL/model/serving/timing admission.'}
+p.write_bytes(json.dumps(record,indent=2).encode());print(json.dumps({'status':record['status'],'target_sha256':record['target_sha256']}))

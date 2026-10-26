@@ -1,0 +1,29 @@
+{
+  "source": "verify_prefill128_fp8_projection.py",
+  "source_sha256": "ef4d73910cde8a6d27ecab82c5d35295bd59e9eeb3df8ac01f5adbd56962c37e",
+  "target": "verify_prefill128_fp8_projection_bound.py",
+  "target_sha256": "2520b9e5409174007b12d6fe8e78b3c80720698cc2208dda10f179e63bc355da",
+  "replacements": [
+    {
+      "old": "import argparse,hashlib,json,re,sys,zipfile",
+      "new": "import argparse,hashlib,json,re,struct,sys,zipfile",
+      "count": 1
+    },
+    {
+      "old": "from test2026.cuda.qwen38_5090.prefill128_fp8_projection import replay_projection",
+      "new": "from test2026.cuda.qwen38_5090.prefill128_fp8_projection import replay_projection,input_oracle",
+      "count": 1
+    },
+    {
+      "old": "        for name in ('src/backends/tensorrt/modelopt_cublaslt.cpp','src/backends/tensorrt/modelopt_cublaslt.h','src/cuda/modelopt_fp8.cu','src/cuda/modelopt_fp8.cuh'):\n            assert sha(z.read('Garnet/'+name))==p['files']['Garnet/'+name]",
+      "new": "        extra_sources={}\n        for name in ('src/backends/tensorrt/modelopt_cublaslt.cpp','src/backends/tensorrt/modelopt_cublaslt.h','src/cuda/modelopt_fp8.cu','src/cuda/modelopt_fp8.cuh'):\n            key='Garnet/'+name;digest=sha(z.read(key))\n            if key in p['files']:assert digest==p['files'][key]\n            else:extra_sources[key]=digest\n            for phase in ('cpu','build','control','shared'):\n                events=[json.loads(line) for line in z.read(base+phase+'-ledger/commands.jsonl').splitlines()]\n                assert len(events)==2 and events[0]['event']=='started' and events[1]['event']=='finished'\n                matches=[h for path,h in events[0]['artifact_sha256'].items() if path.replace('\\\\','/').lower()=='d:/cantorai/5090-study-20261023/'+key.lower()]\n                assert matches==[digest]\n        assert set(extra_sources)=={'Garnet/src/cuda/modelopt_fp8.cu','Garnet/src/cuda/modelopt_fp8.cuh'}",
+      "count": 1
+    },
+    {
+      "old": "        result={'status':",
+      "new": "        workspace_failure=None\n        if not passed:\n            assert w['exit_code']==2 and w['control_exit_code']==0 and w['shared_exit_code']==2 and w['status']=='failed'\n            read_fixture=lambda name:z.read(fixture+name)\n            replayed['control']=replay_projection(read_fixture,lambda name:z.read(base+'control/'+name),'control')\n            assert replayed['control']==w['control_replay']\n            source=read_fixture('input-m16-k6144.f32');expected=read_fixture('expected-m16-n5120.bf16');scale=struct.unpack('<f',read_fixture('input-scale.f32'))[0]\n            shared_words=0\n            for m in (16,32,128):\n                cast,quantized=input_oracle(source*(m//16),scale)\n                assert z.read(base+'shared/cast-m'+str(m)+'.bf16')==cast and z.read(base+'shared/quantized-m'+str(m)+'.e4m3')==quantized\n                for repeat in (0,1):\n                    name=base+'shared/actual-m'+str(m)+'-r'+str(repeat)+'.bf16'\n                    if m==128:assert name not in manifest['files']\n                    else:assert z.read(name)==expected*(m//16);shared_words+=m*5120\n            log=z.read(base+'shared-ledger/commands.log').decode();checks=re.findall(r'SHARED_ALGORITHM_CHECK status=(\\d+) state=(\\d+) workspace=(\\d+)',log)\n            assert checks==[('0','0','1311839'),('0','0','1311839'),('0','0','5246879')]\n            assert 5246879>4<<20 and 'ERROR Native helper matmul failed' in log\n            shared=re.findall(r'ALGORITHM status=0 id_query=0 id=(\\d+) workspace=4194304 opaque=([0-9a-f]+)',log)\n            assert len(shared)==4 and all(row==shared[0] for row in shared) and shared[0][0]=='35'\n            for phase in ('control','shared'):\n                log=z.read(base+phase+'-ledger/commands.log').decode();assert 'CUBLASLT_VERSION 130400' in log and 'CUBLASLT_DLL D:/CantorAI/5090-study-20261023/tools/cuda13/nvidia/cu13/bin/x86_64/cublasLt64_13.dll' in log\n            workspace_failure={'shared_m16_m32_output_words_exact':shared_words,'shared_m128_cast_and_quantized_input_exact':True,'shared_m128_matmul_executed':False,'algo_check_status':0,'algo_check_state':0,'required_workspace_bytes':5246879,'allowed_workspace_bytes':4194304,'default_m128_changed_words_each_repeat':[row['different_from_repeated_m16_output_words'] for row in replayed['control']['cases'] if row['m']==128],'cause_of_standalone_rejection':'Declared4MiB workspace budget rejected valid checked algorithm needing5246879bytes; not a hardware or library unsupported claim','full_model_cause_established':False}\n        result={'workspace_failure':workspace_failure,'original_unified_inventory_missing_primitives':extra_sources,'all_raw_native_source_artifact_hashes_bound_across_all_four_processes':True,'external_bound_verifier_sha256':sha(Path(__file__).read_bytes()),'status':",
+      "count": 1
+    }
+  ],
+  "scope": "OriginalcheckerKeyError retained. External replay binds two native primitive sources omitted from unified inventory using all four original process-start artifact digests and archived final raw bodies. All original predicates retained; additionally replay complete default outputs and actually saved shared16/32 outputs and128input bytes; qualify only the observed workspace-budget rejection, no M128 execution or model/performance admission."
+}

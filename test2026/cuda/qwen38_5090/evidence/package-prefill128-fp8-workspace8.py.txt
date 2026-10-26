@@ -1,0 +1,16 @@
+from pathlib import Path
+import hashlib,json,os,sys,zipfile
+work=Path(__file__).resolve().parent;repo=Path('D:/CantorAI/work/qwen38-5090');m=repo/'test2026/cuda/qwen38_5090';sys.path[:0]=[str(repo),str(m)]
+from run_prefill128_fp8_workspace8 import NAMES
+sha=lambda raw:hashlib.sha256(raw).hexdigest();files={'Garnet/test2026/cuda/qwen38_5090/'+name:(m/name).read_bytes() for name in NAMES};assert len(files)==11
+import test2026.cuda.qwen38_5090.run_logged as ledger
+ledger.source_identity=lambda:{'scope':'Explicit owned workspace8FP8 control sources; unrelated untracked files excluded','owned_source_sha256':{name:sha(raw) for name,raw in files.items()}}
+os.chdir(repo);code=ledger.run([sys.executable,'-m','unittest','test2026.cuda.qwen38_5090.test_prefill128_fp8_projection','test2026.cuda.qwen38_5090.test_prefill128_fp8_workspace8'],work/'prefill128-fp8-workspace8-local-cpu-ledger','correctness','Six full-word/input/replication/source/workspace faults; no local native runtime/GPU',[m/name for name in NAMES]);assert code==0
+bundle=work/'prefill128-fp8-workspace8-methods.zip';assert not bundle.exists()
+with zipfile.ZipFile(bundle,'x',zipfile.ZIP_DEFLATED) as z:
+    for name,raw in files.items():z.writestr(name,raw)
+    z.writestr('install-manifest.json',json.dumps({'files':{name:sha(raw) for name,raw in files.items()}},indent=2))
+source=(work/'install-prefill128-fp8-projection.py').read_bytes();installer=source.replace(b'prefill128-fp8-projection',b'prefill128-fp8-workspace8').replace(b'==9',b'==12')
+path=work/'install-prefill128-fp8-workspace8.py';assert not path.exists();path.write_bytes(installer)
+r={'status':'prefill128_fp8_workspace8_packaged_gpu_unrun','sha256':sha(bundle.read_bytes()),'bytes':bundle.stat().st_size,'targets':11,'cpu_tests':6,'installer_sha256':sha(installer)}
+(work/'prefill128-fp8-workspace8-package.json').write_bytes(json.dumps(r,indent=2).encode());print(json.dumps(r))
