@@ -1,0 +1,36 @@
+"""Keep the closed stage source/cache transaction; add fresh-process policy controls."""
+from pathlib import Path
+import hashlib,json
+repo=Path('D:/CantorAI/work/qwen38-5090');m=repo/'test2026/cuda/qwen38_5090';sha=lambda raw:hashlib.sha256(raw).hexdigest();source=m/'run_gdn_chunk_stage_witness_bound.py';raw=source.read_bytes();text=raw.decode();steps=[]
+def change(old,new,count=1):
+    global text
+    assert text.count(old)==count,(old,text.count(old));text=text.replace(old,new);steps.append({'old':old,'new':new,'count':count})
+change('"""Exclusive bounded-readback GDN stage witness; preserve23native profile and DLL."""','"""Exclusive native28 Z stage witness and fresh-process policy frontend controls."""')
+change("JOB='gdn-chunk-stage-witness-attempt2'","JOB='fp8-z128-stage-witness-attempt1'")
+change('gdn-chunk-stage-witness-bound-preparation.json','fp8-z128-stage-witness-preparation.json')
+change("'gdn_chunk_stage_witness_prepared_gpu_unrun' and len(p['candidate_files'])==23","'fp8_z128_stage_witness_prepared_gpu_unrun' and len(p['candidate_files'])==28")
+change('garnet-native-gdn-chunk-stage-attempt1.dll','garnet-native-fp8-z128-attempt1.dll')
+change('len(z.namelist())==len(set(z.namelist()))==23','len(z.namelist())==len(set(z.namelist()))==28')
+change('Explicit owned T128 model source inventory; unrelated untracked bodies excluded','Explicit owned native28 Z stage/policy source inventory; unrelated untracked bodies excluded')
+change('20CPU GDN source/profile/oldquantization, complete-piece/primary/hash/finite/metadata/owner provenance and actual readback retry controls; no GPU','29CPU old/new source/nativebuild/real128/context/log/complete-array/policy/owner/readback controls; no GPU')
+policy='''        from test2026.cuda.qwen38_5090.fp8_z128_stage_layout import POLICY_VALUES,check_policy_report
+        w['policy_controls']=[];save()
+        for index,policy in enumerate(POLICY_VALUES):
+            idle()
+            if policy is None:os.environ.pop('GARNET_FP8_GDN_Z128_CANONICAL',None)
+            else:os.environ['GARNET_FP8_GDN_Z128_CANONICAL']=policy
+            label='policy-'+str(index)
+            argv=[sys.executable,str(M/'monitor_native_probe.py'),'--study',str(ROOT),'--output',str(out/(label+'-resources')),'--','cmd.exe','/d','/c',str(M/'test_fp8_z128_policy_control.bat'),str(out/label),str(cache)]
+            code=ledger.run(argv,out/(label+'-ledger'),'correctness','Fresh embedded Z policy frontend value='+repr(policy)+'; no graph inference',common+[library]);idle()
+            if code:raise RuntimeError('Fresh policy control failed: '+repr(policy))
+            observed=json.loads((out/label/'report.json').read_bytes());validated=check_policy_report(observed,policy)
+            w['policy_controls'].append({'index':index,'expected_environment_value':policy,'validated':validated});save()
+        os.environ['GARNET_FP8_GDN_Z128_CANONICAL']='1'
+'''
+change("        command=[sys.executable,str(M/'monitor_native_probe.py')",policy+"        command=[sys.executable,str(M/'monitor_native_probe.py')")
+change('test_gdn_chunk_stage_witness_bound.bat','test_fp8_z128_stage_witness.bat')
+change('from test2026.cuda.qwen38_5090.gdn_chunk_stage_replay import replay','from test2026.cuda.qwen38_5090.fp8_z128_stage_replay import replay')
+change("        w['status']='gdn_chunk_stage_witness_collected_needs_replay'","        if w['array_replay']['controlled_first128_all11_stages_exact']:\n            w['status']='fp8_z128_stage_witness_collected_needs_replay'\n        else:\n            w['status']='fp8_z128_stage_remaining_difference_preserved';code=1")
+target=m/'run_fp8_z128_stage_witness.py';value=text.encode();assert not target.exists();target.write_bytes(value)
+record={'status':'fp8_z128_stage_owner_derived_unrun','files':[{'source':source.name,'source_sha256':sha(raw),'target':target.name,'target_sha256':sha(value),'replacements':steps}],'scope':'Same closed source/runtime/SDK/checkpoint/cache restoration transaction fornative28,8existing20new.10freshembeddedpolicyfrontends then8realordinary/diagnosticprofiles. Preserveanyremainingfirst128stage difference with nonzeroexit, no fullmodel/performance qualification.'}
+path=m/'evidence/fp8-z128-stage-owner-derivation.json';assert not path.exists();path.write_bytes(json.dumps(record,indent=2).encode());print(json.dumps({'status':record['status'],'target_sha256':sha(value)}))

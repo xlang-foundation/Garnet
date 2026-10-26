@@ -1,0 +1,70 @@
+{
+  "status": "fp8_z128_stage_probe_methods_derived_unrun",
+  "files": [
+    {
+      "source": "probe_gdn_chunk_stage_witness_bound.py",
+      "source_sha256": "f3902803c76317a4a5dd8a562f24c07f1160966fe461d19fbe2f94f03be43b78",
+      "target": "probe_fp8_z128_stage_witness.py",
+      "target_sha256": "d4fd6b1c2c5f8eaf8350c2f396dce3424257073c04e5a4156bb48cf5a393777e",
+      "replacements": [
+        {
+          "old": "root,out=map(Path,sys.argv[1:]);m=",
+          "new": "root,out=map(Path,sys.argv[1:3]);policy_only=len(sys.argv)==4 and sys.argv[3]=='--z-policy-only';m=",
+          "count": 1
+        },
+        {
+          "old": "gdn-chunk-stage-witness-bound-preparation.json",
+          "new": "fp8-z128-stage-witness-preparation.json",
+          "count": 1
+        },
+        {
+          "old": "from test2026.cuda.qwen38_5090.gdn_chunk_stage_layout import STAGES,layout,pieces,check_graph",
+          "new": "from test2026.cuda.qwen38_5090.fp8_z128_stage_layout import STAGES,layout,pieces,check_graph",
+          "count": 1
+        },
+        {
+          "old": "        embedding=io.embedding(ids);",
+          "new": "        if policy_only:\n            policy=os.environ.get('GARNET_FP8_GDN_Z128_CANONICAL');rejected=False;error=None;stats=None;policy_graph=None\n            try:\n                policy_graph,_=build(0,128,False);stats=json.loads(policy_graph.stats_json())\n            except Exception as exc:rejected=True;error=repr(exc)\n            finally:\n                if policy_graph is not None:policy_graph.close()\n            report.update(status='fp8_z128_policy_control_observed',policy_value=policy,rejected=rejected,error=error,graph=stats,graph_inference_executed=False)\n            from test2026.cuda.qwen38_5090.fp8_z128_stage_layout import check_policy_report\n            check_policy_report(report,policy);save();return 0\n        assert os.environ.get('GARNET_FP8_GDN_Z128_CANONICAL')=='1'\n        embedding=io.embedding(ids);",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "test_gdn_chunk_stage_witness_bound.bat",
+      "source_sha256": "cbe5355a6d5b487c89e6895322c1b01ac52c0d8a81b4e610bc0609f1cc990d61",
+      "target": "test_fp8_z128_stage_witness.bat",
+      "target_sha256": "4ade12eeee554f850ac8e3fda131ab07f326fe28d07b5f9b8e8190230c232bb2",
+      "replacements": [
+        {
+          "old": "set GARNET_FP8_GDN_M128_CANONICAL=1",
+          "new": "set GARNET_FP8_GDN_M128_CANONICAL=1\nset GARNET_FP8_GDN_Z128_CANONICAL=1",
+          "count": 1
+        },
+        {
+          "old": "probe_gdn_chunk_stage_witness_bound.py",
+          "new": "probe_fp8_z128_stage_witness.py",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "test_gdn_chunk_stage_witness_bound.bat",
+      "source_sha256": "cbe5355a6d5b487c89e6895322c1b01ac52c0d8a81b4e610bc0609f1cc990d61",
+      "target": "test_fp8_z128_policy_control.bat",
+      "target_sha256": "7f4a7ea22d0f637c1eea0fc9040d642ec52fc714b9e25a2e91fda5d9af333657",
+      "replacements": [
+        {
+          "old": "probe_gdn_chunk_stage_witness_bound.py",
+          "new": "probe_fp8_z128_stage_witness.py",
+          "count": 1
+        },
+        {
+          "old": "\"%~1\"\nexit /b",
+          "new": "\"%~1\" --z-policy-only\nexit /b",
+          "count": 1
+        }
+      ]
+    }
+  ],
+  "scope": "Exact same old real128 bounded collector/explicit readback/math/profile, addnew Zcounter wrapper. Separate policy-only frontend process mode never runsgraphinference; launcher preserves inheritednewZenvironment for10freshprocesscontrols."
+}
