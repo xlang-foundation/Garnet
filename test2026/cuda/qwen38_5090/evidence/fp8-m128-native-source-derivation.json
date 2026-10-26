@@ -1,0 +1,109 @@
+{
+  "status": "fp8_m128_distinct_native_policy_candidate_cpu_unverified",
+  "modified_files": [
+    {
+      "target": "src/backends/tensorrt/modelopt_fp8_lowering.cpp",
+      "original_snapshot": "test2026/cuda/qwen38_5090/evidence/fp8-m128-native-original-src__backends__tensorrt__modelopt_fp8_lowering.cpp.txt",
+      "before_sha256": "eed54fcc67195d79e814ed9e5c78ab25a5c3d628b3c7336b98ed27996fce76a2",
+      "target_sha256": "68535d3a94e59f93232cb1e6284ef046fe1ec9642b3a0242c43207b360e17817",
+      "replacements": [
+        {
+          "old": "#include \"modelopt_fp8_plugin.h\"",
+          "new": "#include \"modelopt_fp8_plugin.h\"\n#include \"modelopt_fp8_m128_plugin.h\"\n#include \"modelopt_fp8_m128_profile.h\"",
+          "count": 1
+        },
+        {
+          "old": "    auto* plugin=new ModelOptFP8Plugin(p.rows,p.columns,p.weightScale,p.inputScale,canonicalM32);ownedPlugins.push_back(plugin);",
+          "new": "    const bool canonicalM128=ModelOptFP8M128GDNSelected(std::getenv(\"GARNET_FP8_GDN_M128_CANONICAL\"),\n        shape.nbDims==3?int(shape.d[0]):0,shape.nbDims==3?int(shape.d[1]):0,rows,p.rows,p.columns,gdnOutput);\n    IPluginV2DynamicExt* plugin=nullptr;\n    if(canonicalM128){\n        if(!EnsureModelOptFP8M128PluginRegistered())throw std::runtime_error(\"Native M128 FP8 registration failed\");\n        plugin=new ModelOptFP8M128Plugin(p.rows,p.columns,p.weightScale,p.inputScale);\n    }else plugin=new ModelOptFP8Plugin(p.rows,p.columns,p.weightScale,p.inputScale,canonicalM32);\n    ownedPlugins.push_back(plugin);",
+          "count": 1
+        },
+        {
+          "old": "    if(!layer)throw std::runtime_error(\"Native FP8 projection layer failed\");",
+          "new": "    if(!layer)throw std::runtime_error(\"Native FP8 projection layer failed\");\n    if(canonicalM128)++nativeFP8M128ProjectionCount_;",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "target": "src/backends/tensorrt/trt_builder.h",
+      "original_snapshot": "test2026/cuda/qwen38_5090/evidence/fp8-m128-native-original-src__backends__tensorrt__trt_builder.h.txt",
+      "before_sha256": "d7b2d5aaced4075acff7987c697b893ff9e2e273eb91a472e285ea30833026a9",
+      "target_sha256": "a3969b9e430b6539595c620d988192eb81fa2dfb00ca619e55fd6ba44298bfd9",
+      "replacements": [
+        {
+          "old": "        size_t NativeFP8WeightCount() const { return nativeFP8Weights.size(); }",
+          "new": "        size_t NativeFP8WeightCount() const { return nativeFP8Weights.size(); }\n        size_t NativeFP8M128ProjectionCount() const { return nativeFP8M128ProjectionCount_; }",
+          "count": 1
+        },
+        {
+          "old": "        std::unordered_map<nvinfer1::ITensor*,NativeFP8Weight> nativeFP8Weights;",
+          "new": "        std::unordered_map<nvinfer1::ITensor*,NativeFP8Weight> nativeFP8Weights;\n        size_t nativeFP8M128ProjectionCount_=0;",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "target": "src/backends/tensorrt/trt_builder.cpp",
+      "original_snapshot": "test2026/cuda/qwen38_5090/evidence/fp8-m128-native-original-src__backends__tensorrt__trt_builder.cpp.txt",
+      "before_sha256": "2480ee3b49c243487c5717f28c74bfd6398897ed521b4b16ccb7e7dfb57f519d",
+      "target_sha256": "13d453394d73359734cc344d8b5d458518e22a857edd3cf3b89e16b38df0110a",
+      "replacements": [
+        {
+          "old": "        nativeNVFP4Weights.clear();nativeNVFP4ScaleStorage.clear();nativeFP8Weights.clear();nativeCTInt4Weights.clear();",
+          "new": "        nativeNVFP4Weights.clear();nativeNVFP4ScaleStorage.clear();nativeFP8Weights.clear();nativeCTInt4Weights.clear();nativeFP8M128ProjectionCount_=0;",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "target": "src/backends/tensorrt/cuda_compiled_graph.h",
+      "original_snapshot": "test2026/cuda/qwen38_5090/evidence/fp8-m128-native-original-src__backends__tensorrt__cuda_compiled_graph.h.txt",
+      "before_sha256": "de97d90a2eb380201e3a0bde4ec84710d3cd27f007d809c7ebbd5239725c7022",
+      "target_sha256": "df2e3ee55bb382c642b79d7cadc8187ec3fb44e13ca2410da37e6668e7fb42a4",
+      "replacements": [
+        {
+          "old": "    size_t nativeFP8WeightCount_=0,nativeNVFP4WeightCount_=0,nativeCTInt4WeightCount_=0;",
+          "new": "    size_t nativeFP8WeightCount_=0,nativeNVFP4WeightCount_=0,nativeCTInt4WeightCount_=0;\n    size_t nativeFP8M128ProjectionCount_=0;",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "target": "src/backends/tensorrt/cuda_compiled_graph.cpp",
+      "original_snapshot": "test2026/cuda/qwen38_5090/evidence/fp8-m128-native-original-src__backends__tensorrt__cuda_compiled_graph.cpp.txt",
+      "before_sha256": "c4dbbc59489e35c8470e89b1ee70e496af68b1ff5df475e6188d04ffadcc23de",
+      "target_sha256": "4d174fc4f3463ba5e458c238dd1ff0f0b0fb4b8b5770a558bbba1bc989c7bb1a",
+      "replacements": [
+        {
+          "old": "nativeFP8WeightCount_=nativeNVFP4WeightCount_=nativeCTInt4WeightCount_=0;",
+          "new": "nativeFP8WeightCount_=nativeNVFP4WeightCount_=nativeCTInt4WeightCount_=0;nativeFP8M128ProjectionCount_=0;",
+          "count": 1
+        },
+        {
+          "old": "    info[\"native_fp8_projection_weights\"]=nativeFP8WeightCount_;",
+          "new": "    info[\"native_fp8_projection_weights\"]=nativeFP8WeightCount_;\n    info[\"native_fp8_m128_canonical_projections\"]=nativeFP8M128ProjectionCount_;",
+          "count": 1
+        },
+        {
+          "old": "    nativeFP8WeightCount_=builder.NativeFP8WeightCount();",
+          "new": "    nativeFP8WeightCount_=builder.NativeFP8WeightCount();\n    nativeFP8M128ProjectionCount_=builder.NativeFP8M128ProjectionCount();",
+          "count": 1
+        }
+      ]
+    }
+  ],
+  "new_files": {
+    "src/backends/tensorrt/modelopt_fp8_m128_profile.h": "99c50216447d28b950286fb83de69412e6e45130db94f938ee91caea230d1e60",
+    "src/backends/tensorrt/modelopt_fp8_m128_canonical.h": "60914d824fab138078686309a5d24bf139f578c9f33d3eb7a125b0cdc0ae7a04",
+    "src/backends/tensorrt/modelopt_fp8_m128_canonical.cpp": "8ca91b6b478fe0dd4ec6463f5f7fa52836350fd927532786d2cf64ee7cda10bc",
+    "src/backends/tensorrt/modelopt_fp8_m128_plugin.h": "009580e736dc3f0688d130f4ed5c06de6025ad7a4166c94939511ffccf6a94c0",
+    "src/backends/tensorrt/modelopt_fp8_m128_plugin.cpp": "98b619674f28bc89ad2f902d4d6362ebe46ceb55976edc300989c09745daf462"
+  },
+  "legacy_untouched_sha256": {
+    "src/backends/tensorrt/modelopt_fp8_plugin.h": "1e8e5bb0bf18302593adacec25b503d82575b27d530f7dedb79b2bc42b8e78b0",
+    "src/backends/tensorrt/modelopt_fp8_plugin.cpp": "ec338161b9fba92373f163d229393d6fdf1afa13cf5446619e0cde2af1188776",
+    "src/backends/tensorrt/modelopt_cublaslt.h": "67c4850bb4e1e6d025fd2d1514447e82f7c36f04e9c3db3fd61e0e347027641a",
+    "src/backends/tensorrt/modelopt_cublaslt.cpp": "f1283406460ecf8d0b633ff49959709d86941009a73cd3bd596d86a2e4792f35"
+  },
+  "scope": "Default-off strictB1/T128 GDN output projection only, not B4/T32 flattenedM128. Separate TensorRT type/wirepolicy128 and typed8MiB context, originalM16selection preference4MiB with AlgoCheck for128. Existing FP8/M32 plugin/helper bodies untouched. Explicit graph creation counter, fresh per-graph cache retained. CPU/native actual-helper/model/quality/HTTP qualification required."
+}

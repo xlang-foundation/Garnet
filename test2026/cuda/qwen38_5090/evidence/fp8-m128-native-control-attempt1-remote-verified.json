@@ -1,0 +1,199 @@
+{
+  "status": "fp8_m128_actual_native_helper_and_wire_replayed",
+  "archive_sha256": "eb942175496d7c6a7163ba0bfbadb224587f9b02c3b95849c91bdaca530b76d1",
+  "files_verified": 74,
+  "wire_contract": {
+    "status": "fp8_m128_plugin_cpu_contract_passed",
+    "wire_bytes": 20,
+    "wire_policy": 128,
+    "roundtrips": 1,
+    "clones": 1,
+    "bad_wires": 33,
+    "bad_constructors": 18,
+    "bad_descriptors": 23,
+    "bad_formats": 11,
+    "policy_rejections": 8,
+    "cross_wire_rejections": 3,
+    "workspace_bytes": 9175040,
+    "unexpected_gpu_calls": 0,
+    "enqueue_tested": false,
+    "model_qualified": false,
+    "performance_admitted": false
+  },
+  "algorithm_observations": {
+    "control": {
+      "algorithms": [
+        {
+          "m": 16,
+          "id": 35,
+          "opaque": "230000000d0000001100000003000000020000000000000001000000000000000100000060fd01001c0000001c0000000e000e00440000000000000000000000"
+        },
+        {
+          "m": 32,
+          "id": 67,
+          "opaque": "430000000d0000001100000001000000000000000100000012000000000000000100000060fd01001c0000001c0000000e000e00440000000000000000000000"
+        },
+        {
+          "m": 128,
+          "id": 67,
+          "opaque": "430000000f0000001200000001000000000000000100000012000000000000000100000060fd01001c0000001c0000000e000e00440000000000000000000000"
+        }
+      ],
+      "typed_context_required_workspace_bytes": null
+    },
+    "native": {
+      "algorithms": [
+        {
+          "m": 16,
+          "id": 35,
+          "opaque": "230000000d0000001100000003000000020000000000000001000000000000000100000060fd01001c0000001c0000000e000e00440000000000000000000000"
+        },
+        {
+          "m": 32,
+          "id": 35,
+          "opaque": "230000000d0000001100000003000000020000000000000001000000000000000100000060fd01001c0000001c0000000e000e00440000000000000000000000"
+        },
+        {
+          "m": 128,
+          "id": 35,
+          "opaque": "230000000d0000001100000003000000020000000000000001000000000000000100000060fd01001c0000001c0000000e000e00440000000000000000000000"
+        }
+      ],
+      "typed_context_required_workspace_bytes": 5246879
+    }
+  },
+  "complete_output_word_replays": {
+    "control": {
+      "mode": "control",
+      "cases": [
+        {
+          "m": 16,
+          "repeat": 0,
+          "output_words": 81920,
+          "different_from_repeated_m16_output_words": 0,
+          "archived_output_exact": true,
+          "m128_default_is_observation_only": false,
+          "shared_algorithm_output_exact": null
+        },
+        {
+          "m": 16,
+          "repeat": 1,
+          "output_words": 81920,
+          "different_from_repeated_m16_output_words": 0,
+          "archived_output_exact": true,
+          "m128_default_is_observation_only": false,
+          "shared_algorithm_output_exact": null
+        },
+        {
+          "m": 32,
+          "repeat": 0,
+          "output_words": 163840,
+          "different_from_repeated_m16_output_words": 18,
+          "archived_output_exact": true,
+          "m128_default_is_observation_only": false,
+          "shared_algorithm_output_exact": null
+        },
+        {
+          "m": 32,
+          "repeat": 1,
+          "output_words": 163840,
+          "different_from_repeated_m16_output_words": 18,
+          "archived_output_exact": true,
+          "m128_default_is_observation_only": false,
+          "shared_algorithm_output_exact": null
+        },
+        {
+          "m": 128,
+          "repeat": 0,
+          "output_words": 655360,
+          "different_from_repeated_m16_output_words": 64,
+          "archived_output_exact": null,
+          "m128_default_is_observation_only": true,
+          "shared_algorithm_output_exact": null
+        },
+        {
+          "m": 128,
+          "repeat": 1,
+          "output_words": 655360,
+          "different_from_repeated_m16_output_words": 64,
+          "archived_output_exact": null,
+          "m128_default_is_observation_only": true,
+          "shared_algorithm_output_exact": null
+        }
+      ],
+      "complete_bf16_output_words_replayed": 1802240,
+      "input_cast_and_quantization_independently_exact": true,
+      "model_or_performance_qualified": false
+    },
+    "native": {
+      "mode": "shared",
+      "cases": [
+        {
+          "m": 16,
+          "repeat": 0,
+          "output_words": 81920,
+          "different_from_repeated_m16_output_words": 0,
+          "archived_output_exact": null,
+          "m128_default_is_observation_only": false,
+          "shared_algorithm_output_exact": true
+        },
+        {
+          "m": 16,
+          "repeat": 1,
+          "output_words": 81920,
+          "different_from_repeated_m16_output_words": 0,
+          "archived_output_exact": null,
+          "m128_default_is_observation_only": false,
+          "shared_algorithm_output_exact": true
+        },
+        {
+          "m": 32,
+          "repeat": 0,
+          "output_words": 163840,
+          "different_from_repeated_m16_output_words": 0,
+          "archived_output_exact": null,
+          "m128_default_is_observation_only": false,
+          "shared_algorithm_output_exact": true
+        },
+        {
+          "m": 32,
+          "repeat": 1,
+          "output_words": 163840,
+          "different_from_repeated_m16_output_words": 0,
+          "archived_output_exact": null,
+          "m128_default_is_observation_only": false,
+          "shared_algorithm_output_exact": true
+        },
+        {
+          "m": 128,
+          "repeat": 0,
+          "output_words": 655360,
+          "different_from_repeated_m16_output_words": 0,
+          "archived_output_exact": null,
+          "m128_default_is_observation_only": false,
+          "shared_algorithm_output_exact": true
+        },
+        {
+          "m": 128,
+          "repeat": 1,
+          "output_words": 655360,
+          "different_from_repeated_m16_output_words": 0,
+          "archived_output_exact": null,
+          "m128_default_is_observation_only": false,
+          "shared_algorithm_output_exact": true
+        }
+      ],
+      "complete_bf16_output_words_replayed": 1802240,
+      "input_cast_and_quantization_independently_exact": true,
+      "model_or_performance_qualified": false
+    }
+  },
+  "total_output_words_replayed": 3604480,
+  "source_runtime_environment_fixture_unchanged": true,
+  "gpu_model_executed": false,
+  "full_model_mismatch_cause_established": false,
+  "model_or_quality_or_performance_qualified": false,
+  "two_times_target_achieved": false,
+  "replay_verifier_sha256": "2d2835589ca32ea15345e5d3a3e8006734c814db53d3b6ca2ee0ece9b34d6270",
+  "scope": "Standalone exact production helper copies plus distinct plugin wire controls. Real retained FP8 GDN matrix; compare all BF16 output words/casts/quantization with qualified8MiB control. Strict actual algorithm35/opaque/5246879B requirement/8MiB allocation and actual loaded DLL identity. Preserve full application source/runtime/SDK/fixture. No Garnet DLL load/change, full-model cause, quality, serving memory or performance qualification."
+}

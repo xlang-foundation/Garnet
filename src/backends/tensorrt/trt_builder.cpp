@@ -4498,7 +4498,7 @@ namespace Garnet {
         tensorMap.clear();
         constantTensors.clear();
         weightTensorMap.clear();
-        nativeNVFP4Weights.clear();nativeNVFP4ScaleStorage.clear();nativeFP8Weights.clear();nativeCTInt4Weights.clear();
+        nativeNVFP4Weights.clear();nativeNVFP4ScaleStorage.clear();nativeFP8Weights.clear();nativeCTInt4Weights.clear();nativeFP8M128ProjectionCount_=0;
         externalBF16Bindings.clear();externalCompressedBindings.clear();
         scalarWeights.clear();
         bfloat16ScalarWeights.clear();

@@ -20,6 +20,7 @@ class CUDACompiledGraph {
     size_t externalWeightCount_=0,externalWeightBytes_=0,joinedProjectionInputs_=0;
     size_t externalCompressedWeightCount_=0,externalCompressedWeightBytes_=0;
     size_t nativeFP8WeightCount_=0,nativeNVFP4WeightCount_=0,nativeCTInt4WeightCount_=0;
+    size_t nativeFP8M128ProjectionCount_=0;
     std::string weightPrecision_="bf16";
     mutable std::mutex mutex_;
     void CloseUnlocked();
