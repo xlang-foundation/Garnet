@@ -1,0 +1,28 @@
+from pathlib import Path
+import ast,hashlib,json,os,sys,zipfile
+work=Path(__file__).resolve().parent;out=work.parent/'outputs';repo=Path('D:/CantorAI/work/qwen38-5090');m=repo/'test2026/cuda/qwen38_5090';M='Garnet/test2026/cuda/qwen38_5090/';sha=lambda raw:hashlib.sha256(raw).hexdigest();sys.path[:0]=[str(repo),str(m)]
+original=(m/'evidence/z128-opaque-config-preparation.json').read_bytes();old=json.loads(original);job='z128-opaque-config-audit-attempt1';proof=(out/(job+'-verified.json')).read_bytes();assert proof==(out/(job+'-remote-verified.json')).read_bytes();q=json.loads(proof);assert q['status']=='retained_Z128_documented_opaque_configuration_failure_preserved' and sha((out/(job+'-evidence.zip')).read_bytes())==q['archive_sha256']
+with zipfile.ZipFile(out/(job+'-evidence.zip')) as z:
+    assert z.testzip() is None;log=z.read('results/'+job+'/cpu-ledger/commands.log');assert b'Ran 89 tests' in log and b'FAILED (failures=1, errors=17)' in log and 'results/'+job+'/build-ledger/commands.jsonl' not in z.namelist()
+methods=dict(old['methods'])
+for name in ('run_z128_opaque_config_audit_attempt2.py','verify_z128_opaque_config_audit_attempt2.py','evidence/z128-opaque-config-attempt2-derivation.json'):methods[M+name]=sha((m/name).read_bytes())
+d=json.loads((m/'evidence/z128-opaque-config-attempt2-derivation.json').read_bytes())
+for row in d['files']:
+    raw=(m/row['base']).read_bytes();assert sha(raw)==row['base_sha256']
+    for step in row['changes']:
+        before=step['before'].encode();assert raw.count(before)==step['count'];raw=raw.replace(before,step['after'].encode())
+    assert raw==(m/row['target']).read_bytes() and sha(raw)==row['target_sha256']
+for name,h in methods.items():
+    raw=(repo/name.removeprefix('Garnet/')).read_bytes();assert sha(raw)==h
+    if name.endswith('.py'):ast.parse(raw)
+files={**old['files'],**old['methods'],M+'evidence/z128-opaque-config-preparation.json':sha(original)};p=dict(old);p.update(files=files,methods=methods,test_ids=['test2026.cuda.qwen38_5090.test_z128_opaque_config'],previous_failure={'job':job,'proof_sha256':sha(proof),'archive_sha256':q['archive_sha256']},scope=old['scope']+' Attempt1 preserved89CPU wrong-baseline source-view failure before compilation/noSDK query. Attempt2 replays complete frozen parent88CPU/source/rawarray evidence with expected scientific failure exit1 and exact proof; only query parser fault unit runs on restored baseline. No model gate or source assertion is relaxed; no production installation.')
+import run_logged as ledger;ledger.source_identity=lambda:{'scope':'Explicit scoped public query audit inputs; unrelated untracked excluded','owned_source_sha256':methods};os.chdir(repo)
+assert ledger.run([sys.executable,'-m','unittest',*p['test_ids']],work/'z128-opaque-config-attempt2-local-cpu-ledger','correctness','Query fault control on restored source; model88 controls remain in full verified parent and are replayed separately',[repo/name.removeprefix('Garnet/') for name in methods])==0
+prep=m/'evidence/z128-opaque-config-preparation-attempt2.json';assert not prep.exists();prep.write_bytes(json.dumps(p,indent=2).encode());deploy={name:(repo/name.removeprefix('Garnet/')).read_bytes() for name in methods};deploy[M+'evidence/'+prep.name]=prep.read_bytes();package=work/'z128-opaque-config-deployment-attempt2.zip';assert not package.exists()
+with zipfile.ZipFile(package,'x',zipfile.ZIP_DEFLATED) as z:
+    for name,raw in deploy.items():z.writestr(name,raw)
+    z.writestr('install-manifest.json',json.dumps({'files':{name:sha(raw) for name,raw in deploy.items()}},indent=2))
+result={'status':p['status'],'package_sha256':sha(package.read_bytes()),'package_bytes':package.stat().st_size,'method_pins':len(methods),'source_pins':len(files),'new_query_CPU_tests':1,'retained_parent_model_CPU_tests':88,'previous_failure_proof_sha256':sha(proof),'preparation_sha256':sha(prep.read_bytes())};(work/'z128-opaque-config-package-attempt2.json').write_bytes(json.dumps(result,indent=2).encode());print(json.dumps(result))
+raw=(work/'install-z128-opaque-config.py').read_bytes()
+for before,after in [('z128-opaque-config-deployment.zip','z128-opaque-config-deployment-attempt2.zip'),('z128-opaque-config-install.json','z128-opaque-config-install-attempt2.json'),('z128-opaque-config-preparation.json','z128-opaque-config-preparation-attempt2.json')]:assert raw.count(before.encode())==1;raw=raw.replace(before.encode(),after.encode())
+target=work/'install-z128-opaque-config-attempt2.py';assert not target.exists();target.write_bytes(raw)

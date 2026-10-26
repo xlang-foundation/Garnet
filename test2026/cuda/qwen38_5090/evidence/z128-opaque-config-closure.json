@@ -1,0 +1,110 @@
+{
+  "status": "documented_Z128_configuration_equal_API_reconstruction_candidate_next",
+  "attempts": [
+    {
+      "attempt": 1,
+      "status": "retained_Z128_documented_opaque_configuration_failure_preserved",
+      "archive_sha256": "b0f864b32520f79b72851749ca6d881e728aa05f21ff684660d7d87dfebdbfca",
+      "archive_bytes": 233012,
+      "archive_members": 12,
+      "proof_pair_sha256": "f8c1b65259f1952c8dadf751f2b289461c916baf81f0482bfafba6488e1a8bf1",
+      "source_pins": 1080,
+      "method_pins": 6,
+      "source_runtime_SDK_unchanged": true,
+      "GPU_model_or_matmul_executed": false,
+      "CPU_tests": 89,
+      "CPU_failures": 1,
+      "CPU_errors": 17,
+      "SDK_compilation_or_query_started": false,
+      "cause": "Model source controls require installed39candidate source; audit intentionally uses restored baseline. This harness scope error was preserved before a separate corrected attempt. No model gate was relaxed."
+    },
+    {
+      "attempt": 2,
+      "status": "retained_Z128_documented_opaque_configuration_replayed",
+      "archive_sha256": "283a6878eed4da05cc0a994ad62a32f31a295d8923878fb19b897f4513c5c3e9",
+      "archive_bytes": 569928,
+      "archive_members": 25,
+      "proof_pair_sha256": "b9bac466b1f72dc833ef15f8ca1f79662e94f7e4428354263a683af1efbcc53d",
+      "source_pins": 1087,
+      "method_pins": 9,
+      "source_runtime_SDK_unchanged": true,
+      "GPU_model_or_matmul_executed": false,
+      "new_query_CPU_tests": 1,
+      "retained_parent_model_CPU_controls": 88,
+      "retained_parent_complete_proof_replayed": true,
+      "documented_attribute_queries": 18,
+      "all_queries_successful": true,
+      "all_documented_attributes_equal": true,
+      "documented_values": {
+        "ID": 67,
+        "TILE_ID": 13,
+        "STAGES_ID": 17,
+        "SPLITK_NUM": 1,
+        "REDUCTION_SCHEME": 0,
+        "CTA_SWIZZLING": 1,
+        "CUSTOM_OPTION": 18,
+        "INNER_SHAPE_ID": 0,
+        "CLUSTER_SHAPE_ID": 0
+      },
+      "executable_sha256": "f22a8672b6f70bbce793961730ecb72023d75279ba430e3ba9a47b811c6bcc16"
+    }
+  ],
+  "documented_attribute_replay": {
+    "status": "documented_opaque_attributes_replayed",
+    "all_18_queries_successful": true,
+    "values": [
+      {
+        "ID": 67,
+        "TILE_ID": 13,
+        "STAGES_ID": 17,
+        "SPLITK_NUM": 1,
+        "REDUCTION_SCHEME": 0,
+        "CTA_SWIZZLING": 1,
+        "CUSTOM_OPTION": 18,
+        "INNER_SHAPE_ID": 0,
+        "CLUSTER_SHAPE_ID": 0
+      },
+      {
+        "ID": 67,
+        "TILE_ID": 13,
+        "STAGES_ID": 17,
+        "SPLITK_NUM": 1,
+        "REDUCTION_SCHEME": 0,
+        "CTA_SWIZZLING": 1,
+        "CUSTOM_OPTION": 18,
+        "INNER_SHAPE_ID": 0,
+        "CLUSTER_SHAPE_ID": 0
+      }
+    ],
+    "different_attributes": [],
+    "all_documented_attributes_equal": true,
+    "raw_descriptors_equal": false,
+    "differing_byte_offsets0": [
+      34,
+      35
+    ],
+    "functional_or_numerical_equivalence_established": false,
+    "padding_or_reserved_byte_semantics_established": false,
+    "algorithm_substituted": false,
+    "model_or_quality_or_performance_qualified": false
+  },
+  "actual_plugin_initialization_fixed": false,
+  "source_runtime_SDK_unchanged": true,
+  "algorithm_substituted": false,
+  "full_model_or_quality_or_performance_qualified": false,
+  "two_times_target_achieved": false,
+  "next_plan": {
+    "status": "documented_Z128_configuration_equal_API_reconstruction_candidate_next",
+    "steps": [
+      "Actual Garnet failure remains unchanged: full64byte opaque comparison rejects offsets34/35 before ID/AlgoCheck, although both retained descriptors now query as algorithm67/tile13/stages17/splitK1/reduction0/swizzle1/custom18/inner0/cluster0 on pinnedcuBLASLt130400. Do not call the different bytes padding, do not mask bytes, and do not infer functional or numerical equivalence from public field equality.",
+      "Prepare a separate default-off typed constructor candidate using NVIDIA-documented AlgoInit/ConfigSet/Get APIs and the exact retained configuration plus original compute/scale/A/B/C/D types, transpose flags, SM120/version, actual M32/M128 layouts and4MiB workspace guards. Keep historical helper/control unchanged. Fail unsupported configuration/query/check drift; no arbitrary candidate search. Before any model performance admission, use SDK AlgoCheck on actual descriptors and CPU factory/default/wire/error/source-composition controls.",
+      "Run source-frozen real-input ordinary T32/T128 layer2 comparison with full finite arrays, original input-readonly/carry/repeat controls and exact retainedT32 lineage. Require all original isolatedGDN stages and actual layer3 full-model input/projection/cache linkage, unchanged six4096 ordinary/MTP state/vector/token and adapted805quality gates. Preserve every failure; never change oracle/tolerance to admit a candidate.",
+      "After correctness and reliable initialization, measure matched text/image HTTP TTFT/decode/throughput/sampledVRAM and strongest feasible tuned/MTP vLLM/SGLang repetitions; INT4 W4A16, Qwen3.5-4B and true concurrency/batch correctness remain required. Overall2xdecodeANDthroughput and halfTTFTextra are still unmet. This audit adds no benchmark/chart values."
+    ],
+    "documentation": "https://docs.nvidia.com/cuda/cublas/index.html#cublasltmatmulalgoconfigattributes-t",
+    "actual_plugin_initialization_fixed": false,
+    "functional_or_numerical_equivalence_established": false,
+    "full_model_or_quality_or_performance_qualified": false,
+    "two_times_target_achieved": false
+  }
+}
