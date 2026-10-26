@@ -1,0 +1,56 @@
+"""Retain complete actual Z control; full model/quality/performance still unqualified."""
+from pathlib import Path
+import hashlib,json,zipfile
+work=Path(__file__).resolve().parent;out=work.parent/'outputs';repo=Path('D:/CantorAI/work/qwen38-5090');m=repo/'test2026/cuda/qwen38_5090';e=m/'evidence';paths=[];sha=lambda raw:hashlib.sha256(raw).hexdigest()
+
+def keep(name,raw):
+    target=e/name;assert not target.exists() or target.read_bytes()==raw,target
+    if not target.exists():target.write_bytes(raw)
+    paths.append(target.relative_to(repo).as_posix())
+
+job='gdn-z-native-control-attempt1';proof=(out/(job+'-verified.json')).read_bytes();q=json.loads(proof);assert proof==(out/(job+'-remote-verified.json')).read_bytes() and q['status']=='real_gdn_z_default_and_m32_shared_algorithm_fully_replayed'
+archive=out/(job+'-evidence.zip');assert sha(archive.read_bytes())==q['archive_sha256']
+with zipfile.ZipFile(archive) as z:
+    manifest=json.loads(z.read('evidence-manifest.json'));assert z.testzip() is None and len(z.namelist())==len(set(z.namelist()))==len(manifest['files'])+1
+    for name,h in manifest['files'].items():assert sha(z.read(name))==h
+    base='results/'+job+'/';w=json.loads(z.read(base+'workflow.json'));praw=z.read('results/gdn-z-native-control-preparation.json');p=json.loads(praw);assert w['exit_code']==0 and w['cleanup_finished'] and w['before']==w['after']
+    assert q['complete_bf16_output_words_replayed']==12582912 and q['complete_profiles_replayed']==4
+    assert q['source_runtime_sdk_and_fixture_unchanged'] and q['application_library_loaded'] is q['gpu_model_executed'] is q['model_or_quality_or_performance_qualified'] is False
+    keep('gdn-z-native-control-preparation.json',praw);keep(job+'-evidence-manifest.json',z.read('evidence-manifest.json'))
+    for name in z.namelist():
+        if name.startswith(base) and name.endswith(('.json','.jsonl','.log','.txt')):keep(job+'-'+name.removeprefix(base).replace('/','-'),z.read(name))
+    for name,h in p['methods'].items():
+        target=repo/name.removeprefix('Garnet/');assert sha(target.read_bytes())==h
+        if target.name in ('actual_gdn_z_projection.cu','build_gdn_z_projection.bat','run_gdn_z_projection.py','verify_gdn_z_projection.py','gdn_z_algorithm_log.py','test_gdn_z_algorithm_log.py'):paths.append(target.relative_to(repo).as_posix())
+for suffix in ('-verified.json','-remote-verified.json','-local-replay.log'):keep(job+suffix,(out/(job+suffix)).read_bytes())
+for target in (work/'gdn-z-control-local-cpu-ledger').iterdir():
+    if target.is_file():keep('gdn-z-control-local-cpu-'+target.name,target.read_bytes())
+for name in ('run-gdn-z-control-local-cpu.py','retain-gdn-z-native-control.py'):keep(name+'.txt',(work/name).read_bytes())
+observed=[]
+for layer in (0,1):
+    control=next(row for row in q['profiles'] if row['layer']==layer and row['replay']['cases'] and row['algorithm_replay']['mode']=='control')['algorithm_replay']['calls']
+    shared=next(row for row in q['profiles'] if row['layer']==layer and row['algorithm_replay']['mode']=='shared')['algorithm_replay']['calls']
+    assert all(row['original_algorithm_id']==row['actual_algorithm_id']==67 for row in control+shared)
+    assert control[0]['actual_opaque']!=control[-1]['actual_opaque'] and shared[0]['actual_opaque']==shared[-1]['actual_opaque']==control[0]['actual_opaque']
+    assert all(row['required_workspace_bytes']==0 and row['supplied_workspace_bytes']==8388608 and row['algorithm_checked_on_actual_m128'] for row in shared[8:])
+    observed.append({'layer':layer,'m32_algorithm_id':67,'default_m128_algorithm_id':67,'same_id_different_opaque_configuration':True,'m32_opaque':control[0]['actual_opaque'],'default_m128_opaque':control[-1]['actual_opaque'],'m32_on_actual_m128_checked_required_workspace_bytes':0,'supplied_intervention_workspace_bytes':8388608,'native_m128_complete_output_exact_to_four_m32':True})
+plan={'status':'real_Z_M32_algorithm_control_qualified_native_typed_policy_next','steps':[
+ 'Implement a separate typed defaultoff Z128 policy/context/plugin for original rank3B1T128, in_proj_z N6144K5120 only. Preserve old GDNoutM128 andoldgeneralFP8 helper/plugin bytes; do not broaden an existing geometry. Environment/scalar/wire/descriptor errors must failclosed, batch4T32/batch8T16/unqualifiedprojections excluded.',
+ 'Select canonical actualM32 descriptors with4MiBheuristic preference onpinnedSM120/cuBLASLt130400. BothobservedIDs are67 butopaqueconfigs differ; require exactobservedM32configuration in nativehelper control, not IDalone. AlgoCheck actual128descriptors required0inthiscontrol;8MiBwas supplied, no claim8MiBnecessary. Decide explicitnativeworkspace withitsown actualhelper test.',
+ 'Build/replay private typedhelper pluswire/constructor/format/descriptor/offtargetcontrols, actualsamefixture fullBF16/FP8 casts/quant/output proof onbothmachines. Testinvalidtype/flags/geometry/device/scales/workspace/version anddistinctpluginserialization, preserve productionbuild andSDK. Only afteractualhelper proof integratefullbuild/counter/routing.',
+ 'Rerunactual eightstageordinary/diagnosticprofiles withnewZpolicy andrequireprimarywitness/fullstage/state/repeatlineage beforeunchangedfull3968+128 sixcase modelstate/vector/ID gate. First128commoninput scalar-matrix control is notfull3968cause ormodelcorrectness.',
+ 'Afterstrictfullmodel/805quality gates runmatchedHTTP text/imageTTFT/decode/concurrencythroughput/sampleVRAM, repeatedandstrongestfeasibletuned/MTPrefs. Original2xdecodeANDthroughput/halfTTFTextra/INT4/4B/B8arithmeticgoals remain active; currentcharts unchanged.'
+ ],'full_model_cause_established':False,'model_or_quality_or_performance_qualified':False,'two_times_target_achieved':False}
+keep('gdn-z-typed-native-policy-next-plan.json',json.dumps(plan,indent=2).encode())
+result={'status':q['status'],'archive_sha256':q['archive_sha256'],'archive_bytes':archive.stat().st_size,'archive_members':len(manifest['files'])+1,'proof_pair_sha256':sha(proof),'source_pins':len(p['files']),'runtime_pins':len(p['runtime']),'sdk_environment_pins':len(p['environment']),'fixture_files':len(p['fixture_files']),'native_executable_sha256':w['executable_sha256'],'complete_bf16_output_words_replayed':q['complete_bf16_output_words_replayed'],'independent_cast_and_fp8_quantization_exact':True,'actual_matmul_calls':40,'observed':observed,'source_runtime_sdk_fixture_unchanged':True,'model_or_quality_or_performance_qualified':False,'two_times_target_achieved':False,'next_plan':plan}
+raw=json.dumps(result,indent=2).encode();keep('gdn-z-native-control-closure.json',raw);(out/'Garnet-GDN-Z-Native-Control-Verified.json').write_bytes(raw)
+title='Actual real128 Z control reproduces both profiles; M32 algorithm restores complete M128 parity'
+text='\n\n### 2026-10-26 — '+title+'\n\n'
+text+='Private explicit sm120 standalone CUDA control includes actual unchanged modelopt_cublaslt.cpp andactual modelopt_fp8.cu. No GarnetDLL/applicationmodel load, no productionbuild/SDK/source mutation.853sourcepins/runtime'+str(len(p['runtime']))+'/SDKenvironment'+str(len(p['environment']))+' and12fixturefiles unchanged. Actualindexed checkpoint weights/scales/headers reread againstfixture beforeprepare andexecution; pinnedconfig/index exact. Samefirst128realinputs fromclosedparent stagewitness, bothGDNlayers0/1, distinctN6144K5120 geometry. EightCPUfaultcontrols pass locally0.196s/remotely0.212s. Realnvcc13.2.78/MSVC14.44 buildsprivateexe '+w['executable_sha256']+'; knownSDKC4819warnings retainedwithoutSDKedit.\n\n'
+text+='Defaultbothprofiles gate passes beforeanyintervention: foursequentialM32chunks andoneM128 exactlyreproduce allarchivedBF16outputs atbothlayers/tworepeats. Perprocess observers seeeightM32 andtwoM128calls. CanonicalM32 anddefaultM128 bothalgorithmID67 butdifferentopaqueconfiguration; IDalone doesnotidentifyequivalent arithmetic. Sharedintervention appliesactualM32opaquealgorithm toactual128descriptors onlyafterAlgoCheck status/state0. Requiredworkspaceobserved0bytes, supplied8MiB; no claim8MiBnecessary. AllM128outputwords nowexactlyequalfourM32atbothlayers/tworepeats. No fallback, actualloadedcuBLASLt13.4DLL hash/locationpinned onSM120RTX5090.\n\n'
+text+='Originalcompleteindependentverifier passes onbothmachines withidenticalproof '+sha(proof)+'. Fourprofiles,40actualmatmulcalls,12,582,912BF16outputwords andallF32-to-BF16/FP8quantizationbytes independentlyreplayed; allcompleteoutputs finite/repeatable. Archive '+q['archive_sha256']+' ('+str(archive.stat().st_size)+'bytes/'+str(len(manifest['files'])+1)+'members), rawsource/logs/casts/quantizedactivations/outputs/prep/exe/fixturemanifest/checkers retained. Raw31MBweights remainexternalpinnedcheckpointfixture, notduplicated inarchive; actualcontrol rereads/provesfixturebyteequality onstudy host. Source/runtime/SDK/fixture unchanged; nativeapplicationDLL baseline1a1d preserved.\n\n'
+text+='This qualifies the focusedreal128Zalgorithm intervention, notfull3968cause/model/quality/performance. NextseparatetypeddefaultoffZ128context/plugin must preserveoldGDNout/generalFP8helpers, enforce originalrank3B1T128/N6144K5120/name/SM120/version/wire/workspace bounds, selectcanonicalM32descriptors andproveopaqueagreement inactualnativehelper testbeforefullintegration. Thenrepeatstageprimarywitness andunchangedfull4Kstate/vector/ID and805quality gates beforeHTTPspeedcharts. Currentcharts unchanged; overall2xdecodeANDthroughput/halfTTFTextra andmatchedINT4/4B/strongestfeasibletunedMTP/repeatedrefs remain active.\n'
+for name in ('qwen38-5090-development-log.md','qwen38-5090-implementation-task.md'):
+    target=repo/'docs/research'/name;before=target.read_bytes();assert title.encode() not in before;target.write_bytes(before+text.encode());paths.append(target.relative_to(repo).as_posix())
+(work/'gdn-z-native-control-retained-paths.json').write_bytes(json.dumps(sorted(set(paths)),indent=2).encode())
+print(json.dumps({'status':result['status'],'proof_pair_sha256':sha(proof),'retained_paths':len(set(paths)),'next_status':plan['status']}))

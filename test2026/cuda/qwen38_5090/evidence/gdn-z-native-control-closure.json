@@ -1,0 +1,55 @@
+{
+  "status": "real_gdn_z_default_and_m32_shared_algorithm_fully_replayed",
+  "archive_sha256": "6cdf4eb999eb4a53649d32dd8857f780d7e5c6969dde75f9a99a95f3ceebb41b",
+  "archive_bytes": 36072997,
+  "archive_members": 67,
+  "proof_pair_sha256": "34ef3f622bfc5edaf3f0274f1e01e061cf32146146acad4282136cd3ec77501c",
+  "source_pins": 853,
+  "runtime_pins": 6,
+  "sdk_environment_pins": 20,
+  "fixture_files": 12,
+  "native_executable_sha256": "45030e9bd809fc841fd01528b71ed6e049986fa4da1f60a67d1be1abb42fd865",
+  "complete_bf16_output_words_replayed": 12582912,
+  "independent_cast_and_fp8_quantization_exact": true,
+  "actual_matmul_calls": 40,
+  "observed": [
+    {
+      "layer": 0,
+      "m32_algorithm_id": 67,
+      "default_m128_algorithm_id": 67,
+      "same_id_different_opaque_configuration": true,
+      "m32_opaque": "430000000d0000001100000001000000000000000100000012000000000000000100000060fd01001c0000001c0000000e000e00440000000000000000000000",
+      "default_m128_opaque": "43000000120000001000000001000000000000000100000012000000000000000100000060fd01001c0000001c0000000e000e00440000000000000000000000",
+      "m32_on_actual_m128_checked_required_workspace_bytes": 0,
+      "supplied_intervention_workspace_bytes": 8388608,
+      "native_m128_complete_output_exact_to_four_m32": true
+    },
+    {
+      "layer": 1,
+      "m32_algorithm_id": 67,
+      "default_m128_algorithm_id": 67,
+      "same_id_different_opaque_configuration": true,
+      "m32_opaque": "430000000d0000001100000001000000000000000100000012000000000000000100000060fd01001c0000001c0000000e000e00440000000000000000000000",
+      "default_m128_opaque": "43000000120000001000000001000000000000000100000012000000000000000100000060fd01001c0000001c0000000e000e00440000000000000000000000",
+      "m32_on_actual_m128_checked_required_workspace_bytes": 0,
+      "supplied_intervention_workspace_bytes": 8388608,
+      "native_m128_complete_output_exact_to_four_m32": true
+    }
+  ],
+  "source_runtime_sdk_fixture_unchanged": true,
+  "model_or_quality_or_performance_qualified": false,
+  "two_times_target_achieved": false,
+  "next_plan": {
+    "status": "real_Z_M32_algorithm_control_qualified_native_typed_policy_next",
+    "steps": [
+      "Implement a separate typed defaultoff Z128 policy/context/plugin for original rank3B1T128, in_proj_z N6144K5120 only. Preserve old GDNoutM128 andoldgeneralFP8 helper/plugin bytes; do not broaden an existing geometry. Environment/scalar/wire/descriptor errors must failclosed, batch4T32/batch8T16/unqualifiedprojections excluded.",
+      "Select canonical actualM32 descriptors with4MiBheuristic preference onpinnedSM120/cuBLASLt130400. BothobservedIDs are67 butopaqueconfigs differ; require exactobservedM32configuration in nativehelper control, not IDalone. AlgoCheck actual128descriptors required0inthiscontrol;8MiBwas supplied, no claim8MiBnecessary. Decide explicitnativeworkspace withitsown actualhelper test.",
+      "Build/replay private typedhelper pluswire/constructor/format/descriptor/offtargetcontrols, actualsamefixture fullBF16/FP8 casts/quant/output proof onbothmachines. Testinvalidtype/flags/geometry/device/scales/workspace/version anddistinctpluginserialization, preserve productionbuild andSDK. Only afteractualhelper proof integratefullbuild/counter/routing.",
+      "Rerunactual eightstageordinary/diagnosticprofiles withnewZpolicy andrequireprimarywitness/fullstage/state/repeatlineage beforeunchangedfull3968+128 sixcase modelstate/vector/ID gate. First128commoninput scalar-matrix control is notfull3968cause ormodelcorrectness.",
+      "Afterstrictfullmodel/805quality gates runmatchedHTTP text/imageTTFT/decode/concurrencythroughput/sampleVRAM, repeatedandstrongestfeasibletuned/MTPrefs. Original2xdecodeANDthroughput/halfTTFTextra/INT4/4B/B8arithmeticgoals remain active; currentcharts unchanged."
+    ],
+    "full_model_cause_established": false,
+    "model_or_quality_or_performance_qualified": false,
+    "two_times_target_achieved": false
+  }
+}
