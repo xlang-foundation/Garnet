@@ -1,0 +1,39 @@
+from pathlib import Path
+import hashlib,json
+m=Path('D:/CantorAI/work/qwen38-5090/test2026/cuda/qwen38_5090')
+old=m/'run_bf16_prefill128_commit_component.py'
+text=old.read_text()
+replacements=[
+('Exclusive standalone T128 commit build/correctness; never a model benchmark.','Exclusive standalone T128 attention correctness; no model or performance run.'),
+("JOB='prefill128-commit-component-attempt1'","JOB='prefill128-attention-component-attempt1'"),
+("REFERENCE='vllm-output-characterization-attempt1'","REFERENCE='vllm-observed-fixed4k-ordinary-attempt1'"),
+("w['exit_code'] in (0,1)","w['exit_code']==0"),
+('prefill128-commit-component-preparation.json','prefill128-attention-component-preparation.json'),
+('prefill128_commit_component_prepared_gpu_unrun','prefill128_attention_component_prepared_gpu_unrun'),
+("    profiled=p['profiled_parent']","    assert parent['archive_sha256']==p['reference_parent']['archive_sha256']\n    profiled=p['profiled_parent']"),
+('prefill128-commit-probe.exe','prefill128-attention-probe.exe'),
+('Actual10CPU metadata/codec/integer BF16/untouched-slot and closed-parent/complete-case controls before component build/GPU','Actual11CPU profile/full FP64 oracle/closed-parent and complete-case controls before component build/GPU'),
+('build_bf16_prefill128_commit_component.bat','build_bf16_prefill128_attention_component.bat'),
+('T128 commit GPU collection failed','T128 attention GPU collection failed'),
+('T128 component CPU controls failed','T128 attention CPU controls failed'),
+('Remote T128 component build failed','Remote T128 attention build failed'),
+('str(binary),str(native)','str(binary),str(native/\'witnesses.f32\')'),
+('Actual16valid/35invalid full canonical states, guards, target readonly,3replays of one captured graph; lossless complete RLE outputs require independent NumPy oracle','Actual36cases/full outputs, plain-tiled probability/output bit checks,9graph launches,256malformed calls, complete canonical readonly/guards; full FP64 replay required'),
+('prefill128_commit_component_collected_needs_replay','prefill128_attention_component_collected_needs_replay'),
+]
+for old_text,new_text in replacements:
+    assert text.count(old_text)==1,old_text
+    text=text.replace(old_text,new_text)
+new=m/'run_bf16_prefill128_attention_component.py'
+if new.exists():
+    previous=json.loads((m/'evidence/prefill128-attention-owner-derivation.json').read_bytes())
+    assert hashlib.sha256(new.read_bytes()).hexdigest()==previous['target_sha256']
+new.write_bytes(text.encode())
+build_old=m/'build_bf16_prefill128_commit_component.bat'
+build=build_old.read_bytes().replace(b'prefill128-commit-',b'prefill128-attention-').replace(b'qwen38_bf16_prefill128_commit.cu',b'qwen38_bf16_prefill128_attention.cu').replace(b'probe_bf16_prefill128_commit.cu',b'probe_bf16_prefill128_attention.cu')
+new_build=m/'build_bf16_prefill128_attention_component.bat'
+assert not new_build.exists() or new_build.read_bytes()==build
+new_build.write_bytes(build)
+r={'source':old.name,'source_sha256':hashlib.sha256(old.read_bytes()).hexdigest(),'target':new.name,'target_sha256':hashlib.sha256(new.read_bytes()).hexdigest(),'replacements':[{'old':a,'new':b,'count':1} for a,b in replacements],'build_source_sha256':hashlib.sha256(build_old.read_bytes()).hexdigest(),'build_target_sha256':hashlib.sha256(build).hexdigest(),'scope':'Same exercised exclusive source/runtime/SDK/build/CPU/GPU/cleanup/archive lifecycle, now latest observed-vLLM closed parent and standalone T128 attention witness collector. No production runtime mutation.'}
+(m/'evidence/prefill128-attention-owner-derivation.json').write_bytes(json.dumps(r,indent=2).encode())
+print(json.dumps({'status':'prefill128_attention_owner_derived','sources':2}))

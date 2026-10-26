@@ -1,0 +1,31 @@
+from pathlib import Path
+import hashlib,json,subprocess,sys,zipfile
+work=Path(__file__).resolve().parent;out=work.parent/'outputs';m=Path('D:/CantorAI/work/qwen38-5090/test2026/cuda/qwen38_5090')
+job='prefill128-attention-component-attempt1';sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+archive=out/(job+'-evidence.zip');remote=out/(job+'-remote-verified.json');q=json.loads(remote.read_bytes())
+assert sha(archive)==q['archive_sha256']
+assert q['status']=='prefill128_attention_component_full_fp64_replayed'
+argv=[sys.executable,str(m/'verify_bf16_prefill128_attention_component.py'),'--proofs',str(out)]
+log=out/(job+'-local-replay.log');proof=out/(job+'-verified.json')
+if log.exists():
+    recorded=json.loads(log.read_bytes())
+    assert recorded['status']=='prefill128_attention_component_full_fp64_replayed' and recorded['proof_sha256']==sha(proof)
+    code=0
+else:
+    with log.open('xb') as stream:code=subprocess.run(argv,stdout=stream,stderr=subprocess.STDOUT).returncode
+assert code==0
+sys.path.insert(0,str(m))
+from compare_bf16_prefill128_attention_replays import compare_replays
+local=json.loads(proof.read_bytes());pair=compare_replays(local,q)
+pair['proof_bytes_identical']=proof.read_bytes()==remote.read_bytes()
+pair_hashes={'local':sha(proof),'remote':sha(remote)}
+with zipfile.ZipFile(archive) as z:
+    w=json.loads(z.read('results/'+job+'/workflow.json'))
+    assert w['exit_code']==0 and w['cleanup_finished'] is True
+    assert w['source_sha256']==w['source_after_sha256'] and w['runtime_dependencies']==w['runtime_dependencies_after']
+    assert w['environment']==w['environment_after'] and w['sdk_before']==w['sdk_after']
+assert len(q['cases'])==36 and q['full_output_scalars_replayed']==28311552 and q['numerical_failures']==[]
+r={'status':'prefill128_attention_full_output_fp64_replayed_on_both_machines','archive_sha256':sha(archive),'archive_bytes':archive.stat().st_size,'proof_sha256':pair_hashes,'proof_pair_sha256':hashlib.sha256(json.dumps(pair_hashes,sort_keys=True).encode()).hexdigest(),'pair_comparison':pair,'files_verified':q['files_verified'],'local_replay':{'exit_code':code,'argv':argv,'log_sha256':sha(log)},'cases':36,'full_output_scalars_replayed':28311552,'graph_launches':q['graph_launches'],'malformed_invocations':q['malformed_invocations'],'max_absolute_error':max(v['max_absolute_error'] for result in (q,local) for v in result['cases']),'max_tolerance_fraction':max(v['max_tolerance_fraction'] for result in (q,local) for v in result['cases']),'correctness_sampled_memory':q['correctness_sampled_memory'],'source_pins':len(w['source_sha256']),'runtime_and_sdk_preserved':True,'full_forward_integrated':False,'model_or_serving_qualified':False,'performance_admitted':False,'two_times_target_achieved':False,'scope':q['scope']}
+(out/'Garnet-T128-Attention-Component-Verified.json').write_bytes(json.dumps(r,indent=2).encode())
+(work/'prefill128-attention-local-receipt.json').write_bytes(json.dumps(r,indent=2).encode())
+print(json.dumps({k:r[k] for k in ('status','archive_sha256','proof_pair_sha256','full_output_scalars_replayed','max_absolute_error','max_tolerance_fraction')}))
