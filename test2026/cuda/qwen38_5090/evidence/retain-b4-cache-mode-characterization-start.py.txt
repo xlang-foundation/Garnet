@@ -1,0 +1,32 @@
+from pathlib import Path
+import hashlib,json
+work=Path(__file__).resolve().parent;out=work.parent/'outputs';repo=Path('D:/CantorAI/work/qwen38-5090');m=repo/'test2026/cuda/qwen38_5090';e=m/'evidence';paths=[]
+sha=lambda raw:hashlib.sha256(raw).hexdigest()
+def keep(name,raw):
+    path=e/name;assert not path.exists() or path.read_bytes()==raw
+    if not path.exists():path.write_bytes(raw)
+    paths.append(path.relative_to(repo).as_posix())
+p=json.loads((e/'b4-cache-mode-characterization-preparation.json').read_bytes());install=json.loads((work/'b4-cache-mode-characterization-install.json').read_bytes());bundle=json.loads((work/'b4-cache-mode-characterization-bundle.json').read_bytes())
+assert len(p['files'])==install['source_pins']==706 and p['expected_cpu_test_count']==50 and install['new_targets']==9 and install['runtime_and_sdk_unchanged'] is True
+for name,digest in p['new_files'].items():
+    path=repo/name.removeprefix('Garnet/');assert sha(path.read_bytes())==digest;paths.append(path.relative_to(repo).as_posix())
+paths.append((e/'b4-cache-mode-characterization-preparation.json').relative_to(repo).as_posix())
+for name in ('derive-b4-cache-mode-characterization.py','package-b4-cache-mode-characterization.py','install-b4-cache-mode-characterization.py','retain-b4-cache-mode-characterization-start.py'):
+    keep(name+'.txt',(work/name).read_bytes())
+for name in ('b4-cache-mode-characterization-upload-plan.json','b4-cache-mode-characterization-bundle.json','b4-cache-mode-characterization-install.json'):
+    keep(name,(work/name).read_bytes())
+for path in (work/'b4-cache-mode-characterization-cpu-ledger').iterdir():
+    if path.is_file():keep('b4-cache-mode-characterization-cpu-'+path.name,path.read_bytes())
+r={'status':'strict_b8_failure_closed_and_cache_mode_diagnosis_running','job':'b4-cache-mode-characterization-attempt1','supervisor_session':48577,'observed_state':'running','cpu_tests_passed_local':50,'local_cpu_seconds':16.562,'cpu_tests_passed_remote':50,'remote_cpu_seconds':19.294,'source_pins':706,'install':install,'bundle':bundle,
+   'planned_modes':['full','packed'],'physical_batch':4,'case':'Actual first failed four-row short-mixed case,8output IDs','terminal_result':None,'strict_failure_proof_pair_sha256':json.loads((work/'b8-b4-failure-local-receipt.json').read_bytes())['proof_pair_sha256'],
+   'prefill128_native_runtime_candidate_deployed':False,'cause_established':False,'new_performance_result':False,'two_times_target_achieved':False}
+raw=json.dumps(r,indent=2).encode();keep('b4-cache-mode-characterization-start.json',raw)
+(out/'Garnet-T128-Candidate-and-B8-Cache-Diagnosis-Status.json').write_bytes(raw)
+text='\n\n### 2026-10-25 — Controlled B4 full/packed cache-mode characterization started\n\n'
+text+='Preserved strict B8/B4 failure and both original replay processes are closed, with identical expected-failure proof. All old archive/proof transfers and CPU inspections completed before the next owner. New characterization keeps unchanged1a1d runtime/source and the exact first four-row short input case, then runs full-FP32-cache/BF16-values and packed-BF16-cache sequentially, with exclusive idle checks between processes. Each collects eight actual generated IDs, full expanded logical-state hashes and raw hidden/normalized vectors at reset/prefill/final plus empty/final-reset controls. Full-repeat versus failed-full, each mode versus closed B8 and packed versus fresh-full are independently replayed. Every difference is retained; no original gate relaxed and no tolerance, cause or quality/performance admission.\n\n'
+text+='Exact source transforms from exercised owner/probe/launcher retained. New standard-library-only helper validates complete128component coverage/slots/rawF32hashes/finite values and reports exact counts/max differences, without NumPy or reconstructed IDs in the embedded runtime. Five faults/control families join the45existing controls; local50tests pass16.562s and actual remote50tests pass19.294s. Preparation/bundle source706, nine-target absent-only install, SDK/runtime unchanged. Bundle '+bundle['bundle_sha256']+' ('+str(bundle['bytes'])+'bytes); install receipt downloaded/ACKed before supervisor48577 starts b4-cache-mode-characterization-attempt1. Exact observed handle remains live after CPU controls, constructing the first mode. No second GPU model, transfer or independent replay while live.\n\n'
+text+='The full T128 forward/native candidate remains local only, CPU compiled and unqualified on GPU. Reconfigure the existing native build tree to collect its new globbed source files before the eventual preserved-DLL candidate build; do not infer runtime/link/model qualification from the four private /c objects. New50test diagnosis source/pins and current remote1a1d are frozen. Complete raw replay/cleanup and both-machine proof closure are required before another GPU owner or any performance promotion. Overall2x/halfTTFT objectives remain unmet/unproven; current charts unchanged.\n'
+for name in ('qwen38-5090-development-log.md','qwen38-5090-implementation-task.md'):
+    path=repo/'docs/research'/name;previous=path.read_bytes();assert b'Controlled B4 full/packed cache-mode characterization started' not in previous
+    path.write_bytes(previous+text.encode());paths.append(path.relative_to(repo).as_posix())
+(work/'b4-cache-mode-start-retained-paths.json').write_bytes(json.dumps(paths,indent=2).encode());print(json.dumps({'status':r['status'],'retained_paths':len(paths)}))

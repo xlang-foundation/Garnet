@@ -1,0 +1,33 @@
+from pathlib import Path
+import argparse,hashlib,json,sys,zipfile
+root=Path('D:/CantorAI/5090-study-20261023');m=root/'Garnet/test2026/cuda/qwen38_5090';sys.path.insert(0,str(m))
+from run_bf16_low_batch_native_build import idle
+sha=lambda b:hashlib.sha256(b).hexdigest()
+a=argparse.ArgumentParser();a.add_argument('--sha256',required=True);args=a.parse_args()
+archive=root/'results/b4-cache-mode-characterization-methods.zip';receipt=root/'results/b4-cache-mode-characterization-install.json'
+assert sha(archive.read_bytes())==args.sha256 and not receipt.exists();idle()
+with zipfile.ZipFile(archive) as z:
+    d=json.loads(z.read('install-manifest.json'));assert z.testzip() is None and len(z.namelist())==len(set(z.namelist()))==len(d['files'])+1
+    key='Garnet/test2026/cuda/qwen38_5090/evidence/b4-cache-mode-characterization-preparation.json';p=json.loads(z.read(key))
+    assert p['status']=='b4_cache_mode_characterization_prepared_gpu_unrun' and len(p['files'])==706 and p['expected_cpu_test_count']==50
+    for n,h in p['files'].items():
+        if n not in d['files']:assert sha((root/n).read_bytes())==h
+    for n,h in p['runtime'].items():assert sha((root/'build/bin'/n).read_bytes())==h
+    for n,h in p['environment'].items():assert sha(Path(n).read_bytes())==h
+    rows=[];unchanged=[]
+    for n,h in d['files'].items():
+        target=root/n;assert target.resolve().is_relative_to(m.resolve()) and target.parent.is_dir()
+        parent=target.parent
+        while parent!=root:
+            assert parent.resolve().is_relative_to(root.resolve()) and not(getattr(parent.lstat(),'st_file_attributes',0)&0x400);parent=parent.parent
+        raw=z.read(n);assert sha(raw)==h
+        if n!=key:assert p['files'][n]==h
+        if target.exists():assert target.is_file() and sha(target.read_bytes())==h;unchanged.append(n)
+        else:rows.append((target,raw))
+    for target,raw in rows:
+        with target.open('xb') as stream:stream.write(raw)
+        assert target.read_bytes()==raw
+for n,h in p['files'].items():assert sha((root/n).read_bytes())==h
+result={'status':'b4_cache_mode_characterization_methods_installed','bundle_sha256':args.sha256,'new_targets':len(rows),
+        'unchanged_targets':unchanged,'source_pins':706,'runtime_and_sdk_unchanged':True,'gpu_executed':False}
+receipt.write_bytes(json.dumps(result,indent=2).encode());print(json.dumps(result))
