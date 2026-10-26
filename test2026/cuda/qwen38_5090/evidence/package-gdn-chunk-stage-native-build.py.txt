@@ -1,0 +1,40 @@
+"""Prepare remote native candidate and CPU evidence; no local target execution."""
+from pathlib import Path
+import hashlib,json,os,sys,unittest,zipfile
+work=Path(__file__).resolve().parent;out=work.parent/'outputs';repo=Path('D:/CantorAI/work/qwen38-5090');m=repo/'test2026/cuda/qwen38_5090';e=m/'evidence';sha=lambda raw:hashlib.sha256(raw).hexdigest();sys.path[:0]=[str(repo),str(m)]
+prior=json.loads((e/'bf16-prefill128-fp8-native-build-preparation.json').read_bytes());stage=json.loads((e/'gdn-chunk-stage-native-derivation.json').read_bytes());candidate=dict(prior['candidate_files']);base=dict(prior['candidate_base'])
+for row in stage['modified']:
+    assert candidate[row['target']]==row['before_sha256'];candidate[row['target']]=row['target_sha256']
+for name,h in stage['new_files'].items():assert name not in candidate;candidate[name]=h;base[name]=None
+assert len(candidate)==len(base)==23 and sum(value is not None for value in base.values())==8
+for name,h in candidate.items():assert sha((repo/name).read_bytes())==h
+bundle=work/'gdn-chunk-stage-native-source.zip';assert not bundle.exists()
+with zipfile.ZipFile(bundle,'x',zipfile.ZIP_DEFLATED) as z:
+    for name in candidate:z.write(repo/name,name)
+new=('run_gdn_chunk_stage_native_build.py','verify_gdn_chunk_stage_native_build.py','prepare_gdn_chunk_stage_native_build.py','test_gdn_chunk_stage_native_build.py','test_gdn_chunk_stage_source.py','probe_gdn_chunk_stage_profile.cpp','build_gdn_chunk_stage_profile_cpu.bat','gdn_chunk_stage_build_contract.py','evidence/gdn-chunk-stage-native-derivation.json','evidence/gdn-chunk-stage-native-original-trt-builder.cpp.txt','evidence/gdn-chunk-stage-native-build-derivation.json')
+methods=dict(prior['methods']);methods.update({'Garnet/test2026/cuda/qwen38_5090/'+name:sha((m/name).read_bytes()) for name in new})
+def ids(suite):
+    for test in suite:
+        if isinstance(test,unittest.TestSuite):yield from ids(test)
+        else:yield test.id()
+tests=prior['test_ids']+list(ids(unittest.defaultTestLoader.loadTestsFromName('test2026.cuda.qwen38_5090.test_gdn_chunk_stage_native_build')));assert len(tests)==len(set(tests))==62
+import test2026.cuda.qwen38_5090.run_logged as ledger
+pins={**methods,**{'Garnet/'+name:h for name,h in candidate.items()}};ledger.source_identity=lambda:{'scope':'Explicit owned GDN stage native build sources; unrelated untracked files excluded','owned_source_sha256':pins};os.chdir(repo)
+code=ledger.run([sys.executable,'-m','unittest',*tests],work/'gdn-chunk-stage-native-build-local-cpu-ledger','correctness','60retained build/transaction/native-wire regressions plus2new profile report/source-derivation faults; source post-install checks are separate. No local native runtime/GPU',[repo/name.removeprefix('Garnet/') for name in methods]);assert code==0
+parents={}
+for job,status,exit_code in (('bf16-prefill128-fp8-native-build-attempt1','bf16_prefill128_fp8_native_build_cpu_replayed',0),('bf16-prefill128-fp8-model-admission-attempt1','bf16_prefill128_fp8_full4k_model_failure_preserved',1)):
+    raw=(out/(job+'-verified.json')).read_bytes();assert raw==(out/(job+'-remote-verified.json')).read_bytes();q=json.loads(raw);assert q['status']==status and sha((out/(job+'-evidence.zip')).read_bytes())==q['archive_sha256'];parents[job]={'status':status,'exit_code':exit_code,'proof_sha256':sha(raw),'archive_sha256':q['archive_sha256']}
+w=json.loads((e/'bf16-prefill128-fp8-model-admission-attempt1-workflow.json').read_bytes());assert w['exit_code']==1 and w['source_before_sha256']==w['source_after_sha256'] and w['runtime_dependencies']==w['runtime_dependencies_after'] and w['environment_before']==w['environment_after']
+baseline=dict(w['source_after_sha256'])
+for name in ('evidence/bf16-prefill128-fp8-model-preparation.json','analyze_bf16_prefill128_fp8_model_failure.py'):baseline['Garnet/test2026/cuda/qwen38_5090/'+name]=sha((m/name).read_bytes())
+for name,h in base.items():
+    if h is not None:assert baseline['Garnet/'+name]==h
+p={'status':'gdn_chunk_stage_native_build_proposed_unrun','base_files':baseline,'methods':methods,'runtime':w['runtime_dependencies_after'],'environment':w['environment_after'],'parents':parents,'candidate_files':candidate,'candidate_base':base,'vcvars':prior['vcvars'],'test_ids':tests,'expected_cpu_test_count':62,'bundle':'results/gdn-chunk-stage-native-source.zip','bundle_sha256':sha(bundle.read_bytes()),'scope':'23native-source combined T128/FP8 candidate plus separate strict GDN layer0/1 B1T32/T128 diagnostic profile. Preserve original embeddedT16 guard; no CUDA/GDN/FP8/MLP body changes.8existing source targets restored/15owned new targets removed, baseline1a1d runtime/SDK restored,34CUDA object set unchanged and only intended existing3may recompile.62CPU regressions before install and3composed source checks afterward; actual pureCPU profile header4valid/50invalid/6flag/1legacyconflict, no frontend/GPU calls. FullGarnet build, bothplugin CPU wire controls,10external+10embedded selectors and955tokenizer. Diagnostic primary witness, numerical cause, full-model correctness,805quality, performance and2xremain unqualified.'}
+proposal=work/'gdn-chunk-stage-native-proposal.json';assert not proposal.exists();proposal.write_bytes(json.dumps(p,indent=2).encode())
+files={'Garnet/test2026/cuda/qwen38_5090/'+name:(m/name).read_bytes() for name in new};files[p['bundle']]=bundle.read_bytes();files['results/gdn-chunk-stage-native-proposal.json']=proposal.read_bytes()
+package=work/'gdn-chunk-stage-native-build-deployment.zip';assert not package.exists()
+with zipfile.ZipFile(package,'x',zipfile.ZIP_DEFLATED) as z:
+    for name,raw in files.items():z.writestr(name,raw)
+    z.writestr('install-manifest.json',json.dumps({'files':{name:sha(raw) for name,raw in files.items()}},indent=2))
+old=(work/'install-prefill128-fp8-native-build.py').read_bytes();installer=old.replace(b'bf16-prefill128-fp8-native-build-deployment',b'gdn-chunk-stage-native-build-deployment').replace(b'prefill128-fp8-native-build-install',b'gdn-chunk-stage-native-build-install').replace(b'prefill128-fp8-native-proposal',b'gdn-chunk-stage-native-proposal').replace(b'bf16_prefill128_fp8_native_build_proposed_unrun',b'gdn_chunk_stage_native_build_proposed_unrun').replace(b'==60',b'==62').replace(b'==22',b'==23').replace(b'+1==8',b'+1==14');installer_path=work/'install-gdn-chunk-stage-native-build.py';assert not installer_path.exists();installer_path.write_bytes(installer)
+result={'status':p['status'],'deployment_sha256':sha(package.read_bytes()),'bytes':package.stat().st_size,'targets':len(files),'native_source_count':23,'baseline_source_pins':len(baseline),'method_pins':len(methods),'cpu_tests':62,'installer_sha256':sha(installer)};(work/'gdn-chunk-stage-native-build-package.json').write_bytes(json.dumps(result,indent=2).encode());print(json.dumps(result))

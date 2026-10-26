@@ -1,0 +1,42 @@
+{
+  "status": "gdn_chunk_stage_native_candidate_uncompiled",
+  "modified": [
+    {
+      "target": "src/backends/tensorrt/trt_builder.cpp",
+      "original_snapshot": "test2026/cuda/qwen38_5090/evidence/gdn-chunk-stage-native-original-trt-builder.cpp.txt",
+      "before_sha256": "13d453394d73359734cc344d8b5d458518e22a857edd3cf3b89e16b38df0110a",
+      "target_sha256": "b1fef77ce1a63ed2d5318e2764eaa8965dbf647bfbfa95105a0b0941f2c0ebda",
+      "replacements": [
+        {
+          "old": "#include \"qwen35_lowering.h\"",
+          "new": "#include \"qwen35_lowering.h\"\n#include \"qwen38_gdn_chunk_stage_profile.h\"",
+          "count": 1
+        },
+        {
+          "old": "                    std::vector<ITensor*> diagnosticStages;\n                    auto b=qwen35Bindings[TensorId(input)];\n                    lastOutput=ops.linearDecoderChunk",
+          "new": "                    auto* chunkStageAttribute=FindKeyword(kwParams,\"diagnostic_gdn_chunk_stages\");\n                    if(chunkStageAttribute&&(!(chunkStageAttribute->second.IsInt64()||chunkStageAttribute->second.IsUInt64())||\n                        (chunkStageAttribute->second.IsUInt64()&&chunkStageAttribute->second.ToUInt64()>1)))\n                        throw std::invalid_argument(\"GDN chunk stage opt-in requires integer0 or1\");\n                    const auto chunkStageMode=chunkStageAttribute?chunkStageAttribute->second.ToLongLong():0;\n                    if(chunkStageMode!=0&&chunkStageMode!=1)throw std::invalid_argument(\"GDN chunk stage opt-in must be0 or1\");\n                    auto b=qwen35Bindings[TensorId(input)];\n                    bool chunkStageStudy=false;\n                    if(chunkStageMode){\n                        const char* bindings[]={\"qwen35_conv_bind_state\",\"qwen35_delta_bind_state\",\"qwen35_conv_bind_active\"};\n                        if(b.size()!=3)throw std::invalid_argument(\"GDN chunk stage needs three exact state/active bindings\");\n                        for(const auto* name:bindings)if(!b.count(name)||!b[name])throw std::invalid_argument(\"GDN chunk stage binding absent\");\n                        GDNChunkStageProfile profile;\n                        profile.hidden=dimensions;profile.history=ops.shape(b[bindings[0]]);profile.state=ops.shape(b[bindings[1]]);profile.active=ops.shape(b[bindings[2]]);\n                        profile.layer=keywordText(\"layer_prefix\");profile.weightProfile=capturedWeightProfile;\n                        for(const auto& value:external)profile.externalNames.push_back(value.first);\n                        profile.floatInputs={source->getType()==DataType::kFLOAT,b[bindings[0]]->getType()==DataType::kFLOAT,b[bindings[1]]->getType()==DataType::kFLOAT,b[bindings[2]]->getType()==DataType::kFLOAT};\n                        profile.compressed=FindKeyword(kwParams,\"external_compressed_weights\")!=nullptr;profile.bf16Bindings=FindKeyword(kwParams,\"external_weights\")!=nullptr;\n                        profile.keyHeads=keywordInt(\"key_heads\",0);profile.valueHeads=keywordInt(\"value_heads\",0);profile.keyDim=keywordInt(\"key_dim\",0);profile.valueDim=keywordInt(\"value_dim\",0);\n                        profile.fused=keywordInt(\"fused_delta\",0);profile.retain=keywordInt(\"retain_linear_inputs\",0);profile.register128=keywordInt(\"register_delta_128\",0);\n                        profile.joinedInputs=keywordInt(\"joined_input_projections\",0);profile.joinedMLP=keywordInt(\"joined_mlp_projections\",0);profile.workspace=keywordInt(\"projection_workspace_bytes\",0);profile.epsilon=float(number(\"eps\",1e-6));\n                        chunkStageStudy=SelectGDNChunkStageProfile(true,chunkStageMode,diagnostic!=0,profile);\n                    }\n                    const bool captureStages=diagnostic||chunkStageStudy;\n                    const int stageWordLimit=chunkStageStudy?dimensions[1]*10240:1048576;\n                    std::vector<ITensor*> diagnosticStages;\n                    lastOutput=ops.linearDecoderChunk",
+          "count": 1
+        },
+        {
+          "old": "keywordInt(\"joined_mlp_projections\",0)!=0,diagnostic?&diagnosticStages:nullptr);",
+          "new": "keywordInt(\"joined_mlp_projections\",0)!=0,captureStages?&diagnosticStages:nullptr);",
+          "count": 1
+        },
+        {
+          "old": "                    if(diagnostic){\n                        if(diagnosticStages.size()!=11)throw std::runtime_error(\"Linear stage diagnostic contract changed\");",
+          "new": "                    if(captureStages){\n                        if(diagnosticStages.size()!=11)throw std::runtime_error(\"Linear stage diagnostic contract changed\");",
+          "count": 1
+        },
+        {
+          "old": "if(shape[i]<1||width>1048576/shape[i])throw std::runtime_error(\"Linear diagnostic stage exceeds bounded row reader\");",
+          "new": "if(shape[i]<1||width>stageWordLimit/shape[i])throw std::runtime_error(\"Linear diagnostic stage exceeds bounded row reader\");",
+          "count": 1
+        }
+      ]
+    }
+  ],
+  "new_files": {
+    "src/backends/tensorrt/qwen38_gdn_chunk_stage_profile.h": "9194a3daa114fd3b42498d25544990d40b9ba47abc836fcfcbf1717a32ed6874"
+  },
+  "scope": "Separate diagnostic_gdn_chunk_stages integer0/1, pinned GDN layer0/1 B1 T32/T128 with exact five shared compressed projections, register128/joinedMLP/no payload. Preserve original embedded T16 guard and all actual GDN/FP8/MLP/CUDA bodies. New capture row bound token*10240; existing IO1Miword reader unchanged, collector must split reads. Primary witness/model/quality/performance unqualified."
+}

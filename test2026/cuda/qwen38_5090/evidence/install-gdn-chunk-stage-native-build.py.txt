@@ -1,0 +1,35 @@
+from pathlib import Path
+import argparse,hashlib,io,json,sys,zipfile
+ROOT=Path('D:/CantorAI/5090-study-20261023');M=ROOT/'Garnet/test2026/cuda/qwen38_5090';sys.path.insert(0,str(M));from run_bf16_low_batch_native_build import idle
+sha=lambda raw:hashlib.sha256(raw).hexdigest();parser=argparse.ArgumentParser();parser.add_argument('--sha256',required=True);args=parser.parse_args()
+bundle=ROOT/'results/gdn-chunk-stage-native-build-deployment.zip';receipt=ROOT/'results/gdn-chunk-stage-native-build-install.json';assert sha(bundle.read_bytes())==args.sha256 and not receipt.exists();idle()
+with zipfile.ZipFile(bundle) as z:
+    manifest=json.loads(z.read('install-manifest.json'));assert z.testzip() is None and len(z.namelist())==len(set(z.namelist()))==len(manifest['files'])+1==14
+    proposal='results/gdn-chunk-stage-native-proposal.json';p=json.loads(z.read(proposal));assert p['status']=='gdn_chunk_stage_native_build_proposed_unrun' and p['expected_cpu_test_count']==62 and len(p['candidate_files'])==23
+    for name,h in p['base_files'].items():assert sha((ROOT/name).read_bytes())==h
+    for name,h in p['methods'].items():
+        if name not in manifest['files']:assert sha((ROOT/name).read_bytes())==h
+    for name,h in p['runtime'].items():assert sha((ROOT/'build/bin'/name).read_bytes())==h
+    for name,h in p['environment'].items():assert sha(Path(name).read_bytes())==h
+    for name,h in p['candidate_base'].items():
+        path=ROOT/'Garnet'/name
+        if h is None:assert not path.exists()
+        else:assert sha(path.read_bytes())==h
+    raw=z.read(p['bundle']);assert sha(raw)==p['bundle_sha256']
+    with zipfile.ZipFile(io.BytesIO(raw)) as source:
+        assert source.testzip() is None and len(source.namelist())==len(set(source.namelist()))==23 and set(source.namelist())==set(p['candidate_files'])
+        for name,h in p['candidate_files'].items():assert sha(source.read(name))==h
+    pending=[];same=[]
+    for name,h in manifest['files'].items():
+        path=ROOT/name;assert path.resolve().is_relative_to(M.resolve()) or name in (p['bundle'],proposal)
+        assert '..' not in Path(name).parts and path.parent.is_dir();parent=path.parent
+        while parent!=ROOT:
+            assert parent.resolve().is_relative_to(ROOT.resolve()) and not(getattr(parent.lstat(),'st_file_attributes',0)&0x400);parent=parent.parent
+        raw=z.read(name);assert sha(raw)==h
+        if name not in (proposal,p['bundle']):assert p['methods'][name]==h
+        if path.exists():assert path.is_file() and sha(path.read_bytes())==h;same.append(name)
+        else:pending.append((path,raw))
+    for path,raw in pending:
+        with path.open('xb') as stream:stream.write(raw)
+        assert path.read_bytes()==raw
+receipt.write_bytes(json.dumps({'status':'combined_native_build_methods_installed_candidate_source_unrun','deployment_sha256':args.sha256,'new_targets':len(pending),'unchanged_targets':same,'candidate_source_installed':False,'gpu_executed':False},indent=2).encode());print(receipt.read_text())
