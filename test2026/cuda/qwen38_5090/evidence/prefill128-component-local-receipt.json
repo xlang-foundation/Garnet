@@ -1,0 +1,41 @@
+{
+  "status": "prefill128_commit_component_full_state_replayed_on_both_machines",
+  "archive_sha256": "2f28fd531f0d01ffd8c267be355d8a9102cd626f8c7aa9f369b78ebc820d0eea",
+  "archive_bytes": 224386502,
+  "proof_pair_sha256": "a892c87a48b64fb1a82d7491b8d3078e2197f7efbaa7a14b93ff1c94225943d9",
+  "files_verified": 90,
+  "local_replay": {
+    "exit_code": 0,
+    "argv": [
+      "D:\\CantorAI\\Garnet\\.venv\\Scripts\\python.exe",
+      "D:\\CantorAI\\work\\qwen38-5090\\test2026\\cuda\\qwen38_5090\\verify_bf16_prefill128_commit_component.py",
+      "--proofs",
+      "C:\\Users\\developer\\Documents\\Codex\\2026-10-23\\referenced-chatgpt-conversation-this-is-an\\outputs"
+    ],
+    "log_sha256": "faffc0127081b51bf97d4c95dbd72ebb948bd5f528173ba0836f1e13f369f3c1"
+  },
+  "full_state_replay": {
+    "valid_cases": 16,
+    "invalid_cases": 35,
+    "graph_replays": 3,
+    "full_canonical_words_replayed": 5448010944,
+    "full_target_input_and_final_replayed": true,
+    "target_readonly_checks_reported": 51,
+    "component_correctness_sampled_memory": {
+      "sampled_peak_adapter_used_bytes": 1631006720,
+      "samples": 367,
+      "requested_interval_seconds": 0.02,
+      "observed_sample_gap_median_seconds": 0.031640549990697764,
+      "observed_sample_gap_max_seconds": 0.035658600012538955,
+      "scope": "NVML adapter-wide used memory, including background allocations; sampled maximum, not instantaneous or process-attributed peak"
+    },
+    "runtime_or_model_qualified": false
+  },
+  "source_pins": 24,
+  "core_runtime_and_sdk_preserved": true,
+  "full_prefill128_forward_runtime_implemented": false,
+  "model_or_http_qualified": false,
+  "performance_admitted": false,
+  "two_times_target_achieved": false,
+  "scope": "Actual isolated commit operator only: all16valid/35invalid canonical states including guards,3replays of one captured graph and full target input/final snapshots independently reconstructed from raw lossless RLE on both machines. Per-call readonly checks are source-pinned C++ observations. No widened runtime/parser guard, local GPU/model execution, full forward integration, serving memory or speedup claim."
+}

@@ -1,0 +1,18 @@
+from pathlib import Path
+import hashlib,json
+m=Path('D:/CantorAI/work/qwen38-5090/test2026/cuda/qwen38_5090');sha=lambda b:hashlib.sha256(b).hexdigest()
+manifest=m/'evidence/vllm-observed-fixed4k-pipeline-derivation.json';d=json.loads(manifest.read_bytes())
+changes={
+ 'run_vllm_observed_fixed4k.py':[
+  ('from vllm_observed_component_parent import closed_component',"if __package__:\n    from .vllm_observed_component_parent import closed_component\nelse:\n    from vllm_observed_component_parent import closed_component"),
+  ("sys.path.insert(0,str(methods));from run_logged import run", "sys.path.insert(0,str(methods));from run_logged import run\n    import run_logged as ledger\n    ledger.source_identity=lambda:{'scope':'explicit owned observed-baseline inputs; unrelated untracked files excluded','owned_source_sha256':p['files']}")],
+ 'verify_vllm_observed_fixed4k.py':[
+  ("archived=sha(z.read(METHODS+'verify_vllm_observed_fixed4k.py'))", "archived=sha(z.read(METHODS+'verify_vllm_observed_fixed4k.py'));assert archived==sha(Path(__file__).read_bytes())")]
+}
+for name,replacements in changes.items():
+    path=m/name;raw=path.read_bytes();row=next(r for r in d['derivations'] if r['target']==name);assert row['target_sha256']==sha(raw)
+    text=raw.decode()
+    for old,new in replacements:
+        assert text.count(old)==1;text=text.replace(old,new);row['replacements'].append({'old':old,'new':new,'count':1})
+    after=text.encode();path.write_bytes(after);row['target_sha256']=sha(after)
+manifest.write_bytes(json.dumps(d,indent=2).encode());print(json.dumps({'status':'unrun_vllm_observed_namespace_and_source_bindings_corrected'}))

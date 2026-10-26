@@ -1,0 +1,21 @@
+from pathlib import Path
+import hashlib,json,subprocess,sys,zipfile
+work=Path(__file__).resolve().parent;out=work.parent/'outputs';m=Path('D:/CantorAI/work/qwen38-5090/test2026/cuda/qwen38_5090')
+job='prefill128-commit-component-attempt1';sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+archive=out/(job+'-evidence.zip');remote=out/(job+'-remote-verified.json');q=json.loads(remote.read_bytes())
+assert sha(archive)==q['archive_sha256'] and q['status']=='prefill128_commit_component_full_state_replayed'
+log=out/(job+'-local-replay.log');argv=[sys.executable,str(m/'verify_bf16_prefill128_commit_component.py'),'--proofs',str(out)]
+with log.open('xb') as stream:code=subprocess.run(argv,stdout=stream,stderr=subprocess.STDOUT).returncode
+proof=out/(job+'-verified.json');assert code==0 and proof.read_bytes()==remote.read_bytes()
+with zipfile.ZipFile(archive) as z:
+    w=json.loads(z.read('results/'+job+'/workflow.json'))
+    assert w['exit_code']==0 and w['cleanup_finished'] is True and w['source_sha256']==w['source_after_sha256']
+    assert w['runtime_dependencies']==w['runtime_dependencies_after'] and w['environment']==w['environment_after'] and w['sdk_before']==w['sdk_after']
+r={'status':'prefill128_commit_component_full_state_replayed_on_both_machines','archive_sha256':sha(archive),'archive_bytes':archive.stat().st_size,
+   'proof_pair_sha256':sha(proof),'files_verified':q['files_verified'],'local_replay':{'exit_code':code,'argv':argv,'log_sha256':sha(log)},
+   'full_state_replay':q['full_state_replay'],'source_pins':len(w['source_sha256']),'core_runtime_and_sdk_preserved':True,
+   'full_prefill128_forward_runtime_implemented':False,'model_or_http_qualified':False,'performance_admitted':False,'two_times_target_achieved':False,
+   'scope':'Actual isolated commit operator only: all16valid/35invalid canonical states including guards,3replays of one captured graph and full target input/final snapshots independently reconstructed from raw lossless RLE on both machines. Per-call readonly checks are source-pinned C++ observations. No widened runtime/parser guard, local GPU/model execution, full forward integration, serving memory or speedup claim.'}
+(work/'prefill128-component-local-receipt.json').write_bytes(json.dumps(r,indent=2).encode())
+(out/'Garnet-T128-Commit-Component-Verified.json').write_bytes(json.dumps(r,indent=2).encode())
+print(json.dumps({k:r[k] for k in ('status','archive_sha256','proof_pair_sha256','files_verified','source_pins','performance_admitted')}))

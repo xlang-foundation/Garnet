@@ -58,7 +58,7 @@ def main():
    wire=z.read(row['request_file']);ids_raw=z.read(row['expected_prompt_ids_file']);assert sha(wire)==row['request_sha256'] and sha(ids_raw)==row['expected_prompt_ids_sha256'];body=json.loads(wire);ids=json.loads(ids_raw)
    assert body['stream'] and body['model']=='qwen38-27b-nvfp4' and body['max_tokens']==128 and body.get('ignore_eos') is True and len(ids)==3968 and row['total_context_capacity']==4096
    prepared[row['key']]=(body,ids)
- assert len(prepared)==124;out=args.output;out.mkdir();controls=out/'controls';controls.mkdir();actual={};control_report={'status':'running','engine':args.engine,'cases':[],'streamed_ids_observed':False,'scope':'Untimed actual nonstreaming IDs; streaming will check actual counts and exact same-engine greedy text only. No token IDs reconstructed from text.'}
+ assert len(prepared)==124;out=args.output;out.mkdir();controls=out/'controls';controls.mkdir();actual={};control_report={'status':'running','engine':args.engine,'cases':[],'streamed_ids_observed':False,'scope':'Untimed actual nonstreaming IDs. Later streams retain strict counts and every observed text variant in separate sidecars; individual streamed IDs remain unobserved.'}
  def save_controls():(controls/'report.json').write_text(json.dumps(control_report,indent=2),encoding='utf8')
  save_controls()
  try:

@@ -6776,3 +6776,73 @@ These fixture timings/memory/requests are not real model benchmark evidence.
 No actual observed-output vLLM benchmark requests. Owner/preparer/full closed
 benchmark checker still need implementation before actual baseline collection.
 Published comparison chart unchanged; overall2x/halfTTFT objectives unmet/unproven.
+
+
+### 2026-10-25 — T128 commit full-state closure on both machines; matched observed-output vLLM4K trial started
+
+T128 component224386502byte archive transfer finished and ACKed. Same independent
+checker exits0 on local CPU and RTX5090host, identical proofa892c87a48b64fb1a82d7491b8d3078e2197f7efbaa7a14b93ff1c94225943d9;
+archive2f28fd531f0d01ffd8c267be355d8a9102cd626f8c7aa9f369b78ebc820d0eea/90members. All16valid/35invalid full canonical states,
+5448010944words and3replays of one captured graph replay exactly; full target
+input/final and per-call C++ readonly observations retained as scoped. Source24,
+runtime6/environment15/SDK8 unchanged, owner terminal0/cleanup. Complete raw RLE/
+binary/build/CPU/GPU/resource data retained in output archive; selected logs,
+workflow/cases/manifests/proofpair and recipe retained on branch. Component is
+qualified for isolated final-state commit only. Full T128 forward/runtime/model/
+quality/serving integration remains unimplemented/unqualified; no speedup claim.
+
+Completed separate vLLM observed-output runner/preparer/full raw checker. Owner
+inherits exercised SGLang lifecycle but uses actual vLLM launcher/metadata/port/
+PID/stop, exact same ordinary0.32.0 profile as the independently replayed288request
+diagnosis. Latest T128 component full-state proof/archive/current closed workflow
+must pass before any next GPU owner, plus native fixed4K parent and observation
+provenance. Archive/pins include all inherited proofs; require15named runtime
+dependencies including shell launcher/metadata inspectors/new client/boundary/
+cache/stop/helper files, not just Python module imports. Full source816/runtime6
+hash checks and original exclusive idle guards remain mandatory. Local/remote
+ledgers use explicit owned input inventories and exclude unrelated untracked files.
+
+Checker preserves SGLang's exercised full805screen/124serialID/124rawstream/eight
+cohort replay, replacing only engine-specific metadata/ID schema/port/boundary
+and closure. Exact vLLM JSON/version/74installed-source/eight checkpoint/fiveconfig
+and dual cache-reset/raw metrics replay fragments come from existing vLLM methods.
+All output-variant sidecars and measured cohort exact/variant counts must replay;
+no individual streamed IDs inferred. New result status is explicitly
+reference_fixed4k_vllm_observed_profile_replayed, distinct from strict acceptance.
+Original strict failure and SGLang sources remain unchanged. Source self-hash,
+current replay-helper hashes, owned PID/start/stop, actual cache idle/reset/counters,
+frozen bytes/full3968+128usage, metrics and sampled memory gaps remain required.
+
+Initial new CPU owner import failed because an absolute sibling import did not
+resolve under package unittest; corrected conditional package/CLI import before
+deployment. Initial source-presence test expected encoder_hits_delta, whereas
+the actual copied vLLM parser uses hit_delta and two explicit reset endpoints;
+corrected the test to those actual invariants without weakening the parser.
+Recorded every exact source transformation and final helper/source binding.
+Four owner/dependency/derivation/closed-component control families pass. Clarified
+an inherited control-report sentence that still described exact text matching;
+new vLLM report explicitly records variants. This is a scope-text correction,
+not a changed request, timer, token check or output-admission rule.
+
+Combined72CPUcontrols pass20.597s, including old strict reference identity/length/
+cache/owner gates, actual-source derivatives,288request synthetic diagnosis and
+124ID+124stream observed-client fixtures/126token clamp rejection/closed component
+and dependency faults. No fixture metrics promoted. Preparation
+60d1b8208edcb5d8431c77d4443d912769e798f7273a97c15bac56752b835621; thirteen-target bundlede97148ffb523cd40b92cdec0e0b3d5ab2333379a8a370808ec526668054dd79,70653bytes.
+Actual absent-only installer verifies all816source/proof pins and runtime6;
+existing files require exact bytes and are never replaced. Installation receipt
+downloaded/ACKed and checked before original48577 starts
+vllm-observed-fixed4k-ordinary-attempt1. Owner observed live; all prior transfers,
+raw CPU replays and component/reference owners closed. Source frozen, no second
+GPU model/transfer/replay during this trial.
+
+Planned real sequence: two full4K text/image boundaries, fourVLM/16short-ID controls,
+fresh805adapted screening,124actual serial prompt/completion-ID controls, then
+124warmup/timedstreams across text/image C1/2/4/8. Same pinned checkpoint,
+modelopt_mixed/BF16KV/F32SSM,4096total context/no reserved slots,4GiB KV budget,
+max8sequences/TP1/full decodegraphs1/2/4/8 and prefix/MM cache controls. Every text
+variant retained with record_vllm_stream_text_variants_v1 after timing/memory
+sampling. Actual metadata/controls/timings/terminal cleanup/full independent replay
+are pending. Current chart and overall2x/halfTTFT claim remain unchanged/unproven.
+Strongest tuned/MTP baselines/repeats, native B8 math/MTP/HTTP and T128 forward
+integration, matched INT4/4B remain open. Objective is unchanged.

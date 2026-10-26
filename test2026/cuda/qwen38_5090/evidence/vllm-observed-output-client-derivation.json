@@ -37,7 +37,7 @@
       "source": "benchmark_observed_output_reference.py",
       "source_sha256": "03448890e27b868a293ae68cc3ee9d6badad0947d24b83d3d461a3b36dacba8a",
       "target": "benchmark_vllm_observed_output.py",
-      "target_sha256": "3dc5c19a29c50e843f0f59576f09b4ec8a3eb99c1014d7beb74396ee447efe11",
+      "target_sha256": "98e439d48a2dab5d2224ef1aca3bebef191b76790e555f2427bd5c30db3f031d",
       "replacements": [
         {
           "old": "reference_observed_output",
@@ -52,6 +52,11 @@
         {
           "old": "Same ordinary SGLang profile",
           "new": "Same ordinary vLLM profile",
+          "count": 1
+        },
+        {
+          "old": "Untimed actual nonstreaming IDs; streaming will check actual counts and exact same-engine greedy text only. No token IDs reconstructed from text.",
+          "new": "Untimed actual nonstreaming IDs. Later streams retain strict counts and every observed text variant in separate sidecars; individual streamed IDs remain unobserved.",
           "count": 1
         }
       ]
