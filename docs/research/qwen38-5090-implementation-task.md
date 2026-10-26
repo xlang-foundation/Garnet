@@ -3115,3 +3115,79 @@ or SDK/production build mutation. Private external-prefix probe remains untouche
 Next actual diagnosis must close/replay before a separate fully qualified vLLM
 observed-output baseline. Native wider prefill/batched correctness and HTTP,
 strongest tuned/MTP references, repeats, matched INT4/4B and overall2x remain open.
+
+
+### 2026-10-25 — vLLM output/isolation diagnosis independently closed; T128 commit full-state GPU component
+
+Actual vllm-output-characterization-attempt1 completed exit0; ownedPID372 stopped,
+wrapper exit0,802source pins/runtime6 preserved, cleanup finished. All59CPU controls
+pass12.687s. Actual ready metadata verifies74installed vLLM sources/eight checkpoint
+configs and five config/router files; resolved37774cachetokens/4096context, same
+ordinary settings. Actual288requests/135overlap waves collect192nonstream actual
+IDs,64full3968+128streams and32mixed-color/spatial streams. Preserve105nonstream
+output variants and52stream text variants. Every24serial-after text/image/color
+control restores its serial-before IDs/text exactly; all48concurrent nonstream/
+24concurrent streamed color/spatial observations pass. This does not establish
+numerical cause/harmlessness or cross-engine quality equivalence; individual
+streamed IDs remain unobserved. No timings promoted from this diagnosis.
+
+Archive2cf6104c43b63f7770edb4329edc8d198dee0bb875a3bc1ccbacf5d313e3223e,
+72278003bytes/1768members. Both raw checkers exit0 with identical proof
+4be4865b75a2b75f020f4371f072ef31153327bb72fef27d3c70aec6ca389f3b.
+All archive/method/config/PID/parent/stream/ID/color/overlap/source/runtime/cleanup
+evidence replayed. Strict trial3 failure remains immutable. A separate declared
+vLLM observed-output benchmark can now be prepared using this exact profile,
+fresh805screen/124serial4Kcontrols/124rawstreams and retained variant sidecars;
+its complete eight-cohort proof is still required before changing comparison charts.
+
+Added isolated T128 final-state commit GPU harness because the actual ordinary
+prefill trace identifies substantial GPU prefill work. It invokes only the already
+unwired commit component, not a widened old runtime/parser guard. Full canonical
+106823680word body plus32word guards at each end, full44564480word target plus
+guards, all48FP32 GDN states and16packed-BF16 KV layers. Sixteen valid cases include
+empty/partial/full spans, head/page/end boundaries and three replays of one captured
+two-node graph. Thirty-five malformed pointer/alignment/overlap/overflow/profile/
+span/unused-row cases must reject without writes. Input fixture includes signed
+zero, subnormal/tie-to-even BF16 cases and varying token/head/layer data. C++ CPU
+oracle compares every actual canonical word and target readonly per call. Full
+canonical outputs and input/final targets are stored in a lossless repeated32word
+block codec, not hashes/samples. Independent NumPy replay must reconstruct and
+compare all51complete canonical states; per-call target readonly checks are
+reported by source-pinned C++, with independent complete input/final snapshots.
+
+Eight CPU layout/codec/BF16/untouched-slot tests pass.025s. Local explicitSM120
+offline probe object compilation succeeds, object
+c4b99a04335ab6234d092df9f53eb52774d7476124818eefc487210660e8b918.
+No executable linked or run locally, no GPU query/context/model load, no SDK/
+production build changes. Known code-page936 CUDA-header warnings retained;
+eight SDK file hashes unchanged. Final component preparation adds closed-reference
+and complete-case controls:10tests pass.148s, then.089s after explicit profiled
+parent archive/proof binding. First preparation assumed namespace-package init
+files existed and stopped before tests/output; removed those nonexistent files.
+Preserve the initial unrun manifest/owner/checker/plan before parent-binding update.
+Local/remote component ledgers use only explicit owned input inventories and
+exclude unrelated untracked probes. No private external-prefix probe edited/staged.
+
+Toolchain correction: earlier offline descriptions called the remote toolkit13.0
+without a current version observation. Actual fixed remote nvcc reports13.2.78;
+its pinned executable hash matches the local13.2.78 tool. Preserve original raw
+compile result/descriptions as historical data, not as current version evidence.
+Current owned observation retains exact version output and630754566144bytes free
+on study drive. Remote component owner records its actual compiler/MSVC version
+again and hashes SDK/compiler/runtime before/after; it does not infer compatibility
+from directory names. Local and remote MSVC versions still differ and actual
+remote rebuild/link/GPU qualification remains required.
+
+Component24source-pin/10test preparation
+8a08df7bb386465b7729a716367bae4837befa38045945a67512bb2d9c052fa9;
+22target bundle515132ec707d7ea6a853debfe49cd698b9aa29a36fbe3ae1280059a157a0a932,
+70071bytes. Actual absent-only install adds15targets and verifies seven existing
+methods plus24source pins/runtime6/SDK15 unchanged, no GPU execution on install.
+After all vLLM transfer ACKs and both CPU replays close, original48577 supervisor
+starts prefill128-commit-component-attempt1 bound to the actual closed reference
+archive. Owner observed live; build/link, actual51GPU cases and full raw replay
+are pending. No second GPU model/transfer/replay while this owner runs. Fixed
+private tools/bf16-kv-native build reused; existing binaries/objects are never
+overwritten. Full T128 forward operators/runtime integration/model/805quality/
+HTTP, B8 math/MTP/HTTP, strongest tuned references/repetitions, INT4/4B and overall
+2xdecode+throughput/halfTTFT remain open. No chart or benchmark changed.
