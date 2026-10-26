@@ -1,0 +1,106 @@
+{
+  "status": "exact_main_failure_hook_and_observer_owner_derivations",
+  "derivations": [
+    {
+      "base": "probe_fp8_z128_stage_witness.py",
+      "target": "probe_fp8_z128_context_audit.py",
+      "base_sha256": "d4fd6b1c2c5f8eaf8350c2f396dce3424257073c04e5a4156bb48cf5a393777e",
+      "target_sha256": "26bf527af92621be9fcc3b2918c1cf5ce99a9bf15a95924f2bf88964d3450b9d",
+      "changes": [
+        {
+          "before": "    except BaseException as error:report.update(status='failed',error=repr(error));save();raise",
+          "after": "    except BaseException as error:\n        report.update(status='failed',error=repr(error));save()\n        if report['error']==\"RuntimeError('TensorRT buildSerializedNetwork failed')\" and [(r['layer'],r['tokens'],r['diagnostic']) for r in report['cases']]==[(0,32,False),(0,32,True)]:\n            try:\n                from test2026.cuda.qwen38_5090.fp8_z128_audit_bridge import observe\n                report['post_failure_context_audit']=observe(root,out/'context-audit.json');save()\n            except BaseException as audit_error:report['context_audit_error']=repr(audit_error);save()\n        raise"
+        }
+      ]
+    },
+    {
+      "base": "test_fp8_z128_stage_witness.bat",
+      "target": "test_fp8_z128_context_audit.bat",
+      "base_sha256": "4ade12eeee554f850ac8e3fda131ab07f326fe28d07b5f9b8e8190230c232bb2",
+      "target_sha256": "d77320413275a31b42525ca3b8ebc62986cee163a2e964ef6f9b6dd19f4411ea",
+      "changes": [
+        {
+          "before": "probe_fp8_z128_stage_witness.py",
+          "after": "probe_fp8_z128_context_audit.py"
+        }
+      ]
+    },
+    {
+      "base": "test_fp8_z128_stage_witness.bat",
+      "target": "test_fp8_z128_audit_cold.bat",
+      "base_sha256": "4ade12eeee554f850ac8e3fda131ab07f326fe28d07b5f9b8e8190230c232bb2",
+      "target_sha256": "249922f6d46c32974c55066fbee5590c0a243998a2b04ecdea7dea5ca0db8cb2",
+      "changes": [
+        {
+          "before": "probe_fp8_z128_stage_witness.py",
+          "after": "probe_fp8_z128_audit_cold.py"
+        }
+      ]
+    },
+    {
+      "base": "run_fp8_z128_stage_trace.py",
+      "target": "run_fp8_z128_context_audit.py",
+      "base_sha256": "e6ec79d0c6b1af5dab8843be2598dd62072801b65c7f1dd61739e90ca64bdef0",
+      "target_sha256": "9a19593bdff853f78358e5752ee298702fa49ed00a9540d3abd23ea15076195e",
+      "changes": [
+        {
+          "before": "Exclusive same-DLL cuBLASLt initialization trace; no performance admission.",
+          "after": "Exclusive cold and post-failure observed actual helper, same Garnet DLL; no performance admission."
+        },
+        {
+          "before": "JOB='fp8-z128-stage-trace-attempt1'",
+          "after": "JOB='fp8-z128-context-audit-attempt1'"
+        },
+        {
+          "before": "evidence/fp8-z128-stage-trace-preparation.json",
+          "after": "evidence/fp8-z128-context-audit-preparation.json"
+        },
+        {
+          "before": "fp8_z128_stage_trace_prepared_gpu_unrun",
+          "after": "fp8_z128_context_audit_prepared_gpu_unrun"
+        },
+        {
+          "before": "common=[prep,bundle,receipt]",
+          "after": "common=[ROOT/name for name in p['observed_helper_files']]+[ROOT/'results/fp8-z128-ctypes-import-bound.json',ROOT/'results/fp8-z128-ctypes-import-bound.log']+[prep,bundle,receipt]"
+        },
+        {
+          "before": "32CPU original29 plus trace derivation/environment/scope contracts; no GPU",
+          "after": "37CPU original32 plus observer/replay/provenance fault contracts; no GPU"
+        },
+        {
+          "before": "        library.write_bytes(candidate.read_bytes());assert sha(library)==p['candidate_library_sha256']",
+          "after": "        (out/'build').mkdir()\n        code=ledger.run(['cmd.exe','/d','/c',str(M/'build_fp8_z128_context_audit.bat'),p['vcvars'],str(out/'build')],out/'audit-build-ledger','build','Separate observer DLL compiles actual pinned typedhelper with unchanged-return API wrappers; no Garnet DLL rebuild',common)\n        if code:raise RuntimeError('Context observer build failed')\n        audit=out/'build/context-audit.dll';w['audit_library_sha256']=sha(audit)\n        (out/'audit-library.json').write_bytes(json.dumps({'library_sha256':sha(audit),'cublaslt_sha256':p['runtime']['cublasLt64_13.dll'],'expected_m32_opaque':p['expected_m32_opaque'],'observed_helper_files':p['observed_helper_files']},indent=2).encode());save()\n        command=[sys.executable,str(M/'monitor_native_probe.py'),'--study',str(ROOT),'--output',str(out/'cold-resources'),'--','cmd.exe','/d','/c',str(M/'test_fp8_z128_audit_cold.bat'),str(out/'cold'),str(cache)]\n        code=ledger.run(command,out/'cold-ledger','correctness','Separate cold embedded process actual helper constructor observation, no model matmul',common+[audit]);idle()\n        if code:raise RuntimeError('Cold context observation failed')\n        w['cold_context_observation']=json.loads((out/'cold/report.json').read_bytes());save()\n        library.write_bytes(candidate.read_bytes());assert sha(library)==p['candidate_library_sha256']"
+        },
+        {
+          "before": "test_fp8_z128_stage_trace.bat",
+          "after": "test_fp8_z128_context_audit.bat"
+        },
+        {
+          "before": "Same frozen main collector and graph order, CUBLASLT_LOG_LEVEL=5/MASK=31, same native28 DLL. Initialization diagnostics only, no timing or benchmark admission",
+          "after": "Same main collector/order with observer only after reproduced build failure; no cuBLASLt API logger, no algorithm substitution, no benchmark admission"
+        },
+        {
+          "before": "w['status']='fp8_z128_stage_trace_collected_needs_replay'",
+          "after": "w['status']='fp8_z128_context_audit_collected_needs_replay'"
+        },
+        {
+          "before": "w['status']='fp8_z128_stage_trace_remaining_difference_preserved'",
+          "after": "w['status']='fp8_z128_context_audit_remaining_difference_preserved'"
+        },
+        {
+          "before": "fp8-z128-ctypes-import-bound.json",
+          "after": "fp8-z128-ctypes-import-bound2.json"
+        },
+        {
+          "before": "fp8-z128-ctypes-import-bound.log",
+          "after": "fp8-z128-ctypes-import-bound2.log"
+        },
+        {
+          "before": "common=[ROOT/name for name in p['observed_helper_files']]+[ROOT/'results/fp8-z128-ctypes-import-bound2.json',ROOT/'results/fp8-z128-ctypes-import-bound2.log']+[prep,bundle,receipt]",
+          "after": "common=[ROOT/name for name in p['observed_helper_files']]+[ROOT/name for name in p['capability_files']]+[prep,bundle,receipt]"
+        }
+      ]
+    }
+  ],
+  "scope": "Original collector unchanged except post-failure observation, after exact same firstT128failure/twoT32profiles, before cleanup. Original28Garnet DLL unchanged; own observer build/cold constructor only."
+}
