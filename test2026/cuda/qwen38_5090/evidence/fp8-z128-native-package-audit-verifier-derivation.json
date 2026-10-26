@@ -1,0 +1,53 @@
+{
+  "base": "verify_fp8_z128_context_audit.py",
+  "target": "verify_fp8_z128_native_package_audit.py",
+  "base_sha256": "55d962754eafa5740885c6801865bb1e99f2d1c0d988818e751bbcfc5837475e",
+  "target_sha256": "aa06d317d38aeffa024eb04c16412824c6c3959bc7ba1fe817f2f1c3634d1147",
+  "changes": [
+    {
+      "before": "JOB='fp8-z128-context-audit-attempt1'",
+      "after": "JOB='fp8-z128-native-package-audit-attempt1'"
+    },
+    {
+      "before": "evidence/fp8-z128-context-audit-preparation.json",
+      "after": "evidence/fp8-z128-native-package-audit-preparation.json"
+    },
+    {
+      "before": "('verify_fp8_z128_context_audit.py','fp8_z128_context_audit.py')",
+      "after": "('verify_fp8_z128_native_package_audit.py','fp8_z128_context_audit.py','fp8_z128_native_audit_contract.py','fp8_z128_native_audit_bridge.py')"
+    },
+    {
+      "before": "==p['new_files'][PREFIX+name]",
+      "after": "==p['files'][PREFIX+name]"
+    },
+    {
+      "before": "b'Ran 37 tests'",
+      "after": "b'Ran 42 tests'"
+    },
+    {
+      "before": "('cpu-ledger','audit-build-ledger','cold-ledger','native-ledger')",
+      "after": "('cpu-ledger','audit-build-ledger','native-abi-ledger','cold-ledger','native-ledger')"
+    },
+    {
+      "before": "sha(z.read(base+'build/context-audit.dll'))",
+      "after": "sha(z.read(p['observer_library']))"
+    },
+    {
+      "before": "        report=json.loads(z.read(base+'native/report.json'));assert",
+      "after": "        assert receipt['observer_library']==p['observer_library'] and receipt['library_sha256']==p['observer_library_sha256'] and receipt['abi']==24\n        assert receipt['native_package_library_sha256']==w['native_package_library_sha256']==sha(z.read(base+'build/fp8_z128_context_native.dll'))\n        abi=json.loads(z.read(base+'native-abi-report.json'));assert abi==w['native_abi_report'] and abi['abi']==24 and abi['cpu_native_calls']==5 and abi['rejection_codes']==[20,20,20] and abi['loaded_native_library_sha256']==receipt['native_package_library_sha256'] and not abi['helper_invoked'] and not abi['gpu_model_executed']\n        assert b'C4530' not in z.read(base+'audit-build-ledger/commands.log')\n        report=json.loads(z.read(base+'native/report.json'));assert"
+    },
+    {
+      "before": "            observations[phase]=",
+      "after": "            assert bridge['native_package_library_sha256']==receipt['native_package_library_sha256'] and bridge['native_package_ABI']==24\n            observations[phase]="
+    },
+    {
+      "before": "'status':'fp8_z128_context_audit_and_partial_main_failure_preserved'",
+      "after": "'status':'fp8_z128_native_package_context_observations_and_main_failure_preserved'"
+    },
+    {
+      "before": "'observer_library_sha256':receipt['library_sha256'],'workflow_exit_code'",
+      "after": "'observer_library_sha256':receipt['library_sha256'],'native_package_library_sha256':receipt['native_package_library_sha256'],'native_ABI_report':abi,'workflow_exit_code'"
+    }
+  ],
+  "scope": "Retain full source/runtime/SDK/checkpoint/nativebundle/original-source/parents/allarrays checks; add nativeABI actualloadedDLL identity, EHsc build and reused immutableobserverDLL; no gate relaxation."
+}

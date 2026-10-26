@@ -1,0 +1,184 @@
+{
+  "status": "exact_native_ABI_and_EHsc_audit_derivatives",
+  "derivations": [
+    {
+      "base": "build_fp8_z128_context_native.bat",
+      "target": "build_fp8_z128_context_native_eh.bat",
+      "base_sha256": "9b4f6187d33287c533ca217ab031e788890206249c529ba37e1c11f516b79587",
+      "target_sha256": "558f762ab924b44089cf815dda747fbee446a39208bed954a82c6106d2e6bfc0",
+      "changes": [
+        {
+          "before": "/LD /O2 /std:c++17 /MT",
+          "after": "/LD /O2 /EHsc /std:c++17 /MT"
+        },
+        {
+          "before": "fp8_z128_context_native.cpp",
+          "after": "fp8_z128_context_native_observed.cpp"
+        }
+      ]
+    },
+    {
+      "base": "probe_fp8_z128_context_audit.py",
+      "target": "probe_fp8_z128_native_audit.py",
+      "base_sha256": "26bf527af92621be9fcc3b2918c1cf5ce99a9bf15a95924f2bf88964d3450b9d",
+      "target_sha256": "dd0a02ba06167cfc5bf581e62ecea878aa36912213373fbed191538308ccb02e",
+      "changes": [
+        {
+          "before": "from test2026.cuda.qwen38_5090.fp8_z128_audit_bridge import observe",
+          "after": "from test2026.cuda.qwen38_5090.fp8_z128_native_audit_bridge import observe"
+        }
+      ]
+    },
+    {
+      "base": "probe_fp8_z128_audit_cold.py",
+      "target": "probe_fp8_z128_native_audit_cold.py",
+      "base_sha256": "1028c6e2fbacba335aa979bfa183f83d0b1c4865ed087e57d724add3e2ac8d61",
+      "target_sha256": "b6458a5864badbfa3e060bea1ceca1eda4429e3f2c468006f93565168fb82241",
+      "changes": [
+        {
+          "before": "from test2026.cuda.qwen38_5090.fp8_z128_audit_bridge import observe",
+          "after": "from test2026.cuda.qwen38_5090.fp8_z128_native_audit_bridge import observe"
+        }
+      ]
+    },
+    {
+      "base": "probe_fp8_z128_native_import.py",
+      "target": "probe_fp8_z128_native_audit_abi.py",
+      "base_sha256": "737718d83394b65b97b33421004d55c2b109e5f22e71b0d9d86cf1d061ad68c8",
+      "target_sha256": "9e7db9dcd67fd01251291e006dacbd50c41482313eba94b2049b325646e01d97",
+      "changes": [
+        {
+          "before": "job=root/'results/fp8-z128-native-package-import-attempt1';assert out==job/'report.json'",
+          "after": "job=root/'results/fp8-z128-native-package-audit-attempt1';assert out==job/'native-abi-report.json'"
+        },
+        {
+          "before": "abi=native.abi();assert type(abi) is int and abi>0",
+          "after": "abi=native.abi();assert type(abi) is int and abi==24\nloaded=Path(native.library_path());assert loaded.resolve()==(job/'build/fp8_z128_context_native.dll').resolve()"
+        },
+        {
+          "before": "'cpu_native_calls':4",
+          "after": "'cpu_native_calls':5,'loaded_native_library_path':str(loaded),'loaded_native_library_sha256':hashlib.sha256(loaded.read_bytes()).hexdigest()"
+        }
+      ]
+    },
+    {
+      "base": "test_fp8_z128_context_audit.bat",
+      "target": "test_fp8_z128_native_package_audit.bat",
+      "base_sha256": "d77320413275a31b42525ca3b8ebc62986cee163a2e964ef6f9b6dd19f4411ea",
+      "target_sha256": "f16bb0d31d9ea78dbd5bd85edfeffb55b3e6362f8f8fdeebd17c4b866ea12284",
+      "changes": [
+        {
+          "before": "probe_fp8_z128_context_audit.py",
+          "after": "probe_fp8_z128_native_audit.py"
+        }
+      ]
+    },
+    {
+      "base": "test_fp8_z128_audit_cold.bat",
+      "target": "test_fp8_z128_native_audit_cold.bat",
+      "base_sha256": "249922f6d46c32974c55066fbee5590c0a243998a2b04ecdea7dea5ca0db8cb2",
+      "target_sha256": "f55a575689fe499164c7aeec18c4477900781dd12a7408ef99cdfc53cc20abb8",
+      "changes": [
+        {
+          "before": "probe_fp8_z128_audit_cold.py",
+          "after": "probe_fp8_z128_native_audit_cold.py"
+        }
+      ]
+    },
+    {
+      "base": "test_fp8_z128_native_import.bat",
+      "target": "test_fp8_z128_native_audit_abi.bat",
+      "base_sha256": "b0aa127a63cdede5d12d08c3ce69c185ee2f39ff9a77434373025b2fec5a48cd",
+      "target_sha256": "00db0ac579b5ccd0e90e46c8b9c42b4e87d32c1cf45d421d2a526dfd1e2abe9a",
+      "changes": [
+        {
+          "before": "probe_fp8_z128_native_import.py",
+          "after": "probe_fp8_z128_native_audit_abi.py"
+        }
+      ]
+    },
+    {
+      "base": "run_fp8_z128_context_audit.py",
+      "target": "run_fp8_z128_native_package_audit.py",
+      "base_sha256": "9a19593bdff853f78358e5752ee298702fa49ed00a9540d3abd23ea15076195e",
+      "target_sha256": "998661c738f1eeb02ed9f234db2de937e973997e9bb513fcc3c181adefcda52b",
+      "changes": [
+        {
+          "before": "Exclusive cold and post-failure observed actual helper, same Garnet DLL; no performance admission.",
+          "after": "Exclusive native package cold/post-failure actual helper audit, same Garnet DLL; no performance admission."
+        },
+        {
+          "before": "JOB='fp8-z128-context-audit-attempt1'",
+          "after": "JOB='fp8-z128-native-package-audit-attempt1'"
+        },
+        {
+          "before": "evidence/fp8-z128-context-audit-preparation.json",
+          "after": "evidence/fp8-z128-native-package-audit-preparation.json"
+        },
+        {
+          "before": "fp8_z128_context_audit_prepared_gpu_unrun",
+          "after": "fp8_z128_native_package_audit_prepared_gpu_unrun"
+        },
+        {
+          "before": "common=[ROOT/name for name in p['observed_helper_files']]",
+          "after": "common=[ROOT/p['observer_library']]+[ROOT/name for name in p['observed_helper_files']]"
+        },
+        {
+          "before": "37CPU original32 plus observer/replay/provenance fault contracts; no GPU",
+          "after": "42CPU retained37 plus native bridge receipt/provenance/control isolation faults; no GPU"
+        },
+        {
+          "before": "        code=ledger.run(['cmd.exe','/d','/c',str(M/'build_fp8_z128_context_audit.bat'),p['vcvars'],str(out/'build')],out/'audit-build-ledger','build','Separate observer DLL compiles actual pinned typedhelper with unchanged-return API wrappers; no Garnet DLL rebuild',common)\n        if code:raise RuntimeError('Context observer build failed')\n        audit=out/'build/context-audit.dll';w['audit_library_sha256']=sha(audit)\n        (out/'audit-library.json').write_bytes(json.dumps({'library_sha256':sha(audit),'cublaslt_sha256':p['runtime']['cublasLt64_13.dll'],'expected_m32_opaque':p['expected_m32_opaque'],'observed_helper_files':p['observed_helper_files']},indent=2).encode());save()\n",
+          "after": "        code=ledger.run(['cmd.exe','/d','/c',str(M/'build_fp8_z128_context_native_eh.bat'),p['vcvars'],str(out/'build')],out/'audit-build-ledger','build','Same native package adapter with EHsc, existing pinned SDK/runtime only; reuse unchanged observedhelper DLL',common)\n        if code:raise RuntimeError('Native package adapter build failed')\n        audit=ROOT/p['observer_library'];assert sha(audit)==p['observer_library_sha256']\n        package=out/'build/fp8_z128_context_native.dll';w['audit_library_sha256']=sha(audit);w['native_package_library_sha256']=sha(package)\n        (out/'audit-library.json').write_bytes(json.dumps({'library_sha256':sha(audit),'observer_library':p['observer_library'],'native_package_library_sha256':sha(package),'abi':24,'cublaslt_sha256':p['runtime']['cublasLt64_13.dll'],'expected_m32_opaque':p['expected_m32_opaque'],'observed_helper_files':p['observed_helper_files']},indent=2).encode());save()\n        code=ledger.run(['cmd.exe','/d','/c',str(M/'test_fp8_z128_native_audit_abi.bat'),str(out/'native-abi-report.json')],out/'native-abi-ledger','correctness','Actual embedded ABI24 and3reject-before-loader guards before cold or main GPU diagnostic',common+[package])\n        if code:raise RuntimeError('Native adapter ABI or path guards failed')\n        w['native_abi_report']=json.loads((out/'native-abi-report.json').read_bytes());assert w['native_abi_report']['abi']==24 and w['native_abi_report']['rejection_codes']==[20,20,20];save()\n"
+        },
+        {
+          "before": "test_fp8_z128_audit_cold.bat",
+          "after": "test_fp8_z128_native_audit_cold.bat"
+        },
+        {
+          "before": "test_fp8_z128_context_audit.bat",
+          "after": "test_fp8_z128_native_package_audit.bat"
+        },
+        {
+          "before": "Ten controls closed by original failed-stage parent; diagnostic repeats only unchanged main collector with API logging.",
+          "after": "Ten controls closed by original failed-stage parent; same main collector without API logger, native observer only after failure."
+        },
+        {
+          "before": "w['status']='fp8_z128_context_audit_collected_needs_replay'",
+          "after": "w['status']='fp8_z128_native_package_audit_collected_needs_replay'"
+        },
+        {
+          "before": "w['status']='fp8_z128_context_audit_remaining_difference_preserved'",
+          "after": "w['status']='fp8_z128_native_package_audit_remaining_difference_preserved'"
+        },
+        {
+          "before": "w['native_abi_report']['rejection_codes']==[20,20,20]",
+          "after": "w['native_abi_report']['rejection_codes']==[20,20,20] and w['native_abi_report']['loaded_native_library_sha256']==sha(package)"
+        }
+      ]
+    },
+    {
+      "base": "fp8_z128_context_native.cpp",
+      "target": "fp8_z128_context_native_observed.cpp",
+      "base_sha256": "04a47e91fc7e14c0f2741b62505a3af31a6e84e4df86b06b2a71878daa65c0dc",
+      "target_sha256": "a3ce460ebcb411df5cf0c5cff59b9fa4cc31946c078a44acbc2997d37a6e9822",
+      "changes": [
+        {
+          "before": "#include <cstring>",
+          "after": "#include <cstring>\nextern \"C\" XLANG3_PACKAGE_EXPORT X3Status Load(void*,X3Value);"
+        },
+        {
+          "before": "    int Abi(){return int(X3_ABI_VERSION);}",
+          "after": "    int Abi(){return int(X3_ABI_VERSION);}\n    std::string LibraryPath(){\n        HMODULE module=nullptr;char path[32768]{};\n        if(!GetModuleHandleExA(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS|GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,reinterpret_cast<LPCSTR>(&Load),&module))return {};\n        const DWORD length=GetModuleFileNameA(module,path,DWORD(sizeof(path)));\n        return length&&length<sizeof(path)?std::string(path,length):std::string();\n    }"
+        },
+        {
+          "before": "        APISET().AddFunc<0>(\"abi\",&ContextNative::Abi);",
+          "after": "        APISET().AddFunc<0>(\"abi\",&ContextNative::Abi);\n        APISET().AddFunc<0>(\"library_path\",&ContextNative::LibraryPath);"
+        }
+      ]
+    }
+  ],
+  "native_adapter_source_sha256": "04a47e91fc7e14c0f2741b62505a3af31a6e84e4df86b06b2a71878daa65c0dc",
+  "native_helper_or_Garnet_DLL_modified": false,
+  "scope": "Existing ABI24 adapter tested previously; EHsc rebuild and repeat CPUguards. Reuse actualobserverDLL from closedlibffi failure, no source/math/SDK mutation. Same original maincollector/order, hook only after failure; replace invocation interface. Native adapter adds readonly library_path metadata, and ABI control/bridge must compare actual loaded path/hash to the owned EHsc DLL before helper invocation."
+}

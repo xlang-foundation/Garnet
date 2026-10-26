@@ -1,0 +1,44 @@
+"""Native-package bridge derivatives; all original libffi failure artifacts stay frozen."""
+from pathlib import Path
+import hashlib,json
+m=Path('D:/CantorAI/work/qwen38-5090/test2026/cuda/qwen38_5090');sha=lambda raw:hashlib.sha256(raw).hexdigest();rows=[]
+
+def derive(old,new,changes):
+    before=(m/old).read_bytes();raw=before
+    for a,b in changes:
+        assert raw.count(a.encode())==1,(old,a);raw=raw.replace(a.encode(),b.encode())
+    target=m/new;assert not target.exists();target.write_bytes(raw)
+    rows.append({'base':old,'target':new,'base_sha256':sha(before),'target_sha256':sha(raw),'changes':[{'before':a,'after':b} for a,b in changes]})
+
+derive('build_fp8_z128_context_native.bat','build_fp8_z128_context_native_eh.bat',[('/LD /O2 /std:c++17 /MT','/LD /O2 /EHsc /std:c++17 /MT')])
+derive('probe_fp8_z128_context_audit.py','probe_fp8_z128_native_audit.py',[('from test2026.cuda.qwen38_5090.fp8_z128_audit_bridge import observe','from test2026.cuda.qwen38_5090.fp8_z128_native_audit_bridge import observe')])
+derive('probe_fp8_z128_audit_cold.py','probe_fp8_z128_native_audit_cold.py',[('from test2026.cuda.qwen38_5090.fp8_z128_audit_bridge import observe','from test2026.cuda.qwen38_5090.fp8_z128_native_audit_bridge import observe')])
+derive('probe_fp8_z128_native_import.py','probe_fp8_z128_native_audit_abi.py',[("job=root/'results/fp8-z128-native-package-import-attempt1';assert out==job/'report.json'","job=root/'results/fp8-z128-native-package-audit-attempt1';assert out==job/'native-abi-report.json'")])
+for old,new,a,b in (
+ ('test_fp8_z128_context_audit.bat','test_fp8_z128_native_package_audit.bat','probe_fp8_z128_context_audit.py','probe_fp8_z128_native_audit.py'),
+ ('test_fp8_z128_audit_cold.bat','test_fp8_z128_native_audit_cold.bat','probe_fp8_z128_audit_cold.py','probe_fp8_z128_native_audit_cold.py'),
+ ('test_fp8_z128_native_import.bat','test_fp8_z128_native_audit_abi.bat','probe_fp8_z128_native_import.py','probe_fp8_z128_native_audit_abi.py')):derive(old,new,[(a,b)])
+old=(m/'run_fp8_z128_context_audit.py').read_bytes().decode();start=old.index("        code=ledger.run(['cmd.exe','/d','/c',str(M/'build_fp8_z128_context_audit.bat')");end=old.index("        command=[sys.executable,str(M/'monitor_native_probe.py')",start)
+replacement="""        code=ledger.run(['cmd.exe','/d','/c',str(M/'build_fp8_z128_context_native_eh.bat'),p['vcvars'],str(out/'build')],out/'audit-build-ledger','build','Same native package adapter with EHsc, existing pinned SDK/runtime only; reuse unchanged observedhelper DLL',common)
+        if code:raise RuntimeError('Native package adapter build failed')
+        audit=ROOT/p['observer_library'];assert sha(audit)==p['observer_library_sha256']
+        package=out/'build/fp8_z128_context_native.dll';w['audit_library_sha256']=sha(audit);w['native_package_library_sha256']=sha(package)
+        (out/'audit-library.json').write_bytes(json.dumps({'library_sha256':sha(audit),'observer_library':p['observer_library'],'native_package_library_sha256':sha(package),'abi':24,'cublaslt_sha256':p['runtime']['cublasLt64_13.dll'],'expected_m32_opaque':p['expected_m32_opaque'],'observed_helper_files':p['observed_helper_files']},indent=2).encode());save()
+        code=ledger.run(['cmd.exe','/d','/c',str(M/'test_fp8_z128_native_audit_abi.bat'),str(out/'native-abi-report.json')],out/'native-abi-ledger','correctness','Actual embedded ABI24 and3reject-before-loader guards before cold or main GPU diagnostic',common+[package])
+        if code:raise RuntimeError('Native adapter ABI or path guards failed')
+        w['native_abi_report']=json.loads((out/'native-abi-report.json').read_bytes());assert w['native_abi_report']['abi']==24 and w['native_abi_report']['rejection_codes']==[20,20,20];save()
+"""
+derive('run_fp8_z128_context_audit.py','run_fp8_z128_native_package_audit.py',[
+ ('Exclusive cold and post-failure observed actual helper, same Garnet DLL; no performance admission.','Exclusive native package cold/post-failure actual helper audit, same Garnet DLL; no performance admission.'),
+ ("JOB='fp8-z128-context-audit-attempt1'","JOB='fp8-z128-native-package-audit-attempt1'"),
+ ('evidence/fp8-z128-context-audit-preparation.json','evidence/fp8-z128-native-package-audit-preparation.json'),
+ ('fp8_z128_context_audit_prepared_gpu_unrun','fp8_z128_native_package_audit_prepared_gpu_unrun'),
+ ("common=[ROOT/name for name in p['observed_helper_files']]","common=[ROOT/p['observer_library']]+[ROOT/name for name in p['observed_helper_files']]"),
+ ('37CPU original32 plus observer/replay/provenance fault contracts; no GPU','42CPU retained37 plus native bridge receipt/provenance/control isolation faults; no GPU'),
+ (old[start:end],replacement),
+ ('test_fp8_z128_audit_cold.bat','test_fp8_z128_native_audit_cold.bat'),
+ ('test_fp8_z128_context_audit.bat','test_fp8_z128_native_package_audit.bat'),
+ ('Ten controls closed by original failed-stage parent; diagnostic repeats only unchanged main collector with API logging.','Ten controls closed by original failed-stage parent; same main collector without API logger, native observer only after failure.'),
+ ("w['status']='fp8_z128_context_audit_collected_needs_replay'","w['status']='fp8_z128_native_package_audit_collected_needs_replay'"),
+ ("w['status']='fp8_z128_context_audit_remaining_difference_preserved'","w['status']='fp8_z128_native_package_audit_remaining_difference_preserved'")])
+target=m/'evidence/fp8-z128-native-package-audit-derivation.json';assert not target.exists();target.write_bytes(json.dumps({'status':'exact_native_ABI_and_EHsc_audit_derivatives','derivations':rows,'native_adapter_source_sha256':sha((m/'fp8_z128_context_native.cpp').read_bytes()),'native_helper_or_Garnet_DLL_modified':False,'scope':'Existing ABI24 adapter tested previously; EHsc rebuild and repeat CPUguards. Reuse actualobserverDLL from closedlibffi failure, no source/math/SDK mutation. Same original maincollector/order, hook only after failure; replace invocation interface.'},indent=2).encode());print(json.dumps({'status':'derived','files':len(rows),'derivation_sha256':sha(target.read_bytes())}))
