@@ -1,0 +1,288 @@
+{
+  "status": "native_gpu_phases_independently_closed_vllm_output_diagnosis_started",
+  "native_phase_diagnostic": {
+    "status": "native_stdio_profiled_retained_4k_control_replayed_on_both_machines",
+    "job": "native-cuda-stdio-profiled-bootstrap-attempt1",
+    "archive_sha256": "b9ce1450d7034abb266d44b41766ff4879c313be064c9f063756326108c85f30",
+    "archive_bytes": 109282384,
+    "files_verified": 700,
+    "proof_pair_sha256": "d313d2c5c07a400a8e8794a13fb0791b8133f6220f86e592e9faeb63fe5a75f6",
+    "local_replay": {
+      "exit_code": 0,
+      "argv": [
+        "D:\\CantorAI\\Garnet\\.venv\\Scripts\\python.exe",
+        "D:\\CantorAI\\work\\qwen38-5090\\test2026\\cuda\\qwen38_5090\\verify_native_cuda_stdio_profiled.py",
+        "--proofs",
+        "C:\\Users\\developer\\Documents\\Codex\\2026-10-23\\referenced-chatgpt-conversation-this-is-an\\outputs",
+        "--scratch",
+        "C:\\Users\\developer\\Documents\\Codex\\2026-10-23\\referenced-chatgpt-conversation-this-is-an\\work"
+      ],
+      "log_sha256": "5bdeda14fff1899c0c0763e4529719c15637fb6bfc48fad4077578a3359d46c2"
+    },
+    "input_tokens": 3968,
+    "output_tokens": 128,
+    "exact_retained_output_ids": true,
+    "unique_markers": 12,
+    "phases": [
+      {
+        "phase": "request",
+        "instrumented_marker_gap_ms": 8865.800824,
+        "observed_owned_cuda_union_ms": 7404.137426,
+        "gap_without_observed_owned_cuda_ms": 1461.663398,
+        "kernel_records": 471345,
+        "kernel_union_ms": 7300.589092,
+        "copy_union_ms": 68.890944,
+        "top_kernels_by_clipped_sum": [
+          {
+            "name": "cutlass3x_sm120_bstensorop_s16864gemm_block_scaled_ue4m3xe2m1_ue4m3xe2m1_f32_bf16_bf16_128x128x256_1x1x1_0_tnn_align32_o_vs16_bias_bf16_relu",
+            "count": 32256,
+            "clipped_sum_duration_ns": 2262796598,
+            "boundary_crossing_records": 0
+          },
+          {
+            "name": "Garnet::<unnamed>::scores(Garnet::Qwen35AttentionCoreConfig, const float *, const __nv_bfloat16 *, const float *, const float *, const float *, float *)",
+            "count": 4016,
+            "clipped_sum_duration_ns": 1045556270,
+            "boundary_crossing_records": 0
+          },
+          {
+            "name": "sm89_xmma_gemm_e4m3bf16_e4m3f32_f32_tn_n_tilesize32x64x64_stage5_warpsize2x2x1_tensor16x8x32_execute_kernel__5x_cublas",
+            "count": 32320,
+            "clipped_sum_duration_ns": 751580775,
+            "boundary_crossing_records": 0
+          },
+          {
+            "name": "Garnet::<unnamed>::context(Garnet::Qwen35AttentionCoreConfig, const __nv_bfloat16 *, const float *, const float *, const float *, const float *, const float *, float *)",
+            "count": 4016,
+            "clipped_sum_duration_ns": 726056382,
+            "boundary_crossing_records": 0
+          },
+          {
+            "name": "void cutlass::Kernel2<cutlass_80_wmma_tensorop_bf16_s161616gemm_bf16_16x16_128x2_tn_align8>(T1::Params)",
+            "count": 24096,
+            "clipped_sum_duration_ns": 652080127,
+            "boundary_crossing_records": 0
+          },
+          {
+            "name": "Garnet::<unnamed>::registerState128Kernel(Garnet::Qwen35DeltaConfig, int, const float *, const float *, const float *, const float *, const float *, const float *, const float *, const float *, const float *, float *, float *)",
+            "count": 12048,
+            "clipped_sum_duration_ns": 515280959,
+            "boundary_crossing_records": 0
+          },
+          {
+            "name": "nvjet_sm120_qqtst_mma_64x64x64_12_32x32x64_tmaAB_alignCD4_bz_TNNN",
+            "count": 5952,
+            "clipped_sum_duration_ns": 227027079,
+            "boundary_crossing_records": 0
+          },
+          {
+            "name": "nvjet_sm120_qqtst_mma_64x32x64_16_32x16x64_tmaAB_alignCD4_bz_TNNN",
+            "count": 7936,
+            "clipped_sum_duration_ns": 224919942,
+            "boundary_crossing_records": 0
+          }
+        ]
+      },
+      {
+        "phase": "reset",
+        "instrumented_marker_gap_ms": 12.188074,
+        "observed_owned_cuda_union_ms": 11.359433,
+        "gap_without_observed_owned_cuda_ms": 0.828641,
+        "kernel_records": 0,
+        "kernel_union_ms": 0.0,
+        "copy_union_ms": 0.0,
+        "top_kernels_by_clipped_sum": []
+      },
+      {
+        "phase": "input_text_or_image",
+        "instrumented_marker_gap_ms": 15.318284,
+        "observed_owned_cuda_union_ms": 0.0,
+        "gap_without_observed_owned_cuda_ms": 15.318284,
+        "kernel_records": 0,
+        "kernel_union_ms": 0.0,
+        "copy_union_ms": 0.0,
+        "top_kernels_by_clipped_sum": []
+      },
+      {
+        "phase": "embedding_and_rows",
+        "instrumented_marker_gap_ms": 227.57644,
+        "observed_owned_cuda_union_ms": 57.600106,
+        "gap_without_observed_owned_cuda_ms": 169.976334,
+        "kernel_records": 0,
+        "kernel_union_ms": 0.0,
+        "copy_union_ms": 55.242152,
+        "top_kernels_by_clipped_sum": []
+      },
+      {
+        "phase": "target_prefill",
+        "instrumented_marker_gap_ms": 5098.506808,
+        "observed_owned_cuda_union_ms": 4471.493237,
+        "gap_without_observed_owned_cuda_ms": 627.013571,
+        "kernel_records": 234490,
+        "kernel_union_ms": 4456.903334,
+        "copy_union_ms": 8.770217,
+        "top_kernels_by_clipped_sum": [
+          {
+            "name": "cutlass3x_sm120_bstensorop_s16864gemm_block_scaled_ue4m3xe2m1_ue4m3xe2m1_f32_bf16_bf16_128x128x256_1x1x1_0_tnn_align32_o_vs16_bias_bf16_relu",
+            "count": 15873,
+            "clipped_sum_duration_ns": 1054070955,
+            "boundary_crossing_records": 0
+          },
+          {
+            "name": "Garnet::<unnamed>::scores(Garnet::Qwen35AttentionCoreConfig, const float *, const __nv_bfloat16 *, const float *, const float *, const float *, float *)",
+            "count": 1984,
+            "clipped_sum_duration_ns": 966525308,
+            "boundary_crossing_records": 0
+          },
+          {
+            "name": "Garnet::<unnamed>::context(Garnet::Qwen35AttentionCoreConfig, const __nv_bfloat16 *, const float *, const float *, const float *, const float *, const float *, float *)",
+            "count": 1984,
+            "clipped_sum_duration_ns": 526422004,
+            "boundary_crossing_records": 0
+          },
+          {
+            "name": "Garnet::<unnamed>::registerState128Kernel(Garnet::Qwen35DeltaConfig, int, const float *, const float *, const float *, const float *, const float *, const float *, const float *, const float *, const float *, float *, float *)",
+            "count": 5952,
+            "clipped_sum_duration_ns": 483142945,
+            "boundary_crossing_records": 0
+          },
+          {
+            "name": "void cutlass::Kernel2<cutlass_80_wmma_tensorop_bf16_s161616gemm_bf16_16x16_128x2_tn_align8>(T1::Params)",
+            "count": 11904,
+            "clipped_sum_duration_ns": 323175482,
+            "boundary_crossing_records": 0
+          },
+          {
+            "name": "nvjet_sm120_qqtst_mma_64x64x64_12_32x32x64_tmaAB_alignCD4_bz_TNNN",
+            "count": 5952,
+            "clipped_sum_duration_ns": 227027079,
+            "boundary_crossing_records": 0
+          },
+          {
+            "name": "nvjet_sm120_qqtst_mma_64x32x64_16_32x16x64_tmaAB_alignCD4_bz_TNNN",
+            "count": 7936,
+            "clipped_sum_duration_ns": 224919942,
+            "boundary_crossing_records": 0
+          },
+          {
+            "name": "sm89_xmma_gemm_e4m3bf16_e4m3f32_f32_tn_n_tilesize32x64x64_stage5_warpsize2x2x1_tensor16x8x32_execute_kernel__5x_cublas",
+            "count": 7936,
+            "clipped_sum_duration_ns": 182300496,
+            "boundary_crossing_records": 0
+          }
+        ]
+      },
+      {
+        "phase": "target_generate",
+        "instrumented_marker_gap_ms": 3471.777583,
+        "observed_owned_cuda_union_ms": 2863.55233,
+        "gap_without_observed_owned_cuda_ms": 608.225253,
+        "kernel_records": 236855,
+        "kernel_union_ms": 2843.685758,
+        "copy_union_ms": 4.746255,
+        "top_kernels_by_clipped_sum": [
+          {
+            "name": "cutlass3x_sm120_bstensorop_s16864gemm_block_scaled_ue4m3xe2m1_ue4m3xe2m1_f32_bf16_bf16_128x128x256_1x1x1_0_tnn_align32_o_vs16_bias_bf16_relu",
+            "count": 16383,
+            "clipped_sum_duration_ns": 1208725643,
+            "boundary_crossing_records": 0
+          },
+          {
+            "name": "sm89_xmma_gemm_e4m3bf16_e4m3f32_f32_tn_n_tilesize32x64x64_stage5_warpsize2x2x1_tensor16x8x32_execute_kernel__5x_cublas",
+            "count": 24384,
+            "clipped_sum_duration_ns": 569280279,
+            "boundary_crossing_records": 0
+          },
+          {
+            "name": "void cutlass::Kernel2<cutlass_80_wmma_tensorop_bf16_s161616gemm_bf16_16x16_128x2_tn_align8>(T1::Params)",
+            "count": 12192,
+            "clipped_sum_duration_ns": 328904645,
+            "boundary_crossing_records": 0
+          },
+          {
+            "name": "Garnet::<unnamed>::context(Garnet::Qwen35AttentionCoreConfig, const __nv_bfloat16 *, const float *, const float *, const float *, const float *, const float *, float *)",
+            "count": 2032,
+            "clipped_sum_duration_ns": 199634378,
+            "boundary_crossing_records": 0
+          },
+          {
+            "name": "sm89_xmma_gemm_e4m3bf16_e4m3f32_f32_tn_n_tilesize64x128x64_stage4_warpsize2x2x1_tensor16x8x32_execute_kernel__5x_cublas",
+            "count": 2032,
+            "clipped_sum_duration_ns": 99161317,
+            "boundary_crossing_records": 0
+          },
+          {
+            "name": "Garnet::<unnamed>::scores(Garnet::Qwen35AttentionCoreConfig, const float *, const __nv_bfloat16 *, const float *, const float *, const float *, float *)",
+            "count": 2032,
+            "clipped_sum_duration_ns": 79030962,
+            "boundary_crossing_records": 0
+          },
+          {
+            "name": "Garnet::<unnamed>::QuantizeActivation(const __nv_bfloat16 *, unsigned char *, unsigned char *, float, int, int, int, unsigned long long)",
+            "count": 16383,
+            "clipped_sum_duration_ns": 63328291,
+            "boundary_crossing_records": 0
+          },
+          {
+            "name": "Garnet::<unnamed>::registerState128Kernel(Garnet::Qwen35DeltaConfig, int, const float *, const float *, const float *, const float *, const float *, const float *, const float *, const float *, const float *, float *, float *)",
+            "count": 6096,
+            "clipped_sum_duration_ns": 32138014,
+            "boundary_crossing_records": 0
+          }
+        ]
+      }
+    ],
+    "sampled_memory": {
+      "sampled_peak_adapter_used_bytes": 21700751360,
+      "samples": 5692,
+      "requested_interval_seconds": 0.02,
+      "observed_sample_gap_median_seconds": 0.03156380000291392,
+      "observed_sample_gap_max_seconds": 2.2774405000091065,
+      "scope": "NVML adapter-wide used memory, including background allocations; sampled maximum, not instantaneous or process-attributed peak"
+    },
+    "preloaded_request": true,
+    "arrival_timing_admitted": false,
+    "performance_admitted": false,
+    "two_times_target_achieved": false,
+    "next_optimization_hypotheses": [
+      "Prefill has234490kernel records; actual NVFP4 GEMM, BF16 attention scores/context and delta state work dominate recorded kernel durations. Wider target prefill128 and tiled attention merit controlled correctness/performance studies.",
+      "Decode has236855kernel records and substantial NVFP4/FP8 GEMM work. Batched native/MTP must be qualified and measured to address concurrency throughput.",
+      "These are instrumented ordinary text observations. MTP/image/repeats and uninstrumented serving tests remain required; the unattributed gaps do not identify a CPU, GIL or scheduling cause."
+    ],
+    "scope": "One real ordinary B1 retained4K text request, pinned Nsight, independently replayed raw700members/SQLite/native IDs and source/runtime/cleanup. GPU/kernel/copy/API durations can overlap; only interval unions are additive. Construction-and-correctness sampled adapter memory is not a serving peak or memory saving. No HTTP benchmark, speedup, cross-engine equivalence or2x claim."
+  },
+  "vllm_diagnosis": {
+    "job": "vllm-output-characterization-attempt1",
+    "supervisor_session": 48577,
+    "observed_state": "running",
+    "source_pins": 802,
+    "prepared_cpu_tests": 59,
+    "terminal_result": null,
+    "requests_planned": 288,
+    "actual_completed_requests": null,
+    "performance_admitted": false,
+    "initial_install": {
+      "status": "vllm_characterization_methods_installed",
+      "bundle_sha256": "16264f872e8ceb2198e9e17bf32e0f4cd7f4329ed4f483259b2f612ae85ca710",
+      "new_targets": 11,
+      "unchanged_targets": [
+        "Garnet/test2026/cuda/qwen38_5090/verify_vllm_fixed4k_attempt3_partial.py"
+      ],
+      "all_source_pins_verified": 801,
+      "runtime_unchanged": true,
+      "gpu_executed": false
+    },
+    "dependency_completion": {
+      "status": "vllm_characterization_linked_proofs_completed",
+      "bundle_sha256": "7236e11f7ffbcbb61c7ff253dc3c65f3800504003c2ff95fe4ef6f0c6eaf9697",
+      "all_source_pins_verified": 802,
+      "cpu_tests_prepared": 59,
+      "backed_up_and_replaced_targets": 3,
+      "original_install_receipt_preserved": true,
+      "runtime_unchanged": true,
+      "gpu_executed": false
+    }
+  },
+  "comparison_chart_changed": false,
+  "two_times_target_achieved": false
+}

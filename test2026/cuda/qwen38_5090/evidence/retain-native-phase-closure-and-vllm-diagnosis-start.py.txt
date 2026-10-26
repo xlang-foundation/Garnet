@@ -1,0 +1,129 @@
+from pathlib import Path
+import hashlib,json,zipfile
+work=Path(__file__).resolve().parent;out=work.parent/'outputs';repo=Path('D:/CantorAI/work/qwen38-5090');m=repo/'test2026/cuda/qwen38_5090';e=m/'evidence'
+sha=lambda raw:hashlib.sha256(raw).hexdigest()
+
+def keep(path,raw):
+    assert not path.exists() or path.read_bytes()==raw,path
+    if not path.exists():path.write_bytes(raw)
+
+job='native-cuda-stdio-profiled-bootstrap-attempt1';receipt=json.loads((work/'native-stdio-profiled-local-receipt.json').read_bytes())
+assert receipt['status']=='native_stdio_profiled_retained_4k_control_replayed_on_both_machines'
+assert (out/(job+'-verified.json')).read_bytes()==(out/(job+'-remote-verified.json')).read_bytes()
+assert sha((out/(job+'-verified.json')).read_bytes())==receipt['proof_pair_sha256']
+assert sha((out/(job+'-evidence.zip')).read_bytes())==receipt['archive_sha256']
+with zipfile.ZipFile(out/(job+'-evidence.zip')) as z:
+    base='results/'+job+'/';manifest=json.loads(z.read('evidence-manifest.json'));assert len(manifest['files'])==700
+    for n,h in manifest['files'].items():assert sha(z.read(n))==h
+    for n in z.namelist():
+        if n.startswith(base) and not n.endswith(('.nsys-rep','.sqlite','resource-vram.jsonl')):
+            keep(e/(job+'-'+n.removeprefix(base).replace('/','-')),z.read(n))
+    keep(e/(job+'-evidence-manifest.json'),z.read('evidence-manifest.json'))
+for suffix in ('-verified.json','-remote-verified.json','-local-replay.log'):
+    keep(e/(job+suffix),(out/(job+suffix)).read_bytes())
+recipes=('replay-native-stdio-profiled-local.py','derive-vllm-characterization-pipeline.py',
+         'revise-vllm-characterization-parent-proof-binding.py','package-vllm-characterization-methods.py',
+         'install-vllm-characterization-methods.py','package-vllm-characterization-linked-proofs.py',
+         'install-vllm-characterization-linked-proofs.py','retain-native-phase-closure-and-vllm-diagnosis-start.py')
+for name in recipes:keep(e/(name+'.txt'),(work/name).read_bytes())
+records=('native-stdio-profiled-local-receipt.json','vllm-characterization-pipeline-upload-plan.json',
+         'vllm-characterization-bundle-preparation.json','vllm-characterization-install.json',
+         'vllm-characterization-linked-proofs-preparation.json','vllm-characterization-linked-proofs-install.json')
+for name in records:keep(e/name,(work/name).read_bytes())
+for f in (work/'vllm-characterization-pipeline-cpu-ledger').iterdir():
+    if f.is_file():keep(e/('vllm-characterization-pipeline-cpu-ledger-'+f.name),f.read_bytes())
+for directory in ('vllm-characterization-before-proof-binding','vllm-characterization-before-linked-proof-completion'):
+    for f in (work/directory).iterdir():
+        if f.is_file():keep(e/(directory+'-'+f.name+'.txt'),f.read_bytes())
+installation=json.loads((work/'vllm-characterization-linked-proofs-install.json').read_bytes())
+assert installation['status']=='vllm_characterization_linked_proofs_completed' and installation['all_source_pins_verified']==802
+p=json.loads((e/'vllm-output-characterization-run-preparation.json').read_bytes());assert p['expected_cpu_tests']==59 and len(p['files'])==802
+assert not any(n.startswith('Garnet/docs/research/') for n in p['files'])
+result={'status':'native_gpu_phases_independently_closed_vllm_output_diagnosis_started',
+        'native_phase_diagnostic':receipt,'vllm_diagnosis':{'job':'vllm-output-characterization-attempt1','supervisor_session':48577,
+            'observed_state':'running','source_pins':802,'prepared_cpu_tests':59,'terminal_result':None,
+            'requests_planned':288,'actual_completed_requests':None,'performance_admitted':False,
+            'initial_install':json.loads((work/'vllm-characterization-install.json').read_bytes()),'dependency_completion':installation},
+        'comparison_chart_changed':False,'two_times_target_achieved':False}
+raw=json.dumps(result,indent=2).encode();keep(e/'native-phase-closure-and-vllm-diagnosis-start.json',raw)
+keep(out/'Garnet-Native-CUDA-Phases-and-vLLM-Diagnosis-Status.json',raw)
+text='''
+
+### 2026-10-25 — first real CUDA request-phase trace closed on both machines; vLLM output diagnosis
+
+Actual native-cuda-stdio-profiled-bootstrap-attempt1 completed exit0. All665source
+pins/runtime6/baseline1a1d preserved, cache retired and owned worker/collector/owner
+closed. Remote28CPU/.194s and actual embedded compatibility passed. The preloaded
+ordinary text request has exact3968prompt/128completion IDs, all130protocol events,
+twelve unique HtoD markers, original host-stage/native close/entry source and real
+owned SM120 CUDA graph-node kernels/API/copies. Archive
+b9ce1450d7034abb266d44b41766ff4879c313be064c9f063756326108c85f30,
+109282384bytes/700files; identical two-machine replay proof
+d313d2c5c07a400a8e8794a13fb0791b8133f6220f86e592e9faeb63fe5a75f6.
+The original ready-stdout failure and paired CPU observations remain immutable.
+
+Instrumented marker windows: prefill5098.506808ms, observed owned CUDA union
+4471.493237ms and234490kernel records; generation3471.777583ms, observed union
+2863.552330ms and236855kernel records. Whole request8865.800824ms/7404.137426ms
+CUDA union. Prefill kernel clipped sums include NVFP4 GEMM1054.070955ms,
+BF16 attention scores966.525308ms/context526.422004ms and GDN register-state
+483.142945ms. Decode includes NVFP4 GEMM1208.725643ms and FP8 GEMM569.280279ms.
+These are one profiled ordinary text control, not uninstrumented HTTP TTFT,
+decode tok/s or a code-change speedup. Kernel/API durations can overlap; use
+interval unions where additive duration is needed. Gaps without observed owned
+CUDA are unattributed, not evidence of a CPU/GIL/scheduling cause. Construction/
+correctness sampled adapter memory is not a serving peak or memory-saving claim.
+Raw source/entry/host/protocol/stats/ledgers/manifests and all failures retained;
+full .nsys-rep/SQLite/VRAM samples remain in hash-pinned output archive.
+
+Actual trace prioritizes wider target prefill128 and attention scores/context
+qualification, plus batched native/MTP to address concurrency throughput. This
+does not prove a particular optimization wins. Existing T128 is an offline
+component only; actual GPU canaries/oracle, full forward/runtime/state/model and
+HTTP remain required. Existing tiled-attention model correctness does not supply
+serving metrics. Full MTP/image phase controls and repeated trials remain open.
+
+Prepared separate vLLM output/isolation owner from qualified SGLang ownership,
+using the actual vLLM launcher/ready metadata/source/config/PID/stop machinery.
+Full checker derives from strict vLLM checker, replacing benchmark/805screen block
+only with raw288request/135overlap-wave diagnosis:192actual nonstream IDs,
+64full3968+128streams and32mixed-color/spatial streams, serial-before/after and
+rotated C1/2/4/8 controls. All variants retained; streamed IDs remain unobserved.
+Actual strict trial3 failed proof/partial12stream+124IDproof/805screenproof and
+archive are required and independently equal on both machines. The diagnosis
+does not weaken strict benchmark gates or admit an observed-output policy.
+
+Source review before any diagnosis requests found two inherited dependency issues.
+First, the strict checker's linked-reference loop overwrote the native parent_raw
+binding used by later metadata admission. New diagnostic checker alone now keeps
+linked_parent_raw separate; actual-loop CPU fixture uses distinct proof bytes.
+Original strict checker/failure proofs unchanged. Preserved original unrun57test
+preparation before this fix;58tests passed11.270s. Second, inherited SGLang proof
+was in parents but absent from archived source list. Before requests, preserved
+installed801pin/58test preparation and added explicit proof/archive pair admission
+and pinning, with missing/drift regression controls. Final59tests pass10.693s,
+802pins; preparation d7680e2eacab12eb1cdb8b941b1ca2615545db52cb63f0cd9a870a6af3b93c18.
+Initial57tests11.143s and all revision snapshots/ledgers/recipes retained.
+
+Initial absent-only vLLM diagnostic install added11targets and verified unchanged
+partial checker,801pins/runtime. Narrow dependency completion backed up all three
+owned unrun files before exact old-hash/new-hash replacement; original preparation
+and install receipt preserved, all802pins/runtime verified, GPU unrun on install.
+Final delta7236e11f7ffbcbb61c7ff253dc3c65f3800504003c2ff95fe4ef6f0c6eaf9697.
+Only after profiler transfer ACK, local/remote replay closure and all install
+receipts, original48577 supervisor started vllm-output-characterization-attempt1.
+Owner observed live; no other GPU model/transfer/replay scheduled concurrently.
+Actual diagnostic requests/terminal/source/runtime cleanup and two-machine replay
+remain pending. No new HTTP benchmark, comparison chart or2xclaim.
+
+Two read-only source searches used nonexistent guessed paths and a Windows glob;
+they failed without changes, then rg --files supplied actual paths. No local GPU
+or SDK/production build mutation. Private external-prefix probe remains untouched.
+Next actual diagnosis must close/replay before a separate fully qualified vLLM
+observed-output baseline. Native wider prefill/batched correctness and HTTP,
+strongest tuned/MTP references, repeats, matched INT4/4B and overall2x remain open.
+'''
+for name in ('qwen38-5090-development-log.md','qwen38-5090-implementation-task.md'):
+    path=repo/'docs/research'/name;raw=path.read_bytes()
+    if b'first real CUDA request-phase trace closed on both machines; vLLM output diagnosis' not in raw:path.write_bytes(raw+text.encode())
+print(json.dumps({'status':result['status'],'profiled_control_replayed':True,'vllm_diagnosis':'running','new_benchmark_result':False}))

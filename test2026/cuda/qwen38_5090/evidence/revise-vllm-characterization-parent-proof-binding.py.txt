@@ -1,0 +1,14 @@
+from pathlib import Path
+import hashlib,json
+m=Path('D:/CantorAI/work/qwen38-5090/test2026/cuda/qwen38_5090');sha=lambda raw:hashlib.sha256(raw).hexdigest()
+target=m/'verify_vllm_output_characterization.py';before=target.read_bytes();text=before.decode()
+left=text.index("        for parent_name,parent_row in p['parents'].items():")
+right=text.index("        parent_archive=",left)
+old=text[left:right];new=old.replace('parent_raw','linked_parent_raw');assert new!=old and text.count(old)==1
+after=text.replace(old,new).encode();target.write_bytes(after)
+derivation=m/'evidence/vllm-output-characterization-pipeline-derivation.json';d=json.loads(derivation.read_bytes())
+row=next(r for r in d['derivations'] if r['target']==target.name);assert row['target_sha256']==sha(before)
+row['replacements'].append({'old':old,'new':new,'count':1});row['target_sha256']=sha(after)
+derivation.write_bytes(json.dumps(d,indent=2).encode())
+print(json.dumps({'status':'unrun_characterization_native_proof_binding_corrected','before_sha256':sha(before),'after_sha256':sha(after),
+    'scope':'Keep the original native parent_raw bound across linked-reference proof verification. Original immutable vLLM strict checker unchanged.'}))

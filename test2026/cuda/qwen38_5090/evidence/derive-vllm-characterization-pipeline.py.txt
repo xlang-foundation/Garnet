@@ -1,0 +1,67 @@
+from pathlib import Path
+import hashlib,json
+m=Path('D:/CantorAI/work/qwen38-5090/test2026/cuda/qwen38_5090');sha=lambda raw:hashlib.sha256(raw).hexdigest();rows=[]
+
+def derive(source,target,transform):
+    raw=(m/source).read_bytes();s=raw.decode();changes=[]
+    def replace(old,new):
+        nonlocal s
+        count=s.count(old);assert count>0,(source,old)
+        s=s.replace(old,new);changes.append({'old':old,'new':new,'count':count})
+    transform(replace)
+    data=s.encode();p=m/target;assert not p.exists() or p.read_bytes()==data
+    if not p.exists():p.write_bytes(data)
+    rows.append({'source':source,'source_sha256':sha(raw),'target':target,'target_sha256':sha(data),'replacements':changes})
+
+def owner(r):
+    r('"""Own exclusive SGLang correctness/overlap characterization, never benchmark."""','"""Own exclusive vLLM correctness/overlap characterization, never benchmark."""')
+    r('from .run_sglang_fixed4k import wait_ready,linux_path','from .run_vllm_fixed4k import wait_ready,linux_path')
+    r('from run_sglang_fixed4k import wait_ready,linux_path','from run_vllm_fixed4k import wait_ready,linux_path')
+    r('from .run_mtp_prefill16_model import closed_native_admission','from .vllm_characterization_parent import admit as admit_parent')
+    r('from run_mtp_prefill16_model import closed_native_admission','from vllm_characterization_parent import admit as admit_parent')
+    r("a.add_argument('--closed-native-archive-sha256',required=True);",'')
+    r(" previous='sglang-fixed4k-ordinary-attempt2';prior=json.loads((root/'results'/(previous+'-partial-verified.json')).read_bytes());assert prior['status']=='reference_fixed4k_attempt2_failure_partial_evidence_replayed' and sha(root/'results'/(previous+'-partial-verified.json'))==p['prior_partial_proof_sha256'] and sha(root/'results'/(previous+'-evidence.zip'))==p['prior_archive_sha256']==prior['archive_sha256']\n native_closed=closed_native_admission(root,args.closed_native_archive_sha256)"," diagnosis_parent=admit_parent(lambda name:(root/name).read_bytes());assert diagnosis_parent==p['diagnosis_parent']")
+    r(",root/'results/bf16-batch8-model-admission-attempt1/workflow.json'",'')
+    r("'prior_partial_proof_sha256':p['prior_partial_proof_sha256'],'prior_archive_sha256':p['prior_archive_sha256'],'closed_native_admission':native_closed,","'diagnosis_parent':diagnosis_parent,")
+    r("'prior_archive_sha256':p['prior_archive_sha256']","'prior_archive_sha256':p['diagnosis_parent']['archive_sha256']")
+    r('reference_concurrency_characterization.py','vllm_concurrency_characterization.py')
+    r('serve_sglang_reserved_fixed4k.sh','serve_vllm_fixed4k.sh')
+    r('prepare_sglang_reserved_fixed4k_metadata.py','prepare_vllm_fixed4k_metadata.py')
+    r('18081','18080')
+    r('sglang','vllm');r('SGLang','vLLM')
+derive('run_sglang_output_characterization.py','run_vllm_output_characterization.py',owner)
+
+def verifier(r):
+    original=(m/'verify_vllm_fixed4k_launcher_completed.py').read_bytes().decode()
+    r('from run_vllm_fixed4k import job_path','from run_vllm_output_characterization import job_path\nfrom vllm_characterization_parent import admit as admit_parent')
+    r("a.add_argument('--corpus',type=Path,required=True);",'')
+    r('evidence/vllm-fixed4k-launcher-completed-preparation.json','evidence/vllm-output-characterization-run-preparation.json')
+    r('vllm_fixed4k_run_prepared_unrun','vllm_output_characterization_prepared_unrun')
+    r("require_runtime_dependencies(p['files']);assert p['preparation_version']=='launcher_dependencies_complete_v2'","require_runtime_dependencies(p['files']);assert p['preparation_version']=='output_diagnosis_v1'")
+    r("args.job.startswith('vllm-fixed4k-'+w['mode']+'-')","args.job.startswith('vllm-output-characterization-attempt')")
+    r("'prepare_vllm_fixed4k_run.py'):","'prepare_vllm_fixed4k_run.py','vllm_characterization_parent.py','vllm_concurrency_characterization.py','replay_vllm_concurrency_characterization.py','run_vllm_output_characterization.py'):")
+    r("        passed=w['exit_code']==0","        parent_archive=args.proofs/'vllm-fixed4k-ordinary-attempt3-evidence.zip'\n        def read_parent(name):\n            if name=='results/vllm-fixed4k-ordinary-attempt3-evidence.zip':return parent_archive.read_bytes()\n            return z.read(name)\n        assert admit_parent(read_parent)==p['diagnosis_parent']==w['diagnosis_parent']\n        assert type(w['exit_code']) is int\n        passed=w['exit_code']==0")
+    r('reference_fixed4k_collected_needs_replay','vllm_output_characterization_collected_needs_replay')
+    start=original.index("            report=doc(base+'client/report.json')")
+    end=original.index("        archived=sha(",start)
+    r(original[start:end],"""            from vllm_concurrency_characterization import load_cases
+            from replay_vllm_concurrency_characterization import replay as replay_characterization
+            groups=load_cases(read=read_parent);report=doc(base+'client/report.json');assert report['metadata']==metadata
+            client_manifest=doc(base+'client/file-manifest.json')
+            assert {n.removeprefix(base+'client/') for n in manifest['files'] if n.startswith(base+'client/')}==set(client_manifest['files'])|{'file-manifest.json'}
+            replayed=replay_characterization(lambda name:z.read(base+'client/'+name),groups)
+            resource=doc(base+'resources/resource-monitor.json');samples=[json.loads(line) for line in z.read(base+'resources/resource-vram.jsonl').splitlines()]
+            peak=max(v['used_bytes'] for v in samples);assert type(resource['child_exit_code']) is int and resource['child_exit_code']==0 and resource['gpu']['uuid']==GPU
+            gaps=[b['monotonic']-a['monotonic'] for a,b in zip(samples,samples[1:])];assert all(v>0 for v in gaps)
+            memory=resource['sampled_memory'];assert memory['samples']==len(samples) and memory['sampled_peak_adapter_used_bytes']==peak
+            assert memory['observed_sample_gap_max_seconds']==(max(gaps) if gaps else None) and memory['observed_sample_gap_median_seconds']==(statistics.median(gaps) if gaps else None)
+            profiles.append({'raw_characterization':replayed,'correctness_sampled_memory':memory})
+""")
+    r('verify_vllm_fixed4k_launcher_completed.py','verify_vllm_output_characterization.py')
+    r("'reference_fixed4k_profile_replayed' if passed else 'reference_fixed4k_failure_preserved'","'vllm_output_characterization_replayed' if passed else 'vllm_output_characterization_failure_preserved'")
+    r('Closed source/config/PID/lifecycle and actual raw request/response/control/SSE/metric/memory replay. Timed streams expose counts/text, no individual IDs reconstructed.805adapted screening and fourVLM controls are not broad/official quality. Strongest feasible tuning, repetitions, native comparison and2x remain open.','Closed source/config/PID/lifecycle and actual288request/135overlap-wave output/isolation replay. All variants retained; streamed individual IDs unobserved. No physical GPU batch, numerical cause/harmlessness, broad quality or performance/2x admission.')
+derive('verify_vllm_fixed4k_launcher_completed.py','verify_vllm_output_characterization.py',verifier)
+target=m/'evidence/vllm-output-characterization-pipeline-derivation.json';raw=json.dumps({'derivations':rows,'scope':'Only explicit engine metadata/owner/parent and characterization collection/replay differences. Original strict vLLM benchmark gates unchanged.'},indent=2).encode()
+assert not target.exists() or target.read_bytes()==raw
+if not target.exists():target.write_bytes(raw)
+print(json.dumps({'status':'vllm_characterization_owner_and_verifier_derived_unrun','targets':len(rows)}))

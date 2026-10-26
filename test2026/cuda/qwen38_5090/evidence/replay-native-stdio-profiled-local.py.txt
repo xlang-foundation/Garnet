@@ -1,0 +1,34 @@
+from pathlib import Path
+import hashlib,json,subprocess,sys,zipfile
+work=Path(__file__).resolve().parent;out=work.parent/'outputs';m=Path('D:/CantorAI/work/qwen38-5090/test2026/cuda/qwen38_5090')
+job='native-cuda-stdio-profiled-bootstrap-attempt1';sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+archive=out/(job+'-evidence.zip');remote=out/(job+'-remote-verified.json');q=json.loads(remote.read_bytes())
+assert q['status']=='native_cuda_stdio_profiled_replayed' and sha(archive)==q['archive_sha256']
+log=out/(job+'-local-replay.log');argv=[sys.executable,str(m/'verify_native_cuda_stdio_profiled.py'),'--proofs',str(out),'--scratch',str(work)]
+with log.open('xb') as stream:code=subprocess.run(argv,stdout=stream,stderr=subprocess.STDOUT).returncode
+proof=out/(job+'-verified.json');assert code==0 and proof.read_bytes()==remote.read_bytes()
+with zipfile.ZipFile(archive) as z:
+    w=json.loads(z.read('results/'+job+'/workflow.json'));assert w['exit_code']==0 and w['cleanup_finished'] is True
+    assert w['source_sha256']==w['source_after_sha256'] and w['runtime_dependencies']==w['runtime_dependencies_after'] and w['library_unchanged'] is True
+g=q['cuda_phase_replay'];assert g['requests']==1 and g['unique_markers']==12
+phases=[]
+for row in g['intervals']:
+    phases.append({'phase':row['phase'],'instrumented_marker_gap_ms':row['instrumented_marker_gap_ns']/1e6,
+        'observed_owned_cuda_union_ms':row['observed_cuda_activity_union_ns']/1e6,
+        'gap_without_observed_owned_cuda_ms':row['gap_without_observed_owned_cuda_activity_ns']/1e6,
+        'kernel_records':row['kernel']['records'],'kernel_union_ms':row['kernel']['clipped_interval_union_ns']/1e6,
+        'copy_union_ms':row['copy']['clipped_interval_union_ns']/1e6,'top_kernels_by_clipped_sum':row['kernel']['by_name'][:8]})
+r={'status':'native_stdio_profiled_retained_4k_control_replayed_on_both_machines','job':job,
+   'archive_sha256':sha(archive),'archive_bytes':archive.stat().st_size,'files_verified':q['files_verified'],
+   'proof_pair_sha256':sha(proof),'local_replay':{'exit_code':code,'argv':argv,'log_sha256':sha(log)},
+   'input_tokens':3968,'output_tokens':128,'exact_retained_output_ids':True,'unique_markers':12,
+   'phases':phases,'sampled_memory':q['construction_correctness_sampled_memory'],
+   'preloaded_request':True,'arrival_timing_admitted':False,'performance_admitted':False,'two_times_target_achieved':False,
+   'next_optimization_hypotheses':[
+       'Prefill has234490kernel records; actual NVFP4 GEMM, BF16 attention scores/context and delta state work dominate recorded kernel durations. Wider target prefill128 and tiled attention merit controlled correctness/performance studies.',
+       'Decode has236855kernel records and substantial NVFP4/FP8 GEMM work. Batched native/MTP must be qualified and measured to address concurrency throughput.',
+       'These are instrumented ordinary text observations. MTP/image/repeats and uninstrumented serving tests remain required; the unattributed gaps do not identify a CPU, GIL or scheduling cause.'],
+   'scope':'One real ordinary B1 retained4K text request, pinned Nsight, independently replayed raw700members/SQLite/native IDs and source/runtime/cleanup. GPU/kernel/copy/API durations can overlap; only interval unions are additive. Construction-and-correctness sampled adapter memory is not a serving peak or memory saving. No HTTP benchmark, speedup, cross-engine equivalence or2x claim.'}
+(work/'native-stdio-profiled-local-receipt.json').write_bytes(json.dumps(r,indent=2).encode())
+(out/'Garnet-Native-4K-CUDA-Phase-Diagnostic.json').write_bytes(json.dumps(r,indent=2).encode())
+print(json.dumps({k:r[k] for k in ('status','archive_sha256','proof_pair_sha256','files_verified','performance_admitted')}))

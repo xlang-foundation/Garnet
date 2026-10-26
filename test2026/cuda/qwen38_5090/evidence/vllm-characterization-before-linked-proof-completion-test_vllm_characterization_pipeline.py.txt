@@ -1,0 +1,87 @@
+"""CPU-only failure/parent/source and owner path controls; no model execution."""
+from pathlib import Path
+import ast,copy,hashlib,io,json,tempfile,types,unittest,zipfile
+from .vllm_characterization_parent import admit,PARENT
+from .run_vllm_output_characterization import job_path
+
+sha=lambda raw:hashlib.sha256(raw).hexdigest()
+
+def fixture(change=None):
+    w={'status':'failed','exit_code':1,'cleanup_finished':True,'server_exit_code':0,
+       'source_sha256':{'s':'h'},'source_after_sha256':{'s':'h'},'runtime_dependencies':{'r':'h'},'runtime_dependencies_after':{'r':'h'}}
+    if change:change(w)
+    prefix='results/'+PARENT
+    files={prefix+'/workflow.json':json.dumps(w).encode(),prefix+'/client/mmmu-quality/file-manifest.json':b'{"files":{}}'}
+    stream=io.BytesIO()
+    with zipfile.ZipFile(stream,'w') as z:
+        for n,b in files.items():z.writestr(n,b)
+        z.writestr('evidence-manifest.json',json.dumps({'files':{n:sha(b) for n,b in files.items()}}))
+    archive=stream.getvalue();h=sha(archive)
+    q={'status':'reference_fixed4k_failure_preserved','engine':'vllm','mode':'ordinary','archive_sha256':h,'performance_admitted':False,'two_times_target_achieved':False}
+    qraw=json.dumps(q).encode()
+    partial={'status':'vllm_fixed4k_attempt3_partial_controls_and_output_failure_replayed','archive_sha256':h,
+             'original_failure_proof_sha256':sha(qraw),'actual_nonstream_4k_id_controls':124,'raw_streams_replayed':12,
+             'performance_admitted':False,'full_4k_benchmark_complete':False,'stream_comparisons':[
+                 {'text_exact':i<10,'individual_streamed_ids_observed':False,'prompt_tokens':3968,'output_tokens':128} for i in range(12)]}
+    quality={'status':'adapted_mmmu_http_quality_responses_replayed','engine':'vllm','completed_requests':805,
+             'attempted_requests':805,'failed_or_interrupted_cases':[],'run_file_manifest_sha256':sha(files[prefix+'/client/mmmu-quality/file-manifest.json'])}
+    return {prefix+'-evidence.zip':archive,prefix+'-verified.json':qraw,prefix+'-partial-verified.json':json.dumps(partial).encode(),prefix+'-quality-verified.json':json.dumps(quality).encode()}
+
+class PipelineTests(unittest.TestCase):
+    def test_failed_parent_lifecycle_faults(self):
+        self.assertEqual(admit(fixture().__getitem__)['exit_code'],1)
+        for field,value in (('exit_code',True),('exit_code',0),('cleanup_finished',False),('server_exit_code',False),('server_exit_code',1),('source_after_sha256',{}),('runtime_dependencies_after',{})):
+            with self.subTest(field=field,value=value),self.assertRaises(AssertionError):
+                admit(fixture(lambda w:w.update({field:value})).__getitem__)
+
+    def test_partial_quality_and_hash_faults(self):
+        for suffix,field,value in (('-partial-verified.json','full_4k_benchmark_complete',True),
+                ('-partial-verified.json','actual_nonstream_4k_id_controls',123),
+                ('-partial-verified.json','original_failure_proof_sha256','0'*64),
+                ('-quality-verified.json','completed_requests',804),
+                ('-quality-verified.json','run_file_manifest_sha256','0'*64)):
+            files=fixture();key='results/'+PARENT+suffix;data=json.loads(files[key]);data[field]=value;files[key]=json.dumps(data).encode()
+            with self.subTest(field=field),self.assertRaises(AssertionError):admit(files.__getitem__)
+        files=fixture();files['results/'+PARENT+'-evidence.zip']+=b'drift'
+        with self.assertRaises(AssertionError):admit(files.__getitem__)
+
+    def test_exclusive_job_paths(self):
+        root=Path('study')
+        self.assertEqual(job_path(root,'vllm-output-characterization-attempt1'),root/'results/vllm-output-characterization-attempt1')
+        for name in ('vllm-fixed4k-ordinary-attempt1','vllm-output-characterization-attempt0','../x','sglang-output-characterization-attempt1'):
+            with self.subTest(name=name),self.assertRaises(ValueError):job_path(root,name)
+
+    def test_linked_reference_proof_does_not_replace_native_binding(self):
+        source=Path(__file__).with_name('verify_vllm_output_characterization.py').read_bytes()
+        tree=ast.parse(source);loops=[n for n in ast.walk(tree) if isinstance(n,ast.For) and isinstance(n.target,ast.Tuple)
+            and [v.id for v in n.target.elts if isinstance(v,ast.Name)]==['parent_name','parent_row']]
+        self.assertEqual(len(loops),1)
+        native=b'original-native-http-proof';archived={};parents={}
+        with tempfile.TemporaryDirectory() as temporary:
+            folder=Path(temporary)
+            for name in ('native-control','different-reference'):
+                archive=('archive:'+name).encode();q={'status':'passed-'+name,'archive_sha256':sha(archive)};raw=json.dumps(q).encode()
+                (folder/(name+'-evidence.zip')).write_bytes(archive);(folder/(name+'-verified.json')).write_bytes(raw)
+                archived['results/'+name+'-verified.json']=raw
+                parents[name]={'proof_sha256':sha(raw),**q}
+            namespace={'p':{'parents':parents},'parent_raw':native,'z':types.SimpleNamespace(read=archived.__getitem__),
+                       'args':types.SimpleNamespace(proofs=folder),'sha':sha,'json':json}
+            exec(compile(ast.fix_missing_locations(ast.Module(body=loops,type_ignores=[])),'actual-linked-parent-loop','exec'),namespace)
+            self.assertEqual(namespace['parent_raw'],native)
+            self.assertNotEqual(namespace['linked_parent_raw'],native)
+
+    def test_derivation_and_collection_scope(self):
+        m=Path(__file__).resolve().parent
+        for row in json.loads((m/'evidence/vllm-output-characterization-pipeline-derivation.json').read_bytes())['derivations']:
+            original=(m/row['source']).read_bytes();self.assertEqual(sha(original),row['source_sha256']);s=original.decode()
+            for step in row['replacements']:
+                self.assertEqual(s.count(step['old']),step['count']);s=s.replace(step['old'],step['new'])
+            actual=(m/row['target']).read_bytes();self.assertEqual(s.encode(),actual);self.assertEqual(sha(actual),row['target_sha256'])
+        owner=(m/'run_vllm_output_characterization.py').read_text()
+        self.assertIn("m/'serve_vllm_fixed4k.sh'",owner);self.assertIn("m/'vllm_concurrency_characterization.py'",owner)
+        self.assertNotIn("m/'probe_reference_fixed4k.py'",owner)
+        checker=(m/'verify_vllm_output_characterization.py').read_text()
+        self.assertIn("identity['engine']=='vllm'",checker);self.assertIn('replay_characterization',checker)
+        self.assertNotIn("report['status']=='reference_fixed4k_profile_collected'",checker)
+
+if __name__=='__main__':unittest.main()

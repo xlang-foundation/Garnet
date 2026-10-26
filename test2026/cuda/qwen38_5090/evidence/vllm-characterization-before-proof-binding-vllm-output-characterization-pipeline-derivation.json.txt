@@ -1,0 +1,166 @@
+{
+  "derivations": [
+    {
+      "source": "run_sglang_output_characterization.py",
+      "source_sha256": "475da727a2cea2ab7d1b28e238619597e814eb8bef21a16126012d32ba0ae9df",
+      "target": "run_vllm_output_characterization.py",
+      "target_sha256": "03edbd1a1d4c5e40aa0392b5d674db03c3406a5696a0dd5020bd69c3cce93cb0",
+      "replacements": [
+        {
+          "old": "\"\"\"Own exclusive SGLang correctness/overlap characterization, never benchmark.\"\"\"",
+          "new": "\"\"\"Own exclusive vLLM correctness/overlap characterization, never benchmark.\"\"\"",
+          "count": 1
+        },
+        {
+          "old": "from .run_sglang_fixed4k import wait_ready,linux_path",
+          "new": "from .run_vllm_fixed4k import wait_ready,linux_path",
+          "count": 1
+        },
+        {
+          "old": "from run_sglang_fixed4k import wait_ready,linux_path",
+          "new": "from run_vllm_fixed4k import wait_ready,linux_path",
+          "count": 1
+        },
+        {
+          "old": "from .run_mtp_prefill16_model import closed_native_admission",
+          "new": "from .vllm_characterization_parent import admit as admit_parent",
+          "count": 1
+        },
+        {
+          "old": "from run_mtp_prefill16_model import closed_native_admission",
+          "new": "from vllm_characterization_parent import admit as admit_parent",
+          "count": 1
+        },
+        {
+          "old": "a.add_argument('--closed-native-archive-sha256',required=True);",
+          "new": "",
+          "count": 1
+        },
+        {
+          "old": " previous='sglang-fixed4k-ordinary-attempt2';prior=json.loads((root/'results'/(previous+'-partial-verified.json')).read_bytes());assert prior['status']=='reference_fixed4k_attempt2_failure_partial_evidence_replayed' and sha(root/'results'/(previous+'-partial-verified.json'))==p['prior_partial_proof_sha256'] and sha(root/'results'/(previous+'-evidence.zip'))==p['prior_archive_sha256']==prior['archive_sha256']\n native_closed=closed_native_admission(root,args.closed_native_archive_sha256)",
+          "new": " diagnosis_parent=admit_parent(lambda name:(root/name).read_bytes());assert diagnosis_parent==p['diagnosis_parent']",
+          "count": 1
+        },
+        {
+          "old": ",root/'results/bf16-batch8-model-admission-attempt1/workflow.json'",
+          "new": "",
+          "count": 1
+        },
+        {
+          "old": "'prior_partial_proof_sha256':p['prior_partial_proof_sha256'],'prior_archive_sha256':p['prior_archive_sha256'],'closed_native_admission':native_closed,",
+          "new": "'diagnosis_parent':diagnosis_parent,",
+          "count": 1
+        },
+        {
+          "old": "'prior_archive_sha256':p['prior_archive_sha256']",
+          "new": "'prior_archive_sha256':p['diagnosis_parent']['archive_sha256']",
+          "count": 1
+        },
+        {
+          "old": "reference_concurrency_characterization.py",
+          "new": "vllm_concurrency_characterization.py",
+          "count": 1
+        },
+        {
+          "old": "serve_sglang_reserved_fixed4k.sh",
+          "new": "serve_vllm_fixed4k.sh",
+          "count": 1
+        },
+        {
+          "old": "prepare_sglang_reserved_fixed4k_metadata.py",
+          "new": "prepare_vllm_fixed4k_metadata.py",
+          "count": 1
+        },
+        {
+          "old": "18081",
+          "new": "18080",
+          "count": 2
+        },
+        {
+          "old": "sglang",
+          "new": "vllm",
+          "count": 5
+        },
+        {
+          "old": "SGLang",
+          "new": "vLLM",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "verify_vllm_fixed4k_launcher_completed.py",
+      "source_sha256": "fb5af2379baaf7d884997a5ec42ec0dcb8dc5d7254bd0d6133f1d62fab22f165",
+      "target": "verify_vllm_output_characterization.py",
+      "target_sha256": "7a4baac2a31d6a4d8a298e87c6ed4efdb0523b496a49be879241b33f20fadc18",
+      "replacements": [
+        {
+          "old": "from run_vllm_fixed4k import job_path",
+          "new": "from run_vllm_output_characterization import job_path\nfrom vllm_characterization_parent import admit as admit_parent",
+          "count": 1
+        },
+        {
+          "old": "a.add_argument('--corpus',type=Path,required=True);",
+          "new": "",
+          "count": 1
+        },
+        {
+          "old": "evidence/vllm-fixed4k-launcher-completed-preparation.json",
+          "new": "evidence/vllm-output-characterization-run-preparation.json",
+          "count": 1
+        },
+        {
+          "old": "vllm_fixed4k_run_prepared_unrun",
+          "new": "vllm_output_characterization_prepared_unrun",
+          "count": 1
+        },
+        {
+          "old": "require_runtime_dependencies(p['files']);assert p['preparation_version']=='launcher_dependencies_complete_v2'",
+          "new": "require_runtime_dependencies(p['files']);assert p['preparation_version']=='output_diagnosis_v1'",
+          "count": 1
+        },
+        {
+          "old": "args.job.startswith('vllm-fixed4k-'+w['mode']+'-')",
+          "new": "args.job.startswith('vllm-output-characterization-attempt')",
+          "count": 1
+        },
+        {
+          "old": "'prepare_vllm_fixed4k_run.py'):",
+          "new": "'prepare_vllm_fixed4k_run.py','vllm_characterization_parent.py','vllm_concurrency_characterization.py','replay_vllm_concurrency_characterization.py','run_vllm_output_characterization.py'):",
+          "count": 1
+        },
+        {
+          "old": "        passed=w['exit_code']==0",
+          "new": "        parent_archive=args.proofs/'vllm-fixed4k-ordinary-attempt3-evidence.zip'\n        def read_parent(name):\n            if name=='results/vllm-fixed4k-ordinary-attempt3-evidence.zip':return parent_archive.read_bytes()\n            return z.read(name)\n        assert admit_parent(read_parent)==p['diagnosis_parent']==w['diagnosis_parent']\n        assert type(w['exit_code']) is int\n        passed=w['exit_code']==0",
+          "count": 1
+        },
+        {
+          "old": "reference_fixed4k_collected_needs_replay",
+          "new": "vllm_output_characterization_collected_needs_replay",
+          "count": 1
+        },
+        {
+          "old": "            report=doc(base+'client/report.json');assert report['status']=='reference_fixed4k_profile_collected' and report['engine']=='vllm' and report['mode']==w['mode'] and not report['performance_admitted']\n            assert report['metadata_sha256']==sha(z.read(base+'metadata.json')) and report['native_http_proof_sha256']==sha(parent_raw)\n            if w['mode']=='mtp':\n                proof_names=[n for n in manifest['files'] if n.startswith('results/vllm-fixed4k-ordinary-') and n.endswith('-verified.json')];assert len(proof_names)==1\n                raw=z.read(proof_names[0]);ordinary=json.loads(raw);assert sha(raw)==w['ordinary_proof_sha256'] and ordinary['status']=='reference_fixed4k_profile_replayed' and ordinary['mode']=='ordinary'\n                ordinary_archive=args.proofs/(Path(proof_names[0]).name.removesuffix('-verified.json')+'-evidence.zip')\n                assert sha(ordinary_archive.read_bytes())==ordinary['archive_sha256']==w['ordinary_archive_sha256']\n                prior=zipfile.ZipFile(ordinary_archive);prior_base='results/'+ordinary_archive.name.removesuffix('-evidence.zip')+'/'\n            from reference_fixed4k_vllm_boundary import replay as replay_boundary\n            with tempfile.TemporaryDirectory(prefix='vllm4k-boundary-replay-',dir=args.scratch) as temporary:\n                folder=Path(temporary).resolve();boundary_prefix=base+'client/boundary-controls/'\n                for name in manifest['files']:\n                    if name.startswith(boundary_prefix):\n                        target=folder/name.removeprefix(boundary_prefix);assert target.resolve().is_relative_to(folder);target.parent.mkdir(parents=True,exist_ok=True);target.write_bytes(z.read(name))\n                assert replay_boundary(Path(__file__).with_name('evidence')/'fixed-length-4096-corpus.zip',folder)==report['early_full4k_controls']\n            greedy=doc(base+'client/greedy-controls/greedy/equivalence.json');assert greedy['status']=='passed' and greedy['engine']=='vllm' and len(greedy['cases'])==16\n            assert greedy['mode']==('ordinary_capture' if w['mode']=='ordinary' else 'speculative_compare')\n            for row in greedy['cases']:\n                stem=base+'client/greedy-controls/greedy/'+row['key'];wire=z.read(stem+'-request.json');response=z.read(stem+'-response.json');body=json.loads(wire)\n                assert sha(wire)==row['request_sha256'] and sha(response)==row['response_sha256']\n                ids,completion=reference_tokens(json.loads(response),'vllm');assert ids==row['prompt_ids'] and completion==row['generated_ids']\n                usage=json.loads(response)['usage'];assert usage['prompt_tokens']==len(ids) and usage['completion_tokens']==len(completion) and len(ids)==(41 if '-text-' in row['key'] else 104)\n                assert 'return_prompt_token_ids' not in body;body.pop('return_token_ids');assert sha(json.dumps(body,sort_keys=True,separators=(',',':')).encode())==row['semantic_request_sha256']\n                if prior is not None:\n                    previous=json.loads(prior.read(prior_base+'client/greedy-controls/greedy/equivalence.json'))\n                    old=next(v for v in previous['cases'] if v['key']==row['key']);assert compare_pair(old,row) and row['exact_match']\n            vlm=doc(base+'client/greedy-controls/correctness/oracle.json');assert len(vlm['cases'])==4 and vlm['grid']==[1,16,16]\n            for row in vlm['cases']:\n                stem=base+'client/greedy-controls/correctness/'+row['name'];wire=z.read(stem+'-request.json');raw=z.read(stem+'-response.json');response=json.loads(raw)\n                assert sha(wire)==row['request_sha256'] and sha(raw)==row['response_sha256'] and sha(z.read(base+'client/greedy-controls/correctness/'+row['image_file']))==row['image_sha256']\n                content=json.loads(wire)['messages'][0]['content'];assert content[1]['text']==row['question'] and sha(base64.b64decode(content[0]['image_url']['url'].split(',',1)[1],validate=True))==row['image_sha256']\n                ids,completion=reference_tokens(response,'vllm');assert ids==row['prompt_ids'] and completion==row['reference_generated_ids'] and ids.count(248056)==64\n                assert response['choices'][0]['message']['content'].strip()==row['reference_text'] and row['reference_text'].lower().rstrip('.')==row['expected_color']\n            with tempfile.TemporaryDirectory(prefix='vllm4k-replay-',dir=args.scratch) as temporary:\n                folder=Path(temporary).resolve();prefix=base+'client/mmmu-quality/'\n                for name in manifest['files']:\n                    if name.startswith(prefix):\n                        target=folder/name.removeprefix(prefix);assert target.resolve().is_relative_to(folder);target.parent.mkdir(parents=True,exist_ok=True);target.write_bytes(z.read(name))\n                screening=replay(args.corpus,folder);assert screening==doc(base+'client/mmmu-quality-replayed.json')==report['screening']\n                assert screening['status']=='adapted_mmmu_http_quality_responses_replayed'\n                if prior is not None:\n                    _,rows,_=load_corpus(args.corpus)\n                    for row in rows:\n                        ids=json.loads((args.corpus/row['prompt_ids_file']).read_bytes());name='client/mmmu-quality/cases/'+row['id']+'/response.bin'\n                        left=validate_response(prior.read(prior_base+name),'vllm','qwen38-27b-nvfp4',ids);right=validate_response(z.read(base+name),'vllm','qwen38-27b-nvfp4',ids);assert left['completion_token_ids']==right['completion_token_ids']\n            corpus_raw=z.read(METHODS+'evidence/fixed-length-4096-corpus.zip');assert sha(corpus_raw)==ARCHIVE_SHA256\n            with zipfile.ZipFile(io.BytesIO(corpus_raw)) as corpus:\n                manifest_raw=corpus.read('manifest.json');assert sha(manifest_raw)==MANIFEST_SHA256;frozen=json.loads(manifest_raw)\n                root=base+'client/benchmark4k/';benchmarks=[n for n in manifest['files'] if n.startswith(root) and n.endswith('-manifest.json')];assert len(benchmarks)==1;benchmark=doc(benchmarks[0]);run=benchmark['run_id']\n                assert benchmark['status']=='completed' and benchmark['engine']=='vllm' and benchmark['engine_metadata']==metadata and benchmark['engine_metadata_sha256']==sha(z.read(base+'metadata.json'))\n                assert benchmark['corpus_archive_sha256']==ARCHIVE_SHA256 and benchmark['corpus_manifest_sha256']==MANIFEST_SHA256 and benchmark['actual_input_tokens_required']==3968 and benchmark['actual_completion_tokens_required']==128 and benchmark['gpu']['uuid']==GPU\n                assert benchmark['streamed_ids_observed'] is False and not benchmark['sampling_errors'] and not benchmark['performance_admitted']\n                from vllm_cache_control import parse_metrics\n                reset=doc(root+'cache-control/reset.json');assert reset['status']=='reset_acknowledged' and reset==benchmark['image_cache_reset']\n                assert reset['idle_before']['running']==reset['idle_before']['waiting']==0\n                assert [(r['endpoint'],r['status']) for r in reset['reset_responses']]==[('/reset_mm_cache',200),('/reset_encoder_cache',200)]\n                before=parse_metrics(z.read(root+'cache-control/after-reset.prom'));after=parse_metrics(z.read(root+'cache-control/after-run.prom'))\n                assert before==reset['after_reset'] and before['running']==before['waiting']==after['running']==after['waiting']==0\n                assert before['process_start']==after['process_start']==reset['idle_before']['process_start']\n                counters=doc(root+'cache-control/counter-delta.json');assert counters==benchmark['image_cache_counter_delta']\n                assert counters['before']==before and counters['after']==after and counters['query_delta']==after['queries']-before['queries']>0 and counters['hit_delta']==after['hits']-before['hits']==0\n                control_report=doc(root+'controls/report.json');assert control_report['status']=='all124_nonstream_id_controls_collected' and len(control_report['cases'])==124 and len(frozen['rows'])==124\n                assert control_report['engine']=='vllm' and control_report['streamed_ids_observed'] is False\n                assert benchmark['nonstream_controls_sha256']==sha(z.read(root+'controls/report.json'))\n                actual_keys=set()\n                for row,record in zip(frozen['rows'],control_report['cases']):\n                    key=row['key'];body=json.loads(corpus.read(row['request_file']));ids=json.loads(corpus.read(row['expected_prompt_ids_file']));assert len(ids)==3968 and body['ignore_eos'] is True and record['key']==key\n                    wire=z.read(root+'controls/'+key+'-request.json');raw=z.read(root+'controls/'+key+'-response.json')\n                    assert wire==json.dumps(control_request(body,'vllm'),separators=(',',':')).encode() and sha(wire)==record['request_sha256'] and sha(raw)==record['response_sha256']\n                    assert record['prompt_ids_exact'] is True and record['output_tokens']==128 and record['ordinary_ids_exact'] is (w['mode']=='mtp')\n                    control=control_response(json.loads(raw),'vllm',ids)\n                    if prior is not None:\n                        previous=prior.read(prior_base+'client/benchmark4k/controls/'+key+'-response.json');paired_control(control,control_response(json.loads(previous),'vllm',ids))\n                    replay_stream(lambda n:z.read(root+n),run+'-'+key,body,control);actual_keys.add(key)\n                stream_names=[n for n in manifest['files'] if n.startswith(root) and n.endswith('-events.jsonl')];assert len(stream_names)==len(actual_keys)==124\n                fresh=verify_run(benchmark,lambda n:z.read(root+n));assert len(fresh['cohorts'])==8 and fresh['transport']=={'scheme':'http','hostname':'127.0.0.1','path':'/'}\n                assert [(c['case'],c['concurrency']) for c in benchmark['cohorts']]==[(c['case'],c['concurrency']) for c in frozen['cohorts']]\n                samples=[json.loads(line) for line in z.read(root+run+'-vram.jsonl').splitlines()];memory={}\n                for saved,cohort in zip(benchmark['cohorts'],frozen['cohorts']):\n                    assert saved['request_keys']==[run+'-'+key for key in cohort['measured']] and saved['prompt_tokens']==[3968]*8 and saved['generated_tokens']==1024\n                    phase=saved['case']+'-c'+str(saved['concurrency']);requests=[doc(root+key+'-result.json') for key in saved['request_keys']]\n                    memory[phase]=replay_cohort_memory(samples,phase,saved,requests)\n                resource=doc(base+'resources/resource-monitor.json');samples=[json.loads(line) for line in z.read(base+'resources/resource-vram.jsonl').splitlines()]\n                peak=max(v['used_bytes'] for v in samples);assert resource['child_exit_code']==0 and resource['gpu']['uuid']==GPU and resource['sampled_memory']['sampled_peak_adapter_used_bytes']==peak\n                profiles.append({'raw_replay':fresh,'sampled_memory':memory,'whole_client_and_quality_sampled_peak_adapter_bytes':peak,'actual_nonstream_id_controls':124,'actual_timed_and_warmup_streams':124,'streamed_individual_ids_observed':False})\n",
+          "new": "            from vllm_concurrency_characterization import load_cases\n            from replay_vllm_concurrency_characterization import replay as replay_characterization\n            groups=load_cases(read=read_parent);report=doc(base+'client/report.json');assert report['metadata']==metadata\n            client_manifest=doc(base+'client/file-manifest.json')\n            assert {n.removeprefix(base+'client/') for n in manifest['files'] if n.startswith(base+'client/')}==set(client_manifest['files'])|{'file-manifest.json'}\n            replayed=replay_characterization(lambda name:z.read(base+'client/'+name),groups)\n            resource=doc(base+'resources/resource-monitor.json');samples=[json.loads(line) for line in z.read(base+'resources/resource-vram.jsonl').splitlines()]\n            peak=max(v['used_bytes'] for v in samples);assert type(resource['child_exit_code']) is int and resource['child_exit_code']==0 and resource['gpu']['uuid']==GPU\n            gaps=[b['monotonic']-a['monotonic'] for a,b in zip(samples,samples[1:])];assert all(v>0 for v in gaps)\n            memory=resource['sampled_memory'];assert memory['samples']==len(samples) and memory['sampled_peak_adapter_used_bytes']==peak\n            assert memory['observed_sample_gap_max_seconds']==(max(gaps) if gaps else None) and memory['observed_sample_gap_median_seconds']==(statistics.median(gaps) if gaps else None)\n            profiles.append({'raw_characterization':replayed,'correctness_sampled_memory':memory})\n",
+          "count": 1
+        },
+        {
+          "old": "verify_vllm_fixed4k_launcher_completed.py",
+          "new": "verify_vllm_output_characterization.py",
+          "count": 1
+        },
+        {
+          "old": "'reference_fixed4k_profile_replayed' if passed else 'reference_fixed4k_failure_preserved'",
+          "new": "'vllm_output_characterization_replayed' if passed else 'vllm_output_characterization_failure_preserved'",
+          "count": 1
+        },
+        {
+          "old": "Closed source/config/PID/lifecycle and actual raw request/response/control/SSE/metric/memory replay. Timed streams expose counts/text, no individual IDs reconstructed.805adapted screening and fourVLM controls are not broad/official quality. Strongest feasible tuning, repetitions, native comparison and2x remain open.",
+          "new": "Closed source/config/PID/lifecycle and actual288request/135overlap-wave output/isolation replay. All variants retained; streamed individual IDs unobserved. No physical GPU batch, numerical cause/harmlessness, broad quality or performance/2x admission.",
+          "count": 1
+        }
+      ]
+    }
+  ],
+  "scope": "Only explicit engine metadata/owner/parent and characterization collection/replay differences. Original strict vLLM benchmark gates unchanged."
+}

@@ -1,0 +1,18 @@
+from pathlib import Path
+import hashlib,json,zipfile
+work=Path(__file__).resolve().parent;m=Path('D:/CantorAI/work/qwen38-5090/test2026/cuda/qwen38_5090')
+old=work/'vllm-characterization-before-linked-proof-completion';prefix='Garnet/test2026/cuda/qwen38_5090/'
+sha=lambda b:hashlib.sha256(b).hexdigest()
+names=('prepare_vllm_output_characterization_run.py','test_vllm_characterization_pipeline.py','evidence/vllm-output-characterization-run-preparation.json')
+rows={};target=work/'vllm-characterization-linked-proofs.zip';assert not target.exists()
+with zipfile.ZipFile(target,'x',zipfile.ZIP_DEFLATED) as z:
+    for n in names:
+        before=(old/Path(n).name).read_bytes();after=(m/n).read_bytes()
+        rows[prefix+n]={'before_sha256':sha(before),'after_sha256':sha(after)};assert before!=after
+        z.writestr(prefix+n,after)
+    z.writestr('install-manifest.json',json.dumps({'files':rows,'scope':'Only three owned unrun diagnostic files replaced after exact backups; pin the inherited SGLang proof into the archive. No original strict benchmark/source/runtime changes.'},indent=2))
+p=json.loads((m/names[-1]).read_bytes())
+r={'status':'vllm_characterization_linked_proofs_packaged_gpu_unrun','bundle_sha256':sha(target.read_bytes()),'bytes':target.stat().st_size,
+   'installer_sha256':sha((work/'install-vllm-characterization-linked-proofs.py').read_bytes()),'cpu_tests':p['expected_cpu_tests'],
+   'source_pins':len(p['files']),'preparation_sha256':sha((m/names[-1]).read_bytes()),'actual_requests':0,'performance_admitted':False}
+(work/'vllm-characterization-linked-proofs-preparation.json').write_bytes(json.dumps(r,indent=2).encode());print(json.dumps(r))
