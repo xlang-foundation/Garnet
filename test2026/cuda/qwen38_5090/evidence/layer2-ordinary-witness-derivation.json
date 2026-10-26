@@ -1,0 +1,166 @@
+{
+  "status": "exact_collecting_and_restore_transaction_derivations",
+  "derivations": [
+    {
+      "base": "probe_fp8_z128_stage_witness.py",
+      "target": "probe_layer2_ordinary_witness.py",
+      "base_sha256": "d4fd6b1c2c5f8eaf8350c2f396dce3424257073c04e5a4156bb48cf5a393777e",
+      "target_sha256": "017ad021bf79b3c9fdd2fa71986ef61039d8da5af528bcc0ffbfaed0f34f7893",
+      "changes": [
+        {
+          "before": "import hashlib,json,os,sys",
+          "after": "import hashlib,json,os,struct,sys",
+          "count": 1
+        },
+        {
+          "before": "policy_only=len(sys.argv)==4 and sys.argv[3]=='--z-policy-only';",
+          "after": "",
+          "count": 1
+        },
+        {
+          "before": "evidence/fp8-z128-stage-witness-preparation.json",
+          "after": "evidence/layer2-ordinary-witness-preparation.json",
+          "count": 1
+        },
+        {
+          "before": "from test2026.cuda.qwen38_5090.fp8_z128_stage_layout import STAGES,layout,pieces,check_graph",
+          "after": "from test2026.cuda.qwen38_5090.layer2_ordinary_layout import layout,pieces,check_graph,validate_profile,INPUT_SOURCE",
+          "count": 1
+        },
+        {
+          "before": "'input_source':'first128_actual_text_prompt_embeddings'",
+          "after": "'input_source':INPUT_SOURCE,'input_fixture_sha256':p['common_input_sha256']",
+          "count": 1
+        },
+        {
+          "before": "'scope':'B1 GDN layer0/1 common-input first128real text tokens only, ordinary flag0 versus diagnostic flag1 atT32/T128. Four sequential32chunks versus one128 with carried states. Primary must match same-profile ordinary before attribution. Layer1 common input comes from retainedT32 layer0 ordinary output, not a claim of full candidate chain. All inputs/states/outputs serialized through <=1Miword reads, repeats and graph counts; no full3968state, quality, timing or2x admission.'",
+          "after": "'scope':p['scope']",
+          "count": 1
+        },
+        {
+          "before": "    def build(layer,tokens,diagnostic,bad=None):",
+          "after": "    def build(layer,tokens,diagnostic,bad=None):\n        validate_profile(layer,tokens,diagnostic);assert bad is None",
+          "count": 1
+        },
+        {
+          "before": "        if policy_only:\n            policy=os.environ.get('GARNET_FP8_GDN_Z128_CANONICAL');rejected=False;error=None;stats=None;policy_graph=None\n            try:\n                policy_graph,_=build(0,128,False);stats=json.loads(policy_graph.stats_json())\n            except Exception as exc:rejected=True;error=repr(exc)\n            finally:\n                if policy_graph is not None:policy_graph.close()\n            report.update(status='fp8_z128_policy_control_observed',policy_value=policy,rejected=rejected,error=error,graph=stats,graph_inference_executed=False)\n            from test2026.cuda.qwen38_5090.fp8_z128_stage_layout import check_policy_report\n            check_policy_report(report,policy);save();return 0\n",
+          "after": "",
+          "count": 1
+        },
+        {
+          "before": "        embedding=io.embedding(ids);prompt=io.storage_view(embedding,[1,128*5120]);report['prompt_input']=capture(prompt,0,128*5120,'prompt');save()",
+          "after": "        raw_input=(m/'evidence/layer2-ordinary-common-input.f32').read_bytes();assert len(raw_input)==2621440 and sha(raw_input)==p['common_input_sha256'];prompt=io.from_host(list(struct.unpack('<655360f',raw_input)),[1,128*5120]);report['common_input']=capture(prompt,0,128*5120,'common-input');save();assert raw(report['common_input'])==raw_input",
+          "count": 1
+        },
+        {
+          "before": "        invalid=(('flag2',{'flag':2}),('flag_negative',{'flag':-1}),('flag_bool',{'flag':True}),('flag_float',{'flag':1.0}),('legacy_conflict',{'legacy':1}),('batch2',{'batch':2}),('tokens16',{'tokens':16}),('layer2',{'layer':2}),('missing_active',{'missing_active':True}),('bf16_hidden',{'bf16':True}))\n        for name,bad in invalid:\n            invalid_graph=None;rejected=False;error=None\n            try:invalid_graph,_=build(1,32,True,bad)\n            except Exception as exc:rejected=True;error=repr(exc)\n            finally:\n                if invalid_graph is not None:invalid_graph.close()\n            report['frontend_rejections'].append({'name':name,'rejected':rejected,'error':error});save();assert rejected,('Malformed frontend accepted',name)\n",
+          "after": "",
+          "count": 1
+        },
+        {
+          "before": "        for layer in (0,1):",
+          "after": "        for layer in (2,):",
+          "count": 1
+        },
+        {
+          "before": "                for diagnostic in (False,True):",
+          "after": "                for diagnostic in (False,):",
+          "count": 1
+        },
+        {
+          "before": "'input_lineage':'prompt_embeddings' if layer==0 else 'retained_T32_layer0_ordinary_output_common_input'",
+          "after": "'input_lineage':INPUT_SOURCE",
+          "count": 1
+        },
+        {
+          "before": "report['status']='gdn_chunk_stage_collected_needs_replay'",
+          "after": "report['status']='layer2_ordinary_collected_needs_replay'",
+          "count": 1
+        },
+        {
+          "before": "    except BaseException as error:report.update(status='failed',error=repr(error));save();raise",
+          "after": "    except BaseException as error:\n        report.update(status='failed',error=repr(error));save()\n        if 'buildSerializedNetwork failed' in report['error']:\n            try:\n                from test2026.cuda.qwen38_5090.fp8_z128_native_audit_bridge import observe\n                target=root/'results/fp8-z128-native-package-audit-attempt1/layer2-ordinary-attempt1-context.json'\n                report['initialization_context_audit']=observe(root,target)\n                copy=out/'context-audit.json';assert not copy.exists();copy.write_bytes(target.read_bytes());save()\n            except BaseException as audit_error:report['initialization_audit_error']=repr(audit_error);save()\n        raise",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "base": "test_fp8_z128_full4k_model.bat",
+      "target": "test_layer2_ordinary_witness.bat",
+      "base_sha256": "49205cff530eba2b32d7a0a8ad9df244b680b7835cc210a79c928e36461aa86b",
+      "target_sha256": "5415c95ae74857f86edb1eb8f4fb16bf039647d8a5dc952aa9bf0ab4ba915096",
+      "changes": [
+        {
+          "before": "set GARNET_FP8_GDN_M128_CANONICAL=%~3",
+          "after": "set GARNET_FP8_GDN_M128_CANONICAL=1",
+          "count": 1
+        },
+        {
+          "before": "set GARNET_FP8_GDN_Z128_CANONICAL=%~3",
+          "after": "set GARNET_FP8_GDN_Z128_CANONICAL=1",
+          "count": 1
+        },
+        {
+          "before": "if not \"%~3\"==\"0\" if not \"%~3\"==\"1\" exit /b 2\n",
+          "after": "",
+          "count": 1
+        },
+        {
+          "before": "probe_fp8_z128_full4k_model.py",
+          "after": "probe_layer2_ordinary_witness.py",
+          "count": 1
+        },
+        {
+          "before": "\"%~1\" %~4",
+          "after": "\"%~1\"",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "base": "run_fa3_prefix_cache_witness.py",
+      "target": "run_layer2_ordinary_witness.py",
+      "base_sha256": "59d182c20ffbe69b980fb001d2fb3fad4b6cb0a25a5183e31b8a579be48857ab",
+      "target_sha256": "b29d2e0f692bb5106d42451e7ca4a526f72c6e69852ae04953d7ec925d0e1d84",
+      "changes": [
+        {
+          "before": "JOB='fa3-prefix-cache-witness-attempt1'",
+          "after": "JOB='layer2-ordinary-witness-attempt1'",
+          "count": 1
+        },
+        {
+          "before": "evidence/fa3-prefix-cache-witness-preparation.json",
+          "after": "evidence/layer2-ordinary-witness-preparation.json",
+          "count": 1
+        },
+        {
+          "before": "p['status']=='fa3_prefix_cache_witness_prepared_gpu_unrun'",
+          "after": "p['status']=='layer2_ordinary_witness_prepared_gpu_unrun'",
+          "count": 1
+        },
+        {
+          "before": "    idle();out.mkdir();",
+          "after": "    assert not (ROOT/'results/fp8-z128-native-package-audit-attempt1/layer2-ordinary-attempt1-context.json').exists()\n    idle();out.mkdir();",
+          "count": 1
+        },
+        {
+          "before": "74CPU retained70 model/state/vector/ID/MTP controls plus4 bounded cache/geometry/finite/index/oracle faults",
+          "after": "78CPU retained74 model/cache controls plus4 ordinary-layer2 profile/fixture/replay/source faults",
+          "count": 1
+        },
+        {
+          "before": "        for phase,tokens in (('baseline',32),('native',128)):\n            command=[sys.executable,str(M/'monitor_native_probe.py'),'--study',str(ROOT),'--output',str(out/(phase+'-resources')),'--','cmd.exe','/d','/c',str(M/'test_fa3_prefix_cache_witness.bat'),str(out/phase),str(cache),str(tokens)]\n            code=ledger.run(command,out/(phase+'-ledger'),'correctness','Read-only complete layer3 KV prefix observations; ordinary3968+128 control must reproduce retained exact states/vectors/IDs; no timing admission',common+[library])\n            idle()\n            if code:raise RuntimeError('Ordinary cache capture/control failed; preserve raw evidence')\n            report=json.loads((out/phase/'report.json').read_bytes());assert report['status']=='fa3_prefix_caches_collected_retained_ordinary_control_exact'\n",
+          "after": "        command=[sys.executable,str(M/'monitor_native_probe.py'),'--study',str(ROOT),'--output',str(out/'native-resources'),'--','cmd.exe','/d','/c',str(M/'test_layer2_ordinary_witness.bat'),str(out/'native'),str(cache)]\n        code=ledger.run(command,out/'native-ledger','correctness','Two ordinary layer2 graphs T32/T128 with identical retained real layer1 output, carried states, readonly inputs and two exact repeats; no timing admission',common+[library])\n        idle()\n        if code:raise RuntimeError('Layer2 ordinary witness failed; preserve all observations')\n        report=json.loads((out/'native/report.json').read_bytes());assert report['status']=='layer2_ordinary_collected_needs_replay'\n",
+          "count": 1
+        },
+        {
+          "before": "w['status']='fa3_prefix_cache_witness_collected_needs_replay'",
+          "after": "w['status']='layer2_ordinary_witness_collected_needs_replay'",
+          "count": 1
+        }
+      ]
+    }
+  ],
+  "native_or_model_math_changed": false,
+  "old_layer2_diagnostic_rejection_preserved": true
+}
