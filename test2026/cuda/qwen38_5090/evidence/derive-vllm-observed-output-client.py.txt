@@ -1,0 +1,66 @@
+from pathlib import Path
+import hashlib,json
+m=Path('D:/CantorAI/work/qwen38-5090/test2026/cuda/qwen38_5090');sha=lambda b:hashlib.sha256(b).hexdigest();rows=[]
+
+def derive(source,target,transform):
+    raw=(m/source).read_bytes();text=raw.decode();steps=[]
+    def r(old,new):
+        nonlocal text
+        count=text.count(old);assert count>0,(target,old);text=text.replace(old,new);steps.append({'old':old,'new':new,'count':count})
+    transform(r,text);data=text.encode();path=m/target;assert not path.exists() or path.read_bytes()==data
+    if not path.exists():path.write_bytes(data)
+    rows.append({'source':source,'source_sha256':sha(raw),'target':target,'target_sha256':sha(data),'replacements':steps})
+
+def policy(r,text):
+    old=next(line for line in text.splitlines() if line.startswith('STABLE_METADATA='))
+    fields=('engine','generation_mode','version','verified_settings','actual_cudagraph_mode','context_capacity','image_cache_policy','checkpoint_revision',
+            'configured_engine_context_capacity','engine_context_reserved_slots','resolved_kv_cache_tokens','reported_max_concurrency_full4k',
+            'installed_config_identity_sha256','launcher_sha256','native_http_proof_sha256')
+    r(old,'STABLE_METADATA='+repr(fields))
+    r("assert proof['configured_engine_context_capacity']==4098 and proof['actual_workload_context_capacity']==4096 and proof['engine_context_reserved_slots']==2 and proof['performance_admitted'] is proof['two_times_target_achieved'] is False",
+      "assert proof['performance_admitted'] is proof['two_times_target_achieved'] is False\n    assert metadata['configured_engine_context_capacity']==4096 and metadata['engine_context_reserved_slots']==0 and metadata['version']=='0.32.0'")
+    r('record_stream_text_variants_v1','record_vllm_stream_text_variants_v1');r('sglang','vllm');r('SGLang','vLLM')
+derive('reference_observed_output.py','reference_vllm_observed_output.py',policy)
+
+def benchmark(r,text):
+    r('reference_observed_output','reference_vllm_observed_output');r("assert args.engine=='sglang'","assert args.engine=='vllm'")
+    r('Same ordinary SGLang profile','Same ordinary vLLM profile')
+derive('benchmark_observed_output_reference.py','benchmark_vllm_observed_output.py',benchmark)
+
+def probe(r,text):
+    r("assert args.engine=='sglang'","assert args.engine=='vllm'")
+    r('from reference_observed_output import','from reference_vllm_observed_output import')
+    r('sglang-output-characterization-attempt1','vllm-output-characterization-attempt1')
+    r("metadata['configured_engine_context_capacity']==4098 and metadata['engine_context_reserved_slots']==2","metadata['configured_engine_context_capacity']==4096 and metadata['engine_context_reserved_slots']==0")
+    r('from reference_fixed4k_boundary import','from reference_fixed4k_vllm_boundary import')
+    r('benchmark_observed_output_reference.py','benchmark_vllm_observed_output.py');r('Ordinary SGLang','Ordinary vLLM')
+derive('probe_reference_observed_fixed4k.py','probe_vllm_observed_fixed4k.py',probe)
+
+def tests(r,text):
+    r('from .reference_observed_output import','from .reference_vllm_observed_output import')
+    r("metadata.update(engine='sglang',generation_mode='ordinary',source_after_startup_verified=True,owned_server_pid_verified=True)",
+      "metadata.update(engine='vllm',generation_mode='ordinary',version='0.32.0',configured_engine_context_capacity=4096,engine_context_reserved_slots=0,source_after_startup_verified=True,owned_server_pid_verified=True)")
+    r("elif kind=='budget':p['actual_workload_context_capacity']=4094","elif kind=='budget':metadata['configured_engine_context_capacity']=4094")
+    r('benchmark_observed_output_reference.py','benchmark_vllm_observed_output.py');r('sglang','vllm')
+derive('test_reference_observed_output.py','test_reference_vllm_observed_output.py',tests)
+
+def http(r,text):
+    r('benchmark_observed_output_reference as bench','benchmark_vllm_observed_output as bench')
+    r('from .reference_observed_output import','from .reference_vllm_observed_output import')
+    r("'prompt_token_ids':prompt,'response_token_ids':[77]*128","'token_ids':[77]*128")
+    r("data={'choices':[{'index':0,'finish_reason':'length'","data={'prompt_token_ids':prompt,'choices':[{'index':0,'finish_reason':'length'")
+    r("        try:\n            with tempfile.TemporaryDirectory", """        def reset_fixture(*args,**kwargs):
+            self.assertEqual(calls['ids'],124);self.assertEqual(calls['streams'],0)
+            return {'status':'explicit-synthetic-CPU-only','after_reset':{}}
+        def verify_fixture(*args,**kwargs):
+            self.assertEqual(calls['streams'],124)
+            return {'scope':'explicit-synthetic-CPU-only','encoder_hit_delta':0,'processor_hit_delta':0}
+        try:
+            with tempfile.TemporaryDirectory""")
+    r("patch.object(bench,'Sampler',CPUSampler),","patch.object(bench,'Sampler',CPUSampler),patch.object(bench,'reset_idle_caches',reset_fixture),patch.object(bench,'verify_after_run',verify_fixture),")
+    r('sglang','vllm');r('18081','18080')
+derive('test_observed_output_benchmark_http.py','test_vllm_observed_output_benchmark_http.py',http)
+path=m/'evidence/vllm-observed-output-client-derivation.json';raw=json.dumps({'derivations':rows,'scope':'Separate vLLM observed-output policy/benchmark/probe and synthetic CPU fixtures. Original strict and SGLang methods unchanged. Actual vLLM288diagnosis exists; no new real benchmark requests yet.'},indent=2).encode()
+assert not path.exists() or path.read_bytes()==raw
+if not path.exists():path.write_bytes(raw)
+print(json.dumps({'status':'vllm_observed_output_client_derived_unrun','targets':len(rows)}))
