@@ -1,0 +1,142 @@
+{
+  "status": "combined_native_build_method_derived_unrun",
+  "files": [
+    {
+      "source": "run_bf16_prefill128_native_build.py",
+      "source_sha256": "6b7cf250d186a94c4a7394689570c6cee2488e366557f14e2a5eaa5fcbee299b",
+      "target": "run_bf16_prefill128_fp8_native_build.py",
+      "target_sha256": "cdda1bb24c98de742defc617cee15db7d759844e1d6032d93718daba4fecefee",
+      "replacements": [
+        {
+          "old": "\"\"\"Build the complete T128 native candidate in the existing study tree, then restore baseline.\"\"\"",
+          "new": "\"\"\"Build combined T128 plus default-off M128 FP8 candidate; restore baseline.\"\"\"",
+          "count": 1
+        },
+        {
+          "old": "JOB='bf16-prefill128-native-build-attempt1'",
+          "new": "JOB='bf16-prefill128-fp8-native-build-attempt1'",
+          "count": 1
+        },
+        {
+          "old": "def main():",
+          "new": "def validate_cuda_objects(before,after):\n    assert len(before)==len(after)==34 and set(before)==set(after)\n    changed=sorted(name for name in before if after[name]!=before[name])\n    allowed={'qwen38_bf16_kv_low_batch_overlay.cu.obj','qwen38_bf16_prefill128_attention.cu.obj','qwen38_bf16_prefill128_commit.cu.obj'}\n    assert all(Path(name).name in allowed for name in changed)\n    return changed\n\ndef main():",
+          "count": 1
+        },
+        {
+          "old": "sys.path.insert(0,str(M))",
+          "new": "sys.path[:0]=[str(M),str(ROOT/'Garnet')]",
+          "count": 1
+        },
+        {
+          "old": "prep=M/'evidence/bf16-prefill128-native-build-preparation.json'",
+          "new": "prep=M/'evidence/bf16-prefill128-fp8-native-build-preparation.json'",
+          "count": 1
+        },
+        {
+          "old": "'bf16_prefill128_native_build_prepared_unrun' and len(p['candidate_files'])==13",
+          "new": "'bf16_prefill128_fp8_native_build_prepared_unrun' and len(p['candidate_files'])==22",
+          "count": 1
+        },
+        {
+          "old": "garnet-native-bf16-prefill128-attempt1.dll",
+          "new": "garnet-native-bf16-prefill128-fp8-m128-attempt1.dll",
+          "count": 1
+        },
+        {
+          "old": "common=[prep,bundle]+",
+          "new": "common=[prep,bundle,ROOT/p['proposal']]+",
+          "count": 1
+        },
+        {
+          "old": "Reconfigure existing Release/MT/sm120 tree for complete T128 native route plus required inherited tiled API implementation",
+          "new": "Reconfigure existing Release/MT/sm120 tree for complete T128 route plus separately qualified M128 FP8 helper/plugin and graph counters",
+          "count": 1
+        },
+        {
+          "old": "        assert set(objects)<=set(after) and len(added)==2\n        assert {Path(name).name for name in added}=={'qwen38_bf16_prefill128_attention.cu.obj','qwen38_bf16_prefill128_commit.cu.obj'}\n        assert all(name.endswith('/qwen38_bf16_kv_low_batch_overlay.cu.obj') for name in changed)",
+          "new": "        assert not added and changed==validate_cuda_objects(objects,after)",
+          "count": 1
+        },
+        {
+          "old": "        for name,argv in (",
+          "new": "        code=ledger.run(['cmd.exe','/d','/c',str(M/'build_fp8_m128_plugin_cpu.bat'),p['vcvars'],str(out/'fp8-wire-cpu')],out/'fp8-wire-cpu-ledger','correctness','Separate M128 FP8 wire/descriptor/default and legacy compatibility; no GPU stubs may run',common+[library])\n        if code:raise RuntimeError('Actual M128 FP8 plugin wire contract')\n        from test2026.cuda.qwen38_5090.fp8_m128_native_control import wire_contract as fp8_wire_contract\n        w['fp8_wire_contract']=fp8_wire_contract(json.loads((out/'fp8-wire-cpu/report.json').read_bytes()));save()\n        for name,argv in (",
+          "count": 1
+        },
+        {
+          "old": "status='bf16_prefill128_native_built_cpu_qualified_model_unqualified'",
+          "new": "status='bf16_prefill128_fp8_native_built_cpu_qualified_model_unqualified'",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "verify_bf16_prefill128_native_build.py",
+      "source_sha256": "ff74c5cdcf34b6f4f2c9bc6814889c7c05a68392b1b2dd3b248981a22b272d86",
+      "target": "verify_bf16_prefill128_fp8_native_build.py",
+      "target_sha256": "a5fed3df24f741ac37b566801562538ec679cfb4fb41781041f5fd716ae1a3ec",
+      "replacements": [
+        {
+          "old": "\"\"\"Replay the complete native T128 build/CPU contracts; no model or timing admission.\"\"\"",
+          "new": "\"\"\"Replay combined T128/M128 FP8 native build/CPU contracts; no model/timing admission.\"\"\"",
+          "count": 1
+        },
+        {
+          "old": "import argparse,hashlib,io,json,zipfile",
+          "new": "import argparse,hashlib,io,json,sys,zipfile\nsys.path.insert(0,str(Path(__file__).resolve().parents[3]))",
+          "count": 1
+        },
+        {
+          "old": "JOB='bf16-prefill128-native-build-attempt1'",
+          "new": "JOB='bf16-prefill128-fp8-native-build-attempt1'",
+          "count": 1
+        },
+        {
+          "old": "METHODS+'evidence/bf16-prefill128-native-build-preparation.json'",
+          "new": "METHODS+'evidence/bf16-prefill128-fp8-native-build-preparation.json'",
+          "count": 1
+        },
+        {
+          "old": "len(p['candidate_files'])==13",
+          "new": "len(p['candidate_files'])==22",
+          "count": 1
+        },
+        {
+          "old": "        for name,h in p['methods'].items():assert sha(z.read(name))==h",
+          "new": "        assert sha(z.read(p['proposal']))==p['proposal_sha256']\n        proposal=doc(p['proposal']);assert proposal['status']=='bf16_prefill128_fp8_native_build_proposed_unrun'\n        assert all(p[name]==value for name,value in proposal.items() if name!='status')\n        for name,h in p['methods'].items():assert sha(z.read(name))==h",
+          "count": 1
+        },
+        {
+          "old": "len(source.namelist())==len(set(source.namelist()))==13",
+          "new": "len(source.namelist())==len(set(source.namelist()))==22",
+          "count": 1
+        },
+        {
+          "old": "'bf16_prefill128_native_built_cpu_qualified_model_unqualified'",
+          "new": "'bf16_prefill128_fp8_native_built_cpu_qualified_model_unqualified'",
+          "count": 1
+        },
+        {
+          "old": "('cpu','build','wire-cpu','selector-cpu','embedded-selector-cpu','tokenizer-cpu')",
+          "new": "('cpu','build','wire-cpu','fp8-wire-cpu','selector-cpu','embedded-selector-cpu','tokenizer-cpu')",
+          "count": 1
+        },
+        {
+          "old": "            assert added==w['added_cuda_objects'] and changed==w['changed_cuda_objects'] and len(added)==2\n            assert {Path(name).name for name in added}=={'qwen38_bf16_prefill128_attention.cu.obj','qwen38_bf16_prefill128_commit.cu.obj'}\n            assert all(name.endswith('/qwen38_bf16_kv_low_batch_overlay.cu.obj') for name in changed)",
+          "new": "            from test2026.cuda.qwen38_5090.run_bf16_prefill128_fp8_native_build import validate_cuda_objects\n            assert added==w['added_cuda_objects']==[] and changed==w['changed_cuda_objects']==validate_cuda_objects(before,after)",
+          "count": 1
+        },
+        {
+          "old": "            wire=wire_contract(doc(base+'wire-cpu/report.json'),dll)",
+          "new": "            wire=wire_contract(doc(base+'wire-cpu/report.json'),dll)\n            from test2026.cuda.qwen38_5090.fp8_m128_native_control import wire_contract as fp8_wire_contract\n            assert fp8_wire_contract(doc(base+'fp8-wire-cpu/report.json'))==w['fp8_wire_contract']",
+          "count": 1
+        },
+        {
+          "old": "'bf16_prefill128_native_build_cpu_replayed' if passed else 'bf16_prefill128_native_build_failure_preserved'",
+          "new": "'bf16_prefill128_fp8_native_build_cpu_replayed' if passed else 'bf16_prefill128_fp8_native_build_failure_preserved'",
+          "count": 1
+        }
+      ]
+    }
+  ],
+  "scope": "Original source snapshot/restore and native CPU gates preserved;22source union, existing34CUDA objects, separate FP8 wire gate. No model or performance qualification."
+}

@@ -1,0 +1,46 @@
+"""CPU-only owned preparation; native source is bundled, never installed locally."""
+from pathlib import Path
+import hashlib,json,os,sys,unittest,zipfile
+work=Path(__file__).resolve().parent;out=work.parent/'outputs';repo=Path('D:/CantorAI/work/qwen38-5090');m=repo/'test2026/cuda/qwen38_5090';e=m/'evidence';sha=lambda raw:hashlib.sha256(raw).hexdigest();sys.path[:0]=[str(repo),str(m)]
+prior=json.loads((e/'bf16-prefill128-native-build-preparation.json').read_bytes());native=json.loads((e/'prefill128-native-runtime-derivation.json').read_bytes());fp8=json.loads((e/'fp8-m128-native-source-derivation.json').read_bytes())
+candidate={row['target']:row['target_sha256'] for row in native['files']};overlay='src/cuda/qwen38_bf16_kv_low_batch_overlay.cu';candidate[overlay]=prior['candidate_files'][overlay]
+base=dict(prior['candidate_base'])
+for row in fp8['modified_files']:
+    candidate[row['target']]=row['target_sha256'];base.setdefault(row['target'],row['before_sha256'])
+for name,h in fp8['new_files'].items():assert name not in candidate;candidate[name]=h;base[name]=None
+assert len(candidate)==len(base)==22 and sum(value is not None for value in base.values())==8
+for name,h in candidate.items():assert sha((repo/name).read_bytes())==h
+bundle=work/'bf16-prefill128-fp8-native-source.zip';assert not bundle.exists()
+with zipfile.ZipFile(bundle,'x',zipfile.ZIP_DEFLATED) as z:
+    for name in candidate:z.write(repo/name,name)
+new=('run_bf16_prefill128_fp8_native_build.py','verify_bf16_prefill128_fp8_native_build.py','test_bf16_prefill128_fp8_native_build.py','prepare_bf16_prefill128_fp8_native_build.py','evidence/prefill128-fp8-native-build-derivation.json')
+old=('run_bf16_prefill128_native_build.py','verify_bf16_prefill128_native_build.py','test_bf16_prefill128_native_build.py','build_bf16_prefill128_plugin_cpu.bat','probe_bf16_prefill128_plugin_contract.cpp','prefill128_plugin_cpu_operators.cpp','build_integrated_batch_top1_native.bat','build_fp8_m128_plugin_cpu.bat','probe_fp8_m128_plugin_contract.cpp','fp8_m128_plugin_cpu_stubs.cpp','fp8_m128_native_control.py','probe_native_tiled_scores_selector_cpu.py','run_tiled_scores_embedded_selector.py','probe_native_tokenizer_frozen_cpu.py')
+methods={'Garnet/test2026/cuda/qwen38_5090/'+name:sha((m/name).read_bytes()) for name in new+old}
+def ids(suite):
+    for case in suite:
+        if isinstance(case,unittest.TestSuite):yield from ids(case)
+        else:yield case.id()
+tests=prior['test_ids']+list(ids(unittest.defaultTestLoader.loadTestsFromName('test2026.cuda.qwen38_5090.test_bf16_prefill128_fp8_native_build')))+list(ids(unittest.defaultTestLoader.loadTestsFromName('test2026.cuda.qwen38_5090.test_fp8_m128_native_control')))
+assert len(tests)==len(set(tests))==60
+import test2026.cuda.qwen38_5090.run_logged as ledger
+pins={**methods,**{'Garnet/'+name:h for name,h in candidate.items()}};ledger.source_identity=lambda:{'scope':'Explicit owned combined native build preparation; unrelated untracked files excluded','owned_source_sha256':pins}
+os.chdir(repo);code=ledger.run([sys.executable,'-m','unittest',*tests],work/'prefill128-fp8-native-build-local-cpu-ledger','correctness','56 existing native source transaction and CPU regression tests plus2object/source faults and2M128wire/algorithm parser controls. No local runtime/GPU',[m/name for name in new+old]);assert code==0
+parents={}
+for job,status in (('bf16-prefill128-native-build-attempt1','bf16_prefill128_native_build_cpu_replayed'),('fp8-m128-native-control-attempt1','fp8_m128_actual_native_helper_and_wire_replayed')):
+    raw=(out/(job+'-verified.json')).read_bytes();assert raw==(out/(job+'-remote-verified.json')).read_bytes();q=json.loads(raw);assert q['status']==status and q['archive_sha256']==sha((out/(job+'-evidence.zip')).read_bytes())
+    parents[job]={'status':status,'exit_code':0,'proof_sha256':sha(raw),'archive_sha256':q['archive_sha256']}
+w=json.loads((e/'fp8-m128-native-control-attempt1-workflow.json').read_bytes());assert w['exit_code']==0 and w['source_before']==w['source_after'] and w['runtime_before']==w['runtime_after'] and w['environment_before']==w['environment_after']
+baseline=dict(w['source_after'])
+for name,h in base.items():
+    if h is not None:
+        key='Garnet/'+name
+        if key in baseline:assert baseline[key]==h
+        else:baseline[key]=h
+p={'status':'bf16_prefill128_fp8_native_build_proposed_unrun','base_files':baseline,'methods':methods,'runtime':w['runtime_after'],'environment':w['environment_after'],'parents':parents,'candidate_files':candidate,'candidate_base':base,'vcvars':prior['vcvars'],'test_ids':tests,'expected_cpu_test_count':60,'bundle':'results/bf16-prefill128-fp8-native-source.zip','bundle_sha256':sha(bundle.read_bytes()),'scope':'Combined22native-source T128 plus default-off M128 FP8 policy and actual graph selection counters.8existing source targets restored byte-for-byte,14new removed; baseline1a1d library restored after owned Release/MT/sm120 build in existing study tree. Existing34CUDA objects, no new/missing/foreign object and only T128attention/commit or inherited lowbatch tiled-overlay objects may differ.60CPU controls, actual old16profile overlay and newFP8 plugin CPU wire gates, external/embedded selector and955tokenizer cases. Save separate candidateDLL. Full model,805quality, HTTP metrics and2xremain unqualified.'}
+proposal=work/'prefill128-fp8-native-proposal.json';assert not proposal.exists();proposal.write_bytes(json.dumps(p,indent=2).encode())
+files={'Garnet/test2026/cuda/qwen38_5090/'+name:(m/name).read_bytes() for name in new};files[p['bundle']]=bundle.read_bytes();files['results/prefill128-fp8-native-proposal.json']=proposal.read_bytes()
+deployment=work/'bf16-prefill128-fp8-native-build-deployment.zip';assert not deployment.exists()
+with zipfile.ZipFile(deployment,'x',zipfile.ZIP_DEFLATED) as z:
+    for name,raw in files.items():z.writestr(name,raw)
+    z.writestr('install-manifest.json',json.dumps({'files':{name:sha(raw) for name,raw in files.items()}},indent=2))
+result={'status':'combined_native_build_packaged_remote_snapshot_unrun','bundle_sha256':sha(deployment.read_bytes()),'bytes':deployment.stat().st_size,'targets':len(files),'candidate_sources':22,'source_pins':len(baseline),'cpu_tests':60,'proposal_sha256':sha(proposal.read_bytes())};(work/'prefill128-fp8-native-build-package.json').write_bytes(json.dumps(result,indent=2).encode());print(json.dumps(result))
