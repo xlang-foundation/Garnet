@@ -51,6 +51,11 @@ def main():
                 assert before==after==(dict(p['base_files'],**p['methods']) if name=='cpu' else expected)
             log=z.read(base+'cpu-ledger/commands.log');assert ('Ran '+str(p['expected_cpu_test_count'])+' tests').encode() in log and b'\nOK' in log
             assert sha(z.read(w['candidate_saved']))==w['candidate_library_sha256']!=p['runtime']['garnet.dll']
+            before=w['cuda_objects_before'];after=w['cuda_objects_built'];assert before==p['cuda_objects_before'] and set(before)<=set(after)
+            added=sorted(set(after)-set(before));changed=sorted(name for name in before if after[name]!=before[name])
+            assert added==w['added_cuda_objects'] and changed==w['changed_cuda_objects'] and len(added)==2
+            assert {Path(name).name for name in added}=={'qwen38_bf16_prefill128_attention.cu.obj','qwen38_bf16_prefill128_commit.cu.obj'}
+            assert all(name.endswith('/qwen38_bf16_kv_low_batch_overlay.cu.obj') for name in changed)
             dll='D:/CantorAI/5090-study-20261023/tools/TensorRT/bin/nvinfer_10.dll'
             wire=wire_contract(doc(base+'wire-cpu/report.json'),dll)
             assert dll.replace('/','\\') in p['environment']

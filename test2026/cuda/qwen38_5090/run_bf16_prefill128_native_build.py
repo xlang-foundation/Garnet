@@ -48,6 +48,8 @@ def main():
         assert sha(proof)==row['proof_sha256'] and q['status']==row['status'] and sha(ROOT/'results'/(job+'-evidence.zip'))==q['archive_sha256']==row['archive_sha256']
         w=json.loads((ROOT/'results'/job/'workflow.json').read_bytes());assert w['exit_code']==row['exit_code'] and w['cleanup_finished']
     cache=ROOT/'build/CMakeCache.txt';assert sha(cache)==p['cache_before_sha256']
+    objects={path.relative_to(ROOT).as_posix():sha(path) for path in (ROOT/'build/garnet/CMakeFiles/garnet.dir').rglob('*.cu.obj')}
+    assert objects==p['cuda_objects_before']
     assert all(flag in cache.read_bytes() for flag in (b'GARNET_STAGE_VENDOR_DLLS:BOOL=OFF',b'GARNET_QWEN35_WHOLE_PROGRAM_CUDA:BOOL=OFF'))
     bundle=ROOT/p['bundle'];assert sha(bundle)==p['bundle_sha256'];candidate=candidate_bytes(bundle,p['candidate_files'])
     old=snapshot_targets(ROOT/'Garnet',candidate,p['candidate_base'])
@@ -59,7 +61,7 @@ def main():
         for name,raw in old.items():z.writestr(name,raw)
     (out/'CMakeCache-before.txt').write_bytes(cache.read_bytes())
     w={'status':'running','preparation_sha256':sha(prep),'source_before':p['base_files'],'methods':p['methods'],'candidate_files':p['candidate_files'],'candidate_base':p['candidate_base'],
-       'runtime_before':p['runtime'],'environment_before':p['environment'],'parents':p['parents'],'cleanup_finished':False,'gpu_model_executed':False,'performance_admitted':False,'scope':p['scope']}
+       'runtime_before':p['runtime'],'environment_before':p['environment'],'parents':p['parents'],'cuda_objects_before':objects,'cleanup_finished':False,'gpu_model_executed':False,'performance_admitted':False,'scope':p['scope']}
     def save():(out/'workflow.json').write_bytes(json.dumps(w,indent=2).encode())
     common=[prep,bundle]+[ROOT/name for name in p['methods']]+[ROOT/'results'/(job+'-verified.json') for job in p['parents']]
     inventory=dict(p['base_files']);inventory.update(p['methods'])
@@ -75,6 +77,12 @@ def main():
         code=ledger.run(['cmd.exe','/d','/c',str(M/'build_integrated_batch_top1_native.bat'),p['vcvars']],out/'build-ledger','build','Reconfigure existing Release/MT/sm120 tree for complete T128 native route plus required inherited tiled API implementation',common)
         if code:raise RuntimeError('Full native candidate build')
         w['candidate_library_sha256']=sha(library);assert w['candidate_library_sha256']!=p['runtime']['garnet.dll'];save()
+        after={path.relative_to(ROOT).as_posix():sha(path) for path in (ROOT/'build/garnet/CMakeFiles/garnet.dir').rglob('*.cu.obj')}
+        added=sorted(set(after)-set(objects));changed=sorted(name for name in objects if after.get(name)!=objects[name])
+        w.update(cuda_objects_built=after,added_cuda_objects=added,changed_cuda_objects=changed);save()
+        assert set(objects)<=set(after) and len(added)==2
+        assert {Path(name).name for name in added}=={'qwen38_bf16_prefill128_attention.cu.obj','qwen38_bf16_prefill128_commit.cu.obj'}
+        assert all(name.endswith('/qwen38_bf16_kv_low_batch_overlay.cu.obj') for name in changed)
         code=ledger.run(['cmd.exe','/d','/c',str(M/'build_bf16_prefill128_plugin_cpu.bat'),p['vcvars'],str(out/'wire-cpu')],out/'wire-cpu-ledger','correctness','Actual CPU-only plugin creator/wire/descriptor compatibility across new16profiles and old B1/B4/B8 dialects; no enqueue/model',common+[library])
         if code:raise RuntimeError('Actual T128 plugin wire contract')
         wire=json.loads((out/'wire-cpu/report.json').read_bytes())

@@ -1,0 +1,37 @@
+from pathlib import Path
+import hashlib,json,sys,zipfile
+work=Path(__file__).resolve().parent;out=work.parent/'outputs';repo=Path('D:/CantorAI/work/qwen38-5090');m=repo/'test2026/cuda/qwen38_5090';e=m/'evidence';sha=lambda raw:hashlib.sha256(raw).hexdigest()
+r=json.loads((work/'prefill128-native-build-local-inputs.json').read_bytes());s=json.loads((work/'prefill128-native-build-baseline-snapshot.json').read_bytes());assert r['cpu_tests']==56 and len(r['candidate_files'])==13 and set(s['candidate_base'])==set(r['candidate_files'])
+assert s['status']=='bf16_prefill128_native_build_idle_baseline_snapshot' and s['candidate_source_installed'] is False and len(s['cuda_objects_before'])==32
+sys.path.insert(0,str(m));from compare_bf16_prefill128_attention_replays import compare_replays
+parents={}
+for job,status in (('prefill128-commit-component-attempt1','prefill128_commit_component_full_state_replayed'),('prefill128-attention-component-attempt1','prefill128_attention_component_full_fp64_replayed'),('b4-packed-cache-characterization-attempt1','b4_packed_cache_characterization_replayed')):
+    local=(out/(job+'-verified.json')).read_bytes();remote=(out/(job+'-remote-verified.json')).read_bytes();q=json.loads(remote)
+    if 'attention-component' in job:compare_replays(json.loads(local),q)
+    else:assert local==remote
+    assert q['status']==status and sha((out/(job+'-evidence.zip')).read_bytes())==q['archive_sha256']
+    with zipfile.ZipFile(out/(job+'-evidence.zip')) as z:
+        w=json.loads(z.read('results/'+job+'/workflow.json'));assert w['exit_code']==0 and w['cleanup_finished']
+    parents[job]={'status':status,'exit_code':0,'proof_sha256':sha(remote),'archive_sha256':q['archive_sha256']}
+assert s['closed_proof_sha256']==parents[s['closed_job']]['proof_sha256'] and s['closed_archive_sha256']==parents[s['closed_job']]['archive_sha256']
+job=s['closed_job'];base=dict(s['base_files'])
+with zipfile.ZipFile(out/(job+'-evidence.zip')) as z:
+    key='Garnet/test2026/cuda/qwen38_5090/evidence/b4-packed-cache-characterization-preparation.json';base[key]=sha(z.read(key))
+assert len(base)==717
+methods=dict(r['methods'])
+for name in ('build_integrated_batch_top1_native.bat','probe_native_tiled_scores_selector_cpu.py','run_tiled_scores_embedded_selector.py','probe_native_tokenizer_frozen_cpu.py'):
+    key='Garnet/test2026/cuda/qwen38_5090/'+name;methods[key]=sha((m/name).read_bytes());assert base[key]==methods[key]
+for key,h in methods.items():assert sha((repo/key.removeprefix('Garnet/')).read_bytes())==h
+for key,h in r['candidate_files'].items():assert sha((repo/key).read_bytes())==h
+prior=json.loads((e/'bf16-scores-tiled-native-api-build-preparation.json').read_bytes())
+p={'status':'bf16_prefill128_native_build_prepared_unrun','base_files':base,'methods':methods,'runtime':s['runtime'],'environment':s['environment'],'parents':parents,'candidate_files':r['candidate_files'],'candidate_base':s['candidate_base'],'cache_before_sha256':s['cache_before_sha256'],'cuda_objects_before':s['cuda_objects_before'],'vcvars':prior['vcvars'],'test_ids':r['test_ids'],'expected_cpu_test_count':56,'bundle':'results/bf16-prefill128-native-source.zip','bundle_sha256':r['bundle_sha256'],
+   'scope':'Complete native T128 forward candidate only:12T128 native source targets plus paired optional tiled API overlay, one preserved Windows Release/MT/sm120 CMake build tree reconfigured for new globbed files. Existing6Python candidate files remain local until model admission. Actual56CPU regressions, nativeGarnet build with exactly2newCUDA objects and no unrelatedCUDA change, isolated real plugin creator/wire/descriptor checks with CPU-only stubs never linked intoGarnet, external+embedded selector and955tokenizer checks. Preserve original4modified source bytes and9absent targets, runtime1a1d and SDK; restore exact source and baselineDLL on exit, save separate candidate. No model, HTTP, quality, performance or2x admission. Both-machine build replay required. Prior packedB4 matches actualfullB4 but both differ fromB8 on first short8-ID case; original strict failure retained, batch-geometry contrast only, cause unproven.'}
+path=e/'bf16-prefill128-native-build-preparation.json';assert not path.exists();raw=json.dumps(p,indent=2).encode();path.write_bytes(raw)
+files={key:(repo/key.removeprefix('Garnet/')).read_bytes() for key in r['methods']};files['Garnet/test2026/cuda/qwen38_5090/evidence/'+path.name]=raw
+candidate=work/'bf16-prefill128-native-source.zip';assert sha(candidate.read_bytes())==p['bundle_sha256'];files[p['bundle']]=candidate.read_bytes();assert len(files)==8
+bundle=work/'bf16-prefill128-native-build-deployment.zip';assert not bundle.exists()
+with zipfile.ZipFile(bundle,'x',zipfile.ZIP_DEFLATED) as z:
+    for name,value in files.items():z.writestr(name,value)
+    z.writestr('install-manifest.json',json.dumps({'files':{name:sha(value) for name,value in files.items()}},indent=2))
+result={'status':p['status'],'preparation_sha256':sha(raw),'bundle_sha256':sha(bundle.read_bytes()),'bytes':bundle.stat().st_size,'targets':len(files),'base_source_pins':717,'method_pins':len(methods),'candidate_source_files':13,'cpu_tests':56}
+(work/'prefill128-native-build-deployment.json').write_bytes(json.dumps(result,indent=2).encode());print(json.dumps(result))

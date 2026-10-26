@@ -1,0 +1,17 @@
+from pathlib import Path
+import hashlib,json,sys
+ROOT=Path('D:/CantorAI/5090-study-20261023');M=ROOT/'Garnet/test2026/cuda/qwen38_5090';sys.path.insert(0,str(M))
+from run_bf16_low_batch_native_build import idle
+sha=lambda path:hashlib.sha256(path.read_bytes()).hexdigest()
+idle();job='b4-packed-cache-characterization-attempt1';w=json.loads((ROOT/'results'/job/'workflow.json').read_bytes());q=json.loads((ROOT/'results'/(job+'-verified.json')).read_bytes())
+assert w['exit_code']==0 and w['cleanup_finished'] and w['library_unchanged'] and q['status']=='b4_packed_cache_characterization_replayed'
+assert sha(ROOT/'results'/(job+'-evidence.zip'))==q['archive_sha256']
+assert w['source_sha256']==w['source_after_sha256'] and w['runtime_dependencies']==w['runtime_dependencies_after'] and w['environment_before']==w['environment_after']
+for name,h in w['source_after_sha256'].items():assert sha(ROOT/name)==h
+for name,h in w['runtime_dependencies_after'].items():assert sha(ROOT/'build/bin'/name)==h
+for name,h in w['environment_after'].items():assert sha(Path(name))==h
+cache=ROOT/'build/CMakeCache.txt';raw=cache.read_bytes()
+for flag in (b'GARNET_STAGE_VENDOR_DLLS:BOOL=OFF',b'GARNET_QWEN35_WHOLE_PROGRAM_CUDA:BOOL=OFF'):assert flag in raw
+targets=('src/cuda/qwen38_bf16_prefill128_attention.cu','src/cuda/qwen38_bf16_prefill128_attention.cuh','src/cuda/qwen38_bf16_prefill128_commit.cu','src/cuda/qwen38_bf16_prefill128_commit.cuh','src/backends/tensorrt/qwen38_bf16_prefill128_layout_contract.h','src/backends/tensorrt/qwen38_bf16_prefill128_kv_overlay_plugin.cpp','src/backends/tensorrt/qwen38_bf16_prefill128_kv_overlay_plugin.h','src/backends/tensorrt/cuda_bf16_prefill128_kv_delta_commit.cpp','src/backends/tensorrt/cuda_bf16_prefill128_kv_delta_commit.h','src/backends/tensorrt/qwen35_lowering.h','src/backends/tensorrt/trt_builder.cpp','src/entry/garnet.h','src/cuda/qwen38_bf16_kv_low_batch_overlay.cu')
+r={'status':'bf16_prefill128_native_build_idle_baseline_snapshot','closed_job':job,'closed_archive_sha256':q['archive_sha256'],'closed_proof_sha256':sha(ROOT/'results'/(job+'-verified.json')),'base_files':w['source_after_sha256'],'runtime':w['runtime_dependencies_after'],'environment':w['environment_after'],'cache_before_sha256':sha(cache),'cuda_objects_before':{path.relative_to(ROOT).as_posix():sha(path) for path in (ROOT/'build/garnet/CMakeFiles/garnet.dir').rglob('*.cu.obj')},'candidate_base':{name:sha(ROOT/'Garnet'/name) if (ROOT/'Garnet'/name).is_file() else None for name in targets},'candidate_source_installed':False}
+target=ROOT/'results/prefill128-native-build-baseline-snapshot.json';assert not target.exists();target.write_bytes(json.dumps(r,indent=2).encode());print(json.dumps({'status':r['status'],'sha256':sha(target),'cuda_objects':len(r['cuda_objects_before']),'candidate_existing':sum(value is not None for value in r['candidate_base'].values())}))
