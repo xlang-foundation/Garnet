@@ -1,0 +1,32 @@
+"""Prepare owned CPU evidence and native source bundle only; remote snapshot/install remains pending."""
+from pathlib import Path
+import ast,hashlib,json,os,sys,unittest,zipfile
+work=Path(__file__).resolve().parent;repo=Path('D:/CantorAI/work/qwen38-5090');m=repo/'test2026/cuda/qwen38_5090';e=m/'evidence'
+sha=lambda path:hashlib.sha256(path.read_bytes()).hexdigest()
+names=('run_bf16_prefill128_native_build.py','build_bf16_prefill128_plugin_cpu.bat','test_bf16_prefill128_native_build.py','verify_bf16_prefill128_native_build.py','probe_bf16_prefill128_plugin_contract.cpp','prefill128_plugin_cpu_operators.cpp')
+pins={'Garnet/test2026/cuda/qwen38_5090/'+name:sha(m/name) for name in names}
+for name in names:
+    if name.endswith('.py'):ast.parse((m/name).read_bytes())
+derivation=json.loads((e/'prefill128-native-runtime-derivation.json').read_bytes());candidate={row['target']:row['target_sha256'] for row in derivation['files']}
+assert len(candidate)==12 and all(sha(repo/name)==digest for name,digest in candidate.items())
+prior=json.loads((e/'bf16-scores-tiled-native-api-build-preparation.json').read_bytes());overlay='src/cuda/qwen38_bf16_kv_low_batch_overlay.cu'
+assert sha(repo/overlay)==prior['candidate_files'][overlay];candidate[overlay]=sha(repo/overlay);assert len(candidate)==13
+sys.path[:0]=[str(repo),str(m)]
+suite=unittest.defaultTestLoader.loadTestsFromName('test2026.cuda.qwen38_5090.test_bf16_prefill128_native_build')
+def ids(suite):
+    for test in suite:
+        if isinstance(test,unittest.TestSuite):yield from ids(test)
+        else:yield test.id()
+tests=sorted(prior['test_ids']+list(ids(suite)));assert len(tests)==len(set(tests))==56
+import test2026.cuda.qwen38_5090.run_logged as ledger
+ledger.source_identity=lambda:{'scope':'Explicit owned native build preparation sources; unrelated untracked bodies excluded','owned_source_sha256':pins}
+os.chdir(repo);code=ledger.run([sys.executable,'-m','unittest',*tests],work/'prefill128-native-build-local-cpu-ledger','correctness','49retained constructor/transaction regressions plus7actual source transaction/archive faults and wire replay controls; no local model/native runtime/GPU',[m/name for name in names]);assert code==0
+bundle=work/'bf16-prefill128-native-source.zip'
+if not bundle.exists():
+    with zipfile.ZipFile(bundle,'x',zipfile.ZIP_DEFLATED) as z:
+        for name in candidate:z.write(repo/name,name)
+with zipfile.ZipFile(bundle) as z:
+    assert len(z.namelist())==len(set(z.namelist()))==13 and set(z.namelist())==set(candidate)
+    for name,h in candidate.items():assert hashlib.sha256(z.read(name)).hexdigest()==h
+r={'status':'bf16_prefill128_native_build_local_inputs_prepared_remote_snapshot_pending','candidate_files':candidate,'methods':pins,'test_ids':tests,'cpu_tests':56,'bundle_sha256':sha(bundle),'bundle_bytes':bundle.stat().st_size,'local_link_or_target_execution':False,'remote_candidate_deployed':False,'model_qualified':False,'performance_admitted':False}
+(work/'prefill128-native-build-local-inputs.json').write_bytes(json.dumps(r,indent=2).encode());print(json.dumps({'status':r['status'],'cpu_tests':56,'candidate_files':13,'bundle_sha256':r['bundle_sha256']}))
