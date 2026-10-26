@@ -1,0 +1,48 @@
+from pathlib import Path
+import hashlib,json,subprocess,sys,zipfile
+work=Path(__file__).resolve().parent;out=work.parent/'outputs';repo=Path('D:/CantorAI/work/qwen38-5090');m=repo/'test2026/cuda/qwen38_5090';e=m/'evidence';paths=[];sha=lambda raw:hashlib.sha256(raw).hexdigest()
+def keep(name,raw):
+    path=e/name;assert not path.exists() or path.read_bytes()==raw,path
+    if not path.exists():path.write_bytes(raw)
+    paths.append(path.relative_to(repo).as_posix())
+job='b4-packed-cache-characterization-attempt1';archive=out/(job+'-evidence.zip');proof=(out/(job+'-verified.json')).read_bytes()
+assert proof==(out/(job+'-remote-verified.json')).read_bytes();q=json.loads(proof);assert sha(archive.read_bytes())==q['archive_sha256'] and q['status']=='b4_packed_cache_characterization_replayed'
+check=subprocess.run([sys.executable,str(m/'verify_b4_packed_cache_characterization.py'),'--proofs',str(out)],capture_output=True);assert check.returncode==0
+keep(job+'-local-replay.log',check.stdout+check.stderr)
+with zipfile.ZipFile(archive) as z:
+    manifest=json.loads(z.read('evidence-manifest.json'));assert len(z.namelist())==len(manifest['files'])+1
+    for name,h in manifest['files'].items():assert sha(z.read(name))==h
+    w=json.loads(z.read('results/'+job+'/workflow.json'));assert w['exit_code']==0 and w['cleanup_finished'] and w['library_unchanged']
+    assert w['source_sha256']==w['source_after_sha256'] and w['runtime_dependencies']==w['runtime_dependencies_after'] and w['environment_before']==w['environment_after']
+    keep(job+'-evidence-manifest.json',z.read('evidence-manifest.json'))
+    for name in z.namelist():
+        prefix='results/'+job+'/'
+        if name.startswith(prefix) and name.endswith(('.json','.jsonl','.log')) and not name.endswith('resource-vram.jsonl'):keep(job+'-'+name.removeprefix(prefix).replace('/','-'),z.read(name))
+for suffix in ('-verified.json','-remote-verified.json'):keep(job+suffix,(out/(job+suffix)).read_bytes())
+obs=q['observations'];pairs={name:value['all_observed_ids_states_vectors_exact'] for name,value in obs.items()}
+assert pairs=={'packed_vs_b8':False,'packed_vs_full_repeat':True,'full_repeat_vs_failed_full':True,'full_repeat_vs_b8':False}
+comparison={'status':'b4_cache_mode_contrast_replayed_on_both_machines','archive_sha256':q['archive_sha256'],'archive_bytes':archive.stat().st_size,'archive_members':len(manifest['files'])+1,'proof_pair_sha256':sha(proof),'actual_case':'first four-row short-mixed inputs;8output IDs per row; prompt lengths41/104/93/93','observed_exact_pairs':pairs,'cpu_tests_passed_remote':53,'remote_cpu_seconds':19.310,'source_pins':716,'source_runtime_environment_preserved':True,'original_gate_changed':False,'cause_established':False,'harmlessness_or_semantic_equivalence_proven':False,'b8_mtp_or_http_qualified':False,'performance_admitted':False,'two_times_target_achieved':False,'scope':'Packed and full BF16 cache modes agree exactly at physicalB4 in this one actual short case; both differ from retained physicalB8. This narrows the observed contrast, does not identify a cause or qualify broader quality/performance. Complete expanded state hashes and raw hidden/normalized vectors, no raw full-cache bytes.'}
+raw=json.dumps(comparison,indent=2).encode();keep('b4-cache-mode-contrast-closure.json',raw);(out/'Garnet-B4-Cache-Mode-Comparison-Verified.json').write_bytes(raw)
+p=json.loads((e/'bf16-prefill128-native-build-preparation.json').read_bytes());install=json.loads((work/'prefill128-native-build-install.json').read_bytes());deployment=json.loads((work/'prefill128-native-build-deployment.json').read_bytes())
+assert len(p['base_files'])==install['base_source_pins']==717 and p['expected_cpu_test_count']==56 and install['new_targets']==8 and install['runtime_and_sdk_unchanged'] is True
+for name,h in p['methods'].items():
+    path=repo/name.removeprefix('Garnet/');assert sha(path.read_bytes())==h;paths.append(path.relative_to(repo).as_posix())
+paths.append((e/'bf16-prefill128-native-build-preparation.json').relative_to(repo).as_posix())
+for name in ('collect-prefill128-native-build-snapshot.py','prepare-prefill128-native-build-deployment.py','install-prefill128-native-build-deployment.py','retain-packed-closure-and-prefill128-build-start.py'):
+    keep(name+'.txt',(work/name).read_bytes())
+for name in ('prefill128-native-build-baseline-snapshot.json','prefill128-native-build-deployment.json','prefill128-native-build-install.json','prefill128-native-build-before-object-binding-local-inputs.json'):
+    keep(name,(work/name).read_bytes())
+keep('prefill128-native-build-final-local-inputs.json',(work/'prefill128-native-build-local-inputs.json').read_bytes())
+for name in ('commands.jsonl','commands.log'):keep('prefill128-native-build-final-local-cpu-'+name,(work/'prefill128-native-build-local-cpu-ledger'/name).read_bytes())
+r={'status':'packed_cache_mode_replay_closed_full_prefill128_native_build_running','job':'bf16-prefill128-native-build-attempt1','supervisor_session':48577,'observed_state':'running;56remote CPU checks passed and CMake reconfigure completed','cpu_tests_passed_local':56,'local_cpu_seconds':0.357,'cpu_tests_passed_remote':56,'remote_cpu_seconds':0.298,'build_before_cuda_objects':32,'candidate_source_files':13,'installed_method_bundle':deployment,'install':install,'packed_cache_comparison':comparison,'terminal_result':None,'model_or_http_qualified':False,'performance_admitted':False,'two_times_target_achieved':False}
+raw=json.dumps(r,indent=2).encode();keep('prefill128-native-build-start.json',raw);(out/'Garnet-Prefill128-Native-Build-Status.json').write_bytes(raw)
+title='Packed B4 matches full B4; both differ from B8, complete T128 native build started'
+text='\n\n### 2026-10-25 — '+title+'\n\n'
+text+='Packed-only actual four-row short8-output owner completed0,53CPU checks19.310s, full empty/reset controls and one complete case. Source716/runtime/SDK and1a1d library unchanged, cache retired, cleanup finished. Archive '+comparison['archive_sha256']+' ('+str(comparison['archive_bytes'])+'bytes/'+str(comparison['archive_members'])+'members), original full checker returns0 on both machines with identical proof '+comparison['proof_pair_sha256']+'. All transfers acknowledged before new work.\n\n'
+text+='Actual packedB4 and fullB4 generated IDs, complete expanded-state hashes and raw hidden/normalized vectors match exactly throughout this first short case. The full repeat also reproduces the original failed full case exactly; both B4 modes remain different from B8. This controlled observation narrows the batch-geometry/cache-mode contrast; it does not establish a cause, arithmetic/semantic harmlessness or B8 MTP/HTTP qualification. Original strict failure/gates and all prior archives remain intact. No new benchmark or chart admission.\n\n'
+text+='After terminal cleanup, collected fresh idle remote snapshot: unchanged717baseline source pins (including closed packed prep), six runtime dependencies,15environment/tool/SDK pins, four existing and nine absent native candidate targets,32existingCUDA objects and actualCMake cache. Final56local CPU tests pass0.357s after adding precise CUDA object inventory checks; earlier54/56unrun inputs and ledgers retained. Deployment eight absent targets,717base+10method pins, SDK/runtime unchanged; downloaded receipt acknowledged before exact supervisor48577 starts bf16-prefill128-native-build-attempt1. Actual56remote CPU controls pass0.298s, VS14.44.35207/WindowsSDK10.0.26100.0 observed; CMake4.4.4 reconfigure completes and native build is live.\n\n'
+text+='Complete native build requires exactly two new attention/commit CUDA objects; only the coupled tiled overlay may change among oldCUDA objects. Real creator/wire contract executable, ten external and ten embedded selector controls,955tokenizer controls, baseline source/DLL restoration, separate saved DLL and both-machine archive replay remain required. No model or HTTP runs during this build. Six PythonT128 candidates stay local until next model admission. Overall2xdecode/concurrency throughput and halfTTFT remain unmet/unproven; matchedINT4/4B, tuned/MTP/repeated references and B8 arithmetic diagnosis remain open.\n'
+for name in ('qwen38-5090-development-log.md','qwen38-5090-implementation-task.md'):
+    path=repo/'docs/research'/name;before=path.read_bytes();assert title.encode() not in before
+    path.write_bytes(before+text.encode());paths.append(path.relative_to(repo).as_posix())
+(work/'packed-closure-prefill128-build-start-retained-paths.json').write_bytes(json.dumps(sorted(set(paths)),indent=2).encode());print(json.dumps({'status':r['status'],'retained_paths':len(set(paths)),'observed_exact_pairs':pairs}))
