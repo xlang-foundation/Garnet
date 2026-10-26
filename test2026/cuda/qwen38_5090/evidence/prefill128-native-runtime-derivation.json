@@ -1,0 +1,269 @@
+{
+  "status": "prefill128_native_runtime_candidate_unbuilt",
+  "files": [
+    {
+      "source": "test2026/cuda/qwen38_5090/qwen38_bf16_prefill128_attention.cu",
+      "source_sha256": "1b40f4c039e62e37049fe178753db4c40185f0a1faf787243032ef40c478a1ec",
+      "target": "src/cuda/qwen38_bf16_prefill128_attention.cu",
+      "target_sha256": "1b40f4c039e62e37049fe178753db4c40185f0a1faf787243032ef40c478a1ec",
+      "replacements": [],
+      "existing_file_modified": false
+    },
+    {
+      "source": "test2026/cuda/qwen38_5090/qwen38_bf16_prefill128_attention.cuh",
+      "source_sha256": "12650239348522213dfe6d5b23b620e7bc6a79b73f45240c0141792db1d6c391",
+      "target": "src/cuda/qwen38_bf16_prefill128_attention.cuh",
+      "target_sha256": "12650239348522213dfe6d5b23b620e7bc6a79b73f45240c0141792db1d6c391",
+      "replacements": [],
+      "existing_file_modified": false
+    },
+    {
+      "source": "test2026/cuda/qwen38_5090/qwen38_bf16_prefill128_commit.cu",
+      "source_sha256": "970ffcb160b321032b8238580d4c00830bf9de7ea81ac95a6ee976575e67e6f5",
+      "target": "src/cuda/qwen38_bf16_prefill128_commit.cu",
+      "target_sha256": "970ffcb160b321032b8238580d4c00830bf9de7ea81ac95a6ee976575e67e6f5",
+      "replacements": [],
+      "existing_file_modified": false
+    },
+    {
+      "source": "test2026/cuda/qwen38_5090/qwen38_bf16_prefill128_commit.cuh",
+      "source_sha256": "037371b8aaae91afb108e857ee51468a331ef0409a5dc38c75b42e8e3624c9a0",
+      "target": "src/cuda/qwen38_bf16_prefill128_commit.cuh",
+      "target_sha256": "037371b8aaae91afb108e857ee51468a331ef0409a5dc38c75b42e8e3624c9a0",
+      "replacements": [],
+      "existing_file_modified": false
+    },
+    {
+      "source": "test2026/cuda/qwen38_5090/qwen38_bf16_prefill128_layout_contract.h",
+      "source_sha256": "75bd1a283fd8ca27ed3eced85d0079bd40c21978a4cf02addba0f598ce5c6998",
+      "target": "src/backends/tensorrt/qwen38_bf16_prefill128_layout_contract.h",
+      "target_sha256": "75bd1a283fd8ca27ed3eced85d0079bd40c21978a4cf02addba0f598ce5c6998",
+      "replacements": [],
+      "existing_file_modified": false
+    },
+    {
+      "source": "src/backends/tensorrt/qwen38_bf16_low_batch_kv_overlay_plugin.h",
+      "source_sha256": "36ec32c9845caf90c3c2f159af2b0017b5d879611be6453252940b9dbf9106b1",
+      "target": "src/backends/tensorrt/qwen38_bf16_prefill128_kv_overlay_plugin.h",
+      "target_sha256": "7d94b7e9f8f2c55617707aca66484bbf40179240b1a919a502157682320571af",
+      "replacements": [
+        {
+          "old": "qwen38_bf16_kv_low_batch_overlay.cuh",
+          "new": "qwen38_bf16_prefill128_attention.cuh",
+          "count": 1
+        },
+        {
+          "old": "BF16KVLowBatchOverlay",
+          "new": "BF16KVPrefill128Overlay",
+          "count": 9
+        }
+      ],
+      "existing_file_modified": false
+    },
+    {
+      "source": "src/backends/tensorrt/qwen38_bf16_low_batch_kv_overlay_plugin.cpp",
+      "source_sha256": "64e5eb70d9f47156ef8963510747aa5ed28011f95b187f47f029dafe917a7287",
+      "target": "src/backends/tensorrt/qwen38_bf16_prefill128_kv_overlay_plugin.cpp",
+      "target_sha256": "40223ff82b75b3a61d330aae225cf8a2760c6cf14b8706ff937213a4459f6524",
+      "replacements": [
+        {
+          "old": "qwen38_bf16_low_batch_kv_overlay_plugin.h",
+          "new": "qwen38_bf16_prefill128_kv_overlay_plugin.h",
+          "count": 1
+        },
+        {
+          "old": "BF16KVLowBatchOverlay",
+          "new": "BF16KVPrefill128Overlay",
+          "count": 22
+        },
+        {
+          "old": "Qwen38BF16KVLowBatchCandidateWorkspace",
+          "new": "Qwen38BF16KVPrefill128AttentionWorkspace",
+          "count": 1
+        },
+        {
+          "old": "RunQwen38BF16KVLowBatchCandidate",
+          "new": "RunQwen38BF16KVPrefill128Attention",
+          "count": 1
+        },
+        {
+          "old": "a.batch==1&&(a.tokens==4||a.tokens==32)",
+          "new": "a.batch==1&&a.tokens==128",
+          "count": 1
+        },
+        {
+          "old": "config_.value_offset,stream",
+          "new": "config_.value_offset,1,stream",
+          "count": 1
+        }
+      ],
+      "existing_file_modified": false
+    },
+    {
+      "source": "src/backends/tensorrt/cuda_bf16_low_batch_kv_delta_commit.h",
+      "source_sha256": "49fe2c68db2398a688687bdc4f71ef8773e9e3173783d160e9f38d4c50acfe76",
+      "target": "src/backends/tensorrt/cuda_bf16_prefill128_kv_delta_commit.h",
+      "target_sha256": "3d7080b281f73af38e8403b896a99ef679023ee542033849225e158d7900fde6",
+      "replacements": [
+        {
+          "old": "qwen38_bf16_low_batch_kv_layout_contract.h",
+          "new": "qwen38_bf16_prefill128_layout_contract.h",
+          "count": 1
+        },
+        {
+          "old": "CUDABF16LowBatchKVDeltaCommit",
+          "new": "CUDABF16Prefill128KVDeltaCommit",
+          "count": 6
+        },
+        {
+          "old": "BF16LowBatchKVLayoutSpec",
+          "new": "BF16Prefill128KVLayoutSpec",
+          "count": 1
+        }
+      ],
+      "existing_file_modified": false
+    },
+    {
+      "source": "src/backends/tensorrt/cuda_bf16_low_batch_kv_delta_commit.cpp",
+      "source_sha256": "f05f209e1092cde4fa964c9a2862d6c11f7916cf88f4899808801d5d2b4ce212",
+      "target": "src/backends/tensorrt/cuda_bf16_prefill128_kv_delta_commit.cpp",
+      "target_sha256": "335a1ccaae5a4045bfaa4a6e5accc39ccf2792c3105c65efc9e502680e7634d2",
+      "replacements": [
+        {
+          "old": "cuda_bf16_low_batch_kv_delta_commit.h",
+          "new": "cuda_bf16_prefill128_kv_delta_commit.h",
+          "count": 1
+        },
+        {
+          "old": "qwen38_bf16_low_batch_kv_commit.cuh",
+          "new": "qwen38_bf16_prefill128_commit.cuh",
+          "count": 1
+        },
+        {
+          "old": "CUDABF16LowBatchKVDeltaCommit",
+          "new": "CUDABF16Prefill128KVDeltaCommit",
+          "count": 4
+        },
+        {
+          "old": "BF16LowBatchKVLayoutSpec",
+          "new": "BF16Prefill128KVLayoutSpec",
+          "count": 1
+        },
+        {
+          "old": "BF16LowBatchKVContract::Parse",
+          "new": "BF16Prefill128KVContract::Parse",
+          "count": 1
+        },
+        {
+          "old": "width==layout_.target||(layout_.chunk==4&&width==layout_.replay)",
+          "new": "width==layout_.target",
+          "count": 1
+        },
+        {
+          "old": "RunQwen38BF16LowBatchCommitCandidate((const float*)target.Info().data,(const float*)info.data,width,(float*)dst.data,",
+          "new": "RunQwen38BF16Prefill128Commit((const float*)target.Info().data,(float*)dst.data,",
+          "count": 1
+        }
+      ],
+      "existing_file_modified": false
+    },
+    {
+      "source": "test2026/cuda/qwen38_5090/evidence/prefill128-native-runtime-original-src__entry__garnet.h.txt",
+      "source_sha256": "baef1507be5082c0f3183783310fcff1f14a3daea331d57dae1732122f1dc557",
+      "target": "src/entry/garnet.h",
+      "target_sha256": "1c311cdff2c545de131468c2054aa3de843f11ee03641e769ac1c32a460d79f5",
+      "replacements": [
+        {
+          "old": "#include \"../backends/tensorrt/cuda_bf16_low_batch_kv_delta_commit.h\"",
+          "new": "#include \"../backends/tensorrt/cuda_bf16_low_batch_kv_delta_commit.h\"\n#include \"../backends/tensorrt/cuda_bf16_prefill128_kv_delta_commit.h\"",
+          "count": 1
+        },
+        {
+          "old": "APISET().AddClass<0,CUDABF16LowBatchKVDeltaCommit>(\"cuda_bf16_low_batch_kv_delta_commit\");",
+          "new": "APISET().AddClass<0,CUDABF16LowBatchKVDeltaCommit>(\"cuda_bf16_low_batch_kv_delta_commit\");\n            APISET().AddClass<0,CUDABF16Prefill128KVDeltaCommit>(\"cuda_bf16_prefill128_kv_delta_commit\");",
+          "count": 1
+        }
+      ],
+      "existing_file_modified": true
+    },
+    {
+      "source": "test2026/cuda/qwen38_5090/evidence/prefill128-native-runtime-original-src__backends__tensorrt__qwen35_lowering.h.txt",
+      "source_sha256": "4e5d51aade5be1767651005a3212a544b906a5dd9342d7c7480ea72f993907b3",
+      "target": "src/backends/tensorrt/qwen35_lowering.h",
+      "target_sha256": "404ceb8386dc3e9c565d829d68211623e212f6e8885c5b23869d9f5544852387",
+      "replacements": [
+        {
+          "old": "#include \"qwen38_bf16_low_batch_kv_overlay_plugin.h\"",
+          "new": "#include \"qwen38_bf16_low_batch_kv_overlay_plugin.h\"\r\n#include \"qwen38_bf16_prefill128_kv_overlay_plugin.h\"",
+          "count": 1
+        },
+        {
+          "old": "const BF16KVLowBatchOverlayConfig* lowBatchOverlay=nullptr) {",
+          "new": "const BF16KVLowBatchOverlayConfig* lowBatchOverlay=nullptr,const BF16KVPrefill128OverlayConfig* prefill128Overlay=nullptr) {",
+          "count": 1
+        },
+        {
+          "old": "        if(legacyBF16Overlay&&lowBatchOverlay)throw std::invalid_argument(\"B1 and B4/B8 BF16 cache types are exclusive\");",
+          "new": "        if(prefill128Overlay&&(legacyBF16Overlay||lowBatchOverlay))throw std::invalid_argument(\"T128 BF16 cache requires its separate exclusive profile\");\r\n        const bool prefill128=prefill128Overlay!=nullptr;\r\n        if(legacyBF16Overlay&&lowBatchOverlay)throw std::invalid_argument(\"B1 and B4/B8 BF16 cache types are exclusive\");",
+          "count": 1
+        },
+        {
+          "old": "const BF16KVOverlayConfig lowBatchView=lowBatch?BF16KVOverlayConfig{lowBatchOverlay->attention,lowBatchOverlay->state_width,lowBatchOverlay->key_offset,lowBatchOverlay->value_offset}:BF16KVOverlayConfig{};",
+          "new": "const BF16KVOverlayConfig lowBatchView=prefill128?BF16KVOverlayConfig{prefill128Overlay->attention,prefill128Overlay->state_width,prefill128Overlay->key_offset,prefill128Overlay->value_offset}:(lowBatch?BF16KVOverlayConfig{lowBatchOverlay->attention,lowBatchOverlay->state_width,lowBatchOverlay->key_offset,lowBatchOverlay->value_offset}:BF16KVOverlayConfig{});",
+          "count": 1
+        },
+        {
+          "old": "const BF16KVOverlayConfig* bf16Overlay=lowBatch?&lowBatchView:legacyBF16Overlay;",
+          "new": "const BF16KVOverlayConfig* bf16Overlay=(lowBatch||prefill128)?&lowBatchView:legacyBF16Overlay;",
+          "count": 1
+        },
+        {
+          "old": "if(lowBatch&&(theta!=1e7f||eps!=1e-6f))",
+          "new": "if((lowBatch||prefill128)&&(theta!=1e7f||eps!=1e-6f))",
+          "count": 1
+        },
+        {
+          "old": "!(lowBatch?ValidBF16KVLowBatchOverlayConfig(*lowBatchOverlay):ValidBF16KVOverlayConfig(*bf16Overlay))",
+          "new": "!(prefill128?ValidBF16KVPrefill128OverlayConfig(*prefill128Overlay):(lowBatch?ValidBF16KVLowBatchOverlayConfig(*lowBatchOverlay):ValidBF16KVOverlayConfig(*bf16Overlay)))",
+          "count": 1
+        },
+        {
+          "old": "                if(lowBatch){\r\n                    if(!EnsureBF16KVLowBatchOverlayPluginRegistered())",
+          "new": "                if(prefill128){\r\n                    if(!EnsureBF16KVPrefill128OverlayPluginRegistered())throw std::runtime_error(\"T128 BF16 canonical KV plugin registration failed\");\r\n                    plugin=new BF16KVPrefill128OverlayPlugin(*prefill128Overlay);\r\n                }else if(lowBatch){\r\n                    if(!EnsureBF16KVLowBatchOverlayPluginRegistered())",
+          "count": 1
+        }
+      ],
+      "existing_file_modified": true
+    },
+    {
+      "source": "test2026/cuda/qwen38_5090/evidence/prefill128-native-runtime-original-src__backends__tensorrt__trt_builder.cpp.txt",
+      "source_sha256": "90f4f815d32dc3fbeff31c581ec56292e987d19f66e69480e1e37e3bbd04957f",
+      "target": "src/backends/tensorrt/trt_builder.cpp",
+      "target_sha256": "2480ee3b49c243487c5717f28c74bfd6398897ed521b4b16ccb7e7dfb57f519d",
+      "replacements": [
+        {
+          "old": "||!EnsureBF16KVLowBatchOverlayPluginRegistered()||!EnsureBF16KVFloatReferencePluginRegistered()",
+          "new": "||!EnsureBF16KVLowBatchOverlayPluginRegistered()||!EnsureBF16KVPrefill128OverlayPluginRegistered()||!EnsureBF16KVFloatReferencePluginRegistered()",
+          "count": 1
+        },
+        {
+          "old": "                    BF16KVLowBatchOverlayConfig lowBatchOverlay{};",
+          "new": "                    auto* prefill128Attribute=FindKeyword(kwParams,\"canonical_bf16_prefill128_kv_overlay\");\n                    if(prefill128Attribute&&(!(prefill128Attribute->second.IsInt64()||prefill128Attribute->second.IsUInt64())||\n                        (prefill128Attribute->second.IsUInt64()&&prefill128Attribute->second.ToUInt64()>1)))throw std::invalid_argument(\"T128 BF16 opt-in requires integer0 or1\");\n                    const auto prefill128Mode=prefill128Attribute?prefill128Attribute->second.ToLongLong():0;\n                    if((prefill128Mode!=0&&prefill128Mode!=1)||(prefill128Mode&&(bf16Mode||overlayMode||referenceMode||lowBatchMode)))throw std::invalid_argument(\"T128 BF16 cache requires a separate exclusive explicit profile\");\n                    BF16KVPrefill128OverlayConfig prefill128Overlay{};\n                    if(prefill128Mode){\n                        const auto dims=ops.shape(source);\n                        if(dims!=std::vector<int>{1,128,5120}||capturedWeightProfile!=\"modelopt_mixed\"||\n                            !FindKeyword(kwParams,\"external_compressed_weights\")||external.empty()||FindKeyword(kwParams,\"external_weights\")||\n                            keywordInt(\"fused_attention\",0)!=1||keywordInt(\"joined_mlp_projections\",0)!=1)\n                            throw std::invalid_argument(\"T128 BF16 cache requires pinned shared mixed joined B1,T128 geometry\");\n                        auto exact=[&](const char* key)->int64_t{auto* item=FindKeyword(kwParams,key);\n                            if(!item||!(item->second.IsInt64()||item->second.IsUInt64())||(item->second.IsUInt64()&&item->second.ToUInt64()>uint64_t(INT64_MAX)))\n                                throw std::invalid_argument(\"T128 BF16 cache metadata requires bounded integers\");return item->second.ToLongLong();};\n                        if(exact(\"kv_overlay_strategy\")!=1)throw std::invalid_argument(\"T128 BF16 cache requires fixed reduction strategy1\");\n                        prefill128Overlay={{1,128,24,4,4096,256},exact(\"canonical_state_width\"),exact(\"canonical_key_offset\"),exact(\"canonical_value_offset\")};\n                        if(!ValidBF16KVPrefill128OverlayConfig(prefill128Overlay))throw std::invalid_argument(\"Unqualified T128 BF16 cache layout\");\n                    }\n                    BF16KVLowBatchOverlayConfig lowBatchOverlay{};",
+          "count": 1
+        },
+        {
+          "old": "(diagnostic&&(overlayMode||bf16Mode||referenceMode||lowBatchMode))",
+          "new": "(diagnostic&&(overlayMode||bf16Mode||referenceMode||lowBatchMode||prefill128Mode))",
+          "count": 1
+        },
+        {
+          "old": "(overlayMode||bf16Mode||lowBatchMode)?b[\"qwen35_attention_bind_canonical\"]:nullptr,overlayMode?&overlay:nullptr,bf16Mode?&bf16Overlay:nullptr,referenceMode!=0,lowBatchMode?&lowBatchOverlay:nullptr);",
+          "new": "(overlayMode||bf16Mode||lowBatchMode||prefill128Mode)?b[\"qwen35_attention_bind_canonical\"]:nullptr,overlayMode?&overlay:nullptr,bf16Mode?&bf16Overlay:nullptr,referenceMode!=0,lowBatchMode?&lowBatchOverlay:nullptr,prefill128Mode?&prefill128Overlay:nullptr);",
+          "count": 1
+        }
+      ],
+      "existing_file_modified": true
+    }
+  ],
+  "scope": "Exact qualified attention/commit CUDA sources copied into native tree; separate T128 plugin/wire/native commit class and strict TRT keyword/lowering. Old4/32 profiles unchanged. Local source only while remote B4 reference runs; no SDK/runtime/build/GPU mutation or runtime/model/performance qualification."
+}

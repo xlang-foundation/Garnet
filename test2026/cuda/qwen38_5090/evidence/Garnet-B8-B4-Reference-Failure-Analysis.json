@@ -1,0 +1,3329 @@
+{
+  "status": "actual_b8_b4_strict_failure_boundaries_analyzed",
+  "archive_sha256": "eaddf8987a88bfa37e422433c753399f42539bd378c1795fb8606e1cbc75e624",
+  "parent_archive_sha256": "3bbec8c568cfcf5d7a1fdf7405b152b14593c2117cd4b4307094ddf5def00f76",
+  "completed_cases": 1,
+  "planned_cases": 18,
+  "group": "short-mixed",
+  "half": 0,
+  "prompt_lengths": [
+    41,
+    104,
+    93,
+    93
+  ],
+  "actual_inputs_exact": true,
+  "generated_ids": [
+    {
+      "physical_row": 0,
+      "actual": [
+        8160,
+        369,
+        264,
+        11346,
+        11,
+        2923,
+        13909,
+        28253
+      ],
+      "expected": [
+        8160,
+        369,
+        264,
+        11346,
+        11,
+        2923,
+        13909,
+        28253
+      ],
+      "first_different_token_zero_based": null
+    },
+    {
+      "physical_row": 1,
+      "actual": [
+        1919,
+        2099,
+        369,
+        264,
+        69235,
+        11,
+        7859,
+        17498
+      ],
+      "expected": [
+        760,
+        2099,
+        18126,
+        264,
+        4145,
+        11,
+        7859,
+        17498
+      ],
+      "first_different_token_zero_based": 0
+    },
+    {
+      "physical_row": 2,
+      "actual": [
+        5844,
+        248046,
+        198,
+        248044,
+        248045,
+        248045,
+        248045,
+        248045
+      ],
+      "expected": [
+        5844,
+        248046,
+        198,
+        248044,
+        248045,
+        846,
+        198,
+        248045
+      ],
+      "first_different_token_zero_based": 5
+    },
+    {
+      "physical_row": 3,
+      "actual": [
+        18978,
+        248046,
+        198,
+        248044,
+        248045,
+        248045,
+        248045,
+        248045
+      ],
+      "expected": [
+        18978,
+        248046,
+        198,
+        248044,
+        248045,
+        198,
+        248045,
+        248046
+      ],
+      "first_different_token_zero_based": 5
+    }
+  ],
+  "phase_observations": [
+    {
+      "phase": "reset_state",
+      "slot_counts_match": true,
+      "logical_row_hashes_match": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "different_components": [],
+      "vectors": {
+        "hidden": [
+          {
+            "physical_row": 0,
+            "equal_scalars": 5120,
+            "scalars": 5120,
+            "max_absolute_difference": 0.0,
+            "relative_l2_difference": 0.0
+          },
+          {
+            "physical_row": 1,
+            "equal_scalars": 5120,
+            "scalars": 5120,
+            "max_absolute_difference": 0.0,
+            "relative_l2_difference": 0.0
+          },
+          {
+            "physical_row": 2,
+            "equal_scalars": 5120,
+            "scalars": 5120,
+            "max_absolute_difference": 0.0,
+            "relative_l2_difference": 0.0
+          },
+          {
+            "physical_row": 3,
+            "equal_scalars": 5120,
+            "scalars": 5120,
+            "max_absolute_difference": 0.0,
+            "relative_l2_difference": 0.0
+          }
+        ],
+        "normalized": [
+          {
+            "physical_row": 0,
+            "equal_scalars": 5120,
+            "scalars": 5120,
+            "max_absolute_difference": 0.0,
+            "relative_l2_difference": 0.0
+          },
+          {
+            "physical_row": 1,
+            "equal_scalars": 5120,
+            "scalars": 5120,
+            "max_absolute_difference": 0.0,
+            "relative_l2_difference": 0.0
+          },
+          {
+            "physical_row": 2,
+            "equal_scalars": 5120,
+            "scalars": 5120,
+            "max_absolute_difference": 0.0,
+            "relative_l2_difference": 0.0
+          },
+          {
+            "physical_row": 3,
+            "equal_scalars": 5120,
+            "scalars": 5120,
+            "max_absolute_difference": 0.0,
+            "relative_l2_difference": 0.0
+          }
+        ]
+      }
+    },
+    {
+      "phase": "prefill_state",
+      "slot_counts_match": true,
+      "logical_row_hashes_match": [
+        false,
+        false,
+        false,
+        false
+      ],
+      "different_components": [
+        {
+          "layer": 3,
+          "kind": "full_attention",
+          "role": 1,
+          "logical_words": 4194304,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 3,
+          "kind": "full_attention",
+          "role": 2,
+          "logical_words": 4194304,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 4,
+          "kind": "linear_attention",
+          "role": 1,
+          "logical_words": 40960,
+          "different_physical_rows": [
+            0
+          ]
+        },
+        {
+          "layer": 4,
+          "kind": "linear_attention",
+          "role": 2,
+          "logical_words": 786432,
+          "different_physical_rows": [
+            0,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 5,
+          "kind": "linear_attention",
+          "role": 1,
+          "logical_words": 40960,
+          "different_physical_rows": [
+            0,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 5,
+          "kind": "linear_attention",
+          "role": 2,
+          "logical_words": 786432,
+          "different_physical_rows": [
+            0,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 6,
+          "kind": "linear_attention",
+          "role": 1,
+          "logical_words": 40960,
+          "different_physical_rows": [
+            0,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 6,
+          "kind": "linear_attention",
+          "role": 2,
+          "logical_words": 786432,
+          "different_physical_rows": [
+            0,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 7,
+          "kind": "full_attention",
+          "role": 1,
+          "logical_words": 4194304,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 7,
+          "kind": "full_attention",
+          "role": 2,
+          "logical_words": 4194304,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 8,
+          "kind": "linear_attention",
+          "role": 1,
+          "logical_words": 40960,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 8,
+          "kind": "linear_attention",
+          "role": 2,
+          "logical_words": 786432,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 9,
+          "kind": "linear_attention",
+          "role": 1,
+          "logical_words": 40960,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 9,
+          "kind": "linear_attention",
+          "role": 2,
+          "logical_words": 786432,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 10,
+          "kind": "linear_attention",
+          "role": 1,
+          "logical_words": 40960,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 10,
+          "kind": "linear_attention",
+          "role": 2,
+          "logical_words": 786432,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 11,
+          "kind": "full_attention",
+          "role": 1,
+          "logical_words": 4194304,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 11,
+          "kind": "full_attention",
+          "role": 2,
+          "logical_words": 4194304,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 12,
+          "kind": "linear_attention",
+          "role": 1,
+          "logical_words": 40960,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 12,
+          "kind": "linear_attention",
+          "role": 2,
+          "logical_words": 786432,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 13,
+          "kind": "linear_attention",
+          "role": 1,
+          "logical_words": 40960,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 13,
+          "kind": "linear_attention",
+          "role": 2,
+          "logical_words": 786432,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 14,
+          "kind": "linear_attention",
+          "role": 1,
+          "logical_words": 40960,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 14,
+          "kind": "linear_attention",
+          "role": 2,
+          "logical_words": 786432,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 15,
+          "kind": "full_attention",
+          "role": 1,
+          "logical_words": 4194304,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 15,
+          "kind": "full_attention",
+          "role": 2,
+          "logical_words": 4194304,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 16,
+          "kind": "linear_attention",
+          "role": 1,
+          "logical_words": 40960,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 16,
+          "kind": "linear_attention",
+          "role": 2,
+          "logical_words": 786432,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 17,
+          "kind": "linear_attention",
+          "role": 1,
+          "logical_words": 40960,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 17,
+          "kind": "linear_attention",
+          "role": 2,
+          "logical_words": 786432,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 18,
+          "kind": "linear_attention",
+          "role": 1,
+          "logical_words": 40960,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 18,
+          "kind": "linear_attention",
+          "role": 2,
+          "logical_words": 786432,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 19,
+          "kind": "full_attention",
+          "role": 1,
+          "logical_words": 4194304,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 19,
+          "kind": "full_attention",
+          "role": 2,
+          "logical_words": 4194304,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 20,
+          "kind": "linear_attention",
+          "role": 1,
+          "logical_words": 40960,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 20,
+          "kind": "linear_attention",
+          "role": 2,
+          "logical_words": 786432,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 21,
+          "kind": "linear_attention",
+          "role": 1,
+          "logical_words": 40960,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 21,
+          "kind": "linear_attention",
+          "role": 2,
+          "logical_words": 786432,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 22,
+          "kind": "linear_attention",
+          "role": 1,
+          "logical_words": 40960,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 22,
+          "kind": "linear_attention",
+          "role": 2,
+          "logical_words": 786432,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 23,
+          "kind": "full_attention",
+          "role": 1,
+          "logical_words": 4194304,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 23,
+          "kind": "full_attention",
+          "role": 2,
+          "logical_words": 4194304,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 24,
+          "kind": "linear_attention",
+          "role": 1,
+          "logical_words": 40960,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 24,
+          "kind": "linear_attention",
+          "role": 2,
+          "logical_words": 786432,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 25,
+          "kind": "linear_attention",
+          "role": 1,
+          "logical_words": 40960,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 25,
+          "kind": "linear_attention",
+          "role": 2,
+          "logical_words": 786432,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 26,
+          "kind": "linear_attention",
+          "role": 1,
+          "logical_words": 40960,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 26,
+          "kind": "linear_attention",
+          "role": 2,
+          "logical_words": 786432,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 27,
+          "kind": "full_attention",
+          "role": 1,
+          "logical_words": 4194304,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 27,
+          "kind": "full_attention",
+          "role": 2,
+          "logical_words": 4194304,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 28,
+          "kind": "linear_attention",
+          "role": 1,
+          "logical_words": 40960,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 28,
+          "kind": "linear_attention",
+          "role": 2,
+          "logical_words": 786432,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 29,
+          "kind": "linear_attention",
+          "role": 1,
+          "logical_words": 40960,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 29,
+          "kind": "linear_attention",
+          "role": 2,
+          "logical_words": 786432,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 30,
+          "kind": "linear_attention",
+          "role": 1,
+          "logical_words": 40960,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 30,
+          "kind": "linear_attention",
+          "role": 2,
+          "logical_words": 786432,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 31,
+          "kind": "full_attention",
+          "role": 1,
+          "logical_words": 4194304,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 31,
+          "kind": "full_attention",
+          "role": 2,
+          "logical_words": 4194304,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 32,
+          "kind": "linear_attention",
+          "role": 1,
+          "logical_words": 40960,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 32,
+          "kind": "linear_attention",
+          "role": 2,
+          "logical_words": 786432,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 33,
+          "kind": "linear_attention",
+          "role": 1,
+          "logical_words": 40960,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 33,
+          "kind": "linear_attention",
+          "role": 2,
+          "logical_words": 786432,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 34,
+          "kind": "linear_attention",
+          "role": 1,
+          "logical_words": 40960,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 34,
+          "kind": "linear_attention",
+          "role": 2,
+          "logical_words": 786432,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 35,
+          "kind": "full_attention",
+          "role": 1,
+          "logical_words": 4194304,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 35,
+          "kind": "full_attention",
+          "role": 2,
+          "logical_words": 4194304,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 36,
+          "kind": "linear_attention",
+          "role": 1,
+          "logical_words": 40960,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 36,
+          "kind": "linear_attention",
+          "role": 2,
+          "logical_words": 786432,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 37,
+          "kind": "linear_attention",
+          "role": 1,
+          "logical_words": 40960,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 37,
+          "kind": "linear_attention",
+          "role": 2,
+          "logical_words": 786432,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 38,
+          "kind": "linear_attention",
+          "role": 1,
+          "logical_words": 40960,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 38,
+          "kind": "linear_attention",
+          "role": 2,
+          "logical_words": 786432,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 39,
+          "kind": "full_attention",
+          "role": 1,
+          "logical_words": 4194304,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 39,
+          "kind": "full_attention",
+          "role": 2,
+          "logical_words": 4194304,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 40,
+          "kind": "linear_attention",
+          "role": 1,
+          "logical_words": 40960,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 40,
+          "kind": "linear_attention",
+          "role": 2,
+          "logical_words": 786432,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 41,
+          "kind": "linear_attention",
+          "role": 1,
+          "logical_words": 40960,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 41,
+          "kind": "linear_attention",
+          "role": 2,
+          "logical_words": 786432,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 42,
+          "kind": "linear_attention",
+          "role": 1,
+          "logical_words": 40960,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 42,
+          "kind": "linear_attention",
+          "role": 2,
+          "logical_words": 786432,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 43,
+          "kind": "full_attention",
+          "role": 1,
+          "logical_words": 4194304,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 43,
+          "kind": "full_attention",
+          "role": 2,
+          "logical_words": 4194304,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 44,
+          "kind": "linear_attention",
+          "role": 1,
+          "logical_words": 40960,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 44,
+          "kind": "linear_attention",
+          "role": 2,
+          "logical_words": 786432,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 45,
+          "kind": "linear_attention",
+          "role": 1,
+          "logical_words": 40960,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 45,
+          "kind": "linear_attention",
+          "role": 2,
+          "logical_words": 786432,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 46,
+          "kind": "linear_attention",
+          "role": 1,
+          "logical_words": 40960,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 46,
+          "kind": "linear_attention",
+          "role": 2,
+          "logical_words": 786432,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 47,
+          "kind": "full_attention",
+          "role": 1,
+          "logical_words": 4194304,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 47,
+          "kind": "full_attention",
+          "role": 2,
+          "logical_words": 4194304,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 48,
+          "kind": "linear_attention",
+          "role": 1,
+          "logical_words": 40960,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 48,
+          "kind": "linear_attention",
+          "role": 2,
+          "logical_words": 786432,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 49,
+          "kind": "linear_attention",
+          "role": 1,
+          "logical_words": 40960,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 49,
+          "kind": "linear_attention",
+          "role": 2,
+          "logical_words": 786432,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 50,
+          "kind": "linear_attention",
+          "role": 1,
+          "logical_words": 40960,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 50,
+          "kind": "linear_attention",
+          "role": 2,
+          "logical_words": 786432,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 51,
+          "kind": "full_attention",
+          "role": 1,
+          "logical_words": 4194304,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 51,
+          "kind": "full_attention",
+          "role": 2,
+          "logical_words": 4194304,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 52,
+          "kind": "linear_attention",
+          "role": 1,
+          "logical_words": 40960,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 52,
+          "kind": "linear_attention",
+          "role": 2,
+          "logical_words": 786432,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 53,
+          "kind": "linear_attention",
+          "role": 1,
+          "logical_words": 40960,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 53,
+          "kind": "linear_attention",
+          "role": 2,
+          "logical_words": 786432,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 54,
+          "kind": "linear_attention",
+          "role": 1,
+          "logical_words": 40960,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 54,
+          "kind": "linear_attention",
+          "role": 2,
+          "logical_words": 786432,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 55,
+          "kind": "full_attention",
+          "role": 1,
+          "logical_words": 4194304,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 55,
+          "kind": "full_attention",
+          "role": 2,
+          "logical_words": 4194304,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 56,
+          "kind": "linear_attention",
+          "role": 1,
+          "logical_words": 40960,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 56,
+          "kind": "linear_attention",
+          "role": 2,
+          "logical_words": 786432,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 57,
+          "kind": "linear_attention",
+          "role": 1,
+          "logical_words": 40960,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 57,
+          "kind": "linear_attention",
+          "role": 2,
+          "logical_words": 786432,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 58,
+          "kind": "linear_attention",
+          "role": 1,
+          "logical_words": 40960,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 58,
+          "kind": "linear_attention",
+          "role": 2,
+          "logical_words": 786432,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 59,
+          "kind": "full_attention",
+          "role": 1,
+          "logical_words": 4194304,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 59,
+          "kind": "full_attention",
+          "role": 2,
+          "logical_words": 4194304,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 60,
+          "kind": "linear_attention",
+          "role": 1,
+          "logical_words": 40960,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 60,
+          "kind": "linear_attention",
+          "role": 2,
+          "logical_words": 786432,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 61,
+          "kind": "linear_attention",
+          "role": 1,
+          "logical_words": 40960,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 61,
+          "kind": "linear_attention",
+          "role": 2,
+          "logical_words": 786432,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 62,
+          "kind": "linear_attention",
+          "role": 1,
+          "logical_words": 40960,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 62,
+          "kind": "linear_attention",
+          "role": 2,
+          "logical_words": 786432,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 63,
+          "kind": "full_attention",
+          "role": 1,
+          "logical_words": 4194304,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 63,
+          "kind": "full_attention",
+          "role": 2,
+          "logical_words": 4194304,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        }
+      ],
+      "vectors": {
+        "hidden": [
+          {
+            "physical_row": 0,
+            "equal_scalars": 0,
+            "scalars": 5120,
+            "max_absolute_difference": 29.4168701171875,
+            "relative_l2_difference": 0.17609598700399556
+          },
+          {
+            "physical_row": 1,
+            "equal_scalars": 0,
+            "scalars": 5120,
+            "max_absolute_difference": 15.16925048828125,
+            "relative_l2_difference": 0.643559669362636
+          },
+          {
+            "physical_row": 2,
+            "equal_scalars": 0,
+            "scalars": 5120,
+            "max_absolute_difference": 85.01123046875,
+            "relative_l2_difference": 0.4944135110904901
+          },
+          {
+            "physical_row": 3,
+            "equal_scalars": 0,
+            "scalars": 5120,
+            "max_absolute_difference": 15.66335678100586,
+            "relative_l2_difference": 0.29034161993283875
+          }
+        ],
+        "normalized": [
+          {
+            "physical_row": 0,
+            "equal_scalars": 0,
+            "scalars": 5120,
+            "max_absolute_difference": 2.694530487060547,
+            "relative_l2_difference": 0.1753501552221368
+          },
+          {
+            "physical_row": 1,
+            "equal_scalars": 0,
+            "scalars": 5120,
+            "max_absolute_difference": 6.550838470458984,
+            "relative_l2_difference": 0.6514798296952574
+          },
+          {
+            "physical_row": 2,
+            "equal_scalars": 0,
+            "scalars": 5120,
+            "max_absolute_difference": 12.476230263710022,
+            "relative_l2_difference": 0.57459706170389
+          },
+          {
+            "physical_row": 3,
+            "equal_scalars": 0,
+            "scalars": 5120,
+            "max_absolute_difference": 4.931392669677734,
+            "relative_l2_difference": 0.3562090076443367
+          }
+        ]
+      }
+    },
+    {
+      "phase": "final_state",
+      "slot_counts_match": true,
+      "logical_row_hashes_match": [
+        false,
+        false,
+        false,
+        false
+      ],
+      "different_components": [
+        {
+          "layer": 0,
+          "kind": "linear_attention",
+          "role": 1,
+          "logical_words": 40960,
+          "different_physical_rows": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 0,
+          "kind": "linear_attention",
+          "role": 2,
+          "logical_words": 786432,
+          "different_physical_rows": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 1,
+          "kind": "linear_attention",
+          "role": 1,
+          "logical_words": 40960,
+          "different_physical_rows": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 1,
+          "kind": "linear_attention",
+          "role": 2,
+          "logical_words": 786432,
+          "different_physical_rows": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 2,
+          "kind": "linear_attention",
+          "role": 1,
+          "logical_words": 40960,
+          "different_physical_rows": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 2,
+          "kind": "linear_attention",
+          "role": 2,
+          "logical_words": 786432,
+          "different_physical_rows": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 3,
+          "kind": "full_attention",
+          "role": 1,
+          "logical_words": 4194304,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 3,
+          "kind": "full_attention",
+          "role": 2,
+          "logical_words": 4194304,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 4,
+          "kind": "linear_attention",
+          "role": 1,
+          "logical_words": 40960,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 4,
+          "kind": "linear_attention",
+          "role": 2,
+          "logical_words": 786432,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 5,
+          "kind": "linear_attention",
+          "role": 1,
+          "logical_words": 40960,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 5,
+          "kind": "linear_attention",
+          "role": 2,
+          "logical_words": 786432,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 6,
+          "kind": "linear_attention",
+          "role": 1,
+          "logical_words": 40960,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 6,
+          "kind": "linear_attention",
+          "role": 2,
+          "logical_words": 786432,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 7,
+          "kind": "full_attention",
+          "role": 1,
+          "logical_words": 4194304,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 7,
+          "kind": "full_attention",
+          "role": 2,
+          "logical_words": 4194304,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 8,
+          "kind": "linear_attention",
+          "role": 1,
+          "logical_words": 40960,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 8,
+          "kind": "linear_attention",
+          "role": 2,
+          "logical_words": 786432,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 9,
+          "kind": "linear_attention",
+          "role": 1,
+          "logical_words": 40960,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 9,
+          "kind": "linear_attention",
+          "role": 2,
+          "logical_words": 786432,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 10,
+          "kind": "linear_attention",
+          "role": 1,
+          "logical_words": 40960,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 10,
+          "kind": "linear_attention",
+          "role": 2,
+          "logical_words": 786432,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 11,
+          "kind": "full_attention",
+          "role": 1,
+          "logical_words": 4194304,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 11,
+          "kind": "full_attention",
+          "role": 2,
+          "logical_words": 4194304,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 12,
+          "kind": "linear_attention",
+          "role": 1,
+          "logical_words": 40960,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 12,
+          "kind": "linear_attention",
+          "role": 2,
+          "logical_words": 786432,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 13,
+          "kind": "linear_attention",
+          "role": 1,
+          "logical_words": 40960,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 13,
+          "kind": "linear_attention",
+          "role": 2,
+          "logical_words": 786432,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 14,
+          "kind": "linear_attention",
+          "role": 1,
+          "logical_words": 40960,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 14,
+          "kind": "linear_attention",
+          "role": 2,
+          "logical_words": 786432,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 15,
+          "kind": "full_attention",
+          "role": 1,
+          "logical_words": 4194304,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 15,
+          "kind": "full_attention",
+          "role": 2,
+          "logical_words": 4194304,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 16,
+          "kind": "linear_attention",
+          "role": 1,
+          "logical_words": 40960,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 16,
+          "kind": "linear_attention",
+          "role": 2,
+          "logical_words": 786432,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 17,
+          "kind": "linear_attention",
+          "role": 1,
+          "logical_words": 40960,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 17,
+          "kind": "linear_attention",
+          "role": 2,
+          "logical_words": 786432,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 18,
+          "kind": "linear_attention",
+          "role": 1,
+          "logical_words": 40960,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 18,
+          "kind": "linear_attention",
+          "role": 2,
+          "logical_words": 786432,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 19,
+          "kind": "full_attention",
+          "role": 1,
+          "logical_words": 4194304,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 19,
+          "kind": "full_attention",
+          "role": 2,
+          "logical_words": 4194304,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 20,
+          "kind": "linear_attention",
+          "role": 1,
+          "logical_words": 40960,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 20,
+          "kind": "linear_attention",
+          "role": 2,
+          "logical_words": 786432,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 21,
+          "kind": "linear_attention",
+          "role": 1,
+          "logical_words": 40960,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 21,
+          "kind": "linear_attention",
+          "role": 2,
+          "logical_words": 786432,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 22,
+          "kind": "linear_attention",
+          "role": 1,
+          "logical_words": 40960,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 22,
+          "kind": "linear_attention",
+          "role": 2,
+          "logical_words": 786432,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 23,
+          "kind": "full_attention",
+          "role": 1,
+          "logical_words": 4194304,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 23,
+          "kind": "full_attention",
+          "role": 2,
+          "logical_words": 4194304,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 24,
+          "kind": "linear_attention",
+          "role": 1,
+          "logical_words": 40960,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 24,
+          "kind": "linear_attention",
+          "role": 2,
+          "logical_words": 786432,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 25,
+          "kind": "linear_attention",
+          "role": 1,
+          "logical_words": 40960,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 25,
+          "kind": "linear_attention",
+          "role": 2,
+          "logical_words": 786432,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 26,
+          "kind": "linear_attention",
+          "role": 1,
+          "logical_words": 40960,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 26,
+          "kind": "linear_attention",
+          "role": 2,
+          "logical_words": 786432,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 27,
+          "kind": "full_attention",
+          "role": 1,
+          "logical_words": 4194304,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 27,
+          "kind": "full_attention",
+          "role": 2,
+          "logical_words": 4194304,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 28,
+          "kind": "linear_attention",
+          "role": 1,
+          "logical_words": 40960,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 28,
+          "kind": "linear_attention",
+          "role": 2,
+          "logical_words": 786432,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 29,
+          "kind": "linear_attention",
+          "role": 1,
+          "logical_words": 40960,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 29,
+          "kind": "linear_attention",
+          "role": 2,
+          "logical_words": 786432,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 30,
+          "kind": "linear_attention",
+          "role": 1,
+          "logical_words": 40960,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 30,
+          "kind": "linear_attention",
+          "role": 2,
+          "logical_words": 786432,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 31,
+          "kind": "full_attention",
+          "role": 1,
+          "logical_words": 4194304,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 31,
+          "kind": "full_attention",
+          "role": 2,
+          "logical_words": 4194304,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 32,
+          "kind": "linear_attention",
+          "role": 1,
+          "logical_words": 40960,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 32,
+          "kind": "linear_attention",
+          "role": 2,
+          "logical_words": 786432,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 33,
+          "kind": "linear_attention",
+          "role": 1,
+          "logical_words": 40960,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 33,
+          "kind": "linear_attention",
+          "role": 2,
+          "logical_words": 786432,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 34,
+          "kind": "linear_attention",
+          "role": 1,
+          "logical_words": 40960,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 34,
+          "kind": "linear_attention",
+          "role": 2,
+          "logical_words": 786432,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 35,
+          "kind": "full_attention",
+          "role": 1,
+          "logical_words": 4194304,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 35,
+          "kind": "full_attention",
+          "role": 2,
+          "logical_words": 4194304,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 36,
+          "kind": "linear_attention",
+          "role": 1,
+          "logical_words": 40960,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 36,
+          "kind": "linear_attention",
+          "role": 2,
+          "logical_words": 786432,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 37,
+          "kind": "linear_attention",
+          "role": 1,
+          "logical_words": 40960,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 37,
+          "kind": "linear_attention",
+          "role": 2,
+          "logical_words": 786432,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 38,
+          "kind": "linear_attention",
+          "role": 1,
+          "logical_words": 40960,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 38,
+          "kind": "linear_attention",
+          "role": 2,
+          "logical_words": 786432,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 39,
+          "kind": "full_attention",
+          "role": 1,
+          "logical_words": 4194304,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 39,
+          "kind": "full_attention",
+          "role": 2,
+          "logical_words": 4194304,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 40,
+          "kind": "linear_attention",
+          "role": 1,
+          "logical_words": 40960,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 40,
+          "kind": "linear_attention",
+          "role": 2,
+          "logical_words": 786432,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 41,
+          "kind": "linear_attention",
+          "role": 1,
+          "logical_words": 40960,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 41,
+          "kind": "linear_attention",
+          "role": 2,
+          "logical_words": 786432,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 42,
+          "kind": "linear_attention",
+          "role": 1,
+          "logical_words": 40960,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 42,
+          "kind": "linear_attention",
+          "role": 2,
+          "logical_words": 786432,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 43,
+          "kind": "full_attention",
+          "role": 1,
+          "logical_words": 4194304,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 43,
+          "kind": "full_attention",
+          "role": 2,
+          "logical_words": 4194304,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 44,
+          "kind": "linear_attention",
+          "role": 1,
+          "logical_words": 40960,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 44,
+          "kind": "linear_attention",
+          "role": 2,
+          "logical_words": 786432,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 45,
+          "kind": "linear_attention",
+          "role": 1,
+          "logical_words": 40960,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 45,
+          "kind": "linear_attention",
+          "role": 2,
+          "logical_words": 786432,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 46,
+          "kind": "linear_attention",
+          "role": 1,
+          "logical_words": 40960,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 46,
+          "kind": "linear_attention",
+          "role": 2,
+          "logical_words": 786432,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 47,
+          "kind": "full_attention",
+          "role": 1,
+          "logical_words": 4194304,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 47,
+          "kind": "full_attention",
+          "role": 2,
+          "logical_words": 4194304,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 48,
+          "kind": "linear_attention",
+          "role": 1,
+          "logical_words": 40960,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 48,
+          "kind": "linear_attention",
+          "role": 2,
+          "logical_words": 786432,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 49,
+          "kind": "linear_attention",
+          "role": 1,
+          "logical_words": 40960,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 49,
+          "kind": "linear_attention",
+          "role": 2,
+          "logical_words": 786432,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 50,
+          "kind": "linear_attention",
+          "role": 1,
+          "logical_words": 40960,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 50,
+          "kind": "linear_attention",
+          "role": 2,
+          "logical_words": 786432,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 51,
+          "kind": "full_attention",
+          "role": 1,
+          "logical_words": 4194304,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 51,
+          "kind": "full_attention",
+          "role": 2,
+          "logical_words": 4194304,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 52,
+          "kind": "linear_attention",
+          "role": 1,
+          "logical_words": 40960,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 52,
+          "kind": "linear_attention",
+          "role": 2,
+          "logical_words": 786432,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 53,
+          "kind": "linear_attention",
+          "role": 1,
+          "logical_words": 40960,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 53,
+          "kind": "linear_attention",
+          "role": 2,
+          "logical_words": 786432,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 54,
+          "kind": "linear_attention",
+          "role": 1,
+          "logical_words": 40960,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 54,
+          "kind": "linear_attention",
+          "role": 2,
+          "logical_words": 786432,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 55,
+          "kind": "full_attention",
+          "role": 1,
+          "logical_words": 4194304,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 55,
+          "kind": "full_attention",
+          "role": 2,
+          "logical_words": 4194304,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 56,
+          "kind": "linear_attention",
+          "role": 1,
+          "logical_words": 40960,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 56,
+          "kind": "linear_attention",
+          "role": 2,
+          "logical_words": 786432,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 57,
+          "kind": "linear_attention",
+          "role": 1,
+          "logical_words": 40960,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 57,
+          "kind": "linear_attention",
+          "role": 2,
+          "logical_words": 786432,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 58,
+          "kind": "linear_attention",
+          "role": 1,
+          "logical_words": 40960,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 58,
+          "kind": "linear_attention",
+          "role": 2,
+          "logical_words": 786432,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 59,
+          "kind": "full_attention",
+          "role": 1,
+          "logical_words": 4194304,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 59,
+          "kind": "full_attention",
+          "role": 2,
+          "logical_words": 4194304,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 60,
+          "kind": "linear_attention",
+          "role": 1,
+          "logical_words": 40960,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 60,
+          "kind": "linear_attention",
+          "role": 2,
+          "logical_words": 786432,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 61,
+          "kind": "linear_attention",
+          "role": 1,
+          "logical_words": 40960,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 61,
+          "kind": "linear_attention",
+          "role": 2,
+          "logical_words": 786432,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 62,
+          "kind": "linear_attention",
+          "role": 1,
+          "logical_words": 40960,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 62,
+          "kind": "linear_attention",
+          "role": 2,
+          "logical_words": 786432,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 63,
+          "kind": "full_attention",
+          "role": 1,
+          "logical_words": 4194304,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "layer": 63,
+          "kind": "full_attention",
+          "role": 2,
+          "logical_words": 4194304,
+          "different_physical_rows": [
+            0,
+            1,
+            2,
+            3
+          ]
+        }
+      ],
+      "vectors": {
+        "hidden": [
+          {
+            "physical_row": 0,
+            "equal_scalars": 0,
+            "scalars": 5120,
+            "max_absolute_difference": 7.25689697265625,
+            "relative_l2_difference": 0.08699197115018162
+          },
+          {
+            "physical_row": 1,
+            "equal_scalars": 0,
+            "scalars": 5120,
+            "max_absolute_difference": 66.76553344726562,
+            "relative_l2_difference": 0.44082678453177204
+          },
+          {
+            "physical_row": 2,
+            "equal_scalars": 0,
+            "scalars": 5120,
+            "max_absolute_difference": 34.43437576293945,
+            "relative_l2_difference": 0.7913352143215333
+          },
+          {
+            "physical_row": 3,
+            "equal_scalars": 0,
+            "scalars": 5120,
+            "max_absolute_difference": 64.2572021484375,
+            "relative_l2_difference": 0.8171388450068461
+          }
+        ],
+        "normalized": [
+          {
+            "physical_row": 0,
+            "equal_scalars": 0,
+            "scalars": 5120,
+            "max_absolute_difference": 1.079973578453064,
+            "relative_l2_difference": 0.11307681184247328
+          },
+          {
+            "physical_row": 1,
+            "equal_scalars": 0,
+            "scalars": 5120,
+            "max_absolute_difference": 7.921212315559387,
+            "relative_l2_difference": 0.4248654763660854
+          },
+          {
+            "physical_row": 2,
+            "equal_scalars": 0,
+            "scalars": 5120,
+            "max_absolute_difference": 12.382974624633789,
+            "relative_l2_difference": 0.9585995811483514
+          },
+          {
+            "physical_row": 3,
+            "equal_scalars": 0,
+            "scalars": 5120,
+            "max_absolute_difference": 6.889369964599609,
+            "relative_l2_difference": 0.7260171225183852
+          }
+        ]
+      }
+    }
+  ],
+  "source_runtime_sdk_preserved": true,
+  "cause_established": false,
+  "harmlessness_or_equivalence_proven": false,
+  "performance_admitted": false,
+  "two_times_target_achieved": false,
+  "scope": "Only actual first completed four-row short case. Complete expanded logical-state hashes identify equality/difference; raw caches are not present. Raw hidden/normalized FP32 vectors permit exact scalar/norm differences. No per-layer arithmetic cause or numerical tolerance admission inferred."
+}

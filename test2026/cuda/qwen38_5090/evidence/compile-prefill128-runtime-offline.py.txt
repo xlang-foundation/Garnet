@@ -1,0 +1,46 @@
+"""Compile candidate CPU translation units to private objects; never link or run."""
+from pathlib import Path
+import hashlib,json,os,re,sys
+work=Path(__file__).resolve().parent;repo=Path('D:/CantorAI/work/qwen38-5090');m=repo/'test2026/cuda/qwen38_5090';e=m/'evidence'
+folder=work/'prefill128-runtime-development/offline-build';folder.mkdir(parents=True,exist_ok=True)
+sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+ninja=Path('D:/CantorAI/Garnet/out/build/x64-Release-vs18/build.ninja');lines=ninja.read_text().splitlines()
+index=next(i for i,line in enumerate(lines) if line.startswith('build ') and 'trt_builder.cpp.obj:' in line)
+line=next(line.strip().removeprefix('INCLUDES = ') for line in lines[index:index+8] if line.strip().startswith('INCLUDES = '))
+includes=[]
+for quoted,plain in re.findall(r'-I(?:"([^"]+)"|(\S+))',line):
+    path=Path(quoted or plain).resolve()
+    if path.is_relative_to(Path('D:/CantorAI/Garnet')):path=repo/path.relative_to(Path('D:/CantorAI/Garnet'))
+    assert path.is_dir() and not any(c in str(path) for c in '&|><%!"\r\n')
+    assert any(path.is_relative_to(Path(root)) for root in (str(repo),'D:/CantorAI/xlang3/sdk','D:/CantorAI/ThirdPartySDK/TensorRT','C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v13.2'))
+    if path not in includes:includes.append(path)
+records=[]
+for name in ('prefill128-native-runtime-derivation.json','prefill128-python-runtime-derivation.json'):
+    records+=json.loads((e/name).read_bytes())['files']
+inputs=[repo/row['target'] for row in records]+[m/'test_bf16_prefill128_runtime_contract.py',ninja]
+pins={str(path):sha(path) for path in inputs}
+sdk=[Path('D:/CantorAI/ThirdPartySDK/TensorRT/include')/name for name in ('NvInfer.h','NvInferRuntime.h','NvInferRuntimeCommon.h','NvInferRuntimeBase.h','NvInferPlugin.h','NvInferVersion.h')]
+sdk += [Path('C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v13.2/include')/name for name in ('cuda_runtime.h','cuda_runtime_api.h','cuda_bf16.h','cuda_bf16.hpp')]
+sdk.append(Path('D:/CantorAI/xlang3/sdk/xlang3/xlang3.h'))
+before={str(path):sha(path) for path in sdk}
+targets=[('src/backends/tensorrt/qwen38_bf16_prefill128_kv_overlay_plugin.cpp','prefill128-plugin.obj'),
+         ('src/backends/tensorrt/cuda_bf16_prefill128_kv_delta_commit.cpp','prefill128-commit-wrapper.obj'),
+         ('src/backends/tensorrt/trt_builder.cpp','prefill128-trt-builder.obj'),('src/entry/garnet.cpp','prefill128-entry.obj')]
+assert not any((folder/name).exists() for source,name in targets)
+vcvars=Path('C:/Program Files/Microsoft Visual Studio/18/Community/VC/Auxiliary/Build/vcvars64.bat');pins[str(vcvars)]=sha(vcvars)
+commands=['@echo off','setlocal','call "'+str(vcvars)+'" -vcvars_ver=14.29','if errorlevel 1 exit /b %errorlevel%',
+          'set "TMP='+str(folder)+'"','set "TEMP='+str(folder)+'"']
+include_flags=' '.join('/I"'+str(path)+'"' for path in includes)
+for source,name in targets:
+    commands+=['cl.exe /nologo /c /std:c++17 /EHsc /MT /utf-8 /bigobj /Zc:preprocessor /openmp /DGARNET_SERVING_EXPORTS=1 /DNOMINMAX /DXLANG3_USE_SHARED /Dgarnet_EXPORTS '+include_flags+' "'+str(repo/source)+'" /Fo"'+str(folder/name)+'" /Fd"'+str(folder/'private.pdb')+'"','if errorlevel 1 exit /b %errorlevel%']
+commands.append('exit /b 0');bat=folder/'compile-runtime.bat';bat.write_bytes(('\r\n'.join(commands)+'\r\n').encode())
+sys.path.insert(0,str(repo));import test2026.cuda.qwen38_5090.run_logged as ledger
+ledger.source_identity=lambda:{'scope':'Explicit owned offline candidate source inputs; unrelated untracked files excluded','owned_source_sha256':pins}
+os.chdir(repo)
+tests=['test2026.cuda.qwen38_5090.'+name for name in ('test_bf16_prefill128_runtime_contract','test_bf16_low_batch_model_contract','test_bf16_kv_model_contract')]
+cpu=ledger.run([sys.executable,'-m','unittest',*tests],folder/'cpu-ledger','correctness','New T128 flags/layout/full graph routing/native capability/factory/source provenance plus original B1/B4/B8 regression controls; no native runtime/GPU',[*inputs,vcvars])
+assert cpu==0
+code=ledger.run(['cmd.exe','/d','/c',str(bat)],folder/'build-ledger','build','Private CPU-only /c compilation of plugin/commit wrapper/TRT builder/entry; no link, executable, runtime, GPU or production build tree mutation',[*inputs,vcvars,bat,*sdk])
+assert pins=={name:sha(Path(name)) for name in pins} and before=={name:sha(Path(name)) for name in before}
+result={'status':'prefill128_runtime_private_cpu_objects_compiled' if code==0 else 'prefill128_runtime_private_cpu_compile_failure_preserved','exit_code':code,'cpu_tests':26,'source_and_build_input_sha256':pins,'sdk_before_after_unchanged':before,'objects':{name:sha(folder/name) for source,name in targets if (folder/name).exists()},'compile_recipe_sha256':sha(bat),'linked':False,'target_executable_run':False,'local_gpu_or_model_executed':False,'native_runtime_qualified':False,'model_or_http_qualified':False,'performance_admitted':False}
+(folder/'result.json').write_bytes(json.dumps(result,indent=2).encode());print(json.dumps({'status':result['status'],'exit_code':code,'cpu_tests':26,'objects':result['objects']}));raise SystemExit(code)

@@ -1,0 +1,62 @@
+{
+  "status": "prefill128_full_forward_runtime_candidate_cpu_compiled_gpu_unrun",
+  "native_and_python_candidate_source_files": 18,
+  "cpu_tests_passed": 26,
+  "cpu_integration_objects": {
+    "prefill128-plugin.obj": "8270118b529922d6a8cf5ff59224989debca859b8660343124a37725a714e7f1",
+    "prefill128-commit-wrapper.obj": "be08ef6d300fe2746c4c1d89f72f6227c8cfa5a7cf290453e32cbc404309298e",
+    "prefill128-trt-builder.obj": "b6423e9a53b0a4810b53d85b16aa3d9d2445de9816a9b091623b1f771848f60a",
+    "prefill128-entry.obj": "b407d43aa41f7e2aa515b5c8384b85087b2e40ab8aca6c4f9421f67ace34277e"
+  },
+  "runtime_or_sdk_or_production_build_mutated": false,
+  "linked": false,
+  "target_executable_run": false,
+  "full_forward_gpu_qualified": false,
+  "model_or_http_qualified": false,
+  "performance_admitted": false,
+  "two_times_target_achieved": false,
+  "strict_b8_reference_failure": {
+    "status": "b8_external_b4_strict_failure_preserved_on_both_machines",
+    "archive_sha256": "eaddf8987a88bfa37e422433c753399f42539bd378c1795fb8606e1cbc75e624",
+    "archive_bytes": 680157,
+    "proof_pair_sha256": "dbdc67c1bb23f479f5cc7b039db0a0ac4e2743513133fc3fa3a4a63e3fb08735",
+    "files_verified": 37,
+    "local_replay": {
+      "expected_exit_code": 1,
+      "actual_exit_code": 1,
+      "argv": [
+        "D:\\CantorAI\\Garnet\\.venv\\Scripts\\python.exe",
+        "D:\\CantorAI\\work\\qwen38-5090\\test2026\\cuda\\qwen38_5090\\verify_bf16_batch8_external_reference.py",
+        "--proofs",
+        "C:\\Users\\developer\\Documents\\Codex\\2026-10-23\\referenced-chatgpt-conversation-this-is-an\\outputs"
+      ],
+      "log_sha256": "5017f14cb7728cf9c42a0a36bd6c40fa41af5efe3cf191f1e1bf33000ce4b2d1"
+    },
+    "source_pins": 697,
+    "failure": "First four-row short case generated_ids differ; remaining17cases unrun",
+    "source_runtime_sdk_preserved": true,
+    "b8_external_math_or_mtp_or_http_qualified": false,
+    "performance_admitted": false,
+    "two_times_target_achieved": false
+  },
+  "failure_boundary_analysis": {
+    "first_different_component": {
+      "layer": 3,
+      "kind": "full_attention",
+      "role": 1,
+      "logical_words": 4194304,
+      "different_physical_rows": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    "first_different_generated_token": [
+      null,
+      0,
+      5,
+      5
+    ]
+  }
+}

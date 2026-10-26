@@ -146,6 +146,39 @@ def create_cuda_bf16_low_batch_study_decoder(checkpoint,config,capacity=4096,bat
         decoder.close();raise
 
 
+
+
+def create_cuda_bf16_prefill128_study_decoder(checkpoint,config,capacity=4096,batch=1):
+    """Explicit experimental B1 route; GPU/model/quality admission is separate."""
+    validate_cuda_profile(config,capacity,batch)
+    from xModel.qwen35.vl_0_8b.bf16_prefill128_kv_profile import validate_bf16_prefill128_kv_decoder
+    options=dict(retain_linear_inputs=True,deferred_state_commit=True,shared_output_storage=True,host_embedding_lookup=True,
+                 external_compressed_weights=True,joined_mlp_projections=True)
+    validate_bf16_prefill128_kv_decoder(True,batch,capacity,128,4,config['text_config'],low_batch_decode=True,**options)
+    import json
+    from xModel.qwen35.vl_0_8b.cuda_packed_decoder import CUDAPackedDecoder
+    decoder=CUDAPackedDecoder(checkpoint,config['text_config'],batch,capacity,128,4,
+        flat_concat=True,register_delta_128=True,bf16_kv_low_batch_state=True,bf16_kv_prefill128_study=True,**options)
+    try:
+        decoder.io.enable_nvfp4_head(True);pool=json.loads(decoder.io.memory_json())
+        if (pool['compressed_projection_pool_entries'],pool['compressed_nvfp4_entries'],pool['compressed_fp8_entries'])!=(336,128,208):
+            raise ValueError('B1 BF16 requires one shared128NVFP4/208FP8 joined projection pool')
+        if pool['embedding_mode']!='host_mapped_bf16' or pool['embedding_table_bytes']!=0 or pool['host_embedding_mapped_tensor_bytes']!=2542796800 or pool['head_precision']!='modelopt_nvfp4_w4a4':
+            raise ValueError('B1 BF16 requires the host-mapped BF16 embedding and native NVFP4 activation head')
+        physical=pool['compressed_projection_weight_bytes']+pool['compressed_projection_scale_bytes']
+        if set(decoder.programs)!={4,128}:raise ValueError('T128 BF16 requires exactly T4 decode and T128 prefill')
+        for size,program in decoder.programs.items():
+            expected='garnet_qwen38_bf16_prefill128_delta_study_v1' if size==128 else 'garnet_qwen38_bf16_low_batch_delta_study_v1'
+            if program.batch!=1 or program.delta_layout['chunk']!=size or program.delta_layout['contract']!=expected:
+                raise ValueError('B1 BF16 decoder used the wrong cache type or physical batch')
+            stats=json.loads(program.graph.stats_json())
+            if stats['native_nvfp4_projection_weights']!=128 or stats['native_fp8_projection_weights']!=208 or stats['external_bf16_weight_inputs']!=0 or stats['external_compressed_weight_inputs']!=336 or stats['external_compressed_weight_bytes']!=physical:
+                raise ValueError('B1 BF16 graph shared compressed projection contract mismatch')
+        return decoder
+    except:
+        decoder.close();raise
+
+
 def validate_cuda_batch_study_profile(config,capacity,batch):
     """Opt-in backend qualification only; not general serving admission."""
     validate_cuda_profile(config,capacity,1)
