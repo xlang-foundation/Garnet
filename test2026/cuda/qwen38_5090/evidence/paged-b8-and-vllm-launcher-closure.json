@@ -1,0 +1,88 @@
+{
+  "status": "paged_b8_preservation_closed_vllm_setup_failure_closed_launcher_fixed_attempt2_started",
+  "jobs": {
+    "paged-batch8-model-preservation-attempt1": {
+      "status": "paged_batch8_model_preservation_replayed",
+      "archive_sha256": "3bbec8c568cfcf5d7a1fdf7405b152b14593c2117cd4b4307094ddf5def00f76",
+      "archive_bytes": 7002650,
+      "files_verified": 92,
+      "proof_pair_sha256": "e87316f391f85419648842045f245495d2ea871e26614a3478c073e7b5aa5306",
+      "owner_exit_code": 0,
+      "cpu_tests": 26,
+      "cpu_unittest_seconds": 9.289,
+      "source_pins": 684,
+      "runtime_pins": 6,
+      "source_runtime_preserved": true,
+      "performance_admitted": false,
+      "cases": 9,
+      "complete_states": 29,
+      "raw_vectors": 58,
+      "actual_generated_ids": 6336,
+      "external_math_qualified": false,
+      "mtp_qualified": false,
+      "http_qualified": false,
+      "sdk_environment_pins": 15,
+      "correctness_resources_recomputed": {
+        "sampled_peak_adapter_used_bytes": 30854819840,
+        "samples": 95302,
+        "requested_interval_seconds": 0.02,
+        "observed_sample_gap_median_seconds": 0.031640600005630404,
+        "observed_sample_gap_max_seconds": 9.206485100003192,
+        "scope": "NVML adapter-wide used memory, including background allocations; sampled maximum, not instantaneous or process-attributed peak"
+      }
+    },
+    "vllm-fixed4k-ordinary-attempt1": {
+      "status": "reference_fixed4k_failure_preserved",
+      "archive_sha256": "43e1d905ebecf8ae4f56cbde3e5a928b9854c860c009d7ba9110c004616ded86",
+      "archive_bytes": 70565639,
+      "files_verified": 788,
+      "proof_pair_sha256": "699d13a9c8caa08400172ebebc36e0058a18cc68e2b9885849d19822abfba8ab",
+      "owner_exit_code": 1,
+      "cpu_tests": 43,
+      "cpu_unittest_seconds": 1.903,
+      "source_pins": 782,
+      "runtime_pins": 6,
+      "source_runtime_preserved": true,
+      "performance_admitted": false,
+      "server_exit_code": 127,
+      "benchmark_profiles": 0,
+      "model_ready": false,
+      "cause": "Ordinary launcher omitted from original deployment dependency manifest; no model or benchmark requests"
+    }
+  },
+  "launcher_installation": {
+    "status": "vllm_launcher_completion_installed",
+    "bundle_sha256": "a0fa1ceadf901ace3b1586032e11db7228d643e2a007cf7252e5910c91ed252d",
+    "all_source_pins_verified": 787,
+    "delta_targets": 6,
+    "replaced_preparer": [
+      {
+        "path": "Garnet/test2026/cuda/qwen38_5090/prepare_vllm_fixed4k_run.py",
+        "before_sha256": "5d2d39b223e24e52ace5fe6c3fc1dcf4dbee8f611dd9e8e9f181ec6637e8ef02",
+        "after_sha256": "69207c9440b739b050f06cf8de59f1a7729891346442c8256bdf4baf8091aa51"
+      }
+    ],
+    "backup_sha256": "5d2d39b223e24e52ace5fe6c3fc1dcf4dbee8f611dd9e8e9f181ec6637e8ef02",
+    "launcher_windows_exists": true,
+    "wsl_launcher_syntax_exit_code": 0,
+    "wsl_launcher_syntax_stdout": "",
+    "wsl_launcher_syntax_stderr": "",
+    "runtime_and_sdk_unchanged": true,
+    "gpu_executed": false,
+    "scope": "Complete missing ordinary launcher and immutable v2 preparation/checker/test fixtures. Preserve setup-failure attempt1 and original checker. Replace only exact hash-matched owned preparer; all other old source/RTE/SDK/model/corpus unchanged."
+  },
+  "completed_preparation_sha256": "dffbeaab7ef5885589246ec7d0392a71de1f14f5e0b3d148917d457bc4d5df74",
+  "local_completion_cpu_tests": 47,
+  "local_completion_unittest_seconds": 1.854,
+  "new_vllm_attempt": {
+    "id": "vllm-fixed4k-ordinary-attempt2",
+    "supervisor_session": 48577,
+    "observed_state": "running",
+    "actual_remote_cpu_tests": 47,
+    "actual_remote_cpu_unittest_seconds": 1.901,
+    "terminal_result": null,
+    "benchmark_admitted": false
+  },
+  "new_benchmark_result": false,
+  "two_times_target_achieved": false
+}

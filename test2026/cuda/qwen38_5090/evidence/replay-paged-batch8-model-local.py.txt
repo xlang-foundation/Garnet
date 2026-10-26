@@ -1,0 +1,12 @@
+from pathlib import Path
+import datetime,hashlib,json,subprocess,sys
+w=Path(__file__).resolve().parent;out=w.parent/'outputs';m=Path('D:/CantorAI/work/qwen38-5090/test2026/cuda/qwen38_5090');name='paged-batch8-model-preservation-attempt1'
+sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest();archive=out/(name+'-evidence.zip')
+assert sha(archive)=='3bbec8c568cfcf5d7a1fdf7405b152b14593c2117cd4b4307094ddf5def00f76'
+log=out/(name+'-local-replay.log');command=[sys.executable,str(m/'verify_paged_batch8_model.py'),'--proofs',str(out)]
+with log.open('xb') as stream:code=subprocess.run(command,stdout=stream,stderr=subprocess.STDOUT).returncode
+proof=out/(name+'-verified.json');result={'exit_code':code,'argv':command,'utc':datetime.datetime.now(datetime.timezone.utc).isoformat(),'archive_sha256':sha(archive),'log_sha256':sha(log),'gpu_model_rerun':False}
+if code==0:
+    q=json.loads(proof.read_bytes());assert q['status']=='paged_batch8_model_preservation_replayed';result.update(status=q['status'],proof_sha256=sha(proof),complete_states=q['preserved_model']['complete_states'],raw_vectors=q['preserved_model']['raw_vectors'])
+else:print(log.read_text(encoding='utf8',errors='replace')[-3500:])
+target=w/'paged-batch8-model-local-replay-receipt.json';assert not target.exists();target.write_bytes(json.dumps(result,indent=2).encode());print(json.dumps(result));raise SystemExit(code)

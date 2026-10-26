@@ -1,0 +1,108 @@
+{
+  "status": "paged_batch8_model_preservation_replayed",
+  "archive_sha256": "3bbec8c568cfcf5d7a1fdf7405b152b14593c2117cd4b4307094ddf5def00f76",
+  "files_verified": 92,
+  "library_sha256": "1a1d0229a1c0c24a8397a4dee7a614bcedf97b3bd3293e58d752ed7de30eb498",
+  "preserved_model": {
+    "status": "paged_batch8_retained_model_preserved",
+    "cases": [
+      {
+        "group": "short-mixed",
+        "repeat": 0,
+        "physical_rows": 8,
+        "actual_generated_ids_each": 8,
+        "all_input_ids_bound": true,
+        "complete_state_and_raw_vectors_inverse_permutation_exact": true
+      },
+      {
+        "group": "short-mixed",
+        "repeat": 1,
+        "physical_rows": 8,
+        "actual_generated_ids_each": 8,
+        "all_input_ids_bound": true,
+        "complete_state_and_raw_vectors_inverse_permutation_exact": true
+      },
+      {
+        "group": "short-mixed",
+        "repeat": 2,
+        "physical_rows": 8,
+        "actual_generated_ids_each": 8,
+        "all_input_ids_bound": true,
+        "complete_state_and_raw_vectors_inverse_permutation_exact": true
+      },
+      {
+        "group": "full4k-text",
+        "repeat": 0,
+        "physical_rows": 8,
+        "actual_generated_ids_each": 128,
+        "all_input_ids_bound": true,
+        "complete_state_and_raw_vectors_inverse_permutation_exact": true
+      },
+      {
+        "group": "full4k-text",
+        "repeat": 1,
+        "physical_rows": 8,
+        "actual_generated_ids_each": 128,
+        "all_input_ids_bound": true,
+        "complete_state_and_raw_vectors_inverse_permutation_exact": true
+      },
+      {
+        "group": "full4k-text",
+        "repeat": 2,
+        "physical_rows": 8,
+        "actual_generated_ids_each": 128,
+        "all_input_ids_bound": true,
+        "complete_state_and_raw_vectors_inverse_permutation_exact": true
+      },
+      {
+        "group": "full4k-image",
+        "repeat": 0,
+        "physical_rows": 8,
+        "actual_generated_ids_each": 128,
+        "all_input_ids_bound": true,
+        "complete_state_and_raw_vectors_inverse_permutation_exact": true
+      },
+      {
+        "group": "full4k-image",
+        "repeat": 1,
+        "physical_rows": 8,
+        "actual_generated_ids_each": 128,
+        "all_input_ids_bound": true,
+        "complete_state_and_raw_vectors_inverse_permutation_exact": true
+      },
+      {
+        "group": "full4k-image",
+        "repeat": 2,
+        "physical_rows": 8,
+        "actual_generated_ids_each": 128,
+        "all_input_ids_bound": true,
+        "complete_state_and_raw_vectors_inverse_permutation_exact": true
+      }
+    ],
+    "complete_states": 29,
+    "raw_vectors": 58,
+    "all_retained_states_vectors_tokens_exact": true,
+    "external_b1_b4_math_qualified": false,
+    "mtp_qualified": false,
+    "broad_quality_qualified": false,
+    "http_qualified": false,
+    "performance_admitted": false,
+    "two_times_target_achieved": false
+  },
+  "correctness_adapter_sampled_memory": {
+    "sampled_peak_adapter_used_bytes": 30854819840,
+    "samples": 95302,
+    "requested_interval_seconds": 0.02,
+    "observed_sample_gap_median_seconds": 0.031640600005630404,
+    "observed_sample_gap_max_seconds": 9.206485100003192,
+    "scope": "NVML adapter-wide used memory, including background allocations; sampled maximum, not instantaneous or process-attributed peak"
+  },
+  "external_b1_b4_math_qualified": false,
+  "mtp_qualified": false,
+  "broad_quality_qualified": false,
+  "http_qualified": false,
+  "serving_memory_saving_qualified": false,
+  "performance_admitted": false,
+  "two_times_target_achieved": false,
+  "scope": "Only replace full-prompt embeddings/copied rows/stacked tensors with admitted128two-page input source in existing baseline1a1d B8 BF16-cache/T32prefill/T4decode model. Same nine short/full3968+128text/image/original/rotated/reset cases, original decoder/vision/generation arithmetic unchanged. Require every input/token/complete canonical state and raw finite hidden/normalized vector match retained actual B8 baseline;29states/58vectors. Observe actual construction/correctness adapter memory with raw samples/gaps, not serving peak or causal savings. Baseline source/runtime/SDK unchanged. Existing B8 external B1/B4 math, MTP,805quality/HTTP/throughput/2x remain unqualified."
+}

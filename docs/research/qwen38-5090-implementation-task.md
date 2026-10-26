@@ -2703,3 +2703,77 @@ Added a fresh ordinary B4/T32/T4 full-FP32-cache/BF16-value producer for actual 
 Thirteen synthetic producer-AST/old-new gate/malformed metadata/shared-drift/vector/row-map/boolean/count controls passed in7.561s under a durable source-pinned CPU ledger. An additional CPU checker exercise used actual retained B8 bytes with explicitly synthetic F32-reference metadata; no new B4 model output was generated and no numerical equivalence is admitted. Actual preparation/owner/GPU run and two-machine archive replay still require current terminal/replayed B8 closure; the producer refuses to construct without that preparation/parent. See `evidence/b8-external-reference-probe-cpu-closure.json` and raw CPU logs. The old real full-cache B4 corpus proof retains its actual historical library97c36465 identity; it is not relabeled as current1a1d. New producer must run fresh on current baseline.
 
 Latest read-only original B8 observation contained all nine cases with exact inverse-permutation checks and no model error. At that observation, the original supervisor remained live, workflow status running, exit code absent, cleanup false and no archive yet. Final reset/complete replay/cleanup must still finish. Last image-order2 reset/prefill/final raw vectors were observed as163840bytes each; those files do not establish owner completion. Do not restart or run another model based on partial reports. Once original terminal/source/runtime/cleanup are observed, run the existing strict paged-B8 archive verifier on both machines, then start the prepared matched ordinary vLLM4K baseline. Tiled HTTP/B8 MTP, fresh B4 reference, wider-prefill GPU correctness, strongest tuned/MTP baselines,805quality/HTTP/repetitions/INT4/4B and overall2x/halfTTFT remain open.
+
+
+### 2026-10-25 — paged B8 model preservation closed; missing vLLM launcher fixed, fresh attempt2 started
+
+Original paged-batch8-model-preservation-attempt1 supervisor terminal0. All nine
+actual short/full3968+128 text/image and row-order cases preserve the retained
+ordinary B8 baseline: 29 complete canonical states, 58 raw finite hidden/normalized
+vectors, all input/output IDs/text and inverse permutations, plus final reset.
+6336 generated IDs total. Remote 26 CPU controls pass (exact raw elapsed retained).
+684 source pins, six runtime dependencies and 15 SDK/environment entries unchanged;
+owned worker gone/cache retired. Archive3bbec8c568cfcf5d7a1fdf7405b152b14593c2117cd4b4307094ddf5def00f76,
+7002650bytes/92files. Independent local/remote original-checker replay exit0;
+identical proof e87316f391f85419648842045f245495d2ea871e26614a3478c073e7b5aa5306.
+Freshly recomputed 95302 resource samples: peak30854819840bytes (28.73579GiB),
+median gap.031640600005630404s, max9.206485100003192s, requested interval.02s.
+This equals the old B8 whole-study sampled peak: no serving-memory saving or speed
+claim. Bounded input now preserves actual model arithmetic; B1/B4 independent math,
+MTP/805quality/HTTP performance still require fresh execution and admission.
+
+Matched vLLM ordinary attempt1 terminal1 was a setup failure: 43 CPU controls
+pass1.903s, WSL bash exits127 because serve_vllm_fixed4k.sh was absent from the
+deployed copy AND omitted from the prepared file manifest. No model ready, quality
+or benchmark requests. This was our deployment dependency omission, not evidence
+of model incompatibility. Archive43e1d905ebecf8ae4f56cbde3e5a928b9854c860c009d7ba9110c004616ded86,
+70565639bytes/788files. Independent original checker exits1 as expected on both
+machines; identical failure proof699d13a9c8caa08400172ebebc36e0058a18cc68e2b9885849d19822abfba8ab.
+Cleanup/source/runtime preserved. Original manifest and checker remain byte-exact.
+
+Corrected preparer explicitly requires launcher plus all named runtime/test-fixture
+dependencies and valid hashes before admission. Added missing-launcher regression,
+every-dependency/hash faults, LF recipe and exact unchanged replay-AST tests.
+Derived separate immutable launcher-completed checker, keeping all raw protocol,
+805quality/actual ID/SSE/cache/count/timing/VRAM/cleanup arithmetic unchanged.
+Initial CPU-only completed manifest was superseded to pin the original preparation
+fixture exercised by tests, before deployment; both versions and append-only logs
+retained. Final47CPU controls pass1.854s; final preparation pins787files, SHA
+dffbeaab7ef5885589246ec7d0392a71de1f14f5e0b3d148917d457bc4d5df74.
+Delta bundle a0fa1ceadf901ace3b1586032e11db7228d643e2a007cf7252e5910c91ed252d,
+45157bytes, six targets, exactly one hash-checked source replacement with backup;
+13 existing targets preserved. Installer terminal0, all787source pins verified,
+runtime/SDK unchanged. Actual WSL bash -n sees the launcher and exits0. Download
+receipt ACKed before new GPU work. No benchmark during installation/syntax check.
+
+Original48577 vllm-fixed4k-ordinary-attempt2 started under the completed preparation;
+actual remote47CPUcontrols pass1.901s and original supervisor observed running.
+Only this owner runs on the GPU; source/transfer freeze maintained while live.
+Terminal startup/805quality/full124stream results and independent replay pending.
+See paged-b8-and-vllm-launcher-closure.json and exact methods/raw ledgers/receipts.
+No new performance figure from these correctness/setup results. Matched vLLM4K,
+strongest tuned/MTP references, B8 math/MTP/serving, repeated trials, INT4/4B matched
+comparisons and overall2xdecode+throughput/halfTTFT remain open.
+
+
+### 2026-10-25 — actual closed B8 parent now bound to MTP trial; GPU execution pending
+
+The unchanged MTP preparer now consumes the actual two-machine closed paged B8
+ordinary parent e87316f3/archive3bbec8c5, not a hypothetical/synthetic parent.
+All immutable archive members verified; 693source pins and actual parent/runtime/
+SDK identities bound. Fresh30CPUcontrols pass12.566s. Preparation
+d87e3d2bd123d449802b2be71fde229aee138c016e495b81aac725742413240b.
+Absent-only ten-target methods packagef249f76305a0066668d7aa793ed6c662d11080ba31251cef4ef4a05e8a571b09
+(48326bytes), installer6d89538cd39c35769e8a3385ee324621eac52718e702db05a1cd65aba3c3cc01.
+Installer is an exact seven-substitution derivative of the previously executed
+ordinary B8 installer, with parent/status/preparation/package/receipt and count
+changed; same all-source/runtime/SDK and resolved-path/absent-target checks.
+No remote upload/install/start while the exclusive vLLM reference owner is live.
+
+Future actual B8 MTP trial uses existing depth3/T4/prefix-replay session with
+128MiB, bounded128/two-page input and unchanged ordinary target arithmetic.
+All nine cases, 29complete target states/58raw vectors and all IDs must match the
+actual closed ordinary run; actual model/draft/vision fit is required. No natural
+stop/805quality/HTTP or performance admission is implied by this preparation.
+The independent B4 full-cache reference producer remains prepared separately;
+shared operator numerical drift still requires that fresh reference gate.

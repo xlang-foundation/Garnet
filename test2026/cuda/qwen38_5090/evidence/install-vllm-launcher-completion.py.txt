@@ -1,0 +1,53 @@
+from pathlib import Path
+import argparse,hashlib,json,subprocess,sys,zipfile
+root=Path('D:/CantorAI/5090-study-20261023');methods=root/'Garnet/test2026/cuda/qwen38_5090';sys.path.insert(0,str(methods))
+from run_bf16_low_batch_native_build import idle
+sha=lambda raw:hashlib.sha256(raw).hexdigest()
+a=argparse.ArgumentParser();a.add_argument('--sha256',required=True);args=a.parse_args()
+archive=root/'results/vllm-fixed4k-launcher-completion-methods.zip';assert sha(archive.read_bytes())==args.sha256
+receipt=root/'results/vllm-launcher-completion-install.json';backup=root/'results/vllm-launcher-completion-preparer-before.py.txt'
+assert not receipt.exists() and not backup.exists();idle()
+failed='vllm-fixed4k-ordinary-attempt1';proof=root/'results'/(failed+'-verified.json');q=json.loads(proof.read_bytes());closed=json.loads((root/'results'/failed/'workflow.json').read_bytes())
+assert sha(proof.read_bytes())=='699d13a9c8caa08400172ebebc36e0058a18cc68e2b9885849d19822abfba8ab' and q['status']=='reference_fixed4k_failure_preserved' and q['profiles']==[]
+assert sha((root/'results'/(failed+'-evidence.zip')).read_bytes())==q['archive_sha256']=='43e1d905ebecf8ae4f56cbde3e5a928b9854c860c009d7ba9110c004616ded86'
+assert closed['exit_code']==1 and closed['server_exit_code']==127 and closed['cleanup_finished'] is True and closed['source_sha256']==closed['source_after_sha256'] and closed['runtime_dependencies']==closed['runtime_dependencies_after']
+with zipfile.ZipFile(archive) as z:
+    manifest=json.loads(z.read('install-manifest.json'));assert z.testzip() is None and len(z.namelist())==len(set(z.namelist()))==len(manifest['files'])+1==7
+    key='Garnet/test2026/cuda/qwen38_5090/evidence/vllm-fixed4k-launcher-completed-preparation.json';p=json.loads(z.read(key));assert p['preparation_version']=='launcher_dependencies_complete_v2'
+    for n,h in p['files'].items():
+        if n not in manifest['files']:assert sha((root/n).read_bytes())==h,('Preserved input drift',n)
+    for n,h in p['runtime_dependencies'].items():assert sha((root/'build/bin'/n).read_bytes())==h
+    for n,h in p['environment'].items():assert sha(Path(n).read_bytes())==h
+    rows=[];changed=[]
+    for n,operation in manifest['files'].items():
+        target=root/n;assert target.resolve().is_relative_to(methods.resolve()) and target.parent.is_dir()
+        parent=target.parent
+        while parent!=root:
+            assert parent.resolve().is_relative_to(root.resolve()) and not(getattr(parent.lstat(),'st_file_attributes',0)&0x400);parent=parent.parent
+        raw=z.read(n);assert sha(raw)==operation['sha256']
+        if n!=key:assert p['files'][n]==operation['sha256']
+        if operation['before_sha256'] is None:assert not target.exists(),('Preserve unexpected existing target',n)
+        else:
+            assert n=='Garnet/test2026/cuda/qwen38_5090/prepare_vllm_fixed4k_run.py' and sha(target.read_bytes())==operation['before_sha256']=='5d2d39b223e24e52ace5fe6c3fc1dcf4dbee8f611dd9e8e9f181ec6637e8ef02'
+            changed.append({'path':n,'before_sha256':operation['before_sha256'],'after_sha256':operation['sha256']})
+            with backup.open('xb') as stream:stream.write(target.read_bytes())
+        rows.append((target,raw,operation))
+    assert len(changed)==1
+    for target,raw,operation in sorted(rows,key=lambda v:v[2]['before_sha256'] is not None):
+        if operation['before_sha256'] is None:
+            with target.open('xb') as stream:stream.write(raw)
+        else:
+            staging=target.with_name(target.name+'.launcher-completion.tmp');assert not staging.exists() and staging.resolve().is_relative_to(methods.resolve())
+            with staging.open('xb') as stream:stream.write(raw)
+            assert sha(staging.read_bytes())==operation['sha256'];staging.replace(target)
+        assert sha(target.read_bytes())==operation['sha256']
+for n,h in p['files'].items():assert sha((root/n).read_bytes())==h
+for n,h in p['runtime_dependencies'].items():assert sha((root/'build/bin'/n).read_bytes())==h
+for n,h in p['environment'].items():assert sha(Path(n).read_bytes())==h
+command=['wsl.exe','-d','Ubuntu-24.04','--','bash','-n','/mnt/d/CantorAI/5090-study-20261023/Garnet/test2026/cuda/qwen38_5090/serve_vllm_fixed4k.sh']
+checked=subprocess.run(command,capture_output=True,text=True,timeout=120)
+assert checked.returncode==0,('Actual WSL launcher path/syntax failed',checked.stderr)
+result={'status':'vllm_launcher_completion_installed','bundle_sha256':args.sha256,'all_source_pins_verified':len(p['files']),'delta_targets':len(rows),'replaced_preparer':changed,'backup_sha256':sha(backup.read_bytes()),
+        'launcher_windows_exists':(methods/'serve_vllm_fixed4k.sh').is_file(),'wsl_launcher_syntax_exit_code':checked.returncode,'wsl_launcher_syntax_stdout':checked.stdout,'wsl_launcher_syntax_stderr':checked.stderr,
+        'runtime_and_sdk_unchanged':True,'gpu_executed':False,'scope':manifest['scope']}
+receipt.write_bytes(json.dumps(result,indent=2).encode());print(json.dumps(result))

@@ -1,0 +1,20 @@
+from pathlib import Path
+import hashlib,json,zipfile
+w=Path(__file__).resolve().parent;m=Path('D:/CantorAI/work/qwen38-5090/test2026/cuda/qwen38_5090');sha=lambda raw:hashlib.sha256(raw).hexdigest()
+old_path=m/'evidence/vllm-fixed4k-run-preparation.json';old=json.loads(old_path.read_bytes());existing={**old['files'],'Garnet/test2026/cuda/qwen38_5090/evidence/'+old_path.name:sha(old_path.read_bytes())}
+plan=json.loads((w/'vllm-fixed4k-launcher-completed-upload-plan.json').read_bytes());payload={};operations={};matching=0
+allowed='Garnet/test2026/cuda/qwen38_5090/prepare_vllm_fixed4k_run.py'
+for row in plan['uploads']:
+    raw=Path(row['local']).read_bytes();assert sha(raw)==row['sha256'];before=existing.get(row['target'])
+    if before==row['sha256']:matching+=1;continue
+    if before is not None:assert row['target']==allowed
+    payload[row['target']]=raw;operations[row['target']]={'before_sha256':before,'sha256':row['sha256']}
+assert matching==13 and len(payload)==6 and sum(v['before_sha256'] is not None for v in operations.values())==1
+manifest={'files':operations,'scope':'Complete missing ordinary launcher and immutable v2 preparation/checker/test fixtures. Preserve setup-failure attempt1 and original checker. Replace only exact hash-matched owned preparer; all other old source/RTE/SDK/model/corpus unchanged.'}
+archive=w/'vllm-fixed4k-launcher-completion-methods.zip';assert not archive.exists()
+with zipfile.ZipFile(archive,'x',zipfile.ZIP_DEFLATED) as z:
+    for n,raw in payload.items():z.writestr(n,raw)
+    z.writestr('install-manifest.json',json.dumps(manifest,indent=2))
+result={'status':'vllm_launcher_completion_delta_prepared','bundle_sha256':sha(archive.read_bytes()),'bytes':archive.stat().st_size,'delta_targets':6,'identical_targets_preserved':13,'changed_existing_sources':1,
+        'installer_sha256':sha((w/'install-vllm-launcher-completion.py').read_bytes())}
+(w/'vllm-launcher-completion-bundle-preparation.json').write_bytes(json.dumps(result,indent=2).encode());print(json.dumps(result))
