@@ -1,0 +1,16 @@
+Traceback (most recent call last):
+  File "D:\CantorAI\5090-study-20261023\Garnet\test2026\cuda\qwen38_5090\verify_fp8_z128_stage_trace.py", line 56, in <module>
+    if __name__=='__main__':raise SystemExit(main())
+                                             ^^^^^^
+  File "D:\CantorAI\5090-study-20261023\Garnet\test2026\cuda\qwen38_5090\verify_fp8_z128_stage_trace.py", line 47, in main
+    report=json.loads(z.read(base+'native/report.json'));assert report['candidate_library_sha256']==p['candidate_library_sha256'] and report['input_ids']==json.loads(z.read(PREFIX+'evidence/native-host-stage-cases.json'))['cases'][0]['prompt_ids'][:128]
+                                                                                                                                                                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Python312\Lib\zipfile\__init__.py", line 1567, in read
+    with self.open(name, "r", pwd) as fp:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Python312\Lib\zipfile\__init__.py", line 1604, in open
+    zinfo = self.getinfo(name)
+            ^^^^^^^^^^^^^^^^^^
+  File "C:\Python312\Lib\zipfile\__init__.py", line 1532, in getinfo
+    raise KeyError(
+KeyError: "There is no item named 'Garnet/test2026/cuda/qwen38_5090/evidence/native-host-stage-cases.json' in the archive"
