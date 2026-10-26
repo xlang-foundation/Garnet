@@ -3191,3 +3191,52 @@ private tools/bf16-kv-native build reused; existing binaries/objects are never
 overwritten. Full T128 forward operators/runtime integration/model/805quality/
 HTTP, B8 math/MTP/HTTP, strongest tuned references/repetitions, INT4/4B and overall
 2xdecode+throughput/halfTTFT remain open. No chart or benchmark changed.
+
+
+### 2026-10-25 — T128 commit actual GPU cases and remote raw full-state replay passed; vLLM observed client ready
+
+Actual prefill128-commit-component-attempt1 owner exit0 and cleanup completed.
+Remote10CPUcontrols pass.094s; actual compiler13.2.78/MSVC14.44.35207 builds/links
+standalone SM120 executable. Actual GPU probe completes16valid,35invalid cases
+and3replays of one captured two-node graph; every complete canonical state,
+canary and per-call target readonly comparison passes C++ CPU oracle. Source24,
+runtime6, inheritedSDK15 and eight directly observed SDK files remain unchanged.
+Garnet library/runtime was not loaded or replaced. Archive
+2f28fd531f0d01ffd8c267be355d8a9102cd626f8c7aa9f369b78ebc820d0eea,224386502bytes/90members.
+
+Remote independent NumPy replay completes exit0: all51actual canonical outputs
+reconstructed losslessly,5448010944uint32words checked against declarative layout
+and integer BF16 round-to-even oracle. Full target input/final snapshots exactly
+match the independent fixture;51per-call readonly checks remain source-pinned
+C++ observations. All16valid/35invalid/3graph cases, guards, archived methods and
+parent/source/runtime/SDK/owned cleanup pass. Remote proofa892c87a48b64fb1a82d7491b8d3078e2197f7efbaa7a14b93ff1c94225943d9.
+Correctness-only sampled adapter peak1631006720bytes,367samples, median gap
+.031640549990697764s/max.035658600012538955s. This is a standalone component,
+not model/serving memory or speed. Full T128 forward/runtime/model/HTTP remains
+unimplemented/unqualified. Local224MBarchive transfer95279 remains live; no
+second-machine full-state closure or performance claim until transfer ACK/hash/
+same-checker replay. Preserve existing original handle; never restart for a wait.
+
+Prepared separate vLLM observed-output policy/benchmark/probe by recorded exact
+derivation from the already exercised SGLang methods, using actual vLLM JSON ID
+schema and vLLM4K boundary controls. New policy record_vllm_stream_text_variants_v1
+requires this engine's actual closed288diagnosis, serial restoration, color/
+spatial/overlap coverage, every archive/source/PID/cleanup proof, and stable
+vLLM0.32.0 settings/4096context/zeroreservedslots/37774cachetokens/config-source/
+checkpoint/launcher identity. It does not inherit SGLang's4098/two-slot policy.
+Original strict and SGLang code unchanged. Every later text variation gets a
+sidecar after timing/sampling; counts, actual serial IDs, cache reset/counters,
+full128length and raw stream accounting remain strict. No inferred streamed IDs
+or numerical/quality equivalence. Direct admission of actual two-machine vLLM
+diagnosis succeeds; this does not admit a benchmark result.
+
+Nine CPU controls pass7.636s: closed-profile/source/context/cache/dtype drift,
+serial-restoration and provenance faults, exact/changed text sidecars, strict
+126token clamp rejection, plus synthetic124nonstream ID controls and124raw HTTP
+streams spanning eight cohorts. Synthetic vLLM reset hooks assert controls precede
+timing and all streams precede post-run counter check. Original protocol helper
+AST remains identical; comparisons/hashes occur only after sampler closure.
+These fixture timings/memory/requests are not real model benchmark evidence.
+No actual observed-output vLLM benchmark requests. Owner/preparer/full closed
+benchmark checker still need implementation before actual baseline collection.
+Published comparison chart unchanged; overall2x/halfTTFT objectives unmet/unproven.

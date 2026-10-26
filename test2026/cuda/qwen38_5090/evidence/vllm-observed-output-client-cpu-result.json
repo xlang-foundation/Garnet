@@ -1,0 +1,26 @@
+{
+  "status": "vllm_observed_output_client_cpu_passed_actual_closed_profile_bound_gpu_unrun",
+  "cpu_tests": 9,
+  "source_sha256": {
+    "reference_vllm_observed_output.py": "6df3cbf474bad595aa4e25e08ed75a3a3389f759aac952d516f49c4543b39d81",
+    "benchmark_vllm_observed_output.py": "3dc5c19a29c50e843f0f59576f09b4ec8a3eb99c1014d7beb74396ee447efe11",
+    "probe_vllm_observed_fixed4k.py": "c343b0a7032bb4b56773c88509e18a454fb70cccf105a7b6f9d20f8e988e5891",
+    "test_reference_vllm_observed_output.py": "bf8ce120f6616af94ae43ada0a133fec97397128f193af46d40d5520032e897a",
+    "test_vllm_observed_output_benchmark_http.py": "cd89442094a1b2af34ac75cba00357be2f2867f1fa236f4fc7330f882d18ad17",
+    "evidence/vllm-observed-output-client-derivation.json": "7a4ec82879d1f3e8816e39504852f593007effd1d914c6f71db5047ef8dff144"
+  },
+  "actual_observation_admission": {
+    "status": "closed_observed_output_profile_bound",
+    "policy": "record_vllm_stream_text_variants_v1",
+    "characterization_proof_sha256": "4be4865b75a2b75f020f4371f072ef31153327bb72fef27d3c70aec6ca389f3b",
+    "characterization_archive_sha256": "2cf6104c43b63f7770edb4329edc8d198dee0bb875a3bc1ccbacf5d313e3223e",
+    "streamed_ids_observed": false,
+    "numerical_cause_or_harmlessness_proven": false,
+    "broad_quality_equivalence_proven": false,
+    "scope": "Same owned ordinary vLLM/checkpoint/precision/cache/context/launcher profile as the independently replayed288request output/isolation diagnosis. Record every later stream-text variant versus actual serial ID controls; retain strict counts/usage/prompt IDs and separate semantic/quality controls. No performance, mathematical-equivalence or harmlessness admission."
+  },
+  "real_benchmark_requests": 0,
+  "owner_preparer_closed_benchmark_checker_implemented": false,
+  "performance_admitted": false,
+  "two_times_target_achieved": false
+}

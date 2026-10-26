@@ -1,0 +1,23 @@
+from pathlib import Path
+import hashlib,json,os,sys,zipfile
+work=Path(__file__).resolve().parent;out=work.parent/'outputs';repo=Path('D:/CantorAI/work/qwen38-5090');m=repo/'test2026/cuda/qwen38_5090'
+sys.path[:0]=[str(repo),str(m)];sha=lambda b:hashlib.sha256(b).hexdigest()
+import test2026.cuda.qwen38_5090.run_logged as ledger
+from test2026.cuda.qwen38_5090.reference_vllm_observed_output import admit_observation
+files=('reference_vllm_observed_output.py','benchmark_vllm_observed_output.py','probe_vllm_observed_fixed4k.py',
+       'test_reference_vllm_observed_output.py','test_vllm_observed_output_benchmark_http.py','evidence/vllm-observed-output-client-derivation.json')
+pins={n:sha((m/n).read_bytes()) for n in files}
+ledger.source_identity=lambda:{'scope':'explicit owned observed-output client inputs; unrelated untracked files excluded','owned_source_sha256':pins}
+os.chdir(repo);code=ledger.run([sys.executable,'-m','unittest','test2026.cuda.qwen38_5090.test_reference_vllm_observed_output',
+    'test2026.cuda.qwen38_5090.test_vllm_observed_output_benchmark_http'],work/'vllm-observed-output-client-cpu-ledger','correctness',
+    'Synthetic closed-profile/variant/budget/source/counter faults,124serial ID controls plus124raw local HTTP streams, deferred sidecars and126token clamp rejection. No GPU/model benchmark.',[m/n for n in files]);assert code==0
+job='vllm-output-characterization-attempt1';proof=(out/(job+'-verified.json')).read_bytes();archive=(out/(job+'-evidence.zip')).read_bytes()
+assert proof==(out/(job+'-remote-verified.json')).read_bytes()
+with zipfile.ZipFile(out/(job+'-evidence.zip')) as z:metadata=json.loads(z.read('results/'+job+'/metadata.json'))
+admitted=admit_observation(proof,archive,metadata)
+assert admitted['policy']=='record_vllm_stream_text_variants_v1'
+r={'status':'vllm_observed_output_client_cpu_passed_actual_closed_profile_bound_gpu_unrun','cpu_tests':9,'source_sha256':pins,
+   'actual_observation_admission':admitted,'real_benchmark_requests':0,'owner_preparer_closed_benchmark_checker_implemented':False,
+   'performance_admitted':False,'two_times_target_achieved':False}
+(work/'vllm-observed-output-client-cpu-result.json').write_bytes(json.dumps(r,indent=2).encode())
+print(json.dumps({k:r[k] for k in ('status','cpu_tests','real_benchmark_requests','performance_admitted')}))

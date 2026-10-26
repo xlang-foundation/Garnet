@@ -1,0 +1,82 @@
+from pathlib import Path
+import datetime,hashlib,json
+work=Path(__file__).resolve().parent;out=work.parent/'outputs';repo=Path('D:/CantorAI/work/qwen38-5090');m=repo/'test2026/cuda/qwen38_5090';e=m/'evidence'
+sha=lambda b:hashlib.sha256(b).hexdigest()
+
+def keep(path,raw):
+    assert not path.exists() or path.read_bytes()==raw,path
+    if not path.exists():path.write_bytes(raw)
+
+job='prefill128-commit-component-attempt1';remote=out/(job+'-remote-verified.json');q=json.loads(remote.read_bytes())
+assert q['status']=='prefill128_commit_component_full_state_replayed' and q['files_verified']==90
+r=q['full_state_replay'];assert (r['valid_cases'],r['invalid_cases'],r['graph_replays'])==(16,35,3)
+assert r['full_canonical_words_replayed']==106823744*51 and r['runtime_or_model_qualified'] is False
+keep(e/(job+'-remote-verified.json'),remote.read_bytes())
+client=json.loads((work/'vllm-observed-output-client-cpu-result.json').read_bytes());assert client['cpu_tests']==9 and client['real_benchmark_requests']==0
+for name in ('derive-vllm-observed-output-client.py','check-vllm-observed-output-client-cpu.py','retain-prefill128-remote-replay-and-vllm-observed-client.py'):
+    keep(e/(name+'.txt'),(work/name).read_bytes())
+keep(e/'vllm-observed-output-client-cpu-result.json',(work/'vllm-observed-output-client-cpu-result.json').read_bytes())
+for f in (work/'vllm-observed-output-client-cpu-ledger').iterdir():
+    if f.is_file():keep(e/('vllm-observed-output-client-cpu-ledger-'+f.name),f.read_bytes())
+result={'status':'t128_component_remote_full_state_replay_passed_local_archive_transfer_running',
+        'observed_utc':datetime.datetime.now(datetime.timezone.utc).isoformat(),'remote_component_proof':q,'remote_proof_sha256':sha(remote.read_bytes()),
+        'archive_bytes_expected':224386502,'local_archive_bytes_observed':(out/(job+'-evidence.zip')).stat().st_size,
+        'archive_transfer_session':95279,'local_full_state_replay_complete':False,
+        'vllm_observed_client':client,'comparison_chart_changed':False,'two_times_target_achieved':False}
+raw=json.dumps(result,indent=2).encode();keep(e/'prefill128-remote-replay-and-vllm-observed-client.json',raw)
+keep(out/'Garnet-T128-Remote-Replay-and-vLLM-Client-Status.json',raw)
+text='''
+
+### 2026-10-25 — T128 commit actual GPU cases and remote raw full-state replay passed; vLLM observed client ready
+
+Actual prefill128-commit-component-attempt1 owner exit0 and cleanup completed.
+Remote10CPUcontrols pass.094s; actual compiler13.2.78/MSVC14.44.35207 builds/links
+standalone SM120 executable. Actual GPU probe completes16valid,35invalid cases
+and3replays of one captured two-node graph; every complete canonical state,
+canary and per-call target readonly comparison passes C++ CPU oracle. Source24,
+runtime6, inheritedSDK15 and eight directly observed SDK files remain unchanged.
+Garnet library/runtime was not loaded or replaced. Archive
+COMPONENT_ARCHIVE_SHA,224386502bytes/90members.
+
+Remote independent NumPy replay completes exit0: all51actual canonical outputs
+reconstructed losslessly,5448010944uint32words checked against declarative layout
+and integer BF16 round-to-even oracle. Full target input/final snapshots exactly
+match the independent fixture;51per-call readonly checks remain source-pinned
+C++ observations. All16valid/35invalid/3graph cases, guards, archived methods and
+parent/source/runtime/SDK/owned cleanup pass. Remote proofCOMPONENT_PROOF_SHA.
+Correctness-only sampled adapter peak1631006720bytes,367samples, median gap
+.031640549990697764s/max.035658600012538955s. This is a standalone component,
+not model/serving memory or speed. Full T128 forward/runtime/model/HTTP remains
+unimplemented/unqualified. Local224MBarchive transfer95279 remains live; no
+second-machine full-state closure or performance claim until transfer ACK/hash/
+same-checker replay. Preserve existing original handle; never restart for a wait.
+
+Prepared separate vLLM observed-output policy/benchmark/probe by recorded exact
+derivation from the already exercised SGLang methods, using actual vLLM JSON ID
+schema and vLLM4K boundary controls. New policy record_vllm_stream_text_variants_v1
+requires this engine's actual closed288diagnosis, serial restoration, color/
+spatial/overlap coverage, every archive/source/PID/cleanup proof, and stable
+vLLM0.32.0 settings/4096context/zeroreservedslots/37774cachetokens/config-source/
+checkpoint/launcher identity. It does not inherit SGLang's4098/two-slot policy.
+Original strict and SGLang code unchanged. Every later text variation gets a
+sidecar after timing/sampling; counts, actual serial IDs, cache reset/counters,
+full128length and raw stream accounting remain strict. No inferred streamed IDs
+or numerical/quality equivalence. Direct admission of actual two-machine vLLM
+diagnosis succeeds; this does not admit a benchmark result.
+
+Nine CPU controls pass7.636s: closed-profile/source/context/cache/dtype drift,
+serial-restoration and provenance faults, exact/changed text sidecars, strict
+126token clamp rejection, plus synthetic124nonstream ID controls and124raw HTTP
+streams spanning eight cohorts. Synthetic vLLM reset hooks assert controls precede
+timing and all streams precede post-run counter check. Original protocol helper
+AST remains identical; comparisons/hashes occur only after sampler closure.
+These fixture timings/memory/requests are not real model benchmark evidence.
+No actual observed-output vLLM benchmark requests. Owner/preparer/full closed
+benchmark checker still need implementation before actual baseline collection.
+Published comparison chart unchanged; overall2x/halfTTFT objectives unmet/unproven.
+'''
+text=text.replace('COMPONENT_ARCHIVE_SHA',q['archive_sha256']).replace('COMPONENT_PROOF_SHA',sha(remote.read_bytes()))
+for name in ('qwen38-5090-development-log.md','qwen38-5090-implementation-task.md'):
+    path=repo/'docs/research'/name;raw=path.read_bytes()
+    if b'T128 commit actual GPU cases and remote raw full-state replay passed; vLLM observed client ready' not in raw:path.write_bytes(raw+text.encode())
+print(json.dumps({'status':result['status'],'remote_full_state_words':r['full_canonical_words_replayed'],'client_cpu_tests':9,'new_benchmark_result':False}))

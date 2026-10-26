@@ -1,0 +1,185 @@
+{
+  "derivations": [
+    {
+      "source": "reference_observed_output.py",
+      "source_sha256": "ee7dcb9577f6fe97838951c0fc40e02abf05dafc413b1945faa01b6bf5c5904c",
+      "target": "reference_vllm_observed_output.py",
+      "target_sha256": "6df3cbf474bad595aa4e25e08ed75a3a3389f759aac952d516f49c4543b39d81",
+      "replacements": [
+        {
+          "old": "STABLE_METADATA=('engine','generation_mode','verified_settings','context_capacity','image_cache_policy','checkpoint_revision','context_capacity_semantics','configured_engine_context_capacity','engine_context_reserved_slots','configured_engine_token_pool','installed_context_limit_identity_sha256','launcher_sha256','native_http_proof_sha256')",
+          "new": "STABLE_METADATA=('engine', 'generation_mode', 'version', 'verified_settings', 'actual_cudagraph_mode', 'context_capacity', 'image_cache_policy', 'checkpoint_revision', 'configured_engine_context_capacity', 'engine_context_reserved_slots', 'resolved_kv_cache_tokens', 'reported_max_concurrency_full4k', 'installed_config_identity_sha256', 'launcher_sha256', 'native_http_proof_sha256')",
+          "count": 1
+        },
+        {
+          "old": "assert proof['configured_engine_context_capacity']==4098 and proof['actual_workload_context_capacity']==4096 and proof['engine_context_reserved_slots']==2 and proof['performance_admitted'] is proof['two_times_target_achieved'] is False",
+          "new": "assert proof['performance_admitted'] is proof['two_times_target_achieved'] is False\n    assert metadata['configured_engine_context_capacity']==4096 and metadata['engine_context_reserved_slots']==0 and metadata['version']=='0.32.0'",
+          "count": 1
+        },
+        {
+          "old": "record_stream_text_variants_v1",
+          "new": "record_vllm_stream_text_variants_v1",
+          "count": 2
+        },
+        {
+          "old": "sglang",
+          "new": "vllm",
+          "count": 4
+        },
+        {
+          "old": "SGLang",
+          "new": "vLLM",
+          "count": 2
+        }
+      ]
+    },
+    {
+      "source": "benchmark_observed_output_reference.py",
+      "source_sha256": "03448890e27b868a293ae68cc3ee9d6badad0947d24b83d3d461a3b36dacba8a",
+      "target": "benchmark_vllm_observed_output.py",
+      "target_sha256": "3dc5c19a29c50e843f0f59576f09b4ec8a3eb99c1014d7beb74396ee447efe11",
+      "replacements": [
+        {
+          "old": "reference_observed_output",
+          "new": "reference_vllm_observed_output",
+          "count": 1
+        },
+        {
+          "old": "assert args.engine=='sglang'",
+          "new": "assert args.engine=='vllm'",
+          "count": 1
+        },
+        {
+          "old": "Same ordinary SGLang profile",
+          "new": "Same ordinary vLLM profile",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "probe_reference_observed_fixed4k.py",
+      "source_sha256": "3f9f5631c6dd789d5f89ad1ba985b9c76e89a37f51c238621c510c6a2acc088f",
+      "target": "probe_vllm_observed_fixed4k.py",
+      "target_sha256": "c343b0a7032bb4b56773c88509e18a454fb70cccf105a7b6f9d20f8e988e5891",
+      "replacements": [
+        {
+          "old": "assert args.engine=='sglang'",
+          "new": "assert args.engine=='vllm'",
+          "count": 1
+        },
+        {
+          "old": "from reference_observed_output import",
+          "new": "from reference_vllm_observed_output import",
+          "count": 1
+        },
+        {
+          "old": "sglang-output-characterization-attempt1",
+          "new": "vllm-output-characterization-attempt1",
+          "count": 2
+        },
+        {
+          "old": "metadata['configured_engine_context_capacity']==4098 and metadata['engine_context_reserved_slots']==2",
+          "new": "metadata['configured_engine_context_capacity']==4096 and metadata['engine_context_reserved_slots']==0",
+          "count": 1
+        },
+        {
+          "old": "from reference_fixed4k_boundary import",
+          "new": "from reference_fixed4k_vllm_boundary import",
+          "count": 1
+        },
+        {
+          "old": "benchmark_observed_output_reference.py",
+          "new": "benchmark_vllm_observed_output.py",
+          "count": 1
+        },
+        {
+          "old": "Ordinary SGLang",
+          "new": "Ordinary vLLM",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "test_reference_observed_output.py",
+      "source_sha256": "f3a6d0cd402f33998021fb0015e2a65bd22fd8ee189812440e9c8d9bf0611cfa",
+      "target": "test_reference_vllm_observed_output.py",
+      "target_sha256": "bf8ce120f6616af94ae43ada0a133fec97397128f193af46d40d5520032e897a",
+      "replacements": [
+        {
+          "old": "from .reference_observed_output import",
+          "new": "from .reference_vllm_observed_output import",
+          "count": 1
+        },
+        {
+          "old": "metadata.update(engine='sglang',generation_mode='ordinary',source_after_startup_verified=True,owned_server_pid_verified=True)",
+          "new": "metadata.update(engine='vllm',generation_mode='ordinary',version='0.32.0',configured_engine_context_capacity=4096,engine_context_reserved_slots=0,source_after_startup_verified=True,owned_server_pid_verified=True)",
+          "count": 1
+        },
+        {
+          "old": "elif kind=='budget':p['actual_workload_context_capacity']=4094",
+          "new": "elif kind=='budget':metadata['configured_engine_context_capacity']=4094",
+          "count": 1
+        },
+        {
+          "old": "benchmark_observed_output_reference.py",
+          "new": "benchmark_vllm_observed_output.py",
+          "count": 1
+        },
+        {
+          "old": "sglang",
+          "new": "vllm",
+          "count": 5
+        }
+      ]
+    },
+    {
+      "source": "test_observed_output_benchmark_http.py",
+      "source_sha256": "669da4c8497d9410306af45d022a4db6b4a60d6020a6658d4bf4f5130f776899",
+      "target": "test_vllm_observed_output_benchmark_http.py",
+      "target_sha256": "cd89442094a1b2af34ac75cba00357be2f2867f1fa236f4fc7330f882d18ad17",
+      "replacements": [
+        {
+          "old": "benchmark_observed_output_reference as bench",
+          "new": "benchmark_vllm_observed_output as bench",
+          "count": 1
+        },
+        {
+          "old": "from .reference_observed_output import",
+          "new": "from .reference_vllm_observed_output import",
+          "count": 1
+        },
+        {
+          "old": "'prompt_token_ids':prompt,'response_token_ids':[77]*128",
+          "new": "'token_ids':[77]*128",
+          "count": 1
+        },
+        {
+          "old": "data={'choices':[{'index':0,'finish_reason':'length'",
+          "new": "data={'prompt_token_ids':prompt,'choices':[{'index':0,'finish_reason':'length'",
+          "count": 1
+        },
+        {
+          "old": "        try:\n            with tempfile.TemporaryDirectory",
+          "new": "        def reset_fixture(*args,**kwargs):\n            self.assertEqual(calls['ids'],124);self.assertEqual(calls['streams'],0)\n            return {'status':'explicit-synthetic-CPU-only','after_reset':{}}\n        def verify_fixture(*args,**kwargs):\n            self.assertEqual(calls['streams'],124)\n            return {'scope':'explicit-synthetic-CPU-only','encoder_hit_delta':0,'processor_hit_delta':0}\n        try:\n            with tempfile.TemporaryDirectory",
+          "count": 1
+        },
+        {
+          "old": "patch.object(bench,'Sampler',CPUSampler),",
+          "new": "patch.object(bench,'Sampler',CPUSampler),patch.object(bench,'reset_idle_caches',reset_fixture),patch.object(bench,'verify_after_run',verify_fixture),",
+          "count": 1
+        },
+        {
+          "old": "sglang",
+          "new": "vllm",
+          "count": 4
+        },
+        {
+          "old": "18081",
+          "new": "18080",
+          "count": 1
+        }
+      ]
+    }
+  ],
+  "scope": "Separate vLLM observed-output policy/benchmark/probe and synthetic CPU fixtures. Original strict and SGLang methods unchanged. Actual vLLM288diagnosis exists; no new real benchmark requests yet."
+}
