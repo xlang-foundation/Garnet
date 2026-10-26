@@ -1,0 +1,64 @@
+{
+  "source": "run_z128_factory_layer2.py",
+  "target": "run_z128_reconstructed_layer2.py",
+  "source_sha256": "860eb40018fbb457266d1a2138d00c44125029db4aa66161c06733f63915e33e",
+  "target_sha256": "9576abbdc3afe8d3894028a73b3c05d127c330583729794ff4896e73814bc37b",
+  "changes": [
+    {
+      "before": "z128-factory-layer2-attempt1",
+      "after": "z128-reconstructed-layer2-attempt1",
+      "count": 2
+    },
+    {
+      "before": "evidence/z128-factory-layer2-preparation.json",
+      "after": "evidence/z128-reconstructed-layer2-preparation.json",
+      "count": 1
+    },
+    {
+      "before": "z128_factory_layer2_prepared_gpu_unrun",
+      "after": "z128_reconstructed_layer2_prepared_gpu_unrun",
+      "count": 1
+    },
+    {
+      "before": "len(p['candidate_files'])==39",
+      "after": "len(p['candidate_files'])==43",
+      "count": 1
+    },
+    {
+      "before": "garnet-native-z128-factory-trace-attempt1.dll",
+      "after": "garnet-native-z128-reconstructed-plugin-attempt2.dll",
+      "count": 1
+    },
+    {
+      "before": "len(set(z.namelist()))==39",
+      "after": "len(set(z.namelist()))==43",
+      "count": 1
+    },
+    {
+      "before": "    for phase in ('on','off'):assert not (ROOT/'results/fp8-z128-native-package-audit-attempt1'/('z128-reconstructed-layer2-attempt1-'+phase+'-context.json')).exists()\n",
+      "after": "",
+      "count": 1
+    },
+    {
+      "before": "88CPU retained model/cache/init/factory controls plus2 exact collector/native attribution checks",
+      "after": "12CPU new integration/array/route/cross-profile fault controls, including86exact frozen historical controls",
+      "count": 1
+    },
+    {
+      "before": "test_z128_factory_layer2.bat",
+      "after": "test_z128_reconstructed_layer2.bat",
+      "count": 1
+    },
+    {
+      "before": "            report=json.loads((out/phase/'report.json').read_bytes());assert report['status']=='layer2_ordinary_collected_needs_replay'",
+      "after": "            report=json.loads((out/phase/'report.json').read_bytes());assert report['status']=='layer2_ordinary_collected_needs_replay'\n            from test2026.cuda.qwen38_5090.z128_reconstructed_layer2_replay import replay,require_admission\n            from test2026.cuda.qwen38_5090.z128_reconstructed_layer2_trace import replay as trace_replay\n            from test2026.cuda.qwen38_5090.modelopt_trace_layer2 import compare_profiles\n            read=lambda name:(out/phase/name).read_bytes()\n            result=replay(report,read,(M/'evidence/layer2-ordinary-common-input.f32').read_bytes())\n            # Preserve complete arithmetic differences before a strict admission assertion.\n            (out/(phase+'-array-analysis.json')).write_bytes(json.dumps(result,indent=2).encode())\n            with zipfile.ZipFile(ROOT/'results/layer2-ordinary-witness-attempt1-evidence.zip') as prior:\n                oldbase='results/layer2-ordinary-witness-attempt1/native/'\n                oldreport=json.loads(prior.read(oldbase+'report.json'))\n                compared=compare_profiles(report,oldreport,read,lambda name:prior.read(oldbase+name),(32,))\n            assert compared['complete_finite_entries_compared']==58\n            traced=trace_replay((out/(phase+'-ledger/commands.log')).read_bytes(),phase=='trace-on')\n            (out/(phase+'-trace-analysis.json')).write_bytes(json.dumps(traced,indent=2).encode())\n            (out/(phase+'-retained-T32-comparison.json')).write_bytes(json.dumps(compared,indent=2).encode())\n            require_admission(result)\n",
+      "count": 1
+    },
+    {
+      "before": "z128_factory_layer2_collected_needs_replay",
+      "after": "z128_reconstructed_layer2_collected_needs_replay",
+      "count": 1
+    }
+  ],
+  "cross_profile_gate_added_without_weakening_original_array_controls": true
+}

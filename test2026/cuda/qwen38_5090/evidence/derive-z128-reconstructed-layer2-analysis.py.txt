@@ -1,0 +1,17 @@
+from pathlib import Path
+import hashlib,json
+M=Path('D:/CantorAI/work/qwen38-5090/test2026/cuda/qwen38_5090');original=(M/'verify_z128_reconstructed_layer2.py').read_bytes();raw=original;changes=[]
+def change(a,b,n=1):
+    global raw
+    assert raw.count(a.encode())==n,(a,raw.count(a.encode()));raw=raw.replace(a.encode(),b.encode());changes.append(dict(before=a,after=b,count=n))
+change("assert sha(Path(__file__).read_bytes())==p['new_files'][M+Path(__file__).name]",'''record=json.loads((Path(__file__).resolve().parent/'evidence/z128-reconstructed-layer2-analysis-derivation.json').read_bytes())
+        original=z.read(M+record['source']);assert sha(original)==record['source_sha256']==p['new_files'][M+record['source']]
+        composed=original
+        for c in record['changes']:
+            before=c['before'].encode();assert composed.count(before)==c['count'];composed=composed.replace(before,c['after'].encode())
+        assert composed==Path(__file__).read_bytes() and sha(composed)==record['target_sha256']''')
+change("assert doc(base+phase+'-trace-analysis.json')==traced","assert doc(base+phase+'-trace-analysis.json')==json.loads(json.dumps(traced))")
+change("'verifier_sha256':sha(Path(__file__).read_bytes())","'verifier_sha256':sha(Path(__file__).read_bytes()),'original_frozen_verifier_passed':False,'original_frozen_verifier_failure':'JSON trace mapping keys int in memory versus str after serialization; all other checks unchanged','analysis_derivation_sha256':sha((Path(__file__).resolve().parent/'evidence/z128-reconstructed-layer2-analysis-derivation.json').read_bytes())")
+target=M/'analyze_z128_reconstructed_layer2.py';assert not target.exists();target.write_bytes(raw)
+record={'source':'verify_z128_reconstructed_layer2.py','target':target.name,'source_sha256':hashlib.sha256(original).hexdigest(),'target_sha256':hashlib.sha256(raw).hexdigest(),'changes':changes,'SDK_source_model_arrays_or_admission_unchanged':True,'normalization':'Compare the exact JSON representation of the same native trace mapping; IDs remain validated integers in native event rows and matched to exact positive IDs before serialization.'}
+(M/'evidence/z128-reconstructed-layer2-analysis-derivation.json').write_bytes(json.dumps(record,indent=2).encode());print('derived strict JSON trace replay repair; no GPU rerun')

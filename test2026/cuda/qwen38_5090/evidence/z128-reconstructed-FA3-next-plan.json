@@ -1,0 +1,55 @@
+{
+  "status": "concrete_FA3_followup_plan_after_reconstructed_layer2_array_admission",
+  "inspected_source_sha256": {
+    "src/backends/tensorrt/modelopt_fp8_lowering.cpp": "ec74eb6da17f9e9096a2aca8b651fba699b3a789a623c8129fb915f61f438534",
+    "src/backends/tensorrt/modelopt_cublaslt.cpp": "f1283406460ecf8d0b633ff49959709d86941009a73cd3bd596d86a2e4792f35",
+    "src/backends/tensorrt/qwen35_lowering.h": "404ceb8386dc3e9c565d829d68211623e212f6e8885c5b23869d9f5544852387",
+    "src/backends/tensorrt/trt_builder.cpp": "37b3893e2ca249415cc84c12dfd843ec9a4ddb9fc36e41a05a606a64e9f78f1f"
+  },
+  "evidence_boundary": "Actual new-factory layer2 trace-on/unset observations collected. Independent paired replay and extracted real fixture must be complete before the next GPU test. Current broad model/quality/performance qualification remains false.",
+  "findings": [
+    {
+      "source": "src/backends/tensorrt/modelopt_fp8_lowering.cpp",
+      "claim": "Full attention M32 policy admits only q_proj N12288 K5120 and o_proj N5120 K6144. K/V N1024 K5120 remain generic default. This identifies an untested arithmetic boundary, not a proven cause."
+    },
+    {
+      "source": "src/backends/tensorrt/trt_builder.cpp",
+      "claim": "Existing qwen35_checkpoint_projection is INT4-only; retain its guard. Existing diagnostic_full_stages is layer3 B1/B2 T16 embedded and excludes canonical BF16 KV; retain this guard too."
+    },
+    {
+      "source": "src/backends/tensorrt/qwen35_lowering.h",
+      "claim": "Actual ordinary FA3 computes masked x, RMS normalization, gated Q, projected K/V, Q/K norm/RoPE, attention/cache update then o_proj/MLP. New witness must preserve these actual projection/normalization primitives."
+    }
+  ],
+  "implementation_steps": [
+    "Re-run the original layer0/1 ordinary-versus-diagnostic GDN suite with the new registered factory/counters. Retain original509finite entries/all11stage T32/T128 byte parity and readonly/carry/repeat guards; compare original retained arrays, do not infer from constructor or layer2 alone.",
+    "Use prepare_fa3_reconstructed_input.py to extract all655360real hidden F32words only after both-machine layer2 proof equality, source ZIP CRC/hash, complete73arrays, retained58T32 entries and traceon/off byte-parity. Controlled same input is not a full3968-candidate-chain claim.",
+    "Add a distinct qwen35_fp8_fa3_projection_witness unary node, selected only explicitly, to private derivative trt_builder.cpp. Require modelopt_mixed, embedded layer3 weights, B1, tokens32or128, hidden5120 and finite positive fixed normalization epsilon. Do not relax old INT4 projection or T16 diagnostic guards or change ordinary operators.",
+    "Construct RMS norm and K/V through the existing ops.norm and ops.project checkpoint/lowering path. Serialize normalized5120 + K1024 + V1024 per token with FP32 casts and bounded reads (T128 total917504words). Actual native FP8 projection count2, NVFP4/INT4 count0, no old/newZ or M128 selection. Pin exact K/V compressed weight shapes/scales and checkpoint/config/index/SDK/runtime identities.",
+    "Before a full source-frozen remote build: CPU profile/default/malformed/geometry/precision controls and byte-exact source composition retaining all earlier guards, creator/wire/tokenizer/selector checks. Preserve old43source bundle; new separate candidate and only owned transient target restoration; no new CUDA kernels needed.",
+    "Run actual registered Garnet witness on the same complete128-input fixture as four32chunks and one128. Three warmups/two complete repeats, input readonly, capture all normalized/K/V F32 words and actual initialization routes. Compare normalization first, then each complete K/V projection. Preserve all differences, including correctly rehashed nonfinite or one-word counterexamples in CPU replay.",
+    "If actual K/V projection differs with identical normalized inputs, observe the actual generic Garnet cuBLASLt selection (defaultoff trace of existing calls, no extra selection or shadow substitute), audit all documented public attributes, reconstruct a separate optin checked descriptor via AlgoInit/ConfigSet/Get/AlgoCheck for both32/128. Do not opaque-mask bytes or assume generic/pointer padding semantics. If projected values match, proceed to K norm/RoPE and cache-commit linkage instead.",
+    "After exact projection/cache linkage, require unchanged full3968+128 ordinary/MTP six-case retained vector/state/token oracle and adapted805quality gate; only then benchmark. Strongest feasible tuned/MTP vLLM/SGLang repeats, native true concurrency, INT4 W4A16 and Qwen3.5-4B remain required. Overall2x faster-baseline decode AND throughput and halfTTFTextra are unmet."
+  ],
+  "new_benchmark_values": false,
+  "two_times_target_achieved": false,
+  "qualified_candidate_source_pins": {
+    "src/backends/tensorrt/modelopt_fp8_lowering.cpp": {
+      "sha256": "28b39c39ad525cd4c1ed6087e0d6ed6d709ee6d427b244492ba8cabe539d5556",
+      "scope": "qualified43-candidate"
+    },
+    "src/backends/tensorrt/modelopt_cublaslt.cpp": {
+      "sha256": "f1283406460ecf8d0b633ff49959709d86941009a73cd3bd596d86a2e4792f35",
+      "scope": "unchanged-production-source"
+    },
+    "src/backends/tensorrt/qwen35_lowering.h": {
+      "sha256": "404ceb8386dc3e9c565d829d68211623e212f6e8885c5b23869d9f5544852387",
+      "scope": "qualified43-candidate"
+    },
+    "src/backends/tensorrt/trt_builder.cpp": {
+      "sha256": "25a94acde29c37c84126008066862d8ab502011493ec06e1addde24ae74ba6d2",
+      "scope": "qualified43-candidate"
+    }
+  },
+  "inspected_source_scope": "Restored production source inspection; precise built43 candidate hashes listed separately. Do not infer baseline/candidate byte identity from file names."
+}
