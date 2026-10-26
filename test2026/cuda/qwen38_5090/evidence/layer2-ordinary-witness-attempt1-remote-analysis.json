@@ -1,0 +1,112 @@
+{
+  "status": "layer2_T32_partial_arrays_and_postfailure_helper_replayed",
+  "archive_sha256": "e6f2817400bcfe0ea082858e6259275eea45e31474e4efc81e5703b940dc1ced",
+  "original_failure_proof_sha256": "0abe430aa87746d0d26eac795fd4d62f10fb4088959df1774d7624cd9198e626",
+  "complete_finite_array_entries": 58,
+  "complete_output_f32_words_replayed": 7929856,
+  "completed_profiles": 1,
+  "T32_warmups": 3,
+  "T32_repeats": 2,
+  "readonly_inputs_and_carried_states_exact": true,
+  "T32_repeats_exact": true,
+  "complete_layer2_T32_output_hidden_bytes": 2621440,
+  "complete_layer2_T32_output_hidden_sha256": "1f5f7340cac51fc1c56157fcf10a623d901de81e1456a74674b6408d5282c72d",
+  "T128_initialization_failed": true,
+  "T128_outputs_collected": false,
+  "T32_T128_arithmetic_comparison_available": false,
+  "postfailure_helper_observation": {
+    "status": "actual_helper_context_observations_replayed",
+    "created": true,
+    "boundary": "actual_helper_context_created",
+    "first_successful_index": 0,
+    "expected_opaque_candidate_indices": [
+      0
+    ],
+    "successful_candidate_IDs": [
+      67,
+      67,
+      35,
+      35,
+      35,
+      35,
+      67
+    ],
+    "matmul_calls": 0,
+    "algorithm_substituted": false,
+    "full_Garnet_plugin_failure_directly_instrumented": false,
+    "model_or_quality_or_performance_qualified": false
+  },
+  "postfailure_helper_raw_sha256": "fa1049569ab43f21a6a86eb515db688bb4ac9dd90a9aa4a794dc168063517812",
+  "postfailure_candidates": [
+    {
+      "state": 0,
+      "workspace": 0,
+      "opaque": "430000000d0000001100000001000000000000000100000012000000000000000100000060fd01001c0000001c0000000e000e00440000000000000000000000",
+      "post_context_ID_status": 0,
+      "post_context_ID": 67,
+      "post_context_ID_bytes": 4
+    },
+    {
+      "state": 0,
+      "workspace": 0,
+      "opaque": "430000000f0000001200000001000000000000000100000012000000000000000100000060fd01001c0000001c0000000e000e00440000000000000000000000",
+      "post_context_ID_status": 0,
+      "post_context_ID": 67,
+      "post_context_ID_bytes": 4
+    },
+    {
+      "state": 0,
+      "workspace": 1574175,
+      "opaque": "230000000d0000001100000003000000020000000000000001000000000000000100000060fd01001c0000001c0000000e000e00440000000000000000000000",
+      "post_context_ID_status": 0,
+      "post_context_ID": 35,
+      "post_context_ID_bytes": 4
+    },
+    {
+      "state": 0,
+      "workspace": 1573791,
+      "opaque": "230000000f0000001000000005000000020000000100000002000000000000000100000060fd01001c0000001c0000000e000e00440000000000000000000000",
+      "post_context_ID_status": 0,
+      "post_context_ID": 35,
+      "post_context_ID_bytes": 4
+    },
+    {
+      "state": 0,
+      "workspace": 1573407,
+      "opaque": "2300000012000000100000000e000000020000000100000002000000000000000100000060fd01001c0000001c0000000e000e00440000000000000000000000",
+      "post_context_ID_status": 0,
+      "post_context_ID": 35,
+      "post_context_ID_bytes": 4
+    },
+    {
+      "state": 0,
+      "workspace": 3146271,
+      "opaque": "23000000140000000f00000007000000020000000000000002000000000000000100000060fd01001c0000001c0000000e000e00440000000000000000000000",
+      "post_context_ID_status": 0,
+      "post_context_ID": 35,
+      "post_context_ID_bytes": 4
+    },
+    {
+      "state": 0,
+      "workspace": 0,
+      "opaque": "43000000140000000f00000001000000000000000100000012000000000000000100000060fd01001c0000001c0000000e000e00440000000000000000000000",
+      "post_context_ID_status": 0,
+      "post_context_ID": 67,
+      "post_context_ID_bytes": 4
+    }
+  ],
+  "postfailure_helper_info": {
+    "algorithm": 67,
+    "device": 0,
+    "required_workspace": 0,
+    "opaque": "430000000d0000001100000001000000000000000100000012000000000000000100000060fd01001c0000001c0000000e000e00440000000000000000000000"
+  },
+  "source_runtime_SDK_checkpoint_restored": true,
+  "actual_failed_Garnet_plugin_or_helper_boundary_identified": false,
+  "initialization_cause_or_reliability_resolved": false,
+  "full_model_cause_established": false,
+  "model_or_quality_or_performance_qualified": false,
+  "two_times_target_achieved": false,
+  "analyzer_sha256": "39b416fc98abb31b7c12aba13e1dfb89a99cacc51be2c6a4a9fdf0896357a882",
+  "scope": "Actual complete ordinary layer2 T32 result survives failed subsequent T128 construction. Same-process/thread postfailure observer uses unchanged Z128 helper in a separate TU and succeeds; it does not prove which actual Garnet plugin failed or its earlier call status/opaque. Do not infer algorithm-selection cause, arithmetic parity, quality or performance."
+}
