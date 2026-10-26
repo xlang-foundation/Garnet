@@ -1,0 +1,146 @@
+from pathlib import Path
+import hashlib,json,re,statistics,zipfile
+
+work=Path(__file__).resolve().parent
+out=work.parent/'outputs'
+repo=Path('D:/CantorAI/work/qwen38-5090')
+e=repo/'test2026/cuda/qwen38_5090/evidence'
+sha=lambda raw:hashlib.sha256(raw).hexdigest()
+
+def keep(path,raw):
+    assert not path.exists() or path.read_bytes()==raw,path
+    if not path.exists():path.write_bytes(raw)
+
+jobs={}
+for job,status,code in (
+    ('paged-batch8-model-preservation-attempt1','paged_batch8_model_preservation_replayed',0),
+    ('vllm-fixed4k-ordinary-attempt1','reference_fixed4k_failure_preserved',1)):
+    pp=out/(job+'-verified.json');raw=pp.read_bytes();p=json.loads(raw)
+    assert raw==(out/(job+'-remote-verified.json')).read_bytes() and p['status']==status
+    archive=out/(job+'-evidence.zip');assert sha(archive.read_bytes())==p['archive_sha256']
+    with zipfile.ZipFile(archive) as z:
+        manifest=json.loads(z.read('evidence-manifest.json'))
+        assert len(z.namelist())==len(set(z.namelist()))==len(manifest['files'])+1
+        for name,digest in manifest['files'].items():assert sha(z.read(name))==digest
+        base='results/'+job+'/'
+        w=json.loads(z.read(base+'workflow.json'))
+        assert w['exit_code']==code and w['cleanup_finished'] is True
+        assert w['source_sha256']==w['source_after_sha256'] and w['runtime_dependencies']==w['runtime_dependencies_after']
+        cpu=z.read(base+'cpu-ledger/commands.log')
+        count,elapsed=re.findall(rb'Ran (\d+) tests in ([0-9.]+)s',cpu)[-1]
+        detail={'status':status,'archive_sha256':p['archive_sha256'],'archive_bytes':archive.stat().st_size,
+                'files_verified':p['files_verified'],'proof_pair_sha256':sha(raw),'owner_exit_code':code,
+                'cpu_tests':int(count),'cpu_unittest_seconds':float(elapsed),
+                'source_pins':len(w['source_sha256']),'runtime_pins':len(w['runtime_dependencies']),
+                'source_runtime_preserved':True,'performance_admitted':False}
+        if code==0:
+            assert w['environment_before']==w['environment_after'] and w['library_unchanged']
+            model=p['preserved_model'];assert model['all_retained_states_vectors_tokens_exact']
+            tokens=sum(c['physical_rows']*c['actual_generated_ids_each'] for c in model['cases'])
+            detail.update(cases=len(model['cases']),complete_states=model['complete_states'],raw_vectors=model['raw_vectors'],
+                          actual_generated_ids=tokens,external_math_qualified=False,mtp_qualified=False,http_qualified=False,
+                          sdk_environment_pins=len(w['environment_after']))
+            r=json.loads(z.read(base+'resources/resource-monitor.json'))
+            samples=[json.loads(line) for line in z.read(base+'resources/resource-vram.jsonl').splitlines()]
+            gaps=[b['monotonic']-a['monotonic'] for a,b in zip(samples,samples[1:])]
+            m=r['sampled_memory']
+            assert r['child_exit_code']==0 and r['gpu']['uuid']=='GPU-265ee66c-9b79-cd3b-0c63-dd6942ddb5e6'
+            assert len(samples)==m['samples'] and all(g>0 for g in gaps)
+            assert max(s['used_bytes'] for s in samples)==m['sampled_peak_adapter_used_bytes']
+            assert max(gaps)==m['observed_sample_gap_max_seconds'] and statistics.median(gaps)==m['observed_sample_gap_median_seconds']
+            detail['correctness_resources_recomputed']=m
+        else:
+            assert w['server_exit_code']==127 and not p.get('profiles')
+            assert b'No such file or directory' in z.read(base+'wsl-wrapper.log')
+            assert not any(n.startswith(base+'client/') for n in z.namelist())
+            detail.update(server_exit_code=127,benchmark_profiles=0,model_ready=False,
+                          cause='Ordinary launcher omitted from original deployment dependency manifest; no model or benchmark requests')
+        for name in z.namelist():
+            if name.startswith(base) and name.endswith(('commands.log','commands.jsonl','workflow.json','resource-monitor.json','wsl-wrapper.log')):
+                keep(e/(job+'-'+name.removeprefix(base).replace('/','-')),z.read(name))
+    jobs[job]=detail
+    for suffix in ('-verified.json','-remote-verified.json','-local-replay.log'):
+        keep(e/(job+suffix),(out/(job+suffix)).read_bytes())
+
+install=json.loads((work/'vllm-launcher-completion-install.json').read_bytes())
+assert install['status']=='vllm_launcher_completion_installed' and install['all_source_pins_verified']==787
+assert install['launcher_windows_exists'] and install['wsl_launcher_syntax_exit_code']==0 and install['runtime_and_sdk_unchanged']
+prep=e/'vllm-fixed4k-launcher-completed-preparation.json';p=json.loads(prep.read_bytes())
+assert len(p['files'])==787 and p['expected_cpu_tests']==47
+for name in ('vllm-launcher-completion-install.json','vllm-launcher-completion-bundle-preparation.json',
+             'vllm-launcher-completion-before-fixture-pin.json','vllm-launcher-completion-plan-before-fixture-pin.json',
+             'paged-batch8-model-local-replay-receipt.json','vllm-attempt1-startup-failure-local-receipt.json',
+             'vllm-fixed4k-install.json'):
+    keep(e/name,(work/name).read_bytes())
+for name in ('derive-vllm-launcher-completed-verifier.py','package-vllm-launcher-completion.py',
+             'install-vllm-launcher-completion.py','retain-paged-b8-and-vllm-launcher-closure.py',
+             'replay-paged-batch8-model-local.py','replay-vllm-attempt1-startup-failure-local.py'):
+    keep(e/(name+'.txt'),(work/name).read_bytes())
+for f in (work/'vllm-fixed4k-cpu-ledger').iterdir():
+    if f.is_file():keep(e/('vllm-launcher-completed-cpu-ledger-'+f.name),f.read_bytes())
+
+result={'status':'paged_b8_preservation_closed_vllm_setup_failure_closed_launcher_fixed_attempt2_started',
+        'jobs':jobs,'launcher_installation':install,'completed_preparation_sha256':sha(prep.read_bytes()),
+        'local_completion_cpu_tests':47,'local_completion_unittest_seconds':1.854,
+        'new_vllm_attempt':{'id':'vllm-fixed4k-ordinary-attempt2','supervisor_session':48577,
+                           'observed_state':'running','actual_remote_cpu_tests':47,'actual_remote_cpu_unittest_seconds':1.901,
+                           'terminal_result':None,'benchmark_admitted':False},
+        'new_benchmark_result':False,'two_times_target_achieved':False}
+keep(e/'paged-b8-and-vllm-launcher-closure.json',json.dumps(result,indent=2).encode())
+keep(out/'Garnet-B8-Preservation-and-vLLM-Launcher-Status.json',json.dumps(result,indent=2).encode())
+text='''
+
+### 2026-10-25 — paged B8 model preservation closed; missing vLLM launcher fixed, fresh attempt2 started
+
+Original paged-batch8-model-preservation-attempt1 supervisor terminal0. All nine
+actual short/full3968+128 text/image and row-order cases preserve the retained
+ordinary B8 baseline: 29 complete canonical states, 58 raw finite hidden/normalized
+vectors, all input/output IDs/text and inverse permutations, plus final reset.
+6336 generated IDs total. Remote 26 CPU controls pass (exact raw elapsed retained).
+684 source pins, six runtime dependencies and 15 SDK/environment entries unchanged;
+owned worker gone/cache retired. Archive3bbec8c568cfcf5d7a1fdf7405b152b14593c2117cd4b4307094ddf5def00f76,
+7002650bytes/92files. Independent local/remote original-checker replay exit0;
+identical proof e87316f391f85419648842045f245495d2ea871e26614a3478c073e7b5aa5306.
+Freshly recomputed 95302 resource samples: peak30854819840bytes (28.73579GiB),
+median gap.031640600005630404s, max9.206485100003192s, requested interval.02s.
+This equals the old B8 whole-study sampled peak: no serving-memory saving or speed
+claim. Bounded input now preserves actual model arithmetic; B1/B4 independent math,
+MTP/805quality/HTTP performance still require fresh execution and admission.
+
+Matched vLLM ordinary attempt1 terminal1 was a setup failure: 43 CPU controls
+pass1.903s, WSL bash exits127 because serve_vllm_fixed4k.sh was absent from the
+deployed copy AND omitted from the prepared file manifest. No model ready, quality
+or benchmark requests. This was our deployment dependency omission, not evidence
+of model incompatibility. Archive43e1d905ebecf8ae4f56cbde3e5a928b9854c860c009d7ba9110c004616ded86,
+70565639bytes/788files. Independent original checker exits1 as expected on both
+machines; identical failure proof699d13a9c8caa08400172ebebc36e0058a18cc68e2b9885849d19822abfba8ab.
+Cleanup/source/runtime preserved. Original manifest and checker remain byte-exact.
+
+Corrected preparer explicitly requires launcher plus all named runtime/test-fixture
+dependencies and valid hashes before admission. Added missing-launcher regression,
+every-dependency/hash faults, LF recipe and exact unchanged replay-AST tests.
+Derived separate immutable launcher-completed checker, keeping all raw protocol,
+805quality/actual ID/SSE/cache/count/timing/VRAM/cleanup arithmetic unchanged.
+Initial CPU-only completed manifest was superseded to pin the original preparation
+fixture exercised by tests, before deployment; both versions and append-only logs
+retained. Final47CPU controls pass1.854s; final preparation pins787files, SHA
+dffbeaab7ef5885589246ec7d0392a71de1f14f5e0b3d148917d457bc4d5df74.
+Delta bundle a0fa1ceadf901ace3b1586032e11db7228d643e2a007cf7252e5910c91ed252d,
+45157bytes, six targets, exactly one hash-checked source replacement with backup;
+13 existing targets preserved. Installer terminal0, all787source pins verified,
+runtime/SDK unchanged. Actual WSL bash -n sees the launcher and exits0. Download
+receipt ACKed before new GPU work. No benchmark during installation/syntax check.
+
+Original48577 vllm-fixed4k-ordinary-attempt2 started under the completed preparation;
+actual remote47CPUcontrols pass1.901s and original supervisor observed running.
+Only this owner runs on the GPU; source/transfer freeze maintained while live.
+Terminal startup/805quality/full124stream results and independent replay pending.
+See paged-b8-and-vllm-launcher-closure.json and exact methods/raw ledgers/receipts.
+No new performance figure from these correctness/setup results. Matched vLLM4K,
+strongest tuned/MTP references, B8 math/MTP/serving, repeated trials, INT4/4B matched
+comparisons and overall2xdecode+throughput/halfTTFT remain open.
+'''
+for name in ('qwen38-5090-development-log.md','qwen38-5090-implementation-task.md'):
+    path=repo/'docs/research'/name;raw=path.read_bytes();marker=b'paged B8 model preservation closed; missing vLLM launcher fixed'
+    if marker not in raw:path.write_bytes(raw+text.encode())
+print(json.dumps({'status':result['status'],'jobs':jobs,'new_performance_result':False}))
