@@ -1,0 +1,52 @@
+"""Retain full native28 build/CPU contracts; GPU primary/model gates stay pending."""
+from pathlib import Path
+import hashlib,json,re,zipfile
+work=Path(__file__).resolve().parent;out=work.parent/'outputs';repo=Path('D:/CantorAI/work/qwen38-5090');m=repo/'test2026/cuda/qwen38_5090';e=m/'evidence';paths=[];sha=lambda raw:hashlib.sha256(raw).hexdigest()
+
+def keep(name,raw):
+    target=e/name;assert not target.exists() or target.read_bytes()==raw,target
+    if not target.exists():target.write_bytes(raw)
+    paths.append(target.relative_to(repo).as_posix())
+
+job='fp8-z128-native-build-attempt1';proof=(out/(job+'-verified.json')).read_bytes();q=json.loads(proof);assert proof==(out/(job+'-remote-verified.json')).read_bytes() and q['status']=='fp8_z128_native_build_cpu_replayed'
+archive=out/(job+'-evidence.zip');assert sha(archive.read_bytes())==q['archive_sha256']
+with zipfile.ZipFile(archive) as z:
+    manifest=json.loads(z.read('evidence-manifest.json'));assert z.testzip() is None and len(z.namelist())==len(set(z.namelist()))==len(manifest['files'])+1
+    for name,h in manifest['files'].items():assert sha(z.read(name))==h
+    base='results/'+job+'/';w=json.loads(z.read(base+'workflow.json'));praw=z.read('Garnet/test2026/cuda/qwen38_5090/evidence/fp8-z128-native-build-preparation.json');p=json.loads(praw)
+    assert w['exit_code']==0 and w['cleanup_finished'] and w['baseline_source_restored'] and w['baseline_library_restored']
+    assert w['source_before']==w['source_after']==p['base_files'] and w['methods']==w['methods_after']==p['methods'] and w['runtime_before']==w['runtime_after']==p['runtime'] and w['environment_before']==w['environment_after']==p['environment']
+    assert len(p['candidate_files'])==28 and sum(value is not None for value in p['candidate_base'].values())==8 and len(w['cuda_objects_before'])==len(w['cuda_objects_built'])==34 and w['added_cuda_objects']==[]
+    for name,h in p['candidate_files'].items():assert sha((repo/name).read_bytes())==h
+    keep('fp8-z128-native-build-preparation.json',praw);keep(job+'-evidence-manifest.json',z.read('evidence-manifest.json'))
+    for name in z.namelist():
+        if name.startswith(base) and name.endswith(('.json','.jsonl','.log','.txt')):keep(job+'-'+name.removeprefix(base).replace('/','-'),z.read(name))
+    for name,h in p['methods'].items():
+        if name.startswith('Garnet/test2026/cuda/qwen38_5090/') and '/native_fp8_z128_candidate/' not in name:
+            path=repo/name.removeprefix('Garnet/');assert sha(path.read_bytes())==h
+            if 'fp8_z128_native_build' in path.name or path.name=='fp8-z128-native-build-derivation.json':paths.append(path.relative_to(repo).as_posix())
+    remote_cpu=float(re.search(rb'Ran 77 tests in ([0-9.]+)s',z.read(base+'cpu-ledger/commands.log')).group(1))
+for suffix in ('-verified.json','-remote-verified.json','-local-replay.log'):keep(job+suffix,(out/(job+suffix)).read_bytes())
+for name in ('fp8-z128-native-build-package.json','fp8-z128-native-proposal.json'):keep(name,(work/name).read_bytes())
+for path in (work/'fp8-z128-native-build-local-cpu-ledger').iterdir():
+    if path.is_file():keep('fp8-z128-native-build-local-cpu-'+path.name,path.read_bytes())
+for name in ('derive-fp8-z128-native-build.py','package-fp8-z128-native-build.py','install-fp8-z128-native-build.py','retain-fp8-z128-native-build.py'):keep(name+'.txt',(work/name).read_bytes())
+plan={'status':'fp8_Z128_whole_native_DLL_CPU_qualified_GPU_primary_pending','steps':[
+ 'Use closednative28candidateDLL andexactsourcebundle in one exclusive stage-witness owner; preserve/restore8existing and20absenttargets/baseline1a1d/runtime/SDK/checkpoints/ownedSSDcache.',
+ 'Run10fresh embeddedprocess policyfrontend controls with inheritednewZenvironment None/empty/0/1/true/01/space1/1space/2/-1. Checknewcounter0bydefault/off,1onlyonpinnedT128Z; rejectmalformedflags withspecificpolicyerror. Policy-onlygraphs neverexecutegraphinference; do not relyon environment flips insidealreadyloadedstaticCRT.',
+ 'Then same realfirst128 frozenprompt layer0/1 controlledcommoninput, T32/T128 ordinary/diagnostic,3warmups/2repeats; newZcounter1at128only, oldGDNoutcounterunchanged. Mandatoryordinaryprimarywitness beforeall11stage/state/input/repeat wordreplay in<=1Miwordpieces. Preserveanyremainingdifferences; do not assumefirst128passesorprovesfull3968cause.',
+ 'Onlyafterprimary/controlstagegate pass rununchangedstrictfull3968+128 sixcase state/vector/ID modelgate and805quality, thenmatchedHTTP/repetitions/strongestfeasibletunedMTPrefs. Overall2xdecodeANDthroughput/halfTTFTextra/INT4/4B/B8arithmeticremainactive; chartsunchanged.'
+ ],'gpu_primary_witness_qualified':False,'model_or_quality_or_performance_qualified':False,'two_times_target_achieved':False}
+keep('fp8-z128-stage-witness-next-plan.json',json.dumps(plan,indent=2).encode())
+result={'status':'fp8_z128_whole_native_build_and_CPU_contracts_replayed_on_both_machines','archive_sha256':q['archive_sha256'],'archive_bytes':archive.stat().st_size,'archive_members':len(manifest['files'])+1,'proof_pair_sha256':sha(proof),'candidate_library_sha256':w['candidate_library_sha256'],'candidate_saved':w['candidate_saved'],'baseline_library_sha256':p['runtime']['garnet.dll'],'source_pins':len(p['base_files']),'method_pins':len(p['methods']),'installed_source_pins':len(w['installed_source']),'native_source_union':28,'existing_targets_restored':8,'new_targets_removed':20,'runtime_pins':len(p['runtime']),'sdk_environment_pins':len(p['environment']),'preinstall_CPU_tests':77,'remote_CPU_seconds':remote_cpu,'postinstall_source_tests':6,'cuda_object_count_before_after':34,'added_cuda_objects':[],'changed_cuda_objects':w['changed_cuda_objects'],'new_Z_wire_contract':w['z_wire_contract'],'old_M128_wire_contract':w['fp8_wire_contract'],'GDN_profile_contract':w['gdn_profile_contract'],'external_selector_cases':10,'embedded_selector_cases':10,'tokenizer_cases':955,'baseline_source_runtime_sdk_restored':True,'gpu_model_executed':False,'gpu_primary_witness_qualified':False,'model_or_quality_or_performance_qualified':False,'two_times_target_achieved':False,'next_plan':plan}
+raw=json.dumps(result,indent=2).encode();keep('fp8-z128-native-build-closure.json',raw);(out/'Garnet-FP8-Z128-Native-Build-Verified.json').write_bytes(raw)
+title='Full native28 Z128 DLL builds and CPU contracts pass; actual GPU stage witness next'
+text='\n\n### 2026-10-26 — '+title+'\n\n'
+text+='Distinct build/prepare/fullverifier methods areexact recordedderivatives ofclosedGDNstage nativebuildtransaction. Newsource union28=closed23plus5typedZfiles, replace5existingbuilder/lowering/graphfileswithqualifiedadditivecounter/routingbytes. ExistingCMakeBackendCPPglobfindsnewfiles; noCMake/CUDA/math/SDKedits. Fresh879baselinesourcepins/69methods/'+str(len(w['installed_source']))+'installed/runtime'+str(len(p['runtime']))+'/selectedSDK'+str(len(p['environment']))+';8existingtargets restoredbyteexact,20ownednew removed; baseline1a1dDLL restored. Source/SDK/checkpointmetadata hashes checkedbeforeinstallandafterrestore. ReusedfixedROOT/build Release/MT/sm120tree, retained allsources/DLLs/cachemetadata/ledgers.\n\n'
+text+='77prebuildCPUcontrols pass local0.527s/remote'+str(remote_cpu)+'s, including62retainedtransaction/contracts,13typedZ/real128faults,2newreport/source-derivation checks. Sixpostinstall native-source/route/fullpriorcomposition/legacydiagnosticguard checks pass. FullGarnetlinks candidate '+w['candidate_library_sha256']+' saved '+w['candidate_saved']+'. CUDAobjectset remains34with0added; onlypermitted priorT128attention/commit/coupled-overlay objects mayrecompile, actualchangednames retained. KnownSDKC4819/NOMINMAXwarnings retainedwithoutSDKmutation.\n\n'
+text+='Actualold16profile overlaywire compatibility passes832badwires/496baddescriptors/336badformats/128crossdialectrejections/96legacyroundtrips/0operatorstubs. OldM128FP8wire contract passesunchanged. NewZwire contract passes34badwires/18badconstructors/23baddescriptors/11badformats/8policyfaults/5crosswirechecks/0GPUstubs, totalworkspace4849664B. PureGDNprofile4valid/50invalid/6flag/1legacyconflict passes. Actualcandidate10external+10embeddednative-selectorcases and955frozen tokenizer cases exact,0mismatches; no model/GPUforward.\n\n'
+text+='Originalcompleteindependentnativebuildverifier passesonbothmachines withidenticalproof '+sha(proof)+'. Archive '+q['archive_sha256']+' ('+str(archive.stat().st_size)+'bytes/'+str(len(manifest['files'])+1)+'members). FullcandidateDLL/nativebundle/8originalsources/rawSDK/cachebefore/CPUcontracts/tokenizercases/methods preserved. RawgeneratedCMakeCache-before preservedverbatim, includingtrailingblankline; onlythatnamedartifact plusrawlogs exemptfromwhitespacechecks. This isbuild/CPUqualification, notactualGPUfrontend/newrouteprimary/model/805quality/performance admission.\n\n'
+text+='NextactualGPUstageowner willrun10freshprocessnewZpolicyfrontendcontrols (default/empty/off/on/6malformed), then8realfirst128layer0/1 T32/T128 ordinary/diagnosticprofiles. Freshprocess controls avoidassumingcross-runtime environment changes arevisibleafterDLLload. Requireold/newprojectioncounters, exactordinaryprimarywitness, completeinput/carriedstate/repeat/all11stage words andboundedreadpieces; preserveanyremainingnumericaldifference. Full3968modelcause/strictsixcase4K/805quality/HTTP/repetitions/strongestfeasibletunedMTPrefs remainopen. Original2xdecodeANDthroughput/halfTTFTextra/INT4/4B/B8arithmeticgoals stayactive; currentchartsunchanged.\n'
+for name in ('qwen38-5090-development-log.md','qwen38-5090-implementation-task.md'):
+    target=repo/'docs/research'/name;before=target.read_bytes();assert title.encode() not in before;target.write_bytes(before+text.encode());paths.append(target.relative_to(repo).as_posix())
+(work/'fp8-z128-native-build-retained-paths.json').write_bytes(json.dumps(sorted(set(paths)),indent=2).encode());print(json.dumps({'status':result['status'],'retained_paths':len(set(paths)),'proof_pair_sha256':sha(proof),'candidate_library_sha256':w['candidate_library_sha256']}))

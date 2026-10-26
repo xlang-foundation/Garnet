@@ -1,0 +1,54 @@
+"""Extend the closed native source transaction with typed Z routing/wire gates."""
+from pathlib import Path
+import hashlib,json
+repo=Path('D:/CantorAI/work/qwen38-5090');m=repo/'test2026/cuda/qwen38_5090';records=[];sha=lambda raw:hashlib.sha256(raw).hexdigest()
+
+def derive(source,target,changes):
+    raw=(m/source).read_bytes();text=raw.decode();steps=[]
+    for old,new,count in changes:
+        assert text.count(old)==count,(source,old,text.count(old));text=text.replace(old,new);steps.append({'old':old,'new':new,'count':count})
+    path=m/target;assert not path.exists();path.write_bytes(text.encode());records.append({'source':source,'source_sha256':sha(raw),'target':target,'target_sha256':sha(text.encode()),'replacements':steps})
+
+old_post="""        code=ledger.run([sys.executable,'-m','unittest','test2026.cuda.qwen38_5090.test_gdn_chunk_stage_source'],out/'source-cpu-ledger','correctness','Three exact new/source-composition/legacy-diagnostic guard controls after candidate native install; no native runtime/GPU',common)
+        if code:raise RuntimeError('Stage source composition controls')
+"""
+new_post="""        code=ledger.run([sys.executable,'-m','unittest','test2026.cuda.qwen38_5090.test_fp8_z128_native_source','test2026.cuda.qwen38_5090.test_fp8_z128_native_integration','test2026.cuda.qwen38_5090.test_gdn_chunk_stage_source.Controls.test_original_diagnostic_guard_and_all_math_bodies_unchanged'],out/'source-cpu-ledger','correctness','Six exact typedZ/additive route/prior GDN/M128/legacy diagnostic source controls after install; no native runtime/GPU',common)
+        if code:raise RuntimeError('Z source composition controls')
+"""
+z_wire="""        code=ledger.run(['cmd.exe','/d','/c',str(M/'build_fp8_z128_plugin_cpu.bat'),p['vcvars'],str(out/'z-wire-cpu')],out/'z-wire-cpu-ledger','correctness','Actual separate Z128 wire/descriptor/default/cross-family compatibility; no GPU stub calls',common+[library])
+        if code:raise RuntimeError('Actual Z128 FP8 plugin wire contract')
+        from test2026.cuda.qwen38_5090.fp8_z128_native_build_contract import z_wire_contract
+        w['z_wire_contract']=z_wire_contract(json.loads((out/'z-wire-cpu/report.json').read_bytes()));save()
+"""
+derive('run_gdn_chunk_stage_native_build.py','run_fp8_z128_native_build.py',[
+ ('"""Build combined T128 plus default-off M128 FP8 candidate; restore baseline."""','"""Build combined T128/GDNstage/typedZ128 candidate; restore all baseline targets."""',1),
+ ("JOB='gdn-chunk-stage-native-build-attempt1'","JOB='fp8-z128-native-build-attempt1'",1),
+ ('gdn-chunk-stage-native-build-preparation.json','fp8-z128-native-build-preparation.json',1),
+ ("'gdn_chunk_stage_native_build_prepared_unrun' and len(p['candidate_files'])==23","'fp8_z128_native_build_prepared_unrun' and len(p['candidate_files'])==28",1),
+ ('garnet-native-gdn-chunk-stage-attempt1.dll','garnet-native-fp8-z128-attempt1.dll',1),
+ (old_post,new_post,1),
+ ("        code=ledger.run(['cmd.exe','/d','/c',str(M/'build_gdn_chunk_stage_profile_cpu.bat')",z_wire+"        code=ledger.run(['cmd.exe','/d','/c',str(M/'build_gdn_chunk_stage_profile_cpu.bat')",1),
+ ("'Reconfigure existing Release/MT/sm120 tree for complete T128 route plus separately qualified M128 FP8 helper/plugin and graph counters'","'Reconfigure reused Release/MT/sm120 tree for28native T128/GDNstage/typedZ sources and separate graph counters'",1),
+ ("status='gdn_chunk_stage_native_built_cpu_qualified_witness_unqualified'","status='fp8_z128_native_built_cpu_qualified_witness_unqualified'",1)])
+
+derive('prepare_gdn_chunk_stage_native_build.py','prepare_fp8_z128_native_build.py',[
+ ('gdn-chunk-stage-native-proposal.json','fp8-z128-native-proposal.json',1),
+ ("'gdn_chunk_stage_native_build_proposed_unrun' and len(p['candidate_files'])==23 and len(p['candidate_base'])==23 and p['expected_cpu_test_count']==62","'fp8_z128_native_build_proposed_unrun' and len(p['candidate_files'])==28 and len(p['candidate_base'])==28 and p['expected_cpu_test_count']==77",1),
+ ('len(z.namelist())==len(set(z.namelist()))==23','len(z.namelist())==len(set(z.namelist()))==28',1),
+ ("status='gdn_chunk_stage_native_build_prepared_unrun'","status='fp8_z128_native_build_prepared_unrun'",1),
+ ('gdn-chunk-stage-native-build-preparation.json','fp8-z128-native-build-preparation.json',1),
+ ("'absent_targets':15","'absent_targets':20",1)])
+
+derive('verify_gdn_chunk_stage_native_build.py','verify_fp8_z128_native_build.py',[
+ ("JOB='gdn-chunk-stage-native-build-attempt1'","JOB='fp8-z128-native-build-attempt1'",1),
+ ('gdn-chunk-stage-native-build-preparation.json','fp8-z128-native-build-preparation.json',1),
+ ("len(p['candidate_files'])==23","len(p['candidate_files'])==28",1),
+ ("'gdn_chunk_stage_native_build_proposed_unrun'","'fp8_z128_native_build_proposed_unrun'",1),
+ ('len(source.namelist())==len(set(source.namelist()))==23','len(source.namelist())==len(set(source.namelist()))==28',1),
+ ("'gdn_chunk_stage_native_built_cpu_qualified_witness_unqualified'","'fp8_z128_native_built_cpu_qualified_witness_unqualified'",1),
+ ("'fp8-wire-cpu','gdn-profile-cpu'","'fp8-wire-cpu','z-wire-cpu','gdn-profile-cpu'",1),
+ ("from test2026.cuda.qwen38_5090.run_bf16_prefill128_fp8_native_build import validate_cuda_objects","from test2026.cuda.qwen38_5090.run_fp8_z128_native_build import validate_cuda_objects",1),
+ ("            assert b'Ran 3 tests' in z.read(base+'source-cpu-ledger/commands.log')","            from test2026.cuda.qwen38_5090.fp8_z128_native_build_contract import z_wire_contract\n            assert z_wire_contract(doc(base+'z-wire-cpu/report.json'))==w['z_wire_contract']\n            assert b'Ran 6 tests' in z.read(base+'source-cpu-ledger/commands.log')",1),
+ ("'gdn_chunk_stage_native_build_cpu_replayed' if passed else 'gdn_chunk_stage_native_build_failure_preserved'","'fp8_z128_native_build_cpu_replayed' if passed else 'fp8_z128_native_build_failure_preserved'",1)])
+
+value=json.dumps({'status':'fp8_z128_native_build_methods_derived_unrun','files':records,'scope':'Same complete source/runtime restore transaction and34CUDAobject guard.28native union,77preCPU/6postsource checks, actual newZwire alongsideoldwire/GDNprofile/selector/tokenizer gates; no GPU model/performance qualification.'},indent=2).encode();target=m/'evidence/fp8-z128-native-build-derivation.json';assert not target.exists();target.write_bytes(value);print(json.dumps({'derived_methods':len(records)}))
