@@ -1,0 +1,13 @@
+from pathlib import Path
+import hashlib,json,zipfile
+work=Path(__file__).resolve().parent;sha=lambda raw:hashlib.sha256(raw).hexdigest()
+plan=json.loads((work/'prefill128-model-upload-plan.json').read_bytes());files={}
+for row in plan['uploads']:
+    raw=Path(row['local']).read_bytes();assert sha(raw)==row['sha256'] and row['target'] not in files;files[row['target']]=raw
+assert len(files)==22
+bundle=work/'bf16-prefill128-model-deployment.zip';assert not bundle.exists()
+with zipfile.ZipFile(bundle,'x',zipfile.ZIP_DEFLATED) as z:
+    for name,raw in files.items():z.writestr(name,raw)
+    z.writestr('install-manifest.json',json.dumps({'files':{name:sha(raw) for name,raw in files.items()}},indent=2))
+r={'status':'bf16_prefill128_model_packaged_gpu_unrun','bundle_sha256':sha(bundle.read_bytes()),'bytes':bundle.stat().st_size,'targets':len(files),'baseline_pins':744,'installed_pins':756,'candidate_source_files':20,'cpu_tests':55}
+(work/'prefill128-model-deployment.json').write_bytes(json.dumps(r,indent=2).encode());print(json.dumps(r))

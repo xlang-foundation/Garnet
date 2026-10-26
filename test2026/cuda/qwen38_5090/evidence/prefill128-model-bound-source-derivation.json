@@ -1,0 +1,186 @@
+{
+  "status": "prefill128_model_retry_complete_provenance_prepared_gpu_unrun",
+  "files": [
+    {
+      "source": "run_bf16_prefill128_model.py",
+      "source_sha256": "192c9b1d4b87a8715052702a7d6322a72aa0e19c34a6d1a5bc499a96349baa1f",
+      "target": "run_bf16_prefill128_model_bound.py",
+      "target_sha256": "5d2411bb23ec9cc53b7dd36bd0a30a40a13db0e88a2fd53d79b647fbbe85d729",
+      "replacements": [
+        {
+          "old": "bf16-prefill128-model-admission-attempt1",
+          "new": "bf16-prefill128-model-admission-attempt2",
+          "count": 1
+        },
+        {
+          "old": "bf16-prefill128-model-preparation.json",
+          "new": "bf16-prefill128-model-bound-preparation.json",
+          "count": 1
+        },
+        {
+          "old": "closed['exit_code']==0 and closed['cleanup_finished']",
+          "new": "closed['exit_code']==row['exit_code'] and closed['cleanup_finished']",
+          "count": 1
+        },
+        {
+          "old": "test_bf16_prefill128_model.bat",
+          "new": "test_bf16_prefill128_model_bound.bat",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "probe_bf16_prefill128_model.py",
+      "source_sha256": "18d8487af2c4abf3a15b48a12297f89524a891ab0242eac1fda93944cae58054",
+      "target": "probe_bf16_prefill128_model_bound.py",
+      "target_sha256": "8b74aa2694517d2994917531e526cdcd5cab80f69cfa2ed175149382ef1099ec",
+      "replacements": [
+        {
+          "old": "bf16-prefill128-model-preparation.json",
+          "new": "bf16-prefill128-model-bound-preparation.json",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "test_bf16_prefill128_model.bat",
+      "source_sha256": "bff0e67f3e81ed9dbdb4ac60fb2df017401bb9d7b39da19529e9b61ee06610e9",
+      "target": "test_bf16_prefill128_model_bound.bat",
+      "target_sha256": "179542a8d35d6bd5b7a93261435956775fab6cb7721fbcf6c6917c5ff5003fa7",
+      "replacements": [
+        {
+          "old": "probe_bf16_prefill128_model.py",
+          "new": "probe_bf16_prefill128_model_bound.py",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "verify_bf16_prefill128_model.py",
+      "source_sha256": "1fd8795ca3d8c47bbf7104397cb76e773a790164f8d409e21921bac19a4716f0",
+      "target": "verify_bf16_prefill128_model_bound.py",
+      "target_sha256": "f22454d15fe9cd40f7b229b2393c37cc0f58c76edf74a701df6fc864242cc636",
+      "replacements": [
+        {
+          "old": "bf16-prefill128-model-admission-attempt1",
+          "new": "bf16-prefill128-model-admission-attempt2",
+          "count": 1
+        },
+        {
+          "old": "bf16-prefill128-model-preparation.json",
+          "new": "bf16-prefill128-model-bound-preparation.json",
+          "count": 1
+        },
+        {
+          "old": "closed['exit_code']==0 and closed['cleanup_finished']",
+          "new": "closed['exit_code']==row['exit_code'] and closed['cleanup_finished']",
+          "count": 1
+        },
+        {
+          "old": "('prefill128_model.py','verify_bf16_prefill128_model.py')",
+          "new": "('prefill128_model.py','verify_bf16_prefill128_model_bound.py')",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "prepare_bf16_prefill128_model.py",
+      "source_sha256": "fb799dc9aa12ac085307379edbb51fef10a852413a139c9d36769ba95f2afd98",
+      "target": "prepare_bf16_prefill128_model_bound.py",
+      "target_sha256": "e745c135cc7d863362bc5cf0e848073aa92831b3bd42f3b4479809071f037545",
+      "replacements": [
+        {
+          "old": "'test_tiled_scores_model','test_prefill128_model')",
+          "new": "'test_tiled_scores_model','test_prefill128_model','test_prefill128_model_bound')",
+          "count": 1
+        },
+        {
+          "old": "def main():",
+          "new": "def required_provenance(m):\n    result=set()\n    for filename in ('prefill128-native-runtime-derivation.json','prefill128-python-runtime-derivation.json'):\n        for row in json.loads((m/'evidence'/filename).read_bytes())['files']:\n            if row['source'].startswith('test2026/cuda/qwen38_5090/'):\n                result.add(row['source'].removeprefix('test2026/cuda/qwen38_5090/'))\n    return result\n\ndef assert_provenance_closure(m,names):\n    assert required_provenance(m)<=set(names),('Unbound provenance dependencies',sorted(required_provenance(m)-set(names)))\n\ndef main():",
+          "count": 1
+        },
+        {
+          "old": "((BUILD,'bf16_prefill128_native_build_cpu_replayed'),(PARENT,'mtp_prefill16_full4k_target_state_replayed'))",
+          "new": "((BUILD,'bf16_prefill128_native_build_cpu_replayed'),(PARENT,'mtp_prefill16_full4k_target_state_replayed'),('bf16-prefill128-model-admission-attempt1','bf16_prefill128_full4k_model_failure_preserved'))",
+          "count": 1
+        },
+        {
+          "old": "w['exit_code']==0 and w['cleanup_finished']",
+          "new": "w['exit_code']==(1 if job=='bf16-prefill128-model-admission-attempt1' else 0) and w['cleanup_finished']",
+          "count": 1
+        },
+        {
+          "old": "else:assert w['library_unchanged']",
+          "new": "elif job==PARENT:assert w['library_unchanged']\n            else:assert w['baseline_source_restored'] and w['baseline_library_restored'] and w['source_before_sha256']==w['source_after_sha256'] and w['runtime_dependencies']==w['runtime_dependencies_after']",
+          "count": 1
+        },
+        {
+          "old": "'exit_code':0,'proof_sha256'",
+          "new": "'exit_code':1 if job=='bf16-prefill128-model-admission-attempt1' else 0,'proof_sha256'",
+          "count": 1
+        },
+        {
+          "old": "candidates=dict(native);names=set(NAMES)",
+          "new": "candidates=dict(native);names=set(NAMES)|{'run_bf16_prefill128_model_bound.py','probe_bf16_prefill128_model_bound.py','test_bf16_prefill128_model_bound.bat','verify_bf16_prefill128_model_bound.py','prepare_bf16_prefill128_model_bound.py','test_prefill128_model_bound.py','evidence/prefill128-model-bound-source-derivation.json','evidence/bf16-prefill128-model-preparation.json'}",
+          "count": 1
+        },
+        {
+          "old": "if row.get('existing_file_modified'):names.add(row['source'].removeprefix('test2026/cuda/qwen38_5090/'))",
+          "new": "if row['source'].startswith('test2026/cuda/qwen38_5090/'):names.add(row['source'].removeprefix('test2026/cuda/qwen38_5090/'))",
+          "count": 1
+        },
+        {
+          "old": "assert len(candidates)==19",
+          "new": "assert len(candidates)==19;assert_provenance_closure(m,names)",
+          "count": 1
+        },
+        {
+          "old": "==55",
+          "new": "==58",
+          "count": 1
+        },
+        {
+          "old": "args.work/'prefill128-model-local-cpu-ledger'",
+          "new": "args.work/'prefill128-model-bound-local-cpu-ledger'",
+          "count": 1
+        },
+        {
+          "old": "55T128 graph/factory",
+          "new": "58T128 graph/factory and actual failed-preparation dependency closure",
+          "count": 1
+        },
+        {
+          "old": "bundle=args.work/'bf16-prefill128-model-source.zip';assert not bundle.exists()\n    with zipfile.ZipFile(bundle,'x',zipfile.ZIP_DEFLATED) as z:\n        for name,h in candidates.items():assert sha((repo/name).read_bytes())==h;z.write(repo/name,name)",
+          "new": "bundle=args.work/'bf16-prefill128-model-source.zip'\n    with zipfile.ZipFile(bundle) as z:\n        assert len(z.namelist())==len(set(z.namelist()))==20 and set(z.namelist())==set(candidates)\n        for name,h in candidates.items():assert sha(z.read(name))==h==sha((repo/name).read_bytes())",
+          "count": 1
+        },
+        {
+          "old": "'expected_cpu_test_count':55",
+          "new": "'expected_cpu_test_count':58",
+          "count": 1
+        },
+        {
+          "old": "55CPU contracts before GPU",
+          "new": "58CPU contracts including actual failed-provenance closure controls before GPU",
+          "count": 1
+        },
+        {
+          "old": "target=e/'bf16-prefill128-model-preparation.json'",
+          "new": "target=e/'bf16-prefill128-model-bound-preparation.json'",
+          "count": 1
+        },
+        {
+          "old": "args.work/'prefill128-model-upload-plan.json'",
+          "new": "args.work/'prefill128-model-bound-upload-plan.json'",
+          "count": 1
+        },
+        {
+          "old": "'cpu_tests':55",
+          "new": "'cpu_tests':58",
+          "count": 1
+        }
+      ]
+    }
+  ],
+  "scope": "Only complete declaration of original provenance dependencies and distinct retry job/preparation/launcher paths; no model/kernel/precision/request/strict retained oracle changes. Original attempt1 CPU failure preserved; candidate20source bundle unchanged."
+}

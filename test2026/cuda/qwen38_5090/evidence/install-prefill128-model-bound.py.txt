@@ -1,0 +1,41 @@
+from pathlib import Path
+import argparse,hashlib,io,json,sys,zipfile
+ROOT=Path('D:/CantorAI/5090-study-20261023');M=ROOT/'Garnet/test2026/cuda/qwen38_5090';sys.path.insert(0,str(M))
+from run_bf16_low_batch_native_build import idle
+sha=lambda raw:hashlib.sha256(raw).hexdigest()
+a=argparse.ArgumentParser();a.add_argument('--sha256',required=True);args=a.parse_args()
+bundle=ROOT/'results/bf16-prefill128-model-bound-deployment.zip';receipt=ROOT/'results/prefill128-model-bound-install.json'
+assert sha(bundle.read_bytes())==args.sha256 and not receipt.exists();idle()
+with zipfile.ZipFile(bundle) as z:
+    manifest=json.loads(z.read('install-manifest.json'));assert z.testzip() is None and len(z.namelist())==len(set(z.namelist()))==len(manifest['files'])+1==36
+    key='Garnet/test2026/cuda/qwen38_5090/evidence/bf16-prefill128-model-bound-preparation.json';p=json.loads(z.read(key))
+    assert p['status']=='bf16_prefill128_full4k_model_prepared_gpu_unrun' and p['expected_cpu_test_count']==58 and len(p['files'])==757 and len(p['installed_files'])==769
+    for name,h in p['files'].items():
+        if name not in manifest['files']:assert sha((ROOT/name).read_bytes())==h
+    for name,h in p['runtime'].items():assert sha((ROOT/'build/bin'/name).read_bytes())==h
+    for name,h in p['environment'].items():assert sha(Path(name).read_bytes())==h
+    assert sha((ROOT/'build/bin/garnet-native-bf16-prefill128-attempt1.dll').read_bytes())==p['candidate_library_sha256']
+    for name,h in p['candidate_base'].items():
+        target=ROOT/'Garnet'/name
+        if h is None:assert not target.exists()
+        else:assert sha(target.read_bytes())==h
+    raw=z.read(p['source_bundle']);assert sha(raw)==p['source_bundle_sha256']
+    with zipfile.ZipFile(io.BytesIO(raw)) as sources:
+        assert sources.testzip() is None and len(sources.namelist())==len(set(sources.namelist()))==20 and set(sources.namelist())==set(p['candidate_files'])
+        for name,h in p['candidate_files'].items():assert sha(sources.read(name))==h
+    pending=[];same=[]
+    for name,h in manifest['files'].items():
+        target=ROOT/name;assert target.resolve().is_relative_to(M.resolve()) or name==p['source_bundle']
+        assert target.parent.is_dir();parent=target.parent
+        while parent!=ROOT:
+            assert parent.resolve().is_relative_to(ROOT.resolve()) and not(getattr(parent.lstat(),'st_file_attributes',0)&0x400);parent=parent.parent
+        raw=z.read(name);assert sha(raw)==h
+        if name not in (key,p['source_bundle']):assert p['new_files'][name]==h
+        if target.exists():assert target.is_file() and sha(target.read_bytes())==h;same.append(name)
+        else:pending.append((target,raw))
+    for target,raw in pending:
+        with target.open('xb') as stream:stream.write(raw)
+        assert target.read_bytes()==raw
+    for name,h in p['files'].items():assert sha((ROOT/name).read_bytes())==h
+r={'status':'bf16_prefill128_full4k_model_methods_installed_candidate_unrun','bundle_sha256':args.sha256,'new_targets':len(pending),'unchanged_targets':same,'baseline_pins':len(p['files']),'installed_pins':len(p['installed_files']),'candidate_sources_installed':False,'runtime_and_sdk_unchanged':True,'gpu_executed':False}
+receipt.write_bytes(json.dumps(r,indent=2).encode());print(json.dumps(r))

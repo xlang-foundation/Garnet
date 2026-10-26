@@ -1,0 +1,16 @@
+from pathlib import Path
+import hashlib,json,zipfile
+work=Path(__file__).resolve().parent;sha=lambda raw:hashlib.sha256(raw).hexdigest()
+plan=json.loads((work/'prefill128-model-bound-upload-plan.json').read_bytes());files={}
+for row in plan['uploads']:
+    raw=Path(row['local']).read_bytes();assert sha(raw)==row['sha256'] and row['target'] not in files;files[row['target']]=raw
+assert len(files)==35
+bundle=work/'bf16-prefill128-model-bound-deployment.zip';assert not bundle.exists()
+with zipfile.ZipFile(bundle,'x',zipfile.ZIP_DEFLATED) as z:
+    for name,raw in files.items():z.writestr(name,raw)
+    z.writestr('install-manifest.json',json.dumps({'files':{name:sha(raw) for name,raw in files.items()}},indent=2))
+source=(work/'install-prefill128-model.py').read_bytes()
+installer=source.replace(b'bf16-prefill128-model-deployment.zip',b'bf16-prefill128-model-bound-deployment.zip').replace(b'prefill128-model-install.json',b'prefill128-model-bound-install.json').replace(b'==23',b'==36').replace(b'bf16-prefill128-model-preparation.json',b'bf16-prefill128-model-bound-preparation.json').replace(b'==55',b'==58').replace(b'==744',b'==757').replace(b'==756',b'==769')
+target=work/'install-prefill128-model-bound.py';assert not target.exists();target.write_bytes(installer)
+r={'status':'bf16_prefill128_model_retry_packaged_gpu_unrun','bundle_sha256':sha(bundle.read_bytes()),'bytes':bundle.stat().st_size,'targets':35,'baseline_pins':757,'installed_pins':769,'candidate_source_files':20,'cpu_tests':58,'installer_sha256':sha(installer),'original_failed_attempt_preserved':True}
+(work/'prefill128-model-bound-deployment.json').write_bytes(json.dumps(r,indent=2).encode());print(json.dumps(r))

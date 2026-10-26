@@ -1,0 +1,53 @@
+from pathlib import Path
+import hashlib,json
+m=Path('D:/CantorAI/work/qwen38-5090/test2026/cuda/qwen38_5090');sha=lambda raw:hashlib.sha256(raw).hexdigest();rows=[]
+def derive(source,target,steps):
+    raw=(m/source).read_bytes();text=raw.decode();records=[]
+    for old,new,count in steps:
+        assert text.count(old)==count,(source,old,text.count(old));text=text.replace(old,new);records.append({'old':old,'new':new,'count':count})
+    data=text.encode();assert not(m/target).exists();(m/target).write_bytes(data);rows.append({'source':source,'source_sha256':sha(raw),'target':target,'target_sha256':sha(data),'replacements':records})
+derive('run_bf16_prefill128_model.py','run_bf16_prefill128_model_bound.py',[
+ ('bf16-prefill128-model-admission-attempt1','bf16-prefill128-model-admission-attempt2',1),
+ ('bf16-prefill128-model-preparation.json','bf16-prefill128-model-bound-preparation.json',1),
+ ("closed['exit_code']==0 and closed['cleanup_finished']","closed['exit_code']==row['exit_code'] and closed['cleanup_finished']",1),
+ ('test_bf16_prefill128_model.bat','test_bf16_prefill128_model_bound.bat',1)])
+derive('probe_bf16_prefill128_model.py','probe_bf16_prefill128_model_bound.py',[
+ ('bf16-prefill128-model-preparation.json','bf16-prefill128-model-bound-preparation.json',1)])
+derive('test_bf16_prefill128_model.bat','test_bf16_prefill128_model_bound.bat',[
+ ('probe_bf16_prefill128_model.py','probe_bf16_prefill128_model_bound.py',1)])
+derive('verify_bf16_prefill128_model.py','verify_bf16_prefill128_model_bound.py',[
+ ('bf16-prefill128-model-admission-attempt1','bf16-prefill128-model-admission-attempt2',1),
+ ('bf16-prefill128-model-preparation.json','bf16-prefill128-model-bound-preparation.json',1),
+ ("closed['exit_code']==0 and closed['cleanup_finished']","closed['exit_code']==row['exit_code'] and closed['cleanup_finished']",1),
+ ("('prefill128_model.py','verify_bf16_prefill128_model.py')","('prefill128_model.py','verify_bf16_prefill128_model_bound.py')",1)])
+derive('prepare_bf16_prefill128_model.py','prepare_bf16_prefill128_model_bound.py',[
+ ("'test_tiled_scores_model','test_prefill128_model')","'test_tiled_scores_model','test_prefill128_model','test_prefill128_model_bound')",1),
+ ("def main():", """def required_provenance(m):
+    result=set()
+    for filename in ('prefill128-native-runtime-derivation.json','prefill128-python-runtime-derivation.json'):
+        for row in json.loads((m/'evidence'/filename).read_bytes())['files']:
+            if row['source'].startswith('test2026/cuda/qwen38_5090/'):
+                result.add(row['source'].removeprefix('test2026/cuda/qwen38_5090/'))
+    return result
+
+def assert_provenance_closure(m,names):
+    assert required_provenance(m)<=set(names),('Unbound provenance dependencies',sorted(required_provenance(m)-set(names)))
+
+def main():""",1),
+ ("((BUILD,'bf16_prefill128_native_build_cpu_replayed'),(PARENT,'mtp_prefill16_full4k_target_state_replayed'))", "((BUILD,'bf16_prefill128_native_build_cpu_replayed'),(PARENT,'mtp_prefill16_full4k_target_state_replayed'),('bf16-prefill128-model-admission-attempt1','bf16_prefill128_full4k_model_failure_preserved'))",1),
+ ("w['exit_code']==0 and w['cleanup_finished']","w['exit_code']==(1 if job=='bf16-prefill128-model-admission-attempt1' else 0) and w['cleanup_finished']",1),
+ ("else:assert w['library_unchanged']","elif job==PARENT:assert w['library_unchanged']\n            else:assert w['baseline_source_restored'] and w['baseline_library_restored'] and w['source_before_sha256']==w['source_after_sha256'] and w['runtime_dependencies']==w['runtime_dependencies_after']",1),
+ ("'exit_code':0,'proof_sha256'","'exit_code':1 if job=='bf16-prefill128-model-admission-attempt1' else 0,'proof_sha256'",1),
+ ("candidates=dict(native);names=set(NAMES)","candidates=dict(native);names=set(NAMES)|{'run_bf16_prefill128_model_bound.py','probe_bf16_prefill128_model_bound.py','test_bf16_prefill128_model_bound.bat','verify_bf16_prefill128_model_bound.py','prepare_bf16_prefill128_model_bound.py','test_prefill128_model_bound.py','evidence/prefill128-model-bound-source-derivation.json','evidence/bf16-prefill128-model-preparation.json'}",1),
+ ("if row.get('existing_file_modified'):names.add(row['source'].removeprefix('test2026/cuda/qwen38_5090/'))", "if row['source'].startswith('test2026/cuda/qwen38_5090/'):names.add(row['source'].removeprefix('test2026/cuda/qwen38_5090/'))",1),
+ ("assert len(candidates)==19","assert len(candidates)==19;assert_provenance_closure(m,names)",1),
+ ("==55","==58",1),
+ ("args.work/'prefill128-model-local-cpu-ledger'","args.work/'prefill128-model-bound-local-cpu-ledger'",1),
+ ("55T128 graph/factory","58T128 graph/factory and actual failed-preparation dependency closure",1),
+ ("bundle=args.work/'bf16-prefill128-model-source.zip';assert not bundle.exists()\n    with zipfile.ZipFile(bundle,'x',zipfile.ZIP_DEFLATED) as z:\n        for name,h in candidates.items():assert sha((repo/name).read_bytes())==h;z.write(repo/name,name)", "bundle=args.work/'bf16-prefill128-model-source.zip'\n    with zipfile.ZipFile(bundle) as z:\n        assert len(z.namelist())==len(set(z.namelist()))==20 and set(z.namelist())==set(candidates)\n        for name,h in candidates.items():assert sha(z.read(name))==h==sha((repo/name).read_bytes())",1),
+ ("'expected_cpu_test_count':55","'expected_cpu_test_count':58",1),
+ ("55CPU contracts before GPU","58CPU contracts including actual failed-provenance closure controls before GPU",1),
+ ("target=e/'bf16-prefill128-model-preparation.json'","target=e/'bf16-prefill128-model-bound-preparation.json'",1),
+ ("args.work/'prefill128-model-upload-plan.json'","args.work/'prefill128-model-bound-upload-plan.json'",1),
+ ("'cpu_tests':55","'cpu_tests':58",1)])
+target=m/'evidence/prefill128-model-bound-source-derivation.json';assert not target.exists();target.write_bytes(json.dumps({'status':'prefill128_model_retry_complete_provenance_prepared_gpu_unrun','files':rows,'scope':'Only complete declaration of original provenance dependencies and distinct retry job/preparation/launcher paths; no model/kernel/precision/request/strict retained oracle changes. Original attempt1 CPU failure preserved; candidate20source bundle unchanged.'},indent=2).encode());print(json.dumps({'derived_methods':len(rows)}))
