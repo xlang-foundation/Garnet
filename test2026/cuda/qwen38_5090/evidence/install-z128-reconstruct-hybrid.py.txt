@@ -1,0 +1,23 @@
+from pathlib import Path
+import argparse,hashlib,json,zipfile
+ROOT=Path('D:/CantorAI/5090-study-20261023');M=ROOT/'Garnet/test2026/cuda/qwen38_5090';sha=lambda raw:hashlib.sha256(raw).hexdigest();parser=argparse.ArgumentParser();parser.add_argument('--sha256',required=True);a=parser.parse_args();package=ROOT/'results/z128-reconstruct-hybrid-deployment.zip';receipt=ROOT/'results/z128-reconstruct-hybrid-install.json';assert not receipt.exists() and sha(package.read_bytes())==a.sha256
+with zipfile.ZipFile(package) as z:
+    manifest=json.loads(z.read('install-manifest.json'));assert z.testzip() is None and len(z.namelist())==len(set(z.namelist()))==len(manifest['files'])+1
+    proposal='results/z128-reconstruct-hybrid-proposal.json';p=json.loads(z.read(proposal));assert p['status']=='separate_reconstruction_runtime_origin_proposed_unrun' and set(manifest['files'])==set(p['methods'])|{proposal}
+    for name,h in p['files'].items():assert sha((ROOT/name).read_bytes())==h
+    for name,h in p['runtime'].items():assert sha((ROOT/'build/bin'/name).read_bytes())==h
+    for name,h in p['environment'].items():assert sha(Path(name).read_bytes())==h
+    pending=[];same=[]
+    for name,h in manifest['files'].items():
+        path=ROOT/name;assert '..' not in Path(name).parts and (path.resolve().is_relative_to(M.resolve()) or name==proposal);parent=path.parent
+        while parent!=ROOT:
+            assert parent.resolve().is_relative_to(ROOT.resolve())
+            if parent.exists():assert parent.is_dir() and not(getattr(parent.lstat(),'st_file_attributes',0)&0x400)
+            parent=parent.parent
+        raw=z.read(name);assert sha(raw)==h
+        if path.exists():assert path.is_file() and path.read_bytes()==raw;same.append(name)
+        else:pending.append((path,raw))
+    for path,raw in pending:
+        path.parent.mkdir(parents=True,exist_ok=True)
+        with path.open('xb') as stream:stream.write(raw)
+receipt.write_bytes(json.dumps({'status':'separate_reconstruction_methods_installed_unrun','package_sha256':a.sha256,'new_files':len(pending),'unchanged_files':same,'production_source_or_library_installed':False},indent=2).encode());print(receipt.read_text())

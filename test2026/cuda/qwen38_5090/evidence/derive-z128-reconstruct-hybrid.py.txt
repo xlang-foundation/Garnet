@@ -1,0 +1,39 @@
+from pathlib import Path
+import hashlib,json
+m=Path('D:/CantorAI/work/qwen38-5090/test2026/cuda/qwen38_5090');sha=lambda raw:hashlib.sha256(raw).hexdigest();rows=[]
+def derive(base,target,steps):
+    raw=(m/base).read_bytes();old=raw
+    for a,b,count in steps:assert raw.count(a.encode())==count,(target,a[:100],raw.count(a.encode()));raw=raw.replace(a.encode(),b.encode())
+    path=m/target;assert not path.exists();path.write_bytes(raw);rows.append({'base':base,'target':target,'base_sha256':sha(old),'target_sha256':sha(raw),'changes':[{'before':a,'after':b,'count':c} for a,b,c in steps]})
+derive('probe_z128_reconstruct_runtime_sdk.cpp','probe_z128_reconstruct_hybrid_sdk.cpp',[( 'runtime==GetModuleHandleA(nullptr)?"static":"dynamic"','runtime==GetModuleHandleA(nullptr)?"hybrid_loader":"dynamic"',1)])
+derive('build_z128_reconstruct_runtime_sdk.bat','build_z128_reconstruct_hybrid_sdk.bat',[('probe_z128_reconstruct_runtime_sdk.cpp','probe_z128_reconstruct_hybrid_sdk.cpp',1)])
+derive('z128_reconstruct_runtime.py','z128_reconstruct_hybrid.py',[
+ ("report['cuda_runtime_linkage']=='static'","report['cuda_runtime_linkage']=='hybrid_loader'",1),
+ ("report['cuda_runtime_version']==report['cuda_runtime_header_version']>=12080 and report['cuda_driver_version']>=12080","(report['cuda_runtime_header_version'],report['cuda_runtime_version'],report['cuda_driver_version'])==(13020,13040,13040)",1),
+ ("if 'cudaGetDevice' in line and 'cudart' in line.lower()","if 'cudaGetDevice' in line and 'cudart:generated_cuda_runtime_api_loader.obj' in line",1),
+ ('static_CUDA_runtime_origin_replayed','Windows_hybrid_CUDA_runtime_origin_replayed',1),
+ ('CUDA_API_origin','CUDA_API_loader_origin',1),('CUDA_runtime_header_and_runtime_version','CUDA_runtime_version',1),
+ ("'CUDA_driver_version':report['cuda_driver_version']","'CUDA_header_version':report['cuda_runtime_header_version'],'CUDA_driver_version':report['cuda_driver_version']",1),
+ ('runtime_origin_by_address_and_static_link_map','runtime_origin_by_address_and_hybrid_loader_map',1)])
+derive('test_z128_reconstruct_runtime.py','test_z128_reconstruct_hybrid.py',[
+ ('from .z128_reconstruct_runtime import identity','from .z128_reconstruct_hybrid import identity',1),
+ ('z128-reconstruct-runtime-derivation.json','z128-reconstruct-hybrid-derivation.json',1),
+ ('probe_z128_reconstruct_runtime_sdk.cpp','probe_z128_reconstruct_hybrid_sdk.cpp',2),
+ ("'cuda_runtime_linkage':'static'","'cuda_runtime_linkage':'hybrid_loader'",1),
+ ("'cuda_runtime_version':13020","'cuda_runtime_version':13040",1),
+ ('cudart.lib:cudart.obj','cudart:generated_cuda_runtime_api_loader.obj',1),
+ ('runtime_origin_by_address_and_static_link_map','runtime_origin_by_address_and_hybrid_loader_map',2)])
+for base,target in [('prepare_z128_reconstruct_runtime.py','prepare_z128_reconstruct_hybrid.py'),('run_z128_reconstruct_runtime.py','run_z128_reconstruct_hybrid.py'),('verify_z128_reconstruct_runtime.py','verify_z128_reconstruct_hybrid.py')]:
+    original=(m/base).read_bytes();steps=[]
+    for a,b in [('z128-reconstruct-runtime-attempt1','z128-reconstruct-hybrid-attempt1'),('z128-reconstruct-runtime-preparation.json','z128-reconstruct-hybrid-preparation.json'),('z128-reconstruct-runtime-proposal.json','z128-reconstruct-hybrid-proposal.json'),('z128_reconstruct_runtime','z128_reconstruct_hybrid'),('static_CUDART_library_sha256','hybrid_CUDART_loader_library_sha256'),('static_runtime_origin','hybrid_runtime_origin')]:
+        count=original.count(a.encode())
+        if count:steps.append((a,b,count));original=original.replace(a.encode(),b.encode())
+    if base.startswith('run_'):
+        before="    out=ROOT/'results'/JOB;"
+        after="""    previous=p['previous_failure'];previous_proof=ROOT/'results'/(previous['job']+'-failure-verified.json');assert sha(previous_proof.read_bytes())==previous['proof_sha256'] and sha((ROOT/'results'/(previous['job']+'-evidence.zip')).read_bytes())==previous['archive_sha256']
+    out=ROOT/'results'/JOB;"""
+        steps.append((before,after,1));steps.append(("common=[prep,proof]+","common=[prep,proof,previous_proof]+",1))
+    if base.startswith('verify_'):
+        steps.append(("        phases={}","        previous=p['previous_failure'];failure=z.read('results/'+previous['job']+'-failure-verified.json');assert sha(failure)==previous['proof_sha256'] and failure==(a.proofs/(previous['job']+'-failure-verified.json')).read_bytes() and sha((a.proofs/(previous['job']+'-evidence.zip')).read_bytes())==previous['archive_sha256']\n        phases={}",1))
+    derive(base,target,steps)
+(m/'evidence/z128-reconstruct-hybrid-derivation.json').write_bytes(json.dumps({'status':'documented_Windows_hybrid_loader_protocol_after_preserved_metadata_assumption_failures','files':rows,'factory_or_CPU_driver_or_algorithm_or_matmul_changed':False,'documentation':['https://docs.nvidia.com/cuda/archive/13.2.0/cuda-compiler-driver-nvcc/index.html#cudart-none-shared-static-hybrid-cudart','https://docs.nvidia.com/cuda/cuda-runtime-api/cuda_runtime_api/group__CUDART____VERSION.html'],'scope':'Same constructor CPP and source pins. Separate metadata probe identifies API loader code inEXE, generated_cuda_runtime_api_loader.obj map contribution, cuBLAS/root driver modules and exact header13020/runtime13040/driver13040 tuple. Original failed header==runtime check remains unchanged/preserved; no broad range or model/quality gate relaxation.'},indent=2).encode());print(json.dumps({'derived_methods':len(rows)}))

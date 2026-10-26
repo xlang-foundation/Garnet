@@ -1,0 +1,10 @@
+from pathlib import Path
+import hashlib,json
+m=Path('D:/CantorAI/work/qwen38-5090/test2026/cuda/qwen38_5090');sha=lambda raw:hashlib.sha256(raw).hexdigest();rows=[]
+for base,target in [('prepare_z128_reconstruct_construction.py','prepare_z128_reconstruct_construction_attempt2.py'),('run_z128_reconstruct_construction.py','run_z128_reconstruct_construction_attempt2.py'),('verify_z128_reconstruct_construction.py','verify_z128_reconstruct_construction_attempt2.py')]:
+    original=(m/base).read_bytes();raw=original;changes=[]
+    for before,after in [('z128-reconstruct-construction-attempt1','z128-reconstruct-construction-attempt2'),('z128-reconstruct-construction-preparation.json','z128-reconstruct-construction-preparation-attempt2.json'),('z128-reconstruct-construction-proposal.json','z128-reconstruct-construction-proposal-attempt2.json')]:
+        count=raw.count(before.encode())
+        if count:raw=raw.replace(before.encode(),after.encode());changes.append({'before':before,'after':after,'count':count})
+    target=m/target;assert not target.exists();target.write_bytes(raw);rows.append({'base':base,'target':target.name,'base_sha256':sha(original),'target_sha256':sha(raw),'changes':changes})
+(m/'evidence/z128-reconstruct-attempt2-derivation.json').write_bytes(json.dumps({'status':'missing_declared_provenance_input_corrected_after_preserved_preflight_failure','files':rows,'candidate_CPP_CPU_driver_or_assertions_changed':False},indent=2).encode());print('Derived attempt2 after preserved missing input')

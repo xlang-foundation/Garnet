@@ -1,0 +1,53 @@
+from pathlib import Path
+import hashlib,json
+repo=Path('D:/CantorAI/work/qwen38-5090');m=repo/'test2026/cuda/qwen38_5090';c=m/'native_z128_reconstruct_candidate';sdk=c/'cpu_sdk';sdk.mkdir();sha=lambda raw:hashlib.sha256(raw).hexdigest();rows=[]
+def derive(source,target,steps):
+    original=source.read_bytes();raw=original
+    for a,b,count in steps:assert raw.count(a.encode())==count,(target,a[:100],raw.count(a.encode()));raw=raw.replace(a.encode(),b.encode())
+    assert not target.exists();target.write_bytes(raw);rows.append({'source':source.relative_to(repo).as_posix(),'source_sha256':sha(original),'target':target.relative_to(repo).as_posix(),'target_sha256':sha(raw),'changes':[{'before':a,'after':b,'count':count} for a,b,count in steps]})
+old=m/'native_z128_factory_trace_candidate/cpu_sdk';(sdk/'cuda_runtime_api.h').write_bytes((old/'cuda_runtime_api.h').read_bytes())
+extra='''
+using cublasLtMatmulAlgoConfigAttributes_t=int;
+constexpr int CUBLASLT_ALGO_CONFIG_TILE_ID=1,CUBLASLT_ALGO_CONFIG_STAGES_ID=2,CUBLASLT_ALGO_CONFIG_SPLITK_NUM=3;
+constexpr int CUBLASLT_ALGO_CONFIG_REDUCTION_SCHEME=4,CUBLASLT_ALGO_CONFIG_CTA_SWIZZLING=5,CUBLASLT_ALGO_CONFIG_CUSTOM_OPTION=6;
+constexpr int CUBLASLT_ALGO_CONFIG_INNER_SHAPE_ID=7,CUBLASLT_ALGO_CONFIG_CLUSTER_SHAPE_ID=8;
+cublasStatus_t cublasLtMatmulAlgoInit(cublasLtHandle_t,int,int,int,int,int,int,int,cublasLtMatmulAlgo_t*);
+cublasStatus_t cublasLtMatmulAlgoConfigSetAttribute(cublasLtMatmulAlgo_t*,int,const void*,size_t);
+'''
+raw=(old/'cublasLt.h').read_bytes()+extra.encode();(sdk/'cublasLt.h').write_bytes(raw);rows.append({'source':(old/'cublasLt.h').relative_to(repo).as_posix(),'source_sha256':sha((old/'cublasLt.h').read_bytes()),'target':(sdk/'cublasLt.h').relative_to(repo).as_posix(),'target_sha256':sha(raw),'changes':[{'before':'','after':extra,'count':None,'operation':'append'}]})
+get_before='''    *static_cast<int32_t*>(value)=mode=="id"?35:67;*written=mode=="id_bytes"?3:sizeof(int32_t);return 0;'''
+get_after='''    if(reconstruct){
+        if(attr<0||attr>=9||bytes!=(attr>=7?2:4))throw std::runtime_error("bad_CPU_attribute_size");
+        uint32_t result=config[attr];if(mode=="get_value_"+std::to_string(attr))++result;
+        if(bytes==2)*static_cast<uint16_t*>(value)=static_cast<uint16_t>(result);else *static_cast<uint32_t*>(value)=result;
+        *written=mode=="get_bytes_"+std::to_string(attr)?bytes-1:bytes;return 0;
+    }
+'''+get_before
+check_before='''cublasStatus_t cublasLtMatmulAlgoCheck(cublasLtHandle_t,cublasLtMatmulDesc_t,cublasLtMatrixLayout_t,cublasLtMatrixLayout_t,cublasLtMatrixLayout_t,cublasLtMatrixLayout_t,const cublasLtMatmulAlgo_t*,cublasLtMatmulHeuristicResult_t* value){
+    if(step("cublasLtMatmulAlgoCheck"))return 7;value->state=mode=="check_state"?7:0;value->workspaceSize=mode=="workspace"?(4ULL<<20)+1:0;return 0;
+}'''
+check_after='''cublasStatus_t cublasLtMatmulAlgoCheck(cublasLtHandle_t,cublasLtMatmulDesc_t,cublasLtMatrixLayout_t,cublasLtMatrixLayout_t input,cublasLtMatrixLayout_t,cublasLtMatrixLayout_t,const cublasLtMatmulAlgo_t*,cublasLtMatmulHeuristicResult_t* value){
+    if(step("cublasLtMatmulAlgoCheck"))return 7;const auto suffix=std::to_string(layoutColumns[input]);
+    value->state=(mode=="check_state"||mode=="check_state_"+suffix)?7:0;
+    value->workspaceSize=(mode=="workspace"||mode=="workspace_"+suffix)?(4ULL<<20)+1:0;return 0;
+}'''
+new_apis='''cublasStatus_t cublasLtMatmulAlgoInit(cublasLtHandle_t,int compute,int scale,int a,int b,int c,int d,int id,cublasLtMatmulAlgo_t* algo){
+    if(step("cublasLtMatmulAlgoInit:"+std::to_string(compute)+":"+std::to_string(scale)+":"+std::to_string(a)+":"+std::to_string(b)+":"+std::to_string(c)+":"+std::to_string(d)+":"+std::to_string(id)))return 7;
+    std::memset(algo,0,sizeof(*algo));for(auto& field:config)field=0;config[0]=id;return 0;
+}
+cublasStatus_t cublasLtMatmulAlgoConfigSetAttribute(cublasLtMatmulAlgo_t*,int attr,const void* value,size_t bytes){
+    if(attr<=0||attr>=9||bytes!=(attr>=7?2:4))throw std::runtime_error("bad_CPU_set_attribute_size");
+    const uint32_t field=bytes==2?*static_cast<const uint16_t*>(value):*static_cast<const uint32_t*>(value);
+    if(step("cublasLtMatmulAlgoConfigSetAttribute:"+std::to_string(attr)+":"+std::to_string(bytes)+":"+std::to_string(field)))return 7;
+    config[attr]=field;return 0;
+}
+'''
+derive(m/'probe_z128_factory_trace_cpu.cpp',m/'probe_z128_reconstruct_cpu.cpp',[
+ ('#include <vector>','#include <vector>\n#include <map>',1),
+ ('int calls=0,failAt=0,throwAt=0,matmuls=0;','int calls=0,failAt=0,throwAt=0,matmuls=0;\nbool reconstruct=false;uint32_t config[9]{};std::map<void*,uint64_t> layoutColumns;',1),
+ ('*value=handle();return 0;}\ncublasStatus_t cublasLtMatrixLayoutDestroy','*value=handle();layoutColumns[*value]=columns;return 0;}\ncublasStatus_t cublasLtMatrixLayoutDestroy',1),
+ (get_before,get_after,1),(check_before,check_after,1),
+ ('cublasStatus_t cublasLtMatmul(',new_apis+'cublasStatus_t cublasLtMatmul(',1),
+ ('if(argc!=2)return 2;mode=argv[1];','if(argc!=2&&argc!=3)return 2;mode=argv[1];reconstruct=argc==3&&std::strcmp(argv[2],"reconstruct")==0;\n    if(argc==3&&!reconstruct)return 2;',1),
+ ('Garnet::CreateModelOptFP8Z128Context()','(reconstruct?Garnet::CreateModelOptFP8Z128ReconstructedContext():Garnet::CreateModelOptFP8Z128Context())',2)])
+(m/'evidence/z128-reconstruct-cpu-derivation.json').write_bytes(json.dumps({'status':'CPU_only_actual_factory_fault_driver_derivative','files':rows,'cuda_interface_sha256':sha((sdk/'cuda_runtime_api.h').read_bytes()),'scope':'CPU fixtures only, never realSDK orGarnetDLL linkage. Legacy transcripts compared to retained48original cases; new factory32SDK failures/exceptions, all9queryvalue/length drift, M32/M128state/workspace andcache tests beforeSDK.'},indent=2).encode());print(json.dumps({'derivatives':len(rows)}))

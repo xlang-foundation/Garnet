@@ -1,0 +1,43 @@
+{
+  "status": "separate_correct_runtime_origin_metadata_after_quarantined_module_field",
+  "files": [
+    {
+      "base": "probe_z128_reconstruct_sdk.cpp",
+      "target": "probe_z128_reconstruct_runtime_sdk.cpp",
+      "base_sha256": "3cbfb6d5334da06aa9a17b6a620bd3c5c4687fd4833b781c7d0fc1554aea10dd",
+      "target_sha256": "9379bc25d8239669802355b54101d1f2080f503de37ba6bc98bf0a5a9f8252d4",
+      "changes": [
+        {
+          "before": "        const char* names[]={\"cublasLt64_13.dll\",\"cudart64_13.dll\"};\n        for(int i=0;i<2;++i){char path[MAX_PATH]{};const auto bytes=GetModuleFileNameA(GetModuleHandleA(names[i]),path,MAX_PATH);if(!bytes||bytes>=MAX_PATH)return 4;std::printf(\"%s{\\\"name\\\":\\\"%s\\\",\\\"path_hex\\\":\\\"\",i?\",\":\"\",names[i]);hex(path,bytes);std::printf(\"\\\"}\");}\n        std::printf(\"],\\\"configuration\\\":[\");",
+          "after": "        HMODULE blas=GetModuleHandleA(\"cublasLt64_13.dll\"),runtime=nullptr,driver=GetModuleHandleA(\"nvcuda.dll\");\n        if(!blas||!driver||!GetModuleHandleExA(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS|GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,\n            reinterpret_cast<LPCSTR>(&cudaGetDevice),&runtime)||!runtime)return 4;\n        const char* names[]={\"cublasLt64_13.dll\",\"cudaGetDevice\",\"nvcuda.dll\"};const HMODULE modules[]={blas,runtime,driver};\n        for(int i=0;i<3;++i){char path[MAX_PATH]{};const auto bytes=GetModuleFileNameA(modules[i],path,MAX_PATH);if(!bytes||bytes>=MAX_PATH)return 4;std::printf(\"%s{\\\"name\\\":\\\"%s\\\",\\\"path_hex\\\":\\\"\",i?\",\":\"\",names[i]);hex(path,bytes);std::printf(\"\\\"}\");}\n        int runtimeVersion=0,driverVersion=0;const auto runtimeCode=cudaRuntimeGetVersion(&runtimeVersion);const auto driverCode=cudaDriverGetVersion(&driverVersion);\n        std::printf(\"],\\\"cuda_runtime_linkage\\\":\\\"%s\\\",\\\"named_cudart_DLL_present\\\":%s,\\\"cuda_runtime_status\\\":%d,\\\"cuda_runtime_version\\\":%d,\\\"cuda_runtime_header_version\\\":%d,\\\"cuda_driver_status\\\":%d,\\\"cuda_driver_version\\\":%d,\\\"configuration\\\":[\",\n            runtime==GetModuleHandleA(nullptr)?\"static\":\"dynamic\",GetModuleHandleA(\"cudart64_13.dll\")?\"true\":\"false\",int(runtimeCode),runtimeVersion,CUDART_VERSION,int(driverCode),driverVersion);",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "base": "build_z128_reconstruct_sdk.bat",
+      "target": "build_z128_reconstruct_runtime_sdk.bat",
+      "base_sha256": "cf9cc80a62c175295ca8b21f516e6a3d3f963a5912bdf21760c9617279ccf3ad",
+      "target_sha256": "09a167863a2c0a57c16cd15eeffc763bcbf4cb0de5ce2ea1327d53f525e40b35",
+      "changes": [
+        {
+          "before": "probe_z128_reconstruct_sdk.cpp",
+          "after": "probe_z128_reconstruct_runtime_sdk.cpp",
+          "count": 1
+        },
+        {
+          "before": " /Feconstructor.exe /link",
+          "after": " /Feconstructor.exe /link /MAP:constructor.map",
+          "count": 1
+        },
+        {
+          "before": "set \"CODE=%errorlevel%\"\npopd",
+          "after": "if errorlevel 1 exit /b %errorlevel%\ndumpbin.exe /dependents constructor.exe > dependencies.txt\nset \"CODE=%errorlevel%\"\npopd",
+          "count": 1
+        }
+      ]
+    }
+  ],
+  "factory_or_CPU_driver_or_algorithm_or_matmul_changed": false,
+  "scope": "Probe metadata only. Check namedDLL handles; identify cudaGetDevice code module by address; record CUDA header/runtime/driver versions andlinker map/PEdependencies. Prior1400CPU and53SDKfactory events remain quarantined with original checker failure; this is not a source or numerical guard relaxation."
+}

@@ -1,0 +1,11 @@
+Traceback (most recent call last):
+  File "D:\CantorAI\5090-study-20261023\Garnet\test2026\cuda\qwen38_5090\verify_z128_reconstruct_runtime.py", line 40, in <module>
+    if __name__=='__main__':raise SystemExit(main())
+                                             ^^^^^^
+  File "D:\CantorAI\5090-study-20261023\Garnet\test2026\cuda\qwen38_5090\verify_z128_reconstruct_runtime.py", line 25, in main
+    assert report['native_report']==json.loads(stdout) and report['replay']==sdk_case(report['native_report'],stderr,phase=='trace-on');r=identity(report['native_report'],'D:/CantorAI/5090-study-20261023/results/'+JOB+'/sdk-build/constructor.exe',z.read(base+'sdk-build/dependencies.txt'),z.read(base+'sdk-build/constructor.map'));origin=doc(base+phase+'/runtime-origin.json');assert origin['identity']==r;phases[phase]['runtime_identity']=origin
+                                                                                                                                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\CantorAI\5090-study-20261023\Garnet\test2026\cuda\qwen38_5090\z128_reconstruct_runtime.py", line 6, in identity
+    assert report['cuda_runtime_version']==report['cuda_runtime_header_version']>=12080 and report['cuda_driver_version']>=12080
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError

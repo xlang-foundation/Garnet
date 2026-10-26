@@ -1,0 +1,22 @@
+
+{"id": "1cf61f993f7e42b29b41045ccf7e7de5", "kind": "correctness", "label": "Threefocused exact source/legacy/default/configuration provenance and fault-envelope controls; no model source installation", "argv": ["C:\\Python312\\python.exe", "-m", "unittest", "test2026.cuda.qwen38_5090.test_z128_reconstruct"]}
+..E
+======================================================================
+ERROR: test_separate_exact_derivative_and_public_configuration_provenance (test2026.cuda.qwen38_5090.test_z128_reconstruct.Controls.test_separate_exact_derivative_and_public_configuration_provenance)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "D:\CantorAI\5090-study-20261023\Garnet\test2026\cuda\qwen38_5090\test_z128_reconstruct.py", line 14, in test_separate_exact_derivative_and_public_configuration_provenance
+    q=json.loads((M/'evidence/z128-opaque-config-audit-attempt2-verified.json').read_bytes())['replay'];self.assertTrue(q['all_18_queries_successful']);self.assertTrue(q['all_documented_attributes_equal']);self.assertFalse(q['functional_or_numerical_equivalence_established']);self.assertEqual([dict((name,value) for name,value,_ in FIELDS)]*2,q['values']);self.assertEqual(len(APIS),32);self.assertEqual(len(MODES),91)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Python312\Lib\pathlib.py", line 1019, in read_bytes
+    with self.open(mode='rb') as f:
+         ^^^^^^^^^^^^^^^^^^^^
+  File "C:\Python312\Lib\pathlib.py", line 1013, in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: 'D:\\CantorAI\\5090-study-20261023\\Garnet\\test2026\\cuda\\qwen38_5090\\evidence\\z128-opaque-config-audit-attempt2-verified.json'
+
+----------------------------------------------------------------------
+Ran 3 tests in 0.004s
+
+FAILED (errors=1)

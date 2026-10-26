@@ -1,0 +1,64 @@
+{
+  "status": "separate_explicit_API_reconstruction_factory_private_unqualified",
+  "files": [
+    {
+      "source": "test2026/cuda/qwen38_5090/native_z128_factory_trace_candidate/modelopt_fp8_z128_canonical.cpp",
+      "source_sha256": "419721efcf9ad05ba90b5bbaae2945fab27f2bdae683d19ba97dbd3e54fc182b",
+      "target": "test2026/cuda/qwen38_5090/native_z128_reconstruct_candidate/modelopt_fp8_z128_canonical.cpp",
+      "target_sha256": "ee24f346d66ea2e724a19b7fbb23ae6956de49543131a69afbea3832d4d268e8",
+      "changes": [
+        {
+          "before": "#include \"modelopt_fp8_z128_init_trace.h\"",
+          "after": "#include \"modelopt_fp8_z128_init_trace.h\"\n#include \"modelopt_fp8_z128_reconstruct_trace.h\"\n#include <cstdint>",
+          "count": 1
+        },
+        {
+          "before": "bool GetModelOptFP8Z128Info",
+          "after": "// A separate explicit factory. The legacy factory and every existing plugin keep\n// their original implementation; no caller is redirected to this candidate.\nstd::shared_ptr<ModelOptFP8Z128Context> CreateModelOptFP8Z128ReconstructedContext(){\n    ModelOptFP8Z128ReconstructTrace trace;\n#if CUDART_VERSION >= 12080\n    int device=-1;cudaDeviceProp properties{};\n    if(trace.api(\"cudaGetDevice\",[&](){return cudaGetDevice(&device);})!=cudaSuccess||\n       trace.api(\"cudaGetDeviceProperties\",[&](){return cudaGetDeviceProperties(&properties,device);})!=cudaSuccess||\n       properties.major!=12||properties.minor!=0||\n       trace.api(\"cublasLtGetVersion\",[&](){return cublasLtGetVersion();})!=130400)\n        return trace.empty<ModelOptFP8Z128Context>(\"device_or_version\",device,properties.major,properties.minor);\n    // Keep a separate cache so legacy and reconstructed configurations cannot mix.\n    static std::unordered_map<int,std::weak_ptr<ModelOptFP8Z128Context>> reconstructed;\n    std::lock_guard<std::mutex> lock(contextsMutex);\n    if(auto previous=reconstructed[device].lock()){trace.success(true);return previous;}\n    auto context=std::make_shared<ModelOptFP8Z128Context>();context->device=device;\n    const auto okay=[](cublasStatus_t value){return value==CUBLAS_STATUS_SUCCESS;};\n    if(!okay(trace.api(\"cublasLtCreate\",[&](){return cublasLtCreate(&context->handle);}))||\n       !okay(trace.api(\"cublasLtMatmulDescCreate\",[&](){return cublasLtMatmulDescCreate(&context->operation,CUBLAS_COMPUTE_32F,CUDA_R_32F);})))\n        return trace.empty<ModelOptFP8Z128Context>(\"handle_or_operation\");\n    const cublasOperation_t transA=CUBLAS_OP_T,transB=CUBLAS_OP_N;\n    if(!okay(trace.api(\"cublasLtMatmulDescSetAttribute\",[&](){return cublasLtMatmulDescSetAttribute(context->operation,CUBLASLT_MATMUL_DESC_TRANSA,&transA,sizeof(transA));}))||\n       !okay(trace.api(\"cublasLtMatmulDescSetAttribute\",[&](){return cublasLtMatmulDescSetAttribute(context->operation,CUBLASLT_MATMUL_DESC_TRANSB,&transB,sizeof(transB));}))||\n       !okay(trace.api(\"cublasLtMatrixLayoutCreate\",[&](){return cublasLtMatrixLayoutCreate(&context->weight,CUDA_R_8F_E4M3,5120,6144,5120);}))||\n       !okay(trace.api(\"cublasLtMatrixLayoutCreate\",[&](){return cublasLtMatrixLayoutCreate(&context->input,CUDA_R_8F_E4M3,5120,128,5120);}))||\n       !okay(trace.api(\"cublasLtMatrixLayoutCreate\",[&](){return cublasLtMatrixLayoutCreate(&context->output,CUDA_R_16BF,6144,128,6144);})))\n        return trace.empty<ModelOptFP8Z128Context>(\"operation_or_actual_layout\");\n    CanonicalSelection canonical;\n    if(!okay(trace.api(\"cublasLtMatrixLayoutCreate\",[&](){return cublasLtMatrixLayoutCreate(&canonical.input,CUDA_R_8F_E4M3,5120,32,5120);}))||\n       !okay(trace.api(\"cublasLtMatrixLayoutCreate\",[&](){return cublasLtMatrixLayoutCreate(&canonical.output,CUDA_R_16BF,6144,32,6144);})))\n        return trace.empty<ModelOptFP8Z128Context>(\"canonical_layout\");\n    cublasLtMatmulAlgo_t algorithm{};\n    if(!okay(trace.api(\"cublasLtMatmulAlgoInit\",[&](){return cublasLtMatmulAlgoInit(context->handle,CUBLAS_COMPUTE_32F,CUDA_R_32F,\n        CUDA_R_8F_E4M3,CUDA_R_8F_E4M3,CUDA_R_16BF,CUDA_R_16BF,67,&algorithm);})))\n        return trace.empty<ModelOptFP8Z128Context>(\"algorithm_init\");\n    struct Field{const char* name;cublasLtMatmulAlgoConfigAttributes_t attribute;uint32_t expected;size_t bytes;};\n    // Public query values independently observed from both retained descriptors.\n    const Field fields[]={\n        {\"ID\",CUBLASLT_ALGO_CONFIG_ID,67,4},{\"TILE_ID\",CUBLASLT_ALGO_CONFIG_TILE_ID,13,4},\n        {\"STAGES_ID\",CUBLASLT_ALGO_CONFIG_STAGES_ID,17,4},{\"SPLITK_NUM\",CUBLASLT_ALGO_CONFIG_SPLITK_NUM,1,4},\n        {\"REDUCTION_SCHEME\",CUBLASLT_ALGO_CONFIG_REDUCTION_SCHEME,0,4},{\"CTA_SWIZZLING\",CUBLASLT_ALGO_CONFIG_CTA_SWIZZLING,1,4},\n        {\"CUSTOM_OPTION\",CUBLASLT_ALGO_CONFIG_CUSTOM_OPTION,18,4},{\"INNER_SHAPE_ID\",CUBLASLT_ALGO_CONFIG_INNER_SHAPE_ID,0,2},\n        {\"CLUSTER_SHAPE_ID\",CUBLASLT_ALGO_CONFIG_CLUSTER_SHAPE_ID,0,2}};\n    for(size_t i=1;i<9;++i){\n        const auto& field=fields[i];const uint16_t value16=static_cast<uint16_t>(field.expected);\n        const void* value=field.bytes==2?static_cast<const void*>(&value16):static_cast<const void*>(&field.expected);\n        if(!okay(trace.api(\"cublasLtMatmulAlgoConfigSetAttribute\",[&](){return cublasLtMatmulAlgoConfigSetAttribute(&algorithm,field.attribute,value,field.bytes);})))\n            return trace.empty<ModelOptFP8Z128Context>(\"configuration_set\",i,int(field.attribute),static_cast<long long>(field.bytes));\n    }\n    for(size_t i=0;i<9;++i){\n        const auto& field=fields[i];uint16_t value16=0;uint32_t value32=0;size_t written=0;\n        void* value=field.bytes==2?static_cast<void*>(&value16):static_cast<void*>(&value32);\n        const auto status=trace.api(\"cublasLtMatmulAlgoConfigGetAttribute\",[&](){return cublasLtMatmulAlgoConfigGetAttribute(&algorithm,field.attribute,value,field.bytes,&written);});\n        const uint32_t actual=field.bytes==2?value16:value32;\n        trace.note(\"configuration\",field.name,actual,static_cast<long long>(written),int(field.attribute));\n        if(!okay(status)||written!=field.bytes||actual!=field.expected)\n            return trace.empty<ModelOptFP8Z128Context>(\"configuration_get\",i,actual,static_cast<long long>(written));\n    }\n    trace.note(\"algorithm\",\"configured\",0,0,0,&algorithm,sizeof(algorithm));\n    cublasLtMatmulHeuristicResult_t checked32{},checked128{};\n    const auto status32=trace.api(\"cublasLtMatmulAlgoCheck\",[&](){return cublasLtMatmulAlgoCheck(context->handle,context->operation,context->weight,\n        canonical.input,canonical.output,canonical.output,&algorithm,&checked32);});\n    trace.note(\"check\",\"M32\",int(checked32.state),static_cast<long long>(checked32.workspaceSize));\n    if(!okay(status32)||checked32.state!=CUBLAS_STATUS_SUCCESS||checked32.workspaceSize>ModelOptFP8Z128BlasWorkspace)\n        return trace.empty<ModelOptFP8Z128Context>(\"algorithm_check_M32\",int(checked32.state),static_cast<long long>(checked32.workspaceSize));\n    const auto status128=trace.api(\"cublasLtMatmulAlgoCheck\",[&](){return cublasLtMatmulAlgoCheck(context->handle,context->operation,context->weight,\n        context->input,context->output,context->output,&algorithm,&checked128);});\n    trace.note(\"check\",\"M128\",int(checked128.state),static_cast<long long>(checked128.workspaceSize));\n    if(!okay(status128)||checked128.state!=CUBLAS_STATUS_SUCCESS||checked128.workspaceSize>ModelOptFP8Z128BlasWorkspace)\n        return trace.empty<ModelOptFP8Z128Context>(\"algorithm_check_M128\",int(checked128.state),static_cast<long long>(checked128.workspaceSize));\n    context->info.device=device;context->info.algorithm=67;context->info.requiredWorkspace=checked128.workspaceSize;context->info.opaque=algorithm;\n    reconstructed[device]=context;trace.success(false);return context;\n#else\n    return trace.empty<ModelOptFP8Z128Context>(\"unsupported_CUDART\");\n#endif\n}\n\nbool GetModelOptFP8Z128Info",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "test2026/cuda/qwen38_5090/native_z128_factory_trace_candidate/modelopt_fp8_z128_canonical.h",
+      "source_sha256": "d792c27b8997fddabc1605865bc0883311451d7b38e0b7c66aad6b74a292e830",
+      "target": "test2026/cuda/qwen38_5090/native_z128_reconstruct_candidate/modelopt_fp8_z128_canonical.h",
+      "target_sha256": "b07d3f88ffb2b3f8dd5347107f0e891fb467395abb4e4fc4011df19d82edf897",
+      "changes": [
+        {
+          "before": "std::shared_ptr<ModelOptFP8Z128Context> CreateModelOptFP8Z128Context();",
+          "after": "std::shared_ptr<ModelOptFP8Z128Context> CreateModelOptFP8Z128Context();\nstd::shared_ptr<ModelOptFP8Z128Context> CreateModelOptFP8Z128ReconstructedContext();",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "test2026/cuda/qwen38_5090/native_z128_factory_trace_candidate/modelopt_fp8_z128_init_trace.h",
+      "source_sha256": "1bdccbdd142cb3e31e9caf76d3741624b8927497141faf8d4a0abd109c365b93",
+      "target": "test2026/cuda/qwen38_5090/native_z128_reconstruct_candidate/modelopt_fp8_z128_reconstruct_trace.h",
+      "target_sha256": "34b29616da37f2fb5db591997b38cbfa464b435fdca75383fcd276937122e232",
+      "changes": [
+        {
+          "before": "ModelOptFP8Z128InitTrace",
+          "after": "ModelOptFP8Z128ReconstructTrace",
+          "count": 7
+        },
+        {
+          "before": "GARNET_Z128_FACTORY_TRACE",
+          "after": "GARNET_Z128_RECONSTRUCT_TRACE",
+          "count": 1
+        },
+        {
+          "before": "GARNET_Z128_FACTORY ",
+          "after": "GARNET_Z128_RECONSTRUCT ",
+          "count": 1
+        }
+      ]
+    }
+  ],
+  "body_sha256": "dd9fd938e2f72ab81e6eb6fa3160dd5dc1ca6f1e9eed472caf962d11703ef3cd",
+  "legacy_factory_and_RunMatmul_bytes_unchanged": true,
+  "old_plugin_or_default_route_changed": false,
+  "numerical_equivalence_established": false,
+  "scope": "Append separate explicit public-API factory to exact traced helper. No plugin uses it yet; no serialized wire/cache policy changes, no opaque byte masking/copy/reinterpretation, no heuristic search. Same SDK/device/type/transpose/geometry and4MiB guards;9public configurations readback;AlgoCheck bothM32/M128. Requires real numerical qualification before integration/performance."
+}
