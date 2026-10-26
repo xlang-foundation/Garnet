@@ -18,6 +18,7 @@
 #include "qwen35_canonical_kv_overlay_plugin.h"
 #include "qwen38_bf16_kv_overlay_plugin.h"
 #include "qwen38_bf16_low_batch_kv_overlay_plugin.h"
+#include "qwen38_bf16_prefill128_kv_overlay_plugin.h"
 #include "qwen38_bf16_kv_float_reference_plugin.h"
 #include "qwen35_f32_barrier_plugin.h"
 
@@ -393,17 +394,19 @@ public:
     }
     T* fullDecoderChunk(T* x,T* key,T* value,T* positions,T* slots,T* active,const std::string& layer,
         int heads,int kv,int dim,int rotary,std::array<int,3> sections,float theta,float eps,bool fusedAttention=false,bool joinedMLPProjections=false,std::vector<T*>* diagnosticStages=nullptr,
-        T* canonical=nullptr,const CanonicalKVOverlayConfig* overlay=nullptr,const BF16KVOverlayConfig* legacyBF16Overlay=nullptr,bool bf16FloatReference=false,const BF16KVLowBatchOverlayConfig* lowBatchOverlay=nullptr) {
+        T* canonical=nullptr,const CanonicalKVOverlayConfig* overlay=nullptr,const BF16KVOverlayConfig* legacyBF16Overlay=nullptr,bool bf16FloatReference=false,const BF16KVLowBatchOverlayConfig* lowBatchOverlay=nullptr,const BF16KVPrefill128OverlayConfig* prefill128Overlay=nullptr) {
+        if(prefill128Overlay&&(legacyBF16Overlay||lowBatchOverlay))throw std::invalid_argument("T128 BF16 cache requires its separate exclusive profile");
+        const bool prefill128=prefill128Overlay!=nullptr;
         if(legacyBF16Overlay&&lowBatchOverlay)throw std::invalid_argument("B1 and B4/B8 BF16 cache types are exclusive");
         const bool lowBatch=lowBatchOverlay!=nullptr;
-        const BF16KVOverlayConfig lowBatchView=lowBatch?BF16KVOverlayConfig{lowBatchOverlay->attention,lowBatchOverlay->state_width,lowBatchOverlay->key_offset,lowBatchOverlay->value_offset}:BF16KVOverlayConfig{};
-        const BF16KVOverlayConfig* bf16Overlay=lowBatch?&lowBatchView:legacyBF16Overlay;
+        const BF16KVOverlayConfig lowBatchView=prefill128?BF16KVOverlayConfig{prefill128Overlay->attention,prefill128Overlay->state_width,prefill128Overlay->key_offset,prefill128Overlay->value_offset}:(lowBatch?BF16KVOverlayConfig{lowBatchOverlay->attention,lowBatchOverlay->state_width,lowBatchOverlay->key_offset,lowBatchOverlay->value_offset}:BF16KVOverlayConfig{});
+        const BF16KVOverlayConfig* bf16Overlay=(lowBatch||prefill128)?&lowBatchView:legacyBF16Overlay;
         const bool bf16Delta=bf16Overlay!=nullptr;
-        if(lowBatch&&(theta!=1e7f||eps!=1e-6f))throw std::invalid_argument("B1 BF16 cache requires pinned RoPE theta and normalization epsilon");
+        if((lowBatch||prefill128)&&(theta!=1e7f||eps!=1e-6f))throw std::invalid_argument("B1 BF16 cache requires pinned RoPE theta and normalization epsilon");
         const bool delta=canonical!=nullptr||overlay!=nullptr||bf16Delta;
         if(bf16FloatReference&&(delta||!key||!value||!fusedAttention||!joinedMLPProjections||diagnosticStages))
             throw std::invalid_argument("BF16 float reference excludes compact state and requires fused joined mode");
-        if(bf16Delta&&(!canonical||overlay||!(lowBatch?ValidBF16KVLowBatchOverlayConfig(*lowBatchOverlay):ValidBF16KVOverlayConfig(*bf16Overlay))||!fusedAttention||!joinedMLPProjections||diagnosticStages))
+        if(bf16Delta&&(!canonical||overlay||!(prefill128?ValidBF16KVPrefill128OverlayConfig(*prefill128Overlay):(lowBatch?ValidBF16KVLowBatchOverlayConfig(*lowBatchOverlay):ValidBF16KVOverlayConfig(*bf16Overlay)))||!fusedAttention||!joinedMLPProjections||diagnosticStages))
             throw std::invalid_argument("BF16 canonical KV requires its explicit shared joined B1 or B4/B8 cache type and T4/T32 profile");
         if(delta&&!bf16Delta&&(!canonical||!overlay||!ValidCanonicalKVOverlayConfig(*overlay)||!fusedAttention||!joinedMLPProjections||diagnosticStages))
             throw std::invalid_argument("Canonical KV requires qualified fused joined B4/T4 mode");
@@ -469,7 +472,10 @@ public:
             };
             if(delta){
                 nvinfer1::IPluginV2DynamicExt* plugin=nullptr;
-                if(lowBatch){
+                if(prefill128){
+                    if(!EnsureBF16KVPrefill128OverlayPluginRegistered())throw std::runtime_error("T128 BF16 canonical KV plugin registration failed");
+                    plugin=new BF16KVPrefill128OverlayPlugin(*prefill128Overlay);
+                }else if(lowBatch){
                     if(!EnsureBF16KVLowBatchOverlayPluginRegistered())throw std::runtime_error("B1 BF16 canonical KV plugin registration failed");
                     plugin=new BF16KVLowBatchOverlayPlugin(*lowBatchOverlay);
                 }else if(bf16Delta){

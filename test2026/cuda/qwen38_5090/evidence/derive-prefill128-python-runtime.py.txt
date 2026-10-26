@@ -1,0 +1,108 @@
+from pathlib import Path
+import ast,hashlib,json
+work=Path(__file__).resolve().parent;repo=Path('D:/CantorAI/work/qwen38-5090');m=repo/'test2026/cuda/qwen38_5090';e=m/'evidence';model='xModel/qwen35/vl_0_8b/'
+sha=lambda raw:hashlib.sha256(raw).hexdigest();records=[]
+def write_new(source,target,steps=()):
+    raw=(repo/source).read_bytes();text=raw.decode();applied=[]
+    for before,after in steps:
+        count=text.count(before);assert count>0,(target,before)
+        text=text.replace(before,after);applied.append({'old':before,'new':after,'count':count})
+    path=repo/target;assert not path.exists();path.write_bytes(text.encode())
+    records.append({'source':source,'source_sha256':sha(raw),'target':target,'target_sha256':sha(text.encode()),'replacements':applied,'existing_file_modified':False})
+def edit(target,steps):
+    path=repo/target;raw=path.read_bytes();text=raw.decode();nl='\r\n' if '\r\n' in text else '\n';applied=[]
+    snapshot=e/('prefill128-python-runtime-original-'+target.replace('/','__')+'.txt');assert not snapshot.exists();snapshot.write_bytes(raw)
+    for before,after in steps:
+        before=before.replace('\n',nl);after=after.replace('\n',nl)
+        assert text.count(before)==1,(target,before,text.count(before))
+        text=text.replace(before,after);applied.append({'old':before,'new':after,'count':1})
+    ast.parse(text);path.write_bytes(text.encode())
+    records.append({'source':snapshot.relative_to(repo).as_posix(),'source_sha256':sha(raw),'target':target,'target_sha256':sha(text.encode()),'replacements':applied,'existing_file_modified':True})
+
+write_new('test2026/cuda/qwen38_5090/bf16_prefill128_layout.py',model+'kv_bf16_prefill128_study_layout.py',
+          [('from .bf16_low_batch_layout import','from .kv_bf16_low_batch_study_layout import')])
+old=(repo/(model+'bf16_low_batch_kv_profile.py')).read_text()
+start=old.index('def validate_bf16_low_batch_kv_decoder')
+new_program=old[:start].replace('CPU-only B1 prototype admission; no production/native/model admission changes.','Separate T128 study admission; full runtime/model/serving qualification is required.')
+new_program=new_program.replace('validate_bf16_low_batch_kv_program','validate_bf16_prefill128_kv_program').replace('chunk not in (4,32)','chunk!=128').replace('B1,cap4096,T4/T32','B1,cap4096,T128').replace('retain is not (chunk==4)','retain is not False').replace('T4-only replay','no prefill replay')
+decoder='''def validate_bf16_prefill128_kv_decoder(enabled,batch,capacity,prefill,decode,config,*,low_batch_decode,
+                            retain_linear_inputs,deferred_state_commit,shared_output_storage,host_embedding_lookup,**program_flags):
+    _boolean(enabled,'T128 BF16 study opt-in')
+    if not enabled:return
+    if low_batch_decode is not True or type(prefill) is not int or prefill!=128 or type(decode) is not int or decode!=4:
+        raise ValueError('T128 BF16 study requires separate prefillT128 with retained low-batch decodeT4')
+    if any(v is not True for v in (retain_linear_inputs,deferred_state_commit,shared_output_storage,host_embedding_lookup)):
+        raise ValueError('T128 BF16 decoder requires retained/deferred/shared-output/host-embedding mode')
+    from .bf16_low_batch_kv_profile import validate_bf16_low_batch_kv_program
+    validate_bf16_low_batch_kv_program(True,batch,capacity,decode,True,config,**program_flags)
+    validate_bf16_prefill128_kv_program(True,batch,capacity,prefill,False,config,**program_flags)
+'''
+target=repo/(model+'bf16_prefill128_kv_profile.py');assert not target.exists();text=new_program+decoder;ast.parse(text);target.write_bytes(text.encode())
+records.append({'source':model+'bf16_low_batch_kv_profile.py','source_sha256':sha((repo/(model+'bf16_low_batch_kv_profile.py')).read_bytes()),'target':target.relative_to(repo).as_posix(),'target_sha256':sha(text.encode()),'scope':'Exact old pinned geometry/RoPE/precision flags copied into a distinct T128-only program validator; separate decoder validates unchanged T4 replay plus new T128 non-replay profile.'})
+
+path=model+'cuda_packed_program.py'
+edit(path,[
+ ('from .bf16_low_batch_kv_profile import validate_bf16_low_batch_kv_program','from .bf16_low_batch_kv_profile import validate_bf16_low_batch_kv_program\nfrom .bf16_prefill128_kv_profile import validate_bf16_prefill128_kv_program\nfrom .kv_bf16_prefill128_study_layout import build_bf16_prefill128_layout'),
+ ('bf16_kv_float_reference=False,bf16_kv_low_batch_state=False):','bf16_kv_float_reference=False,bf16_kv_low_batch_state=False,bf16_kv_prefill128_state=False):'),
+ ('        if bf16_kv_low_batch_state:\n            validate_bf16_low_batch_kv_program',
+  '        if type(bf16_kv_prefill128_state) is not bool:raise ValueError("T128 BF16 program opt-in must be boolean")\n        if bf16_kv_prefill128_state:\n            if bf16_kv_low_batch_state is not False:raise ValueError("T128 and T4/T32 BF16 program dialects are exclusive")\n            validate_bf16_prefill128_kv_program(True,batch,capacity,chunk_size,retain_linear_inputs,config,\n                external_compressed_weights=external_compressed_weights,joined_mlp_projections=joined_mlp_projections,\n                embedded_projection_weights=embedded_projection_weights,join_input_projections=join_input_projections,\n                kv_delta_state=kv_delta_state,kv_overlay_strategy=kv_overlay_strategy,legacy_bf16_kv_state=bf16_kv_state,bf16_kv_float_reference=bf16_kv_float_reference)\n        if bf16_kv_low_batch_state:\n            validate_bf16_low_batch_kv_program'),
+ ('        else:validate_joined_mlp_profile(joined_mlp_projections,batch,capacity,chunk_size,external_compressed_weights,embedded_projection_weights,join_input_projections,bf16_float_reference=bf16_kv_float_reference)',
+  '        elif not bf16_kv_prefill128_state:validate_joined_mlp_profile(joined_mlp_projections,batch,capacity,chunk_size,external_compressed_weights,embedded_projection_weights,join_input_projections,bf16_float_reference=bf16_kv_float_reference)'),
+ ('self.bf16_kv_state=bf16_kv_state or bf16_kv_low_batch_state;self.bf16_kv_low_batch_state=bf16_kv_low_batch_state',
+  'self.bf16_kv_state=bf16_kv_state or bf16_kv_low_batch_state or bf16_kv_prefill128_state;self.bf16_kv_low_batch_state=bf16_kv_low_batch_state;self.bf16_kv_prefill128_state=bf16_kv_prefill128_state'),
+ ('        if bf16_kv_state or bf16_kv_low_batch_state:\n            builder=build_bf16_low_batch_layout if bf16_kv_low_batch_state else build_bf16_kv_study_layout',
+  '        if bf16_kv_state or bf16_kv_low_batch_state or bf16_kv_prefill128_state:\n            builder=build_bf16_prefill128_layout if bf16_kv_prefill128_state else (build_bf16_low_batch_layout if bf16_kv_low_batch_state else build_bf16_kv_study_layout)'),
+ ("bf16_canonical_kv=bool(canonical is not None and getattr(self,'bf16_kv_state',False) and not getattr(self,'bf16_kv_low_batch_state',False)),",
+  "bf16_canonical_kv=bool(canonical is not None and getattr(self,'bf16_kv_state',False) and not getattr(self,'bf16_kv_low_batch_state',False) and not getattr(self,'bf16_kv_prefill128_state',False)),"),
+ ("                    bf16_low_batch_canonical_kv=bool(canonical is not None and getattr(self,'bf16_kv_low_batch_state',False)),",
+  "                    bf16_low_batch_canonical_kv=bool(canonical is not None and getattr(self,'bf16_kv_low_batch_state',False)),\n                    bf16_prefill128_canonical_kv=bool(canonical is not None and getattr(self,'bf16_kv_prefill128_state',False)),")])
+
+path=model+'cuda_chunk.py'
+edit(path,[
+ ('bf16_kv_float_reference=False,bf16_low_batch_canonical_kv=False):','bf16_kv_float_reference=False,bf16_low_batch_canonical_kv=False,bf16_prefill128_canonical_kv=False):'),
+ ("    if type(bf16_low_batch_canonical_kv) is not bool or",'    if type(bf16_prefill128_canonical_kv) is not bool or (bf16_prefill128_canonical_kv and (bf16_low_batch_canonical_kv or bf16_canonical_kv or bf16_kv_float_reference or canonical_kv_state is None or kind!="full_attention")):\n        raise ValueError("T128 BF16 canonical KV requires its separate exclusive full-attention binding")\n    if type(bf16_low_batch_canonical_kv) is not bool or'),
+ ("extra.update({('canonical_bf16_low_batch_kv_overlay' if bf16_low_batch_canonical_kv else ('canonical_bf16_kv_overlay' if bf16_canonical_kv else 'canonical_kv_overlay')):1})",
+  "extra.update({('canonical_bf16_prefill128_kv_overlay' if bf16_prefill128_canonical_kv else ('canonical_bf16_low_batch_kv_overlay' if bf16_low_batch_canonical_kv else ('canonical_bf16_kv_overlay' if bf16_canonical_kv else 'canonical_kv_overlay'))):1})")])
+
+path=model+'cuda_packed_decoder.py'
+edit(path,[
+ ('from .bf16_low_batch_kv_profile import validate_bf16_low_batch_kv_decoder','from .bf16_low_batch_kv_profile import validate_bf16_low_batch_kv_decoder\nfrom .bf16_prefill128_kv_profile import validate_bf16_prefill128_kv_decoder'),
+ ('bf16_kv_float_reference=False,bf16_kv_low_batch_state=False):','bf16_kv_float_reference=False,bf16_kv_low_batch_state=False,bf16_kv_prefill128_study=False):'),
+ ('        low_batch_helper_factory=None\n        if bf16_kv_low_batch_state:\n            validate_bf16_low_batch_kv_decoder(True,batch,capacity,prefill_chunk,decode_chunk,config,',
+  '        if type(bf16_kv_prefill128_study) is not bool or (bf16_kv_prefill128_study and bf16_kv_low_batch_state is not True):raise ValueError("T128 BF16 study requires an explicit boolean and retained low-batch decode")\n        low_batch_helper_factory=None;prefill128_helper_factory=None\n        if bf16_kv_low_batch_state:\n            low_batch_validator=validate_bf16_prefill128_kv_decoder if bf16_kv_prefill128_study else validate_bf16_low_batch_kv_decoder\n            low_batch_options={"low_batch_decode":True} if bf16_kv_prefill128_study else {}\n            low_batch_validator(True,batch,capacity,prefill_chunk,decode_chunk,config,**low_batch_options,'),
+ ('            try:low_batch_helper_factory=garnet.cuda_bf16_low_batch_kv_delta_commit',
+  '            try:\n                low_batch_helper_factory=garnet.cuda_bf16_low_batch_kv_delta_commit\n                if bf16_kv_prefill128_study:prefill128_helper_factory=garnet.cuda_bf16_prefill128_kv_delta_commit'),
+ ('self.bf16_kv_state=bf16_kv_state or bf16_kv_low_batch_state;self.bf16_kv_low_batch_state=bf16_kv_low_batch_state;self.bf16_prefill_commit=None',
+  'self.bf16_kv_state=bf16_kv_state or bf16_kv_low_batch_state;self.bf16_kv_low_batch_state=bf16_kv_low_batch_state;self.bf16_prefill_commit=None;self.bf16_kv_prefill128_study=bf16_kv_prefill128_study'),
+ ('        for size in (prefill_chunk,decode_chunk):\n            if bf16_kv_state:',
+  '        for size in (prefill_chunk,decode_chunk):\n            if bf16_kv_prefill128_study and size==128:continue # Exact separate guard above; old joined profiles stay unchanged.\n            if bf16_kv_state:'),
+ ("                options={'bf16_kv_low_batch_state':True} if bf16_kv_low_batch_state else ({'bf16_kv_state':True} if bf16_kv_state else ({'bf16_kv_float_reference':True} if bf16_kv_float_reference else {}))",
+  "                options={'bf16_kv_prefill128_state':True} if bf16_kv_prefill128_study and size==128 else ({'bf16_kv_low_batch_state':True} if bf16_kv_low_batch_state else ({'bf16_kv_state':True} if bf16_kv_state else ({'bf16_kv_float_reference':True} if bf16_kv_float_reference else {})))"),
+ ('                self.bf16_prefill_commit=helper_factory();self.bf16_prefill_commit.build(json.dumps(self.programs[prefill_chunk].delta_layout))',
+  '                prefill_factory=prefill128_helper_factory if bf16_kv_prefill128_study else helper_factory\n                self.bf16_prefill_commit=prefill_factory();self.bf16_prefill_commit.build(json.dumps(self.programs[prefill_chunk].delta_layout))'),
+ ("        if getattr(self,'bf16_kv_low_batch_state',False):result['packed_profiles']['bf16_kv_low_batch_state']=True",
+  "        if getattr(self,'bf16_kv_low_batch_state',False):result['packed_profiles']['bf16_kv_low_batch_state']=True\n        if getattr(self,'bf16_kv_prefill128_study',False):result['packed_profiles']['bf16_kv_prefill128_study']=True")])
+
+# Add a separate factory without changing the original B1 factory's body.
+path='xModel/qwen38/vl_27b/model.py';raw=(repo/path).read_bytes();text=raw.decode();nl='\r\n' if '\r\n' in text else '\n'
+tree=ast.parse(text);node=next(n for n in tree.body if isinstance(n,ast.FunctionDef) and n.name=='create_cuda_bf16_low_batch_study_decoder')
+lines=text.splitlines(keepends=True);original=''.join(lines[node.lineno-1:node.end_lineno]);new=original
+steps=[]
+for before,after in (
+ ('create_cuda_bf16_low_batch_study_decoder','create_cuda_bf16_prefill128_study_decoder'),
+ ('from xModel.qwen35.vl_0_8b.bf16_low_batch_kv_profile import validate_bf16_low_batch_kv_decoder','from xModel.qwen35.vl_0_8b.bf16_prefill128_kv_profile import validate_bf16_prefill128_kv_decoder'),
+ ("validate_bf16_low_batch_kv_decoder(True,batch,capacity,32,4,config['text_config'],**options)","validate_bf16_prefill128_kv_decoder(True,batch,capacity,128,4,config['text_config'],low_batch_decode=True,**options)"),
+ ("batch,capacity,32,4,","batch,capacity,128,4,"),
+ ('bf16_kv_low_batch_state=True,**options','bf16_kv_low_batch_state=True,bf16_kv_prefill128_study=True,**options'),
+ ("        for program in decoder.programs.values():","        if set(decoder.programs)!={4,128}:raise ValueError('T128 BF16 requires exactly T4 decode and T128 prefill')\n        for size,program in decoder.programs.items():"),
+ ("            if program.batch!=1 or program.delta_layout['contract']!='garnet_qwen38_bf16_low_batch_delta_study_v1':","            expected='garnet_qwen38_bf16_prefill128_delta_study_v1' if size==128 else 'garnet_qwen38_bf16_low_batch_delta_study_v1'\n            if program.batch!=1 or program.delta_layout['chunk']!=size or program.delta_layout['contract']!=expected:")):
+    before=before.replace('\n',nl);after=after.replace('\n',nl);assert new.count(before)==1,(before,new.count(before))
+    new=new.replace(before,after);steps.append({'old':before,'new':after,'count':1})
+insertion=nl+nl+new+nl+nl
+anchor='def validate_cuda_batch_study_profile(config,capacity,batch):'
+edit(path,[(anchor,insertion+anchor)])
+records[-1]['factory_derivation']={'source_function':node.name,'replacements':steps}
+
+result={'status':'prefill128_python_runtime_candidate_cpu_unverified','files':records,'scope':'Distinct opt-in T128 program/layout/keyword and T128prefill/T4decode construction/factory, sharing the existing projection pool and canonical state. Old admission helpers unchanged; no local GPU/native runtime/build or remote mutation. Full native build, model/GDN equivalence, quality and HTTP performance qualification remain required.'}
+(e/'prefill128-python-runtime-derivation.json').write_bytes(json.dumps(result,indent=2).encode())
+print(json.dumps({'status':result['status'],'source_files':len(records),'remote_changed':False}))

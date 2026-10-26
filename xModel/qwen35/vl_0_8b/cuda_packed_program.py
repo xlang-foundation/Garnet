@@ -17,6 +17,8 @@ from .kv_delta_layout import build_kv_delta_layout
 from .kv_bf16_study_layout import build_bf16_kv_study_layout
 from .bf16_kv_profile import validate_bf16_kv_program
 from .bf16_low_batch_kv_profile import validate_bf16_low_batch_kv_program
+from .bf16_prefill128_kv_profile import validate_bf16_prefill128_kv_program
+from .kv_bf16_prefill128_study_layout import build_bf16_prefill128_layout
 from .kv_bf16_low_batch_study_layout import build_bf16_low_batch_layout
 from .bf16_float_reference_profile import validate_bf16_float_reference_program
 
@@ -50,10 +52,17 @@ def decoder_state_layout(config,batch,capacity):
     return result,offset
 
 class CUDAPackedDecoderProgram:
-    def __init__(self,checkpoint,config,io,batch=1,capacity=512,chunk_size=4,retain_linear_inputs=False,projection_workspace_bytes=0,register_delta_128=False,flat_concat=False,join_input_projections=False,embedded_projection_weights=False,external_compressed_weights=False,joined_mlp_projections=False,kv_delta_state=False,kv_overlay_strategy=1,bf16_kv_state=False,bf16_kv_float_reference=False,bf16_kv_low_batch_state=False):
+    def __init__(self,checkpoint,config,io,batch=1,capacity=512,chunk_size=4,retain_linear_inputs=False,projection_workspace_bytes=0,register_delta_128=False,flat_concat=False,join_input_projections=False,embedded_projection_weights=False,external_compressed_weights=False,joined_mlp_projections=False,kv_delta_state=False,kv_overlay_strategy=1,bf16_kv_state=False,bf16_kv_float_reference=False,bf16_kv_low_batch_state=False,bf16_kv_prefill128_state=False):
         if batch not in (1,2,4,8) or not 32<=capacity<=8192 or chunk_size not in (4,8,16,32,64,128):raise ValueError('Unsupported packed decoder profile')
         if projection_workspace_bytes not in (0,16384):raise ValueError('Invalid projection workspace')
         if type(bf16_kv_low_batch_state) is not bool:raise ValueError('B1 BF16 KV opt-in must be boolean')
+        if type(bf16_kv_prefill128_state) is not bool:raise ValueError("T128 BF16 program opt-in must be boolean")
+        if bf16_kv_prefill128_state:
+            if bf16_kv_low_batch_state is not False:raise ValueError("T128 and T4/T32 BF16 program dialects are exclusive")
+            validate_bf16_prefill128_kv_program(True,batch,capacity,chunk_size,retain_linear_inputs,config,
+                external_compressed_weights=external_compressed_weights,joined_mlp_projections=joined_mlp_projections,
+                embedded_projection_weights=embedded_projection_weights,join_input_projections=join_input_projections,
+                kv_delta_state=kv_delta_state,kv_overlay_strategy=kv_overlay_strategy,legacy_bf16_kv_state=bf16_kv_state,bf16_kv_float_reference=bf16_kv_float_reference)
         if bf16_kv_low_batch_state:
             validate_bf16_low_batch_kv_program(True,batch,capacity,chunk_size,retain_linear_inputs,config,
                 external_compressed_weights=external_compressed_weights,joined_mlp_projections=joined_mlp_projections,
@@ -72,8 +81,8 @@ class CUDAPackedDecoderProgram:
                 kv_delta_state=kv_delta_state,kv_overlay_strategy=kv_overlay_strategy)
             validate_joined_mlp_profile(joined_mlp_projections,batch,capacity,chunk_size,external_compressed_weights,embedded_projection_weights,join_input_projections,bf16_cache_profile=True)
         elif bf16_kv_low_batch_state:validate_joined_mlp_profile(joined_mlp_projections,batch,capacity,chunk_size,external_compressed_weights,embedded_projection_weights,join_input_projections,bf16_low_batch_cache_profile=True)
-        else:validate_joined_mlp_profile(joined_mlp_projections,batch,capacity,chunk_size,external_compressed_weights,embedded_projection_weights,join_input_projections,bf16_float_reference=bf16_kv_float_reference)
-        self.bf16_kv_state=bf16_kv_state or bf16_kv_low_batch_state;self.bf16_kv_low_batch_state=bf16_kv_low_batch_state
+        elif not bf16_kv_prefill128_state:validate_joined_mlp_profile(joined_mlp_projections,batch,capacity,chunk_size,external_compressed_weights,embedded_projection_weights,join_input_projections,bf16_float_reference=bf16_kv_float_reference)
+        self.bf16_kv_state=bf16_kv_state or bf16_kv_low_batch_state or bf16_kv_prefill128_state;self.bf16_kv_low_batch_state=bf16_kv_low_batch_state;self.bf16_kv_prefill128_state=bf16_kv_prefill128_state
         if type(kv_delta_state) is not bool or type(kv_overlay_strategy) is not int or kv_overlay_strategy not in (0,1):raise ValueError('Invalid explicit canonical KV profile')
         if kv_delta_state and ((batch,capacity,chunk_size)!=(4,4096,4) or retain_linear_inputs is not True or external_compressed_weights is not True or joined_mlp_projections is not True or embedded_projection_weights or join_input_projections):
             raise ValueError('Canonical KV program requires retained shared mixed joined B4/T4/cap4096')
@@ -88,8 +97,8 @@ class CUDAPackedDecoderProgram:
         if self.embedded_projection_weights and self.join_input_projections:raise ValueError('Embedded projections do not support BF16 joined input pools')
         if self.join_input_projections and chunk_size!=4:raise ValueError('Joined input projections require decode width4')
         self.workspace=projection_workspace_bytes
-        if bf16_kv_state or bf16_kv_low_batch_state:
-            builder=build_bf16_low_batch_layout if bf16_kv_low_batch_state else build_bf16_kv_study_layout
+        if bf16_kv_state or bf16_kv_low_batch_state or bf16_kv_prefill128_state:
+            builder=build_bf16_prefill128_layout if bf16_kv_prefill128_state else (build_bf16_low_batch_layout if bf16_kv_low_batch_state else build_bf16_kv_study_layout)
             self.delta_layout=builder(batch,capacity,chunk_size,retain_linear_inputs=retain_linear_inputs)
             self.layout=[dict(l) for l in self.delta_layout['layers']];self.state_width=self.delta_layout['canonical_state_width']
         else:self.layout,self.state_width=decoder_state_layout(config,batch,capacity)
@@ -174,8 +183,9 @@ class CUDAPackedDecoderProgram:
                 packed=Qwen35CUDAChunk(hidden,first,second,active,positions,slots,config,layer['index'],layer['kind'],True,True,
                     self.workspace,self.retain,external,self.register_delta_128,self.join_input_projections and layer['kind']=='linear_attention',external_compressed_weights=compressed,joined_mlp_projections=self.joined_mlp_projections,
                     canonical_kv_state=state if canonical is not None else None,canonical_kv_layout=canonical,kv_overlay_strategy=self.kv_overlay_strategy,
-                    bf16_canonical_kv=bool(canonical is not None and getattr(self,'bf16_kv_state',False) and not getattr(self,'bf16_kv_low_batch_state',False)),
+                    bf16_canonical_kv=bool(canonical is not None and getattr(self,'bf16_kv_state',False) and not getattr(self,'bf16_kv_low_batch_state',False) and not getattr(self,'bf16_kv_prefill128_state',False)),
                     bf16_low_batch_canonical_kv=bool(canonical is not None and getattr(self,'bf16_kv_low_batch_state',False)),
+                    bf16_prefill128_canonical_kv=bool(canonical is not None and getattr(self,'bf16_kv_prefill128_state',False)),
                     bf16_kv_float_reference=bool(layer['kind']=='full_attention' and getattr(self,'bf16_kv_float_reference',False)))
                 hidden=packed_view(packed,0,t*h,[b,t,h])
                 if compact is not None:w1=compact['output_state1_width'];w2=compact['output_state2_width']
