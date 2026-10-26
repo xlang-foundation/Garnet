@@ -1,0 +1,42 @@
+{
+  "status": "cold_actual_helper_audit_observed",
+  "observation": {
+    "library_sha256": "1b421e7946bc8b7959b3ec23ace61080b56cacb5ef22b1e452f832c5b926ba63",
+    "report_sha256": "fa1049569ab43f21a6a86eb515db688bb4ac9dd90a9aa4a794dc168063517812",
+    "report_file": "context-audit.json",
+    "loaded_cublaslt_path": "D:\\CantorAI\\5090-study-20261023\\build\\bin\\cublasLt64_13.dll",
+    "loaded_cublaslt_sha256": "b37233a1e3516a41d27dcea49595fd1cbaff979b65c80da69935cb59d0d23f5b",
+    "native_package_library_path": "D:\\CantorAI\\5090-study-20261023\\results\\fp8-z128-native-package-audit-attempt1\\build\\fp8_z128_context_native.dll",
+    "native_package_library_sha256": "05ee73e4fe34dbb69050333667958b1ec5c74f4e5ae8ea7d844e4cd4d68b2881",
+    "native_package_ABI": 24,
+    "validation": {
+      "status": "actual_helper_context_observations_replayed",
+      "created": true,
+      "boundary": "actual_helper_context_created",
+      "first_successful_index": 0,
+      "expected_opaque_candidate_indices": [
+        0
+      ],
+      "successful_candidate_IDs": [
+        67,
+        67,
+        35,
+        35,
+        35,
+        35,
+        67
+      ],
+      "matmul_calls": 0,
+      "algorithm_substituted": false,
+      "full_Garnet_plugin_failure_directly_instrumented": false,
+      "model_or_quality_or_performance_qualified": false
+    },
+    "placement_scope": "Actual unchanged helper in separate observedTU, synchronous XLang native call in same process/thread after failure (or isolated cold process). Additional ID queries and IO after helper return; not a direct hook inside Garnet plugin."
+  },
+  "host_preloaded_modules": {
+    "garnet": false,
+    "tensor": true
+  },
+  "probe_explicit_Garnet_import": false,
+  "model_or_performance_qualified": false
+}

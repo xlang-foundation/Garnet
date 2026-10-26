@@ -1,0 +1,41 @@
+"""Post-observation success checker; frozen failure checker and run artifacts remain intact."""
+from pathlib import Path
+import hashlib,json
+m=Path('D:/CantorAI/work/qwen38-5090/test2026/cuda/qwen38_5090');old='verify_fp8_z128_native_package_audit.py';new='verify_fp8_z128_native_stage_success.py';before=(m/old).read_bytes();raw=before
+old_report="report['error']==\"RuntimeError('TensorRT buildSerializedNetwork failed')\" and [(r['layer'],r['tokens'],r['diagnostic']) for r in report['cases']]==[(0,32,False),(0,32,True)]"
+new_report="report['status']=='gdn_chunk_stage_collected_needs_replay' and [(r['layer'],r['tokens'],r['diagnostic']) for r in report['cases']]==[(layer,tokens,diagnostic) for layer in (0,1) for tokens in (32,128) for diagnostic in (False,True)] and 'post_failure_context_audit' not in report"
+array_checks="""        full=stage_replay(report,lambda name:z.read(base+'native/'+name));assert full==w['array_replay'] and full['controlled_first128_all11_stages_exact']
+        compared=0;previous='gdn-chunk-stage-witness-attempt2'
+        with zipfile.ZipFile(args.proofs/(previous+'-evidence.zip')) as old:
+            assert old.testzip() is None;oldbase='results/'+previous+'/native/';prior=json.loads(old.read(oldbase+'report.json'));assert report['input_ids']==prior['input_ids']
+            for row in report['cases']:
+                if row['tokens']!=32:continue
+                reference=next(item for item in prior['cases'] if (item['layer'],item['tokens'],item['diagnostic'])==(row['layer'],32,row['diagnostic']))
+                for sequence,earlier in zip(row['repeats'],reference['repeats']):
+                    assert len(sequence)==len(earlier)==4
+                    for now,then in zip(sequence,earlier):
+                        assert now['start']==then['start'] and now['repeat']==then['repeat']
+                        for name in ('input_hidden','input_history','input_state','input_hidden_after','input_history_after','input_state_after'):
+                            assert array(now[name],lambda name:z.read(base+'native/'+name))==array(then[name],lambda name:old.read(oldbase+name));compared+=1
+                        assert set(now['arrays'])==set(then['arrays'])
+                        for name in now['arrays']:
+                            assert array(now['arrays'][name],lambda name:z.read(base+'native/'+name))==array(then['arrays'][name],lambda name:old.read(oldbase+name));compared+=1
+        assert compared==400
+        entries=complete_entries(report,lambda name:z.read(base+'native/'+name));assert entries==509"""
+changes=[
+ ('from test2026.cuda.qwen38_5090.fp8_z128_context_audit import replay','from test2026.cuda.qwen38_5090.fp8_z128_context_audit import replay as context_replay\nfrom test2026.cuda.qwen38_5090.fp8_z128_stage_replay import replay as stage_replay\nfrom test2026.cuda.qwen38_5090.gdn_chunk_stage_replay import array'),
+ ("w['exit_code']==1","w['exit_code']==0 and w['status']=='fp8_z128_native_package_audit_collected_needs_replay'"),
+ ("events[1]['exit_code']==(1 if phase=='native-ledger' else 0)","events[1]['exit_code']==0"),
+ ("resource['child_exit_code']==(1 if phase=='native' else 0)","resource['child_exit_code']==0"),
+ (old_report,new_report),
+ ("(('cold',cold['observation']),('native',report['post_failure_context_audit']))","(('cold',cold['observation']),)"),
+ ("validated=replay(observed,p['expected_m32_opaque'])","validated=context_replay(observed,p['expected_m32_opaque'])"),
+ ("        entries=complete_entries(report,lambda name:z.read(base+'native/'+name));assert entries==203",array_checks),
+ ("'status':'fp8_z128_native_package_context_observations_and_main_failure_preserved'","'status':'fp8_z128_native_package_all8_stage_profiles_and_cold_context_replayed'"),
+ ("'workflow_exit_code':1,'profiles_observed':2","'workflow_exit_code':0,'profiles_observed':8"),
+ ("'context_observations':observations,'source_runtime_sdk_checkpoint_restored'","'context_observations':observations,'array_replay':full,'unchanged_T32_baseline_arrays_compared':compared,'post_failure_audit_invoked':False,'initialization_failure_reliability_resolved':False,'source_runtime_sdk_checkpoint_restored'"),
+ ("'scope':p['scope']","'scope':p['scope']+' Observed mainrun completed all8profiles and exactcontrolledstage replay. No failure/postfailure hook executed here. Earlier initialization failure remains unexplained; no full3968model/quality/performance admission.'"),
+ ("'post_failure':observations['native']['replay']","'post_failure':'not invoked: mainrun succeeded'")]
+for a,b in changes:
+    assert raw.count(a.encode())==1,a;raw=raw.replace(a.encode(),b.encode())
+target=m/new;assert not target.exists();target.write_bytes(raw);sha=lambda r:hashlib.sha256(r).hexdigest();d={'status':'post_observation_full_success_verifier_extension','base':old,'target':new,'base_sha256':sha(before),'target_sha256':sha(raw),'changes':[{'before':a,'after':b} for a,b in changes],'scope':'Original frozen failure checker remains unchanged. Actual run succeeded; distinct checker requires all8profiles,509finiteentries, all11stages/fullstate/repeats/ordinaryprimary/400oldT32baseline arrays plus same fullmetadata/nativeABI/cold/restoration checks. No numerical gate relaxation, no warmfailure report invented.'};(m/'evidence/fp8-z128-native-stage-success-verifier-derivation.json').write_bytes(json.dumps(d,indent=2).encode());compile(raw,new,'exec');print(json.dumps({'status':d['status'],'checker_sha256':sha(raw)}))

@@ -1,0 +1,83 @@
+
+{"id": "8a54f07b15614da5bcc0b656034e2563", "kind": "correctness", "label": "Actual embedded ABI24 and3reject-before-loader guards before cold or main GPU diagnostic", "argv": ["cmd.exe", "/d", "/c", "D:\\CantorAI\\5090-study-20261023\\Garnet\\test2026\\cuda\\qwen38_5090\\test_fp8_z128_native_audit_abi.bat", "D:\\CantorAI\\5090-study-20261023\\results\\fp8-z128-native-package-audit-attempt1\\native-abi-report.json"]}
+ERROR:root:code for hash md5 was not found.
+Traceback (most recent call last):
+  File "C:\Python\Python314\Lib\hashlib.py", line 247, in <module>
+    globals()[__func_name] = __get_hash(__func_name)
+                             ~~~~~~~~~~^^^^^^^^^^^^^
+  File "C:\Python\Python314\Lib\hashlib.py", line 123, in __get_builtin_constructor
+    raise ValueError('unsupported hash type ' + name)
+ValueError: unsupported hash type md5
+ERROR:root:code for hash sha1 was not found.
+Traceback (most recent call last):
+  File "C:\Python\Python314\Lib\hashlib.py", line 247, in <module>
+    globals()[__func_name] = __get_hash(__func_name)
+                             ~~~~~~~~~~^^^^^^^^^^^^^
+  File "C:\Python\Python314\Lib\hashlib.py", line 123, in __get_builtin_constructor
+    raise ValueError('unsupported hash type ' + name)
+ValueError: unsupported hash type sha1
+ERROR:root:code for hash blake2b was not found.
+Traceback (most recent call last):
+  File "C:\Python\Python314\Lib\hashlib.py", line 247, in <module>
+    globals()[__func_name] = __get_hash(__func_name)
+                             ~~~~~~~~~~^^^^^^^^^^^^^
+  File "C:\Python\Python314\Lib\hashlib.py", line 123, in __get_builtin_constructor
+    raise ValueError('unsupported hash type ' + name)
+ValueError: unsupported hash type blake2b
+ERROR:root:code for hash blake2s was not found.
+Traceback (most recent call last):
+  File "C:\Python\Python314\Lib\hashlib.py", line 247, in <module>
+    globals()[__func_name] = __get_hash(__func_name)
+                             ~~~~~~~~~~^^^^^^^^^^^^^
+  File "C:\Python\Python314\Lib\hashlib.py", line 123, in __get_builtin_constructor
+    raise ValueError('unsupported hash type ' + name)
+ValueError: unsupported hash type blake2s
+ERROR:root:code for hash sha3_224 was not found.
+Traceback (most recent call last):
+  File "C:\Python\Python314\Lib\hashlib.py", line 247, in <module>
+    globals()[__func_name] = __get_hash(__func_name)
+                             ~~~~~~~~~~^^^^^^^^^^^^^
+  File "C:\Python\Python314\Lib\hashlib.py", line 123, in __get_builtin_constructor
+    raise ValueError('unsupported hash type ' + name)
+ValueError: unsupported hash type sha3_224
+ERROR:root:code for hash sha3_256 was not found.
+Traceback (most recent call last):
+  File "C:\Python\Python314\Lib\hashlib.py", line 247, in <module>
+    globals()[__func_name] = __get_hash(__func_name)
+                             ~~~~~~~~~~^^^^^^^^^^^^^
+  File "C:\Python\Python314\Lib\hashlib.py", line 123, in __get_builtin_constructor
+    raise ValueError('unsupported hash type ' + name)
+ValueError: unsupported hash type sha3_256
+ERROR:root:code for hash sha3_384 was not found.
+Traceback (most recent call last):
+  File "C:\Python\Python314\Lib\hashlib.py", line 247, in <module>
+    globals()[__func_name] = __get_hash(__func_name)
+                             ~~~~~~~~~~^^^^^^^^^^^^^
+  File "C:\Python\Python314\Lib\hashlib.py", line 123, in __get_builtin_constructor
+    raise ValueError('unsupported hash type ' + name)
+ValueError: unsupported hash type sha3_384
+ERROR:root:code for hash sha3_512 was not found.
+Traceback (most recent call last):
+  File "C:\Python\Python314\Lib\hashlib.py", line 247, in <module>
+    globals()[__func_name] = __get_hash(__func_name)
+                             ~~~~~~~~~~^^^^^^^^^^^^^
+  File "C:\Python\Python314\Lib\hashlib.py", line 123, in __get_builtin_constructor
+    raise ValueError('unsupported hash type ' + name)
+ValueError: unsupported hash type sha3_512
+ERROR:root:code for hash shake_128 was not found.
+Traceback (most recent call last):
+  File "C:\Python\Python314\Lib\hashlib.py", line 247, in <module>
+    globals()[__func_name] = __get_hash(__func_name)
+                             ~~~~~~~~~~^^^^^^^^^^^^^
+  File "C:\Python\Python314\Lib\hashlib.py", line 123, in __get_builtin_constructor
+    raise ValueError('unsupported hash type ' + name)
+ValueError: unsupported hash type shake_128
+ERROR:root:code for hash shake_256 was not found.
+Traceback (most recent call last):
+  File "C:\Python\Python314\Lib\hashlib.py", line 247, in <module>
+    globals()[__func_name] = __get_hash(__func_name)
+                             ~~~~~~~~~~^^^^^^^^^^^^^
+  File "C:\Python\Python314\Lib\hashlib.py", line 123, in __get_builtin_constructor
+    raise ValueError('unsupported hash type ' + name)
+ValueError: unsupported hash type shake_256
+{"status": "embedded_native_package_CPU_invocation_passed", "abi": 24, "rejected_paths": ["C:/outside.json", "D:/CantorAI/5090-study-20261023/results/fp8-z128-native-package-audit-attempt1/../escape.json", ""], "rejection_codes": [20, 20, 20], "cpu_native_calls": 5, "loaded_native_library_path": "D:\\CantorAI\\5090-study-20261023\\results\\fp8-z128-native-package-audit-attempt1\\build\\fp8_z128_context_native.dll", "loaded_native_library_sha256": "05ee73e4fe34dbb69050333667958b1ec5c74f4e5ae8ea7d844e4cd4d68b2881", "native_module_file": null, "probe_sha256": "9e7db9dcd67fd01251291e006dacbd50c41482313eba94b2049b325646e01d97", "runtime_host_sha256": "2e2db12a2dbc1134a3a4c662c080b91d500b37af488661630d4d580e7684dc10", "observer_DLL_loaded_by_adapter": false, "helper_invoked": false, "gpu_model_executed": false, "model_or_performance_qualified": false, "scope": "Existing XLang package Load/BuildAPI/Create and member invocation with ABI query plus3outside-path guards, all before LoadLibrary/observer/CUDA. No ctypes/libffi/SDK mutation."}

@@ -1,0 +1,62 @@
+{
+  "status": "post_observation_full_success_verifier_extension",
+  "base": "verify_fp8_z128_native_package_audit.py",
+  "target": "verify_fp8_z128_native_stage_success.py",
+  "base_sha256": "aa06d317d38aeffa024eb04c16412824c6c3959bc7ba1fe817f2f1c3634d1147",
+  "target_sha256": "02cb6795b066e30823d1ecbf98b55d5105520a39ccb2783ab6032734707c7a36",
+  "changes": [
+    {
+      "before": "from test2026.cuda.qwen38_5090.fp8_z128_context_audit import replay",
+      "after": "from test2026.cuda.qwen38_5090.fp8_z128_context_audit import replay as context_replay\nfrom test2026.cuda.qwen38_5090.fp8_z128_stage_replay import replay as stage_replay\nfrom test2026.cuda.qwen38_5090.gdn_chunk_stage_replay import array"
+    },
+    {
+      "before": "w['exit_code']==1",
+      "after": "w['exit_code']==0 and w['status']=='fp8_z128_native_package_audit_collected_needs_replay'"
+    },
+    {
+      "before": "events[1]['exit_code']==(1 if phase=='native-ledger' else 0)",
+      "after": "events[1]['exit_code']==0"
+    },
+    {
+      "before": "resource['child_exit_code']==(1 if phase=='native' else 0)",
+      "after": "resource['child_exit_code']==0"
+    },
+    {
+      "before": "report['error']==\"RuntimeError('TensorRT buildSerializedNetwork failed')\" and [(r['layer'],r['tokens'],r['diagnostic']) for r in report['cases']]==[(0,32,False),(0,32,True)]",
+      "after": "report['status']=='gdn_chunk_stage_collected_needs_replay' and [(r['layer'],r['tokens'],r['diagnostic']) for r in report['cases']]==[(layer,tokens,diagnostic) for layer in (0,1) for tokens in (32,128) for diagnostic in (False,True)] and 'post_failure_context_audit' not in report"
+    },
+    {
+      "before": "(('cold',cold['observation']),('native',report['post_failure_context_audit']))",
+      "after": "(('cold',cold['observation']),)"
+    },
+    {
+      "before": "validated=replay(observed,p['expected_m32_opaque'])",
+      "after": "validated=context_replay(observed,p['expected_m32_opaque'])"
+    },
+    {
+      "before": "        entries=complete_entries(report,lambda name:z.read(base+'native/'+name));assert entries==203",
+      "after": "        full=stage_replay(report,lambda name:z.read(base+'native/'+name));assert full==w['array_replay'] and full['controlled_first128_all11_stages_exact']\n        compared=0;previous='gdn-chunk-stage-witness-attempt2'\n        with zipfile.ZipFile(args.proofs/(previous+'-evidence.zip')) as old:\n            assert old.testzip() is None;oldbase='results/'+previous+'/native/';prior=json.loads(old.read(oldbase+'report.json'));assert report['input_ids']==prior['input_ids']\n            for row in report['cases']:\n                if row['tokens']!=32:continue\n                reference=next(item for item in prior['cases'] if (item['layer'],item['tokens'],item['diagnostic'])==(row['layer'],32,row['diagnostic']))\n                for sequence,earlier in zip(row['repeats'],reference['repeats']):\n                    assert len(sequence)==len(earlier)==4\n                    for now,then in zip(sequence,earlier):\n                        assert now['start']==then['start'] and now['repeat']==then['repeat']\n                        for name in ('input_hidden','input_history','input_state','input_hidden_after','input_history_after','input_state_after'):\n                            assert array(now[name],lambda name:z.read(base+'native/'+name))==array(then[name],lambda name:old.read(oldbase+name));compared+=1\n                        assert set(now['arrays'])==set(then['arrays'])\n                        for name in now['arrays']:\n                            assert array(now['arrays'][name],lambda name:z.read(base+'native/'+name))==array(then['arrays'][name],lambda name:old.read(oldbase+name));compared+=1\n        assert compared==400\n        entries=complete_entries(report,lambda name:z.read(base+'native/'+name));assert entries==509"
+    },
+    {
+      "before": "'status':'fp8_z128_native_package_context_observations_and_main_failure_preserved'",
+      "after": "'status':'fp8_z128_native_package_all8_stage_profiles_and_cold_context_replayed'"
+    },
+    {
+      "before": "'workflow_exit_code':1,'profiles_observed':2",
+      "after": "'workflow_exit_code':0,'profiles_observed':8"
+    },
+    {
+      "before": "'context_observations':observations,'source_runtime_sdk_checkpoint_restored'",
+      "after": "'context_observations':observations,'array_replay':full,'unchanged_T32_baseline_arrays_compared':compared,'post_failure_audit_invoked':False,'initialization_failure_reliability_resolved':False,'source_runtime_sdk_checkpoint_restored'"
+    },
+    {
+      "before": "'scope':p['scope']",
+      "after": "'scope':p['scope']+' Observed mainrun completed all8profiles and exactcontrolledstage replay. No failure/postfailure hook executed here. Earlier initialization failure remains unexplained; no full3968model/quality/performance admission.'"
+    },
+    {
+      "before": "'post_failure':observations['native']['replay']",
+      "after": "'post_failure':'not invoked: mainrun succeeded'"
+    }
+  ],
+  "scope": "Original frozen failure checker remains unchanged. Actual run succeeded; distinct checker requires all8profiles,509finiteentries, all11stages/fullstate/repeats/ordinaryprimary/400oldT32baseline arrays plus same fullmetadata/nativeABI/cold/restoration checks. No numerical gate relaxation, no warmfailure report invented."
+}
