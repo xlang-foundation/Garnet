@@ -1,0 +1,128 @@
+{
+  "status": "native_cuda_entry_profiled_failure_preserved",
+  "archive_sha256": "762a1b928d964969c164baec301d2094c34038bd04194fb3ff04973f51a031ae",
+  "files_verified": 684,
+  "parent_archive_sha256": "8104499a0eace60c00e9af1add17640b5d29e0810894eee8e1b264164b31a9b7",
+  "library_sha256": "1a1d0229a1c0c24a8397a4dee7a614bcedf97b3bd3293e58d752ed7de30eb498",
+  "control_replay": null,
+  "entry_replay": null,
+  "cuda_phase_replay": null,
+  "construction_correctness_sampled_memory": null,
+  "diagnostic_logs": {
+    "embedded-cpu/trace-fixture/synthetic-trace.bootstrap.jsonl": [
+      {
+        "stage": "trace_constructor_entered",
+        "mode": "ordinary"
+      },
+      {
+        "stage": "trace_constructor_completed",
+        "exception": null
+      },
+      {
+        "stage": "decoder_constructed_and_io_bound",
+        "exception": null
+      },
+      {
+        "stage": "native_ready_observed_before_pipe_emit",
+        "exception": null
+      },
+      {
+        "stage": "native_worker_finally_entered",
+        "exception": {
+          "type": "RuntimeError",
+          "repr": "RuntimeError('explicit embedded CPU fixture error')",
+          "traceback": "Traceback (most recent call last):\n  File \"D:\\CantorAI\\5090-study-20261023\\Garnet\\test2026\\cuda\\qwen38_5090\\probe_native_cuda_trace_embedded_cpu.py\", line 22, in <module>\n        with trace.stage('reset'):\n        ^^^^^^^^^^^^^^^^^^^^^^^^^^\n            raise RuntimeError('explicit embedded CPU fixture error')\n            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n    except RuntimeError as error:\n    ^^^^\n  File \"D:\\CantorAI\\5090-study-20261023\\Garnet\\test2026\\cuda\\qwen38_5090\\probe_native_cuda_trace_embedded_cpu.py\", line 23, in <module>\n    raise RuntimeError('explicit embedded CPU fixture error')\nRuntimeError: explicit embedded CPU fixture error\n"
+        }
+      },
+      {
+        "stage": "trace_closed",
+        "exception": null
+      }
+    ],
+    "native/control/host-stages.bootstrap.jsonl": [
+      {
+        "stage": "trace_constructor_entered",
+        "mode": "ordinary"
+      },
+      {
+        "stage": "trace_constructor_completed",
+        "exception": null
+      },
+      {
+        "stage": "decoder_constructed_and_io_bound",
+        "exception": null
+      },
+      {
+        "stage": "native_ready_observed_before_pipe_emit",
+        "exception": null
+      },
+      {
+        "stage": "native_worker_finally_entered",
+        "exception": {
+          "type": "OSError",
+          "repr": "OSError('write failed')",
+          "traceback": "Traceback (most recent call last):\n  File \"D:\\CantorAI\\5090-study-20261023\\results\\native-cuda-entry-profiled-bootstrap-attempt1\\native\\control\\host-stages.entry-worker.py.txt\", line 57, in <module>\n    emit({'event':'ready','protocol':'study_single_v1','batch':1,'capacity':4096,'prefill_chunk':32,'chunk':4,'generation_mode':mode,'bf16_kv_low_batch_state':True,'library_sha256':library,'model_consistency_proof_sha256':sha(root/'results'/(name+'-verified.json')),'qualified_model_source':True,'precision':'mixed NVFP4/FP8; BF16 vision and cache','queued_concurrency':True,'research_only':True,'explicit_ignore_eos_supported':True,'broad_quality_qualified':False,'performance_admitted':False})\n    ~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"D:\\CantorAI\\5090-study-20261023\\results\\native-cuda-entry-profiled-bootstrap-attempt1\\native\\control\\host-stages.entry-worker.py.txt\", line 47, in emit\n    trace.observe(event);_emit(event)\n                         ~~~~~^^^^^^^\n  File \"D:\\CantorAI\\5090-study-20261023\\Garnet\\test2026\\cuda\\qwen38_5090\\native_worker_io.py\", line 58, in emit\n    count=write(raw)\n  File \"D:\\CantorAI\\5090-study-20261023\\Garnet\\test2026\\cuda\\qwen38_5090\\native_worker_io.py\", line 50, in <lambda>\n    write=write or (lambda raw:os.write(1,raw))\n                               ~~~~~~~~^^^^^^^\nOSError: write failed\n"
+        }
+      },
+      {
+        "stage": "trace_closed",
+        "exception": null
+      }
+    ],
+    "native/control/host-stages.entry.jsonl": [
+      {
+        "ordinal": 0,
+        "stage": "python_entry_started",
+        "mode": "ordinary",
+        "pid": 38792
+      },
+      {
+        "ordinal": 1,
+        "stage": "instrumented_source_retained",
+        "mode": "ordinary",
+        "monotonic_seconds": 186043.5573917,
+        "original_sha256": "c3af81f240cffdf0ed1e5be6994e69975a5d9ff1d79b92f95d019b6aa6d56070",
+        "instrumented_sha256": "26d4278c22f7f98fd0e59e120ec3812066e435c1e59bfb6607beae94e14d1acd"
+      },
+      {
+        "ordinal": 2,
+        "stage": "before_garnet_import",
+        "mode": "ordinary",
+        "monotonic_seconds": 186043.6109958
+      },
+      {
+        "ordinal": 3,
+        "stage": "garnet_import_returned",
+        "mode": "ordinary",
+        "monotonic_seconds": 186043.7277852
+      },
+      {
+        "ordinal": 4,
+        "stage": "before_model_import",
+        "mode": "ordinary",
+        "monotonic_seconds": 186043.830487
+      },
+      {
+        "ordinal": 5,
+        "stage": "model_import_returned",
+        "mode": "ordinary",
+        "monotonic_seconds": 186043.8891983
+      },
+      {
+        "ordinal": 6,
+        "stage": "worker_raised",
+        "mode": "ordinary",
+        "monotonic_seconds": 186198.8027542,
+        "exception": {
+          "type": "OSError",
+          "repr": "OSError('write failed')",
+          "traceback": "Traceback (most recent call last):\n  File \"D:/CantorAI/5090-study-20261023/Garnet/test2026/cuda/qwen38_5090/native_cuda_phase_entry.py\", line 49, in execute\n    exec(compile(candidate,str(retained_path),'exec'),namespace)\n    ~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"D:\\CantorAI\\5090-study-20261023\\results\\native-cuda-entry-profiled-bootstrap-attempt1\\native\\control\\host-stages.entry-worker.py.txt\", line 57, in <module>\n    emit({'event':'ready','protocol':'study_single_v1','batch':1,'capacity':4096,'prefill_chunk':32,'chunk':4,'generation_mode':mode,'bf16_kv_low_batch_state':True,'library_sha256':library,'model_consistency_proof_sha256':sha(root/'results'/(name+'-verified.json')),'qualified_model_source':True,'precision':'mixed NVFP4/FP8; BF16 vision and cache','queued_concurrency':True,'research_only':True,'explicit_ignore_eos_supported':True,'broad_quality_qualified':False,'performance_admitted':False})\n    ~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"D:\\CantorAI\\5090-study-20261023\\results\\native-cuda-entry-profiled-bootstrap-attempt1\\native\\control\\host-stages.entry-worker.py.txt\", line 47, in emit\n    trace.observe(event);_emit(event)\n                         ~~~~~^^^^^^^\n  File \"D:\\CantorAI\\5090-study-20261023\\Garnet\\test2026\\cuda\\qwen38_5090\\native_worker_io.py\", line 58, in emit\n    count=write(raw)\n  File \"D:\\CantorAI\\5090-study-20261023\\Garnet\\test2026\\cuda\\qwen38_5090\\native_worker_io.py\", line 50, in <lambda>\n    write=write or (lambda raw:os.write(1,raw))\n                               ~~~~~~~~^^^^^^^\nOSError: write failed\n"
+        }
+      }
+    ]
+  },
+  "profiled": true,
+  "performance_admitted": false,
+  "two_times_target_achieved": false,
+  "scope": "One exclusive actual unchanged B1 ordinary3968+128 retained text control under pinned Nsight2026.5 process-tree capture, normal inner IPC and early native import/exception log. Actual closed two-machine unprofiled bootstrap parent, source/runtime pins,21CPUguards and real embedded fake-import/fake-IO compatibility required. Actual model/vision construction, identical IDs,12unique HtoD markers, SM120 owned graph-node kernels/API/copy activity, raw SQLite/nsys reports and independent replay required for diagnostic success. Retain setup/native/profiler failures and original exit; source/runtime unchanged and owned cache retirement mandatory. Instrumented GPU activity is not HTTP speedup or serving-memory saving. Full text/image ordinary/MTP profiling, batched/quality/HTTP, wider prefill, strongest tuned references/repetitions/INT4/4B and overall2x remain open."
+}

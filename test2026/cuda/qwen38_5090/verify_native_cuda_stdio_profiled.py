@@ -1,0 +1,116 @@
+"""Independent actual entry/ID/marker/Nsight replay; setup failure stays failure."""
+from pathlib import Path
+import argparse,hashlib,json,math,sqlite3,statistics,sys,zipfile
+sys.path.insert(0,str(Path(__file__).resolve().parents[3]))
+from test2026.cuda.qwen38_5090.native_cuda_phase_stdio_entry import instrument
+from test2026.cuda.qwen38_5090.replay_native_host_stage_trace import replay as replay_host
+from test2026.cuda.qwen38_5090.replay_native_cuda_phases import replay as replay_gpu
+from test2026.cuda.qwen38_5090.probe_native_cuda_stdio_bootstrap import validate_preloaded_events
+
+JOB='native-cuda-stdio-profiled-bootstrap-attempt1'
+PARENT='native-cuda-entry-profiled-bootstrap-attempt1'
+PREFIX='Garnet/test2026/cuda/qwen38_5090/'
+sha=lambda raw:hashlib.sha256(raw).hexdigest()
+
+def checked(path):
+    z=zipfile.ZipFile(path);m=json.loads(z.read('evidence-manifest.json'))
+    assert z.testzip() is None and len(z.namelist())==len(set(z.namelist()))==len(m['files'])+1
+    for n,h in m['files'].items():assert sha(z.read(n))==h
+    return z,m
+
+def replay_entry(rows,source,original):
+    assert source.decode()==instrument(original.decode())
+    assert len(rows)==7 and all(type(r['ordinal']) is int for r in rows) and [r['ordinal'] for r in rows]==list(range(7))
+    assert [r['stage'] for r in rows]==['python_entry_started','instrumented_source_retained','before_garnet_import',
+        'garnet_import_returned','before_model_import','model_import_returned','worker_execution_returned']
+    assert all(r['mode']=='ordinary' for r in rows)
+    assert type(rows[0]['pid']) is int and rows[0]['pid']>0
+    assert rows[1]['original_sha256']==sha(original) and rows[1]['instrumented_sha256']==sha(source)
+    times=[r['monotonic_seconds'] for r in rows[1:]]
+    assert all(type(v) in (int,float) and math.isfinite(v) for v in times) and times==sorted(times)
+    return {'status':'native_entry_source_imports_and_return_replayed','events':7,'actual_pid':rows[0]['pid']}
+
+def main():
+    a=argparse.ArgumentParser(description=__doc__);a.add_argument('--proofs',type=Path,required=True)
+    a.add_argument('--scratch',type=Path,required=True);args=a.parse_args();assert args.scratch.is_dir()
+    path=args.proofs/(JOB+'-evidence.zip');z,manifest=checked(path)
+    parent_path=args.proofs/(PARENT+'-evidence.zip');parent,_=checked(parent_path)
+    base='results/'+JOB+'/';control=cuda=entry=memory=None
+    with z,parent:
+        doc=lambda n:json.loads(z.read(n))
+        p=doc(PREFIX+'evidence/native-cuda-stdio-profiled-preparation.json');w=doc(base+'workflow.json')
+        assert p['status']=='native_cuda_stdio_profiled_prepared_gpu_unrun'
+        assert sha(z.read(PREFIX+'evidence/native-cuda-stdio-profiled-preparation.json'))==w['preparation_sha256']
+        assert w['source_sha256']==w['source_after_sha256']==p['files']
+        assert w['runtime_dependencies']==w['runtime_dependencies_after']==p['runtime_dependencies']
+        assert w['library_unchanged'] is w['cleanup_finished'] is w['profiled'] is True and type(w['exit_code']) is int
+        assert w['library_sha256']==p['runtime_dependencies']['garnet.dll']=='1a1d0229a1c0c24a8397a4dee7a614bcedf97b3bd3293e58d752ed7de30eb498'
+        parent_raw=z.read('results/'+PARENT+'-verified.json');q=json.loads(parent_raw)
+        assert parent_raw==(args.proofs/(PARENT+'-verified.json')).read_bytes()
+        assert sha(parent_raw)==p['parent_proof_sha256']==w['parent_proof_sha256']
+        assert sha(parent_path.read_bytes())==q['archive_sha256']==p['parent_archive_sha256']==w['parent_archive_sha256']==manifest['linked_parent_archive_sha256']
+        assert q['status']=='native_cuda_entry_profiled_failure_preserved' and q['profiled'] is True
+        old=json.loads(parent.read('results/'+PARENT+'/workflow.json'))
+        assert old['exit_code']==1 and type(old['exit_code']) is int and old['cleanup_finished'] is old['library_unchanged'] is True
+        assert old['source_sha256']==old['source_after_sha256'] and old['runtime_dependencies']==old['runtime_dependencies_after']==p['runtime_dependencies']
+        assert p['files']=={**old['source_after_sha256'],**p['new_files']} and not(set(old['source_after_sha256'])&set(p['new_files']))
+        for n,h in p['files'].items():assert sha(z.read(n))==h
+        for n in ('verify_native_cuda_stdio_profiled.py','native_cuda_phase_stdio_entry.py','native_profiled_worker_io.py','native_cuda_phase_stdio_worker.py','probe_native_cuda_stdio_bootstrap.py','replay_native_cuda_phases.py','replay_native_host_stage_trace.py'):
+            assert sha(Path(__file__).with_name(n).read_bytes())==p['files'][PREFIX+n]
+        passed=w['exit_code']==0
+        if passed:
+            assert w['status']=='native_stdio_profiled_collected_needs_replay'
+            for ledger in ('cpu-ledger','embedded-cpu-ledger','gpu-ledger'):
+                rows=[json.loads(v) for v in z.read(base+ledger+'/commands.jsonl').splitlines()]
+                assert len(rows)==2 and rows[-1]['event']=='finished' and type(rows[-1]['exit_code']) is int and rows[-1]['exit_code']==0
+            log=z.read(base+'cpu-ledger/commands.log');assert b'Ran 28 tests' in log and b'\nOK' in log and b'FAILED' not in log
+            embedded=doc(base+'embedded-cpu/report.json');assert embedded['status']=='embedded_python_entry_cpu_compatibility_passed' and embedded['gpu_executed'] is False
+            collected=doc(base+'native/report.json')
+            assert collected['status']=='native_stdio_profiled_control_collected_needs_replay' and collected['exit_code']==0
+            assert collected['profiler_before']==collected['profiler_after']==p['profiler'] and collected['profiled'] is True
+            for ledger in ('profile-ledger','stats-ledger'):
+                rows=[json.loads(v) for v in z.read(base+'native/'+ledger+'/commands.jsonl').splitlines()]
+                assert len(rows)==2 and rows[-1]['event']=='finished' and type(rows[-1]['exit_code']) is int and rows[-1]['exit_code']==0
+            inner=base+'native/control/';report=doc(inner+'report.json')
+            assert report['status']=='native_stdio_bootstrap_retained_control_completed' and report['profiled'] is True
+            assert report['preloaded_input'] is True and report['arrival_timing_admitted'] is False
+            assert type(report['worker_exit_code']) is int and report['worker_exit_code']==0 and len(report['requests'])==1
+            case=doc(PREFIX+'evidence/native-host-stage-cases.json')['cases'][0];key=report['requests'][0]['id'];events=[]
+            for line in z.read(inner+'worker/worker-stdout.jsonl').splitlines():
+                try:value=json.loads(json.loads(line)['line'])
+                except ValueError:continue
+                assert isinstance(value,dict) and value.get('event') in ('ready','token','completed');events.append(value)
+            assert z.read(inner+'preloaded-request.jsonl')==(json.dumps({'id':key,'body':case['body']},separators=(',',':'))+'\n').encode()
+            assert report['ready']==validate_preloaded_events(events,case,key,w['library_sha256'])
+            host=[json.loads(v) for v in z.read(inner+'host-stages.jsonl').splitlines()]
+            expected={key:{'case':'text','prompt_ids':case['prompt_ids'],'generated_ids':case['generated_ids_by_mode']['ordinary'],'image_sha256':None}}
+            control=replay_host(host,events,expected);assert control==report['host_replay']
+            markers=[json.loads(v) for v in z.read(inner+'host-stages.cuda-markers.jsonl').splitlines()]
+            close=doc(inner+'host-stages.model-closed.json');assert close==report['native_model_cleanup'] and close['marker_count']==12 and close['library_sha256']==w['library_sha256']
+            entry_rows=[json.loads(v) for v in z.read(inner+'host-stages.entry.jsonl').splitlines()]
+            entry=replay_entry(entry_rows,z.read(inner+'host-stages.entry-worker.py.txt'),z.read(PREFIX+'native_cuda_phase_stdio_worker.py'))
+            sqlite=z.read(base+'native/cuda-trace.sqlite');scratch=args.scratch/'native-cuda-stdio-profiled-replay.sqlite'
+            assert not scratch.exists() or sha(scratch.read_bytes())==sha(sqlite)
+            if not scratch.exists():
+                with scratch.open('xb') as stream:stream.write(sqlite)
+            assert z.read(base+'native/cuda-trace.nsys-rep')
+            with sqlite3.connect('file:'+scratch.resolve().as_posix()+'?mode=ro',uri=True) as connection:cuda=replay_gpu(connection,markers,host)
+            assert cuda==collected['cuda_phase_replay'] and cuda['requests']==1 and cuda['unique_markers']==12
+            resource=doc(base+'resources/resource-monitor.json');samples=[json.loads(v) for v in z.read(base+'resources/resource-vram.jsonl').splitlines()]
+            assert type(resource['child_exit_code']) is int and resource['child_exit_code']==0 and resource['gpu']['uuid']=='GPU-265ee66c-9b79-cd3b-0c63-dd6942ddb5e6'
+            gaps=[b['monotonic']-a['monotonic'] for a,b in zip(samples,samples[1:])];assert samples and all(g>0 for g in gaps)
+            memory=resource['sampled_memory'];assert memory['samples']==len(samples) and memory['sampled_peak_adapter_used_bytes']==max(v['used_bytes'] for v in samples)
+            assert memory['observed_sample_gap_max_seconds']==(max(gaps) if gaps else None) and memory['observed_sample_gap_median_seconds']==(statistics.median(gaps) if gaps else None)
+        logs={n.removeprefix(base):[json.loads(v) for v in z.read(n).splitlines()] for n in manifest['files'] if n.startswith(base) and n.endswith(('.entry.jsonl','.bootstrap.jsonl'))}
+        result={'status':'native_cuda_stdio_profiled_replayed' if passed else 'native_cuda_stdio_profiled_failure_preserved',
+                'archive_sha256':sha(path.read_bytes()),'files_verified':len(manifest['files']),'parent_archive_sha256':q['archive_sha256'],
+                'library_sha256':w['library_sha256'],'control_replay':control,'entry_replay':entry,'cuda_phase_replay':cuda,
+                'construction_correctness_sampled_memory':memory,'diagnostic_logs':logs,'profiled':True,
+                'performance_admitted':False,'two_times_target_achieved':False,'scope':p['scope']}
+    target=args.proofs/(JOB+'-verified.json');raw=json.dumps(result,indent=2).encode()
+    assert not target.exists() or target.read_bytes()==raw
+    if not target.exists():target.write_bytes(raw)
+    print(json.dumps({'status':result['status'],'archive_sha256':result['archive_sha256'],'proof_sha256':sha(raw),'files_verified':result['files_verified']}))
+    return 0 if passed else 1
+
+if __name__=='__main__':raise SystemExit(main())

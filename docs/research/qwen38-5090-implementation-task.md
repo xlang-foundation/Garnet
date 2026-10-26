@@ -2982,3 +2982,61 @@ HTTP with complete805quality/full4Kprotocol checks. Wider-prefill128 still needs
 actual component/forward/runtime/model qualification. Strongest tuned/MTP
 references, repeated statistics, matched INT4/4B and overall2xdecode+throughput/
 halfTTFT remain open. The objective and branch scope are unchanged.
+
+
+### 2026-10-25 — profiler ready-event transport failure located; paired CPU diagnosis and isolated writer
+
+Actual native-cuda-entry-profiled-bootstrap-attempt1 closed exit1 with cleanup,
+654 source pins/six runtime dependencies/baseline library preserved. Native imports,
+decoder/vision construction and trace binding succeed; native_ready_observed_before_pipe_emit
+is recorded. The first ready-event emit fails in original native_worker_io.py
+os.write(1,raw), OSError('write failed'). No model request ran. Retain original
+traceback, entry-instrumented source, construction-only Nsight report and raw logs.
+Archive 762a1b928d964969c164baec301d2094c34038bd04194fb3ff04973f51a031ae,
+68287144 bytes/684 files. Both unchanged checkers exit1 as expected; identical proof
+a72e26c27277036a59d5480a37738f2e7832bafbeba071dfe984c0bc4d353426.
+Construction CUDA activity does not establish request-phase bottlenecks or timings.
+
+Actual embedded CPU-only paired experiment uses ordinary and pinned outer Nsight
+process trees, identical stdin/frame probes and raw pipe captures. Ordinary: all
+seven operations succeed. Profiled: raw descriptor stdout/stderr and fdopen1 fail
+with errno9; sys.stdout/sys.__stdout__ writes reach the captured pipe and stdin
+reads the exact JSON. Runtime6, source2 and profiler hashes preserved, both child
+processes and owner exit0. Archive 58c2d74880076137e9dba4e2bc55898aaca611c319b0ba3fc32c965b1f4400d8,
+24186 bytes/20 files, every raw member and observation independently replayed
+locally. This is actual CPU evidence, not a model run or a two-machine equal-proof
+claim. End-of-process text capture does not establish prompt live delivery.
+
+Added diagnostic-only native_profiled_worker_io: original request parser, JSON
+ASCII serialization, text normalization and partial-write checks retained; an
+explicit callback uses sys.stdout.write/flush. The new model worker differs only
+in that transport import; original production native_worker_io/model/runtime/SDK
+remain unchanged. Same retained ordinary3968+128 request is preloaded then stdin
+closed; all130 ready/token/completed events, exact3968prompt/128output IDs, original
+12 CUDA markers/model-close and pinned raw Nsight SQLite must validate. No arrival
+timing or HTTP performance admitted. This bypasses possible profiler text buffering
+only for diagnostic collection and does not repair or change the serving path.
+
+Initial27CPU/.229s interactive preparation was never installed or run. Preserved
+all initial methods/manifest/plan before switching to a preloaded control and
+adding the seventh protocol fault test. Final28CPU/.216s pass; all initial and
+final ledgers/recipes/source derivations retained. Final preparation
+5eb1ab9180c010f3097a78c599feb6595149bde674f8394892ec84db3d328363;
+bundle 9ecb251b6fd14250346cedf6b913d97c5886f968b80c33244a0674e990cf4a14,
+65629 bytes/12 absent-only targets. Actual install exit0 confirms654existing/
+665total pins and runtime preserved. Installation receipt downloaded and verified.
+
+Original48577 supervisor started native-cuda-stdio-profiled-bootstrap-attempt1
+after prior jobs and transfers closed. Actual remote28CPU pass .194s and embedded
+fake-import/fake-IO compatibility succeeds; optional hashlib warnings retained.
+Owner observed running; source frozen, no second GPU model or transfer. Actual
+request/GPU records, terminal cleanup and independent raw replay remain pending.
+No benchmark/chart changed. A read of a nonexistent retention helper filename
+failed harmlessly; existing helper was found before creating this distinct recipe.
+
+Next: close/replay profiler data and use actual GPU phases to choose the native
+prefill/throughput change; finish vLLM288request isolation diagnosis before a
+distinct fully retained observed-output benchmark. B4-cache/B8-MTP math/model/HTTP,
+wider-prefill128 actual GPU/forward integration, tuned/MTP references, repeated
+statistics and matched INT4/4B remain open. Overall2x decode+throughput and halfTTFT
+unmet/unproven; no reduced completion objective.

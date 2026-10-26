@@ -1,0 +1,34 @@
+from pathlib import Path
+import argparse,hashlib,json,sys,zipfile
+root=Path('D:/CantorAI/5090-study-20261023');methods=root/'Garnet/test2026/cuda/qwen38_5090';sys.path.insert(0,str(methods));from run_bf16_low_batch_native_build import idle
+sha=lambda raw:hashlib.sha256(raw).hexdigest()
+a=argparse.ArgumentParser();a.add_argument('--sha256',required=True);args=a.parse_args();archive=root/'results/native-stdio-profiled-methods.zip';assert sha(archive.read_bytes())==args.sha256
+receipt=root/'results/native-stdio-profiled-install.json';assert not receipt.exists();idle()
+with zipfile.ZipFile(archive) as z:
+    manifest=json.loads(z.read('install-manifest.json'));assert z.testzip() is None and len(z.namelist())==len(set(z.namelist()))==len(manifest['files'])+1==13
+    key='Garnet/test2026/cuda/qwen38_5090/evidence/native-cuda-stdio-profiled-preparation.json';p=json.loads(z.read(key))
+    parent='native-cuda-entry-profiled-bootstrap-attempt1';proof=root/'results'/(parent+'-verified.json');q=json.loads(proof.read_bytes());w=json.loads((root/'results'/parent/'workflow.json').read_bytes())
+    assert sha(proof.read_bytes())==p['parent_proof_sha256'] and q['archive_sha256']==p['parent_archive_sha256']==sha((root/'results'/(parent+'-evidence.zip')).read_bytes())
+    assert q['status']=='native_cuda_entry_profiled_failure_preserved' and w['exit_code']==1 and w['cleanup_finished'] and (w['runtime_dependencies']==w['runtime_dependencies_after']) and w['source_sha256']==w['source_after_sha256']
+    assert set(manifest['files'])==set(p['new_files'])|{key}
+    existing={n:h for n,h in p['files'].items() if n not in p['new_files']}
+    for n,h in existing.items():assert sha((root/n).read_bytes())==h,('Existing input drift',n)
+    for n,h in p['runtime_dependencies'].items():assert sha((root/'build/bin'/n).read_bytes())==h
+    rows=[]
+    for n,h in manifest['files'].items():
+        target=root/n;assert target.resolve().is_relative_to(methods.resolve()) and target.parent.is_dir()
+        parent_path=target.parent
+        while parent_path!=root:
+            assert parent_path.resolve().is_relative_to(root.resolve()) and not(getattr(parent_path.lstat(),'st_file_attributes',0)&0x400);parent_path=parent_path.parent
+        raw=z.read(n);assert sha(raw)==h
+        assert not target.exists(),('New target already exists; preserve and inspect instead of overwrite',n)
+        if n in p['new_files']:assert h==p['new_files'][n]
+        rows.append((target,raw,h))
+    for target,raw,h in rows:
+        with target.open('xb') as stream:stream.write(raw)
+        assert sha(target.read_bytes())==h
+for n,h in p['files'].items():assert sha((root/n).read_bytes())==h
+for n,h in p['runtime_dependencies'].items():assert sha((root/'build/bin'/n).read_bytes())==h
+result={'status':'native_stdio_profiled_methods_installed','bundle_sha256':args.sha256,'existing_source_pins_verified':len(existing),'new_targets_verified':len(rows),'all_source_pins_verified':len(p['files']),
+        'runtime_unchanged':True,'gpu_executed':False,'scope':manifest['scope']}
+receipt.write_bytes(json.dumps(result,indent=2).encode());print(json.dumps(result))

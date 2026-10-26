@@ -1,0 +1,141 @@
+from pathlib import Path
+import hashlib,json,zipfile
+
+work=Path(__file__).resolve().parent;out=work.parent/'outputs'
+repo=Path('D:/CantorAI/work/qwen38-5090');m=repo/'test2026/cuda/qwen38_5090';e=m/'evidence'
+sha=lambda raw:hashlib.sha256(raw).hexdigest()
+
+def keep(path,raw):
+    assert not path.exists() or path.read_bytes()==raw,path
+    if not path.exists():path.write_bytes(raw)
+
+failure=json.loads((work/'native-entry-profiled-failure-local-receipt.json').read_bytes())
+job='native-cuda-entry-profiled-bootstrap-attempt1'
+assert failure['status']=='native_entry_profiled_ready_stdout_failure_replayed_on_both_machines'
+assert failure['actual_request_count']==0 and failure['actual_model_ready_before_transport'] is True
+assert (out/(job+'-verified.json')).read_bytes()==(out/(job+'-remote-verified.json')).read_bytes()
+assert sha((out/(job+'-verified.json')).read_bytes())==failure['proof_pair_sha256']
+with zipfile.ZipFile(out/(job+'-evidence.zip')) as z:
+    assert sha((out/(job+'-evidence.zip')).read_bytes())==failure['archive_sha256']
+    manifest=json.loads(z.read('evidence-manifest.json'))
+    assert len(manifest['files'])==684 and len(z.namelist())==685
+    for n,h in manifest['files'].items():assert sha(z.read(n))==h
+    base='results/'+job+'/'
+    for n in z.namelist():
+        if n.startswith(base) and not n.endswith(('cuda-trace.nsys-rep','resource-vram.jsonl')):
+            keep(e/(job+'-'+n.removeprefix(base).replace('/','-')),z.read(n))
+    keep(e/(job+'-evidence-manifest.json'),z.read('evidence-manifest.json'))
+for suffix in ('-verified.json','-remote-verified.json','-local-replay.log'):
+    keep(e/(job+suffix),(out/(job+suffix)).read_bytes())
+
+cpujob='native-embedded-stdio-cpu-diagnosis-attempt1'
+cpuproof=json.loads((out/(cpujob+'-verified.json')).read_bytes())
+with zipfile.ZipFile(out/(cpujob+'-evidence.zip')) as z:
+    assert sha((out/(cpujob+'-evidence.zip')).read_bytes())==cpuproof['archive_sha256']
+    manifest=json.loads(z.read('evidence-manifest.json'));assert len(manifest['files'])==20
+    for n,h in manifest['files'].items():assert sha(z.read(n))==h
+    base='results/'+cpujob+'/'
+    for n in z.namelist():
+        if n.startswith(base) and not n.endswith('cpu-trace.nsys-rep'):
+            # Preserve raw pipe bytes exactly, including their original .bin suffix.
+            keep(e/(cpujob+'-'+n.removeprefix(base).replace('/','-')),z.read(n))
+    keep(e/(cpujob+'-evidence-manifest.json'),z.read('evidence-manifest.json'))
+keep(e/(cpujob+'-verified.json'),(out/(cpujob+'-verified.json')).read_bytes())
+bundle=json.loads((work/'native-stdio-profiled-bundle-preparation.json').read_bytes())
+installation=json.loads((work/'native-stdio-profiled-install.json').read_bytes())
+assert installation['status']=='native_stdio_profiled_methods_installed'
+assert installation['bundle_sha256']==bundle['bundle_sha256']==sha((work/'native-stdio-profiled-methods.zip').read_bytes())
+assert installation['existing_source_pins_verified']==654 and installation['all_source_pins_verified']==665
+assert installation['runtime_unchanged'] is True and installation['gpu_executed'] is False
+p=json.loads((e/'native-cuda-stdio-profiled-preparation.json').read_bytes())
+assert sha((e/'native-cuda-stdio-profiled-preparation.json').read_bytes())==bundle['preparation_sha256']
+with zipfile.ZipFile(work/'native-stdio-profiled-methods.zip') as z:
+    manifest=json.loads(z.read('install-manifest.json'));assert len(manifest['files'])==12
+    for n,h in manifest['files'].items():assert sha(z.read(n))==h==sha((repo/n.removeprefix('Garnet/')).read_bytes())
+assert not any(n.startswith('Garnet/docs/research/') for n in p['files'])
+recipes=('replay-native-entry-profiled-failure-local.py','replay-native-stdio-cpu-archive.py',
+         'derive-native-stdio-profiled-pipeline.py','package-native-stdio-profiled-methods.py',
+         'install-native-stdio-profiled-methods.py','retain-native-stdio-diagnosis-and-profiled-start.py')
+for n in recipes:keep(e/(n+'.txt'),(work/n).read_bytes())
+for n in ('native-entry-profiled-failure-local-receipt.json','native-embedded-stdio-cpu-diagnosis-archive.json',
+          'native-stdio-profiled-upload-plan.json','native-stdio-profiled-bundle-preparation.json','native-stdio-profiled-install.json'):
+    keep(e/n,(work/n).read_bytes())
+for f in (work/'native-stdio-profiled-cpu-ledger').iterdir():
+    if f.is_file():keep(e/('native-stdio-profiled-cpu-ledger-'+f.name),f.read_bytes())
+old=work/'native-stdio-initial-interactive'
+assert (old/'moved-original-preparation.json').read_bytes()==(old/'native-cuda-stdio-profiled-preparation.json').read_bytes()
+for f in old.iterdir():
+    if f.is_file():keep(e/('native-stdio-before-preloading-'+f.name+'.txt'),f.read_bytes())
+result={'status':'native_stdio_failure_diagnosed_new_profiled_control_started',
+        'previous_profiled_failure':failure,'embedded_cpu_diagnosis':cpuproof,'installation':installation,
+        'profiler_control':{'job':'native-cuda-stdio-profiled-bootstrap-attempt1','supervisor_session':48577,
+            'observed_state':'running','source_pins':665,'remote_cpu_tests':28,'remote_unittest_seconds':.194,
+            'actual_embedded_cpu_compatibility_passed':True,'requests_planned':1,'input_tokens':3968,'output_tokens':128,
+            'preloaded_request':True,'arrival_timing_admitted':False,'terminal_result':None},
+        'performance_admitted':False,'two_times_target_achieved':False}
+raw=json.dumps(result,indent=2).encode()
+keep(e/'native-stdio-diagnosis-and-profiled-start.json',raw)
+keep(out/'Garnet-Native-Profiler-StdIO-Diagnosis-Status.json',raw)
+text='''
+
+### 2026-10-25 — profiler ready-event transport failure located; paired CPU diagnosis and isolated writer
+
+Actual native-cuda-entry-profiled-bootstrap-attempt1 closed exit1 with cleanup,
+654 source pins/six runtime dependencies/baseline library preserved. Native imports,
+decoder/vision construction and trace binding succeed; native_ready_observed_before_pipe_emit
+is recorded. The first ready-event emit fails in original native_worker_io.py
+os.write(1,raw), OSError('write failed'). No model request ran. Retain original
+traceback, entry-instrumented source, construction-only Nsight report and raw logs.
+Archive 762a1b928d964969c164baec301d2094c34038bd04194fb3ff04973f51a031ae,
+68287144 bytes/684 files. Both unchanged checkers exit1 as expected; identical proof
+a72e26c27277036a59d5480a37738f2e7832bafbeba071dfe984c0bc4d353426.
+Construction CUDA activity does not establish request-phase bottlenecks or timings.
+
+Actual embedded CPU-only paired experiment uses ordinary and pinned outer Nsight
+process trees, identical stdin/frame probes and raw pipe captures. Ordinary: all
+seven operations succeed. Profiled: raw descriptor stdout/stderr and fdopen1 fail
+with errno9; sys.stdout/sys.__stdout__ writes reach the captured pipe and stdin
+reads the exact JSON. Runtime6, source2 and profiler hashes preserved, both child
+processes and owner exit0. Archive 58c2d74880076137e9dba4e2bc55898aaca611c319b0ba3fc32c965b1f4400d8,
+24186 bytes/20 files, every raw member and observation independently replayed
+locally. This is actual CPU evidence, not a model run or a two-machine equal-proof
+claim. End-of-process text capture does not establish prompt live delivery.
+
+Added diagnostic-only native_profiled_worker_io: original request parser, JSON
+ASCII serialization, text normalization and partial-write checks retained; an
+explicit callback uses sys.stdout.write/flush. The new model worker differs only
+in that transport import; original production native_worker_io/model/runtime/SDK
+remain unchanged. Same retained ordinary3968+128 request is preloaded then stdin
+closed; all130 ready/token/completed events, exact3968prompt/128output IDs, original
+12 CUDA markers/model-close and pinned raw Nsight SQLite must validate. No arrival
+timing or HTTP performance admitted. This bypasses possible profiler text buffering
+only for diagnostic collection and does not repair or change the serving path.
+
+Initial27CPU/.229s interactive preparation was never installed or run. Preserved
+all initial methods/manifest/plan before switching to a preloaded control and
+adding the seventh protocol fault test. Final28CPU/.216s pass; all initial and
+final ledgers/recipes/source derivations retained. Final preparation
+5eb1ab9180c010f3097a78c599feb6595149bde674f8394892ec84db3d328363;
+bundle 9ecb251b6fd14250346cedf6b913d97c5886f968b80c33244a0674e990cf4a14,
+65629 bytes/12 absent-only targets. Actual install exit0 confirms654existing/
+665total pins and runtime preserved. Installation receipt downloaded and verified.
+
+Original48577 supervisor started native-cuda-stdio-profiled-bootstrap-attempt1
+after prior jobs and transfers closed. Actual remote28CPU pass .194s and embedded
+fake-import/fake-IO compatibility succeeds; optional hashlib warnings retained.
+Owner observed running; source frozen, no second GPU model or transfer. Actual
+request/GPU records, terminal cleanup and independent raw replay remain pending.
+No benchmark/chart changed. A read of a nonexistent retention helper filename
+failed harmlessly; existing helper was found before creating this distinct recipe.
+
+Next: close/replay profiler data and use actual GPU phases to choose the native
+prefill/throughput change; finish vLLM288request isolation diagnosis before a
+distinct fully retained observed-output benchmark. B4-cache/B8-MTP math/model/HTTP,
+wider-prefill128 actual GPU/forward integration, tuned/MTP references, repeated
+statistics and matched INT4/4B remain open. Overall2x decode+throughput and halfTTFT
+unmet/unproven; no reduced completion objective.
+'''
+for n in ('qwen38-5090-development-log.md','qwen38-5090-implementation-task.md'):
+    path=repo/'docs/research'/n;raw=path.read_bytes()
+    if b'profiler ready-event transport failure located; paired CPU diagnosis and isolated writer' not in raw:path.write_bytes(raw+text.encode())
+print(json.dumps({'status':result['status'],'retained_cpu_diagnosis':True,'profiled_control':'running','new_benchmark_result':False}))

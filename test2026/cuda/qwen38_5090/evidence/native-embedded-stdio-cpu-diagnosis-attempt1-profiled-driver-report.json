@@ -1,0 +1,68 @@
+{
+  "status": "embedded_cpu_stdio_driver_collected",
+  "argv": [
+    "cmd.exe",
+    "/d",
+    "/c",
+    "D:\\CantorAI\\5090-study-20261023\\results\\native-embedded-stdio-cpu-diagnosis-attempt1\\profiled\\cpu-native-target.bat",
+    "D:\\CantorAI\\5090-study-20261023\\results\\native-embedded-stdio-cpu-diagnosis-attempt1\\profiled\\embedded"
+  ],
+  "child_exit_code": 0,
+  "target": {
+    "status": "cpu_stdio_observations_collected",
+    "pid": 41692,
+    "operations": [
+      {
+        "operation": "os.write.stdout",
+        "completed": false,
+        "exception_type": "OSError",
+        "exception_repr": "OSError('write failed')",
+        "errno": 9,
+        "winerror": null
+      },
+      {
+        "operation": "sys.stdout.write",
+        "returned": "(29, None)",
+        "completed": true
+      },
+      {
+        "operation": "sys.__stdout__.write",
+        "returned": "(33, None)",
+        "completed": true
+      },
+      {
+        "operation": "os.fdopen.stdout",
+        "completed": false,
+        "exception_type": "OSError",
+        "exception_repr": "OSError('file descriptor write failed: Bad file descriptor')",
+        "errno": 9,
+        "winerror": null
+      },
+      {
+        "operation": "os.write.stderr",
+        "completed": false,
+        "exception_type": "OSError",
+        "exception_repr": "OSError('write failed')",
+        "errno": 9,
+        "winerror": null
+      },
+      {
+        "operation": "os.read.stdin",
+        "returned": "b'{\"probe\":\"native.stdin\",\"cpu_only\":true}\\n'",
+        "completed": true
+      },
+      {
+        "operation": "owned_file.write",
+        "returned": "39",
+        "completed": true
+      }
+    ],
+    "actual_native_model_executed": false,
+    "scope": "CPU-only embedded Python stdio observations; failures are recorded, not suppressed in a model worker.",
+    "sys_stdout_type": "TextIOWrapper",
+    "sys_stdin_type": "TextIOWrapper"
+  },
+  "stdout_bytes": 62,
+  "stderr_bytes": 0,
+  "actual_native_model_executed": false
+}

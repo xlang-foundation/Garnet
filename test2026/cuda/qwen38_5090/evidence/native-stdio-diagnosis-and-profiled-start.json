@@ -1,0 +1,171 @@
+{
+  "status": "native_stdio_failure_diagnosed_new_profiled_control_started",
+  "previous_profiled_failure": {
+    "status": "native_entry_profiled_ready_stdout_failure_replayed_on_both_machines",
+    "archive_sha256": "762a1b928d964969c164baec301d2094c34038bd04194fb3ff04973f51a031ae",
+    "archive_bytes": 68287144,
+    "proof_pair_sha256": "a72e26c27277036a59d5480a37738f2e7832bafbeba071dfe984c0bc4d353426",
+    "files_verified": 684,
+    "local_replay": {
+      "exit_code": 1,
+      "argv": [
+        "D:\\CantorAI\\Garnet\\.venv\\Scripts\\python.exe",
+        "D:\\CantorAI\\work\\qwen38-5090\\test2026\\cuda\\qwen38_5090\\verify_native_cuda_entry_profiled.py",
+        "--proofs",
+        "C:\\Users\\developer\\Documents\\Codex\\2026-10-23\\referenced-chatgpt-conversation-this-is-an\\outputs",
+        "--scratch",
+        "C:\\Users\\developer\\Documents\\Codex\\2026-10-23\\referenced-chatgpt-conversation-this-is-an\\work"
+      ],
+      "log_sha256": "b195687892b010722e6c4c5276b9cd2c2bc2fca95d77a8b3a99efe18f6a0620f"
+    },
+    "actual_model_ready_before_transport": true,
+    "actual_request_count": 0,
+    "observed_error": {
+      "type": "OSError",
+      "repr": "OSError('write failed')",
+      "traceback": "Traceback (most recent call last):\n  File \"D:/CantorAI/5090-study-20261023/Garnet/test2026/cuda/qwen38_5090/native_cuda_phase_entry.py\", line 49, in execute\n    exec(compile(candidate,str(retained_path),'exec'),namespace)\n    ~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"D:\\CantorAI\\5090-study-20261023\\results\\native-cuda-entry-profiled-bootstrap-attempt1\\native\\control\\host-stages.entry-worker.py.txt\", line 57, in <module>\n    emit({'event':'ready','protocol':'study_single_v1','batch':1,'capacity':4096,'prefill_chunk':32,'chunk':4,'generation_mode':mode,'bf16_kv_low_batch_state':True,'library_sha256':library,'model_consistency_proof_sha256':sha(root/'results'/(name+'-verified.json')),'qualified_model_source':True,'precision':'mixed NVFP4/FP8; BF16 vision and cache','queued_concurrency':True,'research_only':True,'explicit_ignore_eos_supported':True,'broad_quality_qualified':False,'performance_admitted':False})\n    ~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"D:\\CantorAI\\5090-study-20261023\\results\\native-cuda-entry-profiled-bootstrap-attempt1\\native\\control\\host-stages.entry-worker.py.txt\", line 47, in emit\n    trace.observe(event);_emit(event)\n                         ~~~~~^^^^^^^\n  File \"D:\\CantorAI\\5090-study-20261023\\Garnet\\test2026\\cuda\\qwen38_5090\\native_worker_io.py\", line 58, in emit\n    count=write(raw)\n  File \"D:\\CantorAI\\5090-study-20261023\\Garnet\\test2026\\cuda\\qwen38_5090\\native_worker_io.py\", line 50, in <lambda>\n    write=write or (lambda raw:os.write(1,raw))\n                               ~~~~~~~~^^^^^^^\nOSError: write failed\n"
+    },
+    "core_runtime_preserved": true,
+    "request_gpu_phase_metrics_admitted": false,
+    "performance_admitted": false,
+    "two_times_target_achieved": false
+  },
+  "embedded_cpu_diagnosis": {
+    "status": "embedded_stdio_cpu_archive_observations_replayed",
+    "archive_sha256": "58c2d74880076137e9dba4e2bc55898aaca611c319b0ba3fc32c965b1f4400d8",
+    "files_verified": 20,
+    "observations": {
+      "ordinary": {
+        "stdout_labels": [
+          "os.write.stdout",
+          "fdopen.stdout",
+          "sys.stdout.write",
+          "sys.__stdout__.write"
+        ],
+        "operations": [
+          {
+            "operation": "os.write.stdout",
+            "returned": "28",
+            "completed": true
+          },
+          {
+            "operation": "sys.stdout.write",
+            "returned": "(29, None)",
+            "completed": true
+          },
+          {
+            "operation": "sys.__stdout__.write",
+            "returned": "(33, None)",
+            "completed": true
+          },
+          {
+            "operation": "os.fdopen.stdout",
+            "returned": "(26, None)",
+            "completed": true
+          },
+          {
+            "operation": "os.write.stderr",
+            "returned": "28",
+            "completed": true
+          },
+          {
+            "operation": "os.read.stdin",
+            "returned": "b'{\"probe\":\"native.stdin\",\"cpu_only\":true}\\n'",
+            "completed": true
+          },
+          {
+            "operation": "owned_file.write",
+            "returned": "39",
+            "completed": true
+          }
+        ]
+      },
+      "profiled": {
+        "stdout_labels": [
+          "sys.stdout.write",
+          "sys.__stdout__.write"
+        ],
+        "operations": [
+          {
+            "operation": "os.write.stdout",
+            "completed": false,
+            "exception_type": "OSError",
+            "exception_repr": "OSError('write failed')",
+            "errno": 9,
+            "winerror": null
+          },
+          {
+            "operation": "sys.stdout.write",
+            "returned": "(29, None)",
+            "completed": true
+          },
+          {
+            "operation": "sys.__stdout__.write",
+            "returned": "(33, None)",
+            "completed": true
+          },
+          {
+            "operation": "os.fdopen.stdout",
+            "completed": false,
+            "exception_type": "OSError",
+            "exception_repr": "OSError('file descriptor write failed: Bad file descriptor')",
+            "errno": 9,
+            "winerror": null
+          },
+          {
+            "operation": "os.write.stderr",
+            "completed": false,
+            "exception_type": "OSError",
+            "exception_repr": "OSError('write failed')",
+            "errno": 9,
+            "winerror": null
+          },
+          {
+            "operation": "os.read.stdin",
+            "returned": "b'{\"probe\":\"native.stdin\",\"cpu_only\":true}\\n'",
+            "completed": true
+          },
+          {
+            "operation": "owned_file.write",
+            "returned": "39",
+            "completed": true
+          }
+        ]
+      }
+    },
+    "runtime_and_profiler_hashes_preserved": true,
+    "live_delivery_observed": false,
+    "only_end_of_process_capture": true,
+    "model_executed": false,
+    "request_gpu_phase_metrics_admitted": false,
+    "performance_admitted": false,
+    "scope": "Actual ordinary/profiled CPU embedded-runtime observations and captured pipe bytes. Raw descriptor9failure is reproducible under Nsight; text-stream writes and stdin complete. End-of-process capture alone does not prove prompt live delivery. Preloaded profiling control must use native markers, not arrival times."
+  },
+  "installation": {
+    "status": "native_stdio_profiled_methods_installed",
+    "bundle_sha256": "9ecb251b6fd14250346cedf6b913d97c5886f968b80c33244a0674e990cf4a14",
+    "existing_source_pins_verified": 654,
+    "new_targets_verified": 12,
+    "all_source_pins_verified": 665,
+    "runtime_unchanged": true,
+    "gpu_executed": false,
+    "scope": "Absent-only diagnostic text-stream callback/preloaded-control Nsight methods. Original production I/O/model/runtime/SDK/corpus unchanged; no GPU execution during install."
+  },
+  "profiler_control": {
+    "job": "native-cuda-stdio-profiled-bootstrap-attempt1",
+    "supervisor_session": 48577,
+    "observed_state": "running",
+    "source_pins": 665,
+    "remote_cpu_tests": 28,
+    "remote_unittest_seconds": 0.194,
+    "actual_embedded_cpu_compatibility_passed": true,
+    "requests_planned": 1,
+    "input_tokens": 3968,
+    "output_tokens": 128,
+    "preloaded_request": true,
+    "arrival_timing_admitted": false,
+    "terminal_result": null
+  },
+  "performance_admitted": false,
+  "two_times_target_achieved": false
+}

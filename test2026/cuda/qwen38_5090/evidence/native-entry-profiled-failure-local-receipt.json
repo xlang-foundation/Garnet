@@ -1,0 +1,30 @@
+{
+  "status": "native_entry_profiled_ready_stdout_failure_replayed_on_both_machines",
+  "archive_sha256": "762a1b928d964969c164baec301d2094c34038bd04194fb3ff04973f51a031ae",
+  "archive_bytes": 68287144,
+  "proof_pair_sha256": "a72e26c27277036a59d5480a37738f2e7832bafbeba071dfe984c0bc4d353426",
+  "files_verified": 684,
+  "local_replay": {
+    "exit_code": 1,
+    "argv": [
+      "D:\\CantorAI\\Garnet\\.venv\\Scripts\\python.exe",
+      "D:\\CantorAI\\work\\qwen38-5090\\test2026\\cuda\\qwen38_5090\\verify_native_cuda_entry_profiled.py",
+      "--proofs",
+      "C:\\Users\\developer\\Documents\\Codex\\2026-10-23\\referenced-chatgpt-conversation-this-is-an\\outputs",
+      "--scratch",
+      "C:\\Users\\developer\\Documents\\Codex\\2026-10-23\\referenced-chatgpt-conversation-this-is-an\\work"
+    ],
+    "log_sha256": "b195687892b010722e6c4c5276b9cd2c2bc2fca95d77a8b3a99efe18f6a0620f"
+  },
+  "actual_model_ready_before_transport": true,
+  "actual_request_count": 0,
+  "observed_error": {
+    "type": "OSError",
+    "repr": "OSError('write failed')",
+    "traceback": "Traceback (most recent call last):\n  File \"D:/CantorAI/5090-study-20261023/Garnet/test2026/cuda/qwen38_5090/native_cuda_phase_entry.py\", line 49, in execute\n    exec(compile(candidate,str(retained_path),'exec'),namespace)\n    ~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"D:\\CantorAI\\5090-study-20261023\\results\\native-cuda-entry-profiled-bootstrap-attempt1\\native\\control\\host-stages.entry-worker.py.txt\", line 57, in <module>\n    emit({'event':'ready','protocol':'study_single_v1','batch':1,'capacity':4096,'prefill_chunk':32,'chunk':4,'generation_mode':mode,'bf16_kv_low_batch_state':True,'library_sha256':library,'model_consistency_proof_sha256':sha(root/'results'/(name+'-verified.json')),'qualified_model_source':True,'precision':'mixed NVFP4/FP8; BF16 vision and cache','queued_concurrency':True,'research_only':True,'explicit_ignore_eos_supported':True,'broad_quality_qualified':False,'performance_admitted':False})\n    ~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"D:\\CantorAI\\5090-study-20261023\\results\\native-cuda-entry-profiled-bootstrap-attempt1\\native\\control\\host-stages.entry-worker.py.txt\", line 47, in emit\n    trace.observe(event);_emit(event)\n                         ~~~~~^^^^^^^\n  File \"D:\\CantorAI\\5090-study-20261023\\Garnet\\test2026\\cuda\\qwen38_5090\\native_worker_io.py\", line 58, in emit\n    count=write(raw)\n  File \"D:\\CantorAI\\5090-study-20261023\\Garnet\\test2026\\cuda\\qwen38_5090\\native_worker_io.py\", line 50, in <lambda>\n    write=write or (lambda raw:os.write(1,raw))\n                               ~~~~~~~~^^^^^^^\nOSError: write failed\n"
+  },
+  "core_runtime_preserved": true,
+  "request_gpu_phase_metrics_admitted": false,
+  "performance_admitted": false,
+  "two_times_target_achieved": false
+}

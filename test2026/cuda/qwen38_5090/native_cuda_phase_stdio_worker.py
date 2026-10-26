@@ -1,0 +1,104 @@
+"""Explicit Nsight phase diagnostic; original model operations retained."""
+import base64,hashlib,json,os,sys,time
+from pathlib import Path
+sys.path.insert(0,os.environ['GARNET_RUNTIME_ROOT']);sys.path.insert(0,os.getcwd())
+import garnet
+from xModel.qwen38.vl_27b.model import create_cuda_bf16_low_batch_study_decoder,create_cuda_vision,prepare_cuda_image
+from test2026.cuda.qwen38_5090.native_prompt import image_positions
+from test2026.cuda.qwen38_5090.native_profiled_worker_io import requests,emit as _emit
+from test2026.cuda.qwen38_5090.native_cuda_phase_bootstrap_log import NativeCUDAPhaseLoggedTrace as NativeHostStageTrace
+from test2026.cuda.qwen38_5090.fixed_length_policy import generation_stop_ids
+def validate_body(body,model='qwen38-27b-nvfp4'):
+    if not isinstance(body,dict) or body.get('model')!=model or body.get('temperature')!=0:
+        raise ValueError('Study requires the pinned model and greedy generation')
+    if body.get('chat_template_kwargs')!={'enable_thinking':False}:raise ValueError('Thinking must be disabled')
+    limit=body.get('max_tokens')
+    if type(limit) is not int or not 2<=limit<=1024:raise ValueError('Output limit outside study profile')
+    if type(body.get('ignore_eos',False)) is not bool:raise ValueError('ignore_eos requires an explicit boolean')
+    messages=body.get('messages')
+    if not isinstance(messages,list) or len(messages)!=1 or messages[0].get('role')!='user':raise ValueError('One user message required')
+    content=messages[0].get('content')
+    if isinstance(content,str):return
+    if not isinstance(content,list) or len(content)!=2 or content[0].get('type')!='image_url' or content[1].get('type')!='text':
+        raise ValueError('Image profile requires JPEG first, then text')
+    if not isinstance(content[1].get('text'),str) or not content[0].get('image_url',{}).get('url','').startswith('data:image/jpeg;base64,'):
+        raise ValueError('Inline JPEG required')
+
+root=Path(sys.argv[1]);mode=sys.argv[2];assert mode in ('ordinary','mtp')
+name='tokenizer-nfc-model-consistency-attempt1';proof=json.loads((root/'results'/(name+'-verified.json')).read_bytes())
+sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest();library=sha(root/'build/bin/garnet.dll')
+assert proof['status']=='tokenizer_nfc_model_consistency_replayed' and proof['library_sha256']==library
+assert sha(root/'results'/(name+'-evidence.zip'))==proof['archive_sha256']
+assert proof['replay_verifier_sha256']==proof['archived_replay_verifier_sha256']==sha(Path(__file__).with_name('verify_tokenizer_nfc_model.py'))
+b1=[v for v in proof['variants'] if v['label']=='b1'];assert len(b1)==1 and b1[0]['cases']==8 and b1[0]['ordinary_mtp_exact'] and b1[0]['prefix_counts']==[0,1,2,4]
+closed=json.loads((root/'results'/name/'workflow.json').read_bytes());assert closed['exit_code']==0 and closed['cleanup_finished'] and closed['library_unchanged'] and closed['source_sha256']==closed['source_after_sha256']
+for n,h in closed['source_sha256'].items():assert sha(root/n)==h,('Qualified model source drift',n)
+for n,h in closed['runtime_dependencies'].items():assert sha(root/'build/bin'/n)==h,('Qualified runtime drift',n)
+for flag in ('GARNET_FP8_FULL_ATTN_M32_CANONICAL','GARNET_FP8_GDN_M32_CANONICAL','GARNET_PARALLEL_BATCH_TOP1'):assert os.environ.get(flag)=='1'
+checkpoint=str(root/'models/Qwen3.8-27B-NVFP4');config=json.loads(Path(checkpoint,'config.json').read_bytes())
+tokenizer=garnet.tokenizer();tokenizer.open(checkpoint);stops=[tokenizer.token_id('<|im_end|>'),tokenizer.token_id('<|endoftext|>')]
+suffix='<|im_end|>\n<|im_start|>assistant\n<think>\n\n</think>\n\n'
+trace=NativeHostStageTrace(root,mode,sys.argv[3])
+def emit(event):
+ trace.observe(event);_emit(event)
+
+decoder=vision=session=None
+try:
+ decoder=create_cuda_bf16_low_batch_study_decoder(checkpoint,config);decoder.enable_cuda_graph(True);io=decoder.io
+ trace.bind_io(io)
+ vision=create_cuda_vision(checkpoint,config,16,16);vision.graph.enable_cuda_graph(True)
+ if mode=='mtp':
+  from xModel.qwen35.vl_0_8b.cuda_speculative import CUDASpeculativeSession
+  session=CUDASpeculativeSession(decoder,checkpoint,stops,3,head_candidates=0,prefix_replay=True,draft_chunk_size=4,draft_builder_workspace_bytes=128<<20)
+ emit({'event':'ready','protocol':'study_single_v1','batch':1,'capacity':4096,'prefill_chunk':32,'chunk':4,'generation_mode':mode,'bf16_kv_low_batch_state':True,'library_sha256':library,'model_consistency_proof_sha256':sha(root/'results'/(name+'-verified.json')),'qualified_model_source':True,'precision':'mixed NVFP4/FP8; BF16 vision and cache','queued_concurrency':True,'research_only':True,'explicit_ignore_eos_supported':True,'broad_quality_qualified':False,'performance_admitted':False})
+ for job in requests():
+  trace.start(job['id'])
+  started=time.monotonic();body=job['body'];validate_body(body);limit=body['max_tokens'];content=body['messages'][0]['content'];image_hash=None;visual=None;image_start=-1
+  request_stops=generation_stop_ids(body,stops)
+  with trace.stage('reset'):
+   if session is None:decoder.reset()
+   else:session.reset();session.stops=set(request_stops)
+  with trace.stage('input_text_or_image'):
+   if isinstance(content,str):ids=tokenizer.encode('<|im_start|>user\n'+content+suffix);position=[[i]*3 for i in range(len(ids))];current=len(ids)
+   else:
+    data=base64.b64decode(content[0]['image_url']['url'].split(',',1)[1],validate=True);assert data[:2]==b'\xff\xd8';image_hash=hashlib.sha256(data).hexdigest()
+    image=root/'tmp/bf16-low-batch-stream.jpg';image.write_bytes(data);prepared=prepare_cuda_image(io,checkpoint,str(image));assert [prepared[1],prepared[2]]==[16,16]
+    visual=io.clone(vision.encode_patches(prepared[0]));leading=tokenizer.encode('<|im_start|>user\n<|vision_start|>');image_start=len(leading)
+    ids=leading+[config['image_token_id']]*64+tokenizer.encode('<|vision_end|>'+content[1]['text']+suffix);position,current=image_positions(len(ids),image_start,64,8)
+   assert ids and len(ids)+limit<=4096
+  with trace.stage('embedding_and_rows'):
+   embeddings=io.embedding(ids);hidden=[io.visual_token(visual,i-image_start) if visual is not None and image_start<=i<image_start+64 else io.row(embeddings,i) for i in range(len(ids))]
+  # Row/VisualToken already return [1,hidden]. Native StackRows([x]) returns x;
+  # avoid that extra ABI call while retaining each row through the request.
+  generated=[];text=''
+  def notify(row,token,n):
+   global text
+   assert row==0
+   if n==1 and generated:assert generated[0]==token;return
+   assert n==len(generated)+1;generated.append(token);text=tokenizer.decode([t for t in generated if t not in stops])
+   emit({'event':'token','id':job['id'],'token_id':token,'sampled_tokens':n,'prompt_tokens':len(ids),'text':text,'stop':token in request_stops,'native_monotonic_seconds':time.monotonic()})
+  metrics=None
+  if session is not None:
+   with trace.stage('mtp_prefill'):
+    session.prefill(hidden,[position],[len(ids)],[current],on_first_token=lambda values:notify(0,values[0],1))
+   with trace.stage('mtp_generate'):
+    result=session.generate(limit,on_token=notify)
+   expected=list(result['generated_token_ids'][0]);stop=result['stop_token_ids'][0]
+   if stop is not None:expected.append(stop)
+   assert generated==expected and len(generated)==result['sampled_tokens_including_stop'][0];metrics=result['speculative_metrics']
+  else:
+   with trace.stage('target_prefill'):
+    prediction=decoder.prefill_sequence(hidden,[position],[len(ids)])
+   with trace.stage('target_generate'):
+    for step in range(limit):
+     notify(0,prediction[0],step+1)
+     if generated[-1] in request_stops or len(generated)==limit:break
+     prediction=decoder.step(prediction,[1],[[current]*3]);current+=1
+  emit({'event':'completed','id':job['id'],'generated_ids':generated,'prompt_ids':ids,'text':text,'image_sha256':image_hash,'image_grid':[1,16,16] if image_hash else None,'physical_batch':1,'real_rows':1,'padded_rows':0,'generation_mode':'verified_mtp' if session is not None else 'greedy_target','speculative_metrics':metrics,'ignore_eos':body.get('ignore_eos',False),'finish_reason':'stop' if generated[-1] in request_stops else 'length','native_elapsed_seconds':time.monotonic()-started})
+  trace.finish()
+finally:
+ trace.close()
+ if session is not None:session.close()
+ if vision is not None:vision.close()
+ if decoder is not None:decoder.close()
+trace.model_closed(library)
