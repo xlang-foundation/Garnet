@@ -1,0 +1,75 @@
+{
+  "status": "gdn_chunk_stage_witness_owner_derived_unrun",
+  "source": "run_bf16_prefill128_model_bound.py",
+  "source_sha256": "5d2411bb23ec9cc53b7dd36bd0a30a40a13db0e88a2fd53d79b647fbbe85d729",
+  "target": "run_gdn_chunk_stage_witness.py",
+  "target_sha256": "d2f7506516214cf8c320e038c9406e90d8fdca8c002fffc49749835077d9bf0a",
+  "replacements": [
+    {
+      "old": "JOB='bf16-prefill128-model-admission-attempt2'",
+      "new": "JOB='gdn-chunk-stage-witness-attempt1'",
+      "count": 1
+    },
+    {
+      "old": "sys.path.insert(0,str(M))",
+      "new": "sys.path[:0]=[str(M),str(ROOT/'Garnet')]",
+      "count": 1
+    },
+    {
+      "old": "bf16-prefill128-model-bound-preparation.json",
+      "new": "gdn-chunk-stage-witness-preparation.json",
+      "count": 1
+    },
+    {
+      "old": "'bf16_prefill128_full4k_model_prepared_gpu_unrun' and len(p['candidate_files'])==20",
+      "new": "'gdn_chunk_stage_witness_prepared_gpu_unrun' and len(p['candidate_files'])==23",
+      "count": 1
+    },
+    {
+      "old": "garnet-native-bf16-prefill128-attempt1.dll",
+      "new": "garnet-native-gdn-chunk-stage-attempt1.dll",
+      "count": 1
+    },
+    {
+      "old": "len(z.namelist())==len(set(z.namelist()))==20",
+      "new": "len(z.namelist())==len(set(z.namelist()))==23",
+      "count": 1
+    },
+    {
+      "old": "test_bf16_prefill128_model_bound.bat",
+      "new": "test_gdn_chunk_stage_witness.bat",
+      "count": 1
+    },
+    {
+      "old": "report=json.loads((out/'native/report.json').read_bytes());assert report['local_replay']['status']=='prefill128_full4k_retained_target_state_exact'",
+      "new": "report=json.loads((out/'native/report.json').read_bytes())\n        from test2026.cuda.qwen38_5090.gdn_chunk_stage_replay import replay\n        w['array_replay']=replay(report,lambda name:(out/'native'/name).read_bytes());save()",
+      "count": 1
+    },
+    {
+      "old": "w['status']='bf16_prefill128_full4k_model_collected_needs_replay'",
+      "new": "w['status']='gdn_chunk_stage_witness_collected_needs_replay'",
+      "count": 1
+    },
+    {
+      "old": "Actual B1 targetT128/decodeT4/draftT16 six3968+128text/image/reset-repeat ordinary and verifiedMTP versus retained T32 complete state/raw-vector/ID oracle; no timing admission",
+      "new": "Actual real first128prompt token GDN layer0/1 common input; ordinary versus diagnostic primary witness before1x128vs4x32 stage attribution. No model or timing admission",
+      "count": 1
+    },
+    {
+      "old": "    for name,h in p['runtime'].items():assert sha(ROOT/'build/bin'/name)==h",
+      "new": "    for name,h in p['checkpoints'].items():assert sha(ROOT/name)==h\n    for name,h in p['runtime'].items():assert sha(ROOT/'build/bin'/name)==h",
+      "count": 1
+    },
+    {
+      "old": "common=[prep,bundle,receipt]+",
+      "new": "common=[prep,bundle,receipt]+[ROOT/name for name in p['checkpoints']]+",
+      "count": 1
+    },
+    {
+      "old": "baseline_library_restored=sha(library)==p['runtime']['garnet.dll'])",
+      "new": "baseline_library_restored=sha(library)==p['runtime']['garnet.dll'],checkpoint_after={name:sha(ROOT/name) for name in p['checkpoints']})",
+      "count": 1
+    }
+  ],
+  "scope": "Reuse exclusive native source/DLL snapshot/restore/cache retirement;23native targets, only one GPU witness subprocess, complete array replay before any attribution. No model/performance admission."
+}

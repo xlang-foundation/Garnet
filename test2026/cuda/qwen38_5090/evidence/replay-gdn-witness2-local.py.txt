@@ -1,0 +1,21 @@
+from pathlib import Path
+import hashlib,json,subprocess,sys,zipfile
+work=Path(__file__).resolve().parent;out=work.parent/'outputs';sha=lambda path:hashlib.sha256(path.read_bytes()).hexdigest()
+proof=out/'gdn-chunk-stage-witness-attempt2-remote-verified.json';expected=json.loads(proof.read_bytes())['archive_sha256']
+reconstructed=out/'gdn-chunk-stage-witness-attempt2-reconstructed-evidence.zip';target=out/'gdn-chunk-stage-witness-attempt2-evidence.zip'
+assert sha(reconstructed)==expected
+partial=work/'gdn-chunk-stage-witness-attempt2-interrupted-original-transfer.zip.part'
+assert target.resolve().parent==out.resolve() and partial.resolve().parent==work.resolve() and not partial.exists()
+assert target.stat().st_size==183795712 and sha(target)!=expected
+target.replace(partial);reconstructed.replace(target)
+with zipfile.ZipFile(work/'gdn-chunk-stage-witness-attempt2-transport.zip') as z:
+    transport=json.loads(z.read('transport.json'));assert transport['original_sha256']==sha(target)
+receipt={'status':'original_archive_reconstructed_byte_exact','archive_sha256':sha(target),'archive_bytes':target.stat().st_size,'transport_sha256':sha(work/'gdn-chunk-stage-witness-attempt2-transport.zip'),'transport_bytes':(work/'gdn-chunk-stage-witness-attempt2-transport.zip').stat().st_size,'original_interrupted_transfer_preserved_bytes':partial.stat().st_size,'remote_proof_sha256':sha(proof),'packer_sha256':transport['source_tool_sha256'],'reconstructor_sha256':sha(work/'reconstruct-verified-zip-transport.py'),'scientific_evidence_changed':False}
+(out/'gdn-chunk-stage-witness-attempt2-transfer-receipt.json').write_bytes(json.dumps(receipt,indent=2).encode())
+repo=Path('D:/CantorAI/work/qwen38-5090');verifier=repo/'test2026/cuda/qwen38_5090/verify_gdn_chunk_stage_witness_bound.py'
+command=[sys.executable,str(verifier),'--proofs',str(out)]
+with (out/'gdn-chunk-stage-witness-attempt2-local-replay.log').open('xb') as log:
+    result=subprocess.run(command,cwd=repo,stdout=log,stderr=subprocess.STDOUT)
+assert result.returncode==0
+local=out/'gdn-chunk-stage-witness-attempt2-verified.json';assert local.read_bytes()==proof.read_bytes()
+print(json.dumps({'status':'both_machines_original_full_verifier_exact','proof_sha256':sha(local),'archive_sha256':expected,'array_words':json.loads(local.read_bytes())['array_replay']['complete_output_f32_words_replayed']}))

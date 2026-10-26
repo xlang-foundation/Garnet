@@ -1,0 +1,51 @@
+"""One fixed CPU extraction job; no GPU, checkpoint loads or SDK changes."""
+from pathlib import Path
+import hashlib,json,os,sys,zipfile
+ROOT=Path('D:/CantorAI/5090-study-20261023');M=ROOT/'Garnet/test2026/cuda/qwen38_5090';JOB='gdn-z-fixture-extraction-attempt1';PARENT='gdn-chunk-stage-witness-attempt2'
+sha=lambda path:hashlib.sha256(path.read_bytes()).hexdigest()
+sys.path[:0]=[str(M),str(ROOT/'Garnet')]
+import run_logged as ledger
+from run_bf16_low_batch_native_build import idle
+
+def main():
+    idle();results=ROOT/'results';parent=json.loads((results/PARENT/'workflow.json').read_bytes());proof=json.loads((results/(PARENT+'-verified.json')).read_bytes())
+    assert parent['exit_code']==0 and parent['cleanup_finished'] and parent['baseline_source_restored'] and parent['baseline_library_restored']
+    assert proof['status']=='gdn_chunk_stage_witness_arrays_replayed' and proof['archive_sha256']==sha(results/(PARENT+'-evidence.zip'))
+    files=parent['source_after_sha256'];runtime=parent['runtime_dependencies_after'];environment=parent['environment_after']
+    assert files==parent['source_before_sha256'] and runtime==parent['runtime_dependencies'] and environment==parent['environment_before']
+    methods={str(M/name):sha(M/name) for name in ('gdn_z_projection.py','prepare_gdn_z_projection_fixture.py','test_gdn_z_projection.py')}
+    methods[str(Path(__file__))]=sha(Path(__file__))
+    checkpoints={str(ROOT/name):sha(ROOT/name) for name in ('models/Qwen3.8-27B-NVFP4/config.json','models/Qwen3.8-27B-NVFP4/model.safetensors.index.json')}
+    def snapshot():
+        return {'source':{name:sha(ROOT/name) for name in files},'runtime':{name:sha(ROOT/'build/bin'/name) for name in runtime},'environment':{name:sha(Path(name)) for name in environment},'methods':{name:sha(Path(name)) for name in methods},'checkpoints':{name:sha(Path(name)) for name in checkpoints}}
+    expected={'source':files,'runtime':runtime,'environment':environment,'methods':methods,'checkpoints':checkpoints};assert snapshot()==expected
+    out=results/JOB;archive=results/(JOB+'-evidence.zip');assert not out.exists() and not archive.exists() and not (results/'actual-gdn-z-128-fixture').exists();out.mkdir();os.chdir(ROOT/'Garnet')
+    pins={**files,**{Path(name).relative_to(ROOT).as_posix():h for name,h in methods.items()}}
+    ledger.source_identity=lambda:{'scope':'Explicit owned CPU fixture extraction source; unrelated untracked excluded','owned_source_sha256':{name:sha(ROOT/name) for name in pins}}
+    w={'status':'running','before':expected,'parent_archive_sha256':proof['archive_sha256'],'parent_proof_sha256':sha(results/(PARENT+'-verified.json')),'gpu_or_native_model_executed':False,'sdk_modified':False,'model_or_performance_qualified':False}
+    def save():(out/'workflow.json').write_bytes(json.dumps(w,indent=2).encode())
+    code=1;save()
+    try:
+        common=[Path(name) for name in methods]+[results/(PARENT+'-verified.json')]
+        code=ledger.run([sys.executable,'-m','unittest','test2026.cuda.qwen38_5090.test_gdn_z_projection','-v'],out/'cpu-ledger','correctness','Six synthetic Z fixture/replay fullword/shape/scale/lineage controls; no GPU',common)
+        if code:raise RuntimeError('CPU fixture controls failed')
+        code=ledger.run([sys.executable,str(M/'prepare_gdn_z_projection_fixture.py'),'--study',str(ROOT)],out/'extraction-ledger','setup','CPU real128 stage/actual checkpoint Z tensor extraction; no model/GPU',common)
+        if code:raise RuntimeError('Fixture extraction failed')
+        raw=(results/'actual-gdn-z-128-fixture/manifest.json').read_bytes();fixture=json.loads(raw)
+        assert fixture['status']=='real_gdn_z_128_fixture_extracted_native_control_unrun'
+        for name,row in fixture['files'].items():assert sha(results/'actual-gdn-z-128-fixture'/name)==row['sha256']
+        w.update(status='real_gdn_z_128_fixture_extracted_native_control_unrun',fixture_manifest_sha256=hashlib.sha256(raw).hexdigest(),layers=fixture['layers'])
+    except BaseException as error:w.update(status='failed',error=repr(error));code=code or 1
+    finally:
+        w.update(exit_code=code,after=snapshot(),cleanup_finished=True);save();assert w['after']==w['before'];idle()
+        selected=list(out.rglob('*'))+[Path(name) for name in methods]+[results/(PARENT+'-verified.json')]
+        fixture_manifest=results/'actual-gdn-z-128-fixture/manifest.json'
+        if fixture_manifest.exists():selected.append(fixture_manifest)
+        names={path.relative_to(ROOT).as_posix():path for path in selected if path.is_file()}
+        with zipfile.ZipFile(archive,'x',zipfile.ZIP_DEFLATED) as z:
+            for name,path in names.items():z.write(path,name)
+            z.writestr('evidence-manifest.json',json.dumps({'files':{name:sha(path) for name,path in names.items()},'linked_parent_archives':{PARENT:proof['archive_sha256']},'external_fixture_payload':True,'scope':'CPU extraction provenance only. Full fixture payload remains on study machine, pinned in manifest; actual standalone native matrix control has not run.'},indent=2))
+        print(json.dumps({'status':w['status'],'archive_sha256':sha(archive),'archive_bytes':archive.stat().st_size,'files':len(names)}),flush=True)
+    return code
+
+if __name__=='__main__':raise SystemExit(main())

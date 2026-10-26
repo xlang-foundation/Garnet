@@ -1,0 +1,194 @@
+{
+  "status": "gdn_chunk_stage_real_primary_witness_replayed_on_both_machines_Z_control_pending",
+  "attempts": {
+    "1": {
+      "proof_sha256": "4420f01d08d25fdd41324140b0a68af4efe526f7cd941f6f4965af909368f7ee",
+      "archive_sha256": "986462fb514b5c5cbbc43a30795f176c02d3566256d32ecc1cc05c556215c731",
+      "archive_bytes": 5874338,
+      "archive_members": 35,
+      "proof": {
+        "status": "gdn_chunk_stage_witness_failure_preserved",
+        "archive_sha256": "986462fb514b5c5cbbc43a30795f176c02d3566256d32ecc1cc05c556215c731",
+        "files_verified": 34,
+        "complete_finite_array_entries_verified": 9,
+        "array_replay": null,
+        "candidate_library_sha256": "0ec79f33c94c756907af9454271e7a27edfb8765a9c5f820fa84f6bdf4380d96",
+        "source_runtime_sdk_restored": true,
+        "frontend_rejections_observed": 10,
+        "profiles_observed": 1,
+        "report_error": "TypeError('object is not subscriptable')",
+        "full_model_cause_established": false,
+        "model_or_quality_or_performance_qualified": false,
+        "two_times_target_achieved": false,
+        "replay_verifier_sha256": "cf7add36cb79a482bc96aabe4e840310ee1ea9968d5018e092573c3411032a2b",
+        "scope": "Exclusive real first128frozen textprompt GDN layer0/1 witness with shared calibrated mixed projections and23native source profile. First actualfrontend10reject controls, then8ordinary/diagnostic B1T32/T128profiles,3warmups/2repeats with stablebuffers. Require full primary hidden/history/state parity before stage attribution, everyinput/carriedstate/repeat word andall11stage arrays with <=1Miword pieces. Layer1usescommonretainedT32layer0ordinaryinput, not fullcandidatechain. Restore8existing/15new source targets, baseline1a1d/runtime/SDK/cache. Pin config/index and nativecandidate;18CPU controls. Full3968model cause,805quality,HTTP/servingmemory/timing/2xremain unqualified."
+      }
+    },
+    "2": {
+      "proof_sha256": "ca7d3f095d1a0e48adfb1297a6c7233936925fdd48f079be6a1f6f1e6818e78a",
+      "archive_sha256": "0faf8a625ba25befbeae0877bdf0a08a7696dd3ed19845f7590238f58e1e7de3",
+      "archive_bytes": 485580421,
+      "archive_members": 555,
+      "proof": {
+        "status": "gdn_chunk_stage_witness_arrays_replayed",
+        "archive_sha256": "0faf8a625ba25befbeae0877bdf0a08a7696dd3ed19845f7590238f58e1e7de3",
+        "files_verified": 554,
+        "complete_finite_array_entries_verified": 509,
+        "array_replay": {
+          "status": "gdn_chunk_stage_primary_witness_and_arrays_replayed",
+          "profiles": 8,
+          "frontend_rejections": 10,
+          "repeats_per_profile": 2,
+          "complete_output_f32_words_replayed": 98205696,
+          "diagnostic_primary_exact_to_ordinary": true,
+          "all_input_and_carried_state_words_exact": true,
+          "stage_comparisons": [
+            {
+              "layer": 0,
+              "input_lineage": "prompt_embeddings",
+              "different_stages": [
+                {
+                  "stage": "z",
+                  "different_f32_words": 27,
+                  "first_different_word": 5510,
+                  "total_words": 786432
+                },
+                {
+                  "stage": "gdn_gated_output",
+                  "different_f32_words": 27,
+                  "first_different_word": 5510,
+                  "total_words": 786432
+                }
+              ],
+              "first_different_stage": "z",
+              "final_history_exact": true,
+              "final_state_exact": true
+            },
+            {
+              "layer": 1,
+              "input_lineage": "common_retained_T32_layer0_output",
+              "different_stages": [
+                {
+                  "stage": "z",
+                  "different_f32_words": 74,
+                  "first_different_word": 19654,
+                  "total_words": 786432
+                },
+                {
+                  "stage": "gdn_gated_output",
+                  "different_f32_words": 74,
+                  "first_different_word": 19654,
+                  "total_words": 786432
+                },
+                {
+                  "stage": "attention_output",
+                  "different_f32_words": 681,
+                  "first_different_word": 578565,
+                  "total_words": 655360
+                },
+                {
+                  "stage": "residual",
+                  "different_f32_words": 681,
+                  "first_different_word": 578565,
+                  "total_words": 655360
+                },
+                {
+                  "stage": "mlp_input_norm",
+                  "different_f32_words": 3779,
+                  "first_different_word": 578560,
+                  "total_words": 655360
+                },
+                {
+                  "stage": "output_hidden",
+                  "different_f32_words": 4910,
+                  "first_different_word": 578560,
+                  "total_words": 655360
+                }
+              ],
+              "first_different_stage": "z",
+              "final_history_exact": true,
+              "final_state_exact": true
+            }
+          ],
+          "full3968_model_cause_established": false,
+          "model_or_quality_or_performance_qualified": false,
+          "two_times_target_achieved": false
+        },
+        "candidate_library_sha256": "0ec79f33c94c756907af9454271e7a27edfb8765a9c5f820fa84f6bdf4380d96",
+        "source_runtime_sdk_restored": true,
+        "frontend_rejections_observed": 10,
+        "profiles_observed": 8,
+        "report_error": null,
+        "full_model_cause_established": false,
+        "model_or_quality_or_performance_qualified": false,
+        "two_times_target_achieved": false,
+        "replay_verifier_sha256": "d0a8b0ddca5cc51f355ab0f6316238cbec7db8643f3affbc83e1f7eb44249543",
+        "scope": "Exclusive real first128frozen textprompt GDN layer0/1 witness with shared calibrated mixed projections and23native source profile. First actualfrontend10reject controls, then8ordinary/diagnostic B1T32/T128profiles,3warmups/2repeats with stablebuffers. Require full primary hidden/history/state parity before stage attribution, everyinput/carriedstate/repeat word andall11stage arrays with <=1Miword pieces. Layer1usescommonretainedT32layer0ordinaryinput, not fullcandidatechain. Restore8existing/15new source targets, baseline1a1d/runtime/SDK/cache. Pin config/index and nativecandidate;18CPU controls. Full3968model cause,805quality,HTTP/servingmemory/timing/2xremain unqualified."
+      }
+    }
+  },
+  "embedded_readback_cpu_control": {
+    "archive_sha256": "db014962c470001802704701ed6dfa5dc43c597a8b967e1d50f32024d76fa148",
+    "report": {
+      "status": "embedded_readback_explicit_loop_passed",
+      "original_error": "TypeError('object is not subscriptable')",
+      "original_exact": null,
+      "loop_exact": true,
+      "concatenation_exact": true,
+      "gpu_or_native_model_executed": false,
+      "sdk_modified": false
+    },
+    "process_seconds": 0.0629999999946449,
+    "scope": "ASCII testbytes only, not model/scientific vectors; actual embedded interpreter without Garnet/CUDA import."
+  },
+  "z_fixture_provenance": {
+    "status": "gdn_z_fixture_stage_vectors_and_extraction_provenance_replayed",
+    "archive_sha256": "982f4f571c3001b95b9015fdbe01c6a520ab90dfa8e78e529f8c5667039b43b7",
+    "files_verified": 11,
+    "fixture_manifest_sha256": "81fa473159a724647197aa3ddc099210e9a7a6f7629006d5719d683c13855acd",
+    "parent_archive_sha256": "0faf8a625ba25befbeae0877bdf0a08a7696dd3ed19845f7590238f58e1e7de3",
+    "stage_derived_vectors_verified": 6,
+    "comparisons": [
+      {
+        "layer": 0,
+        "input_lineage": "prompt_embeddings",
+        "input_words": 655360,
+        "output_words_per_profile": 786432,
+        "different_bf16_words": 27,
+        "first_different_word": 5510
+      },
+      {
+        "layer": 1,
+        "input_lineage": "retained_T32_layer0_ordinary_output_common_input",
+        "input_words": 655360,
+        "output_words_per_profile": 786432,
+        "different_bf16_words": 74,
+        "first_different_word": 19654
+      }
+    ],
+    "remote_cpu_tests_passed": 6,
+    "source_runtime_sdk_and_checkpoint_metadata_unchanged": true,
+    "checkpoint_weight_payload_verified_locally": false,
+    "native_projection_control_executed": false,
+    "model_or_quality_or_performance_qualified": false,
+    "replay_verifier_sha256": "5116d4ab72f4bb9626c54daf588c3a5869345e8df89760f834e3b033e9c93f17",
+    "scope": "Complete stage-derived input/output vector hashes rebuilt from immutable parent; extraction ledger and tensor metadata checked. Actual weight/scale payload is external on study machine and has not been independently reread here. Requires actual native both-profile reproduction and full BF16/FP8 replay before a candidate algorithm, then unchanged full4K/quality/HTTP gates."
+  },
+  "z_fixture_files": 12,
+  "z_fixture_bytes": 74448912,
+  "next_plan": {
+    "status": "real_gdn_chunk_stage_witness_closed_Z_native_control_next",
+    "steps": [
+      "Freeze owned source/runtime/SDK/real128fixture for one exclusive standalone control. Geometry is Z N6144/K5120, not existing GDNout N5120/K6144. Pin checkpoint tensor headers, rawweight andscalarcalibration hashes, actual loadedcuBLASLt13.4 onSM120. No productionDLL orSDK mutation.",
+      "Build private explicit sm120 observer including actual modelopt_cublaslt.cpp and actual modelopt_fp8.cu. Reproduce all outputs for four sequential realM32chunks and one realM128, both repeats, bothlayers. Independently verify every F32RNE BF16 cast, FP8quant byte and BF16output word. No replicated16rows.",
+      "Only after both defaultprofiles reproduce archived arrays observe actual canonicalM32 opaquealgorithm. AlgoCheck actualM128 descriptors and requiredworkspace, retain full rawalgorithm/check/status/workspace. Apply only a qualified commonM32 algorithm toM128, fail closed withoutfallback; require complete equality tofourM32. Do not assume algorithm35/67 or4/8MiBworkspaces qualifyZ.",
+      "If successful design typed strict defaultoff Z-specific native policy/plugin and validate actualwire/constructor/descriptor/source/fullbuild, then rerun ordinary/diagnostic primary-witness arrays before unchanged full3968+128 sixcase state/vector/ID gate. Neither the first128commoninput witness nor standaloneprojection proves full3968cause.",
+      "After strict fullmodel and805quality acceptance run matchedHTTP text/imageTTFT/decode/concurrency-throughput/sampleVRAM; retain repeated trials and strongest feasible tuned/MTPreferences. Original2xdecodeANDthroughput/halfTTFTextra, B8arithmetic, matchedINT4/4Bgoals remain active. Currentcharts unchanged."
+    ],
+    "full_model_cause_established": false,
+    "model_or_quality_or_performance_qualified": false,
+    "two_times_target_achieved": false
+  },
+  "model_or_quality_or_performance_qualified": false,
+  "two_times_target_achieved": false
+}

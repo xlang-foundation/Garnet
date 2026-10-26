@@ -1,0 +1,618 @@
+{
+  "status": "failed",
+  "candidate_library_sha256": "0ec79f33c94c756907af9454271e7a27edfb8765a9c5f820fa84f6bdf4380d96",
+  "cases_sha256": "e3771da6f1646743cc3d0f8e24db744d41ad9bc3f2aaeba836f68e31b82d74bf",
+  "config_sha256": "71fa01bb64de20971045cd82a82c0ebb25a54e1b0a3f09ef23cf5479e9c54df8",
+  "prompt_tokens": 3968,
+  "input_ids": [
+    248045,
+    846,
+    198,
+    8441,
+    8129,
+    364,
+    264,
+    2193,
+    28365,
+    1228,
+    13,
+    21134,
+    279,
+    3296,
+    506,
+    279,
+    809,
+    13,
+    198,
+    27336,
+    57054,
+    942,
+    11,
+    35937,
+    11,
+    1027,
+    2971,
+    11,
+    321,
+    9464,
+    4140,
+    1083,
+    9158,
+    6756,
+    86412,
+    13,
+    198,
+    27336,
+    57054,
+    942,
+    11,
+    35937,
+    11,
+    1027,
+    2971,
+    11,
+    321,
+    9464,
+    4140,
+    1083,
+    9158,
+    6756,
+    86412,
+    13,
+    198,
+    27336,
+    57054,
+    942,
+    11,
+    35937,
+    11,
+    1027,
+    2971,
+    11,
+    321,
+    9464,
+    4140,
+    1083,
+    9158,
+    6756,
+    86412,
+    13,
+    198,
+    27336,
+    57054,
+    942,
+    11,
+    35937,
+    11,
+    1027,
+    2971,
+    11,
+    321,
+    9464,
+    4140,
+    1083,
+    9158,
+    6756,
+    86412,
+    13,
+    198,
+    27336,
+    57054,
+    942,
+    11,
+    35937,
+    11,
+    1027,
+    2971,
+    11,
+    321,
+    9464,
+    4140,
+    1083,
+    9158,
+    6756,
+    86412,
+    13,
+    198,
+    27336,
+    57054,
+    942,
+    11,
+    35937,
+    11,
+    1027,
+    2971,
+    11,
+    321,
+    9464,
+    4140,
+    1083,
+    9158,
+    6756,
+    86412,
+    13,
+    198,
+    27336
+  ],
+  "input_source": "first128_actual_text_prompt_embeddings",
+  "frontend_rejections": [
+    {
+      "name": "flag2",
+      "rejected": true,
+      "error": "RuntimeError('GDN chunk stage opt-in must be0 or1')"
+    },
+    {
+      "name": "flag_negative",
+      "rejected": true,
+      "error": "RuntimeError('GDN chunk stage opt-in must be0 or1')"
+    },
+    {
+      "name": "flag_bool",
+      "rejected": true,
+      "error": "RuntimeError('GDN chunk stage opt-in requires integer0 or1')"
+    },
+    {
+      "name": "flag_float",
+      "rejected": true,
+      "error": "RuntimeError('GDN chunk stage opt-in requires integer0 or1')"
+    },
+    {
+      "name": "legacy_conflict",
+      "rejected": true,
+      "error": "RuntimeError('Stage capture requires the embedded mixed27B layer0 B1/2 T16 diagnostic profile')"
+    },
+    {
+      "name": "batch2",
+      "rejected": true,
+      "error": "RuntimeError('GDN chunk stage requires pinned shared joined B1 T32/T128 layer0/1 profile')"
+    },
+    {
+      "name": "tokens16",
+      "rejected": true,
+      "error": "RuntimeError('GDN chunk stage requires pinned shared joined B1 T32/T128 layer0/1 profile')"
+    },
+    {
+      "name": "layer2",
+      "rejected": true,
+      "error": "RuntimeError('Joined decoder MLP requires an explicit validated compressed alias')"
+    },
+    {
+      "name": "missing_active",
+      "rejected": true,
+      "error": "RuntimeError('GDN chunk stage needs three exact state/active bindings')"
+    },
+    {
+      "name": "bf16_hidden",
+      "rejected": true,
+      "error": "RuntimeError('GDN chunk stage requires pinned shared joined B1 T32/T128 layer0/1 profile')"
+    }
+  ],
+  "cases": [
+    {
+      "layer": 0,
+      "tokens": 32,
+      "diagnostic": false,
+      "layout": {
+        "tokens": 32,
+        "primary_words": 991232,
+        "total_words": 991232,
+        "rows": [
+          {
+            "name": "primary",
+            "offset": 0,
+            "words": 991232
+          }
+        ]
+      },
+      "input_lineage": "prompt_embeddings",
+      "active": {
+        "words": 32,
+        "sha256": "b638277a8690e175a9137feff1e43c067f9faf4e2f600caf468fb05b0403b717",
+        "parts": [
+          {
+            "file": "l0-t32-d0-active-part-0.f32",
+            "offset": 0,
+            "words": 32,
+            "sha256": "b638277a8690e175a9137feff1e43c067f9faf4e2f600caf468fb05b0403b717"
+          }
+        ]
+      },
+      "repeats": [
+        [
+          {
+            "start": 0,
+            "repeat": 0,
+            "input_hidden": {
+              "words": 163840,
+              "sha256": "8e61c1293dabe149e2bcdca8f5aaba6634f2dd6e7b628e3d2091264e94dbc7bc",
+              "parts": [
+                {
+                  "file": "l0-t32-d0-r0-s0-in-hidden-part-0.f32",
+                  "offset": 0,
+                  "words": 163840,
+                  "sha256": "8e61c1293dabe149e2bcdca8f5aaba6634f2dd6e7b628e3d2091264e94dbc7bc"
+                }
+              ]
+            },
+            "input_history": {
+              "words": 40960,
+              "sha256": "6cdd259c8ecbe61fbc369f3293c1961541386954a223b17a37899d7fd9ad42da",
+              "parts": [
+                {
+                  "file": "l0-t32-d0-r0-s0-in-history-part-0.f32",
+                  "offset": 0,
+                  "words": 40960,
+                  "sha256": "6cdd259c8ecbe61fbc369f3293c1961541386954a223b17a37899d7fd9ad42da"
+                }
+              ]
+            },
+            "input_state": {
+              "words": 786432,
+              "sha256": "bbd05cf6097ac9b1f89ea29d2542c1b7b67ee46848393895f5a9e43fa1f621e5",
+              "parts": [
+                {
+                  "file": "l0-t32-d0-r0-s0-in-state-part-0.f32",
+                  "offset": 0,
+                  "words": 786432,
+                  "sha256": "bbd05cf6097ac9b1f89ea29d2542c1b7b67ee46848393895f5a9e43fa1f621e5"
+                }
+              ]
+            },
+            "arrays": {
+              "primary": {
+                "words": 991232,
+                "sha256": "c547ed71722f5c2b2a2c39eee6b258f986c9e68e7570a5df815ee8a966a3698c",
+                "parts": [
+                  {
+                    "file": "l0-t32-d0-r0-s0-primary-part-0.f32",
+                    "offset": 0,
+                    "words": 991232,
+                    "sha256": "c547ed71722f5c2b2a2c39eee6b258f986c9e68e7570a5df815ee8a966a3698c"
+                  }
+                ]
+              }
+            },
+            "input_hidden_after": {
+              "words": 163840,
+              "sha256": "8e61c1293dabe149e2bcdca8f5aaba6634f2dd6e7b628e3d2091264e94dbc7bc",
+              "parts": [
+                {
+                  "file": "l0-t32-d0-r0-s0-after-hidden-part-0.f32",
+                  "offset": 0,
+                  "words": 163840,
+                  "sha256": "8e61c1293dabe149e2bcdca8f5aaba6634f2dd6e7b628e3d2091264e94dbc7bc"
+                }
+              ]
+            },
+            "input_history_after": {
+              "words": 40960,
+              "sha256": "6cdd259c8ecbe61fbc369f3293c1961541386954a223b17a37899d7fd9ad42da",
+              "parts": [
+                {
+                  "file": "l0-t32-d0-r0-s0-after-history-part-0.f32",
+                  "offset": 0,
+                  "words": 40960,
+                  "sha256": "6cdd259c8ecbe61fbc369f3293c1961541386954a223b17a37899d7fd9ad42da"
+                }
+              ]
+            },
+            "input_state_after": {
+              "words": 786432,
+              "sha256": "bbd05cf6097ac9b1f89ea29d2542c1b7b67ee46848393895f5a9e43fa1f621e5",
+              "parts": [
+                {
+                  "file": "l0-t32-d0-r0-s0-after-state-part-0.f32",
+                  "offset": 0,
+                  "words": 786432,
+                  "sha256": "bbd05cf6097ac9b1f89ea29d2542c1b7b67ee46848393895f5a9e43fa1f621e5"
+                }
+              ]
+            }
+          }
+        ]
+      ],
+      "graph": {
+        "allocator_tracking_enabled": false,
+        "aux_streams": 0,
+        "builder_workspace_limit_bytes": 268435456,
+        "checkpoint_weight_precision": "modelopt_mixed",
+        "contexts": 1,
+        "cuda_graph_requested": true,
+        "device_output_bytes": 3964928,
+        "engine_refittable": false,
+        "external_bf16_weight_bytes": 0,
+        "external_bf16_weight_inputs": 0,
+        "external_compressed_weight_bytes": 265748480,
+        "external_compressed_weight_inputs": 5,
+        "external_compressed_weight_scope": "Caller-owned opaque INT32 storage; calibration from checkpoint; excluded from graph-owned allocations",
+        "external_output_storage": false,
+        "external_output_storage_span_bytes": 0,
+        "external_weight_scope": "Caller-owned symbolic BF16 inputs; excluded from graph-owned allocations",
+        "graph_capture_failures": 0,
+        "graph_captures": 1,
+        "graph_replays": 1,
+        "joined_projection_inputs": 0,
+        "native_fp8_m128_canonical_projections": 0,
+        "native_fp8_projection_weights": 3,
+        "native_int4_g128_projection_weights": 0,
+        "native_nvfp4_projection_weights": 2,
+        "output_storage_scope": "Logical output footprint; externally bound storage is excluded from owned bytes and must be counted once by its caller",
+        "owned_device_output_bytes": 3964928,
+        "pending_graph_reuses": 0,
+        "qwen35_whole_program_cuda": false,
+        "scope": "TensorRT runtime allocator (engine/context), excludes builder workspace, driver and external library allocations",
+        "serial_graph_reuse_requested": false,
+        "serial_graph_reuses": 0,
+        "serial_graph_warmup_waits": 0,
+        "trt_allocator_allocations": null,
+        "trt_allocator_live_bytes": null,
+        "trt_allocator_peak_bytes": null
+      }
+    }
+  ],
+  "model_or_performance_qualified": false,
+  "scope": "B1 GDN layer0/1 common-input first128real text tokens only, ordinary flag0 versus diagnostic flag1 atT32/T128. Four sequential32chunks versus one128 with carried states. Primary must match same-profile ordinary before attribution. Layer1 common input comes from retainedT32 layer0 ordinary output, not a claim of full candidate chain. All inputs/states/outputs serialized through <=1Miword reads, repeats and graph counts; no full3968state, quality, timing or2x admission.",
+  "prompt_input": {
+    "words": 655360,
+    "sha256": "d739567cd2cb7223a1b0cf3648f48a15c8e39baa92392116171cab9b07a19a12",
+    "parts": [
+      {
+        "file": "prompt-part-0.f32",
+        "offset": 0,
+        "words": 655360,
+        "sha256": "d739567cd2cb7223a1b0cf3648f48a15c8e39baa92392116171cab9b07a19a12"
+      }
+    ]
+  },
+  "weight_metadata": {
+    "1": [
+      {
+        "input_scale": 0.0013485862873494625,
+        "joined_mlp": true,
+        "logical_shape": [
+          34816,
+          5120
+        ],
+        "packed_bytes": 89128960,
+        "packed_dtype": "INT32",
+        "packed_shape": [
+          34816,
+          640
+        ],
+        "recipe": "modelopt_nvfp4_w4a4",
+        "resident_in_compressed_pool": false,
+        "resident_packed_readonly": false,
+        "resident_scales_readonly": false,
+        "scale_bytes": 11141120,
+        "scale_shape": [
+          2785280
+        ],
+        "source_weights": [
+          "model.language_model.layers.1.mlp.gate_proj.weight",
+          "model.language_model.layers.1.mlp.up_proj.weight"
+        ],
+        "storage_encoding": "Opaque little-endian words; raw checkpoint bits, no numeric conversion",
+        "weight_scale": 8.610316581325606e-05
+      },
+      {
+        "input_scale": 0.0292038694024086,
+        "joined_mlp": false,
+        "logical_shape": [
+          5120,
+          17408
+        ],
+        "packed_bytes": 44564480,
+        "packed_dtype": "INT32",
+        "packed_shape": [
+          5120,
+          2176
+        ],
+        "recipe": "modelopt_nvfp4_w4a4",
+        "resident_in_compressed_pool": false,
+        "resident_packed_readonly": false,
+        "resident_scales_readonly": false,
+        "scale_bytes": 5570560,
+        "scale_shape": [
+          1392640
+        ],
+        "source_weights": [],
+        "storage_encoding": "Opaque little-endian words; raw checkpoint bits, no numeric conversion",
+        "weight_scale": 0.0001642136339796707
+      },
+      {
+        "input_scale": 0.0524553582072258,
+        "joined_mlp": false,
+        "logical_shape": [
+          10240,
+          5120
+        ],
+        "packed_bytes": 52428800,
+        "packed_dtype": "INT32",
+        "packed_shape": [
+          10240,
+          1280
+        ],
+        "recipe": "modelopt_fp8_w8a8",
+        "resident_in_compressed_pool": false,
+        "resident_packed_readonly": false,
+        "resident_scales_readonly": false,
+        "scale_bytes": 0,
+        "scale_shape": [],
+        "source_weights": [],
+        "storage_encoding": "Opaque little-endian words; raw checkpoint bits, no numeric conversion",
+        "weight_scale": 0.0007455008453689516
+      },
+      {
+        "input_scale": 0.0524553582072258,
+        "joined_mlp": false,
+        "logical_shape": [
+          6144,
+          5120
+        ],
+        "packed_bytes": 31457280,
+        "packed_dtype": "INT32",
+        "packed_shape": [
+          6144,
+          1280
+        ],
+        "recipe": "modelopt_fp8_w8a8",
+        "resident_in_compressed_pool": false,
+        "resident_packed_readonly": false,
+        "resident_scales_readonly": false,
+        "scale_bytes": 0,
+        "scale_shape": [],
+        "source_weights": [],
+        "storage_encoding": "Opaque little-endian words; raw checkpoint bits, no numeric conversion",
+        "weight_scale": 0.0005929129547439516
+      },
+      {
+        "input_scale": 0.1255580484867096,
+        "joined_mlp": false,
+        "logical_shape": [
+          5120,
+          6144
+        ],
+        "packed_bytes": 31457280,
+        "packed_dtype": "INT32",
+        "packed_shape": [
+          5120,
+          1536
+        ],
+        "recipe": "modelopt_fp8_w8a8",
+        "resident_in_compressed_pool": false,
+        "resident_packed_readonly": false,
+        "resident_scales_readonly": false,
+        "scale_bytes": 0,
+        "scale_shape": [],
+        "source_weights": [],
+        "storage_encoding": "Opaque little-endian words; raw checkpoint bits, no numeric conversion",
+        "weight_scale": 0.0032958986703306437
+      }
+    ],
+    "0": [
+      {
+        "input_scale": 0.0012613933067768812,
+        "joined_mlp": true,
+        "logical_shape": [
+          34816,
+          5120
+        ],
+        "packed_bytes": 89128960,
+        "packed_dtype": "INT32",
+        "packed_shape": [
+          34816,
+          640
+        ],
+        "recipe": "modelopt_nvfp4_w4a4",
+        "resident_in_compressed_pool": false,
+        "resident_packed_readonly": false,
+        "resident_scales_readonly": false,
+        "scale_bytes": 11141120,
+        "scale_shape": [
+          2785280
+        ],
+        "source_weights": [
+          "model.language_model.layers.0.mlp.gate_proj.weight",
+          "model.language_model.layers.0.mlp.up_proj.weight"
+        ],
+        "storage_encoding": "Opaque little-endian words; raw checkpoint bits, no numeric conversion",
+        "weight_scale": 0.0001569475425640121
+      },
+      {
+        "input_scale": 0.0773809552192688,
+        "joined_mlp": false,
+        "logical_shape": [
+          5120,
+          17408
+        ],
+        "packed_bytes": 44564480,
+        "packed_dtype": "INT32",
+        "packed_shape": [
+          5120,
+          2176
+        ],
+        "recipe": "modelopt_nvfp4_w4a4",
+        "resident_in_compressed_pool": false,
+        "resident_packed_readonly": false,
+        "resident_scales_readonly": false,
+        "scale_bytes": 5570560,
+        "scale_shape": [
+          1392640
+        ],
+        "source_weights": [],
+        "storage_encoding": "Opaque little-endian words; raw checkpoint bits, no numeric conversion",
+        "weight_scale": 0.00036475772503763437
+      },
+      {
+        "input_scale": 0.1121651828289032,
+        "joined_mlp": false,
+        "logical_shape": [
+          10240,
+          5120
+        ],
+        "packed_bytes": 52428800,
+        "packed_dtype": "INT32",
+        "packed_shape": [
+          10240,
+          1280
+        ],
+        "recipe": "modelopt_fp8_w8a8",
+        "resident_in_compressed_pool": false,
+        "resident_packed_readonly": false,
+        "resident_scales_readonly": false,
+        "scale_bytes": 0,
+        "scale_shape": [],
+        "source_weights": [],
+        "storage_encoding": "Opaque little-endian words; raw checkpoint bits, no numeric conversion",
+        "weight_scale": 0.0009722028626129031
+      },
+      {
+        "input_scale": 0.1121651828289032,
+        "joined_mlp": false,
+        "logical_shape": [
+          6144,
+          5120
+        ],
+        "packed_bytes": 31457280,
+        "packed_dtype": "INT32",
+        "packed_shape": [
+          6144,
+          1280
+        ],
+        "recipe": "modelopt_fp8_w8a8",
+        "resident_in_compressed_pool": false,
+        "resident_packed_readonly": false,
+        "resident_scales_readonly": false,
+        "scale_bytes": 0,
+        "scale_shape": [],
+        "source_weights": [],
+        "storage_encoding": "Opaque little-endian words; raw checkpoint bits, no numeric conversion",
+        "weight_scale": 0.0005318777984939516
+      },
+      {
+        "input_scale": 0.0322265625,
+        "joined_mlp": false,
+        "logical_shape": [
+          5120,
+          6144
+        ],
+        "packed_bytes": 31457280,
+        "packed_dtype": "INT32",
+        "packed_shape": [
+          5120,
+          1536
+        ],
+        "recipe": "modelopt_fp8_w8a8",
+        "resident_in_compressed_pool": false,
+        "resident_packed_readonly": false,
+        "resident_scales_readonly": false,
+        "scale_bytes": 0,
+        "scale_shape": [],
+        "source_weights": [],
+        "storage_encoding": "Opaque little-endian words; raw checkpoint bits, no numeric conversion",
+        "weight_scale": 0.003016880713403225
+      }
+    ]
+  },
+  "error": "TypeError('object is not subscriptable')"
+}
