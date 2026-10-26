@@ -1,0 +1,72 @@
+from pathlib import Path
+import hashlib,json,subprocess,sys,zipfile
+work=Path(__file__).resolve().parent;out=work.parent/'outputs';repo=Path('D:/CantorAI/work/qwen38-5090');m=repo/'test2026/cuda/qwen38_5090';e=m/'evidence';paths=[]
+sha=lambda raw:hashlib.sha256(raw).hexdigest()
+def keep(name,raw):
+    path=e/name;assert not path.exists() or path.read_bytes()==raw,path
+    if not path.exists():path.write_bytes(raw)
+    paths.append(path.relative_to(repo).as_posix())
+job='b4-cache-mode-characterization-attempt1';archive=out/(job+'-evidence.zip');raw=archive.read_bytes()
+proof=json.loads((out/(job+'-verified.json')).read_bytes());partial=json.loads((out/(job+'-partial-verified.json')).read_bytes())
+assert sha(raw)==proof['archive_sha256']==partial['archive_sha256']
+for suffix in ('-verified.json','-partial-verified.json'):
+    remote=suffix.replace('-verified.json','-remote-verified.json')
+    assert (out/(job+suffix)).read_bytes()==(out/(job+remote)).read_bytes()
+    for name in (suffix,remote):keep(job+name,(out/(job+name)).read_bytes())
+replays=[]
+for checker,expected in (('verify_b4_cache_mode_characterization.py',1),('verify_b4_cache_mode_partial.py',0)):
+    result=subprocess.run([sys.executable,str(m/checker),'--proofs',str(out)],capture_output=True)
+    keep(job+'-'+checker+'-local-replay.log',result.stdout+result.stderr)
+    assert result.returncode==expected,(checker,result.returncode,result.stdout,result.stderr)
+    replays.append({'checker':checker,'checker_sha256':sha((m/checker).read_bytes()),'exit_code':result.returncode})
+with zipfile.ZipFile(archive) as z:
+    manifest=json.loads(z.read('evidence-manifest.json'))
+    for name,digest in manifest['files'].items():assert sha(z.read(name))==digest
+    w=json.loads(z.read('results/'+job+'/workflow.json'))
+    assert w['exit_code']==1 and w['cleanup_finished'] and w['source_sha256']==w['source_after_sha256']
+    assert w['runtime_dependencies']==w['runtime_dependencies_after'] and w['environment_before']==w['environment_after']
+    keep(job+'-evidence-manifest.json',z.read('evidence-manifest.json'))
+    for name in z.namelist():
+        prefix='results/'+job+'/'
+        if name.startswith(prefix) and name.endswith(('.json','.jsonl','.log')) and not name.endswith('resource-vram.jsonl'):
+            keep(job+'-'+name.removeprefix(prefix).replace('/','-'),z.read(name))
+    original_entry=w['source_after_sha256']['Garnet/src/entry/garnet.h'];original_overlay=w['source_after_sha256']['Garnet/src/cuda/qwen38_bf16_kv_low_batch_overlay.cu']
+assert partial['full_repeat_vs_failed_full']['all_observed_ids_states_vectors_exact'] is True
+assert partial['full_case_vs_b8']['all_observed_ids_states_vectors_exact'] is False
+assert partial['packed_cases_completed']==0 and partial['packed_empty_state']['all_states_and_vectors_exact'] is True
+p=json.loads((e/'b4-packed-cache-characterization-preparation.json').read_bytes());install=json.loads((work/'b4-packed-cache-characterization-install.json').read_bytes());bundle=json.loads((work/'b4-packed-cache-characterization-bundle.json').read_bytes())
+assert len(p['files'])==install['source_pins']==716 and p['expected_cpu_test_count']==53
+assert install['new_targets']==8 and install['runtime_and_sdk_unchanged'] is True and install['bundle_sha256']==bundle['bundle_sha256']
+for name,digest in p['new_files'].items():
+    path=repo/name.removeprefix('Garnet/');assert sha(path.read_bytes())==digest;paths.append(path.relative_to(repo).as_posix())
+for name in ('b4-packed-cache-characterization-preparation.json','b4-packed-before-partial-archive-binding-preparation.json','b4-packed-before-partial-archive-binding-derivation.json','prefill128-plugin-contract-derivation.json'):paths.append((e/name).relative_to(repo).as_posix())
+for name in ('derive-b4-packed-cache-characterization.py','package-b4-packed-cache-characterization.py','install-b4-packed-cache-characterization.py','derive-prefill128-plugin-contract.py','compile-prefill128-plugin-contract-offline.py','retain-b4-partial-and-packed-retry.py'):
+    keep(name+'.txt',(work/name).read_bytes())
+for name in ('b4-packed-cache-characterization-upload-plan.json','b4-packed-cache-characterization-bundle.json','b4-packed-cache-characterization-install.json','b4-packed-before-partial-archive-binding-upload-plan.json'):keep(name,(work/name).read_bytes())
+for folder in ('b4-packed-cache-characterization-cpu-ledger','b4-packed-cache-characterization-bound-cpu-ledger'):
+    for path in (work/folder).iterdir():
+        if path.is_file():keep(folder+'-'+path.name,path.read_bytes())
+folder=work/'prefill128-runtime-development/offline-build';contract=json.loads((folder/'plugin-contract-result.json').read_bytes())
+assert contract['exit_code']==0 and len(contract['objects'])==4 and contract['contract_executable_run'] is contract['linked'] is False
+for name,digest in contract['source_sha256'].items():assert sha(Path(name).read_bytes())==digest
+for name in ('prefill128_plugin_cpu_operators.cpp','probe_bf16_prefill128_plugin_contract.cpp'):paths.append((m/name).relative_to(repo).as_posix())
+for name in ('plugin-contract-result.json','compile-plugin-contract.bat','plugin-contract-build-ledger/commands.jsonl','plugin-contract-build-ledger/commands.log'):
+    keep('prefill128-wire-offline-'+name.replace('/','-'),(folder/name).read_bytes())
+candidate=json.loads((e/'bf16-scores-tiled-native-api-build-preparation.json').read_bytes())
+compat={'status':'full_prefill128_native_candidate_requires_coupled_tiled_overlay_source','remote_preserved_entry_sha256':original_entry,'remote_preserved_overlay_sha256':original_overlay,'required_previous_candidate_files':candidate['candidate_files'],'runtime_candidate_source_files':18,'additional_coupled_overlay_files':1,'actual_build_source_union_required':19,'deployed':False,'scope':'Actual archived remote source hashes versus retained tiled API preparation: the local T128 entry inherited its optional tiled API and requires that implementation in the eventual candidate build. No remote mutation during packed trial.'}
+keep('prefill128-runtime-coupled-overlay-audit.json',json.dumps(compat,indent=2).encode())
+receipt={'status':'dual_cache_mode_failure_and_scoped_partial_replay_closed_packed_retry_started','archive_sha256':sha(raw),'archive_bytes':len(raw),'members':len(manifest['files'])+1,'proof_sha256':sha((out/(job+'-verified.json')).read_bytes()),'partial_proof_sha256':sha((out/(job+'-partial-verified.json')).read_bytes()),'local_replays':replays,'full_repeat_matches_failed_full':True,'full_repeat_matches_b8':False,'packed_cases_in_failed_parent':0,'packed_empty_matches_b8':True,'packed_retry_job':'b4-packed-cache-characterization-attempt1','packed_retry_last_observed_state':'running','packed_retry_supervisor_session':48577,'cpu_tests_passed_local':53,'local_cpu_process_seconds':17.75,'install':install,'bundle':bundle,'plugin_contract_cpu_objects':contract,'original_gate_changed':False,'cause_established':False,'new_performance_result':False,'two_times_target_achieved':False}
+receipt_raw=json.dumps(receipt,indent=2).encode();keep('b4-partial-closure-and-packed-retry-start.json',receipt_raw)
+(out/'Garnet-B4-Cache-Diagnosis-and-Prefill128-Status.json').write_bytes(receipt_raw)
+title='Dual cache-mode failure replayed; packed-only retry and T128 wire CPU objects'
+text='\n\n### 2026-10-25 — '+title+'\n\n'
+text+='Actual dual-mode owner exits1 after full mode completed0 and packed mode constructed an empty state but the old full-only representation control rejected it before any packed case. All50remote CPU controls passed; source706, runtime/SDK and1a1d library preserved, private engine cache retired and cleanup completed. Archive '+receipt['archive_sha256']+' ('+str(len(raw))+'bytes/'+str(receipt['members'])+'members), original expected-failure proof '+receipt['proof_sha256']+' exactly matches on both machines. Original gate and failed raw evidence remain unchanged.\n\n'
+text+='New scoped partial checker independently replays the actual completed full case against both earlier failed full and B8. Full repeat exactly reproduces prior full IDs/state hashes/raw hidden and normalized vectors; it remains different from B8. Packed empty state is exactly equal to B8 under typed packed-versus-packed comparison, but no packed model case completed in that archive. Both-machine exact partial proof '+receipt['partial_proof_sha256']+'. Cause, harmlessness, arithmetic equivalence, model quality and B8 MTP/HTTP qualification remain unproven.\n\n'
+text+='Prepared separate packed-only retry with correct typed empty/final-reset controls, unchanged request/decoder/model source and no relaxed comparison. Reuses the actual completed full companion via archived partial proof; added archive dependency fault control. Initial unrun52test prep/derivation retained, then explicit partial-proof archive binding fixed before deployment. Final53local CPU controls pass17.641s (logged process17.75s).716source pins; nine bundle targets, eight new/one identical, runtime/SDK unchanged. Bundle '+bundle['bundle_sha256']+' ('+str(bundle['bytes'])+'bytes); downloaded install receipt acknowledged before owned supervisor48577 starts b4-packed-cache-characterization-attempt1, confirmed running by live handle. Remote source and transfers frozen during live trial; no new performance result.\n\n'
+text+='Separate T128 wire contract/stub sources pass private MSVC /c compilation for four objects, reuse the compiled new plugin object, no linking/target execution/local GPU or runtime/SDK mutation. Actual local toolchain14.29.30133, cl19.29.30159.0, WindowsSDK10.0.28000.0; benign NOMINMAX redefinition retained.16profiles,832bad wires,496descriptors,336formats,128cross-dialect rejections and96old roundtrips are planned executable checks, not runtime passes. Missing private fixture header was caught before compilation and replaced by explicit16qualified FA offsets. The future native runtime source union needs19files:18T128 targets plus the paired previous tiled-scores overlay implementing the API inherited by its entry. Audit retained; no candidate deployment yet.\n\n'
+text+='Next: close actual packed case, cleanup and independent replay on both machines; use its observed cache-mode/batch-geometry contrast to choose the next correctness fix. Then preserved-DLL native T128 candidate build and plugin/model/805quality/HTTP qualification. Current verified charts unchanged; overall2xdecode/concurrency throughput and halfTTFT goals remain unmet/unproven.\n'
+for name in ('qwen38-5090-development-log.md','qwen38-5090-implementation-task.md'):
+    path=repo/'docs/research'/name;before=path.read_bytes();assert title.encode() not in before
+    path.write_bytes(before+text.encode());paths.append(path.relative_to(repo).as_posix())
+(work/'b4-partial-packed-retry-retained-paths.json').write_bytes(json.dumps(sorted(set(paths)),indent=2).encode())
+print(json.dumps({'status':receipt['status'],'retained_paths':len(set(paths)),'replays':replays}))
