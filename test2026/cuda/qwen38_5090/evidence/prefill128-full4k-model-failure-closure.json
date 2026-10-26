@@ -1,0 +1,29 @@
+{
+  "status": "prefill128_first_full4k_model_failure_replayed_and_analyzed_on_both_machines",
+  "archive_sha256": "a25a2ca4f9ee908a1ae80e2c5754dc2283dc465438bf6ce5430ff89b02dd926b",
+  "archive_bytes": 832550,
+  "archive_members": 57,
+  "failure_proof_pair_sha256": "4b79a5fa4f17bfd9131dca464fdf0122dc9fdc81b23d64dc9476f2732e8f29b7",
+  "analysis_proof_pair_sha256": "57baf5446f4f64643976e9581de184f0b46920ff11bbf0ce002279ec9fc9f79d",
+  "candidate_library_sha256": "897d2fc05f55229416cca8f1b420e6c27a70b1707298c24c311eab5db7a22da4",
+  "actual_prompt_tokens": 3968,
+  "actual_output_tokens": 128,
+  "first_different_output_zero_based": 44,
+  "equal_output_ids": 44,
+  "earliest_different_prefill_component": {
+    "layer": 1,
+    "kind": "linear_attention",
+    "role": 2,
+    "logical_words": 786432
+  },
+  "different_prefill_components": 125,
+  "prefill_hidden_relative_l2": 0.24171460250450066,
+  "baseline_source_runtime_environment_restored": true,
+  "mtp_generate_executed": false,
+  "image_cases_executed": false,
+  "remaining_cases_unrun": 5,
+  "cause_established": false,
+  "full_model_or_quality_or_performance_qualified": false,
+  "two_times_target_achieved": false,
+  "next_control": "Preserve the actual real-layer0 FP8 fixture and reproduce its archived M16/M32 outputs first; then compare128rows made from identical replicated actual inputs under default heuristic and AlgoCheck-qualified M16 algorithm. Independently compare every BF16 output word and actual cast/quantized input bytes, record opaque algorithm choices. If it passes, prepare a separate opt-in M128 native policy and repeat strict full-model/quality gates before timing."
+}
