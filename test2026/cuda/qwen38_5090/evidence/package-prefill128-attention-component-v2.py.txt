@@ -1,0 +1,14 @@
+from pathlib import Path
+import hashlib,json,zipfile
+work=Path(__file__).resolve().parent;sha=lambda b:hashlib.sha256(b).hexdigest()
+plan=json.loads((work/'prefill128-attention-component-upload-plan.json').read_bytes());files={}
+for row in plan['uploads']:
+    raw=Path(row['local']).read_bytes();assert sha(raw)==row['sha256'] and row['target'] not in files
+    files[row['target']]=raw
+target=work/'prefill128-attention-component-methods-v2.zip';assert not target.exists()
+with zipfile.ZipFile(target,'x',zipfile.ZIP_DEFLATED) as z:
+    for n,raw in files.items():z.writestr(n,raw)
+    z.writestr('install-manifest.json',json.dumps({'files':{n:sha(raw) for n,raw in files.items()},'scope':plan['scope']},indent=2))
+r={'status':'prefill128_attention_component_methods_packaged_gpu_unrun','bundle_sha256':sha(target.read_bytes()),'bytes':target.stat().st_size,
+   'targets':len(files),'installer_sha256':sha((work/'install-prefill128-attention-component-v2.py').read_bytes()),'gpu_executed':False}
+(work/'prefill128-attention-component-bundle-preparation-v2.json').write_bytes(json.dumps(r,indent=2).encode());print(json.dumps(r))

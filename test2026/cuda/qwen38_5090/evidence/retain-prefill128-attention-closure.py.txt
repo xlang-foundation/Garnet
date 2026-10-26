@@ -1,0 +1,62 @@
+from pathlib import Path
+import hashlib,json,zipfile
+work=Path(__file__).resolve().parent;out=work.parent/'outputs';repo=Path('D:/CantorAI/work/qwen38-5090');m=repo/'test2026/cuda/qwen38_5090';e=m/'evidence'
+sha=lambda raw:hashlib.sha256(raw).hexdigest()
+job='prefill128-attention-component-attempt1';receipt=json.loads((work/'prefill128-attention-local-receipt.json').read_bytes())
+assert receipt['status']=='prefill128_attention_full_output_fp64_replayed_on_both_machines'
+p=json.loads((e/'prefill128-attention-component-preparation.json').read_bytes())
+assert receipt['source_pins']==len(p['files'])==32 and receipt['full_output_scalars_replayed']==28311552
+paths=[]
+def keep(name,raw):
+    path=e/name
+    assert not path.exists() or path.read_bytes()==raw,path
+    if not path.exists():path.write_bytes(raw)
+    paths.append(path.relative_to(repo).as_posix())
+for name in p['files']:
+    if name.startswith('Garnet/'):
+        path=repo/name.removeprefix('Garnet/');assert sha(path.read_bytes())==p['files'][name]
+        paths.append(path.relative_to(repo).as_posix())
+paths.append((e/'prefill128-attention-component-preparation.json').relative_to(repo).as_posix())
+for name in ('compare_bf16_prefill128_attention_replays.py','test_bf16_prefill128_attention_replay_pair.py'):
+    paths.append((m/name).relative_to(repo).as_posix())
+keep('replay-prefill128-attention-local-before-proof-byte-correction.py.txt',(work/'replay-prefill128-attention-local-before-proof-byte-correction.py.txt').read_bytes())
+keep('prefill128-attention-pair-comparison.json',json.dumps(receipt['pair_comparison'],indent=2).encode())
+for path in e.glob('prefill128-attention-before-source-snapshot-*'):paths.append(path.relative_to(repo).as_posix())
+for name in ('prefill128-attention-install-source-mismatch.json','prefill128-attention-initial-source-preflight.json'):
+    paths.append((e/name).relative_to(repo).as_posix())
+recipes=('derive-prefill128-attention-component.py','derive-prefill128-attention-probe.py','derive-prefill128-attention-owner.py',
+ 'compile-prefill128-attention-offline.py','compile-prefill128-attention-probe-offline.py','correct-prefill128-attention-derivation-input.py',
+ 'install-prefill128-attention-component.py','install-prefill128-attention-component-v2.py','package-prefill128-attention-component.py',
+ 'package-prefill128-attention-component-v2.py','replay-prefill128-attention-local.py','retain-prefill128-attention-closure.py')
+for name in recipes:keep(name+'.txt',(work/name).read_bytes())
+for name in ('prefill128-attention-component-upload-plan.json','prefill128-attention-component-bundle-preparation.json',
+ 'prefill128-attention-component-bundle-preparation-v2.json','prefill128-attention-component-install-v2.json',
+ 'prefill128-attention-local-receipt.json','prefill128-attention-before-source-snapshot-prefill128-attention-component-upload-plan.json',
+ 'prefill128-attention-before-source-snapshot-prefill128-attention-component-bundle-preparation.json'):
+    keep(name,(work/name).read_bytes())
+for folder in ('prefill128-attention-offline-build','prefill128-attention-component-cpu-ledger','prefill128-attention-pair-cpu-ledger'):
+    for path in (work/folder).rglob('*'):
+        if path.is_file() and path.suffix in ('.json','.jsonl','.log','.bat'):
+            keep('attention-'+folder+'-'+path.relative_to(work/folder).as_posix().replace('/','-'),path.read_bytes())
+archive=out/(job+'-evidence.zip');assert sha(archive.read_bytes())==receipt['archive_sha256']
+with zipfile.ZipFile(archive) as z:
+    keep(job+'-evidence-manifest.json',z.read('evidence-manifest.json'))
+    for name in z.namelist():
+        prefix='results/'+job+'/'
+        if name.startswith(prefix) and name.endswith(('.json','.jsonl','.log')) and not name.endswith('resource-vram.jsonl'):
+            keep(job+'-'+name.removeprefix(prefix).replace('/','-'),z.read(name))
+for suffix in ('-verified.json','-remote-verified.json','-local-replay.log'):
+    keep(job+suffix,(out/(job+suffix)).read_bytes())
+text='\n\n### 2026-10-25 — T128 attention: full GPU outputs and independent FP64 replay on both machines\n\n'
+text+='Completed standalone B1/T128 attention after the actual native CUDA phase diagnosis and closed matched vLLM baseline. Core and witness collector previously compiled to private SM120 objects locally, without linking or executing any local GPU/model/target executable or mutating runtime/SDK. Local CUDA13.2.78/MSVC14.29; actual remote build/link CUDA13.2.78/MSVC14.44.35207. Original offline ledgers, source/SDK hashes and object hashes retained. Geometry: 48MiB probability workspace; canonical bytes427294720; raw complete output3145728bytes per case. Production/default4/32 runtime admission remains unchanged.\n\n'
+text+='Initial installation stopped in the preflight before writing any target because the remote production overlay retained a different version from the local optional tiled candidate. The exact downloaded source-hash observation is retained; no production source was overwritten. The candidate derivation source is now an exact inert study snapshot. Original unrun preparation/bundle/installer and corrected preparation are preserved. The corrected absent-only install added17new targets, kept11existing targets byte-identical, checked32source/proof pins, six runtime files and environment/SDK pins. Fresh11CPU controls pass0.173s locally and0.200s remotely; owner rebuilt and linked the standalone collector in the fixed private folder. No Garnet DLL loading/replacement.\n\n'
+text+='Actual GPU collection passed36cases covering all16full-attention layers, empty/partial/full128 sequences, cache/page bounds, full4096end and128active queries. Complete plain/tiled outputs and probability workspace compared bit-exact in source-pinned C++; nine launches of three captured three-node graphs also compare exactly. Cached-prefix last-token invariance, complete canonical/small inputs readonly and output/workspace guards pass;256malformed actual invocations reject. These probability/readonly observations are checked by the source-pinned C++ collector; the corresponding probability/canonical buffers are not serialized.\n\n'
+text+='Raw all786432F32 output values per case are serialized (113246208bytes total), including all24heads/all256dimensions and inactive exact zeros. Independent dense FP64 replay checks all28311552output scalars at ATOL3e-5/RTOL2e-5; max absolute error '+str(receipt['max_absolute_error'])+', max tolerance fraction '+str(receipt['max_tolerance_fraction'])+'. Both checkers exit0 against the same archive '+receipt['archive_sha256']+' ('+str(receipt['archive_bytes'])+'bytes/'+str(receipt['files_verified'])+'members). Local/remote proof hashes '+json.dumps(receipt['proof_sha256'],sort_keys=True)+'. Source/runtime/environment/SDK preserved, cleanup complete; original logs, manifest, proof pair, sampled memory and recipes retained. Sampled memory is correctness-only and does not establish serving memory savings.\n\n'
+text+='The initial local reporting wrapper incorrectly required proof bytes to match, after the original full scalar checker already passed. The two actual proofs differ only in last digits of two per-case FP64 error summaries; all non-summary fields are strictly identical JSON, the archive and original verifier hashes match, and both original checkers independently accept all scalars at unchanged tolerances. Original wrapper retained. A separate comparison helper records every summary difference, permits only finite nonnegative statistics (fraction at most1), bounds statistic differences by1e-12 absolute error/1e-8 tolerance fraction, and rejects all structural/source/acceptance changes. Two CPU fault controls pass0.003s. Cause of tiny summary variations is not established; no GPU output or original proof/checker was modified or rounded to force equality.\n\n'
+text+='This qualifies the isolated T128 attention component. It does not qualify full decoder forward, GDN, parser/plugin/state integration, model output, adapted screening or HTTP performance. Next integrate the qualified attention and final-state commit into a distinct opt-in T128 forward/runtime path, verify against retainedT32 complete model IDs/state, then repeat805quality and matched4KHTTP. Strongest tuned/MTP reference profiles/repetitions, native wider batching and matched INT4/4B remain open. Current comparison chart stays unchanged; overall2x/halfTTFT objective is unmet/unproven.\n'
+for name in ('qwen38-5090-development-log.md','qwen38-5090-implementation-task.md'):
+    path=repo/'docs/research'/name;raw=path.read_bytes()
+    assert b'T128 attention: full GPU outputs and independent FP64 replay on both machines' not in raw
+    path.write_bytes(raw+text.encode());paths.append(path.relative_to(repo).as_posix())
+(work/'prefill128-attention-retained-paths.json').write_bytes(json.dumps(sorted(set(paths)),indent=2).encode())
+print(json.dumps({'status':receipt['status'],'retained_paths':len(set(paths)),'max_absolute_error':receipt['max_absolute_error'],'performance_admitted':False}))

@@ -1,0 +1,40 @@
+"""CPU tools only: private explicitSM120 object; no CUDA execution or link."""
+from pathlib import Path
+import hashlib,json,os,sys
+repo=Path('D:/CantorAI/work/qwen38-5090');m=repo/'test2026/cuda/qwen38_5090';work=Path(__file__).resolve().parent
+build=work/'prefill128-attention-offline-build';assert not build.exists();build.mkdir()
+sdk=Path('C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v13.2');vcvars=Path('C:/Program Files/Microsoft Visual Studio/18/Community/VC/Auxiliary/Build/vcvars64.bat')
+sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+sources=[m/n for n in ('qwen38_bf16_prefill128_attention.cu','qwen38_bf16_prefill128_attention.cuh','bf16_prefill128_attention_profile.py','test_bf16_prefill128_attention_profile.py','evidence/prefill128-attention-component-derivation.json')]
+sources += [repo/'src/cuda/qwen35_attention_core.cuh',repo/'src/cuda/qwen38_bf16_kv_commit.cuh',repo/'src/cuda/qwen38_bf16_kv_low_batch_overlay.cu',repo/'src/cuda/qwen38_bf16_kv_low_batch_overlay.cuh',vcvars]
+inputs={str(p):sha(p) for p in sources}
+sdk_names=('bin/nvcc.exe','bin/ptxas.exe','nvvm/bin/cicc.exe','include/crt/host_config.h','include/cuda_runtime.h','include/cuda_runtime_api.h','include/cuda_bf16.h','include/cuda_bf16.hpp')
+sdk_hashes={str(sdk/n):sha(sdk/n) for n in sdk_names};nvcc=sdk/'bin/nvcc.exe';obj=build/'prefill128_attention.obj';bat=build/'compile.bat'
+raw=f'''@echo off
+setlocal
+call "{vcvars}" -vcvars_ver=14.29
+if errorlevel 1 exit /b %errorlevel%
+set "TMP={build}"
+set "TEMP={build}"
+"{nvcc}" --version
+if errorlevel 1 exit /b %errorlevel%
+"{nvcc}" -std=c++17 -arch=sm_120 -O3 -c -I"{repo}/src/cuda" -Xcompiler /MT --ptxas-options=-v "{m}/qwen38_bf16_prefill128_attention.cu" -o "{obj}"
+if errorlevel 1 exit /b %errorlevel%
+dumpbin /headers "{obj}" > "{build}/object-headers.txt"
+exit /b %errorlevel%
+''';bat.write_bytes(raw.replace('\n','\r\n').encode())
+sys.path.insert(0,str(repo));import test2026.cuda.qwen38_5090.run_logged as ledger
+ledger.source_identity=lambda:{'scope':'explicit owned attention component inputs; unrelated untracked files excluded','owned_source_sha256':inputs}
+os.chdir(repo);code=ledger.run([sys.executable,'-m','unittest','test2026.cuda.qwen38_5090.test_bf16_prefill128_attention_profile'],build/'cpu-ledger','correctness',
+    'Four CPU geometry/layout/strict-old-runtime/exact-kernel-derivation controls only; no model or GPU',[*sources])
+assert code==0
+code=ledger.run(['cmd.exe','/d','/c',str(bat)],build/'build-ledger','build',
+    'Offline CUDA13.2 explicitSM120 compilation only into private relocatable COFF. No executable link/run, GPU query/context, SDK/runtime/production build/default source mutation',sources+[bat])
+assert all(sha(Path(n))==h for n,h in inputs.items()) and all(sha(Path(n))==h for n,h in sdk_hashes.items())
+r={'status':'prefill128_attention_offline_sm120_object_compiled' if code==0 else 'prefill128_attention_offline_compile_failure_preserved',
+   'exit_code':code,'inputs':inputs,'sdk_before_after_unchanged':sdk_hashes,'object_sha256':sha(obj) if obj.exists() else None,
+   'outputs':{p.relative_to(build).as_posix():{'bytes':p.stat().st_size,'sha256':sha(p)} for p in build.rglob('*') if p.is_file()},
+   'gpu_executed':False,'linked':False,'runtime_or_sdk_or_production_build_mutated':False,'attention_gpu_math_qualified':False,
+   'prefill128_model_or_runtime_qualified':False,'performance_admitted':False,'two_times_target_achieved':False,
+   'scope':'Separate B1/T128 forward-attention component with explicit plain0/tiled16 strategy1, same kernel math as source-pinned T4/T32 implementation and added alignment checks. Existing admission remains unchanged. Local CPU geometry/derivation and compilation only; actual GPU full output/probability/readonly/canary/graph and FP64 math, runtime integration/model/HTTP tests remain open.'}
+(build/'result.json').write_bytes(json.dumps(r,indent=2).encode());print(json.dumps({k:r[k] for k in ('status','exit_code','object_sha256','gpu_executed')}));raise SystemExit(code)

@@ -1,0 +1,42 @@
+"""Compile the complete-output GPU probe to an object with CPU tools only."""
+from pathlib import Path
+import hashlib,json,os,sys
+repo=Path('D:/CantorAI/work/qwen38-5090');m=repo/'test2026/cuda/qwen38_5090';work=Path(__file__).resolve().parent
+build=work/'prefill128-attention-offline-build';assert build.is_dir()
+sdk=Path('C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v13.2');vcvars=Path('C:/Program Files/Microsoft Visual Studio/18/Community/VC/Auxiliary/Build/vcvars64.bat')
+sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest();obj=build/'prefill128_attention_probe.obj';assert not obj.exists()
+sources=[m/n for n in ('probe_bf16_prefill128_attention.cu','qwen38_bf16_prefill128_attention.cuh','prefill128_commit_fixture.h',
+    'bf16_prefill128_attention_oracle.py','bf16_prefill128_attention_profile.py','bf16_kv_overlay_oracle.py',
+    'test_bf16_prefill128_attention_profile.py','test_bf16_prefill128_attention_oracle.py',
+    'evidence/prefill128-attention-component-derivation.json','evidence/prefill128-attention-probe-derivation.json')]
+sources += [repo/'src/cuda/qwen35_attention_core.cuh',repo/'src/cuda/qwen38_bf16_kv_commit.cuh',vcvars]
+inputs={str(p):sha(p) for p in sources};sdk_names=('bin/nvcc.exe','bin/ptxas.exe','nvvm/bin/cicc.exe','include/crt/host_config.h','include/cuda_runtime.h','include/cuda_runtime_api.h','include/cuda_bf16.h','include/cuda_bf16.hpp')
+sdk_hashes={str(sdk/n):sha(sdk/n) for n in sdk_names};nvcc=sdk/'bin/nvcc.exe';bat=build/'compile-probe.bat';assert not bat.exists()
+raw=f'''@echo off
+setlocal
+call "{vcvars}" -vcvars_ver=14.29
+if errorlevel 1 exit /b %errorlevel%
+set "TMP={build}"
+set "TEMP={build}"
+"{nvcc}" --version
+if errorlevel 1 exit /b %errorlevel%
+"{nvcc}" -std=c++17 -arch=sm_120 -O3 -c -I"{repo}/src/cuda" -Xcompiler=/MT,/utf-8 --ptxas-options=-v "{m}/probe_bf16_prefill128_attention.cu" -o "{obj}"
+if errorlevel 1 exit /b %errorlevel%
+dumpbin /headers "{obj}" > "{build}/probe-object-headers.txt"
+exit /b %errorlevel%
+''';bat.write_bytes(raw.replace('\n','\r\n').encode())
+sys.path.insert(0,str(repo));import test2026.cuda.qwen38_5090.run_logged as ledger
+ledger.source_identity=lambda:{'scope':'explicit owned T128 attention probe inputs; unrelated untracked files excluded','owned_source_sha256':inputs}
+os.chdir(repo);code=ledger.run([sys.executable,'-m','unittest','test2026.cuda.qwen38_5090.test_bf16_prefill128_attention_profile',
+    'test2026.cuda.qwen38_5090.test_bf16_prefill128_attention_oracle'],build/'probe-cpu-ledger','correctness',
+    'Actual9CPU geometry/strict-old-profile/derivation/full-output FP64/analytic single-key/inactive-zero/malformed-buffer controls; no GPU',sources);assert code==0
+code=ledger.run(['cmd.exe','/d','/c',str(bat)],build/'probe-build-ledger','build',
+    'Offline full-output T128 probe object compilation for explicitSM120 only; no link or executable/target/GPU/model execution, no SDK/runtime/production build mutation',sources+[bat])
+assert all(sha(Path(n))==h for n,h in inputs.items()) and all(sha(Path(n))==h for n,h in sdk_hashes.items())
+r={'status':'prefill128_attention_probe_offline_sm120_object_compiled' if code==0 else 'prefill128_attention_probe_offline_compile_failure_preserved',
+   'exit_code':code,'inputs':inputs,'sdk_before_after_unchanged':sdk_hashes,'object_sha256':sha(obj) if obj.exists() else None,
+   'outputs':{p.relative_to(build).as_posix():{'bytes':p.stat().st_size,'sha256':sha(p)} for p in build.rglob('*') if p.is_file()},
+   'cpu_tests':9,'gpu_executed':False,'linked':False,'runtime_or_sdk_or_production_build_mutated':False,
+   'attention_gpu_math_qualified':False,'model_or_serving_qualified':False,'performance_admitted':False,'two_times_target_achieved':False,
+   'scope':'Compiled a standalone36case T128 full-output witness collector only. Planned plain/tiled probability/output bit checks,9graph launches,256malformed invocations, prefix/cache/readonly/canaries and complete denseFP64 output replay have not run on GPU. Existing production/default/runtime profiles unchanged. Remote build/link/GPU/math/model/HTTP qualification remains required.'}
+(build/'probe-result.json').write_bytes(json.dumps(r,indent=2).encode());print(json.dumps({k:r[k] for k in ('status','exit_code','object_sha256','gpu_executed')}));raise SystemExit(code)

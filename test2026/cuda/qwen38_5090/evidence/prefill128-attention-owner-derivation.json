@@ -1,0 +1,91 @@
+{
+  "source": "run_bf16_prefill128_commit_component.py",
+  "source_sha256": "8b0e9c4ae8bf390a745f75a52292ceb449a025082294763fa385452f08f55744",
+  "target": "run_bf16_prefill128_attention_component.py",
+  "target_sha256": "cbcdc53b1510430dbf4f45787fa188f65219a1d8c7e39f3e20c2e81e00171d0f",
+  "replacements": [
+    {
+      "old": "Exclusive standalone T128 commit build/correctness; never a model benchmark.",
+      "new": "Exclusive standalone T128 attention correctness; no model or performance run.",
+      "count": 1
+    },
+    {
+      "old": "JOB='prefill128-commit-component-attempt1'",
+      "new": "JOB='prefill128-attention-component-attempt1'",
+      "count": 1
+    },
+    {
+      "old": "REFERENCE='vllm-output-characterization-attempt1'",
+      "new": "REFERENCE='vllm-observed-fixed4k-ordinary-attempt1'",
+      "count": 1
+    },
+    {
+      "old": "w['exit_code'] in (0,1)",
+      "new": "w['exit_code']==0",
+      "count": 1
+    },
+    {
+      "old": "prefill128-commit-component-preparation.json",
+      "new": "prefill128-attention-component-preparation.json",
+      "count": 1
+    },
+    {
+      "old": "prefill128_commit_component_prepared_gpu_unrun",
+      "new": "prefill128_attention_component_prepared_gpu_unrun",
+      "count": 1
+    },
+    {
+      "old": "    profiled=p['profiled_parent']",
+      "new": "    assert parent['archive_sha256']==p['reference_parent']['archive_sha256']\n    profiled=p['profiled_parent']",
+      "count": 1
+    },
+    {
+      "old": "prefill128-commit-probe.exe",
+      "new": "prefill128-attention-probe.exe",
+      "count": 1
+    },
+    {
+      "old": "Actual10CPU metadata/codec/integer BF16/untouched-slot and closed-parent/complete-case controls before component build/GPU",
+      "new": "Actual11CPU profile/full FP64 oracle/closed-parent and complete-case controls before component build/GPU",
+      "count": 1
+    },
+    {
+      "old": "build_bf16_prefill128_commit_component.bat",
+      "new": "build_bf16_prefill128_attention_component.bat",
+      "count": 1
+    },
+    {
+      "old": "T128 commit GPU collection failed",
+      "new": "T128 attention GPU collection failed",
+      "count": 1
+    },
+    {
+      "old": "T128 component CPU controls failed",
+      "new": "T128 attention CPU controls failed",
+      "count": 1
+    },
+    {
+      "old": "Remote T128 component build failed",
+      "new": "Remote T128 attention build failed",
+      "count": 1
+    },
+    {
+      "old": "str(binary),str(native)",
+      "new": "str(binary),str(native/'witnesses.f32')",
+      "count": 1
+    },
+    {
+      "old": "Actual16valid/35invalid full canonical states, guards, target readonly,3replays of one captured graph; lossless complete RLE outputs require independent NumPy oracle",
+      "new": "Actual36cases/full outputs, plain-tiled probability/output bit checks,9graph launches,256malformed calls, complete canonical readonly/guards; full FP64 replay required",
+      "count": 1
+    },
+    {
+      "old": "prefill128_commit_component_collected_needs_replay",
+      "new": "prefill128_attention_component_collected_needs_replay",
+      "count": 1
+    }
+  ],
+  "build_source_sha256": "27978f0e3807730ccd367278caf87abf013e724dee3703730e7ffb90a06f2b44",
+  "build_target_sha256": "1e56052f01f6a9e5db1e6aa30ba8e6215ccd75871dc2e15e0201c451d97d5f4d",
+  "scope": "Same exercised exclusive source/runtime/SDK/build/CPU/GPU/cleanup/archive lifecycle, now latest observed-vLLM closed parent and standalone T128 attention witness collector. No production runtime mutation."
+}

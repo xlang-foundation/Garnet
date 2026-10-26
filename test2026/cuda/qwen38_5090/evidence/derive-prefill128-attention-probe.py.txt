@@ -1,0 +1,63 @@
+from pathlib import Path
+import hashlib,json
+m=Path('D:/CantorAI/work/qwen38-5090/test2026/cuda/qwen38_5090');sha=lambda b:hashlib.sha256(b).hexdigest()
+source=m/'probe_bf16_scores_tiled.cu';raw=source.read_bytes();text=raw.decode();steps=[]
+def replace(old,new):
+    global text
+    count=text.count(old);assert count>0,old;text=text.replace(old,new);steps.append({'old':old,'new':new,'count':count})
+if '\r\n' in text:replace('\r\n','\n')
+replace('qwen38_bf16_kv_low_batch_overlay.cuh','qwen38_bf16_prefill128_attention.cuh')
+replace('#include "bf16_low_batch_scores_tiled.cuh"\n','')
+replace('bf16_kv_fixture_layout.h','prefill128_commit_fixture.h')
+replace('namespace {\n', '''namespace {
+size_t workspaceBytes(const Qwen35AttentionCoreConfig& c){return Qwen38BF16KVPrefill128AttentionWorkspace(c);}
+int baseline(const Qwen35AttentionCoreConfig& c,const void* const* in,void* out,void* work,int64_t key,int64_t value,cudaStream_t s){return RunQwen38BF16KVPrefill128Attention(c,in,out,work,key,value,0,s);}
+int tiled(const Qwen35AttentionCoreConfig& c,const void* const* in,void* out,void* work,int64_t key,int64_t value,cudaStream_t s){return RunQwen38BF16KVPrefill128Attention(c,in,out,work,key,value,1,s);}
+''')
+replace('Qwen38BF16KVLowBatchCandidateWorkspace','workspaceBytes');replace('Qwen38BF16KVTiledScoresWorkspace','workspaceBytes')
+replace('RunQwen38BF16KVLowBatchCandidate','baseline');replace('RunQwen38BF16KVTiledScores','tiled')
+replace('(chunk==4?bf16Layers4:bf16Layers32)[layer]','prefill128Fixture[layer]')
+replace('int rejected=0;','int rejected=0,rejectedInvocations=0;')
+replace('"Malformed/aliased baseline call accepted");require(', '"Malformed/aliased baseline call accepted");++rejectedInvocations;require(')
+replace('"Malformed/aliased tiled call accepted");++rejected;', '"Malformed/aliased tiled call accepted");++rejectedInvocations;++rejected;')
+needle='        checkState(state,errors,batch,chunk,layer,ko,spans,false,s);'
+replace(needle,'''        for(int i=0;i<7;++i){const void* bad[7];std::copy(inputs,inputs+7,bad);bad[i]=static_cast<const char*>(inputs[i])+1;reject(c,bad,result,workspace,ko,vo);}
+        reject(c,inputs,reinterpret_cast<char*>(result)+1,workspace,ko,vo);
+        reject(c,inputs,result,static_cast<char*>(workspace)+1,ko,vo);
+        for(int oldChunk:{4,32}){auto bad=c;bad.tokens=oldChunk;require(workspaceBytes(bad)==0,"Old chunk admitted into T128 component");reject(bad,inputs,result,workspace,ko,vo);}
+        for(int strategy:{-1,2}){require(RunQwen38BF16KVPrefill128Attention(c,inputs,result,workspace,ko,vo,strategy,s)!=0,"Invalid strategy accepted");++rejected;++rejectedInvocations;}
+'''+needle)
+replace('const bool graph=(id==1||id==15||id==63);','const bool graph=(id==1||id==15||id==127);')
+start=text.index('        check(cudaMemsetAsync(result,0xa5,nq*4,s));check(cudaGraphLaunch(execution,s));')
+end=text.index('    }\n    checkState(state,errors',start)
+replace(text[start:end],'''        std::vector<float> back(nq);std::vector<unsigned char> graphWorkspace(scratch);
+        size_t nodes=0;check(cudaGraphGetNodes(captured,nullptr,&nodes));require(nodes==3,"Three attention graph nodes required");
+        for(int replay=0;replay<3;++replay){
+            check(cudaMemsetAsync(result,0xa5,nq*4,s));check(cudaMemsetAsync(workspace,0xa5,scratch,s));check(cudaGraphLaunch(execution,s));
+            check(cudaMemcpyAsync(back.data(),result,nq*4,cudaMemcpyDeviceToHost,s));check(cudaMemcpyAsync(graphWorkspace.data(),workspace,scratch,cudaMemcpyDeviceToHost,s));check(cudaStreamSynchronize(s));
+            require(std::memcmp(back.data(),original.data(),nq*4)==0&&graphWorkspace==originalWorkspace,"Graph full context/probabilities changed");
+        }
+        check(cudaGraphExecDestroy(execution));check(cudaGraphDestroy(captured));
+''')
+start=text.index('    const uint64_t startOffset=witnessOffset;')
+end=text.index('    if(end){',start)
+replace(text[start:end],'''    const uint64_t startOffset=witnessOffset;std::vector<int> sampleTriples;
+    witnesses.write(reinterpret_cast<const char*>(original.data()),nq*4);witnessOffset+=nq*4;
+''')
+replace('\\"rejected_calls\\":%d,\\"graph_replay_exact','\\"rejected_groups\\":%d,\\"rejected_invocations\\":%d,\\"graph_replay_exact')
+replace(',rejected,graph?',',rejected,rejectedInvocations,graph?')
+replace('\\"samples\\":[','\\"full_output_words\\":%llu,\\"samples\\":[')
+replace('end?"true":"false");','end?"true":"false",(unsigned long long)nq);')
+start=text.index('        for(int batch:{1})');end=text.index('        witnesses.close();',start)
+replace(text[start:end],'''        for(int layer:{3,63})for(int end:{0,1,127,128,511,512,513,3968,4095,4096})execute(id++,1,128,layer,end,witnesses,offset);
+        for(int layer=7;layer<63;layer+=4)execute(id++,1,128,layer,513,witnesses,offset);
+        execute(127,1,128,3,128,witnesses,offset);execute(255,1,128,63,4096,witnesses,offset);id+=2;
+''')
+replace('id==44','id==36');replace('bf16_scores_tiled16_collected_needs_fp64_replay','prefill128_attention_collected_needs_full_fp64_replay')
+target=m/'probe_bf16_prefill128_attention.cu';after=text.encode();assert not target.exists() or target.read_bytes()==after
+if not target.exists():target.write_bytes(after)
+d={'source':source.name,'source_sha256':sha(raw),'target':target.name,'target_sha256':sha(after),'replacements':steps,
+   'scope':'Separate T128 probe from previously exercised T4/T32 component harness.36cases, full output bytes for dense FP64 replay, exact plain/tiled output and probability buffers,9graph launches across3captures, prefix/cache invariance, complete readonly/canary checks and256malformed call invocations. GPU unrun; no performance/model qualification.'}
+path=m/'evidence/prefill128-attention-probe-derivation.json';blob=json.dumps(d,indent=2).encode();assert not path.exists() or path.read_bytes()==blob
+if not path.exists():path.write_bytes(blob)
+print(json.dumps({'status':'prefill128_attention_full_output_probe_derived_gpu_unrun','target_sha256':d['target_sha256']}))
