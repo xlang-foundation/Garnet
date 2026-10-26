@@ -1,0 +1,98 @@
+
+{"id": "e86d1319d93540ff9fc16c4c3ec25654", "kind": "correctness", "label": "Actual same-input four-row short case, full or packed BF16 cache,8output IDs and complete expanded state hashes/raw vectors; differences retained, no performance admission", "argv": ["C:\\Python312\\python.exe", "D:\\CantorAI\\5090-study-20261023\\Garnet\\test2026\\cuda\\qwen38_5090\\monitor_native_probe.py", "--study", "D:\\CantorAI\\5090-study-20261023", "--output", "D:\\CantorAI\\5090-study-20261023\\results\\b4-cache-mode-characterization-attempt1\\packed-resources", "--", "cmd.exe", "/d", "/c", "D:\\CantorAI\\5090-study-20261023\\Garnet\\test2026\\cuda\\qwen38_5090\\test_b4_cache_mode_characterization.bat", "D:\\CantorAI\\5090-study-20261023\\results\\b4-cache-mode-characterization-attempt1\\packed", "C:\\Users\\zsdx\\AppData\\Local\\CantorAI\\5090-engine-cache", "packed"]}
+ERROR:root:code for hash md5 was not found.
+Traceback (most recent call last):
+  File "C:\Python\Python314\Lib\hashlib.py", line 247, in <module>
+    globals()[__func_name] = __get_hash(__func_name)
+                             ~~~~~~~~~~^^^^^^^^^^^^^
+  File "C:\Python\Python314\Lib\hashlib.py", line 123, in __get_builtin_constructor
+    raise ValueError('unsupported hash type ' + name)
+ValueError: unsupported hash type md5
+ERROR:root:code for hash sha1 was not found.
+Traceback (most recent call last):
+  File "C:\Python\Python314\Lib\hashlib.py", line 247, in <module>
+    globals()[__func_name] = __get_hash(__func_name)
+                             ~~~~~~~~~~^^^^^^^^^^^^^
+  File "C:\Python\Python314\Lib\hashlib.py", line 123, in __get_builtin_constructor
+    raise ValueError('unsupported hash type ' + name)
+ValueError: unsupported hash type sha1
+ERROR:root:code for hash blake2b was not found.
+Traceback (most recent call last):
+  File "C:\Python\Python314\Lib\hashlib.py", line 247, in <module>
+    globals()[__func_name] = __get_hash(__func_name)
+                             ~~~~~~~~~~^^^^^^^^^^^^^
+  File "C:\Python\Python314\Lib\hashlib.py", line 123, in __get_builtin_constructor
+    raise ValueError('unsupported hash type ' + name)
+ValueError: unsupported hash type blake2b
+ERROR:root:code for hash blake2s was not found.
+Traceback (most recent call last):
+  File "C:\Python\Python314\Lib\hashlib.py", line 247, in <module>
+    globals()[__func_name] = __get_hash(__func_name)
+                             ~~~~~~~~~~^^^^^^^^^^^^^
+  File "C:\Python\Python314\Lib\hashlib.py", line 123, in __get_builtin_constructor
+    raise ValueError('unsupported hash type ' + name)
+ValueError: unsupported hash type blake2s
+ERROR:root:code for hash sha3_224 was not found.
+Traceback (most recent call last):
+  File "C:\Python\Python314\Lib\hashlib.py", line 247, in <module>
+    globals()[__func_name] = __get_hash(__func_name)
+                             ~~~~~~~~~~^^^^^^^^^^^^^
+  File "C:\Python\Python314\Lib\hashlib.py", line 123, in __get_builtin_constructor
+    raise ValueError('unsupported hash type ' + name)
+ValueError: unsupported hash type sha3_224
+ERROR:root:code for hash sha3_256 was not found.
+Traceback (most recent call last):
+  File "C:\Python\Python314\Lib\hashlib.py", line 247, in <module>
+    globals()[__func_name] = __get_hash(__func_name)
+                             ~~~~~~~~~~^^^^^^^^^^^^^
+  File "C:\Python\Python314\Lib\hashlib.py", line 123, in __get_builtin_constructor
+    raise ValueError('unsupported hash type ' + name)
+ValueError: unsupported hash type sha3_256
+ERROR:root:code for hash sha3_384 was not found.
+Traceback (most recent call last):
+  File "C:\Python\Python314\Lib\hashlib.py", line 247, in <module>
+    globals()[__func_name] = __get_hash(__func_name)
+                             ~~~~~~~~~~^^^^^^^^^^^^^
+  File "C:\Python\Python314\Lib\hashlib.py", line 123, in __get_builtin_constructor
+    raise ValueError('unsupported hash type ' + name)
+ValueError: unsupported hash type sha3_384
+ERROR:root:code for hash sha3_512 was not found.
+Traceback (most recent call last):
+  File "C:\Python\Python314\Lib\hashlib.py", line 247, in <module>
+    globals()[__func_name] = __get_hash(__func_name)
+                             ~~~~~~~~~~^^^^^^^^^^^^^
+  File "C:\Python\Python314\Lib\hashlib.py", line 123, in __get_builtin_constructor
+    raise ValueError('unsupported hash type ' + name)
+ValueError: unsupported hash type sha3_512
+ERROR:root:code for hash shake_128 was not found.
+Traceback (most recent call last):
+  File "C:\Python\Python314\Lib\hashlib.py", line 247, in <module>
+    globals()[__func_name] = __get_hash(__func_name)
+                             ~~~~~~~~~~^^^^^^^^^^^^^
+  File "C:\Python\Python314\Lib\hashlib.py", line 123, in __get_builtin_constructor
+    raise ValueError('unsupported hash type ' + name)
+ValueError: unsupported hash type shake_128
+ERROR:root:code for hash shake_256 was not found.
+Traceback (most recent call last):
+  File "C:\Python\Python314\Lib\hashlib.py", line 247, in <module>
+    globals()[__func_name] = __get_hash(__func_name)
+                             ~~~~~~~~~~^^^^^^^^^^^^^
+  File "C:\Python\Python314\Lib\hashlib.py", line 123, in __get_builtin_constructor
+    raise ValueError('unsupported hash type ' + name)
+ValueError: unsupported hash type shake_256
+Traceback (most recent call last):
+  File "D:/CantorAI/5090-study-20261023/Garnet/test2026/cuda/qwen38_5090/probe_b4_cache_mode_characterization.py", line 129, in <module>
+    if __name__=='__main__':raise SystemExit(main())
+                                             ~~~~^^
+  File "D:/CantorAI/5090-study-20261023/Garnet/test2026/cuda/qwen38_5090/probe_b4_cache_mode_characterization.py", line 82, in main
+    capture_exact(state,baseline['empty_state'],list(range(half*4,half*4+4)),read,baseline_vectors.__getitem__)
+    ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\CantorAI\5090-study-20261023\Garnet\test2026\cuda\qwen38_5090\bf16_batch8_external_reference.py", line 28, in capture_exact
+    assert same_reference_state(original_b8['logical'], actual_b4['logical'], rows)
+           ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\CantorAI\5090-study-20261023\Garnet\test2026\cuda\qwen38_5090\bf16_batch8_reference_gate.py", line 34, in same_reference_state
+    return same_logical_state(four_complete_rows(b8, rows), b4_reference)
+  File "D:\CantorAI\5090-study-20261023\Garnet\test2026\cuda\qwen38_5090\bf16_same_precision_gate.py", line 8, in same_logical_state
+    raise ValueError('Unqualified same-precision state representation')
+ValueError: Unqualified same-precision state representation
+NATIVE_CORRECTNESS_RESOURCE_REPORT_SAVED

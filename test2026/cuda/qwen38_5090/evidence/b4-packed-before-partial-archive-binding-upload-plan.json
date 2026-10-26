@@ -1,0 +1,50 @@
+{
+  "uploads": [
+    {
+      "local": "D:\\CantorAI\\work\\qwen38-5090\\test2026\\cuda\\qwen38_5090\\probe_b4_packed_cache_characterization.py",
+      "target": "Garnet/test2026/cuda/qwen38_5090/probe_b4_packed_cache_characterization.py",
+      "sha256": "b1c9fe4c4bb9514ccecc3a3ab178fc2a83bc694b82546f9f2a25d4a883d6b62e"
+    },
+    {
+      "local": "D:\\CantorAI\\work\\qwen38-5090\\test2026\\cuda\\qwen38_5090\\test_b4_packed_cache_characterization.bat",
+      "target": "Garnet/test2026/cuda/qwen38_5090/test_b4_packed_cache_characterization.bat",
+      "sha256": "a45c317a5e15e031bc2670ad8d7eb2d6d2db902d24453db13117c58df470ae03"
+    },
+    {
+      "local": "D:\\CantorAI\\work\\qwen38-5090\\test2026\\cuda\\qwen38_5090\\run_b4_packed_cache_characterization.py",
+      "target": "Garnet/test2026/cuda/qwen38_5090/run_b4_packed_cache_characterization.py",
+      "sha256": "9c54795d929439c23f190aabb2c3b76ddab5b6a35686c3356bc24c2baeb86276"
+    },
+    {
+      "local": "D:\\CantorAI\\work\\qwen38-5090\\test2026\\cuda\\qwen38_5090\\verify_b4_packed_cache_characterization.py",
+      "target": "Garnet/test2026/cuda/qwen38_5090/verify_b4_packed_cache_characterization.py",
+      "sha256": "da7e7a9ef82687332818edffe6df3837107550bbee372a3cbb94dbd7a1b8ea53"
+    },
+    {
+      "local": "D:\\CantorAI\\work\\qwen38-5090\\test2026\\cuda\\qwen38_5090\\prepare_b4_packed_cache_characterization.py",
+      "target": "Garnet/test2026/cuda/qwen38_5090/prepare_b4_packed_cache_characterization.py",
+      "sha256": "7d5cedada831b9578e2a27c4028ba4499714e1e1e21f3fb3c14079cd7710f1c6"
+    },
+    {
+      "local": "D:\\CantorAI\\work\\qwen38-5090\\test2026\\cuda\\qwen38_5090\\test_b4_packed_cache_characterization.py",
+      "target": "Garnet/test2026/cuda/qwen38_5090/test_b4_packed_cache_characterization.py",
+      "sha256": "36e054762eff387dbcceaa35cada607bead1e983b37d7717a38d1020a48d3b07"
+    },
+    {
+      "local": "D:\\CantorAI\\work\\qwen38-5090\\test2026\\cuda\\qwen38_5090\\verify_b4_cache_mode_partial.py",
+      "target": "Garnet/test2026/cuda/qwen38_5090/verify_b4_cache_mode_partial.py",
+      "sha256": "7875d00b1a8153587851012eb8d6bb918c47a7fb413ba01bf8666152557f83f8"
+    },
+    {
+      "local": "D:\\CantorAI\\work\\qwen38-5090\\test2026\\cuda\\qwen38_5090\\evidence\\b4-packed-cache-characterization-derivation.json",
+      "target": "Garnet/test2026/cuda/qwen38_5090/evidence/b4-packed-cache-characterization-derivation.json",
+      "sha256": "68c45d068e5291c39baf02f65b3a1904225c5208f20a9096fcf25d171383805f"
+    },
+    {
+      "local": "D:\\CantorAI\\work\\qwen38-5090\\test2026\\cuda\\qwen38_5090\\evidence\\b4-packed-cache-characterization-preparation.json",
+      "target": "Garnet/test2026/cuda/qwen38_5090/evidence/b4-packed-cache-characterization-preparation.json",
+      "sha256": "a748213cd4da95e12eb0a8e6e4aadd70af581dc83bbf69475e94821ddc2ebbef"
+    }
+  ],
+  "scope": "Only the actual first four-row packed-BF16 B4 short8-output case, after original dual-mode owner failed at a full-only representation control before any packed case. Original failed archive and strict gate unchanged. Correct packed empty/final-reset control requires exact full expanded-state hashes and raw vectors against B8 packed empties. Reuse independently replayed actual full companion (which exactly reproduces prior failed-full) for same-B4 comparison; record every ID/state/vector difference versus full and B8. No tolerance relaxation, cause/harmlessness/semantic/model-math/quality/performance admission. Existing1a1d source/runtime/request recipe, exclusive owner/source/SDK/cache cleanup and both-machine replay required. LocalT128native candidate remains uninstalled."
+}

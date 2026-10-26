@@ -1,0 +1,84 @@
+{
+  "source": "probe_bf16_low_batch_plugin_contract.cpp",
+  "source_sha256": "5bff1a7df94dcd5bf9120b847141e108b0a9c2cfa9d4f775da6292524006773e",
+  "target": "probe_bf16_prefill128_plugin_contract.cpp",
+  "target_sha256": "5ebcb9108487c8a76a387e27c8eb6adca8a8dfe95de2b71f649c3773d2aa7c93",
+  "replacements": [
+    {
+      "old": "#include \"bf16_low_batch_overlay_plugin.h\"",
+      "new": "#include \"qwen38_bf16_prefill128_kv_overlay_plugin.h\"\n#include \"qwen38_bf16_low_batch_kv_overlay_plugin.h\"",
+      "count": 1
+    },
+    {
+      "old": "#include \"bf16_kv_fixture_layout.h\"",
+      "new": "// Canonical FA offsets follow the separately qualified packed layout.",
+      "count": 1
+    },
+    {
+      "old": "const auto key=bf16Layers4[index].canonical;",
+      "new": "const int64_t key=2482176+int64_t(index/4)*6676480;",
+      "count": 1
+    },
+    {
+      "old": "BF16LowBatchPluginCPUUnexpectedEnqueues",
+      "new": "Prefill128PluginCPUUnexpectedEnqueues",
+      "count": 3
+    },
+    {
+      "old": "EnsureBF16KVLowBatchOverlayPluginRegistered()",
+      "new": "EnsureBF16KVPrefill128OverlayPluginRegistered()",
+      "count": 1
+    },
+    {
+      "old": "\"GarnetQwen38BF16KVLowBatchOverlay\"",
+      "new": "\"GarnetQwen38BF16KVPrefill128Overlay\"",
+      "count": 2
+    },
+    {
+      "old": "BF16KVLowBatchOverlayConfig",
+      "new": "BF16KVPrefill128OverlayConfig",
+      "count": 2
+    },
+    {
+      "old": "BF16KVLowBatchOverlayPlugin plugin",
+      "new": "BF16KVPrefill128OverlayPlugin plugin",
+      "count": 1
+    },
+    {
+      "old": "for(int b:{1})for(int t:{4,32})",
+      "new": "for(int b:{1})for(int t:{128})",
+      "count": 1
+    },
+    {
+      "old": "int profiles=0,badWire=0,badDesc=0,badFormat=0,cross=0,legacyRoundTrips=0;",
+      "new": "require(EnsureBF16KVLowBatchOverlayPluginRegistered(),\"Old B1 registration failed\");\n        auto* b1Creator=registry->getPluginCreator(\"GarnetQwen38BF16KVLowBatchOverlay\",\"1\",\"\");require(b1Creator,\"Old B1 creator missing\");\n        int profiles=0,badWire=0,badDesc=0,badFormat=0,cross=0,legacyRoundTrips=0;",
+      "count": 1
+    },
+    {
+      "old": "rejectWire(nullptr,72);",
+      "new": "rejectWire(nullptr,72);auto bad64=wire;bad64[1]=64;rejectWire(bad64.data(),72);",
+      "count": 1
+    },
+    {
+      "old": "for(int legacyBatch:{4,8}){\n                auto oldWire=wire;oldWire[0]=legacyBatch;",
+      "new": "auto* oldB1Cross=b1Creator->deserializePlugin(\"study\",wire.data(),72);if(oldB1Cross){oldB1Cross->destroy();throw std::runtime_error(\"Old B1 accepted T128 wire\");}++cross;\n            for(int oldT:{4,32}){\n                auto oldWire=wire;oldWire[1]=oldT;auto* oldB1=b1Creator->deserializePlugin(\"study\",oldWire.data(),72);require(oldB1,\"Old B1 profile rejected\");\n                std::array<int64_t,9> back{};oldB1->serialize(back.data());require(back==oldWire,\"Old B1 wire differs\");oldB1->destroy();++legacyRoundTrips;\n                auto* rejected=creator->deserializePlugin(\"study\",oldWire.data(),72);if(rejected){rejected->destroy();throw std::runtime_error(\"T128 accepted old B1 profile\");}++cross;\n            }\n            for(int legacyBatch:{4,8})for(int oldT:{4,32}){\n                auto oldWire=wire;oldWire[0]=legacyBatch;oldWire[1]=oldT;",
+      "count": 1
+    },
+    {
+      "old": "profiles==32&&badWire==1632&&badDesc==992&&badFormat==672&&cross==96&&legacyRoundTrips==64",
+      "new": "profiles==16&&badWire==832&&badDesc==496&&badFormat==336&&cross==128&&legacyRoundTrips==96",
+      "count": 1
+    },
+    {
+      "old": "bf16_low_batch_plugin_cpu_contract_passed",
+      "new": "prefill128_plugin_cpu_contract_passed",
+      "count": 1
+    },
+    {
+      "old": "\\\"roundtrips\\\":32,\\\"clones\\\":32",
+      "new": "\\\"roundtrips\\\":16,\\\"clones\\\":16",
+      "count": 1
+    }
+  ],
+  "scope": "CPU wire/clone/descriptor/format and cross-dialect control only:16newT128profiles,96oldB1/B4/B8roundtrips; no enqueue, CUDA API, builder or model call. Actual remote execution remains pending."
+}

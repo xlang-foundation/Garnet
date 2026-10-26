@@ -1,0 +1,30 @@
+from pathlib import Path
+import hashlib,json,os,sys
+work=Path(__file__).resolve().parent;repo=Path('D:/CantorAI/work/qwen38-5090');m=repo/'test2026/cuda/qwen38_5090';folder=work/'prefill128-runtime-development/offline-build';sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+prior=json.loads((folder/'result.json').read_bytes());assert prior['exit_code']==0
+assert all(sha(Path(name))==digest for name,digest in prior['sdk_before_after_unchanged'].items())
+assert sha(folder/'prefill128-plugin.obj')==prior['objects']['prefill128-plugin.obj']
+record=json.loads((m/'evidence/prefill128-plugin-contract-derivation.json').read_bytes());raw=(m/record['source']).read_bytes();assert hashlib.sha256(raw).hexdigest()==record['source_sha256'];text=raw.decode()
+for step in record['replacements']:
+    assert text.count(step['old'])==step['count'];text=text.replace(step['old'],step['new'])
+assert text.encode()==(m/record['target']).read_bytes()
+old_source=repo/'src/backends/tensorrt/qwen38_bf16_prefill128_kv_overlay_plugin.cpp'
+lines=(folder/'compile-runtime.bat').read_text().splitlines();command=next(line for line in lines if line.startswith('cl.exe '))
+assert command.count('"'+str(old_source)+'"')==1
+prefix=command.split('"'+str(old_source)+'"')[0].replace('cl.exe ','cl.exe /Bv ',1)
+targets=[(repo/'src/backends/tensorrt/qwen38_bf16_kv_overlay_plugin.cpp','prefill128-wire-legacy.obj'),
+         (repo/'src/backends/tensorrt/qwen38_bf16_low_batch_kv_overlay_plugin.cpp','prefill128-wire-low-batch.obj'),
+         (m/'prefill128_plugin_cpu_operators.cpp','prefill128-wire-stubs.obj'),(m/'probe_bf16_prefill128_plugin_contract.cpp','prefill128-wire-probe.obj')]
+assert not any((folder/name).exists() for source,name in targets)
+inputs=[source for source,name in targets]+[old_source,m/'evidence/prefill128-plugin-contract-derivation.json',m/'probe_bf16_low_batch_plugin_contract.cpp',repo/'src/cuda/qwen38_bf16_prefill128_attention.cuh',repo/'src/cuda/qwen38_bf16_kv_low_batch_overlay.cuh',repo/'src/cuda/qwen38_bf16_kv_overlay.cuh']
+pins={str(path):sha(path) for path in inputs};sdk=prior['sdk_before_after_unchanged']
+commands=lines[:6]+['echo VCToolsVersion=%VCToolsVersion%','echo WindowsSDKVersion=%WindowsSDKVersion%']
+for source,name in targets:
+    commands+=[prefix+'/I"'+str(m)+'" "'+str(source)+'" /Fo"'+str(folder/name)+'" /Fd"'+str(folder/'private.pdb')+'"','if errorlevel 1 exit /b %errorlevel%']
+commands.append('exit /b 0');bat=folder/'compile-plugin-contract.bat';bat.write_bytes(('\r\n'.join(commands)+'\r\n').encode())
+sys.path.insert(0,str(repo));import test2026.cuda.qwen38_5090.run_logged as ledger
+ledger.source_identity=lambda:{'scope':'Explicit owned CPU contract collector inputs; unrelated untracked files excluded','owned_source_sha256':pins}
+os.chdir(repo);code=ledger.run(['cmd.exe','/d','/c',str(bat)],folder/'plugin-contract-build-ledger','build','Private /c compilation only: actual old/new wrapper declarations, cross-dialect CPU collector/stubs; no linking, executable, SDK/runtime or GPU/model use',[*inputs,bat])
+assert pins=={name:sha(Path(name)) for name in pins} and sdk=={name:sha(Path(name)) for name in sdk}
+r={'status':'prefill128_plugin_cpu_contract_objects_compiled' if code==0 else 'prefill128_plugin_cpu_contract_offline_failure_preserved','exit_code':code,'source_sha256':pins,'sdk_before_after_unchanged':sdk,'objects':{name:sha(folder/name) for source,name in targets if (folder/name).exists()},'existing_new_plugin_object_sha256':sha(folder/'prefill128-plugin.obj'),'compiled_contract_profiles':16,'planned_bad_wires':832,'planned_bad_descriptors':496,'planned_bad_formats':336,'planned_cross_dialect_rejections':128,'planned_old_profile_roundtrips':96,'contract_executable_run':False,'linked':False,'runtime_or_sdk_or_gpu_mutated':False,'model_or_performance_qualified':False}
+(folder/'plugin-contract-result.json').write_bytes(json.dumps(r,indent=2).encode());print(json.dumps({'status':r['status'],'objects':r['objects'],'contract_executable_run':False}));raise SystemExit(code)

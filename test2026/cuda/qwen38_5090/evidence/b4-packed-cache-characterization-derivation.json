@@ -1,0 +1,129 @@
+{
+  "files": [
+    {
+      "source": "probe_b4_cache_mode_characterization.py",
+      "source_sha256": "1816c69ebdfa47d429042dfc309113cdaba68fcc4fbd8cf93930652fec4e3521",
+      "target": "probe_b4_packed_cache_characterization.py",
+      "target_sha256": "b1c9fe4c4bb9514ccecc3a3ab178fc2a83bc694b82546f9f2a25d4a883d6b62e",
+      "replacements": [
+        {
+          "old": "from test2026.cuda.qwen38_5090.bf16_batch8_external_reference import capture_exact\n",
+          "new": "",
+          "count": 1
+        },
+        {
+          "old": "import characterize_case",
+          "new": "import characterize_case,compare_capture",
+          "count": 1
+        },
+        {
+          "old": "def main():",
+          "new": "def empty_packed_exact(actual,reference,read_actual,read_reference):\n    for value,batch in ((actual,4),(reference,8)):\n        logical=value['logical']\n        assert logical['physical_words_per_row']==106823680 and logical['reference_bf16_roundtrip_checked'] is False\n        assert logical['slots']==[0]*batch\n    result=compare_capture(actual,reference,[0,1,2,3],read_actual,read_reference)\n    assert result['all_states_and_vectors_exact'] is True\n    return result\n\n\ndef main():",
+          "count": 1
+        },
+        {
+          "old": "mode in (\"full\",\"packed\")",
+          "new": "mode==\"packed\"",
+          "count": 1
+        },
+        {
+          "old": "b4-cache-mode-characterization-preparation.json",
+          "new": "b4-packed-cache-characterization-preparation.json",
+          "count": 1
+        },
+        {
+          "old": "b4_cache_mode_characterization_prepared_gpu_unrun",
+          "new": "b4_packed_cache_characterization_prepared_gpu_unrun",
+          "count": 1
+        },
+        {
+          "old": "capture_exact(state,baseline['empty_state'],list(range(half*4,half*4+4)),read,baseline_vectors.__getitem__)",
+          "new": "empty_packed_exact(state,baseline['empty_state'],read,baseline_vectors.__getitem__)",
+          "count": 1
+        },
+        {
+          "old": "capture_exact(state,baseline['final_reset'],list(range(half*4,half*4+4)),read,baseline_vectors.__getitem__)",
+          "new": "empty_packed_exact(state,baseline['final_reset'],read,baseline_vectors.__getitem__)",
+          "count": 1
+        },
+        {
+          "old": "b4_cache_mode_characterization_collected_needs_replay",
+          "new": "b4_packed_cache_characterization_collected_needs_replay",
+          "count": 1
+        },
+        {
+          "old": "Actual first four-row short case repeated separately with B4 full-FP32-cache/BF16-values and B4 packed-BF16 cache.",
+          "new": "Actual packed-BF16 B4 first four-row short case only; full-cache companion is reused from the closed preserved prior archive.",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "test_b4_cache_mode_characterization.bat",
+      "source_sha256": "254b2be1e0d7a7e1243f8c526d712641b357302a1ff7621efd2caa4c15aa8a3f",
+      "target": "test_b4_packed_cache_characterization.bat",
+      "target_sha256": "a45c317a5e15e031bc2670ad8d7eb2d6d2db902d24453db13117c58df470ae03",
+      "replacements": [
+        {
+          "old": "probe_b4_cache_mode_characterization.py",
+          "new": "probe_b4_packed_cache_characterization.py",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "run_b4_cache_mode_characterization.py",
+      "source_sha256": "dbbebd8ef767d97f1f569e3b2e4928539f70803ba5ae9a6a186c0dafcd4e6a1d",
+      "target": "run_b4_packed_cache_characterization.py",
+      "target_sha256": "0ff62cfe3e8fa5c2ed5f808d519f8a68932feb00c7ad0f45107be21134d326ea",
+      "replacements": [
+        {
+          "old": "def main():",
+          "new": "def owned_common_inputs(p,prep,receipt):\n    job=p['partial_parent']['job'];assert job in p['parents']\n    return [prep,receipt]+[ROOT/n for n in p['new_files']]+[ROOT/'results'/(name+'-verified.json') for name in p['parents']]+[ROOT/'results'/(job+'-partial-verified.json')]\n\ndef main():",
+          "count": 1
+        },
+        {
+          "old": "common=[prep,receipt]+[ROOT/n for n in p['new_files']]+[ROOT/'results'/(name+'-verified.json') for name in p['parents']]",
+          "new": "common=owned_common_inputs(p,prep,receipt)",
+          "count": 1
+        },
+        {
+          "old": "JOB='b4-cache-mode-characterization-attempt1'",
+          "new": "JOB='b4-packed-cache-characterization-attempt1'",
+          "count": 1
+        },
+        {
+          "old": "b4-cache-mode-characterization-preparation.json",
+          "new": "b4-packed-cache-characterization-preparation.json",
+          "count": 1
+        },
+        {
+          "old": "for mode in ('full','packed'):",
+          "new": "for mode in ('packed',):",
+          "count": 1
+        },
+        {
+          "old": "test_b4_cache_mode_characterization.bat",
+          "new": "test_b4_packed_cache_characterization.bat",
+          "count": 1
+        },
+        {
+          "old": "b4_cache_mode_characterization_collected_needs_replay",
+          "new": "b4_packed_cache_characterization_collected_needs_replay",
+          "count": 2
+        },
+        {
+          "old": "Existing45reference controls plus5characterization input/state/vector/ID controls; no numerical-equivalence admission",
+          "new": "Existing50controls plus3explicit packed empty-state and partial-proof archive dependency faults; original full-reference gate unchanged",
+          "count": 1
+        },
+        {
+          "old": "Exclusive full/packed B4 same-input diagnosis after strict B8-reference failure; no timing admission.",
+          "new": "Exclusive packed-only retry after preserved representation-control failure; reuse actual closed full companion, no timing admission.",
+          "count": 1
+        }
+      ]
+    }
+  ],
+  "scope": "Only correct the packed empty/final-reset control to typed packed-vs-packed full hashes/raw vectors, run packed mode only, reuse actual full process from preserved failed archive. Original full-only strict gate and all model/math/request code unchanged."
+}
