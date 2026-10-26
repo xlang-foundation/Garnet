@@ -1,0 +1,88 @@
+{
+  "status": "private_actual_plugin_initialize_trace_only",
+  "files": [
+    {
+      "source": "src/backends/tensorrt/modelopt_fp8_plugin.cpp",
+      "target": "test2026/cuda/qwen38_5090/native_modelopt_init_trace_candidate/modelopt_fp8_plugin.cpp",
+      "source_sha256": "ec338161b9fba92373f163d229393d6fdf1afa13cf5446619e0cde2af1188776",
+      "target_sha256": "0ab1ad2ecbc1274ad92952394fb860e7fa77fe112a12bd1e790a6bb865027bbc",
+      "route": "fp8",
+      "factory": "CreateModelOptNVFP4Context",
+      "changes": [
+        {
+          "before": "#include \"modelopt_fp8_plugin.h\"",
+          "after": "#include \"modelopt_fp8_plugin.h\"\n#include \"modelopt_plugin_init_trace.h\"",
+          "count": 1
+        },
+        {
+          "before": "    try{if(!context_)context_=CreateModelOptNVFP4Context();return context_?0:1;}catch(...){return 1;}",
+          "after": "    return InitializeModelOptPluginContext(context_,[]{return CreateModelOptNVFP4Context();},\"fp8\",this,state_.rows,state_.columns,int(canonicalM32_));",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "src/backends/tensorrt/modelopt_nvfp4_plugin.cpp",
+      "target": "test2026/cuda/qwen38_5090/native_modelopt_init_trace_candidate/modelopt_nvfp4_plugin.cpp",
+      "source_sha256": "a05334d910a16a71db4d660413fdf38d3e1687709664904fffee808f145b3e52",
+      "target_sha256": "10cff931e2064aa0ef569f840798386c53d267d82e3f000c56fa47ccfe10a6a6",
+      "route": "nvfp4",
+      "factory": "CreateModelOptNVFP4Context",
+      "changes": [
+        {
+          "before": "#include \"modelopt_nvfp4_plugin.h\"",
+          "after": "#include \"modelopt_nvfp4_plugin.h\"\n#include \"modelopt_plugin_init_trace.h\"",
+          "count": 1
+        },
+        {
+          "before": "    try{if(!context_)context_=CreateModelOptNVFP4Context();return context_?0:1;}catch(...){return 1;}",
+          "after": "    return InitializeModelOptPluginContext(context_,[]{return CreateModelOptNVFP4Context();},\"nvfp4\",this,state_.rows,state_.columns,int(candidatePolicy_));",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "src/backends/tensorrt/modelopt_fp8_m128_plugin.cpp",
+      "target": "test2026/cuda/qwen38_5090/native_modelopt_init_trace_candidate/modelopt_fp8_m128_plugin.cpp",
+      "source_sha256": "98b619674f28bc89ad2f902d4d6362ebe46ceb55976edc300989c09745daf462",
+      "target_sha256": "2c78a9df431a0c963f6610cb3cbe91150caf894d984dc9463dd0820e60c429bc",
+      "route": "fp8_m128",
+      "factory": "CreateModelOptFP8M128Context",
+      "changes": [
+        {
+          "before": "#include \"modelopt_fp8_m128_plugin.h\"",
+          "after": "#include \"modelopt_fp8_m128_plugin.h\"\n#include \"modelopt_plugin_init_trace.h\"",
+          "count": 1
+        },
+        {
+          "before": "    try{if(!context_)context_=CreateModelOptFP8M128Context();return context_?0:1;}catch(...){return 1;}",
+          "after": "    return InitializeModelOptPluginContext(context_,[]{return CreateModelOptFP8M128Context();},\"fp8_m128\",this,state_.rows,state_.columns,128);",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "src/backends/tensorrt/modelopt_fp8_z128_plugin.cpp",
+      "target": "test2026/cuda/qwen38_5090/native_modelopt_init_trace_candidate/modelopt_fp8_z128_plugin.cpp",
+      "source_sha256": "4707bdf990b5f87f23f26a309804f56f89c2c262b20c3c5ede37533ac138d166",
+      "target_sha256": "45ea03491b9ac07b709c4f95f9cca225cda86857ce5a48ad0f3e20232c03b21a",
+      "route": "fp8_z128",
+      "factory": "CreateModelOptFP8Z128Context",
+      "changes": [
+        {
+          "before": "#include \"modelopt_fp8_z128_plugin.h\"",
+          "after": "#include \"modelopt_fp8_z128_plugin.h\"\n#include \"modelopt_plugin_init_trace.h\"",
+          "count": 1
+        },
+        {
+          "before": "    try{if(!context_)context_=CreateModelOptFP8Z128Context();return context_?0:1;}catch(...){return 1;}",
+          "after": "    return InitializeModelOptPluginContext(context_,[]{return CreateModelOptFP8Z128Context();},\"fp8_z128\",this,state_.rows,state_.columns,0x5a313238);",
+          "count": 1
+        }
+      ]
+    }
+  ],
+  "trace_header_sha256": "3287a18554910d7c864ccab5fcffdf649bce62bdab07c6fbfbd8d9187aaff5a7",
+  "algorithms_descriptors_workspace_wire_enqueue_and_factory_implementations_changed": false,
+  "production_source_installed_locally": false
+}

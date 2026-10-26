@@ -1,0 +1,50 @@
+"""CPU source composition and observed-event fault checks; no native/GPU calls."""
+from pathlib import Path
+import copy,hashlib,json,unittest
+from unittest.mock import patch
+from .modelopt_init_trace_contract import events,replay
+sha=lambda raw:hashlib.sha256(raw).hexdigest()
+class Controls(unittest.TestCase):
+    def test_four_private_derivations_only_replace_initialize(self):
+        m=Path(__file__).resolve().parent;repo=m.parents[2];p=json.loads((m/'evidence/modelopt-init-trace-source-derivation.json').read_bytes());self.assertEqual(len(p['files']),4);self.assertFalse(p['algorithms_descriptors_workspace_wire_enqueue_and_factory_implementations_changed'])
+        for row in p['files']:
+            source=repo/row['source'];original=m/'native_modelopt_init_trace_candidate'/('original-'+Path(row['source']).name+'.txt')
+            if not source.exists():self.assertIn(source.name,('modelopt_fp8_m128_plugin.cpp','modelopt_fp8_z128_plugin.cpp'))
+            raw=source.read_bytes() if source.exists() else original.read_bytes()
+            if sha(raw)==row['target_sha256']:raw=(m/'native_modelopt_init_trace_candidate'/('original-'+Path(row['source']).name+'.txt')).read_bytes()
+            self.assertEqual(sha(raw),row['source_sha256'])
+            for change in row['changes']:
+                before=change['before'].encode();self.assertEqual(raw.count(before),change['count']);raw=raw.replace(before,change['after'].encode())
+            self.assertEqual(raw,(repo/row['target']).read_bytes());self.assertEqual(sha(raw),row['target_sha256'])
+        raw=(m/'native_modelopt_init_trace_candidate/modelopt_plugin_init_trace.h').read_bytes();self.assertEqual(sha(raw),p['trace_header_sha256']);self.assertNotIn(b'cuda',raw.lower());self.assertNotIn(b'cublas',raw.lower());self.assertIn(b'std::strcmp(value,"1")==0',raw)
+        for row in json.loads((m/'evidence/modelopt-init-trace-cpu-source-copies.json').read_bytes())['files']:
+            raw=(repo/row['target']).read_bytes();self.assertEqual(sha(raw),row['sha256'])
+            if row['role']=='identical_CPU_interface':
+                source=repo/row['source']
+                if source.exists():self.assertEqual(raw,source.read_bytes())
+                else:self.assertIn(source.name,('modelopt_fp8_m128_plugin.h','modelopt_fp8_z128_plugin.h','modelopt_fp8_m128_canonical.h','modelopt_fp8_z128_canonical.h'))
+    def test_actual_call_envelope_and_route_failure(self):
+        begin={'id':1,'phase':'begin','route':'fp8_z128','instance':'000000000001','rows':6144,'columns':5120,'policy':0x5a313238,'context_present':False,'factory_called':False,'result':-1,'exception':False}
+        end=dict(begin,phase='end',factory_called=True,result=1)
+        rows=events('GARNET_MODELOPT_INIT '+json.dumps(begin)+'\nGARNET_MODELOPT_INIT '+json.dumps(end));q=replay(rows,expected_calls=1);self.assertTrue(q['actual_failed_plugin_route_observed']);self.assertEqual(q['failures'],[end])
+        for name,value in (('factory_called',False),('context_present',True),('instance','different'),('id',True),('route','nvfp4'),('exception',1)):
+            bad=copy.deepcopy(rows);bad[1][name]=value
+            with self.assertRaises(AssertionError):replay(bad)
+        with self.assertRaises(AssertionError):replay(rows[:1])
+        with self.assertRaises(AssertionError):replay(rows+rows)
+    def test_thread_interleaving_and_cached_success(self):
+        rows=[]
+        for i,route in ((1,'fp8'),(2,'nvfp4')):rows.append({'id':i,'phase':'begin','route':route,'instance':str(i),'rows':5120,'columns':6144 if i==1 else 17408,'policy':0,'context_present':True,'factory_called':False,'result':-1,'exception':False})
+        rows +=[dict(row,phase='end',result=0) for row in reversed(rows)]
+        q=replay(rows,expected_calls=2);self.assertEqual(q['cached_context_initializations'],2);self.assertEqual(q['factory_calls'],0);self.assertFalse(q['actual_failed_plugin_route_observed'])
+    def test_original_policy_provenance_through_exact_initialize_composition(self):
+        from . import test_fp8_z128_native_source as old
+        m=Path(__file__).resolve().parent;repo=m.parents[2];p=json.loads((m/'evidence/modelopt-init-trace-source-derivation.json').read_bytes());rows={row['source']:row for row in p['files']};previous=old.source
+        def source(name):
+            if name not in rows:return previous(name)
+            row=rows[name];raw=(m/'native_modelopt_init_trace_candidate'/('original-'+Path(name).name+'.txt')).read_bytes();self.assertEqual(sha(raw),row['source_sha256'])
+            actual=repo/name
+            if actual.exists():self.assertIn(sha(actual.read_bytes()),(row['source_sha256'],row['target_sha256']))
+            return raw
+        with patch.object(old,'source',source):old.SourceProvenance('test_exact_new_policy_derivation_and_untouched_legacy').debug()
+if __name__=='__main__':unittest.main()

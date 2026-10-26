@@ -1,0 +1,31 @@
+from pathlib import Path
+import hashlib,json
+work=Path(__file__).resolve().parent;repo=Path('D:/CantorAI/work/qwen38-5090');m=repo/'test2026/cuda/qwen38_5090';private=m/'native_modelopt_init_trace_candidate';sha=lambda raw:hashlib.sha256(raw).hexdigest();rows=[]
+for name,route,factory,policy in (
+    ('modelopt_fp8_plugin.cpp','fp8','CreateModelOptNVFP4Context','int(canonicalM32_)'),
+    ('modelopt_nvfp4_plugin.cpp','nvfp4','CreateModelOptNVFP4Context','int(candidatePolicy_)'),
+    ('modelopt_fp8_m128_plugin.cpp','fp8_m128','CreateModelOptFP8M128Context','128'),
+    ('modelopt_fp8_z128_plugin.cpp','fp8_z128','CreateModelOptFP8Z128Context','0x5a313238')):
+    source=repo/'src/backends/tensorrt'/name;raw=source.read_bytes();original=raw;include=b'#include "'+name.replace('.cpp','.h').encode()+b'"';old='    try{if(!context_)context_='+factory+'();return context_?0:1;}catch(...){return 1;}'
+    new='    return InitializeModelOptPluginContext(context_,[]{return '+factory+'();},"'+route+'",this,state_.rows,state_.columns,'+policy+');'
+    changes=[(include,include+b'\n#include "modelopt_plugin_init_trace.h"'),(old.encode(),new.encode())]
+    for before,after in changes:assert raw.count(before)==1;raw=raw.replace(before,after)
+    target=private/name;assert not target.exists() or target.read_bytes()==raw
+    if not target.exists():target.write_bytes(raw)
+    rows.append({'source':source.relative_to(repo).as_posix(),'target':target.relative_to(repo).as_posix(),'source_sha256':sha(original),'target_sha256':sha(raw),'route':route,'factory':factory,'changes':[{'before':a.decode(),'after':b.decode(),'count':1} for a,b in changes]})
+result={'status':'private_actual_plugin_initialize_trace_only','files':rows,'trace_header_sha256':sha((private/'modelopt_plugin_init_trace.h').read_bytes()),'algorithms_descriptors_workspace_wire_enqueue_and_factory_implementations_changed':False,'production_source_installed_locally':False}
+target=m/'evidence/modelopt-init-trace-source-derivation.json';raw=json.dumps(result,indent=2).encode();assert not target.exists() or target.read_bytes()==raw
+if not target.exists():target.write_bytes(raw)
+print(json.dumps({'status':result['status'],'private_sources':5,'production_source_installed_locally':False}))
+copies=[]
+for row in rows:
+    source=repo/row['source'];target=private/('original-'+source.name+'.txt');raw=source.read_bytes();assert sha(raw)==row['source_sha256']
+    assert not target.exists() or target.read_bytes()==raw
+    if not target.exists():target.write_bytes(raw)
+    copies.append({'source':source.relative_to(repo).as_posix(),'target':target.relative_to(repo).as_posix(),'sha256':sha(raw),'role':'immutable_original_CPP'})
+for name in ('modelopt_fp8_plugin.h','modelopt_nvfp4_plugin.h','modelopt_fp8_m128_plugin.h','modelopt_fp8_z128_plugin.h','modelopt_fp8_m128_canonical.h','modelopt_fp8_z128_canonical.h','modelopt_cublaslt.h','modelopt_fp8.cuh','modelopt_nvfp4.cuh'):
+    source=repo/('src/cuda/' if name.endswith('.cuh') else 'src/backends/tensorrt/')/name;target=private/name;raw=source.read_bytes();assert not target.exists() or target.read_bytes()==raw
+    if not target.exists():target.write_bytes(raw)
+    copies.append({'source':source.relative_to(repo).as_posix(),'target':target.relative_to(repo).as_posix(),'sha256':sha(raw),'role':'identical_CPU_interface'})
+target=m/'evidence/modelopt-init-trace-cpu-source-copies.json';raw=json.dumps({'status':'exact_private_CPU_interfaces_and_originals','files':copies},indent=2).encode();assert not target.exists() or target.read_bytes()==raw
+if not target.exists():target.write_bytes(raw)

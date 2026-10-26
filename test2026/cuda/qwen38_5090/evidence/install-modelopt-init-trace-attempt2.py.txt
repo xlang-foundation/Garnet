@@ -1,0 +1,42 @@
+from pathlib import Path
+import argparse,hashlib,io,json,sys,zipfile
+ROOT=Path('D:/CantorAI/5090-study-20261023');M=ROOT/'Garnet/test2026/cuda/qwen38_5090';sys.path.insert(0,str(M));from run_bf16_low_batch_native_build import idle
+sha=lambda raw:hashlib.sha256(raw).hexdigest();parser=argparse.ArgumentParser();parser.add_argument('--sha256',required=True);a=parser.parse_args();bundle=ROOT/'results/modelopt-init-trace-native-deployment-attempt2-v2.zip';receipt=ROOT/'results/modelopt-init-trace-native-install-attempt2.json';backup=ROOT/'results/modelopt-init-trace-methods-before-attempt2.zip';assert sha(bundle.read_bytes())==a.sha256 and not receipt.exists() and not backup.exists();idle()
+with zipfile.ZipFile(bundle) as z:
+    manifest=json.loads(z.read('install-manifest.json'));assert z.testzip() is None and len(z.namelist())==len(set(z.namelist()))==len(manifest['files'])+1
+    proposal='results/modelopt-init-trace-native-proposal-attempt2.json';p=json.loads(z.read(proposal));assert p['status']=='modelopt_init_trace_native_build_proposed_unrun' and p['expected_cpu_test_count']==81 and len(p['candidate_files'])==38 and len(p['methods'])==33
+    assert set(manifest['files'])==set(p['methods'])|{proposal,p['bundle']} and len(p['expected_method_updates'])==1
+    for name,h in p['base_files'].items():assert sha((ROOT/name).read_bytes())==h,('baseline drift',name)
+    for name,h in p['runtime'].items():assert sha((ROOT/'build/bin'/name).read_bytes())==h
+    for name,h in p['environment'].items():assert sha(Path(name).read_bytes())==h
+    for name,h in p['checkpoints'].items():assert sha((ROOT/name).read_bytes())==h
+    for name,h in p['candidate_base'].items():
+        target=ROOT/'Garnet'/name
+        if h is None:assert not target.exists()
+        else:assert sha(target.read_bytes())==h
+    source_raw=z.read(p['bundle']);assert sha(source_raw)==p['bundle_sha256']
+    with zipfile.ZipFile(io.BytesIO(source_raw)) as source:
+        assert source.testzip() is None and len(source.namelist())==len(set(source.namelist()))==38 and set(source.namelist())==set(p['candidate_files'])
+        for name,h in p['candidate_files'].items():assert sha(source.read(name))==h
+    pending=[];same=[];originals={}
+    for name,h in manifest['files'].items():
+        target=ROOT/name;assert target.resolve().is_relative_to(M.resolve()) or name in (proposal,p['bundle']);assert target.parent.is_dir() and '..' not in Path(name).parts
+        parent=target.parent
+        while parent!=ROOT:
+            assert parent.resolve().is_relative_to(ROOT.resolve()) and not(getattr(parent.lstat(),'st_file_attributes',0)&0x400);parent=parent.parent
+        raw=z.read(name);assert sha(raw)==h
+        if name in p['methods']:assert h==p['methods'][name]
+        if target.exists():
+            before=target.read_bytes()
+            if before==raw:same.append(name);continue
+            assert name in p['expected_method_updates'] and sha(before)==p['expected_method_updates'][name];originals[name]=before
+        pending.append((name,target,raw))
+    assert set(originals)==set(p['expected_method_updates'])
+    with zipfile.ZipFile(backup,'x',zipfile.ZIP_DEFLATED) as saved:
+        for name,raw in originals.items():saved.writestr(name,raw)
+    for name,target,raw in pending:
+        if name in originals:assert target.read_bytes()==originals[name];target.write_bytes(raw)
+        else:
+            with target.open('xb') as stream:stream.write(raw)
+        assert target.read_bytes()==raw
+receipt.write_bytes(json.dumps({'status':'modelopt_init_trace_attempt2_methods_installed_production_source_unmodified','deployment_sha256':a.sha256,'new_or_updated_targets':len(pending),'unchanged_targets':same,'original_methods_backup_sha256':sha(backup.read_bytes()),'expected_method_updates':p['expected_method_updates'],'candidate_production_source_installed':False},indent=2).encode());print(receipt.read_text())

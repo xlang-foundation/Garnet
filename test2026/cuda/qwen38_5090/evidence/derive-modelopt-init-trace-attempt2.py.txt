@@ -1,0 +1,11 @@
+from pathlib import Path
+import hashlib,json
+work=Path(__file__).resolve().parent;m=Path('D:/CantorAI/work/qwen38-5090/test2026/cuda/qwen38_5090');sha=lambda raw:hashlib.sha256(raw).hexdigest();rows=[]
+for base,target,extra in (
+ ('prepare_modelopt_init_trace_native_build.py','prepare_modelopt_init_trace_native_build_attempt2.py',[('modelopt-init-trace-native-proposal.json','modelopt-init-trace-native-proposal-attempt2.json')]),
+ ('run_modelopt_init_trace_native_build.py','run_modelopt_init_trace_native_build_attempt2.py',[('modelopt-init-trace-native-build-attempt1','modelopt-init-trace-native-build-attempt2'),('garnet-native-modelopt-init-trace-attempt1.dll','garnet-native-modelopt-init-trace-attempt2.dll')]),
+ ('verify_modelopt_init_trace_native_build.py','verify_modelopt_init_trace_native_build_attempt2.py',[('modelopt-init-trace-native-build-attempt1','modelopt-init-trace-native-build-attempt2')])):
+    raw=(m/base).read_bytes();original=raw;changes=[('modelopt-init-trace-native-build-preparation.json','modelopt-init-trace-native-build-preparation-attempt2.json')]+extra
+    for before,after in changes:assert raw.count(before.encode())==1;raw=raw.replace(before.encode(),after.encode())
+    target=m/target;assert not target.exists();target.write_bytes(raw);rows.append({'base':base,'target':target.name,'base_sha256':sha(original),'target_sha256':sha(raw),'changes':[{'before':a,'after':b,'count':1} for a,b in changes]})
+(m/'evidence/modelopt-init-trace-native-build-attempt2-derivation.json').write_bytes(json.dumps({'status':'distinct_attempt_after_preserved_CPU_provenance_failure','files':rows,'native_candidate_source_changed':False},indent=2).encode());print(json.dumps({'derived_methods':len(rows)}))
