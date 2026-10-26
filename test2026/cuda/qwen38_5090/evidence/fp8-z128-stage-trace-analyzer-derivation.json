@@ -1,0 +1,29 @@
+{
+  "base": "analyze_fp8_z128_stage_failure.py",
+  "target": "analyze_fp8_z128_stage_trace_failure.py",
+  "base_sha256": "ba4d664918c15ed3d5a16a4f286906ecbaed9cadf41e2ee47142f02c730792ce",
+  "target_sha256": "c1dacfab9aade1daa4830bf8d69b6d2acd5eeecc4a05990a59bfe81d4cd70f18",
+  "changes": [
+    {
+      "before": "JOB='fp8-z128-stage-witness-attempt1'",
+      "after": "JOB='fp8-z128-stage-trace-attempt1'"
+    },
+    {
+      "before": "assert proof['status']=='fp8_z128_stage_failure_or_remaining_difference_preserved' and len(proof['policy_controls'])==10 and proof['profiles_observed']==2 and proof['complete_finite_array_entries_verified']==203",
+      "after": "assert proof['status']=='fp8_z128_same_DLL_initialization_trace_preserved' and proof['workflow_exit_code']==1 and proof['profiles_observed']==2 and proof['complete_finite_array_entries']==203 and proof['trace_bytes']>0"
+    },
+    {
+      "before": "'status':'fp8_z128_failed_T128_build_with_exact_partial_T32_witness_replayed'",
+      "after": "'status':'fp8_z128_traced_T128_build_failure_with_exact_partial_T32_witness_replayed'"
+    },
+    {
+      "before": "'completed_policy_controls':10",
+      "after": "'completed_policy_controls':0,'linked_parent_fresh_policy_controls':10"
+    },
+    {
+      "before": "Tenfreshpolicygraphs built/rejected asplanned withoutgraphinference.",
+      "after": "Tenfreshpolicygraphs areclosed only inlinked originalfailedstageparent, notreexecuted here. SameDLL cuBLASLt initializationtrace preservesfailure beforeAlgoCheck; exactguard/candidateopaque cause remainsunproven."
+    }
+  ],
+  "scope": "Same strict partialT32 primary/state/repeat/all200baseline arrays; trace has0newpolicycontrols,10linked parent controls. NoT128model/performance admission."
+}

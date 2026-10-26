@@ -1,0 +1,69 @@
+{
+  "status": "fp8_z128_traced_T128_build_failure_with_exact_partial_T32_witness_replayed",
+  "archive_sha256": "47a28a878771e342419231ee802d4798f8f7a33e64737a23b71148e9bf24a18d",
+  "archive_bytes": 174652941,
+  "archive_members": 228,
+  "proof_pair_sha256": "39de5809ef16448716cb7a00e4574945e4ad14774b1793a1687164a8adfa88d5",
+  "analysis_pair_sha256": "7d42fb819e025d114726fe36a38b8535be4a4470116a05fc3dbd891846ed485d",
+  "candidate_library_sha256": "6d4abad7ac368ce4e5ac99b46bd3afd53e6d73e0c22c4754c8ffc0158f57bebe",
+  "CPU_tests": 32,
+  "remote_CPU_seconds": 2.93,
+  "source_pins": 912,
+  "installed_pins": 932,
+  "trace_observation": {
+    "status": "same_DLL_warm_T128_initialization_trace_replayed",
+    "trace_sha256": "5381d06d192d7267a6e75bb41a482a1f7057cf5079b538ea549345853acc9b05",
+    "trace_bytes": 86875,
+    "final_heuristic_query_and_cleanup": [
+      "[2026-10-27 02:55:48][cublasLt][2340][Api][cublasLtMatmulAlgoGetHeuristic] Adesc=[type=R_8F_E4M3 rows=5120 cols=6144 ld=5120] Bdesc=[type=R_8F_E4M3 rows=5120 cols=32 ld=5120] Cdesc=[type=R_16BF rows=6144 cols=32 ld=6144] Ddesc=[type=R_16BF rows=6144 cols=32 ld=6144] preference=[maxWavesCount=0.0 maxWorkspaceSizeinBytes=4194304] computeDesc=[computeType=COMPUTE_32F scaleType=R_32F transa=OP_T]",
+      "[2026-10-27 02:55:48][cublasLt][2340][Info][cublasLtMatmulAlgoGetHeuristic]  heuristicResults=[67,67,35,35,35,35,67]",
+      "[2026-10-27 02:55:48][cublasLt][2340][Api][cublasLtMatmulPreferenceDestroy] matmulPref=0X1A8AEEE0B50",
+      "[2026-10-27 02:55:48][cublasLt][2340][Api][cublasLtMatrixLayoutDestroy] matLayout=0X1A65B1A1DE0",
+      "[2026-10-27 02:55:48][cublasLt][2340][Api][cublasLtMatrixLayoutDestroy] matLayout=0X1A65B1A2560",
+      "[2026-10-27 02:55:48][cublasLt][2340][Api][cublasLtMatrixLayoutDestroy] matLayout=0X1A65B1A17E0",
+      "[2026-10-27 02:55:48][cublasLt][2340][Api][cublasLtMatrixLayoutDestroy] matLayout=0X1A65B1A20E0",
+      "[2026-10-27 02:55:48][cublasLt][2340][Api][cublasLtMatrixLayoutDestroy] matLayout=0X1A65B1A1D60",
+      "[2026-10-27 02:55:48][cublasLt][2340][Api][cublasLtMatmulDescDestroy] matmulDesc=0X1A8E1EA82F0",
+      "[2026-10-27 02:55:48][cublasLt][2340][Api][cublasLtDestroy] lightHandle=0X1A387938050",
+      "[2026-10-27 02:55:48][cublasLt][2340][Api][cublasLtDestroy] lightHandle=0X1A387938050"
+    ],
+    "observed_heuristic_IDs": [
+      67,
+      67,
+      35,
+      35,
+      35,
+      35,
+      67
+    ],
+    "M32_canonical_geometry": {
+      "K": 5120,
+      "N": 6144,
+      "M": 32,
+      "workspace_preference_bytes": 4194304
+    },
+    "M128_AlgoCheck_seen_after_final_heuristic": false,
+    "context_destroyed_after_final_heuristic": true,
+    "inference": "Failure is consistent with a Z-context selection guard before the M128 AlgoCheck. API logger does not expose full opaque candidate bytes or identify the exact rejected guard. No API error or OOM root cause is established by this trace.",
+    "exact_failure_guard_or_candidate_opaque_established": false,
+    "model_or_quality_or_performance_qualified": false
+  },
+  "old_T32_arrays_compared": 200,
+  "source_runtime_sdk_checkpoint_restored": true,
+  "original_checker_failure_preserved": true,
+  "linked_checker_correction_scope": "Only frozen prompt fixture lookup in verified linked parent archive; original checker/preparation/archive immutable.",
+  "model_or_quality_or_performance_qualified": false,
+  "two_times_target_achieved": false,
+  "next_plan": {
+    "status": "full_opaque_selection_audit_next_not_relaxed_gates",
+    "steps": [
+      "Keep same native28 DLL and original failed stage/trace archives immutable. Recheck no live GPU owner and restored baseline before next exclusive diagnostic.",
+      "First check embedded Python ctypes availability using a CPU-only import. Build a separate remote diagnostic DLL that compiles the actual pinned typed Z helper in an observed translation unit, not a replacement implementation. Wrappers must call real cuBLASLt heuristic/config/check APIs once unchanged and record statuses, all returned64-byte opaque candidates, workspace and reached checks; never substitute algorithms or launch model matmuls.",
+      "Use a distinct exact-derived collector to call this observer after the reproduced mainT128 build failure in the same process/CUDA context. A separate cold-process control distinguishes cold/warm selection. Audit can perturb caches, so record placement and retain original uninstrumented reproduction; do not claim direct in-helper attribution unless evidence establishes it.",
+      "Only evidence of the exact guard/full candidate bytes can justify selecting a later identical pinned configuration or another source change. Keep full opaque/device/library/shape/workspace gates; qualify actual helper/plugin and whole DLL transaction before rerunning10policies/eight real128 ordinary-primary/stage profiles.",
+      "After exact stage gates, run strict full3968+128 six-case state/vector/ID and805quality before matched HTTP repetitions and strongest feasible tuned/MTP references. Original2xdecodeANDthroughput, halfTTFT extra, INT4/4B and B8 work remain open."
+    ],
+    "model_or_quality_or_performance_qualified": false,
+    "two_times_target_achieved": false
+  }
+}

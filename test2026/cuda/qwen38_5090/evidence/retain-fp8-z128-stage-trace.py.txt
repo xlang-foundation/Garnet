@@ -1,0 +1,62 @@
+"""Retain same-DLL trace, original checker omission and linked-checker repair."""
+from pathlib import Path
+import hashlib,json,re,zipfile
+work=Path(__file__).resolve().parent;out=work.parent/'outputs';repo=Path('D:/CantorAI/work/qwen38-5090');m=repo/'test2026/cuda/qwen38_5090';e=m/'evidence';JOB='fp8-z128-stage-trace-attempt1';PREFIX='Garnet/test2026/cuda/qwen38_5090/';paths=[];sha=lambda raw:hashlib.sha256(raw).hexdigest()
+
+def keep(name,raw):
+    target=e/name;assert not target.exists() or target.read_bytes()==raw,target
+    if not target.exists():target.write_bytes(raw)
+    paths.append(target.relative_to(repo).as_posix())
+
+proof=(out/(JOB+'-verified.json')).read_bytes();analysis=(out/(JOB+'-analysis.json')).read_bytes();q=json.loads(proof);a=json.loads(analysis)
+assert proof==(out/(JOB+'-remote-verified.json')).read_bytes() and analysis==(out/(JOB+'-remote-analysis.json')).read_bytes()
+assert q['status']=='fp8_z128_same_DLL_initialization_trace_preserved' and q['native_exit_code']==q['workflow_exit_code']==1 and q['profiles_observed']==2 and q['complete_finite_array_entries']==203
+assert a['unchanged_old_T32_baseline_arrays_compared']==200 and a['partial_output_f32_words_replayed']==29515776 and a['completed_policy_controls']==0
+archive=out/(JOB+'-evidence.zip');assert sha(archive.read_bytes())==q['archive_sha256']
+with zipfile.ZipFile(archive) as z:
+    manifest=json.loads(z.read('evidence-manifest.json'));assert z.testzip() is None and len(z.namelist())==len(set(z.namelist()))==len(manifest['files'])+1
+    for name,h in manifest['files'].items():assert sha(z.read(name))==h
+    base='results/'+JOB+'/';praw=z.read(PREFIX+'evidence/fp8-z128-stage-trace-preparation.json');p=json.loads(praw);w=json.loads(z.read(base+'workflow.json'))
+    keep('fp8-z128-stage-trace-preparation.json',praw);keep(JOB+'-evidence-manifest.json',z.read('evidence-manifest.json'))
+    for name in z.namelist():
+        if name.startswith(base) and name.endswith(('.json','.jsonl','.log','.txt')):keep(JOB+'-'+name.removeprefix(base).replace('/','-'),z.read(name))
+    for name,h in p['new_files'].items():
+        path=repo/name.removeprefix('Garnet/');assert sha(path.read_bytes())==h;paths.append(path.relative_to(repo).as_posix())
+    trace=z.read(base+'native-cublaslt.log');assert sha(trace)==q['trace_sha256'];lines=trace.decode().splitlines()
+    query=[i for i,line in enumerate(lines) if '[Api][cublasLtMatmulAlgoGetHeuristic]' in line][-1]
+    final=lines[query:];assert 'rows=5120 cols=6144' in final[0] and 'cols=32' in final[0] and 'maxWorkspaceSizeinBytes=4194304' in final[0]
+    assert 'heuristicResults=[67,67,35,35,35,35,67]' in final[1] and any('[cublasLtDestroy]' in line for line in final) and not any('[cublasLtMatmulAlgoCheck]' in line for line in final)
+    observation={'status':'same_DLL_warm_T128_initialization_trace_replayed','trace_sha256':q['trace_sha256'],'trace_bytes':len(trace),'final_heuristic_query_and_cleanup':final,'observed_heuristic_IDs':[67,67,35,35,35,35,67],'M32_canonical_geometry':{'K':5120,'N':6144,'M':32,'workspace_preference_bytes':4194304},'M128_AlgoCheck_seen_after_final_heuristic':False,'context_destroyed_after_final_heuristic':True,'inference':'Failure is consistent with a Z-context selection guard before the M128 AlgoCheck. API logger does not expose full opaque candidate bytes or identify the exact rejected guard. No API error or OOM root cause is established by this trace.','exact_failure_guard_or_candidate_opaque_established':False,'model_or_quality_or_performance_qualified':False}
+    keep('fp8-z128-stage-trace-observation.json',json.dumps(observation,indent=2).encode())
+    remote_cpu=float(re.search(rb'Ran 32 tests in ([0-9.]+)s',z.read(base+'cpu-ledger/commands.log')).group(1))
+for suffix in ('-verified.json','-remote-verified.json','-analysis.json','-remote-analysis.json','-local-replay.log','-local-analysis.log','-remote-replay.log'):keep(JOB+suffix,(out/(JOB+suffix)).read_bytes())
+keep('fp8-z128-stage-trace-original-checker-failure.log',(out/'fp8-z128-stage-trace-original-checker-failure.log').read_bytes())
+for name in ('fp8-z128-stage-trace-package.json','fp8-z128-stage-trace-install.json'):keep(name,(work/name).read_bytes())
+for path in (work/'fp8-z128-stage-trace-local-cpu-ledger').iterdir():
+    if path.is_file():keep('fp8-z128-stage-trace-local-cpu-'+path.name,path.read_bytes())
+for name in ('derive-fp8-z128-stage-trace.py','install-fp8-z128-stage-trace.py','retain-fp8-z128-stage-trace.py'):keep(name+'.txt',(work/name).read_bytes())
+for name in ('verify_fp8_z128_stage_trace_linked.py','analyze_fp8_z128_stage_trace_failure.py','evidence/fp8-z128-stage-trace-checker-derivation.json','evidence/fp8-z128-stage-trace-analyzer-derivation.json'):
+    paths.append((m/name).relative_to(repo).as_posix())
+with zipfile.ZipFile(work/(JOB+'-transport.zip')) as z:transport=json.loads(z.read('transport.json'))
+assert transport['original_sha256']==q['archive_sha256'] and transport['original_proof_sha256']==sha(proof)
+keep(JOB+'-transport-receipt.json',json.dumps({'transport_sha256':sha((work/(JOB+'-transport.zip')).read_bytes()),'transport_bytes':(work/(JOB+'-transport.zip')).stat().st_size,'exact_reconstruction':transport},indent=2).encode())
+plan={'status':'full_opaque_selection_audit_next_not_relaxed_gates','steps':[
+ 'Keep same native28 DLL and original failed stage/trace archives immutable. Recheck no live GPU owner and restored baseline before next exclusive diagnostic.',
+ 'First check embedded Python ctypes availability using a CPU-only import. Build a separate remote diagnostic DLL that compiles the actual pinned typed Z helper in an observed translation unit, not a replacement implementation. Wrappers must call real cuBLASLt heuristic/config/check APIs once unchanged and record statuses, all returned64-byte opaque candidates, workspace and reached checks; never substitute algorithms or launch model matmuls.',
+ 'Use a distinct exact-derived collector to call this observer after the reproduced mainT128 build failure in the same process/CUDA context. A separate cold-process control distinguishes cold/warm selection. Audit can perturb caches, so record placement and retain original uninstrumented reproduction; do not claim direct in-helper attribution unless evidence establishes it.',
+ 'Only evidence of the exact guard/full candidate bytes can justify selecting a later identical pinned configuration or another source change. Keep full opaque/device/library/shape/workspace gates; qualify actual helper/plugin and whole DLL transaction before rerunning10policies/eight real128 ordinary-primary/stage profiles.',
+ 'After exact stage gates, run strict full3968+128 six-case state/vector/ID and805quality before matched HTTP repetitions and strongest feasible tuned/MTP references. Original2xdecodeANDthroughput, halfTTFT extra, INT4/4B and B8 work remain open.'
+ ],'model_or_quality_or_performance_qualified':False,'two_times_target_achieved':False}
+keep('fp8-z128-stage-trace-next-plan.json',json.dumps(plan,indent=2).encode())
+result={'status':a['status'],'archive_sha256':q['archive_sha256'],'archive_bytes':archive.stat().st_size,'archive_members':len(manifest['files'])+1,'proof_pair_sha256':sha(proof),'analysis_pair_sha256':sha(analysis),'candidate_library_sha256':p['candidate_library_sha256'],'CPU_tests':32,'remote_CPU_seconds':remote_cpu,'source_pins':len(p['files']),'installed_pins':len(p['installed_files']),'trace_observation':observation,'old_T32_arrays_compared':200,'source_runtime_sdk_checkpoint_restored':True,'original_checker_failure_preserved':True,'linked_checker_correction_scope':'Only frozen prompt fixture lookup in verified linked parent archive; original checker/preparation/archive immutable.','model_or_quality_or_performance_qualified':False,'two_times_target_achieved':False,'next_plan':plan}
+raw=json.dumps(result,indent=2).encode();keep('fp8-z128-stage-trace-closure.json',raw);(out/'Garnet-FP8-Z128-Initialization-Trace-Verified.json').write_bytes(raw)
+title='Same native28 DLL reproduces T128 initialization failure; trace narrows selection boundary'
+text='\n\n### 2026-10-26 — '+title+'\n\n'
+text+='Distinct exact-derived owner/bat retain same DLL/collector/graph order and all numerical gates. Only runtime additions: CUBLASLT_LOG_LEVEL=5, MASK=31, unique owned log path, as documented at https://docs.nvidia.com/cuda/cublas/index.html#cublaslt-logging . Ten alreadyclosed policy processes omitted explicitly; main frontend10rejections and originalstage sequence retained.32CPU controls pass local4.377s/remote'+str(remote_cpu)+'s. No cache capacity/selection/math/SDK changes or benchmark admission.\n\n'
+text+='Reproduced same firstmainL0T128ordinary build failure after twoL0T32 profiles.86875-byte API trace final Z query uses actualM32 K5120/N6144/4MiB preference and reports IDs[67,67,35,35,35,35,67], then destroys descriptors/context without logged M128AlgoCheck. This narrows initialization to selection-before-check; exact rejected guard/full opaque bytes and root cause remain unproven. No OOM or numerical divergence claim.\n\n'
+text+='Original verifier failed because frozen prompt fixture lives only in linked parent archive. Original checker/preparation/evidence preserved; separate exact-derived linked checker corrects lookup and verifies fixture hash, no gate relaxation. Corrected checker passes bothmachines with identical proof '+sha(proof)+'. Separate strictpartialT32 replay also passes both with identical proof '+sha(analysis)+':203finite entries/29,515,776F32 words, exactreadonly/carriedstate/repeats/ordinary-diagnostic primary/all200priorbaseline arrays. No T128graph inference orfullmodel/quality/performance qualification.\n\n'
+text+='Original archive '+q['archive_sha256']+' ('+str(archive.stat().st_size)+'bytes/'+str(len(manifest['files'])+1)+'members) reconstructed byteexact fromdeduptransport andfullCRC/manifestreplayed.912source/932installed pins,8old/20new nativefiles,baseline1a1d DLL/runtime/SDK/checkpoints/ownedcache restored. Original checker traceback, repaired checker derivation, all raw logs/resource samples and proof pairs retained. Next audit actualtypedhelper opaquechoices in samewarmCUDAcontext before any selectionchange. Full4K/805quality/HTTP/repetitions/strongestMTPrefs/2xdecodeANDthroughput/halfTTFTextra/INT4/4B/B8 goals remain active; charts unchanged.\n'
+for name in ('qwen38-5090-development-log.md','qwen38-5090-implementation-task.md'):
+    target=repo/'docs/research'/name;before=target.read_bytes();assert title.encode() not in before;target.write_bytes(before+text.encode());paths.append(target.relative_to(repo).as_posix())
+(work/'fp8-z128-stage-trace-retained-paths.json').write_bytes(json.dumps(sorted(set(paths)),indent=2).encode())
+print(json.dumps({'status':result['status'],'paths':len(set(paths)),'proof_pair_sha256':sha(proof),'analysis_pair_sha256':sha(analysis),'model_or_performance_qualified':False}))

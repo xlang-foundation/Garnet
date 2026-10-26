@@ -1,0 +1,11 @@
+{
+  "status": "postfailure_checker_lookup_correction_only",
+  "base": "verify_fp8_z128_stage_trace.py",
+  "target": "verify_fp8_z128_stage_trace_linked.py",
+  "base_sha256": "0fd031290f8834b828b7f99436d9f3e1f7f8ce54644b15fa0b612d0986f817ce",
+  "target_sha256": "15f85923d82ac438ea0d0d5ace3e0514b88fac8a760d907200473dd98410ed91",
+  "before": "        report=json.loads(z.read(base+'native/report.json'));assert report['candidate_library_sha256']==p['candidate_library_sha256'] and report['input_ids']==json.loads(z.read(PREFIX+'evidence/native-host-stage-cases.json'))['cases'][0]['prompt_ids'][:128]",
+  "after": "        with zipfile.ZipFile(args.proofs/'fp8-z128-stage-witness-attempt1-evidence.zip') as linked:\n            case_raw=linked.read(PREFIX+'evidence/native-host-stage-cases.json');assert sha(case_raw)==p['files'][PREFIX+'evidence/native-host-stage-cases.json']\n        report=json.loads(z.read(base+'native/report.json'));assert report['candidate_library_sha256']==p['candidate_library_sha256'] and report['input_ids']==json.loads(case_raw)['cases'][0]['prompt_ids'][:128]",
+  "archive_or_hardware_evidence_modified": false,
+  "scope": "Frozen case lives in hash-checked linked original failed-stage archive. Preserve original checker/packaging failure. No gate or measurement relaxation."
+}

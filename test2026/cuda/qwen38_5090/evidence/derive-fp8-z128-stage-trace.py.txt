@@ -1,0 +1,31 @@
+"""Derive separate logged diagnostic, leaving failed integrated stage immutable."""
+from pathlib import Path
+import hashlib,json
+repo=Path('D:/CantorAI/work/qwen38-5090');m=repo/'test2026/cuda/qwen38_5090';sha=lambda raw:hashlib.sha256(raw).hexdigest();rows=[]
+
+def derive(old,new,changes):
+    before=(m/old).read_bytes();raw=before
+    for left,right in changes:
+        left=left.encode();right=right.encode();assert raw.count(left)==1,(old,left);raw=raw.replace(left,right)
+    target=m/new;assert not target.exists();target.write_bytes(raw)
+    rows.append({'base':old,'target':new,'base_sha256':sha(before),'target_sha256':sha(raw),'changes':[{'before':a,'after':b} for a,b in changes]})
+
+owner=(m/'run_fp8_z128_stage_witness.py').read_bytes().decode()
+start=owner.index('        for index,policy in enumerate(POLICY_VALUES):')
+end=owner.index("        os.environ['GARNET_FP8_GDN_Z128_CANONICAL']='1'",start)
+derive('run_fp8_z128_stage_witness.py','run_fp8_z128_stage_trace.py',[
+ ('Exclusive native28 Z stage witness and fresh-process policy frontend controls.','Exclusive same-DLL cuBLASLt initialization trace; no performance admission.'),
+ ("JOB='fp8-z128-stage-witness-attempt1'","JOB='fp8-z128-stage-trace-attempt1'"),
+ ('evidence/fp8-z128-stage-witness-preparation.json','evidence/fp8-z128-stage-trace-preparation.json'),
+ ('fp8_z128_stage_witness_prepared_gpu_unrun','fp8_z128_stage_trace_prepared_gpu_unrun'),
+ ('29CPU old/new source/nativebuild/real128/context/log/complete-array/policy/owner/readback controls; no GPU','32CPU original29 plus trace derivation/environment/scope contracts; no GPU'),
+ (owner[start:end],"        w['fresh_policy_controls_omitted']='Ten controls closed by original failed-stage parent; diagnostic repeats only unchanged main collector with API logging.';save()\n"),
+ ('test_fp8_z128_stage_witness.bat','test_fp8_z128_stage_trace.bat'),
+ ('Actual real first128prompt token GDN layer0/1 common input; ordinary versus diagnostic primary witness before1x128vs4x32 stage attribution. No model or timing admission','Same frozen main collector and graph order, CUBLASLT_LOG_LEVEL=5/MASK=31, same native28 DLL. Initialization diagnostics only, no timing or benchmark admission'),
+ ("w['status']='fp8_z128_stage_witness_collected_needs_replay'","w['status']='fp8_z128_stage_trace_collected_needs_replay'"),
+ ("w['status']='fp8_z128_stage_remaining_difference_preserved'","w['status']='fp8_z128_stage_trace_remaining_difference_preserved'")])
+derive('test_fp8_z128_stage_witness.bat','test_fp8_z128_stage_trace.bat',[
+ ('set PYTHONDONTWRITEBYTECODE=1','set CUBLASLT_LOG_LEVEL=5\nset CUBLASLT_LOG_MASK=31\nset "CUBLASLT_LOG_FILE=%~1-cublaslt.log"\nset PYTHONDONTWRITEBYTECODE=1')])
+raw=json.dumps({'status':'exact_same_DLL_collector_trace_derivations','native_or_collector_modified':False,'logging_source':'https://docs.nvidia.com/cuda/cublas/index.html#cublaslt-logging','derivations':rows},indent=2).encode()
+target=m/'evidence/fp8-z128-stage-trace-derivation.json';assert not target.exists();target.write_bytes(raw)
+print(json.dumps({'status':'derived','files':len(rows),'derivation_sha256':sha(raw)}))
