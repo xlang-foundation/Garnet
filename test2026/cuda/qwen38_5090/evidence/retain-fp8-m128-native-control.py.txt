@@ -1,0 +1,61 @@
+"""Retain owned source, exact CPU/native receipts, and append-only paper notes."""
+from pathlib import Path
+import hashlib,json,zipfile
+work=Path(__file__).resolve().parent;out=work.parent/'outputs';repo=Path('D:/CantorAI/work/qwen38-5090');m=repo/'test2026/cuda/qwen38_5090';e=m/'evidence';paths=[];sha=lambda raw:hashlib.sha256(raw).hexdigest()
+def keep(name,raw):
+    path=e/name;assert not path.exists() or path.read_bytes()==raw,path
+    if not path.exists():path.write_bytes(raw)
+    paths.append(path.relative_to(repo).as_posix())
+job='fp8-m128-native-control-attempt1';archive=out/(job+'-evidence.zip');raw=(out/(job+'-verified.json')).read_bytes();q=json.loads(raw)
+assert raw==(out/(job+'-remote-verified.json')).read_bytes() and q['status']=='fp8_m128_actual_native_helper_and_wire_replayed' and sha(archive.read_bytes())==q['archive_sha256'] and q['total_output_words_replayed']==3604480
+with zipfile.ZipFile(archive) as z:
+    manifest=json.loads(z.read('evidence-manifest.json'));assert z.testzip() is None and len(z.namelist())==len(set(z.namelist()))==len(manifest['files'])+1
+    for name,h in manifest['files'].items():assert sha(z.read(name))==h
+    base='results/'+job+'/';w=json.loads(z.read(base+'workflow.json'));assert w['exit_code']==0 and w['cleanup_finished'] and w['source_before']==w['source_after'] and w['runtime_before']==w['runtime_after'] and w['environment_before']==w['environment_after']
+    keep(job+'-evidence-manifest.json',z.read('evidence-manifest.json'))
+    for name in z.namelist():
+        if name.startswith(base) and name.endswith(('.json','.jsonl','.log')):keep(job+'-'+name.removeprefix(base).replace('/','-'),z.read(name))
+    keep(job+'-fixture-manifest.json',z.read('results/actual-layer0-fp8-fixture/manifest.json'))
+    wire=json.loads(z.read(base+'wire-cpu/report.json'))
+for suffix in ('-verified.json','-remote-verified.json','-local-replay.log'):keep(job+suffix,(out/(job+suffix)).read_bytes())
+for suffix in ('-package.json','-preparation.json','-install.json'):keep('fp8-m128-native-control'+suffix,(work/('fp8-m128-native-control'+suffix)).read_bytes())
+for path in (work/'fp8-m128-native-control-local-cpu-ledger').iterdir():
+    if path.is_file():keep('fp8-m128-native-control-local-cpu-'+path.name,path.read_bytes())
+compiled=work/'fp8-m128-native-development/offline-build';cpu=json.loads((compiled/'result.json').read_bytes());assert cpu['exit_code']==0 and cpu['cpu_tests']==28 and len(cpu['objects'])==9 and not cpu['linked'] and not cpu['target_executable_run'] and not cpu['local_gpu_or_model_executed']
+for sub in ('cpu-ledger','build-ledger'):
+    for path in (compiled/sub).iterdir():
+        if path.is_file():keep('fp8-m128-native-private-'+sub+'-'+path.name,path.read_bytes())
+for name in ('compile.bat','result.json'):keep('fp8-m128-native-private-'+name,(compiled/name).read_bytes())
+preflights='Observed private preparation errors before any CPU/compiler launch:\n1. Target-count assertion expected10; actual explicit translation-unit list has9. Corrected to9.\n2. AttributeError: test_bf16_low_batch_model_contract has no attribute Controls. Replaced assumed class name with unittest module-suite discovery.\nBoth were CPU-only preparation failures; no source/SDK/production-build/GPU mutation. Raw tracebacks remain in chat tool output; this file is a summary, not a captured raw process log.\n'
+keep('fp8-m128-native-private-preflight-failures.txt',preflights.encode())
+record=json.loads((e/'fp8-m128-native-source-derivation.json').read_bytes())
+for row in record['modified_files']:
+    assert sha((repo/row['target']).read_bytes())==row['target_sha256'];paths += [row['target'],row['original_snapshot']]
+for name,h in record['new_files'].items():assert sha((repo/name).read_bytes())==h;paths.append(name)
+for name in ('fp8-m128-native-source-before.json','fp8-m128-native-source-derivation.json'):paths.append((e/name).relative_to(repo).as_posix())
+paths.append((m/'test_fp8_m128_native_source.py').relative_to(repo).as_posix())
+prep=json.loads((work/'fp8-m128-native-control-preparation.json').read_bytes())
+for name,h in prep['methods'].items():
+    if '/native_fp8_m128_candidate/' in name:continue
+    target=repo/name.removeprefix('Garnet/');assert sha(target.read_bytes())==h;paths.append(target.relative_to(repo).as_posix())
+for name in ('integrate-fp8-m128-native.py','compile-fp8-m128-native-offline.py','derive-fp8-m128-native-control.py','package-fp8-m128-native-control.py','install-fp8-m128-native-control.py','retain-fp8-m128-native-control.py'):keep(name+'.txt',(work/name).read_bytes())
+plan={'status':'actual_fp8_m128_helper_and_plugin_wire_verified_complete_native_model_gate_pending','goal_unchanged':'Original>=2x faster-reference matched decode AND concurrency throughput; halfTTFT additional; INT4/4B/strongest feasible references and complete quality/performance remain required','next_steps':[
+ 'Create combined22native-file candidate:13qualifiedT128 native files plus10M128 native files, trt_builder.cpp overlap counted once. Fresh remote source/cache/34CUDA-object snapshot, exact8existing-target bytes and14absent targets expected; refuse unknown outside edits. Use same study build tree and restore baseline1a1d DLL/source in finally.',
+ 'Reconfigure real Release/MT/sm120 build for two newCPP translation units. Retain all CPU object provenance; require no new/unrelatedCUDA objects beyond existing34 and allow changedCUDA bytes only for recompiled T128attention/commit and inherited coupled tiled overlay. Actual full native CPU wire/selector/955tokenizer checks before model; save candidate separately.',
+ 'Retry original strict six3968+128 ordinary/MTP text/image/reset-repeat cases with paired29native/Python source files. Enable only GARNET_FP8_GDN_M128_CANONICAL=1 on candidate, assert graph counter48atB1T128 and0atT4decode/T16draft. Default/off companion counter0; retain all old M32 controls and baseline1a1d T32 oracle unchanged.',
+ 'Require complete states/raw vectors/IDs under unchanged strict oracle. Save first observed failure before assertion. Do not waive output/state differences or extend untested projection geometry; isolate the next real operator if a mismatch remains.',
+ 'Only after model correctness and805quality gates, measure actual fixed4K HTTP text/image TTFT, decode/concurrency throughput and sampledVRAM, then update all charts from verified results. Preserve B8 failure diagnosis, tuned/MTP/repeated references and matched INT4/4B scope.'
+ ],'complete_native_build_qualified':False,'full_model_mismatch_cause_established':False,'performance_admitted':False,'two_times_target_achieved':False}
+keep('fp8-m128-native-next-plan.json',json.dumps(plan,indent=2).encode())
+receipt={'status':'actual_fp8_m128_native_helper_and_plugin_cpu_wire_replayed_on_both_machines','archive_sha256':q['archive_sha256'],'archive_bytes':archive.stat().st_size,'archive_members':len(manifest['files'])+1,'proof_pair_sha256':sha(raw),'source_pins':len(w['source_before']),'runtime_pins':len(w['runtime_before']),'selected_sdk_environment_pins':len(w['environment_before']),'local_cpu_tests':28,'local_private_cpp_objects':9,'remote_cpu_tests':8,'remote_actual_plugin_wire':wire,'algorithm_observations':q['algorithm_observations'],'total_output_words_independently_replayed':3604480,'real_fixture_scope':'Actual retained layer0 GDN output matrix and16real input rows repeated identically at32/128, two repeats; not full3968prompt activation sequence','native_source_modified':True,'default_enabled':False,'legacy_plugin_and_helper_sources_unchanged':record['legacy_untouched_sha256'],'application_source_runtime_sdk_fixture_unchanged_remotely':True,'complete_garnet_native_build_qualified':False,'full_model_mismatch_cause_established':False,'model_or_quality_or_performance_qualified':False,'two_times_target_achieved':False,'next_plan':plan}
+payload=json.dumps(receipt,indent=2).encode();keep('fp8-m128-native-control-closure.json',payload);(out/'Garnet-FP8-M128-Native-Helper-Verified.json').write_bytes(payload)
+title='Distinct native M128 FP8 helper and CPU wire verified; full model still pending'
+text='\n\n### 2026-10-25 — '+title+'\n\n'
+text+='Added default-off GARNET_FP8_GDN_M128_CANONICAL for original rank3 B1/T128 GDN output only, exact5120x6144 projection geometry; B4/T32 andB8/T16 flattened128 remain old path. Separate typed shared per-device native context, strictSM120/cuBLASLt130400, original4MiB M16 preference then actualM128 AlgoCheck with8MiB scratch. Separate GarnetModelOptFP8M128Canonical creator/version1/20byte policy128 wire, BF16 activation/output andINT8/opaqueINT32 weights,9175040total workspace. Four legacy plugin/helper files unchanged byte-for-byte. New graph stats count actual selected M128 projections; existing fresh per-graph engine-cache constructor unchanged. This is candidate native integration, not full model qualification.\n\n'
+text+='Private local CPU-only compilation produces9objects for actual helper/plugin/lowering/builder/compiledgraph, old plugin/helper and wire probe/stubs. No link, target runtime, model or local GPU. 28CPU checks pass0.171s; exact composed originalT128+newM128 source derivation checks replace the single-stage provenance check only in this combined suite, original check untouched. SDK/input hashes unchanged. Initial preparation target-count and assumed unittest class-name errors were corrected before compiler execution and summarized separately. NOMINMAX redefinition warning retained.\n\n'
+text+='Remote '+job+' exits0:8CPU controls0.531s, actual distinct plugin CPU wire contract with33bad wires/18bad constructors/23bad descriptors/11bad formats/8policy rejects/3cross-wire rejects, clone androundtrip, zeroGPUstub calls. Standalone actual typed helper compiled in a separate translation unit from exact production source copies, cublas calls observed without algorithm substitution. Real retained layer0FP8 weights and16token rows repeated for32/128, two repeats, unchangedCUDA cast/quantizer. Actual default algorithms35/67/67 reproduce archived16/32 and observed128differences64words eachrepeat; nativeM16/M32/newM128 allalgorithm35 with exactsameopaque descriptor, checkedM128 requirement5246879bytes and8388608supplied. Every native128word exactly matches repeatedM16 and qualified8MiB parent output.\n\n'
+text+='Independent replay on both machines checks complete3604480BF16 output words, RNE BF16casts/E4M3quantization/repeatedinputs/allactualoutputs, real helper context/actual matmul algorithm/opaque/workspace/DLLidentity, source787/runtime6/selectedSDK20/fixture preservation. Archive '+q['archive_sha256']+' ('+str(archive.stat().st_size)+'bytes/'+str(len(manifest['files'])+1)+'members); identical proof '+sha(raw)+'. Existing SDK C4819codepage warnings retained; no SDK modification or applicationDLL load/change. All raw words remain in output archive, metadata and raw ledgers retained in Git.\n\n'
+text+='Next is combined22native-file candidate build on the5090 with original source/DLL restored afterward, actual native CPU compatibility, then strict paired29native/Python source sixcase3968+128 ordinary/MTP model replay. Require actual graphcounter48forT128 and0forT4decode/T16draft. Full-model mismatch cause/fix,805quality, HTTP speed/VRAM and2x are unproven. Current comparison charts remain unchanged; original throughput/decode/halfTTFT/INT4/4B/strongest-reference goals remain active.\n'
+for name in ('qwen38-5090-development-log.md','qwen38-5090-implementation-task.md'):
+    path=repo/'docs/research'/name;before=path.read_bytes();assert title.encode() not in before;path.write_bytes(before+text.encode());paths.append(path.relative_to(repo).as_posix())
+(work/'fp8-m128-native-control-retained-paths.json').write_bytes(json.dumps(sorted(set(paths)),indent=2).encode());print(json.dumps({'status':receipt['status'],'retained_paths':len(set(paths)),'archive_sha256':q['archive_sha256'],'proof_pair_sha256':sha(raw)}))

@@ -1,0 +1,37 @@
+from pathlib import Path
+import hashlib,json
+repo=Path('D:/CantorAI/work/qwen38-5090');e=repo/'test2026/cuda/qwen38_5090/evidence';sha=lambda raw:hashlib.sha256(raw).hexdigest()
+before=json.loads((e/'fp8-m128-native-source-before.json').read_bytes());records=[]
+changes={
+'src/backends/tensorrt/modelopt_fp8_lowering.cpp':[
+ ('#include "modelopt_fp8_plugin.h"','#include "modelopt_fp8_plugin.h"\n#include "modelopt_fp8_m128_plugin.h"\n#include "modelopt_fp8_m128_profile.h"',1),
+ ('    auto* plugin=new ModelOptFP8Plugin(p.rows,p.columns,p.weightScale,p.inputScale,canonicalM32);ownedPlugins.push_back(plugin);',
+  '''    const bool canonicalM128=ModelOptFP8M128GDNSelected(std::getenv("GARNET_FP8_GDN_M128_CANONICAL"),
+        shape.nbDims==3?int(shape.d[0]):0,shape.nbDims==3?int(shape.d[1]):0,rows,p.rows,p.columns,gdnOutput);
+    IPluginV2DynamicExt* plugin=nullptr;
+    if(canonicalM128){
+        if(!EnsureModelOptFP8M128PluginRegistered())throw std::runtime_error("Native M128 FP8 registration failed");
+        plugin=new ModelOptFP8M128Plugin(p.rows,p.columns,p.weightScale,p.inputScale);
+    }else plugin=new ModelOptFP8Plugin(p.rows,p.columns,p.weightScale,p.inputScale,canonicalM32);
+    ownedPlugins.push_back(plugin);''',1),
+ ('    if(!layer)throw std::runtime_error("Native FP8 projection layer failed");','    if(!layer)throw std::runtime_error("Native FP8 projection layer failed");\n    if(canonicalM128)++nativeFP8M128ProjectionCount_;',1)],
+'src/backends/tensorrt/trt_builder.h':[
+ ('        size_t NativeFP8WeightCount() const { return nativeFP8Weights.size(); }','        size_t NativeFP8WeightCount() const { return nativeFP8Weights.size(); }\n        size_t NativeFP8M128ProjectionCount() const { return nativeFP8M128ProjectionCount_; }',1),
+ ('        std::unordered_map<nvinfer1::ITensor*,NativeFP8Weight> nativeFP8Weights;','        std::unordered_map<nvinfer1::ITensor*,NativeFP8Weight> nativeFP8Weights;\n        size_t nativeFP8M128ProjectionCount_=0;',1)],
+'src/backends/tensorrt/trt_builder.cpp':[
+ ('        nativeNVFP4Weights.clear();nativeNVFP4ScaleStorage.clear();nativeFP8Weights.clear();nativeCTInt4Weights.clear();','        nativeNVFP4Weights.clear();nativeNVFP4ScaleStorage.clear();nativeFP8Weights.clear();nativeCTInt4Weights.clear();nativeFP8M128ProjectionCount_=0;',1)],
+'src/backends/tensorrt/cuda_compiled_graph.h':[
+ ('    size_t nativeFP8WeightCount_=0,nativeNVFP4WeightCount_=0,nativeCTInt4WeightCount_=0;','    size_t nativeFP8WeightCount_=0,nativeNVFP4WeightCount_=0,nativeCTInt4WeightCount_=0;\n    size_t nativeFP8M128ProjectionCount_=0;',1)],
+'src/backends/tensorrt/cuda_compiled_graph.cpp':[
+ ('nativeFP8WeightCount_=nativeNVFP4WeightCount_=nativeCTInt4WeightCount_=0;','nativeFP8WeightCount_=nativeNVFP4WeightCount_=nativeCTInt4WeightCount_=0;nativeFP8M128ProjectionCount_=0;',1),
+ ('    info["native_fp8_projection_weights"]=nativeFP8WeightCount_;','    info["native_fp8_projection_weights"]=nativeFP8WeightCount_;\n    info["native_fp8_m128_canonical_projections"]=nativeFP8M128ProjectionCount_;',1),
+ ('    nativeFP8WeightCount_=builder.NativeFP8WeightCount();','    nativeFP8WeightCount_=builder.NativeFP8WeightCount();\n    nativeFP8M128ProjectionCount_=builder.NativeFP8M128ProjectionCount();',1)]}
+for row in before:
+    path=repo/row['target'];raw=path.read_bytes();assert sha(raw)==row['before_sha256']==sha((repo/row['original_snapshot']).read_bytes());text=raw.decode();steps=[]
+    for old,new,count in changes[row['target']]:
+        assert text.count(old)==count,(row['target'],old,text.count(old));text=text.replace(old,new);steps.append({'old':old,'new':new,'count':count})
+    path.write_bytes(text.encode());records.append({**row,'target_sha256':sha(text.encode()),'replacements':steps})
+newfiles=['src/backends/tensorrt/'+name for name in ('modelopt_fp8_m128_profile.h','modelopt_fp8_m128_canonical.h','modelopt_fp8_m128_canonical.cpp','modelopt_fp8_m128_plugin.h','modelopt_fp8_m128_plugin.cpp')]
+legacy=['src/backends/tensorrt/'+name for name in ('modelopt_fp8_plugin.h','modelopt_fp8_plugin.cpp','modelopt_cublaslt.h','modelopt_cublaslt.cpp')]
+p={'status':'fp8_m128_distinct_native_policy_candidate_cpu_unverified','modified_files':records,'new_files':{name:sha((repo/name).read_bytes()) for name in newfiles},'legacy_untouched_sha256':{name:sha((repo/name).read_bytes()) for name in legacy},'scope':'Default-off strictB1/T128 GDN output projection only, not B4/T32 flattenedM128. Separate TensorRT type/wirepolicy128 and typed8MiB context, originalM16selection preference4MiB with AlgoCheck for128. Existing FP8/M32 plugin/helper bodies untouched. Explicit graph creation counter, fresh per-graph cache retained. CPU/native actual-helper/model/quality/HTTP qualification required.'}
+target=e/'fp8-m128-native-source-derivation.json';assert not target.exists();target.write_bytes(json.dumps(p,indent=2).encode());print(json.dumps({'modified':len(records),'new':len(newfiles),'legacy_untouched':len(legacy)}))

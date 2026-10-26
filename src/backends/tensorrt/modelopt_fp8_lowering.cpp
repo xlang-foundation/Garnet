@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 #include "trt_builder.h"
 #include "modelopt_fp8_plugin.h"
+#include "modelopt_fp8_m128_plugin.h"
+#include "modelopt_fp8_m128_profile.h"
 #include <climits>
 #include <cmath>
 #include <cstring>
@@ -77,10 +79,18 @@ ITensor* TRTBuilder::ProjectModelOptFP8(ITensor* input,ITensor* weight){
     const bool canonicalM32=rows==32&&(
         (canonicalPolicy&&!std::strcmp(canonicalPolicy,"1")&&gdnOutput&&p.rows==5120&&p.columns==6144)||
         (attentionPolicy&&!std::strcmp(attentionPolicy,"1")&&attentionProjection));
-    auto* plugin=new ModelOptFP8Plugin(p.rows,p.columns,p.weightScale,p.inputScale,canonicalM32);ownedPlugins.push_back(plugin);
+    const bool canonicalM128=ModelOptFP8M128GDNSelected(std::getenv("GARNET_FP8_GDN_M128_CANONICAL"),
+        shape.nbDims==3?int(shape.d[0]):0,shape.nbDims==3?int(shape.d[1]):0,rows,p.rows,p.columns,gdnOutput);
+    IPluginV2DynamicExt* plugin=nullptr;
+    if(canonicalM128){
+        if(!EnsureModelOptFP8M128PluginRegistered())throw std::runtime_error("Native M128 FP8 registration failed");
+        plugin=new ModelOptFP8M128Plugin(p.rows,p.columns,p.weightScale,p.inputScale);
+    }else plugin=new ModelOptFP8Plugin(p.rows,p.columns,p.weightScale,p.inputScale,canonicalM32);
+    ownedPlugins.push_back(plugin);
     ITensor* inputs[]={flatten->getOutput(0),weight};
     auto* layer=network->addPluginV2(inputs,2,*plugin);
     if(!layer)throw std::runtime_error("Native FP8 projection layer failed");
+    if(canonicalM128)++nativeFP8M128ProjectionCount_;
     auto* restore=network->addShuffle(*layer->getOutput(0));
     if(!restore)throw std::runtime_error("Native FP8 output reshape failed");
     shape.d[shape.nbDims-1]=p.rows;restore->setReshapeDimensions(shape);return restore->getOutput(0);

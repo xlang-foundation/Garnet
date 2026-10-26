@@ -84,6 +84,7 @@ namespace Garnet {
         }
         size_t NativeCTInt4WeightCount() const { return nativeCTInt4Weights.size(); }
         size_t NativeFP8WeightCount() const { return nativeFP8Weights.size(); }
+        size_t NativeFP8M128ProjectionCount() const { return nativeFP8M128ProjectionCount_; }
         size_t NativeNVFP4WeightCount() const { return nativeNVFP4Weights.size(); }
 
         X::Value ExportMatmulEngine(const std::string& enginePath, const std::vector<int>& inputShape, const std::vector<int>& weightShape);
@@ -203,6 +204,7 @@ namespace Garnet {
         std::deque<std::vector<unsigned char>> nativeNVFP4ScaleStorage;
         struct NativeFP8Weight {int rows,columns;float weightScale,inputScale;std::string logicalName;};
         std::unordered_map<nvinfer1::ITensor*,NativeFP8Weight> nativeFP8Weights;
+        size_t nativeFP8M128ProjectionCount_=0;
         struct NativeCTInt4Weight {nvinfer1::ITensor* scales;int rows,columns;};
         std::unordered_map<nvinfer1::ITensor*,NativeCTInt4Weight> nativeCTInt4Weights;
         std::deque<float> scalarWeights;
