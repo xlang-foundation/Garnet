@@ -1,0 +1,241 @@
+{
+  "derivations": [
+    {
+      "source": "run_sglang_observed_fixed4k.py",
+      "source_sha256": "ebcf3781e12c86cb9a9c846092a3c38195b850f588bdf0e741590d15dba47c12",
+      "target": "run_vllm_observed_fixed4k.py",
+      "target_sha256": "f6a31a679f0cf73b9a65a6b740c4973abc78c28bac87d4eb369d2e9621c3e42d",
+      "replacements": [
+        {
+          "old": "def closed_native_full4k(root,digest):\r\n    if re.fullmatch('[0-9a-f]{64}',digest) is None:raise ValueError('Actual closed native full4K archive required')\r\n    name='mtp-prefill16-full4k-admission-attempt1';archive=root/'results'/(name+'-evidence.zip');assert sha(archive)==digest\r\n    with zipfile.ZipFile(archive) as z:\r\n        manifest=json.loads(z.read('evidence-manifest.json'));assert z.testzip() is None and len(z.namelist())==len(set(z.namelist()))==len(manifest['files'])+1\r\n        for path,expected in manifest['files'].items():assert hashlib.sha256(z.read(path)).hexdigest()==expected\r\n        w=json.loads(z.read('results/'+name+'/workflow.json'))\r\n    assert w==json.loads((root/'results'/name/'workflow.json').read_bytes()) and type(w['exit_code']) is int and w['cleanup_finished'] is True and w['library_unchanged'] is True\r\n    assert w['source_sha256']==w['source_after_sha256'] and w['runtime_dependencies']==w['runtime_dependencies_after']\r\n    proof_path=root/'results'/(name+'-verified.json');proof=json.loads(proof_path.read_bytes());assert proof['archive_sha256']==digest and proof['status']==('mtp_prefill16_full4k_target_state_replayed' if w['exit_code']==0 else 'mtp_prefill16_full4k_failure_preserved')\r\n    return {'job':name,'archive_sha256':digest,'proof_sha256':sha(proof_path),'proof_status':proof['status'],'exit_code':w['exit_code'],'cleanup_finished':True}\r\n\r\n\r",
+          "new": "from vllm_observed_component_parent import closed_component\n\n",
+          "count": 1
+        },
+        {
+          "old": "closed_native_archive_sha256",
+          "new": "closed_component_archive_sha256",
+          "count": 1
+        },
+        {
+          "old": "--closed-native-archive-sha256",
+          "new": "--closed-component-archive-sha256",
+          "count": 1
+        },
+        {
+          "old": "closed_native_full4k",
+          "new": "closed_component",
+          "count": 2
+        },
+        {
+          "old": "native_closed",
+          "new": "component_closed",
+          "count": 4
+        },
+        {
+          "old": "component_closed=closed_component(root,args.closed_component_archive_sha256)",
+          "new": "component_closed=closed_component(root,args.closed_component_archive_sha256);assert component_closed==p['component_parent']",
+          "count": 1
+        },
+        {
+          "old": "serve_sglang_reserved_fixed4k.sh",
+          "new": "serve_vllm_fixed4k.sh",
+          "count": 1
+        },
+        {
+          "old": "serve_sglang_reserved_mtp3_fixed4k.sh",
+          "new": "serve_vllm_mtp3_fixed4k.sh",
+          "count": 1
+        },
+        {
+          "old": "prepare_sglang_reserved_fixed4k_metadata.py",
+          "new": "prepare_vllm_fixed4k_metadata.py",
+          "count": 1
+        },
+        {
+          "old": "probe_reference_observed_fixed4k.py",
+          "new": "probe_vllm_observed_fixed4k.py",
+          "count": 1
+        },
+        {
+          "old": "reference_observed_fixed4k_collected_needs_replay",
+          "new": "vllm_observed_fixed4k_collected_needs_replay",
+          "count": 1
+        },
+        {
+          "old": "18081",
+          "new": "18080",
+          "count": 2
+        },
+        {
+          "old": "sglang",
+          "new": "vllm",
+          "count": 11
+        },
+        {
+          "old": "SGLang",
+          "new": "vLLM",
+          "count": 3
+        },
+        {
+          "old": "from vllm_observed_component_parent import closed_component",
+          "new": "if __package__:\n    from .vllm_observed_component_parent import closed_component\nelse:\n    from vllm_observed_component_parent import closed_component",
+          "count": 1
+        },
+        {
+          "old": "sys.path.insert(0,str(methods));from run_logged import run",
+          "new": "sys.path.insert(0,str(methods));from run_logged import run\n    import run_logged as ledger\n    ledger.source_identity=lambda:{'scope':'explicit owned observed-baseline inputs; unrelated untracked files excluded','owned_source_sha256':p['files']}",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "verify_sglang_observed_fixed4k.py",
+      "source_sha256": "62121e929fb98ed997956f138b4957650efa7741bb57e18c7b51cb1f90b1bf19",
+      "target": "verify_vllm_observed_fixed4k.py",
+      "target_sha256": "e20ad527f300dd78e3fe27ba38fd606e59c8c7657888f65e5b00565b50418f01",
+      "replacements": [
+        {
+          "old": "run_sglang_observed_fixed4k",
+          "new": "run_vllm_observed_fixed4k",
+          "count": 1
+        },
+        {
+          "old": "reference_fixed4k_sglang_reserved_identity",
+          "new": "reference_fixed4k_vllm_identity",
+          "count": 2
+        },
+        {
+          "old": "reference_observed_output",
+          "new": "reference_vllm_observed_output",
+          "count": 3
+        },
+        {
+          "old": "benchmark_observed_output_reference",
+          "new": "benchmark_vllm_observed_output",
+          "count": 1
+        },
+        {
+          "old": "'reference_fixed4k_sglang_identity.py',",
+          "new": "",
+          "count": 1
+        },
+        {
+          "old": "'reference_fixed4k_boundary.py'",
+          "new": "'reference_fixed4k_vllm_boundary.py'",
+          "count": 1
+        },
+        {
+          "old": "closed_native_full4k",
+          "new": "closed_component",
+          "count": 1
+        },
+        {
+          "old": "previous_workflow['library_unchanged'] is True and ",
+          "new": "previous_workflow['environment']==previous_workflow['environment_after'] and previous_workflow['sdk_before']==previous_workflow['sdk_after'] and ",
+          "count": 1
+        },
+        {
+          "old": "reference_observed_fixed4k_collected_needs_replay",
+          "new": "vllm_observed_fixed4k_collected_needs_replay",
+          "count": 1
+        },
+        {
+          "old": "expected=validate(info,w['mode'])",
+          "new": "expected=validate(info,doc(base+'server-version-raw.json'),z.read(base+'server.log').decode('utf8','replace'),w['mode'])",
+          "count": 1
+        },
+        {
+          "old": "serve_sglang_reserved_fixed4k.sh",
+          "new": "serve_vllm_fixed4k.sh",
+          "count": 1
+        },
+        {
+          "old": "serve_sglang_reserved_mtp3_fixed4k.sh",
+          "new": "serve_vllm_mtp3_fixed4k.sh",
+          "count": 1
+        },
+        {
+          "old": "            context_pins=doc(METHODS+'evidence/sglang-context-limit-source-pins.json');context_identity=doc(base+'context-limit-identity.json')\r\n            assert sha(z.read(base+'context-limit-identity.json'))==metadata['installed_context_limit_identity_sha256']\r\n            assert context_identity['status']=='installed_context_limit_sources_verified' and context_identity['source_modified'] is False\r\n            assert context_identity['pins_sha256']==sha(z.read(METHODS+'evidence/sglang-context-limit-source-pins.json'))\r\n            assert context_identity['configured_engine_context_capacity']==4098 and context_identity['actual_workload_context_capacity']==4096\r\n            assert set(context_identity['files'])==set(context_pins['files']) and len(context_pins['files'])==19\r\n            for name,row in context_identity['files'].items():\r\n                assert row['sha256']==context_pins['files'][name]==sha(z.read(base+row['archived_copy']))==sha(z.read(METHODS+'evidence/sglang-context-limit-source/'+name))\r\n",
+          "new": "            assert metadata['server_version_sha256']==sha(z.read(base+'server-version-raw.json'))\n            config_identity=doc(base+'vllm-config-identity.json');schema=doc(METHODS+'evidence/vllm-fixed4k-config-schema-attempt1.json')\n            assert sha(z.read(base+'vllm-config-identity.json'))==metadata['installed_config_identity_sha256']\n            assert config_identity['status']=='installed_vllm_fixed4k_config_sources_verified' and config_identity['source_modified'] is config_identity['gpu_executed'] is False\n            assert config_identity['pins_sha256']==sha(z.read(METHODS+'evidence/vllm-fixed4k-config-schema-attempt1.json')) and len(config_identity['files'])==5\n            assert set(config_identity['files'])==set(schema['files'])\n            for name,row in config_identity['files'].items():assert row['sha256']==schema['files'][name]['sha256']==sha(z.read(base+row['archived_copy']))\n",
+          "count": 1
+        },
+        {
+          "old": "from reference_fixed4k_boundary import",
+          "new": "from reference_fixed4k_vllm_boundary import",
+          "count": 1
+        },
+        {
+          "old": "expected=left['choices'][0]['prompt_token_ids']",
+          "new": "expected=left['prompt_token_ids']",
+          "count": 1
+        },
+        {
+          "old": "body.pop('return_token_ids');body.pop('return_prompt_token_ids');",
+          "new": "assert 'return_prompt_token_ids' not in body;body.pop('return_token_ids');",
+          "count": 1
+        },
+        {
+          "old": "                control_report=doc(root+'controls/report.json')",
+          "new": "                from vllm_cache_control import parse_metrics\n                reset=doc(root+'cache-control/reset.json');assert reset['status']=='reset_acknowledged' and reset==benchmark['image_cache_reset']\n                assert reset['idle_before']['running']==reset['idle_before']['waiting']==0\n                assert [(r['endpoint'],r['status']) for r in reset['reset_responses']]==[('/reset_mm_cache',200),('/reset_encoder_cache',200)]\n                before=parse_metrics(z.read(root+'cache-control/after-reset.prom'));after=parse_metrics(z.read(root+'cache-control/after-run.prom'))\n                assert before==reset['after_reset'] and before['running']==before['waiting']==after['running']==after['waiting']==0\n                assert before['process_start']==after['process_start']==reset['idle_before']['process_start']\n                counters=doc(root+'cache-control/counter-delta.json');assert counters==benchmark['image_cache_counter_delta']\n                assert counters['before']==before and counters['after']==after and counters['query_delta']==after['queries']-before['queries']>0 and counters['hit_delta']==after['hits']-before['hits']==0\n                control_report=doc(root+'controls/report.json')",
+          "count": 1
+        },
+        {
+          "old": "'configured_engine_context_capacity':4098",
+          "new": "'configured_engine_context_capacity':4096",
+          "count": 1
+        },
+        {
+          "old": "'engine_context_reserved_slots':2",
+          "new": "'engine_context_reserved_slots':0",
+          "count": 1
+        },
+        {
+          "old": "reference_fixed4k_observed_profile_replayed",
+          "new": "reference_fixed4k_vllm_observed_profile_replayed",
+          "count": 1
+        },
+        {
+          "old": "reference_fixed4k_observed_failure_preserved",
+          "new": "reference_fixed4k_vllm_observed_failure_preserved",
+          "count": 1
+        },
+        {
+          "old": "18081",
+          "new": "18080",
+          "count": 1
+        },
+        {
+          "old": "sglang",
+          "new": "vllm",
+          "count": 28
+        },
+        {
+          "old": "SGLang",
+          "new": "vLLM",
+          "count": 1
+        },
+        {
+          "old": "archived=sha(z.read(METHODS+'verify_vllm_observed_fixed4k.py'))",
+          "new": "archived=sha(z.read(METHODS+'verify_vllm_observed_fixed4k.py'));assert archived==sha(Path(__file__).read_bytes())",
+          "count": 1
+        },
+        {
+          "old": "'benchmark_vllm_observed_output.py'):",
+          "new": "'benchmark_vllm_observed_output.py','vllm_observed_component_parent.py'):",
+          "count": 1
+        },
+        {
+          "old": "entry=w['closed_component'];assert entry['cleanup_finished'] is True;",
+          "new": "entry=w['closed_component'];assert entry==p['component_parent'] and entry['cleanup_finished'] is True;",
+          "count": 1
+        },
+        {
+          "old": "        passed=w['exit_code']==0",
+          "new": "        from test2026.cuda.qwen38_5090.vllm_observed_component_parent import admit_component\n        assert admit_component(native_archive.read_bytes(),native_proof_raw)==entry\n        assert type(w['exit_code']) is int and w['cleanup_finished'] is True\n        passed=w['exit_code']==0",
+          "count": 1
+        }
+      ]
+    }
+  ],
+  "scope": "Separate ordinary vLLM observed-output owner/checker. Preserve original strict and SGLang pipelines. Exact vLLM metadata/cache replay fragments retained from actual qualified diagnosis methods; latest T128 component closure required."
+}

@@ -1,0 +1,60 @@
+from pathlib import Path
+import hashlib,json
+m=Path('D:/CantorAI/work/qwen38-5090/test2026/cuda/qwen38_5090');sha=lambda b:hashlib.sha256(b).hexdigest();rows=[]
+
+def derive(source,target,transform):
+    raw=(m/source).read_bytes();text=raw.decode();steps=[]
+    def r(old,new):
+        nonlocal text
+        count=text.count(old);assert count>0,(target,old);text=text.replace(old,new);steps.append({'old':old,'new':new,'count':count})
+    transform(r,text);data=text.encode();path=m/target;assert not path.exists() or path.read_bytes()==data
+    if not path.exists():path.write_bytes(data)
+    rows.append({'source':source,'source_sha256':sha(raw),'target':target,'target_sha256':sha(data),'replacements':steps})
+
+def owner(r,text):
+    start=text.index('def closed_native_full4k(');end=text.index('\ndef main():',start)
+    r(text[start:end],'from vllm_observed_component_parent import closed_component\n\n')
+    r('closed_native_archive_sha256','closed_component_archive_sha256');r('--closed-native-archive-sha256','--closed-component-archive-sha256')
+    r('closed_native_full4k','closed_component');r('native_closed','component_closed')
+    r("component_closed=closed_component(root,args.closed_component_archive_sha256)","component_closed=closed_component(root,args.closed_component_archive_sha256);assert component_closed==p['component_parent']")
+    r('serve_sglang_reserved_fixed4k.sh','serve_vllm_fixed4k.sh');r('serve_sglang_reserved_mtp3_fixed4k.sh','serve_vllm_mtp3_fixed4k.sh')
+    r('prepare_sglang_reserved_fixed4k_metadata.py','prepare_vllm_fixed4k_metadata.py')
+    r('probe_reference_observed_fixed4k.py','probe_vllm_observed_fixed4k.py')
+    r('reference_observed_fixed4k_collected_needs_replay','vllm_observed_fixed4k_collected_needs_replay')
+    r('18081','18080');r('sglang','vllm');r('SGLang','vLLM')
+derive('run_sglang_observed_fixed4k.py','run_vllm_observed_fixed4k.py',owner)
+
+def checker(r,text):
+    r('run_sglang_observed_fixed4k','run_vllm_observed_fixed4k')
+    r('reference_fixed4k_sglang_reserved_identity','reference_fixed4k_vllm_identity')
+    r('reference_observed_output','reference_vllm_observed_output')
+    r('benchmark_observed_output_reference','benchmark_vllm_observed_output')
+    r("'reference_fixed4k_sglang_identity.py',",'')
+    r("'reference_fixed4k_boundary.py'","'reference_fixed4k_vllm_boundary.py'")
+    r('closed_native_full4k','closed_component')
+    r("previous_workflow['library_unchanged'] is True and ","previous_workflow['environment']==previous_workflow['environment_after'] and previous_workflow['sdk_before']==previous_workflow['sdk_after'] and ")
+    r('reference_observed_fixed4k_collected_needs_replay','vllm_observed_fixed4k_collected_needs_replay')
+    r("expected=validate(info,w['mode'])","expected=validate(info,doc(base+'server-version-raw.json'),z.read(base+'server.log').decode('utf8','replace'),w['mode'])")
+    r('serve_sglang_reserved_fixed4k.sh','serve_vllm_fixed4k.sh');r('serve_sglang_reserved_mtp3_fixed4k.sh','serve_vllm_mtp3_fixed4k.sh')
+    start=text.index("            context_pins=doc(");end=text.index('            from reference_observed_output import admit_observation',start)
+    # This exact metadata fragment has already replayed actual vLLM trial3 and diagnosis.
+    v=(m/'verify_vllm_fixed4k_launcher_completed.py').read_bytes().decode()
+    a=v.index("            assert metadata['server_version_sha256']");b=v.index("            report=doc(base+'client/report.json')",a)
+    r(text[start:end],v[a:b])
+    r('from reference_fixed4k_boundary import','from reference_fixed4k_vllm_boundary import')
+    r("expected=left['choices'][0]['prompt_token_ids']","expected=left['prompt_token_ids']")
+    r("body.pop('return_token_ids');body.pop('return_prompt_token_ids');","assert 'return_prompt_token_ids' not in body;body.pop('return_token_ids');")
+    needle="                control_report=doc(root+'controls/report.json')"
+    # Use the exact existing vLLM raw-cache replay rather than guessing metric filenames.
+    ca=v.index("                from vllm_cache_control import parse_metrics");cb=v.index("                control_report=doc(root+'controls/report.json')",ca)
+    r(needle,v[ca:cb]+needle)
+    r("'configured_engine_context_capacity':4098","'configured_engine_context_capacity':4096")
+    r("'engine_context_reserved_slots':2","'engine_context_reserved_slots':0")
+    r('reference_fixed4k_observed_profile_replayed','reference_fixed4k_vllm_observed_profile_replayed')
+    r('reference_fixed4k_observed_failure_preserved','reference_fixed4k_vllm_observed_failure_preserved')
+    r('18081','18080');r('sglang','vllm');r('SGLang','vLLM')
+derive('verify_sglang_observed_fixed4k.py','verify_vllm_observed_fixed4k.py',checker)
+path=m/'evidence/vllm-observed-fixed4k-pipeline-derivation.json';raw=json.dumps({'derivations':rows,'scope':'Separate ordinary vLLM observed-output owner/checker. Preserve original strict and SGLang pipelines. Exact vLLM metadata/cache replay fragments retained from actual qualified diagnosis methods; latest T128 component closure required.'},indent=2).encode()
+assert not path.exists() or path.read_bytes()==raw
+if not path.exists():path.write_bytes(raw)
+print(json.dumps({'status':'vllm_observed_fixed4k_owner_checker_derived_unrun','targets':len(rows)}))

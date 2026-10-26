@@ -1,0 +1,121 @@
+from pathlib import Path
+import hashlib,json,zipfile
+work=Path(__file__).resolve().parent;out=work.parent/'outputs';repo=Path('D:/CantorAI/work/qwen38-5090');m=repo/'test2026/cuda/qwen38_5090';e=m/'evidence'
+sha=lambda b:hashlib.sha256(b).hexdigest()
+
+def keep(path,raw):
+    assert not path.exists() or path.read_bytes()==raw,path
+    if not path.exists():path.write_bytes(raw)
+
+job='prefill128-commit-component-attempt1';r=json.loads((work/'prefill128-component-local-receipt.json').read_bytes())
+assert r['status']=='prefill128_commit_component_full_state_replayed_on_both_machines'
+assert (out/(job+'-verified.json')).read_bytes()==(out/(job+'-remote-verified.json')).read_bytes()
+assert sha((out/(job+'-verified.json')).read_bytes())==r['proof_pair_sha256'] and sha((out/(job+'-evidence.zip')).read_bytes())==r['archive_sha256']
+with zipfile.ZipFile(out/(job+'-evidence.zip')) as z:
+    base='results/'+job+'/';manifest=json.loads(z.read('evidence-manifest.json'));assert len(manifest['files'])==90
+    for n,h in manifest['files'].items():assert sha(z.read(n))==h
+    for n in z.namelist():
+        if n.startswith(base) and n.endswith(('.json','.jsonl','.log')) and not n.endswith('resource-vram.jsonl'):
+            keep(e/(job+'-'+n.removeprefix(base).replace('/','-')),z.read(n))
+    keep(e/(job+'-evidence-manifest.json'),z.read('evidence-manifest.json'))
+for suffix in ('-verified.json','-remote-verified.json','-local-replay.log'):
+    keep(e/(job+suffix),(out/(job+suffix)).read_bytes())
+recipes=('replay-prefill128-component-local.py','derive-vllm-observed-fixed4k-pipeline.py',
+         'revise-vllm-observed-pipeline-bindings.py','bind-vllm-observed-component-replay.py','clarify-vllm-observed-control-scope.py',
+         'package-vllm-observed-fixed4k-methods.py','install-vllm-observed-fixed4k-methods.py','retain-t128-closure-and-vllm-observed-start.py')
+for n in recipes:keep(e/(n+'.txt'),(work/n).read_bytes())
+for n in ('prefill128-component-local-receipt.json','vllm-observed-fixed4k-upload-plan.json',
+          'vllm-observed-fixed4k-bundle-preparation.json','vllm-observed-fixed4k-install.json'):
+    keep(e/n,(work/n).read_bytes())
+for f in (work/'vllm-observed-fixed4k-cpu-ledger').iterdir():
+    if f.is_file():keep(e/('vllm-observed-fixed4k-cpu-ledger-'+f.name),f.read_bytes())
+install=json.loads((work/'vllm-observed-fixed4k-install.json').read_bytes());assert install['status']=='vllm_observed_fixed4k_methods_installed' and install['all_source_pins_verified']==816
+p=json.loads((e/'vllm-observed-fixed4k-run-preparation.json').read_bytes());assert p['expected_cpu_tests']==72 and len(p['files'])==816
+assert not any(n.startswith('Garnet/docs/research/') for n in p['files'])
+result={'status':'t128_commit_independently_closed_matched_vllm_observed_4k_started','t128_component':r,
+        'vllm_baseline':{'job':'vllm-observed-fixed4k-ordinary-attempt1','supervisor_session':48577,'observed_state':'running',
+            'terminal_result':None,'source_pins':816,'cpu_tests_prepared':72,'installation':install,
+            'actual_input_tokens_required':3968,'actual_output_tokens_required':128,'planned_adapted_screen_questions':805,
+            'planned_serial_id_controls':124,'planned_raw_streams':124,'planned_measured_cohorts':8,
+            'policy':'record_vllm_stream_text_variants_v1','new_benchmark_result':False},
+        'comparison_chart_changed':False,'two_times_target_achieved':False}
+raw=json.dumps(result,indent=2).encode();keep(e/'t128-closure-and-vllm-observed-start.json',raw)
+keep(out/'Garnet-T128-Verified-and-vLLM-4K-Run-Status.json',raw)
+text='''
+
+### 2026-10-25 — T128 commit full-state closure on both machines; matched observed-output vLLM4K trial started
+
+T128 component224386502byte archive transfer finished and ACKed. Same independent
+checker exits0 on local CPU and RTX5090host, identical proofCOMPONENT_PROOF_SHA;
+archiveCOMPONENT_ARCHIVE_SHA/90members. All16valid/35invalid full canonical states,
+5448010944words and3replays of one captured graph replay exactly; full target
+input/final and per-call C++ readonly observations retained as scoped. Source24,
+runtime6/environment15/SDK8 unchanged, owner terminal0/cleanup. Complete raw RLE/
+binary/build/CPU/GPU/resource data retained in output archive; selected logs,
+workflow/cases/manifests/proofpair and recipe retained on branch. Component is
+qualified for isolated final-state commit only. Full T128 forward/runtime/model/
+quality/serving integration remains unimplemented/unqualified; no speedup claim.
+
+Completed separate vLLM observed-output runner/preparer/full raw checker. Owner
+inherits exercised SGLang lifecycle but uses actual vLLM launcher/metadata/port/
+PID/stop, exact same ordinary0.32.0 profile as the independently replayed288request
+diagnosis. Latest T128 component full-state proof/archive/current closed workflow
+must pass before any next GPU owner, plus native fixed4K parent and observation
+provenance. Archive/pins include all inherited proofs; require15named runtime
+dependencies including shell launcher/metadata inspectors/new client/boundary/
+cache/stop/helper files, not just Python module imports. Full source816/runtime6
+hash checks and original exclusive idle guards remain mandatory. Local/remote
+ledgers use explicit owned input inventories and exclude unrelated untracked files.
+
+Checker preserves SGLang's exercised full805screen/124serialID/124rawstream/eight
+cohort replay, replacing only engine-specific metadata/ID schema/port/boundary
+and closure. Exact vLLM JSON/version/74installed-source/eight checkpoint/fiveconfig
+and dual cache-reset/raw metrics replay fragments come from existing vLLM methods.
+All output-variant sidecars and measured cohort exact/variant counts must replay;
+no individual streamed IDs inferred. New result status is explicitly
+reference_fixed4k_vllm_observed_profile_replayed, distinct from strict acceptance.
+Original strict failure and SGLang sources remain unchanged. Source self-hash,
+current replay-helper hashes, owned PID/start/stop, actual cache idle/reset/counters,
+frozen bytes/full3968+128usage, metrics and sampled memory gaps remain required.
+
+Initial new CPU owner import failed because an absolute sibling import did not
+resolve under package unittest; corrected conditional package/CLI import before
+deployment. Initial source-presence test expected encoder_hits_delta, whereas
+the actual copied vLLM parser uses hit_delta and two explicit reset endpoints;
+corrected the test to those actual invariants without weakening the parser.
+Recorded every exact source transformation and final helper/source binding.
+Four owner/dependency/derivation/closed-component control families pass. Clarified
+an inherited control-report sentence that still described exact text matching;
+new vLLM report explicitly records variants. This is a scope-text correction,
+not a changed request, timer, token check or output-admission rule.
+
+Combined72CPUcontrols pass20.597s, including old strict reference identity/length/
+cache/owner gates, actual-source derivatives,288request synthetic diagnosis and
+124ID+124stream observed-client fixtures/126token clamp rejection/closed component
+and dependency faults. No fixture metrics promoted. Preparation
+VLLM_PREPARATION_SHA; thirteen-target bundleVLLM_BUNDLE_SHA,70653bytes.
+Actual absent-only installer verifies all816source/proof pins and runtime6;
+existing files require exact bytes and are never replaced. Installation receipt
+downloaded/ACKed and checked before original48577 starts
+vllm-observed-fixed4k-ordinary-attempt1. Owner observed live; all prior transfers,
+raw CPU replays and component/reference owners closed. Source frozen, no second
+GPU model/transfer/replay during this trial.
+
+Planned real sequence: two full4K text/image boundaries, fourVLM/16short-ID controls,
+fresh805adapted screening,124actual serial prompt/completion-ID controls, then
+124warmup/timedstreams across text/image C1/2/4/8. Same pinned checkpoint,
+modelopt_mixed/BF16KV/F32SSM,4096total context/no reserved slots,4GiB KV budget,
+max8sequences/TP1/full decodegraphs1/2/4/8 and prefix/MM cache controls. Every text
+variant retained with record_vllm_stream_text_variants_v1 after timing/memory
+sampling. Actual metadata/controls/timings/terminal cleanup/full independent replay
+are pending. Current chart and overall2x/halfTTFT claim remain unchanged/unproven.
+Strongest tuned/MTP baselines/repeats, native B8 math/MTP/HTTP and T128 forward
+integration, matched INT4/4B remain open. Objective is unchanged.
+'''
+bundle=json.loads((work/'vllm-observed-fixed4k-bundle-preparation.json').read_bytes())
+text=text.replace('COMPONENT_PROOF_SHA',r['proof_pair_sha256']).replace('COMPONENT_ARCHIVE_SHA',r['archive_sha256'])
+text=text.replace('VLLM_PREPARATION_SHA',bundle['preparation_sha256']).replace('VLLM_BUNDLE_SHA',bundle['bundle_sha256'])
+for n in ('qwen38-5090-development-log.md','qwen38-5090-implementation-task.md'):
+    path=repo/'docs/research'/n;raw=path.read_bytes()
+    if b'T128 commit full-state closure on both machines; matched observed-output vLLM4K trial started' not in raw:path.write_bytes(raw+text.encode())
+print(json.dumps({'status':result['status'],'actual_component_words_replayed':5448010944,'vllm_baseline':'running','new_benchmark_result':False}))
