@@ -1,0 +1,79 @@
+{
+  "status": "native_stdio_bootstrap_retained_control_completed",
+  "command": [
+    "cmd.exe",
+    "/d",
+    "/c",
+    "D:\\CantorAI\\5090-study-20261023\\Garnet\\test2026\\cuda\\qwen38_5090\\serve_native_cuda_phase_stdio_worker.bat",
+    "ordinary",
+    "C:\\Users\\zsdx\\AppData\\Local\\CantorAI\\5090-engine-cache",
+    "D:\\CantorAI\\5090-study-20261023\\results\\native-cuda-stdio-profiled-bootstrap-attempt1\\native\\control\\host-stages.jsonl"
+  ],
+  "retained_case_key": "ctx4096-s3-text-c1-r0",
+  "requests": [
+    {
+      "id": "ordinary-stdio-profiled-retained-text",
+      "actual_prompt_tokens": 3968,
+      "actual_output_tokens": 128,
+      "retained_ids_exact": true
+    }
+  ],
+  "profiled": true,
+  "performance_admitted": false,
+  "preloaded_input": true,
+  "arrival_timing_admitted": false,
+  "scope": "Actual unchanged B1 model under normal worker pipes inside the explicit outer profiler. One retained3968+128 text control; pre-import/native bootstrap exceptions retained even if ready fails. No HTTP timing/quality/speed admission.",
+  "ready": {
+    "event": "ready",
+    "protocol": "study_single_v1",
+    "batch": 1,
+    "capacity": 4096,
+    "prefill_chunk": 32,
+    "chunk": 4,
+    "generation_mode": "ordinary",
+    "bf16_kv_low_batch_state": true,
+    "library_sha256": "1a1d0229a1c0c24a8397a4dee7a614bcedf97b3bd3293e58d752ed7de30eb498",
+    "model_consistency_proof_sha256": "d942154cf22fb37eebba6906d312a4df1eddcba331c88cfc4b3f45c9f76ffa6a",
+    "qualified_model_source": true,
+    "precision": "mixed NVFP4/FP8; BF16 vision and cache",
+    "queued_concurrency": true,
+    "research_only": true,
+    "explicit_ignore_eos_supported": true,
+    "broad_quality_qualified": false,
+    "performance_admitted": false
+  },
+  "worker_exit_code": 0,
+  "host_replay": {
+    "status": "native_instrumented_host_stages_replayed",
+    "requests": [
+      {
+        "id": "ordinary-stdio-profiled-retained-text",
+        "case": "text",
+        "mode": "ordinary",
+        "host_wall_seconds": 8.870109400013462,
+        "host_stage_seconds": {
+          "reset": 0.016081699985079467,
+          "input_text_or_image": 0.019714900001417845,
+          "embedding_and_rows": 0.23104650000459515,
+          "target_prefill": 5.10189829999581,
+          "target_generate": 3.475395799992839
+        },
+        "host_wall_outside_stages_seconds": 0.025972200033720583,
+        "first_token_observation_phase": "target_generate",
+        "tokens_bound_to_retained_4k_control": true
+      }
+    ],
+    "performance_admitted": false,
+    "isolated_gpu_or_kernel_time_measured": false,
+    "two_times_target_achieved": false,
+    "scope": "Flat instrumented host-wall intervals bound to actual same-process token/completion events and retained3968+128IDs. MTP may emit the first target token before draft prefill finishes; full prefill phase duration is not TTFT. No cross-process epoch comparison, HTTP timing, benchmark speedup, causal kernel attribution or isolated GPU-active timing."
+  },
+  "marker_count": 12,
+  "native_model_cleanup": {
+    "status": "native_model_close_calls_returned",
+    "mode": "ordinary",
+    "marker_count": 12,
+    "library_sha256": "1a1d0229a1c0c24a8397a4dee7a614bcedf97b3bd3293e58d752ed7de30eb498",
+    "scope": "Witness after native session/vision/decoder cleanup calls; distinct from Nsight wrapper and interpreter exit"
+  }
+}

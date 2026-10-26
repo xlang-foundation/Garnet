@@ -1,0 +1,37 @@
+from pathlib import Path
+import argparse,hashlib,json,sys,zipfile
+root=Path('D:/CantorAI/5090-study-20261023');m=root/'Garnet/test2026/cuda/qwen38_5090'
+sys.path.insert(0,str(m));from run_bf16_low_batch_native_build import idle
+sha=lambda b:hashlib.sha256(b).hexdigest()
+a=argparse.ArgumentParser();a.add_argument('--sha256',required=True);args=a.parse_args()
+archive=root/'results/vllm-characterization-linked-proofs.zip';receipt=root/'results/vllm-characterization-linked-proofs-install.json'
+assert sha(archive.read_bytes())==args.sha256 and not receipt.exists()
+assert not (root/'results/vllm-output-characterization-attempt1').exists();idle()
+key='Garnet/test2026/cuda/qwen38_5090/evidence/vllm-output-characterization-run-preparation.json'
+with zipfile.ZipFile(archive) as z:
+    d=json.loads(z.read('install-manifest.json'));assert z.testzip() is None and len(z.namelist())==len(set(z.namelist()))==4
+    old=json.loads((root/key).read_bytes());new=json.loads(z.read(key))
+    assert len(old['files'])==801 and old['expected_cpu_tests']==58 and len(new['files'])==802 and new['expected_cpu_tests']==59
+    assert old['runtime_dependencies']==new['runtime_dependencies'] and old['diagnosis_parent']==new['diagnosis_parent']
+    for n,h in old['files'].items():assert sha((root/n).read_bytes())==h
+    for n,h in old['runtime_dependencies'].items():assert sha((root/'build/bin'/n).read_bytes())==h
+    assert set(d['files'])=={key,'Garnet/test2026/cuda/qwen38_5090/prepare_vllm_output_characterization_run.py','Garnet/test2026/cuda/qwen38_5090/test_vllm_characterization_pipeline.py'}
+    rows=[]
+    for n,row in d['files'].items():
+        target=root/n;assert target.resolve().is_relative_to(m.resolve())
+        assert not(getattr(target.lstat(),'st_file_attributes',0)&0x400)
+        before=target.read_bytes();after=z.read(n);assert sha(before)==row['before_sha256'] and sha(after)==row['after_sha256']
+        backup=root/'results'/('vllm-characterization-linked-proofs-before-'+target.name);assert not backup.exists()
+        rows.append((target,before,after,backup))
+    for target,before,after,backup in rows:
+        with backup.open('xb') as stream:stream.write(before)
+        assert backup.read_bytes()==before
+    for target,before,after,backup in rows:
+        assert target.read_bytes()==before
+        target.write_bytes(after);assert target.read_bytes()==after
+for n,h in new['files'].items():assert sha((root/n).read_bytes())==h
+for n,h in new['runtime_dependencies'].items():assert sha((root/'build/bin'/n).read_bytes())==h
+result={'status':'vllm_characterization_linked_proofs_completed','bundle_sha256':args.sha256,
+        'all_source_pins_verified':802,'cpu_tests_prepared':59,'backed_up_and_replaced_targets':3,
+        'original_install_receipt_preserved':True,'runtime_unchanged':True,'gpu_executed':False}
+receipt.write_bytes(json.dumps(result,indent=2).encode());print(json.dumps(result))

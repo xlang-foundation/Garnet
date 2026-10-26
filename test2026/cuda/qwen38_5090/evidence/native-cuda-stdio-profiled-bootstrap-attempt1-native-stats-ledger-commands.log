@@ -1,0 +1,210 @@
+
+{"id": "bede4c81ddd6486da5a9ae08500b22c4", "kind": "correctness", "label": "Export real CUDA records; preserve instrumented scope", "argv": ["D:\\CantorAI\\5090-study-20261023\\tools\\n26\\target-windows-x64\\nsys.exe", "stats", "--report", "cuda_gpu_kern_sum,cuda_api_sum", "--format", "csv", "D:\\CantorAI\\5090-study-20261023\\results\\native-cuda-stdio-profiled-bootstrap-attempt1\\native\\cuda-trace.nsys-rep"]}
+Generating SQLite file D:\CantorAI\5090-study-20261023\results\native-cuda-stdio-profiled-bootstrap-attempt1\native\cuda-trace.sqlite from D:\CantorAI\5090-study-20261023\results\native-cuda-stdio-profiled-bootstrap-attempt1\native\cuda-trace.nsys-rep
+Processing [D:\CantorAI\5090-study-20261023\results\native-cuda-stdio-profiled-bootstrap-attempt1\native\cuda-trace.sqlite] with [D:\CantorAI\5090-study-20261023\tools\n26\target-windows-x64\reports\cuda_gpu_kern_sum.py]... 
+Time (%),Total Time (ns),Instances,Avg (ns),Med (ns),Min (ns),Max (ns),StdDev (ns),Name
+29.6,2262796598,32256,70151.2,77568.0,52608,629921,38139.7,cutlass3x_sm120_bstensorop_s16864gemm_block_scaled_ue4m3xe2m1_ue4m3xe2m1_f32_bf16_bf16_128x128x256_1x1x1_0_tnn_align32_o_vs16_bias_bf16_relu
+13.7,1045556270,4016,260347.7,39424.0,38304,660610,234299.7,"Garnet::<unnamed>::scores(Garnet::Qwen35AttentionCoreConfig, const float *, const __nv_bfloat16 *, const float *, const float *, const float *, float *)"
+9.8,751580775,32320,23254.4,22848.0,7008,39232,7704.9,sm89_xmma_gemm_e4m3bf16_e4m3f32_f32_tn_n_tilesize32x64x64_stage5_warpsize2x2x1_tensor16x8x32_execute_kernel__5x_cublas
+9.5,726056382,4016,180790.9,99200.0,10272,525249,134042.3,"Garnet::<unnamed>::context(Garnet::Qwen35AttentionCoreConfig, const __nv_bfloat16 *, const float *, const float *, const float *, const float *, const float *, float *)"
+8.5,652080127,24096,27061.8,27040.0,26016,29376,330.7,void cutlass::Kernel2<cutlass_80_wmma_tensorop_bf16_s161616gemm_bf16_16x16_128x2_tn_align8>(T1::Params)
+6.8,515280959,12048,42769.0,5376.0,5216,85056,37950.7,"Garnet::<unnamed>::registerState128Kernel(Garnet::Qwen35DeltaConfig, int, const float *, const float *, const float *, const float *, const float *, const float *, const float *, const float *, const float *, float *, float *)"
+3.0,227027079,5952,38143.0,38048.0,36576,42176,752.4,nvjet_sm120_qqtst_mma_64x64x64_12_32x32x64_tmaAB_alignCD4_bz_TNNN
+2.9,224919942,7936,28341.7,23872.0,22560,44257,7994.1,nvjet_sm120_qqtst_mma_64x32x64_16_32x16x64_tmaAB_alignCD4_bz_TNNN
+2.4,179660668,148,1213923.4,544.0,512,22675306,5093174.4,"void genericReformat::copyVectorizedKernel<double, float, float, (bool)1, (bool)0, (int)1>(unsigned int, const void *, genericReformat::ArrayN<T6>, genericReformat::ArrayNWithReducedDivisors<T6>, genericReformat::ArrayN<T6>, int, const float *, void *, genericReformat::ArrayN<T6>, genericReformat::ArrayNWithReducedDivisors<T6>, genericReformat::ArrayN<T6>, int, const float *)"
+1.8,139180463,12,11598371.9,10459124.5,555008,22337190,7401817.4,"void CUTENSOR_NAMESPACE::permutationKernelPLC3<CUTENSOR_NAMESPACE::VectorWrite2DTensorView<(unsigned char)0, (unsigned char)1, (bool)1, (unsigned int)4, float, float, CUTENSOR_NAMESPACE::GeneralUnarySmall<float>>, CUTENSOR_NAMESPACE::VectorRead2DTensorView<(unsigned char)0, (unsigned char)1, (bool)1, (unsigned int)4, float, float, CUTENSOR_NAMESPACE::GeneralUnarySmall<float>>, CUTENSOR_NAMESPACE::ThreadLevelElementwise<CUTENSOR_NAMESPACE::ElementwiseConfig1DCommonCase<CUTENSOR_NAMESPACE::GeneralUnarySmall<float>, CUTENSOR_NAMESPACE::GeneralBinary<float>, (int)1, (int)256, (int)1, (int)64, (signed char)4, (bool)1, (bool)0, (bool)1, (bool)1, (bool)0>, float>, CUTENSOR_NAMESPACE::ElementwiseRuntimePLC3<float, float, float, float>::Params>(T4)"
+1.7,133480581,32256,4138.2,3968.0,3744,5312,340.6,"Garnet::<unnamed>::QuantizeActivation(const __nv_bfloat16 *, unsigned char *, unsigned char *, float, int, int, int, unsigned long long)"
+1.3,99161317,2032,48799.9,48832.0,47329,51232,425.6,sm89_xmma_gemm_e4m3bf16_e4m3f32_f32_tn_n_tilesize64x128x64_stage4_warpsize2x2x1_tensor16x8x32_execute_kernel__5x_cublas
+1.2,88407312,12048,7337.9,2048.0,1760,13856,5574.5,"Garnet::<unnamed>::convolution(Garnet::Qwen35DeltaConfig, int, int, const float *, const float *, const float *, const float *, float *, float *)"
+0.6,46520260,251,185339.7,169536.0,167264,205280,17400.4,"Garnet::<unnamed>::copyLinearBF16KV(const float *, long long, float *, int, long long, Garnet::Qwen38BF16KVSpans)"
+0.6,46295251,52208,886.7,928.0,608,1696,211.5,"Garnet::<unnamed>::Quantize(const __nv_bfloat16 *, unsigned char *, float, unsigned long long)"
+0.4,28986841,8128,3566.3,3584.0,3008,4000,152.4,__myl_ReshCastReshCastSeleAddMulMeanAddSqrtDivMulMul_0xd6e87c1d9529adc83cded642e4ea6ceb
+0.4,27817888,7936,3505.3,3520.0,3040,4000,170.1,__myl_ReshCastReshCastSeleAddMulMeanAddSqrtDivMulMul_0xa561ce508f6c305e302bc7248352bb45
+0.3,26578512,4016,6618.2,3200.0,2848,11552,3681.3,"Garnet::<unnamed>::normalize(Garnet::Qwen35AttentionCoreConfig, const float *, float *)"
+0.3,24472247,6096,4014.5,4000.0,3776,5632,107.5,__myl_ReshCastSeleMulMeanAddSqrtDivMulMulCastReshMoveMoveMove_0x03c14527b93bd8f31d28265cf37de748
+0.3,23821898,5952,4002.3,4000.0,3744,6880,110.8,__myl_ReshCastSeleMulMeanAddSqrtDivMulMulCastReshMoveMoveMove_0x22e980ab627e61e47a1b095e984f966e
+0.3,22832079,127,179780.1,179745.0,178369,181024,523.3,__myl_MoveMoveMoveMoveMoveMoveMoveMoveMoveMoveMoveMoveMoveMoveMoveMoveMoveMoveMoveMoveMoveMoveEtc_0xc3298a2f4f4622121d6143b94c29ccca
+0.3,21964022,3968,5535.3,5536.0,5152,6144,201.6,sm89_xmma_gemm_e4m3bf16_e4m3f32_f32_tn_n_tilesize64x64x64_stage6_warpsize2x2x1_tensor16x8x32_execute_kernel__5x_cublas
+0.3,21747479,5952,3653.8,3616.0,3296,4736,190.8,__myl_ReshReshReshCastAddReshConcSlic_0x40d8b0dc3605cd2358377a1410cc7318
+0.3,21310561,124,171859.4,171777.0,170049,174144,644.7,__myl_SlicSlicSlicSlicSlicSlicSlicSlicSlicSlicSlicSlicSlicSlicSlicSlicSlicSlicSlicSlicSlicSlicEtc_0x9c3615ffa2d4ffb77eac83e035e8904c
+0.3,20427074,24096,847.7,832.0,672,1280,56.3,__myl_Move_0x60f1a4ef80aed241192041c54e812fe4
+0.3,19782637,6096,3245.2,3232.0,2912,3872,162.9,__myl_ReshReshReshReshReshReshReshCastAddReshConcSlic_0xfe17717240d84877f279135822b57ca2
+0.2,18725843,7936,2359.6,2336.0,2208,3040,59.9,__myl_ReshCastSlicSiluSlicMul_0xa3541528f0051c52fd2271ea971bea0b
+0.2,11771040,2032,5792.8,5792.0,5472,6273,113.4,__myl_GathMulConcReshSinCosAddSqrtDivMulMulSlicSlicMulSlicSlicNegConcMulAddConcAddSqrtDivMulMulEtc_0x4e66ca26d600e64fd3c4f7816ce50791
+0.2,11668494,1984,5881.3,5824.0,5536,6656,188.2,__myl_GathMulConcReshSinCosAddSqrtDivMulMulSlicSlicMulSlicSlicNegConcMulAddConcAddSqrtDivMulMulEtc_0x2f3ce452f912447fcdd28108f4294a0f
+0.1,10737652,12048,891.2,864.0,768,1280,53.8,__myl_Move_0x62f646d24f97fec42ecb88076c8068ea
+0.1,10680233,7936,1345.8,1344.0,1312,1792,34.9,__myl_Cast_0x5ba882589bb84d5a649b9b0af7ce3eb3
+0.1,10594799,12048,879.4,832.0,768,1408,92.1,__myl_Move_0xdab72d3ab0cf2d499046a47c1d25ba44
+0.1,9893565,8128,1217.2,1216.0,1088,1568,51.2,__myl_ReshCastSlicSiluSlicMul_0x02f6476cd7766bf68134a397657a3383
+0.1,9733753,3968,2453.1,2448.0,2175,3040,237.2,sm89_xmma_gemm_e4m3bf16_e4m3f32_f32_tn_n_tilesize64x64x64_stage6_warpsize2x2x1_tensor16x8x32_execute_split_k_kernel__5x_cublas
+0.1,7852818,12192,644.1,640.0,480,1248,63.9,__myl_ReshCast_0x7af8b5e70fded89312dcab19083839e7
+0.1,7800041,11904,655.2,640.0,512,1152,68.0,__myl_ReshCast_0xe55201cd5d0e988fffcfd1299d79574d
+0.1,6674401,12,556200.1,555840.5,554112,558976,1597.5,__myl_Move_0x97941653caec58478dfde96b6d497c35
+0.1,6462951,2032,3180.6,3168.0,3040,3520,67.0,__myl_ReshCastSeleMulMeanAddSqrtDivMulMulCastReshMoveMove_0x368b6ba304a3ba5782c190f5618e4a8e
+0.1,6306119,1984,3178.5,3168.0,3040,3552,62.2,__myl_ReshCastSeleMulMeanAddSqrtDivMulMulCastReshMoveMove_0x9520d4fdfc6e2cec1f0b6329d49f156c
+0.1,5571751,5952,936.1,928.0,896,1408,34.0,__myl_ReshCast_0x9612e69c4dd91c5e310c479cd45bba60
+0.1,5428645,7936,684.1,672.0,640,1088,31.6,__myl_Cast_0x99fed1cbd2d09e89c573267f5d85b9ee
+0.1,5160874,5952,867.1,864.0,768,1312,47.9,__myl_ReshCast_0x21878d0b3360640b1ffc070a114f2080
+0.1,5010822,7936,631.4,640.0,608,1344,34.9,__myl_Cast_0x11386ef32551698b5814c2bb957868c1
+0.1,4406085,251,17554.1,6080.0,4384,33760,12498.4,"Garnet::<unnamed>::scatterBF16KV(const float *, float *, int, int, long long, Garnet::Qwen38BF16KVSpans)"
+0.1,4381125,8128,539.0,544.0,512,896,26.9,__myl_Cast_0xe6bcaf4cbf0131084a02f9045ff15ad5
+0.1,4289989,8128,527.8,512.0,480,832,22.8,__myl_Cast_0x51874e8cfc4b7db08438897d75e7de79
+0.1,4282412,8128,526.9,512.0,512,800,22.5,__myl_Cast_0xe91a866ec3696f1f7f4d032ef6b6c8b5
+0.1,4188105,6096,687.0,672.0,608,1120,50.4,__myl_ReshCast_0x771e96dbb37e1d3630e8e67e2ac15361
+0.0,3201158,6096,525.1,512.0,480,864,23.6,__myl_ReshCast_0x236569f837b6448315ac2354c61a8fc3
+0.0,2973057,1984,1498.5,1504.0,1344,1824,48.6,__myl_ReshCastSlicSlicMulMean_0x7ba198088d7ed091dc17f146751e51f9
+0.0,2839588,1860,1526.7,1504.0,1344,2112,94.3,__myl_ReshReshReshCastAddReshConcSlic_0xd0e64076ca0e04b80bb5b86105247c4a
+0.0,2832356,2032,1393.9,1376.0,1280,1664,50.7,__myl_ReshCastSlicSlicMulMean_0x9c75b0e40f541886160c235eb600c677
+0.0,2151298,26,82742.2,84992.0,1696,214528,37470.2,wait_kernel_impl
+0.0,1964323,1984,990.1,992.0,928,1216,32.8,__myl_ReshCastMulMean_0xca927addd9364e13ed42c60711f0e671
+0.0,1872258,1905,982.8,960.0,864,1568,88.3,__myl_ReshReshReshCastAddReshConcSlic_0x6c4daad0e18c0b905f631d2a9030c2f0
+0.0,1342722,2032,660.8,640.0,608,928,38.9,__myl_ReshCast_0xa017869faeff926bae2fe34f5da4ec29
+0.0,1317377,1984,664.0,672.0,608,960,35.4,__myl_ReshCast_0x27be7ebb0998f9e40e3d3a17fc5830c0
+0.0,1233505,2032,607.0,608.0,576,992,21.6,__myl_ReshCastMulMean_0x31643270cf7e09a94baa7596226c1ade
+0.0,816031,251,3251.1,3232.0,2912,3872,226.1,__myl_MoveSlicSlic_0x378b5163fe6c479065ced7f54bc008b6
+0.0,812128,251,3235.6,3264.0,2944,3744,211.3,__myl_MoveSlicSlic_0xb40cd9c0c66cbe2505ce48ceb6bf24ca
+0.0,812052,251,3235.3,3232.0,2944,4032,210.0,__myl_MoveSlicSlic_0xa9c1e5a1466968e952243a0458de898e
+0.0,804476,251,3205.1,3104.0,2944,3840,211.1,__myl_MoveSlicSlic_0xe189b866c6dfe5b02a4f9083c62e87d1
+0.0,800702,251,3190.0,3104.0,2976,3840,188.5,__myl_MoveSlicSlic_0x9db8e932459bc465a2f0460f5064a047
+0.0,800701,251,3190.0,3104.0,2976,3648,193.1,__myl_MoveSlicSlic_0x294fde4ffb42da1d9e4ee6944e26dbca
+0.0,799422,251,3184.9,3200.0,2944,3680,160.4,__myl_MoveSlicSlic_0x9a5b90e5058cea2ccff573694b44afaf
+0.0,793312,251,3160.6,3072.0,2944,3808,188.7,__myl_MoveSlicSlic_0x00ceb07d3e0fdb624b2b18e693e2b80b
+0.0,788382,251,3141.0,3104.0,2880,3616,155.6,__myl_MoveSlicSlic_0x6dfe101b94db0c3f786b7e07f01ec961
+0.0,788301,251,3140.6,3072.0,2944,3808,178.2,__myl_MoveSlicSlic_0xbde49e1d8bf86d1aec111db57f078cc3
+0.0,780795,251,3110.7,3071.0,2656,3680,178.1,__myl_MoveSlicSlic_0xcd299a78eb6bd2f3e10616da36ebd4b4
+0.0,778366,251,3101.1,3040.0,2880,3584,158.3,__myl_MoveSlicSlic_0xd0600a42fd832e66e6379880dcb6803c
+0.0,773691,251,3082.4,3040.0,2624,3776,194.6,__myl_MoveSlicSlic_0xd1b29ba6c8961ac4e7fe9ee3de6196c8
+0.0,767116,251,3056.2,3008.0,2688,3839,210.3,__myl_MoveSlicSlic_0x7d01c689b0313813041542a46c6edb07
+0.0,764737,251,3046.8,3008.0,2848,3520,152.3,__myl_MoveSlicSlic_0x3553ebd67d80706c6143626c5df90486
+0.0,763224,251,3040.7,3040.0,2655,3648,214.9,__myl_MoveSlicSlic_0x3c8cc95f1de088557c98c0f2b8f1ed10
+0.0,758992,251,3023.9,3040.0,2656,3584,239.8,__myl_MoveSlicSlic_0x86927e22df866a965fdaea959a8b75ca
+0.0,758196,251,3020.7,2976.0,2784,3360,156.5,__myl_MoveSlicSlic_0x4192e0731dab1b3b2b51a1d904ae4b95
+0.0,757375,251,3017.4,3008.0,2720,3488,192.7,__myl_MoveSlicSlic_0xed862bf9f322b2a667875d20192ca1b6
+0.0,755150,251,3008.6,3008.0,2656,3680,269.8,__myl_MoveSlicSlic_0xa574f805877b28e85a5d6a2863c92090
+0.0,753918,251,3003.7,3008.0,2624,3552,242.9,__myl_MoveSlicSlic_0xf8fe125ea1b17868a012501b42fd7c6c
+0.0,751595,251,2994.4,3008.0,2655,4128,242.5,__myl_MoveSlicSlic_0x5a6e9e259b1bd8bcff2ec31797c3b199
+0.0,750135,251,2988.6,3008.0,2656,3552,228.3,__myl_MoveSlicSlic_0x31ae6796d71610ff0a86a0b8484df890
+0.0,749645,251,2986.6,3008.0,2655,3680,212.3,__myl_MoveSlicSlic_0xd2af798bd8576543e54353f5f7083c24
+0.0,747608,251,2978.5,3040.0,2656,3808,243.0,__myl_MoveSlicSlic_0x286f6f42ae246ddf06e6242dbd7440b6
+0.0,743919,251,2963.8,3007.0,2592,3551,250.7,__myl_MoveSlicSlic_0x64fee037f5fa739d1e1ecd8947833c95
+0.0,741926,251,2955.9,2976.0,2624,4096,261.4,__myl_MoveSlicSlic_0x64d4df65e4314faf5a11dabdeb746715
+0.0,741178,251,2952.9,3008.0,2624,3647,265.3,__myl_MoveSlicSlic_0xdbe86221a1268961edfb085f9bb1fc1a
+0.0,739357,251,2945.6,2944.0,2592,3584,247.1,__myl_MoveSlicSlic_0x51acaa3f5001886a84239e534a43a980
+0.0,737745,251,2939.2,2944.0,2592,3552,222.5,__myl_MoveSlicSlic_0xb688fea06071f51b33a96360e46755b0
+0.0,737212,251,2937.1,2944.0,2624,3424,216.2,__myl_MoveSlicSlic_0x02bfbeb55be6e9d4c56e9729df388115
+0.0,731168,251,2913.0,2912.0,2592,3456,221.0,__myl_MoveSlicSlic_0x12c66198adff338ab0fa945ed4645e76
+0.0,721727,251,2875.4,2848.0,2592,3328,203.9,__myl_MoveSlicSlic_0x7c0627f21e9e385e9a9247813887dd42
+0.0,719944,251,2868.3,2848.0,2624,3328,176.0,__myl_MoveSlicSlic_0x2ea1baddb28c235cf43c0e443e70d48f
+0.0,718007,251,2860.6,2848.0,2592,3328,213.7,__myl_MoveSlicSlic_0xc89acef5f0e825624e95e9364e2f0d8e
+0.0,715679,251,2851.3,2752.0,2592,3520,197.7,__myl_MoveSlicSlic_0x412df16d3bd46be1ab4b548741557e10
+0.0,714681,251,2847.3,2816.0,2592,3392,184.8,__myl_MoveSlicSlic_0xec7f67a07abee026d2daa55df59a9e17
+0.0,711275,251,2833.8,2720.0,2624,3456,215.9,__myl_MoveSlicSlic_0x699fd7ea101967862e0684f7d9198465
+0.0,711034,251,2832.8,2720.0,2592,3456,218.8,__myl_MoveSlicSlic_0x8312ce0c5958d52985107a75f1641e55
+0.0,709892,251,2828.3,2720.0,2655,3584,190.1,__myl_MoveSlicSlic_0xb51ad4940a5ae8a5717d20fc45c737c3
+0.0,706133,251,2813.3,2784.0,2624,3264,150.0,__myl_MoveSlicSlic_0x25b2bbbc3e9e26d57806103d9b58cd0f
+0.0,704574,251,2807.1,2752.0,2592,3296,171.2,__myl_MoveSlicSlic_0x7ba6fca991b308d1895cf751cc9a973f
+0.0,703789,251,2803.9,2720.0,2624,3328,166.5,__myl_MoveSlicSlic_0x60b2367da9d35560b785d1d5f073549a
+0.0,703525,251,2802.9,2688.0,2624,3360,205.3,__myl_MoveSlicSlic_0x8ff42f969acc1714eaddc496ee4ad5a5
+0.0,702962,251,2800.6,2688.0,2592,3360,188.9,__myl_MoveSlicSlic_0x0070272da9a20b7b3a8f79a84199519d
+0.0,702891,251,2800.4,2688.0,2624,3264,165.3,__myl_MoveSlicSlic_0x3a1bab8303df08899deb000d033b5fb4
+0.0,700229,251,2789.8,2720.0,2624,3231,141.9,__myl_MoveSlicSlic_0xdcdb8128e200be237723b9115a826a79
+0.0,696960,251,2776.7,2720.0,2592,3168,133.4,__myl_MoveSlicSlic_0x7bd68abfb956adf266c2ef06fc48ad95
+0.0,530305,22,24104.8,24304.0,13600,35328,10653.3,sm80_xmma_gemm_f32f32_f32f32_f32_nn_n_tilesize256x128x8_stage3_warpsize4x2x1_ffma_aligna4_alignc4_execute_kernel_trt
+0.0,493184,22,22417.5,22624.0,12992,32672,9573.2,sm80_xmma_gemm_f32f32_f32f32_f32_nn_n_tilesize128x256x8_stage3_warpsize2x4x1_ffma_aligna4_alignc4_execute_kernel_trt
+0.0,435011,128,3398.5,3392.0,3232,4576,135.9,__myl_MoveMulMeanAddSqrtDivMulMul_0x470ac9b3d3cae4f59388eab8426d5252
+0.0,367584,22,16708.4,17328.0,8800,26272,7890.5,sm80_xmma_gemm_f32f32_f32f32_f32_nn_n_tilesize256x64x8_stage3_warpsize2x2x1_ffma_aligna4_alignc4_execute_kernel_trt
+0.0,314880,251,1254.5,1248.0,1088,1472,72.7,"Garnet::<unnamed>::CopyLast(const float *, const float *, float *, int, int, int)"
+0.0,311233,22,14147.0,14592.0,8000,21440,6177.9,sm80_xmma_gemm_f32f32_f32f32_f32_nn_n_tilesize64x256x8_stage3_warpsize1x4x1_ffma_aligna4_alignc4_execute_kernel_trt
+0.0,299137,22,13597.1,14032.0,7584,20896,6031.6,sm80_xmma_gemm_f32f32_f32f32_f32_nn_n_tilesize128x128x8_stage3_warpsize2x2x1_ffma_aligna4_alignc4_execute_kernel_trt
+0.0,296416,1,296416.0,296416.0,296416,296416,0.0,"Garnet::<unnamed>::RepackScales(const unsigned char *, unsigned char *, int, int, int, unsigned long long)"
+0.0,278337,128,2174.5,2144.0,2080,2432,86.3,"void Garnet::ParallelBatchTop1Candidate::chunks<__nv_bfloat16>(const T1 *, unsigned long long *, int)"
+0.0,204032,22,9274.2,9328.0,5376,13408,3940.2,sm80_xmma_gemm_f32f32_f32f32_f32_nn_n_tilesize128x64x8_stage3_warpsize2x2x1_ffma_aligna4_alignc4_execute_kernel_trt
+0.0,175904,22,7995.6,8160.0,4928,11520,3066.3,sm80_xmma_gemm_f32f32_f32f32_f32_nn_n_tilesize64x128x8_stage3_warpsize1x4x1_ffma_aligna4_alignc4_execute_kernel_trt
+0.0,172960,22,7861.8,7856.0,6592,9184,1264.5,sm80_xmma_gemm_f32f32_f32f32_f32_nn_n_tilesize128x32x8_stage3_warpsize2x2x1_ffma_aligna4_alignc4_execute_kernel_trt
+0.0,172513,22,7841.5,7920.0,5472,10336,2354.7,sm80_xmma_gemm_f32f32_f32f32_f32_nn_n_tilesize32x128x8_stage3_warpsize1x2x1_ffma_aligna4_alignc4_execute_kernel_trt
+0.0,168480,22,7658.2,7600.0,6144,9280,1417.4,sm80_xmma_gemm_f32f32_f32f32_f32_nn_n_tilesize64x32x8_stage3_warpsize1x2x1_ffma_aligna4_alignc4_execute_kernel_trt
+0.0,151713,22,6896.0,6896.0,5152,8641,1693.6,sm80_xmma_gemm_f32f32_f32f32_f32_nn_n_tilesize32x64x8_stage3_warpsize1x2x1_ffma_aligna4_alignc4_execute_kernel_trt
+0.0,149312,22,6786.9,6848.0,5984,7552,722.9,sm80_xmma_gemm_f32f32_f32f32_f32_nn_n_tilesize32x32x8_stage3_warpsize1x2x1_ffma_aligna4_alignc4_execute_kernel_trt
+0.0,139456,22,6338.9,7008.0,4896,7744,1347.8,sm80_xmma_gemm_f32f32_f32f32_f32_nn_n_tilesize64x64x8_stage3_warpsize1x4x1_ffma_aligna4_alignc4_execute_kernel_trt
+0.0,101696,128,794.5,800.0,736,960,31.1,"void Garnet::ParallelBatchTop1Candidate::finish<__nv_bfloat16>(const T1 *, long long *, float *, int, int)"
+0.0,100544,128,785.5,768.0,736,1312,56.2,"void CUTENSOR_NAMESPACE::permutationKernelPLC3<CUTENSOR_NAMESPACE::VectorWrite2DTensorView<(unsigned char)0, (unsigned char)1, (bool)1, (unsigned int)1, float, float, CUTENSOR_NAMESPACE::GeneralUnarySmall<float>>, CUTENSOR_NAMESPACE::VectorRead2DTensorView<(unsigned char)0, (unsigned char)1, (bool)1, (unsigned int)1, float, float, CUTENSOR_NAMESPACE::GeneralUnarySmall<float>>, CUTENSOR_NAMESPACE::ThreadLevelElementwise<CUTENSOR_NAMESPACE::ElementwiseConfig1DSmallMode<CUTENSOR_NAMESPACE::GeneralUnarySmall<float>, CUTENSOR_NAMESPACE::GeneralBinary<float>, (int)1, (int)32, (int)1, (int)32, (signed char)1, (bool)1, (bool)0, (bool)1, (bool)1, (bool)0>, float>, CUTENSOR_NAMESPACE::ElementwiseRuntimePLC3<float, float, float, float>::Params>(T4)"
+0.0,97952,128,765.3,768.0,704,960,34.3,"void astypeKernel<float, __nv_bfloat16>(const T1 *, T2 *, int)"
+0.0,53664,98,547.6,544.0,512,640,14.4,__myl_Move_0x1df4ffec90d3ab4449293c7107b01d4a
+0.0,51328,94,546.0,544.0,512,640,15.4,__myl_Move_0x049c1bd281d02898df3c51028db8d788
+
+Processing [D:\CantorAI\5090-study-20261023\results\native-cuda-stdio-profiled-bootstrap-attempt1\native\cuda-trace.sqlite] with [D:\CantorAI\5090-study-20261023\tools\n26\target-windows-x64\reports\cuda_api_sum.py]... 
+Time (%),Total Time (ns),Num Calls,Avg (ns),Med (ns),Min (ns),Max (ns),StdDev (ns),Name
+52.9,28211576831,19743,1428940.7,429655.0,135969,124504594,5707383.7,cuModuleLoadFatBinary
+17.4,9302771155,6293,1478272.9,8705.0,574,954166721,13214728.7,cudaMemcpyAsync
+10.6,5633776374,22488,250523.7,162896.5,5973,27862364,600929.5,cuModuleUnload
+8.2,4383412736,3597,1218630.2,12678.0,346,65203873,5935360.3,cudaStreamSynchronize
+3.4,1811018092,1770,1023174.1,467494.0,182594,28801503,1849710.3,cuMemFreeHost
+1.5,825128115,1770,466174.1,385838.5,251974,7565207,468825.8,cuMemHostAlloc
+1.3,699410075,376,1860133.2,2186724.5,14162,4400638,1430578.0,cudaGraphLaunch
+1.1,596967716,2747,217316.2,184657.0,94427,13664065,339681.7,cuModuleLoadData
+0.9,483411627,1313,368173.4,1017.0,386,144868935,5341902.8,cudaEventSynchronize
+0.6,306769392,4912,62453.1,3014.0,1738,113023794,1626415.1,cudaMalloc
+0.3,173914502,1874,92803.9,6775.5,336,10758220,393581.4,cudaFree
+0.2,102906354,233967,439.8,368.0,244,334159,1737.7,cudaEventQuery
+0.2,101760815,15,6784054.3,6807112.0,23102,19858505,5686265.6,cuLibraryLoadData
+0.2,94336145,3474,27154.9,7154.0,708,51119145,877132.2,cudaLaunchKernel
+0.1,72702513,167,435344.4,92101.0,80853,31740706,2527245.0,cuMemUnmap
+0.1,66466430,3,22155476.7,32800294.0,105027,33561109,19100038.2,cudaGraphInstantiate
+0.1,64028843,5519,11601.5,7248.0,130,270891,15811.4,cudaMemsetAsync
+0.1,61801369,82132,752.5,643.0,475,142913,1145.3,cudaStreamWaitEvent
+0.1,56746735,4538,12504.8,9874.0,3797,174848,9611.2,cudaMemcpy2DAsync
+0.1,46088490,167,275979.0,43959.0,13630,12778767,1192111.9,cuMemRelease
+0.1,32858263,4860,6761.0,6159.0,486,694450,14091.8,cuLaunchKernelEx
+0.1,31948541,167,191308.6,107512.0,64617,2676520,382612.7,cuMemCreate
+0.1,26834248,941,28516.7,6427.0,4060,2341857,117360.4,cuMemcpyHtoDAsync_v2
+0.0,24626770,15467,1592.2,1026.0,535,468422,6092.8,cudaEventRecord
+0.0,12874984,26,495191.7,368777.0,233759,2204562,410265.6,cuEventSynchronize
+0.0,11520643,19598,587.8,472.0,199,43547,720.6,cudaEventCreateWithFlags
+0.0,11468463,15629,733.8,412.0,171,696003,10079.0,cudaEventDestroy
+0.0,6613228,4529,1460.2,1209.0,142,109653,2018.5,cuEventCreate
+0.0,6271899,54,116146.3,120702.0,90882,142375,11723.8,cuMemGetInfo_v2
+0.0,6159027,4529,1359.9,661.0,134,241426,4589.5,cuEventDestroy_v2
+0.0,6116314,12,509692.8,23500.5,13530,3757720,1105469.5,cudaMallocAsync
+0.0,5812468,3,1937489.3,2656911.0,29522,3126035,1668914.0,cudaGraphExecDestroy
+0.0,5083917,13,391070.5,321830.0,105278,914893,236406.7,cuMemAddressFree
+0.0,4246624,682,6226.7,6754.0,797,140816,9406.9,cuLaunchKernel
+0.0,4172062,109,38275.8,34156.0,26012,92136,10653.0,cuMemcpyAsync
+0.0,4102742,167,24567.3,21853.0,12484,107211,10644.3,cuMemSetAccess
+0.0,4000675,672,5953.4,6404.0,846,99321,8611.2,cudaLaunchKernelExC
+0.0,3265749,54,60476.8,63524.0,29085,168808,20528.4,cuMemsetD8_v2
+0.0,2985067,13,229620.5,182220.0,126935,543724,111744.1,cuMemAddressReserve
+0.0,2188723,1822,1201.3,1244.0,355,22968,905.7,cuCtxSetCurrent
+0.0,1849567,24,77065.3,68760.5,4221,188209,41820.2,cudaMemGetInfo
+0.0,1433020,3,477673.3,581512.0,3582,847926,431643.4,cudaGraphDestroy
+0.0,1181394,139,8499.2,1622.0,433,368137,44040.8,cuStreamSynchronize
+0.0,1177762,124,9498.1,9509.0,964,67142,7117.9,cudaStreamCreate
+0.0,1158645,167,6938.0,5974.0,3238,62320,4941.9,cuMemMap
+0.0,1029839,1751,588.1,352.0,305,41171,1350.1,cudaOccupancyMaxActiveClusters
+0.0,885999,26,34076.9,27341.0,23039,162076,26972.8,cuMemsetD8Async
+0.0,856153,3474,246.4,168.0,83,11005,268.0,cuKernelGetName
+0.0,854245,384,2224.6,227.0,189,753909,38459.5,cuKernelGetFunction
+0.0,828151,241,3436.3,2885.0,591,31120,4305.9,cuStreamCreate
+0.0,703620,1742,403.9,336.5,211,6683,275.8,cudaStreamIsCapturing
+0.0,602686,124,4860.4,4865.5,628,26934,3421.1,cudaStreamDestroy
+0.0,432637,103,4200.4,3658.0,666,10175,1641.2,cudaOccupancyAvailableDynamicSMemPerBlock
+0.0,430623,2142,201.0,149.0,95,917,97.5,cuFuncGetModule
+0.0,387114,3,129038.0,162335.0,1855,222924,114233.9,cudaStreamEndCapture
+0.0,336930,26,12958.8,9511.0,7690,38767,8475.1,cuMemAlloc_v2
+0.0,309689,52,5955.6,5057.0,2835,25421,3371.4,cuEventRecord
+0.0,304516,241,1263.6,1204.0,351,5479,847.8,cuStreamDestroy_v2
+0.0,262537,26,10097.6,8722.0,7157,30634,4746.7,cuMemFree_v2
+0.0,235035,224,1049.3,425.0,267,69164,6204.4,cuKernelSetAttribute
+0.0,200267,31,6460.2,2887.0,287,18737,6647.4,cuLibraryGetKernel
+0.0,197001,1008,195.4,154.0,100,4246,189.4,cuGetProcAddress_v2
+0.0,186614,15,12440.9,10641.0,652,59640,14319.0,cudaDeviceSynchronize
+0.0,102539,11,9321.7,10496.0,2133,15913,5057.9,cudaFreeAsync
+0.0,27723,15,1848.2,688.0,210,12270,3053.0,cuModuleGetLoadingMode
+0.0,16173,1,16173.0,16173.0,16173,16173,0.0,cuCtxSynchronize
+0.0,14909,13,1146.8,835.0,313,2626,613.3,cuMemGetAllocationGranularity
+0.0,13066,3,4355.3,3058.0,2100,7908,3113.8,cudaStreamBeginCapture
+0.0,13028,5,2605.6,1468.0,470,4926,2131.5,cuInit
+0.0,8689,3,2896.3,2727.0,1315,4647,1672.4,cudaGetDeviceProperties
+0.0,4321,2,2160.5,2160.5,287,4034,2649.5,cuGetProcAddress
+0.0,2890,3,963.3,480.0,378,2032,926.9,cudaGetDriverEntryPointByVersion
+0.0,1473,3,491.0,491.0,405,577,86.0,cuDeviceGetLuid
+

@@ -6576,3 +6576,78 @@ distinct fully retained observed-output benchmark. B4-cache/B8-MTP math/model/HT
 wider-prefill128 actual GPU/forward integration, tuned/MTP references, repeated
 statistics and matched INT4/4B remain open. Overall2x decode+throughput and halfTTFT
 unmet/unproven; no reduced completion objective.
+
+
+### 2026-10-25 — first real CUDA request-phase trace closed on both machines; vLLM output diagnosis
+
+Actual native-cuda-stdio-profiled-bootstrap-attempt1 completed exit0. All665source
+pins/runtime6/baseline1a1d preserved, cache retired and owned worker/collector/owner
+closed. Remote28CPU/.194s and actual embedded compatibility passed. The preloaded
+ordinary text request has exact3968prompt/128completion IDs, all130protocol events,
+twelve unique HtoD markers, original host-stage/native close/entry source and real
+owned SM120 CUDA graph-node kernels/API/copies. Archive
+b9ce1450d7034abb266d44b41766ff4879c313be064c9f063756326108c85f30,
+109282384bytes/700files; identical two-machine replay proof
+d313d2c5c07a400a8e8794a13fb0791b8133f6220f86e592e9faeb63fe5a75f6.
+The original ready-stdout failure and paired CPU observations remain immutable.
+
+Instrumented marker windows: prefill5098.506808ms, observed owned CUDA union
+4471.493237ms and234490kernel records; generation3471.777583ms, observed union
+2863.552330ms and236855kernel records. Whole request8865.800824ms/7404.137426ms
+CUDA union. Prefill kernel clipped sums include NVFP4 GEMM1054.070955ms,
+BF16 attention scores966.525308ms/context526.422004ms and GDN register-state
+483.142945ms. Decode includes NVFP4 GEMM1208.725643ms and FP8 GEMM569.280279ms.
+These are one profiled ordinary text control, not uninstrumented HTTP TTFT,
+decode tok/s or a code-change speedup. Kernel/API durations can overlap; use
+interval unions where additive duration is needed. Gaps without observed owned
+CUDA are unattributed, not evidence of a CPU/GIL/scheduling cause. Construction/
+correctness sampled adapter memory is not a serving peak or memory-saving claim.
+Raw source/entry/host/protocol/stats/ledgers/manifests and all failures retained;
+full .nsys-rep/SQLite/VRAM samples remain in hash-pinned output archive.
+
+Actual trace prioritizes wider target prefill128 and attention scores/context
+qualification, plus batched native/MTP to address concurrency throughput. This
+does not prove a particular optimization wins. Existing T128 is an offline
+component only; actual GPU canaries/oracle, full forward/runtime/state/model and
+HTTP remain required. Existing tiled-attention model correctness does not supply
+serving metrics. Full MTP/image phase controls and repeated trials remain open.
+
+Prepared separate vLLM output/isolation owner from qualified SGLang ownership,
+using the actual vLLM launcher/ready metadata/source/config/PID/stop machinery.
+Full checker derives from strict vLLM checker, replacing benchmark/805screen block
+only with raw288request/135overlap-wave diagnosis:192actual nonstream IDs,
+64full3968+128streams and32mixed-color/spatial streams, serial-before/after and
+rotated C1/2/4/8 controls. All variants retained; streamed IDs remain unobserved.
+Actual strict trial3 failed proof/partial12stream+124IDproof/805screenproof and
+archive are required and independently equal on both machines. The diagnosis
+does not weaken strict benchmark gates or admit an observed-output policy.
+
+Source review before any diagnosis requests found two inherited dependency issues.
+First, the strict checker's linked-reference loop overwrote the native parent_raw
+binding used by later metadata admission. New diagnostic checker alone now keeps
+linked_parent_raw separate; actual-loop CPU fixture uses distinct proof bytes.
+Original strict checker/failure proofs unchanged. Preserved original unrun57test
+preparation before this fix;58tests passed11.270s. Second, inherited SGLang proof
+was in parents but absent from archived source list. Before requests, preserved
+installed801pin/58test preparation and added explicit proof/archive pair admission
+and pinning, with missing/drift regression controls. Final59tests pass10.693s,
+802pins; preparation d7680e2eacab12eb1cdb8b941b1ca2615545db52cb63f0cd9a870a6af3b93c18.
+Initial57tests11.143s and all revision snapshots/ledgers/recipes retained.
+
+Initial absent-only vLLM diagnostic install added11targets and verified unchanged
+partial checker,801pins/runtime. Narrow dependency completion backed up all three
+owned unrun files before exact old-hash/new-hash replacement; original preparation
+and install receipt preserved, all802pins/runtime verified, GPU unrun on install.
+Final delta7236e11f7ffbcbb61c7ff253dc3c65f3800504003c2ff95fe4ef6f0c6eaf9697.
+Only after profiler transfer ACK, local/remote replay closure and all install
+receipts, original48577 supervisor started vllm-output-characterization-attempt1.
+Owner observed live; no other GPU model/transfer/replay scheduled concurrently.
+Actual diagnostic requests/terminal/source/runtime cleanup and two-machine replay
+remain pending. No new HTTP benchmark, comparison chart or2xclaim.
+
+Two read-only source searches used nonexistent guessed paths and a Windows glob;
+they failed without changes, then rg --files supplied actual paths. No local GPU
+or SDK/production build mutation. Private external-prefix probe remains untouched.
+Next actual diagnosis must close/replay before a separate fully qualified vLLM
+observed-output baseline. Native wider prefill/batched correctness and HTTP,
+strongest tuned/MTP references, repeats, matched INT4/4B and overall2x remain open.
