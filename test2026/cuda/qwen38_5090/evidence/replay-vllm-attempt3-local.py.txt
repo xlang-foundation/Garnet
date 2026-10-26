@@ -1,0 +1,36 @@
+from pathlib import Path
+import hashlib,json,os,subprocess,sys,zipfile
+work=Path(__file__).resolve().parent;out=work.parent/'outputs';repo=Path('D:/CantorAI/work/qwen38-5090');m=repo/'test2026/cuda/qwen38_5090'
+job='vllm-fixed4k-ordinary-attempt3';archive=out/(job+'-evidence.zip');sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+remote=json.loads((out/(job+'-remote-verified.json')).read_bytes());assert sha(archive)==remote['archive_sha256'];os.chdir(repo)
+def run(argv,path,expected):
+    with path.open('xb') as stream:code=subprocess.run(argv,stdout=stream,stderr=subprocess.STDOUT).returncode
+    assert code==expected,(code,path)
+    return {'exit_code':code,'argv':argv,'log_sha256':sha(path)}
+strict=run([sys.executable,str(m/'verify_vllm_fixed4k_launcher_completed.py'),'--proofs',str(out),'--job',job,
+            '--corpus',str(work/'mmmu/quality-corpus'),'--scratch',str(work)],out/(job+'-local-replay.log'),1)
+proof=out/(job+'-verified.json');assert proof.read_bytes()==(out/(job+'-remote-verified.json')).read_bytes()
+partial=run([sys.executable,str(m/'verify_vllm_fixed4k_attempt3_partial.py'),'--proofs',str(out)],out/(job+'-partial-local-replay.log'),0)
+pp=out/(job+'-partial-verified.json');assert pp.read_bytes()==(out/(job+'-partial-remote-verified.json')).read_bytes();p=json.loads(pp.read_bytes())
+folder=work/'vllm-attempt3-quality-local';folder.mkdir(exist_ok=True)
+with zipfile.ZipFile(archive) as z:
+    prefix='results/'+job+'/client/mmmu-quality/'
+    for name in z.namelist():
+        if name.startswith(prefix):
+            path=folder/name.removeprefix(prefix);assert path.resolve().is_relative_to(folder.resolve());raw=z.read(name)
+            assert not path.exists() or path.read_bytes()==raw
+            if not path.exists():
+                path.parent.mkdir(parents=True,exist_ok=True)
+                with path.open('xb') as stream:stream.write(raw)
+qp=out/(job+'-quality-verified.json')
+quality=run([sys.executable,'-m','test2026.cuda.qwen38_5090.verify_mmmu_http_quality','--corpus',str(work/'mmmu/quality-corpus'),
+             '--run',str(folder),'--output',str(qp)],out/(job+'-quality-local-replay.log'),0)
+assert qp.read_bytes()==(out/(job+'-quality-remote-verified.json')).read_bytes();q=json.loads(qp.read_bytes())
+r={'status':'vllm_attempt3_failure_partial_streams_and_adapted_screen_replayed_on_both_machines',
+   'archive_sha256':sha(archive),'archive_bytes':archive.stat().st_size,'failure_proof_sha256':sha(proof),
+   'partial_proof_sha256':sha(pp),'quality_proof_sha256':sha(qp),'strict_failure_replay':strict,'partial_replay':partial,'quality_replay':quality,
+   'actual_nonstream_4k_id_controls':p['actual_nonstream_4k_id_controls'],'raw_streams_replayed':p['raw_streams_replayed'],
+   'changed_stream_texts':sum(not s['text_exact'] for s in p['stream_comparisons']),
+   'adapted_screen_completed':q['completed_requests'],'adapted_screen_correct':q['score']['correct'],
+   'new_model_or_gpu_execution':False,'full_4k_benchmark_complete':False,'performance_admitted':False,'two_times_target_achieved':False}
+(work/'vllm-attempt3-local-replay-receipt.json').write_bytes(json.dumps(r,indent=2).encode());print(json.dumps({k:v for k,v in r.items() if not isinstance(v,dict)}))

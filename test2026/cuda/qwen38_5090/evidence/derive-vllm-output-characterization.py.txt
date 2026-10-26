@@ -1,0 +1,42 @@
+from pathlib import Path
+import ast,hashlib,json
+m=Path('D:/CantorAI/work/qwen38-5090/test2026/cuda/qwen38_5090');records={}
+sha=lambda raw:hashlib.sha256(raw).hexdigest()
+def create(old,new,replacements):
+    raw=(m/old).read_bytes();text=raw.decode();steps=[]
+    for a,b,count in replacements:
+        assert text.count(a)==count,(new,a,text.count(a),count)
+        text=text.replace(a,b);steps.append({'before':a,'after':b,'count':count})
+    path=m/new;assert not path.exists();ast.parse(text);path.write_bytes(text.encode())
+    records[new]={'source':old,'source_sha256':sha(raw),'source_text':raw.decode(),'target_sha256':sha(text.encode()),'replacements':steps}
+old=(m/'reference_concurrency_characterization.py').read_text()
+statement=" with urlopen(URL+'/get_server_info',timeout=60) as response:info=json.loads(response.read())\n expected=validate_server(info,'ordinary')"
+replacement=" with urlopen(URL+'/server_info?config_format=json',timeout=120) as response:info=json.loads(response.read())\n with urlopen(URL+'/version',timeout=120) as response:version=json.loads(response.read())\n server_log=(args.metadata.parent/'server.log').read_text(encoding='utf8',errors='replace')\n expected=validate_server(info,version,server_log,'ordinary')"
+create('reference_concurrency_characterization.py','vllm_concurrency_characterization.py',[
+    ('Untimed SGLang output/isolation study','Untimed vLLM output/isolation study',1),
+    ('from reference_fixed4k_sglang_reserved_identity import validate as validate_server','from reference_fixed4k_vllm_identity import validate as validate_server',1),
+    ('http://127.0.0.1:18081','http://127.0.0.1:18080',1),
+    ('sglang-fixed4k-ordinary-attempt2','vllm-fixed4k-ordinary-attempt3',1),
+    ("'sglang'","'vllm'",old.count("'sglang'")),
+    ("metadata['configured_engine_context_capacity']==4098","metadata['configured_engine_context_capacity']==4096",1),
+    (statement,replacement,1)])
+old=(m/'replay_reference_concurrency_characterization.py').read_text()
+create('replay_reference_concurrency_characterization.py','replay_vllm_concurrency_characterization.py',[
+    ('from reference_concurrency_characterization import','from vllm_concurrency_characterization import',1),
+    ("'sglang'","'vllm'",old.count("'sglang'"))])
+old=(m/'test_reference_concurrency_characterization.py').read_text()
+create('test_reference_concurrency_characterization.py','test_vllm_concurrency_characterization.py',[
+    ('class CharacterizationControls','class VLLMCharacterizationControls',1),
+    ("importlib.import_module('reference_concurrency_characterization')","importlib.import_module('vllm_concurrency_characterization')",1),
+    ("sample('sglang')","sample('vllm')",1),
+    ("changed['choices'][0]['response_token_ids']=changed['choices'][0]['response_token_ids'][:-2]","changed['choices'][0]['token_ids']=changed['choices'][0]['token_ids'][:-2]",1),
+    ("changed['choices'][0]['prompt_token_ids'][20]=9999","changed['prompt_token_ids'][20]=9999",1),
+    ("value={'choices':[{'index':0,'finish_reason':'stop','message':{'role':'assistant','content':'Red'},'prompt_token_ids':prompt,'response_token_ids':[100,248046]}]",
+     "value={'prompt_token_ids':prompt,'choices':[{'index':0,'finish_reason':'stop','message':{'role':'assistant','content':'Red'},'token_ids':[100,248046]}]",1),
+    ('from .replay_reference_concurrency_characterization import replay','from .replay_vllm_concurrency_characterization import replay',1),
+    ("data={'choices':[{'index':0,'finish_reason':finish,'message':{'role':'assistant','content':text},'prompt_token_ids':prompt,'response_token_ids':ids}]",
+     "data={'prompt_token_ids':prompt,'choices':[{'index':0,'finish_reason':finish,'message':{'role':'assistant','content':text},'token_ids':ids}]",1)])
+path=m/'evidence/vllm-output-characterization-client-derivation.json';assert not path.exists()
+path.write_bytes(json.dumps({'status':'exact_existing288request_client_raw_replay_and_CPU_fixture_derivation_gpu_unrun','files':records,
+    'scope':'Only actual engine/port/4096config/parent/JSON-schema adaptation. All135overlap waves,192nonstreamIDs/96streams,full4K lengths/color isolation/reset comparisons and non-promotion scope remain unchanged. No vLLM diagnosis or performance result yet.'},indent=2).encode())
+print(json.dumps({'status':'vllm_output_characterization_client_derived','files':list(records)}))

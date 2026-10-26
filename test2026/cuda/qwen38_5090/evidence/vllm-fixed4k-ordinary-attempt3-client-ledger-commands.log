@@ -1,0 +1,55 @@
+
+{"id": "029234d2308d4da4bec2c20d263cf50c", "kind": "correctness", "label": "Actual untimed controls/805screen then124frozen4K controls and124timedstreams; timings belong to HTTP harness", "argv": ["C:\\Python312\\python.exe", "D:\\CantorAI\\5090-study-20261023\\Garnet\\test2026\\cuda\\qwen38_5090\\monitor_native_probe.py", "--study", "D:\\CantorAI\\5090-study-20261023", "--output", "D:\\CantorAI\\5090-study-20261023\\results\\vllm-fixed4k-ordinary-attempt3\\resources", "--", "C:\\Python312\\python.exe", "D:\\CantorAI\\5090-study-20261023\\Garnet\\test2026\\cuda\\qwen38_5090\\probe_reference_fixed4k.py", "--root", "D:\\CantorAI\\5090-study-20261023", "--engine", "vllm", "--mode", "ordinary", "--output", "D:\\CantorAI\\5090-study-20261023\\results\\vllm-fixed4k-ordinary-attempt3\\client", "--metadata", "D:\\CantorAI\\5090-study-20261023\\results\\vllm-fixed4k-ordinary-attempt3\\metadata.json", "--launcher", "D:\\CantorAI\\5090-study-20261023\\Garnet\\test2026\\cuda\\qwen38_5090\\serve_vllm_fixed4k.sh", "--server-log", "D:\\CantorAI\\5090-study-20261023\\results\\vllm-fixed4k-ordinary-attempt3\\server.log"]}
+REFERENCE_READY_FOR_UNTIMED_GREEDY vllm
+MATCHED_REFERENCE_IMAGE_PASS red Red
+MATCHED_REFERENCE_IMAGE_PASS green Green
+MATCHED_REFERENCE_IMAGE_PASS blue Blue
+MATCHED_REFERENCE_IMAGE_PASS bottom-blue blue
+REFERENCE_GREEDY_CAPTURE s3-text-c1-r0 128
+REFERENCE_GREEDY_CAPTURE s3-text-c1-r1 128
+REFERENCE_GREEDY_CAPTURE s3-text-c1-r2 128
+REFERENCE_GREEDY_CAPTURE s3-text-c1-r3 128
+REFERENCE_GREEDY_CAPTURE s3-text-c1-r4 128
+REFERENCE_GREEDY_CAPTURE s3-text-c1-r5 128
+REFERENCE_GREEDY_CAPTURE s3-text-c1-r6 128
+REFERENCE_GREEDY_CAPTURE s3-text-c1-r7 128
+REFERENCE_GREEDY_CAPTURE s3-image-c1-r0 128
+REFERENCE_GREEDY_CAPTURE s3-image-c1-r1 128
+REFERENCE_GREEDY_CAPTURE s3-image-c1-r2 128
+REFERENCE_GREEDY_CAPTURE s3-image-c1-r3 128
+REFERENCE_GREEDY_CAPTURE s3-image-c1-r4 128
+REFERENCE_GREEDY_CAPTURE s3-image-c1-r5 128
+REFERENCE_GREEDY_CAPTURE s3-image-c1-r6 128
+REFERENCE_GREEDY_CAPTURE s3-image-c1-r7 128
+REFERENCE_VLM_AND_FULL_GREEDY_CAPTURE_COMPLETE
+{"requests": 8, "generated_tokens": 1024, "ttft_median_ms": 313.27510000846814, "decode_median_tokens_per_second": 67.61911653328855, "output_tokens_per_second": 58.34546394785941, "requests_per_second": 0.4558239370926516, "sampled_peak_adapter_used_bytes": 28726210560, "samples": 558, "requested_interval_seconds": 0.02, "observed_sample_gap_median_seconds": 0.031182500009890646, "observed_sample_gap_max_seconds": 0.07234099999186583, "scope": "NVML adapter-wide used memory, including background allocations; sampled maximum, not instantaneous or process-attributed peak", "case": "text", "concurrency": 1, "request_keys": ["e48654c06f3f42e4b461ef8fd0d06b1e-ctx4096-s3-text-c1-r0", "e48654c06f3f42e4b461ef8fd0d06b1e-ctx4096-s3-text-c1-r1", "e48654c06f3f42e4b461ef8fd0d06b1e-ctx4096-s3-text-c1-r2", "e48654c06f3f42e4b461ef8fd0d06b1e-ctx4096-s3-text-c1-r3", "e48654c06f3f42e4b461ef8fd0d06b1e-ctx4096-s3-text-c1-r4", "e48654c06f3f42e4b461ef8fd0d06b1e-ctx4096-s3-text-c1-r5", "e48654c06f3f42e4b461ef8fd0d06b1e-ctx4096-s3-text-c1-r6", "e48654c06f3f42e4b461ef8fd0d06b1e-ctx4096-s3-text-c1-r7"], "single_token_arrivals": true, "prompt_tokens": [3968, 3968, 3968, 3968, 3968, 3968, 3968, 3968]}
+Traceback (most recent call last):
+  File "D:\CantorAI\5090-study-20261023\Garnet\test2026\cuda\qwen38_5090\benchmark_fixed_length_reference.py", line 107, in <module>
+    if __name__=='__main__':raise SystemExit(main())
+                                             ^^^^^^
+  File "D:\CantorAI\5090-study-20261023\Garnet\test2026\cuda\qwen38_5090\benchmark_fixed_length_reference.py", line 94, in main
+    for f in [pool.submit(send,key) for key in wave]:f.result()
+                                                     ^^^^^^^^^^
+  File "C:\Python312\Lib\concurrent\futures\_base.py", line 456, in result
+    return self.__get_result()
+           ^^^^^^^^^^^^^^^^^^^
+  File "C:\Python312\Lib\concurrent\futures\_base.py", line 401, in __get_result
+    raise self._exception
+  File "C:\Python312\Lib\concurrent\futures\thread.py", line 58, in run
+    result = self.fn(*self.args, **self.kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\CantorAI\5090-study-20261023\Garnet\test2026\cuda\qwen38_5090\benchmark_fixed_length_reference.py", line 81, in send
+    if result['status']!='completed' or result['prompt_tokens']!=3968 or result['generated_tokens']!=128 or result['text']!=actual[key]['text']:raise ValueError('Preserved failed or nonmatching same-engine4Kstream: '+key)
+                                                                                                                                                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ValueError: Preserved failed or nonmatching same-engine4Kstream: ctx4096-s3-text-c2-warmup-0-0
+Traceback (most recent call last):
+  File "D:\CantorAI\5090-study-20261023\Garnet\test2026\cuda\qwen38_5090\probe_reference_fixed4k.py", line 56, in <module>
+    if __name__=='__main__':raise SystemExit(main())
+                                             ^^^^^^
+  File "D:\CantorAI\5090-study-20261023\Garnet\test2026\cuda\qwen38_5090\probe_reference_fixed4k.py", line 53, in main
+    subprocess.run(command,check=True);report['fixed_4k_cohorts_collected']=True;report['status']='reference_fixed4k_profile_collected';save()
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Python312\Lib\subprocess.py", line 571, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['C:\\Python312\\python.exe', 'D:\\CantorAI\\5090-study-20261023\\Garnet\\test2026\\cuda\\qwen38_5090\\benchmark_fixed_length_reference.py', '--engine', 'vllm', '--url', 'http://127.0.0.1:18080', '--corpus-archive', 'D:\\CantorAI\\5090-study-20261023\\Garnet\\test2026\\cuda\\qwen38_5090\\evidence\\fixed-length-4096-corpus.zip', '--output', 'D:\\CantorAI\\5090-study-20261023\\results\\vllm-fixed4k-ordinary-attempt3\\client\\benchmark4k', '--metadata', 'D:\\CantorAI\\5090-study-20261023\\results\\vllm-fixed4k-ordinary-attempt3\\metadata.json']' returned non-zero exit status 1.
+NATIVE_CORRECTNESS_RESOURCE_REPORT_SAVED

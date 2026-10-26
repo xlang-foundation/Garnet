@@ -1,0 +1,23 @@
+from pathlib import Path
+import hashlib,json,os,sys
+work=Path(__file__).resolve().parent;repo=Path('D:/CantorAI/work/qwen38-5090');out=work.parent/'outputs'
+sys.path.insert(0,str(repo))
+from test2026.cuda.qwen38_5090.run_logged import run
+names=('Garnet-vs-vLLM-SGLang-Verified-4K.png','Garnet-vs-vLLM-SGLang-Verified-4K.svg',
+       'Garnet-vs-vLLM-SGLang-Verified-4K-Data.json','Garnet-vLLM-SGLang-Verified-4K-Report.html')
+sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+assert all(not(out/n).exists() for n in names)
+renderer=work/'render-matched-vllm-sglang-4k.py';proof=out/'vllm-fixed4k-ordinary-attempt2-verified.json'
+assert json.loads(proof.read_bytes())['status']=='reference_fixed4k_failure_preserved'
+pins={str(p):sha(p) for p in (renderer,proof,out/'Garnet-Prefill16-vs-References-Verified-4K-Data.json',
+                             out/'Garnet-Prefill16-vs-References-Verified-4K.png')}
+os.chdir(repo)
+code=run([sys.executable,str(renderer),'--vllm-job','vllm-fixed4k-ordinary-attempt2'],work/'matched-chart-admission-ledger',
+    'correctness','Actual failed immutable vLLM proof must be refused before plotting or any new figure output',[Path(p) for p in pins])
+assert code==1 and all(not(out/n).exists() for n in names)
+assert all(sha(Path(p))==h for p,h in pins.items())
+assert 'Failed/partial vLLM trial cannot enter a comparison figure' in (work/'matched-chart-admission-ledger/commands.log').read_text()
+r={'status':'matched_chart_renderer_refused_actual_failed_trial','source_and_inputs_sha256':pins,
+   'expected_exit_code':1,'new_chart_created':False,'old_figure_unchanged':True,
+   'scope':'Actual failed vLLM metadata trial cannot produce a performance figure. No synthetic metrics or GPU/HTTP request. Successful render remains pending complete matched ordinary vLLM raw replay on both machines.'}
+(work/'matched-chart-admission-result.json').write_bytes(json.dumps(r,indent=2).encode());print(json.dumps(r))

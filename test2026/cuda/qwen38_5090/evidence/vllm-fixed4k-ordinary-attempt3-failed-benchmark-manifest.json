@@ -1,0 +1,163 @@
+{
+  "run_id": "e48654c06f3f42e4b461ef8fd0d06b1e",
+  "status": "failed",
+  "engine": "vllm",
+  "utc": "2026-10-26T00:51:41.339078+00:00",
+  "argv": [
+    "D:\\CantorAI\\5090-study-20261023\\Garnet\\test2026\\cuda\\qwen38_5090\\benchmark_fixed_length_reference.py",
+    "--engine",
+    "vllm",
+    "--url",
+    "http://127.0.0.1:18080",
+    "--corpus-archive",
+    "D:\\CantorAI\\5090-study-20261023\\Garnet\\test2026\\cuda\\qwen38_5090\\evidence\\fixed-length-4096-corpus.zip",
+    "--output",
+    "D:\\CantorAI\\5090-study-20261023\\results\\vllm-fixed4k-ordinary-attempt3\\client\\benchmark4k",
+    "--metadata",
+    "D:\\CantorAI\\5090-study-20261023\\results\\vllm-fixed4k-ordinary-attempt3\\metadata.json"
+  ],
+  "corpus_archive_sha256": "596991dd0907ccb8ae8ffb090737f59ba8da3faac181bb18fadc74ae0e4ef3ce",
+  "corpus_manifest_sha256": "25808fff53f326b6a1a970bb389173b2a54c1d1189248d40122fcdb959cb6987",
+  "context_capacity": 4096,
+  "actual_input_tokens_required": 3968,
+  "actual_completion_tokens_required": 128,
+  "engine_metadata": {
+    "engine": "vllm",
+    "generation_mode": "ordinary",
+    "version": "0.32.0",
+    "verified_settings": {
+      "model_config": {
+        "model": "/mnt/d/CantorAI/5090-study-20261023/models/Qwen3.8-27B-NVFP4",
+        "max_model_len": 4096,
+        "dtype": "torch.bfloat16",
+        "quantization": "modelopt_mixed",
+        "enforce_eager": false
+      },
+      "cache_config": {
+        "cache_dtype": "bfloat16",
+        "mamba_ssm_cache_dtype": "float32",
+        "enable_prefix_caching": false,
+        "kv_cache_memory_bytes": 4294967296
+      },
+      "parallel_config": {
+        "tensor_parallel_size": 1,
+        "pipeline_parallel_size": 1,
+        "data_parallel_size": 1
+      },
+      "scheduler_config": {
+        "max_num_seqs": 8,
+        "max_num_batched_tokens": 4096
+      },
+      "compilation_config": {
+        "cudagraph_capture_sizes": [
+          1,
+          2,
+          4,
+          8
+        ],
+        "max_cudagraph_capture_size": 8
+      }
+    },
+    "actual_cudagraph_mode": [
+      2,
+      0
+    ],
+    "context_capacity": 4096,
+    "configured_engine_context_capacity": 4096,
+    "engine_context_reserved_slots": 0,
+    "resolved_kv_cache_tokens": 37774,
+    "reported_max_concurrency_full4k": 9.22,
+    "checkpoint_revision": "482ca0f3832238542f8f5295dde86b5f22711d80",
+    "image_cache_policy": "dual_idle_reset_before_timing",
+    "scope": "Actual ready JSON config/version and startup cache-capacity log. Separate source/PID/quality/boundary/stream/cleanup checks required. Cache budget alone is not admission evidence; actual timed client concurrency is measured separately. Not strongest tuned/MTP or broad quality admission.",
+    "launcher_sha256": "25ccefca148c8c8141436358582093ba2d1a9e4e1cf5ff8e983b070fee80b90e",
+    "source_after_startup_verified": true,
+    "owned_server_pid_verified": true,
+    "linux_identity_sha256": "e018d04af35277422731245067a6bea7b92a6ec3fe2397c501b917bc3249ae03",
+    "server_info_sha256": "7d61ff2f62d146ac9cad14a6b028758ea0601943e43632f2f911efcb2e39f581",
+    "server_version_sha256": "2bd89ec9b983123a225f3df0381c737a45302bb7417e345bf9ef92304e4388cf",
+    "installed_config_identity_sha256": "5d1aabe705efffca8ec8c82bac8594fdbe1435ce462a799a6d5bfe66fc2f8eea",
+    "native_http_proof_sha256": "e07edc63fabb0489d0e250077162e24577421402d63ac9d8bf9bf0766f4e02dd"
+  },
+  "engine_metadata_sha256": "6eb2dfa75c679326557748c6e19ae677b863d354e3360efcd02afbf3954b2929",
+  "cohorts": [
+    {
+      "requests": 8,
+      "generated_tokens": 1024,
+      "ttft_median_ms": 313.27510000846814,
+      "decode_median_tokens_per_second": 67.61911653328855,
+      "output_tokens_per_second": 58.34546394785941,
+      "requests_per_second": 0.4558239370926516,
+      "sampled_peak_adapter_used_bytes": 28726210560,
+      "samples": 558,
+      "requested_interval_seconds": 0.02,
+      "observed_sample_gap_median_seconds": 0.031182500009890646,
+      "observed_sample_gap_max_seconds": 0.07234099999186583,
+      "scope": "NVML adapter-wide used memory, including background allocations; sampled maximum, not instantaneous or process-attributed peak",
+      "case": "text",
+      "concurrency": 1,
+      "request_keys": [
+        "e48654c06f3f42e4b461ef8fd0d06b1e-ctx4096-s3-text-c1-r0",
+        "e48654c06f3f42e4b461ef8fd0d06b1e-ctx4096-s3-text-c1-r1",
+        "e48654c06f3f42e4b461ef8fd0d06b1e-ctx4096-s3-text-c1-r2",
+        "e48654c06f3f42e4b461ef8fd0d06b1e-ctx4096-s3-text-c1-r3",
+        "e48654c06f3f42e4b461ef8fd0d06b1e-ctx4096-s3-text-c1-r4",
+        "e48654c06f3f42e4b461ef8fd0d06b1e-ctx4096-s3-text-c1-r5",
+        "e48654c06f3f42e4b461ef8fd0d06b1e-ctx4096-s3-text-c1-r6",
+        "e48654c06f3f42e4b461ef8fd0d06b1e-ctx4096-s3-text-c1-r7"
+      ],
+      "single_token_arrivals": true,
+      "prompt_tokens": [
+        3968,
+        3968,
+        3968,
+        3968,
+        3968,
+        3968,
+        3968,
+        3968
+      ]
+    }
+  ],
+  "nonstream_controls_sha256": "633abaee536db0fe7cdd3c2d948eb7bc54942572b0afe13202dbb8cba0ff7a4c",
+  "streamed_ids_observed": false,
+  "performance_admitted": false,
+  "scope": "Actual frozen4K loopback requests with continuous usage; actual separate prompt/completion-ID controls and same-engine exact text checked. Streamed IDs are unavailable in the common reference protocol. No matched quality/tuning/repetition/2x promotion.",
+  "image_cache_reset": {
+    "status": "reset_acknowledged",
+    "reset_responses": [
+      {
+        "endpoint": "/reset_mm_cache",
+        "status": 200,
+        "monotonic": 185557.453
+      },
+      {
+        "endpoint": "/reset_encoder_cache",
+        "status": 200,
+        "monotonic": 185557.468
+      }
+    ],
+    "scope": "Idle metric observation, installed processor/transport and encoder reset acknowledgements, raw counters. HTTP acknowledgement alone is not a universal cache-success proof.",
+    "idle_before": {
+      "running": 0.0,
+      "waiting": 0.0,
+      "queries": 879.0,
+      "hits": 24.0,
+      "process_start": 1792975029.82
+    },
+    "after_reset": {
+      "running": 0.0,
+      "waiting": 0.0,
+      "queries": 879.0,
+      "hits": 24.0,
+      "process_start": 1792975029.82
+    }
+  },
+  "gpu": {
+    "index": 0,
+    "name": "NVIDIA GeForce RTX 5090",
+    "uuid": "GPU-265ee66c-9b79-cd3b-0c63-dd6942ddb5e6"
+  },
+  "error": "ValueError('Preserved failed or nonmatching same-engine4Kstream: ctx4096-s3-text-c2-warmup-0-0')",
+  "sampling_errors": []
+}

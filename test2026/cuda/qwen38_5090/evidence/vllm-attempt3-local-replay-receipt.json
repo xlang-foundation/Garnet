@@ -1,0 +1,58 @@
+{
+  "status": "vllm_attempt3_failure_partial_streams_and_adapted_screen_replayed_on_both_machines",
+  "archive_sha256": "abeebf29f6e7527bc7f3f652c6f0850a2ea309308c79419be88e2d9318130cb7",
+  "archive_bytes": 102606666,
+  "failure_proof_sha256": "c9fa4e365329a5a3ad7387b854e252a23cd57121c63fb75839a6f8d7cff2cadb",
+  "partial_proof_sha256": "c10239956b52f1749cf91b14638a03b45bfcee5a002b67d40f5d495c0c41aa1e",
+  "quality_proof_sha256": "ea52ee42fb5e5a54bd2fad9e1295de2e7c1a4adc91a12dff6c5c0e12824ac633",
+  "strict_failure_replay": {
+    "exit_code": 1,
+    "argv": [
+      "D:\\CantorAI\\Garnet\\.venv\\Scripts\\python.exe",
+      "D:\\CantorAI\\work\\qwen38-5090\\test2026\\cuda\\qwen38_5090\\verify_vllm_fixed4k_launcher_completed.py",
+      "--proofs",
+      "C:\\Users\\developer\\Documents\\Codex\\2026-10-23\\referenced-chatgpt-conversation-this-is-an\\outputs",
+      "--job",
+      "vllm-fixed4k-ordinary-attempt3",
+      "--corpus",
+      "C:\\Users\\developer\\Documents\\Codex\\2026-10-23\\referenced-chatgpt-conversation-this-is-an\\work\\mmmu\\quality-corpus",
+      "--scratch",
+      "C:\\Users\\developer\\Documents\\Codex\\2026-10-23\\referenced-chatgpt-conversation-this-is-an\\work"
+    ],
+    "log_sha256": "cf171a28efff797b57d7acadadd005c848347a90d9353bbf2b618fdd958768ca"
+  },
+  "partial_replay": {
+    "exit_code": 0,
+    "argv": [
+      "D:\\CantorAI\\Garnet\\.venv\\Scripts\\python.exe",
+      "D:\\CantorAI\\work\\qwen38-5090\\test2026\\cuda\\qwen38_5090\\verify_vllm_fixed4k_attempt3_partial.py",
+      "--proofs",
+      "C:\\Users\\developer\\Documents\\Codex\\2026-10-23\\referenced-chatgpt-conversation-this-is-an\\outputs"
+    ],
+    "log_sha256": "0867a7ab3d928d3086c1e4c040f2e45bcc6e47412657cfae5235fc82d8471e87"
+  },
+  "quality_replay": {
+    "exit_code": 0,
+    "argv": [
+      "D:\\CantorAI\\Garnet\\.venv\\Scripts\\python.exe",
+      "-m",
+      "test2026.cuda.qwen38_5090.verify_mmmu_http_quality",
+      "--corpus",
+      "C:\\Users\\developer\\Documents\\Codex\\2026-10-23\\referenced-chatgpt-conversation-this-is-an\\work\\mmmu\\quality-corpus",
+      "--run",
+      "C:\\Users\\developer\\Documents\\Codex\\2026-10-23\\referenced-chatgpt-conversation-this-is-an\\work\\vllm-attempt3-quality-local",
+      "--output",
+      "C:\\Users\\developer\\Documents\\Codex\\2026-10-23\\referenced-chatgpt-conversation-this-is-an\\outputs\\vllm-fixed4k-ordinary-attempt3-quality-verified.json"
+    ],
+    "log_sha256": "72c8c12d2991a3f7a456b4faf6131294759e9c25443b4760a01db55e7db7add8"
+  },
+  "actual_nonstream_4k_id_controls": 124,
+  "raw_streams_replayed": 12,
+  "changed_stream_texts": 2,
+  "adapted_screen_completed": 805,
+  "adapted_screen_correct": 488,
+  "new_model_or_gpu_execution": false,
+  "full_4k_benchmark_complete": false,
+  "performance_admitted": false,
+  "two_times_target_achieved": false
+}

@@ -1,0 +1,122 @@
+from pathlib import Path
+import hashlib,json,zipfile
+work=Path(__file__).resolve().parent;out=work.parent/'outputs';repo=Path('D:/CantorAI/work/qwen38-5090');m=repo/'test2026/cuda/qwen38_5090';e=m/'evidence'
+sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+def keep(path,raw):
+    assert not path.exists() or path.read_bytes()==raw,path
+    if not path.exists():path.write_bytes(raw)
+job='vllm-fixed4k-ordinary-attempt3';receipt=json.loads((work/'vllm-attempt3-local-replay-receipt.json').read_bytes())
+assert receipt['status']=='vllm_attempt3_failure_partial_streams_and_adapted_screen_replayed_on_both_machines'
+archive=out/(job+'-evidence.zip');assert sha(archive)==receipt['archive_sha256']
+for kind in ('','-partial','-quality'):
+    proof=out/(job+kind+'-verified.json');assert proof.read_bytes()==(out/(job+kind+'-remote-verified.json')).read_bytes()
+    for suffix in ('-verified.json','-remote-verified.json','-local-replay.log'):
+        keep(e/(job+kind+suffix),(out/(job+kind+suffix)).read_bytes())
+with zipfile.ZipFile(archive) as z:
+    base='results/'+job+'/'
+    for n in z.namelist():
+        if n.startswith(base) and n.endswith(('commands.log','commands.jsonl','workflow.json','server.log','resource-monitor.json','wsl-wrapper.log')):
+            keep(e/(job+'-'+n.removeprefix(base).replace('/','-')),z.read(n))
+    w=json.loads(z.read(base+'workflow.json'));assert w['exit_code']==1 and w['cleanup_finished'] is True and w['server_exit_code']==0
+    assert w['source_sha256']==w['source_after_sha256'] and w['runtime_dependencies']==w['runtime_dependencies_after']
+    keep(e/(job+'-ready-metadata.json'),z.read(base+'metadata.json'))
+    names=[n for n in z.namelist() if n.startswith(base+'client/benchmark4k/') and n.endswith('-manifest.json')];assert len(names)==1
+    keep(e/(job+'-failed-benchmark-manifest.json'),z.read(names[0]))
+for n in ('vllm-attempt3-local-replay-receipt.json','native-entry-profiled-install.json','vllm-characterization-client-cpu-result.json','matched-chart-admission-result.json'):
+    keep(e/n,(work/n).read_bytes())
+for n in ('replay-vllm-attempt3-local.py','derive-vllm-output-characterization.py','check-vllm-characterization-client-cpu.py',
+          'render-matched-vllm-sglang-4k.py','check-matched-chart-admission.py','retain-vllm3-closure-and-profiler-start.py'):
+    keep(e/(n+'.txt'),(work/n).read_bytes())
+for directory in ('vllm-characterization-client-cpu-ledger','matched-chart-admission-ledger'):
+    for f in (work/directory).iterdir():
+        if f.is_file():keep(e/(directory+'-'+f.name),f.read_bytes())
+profile_pins=json.loads((e/'native-cuda-entry-profiled-preparation.json').read_bytes())['files']
+assert not any(n.startswith('Garnet/docs/research/') for n in profile_pins)
+r={'status':'vllm3_strict_output_failure_independently_closed_native_profiler_started',
+   'vllm3':receipt,'native_profiler':{'job':'native-cuda-entry-profiled-bootstrap-attempt1','supervisor_session':48577,
+      'source_pins':654,'actual_remote_cpu_tests':21,'actual_remote_cpu_unittest_seconds':.226,
+      'actual_embedded_cpu_compatibility_passed':True,'terminal_result':None,'new_benchmark_result':False},
+   'vllm_characterization_client':json.loads((work/'vllm-characterization-client-cpu-result.json').read_bytes()),
+   'comparison_renderer':json.loads((work/'matched-chart-admission-result.json').read_bytes()),
+   'two_times_target_achieved':False}
+keep(e/'vllm3-closure-and-profiler-start.json',json.dumps(r,indent=2).encode())
+keep(out/'Garnet-vLLM-4K-Strict-Failure-and-Profiler-Status.json',json.dumps(r,indent=2).encode())
+text='''
+
+### 2026-10-25 — vLLM4K strict concurrent-text failure closed; native profiled control started
+
+Actual vllm-fixed4k-ordinary-attempt3 owner terminal1, cleanup/source787/runtime6
+preserved and owned wrapper exit0. This trial passed ready configuration/source/
+PID/context admission, both early4K boundaries, four image controls,16short greedy
+captures,805adapted screening and all124actual nonstream3968+128ID controls.
+Strict benchmark collected textC1 then rejected the first textC2warmup because
+stream text differs from its serial control. Original strict checker/rules remain
+unchanged; preserve failed archive, do not publish one passing cohort as a full
+comparison. Archiveabeebf29f6e7527bc7f3f652c6f0850a2ea309308c79419be88e2d9318130cb7,
+102606666bytes/3655files. Both original independent checkers exit1 as expected,
+identical failure proofc9fa4e365329a5a3ad7387b854e252a23cd57121c63fb75839a6f8d7cff2cadb.
+
+Separate source-pinned CPU postprocessor independently replays actual ready JSON
+settings, all124serial prompt/completion IDs, every12saved raw SSE/request/result
+stream, typed continuous usage/full128tokens and the retained first cohort's raw
+arithmetic. All12streams have valid3968+128length completions; two C2warmup texts
+differ. Streamed individual IDs remain unobserved. Both machines exit0 with
+identical partial proofc10239956b52f1749cf91b14638a03b45bfcee5a002b67d40f5d495c0c41aa1e.
+This neither explains the numerical cause nor proves harmlessness/equivalence,
+and never promotes a partial benchmark. Postprocessor SHA/source and logs retained.
+
+Actual805screen raw response/wire/prompt-ID replay independently completes on both
+machines,488/805correct; identical proofea52ee42fb5e5a54bd2fad9e1295de2e7c1a4adc91a12dff6c5c0e12824ac633.
+This is the adapted805question/single256pixel image screen, not official MMMU or
+broad quality parity. Initial direct-file remote CLI invocation failed relative
+package import before creating an output; reran only the CPU verifier with -m
+from the owned repository. Full original model trial was never restarted for a
+replay. The new partial checker was first uploaded as an exact results snapshot,
+then copied absent-only to its intended methods sibling location so imported/helper
+hash paths resolve. No existing source overwritten. An initial local derivation
+command used the repository cwd for a chat-work relative path and correctly failed
+before creating code; reran by absolute path before tests. All later commands use
+explicit absolute paths for chat work and repository targets.
+
+Prepared engine-specific vLLM288request/135wave output/isolation client and raw
+replayer by exact recorded substitutions from the already qualified SGLang methods:
+actual vLLM ID JSON schema,18080/4096config/metadata-version and actual failed3parent.
+All serial-before/after, C1/2/4/8, rotated nonstream IDs, full4K counts and concurrent
+color/spatial isolation remain. Six synthetic CPU tests pass11.111s, including all
+288local HTTP fixture requests and missing-row/overlap/count/color faults; no real
+vLLM characterization requests executed. Owner/preparer/closed verifier and actual
+two-machine characterization remain to implement/run. No observed-output benchmark
+policy admitted from this failure or from SGLang results. Never silently relax
+the original exact-text gate or infer unobserved streamed IDs.
+
+Prepared combined actual4K chart renderer for five real series (native ordinary,
+MTPprefill4/16, ordinary vLLM/SGLang). It requires a complete8cohort/124stream
+two-machine proof and raw archive hashes before importing plotting or emitting
+any output. Actual failed vLLM2proof is correctly refused in source-pinned CPU
+control, exit1; previous published chart unchanged. No placeholder/synthetic chart
+or partial vLLM3timings inserted. An observed-output figure, if later qualified,
+must explicitly retain its distinct policy and output-equivalence limitations.
+
+Native entry-logged profiler package installed absent-only after vLLM3terminal:
+643existing/654total source pins and runtime verified; twelve new targets, no core/
+runtime/SDK/model replacement. All transfers ACKed, remote/local CPU replays closed,
+then original48577 native-cuda-entry-profiled-bootstrap-attempt1 started. Remote
+21CPUcontrols pass.226s; actual embedded Python fake-import/fake-IO compatibility
+passes. Known optional hashlib algorithm warnings retained; sha256 works, no SDK
+repair attempted. Owner is proceeding to the pinned Nsight/native control; actual
+CUDA records, terminal cleanup and raw replay are pending. No new performance
+result or2xclaim from this correctness/setup/partial data.
+
+Next: close the real profiler diagnostic and inspect actual GPU phases/failure
+location; finish/run vLLM output-isolation diagnosis before a fully retained
+observed-output baseline; execute fresh B4-cache/B8-MTP admission, then batched
+HTTP with complete805quality/full4Kprotocol checks. Wider-prefill128 still needs
+actual component/forward/runtime/model qualification. Strongest tuned/MTP
+references, repeated statistics, matched INT4/4B and overall2xdecode+throughput/
+halfTTFT remain open. The objective and branch scope are unchanged.
+'''
+for n in ('qwen38-5090-development-log.md','qwen38-5090-implementation-task.md'):
+    path=repo/'docs/research'/n;raw=path.read_bytes()
+    if b'vLLM4K strict concurrent-text failure closed; native profiled control started' not in raw:path.write_bytes(raw+text.encode())
+print(json.dumps({'status':r['status'],'vllm3_full_benchmark_complete':False,'adapted_screen_correct':488,
+    'partial_stream_text_differences':2,'native_profiler':'running','new_benchmark_result':False}))
