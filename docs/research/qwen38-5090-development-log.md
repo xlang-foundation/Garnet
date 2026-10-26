@@ -6400,3 +6400,48 @@ remain open; original profiler root cause is not yet established by these tests.
 All batch8 independent-cache/MTP/805quality/HTTP, wider-prefill GPU qualification,
 strongest tuned/MTP references, full matched vLLM4K, repetitions, INT4/4B matched
 comparisons and overall2xdecode+throughput/halfTTFT scope remain open.
+
+
+### 2026-10-25 — explicit entry-logged profiler pipeline prepared; repaired vLLM reaches request controls
+
+vllm-fixed4k-ordinary-attempt3 original48577 supervisor observed live. Repaired
+actual config endpoint now succeeds; installed74reference source files/eight
+checkpoint configs plus five named config/router source hashes and ownedPID350
+verified. Actual resolved cache37774tokens/9.22full4Krequests, configured4096total
+context, all explicit BF16KV/F32SSM/TP1/decodegraph settings pass strict admission.
+All four VLM color/layout controls pass. All16short greedy text/image captures
+generate128actual IDs. Workflow client_running; quality screening and subsequent
+124serial4KID controls/124warmup-timed streams remain pending. No timings inferred
+from startup/control duration, and no extra HTTP request sent outside the owner.
+
+The pre-import logger is now wired into an explicit exclusive Nsight diagnostic
+pipeline. Same actual retained ordinary3968+128text control and normal inner Worker
+pipes, exact old request/model/generation/cleanup operations; only launcher/logging
+and declared profiled scope differ. Actual old unprofiled control archive/proof
+8104499a/9d5b3a3f and643source pins required; new654source manifest binds11new
+methods plus preparation. Existing core/runtime/SDK/defaults are not replaced.
+New embedded compatibility gate first runs old fake-IO trace fixture plus a fake
+native-import exception under actual embedded Python; only then may collector
+launch pinned Nsight2026.5 on the real control. Actual raw .nsys-rep/SQLite, twelve
+unique HtoD markers, owned SM120 graph-node kernels/API/copies and complete original
+IDs/host stages/model close/entry-source logs must replay independently. Source/
+runtime hashes and owned cache retirement remain mandatory. A failure is retained
+with original import/launcher/profiler logs; no diagnostic success from mere process
+exit. Collected activity remains instrumented, not serving-speed/TTFT evidence.
+
+Fresh21CPUcontrols pass.178s: existing10phase replay/3bootstrap controls,5entry
+import/exception/exit/IPC/AST controls and3raw-entry/parent/derivation fault families.
+Initial21CPU preparation/.252s did not reject boolFalse as entry ordinal0; before
+any deployment or GPU run, preserved old verifier/test/manifest/plan, added strict
+integer ordinal gate and boolean fault, reran full21controls and regenerated.
+An attempted cross-volume Path.rename correctly failed WinError17 before changing
+the source; verified the already copied snapshot hash and used native Move-Item
+for that exact owned preparation file. Both unrun manifests and old source bytes
+are retained. Final preparation
+efcaf1f2fa19f7d4285798fec9769ad69e6d2d1535beb33ac93eca13680f549f.
+Twelve-target absent-only bundle63e74e977fae7bcf31bcfe2e3eab7ba45b7dbe0905f1efa41f48594376dba793,
+49577bytes, installerf6ed03293e09b3bd37f2fda61508886f13049d4b1052c4846f1547ef85940806.
+No remote transfer/install or second GPU model while vLLM owner is live. Actual
+embedded/profiler execution, independent closure and full text/image ordinary/MTP
+phase diagnosis remain open. This is a prerequisite diagnostic, not a substituted
+benchmark or completion of the broader optimization/2x objective.

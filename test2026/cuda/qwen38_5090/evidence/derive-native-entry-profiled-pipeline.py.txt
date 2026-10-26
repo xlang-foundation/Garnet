@@ -1,0 +1,41 @@
+from pathlib import Path
+import ast,hashlib,json
+m=Path('D:/CantorAI/work/qwen38-5090/test2026/cuda/qwen38_5090');records={}
+sha=lambda b:hashlib.sha256(b).hexdigest()
+def create(old,new,replacements):
+    raw=(m/old).read_bytes();source=raw.decode();steps=[]
+    for a,b,count in replacements:
+        assert source.count(a)==count,(new,a,source.count(a),count)
+        source=source.replace(a,b);steps.append({'before':a,'after':b,'count':count})
+    path=m/new;assert not path.exists();path.write_bytes(source.encode());ast.parse(source)
+    records[new]={'source':old,'source_text':raw.decode(),'source_sha256':sha(raw),'target_sha256':sha(source.encode()),'replacements':steps}
+create('probe_native_cuda_logged_bootstrap.py','probe_native_cuda_entry_bootstrap.py',[
+    ('One actual retained text control, normal pipes, no profiler or HTTP timing.','One retained text control with pre-import log; explicit outer profiler, no HTTP timing.',1),
+    ('ordinary-logged-bootstrap-retained-text','ordinary-entry-profiled-retained-text',1),
+    ('serve_native_cuda_phase_logged_worker.bat','serve_native_cuda_phase_entry_worker.bat',1),
+    ("'profiled': False","'profiled': True",1),
+    ('Actual unchanged B1 model under normal worker pipes, one retained3968+128 text control. Bootstrap/exception file retained even if ready fails. No profiler, HTTP metrics, quality or speed admission.',
+     'Actual unchanged B1 model under normal worker pipes inside the explicit outer profiler. One retained3968+128 text control; pre-import/native bootstrap exceptions retained even if ready fails. No HTTP timing/quality/speed admission.',1),
+    ('native_logged_bootstrap_retained_control_completed','native_entry_bootstrap_retained_control_completed',1),
+    ('NATIVE_LOGGED_BOOTSTRAP_RETAINED_CONTROL_COMPLETE','NATIVE_ENTRY_BOOTSTRAP_RETAINED_CONTROL_COMPLETE',1)])
+create('run_native_cuda_logged_bootstrap.py','run_native_cuda_entry_profiled.py',[
+    ('Exclusive logged bootstrap; keep the failed profile immutable and linked.','Exclusive pre-import logged Nsight diagnostic; original controls remain immutable.',1),
+    ("JOB = 'native-cuda-phase-logged-bootstrap-attempt1'","JOB = 'native-cuda-entry-profiled-bootstrap-attempt1'",1),
+    ("PARENT = 'native-cuda-phase-full4k-attempt1'","PARENT = 'native-cuda-phase-logged-bootstrap-attempt1'",1),
+    ('native-cuda-logged-bootstrap-preparation.json','native-cuda-entry-profiled-preparation.json',1),
+    ('native_cuda_phases_full4k_failure_preserved','native_cuda_logged_bootstrap_replayed',1),
+    ("closed['exit_code'] == 1","closed['exit_code'] == 0",1),
+    ("'profiled': False","'profiled': True",1),
+    ("[root / name for name in p['new_files']]","[root / name for name in p['files']]",1),
+    ('Actual13source-pinned bootstrap exception and unchanged model AST controls','Actual21source-pinned import/exit/IPC/bootstrap/phase/lifecycle faults, no GPU in CPU tests',1),
+    ('probe_native_cuda_trace_embedded_cpu.py','probe_native_cuda_entry_embedded_cpu.py',1),
+    ('Actual embedded Python subclass/exception compatibility with fake IO, no model','Actual embedded Python pre-import logging and trace compatibility with fake imports/IO, no model',1),
+    ('embedded_python_trace_cpu_compatibility_passed','embedded_python_entry_cpu_compatibility_passed',1),
+    ('probe_native_cuda_logged_bootstrap.py','collect_native_cuda_entry_profiled.py',1),
+    ('One actual retained3968+128 native text control without profiler; persistent bootstrap/exception log','One actual retained3968+128 ordinary text control under pinned Nsight, normal inner IPC, early import/exception logs and actual CUDA marker replay',1),
+    ('Actual logged bootstrap failed; inspect retained native bootstrap log','Actual entry-profiled bootstrap failed; inspect entry/native/profiler logs, preserve owner cleanup',1),
+    ("report['status'] == 'native_logged_bootstrap_retained_control_completed'","report['status'] == 'native_entry_profiled_control_collected_needs_replay'",1),
+    ('native_logged_bootstrap_collected_needs_replay','native_entry_profiled_collected_needs_replay',1)])
+record=m/'evidence/native-cuda-entry-profiled-derivation.json';assert not record.exists()
+record.write_bytes(json.dumps({'status':'exact_inner_worker_control_and_exclusive_owner_derivation_gpu_unrun','files':records},indent=2).encode())
+print(json.dumps({'status':'native_entry_profiled_owner_and_inner_probe_derived','files':list(records)}))
