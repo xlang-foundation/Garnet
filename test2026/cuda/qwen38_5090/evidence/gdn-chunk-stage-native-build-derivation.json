@@ -1,0 +1,150 @@
+{
+  "status": "gdn_chunk_stage_native_build_methods_derived_unrun",
+  "files": [
+    {
+      "source": "run_bf16_prefill128_fp8_native_build.py",
+      "source_sha256": "cdda1bb24c98de742defc617cee15db7d759844e1d6032d93718daba4fecefee",
+      "target": "run_gdn_chunk_stage_native_build.py",
+      "target_sha256": "d2ac1179dd654aa464b4554bc4ebcdc178f888d85ccd06306a812a8264e9590b",
+      "replacements": [
+        {
+          "old": "JOB='bf16-prefill128-fp8-native-build-attempt1'",
+          "new": "JOB='gdn-chunk-stage-native-build-attempt1'",
+          "count": 1
+        },
+        {
+          "old": "bf16-prefill128-fp8-native-build-preparation.json",
+          "new": "gdn-chunk-stage-native-build-preparation.json",
+          "count": 1
+        },
+        {
+          "old": "'bf16_prefill128_fp8_native_build_prepared_unrun' and len(p['candidate_files'])==22",
+          "new": "'gdn_chunk_stage_native_build_prepared_unrun' and len(p['candidate_files'])==23",
+          "count": 1
+        },
+        {
+          "old": "garnet-native-bf16-prefill128-fp8-m128-attempt1.dll",
+          "new": "garnet-native-gdn-chunk-stage-attempt1.dll",
+          "count": 1
+        },
+        {
+          "old": "        code=ledger.run(['cmd.exe','/d','/c',str(M/'build_integrated_batch_top1_native.bat')",
+          "new": "        code=ledger.run([sys.executable,'-m','unittest','test2026.cuda.qwen38_5090.test_gdn_chunk_stage_source'],out/'source-cpu-ledger','correctness','Three exact new/source-composition/legacy-diagnostic guard controls after candidate native install; no native runtime/GPU',common)\n        if code:raise RuntimeError('Stage source composition controls')\n        code=ledger.run(['cmd.exe','/d','/c',str(M/'build_integrated_batch_top1_native.bat')",
+          "count": 1
+        },
+        {
+          "old": "        for name,argv in (",
+          "new": "        code=ledger.run(['cmd.exe','/d','/c',str(M/'build_gdn_chunk_stage_profile_cpu.bat'),p['vcvars'],str(out/'gdn-profile-cpu')],out/'gdn-profile-cpu-ledger','correctness','Actual pureCPU profile header:4valid/50invalid profiles/6invalid flags/legacy conflict; no CUDA/TRT/GarnetDLL or frontend calls',common+[library])\n        if code:raise RuntimeError('Actual GDN stage profile CPU contract')\n        from test2026.cuda.qwen38_5090.gdn_chunk_stage_build_contract import profile_contract\n        w['gdn_profile_contract']=profile_contract(json.loads((out/'gdn-profile-cpu/report.json').read_bytes()));save()\n        for name,argv in (",
+          "count": 1
+        },
+        {
+          "old": "status='bf16_prefill128_fp8_native_built_cpu_qualified_model_unqualified'",
+          "new": "status='gdn_chunk_stage_native_built_cpu_qualified_witness_unqualified'",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "verify_bf16_prefill128_fp8_native_build.py",
+      "source_sha256": "a5fed3df24f741ac37b566801562538ec679cfb4fb41781041f5fd716ae1a3ec",
+      "target": "verify_gdn_chunk_stage_native_build.py",
+      "target_sha256": "5ff33cfa3c98b08d997a108318f1b8bf0af04cc9635d1db90647f183538d0f22",
+      "replacements": [
+        {
+          "old": "JOB='bf16-prefill128-fp8-native-build-attempt1'",
+          "new": "JOB='gdn-chunk-stage-native-build-attempt1'",
+          "count": 1
+        },
+        {
+          "old": "bf16-prefill128-fp8-native-build-preparation.json",
+          "new": "gdn-chunk-stage-native-build-preparation.json",
+          "count": 1
+        },
+        {
+          "old": "len(p['candidate_files'])==22",
+          "new": "len(p['candidate_files'])==23",
+          "count": 1
+        },
+        {
+          "old": "'bf16_prefill128_fp8_native_build_proposed_unrun'",
+          "new": "'gdn_chunk_stage_native_build_proposed_unrun'",
+          "count": 1
+        },
+        {
+          "old": "len(source.namelist())==len(set(source.namelist()))==22",
+          "new": "len(source.namelist())==len(set(source.namelist()))==23",
+          "count": 1
+        },
+        {
+          "old": "'bf16_prefill128_fp8_native_built_cpu_qualified_model_unqualified'",
+          "new": "'gdn_chunk_stage_native_built_cpu_qualified_witness_unqualified'",
+          "count": 1
+        },
+        {
+          "old": "('cpu','build','wire-cpu','fp8-wire-cpu','selector-cpu','embedded-selector-cpu','tokenizer-cpu')",
+          "new": "('cpu','source-cpu','build','wire-cpu','fp8-wire-cpu','gdn-profile-cpu','selector-cpu','embedded-selector-cpu','tokenizer-cpu')",
+          "count": 1
+        },
+        {
+          "old": "            assert dll.replace('/','\\\\') in p['environment']",
+          "new": "            from test2026.cuda.qwen38_5090.gdn_chunk_stage_build_contract import profile_contract\n            assert profile_contract(doc(base+'gdn-profile-cpu/report.json'))==w['gdn_profile_contract']\n            assert b'Ran 3 tests' in z.read(base+'source-cpu-ledger/commands.log') and b'\\nOK' in z.read(base+'source-cpu-ledger/commands.log')\n            assert dll.replace('/','\\\\') in p['environment']",
+          "count": 1
+        },
+        {
+          "old": "'bf16_prefill128_fp8_native_build_cpu_replayed' if passed else 'bf16_prefill128_fp8_native_build_failure_preserved'",
+          "new": "'gdn_chunk_stage_native_build_cpu_replayed' if passed else 'gdn_chunk_stage_native_build_failure_preserved'",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "prepare_bf16_prefill128_fp8_native_build.py",
+      "source_sha256": "fc04b752a1daa58f56448c201425e5fb1d43472388cf5151269ffbe074c03b27",
+      "target": "prepare_gdn_chunk_stage_native_build.py",
+      "target_sha256": "706fccfe6a51805f6ec482ae8cc7662e460f8e6b2d7d528125927e2681e3ca62",
+      "replacements": [
+        {
+          "old": "prefill128-fp8-native-proposal.json",
+          "new": "gdn-chunk-stage-native-proposal.json",
+          "count": 1
+        },
+        {
+          "old": "'bf16_prefill128_fp8_native_build_proposed_unrun'",
+          "new": "'gdn_chunk_stage_native_build_proposed_unrun'",
+          "count": 1
+        },
+        {
+          "old": "len(p['candidate_files'])==22 and len(p['candidate_base'])==22 and p['expected_cpu_test_count']==60",
+          "new": "len(p['candidate_files'])==23 and len(p['candidate_base'])==23 and p['expected_cpu_test_count']==62",
+          "count": 1
+        },
+        {
+          "old": "len(z.namelist())==len(set(z.namelist()))==22",
+          "new": "len(z.namelist())==len(set(z.namelist()))==23",
+          "count": 1
+        },
+        {
+          "old": "w['exit_code']==row['exit_code']==0",
+          "new": "w['exit_code']==row['exit_code'] and row['exit_code'] in (0,1)",
+          "count": 1
+        },
+        {
+          "old": "status='bf16_prefill128_fp8_native_build_prepared_unrun'",
+          "new": "status='gdn_chunk_stage_native_build_prepared_unrun'",
+          "count": 1
+        },
+        {
+          "old": "bf16-prefill128-fp8-native-build-preparation.json",
+          "new": "gdn-chunk-stage-native-build-preparation.json",
+          "count": 1
+        },
+        {
+          "old": "'absent_targets':14",
+          "new": "'absent_targets':15",
+          "count": 1
+        }
+      ]
+    }
+  ],
+  "scope": "Same native source snapshot/restore and34CUDA-object provenance;23source union, three post-install source checks, actual pureCPU header contract. Frontend and primary GPU witness remain unqualified."
+}

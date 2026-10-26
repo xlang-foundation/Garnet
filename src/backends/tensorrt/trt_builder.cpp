@@ -9,6 +9,7 @@
 #include "trt_context_pool.h"
 #include "trt_memory_profile.h"
 #include "qwen35_lowering.h"
+#include "qwen38_gdn_chunk_stage_profile.h"
 #include "operator_execution_group.h"
 #include "trt_sync_allocator.h"
 #include "weight_streaming_policy.h"
@@ -6164,19 +6165,43 @@ namespace Garnet {
                         keywordInt("retain_linear_inputs",0)!=0||keywordInt("register_delta_128",0)!=0||
                         keywordInt("joined_input_projections",0)!=0||keywordInt("joined_mlp_projections",0)!=0))
                         throw std::invalid_argument("Stage capture requires the embedded mixed27B layer0 B1/2 T16 diagnostic profile");
-                    std::vector<ITensor*> diagnosticStages;
+                    auto* chunkStageAttribute=FindKeyword(kwParams,"diagnostic_gdn_chunk_stages");
+                    if(chunkStageAttribute&&(!(chunkStageAttribute->second.IsInt64()||chunkStageAttribute->second.IsUInt64())||
+                        (chunkStageAttribute->second.IsUInt64()&&chunkStageAttribute->second.ToUInt64()>1)))
+                        throw std::invalid_argument("GDN chunk stage opt-in requires integer0 or1");
+                    const auto chunkStageMode=chunkStageAttribute?chunkStageAttribute->second.ToLongLong():0;
+                    if(chunkStageMode!=0&&chunkStageMode!=1)throw std::invalid_argument("GDN chunk stage opt-in must be0 or1");
                     auto b=qwen35Bindings[TensorId(input)];
+                    bool chunkStageStudy=false;
+                    if(chunkStageMode){
+                        const char* bindings[]={"qwen35_conv_bind_state","qwen35_delta_bind_state","qwen35_conv_bind_active"};
+                        if(b.size()!=3)throw std::invalid_argument("GDN chunk stage needs three exact state/active bindings");
+                        for(const auto* name:bindings)if(!b.count(name)||!b[name])throw std::invalid_argument("GDN chunk stage binding absent");
+                        GDNChunkStageProfile profile;
+                        profile.hidden=dimensions;profile.history=ops.shape(b[bindings[0]]);profile.state=ops.shape(b[bindings[1]]);profile.active=ops.shape(b[bindings[2]]);
+                        profile.layer=keywordText("layer_prefix");profile.weightProfile=capturedWeightProfile;
+                        for(const auto& value:external)profile.externalNames.push_back(value.first);
+                        profile.floatInputs={source->getType()==DataType::kFLOAT,b[bindings[0]]->getType()==DataType::kFLOAT,b[bindings[1]]->getType()==DataType::kFLOAT,b[bindings[2]]->getType()==DataType::kFLOAT};
+                        profile.compressed=FindKeyword(kwParams,"external_compressed_weights")!=nullptr;profile.bf16Bindings=FindKeyword(kwParams,"external_weights")!=nullptr;
+                        profile.keyHeads=keywordInt("key_heads",0);profile.valueHeads=keywordInt("value_heads",0);profile.keyDim=keywordInt("key_dim",0);profile.valueDim=keywordInt("value_dim",0);
+                        profile.fused=keywordInt("fused_delta",0);profile.retain=keywordInt("retain_linear_inputs",0);profile.register128=keywordInt("register_delta_128",0);
+                        profile.joinedInputs=keywordInt("joined_input_projections",0);profile.joinedMLP=keywordInt("joined_mlp_projections",0);profile.workspace=keywordInt("projection_workspace_bytes",0);profile.epsilon=float(number("eps",1e-6));
+                        chunkStageStudy=SelectGDNChunkStageProfile(true,chunkStageMode,diagnostic!=0,profile);
+                    }
+                    const bool captureStages=diagnostic||chunkStageStudy;
+                    const int stageWordLimit=chunkStageStudy?dimensions[1]*10240:1048576;
+                    std::vector<ITensor*> diagnosticStages;
                     lastOutput=ops.linearDecoderChunk(source,b["qwen35_conv_bind_state"],b["qwen35_delta_bind_state"],
                         b["qwen35_conv_bind_active"],keywordText("layer_prefix"),keywordInt("key_heads",0),keywordInt("value_heads",0),
-                        keywordInt("key_dim",0),keywordInt("value_dim",0),float(number("eps",1e-6)),keywordInt("fused_delta",0)!=0,keywordInt("retain_linear_inputs",0)!=0,keywordInt("register_delta_128",0)!=0,keywordInt("joined_input_projections",0)!=0,keywordInt("joined_mlp_projections",0)!=0,diagnostic?&diagnosticStages:nullptr);
-                    if(diagnostic){
+                        keywordInt("key_dim",0),keywordInt("value_dim",0),float(number("eps",1e-6)),keywordInt("fused_delta",0)!=0,keywordInt("retain_linear_inputs",0)!=0,keywordInt("register_delta_128",0)!=0,keywordInt("joined_input_projections",0)!=0,keywordInt("joined_mlp_projections",0)!=0,captureStages?&diagnosticStages:nullptr);
+                    if(captureStages){
                         if(diagnosticStages.size()!=11)throw std::runtime_error("Linear stage diagnostic contract changed");
                         std::vector<ITensor*> parts{lastOutput};
                         for(auto* value:diagnosticStages){
                             const auto shape=ops.shape(value);int width=1;
                             if(shape.size()<2||shape[0]!=dimensions[0])throw std::runtime_error("Linear diagnostic batch differs");
                             for(size_t i=1;i<shape.size();++i){
-                                if(shape[i]<1||width>1048576/shape[i])throw std::runtime_error("Linear diagnostic stage exceeds bounded row reader");
+                                if(shape[i]<1||width>stageWordLimit/shape[i])throw std::runtime_error("Linear diagnostic stage exceeds bounded row reader");
                                 width*=shape[i];
                             }
                             parts.push_back(ops.reshape(ops.cast(value),{dimensions[0],width}));
