@@ -1,0 +1,129 @@
+{
+  "status": "retained_native_runner_exact_extension_actual_helper_observation",
+  "files": [
+    {
+      "base": "prepare_modelopt_init_trace_native_build_attempt2.py",
+      "target": "prepare_z128_factory_trace_native_build.py",
+      "base_sha256": "f095f8b0861a384e2937a386cddd89c5bef3b8a06ad261f0fa89b4b89cd233b1",
+      "target_sha256": "facd26e86afd37f5532b9ae01ee64b78bba6945e3844749b613ecc899e2d69c9",
+      "changes": [
+        {
+          "before": "modelopt-init-trace-native-build-preparation-attempt2.json",
+          "after": "z128-factory-trace-native-build-preparation.json",
+          "count": 1
+        },
+        {
+          "before": "modelopt_init_trace_native_build_",
+          "after": "z128_factory_trace_native_build_",
+          "count": 2
+        },
+        {
+          "before": "==38",
+          "after": "==39",
+          "count": 3
+        },
+        {
+          "before": "modelopt-init-trace-native-proposal-attempt2.json",
+          "after": "z128-factory-trace-native-proposal.json",
+          "count": 1
+        },
+        {
+          "before": "==81",
+          "after": "==86",
+          "count": 1
+        },
+        {
+          "before": "absent_targets':24",
+          "after": "absent_targets':25",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "base": "run_modelopt_init_trace_native_build_attempt2.py",
+      "target": "run_z128_factory_trace_native_build.py",
+      "base_sha256": "31c63ed48ac18ae0a8ac2b7d8bac8c395c1b57eedc3abac071b62473837bd3b6",
+      "target_sha256": "322e138b06373b6ca006fdc4b57c46d63d7df2b910b4e12cf2d4c2efa34dc082",
+      "changes": [
+        {
+          "before": "modelopt-init-trace-native-build-preparation-attempt2.json",
+          "after": "z128-factory-trace-native-build-preparation.json",
+          "count": 1
+        },
+        {
+          "before": "modelopt_init_trace_native_build_",
+          "after": "z128_factory_trace_native_build_",
+          "count": 1
+        },
+        {
+          "before": "modelopt_init_trace_native_built_cpu_qualified_model_unqualified",
+          "after": "z128_factory_trace_native_built_cpu_qualified_model_unqualified",
+          "count": 1
+        },
+        {
+          "before": "==38",
+          "after": "==39",
+          "count": 1
+        },
+        {
+          "before": "modelopt-init-trace-native-build-attempt2",
+          "after": "z128-factory-trace-native-build-attempt1",
+          "count": 1
+        },
+        {
+          "before": "garnet-native-modelopt-init-trace-attempt2.dll",
+          "after": "garnet-native-z128-factory-trace-attempt1.dll",
+          "count": 1
+        },
+        {
+          "before": "        code=ledger.run(['cmd.exe','/d','/c',str(M/'build_integrated_batch_top1_native.bat')",
+          "after": "        code=ledger.run(['cmd.exe','/d','/c',str(M/'build_z128_factory_trace_cpu.bat'),p['vcvars'],str(out/'factory-cpu-build')],out/'factory-cpu-build-ledger','correctness','Two CPU-only executables compile actual original and traced Z128 helper with fixture SDK functions; no GPU/SDK library linkage',common)\n        if code:raise RuntimeError('Actual Z128 helper CPU fixture build')\n        code=ledger.run([sys.executable,str(M/'run_z128_factory_trace_cpu.py'),'--build',str(out/'factory-cpu-build'),'--output',str(out/'factory-cpu')],out/'factory-cpu-ledger','correctness','48CPU modes x10trace policies compare complete original/trace SDK call arguments/order/cleanup/return/exception/cache transcripts;0matmul. Synthetic fault evidence only',common)\n        if code:raise RuntimeError('Actual Z128 factory forwarding/fault contract')\n        code=ledger.run(['cmd.exe','/d','/c',str(M/'build_integrated_batch_top1_native.bat')",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "base": "verify_modelopt_init_trace_native_build_attempt2.py",
+      "target": "verify_z128_factory_trace_native_build.py",
+      "base_sha256": "4b0a72faa904609e0cdf147d1bd50bbea31614398c7b8eb99ee9daa64f91ac76",
+      "target_sha256": "b8f3e990dba9029e732f548fd2069d729449f7256565a8ba4859be1d30c4b49d",
+      "changes": [
+        {
+          "before": "modelopt-init-trace-native-build-preparation-attempt2.json",
+          "after": "z128-factory-trace-native-build-preparation.json",
+          "count": 1
+        },
+        {
+          "before": "modelopt_init_trace_native_build_",
+          "after": "z128_factory_trace_native_build_",
+          "count": 3
+        },
+        {
+          "before": "modelopt_init_trace_native_built_cpu_qualified_model_unqualified",
+          "after": "z128_factory_trace_native_built_cpu_qualified_model_unqualified",
+          "count": 1
+        },
+        {
+          "before": "==38",
+          "after": "==39",
+          "count": 2
+        },
+        {
+          "before": "modelopt-init-trace-native-build-attempt2",
+          "after": "z128-factory-trace-native-build-attempt1",
+          "count": 1
+        },
+        {
+          "before": "('cpu','init-cpu-build','init-cpu','build','wire-cpu'",
+          "after": "('cpu','init-cpu-build','init-cpu','factory-cpu-build','factory-cpu','build','wire-cpu'",
+          "count": 1
+        },
+        {
+          "before": "            assert dll.replace('/','\\\\') in p['environment']",
+          "after": "            from test2026.cuda.qwen38_5090.z128_factory_trace import MODES,POLICIES,cpu_case\n            factory=doc(base+'factory-cpu/report.json');assert factory['status']=='actual_original_and_traced_Z128_constructor_CPU_fault_transcripts_exact' and factory['CPU_interface_fixture_only'] and not factory['actual_GPU_or_SDK_library_loaded'] and factory['modes']==len(MODES)==48 and factory['policies']==len(POLICIES)==10 and factory['original_processes']==48 and factory['traced_processes']==480 and len(factory['cases'])==480\n            for kind in ('original','traced'):assert sha(z.read(base+'factory-cpu-build/'+kind+'.exe'))==factory[kind+'_executable_sha256']\n            for mode in MODES:\n                original=z.read(base+'factory-cpu/'+mode+'-original-stdout.json');report=json.loads(original)\n                for i,policy in enumerate(POLICIES):\n                    prefix=base+'factory-cpu/'+mode+'-policy-'+str(i);stdout=z.read(prefix+'-stdout.json');stderr=z.read(prefix+'-stderr.log');assert stdout==original\n                    item=factory['cases'][MODES.index(mode)*10+i];assert item['mode']==mode and item['policy']==policy and item['stdout_sha256']==sha(stdout) and item['stderr_sha256']==sha(stderr) and item['replay']==cpu_case(report,stderr,mode,policy=='1')\n            assert dll.replace('/','\\\\') in p['environment']",
+          "count": 1
+        }
+      ]
+    }
+  ]
+}

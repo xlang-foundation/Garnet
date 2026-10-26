@@ -1,0 +1,48 @@
+from pathlib import Path
+import hashlib,json,re
+repo=Path('D:/CantorAI/work/qwen38-5090');m=repo/'test2026/cuda/qwen38_5090';dest=m/'native_z128_factory_trace_candidate';sha=lambda raw:hashlib.sha256(raw).hexdigest()
+original=(repo/'src/backends/tensorrt/modelopt_fp8_z128_canonical.cpp').read_bytes();raw=original;changes=[]
+def replace(before,after,count=1):
+    global raw
+    assert raw.count(before.encode())==count,(before,raw.count(before.encode()))
+    raw=raw.replace(before.encode(),after.encode());changes.append({'before':before,'after':after,'count':count})
+replace('#include "modelopt_fp8_z128_canonical.h"','#include "modelopt_fp8_z128_canonical.h"\n#include "modelopt_fp8_z128_init_trace.h"')
+start=raw.index(b'std::shared_ptr<ModelOptFP8Z128Context> CreateModelOptFP8Z128Context(){');end=raw.index(b'\nbool GetModelOptFP8Z128Info',start)
+body=raw[start:end].decode();beforebody=body
+body=body.replace('CreateModelOptFP8Z128Context(){','CreateModelOptFP8Z128Context(){\n    ModelOptFP8Z128InitTrace trace;')
+# Wrap only the existing SDK expressions, within this constructor. Parentheses scanner preserves arguments.
+names=('cudaGetDevice','cudaGetDeviceProperties','cublasLtGetVersion','cublasLtCreate','cublasLtMatmulDescCreate','cublasLtMatmulDescSetAttribute','cublasLtMatrixLayoutCreate','cublasLtMatmulPreferenceCreate','cublasLtMatmulPreferenceSetAttribute','cublasLtMatmulAlgoGetHeuristic','cublasLtMatmulAlgoConfigGetAttribute','cublasLtMatmulAlgoCheck')
+pattern=re.compile(r'\b('+ '|'.join(names)+r')\(');spans=[]
+for match in pattern.finditer(body):
+    pos=match.end();depth=1
+    while depth:
+        if body[pos]=='(':depth+=1
+        elif body[pos]==')':depth-=1
+        pos+=1
+    expression=body[match.start():pos];spans.append((match.start(),pos,'trace.api("'+match.group(1)+'",[&](){return '+expression+';})'))
+assert len(spans)==17,len(spans)
+for begin,finish,value in reversed(spans):body=body[:begin]+value+body[finish:]
+# Label each original empty return without changing its guard or short circuit order.
+guards=('device_or_version','handle_or_operation','operation_or_actual_layout','canonical_layout_or_preference','workspace_preference','heuristic_api','opaque_mismatch','algorithm_ID','actual_algorithm_check','no_supported_candidate_or_CUDART')
+assert body.count('return {};')==len(guards)
+for name in guards:
+    args=',device,properties.major,properties.minor' if name=='device_or_version' else ''
+    body=body.replace('return {};','return trace.empty<ModelOptFP8Z128Context>("'+name+'"'+args+');',1)
+body=body.replace('if(auto previous=contexts[device].lock())return previous;','if(auto previous=contexts[device].lock()){trace.success(true);return previous;}')
+body=body.replace('contexts[device]=context;return context;','contexts[device]=context;trace.success(false);return context;')
+assert 'if(auto previous=contexts[device].lock()){trace.success(true);return previous;}' in body
+# Pure CPU observations of already populated result structures; no new SDK queries.
+needle='    // Exact opaque configuration'
+assert body.count(needle)==1
+body=body.replace(needle,'    trace.note("heuristic","found",found);\n    if(found>=0&&found<=8)for(int j=0;j<found;++j)trace.note("candidate","heuristic",j,int(choices[j].state),static_cast<long long>(choices[j].workspaceSize),&choices[j].algo,sizeof(choices[j].algo));\n'+needle)
+needle='        int32_t id=-1;size_t bytes=0;'
+body=body.replace(needle,'        trace.note("selection","opaque_equal",i);\n'+needle)
+# Config/check guard outputs are available at their original rejecting branches.
+body=body.replace('trace.empty<ModelOptFP8Z128Context>("algorithm_ID")','trace.empty<ModelOptFP8Z128Context>("algorithm_ID",id,static_cast<long long>(bytes))')
+body=body.replace('trace.empty<ModelOptFP8Z128Context>("actual_algorithm_check")','trace.empty<ModelOptFP8Z128Context>("actual_algorithm_check",int(checked.state),static_cast<long long>(checked.workspaceSize))')
+replace(beforebody,body)
+for name,value in [('original-modelopt_fp8_z128_canonical.cpp.txt',original),('modelopt_fp8_z128_canonical.cpp',raw)]:
+    path=dest/name;assert not path.exists();path.write_bytes(value)
+header=dest/'modelopt_fp8_z128_init_trace.h'
+p={'status':'actual_Z128_factory_trace_only_exact_derivative','source':'src/backends/tensorrt/modelopt_fp8_z128_canonical.cpp','source_sha256':sha(original),'target':'test2026/cuda/qwen38_5090/native_z128_factory_trace_candidate/modelopt_fp8_z128_canonical.cpp','target_sha256':sha(raw),'changes':changes,'header_sha256':sha(header.read_bytes()),'original_SDK_call_expressions':len(spans),'empty_return_guards':list(guards),'new_SDK_calls':0,'algorithm_descriptors_workspace_wire_enqueue_changed':False,'scope':'Private actual Garnet helper derivative, not the separate-TU shadow. Only exact GARNET_Z128_FACTORY_TRACE=1 emits synchronized native stderr. Same SDK call expressions once in original short-circuit order, same guards, opaque memcmp and first-successful rejection, same cache/return behavior; complete finite numerical admission remains separate.'}
+(m/'evidence/z128-factory-trace-source-derivation.json').write_bytes(json.dumps(p,indent=2).encode());print(json.dumps({'status':p['status'],'sdk_calls':len(spans),'guards':len(guards),'sha256':p['target_sha256']}))

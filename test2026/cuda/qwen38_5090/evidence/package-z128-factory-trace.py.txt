@@ -1,0 +1,42 @@
+from pathlib import Path
+import ast,hashlib,io,json,os,sys,unittest,zipfile
+from unittest.mock import patch
+work=Path(__file__).resolve().parent;out=work.parent/'outputs';repo=Path('D:/CantorAI/work/qwen38-5090');m=repo/'test2026/cuda/qwen38_5090';M='Garnet/test2026/cuda/qwen38_5090/';sha=lambda raw:hashlib.sha256(raw).hexdigest();sys.path[:0]=[str(repo),str(m)]
+bp=json.loads((m/'evidence/modelopt-trace-layer2-preparation.json').read_bytes());base=dict(bp['files']);base[M+'evidence/modelopt-trace-layer2-preparation.json']=sha((m/'evidence/modelopt-trace-layer2-preparation.json').read_bytes())
+names=['z128_factory_trace.py','run_z128_factory_trace_cpu.py','test_z128_factory_trace.py','probe_z128_factory_trace_cpu.cpp','build_z128_factory_trace_cpu.bat','prepare_z128_factory_trace_native_build.py','run_z128_factory_trace_native_build.py','verify_z128_factory_trace_native_build.py','evidence/z128-factory-trace-source-derivation.json','evidence/z128-factory-trace-build-derivation.json','evidence/modelopt-trace-layer2-attempt1-verified.json']
+names += [path.relative_to(m).as_posix() for path in (m/'native_z128_factory_trace_candidate').rglob('*') if path.is_file()]
+methods={M+name:sha((m/name).read_bytes()) for name in names};assert len(methods)==len(names)
+for name,h in methods.items():
+    raw=(repo/name.removeprefix('Garnet/')).read_bytes();assert sha(raw)==h
+    if name.endswith('.py'):ast.parse(raw)
+source={}
+with zipfile.ZipFile(out/'modelopt-init-trace-native-build-attempt2-evidence.zip') as z:
+    np=json.loads(z.read(M+'evidence/modelopt-init-trace-native-build-preparation-attempt2.json'));raw=z.read(np['bundle']);assert sha(raw)==np['bundle_sha256']
+    with zipfile.ZipFile(io.BytesIO(raw)) as sourcezip:source={name:sourcezip.read(name) for name in sourcezip.namelist()}
+assert len(source)==38 and {name:sha(raw) for name,raw in source.items()}==bp['candidate_files']
+helper='src/backends/tensorrt/modelopt_fp8_z128_canonical.cpp';trace='src/backends/tensorrt/modelopt_fp8_z128_init_trace.h';c=m/'native_z128_factory_trace_candidate';d=json.loads((m/'evidence/z128-factory-trace-source-derivation.json').read_bytes());assert sha(source[helper])==d['source_sha256'];source[helper]=(c/'modelopt_fp8_z128_canonical.cpp').read_bytes();source[trace]=(c/'modelopt_fp8_z128_init_trace.h').read_bytes();assert len(source)==39
+candidate_base={**bp['candidate_base'],trace:None};assert len(candidate_base)==39 and sum(v is not None for v in candidate_base.values())==14
+bundle=work/'z128-factory-trace-native-source.zip';assert not bundle.exists()
+with zipfile.ZipFile(bundle,'x',zipfile.ZIP_DEFLATED) as z:
+    for name,raw in source.items():z.writestr(name,raw)
+replaced=['test2026.cuda.qwen38_5090.test_modelopt_init_trace.Controls.test_original_policy_provenance_through_exact_initialize_composition','test2026.cuda.qwen38_5090.test_modelopt_init_trace.Controls.test_original_prior_stage_integration_through_exact_initialize_composition']
+def ids(suite):
+    for item in suite:
+        if isinstance(item,unittest.TestSuite):yield from ids(item)
+        else:yield item.id()
+tests=[name for name in bp['test_ids'] if name not in replaced]+sorted(ids(unittest.defaultTestLoader.loadTestsFromName('test2026.cuda.qwen38_5090.test_z128_factory_trace')));assert len(tests)==len(set(tests))==86 and all(bp['test_ids'].count(name)==1 for name in replaced)
+import run_logged as ledger
+ledger.source_identity=lambda:{'scope':'Explicit constructor trace methods; unrelated untracked file excluded','owned_source_sha256':methods};os.chdir(repo)
+assert ledger.run([sys.executable,'-m','unittest',*tests],work/'z128-factory-trace-local-cpu-ledger','correctness','86CPU: retain83 via exact helper composition, five new actual failure/trace/source controls replace two prior source-view controls only',[repo/name.removeprefix('Garnet/') for name in methods])==0
+# Simulate installed source bytes for every changed CPP without writing production source.
+mapping={str((repo/name).resolve()).lower():raw for name,raw in source.items() if name.endswith('.cpp')};original_read=Path.read_bytes
+def read(path):return mapping.get(str(path.resolve()).lower(),None) if str(path.resolve()).lower() in mapping else original_read(path)
+with patch.object(Path,'read_bytes',read):
+    result=unittest.TextTestRunner(verbosity=1).run(unittest.defaultTestLoader.loadTestsFromNames(tests));assert result.wasSuccessful()
+parents={**bp['parents']};job='modelopt-trace-layer2-attempt1';proof=(out/(job+'-verified.json')).read_bytes();q=json.loads(proof);assert proof==(out/(job+'-remote-verified.json')).read_bytes() and sha((out/(job+'-evidence.zip')).read_bytes())==q['archive_sha256'];parents[job]={'status':q['status'],'exit_code':1,'proof_sha256':sha(proof),'archive_sha256':q['archive_sha256']}
+p={'status':'z128_factory_trace_native_build_proposed_unrun','base_files':base,'methods':methods,'candidate_files':{name:sha(raw) for name,raw in source.items()},'candidate_base':candidate_base,'bundle':'results/'+bundle.name,'bundle_sha256':sha(bundle.read_bytes()),'runtime':bp['runtime'],'environment':bp['environment'],'checkpoints':bp['checkpoints'],'vcvars':np['vcvars'],'parents':parents,'test_ids':tests,'expected_cpu_test_count':86,'scope':'Actual real Garnet Z128 factory observation, defaultoff GARNET_Z128_FACTORY_TRACE exact1. Native32+samePython7=39sources; only typedZ constructor CPP derivative and new no-SDK trace header beyond qualified38. Original17SDK expressions forwarded once in short-circuit order; original10empty guards/cache/firstsuccessful opaque rejection and algorithms/descriptor/workspace/wire/enqueue unchanged. CPU original-vs-traced48modes x10policies SDK-fixture tests before full remote native build. No GPU model or correctness/quality/performance admission. Restore14old/25new source/runtime/SDK/checkpoints/cache; retain all faults.'}
+proposal=work/'z128-factory-trace-native-proposal.json';assert not proposal.exists();proposal.write_bytes(json.dumps(p,indent=2).encode());deploy={name:(repo/name.removeprefix('Garnet/')).read_bytes() for name in methods};deploy[p['bundle']]=bundle.read_bytes();deploy['results/'+proposal.name]=proposal.read_bytes();package=work/'z128-factory-trace-native-deployment.zip';assert not package.exists()
+with zipfile.ZipFile(package,'x',zipfile.ZIP_DEFLATED) as z:
+    for name,raw in deploy.items():z.writestr(name,raw)
+    z.writestr('install-manifest.json',json.dumps({'files':{name:sha(raw) for name,raw in deploy.items()}},indent=2))
+result={'status':p['status'],'source_pins':len(base),'methods':len(methods),'candidate_sources':39,'CPU_tests':86,'package_sha256':sha(package.read_bytes()),'package_bytes':package.stat().st_size,'proposal_sha256':sha(proposal.read_bytes())};(work/'z128-factory-trace-native-package.json').write_bytes(json.dumps(result,indent=2).encode());print(json.dumps(result))

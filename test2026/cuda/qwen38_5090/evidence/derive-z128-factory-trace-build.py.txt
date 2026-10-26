@@ -1,0 +1,37 @@
+from pathlib import Path
+import hashlib,json
+work=Path(__file__).resolve().parent;m=Path('D:/CantorAI/work/qwen38-5090/test2026/cuda/qwen38_5090');sha=lambda raw:hashlib.sha256(raw).hexdigest();rows=[]
+job='z128-factory-trace-native-build-attempt1'
+common=[('modelopt-init-trace-native-build-preparation-attempt2.json','z128-factory-trace-native-build-preparation.json'),('modelopt_init_trace_native_build_','z128_factory_trace_native_build_'),('modelopt_init_trace_native_built_cpu_qualified_model_unqualified','z128_factory_trace_native_built_cpu_qualified_model_unqualified'),("==38","==39")]
+for base,target,extra in (
+ ('prepare_modelopt_init_trace_native_build_attempt2.py','prepare_z128_factory_trace_native_build.py',[('modelopt-init-trace-native-proposal-attempt2.json','z128-factory-trace-native-proposal.json'),('==81','==86'),('absent_targets\':24','absent_targets\':25')]),
+ ('run_modelopt_init_trace_native_build_attempt2.py','run_z128_factory_trace_native_build.py',[('modelopt-init-trace-native-build-attempt2',job),('garnet-native-modelopt-init-trace-attempt2.dll','garnet-native-z128-factory-trace-attempt1.dll')]),
+ ('verify_modelopt_init_trace_native_build_attempt2.py','verify_z128_factory_trace_native_build.py',[('modelopt-init-trace-native-build-attempt2',job)])):
+    original=(m/base).read_bytes();raw=original;changes=[]
+    for before,after in common+extra:
+        count=raw.count(before.encode())
+        if count:raw=raw.replace(before.encode(),after.encode());changes.append({'before':before,'after':after,'count':count})
+    if target.startswith('run_'):
+        before="        code=ledger.run(['cmd.exe','/d','/c',str(M/'build_integrated_batch_top1_native.bat')"
+        assert raw.count(before.encode())==1
+        after="""        code=ledger.run(['cmd.exe','/d','/c',str(M/'build_z128_factory_trace_cpu.bat'),p['vcvars'],str(out/'factory-cpu-build')],out/'factory-cpu-build-ledger','correctness','Two CPU-only executables compile actual original and traced Z128 helper with fixture SDK functions; no GPU/SDK library linkage',common)
+        if code:raise RuntimeError('Actual Z128 helper CPU fixture build')
+        code=ledger.run([sys.executable,str(M/'run_z128_factory_trace_cpu.py'),'--build',str(out/'factory-cpu-build'),'--output',str(out/'factory-cpu')],out/'factory-cpu-ledger','correctness','48CPU modes x10trace policies compare complete original/trace SDK call arguments/order/cleanup/return/exception/cache transcripts;0matmul. Synthetic fault evidence only',common)
+        if code:raise RuntimeError('Actual Z128 factory forwarding/fault contract')
+"""+before
+        raw=raw.replace(before.encode(),after.encode());changes.append({'before':before,'after':after,'count':1})
+    if target.startswith('verify_'):
+        before="('cpu','init-cpu-build','init-cpu','build','wire-cpu'";after="('cpu','init-cpu-build','init-cpu','factory-cpu-build','factory-cpu','build','wire-cpu'";assert raw.count(before.encode())==1;raw=raw.replace(before.encode(),after.encode());changes.append({'before':before,'after':after,'count':1})
+        before="            assert dll.replace('/','\\\\') in p['environment']"
+        after="""            from test2026.cuda.qwen38_5090.z128_factory_trace import MODES,POLICIES,cpu_case
+            factory=doc(base+'factory-cpu/report.json');assert factory['status']=='actual_original_and_traced_Z128_constructor_CPU_fault_transcripts_exact' and factory['CPU_interface_fixture_only'] and not factory['actual_GPU_or_SDK_library_loaded'] and factory['modes']==len(MODES)==48 and factory['policies']==len(POLICIES)==10 and factory['original_processes']==48 and factory['traced_processes']==480 and len(factory['cases'])==480
+            for kind in ('original','traced'):assert sha(z.read(base+'factory-cpu-build/'+kind+'.exe'))==factory[kind+'_executable_sha256']
+            for mode in MODES:
+                original=z.read(base+'factory-cpu/'+mode+'-original-stdout.json');report=json.loads(original)
+                for i,policy in enumerate(POLICIES):
+                    prefix=base+'factory-cpu/'+mode+'-policy-'+str(i);stdout=z.read(prefix+'-stdout.json');stderr=z.read(prefix+'-stderr.log');assert stdout==original
+                    item=factory['cases'][MODES.index(mode)*10+i];assert item['mode']==mode and item['policy']==policy and item['stdout_sha256']==sha(stdout) and item['stderr_sha256']==sha(stderr) and item['replay']==cpu_case(report,stderr,mode,policy=='1')
+"""+before
+        assert raw.count(before.encode())==1;raw=raw.replace(before.encode(),after.encode());changes.append({'before':before,'after':after,'count':1})
+    target=m/target;assert not target.exists();target.write_bytes(raw);rows.append({'base':base,'target':target.name,'base_sha256':sha(original),'target_sha256':sha(raw),'changes':changes})
+(m/'evidence/z128-factory-trace-build-derivation.json').write_bytes(json.dumps({'status':'retained_native_runner_exact_extension_actual_helper_observation','files':rows},indent=2).encode());print(json.dumps({'derived_methods':len(rows)}))
