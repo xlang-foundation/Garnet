@@ -1,0 +1,184 @@
+{
+  "status": "real_gdn_z_128_fixture_extracted_native_control_unrun",
+  "parent_archive_sha256": "0faf8a625ba25befbeae0877bdf0a08a7696dd3ed19845f7590238f58e1e7de3",
+  "parent_proof_sha256": "ca7d3f095d1a0e48adfb1297a6c7233936925fdd48f079be6a1f6f1e6818e78a",
+  "parent_report_sha256": "7656e3cec6ef2e85ee68659450112539c06e2a8464a398273606237dd5fc9dc8",
+  "config_sha256": "71fa01bb64de20971045cd82a82c0ebb25a54e1b0a3f09ef23cf5479e9c54df8",
+  "index_sha256": "7aa103a2582b7d26631988de33dea19e8a308ee9c239e8e14feb374af30905e2",
+  "candidate_library_sha256": "0ec79f33c94c756907af9454271e7a27edfb8765a9c5f820fa84f6bdf4380d96",
+  "extractor_sha256": "9a47f8c923e956e27ae1437937d6c43206b501d05469ecdf6b7ae7d7f56b9e38",
+  "layers": [
+    {
+      "layer": 0,
+      "input_lineage": "prompt_embeddings",
+      "input_words": 655360,
+      "output_words_per_profile": 786432,
+      "different_bf16_words": 27,
+      "first_different_word": 5510,
+      "dimensions": {
+        "m": [
+          32,
+          128
+        ],
+        "n": 6144,
+        "k": 5120
+      },
+      "tensors": {
+        "model.language_model.layers.0.linear_attn.in_proj_z.weight": {
+          "key": "model.language_model.layers.0.linear_attn.in_proj_z.weight",
+          "shard": "model-00001-of-00003.safetensors",
+          "header_sha256": "60f09f862dd9fc8c2594641081613cc3f12f162419cfa06f2e6ee3feac7bc5f5",
+          "dtype": "F8_E4M3",
+          "shape": [
+            6144,
+            5120
+          ],
+          "data_offsets": [
+            3537427440,
+            3568884720
+          ],
+          "file": "weight-n6144-k5120.e4m3",
+          "sha256": "c7f8ba2a6601081105754589e3ae1c7ca96ec1c524f0f8d51ac1c2aaaa862929"
+        },
+        "model.language_model.layers.0.linear_attn.in_proj_z.weight_scale": {
+          "key": "model.language_model.layers.0.linear_attn.in_proj_z.weight_scale",
+          "shard": "model-00001-of-00003.safetensors",
+          "header_sha256": "60f09f862dd9fc8c2594641081613cc3f12f162419cfa06f2e6ee3feac7bc5f5",
+          "dtype": "F32",
+          "shape": [],
+          "data_offsets": [
+            12,
+            16
+          ],
+          "file": "weight-scale.f32",
+          "sha256": "4e7307afd4abbd90825905b2ff2017eefb50d4216317367defa64717beb63ee9"
+        },
+        "model.language_model.layers.0.linear_attn.in_proj_z.input_scale": {
+          "key": "model.language_model.layers.0.linear_attn.in_proj_z.input_scale",
+          "shard": "model-00001-of-00003.safetensors",
+          "header_sha256": "60f09f862dd9fc8c2594641081613cc3f12f162419cfa06f2e6ee3feac7bc5f5",
+          "dtype": "F32",
+          "shape": [],
+          "data_offsets": [
+            8,
+            12
+          ],
+          "file": "input-scale.f32",
+          "sha256": "963ba33b78e78443d5c691760882700f03e9953c1d6e47e5a3be4d3e9ee02926"
+        }
+      }
+    },
+    {
+      "layer": 1,
+      "input_lineage": "retained_T32_layer0_ordinary_output_common_input",
+      "input_words": 655360,
+      "output_words_per_profile": 786432,
+      "different_bf16_words": 74,
+      "first_different_word": 19654,
+      "dimensions": {
+        "m": [
+          32,
+          128
+        ],
+        "n": 6144,
+        "k": 5120
+      },
+      "tensors": {
+        "model.language_model.layers.1.linear_attn.in_proj_z.weight": {
+          "key": "model.language_model.layers.1.linear_attn.in_proj_z.weight",
+          "shard": "model-00001-of-00003.safetensors",
+          "header_sha256": "60f09f862dd9fc8c2594641081613cc3f12f162419cfa06f2e6ee3feac7bc5f5",
+          "dtype": "F8_E4M3",
+          "shape": [
+            6144,
+            5120
+          ],
+          "data_offsets": [
+            3669482480,
+            3700939760
+          ],
+          "file": "weight-n6144-k5120.e4m3",
+          "sha256": "8434728ae27b1dbe24a2390d0f881a15682cde9a341f88afd560937f8a3aa164"
+        },
+        "model.language_model.layers.1.linear_attn.in_proj_z.weight_scale": {
+          "key": "model.language_model.layers.1.linear_attn.in_proj_z.weight_scale",
+          "shard": "model-00001-of-00003.safetensors",
+          "header_sha256": "60f09f862dd9fc8c2594641081613cc3f12f162419cfa06f2e6ee3feac7bc5f5",
+          "dtype": "F32",
+          "shape": [],
+          "data_offsets": [
+            60,
+            64
+          ],
+          "file": "weight-scale.f32",
+          "sha256": "2abf1fd1b95bd3482f1609cd856bf7ea1a9d39e990600a7b13a2f7bd1976cee2"
+        },
+        "model.language_model.layers.1.linear_attn.in_proj_z.input_scale": {
+          "key": "model.language_model.layers.1.linear_attn.in_proj_z.input_scale",
+          "shard": "model-00001-of-00003.safetensors",
+          "header_sha256": "60f09f862dd9fc8c2594641081613cc3f12f162419cfa06f2e6ee3feac7bc5f5",
+          "dtype": "F32",
+          "shape": [],
+          "data_offsets": [
+            56,
+            60
+          ],
+          "file": "input-scale.f32",
+          "sha256": "9c1441b0b0f169688510973588007eaeea0d8ba936ae10891297ed88f2492170"
+        }
+      }
+    }
+  ],
+  "files": {
+    "layer0/input-m128-k5120.f32": {
+      "bytes": 2621440,
+      "sha256": "bc5cdaf8633a573206369fdbcc59aba0875e0ad873f23c01c346c9c52a16a1fc"
+    },
+    "layer0/expected-four-m32-n6144.bf16": {
+      "bytes": 1572864,
+      "sha256": "7981d2fb446f5669d4093094afcfd0e477e01e8f5c47624b29045e9166298768"
+    },
+    "layer0/expected-m128-n6144.bf16": {
+      "bytes": 1572864,
+      "sha256": "dfd5742fe304e55eee0e7a710587ff338532581351180cac95d89d65b241bede"
+    },
+    "layer0/weight-n6144-k5120.e4m3": {
+      "bytes": 31457280,
+      "sha256": "c7f8ba2a6601081105754589e3ae1c7ca96ec1c524f0f8d51ac1c2aaaa862929"
+    },
+    "layer0/weight-scale.f32": {
+      "bytes": 4,
+      "sha256": "4e7307afd4abbd90825905b2ff2017eefb50d4216317367defa64717beb63ee9"
+    },
+    "layer0/input-scale.f32": {
+      "bytes": 4,
+      "sha256": "963ba33b78e78443d5c691760882700f03e9953c1d6e47e5a3be4d3e9ee02926"
+    },
+    "layer1/input-m128-k5120.f32": {
+      "bytes": 2621440,
+      "sha256": "8fb96353a29fa8a409871db82f09619f4168c125fb44224a2390232a506c97ac"
+    },
+    "layer1/expected-four-m32-n6144.bf16": {
+      "bytes": 1572864,
+      "sha256": "ba0ec1e41b8d3d6f67f92e392613855d773735e14304f12a3780868878f44cf3"
+    },
+    "layer1/expected-m128-n6144.bf16": {
+      "bytes": 1572864,
+      "sha256": "6ef240b5f5fd16fcaa6071c97f697b11fbfd4cb7019f92d17117a03f545c43ba"
+    },
+    "layer1/weight-n6144-k5120.e4m3": {
+      "bytes": 31457280,
+      "sha256": "8434728ae27b1dbe24a2390d0f881a15682cde9a341f88afd560937f8a3aa164"
+    },
+    "layer1/weight-scale.f32": {
+      "bytes": 4,
+      "sha256": "2abf1fd1b95bd3482f1609cd856bf7ea1a9d39e990600a7b13a2f7bd1976cee2"
+    },
+    "layer1/input-scale.f32": {
+      "bytes": 4,
+      "sha256": "9c1441b0b0f169688510973588007eaeea0d8ba936ae10891297ed88f2492170"
+    }
+  },
+  "model_or_performance_qualified": false,
+  "scope": "Actual non-repeated first128 input_norm rows and Z outputs at layers0/1 with common controlled layer1 input. Both archived fourM32 and M128 outputs must be reproduced with native helper before an AlgoCheck-qualified M32algorithm intervention. No assumed algorithm ID/workspace, full3968cause, model/quality or serving speed admission."
+}

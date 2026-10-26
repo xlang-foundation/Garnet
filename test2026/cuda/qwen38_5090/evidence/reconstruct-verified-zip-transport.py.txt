@@ -1,0 +1,18 @@
+"""Reconstruct immutable remote archive exactly; never overwrite an active transfer."""
+from pathlib import Path
+import argparse,hashlib,json,zipfile
+sha=lambda raw:hashlib.sha256(raw).hexdigest()
+def main():
+    parser=argparse.ArgumentParser();parser.add_argument('--transport',type=Path,required=True);parser.add_argument('--proof',type=Path,required=True);parser.add_argument('--output',type=Path,required=True);args=parser.parse_args();assert not args.output.exists()
+    with zipfile.ZipFile(args.transport) as z:
+        p=json.loads(z.read('transport.json'));assert z.testzip() is None and len(z.namelist())==len(set(z.namelist()))==len(p['objects'])+1 and p['original_proof_sha256']==sha(args.proof.read_bytes())
+        q=json.loads(args.proof.read_bytes());assert p['original_sha256']==q['archive_sha256']
+        for key,length in p['objects'].items():raw=z.read('objects/'+key);assert len(raw)==length and sha(raw)==key
+        digest=hashlib.sha256();size=0
+        with args.output.open('xb') as output:
+            for row in p['segments']:
+                raw=z.read('objects/'+row['sha256']);assert len(raw)==row['bytes']==p['objects'][row['sha256']];output.write(raw);digest.update(raw);size+=len(raw)
+        assert size==p['original_bytes'] and digest.hexdigest()==p['original_sha256']
+        with zipfile.ZipFile(args.output) as original:assert original.testzip() is None
+    print(json.dumps({'status':'exact_original_archive_reconstructed','bytes':size,'sha256':digest.hexdigest(),'original_scientific_evidence_changed':False}))
+if __name__=='__main__':main()

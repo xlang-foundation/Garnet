@@ -1,0 +1,12 @@
+from pathlib import Path
+import hashlib,json,sys
+repo=Path('D:/CantorAI/work/qwen38-5090');sys.path[:0]=[str(repo/'test2026/cuda/qwen38_5090'),str(repo)]
+import run_logged as ledger
+m=repo/'test2026/cuda/qwen38_5090';work=Path(__file__).resolve().parent
+names=('gdn_z_projection.py','prepare_gdn_z_projection_fixture.py','test_gdn_z_projection.py','gdn_chunk_stage_replay.py','gdn_chunk_stage_layout.py','prefill128_fp8_projection.py')
+pins={str(m/name):hashlib.sha256((m/name).read_bytes()).hexdigest() for name in names}
+ledger.source_identity=lambda:{'scope':'Explicit GDN Z fixture/replay CPU source; unrelated untracked excluded','owned_source_sha256':{name:hashlib.sha256(Path(name).read_bytes()).hexdigest() for name in pins}}
+modules=['test2026.cuda.qwen38_5090.'+name for name in ('test_gdn_chunk_stage_witness','test_gdn_chunk_stage_bound','test_gdn_z_projection')]
+code=ledger.run([sys.executable,'-m','unittest',*modules,'-v'],work/'gdn-z-fixture-local-cpu-ledger','correctness','Synthetic CPU piece/primary/bound readback/Z conversion/lastword/shape/scale controls; no native runtime/model/GPU',list(pins))
+assert pins==ledger.source_identity()['owned_source_sha256']
+raise SystemExit(code)

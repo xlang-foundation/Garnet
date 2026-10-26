@@ -1,0 +1,99 @@
+"""Retain failed collector, closed real stage witness, and unqualified Z fixtures."""
+from pathlib import Path
+import hashlib,json,zipfile
+work=Path(__file__).resolve().parent;out=work.parent/'outputs';repo=Path('D:/CantorAI/work/qwen38-5090');m=repo/'test2026/cuda/qwen38_5090';e=m/'evidence';paths=[];sha=lambda raw:hashlib.sha256(raw).hexdigest()
+
+def keep(name,raw):
+    target=e/name;assert not target.exists() or target.read_bytes()==raw,target
+    if not target.exists():target.write_bytes(raw)
+    paths.append(target.relative_to(repo).as_posix())
+
+def check_archive(job):
+    archive=out/(job+'-evidence.zip');z=zipfile.ZipFile(archive);manifest=json.loads(z.read('evidence-manifest.json'))
+    assert z.testzip() is None and len(z.namelist())==len(set(z.namelist()))==len(manifest['files'])+1
+    for name,h in manifest['files'].items():assert sha(z.read(name))==h
+    keep(job+'-evidence-manifest.json',z.read('evidence-manifest.json'))
+    for name in z.namelist():
+        if name.startswith('results/'+job+'/') and name.endswith(('.json','.jsonl','.log','.txt')):
+            keep(job+'-'+name.removeprefix('results/'+job+'/').replace('/','-'),z.read(name))
+    return z,manifest,archive
+
+proofs={};workflows={}
+for attempt in (1,2):
+    job='gdn-chunk-stage-witness-attempt'+str(attempt);raw=(out/(job+'-verified.json')).read_bytes();q=json.loads(raw)
+    assert raw==(out/(job+'-remote-verified.json')).read_bytes()
+    z,manifest,archive=check_archive(job)
+    with z:
+        assert sha(archive.read_bytes())==q['archive_sha256'];w=json.loads(z.read('results/'+job+'/workflow.json'));workflows[attempt]=w
+        assert w['exit_code']==(1 if attempt==1 else 0) and w['cleanup_finished'] and w['baseline_source_restored'] and w['baseline_library_restored']
+        assert w['source_before_sha256']==w['source_after_sha256'] and w['runtime_dependencies']==w['runtime_dependencies_after'] and w['environment_before']==w['environment_after']
+        prepname='gdn-chunk-stage-witness-'+('bound-' if attempt==2 else '')+'preparation.json';praw=z.read('Garnet/test2026/cuda/qwen38_5090/evidence/'+prepname);p=json.loads(praw);keep(prepname,praw)
+        assert len(p['candidate_files'])==23 and len([h for h in p['candidate_base'].values() if h is not None])==8
+        for name,h in p['new_files'].items():
+            if name.startswith('Garnet/'):
+                target=repo/name.removeprefix('Garnet/');assert sha(target.read_bytes())==h
+                paths.append(target.relative_to(repo).as_posix())
+        assert q['complete_finite_array_entries_verified']==(9 if attempt==1 else 509)
+        if attempt==1:assert 'object is not subscriptable' in q['report_error'] and q['array_replay'] is None
+        else:assert q['array_replay']==w['array_replay'] and q['array_replay']['complete_output_f32_words_replayed']==98205696
+    for suffix in ('-verified.json','-remote-verified.json','-local-replay.log'):keep(job+suffix,(out/(job+suffix)).read_bytes())
+    proofs[attempt]={'proof_sha256':sha(raw),'archive_sha256':q['archive_sha256'],'archive_bytes':archive.stat().st_size,'archive_members':len(manifest['files'])+1,'proof':q}
+
+job='gdn-chunk-stage-readback-cpu';z,manifest,archive=check_archive(job)
+with z:
+    base='results/'+job+'/';r=json.loads(z.read(base+'report.json'));assert r['status']=='embedded_readback_explicit_loop_passed' and r['loop_exact'] and r['concatenation_exact'] and r['original_error']=="TypeError('object is not subscriptable')"
+    assert r['gpu_or_native_model_executed'] is r['sdk_modified'] is False
+    assert z.read(base+'a.f32')==b'abcd' and z.read(base+'b.f32')==b'efgh'
+    name='Garnet/test2026/cuda/qwen38_5090/probe_gdn_chunk_stage_readback_cpu.py';assert z.read(name)==(m/Path(name).name).read_bytes();paths.append((m/Path(name).name).relative_to(repo).as_posix())
+    events=[json.loads(line) for line in z.read(base+'../'+job+'-ledger/commands.jsonl').splitlines()] if base+'../'+job+'-ledger/commands.jsonl' in z.namelist() else [json.loads(line) for line in z.read('results/'+job+'-ledger/commands.jsonl').splitlines()]
+    assert len(events)==2 and events[1]['exit_code']==0 and events[0]['source']['owned_source_sha256']==events[1]['source_after']['owned_source_sha256']
+    for name in z.namelist():
+        if name.startswith('results/'+job+'-ledger/'):keep(job+'-'+Path(name).name,z.read(name))
+    readback={'archive_sha256':sha(archive.read_bytes()),'report':r,'process_seconds':events[1]['process_elapsed_seconds'],'scope':'ASCII testbytes only, not model/scientific vectors; actual embedded interpreter without Garnet/CUDA import.'}
+
+job='gdn-z-fixture-extraction-attempt1';qraw=(out/(job+'-verified.json')).read_bytes();q=json.loads(qraw);z,manifest,archive=check_archive(job)
+with z:
+    assert sha(archive.read_bytes())==q['archive_sha256'] and q['stage_derived_vectors_verified']==6 and q['checkpoint_weight_payload_verified_locally'] is q['native_projection_control_executed'] is False
+    praw=z.read('results/actual-gdn-z-128-fixture/manifest.json');fixture=json.loads(praw);assert sha(praw)==q['fixture_manifest_sha256']
+    keep(job+'-manifest.json',praw)
+    for name in ('gdn_z_projection.py','prepare_gdn_z_projection_fixture.py','test_gdn_z_projection.py'):
+        assert z.read('Garnet/test2026/cuda/qwen38_5090/'+name)==(m/name).read_bytes();paths.append((m/name).relative_to(repo).as_posix())
+    keep('run-gdn-z-fixture-remote.py.txt',z.read('tools/run-gdn-z-fixture-remote.py'))
+for suffix in ('-verified.json','-local-replay.log'):keep(job+suffix,(out/(job+suffix)).read_bytes())
+paths.append((m/'verify_gdn_z_fixture.py').relative_to(repo).as_posix())
+
+for name in ('gdn-chunk-stage-witness-owner-derivation.json','gdn-chunk-stage-witness-bound-derivation.json'):
+    paths.append((e/name).relative_to(repo).as_posix())
+for name in ('gdn-chunk-stage-witness-package.json','gdn-chunk-stage-witness-install.json','gdn-chunk-stage-witness-bound-package.json','gdn-chunk-stage-witness-bound-install.json'):
+    keep(name,(work/name).read_bytes())
+keep('gdn-chunk-stage-witness-attempt2-transfer-receipt.json',(out/'gdn-chunk-stage-witness-attempt2-transfer-receipt.json').read_bytes())
+for name in ('gdn-chunk-stage-witness-local-cpu-ledger','gdn-chunk-stage-witness-bound-local-cpu-ledger','gdn-z-fixture-local-cpu-ledger'):
+    for target in (work/name).iterdir():
+        if target.is_file():keep(name+'-'+target.name,target.read_bytes())
+for name in ('derive-gdn-chunk-stage-witness-owner.py','derive-gdn-chunk-stage-witness-bound.py','install-gdn-chunk-stage-witness.py','install-gdn-chunk-stage-witness-bound.py','pack-verified-zip-transport.py','reconstruct-verified-zip-transport.py','replay-gdn-witness2-local.py','run-gdn-z-local-cpu.py','retain-gdn-chunk-stage-witness.py'):
+    keep(name+'.txt',(work/name).read_bytes())
+keep('gdn-z-fixture-first-checker-windows-path-failure.log',(work/'gdn-z-fixture-first-checker-windows-path-failure.log').read_bytes())
+
+plan={'status':'real_gdn_chunk_stage_witness_closed_Z_native_control_next','steps':[
+ 'Freeze owned source/runtime/SDK/real128fixture for one exclusive standalone control. Geometry is Z N6144/K5120, not existing GDNout N5120/K6144. Pin checkpoint tensor headers, rawweight andscalarcalibration hashes, actual loadedcuBLASLt13.4 onSM120. No productionDLL orSDK mutation.',
+ 'Build private explicit sm120 observer including actual modelopt_cublaslt.cpp and actual modelopt_fp8.cu. Reproduce all outputs for four sequential realM32chunks and one realM128, both repeats, bothlayers. Independently verify every F32RNE BF16 cast, FP8quant byte and BF16output word. No replicated16rows.',
+ 'Only after both defaultprofiles reproduce archived arrays observe actual canonicalM32 opaquealgorithm. AlgoCheck actualM128 descriptors and requiredworkspace, retain full rawalgorithm/check/status/workspace. Apply only a qualified commonM32 algorithm toM128, fail closed withoutfallback; require complete equality tofourM32. Do not assume algorithm35/67 or4/8MiBworkspaces qualifyZ.',
+ 'If successful design typed strict defaultoff Z-specific native policy/plugin and validate actualwire/constructor/descriptor/source/fullbuild, then rerun ordinary/diagnostic primary-witness arrays before unchanged full3968+128 sixcase state/vector/ID gate. Neither the first128commoninput witness nor standaloneprojection proves full3968cause.',
+ 'After strict fullmodel and805quality acceptance run matchedHTTP text/imageTTFT/decode/concurrency-throughput/sampleVRAM; retain repeated trials and strongest feasible tuned/MTPreferences. Original2xdecodeANDthroughput/halfTTFTextra, B8arithmetic, matchedINT4/4Bgoals remain active. Currentcharts unchanged.'
+ ],'full_model_cause_established':False,'model_or_quality_or_performance_qualified':False,'two_times_target_achieved':False}
+keep('gdn-z-native-control-next-plan.json',json.dumps(plan,indent=2).encode())
+result={'status':'gdn_chunk_stage_real_primary_witness_replayed_on_both_machines_Z_control_pending','attempts':proofs,'embedded_readback_cpu_control':readback,'z_fixture_provenance':q,'z_fixture_files':len(fixture['files']),'z_fixture_bytes':sum(row['bytes'] for row in fixture['files'].values()),'next_plan':plan,'model_or_quality_or_performance_qualified':False,'two_times_target_achieved':False}
+raw=json.dumps(result,indent=2).encode();keep('gdn-chunk-stage-witness-closure.json',raw);(out/'Garnet-GDN-Stage-Witness-Verified.json').write_bytes(raw)
+
+title='Real GDN stage primary witness passes; Z projection differs on actual128 inputs'
+text='\n\n### 2026-10-26 UTC — '+title+'\n\n'
+text+='Preserved actual attempt1collector failure after firstlayer0T32chunk:18CPUchecks,10actualfrontendrejects and9complete finite arrays; generator readback raises TypeError(object is not subscriptable) before stage comparison. Not a numerical/primary mismatch. Original failure checker independently agrees on both machines, proof '+proofs[1]['proof_sha256']+', archive '+proofs[1]['archive_sha256']+'. CPU-only actualembedded interpreter control reproduces the generator failure on ASCII testbytes, explicit list-loop and concatenation both exact; no Garnet/CUDA import, no SDKchange. Distinct boundretry changes readback only, exact five-method derivation retained, originalsource/checker/prep immutable. Originalowner inherited T128model CPUlabel/docstring is historical; actual launcher/profile/outputs/scope identify stage witness.\n\n'
+text+='Attempt2owner0:20CPUcontrols pass remotely2.355s andlocally3.244s. Same23native source candidate '+proofs[2]['proof']['candidate_library_sha256']+',843source/858installed pins/runtime6/selectedSDK20;8originaltargets restoredbyte-exact and15new removed, baseline1a1dDLL/cache/config/index restored.10actualfrontendrejects flag2/negative/bool/float/legacyconflict/batch2/T16/layer2/noactive/BF16hidden pass.8profiles (layers0/1, T32/T128, ordinary/diagnostic),3warmups and2repeats use realfirst128of3968frozenprompt; layer1uses commonretainedT32layer0ordinaryoutput. No repeated16rows. Allinputreadonly/carriedstate/repeats/graphcounts hold. All diagnostic primaryhidden/history/state bytes equal ordinary same-profile output. Original fullverifier independently replays509complete finite arrays/98,205,696outputF32words on bothmachines, identicalproof '+proofs[2]['proof_sha256']+'.\n\n'
+text+='Firstdifferentstage Z: layer0 27/786432words first5510, gatedoutputsame27, attention/residual/MLP/hidden exact. Layer1controlledcommoninput Z74words first19654; gated74; attention/residual681; MLPnorm3779; hidden4910. Inputnorm/QKV/beta/a andfinalhistory/state exact inbothlayers. These first128component observations do not establish full3968model cause. Correct next geometry is in_proj_z N6144/K5120, distinct from existing out_proj N5120/K6144.\n\n'
+text+='Immutable archive '+proofs[2]['archive_sha256']+' ('+str(proofs[2]['archive_bytes'])+'bytes/'+str(proofs[2]['archive_members'])+'members). Lossless transport removes duplicate compressedZIPpayloads only:124598047bytes reconstruct exact485580421byte originalSHA before originalchecker. Interrupted183795712byte originaltransfer retained as workpartial. Initial localtransfer guard used stale observed46825472size and failed beforemutation; actualterminated size inspected then guard corrected. No sciencebytes changed.\n\n'
+text+='NewCPU fixture extraction reads actualcheckpoint layers0/1 in_proj_z weight/scales andstageinputnorm/Zoutputs.12files/74448912bytes remain onstudy machine; fixturemanifest '+sha(praw)+'. SixnewCPU fault tests pass local0.240s/remote0.198s; composed15CPUtests3.218s pass. Source/runtime/SDK/checkpointmetadata unchanged. Independent local extractionchecker rebuilds allsixstage-derivedinput/output vectors againstparent bytes andcheckslogs/provenance/metadata, proof '+sha(qraw)+'. Externalweight/scale payloads have not been independently reread locally; nativecontrol unrun. First checker Windows pathnormalization failure retained, corrected beforeproofcreation.\n\n'
+text+='Next: reproduce both actual fourM32/M128Zprofiles with actualnativehelper, complete BF16/FP8 conversion/output replay, observeM32algorithm and AlgoCheck actual128workspace beforeintervention. ExistingGDNoutpolicy not extended. No full4Kmodel/805quality/HTTP/2xadmission. Currentcharts unchanged; overall2xdecodeANDthroughput/halfTTFTextra andmatchedINT4/4B/strongestfeasible tunedMTP/repeatedreference goals remain active.\n'
+for name in ('qwen38-5090-development-log.md','qwen38-5090-implementation-task.md'):
+    target=repo/'docs/research'/name;before=target.read_bytes();assert title.encode() not in before;target.write_bytes(before+text.encode());paths.append(target.relative_to(repo).as_posix())
+(work/'gdn-chunk-stage-witness-retained-paths.json').write_bytes(json.dumps(sorted(set(paths)),indent=2).encode())
+print(json.dumps({'status':result['status'],'retained_paths':len(set(paths)),'proof_pair_sha256':proofs[2]['proof_sha256'],'fixture_proof_sha256':sha(qraw)}))

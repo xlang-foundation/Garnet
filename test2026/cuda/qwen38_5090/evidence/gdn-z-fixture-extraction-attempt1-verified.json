@@ -1,0 +1,33 @@
+{
+  "status": "gdn_z_fixture_stage_vectors_and_extraction_provenance_replayed",
+  "archive_sha256": "982f4f571c3001b95b9015fdbe01c6a520ab90dfa8e78e529f8c5667039b43b7",
+  "files_verified": 11,
+  "fixture_manifest_sha256": "81fa473159a724647197aa3ddc099210e9a7a6f7629006d5719d683c13855acd",
+  "parent_archive_sha256": "0faf8a625ba25befbeae0877bdf0a08a7696dd3ed19845f7590238f58e1e7de3",
+  "stage_derived_vectors_verified": 6,
+  "comparisons": [
+    {
+      "layer": 0,
+      "input_lineage": "prompt_embeddings",
+      "input_words": 655360,
+      "output_words_per_profile": 786432,
+      "different_bf16_words": 27,
+      "first_different_word": 5510
+    },
+    {
+      "layer": 1,
+      "input_lineage": "retained_T32_layer0_ordinary_output_common_input",
+      "input_words": 655360,
+      "output_words_per_profile": 786432,
+      "different_bf16_words": 74,
+      "first_different_word": 19654
+    }
+  ],
+  "remote_cpu_tests_passed": 6,
+  "source_runtime_sdk_and_checkpoint_metadata_unchanged": true,
+  "checkpoint_weight_payload_verified_locally": false,
+  "native_projection_control_executed": false,
+  "model_or_quality_or_performance_qualified": false,
+  "replay_verifier_sha256": "5116d4ab72f4bb9626c54daf588c3a5869345e8df89760f834e3b033e9c93f17",
+  "scope": "Complete stage-derived input/output vector hashes rebuilt from immutable parent; extraction ledger and tensor metadata checked. Actual weight/scale payload is external on study machine and has not been independently reread here. Requires actual native both-profile reproduction and full BF16/FP8 replay before a candidate algorithm, then unchanged full4K/quality/HTTP gates."
+}

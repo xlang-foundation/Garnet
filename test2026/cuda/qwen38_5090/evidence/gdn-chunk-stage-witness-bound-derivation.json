@@ -1,0 +1,171 @@
+{
+  "status": "gdn_chunk_stage_readback_retry_derived_unrun",
+  "files": [
+    {
+      "source": "probe_gdn_chunk_stage_witness.py",
+      "source_sha256": "faa863088b15899879627b832ea5fbf950c9aa0a70879ef696e820c5e535da1f",
+      "target": "probe_gdn_chunk_stage_witness_bound.py",
+      "target_sha256": "f3902803c76317a4a5dd8a562f24c07f1160966fe461d19fbe2f94f03be43b78",
+      "replacements": [
+        {
+          "old": "gdn-chunk-stage-witness-preparation.json",
+          "new": "gdn-chunk-stage-witness-bound-preparation.json",
+          "count": 1
+        },
+        {
+          "old": "    def raw(entry):return b''.join((out[row['file']]).read_bytes() for row in entry['parts'])",
+          "new": "    def raw(entry):\n        values=[]\n        for piece in entry['parts']:\n            values.append((out/piece['file']).read_bytes())\n        return b''.join(values)",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "test_gdn_chunk_stage_witness.bat",
+      "source_sha256": "ce6473558dd3f081bddc8a4112d29f368331dee8858a27a0e65b30fdb745e721",
+      "target": "test_gdn_chunk_stage_witness_bound.bat",
+      "target_sha256": "cbe5355a6d5b487c89e6895322c1b01ac52c0d8a81b4e610bc0609f1cc990d61",
+      "replacements": [
+        {
+          "old": "probe_gdn_chunk_stage_witness.py",
+          "new": "probe_gdn_chunk_stage_witness_bound.py",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "run_gdn_chunk_stage_witness.py",
+      "source_sha256": "d2f7506516214cf8c320e038c9406e90d8fdca8c002fffc49749835077d9bf0a",
+      "target": "run_gdn_chunk_stage_witness_bound.py",
+      "target_sha256": "44f074021e27d2b48804ff4342a669a5d58cbfbf1385083f260747294a447fa8",
+      "replacements": [
+        {
+          "old": "\"\"\"Exclusive full-model T128 trial; preserve and restore the complete native/Python profile.\"\"\"",
+          "new": "\"\"\"Exclusive bounded-readback GDN stage witness; preserve23native profile and DLL.\"\"\"",
+          "count": 1
+        },
+        {
+          "old": "JOB='gdn-chunk-stage-witness-attempt1'",
+          "new": "JOB='gdn-chunk-stage-witness-attempt2'",
+          "count": 1
+        },
+        {
+          "old": "gdn-chunk-stage-witness-preparation.json",
+          "new": "gdn-chunk-stage-witness-bound-preparation.json",
+          "count": 1
+        },
+        {
+          "old": "test_gdn_chunk_stage_witness.bat",
+          "new": "test_gdn_chunk_stage_witness_bound.bat",
+          "count": 1
+        },
+        {
+          "old": "T128 full64layer source/routing/factory, oldB1/B4 guards, old/new MTP binding and strict retained4K replay controls before model",
+          "new": "20CPU GDN source/profile/oldquantization, complete-piece/primary/hash/finite/metadata/owner provenance and actual readback retry controls; no GPU",
+          "count": 1
+        },
+        {
+          "old": "T128 full4K model/state gate failed; preserve raw observations, no performance",
+          "new": "GDN stage primary witness or collector gate failed; preserve raw observations, no performance",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "verify_gdn_chunk_stage_witness.py",
+      "source_sha256": "cf7add36cb79a482bc96aabe4e840310ee1ea9968d5018e092573c3411032a2b",
+      "target": "verify_gdn_chunk_stage_witness_bound.py",
+      "target_sha256": "d0a8b0ddca5cc51f355ab0f6316238cbec7db8643f3affbc83e1f7eb44249543",
+      "replacements": [
+        {
+          "old": "JOB='gdn-chunk-stage-witness-attempt1'",
+          "new": "JOB='gdn-chunk-stage-witness-attempt2'",
+          "count": 1
+        },
+        {
+          "old": "gdn-chunk-stage-witness-preparation.json",
+          "new": "gdn-chunk-stage-witness-bound-preparation.json",
+          "count": 1
+        },
+        {
+          "old": "        inherited={**bp['base_files'],**bp['methods'],METHODS+'evidence/gdn-chunk-stage-native-build-preparation.json':sha(braw)}",
+          "new": "        failed=parents['gdn-chunk-stage-witness-attempt1'];fraw=failed.read(METHODS+'evidence/gdn-chunk-stage-witness-preparation.json');fp=json.loads(fraw)\n        inherited={**fp['files'],METHODS+'evidence/gdn-chunk-stage-witness-preparation.json':sha(fraw)}\n        closed=json.loads(failed.read('results/gdn-chunk-stage-witness-attempt1/workflow.json'));assert closed['exit_code']==1 and closed['cleanup_finished'] and closed['baseline_source_restored'] and closed['baseline_library_restored']",
+          "count": 1
+        },
+        {
+          "old": "'verify_gdn_chunk_stage_witness.py'",
+          "new": "'verify_gdn_chunk_stage_witness_bound.py'",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "prepare_gdn_chunk_stage_witness.py",
+      "source_sha256": "1446ac4bc0dfa006d53154f3d23285c056145519dfae7154977c79f98ad184d8",
+      "target": "prepare_gdn_chunk_stage_witness_bound.py",
+      "target_sha256": "7816c65075f7e3df5d244d006ad3fef1f641d893bffe68853a4e5e639528ceea",
+      "replacements": [
+        {
+          "old": "\ndef main():",
+          "new": "\nNAMES=NAMES+('prepare_gdn_chunk_stage_witness_bound.py','run_gdn_chunk_stage_witness_bound.py','probe_gdn_chunk_stage_witness_bound.py','verify_gdn_chunk_stage_witness_bound.py','test_gdn_chunk_stage_witness_bound.bat','test_gdn_chunk_stage_bound.py','evidence/gdn-chunk-stage-witness-bound-derivation.json')\nMODULES=MODULES+('test_gdn_chunk_stage_bound',)\n\ndef main():",
+          "count": 1
+        },
+        {
+          "old": "    candidates=bp['candidate_files'];assert len(candidates)==23",
+          "new": "    with zipfile.ZipFile(args.proofs/'gdn-chunk-stage-witness-attempt1-evidence.zip') as z:\n        failed_raw=z.read(PREFIX+'evidence/gdn-chunk-stage-witness-preparation.json');failed_p=json.loads(failed_raw);failed_w=json.loads(z.read('results/gdn-chunk-stage-witness-attempt1/workflow.json'))\n        assert failed_w['exit_code']==1 and failed_w['cleanup_finished'] and failed_w['baseline_source_restored'] and failed_w['baseline_library_restored']\n        assert failed_w['source_before_sha256']==failed_w['source_after_sha256']==failed_p['files'] and failed_w['runtime_dependencies']==failed_w['runtime_dependencies_after']==failed_p['runtime']\n        base={**failed_p['files'],PREFIX+'evidence/gdn-chunk-stage-witness-preparation.json':sha(failed_raw)}\n    failed_proof=(args.proofs/'gdn-chunk-stage-witness-attempt1-verified.json').read_bytes();assert failed_proof==(args.proofs/'gdn-chunk-stage-witness-attempt1-remote-verified.json').read_bytes();fq=json.loads(failed_proof)\n    assert fq['status']=='gdn_chunk_stage_witness_failure_preserved' and fq['archive_sha256']==sha((args.proofs/'gdn-chunk-stage-witness-attempt1-evidence.zip').read_bytes())\n    candidates=bp['candidate_files'];assert len(candidates)==23",
+          "count": 1
+        },
+        {
+          "old": "len(tests)==len(set(tests))==18",
+          "new": "len(tests)==len(set(tests))==20",
+          "count": 1
+        },
+        {
+          "old": "gdn-chunk-stage-witness-local-cpu-ledger",
+          "new": "gdn-chunk-stage-witness-bound-local-cpu-ledger",
+          "count": 1
+        },
+        {
+          "old": "18 CPU composed source/profile/oldquantization and full-array piece/primary/hash/finite/graph metadata controls",
+          "new": "20 CPU composed source/profile/oldquantization, full-array and actual readback/source retry controls",
+          "count": 1
+        },
+        {
+          "old": "gdn-chunk-stage-witness-source.zip",
+          "new": "gdn-chunk-stage-witness-bound-source.zip",
+          "count": 1
+        },
+        {
+          "old": "'exit_code':0,'proof_sha256':sha(proof),'archive_sha256':q['archive_sha256']}},",
+          "new": "'exit_code':0,'proof_sha256':sha(proof),'archive_sha256':q['archive_sha256']},'gdn-chunk-stage-witness-attempt1':{'status':fq['status'],'exit_code':1,'proof_sha256':sha(failed_proof),'archive_sha256':fq['archive_sha256']}},",
+          "count": 1
+        },
+        {
+          "old": "'expected_cpu_test_count':18",
+          "new": "'expected_cpu_test_count':20",
+          "count": 1
+        },
+        {
+          "old": "gdn-chunk-stage-witness-preparation.json';assert not target.exists()",
+          "new": "gdn-chunk-stage-witness-bound-preparation.json';assert not target.exists()",
+          "count": 1
+        },
+        {
+          "old": "gdn-chunk-stage-witness-deployment.zip",
+          "new": "gdn-chunk-stage-witness-bound-deployment.zip",
+          "count": 1
+        },
+        {
+          "old": "gdn-chunk-stage-witness-package.json",
+          "new": "gdn-chunk-stage-witness-bound-package.json",
+          "count": 1
+        },
+        {
+          "old": "'cpu_tests':18",
+          "new": "'cpu_tests':20",
+          "count": 1
+        }
+      ]
+    }
+  ],
+  "scope": "Preserve attempt1 TypeError and all rawarrays; replace only embedded generator-based file readback by explicit loop. Separate owner/probe/launcher/checker/preparer, bind actual failed archive/proof,20CPU controls. NativeDLL/23sources/GPUmath/policy/primary gates and full-array replay unchanged."
+}
