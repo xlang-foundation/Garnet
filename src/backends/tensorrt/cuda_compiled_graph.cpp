@@ -18,7 +18,7 @@ CUDACompiledGraph::CUDACompiledGraph() {
     enginePath_=cacheRoot_+"model.engine";
 }
 CUDACompiledGraph::~CUDACompiledGraph(){Close();}
-void CUDACompiledGraph::CloseUnlocked(){deviceOutput_=X::Value();externalOutput_=false;execution_.reset();TRTBuilder::ReleaseCachedExecutions(cacheRoot_);ready_=false;externalWeightCount_=externalWeightBytes_=joinedProjectionInputs_=nativeFP8WeightCount_=nativeNVFP4WeightCount_=nativeCTInt4WeightCount_=0;nativeFP8M128ProjectionCount_=0;externalCompressedWeightCount_=externalCompressedWeightBytes_=0;weightPrecision_="bf16";}
+void CUDACompiledGraph::CloseUnlocked(){deviceOutput_=X::Value();externalOutput_=false;execution_.reset();TRTBuilder::ReleaseCachedExecutions(cacheRoot_);ready_=false;externalWeightCount_=externalWeightBytes_=joinedProjectionInputs_=nativeFP8WeightCount_=nativeNVFP4WeightCount_=nativeCTInt4WeightCount_=0;nativeFP8M128ProjectionCount_=0;nativeFP8Z128ProjectionCount_=0;externalCompressedWeightCount_=externalCompressedWeightBytes_=0;weightPrecision_="bf16";}
 void CUDACompiledGraph::Close(){std::lock_guard<std::mutex> lock(mutex_);CloseUnlocked();}
 bool CUDACompiledGraph::Ready() const{std::lock_guard<std::mutex> lock(mutex_);return ready_;}
 double CUDACompiledGraph::CompileMs() const{std::lock_guard<std::mutex> lock(mutex_);return compileMs_;}
@@ -49,6 +49,7 @@ std::string CUDACompiledGraph::StatsJson() const{
     info["native_nvfp4_projection_weights"]=nativeNVFP4WeightCount_;
     info["native_fp8_projection_weights"]=nativeFP8WeightCount_;
     info["native_fp8_m128_canonical_projections"]=nativeFP8M128ProjectionCount_;
+    info["native_fp8_z128_canonical_projections"]=nativeFP8Z128ProjectionCount_;
     info["native_int4_g128_projection_weights"]=nativeCTInt4WeightCount_;
     info["joined_projection_inputs"]=joinedProjectionInputs_;
     info["external_bf16_weight_bytes"]=externalWeightBytes_;
@@ -111,6 +112,7 @@ bool CUDACompiledGraph::Build(X::Value graph,X::Value symbols,const std::string&
     nativeNVFP4WeightCount_=builder.NativeNVFP4WeightCount();
     nativeFP8WeightCount_=builder.NativeFP8WeightCount();
     nativeFP8M128ProjectionCount_=builder.NativeFP8M128ProjectionCount();
+    nativeFP8Z128ProjectionCount_=builder.NativeFP8Z128ProjectionCount();
     nativeCTInt4WeightCount_=builder.NativeCTInt4WeightCount();
     compileMs_=std::chrono::duration<double,std::milli>(std::chrono::steady_clock::now()-start).count();
     ready_=true;return true;
