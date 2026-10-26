@@ -1,0 +1,61 @@
+"""Retain failed libffi observer and successful native-package CPU alternative."""
+from pathlib import Path
+import hashlib,json,re,zipfile
+work=Path(__file__).resolve().parent;out=work.parent/'outputs';repo=Path('D:/CantorAI/work/qwen38-5090');m=repo/'test2026/cuda/qwen38_5090';e=m/'evidence';PREFIX='Garnet/test2026/cuda/qwen38_5090/';paths=[];sha=lambda raw:hashlib.sha256(raw).hexdigest()
+
+def keep(name,raw):
+    target=e/name;assert not target.exists() or target.read_bytes()==raw,target
+    if not target.exists():target.write_bytes(raw)
+    paths.append(target.relative_to(repo).as_posix())
+
+jobs=('fp8-z128-context-audit-attempt1','fp8-z128-native-package-import-attempt1');proofs={};metadata={}
+for job in jobs:
+    raw=(out/(job+'-verified.json')).read_bytes();assert raw==(out/(job+'-remote-verified.json')).read_bytes();q=json.loads(raw);archive=out/(job+'-evidence.zip');assert sha(archive.read_bytes())==q['archive_sha256'];proofs[job]=q
+    with zipfile.ZipFile(archive) as z:
+        manifest=json.loads(z.read('evidence-manifest.json'));assert z.testzip() is None and len(z.namelist())==len(set(z.namelist()))==len(manifest['files'])+1
+        for name,h in manifest['files'].items():assert sha(z.read(name))==h
+        base='results/'+job+'/';w=json.loads(z.read(base+'workflow.json'));assert w['cleanup_finished']
+        keep(job+'-evidence-manifest.json',z.read('evidence-manifest.json'))
+        for name in z.namelist():
+            if name.startswith(base) and name.endswith(('.json','.jsonl','.log','.txt')):keep(job+'-'+name.removeprefix(base).replace('/','-'),z.read(name))
+        metadata[job]={'archive_sha256':q['archive_sha256'],'archive_bytes':archive.stat().st_size,'archive_members':len(manifest['files'])+1,'proof_pair_sha256':sha(raw)}
+        if job==jobs[0]:
+            p=json.loads(z.read(PREFIX+'evidence/fp8-z128-context-audit-preparation.json'));keep('fp8-z128-context-audit-preparation.json',z.read(PREFIX+'evidence/fp8-z128-context-audit-preparation.json'))
+            assert q['status']=='fp8_z128_observer_compiled_but_embedded_libffi_call_failure_preserved' and not q['main_graph_sequence_started'] and q['observer_build_exit_code']==0
+            for name,h in p['new_files'].items():
+                path=repo/name.removeprefix('Garnet/');assert sha(path.read_bytes())==h;paths.append(path.relative_to(repo).as_posix())
+            for name,h in p['observed_helper_files'].items():keep('fp8-z128-observed-source-'+Path(name).name+'.txt',z.read(name))
+            for name in p['capability_files']:keep(Path(name).name,z.read(name))
+            remote_cpu=float(re.search(rb'Ran 37 tests in ([0-9.]+)s',z.read(base+'cpu-ledger/commands.log')).group(1))
+        else:
+            assert q['status']=='native_XLang_package_CPU_invocation_and_unchanged_SDK_replayed' and w['exit_code']==0 and q['report']['abi']==24 and q['report']['cpu_native_calls']==4
+            for name in ('fp8_z128_context_native.cpp','build_fp8_z128_context_native.bat','probe_fp8_z128_native_import.py','test_fp8_z128_native_import.bat','run_fp8_z128_native_import.py'):
+                path=m/name;assert path.read_bytes()==z.read(PREFIX+name);paths.append(path.relative_to(repo).as_posix())
+    for suffix in ('-verified.json','-remote-verified.json','-local-replay.log'):keep(job+suffix,(out/(job+suffix)).read_bytes())
+for name in ('verify_fp8_z128_context_audit_failure.py','verify_fp8_z128_native_import.py'):paths.append((m/name).relative_to(repo).as_posix())
+for name in ('fp8-z128-context-audit-package.json','fp8-z128-context-audit-install.json','fp8-z128-native-import-install.json'):keep(name,(work/name).read_bytes())
+for name in ('install-fp8-z128-context-audit.py','install-fp8-z128-native-import.py','retain-fp8-z128-observer-interface.py'):keep(name+'.txt',(work/name).read_bytes())
+for path in (work/'fp8-z128-context-audit-local-cpu-ledger').iterdir():
+    if path.is_file():keep('fp8-z128-context-audit-local-cpu-'+path.name,path.read_bytes())
+plan={'status':'existing_native_package_ABI_CPU_qualified_cold_warm_GPU_audit_pending','steps':[
+ 'Keep original observer/libffi failure and CPU native-package artifacts immutable. The actual observerDLL is1b421e7946bc8b7959b3ec23ace61080b56cacb5ef22b1e452f832c5b926ba63, built from unchanged real typedhelper and observed-return wrappers. No helper selection result exists from the failed libffi run.',
+ 'Use existing XLang native package ABI24 instead of ctypes. Before GPU admission build the adapter with /EHsc (initial CPU prototype emitted C4530); retain that original warning/artifact. Same adapter source/functionality, repeat ABI and three outside-path rejections before observer load. Link only pinned existing SDK/runtime; no SDK edits, libffi install, DllMain GPU calls or production Garnet DLL mutation.',
+ 'Prepare one distinct exclusive native-package-audit owner under the fixed study root, with normal source/runtime/SDK/checkpoint snapshots and restore8existing/20new native source targets/baseline1a1d. Native adapter may load only fixed old observer DLL, SHA checked in bridge/receipt. It permits only reports under results/fp8-z128-native-package-audit-attempt1. Caller gets packageDLL from its owned build path and pins both DLLs and actualhelper copies.',
+ 'Run separate cold embedded constructor control, then same native28 Garnet DLL/main realfirst128collector/order without API logger. Exact-derived postfailure hook invokes adapter.observe on the same thread/process/CUDA context after firstmainT128 build failure and before cleanup. Observe actual unchangedhelper full64-byte candidate configs and reached ConfigGet/AlgoCheck calls; wrappers never substitute results or launch model matmuls. Distinguish observedhelper guard from direct instrumentation inside Garnet plugin/fullmodel cause.',
+ 'Only exact guard/candidate evidence justifies a source fix, such as searching later for the same pinned opaque configuration. Keep opaque/device/version/shape/workspace gates. Qualify realhelper/plugin, wholeDLL restore transaction, all10policies/eight real128 ordinary-primary/stage profiles before full3968+128 sixcase state/vector/ID gate and805quality.',
+ 'Then matched HTTP text/image/repetitions/strongest feasible tunedMTP vLLM/SGLang references, INT4/4B and B8 arithmetic work. Original2xdecodeANDconcurrencythroughput and halfTTFTextra remain unmet; charts unchanged.'
+ ],'model_or_quality_or_performance_qualified':False,'two_times_target_achieved':False}
+keep('fp8-z128-native-package-audit-next-plan.json',json.dumps(plan,indent=2).encode())
+result={'status':plan['status'],'evidence':metadata,'observer_DLL_sha256':proofs[jobs[0]]['observer_library_sha256'],'observer_CPU_tests':37,'observer_remote_CPU_seconds':remote_cpu,'libffi_error_preserved':proofs[jobs[0]]['cold_error'],'main_graph_sequence_started':False,'native_package_CPU_ABI':24,'actual_native_CPU_calls':4,'path_rejections_before_loader':3,'native_package_DLL_sha256':proofs[jobs[1]]['library_sha256'],'source_runtime_SDK_checkpoint_unchanged':True,'helper_GPU_observation_or_model_or_performance_qualified':False,'two_times_target_achieved':False,'next_plan':plan}
+raw=json.dumps(result,indent=2).encode();keep('fp8-z128-observer-interface-closure.json',raw);(out/'Garnet-FP8-Z128-Observer-Interface-Verified.json').write_bytes(raw)
+title='Observer builds; embedded libffi unavailable; existing native package ABI works without SDK changes'
+text='\n\n### 2026-10-26 — '+title+'\n\n'
+text+='Original CPU ctypes capability probe imported successfully but incorrectly assumed no tensor/Garnet module preload; first guard failed. Separate bound probe then failed on staticbuiltin _ctypes lacking __file__. Both original methods/logs preserved; bound2 records actual tensorpreloaded=true/Garnetpreloaded=false, builtin _ctypes, hosthash2e2db1 and baseline1a1d. Attribute/import/dlopen capability did not prove foreign-function invocation. NoSDK edits.\n\n'
+text+='Actual observer DLL '+result['observer_DLL_sha256']+' builds remotely from exact typedZhelper CPP/header in separate observedTU; wrappers call actual heuristic/config/check/matmul APIs once andreturn unchanged, record all64-byte candidates/status/workspace.37CPU source/candidate/replay/fault controls pass local4.199s/remote'+str(remote_cpu)+'s. Cold embedded process failed with NotImplementedError:libffi is unavailable for ctypes, before any helper report. Main GPU graph sequence never started. Original full expected-stage verifier remains unchanged; distinct failure verifier checks all source941/installed961/runtime/SDK/checkpoint restoration, rawCPU/build/cold ledgers/resourceGPU identity and complete archive.\n\n'
+text+='Existing Garnet src/entry/main.cpp andcpu_main.cpp establish XLang package ABI Load/BuildAPI/Create. Separate fixedobserver nativeadapter uses that same pinned existing SDK/runtime, no productionGarnetDLL change. Actual embedded CPU invocation passes ABI24 plus3outside/traversal/empty-path guards returning20 before LoadLibrary/observer/CUDA,4nativecalls total. Source946/runtime/selectedSDK/checkpointmetadata unchanged. Compiler C4530 warning in first CPU prototype retained; next GPUadapter build mustadd /EHsc and repeat CPUcalls before cold/warm audit. Import-only success wasinsufficient; this actualmembercall proves usable alternative.\n\n'
+text+='Both original archives fullyCRC/manifest/source replayed on bothmachines with identical proof pairs: failed observer '+metadata[jobs[0]]['proof_pair_sha256']+' (archive '+metadata[jobs[0]]['archive_sha256']+'), successful nativeCPU '+metadata[jobs[1]]['proof_pair_sha256']+' (archive '+metadata[jobs[1]]['archive_sha256']+'). Fullbinary/source/rawlogs/failed capability probes retained. Neither qualification supplies actual warm opaque candidates or T128 outputs.\n\n'
+text+='Nextdistinct native-package owner willreuse exactobserverDLL, compileEHsc adapter, validateCPU ABI/guards, then coldactualhelper and same28DLL real128 mainsequence withpostfailure nativecall on same thread/process/CUDAcontext. No ctypes/libffi/SDK mutation/DllMain GPU work. Preserve strictopaque/device/version/shape/workspace gates; onlycandidateevidencecanjustifyselectionfix. Full4K/805quality/HTTP/repetitions/strongestMTPrefs/2xdecodeANDthroughput/halfTTFTextra/INT4/4B/B8 remainactive; publishedchartsunchanged.\n'
+for name in ('qwen38-5090-development-log.md','qwen38-5090-implementation-task.md'):
+    target=repo/'docs/research'/name;before=target.read_bytes();assert title.encode() not in before;target.write_bytes(before+text.encode());paths.append(target.relative_to(repo).as_posix())
+(work/'fp8-z128-observer-interface-retained-paths.json').write_bytes(json.dumps(sorted(set(paths)),indent=2).encode())
+print(json.dumps({'status':result['status'],'retained_paths':len(set(paths)),'proof_pairs':[metadata[job]['proof_pair_sha256'] for job in jobs]}))

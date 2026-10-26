@@ -1,0 +1,30 @@
+{
+  "status": "builtin_ctypes_metadata_supported",
+  "derivations": [
+    {
+      "base": "probe_fp8_z128_ctypes_bound.py",
+      "target": "probe_fp8_z128_ctypes_bound2.py",
+      "base_sha256": "dada574d9e78ac3f9699e51c34ed61ed3b0c50f1042f13787ea10c7b0cc0f693",
+      "target_sha256": "29ed6338d91b0caf452f51704cb420cf4e7ac300ed5d5a0b19d095be1a03ce2f",
+      "changes": [
+        {
+          "before": "'extension_module':_ctypes.__file__,'extension_sha256':sha(Path(_ctypes.__file__))",
+          "after": "'extension_module':getattr(_ctypes,'__file__',None),'extension_sha256':sha(Path(_ctypes.__file__)) if hasattr(_ctypes,'__file__') else None,'extension_origin':getattr(getattr(_ctypes,'__spec__',None),'origin',None)"
+        }
+      ]
+    },
+    {
+      "base": "test_fp8_z128_ctypes_bound.bat",
+      "target": "test_fp8_z128_ctypes_bound2.bat",
+      "base_sha256": "be89a78b466d6a7419f3e464174d7f518486286181f6a1675c9940d4e98443d1",
+      "target_sha256": "a0ea9ebc7b887554fab1eafb05510440d2c660aac53a058f181e95a8ebc6f657",
+      "changes": [
+        {
+          "before": "probe_fp8_z128_ctypes_bound.py",
+          "after": "probe_fp8_z128_ctypes_bound2.py"
+        }
+      ]
+    }
+  ],
+  "scope": "Preserve first two probes/failures; static built-in _ctypes can lack __file__, covered by runtime host hash. No SDK or runtime change."
+}
