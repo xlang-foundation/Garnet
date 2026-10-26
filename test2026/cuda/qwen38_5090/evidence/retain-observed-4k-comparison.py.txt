@@ -1,0 +1,46 @@
+from pathlib import Path
+import hashlib,json
+work=Path(__file__).resolve().parent
+out=work.parent/'outputs'
+repo=Path('D:/CantorAI/work/qwen38-5090')
+e=repo/'test2026/cuda/qwen38_5090/evidence'
+sha=lambda raw:hashlib.sha256(raw).hexdigest()
+job='vllm-observed-fixed4k-ordinary-attempt1'
+stem='Garnet-vLLM-SGLang-Observed-Verified-4K'
+data=json.loads((out/(stem+'-Data.json')).read_bytes())
+assert data['status']=='complete_native_and_observed_references_actual4k_single_trials_replayed_on_both_machines'
+proof=(out/(job+'-verified.json')).read_bytes()
+assert proof==(out/(job+'-remote-verified.json')).read_bytes()
+assert sha((out/(job+'-evidence.zip')).read_bytes())==data['archive_sha256']['vllm']
+files={}
+def keep(name,raw):
+    path=e/name
+    assert not path.exists() or path.read_bytes()==raw,path
+    if not path.exists():path.write_bytes(raw)
+    files[path.relative_to(repo).as_posix()]=sha(raw)
+for name in (job+'-verified.json',job+'-remote-verified.json',job+'-local-replay.log','Garnet-vLLM-Observed-4K-Verified.json',stem+'-Data.json'):
+    keep(name,(out/name).read_bytes())
+for name in ('replay-vllm-observed-fixed4k-local.py','render-observed-matched-vllm-sglang-4k.py','render-observed-4k-metric-charts.py','derive-observed-matched-chart.py','check-observed-matched-chart-admission.py','retain-observed-4k-comparison.py'):
+    keep(name+'.txt',(work/name).read_bytes())
+for name in ('observed-matched-chart-derivation.json','observed-matched-chart-admission-result.json'):
+    keep(name,(work/name).read_bytes())
+for path in (work/'observed-matched-chart-admission-ledger').iterdir():
+    if path.is_file():keep('observed-chart-admission-'+path.name,path.read_bytes())
+artifact_names=(stem+'.png',stem+'.svg',stem+'-Data.json',stem+'-Report.html',stem+'-Metrics.csv',stem+'-Metric-Charts-Receipt.json')+tuple(stem+'-'+tag+'.'+ext for tag in ('TTFT','Decode','Throughput','VRAM') for ext in ('png','svg'))
+receipt={'status':data['status'],'vllm_archive_sha256':data['archive_sha256']['vllm'],'vllm_proof_pair_sha256':sha(proof),'artifacts':{name:sha((out/name).read_bytes()) for name in artifact_names},'observed_reference_variants':data['observed_reference_variants'],'evidence_files':files,'two_times_target_achieved':False,'strongest_tuned_mtp_references_qualified':False}
+keep('observed-matched-4k-comparison-receipt.json',json.dumps(receipt,indent=2).encode())
+text='\n\n### 2026-10-25 — Complete matched ordinary vLLM 4K trial and five-series comparison\n\n'
+text+='vllm-observed-fixed4k-ordinary-attempt1 completed with cleanup and preserved source/runtime pins. Raw archive '+data['archive_sha256']['vllm']+'; identical remote/local full replay proof '+sha(proof)+'. All 4151 archive members replayed, including 805 adapted screening responses (489 correct), 124 actual serial ID controls, 124 warmup/timed streams, eight measured cohorts and raw memory/cache/config/lifecycle evidence. The observed-output policy records every text variation; individual streamed IDs and long-output semantic equivalence remain unproven. Original strict failure remains preserved.\n\n'
+text+='The new chart requires complete two-machine proof pairs and original archive hashes for native ordinary/MTP4/MTP16, SGLang ordinary and vLLM ordinary. It refuses missing/failed strict vLLM results before plotting; both real-file rejection controls passed. Actual 3968 input plus 128 output tokens on the same RTX 5090, text/image with client concurrency 1/2/4/8, eight measured requests per cohort. Native physical batch is one with queueing; reference servers admit up to eight requests. Separate single trials, no confidence intervals or broad cross-engine quality equivalence.\n\n'
+text+='| Input | Clients | Garnet MTP16 decode tok/s | vLLM decode | SGLang decode | Garnet total tok/s | vLLM total | SGLang total |\n|---|---:|---:|---:|---:|---:|---:|---:|\n'
+for row in data['comparisons']:
+    g=row['garnet_mtp16'];v=row['references']['vLLM ordinary'];s=row['references']['SGLang ordinary']
+    text+='| '+row['case']+' | '+str(row['clients'])+' | '+' | '.join(f'{r[k]:.3f}' for k in ('decode_median_tokens_per_second','output_tokens_per_second') for r in (g,v,s))+' |\n'
+text+='\nAll eight panels (text/image TTFT, decode, total throughput and sampled adapter VRAM) and machine-readable data retained in chat outputs. vLLM ordinary and SGLang ordinary variation counts are '+json.dumps(data['observed_reference_variants'],sort_keys=True)+'. Decode gains do not establish latency or end-to-end throughput gains. Overall 2x objective remains unmet/unproven; tuned/MTP references, repetitions, T128 forward integration, matched INT4/4B and wider native batching remain open. No new model execution by chart renderer; no benchmark invented or omitted.\n'
+for name in ('qwen38-5090-development-log.md','qwen38-5090-implementation-task.md'):
+    path=repo/'docs/research'/name
+    raw=path.read_bytes()
+    assert b'Complete matched ordinary vLLM 4K trial and five-series comparison' not in raw
+    path.write_bytes(raw+text.encode())
+(work/'observed-matched-4k-retained-paths.json').write_bytes(json.dumps(list(files)+['test2026/cuda/qwen38_5090/evidence/observed-matched-4k-comparison-receipt.json','docs/research/qwen38-5090-development-log.md','docs/research/qwen38-5090-implementation-task.md'],indent=2).encode())
+print(json.dumps({'status':receipt['status'],'retained_evidence_files':len(files)+1,'variants':data['observed_reference_variants']}))

@@ -3310,3 +3310,23 @@ sampling. Actual metadata/controls/timings/terminal cleanup/full independent rep
 are pending. Current chart and overall2x/halfTTFT claim remain unchanged/unproven.
 Strongest tuned/MTP baselines/repeats, native B8 math/MTP/HTTP and T128 forward
 integration, matched INT4/4B remain open. Objective is unchanged.
+
+
+### 2026-10-25 — Complete matched ordinary vLLM 4K trial and five-series comparison
+
+vllm-observed-fixed4k-ordinary-attempt1 completed with cleanup and preserved source/runtime pins. Raw archive eee2f5e3e699868e306f53eeadf63fd8e0cc6efa4585222bb9ac7e6ade62e696; identical remote/local full replay proof c67d7a4912a4a28f0956b2be918da6ea1474c55ea8c5c55860336f611d627eee. All 4151 archive members replayed, including 805 adapted screening responses (489 correct), 124 actual serial ID controls, 124 warmup/timed streams, eight measured cohorts and raw memory/cache/config/lifecycle evidence. The observed-output policy records every text variation; individual streamed IDs and long-output semantic equivalence remain unproven. Original strict failure remains preserved.
+
+The new chart requires complete two-machine proof pairs and original archive hashes for native ordinary/MTP4/MTP16, SGLang ordinary and vLLM ordinary. It refuses missing/failed strict vLLM results before plotting; both real-file rejection controls passed. Actual 3968 input plus 128 output tokens on the same RTX 5090, text/image with client concurrency 1/2/4/8, eight measured requests per cohort. Native physical batch is one with queueing; reference servers admit up to eight requests. Separate single trials, no confidence intervals or broad cross-engine quality equivalence.
+
+| Input | Clients | Garnet MTP16 decode tok/s | vLLM decode | SGLang decode | Garnet total tok/s | vLLM total | SGLang total |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| text | 1 | 75.693 | 69.483 | 64.073 | 18.194 | 59.616 | 55.797 |
+| text | 2 | 83.515 | 59.760 | 61.584 | 18.445 | 96.536 | 95.316 |
+| text | 4 | 78.194 | 49.351 | 50.529 | 18.255 | 153.636 | 148.851 |
+| text | 8 | 73.751 | 42.460 | 44.385 | 18.235 | 226.945 | 151.791 |
+| image | 1 | 88.257 | 69.536 | 60.684 | 17.663 | 59.135 | 52.620 |
+| image | 2 | 89.384 | 60.292 | 56.019 | 15.450 | 96.461 | 90.707 |
+| image | 4 | 88.135 | 51.778 | 48.369 | 18.976 | 152.466 | 142.794 |
+| image | 8 | 91.453 | 42.460 | 42.606 | 19.080 | 224.971 | 146.537 |
+
+All eight panels (text/image TTFT, decode, total throughput and sampled adapter VRAM) and machine-readable data retained in chat outputs. vLLM ordinary and SGLang ordinary variation counts are {"SGLang ordinary": {"long_output_semantic_equivalence_proven": false, "policy": "record_stream_text_variants_v1", "serial_text_exact": 26, "serial_text_variants": 98, "streams": 124}, "vLLM ordinary": {"long_output_semantic_equivalence_proven": false, "policy": "record_vllm_stream_text_variants_v1", "serial_text_exact": 20, "serial_text_variants": 104, "streams": 124}}. Decode gains do not establish latency or end-to-end throughput gains. Overall 2x objective remains unmet/unproven; tuned/MTP references, repetitions, T128 forward integration, matched INT4/4B and wider native batching remain open. No new model execution by chart renderer; no benchmark invented or omitted.
