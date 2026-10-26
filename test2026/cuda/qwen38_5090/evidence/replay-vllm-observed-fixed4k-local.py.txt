@@ -1,0 +1,26 @@
+from pathlib import Path
+import hashlib,json,subprocess,sys,zipfile
+work=Path(__file__).resolve().parent
+out=work.parent/'outputs'
+methods=Path('D:/CantorAI/work/qwen38-5090/test2026/cuda/qwen38_5090')
+job='vllm-observed-fixed4k-ordinary-attempt1'
+sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+archive=out/(job+'-evidence.zip')
+remote=out/(job+'-remote-verified.json')
+q=json.loads(remote.read_bytes())
+assert q['status']=='reference_fixed4k_vllm_observed_profile_replayed'
+assert sha(archive)==q['archive_sha256']
+argv=[sys.executable,str(methods/'verify_vllm_observed_fixed4k.py'),'--proofs',str(out),'--job',job,'--corpus',str(work/'mmmu/quality-corpus'),'--scratch',str(work)]
+log=out/(job+'-local-replay.log')
+with log.open('xb') as stream:
+    code=subprocess.run(argv,stdout=stream,stderr=subprocess.STDOUT).returncode
+proof=out/(job+'-verified.json')
+assert code==0 and proof.read_bytes()==remote.read_bytes()
+with zipfile.ZipFile(archive) as z:
+    w=json.loads(z.read('results/'+job+'/workflow.json'))
+    assert w['exit_code']==0 and w['cleanup_finished'] is True
+    assert w['source_sha256']==w['source_after_sha256']
+    assert w['runtime_dependencies']==w['runtime_dependencies_after']
+receipt={'status':'vllm_observed_fixed4k_replayed_on_both_machines','archive_sha256':sha(archive),'archive_bytes':archive.stat().st_size,'proof_pair_sha256':sha(proof),'files_verified':q['files_verified'],'local_replay':{'exit_code':code,'argv':argv,'log_sha256':sha(log)},'source_pins':len(w['source_sha256']),'long_output_semantic_equivalence_proven':False,'two_times_target_achieved':False}
+(out/'Garnet-vLLM-Observed-4K-Verified.json').write_bytes(json.dumps(receipt,indent=2).encode())
+print(json.dumps(receipt))

@@ -1,0 +1,42 @@
+from pathlib import Path
+import hashlib,json
+work=Path(__file__).resolve().parent;source=work/'render-matched-vllm-sglang-4k.py';raw=source.read_bytes();text=raw.decode();steps=[]
+sha=lambda b:hashlib.sha256(b).hexdigest()
+def replace(old,new):
+    global text
+    count=text.count(old);assert count>0,old;text=text.replace(old,new);steps.append({'old':old,'new':new,'count':count})
+if '\r\n' in text:replace('\r\n','\n')
+replace('import argparse,base64,copy,hashlib,html,json','import argparse,base64,copy,hashlib,html,json,zipfile')
+replace("default='vllm-fixed4k-ordinary-attempt3'","default='vllm-observed-fixed4k-ordinary-attempt1'")
+replace("p['status']!='reference_fixed4k_profile_replayed'","p['status']!='reference_fixed4k_vllm_observed_profile_replayed'")
+replace("    assert profile['streamed_individual_ids_observed'] is False", """    assert profile['streamed_individual_ids_observed'] is False
+    assert p['replay_verifier_sha256']==p['archived_replay_verifier_sha256']
+    assert p['observed_stream_text_variants_recorded'] is True and p['long_output_semantic_equivalence_proven'] is False
+    assert p['configured_engine_context_capacity']==p['actual_workload_context_capacity']==4096 and p['engine_context_reserved_slots']==0
+    observed_variants={}
+    for name,job,policy in (('vLLM ordinary',args.vllm_job,'record_vllm_stream_text_variants_v1'),
+                            ('SGLang ordinary','sglang-observed-fixed4k-ordinary-attempt1','record_stream_text_variants_v1')):
+        with zipfile.ZipFile(out/(job+'-evidence.zip')) as z:
+            base='results/'+job+'/client/benchmark4k/'
+            manifests=[n for n in z.namelist() if n.startswith(base) and n.endswith('-manifest.json')]
+            assert len(manifests)==1;benchmark=json.loads(z.read(manifests[0]))
+            assert benchmark['status']=='completed' and benchmark['observed_output_policy']['policy']==policy
+            sidecars=[n for n in z.namelist() if n.startswith(base) and n.endswith('-output-comparison.json')];assert len(sidecars)==124
+            comparisons=[json.loads(z.read(n)) for n in sidecars]
+            assert all(v['policy']==policy and v['streamed_ids_observed'] is False and type(v['serial_control_text_exact']) is bool for v in comparisons)
+            exact=sum(v['serial_control_text_exact'] for v in comparisons)
+            observed_variants[name]={'policy':policy,'streams':124,'serial_text_exact':exact,'serial_text_variants':124-exact,
+                                     'long_output_semantic_equivalence_proven':False}
+""")
+replace("'Native candidate/control IDs match. Reference streaming IDs are unobserved; separate actual-ID controls are retained.',",
+        "'Native candidate/control IDs match. Ordinary references retain text variants; streamed IDs and long-output equivalence are unproven.',")
+replace("'notes':notes,","'notes':notes,'observed_reference_variants':observed_variants,")
+replace('complete_native_vllm_and_sglang_actual4k_single_trials_replayed_on_both_machines','complete_native_and_observed_references_actual4k_single_trials_replayed_on_both_machines')
+replace('Garnet-vs-vLLM-SGLang-Verified-4K','Garnet-vLLM-SGLang-Observed-Verified-4K')
+replace('Garnet-vLLM-SGLang-Verified-4K-Report.html','Garnet-vLLM-SGLang-Observed-Verified-4K-Report.html')
+replace('All eight text/image cohorts retained. Values:', 'All eight text/image cohorts retained. Ordinary references retain output variations; long-output equivalence is unproven. Values:')
+target=work/'render-observed-matched-vllm-sglang-4k.py';data=text.encode();assert not target.exists() or target.read_bytes()==data
+if not target.exists():target.write_bytes(data)
+record={'source':source.name,'source_sha256':sha(raw),'target':target.name,'target_sha256':sha(data),'replacements':steps,
+        'scope':'Only explicit complete observed-vLLM status/policy/provenance and both references124sidecars admitted. Actual partial/failed/missing results refuse before plotting. No synthetic metrics or benchmark execution.'}
+(work/'observed-matched-chart-derivation.json').write_bytes(json.dumps(record,indent=2).encode());print(json.dumps({'status':'observed_matched_chart_renderer_prepared_unrun','target_sha256':sha(data)}))
