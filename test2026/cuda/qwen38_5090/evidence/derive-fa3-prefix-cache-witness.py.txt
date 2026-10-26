@@ -1,0 +1,41 @@
+from pathlib import Path
+import hashlib,json
+work=Path(__file__).resolve().parent;m=Path('D:/CantorAI/work/qwen38-5090/test2026/cuda/qwen38_5090');sha=lambda raw:hashlib.sha256(raw).hexdigest();deriv=[]
+def derive(base,target,changes):
+    raw=(m/base).read_bytes();before=raw
+    for old,new,count in changes:
+        assert raw.count(old.encode())==count,(base,old,raw.count(old.encode()));raw=raw.replace(old.encode(),new.encode())
+    path=m/target;assert not path.exists() or path.read_bytes()==raw
+    if not path.exists():path.write_bytes(raw)
+    deriv.append({'base':base,'target':target,'base_sha256':sha(before),'target_sha256':sha(raw),'changes':[{'before':a,'after':b,'count':c} for a,b,c in changes]})
+derive('test_fp8_z128_full4k_model.bat','test_fa3_prefix_cache_witness.bat',[
+ ('set GARNET_FP8_GDN_M128_CANONICAL=%~3','set GARNET_FP8_GDN_M128_CANONICAL=0\nif "%~3"=="128" set GARNET_FP8_GDN_M128_CANONICAL=1',1),
+ ('set GARNET_FP8_GDN_Z128_CANONICAL=%~3','set GARNET_FP8_GDN_Z128_CANONICAL=%GARNET_FP8_GDN_M128_CANONICAL%',1),
+ ('if not "%~3"=="0" if not "%~3"=="1" exit /b 2','if not "%~3"=="32" if not "%~3"=="128" exit /b 2',1),
+ ('probe_fp8_z128_full4k_model.py','probe_fa3_prefix_cache_witness.py',1),('"%~1" %~4','"%~1" %~3',1)])
+old=(m/'run_fp8_z128_full4k_model.py').read_text();start=old.index('        off_command=');end=old.index("        w['status']='fp8_z128_full4k_model_collected_needs_replay'",start)
+replacement='''        for phase,tokens in (('baseline',32),('native',128)):
+            command=[sys.executable,str(M/'monitor_native_probe.py'),'--study',str(ROOT),'--output',str(out/(phase+'-resources')),'--','cmd.exe','/d','/c',str(M/'test_fa3_prefix_cache_witness.bat'),str(out/phase),str(cache),str(tokens)]
+            code=ledger.run(command,out/(phase+'-ledger'),'correctness','Read-only complete layer3 KV prefix observations; ordinary3968+128 control must reproduce retained exact states/vectors/IDs; no timing admission',common+[library])
+            idle()
+            if code:raise RuntimeError('Ordinary cache capture/control failed; preserve raw evidence')
+            report=json.loads((out/phase/'report.json').read_bytes());assert report['status']=='fa3_prefix_caches_collected_retained_ordinary_control_exact'
+'''
+# The exact source block is recorded in the derivation, including the deliberately removed off-construction-only branch.
+derive('run_fp8_z128_full4k_model.py','run_fa3_prefix_cache_witness.py',[
+ ('"""Exclusive full-model T128 trial; preserve and restore the complete native/Python profile."""','"""Exclusive read-only cache witness; preserve and restore the complete native/Python profile."""',1),
+ ("JOB='fp8-z128-full4k-model-admission-attempt1'","JOB='fa3-prefix-cache-witness-attempt1'",1),
+ ('evidence/fp8-z128-full4k-model-preparation.json','evidence/fa3-prefix-cache-witness-preparation.json',1),
+ ("p['status']=='fp8_z128_full4k_model_prepared_gpu_unrun'","p['status']=='fa3_prefix_cache_witness_prepared_gpu_unrun'",1),
+ ("    for phase in ('off','native'):assert not (ROOT/'results/fp8-z128-native-package-audit-attempt1'/('full4k-model-attempt1-'+phase+'-context.json')).exists()\n",'',1),
+ ('70CPU composed native28/Python7 source/routing/factory, oldB1/B4 guards, old/new MTP binding, both FP8 counters and unchanged strict retained4K oracle','74CPU retained70 model/state/vector/ID/MTP controls plus4 bounded cache/geometry/finite/index/oracle faults',1),
+ (old[start:end],replacement,1),
+ ("w['status']='fp8_z128_full4k_model_collected_needs_replay'","w['status']='fa3_prefix_cache_witness_collected_needs_replay'",1)])
+target=m/'evidence/fa3-prefix-cache-witness-derivation.json';raw=json.dumps({'status':'exact_owner_and_environment_derivations_for_ordinary_cache_observation','derivations':deriv,'candidate_native_or_model_math_changed':False,'full4k_admission_replaced':False},indent=2).encode();assert not target.exists() or target.read_bytes()==raw
+if not target.exists():target.write_bytes(raw)
+installer=(work/'install-fp8-z128-full4k-model.py').read_bytes()
+for old,new,count in [(b'fp8-z128-full4k-model',b'fa3-prefix-cache-witness',3),(b'fp8_z128_full4k_model_prepared_gpu_unrun',b'fa3_prefix_cache_witness_prepared_gpu_unrun',1),(b"p['expected_cpu_test_count']==70",b"p['expected_cpu_test_count']==74",1),(b"len(manifest['files'])==len(p['new_files'])+2",b"len(manifest['files'])==len(p['new_files'])+3",1),(b"if name not in (prep,p['source_bundle']):assert p['new_files'][name]==h",b"if name not in (prep,p['source_bundle'],'Garnet/test2026/cuda/qwen38_5090/evidence/fp8-z128-full4k-model-preparation.json'):assert p['new_files'][name]==h",1),(b'fp8_z128_full4k_model_methods_installed_gpu_unrun',b'fa3_prefix_cache_witness_methods_installed_gpu_unrun',1)]:
+    assert installer.count(old)==count,(old,installer.count(old));installer=installer.replace(old,new)
+target=work/'install-fa3-prefix-cache-witness.py';assert not target.exists() or target.read_bytes()==installer
+if not target.exists():target.write_bytes(installer)
+print(json.dumps({'derived_methods':len(deriv),'installer_sha256':sha(installer)}))
