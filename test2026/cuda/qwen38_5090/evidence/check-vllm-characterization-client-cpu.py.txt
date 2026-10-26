@@ -1,0 +1,25 @@
+from pathlib import Path
+import ast,hashlib,json,os,sys
+work=Path(__file__).resolve().parent;repo=Path('D:/CantorAI/work/qwen38-5090');m=repo/'test2026/cuda/qwen38_5090'
+sys.path.insert(0,str(repo))
+from test2026.cuda.qwen38_5090.run_logged import run
+names=('vllm_concurrency_characterization.py','replay_vllm_concurrency_characterization.py','test_vllm_concurrency_characterization.py',
+       'benchmark_fixed_length_reference.py','benchmark_stream.py','prepare_vlm_reference.py','reference_fixed4k_vllm_identity.py',
+       'test_fixed_length_reference.py','evidence/vllm-output-characterization-client-derivation.json')
+sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest();pins={n:sha(m/n) for n in names}
+r=json.loads((m/'evidence/vllm-output-characterization-client-derivation.json').read_bytes())
+for name,row in r['files'].items():
+    source=row['source_text'];assert hashlib.sha256(source.encode()).hexdigest()==row['source_sha256']
+    for step in row['replacements']:
+        assert source.count(step['before'])==step['count'];source=source.replace(step['before'],step['after'])
+    assert source.encode()==(m/name).read_bytes() and hashlib.sha256(source.encode()).hexdigest()==row['target_sha256'];ast.parse(source)
+os.chdir(repo)
+code=run([sys.executable,'-m','unittest','test2026.cuda.qwen38_5090.test_vllm_concurrency_characterization'],
+    work/'vllm-characterization-client-cpu-ledger','correctness',
+    '6CPU-only actual vLLM JSON schema/full4K ID/usage/color/overlap/raw-stream and synthetic288request replay faults',[m/n for n in names])
+assert code==0 and pins=={n:sha(m/n) for n in names}
+result={'status':'vllm_characterization_client_and_raw_replayer_cpu_passed_gpu_unrun','cpu_tests':6,'source_sha256':pins,
+        'actual_vllm_requests':0,'actual_vllm_characterization_complete':False,'owner_preparer_and_closed_characterization_verifier_complete':False,
+        'new_benchmark_result':False,'two_times_target_achieved':False,
+        'scope':'Exact schema/engine/port/context/parent derivative of old288request/135wave SGLang diagnosis. Synthetic local HTTP fixtures only. Preserve serial/concurrent/rotated/reset ID/text variants, full4K budgets and mixed-color/spatial isolation. Actual owned vLLM diagnosis and independent replay still required; no observed-output benchmark policy admitted.'}
+(work/'vllm-characterization-client-cpu-result.json').write_bytes(json.dumps(result,indent=2).encode());print(json.dumps({k:v for k,v in result.items() if k!='source_sha256'}))

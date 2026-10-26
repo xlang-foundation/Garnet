@@ -2909,3 +2909,76 @@ No remote transfer/install or second GPU model while vLLM owner is live. Actual
 embedded/profiler execution, independent closure and full text/image ordinary/MTP
 phase diagnosis remain open. This is a prerequisite diagnostic, not a substituted
 benchmark or completion of the broader optimization/2x objective.
+
+
+### 2026-10-25 — vLLM4K strict concurrent-text failure closed; native profiled control started
+
+Actual vllm-fixed4k-ordinary-attempt3 owner terminal1, cleanup/source787/runtime6
+preserved and owned wrapper exit0. This trial passed ready configuration/source/
+PID/context admission, both early4K boundaries, four image controls,16short greedy
+captures,805adapted screening and all124actual nonstream3968+128ID controls.
+Strict benchmark collected textC1 then rejected the first textC2warmup because
+stream text differs from its serial control. Original strict checker/rules remain
+unchanged; preserve failed archive, do not publish one passing cohort as a full
+comparison. Archiveabeebf29f6e7527bc7f3f652c6f0850a2ea309308c79419be88e2d9318130cb7,
+102606666bytes/3655files. Both original independent checkers exit1 as expected,
+identical failure proofc9fa4e365329a5a3ad7387b854e252a23cd57121c63fb75839a6f8d7cff2cadb.
+
+Separate source-pinned CPU postprocessor independently replays actual ready JSON
+settings, all124serial prompt/completion IDs, every12saved raw SSE/request/result
+stream, typed continuous usage/full128tokens and the retained first cohort's raw
+arithmetic. All12streams have valid3968+128length completions; two C2warmup texts
+differ. Streamed individual IDs remain unobserved. Both machines exit0 with
+identical partial proofc10239956b52f1749cf91b14638a03b45bfcee5a002b67d40f5d495c0c41aa1e.
+This neither explains the numerical cause nor proves harmlessness/equivalence,
+and never promotes a partial benchmark. Postprocessor SHA/source and logs retained.
+
+Actual805screen raw response/wire/prompt-ID replay independently completes on both
+machines,488/805correct; identical proofea52ee42fb5e5a54bd2fad9e1295de2e7c1a4adc91a12dff6c5c0e12824ac633.
+This is the adapted805question/single256pixel image screen, not official MMMU or
+broad quality parity. Initial direct-file remote CLI invocation failed relative
+package import before creating an output; reran only the CPU verifier with -m
+from the owned repository. Full original model trial was never restarted for a
+replay. The new partial checker was first uploaded as an exact results snapshot,
+then copied absent-only to its intended methods sibling location so imported/helper
+hash paths resolve. No existing source overwritten. An initial local derivation
+command used the repository cwd for a chat-work relative path and correctly failed
+before creating code; reran by absolute path before tests. All later commands use
+explicit absolute paths for chat work and repository targets.
+
+Prepared engine-specific vLLM288request/135wave output/isolation client and raw
+replayer by exact recorded substitutions from the already qualified SGLang methods:
+actual vLLM ID JSON schema,18080/4096config/metadata-version and actual failed3parent.
+All serial-before/after, C1/2/4/8, rotated nonstream IDs, full4K counts and concurrent
+color/spatial isolation remain. Six synthetic CPU tests pass11.111s, including all
+288local HTTP fixture requests and missing-row/overlap/count/color faults; no real
+vLLM characterization requests executed. Owner/preparer/closed verifier and actual
+two-machine characterization remain to implement/run. No observed-output benchmark
+policy admitted from this failure or from SGLang results. Never silently relax
+the original exact-text gate or infer unobserved streamed IDs.
+
+Prepared combined actual4K chart renderer for five real series (native ordinary,
+MTPprefill4/16, ordinary vLLM/SGLang). It requires a complete8cohort/124stream
+two-machine proof and raw archive hashes before importing plotting or emitting
+any output. Actual failed vLLM2proof is correctly refused in source-pinned CPU
+control, exit1; previous published chart unchanged. No placeholder/synthetic chart
+or partial vLLM3timings inserted. An observed-output figure, if later qualified,
+must explicitly retain its distinct policy and output-equivalence limitations.
+
+Native entry-logged profiler package installed absent-only after vLLM3terminal:
+643existing/654total source pins and runtime verified; twelve new targets, no core/
+runtime/SDK/model replacement. All transfers ACKed, remote/local CPU replays closed,
+then original48577 native-cuda-entry-profiled-bootstrap-attempt1 started. Remote
+21CPUcontrols pass.226s; actual embedded Python fake-import/fake-IO compatibility
+passes. Known optional hashlib algorithm warnings retained; sha256 works, no SDK
+repair attempted. Owner is proceeding to the pinned Nsight/native control; actual
+CUDA records, terminal cleanup and raw replay are pending. No new performance
+result or2xclaim from this correctness/setup/partial data.
+
+Next: close the real profiler diagnostic and inspect actual GPU phases/failure
+location; finish/run vLLM output-isolation diagnosis before a fully retained
+observed-output baseline; execute fresh B4-cache/B8-MTP admission, then batched
+HTTP with complete805quality/full4Kprotocol checks. Wider-prefill128 still needs
+actual component/forward/runtime/model qualification. Strongest tuned/MTP
+references, repeated statistics, matched INT4/4B and overall2xdecode+throughput/
+halfTTFT remain open. The objective and branch scope are unchanged.

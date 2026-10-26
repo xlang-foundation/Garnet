@@ -1,0 +1,101 @@
+"""Render only complete two-machine-replayed 4K trials; failed/partial vLLM is refused."""
+from pathlib import Path
+import argparse,base64,copy,hashlib,html,json
+
+def main():
+    a=argparse.ArgumentParser(description=__doc__);a.add_argument('--vllm-job',default='vllm-fixed4k-ordinary-attempt3');args=a.parse_args()
+    work=Path(__file__).resolve().parent;out=work.parent/'outputs';sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+    source=out/'Garnet-Prefill16-vs-References-Verified-4K-Data.json';old=json.loads(source.read_bytes())
+    assert old['status']=='prefill16_http_and_prior_4k_comparisons_two_machine_replayed'
+    parents={'fixed-length-http-study-attempt1':('native','fixed_length_http_study_replayed'),
+             'sglang-observed-fixed4k-ordinary-attempt1':('sglang','reference_fixed4k_observed_profile_replayed'),
+             'prefill16-fixed4k-http-attempt1':('prefill16','prefill16_fixed4k_http_replayed')}
+    pins={source.name:sha(source)}
+    for job,(key,status) in parents.items():
+        path=out/(job+'-verified.json');p=json.loads(path.read_bytes())
+        assert path.read_bytes()==(out/(job+'-remote-verified.json')).read_bytes() and p['status']==status
+        assert p['archive_sha256']==old['archive_sha256'][key]==sha(out/(job+'-evidence.zip'));pins[path.name]=sha(path)
+    path=out/(args.vllm_job+'-verified.json')
+    if not path.is_file():raise ValueError('No completed independent vLLM proof: '+args.vllm_job)
+    raw=path.read_bytes();p=json.loads(raw)
+    if p['status']!='reference_fixed4k_profile_replayed' or p['engine']!='vllm' or p['mode']!='ordinary':
+        raise ValueError('Failed/partial vLLM trial cannot enter a comparison figure')
+    assert raw==(out/(args.vllm_job+'-remote-verified.json')).read_bytes()
+    assert sha(out/(args.vllm_job+'-evidence.zip'))==p['archive_sha256'] and len(p['profiles'])==1
+    assert p['screening']['completed_requests']==p['screening']['attempted_requests']==805
+    profile=p['profiles'][0];assert profile['actual_nonstream_id_controls']==profile['actual_timed_and_warmup_streams']==124
+    assert profile['streamed_individual_ids_observed'] is False
+    rows={key:dict(value['metrics'],sampled_peak_adapter_used_bytes=profile['sampled_memory'][key]['sampled_peak_adapter_used_bytes'],
+                  observed_sample_gap_max_seconds=profile['sampled_memory'][key]['observed_sample_gap_max_seconds'])
+          for key,value in profile['raw_replay']['cohorts'].items()}
+    series=copy.deepcopy(old['series']);series['vLLM ordinary']=rows;pins[path.name]=sha(path)
+    expected={case+'-c'+str(c) for case in ('text','image') for c in (1,2,4,8)}
+    assert len(series)==5 and all(set(values)==expected for values in series.values())
+    assert all(r['requests']==8 and r['generated_tokens']==1024 for values in series.values() for r in values.values())
+    # Import plotting only after every real-evidence admission check.
+    import matplotlib
+    matplotlib.use('Agg')
+    import matplotlib.pyplot as plt
+    from matplotlib.ticker import FuncFormatter
+    plt.rcParams.update({'font.family':'DejaVu Sans','font.size':10,'axes.spines.top':False,'axes.spines.right':False})
+    specs=[('First-token wait (seconds; lower is better)','ttft_median_ms',.001),
+           ('Decode per request (tokens/s; higher is better)','decode_median_tokens_per_second',1),
+           ('Total output throughput (tokens/s; higher is better)','output_tokens_per_second',1),
+           ('Sampled adapter VRAM (GiB; lower is better)','sampled_peak_adapter_used_bytes',1/2**30)]
+    styles=[('#7790a6','o','--'),('#d06b26','s','--'),('#7650a1','D','-'),('#32977b','^','-'),('#be4778','v','-')]
+    fig,axes=plt.subplots(4,2,figsize=(16,15));fig.patch.set_facecolor('#f5f8fc')
+    fig.subplots_adjust(left=.075,right=.97,bottom=.17,top=.83,hspace=.52,wspace=.22)
+    fig.text(.05,.967,'Garnet vs vLLM and SGLang: actual 4K',fontsize=24,weight='bold')
+    fig.text(.05,.936,'Single RTX 5090 32GB | Qwen3.8-27B mixed NVFP4/FP8 | independently replayed single trials',fontsize=12,color='#43546b')
+    fig.text(.05,.91,'3968 input + 128 output tokens | text and image | 8 measured requests per cohort | HTTP streaming',fontsize=12,color='#43546b')
+    for col,case in enumerate(('text','image')):
+        for index,(title,key,scale) in enumerate(specs):
+            ax=axes[index,col]
+            for (label,values),(color,marker,line) in zip(series.items(),styles):
+                cs=[1,2,4,8];ax.plot(cs,[values[case+'-c'+str(c)][key]*scale for c in cs],color=color,marker=marker,linestyle=line,lw=2,label=label)
+            ax.set_title(case.title()+' | '+title,loc='left',fontsize=11);ax.set_xticks([1,2,4,8]);ax.set_xlabel('Concurrent client requests');ax.grid(axis='y',alpha=.2)
+            if index==0:ax.set_yscale('log');ax.yaxis.set_major_formatter(FuncFormatter(lambda v,_:f'{v:g}'))
+            else:ax.set_ylim(bottom=0)
+    handles,labels=axes[0,0].get_legend_handles_labels();fig.legend(handles,labels,loc='upper center',bbox_to_anchor=(.52,.89),ncol=3,frameon=False,fontsize=10.5)
+    notes=[
+        'Native physical GPU batch1; clients queue. References: up to8 running requests. Native Windows / reference WSL.',
+        'All measured requests and delays retained. Decode per request and total throughput are separate metrics.',
+        'Native candidate/control IDs match. Reference streaming IDs are unobserved; separate actual-ID controls are retained.',
+        'Sampled adapter-wide VRAM includes background allocations; all sampling gaps remain in the data.',
+        'Separate single trials, no confidence intervals. Cross-engine broad quality parity and strongest tuned/MTP references remain open.',
+        'Overall2x decode/throughput and half-TTFT objectives remain unmet/unproven.'
+    ]
+    for i,text in enumerate(notes):fig.text(.05,.129-i*.019,text,fontsize=9.3,color='#9a4521' if i==5 else '#24364c')
+    stem='Garnet-vs-vLLM-SGLang-Verified-4K'
+    for ext in ('png','svg'):fig.savefig(out/(stem+'.'+ext),dpi=160,facecolor=fig.get_facecolor())
+    plt.close(fig)
+    comparisons=[]
+    for case in ('text','image'):
+        for c in (1,2,4,8):
+            key=case+'-c'+str(c);g=series['Garnet MTP3 / draft prefill16'][key]
+            refs={name:series[name][key] for name in ('vLLM ordinary','SGLang ordinary')}
+            best_decode=max(r['decode_median_tokens_per_second'] for r in refs.values())
+            best_total=max(r['output_tokens_per_second'] for r in refs.values())
+            best_ttft=min(r['ttft_median_ms'] for r in refs.values())
+            comparisons.append({'case':case,'clients':c,'garnet_mtp16':g,'references':refs,
+                'decode_over_best_ordinary_reference':g['decode_median_tokens_per_second']/best_decode,
+                'throughput_over_best_ordinary_reference':g['output_tokens_per_second']/best_total,
+                'ttft_over_best_ordinary_reference':g['ttft_median_ms']/best_ttft})
+    data={'status':'complete_native_vllm_and_sglang_actual4k_single_trials_replayed_on_both_machines','series':series,
+          'comparisons':comparisons,'input_sha256':pins,'archive_sha256':dict(old['archive_sha256'],vllm=p['archive_sha256']),
+          'vllm_job':args.vllm_job,'vllm_adapted_screen_correct':p['screening']['score']['correct'],'notes':notes,
+          'new_benchmark_execution_by_renderer':False,'strongest_tuned_mtp_references_qualified':False,'two_times_target_achieved':False}
+    (out/(stem+'-Data.json')).write_bytes(json.dumps(data,indent=2).encode())
+    table=[]
+    for row in comparisons:
+        values=[row['case'],str(row['clients'])]
+        for name in ('garnet_mtp16','vLLM ordinary','SGLang ordinary'):
+            r=row[name] if name=='garnet_mtp16' else row['references'][name]
+            values.append(f"{r['ttft_median_ms']/1000:.3f} s / {r['decode_median_tokens_per_second']:.2f} / {r['output_tokens_per_second']:.2f} / {r['sampled_peak_adapter_used_bytes']/2**30:.2f}")
+        table.append('<tr>'+''.join('<td>'+html.escape(v)+'</td>' for v in values)+'</tr>')
+    png=base64.b64encode((out/(stem+'.png')).read_bytes()).decode()
+    report='<!doctype html><html><head><meta charset="utf-8"><title>Garnet vs vLLM and SGLang: actual4K</title><style>body{font:17px/1.5 system-ui;max-width:1400px;margin:32px auto;padding:0 24px;background:#f5f8fc;color:#24364c}img{width:100%;height:auto}table{border-collapse:collapse;font-size:14px;width:100%}td,th{padding:10px;text-align:left;border-bottom:1px solid #ccd5df}</style></head><body><h1>Garnet vs vLLM and SGLang: actual4K</h1><p><b>Overall2x target remains unmet/unproven.</b> All eight text/image cohorts retained. Values: first-token wait / decode tok/s / total output tok/s / sampled VRAM GiB.</p><table><tr><th>Input</th><th>Clients</th><th>Garnet MTP16</th><th>vLLM ordinary</th><th>SGLang ordinary</th></tr>'+''.join(table)+'</table><img alt="Eight verified comparison panels" src="data:image/png;base64,'+png+'"><ul>'+''.join('<li>'+html.escape(n)+'</li>' for n in notes)+'</ul></body></html>'
+    (out/'Garnet-vLLM-SGLang-Verified-4K-Report.html').write_bytes(report.encode())
+    print(json.dumps({'status':data['status'],'cohorts':40,'vllm_job':args.vllm_job}));return 0
+
+if __name__=='__main__':raise SystemExit(main())
