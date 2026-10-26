@@ -1,0 +1,141 @@
+{
+  "status": "exact_inner_worker_control_and_exclusive_owner_derivation_gpu_unrun",
+  "files": {
+    "probe_native_cuda_entry_bootstrap.py": {
+      "source": "probe_native_cuda_logged_bootstrap.py",
+      "source_text": "\"\"\"One actual retained text control, normal pipes, no profiler or HTTP timing.\"\"\"\nfrom pathlib import Path\nimport argparse\nimport json\nimport sys\nimport time\n\nsys.path.insert(0, str(Path(__file__).resolve().parents[3]))\nfrom test2026.cuda.qwen38_5090.native_fixed_length_http_bridge import Worker\nfrom test2026.cuda.qwen38_5090.replay_native_host_stage_trace import replay\n\n\ndef main():\n    parser = argparse.ArgumentParser(description=__doc__)\n    parser.add_argument('--root', type=Path, required=True)\n    parser.add_argument('--output', type=Path, required=True)\n    parser.add_argument('--cache', type=Path, required=True)\n    args = parser.parse_args()\n    root, out = args.root, args.output\n    assert not out.exists() and out.resolve().is_relative_to((root / 'results').resolve())\n    out.mkdir()\n    methods = Path(__file__).resolve().parent\n    cases = json.loads((methods / 'evidence/native-host-stage-cases.json').read_bytes())\n    case = cases['cases'][0]\n    assert case['case'] == 'text' and len(case['prompt_ids']) == 3968\n    key = 'ordinary-logged-bootstrap-retained-text'\n    trace = out / 'host-stages.jsonl'\n    command = ['cmd.exe', '/d', '/c', str(methods / 'serve_native_cuda_phase_logged_worker.bat'), 'ordinary', str(args.cache), str(trace)]\n    report = {'status': 'starting', 'command': command, 'retained_case_key': case['key'], 'requests': [],\n              'profiled': False, 'performance_admitted': False,\n              'scope': 'Actual unchanged B1 model under normal worker pipes, one retained3968+128 text control. Bootstrap/exception file retained even if ready fails. No profiler, HTTP metrics, quality or speed admission.'}\n    def save():\n        (out / 'report.json').write_text(json.dumps(report, indent=2), encoding='utf8')\n    save()\n    worker = None\n    try:\n        worker = Worker(command, out / 'worker')\n        deadline = time.monotonic() + 5400\n        while not worker.healthy() or getattr(worker, 'ready_info', None) is None:\n            if worker.process.poll() is not None:\n                raise RuntimeError('Logged native worker exited before ready: ' + str(worker.process.returncode))\n            if time.monotonic() > deadline:\n                raise TimeoutError('Observe owned worker; do not restart on an observation deadline')\n            time.sleep(.25)\n        report['ready'] = worker.ready_info\n        assert worker.ready_info['generation_mode'] == 'ordinary' and worker.ready_info['batch'] == 1\n        assert worker.ready_info['capacity'] == 4096 and worker.ready_info['library_sha256'] == cases['library_sha256']\n        report['status'] = 'request_running'\n        save()\n        events = list(worker.generate(case['body'], key))\n        end = events[-1]\n        assert end['event'] == 'completed' and end['prompt_ids'] == case['prompt_ids']\n        assert end['generated_ids'] == case['generated_ids_by_mode']['ordinary'] and end['image_sha256'] is None\n        report['requests'].append({'id': key, 'actual_prompt_tokens': 3968, 'actual_output_tokens': 128, 'retained_ids_exact': True})\n        report['status'] = 'request_completed'\n        save()\n    except BaseException as error:\n        report.update(status='failed', error=repr(error))\n        raise\n    finally:\n        if worker is not None:\n            try:\n                worker.close()\n            except BaseException as error:\n                report['worker_close_error'] = repr(error)\n                raise\n            finally:\n                report['worker_exit_code'] = worker.process.returncode\n                save()\n    assert type(report['worker_exit_code']) is int and report['worker_exit_code'] == 0\n    rows = [json.loads(line) for line in trace.read_bytes().splitlines()]\n    events = []\n    for line in (out / 'worker/worker-stdout.jsonl').read_bytes().splitlines():\n        try:\n            value = json.loads(json.loads(line)['line'])\n        except ValueError:\n            continue\n        assert isinstance(value, dict) and value.get('event') in ('ready', 'token', 'completed')\n        events.append(value)\n    expected = {key: {'case': 'text', 'prompt_ids': case['prompt_ids'], 'generated_ids': case['generated_ids_by_mode']['ordinary'], 'image_sha256': None}}\n    report['host_replay'] = replay(rows, events, expected)\n    markers = [json.loads(line) for line in trace.with_suffix('.cuda-markers.jsonl').read_bytes().splitlines()]\n    assert len(markers) == 12 and [row['ordinal'] for row in markers] == list(range(12))\n    assert all(row['status'] == 'completed' and row['id'] == key for row in markers)\n    close = json.loads(trace.with_suffix('.model-closed.json').read_bytes())\n    assert close['status'] == 'native_model_close_calls_returned' and close['marker_count'] == 12\n    report.update(status='native_logged_bootstrap_retained_control_completed', marker_count=12, native_model_cleanup=close)\n    save()\n    print('NATIVE_LOGGED_BOOTSTRAP_RETAINED_CONTROL_COMPLETE', flush=True)\n    return 0\n\n\nif __name__ == '__main__':\n    raise SystemExit(main())\n",
+      "source_sha256": "8d714effc9f1abf5987bfddca7c75da194d297737917250815db268c29ee0645",
+      "target_sha256": "bba7a6649391ec52b03d7067ff4e2a2f3dd68c6cded538e95343138d7e952507",
+      "replacements": [
+        {
+          "before": "One actual retained text control, normal pipes, no profiler or HTTP timing.",
+          "after": "One retained text control with pre-import log; explicit outer profiler, no HTTP timing.",
+          "count": 1
+        },
+        {
+          "before": "ordinary-logged-bootstrap-retained-text",
+          "after": "ordinary-entry-profiled-retained-text",
+          "count": 1
+        },
+        {
+          "before": "serve_native_cuda_phase_logged_worker.bat",
+          "after": "serve_native_cuda_phase_entry_worker.bat",
+          "count": 1
+        },
+        {
+          "before": "'profiled': False",
+          "after": "'profiled': True",
+          "count": 1
+        },
+        {
+          "before": "Actual unchanged B1 model under normal worker pipes, one retained3968+128 text control. Bootstrap/exception file retained even if ready fails. No profiler, HTTP metrics, quality or speed admission.",
+          "after": "Actual unchanged B1 model under normal worker pipes inside the explicit outer profiler. One retained3968+128 text control; pre-import/native bootstrap exceptions retained even if ready fails. No HTTP timing/quality/speed admission.",
+          "count": 1
+        },
+        {
+          "before": "native_logged_bootstrap_retained_control_completed",
+          "after": "native_entry_bootstrap_retained_control_completed",
+          "count": 1
+        },
+        {
+          "before": "NATIVE_LOGGED_BOOTSTRAP_RETAINED_CONTROL_COMPLETE",
+          "after": "NATIVE_ENTRY_BOOTSTRAP_RETAINED_CONTROL_COMPLETE",
+          "count": 1
+        }
+      ]
+    },
+    "run_native_cuda_entry_profiled.py": {
+      "source": "run_native_cuda_logged_bootstrap.py",
+      "source_text": "\"\"\"Exclusive logged bootstrap; keep the failed profile immutable and linked.\"\"\"\nfrom pathlib import Path\nimport hashlib\nimport json\nimport os\nimport shutil\nimport sys\nimport time\nimport zipfile\n\nsys.path.insert(0, str(Path(__file__).resolve().parents[3]))\nfrom test2026.cuda.qwen38_5090.native_cuda_phase_study import sha\nfrom test2026.cuda.qwen38_5090.run_bf16_batch8_admission import retire\n\nJOB = 'native-cuda-phase-logged-bootstrap-attempt1'\nPARENT = 'native-cuda-phase-full4k-attempt1'\n\n\ndef main():\n    root = Path('D:/CantorAI/5090-study-20261023')\n    methods = Path(__file__).resolve().parent\n    assert methods == (root / 'Garnet/test2026/cuda/qwen38_5090').resolve()\n    sys.path.insert(0, str(methods))\n    from run_logged import run\n    from run_bf16_low_batch_native_build import idle\n    preparation = methods / 'evidence/native-cuda-logged-bootstrap-preparation.json'\n    p = json.loads(preparation.read_bytes())\n    parent = root / 'results' / (PARENT + '-evidence.zip')\n    proof_path = root / 'results' / (PARENT + '-verified.json')\n    proof = json.loads(proof_path.read_bytes())\n    assert sha(parent) == proof['archive_sha256'] == p['parent_archive_sha256']\n    assert sha(proof_path) == p['parent_proof_sha256'] and proof['status'] == 'native_cuda_phases_full4k_failure_preserved'\n    closed = json.loads((root / 'results' / PARENT / 'workflow.json').read_bytes())\n    assert type(closed['exit_code']) is int and closed['exit_code'] == 1 and closed['cleanup_finished'] is True\n    assert closed['source_sha256'] == closed['source_after_sha256'] and closed['runtime_dependencies'] == closed['runtime_dependencies_after']\n    assert closed['library_unchanged'] is True\n    for name, digest in p['files'].items():\n        assert sha(root / name) == digest, ('Logged bootstrap source/input drift', name)\n    for name, digest in p['runtime_dependencies'].items():\n        assert sha(root / 'build/bin' / name) == digest\n    receipt = root / 'results/study-ssd-engine-cache/receipt.json'\n    cache = Path(json.loads(receipt.read_bytes())['cache_root'])\n    assert cache.resolve().drive.upper() == 'C:'\n    assert json.loads((cache / 'study-owner.json').read_bytes())['study'] == str(root)\n    assert shutil.disk_usage(cache).free >= 96 * 1024**3\n    out = root / 'results' / JOB\n    archive = root / 'results' / (JOB + '-evidence.zip')\n    assert not out.exists() and not archive.exists()\n    idle()\n    out.mkdir()\n    os.chdir(root / 'Garnet')\n    before = {path.name for path in cache.iterdir()}\n    started = time.time()\n    code = 1\n    w = {'status': 'running', 'source_sha256': p['files'], 'runtime_dependencies': p['runtime_dependencies'],\n         'preparation_sha256': sha(preparation), 'parent_archive_sha256': sha(parent), 'parent_proof_sha256': sha(proof_path),\n         'library_sha256': sha(root / 'build/bin/garnet.dll'), 'cleanup_finished': False,\n         'profiled': False, 'performance_admitted': False, 'scope': p['scope']}\n    def save():\n        (out / 'workflow.json').write_text(json.dumps(w, indent=2), encoding='utf8')\n    save()\n    common = [root / name for name in p['new_files']] + [preparation, receipt, proof_path]\n    try:\n        tests = ['unittest', *p['test_modules']]\n        code = run([sys.executable, '-m', *tests], out / 'cpu-ledger', 'correctness', 'Actual13source-pinned bootstrap exception and unchanged model AST controls', common)\n        if code:\n            raise RuntimeError('Logged bootstrap CPU controls failed')\n        code = run([str(root / 'build/bin/xlang3.exe'), str(methods / 'probe_native_cuda_trace_embedded_cpu.py'), str(root), str(out / 'embedded-cpu')],\n                   out / 'embedded-cpu-ledger', 'correctness', 'Actual embedded Python subclass/exception compatibility with fake IO, no model', common)\n        if code:\n            raise RuntimeError('Embedded Python trace CPU compatibility failed before model construction')\n        embedded = json.loads((out / 'embedded-cpu/report.json').read_bytes())\n        assert embedded['status'] == 'embedded_python_trace_cpu_compatibility_passed' and embedded['gpu_executed'] is False\n        code = run([sys.executable, str(methods / 'monitor_native_probe.py'), '--study', str(root), '--output', str(out / 'resources'), '--',\n                    sys.executable, str(methods / 'probe_native_cuda_logged_bootstrap.py'), '--root', str(root), '--output', str(out / 'native'), '--cache', str(cache)],\n                   out / 'gpu-ledger', 'correctness', 'One actual retained3968+128 native text control without profiler; persistent bootstrap/exception log', common)\n        if code:\n            raise RuntimeError('Actual logged bootstrap failed; inspect retained native bootstrap log')\n        report = json.loads((out / 'native/report.json').read_bytes())\n        assert report['status'] == 'native_logged_bootstrap_retained_control_completed'\n        w['status'] = 'native_logged_bootstrap_collected_needs_replay'\n    except BaseException as error:\n        w.update(status='failed', error=repr(error))\n        code = code or 1\n    finally:\n        w.update(exit_code=code, source_after_sha256={name: sha(root / name) for name in p['files']},\n                 runtime_dependencies_after={name: sha(root / 'build/bin' / name) for name in p['runtime_dependencies']},\n                 library_unchanged=sha(root / 'build/bin/garnet.dll') == w['library_sha256'])\n        save()\n        idle()\n        w['retired_private_engine_files'] = retire(cache, root, before, started)\n        w['cleanup_finished'] = True\n        save()\n        paths = {path.relative_to(root).as_posix(): path for path in [*out.rglob('*'), *common] if path.is_file()}\n        with zipfile.ZipFile(archive, 'x', zipfile.ZIP_DEFLATED) as z:\n            for name, path in paths.items():\n                z.write(path, name)\n            z.writestr('evidence-manifest.json', json.dumps({'files': {name: sha(path) for name, path in paths.items()},\n                'linked_parent_archive_sha256': sha(parent), 'scope': p['scope']}, indent=2))\n        print(json.dumps({'status': w['status'], 'archive_sha256': sha(archive), 'bytes': archive.stat().st_size, 'files': len(paths)}), flush=True)\n    return code\n\n\nif __name__ == '__main__':\n    raise SystemExit(main())\n",
+      "source_sha256": "5c255644f5789fa80901fa5f80b3323db693af72db65646803673d784c5a1fe4",
+      "target_sha256": "3bb0866d441a8429925f33a3de852fe030d95349e157979d3951812eb1f0b809",
+      "replacements": [
+        {
+          "before": "Exclusive logged bootstrap; keep the failed profile immutable and linked.",
+          "after": "Exclusive pre-import logged Nsight diagnostic; original controls remain immutable.",
+          "count": 1
+        },
+        {
+          "before": "JOB = 'native-cuda-phase-logged-bootstrap-attempt1'",
+          "after": "JOB = 'native-cuda-entry-profiled-bootstrap-attempt1'",
+          "count": 1
+        },
+        {
+          "before": "PARENT = 'native-cuda-phase-full4k-attempt1'",
+          "after": "PARENT = 'native-cuda-phase-logged-bootstrap-attempt1'",
+          "count": 1
+        },
+        {
+          "before": "native-cuda-logged-bootstrap-preparation.json",
+          "after": "native-cuda-entry-profiled-preparation.json",
+          "count": 1
+        },
+        {
+          "before": "native_cuda_phases_full4k_failure_preserved",
+          "after": "native_cuda_logged_bootstrap_replayed",
+          "count": 1
+        },
+        {
+          "before": "closed['exit_code'] == 1",
+          "after": "closed['exit_code'] == 0",
+          "count": 1
+        },
+        {
+          "before": "'profiled': False",
+          "after": "'profiled': True",
+          "count": 1
+        },
+        {
+          "before": "[root / name for name in p['new_files']]",
+          "after": "[root / name for name in p['files']]",
+          "count": 1
+        },
+        {
+          "before": "Actual13source-pinned bootstrap exception and unchanged model AST controls",
+          "after": "Actual21source-pinned import/exit/IPC/bootstrap/phase/lifecycle faults, no GPU in CPU tests",
+          "count": 1
+        },
+        {
+          "before": "probe_native_cuda_trace_embedded_cpu.py",
+          "after": "probe_native_cuda_entry_embedded_cpu.py",
+          "count": 1
+        },
+        {
+          "before": "Actual embedded Python subclass/exception compatibility with fake IO, no model",
+          "after": "Actual embedded Python pre-import logging and trace compatibility with fake imports/IO, no model",
+          "count": 1
+        },
+        {
+          "before": "embedded_python_trace_cpu_compatibility_passed",
+          "after": "embedded_python_entry_cpu_compatibility_passed",
+          "count": 1
+        },
+        {
+          "before": "probe_native_cuda_logged_bootstrap.py",
+          "after": "collect_native_cuda_entry_profiled.py",
+          "count": 1
+        },
+        {
+          "before": "One actual retained3968+128 native text control without profiler; persistent bootstrap/exception log",
+          "after": "One actual retained3968+128 ordinary text control under pinned Nsight, normal inner IPC, early import/exception logs and actual CUDA marker replay",
+          "count": 1
+        },
+        {
+          "before": "Actual logged bootstrap failed; inspect retained native bootstrap log",
+          "after": "Actual entry-profiled bootstrap failed; inspect entry/native/profiler logs, preserve owner cleanup",
+          "count": 1
+        },
+        {
+          "before": "report['status'] == 'native_logged_bootstrap_retained_control_completed'",
+          "after": "report['status'] == 'native_entry_profiled_control_collected_needs_replay'",
+          "count": 1
+        },
+        {
+          "before": "native_logged_bootstrap_collected_needs_replay",
+          "after": "native_entry_profiled_collected_needs_replay",
+          "count": 1
+        }
+      ]
+    }
+  }
+}

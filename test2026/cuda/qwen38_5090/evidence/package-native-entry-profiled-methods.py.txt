@@ -1,0 +1,34 @@
+from pathlib import Path
+import ast,hashlib,json,zipfile
+work=Path(__file__).resolve().parent;sha=lambda raw:hashlib.sha256(raw).hexdigest()
+plan=json.loads((work/'native-entry-profiled-upload-plan.json').read_bytes());files={}
+for row in plan['uploads']:
+    raw=Path(row['local']).read_bytes();assert sha(raw)==row['sha256'];assert row['target'] not in files;files[row['target']]=raw
+assert len(files)==12
+target=work/'native-entry-profiled-methods.zip';assert not target.exists()
+with zipfile.ZipFile(target,'x',zipfile.ZIP_DEFLATED) as z:
+    for n,raw in files.items():z.writestr(n,raw)
+    z.writestr('install-manifest.json',json.dumps({'files':{n:sha(raw) for n,raw in files.items()},
+        'scope':'Absent-only explicit pre-import-logged Nsight diagnostic methods. Preserve all existing source/runtime/SDK/checkpoint/corpus; no GPU execution during install.'},indent=2))
+old=(work/'install-paged-batch8-mtp-methods.py').read_text();new=old
+for a,b,count in (
+    ('paged-batch8-mtp-methods.zip','native-entry-profiled-methods.zip',1),
+    ('paged-batch8-mtp-install.json','native-entry-profiled-install.json',1),
+    ('==11\n','==13\n',1),
+    ('paged-batch8-mtp-preparation.json','native-cuda-entry-profiled-preparation.json',1),
+    ("parent='paged-batch8-model-preservation-attempt1'","parent='native-cuda-phase-logged-bootstrap-attempt1'",1),
+    ("p['parents'][parent]['proof_sha256']","p['parent_proof_sha256']",1),
+    ("p['parents'][parent]['archive_sha256']","p['parent_archive_sha256']",1),
+    ('paged_batch8_model_preservation_replayed','native_cuda_logged_bootstrap_replayed',1),
+    ("p['runtime']","p['runtime_dependencies']",2),
+    ("    for n,h in p['environment'].items():assert sha(Path(n).read_bytes())==h\n",'',1),
+    ("for n,h in p['environment'].items():assert sha(Path(n).read_bytes())==h\n",'',1),
+    ('paged_batch8_mtp_methods_installed','native_entry_profiled_methods_installed',1),
+    ('runtime_and_sdk_unchanged','runtime_unchanged',1)):
+    assert new.count(a)==count,(a,new.count(a),count);new=new.replace(a,b)
+ast.parse(new);installer=work/'install-native-entry-profiled-methods.py';assert not installer.exists();installer.write_bytes(new.encode())
+r={'status':'native_entry_profiled_diagnostic_packaged_gpu_unrun','bundle_sha256':sha(target.read_bytes()),'bytes':target.stat().st_size,
+   'new_targets':12,'installer_sha256':sha(installer.read_bytes()),'source_pins':654,'cpu_tests':21,'local_unittest_seconds':.178,
+   'preparation_sha256':sha(files['Garnet/test2026/cuda/qwen38_5090/evidence/native-cuda-entry-profiled-preparation.json']),
+   'actual_embedded_executed':False,'actual_profiler_executed':False,'new_benchmark_result':False,'two_times_target_achieved':False}
+(work/'native-entry-profiled-bundle-preparation.json').write_bytes(json.dumps(r,indent=2).encode());print(json.dumps(r))
