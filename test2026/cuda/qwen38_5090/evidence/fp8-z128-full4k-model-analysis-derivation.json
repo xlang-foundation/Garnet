@@ -1,0 +1,41 @@
+{
+  "base": "analyze_bf16_prefill128_fp8_model_failure.py",
+  "target": "analyze_fp8_z128_full4k_model_failure.py",
+  "base_sha256": "501e065c391e750cbd8422605ec56054f8cccd6515f2dc7d61bae416604f8136",
+  "target_sha256": "2b1ee08bd3868444ff0026b199f2fe301ed1e1d8407b8114ae6da784f1ecf5b6",
+  "changes": [
+    {
+      "before": "from test2026.cuda.qwen38_5090.verify_bf16_prefill128_fp8_model import checked,JOB,PARENT,METHODS",
+      "after": "from test2026.cuda.qwen38_5090.verify_fp8_z128_full4k_model import checked,JOB,PARENT,M as METHODS"
+    },
+    {
+      "before": "from test2026.cuda.qwen38_5090.prefill128_fp8_model import validate_selection",
+      "after": "from test2026.cuda.qwen38_5090.fp8_z128_full4k_model import validate_selection"
+    },
+    {
+      "before": "evidence/bf16-prefill128-fp8-model-preparation.json",
+      "after": "evidence/fp8-z128-full4k-model-preparation.json"
+    },
+    {
+      "before": "failure['status']=='bf16_prefill128_fp8_full4k_model_failure_preserved'",
+      "after": "failure['status']=='fp8_z128_full4k_model_failure_preserved'"
+    },
+    {
+      "before": "failure['default_off_selection']=={'4':0,'128':0}",
+      "after": "failure['default_off_selection']=={'m128':{'4':0,'128':0},'z128':{'4':0,'128':0}}"
+    },
+    {
+      "before": "b'Ran 64 tests'",
+      "after": "b'Ran 70 tests'"
+    },
+    {
+      "before": "('bf16_packed_state_gate.py','mtp_prefill16_full4k.py','verify_bf16_prefill128_fp8_model.py','prefill128_fp8_model.py')",
+      "after": "('bf16_packed_state_gate.py','mtp_prefill16_full4k.py','verify_fp8_z128_full4k_model.py','prefill128_fp8_model.py','fp8_z128_full4k_model.py')"
+    },
+    {
+      "before": "'status':'bf16_prefill128_fp8_first_full4k_failure_analyzed'",
+      "after": "'status':'fp8_z128_first_full4k_failure_analyzed'"
+    }
+  ],
+  "scope": "Retain every original128component/40960finitevector scalar/actualtoken/oracle/source/restoration check; only job/controller/counter/CPUcount identity changes. No harmlessness, cause, quality or timing admission."
+}

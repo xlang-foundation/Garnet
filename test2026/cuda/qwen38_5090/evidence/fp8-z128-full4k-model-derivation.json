@@ -1,0 +1,149 @@
+{
+  "status": "exact_full_model_methods_plus_Z_policy_and_postfailure_observation",
+  "derivations": [
+    {
+      "base": "probe_bf16_prefill128_fp8_model.py",
+      "target": "probe_fp8_z128_full4k_model.py",
+      "base_sha256": "810ef5df5d6a9f72cfac74ba494660f201236c9019dc7cb2bb1820ef0eb9c0c3",
+      "target_sha256": "e5eecac6c64e20dceefa5fb0c24ba1e267a33458887bc57e7d085135191e793f",
+      "changes": [
+        {
+          "before": "evidence/bf16-prefill128-fp8-model-preparation.json",
+          "after": "evidence/fp8-z128-full4k-model-preparation.json",
+          "count": 1
+        },
+        {
+          "before": "    assert os.environ.get('GARNET_FP8_GDN_M128_CANONICAL')==('0' if selection_off else '1')",
+          "after": "    assert os.environ.get('GARNET_FP8_GDN_M128_CANONICAL')==('0' if selection_off else '1')\n    assert os.environ.get('GARNET_FP8_GDN_Z128_CANONICAL')==('0' if selection_off else '1')",
+          "count": 1
+        },
+        {
+          "before": "from test2026.cuda.qwen38_5090.prefill128_fp8_model import replay_prefill128_fp8_model as replay_prefill128_model,validate_targets,validate_selection",
+          "after": "from test2026.cuda.qwen38_5090.fp8_z128_full4k_model import replay_full4k_model as replay_prefill128_model,validate_targets,validate_selection",
+          "count": 1
+        },
+        {
+          "before": "report={'fp8_m128_policy':os.environ['GARNET_FP8_GDN_M128_CANONICAL']",
+          "after": "report={'fp8_z128_policy':os.environ['GARNET_FP8_GDN_Z128_CANONICAL'],'fp8_m128_policy':os.environ['GARNET_FP8_GDN_M128_CANONICAL']",
+          "count": 1
+        },
+        {
+          "before": "    except BaseException as error:report.update(status='failed',error=repr(error));save();raise",
+          "after": "    except BaseException as error:\n        report.update(status='failed',error=repr(error));save()\n        if 'buildSerializedNetwork failed' in report['error']:\n            try:\n                from test2026.cuda.qwen38_5090.fp8_z128_native_audit_bridge import observe\n                target=root/'results/fp8-z128-native-package-audit-attempt1'/('full4k-model-attempt1-'+('off' if selection_off else 'native')+'-context.json')\n                report['initialization_audit_decoder_available']=decoder is not None\n                report['initialization_context_audit']=observe(root,target)\n                raw=target.read_bytes();copy=out/'initialization-context-audit.json';assert not copy.exists();copy.write_bytes(raw);save()\n            except BaseException as audit_error:report['initialization_audit_error']=repr(audit_error);save()\n        raise",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "base": "test_bf16_prefill128_fp8_model.bat",
+      "target": "test_fp8_z128_full4k_model.bat",
+      "base_sha256": "ace953e669b60d65ca0eb19f9fc9b308111d1285c32a90d7f6e6dd1650dba96f",
+      "target_sha256": "49205cff530eba2b32d7a0a8ad9df244b680b7835cc210a79c928e36461aa86b",
+      "changes": [
+        {
+          "before": "set GARNET_FP8_GDN_M128_CANONICAL=%~3",
+          "after": "set GARNET_FP8_GDN_M128_CANONICAL=%~3\nset GARNET_FP8_GDN_Z128_CANONICAL=%~3",
+          "count": 1
+        },
+        {
+          "before": "probe_bf16_prefill128_fp8_model.py",
+          "after": "probe_fp8_z128_full4k_model.py",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "base": "run_bf16_prefill128_fp8_model.py",
+      "target": "run_fp8_z128_full4k_model.py",
+      "base_sha256": "8cc067cd5575403445b3d56c33d3d3168fc40f92689fc552976c31eb8f287d41",
+      "target_sha256": "c7a582ad939431cf0bc014eef5c1ae2630a8e43bd42a0e933291400eb3115dbe",
+      "changes": [
+        {
+          "before": "JOB='bf16-prefill128-fp8-model-admission-attempt1'",
+          "after": "JOB='fp8-z128-full4k-model-admission-attempt1'",
+          "count": 1
+        },
+        {
+          "before": "evidence/bf16-prefill128-fp8-model-preparation.json",
+          "after": "evidence/fp8-z128-full4k-model-preparation.json",
+          "count": 1
+        },
+        {
+          "before": "bf16_prefill128_fp8_full4k_model_prepared_gpu_unrun",
+          "after": "fp8_z128_full4k_model_prepared_gpu_unrun",
+          "count": 1
+        },
+        {
+          "before": "len(p['candidate_files'])==29",
+          "after": "len(p['candidate_files'])==35",
+          "count": 1
+        },
+        {
+          "before": "garnet-native-bf16-prefill128-fp8-m128-attempt1.dll",
+          "after": "garnet-native-fp8-z128-attempt1.dll",
+          "count": 1
+        },
+        {
+          "before": "len(z.namelist())==len(set(z.namelist()))==29",
+          "after": "len(z.namelist())==len(set(z.namelist()))==35",
+          "count": 1
+        },
+        {
+          "before": "    for name,h in p['runtime'].items():assert sha(ROOT/'build/bin'/name)==h",
+          "after": "    for name,h in p['checkpoints'].items():assert sha(ROOT/name)==h\n    for name,h in p['runtime'].items():assert sha(ROOT/'build/bin'/name)==h",
+          "count": 1
+        },
+        {
+          "before": "    idle();out.mkdir();os.chdir(ROOT/'Garnet');",
+          "after": "    for phase in ('off','native'):assert not (ROOT/'results/fp8-z128-native-package-audit-attempt1'/('full4k-model-attempt1-'+phase+'-context.json')).exists()\n    idle();out.mkdir();os.chdir(ROOT/'Garnet');",
+          "count": 1
+        },
+        {
+          "before": "common=[prep,bundle,receipt]",
+          "after": "common=[ROOT/name for name in p['audit_dependencies']]+[ROOT/name for name in p['checkpoints']]+[prep,bundle,receipt]",
+          "count": 1
+        },
+        {
+          "before": "T128 full64layer source/routing/factory, oldB1/B4 guards, old/new MTP binding and strict retained4K replay controls before model",
+          "after": "70CPU composed native28/Python7 source/routing/factory, oldB1/B4 guards, old/new MTP binding, both FP8 counters and unchanged strict retained4K oracle",
+          "count": 1
+        },
+        {
+          "before": "test_bf16_prefill128_fp8_model.bat",
+          "after": "test_fp8_z128_full4k_model.bat",
+          "count": 2
+        },
+        {
+          "before": "from test2026.cuda.qwen38_5090.prefill128_fp8_model import validate_targets",
+          "after": "from test2026.cuda.qwen38_5090.fp8_z128_full4k_model import validate_targets",
+          "count": 1
+        },
+        {
+          "before": "off['fp8_m128_policy']=='0'",
+          "after": "off['fp8_m128_policy']==off['fp8_z128_policy']=='0'",
+          "count": 1
+        },
+        {
+          "before": "w['status']='bf16_prefill128_fp8_full4k_model_collected_needs_replay'",
+          "after": "w['status']='fp8_z128_full4k_model_collected_needs_replay'",
+          "count": 1
+        },
+        {
+          "before": "baseline_library_restored=sha(library)==p['runtime']['garnet.dll'])",
+          "after": "baseline_library_restored=sha(library)==p['runtime']['garnet.dll'],checkpoint_after={name:sha(ROOT/name) for name in p['checkpoints']})",
+          "count": 1
+        }
+      ]
+    }
+  ],
+  "candidate_source_count": 35,
+  "existing_targets_restored": 12,
+  "new_targets_removed": 23,
+  "composed_native_test_modules": [
+    "test_fp8_z128_native_source",
+    "test_fp8_z128_native_integration"
+  ],
+  "superseded_source_tests_only": "Three old single-stage M128 source-composition assertions replaced by latest five composed native-source/integration checks; all model/ID/state/vector/MTP oracle controls retained.",
+  "numerical_oracle_relaxed": false,
+  "scope": "Same six3968+128 cases, old T4verification/T16draft and exact retained1a1d oracle. New Zcounter only, plus optional native observer after initialization exception; original observations saved before equality assertions. Observer writes a new unique sidecar under its permitted existing result root and copies identical bytes into this trial; never alters prior archive/workflow."
+}
