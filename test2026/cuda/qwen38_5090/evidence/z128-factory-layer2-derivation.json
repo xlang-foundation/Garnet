@@ -1,0 +1,105 @@
+{
+  "status": "actual_factory_layer2_observation_derivatives",
+  "files": [
+    {
+      "base": "probe_modelopt_trace_layer2.py",
+      "target": "probe_z128_factory_layer2.py",
+      "base_sha256": "09a23eee32f8321e5ce6b16aaed5dd48195d1e367aab3c7f13b4c87304cf6600",
+      "target_sha256": "f19b7f8c6e8142908c24b68d8d80e10794117fa632c86732a7527dd98e52a90d",
+      "changes": [
+        {
+          "before": "modelopt-trace-layer2-preparation.json",
+          "after": "z128-factory-layer2-preparation.json",
+          "count": 1
+        },
+        {
+          "before": "'trace_policy':os.environ.get('GARNET_MODELOPT_INIT_TRACE')",
+          "after": "'trace_policy':os.environ.get('GARNET_MODELOPT_INIT_TRACE'),'factory_trace_policy':os.environ.get('GARNET_Z128_FACTORY_TRACE')",
+          "count": 1
+        },
+        {
+          "before": "assert os.environ.get('GARNET_MODELOPT_INIT_TRACE') in (None,'1')",
+          "after": "assert os.environ.get('GARNET_MODELOPT_INIT_TRACE') in (None,'1')\n    assert os.environ.get('GARNET_Z128_FACTORY_TRACE')==os.environ.get('GARNET_MODELOPT_INIT_TRACE')",
+          "count": 1
+        },
+        {
+          "before": "modelopt-trace-layer2-attempt1-",
+          "after": "z128-factory-layer2-attempt1-",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "base": "test_modelopt_trace_layer2.bat",
+      "target": "test_z128_factory_layer2.bat",
+      "base_sha256": "5ee96c27312fea4184a4caec4e1f52e6b261fd107138e2218dfc015a058cc622",
+      "target_sha256": "2ea6acea799ac5f8168446855cdbdb54a92bdb149ac896b4df62c2ba60b00f93",
+      "changes": [
+        {
+          "before": "set GARNET_MODELOPT_INIT_TRACE=\n",
+          "after": "set GARNET_Z128_FACTORY_TRACE=\nset GARNET_MODELOPT_INIT_TRACE=\n",
+          "count": 1
+        },
+        {
+          "before": "if \"%~3\"==\"1\" set GARNET_MODELOPT_INIT_TRACE=1",
+          "after": "if \"%~3\"==\"1\" set GARNET_MODELOPT_INIT_TRACE=1\nif \"%~3\"==\"1\" set GARNET_Z128_FACTORY_TRACE=1",
+          "count": 1
+        },
+        {
+          "before": "probe_modelopt_trace_layer2.py",
+          "after": "probe_z128_factory_layer2.py",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "base": "run_modelopt_trace_layer2.py",
+      "target": "run_z128_factory_layer2.py",
+      "base_sha256": "5ce3265f454478df7113970cc92040a5c52d67cf07218ab05032077934358f8b",
+      "target_sha256": "860eb40018fbb457266d1a2138d00c44125029db4aa66161c06733f63915e33e",
+      "changes": [
+        {
+          "before": "modelopt-trace-layer2-attempt1",
+          "after": "z128-factory-layer2-attempt1",
+          "count": 2
+        },
+        {
+          "before": "modelopt-trace-layer2-preparation.json",
+          "after": "z128-factory-layer2-preparation.json",
+          "count": 1
+        },
+        {
+          "before": "modelopt_trace_layer2_prepared_gpu_unrun",
+          "after": "z128_factory_layer2_prepared_gpu_unrun",
+          "count": 1
+        },
+        {
+          "before": "==38",
+          "after": "==39",
+          "count": 2
+        },
+        {
+          "before": "garnet-native-modelopt-init-trace-attempt2.dll",
+          "after": "garnet-native-z128-factory-trace-attempt1.dll",
+          "count": 1
+        },
+        {
+          "before": "test_modelopt_trace_layer2.bat",
+          "after": "test_z128_factory_layer2.bat",
+          "count": 1
+        },
+        {
+          "before": "83CPU retain81 composed model/cache/init controls plus2 actual trace-profile/provenance faults",
+          "after": "88CPU retained model/cache/init/factory controls plus2 exact collector/native attribution checks",
+          "count": 1
+        },
+        {
+          "before": "modelopt_trace_layer2_collected_needs_replay",
+          "after": "z128_factory_layer2_collected_needs_replay",
+          "count": 1
+        }
+      ]
+    }
+  ],
+  "numerical_collection_changed": false
+}

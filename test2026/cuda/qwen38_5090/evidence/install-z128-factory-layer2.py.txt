@@ -1,0 +1,34 @@
+from pathlib import Path
+import argparse,hashlib,io,json,sys,zipfile
+ROOT=Path('D:/CantorAI/5090-study-20261023');M=ROOT/'Garnet/test2026/cuda/qwen38_5090';sys.path.insert(0,str(M));from run_bf16_low_batch_native_build import idle
+sha=lambda raw:hashlib.sha256(raw).hexdigest();parser=argparse.ArgumentParser();parser.add_argument('--sha256',required=True);a=parser.parse_args();bundle=ROOT/'results/z128-factory-layer2-deployment.zip';receipt=ROOT/'results/z128-factory-layer2-install.json';assert sha(bundle.read_bytes())==a.sha256 and not receipt.exists();idle()
+with zipfile.ZipFile(bundle) as z:
+    manifest=json.loads(z.read('install-manifest.json'));assert z.testzip() is None and len(z.namelist())==len(set(z.namelist()))==len(manifest['files'])+1
+    prep='Garnet/test2026/cuda/qwen38_5090/evidence/z128-factory-layer2-preparation.json';p=json.loads(z.read(prep));assert p['status']=='z128_factory_layer2_prepared_gpu_unrun' and p['expected_cpu_test_count']==88 and len(p['candidate_files'])==39 and len(manifest['files'])==len(p['new_files'])+2
+    assert set(manifest['files'])==set(p['new_files'])|{prep,p['source_bundle']}
+    for name,h in p['files'].items():
+        if name not in p['new_files']:assert sha((ROOT/name).read_bytes())==h
+    for name,h in p['runtime'].items():assert sha((ROOT/'build/bin'/name).read_bytes())==h
+    for name,h in p['environment'].items():assert sha(Path(name).read_bytes())==h
+    for name,h in p['checkpoints'].items():assert sha((ROOT/name).read_bytes())==h
+    for name,h in p['candidate_base'].items():
+        target=ROOT/'Garnet'/name
+        if h is None:assert not target.exists()
+        else:assert sha(target.read_bytes())==h
+    source_raw=z.read(p['source_bundle']);assert sha(source_raw)==p['source_bundle_sha256']
+    with zipfile.ZipFile(io.BytesIO(source_raw)) as source:
+        assert source.testzip() is None and len(source.namelist())==len(set(source.namelist()))==39 and set(source.namelist())==set(p['candidate_files'])
+        for name,h in p['candidate_files'].items():assert sha(source.read(name))==h
+    pending=[];same=[]
+    for name,h in manifest['files'].items():
+        target=ROOT/name;assert target.resolve().is_relative_to(M.resolve()) or name==p['source_bundle'];assert target.parent.is_dir() and '..' not in Path(name).parts;parent=target.parent
+        while parent!=ROOT:
+            assert parent.resolve().is_relative_to(ROOT.resolve()) and not(getattr(parent.lstat(),'st_file_attributes',0)&0x400);parent=parent.parent
+        raw=z.read(name);assert sha(raw)==h
+        if name not in (prep,p['source_bundle']):assert p['new_files'][name]==h
+        if target.exists():assert target.is_file() and target.read_bytes()==raw;same.append(name)
+        else:pending.append((target,raw))
+    for target,raw in pending:
+        with target.open('xb') as stream:stream.write(raw)
+        assert target.read_bytes()==raw
+receipt.write_bytes(json.dumps({'status':'z128_factory_layer2_methods_installed_GPU_unrun','deployment_sha256':a.sha256,'new_targets':len(pending),'unchanged_targets':same,'candidate_production_source_installed':False},indent=2).encode());print(receipt.read_text())

@@ -1,0 +1,43 @@
+from pathlib import Path
+import hashlib,json
+m=Path('D:/CantorAI/work/qwen38-5090/test2026/cuda/qwen38_5090');sha=lambda raw:hashlib.sha256(raw).hexdigest();rows=[]
+def derive(base,target,changes):
+    raw=(m/base).read_bytes();original=raw;steps=[]
+    for before,after,count in changes:
+        assert raw.count(before.encode())==count,(target,before[:120],raw.count(before.encode()));raw=raw.replace(before.encode(),after.encode());steps.append({'before':before,'after':after,'count':count})
+    path=m/target;assert not path.exists();path.write_bytes(raw);rows.append({'base':base,'target':target,'base_sha256':sha(original),'target_sha256':sha(raw),'changes':steps})
+common=[('modelopt_trace_layer2','z128_factory_layer2',None),('modelopt-trace-layer2','z128-factory-layer2',None)]
+old=(m/'prepare_modelopt_trace_layer2.py').read_bytes()
+changes=[]
+for before,after,_ in common:changes.append((before,after,old.count(before.encode())));old=old.replace(before.encode(),after.encode())
+changes += [
+ ('modelopt-init-trace-native-build-attempt2','z128-factory-trace-native-build-attempt1',1),
+ ('modelopt-init-trace-native-build-preparation-attempt2.json','z128-factory-trace-native-build-preparation.json',3),
+ ('modelopt_init_trace_native_build_cpu_replayed','z128_factory_trace_native_build_cpu_replayed',1),
+ ('==38','==39',1),('==83','==88',1),('count\':83','count\':88',1),
+ ('Native38 qualified default-off plugin init trace','Native39 qualified default-off actual Z128 factory plus plugin init trace',1),
+ ('Restore14old/24new','Restore14old/25new',1),
+ ('83CPU: retain81 composed native/model/cache/init controls plus2 real trace-profile and exact collection-source controls','88CPU retain86 exact native/model/cache/factory controls plus2 actual stderr enclosing-plugin attribution/source controls',1),
+ ('No native/math changes versus qualified d3f15 DLL','Only qualified real constructor trace derivative; no forward math/algorithm changes',1),
+ ('with explicit T32/T128 build boundary markers','with native stderr constructor/API/guard events joined to enclosing plugin; Python stdout profile markers retained but not used as chronology',1),
+ ('Preserve failures and any actual initialize return1 route separately from postfailure separate-TU helper.','Preserve actual constructor rejection guards/SDK statuses/full opaque choices linked to plugin initialize. No extra SDK queries. Keep postfailure separate-TU helper separate.',1),
+ ("'candidate_sources':38","'candidate_sources':39",1),("'CPU_tests':83","'CPU_tests':88",1)]
+derive('prepare_modelopt_trace_layer2.py','prepare_z128_factory_layer2.py',changes)
+original=(m/'verify_modelopt_trace_layer2.py').read_bytes();changes=[]
+for before,after,_ in common:
+    # Keep original unchanged array/profile replay imports; new helper replay is additional.
+    count=original.count(before.encode())
+    if before=='modelopt_trace_layer2':
+        before='verify_modelopt_trace_layer2.py';after='verify_z128_factory_layer2.py';count=original.count(before.encode())
+    if count:changes.append((before,after,count));original=original.replace(before.encode(),after.encode())
+changes += [
+ ('from test2026.cuda.qwen38_5090.fp8_z128_context_audit import replay as audit_replay','from test2026.cuda.qwen38_5090.fp8_z128_context_audit import replay as audit_replay\nfrom test2026.cuda.qwen38_5090.z128_factory_layer2 import joined_replay',1),
+ ('==38','==39',1),('Ran 83 tests','Ran 88 tests',1),
+ ("'modelopt_init_trace_contract.py','layer2_ordinary_replay.py'","'modelopt_init_trace_contract.py','layer2_ordinary_replay.py','z128_factory_layer2.py','z128_factory_trace.py'",1),
+ ("and r['trace_policy']==('1' if phase=='trace-on' else None)","and r['trace_policy']==r['factory_trace_policy']==('1' if phase=='trace-on' else None)",1),
+ ("'postfailure_helper':None}","'postfailure_helper':None,'actual_factory_trace':joined_replay(z.read(base+phase+'-ledger/commands.log'),phase=='trace-on')}",1),
+ ("        result={'status':", "        guard_failures=[failure for row in phases.values() for failure in row['actual_factory_trace'].get('failures',[])]\n        result={'actual_constructor_rejection_guards':guard_failures,'actual_constructor_rejection_guard_observed':bool(guard_failures),'status':",1),
+ ("'actual_modelopt_layer2_trace_and_controls_replayed'","'actual_Z128_factory_layer2_trace_and_controls_replayed'",1),
+ ("'actual_modelopt_layer2_initialization_failure_preserved'","'actual_Z128_factory_layer2_initialization_failure_preserved'",1)]
+derive('verify_modelopt_trace_layer2.py','verify_z128_factory_layer2.py',changes)
+(m/'evidence/z128-factory-layer2-prep-verify-derivation.json').write_bytes(json.dumps({'status':'exact_collector_preparation_and_frozen_verifier_extension','files':rows},indent=2).encode());print(json.dumps({'derived_methods':len(rows)}))
