@@ -1,0 +1,19 @@
+from pathlib import Path
+import hashlib,json,os,sys
+work=Path(__file__).resolve().parent;repo=Path('D:/CantorAI/work/qwen38-5090');m=repo/'test2026/cuda/qwen38_5090'
+sys.path.insert(0,str(repo))
+from test2026.cuda.qwen38_5090.run_logged import run
+sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+names=('native_cuda_phase_entry.py','test_native_cuda_phase_entry.py','serve_native_cuda_phase_entry_worker.bat',
+       'native_cuda_phase_logged_worker.py','test_native_cuda_bootstrap_log.py','native_cuda_phase_bootstrap_log.py',
+       'test_native_host_stage_trace.py','native_fixed_length_stream_worker.py','native_cuda_phase_trace.py','native_host_stage_trace.py')
+files={n:sha(m/n) for n in names};os.chdir(repo)
+code=run([sys.executable,'-m','unittest','test2026.cuda.qwen38_5090.test_native_cuda_phase_entry',
+          'test2026.cuda.qwen38_5090.test_native_cuda_bootstrap_log'],work/'native-preimport-entry-cpu-ledger','correctness',
+         '8CPU-only pre-native-import exception/exit/IPC/AST and existing bootstrap fault controls; actual model never executed',
+         [m/n for n in names])
+assert code==0 and files=={n:sha(m/n) for n in names}
+result={'status':'native_preimport_entry_cpu_controls_passed_gpu_unrun','source_sha256':files,'cpu_tests':8,
+        'actual_garnet_model_executed':False,'actual_profiler_executed':False,'performance_admitted':False,
+        'scope':'Diagnostic wrapper retains exact original model AST after removal of four entry marks. Records original import/worker exceptions and exit, exclusive durable logs and exact instrumented source. Synthetic CPU imports only; actual embedded/profiler integration and root-cause diagnosis remain open.'}
+(work/'native-preimport-entry-cpu-result.json').write_bytes(json.dumps(result,indent=2).encode());print(json.dumps(result))

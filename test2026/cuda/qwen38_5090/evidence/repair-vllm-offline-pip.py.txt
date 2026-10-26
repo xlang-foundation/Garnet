@@ -1,0 +1,57 @@
+"""Offline CPU-only repair for actual vLLM collect_env missing pip/uv failure."""
+from pathlib import Path
+import hashlib,importlib.metadata,importlib.util,json,os,shutil,subprocess,sys,time
+
+ROOT=Path('/mnt/d/CantorAI/5090-study-20261023')
+OUT=ROOT/'results/vllm-env-offline-pip-repair-attempt1'
+ENV=Path('/opt/cantorai5090/vllm')
+SOURCE=ENV/'lib/python3.12/site-packages/vllm'
+assert sys.prefix==str(ENV) and Path(sys.executable)==ENV/'bin/python'
+assert importlib.util.find_spec('pip') is None and importlib.util.find_spec('ensurepip') is not None
+assert not OUT.exists();OUT.mkdir()
+sha=lambda path:hashlib.sha256(path.read_bytes()).hexdigest()
+pins=json.loads((ROOT/'Garnet/test2026/cuda/qwen38_5090/evidence/vllm-fixed4k-config-schema-attempt1.json').read_bytes())
+files=[SOURCE/name for name in pins['files']]+[SOURCE/'collect_env.py',Path(sys.executable).resolve()]
+before={str(p):sha(p) for p in files}
+for name,row in pins['files'].items():assert before[str(SOURCE/name)]==row['sha256']
+def packages():
+    rows={}
+    for d in importlib.metadata.distributions():
+        name=d.metadata['Name'].lower().replace('_','-');assert name not in rows,name
+        rows[name]=d.version
+    return rows
+old=packages()
+snapshot={'status':'before_offline_pip_install','packages':old,'source_binary_sha256':before,
+          'pip_spec':None,'ensurepip_spec':str(importlib.util.find_spec('ensurepip')),'uv':shutil.which('uv'),
+          'virtual_env':os.environ.get('VIRTUAL_ENV'),'gpu_executed':False}
+(OUT/'before.json').write_bytes(json.dumps(snapshot,indent=2).encode())
+commands=[]
+def run(argv):
+    started=time.monotonic();r=subprocess.run(argv,capture_output=True,text=True)
+    row={'argv':argv,'exit_code':r.returncode,'stdout':r.stdout,'stderr':r.stderr,
+         'process_elapsed_seconds':time.monotonic()-started,'scope':'CPU setup duration, not serving/model timing'}
+    commands.append(row);(OUT/'commands.json').write_bytes(json.dumps(commands,indent=2).encode())
+    assert r.returncode==0,row
+    return r.stdout
+status='failed'
+try:
+    import ensurepip
+    bundled=ensurepip.version()
+    run([sys.executable,'-m','ensurepip','--default-pip'])
+    run([sys.executable,'-m','pip','--version'])
+    listed=run([sys.executable,'-m','pip','list','--format=freeze','--disable-pip-version-check'])
+    after=packages();new_hashes={str(p):sha(p) for p in files}
+    assert before==new_hashes and all(after[name]==version for name,version in old.items())
+    assert set(after)-set(old)=={'pip'} and after['pip']==bundled
+    assert importlib.util.find_spec('pip') is not None and listed.strip()
+    status='vllm_offline_pip_installed_existing_packages_and_framework_source_preserved'
+    result={'status':status,'bundled_pip_version':bundled,'added_distributions':{'pip':after['pip']},
+            'existing_distributions_preserved':len(old),'source_binary_sha256':new_hashes,
+            'gpu_executed':False,'framework_code_modified':False,'network_download':False,
+            'scope':'Repair package-list dependency only, using Python bundled pip wheel. Actual ready config endpoint and full reference trial remain unrun.'}
+    (OUT/'after.json').write_bytes(json.dumps({'packages':after,'source_binary_sha256':new_hashes},indent=2).encode())
+    (OUT/'receipt.json').write_bytes(json.dumps(result,indent=2).encode())
+    print(json.dumps(result))
+except BaseException as error:
+    (OUT/'failure.json').write_bytes(json.dumps({'status':status,'error':repr(error),'commands':commands},indent=2).encode())
+    raise

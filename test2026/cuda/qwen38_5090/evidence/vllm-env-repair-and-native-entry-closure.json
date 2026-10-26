@@ -1,0 +1,78 @@
+{
+  "status": "vllm_metadata_failure_closed_offline_pip_repaired_attempt3_started",
+  "failure": {
+    "status": "reference_fixed4k_failure_preserved",
+    "archive_sha256": "7008eb5e5f33fb6c03fe5332ae66c7ebbe5817633ceb608ab2818835058742ac",
+    "archive_bytes": 70678418,
+    "proof_pair_sha256": "72901a6925c48ad8cfb8c186f892c53d9fb3e286382039409c79d2ac9d7423f4",
+    "files_verified": 800,
+    "cpu_tests": 47,
+    "cpu_unittest_seconds": 1.901,
+    "owner_exit_code": 1,
+    "owned_wsl_wrapper_exit_code": 0,
+    "source_pins_preserved": 787,
+    "model_ready": true,
+    "config_endpoint_status": 500,
+    "quality_or_timing_requests": 0,
+    "benchmark_profiles": 0,
+    "cause": "Installed vLLM collect_env pip listing returns None because pip is absent and uv executable is not on server PATH; splitlines raises AttributeError",
+    "performance_admitted": false
+  },
+  "offline_environment_repair": {
+    "archive_sha256": "22fb323439ab993fd0ae67070421c2122ff304d3aae98a46da64e12210b513ac",
+    "bytes": 11161,
+    "files_verified": 5,
+    "receipt": {
+      "status": "vllm_offline_pip_installed_existing_packages_and_framework_source_preserved",
+      "bundled_pip_version": "24.0",
+      "added_distributions": {
+        "pip": "24.0"
+      },
+      "existing_distributions_preserved": 198,
+      "source_binary_sha256": {
+        "/opt/cantorai5090/vllm/lib/python3.12/site-packages/vllm/config/model.py": "04ca37ea1d50128a7ddede30e7baa4e0a56bccec85091577a2c81c5de1a8fab8",
+        "/opt/cantorai5090/vllm/lib/python3.12/site-packages/vllm/config/cache.py": "d37db21e7a6a1b477a580b54d90011d8708c4e7f6e3903221432d9a39830559b",
+        "/opt/cantorai5090/vllm/lib/python3.12/site-packages/vllm/config/scheduler.py": "2fb86b1572a4925be59f304d13b4f6ec03d496b67a7c4abbb976ecda2232839a",
+        "/opt/cantorai5090/vllm/lib/python3.12/site-packages/vllm/config/compilation.py": "d8a8086166e3f344b75d98d8350a77592f7b6c145319b3a9f0b9c8cb36bc39cb",
+        "/opt/cantorai5090/vllm/lib/python3.12/site-packages/vllm/entrypoints/serve/dev/server_info/api_router.py": "06af82ff18d062d0b4035c27c8454fd2062ae758df1ee4b7053aaa7f0d411901",
+        "/opt/cantorai5090/vllm/lib/python3.12/site-packages/vllm/collect_env.py": "f3f813082a59f41ce6eefce4efcd3267613272f530e29c0a1a564d3d0ff47d30",
+        "/usr/bin/python3.12": "e50d468e8b0adfb05733f5b87b3cff34829c4a8c1aea50c865aa8bdfe4bb150f"
+      },
+      "gpu_executed": false,
+      "framework_code_modified": false,
+      "network_download": false,
+      "scope": "Repair package-list dependency only, using Python bundled pip wheel. Actual ready config endpoint and full reference trial remain unrun."
+    }
+  },
+  "current_vllm_attempt": {
+    "id": "vllm-fixed4k-ordinary-attempt3",
+    "supervisor_session": 48577,
+    "observed_state": "running",
+    "actual_remote_cpu_tests": 47,
+    "actual_remote_cpu_unittest_seconds": 1.755,
+    "terminal_result": null,
+    "performance_admitted": false
+  },
+  "native_preimport_entry": {
+    "status": "native_preimport_entry_cpu_controls_passed_gpu_unrun",
+    "source_sha256": {
+      "native_cuda_phase_entry.py": "8db135e5873820fa8648eb77d4943ed8eb1f942684bd2f4f1637d65cdf7eedb0",
+      "test_native_cuda_phase_entry.py": "863af308215c7308eb8f3f355b885e935770b436e74fdf6edff3c673e59f0e3e",
+      "serve_native_cuda_phase_entry_worker.bat": "d19867af44f5d5db3c8792ca66834a96cf6408e6507fa4b1744b5d433fc6b411",
+      "native_cuda_phase_logged_worker.py": "c3af81f240cffdf0ed1e5be6994e69975a5d9ff1d79b92f95d019b6aa6d56070",
+      "test_native_cuda_bootstrap_log.py": "a5f4743a507846ece739192d0f60f14ebda1b7c6610f04184bbf806c7af961c7",
+      "native_cuda_phase_bootstrap_log.py": "35a2e2c15353fb18dcfb11f4e774cd8bd8466ccf170b31bd20db41aef7ab317a",
+      "test_native_host_stage_trace.py": "5734bf0cfbfd77a647637e8f314ae15cdaaa929d7fbe185ab344d0a300bad568",
+      "native_fixed_length_stream_worker.py": "46c2565ac3a5cd9df08a2129071bd75cc698f0a4da091c1fdb28f8857b7a781c",
+      "native_cuda_phase_trace.py": "d00b0786f6860002c40ce88f1f0cd72b763dffd901735a8a2383eadb4b698ec0",
+      "native_host_stage_trace.py": "0ae1ef949b8f7585544cd50cccc95bd9024715746385a70ac9c20554321248ac"
+    },
+    "cpu_tests": 8,
+    "actual_garnet_model_executed": false,
+    "actual_profiler_executed": false,
+    "performance_admitted": false,
+    "scope": "Diagnostic wrapper retains exact original model AST after removal of four entry marks. Records original import/worker exceptions and exit, exclusive durable logs and exact instrumented source. Synthetic CPU imports only; actual embedded/profiler integration and root-cause diagnosis remain open."
+  },
+  "new_benchmark_result": false,
+  "two_times_target_achieved": false
+}

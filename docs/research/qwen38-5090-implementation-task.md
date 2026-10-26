@@ -2812,3 +2812,55 @@ FlashInfer missing precompiled-kernel warning is retained; no package/kernel-cac
 mutation or restart while this owner is live. Startup selection is not benchmark
 evidence. No remote transfers/installations/second model during the reference run.
 Matched timing/quality/replay and all remaining scope including2x remain open.
+
+
+### 2026-10-25 — vLLM ready but metadata endpoint failed; offline pip dependency repaired, attempt3 started
+
+Original vllm-fixed4k-ordinary-attempt2 terminal1. Actual47CPUcontrols pass1.901s;
+all weights load, kernel tuning/decodegraphs complete and health returns200.
+Before any quality/client/timed requests, /server_info?config_format=json returns
+HTTP500. Actual server traceback is vLLM collect_env.get_pip_packages: missing
+pip falls back to uv in a uv-created venv, but uv executable is absent from the
+server PATH; run_and_read_all returnsNone and out.splitlines raises AttributeError.
+This is an environment-collection dependency failure, not model inference failure.
+Owned SIGTERM/shutdown observed wrapper0, source787/runtime unchanged, cleanup true.
+Archive7008eb5e5f33fb6c03fe5332ae66c7ebbe5817633ceb608ab2818835058742ac,
+70678418bytes/800files. Independent local and remote unchanged v2 checker exit1
+as expected with identical proof72901a6925c48ad8cfb8c186f892c53d9fb3e286382039409c79d2ac9d7423f4.
+First remote replay invocation omitted --job and correctly exited2 without a proof;
+preserved the original model run and repeated only the CPU replay with explicit job.
+First read-only WSL source inspection timed out; authoritative Windows process
+inventory showed no remaining wsl.exe command before a fresh CPU source read.
+Neither event restarted a model. Raw server trace and all ledgers retained.
+
+Repair uses existing Python bundled ensurepip wheel offline, not a framework edit
+or network install. Actual CPU-only repair terminal0 adds pip24.0 only. All198
+existing distribution versions unchanged; five named config/router sources plus
+collect_env.py and Python binary SHA256 unchanged. Raw before/after inventories,
+commands/stdout/stderr and installer source retained in five-file archive
+22fb323439ab993fd0ae67070421c2122ff304d3aae98a46da64e12210b513ac,
+11161bytes. Downloaded archive metadata and all members independently verified.
+An initial local hash assertion used an extra8 transcribed from wrapped PTY output;
+it failed before any operation. Saved/downloaded authoritative remote metadata
+instead and verified its JSON digest against the actual archive; no archive edited.
+No GPU/model execution or modification of existing packages/runtime/SDK in repair.
+
+After all transfer ACKs and replay/repair terminal observations, fresh ordinary
+attempt3 starts under the exact same launcher/preparation/source787 corpus and
+805quality/124stream protocol. Remote47CPUcontrols pass1.755s; original48577 owner
+observed live. Actual configuration endpoint, cache-capacity/ID/quality/timing and
+cleanup/replay remain pending. No benchmark or chart addition from setup results.
+
+Prepared explicit native pre-import diagnostic wrapper: durable exclusive entry
+file before importing Garnet/model, exact retained instrumented source and original
+exception/traceback/SystemExit code, launcher stderr entry/exit markers. Four calls
+around the two native import statements are the only changes to the original model
+AST; ordinary worker remains byte-exact and __file__/argv/IPC preserved. Eight
+CPU-only fault/AST/bootstrap controls pass.101s, source hashes/raw ledgers retained.
+Fixtures intercept native imports, never execute actual local Garnet/GPU/model.
+Actual embedded compatibility and profiler owner/probe/checker wiring/execution
+remain open; original profiler root cause is not yet established by these tests.
+
+All batch8 independent-cache/MTP/805quality/HTTP, wider-prefill GPU qualification,
+strongest tuned/MTP references, full matched vLLM4K, repetitions, INT4/4B matched
+comparisons and overall2xdecode+throughput/halfTTFT scope remain open.
