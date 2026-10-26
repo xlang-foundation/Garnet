@@ -1,0 +1,75 @@
+{
+  "status": "untimed_real_fp8_m128_projection_gpu_unrun",
+  "source": "actual_layer0_fp8_control.cu",
+  "source_sha256": "e34195ba625ed6dd9f1516af771667ad71bbe28ecf25f9377a63240ba68c2794",
+  "target": "actual_prefill128_fp8_projection.cu",
+  "target_sha256": "147db041b5799d9652f8c8ebee3a54183466a7c554c30f79742fa3f0630a48fa",
+  "replacements": [
+    {
+      "old": "#include <cuda_runtime.h>",
+      "new": "#define WIN32_LEAN_AND_MEAN\n#define NOMINMAX\n#include <windows.h>\n#include <cuda_runtime.h>",
+      "count": 1
+    },
+    {
+      "old": "printf(\"CUBLASLT_VERSION %zu\\n\", cublasLtGetVersion());",
+      "new": "printf(\"CUBLASLT_VERSION %zu\\n\", cublasLtGetVersion());\n        char loaded[MAX_PATH]{};\n        const auto length = GetModuleFileNameA(GetModuleHandleA(\"cublasLt64_13.dll\"), loaded, MAX_PATH);\n        if (!length || length >= MAX_PATH) throw std::runtime_error(\"Cannot identify actual cuBLASLt DLL\");\n        for (DWORD i = 0; i < length; ++i) if (loaded[i] == '\\\\') loaded[i] = '/';\n        printf(\"CUBLASLT_DLL %s\\n\", loaded);",
+      "count": 1
+    },
+    {
+      "old": "sameAlgorithm && m == 32",
+      "new": "sameAlgorithm && (m == 32 || m == 128)",
+      "count": 1
+    },
+    {
+      "old": "for (int m : {16, 32})",
+      "new": "for (int m : {16, 32, 128})",
+      "count": 1
+    },
+    {
+      "old": "const auto input = Read(fixture + \"input-m\" + std::to_string(m) + \"-k6144.f32\", m * k * 4);\n            const auto expected = Read(fixture + \"expected-m\" + std::to_string(m) + \"-n5120.bf16\", m * n * 2);",
+      "new": "const int sourceM = m == 128 ? 16 : m;\n            auto input = Read(fixture + \"input-m\" + std::to_string(sourceM) + \"-k6144.f32\", sourceM * k * 4);\n            auto expected = Read(fixture + \"expected-m\" + std::to_string(sourceM) + \"-n5120.bf16\", sourceM * n * 2);\n            if (m == 128) {\n                const auto seed = input, reference = expected;\n                for (int copy = 1; copy < 8; ++copy) { input.insert(input.end(), seed.begin(), seed.end()); expected.insert(expected.end(), reference.begin(), reference.end()); }\n            }",
+      "count": 1
+    },
+    {
+      "old": "(sameAlgorithm || nativeCanonical) && m == 32",
+      "new": "(sameAlgorithm || nativeCanonical) && (m == 32 || m == 128)",
+      "count": 1
+    },
+    {
+      "old": "} else changed = archiveChanged;",
+      "new": "} else changed = m == 128 ? 0 : archiveChanged; // Default M128 is an observation, not an admitted equivalence.",
+      "count": 1
+    },
+    {
+      "old": "ARCHIVED_OUTPUT_DELTA",
+      "new": "REFERENCE_OUTPUT_DELTA",
+      "count": 1
+    },
+    {
+      "old": "EXACT_CONTROL",
+      "new": "GATED_CONTROL",
+      "count": 1
+    },
+    {
+      "old": "SHARED_ALGORITHM_CANDIDATE_FAILED",
+      "new": "M16_ALGORITHM_M128_CANDIDATE_FAILED",
+      "count": 1
+    },
+    {
+      "old": "SHARED_ALGORITHM_CANDIDATE_PASSED",
+      "new": "M16_ALGORITHM_M128_CANDIDATE_PASSED",
+      "count": 1
+    },
+    {
+      "old": "REAL_PROJECTION_CONTROL_FAILED",
+      "new": "M16_M32_BASELINE_AND_M128_OBSERVATION_FAILED",
+      "count": 1
+    },
+    {
+      "old": "REAL_PROJECTION_CONTROL_PASSED",
+      "new": "M16_M32_BASELINE_AND_M128_OBSERVATION_PASSED",
+      "count": 1
+    }
+  ],
+  "scope": "Same native helper, actual old M16/M32 real fixture and repetitions. AddM128 by exact8fold actualM16input replication; require oldcontrol16/32 reproduction, retain default128 differences as observations, then AlgoCheck-qualified M16algorithm on32/128 with every BF16 output word exact. No native DLL/model/serving/timing admission."
+}

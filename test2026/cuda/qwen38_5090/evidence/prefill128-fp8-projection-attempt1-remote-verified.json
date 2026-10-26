@@ -1,0 +1,99 @@
+{
+  "workspace_failure": {
+    "shared_m16_m32_output_words_exact": 491520,
+    "shared_m128_cast_and_quantized_input_exact": true,
+    "shared_m128_matmul_executed": false,
+    "algo_check_status": 0,
+    "algo_check_state": 0,
+    "required_workspace_bytes": 5246879,
+    "allowed_workspace_bytes": 4194304,
+    "default_m128_changed_words_each_repeat": [
+      64,
+      64
+    ],
+    "cause_of_standalone_rejection": "Declared4MiB workspace budget rejected valid checked algorithm needing5246879bytes; not a hardware or library unsupported claim",
+    "full_model_cause_established": false
+  },
+  "original_unified_inventory_missing_primitives": {
+    "Garnet/src/cuda/modelopt_fp8.cu": "5de1ebcd1874aa2e6b1905b7473a1f90f4c49f3b912f9eafcd258b11e761f6a8",
+    "Garnet/src/cuda/modelopt_fp8.cuh": "5778239a58764f43319aebcac2f31fe95dcddd5393ed434cda9bca27422dac72"
+  },
+  "all_raw_native_source_artifact_hashes_bound_across_all_four_processes": true,
+  "external_bound_verifier_sha256": "2520b9e5409174007b12d6fe8e78b3c80720698cc2208dda10f179e63bc355da",
+  "status": "prefill128_fp8_projection_failure_preserved",
+  "archive_sha256": "72f704a39d4ce59f997173763bebf4b45a2329add7dfd724db19767bfa4a8880",
+  "files_verified": 55,
+  "algorithm_observations": {},
+  "complete_output_word_replays": {
+    "control": {
+      "mode": "control",
+      "cases": [
+        {
+          "m": 16,
+          "repeat": 0,
+          "output_words": 81920,
+          "different_from_repeated_m16_output_words": 0,
+          "archived_output_exact": true,
+          "m128_default_is_observation_only": false,
+          "shared_algorithm_output_exact": null
+        },
+        {
+          "m": 16,
+          "repeat": 1,
+          "output_words": 81920,
+          "different_from_repeated_m16_output_words": 0,
+          "archived_output_exact": true,
+          "m128_default_is_observation_only": false,
+          "shared_algorithm_output_exact": null
+        },
+        {
+          "m": 32,
+          "repeat": 0,
+          "output_words": 163840,
+          "different_from_repeated_m16_output_words": 18,
+          "archived_output_exact": true,
+          "m128_default_is_observation_only": false,
+          "shared_algorithm_output_exact": null
+        },
+        {
+          "m": 32,
+          "repeat": 1,
+          "output_words": 163840,
+          "different_from_repeated_m16_output_words": 18,
+          "archived_output_exact": true,
+          "m128_default_is_observation_only": false,
+          "shared_algorithm_output_exact": null
+        },
+        {
+          "m": 128,
+          "repeat": 0,
+          "output_words": 655360,
+          "different_from_repeated_m16_output_words": 64,
+          "archived_output_exact": null,
+          "m128_default_is_observation_only": true,
+          "shared_algorithm_output_exact": null
+        },
+        {
+          "m": 128,
+          "repeat": 1,
+          "output_words": 655360,
+          "different_from_repeated_m16_output_words": 64,
+          "archived_output_exact": null,
+          "m128_default_is_observation_only": true,
+          "shared_algorithm_output_exact": null
+        }
+      ],
+      "complete_bf16_output_words_replayed": 1802240,
+      "input_cast_and_quantization_independently_exact": true,
+      "model_or_performance_qualified": false
+    }
+  },
+  "total_output_words_replayed": 1802240,
+  "source_runtime_environment_fixture_unchanged": true,
+  "gpu_model_executed": false,
+  "full_model_mismatch_cause_established": false,
+  "model_or_quality_or_performance_qualified": false,
+  "two_times_target_achieved": false,
+  "replay_verifier_sha256": "2520b9e5409174007b12d6fe8e78b3c80720698cc2208dda10f179e63bc355da",
+  "scope": "Untimed standalone real-layer0 FP8 matrix control only. Reproduce archivedM16/M32 first; actualM16 input repeated8times givesM128, defaultM128 differences observed without admission, then actual AlgoCheck-qualified M16algorithm applied to32/128 and every BF16 output word must match repeatedM16. Independent CPU input cast/FP8 quantization/full-word replay on both machines. Frozen source/runtime/SDK/fixture, no GarnetDLL load/change, model, quality, HTTP, serving-memory or performance admission; cause of full-model mismatch remains unproven."
+}
