@@ -1,0 +1,48 @@
+"""Separate native Z policy derived from preserved old GDNout policy, never edit it."""
+from pathlib import Path
+import hashlib,json
+repo=Path('D:/CantorAI/work/qwen38-5090');m=repo/'test2026/cuda/qwen38_5090';e=m/'evidence';sha=lambda raw:hashlib.sha256(raw).hexdigest()
+qraw=(e/'gdn-z-native-control-attempt1-verified.json').read_bytes();q=json.loads(qraw);assert q['status']=='real_gdn_z_default_and_m32_shared_algorithm_fully_replayed'
+canonical={row['actual_opaque'] for profile in q['profiles'] for row in profile['algorithm_replay']['calls'] if row['m']==32 or profile['algorithm_replay']['mode']=='shared'}
+assert len(canonical)==1;opaque=bytes.fromhex(canonical.pop());assert len(opaque)==64
+assert all(row['actual_algorithm_id']==67 for profile in q['profiles'] for row in profile['algorithm_replay']['calls'])
+record={'status':'separate_fp8_Z128_native_source_derived_unqualified','qualified_control_proof_sha256':sha(qraw),'qualified_control_archive_sha256':q['archive_sha256'],'opaque_configuration':opaque.hex(),'files':[],'legacy_untouched_sha256':{}}
+for suffix in ('canonical.h','canonical.cpp','plugin.h','plugin.cpp','profile.h'):
+    source='src/backends/tensorrt/modelopt_fp8_m128_'+suffix;target='src/backends/tensorrt/modelopt_fp8_z128_'+suffix;raw=(repo/source).read_bytes();text=raw.decode();steps=[]
+    def replace(old,new,count=None):
+        global text
+        actual=text.count(old);assert actual>0 and (count is None or actual==count),(suffix,old,actual,count)
+        steps.append({'old':old,'new':new,'count':actual});text=text.replace(old,new)
+    if 'modelopt_fp8_m128' in text:replace('modelopt_fp8_m128','modelopt_fp8_z128')
+    if 'ModelOptFP8M128' in text:replace('ModelOptFP8M128','ModelOptFP8Z128')
+    if 'AlignedM128' in text:replace('AlignedM128','AlignedZ128')
+    # Simultaneous dimensions, retaining CUDA16BF and token128 semantics.
+    if '5120' in text:
+        replace('5120','@Z_N@');replace('6144','5120');replace('@Z_N@','6144')
+    if suffix=='canonical.h':replace('=8ULL<<20','=4ULL<<20',1)
+    elif suffix=='canonical.cpp':
+        replace('5120,16,5120','5120,32,5120',1);replace('6144,16,6144','6144,32,6144',1)
+        replace('Preserve the tested M16 selection preference, then validate M128 separately.','Preserve actual M32 preference, then AlgoCheck actual M128 descriptors.',1)
+        replace('id!=35','id!=67',1);replace('info.algorithm==35','info.algorithm==67',1)
+        old='    for(int i=0;i<found;++i){'
+        block='    // Exact opaque configuration from closed real128 Z control on pinned13.4.\n    // Opaque bytes are never interpreted; any library/device selection drift fails closed.\n    static_assert(sizeof(cublasLtMatmulAlgo_t)==64,"Pinned opaque ABI");\n    const unsigned char expected[64]={'+','.join('0x%02x'%value for value in opaque)+'};\n'+old
+        replace(old,block,1)
+        replace('if(choices[i].state!=CUBLAS_STATUS_SUCCESS)continue;','if(choices[i].state!=CUBLAS_STATUS_SUCCESS)continue;\n        if(std::memcmp(&choices[i].algo,expected,sizeof(expected)))return {};',1)
+        replace('#include <cmath>','#include <cmath>\n#include <cstring>',1)
+    elif suffix=='plugin.h':replace('policy=128;','policy=0x5a313238u;',1)
+    elif suffix=='plugin.cpp':
+        replace('policy!=128','policy!=0x5a313238u',1);replace('1536','1280',1)
+        replace('Stable separate M128 FP8 wire','Stable separate Z128 FP8 wire',1)
+        replace('M128 FP8 requires exact GDN output geometry','Z128 FP8 requires exact GDN Z geometry',1)
+    elif suffix=='profile.h':
+        replace('GDNSelected','GDNZSelected',1);replace('GARNET_FP8_GDN_M128_CANONICAL','GARNET_FP8_GDN_Z128_CANONICAL',1)
+        replace('gdnOutput','gdnZ');replace('Unqualified M128 GDN output projection','Unqualified M128 GDN Z projection',1)
+    value=text.encode();path=repo/target;assert not path.exists() or path.read_bytes()==value
+    if not path.exists():path.write_bytes(value)
+    record['files'].append({'source':source,'source_sha256':sha(raw),'target':target,'target_sha256':sha(value),'steps':steps})
+    record['legacy_untouched_sha256'][source]=sha(raw)
+for name in ('modelopt_cublaslt.cpp','modelopt_cublaslt.h','modelopt_fp8_plugin.cpp','modelopt_fp8_plugin.h'):
+    key='src/backends/tensorrt/'+name;record['legacy_untouched_sha256'][key]=sha((repo/key).read_bytes())
+target=e/'fp8-z128-native-source-derivation.json';value=json.dumps(record,indent=2).encode();assert not target.exists() or target.read_bytes()==value
+if not target.exists():target.write_bytes(value)
+print(json.dumps({'status':record['status'],'new_files':len(record['files']),'legacy_files_untouched':len(record['legacy_untouched_sha256']),'opaque':opaque.hex()}))

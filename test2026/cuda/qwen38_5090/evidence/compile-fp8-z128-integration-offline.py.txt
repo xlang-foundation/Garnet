@@ -1,0 +1,30 @@
+"""Private integration CPU objects only; no local linking, runtime, model or GPU."""
+from pathlib import Path
+import hashlib,json,os,re,sys,unittest
+work=Path(__file__).resolve().parent;repo=Path('D:/CantorAI/work/qwen38-5090');m=repo/'test2026/cuda/qwen38_5090';e=m/'evidence';sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest();folder=work/'fp8-z128-native-development/integration-offline-build';folder.mkdir(parents=True,exist_ok=True)
+oldbat=work/'fp8-z128-native-development/offline-build/compile.bat';includes=re.findall(r'/I"([^"]+)"',oldbat.read_text().split('cl.exe ',1)[1].splitlines()[0]);assert includes and all(Path(name).is_dir() for name in includes)
+r=json.loads((e/'fp8-z128-native-integration-derivation.json').read_bytes());inputs=[repo/row['target'] for row in r['modified_files']]+[repo/row['original_snapshot'] for row in r['modified_files']]+[e/'fp8-z128-native-integration-derivation.json',m/'test_fp8_z128_native_integration.py',Path(__file__),oldbat]
+for name in ('fp8-z128-native-source-derivation.json','gdn-chunk-stage-native-derivation.json','fp8-m128-native-source-derivation.json'):
+    inputs.append(e/name)
+new=json.loads((e/'fp8-z128-native-source-derivation.json').read_bytes());inputs += [repo/row['target'] for row in new['files']]+[repo/name for name in new['legacy_untouched_sha256']]
+vcvars=Path('C:/Program Files/Microsoft Visual Studio/18/Community/VC/Auxiliary/Build/vcvars64.bat');inputs.append(vcvars)
+sdk=[Path('D:/CantorAI/ThirdPartySDK/TensorRT/include')/name for name in ('NvInfer.h','NvInferRuntime.h','NvInferRuntimeCommon.h','NvInferRuntimeBase.h','NvInferPlugin.h','NvInferVersion.h')]+[Path('C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v13.2/include')/name for name in ('cuda_runtime.h','cuda_runtime_api.h','cuda_bf16.h','cuda_bf16.hpp','cublasLt.h','cublas_v2.h')]+[Path('D:/CantorAI/xlang3/sdk/xlang3/xlang3.h')]
+before={str(path):sha(path) for path in sdk};pins={str(path):sha(path) for path in inputs}
+previous=json.loads((work/'gdn-chunk-stage-native-development/offline-build/result.json').read_bytes())['selected_tests'];assert len(previous)==66
+excluded=['test2026.cuda.qwen38_5090.test_gdn_chunk_stage_source.Controls.'+name for name in ('test_new_source_derivation_and_profile_header','test_previous_fp8_native_source_is_exact_composed_before_stage')]
+assert all(name in previous for name in excluded);tests=[name for name in previous if name not in excluded]
+sys.path[:0]=[str(repo),str(m)]
+for name in ('test_fp8_z128_native_integration','test_fp8_z128_native_source','test_fp8_z128_native_control','test_gdn_z_projection','test_gdn_z_algorithm_log'):
+    module=__import__('test2026.cuda.qwen38_5090.'+name,fromlist=['*'])
+    for attr in vars(module).values():
+        if isinstance(attr,type) and issubclass(attr,unittest.TestCase):tests += [module.__name__+'.'+attr.__name__+'.'+method for method in unittest.defaultTestLoader.getTestCaseNames(attr)]
+assert len(tests)==len(set(tests))==79
+targets=[('src/backends/tensorrt/'+name,name.removesuffix('.cpp')+'.obj') for name in ('modelopt_fp8_lowering.cpp','trt_builder.cpp','cuda_compiled_graph.cpp')];assert not any((folder/name).exists() for source,name in targets)
+commands=['@echo off','setlocal','call "'+str(vcvars)+'" -vcvars_ver=14.29','if errorlevel 1 exit /b %errorlevel%','set "TMP='+str(folder)+'"','set "TEMP='+str(folder)+'"'];flags=' '.join('/I"'+name+'"' for name in includes)
+for source,name in targets:
+    commands += ['cl.exe /nologo /c /std:c++17 /EHsc /MT /utf-8 /bigobj /Zc:preprocessor /openmp /DGARNET_SERVING_EXPORTS=1 /DNOMINMAX /DXLANG3_USE_SHARED /Dgarnet_EXPORTS '+flags+' "'+str(repo/source)+'" /Fo"'+str(folder/name)+'" /Fd"'+str(folder/'private.pdb')+'"','if errorlevel 1 exit /b %errorlevel%']
+commands.append('exit /b 0');bat=folder/'compile.bat';bat.write_bytes(('\r\n'.join(commands)+'\r\n').encode());import run_logged as ledger
+ledger.source_identity=lambda:{'scope':'Explicit owned Z128 integration privateCPU sources; unrelated untracked excluded','owned_source_sha256':{name:sha(Path(name)) for name in pins}};os.chdir(repo)
+cpu=ledger.run([sys.executable,'-m','unittest',*tests],folder/'cpu-ledger','correctness','79 retained model/strictoracle/source/routing/conversion/algorithm controls; replace2old single-stage provenance tests with exact original+GDN+Z composition, old tests unchanged',inputs);assert cpu==0
+code=ledger.run(['cmd.exe','/d','/c',str(bat)],folder/'build-ledger','build','Three private CPU /c actual builder/lowering/graph objects; no local link/native runtime/model/GPU',inputs+[bat,*sdk]);assert pins=={name:sha(Path(name)) for name in pins} and before=={name:sha(Path(name)) for name in before}
+result={'status':'fp8_z128_integration_private_cpu_objects_compiled' if code==0 else 'fp8_z128_integration_private_compile_failure_preserved','exit_code':code,'cpu_tests':79,'selected_tests':tests,'excluded_old_single_stage_tests':excluded,'source_input_sha256':pins,'sdk_before_after_unchanged':before,'objects':{name:sha(folder/name) for source,name in targets if (folder/name).exists()},'linked':False,'native_runtime_or_gpu_executed':False,'model_or_performance_qualified':False};(folder/'result.json').write_bytes(json.dumps(result,indent=2).encode());print(json.dumps({'status':result['status'],'exit_code':code,'cpu_tests':79,'objects':len(result['objects'])}));raise SystemExit(code)

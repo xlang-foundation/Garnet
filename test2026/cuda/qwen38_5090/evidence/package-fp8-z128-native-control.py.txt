@@ -1,0 +1,20 @@
+"""Package exact native copies without mutating the remote production checkout."""
+from pathlib import Path
+import ast,hashlib,json,os,sys,zipfile
+repo=Path('D:/CantorAI/work/qwen38-5090');m=repo/'test2026/cuda/qwen38_5090';e=m/'evidence';work=Path(__file__).resolve().parent;sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+record=json.loads((e/'fp8-z128-native-source-derivation.json').read_bytes());source=[row['target'] for row in record['files']]+[row['source'] for row in record['files']]
+copies={'native_fp8_z128_candidate/'+Path(name).name:{'production_source':name,'sha256':sha(repo/name)} for name in source};assert len(copies)==10
+origin={'status':'exact_native_Z128_and_legacy_comparison_copies_prepared_unqualified','candidate_copies':copies,'scope':'Candidate5new/5old bytes are exact local source hashes; oldcomparison copies only used in separateCPUwire exe. No remoteproductiontargets overwritten, existing source/runtime preserved. Newtypedhelper mustpassactualreal128 fullwordgate.'}
+raw=json.dumps(origin,indent=2).encode();path=e/'fp8-z128-native-control-origin.json';assert not path.exists() or path.read_bytes()==raw
+if not path.exists():path.write_bytes(raw)
+tree=ast.parse((m/'run_fp8_z128_native_control.py').read_bytes());names=next(ast.literal_eval(n.value) for n in tree.body if isinstance(n,ast.Assign) and any(isinstance(t,ast.Name) and t.id=='NAMES' for t in n.targets))
+files={'Garnet/test2026/cuda/qwen38_5090/'+name:m/name for name in names};files.update({'Garnet/test2026/cuda/qwen38_5090/'+name:repo/row['production_source'] for name,row in copies.items()})
+pins={str(path):sha(path) for path in files.values()};sys.path[:0]=[str(repo),str(m)];import run_logged as ledger
+ledger.source_identity=lambda:{'scope':'Explicit owned Z128 helper package/CPU methods; unrelated untracked excluded','owned_source_sha256':{name:sha(Path(name)) for name in pins}}
+modules=['test2026.cuda.qwen38_5090.'+name for name in ('test_fp8_z128_native_source','test_fp8_z128_native_control','test_gdn_z_projection','test_gdn_z_algorithm_log')]
+os.chdir(repo);code=ledger.run([sys.executable,'-m','unittest',*modules,'-v'],work/'fp8-z128-native-control-local-cpu-ledger','correctness','13 native provenance/context/algorithm/workspace/fullword faults; no local native execution/model/GPU',list(pins));assert code==0 and pins=={name:sha(Path(name)) for name in pins}
+target=work/'fp8-z128-native-control-methods.zip';assert not target.exists()
+with zipfile.ZipFile(target,'x',zipfile.ZIP_DEFLATED) as z:
+    for name,path in files.items():z.write(path,name)
+    z.writestr('manifest.json',json.dumps({name:sha(path) for name,path in files.items()},indent=2))
+receipt={'status':'fp8_z128_native_helper_prepared_remote_unrun','sha256':sha(target),'bytes':target.stat().st_size,'files':len(files),'candidate_copies':len(copies),'cpu_tests':13};(work/'fp8-z128-native-control-package.json').write_bytes(json.dumps(receipt,indent=2).encode());print(json.dumps(receipt))

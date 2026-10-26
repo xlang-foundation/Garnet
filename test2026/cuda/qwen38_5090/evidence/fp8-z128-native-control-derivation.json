@@ -1,0 +1,64 @@
+{
+  "source": "test2026/cuda/qwen38_5090/actual_gdn_z_projection.cu",
+  "source_sha256": "d5e3ed3ce854834eb1ebd2d0a54f0fd305f27e591c67f05d8579ef9612c3b917",
+  "target": "test2026/cuda/qwen38_5090/actual_fp8_z128_native_control.cu",
+  "target_sha256": "003d04dbb6510c5d58c8894133ae49135c24e99e9245817b4da4685373d6dd0a",
+  "steps": [
+    {
+      "old": "#include \"modelopt_fp8.cuh\"",
+      "new": "#include \"modelopt_fp8.cuh\"\n#include \"modelopt_fp8_z128_canonical.h\"",
+      "count": 1
+    },
+    {
+      "old": "static bool shared = false, savedValid = false;",
+      "new": "static bool shared = false, savedValid = false, nativeZ = false;\nstatic int observedCalls = 0;",
+      "count": 1
+    },
+    {
+      "old": "static cublasStatus_t ObserveMatmul(",
+      "new": "cublasStatus_t ObserveMatmul(",
+      "count": 1
+    },
+    {
+      "old": "    printf(\"OBSERVE m=%llu original_workspace=%zu\\n\", (unsigned long long)m, workspaceBytes);",
+      "new": "    ++observedCalls;\n    if(nativeZ && m==128 && (!savedValid || !algo || std::memcmp(algo,&saved,sizeof(saved)) || workspaceBytes!=(4ULL<<20)))return CUBLAS_STATUS_INVALID_VALUE;\n    printf(\"OBSERVE m=%llu original_workspace=%zu\\n\", (unsigned long long)m, workspaceBytes);",
+      "count": 1
+    },
+    {
+      "old": "if (std::strcmp(argv[3], \"--m32-shared\")) throw std::runtime_error(\"Unknown mode\");\n            shared = true;",
+      "new": "if (std::strcmp(argv[3], \"--native-z128\")) throw std::runtime_error(\"Unknown mode\");\n            nativeZ = true;",
+      "count": 1
+    },
+    {
+      "old": "[--m32-shared]",
+      "new": "[--native-z128]",
+      "count": 1
+    },
+    {
+      "old": "            for (int repeat = 0; repeat < 2; ++repeat) {",
+      "new": "            std::shared_ptr<Garnet::ModelOptFP8Z128Context> context;\n            if(nativeZ && tokens==128){\n                context=Garnet::CreateModelOptFP8Z128Context();Garnet::ModelOptFP8Z128Info info;\n                if(!savedValid || !Garnet::GetModelOptFP8Z128Info(context,info) || info.algorithm!=67 || info.device!=0 || info.requiredWorkspace!=0 || std::memcmp(&info.opaque,&saved,sizeof(saved)))\n                    throw std::runtime_error(\"Typed Z128 context does not match qualified actualM32 configuration\");\n                printf(\"NATIVE_Z128_CONTEXT algorithm=%d device=%d required_workspace=%zu blas_workspace=%zu opaque=\",info.algorithm,info.device,info.requiredWorkspace,Garnet::ModelOptFP8Z128BlasWorkspace);\n                const auto* bytes=reinterpret_cast<const unsigned char*>(&info.opaque);for(size_t i=0;i<sizeof(info.opaque);++i)printf(\"%02x\",bytes[i]);puts(\"\");\n                const int callsBefore=observedCalls;int rejected=0;\n                auto reject=[&](const std::shared_ptr<Garnet::ModelOptFP8Z128Context>& owner,const void* weight,const void* input,void* output,int batch,int rows,int columns,float scale,void* scratch,size_t size,cublasStatus_t expected){\n                    if(Garnet::RunModelOptFP8Z128Matmul(owner,weight,input,output,batch,rows,columns,scale,scratch,size,nullptr)!=expected)throw std::runtime_error(\"Native Z invalid argument accepted\");++rejected;\n                };\n                const float scale=weightScale*inputScale;const size_t size=Garnet::ModelOptFP8Z128BlasWorkspace;\n                reject({},w.p,packed.p,result.p,128,n,k,scale,workspace.p,size,CUBLAS_STATUS_NOT_INITIALIZED);\n                reject(context,nullptr,packed.p,result.p,128,n,k,scale,workspace.p,size,CUBLAS_STATUS_INVALID_VALUE);\n                reject(context,w.p,nullptr,result.p,128,n,k,scale,workspace.p,size,CUBLAS_STATUS_INVALID_VALUE);\n                reject(context,w.p,packed.p,nullptr,128,n,k,scale,workspace.p,size,CUBLAS_STATUS_INVALID_VALUE);\n                reject(context,w.p,packed.p,result.p,128,n,k,scale,nullptr,size,CUBLAS_STATUS_INVALID_VALUE);\n                reject(context,w.p,packed.p,result.p,32,n,k,scale,workspace.p,size,CUBLAS_STATUS_INVALID_VALUE);\n                reject(context,w.p,packed.p,result.p,128,5120,k,scale,workspace.p,size,CUBLAS_STATUS_INVALID_VALUE);\n                reject(context,w.p,packed.p,result.p,128,n,6144,scale,workspace.p,size,CUBLAS_STATUS_INVALID_VALUE);\n                for(size_t wrong:{size_t(0),size-1,size_t(8ULL<<20)})reject(context,w.p,packed.p,result.p,128,n,k,scale,workspace.p,wrong,CUBLAS_STATUS_INVALID_VALUE);\n                for(float wrong:{0.f,-1.f,std::numeric_limits<float>::quiet_NaN(),std::numeric_limits<float>::infinity()})reject(context,w.p,packed.p,result.p,128,n,k,wrong,workspace.p,size,CUBLAS_STATUS_INVALID_VALUE);\n                if(rejected!=15 || observedCalls!=callsBefore)throw std::runtime_error(\"Invalid native Z control accounting/GPU call\");\n                printf(\"NATIVE_Z128_REJECTIONS count=%d unexpected_matmul_calls=%d\\n\",rejected,observedCalls-callsBefore);\n            }\n            for (int repeat = 0; repeat < 2; ++repeat) {",
+      "count": 1
+    },
+    {
+      "old": "#include <vector>",
+      "new": "#include <vector>\n#include <limits>",
+      "count": 1
+    },
+    {
+      "old": "                    const auto status = Garnet::RunModelOptFP8Matmul(handle, w.p,\n                        static_cast<unsigned char*>(packed.p) + start * k, result.p, tokens, n, k,\n                        weightScale * inputScale, workspace.p, 4ULL << 20, nullptr, false);",
+      "new": "                    const auto status = nativeZ && tokens==128\n                        ? Garnet::RunModelOptFP8Z128Matmul(context,w.p,packed.p,result.p,128,n,k,weightScale*inputScale,workspace.p,Garnet::ModelOptFP8Z128BlasWorkspace,nullptr)\n                        : Garnet::RunModelOptFP8Matmul(handle, w.p,\n                        static_cast<unsigned char*>(packed.p) + start * k, result.p, tokens, n, k,\n                        weightScale * inputScale, workspace.p, 4ULL << 20, nullptr, false);",
+      "count": 1
+    },
+    {
+      "old": "tokens == 32 || shared ? expected32 : expected128",
+      "new": "tokens == 32 || shared || nativeZ ? expected32 : expected128",
+      "count": 1
+    },
+    {
+      "old": "shared ? \"SHARED_M32\" : \"BOTH_DEFAULT_PROFILES\"",
+      "new": "nativeZ ? \"TYPED_NATIVE_Z128\" : (shared ? \"SHARED_M32\" : \"BOTH_DEFAULT_PROFILES\")",
+      "count": 1
+    }
+  ],
+  "scope": "Untimed real128 Z control derivative, distinct typed nativehelper called in separate observedTU; defaultsource unchanged. 15real invalidarg rejections withoutmatmul; CPUwire control separate."
+}

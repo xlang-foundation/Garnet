@@ -3,6 +3,8 @@
 #include "modelopt_fp8_plugin.h"
 #include "modelopt_fp8_m128_plugin.h"
 #include "modelopt_fp8_m128_profile.h"
+#include "modelopt_fp8_z128_plugin.h"
+#include "modelopt_fp8_z128_profile.h"
 #include <climits>
 #include <cmath>
 #include <cstring>
@@ -81,8 +83,13 @@ ITensor* TRTBuilder::ProjectModelOptFP8(ITensor* input,ITensor* weight){
         (attentionPolicy&&!std::strcmp(attentionPolicy,"1")&&attentionProjection));
     const bool canonicalM128=ModelOptFP8M128GDNSelected(std::getenv("GARNET_FP8_GDN_M128_CANONICAL"),
         shape.nbDims==3?int(shape.d[0]):0,shape.nbDims==3?int(shape.d[1]):0,rows,p.rows,p.columns,gdnOutput);
+    const bool canonicalZ128=ModelOptFP8Z128GDNZSelected(std::getenv("GARNET_FP8_GDN_Z128_CANONICAL"),
+        shape.nbDims==3?int(shape.d[0]):0,shape.nbDims==3?int(shape.d[1]):0,rows,p.rows,p.columns,suffixMatches(".linear_attn.in_proj_z.weight"));
     IPluginV2DynamicExt* plugin=nullptr;
-    if(canonicalM128){
+    if(canonicalZ128){
+        if(!EnsureModelOptFP8Z128PluginRegistered())throw std::runtime_error("Native Z128 FP8 registration failed");
+        plugin=new ModelOptFP8Z128Plugin(p.rows,p.columns,p.weightScale,p.inputScale);
+    }else if(canonicalM128){
         if(!EnsureModelOptFP8M128PluginRegistered())throw std::runtime_error("Native M128 FP8 registration failed");
         plugin=new ModelOptFP8M128Plugin(p.rows,p.columns,p.weightScale,p.inputScale);
     }else plugin=new ModelOptFP8Plugin(p.rows,p.columns,p.weightScale,p.inputScale,canonicalM32);
@@ -91,6 +98,7 @@ ITensor* TRTBuilder::ProjectModelOptFP8(ITensor* input,ITensor* weight){
     auto* layer=network->addPluginV2(inputs,2,*plugin);
     if(!layer)throw std::runtime_error("Native FP8 projection layer failed");
     if(canonicalM128)++nativeFP8M128ProjectionCount_;
+    if(canonicalZ128)++nativeFP8Z128ProjectionCount_;
     auto* restore=network->addShuffle(*layer->getOutput(0));
     if(!restore)throw std::runtime_error("Native FP8 output reshape failed");
     shape.d[shape.nbDims-1]=p.rows;restore->setReshapeDimensions(shape);return restore->getOutput(0);

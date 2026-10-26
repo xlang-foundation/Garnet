@@ -1,0 +1,33 @@
+"""Wire qualified separate Z policy/counter, retaining all five current source files."""
+from pathlib import Path
+import hashlib,json
+repo=Path('D:/CantorAI/work/qwen38-5090');e=repo/'test2026/cuda/qwen38_5090/evidence';sha=lambda raw:hashlib.sha256(raw).hexdigest()
+out=Path(__file__).resolve().parent.parent/'outputs';proof=(out/'fp8-z128-native-control-attempt1-verified.json').read_bytes();assert proof==(out/'fp8-z128-native-control-attempt1-remote-verified.json').read_bytes();q=json.loads(proof);assert q['status']=='fp8_z128_actual_typed_helper_and_plugin_fully_replayed'
+changes={
+'src/backends/tensorrt/modelopt_fp8_lowering.cpp':[
+ ('#include "modelopt_fp8_m128_profile.h"','#include "modelopt_fp8_m128_profile.h"\n#include "modelopt_fp8_z128_plugin.h"\n#include "modelopt_fp8_z128_profile.h"'),
+ ('    IPluginV2DynamicExt* plugin=nullptr;\n    if(canonicalM128){',
+  '    const bool canonicalZ128=ModelOptFP8Z128GDNZSelected(std::getenv("GARNET_FP8_GDN_Z128_CANONICAL"),\n        shape.nbDims==3?int(shape.d[0]):0,shape.nbDims==3?int(shape.d[1]):0,rows,p.rows,p.columns,suffixMatches(".linear_attn.in_proj_z.weight"));\n    IPluginV2DynamicExt* plugin=nullptr;\n    if(canonicalZ128){\n        if(!EnsureModelOptFP8Z128PluginRegistered())throw std::runtime_error("Native Z128 FP8 registration failed");\n        plugin=new ModelOptFP8Z128Plugin(p.rows,p.columns,p.weightScale,p.inputScale);\n    }else if(canonicalM128){'),
+ ('    if(canonicalM128)++nativeFP8M128ProjectionCount_;','    if(canonicalM128)++nativeFP8M128ProjectionCount_;\n    if(canonicalZ128)++nativeFP8Z128ProjectionCount_;')],
+'src/backends/tensorrt/trt_builder.h':[
+ ('        size_t NativeFP8M128ProjectionCount() const { return nativeFP8M128ProjectionCount_; }','        size_t NativeFP8M128ProjectionCount() const { return nativeFP8M128ProjectionCount_; }\n        size_t NativeFP8Z128ProjectionCount() const { return nativeFP8Z128ProjectionCount_; }'),
+ ('        size_t nativeFP8M128ProjectionCount_=0;','        size_t nativeFP8M128ProjectionCount_=0;\n        size_t nativeFP8Z128ProjectionCount_=0;')],
+'src/backends/tensorrt/trt_builder.cpp':[
+ ('nativeCTInt4Weights.clear();nativeFP8M128ProjectionCount_=0;','nativeCTInt4Weights.clear();nativeFP8M128ProjectionCount_=0;nativeFP8Z128ProjectionCount_=0;')],
+'src/backends/tensorrt/cuda_compiled_graph.h':[
+ ('    size_t nativeFP8M128ProjectionCount_=0;','    size_t nativeFP8M128ProjectionCount_=0;\n    size_t nativeFP8Z128ProjectionCount_=0;')],
+'src/backends/tensorrt/cuda_compiled_graph.cpp':[
+ ('nativeFP8M128ProjectionCount_=0;','nativeFP8M128ProjectionCount_=0;nativeFP8Z128ProjectionCount_=0;'),
+ ('    info["native_fp8_m128_canonical_projections"]=nativeFP8M128ProjectionCount_;','    info["native_fp8_m128_canonical_projections"]=nativeFP8M128ProjectionCount_;\n    info["native_fp8_z128_canonical_projections"]=nativeFP8Z128ProjectionCount_;'),
+ ('    nativeFP8M128ProjectionCount_=builder.NativeFP8M128ProjectionCount();','    nativeFP8M128ProjectionCount_=builder.NativeFP8M128ProjectionCount();\n    nativeFP8Z128ProjectionCount_=builder.NativeFP8Z128ProjectionCount();')]}
+plan=[]
+for name,steps in changes.items():
+    path=repo/name;raw=path.read_bytes();text=raw.decode();rows=[];snapshot=e/('fp8-z128-native-original-'+name.replace('/','__')+'.txt');assert not snapshot.exists() or snapshot.read_bytes()==raw
+    for old,new in steps:
+        assert text.count(old)==1,(name,old,text.count(old));text=text.replace(old,new);rows.append({'old':old,'new':new,'count':1})
+    plan.append((path,raw,text.encode(),snapshot,{'target':name,'before_sha256':sha(raw),'target_sha256':sha(text.encode()),'original_snapshot':snapshot.relative_to(repo).as_posix(),'steps':rows}))
+for path,raw,value,snapshot,row in plan:
+    if not snapshot.exists():snapshot.write_bytes(raw)
+    path.write_bytes(value)
+record={'status':'fp8_z128_full_builder_route_candidate_native_build_pending','modified_files':[row for path,raw,value,snapshot,row in plan],'source_policy_derivation_sha256':sha((e/'fp8-z128-native-source-derivation.json').read_bytes()),'actual_typed_helper_qualified_proof_sha256':sha(proof),'actual_typed_helper_qualified_archive_sha256':q['archive_sha256'],'scope':'Exact additive separate defaultoff GARNET_FP8_GDN_Z128_CANONICAL route on originalrank3B1T128/exactZsuffix/N6144K5120 only. Existing GDNoutM128 andM32selection preserved, independent graphcreationcounter copied/reset/stats. Existing pergraph cache remains unchanged. WholeDLL/nativefrontend/fullmodel/quality/HTTP gates pending.'}
+target=e/'fp8-z128-native-integration-derivation.json';assert not target.exists();target.write_bytes(json.dumps(record,indent=2).encode());print(json.dumps({'status':record['status'],'modified_files':len(plan)}))

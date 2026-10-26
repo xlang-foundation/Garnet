@@ -1,0 +1,239 @@
+{
+  "status": "separate_fp8_Z128_native_source_derived_unqualified",
+  "qualified_control_proof_sha256": "34ef3f622bfc5edaf3f0274f1e01e061cf32146146acad4282136cd3ec77501c",
+  "qualified_control_archive_sha256": "6cdf4eb999eb4a53649d32dd8857f780d7e5c6969dde75f9a99a95f3ceebb41b",
+  "opaque_configuration": "430000000d0000001100000001000000000000000100000012000000000000000100000060fd01001c0000001c0000000e000e00440000000000000000000000",
+  "files": [
+    {
+      "source": "src/backends/tensorrt/modelopt_fp8_m128_canonical.h",
+      "source_sha256": "60914d824fab138078686309a5d24bf139f578c9f33d3eb7a125b0cdc0ae7a04",
+      "target": "src/backends/tensorrt/modelopt_fp8_z128_canonical.h",
+      "target_sha256": "d792c27b8997fddabc1605865bc0883311451d7b38e0b7c66aad6b74a292e830",
+      "steps": [
+        {
+          "old": "ModelOptFP8M128",
+          "new": "ModelOptFP8Z128",
+          "count": 10
+        },
+        {
+          "old": "=8ULL<<20",
+          "new": "=4ULL<<20",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "src/backends/tensorrt/modelopt_fp8_m128_canonical.cpp",
+      "source_sha256": "8ca91b6b478fe0dd4ec6463f5f7fa52836350fd927532786d2cf64ee7cda10bc",
+      "target": "src/backends/tensorrt/modelopt_fp8_z128_canonical.cpp",
+      "target_sha256": "6207d7b31a5335762e3ae73cc18bc0205dace5dc605851a536e6c6c2d64472da",
+      "steps": [
+        {
+          "old": "modelopt_fp8_m128",
+          "new": "modelopt_fp8_z128",
+          "count": 1
+        },
+        {
+          "old": "ModelOptFP8M128",
+          "new": "ModelOptFP8Z128",
+          "count": 14
+        },
+        {
+          "old": "5120",
+          "new": "@Z_N@",
+          "count": 6
+        },
+        {
+          "old": "6144",
+          "new": "5120",
+          "count": 7
+        },
+        {
+          "old": "@Z_N@",
+          "new": "6144",
+          "count": 6
+        },
+        {
+          "old": "5120,16,5120",
+          "new": "5120,32,5120",
+          "count": 1
+        },
+        {
+          "old": "6144,16,6144",
+          "new": "6144,32,6144",
+          "count": 1
+        },
+        {
+          "old": "Preserve the tested M16 selection preference, then validate M128 separately.",
+          "new": "Preserve actual M32 preference, then AlgoCheck actual M128 descriptors.",
+          "count": 1
+        },
+        {
+          "old": "id!=35",
+          "new": "id!=67",
+          "count": 1
+        },
+        {
+          "old": "info.algorithm==35",
+          "new": "info.algorithm==67",
+          "count": 1
+        },
+        {
+          "old": "    for(int i=0;i<found;++i){",
+          "new": "    // Exact opaque configuration from closed real128 Z control on pinned13.4.\n    // Opaque bytes are never interpreted; any library/device selection drift fails closed.\n    static_assert(sizeof(cublasLtMatmulAlgo_t)==64,\"Pinned opaque ABI\");\n    const unsigned char expected[64]={0x43,0x00,0x00,0x00,0x0d,0x00,0x00,0x00,0x11,0x00,0x00,0x00,0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x01,0x00,0x00,0x00,0x12,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x01,0x00,0x00,0x00,0x60,0xfd,0x01,0x00,0x1c,0x00,0x00,0x00,0x1c,0x00,0x00,0x00,0x0e,0x00,0x0e,0x00,0x44,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};\n    for(int i=0;i<found;++i){",
+          "count": 1
+        },
+        {
+          "old": "if(choices[i].state!=CUBLAS_STATUS_SUCCESS)continue;",
+          "new": "if(choices[i].state!=CUBLAS_STATUS_SUCCESS)continue;\n        if(std::memcmp(&choices[i].algo,expected,sizeof(expected)))return {};",
+          "count": 1
+        },
+        {
+          "old": "#include <cmath>",
+          "new": "#include <cmath>\n#include <cstring>",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "src/backends/tensorrt/modelopt_fp8_m128_plugin.h",
+      "source_sha256": "009580e736dc3f0688d130f4ed5c06de6025ad7a4166c94939511ffccf6a94c0",
+      "target": "src/backends/tensorrt/modelopt_fp8_z128_plugin.h",
+      "target_sha256": "95221073c966f5348d758fb15c0e95cf19842b86f99d502a9d6e3472190325e0",
+      "steps": [
+        {
+          "old": "modelopt_fp8_m128",
+          "new": "modelopt_fp8_z128",
+          "count": 1
+        },
+        {
+          "old": "ModelOptFP8M128",
+          "new": "ModelOptFP8Z128",
+          "count": 6
+        },
+        {
+          "old": "policy=128;",
+          "new": "policy=0x5a313238u;",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "src/backends/tensorrt/modelopt_fp8_m128_plugin.cpp",
+      "source_sha256": "98b619674f28bc89ad2f902d4d6362ebe46ceb55976edc300989c09745daf462",
+      "target": "src/backends/tensorrt/modelopt_fp8_z128_plugin.cpp",
+      "target_sha256": "4707bdf990b5f87f23f26a309804f56f89c2c262b20c3c5ede37533ac138d166",
+      "steps": [
+        {
+          "old": "modelopt_fp8_m128",
+          "new": "modelopt_fp8_z128",
+          "count": 1
+        },
+        {
+          "old": "ModelOptFP8M128",
+          "new": "ModelOptFP8Z128",
+          "count": 22
+        },
+        {
+          "old": "AlignedM128",
+          "new": "AlignedZ128",
+          "count": 3
+        },
+        {
+          "old": "5120",
+          "new": "@Z_N@",
+          "count": 5
+        },
+        {
+          "old": "6144",
+          "new": "5120",
+          "count": 8
+        },
+        {
+          "old": "@Z_N@",
+          "new": "6144",
+          "count": 5
+        },
+        {
+          "old": "policy!=128",
+          "new": "policy!=0x5a313238u",
+          "count": 1
+        },
+        {
+          "old": "1536",
+          "new": "1280",
+          "count": 1
+        },
+        {
+          "old": "Stable separate M128 FP8 wire",
+          "new": "Stable separate Z128 FP8 wire",
+          "count": 1
+        },
+        {
+          "old": "M128 FP8 requires exact GDN output geometry",
+          "new": "Z128 FP8 requires exact GDN Z geometry",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "src/backends/tensorrt/modelopt_fp8_m128_profile.h",
+      "source_sha256": "99c50216447d28b950286fb83de69412e6e45130db94f938ee91caea230d1e60",
+      "target": "src/backends/tensorrt/modelopt_fp8_z128_profile.h",
+      "target_sha256": "42e3d9afb3e3013c8c0b23735bf2e0e2cf0603f87a39dd4a3979f9808531d464",
+      "steps": [
+        {
+          "old": "ModelOptFP8M128",
+          "new": "ModelOptFP8Z128",
+          "count": 1
+        },
+        {
+          "old": "5120",
+          "new": "@Z_N@",
+          "count": 1
+        },
+        {
+          "old": "6144",
+          "new": "5120",
+          "count": 1
+        },
+        {
+          "old": "@Z_N@",
+          "new": "6144",
+          "count": 1
+        },
+        {
+          "old": "GDNSelected",
+          "new": "GDNZSelected",
+          "count": 1
+        },
+        {
+          "old": "GARNET_FP8_GDN_M128_CANONICAL",
+          "new": "GARNET_FP8_GDN_Z128_CANONICAL",
+          "count": 1
+        },
+        {
+          "old": "gdnOutput",
+          "new": "gdnZ",
+          "count": 2
+        },
+        {
+          "old": "Unqualified M128 GDN output projection",
+          "new": "Unqualified M128 GDN Z projection",
+          "count": 1
+        }
+      ]
+    }
+  ],
+  "legacy_untouched_sha256": {
+    "src/backends/tensorrt/modelopt_fp8_m128_canonical.h": "60914d824fab138078686309a5d24bf139f578c9f33d3eb7a125b0cdc0ae7a04",
+    "src/backends/tensorrt/modelopt_fp8_m128_canonical.cpp": "8ca91b6b478fe0dd4ec6463f5f7fa52836350fd927532786d2cf64ee7cda10bc",
+    "src/backends/tensorrt/modelopt_fp8_m128_plugin.h": "009580e736dc3f0688d130f4ed5c06de6025ad7a4166c94939511ffccf6a94c0",
+    "src/backends/tensorrt/modelopt_fp8_m128_plugin.cpp": "98b619674f28bc89ad2f902d4d6362ebe46ceb55976edc300989c09745daf462",
+    "src/backends/tensorrt/modelopt_fp8_m128_profile.h": "99c50216447d28b950286fb83de69412e6e45130db94f938ee91caea230d1e60",
+    "src/backends/tensorrt/modelopt_cublaslt.cpp": "f1283406460ecf8d0b633ff49959709d86941009a73cd3bd596d86a2e4792f35",
+    "src/backends/tensorrt/modelopt_cublaslt.h": "67c4850bb4e1e6d025fd2d1514447e82f7c36f04e9c3db3fd61e0e347027641a",
+    "src/backends/tensorrt/modelopt_fp8_plugin.cpp": "ec338161b9fba92373f163d229393d6fdf1afa13cf5446619e0cde2af1188776",
+    "src/backends/tensorrt/modelopt_fp8_plugin.h": "1e8e5bb0bf18302593adacec25b503d82575b27d530f7dedb79b2bc42b8e78b0"
+  }
+}

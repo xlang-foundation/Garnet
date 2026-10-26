@@ -1,0 +1,28 @@
+"""Private CPU /c objects only; no local link/runtime/model/GPU or SDK mutation."""
+from pathlib import Path
+import hashlib,json,os,re,sys
+work=Path(__file__).resolve().parent;repo=Path('D:/CantorAI/work/qwen38-5090');m=repo/'test2026/cuda/qwen38_5090';e=m/'evidence';sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+folder=work/'fp8-z128-native-development/offline-build';folder.mkdir(parents=True,exist_ok=True)
+oldbat=work/'prefill128-runtime-development/offline-build/compile-runtime.bat';includes=re.findall(r'/I"([^"]+)"',oldbat.read_text().split('cl.exe ',1)[1].splitlines()[0]);assert includes and all(Path(n).is_dir() for n in includes)
+record=json.loads((e/'fp8-z128-native-source-derivation.json').read_bytes());native=[row['target'] for row in record['files']]+list(record['legacy_untouched_sha256'])
+targets=[(name,Path(name).stem+'.obj') for name in native if name.endswith('.cpp') and Path(name).name in ('modelopt_fp8_z128_canonical.cpp','modelopt_fp8_z128_plugin.cpp','modelopt_fp8_m128_plugin.cpp','modelopt_fp8_plugin.cpp')]
+targets += [('test2026/cuda/qwen38_5090/'+name,Path(name).stem+'.obj') for name in ('probe_fp8_z128_plugin_contract.cpp','fp8_z128_plugin_cpu_stubs.cpp','fp8_z128_observed_helper.cpp')]
+assert len(targets)==7 and not any((folder/name).exists() for source,name in targets)
+vcvars=Path('C:/Program Files/Microsoft Visual Studio/18/Community/VC/Auxiliary/Build/vcvars64.bat')
+sdk=[Path('D:/CantorAI/ThirdPartySDK/TensorRT/include')/name for name in ('NvInfer.h','NvInferRuntime.h','NvInferRuntimeCommon.h','NvInferRuntimeBase.h','NvInferPlugin.h','NvInferVersion.h')]
+sdk += [Path('C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v13.2/include')/name for name in ('cuda_runtime.h','cuda_runtime_api.h','cuda_bf16.h','cuda_bf16.hpp','cublasLt.h','cublas_v2.h')]
+before={str(path):sha(path) for path in sdk};inputs=[repo/name for name in native]+[repo/source for source,name in targets]+[e/'fp8-z128-native-source-derivation.json',e/'fp8-z128-native-control-derivation.json',oldbat,vcvars,Path(__file__)]
+inputs += [m/name for name in ('test_fp8_z128_native_source.py','gdn_z_projection.py','gdn_z_algorithm_log.py','test_gdn_z_projection.py','test_gdn_z_algorithm_log.py','actual_gdn_z_projection.cu','actual_fp8_z128_native_control.cu')]
+pins={str(path):sha(path) for path in inputs};flags=' '.join('/I"'+name+'"' for name in includes)
+commands=['@echo off','setlocal','call "'+str(vcvars)+'" -vcvars_ver=14.29','if errorlevel 1 exit /b %errorlevel%','set "TMP='+str(folder)+'"','set "TEMP='+str(folder)+'"']
+for source,name in targets:
+    commands += ['cl.exe /nologo /c /std:c++17 /EHsc /MT /utf-8 /bigobj /Zc:preprocessor /openmp /DGARNET_SERVING_EXPORTS=1 /DNOMINMAX /DXLANG3_USE_SHARED /Dgarnet_EXPORTS '+flags+' "'+str(repo/source)+'" /Fo"'+str(folder/name)+'" /Fd"'+str(folder/'private.pdb')+'"','if errorlevel 1 exit /b %errorlevel%']
+commands.append('exit /b 0');bat=folder/'compile.bat';bat.write_bytes(('\r\n'.join(commands)+'\r\n').encode())
+sys.path.insert(0,str(repo));import test2026.cuda.qwen38_5090.run_logged as ledger
+ledger.source_identity=lambda:{'scope':'Explicit owned Z128 private CPU compile inputs; unrelated untracked excluded','owned_source_sha256':{name:sha(Path(name)) for name in pins}}
+os.chdir(repo);modules=['test2026.cuda.qwen38_5090.'+name for name in ('test_fp8_z128_native_source','test_gdn_z_projection','test_gdn_z_algorithm_log')]
+cpu=ledger.run([sys.executable,'-m','unittest',*modules,'-v'],folder/'cpu-ledger','correctness','Eleven native source lineage/completeword/algorithm/workspace faults; no native runtime/GPU',inputs);assert cpu==0
+code=ledger.run(['cmd.exe','/d','/c',str(bat)],folder/'build-ledger','build','Seven private CPU /c helper/plugin/oldplugins/probe/stubs/observedhelper objects; no link/exe/nativeGPU',inputs+[bat,*sdk])
+assert pins=={name:sha(Path(name)) for name in pins} and before=={name:sha(Path(name)) for name in before}
+result={'status':'fp8_z128_native_private_cpu_objects_compiled' if code==0 else 'fp8_z128_native_private_cpu_compile_failure_preserved','exit_code':code,'cpu_tests':11,'source_and_build_input_sha256':pins,'sdk_before_after_unchanged':before,'objects':{name:sha(folder/name) for source,name in targets if (folder/name).exists()},'compile_recipe_sha256':sha(bat),'linked':False,'target_executable_run':False,'local_gpu_or_model_executed':False,'native_runtime_qualified':False,'model_or_http_qualified':False,'performance_admitted':False}
+(folder/'result.json').write_bytes(json.dumps(result,indent=2).encode());print(json.dumps({'status':result['status'],'exit_code':code,'cpu_tests':11,'objects':len(result['objects'])}));raise SystemExit(code)

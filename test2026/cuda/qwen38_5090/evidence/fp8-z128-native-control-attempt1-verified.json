@@ -1,0 +1,723 @@
+{
+  "status": "fp8_z128_actual_typed_helper_and_plugin_fully_replayed",
+  "archive_sha256": "594b2248b5b5cf67e5ea719153841470392b2ad0bf4ecc3ceff964afacdbbbe8",
+  "files_verified": 91,
+  "complete_profiles_replayed": 4,
+  "complete_bf16_output_words_replayed": 12582912,
+  "profiles": [
+    {
+      "mode": "control",
+      "layer": 0,
+      "replay": {
+        "mode": "control",
+        "words": {
+          "status": "real_gdn_z_projection_control_words_replayed",
+          "cases": [
+            {
+              "profile": "four-m32",
+              "repeat": 0,
+              "words": 786432,
+              "complete_expected_output_exact": true
+            },
+            {
+              "profile": "four-m32",
+              "repeat": 1,
+              "words": 786432,
+              "complete_expected_output_exact": true
+            },
+            {
+              "profile": "m128",
+              "repeat": 0,
+              "words": 786432,
+              "complete_expected_output_exact": true
+            },
+            {
+              "profile": "m128",
+              "repeat": 1,
+              "words": 786432,
+              "complete_expected_output_exact": true
+            }
+          ],
+          "complete_bf16_output_words_replayed": 3145728,
+          "independent_input_cast_and_quantization_exact": true,
+          "real128_rows_not_repeated16": true,
+          "full_model_cause_established": false,
+          "model_or_quality_or_performance_qualified": false
+        },
+        "typed_native_m128_matches_four_m32": null,
+        "model_or_performance_qualified": false
+      },
+      "algorithms": {
+        "mode": "control",
+        "native_context": null,
+        "actual_helper_calls": {
+          "mode": "control",
+          "actual_matmul_calls": 10,
+          "calls": [
+            {
+              "m": 32,
+              "original_algorithm_id": 67,
+              "original_opaque": "430000000d0000001100000001000000000000000100000012000000000000000100000060fd01001c0000001c0000000e000e00440000000000000000000000",
+              "actual_algorithm_id": 67,
+              "actual_opaque": "430000000d0000001100000001000000000000000100000012000000000000000100000060fd01001c0000001c0000000e000e00440000000000000000000000",
+              "algorithm_checked_on_actual_m128": false,
+              "required_workspace_bytes": null,
+              "supplied_workspace_bytes": 4194304
+            },
+            {
+              "m": 32,
+              "original_algorithm_id": 67,
+              "original_opaque": "430000000d0000001100000001000000000000000100000012000000000000000100000060fd01001c0000001c0000000e000e00440000000000000000000000",
+              "actual_algorithm_id": 67,
+              "actual_opaque": "430000000d0000001100000001000000000000000100000012000000000000000100000060fd01001c0000001c0000000e000e00440000000000000000000000",
+              "algorithm_checked_on_actual_m128": false,
+              "required_workspace_bytes": null,
+              "supplied_workspace_bytes": 4194304
+            },
+            {
+              "m": 32,
+              "original_algorithm_id": 67,
+              "original_opaque": "430000000d0000001100000001000000000000000100000012000000000000000100000060fd01001c0000001c0000000e000e00440000000000000000000000",
+              "actual_algorithm_id": 67,
+              "actual_opaque": "430000000d0000001100000001000000000000000100000012000000000000000100000060fd01001c0000001c0000000e000e00440000000000000000000000",
+              "algorithm_checked_on_actual_m128": false,
+              "required_workspace_bytes": null,
+              "supplied_workspace_bytes": 4194304
+            },
+            {
+              "m": 32,
+              "original_algorithm_id": 67,
+              "original_opaque": "430000000d0000001100000001000000000000000100000012000000000000000100000060fd01001c0000001c0000000e000e00440000000000000000000000",
+              "actual_algorithm_id": 67,
+              "actual_opaque": "430000000d0000001100000001000000000000000100000012000000000000000100000060fd01001c0000001c0000000e000e00440000000000000000000000",
+              "algorithm_checked_on_actual_m128": false,
+              "required_workspace_bytes": null,
+              "supplied_workspace_bytes": 4194304
+            },
+            {
+              "m": 32,
+              "original_algorithm_id": 67,
+              "original_opaque": "430000000d0000001100000001000000000000000100000012000000000000000100000060fd01001c0000001c0000000e000e00440000000000000000000000",
+              "actual_algorithm_id": 67,
+              "actual_opaque": "430000000d0000001100000001000000000000000100000012000000000000000100000060fd01001c0000001c0000000e000e00440000000000000000000000",
+              "algorithm_checked_on_actual_m128": false,
+              "required_workspace_bytes": null,
+              "supplied_workspace_bytes": 4194304
+            },
+            {
+              "m": 32,
+              "original_algorithm_id": 67,
+              "original_opaque": "430000000d0000001100000001000000000000000100000012000000000000000100000060fd01001c0000001c0000000e000e00440000000000000000000000",
+              "actual_algorithm_id": 67,
+              "actual_opaque": "430000000d0000001100000001000000000000000100000012000000000000000100000060fd01001c0000001c0000000e000e00440000000000000000000000",
+              "algorithm_checked_on_actual_m128": false,
+              "required_workspace_bytes": null,
+              "supplied_workspace_bytes": 4194304
+            },
+            {
+              "m": 32,
+              "original_algorithm_id": 67,
+              "original_opaque": "430000000d0000001100000001000000000000000100000012000000000000000100000060fd01001c0000001c0000000e000e00440000000000000000000000",
+              "actual_algorithm_id": 67,
+              "actual_opaque": "430000000d0000001100000001000000000000000100000012000000000000000100000060fd01001c0000001c0000000e000e00440000000000000000000000",
+              "algorithm_checked_on_actual_m128": false,
+              "required_workspace_bytes": null,
+              "supplied_workspace_bytes": 4194304
+            },
+            {
+              "m": 32,
+              "original_algorithm_id": 67,
+              "original_opaque": "430000000d0000001100000001000000000000000100000012000000000000000100000060fd01001c0000001c0000000e000e00440000000000000000000000",
+              "actual_algorithm_id": 67,
+              "actual_opaque": "430000000d0000001100000001000000000000000100000012000000000000000100000060fd01001c0000001c0000000e000e00440000000000000000000000",
+              "algorithm_checked_on_actual_m128": false,
+              "required_workspace_bytes": null,
+              "supplied_workspace_bytes": 4194304
+            },
+            {
+              "m": 128,
+              "original_algorithm_id": 67,
+              "original_opaque": "43000000120000001000000001000000000000000100000012000000000000000100000060fd01001c0000001c0000000e000e00440000000000000000000000",
+              "actual_algorithm_id": 67,
+              "actual_opaque": "43000000120000001000000001000000000000000100000012000000000000000100000060fd01001c0000001c0000000e000e00440000000000000000000000",
+              "algorithm_checked_on_actual_m128": false,
+              "required_workspace_bytes": null,
+              "supplied_workspace_bytes": 4194304
+            },
+            {
+              "m": 128,
+              "original_algorithm_id": 67,
+              "original_opaque": "43000000120000001000000001000000000000000100000012000000000000000100000060fd01001c0000001c0000000e000e00440000000000000000000000",
+              "actual_algorithm_id": 67,
+              "actual_opaque": "43000000120000001000000001000000000000000100000012000000000000000100000060fd01001c0000001c0000000e000e00440000000000000000000000",
+              "algorithm_checked_on_actual_m128": false,
+              "required_workspace_bytes": null,
+              "supplied_workspace_bytes": 4194304
+            }
+          ],
+          "complete_output_reproduced": true,
+          "loaded_cublasLt": "D:/CantorAI/5090-study-20261023/tools/cuda13/nvidia/cu13/bin/x86_64/cublasLt64_13.dll",
+          "model_or_performance_qualified": false
+        },
+        "model_or_performance_qualified": false
+      }
+    },
+    {
+      "mode": "control",
+      "layer": 1,
+      "replay": {
+        "mode": "control",
+        "words": {
+          "status": "real_gdn_z_projection_control_words_replayed",
+          "cases": [
+            {
+              "profile": "four-m32",
+              "repeat": 0,
+              "words": 786432,
+              "complete_expected_output_exact": true
+            },
+            {
+              "profile": "four-m32",
+              "repeat": 1,
+              "words": 786432,
+              "complete_expected_output_exact": true
+            },
+            {
+              "profile": "m128",
+              "repeat": 0,
+              "words": 786432,
+              "complete_expected_output_exact": true
+            },
+            {
+              "profile": "m128",
+              "repeat": 1,
+              "words": 786432,
+              "complete_expected_output_exact": true
+            }
+          ],
+          "complete_bf16_output_words_replayed": 3145728,
+          "independent_input_cast_and_quantization_exact": true,
+          "real128_rows_not_repeated16": true,
+          "full_model_cause_established": false,
+          "model_or_quality_or_performance_qualified": false
+        },
+        "typed_native_m128_matches_four_m32": null,
+        "model_or_performance_qualified": false
+      },
+      "algorithms": {
+        "mode": "control",
+        "native_context": null,
+        "actual_helper_calls": {
+          "mode": "control",
+          "actual_matmul_calls": 10,
+          "calls": [
+            {
+              "m": 32,
+              "original_algorithm_id": 67,
+              "original_opaque": "430000000d0000001100000001000000000000000100000012000000000000000100000060fd01001c0000001c0000000e000e00440000000000000000000000",
+              "actual_algorithm_id": 67,
+              "actual_opaque": "430000000d0000001100000001000000000000000100000012000000000000000100000060fd01001c0000001c0000000e000e00440000000000000000000000",
+              "algorithm_checked_on_actual_m128": false,
+              "required_workspace_bytes": null,
+              "supplied_workspace_bytes": 4194304
+            },
+            {
+              "m": 32,
+              "original_algorithm_id": 67,
+              "original_opaque": "430000000d0000001100000001000000000000000100000012000000000000000100000060fd01001c0000001c0000000e000e00440000000000000000000000",
+              "actual_algorithm_id": 67,
+              "actual_opaque": "430000000d0000001100000001000000000000000100000012000000000000000100000060fd01001c0000001c0000000e000e00440000000000000000000000",
+              "algorithm_checked_on_actual_m128": false,
+              "required_workspace_bytes": null,
+              "supplied_workspace_bytes": 4194304
+            },
+            {
+              "m": 32,
+              "original_algorithm_id": 67,
+              "original_opaque": "430000000d0000001100000001000000000000000100000012000000000000000100000060fd01001c0000001c0000000e000e00440000000000000000000000",
+              "actual_algorithm_id": 67,
+              "actual_opaque": "430000000d0000001100000001000000000000000100000012000000000000000100000060fd01001c0000001c0000000e000e00440000000000000000000000",
+              "algorithm_checked_on_actual_m128": false,
+              "required_workspace_bytes": null,
+              "supplied_workspace_bytes": 4194304
+            },
+            {
+              "m": 32,
+              "original_algorithm_id": 67,
+              "original_opaque": "430000000d0000001100000001000000000000000100000012000000000000000100000060fd01001c0000001c0000000e000e00440000000000000000000000",
+              "actual_algorithm_id": 67,
+              "actual_opaque": "430000000d0000001100000001000000000000000100000012000000000000000100000060fd01001c0000001c0000000e000e00440000000000000000000000",
+              "algorithm_checked_on_actual_m128": false,
+              "required_workspace_bytes": null,
+              "supplied_workspace_bytes": 4194304
+            },
+            {
+              "m": 32,
+              "original_algorithm_id": 67,
+              "original_opaque": "430000000d0000001100000001000000000000000100000012000000000000000100000060fd01001c0000001c0000000e000e00440000000000000000000000",
+              "actual_algorithm_id": 67,
+              "actual_opaque": "430000000d0000001100000001000000000000000100000012000000000000000100000060fd01001c0000001c0000000e000e00440000000000000000000000",
+              "algorithm_checked_on_actual_m128": false,
+              "required_workspace_bytes": null,
+              "supplied_workspace_bytes": 4194304
+            },
+            {
+              "m": 32,
+              "original_algorithm_id": 67,
+              "original_opaque": "430000000d0000001100000001000000000000000100000012000000000000000100000060fd01001c0000001c0000000e000e00440000000000000000000000",
+              "actual_algorithm_id": 67,
+              "actual_opaque": "430000000d0000001100000001000000000000000100000012000000000000000100000060fd01001c0000001c0000000e000e00440000000000000000000000",
+              "algorithm_checked_on_actual_m128": false,
+              "required_workspace_bytes": null,
+              "supplied_workspace_bytes": 4194304
+            },
+            {
+              "m": 32,
+              "original_algorithm_id": 67,
+              "original_opaque": "430000000d0000001100000001000000000000000100000012000000000000000100000060fd01001c0000001c0000000e000e00440000000000000000000000",
+              "actual_algorithm_id": 67,
+              "actual_opaque": "430000000d0000001100000001000000000000000100000012000000000000000100000060fd01001c0000001c0000000e000e00440000000000000000000000",
+              "algorithm_checked_on_actual_m128": false,
+              "required_workspace_bytes": null,
+              "supplied_workspace_bytes": 4194304
+            },
+            {
+              "m": 32,
+              "original_algorithm_id": 67,
+              "original_opaque": "430000000d0000001100000001000000000000000100000012000000000000000100000060fd01001c0000001c0000000e000e00440000000000000000000000",
+              "actual_algorithm_id": 67,
+              "actual_opaque": "430000000d0000001100000001000000000000000100000012000000000000000100000060fd01001c0000001c0000000e000e00440000000000000000000000",
+              "algorithm_checked_on_actual_m128": false,
+              "required_workspace_bytes": null,
+              "supplied_workspace_bytes": 4194304
+            },
+            {
+              "m": 128,
+              "original_algorithm_id": 67,
+              "original_opaque": "43000000120000001000000001000000000000000100000012000000000000000100000060fd01001c0000001c0000000e000e00440000000000000000000000",
+              "actual_algorithm_id": 67,
+              "actual_opaque": "43000000120000001000000001000000000000000100000012000000000000000100000060fd01001c0000001c0000000e000e00440000000000000000000000",
+              "algorithm_checked_on_actual_m128": false,
+              "required_workspace_bytes": null,
+              "supplied_workspace_bytes": 4194304
+            },
+            {
+              "m": 128,
+              "original_algorithm_id": 67,
+              "original_opaque": "43000000120000001000000001000000000000000100000012000000000000000100000060fd01001c0000001c0000000e000e00440000000000000000000000",
+              "actual_algorithm_id": 67,
+              "actual_opaque": "43000000120000001000000001000000000000000100000012000000000000000100000060fd01001c0000001c0000000e000e00440000000000000000000000",
+              "algorithm_checked_on_actual_m128": false,
+              "required_workspace_bytes": null,
+              "supplied_workspace_bytes": 4194304
+            }
+          ],
+          "complete_output_reproduced": true,
+          "loaded_cublasLt": "D:/CantorAI/5090-study-20261023/tools/cuda13/nvidia/cu13/bin/x86_64/cublasLt64_13.dll",
+          "model_or_performance_qualified": false
+        },
+        "model_or_performance_qualified": false
+      }
+    },
+    {
+      "mode": "native",
+      "layer": 0,
+      "replay": {
+        "mode": "native",
+        "words": {
+          "status": "real_gdn_z_projection_shared_words_replayed",
+          "cases": [
+            {
+              "profile": "four-m32",
+              "repeat": 0,
+              "words": 786432,
+              "complete_expected_output_exact": true
+            },
+            {
+              "profile": "four-m32",
+              "repeat": 1,
+              "words": 786432,
+              "complete_expected_output_exact": true
+            },
+            {
+              "profile": "m128",
+              "repeat": 0,
+              "words": 786432,
+              "complete_expected_output_exact": true
+            },
+            {
+              "profile": "m128",
+              "repeat": 1,
+              "words": 786432,
+              "complete_expected_output_exact": true
+            }
+          ],
+          "complete_bf16_output_words_replayed": 3145728,
+          "independent_input_cast_and_quantization_exact": true,
+          "real128_rows_not_repeated16": true,
+          "full_model_cause_established": false,
+          "model_or_quality_or_performance_qualified": false
+        },
+        "typed_native_m128_matches_four_m32": true,
+        "model_or_performance_qualified": false
+      },
+      "algorithms": {
+        "mode": "native",
+        "native_context": {
+          "algorithm": 67,
+          "device": 0,
+          "required_workspace_bytes": 0,
+          "supplied_workspace_bytes": 4194304,
+          "opaque": "430000000d0000001100000001000000000000000100000012000000000000000100000060fd01001c0000001c0000000e000e00440000000000000000000000",
+          "invalid_argument_rejections": 15,
+          "invalid_arg_matmul_calls": 0
+        },
+        "actual_helper_calls": {
+          "mode": "control",
+          "actual_matmul_calls": 10,
+          "calls": [
+            {
+              "m": 32,
+              "original_algorithm_id": 67,
+              "original_opaque": "430000000d0000001100000001000000000000000100000012000000000000000100000060fd01001c0000001c0000000e000e00440000000000000000000000",
+              "actual_algorithm_id": 67,
+              "actual_opaque": "430000000d0000001100000001000000000000000100000012000000000000000100000060fd01001c0000001c0000000e000e00440000000000000000000000",
+              "algorithm_checked_on_actual_m128": false,
+              "required_workspace_bytes": null,
+              "supplied_workspace_bytes": 4194304
+            },
+            {
+              "m": 32,
+              "original_algorithm_id": 67,
+              "original_opaque": "430000000d0000001100000001000000000000000100000012000000000000000100000060fd01001c0000001c0000000e000e00440000000000000000000000",
+              "actual_algorithm_id": 67,
+              "actual_opaque": "430000000d0000001100000001000000000000000100000012000000000000000100000060fd01001c0000001c0000000e000e00440000000000000000000000",
+              "algorithm_checked_on_actual_m128": false,
+              "required_workspace_bytes": null,
+              "supplied_workspace_bytes": 4194304
+            },
+            {
+              "m": 32,
+              "original_algorithm_id": 67,
+              "original_opaque": "430000000d0000001100000001000000000000000100000012000000000000000100000060fd01001c0000001c0000000e000e00440000000000000000000000",
+              "actual_algorithm_id": 67,
+              "actual_opaque": "430000000d0000001100000001000000000000000100000012000000000000000100000060fd01001c0000001c0000000e000e00440000000000000000000000",
+              "algorithm_checked_on_actual_m128": false,
+              "required_workspace_bytes": null,
+              "supplied_workspace_bytes": 4194304
+            },
+            {
+              "m": 32,
+              "original_algorithm_id": 67,
+              "original_opaque": "430000000d0000001100000001000000000000000100000012000000000000000100000060fd01001c0000001c0000000e000e00440000000000000000000000",
+              "actual_algorithm_id": 67,
+              "actual_opaque": "430000000d0000001100000001000000000000000100000012000000000000000100000060fd01001c0000001c0000000e000e00440000000000000000000000",
+              "algorithm_checked_on_actual_m128": false,
+              "required_workspace_bytes": null,
+              "supplied_workspace_bytes": 4194304
+            },
+            {
+              "m": 32,
+              "original_algorithm_id": 67,
+              "original_opaque": "430000000d0000001100000001000000000000000100000012000000000000000100000060fd01001c0000001c0000000e000e00440000000000000000000000",
+              "actual_algorithm_id": 67,
+              "actual_opaque": "430000000d0000001100000001000000000000000100000012000000000000000100000060fd01001c0000001c0000000e000e00440000000000000000000000",
+              "algorithm_checked_on_actual_m128": false,
+              "required_workspace_bytes": null,
+              "supplied_workspace_bytes": 4194304
+            },
+            {
+              "m": 32,
+              "original_algorithm_id": 67,
+              "original_opaque": "430000000d0000001100000001000000000000000100000012000000000000000100000060fd01001c0000001c0000000e000e00440000000000000000000000",
+              "actual_algorithm_id": 67,
+              "actual_opaque": "430000000d0000001100000001000000000000000100000012000000000000000100000060fd01001c0000001c0000000e000e00440000000000000000000000",
+              "algorithm_checked_on_actual_m128": false,
+              "required_workspace_bytes": null,
+              "supplied_workspace_bytes": 4194304
+            },
+            {
+              "m": 32,
+              "original_algorithm_id": 67,
+              "original_opaque": "430000000d0000001100000001000000000000000100000012000000000000000100000060fd01001c0000001c0000000e000e00440000000000000000000000",
+              "actual_algorithm_id": 67,
+              "actual_opaque": "430000000d0000001100000001000000000000000100000012000000000000000100000060fd01001c0000001c0000000e000e00440000000000000000000000",
+              "algorithm_checked_on_actual_m128": false,
+              "required_workspace_bytes": null,
+              "supplied_workspace_bytes": 4194304
+            },
+            {
+              "m": 32,
+              "original_algorithm_id": 67,
+              "original_opaque": "430000000d0000001100000001000000000000000100000012000000000000000100000060fd01001c0000001c0000000e000e00440000000000000000000000",
+              "actual_algorithm_id": 67,
+              "actual_opaque": "430000000d0000001100000001000000000000000100000012000000000000000100000060fd01001c0000001c0000000e000e00440000000000000000000000",
+              "algorithm_checked_on_actual_m128": false,
+              "required_workspace_bytes": null,
+              "supplied_workspace_bytes": 4194304
+            },
+            {
+              "m": 128,
+              "original_algorithm_id": 67,
+              "original_opaque": "430000000d0000001100000001000000000000000100000012000000000000000100000060fd01001c0000001c0000000e000e00440000000000000000000000",
+              "actual_algorithm_id": 67,
+              "actual_opaque": "430000000d0000001100000001000000000000000100000012000000000000000100000060fd01001c0000001c0000000e000e00440000000000000000000000",
+              "algorithm_checked_on_actual_m128": false,
+              "required_workspace_bytes": null,
+              "supplied_workspace_bytes": 4194304
+            },
+            {
+              "m": 128,
+              "original_algorithm_id": 67,
+              "original_opaque": "430000000d0000001100000001000000000000000100000012000000000000000100000060fd01001c0000001c0000000e000e00440000000000000000000000",
+              "actual_algorithm_id": 67,
+              "actual_opaque": "430000000d0000001100000001000000000000000100000012000000000000000100000060fd01001c0000001c0000000e000e00440000000000000000000000",
+              "algorithm_checked_on_actual_m128": false,
+              "required_workspace_bytes": null,
+              "supplied_workspace_bytes": 4194304
+            }
+          ],
+          "complete_output_reproduced": true,
+          "loaded_cublasLt": "D:/CantorAI/5090-study-20261023/tools/cuda13/nvidia/cu13/bin/x86_64/cublasLt64_13.dll",
+          "model_or_performance_qualified": false
+        },
+        "model_or_performance_qualified": false
+      }
+    },
+    {
+      "mode": "native",
+      "layer": 1,
+      "replay": {
+        "mode": "native",
+        "words": {
+          "status": "real_gdn_z_projection_shared_words_replayed",
+          "cases": [
+            {
+              "profile": "four-m32",
+              "repeat": 0,
+              "words": 786432,
+              "complete_expected_output_exact": true
+            },
+            {
+              "profile": "four-m32",
+              "repeat": 1,
+              "words": 786432,
+              "complete_expected_output_exact": true
+            },
+            {
+              "profile": "m128",
+              "repeat": 0,
+              "words": 786432,
+              "complete_expected_output_exact": true
+            },
+            {
+              "profile": "m128",
+              "repeat": 1,
+              "words": 786432,
+              "complete_expected_output_exact": true
+            }
+          ],
+          "complete_bf16_output_words_replayed": 3145728,
+          "independent_input_cast_and_quantization_exact": true,
+          "real128_rows_not_repeated16": true,
+          "full_model_cause_established": false,
+          "model_or_quality_or_performance_qualified": false
+        },
+        "typed_native_m128_matches_four_m32": true,
+        "model_or_performance_qualified": false
+      },
+      "algorithms": {
+        "mode": "native",
+        "native_context": {
+          "algorithm": 67,
+          "device": 0,
+          "required_workspace_bytes": 0,
+          "supplied_workspace_bytes": 4194304,
+          "opaque": "430000000d0000001100000001000000000000000100000012000000000000000100000060fd01001c0000001c0000000e000e00440000000000000000000000",
+          "invalid_argument_rejections": 15,
+          "invalid_arg_matmul_calls": 0
+        },
+        "actual_helper_calls": {
+          "mode": "control",
+          "actual_matmul_calls": 10,
+          "calls": [
+            {
+              "m": 32,
+              "original_algorithm_id": 67,
+              "original_opaque": "430000000d0000001100000001000000000000000100000012000000000000000100000060fd01001c0000001c0000000e000e00440000000000000000000000",
+              "actual_algorithm_id": 67,
+              "actual_opaque": "430000000d0000001100000001000000000000000100000012000000000000000100000060fd01001c0000001c0000000e000e00440000000000000000000000",
+              "algorithm_checked_on_actual_m128": false,
+              "required_workspace_bytes": null,
+              "supplied_workspace_bytes": 4194304
+            },
+            {
+              "m": 32,
+              "original_algorithm_id": 67,
+              "original_opaque": "430000000d0000001100000001000000000000000100000012000000000000000100000060fd01001c0000001c0000000e000e00440000000000000000000000",
+              "actual_algorithm_id": 67,
+              "actual_opaque": "430000000d0000001100000001000000000000000100000012000000000000000100000060fd01001c0000001c0000000e000e00440000000000000000000000",
+              "algorithm_checked_on_actual_m128": false,
+              "required_workspace_bytes": null,
+              "supplied_workspace_bytes": 4194304
+            },
+            {
+              "m": 32,
+              "original_algorithm_id": 67,
+              "original_opaque": "430000000d0000001100000001000000000000000100000012000000000000000100000060fd01001c0000001c0000000e000e00440000000000000000000000",
+              "actual_algorithm_id": 67,
+              "actual_opaque": "430000000d0000001100000001000000000000000100000012000000000000000100000060fd01001c0000001c0000000e000e00440000000000000000000000",
+              "algorithm_checked_on_actual_m128": false,
+              "required_workspace_bytes": null,
+              "supplied_workspace_bytes": 4194304
+            },
+            {
+              "m": 32,
+              "original_algorithm_id": 67,
+              "original_opaque": "430000000d0000001100000001000000000000000100000012000000000000000100000060fd01001c0000001c0000000e000e00440000000000000000000000",
+              "actual_algorithm_id": 67,
+              "actual_opaque": "430000000d0000001100000001000000000000000100000012000000000000000100000060fd01001c0000001c0000000e000e00440000000000000000000000",
+              "algorithm_checked_on_actual_m128": false,
+              "required_workspace_bytes": null,
+              "supplied_workspace_bytes": 4194304
+            },
+            {
+              "m": 32,
+              "original_algorithm_id": 67,
+              "original_opaque": "430000000d0000001100000001000000000000000100000012000000000000000100000060fd01001c0000001c0000000e000e00440000000000000000000000",
+              "actual_algorithm_id": 67,
+              "actual_opaque": "430000000d0000001100000001000000000000000100000012000000000000000100000060fd01001c0000001c0000000e000e00440000000000000000000000",
+              "algorithm_checked_on_actual_m128": false,
+              "required_workspace_bytes": null,
+              "supplied_workspace_bytes": 4194304
+            },
+            {
+              "m": 32,
+              "original_algorithm_id": 67,
+              "original_opaque": "430000000d0000001100000001000000000000000100000012000000000000000100000060fd01001c0000001c0000000e000e00440000000000000000000000",
+              "actual_algorithm_id": 67,
+              "actual_opaque": "430000000d0000001100000001000000000000000100000012000000000000000100000060fd01001c0000001c0000000e000e00440000000000000000000000",
+              "algorithm_checked_on_actual_m128": false,
+              "required_workspace_bytes": null,
+              "supplied_workspace_bytes": 4194304
+            },
+            {
+              "m": 32,
+              "original_algorithm_id": 67,
+              "original_opaque": "430000000d0000001100000001000000000000000100000012000000000000000100000060fd01001c0000001c0000000e000e00440000000000000000000000",
+              "actual_algorithm_id": 67,
+              "actual_opaque": "430000000d0000001100000001000000000000000100000012000000000000000100000060fd01001c0000001c0000000e000e00440000000000000000000000",
+              "algorithm_checked_on_actual_m128": false,
+              "required_workspace_bytes": null,
+              "supplied_workspace_bytes": 4194304
+            },
+            {
+              "m": 32,
+              "original_algorithm_id": 67,
+              "original_opaque": "430000000d0000001100000001000000000000000100000012000000000000000100000060fd01001c0000001c0000000e000e00440000000000000000000000",
+              "actual_algorithm_id": 67,
+              "actual_opaque": "430000000d0000001100000001000000000000000100000012000000000000000100000060fd01001c0000001c0000000e000e00440000000000000000000000",
+              "algorithm_checked_on_actual_m128": false,
+              "required_workspace_bytes": null,
+              "supplied_workspace_bytes": 4194304
+            },
+            {
+              "m": 128,
+              "original_algorithm_id": 67,
+              "original_opaque": "430000000d0000001100000001000000000000000100000012000000000000000100000060fd01001c0000001c0000000e000e00440000000000000000000000",
+              "actual_algorithm_id": 67,
+              "actual_opaque": "430000000d0000001100000001000000000000000100000012000000000000000100000060fd01001c0000001c0000000e000e00440000000000000000000000",
+              "algorithm_checked_on_actual_m128": false,
+              "required_workspace_bytes": null,
+              "supplied_workspace_bytes": 4194304
+            },
+            {
+              "m": 128,
+              "original_algorithm_id": 67,
+              "original_opaque": "430000000d0000001100000001000000000000000100000012000000000000000100000060fd01001c0000001c0000000e000e00440000000000000000000000",
+              "actual_algorithm_id": 67,
+              "actual_opaque": "430000000d0000001100000001000000000000000100000012000000000000000100000060fd01001c0000001c0000000e000e00440000000000000000000000",
+              "algorithm_checked_on_actual_m128": false,
+              "required_workspace_bytes": null,
+              "supplied_workspace_bytes": 4194304
+            }
+          ],
+          "complete_output_reproduced": true,
+          "loaded_cublasLt": "D:/CantorAI/5090-study-20261023/tools/cuda13/nvidia/cu13/bin/x86_64/cublasLt64_13.dll",
+          "model_or_performance_qualified": false
+        },
+        "model_or_performance_qualified": false
+      }
+    }
+  ],
+  "wire_contract": {
+    "status": "fp8_z128_plugin_cpu_contract_passed",
+    "wire_bytes": 20,
+    "wire_policy": 1513173560,
+    "bad_wires": 34,
+    "bad_constructors": 18,
+    "bad_descriptors": 23,
+    "bad_formats": 11,
+    "policy_rejections": 8,
+    "cross_wire_rejections": 5,
+    "workspace_bytes": 4849664,
+    "unexpected_gpu_calls": 0,
+    "runtime_version": 101601,
+    "header_version": 101601,
+    "loaded_tensorrt_dll": "D:/CantorAI/5090-study-20261023/tools/TensorRT/bin/nvinfer_10.dll",
+    "enqueue_tested": false,
+    "model_qualified": false,
+    "performance_admitted": false
+  },
+  "source_runtime_sdk_fixture_unchanged": true,
+  "candidate_copies": {
+    "native_fp8_z128_candidate/modelopt_fp8_z128_canonical.h": {
+      "production_source": "src/backends/tensorrt/modelopt_fp8_z128_canonical.h",
+      "sha256": "d792c27b8997fddabc1605865bc0883311451d7b38e0b7c66aad6b74a292e830"
+    },
+    "native_fp8_z128_candidate/modelopt_fp8_z128_canonical.cpp": {
+      "production_source": "src/backends/tensorrt/modelopt_fp8_z128_canonical.cpp",
+      "sha256": "6207d7b31a5335762e3ae73cc18bc0205dace5dc605851a536e6c6c2d64472da"
+    },
+    "native_fp8_z128_candidate/modelopt_fp8_z128_plugin.h": {
+      "production_source": "src/backends/tensorrt/modelopt_fp8_z128_plugin.h",
+      "sha256": "95221073c966f5348d758fb15c0e95cf19842b86f99d502a9d6e3472190325e0"
+    },
+    "native_fp8_z128_candidate/modelopt_fp8_z128_plugin.cpp": {
+      "production_source": "src/backends/tensorrt/modelopt_fp8_z128_plugin.cpp",
+      "sha256": "4707bdf990b5f87f23f26a309804f56f89c2c262b20c3c5ede37533ac138d166"
+    },
+    "native_fp8_z128_candidate/modelopt_fp8_z128_profile.h": {
+      "production_source": "src/backends/tensorrt/modelopt_fp8_z128_profile.h",
+      "sha256": "42e3d9afb3e3013c8c0b23735bf2e0e2cf0603f87a39dd4a3979f9808531d464"
+    },
+    "native_fp8_z128_candidate/modelopt_fp8_m128_canonical.h": {
+      "production_source": "src/backends/tensorrt/modelopt_fp8_m128_canonical.h",
+      "sha256": "60914d824fab138078686309a5d24bf139f578c9f33d3eb7a125b0cdc0ae7a04"
+    },
+    "native_fp8_z128_candidate/modelopt_fp8_m128_canonical.cpp": {
+      "production_source": "src/backends/tensorrt/modelopt_fp8_m128_canonical.cpp",
+      "sha256": "8ca91b6b478fe0dd4ec6463f5f7fa52836350fd927532786d2cf64ee7cda10bc"
+    },
+    "native_fp8_z128_candidate/modelopt_fp8_m128_plugin.h": {
+      "production_source": "src/backends/tensorrt/modelopt_fp8_m128_plugin.h",
+      "sha256": "009580e736dc3f0688d130f4ed5c06de6025ad7a4166c94939511ffccf6a94c0"
+    },
+    "native_fp8_z128_candidate/modelopt_fp8_m128_plugin.cpp": {
+      "production_source": "src/backends/tensorrt/modelopt_fp8_m128_plugin.cpp",
+      "sha256": "98b619674f28bc89ad2f902d4d6362ebe46ceb55976edc300989c09745daf462"
+    },
+    "native_fp8_z128_candidate/modelopt_fp8_m128_profile.h": {
+      "production_source": "src/backends/tensorrt/modelopt_fp8_m128_profile.h",
+      "sha256": "99c50216447d28b950286fb83de69412e6e45130db94f938ee91caea230d1e60"
+    }
+  },
+  "application_library_loaded": false,
+  "gpu_model_executed": false,
+  "full_model_cause_established": false,
+  "model_or_quality_or_performance_qualified": false,
+  "two_times_target_achieved": false,
+  "report_error": null,
+  "replay_verifier_sha256": "e9fb9f4417cd973f6f46742eb0093098f50b732141d9fdbbcc202166f12e8395",
+  "scope": "Exclusive untimed actual typed Z128 helper in separate observedTU plus distinct actualplugin CPUwire contract withunusedGPUstubs. Exactnew fiveproduction-source copies andold fivecomparisoncopies only; no production source/DLL/build/SDK mutation. CanonicalM32 opaque67pinned/actual128AlgoCheck/4MiBnative allocation mustexactlymatchreal fourM32outputs atbothlayers/tworepeats, bothdefaultprofilesreproducedfirst. CompleteF32/BF16/FP8 byte/word replay,15realinvalidargs perlayer withoutmatmul. No actualapplicationDLL/model/quality/HTTP/servingmemory/timing/2xadmission."
+}
