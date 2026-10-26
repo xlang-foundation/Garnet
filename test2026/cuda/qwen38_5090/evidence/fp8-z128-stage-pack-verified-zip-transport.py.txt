@@ -1,0 +1,28 @@
+"""Lossless deduplication of raw ZIP member payloads; reconstruct original exact bytes."""
+from pathlib import Path
+import argparse,hashlib,json,struct,zipfile
+sha=lambda raw:hashlib.sha256(raw).hexdigest()
+
+def file_sha(path):
+    result=hashlib.sha256()
+    with path.open('rb') as stream:
+        for block in iter(lambda:stream.read(8<<20),b''):result.update(block)
+    return result.hexdigest()
+
+def main():
+    parser=argparse.ArgumentParser();parser.add_argument('--archive',type=Path,required=True);parser.add_argument('--proof',type=Path,required=True);parser.add_argument('--output',type=Path,required=True);args=parser.parse_args();root=Path('D:/CantorAI/5090-study-20261023/results').resolve();source=args.archive.resolve();target=args.output.resolve()
+    assert source.is_relative_to(root) and target.is_relative_to(root) and not target.exists();q=json.loads(args.proof.read_bytes());original_sha=file_sha(source);assert original_sha==q['archive_sha256'];before=source.stat();segments=[];objects={};cursor=0
+    with source.open('rb') as stream,zipfile.ZipFile(source) as original,zipfile.ZipFile(target,'x',zipfile.ZIP_STORED) as packed:
+        def add(start,length):
+            stream.seek(start);raw=stream.read(length);assert len(raw)==length;h=sha(raw);segments.append({'sha256':h,'bytes':length})
+            if h not in objects:objects[h]=length;packed.writestr('objects/'+h,raw)
+            else:assert objects[h]==length
+        for item in sorted(original.infolist(),key=lambda row:row.header_offset):
+            assert cursor<=item.header_offset;stream.seek(item.header_offset);header=stream.read(30);assert len(header)==30 and header[:4]==b'PK\x03\x04';name,extra=struct.unpack_from('<HH',header,26);data=item.header_offset+30+name+extra
+            add(cursor,data-cursor);add(data,item.compress_size);cursor=data+item.compress_size
+        add(cursor,before.st_size-cursor)
+        record={'status':'lossless_original_zip_payload_transport','original_name':source.name,'original_sha256':original_sha,'original_bytes':before.st_size,'original_proof_sha256':sha(args.proof.read_bytes()),'segments':segments,'objects':objects,'source_tool_sha256':sha(Path(__file__).read_bytes()),'scope':'Transport only. Raw local headers, compressed payloads, descriptors and entire central directory are preserved; duplicate byte-identical payloads stored once. Reconstruct and require original full checksum before original checker. No scientific data or evidence changes.'};packed.writestr('transport.json',json.dumps(record,indent=2))
+    after=source.stat();assert (before.st_size,before.st_mtime_ns)==(after.st_size,after.st_mtime_ns) and file_sha(source)==original_sha
+    print(json.dumps({'status':record['status'],'original_bytes':before.st_size,'transport_bytes':target.stat().st_size,'transport_sha256':file_sha(target),'unique_objects':len(objects),'segments':len(segments),'original_sha256':original_sha}))
+
+if __name__=='__main__':main()

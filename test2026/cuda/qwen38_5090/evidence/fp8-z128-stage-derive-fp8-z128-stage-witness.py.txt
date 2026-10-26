@@ -1,0 +1,36 @@
+"""Preserve closed bounded collector/owner, adding Z policy and exact counter gates."""
+from pathlib import Path
+import hashlib,json
+repo=Path('D:/CantorAI/work/qwen38-5090');m=repo/'test2026/cuda/qwen38_5090';sha=lambda raw:hashlib.sha256(raw).hexdigest();records=[]
+
+def derive(source,target,changes):
+    raw=(m/source).read_bytes();text=raw.decode();steps=[]
+    for old,new,count in changes:
+        assert text.count(old)==count,(source,old,text.count(old));text=text.replace(old,new);steps.append({'old':old,'new':new,'count':count})
+    path=m/target;assert not path.exists();path.write_bytes(text.encode());records.append({'source':source,'source_sha256':sha(raw),'target':target,'target_sha256':sha(text.encode()),'replacements':steps})
+
+policy_only='''        if policy_only:
+            policy=os.environ.get('GARNET_FP8_GDN_Z128_CANONICAL');rejected=False;error=None;stats=None;policy_graph=None
+            try:
+                policy_graph,_=build(0,128,False);stats=json.loads(policy_graph.stats_json())
+            except Exception as exc:rejected=True;error=repr(exc)
+            finally:
+                if policy_graph is not None:policy_graph.close()
+            report.update(status='fp8_z128_policy_control_observed',policy_value=policy,rejected=rejected,error=error,graph=stats,graph_inference_executed=False)
+            from test2026.cuda.qwen38_5090.fp8_z128_stage_layout import check_policy_report
+            check_policy_report(report,policy);save();return 0
+        assert os.environ.get('GARNET_FP8_GDN_Z128_CANONICAL')=='1'
+'''
+derive('probe_gdn_chunk_stage_witness_bound.py','probe_fp8_z128_stage_witness.py',[
+ ("root,out=map(Path,sys.argv[1:]);m=", "root,out=map(Path,sys.argv[1:3]);policy_only=len(sys.argv)==4 and sys.argv[3]=='--z-policy-only';m=",1),
+ ('gdn-chunk-stage-witness-bound-preparation.json','fp8-z128-stage-witness-preparation.json',1),
+ ('from test2026.cuda.qwen38_5090.gdn_chunk_stage_layout import STAGES,layout,pieces,check_graph','from test2026.cuda.qwen38_5090.fp8_z128_stage_layout import STAGES,layout,pieces,check_graph',1),
+ ("        embedding=io.embedding(ids);",policy_only+"        embedding=io.embedding(ids);",1)])
+derive('test_gdn_chunk_stage_witness_bound.bat','test_fp8_z128_stage_witness.bat',[
+ ('set GARNET_FP8_GDN_M128_CANONICAL=1','set GARNET_FP8_GDN_M128_CANONICAL=1\nset GARNET_FP8_GDN_Z128_CANONICAL=1',1),
+ ('probe_gdn_chunk_stage_witness_bound.py','probe_fp8_z128_stage_witness.py',1)])
+derive('test_gdn_chunk_stage_witness_bound.bat','test_fp8_z128_policy_control.bat',[
+ ('probe_gdn_chunk_stage_witness_bound.py','probe_fp8_z128_stage_witness.py',1),
+ ('"%~1"\nexit /b','"%~1" --z-policy-only\nexit /b',1)])
+
+value=json.dumps({'status':'fp8_z128_stage_probe_methods_derived_unrun','files':records,'scope':'Exact same old real128 bounded collector/explicit readback/math/profile, addnew Zcounter wrapper. Separate policy-only frontend process mode never runsgraphinference; launcher preserves inheritednewZenvironment for10freshprocesscontrols.'},indent=2).encode();target=m/'evidence/fp8-z128-stage-probe-derivation.json';assert not target.exists();target.write_bytes(value);print(json.dumps({'derived_methods':len(records)}))
