@@ -1,0 +1,49 @@
+"""Add Z selection and optional initialization diagnostics; preserve the full model oracle."""
+from pathlib import Path
+import hashlib,json
+m=Path('D:/CantorAI/work/qwen38-5090/test2026/cuda/qwen38_5090');sha=lambda raw:hashlib.sha256(raw).hexdigest();rows=[]
+
+def derive(old,new,changes):
+    before=(m/old).read_bytes();raw=before
+    for a,b in changes:
+        assert raw.count(a.encode())==1,(old,a);raw=raw.replace(a.encode(),b.encode())
+    p=m/new;assert not p.exists();p.write_bytes(raw);rows.append({'base':old,'target':new,'base_sha256':sha(before),'target_sha256':sha(raw),'changes':[{'before':a,'after':b} for a,b in changes]})
+
+hook="""    except BaseException as error:
+        report.update(status='failed',error=repr(error));save()
+        if 'buildSerializedNetwork failed' in report['error']:
+            try:
+                from test2026.cuda.qwen38_5090.fp8_z128_native_audit_bridge import observe
+                target=root/'results/fp8-z128-native-package-audit-attempt1'/('full4k-model-attempt1-'+('off' if selection_off else 'native')+'-context.json')
+                report['initialization_audit_decoder_available']=decoder is not None
+                report['initialization_context_audit']=observe(root,target)
+                raw=target.read_bytes();copy=out/'initialization-context-audit.json';assert not copy.exists();copy.write_bytes(raw);save()
+            except BaseException as audit_error:report['initialization_audit_error']=repr(audit_error);save()
+        raise"""
+derive('probe_bf16_prefill128_fp8_model.py','probe_fp8_z128_full4k_model.py',[
+ ('evidence/bf16-prefill128-fp8-model-preparation.json','evidence/fp8-z128-full4k-model-preparation.json'),
+ ("    assert os.environ.get('GARNET_FP8_GDN_M128_CANONICAL')==('0' if selection_off else '1')","    assert os.environ.get('GARNET_FP8_GDN_M128_CANONICAL')==('0' if selection_off else '1')\n    assert os.environ.get('GARNET_FP8_GDN_Z128_CANONICAL')==('0' if selection_off else '1')"),
+ ('from test2026.cuda.qwen38_5090.prefill128_fp8_model import replay_prefill128_fp8_model as replay_prefill128_model,validate_targets,validate_selection','from test2026.cuda.qwen38_5090.fp8_z128_full4k_model import replay_full4k_model as replay_prefill128_model,validate_targets,validate_selection'),
+ ("report={'fp8_m128_policy':os.environ['GARNET_FP8_GDN_M128_CANONICAL']","report={'fp8_z128_policy':os.environ['GARNET_FP8_GDN_Z128_CANONICAL'],'fp8_m128_policy':os.environ['GARNET_FP8_GDN_M128_CANONICAL']"),
+ ("    except BaseException as error:report.update(status='failed',error=repr(error));save();raise",hook)])
+derive('test_bf16_prefill128_fp8_model.bat','test_fp8_z128_full4k_model.bat',[
+ ('set GARNET_FP8_GDN_M128_CANONICAL=%~3','set GARNET_FP8_GDN_M128_CANONICAL=%~3\nset GARNET_FP8_GDN_Z128_CANONICAL=%~3'),
+ ('probe_bf16_prefill128_fp8_model.py','probe_fp8_z128_full4k_model.py')])
+derive('run_bf16_prefill128_fp8_model.py','run_fp8_z128_full4k_model.py',[
+ ("JOB='bf16-prefill128-fp8-model-admission-attempt1'","JOB='fp8-z128-full4k-model-admission-attempt1'"),
+ ('evidence/bf16-prefill128-fp8-model-preparation.json','evidence/fp8-z128-full4k-model-preparation.json'),
+ ('bf16_prefill128_fp8_full4k_model_prepared_gpu_unrun','fp8_z128_full4k_model_prepared_gpu_unrun'),
+ ("len(p['candidate_files'])==29","len(p['candidate_files'])==35"),
+ ('garnet-native-bf16-prefill128-fp8-m128-attempt1.dll','garnet-native-fp8-z128-attempt1.dll'),
+ ('len(z.namelist())==len(set(z.namelist()))==29','len(z.namelist())==len(set(z.namelist()))==35'),
+ ("    for name,h in p['runtime'].items():assert sha(ROOT/'build/bin'/name)==h","    for name,h in p['checkpoints'].items():assert sha(ROOT/name)==h\n    for name,h in p['runtime'].items():assert sha(ROOT/'build/bin'/name)==h"),
+ ('    idle();out.mkdir();os.chdir(ROOT/\'Garnet\');',"    for phase in ('off','native'):assert not (ROOT/'results/fp8-z128-native-package-audit-attempt1'/('full4k-model-attempt1-'+phase+'-context.json')).exists()\n    idle();out.mkdir();os.chdir(ROOT/'Garnet');"),
+ ('common=[prep,bundle,receipt]','common=[ROOT/name for name in p[\'audit_dependencies\']]+[ROOT/name for name in p[\'checkpoints\']]+[prep,bundle,receipt]'),
+ ('T128 full64layer source/routing/factory, oldB1/B4 guards, old/new MTP binding and strict retained4K replay controls before model','70CPU composed native28/Python7 source/routing/factory, oldB1/B4 guards, old/new MTP binding, both FP8 counters and unchanged strict retained4K oracle'),
+ ('test_bf16_prefill128_fp8_model.bat','test_fp8_z128_full4k_model.bat'),
+ ('from test2026.cuda.qwen38_5090.prefill128_fp8_model import validate_targets','from test2026.cuda.qwen38_5090.fp8_z128_full4k_model import validate_targets'),
+ ("off['fp8_m128_policy']=='0'","off['fp8_m128_policy']==off['fp8_z128_policy']=='0'"),
+ ("w['status']='bf16_prefill128_fp8_full4k_model_collected_needs_replay'","w['status']='fp8_z128_full4k_model_collected_needs_replay'"),
+ ("baseline_library_restored=sha(library)==p['runtime']['garnet.dll'])","baseline_library_restored=sha(library)==p['runtime']['garnet.dll'],checkpoint_after={name:sha(ROOT/name) for name in p['checkpoints']})")])
+d={'status':'exact_full_model_methods_plus_Z_policy_and_postfailure_observation','derivations':rows,'candidate_source_count':35,'existing_targets_restored':12,'new_targets_removed':23,'composed_native_test_modules':['test_fp8_z128_native_source','test_fp8_z128_native_integration'],'superseded_source_tests_only':'Three old single-stage M128 source-composition assertions replaced by latest five composed native-source/integration checks; all model/ID/state/vector/MTP oracle controls retained.','numerical_oracle_relaxed':False,'scope':'Same six3968+128 cases, old T4verification/T16draft and exact retained1a1d oracle. New Zcounter only, plus optional native observer after initialization exception; original observations saved before equality assertions. Observer writes a new unique sidecar under its permitted existing result root and copies identical bytes into this trial; never alters prior archive/workflow.'}
+target=m/'evidence/fp8-z128-full4k-model-derivation.json';assert not target.exists();target.write_bytes(json.dumps(d,indent=2).encode());print(json.dumps({'status':d['status'],'derivations':len(rows),'derivation_sha256':sha(target.read_bytes())}))
