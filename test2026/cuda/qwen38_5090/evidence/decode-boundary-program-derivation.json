@@ -1,0 +1,57 @@
+{
+  "source": "layer_boundary_program.py",
+  "target": "decode_boundary_program.py",
+  "source_sha256": "37b30d9d3ee020f084cd97bc1c5a11506fd706524372023012082eb3411b9b5e",
+  "target_sha256": "0db42ffae160f76f05c2db763694a3056c2b5288a4057afb3af4eb23022a9f9e",
+  "changes": [
+    {
+      "old": "from xModel.qwen35.vl_0_8b.cuda_packed_program import CUDAPackedDecoderProgram,T,Qwen35CUDAChunk,flat_concat,concat,packed_view",
+      "new": "from xModel.qwen35.vl_0_8b.cuda_packed_program import CUDAPackedDecoderProgram,T,Qwen35CUDAChunk,flat_concat,concat,packed_view\nfrom test2026.cuda.qwen38_5090.decode_boundary_layout import LAYERS,validate_profile,offsets",
+      "count": 1
+    },
+    {
+      "old": "LayerBoundaryProgram",
+      "new": "DecodeBoundaryProgram",
+      "count": 2
+    },
+    {
+      "old": "boundary_layers=(0,1,2,3,4)",
+      "new": "boundary_layers=LAYERS",
+      "count": 1
+    },
+    {
+      "old": "        if len(args)<6 or args[3]!=1 or args[4]!=4096 or args[5] not in (32,128):raise ValueError('Boundary study requires explicit B1/cap4096/T32 or T128')",
+      "new": "        if len(args)<6:raise ValueError('Explicit decode boundary profile required')\n        validate_profile(args[3],args[4],args[5])",
+      "count": 1
+    },
+    {
+      "old": "self.io.zeros([1,self.ordinary_output_width])",
+      "new": "self.io.zeros([self.batch,self.ordinary_output_width])",
+      "count": 1
+    },
+    {
+      "old": "self.io.zeros([1,self.hidden_width])",
+      "new": "self.io.zeros([self.batch,self.hidden_width])",
+      "count": 1
+    },
+    {
+      "old": "            self.output_width=self.ordinary_output_width+len(self.boundary_layers)*self.hidden_width",
+      "new": "            self.boundary_offsets=offsets(self.ordinary_output_width,self.hidden_width)\n            self.output_width=self.ordinary_output_width+len(self.boundary_layers)*self.hidden_width",
+      "count": 1
+    },
+    {
+      "old": "construct_with_boundary_program",
+      "new": "construct_with_decode_boundary_program",
+      "count": 1
+    },
+    {
+      "old": "values[5] in (32,128)",
+      "new": "values[5]==4",
+      "count": 1
+    }
+  ],
+  "original_forward_sha256": "fe57e4d731ce6caf14edeeedf12613c32b63142d85a033516208fddd8ccb8997",
+  "math_forward_body_byte_identical": true,
+  "original_B1_T32_T128_guard_unchanged": true,
+  "scope": "SeparateB1/B4T4/cap4096 readonly observer; append8boundaries, exactoriginalmath/statecommitprefix andFP32barriers. Single-processbindingrestoredonfailure. Mustprove same-profile fullprimary state/rawvector/ID endpointparity before interpretingobservations. No native/CUDA or precisionguardchange, no model/performance qualification."
+}

@@ -1,0 +1,6 @@
+from pathlib import Path
+import ast,json
+W=Path(__file__).resolve().parent;p=json.loads((W/'decode-boundaries-package.json').read_bytes())
+raw=(W/'install-b4-b1-short-m16.py').read_text();raw=raw.replace('b4-b1-short-m16','decode-boundaries').replace('B4_vs_B1_short_M16','readonly_decode_boundaries').replace('4dc03a01a8aec10f430563e62a71daeade3bdf414edba198a553e387517296d1',p['deployment_sha256']).replace('==10','==14+1');ast.parse(raw);target=W/'install-decode-boundaries.py';assert not target.exists();target.write_bytes(raw.encode())
+raw=(W/'postprocess-b4-b1-short-m16.py').read_text().replace('b4-b1-short-m16','decode-boundaries').replace('verify_b4_b1_short_m16_admission.py','verify_decode_boundaries.py').replace("M/'b4_b1_short_m16_gate.py',M/'b4_b1_exact_gate.py'","M/'decode_boundary_analysis.py',M/'decode_boundary_layout.py',M/'decode_boundary_program.py',M/'b4_b1_short_m16_gate.py',M/'b4_b1_exact_gate.py'").replace('B4_M16_short_postprocess_terminal','readonly_decode_boundaries_postprocess_terminal');ast.parse(raw);target=W/'postprocess-decode-boundaries.py';assert not target.exists();target.write_bytes(raw.encode())
+print(json.dumps(dict(status='readonly_decode_boundary_install_and_replay_ops_prepared')))
