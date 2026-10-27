@@ -1,0 +1,35 @@
+from pathlib import Path
+import hashlib,json
+R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';sha=lambda b:hashlib.sha256(b).hexdigest();rows=[]
+def derive(source,target,changes):
+    raw=(M/source).read_bytes();before=sha(raw);steps=[]
+    for old,new,count in changes:
+        assert raw.count(old.encode())==count,(source,old,raw.count(old.encode()),count);raw=raw.replace(old.encode(),new.encode());steps.append(dict(old=old,new=new,count=count))
+    t=M/target;assert not t.exists() or t.read_bytes()==raw;t.write_bytes(raw);rows.append(dict(source=source,target=target,source_sha256=before,target_sha256=sha(raw),changes=steps))
+owner=(M/'run_o128_full4k_model.py').read_text();start=owner.index("        needed=json.loads");end=owner.index('    except BaseException as e:',start)
+body='''        needed=json.loads((ROOT/'results/o128-full4k-model-admission-attempt1-verified.json').read_bytes());assert needed['exit_code']==0 and needed['status']=='actual_O128_six_full4k_original_states_vectors_tokens_MTP_reset_replayed' and needed['full_six_case_model_qualified'] is True
+        argv=[sys.executable,str(M/'monitor_native_probe.py'),'--study',str(ROOT),'--output',str(out/'resources'),'--',sys.executable,str(M/'run_o128_frontend_cases.py'),str(ROOT),str(out/'native'),str(cache)]
+        code=ledger.run(argv,out/'gpu-ledger','correctness','Actual fresh-process Garnet decoder-layer capture/lowering:17cases, six compiled route controls and11required native policy/name/geometry rejections; same60source/DLL, no decode or speed admission',common+[library]);idle()
+        if code:raise RuntimeError('Actual O128 frontend contract failed; preserve all native errors')
+        report=json.loads((out/'native/report.json').read_bytes())
+        from test2026.cuda.qwen38_5090.o128_frontend_contract import replay
+        result=replay(report);assert result==report['local_replay'];(out/'frontend-analysis.json').write_bytes(json.dumps(result,indent=2).encode());w['status']='O128_actual_frontend_contracts_collected_needs_independent_replay'
+'''
+derive('run_o128_full4k_model.py','run_o128_frontend.py',[("JOB='o128-full4k-model-admission-attempt1'","JOB='o128-frontend-attempt1'",1),('o128-full4k-model-preparation.json','o128-frontend-preparation.json',1),('o128_full4k_model_prepared_gpu_unrun','o128_frontend_prepared_gpu_unrun',1),('74current O128 six-case/reference/route/source/readonly/stage/array/corruption controls','77current O128 actual-frontend/route/source/reference/readonly/stage/array/corruption controls',1),(owner[start:end],body,1)])
+v=(M/'verify_o128_full4k_model.py').read_text();start=v.index('        arrays=dict(');end=v.index('        result=dict(',start)
+body='''        arrays=dict(status='O128_frontend_failure_preserved',report_status=None if r is None else r['status'],error=None if r is None else r.get('error'),captured_cases=0 if r is None else len(r['cases']))
+        if passed:
+            assert w['status']=='O128_actual_frontend_contracts_collected_needs_independent_replay'
+            needed=json.loads((args.proofs/'o128-full4k-model-admission-attempt1-verified.json').read_bytes());assert needed['exit_code']==0 and needed['status']=='actual_O128_six_full4k_original_states_vectors_tokens_MTP_reset_replayed' and needed['full_six_case_model_qualified'] is True
+            arrays=replay(r);assert arrays==r['local_replay']==doc(base+'frontend-analysis.json')
+            for row,spec in zip(r['cases'],CASES):
+                assert row==doc(base+'native/'+spec['key']+'/report.json')
+                events=[json.loads(line) for line in z.read(base+'native/'+spec['key']+'-ledger/commands.jsonl').splitlines()]
+                assert len(events)==2 and events[0]['event']=='started' and events[1]['event']=='finished' and events[1]['exit_code']==0
+                assert events[0]['source']['owned_source_sha256']==events[1]['source_after']['owned_source_sha256']==p['installed_files']
+                assert ('ACTUAL_O128_FRONTEND_CASE_PASS '+spec['key']).encode() in z.read(base+'native/'+spec['key']+'-ledger/commands.log')
+        else:assert w['status']=='failed' and w.get('error')
+'''
+derive('verify_o128_full4k_model.py','verify_o128_frontend.py',[("JOB='o128-full4k-model-admission-attempt1'","JOB='o128-frontend-attempt1'",1),('o128-full4k-model-preparation.json','o128-frontend-preparation.json',1),('from test2026.cuda.qwen38_5090.o128_full4k_model import replay_full4k_model','from test2026.cuda.qwen38_5090.o128_frontend_contract import replay,CASES',1),("b'Ran 74 tests'","b'Ran 77 tests'",1),(v[start:end],body,1),('actual_O128_six_full4k_original_states_vectors_tokens_MTP_reset_replayed\' if passed else \'actual_O128_six_full4k_model_failure_preserved','actual_O128_frontend_policy_geometry_names_and_route_controls_replayed\' if passed else \'actual_O128_frontend_failure_preserved',1),('actual_Garnet_frontend_negative_cases_pending=True,full_six_case_model_qualified=passed','actual_Garnet_frontend_negative_cases_pending=not passed,actual_frontend_contracts_qualified=passed,full_six_case_model_qualified=False',1)])
+p=dict(derivations=rows,same60_native_source_and_DLL=True,all_original_source_library_runtime_SDK_checkpoint_restoration_predicates_preserved=True,actual_native_rejection_not_CPU_fixture_required=True,full_six_case_pass_required_before_GPU=True,GPU_or_model_executed=False)
+t=M/'evidence/o128-frontend-owner-derivation.json';blob=json.dumps(p,indent=2).encode();assert not t.exists() or t.read_bytes()==blob;t.write_bytes(blob);print(json.dumps(dict(derived=len(rows),GPU_requested=False)))
