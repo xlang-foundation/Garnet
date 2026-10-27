@@ -1,0 +1,306 @@
+{
+  "status": "separate_O128_profile_wire_and_eighth_init_route_original_Q_and_legacy_templates_preserved",
+  "derivations": [
+    {
+      "source": "probe_q128_profile_cpu.cpp",
+      "target": "probe_o128_profile_cpu.cpp",
+      "source_sha256": "44f17f14eeaf767114d08538cb3f1b54e62cc016b13890802cab9ea4629e6d06",
+      "target_sha256": "d5307cd07f6ddbb462b802781841a36e50cfa95a27d3d7ae1cd3f437234d45b7",
+      "changes": [
+        {
+          "old": "modelopt_fp8_q128",
+          "new": "modelopt_fp8_o128",
+          "count": 1
+        },
+        {
+          "old": "ModelOptFP8Q128",
+          "new": "ModelOptFP8O128",
+          "count": 5
+        },
+        {
+          "old": "Q128",
+          "new": "O128",
+          "count": 2
+        },
+        {
+          "old": "12288,5120",
+          "new": "5120,6144",
+          "count": 5
+        },
+        {
+          "old": "std::string(projection)==\"q\"",
+          "new": "std::string(projection)==\"o\"",
+          "count": 1
+        },
+        {
+          "old": "q_proj.weight",
+          "new": "o_proj.weight",
+          "count": 5
+        }
+      ]
+    },
+    {
+      "source": "build_q128_profile_cpu.bat",
+      "target": "build_o128_profile_cpu.bat",
+      "source_sha256": "7b3c501c65e98c92ca0337a8bb6d844fd203e193b5618e625181fb072a9a4dc5",
+      "target_sha256": "a6f789808e5d802d8a815376b657c2d3f407406f0c8e2c82cedbe9a254e4dccf",
+      "changes": [
+        {
+          "old": "q128",
+          "new": "o128",
+          "count": 2
+        }
+      ]
+    },
+    {
+      "source": "probe_q128_plugin_wire.cpp",
+      "target": "probe_o128_plugin_wire.cpp",
+      "source_sha256": "98ebfdfab985ea8c1131f1170387725a031f44eef9a7b0a6a3df8311c8f1f8e6",
+      "target_sha256": "3522045716e7605cda94bfb277a3c78e49cfdc5d7976edf9bed1a09224101f00",
+      "changes": [
+        {
+          "old": "modelopt_fp8_q128_plugin.h",
+          "new": "modelopt_fp8_o128_plugin.h",
+          "count": 1
+        },
+        {
+          "old": "modelopt_fp8_q128_profile.h",
+          "new": "modelopt_fp8_o128_profile.h",
+          "count": 1
+        },
+        {
+          "old": "ModelOptFP8Q128",
+          "new": "ModelOptFP8O128",
+          "count": 13
+        },
+        {
+          "old": "fp8_q128",
+          "new": "fp8_o128",
+          "count": 1
+        },
+        {
+          "old": "0x51313238",
+          "new": "0x4f313238",
+          "count": 1
+        },
+        {
+          "old": "q_proj.weight",
+          "new": "o_proj.weight",
+          "count": 1
+        },
+        {
+          "old": "plugin(12288,5120",
+          "new": "plugin(5120,6144",
+          "count": 1
+        },
+        {
+          "old": "wire[0]==12288&&wire[1]==5120",
+          "new": "wire[0]==5120&&wire[1]==6144",
+          "count": 1
+        },
+        {
+          "old": "{12287,5120},{12288,5119},{5120,12288},{0,5120},{12288,0},{-1,5120}",
+          "new": "{5119,6144},{5120,6143},{6144,5120},{0,6144},{5120,0},{-1,6144}",
+          "count": 1
+        },
+        {
+          "old": "invalid(12288,5120",
+          "new": "invalid(5120,6144",
+          "count": 2
+        },
+        {
+          "old": "PluginTensorDesc inputs[2]={desc(128,5120,DataType::kBF16),desc(12288,5120,DataType::kINT8)};auto output=desc(128,12288,DataType::kBF16);",
+          "new": "PluginTensorDesc inputs[2]={desc(128,6144,DataType::kBF16),desc(5120,6144,DataType::kINT8)};auto output=desc(128,5120,DataType::kBF16);",
+          "count": 1
+        },
+        {
+          "old": "desc(12288,1280,DataType::kINT32)",
+          "new": "desc(5120,1536,DataType::kINT32)",
+          "count": 1
+        },
+        {
+          "old": "desc(12288,5120,DataType::kINT8)",
+          "new": "desc(5120,6144,DataType::kINT8)",
+          "count": 1
+        },
+        {
+          "old": "4849664",
+          "new": "9175040",
+          "count": 3
+        },
+        {
+          "old": "12288,5120,weight",
+          "new": "5120,6144,weight",
+          "count": 5
+        },
+        {
+          "old": "{12287,5120},{12288,5119}",
+          "new": "{5119,6144},{5120,6143}",
+          "count": 1
+        },
+        {
+          "old": "badWire==35",
+          "new": "badWire==36",
+          "count": 1
+        },
+        {
+          "old": "crossWire==9",
+          "new": "crossWire==11",
+          "count": 1
+        },
+        {
+          "old": "#include \"modelopt_fp8_o128_plugin.h\"",
+          "new": "#include \"modelopt_fp8_o128_plugin.h\"\n#include \"modelopt_fp8_q128_plugin.h\"",
+          "count": 1
+        },
+        {
+          "old": "        require(creator->createPlugin(",
+          "new": "        ModelOptFP8Q128Plugin previousQ(12288,5120,.5f,.25f);require(EnsureModelOptFP8Q128PluginRegistered(),\"Old Q registration failed\");\n        auto* previousQCreator=registry->getPluginCreator(\"GarnetModelOptFP8Q128Canonical\",\"1\",\"\");require(previousQCreator,\"Old Q creator missing\");\n        require(!previousQCreator->deserializePlugin(\"newO\",wire.data(),20),\"Old Q accepted O wire\");++crossWire;\n        std::array<uint32_t,5> previousQWire{};previousQ.serialize(previousQWire.data());require(previousQWire[4]==0x51313238u&&!creator->deserializePlugin(\"oldQ\",previousQWire.data(),20),\"O accepted old Q wire\");++crossWire;\n        auto* previousQRestored=previousQCreator->deserializePlugin(\"oldQ\",previousQWire.data(),20);require(previousQRestored,\"Old Q roundtrip changed\");previousQRestored->destroy();\n        auto qMarkerOnly=wire;qMarkerOnly[4]=0x51313238u;reject(qMarkerOnly.data(),20);\n        require(creator->createPlugin(",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "build_q128_plugin_wire_cpu.bat",
+      "target": "build_o128_plugin_wire_cpu.bat",
+      "source_sha256": "6897ce041d6397fea217eb4264f9a524b75333fcf03ad37d50c446a71eb98239",
+      "target_sha256": "13a0123132f0a7b03c59b722b4eafd0dba00f0106d95fadfc0c6d70864aa5a3a",
+      "changes": [
+        {
+          "old": "\"%CANDIDATE%\\modelopt_fp8_q128_plugin.cpp\"",
+          "new": "\"%CANDIDATE%\\modelopt_fp8_o128_plugin.cpp\" \"%CANDIDATE%\\modelopt_fp8_q128_plugin.cpp\"",
+          "count": 1
+        },
+        {
+          "old": "probe_q128_plugin_wire.cpp",
+          "new": "probe_o128_plugin_wire.cpp",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "probe_q128_plugin_init.cpp",
+      "target": "probe_o128_plugin_init.cpp",
+      "source_sha256": "337156863644ac6b0a04b424be9512ec3bd60e6f05476f2ad7b0faecde36c757",
+      "target_sha256": "ed75fc1a657d626c7e49c8d219db3e4604b8f581d0929be973247d33a3b84cd0",
+      "changes": [
+        {
+          "old": "#include \"modelopt_fp8_q128_plugin.h\"",
+          "new": "#include \"modelopt_fp8_q128_plugin.h\"\n#include \"modelopt_fp8_o128_plugin.h\"",
+          "count": 1
+        },
+        {
+          "old": "    if(route==6)",
+          "new": "    if(route==7)return OwnedPlugin(new ModelOptFP8O128Plugin(5120,6144,.5f,.25f));\n    if(route==6)",
+          "count": 1
+        },
+        {
+          "old": "route<7",
+          "new": "route<8",
+          "count": 1
+        },
+        {
+          "old": "calls==63&&factories==49&&successes==21&&failures==42&&clones==7",
+          "new": "calls==72&&factories==56&&successes==24&&failures==48&&clones==8",
+          "count": 1
+        },
+        {
+          "old": "actual_q128_plugin_initialize_cpu_controls_passed",
+          "new": "actual_o128_plugin_initialize_cpu_controls_passed",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "q128_plugin_init_contract.py",
+      "target": "o128_plugin_init_contract.py",
+      "source_sha256": "b444f06f8b6e4075c4cfef6831732c7e0386565045aeb89ac9e5d0117785cc8b",
+      "target_sha256": "6a745e2aded6d2d88ffee9d806fabf8cc329f51f4c132bc0753067c542660574",
+      "changes": [
+        {
+          "old": "'fp8_q128'}",
+          "new": "'fp8_q128','fp8_o128'}",
+          "count": 1
+        },
+        {
+          "old": "        elif row['route']=='fp8':",
+          "new": "        elif row['route']=='fp8_o128':assert (row['rows'],row['columns'],row['policy'])==(5120,6144,0x4f313238)\n        elif row['route']=='fp8':",
+          "count": 1
+        },
+        {
+          "old": "actual_q128_plugin_initialize_cpu_controls_passed",
+          "new": "actual_o128_plugin_initialize_cpu_controls_passed",
+          "count": 1
+        },
+        {
+          "old": "'actual_initialize_calls':63,'factory_calls':49,'successes':21,'failures':42,'cached_clone_initializations':7",
+          "new": "'actual_initialize_calls':72,'factory_calls':56,'successes':24,'failures':48,'cached_clone_initializations':8",
+          "count": 1
+        },
+        {
+          "old": "'initialize_calls':63,'factory_calls':49",
+          "new": "'initialize_calls':72,'factory_calls':56",
+          "count": 2
+        },
+        {
+          "old": "expected_calls=63",
+          "new": "expected_calls=72",
+          "count": 1
+        },
+        {
+          "old": "q['factory_calls']==49 and q['cached_context_initializations']==14 and q['exception_returns']==28 and len(q['failures'])==42",
+          "new": "q['factory_calls']==56 and q['cached_context_initializations']==16 and q['exception_returns']==32 and len(q['failures'])==48",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "run_q128_plugin_init_cpu.py",
+      "target": "run_o128_plugin_init_cpu.py",
+      "source_sha256": "41b73c41d4df14a67dd28fb565ead7306ed6095a1dce0a7a745f65daf6673f00",
+      "target_sha256": "d1ab02316dde9c9c346ddd38a6aceb83fab31ab54ec06654002245f04ad503ed",
+      "changes": [
+        {
+          "old": "q128_plugin_init_contract",
+          "new": "o128_plugin_init_contract",
+          "count": 1
+        },
+        {
+          "old": "actual_q128_plugin_initialize_CPU",
+          "new": "actual_o128_plugin_initialize_CPU",
+          "count": 1
+        },
+        {
+          "old": "630",
+          "new": "720",
+          "count": 2
+        },
+        {
+          "old": "490",
+          "new": "560",
+          "count": 2
+        }
+      ]
+    },
+    {
+      "source": "build_q128_plugin_init_cpu.bat",
+      "target": "build_o128_plugin_init_cpu.bat",
+      "source_sha256": "64829a75be08af6b95cc0414debc2f376eb8aacc4bd7cb5ef874ea7e29b1ee74",
+      "target_sha256": "a498c1158a8351d25bf49adad18f306422aa09c53c74a377d66c3d4740828e33",
+      "changes": [
+        {
+          "old": "\"%CANDIDATE%\\modelopt_fp8_q128_plugin.cpp\"",
+          "new": "\"%CANDIDATE%\\modelopt_fp8_q128_plugin.cpp\" \"%CANDIDATE%\\modelopt_fp8_o128_plugin.cpp\"",
+          "count": 1
+        },
+        {
+          "old": "probe_q128_plugin_init.cpp",
+          "new": "probe_o128_plugin_init.cpp",
+          "count": 1
+        }
+      ]
+    }
+  ],
+  "original_shared_M128_context_factory_stubs_unchanged": true,
+  "GPU_or_model_executed": false
+}

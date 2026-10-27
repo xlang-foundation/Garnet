@@ -1,0 +1,35 @@
+from pathlib import Path
+import hashlib,json,sys
+W=Path(__file__).resolve().parent;O=W.parent/'outputs';R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';sys.path.insert(0,str(R));from test2026.cuda.qwen38_5090.q128_canonical_source import sources
+sha=lambda b:hashlib.sha256(b).hexdigest();proof=(O/'q128-model-single-observation-verified.json').read_bytes();assert proof==(O/'q128-model-single-observation-remote-verified.json').read_bytes();q=json.loads(proof);assert q['original_full_model_prefill_gate_failed'] and q['stages']['qg']['byte_exact'] and q['stages']['core']['byte_exact'] and q['first_different_stage']['stage']=='attention';parent=sources()[1];assert len(parent)==57;new=dict(parent);C=M/'native_o128_canonical_candidate';C.mkdir(exist_ok=True);prefix='src/backends/tensorrt/';derivations=[];compositions={};newnames=[]
+def edit(raw,changes):
+    steps=[]
+    for old,replacement,count in changes:
+        if b'\r\n' in raw:old=old.replace('\n','\r\n');replacement=replacement.replace('\n','\r\n')
+        assert raw.count(old.encode())==count,(old,raw.count(old.encode()),count);raw=raw.replace(old.encode(),replacement.encode());steps.append(dict(old=old,new=replacement,count=count))
+    return raw,steps
+def template(source,target,changes):
+    before=parent[prefix+source];raw,steps=edit(before,changes);path=C/target;assert not path.exists() or path.read_bytes()==raw;path.write_bytes(raw);new[prefix+target]=raw;newnames.append(prefix+target);derivations.append(dict(source=prefix+source,target=prefix+target,source_sha256=sha(before),target_sha256=sha(raw),changes=steps))
+def compose(name,changes):
+    raw,steps=edit(parent[name],changes);path=C/Path(name).name;assert not path.exists() or path.read_bytes()==raw;path.write_bytes(raw);new[name]=raw;compositions[name]=steps
+raw=parent[prefix+'modelopt_fp8_q128_plugin.h'];template('modelopt_fp8_q128_plugin.h','modelopt_fp8_o128_plugin.h',[
+    ('modelopt_fp8_q128_canonical.h','modelopt_fp8_m128_canonical.h',1),('ModelOptFP8Q128Context','ModelOptFP8M128Context',1),('ModelOptFP8Q128','ModelOptFP8O128',raw.count(b'ModelOptFP8Q128')-1),('0x51313238u','0x4f313238u',1)])
+raw=parent[prefix+'modelopt_fp8_q128_plugin.cpp'];template('modelopt_fp8_q128_plugin.cpp','modelopt_fp8_o128_plugin.cpp',[
+    ('modelopt_fp8_q128_plugin.h','modelopt_fp8_o128_plugin.h',1),('ModelOptFP8Q128Context','ModelOptFP8M128Context',raw.count(b'ModelOptFP8Q128Context')),
+    ('RunModelOptFP8Q128Matmul','RunModelOptFP8M128Matmul',1),('ModelOptFP8Q128BlasWorkspace','ModelOptFP8M128BlasWorkspace',2),
+    ('ModelOptFP8Q128','ModelOptFP8O128',raw.count(b'ModelOptFP8Q128')-raw.count(b'ModelOptFP8Q128Context')-3),
+    ('5120','6144',raw.count(b'5120')),('12288','5120',raw.count(b'12288')),('1280','1536',1),('0x51313238','0x4f313238',2),('AlignedQ128','AlignedO128',3),('Q128 FP8','O128 FP8',2),('text Q geometry','text O geometry',1),('fp8_q128','fp8_o128',1)])
+raw=parent[prefix+'modelopt_fp8_q128_profile.h'];template('modelopt_fp8_q128_profile.h','modelopt_fp8_o128_profile.h',[
+    ('ModelOptFP8Q128','ModelOptFP8O128',raw.count(b'ModelOptFP8Q128')),('GARNET_FP8_FULL_ATTN_Q128_CANONICAL','GARNET_FP8_FULL_ATTN_O128_CANONICAL',1),('q_proj.weight','o_proj.weight',1),('outputRows!=12288||columns!=5120','outputRows!=5120||columns!=6144',1),('text Q projection','text O projection',1)])
+compose(prefix+'modelopt_fp8_lowering.cpp',[
+    ('#include "modelopt_fp8_q128_profile.h"','#include "modelopt_fp8_q128_profile.h"\n#include "modelopt_fp8_o128_plugin.h"\n#include "modelopt_fp8_o128_profile.h"',1),
+    ('    IPluginV2DynamicExt* plugin=nullptr;','    const bool canonicalO128=ModelOptFP8O128Selected(std::getenv("GARNET_FP8_FULL_ATTN_O128_CANONICAL"),\n        shape.nbDims==3?int(shape.d[0]):0,shape.nbDims==3?int(shape.d[1]):0,rows,p.rows,p.columns,p.logicalName);\n    IPluginV2DynamicExt* plugin=nullptr;',1),
+    ('    if(canonicalQ128){','    if(canonicalO128){\n        if(!EnsureModelOptFP8O128PluginRegistered())throw std::runtime_error("Native O128 FP8 registration failed");\n        plugin=new ModelOptFP8O128Plugin(p.rows,p.columns,p.weightScale,p.inputScale);\n    }else if(canonicalQ128){',1),
+    ('    if(canonicalQ128)++nativeFP8Q128ProjectionCount_;','    if(canonicalQ128)++nativeFP8Q128ProjectionCount_;\n    if(canonicalO128)++nativeFP8O128ProjectionCount_;',1)])
+compose(prefix+'trt_builder.h',[('size_t NativeFP8Q128ProjectionCount() const { return nativeFP8Q128ProjectionCount_; }','size_t NativeFP8Q128ProjectionCount() const { return nativeFP8Q128ProjectionCount_; }\n        size_t NativeFP8O128ProjectionCount() const { return nativeFP8O128ProjectionCount_; }',1),('size_t nativeFP8Q128ProjectionCount_=0;','size_t nativeFP8Q128ProjectionCount_=0;\n        size_t nativeFP8O128ProjectionCount_=0;',1)])
+compose(prefix+'trt_builder.cpp',[('nativeFP8Q128ProjectionCount_=0;','nativeFP8Q128ProjectionCount_=0;nativeFP8O128ProjectionCount_=0;',1)])
+compose(prefix+'cuda_compiled_graph.h',[('size_t nativeFP8Q128ProjectionCount_=0;','size_t nativeFP8Q128ProjectionCount_=0;\n    size_t nativeFP8O128ProjectionCount_=0;',1)])
+compose(prefix+'cuda_compiled_graph.cpp',[('nativeFP8Q128ProjectionCount_=0;','nativeFP8Q128ProjectionCount_=0;nativeFP8O128ProjectionCount_=0;',1),('info["native_fp8_q128_canonical_projections"]=nativeFP8Q128ProjectionCount_;','info["native_fp8_q128_canonical_projections"]=nativeFP8Q128ProjectionCount_;\n    info["native_fp8_o128_canonical_projections"]=nativeFP8O128ProjectionCount_;',1),('nativeFP8Q128ProjectionCount_=builder.NativeFP8Q128ProjectionCount();','nativeFP8Q128ProjectionCount_=builder.NativeFP8Q128ProjectionCount();\n    nativeFP8O128ProjectionCount_=builder.NativeFP8O128ProjectionCount();',1)])
+assert len(new)==60 and len(newnames)==3 and len(compositions)==5
+p=dict(status='defaultoff_O128_source_prepared_not_compiled_or_numerically_admitted',parent_files={n:sha(b) for n,b in parent.items()},candidate_files={n:sha(b) for n,b in new.items()},new_files=newnames,modified_files=list(compositions),derivations=derivations,compositions=compositions,paired_Q128_failed_prefill_single_observation_proof_sha256=sha(proof),unchanged_shared_M128_context=True,shared_M128_workspace_bytes=8<<20,new_context_factories=0,new_CUDA_kernels=0,old_Q_KV_GDN_plugins_wires_factories_guards_and_CUDA_kernels_unchanged=True,model_or_performance_qualified=False)
+(M/'evidence/o128-canonical-source-derivation.json').write_bytes(json.dumps(p,indent=2).encode());print(json.dumps(dict(status=p['status'],native_files=len(new),new_files=len(newnames),modified_files=len(compositions))))
