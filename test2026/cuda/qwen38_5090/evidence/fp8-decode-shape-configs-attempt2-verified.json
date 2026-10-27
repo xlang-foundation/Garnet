@@ -1,0 +1,236 @@
+{
+  "status": "actual_FP8_decode_shape_queries_replayed_no_matmul",
+  "exit_code": 0,
+  "error": null,
+  "archive_sha256": "88225b0df3638d54a46af78e584b6ba28beb8bec9a6bb1c9fc84fabbcc4f4710",
+  "archive_bytes": 929562,
+  "archive_members": 36,
+  "stages": {
+    "cpu": 0,
+    "build": 0,
+    "SDK": 0
+  },
+  "analysis": {
+    "status": "actual_live_FP8_decode_configuration_queries_replayed_no_matmul",
+    "rows": [
+      {
+        "label": "GDN_QKV",
+        "N": 10240,
+        "K": 5120,
+        "M4_configuration": [
+          35,
+          13,
+          17,
+          3,
+          2,
+          0,
+          1
+        ],
+        "M16_configuration": [
+          67,
+          15,
+          18,
+          1,
+          0,
+          1,
+          18
+        ],
+        "M4_and_M16_configurations_equal": false,
+        "live_M4_eligible_at_M4_and_M16": true,
+        "M4_checks": [
+          {
+            "M": 4,
+            "status": 0,
+            "state": 0,
+            "workspace": 2623519
+          },
+          {
+            "M": 16,
+            "status": 0,
+            "state": 0,
+            "workspace": 2623519
+          }
+        ],
+        "known_M4_reference_matches": true
+      },
+      {
+        "label": "GDN_Z",
+        "N": 6144,
+        "K": 5120,
+        "M4_configuration": [
+          35,
+          13,
+          17,
+          3,
+          2,
+          0,
+          1
+        ],
+        "M16_configuration": [
+          67,
+          13,
+          17,
+          1,
+          0,
+          1,
+          18
+        ],
+        "M4_and_M16_configurations_equal": false,
+        "live_M4_eligible_at_M4_and_M16": true,
+        "M4_checks": [
+          {
+            "M": 4,
+            "status": 0,
+            "state": 0,
+            "workspace": 1574175
+          },
+          {
+            "M": 16,
+            "status": 0,
+            "state": 0,
+            "workspace": 1574175
+          }
+        ],
+        "known_M4_reference_matches": true
+      },
+      {
+        "label": "FA_KV",
+        "N": 1024,
+        "K": 5120,
+        "M4_configuration": [
+          35,
+          13,
+          17,
+          3,
+          2,
+          0,
+          1
+        ],
+        "M16_configuration": [
+          35,
+          15,
+          18,
+          7,
+          2,
+          1,
+          0
+        ],
+        "M4_and_M16_configurations_equal": false,
+        "live_M4_eligible_at_M4_and_M16": true,
+        "M4_checks": [
+          {
+            "M": 4,
+            "status": 0,
+            "state": 0,
+            "workspace": 262495
+          },
+          {
+            "M": 16,
+            "status": 0,
+            "state": 0,
+            "workspace": 262495
+          }
+        ],
+        "known_M4_reference_matches": true
+      },
+      {
+        "label": "FA_Q",
+        "N": 12288,
+        "K": 5120,
+        "M4_configuration": [
+          35,
+          18,
+          16,
+          7,
+          2,
+          1,
+          2
+        ],
+        "M16_configuration": [
+          67,
+          13,
+          17,
+          1,
+          0,
+          1,
+          18
+        ],
+        "M4_and_M16_configurations_equal": false,
+        "live_M4_eligible_at_M4_and_M16": true,
+        "M4_checks": [
+          {
+            "M": 4,
+            "status": 0,
+            "state": 0,
+            "workspace": 3146655
+          },
+          {
+            "M": 16,
+            "status": 0,
+            "state": 0,
+            "workspace": 3146655
+          }
+        ],
+        "known_M4_reference_matches": null
+      },
+      {
+        "label": "FA_O",
+        "N": 5120,
+        "K": 6144,
+        "M4_configuration": [
+          35,
+          13,
+          17,
+          3,
+          2,
+          0,
+          1
+        ],
+        "M16_configuration": [
+          35,
+          13,
+          17,
+          3,
+          2,
+          0,
+          1
+        ],
+        "M4_and_M16_configurations_equal": true,
+        "live_M4_eligible_at_M4_and_M16": true,
+        "M4_checks": [
+          {
+            "M": 4,
+            "status": 0,
+            "state": 0,
+            "workspace": 1311839
+          },
+          {
+            "M": 16,
+            "status": 0,
+            "state": 0,
+            "workspace": 1311839
+          }
+        ],
+        "known_M4_reference_matches": null
+      }
+    ],
+    "heuristic_candidates": 70,
+    "valid_candidates": 70,
+    "actual_AlgoChecks": 140,
+    "API_events": 731,
+    "reported_versions": {
+      "CUDART_VERSION": 13020,
+      "runtime_version": 13040,
+      "driver_version": 13040
+    },
+    "header_and_runtime_versions_equal": false,
+    "all_known_M4_references_match": true,
+    "numerical_or_model_or_performance_qualified": false,
+    "scope": "Only live SDK descriptor/algorithm/workspace eligibility. No tensor inputs, matmul, fullmodel or benchmark executed. Use fullconfiguration, not algorithmID alone; actualmatrix and unchanged modelgates required before any policy expansion or timing."
+  },
+  "source_runtime_SDK_config_index_all34objects_CMake_unchanged": true,
+  "model_matmul_or_performance_qualified": false,
+  "original_failed_model_job_promoted": false,
+  "replay_verifier_sha256": "f3f2d188683295816675c51c73a775c83231801c9766fcf87edf8184e173379b",
+  "scope": "Read-only standalone liveSDK descriptor/heuristic/all7attribute/actualM4-M16AlgoChecks4MiB query, sameGDN_QKV10240x5120/GDN_Z6144x5120/FA_KV1024x5120 controls plusFA_Q12288x5120 andFA_O5120x6144. TenM4/M16queryshapes withallreturned8candidates/statuses/configs/liveopaquebytes retained; firstvalidliveM4candidate eligibility checkedatbothM4/M16 withoutimportingopaque bytes. KnownGDN/VactualM4configuration crosschecks andactualcuBLASLtloadedDLL path/GPUUUID/SM120/SDK130400 pins. No tensorinput/allocation/matmul/model/Garnet/TRTload, no nativeDLL/sourceoverlay/productionbuild or performance qualification. OnlyprivateMSVCexe build/run on5090;all1686ownedsource/runtime/SDK/config-index/all34objects/CMake unchanged. OriginalVconnectedcomponentpassed butfullmodelfailed atfinaldecode; earliestpersistentK7/afterFA11 isnotuniquecause. Thisquerydoesnotpromoteanyfailedgate orjustifynewgeometrymathwithoutactualprojection/fullmodel gates; strongestreferences/INT4/4B/2xopen. Version1Cppquery exited0 with actualheader13020/runtime13040/driver13040 butwrapperrejectedfalseversionequality assumption; originaljob staysFAILED, bothindependentreplays agree. Version2 onlychangesmetadata/loader/replay: delay-load andexplicitLoadLibraryEx exactGarnetbuild/bin cudart/cuBLASLtproviders, actualpaths+fileSHAs checkedagainstexistingruntimepins; independentheader/runtime/driver fieldsreported, no equality assumption. Allmatrixdescriptors/heuristic/config/AlgoCheck computations unchanged; 4CPUcontrols(original3+versionpair). KnownM4referencesmuststillmatch; APIeligibilitynotnumericalequivalence. Originalmodel/SDKfailuresnotpromoted. Initialv2unittest commandusedchatcwd andcouldnotimporttest2026; correctedtorepositorycwd beforepackage/nativeexecution,4controlspassed."
+}
