@@ -1,0 +1,50 @@
+from pathlib import Path
+import hashlib,json,zipfile
+W=Path(__file__).resolve().parent;O=W.parent/'outputs';R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';E=M/'evidence';sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest();owned=[];saved={}
+def keep(name,raw):
+    p=E/name;assert not p.exists(),p;p.write_bytes(raw);owned.append(p);saved[name]=sha(p)
+job='b4-k-m4x4-build-attempt1';proof=O/(job+'-verified.json');remote=O/(job+'-remote-verified.json');assert proof.read_bytes()==remote.read_bytes();q=json.loads(proof.read_bytes());assert q['exit_code']==0
+archive=O/(job+'-evidence.zip');assert sha(archive)==q['archive_sha256']
+for name in (proof.name,remote.name,'Garnet-B4-K-M4x4-Native-Build-Progress.json'):keep(name,(O/name).read_bytes())
+with zipfile.ZipFile(archive) as z:
+    mf=json.loads(z.read('evidence-manifest.json'));base='results/'+job+'/'
+    keep('b4-k-m4x4-build1-manifest.json',z.read('evidence-manifest.json'));keep('b4-k-m4x4-build1-workflow.json',z.read(base+'workflow.json'))
+    stages=['cpu-before','profile','o-profile','factory-build','factory-controls','wire','o-wire','init-build','init-controls','o-init-build','o-init-controls','native-build','selector-cpu','embedded-selector-cpu','tokenizer-cpu']
+    for stage in stages:
+        for ext in ('log','jsonl'):keep('b4-k-m4x4-build1-'+stage+'-commands.'+ext,z.read(base+stage+'-ledger/commands.'+ext))
+    for name in mf['files']:
+        if name.startswith(base) and name.endswith('/report.json'):
+            keep('b4-k-m4x4-build1-'+name.removeprefix(base).replace('/','-'),z.read(name))
+    keep('b4-k-m4x4-build1-CMakeCache-before.txt',z.read(base+'CMakeCache-before.txt'))
+for name in ('commands.log','commands.jsonl'):keep('b4-k-m4x4-build1-local-replay-'+name,(W/'b4-k-m4x4-native-build-local-replay'/name).read_bytes())
+for name in ('postprocess-b4-k-m4x4-native-build.py','replay-b4-k-m4x4-native-build.py',Path(__file__).name):keep(name+'.txt',(W/name).read_bytes())
+summary=json.loads((O/'Garnet-B4-K-M4x4-Native-Build-Progress.json').read_bytes())
+keep('b4-k-m4x4-build1-retention.json',json.dumps({'status':'source85_actual_native_build_paired_replayed_retained','raw_archive_sha256':sha(archive),'raw_archive_bytes':archive.stat().st_size,'proof_sha256':sha(proof),'retained_sha256':saved,'production_candidate_saved':True,'baseline_source_DLL_runtime_SDK_config_index_CMake_restored':True,'all34_recorded_original_three_object_whitelist_unchanged':True,'GPU_or_model_or_quality_or_HTTP_or_performance_qualified':False,'two_times_target_achieved':False},indent=2).encode())
+entry=('\n\n2026-10-27 source85 actual full native DLL build PASSED on CD-RTX5090, '
+       'with independent remote/local byte-identical proof '+sha(proof)+'. '
+       'Release /MT /sm120; candidate DLL '+q['candidate_library_sha256']+' saved '
+       'as build/bin/garnet-native-b4-k-m4x4-attempt1.dll. All88 current and86 '
+       'historical Python controls passed on exact parent50; original Q/O278 '
+       'profiles,182factory faults,Q/Owire,630+720initialize calls,native+embedded '
+       'selector and tokenizer smoke gates retained and passed. NewK1209selector/'
+       '232factory-pointer/plugin CPU parent required and verified. Baseline '
+       'source85 target snapshot (14 original files), baseline DLL, all owned '
+       'source/method/runtime/SDK, config+index and CMake restored. All34 CUDA '
+       'object hashes recorded: the3changed objects are the original low-batch '
+       'overlay/prefill128-attention/prefill128-commit whitelist; whitelist unchanged. '
+       'This doesnot prove all3 metadata-only, and original strictcache62 remains '
+       'FAILED. Newbuild post-state object hashes retained for subsequent model '
+       'preflight; do not reuse stale pre-build hashes. Raw archive '
+       +sha(archive)+' ('+str(archive.stat().st_size)+'B /884members), compiler '
+       'and all15stage command logs/reports/source hashes retained. No live SDK '
+       'matmul/GPU model/quality/HTTP/performance in this build; original full4K '
+       'remains FAILED. Next: sameDLLflagoff parity against source79, newflag1 '
+       'K-only intervention with actual live SDK route evidence and complete '
+       'selected-row state/raw-cache checks, then all128-output/4K/MTP/quality/'
+       'HTTP gates before timing. Strongest tuned/MTP references, matched '
+       'INT4/Qwen3.5-4B and overall2x remain open; serving measurements unchanged.\n').encode()
+for name in ('docs/research/qwen38-5090-development-log.md','docs/research/qwen38-5090-implementation-task.md'):
+    p=R/name;before=p.read_bytes();assert b'source85 actual full native DLL build PASSED' not in before
+    with p.open('ab') as f:f.write(entry)
+    assert p.read_bytes()==before+entry;owned.append(p)
+(W/'b4-k-m4x4-native-build-stage-paths.bin').write_bytes(b''.join(n.relative_to(R).as_posix().encode()+b'\0' for n in owned));print(json.dumps({'stage_paths':len(owned),'candidate_DLL_sha256':q['candidate_library_sha256'],'proof_sha256':sha(proof),'GPU_model_unrun':True},indent=2))

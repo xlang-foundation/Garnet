@@ -1,0 +1,17 @@
+"""Local Python-only evidence replay; do not load or execute downloaded DLL/EXEs."""
+from pathlib import Path
+import hashlib,json,os,sys,zipfile
+W=Path(__file__).resolve().parent;O=W.parent/'outputs';R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest();sys.path[:0]=[str(M),str(R)]
+import run_logged as ledger
+job='b4-k-m4x4-build-attempt1';archive=O/(job+'-evidence.zip');remote=O/(job+'-remote-verified.json');q=json.loads(remote.read_bytes());assert q['exit_code']==0 and sha(archive)==q['archive_sha256']
+names=['verify_b4_k_m4x4_native_build.py','verify_b4_qk_m16_native_build.py','run_z128_factory_trace_native_build.py','evidence/b4-k-m4x4-native-build-derivation.json','evidence/b4-k-m4x4-build-preparation.json']
+ledger.source_identity=lambda:{'scope':'Explicit source85 actual native build Python archive replay; native artifacts are bytes only, no protected-body reads','owned_source_sha256':{n:sha(M/n) for n in names}}
+os.chdir(R);assert ledger.run([sys.executable,str(M/'verify_b4_k_m4x4_native_build.py'),'--proofs',str(O)],W/'b4-k-m4x4-native-build-local-replay','correctness','Independent raw replay of actual source85 native build: all original 88+86 current/historical CPU/source and Q/O factory-wire-initialize/selector/tokenizer gates, newK1209/232 parent, all34/three-object whitelist, source/runtime/SDK/config-index/CMake restoration. Never execute any downloaded native artifact.',[M/n for n in names]+[archive,remote])==0
+proof=O/(job+'-verified.json');assert proof.read_bytes()==remote.read_bytes();q=json.loads(proof.read_bytes())
+with zipfile.ZipFile(archive) as z:
+    w=json.loads(z.read('results/'+job+'/workflow.json'));assert len(w['cuda_objects_before'])==len(w['cuda_objects_built'])==34
+    changed=[n for n in w['cuda_objects_before'] if w['cuda_objects_before'][n]!=w['cuda_objects_built'][n]]
+    assert sorted(changed)==w['changed_cuda_objects'] and len(changed)==3
+    assert all(Path(n).name in {'qwen38_bf16_kv_low_batch_overlay.cu.obj','qwen38_bf16_prefill128_attention.cu.obj','qwen38_bf16_prefill128_commit.cu.obj'} for n in changed)
+summary={'status':q['status'],'proof_sha256':sha(proof),'archive_sha256':sha(archive),'archive_bytes':archive.stat().st_size,'paired_remote_local_proof_bytes_identical':True,'candidate_source_files':85,'candidate_library_sha256':q['candidate_library_sha256'],'actual_current_Python_controls':q['current_CPU_controls'],'actual_historical_controls':q['historical_controls'],'new_native_CPU_selector_cases':1209,'new_native_CPU_factory_and_pointer_cases':232,'all_original_native_Q_O_factory_wire_initialize_selector_tokenizer_gates_retained':True,'baseline_source_DLL_runtime_SDK_config_index_CMake_restored':q['source_runtime_SDK_checkpoint_CMake_restored'],'all34_CUDA_object_hashes_recorded':True,'changed_CUDA_objects':changed,'original_three_object_whitelist_unchanged':True,'all_three_changed_objects_proved_metadata_only':False,'original_strict_cache62_and_full4k_still_failed':True,'GPU_model_or_live_matmul_run_in_build':False,'model_quality_HTTP_or_performance_qualified':False,'two_times_target_achieved':False}
+(O/'Garnet-B4-K-M4x4-Native-Build-Progress.json').write_bytes(json.dumps(summary,indent=2).encode());print(json.dumps(summary,indent=2))

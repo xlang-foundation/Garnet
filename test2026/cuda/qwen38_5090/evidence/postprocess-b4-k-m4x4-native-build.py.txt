@@ -1,0 +1,12 @@
+"""Run only after terminal native owner; replay immutable raw build evidence."""
+from pathlib import Path
+import hashlib,json,os,sys
+ROOT=Path('D:/CantorAI/5090-study-20261023');M=ROOT/'Garnet/test2026/cuda/qwen38_5090';JOB='b4-k-m4x4-build-attempt1';sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest();sys.path[:0]=[str(M),str(ROOT/'Garnet')]
+from run_bf16_low_batch_native_build import idle
+import run_logged as ledger
+idle();w=json.loads((ROOT/'results'/JOB/'workflow.json').read_bytes());assert w['cleanup_finished'] and type(w['exit_code']) is int
+names=['verify_b4_k_m4x4_native_build.py','verify_b4_qk_m16_native_build.py','run_z128_factory_trace_native_build.py','evidence/b4-k-m4x4-native-build-derivation.json','evidence/b4-k-m4x4-build-preparation.json']
+ledger.source_identity=lambda:{'scope':'Explicit terminal source85 native build archive replay; no native/GPU/model execution, protected bodies excluded','owned_source_sha256':{n:sha(M/n) for n in names}}
+os.chdir(ROOT/'Garnet');code=ledger.run([sys.executable,str(M/'verify_b4_k_m4x4_native_build.py'),'--proofs',str(ROOT/'results')],ROOT/'results/b4-k-m4x4-native-build-postprocess-ledger','correctness','Replay source85 actual native build; exact original owner/reader derivation, all original Python/Q-O factory-wire-initialize/selector/tokenizer gates and new1209/232 CPU parent, original all34/three-object whitelist, baseline source/runtime/SDK/config-index/CMake restoration. Build is not numeric or performance admission.',[M/n for n in names]+[ROOT/'results'/(JOB+'-evidence.zip')])
+if code:raise SystemExit(code)
+q=json.loads((ROOT/'results'/(JOB+'-verified.json')).read_bytes());print(json.dumps({'status':q['status'],'exit_code':q['exit_code'],'proof_sha256':sha(ROOT/'results'/(JOB+'-verified.json')),'archive_sha256':q['archive_sha256'],'candidate_library_sha256':q['candidate_library_sha256']}))
