@@ -1,0 +1,49 @@
+{
+  "status": "O128_native_DLL_built_and_CPU_verified_actual_model_admission_next",
+  "native_source_files": 60,
+  "native_source_bundle_sha256": "c44138f5e64b684d556830f58f09c2332d767155669c6642ba799b8445493997",
+  "candidate_library_sha256": "8414795d2953feae49532340b206328972c8a23767276319e6e4fb3e1912c18a",
+  "candidate_library_remote": "D:/CantorAI/5090-study-20261023/build/bin/garnet-native-o128-canonical-attempt1.dll",
+  "paired_native_build_proof_sha256": "fd4dc3af8f7570bd53b778c77e5c2bf32f6a2db548ce71e0f20cc9572ddef06c",
+  "profiles": [
+    {
+      "name": "off32",
+      "tokens": 32,
+      "Q128": 0,
+      "O128": 0,
+      "reference": "original correctT32",
+      "requirements": "Full3968prefill/128IDs/finalstate/two-prefill repeats/all12cache arrays and all10first128stages exact qualified baseline"
+    },
+    {
+      "name": "Q128_only_control",
+      "tokens": 128,
+      "Q128": 1,
+      "O128": 0,
+      "reference": "preserved Q128-only failed-prefill observation, instrumentation equivalence only",
+      "requirements": "Full empty/prefill state/vectors/all12caches and first128stage/readonly bytes reproduce Q128-only archive; no model admission and no IDs/finalstate claimed from old failedcapture. Fresh two fullprefill repeats may be collected and validated as new diagnostic evidence; never invent old repeat metadata"
+    },
+    {
+      "name": "Q128_plus_O128",
+      "tokens": 128,
+      "Q128": 1,
+      "O128": 1,
+      "reference": "ORIGINAL correctT32, never known-failed Q128-only or original T128",
+      "requirements": "All complete empty/prefill/final packed states/rawhidden/normalized vectors/all12cache arrays/128decode IDs/two complete prefills/first128finite stages and readonly inputstate/control checks pass unchanged original predicates; otherwise abort/preserve failure before any timing"
+    }
+  ],
+  "physical_counts": "O16 andQ16 only enabled128; Q-onlycontrol Q16/O0; T32/T4Q0/O0. Original GDNM12848/reconstructedZ48/KV32/fullstage1 unchanged onT128.",
+  "no_gate_waived": true,
+  "first128_stage_diagnostic_does_not_replace_full_model_admission": true,
+  "after_one_case": [
+    "Original fullsix4096ordinary/MTP/image/token/state/reset cases",
+    "805screen and broaderquality parity with proper limitations",
+    "Actual Garnet frontend negative cases, production cache fingerprint and promotion",
+    "True native concurrency",
+    "Strongest feasible repeated tuned/MTP vLLM/SGLang references",
+    "Matched INT4W4A16 and Qwen3.5-4B",
+    "text/image TTFT/decode/concurrency throughput/servingVRAM",
+    "At least2x fasterbaseline decode AND concurrency throughput, plus halfTTFT additional"
+  ],
+  "new_benchmarks": false,
+  "goal_complete": false
+}
