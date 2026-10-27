@@ -1,0 +1,35 @@
+from pathlib import Path
+import ast,hashlib,json
+W=Path(__file__).resolve().parent;M=Path('D:/CantorAI/work/qwen38-5090/test2026/cuda/qwen38_5090');sha=lambda b:hashlib.sha256(b).hexdigest();rows=[]
+def derive(source,target,changes):
+    raw=source.read_bytes();before=sha(raw);d=[]
+    for old,new,count in changes:
+        assert raw.count(old.encode())==count,(source.name,old,raw.count(old.encode()));raw=raw.replace(old.encode(),new.encode());d.append(dict(old=old,new=new,count=count))
+    ast.parse(raw);assert not target.exists() or target.read_bytes()==raw;target.write_bytes(raw);rows.append(dict(source=source.name,target=target.name,source_sha256=before,target_sha256=sha(raw),changes=d))
+old="""        shapes=[[batch,4,5120],[batch,10240,4],[batch,48,128,128],[batch,4],[batch,4,3],[batch,4]];inputs=[tensor.input('decode_input'+str(i),shape=s,dtype=tensor.float32) for i,s in enumerate(shapes)]
+        graph=garnet.compiled_graph();graph.set_builder_workspace_bytes(256<<20);graph.build(T.fusion(name='qwen38_actual_decode_layer0',boundary='required')(layer_forward)(*inputs,*symbols),inputs+symbols,str(checkpoint));graph.enable_cuda_graph(True)
+        norm_symbol=tensor.input('decode_norm',shape=shapes[0],dtype=tensor.float32);normalizer=garnet.compiled_graph();normalizer.set_builder_workspace_bytes(128<<20);normalizer.build(T.fusion(name='qwen38_actual_decode_norm',boundary='required')(norm_forward)(norm_symbol),[norm_symbol],str(checkpoint));normalizer.enable_cuda_graph(True)
+        controls=[io.zeros(s) for s in shapes];hidden,history,state,active,positions,slots=controls;io.update(active,[1,0,0,0]*batch);report['graph_before']=json.loads(graph.stats_json());report['norm_graph_before']=json.loads(normalizer.stats_json());save()"""
+new="""        shapes=[[batch,4,5120],[batch,10240,4],[batch,48,128,128],[batch,4]];inputs=[tensor.input('decode_input'+str(i),shape=s,dtype=tensor.float32) for i,s in enumerate(shapes)]
+        @T.fusion(name='qwen38_actual_decode_layer0',boundary='required')
+        def actual_layer(hidden,history,state,active,*provided_weights):
+            compressed={}
+            for index in range(len(WEIGHT_NAMES)):
+                values=[]
+                for slot in WEIGHT_SLOTS[index]:values.append(provided_weights[slot])
+                compressed[WEIGHT_NAMES[index]]=values
+            return Qwen35CUDAChunk(hidden,history,state,active,None,None,CONFIG,0,'linear_attention',fused_delta=True,fused_attention=True,retain_linear_inputs=True,register_delta_128=True,external_compressed_weights=compressed,joined_mlp_projections=True)
+        @T.fusion(name='qwen38_actual_decode_norm',boundary='required')
+        def actual_norm(hidden):return hidden*T.unary_op('qwen35_rms_norm',weight_name='model.language_model.layers.0.input_layernorm.weight',eps=1.e-6)
+        graph=garnet.compiled_graph();graph.set_builder_workspace_bytes(256<<20);graph.build(actual_layer(*inputs,*symbols),inputs+symbols,str(checkpoint));graph.enable_cuda_graph(True)
+        norm_symbol=tensor.input('decode_norm',shape=shapes[0],dtype=tensor.float32);normalizer=garnet.compiled_graph();normalizer.set_builder_workspace_bytes(128<<20);normalizer.build(actual_norm(norm_symbol),[norm_symbol],str(checkpoint));normalizer.enable_cuda_graph(True)
+        controls=[io.zeros(s) for s in shapes];hidden,history,state,active=controls;io.update(active,[1,0,0,0]*batch);report['graph_before']=json.loads(graph.stats_json());report['norm_graph_before']=json.loads(normalizer.stats_json());save()"""
+derive(M/'probe_decode_projection_diagnostic_attempt2.py',M/'probe_decode_projection_diagnostic_attempt3.py',[
+ ('decode-projection-attempt2-preparation.json','decode-projection-attempt3-preparation.json',1),(old,new,1)])
+derive(M/'launch_decode_projection_diagnostic_attempt2.py',M/'launch_decode_projection_diagnostic_attempt3.py',[
+ ('decode-projection-attempt2-preparation.json','decode-projection-attempt3-preparation.json',1),('probe_decode_projection_diagnostic_attempt2.py','probe_decode_projection_diagnostic_attempt3.py',1)])
+derive(M/'run_decode_projection_diagnostic_attempt2.py',M/'run_decode_projection_diagnostic_attempt3.py',[
+ ('decode-projection-diagnostic-attempt2','decode-projection-diagnostic-attempt3',1),('decode-projection-attempt2-preparation.json','decode-projection-attempt3-preparation.json',1),('launch_decode_projection_diagnostic_attempt2.py','launch_decode_projection_diagnostic_attempt3.py',1)])
+derive(W/'verify-decode-projection-diagnostic-attempt2.py',W/'verify-decode-projection-diagnostic-attempt3.py',[
+ ('decode-projection-diagnostic-attempt2','decode-projection-diagnostic-attempt3',1),('decode-projection-attempt2-preparation.json','decode-projection-attempt3-preparation.json',2),('probe_decode_projection_diagnostic_attempt2.py','probe_decode_projection_diagnostic_attempt3.py',1),('run_decode_projection_diagnostic_attempt2.py','run_decode_projection_diagnostic_attempt3.py',1),('launch_decode_projection_diagnostic_attempt2.py','launch_decode_projection_diagnostic_attempt3.py',1)])
+target=M/'evidence/decode-projection-attempt3-derivation.json';raw=json.dumps(dict(derivations=rows,reason='Use supported XLang @T.fusion decorator syntax, not runtime TensorCompat.fusion calls. Component omits unused position/slot bindings and passes None for those ignored linear-layer arguments. Retained projection operators, data, weights, source bundles, native DLLs, original model/numeric guards unchanged. Prior attempts preserved.'),indent=2).encode();assert not target.exists() or target.read_bytes()==raw;target.write_bytes(raw);print(json.dumps(dict(derived=len(rows))))

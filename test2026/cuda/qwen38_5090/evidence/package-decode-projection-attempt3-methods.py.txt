@@ -1,0 +1,13 @@
+from pathlib import Path
+import ast,hashlib,json
+W=Path(__file__).resolve().parent;sha=lambda b:hashlib.sha256(b).hexdigest();old=json.loads((W/'decode-projection-attempt2-package.json').read_bytes());new=json.loads((W/'decode-projection-attempt3-package.json').read_bytes());rows=[]
+def derive(source,target,changes):
+    raw=(W/source).read_bytes();before=sha(raw);d=[]
+    for old,new,count in changes:
+        assert raw.count(old.encode())==count,(source,old,raw.count(old.encode()));raw=raw.replace(old.encode(),new.encode());d.append(dict(old=old,new=new,count=count))
+    ast.parse(raw);t=W/target;assert not t.exists();t.write_bytes(raw);rows.append(dict(source=source,target=target,source_sha256=before,target_sha256=sha(raw),changes=d))
+derive('install-decode-projection-attempt2.py','install-decode-projection-attempt3.py',[
+ ('decode-projection-attempt2','decode-projection-attempt3',3),('==13','=='+str(new['files']+1),1),(old['deployment_sha256'],new['deployment_sha256'],1)])
+derive('run-decode-projection-attempt2-postprocess.py','run-decode-projection-attempt3-postprocess.py',[
+ ('decode-projection-diagnostic-attempt2','decode-projection-diagnostic-attempt3',1),('verify-decode-projection-diagnostic-attempt2.py','verify-decode-projection-diagnostic-attempt3.py',1),('decode-projection-attempt2','decode-projection-attempt3',4)])
+(W/'decode-projection-attempt3-method-derivation.json').write_bytes(json.dumps(dict(derivations=rows),indent=2).encode());print(json.dumps(dict(methods=len(rows))))

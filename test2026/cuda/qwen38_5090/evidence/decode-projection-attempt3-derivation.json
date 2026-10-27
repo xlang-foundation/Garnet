@@ -1,0 +1,97 @@
+{
+  "derivations": [
+    {
+      "source": "probe_decode_projection_diagnostic_attempt2.py",
+      "target": "probe_decode_projection_diagnostic_attempt3.py",
+      "source_sha256": "bf29308a6fb4208bf766a0a84808e30c106b777c757085aaad7b8581129d25e3",
+      "target_sha256": "67012adb37eeb3e522d4861e833afa78c6638d55a8a85461fd1742a253949e80",
+      "changes": [
+        {
+          "old": "decode-projection-attempt2-preparation.json",
+          "new": "decode-projection-attempt3-preparation.json",
+          "count": 1
+        },
+        {
+          "old": "        shapes=[[batch,4,5120],[batch,10240,4],[batch,48,128,128],[batch,4],[batch,4,3],[batch,4]];inputs=[tensor.input('decode_input'+str(i),shape=s,dtype=tensor.float32) for i,s in enumerate(shapes)]\n        graph=garnet.compiled_graph();graph.set_builder_workspace_bytes(256<<20);graph.build(T.fusion(name='qwen38_actual_decode_layer0',boundary='required')(layer_forward)(*inputs,*symbols),inputs+symbols,str(checkpoint));graph.enable_cuda_graph(True)\n        norm_symbol=tensor.input('decode_norm',shape=shapes[0],dtype=tensor.float32);normalizer=garnet.compiled_graph();normalizer.set_builder_workspace_bytes(128<<20);normalizer.build(T.fusion(name='qwen38_actual_decode_norm',boundary='required')(norm_forward)(norm_symbol),[norm_symbol],str(checkpoint));normalizer.enable_cuda_graph(True)\n        controls=[io.zeros(s) for s in shapes];hidden,history,state,active,positions,slots=controls;io.update(active,[1,0,0,0]*batch);report['graph_before']=json.loads(graph.stats_json());report['norm_graph_before']=json.loads(normalizer.stats_json());save()",
+          "new": "        shapes=[[batch,4,5120],[batch,10240,4],[batch,48,128,128],[batch,4]];inputs=[tensor.input('decode_input'+str(i),shape=s,dtype=tensor.float32) for i,s in enumerate(shapes)]\n        @T.fusion(name='qwen38_actual_decode_layer0',boundary='required')\n        def actual_layer(hidden,history,state,active,*provided_weights):\n            compressed={}\n            for index in range(len(WEIGHT_NAMES)):\n                values=[]\n                for slot in WEIGHT_SLOTS[index]:values.append(provided_weights[slot])\n                compressed[WEIGHT_NAMES[index]]=values\n            return Qwen35CUDAChunk(hidden,history,state,active,None,None,CONFIG,0,'linear_attention',fused_delta=True,fused_attention=True,retain_linear_inputs=True,register_delta_128=True,external_compressed_weights=compressed,joined_mlp_projections=True)\n        @T.fusion(name='qwen38_actual_decode_norm',boundary='required')\n        def actual_norm(hidden):return hidden*T.unary_op('qwen35_rms_norm',weight_name='model.language_model.layers.0.input_layernorm.weight',eps=1.e-6)\n        graph=garnet.compiled_graph();graph.set_builder_workspace_bytes(256<<20);graph.build(actual_layer(*inputs,*symbols),inputs+symbols,str(checkpoint));graph.enable_cuda_graph(True)\n        norm_symbol=tensor.input('decode_norm',shape=shapes[0],dtype=tensor.float32);normalizer=garnet.compiled_graph();normalizer.set_builder_workspace_bytes(128<<20);normalizer.build(actual_norm(norm_symbol),[norm_symbol],str(checkpoint));normalizer.enable_cuda_graph(True)\n        controls=[io.zeros(s) for s in shapes];hidden,history,state,active=controls;io.update(active,[1,0,0,0]*batch);report['graph_before']=json.loads(graph.stats_json());report['norm_graph_before']=json.loads(normalizer.stats_json());save()",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "launch_decode_projection_diagnostic_attempt2.py",
+      "target": "launch_decode_projection_diagnostic_attempt3.py",
+      "source_sha256": "d81deea723a8c551741d8c010f8259eeb1bb73e7ef74cd01e7ead86f9fb6f348",
+      "target_sha256": "0f47088af0878d223f0f629711acb9b7021f6f8179f419e21fcbe2391c2f2727",
+      "changes": [
+        {
+          "old": "decode-projection-attempt2-preparation.json",
+          "new": "decode-projection-attempt3-preparation.json",
+          "count": 1
+        },
+        {
+          "old": "probe_decode_projection_diagnostic_attempt2.py",
+          "new": "probe_decode_projection_diagnostic_attempt3.py",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "run_decode_projection_diagnostic_attempt2.py",
+      "target": "run_decode_projection_diagnostic_attempt3.py",
+      "source_sha256": "66fc86f3a1954057ce59faa68835899cdcf9a3b470004b38370e1fd9d8c611b7",
+      "target_sha256": "9987ff37612df59dd09a4f17cffb6d25dbe59b4b9632ba449204cc56db5c6d93",
+      "changes": [
+        {
+          "old": "decode-projection-diagnostic-attempt2",
+          "new": "decode-projection-diagnostic-attempt3",
+          "count": 1
+        },
+        {
+          "old": "decode-projection-attempt2-preparation.json",
+          "new": "decode-projection-attempt3-preparation.json",
+          "count": 1
+        },
+        {
+          "old": "launch_decode_projection_diagnostic_attempt2.py",
+          "new": "launch_decode_projection_diagnostic_attempt3.py",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "verify-decode-projection-diagnostic-attempt2.py",
+      "target": "verify-decode-projection-diagnostic-attempt3.py",
+      "source_sha256": "a6263a57ece245a4d39a94568db6327e53c48ba7c919f971ccf1ff5c803dc6a3",
+      "target_sha256": "53ff6f3497393ee48c282a6081663c6e4353a60cf0f211e074c1636b18b4dd98",
+      "changes": [
+        {
+          "old": "decode-projection-diagnostic-attempt2",
+          "new": "decode-projection-diagnostic-attempt3",
+          "count": 1
+        },
+        {
+          "old": "decode-projection-attempt2-preparation.json",
+          "new": "decode-projection-attempt3-preparation.json",
+          "count": 2
+        },
+        {
+          "old": "probe_decode_projection_diagnostic_attempt2.py",
+          "new": "probe_decode_projection_diagnostic_attempt3.py",
+          "count": 1
+        },
+        {
+          "old": "run_decode_projection_diagnostic_attempt2.py",
+          "new": "run_decode_projection_diagnostic_attempt3.py",
+          "count": 1
+        },
+        {
+          "old": "launch_decode_projection_diagnostic_attempt2.py",
+          "new": "launch_decode_projection_diagnostic_attempt3.py",
+          "count": 1
+        }
+      ]
+    }
+  ],
+  "reason": "Use supported XLang @T.fusion decorator syntax, not runtime TensorCompat.fusion calls. Component omits unused position/slot bindings and passes None for those ignored linear-layer arguments. Retained projection operators, data, weights, source bundles, native DLLs, original model/numeric guards unchanged. Prior attempts preserved."
+}

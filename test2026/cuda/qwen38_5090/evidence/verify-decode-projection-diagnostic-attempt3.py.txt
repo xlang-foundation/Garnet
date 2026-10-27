@@ -1,0 +1,48 @@
+from pathlib import Path
+import argparse,hashlib,io,json,sys,zipfile
+JOB='decode-projection-diagnostic-attempt3';P='Garnet/test2026/cuda/qwen38_5090/';sha=lambda b:hashlib.sha256(b).hexdigest()
+def main():
+    a=argparse.ArgumentParser();a.add_argument('--proofs',type=Path,required=True);a.add_argument('--repo',type=Path,required=True);args=a.parse_args();sys.path.insert(0,str(args.repo))
+    from test2026.cuda.qwen38_5090.decode_projection_diagnostic import replay
+    archive=args.proofs/(JOB+'-evidence.zip');base='results/'+JOB+'/'
+    with zipfile.ZipFile(archive) as z:
+        assert z.testzip() is None;mf=json.loads(z.read('evidence-manifest.json'))['files'];assert len(z.namelist())==len(set(z.namelist()))==len(mf)+1
+        for n,h in mf.items():assert sha(z.read(n))==h
+        doc=lambda n:json.loads(z.read(n));p=doc(P+'evidence/decode-projection-attempt3-preparation.json');w=doc(base+'workflow.json');assert sha(z.read(P+'evidence/decode-projection-attempt3-preparation.json'))==w['preparation_sha256']
+        assert type(w['exit_code']) is int and w['exit_code'] in (0,1) and w['cleanup_finished'] is w['baseline_source_restored'] is w['baseline_library_restored'] is True
+        assert w['source_before']==w['source_after']==p['files'] and w['runtime_before']==w['runtime_after']==p['runtime'] and w['environment_before']==w['environment_after']==p['environment'] and w['checkpoint_after']==p['checkpoints']
+        assert w['performance_admitted'] is w['full4k_MTP_805_qualified'] is False
+        for n,h in {**p['new_files'],**p['capture_inputs'],**p['checkpoints']}.items():assert sha(z.read(n))==h
+        for n in ('decode_projection_diagnostic.py','probe_decode_projection_diagnostic_attempt3.py','run_decode_projection_diagnostic_attempt3.py','launch_decode_projection_diagnostic_attempt3.py'):assert (args.repo/'test2026/cuda/qwen38_5090'/n).read_bytes()==z.read(P+n)
+        for mode in ('reference','candidate'):
+            assert sha(z.read(p[mode+'_bundle']))==p[mode+'_bundle_sha256']
+            with zipfile.ZipFile(io.BytesIO(z.read(p[mode+'_bundle']))) as source:assert source.testzip() is None and {n:sha(source.read(n)) for n in source.namelist()}==p[mode+'_source_files']
+        for job,row in p['parents'].items():
+            raw=z.read('results/'+job+'-verified.json');q=json.loads(raw);assert sha(raw)==row['proof_sha256'] and q['status']==row['status'] and raw==(args.proofs/(job+'-verified.json')).read_bytes() and sha((args.proofs/(job+'-evidence.zip')).read_bytes())==q['archive_sha256']==row['archive_sha256']
+            with zipfile.ZipFile(args.proofs/(job+'-evidence.zip')) as parent:wparent=json.loads(parent.read('results/'+job+'/workflow.json'));assert type(wparent['exit_code']) is int and wparent['exit_code']==row['exit_code'] and wparent['cleanup_finished']
+        prior='b4-b1-short-admission-attempt1'
+        with zipfile.ZipFile(args.proofs/(prior+'-evidence.zip')) as priorzip:
+            r=json.loads(priorzip.read('results/'+prior+'/reference/report.json'));c=json.loads(priorzip.read('results/'+prior+'/candidate/report.json'))
+        tokens=[[r['rows'][i]['generated_ids'][0][step] for i in range(4)] for step in range(5)];assert tokens==p['token_inputs'] and all(tokens[step]==[c['rows'][0]['generated_ids'][i][step] for i in range(4)] for step in range(5))
+        def commands(name,expected):
+            events=[json.loads(line) for line in z.read(base+name+'-ledger/commands.jsonl').splitlines()];assert len(events)==2 and events[0]['event']=='started' and events[1]['event']=='finished';assert events[0]['source']['owned_source_sha256']==events[1]['source_after']['owned_source_sha256']==expected;return events[1]['exit_code']
+        assert commands('cpu',p['files'])==0 and b'Ran 4 tests' in z.read(base+'cpu-ledger/commands.log')
+        reports={};result=None
+        for phase in w['phases']:
+            mode=phase['mode'];assert mode not in reports and phase['source_installed']==p[mode+'_installed_files'] and phase['library_sha256']==p[mode+'_library_sha256'];assert commands(mode,p[mode+'_installed_files'])==phase['exit_code']
+            name=base+mode+'/report.json'
+            if name in mf:reports[mode]=doc(name)
+        passed=w['exit_code']==0
+        if passed:
+            assert w['status']=='actual_decode_projection_diagnostic_collected_no_model_or_performance_admission' and [v['mode'] for v in w['phases']]==['reference','candidate'] and all(v['exit_code']==0 for v in w['phases'])
+            for mode,r in reports.items():
+                assert r['library_sha256']==p[mode+'_library_sha256'] and set(r['weight_metadata'])=={'model.language_model.layers.0.'+suffix for suffix in ('mlp.gate_up_proj.weight','mlp.down_proj.weight','linear_attn.in_proj_qkv.weight','linear_attn.in_proj_z.weight','linear_attn.out_proj.weight')}
+                assert r['graph_before']['native_fp8_projection_weights']==3 and r['graph_before']['native_nvfp4_projection_weights']==2 and r['graph_before']['external_compressed_weight_inputs']==5
+                for stats in (r['graph_before'],r['norm_graph_before']):
+                    for key in ('native_fp8_m128_canonical_projections','native_fp8_z128_canonical_projections','native_fp8_z128_reconstructed_projections','native_fp8_kv128_canonical_projections','native_fp8_q128_canonical_projections','native_fp8_o128_canonical_projections','native_full_chunk_stage_witnesses'):assert type(stats[key]) is int and stats[key]==0
+                assert len(z.read(base+mode+'/cublaslt.log'))>0
+            result=replay(reports['reference'],reports['candidate'],lambda n:z.read(base+'reference/'+n),lambda n:z.read(base+'candidate/'+n),tokens);assert result==doc(base+'analysis.json')
+        else:assert w['status']=='failed' and w.get('error')
+        output=dict(status='actual_decode_projection_diagnostic_replayed' if passed else 'actual_decode_projection_diagnostic_capture_failure_replayed',exit_code=w['exit_code'],error=w.get('error'),archive_sha256=sha(archive.read_bytes()),archive_bytes=archive.stat().st_size,archive_members=len(z.namelist()),phase_statuses={mode:r['status'] for mode,r in reports.items()},phase_errors={mode:r.get('error') for mode,r in reports.items()},candidate_library_sha256=p['candidate_library_sha256'],reference_library_sha256=p['reference_library_sha256'],comparison=result,source_runtime_SDK_checkpoint_restored=True,original_short_model_job_remains_failed=True,new_native_math_policy=False,full_model_or_quality_or_performance_qualified=False,two_times_target_achieved=False)
+    target=args.proofs/(JOB+'-verified.json');raw=json.dumps(output,indent=2).encode();assert not target.exists() or target.read_bytes()==raw;target.write_bytes(raw);print(json.dumps(output))
+if __name__=='__main__':main()
