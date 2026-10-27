@@ -1,0 +1,4 @@
+from pathlib import Path
+import hashlib,json
+W=Path(__file__).resolve().parent;raw=(W/'inspect-q128-build-inputs.py').read_bytes();old=b"(ROOT/'Garnet/src').resolve()";new=b"(ROOT/'Garnet').resolve()";assert raw.count(old)==1;fixed=raw.replace(old,new);target=W/'inspect-q128-build-inputs-attempt2.py';assert not target.exists() or target.read_bytes()==fixed;target.write_bytes(fixed)
+q=dict(status='candidate_includes_preserved_xModel_sources_guard_corrected_to_exact_Garnet_root',source_sha256=hashlib.sha256(raw).hexdigest(),target_sha256=hashlib.sha256(fixed).hexdigest(),old=old.decode(),new=new.decode(),project_source_modified=False,GPU_or_model_executed=False);(W/'q128-build-inventory-guard-retry.json').write_bytes(json.dumps(q,indent=2).encode());print(json.dumps(q))
