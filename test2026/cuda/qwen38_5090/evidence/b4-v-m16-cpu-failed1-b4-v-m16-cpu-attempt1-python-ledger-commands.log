@@ -1,0 +1,22 @@
+
+{"id": "a758486e38f649ca805431f1e4adea59", "kind": "correctness", "label": "Four immutable73-source/failed-lineage/corruption controls plus eight unchanged SDK replay and independent conversion controls", "argv": ["C:\\Python312\\python.exe", "-m", "unittest", "test2026.cuda.qwen38_5090.test_b4_v_m16_source", "test2026.cuda.qwen38_5090.test_decode_fp8_sdk_control", "test2026.cuda.qwen38_5090.test_prefill128_fp8_projection"]}
+..E.........
+======================================================================
+ERROR: test_faithful_component_pass_and_failed_SDK_and_model_lineage_preserved (test2026.cuda.qwen38_5090.test_b4_v_m16_source.Composition.test_faithful_component_pass_and_failed_SDK_and_model_lineage_preserved)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "D:\CantorAI\5090-study-20261023\Garnet\test2026\cuda\qwen38_5090\test_b4_v_m16_source.py", line 13, in test_faithful_component_pass_and_failed_SDK_and_model_lineage_preserved
+    raw=(M/'evidence'/(job+'-verified.json')).read_bytes();q=json.loads(raw);self.assertEqual(hashlib.sha256(raw).hexdigest(),row['proof_sha256']);self.assertEqual(q['archive_sha256'],row['archive_sha256']);self.assertEqual(q['exit_code'],row['exit_code']);reports[job]=q
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Python312\Lib\pathlib.py", line 1019, in read_bytes
+    with self.open(mode='rb') as f:
+         ^^^^^^^^^^^^^^^^^^^^
+  File "C:\Python312\Lib\pathlib.py", line 1013, in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: 'D:\\CantorAI\\5090-study-20261023\\Garnet\\test2026\\cuda\\qwen38_5090\\evidence\\connected-fa-value-attempt4-verified.json'
+
+----------------------------------------------------------------------
+Ran 12 tests in 0.790s
+
+FAILED (errors=1)

@@ -1,0 +1,29 @@
+from pathlib import Path
+import hashlib,json,zipfile,sys,os
+W=Path(__file__).resolve().parent;O=W.parent/'outputs';R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';E=M/'evidence';P='Garnet/test2026/cuda/qwen38_5090/';sha=lambda raw:hashlib.sha256(raw).hexdigest()
+with zipfile.ZipFile(W/'b4-v-m16-cpu-closure-assets.zip') as z:
+    mf=json.loads(z.read('manifest.json'));assert z.testzip() is None
+    for n,h in mf['files'].items():assert sha(z.read(n))==h
+    proof=z.read('results/b4-v-m16-cpu-attempt1-verified.json');assert proof==(O/'b4-v-m16-cpu-attempt1-verified.json').read_bytes()
+    target=O/'b4-v-m16-cpu-attempt1-remote-verified.json';assert not target.exists();target.write_bytes(proof)
+q=json.loads(proof);assert q['exit_code']==1 and q['source_runtime_SDK_checkpoint_all34objects_CMakeCache_unchanged'] and q['stage_exit_codes']==dict(python=1)
+target=E/'b4-v-m16-cpu-attempt1-verified.json';assert not target.exists();target.write_bytes(proof)
+p=json.loads((E/'b4-v-m16-cpu-preparation.json').read_bytes());extra=['run_b4_v_m16_cpu_v2.py','verify_b4_v_m16_cpu_v2.py','evidence/b4-v-m16-cpu-v2-owner-derivation.json','evidence/b4-v-m16-cpu-attempt1-verified.json']+['evidence/'+job+'-verified.json' for job in p['parents']]
+methods={**p['methods'],**{P+n:sha((M/n).read_bytes()) for n in extra}};p['methods']=methods;p['files']={**p['files'],**methods}
+p['parents']['b4-v-m16-cpu-attempt1']=dict(proof_sha256=sha(proof),archive_sha256=q['archive_sha256'],status=q['status'],exit_code=1)
+p['scope']+=' Version2 fixes deployment only: exact paired parent proof copies explicitly pinned at M/evidence for unchanged lineage unittest. Originalattempt1 failedbeforeC++ due missingproof, both independentreplays agree; neverpromoted. Selector/factory/plugin source, thresholds, all originalchecks unchanged.'
+prep=E/'b4-v-m16-cpu-v2-preparation.json';assert not prep.exists();prep.write_bytes(json.dumps(p,indent=2).encode())
+sys.path[:0]=[str(R),str(M)];import run_logged as ledger
+ledger.source_identity=lambda:dict(scope='Explicit V CPU v2 preparation; no GPU/native/protected bodies',owned_source_sha256=methods);os.chdir(R)
+assert ledger.run([sys.executable,'-m','unittest','test2026.cuda.qwen38_5090.test_b4_v_m16_source','test2026.cuda.qwen38_5090.test_decode_fp8_sdk_control','test2026.cuda.qwen38_5090.test_prefill128_fp8_projection'],W/'b4-v-m16-v2-local-cpu-ledger','correctness','Unchanged12Python gates with explicit paired immutableproof deployment; no native/localGPU',[prep]+[R/n.removeprefix('Garnet/') for n in methods])==0
+files={n:R/n.removeprefix('Garnet/') for n in methods};files[P+'evidence/b4-v-m16-cpu-v2-preparation.json']=prep;target=W/'b4-v-m16-cpu-v2-deployment.zip';assert not target.exists()
+with zipfile.ZipFile(target,'x',zipfile.ZIP_DEFLATED) as z:
+    for n,path in files.items():z.write(path,n)
+    z.writestr('deployment-manifest.json',json.dumps(dict(files={n:sha(path.read_bytes()) for n,path in files.items()}),indent=2))
+receipt=dict(deployment_sha256=sha(target.read_bytes()),files=len(files),bytes=target.stat().st_size,preparation_sha256=sha(prep.read_bytes()));(W/'b4-v-m16-cpu-v2-package.json').write_bytes(json.dumps(receipt,indent=2).encode())
+raw=(W/'install-b4-v-m16-cpu.py').read_bytes();old=json.loads((W/'b4-v-m16-cpu-package.json').read_bytes())
+for a,b in [('b4-v-m16-cpu-deployment.zip','b4-v-m16-cpu-v2-deployment.zip'),(old['deployment_sha256'],receipt['deployment_sha256']),('b4-v-m16-cpu-install.json','b4-v-m16-cpu-v2-install.json'),('evidence/b4-v-m16-cpu-preparation.json','evidence/b4-v-m16-cpu-v2-preparation.json'),('len(mf)+1==23','len(mf)+1=='+str(len(files)+1))]:assert raw.count(a.encode())==1;raw=raw.replace(a.encode(),b.encode())
+(W/'install-b4-v-m16-cpu-v2.py').write_bytes(raw)
+raw=(W/'postprocess-b4-v-m16-cpu.py').read_bytes()
+for a,b in [('b4-v-m16-cpu-attempt1','b4-v-m16-cpu-attempt2'),('verify_b4_v_m16_cpu.py','verify_b4_v_m16_cpu_v2.py'),('b4-v-m16-cpu-postprocess','b4-v-m16-cpu-v2-postprocess'),('b4-v-m16-cpu-install.json','b4-v-m16-cpu-v2-install.json'),('b4-v-m16-cpu-closure','b4-v-m16-cpu-v2-closure')]:assert raw.count(a.encode())>0;raw=raw.replace(a.encode(),b.encode())
+(W/'postprocess-b4-v-m16-cpu-v2.py').write_bytes(raw);print(json.dumps(receipt))
