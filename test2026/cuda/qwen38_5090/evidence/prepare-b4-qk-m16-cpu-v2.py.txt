@@ -1,0 +1,24 @@
+from pathlib import Path
+import hashlib,json,zipfile
+W=Path(__file__).resolve().parent;R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';E=M/'evidence';P='Garnet/test2026/cuda/qwen38_5090/';sha=lambda b:hashlib.sha256(b).hexdigest();records=[]
+for old,new,pairs in [('run_b4_qk_m16_cpu.py','run_b4_qk_m16_cpu_v2.py',[('evidence/b4-qk-m16-cpu-preparation.json','evidence/b4-qk-m16-cpu-v2-preparation.json')]),('verify_b4_qk_m16_cpu.py','verify_b4_qk_m16_cpu_v2.py',[('evidence/b4-qk-m16-cpu-preparation.json','evidence/b4-qk-m16-cpu-v2-preparation.json'),('verify_b4_qk_m16_cpu.py','verify_b4_qk_m16_cpu_v2.py')])]:
+    original=(M/old).read_bytes();raw=original;changes=[]
+    for a,b in pairs:assert raw.count(a.encode())==1;raw=raw.replace(a.encode(),b.encode());changes.append(dict(old=a,new=b,count=1))
+    target=M/new;assert not target.exists();target.write_bytes(raw);records.append(dict(source=old,target=new,source_sha256=sha(original),target_sha256=sha(raw),changes=changes))
+n='evidence/b4-qk-m16-cpu-v2-owner-derivation.json';(M/n).write_bytes(json.dumps(dict(derivations=records,scope='Deployment-only preparation snapshot correction; original selector/factory/plugin/source/math/contracts unchanged. No CPUowner or C++ job started during rejected initialinstaller.'),indent=2).encode())
+failure=dict(status='initial_QK_CPU_installer_preflight_rejected_before_any_install_or_job',command='C:/Python312/python.exe D:/CantorAI/5090-study-20261023/results/install-b4-qk-m16-cpu.py',exit_code=1,error="AssertionError: ('Preserve existing source', 'build/garnet/CMakeFiles/garnet.dir/src/cuda/qwen38_bf16_kv_low_batch_overlay.cu.obj')",reason='Initial QK preparation inherited CUDA object snapshot from pre-source73 V CPU preparation. Later qualified V native build changed whitelisted object bytes. Latest terminal SDKquery2 already pinned all34 current objects. Use that exact newer snapshot rather than olderCPU snapshot; no whitelist relaxation, object mutation, native rerun or skipped preservation check.',no_owner_or_build_started=True)
+n2='evidence/b4-qk-m16-cpu-install-attempt1-failure.json';(M/n2).write_bytes(json.dumps(failure,indent=2).encode())
+old=json.loads((E/'b4-qk-m16-cpu-preparation.json').read_bytes());last=json.loads((E/'fp8-decode-shape-configs-v2-preparation.json').read_bytes());extra=['run_b4_qk_m16_cpu_v2.py','verify_b4_qk_m16_cpu_v2.py',n,n2,'evidence/b4-qk-m16-cpu-preparation.json'];methods={**old['methods'],**{P+n:sha((M/n).read_bytes()) for n in extra}}
+p={**old,'methods':methods,'files':{**old['files'],**methods},'cuda_objects':last['cuda_objects'],'runtime':last['runtime'],'environment':last['environment'],'checkpoints':last['checkpoints'],'cache_before_sha256':last['cache_before_sha256'],'scope':old['scope']+' Initialinstaller rejected stale pre-source73 CPU CUDAobject snapshot before any mutations/owner/C++ job; version2 pins exact newer terminal SDKquery2 all34 snapshot, all preservation checks remainstrict. No source/math/CPUcase changes.'}
+prep=E/'b4-qk-m16-cpu-v2-preparation.json';assert not prep.exists();prep.write_bytes(json.dumps(p,indent=2).encode());files={n:R/n.removeprefix('Garnet/') for n in methods};files[P+'evidence/b4-qk-m16-cpu-v2-preparation.json']=prep
+target=W/'b4-qk-m16-cpu-v2-deployment.zip';assert not target.exists()
+with zipfile.ZipFile(target,'x',zipfile.ZIP_DEFLATED) as z:
+    for n,path in files.items():z.write(path,n)
+    z.writestr('deployment-manifest.json',json.dumps(dict(files={n:sha(path.read_bytes()) for n,path in files.items()}),indent=2))
+receipt=dict(deployment_sha256=sha(target.read_bytes()),files=len(files),bytes=target.stat().st_size,preparation_sha256=sha(prep.read_bytes()),source_inventory=len(p['files']));(W/'b4-qk-m16-cpu-v2-package.json').write_bytes(json.dumps(receipt,indent=2).encode())
+raw=(W/'install-b4-qk-m16-cpu.py').read_bytes();pkg=json.loads((W/'b4-qk-m16-cpu-package.json').read_bytes())
+for a,b in [('b4-qk-m16-cpu-deployment.zip','b4-qk-m16-cpu-v2-deployment.zip'),(pkg['deployment_sha256'],receipt['deployment_sha256']),('b4-qk-m16-cpu-install.json','b4-qk-m16-cpu-v2-install.json'),('evidence/b4-qk-m16-cpu-preparation.json','evidence/b4-qk-m16-cpu-v2-preparation.json'),('len(mf)+1==55','len(mf)+1=='+str(len(files)+1))]:assert raw.count(a.encode())==1;raw=raw.replace(a.encode(),b.encode())
+(W/'install-b4-qk-m16-cpu-v2.py').write_bytes(raw)
+raw=(W/'postprocess-b4-qk-m16-cpu.py').read_bytes()
+for a,b in [('verify_b4_qk_m16_cpu.py','verify_b4_qk_m16_cpu_v2.py'),('b4-qk-m16-cpu-postprocess','b4-qk-m16-cpu-v2-postprocess'),('b4-qk-m16-cpu-install.json','b4-qk-m16-cpu-v2-install.json'),('b4-qk-m16-cpu-closure','b4-qk-m16-cpu-v2-closure')]:assert raw.count(a.encode())>0;raw=raw.replace(a.encode(),b.encode())
+(W/'postprocess-b4-qk-m16-cpu-v2.py').write_bytes(raw);print(json.dumps(receipt))
