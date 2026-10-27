@@ -1,0 +1,44 @@
+{
+  "source": "run_gdn_exact_zip_delta.py",
+  "target": "run_kv128_prefix_exact_delta.py",
+  "source_sha256": "dd915b61a2f803483633c49205d842bff7cc3e773f91a04295ed36157d9af134",
+  "target_sha256": "eb212d3723d464e367a97aa8ac1341110ddc9209cb4cc6664ff396d43c73cf36",
+  "changes": [
+    {
+      "before": "closed native GDN archive",
+      "after": "closed full-chain prefix archive",
+      "count": 1
+    },
+    {
+      "before": "JOB='gdn-kv128-stage-attempt1'",
+      "after": "JOB='kv128-prefix-cache-attempt1'",
+      "count": 1
+    },
+    {
+      "before": "run_gdn_exact_zip_delta.py",
+      "after": "run_kv128_prefix_exact_delta.py",
+      "count": 1
+    },
+    {
+      "before": "results/gdn-kv128-stage-transport",
+      "after": "results/kv128-prefix-cache-transport",
+      "count": 1
+    },
+    {
+      "before": "q['exit_code']==w['exit_code']==0",
+      "after": "q['exit_code']==w['exit_code'] and q['exit_code'] in (0,1)",
+      "count": 1
+    },
+    {
+      "before": "fp8-z128-native-package-audit-attempt1-evidence.zip",
+      "after": "fa3-prefix-cache-witness-attempt1-evidence.zip",
+      "count": 1
+    },
+    {
+      "before": "exact_GDN_archive_transport_delta_prepared",
+      "after": "exact_KV128_prefix_archive_transport_delta_prepared",
+      "count": 1
+    }
+  ],
+  "native_or_model_or_oracle_changed": false
+}

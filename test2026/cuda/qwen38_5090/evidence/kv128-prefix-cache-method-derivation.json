@@ -1,0 +1,140 @@
+{
+  "files": [
+    {
+      "source": "probe_fa3_prefix_cache_witness.py",
+      "target": "probe_kv128_prefix_cache.py",
+      "source_sha256": "385066aab0b6be33a8be88ca826cb8161148083ddc8f8303e4e1c2ea13abcf67",
+      "target_sha256": "4147edd7f27542f15db423dbd8e5a7570e912fa262973dd51db702c28e33a836",
+      "changes": [
+        {
+          "before": "fa3-prefix-cache-witness-preparation.json",
+          "after": "kv128-prefix-cache-preparation.json",
+          "count": 1
+        },
+        {
+          "before": "qwen38_5090.fa3_prefix_cache_witness import",
+          "after": "qwen38_5090.kv128_prefix_cache_witness import",
+          "count": 1
+        },
+        {
+          "before": "parent='mtp-prefill16-full4k-admission-attempt1' if tokens==32 else 'fp8-z128-full4k-model-admission-attempt1'",
+          "after": "parent='mtp-prefill16-full4k-admission-attempt1'",
+          "count": 1
+        },
+        {
+          "before": "expected=old['cases'][0] if tokens==32 else ref['ordinary_observations'][0]",
+          "after": "unused",
+          "count": 0
+        },
+        {
+          "before": "expected=old['cases'][0] if tokens==32 else old['ordinary_observations'][0]",
+          "after": "expected=old['cases'][0]",
+          "count": 1
+        },
+        {
+          "before": "    assert os.environ.get('GARNET_QWEN38_BF16_LOW_BATCH_TILED_SCORES')=='0'",
+          "after": "    for flag in ('GARNET_FP8_GDN_Z128_RECONSTRUCT','GARNET_FP8_FULL_ATTN_KV128_CANONICAL'):assert os.environ.get(flag)==('1' if tokens==128 else '0')\n    assert os.environ.get('GARNET_QWEN38_BF16_LOW_BATCH_TILED_SCORES')=='0'",
+          "count": 1
+        },
+        {
+          "before": "Retained T32 baseline and prior failed T128 final states/IDs must reproduce exactly.",
+          "after": "Both profiles must match the unchanged retained T32 complete packed state, vectors and128IDs. Old wrong T128 outputs are not the target.",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "test_fa3_prefix_cache_witness.bat",
+      "target": "test_kv128_prefix_cache.bat",
+      "source_sha256": "a1ab5d20d831f1ef85e595672030e7fa9c98989e6c1f73670508a44235503ecc",
+      "target_sha256": "ba7d68b67d3af715f2f06ad563f3315b2da750d6f03a76cbfa17a050dbd6f804",
+      "changes": [
+        {
+          "before": "set GARNET_FP8_GDN_Z128_CANONICAL=%GARNET_FP8_GDN_M128_CANONICAL%",
+          "after": "set GARNET_FP8_GDN_Z128_CANONICAL=%GARNET_FP8_GDN_M128_CANONICAL%\nset GARNET_FP8_GDN_Z128_RECONSTRUCT=%GARNET_FP8_GDN_M128_CANONICAL%\nset GARNET_FP8_FULL_ATTN_KV128_CANONICAL=%GARNET_FP8_GDN_M128_CANONICAL%\nset GARNET_MODELOPT_INIT_TRACE=\nset GARNET_Z128_RECONSTRUCT_TRACE=\nset GARNET_Z128_FACTORY_TRACE=\nset GARNET_KV128_FACTORY_TRACE=\nset CUBLASLT_LOG_LEVEL=\nset CUBLASLT_LOG_MASK=\nset CUBLASLT_LOG_FILE=",
+          "count": 1
+        },
+        {
+          "before": "probe_fa3_prefix_cache_witness.py",
+          "after": "probe_kv128_prefix_cache.py",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "test_gdn_kv128_embedded_metadata.bat",
+      "target": "test_kv128_prefix_metadata.bat",
+      "source_sha256": "1af5758f2c062be662d4b7d72998d3392268fd52f7e18902901cf5de8cb260fb",
+      "target_sha256": "e6da528b921833a7ac9772bf0ff1fce633a8afaf72106f31473dc91342be1b81",
+      "changes": [
+        {
+          "before": "probe_gdn_kv128_embedded_metadata.py",
+          "after": "probe_kv128_prefix_metadata.py",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "run_fa3_prefix_cache_witness.py",
+      "target": "run_kv128_prefix_cache.py",
+      "source_sha256": "59d182c20ffbe69b980fb001d2fb3fad4b6cb0a25a5183e31b8a579be48857ab",
+      "target_sha256": "9b30557956c55a9e5e02130d36fbdd4bd3cd281927073413a8c83b5a8cb8d3a9",
+      "changes": [
+        {
+          "before": "JOB='fa3-prefix-cache-witness-attempt1'",
+          "after": "JOB='kv128-prefix-cache-attempt1'",
+          "count": 1
+        },
+        {
+          "before": "fa3-prefix-cache-witness-preparation.json",
+          "after": "kv128-prefix-cache-preparation.json",
+          "count": 1
+        },
+        {
+          "before": "fa3_prefix_cache_witness_prepared_gpu_unrun",
+          "after": "KV128_prefix_cache_prepared_gpu_unrun",
+          "count": 1
+        },
+        {
+          "before": "==35",
+          "after": "==50",
+          "count": 2
+        },
+        {
+          "before": "garnet-native-fp8-z128-attempt1.dll",
+          "after": "garnet-native-kv128-canonical-attempt2.dll",
+          "count": 1
+        },
+        {
+          "before": "test_fa3_prefix_cache_witness.bat",
+          "after": "test_kv128_prefix_cache.bat",
+          "count": 1
+        },
+        {
+          "before": "74CPU retained70 model/state/vector/ID/MTP controls plus4 bounded cache/geometry/finite/index/oracle faults",
+          "after": "35CPU new/retained route/complete-cache/state/vector/ID/MTP and corruption controls plus86historical assertions in frozen source view",
+          "count": 1
+        },
+        {
+          "before": "        library.write_bytes(candidate.read_bytes());",
+          "after": "        code=ledger.run(['cmd.exe','/d','/c',str(M/'test_kv128_prefix_metadata.bat'),str(out/'embedded-metadata.json')],out/'embedded-metadata-ledger','correctness','Actual embedded stdlib-only prefix metadata import before GPU request',common)\n        if code:raise RuntimeError('Embedded prefix metadata failed before GPU')\n        library.write_bytes(candidate.read_bytes());",
+          "count": 1
+        },
+        {
+          "before": "        w['status']='fa3_prefix_cache_witness_collected_needs_replay'",
+          "after": "        from test2026.cuda.qwen38_5090.kv128_prefix_cache_witness import compare\n        report_base=json.loads((out/'baseline/report.json').read_bytes());report_native=json.loads((out/'native/report.json').read_bytes())\n        result=compare(report_base,report_native,lambda n:(out/'baseline'/n).read_bytes(),lambda n:(out/'native'/n).read_bytes())\n        (out/'cache-analysis.json').write_bytes(json.dumps(result,indent=2).encode())\n        assert result['all_prefix_KEY_and_VALUE_byte_exact'],'Full-chain layer3 cache gate failed; preserve complete arrays'\n        w['status']='KV128_prefix_cache_and_ordinary_control_collected_needs_replay'",
+          "count": 1
+        },
+        {
+          "before": "    idle();out.mkdir();",
+          "after": "    idle();assert shutil.disk_usage(ROOT).free>=2<<30;out.mkdir();",
+          "count": 1
+        }
+      ]
+    }
+  ],
+  "native_source_or_DLL_changed": false,
+  "original_state_vector_token_cache_oracles_unchanged": true,
+  "both_profiles_use_T32_oracle": true,
+  "original_failed_T128_result_not_used_as_target": true
+}
