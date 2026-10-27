@@ -1,0 +1,69 @@
+from pathlib import Path
+import hashlib,json,sys
+R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';E=M/'evidence';sys.path[:0]=[str(R),str(M)];sha=lambda b:hashlib.sha256(b).hexdigest()
+from test2026.cuda.qwen38_5090.b4_qk_m16_source import sources
+_,parent,_=sources();assert len(parent)==79
+folder=M/'native_b4_k_m4x4_candidate';assert not folder.exists();folder.mkdir();candidate=dict(parent);derivations=[];root='src/backends/tensorrt/'
+def derive(source,target,edits):
+    old=parent[source];raw=old;changes=[]
+    for a,b,count in edits:
+        if b'\r\n' in old:a=a.replace('\n','\r\n');b=b.replace('\n','\r\n')
+        assert raw.count(a.encode())==count,(source,a,raw.count(a.encode()),count)
+        raw=raw.replace(a.encode(),b.encode());changes.append(dict(old=a,new=b,count=count))
+    candidate[target]=raw;(folder/Path(target).name).write_bytes(raw);derivations.append(dict(source=source,target=target,source_sha256=sha(old),target_sha256=sha(raw),changes=changes))
+def renamed(name,extra):
+    source=root+'modelopt_fp8_qk_m16_'+name;target=root+'modelopt_fp8_k_m4x4_'+name;raw=parent[source]
+    edits=[]
+    for a,b in [('QKM16','KM4X4'),('qk_m16','k_m4x4'),('0x514b3136u','0x4b343434u'),('GARNET_FP8_QK_BATCH4_DECODE_CANONICAL','GARNET_FP8_K_BATCH4_DECODE_M4X4')]:
+        count=raw.count(a.encode())
+        if count:edits.append((a,b,count));raw=raw.replace(a.encode(),b.encode())
+    for a,b,count in extra:assert raw.count(a.encode())==count;raw=raw.replace(a.encode(),b.encode())
+    derive(source,target,edits+extra)
+renamed('canonical.h',[
+('int device=-1,algorithm=-1,rows=0;','int device=-1,algorithm=-1,rows=0;\n    int inputRowsPerMatmul=4,matmulsPerEnqueue=4;',1)])
+renamed('init_trace.h',[])
+renamed('profile.h',[
+('        if(name==prefix+"q_proj.weight")return 12288;\n','',1),
+('full-attention Q/K FP8 projection','full-attention K FP8 projection',1)])
+renamed('plugin.h',[])
+renamed('plugin.cpp',[
+('(rows!=1024&&rows!=12288)||columns!=5120','rows!=1024||columns!=5120',1),
+('full-attention Q/K decode geometry','full-attention K decode geometry',1),
+('"fp8_k_m4x4",this,state_.rows,state_.columns,16','"fp8_k_m4x4",this,state_.rows,state_.columns,4',1)])
+old_run='''        return cublasLtMatmul(context->handle,context->operation,&globalScale,weights,context->weight,input,context->input,
+            &beta,output,context->output,output,context->output,&context->info.opaque,workspace,workspaceBytes,stream);'''
+new_run='''        // Preserve the actual M4 shape for each physical row's four-token block.
+        // Quantized input and BF16 output are contiguous [16,K] and [16,N].
+        // Each ordered call uses the original weight, scalar, workspace and stream.
+        for(int group=0;group<4;++group){
+            const auto* groupInput=static_cast<const unsigned char*>(input)+size_t(group)*4*5120;
+            auto* groupOutput=static_cast<unsigned char*>(output)+size_t(group)*4*1024*sizeof(uint16_t);
+            const auto status=cublasLtMatmul(context->handle,context->operation,&globalScale,weights,context->weight,groupInput,context->input,
+                &beta,groupOutput,context->output,groupOutput,context->output,&context->info.opaque,workspace,workspaceBytes,stream);
+            if(status!=CUBLAS_STATUS_SUCCESS)return status;
+        }
+        return CUBLAS_STATUS_SUCCESS;'''
+renamed('canonical.cpp',[
+('#include <cstring>','#include <cstring>\n#include <cstdint>',1),
+('if(rows!=1024&&rows!=12288)','if(rows!=1024)',1),
+('context->input,CUDA_R_8F_E4M3,5120,16,5120','context->input,CUDA_R_8F_E4M3,5120,4,5120',1),
+('context->output,CUDA_R_16BF,rows,16,rows','context->output,CUDA_R_16BF,rows,4,rows',1),
+('// Select the live actual M4 reference, then check reference M4 and actual M16.','// Select the live M4 reference and check both reference and persistent actual M4 layouts.',1),
+('rows==12288?18u:uint32_t(CUBLASLT_MATMUL_TILE_64x32)','uint32_t(CUBLASLT_MATMUL_TILE_64x32)',1),
+('rows==12288?16u:uint32_t(CUBLASLT_MATMUL_STAGES_64x5)','uint32_t(CUBLASLT_MATMUL_STAGES_64x5)',1),
+('rows==12288?7:3','3',1),('rows==12288?1u:0u','0u',1),('rows==12288?2:1','1',1),
+('trace.note("check","M16"','trace.note("check","M4_actual"',1),
+('return info.algorithm==35&&(info.rows==1024||info.rows==12288);','return info.algorithm==35&&info.rows==1024&&info.inputRowsPerMatmul==4&&info.matmulsPerEnqueue==4;',1),
+(old_run,new_run,1)])
+derive(root+'modelopt_fp8_lowering.cpp',root+'modelopt_fp8_lowering.cpp',[
+('#include "modelopt_fp8_qk_m16_profile.h"','#include "modelopt_fp8_qk_m16_profile.h"\n#include "modelopt_fp8_k_m4x4_plugin.h"\n#include "modelopt_fp8_k_m4x4_profile.h"',1),
+('    const bool canonicalQKM16=ModelOptFP8QKM16Selected','    const bool separateKM4X4=ModelOptFP8KM4X4Selected(std::getenv("GARNET_FP8_K_BATCH4_DECODE_M4X4"),\n        shape.nbDims==3?int(shape.d[0]):0,shape.nbDims==3?int(shape.d[1]):0,rows,p.rows,p.columns,p.logicalName);\n    const bool canonicalQKM16=ModelOptFP8QKM16Selected',1),
+('    if(canonicalQKM16){','    if(separateKM4X4){\n        if(!EnsureModelOptFP8KM4X4PluginRegistered())throw std::runtime_error("Native physicalB4T4 K M4x4 FP8 registration failed");\n        plugin=new ModelOptFP8KM4X4Plugin(p.rows,p.columns,p.weightScale,p.inputScale);\n    }else if(canonicalQKM16){',1)])
+assert len(candidate)==85
+modified=[n for n in parent if parent[n]!=candidate[n]];new=[n for n in candidate if n not in parent];assert modified==[root+'modelopt_fp8_lowering.cpp'] and len(new)==6
+parents={}
+for job in ('b4-qk-m16-short-attempt1','b4-full4k-exact-attempt1','b4-full4k-decode-prefix-attempt1','b4-full4k-selection52-attempt1'):
+    raw=(E/(job+'-verified.json')).read_bytes();q=json.loads(raw);parents[job]=dict(proof_sha256=sha(raw),archive_sha256=q['archive_sha256'],exit_code=q['exit_code'],status=q['status'])
+record=dict(status='K_M4x4_candidate_source_prepared_GPU_and_native_CPU_unrun',parent_files={n:sha(b) for n,b in parent.items()},candidate_files={n:sha(b) for n,b in candidate.items()},modified_files=modified,new_files=new,derivations=derivations,parents=parents,new_CUDA_kernels=0,new_context_factories=1,BlasWorkspace=4<<20,outer_M=16,actual_M_per_call=4,matmuls_per_enqueue=4,output_N=1024,input_K=5120,observed_M4_configuration=[35,13,17,3,2,0,1],model_or_quality_or_performance_qualified=False,
+scope='Separatedefaultoff K-only physicalB4T4 intervention, source79->85. NewSDK context keepsactualM4descriptors andexecutesfourorderedM4matmuls usingliveSDKselectedM4opaque andsevenattr checks, instead of executing M16. Inputquantization unchangedouter16, perrowfourtokenblocks atinputbyteoffsetgroup*4*5120/outputbyteoffsetgroup*4*1024*2; weights/scalar/workspace/stream shared, firstfailurepropagates. ExistingQ/KM16,V,GDN,NVFP4/allCUDAkernels/wires/defaults remainbyte-identical outsideonlyloweringdispatch. New20Bwire0x4b343434, newflagGARNET_FP8_K_BATCH4_DECODE_M4X4. Controlledhypothesis followingactualcommoninputstep52K35state drift; normalization/rotary/othercauses notexcluded. No SDK eligibility, numeric equivalence, timing, quality orperformanceadmission fromsource alone. PendingactualnativeCPU/API/modelfull4K/MTP/quality/HTTPvalidation. Originalfailedfull4K/cache62jobs remainFAILED.')
+p=E/'b4-k-m4x4-source-derivation.json';assert not p.exists();p.write_bytes(json.dumps(record,indent=2).encode());print(json.dumps(dict(candidate_sources=len(candidate),modified=modified,new_files=len(new),native_CPU_and_GPU_unrun=True)))
