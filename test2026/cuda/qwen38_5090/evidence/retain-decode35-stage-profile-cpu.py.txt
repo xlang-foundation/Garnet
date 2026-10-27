@@ -1,0 +1,44 @@
+from pathlib import Path
+import hashlib,json,zipfile
+W=Path(__file__).resolve().parent;O=W.parent/'outputs';R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';E=M/'evidence';sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest();owned=[];saved={}
+def keep(name,raw):
+    p=E/name;assert not p.exists();p.write_bytes(raw);owned.append(p);saved[name]=sha(p)
+J='decode35-stage-profile-cpu-attempt1';proof=O/(J+'-verified.json');q=json.loads(proof.read_bytes());archive=O/(J+'-evidence.zip')
+assert proof.read_bytes()==(O/(J+'-remote-verified.json')).read_bytes() and q['exit_code']==0 and q['baseline_unchanged'] and sha(archive)==q['archive_sha256']
+assert q['native_contract']=={'status':'passed','new_valid':2,'new_rejected':103,'old_valid':2,'old_rejected':2,'failures':0,'cases':109}
+owned.append(M/'verify_decode35_stage_profile_cpu.py')
+for name in (proof.name,J+'-remote-verified.json','Garnet-Decode35-Stage-CPU-Progress.json'):keep(name,(O/name).read_bytes())
+with zipfile.ZipFile(archive) as z:
+    keep('decode35-stage-profile-cpu1-manifest.json',z.read('evidence-manifest.json'));keep('decode35-stage-profile-cpu1-workflow.json',z.read('workflow.json'))
+    for stage in ('build','contract'):
+        for ext in ('log','jsonl'):keep('decode35-stage-profile-cpu1-'+stage+'-commands.'+ext,z.read(stage+'-ledger/commands.'+ext))
+    for name in ('qwen38_decode35_stage_profile.h','qwen38_full_chunk_stage_profile.h','probe_decode35_stage_profile.cpp','build_decode35_stage_profile_cpu.bat'):keep('decode35-stage-profile-cpu1-input-'+name+'.txt',z.read('input/'+name))
+for name in ('commands.log','commands.jsonl'):keep('decode35-stage-profile-cpu1-local-replay-'+name,(W/'decode35-stage-profile-cpu-local-replay'/name).read_bytes())
+for name in ('replay-decode35-stage-profile-cpu.py',Path(__file__).name):keep(name+'.txt',(W/name).read_bytes())
+keep('decode35-stage-profile-cpu1-retention.json',json.dumps({'status':'source86_native_CPU_profile_replayed_retained','archive_sha256':sha(archive),'archive_bytes':archive.stat().st_size,'proof_sha256':sha(proof),'retained_sha256':saved,'actual_native_CPU_contracts':109,'local_source_controls':5,'paired_replay_bytes_identical':True,'all1892_baseline_runtime_SDK_config_index_CMake_current34_unchanged':True,'Garnet_DLL_or_live_TensorRT_or_GPU_model_build_executed':False,'downloaded_native_executable_loaded_locally':False,'full_goal_or_two_times_target_achieved':False},indent=2).encode())
+entry=('\n\n2026-10-27 source86 decode35 native CPU profile contracts PASSED on '
+       'CD-RTX5090. Actual MSVC C++17 /MT /W4 /WX compiles exact newguardheader '
+       'and pinned original source85 fullchunkprofile header;109cases:2newvalid '
+       '(B1lowbatch/B4BF16 T4layer35),103invalidflag/precision/binding/geometry/'
+       'mode/finite/neighborfloat/offset variants rejected,2oldB1T32/T128layer3 '
+       'valid,2oldguard rejects newprofiles. Zero failures. Thisvalidates only '
+       'actualheadercontracts, NOTliveTensorRT typeparsing/stagepacking, fullDLL '
+       'compilation, numerical tensors, modelquality orperformance. Five local '
+       'source controls separatelypassed. Remote/local rawreaders byte-identical '
+       'proof '+sha(proof)+', archive '+sha(archive)+' ('+str(archive.stat().st_size)+'B /14members). '
+       'All1892 baseline files,guardedruntime/SDK/config+index/CMake/all34CUDA '
+       'objects unchanged; no production source/DLL mutations. Allsix CPUinput '
+       'hashes/actualbuild+contractcommandledgers/compiledEXEhash/sourcebeforeafter '
+       'and rawworkflow retained. Localreader only hashes EXEbytes; neverloads '
+       'or executesdownloadednativecode. Nextfullsource86nativebuild with all '
+       'original88current+86historical controls plusnewsource5/header109proof, '
+       'original three-objectwhitelist andcurrentpostbuildhashes, thenseparate '
+       'modelobserver retaining original53IDs/fivestatevectorcaptures/fullcache/'
+       'coordinate/all64layer44-45parity beforeinternaloperand interpretation. '
+       'Originalfull4K/cache62/K-fourM4/observer1 failures preserved; strongest '
+       'tuned/MTPrefs,matchedINT4/4B andoverall2xgoal remainopen.\n').encode()
+for name in ('docs/research/qwen38-5090-development-log.md','docs/research/qwen38-5090-implementation-task.md'):
+    p=R/name;before=p.read_bytes();assert b'source86 decode35 native CPU profile contracts PASSED' not in before
+    with p.open('ab') as f:f.write(entry)
+    assert p.read_bytes()==before+entry;owned.append(p)
+(W/'decode35-stage-profile-cpu-result-stage-paths.bin').write_bytes(b''.join(p.relative_to(R).as_posix().encode()+b'\0' for p in owned));print(json.dumps({'stage_paths':len(owned),'proof_sha256':sha(proof),'native_CPU_cases':109}))

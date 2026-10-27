@@ -1,0 +1,12 @@
+"""Local data-only replay; archived native executable is never loaded/executed."""
+from pathlib import Path
+import hashlib,json,os,sys
+W=Path(__file__).resolve().parent;O=W.parent/'outputs';R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest();sys.path[:0]=[str(M),str(R)]
+import run_logged as ledger
+J='decode35-stage-profile-cpu-attempt1';archive=O/(J+'-evidence.zip');remote=O/(J+'-remote-verified.json');q=json.loads(remote.read_bytes());assert q['exit_code']==0 and sha(archive)==q['archive_sha256']
+names=['verify_decode35_stage_profile_cpu.py','decode35_stage_source.py','evidence/decode35-stage-source-derivation.json','native_decode35_stage_candidate/qwen38_decode35_stage_profile.h','probe_decode35_stage_profile.cpp']
+ledger.source_identity=lambda:{'scope':'Explicit local native CPU guard raw reader/source pins; no native binary/GPU/model execution or protected-body reads','owned_source_sha256':{n:sha(M/n) for n in names}}
+os.chdir(R);proof=O/(J+'-verified.json');assert ledger.run([sys.executable,str(M/'verify_decode35_stage_profile_cpu.py'),'--archive',str(archive),'--output',str(proof)],W/'decode35-stage-profile-cpu-local-replay','correctness','Independent raw native CPU profile replay: six exact input hashes, all13 manifest files, actual cl/contract source before-after/exit/109result/compiledEXEhash, all1892baseline/runtime/SDK/config-index/CMake/all34 unchanged. Native EXE is read as bytes only, never loaded locally. No live TensorRT/model/performance qualification.',[M/n for n in names]+[archive,remote])==0
+assert proof.read_bytes()==remote.read_bytes();q=json.loads(proof.read_bytes())
+summary={'status':q['status'],'proof_sha256':sha(proof),'archive_sha256':sha(archive),'archive_bytes':archive.stat().st_size,'paired_remote_local_proof_bytes_identical':True,'local_source_controls':5,'actual_native_CPU_contract':q['native_contract'],'source_files':86,'baseline_unchanged':q['baseline_unchanged'],'downloaded_executable_executed_locally':False,'full_native_Garnet_build_executed':False,'GPU_model_or_performance_qualified':False,'two_times_target_achieved':False}
+(O/'Garnet-Decode35-Stage-CPU-Progress.json').write_bytes(json.dumps(summary,indent=2).encode());print(json.dumps(summary,indent=2))
