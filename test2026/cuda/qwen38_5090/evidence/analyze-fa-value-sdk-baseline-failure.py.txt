@@ -1,0 +1,14 @@
+from pathlib import Path
+import hashlib,json,sys,zipfile
+import numpy as np
+W=Path(__file__).resolve().parent;O=W.parent/'outputs';R=Path('D:/CantorAI/work/qwen38-5090');sys.path.insert(0,str(R));from test2026.cuda.qwen38_5090.fa_value_sdk_control import active_values,CASES
+JOB='fa-value-sdk-control-attempt1';sha=lambda raw:hashlib.sha256(raw).hexdigest();raw=(O/(JOB+'-verified.json')).read_bytes();assert raw==(O/(JOB+'-remote-verified.json')).read_bytes();q=json.loads(raw);assert q['exit_code']==1 and not q['strict_replay_passed'] and q['source_runtime_SDK_checkpoint_CMake_all34_production_objects_unchanged'];archive=O/(JOB+'-evidence.zip');assert sha(archive.read_bytes())==q['archive_sha256'];rows=[]
+with zipfile.ZipFile(archive) as z:
+    for label,layer,step in CASES:
+        stem=label+'-step0';f='results/actual-fa-value-m4-m16-fixture/';a='results/'+JOB+'/actual/';expected={mode:z.read(f+stem+'-garnet-'+mode+'-active.bf16') for mode in ('m4','m16')}
+        actual={mode:active_values(z.read(a+stem+'-'+mode+'-r0.bf16')) for mode in ('m4','default16','shared16')};comparisons=[]
+        for mode,base in (('m4','m4'),('default16','m16'),('shared16','m4')):
+            x=np.frombuffer(actual[mode],dtype='<u2');y=np.frombuffer(expected[base],dtype='<u2');indices=np.flatnonzero(x!=y);examples=[dict(flat_index=int(i),physical_row=int(i)//1024,head=(int(i)%1024)//256,dimension=int(i)%256,SDK_BF16_bits=int(x[i]),Garnet_BF16_bits=int(y[i])) for i in indices[:16]]
+            comparisons.append(dict(mode=mode,Garnet_reference=base,active_words=4096,different_words=len(indices),different_by_row=[int(np.count_nonzero(x[r*1024:(r+1)*1024]!=y[r*1024:(r+1)*1024])) for r in range(4)],first_16_differences=examples))
+        rows.append(dict(projection=label,layer=layer,actual_decode_step=step,comparisons=comparisons))
+doc=dict(status='paired_FA_value_SDK_baseline_failure_word_diagnostics_not_admission',proof_sha256=sha(raw),archive_sha256=q['archive_sha256'],rows=rows,scope='All actual cache rows compared as BF16 bits. Does not relax failed aggregate baseline gate. Separate normalization is not the actual internal fused-normalization witness; SDK-to-cache mismatches need further observation. No model/performance claim.');target=O/'Garnet-FA-Value-SDK-Baseline-Failure-Diagnostics.json';assert not target.exists();target.write_bytes(json.dumps(doc,indent=2).encode());print(json.dumps(doc,indent=2))

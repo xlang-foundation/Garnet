@@ -1,0 +1,187 @@
+{
+  "status": "actual_FA3_step5_FA11_step1_SDK_fixture_prepared",
+  "parent_archive_sha256": "95a52fcceceeeee6f74b2c9747c9fc363280821ba2d38d0805f3e7b3f1fa7dc1",
+  "parent_proof_sha256": "682f54de95a19b9ca6f2315059eddb05703129ce13a62868eda1322b500e91f0",
+  "cases": [
+    {
+      "label": "v3",
+      "layer": 3,
+      "actual_decode_step": 5,
+      "physical_rows": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "same_consumed_inputs_and_full_preceding_hidden_and_separate_norm": true,
+      "actual_active_V_BF16_different_words": 1,
+      "input_sha256": "e0eb19c4795c4c0365119d14bd584d95184dad2e67ac1185c868fde21afc90a4",
+      "reference_active_sha256": "1b6929ac225b4af1607b1c726ec33eb2c1eaffe6d191114dceee9e34489fb097",
+      "candidate_active_sha256": "debe0ed8aabd389689b21da2834f58099833d10ef57cd01f4d8f1b6e59886021"
+    },
+    {
+      "label": "v11",
+      "layer": 11,
+      "actual_decode_step": 1,
+      "physical_rows": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "same_consumed_inputs_and_full_preceding_hidden_and_separate_norm": true,
+      "actual_active_V_BF16_different_words": 1,
+      "input_sha256": "e096b6641d78c0bdba4713695933175514c229e784e22ca848e44053d1e0283f",
+      "reference_active_sha256": "b5b54f71d7c654c53321d2d9e7c90381ea01b05523e3a8ab494053b2f16244d6",
+      "candidate_active_sha256": "d2b9ab6a54fa5b127f8317435243f9954e1e8870c5dbf69c2a883e114cef3803"
+    }
+  ],
+  "files": {
+    "v3-step0-normalized.f32": {
+      "sha256": "e0eb19c4795c4c0365119d14bd584d95184dad2e67ac1185c868fde21afc90a4",
+      "bytes": 327680,
+      "archive": true
+    },
+    "v3-step0-garnet-m4-active.bf16": {
+      "sha256": "1b6929ac225b4af1607b1c726ec33eb2c1eaffe6d191114dceee9e34489fb097",
+      "bytes": 8192,
+      "archive": true
+    },
+    "v3-step0-garnet-m16-active.bf16": {
+      "sha256": "debe0ed8aabd389689b21da2834f58099833d10ef57cd01f4d8f1b6e59886021",
+      "bytes": 8192,
+      "archive": true
+    },
+    "v11-step0-normalized.f32": {
+      "sha256": "e096b6641d78c0bdba4713695933175514c229e784e22ca848e44053d1e0283f",
+      "bytes": 327680,
+      "archive": true
+    },
+    "v11-step0-garnet-m4-active.bf16": {
+      "sha256": "b5b54f71d7c654c53321d2d9e7c90381ea01b05523e3a8ab494053b2f16244d6",
+      "bytes": 8192,
+      "archive": true
+    },
+    "v11-step0-garnet-m16-active.bf16": {
+      "sha256": "d2b9ab6a54fa5b127f8317435243f9954e1e8870c5dbf69c2a883e114cef3803",
+      "bytes": 8192,
+      "archive": true
+    },
+    "v3-weight.e4m3": {
+      "sha256": "486f1085ebfdb4ae9f43c6c15a1d2e0af187f7487fc71a44ac67a2d436e5b592",
+      "bytes": 5242880,
+      "archive": true
+    },
+    "v3-weight-scale.f32": {
+      "sha256": "a5246666072922ea324d1cf125f1fb862822de7f0a981b9e42a4dffc4f28b063",
+      "bytes": 4,
+      "archive": true
+    },
+    "v3-input-scale.f32": {
+      "sha256": "18e4287f279fc5ae1cf15d0d40fef68dafb78c140471f32d046457e8b13d169c",
+      "bytes": 4,
+      "archive": true
+    },
+    "v11-weight.e4m3": {
+      "sha256": "f493c9cefca81a5c596c5450e4c90b0eb513e806283738a486528823e80f70e4",
+      "bytes": 5242880,
+      "archive": true
+    },
+    "v11-weight-scale.f32": {
+      "sha256": "19c343903192c6e5fbe7ce92dca1734474bc6eee9d43e203a7fa8d450f2a0af6",
+      "bytes": 4,
+      "archive": true
+    },
+    "v11-input-scale.f32": {
+      "sha256": "2e412a25091ca0bc493ffc89623938480bf8d21cb426e35eb9dcb5918fc30b4a",
+      "bytes": 4,
+      "archive": true
+    },
+    "model-00001-of-00003.safetensors-header.json": {
+      "sha256": "60f09f862dd9fc8c2594641081613cc3f12f162419cfa06f2e6ee3feac7bc5f5",
+      "bytes": 126536,
+      "archive": true
+    }
+  },
+  "checkpoint_tensors": {
+    "v3-weight.e4m3": {
+      "key": "model.language_model.layers.3.self_attn.v_proj.weight",
+      "shard": "model-00001-of-00003.safetensors",
+      "header_sha256": "60f09f862dd9fc8c2594641081613cc3f12f162419cfa06f2e6ee3feac7bc5f5",
+      "shard_bytes": 9965652544,
+      "dtype": "F8_E4M3",
+      "shape": [
+        1024,
+        5120
+      ],
+      "data_offsets": [
+        5925231600,
+        5930474480
+      ]
+    },
+    "v3-weight-scale.f32": {
+      "key": "model.language_model.layers.3.self_attn.v_proj.weight_scale",
+      "shard": "model-00001-of-00003.safetensors",
+      "header_sha256": "60f09f862dd9fc8c2594641081613cc3f12f162419cfa06f2e6ee3feac7bc5f5",
+      "shard_bytes": 9965652544,
+      "dtype": "F32",
+      "shape": [],
+      "data_offsets": [
+        932,
+        936
+      ]
+    },
+    "v3-input-scale.f32": {
+      "key": "model.language_model.layers.3.self_attn.v_proj.input_scale",
+      "shard": "model-00001-of-00003.safetensors",
+      "header_sha256": "60f09f862dd9fc8c2594641081613cc3f12f162419cfa06f2e6ee3feac7bc5f5",
+      "shard_bytes": 9965652544,
+      "dtype": "F32",
+      "shape": [],
+      "data_offsets": [
+        928,
+        932
+      ]
+    },
+    "v11-weight.e4m3": {
+      "key": "model.language_model.layers.11.self_attn.v_proj.weight",
+      "shard": "model-00001-of-00003.safetensors",
+      "header_sha256": "60f09f862dd9fc8c2594641081613cc3f12f162419cfa06f2e6ee3feac7bc5f5",
+      "shard_bytes": 9965652544,
+      "dtype": "F8_E4M3",
+      "shape": [
+        1024,
+        5120
+      ],
+      "data_offsets": [
+        3997490160,
+        4002733040
+      ]
+    },
+    "v11-weight-scale.f32": {
+      "key": "model.language_model.layers.11.self_attn.v_proj.weight_scale",
+      "shard": "model-00001-of-00003.safetensors",
+      "header_sha256": "60f09f862dd9fc8c2594641081613cc3f12f162419cfa06f2e6ee3feac7bc5f5",
+      "shard_bytes": 9965652544,
+      "dtype": "F32",
+      "shape": [],
+      "data_offsets": [
+        196,
+        200
+      ]
+    },
+    "v11-input-scale.f32": {
+      "key": "model.language_model.layers.11.self_attn.v_proj.input_scale",
+      "shard": "model-00001-of-00003.safetensors",
+      "header_sha256": "60f09f862dd9fc8c2594641081613cc3f12f162419cfa06f2e6ee3feac7bc5f5",
+      "shard_bytes": 9965652544,
+      "dtype": "F32",
+      "shape": [],
+      "data_offsets": [
+        192,
+        196
+      ]
+    }
+  },
+  "scope": "Only two real previously captured qualifying cases, all four full T4 input/norm rows exact and one actual active Vcache BF16 mismatch each. Actual indexed N1024/K5120 E4M3 weights and positive F32 calibrations, full shard header retained. Both weight slices total10MiB archived, no full checkpoint/model copy. Garnet only supplies active Vcache outputs, not inactive projection outputs. SDK baselines must reproduce both actual active caches before intervention; original model failure unchanged."
+}
