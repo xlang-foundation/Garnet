@@ -1,0 +1,38 @@
+from pathlib import Path
+import ast,hashlib,json,sys,zipfile
+W=Path(__file__).resolve().parent;O=W.parent/'outputs';R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';E=M/'evidence';P='Garnet/test2026/cuda/qwen38_5090/';sha=lambda b:hashlib.sha256(b).hexdigest();sys.path.insert(0,str(R));from test2026.cuda.qwen38_5090.b4_prefill128_source import sources
+old,candidate,source=sources();i_raw=(W/'b4-prefill128-build-inputs.json').read_bytes();i=json.loads(i_raw);assert i['status']=='B4_prefill128_native_build_inputs_verified_no_GPU_or_mutation' and len(i['base_files'])==1374 and len(i['candidate_base'])==61 and len(i['cuda_objects_before'])==34
+native=json.loads((E/'o128-canonical-build-preparation.json').read_bytes());bench=json.loads((E/'o128-http-benchmark-preparation.json').read_bytes());cache=json.loads((E/'fp8-policy-cache-production-python-preparation.json').read_bytes());assert all(i['base_files'][n]==h for n,h in native['base_files'].items()) and i['base_files']==cache['files'] and i['runtime']==native['runtime']==bench['runtime']
+target=E/'b4-prefill128-build-inputs.json';assert not target.exists() or target.read_bytes()==i_raw;target.write_bytes(i_raw)
+names=['b4_prefill128_source.py','test_b4_prefill128_source.py','probe_b4_prefill128_policy.cpp','run_b4_prefill128_native_build.py','verify_b4_prefill128_native_build.py','evidence/b4-prefill128-source-derivation.json','evidence/b4-prefill128-native-build-derivation.json','evidence/b4-prefill128-build-inputs.json','evidence/b4-prefill128-header-preparation.json','evidence/o128-canonical-build-preparation.json','evidence/o128-http-benchmark-preparation.json','evidence/fp8-policy-cache-production-python-preparation.json']+[n.relative_to(M).as_posix() for n in (M/'native_b4_prefill128_candidate').iterdir() if n.is_file()]
+for n in names:
+    if n.endswith('.py'):ast.parse((M/n).read_bytes())
+d=json.loads((E/'b4-prefill128-native-build-derivation.json').read_bytes())
+for row in d['derivations']:
+    raw=(M/row['source']).read_bytes();assert sha(raw)==row['source_sha256']
+    for c in row['changes']:assert raw.count(c['old'].encode())==c['count'];raw=raw.replace(c['old'].encode(),c['new'].encode())
+    assert raw==(M/row['target']).read_bytes() and sha(raw)==row['target_sha256']
+for mapping in (native['methods'],bench['new_files']):
+    for n,h in mapping.items():assert sha((R/n.removeprefix('Garnet/')).read_bytes())==h,('Frozen dependency drift',n)
+methods={**native['methods'],**bench['new_files'],**{P+n:sha((M/n).read_bytes()) for n in names}}
+oracle='results/tokenizer-nfc-cpu-oracles.zip';expected_oracle=cache['audit_dependencies'][oracle]
+with zipfile.ZipFile(O/'fp8-policy-cache-production-diagnostic-attempt2-evidence.zip') as z:oracle_raw=z.read(oracle)
+assert sha(oracle_raw)==expected_oracle;oracle_file=W/'b4-build-frozen-tokenizer-oracle.zip';assert not oracle_file.exists() or oracle_file.read_bytes()==oracle_raw;oracle_file.write_bytes(oracle_raw);methods[oracle]=expected_oracle
+assert not any('probe_native_external_prefix_batch.py' in n for n in methods)
+parents=dict(native['parents'])
+for job in ('o128-canonical-build-attempt1','o128-full4k-model-admission-attempt1','o128-frontend-attempt1','o128-http-quality-attempt1','o128-http-benchmark-attempt1','b4-prefill128-header-attempt1','fp8-policy-cache-build-attempt1'):
+    raw=(O/(job+'-verified.json')).read_bytes();assert raw==(O/(job+'-remote-verified.json')).read_bytes();q=json.loads(raw);archive=O/(job+'-evidence.zip');assert sha(archive.read_bytes())==q['archive_sha256']
+    with zipfile.ZipFile(archive) as z:w=json.loads(z.read('results/'+job+'/workflow.json'))
+    assert type(w['exit_code']) is int and w['cleanup_finished'];parents[job]=dict(proof_sha256=sha(raw),archive_sha256=q['archive_sha256'],exit_code=w['exit_code'],status=q['status'])
+    if job!='fp8-policy-cache-build-attempt1':assert w['exit_code']==0
+    else:assert w['exit_code']==1 and q['status']=='fp8_policy_cache_native_build_failure_replayed'
+bundle=W/'b4-prefill128-source.zip';assert not bundle.exists()
+with zipfile.ZipFile(bundle,'x',zipfile.ZIP_DEFLATED) as z:
+    for n,b in sorted(candidate.items()):z.writestr(n,b)
+p=dict(status='b4_prefill128_build_prepared_unrun',base_files=i['base_files'],methods=methods,candidate_files=source['candidate_files'],candidate_base=i['candidate_base'],runtime=i['runtime'],environment=i['environment'],checkpoints=i['checkpoints'],parents=parents,cache_before_sha256=i['cache_before_sha256'],cuda_objects_before=i['cuda_objects_before'],input_inventory_sha256=sha(i_raw),bundle='results/b4-prefill128-source.zip',bundle_sha256=sha(bundle.read_bytes()),vcvars=native['vcvars'],test_ids=native['test_ids']+['test2026.cuda.qwen38_5090.test_b4_prefill128_source'],scope='Separate61-source defaultoff B4T32 flat128 FP8 eligibility candidate over qualified60source/DLL841. Seven host selector/lowering files change plus one strictpolicy header; existing plugin bodies/quantizers/scales/wires/SDKcontext/CUDA bytes unchanged. Actual header235checks/61rejections paired proof required. Preserve all original O128 native-build guards:71current+86historical CPU tests on exactparent50, original Q/O profile/factory-fault/wire/initialize controls and native selector20/tokenizer955smoke. Frozen tokenizer oracle is an explicit owned method/input, included and hash-checked before build and raw archive replay. NativeRelease/MT/sm120 in fixed existing build; original three-CUDA-object whitelist unchanged, all34before/after hashes recorded. Current raw object ancestry from failed cache-only62 build preserved; its stricter all34identity gate remainsFAILED and this new61build does not clear it. Restore all61source targets/baselineDLL/runtime/SDK/checkpoints/CMake even on failure. New binary remains SDK/matmul/model/quality/MTP/performance UNQUALIFIED until actual projection and full per-rowB1/B4 complete-state/finite hidden+norm/IDs/short-tail/full4Ktext-image/reset gates, plus original B1/fullsix805 checks where applicable. Private nonce research graphs only; sharedproductioncache compatibility separate. No new benchmark or2x claim; strongest repeated tuned/MTP references, matchedINT4/4B and originalfullgoal remain open.')
+prep=E/'b4-prefill128-build-preparation.json';raw=json.dumps(p,indent=2).encode();assert not prep.exists() or prep.read_bytes()==raw;prep.write_bytes(raw)
+files={n:(oracle_file if n==oracle else R/n.removeprefix('Garnet/')) for n in methods};files[P+'evidence/b4-prefill128-build-preparation.json']=prep;files[p['bundle']]=bundle;deployment=W/'b4-prefill128-native-deployment.zip';assert not deployment.exists()
+with zipfile.ZipFile(deployment,'x',zipfile.ZIP_DEFLATED) as z:
+    for n,path in files.items():z.write(path,n)
+    z.writestr('deployment-manifest.json',json.dumps(dict(files={n:sha(path.read_bytes()) for n,path in files.items()},native_source_and_runtime_install_deferred_to_exclusive_owner=True),indent=2))
+receipt=dict(status='B4_native_build_prepared_not_run',deployment_sha256=sha(deployment.read_bytes()),bytes=deployment.stat().st_size,files=len(files),native_source_files=61,preparation_sha256=sha(raw),source_bundle_sha256=p['bundle_sha256'],original_object_whitelist_preserved=True,cache_only_failure_not_cleared=True);(W/'b4-prefill128-native-package.json').write_bytes(json.dumps(receipt,indent=2).encode());print(json.dumps(receipt))

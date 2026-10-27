@@ -1,0 +1,23 @@
+from pathlib import Path
+import ast,hashlib,json,subprocess,zipfile
+W=Path(__file__).resolve().parent;R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';E='test2026/cuda/qwen38_5090/evidence/';sha=lambda b:hashlib.sha256(b).hexdigest();owned=[]
+def put(name,raw):
+    t=R/name;assert t.resolve().is_relative_to(R.resolve()) and (not t.exists() or t.read_bytes()==raw),name;t.parent.mkdir(parents=True,exist_ok=True);t.write_bytes(raw);owned.append(name)
+receipt=json.loads((W/'b4-prefill128-native-package.json').read_bytes());prep=M/'evidence/b4-prefill128-build-preparation.json';p=json.loads(prep.read_bytes());assert sha(prep.read_bytes())==receipt['preparation_sha256']
+assert sha((W/'b4-prefill128-native-deployment.zip').read_bytes())==receipt['deployment_sha256'];assert sha((W/'b4-prefill128-source.zip').read_bytes())==p['bundle_sha256']==receipt['source_bundle_sha256']
+with zipfile.ZipFile(W/'b4-prefill128-native-deployment.zip') as z:
+    mf=json.loads(z.read('deployment-manifest.json'))['files'];assert len(mf)==171 and all(sha(z.read(n))==h for n,h in mf.items()) and z.testzip() is None
+    for n,h in p['methods'].items():assert mf[n]==h
+assert len(p['base_files'])==1374 and len(p['candidate_files'])==61 and len(p['cuda_objects_before'])==34
+for n in ('run_b4_prefill128_native_build.py','verify_b4_prefill128_native_build.py','evidence/b4-prefill128-build-inputs.json','evidence/b4-prefill128-build-preparation.json','evidence/b4-prefill128-native-build-derivation.json'):
+    if n.endswith('.py'):ast.parse((M/n).read_bytes())
+    owned.append('test2026/cuda/qwen38_5090/'+n)
+for n in ('derive-b4-prefill128-native-build.py','make-b4-prefill128-build-inventory.py','inspect-b4-prefill128-build-inputs.py','run-b4-prefill128-build-inventory.py','prepare-b4-prefill128-native-build.py','install-b4-prefill128-native.py','retain-b4-prefill128-native-preparation.py'):
+    ast.parse((W/n).read_bytes());put(E+n+'.txt',(W/n).read_bytes())
+put(E+'b4-prefill128-native-package.json',(W/'b4-prefill128-native-package.json').read_bytes())
+text='''\r\n\r\n### B4T32 native build prepared with original guards and frozen oracle\r\n\r\n2026-10-27: GPU idle and fresh remote baseline1374/runtime/SDK/checkpoints/CMake/current34CUDAobjects independently inventoried before deployment. Separate61-source B4T32 eligibility candidate package prepared after paired235CPUheader controls. Native owner preserves original O128 profile/factory/wire/init/selector20/tokenizer955 and all original numerical/model gates; 71current plus86historical CPU controls. Source bodies/quantizers/scales/SDK contexts/CUDA bytes unchanged. Owned frozen tokenizer oracle ZIP explicitly included and hashed. All baseline sources and active DLL restored after build even on failure. Current object ancestry from the failed cache62 build is recorded; the original three-object native-build whitelist is preserved, and the cache-only stricter all34identity failure remains failed. No new native binary/model result or performance claim exists at this preparation point.\r\n\r\nPackage SHA256 %s, preparation %s, source61bundle %s. New binary must pass actual SDK/projection and physicalB4 vs per-rowB1 complete-state/finite hidden+norm/IDs/short-tail/full4Ktext-image/reset/repeat gates before batching/MTP/quality/performance admission. Strongest repeated tuned/MTP references, matched INT4/4B and >=2xdecode+throughput/halfTTFT goal remain open.\r\n'''%(receipt['deployment_sha256'],receipt['preparation_sha256'],p['bundle_sha256'])
+for n in ('docs/research/qwen38-5090-development-log.md','docs/research/qwen38-5090-implementation-task.md'):
+    t=R/n;before=t.read_bytes();assert b'### B4T32 native build prepared with original guards' not in before;t.write_bytes(before+text.encode());assert t.read_bytes()[:len(before)]==before;owned.append(n)
+assert not any('probe_native_external_prefix_batch.py' in n for n in owned)
+subprocess.run(['git','-C',str(R),'-c','core.autocrlf=false','add','--pathspec-from-file=-','--pathspec-file-nul'],input=('\0'.join(owned)+'\0').encode(),check=True)
+print(json.dumps(dict(status='B4_native_preparation_retained',owned_paths=len(owned),files=receipt['files'],source_files=61)))
