@@ -1,0 +1,23 @@
+from pathlib import Path
+import ast,hashlib,json
+W=Path(__file__).resolve().parent;R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';sha=lambda b:hashlib.sha256(b).hexdigest();records=[]
+def derive(source,target,changes):
+    original=(M/source).read_bytes();raw=original;done=[]
+    for old,new,count in changes:
+        if b'\r\n' in original:old=old.replace('\n','\r\n');new=new.replace('\n','\r\n')
+        assert raw.count(old.encode())==count,(source,old,raw.count(old.encode()));raw=raw.replace(old.encode(),new.encode());done.append(dict(old=old,new=new,count=count))
+    if target.endswith('.py'):ast.parse(raw)
+    path=M/target;assert not path.exists();path.write_bytes(raw);records.append(dict(source=source,target=target,source_sha256=sha(original),target_sha256=sha(raw),changes=done))
+derive('actual_decode_fp8_m4_m16.cu','actual_decode_fa_value_m4_m16.cu',[
+('for(const char* label:{"qkv","z"})','for(const char* label:{"v3","v11"})',1),
+('const int n=!std::strcmp(label,"qkv")?10240:6144','const int n=1024',1),
+('for(int step=0;step<5;++step)','for(int step=0;step<1;++step)',1),
+('fixture+"step"+std::to_string(step)+"-normalized.f32"','fixture+std::string(label)+"-step"+std::to_string(step)+"-normalized.f32"',1)])
+derive('build_decode_fp8_sdk_control.bat','build_fa_value_sdk_control.bat',[('actual_decode_fp8_m4_m16.cu','actual_decode_fa_value_m4_m16.cu',1)])
+derive('decode_fp8_sdk_control.py','fa_value_sdk_log.py',[
+('PROJECTIONS={\'qkv\':10240,\'z\':6144}',"PROJECTIONS={'v3':1024,'v11':1024}",1),
+('range(5)','range(1)',3),('(qkv|z)','(v3|v11)',2),('len(calls)==120','len(calls)==24',1),('len(checks)==20','len(checks)==4',1),('actual_M16_AlgoChecks=20','actual_M16_AlgoChecks=4',1)])
+# Keep only the independently derived original seven-attribute/AlgoCheck parser;
+# the FA-value raw-array oracle has a different active-cache provenance contract.
+path=M/'fa_value_sdk_log.py';full=path.read_bytes();start=full.index(b'def parse_log(raw):');prefix=b'"""Original SDK log parser adapted only to two FA value cases and one matrix each."""\nimport re\nPROJECTIONS={\'v3\':1024,\'v11\':1024}\n\n';final=prefix+full[start:];ast.parse(final);path.write_bytes(final);records[-1].update(intermediate_sha256=sha(full),target_sha256=sha(final),retained_function='parse_log',retained_function_sha256=sha(full[start:]),final_prefix=prefix.decode())
+target=M/'evidence/fa-value-sdk-derivation.json';assert not target.exists();target.write_bytes(json.dumps(dict(derivations=records,scope='Private SDK control changes only two actual N1024 projection labels, one real input per layer and label-specific input path. Production BF16 cast/FP8 quantizer/matmul, actual live M4 algorithm interception, all7attributes, M16 AlgoCheck, original4MiB and full output writes unchanged. Parser original body adapted only label/count domain. No native model change or performance claim.'),indent=2).encode());print(json.dumps(dict(status='FA_value_SDK_control_sources_prepared_GPU_unrun')))

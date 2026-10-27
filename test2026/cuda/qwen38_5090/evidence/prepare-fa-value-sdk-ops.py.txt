@@ -1,0 +1,10 @@
+from pathlib import Path
+import ast,json
+W=Path(__file__).resolve().parent;p=json.loads((W/'fa-value-sdk-package.json').read_bytes())
+raw=(W/'install-decode-fp8-sdk-control.py').read_text().replace('decode-fp8-sdk','fa-value-sdk').replace('actual_decode_fp8_SDK_prepared_GPU_unrun','actual_FA_value_SDK_prepared_GPU_unrun').replace('f24f5c21cf3b748ed9a1b8b7d5514190aeae6402bdcbe1cd89b302a82607cffe',p['deployment_sha256']).replace('==9','==13')
+raw=raw.replace("    for n,h in p['runtime'].items():assert sha(ROOT/'build/bin'/n)==h","    assert sha(ROOT/'build/CMakeCache.txt')==p['cache_before_sha256']\n    for mode in ('reference','candidate'):assert sha(ROOT/p[mode+'_bundle'])==p[mode+'_bundle_sha256']\n    for n,h in p['runtime'].items():assert sha(ROOT/'build/bin'/n)==h")
+ast.parse(raw);target=W/'install-fa-value-sdk-control.py';assert not target.exists();target.write_bytes(raw.encode())
+raw=(W/'postprocess-decode-fp8-sdk-control.py').read_text().replace('decode-fp8-sdk-control-attempt1',p['job']).replace('decode-fp8-sdk','fa-value-sdk').replace('verify_decode_fp8_sdk_control.py','verify_fa_value_sdk_control.py')
+raw=raw.replace("M/'decode_fp8_sdk_control.py',M/'prefill128_fp8_projection.py'","M/'fa_value_sdk_control.py',M/'fa_value_sdk_log.py',M/'prefill128_fp8_projection.py',M/'decode_boundary_analysis.py',M/'decode_boundary_layout.py',M/'b4_b1_exact_gate.py',M/'b4_b1_short_m16_gate.py'")
+tree=ast.parse(raw);jobs=[node.value.value for node in ast.walk(tree) if isinstance(node,ast.Assign) and any(isinstance(t,ast.Name) and t.id=='JOB' for t in node.targets) and isinstance(node.value,ast.Constant)];assert jobs==[p['job']],jobs
+target=W/'postprocess-fa-value-sdk-control.py';assert not target.exists();target.write_bytes(raw.encode());print(json.dumps(dict(status='FA_value_SDK_install_and_replay_ops_prepared',job=jobs[0])))

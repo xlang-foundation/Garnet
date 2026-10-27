@@ -1,0 +1,19 @@
+from pathlib import Path
+import hashlib,json,sys,zipfile
+ROOT=Path('D:/CantorAI/5090-study-20261023');P='Garnet/test2026/cuda/qwen38_5090/';M=ROOT/P;sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest();sys.path[:0]=[str(M),str(ROOT/'Garnet')]
+from run_bf16_low_batch_native_build import idle
+archive=ROOT/'results/fa-value-sdk-deployment.zip';assert sha(archive)=='e2311e16bb6e8a836fb27675ab7511cbf6ab701aad9e8e51acc6666996eb0d0e';idle();out=ROOT/'results/fa-value-sdk-install.json';assert not out.exists()
+with zipfile.ZipFile(archive) as z:
+    mf=json.loads(z.read('deployment-manifest.json'))['files'];assert z.testzip() is None and len(z.namelist())==len(set(z.namelist()))==len(mf)+1==13
+    p=json.loads(z.read(P+'evidence/fa-value-sdk-preparation.json'));assert p['status']=='actual_FA_value_SDK_prepared_GPU_unrun'
+    for n,h in {**p['files'],**p['checkpoints'],**p['cuda_objects']}.items():
+        if n in mf:assert hashlib.sha256(z.read(n)).hexdigest()==h
+        else:assert sha(ROOT/n)==h,('Preserve baseline',n)
+    assert sha(ROOT/'build/CMakeCache.txt')==p['cache_before_sha256']
+    for mode in ('reference','candidate'):assert sha(ROOT/p[mode+'_bundle'])==p[mode+'_bundle_sha256']
+    for n,h in p['runtime'].items():assert sha(ROOT/'build/bin'/n)==h
+    for n,h in p['environment'].items():assert sha(Path(n))==h
+    for n,h in mf.items():
+        target=ROOT/n;assert target.resolve().is_relative_to(M.resolve()) and 'probe_native_external_prefix_batch.py' not in n;raw=z.read(n);assert hashlib.sha256(raw).hexdigest()==h and (not target.exists() or target.read_bytes()==raw),('Preserve existing edit',n)
+    for n in mf:target=ROOT/n;target.parent.mkdir(parents=True,exist_ok=True);target.write_bytes(z.read(n))
+out.write_bytes(json.dumps(dict(status='actual_decode_SDK_methods_installed_GPU_unrun',deployment_sha256=sha(archive),files=mf),indent=2).encode());print(json.dumps(dict(status='actual_decode_SDK_methods_installed',files=len(mf))))

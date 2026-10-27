@@ -1,0 +1,98 @@
+{
+  "derivations": [
+    {
+      "source": "run_decode_fp8_sdk_control.py",
+      "target": "run_fa_value_sdk_control.py",
+      "source_sha256": "9e80293c8538aa1b04b907efc864377aab2c45c62cdfcccbed1e9f7a13cd69e4",
+      "target_sha256": "263b79667f29db5f0885515aabed3c808b05de1648644e932fb4a1f9a015a4f4",
+      "changes": [
+        {
+          "old": "JOB='decode-fp8-sdk-control-attempt1'",
+          "new": "JOB='fa-value-sdk-control-attempt1'",
+          "count": 1
+        },
+        {
+          "old": "from test2026.cuda.qwen38_5090.decode_fp8_sdk_control import observe,replay,parse_log",
+          "new": "from test2026.cuda.qwen38_5090.fa_value_sdk_control import observe,replay,parse_log",
+          "count": 1
+        },
+        {
+          "old": "decode-fp8-sdk-preparation.json",
+          "new": "fa-value-sdk-preparation.json",
+          "count": 1
+        },
+        {
+          "old": "actual_decode_fp8_SDK_prepared_GPU_unrun",
+          "new": "actual_FA_value_SDK_prepared_GPU_unrun",
+          "count": 1
+        },
+        {
+          "old": "actual-decode-fp8-m4-m16-fixture",
+          "new": "actual-fa-value-m4-m16-fixture",
+          "count": 1
+        },
+        {
+          "old": "source60/61",
+          "new": "source60/67",
+          "count": 1
+        },
+        {
+          "old": "    for n,h in p['runtime'].items():assert sha(ROOT/'build/bin'/n)==h",
+          "new": "    assert sha(ROOT/'build/CMakeCache.txt')==p['cache_before_sha256']\n    for n,h in p['runtime'].items():assert sha(ROOT/'build/bin'/n)==h",
+          "count": 1
+        },
+        {
+          "old": "cuda_objects_before=p['cuda_objects'],parents=p['parents']",
+          "new": "cuda_objects_before=p['cuda_objects'],cache_before_sha256=p['cache_before_sha256'],parents=p['parents']",
+          "count": 1
+        },
+        {
+          "old": "'test2026.cuda.qwen38_5090.test_decode_fp8_sdk_control'",
+          "new": "'test2026.cuda.qwen38_5090.test_fa_value_sdk_control','test2026.cuda.qwen38_5090.test_decode_fp8_sdk_control','test2026.cuda.qwen38_5090.test_prefill128_fp8_projection'",
+          "count": 1
+        },
+        {
+          "old": "Four full-array CPU corruption controls; synthetic values are not hardware evidence",
+          "new": "14 CPU controls: six new active-cache/full-SDK/derivation/row/padding/config faults plus eight unchanged original SDK and BF16/FP8 oracle controls; synthetic values are not hardware evidence",
+          "count": 1
+        },
+        {
+          "old": "prepare_decode_fp8_sdk_fixture.py",
+          "new": "prepare_fa_value_sdk_fixture.py",
+          "count": 1
+        },
+        {
+          "old": "build_decode_fp8_sdk_control.bat",
+          "new": "build_fa_value_sdk_control.bat",
+          "count": 1
+        },
+        {
+          "old": "Original real separate-normalization inputs, saved Garnet outputs, indexed actual checkpoint FP8 matrices/scalars; bounded CPU extraction only",
+          "new": "Two real all-four-input-exact cases FA3step5/FA11step1 from paired readonly diagnostic, actual activeVcache outputs, indexed N1024/K5120 E4M3 weights/calibrations and full actual shard header; no checkpoint copy",
+          "count": 1
+        },
+        {
+          "old": "actual_decode_fp8_SDK_control_collected_needs_independent_replay",
+          "new": "actual_FA_value_SDK_control_collected_needs_independent_replay",
+          "count": 1
+        },
+        {
+          "old": "cleanup_finished=True)",
+          "new": "cleanup_finished=True,cache_after_sha256=sha(ROOT/'build/CMakeCache.txt'))",
+          "count": 1
+        },
+        {
+          "old": "('cuda_objects_before','cuda_objects_after')]);save()",
+          "new": "('cuda_objects_before','cuda_objects_after')]) and w['cache_before_sha256']==w['cache_after_sha256'];save()",
+          "count": 1
+        },
+        {
+          "old": "if not w['unchanged_before_after']:code=1;w['exit_code']=code;save()",
+          "new": "if not w['unchanged_before_after']:code=1;w.update(exit_code=1,status='failed',error='Production source/runtime/SDK/checkpoint/objects/CMake drift during private SDK control');save()",
+          "count": 1
+        }
+      ]
+    }
+  ],
+  "scope": "Original exclusive private SDK owner, source/runtime/SDK/checkpoint/34productionobjects/UUID/parent/archive/immutablefixture guards preserved. Add CMakebefore/after and explicit drift failure. Only actualFAvalue fixture/CPUmodule/privatebuild/job identities change. All raw SDK outputs and failed baselines retained before strict replay. No model/DLL mutation or benchmark."
+}

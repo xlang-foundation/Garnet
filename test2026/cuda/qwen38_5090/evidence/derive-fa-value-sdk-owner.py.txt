@@ -1,0 +1,21 @@
+from pathlib import Path
+import ast,hashlib,json
+W=Path(__file__).resolve().parent;R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';original=(M/'run_decode_fp8_sdk_control.py').read_bytes();raw=original;changes=[];sha=lambda b:hashlib.sha256(b).hexdigest()
+steps=[("JOB='decode-fp8-sdk-control-attempt1'","JOB='fa-value-sdk-control-attempt1'",1),
+('from test2026.cuda.qwen38_5090.decode_fp8_sdk_control import observe,replay,parse_log','from test2026.cuda.qwen38_5090.fa_value_sdk_control import observe,replay,parse_log',1),
+('decode-fp8-sdk-preparation.json','fa-value-sdk-preparation.json',1),('actual_decode_fp8_SDK_prepared_GPU_unrun','actual_FA_value_SDK_prepared_GPU_unrun',1),
+('actual-decode-fp8-m4-m16-fixture','actual-fa-value-m4-m16-fixture',1),('source60/61','source60/67',1),
+("    for n,h in p['runtime'].items():assert sha(ROOT/'build/bin'/n)==h","    assert sha(ROOT/'build/CMakeCache.txt')==p['cache_before_sha256']\n    for n,h in p['runtime'].items():assert sha(ROOT/'build/bin'/n)==h",1),
+('cuda_objects_before=p[\'cuda_objects\'],parents=p[\'parents\']',"cuda_objects_before=p['cuda_objects'],cache_before_sha256=p['cache_before_sha256'],parents=p['parents']",1),
+("'test2026.cuda.qwen38_5090.test_decode_fp8_sdk_control'","'test2026.cuda.qwen38_5090.test_fa_value_sdk_control','test2026.cuda.qwen38_5090.test_decode_fp8_sdk_control','test2026.cuda.qwen38_5090.test_prefill128_fp8_projection'",1),
+('Four full-array CPU corruption controls; synthetic values are not hardware evidence','14 CPU controls: six new active-cache/full-SDK/derivation/row/padding/config faults plus eight unchanged original SDK and BF16/FP8 oracle controls; synthetic values are not hardware evidence',1),
+('prepare_decode_fp8_sdk_fixture.py','prepare_fa_value_sdk_fixture.py',1),('build_decode_fp8_sdk_control.bat','build_fa_value_sdk_control.bat',1),
+('Original real separate-normalization inputs, saved Garnet outputs, indexed actual checkpoint FP8 matrices/scalars; bounded CPU extraction only','Two real all-four-input-exact cases FA3step5/FA11step1 from paired readonly diagnostic, actual activeVcache outputs, indexed N1024/K5120 E4M3 weights/calibrations and full actual shard header; no checkpoint copy',1),
+('actual_decode_fp8_SDK_control_collected_needs_independent_replay','actual_FA_value_SDK_control_collected_needs_independent_replay',1),
+('cleanup_finished=True)',"cleanup_finished=True,cache_after_sha256=sha(ROOT/'build/CMakeCache.txt'))",1),
+("('cuda_objects_before','cuda_objects_after')]);save()","('cuda_objects_before','cuda_objects_after')]) and w['cache_before_sha256']==w['cache_after_sha256'];save()",1),
+("if not w['unchanged_before_after']:code=1;w['exit_code']=code;save()","if not w['unchanged_before_after']:code=1;w.update(exit_code=1,status='failed',error='Production source/runtime/SDK/checkpoint/objects/CMake drift during private SDK control');save()",1)]
+for old,new,count in steps:
+    if b'\r\n' in original:old=old.replace('\n','\r\n');new=new.replace('\n','\r\n')
+    assert raw.count(old.encode())==count,(old,raw.count(old.encode()));raw=raw.replace(old.encode(),new.encode());changes.append(dict(old=old,new=new,count=count))
+ast.parse(raw);target=M/'run_fa_value_sdk_control.py';assert not target.exists();target.write_bytes(raw);record=dict(derivations=[dict(source='run_decode_fp8_sdk_control.py',target=target.name,source_sha256=sha(original),target_sha256=sha(raw),changes=changes)],scope='Original exclusive private SDK owner, source/runtime/SDK/checkpoint/34productionobjects/UUID/parent/archive/immutablefixture guards preserved. Add CMakebefore/after and explicit drift failure. Only actualFAvalue fixture/CPUmodule/privatebuild/job identities change. All raw SDK outputs and failed baselines retained before strict replay. No model/DLL mutation or benchmark.');target=M/'evidence/fa-value-sdk-owner-derivation.json';assert not target.exists();target.write_bytes(json.dumps(record,indent=2).encode());print(json.dumps(dict(status='FA_value_SDK_owner_prepared_GPU_unrun')))
