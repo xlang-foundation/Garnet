@@ -1,0 +1,31 @@
+from pathlib import Path
+import hashlib,json,subprocess,zipfile
+W=Path(__file__).resolve().parent;O=W.parent/'outputs';R=Path('D:/CantorAI/work/qwen38-5090');E='test2026/cuda/qwen38_5090/evidence/';JOB='b4-prefill128-header-attempt1';sha=lambda b:hashlib.sha256(b).hexdigest();owned=[]
+def put(name,raw):
+    t=R/name;assert t.resolve().is_relative_to(R.resolve()) and (not t.exists() or t.read_bytes()==raw),name;t.parent.mkdir(parents=True,exist_ok=True);t.write_bytes(raw);owned.append(name)
+raw=(O/(JOB+'-verified.json')).read_bytes();assert raw==(O/(JOB+'-remote-verified.json')).read_bytes();q=json.loads(raw);assert q['status']=='actual_B4_T32_CPU_header_controls_and_source_composition_replayed' and q['exit_code']==0 and q['compiler_source_library_unchanged'];assert q['actual_header_controls']['checks']==235 and q['actual_header_controls']['rejections']==61 and q['actual_GEMM_or_GPU_executed'] is q['SDK_model_MTP_quality_performance_qualified'] is False
+archive=O/(JOB+'-evidence.zip');assert sha(archive.read_bytes())==q['archive_sha256']
+for suffix in ('-verified.json','-remote-verified.json'):put(E+JOB+suffix,(O/(JOB+suffix)).read_bytes())
+with zipfile.ZipFile(archive) as z:
+    for n in z.namelist():
+        if n.startswith('results/'+JOB+'/') and n.endswith(('.json','.jsonl','.log','.txt')):put(E+JOB+'-'+n.removeprefix('results/'+JOB+'/').replace('/','-'),z.read(n))
+    put(E+JOB+'-manifest.json',z.read('evidence-manifest.json'))
+for name in ('run-b4-prefill128-header-postprocess.py','extract-b4-prefill128-header-closure.py','replay-b4-prefill128-header-local.py','verify-b4-prefill128-header.py','retain-b4-prefill128-header-outcome.py'):put(E+name+'.txt',(W/name).read_bytes())
+for name in ('commands.log','commands.jsonl'):put(E+'b4-prefill128-header-local-replay-ledger-'+name,(W/'b4-prefill128-header-local-replay-ledger'/name).read_bytes())
+with zipfile.ZipFile(W/'b4-prefill128-header-closure-assets.zip') as z:
+    for n in z.namelist():
+        if n.startswith('results/b4-prefill128-header-postprocess/'):put(E+'b4-prefill128-header-remote-'+n.removeprefix('results/b4-prefill128-header-postprocess/').replace('/','-'),z.read(n))
+    put(E+'b4-prefill128-header-closure-manifest.json',z.read('manifest.json'))
+summary=dict(status=q['status'],paired_proof_sha256=sha(raw),archive_sha256=q['archive_sha256'],archive_bytes=archive.stat().st_size,actual_CXX_header_checks=235,expected_invalid_rejections_observed=61,candidate_source_files=61,compiler_source_library_preserved=True,actual_GEMM_or_GPU_executed=False,SDK_model_MTP_quality_performance_qualified=False,two_times_target_achieved=False)
+blob=json.dumps(summary,indent=2).encode();put(E+'b4-prefill128-header-research-summary.json',blob);(O/'Garnet-B4-T32-FP8-Header-Verified.json').write_bytes(blob)
+text=f'''
+
+### Actual B4T32 CPU header235 controls pass; GPU/model validation still pending
+
+2026-10-27: Original {JOB} exits0 on remote pinned MSVC14.44.35207 (actual compiler19.44.35229.0). Actual compiled header executable passes235checks including61expected invalid-policy/geometry/coupling rejections across all six selectors. Original function arity/defaultoff/empty-zero aliases/B1eligibility, explicit B4T32flat128 admission, otherbatch/decode exclusion, N/K/flatrow guards, reconstructedZ coupling, all16text layer names and foreignname exclusions exercised. Independently replay raw compile/control ledgers, nativeEXESHA/AMD64 PE target, immutable61source composition from archived60bundle and compiler/source/library preservation remotely and locally. No native executable runs locally. Paired proof {sha(raw)}, raw archive {q['archive_sha256']} ({archive.stat().st_size}B). Sourceheaders/controls/manifest/logs/hash proofs retained, raw executable/object bytes preserved only in immutable ZIP.
+
+No GEMM, CUDA/SDK or model executed by this header test. Existing Garnet baseline1a1d remains restored; no new Garnet binary built or qualified. Next actual SDK/projection and full physicalB4vsper-rowB1 complete-state/finite hidden+norm/token/short-tail/image/full4K/reset gates remain required before MTP/quality/performance. Preserve original failedB4/B8 contrast without claiming its cause. New measured O128 three-trial figures/evidence are separately retained on same source60/DLL841; they do not qualify this61source candidate. Overall2xdecode+throughput/halfTTFT, strongest repeated tuned/MTP references and matchedINT4/4B remain open.
+'''
+for name in ('docs/research/qwen38-5090-development-log.md','docs/research/qwen38-5090-implementation-task.md'):
+    t=R/name;before=t.read_bytes();assert b'### Actual B4T32 CPU header235 controls pass' not in before;t.write_bytes(before+text.replace('\n','\r\n').encode());assert t.read_bytes()[:len(before)]==before;owned.append(name)
+assert not any('probe_native_external_prefix_batch.py' in n for n in owned);subprocess.run(['git','-C',str(R),'-c','core.autocrlf=false','add','--pathspec-from-file=-','--pathspec-file-nul'],input=('\0'.join(owned)+'\0').encode(),check=True);print(json.dumps(dict(owned_paths=len(owned),CPU_header235_passed=True,SDK_model_performance_qualified=False)))

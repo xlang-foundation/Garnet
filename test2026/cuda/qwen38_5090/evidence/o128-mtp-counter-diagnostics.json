@@ -1,0 +1,151 @@
+{
+  "status": "actual_O128_MTP_counters_and_client_arrival_diagnostics_replayed",
+  "paired_benchmark_proof_sha256": "c86b1a10553dbb83d5753495c3e6ede4411187ee1909e2fc05ee48a7eef9005c",
+  "archive_sha256": "0233565d6de5c4973760e4f618e91d192a070f342cfc3b8967facd4d61fb3206",
+  "requests": 372,
+  "source_sha256": {
+    "Garnet/xModel/qwen35/vl_0_8b/cuda_speculative.py": "ae1214029877bd32c758686014b0c2c0dceffee369cadb6d74d42d28a3b7e997",
+    "Garnet/xModel/qwen35/vl_0_8b/cuda_packed_replay.py": "c4c57b265227882253a2f9800599c7607b70d4bb9a622f51cf21587da645b7a4"
+  },
+  "diagnostics": {
+    "text": {
+      "requests_including_warmups": 186,
+      "last_iteration_sampled_count_distribution": {
+        "127": 84,
+        "128": 102
+      },
+      "counters": {
+        "mtp_prefill_calls": {
+          "min": 249,
+          "max": 249,
+          "mean": 249
+        },
+        "mtp_draft_calls": {
+          "min": 82,
+          "max": 101,
+          "mean": 91.38709677419355
+        },
+        "mtp_correction_calls": {
+          "min": 41,
+          "max": 51,
+          "mean": 46.225806451612904
+        },
+        "mtp_head_calls": {
+          "min": 124,
+          "max": 152,
+          "mean": 138.06451612903226
+        },
+        "target_verification_calls": {
+          "min": 41,
+          "max": 51,
+          "mean": 46.225806451612904
+        },
+        "target_prefix_replays": {
+          "min": 19,
+          "max": 36,
+          "mean": 28.258064516129032
+        },
+        "proposed_draft_tokens": {
+          "min": 123,
+          "max": 152,
+          "mean": 137.61290322580646
+        },
+        "accepted_draft_tokens": {
+          "min": 77,
+          "max": 86,
+          "mean": 81.3225806451613
+        },
+        "target_forward_calls": {
+          "min": 41,
+          "max": 51,
+          "mean": 46.225806451612904
+        },
+        "target_head_evaluations": {
+          "min": 60,
+          "max": 87,
+          "mean": 74.48387096774194
+        },
+        "target_head_reuses": {
+          "min": 0,
+          "max": 0,
+          "mean": 0
+        }
+      },
+      "weighted_draft_acceptance": 0.5909517112048758,
+      "processed_tokens_per_target_verification": 2.74738311235171,
+      "median_first_to_second_client_arrival_gap_ms": 44.9676500284113,
+      "median_of_per_request_mean_later_client_arrival_gap_ms": 12.72215396821839
+    },
+    "image": {
+      "requests_including_warmups": 186,
+      "last_iteration_sampled_count_distribution": {
+        "127": 60,
+        "128": 126
+      },
+      "counters": {
+        "mtp_prefill_calls": {
+          "min": 249,
+          "max": 249,
+          "mean": 249
+        },
+        "mtp_draft_calls": {
+          "min": 75,
+          "max": 97,
+          "mean": 82.01612903225806
+        },
+        "mtp_correction_calls": {
+          "min": 38,
+          "max": 49,
+          "mean": 41.435483870967744
+        },
+        "mtp_head_calls": {
+          "min": 113,
+          "max": 147,
+          "mean": 123.7741935483871
+        },
+        "target_verification_calls": {
+          "min": 38,
+          "max": 49,
+          "mean": 41.435483870967744
+        },
+        "target_prefix_replays": {
+          "min": 11,
+          "max": 32,
+          "mean": 19.14516129032258
+        },
+        "proposed_draft_tokens": {
+          "min": 113,
+          "max": 146,
+          "mean": 123.45161290322581
+        },
+        "accepted_draft_tokens": {
+          "min": 78,
+          "max": 90,
+          "mean": 86.24193548387096
+        },
+        "target_forward_calls": {
+          "min": 38,
+          "max": 49,
+          "mean": 41.435483870967744
+        },
+        "target_head_evaluations": {
+          "min": 49,
+          "max": 81,
+          "mean": 60.58064516129032
+        },
+        "target_head_reuses": {
+          "min": 0,
+          "max": 0,
+          "mean": 0
+        }
+      },
+      "weighted_draft_acceptance": 0.6985889730859681,
+      "processed_tokens_per_target_verification": 3.0650058388478008,
+      "median_first_to_second_client_arrival_gap_ms": 44.861000002129,
+      "median_of_per_request_mean_later_client_arrival_gap_ms": 11.101427777912395
+    }
+  },
+  "scope": "Descriptive all372requests including180warmups, not a new benchmark or GPU phase timer. Last verification iteration may end at sampled127: original generate emits final remaining token directly before breaking, with no new verification iteration. Final streams still contain128IDs and127processed target tokens; original benchmark gates unchanged. Prefix replay uses retained projections and does not add a full target forward (source and counters agree). Draft acceptance/call counts do not establish speedup or justify enabling previously failed head-reuse optimization. Client SSE arrival gaps include all runtime/transport scheduling; no CUDA kernel attribution. Use further controlled profiling/actual batching math gates before choosing or admitting optimization; strongest references and overall2x still open.",
+  "new_benchmark": false,
+  "two_times_target_achieved": false
+}

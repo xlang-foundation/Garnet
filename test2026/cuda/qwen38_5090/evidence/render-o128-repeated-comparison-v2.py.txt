@@ -1,0 +1,91 @@
+"""Render completed two-machine-replayed measurements only; never run a model."""
+from pathlib import Path
+import base64,csv,hashlib,html,json,statistics,zipfile
+W=Path(__file__).resolve().parent;O=W.parent/'outputs';JOB='o128-http-benchmark-attempt1';STEM='Garnet-O128-Repeated-vLLM-SGLang-4K-v2';sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+
+def main():
+    proof=O/(JOB+'-verified.json');raw=proof.read_bytes();assert raw==(O/(JOB+'-remote-verified.json')).read_bytes();q=json.loads(raw);assert q['status']=='actual_O128_three_fixed4k_HTTP_trials_raw_stream_memory_and_IDs_replayed' and q['exit_code']==0 and q['source_runtime_SDK_checkpoint_restored'] is True
+    assert q['arrays']['actual_repeated_fixed4k_benchmark_replayed'] is True and q['arrays']['all372_prompt_and_output_IDs_exact_T32'] is True and q['arrays']['actual_requests']==372 and q['arrays']['measured_requests']==192
+    assert sha(O/(JOB+'-evidence.zip'))==q['archive_sha256']
+    oldpath=O/'Garnet-vLLM-SGLang-Observed-Verified-4K-Data.json';old=json.loads(oldpath.read_bytes());assert old['status']=='complete_native_and_observed_references_actual4k_single_trials_replayed_on_both_machines'
+    for name,h in old['input_sha256'].items():assert sha(O/name)==h
+    for job,key in [('prefill16-fixed4k-http-attempt1','prefill16'),('vllm-observed-fixed4k-ordinary-attempt1','vllm'),('sglang-observed-fixed4k-ordinary-attempt1','sglang')]:
+        path=O/(job+'-verified.json');p=json.loads(path.read_bytes());assert path.read_bytes()==(O/(job+'-remote-verified.json')).read_bytes() and p['archive_sha256']==old['archive_sha256'][key]==sha(O/(job+'-evidence.zip'))
+    expected={case+'-c'+str(c) for case in ('text','image') for c in (1,2,4,8)};trials=q['arrays']['trials'];assert len(trials)==3
+    native=[]
+    for t in trials:
+        assert t['requests']==124 and t['measured_requests']==64 and set(t['cohorts'])==set(t['memory'])==expected
+        rows={}
+        for key,c in t['cohorts'].items():
+            r=dict(c['metrics'],**{field:t['memory'][key][field] for field in ('sampled_peak_adapter_used_bytes','samples','observed_sample_gap_median_seconds','observed_sample_gap_max_seconds')});assert r['requests']==8 and r['generated_tokens']==1024;rows[key]=r
+        native.append(rows)
+    old_label='Garnet prefill32 / MTP3 (1 trial)';new_label='Garnet prefill128 / MTP3 (3 trials)'
+    samples={old_label:[old['series']['Garnet MTP3 / draft prefill16']],new_label:native,'vLLM ordinary (1 trial)':[old['series']['vLLM ordinary']],'SGLang ordinary (1 trial)':[old['series']['SGLang ordinary']]}
+    specs=[('TTFT','First-token wait (seconds; lower is better)','ttft_median_ms',.001),('Decode','Decode per request (tokens/s; higher is better)','decode_median_tokens_per_second',1),('Throughput','Total output throughput (tokens/s; higher is better)','output_tokens_per_second',1),('VRAM','Sampled adapter VRAM (GiB; max across trials)','sampled_peak_adapter_used_bytes',1/2**30)]
+    series={};ranges={}
+    for label,runs in samples.items():
+        assert all(set(r)==expected for r in runs);series[label]={};ranges[label]={}
+        for key in sorted(expected):
+            series[label][key]={};ranges[label][key]={}
+            for _,_,metric,_ in specs:
+                values=[r[key][metric] for r in runs];series[label][key][metric]=max(values) if metric=='sampled_peak_adapter_used_bytes' else statistics.median(values);ranges[label][key][metric]=dict(min=min(values),max=max(values),n=len(values))
+    maximum_native_gap=max(t['memory'][key]['observed_sample_gap_max_seconds'] for t in trials for key in expected)
+    notes=[
+      '3968 input + 128 output; 8 measured requests/cohort; text/image; clients 1, 2, 4, 8; mixed NVFP4/FP8 on one RTX 5090 32GB.',
+      'New native line: median of three cohort statistics; band: observed min–max, not a confidence interval. VRAM line: maximum across trials.',
+      'Three native trials share one worker. Older native and ordinary vLLM/SGLang references have one retained trial each.',
+      'Native physical batch 1 queues clients; references allow up to 8 running requests. Native Windows; reference WSL.',
+      'All 372 new native request IDs match retained T32 controls. Reference text variants remain; cross-engine long-output equivalence is unproven.',
+      f'VRAM includes background usage. Maximum observed native sampling gap: {maximum_native_gap:.3f} s; raw samples retained.',
+      'Strongest repeated tuned/MTP references and matched INT4/4B comparisons remain pending. Overall 2x target is not established.'
+    ]
+    comparisons=[]
+    for key in sorted(expected):
+        r=series[new_label][key];refs=[series[n][key] for n in ('vLLM ordinary (1 trial)','SGLang ordinary (1 trial)')]
+        comparisons.append(dict(cohort=key,decode_over_best_ordinary=r['decode_median_tokens_per_second']/max(x['decode_median_tokens_per_second'] for x in refs),throughput_over_best_ordinary=r['output_tokens_per_second']/max(x['output_tokens_per_second'] for x in refs),TTFT_over_best_ordinary=r['ttft_median_ms']/min(x['ttft_median_ms'] for x in refs)))
+    data=dict(model_checkpoint='nvidia/Qwen3.8-27B-NVFP4',model_precision='mixed NVFP4/FP8; BF16 vision/cache; native NVFP4 head',memory_sampling_by_native_trial=[t['memory'] for t in trials],status='three_O128_HTTP_trials_and_retained_single_trial_references_replayed',series=series,ranges=ranges,raw_trial_cohorts=samples,comparisons=comparisons,notes=notes,source_sha256={oldpath.name:sha(oldpath),proof.name:sha(proof)},native_archive_sha256=q['archive_sha256'],strongest_reference_comparison_qualified=False,two_times_target_achieved=False,new_model_or_benchmark_executed_by_renderer=False)
+    (O/(STEM+'-Data.json')).write_bytes(json.dumps(data,indent=2).encode())
+    import matplotlib
+    matplotlib.use('Agg')
+    import matplotlib.pyplot as plt
+    from matplotlib.ticker import FuncFormatter
+    plt.rcParams.update({'font.family':'DejaVu Sans','font.size':10,'axes.spines.top':False,'axes.spines.right':False})
+    styles=[('#9b8aaf','o','--'),('#366bd1','D','-'),('#bd4775','v','-'),('#278d70','^','-')];cs=[1,2,4,8];artifacts={}
+    def draw(ax,case,spec):
+        _,title,metric,scale=spec
+        for (label,rows),(color,marker,line) in zip(series.items(),styles):
+            values=[rows[case+'-c'+str(c)][metric]*scale for c in cs];ax.plot(cs,values,label=label,color=color,marker=marker,linestyle=line,lw=2)
+            if label==new_label:ax.fill_between(cs,[ranges[label][case+'-c'+str(c)][metric]['min']*scale for c in cs],[ranges[label][case+'-c'+str(c)][metric]['max']*scale for c in cs],color=color,alpha=.17)
+        ax.set_title(case.title()+' | '+title,loc='left',fontsize=11);ax.set_xticks(cs);ax.set_xlabel('Concurrent client requests');ax.grid(axis='y',alpha=.2)
+        if metric=='ttft_median_ms':ax.set_yscale('log');ax.yaxis.set_major_formatter(FuncFormatter(lambda v,_:f'{v:g}'))
+        else:ax.set_ylim(bottom=0)
+    def save(fig,tag):
+        for ext in ('png','svg'):
+            target=O/(STEM+tag+'.'+ext);fig.savefig(target,dpi=160,facecolor=fig.get_facecolor());artifacts[target.name]=sha(target)
+        plt.close(fig)
+    fig,axes=plt.subplots(4,2,figsize=(16,15.6));fig.patch.set_facecolor('#f5f8fc');fig.subplots_adjust(left=.075,right=.97,bottom=.205,top=.84,hspace=.48,wspace=.22)
+    fig.text(.05,.967,'Garnet prefill128: repeated 4K HTTP comparison',fontsize=23,weight='bold');fig.text(.05,.935,'Qwen3.8-27B mixed NVFP4/FP8 | RTX 5090 32GB | 3968+128 tokens | native: 3 trials; references: 1 trial',fontsize=12,color='#43546b')
+    for i,spec in enumerate(specs):
+        for col,case in enumerate(('text','image')):draw(axes[i,col],case,spec)
+    handles,labels=axes[0,0].get_legend_handles_labels();fig.legend(handles,labels,loc='upper center',bbox_to_anchor=(.52,.905),ncol=2,frameon=False,fontsize=10)
+    for i,note in enumerate(notes[1:]):fig.text(.05,.16-i*.022,note,fontsize=9,color='#24364c' if i<5 else '#9a4521')
+    save(fig,'')
+    for spec in specs:
+        fig,axes=plt.subplots(1,2,figsize=(14,5.8));fig.patch.set_facecolor('#f5f8fc');fig.subplots_adjust(left=.07,right=.97,bottom=.27,top=.70,wspace=.22);fig.text(.05,.94,'Garnet prefill128 vs retained vLLM / SGLang',fontsize=21,weight='bold');fig.text(.05,.88,'Qwen3.8-27B mixed NVFP4/FP8 | RTX 5090 32GB | actual 4K | native: 3 trials; references: 1 trial',fontsize=11)
+        for ax,case in zip(axes,('text','image')):draw(ax,case,spec)
+        handles,labels=axes[0].get_legend_handles_labels();fig.legend(handles,labels,loc='upper center',bbox_to_anchor=(.52,.83),ncol=2,frameon=False,fontsize=9)
+        fig.text(.05,.15,'Native batch 1 queues clients; references up to 8 running. Windows / WSL. Min–max bands are not confidence intervals.',fontsize=9);fig.text(.05,.10,'Sampled adapter VRAM includes background allocations. Strongest repeated tuned/MTP reference comparison remains pending.',fontsize=9);fig.text(.05,.05,'Overall 2x decode/throughput and half-TTFT target is not established.',fontsize=9,color='#9a4521');save(fig,'-'+spec[0])
+    with (O/(STEM+'-Metrics.csv')).open('w',newline='',encoding='utf8') as f:
+        writer=csv.writer(f);writer.writerow(['engine','trial','cohort','TTFT_seconds','decode_tokens_per_second','aggregate_tokens_per_second','sampled_adapter_GiB','memory_samples','maximum_sampling_gap_seconds'])
+        for label,runs in samples.items():
+            for i,run in enumerate(runs):
+                for key,r in sorted(run.items()):writer.writerow([label,i,key,r['ttft_median_ms']/1000,r['decode_median_tokens_per_second'],r['output_tokens_per_second'],r['sampled_peak_adapter_used_bytes']/2**30,r.get('samples'),r.get('observed_sample_gap_max_seconds')])
+    table=[]
+    for key in sorted(expected):
+        cells=[key]
+        for label in series:
+            r=series[label][key];cells.append(f"{r['ttft_median_ms']/1000:.3f} s / {r['decode_median_tokens_per_second']:.2f} / {r['output_tokens_per_second']:.2f} / {r['sampled_peak_adapter_used_bytes']/2**30:.2f}")
+        table.append('<tr>'+''.join('<td>'+html.escape(c)+'</td>' for c in cells)+'</tr>')
+    image=base64.b64encode((O/(STEM+'.png')).read_bytes()).decode();report='<!doctype html><html><meta charset="utf-8"><title>Garnet prefill128 repeated 4K comparison</title><style>body{font:16px/1.5 system-ui;max-width:1450px;margin:30px auto;padding:0 20px;background:#f5f8fc;color:#24364c}img{width:100%}table{border-collapse:collapse;font-size:13px}td,th{padding:8px;border-bottom:1px solid #ccd5df;text-align:left}</style><h1>Garnet prefill128 repeated 4K HTTP comparison</h1><p>Model: nvidia/Qwen3.8-27B-NVFP4, mixed NVFP4/FP8, native NVFP4 head, BF16 vision/cache.</p><p>Values: first-token seconds / per-request decode tok/s / aggregate output tok/s / sampled adapter GiB. Native: median of three trials, VRAM maximum. Retained references: single trials. Overall 2x target is not established.</p><table><tr><th>Cohort</th>'+''.join('<th>'+html.escape(n)+'</th>' for n in series)+'</tr>'+''.join(table)+'</table><img alt="Eight comparison panels" src="data:image/png;base64,'+image+'"><ul>'+''.join('<li>'+html.escape(n)+'</li>' for n in notes)+'</ul></html>'
+    (O/(STEM+'-Report.html')).write_bytes(report.encode());(O/(STEM+'-Receipt.json')).write_bytes(json.dumps(dict(artifacts=artifacts,data_sha256=sha(O/(STEM+'-Data.json')),source_sha256=data['source_sha256'],new_benchmark_executed=False),indent=2).encode());print(json.dumps(dict(status=data['status'],figures=len(artifacts),two_times_target_achieved=False)))
+if __name__=='__main__':main()

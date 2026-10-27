@@ -1,0 +1,20 @@
+from pathlib import Path
+import json,subprocess
+W=Path(__file__).resolve().parent;O=W.parent/'outputs';R=Path('D:/CantorAI/work/qwen38-5090');E=R/'test2026/cuda/qwen38_5090/evidence';owned=[]
+def put(name,raw):
+    t=E/name;assert not t.exists() or t.read_bytes()==raw;t.write_bytes(raw);owned.append(t.relative_to(R).as_posix())
+for name in ('analyze-o128-mtp-counters.py','fix-o128-counter-tail-assumption.py','retain-o128-mtp-counter-diagnostic.py'):put(name+'.txt',(W/name).read_bytes())
+for name in ('commands.log','commands.jsonl'):put('o128-mtp-counter-diagnostic-ledger-'+name,(W/'o128-mtp-counter-diagnostic-ledger'/name).read_bytes())
+for name in ('analyze-o128-mtp-counters-initial.py.txt','o128-counter-tail-assumption-repair.json'):owned.append((E/name).relative_to(R).as_posix())
+raw=(O/'Garnet-O128-MTP-Counter-Diagnostics.json').read_bytes();p=json.loads(raw);assert p['requests']==372 and p['new_benchmark'] is False;put('o128-mtp-counter-diagnostics.json',raw)
+text='''
+
+### Descriptive MTP counters/client arrivals replayed; no call-count speed proxy
+
+2026-10-27: Replay all372complete fixed4Krequests including180warmups from paired verified O128 archive,186text/186image. Weighted draft acceptance is0.5909517112text/0.6985889731image. All requests use249draftprefill calls and headreuse0; target full-forward count equals verification count, prefix fullrecomputes0. Source-pinned packed-prefix replay uses retained authoritative projections and reruns no target projections; do not mistake target_prefix_replays for extra full-model forward calls. Descriptive client first-to-second arrival median is44.97ms text/44.86ms image; median of per-request mean later-gap is12.72/11.10ms. These include runtime/transport scheduling, are not CUDA/kernel phase times or a new benchmark. Counters do not establish a speedup and do not justify re-enabling earlier failed head-reuse optimization. Controlled phase profiling and actual B4 SDK/model validation remain useful next steps.
+
+Preserve first new counter-diagnostic failure and exact source repair: it incorrectly required final verification-iteration sampled128. Original generate emits a final remaining token and breaks without appending another verification iteration, so last recorded iteration127 is valid. Record observed127/128distribution; require unchanged actual128stream IDs,127processed target tokens and exact verification-iteration counts. No official benchmark/model/state/vector/token assertion changed or waived. Retain original failed source and ledger alongside corrected success.
+'''
+for name in ('docs/research/qwen38-5090-development-log.md','docs/research/qwen38-5090-implementation-task.md'):
+    t=R/name;b=t.read_bytes();assert b'### Descriptive MTP counters/client arrivals replayed' not in b;t.write_bytes(b+text.replace('\n','\r\n').encode());assert t.read_bytes()[:len(b)]==b;owned.append(name)
+assert not any('probe_native_external_prefix_batch.py' in n for n in owned);subprocess.run(['git','-C',str(R),'-c','core.autocrlf=false','add','--pathspec-from-file=-','--pathspec-file-nul'],input=('\0'.join(owned)+'\0').encode(),check=True);print(json.dumps(dict(owned_paths=len(owned),new_benchmark=False)))
