@@ -1,0 +1,79 @@
+{
+  "source": "probe_layer_boundary.py",
+  "source_sha256": "cd3c6f2c997794cf6763e7d12d2873e590afb75fb6bb8eea427077c33da8c135",
+  "target": "probe_full_chunk_stage.py",
+  "target_sha256": "7f467cf07bff1f9fc2f392e02f459ee908d921b597d406cb128dc80a0cb4e54f",
+  "steps": [
+    {
+      "old": "tokens=int(sys.argv[3]);assert tokens in (32,128) and not out.exists()",
+      "new": "tokens=int(sys.argv[3]);enabled=int(sys.argv[4]);assert tokens in (32,128) and enabled in (0,1) and not out.exists();enabled=bool(enabled)",
+      "count": 1
+    },
+    {
+      "old": "evidence/layer-boundary-preparation.json",
+      "new": "evidence/full-chunk-stage-gpu-preparation.json",
+      "count": 1
+    },
+    {
+      "old": "    sys.path[:0]=[os.environ['GARNET_RUNTIME_ROOT'],str(root/'Garnet')]",
+      "new": "    assert os.environ.get('GARNET_FULL_CHUNK_STAGE_WITNESS')==('1' if enabled else '0')\n    sys.path[:0]=[os.environ['GARNET_RUNTIME_ROOT'],str(root/'Garnet')]",
+      "count": 1
+    },
+    {
+      "old": "PREFIXES,parts,cache_components,same_state,check_graphs",
+      "new": "PREFIXES,parts,cache_components,same_state",
+      "count": 1
+    },
+    {
+      "old": "    from test2026.cuda.qwen38_5090.bf16_model_state_witness import logical_state_witness",
+      "new": "    from test2026.cuda.qwen38_5090.bf16_model_state_witness import logical_state_witness\n    from test2026.cuda.qwen38_5090.full_chunk_stage_layout import STAGES,check_graphs",
+      "count": 1
+    },
+    {
+      "old": "report={'boundaries':[]",
+      "new": "report={'stage_frames':[],'stage_capture_enabled':enabled",
+      "count": 1
+    },
+    {
+      "old": "        from test2026.cuda.qwen38_5090.layer_boundary_program import construct_with_boundary_program\n        decoder=construct_with_boundary_program(factory,str(checkpoint),config);decoder.enable_cuda_graph(True)",
+      "new": "        from test2026.cuda.qwen38_5090.full_chunk_stage_program import construct_with_full_chunk_stages\n        decoder=construct_with_full_chunk_stages(factory,str(checkpoint),config) if enabled else factory(str(checkpoint),config);decoder.enable_cuda_graph(True)",
+      "count": 1
+    },
+    {
+      "old": "check_graphs(report['graphs'],tokens)",
+      "new": "check_graphs(report['graphs'],tokens,enabled)",
+      "count": 1
+    },
+    {
+      "old": "                program=decoder.programs[tokens];boundary={'start':start,'count':tokens,'layers':{}}\n                for layer,value in zip(program.boundary_layers,program.boundary_buffers):\n                    raw=bytes(io.finite_f32_bytes(value));assert len(raw)==tokens*5120*4;filename='boundary-'+str(start)+'-L'+str(layer)+'.f32';assert not (out/filename).exists();(out/filename).write_bytes(raw)\n                    boundary['layers'][str(layer)]={'file':filename,'words':tokens*5120,'sha256':sha(raw)}\n                report['boundaries'].append(boundary)",
+      "new": "                if enabled and start<128:\n                    program=decoder.programs[tokens];frame={'start':start,'count':tokens,'arrays':{}}\n                    for name,width in STAGES:frame['arrays'][name]=capture(program.stage_buffers[name],0,tokens*width,'s'+str(start)+'-'+name)\n                    report['stage_frames'].append(frame)",
+      "count": 1
+    },
+    {
+      "old": "                for layer,value in zip(decoder.programs[tokens].boundary_layers,decoder.programs[tokens].boundary_buffers):\n                    raw=bytes(io.finite_f32_bytes(value));assert len(raw)==tokens*5120*4\n                    value=report['boundaries'][index]['layers'][str(layer)];value['repeat_sha256']=sha(raw);assert value['repeat_sha256']==value['sha256']",
+      "new": "                if enabled and start<128:\n                    for name,width in STAGES:\n                        prior=report['stage_frames'][index]['arrays'][name];digest=hashlib.sha256();value=decoder.programs[tokens].stage_buffers[name]\n                        for part in prior['parts']:\n                            buffer=io.zeros([1,part['words']]);io.slice_into(value,part['offset'],buffer);raw=bytes(io.finite_f32_bytes(buffer))\n                            assert len(raw)==part['words']*4 and raw==(out/part['file']).read_bytes();digest.update(raw)\n                        prior['repeat_sha256']=digest.hexdigest();assert prior['repeat_sha256']==prior['sha256']",
+      "count": 1
+    },
+    {
+      "old": "report['repeat_complete_prefill_state_vectors_exact']=True;report['boundary_runs']=decoder.programs[tokens].boundary_runs",
+      "new": "report['repeat_complete_prefill_state_vectors_exact']=True;report['stage_runs']=decoder.programs[tokens].stage_runs if enabled else 0;report['readonly_observations']=decoder.programs[tokens].readonly_observations if enabled else []",
+      "count": 1
+    },
+    {
+      "old": "status='layer_boundaries_collected_primary_profile_exact'",
+      "new": "status='full_chunk_stages_collected_primary_profile_exact'",
+      "count": 1
+    },
+    {
+      "old": "Read-only hidden boundaries after layers0..4 of the actual full3968 chain, two exact repeats, and complete layer3 KV at six prefixes. Preserve primary same-profile state/vector/cache equivalence to the retained current run; T32 also retains128IDs/finalstate. Failed T128 is instrumentation-equivalence control only, never admission oracle. Original correct T32 admission target unchanged. No native/production changes or timing admission.",
+      "new": "Read-only all10 layer3 ordinary full-chunk stages for first128 tokens, defaultoff and enabled full3968 chain, two exact repeats, complete canonical graph input state/controls readonly when capturing and layer3KV sixprefixes. Require complete primary same-profile state/vector/cache equivalence, correctT32 also128IDs/finalstate. FailedT128 is only instrumentation-equivalence control, original correctT32 admission unchanged. No timing admission.",
+      "count": 1
+    },
+    {
+      "old": "    def save():(out/'report.json').write_bytes(json.dumps(report,indent=2).encode())",
+      "new": "    def save():\n        if enabled and decoder is not None and tokens in decoder.programs:\n            program=decoder.programs[tokens];report['stage_runs']=program.stage_runs;report['readonly_observations']=program.readonly_observations\n        (out/'report.json').write_bytes(json.dumps(report,indent=2).encode())",
+      "count": 1
+    }
+  ],
+  "original_numeric_predicates_unchanged": true
+}

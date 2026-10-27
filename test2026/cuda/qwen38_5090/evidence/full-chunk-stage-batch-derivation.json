@@ -1,0 +1,23 @@
+{
+  "source": "test_layer_boundary.bat",
+  "source_sha256": "5caf05e3fdf818926316adad2ab7e0e219251b0529e1ccfbb07767873d09794f",
+  "target": "test_full_chunk_stage.bat",
+  "target_sha256": "c7dbd028aed8363ab4f44adda4ac7634118052878c1c81112396e9cd78eebee9",
+  "steps": [
+    {
+      "old": "set CUDA_VISIBLE_DEVICES=0",
+      "new": "set CUDA_VISIBLE_DEVICES=0\nif not \"%~4\"==\"0\" if not \"%~4\"==\"1\" exit /b 2\nset GARNET_FULL_CHUNK_STAGE_WITNESS=%~4",
+      "count": 1
+    },
+    {
+      "old": "probe_layer_boundary.py",
+      "new": "probe_full_chunk_stage.py",
+      "count": 1
+    },
+    {
+      "old": "\"%~1\" %~3",
+      "new": "\"%~1\" %~3 %~4",
+      "count": 1
+    }
+  ]
+}
