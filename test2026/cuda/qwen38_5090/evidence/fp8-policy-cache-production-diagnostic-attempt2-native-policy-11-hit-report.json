@@ -1,0 +1,199 @@
+{
+  "status": "actual_production_cache_case_collected",
+  "spec": {
+    "key": "policy-11-hit",
+    "phase": "hit",
+    "environment": {
+      "GARNET_FP8_FULL_ATTN_M32_CANONICAL": null,
+      "GARNET_FP8_GDN_M32_CANONICAL": null,
+      "GARNET_FP8_GDN_M128_CANONICAL": null,
+      "GARNET_FP8_GDN_Z128_CANONICAL": null,
+      "GARNET_FP8_GDN_Z128_RECONSTRUCT": null,
+      "GARNET_FP8_FULL_ATTN_KV128_CANONICAL": null,
+      "GARNET_FP8_FULL_ATTN_Q128_CANONICAL": null,
+      "GARNET_FP8_FULL_ATTN_O128_CANONICAL": null,
+      "GARNET_FULL_CHUNK_STAGE_WITNESS": null,
+      "GARNET_PARALLEL_BATCH_TOP1": null,
+      "GARNET_QWEN38_BF16_LOW_BATCH_TILED_SCORES": null,
+      "GARNET_NVFP4_DOWN_CANDIDATE": "1"
+    },
+    "expected_error": null
+  },
+  "actual_environment": {
+    "GARNET_FP8_FULL_ATTN_M32_CANONICAL": null,
+    "GARNET_FP8_GDN_M32_CANONICAL": null,
+    "GARNET_FP8_GDN_M128_CANONICAL": null,
+    "GARNET_FP8_GDN_Z128_CANONICAL": null,
+    "GARNET_FP8_GDN_Z128_RECONSTRUCT": null,
+    "GARNET_FP8_FULL_ATTN_KV128_CANONICAL": null,
+    "GARNET_FP8_FULL_ATTN_Q128_CANONICAL": null,
+    "GARNET_FP8_FULL_ATTN_O128_CANONICAL": null,
+    "GARNET_FULL_CHUNK_STAGE_WITNESS": null,
+    "GARNET_PARALLEL_BATCH_TOP1": null,
+    "GARNET_QWEN38_BF16_LOW_BATCH_TILED_SCORES": null,
+    "GARNET_NVFP4_DOWN_CANDIDATE": "1"
+  },
+  "library_sha256": "dc15e4f53855fb91e182cf52e78eb3917068b8df80cde1242ff1799ce4fb99ba",
+  "actual_Garnet_load_model_called": true,
+  "cache_before": {
+    "model.engine": {
+      "bytes": 12508,
+      "sha256": "f9938ab5c5f24911ce85f0b0ad1d61ed3c676c9d69e3112d571ae39d8744734a"
+    },
+    "runtime_graph.cache": {
+      "bytes": 2905,
+      "sha256": "e46924b601668b2bde289b90555a477a51a9ffce9a2e7edd955b8777e233495d",
+      "fingerprint": "a451ee5afaee75022ac28c1afb26d71f"
+    }
+  },
+  "cache_after": {
+    "model.engine": {
+      "bytes": 12508,
+      "sha256": "f9938ab5c5f24911ce85f0b0ad1d61ed3c676c9d69e3112d571ae39d8744734a"
+    },
+    "runtime_graph.cache": {
+      "bytes": 2905,
+      "sha256": "e46924b601668b2bde289b90555a477a51a9ffce9a2e7edd955b8777e233495d",
+      "fingerprint": "a451ee5afaee75022ac28c1afb26d71f"
+    }
+  },
+  "runtime_status": {
+    "mode": "compiled_xmodel",
+    "state": "engine_cache_loaded",
+    "ready": true,
+    "root_xmodel": "D:\\CantorAI\\5090-study-20261023\\Garnet\\test2026\\cuda\\qwen38_5090\\fp8_policy_cache_fixture.py",
+    "cache_directory": "D:\\CantorAI\\5090-study-20261023\\results\\fp8-policy-cache-production-diagnostic-attempt2\\native\\cache",
+    "weights_location": "",
+    "entry_function": "Model",
+    "frontend": "",
+    "backend": "tensorrt",
+    "precision": "bf16",
+    "graph_summary": "<tensor.Graph object>",
+    "scheduler": "cpu_control_gpu_execution",
+    "execution_plan_json": "{\"candidate_partition_count\":1,\"control_plane\":\"cpu\",\"cross_partition_synchronization\":\"cuda_events_planned\",\"device_wide_synchronization\":false,\"engine_partitions\":[],\"execution_mode\":\"monolithic_engine\",\"intermediate_host_copies\":false,\"operations\":[{\"candidate_partition\":0,\"index\":0,\"input_tensor_ids\":[1,1],\"name\":\"add\",\"output_tensor_id\":2,\"partition_reason\":\"default\",\"region_id\":0},{\"candidate_partition\":0,\"index\":1,\"input_tensor_ids\":[2,1],\"name\":\"mul\",\"output_tensor_id\":3,\"partition_reason\":\"default\",\"region_id\":0},{\"candidate_partition\":0,\"index\":2,\"input_tensor_ids\":[3,1],\"name\":\"sub\",\"output_tensor_id\":4,\"partition_reason\":\"default\",\"region_id\":0}],\"partition_candidates\":[{\"candidate_partition\":0,\"kind\":\"required\",\"region_id\":0}],\"partition_state\":\"operation_dag_partitioned\",\"planner_options\":{\"builder_optimization_level\":3,\"builder_workspace_bytes\":67108864,\"enable_preferred_boundaries\":true,\"max_atomic_regions_per_partition\":0,\"preferred_min_operations\":32},\"regions\":[{\"atomic\":false,\"boundary\":\"required\",\"candidate_partition\":0,\"cuda_graph\":false,\"depth\":0,\"function\":\"Model\",\"id\":0,\"inclusive_operation_count\":3,\"input_tensor_ids\":[1],\"invocation\":0,\"name\":\"fp8_policy_cache_addition_fixture\",\"operation_count\":3,\"output_tensor_ids\":[4],\"parent_id\":-1,\"role\":\"generic\"}],\"schema\":\"garnet_execution_plan_v8\",\"synchronization\":\"cuda_stream_ordering\",\"tensor_plane\":\"gpu\"}",
+    "execution_plan": {
+      "candidate_partition_count": 1,
+      "control_plane": "cpu",
+      "cross_partition_synchronization": "cuda_events_planned",
+      "device_wide_synchronization": false,
+      "engine_partitions": [],
+      "execution_mode": "monolithic_engine",
+      "intermediate_host_copies": false,
+      "operations": [
+        {
+          "candidate_partition": 0,
+          "index": 0,
+          "input_tensor_ids": [
+            1,
+            1
+          ],
+          "name": "add",
+          "output_tensor_id": 2,
+          "partition_reason": "default",
+          "region_id": 0
+        },
+        {
+          "candidate_partition": 0,
+          "index": 1,
+          "input_tensor_ids": [
+            2,
+            1
+          ],
+          "name": "mul",
+          "output_tensor_id": 3,
+          "partition_reason": "default",
+          "region_id": 0
+        },
+        {
+          "candidate_partition": 0,
+          "index": 2,
+          "input_tensor_ids": [
+            3,
+            1
+          ],
+          "name": "sub",
+          "output_tensor_id": 4,
+          "partition_reason": "default",
+          "region_id": 0
+        }
+      ],
+      "partition_candidates": [
+        {
+          "candidate_partition": 0,
+          "kind": "required",
+          "region_id": 0
+        }
+      ],
+      "partition_state": "operation_dag_partitioned",
+      "planner_options": {
+        "builder_optimization_level": 3,
+        "builder_workspace_bytes": 67108864,
+        "enable_preferred_boundaries": true,
+        "max_atomic_regions_per_partition": 0,
+        "preferred_min_operations": 32
+      },
+      "regions": [
+        {
+          "atomic": false,
+          "boundary": "required",
+          "candidate_partition": 0,
+          "cuda_graph": false,
+          "depth": 0,
+          "function": "Model",
+          "id": 0,
+          "inclusive_operation_count": 3,
+          "input_tensor_ids": [
+            1
+          ],
+          "invocation": 0,
+          "name": "fp8_policy_cache_addition_fixture",
+          "operation_count": 3,
+          "output_tensor_ids": [
+            4
+          ],
+          "parent_id": -1,
+          "role": "generic"
+        }
+      ],
+      "schema": "garnet_execution_plan_v8",
+      "synchronization": "cuda_stream_ordering",
+      "tensor_plane": "gpu"
+    },
+    "engine_path": "D:\\CantorAI\\5090-study-20261023\\results\\fp8-policy-cache-production-diagnostic-attempt2\\native\\cache\\model.engine",
+    "engine_partition_count": 1,
+    "partition_options": {
+      "enable_preferred_boundaries": true,
+      "preferred_min_operations": 32,
+      "max_atomic_regions_per_partition": 0,
+      "builder_workspace_bytes": 67108864,
+      "builder_optimization_level": 3
+    },
+    "weight_tensor_count": 0,
+    "weight_tensor_bytes": 0,
+    "weight_index_error": "",
+    "loaded_weight_count": 0,
+    "loaded_weight_bytes": 0,
+    "engines_prepared": true,
+    "engine_prepare_ms": 125.6376,
+    "frontend_prepared": false,
+    "frontend_prepare_ms": 0.0,
+    "error_code": "",
+    "error_message": "",
+    "forbidden_path_counters": {
+      "root_x_executions": 0,
+      "hardcoded_qwen_runner_calls": 0,
+      "python_subgraph_calls": 0,
+      "direct_internal_export_calls": 0,
+      "cpu_tensor_intermediates": 0,
+      "graph_cache_hits": 1,
+      "graph_cache_misses": 0
+    }
+  },
+  "output_values": [
+    1.0,
+    6.0,
+    15.0,
+    28.0
+  ],
+  "forward_status": "ok"
+}
