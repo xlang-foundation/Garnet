@@ -1,0 +1,619 @@
+
+{"id": "f2c8d1a2565a4f1e9e1e4dc2e772678c", "kind": "correctness", "label": "Actual real-input ordinary layer2 T32/T128 with plugin init trace=1, full arrays/readonly/carried states/repeats; no performance admission", "argv": ["C:\\Python312\\python.exe", "D:\\CantorAI\\5090-study-20261023\\Garnet\\test2026\\cuda\\qwen38_5090\\monitor_native_probe.py", "--study", "D:\\CantorAI\\5090-study-20261023", "--output", "D:\\CantorAI\\5090-study-20261023\\results\\gdn-kv128-stage-attempt1\\native-resources", "--", "cmd.exe", "/d", "/c", "D:\\CantorAI\\5090-study-20261023\\Garnet\\test2026\\cuda\\qwen38_5090\\test_gdn_kv128_stage.bat", "D:\\CantorAI\\5090-study-20261023\\results\\gdn-kv128-stage-attempt1\\native", "C:\\Users\\zsdx\\AppData\\Local\\CantorAI\\5090-engine-cache", "1"]}
+ERROR:root:code for hash md5 was not found.
+Traceback (most recent call last):
+  File "C:\Python\Python314\Lib\hashlib.py", line 247, in <module>
+    globals()[__func_name] = __get_hash(__func_name)
+                             ~~~~~~~~~~^^^^^^^^^^^^^
+  File "C:\Python\Python314\Lib\hashlib.py", line 123, in __get_builtin_constructor
+    raise ValueError('unsupported hash type ' + name)
+ValueError: unsupported hash type md5
+ERROR:root:code for hash sha1 was not found.
+Traceback (most recent call last):
+  File "C:\Python\Python314\Lib\hashlib.py", line 247, in <module>
+    globals()[__func_name] = __get_hash(__func_name)
+                             ~~~~~~~~~~^^^^^^^^^^^^^
+  File "C:\Python\Python314\Lib\hashlib.py", line 123, in __get_builtin_constructor
+    raise ValueError('unsupported hash type ' + name)
+ValueError: unsupported hash type sha1
+ERROR:root:code for hash blake2b was not found.
+Traceback (most recent call last):
+  File "C:\Python\Python314\Lib\hashlib.py", line 247, in <module>
+    globals()[__func_name] = __get_hash(__func_name)
+                             ~~~~~~~~~~^^^^^^^^^^^^^
+  File "C:\Python\Python314\Lib\hashlib.py", line 123, in __get_builtin_constructor
+    raise ValueError('unsupported hash type ' + name)
+ValueError: unsupported hash type blake2b
+ERROR:root:code for hash blake2s was not found.
+Traceback (most recent call last):
+  File "C:\Python\Python314\Lib\hashlib.py", line 247, in <module>
+    globals()[__func_name] = __get_hash(__func_name)
+                             ~~~~~~~~~~^^^^^^^^^^^^^
+  File "C:\Python\Python314\Lib\hashlib.py", line 123, in __get_builtin_constructor
+    raise ValueError('unsupported hash type ' + name)
+ValueError: unsupported hash type blake2s
+ERROR:root:code for hash sha3_224 was not found.
+Traceback (most recent call last):
+  File "C:\Python\Python314\Lib\hashlib.py", line 247, in <module>
+    globals()[__func_name] = __get_hash(__func_name)
+                             ~~~~~~~~~~^^^^^^^^^^^^^
+  File "C:\Python\Python314\Lib\hashlib.py", line 123, in __get_builtin_constructor
+    raise ValueError('unsupported hash type ' + name)
+ValueError: unsupported hash type sha3_224
+ERROR:root:code for hash sha3_256 was not found.
+Traceback (most recent call last):
+  File "C:\Python\Python314\Lib\hashlib.py", line 247, in <module>
+    globals()[__func_name] = __get_hash(__func_name)
+                             ~~~~~~~~~~^^^^^^^^^^^^^
+  File "C:\Python\Python314\Lib\hashlib.py", line 123, in __get_builtin_constructor
+    raise ValueError('unsupported hash type ' + name)
+ValueError: unsupported hash type sha3_256
+ERROR:root:code for hash sha3_384 was not found.
+Traceback (most recent call last):
+  File "C:\Python\Python314\Lib\hashlib.py", line 247, in <module>
+    globals()[__func_name] = __get_hash(__func_name)
+                             ~~~~~~~~~~^^^^^^^^^^^^^
+  File "C:\Python\Python314\Lib\hashlib.py", line 123, in __get_builtin_constructor
+    raise ValueError('unsupported hash type ' + name)
+ValueError: unsupported hash type sha3_384
+ERROR:root:code for hash sha3_512 was not found.
+Traceback (most recent call last):
+  File "C:\Python\Python314\Lib\hashlib.py", line 247, in <module>
+    globals()[__func_name] = __get_hash(__func_name)
+                             ~~~~~~~~~~^^^^^^^^^^^^^
+  File "C:\Python\Python314\Lib\hashlib.py", line 123, in __get_builtin_constructor
+    raise ValueError('unsupported hash type ' + name)
+ValueError: unsupported hash type sha3_512
+ERROR:root:code for hash shake_128 was not found.
+Traceback (most recent call last):
+  File "C:\Python\Python314\Lib\hashlib.py", line 247, in <module>
+    globals()[__func_name] = __get_hash(__func_name)
+                             ~~~~~~~~~~^^^^^^^^^^^^^
+  File "C:\Python\Python314\Lib\hashlib.py", line 123, in __get_builtin_constructor
+    raise ValueError('unsupported hash type ' + name)
+ValueError: unsupported hash type shake_128
+ERROR:root:code for hash shake_256 was not found.
+Traceback (most recent call last):
+  File "C:\Python\Python314\Lib\hashlib.py", line 247, in <module>
+    globals()[__func_name] = __get_hash(__func_name)
+                             ~~~~~~~~~~^^^^^^^^^^^^^
+  File "C:\Python\Python314\Lib\hashlib.py", line 123, in __get_builtin_constructor
+    raise ValueError('unsupported hash type ' + name)
+ValueError: unsupported hash type shake_256
+GARNET_MODELOPT_INIT {"id":1,"phase":"begin","route":"fp8","instance":"000001F7FF82E7F0","rows":10240,"columns":5120,"policy":0,"context_present":false,"factory_called":false,"result":-1,"exception":false}
+GARNET_MODELOPT_INIT {"id":1,"phase":"end","route":"fp8","instance":"000001F7FF82E7F0","rows":10240,"columns":5120,"policy":0,"context_present":true,"factory_called":true,"result":0,"exception":false}
+GARNET_MODELOPT_INIT {"id":2,"phase":"begin","route":"fp8","instance":"000001F7FF82E9D0","rows":6144,"columns":5120,"policy":0,"context_present":false,"factory_called":false,"result":-1,"exception":false}
+GARNET_MODELOPT_INIT {"id":2,"phase":"end","route":"fp8","instance":"000001F7FF82E9D0","rows":6144,"columns":5120,"policy":0,"context_present":true,"factory_called":true,"result":0,"exception":false}
+GARNET_MODELOPT_INIT {"id":3,"phase":"begin","route":"fp8","instance":"000001F7FF82FC30","rows":5120,"columns":6144,"policy":1,"context_present":false,"factory_called":false,"result":-1,"exception":false}
+GARNET_MODELOPT_INIT {"id":3,"phase":"end","route":"fp8","instance":"000001F7FF82FC30","rows":5120,"columns":6144,"policy":1,"context_present":true,"factory_called":true,"result":0,"exception":false}
+GARNET_MODELOPT_INIT {"id":4,"phase":"begin","route":"nvfp4","instance":"000001F7FF8353F0","rows":34816,"columns":5120,"policy":0,"context_present":false,"factory_called":false,"result":-1,"exception":false}
+GARNET_MODELOPT_INIT {"id":4,"phase":"end","route":"nvfp4","instance":"000001F7FF8353F0","rows":34816,"columns":5120,"policy":0,"context_present":true,"factory_called":true,"result":0,"exception":false}
+GARNET_MODELOPT_INIT {"id":5,"phase":"begin","route":"nvfp4","instance":"000001F7FF835630","rows":5120,"columns":17408,"policy":0,"context_present":false,"factory_called":false,"result":-1,"exception":false}
+GARNET_MODELOPT_INIT {"id":5,"phase":"end","route":"nvfp4","instance":"000001F7FF835630","rows":5120,"columns":17408,"policy":0,"context_present":true,"factory_called":true,"result":0,"exception":false}
+GARNET_MODELOPT_INIT {"id":6,"phase":"begin","route":"fp8","instance":"000001F7F0D5C3B0","rows":10240,"columns":5120,"policy":0,"context_present":false,"factory_called":false,"result":-1,"exception":false}
+GARNET_MODELOPT_INIT {"id":6,"phase":"end","route":"fp8","instance":"000001F7F0D5C3B0","rows":10240,"columns":5120,"policy":0,"context_present":true,"factory_called":true,"result":0,"exception":false}
+GARNET_MODELOPT_INIT {"id":7,"phase":"begin","route":"fp8","instance":"000001F7F0D5B930","rows":6144,"columns":5120,"policy":0,"context_present":false,"factory_called":false,"result":-1,"exception":false}
+GARNET_MODELOPT_INIT {"id":7,"phase":"end","route":"fp8","instance":"000001F7F0D5B930","rows":6144,"columns":5120,"policy":0,"context_present":true,"factory_called":true,"result":0,"exception":false}
+GARNET_MODELOPT_INIT {"id":8,"phase":"begin","route":"fp8","instance":"000001F7F0D5C1D0","rows":5120,"columns":6144,"policy":1,"context_present":false,"factory_called":false,"result":-1,"exception":false}
+GARNET_MODELOPT_INIT {"id":8,"phase":"end","route":"fp8","instance":"000001F7F0D5C1D0","rows":5120,"columns":6144,"policy":1,"context_present":true,"factory_called":true,"result":0,"exception":false}
+GARNET_MODELOPT_INIT {"id":9,"phase":"begin","route":"nvfp4","instance":"000001F7F0D5D070","rows":34816,"columns":5120,"policy":0,"context_present":false,"factory_called":false,"result":-1,"exception":false}
+GARNET_MODELOPT_INIT {"id":9,"phase":"end","route":"nvfp4","instance":"000001F7F0D5D070","rows":34816,"columns":5120,"policy":0,"context_present":true,"factory_called":true,"result":0,"exception":false}
+GARNET_MODELOPT_INIT {"id":10,"phase":"begin","route":"nvfp4","instance":"000001F7F0D5BC90","rows":5120,"columns":17408,"policy":0,"context_present":false,"factory_called":false,"result":-1,"exception":false}
+GARNET_MODELOPT_INIT {"id":10,"phase":"end","route":"nvfp4","instance":"000001F7F0D5BC90","rows":5120,"columns":17408,"policy":0,"context_present":true,"factory_called":true,"result":0,"exception":false}
+GARNET_MODELOPT_INIT {"id":11,"phase":"begin","route":"fp8","instance":"000001F53DB4C6E0","rows":10240,"columns":5120,"policy":0,"context_present":false,"factory_called":false,"result":-1,"exception":false}
+GARNET_MODELOPT_INIT {"id":11,"phase":"end","route":"fp8","instance":"000001F53DB4C6E0","rows":10240,"columns":5120,"policy":0,"context_present":true,"factory_called":true,"result":0,"exception":false}
+GARNET_MODELOPT_INIT {"id":12,"phase":"begin","route":"fp8","instance":"000001F53DB4B8A0","rows":6144,"columns":5120,"policy":0,"context_present":false,"factory_called":false,"result":-1,"exception":false}
+GARNET_MODELOPT_INIT {"id":12,"phase":"end","route":"fp8","instance":"000001F53DB4B8A0","rows":6144,"columns":5120,"policy":0,"context_present":true,"factory_called":true,"result":0,"exception":false}
+GARNET_MODELOPT_INIT {"id":13,"phase":"begin","route":"fp8","instance":"000001F53DB4C140","rows":5120,"columns":6144,"policy":1,"context_present":false,"factory_called":false,"result":-1,"exception":false}
+GARNET_MODELOPT_INIT {"id":13,"phase":"end","route":"fp8","instance":"000001F53DB4C140","rows":5120,"columns":6144,"policy":1,"context_present":true,"factory_called":true,"result":0,"exception":false}
+GARNET_MODELOPT_INIT {"id":14,"phase":"begin","route":"nvfp4","instance":"000001F28D97D540","rows":34816,"columns":5120,"policy":0,"context_present":false,"factory_called":false,"result":-1,"exception":false}
+GARNET_MODELOPT_INIT {"id":14,"phase":"end","route":"nvfp4","instance":"000001F28D97D540","rows":34816,"columns":5120,"policy":0,"context_present":true,"factory_called":true,"result":0,"exception":false}
+GARNET_MODELOPT_INIT {"id":15,"phase":"begin","route":"nvfp4","instance":"000001F28D97D0C0","rows":5120,"columns":17408,"policy":0,"context_present":false,"factory_called":false,"result":-1,"exception":false}
+GARNET_MODELOPT_INIT {"id":15,"phase":"end","route":"nvfp4","instance":"000001F28D97D0C0","rows":5120,"columns":17408,"policy":0,"context_present":true,"factory_called":true,"result":0,"exception":false}
+GARNET_MODELOPT_INIT {"id":16,"phase":"begin","route":"fp8","instance":"000001F7FF824D70","rows":10240,"columns":5120,"policy":0,"context_present":false,"factory_called":false,"result":-1,"exception":false}
+GARNET_MODELOPT_INIT {"id":16,"phase":"end","route":"fp8","instance":"000001F7FF824D70","rows":10240,"columns":5120,"policy":0,"context_present":true,"factory_called":true,"result":0,"exception":false}
+GARNET_MODELOPT_INIT {"id":17,"phase":"begin","route":"fp8","instance":"000001F7FF824050","rows":6144,"columns":5120,"policy":0,"context_present":false,"factory_called":false,"result":-1,"exception":false}
+GARNET_MODELOPT_INIT {"id":17,"phase":"end","route":"fp8","instance":"000001F7FF824050","rows":6144,"columns":5120,"policy":0,"context_present":true,"factory_called":true,"result":0,"exception":false}
+GARNET_MODELOPT_INIT {"id":18,"phase":"begin","route":"fp8","instance":"000001F7FF824D10","rows":5120,"columns":6144,"policy":1,"context_present":false,"factory_called":false,"result":-1,"exception":false}
+GARNET_MODELOPT_INIT {"id":18,"phase":"end","route":"fp8","instance":"000001F7FF824D10","rows":5120,"columns":6144,"policy":1,"context_present":true,"factory_called":true,"result":0,"exception":false}
+GARNET_MODELOPT_INIT {"id":19,"phase":"begin","route":"nvfp4","instance":"000001F7FF824770","rows":34816,"columns":5120,"policy":0,"context_present":false,"factory_called":false,"result":-1,"exception":false}
+GARNET_MODELOPT_INIT {"id":19,"phase":"end","route":"nvfp4","instance":"000001F7FF824770","rows":34816,"columns":5120,"policy":0,"context_present":true,"factory_called":true,"result":0,"exception":false}
+GARNET_MODELOPT_INIT {"id":20,"phase":"begin","route":"nvfp4","instance":"000001F7FF8245F0","rows":5120,"columns":17408,"policy":0,"context_present":false,"factory_called":false,"result":-1,"exception":false}
+GARNET_MODELOPT_INIT {"id":20,"phase":"end","route":"nvfp4","instance":"000001F7FF8245F0","rows":5120,"columns":17408,"policy":0,"context_present":true,"factory_called":true,"result":0,"exception":false}
+GARNET_MODELOPT_INIT {"id":21,"phase":"begin","route":"fp8","instance":"000001F28D98F9C0","rows":10240,"columns":5120,"policy":0,"context_present":false,"factory_called":false,"result":-1,"exception":false}
+GARNET_MODELOPT_INIT {"id":21,"phase":"end","route":"fp8","instance":"000001F28D98F9C0","rows":10240,"columns":5120,"policy":0,"context_present":true,"factory_called":true,"result":0,"exception":false}
+GARNET_MODELOPT_INIT {"id":22,"phase":"begin","route":"fp8_z128_reconstructed","instance":"000001F2D4C082C0","rows":6144,"columns":5120,"policy":1378955832,"context_present":false,"factory_called":false,"result":-1,"exception":false}
+GARNET_Z128_RECONSTRUCT {"id":1,"seq":1,"event":"begin","name":"factory","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":1,"seq":2,"event":"api","name":"cudaGetDevice","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":1,"seq":3,"event":"api","name":"cudaGetDeviceProperties","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":1,"seq":4,"event":"api","name":"cublasLtGetVersion","a":130400,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":1,"seq":5,"event":"api","name":"cublasLtCreate","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":1,"seq":6,"event":"api","name":"cublasLtMatmulDescCreate","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":1,"seq":7,"event":"api","name":"cublasLtMatmulDescSetAttribute","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":1,"seq":8,"event":"api","name":"cublasLtMatmulDescSetAttribute","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":1,"seq":9,"event":"api","name":"cublasLtMatrixLayoutCreate","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":1,"seq":10,"event":"api","name":"cublasLtMatrixLayoutCreate","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":1,"seq":11,"event":"api","name":"cublasLtMatrixLayoutCreate","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":1,"seq":12,"event":"api","name":"cublasLtMatrixLayoutCreate","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":1,"seq":13,"event":"api","name":"cublasLtMatrixLayoutCreate","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":1,"seq":14,"event":"api","name":"cublasLtMatmulAlgoInit","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":1,"seq":15,"event":"api","name":"cublasLtMatmulAlgoConfigSetAttribute","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":1,"seq":16,"event":"api","name":"cublasLtMatmulAlgoConfigSetAttribute","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":1,"seq":17,"event":"api","name":"cublasLtMatmulAlgoConfigSetAttribute","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":1,"seq":18,"event":"api","name":"cublasLtMatmulAlgoConfigSetAttribute","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":1,"seq":19,"event":"api","name":"cublasLtMatmulAlgoConfigSetAttribute","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":1,"seq":20,"event":"api","name":"cublasLtMatmulAlgoConfigSetAttribute","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":1,"seq":21,"event":"api","name":"cublasLtMatmulAlgoConfigSetAttribute","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":1,"seq":22,"event":"api","name":"cublasLtMatmulAlgoConfigSetAttribute","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":1,"seq":23,"event":"api","name":"cublasLtMatmulAlgoConfigGetAttribute","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":1,"seq":24,"event":"configuration","name":"ID","a":67,"b":4,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":1,"seq":25,"event":"api","name":"cublasLtMatmulAlgoConfigGetAttribute","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":1,"seq":26,"event":"configuration","name":"TILE_ID","a":13,"b":4,"c":1,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":1,"seq":27,"event":"api","name":"cublasLtMatmulAlgoConfigGetAttribute","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":1,"seq":28,"event":"configuration","name":"STAGES_ID","a":17,"b":4,"c":6,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":1,"seq":29,"event":"api","name":"cublasLtMatmulAlgoConfigGetAttribute","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":1,"seq":30,"event":"configuration","name":"SPLITK_NUM","a":1,"b":4,"c":2,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":1,"seq":31,"event":"api","name":"cublasLtMatmulAlgoConfigGetAttribute","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":1,"seq":32,"event":"configuration","name":"REDUCTION_SCHEME","a":0,"b":4,"c":3,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":1,"seq":33,"event":"api","name":"cublasLtMatmulAlgoConfigGetAttribute","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":1,"seq":34,"event":"configuration","name":"CTA_SWIZZLING","a":1,"b":4,"c":4,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":1,"seq":35,"event":"api","name":"cublasLtMatmulAlgoConfigGetAttribute","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":1,"seq":36,"event":"configuration","name":"CUSTOM_OPTION","a":18,"b":4,"c":5,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":1,"seq":37,"event":"api","name":"cublasLtMatmulAlgoConfigGetAttribute","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":1,"seq":38,"event":"configuration","name":"INNER_SHAPE_ID","a":0,"b":2,"c":7,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":1,"seq":39,"event":"api","name":"cublasLtMatmulAlgoConfigGetAttribute","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":1,"seq":40,"event":"configuration","name":"CLUSTER_SHAPE_ID","a":0,"b":2,"c":8,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":1,"seq":41,"event":"algorithm","name":"configured","a":0,"b":0,"c":0,"opaque":"430000000d0000001100000001000000000000000100000012000000000000000100000060fd01001c0000001c0000000e000e00440000000000000000000000"}
+GARNET_Z128_RECONSTRUCT {"id":1,"seq":42,"event":"api","name":"cublasLtMatmulAlgoCheck","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":1,"seq":43,"event":"check","name":"M32","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":1,"seq":44,"event":"api","name":"cublasLtMatmulAlgoCheck","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":1,"seq":45,"event":"check","name":"M128","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":1,"seq":46,"event":"accept","name":"created","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":1,"seq":47,"event":"end","name":"created","a":0,"b":0,"c":0,"opaque":""}
+GARNET_MODELOPT_INIT {"id":22,"phase":"end","route":"fp8_z128_reconstructed","instance":"000001F2D4C082C0","rows":6144,"columns":5120,"policy":1378955832,"context_present":true,"factory_called":true,"result":0,"exception":false}
+GARNET_MODELOPT_INIT {"id":23,"phase":"begin","route":"fp8_m128","instance":"000001F28DD23A50","rows":5120,"columns":6144,"policy":128,"context_present":false,"factory_called":false,"result":-1,"exception":false}
+GARNET_MODELOPT_INIT {"id":23,"phase":"end","route":"fp8_m128","instance":"000001F28DD23A50","rows":5120,"columns":6144,"policy":128,"context_present":true,"factory_called":true,"result":0,"exception":false}
+GARNET_MODELOPT_INIT {"id":24,"phase":"begin","route":"nvfp4","instance":"000001F28D977A20","rows":34816,"columns":5120,"policy":0,"context_present":false,"factory_called":false,"result":-1,"exception":false}
+GARNET_MODELOPT_INIT {"id":24,"phase":"end","route":"nvfp4","instance":"000001F28D977A20","rows":34816,"columns":5120,"policy":0,"context_present":true,"factory_called":true,"result":0,"exception":false}
+GARNET_MODELOPT_INIT {"id":25,"phase":"begin","route":"nvfp4","instance":"000001F7FF82C270","rows":5120,"columns":17408,"policy":0,"context_present":false,"factory_called":false,"result":-1,"exception":false}
+GARNET_MODELOPT_INIT {"id":25,"phase":"end","route":"nvfp4","instance":"000001F7FF82C270","rows":5120,"columns":17408,"policy":0,"context_present":true,"factory_called":true,"result":0,"exception":false}
+GARNET_MODELOPT_INIT {"id":26,"phase":"begin","route":"fp8","instance":"000001F7FF82D1D0","rows":10240,"columns":5120,"policy":0,"context_present":false,"factory_called":false,"result":-1,"exception":false}
+GARNET_MODELOPT_INIT {"id":26,"phase":"end","route":"fp8","instance":"000001F7FF82D1D0","rows":10240,"columns":5120,"policy":0,"context_present":true,"factory_called":true,"result":0,"exception":false}
+GARNET_MODELOPT_INIT {"id":27,"phase":"begin","route":"fp8_z128_reconstructed","instance":"000001F2D4657820","rows":6144,"columns":5120,"policy":1378955832,"context_present":false,"factory_called":false,"result":-1,"exception":false}
+GARNET_Z128_RECONSTRUCT {"id":2,"seq":1,"event":"begin","name":"factory","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":2,"seq":2,"event":"api","name":"cudaGetDevice","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":2,"seq":3,"event":"api","name":"cudaGetDeviceProperties","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":2,"seq":4,"event":"api","name":"cublasLtGetVersion","a":130400,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":2,"seq":5,"event":"api","name":"cublasLtCreate","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":2,"seq":6,"event":"api","name":"cublasLtMatmulDescCreate","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":2,"seq":7,"event":"api","name":"cublasLtMatmulDescSetAttribute","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":2,"seq":8,"event":"api","name":"cublasLtMatmulDescSetAttribute","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":2,"seq":9,"event":"api","name":"cublasLtMatrixLayoutCreate","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":2,"seq":10,"event":"api","name":"cublasLtMatrixLayoutCreate","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":2,"seq":11,"event":"api","name":"cublasLtMatrixLayoutCreate","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":2,"seq":12,"event":"api","name":"cublasLtMatrixLayoutCreate","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":2,"seq":13,"event":"api","name":"cublasLtMatrixLayoutCreate","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":2,"seq":14,"event":"api","name":"cublasLtMatmulAlgoInit","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":2,"seq":15,"event":"api","name":"cublasLtMatmulAlgoConfigSetAttribute","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":2,"seq":16,"event":"api","name":"cublasLtMatmulAlgoConfigSetAttribute","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":2,"seq":17,"event":"api","name":"cublasLtMatmulAlgoConfigSetAttribute","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":2,"seq":18,"event":"api","name":"cublasLtMatmulAlgoConfigSetAttribute","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":2,"seq":19,"event":"api","name":"cublasLtMatmulAlgoConfigSetAttribute","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":2,"seq":20,"event":"api","name":"cublasLtMatmulAlgoConfigSetAttribute","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":2,"seq":21,"event":"api","name":"cublasLtMatmulAlgoConfigSetAttribute","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":2,"seq":22,"event":"api","name":"cublasLtMatmulAlgoConfigSetAttribute","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":2,"seq":23,"event":"api","name":"cublasLtMatmulAlgoConfigGetAttribute","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":2,"seq":24,"event":"configuration","name":"ID","a":67,"b":4,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":2,"seq":25,"event":"api","name":"cublasLtMatmulAlgoConfigGetAttribute","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":2,"seq":26,"event":"configuration","name":"TILE_ID","a":13,"b":4,"c":1,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":2,"seq":27,"event":"api","name":"cublasLtMatmulAlgoConfigGetAttribute","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":2,"seq":28,"event":"configuration","name":"STAGES_ID","a":17,"b":4,"c":6,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":2,"seq":29,"event":"api","name":"cublasLtMatmulAlgoConfigGetAttribute","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":2,"seq":30,"event":"configuration","name":"SPLITK_NUM","a":1,"b":4,"c":2,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":2,"seq":31,"event":"api","name":"cublasLtMatmulAlgoConfigGetAttribute","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":2,"seq":32,"event":"configuration","name":"REDUCTION_SCHEME","a":0,"b":4,"c":3,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":2,"seq":33,"event":"api","name":"cublasLtMatmulAlgoConfigGetAttribute","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":2,"seq":34,"event":"configuration","name":"CTA_SWIZZLING","a":1,"b":4,"c":4,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":2,"seq":35,"event":"api","name":"cublasLtMatmulAlgoConfigGetAttribute","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":2,"seq":36,"event":"configuration","name":"CUSTOM_OPTION","a":18,"b":4,"c":5,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":2,"seq":37,"event":"api","name":"cublasLtMatmulAlgoConfigGetAttribute","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":2,"seq":38,"event":"configuration","name":"INNER_SHAPE_ID","a":0,"b":2,"c":7,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":2,"seq":39,"event":"api","name":"cublasLtMatmulAlgoConfigGetAttribute","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":2,"seq":40,"event":"configuration","name":"CLUSTER_SHAPE_ID","a":0,"b":2,"c":8,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":2,"seq":41,"event":"algorithm","name":"configured","a":0,"b":0,"c":0,"opaque":"430000000d0000001100000001000000000000000100000012000000000000000100000060fd01001c0000001c0000000e000e00440000000000000000000000"}
+GARNET_Z128_RECONSTRUCT {"id":2,"seq":42,"event":"api","name":"cublasLtMatmulAlgoCheck","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":2,"seq":43,"event":"check","name":"M32","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":2,"seq":44,"event":"api","name":"cublasLtMatmulAlgoCheck","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":2,"seq":45,"event":"check","name":"M128","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":2,"seq":46,"event":"accept","name":"created","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":2,"seq":47,"event":"end","name":"created","a":0,"b":0,"c":0,"opaque":""}
+GARNET_MODELOPT_INIT {"id":27,"phase":"end","route":"fp8_z128_reconstructed","instance":"000001F2D4657820","rows":6144,"columns":5120,"policy":1378955832,"context_present":true,"factory_called":true,"result":0,"exception":false}
+GARNET_MODELOPT_INIT {"id":28,"phase":"begin","route":"fp8_m128","instance":"000001F2D4656A60","rows":5120,"columns":6144,"policy":128,"context_present":false,"factory_called":false,"result":-1,"exception":false}
+GARNET_MODELOPT_INIT {"id":28,"phase":"end","route":"fp8_m128","instance":"000001F2D4656A60","rows":5120,"columns":6144,"policy":128,"context_present":true,"factory_called":true,"result":0,"exception":false}
+GARNET_MODELOPT_INIT {"id":29,"phase":"begin","route":"nvfp4","instance":"000001F7FF82D110","rows":34816,"columns":5120,"policy":0,"context_present":false,"factory_called":false,"result":-1,"exception":false}
+GARNET_MODELOPT_INIT {"id":29,"phase":"end","route":"nvfp4","instance":"000001F7FF82D110","rows":34816,"columns":5120,"policy":0,"context_present":true,"factory_called":true,"result":0,"exception":false}
+GARNET_MODELOPT_INIT {"id":30,"phase":"begin","route":"nvfp4","instance":"000001F7FF82E0D0","rows":5120,"columns":17408,"policy":0,"context_present":false,"factory_called":false,"result":-1,"exception":false}
+GARNET_MODELOPT_INIT {"id":30,"phase":"end","route":"nvfp4","instance":"000001F7FF82E0D0","rows":5120,"columns":17408,"policy":0,"context_present":true,"factory_called":true,"result":0,"exception":false}
+GARNET_MODELOPT_INIT {"id":31,"phase":"begin","route":"fp8","instance":"000001F53DB633C0","rows":10240,"columns":5120,"policy":0,"context_present":false,"factory_called":false,"result":-1,"exception":false}
+GARNET_MODELOPT_INIT {"id":31,"phase":"end","route":"fp8","instance":"000001F53DB633C0","rows":10240,"columns":5120,"policy":0,"context_present":true,"factory_called":true,"result":0,"exception":false}
+GARNET_MODELOPT_INIT {"id":32,"phase":"begin","route":"fp8_z128_reconstructed","instance":"000001F7D4E96BA0","rows":6144,"columns":5120,"policy":1378955832,"context_present":false,"factory_called":false,"result":-1,"exception":false}
+GARNET_Z128_RECONSTRUCT {"id":3,"seq":1,"event":"begin","name":"factory","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":3,"seq":2,"event":"api","name":"cudaGetDevice","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":3,"seq":3,"event":"api","name":"cudaGetDeviceProperties","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":3,"seq":4,"event":"api","name":"cublasLtGetVersion","a":130400,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":3,"seq":5,"event":"api","name":"cublasLtCreate","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":3,"seq":6,"event":"api","name":"cublasLtMatmulDescCreate","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":3,"seq":7,"event":"api","name":"cublasLtMatmulDescSetAttribute","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":3,"seq":8,"event":"api","name":"cublasLtMatmulDescSetAttribute","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":3,"seq":9,"event":"api","name":"cublasLtMatrixLayoutCreate","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":3,"seq":10,"event":"api","name":"cublasLtMatrixLayoutCreate","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":3,"seq":11,"event":"api","name":"cublasLtMatrixLayoutCreate","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":3,"seq":12,"event":"api","name":"cublasLtMatrixLayoutCreate","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":3,"seq":13,"event":"api","name":"cublasLtMatrixLayoutCreate","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":3,"seq":14,"event":"api","name":"cublasLtMatmulAlgoInit","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":3,"seq":15,"event":"api","name":"cublasLtMatmulAlgoConfigSetAttribute","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":3,"seq":16,"event":"api","name":"cublasLtMatmulAlgoConfigSetAttribute","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":3,"seq":17,"event":"api","name":"cublasLtMatmulAlgoConfigSetAttribute","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":3,"seq":18,"event":"api","name":"cublasLtMatmulAlgoConfigSetAttribute","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":3,"seq":19,"event":"api","name":"cublasLtMatmulAlgoConfigSetAttribute","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":3,"seq":20,"event":"api","name":"cublasLtMatmulAlgoConfigSetAttribute","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":3,"seq":21,"event":"api","name":"cublasLtMatmulAlgoConfigSetAttribute","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":3,"seq":22,"event":"api","name":"cublasLtMatmulAlgoConfigSetAttribute","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":3,"seq":23,"event":"api","name":"cublasLtMatmulAlgoConfigGetAttribute","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":3,"seq":24,"event":"configuration","name":"ID","a":67,"b":4,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":3,"seq":25,"event":"api","name":"cublasLtMatmulAlgoConfigGetAttribute","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":3,"seq":26,"event":"configuration","name":"TILE_ID","a":13,"b":4,"c":1,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":3,"seq":27,"event":"api","name":"cublasLtMatmulAlgoConfigGetAttribute","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":3,"seq":28,"event":"configuration","name":"STAGES_ID","a":17,"b":4,"c":6,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":3,"seq":29,"event":"api","name":"cublasLtMatmulAlgoConfigGetAttribute","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":3,"seq":30,"event":"configuration","name":"SPLITK_NUM","a":1,"b":4,"c":2,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":3,"seq":31,"event":"api","name":"cublasLtMatmulAlgoConfigGetAttribute","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":3,"seq":32,"event":"configuration","name":"REDUCTION_SCHEME","a":0,"b":4,"c":3,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":3,"seq":33,"event":"api","name":"cublasLtMatmulAlgoConfigGetAttribute","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":3,"seq":34,"event":"configuration","name":"CTA_SWIZZLING","a":1,"b":4,"c":4,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":3,"seq":35,"event":"api","name":"cublasLtMatmulAlgoConfigGetAttribute","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":3,"seq":36,"event":"configuration","name":"CUSTOM_OPTION","a":18,"b":4,"c":5,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":3,"seq":37,"event":"api","name":"cublasLtMatmulAlgoConfigGetAttribute","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":3,"seq":38,"event":"configuration","name":"INNER_SHAPE_ID","a":0,"b":2,"c":7,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":3,"seq":39,"event":"api","name":"cublasLtMatmulAlgoConfigGetAttribute","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":3,"seq":40,"event":"configuration","name":"CLUSTER_SHAPE_ID","a":0,"b":2,"c":8,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":3,"seq":41,"event":"algorithm","name":"configured","a":0,"b":0,"c":0,"opaque":"430000000d0000001100000001000000000000000100000012000000000000000100000060fd01001c0000001c0000000e000e00440000000000000000000000"}
+GARNET_Z128_RECONSTRUCT {"id":3,"seq":42,"event":"api","name":"cublasLtMatmulAlgoCheck","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":3,"seq":43,"event":"check","name":"M32","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":3,"seq":44,"event":"api","name":"cublasLtMatmulAlgoCheck","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":3,"seq":45,"event":"check","name":"M128","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":3,"seq":46,"event":"accept","name":"created","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":3,"seq":47,"event":"end","name":"created","a":0,"b":0,"c":0,"opaque":""}
+GARNET_MODELOPT_INIT {"id":32,"phase":"end","route":"fp8_z128_reconstructed","instance":"000001F7D4E96BA0","rows":6144,"columns":5120,"policy":1378955832,"context_present":true,"factory_called":true,"result":0,"exception":false}
+GARNET_MODELOPT_INIT {"id":33,"phase":"begin","route":"fp8_m128","instance":"000001F7D4E96BF0","rows":5120,"columns":6144,"policy":128,"context_present":false,"factory_called":false,"result":-1,"exception":false}
+GARNET_MODELOPT_INIT {"id":33,"phase":"end","route":"fp8_m128","instance":"000001F7D4E96BF0","rows":5120,"columns":6144,"policy":128,"context_present":true,"factory_called":true,"result":0,"exception":false}
+GARNET_MODELOPT_INIT {"id":34,"phase":"begin","route":"nvfp4","instance":"000001F7FF8319D0","rows":34816,"columns":5120,"policy":0,"context_present":false,"factory_called":false,"result":-1,"exception":false}
+GARNET_MODELOPT_INIT {"id":34,"phase":"end","route":"nvfp4","instance":"000001F7FF8319D0","rows":34816,"columns":5120,"policy":0,"context_present":true,"factory_called":true,"result":0,"exception":false}
+GARNET_MODELOPT_INIT {"id":35,"phase":"begin","route":"nvfp4","instance":"000001F7FF831850","rows":5120,"columns":17408,"policy":0,"context_present":false,"factory_called":false,"result":-1,"exception":false}
+GARNET_MODELOPT_INIT {"id":35,"phase":"end","route":"nvfp4","instance":"000001F7FF831850","rows":5120,"columns":17408,"policy":0,"context_present":true,"factory_called":true,"result":0,"exception":false}
+GARNET_MODELOPT_INIT {"id":36,"phase":"begin","route":"fp8","instance":"000001F28D994B20","rows":10240,"columns":5120,"policy":0,"context_present":false,"factory_called":false,"result":-1,"exception":false}
+GARNET_MODELOPT_INIT {"id":36,"phase":"end","route":"fp8","instance":"000001F28D994B20","rows":10240,"columns":5120,"policy":0,"context_present":true,"factory_called":true,"result":0,"exception":false}
+GARNET_MODELOPT_INIT {"id":37,"phase":"begin","route":"fp8_z128_reconstructed","instance":"000001F7D4E95F20","rows":6144,"columns":5120,"policy":1378955832,"context_present":false,"factory_called":false,"result":-1,"exception":false}
+GARNET_Z128_RECONSTRUCT {"id":4,"seq":1,"event":"begin","name":"factory","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":4,"seq":2,"event":"api","name":"cudaGetDevice","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":4,"seq":3,"event":"api","name":"cudaGetDeviceProperties","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":4,"seq":4,"event":"api","name":"cublasLtGetVersion","a":130400,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":4,"seq":5,"event":"api","name":"cublasLtCreate","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":4,"seq":6,"event":"api","name":"cublasLtMatmulDescCreate","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":4,"seq":7,"event":"api","name":"cublasLtMatmulDescSetAttribute","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":4,"seq":8,"event":"api","name":"cublasLtMatmulDescSetAttribute","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":4,"seq":9,"event":"api","name":"cublasLtMatrixLayoutCreate","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":4,"seq":10,"event":"api","name":"cublasLtMatrixLayoutCreate","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":4,"seq":11,"event":"api","name":"cublasLtMatrixLayoutCreate","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":4,"seq":12,"event":"api","name":"cublasLtMatrixLayoutCreate","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":4,"seq":13,"event":"api","name":"cublasLtMatrixLayoutCreate","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":4,"seq":14,"event":"api","name":"cublasLtMatmulAlgoInit","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":4,"seq":15,"event":"api","name":"cublasLtMatmulAlgoConfigSetAttribute","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":4,"seq":16,"event":"api","name":"cublasLtMatmulAlgoConfigSetAttribute","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":4,"seq":17,"event":"api","name":"cublasLtMatmulAlgoConfigSetAttribute","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":4,"seq":18,"event":"api","name":"cublasLtMatmulAlgoConfigSetAttribute","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":4,"seq":19,"event":"api","name":"cublasLtMatmulAlgoConfigSetAttribute","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":4,"seq":20,"event":"api","name":"cublasLtMatmulAlgoConfigSetAttribute","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":4,"seq":21,"event":"api","name":"cublasLtMatmulAlgoConfigSetAttribute","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":4,"seq":22,"event":"api","name":"cublasLtMatmulAlgoConfigSetAttribute","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":4,"seq":23,"event":"api","name":"cublasLtMatmulAlgoConfigGetAttribute","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":4,"seq":24,"event":"configuration","name":"ID","a":67,"b":4,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":4,"seq":25,"event":"api","name":"cublasLtMatmulAlgoConfigGetAttribute","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":4,"seq":26,"event":"configuration","name":"TILE_ID","a":13,"b":4,"c":1,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":4,"seq":27,"event":"api","name":"cublasLtMatmulAlgoConfigGetAttribute","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":4,"seq":28,"event":"configuration","name":"STAGES_ID","a":17,"b":4,"c":6,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":4,"seq":29,"event":"api","name":"cublasLtMatmulAlgoConfigGetAttribute","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":4,"seq":30,"event":"configuration","name":"SPLITK_NUM","a":1,"b":4,"c":2,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":4,"seq":31,"event":"api","name":"cublasLtMatmulAlgoConfigGetAttribute","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":4,"seq":32,"event":"configuration","name":"REDUCTION_SCHEME","a":0,"b":4,"c":3,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":4,"seq":33,"event":"api","name":"cublasLtMatmulAlgoConfigGetAttribute","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":4,"seq":34,"event":"configuration","name":"CTA_SWIZZLING","a":1,"b":4,"c":4,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":4,"seq":35,"event":"api","name":"cublasLtMatmulAlgoConfigGetAttribute","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":4,"seq":36,"event":"configuration","name":"CUSTOM_OPTION","a":18,"b":4,"c":5,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":4,"seq":37,"event":"api","name":"cublasLtMatmulAlgoConfigGetAttribute","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":4,"seq":38,"event":"configuration","name":"INNER_SHAPE_ID","a":0,"b":2,"c":7,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":4,"seq":39,"event":"api","name":"cublasLtMatmulAlgoConfigGetAttribute","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":4,"seq":40,"event":"configuration","name":"CLUSTER_SHAPE_ID","a":0,"b":2,"c":8,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":4,"seq":41,"event":"algorithm","name":"configured","a":0,"b":0,"c":0,"opaque":"430000000d0000001100000001000000000000000100000012000000000000000100000060fd01001c0000001c0000000e000e00440000000000000000000000"}
+GARNET_Z128_RECONSTRUCT {"id":4,"seq":42,"event":"api","name":"cublasLtMatmulAlgoCheck","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":4,"seq":43,"event":"check","name":"M32","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":4,"seq":44,"event":"api","name":"cublasLtMatmulAlgoCheck","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":4,"seq":45,"event":"check","name":"M128","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":4,"seq":46,"event":"accept","name":"created","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":4,"seq":47,"event":"end","name":"created","a":0,"b":0,"c":0,"opaque":""}
+GARNET_MODELOPT_INIT {"id":37,"phase":"end","route":"fp8_z128_reconstructed","instance":"000001F7D4E95F20","rows":6144,"columns":5120,"policy":1378955832,"context_present":true,"factory_called":true,"result":0,"exception":false}
+GARNET_MODELOPT_INIT {"id":38,"phase":"begin","route":"fp8_m128","instance":"000001F7D4E96510","rows":5120,"columns":6144,"policy":128,"context_present":false,"factory_called":false,"result":-1,"exception":false}
+GARNET_MODELOPT_INIT {"id":38,"phase":"end","route":"fp8_m128","instance":"000001F7D4E96510","rows":5120,"columns":6144,"policy":128,"context_present":true,"factory_called":true,"result":0,"exception":false}
+GARNET_MODELOPT_INIT {"id":39,"phase":"begin","route":"nvfp4","instance":"000001F28D995CC0","rows":34816,"columns":5120,"policy":0,"context_present":false,"factory_called":false,"result":-1,"exception":false}
+GARNET_MODELOPT_INIT {"id":39,"phase":"end","route":"nvfp4","instance":"000001F28D995CC0","rows":34816,"columns":5120,"policy":0,"context_present":true,"factory_called":true,"result":0,"exception":false}
+GARNET_MODELOPT_INIT {"id":40,"phase":"begin","route":"nvfp4","instance":"000001F28D995180","rows":5120,"columns":17408,"policy":0,"context_present":false,"factory_called":false,"result":-1,"exception":false}
+GARNET_MODELOPT_INIT {"id":40,"phase":"end","route":"nvfp4","instance":"000001F28D995180","rows":5120,"columns":17408,"policy":0,"context_present":true,"factory_called":true,"result":0,"exception":false}
+GARNET_MODELOPT_INIT {"id":41,"phase":"begin","route":"fp8","instance":"000001F28D97EB60","rows":10240,"columns":5120,"policy":0,"context_present":false,"factory_called":false,"result":-1,"exception":false}
+GARNET_MODELOPT_INIT {"id":41,"phase":"end","route":"fp8","instance":"000001F28D97EB60","rows":10240,"columns":5120,"policy":0,"context_present":true,"factory_called":true,"result":0,"exception":false}
+GARNET_MODELOPT_INIT {"id":42,"phase":"begin","route":"fp8","instance":"000001F28D97EF20","rows":6144,"columns":5120,"policy":0,"context_present":false,"factory_called":false,"result":-1,"exception":false}
+GARNET_MODELOPT_INIT {"id":42,"phase":"end","route":"fp8","instance":"000001F28D97EF20","rows":6144,"columns":5120,"policy":0,"context_present":true,"factory_called":true,"result":0,"exception":false}
+GARNET_MODELOPT_INIT {"id":43,"phase":"begin","route":"fp8","instance":"000001F28D993B60","rows":5120,"columns":6144,"policy":1,"context_present":false,"factory_called":false,"result":-1,"exception":false}
+GARNET_MODELOPT_INIT {"id":43,"phase":"end","route":"fp8","instance":"000001F28D993B60","rows":5120,"columns":6144,"policy":1,"context_present":true,"factory_called":true,"result":0,"exception":false}
+GARNET_MODELOPT_INIT {"id":44,"phase":"begin","route":"nvfp4","instance":"000001F28D97DDE0","rows":34816,"columns":5120,"policy":0,"context_present":false,"factory_called":false,"result":-1,"exception":false}
+GARNET_MODELOPT_INIT {"id":44,"phase":"end","route":"nvfp4","instance":"000001F28D97DDE0","rows":34816,"columns":5120,"policy":0,"context_present":true,"factory_called":true,"result":0,"exception":false}
+GARNET_MODELOPT_INIT {"id":45,"phase":"begin","route":"nvfp4","instance":"000001F7FF82DCB0","rows":5120,"columns":17408,"policy":0,"context_present":false,"factory_called":false,"result":-1,"exception":false}
+GARNET_MODELOPT_INIT {"id":45,"phase":"end","route":"nvfp4","instance":"000001F7FF82DCB0","rows":5120,"columns":17408,"policy":0,"context_present":true,"factory_called":true,"result":0,"exception":false}
+GARNET_MODELOPT_INIT {"id":46,"phase":"begin","route":"fp8","instance":"000001F28D98F9C0","rows":10240,"columns":5120,"policy":0,"context_present":false,"factory_called":false,"result":-1,"exception":false}
+GARNET_MODELOPT_INIT {"id":46,"phase":"end","route":"fp8","instance":"000001F28D98F9C0","rows":10240,"columns":5120,"policy":0,"context_present":true,"factory_called":true,"result":0,"exception":false}
+GARNET_MODELOPT_INIT {"id":47,"phase":"begin","route":"fp8","instance":"000001F28D98F480","rows":6144,"columns":5120,"policy":0,"context_present":false,"factory_called":false,"result":-1,"exception":false}
+GARNET_MODELOPT_INIT {"id":47,"phase":"end","route":"fp8","instance":"000001F28D98F480","rows":6144,"columns":5120,"policy":0,"context_present":true,"factory_called":true,"result":0,"exception":false}
+GARNET_MODELOPT_INIT {"id":48,"phase":"begin","route":"fp8","instance":"000001F28D98FA80","rows":5120,"columns":6144,"policy":1,"context_present":false,"factory_called":false,"result":-1,"exception":false}
+GARNET_MODELOPT_INIT {"id":48,"phase":"end","route":"fp8","instance":"000001F28D98FA80","rows":5120,"columns":6144,"policy":1,"context_present":true,"factory_called":true,"result":0,"exception":false}
+GARNET_MODELOPT_INIT {"id":49,"phase":"begin","route":"nvfp4","instance":"000001F28D98FC60","rows":34816,"columns":5120,"policy":0,"context_present":false,"factory_called":false,"result":-1,"exception":false}
+GARNET_MODELOPT_INIT {"id":49,"phase":"end","route":"nvfp4","instance":"000001F28D98FC60","rows":34816,"columns":5120,"policy":0,"context_present":true,"factory_called":true,"result":0,"exception":false}
+GARNET_MODELOPT_INIT {"id":50,"phase":"begin","route":"nvfp4","instance":"000001F28D98EFA0","rows":5120,"columns":17408,"policy":0,"context_present":false,"factory_called":false,"result":-1,"exception":false}
+GARNET_MODELOPT_INIT {"id":50,"phase":"end","route":"nvfp4","instance":"000001F28D98EFA0","rows":5120,"columns":17408,"policy":0,"context_present":true,"factory_called":true,"result":0,"exception":false}
+GARNET_MODELOPT_INIT {"id":51,"phase":"begin","route":"fp8","instance":"000001F28D97A600","rows":10240,"columns":5120,"policy":0,"context_present":false,"factory_called":false,"result":-1,"exception":false}
+GARNET_MODELOPT_INIT {"id":51,"phase":"end","route":"fp8","instance":"000001F28D97A600","rows":10240,"columns":5120,"policy":0,"context_present":true,"factory_called":true,"result":0,"exception":false}
+GARNET_MODELOPT_INIT {"id":52,"phase":"begin","route":"fp8","instance":"000001F28D97AC60","rows":6144,"columns":5120,"policy":0,"context_present":false,"factory_called":false,"result":-1,"exception":false}
+GARNET_MODELOPT_INIT {"id":52,"phase":"end","route":"fp8","instance":"000001F28D97AC60","rows":6144,"columns":5120,"policy":0,"context_present":true,"factory_called":true,"result":0,"exception":false}
+GARNET_MODELOPT_INIT {"id":53,"phase":"begin","route":"fp8","instance":"000001F28D98F2A0","rows":5120,"columns":6144,"policy":1,"context_present":false,"factory_called":false,"result":-1,"exception":false}
+GARNET_MODELOPT_INIT {"id":53,"phase":"end","route":"fp8","instance":"000001F28D98F2A0","rows":5120,"columns":6144,"policy":1,"context_present":true,"factory_called":true,"result":0,"exception":false}
+GARNET_MODELOPT_INIT {"id":54,"phase":"begin","route":"nvfp4","instance":"000001F28D9941C0","rows":34816,"columns":5120,"policy":0,"context_present":false,"factory_called":false,"result":-1,"exception":false}
+GARNET_MODELOPT_INIT {"id":54,"phase":"end","route":"nvfp4","instance":"000001F28D9941C0","rows":34816,"columns":5120,"policy":0,"context_present":true,"factory_called":true,"result":0,"exception":false}
+GARNET_MODELOPT_INIT {"id":55,"phase":"begin","route":"nvfp4","instance":"000001F28D9942E0","rows":5120,"columns":17408,"policy":0,"context_present":false,"factory_called":false,"result":-1,"exception":false}
+GARNET_MODELOPT_INIT {"id":55,"phase":"end","route":"nvfp4","instance":"000001F28D9942E0","rows":5120,"columns":17408,"policy":0,"context_present":true,"factory_called":true,"result":0,"exception":false}
+GARNET_MODELOPT_INIT {"id":56,"phase":"begin","route":"fp8","instance":"000001F28D993920","rows":10240,"columns":5120,"policy":0,"context_present":false,"factory_called":false,"result":-1,"exception":false}
+GARNET_MODELOPT_INIT {"id":56,"phase":"end","route":"fp8","instance":"000001F28D993920","rows":10240,"columns":5120,"policy":0,"context_present":true,"factory_called":true,"result":0,"exception":false}
+GARNET_MODELOPT_INIT {"id":57,"phase":"begin","route":"fp8","instance":"000001F28D993800","rows":6144,"columns":5120,"policy":0,"context_present":false,"factory_called":false,"result":-1,"exception":false}
+GARNET_MODELOPT_INIT {"id":57,"phase":"end","route":"fp8","instance":"000001F28D993800","rows":6144,"columns":5120,"policy":0,"context_present":true,"factory_called":true,"result":0,"exception":false}
+GARNET_MODELOPT_INIT {"id":58,"phase":"begin","route":"fp8","instance":"000001F28D9937A0","rows":5120,"columns":6144,"policy":1,"context_present":false,"factory_called":false,"result":-1,"exception":false}
+GARNET_MODELOPT_INIT {"id":58,"phase":"end","route":"fp8","instance":"000001F28D9937A0","rows":5120,"columns":6144,"policy":1,"context_present":true,"factory_called":true,"result":0,"exception":false}
+GARNET_MODELOPT_INIT {"id":59,"phase":"begin","route":"nvfp4","instance":"000001F28D994820","rows":34816,"columns":5120,"policy":0,"context_present":false,"factory_called":false,"result":-1,"exception":false}
+GARNET_MODELOPT_INIT {"id":59,"phase":"end","route":"nvfp4","instance":"000001F28D994820","rows":34816,"columns":5120,"policy":0,"context_present":true,"factory_called":true,"result":0,"exception":false}
+GARNET_MODELOPT_INIT {"id":60,"phase":"begin","route":"nvfp4","instance":"000001F28D993680","rows":5120,"columns":17408,"policy":0,"context_present":false,"factory_called":false,"result":-1,"exception":false}
+GARNET_MODELOPT_INIT {"id":60,"phase":"end","route":"nvfp4","instance":"000001F28D993680","rows":5120,"columns":17408,"policy":0,"context_present":true,"factory_called":true,"result":0,"exception":false}
+GARNET_MODELOPT_INIT {"id":61,"phase":"begin","route":"fp8","instance":"000001F28D97D600","rows":10240,"columns":5120,"policy":0,"context_present":false,"factory_called":false,"result":-1,"exception":false}
+GARNET_MODELOPT_INIT {"id":61,"phase":"end","route":"fp8","instance":"000001F28D97D600","rows":10240,"columns":5120,"policy":0,"context_present":true,"factory_called":true,"result":0,"exception":false}
+GARNET_MODELOPT_INIT {"id":62,"phase":"begin","route":"fp8_z128_reconstructed","instance":"000001F80035D740","rows":6144,"columns":5120,"policy":1378955832,"context_present":false,"factory_called":false,"result":-1,"exception":false}
+GARNET_Z128_RECONSTRUCT {"id":5,"seq":1,"event":"begin","name":"factory","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":5,"seq":2,"event":"api","name":"cudaGetDevice","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":5,"seq":3,"event":"api","name":"cudaGetDeviceProperties","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":5,"seq":4,"event":"api","name":"cublasLtGetVersion","a":130400,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":5,"seq":5,"event":"api","name":"cublasLtCreate","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":5,"seq":6,"event":"api","name":"cublasLtMatmulDescCreate","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":5,"seq":7,"event":"api","name":"cublasLtMatmulDescSetAttribute","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":5,"seq":8,"event":"api","name":"cublasLtMatmulDescSetAttribute","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":5,"seq":9,"event":"api","name":"cublasLtMatrixLayoutCreate","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":5,"seq":10,"event":"api","name":"cublasLtMatrixLayoutCreate","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":5,"seq":11,"event":"api","name":"cublasLtMatrixLayoutCreate","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":5,"seq":12,"event":"api","name":"cublasLtMatrixLayoutCreate","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":5,"seq":13,"event":"api","name":"cublasLtMatrixLayoutCreate","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":5,"seq":14,"event":"api","name":"cublasLtMatmulAlgoInit","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":5,"seq":15,"event":"api","name":"cublasLtMatmulAlgoConfigSetAttribute","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":5,"seq":16,"event":"api","name":"cublasLtMatmulAlgoConfigSetAttribute","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":5,"seq":17,"event":"api","name":"cublasLtMatmulAlgoConfigSetAttribute","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":5,"seq":18,"event":"api","name":"cublasLtMatmulAlgoConfigSetAttribute","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":5,"seq":19,"event":"api","name":"cublasLtMatmulAlgoConfigSetAttribute","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":5,"seq":20,"event":"api","name":"cublasLtMatmulAlgoConfigSetAttribute","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":5,"seq":21,"event":"api","name":"cublasLtMatmulAlgoConfigSetAttribute","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":5,"seq":22,"event":"api","name":"cublasLtMatmulAlgoConfigSetAttribute","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":5,"seq":23,"event":"api","name":"cublasLtMatmulAlgoConfigGetAttribute","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":5,"seq":24,"event":"configuration","name":"ID","a":67,"b":4,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":5,"seq":25,"event":"api","name":"cublasLtMatmulAlgoConfigGetAttribute","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":5,"seq":26,"event":"configuration","name":"TILE_ID","a":13,"b":4,"c":1,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":5,"seq":27,"event":"api","name":"cublasLtMatmulAlgoConfigGetAttribute","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":5,"seq":28,"event":"configuration","name":"STAGES_ID","a":17,"b":4,"c":6,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":5,"seq":29,"event":"api","name":"cublasLtMatmulAlgoConfigGetAttribute","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":5,"seq":30,"event":"configuration","name":"SPLITK_NUM","a":1,"b":4,"c":2,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":5,"seq":31,"event":"api","name":"cublasLtMatmulAlgoConfigGetAttribute","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":5,"seq":32,"event":"configuration","name":"REDUCTION_SCHEME","a":0,"b":4,"c":3,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":5,"seq":33,"event":"api","name":"cublasLtMatmulAlgoConfigGetAttribute","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":5,"seq":34,"event":"configuration","name":"CTA_SWIZZLING","a":1,"b":4,"c":4,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":5,"seq":35,"event":"api","name":"cublasLtMatmulAlgoConfigGetAttribute","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":5,"seq":36,"event":"configuration","name":"CUSTOM_OPTION","a":18,"b":4,"c":5,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":5,"seq":37,"event":"api","name":"cublasLtMatmulAlgoConfigGetAttribute","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":5,"seq":38,"event":"configuration","name":"INNER_SHAPE_ID","a":0,"b":2,"c":7,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":5,"seq":39,"event":"api","name":"cublasLtMatmulAlgoConfigGetAttribute","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":5,"seq":40,"event":"configuration","name":"CLUSTER_SHAPE_ID","a":0,"b":2,"c":8,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":5,"seq":41,"event":"algorithm","name":"configured","a":0,"b":0,"c":0,"opaque":"430000000d0000001100000001000000000000000100000012000000000000000100000060fd01001c0000001c0000000e000e00440000000000000000000000"}
+GARNET_Z128_RECONSTRUCT {"id":5,"seq":42,"event":"api","name":"cublasLtMatmulAlgoCheck","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":5,"seq":43,"event":"check","name":"M32","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":5,"seq":44,"event":"api","name":"cublasLtMatmulAlgoCheck","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":5,"seq":45,"event":"check","name":"M128","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":5,"seq":46,"event":"accept","name":"created","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":5,"seq":47,"event":"end","name":"created","a":0,"b":0,"c":0,"opaque":""}
+GARNET_MODELOPT_INIT {"id":62,"phase":"end","route":"fp8_z128_reconstructed","instance":"000001F80035D740","rows":6144,"columns":5120,"policy":1378955832,"context_present":true,"factory_called":true,"result":0,"exception":false}
+GARNET_MODELOPT_INIT {"id":63,"phase":"begin","route":"fp8_m128","instance":"000001F2D4C038B0","rows":5120,"columns":6144,"policy":128,"context_present":false,"factory_called":false,"result":-1,"exception":false}
+GARNET_MODELOPT_INIT {"id":63,"phase":"end","route":"fp8_m128","instance":"000001F2D4C038B0","rows":5120,"columns":6144,"policy":128,"context_present":true,"factory_called":true,"result":0,"exception":false}
+GARNET_MODELOPT_INIT {"id":64,"phase":"begin","route":"nvfp4","instance":"000001F28D97B680","rows":34816,"columns":5120,"policy":0,"context_present":false,"factory_called":false,"result":-1,"exception":false}
+GARNET_MODELOPT_INIT {"id":64,"phase":"end","route":"nvfp4","instance":"000001F28D97B680","rows":34816,"columns":5120,"policy":0,"context_present":true,"factory_called":true,"result":0,"exception":false}
+GARNET_MODELOPT_INIT {"id":65,"phase":"begin","route":"nvfp4","instance":"000001F7FF821470","rows":5120,"columns":17408,"policy":0,"context_present":false,"factory_called":false,"result":-1,"exception":false}
+GARNET_MODELOPT_INIT {"id":65,"phase":"end","route":"nvfp4","instance":"000001F7FF821470","rows":5120,"columns":17408,"policy":0,"context_present":true,"factory_called":true,"result":0,"exception":false}
+GARNET_MODELOPT_INIT {"id":66,"phase":"begin","route":"fp8","instance":"000001F7FF822550","rows":10240,"columns":5120,"policy":0,"context_present":false,"factory_called":false,"result":-1,"exception":false}
+GARNET_MODELOPT_INIT {"id":66,"phase":"end","route":"fp8","instance":"000001F7FF822550","rows":10240,"columns":5120,"policy":0,"context_present":true,"factory_called":true,"result":0,"exception":false}
+GARNET_MODELOPT_INIT {"id":67,"phase":"begin","route":"fp8_z128_reconstructed","instance":"000001F2D4C128B0","rows":6144,"columns":5120,"policy":1378955832,"context_present":false,"factory_called":false,"result":-1,"exception":false}
+GARNET_Z128_RECONSTRUCT {"id":6,"seq":1,"event":"begin","name":"factory","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":6,"seq":2,"event":"api","name":"cudaGetDevice","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":6,"seq":3,"event":"api","name":"cudaGetDeviceProperties","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":6,"seq":4,"event":"api","name":"cublasLtGetVersion","a":130400,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":6,"seq":5,"event":"api","name":"cublasLtCreate","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":6,"seq":6,"event":"api","name":"cublasLtMatmulDescCreate","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":6,"seq":7,"event":"api","name":"cublasLtMatmulDescSetAttribute","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":6,"seq":8,"event":"api","name":"cublasLtMatmulDescSetAttribute","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":6,"seq":9,"event":"api","name":"cublasLtMatrixLayoutCreate","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":6,"seq":10,"event":"api","name":"cublasLtMatrixLayoutCreate","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":6,"seq":11,"event":"api","name":"cublasLtMatrixLayoutCreate","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":6,"seq":12,"event":"api","name":"cublasLtMatrixLayoutCreate","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":6,"seq":13,"event":"api","name":"cublasLtMatrixLayoutCreate","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":6,"seq":14,"event":"api","name":"cublasLtMatmulAlgoInit","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":6,"seq":15,"event":"api","name":"cublasLtMatmulAlgoConfigSetAttribute","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":6,"seq":16,"event":"api","name":"cublasLtMatmulAlgoConfigSetAttribute","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":6,"seq":17,"event":"api","name":"cublasLtMatmulAlgoConfigSetAttribute","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":6,"seq":18,"event":"api","name":"cublasLtMatmulAlgoConfigSetAttribute","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":6,"seq":19,"event":"api","name":"cublasLtMatmulAlgoConfigSetAttribute","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":6,"seq":20,"event":"api","name":"cublasLtMatmulAlgoConfigSetAttribute","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":6,"seq":21,"event":"api","name":"cublasLtMatmulAlgoConfigSetAttribute","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":6,"seq":22,"event":"api","name":"cublasLtMatmulAlgoConfigSetAttribute","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":6,"seq":23,"event":"api","name":"cublasLtMatmulAlgoConfigGetAttribute","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":6,"seq":24,"event":"configuration","name":"ID","a":67,"b":4,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":6,"seq":25,"event":"api","name":"cublasLtMatmulAlgoConfigGetAttribute","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":6,"seq":26,"event":"configuration","name":"TILE_ID","a":13,"b":4,"c":1,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":6,"seq":27,"event":"api","name":"cublasLtMatmulAlgoConfigGetAttribute","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":6,"seq":28,"event":"configuration","name":"STAGES_ID","a":17,"b":4,"c":6,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":6,"seq":29,"event":"api","name":"cublasLtMatmulAlgoConfigGetAttribute","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":6,"seq":30,"event":"configuration","name":"SPLITK_NUM","a":1,"b":4,"c":2,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":6,"seq":31,"event":"api","name":"cublasLtMatmulAlgoConfigGetAttribute","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":6,"seq":32,"event":"configuration","name":"REDUCTION_SCHEME","a":0,"b":4,"c":3,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":6,"seq":33,"event":"api","name":"cublasLtMatmulAlgoConfigGetAttribute","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":6,"seq":34,"event":"configuration","name":"CTA_SWIZZLING","a":1,"b":4,"c":4,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":6,"seq":35,"event":"api","name":"cublasLtMatmulAlgoConfigGetAttribute","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":6,"seq":36,"event":"configuration","name":"CUSTOM_OPTION","a":18,"b":4,"c":5,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":6,"seq":37,"event":"api","name":"cublasLtMatmulAlgoConfigGetAttribute","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":6,"seq":38,"event":"configuration","name":"INNER_SHAPE_ID","a":0,"b":2,"c":7,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":6,"seq":39,"event":"api","name":"cublasLtMatmulAlgoConfigGetAttribute","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":6,"seq":40,"event":"configuration","name":"CLUSTER_SHAPE_ID","a":0,"b":2,"c":8,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":6,"seq":41,"event":"algorithm","name":"configured","a":0,"b":0,"c":0,"opaque":"430000000d0000001100000001000000000000000100000012000000000000000100000060fd01001c0000001c0000000e000e00440000000000000000000000"}
+GARNET_Z128_RECONSTRUCT {"id":6,"seq":42,"event":"api","name":"cublasLtMatmulAlgoCheck","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":6,"seq":43,"event":"check","name":"M32","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":6,"seq":44,"event":"api","name":"cublasLtMatmulAlgoCheck","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":6,"seq":45,"event":"check","name":"M128","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":6,"seq":46,"event":"accept","name":"created","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":6,"seq":47,"event":"end","name":"created","a":0,"b":0,"c":0,"opaque":""}
+GARNET_MODELOPT_INIT {"id":67,"phase":"end","route":"fp8_z128_reconstructed","instance":"000001F2D4C128B0","rows":6144,"columns":5120,"policy":1378955832,"context_present":true,"factory_called":true,"result":0,"exception":false}
+GARNET_MODELOPT_INIT {"id":68,"phase":"begin","route":"fp8_m128","instance":"000001F2D4C12770","rows":5120,"columns":6144,"policy":128,"context_present":false,"factory_called":false,"result":-1,"exception":false}
+GARNET_MODELOPT_INIT {"id":68,"phase":"end","route":"fp8_m128","instance":"000001F2D4C12770","rows":5120,"columns":6144,"policy":128,"context_present":true,"factory_called":true,"result":0,"exception":false}
+GARNET_MODELOPT_INIT {"id":69,"phase":"begin","route":"nvfp4","instance":"000001F7FF8233F0","rows":34816,"columns":5120,"policy":0,"context_present":false,"factory_called":false,"result":-1,"exception":false}
+GARNET_MODELOPT_INIT {"id":69,"phase":"end","route":"nvfp4","instance":"000001F7FF8233F0","rows":34816,"columns":5120,"policy":0,"context_present":true,"factory_called":true,"result":0,"exception":false}
+GARNET_MODELOPT_INIT {"id":70,"phase":"begin","route":"nvfp4","instance":"000001F7FF8221F0","rows":5120,"columns":17408,"policy":0,"context_present":false,"factory_called":false,"result":-1,"exception":false}
+GARNET_MODELOPT_INIT {"id":70,"phase":"end","route":"nvfp4","instance":"000001F7FF8221F0","rows":5120,"columns":17408,"policy":0,"context_present":true,"factory_called":true,"result":0,"exception":false}
+GARNET_MODELOPT_INIT {"id":71,"phase":"begin","route":"fp8","instance":"000001F28D989540","rows":10240,"columns":5120,"policy":0,"context_present":false,"factory_called":false,"result":-1,"exception":false}
+GARNET_MODELOPT_INIT {"id":71,"phase":"end","route":"fp8","instance":"000001F28D989540","rows":10240,"columns":5120,"policy":0,"context_present":true,"factory_called":true,"result":0,"exception":false}
+GARNET_MODELOPT_INIT {"id":72,"phase":"begin","route":"fp8_z128_reconstructed","instance":"000001F587ACFEF0","rows":6144,"columns":5120,"policy":1378955832,"context_present":false,"factory_called":false,"result":-1,"exception":false}
+GARNET_Z128_RECONSTRUCT {"id":7,"seq":1,"event":"begin","name":"factory","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":7,"seq":2,"event":"api","name":"cudaGetDevice","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":7,"seq":3,"event":"api","name":"cudaGetDeviceProperties","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":7,"seq":4,"event":"api","name":"cublasLtGetVersion","a":130400,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":7,"seq":5,"event":"api","name":"cublasLtCreate","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":7,"seq":6,"event":"api","name":"cublasLtMatmulDescCreate","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":7,"seq":7,"event":"api","name":"cublasLtMatmulDescSetAttribute","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":7,"seq":8,"event":"api","name":"cublasLtMatmulDescSetAttribute","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":7,"seq":9,"event":"api","name":"cublasLtMatrixLayoutCreate","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":7,"seq":10,"event":"api","name":"cublasLtMatrixLayoutCreate","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":7,"seq":11,"event":"api","name":"cublasLtMatrixLayoutCreate","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":7,"seq":12,"event":"api","name":"cublasLtMatrixLayoutCreate","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":7,"seq":13,"event":"api","name":"cublasLtMatrixLayoutCreate","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":7,"seq":14,"event":"api","name":"cublasLtMatmulAlgoInit","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":7,"seq":15,"event":"api","name":"cublasLtMatmulAlgoConfigSetAttribute","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":7,"seq":16,"event":"api","name":"cublasLtMatmulAlgoConfigSetAttribute","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":7,"seq":17,"event":"api","name":"cublasLtMatmulAlgoConfigSetAttribute","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":7,"seq":18,"event":"api","name":"cublasLtMatmulAlgoConfigSetAttribute","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":7,"seq":19,"event":"api","name":"cublasLtMatmulAlgoConfigSetAttribute","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":7,"seq":20,"event":"api","name":"cublasLtMatmulAlgoConfigSetAttribute","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":7,"seq":21,"event":"api","name":"cublasLtMatmulAlgoConfigSetAttribute","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":7,"seq":22,"event":"api","name":"cublasLtMatmulAlgoConfigSetAttribute","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":7,"seq":23,"event":"api","name":"cublasLtMatmulAlgoConfigGetAttribute","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":7,"seq":24,"event":"configuration","name":"ID","a":67,"b":4,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":7,"seq":25,"event":"api","name":"cublasLtMatmulAlgoConfigGetAttribute","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":7,"seq":26,"event":"configuration","name":"TILE_ID","a":13,"b":4,"c":1,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":7,"seq":27,"event":"api","name":"cublasLtMatmulAlgoConfigGetAttribute","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":7,"seq":28,"event":"configuration","name":"STAGES_ID","a":17,"b":4,"c":6,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":7,"seq":29,"event":"api","name":"cublasLtMatmulAlgoConfigGetAttribute","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":7,"seq":30,"event":"configuration","name":"SPLITK_NUM","a":1,"b":4,"c":2,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":7,"seq":31,"event":"api","name":"cublasLtMatmulAlgoConfigGetAttribute","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":7,"seq":32,"event":"configuration","name":"REDUCTION_SCHEME","a":0,"b":4,"c":3,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":7,"seq":33,"event":"api","name":"cublasLtMatmulAlgoConfigGetAttribute","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":7,"seq":34,"event":"configuration","name":"CTA_SWIZZLING","a":1,"b":4,"c":4,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":7,"seq":35,"event":"api","name":"cublasLtMatmulAlgoConfigGetAttribute","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":7,"seq":36,"event":"configuration","name":"CUSTOM_OPTION","a":18,"b":4,"c":5,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":7,"seq":37,"event":"api","name":"cublasLtMatmulAlgoConfigGetAttribute","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":7,"seq":38,"event":"configuration","name":"INNER_SHAPE_ID","a":0,"b":2,"c":7,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":7,"seq":39,"event":"api","name":"cublasLtMatmulAlgoConfigGetAttribute","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":7,"seq":40,"event":"configuration","name":"CLUSTER_SHAPE_ID","a":0,"b":2,"c":8,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":7,"seq":41,"event":"algorithm","name":"configured","a":0,"b":0,"c":0,"opaque":"430000000d0000001100000001000000000000000100000012000000000000000100000060fd01001c0000001c0000000e000e00440000000000000000000000"}
+GARNET_Z128_RECONSTRUCT {"id":7,"seq":42,"event":"api","name":"cublasLtMatmulAlgoCheck","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":7,"seq":43,"event":"check","name":"M32","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":7,"seq":44,"event":"api","name":"cublasLtMatmulAlgoCheck","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":7,"seq":45,"event":"check","name":"M128","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":7,"seq":46,"event":"accept","name":"created","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":7,"seq":47,"event":"end","name":"created","a":0,"b":0,"c":0,"opaque":""}
+GARNET_MODELOPT_INIT {"id":72,"phase":"end","route":"fp8_z128_reconstructed","instance":"000001F587ACFEF0","rows":6144,"columns":5120,"policy":1378955832,"context_present":true,"factory_called":true,"result":0,"exception":false}
+GARNET_MODELOPT_INIT {"id":73,"phase":"begin","route":"fp8_m128","instance":"000001F55682B050","rows":5120,"columns":6144,"policy":128,"context_present":false,"factory_called":false,"result":-1,"exception":false}
+GARNET_MODELOPT_INIT {"id":73,"phase":"end","route":"fp8_m128","instance":"000001F55682B050","rows":5120,"columns":6144,"policy":128,"context_present":true,"factory_called":true,"result":0,"exception":false}
+GARNET_MODELOPT_INIT {"id":74,"phase":"begin","route":"nvfp4","instance":"000001F28D980300","rows":34816,"columns":5120,"policy":0,"context_present":false,"factory_called":false,"result":-1,"exception":false}
+GARNET_MODELOPT_INIT {"id":74,"phase":"end","route":"nvfp4","instance":"000001F28D980300","rows":34816,"columns":5120,"policy":0,"context_present":true,"factory_called":true,"result":0,"exception":false}
+GARNET_MODELOPT_INIT {"id":75,"phase":"begin","route":"nvfp4","instance":"000001F28D9807E0","rows":5120,"columns":17408,"policy":0,"context_present":false,"factory_called":false,"result":-1,"exception":false}
+GARNET_MODELOPT_INIT {"id":75,"phase":"end","route":"nvfp4","instance":"000001F28D9807E0","rows":5120,"columns":17408,"policy":0,"context_present":true,"factory_called":true,"result":0,"exception":false}
+GARNET_MODELOPT_INIT {"id":76,"phase":"begin","route":"fp8","instance":"000001F28D981740","rows":10240,"columns":5120,"policy":0,"context_present":false,"factory_called":false,"result":-1,"exception":false}
+GARNET_MODELOPT_INIT {"id":76,"phase":"end","route":"fp8","instance":"000001F28D981740","rows":10240,"columns":5120,"policy":0,"context_present":true,"factory_called":true,"result":0,"exception":false}
+GARNET_MODELOPT_INIT {"id":77,"phase":"begin","route":"fp8_z128_reconstructed","instance":"000001F7F2B87630","rows":6144,"columns":5120,"policy":1378955832,"context_present":false,"factory_called":false,"result":-1,"exception":false}
+GARNET_Z128_RECONSTRUCT {"id":8,"seq":1,"event":"begin","name":"factory","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":8,"seq":2,"event":"api","name":"cudaGetDevice","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":8,"seq":3,"event":"api","name":"cudaGetDeviceProperties","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":8,"seq":4,"event":"api","name":"cublasLtGetVersion","a":130400,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":8,"seq":5,"event":"api","name":"cublasLtCreate","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":8,"seq":6,"event":"api","name":"cublasLtMatmulDescCreate","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":8,"seq":7,"event":"api","name":"cublasLtMatmulDescSetAttribute","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":8,"seq":8,"event":"api","name":"cublasLtMatmulDescSetAttribute","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":8,"seq":9,"event":"api","name":"cublasLtMatrixLayoutCreate","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":8,"seq":10,"event":"api","name":"cublasLtMatrixLayoutCreate","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":8,"seq":11,"event":"api","name":"cublasLtMatrixLayoutCreate","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":8,"seq":12,"event":"api","name":"cublasLtMatrixLayoutCreate","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":8,"seq":13,"event":"api","name":"cublasLtMatrixLayoutCreate","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":8,"seq":14,"event":"api","name":"cublasLtMatmulAlgoInit","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":8,"seq":15,"event":"api","name":"cublasLtMatmulAlgoConfigSetAttribute","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":8,"seq":16,"event":"api","name":"cublasLtMatmulAlgoConfigSetAttribute","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":8,"seq":17,"event":"api","name":"cublasLtMatmulAlgoConfigSetAttribute","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":8,"seq":18,"event":"api","name":"cublasLtMatmulAlgoConfigSetAttribute","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":8,"seq":19,"event":"api","name":"cublasLtMatmulAlgoConfigSetAttribute","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":8,"seq":20,"event":"api","name":"cublasLtMatmulAlgoConfigSetAttribute","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":8,"seq":21,"event":"api","name":"cublasLtMatmulAlgoConfigSetAttribute","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":8,"seq":22,"event":"api","name":"cublasLtMatmulAlgoConfigSetAttribute","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":8,"seq":23,"event":"api","name":"cublasLtMatmulAlgoConfigGetAttribute","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":8,"seq":24,"event":"configuration","name":"ID","a":67,"b":4,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":8,"seq":25,"event":"api","name":"cublasLtMatmulAlgoConfigGetAttribute","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":8,"seq":26,"event":"configuration","name":"TILE_ID","a":13,"b":4,"c":1,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":8,"seq":27,"event":"api","name":"cublasLtMatmulAlgoConfigGetAttribute","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":8,"seq":28,"event":"configuration","name":"STAGES_ID","a":17,"b":4,"c":6,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":8,"seq":29,"event":"api","name":"cublasLtMatmulAlgoConfigGetAttribute","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":8,"seq":30,"event":"configuration","name":"SPLITK_NUM","a":1,"b":4,"c":2,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":8,"seq":31,"event":"api","name":"cublasLtMatmulAlgoConfigGetAttribute","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":8,"seq":32,"event":"configuration","name":"REDUCTION_SCHEME","a":0,"b":4,"c":3,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":8,"seq":33,"event":"api","name":"cublasLtMatmulAlgoConfigGetAttribute","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":8,"seq":34,"event":"configuration","name":"CTA_SWIZZLING","a":1,"b":4,"c":4,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":8,"seq":35,"event":"api","name":"cublasLtMatmulAlgoConfigGetAttribute","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":8,"seq":36,"event":"configuration","name":"CUSTOM_OPTION","a":18,"b":4,"c":5,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":8,"seq":37,"event":"api","name":"cublasLtMatmulAlgoConfigGetAttribute","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":8,"seq":38,"event":"configuration","name":"INNER_SHAPE_ID","a":0,"b":2,"c":7,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":8,"seq":39,"event":"api","name":"cublasLtMatmulAlgoConfigGetAttribute","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":8,"seq":40,"event":"configuration","name":"CLUSTER_SHAPE_ID","a":0,"b":2,"c":8,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":8,"seq":41,"event":"algorithm","name":"configured","a":0,"b":0,"c":0,"opaque":"430000000d0000001100000001000000000000000100000012000000000000000100000060fd01001c0000001c0000000e000e00440000000000000000000000"}
+GARNET_Z128_RECONSTRUCT {"id":8,"seq":42,"event":"api","name":"cublasLtMatmulAlgoCheck","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":8,"seq":43,"event":"check","name":"M32","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":8,"seq":44,"event":"api","name":"cublasLtMatmulAlgoCheck","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":8,"seq":45,"event":"check","name":"M128","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":8,"seq":46,"event":"accept","name":"created","a":0,"b":0,"c":0,"opaque":""}
+GARNET_Z128_RECONSTRUCT {"id":8,"seq":47,"event":"end","name":"created","a":0,"b":0,"c":0,"opaque":""}
+GARNET_MODELOPT_INIT {"id":77,"phase":"end","route":"fp8_z128_reconstructed","instance":"000001F7F2B87630","rows":6144,"columns":5120,"policy":1378955832,"context_present":true,"factory_called":true,"result":0,"exception":false}
+GARNET_MODELOPT_INIT {"id":78,"phase":"begin","route":"fp8_m128","instance":"000001F7F2B87EF0","rows":5120,"columns":6144,"policy":128,"context_present":false,"factory_called":false,"result":-1,"exception":false}
+GARNET_MODELOPT_INIT {"id":78,"phase":"end","route":"fp8_m128","instance":"000001F7F2B87EF0","rows":5120,"columns":6144,"policy":128,"context_present":true,"factory_called":true,"result":0,"exception":false}
+GARNET_MODELOPT_INIT {"id":79,"phase":"begin","route":"nvfp4","instance":"000001F28D9823A0","rows":34816,"columns":5120,"policy":0,"context_present":false,"factory_called":false,"result":-1,"exception":false}
+GARNET_MODELOPT_INIT {"id":79,"phase":"end","route":"nvfp4","instance":"000001F28D9823A0","rows":34816,"columns":5120,"policy":0,"context_present":true,"factory_called":true,"result":0,"exception":false}
+GARNET_MODELOPT_INIT {"id":80,"phase":"begin","route":"nvfp4","instance":"000001F28D982640","rows":5120,"columns":17408,"policy":0,"context_present":false,"factory_called":false,"result":-1,"exception":false}
+GARNET_MODELOPT_INIT {"id":80,"phase":"end","route":"nvfp4","instance":"000001F28D982640","rows":5120,"columns":17408,"policy":0,"context_present":true,"factory_called":true,"result":0,"exception":false}
+NATIVE_CORRECTNESS_RESOURCE_REPORT_SAVED

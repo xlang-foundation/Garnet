@@ -1,0 +1,131 @@
+{
+  "files": [
+    {
+      "source": "probe_gdn_chunk_stage_witness_bound.py",
+      "target": "probe_gdn_kv128_stage.py",
+      "source_sha256": "f3902803c76317a4a5dd8a562f24c07f1160966fe461d19fbe2f94f03be43b78",
+      "target_sha256": "7c9eb592a26cc901226a0b32a11e362dd8ecbe9baa91b17aea242100cd37d922",
+      "changes": [
+        {
+          "before": "evidence/gdn-chunk-stage-witness-bound-preparation.json",
+          "after": "evidence/gdn-kv128-stage-preparation.json",
+          "count": 1
+        },
+        {
+          "before": "qwen38_5090.gdn_chunk_stage_layout import",
+          "after": "qwen38_5090.gdn_kv128_stage_layout import",
+          "count": 1
+        },
+        {
+          "before": "    assert os.environ.get('GARNET_NVFP4_DOWN_CANDIDATE')=='0'",
+          "after": "    assert os.environ.get('GARNET_NVFP4_DOWN_CANDIDATE')=='0'\n    for name in ('GARNET_FP8_GDN_Z128_CANONICAL','GARNET_FP8_GDN_Z128_RECONSTRUCT','GARNET_FP8_FULL_ATTN_KV128_CANONICAL','GARNET_MODELOPT_INIT_TRACE','GARNET_Z128_RECONSTRUCT_TRACE'):assert os.environ.get(name)=='1'",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "test_kv128_projection.bat",
+      "target": "test_gdn_kv128_stage.bat",
+      "source_sha256": "7e6a0eccf230d28cb283de55014b107705ff21a6e1cd5f5b41bee6f8e8edfd71",
+      "target_sha256": "9a3f1a8436d0bc2269156b81b9821734a292ae1b92ba1f4a60944eddd7b13774",
+      "changes": [
+        {
+          "before": "probe_kv128_projection.py",
+          "after": "probe_gdn_kv128_stage.py",
+          "count": 1
+        },
+        {
+          "before": "set GARNET_KV128_FACTORY_TRACE=1",
+          "after": "set GARNET_KV128_FACTORY_TRACE=",
+          "count": 1
+        },
+        {
+          "before": "set GARNET_Z128_RECONSTRUCT_TRACE=",
+          "after": "set GARNET_Z128_RECONSTRUCT_TRACE=1",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "test_kv128_embedded_metadata.bat",
+      "target": "test_gdn_kv128_embedded_metadata.bat",
+      "source_sha256": "2ce4e7c112a2f9db6e5ae479fe481e1e5e735034cd31f03baaa223aef4c32b17",
+      "target_sha256": "1af5758f2c062be662d4b7d72998d3392268fd52f7e18902901cf5de8cb260fb",
+      "changes": [
+        {
+          "before": "probe_kv128_embedded_metadata.py",
+          "after": "probe_gdn_kv128_embedded_metadata.py",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "run_fa3_projection_witness_attempt2.py",
+      "target": "run_gdn_kv128_stage.py",
+      "source_sha256": "6a897358e4aa99077fc17c6d77b3f462560f8f09c5f95ca03591bf30e01ef28e",
+      "target_sha256": "75b9836533cccfdb29836daa10521596cbe53487dbf5c76cb4c93e523622889e",
+      "changes": [
+        {
+          "before": "JOB='fa3-projection-witness-attempt2'",
+          "after": "JOB='gdn-kv128-stage-attempt1'",
+          "count": 1
+        },
+        {
+          "before": "fa3-projection-witness-gpu-preparation-attempt2.json",
+          "after": "gdn-kv128-stage-preparation.json",
+          "count": 1
+        },
+        {
+          "before": "FA3_projection_witness_prepared_gpu_unrun",
+          "after": "GDN50_stage_prepared_gpu_unrun",
+          "count": 1
+        },
+        {
+          "before": "==44",
+          "after": "==50",
+          "count": 2
+        },
+        {
+          "before": "garnet-native-fa3-projection-witness-attempt1.dll",
+          "after": "garnet-native-kv128-canonical-attempt2.dll",
+          "count": 1
+        },
+        {
+          "before": "test_fa3_projection_embedded_metadata.bat",
+          "after": "test_gdn_kv128_embedded_metadata.bat",
+          "count": 1
+        },
+        {
+          "before": "test_fa3_projection_witness_attempt2.bat",
+          "after": "test_gdn_kv128_stage.bat",
+          "count": 1
+        },
+        {
+          "before": "actual_FA3_projection_witness_collected",
+          "after": "gdn_chunk_stage_collected_needs_replay",
+          "count": 1
+        },
+        {
+          "before": "            from test2026.cuda.qwen38_5090.fa3_projection_witness import replay\n            from test2026.cuda.qwen38_5090.z128_reconstructed_plugin_init_contract import events,replay as replay_init\n            read=lambda name:(out/phase/name).read_bytes()\n            result=replay(report,read,(M/'evidence/reconstructed-fa3-common-input.f32').read_bytes())\n            (out/'array-analysis.json').write_bytes(json.dumps(result,indent=2).encode())\n            traced=replay_init(events((out/(phase+'-ledger/commands.log')).read_bytes()))\n            assert set(traced['routes'])=={'fp8'} and traced['routes']['fp8']>=2 and traced['failures']==[]\n            rows=events((out/(phase+'-ledger/commands.log')).read_bytes())\n            assert all((r['rows'],r['columns'],r['policy'])==(1024,5120,0) for r in rows)\n            (out/'trace-analysis.json').write_bytes(json.dumps(traced,indent=2).encode())\n            # Projection differences are diagnostic evidence, not arithmetic or performance admission.",
+          "after": "            from test2026.cuda.qwen38_5090.gdn_kv128_stage_replay import replay\n            from test2026.cuda.qwen38_5090.z128_reconstructed_layer2_trace import replay as replay_trace\n            read=lambda name:(out/phase/name).read_bytes()\n            result=replay(report,read,ROOT/'results')\n            (out/'array-analysis.json').write_bytes(json.dumps(result,indent=2).encode())\n            traced=replay_trace((out/(phase+'-ledger/commands.log')).read_bytes(),True)\n            assert set(traced['plugin']['routes'])=={'fp8','nvfp4','fp8_m128','fp8_z128_reconstructed'} and not traced['plugin']['failures']\n            assert traced['factory']['factory_calls']>=4\n            (out/'trace-analysis.json').write_bytes(json.dumps(traced,indent=2).encode())\n            assert result['controlled_first128_all11_stages_exact'],'Original GDN stage/state gate failed; preserve all arrays'\n            # No full-model or performance admission from this controlled first128 gate.",
+          "count": 1
+        },
+        {
+          "before": "FA3_projection_witness_collected_needs_replay",
+          "after": "GDN50_stage_collected_needs_replay",
+          "count": 1
+        },
+        {
+          "before": "    idle();out.mkdir();",
+          "after": "    idle();assert shutil.disk_usage(ROOT).free>=4<<30;out.mkdir();",
+          "count": 1
+        }
+      ]
+    }
+  ],
+  "native_candidate_source_changed": false,
+  "original_full_GDN_collection_and_math_gates_unchanged": true,
+  "original_finite_array_entries_required": 509,
+  "original_complete_output_F32_words_required": 98205696,
+  "additional_all509_control_arrays_must_match": true
+}
