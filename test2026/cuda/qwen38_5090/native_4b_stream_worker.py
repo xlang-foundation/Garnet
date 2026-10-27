@@ -20,6 +20,8 @@ try:
   key=item['id'];body=item['body'];started=time.monotonic()
   try:
    validate_body(body,'qwen35-4b-bf16');limit=body['max_tokens']
+   ignore_eos=body.get('ignore_eos',False)
+   if type(ignore_eos) is not bool:raise TypeError('ignore_eos must be a boolean')
    if limit>128:raise ValueError('Loaded4B profile supports at most128 outputs')
    content=body['messages'][0]['content'];path='';image_hash=None
    if isinstance(content,str):prompt=content
@@ -35,14 +37,15 @@ try:
     now=time.monotonic();generated.append(token)
     state['text']=model.tokenizer.decode([t for t in generated if t not in model.stops])
     emit({'event':'token','id':key,'token_id':token,'sampled_tokens':count,'prompt_tokens':prompt_count,
-     'text':state['text'],'stop':token in model.stops,'native_monotonic_seconds':now})
-   result=model.infer(prompt,path,limit,on_token=notify)
+     'text':state['text'],'stop':token in model.stops and not ignore_eos,'native_monotonic_seconds':now})
+   result=model.infer(prompt,path,limit,on_token=notify,ignore_eos=ignore_eos)
    expected=list(result['generated_token_ids'][0])
    if result['stop_token_ids'][0] is not None:expected.append(result['stop_token_ids'][0])
    assert expected==generated and result['sampled_tokens_including_stop']==[len(generated)]
    assert result['text']==state['text']
    emit({'event':'completed','id':key,'generated_ids':generated,'prompt_ids':result['prompt_token_ids'][0],
     'text':result['text'],'image_sha256':image_hash,'generation_mode':'greedy_target','speculative_metrics':None,
+    'generation_policy':result['generation_policy'],
     'finish_reason':'stop' if result['finish_reasons']==['eos'] else 'length',
     'native_elapsed_seconds':time.monotonic()-started})
   except Exception as error:

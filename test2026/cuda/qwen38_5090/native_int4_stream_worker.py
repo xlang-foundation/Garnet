@@ -31,6 +31,8 @@ try:
         try:
             assert body['temperature']==0 and body['chat_template_kwargs']=={'enable_thinking':False}
             validate_body(body,'qwen38-27b-int4')
+            ignore_eos=body.get('ignore_eos',False)
+            if type(ignore_eos) is not bool:raise TypeError('ignore_eos must be a boolean')
             limit=body['max_tokens'];assert isinstance(limit,int) and not isinstance(limit,bool) and 2<=limit<=128
             assert 'study_target_only' not in body,'No speculative mode for this profile'
             content=body['messages'][0]['content'];visual=None;image_start=-1;image_hash=None
@@ -61,14 +63,14 @@ try:
                 assert count==len(generated)+1
                 now=time.monotonic();generated.append(token)
                 stream_state['text']=tokenizer.decode([t for t in generated if t not in stops])
-                emit({'event':'token','id':key,'token_id':token,'sampled_tokens':count,'prompt_tokens':len(ids),'text':stream_state['text'],'stop':token in stops,'native_monotonic_seconds':now})
+                emit({'event':'token','id':key,'token_id':token,'sampled_tokens':count,'prompt_tokens':len(ids),'text':stream_state['text'],'stop':token in stops and not ignore_eos,'native_monotonic_seconds':now})
             prediction=decoder.prefill_sequence(hidden,[positions])
             for step in range(limit):
                 token=prediction[0];notify(0,token,step+1)
-                if token in stops or step+1==limit:break
+                if (token in stops and not ignore_eos) or step+1==limit:break
                 prediction=decoder.step([token],positions=[[current]*3]);current+=1
             mode='greedy_target'
-            emit({'event':'completed','id':key,'generated_ids':generated,'prompt_ids':ids,'text':stream_state['text'],'image_sha256':image_hash,'generation_mode':mode,'speculative_metrics':speculative_metrics,'finish_reason':'stop' if generated[-1] in stops else 'length','native_elapsed_seconds':time.monotonic()-started})
+            emit({'event':'completed','id':key,'generated_ids':generated,'prompt_ids':ids,'text':stream_state['text'],'image_sha256':image_hash,'generation_mode':mode,'speculative_metrics':speculative_metrics,'generation_policy':{'ignore_eos':ignore_eos,'max_new_tokens':limit},'finish_reason':'stop' if generated[-1] in stops and not ignore_eos else 'length','native_elapsed_seconds':time.monotonic()-started})
         except Exception as error:
             emit({'event':'error','id':key,'error':repr(error)});raise
 finally:

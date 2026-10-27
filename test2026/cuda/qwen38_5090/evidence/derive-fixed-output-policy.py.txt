@@ -1,0 +1,30 @@
+from pathlib import Path
+import ast,hashlib,json
+R=Path('D:/CantorAI/work/qwen38-5090');E=R/'test2026/cuda/qwen38_5090/evidence';sha=lambda b:hashlib.sha256(b).hexdigest();rows=[]
+def change(name,pairs):
+    p=R/name;before=p.read_bytes();nl=b'\r\n' if b'\r\n' in before else b'\n';raw=before;changes=[]
+    for a,b,count in pairs:
+        a=a.encode().replace(b'\n',nl);b=b.encode().replace(b'\n',nl);assert raw.count(a)==count,(name,a,raw.count(a));raw=raw.replace(a,b);changes.append({'old':a.decode(),'new':b.decode(),'count':count})
+    ast.parse(raw);p.write_bytes(raw);assert p.read_bytes()==raw;rows.append({'file':name,'before_sha256':sha(before),'after_sha256':sha(raw),'changes':changes})
+change('runtime/cuda_serving.py',[
+ ('def infer_batch(self,prompts,images,limit,on_token=None):','def infer_batch(self,prompts,images,limit,on_token=None,ignore_eos=False):',1),
+ ('        with self.lock:\n            if on_token is not None:','        with self.lock:\n            if type(ignore_eos) is not bool:raise TypeError(\'ignore_eos must be a boolean\')\n            if ignore_eos and self.speculative is not None:raise ValueError(\'ignore_eos currently requires target-only decoding\')\n            if on_token is not None:',1),
+ ('if prediction[b] in self.stops:', 'if prediction[b] in self.stops and not ignore_eos:',1),
+ ("'texts':[self.tokenizer.decode(o) for o in output]", "'texts':[self.tokenizer.decode([t for t in o if t not in self.stops] if ignore_eos else o) for o in output]",1),
+ ("'speculative_metrics':speculative_metrics,", "'speculative_metrics':speculative_metrics,\n                'generation_policy':{'ignore_eos':ignore_eos,'max_new_tokens':limit},",1),
+ ('def infer(self,prompt,image,limit,on_token=None):','def infer(self,prompt,image,limit,on_token=None,ignore_eos=False):',1),
+ ('self.infer_batch([prompt],[image],limit,on_token=on_token)', 'self.infer_batch([prompt],[image],limit,on_token=on_token,ignore_eos=ignore_eos)',1),
+])
+change('test2026/cuda/qwen38_5090/native_int4_stream_worker.py',[
+ ("            validate_body(body,'qwen38-27b-int4')", "            validate_body(body,'qwen38-27b-int4')\n            ignore_eos=body.get('ignore_eos',False)\n            if type(ignore_eos) is not bool:raise TypeError('ignore_eos must be a boolean')",1),
+ ("'stop':token in stops,", "'stop':token in stops and not ignore_eos,",1),
+ ('if token in stops or step+1==limit:break','if (token in stops and not ignore_eos) or step+1==limit:break',1),
+ ("'finish_reason':'stop' if generated[-1] in stops else 'length'", "'generation_policy':{'ignore_eos':ignore_eos,'max_new_tokens':limit},'finish_reason':'stop' if generated[-1] in stops and not ignore_eos else 'length'",1),
+])
+change('test2026/cuda/qwen38_5090/native_4b_stream_worker.py',[
+ ("   validate_body(body,'qwen35-4b-bf16');limit=body['max_tokens']", "   validate_body(body,'qwen35-4b-bf16');limit=body['max_tokens']\n   ignore_eos=body.get('ignore_eos',False)\n   if type(ignore_eos) is not bool:raise TypeError('ignore_eos must be a boolean')",1),
+ ("'stop':token in model.stops,", "'stop':token in model.stops and not ignore_eos,",1),
+ ('model.infer(prompt,path,limit,on_token=notify)', 'model.infer(prompt,path,limit,on_token=notify,ignore_eos=ignore_eos)',1),
+ ("'finish_reason':'stop' if result['finish_reasons']==['eos'] else 'length',", "'generation_policy':result['generation_policy'],\n    'finish_reason':'stop' if result['finish_reasons']==['eos'] else 'length',",1),
+])
+p=E/'fixed-output-policy-derivation.json';assert not p.exists();p.write_bytes(json.dumps({'status':'local_source_changed_remote_frozen_and_GPU_unrun','derivations':rows,'default_EOS_behavior_retained':True,'ignore_eos_speculative_mode_rejected':True,'raw_sampled_IDs_retained_and_special_stop_tokens_hidden_from_text':True,'performance_claim':False},indent=2).encode());print(json.dumps({'files':len(rows),'derivation_sha256':sha(p.read_bytes())}))

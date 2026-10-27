@@ -143,8 +143,10 @@ class Model:
             else:hidden.append(io.row(embeddings,i))
         return hidden,positions,ids,current,compile_ms,visual_count
 
-    def infer_batch(self,prompts,images,limit,on_token=None):
+    def infer_batch(self,prompts,images,limit,on_token=None,ignore_eos=False):
         with self.lock:
+            if type(ignore_eos) is not bool:raise TypeError('ignore_eos must be a boolean')
+            if ignore_eos and self.speculative is not None:raise ValueError('ignore_eos currently requires target-only decoding')
             if on_token is not None:
                 if not callable(on_token):raise TypeError('on_token must be callable')
                 if self.speculative is not None:raise ValueError('Model streaming callback currently requires target-only decoding')
@@ -180,7 +182,7 @@ class Model:
                             # Each prediction is synchronized by the decoder before return.
                             # Include EOS in the sampled stream; never emit inactive rows.
                             if on_token is not None:on_token(b,prediction[b],sampled[b],lengths[b])
-                            if prediction[b] in self.stops:
+                            if prediction[b] in self.stops and not ignore_eos:
                                 active[b]=0;finish[b]='eos';stop_tokens[b]=prediction[b]
                             else:output[b].append(prediction[b])
                     if not any(active) or step+1==limit:break
@@ -189,7 +191,7 @@ class Model:
                     for b in range(self.batch):current[b]+=active[b]
             done=time.monotonic()
             return {'status':'ok','model_id':self.name,'backend':'Garnet CUDA/TensorRT Qwen3.5','batch':self.batch,
-                'texts':[self.tokenizer.decode(o) for o in output],'generated_token_ids':output,'generated_tokens':[len(o) for o in output],
+                'texts':[self.tokenizer.decode([t for t in o if t not in self.stops] if ignore_eos else o) for o in output],'generated_token_ids':output,'generated_tokens':[len(o) for o in output],
                 'sampled_tokens_including_stop':sampled,'finish_reasons':finish,'stop_token_ids':stop_tokens,'decode_steps':decode_steps,
                 'prompt_token_ids':[r[2] for r in rows],'prompt_tokens':lengths,
                 'visual_tokens_per_row':[r[5] for r in rows],
@@ -205,15 +207,16 @@ class Model:
                     'proposal_source':'native checkpoint MTP' if self.speculative is not None else None,
                     'target_verification':self.speculative is not None,'partial_commit':(('packed_delta_replay_kv_selection' if self.packed_program else 'replay_delta_restore_kv') if self.speculative_replay else 'restore_recompute') if self.speculative is not None else None},
                 'speculative_metrics':speculative_metrics,
+                'generation_policy':{'ignore_eos':ignore_eos,'max_new_tokens':limit},
                 'arithmetic':{'weights':'BF16','projection_input_output':'BF16','projection_accumulation':'FP32',
                     'projection_reduced_precision_reduction':False,
                     'full_attention_projection_layout':'chunk_batched',
                     'residual_state_norm_attention':'FP32','equivalent_to_transformers_full_bf16':False},
                 'prompt_sha256':[hashlib.sha256(p.encode()).hexdigest() for p in prompts]}
 
-    def infer(self,prompt,image,limit,on_token=None):
+    def infer(self,prompt,image,limit,on_token=None,ignore_eos=False):
         if self.batch!=1:raise ValueError('Use infer_batch with the loaded batch profile')
-        r=self.infer_batch([prompt],[image],limit,on_token=on_token);r['text']=r['texts'][0];return r
+        r=self.infer_batch([prompt],[image],limit,on_token=on_token,ignore_eos=ignore_eos);r['text']=r['texts'][0];return r
 
     def close(self):
         try:
