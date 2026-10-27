@@ -1,0 +1,73 @@
+{
+  "derivations": [
+    {
+      "source": "run_full_chunk_stage_build.py",
+      "source_sha256": "c7ae3993dbb7fbaa82d8f6b34ee1de657d6aa3ed0df0db5f09f9ca1c4fb88596",
+      "target": "run_full_chunk_stage_build_attempt2.py",
+      "target_sha256": "7aa46cab104e02e3c436cb94933324adb8017f63b644b32f3e8c33e041d510d0",
+      "steps": [
+        {
+          "old": "JOB='full-chunk-stage-build-attempt1'",
+          "new": "JOB='full-chunk-stage-build-attempt2'",
+          "count": 1
+        },
+        {
+          "old": "evidence/full-chunk-stage-build-preparation.json",
+          "new": "evidence/full-chunk-stage-build-preparation-attempt2.json",
+          "count": 1
+        },
+        {
+          "old": "garnet-native-full-chunk-stage-attempt1.dll",
+          "new": "garnet-native-full-chunk-stage-attempt2.dll",
+          "count": 1
+        },
+        {
+          "old": "        # Existing source-composition controls run on their exact baseline before\n        # installing observation-only headers, rather than rewriting old guards.\n        run([sys.executable,'-m','unittest',*p['test_ids']],'cpu-before','41current controls plus86historical assertions on original baseline; exact additive51-source witness composition, old guards and math retained')",
+          "new": "        # The restored baseline intentionally lacks37 research-only files. Install\n        # exact qualified parent50 before existing controls; do not alter old tests.\n        from test2026.cuda.qwen38_5090.full_chunk_stage_source import sources\n        parent,expected,_=sources();assert len(parent)==50 and expected==candidate\n        for n,b in parent.items():installed[n]=b;(ROOT/'Garnet'/n).write_bytes(b)\n        inventory.update({'Garnet/'+n:hashlib.sha256(b).hexdigest() for n,b in parent.items()})\n        w['parent_installed_source']={n:sha(ROOT/n) for n in inventory};save()\n        run([sys.executable,'-m','unittest',*p['test_ids']],'cpu-before','41current controls plus86historical assertions on exact qualified parent50; original tests unchanged, new51source composition checked independently')",
+          "count": 1
+        },
+        {
+          "old": "41current controls",
+          "new": "42current controls",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "verify_full_chunk_stage_build.py",
+      "source_sha256": "d28d996f510227d5ece9cfb0d3930b41ef05ded7c1ace45446ccbad3852cdecf",
+      "target": "verify_full_chunk_stage_build_attempt2.py",
+      "target_sha256": "84ff8ad31af71f58ea91b4f50349aa5da33b76c14108911e72b66e3cb4d67d76",
+      "steps": [
+        {
+          "old": "JOB='full-chunk-stage-build-attempt1'",
+          "new": "JOB='full-chunk-stage-build-attempt2'",
+          "count": 1
+        },
+        {
+          "old": "evidence/full-chunk-stage-build-preparation.json",
+          "new": "evidence/full-chunk-stage-build-preparation-attempt2.json",
+          "count": 1
+        },
+        {
+          "old": "            command('cpu-before',before);assert b'Ran 41 tests'",
+          "new": "            parent=doc(P+'evidence/full-chunk-stage-source-derivation.json')['parent_files']\n            parent_sources={**before,**{'Garnet/'+n:h for n,h in parent.items()}};assert w['parent_installed_source']==parent_sources\n            command('cpu-before',parent_sources);assert b'Ran 41 tests'",
+          "count": 1
+        },
+        {
+          "old": "b'Ran 41 tests'",
+          "new": "b'Ran 42 tests'",
+          "count": 1
+        },
+        {
+          "old": "current_CPU_controls=41",
+          "new": "current_CPU_controls=42",
+          "count": 1
+        }
+      ]
+    }
+  ],
+  "reason": "Restored14-source baseline lacks research modules; existing controls require exact qualified50-source parent installed first",
+  "all51native_candidate_bytes_unchanged": true,
+  "no_model_math_or_CPU_assertion_changed": true
+}
