@@ -1,0 +1,9 @@
+from pathlib import Path
+import hashlib,json,zipfile
+W=Path(__file__).resolve().parent;O=W.parent/'outputs';sha=lambda b:hashlib.sha256(b).hexdigest();archive=W/'b4-prefill128-native-closure-assets.zip';assert sha(archive.read_bytes())=='ffd3b0291ca1b0d43a0ff2dc13b2421b45f0b68ebbe9b5594c61a548a911e5875'
+with zipfile.ZipFile(archive) as z:
+    mf=json.loads(z.read('manifest.json'));assert z.testzip() is None and len(z.namelist())==len(set(z.namelist()))==len(mf['files'])+1
+    assert mf['native_archive_sha256']==sha((O/'b4-prefill128-build-attempt1-evidence.zip').read_bytes())
+    for n,h in mf['files'].items():assert sha(z.read(n))==h
+    raw=z.read('results/b4-prefill128-build-attempt1-verified.json');target=O/'b4-prefill128-build-attempt1-remote-verified.json';assert not target.exists() or target.read_bytes()==raw;target.write_bytes(raw)
+print(json.dumps(dict(status='B4_native_closure_verified_and_peer_extracted',paired_remote_status=json.loads(raw)['status'])))
