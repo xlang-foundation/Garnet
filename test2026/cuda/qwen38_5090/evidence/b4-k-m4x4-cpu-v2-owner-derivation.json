@@ -1,0 +1,22 @@
+{
+  "rows": [
+    {
+      "source": "run_b4_k_m4x4_cpu.py",
+      "source_sha256": "90f44623a1746fa598e182eb87fbb49720487c8dc3113f89fd9818cae13999bd",
+      "target": "run_b4_k_m4x4_cpu_v2.py",
+      "target_sha256": "7a672819ccbbaa8068c8a27f02379f935a8d65184b90cbe3376ccf96ef14df87",
+      "changes": "Separate attempt2/preparationV2; verifier self pin V2. Actual CPU test bodies and candidate unchanged.",
+      "pre_dependency_link_sha256": "fe13007cb8e600ed56d372d90345c610453f763ea14206e6c4a5956b27a66939"
+    },
+    {
+      "source": "verify_b4_k_m4x4_cpu.py",
+      "source_sha256": "0cb0cdd4d3aa51f6d3ee3d07a714b21180cb613b64acbca51fd9772c47e582f9",
+      "target": "verify_b4_k_m4x4_cpu_v2.py",
+      "target_sha256": "2510ac4575e453982f98a8b252657429388d4e2ba608000e3603dc6fcdf58cff",
+      "changes": "Separate attempt2/preparationV2; verifier self pin V2. Actual CPU test bodies and candidate unchanged.",
+      "pre_dependency_link_sha256": "0ad0eb0a8173953b325ee9b60be64238ce88318da96d7b072a70d8d4e8774f0f"
+    }
+  ],
+  "fix": "Deployment and initial guard must cover all method and compile-input dependencies, including three omitted parent evidence files. Preserve attempt1 packaging failure.",
+  "failure_closure_link": "Owner and archive replay pin packaging-failure closure; all method and compile-input files are now part of initial before/after inventory."
+}

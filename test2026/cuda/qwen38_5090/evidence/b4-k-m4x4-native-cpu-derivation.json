@@ -1,0 +1,38 @@
+{
+  "status": "K_four_actual_M4_native_CPU_contracts_prepared_unrun",
+  "parent_sha256": {
+    "probe_b4_qk_m16_profile_cpu.cpp": "1617a1d85f5ef00a3866fba841525f414bc5f882fd3945ab4f3ef8997b9fb2ab",
+    "probe_b4_qk_m16_factory_cpu.cpp": "b0d6f948bc7b2ca36d77abcf7c8d1fecb899fed6375584507fdd180f685cc2cc",
+    "run_b4_qk_m16_factory_cpu.py": "b1b76e93befd17f1aca10d539f8ee56373163b187a37577626b8622b475291d7",
+    "probe_b4_qk_m16_plugin_cpu.cpp": "32858f4d7e491b8f2489f76586fb4f9eacfae2a67258236bfadbc14a00d276d1",
+    "b4_qk_m16_plugin_cpu_stubs.cpp": "1a8ce0dd8d523a5aec885dfbe74e662873d9cbd56da68aeaa03bd7cbf39cec41",
+    "build_b4_qk_m16_profile_cpu.bat": "d43644bb9544025e8695a46ebce3e0f66d14d8600da381184bc8851ec1200cd5",
+    "build_b4_qk_m16_factory_cpu.bat": "dadcef5daf630954b23f4e007deded706b616ea51fbc7e2933c63d60d1bcf3c7",
+    "build_b4_qk_m16_plugin_cpu.bat": "b9851095aa9e4cc954c1ad3370004bdc8aa89776df0becf6eeecdfc566d73a66"
+  },
+  "derived_sha256": {
+    "probe_b4_k_m4x4_profile_cpu.cpp": "6a34d7a2b1813aa8297b58d886339715b1b6002b2f91425a66242537ec3615fc",
+    "probe_b4_k_m4x4_factory_cpu.cpp": "991f4e488d977c1ff1f85645c1aa7c47ea3202736c405754349f797b80e9170a",
+    "run_b4_k_m4x4_factory_cpu.py": "d1b1f0f33284b8e51faa28392959507dc99c89e074119589ec95e44b9c69e068",
+    "probe_b4_k_m4x4_plugin_cpu.cpp": "37dd156bea84fc5b99e69b7afb1e03b4d9531ead3e65996a691b180555d74d64",
+    "b4_k_m4x4_plugin_cpu_stubs.cpp": "835ad8e8c95c4cf9132f2a17c627b5886ddd817d126eebf46686099127958e27",
+    "build_b4_k_m4x4_profile_cpu.bat": "ef345a0c821bd6f870bb680375abe6730785946829f7fec042ba2a078480254a",
+    "build_b4_k_m4x4_factory_cpu.bat": "265e18a9a775d751a2fb055a41206c50f84255ab8bae584bf87662f05a0db0f9",
+    "build_b4_k_m4x4_plugin_cpu.bat": "874f017c54f5ac0c6b50d319804ee608b36ad827b18a27bcb62fc20b7ee31beb"
+  },
+  "GPU_or_native_executed_locally": false,
+  "candidate_math_source_changed": false,
+  "scope": "Actual C++ K-only selector; actual context under CPU SDK fixtures, all7 attrs/twoM4checks/API fault injection, four real host pointer offsets/alpha/beta/workspace/stream/opaque/firstfailure and throw propagation; actual TRT plugin with CPU operators and all four legacy wire cross-rejections. No CUDA SDK math or model qualification.",
+  "pre_native_adjustments": {
+    "probe_b4_k_m4x4_factory_cpu.cpp": {
+      "before_sha256": "05a42e63487a2b3825e431d4f5675b4680d90633966f2ccab5fdecb06b287f89",
+      "after_sha256": "991f4e488d977c1ff1f85645c1aa7c47ea3202736c405754349f797b80e9170a",
+      "reason": "Separate reference/actual check ordinals reset per device context; cross-device mode expects two of each."
+    },
+    "run_b4_k_m4x4_factory_cpu.py": {
+      "before_sha256": "1dee0e1711f1dce0a31453c993c60fde3b3a60fd022e21cae74eb97448f7a841",
+      "after_sha256": "d1b1f0f33284b8e51faa28392959507dc99c89e074119589ec95e44b9c69e068",
+      "reason": "Separate reference/actual check ordinals reset per device context; cross-device mode expects two of each."
+    }
+  }
+}

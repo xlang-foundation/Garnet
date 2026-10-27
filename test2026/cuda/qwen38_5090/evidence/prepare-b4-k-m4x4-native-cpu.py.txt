@@ -1,0 +1,41 @@
+from pathlib import Path
+import ast,hashlib,json,sys,zipfile
+W=Path(__file__).resolve().parent;R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';E=M/'evidence'
+P='Garnet/test2026/cuda/qwen38_5090/';sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+sys.path[:0]=[str(R),str(M)]
+from test2026.cuda.qwen38_5090.b4_k_m4x4_source import sources
+old,candidate,record=sources();assert (len(old),len(candidate))==(79,85)
+basepath=E/'b4-k35-cache52-preparation.json';base=json.loads(basepath.read_bytes())
+oldcpu=json.loads((E/'b4-qk-m16-cpu-v2-preparation.json').read_bytes())
+derivation=json.loads((E/'b4-k-m4x4-native-cpu-derivation.json').read_bytes())
+new=list(derivation['derived_sha256'])+['run_b4_k_m4x4_cpu.py','verify_b4_k_m4x4_cpu.py',
+    'b4_k_m4x4_source.py','test_b4_k_m4x4_source.py',
+    'evidence/b4-k-m4x4-source-derivation.json','evidence/b4-k-m4x4-source-cpu-preparation.json',
+    'evidence/b4-k-m4x4-native-cpu-derivation.json','evidence/b4-k-m4x4-cpu-owner-derivation.json']
+new+=['native_b4_k_m4x4_candidate/'+Path(n).name for n in record['modified_files']+record['new_files']]
+assert len(new)==len(set(new))==23
+for n,h in derivation['derived_sha256'].items():assert sha(M/n)==h
+for n in new:
+    if n.endswith('.py'):ast.parse((M/n).read_bytes())
+files=dict(base['files']);methods=dict(oldcpu['methods'])
+for n in new:files[P+n]=methods[P+n]=sha(M/n)
+for n in ('evidence/b4-full4k-exact-attempt1-verified.json','evidence/b4-full4k-decode-prefix-attempt1-verified.json','evidence/b4-full4k-selection52-attempt1-verified.json'):
+    methods[P+n]=sha(M/n)
+for n,h in methods.items():assert sha(R/n.removeprefix('Garnet/'))==h,(n,'local method mismatch')
+assert all('probe_native_external_prefix_batch.py' not in n for n in files)
+parents=dict(oldcpu['parents'])
+for job in ('b4-qk-m16-cpu-attempt1','b4-k35-cache52-attempt1'):
+    path=E/(job+'-verified.json');q=json.loads(path.read_bytes());assert q['exit_code']==0
+    parents[job]={'proof_sha256':sha(path),'archive_sha256':q['archive_sha256'],'status':q['status'],'exit_code':0}
+p={k:base[k] for k in ('runtime','environment','checkpoints','cuda_objects','cache_before_sha256')}
+p.update(status='B4T4_K_M4X4_CPU_prepared_unrun',files=files,methods=methods,compile_inputs=oldcpu['compile_inputs'],
+    parents=parents,bundle='results/b4-k-m4x4-source.zip',bundle_sha256=sha(W/'b4-k-m4x4-source.zip'),candidate_files=record['candidate_files'],
+    vcvars=oldcpu['vcvars'],baseline_preparation_sha256=sha(basepath),new_methods=[P+n for n in new],
+    scope='Private actual native C++ selector/factory/run-contract/TRT-plugin validation only. CPU SDK stubs perform no CUDA math. Four ordered actual-M4 calls verify real host pointer offsets, identical weights/scale/beta/workspace/stream/opaque, firstfailure and thrown exception propagation; strict SM120/version/attributes/workspace/shape/defaultoff/wire guards. No production source, DLL, CMake or CUDA-object modification; no model/quality/HTTP/performance admission. Original full4K remains failed; overall2x unmet.')
+prep=E/'b4-k-m4x4-cpu-preparation.json';assert not prep.exists();prep.write_bytes(json.dumps(p,indent=2).encode())
+archive=W/'b4-k-m4x4-cpu-deployment.zip';assert not archive.exists();deploy={P+n:M/n for n in new};deploy[P+'evidence/'+prep.name]=prep
+with zipfile.ZipFile(archive,'x',zipfile.ZIP_DEFLATED) as z:
+    for n,path in deploy.items():z.write(path,n)
+    z.writestr('deployment-manifest.json',json.dumps({'files':{n:sha(path) for n,path in deploy.items()}},indent=2))
+(W/'b4-k-m4x4-cpu-deployment-receipt.json').write_bytes(json.dumps({'archive_sha256':sha(archive),'files':len(deploy),'bytes':archive.stat().st_size,'preparation_sha256':sha(prep)},indent=2).encode())
+print(json.dumps({'archive_sha256':sha(archive),'files':len(deploy),'baseline_files':len(base['files']),'guarded_files':len(files),'methods':len(methods),'parents':len(parents),'native_remote_unrun':True},indent=2))

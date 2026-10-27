@@ -1,0 +1,122 @@
+"""Derive private native CPU contracts; never execute native binaries locally."""
+from pathlib import Path
+import hashlib,json
+R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090'
+parents={};children={}
+sha=lambda b:hashlib.sha256(b).hexdigest()
+def read(name):
+    raw=(M/name).read_bytes();parents[name]=sha(raw);return raw.decode().replace('\r\n','\n')
+def replace(s,old,new,count=1):
+    assert s.count(old)==count,(old,s.count(old),count)
+    return s.replace(old,new)
+def write(name,s):
+    p=M/name;assert not p.exists(),p;raw=s.replace('\r\n','\n').encode();p.write_bytes(raw);children[name]=sha(raw)
+def rename(s):
+    return s.replace('qk_m16','k_m4x4').replace('QKM16','KM4X4').replace('QK M16','K M4x4').replace('QK_M16','K_M4X4')
+
+s=rename(read('probe_b4_qk_m16_profile_cpu.cpp'))
+s=replace(s,'(std::string(projection)=="q_proj"||std::string(projection)=="k_proj")','std::string(projection)=="k_proj"')
+s=replace(s,'for(const char* projection:{"q_proj","k_proj"})','for(const char* projection:{"k_proj"})')
+s=replace(s,'cases==1248&&selected==32&&rejected==1216','cases==1209&&selected==16&&rejected==1193')
+write('probe_b4_k_m4x4_profile_cpu.cpp',s)
+
+s=rename(read('probe_b4_qk_m16_factory_cpu.cpp'))
+s=replace(s,'int calls=0,failAt=0,throwAt=0,matmuls=0,activeRows=0;','''int calls=0,failAt=0,throwAt=0,matmuls=0,activeRows=0,checks=0;
+bool matmulContractOkay=true;
+const unsigned char* expectedInput=nullptr;unsigned char* expectedOutput=nullptr;
+const void* expectedWeights=nullptr;void* expectedWorkspace=nullptr;
+cudaStream_t expectedStream=nullptr;
+void* actualInputLayout=nullptr;void* actualOutputLayout=nullptr;
+std::vector<size_t> inputOffsets,outputOffsets;''')
+s=replace(s,'*value=handle();layoutColumns[*value]=columns;return 0;','''*value=handle();layoutColumns[*value]=columns;
+    if(calls==9)actualInputLayout=*value;if(calls==10)actualOutputLayout=*value;
+    return 0;''')
+s=replace(s,'const auto m=std::to_string(layoutColumns.at(input));','const auto m=std::to_string(++checks);')
+old='cublasStatus_t cublasLtMatmul(cublasLtHandle_t,cublasLtMatmulDesc_t,const void*,const void*,cublasLtMatrixLayout_t,const void*,cublasLtMatrixLayout_t,const void*,const void*,cublasLtMatrixLayout_t,void*,cublasLtMatrixLayout_t,const cublasLtMatmulAlgo_t*,void*,size_t,cudaStream_t){++matmuls;return 14;}'
+new='''cublasStatus_t cublasLtMatmul(cublasLtHandle_t,cublasLtMatmulDesc_t,const void* alpha,const void* weights,cublasLtMatrixLayout_t weightLayout,const void* input,cublasLtMatrixLayout_t inputLayout,const void* beta,const void* prior,cublasLtMatrixLayout_t priorLayout,void* output,cublasLtMatrixLayout_t outputLayout,const cublasLtMatmulAlgo_t* opaque,void* workspace,size_t workspaceBytes,cudaStream_t stream){
+    const int group=matmuls++;
+    const size_t inOffset=static_cast<const unsigned char*>(input)-expectedInput;
+    const size_t outOffset=static_cast<unsigned char*>(output)-expectedOutput;
+    inputOffsets.push_back(inOffset);outputOffsets.push_back(outOffset);
+    cublasLtMatmulAlgo_t expectedOpaque{};expected(expectedOpaque);
+    matmulContractOkay=matmulContractOkay&&group<4&&inOffset==size_t(group)*20480&&outOffset==size_t(group)*8192&&
+        weights==expectedWeights&&workspace==expectedWorkspace&&workspaceBytes==(4ULL<<20)&&stream==expectedStream&&
+        *static_cast<const float*>(alpha)==.125f&&*static_cast<const float*>(beta)==0.f&&prior==output&&
+        inputLayout==actualInputLayout&&outputLayout==actualOutputLayout&&priorLayout==outputLayout&&
+        layoutColumns.at(weightLayout)==1024&&layoutColumns.at(inputLayout)==4&&layoutColumns.at(outputLayout)==4&&
+        !std::memcmp(opaque,&expectedOpaque,sizeof(expectedOpaque));
+    if(mode=="run_matmul_throw_"+std::to_string(group))throw std::runtime_error("intentional_CPU_matmul_throw");
+    return mode=="run_matmul_fail_"+std::to_string(group)?14:0;
+}'''
+s=replace(s,old,new)
+s=replace(s,'infoOkay=Garnet::GetModelOptFP8KM4X4Info(context,info)&&info.rows==geometry;','infoOkay=Garnet::GetModelOptFP8KM4X4Info(context,info)&&info.rows==geometry&&info.inputRowsPerMatmul==4&&info.matmulsPerEnqueue==4;')
+start=s.index('        if(mode=="cross_geometry"){');end=s.index('        if(mode=="cross_device")',start)
+s=s[:start]+'''        if(mode=="cross_geometry"){auto other=Garnet::CreateModelOptFP8KM4X4Context(12288);if(!context||other)return 5;}
+'''+s[end:]
+s=replace(s,'int m=16,n=geometry,k=5120;float scale=.125f;const void* w=reinterpret_cast<void*>(1);const void* x=w;void* y=reinterpret_cast<void*>(2);void* scratch=reinterpret_cast<void*>(3);size_t bytes=4ULL<<20;','''std::vector<unsigned char> input(16*5120),output(16*1024*2),scratchStorage(4ULL<<20),weightStorage(1024*5120);
+            int m=16,n=geometry,k=5120;float scale=.125f;const void* w=weightStorage.data();const void* x=input.data();void* y=output.data();void* scratch=scratchStorage.data();size_t bytes=4ULL<<20;
+            expectedInput=input.data();expectedOutput=output.data();expectedWeights=w;expectedWorkspace=scratch;
+            expectedStream=reinterpret_cast<void*>(size_t(0x1230));''')
+s=replace(s,'if(mode=="run_zero_scale")scale=0;if(mode=="run_nan_scale")scale=std::numeric_limits<float>::quiet_NaN();','''if(mode=="run_zero_scale")scale=0;if(mode=="run_nan_scale")scale=std::numeric_limits<float>::quiet_NaN();
+            if(mode=="run_negative_scale")scale=-1;if(mode=="run_infinite_scale")scale=std::numeric_limits<float>::infinity();''')
+s=replace(s,'runtimeStatus=Garnet::RunModelOptFP8KM4X4Matmul(context,w,x,y,m,n,k,scale,scratch,bytes,nullptr);','''if(mode=="run_null_context")context.reset();
+            runtimeStatus=Garnet::RunModelOptFP8KM4X4Matmul(context,w,x,y,m,n,k,scale,scratch,bytes,expectedStream);''')
+s=replace(s,'    std::puts("]}");return (mode=="run_valid"?matmuls!=1:matmuls!=0)?3:0;','''    std::printf("],\\"matmul_contract_okay\\":%s,\\"input_offsets\\":[",matmulContractOkay?"true":"false");
+    for(size_t i=0;i<inputOffsets.size();++i)std::printf("%s%zu",i?",":"",inputOffsets[i]);
+    std::printf("],\\"output_offsets\\":[");for(size_t i=0;i<outputOffsets.size();++i)std::printf("%s%zu",i?",":"",outputOffsets[i]);
+    std::puts("]}");return matmulContractOkay?0:3;''')
+write('probe_b4_k_m4x4_factory_cpu.cpp',s)
+
+s=rename(read('run_b4_qk_m16_factory_cpu.py'))
+s=replace(s,"'run_device_throw']","'run_device_throw','run_negative_scale','run_infinite_scale','run_null_context']+[f'run_matmul_{what}_{i}' for what in ('fail','throw') for i in range(4)]")
+s=replace(s,"for m in (4,16)","for m in (1,2)")
+s=s.replace('geometry in (12288,1024)','geometry == 1024').replace('geometry not in (12288,1024)','geometry != 1024')
+s=replace(s,"assert q['unexpected_matmuls']==(1 if mode=='run_valid' and accepted else 0)","""attempts=(4 if mode=='run_valid' else int(mode[-1])+1 if mode.startswith(('run_matmul_fail_','run_matmul_throw_')) else 0) if accepted else 0
+    assert q['unexpected_matmuls']==attempts and q['matmul_contract_okay']
+    assert q['input_offsets']==[i*20480 for i in range(attempts)] and q['output_offsets']==[i*8192 for i in range(attempts)]""")
+s=replace(s,"expected_runtime=(-999 if not mode.startswith('run_') else 14 if mode in ('run_valid','run_device_throw') else 7)","expected_runtime=(-999 if not mode.startswith('run_') else 1 if mode=='run_null_context' else 0 if mode=='run_valid' else 14 if mode=='run_device_throw' or mode.startswith(('run_matmul_fail_','run_matmul_throw_')) else 7)")
+s=replace(s,'current_geometry=(1024 if geometry==12288 else 12288) if i==2 and mode==\'cross_geometry\' else geometry','''if i==2 and mode=='cross_geometry':assert group[-1]['name']=='empty' and not any(r['event']=='api' for r in group);continue
+            current_geometry=geometry''')
+s=replace(s,"[('M4',0,0),('M16',0,0)]","[('M4',0,0),('M4_actual',0,0)]")
+s=replace(s,"'cublasLtMatrixLayoutCreate:28:5120:16:5120',f'cublasLtMatrixLayoutCreate:14:{geometry}:16:{geometry}'","'cublasLtMatrixLayoutCreate:28:5120:4:5120',f'cublasLtMatrixLayoutCreate:14:{geometry}:4:{geometry}'")
+s=replace(s,"assert q['calls'].count('cublasLtMatmulAlgoCheck:4')==q['calls'].count('cublasLtMatmulAlgoCheck:16')==(2 if mode in ('cross_geometry','cross_device') else 1)","assert q['calls'].count('cublasLtMatmulAlgoCheck:1')==1 and q['calls'].count('cublasLtMatmulAlgoCheck:2')==1")
+s=replace(s,"for g in (12288,1024) for m in MODES","for g in (1024,) for m in MODES")
+s=s.replace("for g in (12288,1024) for v", "for g in (1024,) for v")
+s=replace(s,"for g in (0,-1,1,5120,6144)","for g in (0,-1,1,5120,6144,12288)")
+s=replace(s,'Both actual Q/K M16 factory geometries','Actual K four-M4 factory and pointer-stride contracts')
+write('run_b4_k_m4x4_factory_cpu.py',s)
+
+s=rename(read('probe_b4_qk_m16_plugin_cpu.cpp'))
+s=replace(s,'#include "modelopt_fp8_k_m4x4_plugin.h"','#include "modelopt_fp8_k_m4x4_plugin.h"\n#include "modelopt_fp8_qk_m16_plugin.h"')
+s=replace(s,'&&EnsureModelOptFP8KM4X4PluginRegistered()','&&EnsureModelOptFP8KM4X4PluginRegistered()&&EnsureModelOptFP8QKM16PluginRegistered()')
+s=replace(s,'for(int n:{1024,12288})','for(int n:{1024})')
+s=s.replace('0x514b3136u','0x4b343434u')
+s=replace(s,'for(uint32_t bad:{0u,1u,16u,128u,5120u,5121u,6144u,10240u,0xffffffffu})','for(uint32_t bad:{0u,1u,16u,128u,5120u,5121u,6144u,10240u,12288u,0xffffffffu})')
+s=replace(s,'for(int badN:{0,-1,1,5120,5121,65536,6144,10240})','for(int badN:{0,-1,1,5120,5121,65536,6144,10240,12288})')
+needle='        for(int badN:'
+at=s.index(needle)
+s=s[:at]+'''        auto* qkCreator=registry->getPluginCreator("GarnetModelOptFP8QKM16Canonical","1","");require(qkCreator,"Missing old QK creator");
+        for(int qkN:{1024,12288}){ModelOptFP8QKM16Plugin qk(qkN,5120,.5f,.25f);std::array<uint32_t,5> foreign{};qk.serialize(foreign.data());require(foreign[4]==0x514b3136u,"Old QK wire changed");reject(foreign.data(),20);++cross;auto* bad=qkCreator->deserializePlugin("KM4X4",wire.data(),20);require(!bad,"QK accepted new K wire");++cross;}
+'''+s[at:]
+s=replace(s,'wires==92&&constructors==48&&descriptors==92&&formats==18&&cross==18&&initializations==14&&KM4X4CPUFactoryCalls()==10','wires==49&&constructors==25&&descriptors==46&&formats==9&&cross==13&&initializations==7&&KM4X4CPUFactoryCalls()==5')
+write('probe_b4_k_m4x4_plugin_cpu.cpp',s)
+s=rename(read('b4_qk_m16_plugin_cpu_stubs.cpp'))
+s=replace(s,'#include "modelopt_fp8_k_m4x4_canonical.h"','#include "modelopt_fp8_k_m4x4_canonical.h"\n#include "modelopt_fp8_qk_m16_canonical.h"')
+s=replace(s,'if(rows!=1024&&rows!=12288)','if(rows!=1024)')
+s=s.replace('struct ModelOptFP8VM16Context{};','''struct ModelOptFP8QKM16Context{};
+std::shared_ptr<ModelOptFP8QKM16Context> CreateModelOptFP8QKM16Context(int){++unexpected;return {};}
+bool GetModelOptFP8QKM16Info(const std::shared_ptr<ModelOptFP8QKM16Context>&,ModelOptFP8QKM16Info&) noexcept{++unexpected;return false;}
+cublasStatus_t RunModelOptFP8QKM16Matmul(const std::shared_ptr<ModelOptFP8QKM16Context>&,const void*,const void*,void*,int,int,int,float,void*,size_t,cudaStream_t) noexcept{++unexpected;return CUBLAS_STATUS_NOT_INITIALIZED;}
+struct ModelOptFP8VM16Context{};''')
+write('b4_k_m4x4_plugin_cpu_stubs.cpp',s)
+for kind in ('profile','factory','plugin'):
+    s=rename(read('build_b4_qk_m16_'+kind+'_cpu.bat'))
+    if kind=='plugin':
+        s=replace(s,'/I"%CANDIDATE%"','/I"%CANDIDATE%" /I"%METHODS%\\native_b4_qk_m16_candidate"')
+        s=replace(s,'"%CANDIDATE%\\modelopt_fp8_k_m4x4_plugin.cpp"','"%CANDIDATE%\\modelopt_fp8_k_m4x4_plugin.cpp" "%METHODS%\\native_b4_qk_m16_candidate\\modelopt_fp8_qk_m16_plugin.cpp"')
+    write('build_b4_k_m4x4_'+kind+'_cpu.bat',s)
+record={'status':'K_four_actual_M4_native_CPU_contracts_prepared_unrun','parent_sha256':parents,'derived_sha256':children,
+    'GPU_or_native_executed_locally':False,'candidate_math_source_changed':False,
+    'scope':'Actual C++ K-only selector; actual context under CPU SDK fixtures, all7 attrs/twoM4checks/API fault injection, four real host pointer offsets/alpha/beta/workspace/stream/opaque/firstfailure and throw propagation; actual TRT plugin with CPU operators and all four legacy wire cross-rejections. No CUDA SDK math or model qualification.'}
+p=M/'evidence/b4-k-m4x4-native-cpu-derivation.json';assert not p.exists();p.write_bytes(json.dumps(record,indent=2).encode())
+print(json.dumps({'derived_files':list(children),'parent_files':len(parents),'native_executed':False},indent=2))

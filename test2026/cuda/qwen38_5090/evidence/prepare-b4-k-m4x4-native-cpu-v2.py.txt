@@ -1,0 +1,23 @@
+from pathlib import Path
+import hashlib,json,zipfile
+W=Path(__file__).resolve().parent;R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';E=M/'evidence';P='Garnet/test2026/cuda/qwen38_5090/'
+sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+dpath=E/'b4-k-m4x4-cpu-v2-owner-derivation.json';d=json.loads(dpath.read_bytes())
+for row in d['rows']:
+    row['pre_dependency_link_sha256']=row['target_sha256'];row['target_sha256']=sha(M/row['target'])
+d['failure_closure_link']='Owner and archive replay pin packaging-failure closure; all method and compile-input files are now part of initial before/after inventory.'
+dpath.write_bytes(json.dumps(d,indent=2).encode())
+p=json.loads((E/'b4-k-m4x4-cpu-preparation.json').read_bytes())
+new=['run_b4_k_m4x4_cpu_v2.py','verify_b4_k_m4x4_cpu_v2.py','evidence/'+dpath.name]+['evidence/'+n+'-verified.json' for n in ('b4-full4k-decode-prefix-attempt1','b4-full4k-exact-attempt1','b4-full4k-selection52-attempt1')]
+for n in new:p['methods'][P+n]=sha(M/n)
+p['files'].update(p['methods']);p['files'].update(p['compile_inputs'])
+p['new_methods']=[P+n for n in new]
+p['packaging_failure_closure']='results/b4-k-m4x4-cpu-attempt1-failure-closure.zip';p['packaging_failure_closure_sha256']='a43cae97968e0e076f962963ffe26faf756e9171070d8d4cb681a4f57626a326'
+p['scope']+=' Attempt1 stopped before any CPU subcommand/native compile because three common evidence dependencies were absent; original partial archive/workflow/absence closure preserved. Attempt2 changes packaging/initial file guards only, no candidate/test-body changes.'
+prep=E/'b4-k-m4x4-cpu-v2-preparation.json';assert not prep.exists();prep.write_bytes(json.dumps(p,indent=2).encode())
+deploy={P+n:M/n for n in new};deploy[P+'evidence/'+prep.name]=prep
+archive=W/'b4-k-m4x4-cpu-v2-deployment.zip';assert not archive.exists()
+with zipfile.ZipFile(archive,'x',zipfile.ZIP_DEFLATED) as z:
+    for n,path in deploy.items():z.write(path,n)
+    z.writestr('deployment-manifest.json',json.dumps({'files':{n:sha(path) for n,path in deploy.items()}},indent=2))
+print(json.dumps({'archive_sha256':sha(archive),'files':len(deploy),'guarded_files':len(p['files']),'methods':len(p['methods'])},indent=2))

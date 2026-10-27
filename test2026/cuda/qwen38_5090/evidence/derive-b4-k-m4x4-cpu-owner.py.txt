@@ -1,0 +1,27 @@
+from pathlib import Path
+import hashlib,json,ast
+R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090'
+sha=lambda b:hashlib.sha256(b).hexdigest();rows=[]
+def convert(source,target,changes):
+    raw=(M/source).read_bytes();s=raw.decode().replace('\r\n','\n')
+    for old,new,count in changes:
+        assert s.count(old)==count,(old,s.count(old),count)
+        s=s.replace(old,new)
+    ast.parse(s);p=M/target;assert not p.exists();p.write_bytes(s.encode());rows.append({'source':source,'source_sha256':sha(raw),'target':target,'target_sha256':sha(p.read_bytes()),'changes':[{'old':a,'new':b,'count':c} for a,b,c in changes]})
+convert('run_b4_qk_m16_cpu_v2.py','run_b4_k_m4x4_cpu.py',[
+ ('qk_m16','k_m4x4',5),('qk-m16','k-m4x4',2),('QK_M16','K_M4X4',2),
+ ('len(old)==73 and len(candidate)==79','len(old)==79 and len(candidate)==85',1),
+ ('Five immutable79-source/failed-lineage/corruption controls','Five immutable85-source/failed-lineage/corruption controls',1),
+ ('Actual Q/K factory;406CPU trace/config/API/state/workspace/unsupported/geometry/cache-isolation/runtime-guard faults','Actual K four-M4 factory;232CPU trace/config/API/state/workspace/unsupported/geometry/cache-isolation/runtime guards plus pointer/scalar/stream/opaque/firstfailure faults',1),
+ ('b4-k-m4x4-cpu-v2-preparation.json','b4-k-m4x4-cpu-preparation.json',1),
+ ])
+convert('verify_b4_qk_m16_cpu_v2.py','verify_b4_k_m4x4_cpu.py',[
+ ('qk_m16','k_m4x4',6),('qk-m16','k-m4x4',2),('QK_M16','K_M4X4',6),
+ ('b4-k-m4x4-cpu-v2-preparation.json','b4-k-m4x4-cpu-preparation.json',1),
+ ('verify_b4_k_m4x4_cpu_v2.py','verify_b4_k_m4x4_cpu.py',1),
+ ('len(candidate)==79','len(candidate)==85',1),('))==79', '))==85',1),
+ ('cases=1248,selected=32,rejected=1216','cases=1209,selected=16,rejected=1193',1),
+ ('==406','==232',1),('==94','==105',1),('factory_count=406','factory_count=232',1),
+ ('wire_rejections=92,constructor_rejections=48,descriptor_rejections=92,format_rejections=18,cross_wire_rejections=18,initialize_calls=14,factory_calls=10','wire_rejections=49,constructor_rejections=25,descriptor_rejections=46,format_rejections=9,cross_wire_rejections=13,initialize_calls=7,factory_calls=5',1),
+ ])
+p=M/'evidence/b4-k-m4x4-cpu-owner-derivation.json';assert not p.exists();p.write_bytes(json.dumps({'status':'private_native_CPU_owner_and_replay_prepared_unrun','rows':rows,'candidate_model_or_performance_qualified':False},indent=2).encode());print('Derived CPU owner and independent raw replay; no native execution')
