@@ -1,0 +1,32 @@
+from pathlib import Path
+import ast,hashlib,json,os,sys,zipfile
+W=Path(__file__).resolve().parent;O=W.parent/'outputs';R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';E=M/'evidence';P='Garnet/test2026/cuda/qwen38_5090/';sha=lambda b:hashlib.sha256(b).hexdigest();sys.path[:0]=[str(R),str(M)]
+from test2026.cuda.qwen38_5090.fa_value_sdk_control import verify_derivations
+old=json.loads((E/'b4-b1-short-m16-preparation.json').read_bytes());component=json.loads((E/'v-m16-connected-preparation.json').read_bytes());job='v-m16-connected-attempt1';raw=(O/(job+'-verified.json')).read_bytes();assert raw==(O/(job+'-remote-verified.json')).read_bytes();q=json.loads(raw)
+assert q['exit_code']==0 and q['status']=='V_M16_connected_off_on_exact_component_replayed' and q['component_baselines_exact'] and q['source_runtime_SDK_checkpoint_CMake_all34objects_restored'] and q['actual_V_route']['all_seven_attributes_checked'] and q['full_model_or_quality_or_performance_qualified'] is False
+assert sha((O/(job+'-evidence.zip')).read_bytes())==q['archive_sha256']
+with zipfile.ZipFile(O/(job+'-evidence.zip')) as z:w=json.loads(z.read('results/'+job+'/workflow.json'));assert w['exit_code']==0 and w['cleanup_finished'] and w['build_artifacts_unchanged'] and all(r['on_vs_four_B1_different_words']==0 for r in q['intervention']['hidden'])
+names=['b4_v_m16_short_route.py','test_b4_v_m16_short_route.py','probe_b4_v_m16_short.py','launch_b4_v_m16_short.py','run_b4_v_m16_short.py','verify_b4_v_m16_short.py','evidence/b4-v-m16-short-owner-derivation.json','evidence/v-m16-connected-attempt1-verified.json'];new={P+n:sha((M/n).read_bytes()) for n in names}
+assert all(old['files'][n]==h for n,h in component['files'].items() if n in old['files']);files={**old['files'],**component['files'],**new}
+verify_derivations(json.loads((E/'b4-v-m16-short-owner-derivation.json').read_bytes()),lambda n:(M/n).read_bytes())
+for n in names:
+    if n.endswith('.py'):ast.parse((M/n).read_bytes())
+parents={**old['parents'],**component['parents'],job:dict(proof_sha256=sha(raw),archive_sha256=q['archive_sha256'],status=q['status'],exit_code=0)}
+for name,row in parents.items():
+    proof=(O/(name+'-verified.json')).read_bytes();assert proof==(O/(name+'-remote-verified.json')).read_bytes() and sha(proof)==row['proof_sha256'] and sha((O/(name+'-evidence.zip')).read_bytes())==row['archive_sha256']
+flags={**old['flags'],'GARNET_FP8_V_BATCH4_DECODE_CANONICAL':'1'}
+audit={**old['audit_dependencies'],**component['audit_dependencies'],'results/'+job+'-evidence.zip':q['archive_sha256']}
+archive_files={**{n:h for n,h in files.items() if n.startswith('Garnet/')},**old['checkpoints'],**{n:h for n,h in audit.items() if not n.endswith('.zip')},'results/study-ssd-engine-cache/receipt.json':files['results/study-ssd-engine-cache/receipt.json']}
+p={**old,'status':'B4_vs_B1_short_V_M16_prepared_GPU_unrun','files':files,'new_files':new,'archive_files':archive_files,'parents':parents,'flags':flags,'audit_dependencies':audit,'cuda_objects':component['cuda_objects'],'cache_before_sha256':component['cache_before_sha256'],'scope':'Original strict full-model short mixed/tail gate, fourfreshsource60/DLL841B1 oracles vs source73/DLLab248 B4,4096capacity,prefill32,decode4,prompt41/104/93/93,8IDs. BothGDN/Vdecodecanonical policies1 onlycandidate; originalmodelprobe computation/cast/quantizer/input/vision/head/pool/slots/state/finitevectors/reset/prefill/final/reset/all128components andrawexactCPython admission unchanged. No relaxed tolerance, no component/fullmodel substitution. Paired actualconnected Voff/on proof required, all70priorbaseline arrays exact andall4rows/twocases V/fullT4hidden nowfourB1exact, originalSDK/model/cachefailures remainfailed. ActualGDN>=48eachN plusV>=16N1024 initcalls andall7liveSDKattrs/M4-M16checks4MiB required. Original7fullgatecontrols+3fullroutecontrols. Guard1671+explicitownedsource/runtime/SDK/checkpoint/CMake/all34productionobjects/hostembedding/NVFP4head andprivatecache restoration. Full4K/MTP/805/HTTP/strongest refs/INT4/4B/performance/2x unqualified byshortpass.'}
+for key in ('candidate_base','candidate_bundle','candidate_bundle_sha256','candidate_source_files','candidate_library','candidate_library_sha256'):p[key]=component[key]
+p['reference_installed_files']={**files,**{'Garnet/'+n:h for n,h in p['reference_source_files'].items()}};p['candidate_installed_files']={**files,**{'Garnet/'+n:h for n,h in p['candidate_source_files'].items()}}
+assert len(p['candidate_source_files'])==73 and len(p['reference_source_files'])==60 and len(p['cuda_objects'])==34 and not any('probe_native_external_prefix_batch.py' in n for n in files)
+prep=E/'b4-v-m16-short-preparation.json';assert not prep.exists();prep.write_bytes(json.dumps(p,indent=2).encode())
+import run_logged as ledger
+ledger.source_identity=lambda:dict(scope='Explicit original fullmodel gate plus newV route CPU preparation; no protected bodies or native/GPU',owned_source_sha256=new);os.chdir(R)
+assert ledger.run([sys.executable,'-m','unittest','test2026.cuda.qwen38_5090.test_b4_b1_short_m16_gate','test2026.cuda.qwen38_5090.test_b4_v_m16_short_route'],W/'b4-v-m16-short-preparation-cpu-ledger','correctness','Original7 complete-state/vector/ID/corruption gates and3full-route controls; originalGDN proof retained, two componentVroutes insufficientfor64layer fullmodel/all16FA',[M/n for n in names]+[prep])==0
+deploy={n:R/n.removeprefix('Garnet/') for n in new};deploy[P+'evidence/b4-v-m16-short-preparation.json']=prep;target=W/'b4-v-m16-short-deployment.zip';assert not target.exists()
+with zipfile.ZipFile(target,'x',zipfile.ZIP_DEFLATED) as z:
+    for n,path in deploy.items():z.write(path,n)
+    z.writestr('deployment-manifest.json',json.dumps(dict(files={n:sha(path.read_bytes()) for n,path in deploy.items()},source_runtime_install_deferred=True),indent=2))
+receipt=dict(status=p['status'],files=len(deploy),deployment_sha256=sha(target.read_bytes()),bytes=target.stat().st_size,preparation_sha256=sha(prep.read_bytes()),candidate_library_sha256=p['candidate_library_sha256'],source_inventory=len(files));(W/'b4-v-m16-short-package.json').write_bytes(json.dumps(receipt,indent=2).encode());print(json.dumps(receipt))
