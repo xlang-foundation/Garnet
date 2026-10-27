@@ -1,0 +1,78 @@
+{
+  "derivations": [
+    {
+      "source": "probe_b4_full4k_exact.py",
+      "target": "probe_b4_mtp_prefill16_full4k.py",
+      "source_sha256": "68ee4339f77ae389d398ca5f62314293a899407ee5552c55d5348d71ab6ad2d3",
+      "target_sha256": "d6873cc1173cfc6c762be408fa7bcfba12017af05f81edc7f3bc12db25a72473",
+      "changes": [
+        {
+          "old": "Full4K raw capture: eight fresh B1 oracles then text/image/mixed B4; no timing.",
+          "new": "Future B4 MTP3/prefill16 raw full4K capture; require independent qualified B1 oracles.",
+          "count": 1
+        },
+        {
+          "old": "assert mode in ('reference','candidate') and not out.exists()",
+          "new": "assert mode=='candidate' and not out.exists()",
+          "count": 1
+        },
+        {
+          "old": "evidence/b4-full4k-exact-preparation.json",
+          "new": "evidence/b4-mtp-prefill16-full4k-preparation.json",
+          "count": 1
+        },
+        {
+          "old": "batch=1 if mode=='reference' else 4",
+          "new": "batch=4",
+          "count": 1
+        },
+        {
+          "old": "out.mkdir();decoder=vision=None",
+          "new": "out.mkdir();decoder=vision=session=None",
+          "count": 1
+        },
+        {
+          "old": "MTP_quality_qualified=False)",
+          "new": "MTP_quality_qualified=False,mtp_study_class='CUDAMTPPrefill16B4StudySession')",
+          "count": 1
+        },
+        {
+          "old": "tokenizer=garnet.tokenizer();tokenizer.open(str(checkpoint));suffix=",
+          "new": "from xModel.qwen35.vl_0_8b.cuda_mtp_prefill16_b4_study import CUDAMTPPrefill16B4StudySession\n        session=CUDAMTPPrefill16B4StudySession(decoder,str(checkpoint),[],3,head_candidates=0,prefix_replay=True,draft_chunk_size=4,draft_builder_workspace_bytes=256<<20)\n        report['mtp_memory']=session.memory_info();memory=report['mtp_memory'];assert (memory['physical_batch'],memory['target_prefill_chunk'],memory['draft_prefill_chunk'],memory['draft_decode_chunk'])==(4,32,16,4);assert memory['draft_decode_builder_workspace_bytes']==256<<20 and memory['draft_prefill_builder_workspace_bytes']==128<<20 and memory['extra_draft_engine_weights_duplicated'] is True\n        for graph in (memory['mtp_graph'],memory['prefill16_graph'],memory['wide_target_norm_graph']):assert graph is not None and all(graph[key]==0 for key in counts)\n        tokenizer=garnet.tokenizer();tokenizer.open(str(checkpoint));suffix=",
+          "count": 1
+        },
+        {
+          "old": "assert decoder.state_transaction is None and not decoder.poisoned",
+          "new": "assert decoder.state_transaction is None and not decoder.poisoned and not session.verifier.pending and session.slots==decoder.slots",
+          "count": 1
+        },
+        {
+          "old": "decoder.reset()",
+          "new": "session.reset()",
+          "count": 2
+        },
+        {
+          "old": "try:prediction=decoder.prefill_sequence(hidden,positions,lengths);",
+          "new": "try:session.prefill(hidden,positions,lengths,current);",
+          "count": 1
+        },
+        {
+          "old": "record['prefill_state']=snapshot('case'+str(group_index)+'-prefill');record['generated_ids']=[[] for _ in physical];save()\n            for step in range(128):\n                assert len(prediction)==batch\n                for row,token in enumerate(prediction):assert type(token) is int and 0<=token<248320;record['generated_ids'][row].append(token)\n                if step+1<128:prediction=decoder.step(prediction,[1]*batch,[[v]*3 for v in current]);current=[v+1 for v in current]",
+          "new": "record['prefill_state']=snapshot('case'+str(group_index)+'-prefill');save()\n            result=session.generate(128);assert result['stop_token_ids']==[None]*4 and result['sampled_tokens_including_stop']==[128]*4\n            record['generated_ids']=result['generated_token_ids'];assert len(record['generated_ids'])==4 and all(len(ids)==128 and all(type(token) is int and 0<=token<248320 for token in ids) for ids in record['generated_ids'])\n            record['speculative_metrics']=result['speculative_metrics'];assert record['speculative_metrics']['target_verification_calls']>0 and record['speculative_metrics']['proposed_draft_tokens']>0 and record['speculative_metrics']['mtp_prefill_calls']==249",
+          "count": 1
+        },
+        {
+          "old": "B4_FULL4K_COLLECTED",
+          "new": "B4_MTP_PREFILL16_FULL4K_COLLECTED",
+          "count": 1
+        },
+        {
+          "old": "        if vision is not None:vision.close()",
+          "new": "        if session is not None:session.close()\n        if vision is not None:vision.close()",
+          "count": 1
+        }
+      ]
+    }
+  ],
+  "scope": "FutureB4MTP3/T16prefill rawcapture only, GPUunrun/undeployed. Samequalifiedtarget79/DLL2bafed modelconstruct/weights/vision/tokenizer/PagedPromptRows/128state-finitevectors snapshots/corpus3groups. Swapordinaryloop for explicitlyguarded newB4study MTPsession, stops[] tohonorpinnedignoreEOS, fullvocabhead0/prefixreplay/T4decode256MiB/extraprefill16at128MiB. Require actualMTPgraphmetadata/249prefillcalls/nonzeroproposals+targetverification andtarget/draftslots agreement; targetcomputedoutputs muststillmatch8independentB1full4Koracles viaoriginalexactgate. No greedyfallback, nativekernel orglobalMTPpolicychanged. ModuleGPUconstructor andalltargetstate/tokens/VRAM/MTPprefix/repeats/quality/HTTP/performance unqualified untilfuturepairedfull4Kpass anddedicatedMTPowner."
+}
