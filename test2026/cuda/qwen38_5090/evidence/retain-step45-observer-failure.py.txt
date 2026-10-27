@@ -1,0 +1,44 @@
+from pathlib import Path
+import hashlib,json,zipfile
+W=Path(__file__).resolve().parent;O=W.parent/'outputs';R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';E=M/'evidence';sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest();owned=[];retained={}
+def keep(name,raw):
+    p=E/name;assert not p.exists();p.write_bytes(raw);owned.append(p);retained[name]=sha(p)
+J='step45-layer-boundary-attempt1';proof=O/(J+'-verified.json');q=json.loads(proof.read_bytes());assert proof.read_bytes()==(O/(J+'-remote-verified.json')).read_bytes() and q['exit_code']==1 and q['analysis'] is None and q['stage_exit_codes']=={'cpu':0,'reference':1}
+archive=O/(J+'-evidence.zip');assert sha(archive)==q['archive_sha256']
+for name in (proof.name,J+'-remote-verified.json','Garnet-Step45-Layer-Boundary-Progress.json'):keep(name,(O/name).read_bytes())
+with zipfile.ZipFile(archive) as z:
+    base='results/'+J+'/';mf=json.loads(z.read('evidence-manifest.json'));keep('step45-layer-boundary-model1-manifest.json',z.read('evidence-manifest.json'))
+    for name in mf['files']:
+        if name.startswith(base) and name.endswith('.json'):keep('step45-layer-boundary-model1-'+name.removeprefix(base).replace('/','-'),z.read(name))
+    log=z.read(base+'reference-ledger/commands.log');assert b'Qwen3.5 variadic packed concatenation profile invalid' in log
+    for phase in ('cpu','reference'):
+        for ext in ('log','jsonl'):keep('step45-layer-boundary-model1-'+phase+'-commands.'+ext,z.read(base+phase+'-ledger/commands.'+ext))
+for name in ('commands.log','commands.jsonl'):keep('step45-layer-boundary-model1-local-replay-'+name,(W/'step45-layer-boundary-local-replay'/name).read_bytes())
+for name in ('postprocess-step45-layer-boundary.py','replay-step45-layer-boundary.py',Path(__file__).name):keep(name+'.txt',(W/name).read_bytes())
+# Preserve the unused installer-v1 and the corrected installer-v2 separately.
+owned.append(E/'install-step45-layer-boundary-v2.py.txt')
+keep('step45-layer-boundary-installer-correction.json',json.dumps({'unused_installer_v1_sha256':sha(W/'install-step45-layer-boundary.py'),'executed_installer_v2_sha256':sha(W/'install-step45-layer-boundary-v2.py'),'only_change':'Read step45-layer-boundary-preparation.json rather than inherited b4-k35-coordinate-trajectory-preparation.json','v1_never_executed':True,'remote_install_exit_code':0,'deployed_package_unchanged':True},indent=2).encode())
+keep('step45-layer-boundary-model1-retention.json',json.dumps({'status':'native_concat_guard_failure_retained_without_layer_interpretation','archive_sha256':sha(archive),'archive_bytes':archive.stat().st_size,'proof_sha256':sha(proof),'retained_sha256':retained,'CPU_controls':66,'paired_replays_identical':True,'all1877_owned_files_runtime_SDK_config_index_CMake_all34_baseline_restored':True,'model_or_performance_qualified':False,'two_times_target_achieved':False},indent=2).encode())
+entry=('\n\n2026-10-27 step44/45 all-layer observer attempt1 FAILED at native graph '
+       'construction in reference phase: Qwen3.5 variadic packed concatenation '
+       'profile invalid. 66CPU passed; no layer observations or model equivalence '
+       'result produced, candidate phase never launched. Native existing parts '
+       'guard allows at most128 additional parts. Retained-input model primary '
+       'has113 total parts (hidden1,state64,linear retained payload48); appending '
+       '64observations inone operation exceedsguard. Keep originalguard unchanged. '
+       'Next private observer should separately join113primary and64observations '
+       'then join2, preserving exact primary-prefix/suffix order and all arithmetic; '
+       'same-profile primary/cache/timeline admission still required before '
+       'interpreting anything. Remote/local raw failure replays byte-identical '
+       'proof '+sha(proof)+', archive '+sha(archive)+' ('+str(archive.stat().st_size)+'B). '
+       'All1877ownedfiles/runtime/SDK/config+index/CMake/current34objects/baselineDLL '
+       'restored; fixedCSSDnonces retired. Original unused installer-v1 referenced '
+       'the inherited preparation filename; corrected-v2 only fixedthatfilename '
+       'before execution and installed the unchangedpackage successfully. Both '
+       'installer sources/hashes retained. Full4K/cache62/K-fourM4 failures remain '
+       'failures; no new benchmark or2xclaim.\n').encode()
+for name in ('docs/research/qwen38-5090-development-log.md','docs/research/qwen38-5090-implementation-task.md'):
+    p=R/name;before=p.read_bytes();assert b'step44/45 all-layer observer attempt1 FAILED' not in before
+    with p.open('ab') as f:f.write(entry)
+    assert p.read_bytes()==before+entry;owned.append(p)
+(W/'step45-observer-failure-stage-paths.bin').write_bytes(b''.join(p.relative_to(R).as_posix().encode()+b'\0' for p in owned));print(json.dumps({'stage_paths':len(owned),'proof_sha256':sha(proof),'no_layer_interpretation':True}))
