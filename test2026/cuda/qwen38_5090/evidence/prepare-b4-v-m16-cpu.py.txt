@@ -1,0 +1,36 @@
+from pathlib import Path
+import ast,hashlib,json,os,sys,zipfile
+W=Path(__file__).resolve().parent;O=W.parent/'outputs';R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';E=M/'evidence';P='Garnet/test2026/cuda/qwen38_5090/';sha=lambda raw:hashlib.sha256(raw).hexdigest();sys.path[:0]=[str(R),str(M)]
+from test2026.cuda.qwen38_5090.b4_v_m16_source import sources
+old=json.loads((E/'connected-fa-value-v4-preparation.json').read_bytes());oldcpu=json.loads((E/'b4-decode-m16-cpu-preparation.json').read_bytes());_,candidate,record=sources()
+names=['b4_v_m16_source.py','test_b4_v_m16_source.py','probe_b4_v_m16_profile_cpu.cpp','probe_b4_v_m16_factory_cpu.cpp','probe_b4_v_m16_plugin_cpu.cpp','build_b4_v_m16_profile_cpu.bat','build_b4_v_m16_factory_cpu.bat','build_b4_v_m16_plugin_cpu.bat','run_b4_v_m16_factory_cpu.py','b4_v_m16_plugin_cpu_stubs.cpp','run_b4_v_m16_cpu.py','verify_b4_v_m16_cpu.py','evidence/b4-v-m16-source-derivation.json','evidence/b4-v-m16-CPU-method-derivation.json']+['native_b4_v_m16_candidate/'+Path(n).name for n in record['modified_files']+record['new_files']]
+assert len(names)==len(set(names))==21
+methods={P+n:sha((M/n).read_bytes()) for n in names}
+assert all(old['files'][n]==h for n,h in oldcpu['files'].items() if n in old['files'])
+files={**oldcpu['files'],**old['files'],**methods}
+for item in json.loads((E/'b4-v-m16-CPU-method-derivation.json').read_bytes())['derivations']:
+    raw=(M/item['source']).read_bytes();assert sha(raw)==item['source_sha256']
+    for change in item['changes']:assert raw.count(change['old'].encode())==change['count'];raw=raw.replace(change['old'].encode(),change['new'].encode())
+    assert raw==(M/item['target']).read_bytes() and sha(raw)==item['target_sha256']
+compile_inputs={n:files[n] for n in oldcpu['compile_inputs']}
+for n in ['modelopt_fp8_gdn_m16_plugin.cpp','modelopt_fp8_gdn_m16_plugin.h','modelopt_fp8_gdn_m16_canonical.h']:
+    name=P+'native_b4_decode_m16_candidate/'+n;compile_inputs[name]=files[name]
+parents=record['parents']
+for job,row in parents.items():
+    raw=(O/(job+'-verified.json')).read_bytes();assert raw==(O/(job+'-remote-verified.json')).read_bytes() and sha(raw)==row['proof_sha256']
+    assert sha((O/(job+'-evidence.zip')).read_bytes())==row['archive_sha256']
+p={k:old[k] for k in ('runtime','environment','checkpoints','cuda_objects','cache_before_sha256')};p.update({k:oldcpu[k] for k in ('vcvars','gpu_uuid')})
+bundle=W/'b4-v-m16-source.zip'
+p.update(status='B4T4_V_M16_CPU_prepared_unrun',files=files,methods=methods,compile_inputs=compile_inputs,parents=parents,candidate_files=record['candidate_files'],bundle='results/b4-v-m16-source.zip',bundle_sha256=sha(bundle.read_bytes()),scope='Defaultoff73-source exact16 FA V projections physicalB4T4/M16,N1024,K5120; all67 parent source bytes retained exceptdispatch; originalCUDA/genericFP8/GDN/NVFP4 math unchanged. LiveM4 SDKopaque7attrs andM4/M16 AlgoChecks within4MiB. Private CPU-only remote compile/execution:12Python,1209profile cases16selected,212factory fault/trace/runtime/device/geometry/opaque-retention cases, actualV+oldGDN+genericTRTplugin crosswire/descriptor/scale/format/initialize tests withGPUstubs. No nativeDLLbuild/install, GPUmath/model or performance admission. OriginalSDK andfullmodel failures retained, faithfulconnectedbaseline passed. All source/runtime/environment/checkpoint/all34productionCUDAobjects/CMake remain unchanged. Productionfrontendpolicycache62 stillunqualified. Originalfullmodel/finitepackedstate/tokens/reset/repeats/MTP/805/full4kHTTP correctness beforeperformance; strongest tuned/MTPrefs, INT4/4B and2x goal open.')
+prep=E/'b4-v-m16-cpu-preparation.json';assert not prep.exists();prep.write_bytes(json.dumps(p,indent=2).encode())
+for name in names:
+    if name.endswith('.py'):ast.parse((M/name).read_bytes())
+import run_logged as ledger
+ledger.source_identity=lambda:dict(scope='Explicit owned V M16 CPU preparation; protected unrelated bodies excluded',owned_source_sha256=methods);os.chdir(R)
+assert ledger.run([sys.executable,'-m','unittest','test2026.cuda.qwen38_5090.test_b4_v_m16_source','test2026.cuda.qwen38_5090.test_decode_fp8_sdk_control','test2026.cuda.qwen38_5090.test_prefill128_fp8_projection'],W/'b4-v-m16-local-cpu-ledger','correctness','Four immutable73-source/failed-lineage controls and eight unchanged independent conversion and fullword oracle controls; no localnativecompile orGPU',[M/n for n in names]+[prep])==0
+deploy={n:R/n.removeprefix('Garnet/') for n in methods};deploy[P+'evidence/b4-v-m16-cpu-preparation.json']=prep
+target=W/'b4-v-m16-cpu-deployment.zip';assert not target.exists()
+with zipfile.ZipFile(target,'x',zipfile.ZIP_DEFLATED) as z:
+    for n,path in deploy.items():z.write(path,n)
+    z.writestr('deployment-manifest.json',json.dumps(dict(files={n:sha(path.read_bytes()) for n,path in deploy.items()}),indent=2))
+receipt=dict(status=p['status'],files=len(deploy),deployment_sha256=sha(target.read_bytes()),bytes=target.stat().st_size,preparation_sha256=sha(prep.read_bytes()),bundle_sha256=p['bundle_sha256'],source_inventory=len(files));(W/'b4-v-m16-cpu-package.json').write_bytes(json.dumps(receipt,indent=2).encode());print(json.dumps(receipt))

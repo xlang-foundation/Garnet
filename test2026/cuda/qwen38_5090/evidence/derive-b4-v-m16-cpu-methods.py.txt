@@ -1,0 +1,70 @@
+from pathlib import Path
+import hashlib,json
+R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';E=M/'evidence';records=[];sha=lambda b:hashlib.sha256(b).hexdigest()
+def derive(old,new,steps):
+    original=(M/old).read_bytes();raw=original;changes=[]
+    for a,b,count in steps:
+        if b'\r\n' in original:a=a.replace('\n','\r\n');b=b.replace('\n','\r\n')
+        assert raw.count(a.encode())==count,(old,a,raw.count(a.encode()));raw=raw.replace(a.encode(),b.encode());changes.append(dict(old=a,new=b,count=count))
+    target=M/new
+    if target.exists():assert target.read_bytes()==raw,target
+    else:target.write_bytes(raw)
+    records.append(dict(source=old,target=new,source_sha256=sha(original),target_sha256=sha(raw),changes=changes))
+def common(name):
+    raw=(M/name).read_text();steps=[]
+    for a,b in [('b4_decode_m16','b4_v_m16'),('b4-decode-m16','b4-v-m16'),('modelopt_fp8_gdn_m16','modelopt_fp8_v_m16'),('ModelOptFP8GDNM16','ModelOptFP8VM16'),('GDNM16','VM16'),('GDN_M16','V_M16')]:
+        n=raw.count(a)
+        if n:steps.append((a,b,n));raw=raw.replace(a,b)
+    return steps,raw
+for suffix in ('profile','factory','plugin'):
+    n='build_b4_decode_m16_'+suffix+'_cpu.bat';steps,raw=common(n)
+    if suffix=='plugin':
+        steps.append((' /Fe"contract.exe"',' "%METHODS%\\native_b4_decode_m16_candidate\\modelopt_fp8_gdn_m16_plugin.cpp" /Fe"contract.exe"',1))
+        steps.append(('/I"%CANDIDATE%"','/I"%CANDIDATE%" /I"%METHODS%\\native_b4_decode_m16_candidate"',1))
+    derive(n,n.replace('b4_decode_m16','b4_v_m16'),steps)
+
+n='probe_b4_decode_m16_factory_cpu.cpp';steps,raw=common(n)
+steps += [('mode=="run_wrong_device"&&calls>24','(mode=="run_wrong_device"||mode=="cross_device")&&calls>24',1),
+('if(mode=="cross_geometry"){\n            auto other=Garnet::CreateModelOptFP8VM16Context(geometry==10240?6144:10240);Garnet::ModelOptFP8VM16Info second;\n            if(!context||!other||other==context||!Garnet::GetModelOptFP8VM16Info(other,second)||second.rows==geometry)return 5;\n        }',
+ 'if(mode=="unsupported_geometry_isolation"){\n            auto other=Garnet::CreateModelOptFP8VM16Context(6144);Garnet::ModelOptFP8VM16Info second;\n            if(!context||other||Garnet::GetModelOptFP8VM16Info(other,second))return 5;\n        }\n        if(mode=="cross_device"){\n            auto other=Garnet::CreateModelOptFP8VM16Context(geometry);Garnet::ModelOptFP8VM16Info second;\n            if(!context||!other||other==context||!Garnet::GetModelOptFP8VM16Info(other,second)||second.rows!=geometry||second.device!=1||info.device!=0)return 6;\n        }',1),
+('n=geometry==10240?6144:10240','n=6144',1),
+('infoOkay=Garnet::GetModelOptFP8VM16Info(context,info)&&info.rows==geometry;', 'infoOkay=Garnet::GetModelOptFP8VM16Info(context,info)&&info.rows==geometry;\n        if(infoOkay){cublasLtMatmulAlgo_t live{};expected(live);if(mode=="opaque")live.bytes[63]^=1;if(std::memcmp(&live,&info.opaque,sizeof(live)))return 7;}',1)]
+derive(n,n.replace('b4_decode_m16','b4_v_m16'),steps)
+n='run_b4_decode_m16_factory_cpu.py';steps,raw=common(n)
+# Apply deliberately one predicate at a time so two-context cases remain distinct.
+steps += [("(2 if mode=='cross_geometry' else 1)","(2 if mode=='cross_device' else 1)",1),
+("'cross_geometry'","'unsupported_geometry_isolation','cross_device'",3),
+('geometry in (10240,6144)','geometry in (1024,)',2),('geometry not in (10240,6144)','geometry not in (1024,)',1),
+("if i==2 and mode=='cached':", "if i==2 and mode=='unsupported_geometry_isolation':assert group[-1]['name']=='empty' and not any(r['event']=='api' for r in group);continue\n            if i==2 and mode=='cached':",1),
+('for g in (10240,6144)','for g in (1024,)',3),
+('for g in (0,-1,1,5120,12288)','for g in (0,-1,1,5120,12288,6144,10240)',1),
+('Both actual GDN M16 factory geometries','Actual V M16 factory geometry and device isolation',1)]
+derive(n,n.replace('b4_decode_m16','b4_v_m16'),steps)
+n='b4_decode_m16_plugin_cpu_stubs.cpp';steps,raw=common(n)
+steps += [('rows!=10240&&rows!=6144','rows!=1024',1),
+('#include "modelopt_fp8_v_m16_canonical.h"','#include "modelopt_fp8_v_m16_canonical.h"\n#include "modelopt_fp8_gdn_m16_canonical.h"',1),
+('std::shared_ptr<void> CreateModelOptNVFP4Context()',
+ 'struct ModelOptFP8GDNM16Context{};\nstd::shared_ptr<ModelOptFP8GDNM16Context> CreateModelOptFP8GDNM16Context(int){++unexpected;return {};}\nbool GetModelOptFP8GDNM16Info(const std::shared_ptr<ModelOptFP8GDNM16Context>&,ModelOptFP8GDNM16Info&) noexcept{++unexpected;return false;}\ncublasStatus_t RunModelOptFP8GDNM16Matmul(const std::shared_ptr<ModelOptFP8GDNM16Context>&,const void*,const void*,void*,int,int,int,float,void*,size_t,cudaStream_t) noexcept{++unexpected;return CUBLAS_STATUS_NOT_INITIALIZED;}\nstd::shared_ptr<void> CreateModelOptNVFP4Context()',1)]
+derive(n,n.replace('b4_decode_m16','b4_v_m16'),steps)
+n='probe_b4_decode_m16_plugin_cpu.cpp';steps,raw=common(n)
+steps += [('#include "modelopt_fp8_v_m16_plugin.h"','#include "modelopt_fp8_v_m16_plugin.h"\n#include "modelopt_fp8_gdn_m16_plugin.h"',1),
+('EnsureModelOptFP8PluginRegistered()&&EnsureModelOptFP8VM16PluginRegistered()','EnsureModelOptFP8PluginRegistered()&&EnsureModelOptFP8GDNM16PluginRegistered()&&EnsureModelOptFP8VM16PluginRegistered()',1),
+('for(int n:{10240,6144})','for(int n:{1024})',1),('0x47313634u','0x56313634u',1),
+('0u,1u,16u,128u,5120u,12288u,0xffffffffu','0u,1u,16u,128u,5120u,12288u,6144u,10240u,0xffffffffu',1),
+('for(int badN:{0,-1,1,5120,12288,65536})','for(int badN:{0,-1,1,5120,12288,65536,6144,10240})',1),
+('        for(int badN:', '        auto* gdnCreator=registry->getPluginCreator("GarnetModelOptFP8GDNM16Canonical","1","");require(gdnCreator,"Missing old GDN creator");\n        for(int gdnN:{10240,6144}){ModelOptFP8GDNM16Plugin gdn(gdnN,5120,.5f,.25f);std::array<uint32_t,5> foreign{};gdn.serialize(foreign.data());require(foreign[4]==0x47313634u,"Old GDN wire changed");reject(foreign.data(),20);++cross;auto* bad=gdnCreator->deserializePlugin("V",wire.data(),20);require(!bad,"GDN accepted V wire");++cross;}\n        for(int badN:',1),
+('wires==82&&constructors==44&&descriptors==92&&formats==18&&cross==6&&initializations==14&&VM16CPUFactoryCalls()==10','wires==45&&constructors==24&&descriptors==46&&formats==9&&cross==7&&initializations==7&&VM16CPUFactoryCalls()==5',1)]
+derive(n,n.replace('b4_decode_m16','b4_v_m16'),steps)
+
+n='run_b4_decode_m16_cpu.py';steps,raw=common(n)
+steps += [('len(old)==61 and len(candidate)==67','len(old)==67 and len(candidate)==73',1),
+('Three immutable67-source/lineage/corruption controls plus eight unchanged SDK replay and independent conversion controls','Four immutable73-source/failed-lineage/corruption controls plus eight unchanged SDK replay and independent conversion controls',1),
+('Both actual factory geometries;402CPU','Actual V factory;212CPU',1)]
+derive(n,n.replace('b4_decode_m16','b4_v_m16'),steps)
+n='verify_b4_decode_m16_cpu.py';steps,raw=common(n)
+steps += [('len(candidate)==67','len(candidate)==73',1),('==67 and all(source.read','==73 and all(source.read',1),
+('Ran 11 tests','Ran 12 tests',1),('cases=437,selected=96,rejected=341','cases=1209,selected=16,rejected=1193',1),
+('==402','==212',1),('==93','==94',1),('factory_count=402','factory_count=212',1),
+('wire_rejections=82,constructor_rejections=44,descriptor_rejections=92,format_rejections=18,cross_wire_rejections=6,initialize_calls=14,factory_calls=10','wire_rejections=45,constructor_rejections=24,descriptor_rejections=46,format_rejections=9,cross_wire_rejections=7,initialize_calls=7,factory_calls=5',1)]
+derive(n,n.replace('b4_decode_m16','b4_v_m16'),steps)
+target=E/'b4-v-m16-CPU-method-derivation.json';assert not target.exists();target.write_bytes(json.dumps(dict(derivations=records,scope='Separate V-only CPU contracts; actual native compile/execution remote only; no model or numerical admission'),indent=2).encode());print(json.dumps(dict(derived_files=len(records))))

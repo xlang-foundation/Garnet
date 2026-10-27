@@ -1,0 +1,19 @@
+from pathlib import Path
+import hashlib,json,os,sys,zipfile
+ROOT=Path('D:/CantorAI/5090-study-20261023');M=ROOT/'Garnet/test2026/cuda/qwen38_5090';JOB='b4-v-m16-cpu-attempt1';sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest();sys.path[:0]=[str(M),str(ROOT/'Garnet')]
+import run_logged as ledger
+from run_bf16_low_batch_native_build import idle
+w=json.loads((ROOT/'results'/JOB/'workflow.json').read_bytes());assert type(w['exit_code']) is int and w['cleanup_finished'];idle()
+paths=[M/'verify_b4_v_m16_cpu.py',M/'b4_v_m16_source.py',M/'run_b4_v_m16_factory_cpu.py',Path(__file__)];pins={n.relative_to(ROOT).as_posix():sha(n) for n in paths};ledger.source_identity=lambda:dict(scope='Explicit terminal nativeCPU contracts replay; no model/GPU/SDKmath or protected body reads',owned_source_sha256=pins);os.chdir(ROOT/'Garnet');out=ROOT/'results/b4-v-m16-cpu-postprocess';assert not out.exists();out.mkdir();code=1
+try:
+    code=ledger.run([sys.executable,str(M/'verify_b4_v_m16_cpu.py'),'--proofs',str(ROOT/'results')],out/'replay-ledger','correctness','Independent raw nativeCPU contract/failure replay, source73composition,212factoryfaults if complete, exact source/runtime/SDK/all34objects/CMakeCache preservation',paths+[ROOT/'results'/(JOB+'-evidence.zip')]);assert code==0
+finally:
+    (out/'postprocess.json').write_bytes(json.dumps(dict(exit_code=code,method_sha256=pins,no_GPU_or_model_rerun=True),indent=2).encode());files={n.relative_to(ROOT).as_posix():n for n in out.rglob('*') if n.is_file()}
+    for n in paths+[ROOT/'results'/(JOB+'-verified.json'),ROOT/'results/b4-v-m16-cpu-install.json']:
+        if n.exists():files[n.relative_to(ROOT).as_posix()]=n
+    target=ROOT/'results/b4-v-m16-cpu-closure-assets.zip';assert not target.exists()
+    with zipfile.ZipFile(target,'x',zipfile.ZIP_DEFLATED) as z:
+        for name,n in files.items():z.write(n,name)
+        z.writestr('manifest.json',json.dumps(dict(files={name:sha(n) for name,n in files.items()},original_archive_sha256=sha(ROOT/'results'/(JOB+'-evidence.zip')),GPU_or_model_rerun=False),indent=2))
+    receipt=dict(status='B4T4_V_M16_CPU_postprocess_terminal',exit_code=code,closure_sha256=sha(target),closure_bytes=target.stat().st_size,files=len(files));(ROOT/'results/b4-v-m16-cpu-closure-receipt.json').write_bytes(json.dumps(receipt,indent=2).encode());print(json.dumps(receipt),flush=True)
+raise SystemExit(code)
