@@ -1,0 +1,106 @@
+"""Report retained measurements and correctness progress; no GPU/model execution."""
+from pathlib import Path
+import hashlib
+import json
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+import numpy as np
+
+O = Path(__file__).resolve().parent.parent / 'outputs'
+S = 'Garnet-O128-Repeated-vLLM-SGLang-4K-v2'
+sha = lambda p: hashlib.sha256(p.read_bytes()).hexdigest()
+receipt = json.loads((O / (S + '-Receipt.json')).read_bytes())
+assert sha(O / (S + '-Data.json')) == receipt['data_sha256']
+for name, digest in receipt['artifacts'].items():
+    assert sha(O / name) == digest
+d = json.loads((O / (S + '-Data.json')).read_bytes())
+component_path = O / 'Garnet-V-M16-Connected-Progress.json'
+model_path = O / 'Garnet-B4-QK-M16-Model-Progress.json'
+component = json.loads(component_path.read_bytes())
+model = json.loads(model_path.read_bytes())
+assert all(r['on_V_BF16_word_differences'] == 0 and r['on_fullT4_hidden_F32_differences_by_repeat'] == [0, 0] for r in component['rows'])
+assert len(component['rows']) == 8
+assert sha(O/'v-m16-connected-attempt1-verified.json') == component['proof_sha256']
+assert sha(O/'v-m16-connected-attempt1-evidence.zip') == component['archive_sha256']
+assert sha(O/'b4-qk-m16-short-attempt1-verified.json') == model['proofs']['after']['proof_sha256']
+assert sha(O/'b4-qk-m16-short-attempt1-evidence.zip') == model['proofs']['after']['archive_sha256']
+assert component['full_model_or_quality_or_performance_qualified'] is False
+assert model['proofs']['after']['exit_code'] == 0
+assert all(r['after_different_state_components']==0 and r['all_8_generated_IDs_exact'] for r in model['rows'])
+assert d['two_times_target_achieved'] is False
+cpu_path = Path('D:/CantorAI/work/qwen38-5090/test2026/cuda/qwen38_5090/evidence/b4-full4k-exact-gate-cpu-preparation.json')
+cpu_log = cpu_path.with_name('b4-full4k-exact-gate-cpu-commands.jsonl')
+cpu = json.loads(cpu_path.read_bytes())
+assert cpu['CPU_controls']==11 and cpu['GPU_or_model_or_performance_admitted'] is False
+cpu_events=[json.loads(line) for line in cpu_log.read_bytes().splitlines()]
+assert len(cpu_events)==2 and cpu_events[-1]['exit_code']==0 and cpu_events[0]['source']['owned_source_sha256']==cpu_events[1]['source_after']['owned_source_sha256']
+
+
+plt.rcParams.update({'font.family': 'DejaVu Sans', 'font.size': 11,
+                     'axes.spines.top': False, 'axes.spines.right': False})
+fig = plt.figure(figsize=(16, 9.8), facecolor='#f5f8fc')
+gs = fig.add_gridspec(2, 3, left=.065, right=.97, bottom=.16, top=.80,
+                      height_ratios=[1.2, .95], hspace=.65, wspace=.30)
+fig.text(.065, .945, 'Garnet RTX 5090: progress toward the 2x target', fontsize=23, weight='bold')
+fig.text(.065, .904, 'Qwen3.8-27B mixed NVFP4/FP8 | 3968 input + 128 output tokens | latest verified evidence: 27 Oct 2026', color='#45576e')
+fig.text(.065, .858, 'Measured serving results below are unchanged by the latest correctness work.', fontsize=12, color='#a34c1d')
+cs = [1, 2, 4, 8]
+specs = [('Decode speed / request', 'decode_over_best_ordinary'),
+         ('Total output throughput', 'throughput_over_best_ordinary'),
+         ('First-token speed (reference TTFT / Garnet TTFT)', 'TTFT_over_best_ordinary')]
+comparisons = {r['cohort']: r for r in d['comparisons']}
+for col, (title, field) in enumerate(specs):
+    ax = fig.add_subplot(gs[0, col])
+    for case, color, offset in [('text', '#366bd1', -.17), ('image', '#16856b', .17)]:
+        values = [comparisons[f'{case}-c{c}'][field] for c in cs]
+        if field == 'TTFT_over_best_ordinary':
+            values = [1/v for v in values]
+        x = np.arange(4) + offset
+        ax.bar(x, values, width=.31, color=color, label=case.title())
+        for xx, value in zip(x, values):
+            ax.text(xx, value + (.12 if case == 'image' else .035), f'{value:.2f}x', ha='center', fontsize=9)
+    ax.axhline(1, color='#66778a', lw=1, ls=':')
+    ax.axhline(2, color='#c44b45', lw=1.5, ls='--')
+    ax.text(3.52, 2.32, '2x target (red line)', ha='right', fontsize=9, color='#a8322c')
+    ax.set_ylim(0, 2.45)
+    ax.set_xticks(range(4), [str(c) for c in cs])
+    ax.set_xlabel('Concurrent clients')
+    ax.set_title(title, fontsize=11, loc='left', pad=13)
+    ax.set_ylabel('Ratio vs best ordinary reference')
+    ax.grid(axis='y', alpha=.15)
+    ax.set_axisbelow(True)
+    if col == 0:
+        ax.legend(frameon=False, loc='upper left', fontsize=10)
+
+ax = fig.add_subplot(gs[1, :]); ax.axis('off')
+ax.text(0, 1.05, 'Engineering progress — correctness gates, not speed estimates', fontsize=15, weight='bold', transform=ax.transAxes)
+rows = [
+    ['Repeated native 4K HTTP benchmark', 'DONE', '3 native trials; 192 measured requests; ordinary reference trials retained'],
+    ['Batch-4 V projection correction', 'COMPONENT PASS', 'Both tested layer/step cases: 8/8 V arrays and 16/16 hidden arrays exact'],
+    ['Batch-4 full-model equivalence', 'SHORT PASS', '4/4 rows: all 8 IDs, 128 state components and full finite vectors exact'],
+    ['Full 4K / MTP / quality / HTTP', 'OPEN', '4K comparator: 11 CPU controls pass; 8 B1 oracles / 3 B4 groups; GPU unrun'],
+    ['Overall >=2x decode AND throughput', 'NOT ACHIEVED', 'Strongest repeated tuned/MTP references, matched INT4 and 4B still pending'],
+]
+table = ax.table(cellText=rows, colWidths=[.27, .15, .58], cellLoc='left', bbox=[0, -.11, 1, 1.02])
+table.auto_set_font_size(False); table.set_fontsize(10)
+for (row, col), cell in table.get_celld().items():
+    cell.set_edgecolor('#dce4ee'); cell.set_linewidth(.7)
+    cell.set_facecolor('white' if row % 2 == 0 else '#ecf1f7')
+    if col == 1:
+        cell.set_text_props(weight='bold', color='#16856b' if row < 3 else '#a34c1d')
+fig.text(.065, .075, 'Each ratio uses the better ordinary vLLM/SGLang result for that metric. Higher is better; TTFT ratio 2x means half the wait.', fontsize=10, color='#45576e')
+fig.text(.065, .047, 'Native: Windows, MTP3, physical batch 1 queues clients, median of 3 trials. References: WSL, ordinary decoding, 1 trial each, up to 8 running.', fontsize=10, color='#45576e')
+fig.text(.065, .019, 'Not a strongest-tuned-backend result. Cross-engine full-output equivalence is unproven. No new benchmark was run to draw this report.', fontsize=10, color='#a34c1d')
+stem = 'Garnet-Progress-Comparison-2026-10-27-v3'
+artifacts = {}
+for ext in ('png', 'svg'):
+    p = O / (stem + '.' + ext)
+    fig.savefig(p, dpi=160, facecolor=fig.get_facecolor())
+    artifacts[p.name] = sha(p)
+plt.close(fig)
+record = {'input_sha256': {p.name: sha(p) for p in [O/(S+'-Data.json'), component_path, model_path, cpu_path, cpu_log]},
+          'generator_sha256': sha(Path(__file__)), 'artifacts': artifacts, 'new_benchmark_executed': False,
+          'overall_two_times_target_achieved': False}
+(O/(stem+'-Receipt.json')).write_text(json.dumps(record, indent=2), encoding='utf-8')
+print(json.dumps(record, indent=2))

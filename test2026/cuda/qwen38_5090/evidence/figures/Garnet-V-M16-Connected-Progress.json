@@ -1,0 +1,297 @@
+{
+  "status": "paired_actual_V_M16_component_off_on_exact_only",
+  "proof_sha256": "c4d6d1cf3765e9b7336c311262fc190b4f887ad595c88cc28fb1123b608b8926",
+  "archive_sha256": "7448bd98108ebb89fbb97fe0825b99dc67a577d487aec48b9b3f02f7c37a3940",
+  "rows": [
+    {
+      "label": "v3",
+      "layer": 3,
+      "actual_decode_step": 5,
+      "physical_row": 0,
+      "off_V_BF16_word_differences": 1,
+      "on_V_BF16_word_differences": 0,
+      "off_fullT4_hidden_F32_differences_by_repeat": [
+        4831,
+        4831
+      ],
+      "on_fullT4_hidden_F32_differences_by_repeat": [
+        0,
+        0
+      ]
+    },
+    {
+      "label": "v3",
+      "layer": 3,
+      "actual_decode_step": 5,
+      "physical_row": 1,
+      "off_V_BF16_word_differences": 0,
+      "on_V_BF16_word_differences": 0,
+      "off_fullT4_hidden_F32_differences_by_repeat": [
+        0,
+        0
+      ],
+      "on_fullT4_hidden_F32_differences_by_repeat": [
+        0,
+        0
+      ]
+    },
+    {
+      "label": "v3",
+      "layer": 3,
+      "actual_decode_step": 5,
+      "physical_row": 2,
+      "off_V_BF16_word_differences": 0,
+      "on_V_BF16_word_differences": 0,
+      "off_fullT4_hidden_F32_differences_by_repeat": [
+        0,
+        0
+      ],
+      "on_fullT4_hidden_F32_differences_by_repeat": [
+        0,
+        0
+      ]
+    },
+    {
+      "label": "v3",
+      "layer": 3,
+      "actual_decode_step": 5,
+      "physical_row": 3,
+      "off_V_BF16_word_differences": 0,
+      "on_V_BF16_word_differences": 0,
+      "off_fullT4_hidden_F32_differences_by_repeat": [
+        0,
+        0
+      ],
+      "on_fullT4_hidden_F32_differences_by_repeat": [
+        0,
+        0
+      ]
+    },
+    {
+      "label": "v11",
+      "layer": 11,
+      "actual_decode_step": 1,
+      "physical_row": 0,
+      "off_V_BF16_word_differences": 0,
+      "on_V_BF16_word_differences": 0,
+      "off_fullT4_hidden_F32_differences_by_repeat": [
+        0,
+        0
+      ],
+      "on_fullT4_hidden_F32_differences_by_repeat": [
+        0,
+        0
+      ]
+    },
+    {
+      "label": "v11",
+      "layer": 11,
+      "actual_decode_step": 1,
+      "physical_row": 1,
+      "off_V_BF16_word_differences": 1,
+      "on_V_BF16_word_differences": 0,
+      "off_fullT4_hidden_F32_differences_by_repeat": [
+        0,
+        0
+      ],
+      "on_fullT4_hidden_F32_differences_by_repeat": [
+        0,
+        0
+      ]
+    },
+    {
+      "label": "v11",
+      "layer": 11,
+      "actual_decode_step": 1,
+      "physical_row": 2,
+      "off_V_BF16_word_differences": 0,
+      "on_V_BF16_word_differences": 0,
+      "off_fullT4_hidden_F32_differences_by_repeat": [
+        0,
+        0
+      ],
+      "on_fullT4_hidden_F32_differences_by_repeat": [
+        0,
+        0
+      ]
+    },
+    {
+      "label": "v11",
+      "layer": 11,
+      "actual_decode_step": 1,
+      "physical_row": 3,
+      "off_V_BF16_word_differences": 0,
+      "on_V_BF16_word_differences": 0,
+      "off_fullT4_hidden_F32_differences_by_repeat": [
+        0,
+        0
+      ],
+      "on_fullT4_hidden_F32_differences_by_repeat": [
+        0,
+        0
+      ]
+    }
+  ],
+  "prior_full_arrays": {
+    "reference": {
+      "status": "all_prior_component_input_normalizer_hidden_V_arrays_exact",
+      "arrays": 56
+    },
+    "off": {
+      "status": "all_prior_component_input_normalizer_hidden_V_arrays_exact",
+      "arrays": 14
+    }
+  },
+  "actual_V_route": {
+    "status": "actual_B4T4_V_M16_route_and_live_SDK_selection_replayed",
+    "created_contexts": 4,
+    "cached_factory_calls": 0,
+    "initializations_by_output_rows": {
+      "1024": 4
+    },
+    "created": [
+      {
+        "configuration": [
+          35,
+          13,
+          17,
+          3,
+          2,
+          0,
+          1
+        ],
+        "checks": [
+          {
+            "id": 1,
+            "seq": 42,
+            "event": "check",
+            "name": "M4",
+            "a": 0,
+            "b": 262495,
+            "c": 0,
+            "opaque": ""
+          },
+          {
+            "id": 1,
+            "seq": 44,
+            "event": "check",
+            "name": "M16",
+            "a": 0,
+            "b": 262495,
+            "c": 0,
+            "opaque": ""
+          }
+        ],
+        "opaque_live_SDK_selection_preserved": true
+      },
+      {
+        "configuration": [
+          35,
+          13,
+          17,
+          3,
+          2,
+          0,
+          1
+        ],
+        "checks": [
+          {
+            "id": 2,
+            "seq": 42,
+            "event": "check",
+            "name": "M4",
+            "a": 0,
+            "b": 262495,
+            "c": 0,
+            "opaque": ""
+          },
+          {
+            "id": 2,
+            "seq": 44,
+            "event": "check",
+            "name": "M16",
+            "a": 0,
+            "b": 262495,
+            "c": 0,
+            "opaque": ""
+          }
+        ],
+        "opaque_live_SDK_selection_preserved": true
+      },
+      {
+        "configuration": [
+          35,
+          13,
+          17,
+          3,
+          2,
+          0,
+          1
+        ],
+        "checks": [
+          {
+            "id": 3,
+            "seq": 42,
+            "event": "check",
+            "name": "M4",
+            "a": 0,
+            "b": 262495,
+            "c": 0,
+            "opaque": ""
+          },
+          {
+            "id": 3,
+            "seq": 44,
+            "event": "check",
+            "name": "M16",
+            "a": 0,
+            "b": 262495,
+            "c": 0,
+            "opaque": ""
+          }
+        ],
+        "opaque_live_SDK_selection_preserved": true
+      },
+      {
+        "configuration": [
+          35,
+          13,
+          17,
+          3,
+          2,
+          0,
+          1
+        ],
+        "checks": [
+          {
+            "id": 4,
+            "seq": 42,
+            "event": "check",
+            "name": "M4",
+            "a": 0,
+            "b": 262495,
+            "c": 0,
+            "opaque": ""
+          },
+          {
+            "id": 4,
+            "seq": 44,
+            "event": "check",
+            "name": "M16",
+            "a": 0,
+            "b": 262495,
+            "c": 0,
+            "opaque": ""
+          }
+        ],
+        "opaque_live_SDK_selection_preserved": true
+      }
+    ],
+    "all_seven_attributes_checked": true,
+    "original_4MiB_workspace_preserved": true
+  },
+  "CPU_controls": 24,
+  "original_SDK_and_model_failures_promoted": false,
+  "full_model_or_quality_or_performance_qualified": false,
+  "scope": "Two actual FA layer/step connected component cases, allfourphysicalrows/tworepeats, originalzerohistory/slots/positions.70priorfullarraysexact; on allactiveV andall20480F32T4hiddenwords/row equalfourB1. Newnativealgorithmqualifiedfor these components only. Originalcomplete-modelhistory/state/IDs/reset/repeats/full4K/MTP/805/HTTP remain required beforetiming."
+}
