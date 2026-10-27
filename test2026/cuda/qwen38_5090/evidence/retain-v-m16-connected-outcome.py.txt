@@ -1,0 +1,30 @@
+from pathlib import Path
+import hashlib,json,zipfile
+W=Path(__file__).resolve().parent;O=W.parent/'outputs';R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';E=M/'evidence';JOB='v-m16-connected-attempt1';sha=lambda b:hashlib.sha256(b).hexdigest();owned=[]
+with zipfile.ZipFile(W/'v-m16-connected-closure-assets.zip') as z:
+    mf=json.loads(z.read('manifest.json'));assert z.testzip() is None
+    for n,h in mf['files'].items():assert sha(z.read(n))==h
+    proof=z.read('results/'+JOB+'-verified.json');assert proof==(O/(JOB+'-verified.json')).read_bytes();target=O/(JOB+'-remote-verified.json');assert not target.exists();target.write_bytes(proof)
+    for n in z.namelist():
+        if n.startswith('results/v-m16-connected-postprocess/') and n.endswith(('.json','.jsonl','.log')):
+            target=E/('v-m16-connected-'+n.removeprefix('results/').replace('/','-'));assert not target.exists();target.write_bytes(z.read(n));owned.append(target)
+q=json.loads(proof);assert q['exit_code']==0 and q['component_baselines_exact'] and q['full_model_or_quality_or_performance_qualified'] is False and q['source_runtime_SDK_checkpoint_CMake_all34objects_restored'];target=E/(JOB+'-verified.json');assert not target.exists();target.write_bytes(proof);owned.append(target)
+with zipfile.ZipFile(O/(JOB+'-evidence.zip')) as z:
+    assert sha((O/(JOB+'-evidence.zip')).read_bytes())==q['archive_sha256'];mf=json.loads(z.read('evidence-manifest.json'))
+    for n,h in mf['files'].items():assert sha(z.read(n))==h
+    for n in z.namelist():
+        if n.startswith('results/'+JOB+'/') and n.endswith(('.json','.jsonl','.log')):
+            target=E/(JOB+'-'+n.removeprefix('results/'+JOB+'/').replace('/','-'));assert not target.exists();target.write_bytes(z.read(n));owned.append(target)
+    target=E/(JOB+'-evidence-manifest.json');assert not target.exists();target.write_bytes(z.read('evidence-manifest.json'));owned.append(target)
+a=q['intervention'];assert all(r['on_vs_four_B1_different_words']==0 for r in a['hidden']) and all(r['B4_component_vs_four_B1_different_words']==0 for r in a['intervention']['rows'])
+rows=[]
+for before,after in zip(a['baseline']['rows'],a['intervention']['rows']):
+    assert all(before[k]==after[k] for k in ('label','layer','actual_decode_step','physical_row'));hidden=[r for r in a['hidden'] if (r['label'],r['physical_row'])==(before['label'],before['physical_row'])];assert len(hidden)==2
+    rows.append({**{k:before[k] for k in ('label','layer','actual_decode_step','physical_row')},'off_V_BF16_word_differences':before['B4_component_vs_four_B1_different_words'],'on_V_BF16_word_differences':after['B4_component_vs_four_B1_different_words'],'off_fullT4_hidden_F32_differences_by_repeat':[r['off_vs_four_B1_different_words'] for r in hidden],'on_fullT4_hidden_F32_differences_by_repeat':[r['on_vs_four_B1_different_words'] for r in hidden]})
+summary=dict(status='paired_actual_V_M16_component_off_on_exact_only',proof_sha256=sha(proof),archive_sha256=q['archive_sha256'],rows=rows,prior_full_arrays=q['prior_full_arrays'],actual_V_route=q['actual_V_route'],CPU_controls=24,original_SDK_and_model_failures_promoted=False,full_model_or_quality_or_performance_qualified=False,scope='Two actual FA layer/step connected component cases, allfourphysicalrows/tworepeats, originalzerohistory/slots/positions.70priorfullarraysexact; on allactiveV andall20480F32T4hiddenwords/row equalfourB1. Newnativealgorithmqualifiedfor these components only. Originalcomplete-modelhistory/state/IDs/reset/repeats/full4K/MTP/805/HTTP remain required beforetiming.')
+(O/'Garnet-V-M16-Connected-Progress.json').write_bytes(json.dumps(summary,indent=2).encode());target=E/'v-m16-connected-progress.json';assert not target.exists();target.write_bytes(json.dumps(summary,indent=2).encode());owned.append(target)
+target=E/'retain-v-m16-connected-outcome.py.txt';assert not target.exists();target.write_bytes(Path(__file__).read_bytes());owned.append(target)
+text=('\r\n\r\n2026-10-27 actual VM16 connected off/on PASSED, pairedremote/local independentrawreplays byte-identical proof '+sha(proof)+', raw '+q['archive_sha256']+'.24CPU controls,3fresh embeddedphases. Source60reference56fullarrays andsource73off14fullarrays reproducepriorpaired4 exactly. Source73on removes bothobserved1BF16 Vworddifferences(FA3step5row0,FA11step1row1); all8case-row Varrays andall16fullT4hidden arrays equalfourB1 exactly(tworepeats), including4831FA3row0 hiddenF32word differences removed. AlloriginalinputKVfullcachezero/read-only/inputhash/normalizer/finite/BF16/fullpadding/repeat guards retained. ActualVM16 trace4createdcontexts/4N1024initializations,all7attrs[35,13,17,3,2,0,1],actualM4/M16AlgoCheck workspace262495B eachwithinoriginal4MiB,liveSDKopaquebytes preserved. Reference/offzeroVM16routes.1671ownedsource/runtime/SDK/config-index/CMake/all34objects restored,baselineDLLrestored/privatecache retired. Thisisconnectedcomponentwithzerohistory, NOTcomplete-modelhistory/state/output/performancequalification. OriginalSDK/model/cachefailuresstayFAILED. Nextunchangedfullmodel128component/finitevector/8IDs/reset/prefill/final/reset shortgate withbothGDNandall16FA Vroutes, thenfull4K/MTP/805/HTTP beforetiming. Strongest repeatedtuned/MTPrefs,INT4/4B and2xgoalopen.\r\n').encode()
+for n in ['docs/research/qwen38-5090-development-log.md','docs/research/qwen38-5090-implementation-task.md']:
+    target=R/n;raw=target.read_bytes();target.write_bytes(raw+text);owned.append(target)
+paths=[n.relative_to(R).as_posix() for n in owned];(W/'v-m16-connected-outcome-owned-paths.json').write_bytes(json.dumps(paths,indent=2).encode());(W/'v-m16-connected-outcome-stage-paths.bin').write_bytes(b'\0'.join(n.encode() for n in paths)+b'\0');print(json.dumps(dict(files=len(paths),proof_sha256=sha(proof))))

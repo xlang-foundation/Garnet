@@ -1,0 +1,636 @@
+{
+  "status": "connected_FA_value_components_collected",
+  "mode": "candidate",
+  "intervention_phase": "on",
+  "physical_batch": 4,
+  "tokens": 4,
+  "capacity": 4096,
+  "library_sha256": "ab248b760f2491db3b4d75db34a8470c4cdf8de20e448c749725accd6086fc34",
+  "fixture_manifest_sha256": "9d3065f6fe2ccbb75e027a922c1243b5d342d6702535bee395b9db074c1f1a1e",
+  "cache_mode": "ordinary_zero_FP32_inputs_component_only",
+  "position_and_slot_controls": "zero_component_controls_V_projection_independent",
+  "cases": [
+    {
+      "label": "v3",
+      "layer": 3,
+      "actual_decode_step": 5,
+      "physical_rows": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "input": {
+        "file": "v3-row0-input.f32",
+        "bytes": 327680,
+        "sha256": "805a09b2373498b62f0c547d8d1f674f4eb1d16fe173bfb5ebba244bc56fc1c1"
+      },
+      "input_cache_sha256_before": [
+        "080acf35a507ac9849cfcba47dc2ad83e01b75663a516279c8b9d243b719643e",
+        "080acf35a507ac9849cfcba47dc2ad83e01b75663a516279c8b9d243b719643e",
+        "080acf35a507ac9849cfcba47dc2ad83e01b75663a516279c8b9d243b719643e",
+        "080acf35a507ac9849cfcba47dc2ad83e01b75663a516279c8b9d243b719643e",
+        "080acf35a507ac9849cfcba47dc2ad83e01b75663a516279c8b9d243b719643e",
+        "080acf35a507ac9849cfcba47dc2ad83e01b75663a516279c8b9d243b719643e",
+        "080acf35a507ac9849cfcba47dc2ad83e01b75663a516279c8b9d243b719643e",
+        "080acf35a507ac9849cfcba47dc2ad83e01b75663a516279c8b9d243b719643e"
+      ],
+      "graph_stats": {
+        "allocator_tracking_enabled": false,
+        "aux_streams": 0,
+        "builder_workspace_limit_bytes": 268435456,
+        "checkpoint_weight_precision": "modelopt_mixed",
+        "contexts": 1,
+        "cuda_graph_requested": true,
+        "device_output_bytes": 0,
+        "engine_refittable": false,
+        "external_bf16_weight_bytes": 0,
+        "external_bf16_weight_inputs": 0,
+        "external_compressed_weight_bytes": 255262720,
+        "external_compressed_weight_inputs": 6,
+        "external_compressed_weight_scope": "Caller-owned opaque INT32 storage; calibration from checkpoint; excluded from graph-owned allocations",
+        "external_output_storage": false,
+        "external_output_storage_span_bytes": 0,
+        "external_weight_scope": "Caller-owned symbolic BF16 inputs; excluded from graph-owned allocations",
+        "graph_capture_failures": 0,
+        "graph_captures": 0,
+        "graph_replays": 0,
+        "joined_projection_inputs": 0,
+        "native_fp8_kv128_canonical_projections": 0,
+        "native_fp8_m128_canonical_projections": 0,
+        "native_fp8_o128_canonical_projections": 0,
+        "native_fp8_projection_weights": 4,
+        "native_fp8_q128_canonical_projections": 0,
+        "native_fp8_z128_canonical_projections": 0,
+        "native_fp8_z128_reconstructed_projections": 0,
+        "native_full_chunk_stage_witnesses": 0,
+        "native_int4_g128_projection_weights": 0,
+        "native_nvfp4_projection_weights": 2,
+        "output_storage_scope": "Logical output footprint; externally bound storage is excluded from owned bytes and must be counted once by its caller",
+        "owned_device_output_bytes": 0,
+        "pending_graph_reuses": 0,
+        "qwen35_whole_program_cuda": false,
+        "scope": "TensorRT runtime allocator (engine/context), excludes builder workspace, driver and external library allocations",
+        "serial_graph_reuse_requested": false,
+        "serial_graph_reuses": 0,
+        "serial_graph_warmup_waits": 0,
+        "trt_allocator_allocations": null,
+        "trt_allocator_live_bytes": null,
+        "trt_allocator_peak_bytes": null
+      },
+      "norm_stats": {
+        "allocator_tracking_enabled": false,
+        "aux_streams": 0,
+        "builder_workspace_limit_bytes": 134217728,
+        "checkpoint_weight_precision": "modelopt_mixed",
+        "contexts": 1,
+        "cuda_graph_requested": true,
+        "device_output_bytes": 0,
+        "engine_refittable": false,
+        "external_bf16_weight_bytes": 0,
+        "external_bf16_weight_inputs": 0,
+        "external_compressed_weight_bytes": 0,
+        "external_compressed_weight_inputs": 0,
+        "external_compressed_weight_scope": "Caller-owned opaque INT32 storage; calibration from checkpoint; excluded from graph-owned allocations",
+        "external_output_storage": false,
+        "external_output_storage_span_bytes": 0,
+        "external_weight_scope": "Caller-owned symbolic BF16 inputs; excluded from graph-owned allocations",
+        "graph_capture_failures": 0,
+        "graph_captures": 0,
+        "graph_replays": 0,
+        "joined_projection_inputs": 0,
+        "native_fp8_kv128_canonical_projections": 0,
+        "native_fp8_m128_canonical_projections": 0,
+        "native_fp8_o128_canonical_projections": 0,
+        "native_fp8_projection_weights": 0,
+        "native_fp8_q128_canonical_projections": 0,
+        "native_fp8_z128_canonical_projections": 0,
+        "native_fp8_z128_reconstructed_projections": 0,
+        "native_full_chunk_stage_witnesses": 0,
+        "native_int4_g128_projection_weights": 0,
+        "native_nvfp4_projection_weights": 0,
+        "output_storage_scope": "Logical output footprint; externally bound storage is excluded from owned bytes and must be counted once by its caller",
+        "owned_device_output_bytes": 0,
+        "pending_graph_reuses": 0,
+        "qwen35_whole_program_cuda": false,
+        "scope": "TensorRT runtime allocator (engine/context), excludes builder workspace, driver and external library allocations",
+        "serial_graph_reuse_requested": false,
+        "serial_graph_reuses": 0,
+        "serial_graph_warmup_waits": 0,
+        "trt_allocator_allocations": null,
+        "trt_allocator_live_bytes": null,
+        "trt_allocator_peak_bytes": null
+      },
+      "weight_metadata": {
+        "model.language_model.layers.3.mlp.gate_up_proj.weight": {
+          "input_scale": 0.002162388525903225,
+          "joined_mlp": true,
+          "logical_shape": [
+            34816,
+            5120
+          ],
+          "packed_bytes": 89128960,
+          "packed_dtype": "INT32",
+          "packed_shape": [
+            34816,
+            640
+          ],
+          "recipe": "modelopt_nvfp4_w4a4",
+          "resident_in_compressed_pool": false,
+          "resident_packed_readonly": false,
+          "resident_scales_readonly": false,
+          "scale_bytes": 11141120,
+          "scale_shape": [
+            2785280
+          ],
+          "source_weights": [
+            "model.language_model.layers.3.mlp.gate_proj.weight",
+            "model.language_model.layers.3.mlp.up_proj.weight"
+          ],
+          "storage_encoding": "Opaque little-endian words; raw checkpoint bits, no numeric conversion",
+          "weight_scale": 6.46682019578293e-05
+        },
+        "model.language_model.layers.3.mlp.down_proj.weight": {
+          "input_scale": 0.009951637126505375,
+          "joined_mlp": false,
+          "logical_shape": [
+            5120,
+            17408
+          ],
+          "packed_bytes": 44564480,
+          "packed_dtype": "INT32",
+          "packed_shape": [
+            5120,
+            2176
+          ],
+          "recipe": "modelopt_nvfp4_w4a4",
+          "resident_in_compressed_pool": false,
+          "resident_packed_readonly": false,
+          "resident_scales_readonly": false,
+          "scale_bytes": 5570560,
+          "scale_shape": [
+            1392640
+          ],
+          "source_weights": [],
+          "storage_encoding": "Opaque little-endian words; raw checkpoint bits, no numeric conversion",
+          "weight_scale": 0.00024995350395329297
+        },
+        "model.language_model.layers.3.self_attn.q_proj.weight": {
+          "input_scale": 0.2064732164144516,
+          "joined_mlp": false,
+          "logical_shape": [
+            12288,
+            5120
+          ],
+          "packed_bytes": 62914560,
+          "packed_dtype": "INT32",
+          "packed_shape": [
+            12288,
+            1280
+          ],
+          "recipe": "modelopt_fp8_w8a8",
+          "resident_in_compressed_pool": false,
+          "resident_packed_readonly": false,
+          "resident_scales_readonly": false,
+          "scale_bytes": 0,
+          "scale_shape": [],
+          "source_weights": [],
+          "storage_encoding": "Opaque little-endian words; raw checkpoint bits, no numeric conversion",
+          "weight_scale": 0.0007149832672439516
+        },
+        "model.language_model.layers.3.self_attn.k_proj.weight": {
+          "input_scale": 0.2064732164144516,
+          "joined_mlp": false,
+          "logical_shape": [
+            1024,
+            5120
+          ],
+          "packed_bytes": 5242880,
+          "packed_dtype": "INT32",
+          "packed_shape": [
+            1024,
+            1280
+          ],
+          "recipe": "modelopt_fp8_w8a8",
+          "resident_in_compressed_pool": false,
+          "resident_packed_readonly": false,
+          "resident_scales_readonly": false,
+          "scale_bytes": 0,
+          "scale_shape": [],
+          "source_weights": [],
+          "storage_encoding": "Opaque little-endian words; raw checkpoint bits, no numeric conversion",
+          "weight_scale": 0.0004686628235504031
+        },
+        "model.language_model.layers.3.self_attn.v_proj.weight": {
+          "input_scale": 0.2064732164144516,
+          "joined_mlp": false,
+          "logical_shape": [
+            1024,
+            5120
+          ],
+          "packed_bytes": 5242880,
+          "packed_dtype": "INT32",
+          "packed_shape": [
+            1024,
+            1280
+          ],
+          "recipe": "modelopt_fp8_w8a8",
+          "resident_in_compressed_pool": false,
+          "resident_packed_readonly": false,
+          "resident_scales_readonly": false,
+          "scale_bytes": 0,
+          "scale_shape": [],
+          "source_weights": [],
+          "storage_encoding": "Opaque little-endian words; raw checkpoint bits, no numeric conversion",
+          "weight_scale": 0.0005057199159637094
+        },
+        "model.language_model.layers.3.self_attn.o_proj.weight": {
+          "input_scale": 0.02748326025903225,
+          "joined_mlp": false,
+          "logical_shape": [
+            5120,
+            6144
+          ],
+          "packed_bytes": 31457280,
+          "packed_dtype": "INT32",
+          "packed_shape": [
+            5120,
+            1536
+          ],
+          "recipe": "modelopt_fp8_w8a8",
+          "resident_in_compressed_pool": false,
+          "resident_packed_readonly": false,
+          "resident_scales_readonly": false,
+          "scale_bytes": 0,
+          "scale_shape": [],
+          "source_weights": [],
+          "storage_encoding": "Opaque little-endian words; raw checkpoint bits, no numeric conversion",
+          "weight_scale": 0.0032087054569274187
+        }
+      },
+      "repeats": [
+        {
+          "repeat": 0,
+          "unmasked_normalized": {
+            "file": "v3-row0-r0-normalizer.f32",
+            "bytes": 327680,
+            "sha256": "e0eb19c4795c4c0365119d14bd584d95184dad2e67ac1185c868fde21afc90a4"
+          },
+          "component_hidden": {
+            "file": "v3-row0-r0-hidden.f32",
+            "bytes": 327680,
+            "sha256": "464c5f9a8efa1ad9c0deec920792aa85fcaa15a564d0b204656b42ae29afeaf9"
+          },
+          "component_V": {
+            "file": "v3-row0-r0-value.f32",
+            "bytes": 16384,
+            "sha256": "3313ede3b1c1e064386af321c81569d5a097ad7968a15573f0d90dd05e837b14"
+          },
+          "input_after_sha256": "805a09b2373498b62f0c547d8d1f674f4eb1d16fe173bfb5ebba244bc56fc1c1"
+        },
+        {
+          "repeat": 1,
+          "unmasked_normalized": {
+            "file": "v3-row0-r1-normalizer.f32",
+            "bytes": 327680,
+            "sha256": "e0eb19c4795c4c0365119d14bd584d95184dad2e67ac1185c868fde21afc90a4"
+          },
+          "component_hidden": {
+            "file": "v3-row0-r1-hidden.f32",
+            "bytes": 327680,
+            "sha256": "464c5f9a8efa1ad9c0deec920792aa85fcaa15a564d0b204656b42ae29afeaf9"
+          },
+          "component_V": {
+            "file": "v3-row0-r1-value.f32",
+            "bytes": 16384,
+            "sha256": "3313ede3b1c1e064386af321c81569d5a097ad7968a15573f0d90dd05e837b14"
+          },
+          "input_after_sha256": "805a09b2373498b62f0c547d8d1f674f4eb1d16fe173bfb5ebba244bc56fc1c1"
+        }
+      ],
+      "input_after_sha256": "805a09b2373498b62f0c547d8d1f674f4eb1d16fe173bfb5ebba244bc56fc1c1",
+      "input_cache_sha256_after": [
+        "080acf35a507ac9849cfcba47dc2ad83e01b75663a516279c8b9d243b719643e",
+        "080acf35a507ac9849cfcba47dc2ad83e01b75663a516279c8b9d243b719643e",
+        "080acf35a507ac9849cfcba47dc2ad83e01b75663a516279c8b9d243b719643e",
+        "080acf35a507ac9849cfcba47dc2ad83e01b75663a516279c8b9d243b719643e",
+        "080acf35a507ac9849cfcba47dc2ad83e01b75663a516279c8b9d243b719643e",
+        "080acf35a507ac9849cfcba47dc2ad83e01b75663a516279c8b9d243b719643e",
+        "080acf35a507ac9849cfcba47dc2ad83e01b75663a516279c8b9d243b719643e",
+        "080acf35a507ac9849cfcba47dc2ad83e01b75663a516279c8b9d243b719643e"
+      ]
+    },
+    {
+      "label": "v11",
+      "layer": 11,
+      "actual_decode_step": 1,
+      "physical_rows": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "input": {
+        "file": "v11-row0-input.f32",
+        "bytes": 327680,
+        "sha256": "13bb69441f70f0ae5319f964975eb6f37a9a1dbacb074a0504b5e398383f8db6"
+      },
+      "input_cache_sha256_before": [
+        "080acf35a507ac9849cfcba47dc2ad83e01b75663a516279c8b9d243b719643e",
+        "080acf35a507ac9849cfcba47dc2ad83e01b75663a516279c8b9d243b719643e",
+        "080acf35a507ac9849cfcba47dc2ad83e01b75663a516279c8b9d243b719643e",
+        "080acf35a507ac9849cfcba47dc2ad83e01b75663a516279c8b9d243b719643e",
+        "080acf35a507ac9849cfcba47dc2ad83e01b75663a516279c8b9d243b719643e",
+        "080acf35a507ac9849cfcba47dc2ad83e01b75663a516279c8b9d243b719643e",
+        "080acf35a507ac9849cfcba47dc2ad83e01b75663a516279c8b9d243b719643e",
+        "080acf35a507ac9849cfcba47dc2ad83e01b75663a516279c8b9d243b719643e"
+      ],
+      "graph_stats": {
+        "allocator_tracking_enabled": false,
+        "aux_streams": 0,
+        "builder_workspace_limit_bytes": 268435456,
+        "checkpoint_weight_precision": "modelopt_mixed",
+        "contexts": 1,
+        "cuda_graph_requested": true,
+        "device_output_bytes": 0,
+        "engine_refittable": false,
+        "external_bf16_weight_bytes": 0,
+        "external_bf16_weight_inputs": 0,
+        "external_compressed_weight_bytes": 255262720,
+        "external_compressed_weight_inputs": 6,
+        "external_compressed_weight_scope": "Caller-owned opaque INT32 storage; calibration from checkpoint; excluded from graph-owned allocations",
+        "external_output_storage": false,
+        "external_output_storage_span_bytes": 0,
+        "external_weight_scope": "Caller-owned symbolic BF16 inputs; excluded from graph-owned allocations",
+        "graph_capture_failures": 0,
+        "graph_captures": 0,
+        "graph_replays": 0,
+        "joined_projection_inputs": 0,
+        "native_fp8_kv128_canonical_projections": 0,
+        "native_fp8_m128_canonical_projections": 0,
+        "native_fp8_o128_canonical_projections": 0,
+        "native_fp8_projection_weights": 4,
+        "native_fp8_q128_canonical_projections": 0,
+        "native_fp8_z128_canonical_projections": 0,
+        "native_fp8_z128_reconstructed_projections": 0,
+        "native_full_chunk_stage_witnesses": 0,
+        "native_int4_g128_projection_weights": 0,
+        "native_nvfp4_projection_weights": 2,
+        "output_storage_scope": "Logical output footprint; externally bound storage is excluded from owned bytes and must be counted once by its caller",
+        "owned_device_output_bytes": 0,
+        "pending_graph_reuses": 0,
+        "qwen35_whole_program_cuda": false,
+        "scope": "TensorRT runtime allocator (engine/context), excludes builder workspace, driver and external library allocations",
+        "serial_graph_reuse_requested": false,
+        "serial_graph_reuses": 0,
+        "serial_graph_warmup_waits": 0,
+        "trt_allocator_allocations": null,
+        "trt_allocator_live_bytes": null,
+        "trt_allocator_peak_bytes": null
+      },
+      "norm_stats": {
+        "allocator_tracking_enabled": false,
+        "aux_streams": 0,
+        "builder_workspace_limit_bytes": 134217728,
+        "checkpoint_weight_precision": "modelopt_mixed",
+        "contexts": 1,
+        "cuda_graph_requested": true,
+        "device_output_bytes": 0,
+        "engine_refittable": false,
+        "external_bf16_weight_bytes": 0,
+        "external_bf16_weight_inputs": 0,
+        "external_compressed_weight_bytes": 0,
+        "external_compressed_weight_inputs": 0,
+        "external_compressed_weight_scope": "Caller-owned opaque INT32 storage; calibration from checkpoint; excluded from graph-owned allocations",
+        "external_output_storage": false,
+        "external_output_storage_span_bytes": 0,
+        "external_weight_scope": "Caller-owned symbolic BF16 inputs; excluded from graph-owned allocations",
+        "graph_capture_failures": 0,
+        "graph_captures": 0,
+        "graph_replays": 0,
+        "joined_projection_inputs": 0,
+        "native_fp8_kv128_canonical_projections": 0,
+        "native_fp8_m128_canonical_projections": 0,
+        "native_fp8_o128_canonical_projections": 0,
+        "native_fp8_projection_weights": 0,
+        "native_fp8_q128_canonical_projections": 0,
+        "native_fp8_z128_canonical_projections": 0,
+        "native_fp8_z128_reconstructed_projections": 0,
+        "native_full_chunk_stage_witnesses": 0,
+        "native_int4_g128_projection_weights": 0,
+        "native_nvfp4_projection_weights": 0,
+        "output_storage_scope": "Logical output footprint; externally bound storage is excluded from owned bytes and must be counted once by its caller",
+        "owned_device_output_bytes": 0,
+        "pending_graph_reuses": 0,
+        "qwen35_whole_program_cuda": false,
+        "scope": "TensorRT runtime allocator (engine/context), excludes builder workspace, driver and external library allocations",
+        "serial_graph_reuse_requested": false,
+        "serial_graph_reuses": 0,
+        "serial_graph_warmup_waits": 0,
+        "trt_allocator_allocations": null,
+        "trt_allocator_live_bytes": null,
+        "trt_allocator_peak_bytes": null
+      },
+      "weight_metadata": {
+        "model.language_model.layers.11.mlp.gate_up_proj.weight": {
+          "input_scale": 0.003976004663854837,
+          "joined_mlp": true,
+          "logical_shape": [
+            34816,
+            5120
+          ],
+          "packed_bytes": 89128960,
+          "packed_dtype": "INT32",
+          "packed_shape": [
+            34816,
+            640
+          ],
+          "recipe": "modelopt_nvfp4_w4a4",
+          "resident_in_compressed_pool": false,
+          "resident_packed_readonly": false,
+          "resident_scales_readonly": false,
+          "scale_bytes": 11141120,
+          "scale_shape": [
+            2785280
+          ],
+          "source_weights": [
+            "model.language_model.layers.11.mlp.gate_proj.weight",
+            "model.language_model.layers.11.mlp.up_proj.weight"
+          ],
+          "storage_encoding": "Opaque little-endian words; raw checkpoint bits, no numeric conversion",
+          "weight_scale": 7.811046816641465e-05
+        },
+        "model.language_model.layers.11.mlp.down_proj.weight": {
+          "input_scale": 0.0126488097012043,
+          "joined_mlp": false,
+          "logical_shape": [
+            5120,
+            17408
+          ],
+          "packed_bytes": 44564480,
+          "packed_dtype": "INT32",
+          "packed_shape": [
+            5120,
+            2176
+          ],
+          "recipe": "modelopt_nvfp4_w4a4",
+          "resident_in_compressed_pool": false,
+          "resident_packed_readonly": false,
+          "resident_scales_readonly": false,
+          "scale_bytes": 5570560,
+          "scale_shape": [
+            1392640
+          ],
+          "source_weights": [],
+          "storage_encoding": "Opaque little-endian words; raw checkpoint bits, no numeric conversion",
+          "weight_scale": 0.00021071662195026875
+        },
+        "model.language_model.layers.11.self_attn.q_proj.weight": {
+          "input_scale": 0.1629464328289032,
+          "joined_mlp": false,
+          "logical_shape": [
+            12288,
+            5120
+          ],
+          "packed_bytes": 62914560,
+          "packed_dtype": "INT32",
+          "packed_shape": [
+            12288,
+            1280
+          ],
+          "recipe": "modelopt_fp8_w8a8",
+          "resident_in_compressed_pool": false,
+          "resident_packed_readonly": false,
+          "resident_scales_readonly": false,
+          "scale_bytes": 0,
+          "scale_shape": [],
+          "source_weights": [],
+          "storage_encoding": "Opaque little-endian words; raw checkpoint bits, no numeric conversion",
+          "weight_scale": 0.0011160714784637094
+        },
+        "model.language_model.layers.11.self_attn.k_proj.weight": {
+          "input_scale": 0.1629464328289032,
+          "joined_mlp": false,
+          "logical_shape": [
+            1024,
+            5120
+          ],
+          "packed_bytes": 5242880,
+          "packed_dtype": "INT32",
+          "packed_shape": [
+            1024,
+            1280
+          ],
+          "recipe": "modelopt_fp8_w8a8",
+          "resident_in_compressed_pool": false,
+          "resident_packed_readonly": false,
+          "resident_scales_readonly": false,
+          "scale_bytes": 0,
+          "scale_shape": [],
+          "source_weights": [],
+          "storage_encoding": "Opaque little-endian words; raw checkpoint bits, no numeric conversion",
+          "weight_scale": 0.0006321498658508062
+        },
+        "model.language_model.layers.11.self_attn.v_proj.weight": {
+          "input_scale": 0.1629464328289032,
+          "joined_mlp": false,
+          "logical_shape": [
+            1024,
+            5120
+          ],
+          "packed_bytes": 5242880,
+          "packed_dtype": "INT32",
+          "packed_shape": [
+            1024,
+            1280
+          ],
+          "recipe": "modelopt_fp8_w8a8",
+          "resident_in_compressed_pool": false,
+          "resident_packed_readonly": false,
+          "resident_scales_readonly": false,
+          "scale_bytes": 0,
+          "scale_shape": [],
+          "source_weights": [],
+          "storage_encoding": "Opaque little-endian words; raw checkpoint bits, no numeric conversion",
+          "weight_scale": 0.0005711147096008062
+        },
+        "model.language_model.layers.11.self_attn.o_proj.weight": {
+          "input_scale": 0.01653180830180645,
+          "joined_mlp": false,
+          "logical_shape": [
+            5120,
+            6144
+          ],
+          "packed_bytes": 31457280,
+          "packed_dtype": "INT32",
+          "packed_shape": [
+            5120,
+            1536
+          ],
+          "recipe": "modelopt_fp8_w8a8",
+          "resident_in_compressed_pool": false,
+          "resident_packed_readonly": false,
+          "resident_scales_readonly": false,
+          "scale_bytes": 0,
+          "scale_shape": [],
+          "source_weights": [],
+          "storage_encoding": "Opaque little-endian words; raw checkpoint bits, no numeric conversion",
+          "weight_scale": 0.0021711078006774187
+        }
+      },
+      "repeats": [
+        {
+          "repeat": 0,
+          "unmasked_normalized": {
+            "file": "v11-row0-r0-normalizer.f32",
+            "bytes": 327680,
+            "sha256": "e096b6641d78c0bdba4713695933175514c229e784e22ca848e44053d1e0283f"
+          },
+          "component_hidden": {
+            "file": "v11-row0-r0-hidden.f32",
+            "bytes": 327680,
+            "sha256": "191886778714121df997dcdfb7439cdcdba24d8101be4e01c27b7301692e1177"
+          },
+          "component_V": {
+            "file": "v11-row0-r0-value.f32",
+            "bytes": 16384,
+            "sha256": "86993d164b57df1a6dbff82c2c24fdfd9d8985d92bbaeb6f0b63b449ab010034"
+          },
+          "input_after_sha256": "13bb69441f70f0ae5319f964975eb6f37a9a1dbacb074a0504b5e398383f8db6"
+        },
+        {
+          "repeat": 1,
+          "unmasked_normalized": {
+            "file": "v11-row0-r1-normalizer.f32",
+            "bytes": 327680,
+            "sha256": "e096b6641d78c0bdba4713695933175514c229e784e22ca848e44053d1e0283f"
+          },
+          "component_hidden": {
+            "file": "v11-row0-r1-hidden.f32",
+            "bytes": 327680,
+            "sha256": "191886778714121df997dcdfb7439cdcdba24d8101be4e01c27b7301692e1177"
+          },
+          "component_V": {
+            "file": "v11-row0-r1-value.f32",
+            "bytes": 16384,
+            "sha256": "86993d164b57df1a6dbff82c2c24fdfd9d8985d92bbaeb6f0b63b449ab010034"
+          },
+          "input_after_sha256": "13bb69441f70f0ae5319f964975eb6f37a9a1dbacb074a0504b5e398383f8db6"
+        }
+      ],
+      "input_after_sha256": "13bb69441f70f0ae5319f964975eb6f37a9a1dbacb074a0504b5e398383f8db6",
+      "input_cache_sha256_after": [
+        "080acf35a507ac9849cfcba47dc2ad83e01b75663a516279c8b9d243b719643e",
+        "080acf35a507ac9849cfcba47dc2ad83e01b75663a516279c8b9d243b719643e",
+        "080acf35a507ac9849cfcba47dc2ad83e01b75663a516279c8b9d243b719643e",
+        "080acf35a507ac9849cfcba47dc2ad83e01b75663a516279c8b9d243b719643e",
+        "080acf35a507ac9849cfcba47dc2ad83e01b75663a516279c8b9d243b719643e",
+        "080acf35a507ac9849cfcba47dc2ad83e01b75663a516279c8b9d243b719643e",
+        "080acf35a507ac9849cfcba47dc2ad83e01b75663a516279c8b9d243b719643e",
+        "080acf35a507ac9849cfcba47dc2ad83e01b75663a516279c8b9d243b719643e"
+      ]
+    }
+  ],
+  "internal_fused_normalization_directly_captured": false,
+  "model_or_performance_qualified": false
+}
