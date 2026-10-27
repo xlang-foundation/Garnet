@@ -1,0 +1,146 @@
+{
+  "status": "optional_CUDA_runtime_module_audit_only_retry",
+  "original_failure_proof_sha256": "4e2026fa3d1b57ec43883c8fdddeeb944cc86a6975272e4a54c39c10dcf72fd5",
+  "original_failure_archive_sha256": "4ec5eed0659f5d58622d0e510abce44159c17ce295387c3fc28f7e0b1f1601fd",
+  "algorithm_selection_geometry_attribute_and_AlgoCheck_predicates_unchanged": true,
+  "original_failure_retained": true,
+  "derivations": [
+    {
+      "source": "probe_qg128_sdk_control.cpp",
+      "target": "probe_qg128_sdk_control_attempt2.cpp",
+      "source_sha256": "370627a63130644e28740b34e5d10192ebc7acc47da5d50356dd7562cf20be2e",
+      "target_sha256": "e153e18c73e6028b75f56a99f05ab361fe31657fdd6748de0ca95afbf62e8f22",
+      "changes": [
+        {
+          "old": "std::string module(const char* name){char path[32768]{};auto handle=GetModuleHandleA(name);require(handle&&GetModuleFileNameA(handle,path,sizeof(path))>0,\"resolved_module_path\");return path;}",
+          "new": "std::string module(const char* name){char path[32768]{};auto handle=GetModuleHandleA(name);require(handle&&GetModuleFileNameA(handle,path,sizeof(path))>0,\"resolved_module_path\");return path;}\nstd::string optionalModule(const char* name){auto handle=GetModuleHandleA(name);if(!handle)return {};char path[32768]{};require(GetModuleFileNameA(handle,path,sizeof(path))>0,\"optional_module_filename\");return path;}",
+          "count": 1
+        },
+        {
+          "old": "std::quoted(module(\"cudart64_13.dll\"))",
+          "new": "std::quoted(module(\"nvcuda.dll\"))",
+          "count": 1
+        },
+        {
+          "old": "\\\"cudart64_13.dll\\\":",
+          "new": "\\\"nvcuda.dll\\\":",
+          "count": 1
+        },
+        {
+          "old": "\\\"no_model_weights_loaded\\\":true",
+          "new": "\\\"optional_cudart_module_path\\\":\"<<std::quoted(optionalModule(\"cudart64_13.dll\"))<<\",\\\"no_model_weights_loaded\\\":true",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "build_qg128_sdk_control.bat",
+      "target": "build_qg128_sdk_control_attempt2.bat",
+      "source_sha256": "9b418e55c0003c742b18b7fde720c1566716e8e4156771cf654e91df5f7155fd",
+      "target_sha256": "82f9b81266b594928fc2a08d75e22e0397be6317e42c65ab85e3885bed6a4f27",
+      "changes": [
+        {
+          "old": "probe_qg128_sdk_control.cpp",
+          "new": "probe_qg128_sdk_control_attempt2.cpp",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "run_qg128_sdk_control.py",
+      "target": "run_qg128_sdk_control_attempt2.py",
+      "source_sha256": "ebde9ca501a30f6e6fc949b1625d116491d8c197d2e1712749dd87220d8133e9",
+      "target_sha256": "43ebe3640357877a2c76b89fc63d295a4b6fcea85250a575b11810cda3c594c2",
+      "changes": [
+        {
+          "old": "JOB='qg128-sdk-control-attempt1'",
+          "new": "JOB='qg128-sdk-control-attempt2'",
+          "count": 1
+        },
+        {
+          "old": "qg128-sdk-control-preparation.json",
+          "new": "qg128-sdk-control-preparation-attempt2.json",
+          "count": 1
+        },
+        {
+          "old": "build_qg128_sdk_control.bat",
+          "new": "build_qg128_sdk_control_attempt2.bat",
+          "count": 1
+        },
+        {
+          "old": "out=ROOT/'results'/JOB;archive=",
+          "new": "previous=ROOT/'results/qg128-sdk-control-attempt1-verified.json';previousq=json.loads(previous.read_bytes());assert sha(previous)==p['previous_SDK_failure_proof_sha256'] and previousq['exit_code']==1 and previousq['source_library_runtime_SDK_checkpoint_unchanged'];assert sha(ROOT/'results/qg128-sdk-control-attempt1-evidence.zip')==previousq['archive_sha256'];driver=Path(os.environ['SystemRoot'])/'System32/nvcuda.dll';driver_before=sha(driver)\n    out=ROOT/'results'/JOB;archive=",
+          "count": 1
+        },
+        {
+          "old": "+[prep,peer,original];code=1",
+          "new": "+[prep,peer,original,previous];code=1",
+          "count": 1
+        },
+        {
+          "old": "cleanup_finished=False)",
+          "new": "cleanup_finished=False,previous_SDK_failure_proof_sha256=sha(previous),driver_module_sha256_before=driver_before)",
+          "count": 1
+        },
+        {
+          "old": "    try:\n        code=ledger.run(",
+          "new": "    try:\n        dumpbin=Path('C:/Program Files (x86)/Microsoft Visual Studio/2022/BuildTools/VC/Tools/MSVC/14.44.35207/bin/Hostx64/x64/dumpbin.exe');oldexe=ROOT/'results/qg128-sdk-control-attempt1/native-build/qg128-sdk-control.exe'\n        code=ledger.run([str(dumpbin),'/DEPENDENTS',str(oldexe)],out/'dependency-ledger','correctness','Record actual first-attempt PE imports; optional cudart module absence is an observed deployment fact, no link-mode assumption',common+[dumpbin,oldexe])\n        if code:raise RuntimeError('PE dependency inspection failed')\n        code=ledger.run(",
+          "count": 1
+        },
+        {
+          "old": "Actual NVCC/MSVC /MT standalone QG descriptor probe, dynamic CUDA runtime, no production/native build change",
+          "new": "Actual NVCC/MSVC /MT standalone QG descriptor probe, shared/hybrid link request with actual module audit, no production/native build change",
+          "count": 1
+        },
+        {
+          "old": "assert w['loaded_module_sha256']=={n:baseline['runtime'][n] for n in ('cublasLt64_13.dll','cudart64_13.dll')}",
+          "new": "assert w['loaded_module_sha256']['cublasLt64_13.dll']==baseline['runtime']['cublasLt64_13.dll'] and Path(r['loaded_modules']['nvcuda.dll']).resolve()==driver.resolve() and w['loaded_module_sha256']['nvcuda.dll']==driver_before;optional=r['optional_cudart_module_path'];w['optional_cudart_module_sha256']=sha(Path(optional)) if optional else None;assert not optional or w['optional_cudart_module_sha256']==baseline['runtime']['cudart64_13.dll']",
+          "count": 1
+        },
+        {
+          "old": "cleanup_finished=True);assert",
+          "new": "cleanup_finished=True,driver_module_sha256_after=sha(driver));assert w['driver_module_sha256_before']==w['driver_module_sha256_after'];assert",
+          "count": 1
+        },
+        {
+          "old": "linked_vendor_archive_sha256=q['original_GPU_archive_sha256']",
+          "new": "linked_vendor_archive_sha256=q['original_GPU_archive_sha256'],linked_failed_SDK_archive_sha256=previousq['archive_sha256']",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "verify_qg128_sdk_control.py",
+      "target": "verify_qg128_sdk_control_attempt2.py",
+      "source_sha256": "c2f2ebde67f897713cc980082930a2a0d91bce201832461f6494be83a953e25d",
+      "target_sha256": "8b7f4f01af6d81fbfd6e139df0f9c1afe8e16e7c5f3c7eea12e3e0b68b02d94b",
+      "changes": [
+        {
+          "old": "JOB='qg128-sdk-control-attempt1'",
+          "new": "JOB='qg128-sdk-control-attempt2'",
+          "count": 1
+        },
+        {
+          "old": "qg128-sdk-control-preparation.json",
+          "new": "qg128-sdk-control-preparation-attempt2.json",
+          "count": 2
+        },
+        {
+          "old": "for phase in ('build','SDK'):",
+          "new": "previous=z.read('results/qg128-sdk-control-attempt1-verified.json');previousq=json.loads(previous);assert sha(previous)==p['previous_SDK_failure_proof_sha256']==w['previous_SDK_failure_proof_sha256'] and previous==(a.proofs/'qg128-sdk-control-attempt1-verified.json').read_bytes() and previousq['archive_sha256']==manifest['linked_failed_SDK_archive_sha256'] and previousq['exit_code']==1 and w['driver_module_sha256_before']==w['driver_module_sha256_after']\n        for phase in ('dependency','build','SDK'):",
+          "count": 1
+        },
+        {
+          "old": "assert w['loaded_module_sha256']=={n:w['runtime_before'][n] for n in ('cublasLt64_13.dll','cudart64_13.dll')}",
+          "new": "assert set(w['loaded_module_sha256'])=={'cublasLt64_13.dll','nvcuda.dll'} and w['loaded_module_sha256']['cublasLt64_13.dll']==w['runtime_before']['cublasLt64_13.dll'] and w['loaded_module_sha256']['nvcuda.dll']==w['driver_module_sha256_before'];assert (w['optional_cudart_module_sha256']==w['runtime_before']['cudart64_13.dll']) if r['optional_cudart_module_path'] else w['optional_cudart_module_sha256'] is None",
+          "count": 1
+        },
+        {
+          "old": "vendor_recovery_proof_sha256=sha(peer),source_library",
+          "new": "vendor_recovery_proof_sha256=sha(peer),previous_SDK_failure_proof_sha256=sha(previous),source_library",
+          "count": 1
+        }
+      ]
+    }
+  ]
+}

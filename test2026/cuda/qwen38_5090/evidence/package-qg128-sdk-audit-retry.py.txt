@@ -1,0 +1,26 @@
+from pathlib import Path
+import ast,hashlib,json,zipfile
+W=Path(__file__).resolve().parent;O=W.parent/'outputs';R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';P='Garnet/test2026/cuda/qwen38_5090/';sha=lambda b:hashlib.sha256(b).hexdigest();raw=(O/'qg128-sdk-control-attempt1-verified.json').read_bytes();assert raw==(O/'qg128-sdk-control-attempt1-remote-verified.json').read_bytes();q=json.loads(raw);assert q['exit_code']==1;peer=(O/'full-chunk-stage-vendor-optional-fields-verified.json').read_bytes();record=json.loads((M/'evidence/qg128-sdk-module-audit-retry-derivation.json').read_bytes());assert record['algorithm_selection_geometry_attribute_and_AlgoCheck_predicates_unchanged']
+names={}
+for row in record['derivations']:
+    original=(M/row['source']).read_bytes();assert sha(original)==row['source_sha256']
+    for c in row['changes']:assert original.count(c['old'].encode())==c['count'];original=original.replace(c['old'].encode(),c['new'].encode())
+    target=M/row['target'];assert target.read_bytes()==original and sha(original)==row['target_sha256'];names[P+row['target']]=target
+    if target.suffix=='.py':ast.parse(original)
+old=(M/'probe_qg128_sdk_control.cpp').read_bytes();new=(M/'probe_qg128_sdk_control_attempt2.cpp').read_bytes();start=b'int main(';finish=b'        report<<"],';assert old[old.index(start):old.index(finish)]==new[new.index(start):new.index(finish)];assert b'cublasLtMatmul(' not in new and b'cublasLtMatmulAlgoConfigSetAttribute' not in new
+names[P+'evidence/qg128-sdk-module-audit-retry-derivation.json']=M/'evidence/qg128-sdk-module-audit-retry-derivation.json';p=dict(status='standalone_QG_module_audit_retry_prepared_unrun',files={n:sha(path.read_bytes()) for n,path in names.items()},paired_vendor_recovery_proof_sha256=sha(peer),previous_SDK_failure_proof_sha256=sha(raw),scope='Exact SDK metadata probe retry: algorithm selection, five observed public attribute guards, geometry and AlgoCheck M16/M32/M128 unchanged. Audit optional cudart module presence, required loaded cuBLASLt and System32 nvcuda bytes before/after; retain actual failed-exe PE imports, requested shared/deprecated hybrid compiler warning. No weights/matmul/Garnet native runtime mutation or model/performance qualification.')
+prep=M/'evidence/qg128-sdk-control-preparation-attempt2.json';blob=json.dumps(p,indent=2).encode();assert not prep.exists() or prep.read_bytes()==blob;prep.write_bytes(blob);names[P+'evidence/qg128-sdk-control-preparation-attempt2.json']=prep;target=W/'qg128-sdk-audit-retry-deployment.zip';assert not target.exists()
+with zipfile.ZipFile(target,'x',zipfile.ZIP_DEFLATED) as z:
+    for n,path in names.items():z.write(path,n)
+    z.writestr('deployment-manifest.json',json.dumps(dict(files={n:sha(path.read_bytes()) for n,path in names.items()},previous_SDK_failure_proof_sha256=sha(raw)),indent=2))
+receipt=dict(status='standalone_QG_SDK_audit_retry_deployment_prepared',sha256=sha(target.read_bytes()),bytes=target.stat().st_size,files=len(names));(W/'qg128-sdk-audit-retry-package.json').write_bytes(json.dumps(receipt,indent=2).encode())
+script='''from pathlib import Path
+import hashlib,json,zipfile
+ROOT=Path('D:/CantorAI/5090-study-20261023');sha=lambda b:hashlib.sha256(b).hexdigest();archive=ROOT/'results/qg128-sdk-audit-retry-deployment.zip';assert sha(archive.read_bytes())==ZIP_SHA
+with zipfile.ZipFile(archive) as z:
+    m=json.loads(z.read('deployment-manifest.json'));assert sha((ROOT/'results/qg128-sdk-control-attempt1-verified.json').read_bytes())==m['previous_SDK_failure_proof_sha256'];assert z.testzip() is None and len(z.namelist())==len(set(z.namelist()))==len(m['files'])+1==7
+    for n,h in m['files'].items():
+        path=ROOT/n;raw=z.read(n);assert path.resolve().is_relative_to((ROOT/'Garnet/test2026/cuda/qwen38_5090').resolve()) and path.parent.exists() and sha(raw)==h and (not path.exists() or path.read_bytes()==raw)
+    for n in m['files']:(ROOT/n).write_bytes(z.read(n))
+out=ROOT/'results/qg128-sdk-audit-retry-install.json';assert not out.exists();out.write_bytes(json.dumps(dict(status='standalone_SDK_audit_retry_methods_installed',deployment_archive_sha256=sha(archive.read_bytes()),files=m['files']),indent=2).encode());print(json.dumps(dict(status='standalone_SDK_audit_retry_methods_installed',files=len(m['files']))))
+'''.replace('ZIP_SHA',repr(receipt['sha256']));(W/'install-qg128-sdk-audit-retry.py').write_bytes(script.encode());print(json.dumps(receipt))
