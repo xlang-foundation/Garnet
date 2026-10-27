@@ -1,0 +1,14 @@
+from pathlib import Path
+import hashlib,json,zipfile
+W=Path(__file__).resolve().parent;O=W.parent/'outputs';archive=O/'b4-b1-short-admission-attempt1-evidence.zip';sha=lambda b:hashlib.sha256(b).hexdigest();job='b4-b1-short-admission-attempt1';base='results/'+job+'/'
+with zipfile.ZipFile(archive) as z:
+    assert z.testzip() is None;mf=json.loads(z.read('evidence-manifest.json'))['files'];assert len(z.namelist())==len(set(z.namelist()))==len(mf)+1
+    for n,h in mf.items():assert sha(z.read(n))==h
+    r=json.loads(z.read(base+'reference/report.json'));c=json.loads(z.read(base+'candidate/report.json'));w=json.loads(z.read(base+'workflow.json'));assert w['exit_code']==1 and w['cleanup_finished']
+    rows=[]
+    for i in range(4):
+        a=c['rows'][0]['generated_ids'][i];b=r['rows'][i]['generated_ids'][0];assert len(a)==len(b)==8
+        ref=r['rows'][i]['prefill_state']['vectors']['normalized'];cand=c['rows'][0]['prefill_state']['vectors']['normalized'];raw=z.read(base+'reference/'+ref['file']);full=z.read(base+'candidate/'+cand['file']);assert full[i*20480:(i+1)*20480]==raw
+        rows.append(dict(physical_row=i,key=r['inputs'][i]['key'],candidate_ids=a,reference_ids=b,first_difference_zero_based=next((j for j,(v,t) in enumerate(zip(a,b)) if v!=t),None),prefill_normalized_raw_bytes_exact=True,first_token_exact=a[0]==b[0]))
+result=dict(status='original_short_failure_first_ID_divergence_observed',archive_sha256=sha(archive.read_bytes()),original_exit_code=1,rows=rows,all_first_tokens_exact=all(v['first_token_exact'] for v in rows),GPU_or_model_rerun=False,full_model_or_performance_qualified=False,scope='Raw eight-ID sequence first differences only after full original archive manifest/CRC validation and same saved prefill normalized bytes. Does not prove head logit equivalence, first-state-divergence step, projection cause or harmlessness.')
+target=O/'Garnet-B4-First-Decode-Divergence.json';raw=json.dumps(result,indent=2).encode();assert not target.exists() or target.read_bytes()==raw;target.write_bytes(raw);print(json.dumps(result))
