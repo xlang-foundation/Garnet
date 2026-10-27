@@ -1,0 +1,170 @@
+{
+  "status": "source86_native_build_protocol_prepared_unrun",
+  "derivations": [
+    {
+      "source": "run_b4_k_m4x4_native_build.py",
+      "source_sha256": "4677c1dab0c1595b304e3003b51454a91003d50dcbe39278d3b39a9821460254",
+      "target": "run_decode35_stage_native_build.py",
+      "target_sha256": "8eb06f339c3742ba7a51645641be715666c57cc673f3f21d0aac3d6c8277d9ff",
+      "changes": [
+        {
+          "old": "JOB='b4-k-m4x4-build-attempt1'",
+          "new": "JOB='decode35-stage-build-attempt1'",
+          "count": 1
+        },
+        {
+          "old": "b4-k-m4x4-build-preparation.json",
+          "new": "decode35-stage-build-preparation.json",
+          "count": 1
+        },
+        {
+          "old": "b4_k_m4x4_build_prepared_unrun",
+          "new": "decode35_stage_build_prepared_unrun",
+          "count": 1
+        },
+        {
+          "old": "b4-k-m4x4-build-inputs.json",
+          "new": "decode35-stage-build-inputs.json",
+          "count": 2
+        },
+        {
+          "old": "garnet-native-b4-k-m4x4-attempt1.dll",
+          "new": "garnet-native-decode35-stage-attempt1.dll",
+          "count": 1
+        },
+        {
+          "old": "b4-k-m4x4-build-input-inventory-v2/",
+          "new": "decode35-stage-build-input-inventory/",
+          "count": 1
+        },
+        {
+          "old": "inspect-b4-k-m4x4-build-inputs-v2.py",
+          "new": "inspect-decode35-stage-build-inputs.py",
+          "count": 1
+        },
+        {
+          "old": "run-b4-k-m4x4-build-inventory-v2.py",
+          "new": "run-decode35-stage-build-inventory.py",
+          "count": 1
+        },
+        {
+          "old": "        original79,expected,_=k_sources();assert original79==qk79 and len(expected)==85 and expected==candidate",
+          "new": "        original79,qualified85,_=k_sources();assert original79==qk79 and len(qualified85)==85\n        from test2026.cuda.qwen38_5090.decode35_stage_source import sources as decode35_sources\n        original85,expected,_=decode35_sources();assert original85==qualified85 and len(expected)==86 and expected==candidate",
+          "count": 1
+        },
+        {
+          "old": "        from test2026.cuda.qwen38_5090.b4_k_m4x4_source import sources\n",
+          "new": "        from test2026.cuda.qwen38_5090.decode35_stage_source import sources\n",
+          "count": 1
+        },
+        {
+          "old": "88current controls plus86historical assertions on exact qualified parent50; original tests unchanged, new85source plus preserved79/73/67 composition/corruption/failedSDK-model lineage; paired1209Kprofile/232four-M4factory/plugin CPU proof plus original1248QK/406 and all legacy proofs required",
+          "new": "93current controls plus86historical assertions on exact qualified parent50; all old tests retained plus5new source86 operand-witness composition/defaultoff/type/shape/corruption controls. Actual new109header CPU and all old1209K/232factory/plugin/QK1248/406 parents required; no model qualification.",
+          "count": 1
+        },
+        {
+          "old": "Release/MT/sm120 source85 defaultoff K-only physicalB4T4 intervention: four actual M4 matmuls with pinned live SDK selection, seven attrs and two M4 checks. Original QK-M16/V/GDN/NVFP4 and every CUDA kernel/wire preserved. Paired1209selector/232factory-pointer/plugin CPU required alongside all original native gates. All34 CUDA hashes and original three-object whitelist retained. Originalfull4K FAILED; no live SDK math/model/quality/HTTP/performance admission from build.",
+          "new": "Release/MT/sm120 source86 defaultoff internal layer35 operand witness. Only observation pointer/metadata/shape/pack additions over85, no original arithmetic/precision/CUDA/oldguard/counter changes. New109actual native CPU profile plus all old Q/O/factory/wire/init/selector/tokenizer gates required. Record all34 CUDA hashes and retain original three-object whitelist; strictcache62/full4K stayFAILED. Save separate DLL, restore source/baseline runtime; no live TensorRT stage/model/quality/performance admission from build.",
+          "count": 1
+        },
+        {
+          "old": "b4_k_m4x4_native_built_CPU_qualified_model_unqualified",
+          "new": "decode35_stage_native_built_CPU_qualified_model_unqualified",
+          "count": 1
+        },
+        {
+          "old": "        save();idle();w['cleanup_finished']=True;save();paths=",
+          "new": "        w['cuda_objects_after']={n.relative_to(ROOT).as_posix():sha(n) for n in (ROOT/'build/garnet/CMakeFiles/garnet.dir').rglob('*.cu.obj')}\n        try:\n            w['changed_cuda_objects_at_closure']=validate_cuda_objects(objects,w['cuda_objects_after'])\n            if code==0:assert w['cuda_objects_after']==w['cuda_objects_built']\n        except BaseException as error:\n            code=1;w.update(status='failed',exit_code=1,cuda_object_validation_error=repr(error))\n            if not w.get('error'):w['error']='CUDA object closure validation failed'\n        save();idle();w['cleanup_finished']=True;save();paths=",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "verify_b4_k_m4x4_native_build.py",
+      "source_sha256": "7f7fb072fd3fab2c5919263aaf0d2a076ca8250d8faaa0ea85a3812cf563552d",
+      "target": "verify_decode35_stage_native_build.py",
+      "target_sha256": "b5e1f9c5ff16856cdf71ab241c0f6918859142de9760f442e4887d5fab29064a",
+      "changes": [
+        {
+          "old": "JOB='b4-k-m4x4-build-attempt1'",
+          "new": "JOB='decode35-stage-build-attempt1'",
+          "count": 1
+        },
+        {
+          "old": "b4-k-m4x4-build-preparation.json",
+          "new": "decode35-stage-build-preparation.json",
+          "count": 1
+        },
+        {
+          "old": "len(p['candidate_files'])==85",
+          "new": "len(p['candidate_files'])==86",
+          "count": 1
+        },
+        {
+          "old": "evidence/b4-k-m4x4-native-build-derivation.json",
+          "new": "evidence/decode35-stage-native-build-derivation.json",
+          "count": 1
+        },
+        {
+          "old": "len(set(source.namelist()))==85",
+          "new": "len(set(source.namelist()))==86",
+          "count": 1
+        },
+        {
+          "old": "b4-k-m4x4-build-inputs.json",
+          "new": "decode35-stage-build-inputs.json",
+          "count": 1
+        },
+        {
+          "old": "b4_k_m4x4_native_built_CPU_qualified_model_unqualified",
+          "new": "decode35_stage_native_built_CPU_qualified_model_unqualified",
+          "count": 1
+        },
+        {
+          "old": "Ran 88 tests",
+          "new": "Ran 93 tests",
+          "count": 1
+        },
+        {
+          "old": "b4_k_m4x4_native_CPU_build_replayed",
+          "new": "decode35_stage_native_CPU_build_replayed",
+          "count": 1
+        },
+        {
+          "old": "b4_k_m4x4_native_build_failure_replayed",
+          "new": "decode35_stage_native_build_failure_replayed",
+          "count": 1
+        },
+        {
+          "old": "candidate_files=85",
+          "new": "candidate_files=86",
+          "count": 1
+        },
+        {
+          "old": "current_CPU_controls=88",
+          "new": "current_CPU_controls=93",
+          "count": 1
+        },
+        {
+          "old": "        passed=w['exit_code']==0",
+          "new": "        decode35=doc('results/decode35-stage-profile-cpu-attempt1-verified.json')\n        assert decode35['exit_code']==0 and decode35['status']=='decode35_stage_native_CPU_profile_replayed'\n        assert decode35['native_contract']==dict(status='passed',new_valid=2,new_rejected=103,old_valid=2,old_rejected=2,failures=0,cases=109)\n        assert decode35['source_files']==86 and decode35['source_bundle_sha256']==p['bundle_sha256'] and decode35['baseline_unchanged']\n        assert decode35['source_sha256']['qwen38_decode35_stage_profile.h']==p['candidate_files']['src/backends/tensorrt/qwen38_decode35_stage_profile.h']\n        passed=w['exit_code']==0",
+          "count": 1
+        },
+        {
+          "old": "new_K_fourM4_CPU_contracts_parent_checked=True,",
+          "new": "new_K_fourM4_CPU_contracts_parent_checked=True,new_decode35_native_CPU_profile_cases=109,",
+          "count": 1
+        },
+        {
+          "old": "            assert w['cuda_objects_before']==p['cuda_objects_before'] and validate_cuda_objects(w['cuda_objects_before'],w['cuda_objects_built'])==w['changed_cuda_objects']",
+          "new": "            assert w['cuda_objects_before']==p['cuda_objects_before'] and validate_cuda_objects(w['cuda_objects_before'],w['cuda_objects_built'])==w['changed_cuda_objects']\n            assert w['cuda_objects_after']==w['cuda_objects_built'] and w['changed_cuda_objects_at_closure']==w['changed_cuda_objects']",
+          "count": 1
+        }
+      ]
+    }
+  ],
+  "original_all_Q_O_factory_wire_initialize_selector_tokenizer_controls_preserved": true,
+  "new_source_CPU_controls": 5,
+  "native_profile_cases_parent_required": 109,
+  "old_object_whitelist_unchanged": true
+}

@@ -1,0 +1,38 @@
+from pathlib import Path
+import ast,hashlib,json,sys,zipfile
+W=Path(__file__).resolve().parent;O=W.parent/'outputs';R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';E=M/'evidence';P='Garnet/test2026/cuda/qwen38_5090/';sha=lambda raw:hashlib.sha256(raw).hexdigest();sys.path.insert(0,str(R))
+from test2026.cuda.qwen38_5090.decode35_stage_source import sources
+_,candidate,record=sources();old=json.loads((E/'b4-k-m4x4-build-preparation.json').read_bytes())
+inventory=W/'decode35-stage-build-inventory-assets.zip'
+with zipfile.ZipFile(inventory) as z:
+    mf=json.loads(z.read('manifest.json'))['files'];assert z.testzip() is None and len(z.namelist())==len(set(z.namelist()))==len(mf)+1
+    for n,h in mf.items():assert sha(z.read(n))==h
+    iraw=z.read('results/decode35-stage-build-inputs.json');i=json.loads(iraw)
+    for name in ('inspect-decode35-stage-build-inputs.py','run-decode35-stage-build-inventory.py','decode35-stage-build-seed.json'):assert z.read('results/'+name)==(W/name).read_bytes()
+    events=[json.loads(line) for line in z.read('results/decode35-stage-build-input-inventory/commands.jsonl').splitlines()];assert len(events)==2 and events[1]['exit_code']==0
+assert i['status']=='decode35_stage_native_build_inputs_verified_no_compilation_or_GPU'
+assert len(i['base_files'])==1892 and len(i['candidate_base'])==86 and len(i['cuda_objects_before'])==34 and len(i['closed_parents'])==47
+seed=json.loads((W/'decode35-stage-build-seed.json').read_bytes())
+for key in seed:assert i[key]==seed[key]
+input_path=E/'decode35-stage-build-inputs.json';assert not input_path.exists();input_path.write_bytes(iraw)
+names=['run_decode35_stage_native_build.py','verify_decode35_stage_native_build.py','decode35_stage_source.py','test_decode35_stage_source.py','native_decode35_stage_candidate/qwen35_lowering.h','native_decode35_stage_candidate/trt_builder.cpp','native_decode35_stage_candidate/qwen38_decode35_stage_profile.h','evidence/decode35-stage-source-derivation.json','evidence/decode35-stage-native-build-derivation.json','evidence/decode35-stage-profile-cpu-attempt1-verified.json','evidence/decode35-stage-build-inputs.json']
+methods={**old['methods'],**{P+n:sha((M/n).read_bytes()) for n in names},**{'results/'+n:sha((W/n).read_bytes()) for n in ('inspect-decode35-stage-build-inputs.py','run-decode35-stage-build-inventory.py','decode35-stage-build-seed.json')}}
+for row in json.loads((E/'decode35-stage-native-build-derivation.json').read_bytes())['derivations']:
+    raw=(M/row['source']).read_bytes();assert sha(raw)==row['source_sha256']
+    for c in row['changes']:assert raw.count(c['old'].encode())==c['count'];raw=raw.replace(c['old'].encode(),c['new'].encode())
+    assert raw==(M/row['target']).read_bytes() and sha(raw)==row['target_sha256'];ast.parse(raw)
+parents=i['closed_parents']
+for job,row in parents.items():
+    proof=(O/(job+'-verified.json')).read_bytes();assert proof==(O/(job+'-remote-verified.json')).read_bytes() and sha(proof)==row['proof_sha256'] and sha((O/(job+'-evidence.zip')).read_bytes())==row['archive_sha256']
+cpu=json.loads((O/'decode35-stage-profile-cpu-attempt1-verified.json').read_bytes());assert cpu['exit_code']==0 and cpu['native_contract']['cases']==109 and cpu['source_files']==86
+assert parents['fp8-policy-cache-build-attempt1']['exit_code']==parents['b4-full4k-exact-attempt1']['exit_code']==1
+bundle=W/'decode35-stage-source.zip';assert sha(bundle.read_bytes())==i['source_bundle_sha256']==cpu['source_bundle_sha256']
+p={'status':'decode35_stage_build_prepared_unrun','base_files':i['base_files'],'methods':methods,'candidate_files':record['candidate_files'],'candidate_base':i['candidate_base'],'runtime':i['runtime'],'environment':i['environment'],'checkpoints':i['checkpoints'],'parents':parents,'cache_before_sha256':i['cache_before_sha256'],'cuda_objects_before':i['cuda_objects_before'],'input_inventory_sha256':sha(iraw),'bundle':'results/decode35-stage-source.zip','bundle_sha256':sha(bundle.read_bytes()),'vcvars':old['vcvars'],'test_ids':old['test_ids']+['test2026.cuda.qwen38_5090.test_decode35_stage_source'],'scope':'Actual source86 Release/MT/sm120 defaultoff layer35 internal operand witness over exactsource85. Only two observation pointer/metadata/shape/pack source edits plusone separate strictguardheader. All old arithmetic/precision/CUDA/guards/counters unchanged. Actual109newnativeCPUprofile proof required, plus all original93current+86historical/Q-O278/factory182/wire/630+720initialize/selector/tokenizer controls. Record all34CUDAobjects and preserve original3objectwhitelist; originalstrictcache62/full4K remainFAILED. Snapshot86targets/baselineDLL/runtime/SDK/config-index/CMake andrestoreallsource. Save separatecandidateDLL; build alone doesnotqualify live TensorRT stagepacking, numerical equivalence, modelquality or speed. Sameprofile complete53IDs/fivestates/vectors/fullcache/coordinate/all64layer44-45 parity before interpreting newinternal operands. Strongesttuned/MTPrefs,INT4/4B andoverall2x remainopen.'}
+prep=E/'decode35-stage-build-preparation.json';assert not prep.exists();prep.write_bytes(json.dumps(p,indent=2).encode())
+deploy={P+n:M/n for n in names};deploy[P+'evidence/'+prep.name]=prep
+target=W/'decode35-stage-native-deployment.zip';assert not target.exists()
+with zipfile.ZipFile(target,'x',zipfile.ZIP_DEFLATED) as z:
+    for n,path in deploy.items():z.write(path,n)
+    z.writestr('deployment-manifest.json',json.dumps({'files':{n:sha(path.read_bytes()) for n,path in deploy.items()},'production_source_and_DLL_install_deferred_to_exclusive_owner':True},indent=2))
+receipt={'deployment_sha256':sha(target.read_bytes()),'bytes':target.stat().st_size,'files':len(deploy),'native_source_files':86,'preparation_sha256':sha(prep.read_bytes()),'source_bundle_sha256':p['bundle_sha256'],'original_object_whitelist_preserved':True,'base_files':len(p['base_files']),'methods':len(methods),'parents':len(parents),'current_Python_controls':93,'historical_controls':86,'new_actual_CPU_profile_cases':109}
+(W/'decode35-stage-native-package.json').write_bytes(json.dumps(receipt,indent=2).encode());print(json.dumps(receipt,indent=2))

@@ -1,0 +1,22 @@
+from pathlib import Path
+import hashlib,json,zipfile
+W=Path(__file__).resolve().parent;O=W.parent/'outputs';R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';E=M/'evidence';sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+old=json.loads((E/'b4-k-m4x4-build-preparation.json').read_bytes());last=json.loads((E/'step45-layer-boundary2-preparation.json').read_bytes());record=json.loads((E/'decode35-stage-source-derivation.json').read_bytes());package=json.loads((W/'decode35-stage-source-package.json').read_bytes())
+J='step45-layer-boundary-attempt2';proof=O/(J+'-verified.json');q=json.loads(proof.read_bytes());assert q['exit_code']==0 and proof.read_bytes()==(O/(J+'-remote-verified.json')).read_bytes()
+assert sha(O/(J+'-evidence.zip'))==q['archive_sha256']
+with zipfile.ZipFile(O/(J+'-evidence.zip')) as z:w=json.loads(z.read('results/'+J+'/workflow.json'));assert w['all_restored'] and w['cleanup_finished']
+parents=dict(last['parents'])
+for job in (J,'decode35-stage-profile-cpu-attempt1'):
+    p=O/(job+'-verified.json');v=json.loads(p.read_bytes());assert v['exit_code']==0
+    parents[job]={'proof_sha256':sha(p),'archive_sha256':v['archive_sha256'],'status':v['status'],'exit_code':0}
+for job,row in parents.items():
+    p=O/(job+'-verified.json');v=json.loads(p.read_bytes());assert p.read_bytes()==(O/(job+'-remote-verified.json')).read_bytes() and sha(p)==row['proof_sha256'] and sha(O/(job+'-evidence.zip'))==v['archive_sha256']==row['archive_sha256'] and v['status']==row['status']
+    member='workflow.json' if job=='decode35-stage-profile-cpu-attempt1' else 'results/'+job+'/workflow.json'
+    with zipfile.ZipFile(O/(job+'-evidence.zip')) as z:
+        mf=json.loads(z.read('evidence-manifest.json'))['files'];raw=z.read(member);assert hashlib.sha256(raw).hexdigest()==mf[member];control=json.loads(raw)
+    assert control['exit_code']==row['exit_code'] and control['cleanup_finished'];parents[job]=dict(row,workflow_member=member)
+assert len(parents)==47 and parents['fp8-policy-cache-build-attempt1']['exit_code']==parents['b4-full4k-exact-attempt1']['exit_code']==1
+targets={**old['candidate_base'],'src/backends/tensorrt/qwen38_decode35_stage_profile.h':None};assert len(targets)==86 and len([v for v in targets.values() if v is not None])==14
+assert sha(W/'decode35-stage-source.zip')==package['source_bundle_sha256']
+s={'status':'source86_native_build_seed','base_files':w['source_after'],'candidate_base':targets,'candidate_files':record['candidate_files'],'runtime':w['runtime_after'],'environment':w['environment_after'],'checkpoints':w['checkpoint_after'],'cache_before_sha256':w['cache_after_sha256'],'cuda_objects_before':w['cuda_objects_after'],'closed_parents':parents,'source_bundle_sha256':package['source_bundle_sha256'],'scope':'Fresh source86 observation-only build; original93current+86historical/nativeQ-O-factory-wire-init-selector-tokenizer controls, actual109profileCPU parent and original34object/three-whitelist constraints. All production source/DLL/runtime/SDK/config-index/CMake restore. No live stage/model/quality/performance claim; full4K/cache62 failures remain failed.'}
+target=W/'decode35-stage-build-seed.json';assert not target.exists();target.write_bytes(json.dumps(s,indent=2).encode());print(json.dumps({'seed_sha256':sha(target),'base_files':len(s['base_files']),'parents':len(parents),'targets':len(targets),'source_bundle_sha256':package['source_bundle_sha256']}))

@@ -1,0 +1,59 @@
+from pathlib import Path
+import ast,hashlib,json
+R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';sha=lambda raw:hashlib.sha256(raw).hexdigest();rows=[]
+def derive(src,dst,changes):
+    raw=(M/src).read_bytes();s=raw.decode()
+    for a,b,n in changes:assert s.count(a)==n,(a,s.count(a),n);s=s.replace(a,b)
+    ast.parse(s);target=M/dst;assert not target.exists();target.write_bytes(s.encode());rows.append({'source':src,'source_sha256':sha(raw),'target':dst,'target_sha256':sha(target.read_bytes()),'changes':[{'old':a,'new':b,'count':n} for a,b,n in changes]})
+
+derive('run_b4_k_m4x4_native_build.py','run_decode35_stage_native_build.py',[
+("JOB='b4-k-m4x4-build-attempt1'","JOB='decode35-stage-build-attempt1'",1),
+('b4-k-m4x4-build-preparation.json','decode35-stage-build-preparation.json',1),
+('b4_k_m4x4_build_prepared_unrun','decode35_stage_build_prepared_unrun',1),
+('b4-k-m4x4-build-inputs.json','decode35-stage-build-inputs.json',2),
+('garnet-native-b4-k-m4x4-attempt1.dll','garnet-native-decode35-stage-attempt1.dll',1),
+('b4-k-m4x4-build-input-inventory-v2/','decode35-stage-build-input-inventory/',1),
+('inspect-b4-k-m4x4-build-inputs-v2.py','inspect-decode35-stage-build-inputs.py',1),
+('run-b4-k-m4x4-build-inventory-v2.py','run-decode35-stage-build-inventory.py',1),
+('        original79,expected,_=k_sources();assert original79==qk79 and len(expected)==85 and expected==candidate',
+ '        original79,qualified85,_=k_sources();assert original79==qk79 and len(qualified85)==85\n        from test2026.cuda.qwen38_5090.decode35_stage_source import sources as decode35_sources\n        original85,expected,_=decode35_sources();assert original85==qualified85 and len(expected)==86 and expected==candidate',1),
+('        from test2026.cuda.qwen38_5090.b4_k_m4x4_source import sources\n','        from test2026.cuda.qwen38_5090.decode35_stage_source import sources\n',1),
+('88current controls plus86historical assertions on exact qualified parent50; original tests unchanged, new85source plus preserved79/73/67 composition/corruption/failedSDK-model lineage; paired1209Kprofile/232four-M4factory/plugin CPU proof plus original1248QK/406 and all legacy proofs required',
+ '93current controls plus86historical assertions on exact qualified parent50; all old tests retained plus5new source86 operand-witness composition/defaultoff/type/shape/corruption controls. Actual new109header CPU and all old1209K/232factory/plugin/QK1248/406 parents required; no model qualification.',1),
+('Release/MT/sm120 source85 defaultoff K-only physicalB4T4 intervention: four actual M4 matmuls with pinned live SDK selection, seven attrs and two M4 checks. Original QK-M16/V/GDN/NVFP4 and every CUDA kernel/wire preserved. Paired1209selector/232factory-pointer/plugin CPU required alongside all original native gates. All34 CUDA hashes and original three-object whitelist retained. Originalfull4K FAILED; no live SDK math/model/quality/HTTP/performance admission from build.',
+ 'Release/MT/sm120 source86 defaultoff internal layer35 operand witness. Only observation pointer/metadata/shape/pack additions over85, no original arithmetic/precision/CUDA/oldguard/counter changes. New109actual native CPU profile plus all old Q/O/factory/wire/init/selector/tokenizer gates required. Record all34 CUDA hashes and retain original three-object whitelist; strictcache62/full4K stayFAILED. Save separate DLL, restore source/baseline runtime; no live TensorRT stage/model/quality/performance admission from build.',1),
+('b4_k_m4x4_native_built_CPU_qualified_model_unqualified','decode35_stage_native_built_CPU_qualified_model_unqualified',1),
+('        save();idle();w[\'cleanup_finished\']=True;save();paths=', '''        w['cuda_objects_after']={n.relative_to(ROOT).as_posix():sha(n) for n in (ROOT/'build/garnet/CMakeFiles/garnet.dir').rglob('*.cu.obj')}
+        try:
+            w['changed_cuda_objects_at_closure']=validate_cuda_objects(objects,w['cuda_objects_after'])
+            if code==0:assert w['cuda_objects_after']==w['cuda_objects_built']
+        except BaseException as error:
+            code=1;w.update(status='failed',exit_code=1,cuda_object_validation_error=repr(error))
+            if not w.get('error'):w['error']='CUDA object closure validation failed'
+        save();idle();w['cleanup_finished']=True;save();paths=''',1),
+])
+
+derive('verify_b4_k_m4x4_native_build.py','verify_decode35_stage_native_build.py',[
+("JOB='b4-k-m4x4-build-attempt1'","JOB='decode35-stage-build-attempt1'",1),
+('b4-k-m4x4-build-preparation.json','decode35-stage-build-preparation.json',1),
+('len(p[\'candidate_files\'])==85',"len(p['candidate_files'])==86",1),
+('evidence/b4-k-m4x4-native-build-derivation.json','evidence/decode35-stage-native-build-derivation.json',1),
+('len(set(source.namelist()))==85','len(set(source.namelist()))==86',1),
+('b4-k-m4x4-build-inputs.json','decode35-stage-build-inputs.json',1),
+('b4_k_m4x4_native_built_CPU_qualified_model_unqualified','decode35_stage_native_built_CPU_qualified_model_unqualified',1),
+('Ran 88 tests','Ran 93 tests',1),
+('b4_k_m4x4_native_CPU_build_replayed','decode35_stage_native_CPU_build_replayed',1),
+('b4_k_m4x4_native_build_failure_replayed','decode35_stage_native_build_failure_replayed',1),
+('candidate_files=85','candidate_files=86',1),
+('current_CPU_controls=88','current_CPU_controls=93',1),
+('        passed=w[\'exit_code\']==0', '''        decode35=doc('results/decode35-stage-profile-cpu-attempt1-verified.json')
+        assert decode35['exit_code']==0 and decode35['status']=='decode35_stage_native_CPU_profile_replayed'
+        assert decode35['native_contract']==dict(status='passed',new_valid=2,new_rejected=103,old_valid=2,old_rejected=2,failures=0,cases=109)
+        assert decode35['source_files']==86 and decode35['source_bundle_sha256']==p['bundle_sha256'] and decode35['baseline_unchanged']
+        assert decode35['source_sha256']['qwen38_decode35_stage_profile.h']==p['candidate_files']['src/backends/tensorrt/qwen38_decode35_stage_profile.h']
+        passed=w['exit_code']==0''',1),
+('new_K_fourM4_CPU_contracts_parent_checked=True,','new_K_fourM4_CPU_contracts_parent_checked=True,new_decode35_native_CPU_profile_cases=109,',1),
+('            assert w[\'cuda_objects_before\']==p[\'cuda_objects_before\'] and validate_cuda_objects(w[\'cuda_objects_before\'],w[\'cuda_objects_built\'])==w[\'changed_cuda_objects\']',
+ '            assert w[\'cuda_objects_before\']==p[\'cuda_objects_before\'] and validate_cuda_objects(w[\'cuda_objects_before\'],w[\'cuda_objects_built\'])==w[\'changed_cuda_objects\']\n            assert w[\'cuda_objects_after\']==w[\'cuda_objects_built\'] and w[\'changed_cuda_objects_at_closure\']==w[\'changed_cuda_objects\']',1),
+])
+target=M/'evidence/decode35-stage-native-build-derivation.json';assert not target.exists();target.write_bytes(json.dumps({'status':'source86_native_build_protocol_prepared_unrun','derivations':rows,'original_all_Q_O_factory_wire_initialize_selector_tokenizer_controls_preserved':True,'new_source_CPU_controls':5,'native_profile_cases_parent_required':109,'old_object_whitelist_unchanged':True},indent=2).encode());print('Two exact native-build protocol derivations parsed; old controls retained.')
