@@ -1,0 +1,47 @@
+"""Prepare an uncompiled host-only B4xT32 FP8 eligibility experiment."""
+from pathlib import Path
+import hashlib,json,sys
+R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';sys.path.insert(0,str(R));from test2026.cuda.qwen38_5090.o128_canonical_source import sources
+_,old,parent=sources();sha=lambda b:hashlib.sha256(b).hexdigest();prefix='src/backends/tensorrt/';folder=M/'native_b4_prefill128_candidate';folder.mkdir(exist_ok=True);new=dict(old);steps={}
+header=b'''// SPDX-License-Identifier: Apache-2.0
+#pragma once
+#include <cstdint>
+#include <cstring>
+#include <stdexcept>
+namespace Garnet {
+// Explicit research geometry only. This selects the existing flat M128 GEMM;
+// it does not flatten recurrent state, attention caches, or logical batches.
+inline bool ModelOptFP8Batch4PrefillSelected(const char* policy,int batch,int tokens,int64_t inputRows){
+    if(policy&&*policy&&std::strcmp(policy,"0")&&std::strcmp(policy,"1"))
+        throw std::invalid_argument("GARNET_FP8_BATCH4_PREFILL_CANONICAL must be0 or1");
+    if(!policy||std::strcmp(policy,"1")||batch!=4||tokens!=32)return false;
+    if(inputRows!=128)throw std::invalid_argument("B4 T32 canonical FP8 requires exactly128 input rows");
+    return true;
+}
+}
+'''
+new[prefix+'modelopt_fp8_batch4_prefill_profile.h']=header
+profiles=[('modelopt_fp8_m128_profile.h','bool gdnOutput'),('modelopt_fp8_z128_profile.h','bool gdnZ'),('modelopt_fp8_kv128_profile.h','const std::string& weight'),('modelopt_fp8_q128_profile.h','const std::string& weight'),('modelopt_fp8_o128_profile.h','const std::string& weight')]
+for filename,last in profiles:
+    key=prefix+filename;raw=old[key];nl=b'\r\n' if b'\r\n' in raw else b'\n';changes=[]
+    def change(a,b):
+        global raw
+        assert raw.count(a)==1,(filename,a,raw.count(a));raw=raw.replace(a,b);changes.append(dict(old=a.decode(),new=b.decode(),count=1))
+    change(b'#pragma once'+nl,b'#pragma once'+nl+b'#include "modelopt_fp8_batch4_prefill_profile.h"'+nl)
+    change((last+'){').encode(),(last+',const char* batch4Policy=nullptr){').encode())
+    change(b'    if(!policy||std::strcmp(policy,"1")',b'    const bool batch4Prefill=ModelOptFP8Batch4PrefillSelected(batch4Policy,batch,tokens,inputRows);'+nl+b'    if(!policy||std::strcmp(policy,"1")')
+    change(b'batch!=1||tokens!=128||inputRows!=128',b'(!(batch==1&&tokens==128)&&!batch4Prefill)||inputRows!=128')
+    new[key]=raw;steps[key]=changes
+key=prefix+'modelopt_fp8_z128_reconstructed_profile.h';raw=old[key];changes=[]
+for a,b in [('bool gdnZ){','bool gdnZ,const char* batch4Policy=nullptr){'),('columns,gdnZ);','columns,gdnZ,batch4Policy);')]:
+    assert raw.count(a.encode())==1;raw=raw.replace(a.encode(),b.encode());changes.append(dict(old=a,new=b,count=1))
+new[key]=raw;steps[key]=changes
+key=prefix+'modelopt_fp8_lowering.cpp';raw=old[key];start=raw.index(b'    const bool canonicalM128=');end=raw.index(b'    IPluginV2DynamicExt* plugin=',start);before=raw[start:end];after=before
+for a,b,count in [(b'gdnOutput);',b'gdnOutput,batch4PrefillPolicy);',1),(b'suffixMatches(".linear_attn.in_proj_z.weight"));',b'suffixMatches(".linear_attn.in_proj_z.weight"),batch4PrefillPolicy);',2),(b'p.logicalName);',b'p.logicalName,batch4PrefillPolicy);',3)]:
+    assert after.count(a)==count,(a,after.count(a));after=after.replace(a,b)
+nl=b'\r\n' if b'\r\n' in raw else b'\n';after=b'    const char* batch4PrefillPolicy=std::getenv("GARNET_FP8_BATCH4_PREFILL_CANONICAL");'+nl+after;new[key]=raw[:start]+after+raw[end:];steps[key]=[dict(old=before.decode(),new=after.decode(),count=1)]
+modified=sorted(steps);added=[prefix+'modelopt_fp8_batch4_prefill_profile.h'];assert len(old)==60 and len(new)==61 and len(modified)==7 and all(new[n]==b for n,b in old.items() if n not in modified)
+for n in modified+added:
+    target=folder/Path(n).name;assert not target.exists() or target.read_bytes()==new[n];target.write_bytes(new[n])
+p=dict(status='B4_T32_flat_M128_FP8_source_prepared_UNCOMPILED',parent_files={n:sha(b) for n,b in old.items()},candidate_files={n:sha(b) for n,b in new.items()},modified_files=modified,new_files=added,derivations=steps,all_CUDA_sources_plugin_bodies_quantizers_context_factories_wires_private_nonce_cache_bytes_unchanged=True,new_CUDA_kernels=0,new_context_factories=0,policy='GARNET_FP8_BATCH4_PREFILL_CANONICAL',policy_default='off',actual_logical_geometry=dict(batch=4,tokens=32,flat_rows=128),shared_M128_workspace_bytes=8<<20,CPU_native_selector_tests_run=False,SDK_or_model_or_MTP_or_quality_or_performance_qualified=False,scope='Hypothesis for real batching: opt-in B4T32 eligibility for existing exact M128 FP8 GDN-out/Z-reconstruction/KV/Q/O families, after same original per-family policy/name/output/input geometry checks. Original B1T128 path remains eligible; defaultoffB4 remains legacy. Preserve physical B4/T32 throughout graph and state; only pure flattened GEMM route differs. No attention/GDN recurrence/cache/commit/weights/scales/quantizer/wire/SDK-context/CUDA changes. Existing M128 context must still execute actual128-row SDK AlgoCheck on pinned Blackwell. Current60source/DLL841 benchmark unchanged. Prepare CPU native profile controls, real projection and complete per-row packed-state/vector/token/short/image/full4K/reset gates before any B4 performance; cannot infer cause or correctness from equal flat row count. Production shared-cache fingerprint compatibility still separately pending; research nonce graphs only.')
+(M/'evidence/b4-prefill128-source-derivation.json').write_bytes(json.dumps(p,indent=2).encode());print(json.dumps(dict(status=p['status'],source_files=61,modified_files=7,new_headers=1,GPU_or_native_compile_requested=False)))
