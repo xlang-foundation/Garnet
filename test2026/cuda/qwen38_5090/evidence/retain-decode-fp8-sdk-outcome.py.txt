@@ -1,0 +1,26 @@
+from pathlib import Path
+import hashlib,json,zipfile
+W=Path(__file__).resolve().parent;O=W.parent/'outputs';R=Path('D:/CantorAI/work/qwen38-5090');E=R/'test2026/cuda/qwen38_5090/evidence';JOB='decode-fp8-sdk-control-attempt1';sha=lambda b:hashlib.sha256(b).hexdigest();owned=[]
+def keep(name,raw):
+    p=E/name;assert not p.exists();p.write_bytes(raw);owned.append(p)
+raw=(O/(JOB+'-verified.json')).read_bytes();assert raw==(O/(JOB+'-remote-verified.json')).read_bytes();q=json.loads(raw);assert q['exit_code']==0 and q['strict_replay_passed'] and q['source_runtime_SDK_checkpoint_all34_production_objects_unchanged'];archive=O/(JOB+'-evidence.zip');assert sha(archive.read_bytes())==q['archive_sha256']
+with zipfile.ZipFile(archive) as z:
+    manifest=json.loads(z.read('evidence-manifest.json'));assert z.testzip() is None
+    for n,h in manifest['files'].items():assert sha(z.read(n))==h
+    for n in manifest['files']:
+        if n.startswith('results/'+JOB+'/') and n.endswith(('.json','.jsonl','.log')):keep(JOB+'-'+n.removeprefix('results/'+JOB+'/').replace('/','-'),z.read(n))
+        elif n=='results/actual-decode-fp8-m4-m16-fixture/manifest.json':keep('decode-fp8-sdk-fixture-manifest.json',z.read(n))
+    keep(JOB+'-archive-manifest.json',json.dumps(dict(archive_sha256=q['archive_sha256'],archive_bytes=archive.stat().st_size,files=manifest['files'],external_weights=manifest['external_weights'],raw_arrays_and_executable_in_immutable_ZIP_only=True),indent=2).encode())
+keep(JOB+'-verified.json',raw);keep('Garnet-Decode-FP8-SDK-Control-Verified.json',(O/'Garnet-Decode-FP8-SDK-Control-Verified.json').read_bytes())
+with zipfile.ZipFile(W/'decode-fp8-sdk-closure-assets.zip') as z:
+    mf=json.loads(z.read('manifest.json'));assert z.testzip() is None
+    for n,h in mf['files'].items():assert sha(z.read(n))==h
+    for n in mf['files']:
+        if n.startswith('results/decode-fp8-sdk-postprocess/') or n=='results/decode-fp8-sdk-install.json':keep('decode-fp8-sdk-closure-'+n.removeprefix('results/').replace('/','-'),z.read(n))
+    keep('decode-fp8-sdk-closure-manifest.json',json.dumps(dict(closure_sha256=sha((W/'decode-fp8-sdk-closure-assets.zip').read_bytes()),**mf),indent=2).encode())
+for name in ('commands.log','commands.jsonl'):keep('decode-fp8-sdk-local-replay-'+name,(W/'decode-fp8-sdk-local-replay-ledger'/name).read_bytes())
+for name in ('replay-decode-fp8-sdk-local.py','retain-decode-fp8-sdk-outcome.py'):keep(name+'.txt',(W/name).read_bytes())
+text=('\r\n\r\n### Actual M4/M16 FP8 SDK causal projection control passed\r\n\r\n2026-10-27: Exclusive remote private sm120 SDK compile and capture exit0. Raw archive '+q['archive_sha256']+' ('+str(archive.stat().st_size)+'B/'+str(len(manifest['files'])+1)+'members), independent remote/local identical full-array proof '+sha(raw)+'. All1548source pins, sixruntime files,23SDK/environment inputs, checkpoint config/index and all34production CUDAobjects unchanged. No GarnetDLL loaded/swapped, no fullmodel/quality/serving benchmark.80MiB real indexed FP8weights stay in fixed remotefixture; scalar/tensor origins/headerSHA/offsets/weightsSHA retained.\r\n\r\nActual separate-normalization inputs exactly reproduce BOTH fourindependentM4 and defaultM16 saved Garnet outputs for QKV/Z, five real inputsteps and two repeats (20cases). Independent CPU BF16 cast and FP8 quantization exact; fourM4 andM16 packedactivations identical; complete finite output/repeat gates pass. DefaultM16 versusfourM4 activeword differences QKV[5,2,3,6,0], Z[0,1,1,2,2], matching prior16+6. ActualM16 with actualM4-selected algorithm eliminates ALL differences across every full BF16 output word, including padding, in both repeats. Actual20AlgoChecks state/status0 within original4MiB; selected7config attrs qkv/z[35,13,17,3,2,0,1] (id,tile,stages,split,reduction,swizzle,custom). BothdefaultM16 use67; all120calls retained. This establishes a causal algorithm effect for the reproduced component projection discrepancy. Internal fusednormalization was not directlycaptured and complete-model B4correctness/cause remains UNPROVEN.\r\n\r\nNext concrete backend candidate: defaultoff physicalB4T4/M16 canonicalQKV/Z only, separate strictprofile/plugin/wire/context, original4MiB and actualM4seed/AlgoCheck; no genericFP8/wire/default/B1 changes or unsupportedfallback. Nativebuild/profile/factory/wire/initialize tests and originalcomplete B1/B4 short/tail/full4Ktext-image/packedstate/finitevectors/IDs/reset/repeats plus MTP/805/HTTP gates required beforetiming. No chart values updated or2xclaim; matched strongest repeatedtuned/MTP references, INT4/4B and fullobjective stillopen.\r\n').encode()
+for name in ('docs/research/qwen38-5090-development-log.md','docs/research/qwen38-5090-implementation-task.md'):
+    p=R/name;before=p.read_bytes();p.write_bytes(before+text);assert p.read_bytes().startswith(before);owned.append(p)
+(W/'decode-fp8-sdk-outcome-owned-paths.json').write_bytes(json.dumps([p.relative_to(R).as_posix() for p in owned],indent=2).encode());(W/'decode-fp8-sdk-outcome-stage-paths.bin').write_bytes(b'\0'.join(p.relative_to(R).as_posix().encode() for p in owned)+b'\0');print(json.dumps(dict(status=q['status'],owned_files=len(owned),strict_replay_passed=q['strict_replay_passed'])))
