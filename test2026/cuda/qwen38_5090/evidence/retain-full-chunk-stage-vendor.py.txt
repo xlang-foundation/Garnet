@@ -1,0 +1,38 @@
+from pathlib import Path
+import hashlib,json,zipfile
+W=Path(__file__).resolve().parent;O=W.parent/'outputs';R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';P='Garnet/test2026/cuda/qwen38_5090/';E='test2026/cuda/qwen38_5090/evidence/';JOB='full-chunk-stage-vendor-attempt1';sha=lambda b:hashlib.sha256(b).hexdigest();paths=[]
+def put(n,raw):
+    target=R/n;assert target.resolve().is_relative_to(R.resolve());assert not target.exists() or target.read_bytes()==raw,n;target.parent.mkdir(parents=True,exist_ok=True);target.write_bytes(raw);paths.append(n)
+failure=(O/(JOB+'-verified.json')).read_bytes();assert failure==(O/(JOB+'-remote-verified.json')).read_bytes();q=json.loads(failure);assert q['exit_code']==1
+recovery=(O/'full-chunk-stage-vendor-optional-fields-verified.json').read_bytes();assert recovery==(O/'full-chunk-stage-vendor-optional-fields-remote-verified.json').read_bytes();r=json.loads(recovery);assert r['original_failure_proof_sha256']==sha(failure) and r['original_GPU_owner_exit_code']==1 and r['no_new_GPU_run']
+for stem in (JOB,'full-chunk-stage-vendor-optional-fields'):
+    for suffix in ('-verified.json','-remote-verified.json'):put(E+stem+suffix,(O/(stem+suffix)).read_bytes())
+archive=O/(JOB+'-evidence.zip');assert sha(archive.read_bytes())==q['archive_sha256']
+with zipfile.ZipFile(archive) as z:
+    p=json.loads(z.read(P+'evidence/full-chunk-stage-vendor-preparation.json'));base='results/'+JOB+'/'
+    for n,h in p['new_files'].items():assert sha(z.read(n))==h and sha((R/n.removeprefix('Garnet/')).read_bytes())==h
+    for n in z.namelist():
+        if n.startswith(base) and n.endswith(('.json','.jsonl','.log')):put(E+JOB+'-'+n.removeprefix(base).replace('/','-'),z.read(n))
+    put(E+JOB+'-manifest.json',z.read('evidence-manifest.json'))
+with zipfile.ZipFile(W/'full-chunk-stage-vendor-closure-assets.zip') as z:
+    m=json.loads(z.read('evidence-manifest.json'));assert z.testzip() is None and len(z.namelist())==len(set(z.namelist()))==len(m['files'])+1==16 and m['original_GPU_archive_sha256']==q['archive_sha256'] and m['CPU_only_reader_recovery_proof_sha256']==sha(recovery)
+    for n,h in m['files'].items():
+        blob=z.read(n);assert sha(blob)==h
+        if n.endswith('/'+JOB+'-verified.json'):assert blob==failure
+        elif n.endswith('/full-chunk-stage-vendor-optional-fields-verified.json'):assert blob==recovery
+        elif n.startswith('results/full-chunk-stage-vendor-reader-recovery/') or n.startswith('results/full-chunk-stage-vendor-transport/'):put(E+n.removeprefix('results/').replace('/','-'),blob)
+        elif n.endswith('.json'):put(E+Path(n).name,blob)
+        elif n.endswith('.py'):put(E+Path(n).name+'.txt',blob)
+    put(E+'full-chunk-stage-vendor-closure-assets-manifest.json',z.read('evidence-manifest.json'))
+for folder,label in (('full-chunk-stage-vendor-reader-local-cpu-ledger','local-reader-CPU'),('full-chunk-stage-vendor-local-transport-ledger','local-transport'),('full-chunk-stage-vendor-local-failure-ledger','local-failure'),('full-chunk-stage-vendor-local-recovery-ledger','local-recovery')):
+    for n in ('commands.log','commands.jsonl'):put(E+'full-chunk-stage-vendor-'+label+'-'+n,(W/folder/n).read_bytes())
+for n in ('derive-full-chunk-stage-vendor-optional-fields.py','prepare-full-chunk-stage-vendor-reader.py','package-full-chunk-stage-vendor-reader.py','install-full-chunk-stage-vendor-reader.py','replay-full-chunk-stage-vendor-local.py','retain-full-chunk-stage-vendor.py'):put(E+n+'.txt',(W/n).read_bytes())
+put(E+'full-chunk-stage-vendor-reader-package.json',(W/'full-chunk-stage-vendor-reader-package.json').read_bytes())
+with zipfile.ZipFile(W/(JOB+'-exact-delta.zip')) as z:put(E+JOB+'-exact-delta-manifest.json',z.read('delta-manifest.json'))
+prep=json.loads((M/'evidence/full-chunk-stage-vendor-reader-preparation.json').read_bytes())
+for n,h in prep['files'].items():assert sha((R/n.removeprefix('Garnet/')).read_bytes())==h;paths.append(n.removeprefix('Garnet/'))
+paths.append('test2026/cuda/qwen38_5090/evidence/full-chunk-stage-vendor-reader-preparation.json')
+receipt=json.loads((R/(E+JOB+'-exact-delta-receipt.json')).read_bytes())
+for n,h in receipt['method_sha256'].items():assert sha((R/n.removeprefix('Garnet/')).read_bytes())==h
+observed=r['observations'];result=dict(status='complete_QG_vendor_selection_and_logger_only_stage_parity_independently_verified',original_GPU_archive_sha256=q['archive_sha256'],original_GPU_archive_bytes=q['archive_bytes'],original_GPU_owner_exit_code=1,paired_original_failure_proof_sha256=sha(failure),paired_CPU_reader_recovery_proof_sha256=sha(recovery),native_candidate_library_sha256=q['candidate_library_sha256'],native_source_bundle_sha256=p['source_bundle_sha256'],stage_parity=observed['stage_parity'],QG_weight_metadata=observed['QG_weight_metadata'],vendor={k:{n:v for n,v in row.items() if n!='calls'} for k,row in observed['vendor'].items()},original_numeric_predicates_unchanged=True,algorithm_cause_established=False,algorithm_intervention_tested=False,model_or_performance_qualified=False,new_benchmarks=False,two_times_target_achieved=False,next='Actual typed SDK M16 first-success QG control, match observed T32 public configuration and AlgoCheck M16/M32/M128 within4MiB. Then narrowly defaultoff Q128 algorithm context/plugin and original stage/model gates before performance.')
+raw=json.dumps(result,indent=2).encode();put(E+'full-chunk-stage-vendor-research-summary.json',raw);(O/'Garnet-Layer3-QG-Vendor-Selection-Verified.json').write_bytes(raw);(W/'full-chunk-stage-vendor-all-retained-paths.json').write_bytes(json.dumps(sorted(set(paths)),indent=2).encode());print(json.dumps(dict(retained_paths=len(set(paths)),paired_recovery_proof_sha256=sha(recovery))))

@@ -1,0 +1,70 @@
+{
+  "status": "actual_QG_vendor_choices_and_complete_logger_parity_verified_SDK_control_next",
+  "original_GPU_owner_exit_code": 1,
+  "paired_failure_proof_sha256": "7361cb9316005adaac98fd16948e03a7b428d616ce5a527efc76831f7cbe73f5",
+  "paired_CPU_only_recovery_proof_sha256": "bd87e5b133fea32d135d414d98ad55c2fe84aca968d953b29c0bf23b7ce12696",
+  "observed_configurations": {
+    "stages32": [
+      {
+        "algoId": "67",
+        "ctaSwizzling": "1",
+        "customOption": "18",
+        "stages": "MATMUL_STAGES_64x5",
+        "tile": "MATMUL_TILE_64x32"
+      }
+    ],
+    "stages128": [
+      {
+        "algoId": "67",
+        "ctaSwizzling": "1",
+        "customOption": "18",
+        "stages": "MATMUL_STAGES_64x4",
+        "tile": "MATMUL_TILE_128x64"
+      }
+    ]
+  },
+  "QG_weight_metadata": {
+    "input_scale": 0.2064732164144516,
+    "joined_mlp": false,
+    "logical_shape": [
+      12288,
+      5120
+    ],
+    "packed_bytes": 62914560,
+    "packed_dtype": "INT32",
+    "packed_shape": [
+      12288,
+      1280
+    ],
+    "recipe": "modelopt_fp8_w8a8",
+    "resident_in_compressed_pool": true,
+    "resident_packed_readonly": true,
+    "resident_scales_readonly": false,
+    "scale_bytes": 0,
+    "scale_shape": [],
+    "source_weights": [],
+    "storage_encoding": "Opaque little-endian words; raw checkpoint bits, no numeric conversion",
+    "weight_scale": 0.0007149832672439516
+  },
+  "required_next": [
+    "Standalone real SDK QG N12288 K5120 E4M3/BF16/F32 M16 query, first-success observed ID67/tile64x32/stages64x5/swizzle1/custom18 match; record all other public attrs without guesses",
+    "AlgoCheck same SDK-owned object M16/M32/M128 within4MiB on actual SM120/cuBLASLt130400; no opaque imported or patched algorithm bytes",
+    "If SDK-compatible build separate defaultoff Q128 helper/plugin/type/wire/counter and strict B1T128 logical text-Q geometry, original KV/GDN guards unchanged, negative native profile/wire/factory controls",
+    "Test full10stage arrays and original correctT32 full-model admission; if core/O still differs isolate next cause",
+    "All six full4096 ordinary/MTP/image/state/vector/token/reset and805/broaderquality before performance"
+  ],
+  "remaining": [
+    "actual Garnet frontend negative cases",
+    "production cache fingerprint and qualified source promotion",
+    "true native concurrency",
+    "strongest feasible repeated tuned/MTP vLLM/SGLang",
+    "matched TTFT/decode/throughput/servingVRAM",
+    "INT4W4A16 and Qwen3.5-4B",
+    "2x fasterbaseline decode AND throughput plus additional halfTTFT"
+  ],
+  "algorithm_cause_established": false,
+  "algorithm_intervention_tested": false,
+  "full_model_admission_failed": true,
+  "new_benchmarks": false,
+  "goal_complete": false
+}

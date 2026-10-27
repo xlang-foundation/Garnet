@@ -1,0 +1,20 @@
+from pathlib import Path
+import hashlib,json,zipfile
+W=Path(__file__).resolve().parent;O=W.parent/'outputs';R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';P='Garnet/test2026/cuda/qwen38_5090/';sha=lambda b:hashlib.sha256(b).hexdigest();proof=(O/'full-chunk-stage-vendor-attempt1-remote-verified.json').read_bytes();q=json.loads(proof);assert q['exit_code']==1 and q['source_library_runtime_SDK_checkpoint_restored']
+new=['full_chunk_stage_vendor_optional_fields.py','test_full_chunk_stage_vendor_optional_fields.py','analyze_full_chunk_stage_vendor_optional_fields.py','run_full_chunk_stage_vendor_reader_recovery.py','run_full_chunk_stage_vendor_exact_delta.py','evidence/full-chunk-stage-vendor-optional-fields-derivation.json','evidence/full-chunk-stage-vendor-transport-derivation.json'];names={P+n:M/n for n in new};pins={n:sha(path.read_bytes()) for n,path in names.items()};pins[P+'full_chunk_stage_vendor.py']=sha((M/'full_chunk_stage_vendor.py').read_bytes());p=dict(status='CPU_reader_only_original_GPU_failure_retained',files=pins,original_failure_proof_sha256=sha(proof),original_vendor_archive_sha256=q['archive_sha256'],native_source_library_math_thresholds_unchanged=True);prep=M/'evidence/full-chunk-stage-vendor-reader-preparation.json';blob=json.dumps(p,indent=2).encode();assert not prep.exists() or prep.read_bytes()==blob;prep.write_bytes(blob);names[P+'evidence/full-chunk-stage-vendor-reader-preparation.json']=prep;target=W/'full-chunk-stage-vendor-reader-deployment.zip';assert not target.exists()
+with zipfile.ZipFile(target,'x',zipfile.ZIP_DEFLATED) as z:
+    for n,path in names.items():z.write(path,n)
+    z.writestr('deployment-manifest.json',json.dumps(dict(files={n:sha(path.read_bytes()) for n,path in names.items()},original_failure_proof_sha256=sha(proof)),indent=2))
+receipt=dict(status='CPU_optional_reader_transport_deployment_prepared',sha256=sha(target.read_bytes()),bytes=target.stat().st_size,files=len(names));(W/'full-chunk-stage-vendor-reader-package.json').write_bytes(json.dumps(receipt,indent=2).encode())
+script='''from pathlib import Path
+import hashlib,json,zipfile
+ROOT=Path('D:/CantorAI/5090-study-20261023');sha=lambda b:hashlib.sha256(b).hexdigest();archive=ROOT/'results/full-chunk-stage-vendor-reader-deployment.zip';assert sha(archive.read_bytes())==ZIP_SHA
+with zipfile.ZipFile(archive) as z:
+    m=json.loads(z.read('deployment-manifest.json'));q=json.loads((ROOT/'results/full-chunk-stage-vendor-attempt1-verified.json').read_bytes());w=json.loads((ROOT/'results/full-chunk-stage-vendor-attempt1/workflow.json').read_bytes());assert q['exit_code']==w['exit_code']==1 and w['cleanup_finished'] and sha((ROOT/'results/full-chunk-stage-vendor-attempt1-verified.json').read_bytes())==m['original_failure_proof_sha256'];assert z.testzip() is None and len(z.namelist())==len(set(z.namelist()))==len(m['files'])+1==9
+    for n,h in m['files'].items():
+        path=ROOT/n;assert path.resolve().is_relative_to((ROOT/'Garnet/test2026/cuda/qwen38_5090').resolve()) and path.parent.exists();raw=z.read(n);assert sha(raw)==h and (not path.exists() or path.read_bytes()==raw)
+    for n in m['files']:(ROOT/n).write_bytes(z.read(n))
+    p=json.loads((ROOT/'Garnet/test2026/cuda/qwen38_5090/evidence/full-chunk-stage-vendor-reader-preparation.json').read_bytes())
+    for n,h in p['files'].items():assert sha((ROOT/n).read_bytes())==h
+out=ROOT/'results/full-chunk-stage-vendor-reader-install.json';assert not out.exists();out.write_bytes(json.dumps(dict(status='CPU_reader_only_methods_installed',archive_sha256=sha(archive.read_bytes()),files=m['files'],original_GPU_failure_preserved=True),indent=2).encode());print(json.dumps(dict(status='CPU_reader_only_methods_installed',files=len(m['files']))))
+'''.replace('ZIP_SHA',repr(receipt['sha256']));installer=W/'install-full-chunk-stage-vendor-reader.py';assert not installer.exists();installer.write_bytes(script.encode());print(json.dumps(receipt))
