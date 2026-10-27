@@ -1,0 +1,13 @@
+from pathlib import Path
+import hashlib,json,os,sys,zipfile
+W=Path(__file__).resolve().parent;O=W.parent/'outputs';R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';JOB='b4-decode-m16-build-attempt1';sha=lambda b:hashlib.sha256(b).hexdigest()
+with zipfile.ZipFile(W/'b4-decode-m16-native-closure-assets.zip') as z:
+    mf=json.loads(z.read('manifest.json'));assert z.testzip() is None and len(z.namelist())==len(set(z.namelist()))==len(mf['files'])+1 and not mf['GPU_or_model_rerun']
+    for n,h in mf['files'].items():assert sha(z.read(n))==h
+    assert sha((O/(JOB+'-evidence.zip')).read_bytes())==mf['original_archive_sha256']
+    for n in ('verify_b4_decode_m16_native_build.py','verify_b4_prefill128_native_build.py','evidence/b4-decode-m16-native-build-derivation.json'):assert (M/n).read_bytes()==z.read('Garnet/test2026/cuda/qwen38_5090/'+n)
+    raw=z.read('results/'+JOB+'-verified.json');q=json.loads(raw);assert q['exit_code']==0 and q['candidate_files']==67 and q['source_runtime_SDK_checkpoint_CMake_restored'];target=O/(JOB+'-remote-verified.json');assert not target.exists();target.write_bytes(raw)
+sys.path[:0]=[str(M),str(R)];import run_logged as ledger;names=('verify_b4_decode_m16_native_build.py','verify_b4_prefill128_native_build.py','evidence/b4-decode-m16-native-build-derivation.json');pins={n:sha((M/n).read_bytes()) for n in names};ledger.source_identity=lambda:dict(scope='Explicit local source67 nativebuild raw-archive replay; no native executable/DLL/SDK/GPU/model invocation',owned_source_sha256=pins);os.chdir(R)
+assert ledger.run([sys.executable,str(M/'verify_b4_decode_m16_native_build.py'),'--proofs',str(O)],W/'b4-decode-m16-native-local-replay-ledger','correctness','Independent preservedoriginal74+86/nativeQ/O/factory/wire/initialize/selector/tokenizer/threeobjectwhitelist/restoration and new402CPUparent proof; downloaded binaries never executed',[M/n for n in names]+[O/(JOB+'-evidence.zip'),W/'b4-decode-m16-native-closure-assets.zip'])==0
+local=(O/(JOB+'-verified.json')).read_bytes();assert local==raw;doc=dict(status='paired_B4T4_GDN_M16_native_build_verified',proof_sha256=sha(raw),archive_sha256=q['archive_sha256'],candidate_library_sha256=q['candidate_library_sha256'],candidate_source_files=67,current_CPU_controls=q['current_CPU_controls'],historical_CPU_controls=q['historical_controls'],original_all_native_controls_preserved=q['original_all_Q_O_factory_wire_initialize_selector_tokenizer_controls_preserved'],source_runtime_SDK_checkpoint_CMake_restored=True,SDK_factory_or_model_or_quality_or_performance_qualified=False)
+(O/'Garnet-B4-Decode-M16-Native-Build-Verified.json').write_bytes(json.dumps(doc,indent=2).encode());print(json.dumps(doc))
