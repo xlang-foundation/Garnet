@@ -1,0 +1,76 @@
+from pathlib import Path
+import ast,hashlib,json
+R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';E=M/'evidence';sha=lambda b:hashlib.sha256(b).hexdigest();derivations=[]
+def text(name):return (M/name).read_text(encoding='utf-8')
+def section(name,start,end):
+    s=text(name);return s[s.index(start):s.index(end,s.index(start))]
+def derive(source,target,edits):
+    old=(M/source).read_bytes();raw=old;changes=[]
+    for a,b in edits:
+        if b'\r\n' in old:a=a.replace('\n','\r\n');b=b.replace('\n','\r\n')
+        assert raw.count(a.encode())==1,(source,a,raw.count(a.encode()))
+        raw=raw.replace(a.encode(),b.encode());changes.append(dict(old=a,new=b,count=1))
+    ast.parse(raw);p=M/target
+    if p.exists():assert p.read_bytes()==raw
+    else:p.write_bytes(raw)
+    derivations.append(dict(source=source,target=target,source_sha256=sha(old),target_sha256=sha(raw),changes=changes))
+derive('probe_b4_full4k_decode_prefix.py','probe_b4_full4k_selection52.py',[
+('"""Ordinary original-model early decode state snapshots; no observer graph or timing."""','"""Unchanged-model selected-row step7/52 states before consuming differing ID52."""'),
+('evidence/b4-full4k-decode-prefix-preparation.json','evidence/b4-full4k-selection52-preparation.json'),
+("    from test2026.cuda.qwen38_5090.b4_full4k_inputs import load_corpus","    from test2026.cuda.qwen38_5090.b4_full4k_inputs import load_corpus\n    from test2026.cuda.qwen38_5090.b4_full4k_selection52 import STEPS"),
+("groups=[[i] for i in selected] if batch==1 else [selected]","assert p['selected_key'] in selection['groups'][2]['keys']\n        groups=[[index[p['selected_key']]]] if batch==1 else [selected]"),
+('for step in range(8):','for step in range(53):'),('if step+1<8:','if step+1<53:'),
+("record['post_step_states'].append(dict(step=step+1,capture=snapshot('case'+str(group_index)+'-step'+str(step+1))));save()","if step+1 in STEPS:record['post_step_states'].append(dict(step=step+1,capture=snapshot('case'+str(group_index)+'-step'+str(step+1))));save()"),
+('decoder.slots==[v+7 for v in lengths]','decoder.slots==[v+52 for v in lengths]'),
+("report['status']='full4k_first_seven_decode_steps_captured_unqualified'","report['status']='selected_full4k_step7_step52_and53_IDs_captured_unqualified'")])
+derive('launch_b4_full4k_decode_prefix.py','launch_b4_full4k_selection52.py',[
+('evidence/b4-full4k-decode-prefix-preparation.json','evidence/b4-full4k-selection52-preparation.json'),('probe_b4_full4k_decode_prefix.py','probe_b4_full4k_selection52.py')])
+a=section('run_b4_full4k_decode_prefix.py','        from test2026.cuda.qwen38_5090.b4_full4k_decode_prefix import observe,same_profile_parent',"        w['actual_GDN_M16_route']")
+b="""        from test2026.cuda.qwen38_5090.b4_full4k_selection52 import observe,same_profile_full_parent,same_profile_step7,first_mixed_difference
+        reference=json.loads((out/'reference/report.json').read_bytes());candidate=json.loads((out/'candidate/report.json').read_bytes())
+        read_reference=lambda key,name:(out/'reference'/name).read_bytes();read_candidate=lambda name:(out/'candidate'/name).read_bytes()
+        with zipfile.ZipFile(ROOT/'results/b4-full4k-exact-attempt1-evidence.zip') as parent:
+            base='results/b4-full4k-exact-attempt1/'
+            old_reference=json.loads(parent.read(base+'reference/report.json'));old_candidate=json.loads(parent.read(base+'candidate/report.json'))
+            assert first_mixed_difference(selection,old_reference,old_candidate)==p['selection_from_original']
+            w['same_profile_parent']={mode:same_profile_full_parent(report,old_report,lambda name,mode=mode:(out/mode/name).read_bytes(),lambda name,mode=mode:parent.read(base+mode+'/'+name)) for mode,report,old_report in (('reference',reference,old_reference),('candidate',candidate,old_candidate))}
+        (out/'same-profile-parent.json').write_bytes(json.dumps(w['same_profile_parent'],indent=2).encode());save()
+        with zipfile.ZipFile(ROOT/'results/b4-full4k-decode-prefix-attempt1-evidence.zip') as parent:
+            base='results/b4-full4k-decode-prefix-attempt1/'
+            w['step7_parent_parity']={mode:same_profile_step7(report,json.loads(parent.read(base+mode+'/report.json')),lambda name,mode=mode:(out/mode/name).read_bytes(),lambda name,mode=mode:parent.read(base+mode+'/'+name)) for mode,report in (('reference',reference),('candidate',candidate))}
+        (out/'step7-parent-parity.json').write_bytes(json.dumps(w['step7_parent_parity'],indent=2).encode());save()
+        w['observation']=observe(selection,p['selected_key'],reference,candidate,read_reference,read_candidate);(out/'analysis.json').write_bytes(json.dumps(w['observation'],indent=2).encode());save()
+"""
+derive('run_b4_full4k_decode_prefix.py','run_b4_full4k_selection52.py',[
+("JOB='b4-full4k-decode-prefix-attempt1'","JOB='b4-full4k-selection52-attempt1'"),
+('evidence/b4-full4k-decode-prefix-preparation.json','evidence/b4-full4k-selection52-preparation.json'),
+("p['status']=='B4_full4k_decode_prefix_prepared_GPU_unrun'","p['status']=='B4_full4k_selection52_prepared_GPU_unrun'"),
+("'test2026.cuda.qwen38_5090.test_b4_full4k_decode_prefix'","'test2026.cuda.qwen38_5090.test_b4_full4k_decode_prefix','test2026.cuda.qwen38_5090.test_b4_full4k_selection52'"),
+('launch_b4_full4k_decode_prefix.py','launch_b4_full4k_selection52.py'),
+('Four fresh source60/DLL841 B1 mixed-group references then source79/DLL2bafed B4. Same actual original model/graphs/precision/weights,3968prompt+8forcedIDs/cap4096, capture complete128components/finitevectors aftereach1..7decode steps. Same-profile original failedfull4Kreset/prefill/reset/first8ID parity required before interpreting drift. Diagnostic only; original128ID full4K gate staysFAILED, no observer outputs/kernel/native rebuild or timing/quality admission.','One B1 reference for firstmixedbatch differingID52 row, thenwholeB4mixedgroup. Originalmodelgraphs/weights/precision/head/nativeDLLs unchanged,3968prompt+53outputs/cap4096. Complete128component/physical-logicalhash/finitehidden-normalizedvectors after7and52steps. All52consumedIDs mustmatch; ID52 isunconsumed. Match53same-profileIDs+endpoints againstoriginalfull4Kfailedparent; matchallcurrentstep7primaryrowsagainstqualifiedearlyprefix.33CPU/actualGDN-V-QKroute/restoration guards; no observer/kernel/nativebuild/timing/quality/performanceadmission.'),
+(a,b),
+("w['status']='full4k_decode_prefix_diagnostic_collected_no_numerical_admission'","w['status']='selected_step52_diagnostic_collected_no_numerical_admission'")])
+a=section('verify_b4_full4k_decode_prefix.py',"            reference=reports['reference'];candidate=reports['candidate'];", "            assert b'GARNET_GDNM16_FACTORY '")
+b="""            reference=reports['reference'];candidate=reports['candidate'];r=lambda key,n:z.read(BASE+'reference/'+n);c=lambda n:z.read(BASE+'candidate/'+n)
+            with zipfile.ZipFile(a.proofs/'b4-full4k-exact-attempt1-evidence.zip') as parent:
+                base='results/b4-full4k-exact-attempt1/'
+                old_reference=json.loads(parent.read(base+'reference/report.json'));old_candidate=json.loads(parent.read(base+'candidate/report.json'))
+                assert first_mixed_difference(selection,old_reference,old_candidate)==p['selection_from_original']
+                parity={mode:same_profile_full_parent(report,old_report,lambda n,mode=mode:z.read(BASE+mode+'/'+n),lambda n,mode=mode:parent.read(base+mode+'/'+n)) for mode,report,old_report in (('reference',reference,old_reference),('candidate',candidate,old_candidate))}
+            assert parity==w['same_profile_parent']==json.loads(z.read(BASE+'same-profile-parent.json'))
+            with zipfile.ZipFile(a.proofs/'b4-full4k-decode-prefix-attempt1-evidence.zip') as parent:
+                base='results/b4-full4k-decode-prefix-attempt1/'
+                early={mode:same_profile_step7(report,json.loads(parent.read(base+mode+'/report.json')),lambda n,mode=mode:z.read(BASE+mode+'/'+n),lambda n,mode=mode:parent.read(base+mode+'/'+n)) for mode,report in (('reference',reference),('candidate',candidate))}
+            assert early==w['step7_parent_parity']==json.loads(z.read(BASE+'step7-parent-parity.json'))
+            observation=observe(selection,p['selected_key'],reference,candidate,r,c);assert observation==w['observation']==json.loads(z.read(BASE+'analysis.json'))
+"""
+derive('verify_b4_full4k_decode_prefix.py','verify_b4_full4k_selection52.py',[
+("from test2026.cuda.qwen38_5090.b4_full4k_decode_prefix import observe,same_profile_parent,STATUS","from test2026.cuda.qwen38_5090.b4_full4k_selection52 import observe,same_profile_full_parent,same_profile_step7,first_mixed_difference,STATUS"),
+("JOB='b4-full4k-decode-prefix-attempt1'","JOB='b4-full4k-selection52-attempt1'"),
+('evidence/b4-full4k-decode-prefix-preparation.json','evidence/b4-full4k-selection52-preparation.json'),
+("'b4_full4k_decode_prefix.py'","'b4_full4k_decode_prefix.py','b4_full4k_selection52.py','verify_b4_full4k_selection52.py'"),
+("verify_derivations(json.loads(z.read(P+'evidence/b4-full4k-decode-prefix-derivation.json')),lambda n:z.read(P+n))","verify_derivations(json.loads(z.read(P+'evidence/b4-full4k-decode-prefix-derivation.json')),lambda n:z.read(P+n))\n        verify_derivations(json.loads(z.read(P+'evidence/b4-full4k-selection52-derivation.json')),lambda n:z.read(P+n))"),
+("b'Ran 29 tests'","b'Ran 33 tests'"),(a,b),
+("w['status']=='full4k_decode_prefix_diagnostic_collected_no_numerical_admission'","w['status']=='selected_step52_diagnostic_collected_no_numerical_admission'"),
+("status='full4k_decode_prefix_diagnostic_replayed' if strict else 'full4k_decode_prefix_job_failure_replayed'","status='selected_step52_diagnostic_replayed' if strict else 'selected_step52_job_failure_replayed'")])
+p=E/'b4-full4k-selection52-derivation.json';assert not p.exists();p.write_bytes(json.dumps(dict(derivations=derivations,scope='Unchangedordinarymodel/nativeDLLs/weights/precision/head, firstmixedbatch ID52 selectedfromactualfailedfull4Kparent. FreshselectedB1row andwholeB4mixedgroup,53generatedIDs withall52consumedIDs exact, completeoriginal128component/finitevectors after7and52steps; allcurrentstep7primaryrows mustreproducequalifiedprefix. No observergraph/kernel/nativebuild/tolerance orfull4K/performanceadmission. OtherB1step52states unobserved.'),indent=2).encode());print(json.dumps(dict(files=4,GPU_unrun=True)))
