@@ -1,0 +1,33 @@
+from pathlib import Path
+import hashlib,json
+R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';sha=lambda b:hashlib.sha256(b).hexdigest();rows=[]
+def derive(source,target,changes):
+    raw=(M/source).read_bytes();before=sha(raw);steps=[]
+    for old,new,count in changes:
+        if b'\r\n' in raw:old=old.replace('\n','\r\n');new=new.replace('\n','\r\n')
+        assert raw.count(old.encode())==count,(source,old,raw.count(old.encode()),count);raw=raw.replace(old.encode(),new.encode());steps.append(dict(old=old,new=new,count=count))
+    p=M/target;assert not p.exists() or p.read_bytes()==raw;p.write_bytes(raw);rows.append(dict(source=source,target=target,source_sha256=before,target_sha256=sha(raw),changes=steps))
+derive('run_full_chunk_stage_attempt2.py','run_q128_model_admission.py',[
+    ("JOB='full-chunk-stage-attempt2'","JOB='q128-model-admission-attempt1'",1),('full-chunk-stage-gpu-preparation-attempt2.json','q128-model-admission-preparation.json',1),('full_chunk_stage_prepared_gpu_unrun','q128_model_admission_prepared_gpu_unrun',1),("len(p['candidate_files'])==51","len(p['candidate_files'])==57",1),('garnet-native-full-chunk-stage-attempt2.dll','garnet-native-q128-canonical-attempt1.dll',1),
+    ("from test2026.cuda.qwen38_5090.full_chunk_stage_source import sources as derive_sources\n        parent,expected,_=derive_sources();assert expected==sources","from test2026.cuda.qwen38_5090.q128_canonical_source import sources as derive_sources\n        observation51,expected,_=derive_sources();assert expected==sources\n        from test2026.cuda.qwen38_5090.full_chunk_stage_source import sources as historical_sources\n        parent,qualified51,_=historical_sources();assert qualified51==observation51 and len(parent)==50",1),
+    ('47current readonly stage/primary/array/corruption/source/route controls plus86retained historical assertions on exact parent50; no original assertion waived','59current Q128/reference/route/source/readonly/stage/array/corruption controls plus86retained historical assertions on exact parent50; no original assertion waived',1),
+    ('test_full_chunk_stage_metadata_attempt2.bat','test_q128_model_metadata.bat',1),
+    ("for phase,t,enabled in (('control32',32,0),('control128',128,0),('stages32',32,1),('stages128',128,1)):","for phase,t,q_enabled in (('off32',32,0),('off128',128,0),('enabled128',128,1)):",1),
+    ('test_full_chunk_stage_attempt2.bat','test_q128_model_admission.bat',1),
+    ('str(t),str(enabled)]','str(t),\'1\',str(q_enabled)]',1),
+    ('Actual exclusive defaultoff/enabled full3968 primary parity and two exact repeats; capture complete first128 layer3 stages/readonly inputs only when enabled; no timing admission','Actual exclusive full3968 ordinary original state/vector/cache/ID/repeat gates with bounded complete first128 stages/readonly inputs; defaultoff same-profile controls then enabledQ128 against correctT32 oracle, no timing admission',1),
+    ("reports[phase]=json.loads((out/phase/'report.json').read_bytes());assert reports[phase]['status']=='full_chunk_stages_collected_primary_profile_exact';reads[phase]=lambda n,phase=phase:(out/phase/n).read_bytes()","reports[phase]=json.loads((out/phase/'report.json').read_bytes());assert reports[phase]['status']=='full_chunk_stages_collected_primary_profile_exact';reads[phase]=lambda n,phase=phase:(out/phase/n).read_bytes()\n            if phase=='off128':\n                from test2026.cuda.qwen38_5090.q128_model_replay import controls\n                result=controls(reports,reads,ROOT/'results');(out/'defaultoff-analysis.json').write_bytes(json.dumps(result,indent=2).encode())",1),
+    ('from test2026.cuda.qwen38_5090.full_chunk_stage_replay import replay','from test2026.cuda.qwen38_5090.q128_model_replay import replay',1),
+    ('full_chunk_stages_collected_same_profile_equivalence_needs_replay','Q128_one_text_case_and_stages_collected_needs_independent_replay',1)])
+derive('verify_full_chunk_stage_attempt2.py','verify_q128_model_admission.py',[
+    ('from test2026.cuda.qwen38_5090.full_chunk_stage_replay import replay','from test2026.cuda.qwen38_5090.q128_model_replay import replay,controls',1),
+    ("JOB='full-chunk-stage-attempt2'","JOB='q128-model-admission-attempt1'",1),('full-chunk-stage-gpu-preparation-attempt2.json','q128-model-admission-preparation.json',1),("len(p['candidate_files'])==51","len(p['candidate_files'])==57",1),
+    ('3574f8cc1f772933f117b484d9a57844fb3846a4e1ada59f62399876c31fa48a','584be8a125d0e2334d5d3d1bcb2ecd8f807cae0b42b047e4198f8830f800347e',1),
+    ("len(set(source.namelist()))==51","len(set(source.namelist()))==57",1),
+    ("b'Ran 47 tests'","b'Ran 59 tests'",1),
+    ("for phase in ('control32','control128','stages32','stages128'):","for phase in ('off32','off128','enabled128'):",1),
+    ("        if passed:\n            arrays=replay", "        if base+'defaultoff-analysis.json' in manifest['files']:\n            defaultoff=controls({k:reports[k] for k in ('off32','off128')},{k:reads[k] for k in ('off32','off128')},args.proofs);assert defaultoff==doc(base+'defaultoff-analysis.json')\n            arrays['defaultoff']=defaultoff\n        if passed:\n            arrays=replay",1),
+    ('full_chunk_stages_collected_same_profile_equivalence_needs_replay','Q128_one_text_case_and_stages_collected_needs_independent_replay',1),
+    ('actual_full_chunk_stage_and_primary_equivalence_replayed','actual_Q128_one_text_case_original_admission_and_stages_replayed',1),
+    ('actual_full_chunk_stage_failure_preserved','actual_Q128_model_or_stage_admission_failure_preserved',1)])
+(M/'evidence/q128-model-owner-derivation.json').write_bytes(json.dumps(dict(status='strict_defaultoff_then_enabled_Q128_original_T32_oracle_owner_and_verifier',no_original_numerical_state_vector_cache_token_or_repeat_gate_waived=True,derivations=rows),indent=2).encode());print(json.dumps(dict(derived=[r['target'] for r in rows])))

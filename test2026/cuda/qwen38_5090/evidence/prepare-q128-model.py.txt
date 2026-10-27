@@ -1,0 +1,29 @@
+from pathlib import Path
+import ast,hashlib,json,sys,zipfile
+W=Path(__file__).resolve().parent;O=W.parent/'outputs';R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';E=M/'evidence';P='Garnet/test2026/cuda/qwen38_5090/';sha=lambda b:hashlib.sha256(b).hexdigest();sys.path.insert(0,str(R))
+from test2026.cuda.qwen38_5090.q128_canonical_source import sources
+from test2026.cuda.qwen38_5090.full_chunk_stage_source import sources as historical_sources
+old=json.loads((E/'full-chunk-stage-gpu-preparation-attempt2.json').read_bytes());native=json.loads((E/'q128-canonical-build-preparation.json').read_bytes());observation,candidate,meta=sources();parent,qualified,_=historical_sources();assert observation==qualified and len(parent)==50 and len(candidate)==57 and old['files']==native['base_files']
+names=['q128_model_layout.py','q128_model_replay.py','test_q128_model_admission.py','evidence/q128-model-probe-derivation.json','evidence/q128-model-owner-derivation.json']
+for name in ('q128-model-probe-derivation.json','q128-model-owner-derivation.json'):
+    d=json.loads((E/name).read_bytes())
+    for row in d['derivations']:
+        raw=(M/row['source']).read_bytes();assert sha(raw)==row['source_sha256']
+        for c in row['changes']:assert raw.count(c['old'].encode())==c['count'];raw=raw.replace(c['old'].encode(),c['new'].encode())
+        assert raw==(M/row['target']).read_bytes() and sha(raw)==row['target_sha256'];names.append(row['target'])
+for n in names:
+    if n.endswith('.py'):ast.parse((M/n).read_bytes())
+methods={**old['new_files'],**native['methods'],**{P+n:sha((M/n).read_bytes()) for n in names}}
+assert not any('probe_native_external_prefix_batch.py' in n for n in methods)
+parents=dict(old['parents'])
+for job in ('q128-canonical-build-attempt1','full-chunk-stage-attempt2'):
+    raw=(O/(job+'-verified.json')).read_bytes();assert raw==(O/(job+'-remote-verified.json')).read_bytes();q=json.loads(raw);assert q['exit_code']==0 and sha((O/(job+'-evidence.zip')).read_bytes())==q['archive_sha256'];parents[job]=dict(proof_sha256=sha(raw),archive_sha256=q['archive_sha256'],status=q['status'],exit_code=0)
+p={**old,'status':'q128_model_admission_prepared_gpu_unrun','new_files':methods,'parents':parents,'candidate_files':native['candidate_files'],'candidate_base':native['candidate_base'],'candidate_library_sha256':'584be8a125d0e2334d5d3d1bcb2ecd8f807cae0b42b047e4198f8830f800347e','source_bundle':native['bundle'],'source_bundle_sha256':native['bundle_sha256'],'test_ids':native['test_ids']+['test2026.cuda.qwen38_5090.test_q128_model_admission'],'expected_cpu_test_count':59,'expected_CPU_test_count':59}
+p['parent_installed_files']={**p['files'],**{'Garnet/'+n:sha(b) for n,b in parent.items()}};p['installed_files']={**p['files'],**{'Garnet/'+n:sha(b) for n,b in candidate.items()}}
+p['scope']='Actual Q128 model correctness admission only, three fresh exclusive profiles off32/off128/enabled128. All ten original complete first128 layer3 stage arrays and readonly graph-input state/control observations enabled. Off32 complete3968prefill/128IDs/finalstate/two-prefill repeats must reproduce correct original T32; off128 must reproduce known-failed same-profile instrumentation controls with Qcounter0, never model admission. Replay both complete defaultoff primary/stage controls before enabled128. Enabled128 must select Qcounter16 only targetT128 (T4zero), retain originalGDN48/reconstructedZ48/KV32 counts, compare all complete empty/prefill/final packed states/hidden/normalized vectors/all12cache arrays/128IDs/two complete prefill repeats to original correctT32 baseline, without tolerances, catches or waivers of original assertions. Any first original assertion failure aborts child and preserves partial raw arrays/log/source/restoration; no repeat claim before actual repeat. Native57bundle a786becf and DLL584be8 already CPU/native-built and independently replayed, no model outcome inferred. CPU59+86 on exact parent50 then install57 and embedded stdlib metadata. Readonly first128 ten-stage finite/repeat comparison only after successful capture; original SDK-returned M16 canonicalQ object is not presumed sufficient to fix downstream math. No speed timing admitted. One real3968+128 TEXT case only if every original gate passes; full six ordinary/MTP/image/state/vector/token/reset and805/broaderquality, actual frontend negative cases/production fingerprint, strongest feasible repeated tuned/MTP vLLM/SGLang baselines, true concurrency/matched INT4W4A16/4B/servingVRAM/TTFT/decode/throughput and2xdecodeANDthroughput/halfTTFT remain required. Preserve fixed study root and baseline source/library/runtime/SDK/checkpoints/cache; no benchmark fabrication.'
+prep=E/'q128-model-admission-preparation.json';raw=json.dumps(p,indent=2).encode();assert not prep.exists() or prep.read_bytes()==raw;prep.write_bytes(raw)
+deployment=W/'q128-model-deployment.zip';assert not deployment.exists();files={n:R/n.removeprefix('Garnet/') for n in methods};files[P+'evidence/q128-model-admission-preparation.json']=prep
+with zipfile.ZipFile(deployment,'x',zipfile.ZIP_DEFLATED) as z:
+    for n,path in files.items():assert sha(path.read_bytes())==p['new_files'].get(n,sha(raw));z.write(path,n)
+    z.writestr('deployment-manifest.json',json.dumps(dict(files={n:sha(path.read_bytes()) for n,path in files.items()},native_source_and_runtime_install_deferred_to_exclusive_owner=True),indent=2))
+receipt=dict(status='Q128_model_admission_prepared_not_run',deployment_sha256=sha(deployment.read_bytes()),bytes=deployment.stat().st_size,files=len(files),preparation_sha256=sha(raw),candidate_source_files=57,CPU_tests_passed=59,historical_tests_passed=86,profiles=['off32','off128','enabled128'],enabled_reference='original_correct_T32',performance_admitted=False);(W/'q128-model-package.json').write_bytes(json.dumps(receipt,indent=2).encode());print(json.dumps(receipt))
