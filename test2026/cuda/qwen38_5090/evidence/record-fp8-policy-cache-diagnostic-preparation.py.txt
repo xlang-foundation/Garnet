@@ -1,0 +1,24 @@
+from pathlib import Path
+import json,subprocess
+W=Path(__file__).resolve().parent;R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';E=M/'evidence';owned=[]
+for n in ('fp8_policy_cache_production_contract.py','fp8_policy_cache_fixture.x','probe_fp8_policy_cache_production.py','launch_fp8_policy_cache_production_case.py','test_fp8_policy_cache_production_contract.py','run_fp8_policy_cache_production_cases.py','run_fp8_policy_cache_diagnostic.py','verify_fp8_policy_cache_diagnostic.py','evidence/fp8-policy-cache-production-preparation.json'):owned.append((M/n).relative_to(R).as_posix())
+def put(n,b):
+    t=E/n;assert not t.exists() or t.read_bytes()==b,n;t.write_bytes(b);owned.append(t.relative_to(R).as_posix())
+for n in ('prepare-fp8-policy-cache-diagnostic.py','make-fp8-policy-cache-diagnostic-installer.py','install-fp8-policy-cache-diagnostic.py','record-fp8-policy-cache-diagnostic-preparation.py'):put(n+'.txt',(W/n).read_bytes())
+put('run-fp8-policy-cache-production-diagnostic-controls-local.py.txt',(W/'run-fp8-policy-cache-production-controls-local.py').read_bytes())
+for n in ('fp8-policy-cache-production-package.json','fp8-policy-cache-diagnostic-installer-derivation.json'):put(n,(W/n).read_bytes())
+for n in ('commands.log','commands.jsonl'):put('fp8-policy-cache-production-diagnostic-controls-local-'+n,(W/'fp8-policy-cache-production-diagnostic-controls-local-ledger'/n).read_bytes())
+p=json.loads((W/'fp8-policy-cache-production-package.json').read_bytes())
+text='''
+
+### Exploratory native API and production-cache diagnosis prepared on preserved failed DLL
+
+2026-10-27: Original candidate62 build identity gate remains FAILED; proofe93e41e0 and original failed archive unchanged. Prepare additional correctness DIAGNOSIS on preserved DLLdc15e4f53855fb91e182cf52e78eb3917068b8df80cde1242ff1799ce4fb99ba/source62bundle03bdbf86. Native compiler/80+86/header72 phase passed, four NVIDIA sections match old841, two COFF objects differ only timestamps, one host-object difference remains unexplained. No identity predicate changes or qualification claim. Testing an unqualified artifact here is explicitly exploratory correctness evidence only; no promotion or VLM/quality/benchmark permission follows.
+
+The controller temporarily installs exact62sources/DLL, requires unchanged source1374/runtime/SDK/checkpoint and CURRENT34object hashes, runs3CPU cache mutation controls, actual20native/embedded selector cases and955frozen tokenizer C API calls, then41fresh-process production TensorRT load_model cache calls on a tiny addition fixture. Require14misses/16hits/11strict or coupled invalid-policy rejections,13keys, alias and return-default behavior, exact cache-file chain/full before-after raw file snapshots, rejection preserving prior cache bytes, and real tinyGPU output[1,6,15,28]. Per-case compiler backend/counters/source/DLL/flags and raw cache hashes replay independently. Fixed studyroot, one GPU owner, source/library/runtime/SDK/checkpoint restored afterward and no CUDAobject or build modification. Original build-identity gate staysfalse in preparation, workflow, report and proof; zero VLM or serving timing admission. The3local CPU controls pass after adding actual backend and scratch/source checks.
+
+Deployment PACKAGE_SHA (PACKAGE_BYTESB/PACKAGE_FILESfiles), preparation PREP_SHA. Actual API/cache outcome pending at preparation. Broader source/host-artifact reproducibility evidence and original fullsix32state/vector/ordinary-MTP/token/image/reset plus805quality remain required for any new binary. Existing60-source841 candidate/fullsix4058a4f1/frontend3cb4f2f5 remain unchanged. No chart or2x decode-and-throughput/halfTTFT claim changes; full goal active.
+'''.replace('PACKAGE_SHA',p['deployment_sha256']).replace('PACKAGE_BYTES',str(p['bytes'])).replace('PACKAGE_FILES',str(p['files'])).replace('PREP_SHA',p['preparation_sha256'])
+for n in ('docs/research/qwen38-5090-development-log.md','docs/research/qwen38-5090-implementation-task.md'):
+    t=R/n;b=t.read_bytes();assert b'### Exploratory native API and production-cache diagnosis prepared' not in b;t.write_bytes(b+text.replace('\n','\r\n').encode());assert t.read_bytes()[:len(b)]==b;owned.append(n)
+owned=sorted(set(owned));assert not any('probe_native_external_prefix_batch.py' in n for n in owned);assert subprocess.check_output(['git','-C',str(R),'branch','--show-current'],text=True).strip()=='qwen38-5090';(W/'fp8-policy-cache-diagnostic-preparation-retained-paths.json').write_bytes(json.dumps(owned,indent=2).encode());subprocess.run(['git','-C',str(R),'-c','core.autocrlf=false','add','--pathspec-from-file=-','--pathspec-file-nul'],input=('\0'.join(owned)+'\0').encode(),check=True);print(json.dumps(dict(owned_paths=len(owned),actual_diagnostic_pending=True,build_identity_gate_passed=False)))

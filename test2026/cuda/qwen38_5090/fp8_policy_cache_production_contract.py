@@ -14,7 +14,7 @@ def cases():
 CASES=cases()
 def replay_case(row,spec,library):
     assert row['status']=='actual_production_cache_case_collected' and row['spec']==spec and row['actual_environment']==spec['environment'] and row['library_sha256']==library
-    assert row['actual_Garnet_load_model_called'] is True and row['runtime_status']['mode']=='compiled_xmodel'
+    assert row['actual_Garnet_load_model_called'] is True and row['runtime_status']['mode']=='compiled_xmodel' and row['runtime_status']['backend']=='tensorrt'
     status=row['runtime_status'];c=status['forbidden_path_counters']
     assert all(type(c[n]) is int for n in ('graph_cache_hits','graph_cache_misses','root_x_executions'))
     if spec['phase']=='reject':

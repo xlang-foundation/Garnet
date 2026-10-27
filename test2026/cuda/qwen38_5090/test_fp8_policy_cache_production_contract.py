@@ -7,7 +7,7 @@ def fixture():
         if phase=='miss':
             counter+=1;current=baseline if s['key']=='return-default-miss' else format(counter,'032x')
             if baseline is None:baseline=current
-        cached={'runtime_graph.cache':dict(bytes=10,sha256='a'*64,fingerprint=current)};c=dict(graph_cache_hits=int(hit),graph_cache_misses=int(phase=='miss'),root_x_executions=int(phase=='miss'));status=dict(mode='compiled_xmodel',state='failed' if reject else ('engine_cache_loaded' if hit else 'compiled_engine_ready'),ready=not reject,forbidden_path_counters=c,error_code='invalid_graph_policy' if reject else '',error_message=s['expected_error'] or '')
+        cached={'runtime_graph.cache':dict(bytes=10,sha256='a'*64,fingerprint=current)};c=dict(graph_cache_hits=int(hit),graph_cache_misses=int(phase=='miss'),root_x_executions=int(phase=='miss'));status=dict(mode='compiled_xmodel',backend='tensorrt',state='failed' if reject else ('engine_cache_loaded' if hit else 'compiled_engine_ready'),ready=not reject,forbidden_path_counters=c,error_code='invalid_graph_policy' if reject else '',error_message=s['expected_error'] or '')
         rows.append(dict(status='actual_production_cache_case_collected',spec=copy.deepcopy(s),actual_environment=dict(s['environment']),library_sha256='test-library',actual_Garnet_load_model_called=True,runtime_status=status,cache_before=copy.deepcopy(previous),cache_after=copy.deepcopy(cached),output_values=None if reject else [1.,6.,15.,28.],forward_status=None if reject else 'ok'));previous=cached
     return dict(status='actual_production_cache_contracts_collected',fresh_process_per_case=True,cases=rows,model_quality_or_performance_admitted=False)
 class CacheProductionControls(unittest.TestCase):
