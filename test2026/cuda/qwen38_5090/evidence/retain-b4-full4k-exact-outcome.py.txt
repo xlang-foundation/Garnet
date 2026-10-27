@@ -1,0 +1,34 @@
+from pathlib import Path
+from datetime import datetime,timezone
+import hashlib,json,zipfile
+W=Path(__file__).resolve().parent;O=W.parent/'outputs';R=Path('D:/CantorAI/work/qwen38-5090');E=R/'test2026/cuda/qwen38_5090/evidence';JOB='b4-full4k-exact-attempt1';sha=lambda b:hashlib.sha256(b).hexdigest();owned=[]
+def keep(name,raw):
+    p=E/name;assert not p.exists();p.write_bytes(raw);owned.append(p)
+with zipfile.ZipFile(W/'b4-full4k-exact-closure-assets.zip') as z:
+    mf=json.loads(z.read('manifest.json'));assert z.testzip() is None
+    for n,h in mf['files'].items():assert sha(z.read(n))==h
+    proof=z.read('results/'+JOB+'-verified.json');assert proof==(O/(JOB+'-verified.json')).read_bytes();p=O/(JOB+'-remote-verified.json');assert not p.exists();p.write_bytes(proof)
+    for n in mf['files']:
+        if n.startswith('results/b4-full4k-exact-postprocess/') or n.endswith('full4k-exact-install.json'):keep('b4-full4k-exact-closure-'+n.removeprefix('results/').replace('/','-'),z.read(n))
+    keep('b4-full4k-exact-closure-manifest.json',json.dumps(dict(closure_sha256=sha((W/'b4-full4k-exact-closure-assets.zip').read_bytes()),**mf),indent=2).encode())
+q=json.loads(proof);assert q['exit_code'] in (0,1) and q['strict_full4k_admission_passed']==(q['exit_code']==0) and q['source_runtime_SDK_checkpoint_CMake_all34objects_restored'] and not q['MTP_805_HTTP_or_performance_qualified'] and not q['original_failed_job_promoted'];keep(JOB+'-verified.json',proof)
+with zipfile.ZipFile(O/(JOB+'-evidence.zip')) as z:
+    mf=json.loads(z.read('evidence-manifest.json'));assert sha((O/(JOB+'-evidence.zip')).read_bytes())==q['archive_sha256']
+    for n,h in mf['files'].items():assert sha(z.read(n))==h
+    w=json.loads(z.read('results/'+JOB+'/workflow.json'));assert w['cleanup_finished'] and w['build_artifacts_unchanged'] and len(w['source_before'])==1774
+    for n in mf['files']:
+        if n.startswith('results/'+JOB+'/') and n.endswith(('.json','.jsonl','.log')):keep(JOB+'-'+n.removeprefix('results/'+JOB+'/').replace('/','-'),z.read(n))
+    keep(JOB+'-archive-manifest.json',json.dumps(dict(archive_sha256=q['archive_sha256'],archive_bytes=(O/(JOB+'-evidence.zip')).stat().st_size,files=mf['files'],raw_vectors_images_and_source_bundles_in_immutable_archive_only=True),indent=2).encode())
+observation=q['observation'];groups=[]
+if observation is not None:
+    for group in observation['groups']:
+        groups.append(dict(label=group['label'],keys=group['keys'],IDs_exact=group['IDs_exact'],phases={phase:[dict(physical_row=row['physical_row'],all_exact=row['all_exact'],different_components=len(row['different_component_indices']),first_different_component=(row['different_component_indices'][0] if row['different_component_indices'] else None),slot_exact=row['slot_exact'],physical_hash_exact=row['physical_hash_exact'],logical_hash_exact=row['logical_hash_exact'],finite_raw_vector_bytes_exact=row['finite_raw_vector_bytes_exact']) for row in comp['rows']] for phase,comp in group['comparisons'].items()}))
+summary=dict(status='paired_B4_full4k_exact_pass_only' if q['strict_full4k_admission_passed'] else 'paired_B4_full4k_failure_preserved',recorded_UTC=datetime.now(timezone.utc).isoformat(),proof_sha256=sha(proof),archive_sha256=q['archive_sha256'],strict_full4k_admission_passed=q['strict_full4k_admission_passed'],error=q['error'],phase_statuses=q['phase_statuses'],phase_errors=q['phase_errors'],groups=groups,actual_GDN_V_QK_route=q['actual_GDN_V_QK_M16_route'],route_error=q['route_error'],source_runtime_SDK_config_index_CMake_all34objects_baseline_restored=True,original_failed_jobs_promoted=False,CPU_controls=25,MTP_805_HTTP_or_performance_qualified=False,two_times_target_achieved=False,scope='Eight fresh B1 oracles/3B4text-image-mixed groups,3968+128/cap4096. All4phases/128statecomponents/finitebitwisevectors/128IDs required forpass; originalfailedSDK/model/cachejobs remainFAILED. Finalstate differences afterchangedconditioning do notlocalize uniquecause. No timingbenchmark, exhaustiveprefix/permutation/tail/repeat/MTP/805quality/liveHTTP/strongesttunedrefs/INT4/4B qualification.')
+if q['strict_full4k_admission_passed']:assert len(groups)==3 and observation['all_states_and_vectors_exact'] and observation['all_128_IDs_exact'] and observation['independent_B1_oracles']==8 and observation['full_phase_row_comparisons']==48
+raw=json.dumps(summary,indent=2).encode();keep('b4-full4k-exact-summary.json',raw);(O/'Garnet-B4-Full4K-Exact-Progress.json').write_bytes(raw)
+for n in ('commands.log','commands.jsonl'):keep('b4-full4k-exact-local-replay-'+n,(W/'b4-full4k-exact-local-replay'/n).read_bytes())
+keep('retain-b4-full4k-exact-outcome.py.txt',Path(__file__).read_bytes())
+text=('\r\n\r\n2026-10-27 source79 B4 full4K exactgate '+('PASSED' if q['strict_full4k_admission_passed'] else 'FAILED')+', pairedremote/localrawreplays identical proof '+sha(proof)+', archive '+q['archive_sha256']+' ('+str((O/(JOB+'-evidence.zip')).stat().st_size)+'B).25CPU,8freshsource60B1oracles/3source79B4groups text-image-mixed,3968prompt+128forcedIDs/cap4096/finalslots4095. Strictadmission='+str(q['strict_full4k_admission_passed'])+', error='+str(q['error'])+'. Complete128component/physical-logicalhash/fullfinitehidden+normalizedvector/reset-prompt-final-reset/128ID gate neverrelaxed. ActualGDN/V/QKlive7attrs/M4-M16checks4MiB/all16eachroutes required. All1774ownedfiles/runtime/SDK/config-index/CMake/all34objects/baselineDLL restored andprivateSSDnonces retiredafteridle. Originalfailedjobs neverpromoted. See b4-full4k-exact-summary.json for exactpergroup/phase/row outcomes; changedconditioning canconfoundlatepersistentdifferences. No performancebenchmark oroverall2xclaim. B4MTPprefill16 CPU27andfullcontextMTPchecker15 preparedlocally butGPUunrun; prefix0-1-2-4/mixedacceptance/permutation/tail/repeats/805quality/HTTP/strongestrefs/INT4/4B/2xtarget remainopen.\r\n').encode()
+for n in ('docs/research/qwen38-5090-development-log.md','docs/research/qwen38-5090-implementation-task.md'):
+    p=R/n;p.write_bytes(p.read_bytes()+text);owned.append(p)
+paths=[p.relative_to(R).as_posix() for p in owned];(W/'b4-full4k-exact-outcome-stage-paths.bin').write_bytes(b'\0'.join(n.encode() for n in paths)+b'\0');print(json.dumps(dict(files=len(paths),proof_sha256=sha(proof),strict_full4k_admission_passed=q['strict_full4k_admission_passed'])))
