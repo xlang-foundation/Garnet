@@ -1,0 +1,113 @@
+{
+  "derivations": [
+    {
+      "source": "probe_q128_factory_cpu.cpp",
+      "target": "probe_b4_decode_m16_factory_cpu.cpp",
+      "source_sha256": "9046c40091a1b0f14a8924790857e74e7548eb90a0c69213eec9f25411a0e9fa",
+      "target_sha256": "bbc67f7970a59747ef4091b6754e8c86abc8954bb3ca9726deffa5bfe817edad",
+      "changes": [
+        {
+          "old": "Q128",
+          "new": "GDNM16",
+          "count": 4
+        },
+        {
+          "old": "q128",
+          "new": "gdn_m16",
+          "count": 1
+        },
+        {
+          "old": "const int values[]={67,13,17,1,0,1,18};",
+          "new": "const int values[]={35,13,17,3,2,0,1};",
+          "count": 1
+        },
+        {
+          "old": "*value=0;return 0;}",
+          "new": "*value=mode==\"run_wrong_device\"&&calls>24?1:0;if(mode==\"run_device_error\"&&calls>24)return 7;return 0;}",
+          "count": 1
+        },
+        {
+          "old": "if(argc!=2)return 2;mode=argv[1];",
+          "new": "if(argc!=3)return 2;mode=argv[1];const int geometry=std::atoi(argv[2]);int runtimeStatus=-999;",
+          "count": 1
+        },
+        {
+          "old": "CreateModelOptFP8GDNM16Context();",
+          "new": "CreateModelOptFP8GDNM16Context(geometry);",
+          "count": 2
+        },
+        {
+          "old": "infoOkay=Garnet::GetModelOptFP8GDNM16Info(context,info);",
+          "new": "infoOkay=Garnet::GetModelOptFP8GDNM16Info(context,info)&&info.rows==geometry;",
+          "count": 1
+        },
+        {
+          "old": "    }catch(const std::runtime_error&){thrown=true;}",
+          "new": "        if(mode==\"cross_geometry\"){\n            auto other=Garnet::CreateModelOptFP8GDNM16Context(geometry==10240?6144:10240);Garnet::ModelOptFP8GDNM16Info second;\n            if(!context||!other||other==context||!Garnet::GetModelOptFP8GDNM16Info(other,second)||second.rows==geometry)return 5;\n        }\n        if(mode.rfind(\"run_\",0)==0){\n            int m=16,n=geometry,k=5120;float scale=.125f;const void* w=reinterpret_cast<void*>(1);const void* x=w;void* y=reinterpret_cast<void*>(2);void* scratch=reinterpret_cast<void*>(3);size_t bytes=4ULL<<20;\n            if(mode==\"run_batch\")m=4;if(mode==\"run_rows\")n=geometry==10240?6144:10240;if(mode==\"run_columns\")k=6144;\n            if(mode==\"run_zero_scale\")scale=0;if(mode==\"run_nan_scale\")scale=std::numeric_limits<float>::quiet_NaN();\n            if(mode==\"run_weight\")w=nullptr;if(mode==\"run_input\")x=nullptr;if(mode==\"run_output\")y=nullptr;if(mode==\"run_workspace\")scratch=nullptr;if(mode==\"run_workspace_bytes\")++bytes;\n            if(mode==\"run_device_throw\")throwAt=calls+1;\n            runtimeStatus=Garnet::RunModelOptFP8GDNM16Matmul(context,w,x,y,m,n,k,scale,scratch,bytes,nullptr);\n        }\n    }catch(const std::runtime_error&){thrown=true;}",
+          "count": 1
+        },
+        {
+          "old": "#include <string>",
+          "new": "#include <string>\n#include <limits>",
+          "count": 1
+        },
+        {
+          "old": "\\\"unexpected_matmuls\\\":%d,",
+          "new": "\\\"runtime_status\\\":%d,\\\"unexpected_matmuls\\\":%d,",
+          "count": 1
+        },
+        {
+          "old": "info.requiredWorkspace,matmuls);",
+          "new": "info.requiredWorkspace,runtimeStatus,matmuls);",
+          "count": 1
+        },
+        {
+          "old": "return matmuls?3:0;",
+          "new": "return (mode==\"run_valid\"?matmuls!=1:matmuls!=0)?3:0;",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "build_q128_factory_cpu.bat",
+      "target": "build_b4_decode_m16_factory_cpu.bat",
+      "source_sha256": "cf6a4f52a4a3c7c91e568ca0da36e374ecad779ecc5846a14d53e5d0d2bed980",
+      "target_sha256": "fb67df98d6f374a4d4ab6c0b530d90f4d0cf6680d449e305a4a643d8a1ecef9c",
+      "changes": [
+        {
+          "old": "native_q128_canonical_candidate",
+          "new": "native_b4_decode_m16_candidate",
+          "count": 1
+        },
+        {
+          "old": "modelopt_fp8_q128_canonical.cpp",
+          "new": "modelopt_fp8_gdn_m16_canonical.cpp",
+          "count": 2
+        },
+        {
+          "old": "probe_q128_factory_cpu.cpp",
+          "new": "probe_b4_decode_m16_factory_cpu.cpp",
+          "count": 2
+        }
+      ]
+    },
+    {
+      "source": "build_o128_profile_cpu.bat",
+      "target": "build_b4_decode_m16_profile_cpu.bat",
+      "source_sha256": "a6f789808e5d802d8a815376b657c2d3f407406f0c8e2c82cedbe9a254e4dccf",
+      "target_sha256": "7162a2dc42c10a36dd5f9bb09ef7b524a345d45bcb4aa647837d2fc2e64c94b0",
+      "changes": [
+        {
+          "old": "native_o128_canonical_candidate",
+          "new": "native_b4_decode_m16_candidate",
+          "count": 1
+        },
+        {
+          "old": "probe_o128_profile_cpu.cpp",
+          "new": "probe_b4_decode_m16_profile_cpu.cpp",
+          "count": 1
+        }
+      ]
+    }
+  ]
+}

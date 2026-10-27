@@ -1,0 +1,37 @@
+from pathlib import Path
+import hashlib,json
+W=Path(__file__).resolve().parent;R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';sha=lambda b:hashlib.sha256(b).hexdigest();records=[]
+def derive(source,target,changes):
+    before=(M/source).read_bytes();raw=before
+    for old,new,count in changes:
+        if b'\r\n' not in before:old=old.replace('\r\n','\n');new=new.replace('\r\n','\n')
+        assert raw.count(old.encode())==count,(source,old,raw.count(old.encode()));raw=raw.replace(old.encode(),new.encode())
+    out=M/target;assert not out.exists();out.write_bytes(raw);records.append(dict(source=source,target=target,source_sha256=sha(before),target_sha256=sha(raw),changes=[dict(old=o,new=n,count=c) for o,n,c in changes]))
+source='probe_q128_factory_cpu.cpp';blob=(M/source).read_bytes();derive(source,'probe_b4_decode_m16_factory_cpu.cpp',[
+    ('Q128','GDNM16',blob.count(b'Q128')),('q128','gdn_m16',blob.count(b'q128')),
+    ('const int values[]={67,13,17,1,0,1,18};','const int values[]={35,13,17,3,2,0,1};',1),
+    ('*value=0;return 0;}','*value=mode=="run_wrong_device"&&calls>24?1:0;if(mode=="run_device_error"&&calls>24)return 7;return 0;}',1),
+    ('if(argc!=2)return 2;mode=argv[1];','if(argc!=3)return 2;mode=argv[1];const int geometry=std::atoi(argv[2]);int runtimeStatus=-999;',1),
+    ('CreateModelOptFP8GDNM16Context();','CreateModelOptFP8GDNM16Context(geometry);',2),
+    ('infoOkay=Garnet::GetModelOptFP8GDNM16Info(context,info);','infoOkay=Garnet::GetModelOptFP8GDNM16Info(context,info)&&info.rows==geometry;',1),
+    ('    }catch(const std::runtime_error&){thrown=true;}',r'''        if(mode=="cross_geometry"){
+            auto other=Garnet::CreateModelOptFP8GDNM16Context(geometry==10240?6144:10240);Garnet::ModelOptFP8GDNM16Info second;
+            if(!context||!other||other==context||!Garnet::GetModelOptFP8GDNM16Info(other,second)||second.rows==geometry)return 5;
+        }
+        if(mode.rfind("run_",0)==0){
+            int m=16,n=geometry,k=5120;float scale=.125f;const void* w=reinterpret_cast<void*>(1);const void* x=w;void* y=reinterpret_cast<void*>(2);void* scratch=reinterpret_cast<void*>(3);size_t bytes=4ULL<<20;
+            if(mode=="run_batch")m=4;if(mode=="run_rows")n=geometry==10240?6144:10240;if(mode=="run_columns")k=6144;
+            if(mode=="run_zero_scale")scale=0;if(mode=="run_nan_scale")scale=std::numeric_limits<float>::quiet_NaN();
+            if(mode=="run_weight")w=nullptr;if(mode=="run_input")x=nullptr;if(mode=="run_output")y=nullptr;if(mode=="run_workspace")scratch=nullptr;if(mode=="run_workspace_bytes")++bytes;
+            if(mode=="run_device_throw")throwAt=calls+1;
+            runtimeStatus=Garnet::RunModelOptFP8GDNM16Matmul(context,w,x,y,m,n,k,scale,scratch,bytes,nullptr);
+        }
+    }catch(const std::runtime_error&){thrown=true;}''',1),
+    ('#include <string>','#include <string>\n#include <limits>',1),
+    ('\\"unexpected_matmuls\\":%d,','\\"runtime_status\\":%d,\\"unexpected_matmuls\\":%d,',1),
+    ('info.requiredWorkspace,matmuls);','info.requiredWorkspace,runtimeStatus,matmuls);',1),
+    ('return matmuls?3:0;','return (mode=="run_valid"?matmuls!=1:matmuls!=0)?3:0;',1)])
+for source,target,changes in [
+    ('build_q128_factory_cpu.bat','build_b4_decode_m16_factory_cpu.bat',[('native_q128_canonical_candidate','native_b4_decode_m16_candidate',1),('modelopt_fp8_q128_canonical.cpp','modelopt_fp8_gdn_m16_canonical.cpp',2),('probe_q128_factory_cpu.cpp','probe_b4_decode_m16_factory_cpu.cpp',2)]),
+    ('build_o128_profile_cpu.bat','build_b4_decode_m16_profile_cpu.bat',[('native_o128_canonical_candidate','native_b4_decode_m16_candidate',1),('probe_o128_profile_cpu.cpp','probe_b4_decode_m16_profile_cpu.cpp',1)])]:derive(source,target,changes)
+target=M/'evidence/b4-decode-m16-CPU-method-derivation.json';assert not target.exists();target.write_bytes(json.dumps(dict(derivations=records),indent=2).encode());print(json.dumps(dict(derived_methods=len(records))))

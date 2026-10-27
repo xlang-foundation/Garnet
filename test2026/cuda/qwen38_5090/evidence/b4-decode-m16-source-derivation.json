@@ -1,0 +1,500 @@
+{
+  "status": "defaultoff_B4T4_M16_GDN_FP8_source_prepared_native_uncompiled",
+  "parent_files": {
+    "src/cuda/qwen38_bf16_prefill128_attention.cu": "1b40f4c039e62e37049fe178753db4c40185f0a1faf787243032ef40c478a1ec",
+    "src/cuda/qwen38_bf16_prefill128_attention.cuh": "12650239348522213dfe6d5b23b620e7bc6a79b73f45240c0141792db1d6c391",
+    "src/cuda/qwen38_bf16_prefill128_commit.cu": "970ffcb160b321032b8238580d4c00830bf9de7ea81ac95a6ee976575e67e6f5",
+    "src/cuda/qwen38_bf16_prefill128_commit.cuh": "037371b8aaae91afb108e857ee51468a331ef0409a5dc38c75b42e8e3624c9a0",
+    "src/backends/tensorrt/qwen38_bf16_prefill128_layout_contract.h": "75bd1a283fd8ca27ed3eced85d0079bd40c21978a4cf02addba0f598ce5c6998",
+    "src/backends/tensorrt/qwen38_bf16_prefill128_kv_overlay_plugin.h": "7d94b7e9f8f2c55617707aca66484bbf40179240b1a919a502157682320571af",
+    "src/backends/tensorrt/qwen38_bf16_prefill128_kv_overlay_plugin.cpp": "40223ff82b75b3a61d330aae225cf8a2760c6cf14b8706ff937213a4459f6524",
+    "src/backends/tensorrt/cuda_bf16_prefill128_kv_delta_commit.h": "3d7080b281f73af38e8403b896a99ef679023ee542033849225e158d7900fde6",
+    "src/backends/tensorrt/cuda_bf16_prefill128_kv_delta_commit.cpp": "335a1ccaae5a4045bfaa4a6e5accc39ccf2792c3105c65efc9e502680e7634d2",
+    "src/entry/garnet.h": "1c311cdff2c545de131468c2054aa3de843f11ee03641e769ac1c32a460d79f5",
+    "src/backends/tensorrt/qwen35_lowering.h": "87698cfd3789816b0f5186791f11dcc8e41f3112502e18db434ad917bdafd439",
+    "src/backends/tensorrt/trt_builder.cpp": "740fbf2cf0c48587c594a3a79179e814506d62e6dada0953423542b3ca0e95e3",
+    "src/cuda/qwen38_bf16_kv_low_batch_overlay.cu": "c85b1411e6e641ebfdb7c8fe0f4b611cbb7203628a17a9c4a50b969b89ef133a",
+    "src/backends/tensorrt/modelopt_fp8_lowering.cpp": "47465e76b460ab517b5d73ac383a3046537574fffd73cca9cf62046268a6e29d",
+    "src/backends/tensorrt/trt_builder.h": "2b15512b3505deded035a7ff470df0b0f1af464ae69cba04258f70afa7be6d96",
+    "src/backends/tensorrt/cuda_compiled_graph.h": "45de2a0622b36540ead3f5349d5c293f446a0a1ab935cac621053ac937bffe41",
+    "src/backends/tensorrt/cuda_compiled_graph.cpp": "cfec98d3967ca1d1288b33474fedbf1a439787e0a5092b96442a32686e1e7854",
+    "src/backends/tensorrt/modelopt_fp8_m128_profile.h": "ebcd9d4ca1a68709ef83b6d76622d30f2324a217118cb7c295a3221ab73fdf8e",
+    "src/backends/tensorrt/modelopt_fp8_m128_canonical.h": "60914d824fab138078686309a5d24bf139f578c9f33d3eb7a125b0cdc0ae7a04",
+    "src/backends/tensorrt/modelopt_fp8_m128_canonical.cpp": "8ca91b6b478fe0dd4ec6463f5f7fa52836350fd927532786d2cf64ee7cda10bc",
+    "src/backends/tensorrt/modelopt_fp8_m128_plugin.h": "009580e736dc3f0688d130f4ed5c06de6025ad7a4166c94939511ffccf6a94c0",
+    "src/backends/tensorrt/modelopt_fp8_m128_plugin.cpp": "2c78a9df431a0c963f6610cb3cbe91150caf894d984dc9463dd0820e60c429bc",
+    "src/backends/tensorrt/qwen38_gdn_chunk_stage_profile.h": "9194a3daa114fd3b42498d25544990d40b9ba47abc836fcfcbf1717a32ed6874",
+    "src/backends/tensorrt/modelopt_fp8_z128_canonical.h": "b07d3f88ffb2b3f8dd5347107f0e891fb467395abb4e4fc4011df19d82edf897",
+    "src/backends/tensorrt/modelopt_fp8_z128_canonical.cpp": "ee24f346d66ea2e724a19b7fbb23ae6956de49543131a69afbea3832d4d268e8",
+    "src/backends/tensorrt/modelopt_fp8_z128_plugin.h": "95221073c966f5348d758fb15c0e95cf19842b86f99d502a9d6e3472190325e0",
+    "src/backends/tensorrt/modelopt_fp8_z128_plugin.cpp": "45ea03491b9ac07b709c4f95f9cca225cda86857ce5a48ad0f3e20232c03b21a",
+    "src/backends/tensorrt/modelopt_fp8_z128_profile.h": "038ef92a1f985e2885f446891548cf6a1a38a29d9fabe9fd475e2a1e86b26031",
+    "xModel/qwen35/vl_0_8b/kv_bf16_prefill128_study_layout.py": "23b83143f3b65055d58571e97497b49d9eb0e8cea79bb5ee09d080e77d6bdea9",
+    "xModel/qwen35/vl_0_8b/bf16_prefill128_kv_profile.py": "d703e543920cc8e4672f670f451580e61259b6d20c841146eea1010742bbd126",
+    "xModel/qwen35/vl_0_8b/cuda_packed_program.py": "623d97063edf8e5dcb22e1558bc0996965bb85dfd8f53d2d93a0fbf68d362ec6",
+    "xModel/qwen35/vl_0_8b/cuda_chunk.py": "fe368296871c876cdbb74a246e8cbecc3ae0609ca4b73c8445ab4cb900d888b7",
+    "xModel/qwen35/vl_0_8b/cuda_packed_decoder.py": "be9198639d0563a335a41bdc0a3558ed1466f062486e7399503bc516243e9153",
+    "xModel/qwen38/vl_27b/model.py": "1d0443a3909c96ce5d1f61ceba393051477261a8258e0c8adc6e5d89b99b1775",
+    "xModel/qwen35/vl_0_8b/cuda_mtp_prefill16_target128_study.py": "87076e99e50c2be3957516be082b602f80757b1ff6c014374e0277ab5625368c",
+    "src/backends/tensorrt/modelopt_fp8_plugin.cpp": "0ab1ad2ecbc1274ad92952394fb860e7fa77fe112a12bd1e790a6bb865027bbc",
+    "src/backends/tensorrt/modelopt_nvfp4_plugin.cpp": "10cff931e2064aa0ef569f840798386c53d267d82e3f000c56fa47ccfe10a6a6",
+    "src/backends/tensorrt/modelopt_plugin_init_trace.h": "3287a18554910d7c864ccab5fcffdf649bce62bdab07c6fbfbd8d9187aaff5a7",
+    "src/backends/tensorrt/modelopt_fp8_z128_init_trace.h": "1bdccbdd142cb3e31e9caf76d3741624b8927497141faf8d4a0abd109c365b93",
+    "src/backends/tensorrt/modelopt_fp8_z128_reconstruct_trace.h": "34b29616da37f2fb5db591997b38cbfa464b435fdca75383fcd276937122e232",
+    "src/backends/tensorrt/modelopt_fp8_z128_reconstructed_plugin.cpp": "4a081d246f2b646342d3f5787b16c2030a39ac49c5208918a7362557f0d074c4",
+    "src/backends/tensorrt/modelopt_fp8_z128_reconstructed_plugin.h": "f5960167c127dc35138694a17c863494b27963d7b8a23f5469f6aa507389355b",
+    "src/backends/tensorrt/modelopt_fp8_z128_reconstructed_profile.h": "c0449a85dec1e91c147ac642f2a837a0fd8fb15c70a24986f61a09e7fb21b2dc",
+    "src/backends/tensorrt/qwen38_fa3_projection_witness_profile.h": "473a6be0340c00082f77f47431d6ea2d2b5590dde59d884fd90a110f51e00413",
+    "src/backends/tensorrt/modelopt_fp8_kv128_init_trace.h": "7c25b1f95fa4c0ef0caefdb1dc7dae8e22e1ca25bf6b5b018a4ad32f4f33b6bf",
+    "src/backends/tensorrt/modelopt_fp8_kv128_canonical.h": "835a4cc6300a7ccff7388221e7bf92aee2c3ac3e8ce506064acf938fbf60dbcc",
+    "src/backends/tensorrt/modelopt_fp8_kv128_canonical.cpp": "8651e86934b6146a991af649706238af2f4afec4f00748e5159f32b5d36b4fe5",
+    "src/backends/tensorrt/modelopt_fp8_kv128_plugin.h": "894c45e1783bee7646ad4d404a2274871d18a8b110c689bfab5edf1714edefda",
+    "src/backends/tensorrt/modelopt_fp8_kv128_plugin.cpp": "1c40faf6fe0159ccfe26cbd70ece1301e957d715ae7b3acf16417de665e71f2c",
+    "src/backends/tensorrt/modelopt_fp8_kv128_profile.h": "4a480a35c5adbe1e349c8863ea008a68c825db2453c738e68a5772b14725438e",
+    "src/backends/tensorrt/qwen38_full_chunk_stage_profile.h": "2c3658933497d0b863551a682f3cf7c5d083f7393ab0f63897239d58ad6a8037",
+    "src/backends/tensorrt/modelopt_fp8_q128_canonical.h": "d2121cbd8d8ac7d992957598a268a03cef4921684d5b018b5c977a798be58dd3",
+    "src/backends/tensorrt/modelopt_fp8_q128_plugin.h": "dfbc896e48a21fbeffb31d77dd5c444bb54ed4761e0b29ece27bc6097154ce97",
+    "src/backends/tensorrt/modelopt_fp8_q128_plugin.cpp": "adc6ffb9fb3537b6fe47a89aae50165ab0bad5d19fa1448f03fb6365ed6d3e6f",
+    "src/backends/tensorrt/modelopt_fp8_q128_init_trace.h": "c5a5bdf618d9663750d502cbfd8ef8939502c256899b7ec14873303ab1ca9858",
+    "src/backends/tensorrt/modelopt_fp8_q128_profile.h": "c4978e0b12619ddb9ce5aedb701100915cba03c0247e334f37041b967186713d",
+    "src/backends/tensorrt/modelopt_fp8_q128_canonical.cpp": "93272cf373253cb7eaa85f6a3e86e87d01749ffd839a3bee89251511675ad767",
+    "src/backends/tensorrt/modelopt_fp8_o128_plugin.h": "1aad2556bcc4a5052ce73327bdc579552ec50f2280f99d4a41d8ac2d21b8bf28",
+    "src/backends/tensorrt/modelopt_fp8_o128_plugin.cpp": "00d8740d2a73d92ec6a31c631decb9eeb88751f75c358a13c964a91c479e4777",
+    "src/backends/tensorrt/modelopt_fp8_o128_profile.h": "c0a9078705b5f317a131aaf84c284044ded69f774e6ea60ca7d6091c28d5d185",
+    "src/backends/tensorrt/modelopt_fp8_batch4_prefill_profile.h": "0a95caefebcc94ef1b44aa4ab389be7db3b84079f6845777d8f497a1ba93f0b7"
+  },
+  "candidate_files": {
+    "src/cuda/qwen38_bf16_prefill128_attention.cu": "1b40f4c039e62e37049fe178753db4c40185f0a1faf787243032ef40c478a1ec",
+    "src/cuda/qwen38_bf16_prefill128_attention.cuh": "12650239348522213dfe6d5b23b620e7bc6a79b73f45240c0141792db1d6c391",
+    "src/cuda/qwen38_bf16_prefill128_commit.cu": "970ffcb160b321032b8238580d4c00830bf9de7ea81ac95a6ee976575e67e6f5",
+    "src/cuda/qwen38_bf16_prefill128_commit.cuh": "037371b8aaae91afb108e857ee51468a331ef0409a5dc38c75b42e8e3624c9a0",
+    "src/backends/tensorrt/qwen38_bf16_prefill128_layout_contract.h": "75bd1a283fd8ca27ed3eced85d0079bd40c21978a4cf02addba0f598ce5c6998",
+    "src/backends/tensorrt/qwen38_bf16_prefill128_kv_overlay_plugin.h": "7d94b7e9f8f2c55617707aca66484bbf40179240b1a919a502157682320571af",
+    "src/backends/tensorrt/qwen38_bf16_prefill128_kv_overlay_plugin.cpp": "40223ff82b75b3a61d330aae225cf8a2760c6cf14b8706ff937213a4459f6524",
+    "src/backends/tensorrt/cuda_bf16_prefill128_kv_delta_commit.h": "3d7080b281f73af38e8403b896a99ef679023ee542033849225e158d7900fde6",
+    "src/backends/tensorrt/cuda_bf16_prefill128_kv_delta_commit.cpp": "335a1ccaae5a4045bfaa4a6e5accc39ccf2792c3105c65efc9e502680e7634d2",
+    "src/entry/garnet.h": "1c311cdff2c545de131468c2054aa3de843f11ee03641e769ac1c32a460d79f5",
+    "src/backends/tensorrt/qwen35_lowering.h": "87698cfd3789816b0f5186791f11dcc8e41f3112502e18db434ad917bdafd439",
+    "src/backends/tensorrt/trt_builder.cpp": "740fbf2cf0c48587c594a3a79179e814506d62e6dada0953423542b3ca0e95e3",
+    "src/cuda/qwen38_bf16_kv_low_batch_overlay.cu": "c85b1411e6e641ebfdb7c8fe0f4b611cbb7203628a17a9c4a50b969b89ef133a",
+    "src/backends/tensorrt/modelopt_fp8_lowering.cpp": "9e59971890fdc242e35ccbe159af393001465eb27e2063ac2b2ed8b181c91211",
+    "src/backends/tensorrt/trt_builder.h": "2b15512b3505deded035a7ff470df0b0f1af464ae69cba04258f70afa7be6d96",
+    "src/backends/tensorrt/cuda_compiled_graph.h": "45de2a0622b36540ead3f5349d5c293f446a0a1ab935cac621053ac937bffe41",
+    "src/backends/tensorrt/cuda_compiled_graph.cpp": "cfec98d3967ca1d1288b33474fedbf1a439787e0a5092b96442a32686e1e7854",
+    "src/backends/tensorrt/modelopt_fp8_m128_profile.h": "ebcd9d4ca1a68709ef83b6d76622d30f2324a217118cb7c295a3221ab73fdf8e",
+    "src/backends/tensorrt/modelopt_fp8_m128_canonical.h": "60914d824fab138078686309a5d24bf139f578c9f33d3eb7a125b0cdc0ae7a04",
+    "src/backends/tensorrt/modelopt_fp8_m128_canonical.cpp": "8ca91b6b478fe0dd4ec6463f5f7fa52836350fd927532786d2cf64ee7cda10bc",
+    "src/backends/tensorrt/modelopt_fp8_m128_plugin.h": "009580e736dc3f0688d130f4ed5c06de6025ad7a4166c94939511ffccf6a94c0",
+    "src/backends/tensorrt/modelopt_fp8_m128_plugin.cpp": "2c78a9df431a0c963f6610cb3cbe91150caf894d984dc9463dd0820e60c429bc",
+    "src/backends/tensorrt/qwen38_gdn_chunk_stage_profile.h": "9194a3daa114fd3b42498d25544990d40b9ba47abc836fcfcbf1717a32ed6874",
+    "src/backends/tensorrt/modelopt_fp8_z128_canonical.h": "b07d3f88ffb2b3f8dd5347107f0e891fb467395abb4e4fc4011df19d82edf897",
+    "src/backends/tensorrt/modelopt_fp8_z128_canonical.cpp": "ee24f346d66ea2e724a19b7fbb23ae6956de49543131a69afbea3832d4d268e8",
+    "src/backends/tensorrt/modelopt_fp8_z128_plugin.h": "95221073c966f5348d758fb15c0e95cf19842b86f99d502a9d6e3472190325e0",
+    "src/backends/tensorrt/modelopt_fp8_z128_plugin.cpp": "45ea03491b9ac07b709c4f95f9cca225cda86857ce5a48ad0f3e20232c03b21a",
+    "src/backends/tensorrt/modelopt_fp8_z128_profile.h": "038ef92a1f985e2885f446891548cf6a1a38a29d9fabe9fd475e2a1e86b26031",
+    "xModel/qwen35/vl_0_8b/kv_bf16_prefill128_study_layout.py": "23b83143f3b65055d58571e97497b49d9eb0e8cea79bb5ee09d080e77d6bdea9",
+    "xModel/qwen35/vl_0_8b/bf16_prefill128_kv_profile.py": "d703e543920cc8e4672f670f451580e61259b6d20c841146eea1010742bbd126",
+    "xModel/qwen35/vl_0_8b/cuda_packed_program.py": "623d97063edf8e5dcb22e1558bc0996965bb85dfd8f53d2d93a0fbf68d362ec6",
+    "xModel/qwen35/vl_0_8b/cuda_chunk.py": "fe368296871c876cdbb74a246e8cbecc3ae0609ca4b73c8445ab4cb900d888b7",
+    "xModel/qwen35/vl_0_8b/cuda_packed_decoder.py": "be9198639d0563a335a41bdc0a3558ed1466f062486e7399503bc516243e9153",
+    "xModel/qwen38/vl_27b/model.py": "1d0443a3909c96ce5d1f61ceba393051477261a8258e0c8adc6e5d89b99b1775",
+    "xModel/qwen35/vl_0_8b/cuda_mtp_prefill16_target128_study.py": "87076e99e50c2be3957516be082b602f80757b1ff6c014374e0277ab5625368c",
+    "src/backends/tensorrt/modelopt_fp8_plugin.cpp": "0ab1ad2ecbc1274ad92952394fb860e7fa77fe112a12bd1e790a6bb865027bbc",
+    "src/backends/tensorrt/modelopt_nvfp4_plugin.cpp": "10cff931e2064aa0ef569f840798386c53d267d82e3f000c56fa47ccfe10a6a6",
+    "src/backends/tensorrt/modelopt_plugin_init_trace.h": "3287a18554910d7c864ccab5fcffdf649bce62bdab07c6fbfbd8d9187aaff5a7",
+    "src/backends/tensorrt/modelopt_fp8_z128_init_trace.h": "1bdccbdd142cb3e31e9caf76d3741624b8927497141faf8d4a0abd109c365b93",
+    "src/backends/tensorrt/modelopt_fp8_z128_reconstruct_trace.h": "34b29616da37f2fb5db591997b38cbfa464b435fdca75383fcd276937122e232",
+    "src/backends/tensorrt/modelopt_fp8_z128_reconstructed_plugin.cpp": "4a081d246f2b646342d3f5787b16c2030a39ac49c5208918a7362557f0d074c4",
+    "src/backends/tensorrt/modelopt_fp8_z128_reconstructed_plugin.h": "f5960167c127dc35138694a17c863494b27963d7b8a23f5469f6aa507389355b",
+    "src/backends/tensorrt/modelopt_fp8_z128_reconstructed_profile.h": "c0449a85dec1e91c147ac642f2a837a0fd8fb15c70a24986f61a09e7fb21b2dc",
+    "src/backends/tensorrt/qwen38_fa3_projection_witness_profile.h": "473a6be0340c00082f77f47431d6ea2d2b5590dde59d884fd90a110f51e00413",
+    "src/backends/tensorrt/modelopt_fp8_kv128_init_trace.h": "7c25b1f95fa4c0ef0caefdb1dc7dae8e22e1ca25bf6b5b018a4ad32f4f33b6bf",
+    "src/backends/tensorrt/modelopt_fp8_kv128_canonical.h": "835a4cc6300a7ccff7388221e7bf92aee2c3ac3e8ce506064acf938fbf60dbcc",
+    "src/backends/tensorrt/modelopt_fp8_kv128_canonical.cpp": "8651e86934b6146a991af649706238af2f4afec4f00748e5159f32b5d36b4fe5",
+    "src/backends/tensorrt/modelopt_fp8_kv128_plugin.h": "894c45e1783bee7646ad4d404a2274871d18a8b110c689bfab5edf1714edefda",
+    "src/backends/tensorrt/modelopt_fp8_kv128_plugin.cpp": "1c40faf6fe0159ccfe26cbd70ece1301e957d715ae7b3acf16417de665e71f2c",
+    "src/backends/tensorrt/modelopt_fp8_kv128_profile.h": "4a480a35c5adbe1e349c8863ea008a68c825db2453c738e68a5772b14725438e",
+    "src/backends/tensorrt/qwen38_full_chunk_stage_profile.h": "2c3658933497d0b863551a682f3cf7c5d083f7393ab0f63897239d58ad6a8037",
+    "src/backends/tensorrt/modelopt_fp8_q128_canonical.h": "d2121cbd8d8ac7d992957598a268a03cef4921684d5b018b5c977a798be58dd3",
+    "src/backends/tensorrt/modelopt_fp8_q128_plugin.h": "dfbc896e48a21fbeffb31d77dd5c444bb54ed4761e0b29ece27bc6097154ce97",
+    "src/backends/tensorrt/modelopt_fp8_q128_plugin.cpp": "adc6ffb9fb3537b6fe47a89aae50165ab0bad5d19fa1448f03fb6365ed6d3e6f",
+    "src/backends/tensorrt/modelopt_fp8_q128_init_trace.h": "c5a5bdf618d9663750d502cbfd8ef8939502c256899b7ec14873303ab1ca9858",
+    "src/backends/tensorrt/modelopt_fp8_q128_profile.h": "c4978e0b12619ddb9ce5aedb701100915cba03c0247e334f37041b967186713d",
+    "src/backends/tensorrt/modelopt_fp8_q128_canonical.cpp": "93272cf373253cb7eaa85f6a3e86e87d01749ffd839a3bee89251511675ad767",
+    "src/backends/tensorrt/modelopt_fp8_o128_plugin.h": "1aad2556bcc4a5052ce73327bdc579552ec50f2280f99d4a41d8ac2d21b8bf28",
+    "src/backends/tensorrt/modelopt_fp8_o128_plugin.cpp": "00d8740d2a73d92ec6a31c631decb9eeb88751f75c358a13c964a91c479e4777",
+    "src/backends/tensorrt/modelopt_fp8_o128_profile.h": "c0a9078705b5f317a131aaf84c284044ded69f774e6ea60ca7d6091c28d5d185",
+    "src/backends/tensorrt/modelopt_fp8_batch4_prefill_profile.h": "0a95caefebcc94ef1b44aa4ab389be7db3b84079f6845777d8f497a1ba93f0b7",
+    "src/backends/tensorrt/modelopt_fp8_gdn_m16_canonical.h": "4568803cef49771f8db18388cf2e3927e7067b82312a2f95dca6083f44c9f0b4",
+    "src/backends/tensorrt/modelopt_fp8_gdn_m16_init_trace.h": "b6c2753074180187ee5daafa085fd82b88e73100531400b0dbad4a2ed96f04a0",
+    "src/backends/tensorrt/modelopt_fp8_gdn_m16_canonical.cpp": "9efbce5bc1160328d288fb897ff850646a17ca27f39f6a1d880df75f5c8d057f",
+    "src/backends/tensorrt/modelopt_fp8_gdn_m16_plugin.h": "ccd7566d5f692a787e3258a40249723efda87f50425d570d744d5fd99ad824d3",
+    "src/backends/tensorrt/modelopt_fp8_gdn_m16_plugin.cpp": "2309c1d1c8d3200a1a799a15d7b482ac76b74efe137a32ca6c1e9e03556bd945",
+    "src/backends/tensorrt/modelopt_fp8_gdn_m16_profile.h": "647a9aa99e40f549faf783098bd70bad54680218a7f6582e53a42271eb3b0bb1"
+  },
+  "modified_files": [
+    "src/backends/tensorrt/modelopt_fp8_lowering.cpp"
+  ],
+  "new_files": [
+    "src/backends/tensorrt/modelopt_fp8_gdn_m16_canonical.cpp",
+    "src/backends/tensorrt/modelopt_fp8_gdn_m16_canonical.h",
+    "src/backends/tensorrt/modelopt_fp8_gdn_m16_init_trace.h",
+    "src/backends/tensorrt/modelopt_fp8_gdn_m16_plugin.cpp",
+    "src/backends/tensorrt/modelopt_fp8_gdn_m16_plugin.h",
+    "src/backends/tensorrt/modelopt_fp8_gdn_m16_profile.h"
+  ],
+  "derivations": [
+    {
+      "source": "src/backends/tensorrt/modelopt_fp8_q128_canonical.h",
+      "target": "src/backends/tensorrt/modelopt_fp8_gdn_m16_canonical.h",
+      "source_sha256": "d2121cbd8d8ac7d992957598a268a03cef4921684d5b018b5c977a798be58dd3",
+      "target_sha256": "4568803cef49771f8db18388cf2e3927e7067b82312a2f95dca6083f44c9f0b4",
+      "changes": [
+        {
+          "old": "Q128",
+          "new": "GDNM16",
+          "count": 10
+        },
+        {
+          "old": "q128",
+          "new": "gdn_m16",
+          "count": 0
+        },
+        {
+          "old": "int device=-1,algorithm=-1;",
+          "new": "int device=-1,algorithm=-1,rows=0;",
+          "count": 1
+        },
+        {
+          "old": "CreateModelOptFP8GDNM16Context();",
+          "new": "CreateModelOptFP8GDNM16Context(int rows);",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "src/backends/tensorrt/modelopt_fp8_q128_init_trace.h",
+      "target": "src/backends/tensorrt/modelopt_fp8_gdn_m16_init_trace.h",
+      "source_sha256": "c5a5bdf618d9663750d502cbfd8ef8939502c256899b7ec14873303ab1ca9858",
+      "target_sha256": "b6c2753074180187ee5daafa085fd82b88e73100531400b0dbad4a2ed96f04a0",
+      "changes": [
+        {
+          "old": "Q128",
+          "new": "GDNM16",
+          "count": 9
+        },
+        {
+          "old": "q128",
+          "new": "gdn_m16",
+          "count": 0
+        }
+      ]
+    },
+    {
+      "source": "src/backends/tensorrt/modelopt_fp8_q128_canonical.cpp",
+      "target": "src/backends/tensorrt/modelopt_fp8_gdn_m16_canonical.cpp",
+      "source_sha256": "93272cf373253cb7eaa85f6a3e86e87d01749ffd839a3bee89251511675ad767",
+      "target_sha256": "9efbce5bc1160328d288fb897ff850646a17ca27f39f6a1d880df75f5c8d057f",
+      "changes": [
+        {
+          "old": "        cublasLtMatmulHeuristicResult_t control32{};\n        const auto control32Status=trace.api(\"cublasLtMatmulAlgoCheck\",[&](){return cublasLtMatmulAlgoCheck(context->handle,context->operation,context->weight,canonical.controlInput,\n            canonical.controlOutput,canonical.controlOutput,&choices[i].algo,&control32);});\n        trace.note(\"check\",\"M32\",int(control32.state),static_cast<long long>(control32.workspaceSize));\n        if(!okay(control32Status)||control32.state!=CUBLAS_STATUS_SUCCESS||control32.workspaceSize>ModelOptFP8Q128BlasWorkspace)\n            return trace.empty<ModelOptFP8Q128Context>(\"control32_algorithm_check\",int(control32.state),static_cast<long long>(control32.workspaceSize));\n",
+          "new": "",
+          "count": 1
+        },
+        {
+          "old": "Q128",
+          "new": "GDNM16",
+          "count": 28
+        },
+        {
+          "old": "q128",
+          "new": "gdn_m16",
+          "count": 2
+        },
+        {
+          "old": "QConfigEqual",
+          "new": "GDNM16ConfigEqual",
+          "count": 8
+        },
+        {
+          "old": "#include <unordered_map>",
+          "new": "#include <map>",
+          "count": 1
+        },
+        {
+          "old": "std::unordered_map<int,std::weak_ptr<ModelOptFP8GDNM16Context>> contexts;",
+          "new": "std::map<std::pair<int,int>,std::weak_ptr<ModelOptFP8GDNM16Context>> contexts;",
+          "count": 1
+        },
+        {
+          "old": "input=nullptr,output=nullptr,controlInput=nullptr,controlOutput=nullptr;",
+          "new": "input=nullptr,output=nullptr;",
+          "count": 1
+        },
+        {
+          "old": "        if(controlOutput)cublasLtMatrixLayoutDestroy(controlOutput);\n        if(controlInput)cublasLtMatrixLayoutDestroy(controlInput);\n",
+          "new": "",
+          "count": 1
+        },
+        {
+          "old": "CreateModelOptFP8GDNM16Context(){",
+          "new": "CreateModelOptFP8GDNM16Context(int rows){",
+          "count": 1
+        },
+        {
+          "old": "    ModelOptFP8GDNM16InitTrace trace;",
+          "new": "    ModelOptFP8GDNM16InitTrace trace;\n    if(rows!=10240&&rows!=6144)return trace.empty<ModelOptFP8GDNM16Context>(\"unqualified_projection_geometry\",rows);",
+          "count": 1
+        },
+        {
+          "old": "    std::lock_guard<std::mutex> lock(contextsMutex);",
+          "new": "    const auto key=std::make_pair(device,rows);\n    std::lock_guard<std::mutex> lock(contextsMutex);",
+          "count": 1
+        },
+        {
+          "old": "contexts[device]",
+          "new": "contexts[key]",
+          "count": 2
+        },
+        {
+          "old": "CUDA_R_8F_E4M3,5120,12288,5120",
+          "new": "CUDA_R_8F_E4M3,5120,rows,5120",
+          "count": 1
+        },
+        {
+          "old": "CUDA_R_8F_E4M3,5120,128,5120",
+          "new": "CUDA_R_8F_E4M3,5120,16,5120",
+          "count": 1
+        },
+        {
+          "old": "CUDA_R_16BF,12288,128,12288",
+          "new": "CUDA_R_16BF,rows,16,rows",
+          "count": 1
+        },
+        {
+          "old": "CUDA_R_8F_E4M3,5120,16,5120);}))||\n       !okay(trace.api(\"cublasLtMatrixLayoutCreate\",[&](){return cublasLtMatrixLayoutCreate(&canonical.output,CUDA_R_16BF,12288,16,12288);}))||",
+          "new": "CUDA_R_8F_E4M3,5120,4,5120);}))||\n       !okay(trace.api(\"cublasLtMatrixLayoutCreate\",[&](){return cublasLtMatrixLayoutCreate(&canonical.output,CUDA_R_16BF,rows,4,rows);}))||",
+          "count": 1
+        },
+        {
+          "old": "       !okay(trace.api(\"cublasLtMatrixLayoutCreate\",[&](){return cublasLtMatrixLayoutCreate(&canonical.controlInput,CUDA_R_8F_E4M3,5120,32,5120);}))||\n       !okay(trace.api(\"cublasLtMatrixLayoutCreate\",[&](){return cublasLtMatrixLayoutCreate(&canonical.controlOutput,CUDA_R_16BF,12288,32,12288);}))||\n",
+          "new": "",
+          "count": 1
+        },
+        {
+          "old": "// Preserve actual M16 preference, then AlgoCheck actual M128 descriptors.",
+          "new": "// Select the live actual M4 reference, then check reference M4 and actual M16.",
+          "count": 1
+        },
+        {
+          "old": "// The live SDK supplies the M16 control. Never import or patch opaque bytes.",
+          "new": "// The live SDK supplies the M4 control. Never import or patch opaque bytes.",
+          "count": 1
+        },
+        {
+          "old": "CUBLASLT_ALGO_CONFIG_ID,67,",
+          "new": "CUBLASLT_ALGO_CONFIG_ID,35,",
+          "count": 1
+        },
+        {
+          "old": "CUBLASLT_ALGO_CONFIG_SPLITK_NUM,1,",
+          "new": "CUBLASLT_ALGO_CONFIG_SPLITK_NUM,3,",
+          "count": 1
+        },
+        {
+          "old": "CUBLASLT_ALGO_CONFIG_REDUCTION_SCHEME,0,",
+          "new": "CUBLASLT_ALGO_CONFIG_REDUCTION_SCHEME,2,",
+          "count": 1
+        },
+        {
+          "old": "CUBLASLT_ALGO_CONFIG_CTA_SWIZZLING,1,",
+          "new": "CUBLASLT_ALGO_CONFIG_CTA_SWIZZLING,0,",
+          "count": 1
+        },
+        {
+          "old": "CUBLASLT_ALGO_CONFIG_CUSTOM_OPTION,18,",
+          "new": "CUBLASLT_ALGO_CONFIG_CUSTOM_OPTION,1,",
+          "count": 1
+        },
+        {
+          "old": "observed_M16_",
+          "new": "observed_M4_",
+          "count": 2
+        },
+        {
+          "old": "\"M16\"",
+          "new": "\"M4\"",
+          "count": 1
+        },
+        {
+          "old": "\"M128\"",
+          "new": "\"M16\"",
+          "count": 1
+        },
+        {
+          "old": "context->info.device=device;context->info.algorithm=67;",
+          "new": "context->info.device=device;context->info.algorithm=35;context->info.rows=rows;",
+          "count": 1
+        },
+        {
+          "old": "info.algorithm==67",
+          "new": "info.algorithm==35&&(info.rows==10240||info.rows==6144)",
+          "count": 1
+        },
+        {
+          "old": "batch!=128||rows!=12288||columns!=5120",
+          "new": "batch!=16||rows!=context->info.rows||columns!=5120",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "src/backends/tensorrt/modelopt_fp8_m128_plugin.h",
+      "target": "src/backends/tensorrt/modelopt_fp8_gdn_m16_plugin.h",
+      "source_sha256": "009580e736dc3f0688d130f4ed5c06de6025ad7a4166c94939511ffccf6a94c0",
+      "target_sha256": "ccd7566d5f692a787e3258a40249723efda87f50425d570d744d5fd99ad824d3",
+      "changes": [
+        {
+          "old": "M128",
+          "new": "GDNM16",
+          "count": 6
+        },
+        {
+          "old": "m128",
+          "new": "gdn_m16",
+          "count": 1
+        },
+        {
+          "old": "const uint32_t policy=128;",
+          "new": "const uint32_t policy=0x47313634u;",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "src/backends/tensorrt/modelopt_fp8_m128_plugin.cpp",
+      "target": "src/backends/tensorrt/modelopt_fp8_gdn_m16_plugin.cpp",
+      "source_sha256": "2c78a9df431a0c963f6610cb3cbe91150caf894d984dc9463dd0820e60c429bc",
+      "target_sha256": "2309c1d1c8d3200a1a799a15d7b482ac76b74efe137a32ca6c1e9e03556bd945",
+      "changes": [
+        {
+          "old": "M128",
+          "new": "GDNM16",
+          "count": 27
+        },
+        {
+          "old": "m128",
+          "new": "gdn_m16",
+          "count": 2
+        },
+        {
+          "old": "rows!=5120||columns!=6144",
+          "new": "(rows!=10240&&rows!=6144)||columns!=5120",
+          "count": 1
+        },
+        {
+          "old": "requires exact GDN output geometry",
+          "new": "requires exact GDN QKV/Z decode geometry",
+          "count": 1
+        },
+        {
+          "old": "if(policy!=128)",
+          "new": "if(policy!=0x47313634u)",
+          "count": 1
+        },
+        {
+          "old": "getConstantValue()!=128",
+          "new": "getConstantValue()!=16",
+          "count": 1
+        },
+        {
+          "old": "getConstantValue()!=6144",
+          "new": "getConstantValue()!=5120",
+          "count": 1
+        },
+        {
+          "old": "output.d[1]=builder.constant(5120)",
+          "new": "output.d[1]=builder.constant(state_.rows)",
+          "count": 1
+        },
+        {
+          "old": "in[0].dims.d[0]!=128||in[0].dims.d[1]!=6144",
+          "new": "in[0].dims.d[0]!=16||in[0].dims.d[1]!=5120",
+          "count": 1
+        },
+        {
+          "old": "in[1].dims.d[0]!=5120",
+          "new": "in[1].dims.d[0]!=state_.rows",
+          "count": 1
+        },
+        {
+          "old": "1536:6144",
+          "new": "1280:5120",
+          "count": 1
+        },
+        {
+          "old": "out[0].dims.d[0]!=128||out[0].dims.d[1]!=5120",
+          "new": "out[0].dims.d[0]!=16||out[0].dims.d[1]!=state_.rows",
+          "count": 1
+        },
+        {
+          "old": "128ULL*6144",
+          "new": "16ULL*5120",
+          "count": 2
+        },
+        {
+          "old": "[]{return CreateModelOptFP8GDNM16Context();}",
+          "new": "[this]{return CreateModelOptFP8GDNM16Context(state_.rows);}",
+          "count": 1
+        },
+        {
+          "old": "state_.columns,128);",
+          "new": "state_.columns,16);",
+          "count": 1
+        },
+        {
+          "old": "state_.inputScale,128,6144",
+          "new": "state_.inputScale,16,5120",
+          "count": 1
+        },
+        {
+          "old": "output[0],128,5120,6144",
+          "new": "output[0],16,state_.rows,5120",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "src/backends/tensorrt/modelopt_fp8_lowering.cpp",
+      "target": "src/backends/tensorrt/modelopt_fp8_lowering.cpp",
+      "source_sha256": "47465e76b460ab517b5d73ac383a3046537574fffd73cca9cf62046268a6e29d",
+      "target_sha256": "9e59971890fdc242e35ccbe159af393001465eb27e2063ac2b2ed8b181c91211",
+      "changes": [
+        {
+          "old": "#include \"modelopt_fp8_plugin.h\"",
+          "new": "#include \"modelopt_fp8_plugin.h\"\n#include \"modelopt_fp8_gdn_m16_plugin.h\"\n#include \"modelopt_fp8_gdn_m16_profile.h\"",
+          "count": 1
+        },
+        {
+          "old": "    const char* batch4PrefillPolicy=",
+          "new": "    const bool canonicalGDNM16=ModelOptFP8GDNM16Selected(std::getenv(\"GARNET_FP8_GDN_BATCH4_DECODE_CANONICAL\"),\n        shape.nbDims==3?int(shape.d[0]):0,shape.nbDims==3?int(shape.d[1]):0,rows,p.rows,p.columns,p.logicalName);\n    const char* batch4PrefillPolicy=",
+          "count": 1
+        },
+        {
+          "old": "    if(canonicalO128){",
+          "new": "    if(canonicalGDNM16){\n        if(!EnsureModelOptFP8GDNM16PluginRegistered())throw std::runtime_error(\"Native physicalB4T4 GDN FP8 registration failed\");\n        plugin=new ModelOptFP8GDNM16Plugin(p.rows,p.columns,p.weightScale,p.inputScale);\n    }else if(canonicalO128){",
+          "count": 1
+        }
+      ]
+    }
+  ],
+  "literal_new_profile": {
+    "src/backends/tensorrt/modelopt_fp8_gdn_m16_profile.h": "647a9aa99e40f549faf783098bd70bad54680218a7f6582e53a42271eb3b0bb1"
+  },
+  "SDK_control_proof_sha256": "a1f20382c9c53b6377c3764c98fcee0150e9ae627d490a886e4ce5ec1ae25b92",
+  "SDK_control_archive_sha256": "2c4d684fb182dc3597e87ff72f09da3aa954e74e6cb1c1537d2d9ecd4f78c657",
+  "new_CUDA_kernels": 0,
+  "new_context_factories": 1,
+  "BlasWorkspace": 4194304,
+  "model_or_quality_or_performance_qualified": false
+}

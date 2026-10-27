@@ -1,0 +1,11 @@
+from pathlib import Path
+W=Path(__file__).resolve().parent;source=W/'derive-b4-decode-m16-source.py';raw=source.read_bytes()
+changes=[
+    ("assert not D.exists();D.mkdir()","D.mkdir(exist_ok=True)",1),
+    ("    for old,new,count in changes:\n        assert", "    for old,new,count in changes:\n        if b'\\r\\n' not in original:old=old.replace('\\r\\n','\\n');new=new.replace('\\r\\n','\\n')\n        assert",1),
+    ("    (D/Path(target).name).write_bytes(raw);result[target]=raw;steps.append", "    target_path=D/Path(target).name;assert not target_path.exists() or target_path.read_bytes()==raw\n    if not target_path.exists():target_path.write_bytes(raw)\n    result[target]=raw;steps.append",1),
+    ("derive(n,base+'modelopt_fp8_gdn_m16_canonical.cpp',rename(parent[n])+[", "removed=parent[n].replace(remove_check.encode(),b'');derive(n,base+'modelopt_fp8_gdn_m16_canonical.cpp',[(remove_check,'',1)]+rename(removed)+[",1),
+    ("(remove_layout,'',1),(remove_check,'',1)","(remove_layout,'',1)",1),
+]
+for old,new,count in changes:assert raw.count(old.encode())==count,(old,raw.count(old.encode()));raw=raw.replace(old.encode(),new.encode())
+target=W/'derive-b4-decode-m16-source-final.py';assert not target.exists();target.write_bytes(raw);print('FINAL_SOURCE_GENERATOR_CREATED_ORIGINAL_DRAFT_PRESERVED')

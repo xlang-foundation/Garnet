@@ -1,0 +1,88 @@
+from pathlib import Path
+import hashlib,json,sys,zipfile
+W=Path(__file__).resolve().parent;R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';E=M/'evidence';D=M/'native_b4_decode_m16_candidate';sys.path.insert(0,str(R));from test2026.cuda.qwen38_5090.b4_prefill128_source import sources
+_,parent,_=sources();assert len(parent)==61;sha=lambda b:hashlib.sha256(b).hexdigest();result=dict(parent);steps=[]
+D.mkdir(exist_ok=True)
+def derive(source,target,changes):
+    original=parent[source];raw=original;record=[]
+    for old,new,count in changes:
+        if b'\r\n' not in original:old=old.replace('\r\n','\n');new=new.replace('\r\n','\n')
+        assert raw.count(old.encode())==count,(source,old,raw.count(old.encode()));raw=raw.replace(old.encode(),new.encode());record.append(dict(old=old,new=new,count=count))
+    target_path=D/Path(target).name;assert not target_path.exists() or target_path.read_bytes()==raw
+    if not target_path.exists():target_path.write_bytes(raw)
+    result[target]=raw;steps.append(dict(source=source,target=target,source_sha256=sha(original),target_sha256=sha(raw),changes=record))
+base='src/backends/tensorrt/'
+def rename(raw):
+    return [('Q128','GDNM16',raw.count(b'Q128')),('q128','gdn_m16',raw.count(b'q128'))]
+n=base+'modelopt_fp8_q128_canonical.h';derive(n,base+'modelopt_fp8_gdn_m16_canonical.h',rename(parent[n])+[
+    ('int device=-1,algorithm=-1;','int device=-1,algorithm=-1,rows=0;',1),('CreateModelOptFP8GDNM16Context();','CreateModelOptFP8GDNM16Context(int rows);',1)])
+n=base+'modelopt_fp8_q128_init_trace.h';derive(n,base+'modelopt_fp8_gdn_m16_init_trace.h',rename(parent[n]))
+n=base+'modelopt_fp8_q128_canonical.cpp';text=parent[n].decode();remove_layout='       !okay(trace.api("cublasLtMatrixLayoutCreate",[&](){return cublasLtMatrixLayoutCreate(&canonical.controlInput,CUDA_R_8F_E4M3,5120,32,5120);}))||\r\n       !okay(trace.api("cublasLtMatrixLayoutCreate",[&](){return cublasLtMatrixLayoutCreate(&canonical.controlOutput,CUDA_R_16BF,12288,32,12288);}))||\r\n'
+start=text.index('        cublasLtMatmulHeuristicResult_t control32{};');end=text.index('        cublasLtMatmulHeuristicResult_t checked{};',start);remove_check=text[start:end]
+removed=parent[n].replace(remove_check.encode(),b'');derive(n,base+'modelopt_fp8_gdn_m16_canonical.cpp',[(remove_check,'',1)]+rename(removed)+[
+    ('QConfigEqual','GDNM16ConfigEqual',8),('#include <unordered_map>','#include <map>',1),
+    ('std::unordered_map<int,std::weak_ptr<ModelOptFP8GDNM16Context>> contexts;','std::map<std::pair<int,int>,std::weak_ptr<ModelOptFP8GDNM16Context>> contexts;',1),
+    ('input=nullptr,output=nullptr,controlInput=nullptr,controlOutput=nullptr;','input=nullptr,output=nullptr;',1),
+    ('        if(controlOutput)cublasLtMatrixLayoutDestroy(controlOutput);\r\n        if(controlInput)cublasLtMatrixLayoutDestroy(controlInput);\r\n','',1),
+    ('CreateModelOptFP8GDNM16Context(){','CreateModelOptFP8GDNM16Context(int rows){',1),
+    ('    ModelOptFP8GDNM16InitTrace trace;','    ModelOptFP8GDNM16InitTrace trace;\r\n    if(rows!=10240&&rows!=6144)return trace.empty<ModelOptFP8GDNM16Context>("unqualified_projection_geometry",rows);',1),
+    ('    std::lock_guard<std::mutex> lock(contextsMutex);','    const auto key=std::make_pair(device,rows);\r\n    std::lock_guard<std::mutex> lock(contextsMutex);',1),('contexts[device]','contexts[key]',2),
+    ('CUDA_R_8F_E4M3,5120,12288,5120','CUDA_R_8F_E4M3,5120,rows,5120',1),
+    ('CUDA_R_8F_E4M3,5120,128,5120','CUDA_R_8F_E4M3,5120,16,5120',1),('CUDA_R_16BF,12288,128,12288','CUDA_R_16BF,rows,16,rows',1),
+    ('CUDA_R_8F_E4M3,5120,16,5120);}))||\r\n       !okay(trace.api("cublasLtMatrixLayoutCreate",[&](){return cublasLtMatrixLayoutCreate(&canonical.output,CUDA_R_16BF,12288,16,12288);}))||','CUDA_R_8F_E4M3,5120,4,5120);}))||\r\n       !okay(trace.api("cublasLtMatrixLayoutCreate",[&](){return cublasLtMatrixLayoutCreate(&canonical.output,CUDA_R_16BF,rows,4,rows);}))||',1),
+    (remove_layout,'',1),
+    ('// Preserve actual M16 preference, then AlgoCheck actual M128 descriptors.','// Select the live actual M4 reference, then check reference M4 and actual M16.',1),
+    ('// The live SDK supplies the M16 control. Never import or patch opaque bytes.','// The live SDK supplies the M4 control. Never import or patch opaque bytes.',1),
+    ('CUBLASLT_ALGO_CONFIG_ID,67,','CUBLASLT_ALGO_CONFIG_ID,35,',1),('CUBLASLT_ALGO_CONFIG_SPLITK_NUM,1,','CUBLASLT_ALGO_CONFIG_SPLITK_NUM,3,',1),
+    ('CUBLASLT_ALGO_CONFIG_REDUCTION_SCHEME,0,','CUBLASLT_ALGO_CONFIG_REDUCTION_SCHEME,2,',1),('CUBLASLT_ALGO_CONFIG_CTA_SWIZZLING,1,','CUBLASLT_ALGO_CONFIG_CTA_SWIZZLING,0,',1),('CUBLASLT_ALGO_CONFIG_CUSTOM_OPTION,18,','CUBLASLT_ALGO_CONFIG_CUSTOM_OPTION,1,',1),
+    ('observed_M16_','observed_M4_',2),('"M16"','"M4"',1),('"M128"','"M16"',1),
+    ('context->info.device=device;context->info.algorithm=67;','context->info.device=device;context->info.algorithm=35;context->info.rows=rows;',1),('info.algorithm==67','info.algorithm==35&&(info.rows==10240||info.rows==6144)',1),
+    ('batch!=128||rows!=12288||columns!=5120','batch!=16||rows!=context->info.rows||columns!=5120',1)])
+n=base+'modelopt_fp8_m128_plugin.h';derive(n,base+'modelopt_fp8_gdn_m16_plugin.h',[
+    ('M128','GDNM16',parent[n].count(b'M128')),('m128','gdn_m16',parent[n].count(b'm128')),('const uint32_t policy=128;','const uint32_t policy=0x47313634u;',1)])
+n=base+'modelopt_fp8_m128_plugin.cpp';derive(n,base+'modelopt_fp8_gdn_m16_plugin.cpp',[
+    ('M128','GDNM16',parent[n].count(b'M128')),('m128','gdn_m16',parent[n].count(b'm128')),
+    ('rows!=5120||columns!=6144','(rows!=10240&&rows!=6144)||columns!=5120',1),
+    ('requires exact GDN output geometry','requires exact GDN QKV/Z decode geometry',1),('if(policy!=128)','if(policy!=0x47313634u)',1),
+    ('getConstantValue()!=128','getConstantValue()!=16',1),('getConstantValue()!=6144','getConstantValue()!=5120',1),('output.d[1]=builder.constant(5120)','output.d[1]=builder.constant(state_.rows)',1),
+    ('in[0].dims.d[0]!=128||in[0].dims.d[1]!=6144','in[0].dims.d[0]!=16||in[0].dims.d[1]!=5120',1),('in[1].dims.d[0]!=5120','in[1].dims.d[0]!=state_.rows',1),('1536:6144','1280:5120',1),('out[0].dims.d[0]!=128||out[0].dims.d[1]!=5120','out[0].dims.d[0]!=16||out[0].dims.d[1]!=state_.rows',1),
+    ('128ULL*6144','16ULL*5120',2),('[]{return CreateModelOptFP8GDNM16Context();}','[this]{return CreateModelOptFP8GDNM16Context(state_.rows);}',1),('state_.columns,128);','state_.columns,16);',1),
+    ('state_.inputScale,128,6144','state_.inputScale,16,5120',1),('output[0],128,5120,6144','output[0],16,state_.rows,5120',1)])
+profile=r'''// SPDX-License-Identifier: Apache-2.0
+#pragma once
+#include <cstdint>
+#include <cstring>
+#include <stdexcept>
+#include <string>
+namespace Garnet {
+inline int ModelOptFP8GDNM16TextProjection(const std::string& name){
+    for(int layer=0;layer<64;++layer){
+        if(layer%4==3)continue;
+        const auto prefix="model.language_model.layers."+std::to_string(layer)+".linear_attn.";
+        if(name==prefix+"in_proj_qkv.weight")return 10240;
+        if(name==prefix+"in_proj_z.weight")return 6144;
+    }
+    return 0;
+}
+inline bool ModelOptFP8GDNM16Selected(const char* policy,int batch,int tokens,int64_t inputRows,
+    int outputRows,int columns,const std::string& weight){
+    if(policy&&*policy&&std::strcmp(policy,"0")&&std::strcmp(policy,"1"))
+        throw std::invalid_argument("GARNET_FP8_GDN_BATCH4_DECODE_CANONICAL must be0 or1");
+    if(!policy||std::strcmp(policy,"1")||batch!=4||tokens!=4||inputRows!=16)return false;
+    const int expected=ModelOptFP8GDNM16TextProjection(weight);if(!expected)return false;
+    if(outputRows!=expected||columns!=5120)throw std::invalid_argument("Unqualified physicalB4T4 GDN FP8 QKV/Z projection");
+    return true;
+}
+}
+'''.encode();n=base+'modelopt_fp8_gdn_m16_profile.h';(D/Path(n).name).write_bytes(profile);result[n]=profile
+n=base+'modelopt_fp8_lowering.cpp';derive(n,n,[
+    ('#include "modelopt_fp8_plugin.h"','#include "modelopt_fp8_plugin.h"\r\n#include "modelopt_fp8_gdn_m16_plugin.h"\r\n#include "modelopt_fp8_gdn_m16_profile.h"',1),
+    ('    const char* batch4PrefillPolicy=','    const bool canonicalGDNM16=ModelOptFP8GDNM16Selected(std::getenv("GARNET_FP8_GDN_BATCH4_DECODE_CANONICAL"),\r\n        shape.nbDims==3?int(shape.d[0]):0,shape.nbDims==3?int(shape.d[1]):0,rows,p.rows,p.columns,p.logicalName);\r\n    const char* batch4PrefillPolicy=',1),
+    ('    if(canonicalO128){','    if(canonicalGDNM16){\r\n        if(!EnsureModelOptFP8GDNM16PluginRegistered())throw std::runtime_error("Native physicalB4T4 GDN FP8 registration failed");\r\n        plugin=new ModelOptFP8GDNM16Plugin(p.rows,p.columns,p.weightScale,p.inputScale);\r\n    }else if(canonicalO128){',1)])
+assert len(result)==67 and len(set(result)-set(parent))==6 and [n for n in parent if parent[n]!=result[n]]==[base+'modelopt_fp8_lowering.cpp']
+proof=(W.parent/'outputs/decode-fp8-sdk-control-attempt1-verified.json').read_bytes();q=json.loads(proof);assert q['strict_replay_passed'] and q['exit_code']==0
+record=dict(status='defaultoff_B4T4_M16_GDN_FP8_source_prepared_native_uncompiled',parent_files={n:sha(b) for n,b in parent.items()},candidate_files={n:sha(b) for n,b in result.items()},modified_files=[base+'modelopt_fp8_lowering.cpp'],new_files=sorted(set(result)-set(parent)),derivations=steps,literal_new_profile={n:sha(result[n]) for n in result if n.endswith('gdn_m16_profile.h')},SDK_control_proof_sha256=sha(proof),SDK_control_archive_sha256=q['archive_sha256'],new_CUDA_kernels=0,new_context_factories=1,BlasWorkspace=4<<20,model_or_quality_or_performance_qualified=False)
+target=E/'b4-decode-m16-source-derivation.json';assert not target.exists();target.write_bytes(json.dumps(record,indent=2).encode());bundle=W/'b4-decode-m16-source.zip';assert not bundle.exists()
+with zipfile.ZipFile(bundle,'x',zipfile.ZIP_DEFLATED) as z:
+    for n,b in result.items():z.writestr(n,b)
+print(json.dumps(dict(status=record['status'],files=len(result),new_files=record['new_files'],bundle_sha256=sha(bundle.read_bytes()),bytes=bundle.stat().st_size)))
