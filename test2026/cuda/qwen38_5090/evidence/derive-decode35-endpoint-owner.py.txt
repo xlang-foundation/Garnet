@@ -1,0 +1,20 @@
+from pathlib import Path
+import ast,hashlib,json
+M=Path('D:/CantorAI/work/qwen38-5090/test2026/cuda/qwen38_5090');raw=(M/'run_decode35_operands.py').read_bytes();text=raw.decode().replace('\r\n','\n');changes=[];sha=lambda b:hashlib.sha256(b).hexdigest()
+pairs=[
+ ('Exclusive same-DLL off/on model controls before any internal operand analysis.','Two fresh six-endpoint on processes; exact source/runtime-pinned ordinary off parents reused.',1),
+ ('decode35-operands-attempt1','decode35-endpoints-attempt1',1),
+ ('from test2026.cuda.qwen38_5090.decode35_operand_analysis import PHASES,primary_control,witness_trace,analyze','from test2026.cuda.qwen38_5090.decode35_endpoint_analysis import PHASES,primary_control,witness_trace,analyze\n    from test2026.cuda.qwen38_5090.decode35_endpoint_reuse import checked_reuse',1),
+ ('decode35-operands-preparation.json','decode35-endpoints-preparation.json',1),
+ ('decode35_operands_prepared_GPU_unrun','decode35_endpoints_prepared_GPU_unrun',1),
+ ('81CPU controls: inherited69 plus5private operand program and7new library-transition/primary-first/trace/geometry/cache-rounding/RoPE-suffix guards. No relaxation of old gates.','97CPU controls: all81 seven-stage controls unchanged,6 endpoint topology,7 endpoint analysis,3 immutable off reuse. Native hook remains7; no pre-RoPE suffix claim for six endpoints. Full all-row primary/cache/timeline/layer gates retained.',1),
+ ('81 CPU controls failed','97 CPU controls failed',1),
+ ("with zipfile.ZipFile(ROOT/'results/step45-layer-boundary-attempt2-evidence.zip') as parent:","with zipfile.ZipFile(ROOT/'results/step45-layer-boundary-attempt2-evidence.zip') as parent,zipfile.ZipFile(ROOT/'results/decode35-operands-attempt1-evidence.zip') as ordinary:",1),
+ ("            for phase in PHASES:\n", "            offproof=json.loads((ROOT/'results/decode35-operands-attempt1-verified.json').read_bytes())\n            reports,reads,w['reused_off']=checked_reuse(p,ordinary,offproof)\n            for phase in PHASES[:2]:\n                role=phase.split('-')[1]\n                w['controls'][phase]=primary_control(reports[phase],historical[role],reads[phase],historical_reads[role],p['selected_key'],p['library_sha256'],p['historical_libraries'][role],False,True)\n                assert w['controls'][phase]==offproof['controls'][phase]\n            save()\n            for phase in PHASES[2:]:\n",1),
+ ('launch_decode35_operands.py','launch_decode35_endpoints.py',1),
+ ('Same source86DLL, ordinary3968prompt+53IDs/52consumed, fulloriginalcaptures/cache/timeline/all64layer44-45; off must reproduce historicalprofile with declaredDLLtransition, thenon must reproduce off exactly before new7internal operands can be interpreted. No model/performance admission.','Same source86DLL and seven-stage native hook; six final endpoints omit pre-RoPE. Fresh on process must reproduce immutable same-DLL ordinary off: all53IDs/five all-row states and vectors/full8MiBcache/timeline/all64 layers44-45 before interpreting six endpoints. Off parents separately rechecked against historicalsource60/85. No performance admission.',1),
+ ('same_DLL_decode35_operands_collected_unqualified','same_DLL_decode35_endpoints_collected_unqualified',1),
+]
+for old,new,count in pairs:assert text.count(old)==count,(old,text.count(old));text=text.replace(old,new);changes.append({'old':old,'new':new,'count':count})
+out=text.encode();ast.parse(out);p=M/'run_decode35_endpoints.py';assert not p.exists();p.write_bytes(out)
+d=M/'evidence/decode35-endpoint-owner-derivation.json';assert not d.exists();d.write_bytes(json.dumps({'source':'run_decode35_operands.py','source_sha256':sha(raw),'new_file_normalizes_CRLF_to_LF':True,'target':p.name,'target_sha256':sha(out),'changes':changes,'fresh_GPU_processes':2,'reused_ordinary_profiles':2,'all_primary_and_restoration_gates_retained':True,'GPU_model_unrun':True},indent=2).encode());print(json.dumps({'target_sha256':sha(out)}))

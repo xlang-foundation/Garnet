@@ -1,0 +1,46 @@
+from pathlib import Path
+import ast,hashlib,json
+M=Path('D:/CantorAI/work/qwen38-5090/test2026/cuda/qwen38_5090');sha=lambda b:hashlib.sha256(b).hexdigest();rows=[]
+def derive(source,target,changes):
+    original=(M/source).read_bytes();text=original.decode().replace('\r\n','\n');record=[]
+    for old,new,count in changes:
+        assert text.count(old)==count,(source,old,text.count(old));text=text.replace(old,new);record.append({'old':old,'new':new,'count':count})
+    raw=text.encode();ast.parse(raw);p=M/target;assert not p.exists() or p.read_bytes()==raw
+    if not p.exists():p.write_bytes(raw)
+    rows.append({'source':source,'source_sha256':sha(original),'new_file_normalizes_CRLF_to_LF':True,'target':target,'target_sha256':sha(raw),'changes':record})
+derive('decode35_operand_analysis.py','decode35_endpoint_analysis.py',[
+ ('"""Off/on controls precede internal-operand interpretation; no performance admission."""','"""Six endpoints over the unchanged native seven-stage hook; full ordinary controls precede interpretation."""',1),
+ (",('K_normalized_pre_RoPE',4096)",'',1),
+ ('2147483647-64*20480-106496','2147483647-64*20480-102400',1),
+ ('+(106496 if enabled else 0)','+(102400 if enabled else 0)',1),
+ ("m['row_words']==106496","m['row_words']==102400",1),
+ ("        pre,post=values['K_normalized_pre_RoPE'],values['K_post_RoPE']\n        for token in range(4):\n            for head in range(4):\n                start=(token*1024+head*256+64)*4;end=(token*1024+(head+1)*256)*4\n                assert pre[start:end]==post[start:end],'RoPE changed the unrotated K suffix'", "        post=values['K_post_RoPE']",1),
+ ("key_path=['masked_input','input_normalized','projected_K','K_normalized_pre_RoPE','K_post_RoPE']", "key_path=['masked_input','input_normalized','projected_K','K_post_RoPE']",1),
+ ("('projected_K','K_normalized_pre_RoPE','K_post_RoPE')", "('projected_K','K_post_RoPE')",1),
+ ('decode35_operands_compared_after_off_historical_and_same_DLL_on_parity','decode35_endpoints_compared_after_reused_off_historical_and_same_DLL_on_parity',1),
+ ('actual_K_cache_BF16_rounding_and_unrotated_suffix_links_passed','actual_K_cache_BF16_rounding_link_passed',1),
+])
+derive('test_decode35_operand_analysis.py','test_decode35_endpoint_analysis.py',[
+ ('from . import decode35_operand_analysis as a','from . import decode35_endpoint_analysis as a',1),
+ ("r['observer']['wide_width']+=106496","r['observer']['wide_width']+=102400",2),
+ ("'offsets':offsets,'row_words':106496}","'offsets':offsets,'row_words':102400}",1),
+ ('test_all_operands_link_masked_input_suffix_and_actual_cache','test_all_endpoints_link_masked_input_and_actual_cache',1),
+ ("('masked','suffix','cache'","('masked','cache_dimension211','cache'",2),
+])
+derive('probe_decode35_operands.py','probe_decode35_endpoints.py',[
+ ('Private all64 layer outputs at44/45; ordinary primary/cache/timeline parity required before interpretation.','Six final endpoints plus all64 layer outputs at44/45; full ordinary parity before interpretation.',1),
+ ("assert phase in ('off-reference','off-candidate','on-reference','on-candidate')", "assert phase in ('on-reference','on-candidate')",1),
+ ('decode35-operands-preparation.json','decode35-endpoints-preparation.json',1),
+ ('from test2026.cuda.qwen38_5090.decode35_operand_program import Decode35OperandProgram,construct_with_decode35_operand_program,OPERANDS','from test2026.cuda.qwen38_5090.decode35_endpoint_program import Decode35EndpointProgram,construct_with_decode35_endpoint_program,OPERANDS',1),
+ ('AllLayerDecodeBoundaryProgram=Decode35OperandProgram if enabled','AllLayerDecodeBoundaryProgram=Decode35EndpointProgram if enabled',1),
+ ('construct_with_all_layer_decode_boundary_program=construct_with_decode35_operand_program if enabled','construct_with_all_layer_decode_boundary_program=construct_with_decode35_endpoint_program if enabled',1),
+ ('row_words=106496','row_words=102400',1),
+ ('len(program.operand_buffers)==7','len(program.operand_buffers)==6',1),
+])
+derive('launch_decode35_operands.py','launch_decode35_endpoints.py',[
+ ('Fresh embedded process per B1-reference/B4-candidate phase; fixed owner cache.','Fresh six-endpoint B1/B4 process; ordinary off captures reused only under exact source/runtime pins.',1),
+ ("assert phase in ('off-reference','off-candidate','on-reference','on-candidate')", "assert phase in ('on-reference','on-candidate')",1),
+ ('decode35-operands-preparation.json','decode35-endpoints-preparation.json',1),
+ ('probe_decode35_operands.py','probe_decode35_endpoints.py',1),
+])
+p=M/'evidence/decode35-endpoint-analysis-probe-derivation.json';assert not p.exists();p.write_bytes(json.dumps({'derivations':rows,'original_seven_stage_protocol_and_tests_unchanged':True,'native_trace_stays_seven_106496':True,'new_final_observation_width':102400,'pre_RoPE_suffix_claim_removed':True,'GPU_model_unrun':True},indent=2).encode());print(json.dumps({'files':len(rows),'derivation_sha256':sha(p.read_bytes())}))

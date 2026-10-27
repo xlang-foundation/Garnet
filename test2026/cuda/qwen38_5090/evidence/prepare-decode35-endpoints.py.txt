@@ -1,0 +1,45 @@
+from pathlib import Path
+import ast,hashlib,json,zipfile
+W=Path(__file__).resolve().parent;O=W.parent/'outputs';R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';E=M/'evidence';P='Garnet/test2026/cuda/qwen38_5090/';sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+old=json.loads((E/'decode35-operands-preparation.json').read_bytes());J='decode35-operands-attempt1';proof=O/(J+'-verified.json');q=json.loads(proof.read_bytes())
+assert proof.read_bytes()==(O/(J+'-remote-verified.json')).read_bytes() and q['exit_code']==1 and q['analysis'] is None and sha(O/(J+'-evidence.zip'))==q['archive_sha256']
+assert set(q['controls'])=={'off-reference','off-candidate','on-reference'} and q['source_runtime_SDK_config_index_CMake_all34_baseline_restored']
+with zipfile.ZipFile(O/(J+'-evidence.zip')) as z:w=json.loads(z.read('results/'+J+'/workflow.json'))
+assert w['cleanup_finished'] and w['all_restored'] and w['source_after']==old['files']
+for key,field in [('runtime','runtime_after'),('environment','environment_after'),('checkpoints','checkpoint_after'),('cuda_objects','cuda_objects_after'),('cache_before_sha256','cache_after_sha256')]:assert old[key]==w[field]
+files=dict(w['source_after']);names=['decode35_endpoint_program.py','test_decode35_endpoint_program.py','decode35_endpoint_analysis.py','test_decode35_endpoint_analysis.py','decode35_endpoint_reuse.py','test_decode35_endpoint_reuse.py','probe_decode35_endpoints.py','launch_decode35_endpoints.py','run_decode35_endpoints.py','verify_decode35_endpoints.py','evidence/decode35-endpoint-program-derivation.json','evidence/decode35-endpoint-analysis-probe-derivation.json','evidence/decode35-endpoint-analysis-probe-derivation-v2.json','evidence/decode35-endpoint-owner-derivation.json','evidence/decode35-endpoint-analysis-failed-v1.py.txt']
+for n in names:
+    if n.endswith('.py'):ast.parse((M/n).read_bytes())
+rows=json.loads((E/'decode35-endpoint-analysis-probe-derivation-v2.json').read_bytes())['derivations']+[json.loads((E/'decode35-endpoint-owner-derivation.json').read_bytes())]
+for row in rows:
+    raw=(M/row['source']).read_bytes();assert hashlib.sha256(raw).hexdigest()==row['source_sha256'];text=raw.decode().replace('\r\n','\n')
+    for c in row['changes']:assert text.count(c['old'])==c['count'];text=text.replace(c['old'],c['new'])
+    assert text.encode()==(M/row['target']).read_bytes() and sha(M/row['target'])==row['target_sha256']
+pd=json.loads((E/'decode35-endpoint-program-derivation.json').read_bytes());raw=(M/pd['target']).read_bytes();assert sha(M/pd['target'])==pd['target_sha256'] and sha(M/pd['source'])==pd['source_sha256'];text=raw.decode();assert text.startswith(pd['header']);body=text[len(pd['header']):]
+for c in reversed(pd['class_changes']):assert body.count(c['new'])==c['count'];body=body.replace(c['new'],c['old'])
+original=(M/pd['source']).read_bytes().decode();assert body==original[original.index('class Decode35OperandProgram'):]
+v1=json.loads((E/'decode35-endpoint-analysis-probe-derivation.json').read_bytes());assert sha(E/'decode35-endpoint-analysis-failed-v1.py.txt')==v1['derivations'][0]['target_sha256']
+ledger=W/'decode35-endpoints-cpu-ledger';events=[json.loads(s) for s in (ledger/'commands.jsonl').read_bytes().splitlines()];assert len(events)==2 and events[1]['exit_code']==0 and events[0]['source']['owned_source_sha256']==events[1]['source_after']['owned_source_sha256'];assert b'Ran 97 tests' in (ledger/'commands.log').read_bytes()
+for n,h in events[0]['source']['owned_source_sha256'].items():assert sha(M/n)==h
+def keep(name,raw):
+    p=E/name;assert not p.exists();p.write_bytes(raw);names.append('evidence/'+name)
+for ext in ('log','jsonl'):keep('decode35-endpoints-cpu-commands.'+ext,(ledger/('commands.'+ext)).read_bytes())
+for name in ('derive-decode35-endpoint-analysis.py','derive-decode35-endpoint-analysis-failed-v1.py.txt','derive-decode35-endpoint-analysis-failed-v2.py.txt','derive-decode35-endpoint-owner.py','test-decode35-endpoints-cpu.py','prepare-decode35-endpoints.py'):keep(name if name.endswith('.txt') else name+'.txt',(W/name).read_bytes())
+keep('decode35-endpoint-analysis-preparation-failures.json',json.dumps({'local_exit_codes':[1,1],'first_failure':'Derivation stopped because row_words106496 occurs in both native trace and final-output metadata, not once. A new analysis file had been created; originals and remote files were unchanged. Narrowed metadata replacement, retaining native7/106496 trace.','second_failure':'First derived six-endpoint analysis retained a seven-file guard; actual unit test test_all_endpoints_link_masked_input_and_actual_cache failed at checked_operands. Invalid source and original derivation retained. Changed only new endpoint file-count guard to6; native and original seven-stage tests unchanged.','second_failure_observed_test_output':'Ran 7 tests in 0.919s; FAILED (failures=1); AssertionError at len(unique operand files)==7','no_native_GPU_model_or_remote_mutation':True,'subsequent_CPU_tests_passed':97},indent=2).encode())
+keep('decode35-endpoints-cpu-preparation.json',json.dumps({'CPU_controls':97,'fresh_GPU_processes_unrun':2,'same_native_seven_stage_hook':True,'new_final_observations':6,'native_and_DLL_precision_math_changes':False,'source_sha256':{n:sha(M/n) for n in names},'all_row_primary_parity_still_required':True,'pre_RoPE_suffix_not_claimed':True},indent=2).encode())
+for n in names:
+    if P+n in files:assert files[P+n]==sha(M/n),('Preserve existing method',n)
+    files[P+n]=sha(M/n)
+parents=dict(old['parents']);parents[J]={'proof_sha256':sha(proof),'archive_sha256':q['archive_sha256'],'status':q['status'],'exit_code':1};assert len(parents)==49
+for job,row in parents.items():
+    path=O/(job+'-verified.json');doc=json.loads(path.read_bytes());assert sha(path)==row['proof_sha256'] and path.read_bytes()==(O/(job+'-remote-verified.json')).read_bytes() and sha(O/(job+'-evidence.zip'))==doc['archive_sha256']==row['archive_sha256'] and doc['status']==row['status']
+p={k:v for k,v in old.items() if k not in ('status','files','archive_files','parents','installed_files','test_modules','scope')}
+p.update(status='decode35_endpoints_prepared_GPU_unrun',files=files,archive_files=sorted(set(old['archive_files'])|{P+n for n in names}),parents=parents,test_modules=old['test_modules']+['test2026.cuda.qwen38_5090.test_decode35_endpoint_program','test2026.cuda.qwen38_5090.test_decode35_endpoint_analysis','test2026.cuda.qwen38_5090.test_decode35_endpoint_reuse'],scope='Two fresh six-endpoint on-reference/on-candidate model processes over exact source86 bundle/DLL/native7stage hook. Omit only pre-RoPE normalization observation from final returned graph outputs, preserve all seven native view offsets, six finalwords102400 versus native106496. Hypothesis observer fusion perturbation; not optimization or cause proof. Reuse only immutable same-DLL ordinary off captures from failed-seven-output archive after exact oldsource inventory/source86/flags/config-index/corpus/selectedkey/runtime/SDK/CMake/all34object identity; replay their historicalsource60/85 controls and require complete all-row53IDs/five128component states+finitevectors/full8MiBcache/all53coordinatepoints/all64 fullT4 layers44-45 before interpreting new endpoints. Actual native trace remains7. Independently round activeK to actualcache slots4011/4012; no unobserved pre-RoPE suffix claim.97CPU/49closedparents/baseline restoration/fixedCcache96GiB/ownednonce retirement. Full4K/K-fourM4/seven-observer failures remainFAILED; no B4MTP/805/HTTP/quality/performance/2x admission.')
+p['installed_files']={**files,**{'Garnet/'+n:h for n,h in p['source_files'].items()}};assert len(p['source_files'])==len(p['candidate_base'])==86 and len(p['cuda_objects'])==34
+prep=E/'decode35-endpoints-preparation.json';assert not prep.exists();prep.write_bytes(json.dumps(p,indent=2).encode());deploy={P+n:M/n for n in names};deploy[P+'evidence/'+prep.name]=prep
+target=W/'decode35-endpoints-deployment.zip';assert not target.exists()
+with zipfile.ZipFile(target,'x',zipfile.ZIP_DEFLATED) as z:
+    for n,path in deploy.items():z.write(path,n)
+    z.writestr('deployment-manifest.json',json.dumps({'files':{n:sha(path) for n,path in deploy.items()},'production_install_deferred_to_exclusive_owner':True},indent=2))
+receipt={'deployment_sha256':sha(target),'bytes':target.stat().st_size,'deployment_files':len(deploy),'guarded_files':len(files),'archive_files':len(p['archive_files']),'parents':len(parents),'CPU_controls':97,'fresh_GPU_processes':2,'reused_ordinary_off_profiles':2,'preparation_sha256':sha(prep),'same_library_sha256':p['library_sha256']}
+(W/'decode35-endpoints-package.json').write_bytes(json.dumps(receipt,indent=2).encode());(W/'decode35-endpoints-owned-names.json').write_bytes(json.dumps(names).encode());print(json.dumps(receipt,indent=2))

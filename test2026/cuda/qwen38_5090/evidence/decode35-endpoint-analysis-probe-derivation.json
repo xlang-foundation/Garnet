@@ -1,0 +1,180 @@
+{
+  "derivations": [
+    {
+      "source": "decode35_operand_analysis.py",
+      "source_sha256": "b3a83e6be89748055766b1a21f10e485b43feb8eb11079819bc06c1678be3a00",
+      "new_file_normalizes_CRLF_to_LF": true,
+      "target": "decode35_endpoint_analysis.py",
+      "target_sha256": "0616bba55ba0c96175bb66b07e7304c301aed33fd3b3d79bd5724282bce1b61f",
+      "changes": [
+        {
+          "old": "\"\"\"Off/on controls precede internal-operand interpretation; no performance admission.\"\"\"",
+          "new": "\"\"\"Six endpoints over the unchanged native seven-stage hook; full ordinary controls precede interpretation.\"\"\"",
+          "count": 1
+        },
+        {
+          "old": ",('K_normalized_pre_RoPE',4096)",
+          "new": "",
+          "count": 1
+        },
+        {
+          "old": "2147483647-64*20480-106496",
+          "new": "2147483647-64*20480-102400",
+          "count": 1
+        },
+        {
+          "old": "+(106496 if enabled else 0)",
+          "new": "+(102400 if enabled else 0)",
+          "count": 1
+        },
+        {
+          "old": "m['row_words']==106496",
+          "new": "m['row_words']==102400",
+          "count": 1
+        },
+        {
+          "old": "        pre,post=values['K_normalized_pre_RoPE'],values['K_post_RoPE']\n        for token in range(4):\n            for head in range(4):\n                start=(token*1024+head*256+64)*4;end=(token*1024+(head+1)*256)*4\n                assert pre[start:end]==post[start:end],'RoPE changed the unrotated K suffix'",
+          "new": "        post=values['K_post_RoPE']",
+          "count": 1
+        },
+        {
+          "old": "key_path=['masked_input','input_normalized','projected_K','K_normalized_pre_RoPE','K_post_RoPE']",
+          "new": "key_path=['masked_input','input_normalized','projected_K','K_post_RoPE']",
+          "count": 1
+        },
+        {
+          "old": "('projected_K','K_normalized_pre_RoPE','K_post_RoPE')",
+          "new": "('projected_K','K_post_RoPE')",
+          "count": 1
+        },
+        {
+          "old": "decode35_operands_compared_after_off_historical_and_same_DLL_on_parity",
+          "new": "decode35_endpoints_compared_after_reused_off_historical_and_same_DLL_on_parity",
+          "count": 1
+        },
+        {
+          "old": "actual_K_cache_BF16_rounding_and_unrotated_suffix_links_passed",
+          "new": "actual_K_cache_BF16_rounding_link_passed",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "test_decode35_operand_analysis.py",
+      "source_sha256": "8d8fc1ad1d94a52bf9b2be7c9cfff6410d2bb58890e05c6222a2d90b5453c197",
+      "new_file_normalizes_CRLF_to_LF": true,
+      "target": "test_decode35_endpoint_analysis.py",
+      "target_sha256": "c09d37a8cdcd14244db805d46ecf2a77d2582d4f439a6f6079a90a592e2c7860",
+      "changes": [
+        {
+          "old": "from . import decode35_operand_analysis as a",
+          "new": "from . import decode35_endpoint_analysis as a",
+          "count": 1
+        },
+        {
+          "old": "r['observer']['wide_width']+=106496",
+          "new": "r['observer']['wide_width']+=102400",
+          "count": 2
+        },
+        {
+          "old": "'offsets':offsets,'row_words':106496}",
+          "new": "'offsets':offsets,'row_words':102400}",
+          "count": 1
+        },
+        {
+          "old": "test_all_operands_link_masked_input_suffix_and_actual_cache",
+          "new": "test_all_endpoints_link_masked_input_and_actual_cache",
+          "count": 1
+        },
+        {
+          "old": "('masked','suffix','cache'",
+          "new": "('masked','cache_dimension211','cache'",
+          "count": 2
+        }
+      ]
+    },
+    {
+      "source": "probe_decode35_operands.py",
+      "source_sha256": "5be4cc2995cf3bd35918535919ad555b4b8108067e457d3b7cf2fdb3645480c9",
+      "new_file_normalizes_CRLF_to_LF": true,
+      "target": "probe_decode35_endpoints.py",
+      "target_sha256": "dae83ace8409e6a1a8d511ce91e56e24cc1eed40c185860a9e674a40ca652090",
+      "changes": [
+        {
+          "old": "Private all64 layer outputs at44/45; ordinary primary/cache/timeline parity required before interpretation.",
+          "new": "Six final endpoints plus all64 layer outputs at44/45; full ordinary parity before interpretation.",
+          "count": 1
+        },
+        {
+          "old": "assert phase in ('off-reference','off-candidate','on-reference','on-candidate')",
+          "new": "assert phase in ('on-reference','on-candidate')",
+          "count": 1
+        },
+        {
+          "old": "decode35-operands-preparation.json",
+          "new": "decode35-endpoints-preparation.json",
+          "count": 1
+        },
+        {
+          "old": "from test2026.cuda.qwen38_5090.decode35_operand_program import Decode35OperandProgram,construct_with_decode35_operand_program,OPERANDS",
+          "new": "from test2026.cuda.qwen38_5090.decode35_endpoint_program import Decode35EndpointProgram,construct_with_decode35_endpoint_program,OPERANDS",
+          "count": 1
+        },
+        {
+          "old": "AllLayerDecodeBoundaryProgram=Decode35OperandProgram if enabled",
+          "new": "AllLayerDecodeBoundaryProgram=Decode35EndpointProgram if enabled",
+          "count": 1
+        },
+        {
+          "old": "construct_with_all_layer_decode_boundary_program=construct_with_decode35_operand_program if enabled",
+          "new": "construct_with_all_layer_decode_boundary_program=construct_with_decode35_endpoint_program if enabled",
+          "count": 1
+        },
+        {
+          "old": "row_words=106496",
+          "new": "row_words=102400",
+          "count": 1
+        },
+        {
+          "old": "len(program.operand_buffers)==7",
+          "new": "len(program.operand_buffers)==6",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "launch_decode35_operands.py",
+      "source_sha256": "451a05a86ecfb4f73cb07fc0b89e8a858fd28b89639a26857916ca3745a7b2d6",
+      "new_file_normalizes_CRLF_to_LF": true,
+      "target": "launch_decode35_endpoints.py",
+      "target_sha256": "bb35b2da356e13395800f5eeeeabdff4c4d6ab758a202fefbc2b3216eaf5b2d6",
+      "changes": [
+        {
+          "old": "Fresh embedded process per B1-reference/B4-candidate phase; fixed owner cache.",
+          "new": "Fresh six-endpoint B1/B4 process; ordinary off captures reused only under exact source/runtime pins.",
+          "count": 1
+        },
+        {
+          "old": "assert phase in ('off-reference','off-candidate','on-reference','on-candidate')",
+          "new": "assert phase in ('on-reference','on-candidate')",
+          "count": 1
+        },
+        {
+          "old": "decode35-operands-preparation.json",
+          "new": "decode35-endpoints-preparation.json",
+          "count": 1
+        },
+        {
+          "old": "probe_decode35_operands.py",
+          "new": "probe_decode35_endpoints.py",
+          "count": 1
+        }
+      ]
+    }
+  ],
+  "original_seven_stage_protocol_and_tests_unchanged": true,
+  "native_trace_stays_seven_106496": true,
+  "new_final_observation_width": 102400,
+  "pre_RoPE_suffix_claim_removed": true,
+  "GPU_model_unrun": true
+}
