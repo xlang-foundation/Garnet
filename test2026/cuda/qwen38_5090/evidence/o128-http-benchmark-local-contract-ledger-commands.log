@@ -1,0 +1,25 @@
+
+{"id": "28be8ea0b3cf4627b800bfd06f6e54a5", "kind": "correctness", "label": "Actual retained124request rawtrace contract positive; no new benchmark measurements", "argv": ["D:\\CantorAI\\Garnet\\.venv\\Scripts\\python.exe", "C:\\Users\\shaw9\\Documents\\Codex\\2026-10-23\\referenced-chatgpt-conversation-this-is-an\\work\\check-o128-http-benchmark-contract.py", "--case", "positive"]}
+Traceback (most recent call last):
+  File "C:\Users\shaw9\Documents\Codex\2026-10-23\referenced-chatgpt-conversation-this-is-an\work\check-o128-http-benchmark-contract.py", line 32, in <module>
+    if args.case:case(args.case)
+                 ^^^^^^^^^^^^^^^
+  File "C:\Users\shaw9\Documents\Codex\2026-10-23\referenced-chatgpt-conversation-this-is-an\work\check-o128-http-benchmark-contract.py", line 23, in case
+    result=replay_trial(manifest,candidate,corpus,original,read);assert result['requests']==124 and len(result['cohorts'])==8
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\CantorAI\work\qwen38-5090\test2026\cuda\qwen38_5090\o128_http_benchmark_contract.py", line 12, in replay_trial
+    assert manifest['corpus_archive_sha256']==reference_manifest['corpus_archive_sha256']==ARCHIVE_SHA256
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError
+
+{"id": "fc96db2eca874307b1666c0b57d4d803", "kind": "correctness", "label": "Actual retained124request rawtrace contract positive; no new benchmark measurements", "argv": ["D:\\CantorAI\\Garnet\\.venv\\Scripts\\python.exe", "C:\\Users\\shaw9\\Documents\\Codex\\2026-10-23\\referenced-chatgpt-conversation-this-is-an\\work\\check-o128-http-benchmark-contract.py", "--case", "positive"]}
+{"status": "actual_retained_trace_contract_control_passed", "case": "positive", "new_benchmark": false}
+
+{"id": "b051f176593a4c3ba929a6730ed2eff6", "kind": "correctness", "label": "Actual retained124request rawtrace contract warmup-token-corruption; no new benchmark measurements", "argv": ["D:\\CantorAI\\Garnet\\.venv\\Scripts\\python.exe", "C:\\Users\\shaw9\\Documents\\Codex\\2026-10-23\\referenced-chatgpt-conversation-this-is-an\\work\\check-o128-http-benchmark-contract.py", "--case", "warmup-token-corruption"]}
+{"status": "actual_retained_trace_contract_control_passed", "case": "warmup-token-corruption", "new_benchmark": false}
+
+{"id": "072138d0557e41e39bfe12a52788d635", "kind": "correctness", "label": "Actual retained124request rawtrace contract memory-corruption; no new benchmark measurements", "argv": ["D:\\CantorAI\\Garnet\\.venv\\Scripts\\python.exe", "C:\\Users\\shaw9\\Documents\\Codex\\2026-10-23\\referenced-chatgpt-conversation-this-is-an\\work\\check-o128-http-benchmark-contract.py", "--case", "memory-corruption"]}
+{"status": "actual_retained_trace_contract_control_passed", "case": "memory-corruption", "new_benchmark": false}
+
+{"id": "15466aa611944f8fabfa83bb0d0f5da8", "kind": "correctness", "label": "Actual retained124request rawtrace contract latency-corruption; no new benchmark measurements", "argv": ["D:\\CantorAI\\Garnet\\.venv\\Scripts\\python.exe", "C:\\Users\\shaw9\\Documents\\Codex\\2026-10-23\\referenced-chatgpt-conversation-this-is-an\\work\\check-o128-http-benchmark-contract.py", "--case", "latency-corruption"]}
+{"status": "actual_retained_trace_contract_control_passed", "case": "latency-corruption", "new_benchmark": false}

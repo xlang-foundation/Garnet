@@ -1,0 +1,37 @@
+from pathlib import Path
+import argparse,copy,hashlib,json,os,sys,zipfile
+W=Path(__file__).resolve().parent;O=W.parent/'outputs';R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';sys.path[:0]=[str(M),str(R)];sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+
+def case(name):
+    from test2026.cuda.qwen38_5090.o128_http_benchmark_contract import replay_trial,REFERENCE,REFERENCE_SHA
+    archive=O/(REFERENCE+'-evidence.zip');assert sha(archive)==REFERENCE_SHA
+    with zipfile.ZipFile(archive) as z,zipfile.ZipFile(M/'evidence/fixed-length-4096-corpus.zip') as corpus:
+        base='results/'+REFERENCE+'/mtp/benchmark4k/';names=[n for n in z.namelist() if n.startswith(base) and n.endswith('-manifest.json')];assert len(names)==1;original=json.loads(z.read(names[0]));manifest=copy.deepcopy(original);read=lambda n:z.read(base+n);candidate=read
+        if name=='warmup-token-corruption':
+            row=json.loads(corpus.read('manifest.json'))['rows'][0];key=row['key'];assert original['run_id']+'-'+key not in {k for c in original['cohorts'] for k in c['request_keys']};target=original['run_id']+'-'+key+'-events.jsonl';events=[json.loads(line) for line in read(target).splitlines()];first=False
+            for e in events:
+                if e['data']=='[DONE]':continue
+                v=json.loads(e['data'])
+                if 'token_id' in v and not first:v['token_id']=(v['token_id']+1)%248320;first=True
+                if 'response_token_ids' in v:v['response_token_ids'][0]=(v['response_token_ids'][0]+1)%248320
+                e['data']=json.dumps(v)
+            assert first;mutated=b'\n'.join(json.dumps(e).encode() for e in events)+b'\n';candidate=lambda n:mutated if n==target else read(n)
+        elif name=='memory-corruption':manifest['cohorts'][0]['sampled_peak_adapter_used_bytes']+=1
+        elif name=='latency-corruption':manifest['cohorts'][0]['ttft_median_ms']+=1
+        elif name!='positive':raise ValueError(name)
+        if name=='positive':
+            result=replay_trial(manifest,candidate,corpus,original,read);assert result['requests']==124 and len(result['cohorts'])==8
+        else:
+            try:replay_trial(manifest,candidate,corpus,original,read)
+            except (ValueError,AssertionError):pass
+            else:raise AssertionError('Corrupted actual retained trace passed: '+name)
+    print(json.dumps(dict(status='actual_retained_trace_contract_control_passed',case=name,new_benchmark=False)))
+
+if __name__=='__main__':
+    a=argparse.ArgumentParser();a.add_argument('--case');args=a.parse_args()
+    if args.case:case(args.case)
+    else:
+        import run_logged as ledger
+        names=['o128_http_benchmark_contract.py','probe_o128_http_benchmark.py','run_o128_http_benchmark.py','verify_o128_http_benchmark.py','cohort_memory_replay.py','compare_http_runs.py','benchmark_fixed_length_native.py'];pins={n:sha(M/n) for n in names};ledger.source_identity=lambda:{'scope':'Explicit local CPU raw retained HTTP stream/ID/memory corruption controls, no GPU/model/native; protected unrelated bodies excluded','owned_source_sha256':pins};os.chdir(R)
+        for name in ('positive','warmup-token-corruption','memory-corruption','latency-corruption'):
+            assert ledger.run([sys.executable,str(Path(__file__)),'--case',name],W/'o128-http-benchmark-local-contract-ledger','correctness','Actual retained124request rawtrace contract '+name+'; no new benchmark measurements',[Path(__file__),*[M/n for n in names],O/'prefill16-fixed4k-http-attempt1-evidence.zip'])==0

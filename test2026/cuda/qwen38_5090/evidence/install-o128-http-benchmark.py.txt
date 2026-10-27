@@ -1,0 +1,17 @@
+from pathlib import Path
+import hashlib,json,sys,zipfile
+ROOT=Path('D:/CantorAI/5090-study-20261023');P='Garnet/test2026/cuda/qwen38_5090/';sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest();archive=ROOT/'results/o128-http-benchmark-deployment.zip';assert sha(archive)=='7c150bddefe52d053cc960d0d72a13b1d301466bbd2056ec51d108adbca23b50'
+sys.path[:0]=[str(ROOT/'Garnet'),str(ROOT/P)];from run_bf16_low_batch_native_build import idle
+idle()
+with zipfile.ZipFile(archive) as z:
+    manifest=json.loads(z.read('deployment-manifest.json'));assert z.testzip() is None and len(z.namelist())==len(set(z.namelist()))==len(manifest['files'])+1==150
+    p=json.loads(z.read(P+'evidence/o128-http-benchmark-preparation.json'));assert p['status']=='O128_HTTP_benchmark_prepared_not_run'
+    for n,h in {**p['files'],**p['checkpoints'],**p['audit_dependencies']}.items():assert sha(ROOT/n)==h,('Baseline changed',n)
+    for n,h in p['runtime'].items():assert sha(ROOT/'build/bin'/n)==h
+    for n,h in p['environment'].items():assert sha(Path(n))==h
+    for n,h in manifest['files'].items():
+        target=ROOT/n;assert target.resolve().is_relative_to((ROOT/P).resolve());blob=z.read(n);assert hashlib.sha256(blob).hexdigest()==h;assert not target.exists() or target.read_bytes()==blob,('Preserve existing edit',n)
+    for n in manifest['files']:
+        target=ROOT/n;target.parent.mkdir(parents=True,exist_ok=True);target.write_bytes(z.read(n))
+    for n,h in p['new_files'].items():assert sha(ROOT/n)==h
+out=ROOT/'results/o128-http-benchmark-install.json';assert not out.exists();out.write_bytes(json.dumps(dict(status='O128_HTTP_benchmark_methods_installed_source_DLL_deferred_to_exclusive_owner',deployment_sha256=sha(archive),files=manifest['files']),indent=2).encode());print(json.dumps(dict(status='O128_HTTP_benchmark_methods_installed',files=len(manifest['files']),GPU_requested=False)))

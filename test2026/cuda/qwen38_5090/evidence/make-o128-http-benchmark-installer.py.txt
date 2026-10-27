@@ -1,0 +1,6 @@
+from pathlib import Path
+import json
+W=Path(__file__).resolve().parent;p=json.loads((W/'o128-http-benchmark-package.json').read_bytes());old=json.loads((W/'o128-http-quality-package.json').read_bytes());raw=(W/'install-o128-http-quality.py').read_bytes()
+for a,b in [(old['deployment_sha256'],p['deployment_sha256']),('o128-http-quality-deployment.zip','o128-http-benchmark-deployment.zip'),('o128-http-quality-preparation.json','o128-http-benchmark-preparation.json'),('O128_HTTP_quality_prepared_not_run','O128_HTTP_benchmark_prepared_not_run'),("len(manifest['files'])+1=="+str(old['files']+1),"len(manifest['files'])+1=="+str(p['files']+1)),('o128-http-quality-install.json','o128-http-benchmark-install.json'),('O128_HTTP_quality_methods_installed','O128_HTTP_benchmark_methods_installed')]:
+    assert a.encode() in raw,a;raw=raw.replace(a.encode(),b.encode())
+t=W/'install-o128-http-benchmark.py';assert not t.exists() or t.read_bytes()==raw;t.write_bytes(raw);print('BENCHMARK_INSTALLER_PREPARED')

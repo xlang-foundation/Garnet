@@ -1,0 +1,18 @@
+from pathlib import Path
+import ast,hashlib,json
+W=Path(__file__).resolve().parent;M=Path('D:/CantorAI/work/qwen38-5090/test2026/cuda/qwen38_5090');old=(M/'run_o128_http_quality.py').read_bytes();raw=old;changes=[]
+for a,b,count in [
+ ('o128-http-quality-attempt1','o128-http-benchmark-attempt1',1),
+ ('o128-http-quality-preparation.json','o128-http-benchmark-preparation.json',1),
+ ('O128_HTTP_quality_prepared_not_run','O128_HTTP_benchmark_prepared_not_run',1),
+ ('probe_o128_http_quality.py','probe_o128_http_benchmark.py',1),
+ ('Actual O128 loopback MTP worker: four3968+128text/image reset controls then805frozen low-resolution adapted screening; compare every prompt/output ID against raw complete correctT32 control; no benchmark','Actual O128 MTP loopback worker, three repeated complete124request fixed3968+128HTTP cohorts after independent805quality closure; separate raw SSE timings/adapter VRAM, all124IDs match retained T32 eachtrial',1),
+ ('Actual O128 HTTP quality failed; preserve raw evidence','Actual O128 HTTP benchmark failed; preserve raw evidence',1),
+ ('O128_HTTP_adapted805_and_four_full4k_controls_collected_needs_independent_replay','O128_three_fixed4k_HTTP_trials_collected_needs_independent_replay',1),
+ ("not report['token_mismatches']","len(report['trials'])==3",1),
+ ('O128_HTTP_quality_collected_needs_independent_replay','O128_HTTP_benchmark_collected_needs_independent_replay',1),
+ ('Exclusive source-bound O128 HTTP quality experiment','Exclusive source-bound O128 repeated HTTP benchmark',1),
+ ('Explicit owned O128 HTTP source inventory','Explicit owned repeated O128 HTTP source inventory',1),
+]:
+    assert raw.count(a.encode())==count,(a,raw.count(a.encode()));raw=raw.replace(a.encode(),b.encode());changes.append(dict(old=a,new=b,count=count))
+ast.parse(raw);t=M/'run_o128_http_benchmark.py';assert not t.exists() or t.read_bytes()==raw;t.write_bytes(raw);(M/'evidence/o128-http-benchmark-owner-derivation.json').write_bytes(json.dumps(dict(source='run_o128_http_quality.py',source_sha256=hashlib.sha256(old).hexdigest(),target=t.name,target_sha256=hashlib.sha256(raw).hexdigest(),changes=changes,scope='Owner supervision/restoration/strict source/runtime/candidate/scratch checks retained; actual separate stream harness supplies timing, not ledger process walltime. Quality certificate required in child before model construction; future preparation must bind its independent proof.'),indent=2).encode());print('BENCHMARK_OWNER_DERIVED_NOT_DEPLOYED')

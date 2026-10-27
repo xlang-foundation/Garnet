@@ -1,0 +1,40 @@
+from pathlib import Path
+import ast,hashlib,json
+W=Path(__file__).resolve().parent;M=Path('D:/CantorAI/work/qwen38-5090/test2026/cuda/qwen38_5090');old=(M/'verify_o128_http_quality.py').read_text();prefix=old[:old.index('        summary=dict(')];tail=old[old.index('        else:assert w[\'status\']==\'failed\''):]
+prefix=prefix.replace('from test2026.cuda.qwen38_5090.probe_o128_http_quality import REFERENCE,REFERENCE_SHA','from test2026.cuda.qwen38_5090.o128_http_benchmark_contract import REFERENCE,REFERENCE_SHA,replay_trial').replace("JOB='o128-http-quality-attempt1'","JOB='o128-http-benchmark-attempt1'").replace('evidence/o128-http-quality-preparation.json','evidence/o128-http-benchmark-preparation.json')
+tail=tail.replace('actual_O128_HTTP_805_IDs_and_four_full4k_controls_replayed','actual_O128_three_fixed4k_HTTP_trials_raw_stream_memory_and_IDs_replayed').replace('actual_O128_HTTP_quality_failure_preserved','actual_O128_HTTP_benchmark_failure_preserved')
+body='''        summary=dict(actual_repeated_fixed4k_benchmark_replayed=False,performance_target_qualified=False)
+        if w['exit_code']==0:
+            assert cpu==child==0 and w['status']=='O128_HTTP_benchmark_collected_needs_independent_replay'
+            r=doc(base+'native/report.json');assert r['status']=='O128_three_fixed4k_HTTP_trials_collected_needs_independent_replay' and len(r['trials'])==3 and r['library_sha256']==LIBRARY
+            quality='o128-http-quality-attempt1';raw=z.read('results/'+quality+'-verified.json');q=json.loads(raw)
+            assert sha(raw)==r['quality_proof_sha256']==p['measurement_parents'][quality]['proof_sha256'] and q['exit_code']==0 and q['status']=='actual_O128_HTTP_805_IDs_and_four_full4k_controls_replayed' and q['arrays']['all805_prompt_and_output_IDs_exact_T32'] is True
+            ready=r['ready'];assert ready['o128_admission']['certificate_proof_sha256']==CERTIFICATES and ready['prefill_chunk']==128 and ready['capacity']==4096 and ready['batch']==1 and ready['generation_mode']=='mtp' and ready['library_sha256']==LIBRARY
+            reference=args.proofs/(REFERENCE+'-evidence.zip');assert sha(reference.read_bytes())==REFERENCE_SHA
+            tokens={};outputs={};native_ready=[]
+            for line in z.read(base+'native/worker/worker-stdout.jsonl').splitlines():
+                try:event=json.loads(json.loads(line)['line'])
+                except ValueError:continue
+                if not isinstance(event,dict):continue
+                if event.get('event')=='ready':native_ready.append(event)
+                elif event.get('event')=='token':
+                    key=event['id'];assert key not in outputs;tokens.setdefault(key,[]).append(event['token_id']);assert event['sampled_tokens']==len(tokens[key])
+                elif event.get('event')=='completed':
+                    key=event['id'];assert key not in outputs and event['generated_ids']==tokens[key] and event['physical_batch']==event['real_rows']==1 and event['padded_rows']==0;outputs[key]=event
+                elif event.get('event')=='error':raise AssertionError(event)
+            assert native_ready==[ready] and len(outputs)==372;used=set();trials=[]
+            import io
+            with zipfile.ZipFile(reference) as old,zipfile.ZipFile(io.BytesIO(z.read(P+'evidence/fixed-length-4096-corpus.zip'))) as corpus:
+                oldbase='results/'+REFERENCE+'/mtp/benchmark4k/';names=[n for n in old.namelist() if n.startswith(oldbase) and n.endswith('-manifest.json')];assert len(names)==1;reference_manifest=json.loads(old.read(names[0]));rows=json.loads(corpus.read('manifest.json'))['rows']
+                for i,trial in enumerate(r['trials']):
+                    assert trial['index']==i;folder=base+'native/trial-'+str(i)+'/';names=[n for n in m['files'] if n.startswith(folder) and n.endswith('-manifest.json')];assert len(names)==1
+                    raw=z.read(names[0]);assert sha(raw)==trial['manifest_sha256'];manifest=json.loads(raw);metadata=doc(base+'native/trial-'+str(i)+'-metadata.json')
+                    assert manifest['engine_metadata']==metadata and sha(z.read(base+'native/trial-'+str(i)+'-metadata.json'))==manifest['engine_metadata_sha256'] and metadata['ready']==ready and metadata['trial_index']==i and metadata['repeat_count']==3 and metadata['quality_proof_sha256']==r['quality_proof_sha256']
+                    fresh=replay_trial(manifest,lambda n:z.read(folder+n),corpus,reference_manifest,lambda n:old.read(oldbase+n));assert fresh==trial['local_replay'];trials.append(fresh)
+                    for row in rows:
+                        events=[json.loads(line) for line in z.read(folder+manifest['run_id']+'-'+row['key']+'-events.jsonl').splitlines()];values=[json.loads(e['data']) for e in events if e['data']!='[DONE]'];last=[e for e in values if 'response_token_ids' in e];assert len(last)==1
+                        final=last[0];key=final['id'];assert key not in used and outputs[key]['prompt_ids']==final['prompt_token_ids'] and outputs[key]['generated_ids']==final['response_token_ids'];used.add(key)
+            assert len(used)==len(outputs)==372
+            summary=dict(actual_repeated_fixed4k_benchmark_replayed=True,trials=trials,actual_requests=372,measured_requests=192,all372_prompt_and_output_IDs_exact_T32=True,performance_target_qualified=False,strongest_tuned_reference_comparison_qualified=False)
+'''
+raw=(prefix+body+tail).encode();ast.parse(raw);t=M/'verify_o128_http_benchmark.py';assert not t.exists() or t.read_bytes()==raw;t.write_bytes(raw);(M/'evidence/o128-http-benchmark-verifier-derivation.json').write_bytes(json.dumps(dict(source='verify_o128_http_quality.py',source_sha256=hashlib.sha256(old.encode()).hexdigest(),target=t.name,target_sha256=hashlib.sha256(raw).hexdigest(),scope='Retains exact archive/source/runtime/SDK/checkpoint/parent/ledger/restoration verifier prefix. New body independently recomputes three actual fixed4Ktrials rawSSE metrics/memory and all372native callback/prompt/output IDs against pinned T32 archive; does not qualify strongest/tuned reference or2x.'),indent=2).encode());print('BENCHMARK_VERIFIER_PREPARED_NOT_DEPLOYED')
