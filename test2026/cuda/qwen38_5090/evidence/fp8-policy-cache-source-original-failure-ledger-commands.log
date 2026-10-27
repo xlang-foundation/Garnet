@@ -1,0 +1,7 @@
+
+{"id": "f6244c1d458b4a94b01f97ae373a718c", "kind": "correctness", "label": "Preserve missing production-runtime file in original model-only baseline inventory refusal before mutations", "argv": ["D:\\CantorAI\\Garnet\\.venv\\Scripts\\python.exe", "C:\\Users\\shaw9\\Documents\\Codex\\2026-10-23\\referenced-chatgpt-conversation-this-is-an\\work\\derive-fp8-policy-cache-source.py"]}
+Traceback (most recent call last):
+  File "C:\Users\shaw9\Documents\Codex\2026-10-23\referenced-chatgpt-conversation-this-is-an\work\derive-fp8-policy-cache-source.py", line 4, in <module>
+    _,parent,_=sources();sha=lambda b:hashlib.sha256(b).hexdigest();runtime='src/model/compiled_model_runtime.cpp';raw=(R/runtime).read_bytes();base=json.loads((M/'evidence/o128-full4k-model-preparation.json').read_bytes());assert sha(raw)==base['files']['Garnet/'+runtime];before=raw;steps=[]
+                                                                                                                                                                                                                                                 ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+KeyError: 'Garnet/src/model/compiled_model_runtime.cpp'

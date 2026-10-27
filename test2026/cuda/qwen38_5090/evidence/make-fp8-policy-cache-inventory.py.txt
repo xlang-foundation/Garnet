@@ -1,0 +1,27 @@
+from pathlib import Path
+import json
+W=Path(__file__).resolve().parent;M=Path('D:/CantorAI/work/qwen38-5090/test2026/cuda/qwen38_5090');p=json.loads((M/'evidence/o128-canonical-build-preparation.json').read_bytes());audit=json.loads((M/'evidence/o128-frontend-cache-source-audit.json').read_bytes());expected={**p['candidate_base'],'src/model/compiled_model_runtime.cpp':audit['compiled_runtime_sha256'],'src/backends/tensorrt/graph_policy_fingerprint.h':None}
+code='''from pathlib import Path
+import hashlib,json,shutil
+ROOT=Path('D:/CantorAI/5090-study-20261023');M=ROOT/'Garnet/test2026/cuda/qwen38_5090';sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+EXPECTED=EXPECTED_LITERAL
+p=json.loads((M/'evidence/o128-canonical-build-preparation.json').read_bytes());base={**p['base_files'],'Garnet/src/model/compiled_model_runtime.cpp':EXPECTED['src/model/compiled_model_runtime.cpp']}
+for n,h in {**base,**p['checkpoints']}.items():assert sha(ROOT/n)==h,('Baseline drift',n)
+for n,h in p['runtime'].items():assert sha(ROOT/'build/bin'/n)==h
+for n,h in p['environment'].items():assert sha(Path(n))==h
+for n,h in EXPECTED.items():
+    t=ROOT/'Garnet'/n;assert t.resolve().is_relative_to((ROOT/'Garnet').resolve());assert (sha(t) if t.exists() else None)==h,('Source target changed',n)
+last=json.loads((ROOT/'results/o128-canonical-build-attempt1/workflow.json').read_bytes());assert last['exit_code']==0 and last['cleanup_finished']
+objects={n.relative_to(ROOT).as_posix():sha(n) for n in (ROOT/'build/garnet/CMakeFiles/garnet.dir').rglob('*.cu.obj')};assert len(objects)==34 and objects==last['cuda_objects_built'];cache=ROOT/'build/CMakeCache.txt';assert sha(cache)==last['cache_after_sha256']
+assert not (ROOT/'build/bin/garnet-native-fp8-policy-cache-attempt1.dll').exists() and not (ROOT/'results/fp8-policy-cache-build-attempt1').exists();assert shutil.disk_usage(ROOT).free>=12<<30
+r=dict(status='FP8_policy_cache_build_inputs_verified_no_GPU_or_mutation',base_files=base,candidate_base=EXPECTED,runtime=p['runtime'],environment=p['environment'],checkpoints=p['checkpoints'],cache_before_sha256=sha(cache),cuda_objects_before=objects,free_bytes=shutil.disk_usage(ROOT).free)
+t=ROOT/'results/fp8-policy-cache-build-inputs.json';assert not t.exists();blob=json.dumps(r,indent=2).encode();t.write_bytes(blob);print(json.dumps(dict(status=r['status'],sha256=hashlib.sha256(blob).hexdigest(),bytes=len(blob))))
+'''.replace('EXPECTED_LITERAL',repr(expected))
+(W/'inspect-fp8-policy-cache-build-inputs.py').write_bytes(code.encode())
+runner='''from pathlib import Path
+import hashlib,os,sys
+ROOT=Path('D:/CantorAI/5090-study-20261023');M=ROOT/'Garnet/test2026/cuda/qwen38_5090';sys.path[:0]=[str(M),str(ROOT/'Garnet')];import run_logged as ledger
+script=ROOT/'results/inspect-fp8-policy-cache-build-inputs.py';ledger.source_identity=lambda:{'scope':'Explicit cache build input inventory script; protected unrelated bodies excluded; no native/GPU work','owned_source_sha256':{script.name:hashlib.sha256(script.read_bytes()).hexdigest()}};os.chdir(ROOT/'Garnet')
+assert ledger.run([sys.executable,str(script)],ROOT/'results/fp8-policy-cache-build-input-inventory','correctness','Read-only baseline1374/62source targets/runtime/SDK/checkpoints/CMake/34objects against closed O128 build; includes separately audited production runtime',[script,M/'evidence/o128-canonical-build-preparation.json'])==0
+'''
+(W/'run-fp8-policy-cache-build-inventory.py').write_bytes(runner.encode());print('Prepared readonly remote62target/1374baseline inventory')

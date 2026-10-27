@@ -1,0 +1,11 @@
+{
+  "source": "derive-fp8-policy-cache-source.py",
+  "target": "derive-fp8-policy-cache-source-attempt2.py",
+  "source_sha256": "7d31498a24f419f0ac6c9a173fba508d898208e5a5f0d492ba368c1d96675160",
+  "target_sha256": "d856bf6167ac17e9737379b00d2a176de006ed53f7fa3ac8cfebd488a5189ae9",
+  "old": "base=json.loads((M/'evidence/o128-full4k-model-preparation.json').read_bytes());assert sha(raw)==base['files']['Garnet/'+runtime]",
+  "new": "audit=json.loads((M/'evidence/o128-frontend-cache-source-audit.json').read_bytes());assert sha(raw)==audit['compiled_runtime_sha256']",
+  "count": 1,
+  "reason": "Original1373 model/source inventory does not include compiled_model_runtime.cpp; require separately audited hash and add actual remote file to new baseline inventory",
+  "no_numeric_or_native_gate_waiver": true
+}

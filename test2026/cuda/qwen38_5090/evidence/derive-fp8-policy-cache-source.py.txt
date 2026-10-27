@@ -1,0 +1,23 @@
+from pathlib import Path
+import hashlib,json,sys
+R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';sys.path.insert(0,str(R));from test2026.cuda.qwen38_5090.o128_canonical_source import sources
+_,parent,_=sources();sha=lambda b:hashlib.sha256(b).hexdigest();runtime='src/model/compiled_model_runtime.cpp';raw=(R/runtime).read_bytes();base=json.loads((M/'evidence/o128-full4k-model-preparation.json').read_bytes());assert sha(raw)==base['files']['Garnet/'+runtime];before=raw;steps=[]
+changes=[('#include "weight_streaming_policy.h"','#include "weight_streaming_policy.h"\n#include "graph_policy_fingerprint.h"',1),('material << Garnet::TRTWeightStreamingFingerprint();','material << Garnet::TRTWeightStreamingFingerprint();\n            material << Garnet::TRTGraphPolicyFingerprint();',1),('''        const std::string graphFingerprint = MakeGraphFingerprint(
+            rootPath, m_weightsLocation, m_entryFunction, m_backend, m_precision,
+            inputShapes, inputDataTypes, m_inputShapeRanges, m_partitionOptions);''','''        std::string graphFingerprint;
+        try {
+            graphFingerprint = MakeGraphFingerprint(
+                rootPath, m_weightsLocation, m_entryFunction, m_backend, m_precision,
+                inputShapes, inputDataTypes, m_inputShapeRanges, m_partitionOptions);
+        } catch (const std::invalid_argument& exception) {
+            m_state = "failed";
+            m_errorCode = "invalid_graph_policy";
+            m_errorMessage = exception.what();
+            return false;
+        }''',1)]
+for old,new,count in changes:
+    if b'\r\n' in raw:old=old.replace('\n','\r\n');new=new.replace('\n','\r\n')
+    assert raw.count(old.encode())==count;raw=raw.replace(old.encode(),new.encode());steps.append(dict(old=old,new=new,count=count))
+folder=M/'native_fp8_policy_cache_candidate';(folder/'compiled_model_runtime-before.cpp.txt').write_bytes(before);(folder/'compiled_model_runtime.cpp').write_bytes(raw);candidate={**parent,runtime:raw,'src/backends/tensorrt/graph_policy_fingerprint.h':(folder/'graph_policy_fingerprint.h').read_bytes()};assert len(candidate)==62 and all(candidate[n]==b for n,b in parent.items())
+p=dict(status='FP8_policy_cache_source_prepared_native_unbuilt',parent_files={n:sha(b) for n,b in parent.items()},candidate_files={n:sha(b) for n,b in candidate.items()},runtime_source=runtime,original_runtime_sha256=sha(before),candidate_runtime_sha256=sha(raw),new_header='src/backends/tensorrt/graph_policy_fingerprint.h',changes=steps,all60_numeric_source_bytes_unchanged=True,no_CUDA_source_or_kernel_changes=True,invalid_policy_fails_before_cache_lookup=True,GPU_model_quality_or_performance_qualified=False)
+t=M/'evidence/fp8-policy-cache-source-derivation.json';blob=json.dumps(p,indent=2).encode();assert not t.exists() or t.read_bytes()==blob;t.write_bytes(blob);print(json.dumps(dict(candidate_files=62,all60_parent_sources_exact=True,native_or_cache_executed=False)))
