@@ -1,0 +1,125 @@
+{
+  "derivations": [
+    {
+      "source": "probe_full_chunk_stage.py",
+      "source_sha256": "7f467cf07bff1f9fc2f392e02f459ee908d921b597d406cb128dc80a0cb4e54f",
+      "target": "probe_full_chunk_stage_attempt2.py",
+      "target_sha256": "fe30df7e302b79fa1297e4c0301fc7e48f31fca0fec170545a1966c1aad76a70",
+      "changes": [
+        {
+          "old": "evidence/full-chunk-stage-gpu-preparation.json",
+          "new": "evidence/full-chunk-stage-gpu-preparation-attempt2.json",
+          "count": 1
+        },
+        {
+          "old": "width=decoder.programs[4].state_width",
+          "new": "canonical_width=decoder.programs[4].state_width",
+          "count": 1
+        },
+        {
+          "old": "logical_state_witness(io,decoder.state,layout,1,width,decoder.slots",
+          "new": "logical_state_witness(io,decoder.state,layout,1,canonical_width,decoder.slots",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "test_full_chunk_stage.bat",
+      "source_sha256": "c7dbd028aed8363ab4f44adda4ac7634118052878c1c81112396e9cd78eebee9",
+      "target": "test_full_chunk_stage_attempt2.bat",
+      "target_sha256": "6f7b3ea1d0fc0dc547b39843d731da709fa7c0a78683426fc3b3c977354ab9fe",
+      "changes": [
+        {
+          "old": "probe_full_chunk_stage.py",
+          "new": "probe_full_chunk_stage_attempt2.py",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "probe_full_chunk_stage_metadata.py",
+      "source_sha256": "c10f125b52fe765ec77c77844d108395ef46815ca75ebd228c0d3f3bc89bbab5",
+      "target": "probe_full_chunk_stage_metadata_attempt2.py",
+      "target_sha256": "cad5ea072a618885531dcc39bc6afc9eaa9a6f4c90ef9a196d77840c58128d28",
+      "changes": [
+        {
+          "old": "'probe_full_chunk_stage.py'",
+          "new": "'probe_full_chunk_stage_attempt2.py'",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "test_full_chunk_stage_metadata.bat",
+      "source_sha256": "4d0a2b97d2ac58c3dbf795d55e9ff3e11bb878ba6d96eff15259c5ab412ac273",
+      "target": "test_full_chunk_stage_metadata_attempt2.bat",
+      "target_sha256": "dfdac46d5380e39487535fb17c67951eb55fc3dcbc65ab356c4061fe3a79c867",
+      "changes": [
+        {
+          "old": "probe_full_chunk_stage_metadata.py",
+          "new": "probe_full_chunk_stage_metadata_attempt2.py",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "run_full_chunk_stage.py",
+      "source_sha256": "13599c1a5243adeab64be949c178611845e6a01ad33d169fc18c1fd9b831ab60",
+      "target": "run_full_chunk_stage_attempt2.py",
+      "target_sha256": "af48b9571a7acdf456be84c63e5f9e55245dbdbfe1db3cefc3f1de6ed6bfb689",
+      "changes": [
+        {
+          "old": "JOB='full-chunk-stage-attempt1'",
+          "new": "JOB='full-chunk-stage-attempt2'",
+          "count": 1
+        },
+        {
+          "old": "evidence/full-chunk-stage-gpu-preparation.json",
+          "new": "evidence/full-chunk-stage-gpu-preparation-attempt2.json",
+          "count": 1
+        },
+        {
+          "old": "46current readonly",
+          "new": "47current readonly",
+          "count": 1
+        },
+        {
+          "old": "test_full_chunk_stage_metadata.bat",
+          "new": "test_full_chunk_stage_metadata_attempt2.bat",
+          "count": 1
+        },
+        {
+          "old": "test_full_chunk_stage.bat",
+          "new": "test_full_chunk_stage_attempt2.bat",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "verify_full_chunk_stage.py",
+      "source_sha256": "a174c45e1cdb14561a55d71ab715050fac1fd0da408c21d58c632721df28b9e0",
+      "target": "verify_full_chunk_stage_attempt2.py",
+      "target_sha256": "7cf55521454d30aeae64e637e3855bec03ae3c97f747dfbb3a490e9fae9eba3d",
+      "changes": [
+        {
+          "old": "JOB='full-chunk-stage-attempt1'",
+          "new": "JOB='full-chunk-stage-attempt2'",
+          "count": 1
+        },
+        {
+          "old": "evidence/full-chunk-stage-gpu-preparation.json",
+          "new": "evidence/full-chunk-stage-gpu-preparation-attempt2.json",
+          "count": 1
+        },
+        {
+          "old": "b'Ran 46 tests'",
+          "new": "b'Ran 47 tests'",
+          "count": 1
+        }
+      ]
+    }
+  ],
+  "reason": "Stage-loop width shadowed closure canonical state width; rename immutable canonical width, preserve strict unchanged state predicate",
+  "all51native_source_DLL_math_and_original_numeric_gates_unchanged": true,
+  "rerun_all_four_profiles": true
+}
