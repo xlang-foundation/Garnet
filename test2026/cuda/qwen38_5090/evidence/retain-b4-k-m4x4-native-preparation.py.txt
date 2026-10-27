@@ -1,0 +1,45 @@
+from pathlib import Path
+import hashlib,json,zipfile
+W=Path(__file__).resolve().parent;R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';E=M/'evidence';sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest();owned=[];retained={}
+def keep(name,raw):
+    p=E/name;assert not p.exists(),p;p.write_bytes(raw);owned.append(p);retained[name]=sha(p)
+for version in ('','-v2'):
+    archive=W/('b4-k-m4x4-build-inventory-assets'+version+'.zip')
+    with zipfile.ZipFile(archive) as z:
+        mf=json.loads(z.read('manifest.json'));assert z.testzip() is None and len(z.namelist())==len(set(z.namelist()))==len(mf['files'])+1
+        for n,h in mf['files'].items():assert hashlib.sha256(z.read(n)).hexdigest()==h
+        ledger='results/b4-k-m4x4-build-input-inventory'+version+'/'
+        events=[json.loads(line) for line in z.read(ledger+'commands.jsonl').splitlines()];assert len(events)==2 and events[-1]['exit_code']==(0 if version else 1)
+        label='b4-k-m4x4-build-inventory'+('2' if version else '1')
+        keep(label+'-manifest.json',z.read('manifest.json'))
+        for name in ('commands.log','commands.jsonl'):keep(label+'-'+name,z.read(ledger+name))
+        retained[label+'-archive-sha256']=sha(archive)
+for name in ('inspect-b4-k-m4x4-build-inputs.py','run-b4-k-m4x4-build-inventory.py','inspect-b4-k-m4x4-build-inputs-v2.py','run-b4-k-m4x4-build-inventory-v2.py','derive-b4-k-m4x4-native-build.py','prepare-b4-k-m4x4-native-build.py','install-b4-k-m4x4-native-build.py',Path(__file__).name):keep(name+'.txt',(W/name).read_bytes())
+p=json.loads((E/'b4-k-m4x4-build-preparation.json').read_bytes());package=json.loads((W/'b4-k-m4x4-native-package.json').read_bytes());assert sha(W/'b4-k-m4x4-native-deployment.zip')==package['deployment_sha256']
+keep('b4-k-m4x4-native-package.json',(W/'b4-k-m4x4-native-package.json').read_bytes())
+keep('b4-k-m4x4-native-preparation-retention.json',json.dumps({'status':'source85_native_build_preparation_and_fresh_inventory_retained','retained_sha256':retained,'deployment_sha256':package['deployment_sha256'],'base_files':len(p['base_files']),'methods':len(p['methods']),'parents':len(p['parents']),'candidate_files':85,'native_build_GPU_model_performance_unrun_at_preparation':True,'original_three_object_whitelist_retained':True,'two_times_target_achieved':False},indent=2).encode())
+for name in ('run_b4_k_m4x4_native_build.py','verify_b4_k_m4x4_native_build.py','evidence/b4-k-m4x4-native-build-derivation.json','evidence/b4-k-m4x4-build-inputs.json','evidence/b4-k-m4x4-build-preparation.json'):owned.append(M/name)
+entry=('\n\n2026-10-27 source85 full native DLL build prepared after paired K-fourM4 actual '
+       'CPU1209/232/plugin proof. Fresh remote inventory validates 1,827 owned files, '
+       '31 closed parent proofs/archives/workflows, runtime/SDK, config+index, CMake '
+       'and all34 current CUDA objects; 85 production targets retain14 original files. '
+       'Inventory1 stopped read-only on three older parent rows without status keys; '
+       'failed command/manifest retained. Inventory2 adds those statuses only after '
+       'original proof+archive SHA checks, then validates actual archived/live workflows; '
+       'no source, runtime, CUDA object or gate changes. Native owner/reader exact '
+       'derivations retain all prior controls, extend current Python controls83->88 '
+       'with unchanged historical86, old Q/O profiles/factory/wire/initialize tests '
+       'and native+embedded selector/tokenizer. Original3-object whitelist unchanged, '
+       'all34 hashes recorded; no claim of strict cache62 admission or that all3 '
+       'allowed objects are metadata-only. Default-off source85 differs from79 only '
+       'in lowering dispatch plus6new K-only helpers; every CUDA kernel unchanged. '
+       'Deployment '+package['deployment_sha256']+' ('+str(package['bytes'])+'B), '
+       'source bundle '+p['bundle_sha256']+'. Build/model unrun at preparation; '
+       'exclusive owner will snapshot/restore85targets and baselineDLL. Production '
+       'compile, same-DLL flagoff/on controls and full4K/MTP/quality/HTTP gates required '
+       'before timing. Original full4K/cache62 failures preserved; overall2x unmet.\n').encode()
+for name in ('docs/research/qwen38-5090-development-log.md','docs/research/qwen38-5090-implementation-task.md'):
+    path=R/name;before=path.read_bytes();assert b'source85 full native DLL build prepared' not in before
+    with path.open('ab') as f:f.write(entry)
+    assert path.read_bytes()==before+entry;owned.append(path)
+(W/'b4-k-m4x4-native-preparation-stage-paths.bin').write_bytes(b''.join(n.relative_to(R).as_posix().encode()+b'\0' for n in owned));print(json.dumps({'stage_paths':len(owned),'guarded_files':len(p['base_files']),'native_model_unrun_at_preparation':True}))

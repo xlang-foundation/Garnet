@@ -1,0 +1,165 @@
+{
+  "status": "source85_native_build_owner_reader_prepared_unrun",
+  "derivations": [
+    {
+      "source": "run_b4_qk_m16_native_build.py",
+      "source_sha256": "a3df91185f8bbc1c9513d4fb47ea4e3eef52b39e2756bd75ff5c02e2cdb28320",
+      "target": "run_b4_k_m4x4_native_build.py",
+      "target_sha256": "4677c1dab0c1595b304e3003b51454a91003d50dcbe39278d3b39a9821460254",
+      "changes": [
+        {
+          "old": "b4-qk-m16-build-attempt1",
+          "new": "b4-k-m4x4-build-attempt1",
+          "count": 1
+        },
+        {
+          "old": "b4-qk-m16-build-preparation.json",
+          "new": "b4-k-m4x4-build-preparation.json",
+          "count": 1
+        },
+        {
+          "old": "p['status']=='b4_qk_m16_build_prepared_unrun'",
+          "new": "p['status']=='b4_k_m4x4_build_prepared_unrun'",
+          "count": 1
+        },
+        {
+          "old": "b4-qk-m16-build-inputs.json",
+          "new": "b4-k-m4x4-build-inputs.json",
+          "count": 2
+        },
+        {
+          "old": "garnet-native-b4-qk-m16-attempt1.dll",
+          "new": "garnet-native-b4-k-m4x4-attempt1.dll",
+          "count": 1
+        },
+        {
+          "old": "b4-qk-m16-build-input-inventory/",
+          "new": "b4-k-m4x4-build-input-inventory-v2/",
+          "count": 1
+        },
+        {
+          "old": "inspect-b4-qk-m16-build-inputs.py",
+          "new": "inspect-b4-k-m4x4-build-inputs-v2.py",
+          "count": 1
+        },
+        {
+          "old": "run-b4-qk-m16-build-inventory.py",
+          "new": "run-b4-k-m4x4-build-inventory-v2.py",
+          "count": 1
+        },
+        {
+          "old": "original73,expected,_=qk_sources();assert original73==v73 and len(expected)==79 and expected==candidate",
+          "new": "original73,qk79,_=qk_sources();assert original73==v73 and len(qk79)==79\n        from test2026.cuda.qwen38_5090.b4_k_m4x4_source import sources as k_sources\n        original79,expected,_=k_sources();assert original79==qk79 and len(expected)==85 and expected==candidate",
+          "count": 1
+        },
+        {
+          "old": "from test2026.cuda.qwen38_5090.b4_qk_m16_source import sources\n        _,expected,_=sources();assert candidate==expected",
+          "new": "from test2026.cuda.qwen38_5090.b4_k_m4x4_source import sources\n        _,expected,_=sources();assert candidate==expected",
+          "count": 1
+        },
+        {
+          "old": "83current controls plus86historical assertions",
+          "new": "88current controls plus86historical assertions",
+          "count": 1
+        },
+        {
+          "old": "new79source plus preserved73/67 composition",
+          "new": "new85source plus preserved79/73/67 composition",
+          "count": 1
+        },
+        {
+          "old": "paired1248QKprofile/406factory/QK-V-GDN-genericcrosswire CPU proof required",
+          "new": "paired1209Kprofile/232four-M4factory/plugin CPU proof plus original1248QK/406 and all legacy proofs required",
+          "count": 1
+        },
+        {
+          "old": "Release/MT/sm120 defaultoff physicalB4T4/M16 Q/K canonical SDK context/plugin/profile over exact73; all old plugin bodies/wires/quantizers/CUDA bytes unchanged. FaithfulVcomponent correction passed, originalfullmodel stillFAILED; actualpergeometryliveM4Q/K query informs candidate, notmathproof.1248profile/406factory/QK-V-GDN-genericcrosswire CPU parent required. Original three-object whitelist retained, all34hashes recorded; new factory/wholemodel/quality/performance still unqualified",
+          "new": "Release/MT/sm120 source85 defaultoff K-only physicalB4T4 intervention: four actual M4 matmuls with pinned live SDK selection, seven attrs and two M4 checks. Original QK-M16/V/GDN/NVFP4 and every CUDA kernel/wire preserved. Paired1209selector/232factory-pointer/plugin CPU required alongside all original native gates. All34 CUDA hashes and original three-object whitelist retained. Originalfull4K FAILED; no live SDK math/model/quality/HTTP/performance admission from build.",
+          "count": 1
+        },
+        {
+          "old": "b4_qk_m16_native_built_CPU_qualified_model_unqualified",
+          "new": "b4_k_m4x4_native_built_CPU_qualified_model_unqualified",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "verify_b4_qk_m16_native_build.py",
+      "source_sha256": "c2a96c8b3dcd305f072528db66564d497ce225516f86cd2a95e19806f0b6ed5d",
+      "target": "verify_b4_k_m4x4_native_build.py",
+      "target_sha256": "7f7fb072fd3fab2c5919263aaf0d2a076ca8250d8faaa0ea85a3812cf563552d",
+      "changes": [
+        {
+          "old": "b4-qk-m16-build-attempt1",
+          "new": "b4-k-m4x4-build-attempt1",
+          "count": 1
+        },
+        {
+          "old": "b4-qk-m16-build-preparation.json",
+          "new": "b4-k-m4x4-build-preparation.json",
+          "count": 1
+        },
+        {
+          "old": "len(p['candidate_files'])==79",
+          "new": "len(p['candidate_files'])==85",
+          "count": 1
+        },
+        {
+          "old": "b4-qk-m16-native-build-derivation.json",
+          "new": "b4-k-m4x4-native-build-derivation.json",
+          "count": 1
+        },
+        {
+          "old": "==79 and {n:sha(source.read(n))",
+          "new": "==85 and {n:sha(source.read(n))",
+          "count": 1
+        },
+        {
+          "old": "assert sha(z.read('results/b4-qk-m16-build-inputs.json'))==p['input_inventory_sha256']",
+          "new": "assert sha(z.read('results/b4-k-m4x4-build-inputs.json'))==p['input_inventory_sha256']\n        kcp=doc('results/b4-k-m4x4-cpu-attempt2-verified.json');assert kcp['exit_code']==0 and kcp['status']=='B4T4_K_M4X4_actual_CPU_contracts_replayed' and kcp['factory_fault_cases']==232 and kcp['profile']['cases']==1209 and kcp['plugin']['GPU_operator_calls']==0",
+          "count": 1
+        },
+        {
+          "old": "b4_qk_m16_native_built_CPU_qualified_model_unqualified",
+          "new": "b4_k_m4x4_native_built_CPU_qualified_model_unqualified",
+          "count": 1
+        },
+        {
+          "old": "b'Ran 83 tests'",
+          "new": "b'Ran 88 tests'",
+          "count": 1
+        },
+        {
+          "old": "b4_qk_m16_native_CPU_build_replayed",
+          "new": "b4_k_m4x4_native_CPU_build_replayed",
+          "count": 1
+        },
+        {
+          "old": "b4_qk_m16_native_build_failure_replayed",
+          "new": "b4_k_m4x4_native_build_failure_replayed",
+          "count": 1
+        },
+        {
+          "old": "candidate_files=79",
+          "new": "candidate_files=85",
+          "count": 1
+        },
+        {
+          "old": "current_CPU_controls=83",
+          "new": "current_CPU_controls=88",
+          "count": 1
+        },
+        {
+          "old": "new_QK_M16_CPU_contracts_parent_checked=True",
+          "new": "new_QK_M16_CPU_contracts_parent_checked=True,new_K_fourM4_CPU_contracts_parent_checked=True",
+          "count": 1
+        }
+      ]
+    }
+  ],
+  "original_native_gates_preserved": true,
+  "original_three_object_whitelist_preserved": true,
+  "new_GPU_or_model_admission": false,
+  "inventory_schema_note": "Use fresh inventoryV2; normalize only three absent legacy status fields after proof and archive original-SHA verification. InventoryV1 failure retained."
+}
