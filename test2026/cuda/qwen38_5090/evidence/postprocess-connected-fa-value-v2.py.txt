@@ -1,0 +1,19 @@
+from pathlib import Path
+import hashlib,json,os,sys,zipfile
+ROOT=Path('D:/CantorAI/5090-study-20261023');M=ROOT/'Garnet/test2026/cuda/qwen38_5090';JOB='connected-fa-value-attempt2';sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest();sys.path[:0]=[str(M),str(ROOT/'Garnet')]
+import run_logged as ledger
+from run_bf16_low_batch_native_build import idle
+w=json.loads((ROOT/'results'/JOB/'workflow.json').read_bytes());assert type(w['exit_code']) is int and w['cleanup_finished'] and w['baseline_source_restored'] and w['baseline_library_restored'];idle()
+paths=[M/'verify_connected_fa_value_v2.py',M/'connected_fa_value_layout.py',M/'connected_fa_value_gate.py',M/'fa_value_sdk_control.py',M/'fa_value_sdk_log.py',M/'prefill128_fp8_projection.py',M/'decode_fp8_sdk_control.py',M/'decode_boundary_analysis.py',M/'decode_boundary_layout.py',M/'decode_boundary_program.py',M/'b4_b1_short_m16_gate.py',M/'b4_b1_exact_gate.py',Path(__file__)];pins={n.relative_to(ROOT).as_posix():sha(n) for n in paths};ledger.source_identity=lambda:dict(scope='Explicit terminal completeB4/B1 short model/state/route/failure archive replay; no GPU/model rerun or protected body reads',owned_source_sha256=pins);os.chdir(ROOT/'Garnet');out=ROOT/'results/connected-fa-value-v2-postprocess';assert not out.exists();out.mkdir();code=1
+try:
+    code=ledger.run([sys.executable,str(M/'verify_connected_fa_value_v2.py'),'--proofs',str(ROOT/'results')],out/'replay-ledger','correctness','Independent original4phase128component/rawfinitevectors/IDs/reset/route/source67/34objects/CMake restoration and anyfailedGPU/math/route witness replay; no tolerance or timing promotion',paths+[ROOT/'results'/(JOB+'-evidence.zip')]);assert code==0
+finally:
+    (out/'postprocess.json').write_bytes(json.dumps(dict(exit_code=code,method_sha256=pins,no_GPU_or_model_rerun=True),indent=2).encode());files={n.relative_to(ROOT).as_posix():n for n in out.rglob('*') if n.is_file()}
+    for n in paths+[ROOT/'results'/(JOB+'-verified.json'),ROOT/'results/connected-fa-value-v2-install.json']:
+        if n.exists():files[n.relative_to(ROOT).as_posix()]=n
+    target=ROOT/'results/connected-fa-value-v2-closure-assets.zip';assert not target.exists()
+    with zipfile.ZipFile(target,'x',zipfile.ZIP_DEFLATED) as z:
+        for name,n in files.items():z.write(n,name)
+        z.writestr('manifest.json',json.dumps(dict(files={name:sha(n) for name,n in files.items()},original_archive_sha256=sha(ROOT/'results'/(JOB+'-evidence.zip')),GPU_or_model_rerun=False),indent=2))
+    receipt=dict(status='readonly_decode_boundaries_postprocess_terminal',exit_code=code,closure_sha256=sha(target),closure_bytes=target.stat().st_size,files=len(files));(ROOT/'results/connected-fa-value-v2-closure-receipt.json').write_bytes(json.dumps(receipt,indent=2).encode());print(json.dumps(receipt),flush=True)
+raise SystemExit(code)
