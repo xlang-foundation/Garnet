@@ -1,0 +1,58 @@
+"""Plot paired raw layer differences only after complete ordinary-parent parity."""
+from pathlib import Path
+import csv,hashlib,json
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+O=Path(__file__).resolve().parent.parent/'outputs';J='step45-layer-boundary-attempt2';S='Garnet-Step44-Step45-Layer-Differences';sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+
+def main():
+    proof=O/(J+'-verified.json');q=json.loads(proof.read_bytes())
+    assert proof.read_bytes()==(O/(J+'-remote-verified.json')).read_bytes()
+    assert q['exit_code']==0 and q['status']=='step45_layer_boundary2_replayed'
+    assert q['source_runtime_SDK_config_index_CMake_all34_baseline_restored']
+    assert sha(O/(J+'-evidence.zip'))==q['archive_sha256']
+    a=q['analysis'];assert a['status']=='step44_step45_all64_layer_outputs_compared_after_ordinary_primary_cache_timeline_parity'
+    assert [r['step'] for r in a['rows']]==[44,45]
+    assert not a['two_times_target_achieved']
+    rows=[]
+    for result in a['rows']:
+        for layer in range(64):
+            d=result['boundaries'][str(layer)]
+            assert d['words']==20480 and 0<=d['active_different_words']<=5120
+            assert d['active_different_words']+d['inactive_different_words']==d['different_words']
+            rows.append(dict(step=result['step'],layer=layer,active_different_F32_words=d['active_different_words'],inactive_different_F32_words=d['inactive_different_words'],full_T4_different_words=d['different_words'],first_different_word=d['first_different_word']))
+    plt.rcParams.update({'font.family':'DejaVu Sans','font.size':11,'axes.spines.top':False,'axes.spines.right':False})
+    fig,axes=plt.subplots(2,1,figsize=(14,9.4),facecolor='#f5f8fc')
+    fig.subplots_adjust(left=.09,right=.97,top=.80,bottom=.22,hspace=.50)
+    fig.text(.07,.947,'Where batch-1 and batch-4 layer outputs differ',fontsize=22,weight='bold')
+    fig.text(.07,.906,'RTX 5090 | Qwen3.8-27B mixed NVFP4/FP8 | selected text row in mixed batch | 3968-token prompt',fontsize=11,color='#45576e')
+    fig.text(.07,.855,'Exact original primary/checkpoint/cache/timeline parity passed before interpreting these outputs.',fontsize=12,color='#16856b')
+    for ax,result,color in zip(axes,a['rows'],['#366bd1','#16856b']):
+        values=[result['boundaries'][str(i)]['active_different_words'] for i in range(64)]
+        ax.bar(range(64),values,color=color,width=.82)
+        ax.set_yscale('symlog',linthresh=1);ax.set_ylim(0,6500);ax.set_xlim(-1,64)
+        ax.set_xticks([0,7,15,23,31,35,39,47,55,63]);ax.set_yticks([0,1,10,100,1000,5120],['0','1','10','100','1000','5120'])
+        ax.set_ylabel('Different active F32 words\n(out of 5120)');ax.set_xlabel('Layer index')
+        ax.axvline(35,color='#a34c1d',ls=':',lw=1.4);ax.grid(axis='y',alpha=.18);ax.set_axisbelow(True)
+        first=result['first_differing_active_layer']
+        label='no differing observed layer' if first is None else f'first differing observed active output: layer {first}'
+        ax.set_title(f"After decode step {result['step']} | {label}",loc='left',fontsize=12)
+        caption='All 64 complete T4 outputs match exactly.' if first is None else f"Layer {first}: {values[first]} of 5120 active F32 values differ."
+        ax.text(.025,.77,caption,transform=ax.transAxes,color='#45576e',fontsize=11)
+    fig.text(.09,.135,'Counts compare exact F32 bits in active token column 0; the CSV also retains differences in the other three padded columns.',fontsize=10,color='#45576e')
+    fig.text(.09,.098,'Dotted line: layer 35, whose sampled key-cache coordinate first differs after step 45. IDs 0–51 are consumed identically.',fontsize=10,color='#45576e')
+    fig.text(.09,.060,'Private observer outputs reproduce all recorded ordinary-parent states, 53 IDs, complete 8 MiB key cache and coordinate timeline.',fontsize=10,color='#45576e')
+    fig.text(.09,.022,'Bit-difference counts do not measure error magnitude or accuracy loss, or establish a unique causal operator. No new speed measurement.',fontsize=10,color='#a34c1d')
+    artifacts={}
+    for ext in ('png','svg'):
+        path=O/(S+'.'+ext);fig.savefig(path,dpi=160,facecolor=fig.get_facecolor());artifacts[path.name]=sha(path)
+    plt.close(fig)
+    path=O/(S+'.csv')
+    with path.open('w',newline='',encoding='utf8') as f:
+        writer=csv.DictWriter(f,fieldnames=list(rows[0]));writer.writeheader();writer.writerows(rows)
+    artifacts[path.name]=sha(path)
+    (O/(S+'-Receipt.json')).write_bytes(json.dumps({'proof_sha256':sha(proof),'archive_sha256':q['archive_sha256'],'generator_sha256':sha(Path(__file__)),'artifacts':artifacts,'new_model_or_benchmark_executed':False,'two_times_target_achieved':False},indent=2).encode())
+    print(json.dumps({'artifacts':artifacts,'first_observed_active_outputs':[r['first_differing_active_layer'] for r in a['rows']]},indent=2))
+
+if __name__=='__main__':main()

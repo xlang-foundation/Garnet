@@ -1,0 +1,74 @@
+"""Retain paired observer evidence, figures and append-only paper methods/results."""
+from pathlib import Path
+import hashlib,json,zipfile
+W=Path(__file__).resolve().parent;O=W.parent/'outputs';R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';E=M/'evidence';F=E/'figures';sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest();owned=[];retained={}
+def keep(dest,raw):
+    assert not dest.exists(),dest
+    dest.write_bytes(raw);assert dest.read_bytes()==raw;owned.append(dest);retained[dest.relative_to(E).as_posix()]=sha(dest)
+J='step45-layer-boundary-attempt2';proof=O/(J+'-verified.json');q=json.loads(proof.read_bytes())
+assert proof.read_bytes()==(O/(J+'-remote-verified.json')).read_bytes() and q['exit_code']==0 and q['CPU_controls']==69
+assert q['source_runtime_SDK_config_index_CMake_all34_baseline_restored']
+a=q['analysis'];assert a['status']=='step44_step45_all64_layer_outputs_compared_after_ordinary_primary_cache_timeline_parity'
+assert [r['step'] for r in a['rows']]==[44,45]
+assert a['rows'][0]['first_differing_active_layer'] is a['rows'][0]['first_differing_full_T4_layer'] is None
+assert a['rows'][1]['first_differing_active_layer']==a['rows'][1]['first_differing_full_T4_layer']==35
+assert all(a['rows'][0]['boundaries'][str(i)]['all_bytes_exact'] for i in range(64))
+assert all(a['rows'][1]['boundaries'][str(i)]['all_bytes_exact'] for i in range(35))
+archive=O/(J+'-evidence.zip');assert sha(archive)==q['archive_sha256']
+for name in (proof.name,J+'-remote-verified.json','Garnet-Step45-Layer-Boundary2-Progress.json'):keep(E/name,(O/name).read_bytes())
+with zipfile.ZipFile(archive) as z:
+    base='results/'+J+'/';mf=json.loads(z.read('evidence-manifest.json'))
+    keep(E/'step45-layer-boundary-model2-manifest.json',z.read('evidence-manifest.json'))
+    for name in mf['files']:
+        if name.startswith(base) and name.endswith('.json'):keep(E/('step45-layer-boundary-model2-'+name.removeprefix(base).replace('/','-')),z.read(name))
+    for phase in ('cpu','reference','candidate'):
+        for ext in ('log','jsonl'):keep(E/('step45-layer-boundary-model2-'+phase+'-commands.'+ext),z.read(base+phase+'-ledger/commands.'+ext))
+    p=json.loads(z.read('Garnet/test2026/cuda/qwen38_5090/evidence/step45-layer-boundary2-preparation.json'))
+    assert len(p['files'])==1892 and len(p['parents'])==45
+for name in ('commands.log','commands.jsonl'):keep(E/('step45-layer-boundary-model2-local-replay-'+name),(W/'step45-layer-boundary2-local-replay'/name).read_bytes())
+for name in ('postprocess-step45-layer-boundary2.py','replay-step45-layer-boundary2.py',Path(__file__).name):keep(E/(name+'.txt'),(W/name).read_bytes())
+S='Garnet-Step44-Step45-Layer-Differences';receipt=json.loads((O/(S+'-Receipt.json')).read_bytes())
+assert receipt['proof_sha256']==sha(proof) and receipt['archive_sha256']==sha(archive)
+for name,digest in receipt['artifacts'].items():
+    assert sha(O/name)==digest;keep(F/name,(O/name).read_bytes())
+keep(F/(S+'-Receipt.json'),(O/(S+'-Receipt.json')).read_bytes())
+generator=W/'render-step45-layer-boundary2.py';assert sha(generator)==receipt['generator_sha256'];keep(F/(generator.name+'.txt'),generator.read_bytes())
+summary=[{'step':r['step'],'first_differing_active_layer':r['first_differing_active_layer'],'first_differing_full_T4_layer':r['first_differing_full_T4_layer'],'layer35':r['boundaries']['35']} for r in a['rows']]
+keep(E/'step45-layer-boundary-model2-retention.json',json.dumps({'status':'all64_layer_observation_retained_after_complete_ordinary_parity','archive_sha256':sha(archive),'archive_bytes':archive.stat().st_size,'proof_sha256':sha(proof),'retained_sha256':dict(retained),'CPU_controls':69,'paired_replay_bytes_identical':True,'observations':summary,'guarded_files':1892,'closed_parents':45,'baseline_restored':True,'visual_QA':'PNG inspected; labels, active-word counts and layer35 marker visible','native_Graph_or_precision_optimization_executed':False,'observer_graph_outputs_added':True,'model_or_performance_qualified':False,'two_times_target_achieved':False,'remote_CPython_NumPy':'3.12.3 / 2.4.4','local_CPython_NumPy':'3.12.10 / 1.26.4','postprocess_ledger_description_parent_count_correction':'Description inherited44; actual preparation/owner/reader verified all45 parents.'},indent=2).encode())
+entry=('\n\n2026-10-27 bounded step44/45 all-layer observer attempt2 PASSED its '
+       'diagnostic parity and independent remote/local raw replays, proof '
+       +sha(proof)+', archive '+sha(archive)+' ('+str(archive.stat().st_size)+'B). '
+       '69CPU passed onbothhosts. Original nativeconcat guard unchanged; bounded '
+       '113primary/64observations/2final joins compile andrun under source60B1 and '
+       'source85flagoffB4. Before interpreting observations, all53IDs/five complete '
+       '128component physical-logical checkpoint hashes/fullfinite hidden-norm '
+       'vectors/full8MiBkey35cache and all53coordinate samples reproduce each '
+       'same-profile ordinary parent exactly. At completed step44 all64 complete '
+       'T4layeroutputs exact. Atstep45 layers0..34 completeT4outputs exact; first '
+       'differing observed active andcompleteT4output islayer35. Activecolumn0 '
+       'is source-proved; allrawinactive words also retained. This narrows '
+       'observation tolayer35 onthisstep, NOTuniqueoperatorcausality or earliest '
+       'globaldecoder drift. Togetherwith earlier singleBF16K35/head0/slot4012/'
+       'dim211difference at45 and failed actualK-fourM4 intervention, nextinspect '
+       'actual internal layer35 inputnormalization/Kprojection/per-headKnorm/'
+       'postRoPE operands with sameprimary/cache/timeline parity. Actual source '
+       'already has full-chunk witness hooks but their existing guards are '
+       'B1/specificprofiles: preserve them and use a separate explicit defaultoff '
+       'decode35 protocol if native instrumentation is needed. No blind shape '
+       'or precision change. All1892ownedfiles/runtime/SDK/config+index/CMake/'
+       'current34objects/baselineDLL restored, ownedSSDnonces retired;45closed '
+       'parents verified (postprocess ledger description inherited44 is atext '
+       'typo only). PNG/SVG/CSV and generator/receipts/rawlogs/resources/proofs '
+       'retained forpaper. Thisisdiagnostic, no full128/B4MTP/quality/HTTP/'
+       'performance admission. Full4K/cache62/K-fourM4/observer1 failures stay '
+       'FAILED andoverall2xgoal unmet. Staticqueueaudit also found native INT4 '
+       'worker currentlybreaks atEOS evenfor bodyignore_eos=True, whilefixed4K '
+       'reference requests ignoreEOS; reconcile andqualify explicit128-output '
+       'policy beforematchedINT4timing. ExistingINT4/4B shortpilots donot satisfy '
+       'matched4K requirement.\n').encode()
+for name in ('docs/research/qwen38-5090-development-log.md','docs/research/qwen38-5090-implementation-task.md'):
+    path=R/name;before=path.read_bytes();assert b'bounded step44/45 all-layer observer attempt2 PASSED' not in before
+    with path.open('ab') as f:f.write(entry)
+    assert path.read_bytes()==before+entry;owned.append(path)
+(W/'step45-layer-boundary2-result-stage-paths.bin').write_bytes(b''.join(p.relative_to(R).as_posix().encode()+b'\0' for p in owned))
+print(json.dumps({'stage_paths':len(owned),'proof_sha256':sha(proof),'observations':summary},indent=2))
