@@ -1,0 +1,185 @@
+{
+  "derivations": [
+    {
+      "source": "test_kv128_prefix_cache.bat",
+      "source_sha256": "ba7d68b67d3af715f2f06ad563f3315b2da750d6f03a76cbfa17a050dbd6f804",
+      "target": "test_layer_boundary.bat",
+      "target_sha256": "5caf05e3fdf818926316adad2ab7e0e219251b0529e1ccfbb07767873d09794f",
+      "steps": [
+        {
+          "old": "probe_kv128_prefix_cache.py",
+          "new": "probe_layer_boundary.py",
+          "occurrences": 1
+        }
+      ]
+    },
+    {
+      "source": "test_kv128_prefix_metadata.bat",
+      "source_sha256": "e6da528b921833a7ac9772bf0ff1fce633a8afaf72106f31473dc91342be1b81",
+      "target": "test_layer_boundary_metadata.bat",
+      "target_sha256": "108fcef131a96d089096b6062ef6080a2ef345ec7189519a44952f0438f0c03c",
+      "steps": [
+        {
+          "old": "probe_kv128_prefix_metadata.py",
+          "new": "probe_layer_boundary_metadata.py",
+          "occurrences": 1
+        }
+      ]
+    },
+    {
+      "source": "probe_kv128_prefix_metadata.py",
+      "source_sha256": "6156fdbe924aa48a5bcccdd28be40f9f7f80c18893ada2f818c1cbfb2adb1523",
+      "target": "probe_layer_boundary_metadata.py",
+      "target_sha256": "1d906b6b5732153c1f217f6bfcc1630e4e64281875d0ff4f9487add59bb21dcb",
+      "steps": [
+        {
+          "old": "import hashlib,json,sys",
+          "new": "import ast,hashlib,json,sys",
+          "occurrences": 1
+        },
+        {
+          "old": "assert len(hashlib.sha256(b'KV128-prefix-stdlib-metadata').hexdigest())==64",
+          "new": "assert len(hashlib.sha256(b'layer-boundary-stdlib-metadata').hexdigest())==64\nfor name in ('layer_boundary_program.py','probe_layer_boundary.py'):ast.parse((Path(__file__).resolve().parent/name).read_bytes())",
+          "occurrences": 1
+        },
+        {
+          "old": "embedded_KV128_prefix_metadata_passed",
+          "new": "embedded_layer_boundary_metadata_passed",
+          "occurrences": 1
+        }
+      ]
+    },
+    {
+      "source": "run_kv128_prefix_cache.py",
+      "source_sha256": "9b30557956c55a9e5e02130d36fbdd4bd3cd281927073413a8c83b5a8cb8d3a9",
+      "target": "run_layer_boundary.py",
+      "target_sha256": "1324adbb954dfeead1f62748674ee09a0467a4ad026d409755678329cf75f2ba",
+      "steps": [
+        {
+          "old": "JOB='kv128-prefix-cache-attempt1'",
+          "new": "JOB='layer-boundary-attempt1'",
+          "occurrences": 1
+        },
+        {
+          "old": "evidence/kv128-prefix-cache-preparation.json",
+          "new": "evidence/layer-boundary-preparation.json",
+          "occurrences": 1
+        },
+        {
+          "old": "KV128_prefix_cache_prepared_gpu_unrun",
+          "new": "layer_boundary_prepared_gpu_unrun",
+          "occurrences": 1
+        },
+        {
+          "old": "shutil.disk_usage(ROOT).free>=2<<30",
+          "new": "shutil.disk_usage(ROOT).free>=4<<30",
+          "occurrences": 1
+        },
+        {
+          "old": "35CPU new/retained route/complete-cache/state/vector/ID/MTP and corruption controls",
+          "new": "39CPU new/retained boundary/readonly/route/complete-cache/state/vector/ID/MTP and corruption controls",
+          "occurrences": 1
+        },
+        {
+          "old": "test_kv128_prefix_metadata.bat",
+          "new": "test_layer_boundary_metadata.bat",
+          "occurrences": 1
+        },
+        {
+          "old": "test_kv128_prefix_cache.bat",
+          "new": "test_layer_boundary.bat",
+          "occurrences": 1
+        },
+        {
+          "old": "report['status']=='fa3_prefix_caches_collected_retained_ordinary_control_exact'",
+          "new": "report['status']=='layer_boundaries_collected_primary_profile_exact'",
+          "occurrences": 1
+        },
+        {
+          "old": "        from test2026.cuda.qwen38_5090.kv128_prefix_cache_witness import compare",
+          "new": "        from test2026.cuda.qwen38_5090.layer_boundary_replay import compare,primary_equivalence",
+          "occurrences": 1
+        },
+        {
+          "old": "        result=compare(report_base,report_native,lambda n:(out/'baseline'/n).read_bytes(),lambda n:(out/'native'/n).read_bytes())",
+          "new": "        reads={phase:lambda n,phase=phase:(out/phase/n).read_bytes() for phase in ('baseline','native')}\n        primary=primary_equivalence({'baseline':report_base,'native':report_native},reads,ROOT/'results')\n        result=compare(report_base,report_native,reads['baseline'],reads['native']);result['primary_equivalence']=primary",
+          "occurrences": 1
+        },
+        {
+          "old": "out/'cache-analysis.json'",
+          "new": "out/'boundary-analysis.json'",
+          "occurrences": 1
+        },
+        {
+          "old": "        assert result['all_prefix_KEY_and_VALUE_byte_exact'],'Full-chain layer3 cache gate failed; preserve complete arrays'",
+          "new": "        assert result['primary_equivalence']['same_profile_complete_primary_states_vectors_all12cache_arrays_exact']\n        # Boundary differences are observations; they never pass full-model admission.",
+          "occurrences": 1
+        },
+        {
+          "old": "w['status']='KV128_prefix_cache_and_ordinary_control_collected_needs_replay'",
+          "new": "w['status']='layer_boundaries_collected_same_profile_equivalence_needs_replay'",
+          "occurrences": 1
+        },
+        {
+          "old": "Read-only complete layer3 KV prefix observations; ordinary3968+128 control must reproduce retained exact states/vectors/IDs; no timing admission",
+          "new": "Actual complete layer0..4 hidden traces, two exact full3968 repetitions; strict same-profile state/vector/cache and retained T32 IDs/final control; no timing admission",
+          "occurrences": 1
+        }
+      ]
+    },
+    {
+      "source": "verify_kv128_prefix_cache.py",
+      "source_sha256": "565d9c247658677a75c02c41f9a510e74e0294379a67628a8f9b35ab6c30c37b",
+      "target": "verify_layer_boundary.py",
+      "target_sha256": "9bc6017ba0bb3f481e62cb8d62bd5c0f426c4bc9d41fdecd6db2176edcca3e9c",
+      "steps": [
+        {
+          "old": "from test2026.cuda.qwen38_5090.kv128_prefix_cache_replay import replay",
+          "new": "from test2026.cuda.qwen38_5090.layer_boundary_replay import compare,primary_equivalence",
+          "occurrences": 1
+        },
+        {
+          "old": "JOB='kv128-prefix-cache-attempt1'",
+          "new": "JOB='layer-boundary-attempt1'",
+          "occurrences": 1
+        },
+        {
+          "old": "evidence/kv128-prefix-cache-preparation.json",
+          "new": "evidence/layer-boundary-preparation.json",
+          "occurrences": 1
+        },
+        {
+          "old": "b'Ran 35 tests'",
+          "new": "b'Ran 39 tests'",
+          "occurrences": 1
+        },
+        {
+          "old": "embedded_KV128_prefix_metadata_passed",
+          "new": "embedded_layer_boundary_metadata_passed",
+          "occurrences": 1
+        },
+        {
+          "old": "        arrays=replay(reports,reads,args.proofs,passed)",
+          "new": "        arrays={'status':'failed_boundary_capture_preserved_no_full_array_or_model_admission_claim','reports':{k:dict(status=r['status'],error=r.get('error'),captured_frames=len(r.get('boundaries',[]))) for k,r in reports.items()}}\n        if passed:\n            primary=primary_equivalence(reports,reads,args.proofs)\n            arrays=compare(reports['baseline'],reports['native'],reads['baseline'],reads['native']);arrays['primary_equivalence']=primary",
+          "occurrences": 1
+        },
+        {
+          "old": "w['status']=='KV128_prefix_cache_and_ordinary_control_collected_needs_replay' and arrays['cache_comparison']==doc(base+'cache-analysis.json')",
+          "new": "w['status']=='layer_boundaries_collected_same_profile_equivalence_needs_replay' and arrays==doc(base+'boundary-analysis.json')",
+          "occurrences": 1
+        },
+        {
+          "old": "actual_KV128_full_chain_prefix_caches_and_strict_ordinary_T32_oracle_replayed",
+          "new": "actual_complete_layer0_to4_boundaries_and_primary_equivalence_replayed",
+          "occurrences": 1
+        },
+        {
+          "old": "actual_KV128_full_chain_prefix_or_ordinary_oracle_failure_preserved",
+          "new": "actual_layer_boundary_capture_failure_preserved",
+          "occurrences": 1
+        }
+      ]
+    }
+  ],
+  "production_source_native_library_and_original_model_admission_oracle_unchanged": true
+}
