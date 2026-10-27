@@ -1,0 +1,112 @@
+{
+  "status": "paired_before_after_B4_M16_model_progress_observed_not_admitted",
+  "proofs": {
+    "before": {
+      "proof_sha256": "c707c7a28bcae3b6238ffee82828b1cd75cf9c03ce0f9622825486d5218f37c8",
+      "archive_sha256": "19056990075e46080af4c417f623f5e578dcc1c90a4785ac957670df4dba51f9",
+      "exit_code": 1
+    },
+    "after": {
+      "proof_sha256": "d96dfc99e40eefa925f10ec82e68af80a0b3b6c82e526f3b29ebd9be72cfed55",
+      "archive_sha256": "75c7fe213bd3e2108827d594e7f36e2f90fd2ed82ac1f130a4a5236f456f65e3",
+      "exit_code": 1
+    }
+  },
+  "unchanged_complete_B1_reference_snapshots": 16,
+  "rows": [
+    {
+      "physical_row": 0,
+      "input_key": "s3-text-c1-r0-greedy",
+      "before_different_state_components": 128,
+      "after_different_state_components": 115,
+      "before_first_different_state_component": {
+        "index": 0,
+        "layer": 0,
+        "role": 1,
+        "kind": "linear_attention"
+      },
+      "after_first_different_state_component": {
+        "index": 7,
+        "layer": 3,
+        "role": 2,
+        "kind": "full_attention"
+      },
+      "before_first_different_generated_ID_index": null,
+      "after_first_different_generated_ID_index": null,
+      "all_8_generated_IDs_exact": true,
+      "all_7_consumed_decode_inputs_exact": true,
+      "first_same_input_prefix_length": 7
+    },
+    {
+      "physical_row": 1,
+      "input_key": "s3-image-c1-r0-greedy",
+      "before_different_state_components": 127,
+      "after_different_state_components": 105,
+      "before_first_different_state_component": {
+        "index": 1,
+        "layer": 0,
+        "role": 2,
+        "kind": "linear_attention"
+      },
+      "after_first_different_state_component": {
+        "index": 23,
+        "layer": 11,
+        "role": 2,
+        "kind": "full_attention"
+      },
+      "before_first_different_generated_ID_index": null,
+      "after_first_different_generated_ID_index": null,
+      "all_8_generated_IDs_exact": true,
+      "all_7_consumed_decode_inputs_exact": true,
+      "first_same_input_prefix_length": 7
+    },
+    {
+      "physical_row": 2,
+      "input_key": "red",
+      "before_different_state_components": 128,
+      "after_different_state_components": 128,
+      "before_first_different_state_component": {
+        "index": 0,
+        "layer": 0,
+        "role": 1,
+        "kind": "linear_attention"
+      },
+      "after_first_different_state_component": {
+        "index": 0,
+        "layer": 0,
+        "role": 1,
+        "kind": "linear_attention"
+      },
+      "before_first_different_generated_ID_index": 5,
+      "after_first_different_generated_ID_index": 5,
+      "all_8_generated_IDs_exact": false,
+      "all_7_consumed_decode_inputs_exact": false,
+      "first_same_input_prefix_length": 5
+    },
+    {
+      "physical_row": 3,
+      "input_key": "green",
+      "before_different_state_components": 128,
+      "after_different_state_components": 128,
+      "before_first_different_state_component": {
+        "index": 0,
+        "layer": 0,
+        "role": 1,
+        "kind": "linear_attention"
+      },
+      "after_first_different_state_component": {
+        "index": 0,
+        "layer": 0,
+        "role": 1,
+        "kind": "linear_attention"
+      },
+      "before_first_different_generated_ID_index": 5,
+      "after_first_different_generated_ID_index": 5,
+      "all_8_generated_IDs_exact": false,
+      "all_7_consumed_decode_inputs_exact": false,
+      "first_same_input_prefix_length": 5
+    }
+  ],
+  "scope": "Final decode state comparisons only. For rows with different consumed tokens, later layer0 state differences cannot localize a same-input arithmetic fault. First changed persistent component is not proof of the causal operation or actual internal activation. Both model jobs remain failed, originalfailedjob neverpromoted. No serving benchmark or2x result. Next readonly per-decode layer0/1/2/3/4/10/11/12 boundaries mustfirst reproduce same-profile primary state/vector/ID endpoints; actualFA3input and normalization capture can then qualify an SDK V/K control.",
+  "full4k_MTP_805_HTTP_or_performance_qualified": false
+}

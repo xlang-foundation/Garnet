@@ -1,0 +1,24 @@
+from pathlib import Path
+import hashlib,json,zipfile
+W=Path(__file__).resolve().parent;O=W.parent/'outputs';sha=lambda b:hashlib.sha256(b).hexdigest();jobs={'before':'b4-b1-short-admission-attempt1','after':'b4-b1-short-m16-admission-attempt1'};proofs={};reports={};archives={}
+for mode,job in jobs.items():
+    raw=(O/(job+'-verified.json')).read_bytes();assert raw==(O/(job+'-remote-verified.json')).read_bytes();q=json.loads(raw);archive=O/(job+'-evidence.zip');assert sha(archive.read_bytes())==q['archive_sha256'];proofs[mode]=dict(proof_sha256=sha(raw),archive_sha256=q['archive_sha256'],exit_code=q['exit_code']);archives[mode]=zipfile.ZipFile(archive);reports[mode]={p:json.loads(archives[mode].read('results/'+job+'/'+p+'/report.json')) for p in ('reference','candidate')}
+try:
+    before=reports['before'];after=reports['after'];assert before['reference']['inputs']==after['reference']['inputs']==before['candidate']['inputs']==after['candidate']['inputs'];unchanged_reference_snapshots=0
+    for i in range(4):
+        x=before['reference']['rows'][i];y=after['reference']['rows'][i];assert x['generated_ids']==y['generated_ids']
+        for phase in ('reset_state','prefill_state','final_state','final_reset'):
+            assert x[phase]['logical']==y[phase]['logical']
+            for key in ('hidden','normalized'):
+                old=archives['before'].read('results/'+jobs['before']+'/reference/'+x[phase]['vectors'][key]['file']);new=archives['after'].read('results/'+jobs['after']+'/reference/'+y[phase]['vectors'][key]['file']);assert old==new
+            unchanged_reference_snapshots+=1
+    oldq=json.loads((O/(jobs['before']+'-verified.json')).read_bytes());newq=json.loads((O/(jobs['after']+'-verified.json')).read_bytes());rows=[]
+    for i in range(4):
+        old=oldq['complete_comparisons']['final_state']['rows'][i]['different_component_indices'];new=newq['observation']['comparisons']['final_state']['rows'][i]['different_component_indices'];gold=after['reference']['rows'][i]['generated_ids'][0];prior=before['candidate']['rows'][0]['generated_ids'][i];actual=after['candidate']['rows'][0]['generated_ids'][i]
+        def first(x,y):return next((n for n,(a,b) in enumerate(zip(x,y)) if a!=b),None)
+        def component(values):return dict(index=values[0],layer=values[0]//2,role=values[0]%2+1,kind='full_attention' if (values[0]//2)%4==3 else 'linear_attention') if values else None
+        rows.append(dict(physical_row=i,input_key=after['reference']['inputs'][i]['key'],before_different_state_components=len(old),after_different_state_components=len(new),before_first_different_state_component=component(old),after_first_different_state_component=component(new),before_first_different_generated_ID_index=first(prior,gold),after_first_different_generated_ID_index=first(actual,gold),all_8_generated_IDs_exact=actual==gold,all_7_consumed_decode_inputs_exact=actual[:7]==gold[:7],first_same_input_prefix_length=next((n for n,(a,b) in enumerate(zip(actual[:7],gold[:7])) if a!=b),7)))
+    result=dict(status='paired_before_after_B4_M16_model_progress_observed_not_admitted',proofs=proofs,unchanged_complete_B1_reference_snapshots=unchanged_reference_snapshots,rows=rows,scope='Final decode state comparisons only. For rows with different consumed tokens, later layer0 state differences cannot localize a same-input arithmetic fault. First changed persistent component is not proof of the causal operation or actual internal activation. Both model jobs remain failed, originalfailedjob neverpromoted. No serving benchmark or2x result. Next readonly per-decode layer0/1/2/3/4/10/11/12 boundaries mustfirst reproduce same-profile primary state/vector/ID endpoints; actualFA3input and normalization capture can then qualify an SDK V/K control.',full4k_MTP_805_HTTP_or_performance_qualified=False)
+finally:
+    for z in archives.values():z.close()
+target=O/'Garnet-B4-Decode-M16-Model-Progress.json';assert not target.exists();target.write_bytes(json.dumps(result,indent=2).encode());print(json.dumps(result))
