@@ -1,0 +1,31 @@
+from pathlib import Path
+import ast,hashlib,json,zipfile
+W=Path(__file__).resolve().parent;O=W.parent/'outputs';R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';E=M/'evidence';P='Garnet/test2026/cuda/qwen38_5090/';sha=lambda b:hashlib.sha256(b).hexdigest();rows=[]
+for source,target,pairs in [('probe_b4_qk_m16_short.py','probe_b4_qk_m16_short_v2.py',[('evidence/b4-qk-m16-short-preparation.json','evidence/b4-qk-m16-short-v2-preparation.json')]),('launch_b4_qk_m16_short.py','launch_b4_qk_m16_short_v2.py',[('evidence/b4-qk-m16-short-preparation.json','evidence/b4-qk-m16-short-v2-preparation.json'),('probe_b4_qk_m16_short.py','probe_b4_qk_m16_short_v2.py')]),('run_b4_qk_m16_short.py','run_b4_qk_m16_short_v2.py',[('evidence/b4-qk-m16-short-preparation.json','evidence/b4-qk-m16-short-v2-preparation.json'),('launch_b4_qk_m16_short.py','launch_b4_qk_m16_short_v2.py')]),('verify_b4_qk_m16_short.py','verify_b4_qk_m16_short_v2.py',[('evidence/b4-qk-m16-short-preparation.json','evidence/b4-qk-m16-short-v2-preparation.json'),("'verify_b4_qk_m16_short.py'","'verify_b4_qk_m16_short_v2.py'"),("verify_derivations(json.loads(z.read(P+'evidence/b4-qk-m16-short-owner-derivation.json')),lambda n:z.read(P+n))","verify_derivations(json.loads(z.read(P+'evidence/b4-qk-m16-short-owner-derivation.json')),lambda n:z.read(P+n))\n        verify_derivations(json.loads(z.read(P+'evidence/b4-qk-m16-short-v2-owner-derivation.json')),lambda n:z.read(P+n))")])]:
+    original=(M/source).read_bytes();raw=original;changes=[]
+    for a,b in pairs:
+        if b'\r\n' in original:a=a.replace('\n','\r\n');b=b.replace('\n','\r\n')
+        assert raw.count(a.encode())==1,(source,a);raw=raw.replace(a.encode(),b.encode());changes.append(dict(old=a,new=b,count=1))
+    ast.parse(raw);p=M/target;assert not p.exists();p.write_bytes(raw);rows.append(dict(source=source,target=target,source_sha256=sha(original),target_sha256=sha(raw),changes=changes))
+n='evidence/b4-qk-m16-short-v2-owner-derivation.json';(M/n).write_bytes(json.dumps(dict(derivations=rows,scope='Metadata-only versioned preparation for missing historical parent.status fields; source79,DLL,allmodelprobe computations and all numerical/route gates unchanged. Original launcher exitedbeforeoutdir/overlay/model/GPUexecution.'),indent=2).encode())
+old=json.loads((E/'b4-qk-m16-short-preparation.json').read_bytes());parents={};missing=[]
+for name,row in old['parents'].items():
+    raw=(O/(name+'-verified.json')).read_bytes();assert raw==(O/(name+'-remote-verified.json')).read_bytes() and sha(raw)==row['proof_sha256'];q=json.loads(raw);assert q['archive_sha256']==row['archive_sha256'] and q['exit_code']==row['exit_code']
+    if 'status' not in row:missing.append(name)
+    else:assert row['status']==q['status']
+    parents[name]={**row,'status':q['status']}
+assert missing==['full-chunk-stage-build-attempt2','full-chunk-stage-attempt2','qg128-sdk-control-attempt2']
+n2='evidence/b4-qk-m16-short-preflight-attempt1-failure.json';(M/n2).write_bytes(json.dumps(dict(status='source79_short_owner_preflight_rejected_no_model_or_GPU_run',command='C:/Python312/python.exe D:/CantorAI/5090-study-20261023/Garnet/test2026/cuda/qwen38_5090/run_b4_qk_m16_short.py',exit_code=1,error="KeyError: 'status'",line=16,missing_parent_status_fields=missing,reason='Merged guarded-nativebuild historical parent rows pin proof/archive/exit but omit status. Version2 fills status from the exact independently paired hash-pinned proof; no checks removed, no model/math rerun or failed-job promotion.',before_output_directory_or_source_DLL_overlay=True),indent=2).encode())
+extra=[row['target'] for row in rows]+[n,n2,'evidence/b4-qk-m16-short-preparation.json'];new={P+n:sha((M/n).read_bytes()) for n in extra};files={**old['files'],**new};p={**old,'files':files,'new_files':new,'parents':parents,'archive_files':{**old['archive_files'],**new},'scope':old['scope']+' Firstlauncher failedmetadata preflightbeforeoutdir/source-overlay/model/GPU. Version2 fills3missinghistoricalparentstatus fields from exact pairedproofs; originalfiles/probe computations/model route/math thresholds unchanged.'}
+p['reference_installed_files']={**files,**{'Garnet/'+n:h for n,h in p['reference_source_files'].items()}};p['candidate_installed_files']={**files,**{'Garnet/'+n:h for n,h in p['candidate_source_files'].items()}}
+prep=E/'b4-qk-m16-short-v2-preparation.json';assert not prep.exists();prep.write_bytes(json.dumps(p,indent=2).encode());deploy={n:R/n.removeprefix('Garnet/') for n in new};deploy[P+'evidence/b4-qk-m16-short-v2-preparation.json']=prep;target=W/'b4-qk-m16-short-v2-deployment.zip';assert not target.exists()
+with zipfile.ZipFile(target,'x',zipfile.ZIP_DEFLATED) as z:
+    for n,path in deploy.items():z.write(path,n)
+    z.writestr('deployment-manifest.json',json.dumps(dict(files={n:sha(path.read_bytes()) for n,path in deploy.items()},source_runtime_install_deferred=True),indent=2))
+receipt=dict(deployment_sha256=sha(target.read_bytes()),files=len(deploy),bytes=target.stat().st_size,preparation_sha256=sha(prep.read_bytes()),source_inventory=len(files));(W/'b4-qk-m16-short-v2-package.json').write_bytes(json.dumps(receipt,indent=2).encode())
+raw=(W/'install-b4-qk-m16-short.py').read_bytes();pkg=json.loads((W/'b4-qk-m16-short-package.json').read_bytes())
+for a,b in [('b4-qk-m16-short-deployment.zip','b4-qk-m16-short-v2-deployment.zip'),(pkg['deployment_sha256'],receipt['deployment_sha256']),('b4-qk-m16-short-install.json','b4-qk-m16-short-v2-install.json'),('evidence/b4-qk-m16-short-preparation.json','evidence/b4-qk-m16-short-v2-preparation.json'),('len(mf)+1==10','len(mf)+1=='+str(len(deploy)+1))]:assert raw.count(a.encode())==1;raw=raw.replace(a.encode(),b.encode())
+(W/'install-b4-qk-m16-short-v2.py').write_bytes(raw)
+raw=(W/'postprocess-b4-qk-m16-short.py').read_bytes()
+for a,b in [('verify_b4_qk_m16_short.py','verify_b4_qk_m16_short_v2.py'),('b4-qk-m16-short-postprocess','b4-qk-m16-short-v2-postprocess'),('b4-qk-m16-short-install.json','b4-qk-m16-short-v2-install.json'),('b4-qk-m16-short-closure','b4-qk-m16-short-v2-closure')]:assert raw.count(a.encode())>0;raw=raw.replace(a.encode(),b.encode())
+(W/'postprocess-b4-qk-m16-short-v2.py').write_bytes(raw);print(json.dumps(receipt))
