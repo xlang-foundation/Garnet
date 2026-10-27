@@ -1,0 +1,26 @@
+{
+  "source": "verify_kv128_projection.py",
+  "target": "analyze_kv128_projection.py",
+  "source_sha256": "793aad87400a8899510f51b93c5d9c62f8e0804bbebb7869415d0ce0c66dd8e5",
+  "target_sha256": "e1ddc7bdeba5c17ee55ba8d3754c92bb7b999e7787eea67ec44d4ad06981ff5a",
+  "changes": [
+    {
+      "before": "        assert sha(Path(__file__).read_bytes())==p['new_files'][P+Path(__file__).name]",
+      "after": "        record=json.loads(Path(__file__).with_name('evidence').joinpath('kv128-projection-analysis-derivation.json').read_bytes())\n        original=z.read(P+record['source']);assert sha(original)==record['source_sha256']==p['new_files'][P+record['source']]\n        composed=original\n        for c in record['changes']:\n            before=c['before'].encode();assert composed.count(before)==c['count'];composed=composed.replace(before,c['after'].encode())\n        assert composed==Path(__file__).read_bytes() and sha(composed)==record['target_sha256']",
+      "count": 1
+    },
+    {
+      "before": "fixture=z.read(P+'evidence/reconstructed-fa3-common-input.f32');assert sha(fixture)==p['common_input_sha256']",
+      "after": "fixture=linked_fixture(args.proofs,p);assert sha(fixture)==p['common_input_sha256']",
+      "count": 1
+    },
+    {
+      "before": "def main():",
+      "after": "def linked_fixture(proofs,p):\n    job='fa3-projection-witness-attempt2';archive=proofs/(job+'-evidence.zip')\n    assert sha(archive.read_bytes())==p['parents'][job]['archive_sha256']=='75ce1c0bac482b86f2fadd7445f7c3bb3ab32499946d7a87e72ef00f46a1732f'\n    with zipfile.ZipFile(archive) as parent:\n        assert parent.testzip() is None\n        raw=parent.read(P+'evidence/reconstructed-fa3-common-input.f32')\n    assert len(raw)==2621440 and sha(raw)==p['common_input_sha256']==p['files'][P+'evidence/reconstructed-fa3-common-input.f32']\n    return raw\n\ndef main():",
+      "count": 1
+    }
+  ],
+  "reason": "Original frozen verifier expects common fixture in current archive, but collector archives only new method files. Resolve exact SHA-pinned fixture from the already linked complete control archive; preserve original failed verifier and current native archive unchanged. Full array/numerical/route/factory/restoration gates are byte-identical.",
+  "GPU_rerun": false,
+  "numerical_threshold_or_oracle_changed": false
+}
