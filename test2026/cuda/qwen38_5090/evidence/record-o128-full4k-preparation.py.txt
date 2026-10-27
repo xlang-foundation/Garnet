@@ -1,0 +1,31 @@
+from pathlib import Path
+import hashlib,json,subprocess
+W=Path(__file__).resolve().parent;R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';E=M/'evidence';owned=json.loads((W/'o128-model-success-retained-paths.json').read_bytes())
+sha=lambda b:hashlib.sha256(b).hexdigest()
+def retain(n,b):
+    t=E/n;assert not t.exists() or t.read_bytes()==b,n;t.write_bytes(b);owned.append(t.relative_to(R).as_posix())
+for n in ('o128_full4k_model.py','test_o128_full4k_model.py','probe_o128_full4k_model.py','test_o128_full4k_model.bat','probe_o128_full4k_metadata.py','test_o128_full4k_metadata.bat','run_o128_full4k_model.py','verify_o128_full4k_model.py','evidence/o128-full4k-model-preparation.json','evidence/o128-full4k-owner-derivation.json','evidence/o128-full4k-probe-derivation.json'):
+    assert (M/n).is_file();owned.append((M/n).relative_to(R).as_posix())
+for n in ('derive-o128-full4k-probe.py','derive-o128-full4k-owner.py','run-o128-full4k-controls-local.py','run-o128-full4k-local-cpu.py','prepare-o128-full4k.py','prepare-o128-full4k-attempt2.py','repair-o128-full4k-preparation.py','make-o128-full4k-installer.py','install-o128-full4k.py','record-o128-full4k-preparation.py'):
+    retain(n+'.txt',(W/n).read_bytes())
+for n in ('o128-full4k-package.json','o128-full4k-preparation-repair.json','o128-full4k-installer-derivation.json'):retain(n,(W/n).read_bytes())
+for folder in ('o128-full4k-controls-local-ledger','o128-full4k-local-cpu-ledger','o128-full4k-preparation-original-failure-ledger','o128-full4k-preparation-recovery-ledger'):
+    for n in ('commands.log','commands.jsonl'):retain(folder+'-'+n,(W/folder/n).read_bytes())
+p=json.loads((W/'o128-full4k-package.json').read_bytes());assert sha((W/'o128-full4k-deployment.zip').read_bytes())==p['deployment_sha256'] and sha((E/'o128-full4k-model-preparation.json').read_bytes())==p['preparation_sha256']
+text='''
+
+### O128 six full4K text/image ordinary and MTP cases prepared
+
+2026-10-27: Following independently paired one-case Q128+O128 proof9dd543a1217d9d78a5dabc9cc87ffa08505212eebf38dc60412a2dd3afc093cf, prepare the SAME60source/DLL8414795d for the original six real3968+128 ordinary/MTP cases: four retained text/image inputs in order0,1,2,3,0,2, with text/image repeats. Stage witnesses are OFF. Preserve all original32complete packed-state witnesses, finite raw hidden/normalized vectors,128 ordinary/MTP token IDs, callbacks/reset/repeats and249draft-prefill-call checks against original correctT32 baseline92eef5433c946f4f2f9dc831902cb80f48b060a92bc6d91879f07137367b1ea5. Physical target128 route counters GDN48/reconstructedZ48/KV32/Q16/O16, oldZ0/stage0, newcounters0T4 and auxiliarydraft/vision guards remain strict. A metadata-only logicalZ view feeds unchanged legacy validators; raw reports and numerical evidence remain unchanged. One-case success is a prerequisite, never a substitute for this suite.
+
+All74current+86historical CPU controls pass locally. Preparation originally refused the older baseline proof's missing exit_code field; retain this failure and exact one-string schema-reader derivation. Recovery reads the hash-verified original raw workflow and requires actual integer exit0, cleanup, source/runtime/library restoration plus original proof32states/sixcases. No missing exit defaults to success and no numerical predicate changes. Exact deployment PACKAGE_SHA (PACKAGE_BYTESB/129files), preparation PREP_SHA. Same fixed remote studyroot; no new model/clone. Exclusive owner audits source/runtime/SDK/checkpoints/cache, runs CPU and embeddedstdlib preflight before GPU, preserves failure and restores source/library/runtime/private cache.
+
+Actual six-case GPU outcome is pending at preparation. This is correctness work, not serving performance. Broader805quality, actual frontend negatives/production fingerprint, real batching/concurrency, strongest feasible repeated tuned/MTP vLLM/SGLang baselines, matched INT4W4A16/Qwen3.5-4B and text/image TTFT/decode/throughput/serving VRAM remain required. Existing performance charts unchanged; overall2x faster-baseline decode AND throughput plus half-TTFT remain unmet/unproven; full goal active.
+'''.replace('PACKAGE_SHA',p['deployment_sha256']).replace('PACKAGE_BYTES',str(p['bytes'])).replace('PREP_SHA',p['preparation_sha256'])
+for n in ('docs/research/qwen38-5090-development-log.md','docs/research/qwen38-5090-implementation-task.md'):
+    t=R/n;b=t.read_bytes();assert b'### O128 six full4K text/image ordinary and MTP cases prepared' not in b;t.write_bytes(b+text.replace('\n','\r\n').encode());assert t.read_bytes()[:len(b)]==b;owned.append(n)
+assert subprocess.check_output(['git','-C',str(R),'branch','--show-current'],text=True).strip()=='qwen38-5090'
+owned=sorted(set(owned));assert not any('probe_native_external_prefix_batch.py' in n for n in owned)
+(W/'o128-full4k-preparation-retained-paths.json').write_bytes(json.dumps(owned,indent=2).encode())
+subprocess.run(['git','-C',str(R),'-c','core.autocrlf=false','add','--pathspec-from-file=-','--pathspec-file-nul'],input=('\0'.join(owned)+'\0').encode(),check=True)
+print(json.dumps(dict(owned_paths=len(owned),CPU_current=74,CPU_historical=86,GPU_outcome_pending=True)))

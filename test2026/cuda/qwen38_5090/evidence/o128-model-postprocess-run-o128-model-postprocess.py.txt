@@ -1,0 +1,24 @@
+from pathlib import Path
+import hashlib,json,os,sys,zipfile
+ROOT=Path('D:/CantorAI/5090-study-20261023');M=ROOT/'Garnet/test2026/cuda/qwen38_5090';JOB='o128-model-admission-attempt1';sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+sys.path[:0]=[str(M),str(ROOT/'Garnet')];import run_logged as ledger
+from run_bf16_low_batch_native_build import idle
+w=json.loads((ROOT/'results'/JOB/'workflow.json').read_bytes());assert type(w['exit_code']) is int and w['exit_code'] in (0,1) and w['cleanup_finished'] and w['baseline_source_restored'] and w['baseline_library_restored'];idle()
+names=['verify_o128_model_admission.py','run_o128_model_exact_delta.py','exact_zip_payload_delta.py','test_exact_zip_payload_delta.py','evidence/o128-model-exact-transport-derivation.json'];paths=[M/n for n in names]+[Path(__file__)];pins={p.relative_to(ROOT).as_posix():sha(p) for p in paths};ledger.source_identity=lambda:{'scope':'Explicit terminal O128 raw-admission archive replay and exact ZIP transport; protected unrelated bodies excluded; no GPU or model rerun','owned_source_sha256':pins};os.chdir(ROOT/'Garnet');out=ROOT/'results/o128-model-postprocess';assert not out.exists();out.mkdir();code=1
+try:
+    code=ledger.run([sys.executable,str(M/'verify_o128_model_admission.py'),'--proofs',str(ROOT/'results')],out/'replay-ledger','correctness','Independently verify actual terminal O128 admission outcome, unchanged full model gates, defaultoff raw stage equivalence, source/runtime/SDK/checkpoint restoration; preserve any numerical admission failure',paths+[ROOT/'results'/(JOB+'-evidence.zip')]);assert code==0
+    code=ledger.run([sys.executable,str(M/'run_o128_model_exact_delta.py')],out/'transport-ledger','correctness','Only after terminal model/restoration and original archive verification, lossless exact original ZIP compressed-payload reuse; no GPU/model/numeric replay rerun',paths);assert code==0
+finally:
+    (out/'postprocess.json').write_bytes(json.dumps(dict(exit_code=code,method_sha256=pins,no_GPU_or_model_rerun=True),indent=2).encode());files={p.relative_to(ROOT).as_posix():p for p in out.rglob('*') if p.is_file()}
+    for name in (JOB+'-verified.json',JOB+'-exact-delta-receipt.json','o128-model-install.json','o128-model-postprocess-install.json'):
+        p=ROOT/'results'/name
+        if p.exists():files[p.relative_to(ROOT).as_posix()]=p
+    for p in (ROOT/'results/o128-model-admission-transport').rglob('*'):
+        if p.is_file():files[p.relative_to(ROOT).as_posix()]=p
+    for p in paths:files[p.relative_to(ROOT).as_posix()]=p
+    target=ROOT/'results/o128-model-closure-assets.zip';assert not target.exists()
+    with zipfile.ZipFile(target,'x',zipfile.ZIP_DEFLATED) as z:
+        for n,p in files.items():z.write(p,n)
+        z.writestr('evidence-manifest.json',json.dumps(dict(files={n:sha(p) for n,p in files.items()},model_archive_sha256=sha(ROOT/'results'/(JOB+'-evidence.zip')),GPU_or_model_rerun=False),indent=2))
+    print(json.dumps(dict(status='O128_model_postprocess_terminal',exit_code=code,closure_sha256=sha(target),closure_bytes=target.stat().st_size,files=len(files))),flush=True)
+raise SystemExit(code)

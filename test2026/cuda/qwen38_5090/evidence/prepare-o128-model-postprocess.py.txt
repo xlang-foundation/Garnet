@@ -1,0 +1,9 @@
+from pathlib import Path
+import ast,hashlib,json
+W=Path(__file__).resolve().parent;changes=[];sha=lambda b:hashlib.sha256(b).hexdigest()
+for source,target in (('package-q128-model-postprocess.py','package-o128-model-postprocess.py'),('replay-q128-model-local.py','replay-o128-model-local.py')):
+    old=(W/source).read_bytes();raw=old.replace(b'q128',b'o128').replace(b'Q128',b'O128');steps=[dict(old='q128',new='o128',count=old.count(b'q128')),dict(old='Q128',new='O128',count=old.count(b'Q128'))]
+    if target.startswith('replay'):
+        a=b"source=O/'full-chunk-stage-attempt2-evidence.zip'";b=b"source=O/'q128-model-admission-attempt1-evidence.zip'";assert raw.count(a)==1;raw=raw.replace(a,b);steps.append(dict(old=a.decode(),new=b.decode(),count=1))
+    ast.parse(raw);p=W/target;assert not p.exists() or p.read_bytes()==raw;p.write_bytes(raw);changes.append(dict(source=source,target=target,source_sha256=sha(old),target_sha256=sha(raw),changes=steps))
+(W/'o128-model-postprocess-local-derivation.json').write_bytes(json.dumps(dict(status='exact_prior_terminal_replay_and_transport_local_methods_retargeted',derivations=changes,no_model_or_GPU_or_remote_mutation=True),indent=2).encode());print(json.dumps(dict(prepared=[r['target'] for r in changes])))

@@ -1,0 +1,42 @@
+from pathlib import Path
+import hashlib,json,zipfile
+W=Path(__file__).resolve().parent;O=W.parent/'outputs';R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';E='test2026/cuda/qwen38_5090/evidence/';P='Garnet/test2026/cuda/qwen38_5090/';JOB='o128-model-admission-attempt1';sha=lambda b:hashlib.sha256(b).hexdigest();owned=[];folded={}
+def put(n,b):
+    assert n.casefold() not in folded or folded[n.casefold()]==n;folded[n.casefold()]=n;target=R/n;assert target.resolve().is_relative_to(R.resolve()) and (not target.exists() or target.read_bytes()==b),n;target.parent.mkdir(parents=True,exist_ok=True);target.write_bytes(b);owned.append(n)
+raw=(O/(JOB+'-verified.json')).read_bytes();assert raw==(O/(JOB+'-remote-verified.json')).read_bytes();q=json.loads(raw);assert q['exit_code']==0 and q['source_library_runtime_SDK_checkpoint_restored'] and q['arrays']['complete_first128_stages']['all_ten_stage_bytes_exact'];archive=O/(JOB+'-evidence.zip');assert sha(archive.read_bytes())==q['archive_sha256']
+for suffix in ('-verified.json','-remote-verified.json'):put(E+JOB+suffix,(O/(JOB+suffix)).read_bytes())
+with zipfile.ZipFile(archive) as z:
+    p=json.loads(z.read(P+'evidence/o128-model-admission-preparation.json'));w=json.loads(z.read('results/'+JOB+'/workflow.json'))
+    for n,h in p['new_files'].items():assert sha(z.read(n))==h and sha((R/n.removeprefix('Garnet/')).read_bytes())==h
+    for n in z.namelist():
+        if n.startswith('results/'+JOB+'/') and n.endswith(('.json','.jsonl','.log')):put(E+JOB+'-'+n.removeprefix('results/'+JOB+'/').replace('/','-'),z.read(n))
+    put(E+JOB+'-manifest.json',z.read('evidence-manifest.json'))
+with zipfile.ZipFile(W/'o128-model-closure-assets.zip') as z:
+    m=json.loads(z.read('evidence-manifest.json'));assert z.testzip() is None and len(z.namelist())==len(set(z.namelist()))==len(m['files'])+1 and m['model_archive_sha256']==q['archive_sha256']
+    for n,h in m['files'].items():
+        b=z.read(n);assert sha(b)==h
+        if n.startswith('results/') and n.endswith(('.json','.jsonl','.log','.py')):put(E+'o128-model-postprocess-'+n.removeprefix('results/').replace('/','-')+('.txt' if n.endswith('.py') else ''),b)
+    put(E+'o128-model-closure-manifest.json',z.read('evidence-manifest.json'))
+with zipfile.ZipFile(W/(JOB+'-exact-delta.zip')) as z:put(E+JOB+'-exact-delta-manifest.json',z.read('delta-manifest.json'))
+for folder in ('o128-model-local-transport-ledger','o128-model-local-replay-ledger'):
+    for n in ('commands.log','commands.jsonl'):put(E+folder+'-'+n,(W/folder/n).read_bytes())
+for n in ('derive-o128-model-postprocess.py','prepare-o128-model-postprocess.py','run-o128-model-postprocess.py','package-o128-model-postprocess.py','install-o128-model-postprocess.py','replay-o128-model-local.py','retain-o128-model-success.py'):put(E+n+'.txt',(W/n).read_bytes())
+for n in ('o128-model-postprocess-package.json','o128-model-postprocess-local-derivation.json'):put(E+n,(W/n).read_bytes())
+for n in ('run_o128_model_exact_delta.py','evidence/o128-model-exact-transport-derivation.json'):owned.append('test2026/cuda/qwen38_5090/'+n)
+result=dict(status='Q128_plus_O128_one_real_4K_text_case_original_correctT32_admission_independently_verified',paired_proof_sha256=sha(raw),original_archive_sha256=q['archive_sha256'],original_archive_bytes=q['archive_bytes'],original_archive_members=q['archive_members'],candidate_library_sha256=p['candidate_library_sha256'],source_bundle_sha256=p['source_bundle_sha256'],source_files=60,defaultoff=q['arrays']['defaultoff'],one_case=q['arrays']['one_case_admission'],complete_first128_stages=q['arrays']['complete_first128_stages'],CPU_current=71,CPU_historical=86,source_library_runtime_SDK_checkpoint_restored=True,all_jobs_terminal=True,no_SFTP_pending=True,full_six_case_model_quality_or_performance_qualified=False,new_benchmarks=False,two_times_target_achieved=False)
+put(E+'o128-one-case-model-research-summary.json',json.dumps(result,indent=2).encode());(O/'Garnet-Q128-O128-4K-One-Case-Verified.json').write_bytes(json.dumps(result,indent=2).encode())
+text='''
+
+### Q128 plus O128 passes original full4K text admission and all ten complete first128 stages
+
+2026-10-26: o128-model-admission-attempt1 exits0 after three fresh exclusive profiles on exact60source c44138f5/DLL8414795d. CPU71+86 and embeddedstdlib preflight pass. off32 reproduces correct original complete empty/prefill/final states/vectors/all12cache arrays/128IDs and two completeprefill repeats,40stage entries/6553600finiteF32words/readonly records exact retainedcorrectT32. Q128_only_control reproduces preserved failedQ-only complete empty/prefill states/vectors/all12caches/10singlefirst128stage arrays and readonly input, and independently establishes fresh two-prefill/stage repeatability. It has reference_admits_model=False, original_reference_primary_equivalence_passed=False, model_admission_passed=False and no decode/finalstate claim; original failedsingle observation is never fabricated as repeated or admitted.
+
+Q128_plus_O128 now passes unchanged ORIGINAL correctT32 full3968prefill+128decode checks: all complete packed states, all5120hidden/5120normalized raw vectors, all12layer3cache arrays,128rawIDs, finalstate and two completeprefill repeats exact. Physical O16/Q16 onlytargetT128, oldGDN48/reconstructedZ48/KV32/stage1 preserved, newcounters0T4/T32. All6553600finiteF32words in complete first128 input/normalized/QG/key/value/core/attention/residual/MLPinput/output stages are BYTEEXACT to correctT32, zero changedwords in every stage; readonly complete graphinputstate/control witnesses and repeats exact. This closes the observed QG/core and remainingO drift for this ONE real3968+128text case. It does not establish sixcase MTP/image/broaderquality or performance, and no causality beyond captured comparisons is assumed.
+
+Original raw archive38596fef75982e918f064004ecb39638e588c721cc7f82059c86d2b1bad56a83 (155889980B/314members) preserved unchanged on both machines. Independent remote and local full original-gate/stage/restoration replay produce identical proof9dd543a1217d9d78a5dabc9cc87ffa08505212eebf38dc60412a2dd3afc093cf. Lossless compressed-payload delta9375938B reuses197payloads/146471488B from priorQ archive; reconstructs exact originalZIP bytes/SHA without scientific data mutation or GPU rerun. Source/library/runtime/SDK/checkpoints/privatecache restored, raw logs/source derivations/failures/proofs retained onbranch. All jobs terminal at closure; no serving speed or VRAM benchmark claimed.
+
+Next fullsix normal-program(stagewitnessOFF)3968+128cases must preserve original32complete-state/rawvector/ID/callback/reset comparison to retainedT32 ordinary/MTP baseline and allfour text/image inputs plus text/image repeats. Wholemodel onecase admission is a prerequisite, not a replacement for fullsix. Actual frontend negatives/production cachefingerprint/promotion,805/broaderquality, trueconcurrency, strongest feasible repeated tuned/MTP vLLM/SGLang, matchedINT4W4A16/4B and text/imageTTFT/decode/throughput/servingVRAM remain required. Charts unchanged; overall2x fasterbaseline decode AND concurrencythroughput/plushalfTTFT remain unproven, goal active.
+'''
+for n in ('docs/research/qwen38-5090-development-log.md','docs/research/qwen38-5090-implementation-task.md'):
+    target=R/n;before=target.read_bytes();assert b'### Q128 plus O128 passes original full4K text admission' not in before;target.write_bytes(before+text.replace('\n','\r\n').encode());assert target.read_bytes()[:len(before)]==before;owned.append(n)
+(W/'o128-model-success-retained-paths.json').write_bytes(json.dumps(sorted(set(owned)),indent=2).encode());print(json.dumps(dict(retained_paths=len(set(owned)),paired_proof_sha256=sha(raw),one_case_admitted=True,broad_quality_or_performance_admitted=False)))

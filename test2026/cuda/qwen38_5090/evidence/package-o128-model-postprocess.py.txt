@@ -1,0 +1,22 @@
+from pathlib import Path
+import ast,hashlib,json,zipfile
+W=Path(__file__).resolve().parent;M=Path('D:/CantorAI/work/qwen38-5090/test2026/cuda/qwen38_5090');P='Garnet/test2026/cuda/qwen38_5090/';sha=lambda b:hashlib.sha256(b).hexdigest();d=json.loads((M/'evidence/o128-model-exact-transport-derivation.json').read_bytes());raw=(M/d['source']).read_bytes();assert sha(raw)==d['source_sha256']
+for c in d['changes']:assert raw.count(c['old'].encode())==c['count'];raw=raw.replace(c['old'].encode(),c['new'].encode())
+assert raw==(M/d['target']).read_bytes() and sha(raw)==d['target_sha256'];ast.parse(raw)
+files={P+d['target']:raw,P+'evidence/o128-model-exact-transport-derivation.json':(M/'evidence/o128-model-exact-transport-derivation.json').read_bytes(),'results/run-o128-model-postprocess.py':(W/'run-o128-model-postprocess.py').read_bytes()};ast.parse(files['results/run-o128-model-postprocess.py']);target=W/'o128-model-postprocess-deployment.zip';assert not target.exists()
+with zipfile.ZipFile(target,'x',zipfile.ZIP_DEFLATED) as z:
+    for n,b in files.items():z.writestr(n,b)
+    z.writestr('install-manifest.json',json.dumps(dict(files={n:sha(b) for n,b in files.items()},terminal_model_job_and_restoration_required=True),indent=2))
+h=sha(target.read_bytes());installer='''from pathlib import Path
+import hashlib,json,sys,zipfile
+ROOT=Path('D:/CantorAI/5090-study-20261023');P='Garnet/test2026/cuda/qwen38_5090/';sha=lambda b:hashlib.sha256(b).hexdigest();archive=ROOT/'results/o128-model-postprocess-deployment.zip';assert sha(archive.read_bytes())=='PACKAGE_SHA'
+sys.path[:0]=[str(ROOT/P),str(ROOT/'Garnet')];from run_bf16_low_batch_native_build import idle
+w=json.loads((ROOT/'results/o128-model-admission-attempt1/workflow.json').read_bytes());assert type(w['exit_code']) is int and w['exit_code'] in (0,1) and w['cleanup_finished'] and w['baseline_source_restored'] and w['baseline_library_restored'];idle()
+with zipfile.ZipFile(archive) as z:
+    m=json.loads(z.read('install-manifest.json'));assert z.testzip() is None and len(z.namelist())==len(set(z.namelist()))==len(m['files'])+1==4
+    for n,h in m['files'].items():
+        p=ROOT/n;assert p.resolve().is_relative_to((ROOT/P).resolve()) or n=='results/run-o128-model-postprocess.py';raw=z.read(n);assert sha(raw)==h and (not p.exists() or p.read_bytes()==raw)
+    for n in m['files']:(ROOT/n).write_bytes(z.read(n))
+out=ROOT/'results/o128-model-postprocess-install.json';assert not out.exists();out.write_bytes(json.dumps(dict(status='O128_terminal_replay_transport_methods_installed',deployment_sha256=sha(archive.read_bytes()),files=m['files'],GPU_or_model_rerun=False),indent=2).encode());print('O128_TERMINAL_POSTPROCESS_INSTALLED')
+'''.replace('PACKAGE_SHA',h)
+(W/'install-o128-model-postprocess.py').write_bytes(installer.encode());(W/'o128-model-postprocess-package.json').write_bytes(json.dumps(dict(deployment_sha256=h,bytes=target.stat().st_size,files={n:sha(b) for n,b in files.items()},GPU_or_model_rerun=False),indent=2).encode());print(json.dumps(dict(deployment_sha256=h,bytes=target.stat().st_size)))
