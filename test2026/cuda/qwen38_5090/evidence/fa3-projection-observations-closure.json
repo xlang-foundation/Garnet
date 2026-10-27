@@ -1,0 +1,104 @@
+{
+  "status": "actual_FA3_KV_projection_difference_VALUE_cache_link_and_vendor_selection_verified",
+  "attempts": [
+    {
+      "job": "fa3-projection-witness-attempt1",
+      "exit_code": 1,
+      "archive_sha256": "c78b06273762b449ac1c8b4378641fd34ef6c4eff09417fbb8f53d99ade80426",
+      "archive_bytes": 2620226,
+      "archive_members": 26,
+      "paired_proof_sha256": "b78ed608deda61d3d42008adb392b1a47ef32fc2c7d8d428c86c16613a7602ce",
+      "source_pins": 1215,
+      "native_source_files": 44,
+      "candidate_library_sha256": "e45950ed41b297cf04430d5835aa1fc5153def820b5bb239468a08d79453a4c0",
+      "source_runtime_SDK_checkpoint_restored": true
+    },
+    {
+      "job": "fa3-projection-witness-attempt2",
+      "exit_code": 0,
+      "archive_sha256": "75ce1c0bac482b86f2fadd7445f7c3bb3ab32499946d7a87e72ef00f46a1732f",
+      "archive_bytes": 30991827,
+      "archive_members": 93,
+      "paired_proof_sha256": "d6511e7dc3e4c818d7797970308c37c6fffa37fc48bdee4d57fefc6d7befde93",
+      "source_pins": 1225,
+      "native_source_files": 44,
+      "candidate_library_sha256": "e45950ed41b297cf04430d5835aa1fc5153def820b5bb239468a08d79453a4c0",
+      "source_runtime_SDK_checkpoint_restored": true
+    },
+    {
+      "job": "fa3-projection-vendor-attempt1",
+      "exit_code": 0,
+      "archive_sha256": "d0ce2d2992c27d4b782438cc45ac47630fba1d0ed59e349da4af3e124794e12d",
+      "archive_bytes": 31012001,
+      "archive_members": 103,
+      "paired_proof_sha256": "cf47ddcd00b19ca2e4688584f3193f251633e6c7366f0a4b24df60397b8ada07",
+      "source_pins": 1233,
+      "native_source_files": 44,
+      "candidate_library_sha256": "e45950ed41b297cf04430d5835aa1fc5153def820b5bb239468a08d79453a4c0",
+      "source_runtime_SDK_checkpoint_restored": true
+    }
+  ],
+  "actual_GPU_inference_processes": 2,
+  "failed_embedded_import_attempts": 1,
+  "all_native44_source_files_and_candidate_DLL_unchanged_across_observations": true,
+  "finite_array_entries_per_successful_process": 51,
+  "complete_output_F32_words_per_successful_process": 3670016,
+  "normalized_F32_values_exact": 655360,
+  "KEY_projection_F32_values_compared": 131072,
+  "KEY_different_values": 8,
+  "VALUE_projection_F32_values_compared": 131072,
+  "VALUE_different_values": 8,
+  "readonly_inputs_and_repeats_exact": true,
+  "entire_first128_VALUE_caches_reproduced_from_pre_cache_projection": true,
+  "complete_VALUE_cache_BF16_values_compared_per_profile": 4194304,
+  "all8_retained_VALUE_cache_differences_explained_pre_storage": true,
+  "vendor_logged_and_unlogged_all51_entries_byte_exact": true,
+  "actual_vendor_configurations": {
+    "32": {
+      "matmul_trace_calls": 4,
+      "weight_buffers": [
+        "0X2200000000",
+        "0X2200500000"
+      ],
+      "unique_printed_configurations": [
+        {
+          "algoId": 35,
+          "ctaSwizzling": 1,
+          "numSplitsK": 7,
+          "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+          "stages": "MATMUL_STAGES_64x6",
+          "tile": "MATMUL_TILE_64x64"
+        }
+      ]
+    },
+    "128": {
+      "matmul_trace_calls": 4,
+      "weight_buffers": [
+        "0X2200000000",
+        "0X2200500000"
+      ],
+      "unique_printed_configurations": [
+        {
+          "algoId": 35,
+          "numSplitsK": 5,
+          "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+          "stages": "MATMUL_STAGES_64x4",
+          "tile": "MATMUL_TILE_64x64"
+        }
+      ]
+    }
+  },
+  "unprinted_attributes_not_assumed": [
+    "CUSTOM_OPTION",
+    "INNER_SHAPE_ID",
+    "CLUSTER_SHAPE_ID",
+    "CTA_SWIZZLING when omitted"
+  ],
+  "VALUE_cache_link_paired_proof_sha256": "6e9c1f00cdc7ff8095b24e683284157d49f3dae66a4d73ba988832c2bd7bc8cc",
+  "vendor_selection_paired_proof_sha256": "2af63301c4625896fd8d788278faae06b9934bf56ca810f5ba264c46351b6919",
+  "KEY_norm_RoPE_or_full3968_chain_cause_established": false,
+  "canonical_configuration_intervention_tested": false,
+  "full_GDN_rerun_full4K_quality_and_performance_gates_still_required": true,
+  "two_times_target_achieved": false,
+  "next_plan": "test2026/cuda/qwen38_5090/evidence/fa3-kv128-canonical-next-plan.json"
+}

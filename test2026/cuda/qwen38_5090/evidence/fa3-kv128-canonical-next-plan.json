@@ -1,0 +1,49 @@
+{
+  "status": "canonical_KV128_intervention_ready_for_implementation_not_executed",
+  "actual_evidence": {
+    "normalization": "655360F32 values exact T32/T128",
+    "projection": "131072F32 values per K/V,8different each; readonly/repeats exact",
+    "VALUE_cache": "Both complete first128-prefix VALUE caches reconstructed exactly from pre-cache V outputs, includingall8differences;4,194,304BF16values compared per profile",
+    "vendor_logging": "Same native DLL44sourcefiles, all51saved arrays byteexact with loggerenabled;8actualmatmul records,four perprofile, same2weightbuffers",
+    "M32_printed_config": {
+      "ID": 35,
+      "tile": "64x64",
+      "stages": "64x6",
+      "splitK": 7,
+      "reduction": "COMPUTE_TYPE",
+      "CTA_SWIZZLING": 1
+    },
+    "M128_printed_config": {
+      "ID": 35,
+      "tile": "64x64",
+      "stages": "64x4",
+      "splitK": 5,
+      "reduction": "COMPUTE_TYPE"
+    },
+    "unprinted_not_assumed": [
+      "CUSTOM_OPTION",
+      "INNER_SHAPE_ID",
+      "CLUSTER_SHAPE_ID",
+      "M128 CTA_SWIZZLING"
+    ]
+  },
+  "SDK_header_sha256": "6d5331ce42987ba19fa19a51b41551caf26fec6cc66b63535a6d817259e95108",
+  "verified_SDK_symbols": {
+    "CUBLASLT_MATMUL_TILE_64x64": 15,
+    "CUBLASLT_MATMUL_STAGES_64x6": 18,
+    "CUBLASLT_REDUCTION_SCHEME_COMPUTE_TYPE": 2
+  },
+  "next_implementation": [
+    "Create separate ModelOptFP8KV128Context and ModelOptFP8KV128Plugin/Creator with unique type and20byte marker0x4b313238. Preserve old generic/Z/M128 plugin math/wire and all default behavior. Exact N1024K5120, B1/T128 only, same activation quantizer/scales/BF16 output/4MiB BLAS workspace as the real generic FP8 path.",
+    "Use the existing Garnet canonical-query strategy: request the exact controlM32 descriptor from cuBLASLt130400 on SM120. Require first successful result to match the observed six public values ID35/TILE15/STAGES18/SPLITK7/REDUCTION2/CTA1 using ConfigGet with exact written widths. Never guess unprinted parameters. Retain the SDK-returned algorithm value through ordinary struct assignment; never import external opaque constants, compare padding, or mask/synthesize bytes. This deliberately follows the live SDK control instead of inventing unlogged AlgoInit defaults.",
+    "AlgoCheck both M32 and actualM128 against exact E4M3 A/B, BF16 C/D, FP32 compute/scales, transA T/transB N, ldK5120/ldN1024,4MiB maximum workspace. Cache the checked context perdevice, return failure on any device/version/type/query/check mismatch. Enqueue the unchanged input quantizer and cuBLASLt matmul path. A valid check is not numerical equivalence.",
+    "Add strict defaultoff GARNET_FP8_FULL_ATTN_KV128_CANONICAL. Admit only validated model.language_model.layers.(3,7,...,63).self_attn.k_proj/v_proj.weight and exact B1/T128/inputRows128/N1024/K5120. Reject malformed flags/qualified wrong geometry. Separate native_fp8_kv128_canonical_projections counter and reset/copy/stats; witnessT128 count2/T32count0, fullmodelT128count32, auxiliaries0. Distinct wire/type plus owned fresh graph caches prevent reuse of prior serialized plugin policy.",
+    "Before native build, compile CPU wire/descriptor/default/cross-family and selector tests. Exercise real helper API guards/fault paths with CPU fixture SDK, never mistake stubs for GPU evidence. Preserve existing exact source/oracle assertions through explicit composition and record every raw failure. Build actual remoteRelease/MT/sm120 with current44candidate as parent, no newCUDAkernels; restore all originaltargets/library/runtime/SDK/checkpoints/CMake.",
+    "Run the actual registered native projection witness with the same complete real input. Require all originalT32 inputs/outputs byteexact, all655360normalized words exact, all131072K and131072V words T128 exact to concatenatedT32, readonly inputs/repeats, actual new2/old0 plugin routes. If no exact parity, preserve every difference and reject promotion; do not alter tolerances or the oracle.",
+    "Then rerun all original509-entry layer0/1 GDN stage controls with the new descriptor family; actual layer2 parity; layer3 K norm/RoPE/cache and ordinary-primary linkage; unchanged six3968+128 ordinary/MTP full state/vector/token oracle and adapted805quality gate before timing. The VALUE-prefix result does not establish KEYnorm/RoPE or the remaining3968-token chain.",
+    "Only after correctness, measure matched text/image TTFT/decode/concurrency/sampledVRAM repeats against strongest feasible tuned/MTP vLLM/SGLang, native truebatch, INT4W4A16 andQwen3.5-4B. Overall2xdecodeANDthroughput and halfTTFTextra remain unmet."
+  ],
+  "algorithm_intervention_tested": false,
+  "full_model_or_quality_or_performance_qualified": false,
+  "two_times_target_achieved": false
+}

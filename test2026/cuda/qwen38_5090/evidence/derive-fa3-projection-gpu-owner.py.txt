@@ -1,0 +1,34 @@
+from pathlib import Path
+import hashlib,json
+M=Path('D:/CantorAI/work/qwen38-5090/test2026/cuda/qwen38_5090');original=(M/'run_z128_reconstructed_layer2.py').read_bytes();raw=original;changes=[]
+def change(a,b,n=1):
+    global raw
+    assert raw.count(a.encode())==n,(a,raw.count(a.encode()));raw=raw.replace(a.encode(),b.encode());changes.append(dict(before=a,after=b,count=n))
+change('z128-reconstructed-layer2-attempt1','fa3-projection-witness-attempt1')
+change('evidence/z128-reconstructed-layer2-preparation.json','evidence/fa3-projection-witness-gpu-preparation.json')
+change('z128_reconstructed_layer2_prepared_gpu_unrun','FA3_projection_witness_prepared_gpu_unrun')
+change("len(p['candidate_files'])==43","len(p['candidate_files'])==44")
+change('len(set(z.namelist()))==43','len(set(z.namelist()))==44')
+change('garnet-native-z128-reconstructed-plugin-attempt2.dll','garnet-native-fa3-projection-witness-attempt1.dll')
+change('12CPU new integration/array/route/cross-profile fault controls, including86exact frozen historical controls','14CPU new source/profile/finite-array/readonly/repeat fault controls, including86frozen historical controls')
+change("for phase,policy in (('trace-on','1'),('trace-off','0')):","for phase,policy in (('native','1'),):")
+change('test_z128_reconstructed_layer2.bat','test_fa3_projection_witness.bat')
+begin=raw.index(b'            from test2026.cuda.qwen38_5090.z128_reconstructed_layer2_replay import');end=raw.index(b'            require_admission(result)\n',begin)+len(b'            require_admission(result)\n')
+old=raw[begin:end].decode();new='''            from test2026.cuda.qwen38_5090.fa3_projection_witness import replay
+            from test2026.cuda.qwen38_5090.z128_reconstructed_plugin_init_contract import events,replay as replay_init
+            read=lambda name:(out/phase/name).read_bytes()
+            result=replay(report,read,(M/'evidence/reconstructed-fa3-common-input.f32').read_bytes())
+            (out/'array-analysis.json').write_bytes(json.dumps(result,indent=2).encode())
+            traced=replay_init(events((out/(phase+'-ledger/commands.log')).read_bytes()))
+            assert set(traced['routes'])=={'fp8'} and traced['routes']['fp8']>=2 and traced['failures']==[]
+            rows=events((out/(phase+'-ledger/commands.log')).read_bytes())
+            assert all((r['rows'],r['columns'],r['policy'])==(1024,5120,0) for r in rows)
+            (out/'trace-analysis.json').write_bytes(json.dumps(traced,indent=2).encode())
+            # Projection differences are diagnostic evidence, not arithmetic or performance admission.
+'''
+change(old,new)
+change("assert report['status']=='layer2_ordinary_collected_needs_replay'","assert report['status']=='actual_FA3_projection_witness_collected'")
+change('z128_reconstructed_layer2_collected_needs_replay','FA3_projection_witness_collected_needs_replay')
+target=M/'run_fa3_projection_witness.py';assert not target.exists();target.write_bytes(raw)
+p=dict(source='run_z128_reconstructed_layer2.py',target=target.name,source_sha256=hashlib.sha256(original).hexdigest(),target_sha256=hashlib.sha256(raw).hexdigest(),changes=changes,diagnostic_observation_only=True,full_GDN_and_model_gates_still_required=True)
+(M/'evidence/fa3-projection-witness-owner-derivation.json').write_bytes(json.dumps(p,indent=2).encode());print('derived actual native projection diagnostic owner')

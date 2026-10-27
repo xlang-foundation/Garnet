@@ -1,0 +1,8 @@
+from pathlib import Path
+import hashlib,json,zipfile
+ROOT=Path('D:/CantorAI/5090-study-20261023');names=('fa3-projection-witness-gpu-install.json','fa3-projection-witness-gpu-install-attempt2.json','fa3-projection-vendor-install.json','fa3-value-link-peer-install.json','fa3-vendor-selection-peer-install.json','fa3-kv128-sdk-symbols.json');target=ROOT/'results/fa3-projection-closure-assets.zip';assert not target.exists()
+files={'results/'+name:(ROOT/'results'/name).read_bytes() for name in names}
+with zipfile.ZipFile(target,'x',zipfile.ZIP_DEFLATED) as z:
+ for n,b in files.items():z.writestr(n,b)
+ z.writestr('manifest.json',json.dumps({'files':{n:hashlib.sha256(b).hexdigest() for n,b in files.items()}},indent=2))
+print(json.dumps({'bytes':target.stat().st_size,'sha256':hashlib.sha256(target.read_bytes()).hexdigest(),'files':len(files)}))

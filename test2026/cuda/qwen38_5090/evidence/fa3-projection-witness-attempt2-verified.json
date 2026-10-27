@@ -1,0 +1,78 @@
+{
+  "status": "actual_FA3_projection_complete_native_observation_replayed",
+  "archive_sha256": "75ce1c0bac482b86f2fadd7445f7c3bb3ab32499946d7a87e72ef00f46a1732f",
+  "archive_bytes": 30991827,
+  "archive_members": 93,
+  "exit_code": 0,
+  "error": null,
+  "candidate_library_sha256": "e45950ed41b297cf04430d5835aa1fc5153def820b5bb239468a08d79453a4c0",
+  "source_runtime_SDK_checkpoint_restored": true,
+  "arrays": {
+    "status": "actual_FA3_projection_complete_arrays_replayed",
+    "finite_array_entries": 51,
+    "complete_output_F32_words_replayed": 3670016,
+    "same_real_input": true,
+    "readonly_inputs_exact": true,
+    "repeats_exact": true,
+    "stages": {
+      "normalized": {
+        "byte_exact": true,
+        "complete_F32_words_compared": 655360,
+        "changed_F32_words": 0,
+        "first_difference": null,
+        "max_absolute_difference": 0.0,
+        "relative_l2_difference": 0.0
+      },
+      "key": {
+        "byte_exact": false,
+        "complete_F32_words_compared": 131072,
+        "changed_F32_words": 8,
+        "first_difference": {
+          "token": 11,
+          "dimension": 882,
+          "T32_bits": 3149070336,
+          "T128_bits": 3149004800
+        },
+        "max_absolute_difference": 0.00390625,
+        "relative_l2_difference": 1.6888510416297236e-05
+      },
+      "value": {
+        "byte_exact": false,
+        "complete_F32_words_compared": 131072,
+        "changed_F32_words": 8,
+        "first_difference": {
+          "token": 11,
+          "dimension": 482,
+          "T32_bits": 3149987840,
+          "T128_bits": 3150053376
+        },
+        "max_absolute_difference": 0.0001220703125,
+        "relative_l2_difference": 6.995786540330331e-07
+      }
+    },
+    "normalized_exact": true,
+    "key_value_both_exact": false,
+    "actual_projection_difference_with_identical_normalized_input": true,
+    "full_attention_cache_cause_established": false,
+    "model_or_quality_or_performance_qualified": false,
+    "two_times_target_achieved": false
+  },
+  "actual_native_FP8_plugin_initialization": {
+    "status": "actual_plugin_initialization_entries_exits_replayed",
+    "initialize_calls": 8,
+    "events": 16,
+    "routes": {
+      "fp8": 8
+    },
+    "factory_calls": 8,
+    "cached_context_initializations": 0,
+    "exception_returns": 0,
+    "failures": [],
+    "actual_failed_plugin_route_observed": false,
+    "arithmetic_or_quality_or_performance_qualified": false
+  },
+  "full_GDN_rerun_and_full4K_quality_gates_still_required": true,
+  "full_model_or_quality_or_performance_qualified": false,
+  "two_times_target_achieved": false,
+  "verifier_sha256": "b4ff5ca2ff1e72a97401838475c024a4bc8d4e856463f652c69b98f00730c9c1"
+}
