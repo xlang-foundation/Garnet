@@ -1,0 +1,116 @@
+{
+  "derivations": [
+    {
+      "source": "run_b4_decode_m16_native_build.py",
+      "target": "run_b4_v_m16_native_build.py",
+      "source_sha256": "d4fe8f2bbe32ad56a26df2190a8079fb844e521c840a96ac3ca75e9c68247ad8",
+      "target_sha256": "5ffb5a961db2f1e5c174502a6fee73f15b5d2fad2ab14a0bbb345908f15a9390",
+      "changes": [
+        {
+          "old": "b4-decode-m16-build",
+          "new": "b4-v-m16-build",
+          "count": 7
+        },
+        {
+          "old": "garnet-native-b4-decode-m16",
+          "new": "garnet-native-b4-v-m16",
+          "count": 1
+        },
+        {
+          "old": "b4_decode_m16_build_prepared",
+          "new": "b4_v_m16_build_prepared",
+          "count": 1
+        },
+        {
+          "old": "b4_decode_m16_native_built",
+          "new": "b4_v_m16_native_built",
+          "count": 1
+        },
+        {
+          "old": "original61,expected,_=m16_sources();assert original61==prefill61 and len(expected)==67 and expected==candidate",
+          "new": "original61,gdn67,_=m16_sources();assert original61==prefill61 and len(gdn67)==67\n        from test2026.cuda.qwen38_5090.b4_v_m16_source import sources as v_sources\n        original67,expected,_=v_sources();assert original67==gdn67 and len(expected)==73 and expected==candidate",
+          "count": 1
+        },
+        {
+          "old": "from test2026.cuda.qwen38_5090.b4_decode_m16_source import sources\n        _,expected,_=sources();assert candidate==expected",
+          "new": "from test2026.cuda.qwen38_5090.b4_v_m16_source import sources\n        _,expected,_=sources();assert candidate==expected",
+          "count": 1
+        },
+        {
+          "old": "74current controls",
+          "new": "78current controls",
+          "count": 1
+        },
+        {
+          "old": "new67source composition/corruption/actualSDK lineage checked independently; paired437profile/402factory/newwire contracts required parent proof",
+          "new": "new73source and preserved67 composition/corruption/failedSDK-model lineage checked independently; paired1209Vprofile/212factory/V-GDN-genericcrosswire contracts required parent proof",
+          "count": 1
+        },
+        {
+          "old": "Release/MT/sm120 defaultoff physicalB4T4/M16 QKV/Z canonical SDK context/plugin/profile over exact61",
+          "new": "Release/MT/sm120 defaultoff physicalB4T4/M16 V canonical SDK context/plugin/profile over exact67",
+          "count": 1
+        },
+        {
+          "old": "ActualSDK paired control and437profile/402factory/newwire CPU parent required.",
+          "new": "Faithfulconnected component baseline passed; original standaloneSDK andfullmodel failures retained.1209profile/212factory/V-GDN-genericcrosswire CPU parent required.",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "verify_b4_decode_m16_native_build.py",
+      "target": "verify_b4_v_m16_native_build.py",
+      "source_sha256": "ef5b0018a5d671da90e6be860cabfa88623052b71bf1c8c3af5e8cad5e68cf89",
+      "target_sha256": "77632ce1bcdc66274732cdd9816a55c318da88a38058e629b1fd8f00b3c02a25",
+      "changes": [
+        {
+          "old": "b4-decode-m16-build",
+          "new": "b4-v-m16-build",
+          "count": 3
+        },
+        {
+          "old": "b4-decode-m16-native-build-derivation",
+          "new": "b4-v-m16-native-build-derivation",
+          "count": 1
+        },
+        {
+          "old": "b4_decode_m16_native",
+          "new": "b4_v_m16_native",
+          "count": 3
+        },
+        {
+          "old": "==67",
+          "new": "==73",
+          "count": 2
+        },
+        {
+          "old": "candidate_files=67",
+          "new": "candidate_files=73",
+          "count": 1
+        },
+        {
+          "old": "Ran 74 tests",
+          "new": "Ran 78 tests",
+          "count": 1
+        },
+        {
+          "old": "current_CPU_controls=74",
+          "new": "current_CPU_controls=78",
+          "count": 1
+        },
+        {
+          "old": "cp=doc('results/b4-decode-m16-cpu-attempt1-verified.json');assert cp['exit_code']==0 and cp['status']=='B4T4_GDN_M16_actual_CPU_contracts_replayed' and cp['factory_fault_cases']==402 and cp['profile']['cases']==437",
+          "new": "cp=doc('results/b4-v-m16-cpu-attempt2-verified.json');assert cp['exit_code']==0 and cp['status']=='B4T4_V_M16_actual_CPU_contracts_replayed' and cp['factory_fault_cases']==212 and cp['profile']['cases']==1209",
+          "count": 1
+        },
+        {
+          "old": "new_GDN_M16_CPU_contracts_parent_checked=True",
+          "new": "new_GDN_M16_CPU_contracts_parent_checked=True,new_V_M16_CPU_contracts_parent_checked=True",
+          "count": 1
+        }
+      ]
+    }
+  ],
+  "scope": "Preserve all original nativebuild source/runtime/restoration,78current/86historicalCPU andQ/O factory/wire/init/native selector/tokenizer gates andoriginalthreeCUDAobject whitelist; add source73/VCPU controls without promotingfailedSDK/fullmodel/cache gates"
+}
