@@ -1,0 +1,71 @@
+{
+  "status": "actual_QG_M16_SDK_control_compatible_defaultoff_Q128_intervention_next",
+  "paired_SDK_proof_sha256": "bba6603e9704787c857846871737afa51653e94ce9527b917b1e36da6b5310da",
+  "SDK_archive_sha256": "19f0d1da2bd6ad0fc7b41041182fbb4e3765f0309b23d5b0b109598c42538c85",
+  "observed_supported_public_attributes": {
+    "ID": 67,
+    "TILE_ID": 13,
+    "STAGES_ID": 17,
+    "CTA_SWIZZLING": 1,
+    "CUSTOM_OPTION": 18,
+    "SPLITK_NUM": 1,
+    "REDUCTION_SCHEME": 0
+  },
+  "unavailable_public_attributes": {
+    "INNER_SHAPE_ID": {
+      "status": 7,
+      "bytes": 0,
+      "value_not_observed": true
+    },
+    "CLUSTER_SHAPE_ID": {
+      "status": 7,
+      "bytes": 0,
+      "value_not_observed": true
+    }
+  },
+  "geometry": {
+    "N": 12288,
+    "K": 5120
+  },
+  "SDK_checks": [
+    {
+      "M": 16,
+      "API_status": 0,
+      "state": 0,
+      "required_workspace": 0
+    },
+    {
+      "M": 32,
+      "API_status": 0,
+      "state": 0,
+      "required_workspace": 0
+    },
+    {
+      "M": 128,
+      "API_status": 0,
+      "state": 0,
+      "required_workspace": 0
+    }
+  ],
+  "required_next": [
+    "Build separate defaultoff Q128 SDK context/plugin with exact B1T128 logical text Q projection N12288 K5120 and pinnedSM120/cuBLASLt130400",
+    "Query liveSDK M16, require first-success candidate match all7observed supported attrs, AlgoCheck M16/M32/M128<=4MiB, retain SDK-owned object; do not populate unavailable INNER/CLUSTER attrs or import/patch opaque bytes",
+    "Distinct type/version/wire marker/counter, original KV/GDN guards/plugins/wires unchanged; exact frozen51-source parent derivation and strict source/profile/factory/wire negative controls",
+    "Use same activation quantizer/inputScale/weightScale/matmul alpha/outputBF16, no model tolerance or state/vector/token/array gate changes",
+    "Actual full first128 all10stage comparison and correctT32 original full-model admission; isolate independent core/O arithmetic if any remains",
+    "Original six4096 ordinary/MTP/image/state/vector/token/reset and805/broaderquality before performance"
+  ],
+  "remaining": [
+    "actual Garnet frontend negative cases",
+    "production cache fingerprint/qualified source promotion",
+    "strongest feasible repeated tuned/MTP references",
+    "true native concurrency and matched TTFT/decode/throughput/servingVRAM",
+    "matched INT4W4A16 and Qwen3.5-4B",
+    "2x fasterbaseline decode AND throughput plus additional halfTTFT"
+  ],
+  "metadata_compatibility_only": true,
+  "numerical_cause_or_model_or_performance_qualified": false,
+  "full_model_T128_admission_failed": true,
+  "new_benchmarks": false,
+  "goal_complete": false
+}
