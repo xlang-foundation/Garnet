@@ -1,0 +1,108 @@
+{
+  "status": "connected_FA_value_component_baselines_replayed",
+  "exit_code": 0,
+  "error": null,
+  "archive_sha256": "a69928200275bbccd309870ab32b05bd6fac84b27c64e796f53ab042041984a0",
+  "archive_bytes": 15046965,
+  "archive_members": 1366,
+  "phase_statuses": {
+    "reference": "connected_FA_value_components_collected",
+    "candidate": "connected_FA_value_components_collected"
+  },
+  "phase_errors": {
+    "reference": null,
+    "candidate": null
+  },
+  "observation": {
+    "status": "connected_FA_value_components_full_active_cache_observed",
+    "rows": [
+      {
+        "label": "v3",
+        "layer": 3,
+        "actual_decode_step": 5,
+        "physical_row": 0,
+        "B1_component_vs_actual_B1_cache_different_words": 0,
+        "B4_component_vs_actual_B4_cache_different_words": 0,
+        "B4_component_vs_four_B1_different_words": 1
+      },
+      {
+        "label": "v3",
+        "layer": 3,
+        "actual_decode_step": 5,
+        "physical_row": 1,
+        "B1_component_vs_actual_B1_cache_different_words": 0,
+        "B4_component_vs_actual_B4_cache_different_words": 0,
+        "B4_component_vs_four_B1_different_words": 0
+      },
+      {
+        "label": "v3",
+        "layer": 3,
+        "actual_decode_step": 5,
+        "physical_row": 2,
+        "B1_component_vs_actual_B1_cache_different_words": 0,
+        "B4_component_vs_actual_B4_cache_different_words": 0,
+        "B4_component_vs_four_B1_different_words": 0
+      },
+      {
+        "label": "v3",
+        "layer": 3,
+        "actual_decode_step": 5,
+        "physical_row": 3,
+        "B1_component_vs_actual_B1_cache_different_words": 0,
+        "B4_component_vs_actual_B4_cache_different_words": 0,
+        "B4_component_vs_four_B1_different_words": 0
+      },
+      {
+        "label": "v11",
+        "layer": 11,
+        "actual_decode_step": 1,
+        "physical_row": 0,
+        "B1_component_vs_actual_B1_cache_different_words": 0,
+        "B4_component_vs_actual_B4_cache_different_words": 0,
+        "B4_component_vs_four_B1_different_words": 0
+      },
+      {
+        "label": "v11",
+        "layer": 11,
+        "actual_decode_step": 1,
+        "physical_row": 1,
+        "B1_component_vs_actual_B1_cache_different_words": 0,
+        "B4_component_vs_actual_B4_cache_different_words": 0,
+        "B4_component_vs_four_B1_different_words": 1
+      },
+      {
+        "label": "v11",
+        "layer": 11,
+        "actual_decode_step": 1,
+        "physical_row": 2,
+        "B1_component_vs_actual_B1_cache_different_words": 0,
+        "B4_component_vs_actual_B4_cache_different_words": 0,
+        "B4_component_vs_four_B1_different_words": 0
+      },
+      {
+        "label": "v11",
+        "layer": 11,
+        "actual_decode_step": 1,
+        "physical_row": 3,
+        "B1_component_vs_actual_B1_cache_different_words": 0,
+        "B4_component_vs_actual_B4_cache_different_words": 0,
+        "B4_component_vs_four_B1_different_words": 0
+      }
+    ],
+    "all_original_cache_baselines_exact": true,
+    "all_standalone_normalizer_full_arrays_exact": true,
+    "all_component_hidden_and_V_repeats_exact": true,
+    "all_complete_zero_input_KV_caches_readonly": true,
+    "internal_fused_normalization_directly_captured": false,
+    "full_model_or_quality_or_performance_qualified": false
+  },
+  "gate_error": null,
+  "component_baselines_exact": true,
+  "source_runtime_SDK_checkpoint_CMake_all34objects_restored": true,
+  "original_failed_SDK_and_model_jobs_promoted": false,
+  "internal_fused_normalization_directly_captured": false,
+  "full_model_or_quality_or_performance_qualified": false,
+  "two_times_target_achieved": false,
+  "replay_verifier_sha256": "6e9885289efa40d69a3d0dded7860ecbeac177db4cdcb1b330731ea72b3d1905",
+  "scope": "Separate untimed connected fullDecoderChunk component reusing exact source60/DLL841 B1T4 andsource67/DLL677 B4T4. Same actualFA3step5 andFA11step1 fullprecedinghidden rows as paired readonlydiagnostic. Six originalsharedcompressedweights perlayer preserveinternalactive select/RMS/sharedQKV/BF16projection/attention/MLPgraph, no newnative/CUDA code or originalwitnessguardchange. OrdinaryFP32zeroKV/zeroPosition/zeroSlot componentcontrols deliberatelyisolatehistory-independent Vprojection; no fullmodelhidden/state/outputequivalence claimed. Requireoriginalstandaloneunmaskednormalizer exactallfullT4FP32arrays, exacttwo repeats forfullT4componenthidden andallactiveVvalues, both complete4194304wordinputcachesperrow remainzero/readonly, inputhiddenreadonly, counts4FP8/2NVFP4/6externalweights, Vcalibrations matchactualSDKfixture. Allfourrow componentB1 andcomponentB4 Vcache baselines mustreproduceallactualGarnet BF16cachewords; no droppingFA3row3 orweakenedexistingfailedSDKgate.10CPUcontrols (new6+unchanged4BF16/FP8oracle) pass, no hardwareclaimfromsyntheticfixtures. Everybaselinepin/runtime/SDK/checkpointmetadata/all34objects/CMake restored andprivatecache retiredafterexclusiveowner; no localnativeexecution. Rawsourcebundles/actualinputJSONbitroundtrip/hidden/norm/cachevectors/repeats/fullinputcachehashes/traces andfailures archived, independentremote/local replay required. Originalsource67model and2caseSDKfailedjobs stayfailed, evenifthisdifferentcomponentmethodpasses. Internalactualfusednormnotdirectlycaptured. No newbenchmark/quality/chart/performance/2xclaim; strongestrepeatedtuned/MTPrefs,matchedINT4/4B andfull4K/MTP/805/HTTPremainopen. Original connectedattempt1 failed BEFORE graph construction becauseembeddedprobe importedCASES fromNumPydependent CPythonSDKmodule. Paired failure8db5d83989da0fbc43de622dc6177764f6818b912f9cb2670696a2465980ac0e remainsfailed. Attempt2 changesonlyprobe constantimport todependency-free identicaltuple/newpreparation/job/launcher/verifier identities. Originalprobe/fullgraph/math/gatebytes retained excepttwoexactprobeimports/preppath changes. Existingexactfixture reused in SAMEfolder after comparisonwithverifiedattempt1rawarchive; no newdatafolder/copy.11CPUtests (original10+1staticembeddeddependency/derivationidentitycontract) pass. No newnative/CUDA dependency installation or numericalwaiver; originalfullscope/SDK/modelgates stayfailed/unqualified. Attempt2 independently failed in I/O setup because unusedhostembedding requestedwithoutrequiredNVFP4head, BEFORE componentgraphs; preserveitunchanged. Attempt3 replacesonlyI/Osetupwithpuretestedhelperopeningcheckpointwithoutrequestingembedding/headmodes; graph/math/allrowcache/normalizer/repeat/readonlygates unchanged. Same exact fixture reused.12CPUcontrols(original11+1I/Ocallorder/failurecleanup/source-derivationcontract). No dependency/nativeinstallation or model/performance claim. Attempt3 constructedgraphs butfailedBEFOREfirstcomponentinference in completecacheobserver: io.slice_into requirespackedrank2source, suppliedrank4cache. Attempt4 onlyaddsread-onlystorage_view(cache,[batch,4194304]) beforeboundedcompletehashslices; no graph/math/cachecoverage or gatechange. NewCPUtest compilesactualold/fixedhelperASTagainststrictfakeIO, rejectsoldrank4call andvalidatesallcompletezerocachehashesforB1/B4.13CPUcontrols(original12+cachecontract). Sameimmutablefixturefolder; originalattempt3/source/failurepreserved. No model/performance claim."
+}

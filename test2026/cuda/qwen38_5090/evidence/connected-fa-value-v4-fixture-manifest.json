@@ -1,0 +1,77 @@
+{
+  "status": "real_connected_FA_value_fixture_prepared",
+  "cases": [
+    {
+      "label": "v3",
+      "layer": 3,
+      "actual_decode_step": 5,
+      "physical_rows": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "same_consumed_inputs_and_full_preceding_hidden_and_separate_norm": true,
+      "actual_active_V_BF16_different_words": 1,
+      "input_sha256": "e0eb19c4795c4c0365119d14bd584d95184dad2e67ac1185c868fde21afc90a4",
+      "reference_active_sha256": "1b6929ac225b4af1607b1c726ec33eb2c1eaffe6d191114dceee9e34489fb097",
+      "candidate_active_sha256": "debe0ed8aabd389689b21da2834f58099833d10ef57cd01f4d8f1b6e59886021"
+    },
+    {
+      "label": "v11",
+      "layer": 11,
+      "actual_decode_step": 1,
+      "physical_rows": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "same_consumed_inputs_and_full_preceding_hidden_and_separate_norm": true,
+      "actual_active_V_BF16_different_words": 1,
+      "input_sha256": "e096b6641d78c0bdba4713695933175514c229e784e22ca848e44053d1e0283f",
+      "reference_active_sha256": "b5b54f71d7c654c53321d2d9e7c90381ea01b05523e3a8ab494053b2f16244d6",
+      "candidate_active_sha256": "d2b9ab6a54fa5b127f8317435243f9954e1e8870c5dbf69c2a883e114cef3803"
+    }
+  ],
+  "parent_archive_sha256": "95a52fcceceeeee6f74b2c9747c9fc363280821ba2d38d0805f3e7b3f1fa7dc1",
+  "files": {
+    "v3-step0-normalized.f32": {
+      "sha256": "e0eb19c4795c4c0365119d14bd584d95184dad2e67ac1185c868fde21afc90a4",
+      "bytes": 327680
+    },
+    "v3-step0-garnet-m4-active.bf16": {
+      "sha256": "1b6929ac225b4af1607b1c726ec33eb2c1eaffe6d191114dceee9e34489fb097",
+      "bytes": 8192
+    },
+    "v3-step0-garnet-m16-active.bf16": {
+      "sha256": "debe0ed8aabd389689b21da2834f58099833d10ef57cd01f4d8f1b6e59886021",
+      "bytes": 8192
+    },
+    "v11-step0-normalized.f32": {
+      "sha256": "e096b6641d78c0bdba4713695933175514c229e784e22ca848e44053d1e0283f",
+      "bytes": 327680
+    },
+    "v11-step0-garnet-m4-active.bf16": {
+      "sha256": "b5b54f71d7c654c53321d2d9e7c90381ea01b05523e3a8ab494053b2f16244d6",
+      "bytes": 8192
+    },
+    "v11-step0-garnet-m16-active.bf16": {
+      "sha256": "d2b9ab6a54fa5b127f8317435243f9954e1e8870c5dbf69c2a883e114cef3803",
+      "bytes": 8192
+    },
+    "v3-step0-hidden.f32": {
+      "sha256": "805a09b2373498b62f0c547d8d1f674f4eb1d16fe173bfb5ebba244bc56fc1c1",
+      "bytes": 327680
+    },
+    "v11-step0-hidden.f32": {
+      "sha256": "13bb69441f70f0ae5319f964975eb6f37a9a1dbacb074a0504b5e398383f8db6",
+      "bytes": 327680
+    },
+    "actual-hidden-inputs.json": {
+      "sha256": "f16b2632add6228b4a78fa09b1184b9cecab44300e3e9c26b5e5b5791cf7865d",
+      "bytes": 1296993
+    }
+  },
+  "scope": "Exactly the same eight real hidden rows and saved normalization/cache outputs as prior readonly diagnostic; JSON float input roundtrip must be bit-exact. Component uses zero ordinary FP32 KV/position/slot controls to observe V projection independent of attention history. No claimed model hidden/output equivalence."
+}
