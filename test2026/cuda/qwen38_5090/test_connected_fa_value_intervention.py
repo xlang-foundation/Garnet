@@ -1,7 +1,7 @@
 import copy,hashlib,struct,unittest
 import numpy as np
 from . import test_connected_fa_value_gate as baseline_fixtures
-from .connected_fa_value_intervention import admit
+from .connected_fa_value_intervention import admit,match_prior_baseline
 
 class Intervention(unittest.TestCase):
     def fixture(self):
@@ -27,6 +27,17 @@ class Intervention(unittest.TestCase):
         self.assertEqual(len(q['hidden']),16);self.assertEqual(sum(v['B4_component_vs_four_B1_different_words'] for v in q['baseline']['rows']),2)
         self.assertTrue(all(v['on_vs_four_B1_different_words']==0 for v in q['hidden']))
         self.assertFalse(q['full_model_or_quality_or_performance_qualified']);self.assertFalse(q['original_failed_SDK_or_model_job_promoted'])
+    def test_prior_baseline_all_arrays_and_metadata_required(self):
+        for use_reference in (True,False):
+            r,off,on,a,f=self.fixture();current=r if use_reference else off
+            for row in current['cases']:row['weight_metadata']={'actual_pinned_weight':'fixture'}
+            prior=copy.deepcopy(current);self.assertEqual(match_prior_baseline(current,prior,a.__getitem__,a.__getitem__)['arrays'],56 if use_reference else 14)
+            for mutation in ('hidden','metadata'):
+                changed=copy.deepcopy(current)
+                if mutation=='metadata':changed['cases'][0]['weight_metadata']={}
+                else:
+                    entry=changed['cases'][0]['repeats'][1]['component_hidden'];old=entry['file'];entry['file']='changed-'+old;raw=a[old];self.change(entry,a,raw[:-4]+struct.pack('<f',99.))
+                with self.assertRaises(AssertionError):match_prior_baseline(changed,prior,a.__getitem__,a.__getitem__)
     def test_original_off_baseline_cannot_be_replaced_with_corrected_values(self):
         r,off,on,a,f=self.fixture()
         for before,after in zip(off['cases'],on['cases']):

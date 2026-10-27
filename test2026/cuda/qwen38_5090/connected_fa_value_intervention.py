@@ -3,6 +3,21 @@ import numpy as np
 from .connected_fa_value_gate import observe,admit as baseline_admit
 from .decode_boundary_analysis import blob
 
+def match_prior_baseline(report,prior,read,read_prior):
+    assert report['mode']==prior['mode'] and report['physical_batch']==prior['physical_batch']
+    batch=report['physical_batch'];assert batch in (1,4) and len(report['cases'])==len(prior['cases'])==(8 if batch==1 else 2)
+    fields=('label','layer','actual_decode_step','physical_rows','input_cache_sha256_before','input_cache_sha256_after','input_after_sha256','weight_metadata')
+    arrays=0
+    for current,old in zip(report['cases'],prior['cases']):
+        assert all(current[key]==old[key] for key in fields)
+        assert blob(current['input'],read,batch*81920)==blob(old['input'],read_prior,batch*81920);arrays+=1
+        assert len(current['repeats'])==len(old['repeats'])==2
+        for i,(a,b) in enumerate(zip(current['repeats'],old['repeats'])):
+            assert a['repeat']==b['repeat']==i and a['input_after_sha256']==b['input_after_sha256']
+            for key,width in [('unmasked_normalized',81920),('component_hidden',81920),('component_V',4096)]:
+                assert blob(a[key],read,batch*width)==blob(b[key],read_prior,batch*width),'New reference/off capture changed from paired prior component baseline';arrays+=1
+    return dict(status='all_prior_component_input_normalizer_hidden_V_arrays_exact',arrays=arrays)
+
 def admit(reference,off,on,read_reference,read_off,read_on,read_fixture):
     baseline=baseline_admit(reference,off,read_reference,read_off,read_fixture)
     intervention=observe(reference,on,read_reference,read_on,read_fixture)

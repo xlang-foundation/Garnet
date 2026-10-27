@@ -1,0 +1,48 @@
+from pathlib import Path
+import ast,hashlib,json
+R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';E=M/'evidence';sha=lambda raw:hashlib.sha256(raw).hexdigest();rows=[]
+def derive(old,new,changes):
+    original=(M/old).read_bytes();raw=original;record=[]
+    for a,b,count in changes:
+        if b'\r\n' in original:a=a.replace('\n','\r\n');b=b.replace('\n','\r\n')
+        assert raw.count(a.encode())==count,(old,a,raw.count(a.encode()));raw=raw.replace(a.encode(),b.encode());record.append(dict(old=a,new=b,count=count))
+    target=M/new;assert not target.exists();ast.parse(raw);target.write_bytes(raw);rows.append(dict(source=old,target=new,source_sha256=sha(original),target_sha256=sha(raw),changes=record))
+derive('probe_connected_fa_value_v4.py','probe_v_m16_connected.py',[
+('root,out,mode=Path(sys.argv[1]),Path(sys.argv[2]),sys.argv[3];assert mode in (\'reference\',\'candidate\') and not out.exists();','root,out,phase=Path(sys.argv[1]),Path(sys.argv[2]),sys.argv[3];assert phase in (\'reference\',\'off\',\'on\') and not out.exists();mode=\'reference\' if phase==\'reference\' else \'candidate\';',1),
+('evidence/connected-fa-value-v4-preparation.json','evidence/v-m16-connected-preparation.json',1),
+("'GARNET_FP8_GDN_BATCH4_DECODE_CANONICAL':'0' if mode=='reference' else '1'","'GARNET_FP8_GDN_BATCH4_DECODE_CANONICAL':'0' if mode=='reference' else '1','GARNET_FP8_V_BATCH4_DECODE_CANONICAL':'1' if phase=='on' else '0'",1),
+('report=dict(status=\'constructing\',mode=mode,','report=dict(status=\'constructing\',mode=mode,intervention_phase=phase,',1)])
+derive('launch_connected_fa_value_v4.py','launch_v_m16_connected.py',[
+("mode=sys.argv[4];reference=Path(sys.argv[5]);assert mode in ('reference','candidate');","phase=sys.argv[4];reference=Path(sys.argv[5]);assert phase in ('reference','off','on');mode='reference' if phase=='reference' else 'candidate';",1),
+('evidence/connected-fa-value-v4-preparation.json','evidence/v-m16-connected-preparation.json',1),
+("env['GARNET_MODELOPT_INIT_TRACE']='1' if mode=='candidate' else '0'","env['GARNET_MODELOPT_INIT_TRACE']='1' if mode=='candidate' else '0';env['GARNET_VM16_FACTORY_TRACE']='1' if mode=='candidate' else '0';env['GARNET_FP8_V_BATCH4_DECODE_CANONICAL']='1' if phase=='on' else '0'",1),
+("str(m/'probe_connected_fa_value_v4.py'),str(root),str(out),mode,str(reference)","str(m/'probe_v_m16_connected.py'),str(root),str(out),phase,str(reference)",1)])
+old='run_connected_fa_value_v4.py';original=(M/old).read_text();begin=original.index("        for mode in ('reference','candidate'):");end=original.index('    except BaseException as error:',begin);block=original[begin:end]
+newblock='''        from test2026.cuda.qwen38_5090.connected_fa_value_intervention import admit,match_prior_baseline
+        from test2026.cuda.qwen38_5090.v_m16_component_trace import route_trace,assert_disabled
+        with zipfile.ZipFile(ROOT/'results/connected-fa-value-attempt4-evidence.zip') as prior:
+            prior_base='results/connected-fa-value-attempt4/'
+            for phase in ('reference','off','on'):
+                mode='reference' if phase=='reference' else 'candidate';idle()
+                for n,b in sources[mode].items():installed[n]=b;(ROOT/'Garnet'/n).write_bytes(b)
+                inventory={**p['files'],**{'Garnet/'+n:h for n,h in p[mode+'_source_files'].items()}};assert inventory==p[mode+'_installed_files']
+                library.write_bytes(saved[mode].read_bytes());assert sha(library)==p[mode+'_library_sha256'];w['phases'].append(dict(mode=phase,source_installed={n:sha(ROOT/n) for n in inventory},library_sha256=sha(library),exit_code=None));save()
+                argv=[sys.executable,str(M/'monitor_native_probe.py'),'--study',str(ROOT),'--output',str(out/(phase+'-resources')),'--',sys.executable,str(M/'launch_v_m16_connected.py'),str(ROOT),str(out/phase),str(cache),phase,str(out/'reference')]
+                code=ledger.run(argv,out/(phase+'-ledger'),'correctness','Untimed original connected fullDecoderChunk, actual FA3step5/FA11step1 inputs, all six compressed weights, zero ordinary FP32 histories. Reference and off must reproduce prior full arrays and cache baselines; on exact V/fullT4hidden fourB1 equality plus liveSDKroute required. No fullmodel/performance claim.',common+[library]);w['phases'][-1]['exit_code']=code;save();idle()
+                if code:raise RuntimeError(phase+' capture failed; preserve all raw witnesses')
+                report=json.loads((out/phase/'report.json').read_bytes());log=(out/(phase+'-ledger/commands.log')).read_bytes()
+                if phase in ('reference','off'):
+                    baseline_mode='reference' if phase=='reference' else 'candidate';oldreport=json.loads(prior.read(prior_base+baseline_mode+'/report.json'))
+                    w[phase+'_prior_full_arrays']=match_prior_baseline(report,oldreport,lambda n:(out/phase/n).read_bytes(),lambda n:prior.read(prior_base+baseline_mode+'/'+n));w[phase+'_no_V_route']=assert_disabled(log);save()
+                else:w['actual_V_route']=route_trace(log);save()
+                if phase=='off':
+                    from test2026.cuda.qwen38_5090.connected_fa_value_gate import admit as baseline_admit
+                    w['off_baseline_admission']=baseline_admit(json.loads((out/'reference/report.json').read_bytes()),report,lambda n:(out/'reference'/n).read_bytes(),lambda n:(out/'off'/n).read_bytes(),lambda n:(fixture/n).read_bytes());save()
+        reports={phase:json.loads((out/phase/'report.json').read_bytes()) for phase in ('reference','off','on')}
+        w['component_admission']=admit(reports['reference'],reports['off'],reports['on'],lambda n:(out/'reference'/n).read_bytes(),lambda n:(out/'off'/n).read_bytes(),lambda n:(out/'on'/n).read_bytes(),lambda n:(fixture/n).read_bytes());(out/'analysis.json').write_bytes(json.dumps(w['component_admission'],indent=2).encode());save()
+        w['status']='V_M16_connected_off_on_exact_component_unqualified_model_or_performance';code=0
+'''
+derive(old,'run_v_m16_connected.py',[
+('connected-fa-value-attempt4','v-m16-connected-attempt1',1),('evidence/connected-fa-value-v4-preparation.json','evidence/v-m16-connected-preparation.json',1),('connected_FA_value_v4_prepared_GPU_unrun','V_M16_connected_prepared_GPU_unrun',1),("len(sources['candidate'])==67","len(sources['candidate'])==73",1),
+("'test2026.cuda.qwen38_5090.test_connected_fa_value_cache_contract'","'test2026.cuda.qwen38_5090.test_connected_fa_value_cache_contract','test2026.cuda.qwen38_5090.test_connected_fa_value_intervention','test2026.cuda.qwen38_5090.test_v_m16_component_trace'",1),('13 CPU controls','24 CPU controls',1),(block,newblock,1)])
+target=E/'v-m16-connected-owner-derivation.json';assert not target.exists();target.write_bytes(json.dumps(dict(derivations=rows,scope='Original faithful connected v4 graph/math/fixtures/cacheview unchanged; three source60reference/source73off/source73on phases, separate fresh embedded processes and nonce engine paths; retainalloriginal CPU/input/cache/normalizer/finite/repeat/restore gates; add exactpriorbaseline arrays and strictV/fullT4hidden/liveSDKroute admission. No fullmodel/quality/performance promotion.'),indent=2).encode());print(json.dumps(dict(files=len(rows))))

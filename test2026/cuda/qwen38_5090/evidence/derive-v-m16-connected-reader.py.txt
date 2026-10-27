@@ -1,0 +1,48 @@
+from pathlib import Path
+import ast,hashlib,json
+R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';E=M/'evidence';sha=lambda b:hashlib.sha256(b).hexdigest();source='verify_connected_fa_value_v4.py';target='verify_v_m16_connected.py';original=(M/source).read_bytes();raw=original;changes=[]
+def change(a,b,count):
+    global raw
+    if b'\r\n' in original:a=a.replace('\n','\r\n');b=b.replace('\n','\r\n')
+    assert raw.count(a.encode())==count,(a,raw.count(a.encode()));raw=raw.replace(a.encode(),b.encode());changes.append(dict(old=a,new=b,count=count))
+change('from test2026.cuda.qwen38_5090.connected_fa_value_gate import observe,admit','from test2026.cuda.qwen38_5090.connected_fa_value_gate import observe\nfrom test2026.cuda.qwen38_5090.connected_fa_value_intervention import admit,match_prior_baseline\nfrom test2026.cuda.qwen38_5090.v_m16_component_trace import route_trace,assert_disabled',1)
+change("JOB='connected-fa-value-attempt4'","JOB='v-m16-connected-attempt1'",1);change('evidence/connected-fa-value-v4-preparation.json','evidence/v-m16-connected-preparation.json',1)
+change("('verify_connected_fa_value_v4.py','connected_fa_value_runtime.py'","('verify_v_m16_connected.py','connected_fa_value_intervention.py','v_m16_component_trace.py','connected_fa_value_runtime.py'",1)
+change("        for mode in ('reference','candidate'):\n            assert sha(z.read(p[mode+'_bundle']))", "        verify_derivations(json.loads(z.read(P+'evidence/v-m16-connected-owner-derivation.json')),lambda n:z.read(P+n))\n        verify_derivations(json.loads(z.read(P+'evidence/v-m16-connected-reader-derivation.json')),lambda n:z.read(P+n))\n        for mode in ('reference','candidate'):\n            assert sha(z.read(p[mode+'_bundle']))",1)
+change('Ran 13 tests','Ran 24 tests',1)
+old="""        for phase in w['phases']:
+            mode=phase['mode'];assert mode not in reports and mode in ('reference','candidate') and phase['source_installed']==p[mode+'_installed_files'] and phase['library_sha256']==p[mode+'_library_sha256'] and commands(mode,p[mode+'_installed_files'])==phase['exit_code']
+            if BASE+mode+'/report.json' in mf['files']:
+                report=json.loads(z.read(BASE+mode+'/report.json'));assert report['library_sha256']==p[mode+'_library_sha256'] and report['mode']==mode and report['fixture_manifest_sha256']==w['fixture_manifest_sha256'];reports[mode]=report
+"""
+new="""        for phase in w['phases']:
+            name=phase['mode'];mode='reference' if name=='reference' else 'candidate';assert name not in reports and name in ('reference','off','on') and phase['source_installed']==p[mode+'_installed_files'] and phase['library_sha256']==p[mode+'_library_sha256'] and commands(name,p[mode+'_installed_files'])==phase['exit_code']
+            if BASE+name+'/report.json' in mf['files']:
+                report=json.loads(z.read(BASE+name+'/report.json'));assert report['library_sha256']==p[mode+'_library_sha256'] and report['mode']==mode and report['intervention_phase']==name and report['fixture_manifest_sha256']==w['fixture_manifest_sha256'];reports[name]=report
+        with zipfile.ZipFile(a.proofs/'connected-fa-value-attempt4-evidence.zip') as previous:
+            for name in ('reference','off'):
+                if name not in reports or reports[name]['status']!='connected_FA_value_components_collected':continue
+                oldmode='reference' if name=='reference' else 'candidate';oldbase='results/connected-fa-value-attempt4/'+oldmode+'/'
+                expected=match_prior_baseline(reports[name],json.loads(previous.read(oldbase+'report.json')),lambda n:z.read(BASE+name+'/'+n),lambda n:previous.read(oldbase+n));assert expected==w[name+'_prior_full_arrays']
+                assert assert_disabled(z.read(BASE+name+'-ledger/commands.log'))==w[name+'_no_V_route']
+        if 'on' in reports and reports['on']['status']=='connected_FA_value_components_collected':assert route_trace(z.read(BASE+'on-ledger/commands.log'))==w['actual_V_route']
+"""
+change(old,new,1)
+text=raw.decode();start=text.index('        observation=None;admission=None;gate_error=None');end=text.index('        result=dict(',start);old=text[start:end]
+new="""        observation=None;admission=None;gate_error=None
+        if 'reference' in reports and 'off' in reports and all(reports[n]['status']=='connected_FA_value_components_collected' for n in ('reference','off')):
+            r=lambda n:z.read(BASE+'reference/'+n);off=lambda n:z.read(BASE+'off/'+n);f=lambda n:z.read(F+n)
+            observation=observe(reports['reference'],reports['off'],r,off,f)
+            from test2026.cuda.qwen38_5090.connected_fa_value_gate import admit as baseline_admit
+            assert baseline_admit(reports['reference'],reports['off'],r,off,f)==w['off_baseline_admission']
+            if 'on' in reports and reports['on']['status']=='connected_FA_value_components_collected':
+                try:admission=admit(reports['reference'],reports['off'],reports['on'],r,off,lambda n:z.read(BASE+'on/'+n),f)
+                except AssertionError as error:gate_error=repr(error);assert w['exit_code']!=0 and 'component_admission' not in w
+                if admission is not None:assert admission==w['component_admission']==json.loads(z.read(BASE+'analysis.json'))
+        if w['exit_code']==0:assert admission is not None and w['status']=='V_M16_connected_off_on_exact_component_unqualified_model_or_performance' and [q['mode'] for q in w['phases']]==['reference','off','on'] and all(q['exit_code']==0 for q in w['phases'])
+        else:assert w['status']=='failed' and isinstance(w['error'],str)
+"""
+change(old,new,1)
+change("'connected_FA_value_component_baselines_replayed' if admission is not None else 'connected_FA_value_component_failure_replayed'","'V_M16_connected_off_on_exact_component_replayed' if admission is not None else 'V_M16_connected_component_failure_replayed'",1)
+change('observation=observation,gate_error=gate_error','observation=observation,intervention=admission,actual_V_route=w.get(\'actual_V_route\'),prior_full_arrays={n:w[n+\'_prior_full_arrays\'] for n in (\'reference\',\'off\') if n+\'_prior_full_arrays\' in w},gate_error=gate_error',1)
+ast.parse(raw);path=M/target;assert not path.exists();path.write_bytes(raw);record=dict(derivations=[dict(source=source,target=target,source_sha256=sha(original),target_sha256=sha(raw),changes=changes)],scope='Retain original independent rawmanifest/fixture-realinputs/actualweightscales/source-runtime-SDK-checkpoint-all34-CMake/CPU/repeats/finite/restoration checks; add exact priorfullarray offbaseline, thirdphase actualV route andfullT4hidden/V equality. Fullmodel/quality/performance not admitted.');path=E/'v-m16-connected-reader-derivation.json';assert not path.exists();path.write_bytes(json.dumps(record,indent=2).encode());print('V_CONNECTED_INDEPENDENT_READER_PREPARED')
