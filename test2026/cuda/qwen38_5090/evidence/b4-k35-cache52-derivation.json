@@ -1,0 +1,167 @@
+{
+  "derivations": [
+    {
+      "source": "probe_b4_full4k_selection52.py",
+      "target": "probe_b4_k35_cache52.py",
+      "source_sha256": "da15db00333704bfdabb246b90e5bb0618607a552084efa2386add0aee7caec6",
+      "target_sha256": "52446b2aa93991223da0c5b88b4a6210d63df82c1f67f618d8fccd05363dc504",
+      "changes": [
+        {
+          "old": "evidence/b4-full4k-selection52-preparation.json",
+          "new": "evidence/b4-k35-cache52-preparation.json",
+          "count": 1
+        },
+        {
+          "old": "    from test2026.cuda.qwen38_5090.b4_full4k_selection52 import STEPS",
+          "new": "    from test2026.cuda.qwen38_5090.b4_full4k_selection52 import STEPS\n    from test2026.cuda.qwen38_5090.b4_k35_cache52 import capture_key",
+          "count": 1
+        },
+        {
+          "old": "assert decoder.slots==[v+52 for v in lengths];decoder.reset()",
+          "new": "assert decoder.slots==[v+52 for v in lengths];record['key35_cache52']=capture_key(io,decoder.state,decoder.programs[4].layout,batch,0 if batch==1 else 2,out,'case'+str(group_index)+'-step52',record['final_state']['logical']['components'][70]);save();decoder.reset()",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "launch_b4_full4k_selection52.py",
+      "target": "launch_b4_k35_cache52.py",
+      "source_sha256": "280fed6492f3810646a92db9a6470abb9a63e46fbbb1701fe3f9027067e266b7",
+      "target_sha256": "403382a508500f3f17529fa01905a658becbd3d1825563a11ad7590082716dc3",
+      "changes": [
+        {
+          "old": "evidence/b4-full4k-selection52-preparation.json",
+          "new": "evidence/b4-k35-cache52-preparation.json",
+          "count": 1
+        },
+        {
+          "old": "probe_b4_full4k_selection52.py",
+          "new": "probe_b4_k35_cache52.py",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "run_b4_full4k_selection52.py",
+      "target": "run_b4_k35_cache52.py",
+      "source_sha256": "e46bec1d994319fb6fb16e5b8afce3aabdc4ec92cbe288b7f121620739a1932a",
+      "target_sha256": "2a9beceaf2b6871b34a2554570b4c797df1ec69c460422a68c3d802270aa429c",
+      "changes": [
+        {
+          "old": "JOB='b4-full4k-selection52-attempt1'",
+          "new": "JOB='b4-k35-cache52-attempt1'",
+          "count": 1
+        },
+        {
+          "old": "evidence/b4-full4k-selection52-preparation.json",
+          "new": "evidence/b4-k35-cache52-preparation.json",
+          "count": 1
+        },
+        {
+          "old": "p['status']=='B4_full4k_selection52_prepared_GPU_unrun'",
+          "new": "p['status']=='B4_key35_cache52_prepared_GPU_unrun'",
+          "count": 1
+        },
+        {
+          "old": "'test2026.cuda.qwen38_5090.test_b4_full4k_selection52'",
+          "new": "'test2026.cuda.qwen38_5090.test_b4_full4k_selection52','test2026.cuda.qwen38_5090.test_b4_k35_cache52'",
+          "count": 1
+        },
+        {
+          "old": "launch_b4_full4k_selection52.py",
+          "new": "launch_b4_k35_cache52.py",
+          "count": 1
+        },
+        {
+          "old": "One B1 reference for firstmixedbatch differingID52 row, thenwholeB4mixedgroup. Originalmodelgraphs/weights/precision/head/nativeDLLs unchanged,3968prompt+53outputs/cap4096. Complete128component/physical-logicalhash/finitehidden-normalizedvectors after7and52steps. All52consumedIDs mustmatch; ID52 isunconsumed. Match53same-profileIDs+endpoints againstoriginalfull4Kfailedparent; matchallcurrentstep7primaryrowsagainstqualifiedearlyprefix.33CPU/actualGDN-V-QKroute/restoration guards; no observer/kernel/nativebuild/timing/quality/performanceadmission.",
+          "new": "Read-only completekey35cache8MiBcarriers after52decodersteps, selectedB1/wholeB4mixedgroup. Twofullreads,2x4MiBchunks/row, expandedSHA256 mustmatchactualcompletecomponent70witness; all4heads4096slots256dims comparedBF16bits. Reproduceall53IDs andfivecompleteordinaryprimarycaptures (reset,prefill,step7,step52,reset) forselectedB1/allfourB4rows againstqualifiedselection52parent BEFORE interpretingrawcache.38CPU andallpriorroute/restorationguards retained. No graphobserver/modelmath/nativeDLL/kernel/precision changes, timing orquality/performanceadmission.",
+          "count": 1
+        },
+        {
+          "old": "        w['observation']=observe(selection,p['selected_key'],reference,candidate,read_reference,read_candidate);(out/'analysis.json').write_bytes(json.dumps(w['observation'],indent=2).encode());save()",
+          "new": "        w['observation']=observe(selection,p['selected_key'],reference,candidate,read_reference,read_candidate);(out/'analysis.json').write_bytes(json.dumps(w['observation'],indent=2).encode());save()\n        from test2026.cuda.qwen38_5090.b4_k35_cache52 import analyze as analyze_key_cache\n        with zipfile.ZipFile(ROOT/'results/b4-full4k-selection52-attempt1-evidence.zip') as parent:\n            base='results/b4-full4k-selection52-attempt1/'\n            old_reference=json.loads(parent.read(base+'reference/report.json'));old_candidate=json.loads(parent.read(base+'candidate/report.json'))\n            w['cache_observation']=analyze_key_cache(selection,p['selected_key'],reference,candidate,old_reference,old_candidate,read_reference,read_candidate,lambda key,name:parent.read(base+'reference/'+name),lambda name:parent.read(base+'candidate/'+name))\n        (out/'cache-analysis.json').write_bytes(json.dumps(w['cache_observation'],indent=2).encode());save()",
+          "count": 1
+        },
+        {
+          "old": "w['status']='selected_step52_diagnostic_collected_no_numerical_admission'",
+          "new": "w['status']='key35_cache52_diagnostic_collected_no_numerical_admission'",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "verify_b4_full4k_selection52.py",
+      "target": "verify_b4_k35_cache52.py",
+      "source_sha256": "3e5c8b509570f4bd86d7d41b740d3b0c92c96100482e86d752a711c6dce49953",
+      "target_sha256": "31b9fdd77cf8c05d68f4fa987d2ad650dd96f99d044c4bd28d55151af7c09993",
+      "changes": [
+        {
+          "old": "from test2026.cuda.qwen38_5090.b4_full4k_inputs import load_corpus",
+          "new": "from test2026.cuda.qwen38_5090.b4_full4k_inputs import load_corpus\nfrom test2026.cuda.qwen38_5090.b4_k35_cache52 import analyze as analyze_key_cache",
+          "count": 1
+        },
+        {
+          "old": "JOB='b4-full4k-selection52-attempt1'",
+          "new": "JOB='b4-k35-cache52-attempt1'",
+          "count": 1
+        },
+        {
+          "old": "evidence/b4-full4k-selection52-preparation.json",
+          "new": "evidence/b4-k35-cache52-preparation.json",
+          "count": 1
+        },
+        {
+          "old": "'verify_b4_full4k_selection52.py'",
+          "new": "'verify_b4_full4k_selection52.py','b4_k35_cache52.py','verify_b4_k35_cache52.py'",
+          "count": 1
+        },
+        {
+          "old": "verify_derivations(json.loads(z.read(P+'evidence/b4-full4k-selection52-derivation.json')),lambda n:z.read(P+n))",
+          "new": "verify_derivations(json.loads(z.read(P+'evidence/b4-full4k-selection52-derivation.json')),lambda n:z.read(P+n))\n        verify_derivations(json.loads(z.read(P+'evidence/b4-k35-cache52-derivation.json')),lambda n:z.read(P+n))",
+          "count": 1
+        },
+        {
+          "old": "b'Ran 33 tests'",
+          "new": "b'Ran 38 tests'",
+          "count": 1
+        },
+        {
+          "old": "observation=route=full=None;route_error=None;strict=False",
+          "new": "observation=route=full=cache_observation=None;route_error=None;strict=False",
+          "count": 1
+        },
+        {
+          "old": "            observation=observe(selection,p['selected_key'],reference,candidate,r,c);assert observation==w['observation']==json.loads(z.read(BASE+'analysis.json'))",
+          "new": "            observation=observe(selection,p['selected_key'],reference,candidate,r,c);assert observation==w['observation']==json.loads(z.read(BASE+'analysis.json'))\n            with zipfile.ZipFile(a.proofs/'b4-full4k-selection52-attempt1-evidence.zip') as parent:\n                base='results/b4-full4k-selection52-attempt1/'\n                old_reference=json.loads(parent.read(base+'reference/report.json'));old_candidate=json.loads(parent.read(base+'candidate/report.json'))\n                cache_observation=analyze_key_cache(selection,p['selected_key'],reference,candidate,old_reference,old_candidate,r,c,lambda key,n:parent.read(base+'reference/'+n),lambda n:parent.read(base+'candidate/'+n))\n            assert cache_observation==w['cache_observation']==json.loads(z.read(BASE+'cache-analysis.json'))",
+          "count": 1
+        },
+        {
+          "old": "if w['exit_code']==0:assert full is not None and w['original_full4k_admission_still_failed'];strict=True",
+          "new": "if w['exit_code']==0:assert full is not None and cache_observation is not None and w['original_full4k_admission_still_failed'];strict=True",
+          "count": 1
+        },
+        {
+          "old": "w['status']=='selected_step52_diagnostic_collected_no_numerical_admission'",
+          "new": "w['status']=='key35_cache52_diagnostic_collected_no_numerical_admission'",
+          "count": 1
+        },
+        {
+          "old": "status='selected_step52_diagnostic_replayed' if strict else 'selected_step52_job_failure_replayed'",
+          "new": "status='key35_cache52_diagnostic_replayed' if strict else 'key35_cache52_job_failure_replayed'",
+          "count": 1
+        },
+        {
+          "old": "observation=observation,actual_GDN_M16_route",
+          "new": "observation=observation,cache_observation=cache_observation,actual_GDN_M16_route",
+          "count": 1
+        },
+        {
+          "old": "def main():",
+          "new": "def main():\n    import numpy as np\n    print('INTEGER_BF16_CACHE_REPLAY_NUMPY',np.__version__,flush=True)",
+          "count": 1
+        }
+      ]
+    }
+  ],
+  "scope": "Puredataread extension ofunchangedordinaryselection52probe. Capturecomplete8MiBkey35carriers twiceviaexistingio.slice_into/row/finite_f32_bytes, afterlastpredictionandbefore reset; no graph/kernel/math/nativebuild changes. ExpandedSHA256 linkedtoactualcompletecomponent70witness. InterpretfullrawBF16cacheonlyafter all53IDs/fivefullprimarycaptures repeatordinarysameprofileparent forselectedB1/allfourB4. Scheduledwriterstep derivesfromdifferentcache slot, notuniqueoperatorcausality orprovenmutationtime.38CPU, oldroute/source/runtime/SDK/config-index/CMake/all34/baselineguards remain. Original128IDfull4K FAILED, no quality/performanceadmission."
+}

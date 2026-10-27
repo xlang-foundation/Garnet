@@ -1,0 +1,39 @@
+from pathlib import Path
+import ast,hashlib,json,os,sys,zipfile
+W=Path(__file__).resolve().parent;O=W.parent/'outputs';R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';E=M/'evidence';P='Garnet/test2026/cuda/qwen38_5090/';sha=lambda b:hashlib.sha256(b).hexdigest();sys.path[:0]=[str(R),str(M)]
+from test2026.cuda.qwen38_5090.fa_value_sdk_control import verify_derivations
+old=json.loads((E/'b4-full4k-selection52-preparation.json').read_bytes());job='b4-full4k-selection52-attempt1';proof=(O/(job+'-verified.json')).read_bytes();assert proof==(O/(job+'-remote-verified.json')).read_bytes();q=json.loads(proof)
+assert q['exit_code']==0 and q['diagnostic_completed'] and not q['strict_full4k_admission_passed'] and q['source_runtime_SDK_checkpoint_CMake_all34objects_restored'] and not q['MTP_805_HTTP_or_performance_qualified'];assert sha((O/(job+'-evidence.zip')).read_bytes())==q['archive_sha256']
+ob=q['observation'];assert ob['all52_consumed_IDs_exact'] and not ob['step52_state_hidden_normalized_exact'] and not ob['token_selection_path_differs_with_exact_decoder_state']
+changed=ob['checkpoints'][1]['comparison']['different_component_indices'];assert changed[0]==70 and 71 not in changed and ob['checkpoints'][0]['comparison']['all_exact'] and ob['physical_row']==2
+with zipfile.ZipFile(O/(job+'-evidence.zip')) as z:
+    w=json.loads(z.read('results/'+job+'/workflow.json'));assert w['cleanup_finished'] and w['exit_code']==0 and w['build_artifacts_unchanged'] and w['source_after']==old['files'] and w['cuda_objects_after']==old['cuda_objects']
+names=['b4_k35_cache52.py','test_b4_k35_cache52.py','probe_b4_k35_cache52.py','launch_b4_k35_cache52.py','run_b4_k35_cache52.py','verify_b4_k35_cache52.py','evidence/b4-k35-cache52-derivation.json','evidence/b4-full4k-selection52-preparation.json']
+new={P+n:sha((M/n).read_bytes()) for n in names};files=dict(old['files'])
+for n,h in new.items():assert n not in files or files[n]==h
+files.update(new);verify_derivations(json.loads((E/'b4-k35-cache52-derivation.json').read_bytes()),lambda n:(M/n).read_bytes())
+for n in names:
+    if n.endswith('.py'):ast.parse((M/n).read_bytes())
+parents={**old['parents'],job:dict(proof_sha256=sha(proof),archive_sha256=q['archive_sha256'],exit_code=0,status=q['status'])}
+for name,row in parents.items():
+    raw=(O/(name+'-verified.json')).read_bytes();qq=json.loads(raw);assert raw==(O/(name+'-remote-verified.json')).read_bytes() and sha(raw)==row['proof_sha256'] and qq['archive_sha256']==row['archive_sha256']==sha((O/(name+'-evidence.zip')).read_bytes()) and qq['exit_code']==row['exit_code'] and qq['status']==row['status']
+p={**old,'status':'B4_key35_cache52_prepared_GPU_unrun','files':files,'new_files':new,'archive_files':{**old['archive_files'],**new},'parents':parents,'audit_dependencies':{**old['audit_dependencies'],'results/'+job+'-evidence.zip':q['archive_sha256']},'cache_locus':dict(layer=35,role=1,component=70,heads=4,capacity=4096,dimension=256,physical_bytes=8388608,parent_proof_sha256=sha(proof)),
+   'scope':'Read-onlycompletekey35cachecarriers after52decodecalls,selectedB1textreference/wholeB4mixedgroup. Actualparent398fbprovesall52consumedIDs exact, step7allstate exact, step52firstdifferentstoredcomponent70(K35),V35component71exact; nohead-onlydiagnosis. Twice-read8MiBrawcacheviaexistingGPUcopies linkedbyBF16expandedSHA256toactualcompletecomponent70witness. All4heads/4096slots/256dims comparedBF16bits includingprompt/inactive, exactrawgeometry/sourcebounds. Beforeinterpretation reproduceall53same-profileIDs andfivefull128componentphysical-logicalhash/finitehidden-normalizedvector primarycaptures (reset,prefill,step7,step52,reset) forselectedB1/ALL4B4rows againstordinaryselection52parent. Rawslot mapscheduledwriterstep isnotproof ofmutationtime oruniqueoperatorcausality. Source60/source79nativeDLLs/modelgraphs/weights/precision/head unchanged; noobserver/kernel/nativebuild/default/tolerance changes.38CPU, allpriorGDN/V/QKactualroutes andownedsource/runtime/SDK/config-index/CMake/all34/baseline/SSDguards preserved. NumPyintegerbitreplayversion loggedseparately. Original128IDfull4K FAILED; noMTP/quality/HTTP/timing/performance/2xadmission.'}
+p['reference_installed_files']={**files,**{'Garnet/'+n:h for n,h in p['reference_source_files'].items()}};p['candidate_installed_files']={**files,**{'Garnet/'+n:h for n,h in p['candidate_source_files'].items()}}
+assert len(p['candidate_source_files'])==79 and len(p['reference_source_files'])==60 and len(p['cuda_objects'])==34 and not any('probe_native_external_prefix_batch.py' in n for n in files)
+prep=E/'b4-k35-cache52-preparation.json';assert not prep.exists();prep.write_bytes(json.dumps(p,indent=2).encode())
+import run_logged as ledger
+ledger.source_identity=lambda:dict(scope='ExplicitCPUonly key35rawcachepreparation; no native/GPU/protectedbody reads',owned_source_sha256=new);os.chdir(R)
+tests=['test_b4_b1_short_m16_gate','test_b4_v_m16_short_route','test_b4_qk_m16_short_route','test_b4_full4k_inputs','test_b4_full4k_exact_gate','test_b4_full4k_decode_prefix','test_b4_full4k_selection52','test_b4_k35_cache52']
+assert ledger.run([sys.executable,'-m','unittest',*['test2026.cuda.qwen38_5090.'+n for n in tests]],W/'b4-k35-cache52-cpu-ledger','correctness','38CPU original33+5new completecachecapture2chunks/tworeads/selectedrow/component70hash/allheads-slots-lastdimension/prompt-inactive/signedzero/NaN/geometry/truncation/integratedprimaryparity controls; full4Kfailedgate staysFAILED',[M/n for n in names]+[prep])==0
+deploy={n:R/n.removeprefix('Garnet/') for n in new};deploy[P+'evidence/b4-k35-cache52-preparation.json']=prep;target=W/'b4-k35-cache52-deployment.zip';assert not target.exists()
+with zipfile.ZipFile(target,'x',zipfile.ZIP_DEFLATED) as z:
+    for n,path in deploy.items():z.write(path,n)
+    z.writestr('deployment-manifest.json',json.dumps(dict(files={n:sha(path.read_bytes()) for n,path in deploy.items()},source_runtime_install_deferred=True),indent=2))
+receipt=dict(status=p['status'],files=len(deploy),deployment_sha256=sha(target.read_bytes()),bytes=target.stat().st_size,preparation_sha256=sha(prep.read_bytes()),candidate_library_sha256=p['candidate_library_sha256'],source_inventory=len(files),selected_key=p['selected_key'],cache_locus=p['cache_locus']);(W/'b4-k35-cache52-package.json').write_bytes(json.dumps(receipt,indent=2).encode())
+raw=(W/'install-b4-full4k-selection52.py').read_bytes();pkg=json.loads((W/'b4-full4k-selection52-package.json').read_bytes())
+for a,b in [('b4-full4k-selection52','b4-k35-cache52'),('B4_full4k_selection52','B4_key35_cache52'),(pkg['deployment_sha256'],receipt['deployment_sha256']),('len(mf)+1==10','len(mf)+1=='+str(len(deploy)+1))]:assert raw.count(a.encode())>0;raw=raw.replace(a.encode(),b.encode())
+(W/'install-b4-k35-cache52.py').write_bytes(raw)
+raw=(W/'postprocess-b4-full4k-selection52.py').read_bytes()
+for a,b in [('b4-full4k-selection52','b4-k35-cache52'),('verify_b4_full4k_selection52.py','verify_b4_k35_cache52.py'),('B4_full4k_selection52','B4_key35_cache52'),("M/'b4_full4k_selection52.py',","M/'b4_full4k_selection52.py',M/'b4_k35_cache52.py',"),('selectedB1/wholeB4 step7/52 complete-state and unconsumedID52 diagnostic archive replay','selectedB1/wholeB4 key35fullrawcache andcompleteprimaryparity diagnostic archive replay')]:assert raw.count(a.encode())>0;raw=raw.replace(a.encode(),b.encode())
+(W/'postprocess-b4-k35-cache52.py').write_bytes(raw);print(json.dumps(receipt))
