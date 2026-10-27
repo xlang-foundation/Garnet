@@ -1,0 +1,17 @@
+from pathlib import Path
+import ast,hashlib,json,subprocess
+W=Path(__file__).resolve().parent;R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';E='test2026/cuda/qwen38_5090/evidence/';sha=lambda b:hashlib.sha256(b).hexdigest();owned=[]
+def put(n,b):
+    t=R/n;assert t.resolve().is_relative_to(R.resolve()) and (not t.exists() or t.read_bytes()==b),n;t.parent.mkdir(parents=True,exist_ok=True);t.write_bytes(b);owned.append(n)
+r=json.loads((W/'b4-b1-short-package.json').read_bytes());assert sha((W/'b4-b1-short-deployment.zip').read_bytes())==r['deployment_sha256']
+assert sha((M/'evidence/b4-b1-short-preparation.json').read_bytes())==r['preparation_sha256']
+for n in ('b4_b1_exact_gate.py','test_b4_b1_exact_gate.py','probe_b4_b1_short_admission.py','launch_b4_b1_short_admission.py','run_b4_b1_short_admission.py','evidence/b4-b1-short-preparation.json'):
+    if n.endswith('.py'):ast.parse((M/n).read_bytes())
+    owned.append('test2026/cuda/qwen38_5090/'+n)
+for n in ('prepare-b4-b1-short-admission.py','make-install-b4-b1-short.py','install-b4-b1-short.py','retain-b4-b1-short-preparation.py'):ast.parse((W/n).read_bytes());put(E+n+'.txt',(W/n).read_bytes())
+put(E+'b4-b1-short-package.json',(W/'b4-b1-short-package.json').read_bytes())
+for n in ('commands.log','commands.jsonl'):put(E+'b4-b1-short-preparation-cpu-'+n,(W/'b4-b1-short-preparation-cpu-ledger'/n).read_bytes())
+text='\r\n\r\n### Fresh four-B1 versus B4 short mixed-tail gate prepared\r\n\r\n2026-10-27: Paired native61build success allows first actual GPU numerical experiment, not timing. Fresh B1reference uses exact qualified60source/DLL841 and B4policy0; candidate uses exact61source/newDLL and policy1. Four archived INPUTS only (41/104/93/93prompt tokens, text/image) exercise heterogeneous short tail;8generated IDs each. OldB8 differences remain preserved, not reused as a correctness oracle. Complete128statecomponents and physical/logical row hashes plus finite raw5120hidden+norm bytes at reset/prefill/final/finalreset. Four CPUcontrols reject lastcomponent corruption, rowpermutation, signedzero byte difference, NaN, missingcoverage, slot andID corruption. Source/runtime/SDK/checkpoint hashes, resource samples, raw failures, cacheownership/96GiBfree, exclusiveexecution and restoration retained. Preparation/deployment %s/%s.\r\n\r\nA short pass is preliminary: original full4K text/image, allIDs/complete states/rawvectors/shorttail/permutation/reset/repeat, originalB1/fullsix/805, MTP andHTTP gates remain unchanged and required. No new benchmark/quality promotion or2xclaim. Next record actual physical canonical selector counts and fresh B1/B4 raw witnesses, then replay independently before broadening.\r\n'%(r['preparation_sha256'],r['deployment_sha256'])
+for n in ('docs/research/qwen38-5090-development-log.md','docs/research/qwen38-5090-implementation-task.md'):
+    t=R/n;before=t.read_bytes();assert b'### Fresh four-B1 versus B4 short mixed-tail gate prepared' not in before;t.write_bytes(before+text.encode());assert t.read_bytes()[:len(before)]==before;owned.append(n)
+assert not any('probe_native_external_prefix_batch.py' in n for n in owned);subprocess.run(['git','-C',str(R),'-c','core.autocrlf=false','add','--pathspec-from-file=-','--pathspec-file-nul'],input=('\0'.join(owned)+'\0').encode(),check=True);print(json.dumps(dict(status='B4_B1_short_preparation_retained',paths=len(owned))))

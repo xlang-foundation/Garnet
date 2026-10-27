@@ -1,0 +1,33 @@
+from pathlib import Path
+import ast,hashlib,json,os,sys,zipfile
+W=Path(__file__).resolve().parent;O=W.parent/'outputs';R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';E=M/'evidence';P='Garnet/test2026/cuda/qwen38_5090/';sha=lambda b:hashlib.sha256(b).hexdigest();sys.path[:0]=[str(M),str(R)]
+from test2026.cuda.qwen38_5090.b4_prefill128_source import sources
+from test2026.cuda.qwen38_5090.o128_frontend_contract import BASE_FLAGS
+old,new,_=sources();native=json.loads((E/'b4-prefill128-build-preparation.json').read_bytes());original=json.loads((E/'o128-canonical-build-preparation.json').read_bytes());assert {n:sha(b) for n,b in old.items()}==original['candidate_files'] and {n:sha(b) for n,b in new.items()}==native['candidate_files']
+names=['b4_b1_exact_gate.py','test_b4_b1_exact_gate.py','probe_b4_b1_short_admission.py','launch_b4_b1_short_admission.py','run_b4_b1_short_admission.py','monitor_native_probe.py','run_bf16_batch8_admission.py','paged_prompt_rows.py','bf16_model_state_witness.py','native_prompt.py']
+for n in names:ast.parse((M/n).read_bytes())
+methods=dict(native['methods'])
+for n,h in methods.items():assert sha((W/'b4-build-frozen-tokenizer-oracle.zip' if n=='results/tokenizer-nfc-cpu-oracles.zip' else R/n.removeprefix('Garnet/')).read_bytes())==h
+for n in names:
+    key=P+n;digest=sha((M/n).read_bytes());assert key not in methods or methods[key]==digest;methods[key]=digest
+parents={}
+for job in ('b4-prefill128-build-attempt1','b4-prefill128-header-attempt1','o128-canonical-build-attempt1','o128-full4k-model-admission-attempt1'):
+    raw=(O/(job+'-verified.json')).read_bytes();assert raw==(O/(job+'-remote-verified.json')).read_bytes();q=json.loads(raw);a=O/(job+'-evidence.zip');assert sha(a.read_bytes())==q['archive_sha256']
+    with zipfile.ZipFile(a) as z:w=json.loads(z.read('results/'+job+'/workflow.json'))
+    assert type(w['exit_code']) is int and w['exit_code']==0 and w['cleanup_finished'];parents[job]=dict(proof_sha256=sha(raw),archive_sha256=q['archive_sha256'],status=q['status'])
+q=json.loads((O/'b4-prefill128-build-attempt1-verified.json').read_bytes());assert q['status']=='b4_prefill128_native_CPU_build_replayed' and q['exit_code']==0
+input_job='paged-batch8-model-preservation-attempt1';a=O/(input_job+'-evidence.zip');iq=json.loads((O/(input_job+'-verified.json')).read_bytes());assert sha(a.read_bytes())==iq['archive_sha256']
+with zipfile.ZipFile(a) as z:r=json.loads(z.read('results/'+input_job+'/model/report.json'))['cases'][0]
+assert r['group']=='short-mixed' and r['actual_limit']==8 and [len(v['prompt_ids']) for v in r['inputs'][:4]]==[41,104,93,93]
+audit={'results/'+input_job+'-evidence.zip':iq['archive_sha256'],**{'results/native-mtp3-http/'+row['key']+'-request.json':row['request_sha256'] for row in r['inputs'][:4]}}
+files={**native['base_files'],**methods};flags={**BASE_FLAGS,'GARNET_FP8_BATCH4_PREFILL_CANONICAL':'1'}
+p=dict(status='B4_vs_B1_short_prepared_GPU_unrun',files=files,runtime=native['runtime'],environment=native['environment'],checkpoints=native['checkpoints'],audit_dependencies=audit,parents=parents,candidate_base=native['candidate_base'],input_parent_archive_sha256=iq['archive_sha256'],flags=flags,reference_bundle=original['bundle'],reference_bundle_sha256=original['bundle_sha256'],reference_source_files=original['candidate_files'],reference_library='build/bin/garnet-native-o128-canonical-attempt1.dll',reference_library_sha256=json.loads((O/'o128-canonical-build-attempt1-verified.json').read_bytes())['candidate_library_sha256'],candidate_bundle=native['bundle'],candidate_bundle_sha256=native['bundle_sha256'],candidate_source_files=native['candidate_files'],candidate_library='build/bin/garnet-native-b4-prefill128-attempt1.dll',candidate_library_sha256=q['candidate_library_sha256'],reference_installed_files={**files,**{'Garnet/'+n:sha(b) for n,b in old.items()}},candidate_installed_files={**files,**{'Garnet/'+n:sha(b) for n,b in new.items()}},scope='First fail-fast actual short mixed text/image and heterogeneous tail B4-vs-four fresh B1 oracle gate. B1 uses qualified immutable source60/DLL841 with flag0; B4 separate source61/candidateDLL with flag1. Both physical capacity4096, prefill32/decode4, same exact41/104/93/93 prompt IDs and8generated IDs. All128complete state components, physical/logical row hashes and finite raw5120hidden+norm bytes at reset/prefill/final/finalreset; strict byte/ID equality, no tolerance. Physical six FP8 family counts require B4T32 GDN48/reconstructedZ48/KV32/Q16/O16 and new0onT4/B1/vision. Old B8 archive is INPUT metadata only, not an admission oracle. Preserve original failures and all full4K/MTP/805/HTTP gates; short pass cannot qualify fullscope/performance. No new timings or2xclaim. Exact source/runtime/SDK/checkpoint restoration; owned privatecache nonces retired, >=96GiB Cfree required. Strongest repeated tuned/MTP references, matchedINT4/4B and original goal remain open.')
+prep=E/'b4-b1-short-preparation.json';assert not prep.exists();prep.write_bytes(json.dumps(p,indent=2).encode())
+import run_logged as ledger
+ledger.source_identity=lambda:{'scope':'Explicit new B4vsB1 short gate CPU and AST controls only; unrelated bodies excluded','owned_source_sha256':{P+n:sha((M/n).read_bytes()) for n in names}};os.chdir(R)
+code=ledger.run([sys.executable,'-m','unittest','test2026.cuda.qwen38_5090.test_b4_b1_exact_gate'],W/'b4-b1-short-preparation-cpu-ledger','correctness','Four controls:completecomponent corruption, rowpermutation, signedzero rawbyte, nonfinite, incompletecoverage, slot andID rejection; synthetic controls only, actual GPU gate remains unrun',[M/n for n in names]+[prep]);assert code==0
+deploy={P+n:M/n for n in names};deploy[P+'evidence/b4-b1-short-preparation.json']=prep;package=W/'b4-b1-short-deployment.zip';assert not package.exists()
+with zipfile.ZipFile(package,'x',zipfile.ZIP_DEFLATED) as z:
+    for n,path in deploy.items():z.write(path,n)
+    z.writestr('deployment-manifest.json',json.dumps(dict(files={n:sha(path.read_bytes()) for n,path in deploy.items()},source_runtime_install_deferred=True),indent=2))
+receipt=dict(status='B4_B1_short_package_prepared_GPU_unrun',deployment_sha256=sha(package.read_bytes()),bytes=package.stat().st_size,files=len(deploy),preparation_sha256=sha(prep.read_bytes()),reference_library_sha256=p['reference_library_sha256'],candidate_library_sha256=p['candidate_library_sha256']);(W/'b4-b1-short-package.json').write_bytes(json.dumps(receipt,indent=2).encode());print(json.dumps(receipt))
