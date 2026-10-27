@@ -1,0 +1,23 @@
+from pathlib import Path
+import datetime,hashlib,json,struct,zipfile
+W=Path(__file__).resolve().parent;O=W.parent/'outputs';M=Path('D:/CantorAI/work/qwen38-5090/test2026/cuda/qwen38_5090');sha=lambda b:hashlib.sha256(b).hexdigest();p=json.loads((M/'evidence/fp8-policy-cache-build-preparation.json').read_bytes());result=[]
+with zipfile.ZipFile(W/'fp8-policy-cache-object-diagnostic.zip') as z:
+    manifest=json.loads(z.read('manifest.json'));assert z.testzip() is None and all(sha(z.read(n))==h for n,h in manifest['files'].items());report=json.loads(z.read('report.json'))
+    for row in report['changed_objects']:
+        if row['old_header_only_reconstructed']:continue
+        raw=z.read(row['retained_file']);assert sha(raw)==row['after_sha256'] and row['before_sha256']==p['cuda_objects_before'][row['path']];found=None;tested=0;ranges=[]
+        for name,parent in p['parents'].items():
+            if 'build' not in name:continue
+            archive=O/(name+'-evidence.zip');assert sha(archive.read_bytes())==parent['archive_sha256']
+            with zipfile.ZipFile(archive) as old:
+                eventpath='results/'+name+'/native-build-ledger/commands.jsonl'
+                if eventpath not in old.namelist():continue
+                events=[json.loads(line) for line in old.read(eventpath).splitlines()];assert len(events)==2 and events[-1]['exit_code']==0
+            begin,end=[int(datetime.datetime.fromisoformat(e['utc']).timestamp()) for e in events];ranges.append(dict(parent=name,first_epoch=begin-10,last_epoch=end+10))
+            for stamp in range(begin-10,end+11):
+                candidate=raw[:row['timestamp_offset']]+struct.pack('<I',stamp)+raw[row['timestamp_offset']+4:];tested+=1
+                if sha(candidate)==row['before_sha256']:
+                    target=W/'fp8-policy-cache-historical-lowbatch.cu.obj';assert not target.exists() or target.read_bytes()==candidate;target.write_bytes(candidate);found=dict(original_timestamp=stamp,matching_parent_build=name,historical_object_sha256=sha(candidate),historical_object_file=target.name);break
+            if found:break
+        result.append(dict(path=row['path'],after_sha256=sha(raw),before_sha256=row['before_sha256'],timestamp_offset=row['timestamp_offset'],searched_timestamps=tested,verified_parent_ranges=ranges,match=found))
+q=dict(status='historical_COFF_timestamp_search_only_no_source_or_build_mutation',rows=result,all_matched=bool(result) and all(r['match'] for r in result));(W/'fp8-policy-cache-historical-timestamp-search.json').write_bytes(json.dumps(q,indent=2).encode());print(json.dumps(q))

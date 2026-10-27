@@ -1,0 +1,31 @@
+from pathlib import Path
+import hashlib,json,os,sys,zipfile,struct
+W=Path(__file__).resolve().parent;O=W.parent/'outputs';R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';JOB='fp8-policy-cache-build-attempt1';sha=lambda b:hashlib.sha256(b).hexdigest();sys.path[:0]=[str(M),str(R)];import run_logged as ledger
+p=json.loads((M/'evidence/fp8-policy-cache-build-preparation.json').read_bytes());pins={n:sha((R/n.removeprefix('Garnet/')).read_bytes()) for n in p['methods']};assert pins==p['methods'];peer=O/(JOB+'-remote-verified.json');q=json.loads(peer.read_bytes());archive=O/(JOB+'-evidence.zip');assert q['archive_sha256']==sha(archive.read_bytes()) and q['exit_code']==1
+ledger.source_identity=lambda:{'scope':'Explicit closed failed62source build and read-only COFF/PE diagnostics; original guard remains failed, no local native compilation/model/GPU; protected unrelated bodies excluded','owned_source_sha256':pins};os.chdir(R)
+assert ledger.run([sys.executable,str(M/'verify_fp8_policy_cache_native_build.py'),'--proofs',str(O)],W/'fp8-policy-cache-failure-local-replay-ledger','correctness','Independent original source/runtime/SDK/checkpoint/CMake restoration and failed strict34object gate replay; no native qualification claimed',[archive,peer,*[R/n.removeprefix('Garnet/') for n in pins]])==0
+assert (O/(JOB+'-verified.json')).read_bytes()==peer.read_bytes()
+def sections(raw):
+    pe=struct.unpack_from('<I',raw,0x3c)[0];assert raw[pe:pe+4]==b'PE\0\0';count=struct.unpack_from('<H',raw,pe+6)[0];start=pe+24+struct.unpack_from('<H',raw,pe+20)[0];result={}
+    for i in range(count):
+        h=raw[start+i*40:start+(i+1)*40];name=h[:8].rstrip(b'\0').decode('ascii');size,offset=struct.unpack_from('<II',h,16);data=raw[offset:offset+size];assert len(data)==size;result[name]=dict(bytes=size,sha256=sha(data))
+    return result
+with zipfile.ZipFile(archive) as z:
+    prefix='results/'+JOB+'/';w=json.loads(z.read(prefix+'workflow.json'));assert w['exit_code']==1 and w['baseline_source_restored'] and w['baseline_library_restored'];new=z.read(prefix+'failed-garnet.dll')
+    for phase in ('cpu-before','policy-cache-cpu','profile','o-profile','factory-build','factory-controls','wire','o-wire','init-build','init-controls','o-init-build','o-init-controls','native-build'):
+        events=[json.loads(line) for line in z.read(prefix+phase+'-ledger/commands.jsonl').splitlines()];assert len(events)==2 and events[1]['exit_code']==0
+    assert b'Ran 80 tests' in z.read(prefix+'cpu-before-ledger/commands.log') and b'Ran 86 tests' in z.read(prefix+'cpu-before-ledger/commands.log')
+    header=json.loads(z.read(prefix+'policy-cache-cpu/report.json'));assert header==dict(status='TRT_graph_policy_header_CPU_contract_passed',checks=72,strict_policies=8,additional_policies=4,distinct_keys=13,rejections=43,GPU_or_model_executed=False)
+with zipfile.ZipFile(O/'o128-canonical-build-attempt1-evidence.zip') as z:
+    ow=json.loads(z.read('results/o128-canonical-build-attempt1/workflow.json'));old=z.read(ow['candidate_saved']);assert sha(old)==ow['candidate_library_sha256']=='8414795d2953feae49532340b206328972c8a23767276319e6e4fb3e1912c18a'
+oldsections,newsections=sections(old),sections(new);nv=[n for n in oldsections if 'nv' in n.lower()];assert nv and all(oldsections[n]==newsections[n] for n in nv)
+with zipfile.ZipFile(W/'fp8-policy-cache-object-diagnostic.zip') as z:
+    manifest=json.loads(z.read('manifest.json'));assert manifest['failed_build_archive_sha256']==q['archive_sha256'] and all(sha(z.read(n))==h for n,h in manifest['files'].items());r=json.loads(z.read('report.json'));assert r['original_library']['sections']==oldsections and r['failed_library']['sections']==newsections and r['failed_library']['file_sha256']==sha(new)
+    assert len(r['current_CUDA_objects'])==34 and len(r['changed_objects'])==3;timestamps=0
+    for row in r['changed_objects']:
+        b=z.read(row['retained_file']);assert sha(b)==row['after_sha256']==r['current_CUDA_objects'][row['path']] and row['before_sha256']==p['cuda_objects_before'][row['path']]
+        if row['old_header_only_reconstructed']:
+            historical=z.read(row['reconstructed_file']);offset=row['timestamp_offset'];assert sha(historical)==row['before_sha256'] and historical[:offset]==b[:offset] and historical[offset+4:]==b[offset+4:] and struct.unpack_from('<I',historical,offset)[0]==row['original_timestamp'];timestamps+=1
+    assert timestamps==2
+result=dict(status='failed_cache_build_and_COFF_PE_diagnostics_independently_replayed',paired_failure_proof_sha256=sha(peer.read_bytes()),failed_build_archive_sha256=q['archive_sha256'],failed_library_sha256=sha(new),CPU_current=80,CPU_historical=86,header_contract=header,changed_CUDA_objects=3,timestamp_only_exact_historical_reconstructions=2,one_host_object_difference_not_fully_explained=True,NVIDIA_sections=nv,NVIDIA_sections_byteexact=True,all34_raw_object_identity_gate_passed=False,native_selector_tokenizer_candidate_tests_not_run=True,source_runtime_SDK_checkpoint_CMake_restored=True,production_cache_or_model_quality_or_performance_admitted=False)
+(O/'Garnet-FP8-Policy-Cache-Build-Failure-Verified.json').write_bytes(json.dumps(result,indent=2).encode());print(json.dumps(result),flush=True)

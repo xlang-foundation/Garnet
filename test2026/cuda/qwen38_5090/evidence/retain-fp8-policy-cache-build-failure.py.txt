@@ -1,0 +1,34 @@
+from pathlib import Path
+import hashlib,json,zipfile,subprocess
+W=Path(__file__).resolve().parent;O=W.parent/'outputs';R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';E='test2026/cuda/qwen38_5090/evidence/';JOB='fp8-policy-cache-build-attempt1';sha=lambda b:hashlib.sha256(b).hexdigest();owned=[]
+def put(n,b):
+    t=R/n;assert t.resolve().is_relative_to(R.resolve()) and (not t.exists() or t.read_bytes()==b),n;t.parent.mkdir(parents=True,exist_ok=True);t.write_bytes(b);owned.append(n)
+raw=(O/(JOB+'-verified.json')).read_bytes();assert raw==(O/(JOB+'-remote-verified.json')).read_bytes();q=json.loads(raw);assert q['exit_code']==1 and q['source_runtime_SDK_checkpoint_CMake_restored'] and not q['model_or_quality_or_performance_qualified'];archive=O/(JOB+'-evidence.zip');assert sha(archive.read_bytes())==q['archive_sha256']
+for s in ('-verified.json','-remote-verified.json'):put(E+JOB+s,(O/(JOB+s)).read_bytes())
+with zipfile.ZipFile(archive) as z:
+    for n in z.namelist():
+        if n.startswith('results/'+JOB+'/') and (n.endswith(('.json','.jsonl','.log')) or n.endswith('CMakeCache-before.txt')):put(E+JOB+'-'+n.removeprefix('results/'+JOB+'/').replace('/','-'),z.read(n))
+    put(E+JOB+'-manifest.json',z.read('evidence-manifest.json'))
+with zipfile.ZipFile(W/'fp8-policy-cache-object-diagnostic.zip') as z:
+    manifest=json.loads(z.read('manifest.json'));assert manifest['failed_build_archive_sha256']==q['archive_sha256'] and z.testzip() is None and all(sha(z.read(n))==h for n,h in manifest['files'].items())
+    for n in manifest['files']:put(E+'fp8-policy-cache-object-diagnostic-'+n.replace('.cu.obj','.coff.bin'),z.read(n))
+    put(E+'fp8-policy-cache-object-diagnostic-manifest.json',z.read('manifest.json'))
+result=(O/'Garnet-FP8-Policy-Cache-Build-Failure-Verified.json').read_bytes();put(E+'fp8-policy-cache-build-failure-research-summary.json',result)
+for n in ('diagnose-fp8-policy-cache-objects.py','search-cache-lowbatch-coff-timestamp.py','search-cache-lowbatch-coff-full-window.py','replay-fp8-policy-cache-failure-local.py','run-fp8-policy-cache-production-controls-local.py','retain-fp8-policy-cache-build-failure.py'):put(E+n+'.txt',(W/n).read_bytes())
+for n in ('fp8-policy-cache-historical-timestamp-search.json','fp8-policy-cache-historical-timestamp-full-window.json'):put(E+n,(W/n).read_bytes())
+for folder in ('fp8-policy-cache-failure-local-replay-ledger','fp8-policy-cache-production-controls-local-ledger'):
+    for n in ('commands.log','commands.jsonl'):put(E+folder+'-'+n,(W/folder/n).read_bytes())
+for n in ('fp8_policy_cache_production_contract.py','fp8_policy_cache_fixture.x','probe_fp8_policy_cache_production.py','launch_fp8_policy_cache_production_case.py','test_fp8_policy_cache_production_contract.py'):owned.append((M/n).relative_to(R).as_posix())
+text='''
+
+### Cache candidate62 compiles and passes header controls; strict object identity fails and remains unqualified
+
+2026-10-27: fp8-policy-cache-build-attempt1 exits1 at the explicitly stricter all34rawCUDAobject identity gate. NativeRelease/MT/sm120 compilation itself exits0. Actual80current+86historical CPU, new pureC++72checks/43rejections/13distinctkeys and all original Q/O profile/factory/wire/initialize command phases through native build exit0. Native selector/tokenizer955smoke did NOT run because the object gate correctly aborted first. Do not call this native build qualified or replace its failed status. Original raw archive ca152badb646fff5d0fa00da01a8602b784de4f2aca021046f5632a826e52a37 (8314261B/664members), paired independent failure proof e93e41e0aa59d687ca0bae2df25d27e22cacf1100f3a649ab6917c816c75c8c9 retained unchanged on both machines; failed compiled DLL dc15e4f53855fb91e182cf52e78eb3917068b8df80cde1242ff1799ce4fb99ba preserved only as a failed artifact. Source/library/runtime/SDK/checkpoints/CMake restore verified.
+
+Read-only diagnosis captures three changed raw COFF objects. Two (prefill128 attention/commit) reconstruct EXACT historical SHA256 by changing ONLY the four-byte COFF timestamp to values within the SHA-pinned O128 native compile ledger UTC window. Full raw new/historical objects and evidence retained. The low-batch overlay object does not reconstruct by timestamp-only changes in known parent compile windows or the bounded2026-10-20..current stamp search; its remaining host-object difference is NOT explained. Do not call all three metadata-only. Independently parse old841DLL from the retained O128 native archive and failed new DLL from the failed archive: __nv_mod, __nv_rel, .nvFatBi and .nv_fatb raw PE sections are all byteexact. All60numeric source files are unchanged by construction; this does not waive the failed all34rawobject gate or qualify the new binary's model arithmetic. Original32complete-state/raw-vector/token/MTP/reset gates remain unchanged and pending for any new binary.
+
+Prepare (not execute) a41case actual production load_model cache matrix with fresh processes:14misses/16hits/11invalid/coupled rejections,13distinct fingerprints, unset/empty/0 aliases, return-to-default, strict cache file chain, invalid-policy previous-cache preservation, and tiny GPU output [1,6,15,28]. Preserve complete before/after cache files so independent replay can verify bytes, not just reported key strings. Three CPU corruption/control tests pass. No production controller/preparation or native production-cache call has executed; these source helpers are preparatory only and fail closed without preparation. Any provisional use of the failed DLL must be labeled exploratory correctness diagnosis, never promotion or benchmark qualification. Resolve artifact/reproducibility evidence and run native API smoke, actual cache tests, original fullsix and broader805quality before new serving results. No benchmark/chart/2x claim changes; source candidate62 remains unqualified and full goal active.
+'''
+for n in ('docs/research/qwen38-5090-development-log.md','docs/research/qwen38-5090-implementation-task.md'):
+    t=R/n;b=t.read_bytes();assert b'### Cache candidate62 compiles and passes header controls; strict object identity fails' not in b;t.write_bytes(b+text.replace('\n','\r\n').encode());assert t.read_bytes()[:len(b)]==b;owned.append(n)
+owned=sorted(set(owned));assert not any('probe_native_external_prefix_batch.py' in n for n in owned);assert subprocess.check_output(['git','-C',str(R),'branch','--show-current'],text=True).strip()=='qwen38-5090';(W/'fp8-policy-cache-build-failure-retained-paths.json').write_bytes(json.dumps(owned,indent=2).encode());subprocess.run(['git','-C',str(R),'-c','core.autocrlf=false','add','--pathspec-from-file=-','--pathspec-file-nul'],input=('\0'.join(owned)+'\0').encode(),check=True);print(json.dumps(dict(owned_paths=len(owned),paired_failure_proof_sha256=sha(raw),native_build_qualified=False,production_cache_run=False)))

@@ -1,0 +1,31 @@
+from pathlib import Path
+import datetime,hashlib,json,struct,zipfile
+ROOT=Path('D:/CantorAI/5090-study-20261023');JOB='fp8-policy-cache-build-attempt1';M=ROOT/'Garnet/test2026/cuda/qwen38_5090';sha=lambda b:hashlib.sha256(b).hexdigest();p=json.loads((M/'evidence/fp8-policy-cache-build-preparation.json').read_bytes());out=ROOT/'results/fp8-policy-cache-object-diagnostic';assert not out.exists();out.mkdir();w=json.loads((ROOT/'results'/JOB/'workflow.json').read_bytes());assert w['exit_code']==1 and w['cleanup_finished'] and w['baseline_source_restored'] and w['baseline_library_restored']
+oldproof=json.loads((ROOT/'results/o128-canonical-build-attempt1-verified.json').read_bytes());assert oldproof['exit_code']==0;oldlibrary=ROOT/'build/bin/garnet-native-o128-canonical-attempt1.dll';assert sha(oldlibrary.read_bytes())==oldproof['candidate_library_sha256'];failedlibrary=ROOT/'results'/JOB/'failed-garnet.dll';assert failedlibrary.is_file()
+with zipfile.ZipFile(ROOT/'results'/(JOB+'-evidence.zip')) as z:
+    manifest=json.loads(z.read('evidence-manifest.json'));assert z.testzip() is None and all(sha(z.read(n))==h for n,h in manifest['files'].items());assert sha(failedlibrary.read_bytes())==manifest['files']['results/'+JOB+'/failed-garnet.dll']
+events=[json.loads(line) for line in (ROOT/'results/o128-canonical-build-attempt1/native-build-ledger/commands.jsonl').read_bytes().splitlines()];assert len(events)==2 and events[1]['exit_code']==0
+epochs=[int(datetime.datetime.fromisoformat(e['utc']).timestamp()) for e in events];rows=[];current={}
+for f in (ROOT/'build/garnet/CMakeFiles/garnet.dir').rglob('*.cu.obj'):
+    n=f.relative_to(ROOT).as_posix();raw=f.read_bytes();current[n]=sha(raw)
+    if sha(raw)==p['cuda_objects_before'][n]:continue
+    offset=8 if raw[:4]==b'\x00\x00\xff\xff' else 4;timestamp=struct.unpack_from('<I',raw,offset)[0];row=dict(path=n,bytes=len(raw),before_sha256=p['cuda_objects_before'][n],after_sha256=sha(raw),header_hex=raw[:24].hex(),timestamp_offset=offset,timestamp=timestamp,old_header_only_reconstructed=False)
+    target=out/('changed-'+str(len(rows))+'.cu.obj');target.write_bytes(raw);row['retained_file']=target.name
+    for stamp in range(epochs[0]-10,epochs[1]+11):
+        candidate=raw[:offset]+struct.pack('<I',stamp)+raw[offset+4:]
+        if sha(candidate)==row['before_sha256']:
+            restored=out/('historical-'+str(len(rows))+'.cu.obj');restored.write_bytes(candidate);row.update(old_header_only_reconstructed=True,original_timestamp=stamp,reconstructed_file=restored.name);break
+    rows.append(row)
+assert set(current)==set(p['cuda_objects_before']) and len(current)==34
+def pe_sections(path):
+    raw=path.read_bytes();pe=struct.unpack_from('<I',raw,0x3c)[0];assert raw[pe:pe+4]==b'PE\0\0';count=struct.unpack_from('<H',raw,pe+6)[0];optional=struct.unpack_from('<H',raw,pe+20)[0];start=pe+24+optional;sections={}
+    for i in range(count):
+        h=raw[start+i*40:start+(i+1)*40];name=h[:8].rstrip(b'\0').decode('ascii');size,offset=struct.unpack_from('<II',h,16);data=raw[offset:offset+size];assert len(data)==size;sections[name]=dict(bytes=size,sha256=sha(data))
+    return dict(file_sha256=sha(raw),sections=sections)
+old=pe_sections(oldlibrary);new=pe_sections(failedlibrary);nv=[n for n in old['sections'] if 'nv' in n.lower()];same=bool(nv) and all(old['sections'][n]==new['sections'].get(n) for n in nv)
+r=dict(status='cache_build_CUDA_object_failure_readonly_diagnostic',original_failure=w['error'],compiled_source_files=62,numeric_parent_sources_unchanged=True,original_O_build_UTC_range=[e['utc'] for e in events],current_CUDA_objects=current,changed_objects=rows,all_changed_objects_are_only_verified_COＦＦ_timestamp_differences=bool(rows) and all(r['old_header_only_reconstructed'] for r in rows),original_library=old,failed_library=new,NVIDIA_sections=nv,NVIDIA_sections_byteexact=same,no_build_artifact_or_source_modified=True,no_GPU_or_benchmark=True)
+(out/'report.json').write_bytes(json.dumps(r,indent=2).encode());files=[n for n in out.iterdir() if n.is_file()];archive=ROOT/'results/fp8-policy-cache-object-diagnostic.zip'
+with zipfile.ZipFile(archive,'x',zipfile.ZIP_DEFLATED) as z:
+    for f in files:z.write(f,f.name)
+    z.writestr('manifest.json',json.dumps(dict(files={f.name:sha(f.read_bytes()) for f in files},failed_build_archive_sha256=sha((ROOT/'results'/(JOB+'-evidence.zip')).read_bytes())),indent=2))
+print(json.dumps(dict(changed_objects=len(rows),timestamp_only=sum(r['old_header_only_reconstructed'] for r in rows),NVIDIA_sections=nv,NVIDIA_sections_byteexact=same,archive_sha256=sha(archive.read_bytes()),archive_bytes=archive.stat().st_size)),flush=True)
