@@ -1,0 +1,9 @@
+from pathlib import Path
+import hashlib,json,os,sys
+W=Path(__file__).resolve().parent;R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';sys.path[:0]=[str(M),str(R)];sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+import run_logged as ledger
+names=['b4_k_m4x4_control52.py','b4_k_m4x4_control52_route.py','test_b4_k_m4x4_control52.py','test_b4_k_m4x4_control52_route.py','probe_b4_k_m4x4_control52.py','launch_b4_k_m4x4_control52.py','evidence/b4-k-m4x4-control52-probe-derivation.json','b4_b1_exact_gate.py','b4_b1_short_m16_gate.py','b4_v_m16_short_route.py','b4_qk_m16_short_route.py','b4_full4k_selection52.py','b4_k35_cache52.py']
+ledger.source_identity=lambda:{'scope':'Explicit local CPU evidence/checker/probe sources only; no native/model execution or protected-body reads','owned_source_sha256':{n:sha(M/n) for n in names}}
+tests=['test_b4_b1_short_m16_gate','test_b4_v_m16_short_route','test_b4_qk_m16_short_route','test_b4_full4k_inputs','test_b4_full4k_exact_gate','test_b4_full4k_decode_prefix','test_b4_full4k_selection52','test_b4_k35_cache52','test_b4_k_m4x4_control52_route','test_b4_k_m4x4_control52']
+os.chdir(R);code=ledger.run([sys.executable,'-m','unittest']+['test2026.cuda.qwen38_5090.'+n for n in tests],W/'b4-k-m4x4-control52-cpu-ledger','correctness','47 CPU controls: retained38 complete-state/IDs/physical-logicalhash/rawfinitevectors/rowmapping/cache-layout/signedzero/nonfinite plus6newroute and3sameDLL-control/intervention tests. Enforce original GDN/V/Q and all16 newK routes,7attrs/twoM4checks/liveopaque/4MiB, all4rows53IDs/fiveprimarycaptures/rawcache andno accidentalfull4K admission.',[M/n for n in names]);assert code==0
+print(json.dumps({'CPU_controls':47,'GPU_or_model_executed':False,'exit_code':code}))

@@ -1,0 +1,100 @@
+{
+  "status": "same_DLL_flagoff_flagon_control52_probe_prepared_GPU_unrun",
+  "derivations": [
+    {
+      "source": "probe_b4_k35_cache52.py",
+      "source_sha256": "52446b2aa93991223da0c5b88b4a6210d63df82c1f67f618d8fccd05363dc504",
+      "target": "probe_b4_k_m4x4_control52.py",
+      "target_sha256": "12cd6c4bb0fadf0a96199a456c9787e67a57423128723d8f6e859c0a86c735de",
+      "changes": [
+        {
+          "old": "Unchanged-model selected-row step7/52 states before consuming differing ID52.",
+          "new": "Same-DLL off/on K-fourM4 intervention, immutable B1/state/cache oracles; no timing.",
+          "count": 1
+        },
+        {
+          "old": "mode in ('reference','candidate')",
+          "new": "mode in ('off','on')",
+          "count": 1
+        },
+        {
+          "old": "b4-k35-cache52-preparation.json",
+          "new": "b4-k-m4x4-control52-preparation.json",
+          "count": 1
+        },
+        {
+          "old": "batch=1 if mode=='reference' else 4",
+          "new": "batch=4",
+          "count": 1
+        },
+        {
+          "old": "p[mode+'_installed_files']",
+          "new": "p['installed_files']",
+          "count": 1
+        },
+        {
+          "old": "p[mode+'_library_sha256']",
+          "new": "p['library_sha256']",
+          "count": 1
+        },
+        {
+          "old": "{**p['flags'],'GARNET_FP8_BATCH4_PREFILL_CANONICAL':'0' if mode=='reference' else '1','GARNET_FP8_GDN_BATCH4_DECODE_CANONICAL':'0' if mode=='reference' else '1','GARNET_FP8_V_BATCH4_DECODE_CANONICAL':'0' if mode=='reference' else '1','GARNET_FP8_QK_BATCH4_DECODE_CANONICAL':'0' if mode=='reference' else '1'}",
+          "new": "{**p['flags'],'GARNET_FP8_K_BATCH4_DECODE_M4X4':'1' if mode=='on' else '0'}",
+          "count": 1
+        },
+        {
+          "old": "mode=mode,physical_batch=batch",
+          "new": "mode='candidate',intervention_policy=mode,physical_batch=batch",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "launch_b4_k35_cache52.py",
+      "source_sha256": "403382a508500f3f17529fa01905a658becbd3d1825563a11ad7590082716dc3",
+      "target": "launch_b4_k_m4x4_control52.py",
+      "target_sha256": "75c8afcf205962d7248ee7430abc2d812387fe72892ca825ba7dc085315d2c83",
+      "changes": [
+        {
+          "old": "Fresh embedded process per B1-reference/B4-candidate phase; fixed owner cache.",
+          "new": "Fresh embedded B4 process per same-DLL flag-off/flag-on phase; fixed owner cache.",
+          "count": 1
+        },
+        {
+          "old": "mode in ('reference','candidate')",
+          "new": "mode in ('off','on')",
+          "count": 1
+        },
+        {
+          "old": "b4-k35-cache52-preparation.json",
+          "new": "b4-k-m4x4-control52-preparation.json",
+          "count": 1
+        },
+        {
+          "old": "'0' if mode=='reference' else '1'",
+          "new": "'1'",
+          "count": 4
+        },
+        {
+          "old": "'1' if mode=='candidate' else '0'",
+          "new": "'1'",
+          "count": 4
+        },
+        {
+          "old": "env['PATH']=';'.join",
+          "new": "env['GARNET_FP8_K_BATCH4_DECODE_M4X4']='1' if mode=='on' else '0';env['GARNET_KM4X4_FACTORY_TRACE']='1'\nenv['PATH']=';'.join",
+          "count": 1
+        },
+        {
+          "old": "probe_b4_k35_cache52.py",
+          "new": "probe_b4_k_m4x4_control52.py",
+          "count": 1
+        }
+      ]
+    }
+  ],
+  "same_source85_and_DLL_both_phases": true,
+  "new_graph_observer_or_kernel_or_tolerance": false,
+  "full128_output_4K_or_performance_qualified": false,
+  "scope": "PhysicalB4 mixed group,3968 prompt+53 predicted IDs/52 consumed steps. Flagoff must exactly reproduce all4rows/five complete states/53IDs/raw key35 bytes under newDLL vs retainedsource79. Flagon compares selected independent source60 B1 step7/52 all128components/fullfinitevectors/rawcache plus all4rows endpoints/step7/53IDs. No new B1 model run or full4K admission."
+}

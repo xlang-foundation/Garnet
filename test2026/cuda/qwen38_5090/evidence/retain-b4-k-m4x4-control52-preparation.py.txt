@@ -1,0 +1,41 @@
+from pathlib import Path
+import hashlib,json
+W=Path(__file__).resolve().parent;R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';E=M/'evidence';sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest();owned=[];retained={}
+names=json.loads((W/'b4-k-m4x4-control52-owned-names.json').read_bytes())
+for n in names:owned.append(M/n)
+owned.append(E/'b4-k-m4x4-control52-preparation.json')
+def keep(name,raw):
+    p=E/name;assert not p.exists();p.write_bytes(raw);owned.append(p);retained[name]=sha(p)
+for name in ('prepare-b4-k-m4x4-control52.py','install-b4-k-m4x4-control52.py',Path(__file__).name):keep(name+'.txt',(W/name).read_bytes())
+keep('b4-k-m4x4-control52-package.json',(W/'b4-k-m4x4-control52-package.json').read_bytes())
+package=json.loads((W/'b4-k-m4x4-control52-package.json').read_bytes());assert sha(W/'b4-k-m4x4-control52-deployment.zip')==package['deployment_sha256']
+keep('b4-k-m4x4-control52-preparation-retention.json',json.dumps({'status':'same_DLL_off_on_model_control_preparation_retained','package':package,'retained_sha256':retained,'original_full128_output_4K_still_failed':True,'full4K_MTP_quality_HTTP_or_performance_qualified':False},indent=2).encode())
+entry=('\n\n2026-10-27 same-DLL source85 K-fourM4 off/on model experiment prepared after '
+       'paired actual native build proof db32c32abad09ead9fbd7b4e57ca20480dee18a0860c806c16dc3762c8bbdb4d. '
+       'Same candidate DLL '+package['native_library_sha256']+' and source85 in '
+       'both fresh physicalB4 mixed4 processes; only GARNET_FP8_K_BATCH4_DECODE_M4X4 '
+       'changes 0->1. Immutable source60 B1/cache52/full4K/prefix oracles reused; '
+       'no fresh B1 run, no full checkpoint shard hash claim (config+index pins). '
+       'Flagoff must exactly reproduce source79 all4rows/53IDs/five complete '
+       '128component/physical-logicalhash/fullfinitevector captures/twice-read '
+       '8MiBkey35cache before flagon may start. Flagon requires all4 endpoint '
+       'and step7 captures and53IDs against retained B1 oracles, selected row2 '
+       'step52 complete state/vectors and all4,194,304 BF16 key values; only '
+       'selected row has independent step52 complete-state/cache oracle. '
+       'Actual newK live7attrs/twoM4checks/4MiB/all16initializations plus oldGDN/V '
+       'and Q-only M16 required; flagoff newK absent with factory trace enabled. '
+       '47CPU controls passed (old38 +6route +3control/intervention), tests include '
+       'other-row/lastcomponent/IDs/nonfinite/cachebit/binary/alias/oldroute '
+       'corruptions; no tolerance or original gate relaxation. Current post-build '
+       'all34 CUDA hashes used, not stale oldCPU snapshot. Guard1,849 files/42 '
+       'closed parents, fixed C-drive cache96GiB/private-nonce retirement, '
+       'source85/SDK/runtime/config-index/CMake/baselineDLL restoration. Package '
+       +package['deployment_sha256']+' ('+str(package['bytes'])+'B), methods/probe '
+       'exact derivations/CPU logs retained. GPU unrun at preparation; not '
+       'full128-output/4K/MTP/quality/HTTP/performance qualification. Original '
+       'full4K/cache62 failures and overall2x unmet status preserved.\n').encode()
+for name in ('docs/research/qwen38-5090-development-log.md','docs/research/qwen38-5090-implementation-task.md'):
+    p=R/name;before=p.read_bytes();assert b'same-DLL source85 K-fourM4 off/on model experiment prepared' not in before
+    with p.open('ab') as f:f.write(entry)
+    assert p.read_bytes()==before+entry;owned.append(p)
+(W/'b4-k-m4x4-control52-preparation-stage-paths.bin').write_bytes(b''.join(n.relative_to(R).as_posix().encode()+b'\0' for n in owned));print(json.dumps({'stage_paths':len(owned),'GPU_unrun_at_preparation':True,'CPU_controls':47}))
