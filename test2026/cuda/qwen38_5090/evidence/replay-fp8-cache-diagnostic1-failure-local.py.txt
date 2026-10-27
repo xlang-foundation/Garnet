@@ -1,0 +1,19 @@
+from pathlib import Path
+import hashlib,json,os,sys,zipfile
+W=Path(__file__).resolve().parent;O=W.parent/'outputs';R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';JOB='fp8-policy-cache-production-diagnostic-attempt1';sha=lambda b:hashlib.sha256(b).hexdigest();sys.path[:0]=[str(M),str(R)];import run_logged as ledger
+p=json.loads((M/'evidence/fp8-policy-cache-production-preparation.json').read_bytes());pins={n:sha((R/n.removeprefix('Garnet/')).read_bytes()) for n in p['new_files']};assert pins==p['new_files'];peer=O/(JOB+'-remote-verified.json');q=json.loads(peer.read_bytes());archive=O/(JOB+'-evidence.zip');assert q['archive_sha256']==sha(archive.read_bytes()) and q['exit_code']==1
+ledger.source_identity=lambda:{'scope':'Explicit first cache diagnostic failure/API partial replay; protected unrelated bodies excluded; no native/GPU/model work','owned_source_sha256':pins};os.chdir(R)
+assert ledger.run([sys.executable,str(M/'verify_fp8_policy_cache_diagnostic.py'),'--proofs',str(O)],W/'fp8-cache-diagnostic1-failure-local-replay-ledger','correctness','Independent explicit .x fixture refusal, native API partial evidence and restoration replay; no cache/quality/promotion admission',[archive,peer,*[R/n.removeprefix('Garnet/') for n in pins]])==0
+assert (O/(JOB+'-verified.json')).read_bytes()==peer.read_bytes()
+with zipfile.ZipFile(archive) as z:
+    base='results/'+JOB+'/';r=json.loads(z.read(base+'native/default-miss/report.json'));assert r['status']=='failed' and r['runtime_status']['error_code']=='invalid_root_xmodel' and r['runtime_status']['error_message']=='compiled_xmodel mode requires an existing Python model file' and r['runtime_status']['root_xmodel'].endswith('fp8_policy_cache_fixture.x')
+    assert r['cache_before']==r['cache_after']=={} and r['output_values'] is None
+    for phase in ('selector-cpu','embedded-selector-cpu','tokenizer-cpu'):
+        events=[json.loads(line) for line in z.read(base+phase+'-ledger/commands.jsonl').splitlines()];assert len(events)==2 and events[-1]['exit_code']==0
+    for phase,status in (('selector-cpu','native_tiled_selector_cpu_exact'),('embedded-selector-cpu','embedded_native_tiled_selector_exact')):
+        v=json.loads(z.read(base+phase+'/report.json'));assert v['status']==status and len(v['cases'])==10 and v['library_sha256']==p['candidate_library_sha256']
+        for row in v['cases']:assert row['exit_code']==0 and row['actual']['first']==row['actual']['after_environment_flip']==(row['environment_value']=='1') and row['actual']['gpu_executed'] is False
+    with zipfile.ZipFile(__import__('io').BytesIO(z.read('results/tokenizer-nfc-cpu-oracles.zip'))) as oracle:expected=[json.loads(line) for line in oracle.read('cases.jsonl').splitlines()]
+    actual=[json.loads(line) for line in z.read(base+'tokenizer-cpu/cases.jsonl').splitlines()];assert len(actual)==len(expected)==955
+    for a,e in zip(actual,expected):assert a['key']==e['key'] and a['kind']==e['kind'] and a['actual_ids']==e['expected_ids'] and a['code']==0 and a['exact'] is True
+result=dict(status='cache_diagnostic_fixture_refusal_and_native_API_independently_replayed',paired_failure_proof_sha256=sha(peer.read_bytes()),archive_sha256=q['archive_sha256'],native_selector_cases=10,embedded_selector_cases=10,tokenizer_cases_exact=955,production_cache_calls_attempted=1,production_cache_calls_successful=0,cache_lookup_or_GPU_addition_not_reached=True,root_error='invalid_root_xmodel_requires_py_file',source_runtime_SDK_checkpoint_restored=True,build_identity_gate_passed=False,native_build_or_VLM_quality_or_performance_qualified=False);(O/'Garnet-FP8-Cache-Diagnostic-Fixture-Failure-Verified.json').write_bytes(json.dumps(result,indent=2).encode());print(json.dumps(result),flush=True)
