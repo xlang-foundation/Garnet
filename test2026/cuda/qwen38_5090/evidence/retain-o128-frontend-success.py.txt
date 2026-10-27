@@ -1,0 +1,39 @@
+from pathlib import Path
+import hashlib,json,zipfile,subprocess
+W=Path(__file__).resolve().parent;O=W.parent/'outputs';R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';E='test2026/cuda/qwen38_5090/evidence/';P='Garnet/test2026/cuda/qwen38_5090/';JOB='o128-frontend-attempt1';owned=[];sha=lambda b:hashlib.sha256(b).hexdigest()
+def put(n,b):
+    t=R/n;assert t.resolve().is_relative_to(R.resolve()) and (not t.exists() or t.read_bytes()==b),n;t.parent.mkdir(parents=True,exist_ok=True);t.write_bytes(b);owned.append(n)
+raw=(O/(JOB+'-verified.json')).read_bytes();assert raw==(O/(JOB+'-remote-verified.json')).read_bytes();q=json.loads(raw);a=q['arrays'];assert q['exit_code']==0 and q['actual_frontend_contracts_qualified'] and q['source_library_runtime_SDK_checkpoint_restored'] and a['compiled_cases']==6 and a['native_rejections']==11 and len(a['cases'])==17
+archive=O/(JOB+'-evidence.zip');assert sha(archive.read_bytes())==q['archive_sha256']
+for s in ('-verified.json','-remote-verified.json'):put(E+JOB+s,(O/(JOB+s)).read_bytes())
+with zipfile.ZipFile(archive) as z:
+    p=json.loads(z.read(P+'evidence/o128-frontend-preparation.json'))
+    for n,h in p['new_files'].items():assert sha(z.read(n))==h and sha((R/n.removeprefix('Garnet/')).read_bytes())==h
+    for n in z.namelist():
+        if n.startswith('results/'+JOB+'/') and n.endswith(('.json','.jsonl','.log')):put(E+JOB+'-'+n.removeprefix('results/'+JOB+'/').replace('/','-'),z.read(n))
+    put(E+JOB+'-manifest.json',z.read('evidence-manifest.json'))
+with zipfile.ZipFile(W/'o128-frontend-closure-assets.zip') as z:
+    manifest=json.loads(z.read('evidence-manifest.json'));assert len(z.namelist())==len(set(z.namelist()))==len(manifest['files'])+1 and z.testzip() is None and manifest['model_archive_sha256']==q['archive_sha256']
+    for n,h in manifest['files'].items():
+        b=z.read(n);assert sha(b)==h
+        if n.startswith('results/'):put(E+'o128-frontend-postprocess-'+n.removeprefix('results/').replace('/','-')+('.txt' if n.endswith('.py') else ''),b)
+    put(E+'o128-frontend-closure-manifest.json',z.read('evidence-manifest.json'))
+for n in ('commands.log','commands.jsonl'):put(E+'o128-frontend-local-replay-ledger-'+n,(W/'o128-frontend-local-replay-ledger'/n).read_bytes())
+for n in ('derive-o128-frontend-postprocess.py','run-o128-frontend-postprocess.py','extract-o128-frontend-closure.py','replay-o128-frontend-local.py','retain-o128-frontend-success.py'):put(E+n+'.txt',(W/n).read_bytes())
+put(E+'o128-frontend-postprocess-derivation.json',(W/'o128-frontend-postprocess-derivation.json').read_bytes())
+result=dict(status='Q128_O128_actual_Garnet_frontend_contracts_independently_verified',paired_proof_sha256=sha(raw),original_archive_sha256=q['archive_sha256'],original_archive_bytes=q['archive_bytes'],original_archive_members=q['archive_members'],candidate_library_sha256=p['candidate_library_sha256'],source_bundle_sha256=p['source_bundle_sha256'],native_source_files=60,CPU_current=77,CPU_historical=86,actual_frontend=a,source_library_runtime_SDK_checkpoint_restored=True,paired_full_six_case_model_proof_sha256=p['full_six_case_admission_proof_sha256'],production_cache_fingerprint_fixed_or_tested=False,broader_quality_and_serving_performance_pending=True,new_serving_benchmarks=False,two_times_target_achieved=False)
+put(E+'o128-frontend-research-summary.json',json.dumps(result,indent=2).encode());(O/'Garnet-Q128-O128-Frontend-Verified.json').write_bytes(json.dumps(result,indent=2).encode())
+text='''
+
+### Actual Garnet frontend passes six compiled controls and eleven required native rejections
+
+2026-10-27: o128-frontend-attempt1 exits0 after77current+86historical CPU and embeddedstdlib preflight. SAME60source c44138f5/DLL8414795d, no native rebuild or arithmetic change. Seventeen fresh embedded processes call actual Garnet Qwen35CUDAChunk capture/native TensorRT lowering with the real pinned mixed checkpoint. All six complete fused decoder-layer builds pass: enabledB1T128 layer3/layer7 physically Q1/O1/KV2; policyoff, T32/T4 and nonmatchingB2T128 have zero new routes as required. GDN/reconstructedZ/stage route counters remain zero in these full-attention-only graphs. All eleven malformed Q/O/KV/M/Z/reconstruct flags, reconstruction/canonical coupling, T129 and missing full-attention layer errors are rejected with the expected native error text. Raw native errors, flags, graph stats and per-case command/source/exit records are retained and independently checked. Failed general acceptance or unrelated native error could not pass. This graph-construction suite is not model decode, quality or performance evidence; paired full-six original4K numeric proof4058a4f1 remains separately pinned.
+
+Original archive ARCHIVE_SHA (ARCHIVE_BYTESB/ARCHIVE_MEMBERSmembers) preserved byteexact remotely and locally; independently replayed proof PROOF_SHA matches on both machines. Full source/library/runtime/SDK/checkpoint/privatecache restoration is verified. First CPU syntax refusal and exact repair remain preserved. Actual frontend gating is now established for this explicit matrix. Source audit still finds production MakeGraphFingerprint omits FP8 policy material; study graphs' unique temporary nonce paths do not prove production cache separation.
+
+Next production cache work: add stable versioned FP8 policy material to compiled_model_runtime.cpp before cache lookup, normalize documented unset/empty/0 semantics, preserve native flag validation/coupling, cover each relevant policy and ensure fresh-process cache miss on change and hit on same setting using a tiny compiled_xmodel addition fixture. A separate native candidate must preserve all60numeric source bytes and CUDA objects, then pass actual native/cache contracts before promotion. In parallel sequencing (one GPU owner only), prepare the exact60source research HTTP worker from the retained prefill16 worker, bind startup to full-six/frontend proofs and loaded841DLL/flags/source, and run frozen805adapted quality plus variable/short/tail/image/reset cases before new serving benchmarks. Then repeated matched3968+128 text/image C1/2/4/8, real batching/concurrency, stronger tuned/MTP reference repeats, INT4W4A16/Qwen3.5-4B remain required. No chart changes or overall2x decode AND concurrency-throughput/halfTTFT claim; full goal active.
+'''.replace('ARCHIVE_SHA',q['archive_sha256']).replace('ARCHIVE_BYTES',str(q['archive_bytes'])).replace('ARCHIVE_MEMBERS',str(q['archive_members'])).replace('PROOF_SHA',sha(raw))
+for n in ('docs/research/qwen38-5090-development-log.md','docs/research/qwen38-5090-implementation-task.md'):
+    t=R/n;b=t.read_bytes();assert b'### Actual Garnet frontend passes six compiled controls' not in b;t.write_bytes(b+text.replace('\n','\r\n').encode());assert t.read_bytes()[:len(b)]==b;owned.append(n)
+owned=sorted(set(owned));assert not any('probe_native_external_prefix_batch.py' in n for n in owned);assert subprocess.check_output(['git','-C',str(R),'branch','--show-current'],text=True).strip()=='qwen38-5090'
+(W/'o128-frontend-success-retained-paths.json').write_bytes(json.dumps(owned,indent=2).encode());subprocess.run(['git','-C',str(R),'-c','core.autocrlf=false','add','--pathspec-from-file=-','--pathspec-file-nul'],input=('\0'.join(owned)+'\0').encode(),check=True);print(json.dumps(dict(retained_paths=len(owned),paired_proof_sha256=sha(raw),actual_frontend_qualified=True,quality_or_performance_admitted=False)))

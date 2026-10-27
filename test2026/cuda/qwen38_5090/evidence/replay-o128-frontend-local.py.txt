@@ -1,0 +1,11 @@
+from pathlib import Path
+import hashlib,json,os,sys
+W=Path(__file__).resolve().parent;O=W.parent/'outputs';R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';JOB='o128-frontend-attempt1';sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+sys.path[:0]=[str(M),str(R)];import run_logged as ledger
+peer=O/(JOB+'-remote-verified.json');q=json.loads(peer.read_bytes());archive=O/(JOB+'-evidence.zip');assert q['archive_sha256']==sha(archive)
+p=json.loads((M/'evidence/o128-frontend-preparation.json').read_bytes());pins={n:sha(R/n.removeprefix('Garnet/')) for n in p['new_files']};assert pins==p['new_files']
+ledger.source_identity=lambda:{'scope':'Explicit O128 actual frontend independent archive/native-errors/routes/restoration CPU replay; protected unrelated bodies excluded; no local native compilation/model/GPU','owned_source_sha256':pins}
+os.chdir(R)
+assert ledger.run([sys.executable,str(M/'verify_o128_frontend.py'),'--proofs',str(O)],W/'o128-frontend-local-replay-ledger','correctness','Independent17actual native frontend cases with strict expected native error strings/route counters/flags/library/case identity and per-case ledger exit/source hashes; preserve frontend failure if any',[archive,peer,*[R/n.removeprefix('Garnet/') for n in pins]])==0
+assert (O/(JOB+'-verified.json')).read_bytes()==peer.read_bytes()
+print(json.dumps(dict(status='actual_O128_frontend_raw_archive_independently_replayed',proof_sha256=sha(peer),frontend_passed=q['actual_frontend_contracts_qualified'],model_exit=q['exit_code'],performance_admitted=False)),flush=True)

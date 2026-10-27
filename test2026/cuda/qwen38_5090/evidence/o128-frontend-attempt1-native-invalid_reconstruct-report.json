@@ -1,0 +1,44 @@
+{
+  "spec": {
+    "key": "invalid_reconstruct",
+    "batch": 1,
+    "tokens": 128,
+    "hidden": 5120,
+    "layer": 3,
+    "flags": {
+      "GARNET_FP8_FULL_ATTN_M32_CANONICAL": "1",
+      "GARNET_FP8_GDN_M32_CANONICAL": "1",
+      "GARNET_FP8_GDN_M128_CANONICAL": "1",
+      "GARNET_FP8_GDN_Z128_CANONICAL": "1",
+      "GARNET_FP8_GDN_Z128_RECONSTRUCT": "2",
+      "GARNET_FP8_FULL_ATTN_KV128_CANONICAL": "1",
+      "GARNET_FP8_FULL_ATTN_Q128_CANONICAL": "1",
+      "GARNET_FP8_FULL_ATTN_O128_CANONICAL": "1",
+      "GARNET_FULL_CHUNK_STAGE_WITNESS": "0",
+      "GARNET_PARALLEL_BATCH_TOP1": "1",
+      "GARNET_QWEN38_BF16_LOW_BATCH_TILED_SCORES": "0",
+      "GARNET_NVFP4_DOWN_CANDIDATE": "0"
+    },
+    "expected_error": "GARNET_FP8_GDN_Z128_RECONSTRUCT must be0 or1"
+  },
+  "actual_flags": {
+    "GARNET_FP8_FULL_ATTN_M32_CANONICAL": "1",
+    "GARNET_FP8_GDN_M32_CANONICAL": "1",
+    "GARNET_FP8_GDN_M128_CANONICAL": "1",
+    "GARNET_FP8_GDN_Z128_CANONICAL": "1",
+    "GARNET_FP8_GDN_Z128_RECONSTRUCT": "2",
+    "GARNET_FP8_FULL_ATTN_KV128_CANONICAL": "1",
+    "GARNET_FP8_FULL_ATTN_Q128_CANONICAL": "1",
+    "GARNET_FP8_FULL_ATTN_O128_CANONICAL": "1",
+    "GARNET_FULL_CHUNK_STAGE_WITNESS": "0",
+    "GARNET_PARALLEL_BATCH_TOP1": "1",
+    "GARNET_QWEN38_BF16_LOW_BATCH_TILED_SCORES": "0",
+    "GARNET_NVFP4_DOWN_CANDIDATE": "0"
+  },
+  "library_sha256": "8414795d2953feae49532340b206328972c8a23767276319e6e4fb3e1912c18a",
+  "actual_Garnet_frontend_requested": true,
+  "status": "expected_native_rejection",
+  "compiled": false,
+  "graph_stats": null,
+  "native_error": "GARNET_FP8_GDN_Z128_RECONSTRUCT must be0 or1"
+}

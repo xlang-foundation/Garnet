@@ -1,0 +1,10 @@
+from pathlib import Path
+import hashlib,json,zipfile
+W=Path(__file__).resolve().parent;O=W.parent/'outputs';JOB='o128-frontend-attempt1';sha=lambda b:hashlib.sha256(b).hexdigest()
+with zipfile.ZipFile(W/'o128-frontend-closure-assets.zip') as z:
+    m=json.loads(z.read('evidence-manifest.json'));assert z.testzip() is None and len(z.namelist())==len(set(z.namelist()))==len(m['files'])+1
+    for n,h in m['files'].items():assert sha(z.read(n))==h
+    assert z.read('results/run-o128-frontend-postprocess.py')==(W/'run-o128-frontend-postprocess.py').read_bytes()
+    raw=z.read('results/'+JOB+'-verified.json');q=json.loads(raw);assert q['archive_sha256']==m['model_archive_sha256']==sha((O/(JOB+'-evidence.zip')).read_bytes())
+    t=O/(JOB+'-remote-verified.json');assert not t.exists() or t.read_bytes()==raw;t.write_bytes(raw)
+    print(json.dumps(dict(status=q['status'],proof_sha256=sha(raw),archive_sha256=q['archive_sha256'],archive_bytes=q['archive_bytes'])))
