@@ -1,0 +1,24 @@
+from pathlib import Path
+import hashlib,json,subprocess,zipfile
+W=Path(__file__).resolve().parent;O=W.parent/'outputs';R=Path('D:/CantorAI/work/qwen38-5090');E='test2026/cuda/qwen38_5090/evidence/';JOB='b4-b1-short-admission-attempt1';sha=lambda b:hashlib.sha256(b).hexdigest();owned=[];folded={}
+def put(n,b):
+    assert n.casefold() not in folded or folded[n.casefold()]==n;folded[n.casefold()]=n;t=R/n;assert t.resolve().is_relative_to(R.resolve()) and (not t.exists() or t.read_bytes()==b),n;t.parent.mkdir(parents=True,exist_ok=True);t.write_bytes(b);owned.append(n)
+raw=(O/(JOB+'-verified.json')).read_bytes();assert raw==(O/(JOB+'-remote-verified.json')).read_bytes();q=json.loads(raw);assert q['source_runtime_SDK_checkpoint_restored'] and q['short_gate_only'] and q['full4k_MTP_805_HTTP_or_performance_qualified'] is q['two_times_target_achieved'] is False;archive=O/(JOB+'-evidence.zip');assert sha(archive.read_bytes())==q['archive_sha256']
+for suffix in ('-verified.json','-remote-verified.json'):put(E+JOB+suffix,(O/(JOB+suffix)).read_bytes())
+with zipfile.ZipFile(archive) as z:
+    w=json.loads(z.read('results/'+JOB+'/workflow.json'));assert w['cleanup_finished'] and w['exit_code']==q['exit_code']
+    for n in z.namelist():
+        if n.startswith('results/'+JOB+'/') and n.endswith(('.json','.jsonl','.log','.txt')):put(E+JOB+'-'+n.removeprefix('results/'+JOB+'/').replace('/','-'),z.read(n))
+    put(E+JOB+'-manifest.json',z.read('evidence-manifest.json'))
+for n in ('verify-b4-b1-short-admission.py','run-b4-b1-short-postprocess.py','extract-b4-b1-short-closure.py','replay-b4-b1-short-local.py','retain-b4-b1-short-outcome.py'):put(E+n+'.txt',(W/n).read_bytes())
+put(E+'b4-b1-short-closure-receipt.json',(W/'b4-b1-short-closure-receipt.json').read_bytes())
+for n in ('commands.log','commands.jsonl'):put(E+'b4-b1-short-local-replay-'+n,(W/'b4-b1-short-local-replay-ledger'/n).read_bytes())
+with zipfile.ZipFile(W/'b4-b1-short-closure-assets.zip') as z:
+    for n in z.namelist():
+        if n.startswith('results/b4-b1-short-postprocess/'):put(E+'b4-b1-short-remote-'+n.removeprefix('results/b4-b1-short-postprocess/').replace('/','-'),z.read(n))
+    put(E+'b4-b1-short-closure-manifest.json',z.read('manifest.json'))
+summary={**q,'paired_proof_sha256':sha(raw)};blob=json.dumps(summary,indent=2).encode();put(E+'b4-b1-short-research-summary.json',blob);(O/'Garnet-B4-vs-Four-B1-Short-Verified.json').write_bytes(blob)
+text='\r\n\r\n### Actual short B4 versus four fresh B1 result and paired raw replay\r\n\r\n2026-10-27: Model job %s exits%s; status %s. Four-B1 source60/DLL841 reference then source61/DLL%s physicalB4 uses same exact short mixed41/104/93/93text-image prompt IDs and8outputs, capacity4096/T32/T4; preserve heterogeneous tail behavior and all complete128component state/physical/logical hashes and finite hidden+norm rawbytes. Actual statuses %s. Error %s. Original raw archive %s (%sB/%smembers); paired proof %s. All source/runtime/SDK/checkpoints restored and private nonce engine artifacts retired. Raw reports, logs, resource samples, source/reader hashes and any numerical failure retained; raw F32 vectors preserved in immutable ZIP on both PCs.\r\n\r\nThis result is restricted to the first short case. It cannot qualify full4K text/image, repeat/permutation/reset/broader quality, MTP orHTTP performance. Any mismatch remains failed without tolerance relaxation. Original fullsix/805/allIDs/state/vector gates remain required. No plotted metrics or new speed claim. Next action follows actual raw differences on failure, or original full numerical admission on pass; strongest repeated tuned/MTP references, matched INT4/4B and >=2xdecode+throughput/halfTTFT remain open.\r\n'%(JOB,q['exit_code'],q['status'],q['candidate_library_sha256'],json.dumps(q['phase_statuses']),q['error'],q['archive_sha256'],q['archive_bytes'],q['archive_members'],sha(raw))
+for n in ('docs/research/qwen38-5090-development-log.md','docs/research/qwen38-5090-implementation-task.md'):
+    t=R/n;before=t.read_bytes();assert b'### Actual short B4 versus four fresh B1 result and paired raw replay' not in before;t.write_bytes(before+text.encode());assert t.read_bytes()[:len(before)]==before;owned.append(n)
+assert not any('probe_native_external_prefix_batch.py' in n for n in owned);subprocess.run(['git','-C',str(R),'-c','core.autocrlf=false','add','--pathspec-from-file=-','--pathspec-file-nul'],input=('\0'.join(owned)+'\0').encode(),check=True);print(json.dumps(dict(status='B4_B1_short_outcome_retained',model_gate_exit_code=q['exit_code'],paths=len(owned),paired_proof_sha256=sha(raw))))

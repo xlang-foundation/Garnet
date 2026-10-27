@@ -1,0 +1,58 @@
+from pathlib import Path
+import argparse,hashlib,io,json,sys,zipfile
+JOB='b4-b1-short-admission-attempt1';P='Garnet/test2026/cuda/qwen38_5090/';sha=lambda b:hashlib.sha256(b).hexdigest()
+def main():
+    a=argparse.ArgumentParser();a.add_argument('--proofs',type=Path,required=True);a.add_argument('--repo',type=Path,required=True);args=a.parse_args();sys.path.insert(0,str(args.repo))
+    from test2026.cuda.qwen38_5090.b4_b1_exact_gate import compare_capture,require_ids
+    archive=args.proofs/(JOB+'-evidence.zip')
+    with zipfile.ZipFile(archive) as z:
+        assert z.testzip() is None;mf=json.loads(z.read('evidence-manifest.json'));assert len(z.namelist())==len(set(z.namelist()))==len(mf['files'])+1
+        for n,h in mf['files'].items():assert sha(z.read(n))==h
+        doc=lambda n:json.loads(z.read(n));base='results/'+JOB+'/';p=doc(P+'evidence/b4-b1-short-preparation.json');w=doc(base+'workflow.json')
+        assert sha(z.read(P+'evidence/b4-b1-short-preparation.json'))==w['preparation_sha256'];assert type(w['exit_code']) is int and w['exit_code'] in (0,1) and w['cleanup_finished'] is w['baseline_source_restored'] is w['baseline_library_restored'] is True
+        assert w['source_before']==w['source_after']==p['files'] and w['runtime_before']==w['runtime_after']==p['runtime'] and w['environment_before']==w['environment_after']==p['environment'] and w['checkpoint_after']==p['checkpoints']
+        assert w['performance_admitted'] is w['full4k_MTP_805_qualified'] is False
+        for n,h in {**p['files'],**p['checkpoints'],**p['audit_dependencies']}.items():assert sha(z.read(n))==h
+        for n in ('b4_b1_exact_gate.py','probe_b4_b1_short_admission.py','run_b4_b1_short_admission.py','launch_b4_b1_short_admission.py'):assert (args.repo/'test2026/cuda/qwen38_5090'/n).read_bytes()==z.read(P+n)
+        for mode in ('reference','candidate'):
+            assert sha(z.read(p[mode+'_bundle']))==p[mode+'_bundle_sha256']
+            with zipfile.ZipFile(io.BytesIO(z.read(p[mode+'_bundle']))) as source:assert source.testzip() is None and {n:sha(source.read(n)) for n in source.namelist()}==p[mode+'_source_files']
+        for job,row in p['parents'].items():
+            raw=z.read('results/'+job+'-verified.json');q=json.loads(raw);assert sha(raw)==row['proof_sha256'] and q['status']==row['status'] and raw==(args.proofs/(job+'-verified.json')).read_bytes() and sha((args.proofs/(job+'-evidence.zip')).read_bytes())==q['archive_sha256']==row['archive_sha256']
+        with zipfile.ZipFile(io.BytesIO(z.read('results/paged-batch8-model-preservation-attempt1-evidence.zip'))) as old:inputs=json.loads(old.read('results/paged-batch8-model-preservation-attempt1/model/report.json'))['cases'][0]['inputs'][:4]
+        def commands(name,expected):
+            events=[json.loads(line) for line in z.read(base+name+'-ledger/commands.jsonl').splitlines()];assert len(events)==2 and events[0]['event']=='started' and events[1]['event']=='finished';assert events[0]['source']['owned_source_sha256']==events[1]['source_after']['owned_source_sha256']==expected;return events[1]['exit_code']
+        assert commands('cpu',p['files'])==0 and b'Ran 4 tests' in z.read(base+'cpu-ledger/commands.log')
+        reports={};comparisons=None;IDs=None
+        for phase in w['phases']:
+            mode=phase['mode'];assert mode not in reports and mode in ('reference','candidate');assert phase['source_installed']==p[mode+'_installed_files'] and phase['library_sha256']==p[mode+'_library_sha256'];assert commands(mode,p[mode+'_installed_files'])==phase['exit_code']
+            name=base+mode+'/report.json'
+            if name not in mf['files']:continue
+            report=doc(name);reports[mode]=report;assert report['inputs']==inputs and report['library_sha256']==p[mode+'_library_sha256'] and report['physical_batch']==(1 if mode=='reference' else 4) and (report['capacity'],report['prefill_chunk'],report['decode_chunk'])==(4096,32,4)
+            assert report['performance_admitted'] is report['full4k_MTP_quality_qualified'] is False
+        recovered_comparison=False
+        if 'candidate' in reports and len(reports['candidate']['rows'])==1 and all(k in reports['candidate']['rows'][0] for k in ('reset_state','prefill_state','final_state','final_reset')):
+            b=reports['reference'];c=reports['candidate'];assert b['status']=='four_B1_short_oracles_collected' and len(b['rows'])==4 and len(c['rows'])==1
+            comparisons={phase:compare_capture(c['rows'][0][phase],[v[phase] for v in b['rows']],lambda n:z.read(base+'candidate/'+n),lambda r,n:z.read(base+'reference/'+n)) for phase in ('reset_state','prefill_state','final_state','final_reset')}
+            IDs=[c['rows'][0]['generated_ids'][r]==b['rows'][r]['generated_ids'][0] for r in range(4)]
+            if 'exact_comparisons' in c:assert comparisons==c['exact_comparisons'] and IDs==c['IDs_exact']
+            else:
+                assert w['exit_code']==1 and c['status']=='failed' and c.get('error')=="NameError(\"free variable 'reference' is not defined\")"
+                recovered_comparison=True # Original failed job stays failed; reuse complete archived raw witnesses only.
+        passed=w['exit_code']==0
+        if passed:
+            assert w['status']=='B4_short_mixed_tail_exact_to_four_B1_collected_unqualified_full4k_MTP_quality_performance' and [v['mode'] for v in w['phases']]==['reference','candidate'] and all(v['exit_code']==0 for v in w['phases'])
+            assert reports['candidate']['status']=='B4_short_mixed_tail_exact_to_four_B1'
+            counts={'native_fp8_m128_canonical_projections':48,'native_fp8_z128_canonical_projections':0,'native_fp8_z128_reconstructed_projections':48,'native_fp8_kv128_canonical_projections':32,'native_fp8_q128_canonical_projections':16,'native_fp8_o128_canonical_projections':16,'native_full_chunk_stage_witnesses':0}
+            for mode,report in reports.items():
+                assert set(report['graph_stats'])=={'4','32'}
+                for t,stats in report['graph_stats'].items():
+                    for key,count in counts.items():assert type(stats[key]) is int and stats[key]==(count if mode=='candidate' and t=='32' else 0)
+                assert all(report['vision_stats'][key]==0 for key in counts)
+                for row in report['rows']:
+                    assert row['reset_state']['logical']==row['final_reset']['logical'] and all(row['reset_state']['vectors'][key]['sha256']==row['final_reset']['vectors'][key]['sha256'] for key in ('hidden','normalized'))
+            assert comparisons is not None and all(v['all_exact'] for v in comparisons.values()) and all(IDs);require_ids(reports['candidate']['rows'][0]['generated_ids'],[v['generated_ids'][0] for v in reports['reference']['rows']],8)
+        else:assert w['status']=='failed' and w.get('error') and w['phases'][-1]['exit_code']!=0
+        result=dict(status='actual_B4_short_vs_four_B1_exact_replayed' if passed else 'actual_B4_short_vs_four_B1_failure_replayed',exit_code=w['exit_code'],error=w.get('error'),archive_sha256=sha(archive.read_bytes()),archive_bytes=archive.stat().st_size,archive_members=len(z.namelist()),candidate_library_sha256=p['candidate_library_sha256'],reference_library_sha256=p['reference_library_sha256'],phase_statuses={mode:row['status'] for mode,row in reports.items()},phase_errors={mode:row.get('error') for mode,row in reports.items()},physical_graph_counts={mode:row.get('graph_stats') for mode,row in reports.items()},complete_comparisons=comparisons,IDs_exact=IDs,postprocess_recovered_comparison_from_complete_original_raw_witnesses=recovered_comparison,original_failed_job_promoted=False,source_runtime_SDK_checkpoint_restored=True,short_gate_only=True,full4k_MTP_805_HTTP_or_performance_qualified=False,two_times_target_achieved=False)
+    target=args.proofs/(JOB+'-verified.json');raw=json.dumps(result,indent=2).encode();assert not target.exists() or target.read_bytes()==raw;target.write_bytes(raw);print(json.dumps(result))
+if __name__=='__main__':main()
