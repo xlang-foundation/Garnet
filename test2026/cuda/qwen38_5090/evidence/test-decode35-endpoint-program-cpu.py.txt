@@ -1,0 +1,8 @@
+from pathlib import Path
+import hashlib,json,os,sys
+W=Path(__file__).resolve().parent;R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';sys.path[:0]=[str(M),str(R)];sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+import run_logged as ledger
+p=json.loads((M/'evidence/decode35-operands-preparation.json').read_bytes());old=json.loads((W/'decode35-operands-cpu-ledger/commands.jsonl').read_bytes().splitlines()[0])
+names=sorted(set(old['source']['owned_source_sha256'])|{'decode35_endpoint_program.py','test_decode35_endpoint_program.py','evidence/decode35-endpoint-program-derivation.json'})
+ledger.source_identity=lambda:{'scope':'Explicit six-endpoint CPU topology and all81 inherited observer guards; no native/GPU/model execution or protected-body reads','owned_source_sha256':{n:sha(M/n) for n in names}}
+os.chdir(R);assert ledger.run([sys.executable,'-m','unittest',*p['test_modules'],'test2026.cuda.qwen38_5090.test_decode35_endpoint_program'],W/'decode35-endpoint-program-cpu-ledger','correctness','87 CPU controls: all81 original controls unchanged, six new final-output topology/source/offset/binding/guard/native-seven-hook identity tests. Only omit pre-RoPE observation from returned network outputs; advance original seven native offsets. No DLL, precision or native arithmetic change; actual pruning and primary parity unproved.',[M/n for n in names])==0

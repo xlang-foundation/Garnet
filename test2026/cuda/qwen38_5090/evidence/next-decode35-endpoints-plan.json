@@ -1,0 +1,20 @@
+{
+  "status": "next_experiment_proposal_unrun",
+  "reason": "Seven-output witness perturbs B4 primary state. Do not interpret its operand values.",
+  "failed_parent": "decode35-operands-attempt1",
+  "failed_parent_archive_sha256": "42ce8c647ec46f618f0b65cc420a50f45fbe3eb17f7b28aab9d52a78610106d7",
+  "remote_proof_sha256": "031df5a8fbd8888391d6e70ba4ac337df43b1fb6c6c4d5a5b16b61c5513ea5cd",
+  "hypothesis_not_diagnosis": "Returning K_normalized_pre_RoPE may change TensorRT fusion. Test omitting only that observation from final graph outputs.",
+  "native_bundle_and_DLL_unchanged": true,
+  "native_hook_stays_seven_stages": true,
+  "final_selected_endpoints": ["masked_input", "input_normalized", "projected_Q_gate", "projected_K", "projected_V", "K_post_RoPE"],
+  "final_observation_row_words": 102400,
+  "native_hook_row_words_unchanged": 106496,
+  "forward_view_rule": "Advance through all seven native widths; skip appending the pre-RoPE view. K_post_RoPE still reads its original native offset. Final returned six observations are repacked contiguously.",
+  "keep_old_failed_protocol_and_tests": true,
+  "can_reuse_ordinary_off_captures": "Only after paired raw proof checks: same source86 bundle, same DLL27b8, same pinned config/index, corpus and flags, same unchanged current34 objects/runtime/SDK/CMake. Both off profiles already reproduce historical source60/source85 exactly. New experiment needs two fresh endpoint-on processes, each checked against its immutable same-DLL off parent; do not rerun two identical costly off controls without a new concern.",
+  "before_interpretation": "Require all53 IDs, five full128-component state captures and finite vectors, entire selected8MiB cache, all53 coordinate points, and both44/45 all64 completeT4 layer outputs. Native actual trace stays7; original counters/guards unchanged. Independent BF16RN-to-actual-cache link stays mandatory. No pre-RoPE suffix claim when that intermediate is not captured.",
+  "if_endpoint_observer_still_perturbs": "Use side-channel copies inside existing projection/attention plugin enqueue at existing operator boundaries, with explicit profile and lifetime guards, rather than adding TensorRT outputs. It is a later design, not implemented.",
+  "performance_or_quality_admitted": false,
+  "overall_goal_unchanged": true
+}

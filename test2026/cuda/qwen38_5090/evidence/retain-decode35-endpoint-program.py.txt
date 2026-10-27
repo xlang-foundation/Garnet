@@ -1,0 +1,44 @@
+from pathlib import Path
+import hashlib,json
+W=Path(__file__).resolve().parent;O=W.parent/'outputs';R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';E=M/'evidence';sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest();owned=[M/'decode35_endpoint_program.py',M/'test_decode35_endpoint_program.py',E/'decode35-endpoint-program-derivation.json'];saved={}
+events=[json.loads(s) for s in (W/'decode35-endpoint-program-cpu-ledger/commands.jsonl').read_bytes().splitlines()];assert len(events)==2 and events[1]['exit_code']==0 and events[0]['source']['owned_source_sha256']==events[1]['source_after']['owned_source_sha256'];assert b'Ran 87 tests' in (W/'decode35-endpoint-program-cpu-ledger/commands.log').read_bytes()
+for n,h in events[0]['source']['owned_source_sha256'].items():assert sha(M/n)==h
+def keep(name,raw):
+    p=E/name;assert not p.exists();p.write_bytes(raw);owned.append(p);saved[name]=sha(p)
+for name in ('derive-decode35-endpoint-program.py','derive-decode35-endpoint-program-failed-v1.py.txt','derive-decode35-endpoint-program-failed-v2.py.txt','test-decode35-endpoint-program-cpu.py','audit-decode35-observer-primary.py',Path(__file__).name):keep(name if name.endswith('.txt') else name+'.txt',(W/name).read_bytes())
+for ext in ('log','jsonl'):keep('decode35-endpoint-program-cpu-commands.'+ext,(W/('decode35-endpoint-program-cpu-ledger/commands.'+ext)).read_bytes())
+keep('next-decode35-endpoints-plan.json',(W/'next-decode35-endpoints-plan.json').read_bytes());keep('Garnet-Decode35-Observer-Perturbation.json',(O/'Garnet-Decode35-Observer-Perturbation.json').read_bytes())
+keep('decode35-endpoint-program-local-derivation-failures.json',json.dumps({'status':'two_readonly_source_derivation_failures_preserved_before_success','exit_codes':[1,1],'failure':'Literal multiline replacement assumed uniform CRLF, but original program contains mixed line endings (35CRLF/127LF). No target file was written before either assertion. Corrected matching tries exact original LF segment without normalizing or rewriting the source. Actual class reversal and frozen old program checks pass.','native_or_GPU_or_remote_mutation':False,'script_sha256':{n:sha(W/n) for n in ('derive-decode35-endpoint-program-failed-v1.py.txt','derive-decode35-endpoint-program-failed-v2.py.txt')}},indent=2).encode())
+audit=json.loads((O/'Garnet-Decode35-Observer-Perturbation.json').read_bytes());assert audit['first_ID_difference']==[None]*4
+keep('decode35-endpoint-program-cpu-preparation.json',json.dumps({'status':'six_final_endpoint_topology_CPU_qualified_GPU_unrun','CPU_tests':87,'new_CPU_tests':6,'retained_sha256':dict(saved),'source_sha256':events[0]['source']['owned_source_sha256'],'native_hook_stages_unchanged':7,'native_hook_row_words_unchanged':106496,'final_observations':6,'final_observation_row_words':102400,'native_or_DLL_or_precision_change':False,'TensorRT_pruning_or_numerical_parity_proved':False,'model_or_performance_qualified':False},indent=2).encode())
+entry=('\n\n2026-10-27 failed seven-output observer independently audited without '
+       'opening its operand blobs. IDs remain exact for all four rows. Reset, '
+       'prefill, step7 and final-reset logical states are exact; step52 differs '
+       'in 56 component hashes, only physical row3, first component70/K35. This '
+       'is an observer perturbation, not original-model diagnosis. Preserve the '
+       'full all-row failed gate; do not reinterpret new operands. Next private '
+       'Decode35EndpointProgram omits only K_normalized_pre_RoPE from final '
+       'network outputs while retaining the exact native seven-stage fusion '
+       'function, metadata, guard, source86 bundle and DLL. Advance through all '
+       'seven native offsets, including the omitted 4096 words, so K_post_RoPE '
+       'reads its original position; return six endpoints contiguously (102400 '
+       'words). Hypothesis: exposing the internal normalization intermediate '
+       'changed TensorRT fusion. Pruning, causal explanation and numeric parity '
+       'remain UNPROVED. All87 CPU controls pass (81 unchanged plus6 topology, '
+       'binding, native identity, source reversal and actual view-offset checks). '
+       'Two read-only derivation assertions failed on mixed LF/CRLF before any '
+       'target write; scripts retained, exact matching corrected and source '
+       'line endings preserved. New model protocol can reuse immutable same-DLL '
+       'ordinary off captures from the paired failed-parent archive, provided '
+       'source86/weights config-index/corpus/flags/runtime/SDK/CMake/all34 objects '
+       'remain exact; two fresh six-endpoint on processes must pass all53IDs, '
+       'five all-row128-component states and vectors, fullcache, coordinate '
+       'timeline and both44/45 all64 outputs before interpretation. Native trace '
+       'still reports7; do not claim a new6 native hook or pre-RoPE suffix check. '
+       'No native build, model run, performance or quality admission for this '
+       'variant yet. Full objective and 2x target remain open.\n').encode()
+for name in ('docs/research/qwen38-5090-development-log.md','docs/research/qwen38-5090-implementation-task.md'):
+    p=R/name;before=p.read_bytes();assert b'failed seven-output observer independently audited' not in before
+    with p.open('ab') as f:f.write(entry)
+    assert p.read_bytes()==before+entry;owned.append(p)
+(W/'decode35-endpoint-program-stage-paths.bin').write_bytes(b''.join(p.relative_to(R).as_posix().encode()+b'\0' for p in owned));print(json.dumps({'stage_paths':len(owned),'CPU_tests':87,'new_tests':6,'native_and_GPU_unrun':True}))
