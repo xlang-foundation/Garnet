@@ -1,0 +1,202 @@
+{
+  "derivations": [
+    {
+      "source": "probe_b4_full4k_exact.py",
+      "target": "probe_b4_full4k_decode_prefix.py",
+      "source_sha256": "68ee4339f77ae389d398ca5f62314293a899407ee5552c55d5348d71ab6ad2d3",
+      "target_sha256": "6ec1040630b8302d59844e37303f7735cdb05331463822e9715584d4a9c8d4ad",
+      "changes": [
+        {
+          "old": "\"\"\"Full4K raw capture: eight fresh B1 oracles then text/image/mixed B4; no timing.\"\"\"",
+          "new": "\"\"\"Ordinary original-model early decode state snapshots; no observer graph or timing.\"\"\"",
+          "count": 1
+        },
+        {
+          "old": "evidence/b4-full4k-exact-preparation.json",
+          "new": "evidence/b4-full4k-decode-prefix-preparation.json",
+          "count": 1
+        },
+        {
+          "old": "groups=[[i] for i in range(8)] if batch==1 else [[index[key] for key in group['keys']] for group in selection['groups']]",
+          "new": "selected=[index[key] for key in selection['groups'][2]['keys']]\n        groups=[[i] for i in selected] if batch==1 else [selected]",
+          "count": 1
+        },
+        {
+          "old": "label=selection['groups'][group_index]['label'] if batch==4 else",
+          "new": "label=selection['groups'][2]['label'] if batch==4 else",
+          "count": 1
+        },
+        {
+          "old": "record['generated_ids']=[[] for _ in physical];save()",
+          "new": "record['generated_ids']=[[] for _ in physical];record['post_step_states']=[];save()",
+          "count": 1
+        },
+        {
+          "old": "for step in range(128):",
+          "new": "for step in range(8):",
+          "count": 1
+        },
+        {
+          "old": "if step+1<128:prediction=decoder.step(prediction,[1]*batch,[[v]*3 for v in current]);current=[v+1 for v in current]",
+          "new": "if step+1<8:\n                    prediction=decoder.step(prediction,[1]*batch,[[v]*3 for v in current]);current=[v+1 for v in current]\n                    record['post_step_states'].append(dict(step=step+1,capture=snapshot('case'+str(group_index)+'-step'+str(step+1))));save()",
+          "count": 1
+        },
+        {
+          "old": "record['final_state']=snapshot('case'+str(group_index)+'-final');assert decoder.slots==[v+127 for v in lengths]",
+          "new": "record['final_state']=record['post_step_states'][-1]['capture'];assert decoder.slots==[v+7 for v in lengths]",
+          "count": 1
+        },
+        {
+          "old": "B4_FULL4K_COLLECTED",
+          "new": "B4_FULL4K_DECODE_PREFIX_COLLECTED",
+          "count": 1
+        },
+        {
+          "old": "report['status']='B4_full4k_raw_capture_needs_CPython_admission' if batch==4 else 'eight_B1_full4k_oracles_collected'",
+          "new": "report['status']='full4k_first_seven_decode_steps_captured_unqualified'",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "launch_b4_full4k_exact.py",
+      "target": "launch_b4_full4k_decode_prefix.py",
+      "source_sha256": "c0f061be9c108e7e2f65d26ae9166e2eee28ef885dcb2adf6dfb39e777866a0a",
+      "target_sha256": "5a4a03b94ffdbb5f6cf5ac4bb8e112234e26fea5bd98f25b4025fd776f83496b",
+      "changes": [
+        {
+          "old": "evidence/b4-full4k-exact-preparation.json",
+          "new": "evidence/b4-full4k-decode-prefix-preparation.json",
+          "count": 1
+        },
+        {
+          "old": "probe_b4_full4k_exact.py",
+          "new": "probe_b4_full4k_decode_prefix.py",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "run_b4_full4k_exact.py",
+      "target": "run_b4_full4k_decode_prefix.py",
+      "source_sha256": "f76122cbc497303b916dae940cfad3b16279a67d2fc4ee7afe939f38aeff3326",
+      "target_sha256": "f5bd261c972f659d1b609610033f151fcbd1c59a9076cea2ccbe7d1bc87f42df",
+      "changes": [
+        {
+          "old": "JOB='b4-full4k-exact-attempt1'",
+          "new": "JOB='b4-full4k-decode-prefix-attempt1'",
+          "count": 1
+        },
+        {
+          "old": "evidence/b4-full4k-exact-preparation.json",
+          "new": "evidence/b4-full4k-decode-prefix-preparation.json",
+          "count": 1
+        },
+        {
+          "old": "p['status']=='B4_full4k_exact_prepared_GPU_unrun'",
+          "new": "p['status']=='B4_full4k_decode_prefix_prepared_GPU_unrun'",
+          "count": 1
+        },
+        {
+          "old": "'test2026.cuda.qwen38_5090.test_b4_full4k_exact_gate'",
+          "new": "'test2026.cuda.qwen38_5090.test_b4_full4k_exact_gate','test2026.cuda.qwen38_5090.test_b4_full4k_decode_prefix'",
+          "count": 1
+        },
+        {
+          "old": "launch_b4_full4k_exact.py",
+          "new": "launch_b4_full4k_decode_prefix.py",
+          "count": 1
+        },
+        {
+          "old": "Eight fresh source60/DLL841 B1 oracles then source79/pinnedcandidateDLL B4 text/image/mixed groups with GDN/V/QK M16policy1; pinned3968prompt+128forcedoutput IDs,4096capacity. Capture complete128statecomponents, finite hidden+norm rawbytes/reset/prefill/final/reset. Original exactgate enforced in CPython owner after capture; actualfactory/init traces required, no timing or quality promotion.",
+          "new": "Four fresh source60/DLL841 B1 mixed-group references then source79/DLL2bafed B4. Same actual original model/graphs/precision/weights,3968prompt+8forcedIDs/cap4096, capture complete128components/finitevectors aftereach1..7decode steps. Same-profile original failedfull4Kreset/prefill/reset/first8ID parity required before interpreting drift. Diagnostic only; original128ID full4K gate staysFAILED, no observer outputs/kernel/native rebuild or timing/quality admission.",
+          "count": 1
+        },
+        {
+          "old": "        from test2026.cuda.qwen38_5090.b4_full4k_exact_gate import observe,admit\n        reference=json.loads((out/'reference/report.json').read_bytes());candidate=json.loads((out/'candidate/report.json').read_bytes())\n        read_reference=lambda key,name:(out/'reference'/name).read_bytes();read_candidate=lambda label,name:(out/'candidate'/name).read_bytes()\n        w['observation']=observe(selection,reference,candidate,read_reference,read_candidate);(out/'analysis.json').write_bytes(json.dumps(w['observation'],indent=2).encode());save()",
+          "new": "        from test2026.cuda.qwen38_5090.b4_full4k_decode_prefix import observe,same_profile_parent\n        reference=json.loads((out/'reference/report.json').read_bytes());candidate=json.loads((out/'candidate/report.json').read_bytes())\n        read_reference=lambda key,name:(out/'reference'/name).read_bytes();read_candidate=lambda name:(out/'candidate'/name).read_bytes()\n        with zipfile.ZipFile(ROOT/'results/b4-full4k-exact-attempt1-evidence.zip') as parent:\n            base='results/b4-full4k-exact-attempt1/'\n            w['same_profile_parent']={mode:same_profile_parent(report,json.loads(parent.read(base+mode+'/report.json')),lambda name,mode=mode:(out/mode/name).read_bytes(),lambda name,mode=mode:parent.read(base+mode+'/'+name)) for mode,report in (('reference',reference),('candidate',candidate))}\n        (out/'same-profile-parent.json').write_bytes(json.dumps(w['same_profile_parent'],indent=2).encode());save()\n        w['observation']=observe(selection,reference,candidate,read_reference,read_candidate);(out/'analysis.json').write_bytes(json.dumps(w['observation'],indent=2).encode());save()",
+          "count": 1
+        },
+        {
+          "old": "        w['strict_admission']=admit(selection,reference,candidate,read_reference,read_candidate);save()\n        w['status']='B4_full4k_state_vectors_and128_IDs_exact_collected_unqualified_MTP_quality_performance';code=0",
+          "new": "        w['original_full4k_admission_still_failed']=True;save()\n        w['status']='full4k_decode_prefix_diagnostic_collected_no_numerical_admission';code=0",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "verify_b4_full4k_exact.py",
+      "target": "verify_b4_full4k_decode_prefix.py",
+      "source_sha256": "96c7c7253419dbc305367e35208d21a65b63b76736a0bed3859897a3201afeb7",
+      "target_sha256": "bd680e4f123b94b1b472a207f0e3be5205f85935207dc14978f6b87db83f85ee",
+      "changes": [
+        {
+          "old": "from test2026.cuda.qwen38_5090.b4_full4k_exact_gate import observe,admit",
+          "new": "from test2026.cuda.qwen38_5090.b4_full4k_decode_prefix import observe,same_profile_parent,STATUS",
+          "count": 1
+        },
+        {
+          "old": "JOB='b4-full4k-exact-attempt1'",
+          "new": "JOB='b4-full4k-decode-prefix-attempt1'",
+          "count": 1
+        },
+        {
+          "old": "evidence/b4-full4k-exact-preparation.json",
+          "new": "evidence/b4-full4k-decode-prefix-preparation.json",
+          "count": 1
+        },
+        {
+          "old": "'b4_full4k_exact_gate.py','b4_full4k_inputs.py'",
+          "new": "'b4_full4k_exact_gate.py','b4_full4k_inputs.py','b4_full4k_decode_prefix.py'",
+          "count": 1
+        },
+        {
+          "old": "verify_derivations(json.loads(z.read(P+'evidence/b4-full4k-exact-probe-derivation.json')),lambda n:z.read(P+n))",
+          "new": "verify_derivations(json.loads(z.read(P+'evidence/b4-full4k-exact-probe-derivation.json')),lambda n:z.read(P+n))\n        verify_derivations(json.loads(z.read(P+'evidence/b4-full4k-decode-prefix-derivation.json')),lambda n:z.read(P+n))",
+          "count": 1
+        },
+        {
+          "old": "b'Ran 25 tests'",
+          "new": "b'Ran 29 tests'",
+          "count": 1
+        },
+        {
+          "old": "reports['reference']['status']=='eight_B1_full4k_oracles_collected' and reports['candidate']['status']=='B4_full4k_raw_capture_needs_CPython_admission'",
+          "new": "reports['reference']['status']==reports['candidate']['status']==STATUS",
+          "count": 1
+        },
+        {
+          "old": "reference=reports['reference'];candidate=reports['candidate'];r=lambda key,n:z.read(BASE+'reference/'+n);c=lambda label,n:z.read(BASE+'candidate/'+n);observation=observe(selection,reference,candidate,r,c);assert observation==w['observation']==json.loads(z.read(BASE+'analysis.json'))",
+          "new": "reference=reports['reference'];candidate=reports['candidate'];r=lambda key,n:z.read(BASE+'reference/'+n);c=lambda n:z.read(BASE+'candidate/'+n);observation=observe(selection,reference,candidate,r,c);assert observation==w['observation']==json.loads(z.read(BASE+'analysis.json'))\n            with zipfile.ZipFile(a.proofs/'b4-full4k-exact-attempt1-evidence.zip') as parent:\n                base='results/b4-full4k-exact-attempt1/'\n                parity={mode:same_profile_parent(report,json.loads(parent.read(base+mode+'/report.json')),lambda n,mode=mode:z.read(BASE+mode+'/'+n),lambda n,mode=mode:parent.read(base+mode+'/'+n)) for mode,report in (('reference',reference),('candidate',candidate))}\n            assert parity==w['same_profile_parent']==json.loads(z.read(BASE+'same-profile-parent.json'))",
+          "count": 1
+        },
+        {
+          "old": "if w['exit_code']==0:assert full is not None and admit(selection,reference,candidate,r,c)==w['strict_admission'];strict=True",
+          "new": "if w['exit_code']==0:assert full is not None and w['original_full4k_admission_still_failed'];strict=True",
+          "count": 1
+        },
+        {
+          "old": "w['status']=='B4_full4k_state_vectors_and128_IDs_exact_collected_unqualified_MTP_quality_performance'",
+          "new": "w['status']=='full4k_decode_prefix_diagnostic_collected_no_numerical_admission'",
+          "count": 1
+        },
+        {
+          "old": "status='actual_B4_full4k_vs_eight_B1_exact_replayed' if strict else 'actual_B4_full4k_vs_eight_B1_failure_replayed'",
+          "new": "status='full4k_decode_prefix_diagnostic_replayed' if strict else 'full4k_decode_prefix_job_failure_replayed'",
+          "count": 1
+        },
+        {
+          "old": "strict_full4k_admission_passed=strict",
+          "new": "strict_full4k_admission_passed=False,diagnostic_completed=strict",
+          "count": 2
+        },
+        {
+          "old": "full4k_state_IDs_qualified=strict",
+          "new": "full4k_state_IDs_qualified=False",
+          "count": 1
+        }
+      ]
+    }
+  ],
+  "scope": "Ordinary unchanged source60B1/source79B4 completefirst7decode-state diagnostic, mixed4only after3968prompt. No graphobserver/newnativecode/kernel/head/precision/tolerance changes. Full4Kfailedparent immutable, exactsame-profile reset/prefill/reset/first8IDs required. Firststate drift is a persistentcomponent observation, notuniqueoperatorcausality; complete128IDs/MTP/quality/HTTP/perf notadmitted."
+}
