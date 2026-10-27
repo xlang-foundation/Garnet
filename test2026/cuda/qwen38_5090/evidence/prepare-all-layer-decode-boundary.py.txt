@@ -1,0 +1,13 @@
+from pathlib import Path
+import ast,hashlib,json,os,sys
+W=Path(__file__).resolve().parent;R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';E=M/'evidence';sys.path[:0]=[str(M),str(R)];sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+names=['all_layer_decode_boundary_program.py','test_all_layer_decode_boundary_program.py','decode_boundary_program.py','decode_boundary_layout.py','test_decode_boundary_program.py','evidence/decode-boundary-program-derivation.json']
+pins={n:sha(M/n) for n in names};tree=ast.parse((M/names[0]).read_bytes());cls=next(n for n in tree.body if isinstance(n,ast.ClassDef));assert cls.bases[0].id=='DecodeBoundaryProgram' and [n.name for n in cls.body if isinstance(n,ast.FunctionDef)]==['__init__']
+import run_logged as ledger
+ledger.source_identity=lambda:dict(scope='Explicit owned CPU fixtures only; GPU job remains exclusive and remote source frozen',owned_source_sha256=pins);os.chdir(R)
+assert ledger.run([sys.executable,'-m','unittest','test2026.cuda.qwen38_5090.test_decode_boundary_program','test2026.cuda.qwen38_5090.test_all_layer_decode_boundary_program'],W/'all-layer-decode-boundary-cpu-ledger','correctness','8CPU originalmathderivation/privatebinding/arityguards +all64inheritance/primaryrow-suffixisolation/B1B4shapes/offsets/constructor-restoration; GPU primary parity still required',[M/n for n in names])==0
+record=dict(status='private_all64_decode_boundary_CPU_prepared_GPU_unrun',CPU_controls=8,source_sha256=pins,original_forward_and_run_inherited_unchanged=True,production_default_or_factory_modified=False,remote_deployed=False,GPU_primary_parity_qualified=False,MTP_quality_HTTP_or_performance_qualified=False,scope='Appends all64layerT4hiddenbuffers usingexistingreadonlyDecodeBoundaryProgram, overridesonlylayerlist/offsetmetadata/privateconstructor binding. No math/kernel/weight/precision/default changes. FutureGPUjob must reproduce sameprofile ordinary full128componentstates/finitevectors aftereach1..7step andall8IDs BEFORE interpreting selectedall64layer outputs; never relax originalfailedfull4K gate.')
+p=E/'all-layer-decode-boundary-cpu-preparation.json';assert not p.exists();p.write_bytes(json.dumps(record,indent=2).encode())
+for src,name in [(W/'all-layer-decode-boundary-cpu-ledger/commands.log','all-layer-decode-boundary-cpu-commands.log'),(W/'all-layer-decode-boundary-cpu-ledger/commands.jsonl','all-layer-decode-boundary-cpu-commands.jsonl'),(Path(__file__),'prepare-all-layer-decode-boundary.py.txt')]:
+    p=E/name;assert not p.exists();p.write_bytes(src.read_bytes())
+print(json.dumps(record))
