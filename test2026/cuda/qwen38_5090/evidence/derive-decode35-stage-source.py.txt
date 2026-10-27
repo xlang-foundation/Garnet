@@ -1,0 +1,79 @@
+"""Private source86 instrumentation; all original arithmetic and guards retained."""
+from pathlib import Path
+import hashlib,json,zipfile
+W=Path(__file__).resolve().parent;R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';E=M/'evidence';C=M/'native_decode35_stage_candidate';sha=lambda b:hashlib.sha256(b).hexdigest()
+p=json.loads((E/'step45-layer-boundary2-preparation.json').read_bytes());bundle=W/'b4-k-m4x4-source.zip';assert sha(bundle.read_bytes())==p['candidate_bundle_sha256']
+with zipfile.ZipFile(bundle) as z:parent={n:z.read(n) for n in z.namelist()}
+assert len(parent)==85 and {n:sha(v) for n,v in parent.items()}==p['candidate_source_files']
+candidate=dict(parent);changes=[]
+def derive(name,replacements):
+    raw=parent[name];s=raw.decode()
+    for old,new,count in replacements:assert s.count(old)==count,(name,old,s.count(old),count);s=s.replace(old,new)
+    target=C/Path(name).name;assert not target.exists();target.write_bytes(s.encode());candidate[name]=target.read_bytes();changes.append({'source':name,'target':name,'source_sha256':sha(raw),'target_sha256':sha(target.read_bytes()),'changes':[{'old':a,'new':b,'count':c} for a,b,c in replacements]})
+header='src/backends/tensorrt/qwen35_lowering.h'
+derive(header,[
+('#include "qwen38_full_chunk_stage_profile.h"','#include "qwen38_full_chunk_stage_profile.h"\n#include "qwen38_decode35_stage_profile.h"',1),
+('std::vector<T*>* chunkStages=nullptr) {','std::vector<T*>* chunkStages=nullptr,std::vector<T*>* decode35Stages=nullptr) {',1),
+('        auto* capturedStages=diagnosticStages?diagnosticStages:chunkStages;', '''        if(decode35Stages){
+            if(diagnosticStages||chunkStages||!bf16Delta||!canonical||overlay||bf16FloatReference||prefill128||
+                !fusedAttention||!joinedMLPProjections||theta!=1.e7f||eps!=1.e-6f)
+                throw std::invalid_argument("Decode35 stage output requires exclusive canonical decode geometry");
+            RequireDecode35StageGeometry(xs,layer,heads,kv,dim,rotary,sections,double(theta),1.e-6,
+                legacyBF16Overlay!=nullptr,lowBatch,prefill128,bf16Overlay->state_width,bf16Overlay->key_offset,bf16Overlay->value_offset);
+        }
+        auto* capturedStages=diagnosticStages?diagnosticStages:chunkStages;''',1),
+('        if(capturedStages)*capturedStages={x,normalized,qg,projectedK,projectedV};','        if(capturedStages)*capturedStages={x,normalized,qg,projectedK,projectedV};\n        if(decode35Stages)*decode35Stages={x,normalized,qg,projectedK,projectedV};',1),
+('            T* k=rms(reshape(projectedK,{batch,tokens,kv,dim}),weight(prefix+".k_norm.weight"),eps,true);','            T* k=rms(reshape(projectedK,{batch,tokens,kv,dim}),weight(prefix+".k_norm.weight"),eps,true);\n            if(decode35Stages)decode35Stages->push_back(k);',1),
+('                key=cast(rotate(k));value=cast(reshape(projectedV,{batch,tokens,kv,dim}));','                key=cast(rotate(k));value=cast(reshape(projectedV,{batch,tokens,kv,dim}));\n                if(decode35Stages)decode35Stages->push_back(key);',1),
+])
+builder='src/backends/tensorrt/trt_builder.cpp'
+policy='''                    auto* decode35Attribute=FindKeyword(kwParams,"witness_full_decode35_stages");
+                    if(decode35Attribute&&(!(decode35Attribute->second.IsInt64()||decode35Attribute->second.IsUInt64())||
+                        (decode35Attribute->second.IsUInt64()&&decode35Attribute->second.ToUInt64()>1)))
+                        throw std::invalid_argument("Decode35 witness metadata requires integer0 or1");
+                    const auto decode35Witness=decode35Attribute?decode35Attribute->second.ToLongLong():0;
+                    if(decode35Witness!=0&&decode35Witness!=1)throw std::invalid_argument("Decode35 witness must be0 or1");
+                    if(decode35Witness){
+                        RequireDecode35StagePolicy(std::getenv("GARNET_DECODE35_STAGE_WITNESS"),capturedWeightProfile,
+                            FindKeyword(kwParams,"external_compressed_weights")&&!external.empty(),FindKeyword(kwParams,"external_weights")!=nullptr,
+                            source->getType()==DataType::kFLOAT,diagnostic!=0,chunkWitness!=0,overlayMode!=0,referenceMode!=0,
+                            keywordInt("fused_attention",0)==1,keywordInt("joined_mlp_projections",0)==1);
+                        RequireDecode35StageGeometry(dimensions,keywordText("layer_prefix"),keywordInt("num_heads",0),keywordInt("num_kv_heads",0),
+                            keywordInt("head_dim",0),keywordInt("rotary_dim",0),{keywordInt("mrope_t",0),keywordInt("mrope_h",0),keywordInt("mrope_w",0)},
+                            number("rope_theta",1.e7),number("eps",1.e-6),bf16Mode!=0,lowBatchMode!=0,prefill128Mode!=0,
+                            lowBatchMode?lowBatchOverlay.state_width:bf16Overlay.state_width,
+                            lowBatchMode?lowBatchOverlay.key_offset:bf16Overlay.key_offset,
+                            lowBatchMode?lowBatchOverlay.value_offset:bf16Overlay.value_offset);
+                    }
+                    std::vector<ITensor*> decode35StageOutputs;
+'''
+packing='''                    if(decode35Witness){
+                        if(decode35StageOutputs.size()!=Decode35StageWidths.size())throw std::runtime_error("Decode35 stage contract changed");
+                        std::vector<ITensor*> parts{lastOutput};
+                        for(size_t stage=0;stage<Decode35StageWidths.size();++stage){
+                            auto* value=decode35StageOutputs[stage];const auto shape=ops.shape(value);int width=1;
+                            if(shape.size()<2||shape.size()>4||shape[0]!=dimensions[0]||value->getType()!=DataType::kFLOAT)
+                                throw std::runtime_error("Decode35 stage batch/type differs");
+                            for(size_t i=1;i<shape.size();++i){
+                                if(shape[i]<1||width>Decode35StageWidths[stage]/shape[i])throw std::runtime_error("Decode35 stage shape overflow");
+                                width*=shape[i];
+                            }
+                            if(width!=Decode35StageWidths[stage])throw std::runtime_error("Decode35 stage width differs");
+                            parts.push_back(ops.reshape(value,{dimensions[0],width}));
+                        }
+                        lastOutput=ops.cat(parts,1);TraceDecode35StageWitness(dimensions[0]);
+                    }
+'''
+derive(builder,[
+('                    std::vector<ITensor*> chunkStageOutputs;',policy+'                    std::vector<ITensor*> chunkStageOutputs;',1),
+('chunkWitness?&chunkStageOutputs:nullptr);','chunkWitness?&chunkStageOutputs:nullptr,decode35Witness?&decode35StageOutputs:nullptr);',1),
+('                }else if(opName=="qwen35_mtp_decoder_chunk") {',packing+'                }else if(opName=="qwen35_mtp_decoder_chunk") {',1),
+])
+new='src/backends/tensorrt/qwen38_decode35_stage_profile.h';candidate[new]=(C/Path(new).name).read_bytes();assert len(candidate)==86
+assert all(candidate[n]==raw for n,raw in parent.items() if n not in (header,builder))
+record={'status':'decode35_stage_source86_prepared_native_GPU_unrun','parent_bundle_sha256':sha(bundle.read_bytes()),'parent_files':{n:sha(v) for n,v in parent.items()},'candidate_files':{n:sha(v) for n,v in candidate.items()},'modified_files':[header,builder],'new_files':[new],'derivations':changes,'stage_names':['masked_input','input_normalized','projected_Q_gate','projected_K','projected_V','K_normalized_pre_RoPE','K_post_RoPE'],'stage_widths':[20480,20480,49152,4096,4096,4096,4096],'row_words':106496,'old_full_chunk_guards_and_all_CUDA_unchanged':True,'new_counter_added':False,'old_counters_unchanged':True,'actual_stage_pack_trace_required':True,'original_arithmetic_removed_or_modified':False,'model_or_quality_or_performance_qualified':False}
+out=E/'decode35-stage-source-derivation.json';assert not out.exists();out.write_bytes(json.dumps(record,indent=2).encode())
+target=W/'decode35-stage-source.zip';assert not target.exists()
+with zipfile.ZipFile(target,'x',zipfile.ZIP_DEFLATED) as z:
+    for n,b in candidate.items():z.writestr(n,b)
+(W/'decode35-stage-source-package.json').write_bytes(json.dumps({'source_bundle_sha256':sha(target.read_bytes()),'bytes':target.stat().st_size,'files':len(candidate),'derivation_sha256':sha(out.read_bytes()),'new_native_or_GPU_execution':False},indent=2).encode());print(json.dumps({'files':len(candidate),'source_bundle_sha256':sha(target.read_bytes()),'stage_words':record['row_words'],'native_or_GPU_unrun':True}))
