@@ -1,0 +1,19 @@
+from pathlib import Path
+import hashlib,json,sys,zipfile
+ROOT=Path('D:/CantorAI/5090-study-20261023');P='Garnet/test2026/cuda/qwen38_5090/';M=ROOT/P;sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest();sys.path[:0]=[str(M),str(ROOT/'Garnet')]
+from run_bf16_low_batch_native_build import idle
+archive=ROOT/'results/decode-projection-attempt2-deployment.zip';assert sha(archive)=='60634cdeb59c75f02ed44cf28efdfe83a42f192fdd14c0ab48282ff94a6adf75';idle();out=ROOT/'results/decode-projection-attempt2-install.json';assert not out.exists()
+with zipfile.ZipFile(archive) as z:
+    mf=json.loads(z.read('deployment-manifest.json'))['files'];assert z.testzip() is None and len(z.namelist())==len(set(z.namelist()))==len(mf)+1==13
+    p=json.loads(z.read(P+'evidence/decode-projection-attempt2-preparation.json'));assert p['status']=='decode_projection_prepared_GPU_unrun'
+    for n,h in {**p['files'],**p['checkpoints'],**p['audit_dependencies']}.items():
+        if n in mf:assert hashlib.sha256(z.read(n)).hexdigest()==h
+        else:assert sha(ROOT/n)==h,('Preserve baseline',n)
+    for n,h in p['runtime'].items():assert sha(ROOT/'build/bin'/n)==h
+    for n,h in p['environment'].items():assert sha(Path(n))==h
+    for mode in ('reference','candidate'):
+        assert sha(ROOT/p[mode+'_bundle'])==p[mode+'_bundle_sha256'] and sha(ROOT/p[mode+'_library'])==p[mode+'_library_sha256']
+    for n,h in mf.items():
+        t=ROOT/n;assert t.resolve().is_relative_to(M.resolve()) and 'probe_native_external_prefix_batch.py' not in n;raw=z.read(n);assert hashlib.sha256(raw).hexdigest()==h;assert not t.exists() or t.read_bytes()==raw,('Preserve existing edit',n)
+    for n in mf:t=ROOT/n;t.parent.mkdir(parents=True,exist_ok=True);t.write_bytes(z.read(n))
+out.write_bytes(json.dumps(dict(status='decode_projection_methods_installed_GPU_unrun',deployment_sha256=sha(archive),files=mf),indent=2).encode());print(json.dumps(dict(status='decode_projection_methods_installed',files=len(mf))))

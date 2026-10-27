@@ -1,0 +1,25 @@
+from pathlib import Path
+import ast,hashlib,json
+W=Path(__file__).resolve().parent;M=Path('D:/CantorAI/work/qwen38-5090/test2026/cuda/qwen38_5090');sha=lambda b:hashlib.sha256(b).hexdigest();rows=[]
+def derive(source,target,changes):
+    raw=source.read_bytes();oldsha=sha(raw);d=[]
+    for old,new,count in changes:
+        assert raw.count(old.encode())==count,(source.name,old,raw.count(old.encode()));raw=raw.replace(old.encode(),new.encode());d.append(dict(old=old,new=new,count=count))
+    ast.parse(raw);assert not target.exists() or target.read_bytes()==raw;target.write_bytes(raw);rows.append(dict(source=source.name,target=target.name,source_sha256=oldsha,target_sha256=sha(raw),changes=d))
+derive(M/'probe_decode_projection_diagnostic.py',M/'probe_decode_projection_diagnostic_attempt2.py',[
+ ('decode-projection-preparation.json','decode-projection-attempt2-preparation.json',1),
+ ('io.open(str(checkpoint));io.enable_host_embedding(True)','io.open(str(checkpoint));io.enable_nvfp4_head(True);io.enable_host_embedding(True)',1)])
+derive(M/'launch_decode_projection_diagnostic.py',M/'launch_decode_projection_diagnostic_attempt2.py',[
+ ('decode-projection-preparation.json','decode-projection-attempt2-preparation.json',1),
+ ('probe_decode_projection_diagnostic.py','probe_decode_projection_diagnostic_attempt2.py',1)])
+derive(M/'run_decode_projection_diagnostic.py',M/'run_decode_projection_diagnostic_attempt2.py',[
+ ('decode-projection-diagnostic-attempt1','decode-projection-diagnostic-attempt2',1),
+ ('decode-projection-preparation.json','decode-projection-attempt2-preparation.json',1),
+ ('launch_decode_projection_diagnostic.py','launch_decode_projection_diagnostic_attempt2.py',1)])
+derive(W/'verify-decode-projection-diagnostic.py',W/'verify-decode-projection-diagnostic-attempt2.py',[
+ ('decode-projection-diagnostic-attempt1','decode-projection-diagnostic-attempt2',1),
+ ('decode-projection-preparation.json','decode-projection-attempt2-preparation.json',2),
+ ('probe_decode_projection_diagnostic.py','probe_decode_projection_diagnostic_attempt2.py',1),
+ ('run_decode_projection_diagnostic.py','run_decode_projection_diagnostic_attempt2.py',1),
+ ('launch_decode_projection_diagnostic.py','launch_decode_projection_diagnostic_attempt2.py',1)])
+target=M/'evidence/decode-projection-attempt2-derivation.json';raw=json.dumps(dict(derivations=rows,reason='Required original IO contract: independent native NVFP4 head must be enabled before host embedding. Head unused in projection capture; same mode as full model. No native/math/projection/sourcebundle/guard change. Prior failed attempt preserved.'),indent=2).encode();assert not target.exists() or target.read_bytes()==raw;target.write_bytes(raw);print(json.dumps(dict(derived=len(rows))))

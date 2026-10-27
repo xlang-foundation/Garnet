@@ -1,0 +1,13 @@
+from pathlib import Path
+import argparse,hashlib,json,os,sys,zipfile
+W=Path(__file__).resolve().parent;O=W.parent/'outputs';R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';sha=lambda b:hashlib.sha256(b).hexdigest()
+a=argparse.ArgumentParser();a.add_argument('--attempt',type=int,choices=(1,2),required=True);args=a.parse_args();job='decode-projection-diagnostic-attempt'+str(args.attempt);prefix='decode-projection'+('' if args.attempt==1 else '-attempt2');reader=W/('verify-decode-projection-diagnostic'+('' if args.attempt==1 else '-attempt2')+'.py');receipt=json.loads((W/(prefix+'-closure-receipt.json')).read_bytes());closure=W/(prefix+'-closure-assets.zip');archive=O/(job+'-evidence.zip');assert receipt['exit_code']==0 and sha(closure.read_bytes())==receipt['closure_sha256'] and closure.stat().st_size==receipt['closure_bytes']
+with zipfile.ZipFile(closure) as z:
+    assert z.testzip() is None;mf=json.loads(z.read('manifest.json'));assert len(z.namelist())==len(set(z.namelist()))==len(mf['files'])+1
+    for n,h in mf['files'].items():assert sha(z.read(n))==h
+    assert mf['original_archive_sha256']==sha(archive.read_bytes()) and reader.read_bytes()==z.read('results/'+reader.name)
+    raw=z.read('results/'+job+'-verified.json');peer=O/(job+'-remote-verified.json');assert not peer.exists() or peer.read_bytes()==raw;peer.write_bytes(raw)
+sys.path[:0]=[str(M),str(R)];import run_logged as ledger
+paths=[reader,Path(__file__),M/'decode_projection_diagnostic.py'];pins={str(n):sha(n.read_bytes()) for n in paths};ledger.source_identity=lambda:{'scope':'Explicit terminal layer0 decode-projection original archive CPU replay; no local GPU/model/native execution; unrelated bodies excluded','owned_source_sha256':pins};os.chdir(R)
+assert ledger.run([sys.executable,str(reader),'--proofs',str(O),'--repo',str(R)],W/(prefix+'-local-replay-ledger'),'correctness','Independent original manifest/source/runtime/SDK/checkpoint restoration and same-input first5decode layer0 raw finite array/ID provenance pass or capture failure replay; no original failed-model or performance promotion',[archive,peer,closure,*paths])==0
+raw=(O/(job+'-verified.json')).read_bytes();assert raw==peer.read_bytes();print(json.dumps(dict(status='decode_projection_paired_replay_passed',job=job,job_exit_code=json.loads(raw)['exit_code'],paired_proof_sha256=sha(raw))))

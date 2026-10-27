@@ -1,0 +1,32 @@
+{
+  "files": {
+    "results/decode-projection-diagnostic-attempt1/original-source.zip": "2c8cbf9c0b6fd67034f31052b3b09c9276b7d851247c4cbdb231b0c1c1cf4eb4",
+    "results/decode-projection-diagnostic-attempt1/workflow.json": "7d264d3a078d993cf3a4739b65503c6e20bb6b553fbdec3e1e9fe3fa16751e96",
+    "results/decode-projection-diagnostic-attempt1/cpu-ledger/commands.jsonl": "f62bbf711693e5551f071655ac42de7a5a34d4aa220bdfdb335fa2c8807fb629",
+    "results/decode-projection-diagnostic-attempt1/cpu-ledger/commands.log": "15eb3c694ebad5974eaabf6474d2d019f933586c31ce10ba3c64beb1d1e95924",
+    "results/decode-projection-diagnostic-attempt1/reference/cublaslt.log": "c6b8717438057b8e8408e5578c778d35dda989515138e08698f6a4b2d91d7628",
+    "results/decode-projection-diagnostic-attempt1/reference/report.json": "eca58587109a0d2c943a2de7d24ad070b0d741972ddc680c7070d9aeec8cd5c3",
+    "results/decode-projection-diagnostic-attempt1/reference-ledger/commands.jsonl": "46d200c6cd83a2ae86846224a2616b0d297f873a8168f76c169c63c17388aacb",
+    "results/decode-projection-diagnostic-attempt1/reference-ledger/commands.log": "ac282615b7bdb13bcb66ec0f1186338cbae25642d4ec413f4824fd8bdd31642e",
+    "results/decode-projection-diagnostic-attempt1/reference-resources/resource-monitor.json": "995f7d8dbc1de775d4fb38d52e2387817c537979155acb06e1c064e2409a5861",
+    "results/decode-projection-diagnostic-attempt1/reference-resources/resource-vram.jsonl": "7769f17aa86699c8e05d3917bcd338ddf7397154809e500fca9527742937a64b",
+    "Garnet/test2026/cuda/qwen38_5090/evidence/decode-projection-preparation.json": "3a397d3376c80b559975083607b14dcc8da148fb11338af84e1000446ea628b0",
+    "results/o128-canonical-source.zip": "c44138f5e64b684d556830f58f09c2332d767155669c6642ba799b8445493997",
+    "results/b4-prefill128-source.zip": "23adffb664de5ade36d76b7377011e96a42de669a91a486cb39bb84e678bdd63",
+    "Garnet/test2026/cuda/qwen38_5090/decode_projection_diagnostic.py": "871e92be609cadfa56375d60ff0fa91ac7da8a833b9f52d269a84bcafc467790",
+    "Garnet/test2026/cuda/qwen38_5090/test_decode_projection_diagnostic.py": "80222fd2dce663606c5f61fb2c1c45fcf0828970fb605d9c847a11300c569b80",
+    "Garnet/test2026/cuda/qwen38_5090/probe_decode_projection_diagnostic.py": "b1fb1a10edd1ae2564b09ad8f470bcd16b9b0eea1949d89a81de758c8176cb66",
+    "Garnet/test2026/cuda/qwen38_5090/launch_decode_projection_diagnostic.py": "85e3f234281ff4f97233a4c59e4cbcf68c7e284c0d76416ec7eaa6dd689d8c25",
+    "Garnet/test2026/cuda/qwen38_5090/run_decode_projection_diagnostic.py": "789ad1f9e5f355784556e535d23898aa72454bf8f4b3ca07ee3ee5f05a480ad5",
+    "Garnet/test2026/cuda/qwen38_5090/evidence/decode-projection-owner-derivation.json": "3a9127fcb9a9c12b7247e78cbce24784611fc39e57dc849316c8bc0a25f6fba6",
+    "Garnet/test2026/cuda/qwen38_5090/evidence/decode-projection-token-inputs.json": "34b4e3acb02baaea764a8a83571072e202bb547806b351acabaa7cc1c148e5d5",
+    "models/Qwen3.8-27B-NVFP4/config.json": "71fa01bb64de20971045cd82a82c0ebb25a54e1b0a3f09ef23cf5479e9c54df8",
+    "models/Qwen3.8-27B-NVFP4/model.safetensors.index.json": "7aa103a2582b7d26631988de33dea19e8a308ee9c239e8e14feb374af30905e2",
+    "results/b4-prefill128-build-attempt1-verified.json": "a11e469a50acdebddab252c6793bb62adb9054b02e87c2b742af3ebe9705c465",
+    "results/b4-prefill128-header-attempt1-verified.json": "5e54d813544059562fd7b4b9a24323775f0ef3395c370bb771d75bb637933826",
+    "results/o128-canonical-build-attempt1-verified.json": "fd4dc3af8f7570bd53b778c77e5c2bf32f6a2db548ce71e0f20cc9572ddef06c",
+    "results/o128-full4k-model-admission-attempt1-verified.json": "4058a4f1c4b542883b97c9dc046bebae440e96fb415e95f5952895ef2a9ac9d1",
+    "results/b4-b1-short-admission-attempt1-verified.json": "c707c7a28bcae3b6238ffee82828b1cd75cf9c03ce0f9622825486d5218f37c8"
+  },
+  "scope": "Actual existing GDN layer0 fused chunk, shared compressed5matrix pool, T4 B1/M4 versus B4/M16, source60/DLL841 versus source61/candidateDLL. First5agreed actual consumed decode tokens from preserved failed full-model short case. Zero conv/recurrent states; retained QKV/Z/beta/a projections are before the state-dependent core. Standalone normalization graph is separate and does not directly witness normalized tensor inside the fused layer; discrepancies cannot alone prove a full-model cause. Capture complete finite raw arrays at input, separate normalization and four retained projections twice, actual cuBLASLt selection logs and source/runtime/SDK/checkpoint hashes. No new native code, factory/math policy or guard relaxation. Component characterization only; original model job remainsFAILED and original complete-state/IDs/finite vectors/full4K/MTP/805/HTTP gates stay unchanged. No timing, quality, throughput or2x admission. Private nonce cache only; original source/runtime restored. Archive raw new methods, bundles, fixture, parent proofs and arrays; unchanged baseline dependency bodies stay in pinned linked artifacts, all before/after hashes still verified. Strongest repeated tuned/MTP references, matchedINT4/4B and original fullgoal remain open."
+}
