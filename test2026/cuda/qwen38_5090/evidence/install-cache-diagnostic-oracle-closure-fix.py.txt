@@ -1,0 +1,11 @@
+from pathlib import Path
+import hashlib,json,zipfile
+ROOT=Path('D:/CantorAI/5090-study-20261023');P=ROOT/'Garnet/test2026/cuda/qwen38_5090';archive=ROOT/'results/fp8-policy-cache-diagnostic-oracle-closure-fix.zip';sha=lambda b:hashlib.sha256(b).hexdigest();assert sha(archive.read_bytes())=='4e95b9dd16ac14e3f1ebcb2e43d824223f778da6bdc478a1e7183969cffbfc9d'
+with zipfile.ZipFile(archive) as z:
+    m=json.loads(z.read('manifest.json'));assert len(z.namelist())==len(set(z.namelist()))==3 and z.testzip() is None
+    for n,row in m['files'].items():
+        t=ROOT/n;assert t.resolve().is_relative_to(P.resolve()) and sha(t.read_bytes())==row['before_sha256'] and sha(z.read(n))==row['after_sha256']
+    for n in m['files']:(ROOT/n).write_bytes(z.read(n))
+    p=json.loads((P/'evidence/fp8-policy-cache-production-preparation.json').read_bytes())
+    for n,h in {**p['files'],**p['new_files'],**p['checkpoints'],**p['audit_dependencies']}.items():assert sha((ROOT/n).read_bytes())==h
+print('Exact owned preflight oracle closure fix installed before first GPU run',flush=True)

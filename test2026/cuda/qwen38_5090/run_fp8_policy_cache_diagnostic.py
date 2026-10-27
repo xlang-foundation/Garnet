@@ -7,7 +7,7 @@ def main():
     from run_bf16_low_batch_native_build import idle
     from run_z128_factory_trace_native_build import candidate_bytes,snapshot_targets,restore_targets
     prep=M/'evidence/fp8-policy-cache-production-preparation.json';p=json.loads(prep.read_bytes());assert p['status']=='FP8_policy_cache_exploratory_diagnostic_prepared' and p['native_build_artifact_identity_gate_passed'] is False and p['exploratory_only'] is True
-    for n,h in {**p['files'],**p['new_files'],**p['checkpoints']}.items():assert sha(ROOT/n)==h,('Source/method/checkpoint drift',n)
+    for n,h in {**p['files'],**p['new_files'],**p['checkpoints'],**p['audit_dependencies']}.items():assert sha(ROOT/n)==h,('Source/method/checkpoint drift',n)
     for n,h in p['runtime'].items():assert sha(ROOT/'build/bin'/n)==h
     for n,h in p['environment'].items():assert sha(Path(n))==h
     for name,row in p['parents'].items():
@@ -17,7 +17,7 @@ def main():
     objects={n.relative_to(ROOT).as_posix():sha(n) for n in (ROOT/'build/garnet/CMakeFiles/garnet.dir').rglob('*.cu.obj')};assert objects==p['current_cuda_objects']
     w=dict(status='running',source_before_sha256=p['files'],runtime_dependencies=p['runtime'],environment_before=p['environment'],candidate_library_sha256=sha(failed),candidate_files=p['candidate_files'],candidate_base=p['candidate_base'],parents=p['parents'],preparation_sha256=sha(prep),native_build_artifact_identity_gate_passed=False,exploratory_only=True,model_or_performance_admitted=False,cleanup_finished=False,CUDA_objects_before=objects,scope=p['scope'])
     def save():(out/'workflow.json').write_bytes(json.dumps(w,indent=2).encode())
-    common=[prep,bundle]+[ROOT/n for n in {**p['new_files'],**p['checkpoints']}]+[ROOT/'results'/(name+'-verified.json') for name in p['parents']]
+    common=[prep,bundle]+[ROOT/n for n in {**p['new_files'],**p['checkpoints'],**p['audit_dependencies']}]+[ROOT/'results'/(name+'-verified.json') for name in p['parents']]
     inventory=dict(p['files']);ledger.source_identity=lambda:{'scope':'Explicit exploratory failed-build cache/API diagnostic source inventory; protected unrelated bodies excluded; no promotion/performance','owned_source_sha256':{n:sha(ROOT/n) for n in inventory}}
     with zipfile.ZipFile(out/'original-source.zip','x',zipfile.ZIP_DEFLATED) as z:
         for n,b in old.items():z.writestr(n,b)

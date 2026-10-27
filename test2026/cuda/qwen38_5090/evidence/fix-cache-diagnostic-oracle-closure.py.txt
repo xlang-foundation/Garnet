@@ -1,0 +1,23 @@
+from pathlib import Path
+import hashlib,json,zipfile
+W=Path(__file__).resolve().parent;R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';P='Garnet/test2026/cuda/qwen38_5090/';E=M/'evidence';owner=M/'run_fp8_policy_cache_diagnostic.py';prep=E/'fp8-policy-cache-production-preparation.json';old=owner.read_bytes();oldprep=prep.read_bytes();sha=lambda b:hashlib.sha256(b).hexdigest();p=json.loads(oldprep);assert p['new_files'][P+owner.name]==sha(old)
+changes=[("{**p['files'],**p['new_files'],**p['checkpoints']}","{**p['files'],**p['new_files'],**p['checkpoints'],**p['audit_dependencies']}",1),("{**p['new_files'],**p['checkpoints']}","{**p['new_files'],**p['checkpoints'],**p['audit_dependencies']}",1)];fixed=old
+for a,b,c in changes:assert fixed.count(a.encode())==c;fixed=fixed.replace(a.encode(),b.encode())
+(E/'fp8-policy-cache-diagnostic-owner-before-oracle-closure.py.txt').write_bytes(old);(E/'fp8-policy-cache-diagnostic-preparation-before-oracle-closure.json').write_bytes(oldprep);owner.write_bytes(fixed);p['new_files'][P+owner.name]=sha(fixed);p['setup_revision']=2;p['setup_prior_preparation_sha256']=sha(oldprep);newprep=json.dumps(p,indent=2).encode();prep.write_bytes(newprep)
+files={P+owner.name:dict(before_sha256=sha(old),after_sha256=sha(fixed),data=fixed),P+'evidence/'+prep.name:dict(before_sha256=sha(oldprep),after_sha256=sha(newprep),data=newprep)};package=W/'fp8-policy-cache-diagnostic-oracle-closure-fix.zip';assert not package.exists()
+with zipfile.ZipFile(package,'x',zipfile.ZIP_DEFLATED) as z:
+    for n,row in files.items():z.writestr(n,row['data'])
+    z.writestr('manifest.json',json.dumps(dict(files={n:{k:v for k,v in row.items() if k!='data'} for n,row in files.items()},reason='Before first GPU run, explicitly audit and retain frozen955tokenizer oracle in raw archive; collector fix only, no scientific predicate changes'),indent=2))
+receipt=dict(package_sha256=sha(package.read_bytes()),bytes=package.stat().st_size,files={n:{k:v for k,v in row.items() if k!='data'} for n,row in files.items()},changes=[dict(old=a,new=b,count=c) for a,b,c in changes],no_API_or_GPU_run_before_fix=True,no_native_or_numeric_gate_waiver=True);(W/'fp8-policy-cache-diagnostic-oracle-closure-fix.json').write_bytes(json.dumps(receipt,indent=2).encode())
+code='''from pathlib import Path
+import hashlib,json,zipfile
+ROOT=Path('D:/CantorAI/5090-study-20261023');P=ROOT/'Garnet/test2026/cuda/qwen38_5090';archive=ROOT/'results/fp8-policy-cache-diagnostic-oracle-closure-fix.zip';sha=lambda b:hashlib.sha256(b).hexdigest();assert sha(archive.read_bytes())=='PACKAGE_SHA'
+with zipfile.ZipFile(archive) as z:
+    m=json.loads(z.read('manifest.json'));assert len(z.namelist())==len(set(z.namelist()))==3 and z.testzip() is None
+    for n,row in m['files'].items():
+        t=ROOT/n;assert t.resolve().is_relative_to(P.resolve()) and sha(t.read_bytes())==row['before_sha256'] and sha(z.read(n))==row['after_sha256']
+    for n in m['files']:(ROOT/n).write_bytes(z.read(n))
+    p=json.loads((P/'evidence/fp8-policy-cache-production-preparation.json').read_bytes())
+    for n,h in {**p['files'],**p['new_files'],**p['checkpoints'],**p['audit_dependencies']}.items():assert sha((ROOT/n).read_bytes())==h
+print('Exact owned preflight oracle closure fix installed before first GPU run',flush=True)
+'''.replace('PACKAGE_SHA',receipt['package_sha256']);(W/'install-cache-diagnostic-oracle-closure-fix.py').write_bytes(code.encode());print(json.dumps(receipt))
