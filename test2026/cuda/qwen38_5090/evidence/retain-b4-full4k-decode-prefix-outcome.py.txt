@@ -1,0 +1,32 @@
+from pathlib import Path
+import hashlib,json,zipfile
+W=Path(__file__).resolve().parent;O=W.parent/'outputs';R=Path('D:/CantorAI/work/qwen38-5090');E=R/'test2026/cuda/qwen38_5090/evidence';JOB='b4-full4k-decode-prefix-attempt1';sha=lambda b:hashlib.sha256(b).hexdigest();owned=[]
+def keep(name,raw):
+    p=E/name;assert not p.exists();p.write_bytes(raw);owned.append(p)
+with zipfile.ZipFile(W/'b4-full4k-decode-prefix-closure-assets.zip') as z:
+    mf=json.loads(z.read('manifest.json'));assert z.testzip() is None
+    for n,h in mf['files'].items():assert sha(z.read(n))==h
+    proof=z.read('results/'+JOB+'-verified.json');assert proof==(O/(JOB+'-verified.json')).read_bytes();p=O/(JOB+'-remote-verified.json');assert not p.exists();p.write_bytes(proof)
+    for n in mf['files']:
+        if n.startswith('results/b4-full4k-decode-prefix-postprocess/') or n.endswith('decode-prefix-install.json'):keep('b4-full4k-decode-prefix-closure-'+n.removeprefix('results/').replace('/','-'),z.read(n))
+    keep('b4-full4k-decode-prefix-closure-manifest.json',json.dumps(dict(closure_sha256=sha((W/'b4-full4k-decode-prefix-closure-assets.zip').read_bytes()),**mf),indent=2).encode())
+q=json.loads(proof);assert q['exit_code'] in (0,1) and q['diagnostic_completed']==(q['exit_code']==0) and not q['strict_full4k_admission_passed'] and not q['full4k_state_IDs_qualified'] and q['source_runtime_SDK_checkpoint_CMake_all34objects_restored'] and not q['MTP_805_HTTP_or_performance_qualified'] and not q['original_failed_job_promoted'];keep(JOB+'-verified.json',proof)
+with zipfile.ZipFile(O/(JOB+'-evidence.zip')) as z:
+    mf=json.loads(z.read('evidence-manifest.json'));assert sha((O/(JOB+'-evidence.zip')).read_bytes())==q['archive_sha256']
+    for n,h in mf['files'].items():assert sha(z.read(n))==h
+    w=json.loads(z.read('results/'+JOB+'/workflow.json'));assert w['cleanup_finished'] and w['build_artifacts_unchanged'] and len(w['source_before'])==1782
+    for n in mf['files']:
+        if n.startswith('results/'+JOB+'/') and n.endswith(('.json','.jsonl','.log')):keep(JOB+'-'+n.removeprefix('results/'+JOB+'/').replace('/','-'),z.read(n))
+    keep(JOB+'-archive-manifest.json',json.dumps(dict(archive_sha256=q['archive_sha256'],archive_bytes=(O/(JOB+'-evidence.zip')).stat().st_size,files=mf['files'],raw_vectors_images_and_source_bundles_in_immutable_archive_only=True),indent=2).encode())
+ob=q['observation'];steps=[]
+if ob is not None:
+    for step in ob['steps']:
+        steps.append(dict(step=step['step'],all_exact=step['comparison']['all_exact'],rows=[dict(physical_row=row['physical_row'],all_exact=row['all_exact'],different_component_indices=row['different_component_indices'],first_different_component=(row['different_component_indices'][0] if row['different_component_indices'] else None),physical_hash_exact=row['physical_hash_exact'],logical_hash_exact=row['logical_hash_exact'],finite_raw_vector_bytes_exact=row['finite_raw_vector_bytes_exact']) for row in step['comparison']['rows']]))
+summary=dict(status=q['status'],diagnostic_completed=q['diagnostic_completed'],proof_sha256=sha(proof),archive_sha256=q['archive_sha256'],error=q['error'],phase_statuses=q['phase_statuses'],phase_errors=q['phase_errors'],first_nonexact_step=(ob['first_nonexact_step'] if ob else None),steps=steps,same_profile_parent=w.get('same_profile_parent'),source_runtime_SDK_config_index_CMake_all34objects_baseline_restored=True,CPU_controls=29,original_full4k_admission_still_failed=True,MTP_805_HTTP_or_performance_qualified=False,two_times_target_achieved=False,scope='Completeordinarymodel7decode-step/128component/finitevectors diagnostic only. 4freshB1mixedtext-image references thenB4. Pinnedoriginalfailedfull4K endpoints/first8IDs exactparity required. Firstdifferentpersistentcomponent doesnotuniquelyidentify causaloperator. No numericadmission ornewtimedbenchmark.')
+raw=json.dumps(summary,indent=2).encode();keep('b4-full4k-decode-prefix-summary.json',raw);(O/'Garnet-B4-Full4K-Decode-Prefix-Progress.json').write_bytes(raw)
+for n in ('commands.log','commands.jsonl'):keep('b4-full4k-decode-prefix-local-replay-'+n,(W/'b4-full4k-decode-prefix-local-replay'/n).read_bytes())
+for name in ('replay-b4-full4k-decode-prefix-local.py','retain-b4-full4k-decode-prefix-outcome.py'):keep(name+'.txt',(W/name).read_bytes())
+text=('\r\n\r\n2026-10-27 ordinary full4K first7decode state diagnostic terminal: '+q['status']+', diagnostic_completed='+str(q['diagnostic_completed'])+', first_nonexact_step='+str(summary['first_nonexact_step'])+', pairedremote/localproof '+sha(proof)+', rawarchive '+q['archive_sha256']+'.29CPU; unchangedsource60B1/source79B4 DLLs/graphmath/weights/precision/head,3968prompt+8forcedIDs/cap4096. Exactsame-profileoriginalfailedparentreset/prefill/reset/first8IDs required. See b4-full4k-decode-prefix-summary.json for all128persistentcomponentdifferences andfullfinitehidden/normbytes atsteps1..7. Driftcomponent isnotuniqueoperatorcausality. All1782ownedsource/runtime/SDK/config-index/CMake/all34/baselineDLL restored; ownedSSDnonces retiredafteridle. Original128IDfull4K staysFAILED, no MTP/quality/HTTP/perf/2xadmission. Privateall64observer CPU8prepared, GPUunrun; futureobserver requiresallseven same-profilecompleteprimarysnapshots+8IDs exactbefore layerinterpretation.\r\n').encode()
+for n in ('docs/research/qwen38-5090-development-log.md','docs/research/qwen38-5090-implementation-task.md'):
+    p=R/n;p.write_bytes(p.read_bytes()+text);owned.append(p)
+(W/'b4-full4k-decode-prefix-outcome-stage-paths.bin').write_bytes(b'\0'.join(p.relative_to(R).as_posix().encode() for p in owned)+b'\0');print(json.dumps(dict(files=len(owned),first_nonexact_step=summary['first_nonexact_step'],diagnostic_completed=q['diagnostic_completed'])))
