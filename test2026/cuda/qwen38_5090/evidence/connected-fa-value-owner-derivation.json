@@ -1,0 +1,76 @@
+{
+  "derivations": [
+    {
+      "source": "launch_decode_boundaries.py",
+      "target": "launch_connected_fa_value.py",
+      "source_sha256": "3d2b6caedf1416be754122fc22f9f89509a58809d0ca547628adacef61795d37",
+      "target_sha256": "62ae1785bc67530138de72a77f749bb52f8f94bce32ffad92375f0018366bfe9",
+      "changes": [
+        {
+          "old": "decode-boundaries-preparation.json",
+          "new": "connected-fa-value-preparation.json",
+          "count": 1
+        },
+        {
+          "old": "probe_decode_boundaries.py",
+          "new": "probe_connected_fa_value.py",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "run_decode_boundaries.py",
+      "target": "run_connected_fa_value.py",
+      "source_sha256": "0c0c48cd03146a43edbd062512fd787b7ff7655d09e4a14b7415ec665d708250",
+      "target_sha256": "289616ab274bc4006be46856184cf5ccf9ae87a3ce602664a3dee0b7dda5f7b7",
+      "changes": [
+        {
+          "old": "JOB='decode-boundaries-attempt1'",
+          "new": "JOB='connected-fa-value-attempt1'",
+          "count": 1
+        },
+        {
+          "old": "decode-boundaries-preparation.json",
+          "new": "connected-fa-value-preparation.json",
+          "count": 1
+        },
+        {
+          "old": "readonly_decode_boundaries_prepared_GPU_unrun",
+          "new": "connected_FA_value_prepared_GPU_unrun",
+          "count": 1
+        },
+        {
+          "old": "'test2026.cuda.qwen38_5090.test_b4_b1_short_m16_gate','test2026.cuda.qwen38_5090.test_decode_boundary_program','test2026.cuda.qwen38_5090.test_decode_boundary_analysis'",
+          "new": "'test2026.cuda.qwen38_5090.test_connected_fa_value_gate','test2026.cuda.qwen38_5090.test_prefill128_fp8_projection'",
+          "count": 1
+        },
+        {
+          "old": "17 CPU controls: original full gates plus readonly prefix/binding/geometry/derivation and full boundary/primary/repeat/nonfinite/slot/row/conditioning faults",
+          "new": "10 CPU controls: full original-cache baseline, row/shape/route/repeat/nonfinite/BF16/signedzero/fullpadding/input-cache/standalone-normalizer faults plus unchanged cast/FP8 oracle",
+          "count": 1
+        },
+        {
+          "old": "assert code==0,'CPU gate controls failed'",
+          "new": "assert code==0,'CPU gate controls failed'\n        fixture=ROOT/'results/connected-fa-value-fixture'\n        code=ledger.run([sys.executable,str(M/'prepare_connected_fa_value_fixture.py')],out/'fixture-ledger','setup','Exact same real fullT4 hidden/norm/cache rows from paired readonly diagnostic; JSON input roundtrip byte-exact, no invented conditioning inputs',common);assert code==0,'Real fixture extraction failed'\n        f=json.loads((fixture/'manifest.json').read_bytes());w['fixture_manifest_sha256']=sha(fixture/'manifest.json');w['fixture_files']={n:sha(fixture/n) for n in f['files']};assert w['fixture_files']=={n:v['sha256'] for n,v in f['files'].items()};common+=[fixture/'manifest.json']+[fixture/n for n in f['files']];save()",
+          "count": 1
+        },
+        {
+          "old": "launch_decode_boundaries.py",
+          "new": "launch_connected_fa_value.py",
+          "count": 1
+        },
+        {
+          "old": "Same source60/DLL841 B1 and source67/DLL677 B4 profiles as linked failed short gate. Only T4 readonly graph suffixes change. Preserve all4phase128component fullstate/rawfinitevectors/8IDs; require exact same-profile primary endpoints to linked prior raw captures BEFORE interpreting 7step full8hidden boundaries, separate FA3/11 RMSNorm repeats, actual active BF16 Vcache reads. M16 init/factory traces retained. No cross-profile model admission or benchmark.",
+          "new": "Connected original fullDecoderChunk component at B1/B4T4, actualFA3step5/FA11step1 preceding hidden rows, original six compressed weights, internal mask/RMS/threeQKV/BF16projection path. Ordinary zeroFP32cache/slot/position controls intentionally isolate history-independent Vprojection; no modelhidden/state/output equivalence claimed. Require standalone unmaskednorm allfullarrays reproduceoldcapture, full inputKVcaches remainzero/readonly, fullhidden/V repeats exact, all4row actualoriginalVcache baselines exact. No originalwitnessguardchange or benchmark.",
+          "count": 1
+        },
+        {
+          "old": "        from test2026.cuda.qwen38_5090.decode_boundary_analysis import primary_parity,analyze\n        from test2026.cuda.qwen38_5090.b4_b1_short_m16_gate import route_trace\n        reference=json.loads((out/'reference/report.json').read_bytes());candidate=json.loads((out/'candidate/report.json').read_bytes());w['primary_parity']={}\n        with zipfile.ZipFile(ROOT/p['primary_parent_archive']) as parent:\n            for mode,report in (('reference',reference),('candidate',candidate)):\n                base='results/b4-b1-short-m16-admission-attempt1/'+mode+'/'\n                original=json.loads(parent.read(base+'report.json'))\n                def read_current(name):return (out/mode/name).read_bytes()\n                def read_parent(name):return parent.read(base+name)\n                w['primary_parity'][mode]=primary_parity(report,original,read_current,read_parent);save()\n        (out/'primary-parity.json').write_bytes(json.dumps(w['primary_parity'],indent=2).encode())\n        def read_reference(name):return (out/'reference'/name).read_bytes()\n        def read_candidate(name):return (out/'candidate'/name).read_bytes()\n        w['observation']=analyze(reference,candidate,read_reference,read_candidate);(out/'analysis.json').write_bytes(json.dumps(w['observation'],indent=2).encode());save()\n        w['actual_GDN_M16_route']=route_trace((out/'candidate-ledger/commands.log').read_bytes());(out/'route-analysis.json').write_bytes(json.dumps(w['actual_GDN_M16_route'],indent=2).encode());save()\n        w['status']='readonly_decode_boundary_diagnostic_primary_parity_verified_model_gate_unchanged';code=0",
+          "new": "        from test2026.cuda.qwen38_5090.connected_fa_value_gate import observe,admit\n        reference=json.loads((out/'reference/report.json').read_bytes());candidate=json.loads((out/'candidate/report.json').read_bytes())\n        def read_reference(name):return (out/'reference'/name).read_bytes()\n        def read_candidate(name):return (out/'candidate'/name).read_bytes()\n        def read_fixture(name):return (fixture/name).read_bytes()\n        w['observation']=observe(reference,candidate,read_reference,read_candidate,read_fixture);(out/'analysis.json').write_bytes(json.dumps(w['observation'],indent=2).encode());save()\n        w['component_admission']=admit(reference,candidate,read_reference,read_candidate,read_fixture);save()\n        w['status']='connected_FA_value_component_baselines_exact_unqualified_model_or_performance';code=0",
+          "count": 1
+        }
+      ]
+    }
+  ],
+  "scope": "Reuse exclusive source60/67 and library restoration, all baseline/runtime/SDK/checkpoint/34objects/CMake/privatecache guards. New component-only graph, not a fullmodel numerical claim. Original failed SDK/model jobs remain failed. Real fixture ledger and originalcache admission replace readonly boundary analysis."
+}
