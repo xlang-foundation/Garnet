@@ -1,0 +1,10 @@
+from pathlib import Path
+import hashlib,json
+W=Path(__file__).resolve().parent;O=W.parent/'outputs';raw=(O/'decode-boundaries-attempt1-verified.json').read_bytes();assert raw==(O/'decode-boundaries-attempt1-remote-verified.json').read_bytes();q=json.loads(raw);assert q['exit_code']==0 and q['diagnostic_passed'];old=json.loads((O/'Garnet-Readonly-Decode-Boundary-Progress.json').read_bytes());assert old['proof_sha256']==hashlib.sha256(raw).hexdigest();eligible={}
+for layer in (3,11):
+    steps=[]
+    for step in range(1,8):
+        group=[r for r in q['observation']['rows'] if r['step']==step];assert len(group)==4
+        if all(r['all_consumed_inputs_so_far_exact'] and r['boundaries'][str(layer-1)]['all_bytes_exact'] and r['separate_normalizations'][str(layer)]['all_bytes_exact'] for r in group) and any(not r['actual_active_V_cache'][str(layer)]['all_bytes_exact'] for r in group):steps.append(step)
+    eligible[str(layer)]=steps
+doc={**old,'status':'paired_readonly_decode_boundary_both_FA_layers_summary_not_benchmark','eligible_actual_weight_V_projection_SDK_controls':eligible,'scope':old['scope']+' Extended independently to both observed FA layers; retains original FA3-only summary unchanged. Both SDK fourM4/defaultM16 baselines must reproduce actual active Vcache words before intervention interpretation.'};target=O/'Garnet-Readonly-Decode-Boundary-Progress-v2.json';assert not target.exists();target.write_bytes(json.dumps(doc,indent=2).encode());print(json.dumps(dict(status=doc['status'],eligible_actual_weight_V_projection_SDK_controls=eligible)))
