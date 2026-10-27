@@ -1,0 +1,134 @@
+{
+  "status": "bounded_three_concat_protocol_prepared_GPU_unrun",
+  "derivations": [
+    {
+      "source": "probe_step45_layer_boundary.py",
+      "source_sha256": "0f3338d9622512c404ac7f0c018c8964508c8ce63a84a146de1508984be93db4",
+      "target": "probe_step45_layer_boundary2.py",
+      "target_sha256": "9205d40033af5e29a7cbd4715d39b0e1a970947803a6e1912c821b4d42bfb9c6",
+      "changes": [
+        {
+          "old": "step45-layer-boundary-preparation.json",
+          "new": "step45-layer-boundary2-preparation.json",
+          "count": 1
+        },
+        {
+          "old": "from test2026.cuda.qwen38_5090.all_layer_decode_boundary_program import AllLayerDecodeBoundaryProgram,construct_with_all_layer_decode_boundary_program",
+          "new": "from test2026.cuda.qwen38_5090.bounded_step45_boundary_program import BoundedStep45BoundaryProgram as AllLayerDecodeBoundaryProgram,construct_with_bounded_step45_boundary_program as construct_with_all_layer_decode_boundary_program",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "launch_step45_layer_boundary.py",
+      "source_sha256": "633e68c9c57456b67de374038beceb4f3bf0f350f52d65e342877e8b8cef84e2",
+      "target": "launch_step45_layer_boundary2.py",
+      "target_sha256": "3651faec382419bf7ed39eb51c5216a96aa6d7684f76cf4ec5014d91265d6a7e",
+      "changes": [
+        {
+          "old": "step45-layer-boundary-preparation.json",
+          "new": "step45-layer-boundary2-preparation.json",
+          "count": 1
+        },
+        {
+          "old": "probe_step45_layer_boundary.py",
+          "new": "probe_step45_layer_boundary2.py",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "run_step45_layer_boundary.py",
+      "source_sha256": "c8b2780d326964530400afac9cc7067f11d89a8af847b5e38cc4fc15f4f1425e",
+      "target": "run_step45_layer_boundary2.py",
+      "target_sha256": "6804211f68f61fd65b70ea5a66256b632d5ecd0d4fcf3b78a29fc53f54adc890",
+      "changes": [
+        {
+          "old": "step45-layer-boundary-preparation.json",
+          "new": "step45-layer-boundary2-preparation.json",
+          "count": 1
+        },
+        {
+          "old": "step45-layer-boundary-attempt1",
+          "new": "step45-layer-boundary-attempt2",
+          "count": 1
+        },
+        {
+          "old": "step45_layer_boundary_prepared_GPU_unrun",
+          "new": "step45_layer_boundary2_prepared_GPU_unrun",
+          "count": 1
+        },
+        {
+          "old": "66CPU",
+          "new": "69CPU",
+          "count": 1
+        },
+        {
+          "old": "66 CPU controls",
+          "new": "69 CPU controls",
+          "count": 1
+        },
+        {
+          "old": "launch_step45_layer_boundary.py",
+          "new": "launch_step45_layer_boundary2.py",
+          "count": 1
+        },
+        {
+          "old": "step45_layer_boundary_collected_no_model_admission",
+          "new": "step45_layer_boundary2_collected_no_model_admission",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "verify_step45_layer_boundary.py",
+      "source_sha256": "886b3f8721f85654a537bb55a2bfb26e3ba8e0337cfebda6f56b35b8e1748600",
+      "target": "verify_step45_layer_boundary2.py",
+      "target_sha256": "fac9b8a50eb1717856e2856c0ba980afabd2c8488ac9e70f6982c1d649554ef5",
+      "changes": [
+        {
+          "old": "step45-layer-boundary-preparation.json",
+          "new": "step45-layer-boundary2-preparation.json",
+          "count": 1
+        },
+        {
+          "old": "step45-layer-boundary-attempt1",
+          "new": "step45-layer-boundary-attempt2",
+          "count": 1
+        },
+        {
+          "old": "verify_step45_layer_boundary.py",
+          "new": "verify_step45_layer_boundary2.py",
+          "count": 1
+        },
+        {
+          "old": "Ran 66 tests",
+          "new": "Ran 69 tests",
+          "count": 1
+        },
+        {
+          "old": "'CPU_controls':66",
+          "new": "'CPU_controls':69",
+          "count": 1
+        },
+        {
+          "old": "step45_layer_boundary_collected_no_model_admission",
+          "new": "step45_layer_boundary2_collected_no_model_admission",
+          "count": 1
+        },
+        {
+          "old": "step45_layer_boundary_replayed",
+          "new": "step45_layer_boundary2_replayed",
+          "count": 1
+        },
+        {
+          "old": "step45_layer_boundary_failure_replayed",
+          "new": "step45_layer_boundary2_failure_replayed",
+          "count": 1
+        }
+      ]
+    }
+  ],
+  "native_guard_unchanged": true,
+  "same_primary_cache_timeline_gates": true
+}

@@ -1,0 +1,35 @@
+from pathlib import Path
+import hashlib,json
+W=Path(__file__).resolve().parent;R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';E=M/'evidence';sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest();owned=[];saved={}
+names=json.loads((W/'step45-layer-boundary2-owned-names.json').read_bytes());owned.extend(M/n for n in names);owned.append(E/'step45-layer-boundary2-preparation.json')
+def keep(name,raw):
+    p=E/name;assert not p.exists();p.write_bytes(raw);owned.append(p);saved[name]=sha(p)
+for name in ('prepare-step45-layer-boundary2.py','install-step45-layer-boundary2.py',Path(__file__).name):keep(name+'.txt',(W/name).read_bytes())
+keep('step45-layer-boundary2-package.json',(W/'step45-layer-boundary2-package.json').read_bytes());package=json.loads((W/'step45-layer-boundary2-package.json').read_bytes());assert sha(W/'step45-layer-boundary2-deployment.zip')==package['deployment_sha256']
+keep('step45-layer-boundary2-preparation-retention.json',json.dumps({'status':'bounded_three_concat_observer_preparation_retained','package':package,'retained_sha256':saved,'GPU_unrun_at_preparation':True,'model_or_performance_qualified':False},indent=2).encode())
+entry=('\n\n2026-10-27 bounded step44/45 observer attempt2 prepared after retained '
+       'attempt1 nativeconcat failure fbdd382d2e9e8bb02cf36d848c003d6026fa44011a723ed294dd225398fc1424. '
+       'New private BoundedStep45BoundaryProgram keeps inherited64layer buffers/'
+       'run/profile/binding contracts, changes only final joins: original113parts '
+       '(1hidden+64state+48GDNpayload),64observations,then2. Originalnative128extra-'
+       'part guard untouched, same dtype/precision/nativeDLLs/weights. Frozen '
+       'source85 flat_concat and actual new_forward executed under faithful '
+       'native-limit CPUstub; all primary and observation spans/order preserved '
+       'forB1/B4, old177partconcat rejected. Striponly boundedjoin construction '
+       'and original arithmetic AST equals prior observer, previously proven '
+       'against source60/85. Freeze actual source85 cuda_packed_program text for '
+       'AST-only CPU tests because restoredremote baseline differs; never assume '
+       'root program is frozen candidate.69CPU passed (all66retained+3bounded). '
+       'Require all53IDs/fivefull128componentcapturedstates/finitevectors/full8MiB '
+       'cache/all53coordinate samples same-profile ordinary parity before any '
+       'layer interpretation; extra outputs may alter TRT tactics/fusions. '
+       'Guard1892files/45closedparents/current34objects/runtime/SDK/config+index/'
+       'CMake/baselineDLL/fixedCSSD96GiB and nonce retirement. Package '
+       +package['deployment_sha256']+' ('+str(package['bytes'])+'B). GPUunrun at '
+       'preparation; original all-layer step<=7 protocol remainsinapplicable. '
+       'No full4K/MTP/quality/HTTP/performance qualification or2xclaim.\n').encode()
+for name in ('docs/research/qwen38-5090-development-log.md','docs/research/qwen38-5090-implementation-task.md'):
+    p=R/name;before=p.read_bytes();assert b'bounded step44/45 observer attempt2 prepared' not in before
+    with p.open('ab') as f:f.write(entry)
+    assert p.read_bytes()==before+entry;owned.append(p)
+(W/'step45-layer-boundary2-preparation-stage-paths.bin').write_bytes(b''.join(p.relative_to(R).as_posix().encode()+b'\0' for p in owned));print(json.dumps({'stage_paths':len(owned),'CPU_controls':69,'GPU_unrun_at_preparation':True}))

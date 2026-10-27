@@ -1,0 +1,20 @@
+{
+  "status": "bounded_observer_prepared_GPU_unrun",
+  "source": "decode_boundary_program.py",
+  "source_sha256": "0db42ffae160f76f05c2db763694a3056c2b5288a4057afb3af4eb23022a9f9e",
+  "source_forward_sha256": "fe57e4d731ce6caf14edeeedf12613c32b63142d85a033516208fddd8ccb8997",
+  "target": "bounded_step45_boundary_program.py",
+  "target_sha256": "77caa6d3df3b6569a4e2ca466983a99a66d09c6ffefc912067f7ed5860357c67",
+  "old_return": "            return join([flat]+state_outputs+payload_outputs+boundary_outputs)",
+  "new_return": "            primary=join([flat]+state_outputs+payload_outputs)\n            observations=join(boundary_outputs)\n            return join([primary,observations])",
+  "native_guard_source_sha256": "740fbf2cf0c48587c594a3a79179e814506d62e6dada0953423542b3ca0e95e3",
+  "native_guard_source": "src/backends/tensorrt/trt_builder.cpp",
+  "native_guard_text": "}else if(opName==\"qwen35_concat_parts\") {\n                    auto item=FindKeyword(kwParams,\"parts\");auto s=ops.shape(source);\n                    if(!item||!item->second.IsList()||item->second.Size()>128||s.size()!=2||s[0]>8||source->getType()!=DataType::kFLOAT)\n                        throw std::invalid_argument(\"Qwen3.5 variadic packed concatenation profile invalid\");\n                    std::vector<ITensor*> parts{source};int width=s[1];\n                    for(uint64_t i=0;i<item->second.Size();++i){auto value=item->second.Get(i);if(!IsTensor(value))throw std::invalid_argument(\"Packed concatenation parts must be tensors\");\n                        auto* part=GetOrCreateTRTTensor(value);auto shape=ops.shape(part);\n                        if(shape.size()!=2||shape[0]!=s[0]||part->getType()!=DataType::kFLOAT||shape[1]>INT_MAX-width)throw std::invalid_argument(\"Packed concatenation part shape/type/width invalid\");\n                        width+=shape[1];parts.push_back(part);}\n                    lastOutput=parts.size()==1?source:ops.cat(parts,1);\n                ",
+  "maximum_extra_parts": 128,
+  "original_primary_parts": 113,
+  "original_payload_parts": 48,
+  "observations_parts": 64,
+  "final_parts": 2,
+  "native_guard_or_precision_changed": false,
+  "primary_cache_timeline_parity_still_required": true
+}
