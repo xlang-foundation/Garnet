@@ -1,0 +1,10 @@
+from pathlib import Path
+import hashlib,json,os,sys
+W=Path(__file__).resolve().parent;R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';sys.path[:0]=[str(M),str(R)];sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+import run_logged as ledger
+names=['step45_layer_boundary_analysis.py','test_step45_layer_boundary_analysis.py','probe_step45_layer_boundary.py','launch_step45_layer_boundary.py','run_step45_layer_boundary.py','verify_step45_layer_boundary.py','evidence/step45-layer-boundary-derivation.json','all_layer_decode_boundary_program.py','decode_boundary_program.py','decode_boundary_layout.py','test_all_layer_decode_boundary_program.py','test_decode_boundary_program.py','layer_boundary_program.py','evidence/decode-boundary-program-derivation.json','b4_k35_coordinate_trajectory.py','b4_k35_cache52.py','b4_full4k_selection52.py','b4_b1_exact_gate.py']
+ledger.source_identity=lambda:{'scope':'Explicit step44/45 observer and inherited parity sources; CPU-only, no protected body reads','owned_source_sha256':{n:sha(M/n) for n in names}}
+p=json.loads((M/'evidence/b4-k35-coordinate-trajectory-preparation.json').read_bytes())
+tests=p['test_modules']+['test2026.cuda.qwen38_5090.test_decode_boundary_program','test2026.cuda.qwen38_5090.test_all_layer_decode_boundary_program','test2026.cuda.qwen38_5090.test_step45_layer_boundary_analysis'];os.chdir(R)
+assert ledger.run([sys.executable,'-m','unittest',*tests],W/'step45-layer-boundary-cpu-ledger','correctness','66CPU: inherited52, original observer prefix/binding/profile/all64suffix controls8, six new step44/45 primary-first/timeline/ID/row/geometry/hash/nonfinite/active-inactive controls. No native/GPU/model execution.',[M/n for n in names])==0
+print(json.dumps({'CPU_controls':66,'GPU_or_model_executed':False}))
