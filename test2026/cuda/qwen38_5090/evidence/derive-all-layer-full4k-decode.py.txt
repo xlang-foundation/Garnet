@@ -1,0 +1,89 @@
+from pathlib import Path
+import ast,hashlib,json
+R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';E=M/'evidence';sha=lambda b:hashlib.sha256(b).hexdigest();derivations=[]
+def derive(source,target,edits):
+    old=(M/source).read_bytes();raw=old;changes=[]
+    for a,b in edits:
+        if b'\r\n' in old:a=a.replace('\n','\r\n');b=b.replace('\n','\r\n')
+        assert raw.count(a.encode())==1,(source,a,raw.count(a.encode()))
+        raw=raw.replace(a.encode(),b.encode());changes.append(dict(old=a,new=b,count=1))
+    ast.parse(raw);p=M/target
+    if p.exists():assert p.read_bytes()==raw
+    else:p.write_bytes(raw)
+    derivations.append(dict(source=source,target=target,source_sha256=sha(old),target_sha256=sha(raw),changes=changes))
+derive('probe_b4_full4k_decode_prefix.py','probe_all_layer_full4k_decode.py',[
+('"""Ordinary original-model early decode state snapshots; no observer graph or timing."""','"""Private selected-step all64layer outputs, subject to ordinary complete primary parity."""'),
+('evidence/b4-full4k-decode-prefix-preparation.json','evidence/all-layer-full4k-decode-preparation.json'),
+("    import garnet","    from test2026.cuda.qwen38_5090.all_layer_decode_boundary_program import AllLayerDecodeBoundaryProgram,construct_with_all_layer_decode_boundary_program\n    import garnet"),
+("if batch==1:decoder=create_cuda_bf16_low_batch_study_decoder(str(checkpoint),cfg)","if batch==1:decoder=construct_with_all_layer_decode_boundary_program(create_cuda_bf16_low_batch_study_decoder,str(checkpoint),cfg)"),
+("decoder=CUDAPackedDecoder(str(checkpoint),cfg['text_config']","decoder=construct_with_all_layer_decode_boundary_program(CUDAPackedDecoder,str(checkpoint),cfg['text_config']"),
+("        vision=create_cuda_vision(str(checkpoint),cfg,16,16)","""        program=decoder.programs[4];assert isinstance(program,AllLayerDecodeBoundaryProgram)
+        assert type(p['observer_step']) is int and 1<=p['observer_step']<=7 and p['reference_key'] in selection['groups'][2]['keys']
+        report['observer']=dict(layers=list(program.boundary_layers),tokens=4,hidden=5120,hidden_width=program.hidden_width,primary_width=program.ordinary_output_width,wide_width=program.output_width,selected_steps=[p['observer_step']])
+        def capture_layers(group,step,consumed):
+            result=dict(step=step,program_runs=program.boundary_runs,consumed_tokens=list(consumed),boundaries={})
+            for layer,buffer in zip(program.boundary_layers,program.boundary_buffers):
+                raw=bytes(io.finite_f32_bytes(buffer));assert len(raw)==batch*4*5120*4
+                name='case'+str(group)+'-step'+str(step)+'-layer'+str(layer)+'.f32';assert not (out/name).exists();(out/name).write_bytes(raw)
+                result['boundaries'][str(layer)]=dict(file=name,bytes=len(raw),sha256=sha(raw))
+            return result
+        vision=create_cuda_vision(str(checkpoint),cfg,16,16)"""),
+("groups=[[i] for i in selected] if batch==1 else [selected]","groups=[[index[p['reference_key']]]] if batch==1 else [selected]"),
+("record['post_step_states']=[];save()","record['post_step_states']=[];record['layer_observations']=[];save()"),
+("prediction=decoder.step(prediction,[1]*batch,[[v]*3 for v in current]);current=[v+1 for v in current]","consumed=list(prediction);prediction=decoder.step(prediction,[1]*batch,[[v]*3 for v in current]);current=[v+1 for v in current]"),
+("record['post_step_states'].append(dict(step=step+1,capture=snapshot('case'+str(group_index)+'-step'+str(step+1))));save()","record['post_step_states'].append(dict(step=step+1,capture=snapshot('case'+str(group_index)+'-step'+str(step+1))));save()\n                    if step+1==p['observer_step']:record['layer_observations'].append(capture_layers(group_index,step+1,consumed));save()"),
+("report['status']='full4k_first_seven_decode_steps_captured_unqualified'","report['boundary_runs']=program.boundary_runs;report['status']='full4k_first_seven_decode_steps_captured_unqualified'")])
+derive('launch_b4_full4k_decode_prefix.py','launch_all_layer_full4k_decode.py',[
+('evidence/b4-full4k-decode-prefix-preparation.json','evidence/all-layer-full4k-decode-preparation.json'),
+('probe_b4_full4k_decode_prefix.py','probe_all_layer_full4k_decode.py')])
+a="""        from test2026.cuda.qwen38_5090.b4_full4k_decode_prefix import observe,same_profile_parent
+        reference=json.loads((out/'reference/report.json').read_bytes());candidate=json.loads((out/'candidate/report.json').read_bytes())
+        read_reference=lambda key,name:(out/'reference'/name).read_bytes();read_candidate=lambda name:(out/'candidate'/name).read_bytes()
+        with zipfile.ZipFile(ROOT/'results/b4-full4k-exact-attempt1-evidence.zip') as parent:
+            base='results/b4-full4k-exact-attempt1/'
+            w['same_profile_parent']={mode:same_profile_parent(report,json.loads(parent.read(base+mode+'/report.json')),lambda name,mode=mode:(out/mode/name).read_bytes(),lambda name,mode=mode:parent.read(base+mode+'/'+name)) for mode,report in (('reference',reference),('candidate',candidate))}
+        (out/'same-profile-parent.json').write_bytes(json.dumps(w['same_profile_parent'],indent=2).encode());save()
+        w['observation']=observe(selection,reference,candidate,read_reference,read_candidate);(out/'analysis.json').write_bytes(json.dumps(w['observation'],indent=2).encode());save()"""
+b="""        from test2026.cuda.qwen38_5090.all_layer_selected_row_decode_analysis import analyze_selected_row
+        reference=json.loads((out/'reference/report.json').read_bytes());candidate=json.loads((out/'candidate/report.json').read_bytes())
+        read_reference=lambda key,name:(out/'reference'/name).read_bytes();read_candidate=lambda name:(out/'candidate'/name).read_bytes()
+        with zipfile.ZipFile(ROOT/'results/b4-full4k-decode-prefix-attempt1-evidence.zip') as parent:
+            base='results/b4-full4k-decode-prefix-attempt1/'
+            old_reference=json.loads(parent.read(base+'reference/report.json'));old_candidate=json.loads(parent.read(base+'candidate/report.json'))
+            w['observation']=analyze_selected_row(selection,p['reference_key'],reference,candidate,old_reference,old_candidate,read_reference,read_candidate,lambda key,name:parent.read(base+'reference/'+name),lambda name:parent.read(base+'candidate/'+name))
+        assert w['observation']['step']==p['observer_step']
+        w['same_profile_parent']=w['observation']['primary_parity'];(out/'same-profile-parent.json').write_bytes(json.dumps(w['same_profile_parent'],indent=2).encode());save()
+        (out/'analysis.json').write_bytes(json.dumps(w['observation'],indent=2).encode());save()"""
+derive('run_b4_full4k_decode_prefix.py','run_all_layer_full4k_decode.py',[
+("JOB='b4-full4k-decode-prefix-attempt1'","JOB='all-layer-full4k-decode-attempt1'"),
+('evidence/b4-full4k-decode-prefix-preparation.json','evidence/all-layer-full4k-decode-preparation.json'),
+("p['status']=='B4_full4k_decode_prefix_prepared_GPU_unrun'","p['status']=='all64_selected_decode_prepared_GPU_unrun'"),
+("'test2026.cuda.qwen38_5090.test_b4_full4k_decode_prefix'","'test2026.cuda.qwen38_5090.test_b4_full4k_decode_prefix','test2026.cuda.qwen38_5090.test_decode_boundary_program','test2026.cuda.qwen38_5090.test_all_layer_decode_boundary_program','test2026.cuda.qwen38_5090.test_all_layer_full4k_decode_analysis','test2026.cuda.qwen38_5090.test_all_layer_selected_row_decode_analysis'"),
+('launch_b4_full4k_decode_prefix.py','launch_all_layer_full4k_decode.py'),
+('Four fresh source60/DLL841 B1 mixed-group references then source79/DLL2bafed B4. Same actual original model/graphs/precision/weights,3968prompt+8forcedIDs/cap4096, capture complete128components/finitevectors aftereach1..7decode steps. Same-profile original failedfull4Kreset/prefill/reset/first8ID parity required before interpreting drift. Diagnostic only; original128ID full4K gate staysFAILED, no observer outputs/kernel/native rebuild or timing/quality admission.','One provedaffected B1row thenwholeB4mixedgroup, unchangedsource60/source79DLLs/weights/precision/head. PrivateexistingoriginalForward/Runinherited observer appendsall64layerT4hidden arrays atonepinnedfirstordinarydriftstep. Fullprimary128componentphysical-logicalhash/finitehidden-normalizedvectors afterEVERY1..7+all8IDs mustmatch ordinaryprefixparentforselectedB1andallB4rows BEFORE interpretation.43CPUcontrols, liveactualGDN/V/QKroutes required. Original128IDfull4K staysFAILED; no kernel/nativebuild/tolerance/default/timing/quality/performanceadmission.'),
+(a,b),
+("w['status']='full4k_decode_prefix_diagnostic_collected_no_numerical_admission'","w['status']='all64_selected_decode_diagnostic_collected_no_numerical_admission'")])
+a="""reference=reports['reference'];candidate=reports['candidate'];r=lambda key,n:z.read(BASE+'reference/'+n);c=lambda n:z.read(BASE+'candidate/'+n);observation=observe(selection,reference,candidate,r,c);assert observation==w['observation']==json.loads(z.read(BASE+'analysis.json'))
+            with zipfile.ZipFile(a.proofs/'b4-full4k-exact-attempt1-evidence.zip') as parent:
+                base='results/b4-full4k-exact-attempt1/'
+                parity={mode:same_profile_parent(report,json.loads(parent.read(base+mode+'/report.json')),lambda n,mode=mode:z.read(BASE+mode+'/'+n),lambda n,mode=mode:parent.read(base+mode+'/'+n)) for mode,report in (('reference',reference),('candidate',candidate))}
+            assert parity==w['same_profile_parent']==json.loads(z.read(BASE+'same-profile-parent.json'))"""
+b="""reference=reports['reference'];candidate=reports['candidate'];r=lambda key,n:z.read(BASE+'reference/'+n);c=lambda n:z.read(BASE+'candidate/'+n)
+            with zipfile.ZipFile(a.proofs/'b4-full4k-decode-prefix-attempt1-evidence.zip') as parent:
+                base='results/b4-full4k-decode-prefix-attempt1/'
+                old_reference=json.loads(parent.read(base+'reference/report.json'));old_candidate=json.loads(parent.read(base+'candidate/report.json'))
+                observation=analyze_selected_row(selection,p['reference_key'],reference,candidate,old_reference,old_candidate,r,c,lambda key,n:parent.read(base+'reference/'+n),lambda n:parent.read(base+'candidate/'+n))
+            assert observation['step']==p['observer_step'] and observation==w['observation']==json.loads(z.read(BASE+'analysis.json'))
+            assert observation['primary_parity']==w['same_profile_parent']==json.loads(z.read(BASE+'same-profile-parent.json'))"""
+derive('verify_b4_full4k_decode_prefix.py','verify_all_layer_full4k_decode.py',[
+("from test2026.cuda.qwen38_5090.b4_full4k_decode_prefix import observe,same_profile_parent,STATUS","from test2026.cuda.qwen38_5090.b4_full4k_decode_prefix import STATUS\nfrom test2026.cuda.qwen38_5090.all_layer_selected_row_decode_analysis import analyze_selected_row"),
+("JOB='b4-full4k-decode-prefix-attempt1'","JOB='all-layer-full4k-decode-attempt1'"),
+('evidence/b4-full4k-decode-prefix-preparation.json','evidence/all-layer-full4k-decode-preparation.json'),
+("'b4_full4k_decode_prefix.py'","'b4_full4k_decode_prefix.py','all_layer_selected_row_decode_analysis.py','all_layer_full4k_decode_analysis.py','verify_all_layer_full4k_decode.py'"),
+("verify_derivations(json.loads(z.read(P+'evidence/b4-full4k-decode-prefix-derivation.json')),lambda n:z.read(P+n))","verify_derivations(json.loads(z.read(P+'evidence/b4-full4k-decode-prefix-derivation.json')),lambda n:z.read(P+n))\n        verify_derivations(json.loads(z.read(P+'evidence/all-layer-full4k-decode-derivation.json')),lambda n:z.read(P+n))"),
+("b'Ran 29 tests'","b'Ran 43 tests'"),
+(a,b),
+("w['status']=='full4k_decode_prefix_diagnostic_collected_no_numerical_admission'","w['status']=='all64_selected_decode_diagnostic_collected_no_numerical_admission'"),
+("status='full4k_decode_prefix_diagnostic_replayed' if strict else 'full4k_decode_prefix_job_failure_replayed'","status='all64_selected_decode_diagnostic_replayed' if strict else 'all64_selected_decode_job_failure_replayed'")])
+record=dict(derivations=derivations,scope='Futureselectedrow all64readonlyobserver, GPUunrun/undeployed. Parentmustbeverifiedordinaryprefixdiagnosticwithprovedaffectedrow/step. Reuseunchangedsource60/source79nativeDLLs; existingForwardandRun inherited, original128componentstate/finitevectors capturedafterEVERY1..7+8IDs mustmatchsame-profileordinaryparent BEFORE interpretingall64T4arrays foroneaffectedrow/step. FullB4primaryparitycoversall4rows. Source/runtime/SDK/config-index/CMake/all34/baselineguards retained. No kernel/nativebuild/precision/math/default/tolerance changes. Original128IDfull4K FAILED, no MTP/quality/HTTP/perf qualification.')
+p=E/'all-layer-full4k-decode-derivation.json';assert not p.exists();p.write_bytes(json.dumps(record,indent=2).encode());print(json.dumps(dict(files=len(derivations),GPU_unrun=True)))
