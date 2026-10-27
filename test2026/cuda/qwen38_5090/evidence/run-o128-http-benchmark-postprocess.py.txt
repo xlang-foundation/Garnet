@@ -1,0 +1,12 @@
+from pathlib import Path
+import hashlib,json,os,sys,zipfile
+ROOT=Path('D:/CantorAI/5090-study-20261023');M=ROOT/'Garnet/test2026/cuda/qwen38_5090';JOB='o128-http-benchmark-attempt1';sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest();sys.path[:0]=[str(M),str(ROOT/'Garnet')];import run_logged as ledger
+from run_bf16_low_batch_native_build import idle
+p=json.loads((M/'evidence/o128-http-benchmark-preparation.json').read_bytes());w=json.loads((ROOT/'results'/JOB/'workflow.json').read_bytes());assert type(w['exit_code']) is int and w['cleanup_finished'] and w['source_before_sha256']==w['source_after_sha256']==p['files'] and w['runtime_dependencies_after']==p['runtime'] and w['environment_after']==p['environment'] and w['checkpoint_after']==p['checkpoints'];idle();pins={n:sha(ROOT/n) for n in p['new_files']};assert pins==p['new_files']
+ledger.source_identity=lambda:{'scope':'Explicit terminal O128 HTTP raw archive repeated timing/ID/callback/restoration CPU replay; no GPU/native compilation; protected unrelated bodies excluded','owned_source_sha256':pins};os.chdir(ROOT/'Garnet');out=ROOT/'results/o128-http-benchmark-postprocess';assert not out.exists();out.mkdir();archive=ROOT/'results'/(JOB+'-evidence.zip')
+assert ledger.run([sys.executable,str(M/'verify_o128_http_benchmark.py'),'--proofs',str(ROOT/'results'),'--corpus',str(ROOT/'tools/mmmu-quality-corpus'),'--scratch',str(ROOT/'tmp')],out/'replay-ledger','correctness','Independent raw three fixed4Ktrials/T32IDs/all372nativecallbacks/SSEmetrics/VRAMsnapshots and complete source/runtime/SDK/checkpoint restoration, no performance admission',[archive,*[ROOT/n for n in pins]])==0
+proof=ROOT/'results'/(JOB+'-verified.json');q=json.loads(proof.read_bytes());summary=dict(status=q['status'],exit_code=q['exit_code'],proof_sha256=sha(proof),archive_sha256=sha(archive),archive_bytes=archive.stat().st_size,source_runtime_restored=True,performance_qualified=False);(out/'postprocess.json').write_bytes(json.dumps(summary,indent=2).encode());files=[proof,Path(__file__),*[n for n in out.rglob('*') if n.is_file()]];target=ROOT/'results/o128-http-benchmark-closure-assets.zip';assert not target.exists()
+with zipfile.ZipFile(target,'x',zipfile.ZIP_DEFLATED) as z:
+    for n in files:z.write(n,n.relative_to(ROOT).as_posix())
+    z.writestr('manifest.json',json.dumps(dict(files={n.relative_to(ROOT).as_posix():sha(n) for n in files},raw_archive_sha256=sha(archive)),indent=2))
+print(json.dumps({**summary,'closure_sha256':sha(target),'closure_bytes':target.stat().st_size}),flush=True)

@@ -1,0 +1,6 @@
+from pathlib import Path
+import ast,hashlib,json
+W=Path(__file__).resolve().parent
+for source,target in [('run-o128-http-quality-postprocess.py','run-o128-http-benchmark-postprocess.py'),('extract-o128-http-quality-closure.py','extract-o128-http-benchmark-closure.py'),('replay-o128-http-quality-local.py','replay-o128-http-benchmark-local.py')]:
+    old=(W/source).read_bytes();raw=old.replace(b'o128-http-quality',b'o128-http-benchmark').replace(b'verify_o128_http_quality.py',b'verify_o128_http_benchmark.py').replace(b'O128_HTTP_quality',b'O128_HTTP_benchmark').replace(b'raw archive quality/ID/callback',b'raw archive repeated timing/ID/callback').replace(b'raw805screening/T32IDs/fourfull4Kcontrols/all809nativecallbacks',b'raw three fixed4Ktrials/T32IDs/all372nativecallbacks/SSEmetrics/VRAMsnapshots').replace(b'complete actual O128HTTPscreening805/T32prompt-outputIDs/fourfull4Kcontrols/all809callbacks',b'three actual repeated O128HTTPfixed4Ktrials/372T32prompt-outputIDs/nativecallbacks/SSEmetrics/VRAMsnapshots').replace(b'actual_O128_HTTP_quality_raw_archive_independently_replayed',b'actual_O128_HTTP_benchmark_raw_archive_independently_replayed');ast.parse(raw);t=W/target;assert not t.exists() or t.read_bytes()==raw;t.write_bytes(raw)
+print(json.dumps(dict(status='future_benchmark_postprocess_wrappers_prepared_not_deployed',GPU_requested=False)))
