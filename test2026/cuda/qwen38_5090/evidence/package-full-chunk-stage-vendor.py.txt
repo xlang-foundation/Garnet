@@ -1,0 +1,8 @@
+from pathlib import Path
+import hashlib,json,zipfile
+W=Path(__file__).resolve().parent;R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';P='Garnet/test2026/cuda/qwen38_5090/';sha=lambda b:hashlib.sha256(b).hexdigest();prep=M/'evidence/full-chunk-stage-vendor-preparation.json';p=json.loads(prep.read_bytes());parent=json.loads((M/'evidence/full-chunk-stage-gpu-preparation-attempt2.json').read_bytes());names={n:R/n.removeprefix('Garnet/') for n in p['new_files'] if n not in parent['new_files']};names[P+'evidence/full-chunk-stage-vendor-preparation.json']=prep
+assert len(names)==8 and all(sha(path.read_bytes())==p['new_files'].get(n,sha(prep.read_bytes())) for n,path in names.items());target=W/'full-chunk-stage-vendor-deployment.zip';assert not target.exists()
+with zipfile.ZipFile(target,'x',zipfile.ZIP_DEFLATED) as z:
+    for n,path in names.items():z.write(path,n)
+    z.writestr('deployment-manifest.json',json.dumps(dict(files={n:sha(path.read_bytes()) for n,path in names.items()},native_source_and_library_unchanged=True),indent=2))
+receipt=dict(status='logger_only_full_chunk_stage_deployment_prepared',sha256=sha(target.read_bytes()),bytes=target.stat().st_size,files=len(names));(W/'full-chunk-stage-vendor-package.json').write_bytes(json.dumps(receipt,indent=2).encode());print(json.dumps(receipt))

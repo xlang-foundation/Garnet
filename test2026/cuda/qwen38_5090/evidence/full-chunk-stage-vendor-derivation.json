@@ -1,0 +1,148 @@
+{
+  "status": "logger_only_derived_ordinary_collector_batch_owner",
+  "all51native_source_DLL_model_math_original_numeric_gates_unchanged": true,
+  "derivations": [
+    {
+      "source": "probe_full_chunk_stage_attempt2.py",
+      "target": "probe_full_chunk_stage_vendor.py",
+      "source_sha256": "fe30df7e302b79fa1297e4c0301fc7e48f31fca0fec170545a1966c1aad76a70",
+      "target_sha256": "6123eb924a870381eb91d873cdd86d27c55255217c8e086f7a1e812923d60961",
+      "changes": [
+        {
+          "old": "full-chunk-stage-gpu-preparation-attempt2.json",
+          "new": "full-chunk-stage-vendor-preparation.json",
+          "count": 1
+        },
+        {
+          "old": "enabled=bool(enabled)",
+          "new": "enabled=bool(enabled);assert enabled\n    assert os.environ.get('CUBLASLT_LOG_LEVEL')=='5' and os.environ.get('CUBLASLT_LOG_MASK')=='31'\n    assert Path(os.environ['CUBLASLT_LOG_FILE'])==Path(str(out)+'-cublaslt.log')",
+          "count": 1
+        },
+        {
+          "old": "io=decoder.io;layout=",
+          "new": "io=decoder.io;report['qg_weight_metadata']=json.loads(io.compressed_weight_info('model.language_model.layers.3.self_attn.q_proj.weight'));layout=",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "test_full_chunk_stage_attempt2.bat",
+      "target": "test_full_chunk_stage_vendor.bat",
+      "source_sha256": "6f7b3ea1d0fc0dc547b39843d731da709fa7c0a78683426fc3b3c977354ab9fe",
+      "target_sha256": "a9d172cb9fdfaefcfaf0ff5f2b3fb0354134683dc677a3ccaf71f2bf1b5f9c53",
+      "changes": [
+        {
+          "old": "if not \"%~4\"==\"0\" if not \"%~4\"==\"1\" exit /b 2",
+          "new": "if not \"%~4\"==\"1\" exit /b 2",
+          "count": 1
+        },
+        {
+          "old": "set CUBLASLT_LOG_LEVEL=",
+          "new": "set CUBLASLT_LOG_LEVEL=5",
+          "count": 1
+        },
+        {
+          "old": "set CUBLASLT_LOG_MASK=",
+          "new": "set CUBLASLT_LOG_MASK=31",
+          "count": 1
+        },
+        {
+          "old": "set CUBLASLT_LOG_FILE=",
+          "new": "set \"CUBLASLT_LOG_FILE=%~1-cublaslt.log\"",
+          "count": 1
+        },
+        {
+          "old": "probe_full_chunk_stage_attempt2.py",
+          "new": "probe_full_chunk_stage_vendor.py",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "run_full_chunk_stage_attempt2.py",
+      "target": "run_full_chunk_stage_vendor.py",
+      "source_sha256": "af48b9571a7acdf456be84c63e5f9e55245dbdbfe1db3cefc3f1de6ed6bfb689",
+      "target_sha256": "48abd1ea531809c6d64d7c88aee1a0d045206935a03398ab1fc791f71201edaf",
+      "changes": [
+        {
+          "old": "JOB='full-chunk-stage-attempt2'",
+          "new": "JOB='full-chunk-stage-vendor-attempt1'",
+          "count": 1
+        },
+        {
+          "old": "full-chunk-stage-gpu-preparation-attempt2.json",
+          "new": "full-chunk-stage-vendor-preparation.json",
+          "count": 1
+        },
+        {
+          "old": "p['status']=='full_chunk_stage_prepared_gpu_unrun'",
+          "new": "p['status']=='full_chunk_stage_vendor_prepared_gpu_unrun'",
+          "count": 1
+        },
+        {
+          "old": "for phase,t,enabled in (('control32',32,0),('control128',128,0),('stages32',32,1),('stages128',128,1)):",
+          "new": "w['fresh_logged_profiles']=['stages32','stages128'];w['inherited_defaultoff_controls']={'parent':'full-chunk-stage-attempt2','profiles':['control32','control128']};save()\n        for phase,t,enabled in (('stages32',32,1),('stages128',128,1)):\n            assert not (out/(phase+'-cublaslt.log')).exists()",
+          "count": 1
+        },
+        {
+          "old": "test_full_chunk_stage_attempt2.bat",
+          "new": "test_full_chunk_stage_vendor.bat",
+          "count": 1
+        },
+        {
+          "old": "47current readonly stage/primary/array/corruption/source/route controls plus86retained historical assertions on exact parent50; no original assertion waived",
+          "new": "50current readonly stage/primary/array/corruption/source/route/vendor controls plus86retained historical assertions on exact parent50; no original assertion waived",
+          "count": 1
+        },
+        {
+          "old": "Actual exclusive defaultoff/enabled full3968 primary parity and two exact repeats; capture complete first128 layer3 stages/readonly inputs only when enabled; no timing admission",
+          "new": "Actual exclusive logger-only full3968 primary parity and two exact repeats; capture complete first128 layer3 stages/readonly inputs, require exact qualified unlogged data; no timing admission",
+          "count": 1
+        },
+        {
+          "old": "from test2026.cuda.qwen38_5090.full_chunk_stage_replay import replay\n        result=replay(reports,reads,ROOT/'results');(out/'stage-analysis.json').write_bytes(json.dumps(result,indent=2).encode());w['status']='full_chunk_stages_collected_same_profile_equivalence_needs_replay'",
+          "new": "from test2026.cuda.qwen38_5090.full_chunk_stage_vendor import compare\n        with zipfile.ZipFile(ROOT/'results/full-chunk-stage-attempt2-evidence.zip') as oldzip:\n            prior={};oldreads={};parentbase='results/full-chunk-stage-attempt2/'\n            for phase in ('control32','control128','stages32','stages128'):\n                prior[phase]=json.loads(oldzip.read(parentbase+phase+'/report.json'));oldreads[phase]=lambda n,phase=phase:oldzip.read(parentbase+phase+'/'+n)\n            result=compare(reports,reads,prior,oldreads,ROOT/'results',{phase:(out/(phase+'-cublaslt.log')).read_bytes() for phase in reports})\n        (out/'vendor-analysis.json').write_bytes(json.dumps(result,indent=2).encode());w['status']='full_chunk_vendor_collected_exact_primary_stage_parity_needs_replay'",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "verify_full_chunk_stage_attempt2.py",
+      "target": "verify_full_chunk_stage_vendor.py",
+      "source_sha256": "7cf55521454d30aeae64e637e3855bec03ae3c97f747dfbb3a490e9fae9eba3d",
+      "target_sha256": "f711cefe973cfd7e661c393f77ad33ab127a73cda89978c8d8641c3938b14ef3",
+      "changes": [
+        {
+          "old": "JOB='full-chunk-stage-attempt2'",
+          "new": "JOB='full-chunk-stage-vendor-attempt1'",
+          "count": 1
+        },
+        {
+          "old": "full-chunk-stage-gpu-preparation-attempt2.json",
+          "new": "full-chunk-stage-vendor-preparation.json",
+          "count": 1
+        },
+        {
+          "old": "b'Ran 47 tests'",
+          "new": "b'Ran 50 tests'",
+          "count": 1
+        },
+        {
+          "old": "for phase in ('control32','control128','stages32','stages128'):",
+          "new": "for phase in ('stages32','stages128'):",
+          "count": 1
+        },
+        {
+          "old": "arrays=replay(reports,reads,args.proofs);assert w['status']=='full_chunk_stages_collected_same_profile_equivalence_needs_replay' and arrays==doc(base+'stage-analysis.json')",
+          "new": "from test2026.cuda.qwen38_5090.full_chunk_stage_vendor import compare\n            assert w['fresh_logged_profiles']==['stages32','stages128'] and w['inherited_defaultoff_controls']=={'parent':'full-chunk-stage-attempt2','profiles':['control32','control128']}\n            with zipfile.ZipFile(args.proofs/'full-chunk-stage-attempt2-evidence.zip') as oldzip:\n                prior={};oldreads={};parentbase='results/full-chunk-stage-attempt2/'\n                for phase in ('control32','control128','stages32','stages128'):\n                    prior[phase]=json.loads(oldzip.read(parentbase+phase+'/report.json'));oldreads[phase]=lambda n,phase=phase:oldzip.read(parentbase+phase+'/'+n)\n                arrays=compare(reports,reads,prior,oldreads,args.proofs,{phase:z.read(base+phase+'-cublaslt.log') for phase in reports})\n            assert w['status']=='full_chunk_vendor_collected_exact_primary_stage_parity_needs_replay' and arrays==doc(base+'vendor-analysis.json')",
+          "count": 1
+        },
+        {
+          "old": "'actual_full_chunk_stage_and_primary_equivalence_replayed' if passed else 'actual_full_chunk_stage_failure_preserved'",
+          "new": "'actual_full_chunk_vendor_logging_and_stage_primary_parity_replayed' if passed else 'actual_full_chunk_vendor_logging_failure_preserved'",
+          "count": 1
+        }
+      ]
+    }
+  ]
+}
