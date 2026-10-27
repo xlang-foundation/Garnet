@@ -1,0 +1,109 @@
+{
+  "status": "same_DLL_four_phase_operand_probe_prepared_GPU_unrun",
+  "derivations": [
+    {
+      "source": "probe_step45_layer_boundary2.py",
+      "source_sha256": "9205d40033af5e29a7cbd4715d39b0e1a970947803a6e1912c821b4d42bfb9c6",
+      "target": "probe_decode35_operands.py",
+      "target_sha256": "5be4cc2995cf3bd35918535919ad555b4b8108067e457d3b7cf2fdb3645480c9",
+      "changes": [
+        {
+          "old": "root,out,mode,reference=Path(sys.argv[1]),Path(sys.argv[2]),sys.argv[3],Path(sys.argv[4]);assert mode in ('reference','candidate') and not out.exists()",
+          "new": "root,out,phase,reference=Path(sys.argv[1]),Path(sys.argv[2]),sys.argv[3],Path(sys.argv[4]);assert phase in ('off-reference','off-candidate','on-reference','on-candidate') and not out.exists();mode=phase.split('-')[1];enabled=phase.startswith('on-')",
+          "count": 1
+        },
+        {
+          "old": "step45-layer-boundary2-preparation.json",
+          "new": "decode35-operands-preparation.json",
+          "count": 1
+        },
+        {
+          "old": "p[mode+'_installed_files']",
+          "new": "p['installed_files']",
+          "count": 1
+        },
+        {
+          "old": "p[mode+'_library_sha256']",
+          "new": "p['library_sha256']",
+          "count": 1
+        },
+        {
+          "old": "'GARNET_FP8_QK_BATCH4_DECODE_CANONICAL':'0' if mode=='reference' else '1'}",
+          "new": "'GARNET_FP8_QK_BATCH4_DECODE_CANONICAL':'0' if mode=='reference' else '1','GARNET_DECODE35_STAGE_WITNESS':'1' if enabled else '0'}",
+          "count": 1
+        },
+        {
+          "old": "from test2026.cuda.qwen38_5090.bounded_step45_boundary_program import BoundedStep45BoundaryProgram as AllLayerDecodeBoundaryProgram,construct_with_bounded_step45_boundary_program as construct_with_all_layer_decode_boundary_program",
+          "new": "from test2026.cuda.qwen38_5090.bounded_step45_boundary_program import BoundedStep45BoundaryProgram,construct_with_bounded_step45_boundary_program\n    from test2026.cuda.qwen38_5090.decode35_operand_program import Decode35OperandProgram,construct_with_decode35_operand_program,OPERANDS\n    AllLayerDecodeBoundaryProgram=Decode35OperandProgram if enabled else BoundedStep45BoundaryProgram\n    construct_with_all_layer_decode_boundary_program=construct_with_decode35_operand_program if enabled else construct_with_bounded_step45_boundary_program",
+          "count": 1
+        },
+        {
+          "old": "report=dict(status='constructing',mode=mode,",
+          "new": "report=dict(status='constructing',mode=mode,phase=phase,operand_witness=enabled,",
+          "count": 1
+        },
+        {
+          "old": "        def capture_layers(group,step,consumed):",
+          "new": "        report['internal_observer']=dict(names=[n for n,_ in OPERANDS],widths=[w for _,w in OPERANDS],offsets=program.operand_offsets,row_words=106496) if enabled else None\n        def capture_layers(group,step,consumed):",
+          "count": 1
+        },
+        {
+          "old": "        vision=create_cuda_vision",
+          "new": "        def capture_operands(group,step,consumed):\n            assert enabled and step in (44,45) and len(program.operand_buffers)==7\n            result=dict(step=step,program_runs=program.boundary_runs,consumed_tokens=list(consumed),operands={})\n            for (name,width),buffer in zip(OPERANDS,program.operand_buffers):\n                raw=bytes(io.finite_f32_bytes(buffer));assert len(raw)==batch*width*4\n                filename='case'+str(group)+'-step'+str(step)+'-'+name+'.f32';assert not (out/filename).exists();(out/filename).write_bytes(raw)\n                result['operands'][name]=dict(file=filename,bytes=len(raw),sha256=sha(raw))\n            return result\n        vision=create_cuda_vision",
+          "count": 1
+        },
+        {
+          "old": "record['layer_observations']=[];sampler=",
+          "new": "record['layer_observations']=[];record['operand_observations']=[];sampler=",
+          "count": 1
+        },
+        {
+          "old": "                    if step+1 in (44,45):record['layer_observations'].append(capture_layers(group_index,step+1,consumed));save()",
+          "new": "                    if step+1 in (44,45):\n                        record['layer_observations'].append(capture_layers(group_index,step+1,consumed))\n                        if enabled:record['operand_observations'].append(capture_operands(group_index,step+1,consumed))\n                        save()",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "launch_step45_layer_boundary2.py",
+      "source_sha256": "3651faec382419bf7ed39eb51c5216a96aa6d7684f76cf4ec5014d91265d6a7e",
+      "target": "launch_decode35_operands.py",
+      "target_sha256": "451a05a86ecfb4f73cb07fc0b89e8a858fd28b89639a26857916ca3745a7b2d6",
+      "changes": [
+        {
+          "old": "mode=sys.argv[4];reference=Path(sys.argv[5]);assert mode in ('reference','candidate');",
+          "new": "phase=sys.argv[4];reference=Path(sys.argv[5]);assert phase in ('off-reference','off-candidate','on-reference','on-candidate');mode=phase.split('-')[1];enabled=phase.startswith('on-');",
+          "count": 1
+        },
+        {
+          "old": "step45-layer-boundary2-preparation.json",
+          "new": "decode35-operands-preparation.json",
+          "count": 1
+        },
+        {
+          "old": "env['GARNET_FP8_K_BATCH4_DECODE_M4X4']='0';",
+          "new": "env['GARNET_DECODE35_STAGE_WITNESS']='1' if enabled else '0'\nenv['GARNET_FP8_K_BATCH4_DECODE_M4X4']='0';",
+          "count": 1
+        },
+        {
+          "old": "probe_step45_layer_boundary2.py",
+          "new": "probe_decode35_operands.py",
+          "count": 1
+        },
+        {
+          "old": "str(root),str(out),mode,str(reference)",
+          "new": "str(root),str(out),phase,str(reference)",
+          "count": 1
+        }
+      ]
+    }
+  ],
+  "ordinary_model_math_loop_53IDs_and_original_captures_retained": true,
+  "phases": [
+    "off-reference",
+    "off-candidate",
+    "on-reference",
+    "on-candidate"
+  ],
+  "actual_same_profile_primary_layer_cache_timeline_controls_required": true
+}

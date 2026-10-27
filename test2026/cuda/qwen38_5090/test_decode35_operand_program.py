@@ -65,12 +65,13 @@ class Contract(unittest.TestCase):
             with self.assertRaises(ValueError):module.Qwen35Decode35CUDAChunk(Symbol(),None,None,Symbol(),Symbol(),Symbol(),config,layer,kind)
 
     def test_exact_frozen_chunk_math_and_parent_forward_derivations(self):
-        from .decode35_stage_source import sources
-        _,candidate,_=sources();p=json.loads((M/'evidence/decode35-operand-program-derivation.json').read_bytes());raw=(M/p['target']).read_bytes()
+        p=json.loads((M/'evidence/decode35-operand-program-derivation.json').read_bytes());raw=(M/p['target']).read_bytes()
+        frozen=(M/'evidence/decode35-frozen-cuda-chunk.py.txt').read_bytes()
+        self.assertEqual(hashlib.sha256(frozen).hexdigest(),p['chunk_source_sha256'])
         self.assertEqual(hashlib.sha256(raw).hexdigest(),p['target_sha256'])
         text=raw.decode();chunk=text[text.index('@T.fusion('):text.index('class Decode35OperandProgram')].rstrip()+'\n'
         for change in reversed(p['chunk_changes']):self.assertEqual(chunk.count(change['new']),change['count']);chunk=chunk.replace(change['new'],change['old'])
-        original=candidate[p['chunk_source']].decode();self.assertEqual(chunk,original[original.index('@T.fusion('):].rstrip()+'\n')
+        original=frozen.decode();self.assertEqual(chunk,original[original.index('@T.fusion('):].rstrip()+'\n')
         current=text[text.index('    def _forward(self):'):text.index('    def run(self,inputs):')]
         for change in reversed(p['forward_changes']):self.assertEqual(current.count(change['new']),change['count']);current=current.replace(change['new'],change['old'])
         original=(M/p['forward_source']).read_text(encoding='utf8');self.assertEqual(current,original[original.index('    def _forward(self):'):original.index('def construct_with_bounded_step45_boundary_program')])

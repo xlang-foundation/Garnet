@@ -1,0 +1,50 @@
+from pathlib import Path
+import ast,hashlib,json,zipfile
+W=Path(__file__).resolve().parent;O=W.parent/'outputs';R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';E=M/'evidence';P='Garnet/test2026/cuda/qwen38_5090/';sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+old=json.loads((E/'step45-layer-boundary2-preparation.json').read_bytes());bp=json.loads((E/'decode35-stage-build-preparation.json').read_bytes());J='decode35-stage-build-attempt1';q=json.loads((O/(J+'-verified.json')).read_bytes())
+assert q['exit_code']==0 and sha(O/(J+'-evidence.zip'))==q['archive_sha256']
+with zipfile.ZipFile(O/(J+'-evidence.zip')) as z:w=json.loads(z.read('results/'+J+'/workflow.json'))
+assert w['cleanup_finished'] and w['baseline_source_restored'] and w['baseline_library_restored']
+files=dict(w['source_after'])
+for n,h in w['methods_after'].items():
+    if n in files:assert files[n]==h
+    files[n]=h
+names=['decode35_operand_program.py','test_decode35_operand_program.py','decode35_operand_analysis.py','test_decode35_operand_analysis.py','probe_decode35_operands.py','launch_decode35_operands.py','run_decode35_operands.py','verify_decode35_operands.py','evidence/decode35-frozen-cuda-chunk.py.txt','evidence/decode35-operand-program-derivation.json','evidence/decode35-operand-probe-derivation.json']
+for n in names:
+    if n.endswith('.py'):ast.parse((M/n).read_bytes())
+for row in json.loads((E/'decode35-operand-probe-derivation.json').read_bytes())['derivations']:
+    raw=(M/row['source']).read_bytes();assert hashlib.sha256(raw).hexdigest()==row['source_sha256']
+    for c in row['changes']:assert raw.count(c['old'].encode())==c['count'];raw=raw.replace(c['old'].encode(),c['new'].encode())
+    assert raw==(M/row['target']).read_bytes() and hashlib.sha256(raw).hexdigest()==row['target_sha256']
+program=json.loads((E/'decode35-operand-program-derivation.json').read_bytes());assert sha(E/'decode35-frozen-cuda-chunk.py.txt')==program['chunk_source_sha256']
+ledger=W/'decode35-operands-cpu-ledger';events=[json.loads(s) for s in (ledger/'commands.jsonl').read_bytes().splitlines()]
+assert len(events)==2 and events[1]['exit_code']==0 and events[0]['source']['owned_source_sha256']==events[1]['source_after']['owned_source_sha256']
+assert b'Ran 81 tests' in (ledger/'commands.log').read_bytes()
+for n,h in events[0]['source']['owned_source_sha256'].items():assert sha(M/n)==h
+def keep(name,raw):
+    target=E/name;assert not target.exists();target.write_bytes(raw);names.append('evidence/'+name)
+for ext in ('log','jsonl'):keep('decode35-operands-cpu-commands.'+ext,(ledger/('commands.'+ext)).read_bytes())
+for name in ('derive-decode35-operand-probe.py','test-decode35-operands-cpu.py','prepare-decode35-operands.py'):keep(name+'.txt',(W/name).read_bytes())
+keep('decode35-operands-cpu-preparation.json',json.dumps({'CPU_controls':81,'GPU_model_unrun':True,'source_sha256':{n:sha(M/n) for n in names},'new_frontend_arithmetic_unchanged':True,'test_provider_change':'Pin symbolic fusion-source check to exact frozen chunk used in source86 rather than restored checkout; assertions and implementation unchanged. Previous test retained at e06cbaffe.','same_DLL_off_on_and_historical_numeric_parity_required':True,'historical_DLL_change_explicit_and_off_only':True},indent=2).encode())
+for n in names:
+    if P+n in files:assert files[P+n]==sha(M/n),('Preserve deployed method',n)
+    files[P+n]=sha(M/n)
+assert all('probe_native_external_prefix_batch.py' not in n for n in files)
+parents=dict(bp['parents']);parents[J]={'proof_sha256':sha(O/(J+'-verified.json')),'archive_sha256':q['archive_sha256'],'status':q['status'],'exit_code':0}
+assert len(parents)==48
+for job,row in parents.items():
+    path=O/(job+'-verified.json');doc=json.loads(path.read_bytes());assert sha(path)==row['proof_sha256'] and path.read_bytes()==(O/(job+'-remote-verified.json')).read_bytes() and sha(O/(job+'-evidence.zip'))==doc['archive_sha256']==row['archive_sha256'] and doc['status']==row['status']
+archive_files=sorted(set(old['archive_files'])|set(w['methods_after'])|{P+n for n in names});assert all(n in files for n in archive_files)
+with zipfile.ZipFile(O/'step45-layer-boundary-attempt2-evidence.zip') as z:
+    historical={role:json.loads(z.read('results/step45-layer-boundary-attempt2/'+role+'/report.json'))['library_sha256'] for role in ('reference','candidate')}
+assert historical=={'reference':old['reference_library_sha256'],'candidate':old['candidate_library_sha256']}
+p=dict(status='decode35_operands_prepared_GPU_unrun',files=files,archive_files=archive_files,parents=parents,checkpoints=w['checkpoint_after'],cuda_objects=w['cuda_objects_after'],runtime=w['runtime_after'],environment=w['environment_after'],cache_before_sha256=w['cache_after_sha256'],input_corpus_sha256=old['input_corpus_sha256'],selected_key=old['selected_key'],bundle=bp['bundle'],bundle_sha256=bp['bundle_sha256'],source_files=bp['candidate_files'],candidate_base=bp['candidate_base'],library=w['candidate_saved'],library_sha256=w['candidate_library_sha256'],historical_libraries=historical,test_modules=old['test_modules']+['test2026.cuda.qwen38_5090.test_decode35_operand_program','test2026.cuda.qwen38_5090.test_decode35_operand_analysis'],flags={**old['flags'],'GARNET_DECODE35_STAGE_WITNESS':'0'},scope='Same source86 bundle and DLL for four fresh off-reference/off-candidate/on-reference/on-candidate processes. Off numerics must reproduce immutable source60/85 ordinary parents with explicit pinned DLL transition. On must reproduce same-DLL off: all53IDs, five full128-component captures and finite hidden/norm vectors, full8MiBcache, all53 coordinate points and bothsteps44/45 all64 completeT4 layer outputs. Only then interpret 7 actual F32 operands and independently link masked input to layer34, unchanged RoPE suffix, and BF16RN of KpostRoPE to actual fullcache slots4011/4012. Original full4K failure retained; no unique global first drift/causal operator/quality/MTP/HTTP/performance/2x admission.81CPU/48closedparents/all34 latestpostbuildobjects/runtime/SDK/config-index/CMake/source/DLL restoration; fixed Ccache>=96GiB and owned nonce retirement.')
+p['installed_files']={**files,**{'Garnet/'+n:h for n,h in p['source_files'].items()}}
+assert len(p['source_files'])==len(p['candidate_base'])==86 and len(p['cuda_objects'])==34
+prep=E/'decode35-operands-preparation.json';assert not prep.exists();prep.write_bytes(json.dumps(p,indent=2).encode());deploy={P+n:M/n for n in names};deploy[P+'evidence/'+prep.name]=prep
+target=W/'decode35-operands-deployment.zip';assert not target.exists()
+with zipfile.ZipFile(target,'x',zipfile.ZIP_DEFLATED) as z:
+    for n,path in deploy.items():z.write(path,n)
+    z.writestr('deployment-manifest.json',json.dumps({'files':{n:sha(path) for n,path in deploy.items()},'production_install_deferred_to_exclusive_owner':True},indent=2))
+receipt={'deployment_sha256':sha(target),'bytes':target.stat().st_size,'deployment_files':len(deploy),'guarded_files':len(files),'archive_files':len(archive_files),'parents':len(parents),'CPU_controls':81,'preparation_sha256':sha(prep),'same_library_sha256':p['library_sha256']}
+(W/'decode35-operands-package.json').write_bytes(json.dumps(receipt,indent=2).encode());(W/'decode35-operands-owned-names.json').write_bytes(json.dumps(names).encode());print(json.dumps(receipt,indent=2))

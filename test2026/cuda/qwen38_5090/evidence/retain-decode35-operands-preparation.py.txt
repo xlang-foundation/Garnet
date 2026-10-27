@@ -1,0 +1,39 @@
+from pathlib import Path
+import hashlib,json,zipfile
+W=Path(__file__).resolve().parent;R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';E=M/'evidence';sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest();owned=[];saved={}
+with zipfile.ZipFile(W/'decode35-operands-deployment.zip') as z:
+    for n,h in json.loads(z.read('deployment-manifest.json'))['files'].items():
+        path=R/n.removeprefix('Garnet/');assert sha(path)==h;owned.append(path)
+def keep(name,raw):
+    p=E/name;assert not p.exists();p.write_bytes(raw);owned.append(p);saved[name]=sha(p)
+for name in ('install-decode35-operands.py',Path(__file__).name):keep(name+'.txt',(W/name).read_bytes())
+keep('decode35-operands-package.json',(W/'decode35-operands-package.json').read_bytes());package=json.loads((W/'decode35-operands-package.json').read_bytes());assert sha(W/'decode35-operands-deployment.zip')==package['deployment_sha256']
+keep('decode35-operands-preparation-retention.json',json.dumps({'status':'same_DLL_decode35_operand_protocol_preparation_retained','package':package,'retained_sha256':saved,'GPU_unrun_at_preparation':True,'model_or_performance_qualified':False},indent=2).encode())
+entry=('\n\n2026-10-27 same-DLL seven-operand diagnostic prepared (GPU unrun). '
+       'All 81 CPU tests passed: inherited 69, private frontend 5, analysis 7. '
+       'The symbolic source test now reads the exact frozen cuda_chunk source '
+       'used by source86, rather than the different restored checkout; assertions '
+       'and the frontend implementation are unchanged, and the previous test is '
+       'retained in commit e06cbaffe. Fixed source bundle 48f323c025cce22577072bc7c1819b62ade5ad08d37e94b2146ded75dac0e43f '
+       'and DLL 27b8c8b97bbe43991c5a75e8d5c753e989f2da559d59f0c05b22c1690869fe91 '
+       'are shared by four fresh processes: off-reference, off-candidate, '
+       'on-reference, on-candidate. Off controls explicitly declare their DLL '
+       'transition from historical source60/source85 but must reproduce all '
+       '53 IDs, five complete 128-component captures and finite vectors, full '
+       '8 MiB selected cache, 53 coordinate points, and all 64 complete T4 '
+       'layer outputs at steps 44 and 45. On controls must match same-DLL off '
+       'before interpreting any new operand. Trace must show one actual native '
+       'stage pack only when on. Check seven F32 operands, link masked input to '
+       'layer34, require unchanged unrotated RoPE suffix, and independently '
+       'round active K to actual BF16 cache slots 4011/4012. Guard 1923 files, '
+       '48 closed parents and all 34 latest post-build object hashes; restore '
+       'source, baseline DLL, runtime, SDK, config/index and CMake. Reuse fixed '
+       'C cache with >=96 GiB free and retire only owned new nonce entries. '
+       'Deployment '+package['deployment_sha256']+' ('+str(package['bytes'])+' bytes). '
+       'No full4K, MTP, quality, HTTP, speed or 2x admission. Existing failures '
+       'and the complete final objective remain open.\n').encode()
+for name in ('docs/research/qwen38-5090-development-log.md','docs/research/qwen38-5090-implementation-task.md'):
+    p=R/name;before=p.read_bytes();assert b'same-DLL seven-operand diagnostic prepared' not in before
+    with p.open('ab') as f:f.write(entry)
+    assert p.read_bytes()==before+entry;owned.append(p)
+(W/'decode35-operands-preparation-stage-paths.bin').write_bytes(b''.join(p.relative_to(R).as_posix().encode()+b'\0' for p in dict.fromkeys(owned)));print(json.dumps({'stage_paths':len(set(owned)),'CPU_controls':81,'GPU_unrun_at_preparation':True}))
