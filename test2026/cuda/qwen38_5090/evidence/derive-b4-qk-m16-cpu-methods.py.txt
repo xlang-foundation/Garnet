@@ -1,0 +1,69 @@
+from pathlib import Path
+import ast,hashlib,json
+R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';E=M/'evidence';records=[];sha=lambda b:hashlib.sha256(b).hexdigest()
+def derive(old,new,steps):
+    original=(M/old).read_bytes();raw=original;changes=[]
+    for a,b,count in steps:
+        if b'\r\n' in original:a=a.replace('\n','\r\n');b=b.replace('\n','\r\n')
+        assert raw.count(a.encode())==count,(old,a,raw.count(a.encode()));raw=raw.replace(a.encode(),b.encode());changes.append(dict(old=a,new=b,count=count))
+    target=M/new;assert not target.exists()
+    if new.endswith('.py'):ast.parse(raw)
+    target.write_bytes(raw);records.append(dict(source=old,target=new,source_sha256=sha(original),target_sha256=sha(raw),changes=changes))
+def common(name,base='v'):
+    raw=(M/name).read_text(encoding='utf-8');steps=[]
+    pairs=[('b4_v_m16','b4_qk_m16'),('b4-v-m16','b4-qk-m16'),('modelopt_fp8_v_m16','modelopt_fp8_qk_m16'),('ModelOptFP8VM16','ModelOptFP8QKM16'),('VM16','QKM16'),('V_M16','QK_M16')]
+    if base=='gdn':pairs=[('b4_decode_m16','b4_qk_m16'),('b4-decode-m16','b4-qk-m16'),('modelopt_fp8_gdn_m16','modelopt_fp8_qk_m16'),('ModelOptFP8GDNM16','ModelOptFP8QKM16'),('GDNM16','QKM16'),('GDN_M16','QK_M16')]
+    for a,b in pairs:
+        n=raw.count(a)
+        if n:steps.append((a,b,n));raw=raw.replace(a,b)
+    return steps,raw
+for suffix in ('profile','factory','plugin'):
+    n='build_b4_v_m16_'+suffix+'_cpu.bat';steps,raw=common(n)
+    if suffix=='plugin':steps.extend([('/I"%CANDIDATE%"','/I"%CANDIDATE%" /I"%METHODS%\\native_b4_v_m16_candidate"',1),(' /Fe"contract.exe"',' "%METHODS%\\native_b4_v_m16_candidate\\modelopt_fp8_v_m16_plugin.cpp" /Fe"contract.exe"',1)])
+    derive(n,n.replace('b4_v_m16','b4_qk_m16'),steps)
+n='probe_b4_decode_m16_factory_cpu.cpp';steps,raw=common(n,'gdn');steps.extend([
+ ('int calls=0,failAt=0,throwAt=0,matmuls=0;','int calls=0,failAt=0,throwAt=0,matmuls=0,activeRows=0;',1),
+ ('mode=="run_wrong_device"&&calls>24','(mode=="run_wrong_device"||mode=="cross_device")&&calls>24',1),
+ ('cublasLtMatmulDesc_t,cublasLtMatrixLayout_t,cublasLtMatrixLayout_t,cublasLtMatrixLayout_t,cublasLtMatrixLayout_t,cublasLtMatmulPreference_t,int requested','cublasLtMatmulDesc_t,cublasLtMatrixLayout_t weight,cublasLtMatrixLayout_t,cublasLtMatrixLayout_t,cublasLtMatrixLayout_t,cublasLtMatmulPreference_t,int requested',1),
+ ('    *found=mode==','    activeRows=int(layoutColumns.at(weight));\n    *found=mode==',1),
+ ('const int values[]={35,13,17,3,2,0,1};','const int key[]={35,13,17,3,2,0,1},query[]={35,18,16,7,2,1,2};const int* values=activeRows==12288?query:key;',1),
+ ('geometry==10240?6144:10240','geometry==12288?1024:12288',2),
+ ('        if(mode.rfind("run_",0)==0){','        if(mode=="cross_device"){auto other=Garnet::CreateModelOptFP8QKM16Context(geometry);Garnet::ModelOptFP8QKM16Info second;if(!context||!other||other==context||!Garnet::GetModelOptFP8QKM16Info(other,second)||second.rows!=geometry||second.device!=1||info.device!=0)return 6;}\n        if(mode.rfind("run_",0)==0){',1),
+ ('infoOkay=Garnet::GetModelOptFP8QKM16Info(context,info)&&info.rows==geometry;','infoOkay=Garnet::GetModelOptFP8QKM16Info(context,info)&&info.rows==geometry;\n        if(infoOkay){cublasLtMatmulAlgo_t live{};expected(live);if(mode=="opaque")live.bytes[63]^=1;if(std::memcmp(&live,&info.opaque,sizeof(live)))return 7;}',1)])
+derive(n,n.replace('b4_decode_m16','b4_qk_m16'),steps)
+n='run_b4_decode_m16_factory_cpu.py';steps,raw=common(n,'gdn');steps.extend([
+ ('Both actual GDN M16 factory geometries','Both actual Q/K M16 factory geometries',1),
+ ("'success','cached','cross_geometry'","'success','cached','cross_geometry','cross_device'",2),
+ ('(10240,6144)','(12288,1024)',6),('for g in (0,-1,1,5120,12288)','for g in (0,-1,1,5120,6144)',1),
+ ("mode in ('cached','cross_geometry')","mode in ('cached','cross_geometry','cross_device')",1),
+ ("(2 if mode=='cross_geometry' else 1)","(2 if mode in ('cross_geometry','cross_device') else 1)",1),
+ ("            configs=[r for r in group if r['event']=='configuration'];", "            current_geometry=(1024 if geometry==12288 else 12288) if i==2 and mode=='cross_geometry' else geometry\n            expected_configuration=(35,18,16,7,2,1,2) if current_geometry==12288 else (35,13,17,3,2,0,1)\n            configs=[r for r in group if r['event']=='configuration'];",1),
+ ("(35,13,17,3,2,0,1))]","expected_configuration)]",1)])
+derive(n,n.replace('b4_decode_m16','b4_qk_m16'),steps)
+n='b4_v_m16_plugin_cpu_stubs.cpp';steps,raw=common(n);steps.extend([
+ ('rows!=1024','rows!=1024&&rows!=12288',1),
+ ('#include "modelopt_fp8_qk_m16_canonical.h"','#include "modelopt_fp8_qk_m16_canonical.h"\n#include "modelopt_fp8_v_m16_canonical.h"',1),
+ ('struct ModelOptFP8GDNM16Context{};','struct ModelOptFP8VM16Context{};\nstd::shared_ptr<ModelOptFP8VM16Context> CreateModelOptFP8VM16Context(int){++unexpected;return {};}\nbool GetModelOptFP8VM16Info(const std::shared_ptr<ModelOptFP8VM16Context>&,ModelOptFP8VM16Info&) noexcept{++unexpected;return false;}\ncublasStatus_t RunModelOptFP8VM16Matmul(const std::shared_ptr<ModelOptFP8VM16Context>&,const void*,const void*,void*,int,int,int,float,void*,size_t,cudaStream_t) noexcept{++unexpected;return CUBLAS_STATUS_NOT_INITIALIZED;}\nstruct ModelOptFP8GDNM16Context{};',1)])
+derive(n,n.replace('b4_v_m16','b4_qk_m16'),steps)
+n='probe_b4_v_m16_plugin_cpu.cpp';steps,raw=common(n);steps.extend([
+ ('#include "modelopt_fp8_qk_m16_plugin.h"','#include "modelopt_fp8_qk_m16_plugin.h"\n#include "modelopt_fp8_v_m16_plugin.h"',1),
+ ('EnsureModelOptFP8GDNM16PluginRegistered()&&EnsureModelOptFP8QKM16PluginRegistered()','EnsureModelOptFP8GDNM16PluginRegistered()&&EnsureModelOptFP8VM16PluginRegistered()&&EnsureModelOptFP8QKM16PluginRegistered()',1),
+ ('for(int n:{1024})','for(int n:{1024,12288})',1),('0x56313634u','0x514b3136u',1),
+ ('0u,1u,16u,128u,5120u,12288u,6144u,10240u,0xffffffffu','0u,1u,16u,128u,5120u,5121u,6144u,10240u,0xffffffffu',1),
+ ('for(int badN:{0,-1,1,5120,12288,65536,6144,10240})','for(int badN:{0,-1,1,5120,5121,65536,6144,10240})',1),
+ ('        for(int badN:', '        auto* vCreator=registry->getPluginCreator("GarnetModelOptFP8VM16Canonical","1","");require(vCreator,"Missing old V creator");ModelOptFP8VM16Plugin v(1024,5120,.5f,.25f);std::array<uint32_t,5> vWire{};v.serialize(vWire.data());require(vWire[4]==0x56313634u,"Old V wire changed");reject(vWire.data(),20);++cross;auto* badV=vCreator->deserializePlugin("QK",wire.data(),20);require(!badV,"V accepted QK wire");++cross;\n        for(int badN:',1),
+ ('wires==45&&constructors==24&&descriptors==46&&formats==9&&cross==7&&initializations==7&&QKM16CPUFactoryCalls()==5','wires==92&&constructors==48&&descriptors==92&&formats==18&&cross==18&&initializations==14&&QKM16CPUFactoryCalls()==10',1)])
+derive(n,n.replace('b4_v_m16','b4_qk_m16'),steps)
+n='run_b4_v_m16_cpu_v2.py';steps,raw=common(n);steps.extend([
+ ('b4-qk-m16-cpu-attempt2','b4-qk-m16-cpu-attempt1',1),('b4-qk-m16-cpu-v2-preparation.json','b4-qk-m16-cpu-preparation.json',1),
+ ('len(old)==67 and len(candidate)==73','len(old)==73 and len(candidate)==79',1),
+ ('Four immutable73-source/failed-lineage/corruption controls plus eight unchanged SDK replay and independent conversion controls','Five immutable79-source/failed-lineage/corruption controls plus eight unchanged SDK replay and independent conversion controls',1),
+ ('Actual V factory;212CPU','Actual Q/K factory;406CPU',1)])
+derive(n,'run_b4_qk_m16_cpu.py',steps)
+n='verify_b4_v_m16_cpu_v2.py';steps,raw=common(n);steps.extend([
+ ('b4-qk-m16-cpu-attempt2','b4-qk-m16-cpu-attempt1',1),('b4-qk-m16-cpu-v2-preparation.json','b4-qk-m16-cpu-preparation.json',1),('verify_b4_qk_m16_cpu_v2.py','verify_b4_qk_m16_cpu.py',1),
+ ('len(candidate)==73','len(candidate)==79',1),('==73 and all(source.read','==79 and all(source.read',1),('Ran 12 tests','Ran 13 tests',1),
+ ('cases=1209,selected=16,rejected=1193','cases=1248,selected=32,rejected=1216',1),('==212','==406',1),('factory_count=212','factory_count=406',1),
+ ('wire_rejections=45,constructor_rejections=24,descriptor_rejections=46,format_rejections=9,cross_wire_rejections=7,initialize_calls=7,factory_calls=5','wire_rejections=92,constructor_rejections=48,descriptor_rejections=92,format_rejections=18,cross_wire_rejections=18,initialize_calls=14,factory_calls=10',1)])
+derive(n,'verify_b4_qk_m16_cpu.py',steps)
+target=E/'b4-qk-m16-CPU-method-derivation.json';assert not target.exists();target.write_bytes(json.dumps(dict(derivations=records,scope='Separate Q/K CPU contracts, per-geometry seven-attribute expected configs from actual live query; old V/GDN/generic wires cross-rejected. Actual native compilation/execution remote only. No GPU/math/model/performance admission.'),indent=2).encode());print(json.dumps(dict(derived_files=len(records))))

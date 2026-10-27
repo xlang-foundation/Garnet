@@ -1,0 +1,407 @@
+{
+  "derivations": [
+    {
+      "source": "build_b4_v_m16_profile_cpu.bat",
+      "target": "build_b4_qk_m16_profile_cpu.bat",
+      "source_sha256": "48e3ca979c69965281e889f1ac8a2234c9dfc6d29608e80c89a5c9a4439118c7",
+      "target_sha256": "d43644bb9544025e8695a46ebce3e0f66d14d8600da381184bc8851ec1200cd5",
+      "changes": [
+        {
+          "old": "b4_v_m16",
+          "new": "b4_qk_m16",
+          "count": 2
+        }
+      ]
+    },
+    {
+      "source": "build_b4_v_m16_factory_cpu.bat",
+      "target": "build_b4_qk_m16_factory_cpu.bat",
+      "source_sha256": "1039938ef7e7bc0158e137b5237b0445e1b9622037035b7fc698b3573f2c6de2",
+      "target_sha256": "dadcef5daf630954b23f4e007deded706b616ea51fbc7e2933c63d60d1bcf3c7",
+      "changes": [
+        {
+          "old": "b4_v_m16",
+          "new": "b4_qk_m16",
+          "count": 3
+        },
+        {
+          "old": "modelopt_fp8_v_m16",
+          "new": "modelopt_fp8_qk_m16",
+          "count": 2
+        }
+      ]
+    },
+    {
+      "source": "build_b4_v_m16_plugin_cpu.bat",
+      "target": "build_b4_qk_m16_plugin_cpu.bat",
+      "source_sha256": "e379547b724eba5700e0a61b6c03c270df7df67ee0462e1be8d9247909fc7160",
+      "target_sha256": "b9851095aa9e4cc954c1ad3370004bdc8aa89776df0becf6eeecdfc566d73a66",
+      "changes": [
+        {
+          "old": "b4_v_m16",
+          "new": "b4_qk_m16",
+          "count": 3
+        },
+        {
+          "old": "modelopt_fp8_v_m16",
+          "new": "modelopt_fp8_qk_m16",
+          "count": 1
+        },
+        {
+          "old": "/I\"%CANDIDATE%\"",
+          "new": "/I\"%CANDIDATE%\" /I\"%METHODS%\\native_b4_v_m16_candidate\"",
+          "count": 1
+        },
+        {
+          "old": " /Fe\"contract.exe\"",
+          "new": " \"%METHODS%\\native_b4_v_m16_candidate\\modelopt_fp8_v_m16_plugin.cpp\" /Fe\"contract.exe\"",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "probe_b4_decode_m16_factory_cpu.cpp",
+      "target": "probe_b4_qk_m16_factory_cpu.cpp",
+      "source_sha256": "bbc67f7970a59747ef4091b6754e8c86abc8954bb3ca9726deffa5bfe817edad",
+      "target_sha256": "b0d6f948bc7b2ca36d77abcf7c8d1fecb899fed6375584507fdd180f685cc2cc",
+      "changes": [
+        {
+          "old": "modelopt_fp8_gdn_m16",
+          "new": "modelopt_fp8_qk_m16",
+          "count": 1
+        },
+        {
+          "old": "ModelOptFP8GDNM16",
+          "new": "ModelOptFP8QKM16",
+          "count": 8
+        },
+        {
+          "old": "int calls=0,failAt=0,throwAt=0,matmuls=0;",
+          "new": "int calls=0,failAt=0,throwAt=0,matmuls=0,activeRows=0;",
+          "count": 1
+        },
+        {
+          "old": "mode==\"run_wrong_device\"&&calls>24",
+          "new": "(mode==\"run_wrong_device\"||mode==\"cross_device\")&&calls>24",
+          "count": 1
+        },
+        {
+          "old": "cublasLtMatmulDesc_t,cublasLtMatrixLayout_t,cublasLtMatrixLayout_t,cublasLtMatrixLayout_t,cublasLtMatrixLayout_t,cublasLtMatmulPreference_t,int requested",
+          "new": "cublasLtMatmulDesc_t,cublasLtMatrixLayout_t weight,cublasLtMatrixLayout_t,cublasLtMatrixLayout_t,cublasLtMatrixLayout_t,cublasLtMatmulPreference_t,int requested",
+          "count": 1
+        },
+        {
+          "old": "    *found=mode==",
+          "new": "    activeRows=int(layoutColumns.at(weight));\n    *found=mode==",
+          "count": 1
+        },
+        {
+          "old": "const int values[]={35,13,17,3,2,0,1};",
+          "new": "const int key[]={35,13,17,3,2,0,1},query[]={35,18,16,7,2,1,2};const int* values=activeRows==12288?query:key;",
+          "count": 1
+        },
+        {
+          "old": "geometry==10240?6144:10240",
+          "new": "geometry==12288?1024:12288",
+          "count": 2
+        },
+        {
+          "old": "        if(mode.rfind(\"run_\",0)==0){",
+          "new": "        if(mode==\"cross_device\"){auto other=Garnet::CreateModelOptFP8QKM16Context(geometry);Garnet::ModelOptFP8QKM16Info second;if(!context||!other||other==context||!Garnet::GetModelOptFP8QKM16Info(other,second)||second.rows!=geometry||second.device!=1||info.device!=0)return 6;}\n        if(mode.rfind(\"run_\",0)==0){",
+          "count": 1
+        },
+        {
+          "old": "infoOkay=Garnet::GetModelOptFP8QKM16Info(context,info)&&info.rows==geometry;",
+          "new": "infoOkay=Garnet::GetModelOptFP8QKM16Info(context,info)&&info.rows==geometry;\n        if(infoOkay){cublasLtMatmulAlgo_t live{};expected(live);if(mode==\"opaque\")live.bytes[63]^=1;if(std::memcmp(&live,&info.opaque,sizeof(live)))return 7;}",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "run_b4_decode_m16_factory_cpu.py",
+      "target": "run_b4_qk_m16_factory_cpu.py",
+      "source_sha256": "1ea88360111da87a8a8ac29aa31068b0021b1e561f82f7daed5ce194a6dbd4c8",
+      "target_sha256": "b1b76e93befd17f1aca10d539f8ee56373163b187a37577626b8622b475291d7",
+      "changes": [
+        {
+          "old": "GDNM16",
+          "new": "QKM16",
+          "count": 3
+        },
+        {
+          "old": "GDN_M16",
+          "new": "QK_M16",
+          "count": 1
+        },
+        {
+          "old": "Both actual GDN M16 factory geometries",
+          "new": "Both actual Q/K M16 factory geometries",
+          "count": 1
+        },
+        {
+          "old": "'success','cached','cross_geometry'",
+          "new": "'success','cached','cross_geometry','cross_device'",
+          "count": 2
+        },
+        {
+          "old": "(10240,6144)",
+          "new": "(12288,1024)",
+          "count": 6
+        },
+        {
+          "old": "for g in (0,-1,1,5120,12288)",
+          "new": "for g in (0,-1,1,5120,6144)",
+          "count": 1
+        },
+        {
+          "old": "mode in ('cached','cross_geometry')",
+          "new": "mode in ('cached','cross_geometry','cross_device')",
+          "count": 1
+        },
+        {
+          "old": "(2 if mode=='cross_geometry' else 1)",
+          "new": "(2 if mode in ('cross_geometry','cross_device') else 1)",
+          "count": 1
+        },
+        {
+          "old": "            configs=[r for r in group if r['event']=='configuration'];",
+          "new": "            current_geometry=(1024 if geometry==12288 else 12288) if i==2 and mode=='cross_geometry' else geometry\n            expected_configuration=(35,18,16,7,2,1,2) if current_geometry==12288 else (35,13,17,3,2,0,1)\n            configs=[r for r in group if r['event']=='configuration'];",
+          "count": 1
+        },
+        {
+          "old": "(35,13,17,3,2,0,1))]",
+          "new": "expected_configuration)]",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "b4_v_m16_plugin_cpu_stubs.cpp",
+      "target": "b4_qk_m16_plugin_cpu_stubs.cpp",
+      "source_sha256": "ae0e06ca872aaaba0b2861439600108b30a16797ccf748c48ec17946ffca7d12",
+      "target_sha256": "1a8ce0dd8d523a5aec885dfbe74e662873d9cbd56da68aeaa03bd7cbf39cec41",
+      "changes": [
+        {
+          "old": "modelopt_fp8_v_m16",
+          "new": "modelopt_fp8_qk_m16",
+          "count": 1
+        },
+        {
+          "old": "ModelOptFP8VM16",
+          "new": "ModelOptFP8QKM16",
+          "count": 10
+        },
+        {
+          "old": "VM16",
+          "new": "QKM16",
+          "count": 3
+        },
+        {
+          "old": "rows!=1024",
+          "new": "rows!=1024&&rows!=12288",
+          "count": 1
+        },
+        {
+          "old": "#include \"modelopt_fp8_qk_m16_canonical.h\"",
+          "new": "#include \"modelopt_fp8_qk_m16_canonical.h\"\n#include \"modelopt_fp8_v_m16_canonical.h\"",
+          "count": 1
+        },
+        {
+          "old": "struct ModelOptFP8GDNM16Context{};",
+          "new": "struct ModelOptFP8VM16Context{};\nstd::shared_ptr<ModelOptFP8VM16Context> CreateModelOptFP8VM16Context(int){++unexpected;return {};}\nbool GetModelOptFP8VM16Info(const std::shared_ptr<ModelOptFP8VM16Context>&,ModelOptFP8VM16Info&) noexcept{++unexpected;return false;}\ncublasStatus_t RunModelOptFP8VM16Matmul(const std::shared_ptr<ModelOptFP8VM16Context>&,const void*,const void*,void*,int,int,int,float,void*,size_t,cudaStream_t) noexcept{++unexpected;return CUBLAS_STATUS_NOT_INITIALIZED;}\nstruct ModelOptFP8GDNM16Context{};",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "probe_b4_v_m16_plugin_cpu.cpp",
+      "target": "probe_b4_qk_m16_plugin_cpu.cpp",
+      "source_sha256": "2c1138cae92aedd232141d6a24740bc4ec8c916e58e14c069f6d629e43c525d3",
+      "target_sha256": "32858f4d7e491b8f2489f76586fb4f9eacfae2a67258236bfadbc14a00d276d1",
+      "changes": [
+        {
+          "old": "modelopt_fp8_v_m16",
+          "new": "modelopt_fp8_qk_m16",
+          "count": 1
+        },
+        {
+          "old": "ModelOptFP8VM16",
+          "new": "ModelOptFP8QKM16",
+          "count": 8
+        },
+        {
+          "old": "VM16",
+          "new": "QKM16",
+          "count": 13
+        },
+        {
+          "old": "V_M16",
+          "new": "QK_M16",
+          "count": 1
+        },
+        {
+          "old": "#include \"modelopt_fp8_qk_m16_plugin.h\"",
+          "new": "#include \"modelopt_fp8_qk_m16_plugin.h\"\n#include \"modelopt_fp8_v_m16_plugin.h\"",
+          "count": 1
+        },
+        {
+          "old": "EnsureModelOptFP8GDNM16PluginRegistered()&&EnsureModelOptFP8QKM16PluginRegistered()",
+          "new": "EnsureModelOptFP8GDNM16PluginRegistered()&&EnsureModelOptFP8VM16PluginRegistered()&&EnsureModelOptFP8QKM16PluginRegistered()",
+          "count": 1
+        },
+        {
+          "old": "for(int n:{1024})",
+          "new": "for(int n:{1024,12288})",
+          "count": 1
+        },
+        {
+          "old": "0x56313634u",
+          "new": "0x514b3136u",
+          "count": 1
+        },
+        {
+          "old": "0u,1u,16u,128u,5120u,12288u,6144u,10240u,0xffffffffu",
+          "new": "0u,1u,16u,128u,5120u,5121u,6144u,10240u,0xffffffffu",
+          "count": 1
+        },
+        {
+          "old": "for(int badN:{0,-1,1,5120,12288,65536,6144,10240})",
+          "new": "for(int badN:{0,-1,1,5120,5121,65536,6144,10240})",
+          "count": 1
+        },
+        {
+          "old": "        for(int badN:",
+          "new": "        auto* vCreator=registry->getPluginCreator(\"GarnetModelOptFP8VM16Canonical\",\"1\",\"\");require(vCreator,\"Missing old V creator\");ModelOptFP8VM16Plugin v(1024,5120,.5f,.25f);std::array<uint32_t,5> vWire{};v.serialize(vWire.data());require(vWire[4]==0x56313634u,\"Old V wire changed\");reject(vWire.data(),20);++cross;auto* badV=vCreator->deserializePlugin(\"QK\",wire.data(),20);require(!badV,\"V accepted QK wire\");++cross;\n        for(int badN:",
+          "count": 1
+        },
+        {
+          "old": "wires==45&&constructors==24&&descriptors==46&&formats==9&&cross==7&&initializations==7&&QKM16CPUFactoryCalls()==5",
+          "new": "wires==92&&constructors==48&&descriptors==92&&formats==18&&cross==18&&initializations==14&&QKM16CPUFactoryCalls()==10",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "run_b4_v_m16_cpu_v2.py",
+      "target": "run_b4_qk_m16_cpu.py",
+      "source_sha256": "830850a5e0265e7521e5c34c7f607cac22993659ee80a25ca280bb6c56b83b84",
+      "target_sha256": "952d0367a63bce8bf775bf8a705bf650c42b26bc06569c1df6ace75294cf04f5",
+      "changes": [
+        {
+          "old": "b4_v_m16",
+          "new": "b4_qk_m16",
+          "count": 5
+        },
+        {
+          "old": "b4-v-m16",
+          "new": "b4-qk-m16",
+          "count": 2
+        },
+        {
+          "old": "V_M16",
+          "new": "QK_M16",
+          "count": 2
+        },
+        {
+          "old": "b4-qk-m16-cpu-attempt2",
+          "new": "b4-qk-m16-cpu-attempt1",
+          "count": 1
+        },
+        {
+          "old": "b4-qk-m16-cpu-v2-preparation.json",
+          "new": "b4-qk-m16-cpu-preparation.json",
+          "count": 1
+        },
+        {
+          "old": "len(old)==67 and len(candidate)==73",
+          "new": "len(old)==73 and len(candidate)==79",
+          "count": 1
+        },
+        {
+          "old": "Four immutable73-source/failed-lineage/corruption controls plus eight unchanged SDK replay and independent conversion controls",
+          "new": "Five immutable79-source/failed-lineage/corruption controls plus eight unchanged SDK replay and independent conversion controls",
+          "count": 1
+        },
+        {
+          "old": "Actual V factory;212CPU",
+          "new": "Actual Q/K factory;406CPU",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "verify_b4_v_m16_cpu_v2.py",
+      "target": "verify_b4_qk_m16_cpu.py",
+      "source_sha256": "292341a940f061201424114486650756d8d044cad9ce44a2cadf13e688df83c2",
+      "target_sha256": "41953165e90f6fc649c56ddf5790d7f25e55bf239e76023185b887811b3409fd",
+      "changes": [
+        {
+          "old": "b4_v_m16",
+          "new": "b4_qk_m16",
+          "count": 6
+        },
+        {
+          "old": "b4-v-m16",
+          "new": "b4-qk-m16",
+          "count": 2
+        },
+        {
+          "old": "V_M16",
+          "new": "QK_M16",
+          "count": 6
+        },
+        {
+          "old": "b4-qk-m16-cpu-attempt2",
+          "new": "b4-qk-m16-cpu-attempt1",
+          "count": 1
+        },
+        {
+          "old": "b4-qk-m16-cpu-v2-preparation.json",
+          "new": "b4-qk-m16-cpu-preparation.json",
+          "count": 1
+        },
+        {
+          "old": "verify_b4_qk_m16_cpu_v2.py",
+          "new": "verify_b4_qk_m16_cpu.py",
+          "count": 1
+        },
+        {
+          "old": "len(candidate)==73",
+          "new": "len(candidate)==79",
+          "count": 1
+        },
+        {
+          "old": "==73 and all(source.read",
+          "new": "==79 and all(source.read",
+          "count": 1
+        },
+        {
+          "old": "Ran 12 tests",
+          "new": "Ran 13 tests",
+          "count": 1
+        },
+        {
+          "old": "cases=1209,selected=16,rejected=1193",
+          "new": "cases=1248,selected=32,rejected=1216",
+          "count": 1
+        },
+        {
+          "old": "==212",
+          "new": "==406",
+          "count": 1
+        },
+        {
+          "old": "factory_count=212",
+          "new": "factory_count=406",
+          "count": 1
+        },
+        {
+          "old": "wire_rejections=45,constructor_rejections=24,descriptor_rejections=46,format_rejections=9,cross_wire_rejections=7,initialize_calls=7,factory_calls=5",
+          "new": "wire_rejections=92,constructor_rejections=48,descriptor_rejections=92,format_rejections=18,cross_wire_rejections=18,initialize_calls=14,factory_calls=10",
+          "count": 1
+        }
+      ]
+    }
+  ],
+  "scope": "Separate Q/K CPU contracts, per-geometry seven-attribute expected configs from actual live query; old V/GDN/generic wires cross-rejected. Actual native compilation/execution remote only. No GPU/math/model/performance admission."
+}

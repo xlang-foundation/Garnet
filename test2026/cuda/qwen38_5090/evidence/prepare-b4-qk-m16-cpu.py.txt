@@ -1,0 +1,34 @@
+from pathlib import Path
+import ast,hashlib,json,os,sys,zipfile
+W=Path(__file__).resolve().parent;O=W.parent/'outputs';R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';E=M/'evidence';P='Garnet/test2026/cuda/qwen38_5090/';sha=lambda b:hashlib.sha256(b).hexdigest();sys.path[:0]=[str(R),str(M)]
+from test2026.cuda.qwen38_5090.b4_qk_m16_source import sources
+_,candidate,record=sources();cpu=json.loads((E/'b4-v-m16-cpu-v2-preparation.json').read_bytes());last=json.loads((E/'fp8-decode-shape-configs-v2-preparation.json').read_bytes())
+names=['b4_qk_m16_source.py','test_b4_qk_m16_source.py','probe_b4_qk_m16_profile_cpu.cpp','evidence/b4-qk-m16-source-derivation.json','evidence/b4-qk-m16-CPU-method-derivation.json','evidence/fp8-decode-shape-configs-v2-provider-audit.json']
+names += [Path(n).as_posix() for n in ['build_b4_qk_m16_profile_cpu.bat','build_b4_qk_m16_factory_cpu.bat','build_b4_qk_m16_plugin_cpu.bat','probe_b4_qk_m16_factory_cpu.cpp','run_b4_qk_m16_factory_cpu.py','b4_qk_m16_plugin_cpu_stubs.cpp','probe_b4_qk_m16_plugin_cpu.cpp','run_b4_qk_m16_cpu.py','verify_b4_qk_m16_cpu.py']]
+names += ['native_b4_qk_m16_candidate/'+Path(n).name for n in record['modified_files']+record['new_files']]
+parents={**cpu['parents'],**record['parents']}
+for job,row in parents.items():
+    raw=(O/(job+'-verified.json')).read_bytes();assert raw==(O/(job+'-remote-verified.json')).read_bytes() and sha(raw)==row['proof_sha256'];n='evidence/'+job+'-verified.json';assert (M/n).read_bytes()==raw;names.append(n)
+methods={**cpu['methods'],**{P+n:sha((M/n).read_bytes()) for n in names}}
+for n,h in methods.items():assert sha((R/n.removeprefix('Garnet/')).read_bytes())==h
+bundle=W/'b4-qk-m16-source.zip'
+p={**cpu,'status':'B4T4_QK_M16_CPU_prepared_unrun','files':{**last['files'],**methods},'methods':methods,'candidate_files':record['candidate_files'],'parents':parents,'bundle':'results/b4-qk-m16-source.zip','bundle_sha256':sha(bundle.read_bytes()),'scope':'Actual79source defaultoff Q/K physicalB4T4 only with independentliveM4 tuple for N12288 andN1024; original source73 exceptlowering and6newfiles unchanged.13Python controls;1248actualselector cases, two-geometry factory CPU faults with sevenattribute/opaque/API/workspace/unsupported/device+geometryisolation/trace checks; original V/GDN/generic TRTwire crossrejections. Remote private nativeCPU compilation only. No productionoverlay/GPU/model/matmul or performance. All1695priorownedfiles+newfiles/runtime/SDK/config-index/CMake/all34objects must stay byteexact. Originalmodel/cache/SDKfailures remainfailed; actualQK/model/4K/MTP/quality/HTTP requireadmission beforetiming. Provider audit explicitly limits cudart modulepath/hash to explicitly loaded module, linked-runtime-callproviderunproven.'}
+for row in json.loads((E/'b4-qk-m16-CPU-method-derivation.json').read_bytes())['derivations']:
+    raw=(M/row['source']).read_bytes();assert sha(raw)==row['source_sha256']
+    for c in row['changes']:assert raw.count(c['old'].encode())==c['count'];raw=raw.replace(c['old'].encode(),c['new'].encode())
+    assert raw==(M/row['target']).read_bytes() and sha(raw)==row['target_sha256']
+prep=E/'b4-qk-m16-cpu-preparation.json';assert not prep.exists();prep.write_bytes(json.dumps(p,indent=2).encode())
+import run_logged as ledger
+ledger.source_identity=lambda:dict(scope='Explicit source79QK CPUpreparation; no native/GPU/protected bodies',owned_source_sha256=methods);os.chdir(R)
+assert ledger.run([sys.executable,'-m','unittest','test2026.cuda.qwen38_5090.test_b4_qk_m16_source','test2026.cuda.qwen38_5090.test_decode_fp8_sdk_control','test2026.cuda.qwen38_5090.test_prefill128_fp8_projection'],W/'b4-qk-m16-preparation-cpu-ledger','correctness','Five source79lineage/corruption/wire/pergeometryquerycontrols +eightunchangedSDK/conversioncontrols',[prep]+[R/n.removeprefix('Garnet/') for n in methods])==0
+files={n:R/n.removeprefix('Garnet/') for n in methods};files[P+'evidence/b4-qk-m16-cpu-preparation.json']=prep;target=W/'b4-qk-m16-cpu-deployment.zip';assert not target.exists()
+with zipfile.ZipFile(target,'x',zipfile.ZIP_DEFLATED) as z:
+    for n,path in files.items():z.write(path,n)
+    z.writestr('deployment-manifest.json',json.dumps(dict(files={n:sha(path.read_bytes()) for n,path in files.items()}),indent=2))
+receipt=dict(status=p['status'],deployment_sha256=sha(target.read_bytes()),files=len(files),bytes=target.stat().st_size,preparation_sha256=sha(prep.read_bytes()),source_inventory=len(p['files']),bundle_sha256=p['bundle_sha256']);(W/'b4-qk-m16-cpu-package.json').write_bytes(json.dumps(receipt,indent=2).encode())
+raw=(W/'install-b4-v-m16-cpu.py').read_bytes();old=json.loads((W/'b4-v-m16-cpu-package.json').read_bytes())
+for a,b in [('b4-v-m16','b4-qk-m16'),('B4T4_V_M16','B4T4_QK_M16'),(old['deployment_sha256'],receipt['deployment_sha256']),('len(mf)+1==23','len(mf)+1=='+str(len(files)+1))]:assert raw.count(a.encode())>=1;raw=raw.replace(a.encode(),b.encode())
+(W/'install-b4-qk-m16-cpu.py').write_bytes(raw)
+raw=(W/'postprocess-b4-v-m16-cpu-v2.py').read_bytes()
+for a,b in [('b4-v-m16-cpu-attempt2','b4-qk-m16-cpu-attempt1'),('b4_v_m16','b4_qk_m16'),('verify_b4_qk_m16_cpu_v2.py','verify_b4_qk_m16_cpu.py'),('b4-v-m16-cpu-v2','b4-qk-m16-cpu'),('b4-v-m16-cpu','b4-qk-m16-cpu')]:assert raw.count(a.encode())>0;raw=raw.replace(a.encode(),b.encode())
+(W/'postprocess-b4-qk-m16-cpu.py').write_bytes(raw);print(json.dumps(receipt))
