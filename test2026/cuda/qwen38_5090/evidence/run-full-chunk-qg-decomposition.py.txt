@@ -1,0 +1,5 @@
+from pathlib import Path
+import hashlib,json,os,sys
+W=Path(__file__).resolve().parent;O=W.parent/'outputs';R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';sys.path[:0]=[str(M),str(R)];import run_logged as ledger
+method=W/'analyze-full-chunk-qg-split.py';pins={str(p):hashlib.sha256(p.read_bytes()).hexdigest() for p in (method,M/'full_chunk_stage_replay.py',M/'full_chunk_stage_layout.py')};ledger.source_identity=lambda:{'scope':'Explicit owned CPU replay/source QG split analysis; protected unrelated untracked excluded','owned_source_sha256':pins};os.chdir(R)
+assert ledger.run([sys.executable,str(method)],W/'full-chunk-stage-attempt2-QG-decomposition-ledger','correctness','Replay actual all102 QG changed values against the exact ordinary source Q/G split and paired complete-stage proof; no GPU or cause/performance claim',[method,O/'full-chunk-stage-attempt2-verified.json',O/'full-chunk-stage-attempt2-evidence.zip'])==0

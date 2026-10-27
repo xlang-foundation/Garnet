@@ -1,0 +1,146 @@
+{
+  "status": "actual_full_chunk_stage_and_primary_equivalence_replayed",
+  "archive_sha256": "085ad330cde66fd755c383f05b7af16d610d7fec3464de6e4a2928a10da7a196",
+  "archive_bytes": 163783460,
+  "archive_members": 237,
+  "exit_code": 0,
+  "error": null,
+  "candidate_library_sha256": "3574f8cc1f772933f117b484d9a57844fb3846a4e1ada59f62399876c31fa48a",
+  "source_library_runtime_SDK_checkpoint_restored": true,
+  "arrays": {
+    "status": "actual_complete_first128_layer3_stages_replayed",
+    "primary_equivalence": {
+      "defaultoff_and_enabled_same_profile_complete_states_vectors_all12caches_exact": true,
+      "correct_T32_128IDs_and_finalstate_exact": true,
+      "failed_T128_only_instrumentation_equivalence_control": true
+    },
+    "stages": {
+      "input": {
+        "byte_exact": true,
+        "changed_F32_words": 0,
+        "complete_F32_words_compared": 655360,
+        "maximum_absolute_difference": 0.0,
+        "first_difference": null
+      },
+      "normalized": {
+        "byte_exact": true,
+        "changed_F32_words": 0,
+        "complete_F32_words_compared": 655360,
+        "maximum_absolute_difference": 0.0,
+        "first_difference": null
+      },
+      "qg": {
+        "byte_exact": false,
+        "changed_F32_words": 102,
+        "complete_F32_words_compared": 1572864,
+        "maximum_absolute_difference": 0.03125,
+        "first_difference": {
+          "token": 0,
+          "dimension": 1585,
+          "word": 1585,
+          "baseline": -0.080078125,
+          "native": -0.07958984375
+        }
+      },
+      "key": {
+        "byte_exact": true,
+        "changed_F32_words": 0,
+        "complete_F32_words_compared": 131072,
+        "maximum_absolute_difference": 0.0,
+        "first_difference": null
+      },
+      "value": {
+        "byte_exact": true,
+        "changed_F32_words": 0,
+        "complete_F32_words_compared": 131072,
+        "maximum_absolute_difference": 0.0,
+        "first_difference": null
+      },
+      "core": {
+        "byte_exact": false,
+        "changed_F32_words": 14542,
+        "complete_F32_words_compared": 786432,
+        "maximum_absolute_difference": 0.00030332524329423904,
+        "first_difference": {
+          "token": 1,
+          "dimension": 2304,
+          "word": 8448,
+          "baseline": 0.005902253556996584,
+          "native": 0.005902254022657871
+        }
+      },
+      "attention": {
+        "byte_exact": false,
+        "changed_F32_words": 8857,
+        "complete_F32_words_compared": 655360,
+        "maximum_absolute_difference": 0.0009765625,
+        "first_difference": {
+          "token": 1,
+          "dimension": 4305,
+          "word": 9425,
+          "baseline": -0.011962890625,
+          "native": -0.01190185546875
+        }
+      },
+      "residual": {
+        "byte_exact": false,
+        "changed_F32_words": 8855,
+        "complete_F32_words_compared": 655360,
+        "maximum_absolute_difference": 0.0009765625,
+        "first_difference": {
+          "token": 1,
+          "dimension": 4305,
+          "word": 9425,
+          "baseline": -0.10600662231445312,
+          "native": -0.10594558715820312
+        }
+      },
+      "mlp_input": {
+        "byte_exact": false,
+        "changed_F32_words": 66398,
+        "complete_F32_words_compared": 655360,
+        "maximum_absolute_difference": 0.0019193142652511597,
+        "first_difference": {
+          "token": 1,
+          "dimension": 4305,
+          "word": 9425,
+          "baseline": -0.13523425161838531,
+          "native": -0.13515639305114746
+        }
+      },
+      "output": {
+        "byte_exact": false,
+        "changed_F32_words": 45291,
+        "complete_F32_words_compared": 655360,
+        "maximum_absolute_difference": 0.002685546875,
+        "first_difference": {
+          "token": 1,
+          "dimension": 4305,
+          "word": 9425,
+          "baseline": -0.11088943481445312,
+          "native": -0.11082839965820312
+        }
+      }
+    },
+    "first_different_stage": {
+      "stage": "qg",
+      "token": 0,
+      "dimension": 1585,
+      "word": 1585,
+      "baseline": -0.080078125,
+      "native": -0.07958984375
+    },
+    "complete_F32_words_compared": 6553600,
+    "complete_readonly_graph_input_state_and_controls": true,
+    "two_full_prefill_repeats_exact": true,
+    "stage_input_exact_retained_real_layer2_output": true,
+    "stage_output_exact_retained_same_profile_layer3_boundary": true,
+    "cause_established": false,
+    "model_or_performance_qualified": false,
+    "two_times_target_achieved": false
+  },
+  "actual_Garnet_frontend_negative_cases_pending": true,
+  "full_six_case_model_quality_performance_still_required": true,
+  "model_or_performance_qualified": false,
+  "two_times_target_achieved": false
+}
