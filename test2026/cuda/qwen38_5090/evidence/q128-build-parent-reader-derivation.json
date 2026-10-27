@@ -1,0 +1,26 @@
+{
+  "status": "CPU_reader_uses_already_SHA_linked_parent_metadata_no_native_rerun",
+  "source": "verify_q128_canonical_native_build.py",
+  "target": "verify_q128_canonical_native_build_parent.py",
+  "source_sha256": "8397f7a1cd88b3e1e55e0e528315b9fe410c84e48aafcf8c6a4d9c2bb13f43b1",
+  "target_sha256": "28c3fdbe16d0b4f52b10ebc9c5bb0a186db1332f21ea6743b4713a861f4896af",
+  "changes": [
+    {
+      "old": "assert sha(Path(__file__).read_bytes())==p['methods'][P+Path(__file__).name] and sha(z.read(p['bundle']))==p['bundle_sha256']",
+      "new": "original=Path(__file__).with_name('verify_q128_canonical_native_build.py');derivation=(Path(__file__).parent/'evidence/q128-build-parent-reader-derivation.json').read_bytes();d=json.loads(derivation);reader=original.read_bytes();assert sha(reader)==p['methods'][P+original.name]==d['source_sha256']\n        for c in d['changes']:assert reader.count(c['old'].encode())==c['count'];reader=reader.replace(c['old'].encode(),c['new'].encode())\n        assert reader==Path(__file__).read_bytes() and sha(reader)==d['target_sha256'] and sha(z.read(p['bundle']))==p['bundle_sha256']",
+      "count": 1
+    },
+    {
+      "old": "parent=doc(P+'evidence/full-chunk-stage-source-derivation.json')['parent_files']",
+      "new": "with zipfile.ZipFile(args.proofs/'full-chunk-stage-build-attempt2-evidence.zip') as linked:\n                parent=json.loads(linked.read(P+'evidence/full-chunk-stage-source-derivation.json'))['parent_files']",
+      "count": 1
+    },
+    {
+      "old": "error=w.get('error'),candidate_files=57",
+      "new": "error=w.get('error'),replay_reader_derivation_sha256=sha(derivation),original_reader_sha256=d['source_sha256'],corrected_reader_sha256=d['target_sha256'],linked_parent_metadata_lookup_only_repair=True,candidate_files=57",
+      "count": 1
+    }
+  ],
+  "all_original_build_CPU_contract_restoration_and_numerical_predicates_unchanged": true,
+  "native_build_or_GPU_rerun": false
+}

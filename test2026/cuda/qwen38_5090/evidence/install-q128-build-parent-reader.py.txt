@@ -1,0 +1,9 @@
+from pathlib import Path
+import hashlib,json,zipfile
+ROOT=Path('D:/CantorAI/5090-study-20261023');sha=lambda b:hashlib.sha256(b).hexdigest();archive=ROOT/'results/q128-build-parent-reader-deployment.zip';assert sha(archive.read_bytes())=='d81116699f8d6a33ad546eb247206363b65b8e5db560557092b7044a44e094e2';w=json.loads((ROOT/'results/q128-canonical-build-attempt1/workflow.json').read_bytes());assert w['exit_code']==0 and w['cleanup_finished'] and w['baseline_library_restored'] and w['baseline_source_restored']
+with zipfile.ZipFile(archive) as z:
+    m=json.loads(z.read('deployment-manifest.json'));assert z.testzip() is None and len(z.namelist())==len(set(z.namelist()))==len(m['files'])+1==4
+    for n,h in m['files'].items():
+        p=ROOT/n;raw=z.read(n);assert p.resolve().is_relative_to((ROOT/'Garnet/test2026/cuda/qwen38_5090').resolve()) and p.parent.exists() and sha(raw)==h and (not p.exists() or p.read_bytes()==raw)
+    for n in m['files']:(ROOT/n).write_bytes(z.read(n))
+out=ROOT/'results/q128-build-parent-reader-install.json';assert not out.exists();out.write_bytes(json.dumps(dict(status='CPU_parent_reader_installed_no_native_rerun',deployment_sha256=sha(archive.read_bytes()),files=m['files']),indent=2).encode());print(json.dumps(dict(status='CPU_parent_reader_installed',files=len(m['files']))))
