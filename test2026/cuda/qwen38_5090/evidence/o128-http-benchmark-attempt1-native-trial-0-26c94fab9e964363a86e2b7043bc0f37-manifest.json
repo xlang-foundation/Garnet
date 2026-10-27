@@ -1,0 +1,457 @@
+{
+  "run_id": "26c94fab9e964363a86e2b7043bc0f37",
+  "status": "completed",
+  "engine": "garnet",
+  "utc": "2026-10-27T09:35:43.523703+00:00",
+  "argv": [
+    "D:\\CantorAI\\5090-study-20261023\\Garnet\\test2026\\cuda\\qwen38_5090\\benchmark_fixed_length_native.py",
+    "--url",
+    "http://127.0.0.1:18082",
+    "--corpus-archive",
+    "D:\\CantorAI\\5090-study-20261023\\Garnet\\test2026\\cuda\\qwen38_5090\\evidence\\fixed-length-4096-corpus.zip",
+    "--output",
+    "D:\\CantorAI\\5090-study-20261023\\results\\o128-http-benchmark-attempt1\\native\\trial-0",
+    "--metadata",
+    "D:\\CantorAI\\5090-study-20261023\\results\\o128-http-benchmark-attempt1\\native\\trial-0-metadata.json"
+  ],
+  "corpus_archive_sha256": "596991dd0907ccb8ae8ffb090737f59ba8da3faac181bb18fadc74ae0e4ef3ce",
+  "corpus_manifest_sha256": "25808fff53f326b6a1a970bb389173b2a54c1d1189248d40122fcdb959cb6987",
+  "context_capacity": 4096,
+  "actual_input_tokens_required": 3968,
+  "actual_completion_tokens_required": 128,
+  "engine_metadata": {
+    "ready": {
+      "event": "ready",
+      "protocol": "study_single_v1",
+      "batch": 1,
+      "capacity": 4096,
+      "prefill_chunk": 128,
+      "chunk": 4,
+      "generation_mode": "mtp",
+      "bf16_kv_low_batch_state": true,
+      "library_sha256": "8414795d2953feae49532340b206328972c8a23767276319e6e4fb3e1912c18a",
+      "model_consistency_proof_sha256": "4058a4f1c4b542883b97c9dc046bebae440e96fb415e95f5952895ef2a9ac9d1",
+      "qualified_model_source": true,
+      "precision": "mixed NVFP4/FP8; BF16 vision and cache",
+      "queued_concurrency": true,
+      "research_only": true,
+      "explicit_ignore_eos_supported": true,
+      "broad_quality_qualified": false,
+      "performance_admitted": false,
+      "o128_admission": {
+        "certificate_proof_sha256": {
+          "o128-full4k-model-admission-attempt1": "4058a4f1c4b542883b97c9dc046bebae440e96fb415e95f5952895ef2a9ac9d1",
+          "o128-frontend-attempt1": "3cb4f2f55ca6f10c714ef4e69156133a29061434ccf0eb7cb88a3add3d82ea58",
+          "o128-canonical-build-attempt1": "fd4dc3af8f7570bd53b778c77e5c2bf32f6a2db548ce71e0f20cc9572ddef06c"
+        },
+        "source_bundle_sha256": "c44138f5e64b684d556830f58f09c2332d767155669c6642ba799b8445493997",
+        "library_sha256": "8414795d2953feae49532340b206328972c8a23767276319e6e4fb3e1912c18a",
+        "target_prefill_chunk": 128,
+        "target_decode_chunk": 4,
+        "draft_prefill_chunk": 16,
+        "draft_decode_chunk": 4,
+        "private_nonce_engines_required": true,
+        "quality_or_performance_qualified": false,
+        "production_deployment_qualified": false
+      },
+      "physical_routes": {
+        "physical_target_counts": {
+          "4": {
+            "native_fp8_q128_canonical_projections": 0,
+            "native_fp8_o128_canonical_projections": 0,
+            "native_full_chunk_stage_witnesses": 0,
+            "native_fp8_z128_canonical_projections": 0,
+            "native_fp8_z128_reconstructed_projections": 0,
+            "native_fp8_kv128_canonical_projections": 0,
+            "native_fp8_m128_canonical_projections": 0
+          },
+          "128": {
+            "native_fp8_q128_canonical_projections": 16,
+            "native_fp8_o128_canonical_projections": 16,
+            "native_full_chunk_stage_witnesses": 0,
+            "native_fp8_z128_canonical_projections": 0,
+            "native_fp8_z128_reconstructed_projections": 48,
+            "native_fp8_kv128_canonical_projections": 32,
+            "native_fp8_m128_canonical_projections": 48
+          }
+        },
+        "physical_auxiliary_counts": {
+          "draft4": {
+            "native_fp8_q128_canonical_projections": 0,
+            "native_fp8_o128_canonical_projections": 0,
+            "native_fp8_kv128_canonical_projections": 0,
+            "native_fp8_z128_canonical_projections": 0,
+            "native_fp8_z128_reconstructed_projections": 0,
+            "native_full_chunk_stage_witnesses": 0
+          },
+          "draft16": {
+            "native_fp8_q128_canonical_projections": 0,
+            "native_fp8_o128_canonical_projections": 0,
+            "native_fp8_kv128_canonical_projections": 0,
+            "native_fp8_z128_canonical_projections": 0,
+            "native_fp8_z128_reconstructed_projections": 0,
+            "native_full_chunk_stage_witnesses": 0
+          },
+          "prefill_norm": {
+            "native_fp8_q128_canonical_projections": 0,
+            "native_fp8_o128_canonical_projections": 0,
+            "native_fp8_kv128_canonical_projections": 0,
+            "native_fp8_z128_canonical_projections": 0,
+            "native_fp8_z128_reconstructed_projections": 0,
+            "native_full_chunk_stage_witnesses": 0
+          },
+          "vision": {
+            "native_fp8_q128_canonical_projections": 0,
+            "native_fp8_o128_canonical_projections": 0,
+            "native_fp8_kv128_canonical_projections": 0,
+            "native_fp8_z128_canonical_projections": 0,
+            "native_fp8_z128_reconstructed_projections": 0,
+            "native_full_chunk_stage_witnesses": 0
+          }
+        },
+        "legacy_logical_selection": {
+          "target_counts": {
+            "4": 0,
+            "128": 48
+          },
+          "auxiliary_counts": {
+            "draft4": 0,
+            "draft16": 0,
+            "vision": 0,
+            "prefill_norm": 0
+          },
+          "native_selection_verified": true,
+          "z128_target_counts": {
+            "4": 0,
+            "128": 48
+          },
+          "z128_auxiliary_counts": {
+            "draft4": 0,
+            "draft16": 0,
+            "vision": 0,
+            "prefill_norm": 0
+          }
+        },
+        "raw_report_unchanged": true
+      }
+    },
+    "generation_mode": "mtp",
+    "library_sha256": "8414795d2953feae49532340b206328972c8a23767276319e6e4fb3e1912c18a",
+    "model_proof_sha256": "4058a4f1c4b542883b97c9dc046bebae440e96fb415e95f5952895ef2a9ac9d1",
+    "quality_proof_sha256": "6853b3033d23a2dceac963bce3f08548fa1efdbdfb11cf3222f5746a942e2ed4",
+    "trial_index": 0,
+    "repeat_count": 3,
+    "physical_batch": 1,
+    "queued_concurrency": true,
+    "performance_admitted": false,
+    "scope": "Exact frozen3968+128HTTPtext/image C1/2/4/8,64measured/60warmups eachtrial. Repeated within one source-bound worker; per-request decode separate from aggregate throughput; nativeWindows vs referenceWSL. No strongest-reference or2x admission."
+  },
+  "engine_metadata_sha256": "955db139df246871df3b70e6517fc215a994c6f9d814549e8054c68f8deb362b",
+  "cohorts": [
+    {
+      "requests": 8,
+      "generated_tokens": 1024,
+      "ttft_median_ms": 2772.2294499981217,
+      "decode_median_tokens_per_second": 75.99556634867221,
+      "output_tokens_per_second": 28.67832293928843,
+      "requests_per_second": 0.22404939796319087,
+      "sampled_peak_adapter_used_bytes": 23944704000,
+      "samples": 1139,
+      "requested_interval_seconds": 0.02,
+      "observed_sample_gap_median_seconds": 0.03137704997789115,
+      "observed_sample_gap_max_seconds": 0.0792224999750033,
+      "scope": "NVML adapter-wide used memory, including background allocations; sampled maximum, not instantaneous or process-attributed peak",
+      "case": "text",
+      "concurrency": 1,
+      "request_keys": [
+        "26c94fab9e964363a86e2b7043bc0f37-ctx4096-s3-text-c1-r0",
+        "26c94fab9e964363a86e2b7043bc0f37-ctx4096-s3-text-c1-r1",
+        "26c94fab9e964363a86e2b7043bc0f37-ctx4096-s3-text-c1-r2",
+        "26c94fab9e964363a86e2b7043bc0f37-ctx4096-s3-text-c1-r3",
+        "26c94fab9e964363a86e2b7043bc0f37-ctx4096-s3-text-c1-r4",
+        "26c94fab9e964363a86e2b7043bc0f37-ctx4096-s3-text-c1-r5",
+        "26c94fab9e964363a86e2b7043bc0f37-ctx4096-s3-text-c1-r6",
+        "26c94fab9e964363a86e2b7043bc0f37-ctx4096-s3-text-c1-r7"
+      ],
+      "single_token_arrivals": true,
+      "prompt_tokens": [
+        3968,
+        3968,
+        3968,
+        3968,
+        3968,
+        3968,
+        3968,
+        3968
+      ]
+    },
+    {
+      "requests": 8,
+      "generated_tokens": 1024,
+      "ttft_median_ms": 7042.299299995648,
+      "decode_median_tokens_per_second": 84.39926976635115,
+      "output_tokens_per_second": 29.537200498794498,
+      "requests_per_second": 0.230759378896832,
+      "sampled_peak_adapter_used_bytes": 23959384064,
+      "samples": 1103,
+      "requested_interval_seconds": 0.02,
+      "observed_sample_gap_median_seconds": 0.031528349994914606,
+      "observed_sample_gap_max_seconds": 0.04811360000167042,
+      "scope": "NVML adapter-wide used memory, including background allocations; sampled maximum, not instantaneous or process-attributed peak",
+      "case": "text",
+      "concurrency": 2,
+      "request_keys": [
+        "26c94fab9e964363a86e2b7043bc0f37-ctx4096-s3-text-c2-r0",
+        "26c94fab9e964363a86e2b7043bc0f37-ctx4096-s3-text-c2-r1",
+        "26c94fab9e964363a86e2b7043bc0f37-ctx4096-s3-text-c2-r2",
+        "26c94fab9e964363a86e2b7043bc0f37-ctx4096-s3-text-c2-r3",
+        "26c94fab9e964363a86e2b7043bc0f37-ctx4096-s3-text-c2-r4",
+        "26c94fab9e964363a86e2b7043bc0f37-ctx4096-s3-text-c2-r5",
+        "26c94fab9e964363a86e2b7043bc0f37-ctx4096-s3-text-c2-r6",
+        "26c94fab9e964363a86e2b7043bc0f37-ctx4096-s3-text-c2-r7"
+      ],
+      "single_token_arrivals": true,
+      "prompt_tokens": [
+        3968,
+        3968,
+        3968,
+        3968,
+        3968,
+        3968,
+        3968,
+        3968
+      ]
+    },
+    {
+      "requests": 8,
+      "generated_tokens": 1024,
+      "ttft_median_ms": 15983.8381500158,
+      "decode_median_tokens_per_second": 78.06914113816521,
+      "output_tokens_per_second": 28.90107802514888,
+      "requests_per_second": 0.22578967207147563,
+      "sampled_peak_adapter_used_bytes": 23938412544,
+      "samples": 1128,
+      "requested_interval_seconds": 0.02,
+      "observed_sample_gap_median_seconds": 0.031554700050037354,
+      "observed_sample_gap_max_seconds": 0.036307500035036355,
+      "scope": "NVML adapter-wide used memory, including background allocations; sampled maximum, not instantaneous or process-attributed peak",
+      "case": "text",
+      "concurrency": 4,
+      "request_keys": [
+        "26c94fab9e964363a86e2b7043bc0f37-ctx4096-s3-text-c4-r0",
+        "26c94fab9e964363a86e2b7043bc0f37-ctx4096-s3-text-c4-r1",
+        "26c94fab9e964363a86e2b7043bc0f37-ctx4096-s3-text-c4-r2",
+        "26c94fab9e964363a86e2b7043bc0f37-ctx4096-s3-text-c4-r3",
+        "26c94fab9e964363a86e2b7043bc0f37-ctx4096-s3-text-c4-r4",
+        "26c94fab9e964363a86e2b7043bc0f37-ctx4096-s3-text-c4-r5",
+        "26c94fab9e964363a86e2b7043bc0f37-ctx4096-s3-text-c4-r6",
+        "26c94fab9e964363a86e2b7043bc0f37-ctx4096-s3-text-c4-r7"
+      ],
+      "single_token_arrivals": true,
+      "prompt_tokens": [
+        3968,
+        3968,
+        3968,
+        3968,
+        3968,
+        3968,
+        3968,
+        3968
+      ]
+    },
+    {
+      "requests": 8,
+      "generated_tokens": 1024,
+      "ttft_median_ms": 18463.860049989307,
+      "decode_median_tokens_per_second": 76.24577919493419,
+      "output_tokens_per_second": 28.674559777907884,
+      "requests_per_second": 0.22401999826490535,
+      "sampled_peak_adapter_used_bytes": 23995035648,
+      "samples": 1138,
+      "requested_interval_seconds": 0.02,
+      "observed_sample_gap_median_seconds": 0.03145280003082007,
+      "observed_sample_gap_max_seconds": 0.040516700013540685,
+      "scope": "NVML adapter-wide used memory, including background allocations; sampled maximum, not instantaneous or process-attributed peak",
+      "case": "text",
+      "concurrency": 8,
+      "request_keys": [
+        "26c94fab9e964363a86e2b7043bc0f37-ctx4096-s3-text-c8-r0",
+        "26c94fab9e964363a86e2b7043bc0f37-ctx4096-s3-text-c8-r1",
+        "26c94fab9e964363a86e2b7043bc0f37-ctx4096-s3-text-c8-r2",
+        "26c94fab9e964363a86e2b7043bc0f37-ctx4096-s3-text-c8-r3",
+        "26c94fab9e964363a86e2b7043bc0f37-ctx4096-s3-text-c8-r4",
+        "26c94fab9e964363a86e2b7043bc0f37-ctx4096-s3-text-c8-r5",
+        "26c94fab9e964363a86e2b7043bc0f37-ctx4096-s3-text-c8-r6",
+        "26c94fab9e964363a86e2b7043bc0f37-ctx4096-s3-text-c8-r7"
+      ],
+      "single_token_arrivals": true,
+      "prompt_tokens": [
+        3968,
+        3968,
+        3968,
+        3968,
+        3968,
+        3968,
+        3968,
+        3968
+      ]
+    },
+    {
+      "requests": 8,
+      "generated_tokens": 1024,
+      "ttft_median_ms": 2810.0194499711506,
+      "decode_median_tokens_per_second": 88.67396966417479,
+      "output_tokens_per_second": 29.865023829051264,
+      "requests_per_second": 0.233320498664463,
+      "sampled_peak_adapter_used_bytes": 24005521408,
+      "samples": 1093,
+      "requested_interval_seconds": 0.02,
+      "observed_sample_gap_median_seconds": 0.03146725002443418,
+      "observed_sample_gap_max_seconds": 0.0422512999502942,
+      "scope": "NVML adapter-wide used memory, including background allocations; sampled maximum, not instantaneous or process-attributed peak",
+      "case": "image",
+      "concurrency": 1,
+      "request_keys": [
+        "26c94fab9e964363a86e2b7043bc0f37-ctx4096-s3-image-c1-r0",
+        "26c94fab9e964363a86e2b7043bc0f37-ctx4096-s3-image-c1-r1",
+        "26c94fab9e964363a86e2b7043bc0f37-ctx4096-s3-image-c1-r2",
+        "26c94fab9e964363a86e2b7043bc0f37-ctx4096-s3-image-c1-r3",
+        "26c94fab9e964363a86e2b7043bc0f37-ctx4096-s3-image-c1-r4",
+        "26c94fab9e964363a86e2b7043bc0f37-ctx4096-s3-image-c1-r5",
+        "26c94fab9e964363a86e2b7043bc0f37-ctx4096-s3-image-c1-r6",
+        "26c94fab9e964363a86e2b7043bc0f37-ctx4096-s3-image-c1-r7"
+      ],
+      "single_token_arrivals": true,
+      "prompt_tokens": [
+        3968,
+        3968,
+        3968,
+        3968,
+        3968,
+        3968,
+        3968,
+        3968
+      ]
+    },
+    {
+      "requests": 8,
+      "generated_tokens": 1024,
+      "ttft_median_ms": 7034.190149977803,
+      "decode_median_tokens_per_second": 88.68278208780477,
+      "output_tokens_per_second": 29.921662982429527,
+      "requests_per_second": 0.23376299205023068,
+      "sampled_peak_adapter_used_bytes": 24020201472,
+      "samples": 1092,
+      "requested_interval_seconds": 0.02,
+      "observed_sample_gap_median_seconds": 0.0314115000073798,
+      "observed_sample_gap_max_seconds": 0.034264099958818406,
+      "scope": "NVML adapter-wide used memory, including background allocations; sampled maximum, not instantaneous or process-attributed peak",
+      "case": "image",
+      "concurrency": 2,
+      "request_keys": [
+        "26c94fab9e964363a86e2b7043bc0f37-ctx4096-s3-image-c2-r0",
+        "26c94fab9e964363a86e2b7043bc0f37-ctx4096-s3-image-c2-r1",
+        "26c94fab9e964363a86e2b7043bc0f37-ctx4096-s3-image-c2-r2",
+        "26c94fab9e964363a86e2b7043bc0f37-ctx4096-s3-image-c2-r3",
+        "26c94fab9e964363a86e2b7043bc0f37-ctx4096-s3-image-c2-r4",
+        "26c94fab9e964363a86e2b7043bc0f37-ctx4096-s3-image-c2-r5",
+        "26c94fab9e964363a86e2b7043bc0f37-ctx4096-s3-image-c2-r6",
+        "26c94fab9e964363a86e2b7043bc0f37-ctx4096-s3-image-c2-r7"
+      ],
+      "single_token_arrivals": true,
+      "prompt_tokens": [
+        3968,
+        3968,
+        3968,
+        3968,
+        3968,
+        3968,
+        3968,
+        3968
+      ]
+    },
+    {
+      "requests": 8,
+      "generated_tokens": 1024,
+      "ttft_median_ms": 15538.81015002844,
+      "decode_median_tokens_per_second": 88.07048942446991,
+      "output_tokens_per_second": 30.011082119596637,
+      "requests_per_second": 0.23446157905934872,
+      "sampled_peak_adapter_used_bytes": 24026492928,
+      "samples": 1088,
+      "requested_interval_seconds": 0.02,
+      "observed_sample_gap_median_seconds": 0.031491000030655414,
+      "observed_sample_gap_max_seconds": 0.04157329996814951,
+      "scope": "NVML adapter-wide used memory, including background allocations; sampled maximum, not instantaneous or process-attributed peak",
+      "case": "image",
+      "concurrency": 4,
+      "request_keys": [
+        "26c94fab9e964363a86e2b7043bc0f37-ctx4096-s3-image-c4-r0",
+        "26c94fab9e964363a86e2b7043bc0f37-ctx4096-s3-image-c4-r1",
+        "26c94fab9e964363a86e2b7043bc0f37-ctx4096-s3-image-c4-r2",
+        "26c94fab9e964363a86e2b7043bc0f37-ctx4096-s3-image-c4-r3",
+        "26c94fab9e964363a86e2b7043bc0f37-ctx4096-s3-image-c4-r4",
+        "26c94fab9e964363a86e2b7043bc0f37-ctx4096-s3-image-c4-r5",
+        "26c94fab9e964363a86e2b7043bc0f37-ctx4096-s3-image-c4-r6",
+        "26c94fab9e964363a86e2b7043bc0f37-ctx4096-s3-image-c4-r7"
+      ],
+      "single_token_arrivals": true,
+      "prompt_tokens": [
+        3968,
+        3968,
+        3968,
+        3968,
+        3968,
+        3968,
+        3968,
+        3968
+      ]
+    },
+    {
+      "requests": 8,
+      "generated_tokens": 1024,
+      "ttft_median_ms": 17563.64454998402,
+      "decode_median_tokens_per_second": 89.71220880649533,
+      "output_tokens_per_second": 30.085137766831718,
+      "requests_per_second": 0.2350401388033728,
+      "sampled_peak_adapter_used_bytes": 24026492928,
+      "samples": 1084,
+      "requested_interval_seconds": 0.02,
+      "observed_sample_gap_median_seconds": 0.03147339995484799,
+      "observed_sample_gap_max_seconds": 0.04724489996442571,
+      "scope": "NVML adapter-wide used memory, including background allocations; sampled maximum, not instantaneous or process-attributed peak",
+      "case": "image",
+      "concurrency": 8,
+      "request_keys": [
+        "26c94fab9e964363a86e2b7043bc0f37-ctx4096-s3-image-c8-r0",
+        "26c94fab9e964363a86e2b7043bc0f37-ctx4096-s3-image-c8-r1",
+        "26c94fab9e964363a86e2b7043bc0f37-ctx4096-s3-image-c8-r2",
+        "26c94fab9e964363a86e2b7043bc0f37-ctx4096-s3-image-c8-r3",
+        "26c94fab9e964363a86e2b7043bc0f37-ctx4096-s3-image-c8-r4",
+        "26c94fab9e964363a86e2b7043bc0f37-ctx4096-s3-image-c8-r5",
+        "26c94fab9e964363a86e2b7043bc0f37-ctx4096-s3-image-c8-r6",
+        "26c94fab9e964363a86e2b7043bc0f37-ctx4096-s3-image-c8-r7"
+      ],
+      "single_token_arrivals": true,
+      "prompt_tokens": [
+        3968,
+        3968,
+        3968,
+        3968,
+        3968,
+        3968,
+        3968,
+        3968
+      ]
+    }
+  ],
+  "ordinary_manifest_sha256": null,
+  "performance_admitted": false,
+  "scope": "Actual fixed-input3968/output128 native loopback streaming cohorts, including all template/image tokens. Artificial repeated-note corpus; no broad-quality, reference-equivalence or2x promotion.",
+  "gpu": {
+    "index": 0,
+    "name": "NVIDIA GeForce RTX 5090",
+    "uuid": "GPU-265ee66c-9b79-cd3b-0c63-dd6942ddb5e6"
+  },
+  "sampling_errors": []
+}
