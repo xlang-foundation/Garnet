@@ -1,0 +1,8 @@
+from pathlib import Path
+import hashlib,json,os,sys
+W=Path(__file__).resolve().parent;R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';sys.path[:0]=[str(M),str(R)];sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+import run_logged as ledger
+names=['decode35_operand_program.py','test_decode35_operand_program.py','evidence/decode35-operand-program-derivation.json','bounded_step45_boundary_program.py','all_layer_decode_boundary_program.py','decode_boundary_program.py','decode_boundary_layout.py','test_all_layer_decode_boundary_program.py','test_decode_boundary_program.py','decode35_stage_source.py','evidence/decode35-stage-source-derivation.json']
+ledger.source_identity=lambda:{'scope':'Explicit private symbolic operand program and frozen source derivations; no native/GPU/model execution or protected reads','owned_source_sha256':{n:sha(M/n) for n in names}}
+os.chdir(R);assert ledger.run([sys.executable,'-m','unittest','test2026.cuda.qwen38_5090.test_decode35_operand_program'],W/'decode35-operand-program-cpu-ledger','correctness','Five symbolic CPU controls: primary/all64/7operand row and suffix spans; old profile rejection; constructor binding restoration/prefill unchanged; actual DSL forwarding marker and B1/B4cache metadata; exact frozen chunk and parent-forward derivation. No native/GPU/model/numerical replay.',[M/n for n in names])==0
+print(json.dumps({'symbolic_CPU_controls':5,'native_or_GPU_model_executed':False}))
