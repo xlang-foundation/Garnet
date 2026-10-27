@@ -1,0 +1,28 @@
+from pathlib import Path
+import hashlib,json,zipfile
+W=Path(__file__).resolve().parent;O=W.parent/'outputs';R=Path('D:/CantorAI/work/qwen38-5090');E=R/'test2026/cuda/qwen38_5090/evidence';JOB='b4-qk-m16-cpu-attempt1';sha=lambda b:hashlib.sha256(b).hexdigest();owned=[]
+def keep(name,raw):
+    p=E/name;assert not p.exists();p.write_bytes(raw);owned.append(p)
+with zipfile.ZipFile(W/'b4-qk-m16-cpu-v2-closure-assets.zip') as z:
+    mf=json.loads(z.read('manifest.json'));assert z.testzip() is None
+    for n,h in mf['files'].items():assert sha(z.read(n))==h
+    proof=z.read('results/'+JOB+'-verified.json');assert proof==(O/(JOB+'-verified.json')).read_bytes();p=O/(JOB+'-remote-verified.json');assert not p.exists();p.write_bytes(proof)
+    for n in mf['files']:
+        if n.startswith('results/b4-qk-m16-cpu-v2-postprocess/') or n.endswith('cpu-v2-install.json'):keep('b4-qk-m16-cpu-closure-'+n.removeprefix('results/').replace('/','-'),z.read(n))
+    keep('b4-qk-m16-cpu-closure-manifest.json',json.dumps(dict(closure_sha256=sha((W/'b4-qk-m16-cpu-v2-closure-assets.zip').read_bytes()),**mf),indent=2).encode())
+q=json.loads(proof);assert q['exit_code']==0 and q['factory_fault_cases']==406 and q['profile']['cases']==1248 and q['plugin']['GPU_operator_calls']==0 and q['source_runtime_SDK_checkpoint_all34objects_CMakeCache_unchanged'];keep(JOB+'-verified.json',proof)
+with zipfile.ZipFile(O/(JOB+'-evidence.zip')) as z:
+    mf=json.loads(z.read('evidence-manifest.json'));assert sha((O/(JOB+'-evidence.zip')).read_bytes())==q['archive_sha256']
+    for n,h in mf['files'].items():assert sha(z.read(n))==h
+    base='results/'+JOB+'/'
+    for n in mf['files']:
+        if n.startswith(base) and (n.endswith(('commands.log','commands.jsonl','/workflow.json','/report.json'))):keep(JOB+'-'+n.removeprefix(base).replace('/','-'),z.read(n))
+    keep(JOB+'-archive-manifest.json',json.dumps(dict(archive_sha256=q['archive_sha256'],files=mf['files'],all_raw_CPU_fault_stdout_stderr_and_executables_retained_in_immutable_archive_only=True),indent=2).encode())
+summary=dict(status='QK_M16_remote_CPU_contracts_passed_no_GPU_math',proof_sha256=sha(proof),archive_sha256=q['archive_sha256'],python_controls=13,profile=q['profile'],factory_fault_cases=406,plugin=q['plugin'],source_runtime_SDK_config_index_all34objects_CMake_unchanged=True,model_or_quality_or_performance_qualified=False,next='Original guarded nativebuild then unchanged fullmodel admission before4K/MTP/quality/HTTP timing')
+raw=json.dumps(summary,indent=2).encode();keep('b4-qk-m16-cpu-summary.json',raw);(O/'Garnet-B4-QK-M16-CPU-Verified.json').write_bytes(raw)
+for n in ('commands.log','commands.jsonl'):keep('b4-qk-m16-local-cpu-replay-'+n,(W/'b4-qk-m16-local-cpu-replay'/n).read_bytes())
+keep('retain-b4-qk-m16-cpu-outcome.py.txt',Path(__file__).read_bytes())
+text=('\r\n\r\n2026-10-27 QK M16 actual nativeCPU contracts PASSED, pairedremote/localrawreplays identical proof '+sha(proof)+', archive '+q['archive_sha256']+' (2483301B,917members).13Python,1248selector32selected1216rejected,406factorycases94modes/twogeometries inclall7pergeometryattributes, liveopaque preservation, M4/M16checks4MiB, device+geometrycacheisolation, unsupportedSDK, tracingparity/API/runtimeguards. ActualQK+oldV+oldGDN+genericTRTplugin92badwires48ctors92descriptors18formats18crosswirerejections14initialize10factorycalls0GPUoperators. All1724ownedfiles/runtime/SDK/config-index/CMake/all34CUDAobjects unchanged; no productionoverlay/GPUmath/model/performance. Initialstale-objectinstaller failure staysrecorded. Nextoriginal83current+86historical nativebuildgates and unchanged strictfullmodel gates; source79 QK remainsnumericallyunqualified.\r\n').encode()
+for n in ('docs/research/qwen38-5090-development-log.md','docs/research/qwen38-5090-implementation-task.md'):
+    p=R/n;p.write_bytes(p.read_bytes()+text);owned.append(p)
+paths=[p.relative_to(R).as_posix() for p in owned];(W/'b4-qk-m16-cpu-outcome-stage-paths.bin').write_bytes(b'\0'.join(n.encode() for n in paths)+b'\0');print(json.dumps(dict(files=len(paths),proof_sha256=sha(proof))))
