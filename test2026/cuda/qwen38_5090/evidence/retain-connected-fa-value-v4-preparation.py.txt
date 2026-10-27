@@ -1,0 +1,27 @@
+from pathlib import Path
+import ast,hashlib,json,zipfile
+W=Path(__file__).resolve().parent;O=W.parent/'outputs';R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';E=M/'evidence';p=json.loads((E/'connected-fa-value-v4-preparation.json').read_bytes());owned=[R/name.removeprefix('Garnet/') for name in p['new_files']]+[E/'connected-fa-value-v4-preparation.json'];sha=lambda raw:hashlib.sha256(raw).hexdigest()
+def keep(name,raw):
+    target=E/name;assert not target.exists();target.write_bytes(raw);owned.append(target)
+job='connected-fa-value-attempt3';raw=(O/(job+'-verified.json')).read_bytes();assert raw==(O/(job+'-remote-verified.json')).read_bytes();q=json.loads(raw);assert q['exit_code']==1 and not q['component_baselines_exact'] and q['source_runtime_SDK_checkpoint_CMake_all34objects_restored'];keep(job+'-verified.json',raw);keep('Garnet-Connected-FA-Value-Verified-v3.json',(O/'Garnet-Connected-FA-Value-Verified-v3.json').read_bytes())
+with zipfile.ZipFile(O/(job+'-evidence.zip')) as z:
+    mf=json.loads(z.read('evidence-manifest.json'));assert sha((O/(job+'-evidence.zip')).read_bytes())==q['archive_sha256'] and z.testzip() is None
+    for name,h in mf['files'].items():assert sha(z.read(name))==h
+    for name in mf['files']:
+        if name.startswith('results/'+job+'/') and name.endswith(('.json','.jsonl','.log')):keep(job+'-'+name.removeprefix('results/'+job+'/').replace('/','-'),z.read(name))
+    keep(job+'-archive-manifest.json',json.dumps(dict(archive_sha256=q['archive_sha256'],archive_bytes=q['archive_bytes'],files=mf['files'],all_real_fixture_arrays_and_bundles_in_immutable_ZIP_only=True),indent=2).encode())
+with zipfile.ZipFile(W/'connected-fa-value-v3-closure-assets.zip') as z:
+    mf=json.loads(z.read('manifest.json'));assert z.testzip() is None
+    for name,h in mf['files'].items():assert sha(z.read(name))==h
+    for name in mf['files']:
+        if name.startswith('results/connected-fa-value-v3-postprocess/') or name=='results/connected-fa-value-v3-install.json':keep('connected-fa-value-v3-closure-'+name.removeprefix('results/').replace('/','-'),z.read(name))
+    keep('connected-fa-value-v3-closure-manifest.json',json.dumps(dict(closure_sha256=sha((W/'connected-fa-value-v3-closure-assets.zip').read_bytes()),**mf),indent=2).encode())
+for name in ('commands.log','commands.jsonl'):keep('connected-fa-value-v3-local-replay-'+name,(W/'connected-fa-value-v3-local-replay-ledger'/name).read_bytes());keep('connected-fa-value-v4-preparation-cpu-'+name,(W/'connected-fa-value-v4-preparation-cpu-ledger'/name).read_bytes())
+for name in ('prepare-connected-fa-value-v3-local-replay.py','replay-connected-fa-value-v3-local.py','derive-connected-fa-value-v4.py','derive-connected-fa-value-v4-preparation.py','prepare-connected-fa-value-v4.py','prepare-connected-fa-value-v4-ops.py','install-connected-fa-value-v4.py','postprocess-connected-fa-value-v4.py','retain-connected-fa-value-v4-preparation.py','connected-fa-value-v4-package.json'):
+    raw=(W/name).read_bytes()
+    if name.endswith('.py'):ast.parse(raw)
+    keep(name+'.txt' if name.endswith('.py') else name,raw)
+package=json.loads((W/'connected-fa-value-v4-package.json').read_bytes());text=('\r\n\r\n### Connected attempt3 observer rank failure preserved; packed-view attempt4 prepared\r\n\r\n2026-10-27: Attempt3 constructed referencegraphs but failed BEFORE firstcomponentinference in completeinputcacheobserver: '+json.dumps(q['phase_errors'])+'. Rawarchive '+q['archive_sha256']+' ('+str(q['archive_bytes'])+'B), paired identicalremote/localproof '+sha((O/(job+'-verified.json')).read_bytes())+'. Allsource/runtime/SDK/checkpointmetadata/34objects/CMake restored. No componentnumericalresult; originalfailedattempt/source/trace preservedunchanged.\r\n\r\nVersion4 only addsio.storage_view(cache,[batch,4194304]) beforeboundedreadonly slice_into in completehashreader; sourcecacheiscontiguousrank4, slice APIrequirespackedrank2. Samecomplete2KVcaches/allrows/allwords, no sampling. CPUtest compilesactualold/fixedcache_hashesASTagainststrictfakeIO: oldrank4call rejected, fixedcompletezero hashesvalidatedforB1/B4.13CPUtests pass(original12+actualobservercontract). No graph/math/gate changes, existingfixture andsource60/67 libraries unchanged. Prepared '+package['preparation_sha256']+', deployment '+package['deployment_sha256']+',1611baselinepins. Actualattempt4GPUcomponent UNRUN atthisentry. OriginalSDK/modeljobs stayfailed andchartsunchanged; full4K/MTP/805/HTTP/strongestrefs/INT4/4B/overall2xremainopen.\r\n').encode()
+for name in ('docs/research/qwen38-5090-development-log.md','docs/research/qwen38-5090-implementation-task.md'):
+    target=R/name;before=target.read_bytes();target.write_bytes(before+text);assert target.read_bytes().startswith(before);owned.append(target)
+(W/'connected-fa-value-v4-preparation-owned-paths.json').write_bytes(json.dumps([name.relative_to(R).as_posix() for name in owned],indent=2).encode());(W/'connected-fa-value-v4-preparation-stage-paths.bin').write_bytes(b'\0'.join(name.relative_to(R).as_posix().encode() for name in owned)+b'\0');print(json.dumps(dict(status=package['status'],owned_files=len(owned))))
