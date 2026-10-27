@@ -1,0 +1,374 @@
+{
+  "status": "paired_first_layer_decode_projection_difference_and_vendor_selection_observed",
+  "paired_proof_sha256": "bbc3fdde79d4194948b738c3261b8679a20271b9283a47bf03f67349d2bb1c40",
+  "archive_sha256": "0fd7721f6e6f012dfe26caf8432568acd05a62a4d8c80aba91350ceba5d703c1",
+  "archive_bytes": 6133765,
+  "first_five_input_rows": [
+    {
+      "consumed_decode_input": 1,
+      "active_different_words": {
+        "input": 0,
+        "normalized": 0,
+        "qkv": 5,
+        "z": 0,
+        "beta": 0,
+        "a": 0
+      },
+      "inactive_different_words": {
+        "input": 0,
+        "normalized": 0,
+        "qkv": 0,
+        "z": 0,
+        "beta": 0,
+        "a": 0
+      }
+    },
+    {
+      "consumed_decode_input": 2,
+      "active_different_words": {
+        "input": 0,
+        "normalized": 0,
+        "qkv": 2,
+        "z": 1,
+        "beta": 0,
+        "a": 0
+      },
+      "inactive_different_words": {
+        "input": 0,
+        "normalized": 0,
+        "qkv": 0,
+        "z": 0,
+        "beta": 0,
+        "a": 0
+      }
+    },
+    {
+      "consumed_decode_input": 3,
+      "active_different_words": {
+        "input": 0,
+        "normalized": 0,
+        "qkv": 3,
+        "z": 1,
+        "beta": 0,
+        "a": 0
+      },
+      "inactive_different_words": {
+        "input": 0,
+        "normalized": 0,
+        "qkv": 0,
+        "z": 0,
+        "beta": 0,
+        "a": 0
+      }
+    },
+    {
+      "consumed_decode_input": 4,
+      "active_different_words": {
+        "input": 0,
+        "normalized": 0,
+        "qkv": 6,
+        "z": 2,
+        "beta": 0,
+        "a": 0
+      },
+      "inactive_different_words": {
+        "input": 0,
+        "normalized": 0,
+        "qkv": 0,
+        "z": 0,
+        "beta": 0,
+        "a": 0
+      }
+    },
+    {
+      "consumed_decode_input": 5,
+      "active_different_words": {
+        "input": 0,
+        "normalized": 0,
+        "qkv": 0,
+        "z": 2,
+        "beta": 0,
+        "a": 0
+      },
+      "inactive_different_words": {
+        "input": 0,
+        "normalized": 0,
+        "qkv": 0,
+        "z": 0,
+        "beta": 0,
+        "a": 0
+      }
+    }
+  ],
+  "active_different_words_one_repeat": {
+    "input": 0,
+    "normalized": 0,
+    "qkv": 16,
+    "z": 6,
+    "beta": 0,
+    "a": 0
+  },
+  "active_compared_words_one_repeat": {
+    "input": 102400,
+    "normalized": 102400,
+    "qkv": 204800,
+    "z": 122880,
+    "beta": 960,
+    "a": 960
+  },
+  "SDK_printed_algorithms": {
+    "reference": {
+      "M": 4,
+      "log_sha256": "4b889b4904f39a1c47ae9643c188d2e81692a8d173ab77c37adf6958f02ad023",
+      "SDK_version": "13.4",
+      "printed_configurations": {
+        "10240x5120": [
+          {
+            "algoId": 35,
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": 3,
+            "customOption": 1
+          }
+        ],
+        "6144x5120": [
+          {
+            "algoId": 35,
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": 3,
+            "customOption": 1
+          }
+        ],
+        "5120x6144": [
+          {
+            "algoId": 35,
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": 3,
+            "customOption": 1
+          }
+        ]
+      },
+      "calls": [
+        {
+          "line": 17,
+          "N": 10240,
+          "K": 5120,
+          "M": 4,
+          "printed_configuration": {
+            "algoId": 35,
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": 3,
+            "customOption": 1
+          }
+        },
+        {
+          "line": 34,
+          "N": 6144,
+          "K": 5120,
+          "M": 4,
+          "printed_configuration": {
+            "algoId": 35,
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": 3,
+            "customOption": 1
+          }
+        },
+        {
+          "line": 59,
+          "N": 5120,
+          "K": 6144,
+          "M": 4,
+          "printed_configuration": {
+            "algoId": 35,
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": 3,
+            "customOption": 1
+          }
+        },
+        {
+          "line": 118,
+          "N": 10240,
+          "K": 5120,
+          "M": 4,
+          "printed_configuration": {
+            "algoId": 35,
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": 3,
+            "customOption": 1
+          }
+        },
+        {
+          "line": 135,
+          "N": 6144,
+          "K": 5120,
+          "M": 4,
+          "printed_configuration": {
+            "algoId": 35,
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": 3,
+            "customOption": 1
+          }
+        },
+        {
+          "line": 160,
+          "N": 5120,
+          "K": 6144,
+          "M": 4,
+          "printed_configuration": {
+            "algoId": 35,
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": 3,
+            "customOption": 1
+          }
+        }
+      ],
+      "unprinted_attributes_not_inferred": true,
+      "clock_scope": "Line order within one SDK file; no cross-process time merging or performance inference"
+    },
+    "candidate": {
+      "M": 16,
+      "log_sha256": "971281c7a32b47bcf80d7269f502cfdd2c3cedcdcaf8c58e48a435f00357adf3",
+      "SDK_version": "13.4",
+      "printed_configurations": {
+        "10240x5120": [
+          {
+            "algoId": 67,
+            "tile": "MATMUL_TILE_64x64",
+            "stages": "MATMUL_STAGES_64x6",
+            "ctaSwizzling": 1,
+            "customOption": 18
+          }
+        ],
+        "6144x5120": [
+          {
+            "algoId": 67,
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "ctaSwizzling": 1,
+            "customOption": 18
+          }
+        ],
+        "5120x6144": [
+          {
+            "algoId": 35,
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": 3,
+            "customOption": 1
+          }
+        ]
+      },
+      "calls": [
+        {
+          "line": 17,
+          "N": 10240,
+          "K": 5120,
+          "M": 16,
+          "printed_configuration": {
+            "algoId": 67,
+            "tile": "MATMUL_TILE_64x64",
+            "stages": "MATMUL_STAGES_64x6",
+            "ctaSwizzling": 1,
+            "customOption": 18
+          }
+        },
+        {
+          "line": 34,
+          "N": 6144,
+          "K": 5120,
+          "M": 16,
+          "printed_configuration": {
+            "algoId": 67,
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "ctaSwizzling": 1,
+            "customOption": 18
+          }
+        },
+        {
+          "line": 59,
+          "N": 5120,
+          "K": 6144,
+          "M": 16,
+          "printed_configuration": {
+            "algoId": 35,
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": 3,
+            "customOption": 1
+          }
+        },
+        {
+          "line": 118,
+          "N": 10240,
+          "K": 5120,
+          "M": 16,
+          "printed_configuration": {
+            "algoId": 67,
+            "tile": "MATMUL_TILE_64x64",
+            "stages": "MATMUL_STAGES_64x6",
+            "ctaSwizzling": 1,
+            "customOption": 18
+          }
+        },
+        {
+          "line": 135,
+          "N": 6144,
+          "K": 5120,
+          "M": 16,
+          "printed_configuration": {
+            "algoId": 67,
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "ctaSwizzling": 1,
+            "customOption": 18
+          }
+        },
+        {
+          "line": 160,
+          "N": 5120,
+          "K": 6144,
+          "M": 16,
+          "printed_configuration": {
+            "algoId": 35,
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": 3,
+            "customOption": 1
+          }
+        }
+      ],
+      "unprinted_attributes_not_inferred": true,
+      "clock_scope": "Line order within one SDK file; no cross-process time merging or performance inference"
+    }
+  },
+  "all_padding_bytes_exact": true,
+  "repeats_per_geometry": 2,
+  "source_runtime_SDK_checkpoint_restored": true,
+  "normalization_graph_is_separate_from_fused_internal_norm": true,
+  "original_short_model_gate_remains_failed": true,
+  "full_model_cause_or_harmlessness_proven": false,
+  "new_native_math_or_benchmark": false,
+  "two_times_target_achieved": false,
+  "next_action": "Controlled actual SDK replay with these real normalized input arrays and checkpoint QKV/Z matrices: fourM4 references, defaultM16, then M4-selected algorithm checked and applied at actualM16. Same4MiB workspace, all7algorithm attributes and actual AlgoCheck, quantized activation bytes and BF16 output bytes, repeat2, compare to recorded Garnet outputs. Preserve unsupported or mismatching controls; no silent fallback or workspace/shape substitution. Compile/run only on remote RTX5090; leave original full model/state/ID/quality/HTTP gates unchanged before promotion."
+}
