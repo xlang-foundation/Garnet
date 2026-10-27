@@ -4460,3 +4460,6 @@ Runtime-provider audit: explicit pinned DLL paths/hashes were collected, but lin
 
 
 2026-10-27 QK short initialowner preflight rejected KeyError status for3historicalnativebuild parent records beforeoutputdir/sourceDLLoverlay/model/GPU. Originalhash-pinnedpairedproofs containstatus; v2metadata prep fillsmissingstatus fromexactproofs andretains strictstatuscheck. Versionedprobe/launcher/owner/reader onlyswitchprep/filenames+verifyderivationchain; originalmodelmath/source79/DLL/14numerical-routecontrols unchanged. RawSSHrejection andoriginalpackage preserved, no failedmathjobpromoted, no timingdata produced.
+
+
+2026-10-27 full4K B4 exactCPython admission comparator preparedCPU-only whileexclusive source79short GPUjobrunning; remote source remainsfrozen.11CPUtests pass(5newfullcontext+6existingpinnedinputcontrols), unchangedcompare_capture/require_ids. Eight independentB1oracles/three4-rowtext-image-mixedgroups, all48phase-row comparisons x128statecomponents, physical/logicalhashes/finitebitwisevectors,128IDs,3968prompt/4095finalslots/resetrestoration. Lastcomponent/lastID/missingoracle/permutation/shortcontext/truncatedoutput/nonfinite/signedzero/profile/slot/reset corruptions rejected. No full4K GPUprobe/owner/capture/quality/timing yet; currentstrictshortpass+pairedclosure stillrequired beforefuturelongrun.
