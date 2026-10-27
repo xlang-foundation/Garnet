@@ -1,0 +1,39 @@
+from pathlib import Path
+import hashlib,json,zipfile,subprocess
+W=Path(__file__).resolve().parent;O=W.parent/'outputs';R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';E='test2026/cuda/qwen38_5090/evidence/';P='Garnet/test2026/cuda/qwen38_5090/';JOB='o128-full4k-model-admission-attempt1';owned=[];sha=lambda b:hashlib.sha256(b).hexdigest()
+def put(n,b):
+    t=R/n;assert t.resolve().is_relative_to(R.resolve()) and (not t.exists() or t.read_bytes()==b),n;t.parent.mkdir(parents=True,exist_ok=True);t.write_bytes(b);owned.append(n)
+raw=(O/(JOB+'-verified.json')).read_bytes();assert raw==(O/(JOB+'-remote-verified.json')).read_bytes();q=json.loads(raw);a=q['arrays'];assert q['exit_code']==0 and q['full_six_case_model_qualified'] and q['source_library_runtime_SDK_checkpoint_restored'] and a['captured_states']==32 and len(a['cases'])==6 and a['complete_retained_baseline_states_and_raw_vectors_exact'] and a['all_original_six_case_state_vector_ID_callback_reset_predicates_unchanged']
+archive=O/(JOB+'-evidence.zip');assert sha(archive.read_bytes())==q['archive_sha256']
+for s in ('-verified.json','-remote-verified.json'):put(E+JOB+s,(O/(JOB+s)).read_bytes())
+with zipfile.ZipFile(archive) as z:
+    p=json.loads(z.read(P+'evidence/o128-full4k-model-preparation.json'));w=json.loads(z.read('results/'+JOB+'/workflow.json'))
+    for n,h in p['new_files'].items():assert sha(z.read(n))==h and sha((R/n.removeprefix('Garnet/')).read_bytes())==h
+    for n in z.namelist():
+        if n.startswith('results/'+JOB+'/') and n.endswith(('.json','.jsonl','.log')):put(E+JOB+'-'+n.removeprefix('results/'+JOB+'/').replace('/','-'),z.read(n))
+    put(E+JOB+'-manifest.json',z.read('evidence-manifest.json'))
+with zipfile.ZipFile(W/'o128-full4k-closure-assets.zip') as z:
+    manifest=json.loads(z.read('evidence-manifest.json'));assert len(z.namelist())==len(set(z.namelist()))==len(manifest['files'])+1 and z.testzip() is None and manifest['model_archive_sha256']==q['archive_sha256']
+    for n,h in manifest['files'].items():
+        b=z.read(n);assert sha(b)==h
+        if n.startswith('results/'):put(E+'o128-full4k-postprocess-'+n.removeprefix('results/').replace('/','-')+('.txt' if n.endswith('.py') else ''),b)
+    put(E+'o128-full4k-closure-manifest.json',z.read('evidence-manifest.json'))
+for n in ('commands.log','commands.jsonl'):put(E+'o128-full4k-local-replay-ledger-'+n,(W/'o128-full4k-local-replay-ledger'/n).read_bytes())
+for n in ('run-o128-full4k-postprocess.py','extract-o128-full4k-closure.py','replay-o128-full4k-local.py','retain-o128-full4k-success.py'):put(E+n+'.txt',(W/n).read_bytes())
+result=dict(status='Q128_plus_O128_six_real_4K_text_image_ordinary_MTP_cases_independently_verified',paired_proof_sha256=sha(raw),original_archive_sha256=q['archive_sha256'],original_archive_bytes=q['archive_bytes'],original_archive_members=q['archive_members'],candidate_library_sha256=p['candidate_library_sha256'],source_bundle_sha256=p['source_bundle_sha256'],source_files=60,cases=a['cases'],captured_states=a['captured_states'],complete_retained_baseline_states_and_raw_vectors_exact=True,ordinary_MTP_128IDs_each_callbacks_reset_repeat_exact=True,stage_witnesses_enabled=False,physical_routes=a['physical_Q_O_KV_reconstructed_Z_selection'],CPU_current=74,CPU_historical=86,source_library_runtime_SDK_checkpoint_restored=True,full_six_case_model_qualified=True,broader_quality_frontend_negatives_and_production_cache_fingerprint_pending=True,new_serving_benchmarks=False,two_times_target_achieved=False)
+put(E+'o128-six-case-model-research-summary.json',json.dumps(result,indent=2).encode());(O/'Garnet-Q128-O128-4K-Six-Case-Verified.json').write_bytes(json.dumps(result,indent=2).encode())
+text='''
+
+### Q128 plus O128 passes all six original full4K text/image ordinary and MTP cases
+
+2026-10-27: o128-full4k-model-admission-attempt1 exits0 with all six cases in retained order0,1,2,3,0,2 passing on the SAME60source c44138f5/DLL8414795d. Actual74current+86historical CPU and embeddedstdlib preflight pass remotely. Normal program has stage witnesses OFF. All original32complete packed-state witnesses, finite raw5120hidden/5120normalized vectors,128ordinary and128MTP IDs percase, complete original correctT32 baseline comparisons, first-token/all-token callbacks, final reset and text/image repeat checks pass unchanged. Each case records249draft-prefill calls. Targetprefill128/decode4/draftprefill16 retained. Physicaltarget128 GDN48/reconstructedZ48/KV32/Q16/O16, oldZ0/stage0; target4 and draft4/draft16/vision/new auxiliary route counters zero as required. Metadata-only logicalZ legacy view never alters raw stats or numerical evidence. Four distinct cases plus two repeats establish this suite, not population-level quality.
+
+Original immutable raw archive ARCHIVE_SHA (ARCHIVE_BYTESB/ARCHIVE_MEMBERSmembers) is preserved byteexact on both machines. Independent closed remote and local source/library/runtime/SDK/checkpoint and full-original-numeric replay produce identical proof PROOF_SHA. All60source targets/baseline DLL/runtime/SDK/checkpoints/private cache restored. Raw model report, resources, CPU/metadata/GPU ledgers, source derivations, closed workflow, manifest and both proofs retained on qwen38-5090. Correctness process wall time and sampled correctness VRAM are not serving benchmarks. No chart value or2x claim changes.
+
+Next: actual Garnet frontend negative cases and production flag/cache-fingerprint coverage; broad805adapted quality screen and variable/short/tail/image prompts against correctT32, retaining original dataset/quality definitions; then exact candidate HTTP serving with repeatable matched3968+128 text/image C1/2/4/8, actual batching/concurrency work, strongest feasible tuned/MTP vLLM/SGLang repeats, INT4W4A16 and Qwen3.5-4B comparisons. Measure TTFT, per-request decode, aggregate output throughput, attributable/adapter sampled VRAM with sampling gaps and repeated uncertainty. Production promotion and broad quality/performance remain unqualified. Overall >=2x the faster matched baseline in BOTH decode and concurrency throughput plus half-TTFT remain unmet/unproven; full goal active.
+'''.replace('ARCHIVE_SHA',q['archive_sha256']).replace('ARCHIVE_BYTES',str(q['archive_bytes'])).replace('ARCHIVE_MEMBERS',str(q['archive_members'])).replace('PROOF_SHA',sha(raw))
+for n in ('docs/research/qwen38-5090-development-log.md','docs/research/qwen38-5090-implementation-task.md'):
+    t=R/n;b=t.read_bytes();assert b'### Q128 plus O128 passes all six original full4K' not in b;t.write_bytes(b+text.replace('\n','\r\n').encode());assert t.read_bytes()[:len(b)]==b;owned.append(n)
+assert subprocess.check_output(['git','-C',str(R),'branch','--show-current'],text=True).strip()=='qwen38-5090';owned=sorted(set(owned));assert not any('probe_native_external_prefix_batch.py' in n for n in owned)
+(W/'o128-full4k-success-retained-paths.json').write_bytes(json.dumps(owned,indent=2).encode());subprocess.run(['git','-C',str(R),'-c','core.autocrlf=false','add','--pathspec-from-file=-','--pathspec-file-nul'],input=('\0'.join(owned)+'\0').encode(),check=True)
+print(json.dumps(dict(retained_paths=len(owned),paired_proof_sha256=sha(raw),six_case_model_qualified=True,broad_quality_or_performance_admitted=False)))

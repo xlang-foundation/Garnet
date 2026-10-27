@@ -1,0 +1,206 @@
+{
+  "status": "actual_O128_six_full4k_original_states_vectors_tokens_MTP_reset_replayed",
+  "archive_sha256": "e4d33e74c11ea2cd8b4229ea81b6407cb25b8e1ab4a6be78e4619612b2360ac2",
+  "archive_bytes": 2998982,
+  "archive_members": 223,
+  "exit_code": 0,
+  "error": null,
+  "candidate_library_sha256": "8414795d2953feae49532340b206328972c8a23767276319e6e4fb3e1912c18a",
+  "source_library_runtime_SDK_checkpoint_restored": true,
+  "arrays": {
+    "status": "prefill128_full4k_retained_target_state_exact",
+    "cases": [
+      {
+        "sequence": 0,
+        "key": "ctx4096-s3-text-c1-r0",
+        "case": "text",
+        "actual_prompt_tokens": 3968,
+        "actual_output_tokens": 128,
+        "target_complete_state_and_raw_vectors_exact": true,
+        "actual_candidate_draft_prefill_calls": 249,
+        "reset_repeat": false
+      },
+      {
+        "sequence": 1,
+        "key": "ctx4096-s3-text-c1-r1",
+        "case": "text",
+        "actual_prompt_tokens": 3968,
+        "actual_output_tokens": 128,
+        "target_complete_state_and_raw_vectors_exact": true,
+        "actual_candidate_draft_prefill_calls": 249,
+        "reset_repeat": false
+      },
+      {
+        "sequence": 2,
+        "key": "ctx4096-s3-image-c1-r0",
+        "case": "image",
+        "actual_prompt_tokens": 3968,
+        "actual_output_tokens": 128,
+        "target_complete_state_and_raw_vectors_exact": true,
+        "actual_candidate_draft_prefill_calls": 249,
+        "reset_repeat": false
+      },
+      {
+        "sequence": 3,
+        "key": "ctx4096-s3-image-c1-r1",
+        "case": "image",
+        "actual_prompt_tokens": 3968,
+        "actual_output_tokens": 128,
+        "target_complete_state_and_raw_vectors_exact": true,
+        "actual_candidate_draft_prefill_calls": 249,
+        "reset_repeat": false
+      },
+      {
+        "sequence": 4,
+        "key": "ctx4096-s3-text-c1-r0",
+        "case": "text",
+        "actual_prompt_tokens": 3968,
+        "actual_output_tokens": 128,
+        "target_complete_state_and_raw_vectors_exact": true,
+        "actual_candidate_draft_prefill_calls": 249,
+        "reset_repeat": true
+      },
+      {
+        "sequence": 5,
+        "key": "ctx4096-s3-image-c1-r0",
+        "case": "image",
+        "actual_prompt_tokens": 3968,
+        "actual_output_tokens": 128,
+        "target_complete_state_and_raw_vectors_exact": true,
+        "actual_candidate_draft_prefill_calls": 249,
+        "reset_repeat": true
+      }
+    ],
+    "captured_states": 32,
+    "complete_retained_baseline_states_and_raw_vectors_exact": true,
+    "target_prefill_chunk": 128,
+    "target_decode_chunk": 4,
+    "draft_prefill_chunk": 16,
+    "ordinary_mtp_exact": true,
+    "broad_quality_qualified": false,
+    "performance_admitted": false,
+    "two_times_target_achieved": false,
+    "fp8_m128_selection": {
+      "target_counts": {
+        "4": 0,
+        "128": 48
+      },
+      "auxiliary_counts": {
+        "draft4": 0,
+        "draft16": 0,
+        "vision": 0,
+        "prefill_norm": 0
+      },
+      "native_selection_verified": true
+    },
+    "fp8_z128_selection": {
+      "target_counts": {
+        "4": 0,
+        "128": 48
+      },
+      "auxiliary_counts": {
+        "draft4": 0,
+        "draft16": 0,
+        "vision": 0,
+        "prefill_norm": 0
+      },
+      "native_selection_verified": true,
+      "z128_target_counts": {
+        "4": 0,
+        "128": 48
+      },
+      "z128_auxiliary_counts": {
+        "draft4": 0,
+        "draft16": 0,
+        "vision": 0,
+        "prefill_norm": 0
+      }
+    },
+    "physical_Q_O_KV_reconstructed_Z_selection": {
+      "physical_target_counts": {
+        "4": {
+          "native_fp8_q128_canonical_projections": 0,
+          "native_fp8_o128_canonical_projections": 0,
+          "native_full_chunk_stage_witnesses": 0,
+          "native_fp8_z128_canonical_projections": 0,
+          "native_fp8_z128_reconstructed_projections": 0,
+          "native_fp8_kv128_canonical_projections": 0,
+          "native_fp8_m128_canonical_projections": 0
+        },
+        "128": {
+          "native_fp8_q128_canonical_projections": 16,
+          "native_fp8_o128_canonical_projections": 16,
+          "native_full_chunk_stage_witnesses": 0,
+          "native_fp8_z128_canonical_projections": 0,
+          "native_fp8_z128_reconstructed_projections": 48,
+          "native_fp8_kv128_canonical_projections": 32,
+          "native_fp8_m128_canonical_projections": 48
+        }
+      },
+      "physical_auxiliary_counts": {
+        "draft4": {
+          "native_fp8_q128_canonical_projections": 0,
+          "native_fp8_o128_canonical_projections": 0,
+          "native_fp8_kv128_canonical_projections": 0,
+          "native_fp8_z128_canonical_projections": 0,
+          "native_fp8_z128_reconstructed_projections": 0,
+          "native_full_chunk_stage_witnesses": 0
+        },
+        "draft16": {
+          "native_fp8_q128_canonical_projections": 0,
+          "native_fp8_o128_canonical_projections": 0,
+          "native_fp8_kv128_canonical_projections": 0,
+          "native_fp8_z128_canonical_projections": 0,
+          "native_fp8_z128_reconstructed_projections": 0,
+          "native_full_chunk_stage_witnesses": 0
+        },
+        "prefill_norm": {
+          "native_fp8_q128_canonical_projections": 0,
+          "native_fp8_o128_canonical_projections": 0,
+          "native_fp8_kv128_canonical_projections": 0,
+          "native_fp8_z128_canonical_projections": 0,
+          "native_fp8_z128_reconstructed_projections": 0,
+          "native_full_chunk_stage_witnesses": 0
+        },
+        "vision": {
+          "native_fp8_q128_canonical_projections": 0,
+          "native_fp8_o128_canonical_projections": 0,
+          "native_fp8_kv128_canonical_projections": 0,
+          "native_fp8_z128_canonical_projections": 0,
+          "native_fp8_z128_reconstructed_projections": 0,
+          "native_full_chunk_stage_witnesses": 0
+        }
+      },
+      "legacy_logical_selection": {
+        "target_counts": {
+          "4": 0,
+          "128": 48
+        },
+        "auxiliary_counts": {
+          "draft4": 0,
+          "draft16": 0,
+          "vision": 0,
+          "prefill_norm": 0
+        },
+        "native_selection_verified": true,
+        "z128_target_counts": {
+          "4": 0,
+          "128": 48
+        },
+        "z128_auxiliary_counts": {
+          "draft4": 0,
+          "draft16": 0,
+          "vision": 0,
+          "prefill_norm": 0
+        }
+      },
+      "raw_report_unchanged": true
+    },
+    "all_original_six_case_state_vector_ID_callback_reset_predicates_unchanged": true
+  },
+  "actual_Garnet_frontend_negative_cases_pending": true,
+  "full_six_case_model_qualified": true,
+  "broader_quality_and_performance_still_required": true,
+  "broad_quality_or_performance_qualified": false,
+  "two_times_target_achieved": false
+}
