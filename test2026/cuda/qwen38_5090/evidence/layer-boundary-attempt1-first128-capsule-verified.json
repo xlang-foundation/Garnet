@@ -1,0 +1,109 @@
+{
+  "status": "first128_all5_boundaries_and_complete_primary_equivalence_independently_replayed",
+  "capsule_sha256": "292983c6b5301701db4f7b5763c4cd13cbd0254b46f865087490ea1e953557c7",
+  "original_full_archive_sha256": "43f1cf82ce8757ae94229f9db82bc1c9908c27786b8f6f420462237ca3d10983",
+  "remote_full_replay_proof_sha256": "00b900582dcdd80a7ad0acea72a299401c7684b327995a99bfbed45538fdf5d9",
+  "remote_full_tokens": 3968,
+  "remote_full_F32_words_compared": 101580800,
+  "independent_local_boundary_tokens": 128,
+  "independent_local_boundary_F32_words_compared": 3276800,
+  "independent_local_full3968_boundary_replay": false,
+  "primary_equivalence": {
+    "same_profile_complete_primary_states_vectors_all12cache_arrays_exact": true,
+    "T32_retained128IDs_finalstate_exact": true,
+    "T128_known_failed_full_model_gate_preserved": true
+  },
+  "first128_boundaries": {
+    "status": "complete_layer0_to4_hidden_boundaries_diagnosed",
+    "layers": {
+      "0": {
+        "byte_exact": true,
+        "changed_F32_words": 0,
+        "complete_F32_words_compared": 655360,
+        "maximum_absolute_difference": 0.0,
+        "first_difference": null
+      },
+      "1": {
+        "byte_exact": true,
+        "changed_F32_words": 0,
+        "complete_F32_words_compared": 655360,
+        "maximum_absolute_difference": 0.0,
+        "first_difference": null
+      },
+      "2": {
+        "byte_exact": true,
+        "changed_F32_words": 0,
+        "complete_F32_words_compared": 655360,
+        "maximum_absolute_difference": 0.0,
+        "first_difference": null
+      },
+      "3": {
+        "byte_exact": false,
+        "changed_F32_words": 45291,
+        "complete_F32_words_compared": 655360,
+        "maximum_absolute_difference": 0.002685546875,
+        "first_difference": {
+          "token": 1,
+          "dimension": 4305,
+          "frame_start": 0,
+          "word": 9425,
+          "baseline": -0.11088943481445312,
+          "native": -0.11082839965820312,
+          "baseline_files": [
+            "boundary-0-L3.f32",
+            "boundary-32-L3.f32",
+            "boundary-64-L3.f32",
+            "boundary-96-L3.f32"
+          ],
+          "native_file": "boundary-0-L3.f32"
+        }
+      },
+      "4": {
+        "byte_exact": false,
+        "changed_F32_words": 600001,
+        "complete_F32_words_compared": 655360,
+        "maximum_absolute_difference": 0.0302734375,
+        "first_difference": {
+          "token": 1,
+          "dimension": 4305,
+          "frame_start": 0,
+          "word": 9425,
+          "baseline": -0.09163284301757812,
+          "native": -0.09157180786132812,
+          "baseline_files": [
+            "boundary-0-L4.f32",
+            "boundary-32-L4.f32",
+            "boundary-64-L4.f32",
+            "boundary-96-L4.f32"
+          ],
+          "native_file": "boundary-0-L4.f32"
+        }
+      }
+    },
+    "first_different_layer": {
+      "layer": 3,
+      "token": 1,
+      "dimension": 4305,
+      "frame_start": 0,
+      "word": 9425,
+      "baseline": -0.11088943481445312,
+      "native": -0.11082839965820312,
+      "baseline_files": [
+        "boundary-0-L3.f32",
+        "boundary-32-L3.f32",
+        "boundary-64-L3.f32",
+        "boundary-96-L3.f32"
+      ],
+      "native_file": "boundary-0-L3.f32"
+    },
+    "complete_F32_words_compared": 3276800,
+    "all_boundaries_byte_exact": false,
+    "primary_same_profile_equivalence_only": true,
+    "original_correct_T32_model_admission_oracle_unchanged": true,
+    "cause_established": false,
+    "performance_admitted": false,
+    "two_times_target_achieved": false
+  },
+  "source_library_runtime_SDK_checkpoint_restoration_replayed": true,
+  "model_or_performance_qualified": false
+}
