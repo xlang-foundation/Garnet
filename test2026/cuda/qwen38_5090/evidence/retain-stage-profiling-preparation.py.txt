@@ -1,0 +1,42 @@
+from pathlib import Path
+import hashlib,json
+W=Path(__file__).resolve().parent;R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';E=M/'evidence';sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest();owned=[];saved={}
+def keep(n,raw):
+    p=E/n;assert not p.exists();p.write_bytes(raw);owned.append(p);saved[n]=sha(p)
+ledger=W/'native-stage-timing-cpu-ledger';events=[json.loads(s) for s in (ledger/'commands.jsonl').read_bytes().splitlines()];assert len(events)==2 and events[-1]['exit_code']==0 and events[0]['source']['owned_source_sha256']==events[1]['source_after']['owned_source_sha256'];assert b'Ran 6 tests' in (ledger/'commands.log').read_bytes()
+for n,h in events[0]['source']['owned_source_sha256'].items():assert sha(M/n)==h;owned.append(M/n)
+for ext in ('log','jsonl'):keep('native-stage-timing-cpu-commands.'+ext,(ledger/('commands.'+ext)).read_bytes())
+for n in ('native-stage-timing-static-preparation.json','test-native-stage-timing-cpu.log','rowwise-k-norm-followup-research.json','existing-layer-profiler-static-audit.json','audit-existing-layer-profiler.log'):keep(n,(W/n).read_bytes())
+for n in ('test-native-stage-timing-cpu.py','audit-existing-layer-profiler.py',Path(__file__).name):keep(n+'.txt',(W/n).read_bytes())
+keep('native-stage-timing-preparation-retention.json',json.dumps(dict(status='optional_host_stage_instrumentation_six_CPU_controls_passed_not_installed',CPU_controls=6,retained_sha256=saved,native_embedded_execution_unrun=True,GPU_or_model_or_profile_run=False,serving_worker_or_graph_changes=False,source60_and87_profiler_regions_exact=True,actual_stage_intervals_or_kernel_times_or_speedup_measured=False),indent=2).encode())
+entry=('\n\n2026-10-27: Prepared optional host-side stage timing for the next throughput '
+       'diagnostic; no worker integration or GPU/profile run. Six CPU controls '
+       'pass with explicit source ledger: result identity/kwargs/startup behavior, '
+       'nested spans, original exception propagation, invalid/stale/reentrant spans, '
+       'bridge lock lifetime and release on logging failures. Native and bridge '
+       'clock domains are labelled separately; never subtract their absolute clocks. '
+       'Host intervals include instrumentation and are not CUDA kernel elapsed time '
+       'or unprofiled serving throughput. Embedded-native compatibility is unrun. '
+       'Static exact ZIP audit proves source60 and87 have identical existing '
+       'OneShotTRTLayerProfiler, enqueue/graph policy and attach/write regions. '
+       'GARNET_PROFILE_DECODE_LAYERS profiles only the first eligible enqueue per '
+       'enginePath and bypasses graph launch while active; use as first-enqueue '
+       'diagnostics, never warmed full4K serving performance. Retained primary '
+       'TensorRT10.x algorithm-selection and debug-tensor documentation: '
+       'https://docs.nvidia.com/deeplearning/tensorrt/10.x.x/inference-library/precision-control.html '
+       'and https://docs.nvidia.com/deeplearning/tensorrt/10.x.x/inference-library/engine-tools.html . '
+       'Explicit debug marking can inhibit fusion, while unfused-debug marking '
+       'is documented to preserve fusion; actual listener/graph compatibility '
+       'and observable tensors still need validation. General PyTorch numerical '
+       'context https://docs.pytorch.org/docs/main/notes/numerical_accuracy.html '
+       'does not establish harmlessness or a unique cause for Garnet differences. '
+       'Current acceptance gates unchanged, original failures remain failed. '
+       'After closing the current model evidence, profile qualified B1/MTP queue/'
+       'dispatch, prompt/image preparation, target/draft prefill, decode verification/'
+       'replay and output formatting. Preserve the full2x/halfTTFT and matched '
+       'strongest references/INT4/4B objective. No new benchmark from these helpers.\n').encode()
+for n in ('docs/research/qwen38-5090-development-log.md','docs/research/qwen38-5090-implementation-task.md'):
+    p=R/n;before=p.read_bytes();assert b'Prepared optional host-side stage timing for the next throughput' not in before
+    with p.open('ab') as f:f.write(entry)
+    assert p.read_bytes()==before+entry;owned.append(p)
+(W/'stage-profiling-preparation-stage-paths.bin').write_bytes(b''.join(p.relative_to(R).as_posix().encode()+b'\0' for p in dict.fromkeys(owned)));print(json.dumps(dict(stage_paths=len(set(owned)),CPU_controls=6,worker_integration_or_GPU_profile_run=False)))
