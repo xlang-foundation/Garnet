@@ -1,0 +1,42 @@
+"""Retain the terminal build result, including failures and exact restoration evidence."""
+from pathlib import Path
+import hashlib,json,zipfile
+W=Path(__file__).resolve().parent;O=W.parent/'outputs';R=Path('D:/CantorAI/work/qwen38-5090');E=R/'test2026/cuda/qwen38_5090/evidence';sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest();owned=[];saved={}
+def keep(name,raw):
+    p=E/name
+    if p.exists():assert p.read_bytes()==raw,('Preserve retained bytes',name)
+    else:p.write_bytes(raw)
+    owned.append(p);saved[name]=sha(p)
+J='rowwise-k-norm-build-attempt1';proof=O/(J+'-verified.json');q=json.loads(proof.read_bytes());archive=O/(J+'-evidence.zip');assert proof.read_bytes()==(O/(J+'-remote-verified.json')).read_bytes() and sha(archive)==q['archive_sha256']
+assert q['candidate_files']==87 and q['new_rowwise_K_native_CPU_profile_cases']==184 and q['source_runtime_SDK_checkpoint_CMake_restored'] and not q['model_or_quality_or_performance_qualified']
+if q['exit_code']==0:assert q['current_CPU_controls']==104 and q['historical_controls']==86
+for n in (proof.name,J+'-remote-verified.json','Garnet-Rowwise-K-Norm-Native-Build-Progress.json'):keep(n,(O/n).read_bytes())
+with zipfile.ZipFile(archive) as z:
+    base='results/'+J+'/';mf=json.loads(z.read('evidence-manifest.json'))['files'];keep('rowwise-k-norm-native-build1-manifest.json',z.read('evidence-manifest.json'))
+    for n in mf:
+        if n.startswith(base) and (n.endswith('.json') or n.endswith('/commands.log') or n.endswith('/commands.jsonl') or n.endswith('/CMakeCache-before.txt')):keep('rowwise-k-norm-native-build1-'+n.removeprefix(base).replace('/','-'),z.read(n))
+    w=json.loads(z.read(base+'workflow.json'));assert w['cleanup_finished'] and len(w['cuda_objects_after'])==34
+    if q['exit_code']==0:assert w['cuda_objects_built']==w['cuda_objects_after'] and w['changed_cuda_objects']==w['changed_cuda_objects_at_closure']
+for n in ('commands.log','commands.jsonl'):keep('rowwise-k-norm-native-build1-local-replay-'+n,(W/'rowwise-k-norm-native-build-local-replay'/n).read_bytes())
+for n in ('postprocess-rowwise-k-norm-native-build.py','replay-rowwise-k-norm-native-build.py',Path(__file__).name):keep(n+'.txt',(W/n).read_bytes())
+keep('rowwise-k-norm-native-build1-retention.json',json.dumps({'status':q['status'],'archive_sha256':sha(archive),'archive_bytes':archive.stat().st_size,'proof_sha256':sha(proof),'candidate_library_sha256':q['candidate_library_sha256'],'retained_sha256':saved,'all34_CUDA_objects_recorded':True,'original_three_object_whitelist_preserved':True,'full4K_and_observer_failures_remain_failed':True,'model_or_performance_qualified':False},indent=2).encode())
+entry=('\n\n2026-10-27: Source87 native build terminal result '+q['status']+'. '
+       'Independent local and remote raw replay proofs byte-identical: '+sha(proof)+'. '
+       'Raw archive '+sha(archive)+' ('+str(archive.stat().st_size)+'bytes). '
+       'Candidate DLL '+str(q['candidate_library_sha256'])+'. Current104/historical86 '
+       'Python and original Q/O/factory/wire/initialization/selector/tokenizer gates '
+       'are required for successful status; actual184 new native guard proof and '
+       'original109 guard parent checked. All baseline source/runtime/SDK/config-index/'
+       'CMake restored; all34 CUDA object hashes retained, original3-object whitelist '
+       'preserved. This does not establish all3 changes as metadata-only or pass the '
+       'old strictcache62 gate. No rowwise-on model, numerical repair, model quality '
+       'or performance qualification follows from compilation. Full4K and six/seven '
+       'observer failures remain failed. Serving measurements remain unchanged; '
+       'imageC8 aggregate29.9110tok/s vs vLLM224.971 and SGLang146.5366; overall2x '
+       'target unmet. Next use same-DLL default-off controls, explicit rowwise-on '
+       'ablation, ordinary full4K/128 regressions and quality before HTTP timing.\n').encode()
+for n in ('docs/research/qwen38-5090-development-log.md','docs/research/qwen38-5090-implementation-task.md'):
+    p=R/n;before=p.read_bytes();assert b'Source87 native build terminal result' not in before
+    with p.open('ab') as f:f.write(entry)
+    assert p.read_bytes()==before+entry;owned.append(p)
+(W/'rowwise-k-norm-native-build-stage-paths.bin').write_bytes(b''.join(p.relative_to(R).as_posix().encode()+b'\0' for p in dict.fromkeys(owned)));print(json.dumps({'stage_paths':len(set(owned)),'status':q['status'],'model_or_performance_qualified':False}))
