@@ -1,0 +1,40 @@
+from pathlib import Path
+import ast,hashlib,json,zipfile
+W=Path(__file__).resolve().parent;O=W.parent/'outputs';R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';E=M/'evidence';P='Garnet/test2026/cuda/qwen38_5090/';sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+old=json.loads((E/'decode35-endpoints-preparation.json').read_bytes());build=json.loads((E/'rowwise-k-norm-build-preparation.json').read_bytes());J='rowwise-k-norm-build-attempt1';proof=O/(J+'-verified.json');q=json.loads(proof.read_bytes())
+assert proof.read_bytes()==(O/(J+'-remote-verified.json')).read_bytes() and q['exit_code']==0 and q['current_CPU_controls']==104 and q['historical_controls']==86 and q['new_rowwise_K_native_CPU_profile_cases']==184 and sha(O/(J+'-evidence.zip'))==q['archive_sha256']
+with zipfile.ZipFile(O/(J+'-evidence.zip')) as z:w=json.loads(z.read('results/'+J+'/workflow.json'))
+assert w['cleanup_finished'] and w['baseline_source_restored'] and w['baseline_library_restored'] and w['cuda_objects_built']==w['cuda_objects_after'] and w['methods']==w['methods_after']
+files={**w['source_after'],**w['methods_after']};assert len(w['source_after'])==1948
+names=['rowwise_k_norm_analysis.py','test_rowwise_k_norm_analysis.py','rowwise_k_norm_program.py','test_rowwise_k_norm_program.py','rowwise_k_norm_source.py','test_rowwise_k_norm_source.py','probe_rowwise_k_norm_model.py','launch_rowwise_k_norm_model.py','run_rowwise_k_norm_model.py','verify_rowwise_k_norm_model.py','evidence/rowwise-k-norm-model-probe-derivation.json','evidence/rowwise-k-norm-program-derivation.json','evidence/rowwise-k-norm-source-derivation.json','evidence/rowwise-k-norm-build-preparation.json','evidence/rowwise-k-norm-build-attempt1-verified.json']
+for n in names:
+    if n.endswith('.py'):ast.parse((M/n).read_bytes())
+for row in json.loads((E/'rowwise-k-norm-model-probe-derivation.json').read_bytes())['derivations']:
+    raw=(M/row['source']).read_bytes();assert hashlib.sha256(raw).hexdigest()==row['source_sha256'];text=raw.decode().replace('\r\n','\n')
+    for c in row['changes']:assert text.count(c['old'])==c['count'];text=text.replace(c['old'],c['new'])
+    assert text.encode()==(M/row['target']).read_bytes() and sha(M/row['target'])==row['target_sha256']
+ledger=W/'rowwise-k-norm-model-cpu-ledger';events=[json.loads(s) for s in (ledger/'commands.jsonl').read_bytes().splitlines()];assert len(events)==2 and events[-1]['exit_code']==0 and events[0]['source']['owned_source_sha256']==events[1]['source_after']['owned_source_sha256'];assert b'Ran 115 tests' in (ledger/'commands.log').read_bytes()
+for n,h in events[0]['source']['owned_source_sha256'].items():assert sha(M/n)==h
+def keep(name,raw):
+    p=E/name;assert not p.exists();p.write_bytes(raw);names.append('evidence/'+name)
+for ext in ('log','jsonl'):keep('rowwise-k-norm-model-cpu-commands.'+ext,(ledger/('commands.'+ext)).read_bytes())
+for n in ('derive-rowwise-k-norm-model.py','test-rowwise-k-norm-model-cpu.py',Path(__file__).name):keep(n+'.txt',(W/n).read_bytes())
+for n in ('derive-rowwise-k-norm-model-attempt1.log','derive-rowwise-k-norm-model-attempt2.log','derive-rowwise-k-norm-model-attempt3.log','test-rowwise-k-norm-model-cpu-attempt1.log'):keep(n,(W/n).read_bytes())
+keep('rowwise-k-norm-model-cpu-preparation.json',json.dumps({'CPU_controls':115,'fresh_GPU_processes':3,'ordinary_primary_outputs_only':True,'source_sha256':{n:sha(M/n) for n in names},'full4K_and_output_observer_failures_remain_failed':True,'numerical_or_performance_qualified':False},indent=2).encode())
+for n in names:
+    if P+n in files:assert files[P+n]==sha(M/n),('Preserve existing method',n)
+    files[P+n]=sha(M/n)
+parents=dict(build['parents']);parents[J]={'proof_sha256':sha(proof),'archive_sha256':q['archive_sha256'],'status':q['status'],'exit_code':0,'workflow_member':'results/'+J+'/workflow.json'};assert len(parents)==52
+for job,row in parents.items():
+    p=O/(job+'-verified.json');v=json.loads(p.read_bytes());assert sha(p)==row['proof_sha256'] and p.read_bytes()==(O/(job+'-remote-verified.json')).read_bytes() and sha(O/(job+'-evidence.zip'))==v['archive_sha256']==row['archive_sha256'] and v['status']==row['status']
+hist=json.loads((E/'b4-k35-coordinate-trajectory-preparation.json').read_bytes());flags={**old['flags'],'GARNET_ROWWISE_K_DECODE_NORM':'0'}
+p=dict(status='rowwise_K_norm_model_prepared_GPU_unrun',files=files,archive_files=sorted(set(old['archive_files'])|set(build['methods'])|{P+n for n in names}),parents=parents,runtime=w['runtime_after'],environment=w['environment_after'],checkpoints=w['checkpoint_after'],cuda_objects=w['cuda_objects_after'],cache_before_sha256=w['cache_after_sha256'],source_files=build['candidate_files'],candidate_base=build['candidate_base'],bundle=build['bundle'],bundle_sha256=build['bundle_sha256'],library=w['candidate_saved'],library_sha256=w['candidate_library_sha256'],input_corpus_sha256=old['input_corpus_sha256'],selected_key=old['selected_key'],historical_libraries={mode:hist[mode+'_library_sha256'] for mode in ('reference','candidate')},flags=flags,test_modules=old['test_modules']+['test2026.cuda.qwen38_5090.test_rowwise_k_norm_source','test2026.cuda.qwen38_5090.test_rowwise_k_norm_program','test2026.cuda.qwen38_5090.test_rowwise_k_norm_analysis'],scope='Three fresh same-source87/DLL ordinary primary-output processes: off B1 selected row,off B4 mixed four rows,then on B4 K RMS split into four B1-shaped subgraphs at all16 full-attention layers. Both off controls must match immutable ordinary source60/85 all53IDs/five full128component states+finite vectors/full8MiBcache/all53 sampled coordinate points before on launches. No new graph observation outputs; old six/seven observers remainFAILED. Require all16 native subgraph traces, original GDN/V/QKroutes and no K-fourM4/no native observers.115CPU controls/52closedparents; pin current post-source87-build all34objects, runtime/SDK/config-index/CMake/source. Selected step52 repair alone cannot qualify full4K128/MTP/805/HTTP/quality/performance or2x. Earlier consumed-token changes invalidate same-input cache inference. Restore allbaseline files/DLL and retire onlyowned Ccache nonce with96GiB admission. Keep every failure and raw report.')
+assert set(p['archive_files'])<=set(files) and len(p['source_files'])==len(p['candidate_base'])==87
+p['installed_files']={**files,**{'Garnet/'+n:h for n,h in p['source_files'].items()}}
+prep=E/'rowwise-k-norm-model-preparation.json';assert not prep.exists();prep.write_bytes(json.dumps(p,indent=2).encode());deploy={P+n:M/n for n in names};deploy[P+'evidence/'+prep.name]=prep
+target=W/'rowwise-k-norm-model-deployment.zip';assert not target.exists()
+with zipfile.ZipFile(target,'x',zipfile.ZIP_DEFLATED) as z:
+    for n,path in deploy.items():z.write(path,n)
+    z.writestr('deployment-manifest.json',json.dumps({'files':{n:sha(path) for n,path in deploy.items()},'production_source_and_DLL_install_deferred_to_exclusive_owner':True},indent=2))
+receipt=dict(deployment_sha256=sha(target),bytes=target.stat().st_size,deployment_files=len(deploy),guarded_files=len(files),archive_files=len(p['archive_files']),parents=52,CPU_controls=115,fresh_GPU_processes=3,source_files=87,preparation_sha256=sha(prep),library_sha256=p['library_sha256'])
+(W/'rowwise-k-norm-model-package.json').write_bytes(json.dumps(receipt,indent=2).encode());(W/'rowwise-k-norm-model-owned-names.json').write_bytes(json.dumps(names).encode());print(json.dumps(receipt))

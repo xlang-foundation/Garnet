@@ -1,0 +1,105 @@
+{
+  "derivations": [
+    {
+      "source": "probe_b4_k35_coordinate_trajectory.py",
+      "target": "probe_rowwise_k_norm_model.py",
+      "source_sha256": "87a5ba5a09b4e0b96c92b72e1ca4c5799cb0f9be5bf1b9ba98181d07d45de0d6",
+      "target_sha256": "5e15924ecf9a8e0b93a3e935d0493396d9b4a51d946cc0e9381be08aa6efb1b0",
+      "changes": [
+        {
+          "old": "Ordinary model with two repeated reads of an existing carrier after each decode step; no graph changes.",
+          "new": "Ordinary primary-output rowwise K normalization ablation; no added graph observations.",
+          "count": 1
+        },
+        {
+          "old": "root,out,mode,reference=Path(sys.argv[1]),Path(sys.argv[2]),sys.argv[3],Path(sys.argv[4]);assert mode in ('reference','candidate') and not out.exists()",
+          "new": "root,out,phase,reference=Path(sys.argv[1]),Path(sys.argv[2]),sys.argv[3],Path(sys.argv[4]);assert phase in ('off-reference','off-candidate','on-candidate') and not out.exists();mode=phase.split('-')[1];enabled=phase.startswith('on-')",
+          "count": 1
+        },
+        {
+          "old": "b4-k35-coordinate-trajectory-preparation.json",
+          "new": "rowwise-k-norm-model-preparation.json",
+          "count": 1
+        },
+        {
+          "old": "p[mode+'_installed_files']",
+          "new": "p['installed_files']",
+          "count": 1
+        },
+        {
+          "old": "p[mode+'_library_sha256']",
+          "new": "p['library_sha256']",
+          "count": 1
+        },
+        {
+          "old": "'GARNET_FP8_QK_BATCH4_DECODE_CANONICAL':'0' if mode=='reference' else '1'}",
+          "new": "'GARNET_FP8_QK_BATCH4_DECODE_CANONICAL':'0' if mode=='reference' else '1','GARNET_ROWWISE_K_DECODE_NORM':'1' if enabled else '0'}",
+          "count": 1
+        },
+        {
+          "old": "    import garnet\n",
+          "new": "    from test2026.cuda.qwen38_5090.rowwise_k_norm_program import RowwiseKDecodeNormProgram,construct_with_rowwise_k_decode_norm_program\n    import garnet\n",
+          "count": 1
+        },
+        {
+          "old": "report=dict(status='constructing',mode=mode,",
+          "new": "report=dict(status='constructing',mode=mode,phase=phase,intervention_policy='on' if enabled else 'off',primary_outputs_only=True,",
+          "count": 1
+        },
+        {
+          "old": "            decoder=CUDAPackedDecoder(str(checkpoint)",
+          "new": "            factory=(lambda *args,**kwargs:construct_with_rowwise_k_decode_norm_program(CUDAPackedDecoder,*args,observe_boundaries=False,**kwargs)) if enabled else CUDAPackedDecoder\n            decoder=factory(str(checkpoint)",
+          "count": 1
+        },
+        {
+          "old": "        decoder.enable_cuda_graph(True);",
+          "new": "        if enabled:assert isinstance(decoder.programs[4],RowwiseKDecodeNormProgram) and not hasattr(decoder.programs[4],'boundary_buffers') and not hasattr(decoder.programs[4],'operand_buffers')\n        assert all(not hasattr(program,'boundary_buffers') and not hasattr(program,'operand_buffers') for program in decoder.programs.values())\n        decoder.enable_cuda_graph(True);",
+          "count": 1
+        }
+      ],
+      "newline_normalization": "CRLF to LF"
+    },
+    {
+      "source": "launch_b4_k35_coordinate_trajectory.py",
+      "target": "launch_rowwise_k_norm_model.py",
+      "source_sha256": "cd05b91ab4a823901139c4b9c4e0da537a26fe7a17d5df727319b7837a006709",
+      "target_sha256": "1032ae0314ca8527726db0b26895c089b666732ecf870cb6568ca2656d0cb47b",
+      "changes": [
+        {
+          "old": "Fresh embedded process per B1-reference/B4-candidate phase; fixed owner cache.",
+          "new": "Fresh embedded ordinary-output process per source87 off/on phase; fixed owner cache.",
+          "count": 1
+        },
+        {
+          "old": "mode=sys.argv[4];reference=Path(sys.argv[5]);assert mode in ('reference','candidate');",
+          "new": "phase=sys.argv[4];reference=Path(sys.argv[5]);assert phase in ('off-reference','off-candidate','on-candidate');mode=phase.split('-')[1];enabled=phase.startswith('on-');",
+          "count": 1
+        },
+        {
+          "old": "b4-k35-coordinate-trajectory-preparation.json",
+          "new": "rowwise-k-norm-model-preparation.json",
+          "count": 1
+        },
+        {
+          "old": "env['PATH']=';'.join",
+          "new": "env['GARNET_ROWWISE_K_DECODE_NORM']='1' if enabled else '0'\nenv['PATH']=';'.join",
+          "count": 1
+        },
+        {
+          "old": "probe_b4_k35_coordinate_trajectory.py",
+          "new": "probe_rowwise_k_norm_model.py",
+          "count": 1
+        },
+        {
+          "old": "str(out),mode,str(reference)",
+          "new": "str(out),phase,str(reference)",
+          "count": 1
+        }
+      ],
+      "newline_normalization": "CRLF to LF"
+    }
+  ],
+  "native_source_or_DLL_changes": false,
+  "ordinary_primary_outputs_only": true,
+  "observer_outputs_added": false
+}

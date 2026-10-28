@@ -1,0 +1,27 @@
+from pathlib import Path
+import ast,hashlib,json
+W=Path(__file__).resolve().parent;M=Path('D:/CantorAI/work/qwen38-5090/test2026/cuda/qwen38_5090');rows=[]
+def derive(source,target,changes):
+    raw=(M/source).read_bytes();before=hashlib.sha256(raw).hexdigest();text=raw.decode().replace('\r\n','\n');cs=[]
+    for old,new,count in changes:
+        assert text.count(old)==count,(source,old,text.count(old));text=text.replace(old,new);cs.append(dict(old=old,new=new,count=count))
+    raw=text.encode();ast.parse(raw);p=M/target;assert not p.exists();p.write_bytes(raw);rows.append(dict(source=source,target=target,source_sha256=before,target_sha256=hashlib.sha256(raw).hexdigest(),changes=cs,newline_normalization='CRLF to LF'))
+derive('probe_b4_k35_coordinate_trajectory.py','probe_rowwise_k_norm_model.py',[
+ ('Ordinary model with two repeated reads of an existing carrier after each decode step; no graph changes.','Ordinary primary-output rowwise K normalization ablation; no added graph observations.',1),
+ ("root,out,mode,reference=Path(sys.argv[1]),Path(sys.argv[2]),sys.argv[3],Path(sys.argv[4]);assert mode in ('reference','candidate') and not out.exists()", "root,out,phase,reference=Path(sys.argv[1]),Path(sys.argv[2]),sys.argv[3],Path(sys.argv[4]);assert phase in ('off-reference','off-candidate','on-candidate') and not out.exists();mode=phase.split('-')[1];enabled=phase.startswith('on-')",1),
+ ('b4-k35-coordinate-trajectory-preparation.json','rowwise-k-norm-model-preparation.json',1),
+ ("p[mode+'_installed_files']","p['installed_files']",1),("p[mode+'_library_sha256']","p['library_sha256']",1),
+ ("'GARNET_FP8_QK_BATCH4_DECODE_CANONICAL':'0' if mode=='reference' else '1'}","'GARNET_FP8_QK_BATCH4_DECODE_CANONICAL':'0' if mode=='reference' else '1','GARNET_ROWWISE_K_DECODE_NORM':'1' if enabled else '0'}",1),
+ ('    import garnet\n',"    from test2026.cuda.qwen38_5090.rowwise_k_norm_program import RowwiseKDecodeNormProgram,construct_with_rowwise_k_decode_norm_program\n    import garnet\n",1),
+ ("report=dict(status='constructing',mode=mode,","report=dict(status='constructing',mode=mode,phase=phase,intervention_policy='on' if enabled else 'off',primary_outputs_only=True,",1),
+ ("            decoder=CUDAPackedDecoder(str(checkpoint)","            factory=(lambda *args,**kwargs:construct_with_rowwise_k_decode_norm_program(CUDAPackedDecoder,*args,observe_boundaries=False,**kwargs)) if enabled else CUDAPackedDecoder\n            decoder=factory(str(checkpoint)",1),
+ ('        decoder.enable_cuda_graph(True);',"        if enabled:assert isinstance(decoder.programs[4],RowwiseKDecodeNormProgram) and not hasattr(decoder.programs[4],'boundary_buffers') and not hasattr(decoder.programs[4],'operand_buffers')\n        assert all(not hasattr(program,'boundary_buffers') and not hasattr(program,'operand_buffers') for program in decoder.programs.values())\n        decoder.enable_cuda_graph(True);",1),
+])
+derive('launch_b4_k35_coordinate_trajectory.py','launch_rowwise_k_norm_model.py',[
+ ('Fresh embedded process per B1-reference/B4-candidate phase; fixed owner cache.','Fresh embedded ordinary-output process per source87 off/on phase; fixed owner cache.',1),
+ ("mode=sys.argv[4];reference=Path(sys.argv[5]);assert mode in ('reference','candidate');", "phase=sys.argv[4];reference=Path(sys.argv[5]);assert phase in ('off-reference','off-candidate','on-candidate');mode=phase.split('-')[1];enabled=phase.startswith('on-');",1),
+ ('b4-k35-coordinate-trajectory-preparation.json','rowwise-k-norm-model-preparation.json',1),
+ ("env['PATH']=';'.join", "env['GARNET_ROWWISE_K_DECODE_NORM']='1' if enabled else '0'\nenv['PATH']=';'.join",1),
+ ('probe_b4_k35_coordinate_trajectory.py','probe_rowwise_k_norm_model.py',1),("str(out),mode,str(reference)","str(out),phase,str(reference)",1),
+])
+p=M/'evidence/rowwise-k-norm-model-probe-derivation.json';assert not p.exists();p.write_bytes(json.dumps({'derivations':rows,'native_source_or_DLL_changes':False,'ordinary_primary_outputs_only':True,'observer_outputs_added':False},indent=2).encode());print(json.dumps({'derived_files':len(rows)}))
