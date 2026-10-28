@@ -1,0 +1,23 @@
+"""Assemble already verified/rendered figures. No benchmark or metric recomputation."""
+from pathlib import Path
+import base64,hashlib,html,json
+W=Path(__file__).resolve().parent;O=W.parent/'outputs';S='Garnet-Resident-Serial-vLLM-SGLang-4K';J='b4-resident-serial-http-benchmark-attempt1';sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+proof=O/(J+'-verified.json');q=json.loads(proof.read_bytes());assert proof.read_bytes()==(O/(J+'-remote-verified.json')).read_bytes() and q['exit_code']==0 and q['B4_HTTP_benchmark_case_gate_passed']
+receipt_path=O/(S+'-Receipt.json');receipt=json.loads(receipt_path.read_bytes());data_path=O/(S+'-Data.json');data=json.loads(data_path.read_bytes())
+assert sha(data_path)==receipt['data_sha256'] and data['source_sha256'][proof.name]==sha(proof) and data['two_times_target_achieved'] is False
+assert len(receipt['artifacts'])==26
+for name,h in receipt['artifacts'].items():assert sha(O/name)==h
+def chart(tag,label):
+ p=O/(S+tag+'.png');assert p.name in receipt['artifacts'];encoded=base64.b64encode(p.read_bytes()).decode()
+ return '<section id="'+html.escape(tag.lstrip('-') or 'dashboard')+'"><h2>'+html.escape(label)+'</h2><img alt="'+html.escape(label)+'" loading="lazy" src="data:image/png;base64,'+encoded+'"></section>'
+nav='<nav>'+''.join('<a href="#'+key+'">'+label+'</a>' for key,label in [('dashboard','Overview'),('TTFT','First token'),('Decode','Decode'),('Throughput','Throughput'),('VRAM','VRAM')])+'</nav>'
+parts=['<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Garnet: all verified RTX5090 comparison charts</title><style>body{font:16px/1.55 system-ui;max-width:1500px;margin:auto;padding:24px;color:#24364c;background:#f5f8fc}h1{line-height:1.2}nav{position:sticky;top:0;background:#fff;padding:12px;display:flex;gap:20px;flex-wrap:wrap;border-bottom:1px solid #ccd5df}a{color:#2166d1}img{width:100%;height:auto}section{scroll-margin-top:75px;margin-top:40px}p,li{max-width:1200px}code{overflow-wrap:anywhere}.status{padding:18px;border-left:5px solid #a34f23;background:#fff}</style><h1>Garnet RTX5090: all verified comparison charts</h1><p class="status"><strong>The overall 2× target is unmet.</strong> These charts contain three native configurations, each with three trials, and retained ordinary vLLM/SGLang references with one trial each. Stronger tuned/MTP reference qualification remains pending. All results, including regressions, are retained.</p>'+nav]
+parts.append('<ul>'+''.join('<li>'+html.escape(n)+'</li>' for n in data['notes'])+'</ul>')
+parts.append(chart('','All eight text/image metric panels'))
+for metric,label in [('TTFT','First-token latency'),('Decode','Decode speed per request'),('Throughput','Total output throughput'),('VRAM','Sampled adapter memory')]:parts.append(chart('-'+metric,label+' — text and image'))
+for case in ('Text','Image'):
+ for metric,label in [('TTFT','First-token latency'),('Decode','Decode speed per request'),('Throughput','Total output throughput'),('VRAM','Sampled adapter memory')]:parts.append(chart('-'+case+'-'+metric,case+' — '+label))
+csv_path=O/(S+'-Metrics.csv');csv_data=base64.b64encode(csv_path.read_bytes()).decode();parts.append('<p><a download="'+csv_path.name+'" href="data:text/csv;base64,'+csv_data+'">Download all per-trial measurements (CSV)</a></p><p>Paired replay proof SHA256: <code>'+sha(proof)+'</code><br>Chart data SHA256: <code>'+sha(data_path)+'</code><br>Raw benchmark archive SHA256: <code>'+q['archive_sha256']+'</code></p></html>')
+target=O/'Garnet-Resident-Serial-All-Charts.html';assert not target.exists();target.write_bytes(''.join(parts).encode())
+result=dict(status='all13_verified_comparison_figures_assembled',html_sha256=sha(target),bytes=target.stat().st_size,method_sha256=sha(Path(__file__)),chart_receipt_sha256=sha(receipt_path),data_sha256=sha(data_path),paired_proof_sha256=sha(proof),CSV_sha256=sha(csv_path),new_benchmark_or_metric_recomputation=False,two_times_target_achieved=False)
+(O/'Garnet-Resident-Serial-All-Charts-Receipt.json').write_bytes(json.dumps(result,indent=2).encode());print(json.dumps(result))

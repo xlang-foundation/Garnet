@@ -1,0 +1,34 @@
+"""Inspect the qualified overlay rather than assuming checkout defaults are active."""
+from pathlib import Path
+import ast,hashlib,json,zipfile
+W=Path(__file__).resolve().parent;O=W.parent/'outputs';M=Path('D:/CantorAI/work/qwen38-5090/test2026/cuda/qwen38_5090');sha=lambda raw:hashlib.sha256(raw).hexdigest()
+prep_path=M/'evidence/b4-resident-serial-stage-profile-preparation.json';p=json.loads(prep_path.read_bytes());archive=W/'b4-rowwise-http-source.zip';assert sha(archive.read_bytes())==p['bundle_sha256']
+bench=O/'b4-resident-serial-http-benchmark-attempt1-verified.json';q=json.loads(bench.read_bytes());assert bench.read_bytes()==(O/'b4-resident-serial-http-benchmark-attempt1-remote-verified.json').read_bytes() and q['B4_HTTP_benchmark_case_gate_passed'] and q['exit_code']==0
+pins={};facts={}
+with zipfile.ZipFile(archive) as z:
+ assert len(z.namelist())==len(set(z.namelist()))==91 and {n:sha(z.read(n)) for n in z.namelist()}==p['source_files']
+ def read(n):
+  raw=z.read(n);pins[n]=sha(raw);return raw.decode()
+ profile=read('src/backends/tensorrt/modelopt_fp8_batch4_prefill_profile.h')
+ assert 'batch!=4||tokens!=32' in profile and 'inputRows!=128' in profile
+ facts['qualified_B4_prefill_selector']=dict(batch=4,tokens=32,flattened_input_rows=128,other_geometry_not_selected=True)
+ canonical=read('src/backends/tensorrt/modelopt_fp8_m128_profile.h')
+ assert 'batch==1&&tokens==128' in canonical and 'batch4Prefill' in canonical and 'inputRows!=128' in canonical
+ facts['existing_GDN_canonical_projection_selector']=dict(B1_tokens=128,B4_tokens=32,input_rows=128,output_rows=5120,columns=6144)
+ plugin=read('src/backends/tensorrt/modelopt_fp8_m128_plugin.cpp');matmul=read('src/backends/tensorrt/modelopt_fp8_m128_canonical.cpp')
+ assert 'getConstantValue()!=128' in plugin and 'in[0].dims.d[0]!=128' in plugin and 'batch!=128' in matmul and 'columns!=6144' in matmul
+ facts['existing_GDN_M128_plugin']=dict(requires_fixed_128_flattened_rows=True,no_direct_M512_support=True)
+ for name,geometry in [('cuda_mtp_prefill16_target128_study.py','(1,4096,128,4)'),('cuda_mtp_prefill16_b4_study.py','(4,4096,32,4)')]:
+  raw=read('xModel/qwen35/vl_0_8b/'+name);ast.parse(raw);assert geometry in raw.replace(' ','')
+  facts[name]=dict(explicit_target_geometry=geometry,unmodified_factory_does_not_admit_B4_T128=True)
+result=dict(status='qualified_source91_prefill_scaling_constraints_static_audited',source_bundle_sha256=p['bundle_sha256'],preparation_sha256=sha(prep_path.read_bytes()),closed_benchmark_paired_proof_sha256=sha(bench.read_bytes()),files_sha256=pins,facts=facts,
+ next_intervention_conditional_on_verified_host_profile=[
+  'If target prompt execution dominates, prototype an explicit default-off B4T128 profile instead of merely changing the Python chunk argument.',
+  'Preserve canonical FP8 M128 arithmetic with separately qualified row/block slicing or a new native plugin; test original M128 defaults unchanged. Do not assume a larger GEMM is bit-exact.',
+  'Audit KV/FP32 GDN-convolution layouts, retained hidden/replay payloads, norm and projection routing, CUDA graph keys, workspace and memory before any model run.',
+  'Remote-only native build and actual plugin/IO controls first; full4K ordinary and MTP token/state/vector/oracle gates, padding/reset/repeat and adapted quality before clean performance.',
+  'If draft prefill or later host waits dominate instead, choose that demonstrated boundary first; host intervals alone never identify isolated CUDA kernel costs.'
+ ],
+ scope='Static source constraints, not a timing diagnosis. The candidate uses the91-file overlay and e843DLL; several newer overlay files are absent from checkout defaults, so inspect archive bytes and SHA pins. No native/model/GPU tests, source mutations, speed estimates or performance promises.',
+ active_native_job_not_modified=True,CUDA_kernel_or_serving_speed_claimed=False,two_times_target_achieved=False)
+target=W/'b4-prefill-scaling-constraints-audit.json';assert not target.exists();target.write_bytes(json.dumps(result,indent=2).encode());print(json.dumps(result))

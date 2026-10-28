@@ -1,0 +1,52 @@
+{
+  "status": "qualified_source91_prefill_scaling_constraints_static_audited",
+  "source_bundle_sha256": "4ccee24a9d58cd8297ea6a44632d54d3efd608fe323f686b12dcb56d9a179779",
+  "preparation_sha256": "1c15e6bfceed2cb2bb68bc9e2efb0168c4f8b28f7c27e99681327f92e24600b7",
+  "closed_benchmark_paired_proof_sha256": "3a8cb9efbb230fc2c046edf3012b6668638b531db66b0199281513102085a8b0",
+  "files_sha256": {
+    "src/backends/tensorrt/modelopt_fp8_batch4_prefill_profile.h": "0a95caefebcc94ef1b44aa4ab389be7db3b84079f6845777d8f497a1ba93f0b7",
+    "src/backends/tensorrt/modelopt_fp8_m128_profile.h": "ebcd9d4ca1a68709ef83b6d76622d30f2324a217118cb7c295a3221ab73fdf8e",
+    "src/backends/tensorrt/modelopt_fp8_m128_plugin.cpp": "2c78a9df431a0c963f6610cb3cbe91150caf894d984dc9463dd0820e60c429bc",
+    "src/backends/tensorrt/modelopt_fp8_m128_canonical.cpp": "8ca91b6b478fe0dd4ec6463f5f7fa52836350fd927532786d2cf64ee7cda10bc",
+    "xModel/qwen35/vl_0_8b/cuda_mtp_prefill16_target128_study.py": "87076e99e50c2be3957516be082b602f80757b1ff6c014374e0277ab5625368c",
+    "xModel/qwen35/vl_0_8b/cuda_mtp_prefill16_b4_study.py": "bac38beeed03c6ad42bef2d9f0b55c50acb8672ed72304611554fdad44d78922"
+  },
+  "facts": {
+    "qualified_B4_prefill_selector": {
+      "batch": 4,
+      "tokens": 32,
+      "flattened_input_rows": 128,
+      "other_geometry_not_selected": true
+    },
+    "existing_GDN_canonical_projection_selector": {
+      "B1_tokens": 128,
+      "B4_tokens": 32,
+      "input_rows": 128,
+      "output_rows": 5120,
+      "columns": 6144
+    },
+    "existing_GDN_M128_plugin": {
+      "requires_fixed_128_flattened_rows": true,
+      "no_direct_M512_support": true
+    },
+    "cuda_mtp_prefill16_target128_study.py": {
+      "explicit_target_geometry": "(1,4096,128,4)",
+      "unmodified_factory_does_not_admit_B4_T128": true
+    },
+    "cuda_mtp_prefill16_b4_study.py": {
+      "explicit_target_geometry": "(4,4096,32,4)",
+      "unmodified_factory_does_not_admit_B4_T128": true
+    }
+  },
+  "next_intervention_conditional_on_verified_host_profile": [
+    "If target prompt execution dominates, prototype an explicit default-off B4T128 profile instead of merely changing the Python chunk argument.",
+    "Preserve canonical FP8 M128 arithmetic with separately qualified row/block slicing or a new native plugin; test original M128 defaults unchanged. Do not assume a larger GEMM is bit-exact.",
+    "Audit KV/FP32 GDN-convolution layouts, retained hidden/replay payloads, norm and projection routing, CUDA graph keys, workspace and memory before any model run.",
+    "Remote-only native build and actual plugin/IO controls first; full4K ordinary and MTP token/state/vector/oracle gates, padding/reset/repeat and adapted quality before clean performance.",
+    "If draft prefill or later host waits dominate instead, choose that demonstrated boundary first; host intervals alone never identify isolated CUDA kernel costs."
+  ],
+  "scope": "Static source constraints, not a timing diagnosis. The candidate uses the91-file overlay and e843DLL; several newer overlay files are absent from checkout defaults, so inspect archive bytes and SHA pins. No native/model/GPU tests, source mutations, speed estimates or performance promises.",
+  "active_native_job_not_modified": true,
+  "CUDA_kernel_or_serving_speed_claimed": false,
+  "two_times_target_achieved": false
+}
