@@ -1,0 +1,40 @@
+"""Retain terminal model evidence and paired replay without promoting narrow results."""
+from pathlib import Path
+import hashlib,json,zipfile
+W=Path(__file__).resolve().parent;O=W.parent/'outputs';R=Path('D:/CantorAI/work/qwen38-5090');E=R/'test2026/cuda/qwen38_5090/evidence';sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest();owned=[];saved={}
+def keep(n,raw):
+    p=E/n
+    if p.exists():assert p.read_bytes()==raw,('Preserve previous retained bytes',n)
+    else:p.write_bytes(raw)
+    owned.append(p);saved[n]=sha(p)
+J='rowwise-k-norm-model-attempt1';proof=O/(J+'-verified.json');q=json.loads(proof.read_bytes());archive=O/(J+'-evidence.zip');assert proof.read_bytes()==(O/(J+'-remote-verified.json')).read_bytes() and sha(archive)==q['archive_sha256']
+assert q['source_runtime_SDK_config_index_CMake_all34_baseline_restored'] and not q['model_or_full4K_MTP_quality_HTTP_or_performance_qualified'] and not q['two_times_target_achieved']
+for n in (proof.name,J+'-remote-verified.json','Garnet-Rowwise-K-Norm-Model-Progress.json'):keep(n,(O/n).read_bytes())
+with zipfile.ZipFile(archive) as z:
+    base='results/'+J+'/';mf=json.loads(z.read('evidence-manifest.json'))['files'];keep('rowwise-k-norm-model1-manifest.json',z.read('evidence-manifest.json'))
+    for n in mf:
+        if n.startswith(base) and (n.endswith('.json') or n.endswith('/commands.log') or n.endswith('/commands.jsonl')):keep('rowwise-k-norm-model1-'+n.removeprefix(base).replace('/','-'),z.read(n))
+    w=json.loads(z.read(base+'workflow.json'));assert w['cleanup_finished'] and w['all_restored']
+for n in ('commands.log','commands.jsonl'):keep('rowwise-k-norm-model1-local-replay-'+n,(W/'rowwise-k-norm-model-local-replay'/n).read_bytes())
+for n in ('postprocess-rowwise-k-norm-model.py','replay-rowwise-k-norm-model.py',Path(__file__).name):keep(n+'.txt',(W/n).read_bytes())
+a=q['analysis'];passed=a['selected_step52_intervention_passed'] if a else None
+keep('rowwise-k-norm-model1-retention.json',json.dumps(dict(status=q['status'],exit_code=q['exit_code'],proof_sha256=sha(proof),archive_sha256=sha(archive),archive_bytes=archive.stat().st_size,selected_step52_intervention_passed=passed,CPU_controls=q['CPU_controls'],defaultoff_controls=list(q['controls']),retained_sha256=saved,source_runtime_SDK_config_index_CMake_all34_restored=True,full4K_and_both_output_observer_failures_remain_failed=True,model_or_quality_or_HTTP_or_performance_qualified=False,two_times_target_achieved=False),indent=2).encode())
+entry=('\n\n2026-10-27: Source87 ordinary-output rowwise K-normalization model terminal '
+       'result '+q['status']+', exit'+str(q['exit_code'])+', error'+str(q['error'])+'. '
+       'Remote/local raw replay proofs are byte-identical: '+sha(proof)+'. '
+       'Raw archive '+sha(archive)+' ('+str(archive.stat().st_size)+'bytes). '
+       'Default-off controls closed: '+str(list(q['controls']))+'. '
+       'Selected step52 intervention passed='+str(passed)+'. '
+       'All raw token/state/cache/coordinate and resource reports retained; source/'
+       'baseline DLL/runtime/SDK/config-index/CMake/all34 objects restored. This '
+       'ablation adds no graph observation outputs. Native rowwise trace counts '
+       'graph subgraphs, not executed kernels. Any selected step52 result is narrow; '
+       'full4K128/MTP/805quality/HTTP/performance remain unqualified, all historical '
+       'full4K/cache62 and six/seven output-observer failures stay failed. No new '
+       'serving benchmark; imageC8 aggregate29.9110tok/s remains the measured result '
+       'and the overall2x target remains unmet.\n').encode()
+for n in ('docs/research/qwen38-5090-development-log.md','docs/research/qwen38-5090-implementation-task.md'):
+    p=R/n;before=p.read_bytes();assert b'Source87 ordinary-output rowwise K-normalization model terminal' not in before
+    with p.open('ab') as f:f.write(entry)
+    assert p.read_bytes()==before+entry;owned.append(p)
+(W/'rowwise-k-norm-model-stage-paths.bin').write_bytes(b''.join(p.relative_to(R).as_posix().encode()+b'\0' for p in dict.fromkeys(owned)));print(json.dumps(dict(stage_paths=len(set(owned)),status=q['status'],selected_step52_intervention_passed=passed,model_or_performance_qualified=False)))
