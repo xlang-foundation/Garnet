@@ -8234,3 +8234,18 @@ All836 actualHTTP prompt/output ID sequences match retained B1 controls:805adapt
 
 
 2026-10-27 local: Prepared clean resident/serial B4 HTTP benchmark after paired quality proof 51fa6eef769b68296b2e62366af24b5bddff6c82cea60fa18565e60625617e6a. Same actual quality-admitted worker and v2launcher, source91 model/transport bundle and native e843DLL; no further math/weights/precision/native changes. Frozen3968+128 corpus, text/image C1/2/4/8, three repeats on one worker,64measured+60warmups pertrial:372realrequests/192measured/180warmups. Raw SSE/client-QPC metrics and sampled adapter memory, all372prompt/output IDs vs retained B1, actual native callbacks/dispatch, real-only output counts. Diagnostic graph markers and large transport fixtures excluded from timing. Two new collector/reader CPU import/CLI smokes pass; actual unchanged correctness evidence reused, no repeated unrelated controls.62closedparents including preserved setup failure; all34/current18file/source/runtime/SDK/config-index/CMake restoration and96GiBprivateCcache/ownednonce retirement. Deployment 1277aa5835b5ef03c64bd51517e3650fb0413578cac4a21f44b3b5dc5a01fd01, preparation 6661697b5403c0e82122d315bfa2b515d146077ebb4795d8f36be7f791fc749c. Actual benchmark unrun at this preparation; no new throughput or2x/halfTTFT admission. Strongest tuned/MTP references, INT4/4B and production integration remain open.
+
+
+2026-10-28T06:47:49.043402+00:00: Three resident/serial source91 B4/MTP3 fixed3968+128 HTTP trials independently replayed remotely and locally; byte-identical proof 3a8cb9efbb230fc2c046edf3012b6668638b531db66b0199281513102085a8b0. Raw archive b223bc406fc377e816aff9999542e4739bfd41d921b2ad76b7f593687ce18e0b (28664915 bytes).372 actual real requests:192 measured and180 warmups,47616 public output IDs,24576 measured tokens; all prompts/outputs exact retained B1. Actual native callbacks/dispatch matched, dummy tokens excluded. Source/runtime/SDK/config-index/CMake/all34/current18files restored. The same unchanged model had independently passed805 adapted prompts plus31 fixed4k controls.
+New comparison figures include all text/image C1/2/4/8 cohorts and all four metrics, retaining B1 and prior B4 historical measurements and ordinary vLLM/SGLang references. All three native lines are medians of three cohort statistics; the new-policy band shows observed min-max, not confidence intervals. Adapter VRAM is the maximum sampled across repeats, includes background allocations, not process-attributed/instantaneous peak. Native and references use FP32 recurrent state and BF16 attention KV. Native convolution state is FP32; reference convolution precision is unverified. Windows/WSL and batching/graph configurations disclosed; saved reference prefix/radix caches disabled. References have one trial each; stronger tuned/MTP baselines, cross-engine output equivalence, matched INT4/4B and production integration remain open. No2x or halfTTFT goal admission.
+
+| Cohort | B4 TTFT s | B4 decode tok/s/request | B4 aggregate tok/s | Aggregate / best ordinary |
+|---|---:|---:|---:|---:|
+| image-c1 | 10.9472 | 65.2974 | 9.8907 | 0.1673 |
+| image-c2 | 10.9946 | 60.8949 | 14.3740 | 0.1490 |
+| image-c4 | 11.0466 | 57.9113 | 25.7258 | 0.1687 |
+| image-c8 | 17.8482 | 58.3704 | 37.8131 | 0.1681 |
+| text-c1 | 10.9487 | 55.2504 | 9.3983 | 0.1576 |
+| text-c2 | 23.2140 | 59.2096 | 11.0442 | 0.1144 |
+| text-c4 | 11.0509 | 51.7101 | 25.2368 | 0.1643 |
+| text-c8 | 18.7958 | 41.8855 | 34.9765 | 0.1541 |

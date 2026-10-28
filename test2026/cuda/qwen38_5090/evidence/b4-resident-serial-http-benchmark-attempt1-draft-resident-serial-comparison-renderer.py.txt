@@ -1,0 +1,28 @@
+"""Prepare the next figures without reading provisional trial values."""
+from pathlib import Path
+import ast,hashlib,json
+W=Path(__file__).resolve().parent;source=W/'render-b4-repeated-comparison.py';raw=source.read_bytes();s=raw.decode().replace('\r\n','\n');changes=[]
+def change(a,b):
+    global s
+    count=s.count(a);assert count,(a,count);s=s.replace(a,b);changes.append(dict(old=a,new=b,count=count))
+change("JOB='b4-rowwise-http-benchmark-attempt1'","JOB='b4-resident-serial-http-benchmark-attempt1'")
+change("STEM='Garnet-B4-Repeated-vLLM-SGLang-4K'","STEM='Garnet-Resident-Serial-vLLM-SGLang-4K'")
+change('actual_B4_three_fixed4k_HTTP_trials_replayed','actual_B4_resident_serial_three_fixed4k_HTTP_trials_replayed')
+change("oldpath=O/'Garnet-O128-Repeated-vLLM-SGLang-4K-v2-Data.json';old=json.loads(oldpath.read_bytes());assert old['status']=='three_O128_HTTP_trials_and_retained_single_trial_references_replayed'", "oldpath=O/'Garnet-B4-Repeated-vLLM-SGLang-4K-Data.json';old=json.loads(oldpath.read_bytes());assert old['status']=='three_B4_HTTP_trials_and_retained_B1_and_ordinary_references_replayed'\n    assert 'FP32 GDN/convolution state' in old['model_precision']")
+change("old_label='Garnet B1 / prefill128 / MTP3 (3 trials)';new_label='Garnet B4 / prefill32 / MTP3 (3 trials)'", "old_label='Garnet B1 / prefill128 / MTP3 (3 trials)';old_b4_label='Garnet B4 / prefill32 / MTP3 (3 trials)';new_label='Garnet B4 / resident+serial / MTP3 (3 trials)'")
+change("samples={old_label:old['raw_trial_cohorts']['Garnet prefill128 / MTP3 (3 trials)'],new_label:native,'vLLM ordinary (1 trial)':old['raw_trial_cohorts']['vLLM ordinary (1 trial)'],'SGLang ordinary (1 trial)':old['raw_trial_cohorts']['SGLang ordinary (1 trial)']}", "samples={old_label:old['raw_trial_cohorts'][old_label],old_b4_label:old['raw_trial_cohorts'][old_b4_label],new_label:native,'vLLM ordinary (1 trial)':old['raw_trial_cohorts']['vLLM ordinary (1 trial)'],'SGLang ordinary (1 trial)':old['raw_trial_cohorts']['SGLang ordinary (1 trial)']}")
+change('Both native lines','All three native lines')
+change('bands: observed min-max','new-policy band: observed min-max')
+change('Three repeats per native worker; ordinary references have one trial each. Native Windows; vLLM/SGLang WSL.','Three repeats per native worker; ordinary refs one each. Windows/WSL. Resident+serial is one combined policy; both B4 configurations prefill32.')
+change('All372 B4 prompt/output sequences match retained B1.','All372 resident/serial prompt/output sequences match retained B1.')
+change('Maximum B4 sample gap','Maximum new-policy sample gap')
+change("status='three_B4_HTTP_trials_and_retained_B1_and_ordinary_references_replayed'", "status='three_resident_serial_HTTP_trials_and_retained_B1_B4_and_ordinary_references_replayed'")
+change("styles=[('#9b8aaf','o','--'),('#366bd1','D','-'),('#bd4775','v','-'),('#278d70','^','-')]", "styles=[('#a1a7b0','o','--'),('#9b8aaf','s','--'),('#2166d1','D','-'),('#bd4775','v','-'),('#278d70','^','-')]")
+change('Garnet B4: repeated 4K HTTP comparison','Garnet resident/serial: repeated 4K HTTP comparison')
+change('Garnet B1 / B4 vs vLLM / SGLang','Garnet progress vs vLLM / SGLang')
+change('Garnet B1 / B4 and ordinary references','Garnet progress and ordinary references')
+change('B1/B4 native: 3 trials each','Native configs: 3 trials each')
+change('Garnet B4 repeated 4K','Garnet resident/serial repeated 4K')
+change("comparisons.append(dict(cohort=key,", "comparisons.append(dict(throughput_over_previous_B4=r['output_tokens_per_second']/series[old_b4_label][key]['output_tokens_per_second'],decode_over_previous_B4=r['decode_median_tokens_per_second']/series[old_b4_label][key]['decode_median_tokens_per_second'],TTFT_over_previous_B4=r['ttft_median_ms']/series[old_b4_label][key]['ttft_median_ms'],cohort=key,")
+ast.parse(s);target=W/'render-resident-serial-comparison.py';assert not target.exists();target.write_bytes(s.encode())
+target=W/'resident-serial-comparison-renderer-derivation.json';assert not target.exists();target.write_bytes(json.dumps(dict(source_sha256=hashlib.sha256(raw).hexdigest(),draft_sha256=hashlib.sha256(s.encode()).hexdigest(),changes=changes,syntax_checked_only=True,actual_paired_three_trial_proof_required=True,all_eight_cohorts_four_metrics_and_previous_native_configs_retained=True,old_native_B4_and_new_policy_both_prefill32=True,combined_policy_no_individual_causal_speed_claim=True,new_model_or_benchmark_or_plot_executed=False),indent=2).encode());print('Five-configuration comparison renderer prepared; waits for paired completed benchmark proof')
