@@ -1,0 +1,23 @@
+"""Prepare installer and terminal-only readers for a separate diagnostic."""
+from pathlib import Path
+import ast,hashlib,json
+W=Path(__file__).resolve().parent;records=[]
+for kind in ('install','postprocess','replay'):
+    source=W/(kind+'-b4-resident-serial-http-benchmark.py');raw=source.read_bytes();s=raw.decode().replace('\r\n','\n');steps=[]
+    for a,b in [('b4-resident-serial-http-benchmark','b4-resident-serial-stage-profile'),('B4_resident_serial_HTTP_benchmark','B4_resident_serial_stage_profile'),('verify_b4_resident_serial_http_benchmark.py','verify_b4_resident_serial_stage_profile.py')]:
+        count=s.count(a)
+        if a.startswith('verify_'):assert kind=='install' or count,(kind,a)
+        elif a.startswith('B4_'):assert kind!='install' or count,(kind,a)
+        else:assert count,(kind,a)
+        if count:s=s.replace(a,b);steps.append(dict(old=a,new=b,count=count))
+    if kind in ('postprocess','replay'):
+        lines=s.splitlines(keepends=True);line=next(n for n in lines if 'ledger.run(' in n)
+        first=line.index("'correctness',")+len("'correctness',");last=line.index(',[',first)
+        label="'Independently replay62fixed4k prompt/output IDs, actual native callbacks/dispatch,31profiled real IDs and physical-group host spans;63closedparents and source/runtime/SDK/all34/current18file restoration. Host wall includes instrumentation and async waits; no isolated CUDA kernel or clean throughput admission.'"
+        s=s.replace(line,line[:first]+label+line[last:]);steps.append(dict(change='Replace benchmark metric replay label with actual62ID/group-span diagnostic scope'))
+    s=s.replace('raw HTTP benchmark replay','host-stage diagnostic replay')
+    ast.parse(s);target=W/(kind+'-b4-resident-serial-stage-profile.py')
+    if target.exists():assert target.read_bytes()==s.encode(),'Preserve existing draft helper'
+    else:target.write_bytes(s.encode())
+    records.append(dict(source=source.name,source_sha256=hashlib.sha256(raw).hexdigest(),target=target.name,target_sha256=hashlib.sha256(target.read_bytes()).hexdigest(),changes=steps))
+target=W/'resident-serial-stage-helper-derivation.json';assert not target.exists();target.write_bytes(json.dumps(dict(methods=records,syntax_checked_only=True,install_and_actual_raw_replay_unrun=True,initial_preparation_failure='A required-replacement assertion incorrectly required an installer-only status string in the postprocessor; corrected before any remote installation/execution. Previously created unrun installer bytes preserved.'),indent=2).encode());print('Separate diagnostic installer/terminal readers prepared; no active source mutation or native execution')

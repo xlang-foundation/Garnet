@@ -1,0 +1,6 @@
+from pathlib import Path
+import hashlib,sys
+W=Path(__file__).resolve().parent;M=Path('D:/CantorAI/work/qwen38-5090/test2026/cuda/qwen38_5090');sys.path.insert(0,str(M));import run_logged as ledger
+files=[W/n for n in ('b4_stage_profile_gate.draft.py','test_b4_stage_profile_gate.draft.py','run-b4-stage-profile-draft-controls.py',Path(__file__).name)]+[M/'native_stage_timing.py']
+ledger.source_identity=lambda:dict(scope='Only isolated W diagnostic parser and synthetic clocks/IDs, plus unchanged pure stdlib StageRecorder; no native/model/GPU or model numerical replay',owned_source_sha256={str(p):hashlib.sha256(p.read_bytes()).hexdigest() for p in files})
+assert ledger.run([sys.executable,str(W/'run-b4-stage-profile-draft-controls.py')],W/'b4-stage-profile-draft-controls-ledger','correctness','Six synthetic physical-group coverage, native clock/sequence/nesting, failure/false-claim, nonfinite-time and incomplete-program controls. No model or native executable/GPU execution.',files)==0

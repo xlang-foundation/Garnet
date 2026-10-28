@@ -1,0 +1,47 @@
+"""Materialize only after the clean three-trial benchmark is closed and paired."""
+from pathlib import Path
+import ast,hashlib,json,os,sys,zipfile
+W=Path(__file__).resolve().parent;O=W.parent/'outputs';R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';E=M/'evidence';P='Garnet/test2026/cuda/qwen38_5090/';sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest();J='b4-resident-serial-http-benchmark-attempt1'
+proof=O/(J+'-verified.json');q=json.loads(proof.read_bytes());assert proof.read_bytes()==(O/(J+'-remote-verified.json')).read_bytes() and q['exit_code']==0 and q['B4_HTTP_benchmark_case_gate_passed'] and q['benchmark_arrays']['all372_prompt_and_output_IDs_exact_retained_B1'] and q['source_runtime_SDK_config_index_CMake_all34_and_full_model_files_restored'] and sha(O/(J+'-evidence.zip'))==q['archive_sha256']
+old_path=E/'b4-resident-serial-http-benchmark-preparation.json';old=json.loads(old_path.read_bytes());assert len(old['parents'])==62
+with zipfile.ZipFile(O/(J+'-evidence.zip')) as z:
+    w=json.loads(z.read('results/'+J+'/workflow.json'));assert w['all_restored'] and w['cleanup_finished'] and w['exit_code']==0 and w['source_after']==old['files']
+audit=json.loads((W/'resident-serial-stage-drafts-audit.json').read_bytes());assert audit['new_synthetic_trace_controls_passed']==6 and not audit['remote_methods_or_source_mutated'];names=[]
+for draft,h in audit['files_sha256'].items():
+    source=W/draft;assert sha(source)==h;raw=source.read_bytes();ast.parse(raw);target=M/draft.replace('.draft.py','.py');assert not target.exists();target.write_bytes(raw);names.append(target.name)
+for n in ('native_stage_timing.py','native_stage_attachment.py','test_native_stage_timing.py','test_native_stage_attachment.py'):
+    if P+n in old['files']:assert sha(M/n)==old['files'][P+n]
+    names.append(n)
+deps=['verify_b4_resident_serial_stage_profile.py','b4_stage_profile_gate.py','b4_full4k_inputs.py','b4_padding_lifecycle_inputs.py','b4_http_event_gate.py','b4_rowwise_http_admission.py','b4_serving_request.py','fixed_length_policy.py','padded_mtp_policy.py']
+for n in deps:
+    if n not in names:assert sha(M/n)==old['files'][P+n]
+sys.path[:0]=[str(M),str(R)];import run_logged as ledger
+ledger.source_identity=lambda:dict(scope='Explicit new fixed4k host-stage collector/reader CLI import controls; no native/model/GPU or protected bodies',owned_source_sha256={n:sha(M/n) for n in dict.fromkeys(names+deps)})
+os.chdir(R)
+for n in ('probe_b4_resident_serial_stage_profile.py','verify_b4_resident_serial_stage_profile.py'):
+    assert ledger.run([sys.executable,str(M/n),'--help'],W/'resident-serial-stage-CLI-ledger','correctness','CPU import/CLI smoke only. Actual embedded compatibility,62HTTPoutputs and group-span raw replay required later; no GPU or model execution.',[M/k for k in dict.fromkeys(names+deps)])==0
+def keep(n,raw):
+    target=E/n;assert not target.exists();target.write_bytes(raw);names.append('evidence/'+n)
+for ext in ('jsonl','log'):
+    keep('resident-serial-stage-CLI-commands.'+ext,(W/'resident-serial-stage-CLI-ledger'/('commands.'+ext)).read_bytes())
+    keep('resident-serial-stage-parser-CPU-commands.'+ext,(W/'b4-stage-profile-draft-controls-ledger'/('commands.'+ext)).read_bytes())
+for n in ('draft-resident-serial-stage-profile-worker.py','resident-serial-stage-profile-worker-derivation.json','draft-resident-serial-stage-owner.py','resident-serial-stage-owner-derivation.json','audit-resident-serial-stage-drafts.py','resident-serial-stage-drafts-audit.json','derive-resident-serial-stage-helpers.py','resident-serial-stage-helper-derivation.json','install-b4-resident-serial-stage-profile.py','run-b4-stage-profile-draft-controls.py','check-b4-stage-profile-draft-controls.py',Path(__file__).name):keep(n+('.txt' if n.endswith('.py') else ''),(W/n).read_bytes())
+names.append('evidence/'+old_path.name);files=dict(old['files'])
+for n in names:
+    key=P+n;h=sha(M/n)
+    if key in files:assert files[key]==h
+    files[key]=h
+parents=dict(old['parents']);assert J not in parents;parents[J]=dict(proof_sha256=sha(proof),archive_sha256=q['archive_sha256'],status=q['status'],exit_code=0);assert len(parents)==63
+p={**old};p.update(status='B4_resident_serial_stage_profile_prepared_GPU_unrun',files=files,archive_files=sorted(set(old['archive_files'])|{P+n for n in names}),parents=parents,benchmark_job=J,reader_dependencies=deps,http_test_modules=['test2026.cuda.qwen38_5090.test_b4_stage_profile_gate'],scope='Separate fixed4k resident/serial host-stage diagnostic after closed paired three-trial benchmark, same source91 model/transport bundle and native e843DLL. Same exact model/session/vision/paged-prompt constructor AST and resident+serial/head settings.6new synthetic group coverage/clock/sequence/nesting/failure/false-claim controls passed locally;18actualembedded compatibility controls required (12existing helper controls not previously embedded-tested plus6new gate controls). Then31controls unprofiled and31profiled in one instrumented worker:29nonstream+2text/imageSSE each phase,62realrequests/7936public output IDs, all exact retained B1. Padding/order/repeat/C8, no large transport fixture or805repeat. Actual callbacks/dispatch and all31profiled IDs must map to closed native-worker group spans. Host wall includes instrumentation and waits; async GPU work may be charged to later read/wait; nested inclusive times cannot be added or called kernel costs. token_delivery includes suppressed dummy/duplicate callbacks, not public token counts. Native/bridge/client absolute clocks cannot be subtracted. Profiled observations are not clean throughput/TTFT speed evidence. No new math/weights/precision/nativebuild.63closedparents, source/runtime/SDK/config-index/CMake/all34/current18files restored;96GiBprivateCcache and ownednonce retirement. Strongest references, INT4/4B, production integration and overall2x/halfTTFT remain open.')
+p['installed_files']={**files,**{'Garnet/'+n:h for n,h in p['source_files'].items()}}
+required=set()
+for name in ('run_b4_resident_serial_stage_profile.py','probe_b4_resident_serial_stage_profile.py','verify_b4_resident_serial_stage_profile.py'):
+    for node in ast.walk(ast.parse((M/name).read_bytes())):
+        if isinstance(node,ast.Subscript) and isinstance(node.value,ast.Name) and node.value.id in ('p','prep') and isinstance(node.slice,ast.Constant) and isinstance(node.slice.value,str):required.add(node.slice.value)
+assert required<=set(p),sorted(required-set(p));prep=E/'b4-resident-serial-stage-profile-preparation.json';assert not prep.exists();prep.write_bytes(json.dumps(p,indent=2).encode())
+deploy={P+n:M/n for n in dict.fromkeys(names)};deploy[P+'evidence/'+prep.name]=prep;package=W/'b4-resident-serial-stage-profile-deployment.zip';assert not package.exists()
+with zipfile.ZipFile(package,'x',zipfile.ZIP_DEFLATED) as z:
+    for n,path in deploy.items():z.write(path,n)
+    z.writestr('deployment-manifest.json',json.dumps(dict(files={n:sha(path) for n,path in deploy.items()},native_DLL_or_model_source_change=False),indent=2))
+receipt=dict(deployment_sha256=sha(package),bytes=package.stat().st_size,files=len(deploy),preparation_sha256=sha(prep),paired_benchmark_proof_sha256=sha(proof),parents=63,local_synthetic_controls_passed=6,CLI_smokes_passed=2,actual_embedded18_and_native62_HTTP_and_span_replay_unrun=True,literal_preparation_reads_present=sorted(required),CUDA_kernel_time_or_clean_serving_speed_claimed=False)
+(W/'resident-serial-stage-package.json').write_bytes(json.dumps(receipt,indent=2).encode());(W/'resident-serial-stage-owned-names.json').write_bytes(json.dumps(list(dict.fromkeys(names))).encode());print(json.dumps(receipt))

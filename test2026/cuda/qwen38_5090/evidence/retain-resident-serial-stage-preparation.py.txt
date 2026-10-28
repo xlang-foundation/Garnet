@@ -1,0 +1,22 @@
+"""Make the actual guarded diagnostic package reviewable before remote execution."""
+from pathlib import Path
+from datetime import datetime,timezone
+import hashlib,json,subprocess,zipfile
+W=Path(__file__).resolve().parent;O=W.parent/'outputs';R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';E=M/'evidence';P='Garnet/test2026/cuda/qwen38_5090/';sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+prep=E/'b4-resident-serial-stage-profile-preparation.json';p=json.loads(prep.read_bytes());receipt=json.loads((W/'resident-serial-stage-package.json').read_bytes());package=W/'b4-resident-serial-stage-profile-deployment.zip'
+assert p['status']=='B4_resident_serial_stage_profile_prepared_GPU_unrun' and len(p['parents'])==63 and receipt['preparation_sha256']==sha(prep) and receipt['deployment_sha256']==sha(package) and receipt['local_synthetic_controls_passed']==6 and receipt['CLI_smokes_passed']==2
+assert receipt['actual_embedded18_and_native62_HTTP_and_span_replay_unrun'] is True
+with zipfile.ZipFile(package) as z:
+ mf=json.loads(z.read('deployment-manifest.json'))['files'];assert len(z.namelist())==len(set(z.namelist()))==len(mf)+1
+ for n,h in mf.items():assert hashlib.sha256(z.read(n)).hexdigest()==h==sha(R/n.removeprefix('Garnet/'))
+owned=[M/n for n in json.loads((W/'resident-serial-stage-owned-names.json').read_bytes())]+[prep]
+for name in ('resident-serial-stage-package.json','retain-resident-serial-stage-preparation.py','postprocess-b4-resident-serial-stage-profile.py','replay-b4-resident-serial-stage-profile.py','retain-b4-resident-serial-stage-profile.py'):
+ target=E/(name+('.txt' if name.endswith('.py') else ''));assert not target.exists();target.write_bytes((W/name).read_bytes());owned.append(target)
+entry='\n\n'+datetime.now(timezone.utc).isoformat()+': Prepared a separate fixed4k resident/serial B4 host-stage diagnostic after the clean three-trial benchmark was closed and independently paired. Preparation '+sha(prep)+', deployment '+sha(package)+'.6 local synthetic span/coverage controls and2 CLI/import smokes passed.18 actual embedded pure-CPU controls and62 actual native HTTP controls (31 unprofiled then31 profiled) remain unrun at preparation. No native/model arithmetic, weight, precision, DLL or constructor AST change; existing admitted resident/serial settings retained. Optional instrumentation maps each physical group to every real HTTP request ID and records one native-worker monotonic clock, nested spans and success. Host intervals include logging/waits and can charge asynchronous GPU work to later reads: they are not CUDA kernel costs or clean serving performance. Output parity and independent raw replay must pass before diagnosis. No speed/2x or halfTTFT claim.\n'
+for name in ('docs/research/qwen38-5090-development-log.md','docs/research/qwen38-5090-implementation-task.md'):
+ path=R/name;assert b'Prepared a separate fixed4k resident/serial B4 host-stage diagnostic after the clean three-trial benchmark' not in path.read_bytes()
+ with path.open('ab') as f:f.write(entry.encode())
+ owned.append(path)
+stage=W/'resident-serial-stage-preparation-stage-paths.bin';stage.write_bytes(b''.join(path.relative_to(R).as_posix().encode()+b'\0' for path in dict.fromkeys(owned)))
+subprocess.run(['git','-c','core.autocrlf=false','add','--pathspec-from-file='+str(stage),'--pathspec-file-nul'],cwd=R,check=True)
+print(json.dumps(dict(staged_paths=len(set(owned)),preparation_sha256=sha(prep),deployment_sha256=sha(package),embedded18_and_native62_unrun=True)))

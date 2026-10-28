@@ -1,0 +1,38 @@
+"""Prepare a separate host-stage diagnostic for the quality-admitted policy."""
+from pathlib import Path
+import ast,hashlib,json
+W=Path(__file__).resolve().parent;M=Path('D:/CantorAI/work/qwen38-5090/test2026/cuda/qwen38_5090');source=M/'native_b4_resident_serial_http_worker.py';raw=source.read_bytes();s=raw.decode().replace('\r\n','\n');steps=[]
+def replace(a,b):
+    global s
+    assert s.count(a)==1,(a,s.count(a));s=s.replace(a,b);steps.append(dict(old=a,new=b,count=1))
+replace('Candidate B4 resident controls and serial graph reuse; fresh correctness/performance admission required.','Diagnostic B4 resident/serial host intervals, including instrumentation; not CUDA kernel timings or clean throughput.')
+replace('from test2026.cuda.qwen38_5090.b4_mtp_public_stream import PublicBatchStream','from test2026.cuda.qwen38_5090.b4_mtp_public_stream import PublicBatchStream\nfrom test2026.cuda.qwen38_5090.native_stage_timing import StageRecorder\nfrom test2026.cuda.qwen38_5090.native_stage_attachment import StageAttachment')
+replace('decoder=vision=session=None','decoder=vision=session=attachment=None\nrecorder=StageRecorder(emit)')
+replace('    memory=session.memory_info();','    attachment=StageAttachment(session,recorder)\n    memory=session.memory_info();')
+replace('              backend_policy_correctness_or_performance_qualified=False))','              backend_policy_correctness_or_performance_qualified=False,stage_profile=True,\n              profile_unit="physical_group_with_first_real_request_ID",profile_clock_domain="native_worker",\n              CUDA_kernel_elapsed_claimed=False,clean_throughput_result_claimed=False))')
+a="            public=PublicBatchStream(jobs,[v['ids'] for v in prepared],stops,tokenizer.decode,emit,[v['image_hash'] for v in prepared],started)"
+replace(a,a+"\n            if profile_enabled:public.notify=recorder.wrap(public.notify,'token_delivery')")
+begin=s.index('            started=time.monotonic();session.reset();prepared=[]');end=s.index('\nfinally:\n    if session is not None:session.close()',begin);body=s[begin:end]
+wrapped="""            profile_flags=[job['body'].get('study_profile',False) for job in jobs]
+            if any(type(flag) is not bool for flag in profile_flags):raise ValueError('study_profile requires a boolean')
+            profile_enabled=any(profile_flags);profile_ok=False
+            if profile_enabled:
+                emit(dict(event='study_profile_group',id=jobs[0]['id'],request_ids=[job['id'] for job in jobs],
+                          real_rows=len(jobs),physical_batch=4,requested_profile_flags=profile_flags,
+                          measurement='host_wall_intervals_including_logging',CUDA_kernel_elapsed_claimed=False))
+                recorder.start_request(jobs[0]['id'])
+            try:
+"""+''.join('    '+line+'\n' for line in body.splitlines())+"""                profile_ok=True
+            finally:
+                if profile_enabled:recorder.finish_request(profile_ok)
+"""
+s=s[:begin]+wrapped+s[end:]
+replace('finally:\n    if session is not None:session.close()','finally:\n    if attachment is not None:attachment.close()\n    if session is not None:session.close()')
+ast.parse(s)
+def calls(text,name):return [ast.dump(n,include_attributes=False) for n in ast.walk(ast.parse(text)) if isinstance(n,ast.Call) and isinstance(n.func,ast.Name) and n.func.id==name]
+for name in ('construct_with_rowwise_k_decode_norm_program','CUDAMTPPrefill16B4StudySession','create_cuda_vision','prepare_cuda_image','PagedPromptRows','PublicBatchStream'):assert calls(raw,name)==calls(s,name),name
+for fragment in ('decoder.resident_controls=True','decoder.serial_target_graph_reuse=True','decoder.serial_graph_reuse=True','assert session.verifier.reuse_verified_head is False','session.prefill_norm.enable_serial_graph_reuse(True)'):assert s.count(fragment)==raw.decode().count(fragment)==1,fragment
+target=W/'native_b4_resident_serial_stage_profile_worker.draft.py';assert not target.exists();target.write_bytes(s.encode())
+deps={n:hashlib.sha256((M/n).read_bytes()).hexdigest() for n in ('native_stage_timing.py','native_stage_attachment.py')}
+record=dict(source_file=str(source),source_sha256=hashlib.sha256(raw).hexdigest(),draft_sha256=hashlib.sha256(s.encode()).hexdigest(),changes=steps,stage_helper_sha256=deps,model_constructor_arguments_AST_unchanged=True,existing_resident_serial_and_head_policies_unchanged=True,model_source_bundle_or_native_DLL_changed=False,profile_marker_default=False,physical_group_to_all_real_request_IDs_retained=True,scope='Separate diagnostic only, never a clean benchmark. Host wall spans include instrumentation; async GPU work may be charged to a later read/wait, so nested spans cannot be added or interpreted as kernel costs. Native/bridge/client absolute clocks must not be subtracted. Reuse existing CPU-tested helpers, but actual embedded compatibility, output-ID equivalence and raw interval replay remain required. No active source mutation or GPU work.',syntax_checked_only=True,embedded_model_GPU_execution_unrun=True)
+target=W/'resident-serial-stage-profile-worker-derivation.json';assert not target.exists();target.write_bytes(json.dumps(record,indent=2).encode());print('Resident/serial diagnostic worker prepared; model calls and policy retained; native/embedded execution unrun')

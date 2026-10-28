@@ -8249,3 +8249,6 @@ New comparison figures include all text/image C1/2/4/8 cohorts and all four metr
 | text-c2 | 23.2140 | 59.2096 | 11.0442 | 0.1144 |
 | text-c4 | 11.0509 | 51.7101 | 25.2368 | 0.1643 |
 | text-c8 | 18.7958 | 41.8855 | 34.9765 | 0.1541 |
+
+
+2026-10-28T06:48:14.750685+00:00: Prepared a separate fixed4k resident/serial B4 host-stage diagnostic after the clean three-trial benchmark was closed and independently paired. Preparation 1c15e6bfceed2cb2bb68bc9e2efb0168c4f8b28f7c27e99681327f92e24600b7, deployment 14d6602b218f5c2651429ddbbd3b83dcff89f0670ee98db3007e38715a8b0903.6 local synthetic span/coverage controls and2 CLI/import smokes passed.18 actual embedded pure-CPU controls and62 actual native HTTP controls (31 unprofiled then31 profiled) remain unrun at preparation. No native/model arithmetic, weight, precision, DLL or constructor AST change; existing admitted resident/serial settings retained. Optional instrumentation maps each physical group to every real HTTP request ID and records one native-worker monotonic clock, nested spans and success. Host intervals include logging/waits and can charge asynchronous GPU work to later reads: they are not CUDA kernel costs or clean serving performance. Output parity and independent raw replay must pass before diagnosis. No speed/2x or halfTTFT claim.
