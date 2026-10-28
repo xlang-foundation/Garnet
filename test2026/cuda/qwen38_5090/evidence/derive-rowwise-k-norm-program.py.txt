@@ -1,0 +1,45 @@
+from pathlib import Path
+import ast,hashlib,json,zipfile
+W=Path(__file__).resolve().parent;M=Path('D:/CantorAI/work/qwen38-5090/test2026/cuda/qwen38_5090');sha=lambda b:hashlib.sha256(b).hexdigest()
+with zipfile.ZipFile(W/'rowwise-k-norm-source.zip') as z:
+    original_chunk=z.read('xModel/qwen35/vl_0_8b/cuda_chunk.py');original_program=z.read('xModel/qwen35/vl_0_8b/cuda_packed_program.py')
+chunk_text=original_chunk.decode().replace('\r\n','\n');chunk=chunk_text[chunk_text.index('@T.fusion('):].rstrip()+'\n';chunk_changes=[]
+changes=[("name='qwen35_cuda_decoder_chunk'","name='qwen35_rowwise_k_decode_norm_chunk'",1),('def Qwen35CUDAChunk(','def Qwen35RowwiseKDecodeNormCUDAChunk(',1),("    p='model.language_model.layers.'+str(layer_idx)","    if type(layer_idx) is not int or layer_idx not in range(3,64,4) or kind!='full_attention':raise ValueError('Rowwise K norm requires one of the sixteen full-attention layers')\n    if not bf16_canonical_kv or bf16_low_batch_canonical_kv or bf16_prefill128_canonical_kv or bf16_kv_float_reference or canonical_kv_state is None or not external_compressed_weights or external_weights or not fused_attention or not joined_mlp_projections:raise ValueError('Rowwise K norm requires the exclusive shared mixed canonical B4 decode profile')\n    p='model.language_model.layers.'+str(layer_idx)",1),("    if external_compressed_weights:extra['external_compressed_weights']=external_compressed_weights","    if external_compressed_weights:extra['external_compressed_weights']=external_compressed_weights\n    extra['rowwise_full_decode_k_norm']=1",1)]
+for old,new,count in changes:assert chunk.count(old)==count,(old,chunk.count(old));chunk=chunk.replace(old,new);chunk_changes.append({'old':old,'new':new,'count':count})
+def forward(raw,classname):
+    text=raw.decode().replace('\r\n','\n');tree=ast.parse(text);c=next(n for n in tree.body if isinstance(n,ast.ClassDef) and n.name==classname);f=next(n for n in c.body if isinstance(n,ast.FunctionDef) and n.name=='_forward');return '\n'.join(text.splitlines()[f.lineno-1:f.end_lineno])+'\n\n'
+old='packed=Qwen35CUDAChunk(';new="packed=(Qwen35RowwiseKDecodeNormCUDAChunk if layer['kind']=='full_attention' else Qwen35CUDAChunk)("
+bounded=(M/'bounded_step45_boundary_program.py').read_bytes();forwards=[];bodies=[]
+for raw,source,klass,target in [(original_program,'evidence/step45-frozen-cuda-packed-program.py.txt','CUDAPackedDecoderProgram','RowwiseKDecodeNormProgram'),(bounded,'bounded_step45_boundary_program.py','BoundedStep45BoundaryProgram','RowwiseKDecodeNormBoundaryProgram')]:
+    body=forward(raw,klass);assert body.count(old)==1;bodies.append(body.replace(old,new));forwards.append({'source':source,'source_sha256':sha(raw),'source_class':klass,'target_class':target,'changes':[{'old':old,'new':new,'count':1}]})
+header='''"""Private B4T4 rowwise K normalization, with ordinary and boundary-control variants.
+
+Uses existing primary outputs and arithmetic. Requires the exact source87 DLL,
+explicit native opt-in, actual 16-layer trace and numerical qualification.
+"""
+from .bounded_step45_boundary_program import BoundedStep45BoundaryProgram,CUDAPackedDecoderProgram
+from xModel.qwen35.vl_0_8b.cuda_packed_program import T,Qwen35CUDAChunk,flat_concat,concat,packed_view
+
+'''
+mixin='''class _RowwiseKShape:
+    def __init__(self,*args,**kwargs):
+        shape=tuple(args[i] if len(args)>i else kwargs.get(name) for i,name in ((3,'batch'),(4,'capacity'),(5,'chunk_size')))
+        if any(type(value) is not int for value in shape) or shape!=(4,4096,4):raise ValueError('Rowwise K norm supports only B4 cap4096 T4')
+        super().__init__(*args,**kwargs)
+
+'''
+classes='class RowwiseKDecodeNormProgram(_RowwiseKShape,CUDAPackedDecoderProgram):\n'+bodies[0]+'class RowwiseKDecodeNormBoundaryProgram(_RowwiseKShape,BoundedStep45BoundaryProgram):\n'+bodies[1]
+binding='''def construct_with_rowwise_k_decode_norm_program(factory,*args,observe_boundaries=False,**kwargs):
+    if type(observe_boundaries) is not bool:raise TypeError('observe_boundaries must be a boolean')
+    from xModel.qwen35.vl_0_8b import cuda_packed_decoder as module
+    original=module.CUDAPackedDecoderProgram
+    assert original is CUDAPackedDecoderProgram
+    selected=RowwiseKDecodeNormBoundaryProgram if observe_boundaries else RowwiseKDecodeNormProgram
+    def choose(*values,**options):
+        return (selected if len(values)>=6 and values[3]==4 and values[5]==4 else original)(*values,**options)
+    module.CUDAPackedDecoderProgram=choose
+    try:return factory(*args,**kwargs)
+    finally:module.CUDAPackedDecoderProgram=original
+'''
+raw=(header+chunk+'\n'+mixin+classes+binding).encode();ast.parse(raw);target=M/'rowwise_k_norm_program.py';assert not target.exists();target.write_bytes(raw)
+p=M/'evidence/rowwise-k-norm-program-derivation.json';assert not p.exists();p.write_bytes(json.dumps({'target':target.name,'target_sha256':sha(raw),'chunk_source':'evidence/decode35-frozen-cuda-chunk.py.txt','chunk_source_sha256':sha(original_chunk),'chunk_changes':chunk_changes,'forward_derivations':forwards,'ordinary_forward_retains_original_outputs':True,'boundary_forward_retains_old64_outputs':True,'new_native_output_observation_added':False,'native_metadata':'rowwise_full_decode_k_norm=1','native_and_model_unrun':True},indent=2).encode());print(json.dumps({'target_sha256':sha(raw),'ordinary_and_boundary_variants':2,'model_unrun':True}))

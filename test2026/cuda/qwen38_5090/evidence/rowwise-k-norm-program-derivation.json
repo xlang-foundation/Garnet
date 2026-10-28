@@ -1,0 +1,61 @@
+{
+  "target": "rowwise_k_norm_program.py",
+  "target_sha256": "1d468ba29c732cf29bcfc825d52fa074774325d365cfeb473e185c77996a6e45",
+  "chunk_source": "evidence/decode35-frozen-cuda-chunk.py.txt",
+  "chunk_source_sha256": "fe368296871c876cdbb74a246e8cbecc3ae0609ca4b73c8445ab4cb900d888b7",
+  "chunk_changes": [
+    {
+      "old": "name='qwen35_cuda_decoder_chunk'",
+      "new": "name='qwen35_rowwise_k_decode_norm_chunk'",
+      "count": 1
+    },
+    {
+      "old": "def Qwen35CUDAChunk(",
+      "new": "def Qwen35RowwiseKDecodeNormCUDAChunk(",
+      "count": 1
+    },
+    {
+      "old": "    p='model.language_model.layers.'+str(layer_idx)",
+      "new": "    if type(layer_idx) is not int or layer_idx not in range(3,64,4) or kind!='full_attention':raise ValueError('Rowwise K norm requires one of the sixteen full-attention layers')\n    if not bf16_canonical_kv or bf16_low_batch_canonical_kv or bf16_prefill128_canonical_kv or bf16_kv_float_reference or canonical_kv_state is None or not external_compressed_weights or external_weights or not fused_attention or not joined_mlp_projections:raise ValueError('Rowwise K norm requires the exclusive shared mixed canonical B4 decode profile')\n    p='model.language_model.layers.'+str(layer_idx)",
+      "count": 1
+    },
+    {
+      "old": "    if external_compressed_weights:extra['external_compressed_weights']=external_compressed_weights",
+      "new": "    if external_compressed_weights:extra['external_compressed_weights']=external_compressed_weights\n    extra['rowwise_full_decode_k_norm']=1",
+      "count": 1
+    }
+  ],
+  "forward_derivations": [
+    {
+      "source": "evidence/step45-frozen-cuda-packed-program.py.txt",
+      "source_sha256": "623d97063edf8e5dcb22e1558bc0996965bb85dfd8f53d2d93a0fbf68d362ec6",
+      "source_class": "CUDAPackedDecoderProgram",
+      "target_class": "RowwiseKDecodeNormProgram",
+      "changes": [
+        {
+          "old": "packed=Qwen35CUDAChunk(",
+          "new": "packed=(Qwen35RowwiseKDecodeNormCUDAChunk if layer['kind']=='full_attention' else Qwen35CUDAChunk)(",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "bounded_step45_boundary_program.py",
+      "source_sha256": "77caa6d3df3b6569a4e2ca466983a99a66d09c6ffefc912067f7ed5860357c67",
+      "source_class": "BoundedStep45BoundaryProgram",
+      "target_class": "RowwiseKDecodeNormBoundaryProgram",
+      "changes": [
+        {
+          "old": "packed=Qwen35CUDAChunk(",
+          "new": "packed=(Qwen35RowwiseKDecodeNormCUDAChunk if layer['kind']=='full_attention' else Qwen35CUDAChunk)(",
+          "count": 1
+        }
+      ]
+    }
+  ],
+  "ordinary_forward_retains_original_outputs": true,
+  "boundary_forward_retains_old64_outputs": true,
+  "new_native_output_observation_added": false,
+  "native_metadata": "rowwise_full_decode_k_norm=1",
+  "native_and_model_unrun": true
+}
