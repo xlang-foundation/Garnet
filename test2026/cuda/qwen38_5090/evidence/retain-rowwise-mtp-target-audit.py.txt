@@ -1,0 +1,32 @@
+from pathlib import Path
+import hashlib,json
+W=Path(__file__).resolve().parent;R=Path('D:/CantorAI/work/qwen38-5090');E=R/'test2026/cuda/qwen38_5090/evidence';sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest();owned=[]
+audit=json.loads((W/'rowwise-mtp-target-static-audit.json').read_bytes());assert not audit['model_or_MTP_or_quality_or_performance_proved'] and not audit['study_module_in_current_remote_inventory']
+for n in ('rowwise-mtp-target-static-audit.json','audit-rowwise-mtp-target.log','audit-rowwise-mtp-target.py',Path(__file__).name):
+    target=E/(n+'.txt' if n.endswith('.py') else n);assert not target.exists();target.write_bytes((W/n).read_bytes());owned.append(target)
+entry=('\n\n2026-10-27: Static MTP target-binding audit completed while the source87 '
+       'ordinary full4K job remains exclusive. Exact installed-overlay identities '
+       'were used rather than the restored baseline: cuda_packed_decoder isbe9198 '
+       'while its restored base isba48f7; packed_program is623d97 while base isfc85e0. '
+       'All six inspected installed sources hash-verify from source87 ZIP or the '
+       'closed selected-model archive. For the declared packed/prefix-replay '
+       'profile, CUDASpeculativeSession selects CUDAPackedDeltaReplayVerifier; '
+       'verification calls decoder.chunk_hidden, replay refers to the existing '
+       'decoder.programs[decode_chunk_size], skips attention replay in canonical '
+       'KV mode and commits retained target K/V via decoder.delta_commit. These '
+       'inspected sources construct no replacement CUDAPackedDecoderProgram. '
+       'This supports using the private rowwise target constructor in a future '
+       'MTP probe without changing core verification/replay arithmetic, but is '
+       'only a conditional source audit, not runtime/MTP correctness proof. '
+       'B4 draft-study module41656e4f1acd2bd1c9cca8e50549e5bb82e804e1bd2daa42396b2f019ecfc02b '
+       'matches its historical27CPU preparation and is not in the current remote '
+       'inventory. Existing15-control MTP full4K gate is unchanged. Wait for '
+       'ordinary full4K128 paired pass before preparing/deploying/running MTP; '
+       'actual graphs/memory/249prefill/127commits/target state+IDs and prefix/'
+       'reset/permutation/tail/quality/HTTP/speed remain unqualified. No running '
+       'job or native/model source/DLL changed in this audit.\n').encode()
+for n in ('docs/research/qwen38-5090-development-log.md','docs/research/qwen38-5090-implementation-task.md'):
+    p=R/n;before=p.read_bytes();assert b'Static MTP target-binding audit completed' not in before
+    with p.open('ab') as f:f.write(entry)
+    assert p.read_bytes()==before+entry;owned.append(p)
+(W/'rowwise-mtp-target-audit-stage-paths.bin').write_bytes(b''.join(p.relative_to(R).as_posix().encode()+b'\0' for p in dict.fromkeys(owned)));print(json.dumps(dict(stage_paths=len(owned),GPU_or_native_execution=False)))

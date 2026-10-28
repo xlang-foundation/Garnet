@@ -1,0 +1,20 @@
+"""Static audit of the installed overlay, without importing model/native modules."""
+from pathlib import Path
+import ast,hashlib,json,zipfile
+W=Path(__file__).resolve().parent;R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';p=json.loads((M/'evidence/rowwise-k-norm-full4k-preparation.json').read_bytes());sha=lambda b:hashlib.sha256(b).hexdigest();prefix='xModel/qwen35/vl_0_8b/';rows={};sources={}
+with zipfile.ZipFile(W/'rowwise-k-norm-source.zip') as overlay,zipfile.ZipFile(W.parent/'outputs/rowwise-k-norm-model-attempt1-evidence.zip') as baseline:
+    assert sha((W/'rowwise-k-norm-source.zip').read_bytes())==p['bundle_sha256']
+    for name in ('cuda_speculative.py','cuda_packed_replay.py','cuda_verify.py','cuda_packed_decoder.py','cuda_packed_program.py','cuda_mtp.py'):
+        relative=prefix+name;key='Garnet/'+relative;overlaid=relative in p['source_files'];raw=overlay.read(relative) if overlaid else baseline.read(key);assert sha(raw)==p['installed_files'][key];sources[name]=raw.decode();ast.parse(raw)
+        rows[name]=dict(installed_sha256=sha(raw),base_sha256=p['files'][key],from_overlay=overlaid,local_file_matches_installed=sha((R/relative).read_bytes())==sha(raw))
+verify=sources['cuda_verify.py'];replay=sources['cuda_packed_replay.py'];speculative=sources['cuda_speculative.py']
+assert 'self.decoder.chunk_hidden(self.embeddings,[list(row) for row in active],self.positions,False)' in verify
+assert 'p=decoder.programs[decoder.decode_chunk_size]' in replay
+assert "if self.kv_delta and layer['kind']=='full_attention':continue" in replay
+assert 'self.decoder.delta_commit.commit(self.decoder.last_packed,source,self.decoder.state,spans)' in replay
+assert 'self.verifier=CUDAPackedDeltaReplayVerifier(decoder,checkpoint,max_draft_tokens+1)' in speculative
+assert all('CUDAPackedDecoderProgram(' not in sources[n] for n in ('cuda_speculative.py','cuda_packed_replay.py','cuda_verify.py'))
+study=R/(prefix+'cuda_mtp_prefill16_b4_study.py');cpu=json.loads((M/'evidence/b4-mtp-prefill16-study-cpu-preparation.json').read_bytes());assert sha(study.read_bytes())==cpu['source_sha256'][prefix+study.name] and cpu['CPU_controls']==27
+gate=M/'b4_mtp_full4k_gate.py';gate_cpu=json.loads((M/'evidence/b4-mtp-full4k-cpu-preparation.json').read_bytes());assert sha(gate.read_bytes())==gate_cpu['files'][gate.name] and gate_cpu['CPU_controls']==15
+result=dict(status='static_rowwise_MTP_target_binding_audited_no_GPU_or_MTP_admission',installed_sources=rows,study_module_sha256=sha(study.read_bytes()),study_module_in_current_remote_inventory=('Garnet/'+prefix+study.name) in p['installed_files'],existing_study_CPU_controls=27,existing_full4K_gate_CPU_controls=15,static_code_path=['Packed MTP selects CUDAPackedDeltaReplayVerifier for this decoder.','Verification calls the existing decoder chunk_hidden path; the inspected verifier/session sources do not construct another CUDAPackedDecoderProgram.','Packed replay refers to decoder.programs[decode_chunk_size], skips attention-state replay in canonical-KV mode, and commits retained target K/V through decoder.delta_commit.'],next_conditions=['The current ordinary full4K128 job must close and pass paired replay before preparing or running MTP.','Deploy the new B4 study module explicitly with pinned source and its existing CPU controls; it is not in the current remote inventory.','Use the ordinary rowwise-K target constructor in the private MTP probe. Keep MTP core/replay arithmetic unchanged.','Actual full4K MTP tokens, target states, draft graphs,249 prefill calls,127 committed target inputs per row, partial-prefix/reset/permutation/tail and quality remain unqualified.'],no_source_DLL_or_running_job_mutation=True,model_or_MTP_or_quality_or_performance_proved=False)
+target=W/'rowwise-mtp-target-static-audit.json';assert not target.exists();target.write_bytes(json.dumps(result,indent=2).encode());print(json.dumps(result))
