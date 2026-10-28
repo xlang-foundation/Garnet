@@ -1,0 +1,80 @@
+{
+  "methods": [
+    {
+      "source": "install-b4-resident-serial-quality.py",
+      "source_sha256": "c4e307da7f9891d1d09aacc2fd959806acac1995fc20b7d20dec2e92bf182083",
+      "target": "install-b4-resident-serial-quality-v2.py",
+      "target_sha256": "4765a30839e95f05fb17c47e3b122108bdfe8311f7c79d7b18769f50f0ad60ac",
+      "changes": [
+        {
+          "old": "b4-resident-serial-quality-preparation.json",
+          "new": "b4-resident-serial-quality-v2-preparation.json",
+          "count": 1
+        },
+        {
+          "old": "b4-resident-serial-quality-deployment.zip",
+          "new": "b4-resident-serial-quality-v2-deployment.zip",
+          "count": 1
+        },
+        {
+          "old": "b4-resident-serial-quality-install.json",
+          "new": "b4-resident-serial-quality-v2-install.json",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "postprocess-b4-resident-serial-quality.py",
+      "source_sha256": "5dcbfb0ffd5cf2aa82a3bc4fed6c12d294cc5af8b2e9ade09e235f538ad8c901",
+      "target": "postprocess-b4-resident-serial-quality-v2.py",
+      "target_sha256": "b6623b43ca5e17641c4554c72554b1e23fedf2d895771beaae7f86a8d0d45d91",
+      "changes": [
+        {
+          "old": "b4-resident-serial-quality-attempt1",
+          "new": "b4-resident-serial-quality-attempt2",
+          "count": 2
+        },
+        {
+          "old": "b4-resident-serial-quality-preparation.json",
+          "new": "b4-resident-serial-quality-v2-preparation.json",
+          "count": 2
+        },
+        {
+          "old": "verify_b4_resident_serial_quality.py",
+          "new": "verify_b4_resident_serial_quality_v2.py",
+          "count": 1
+        },
+        {
+          "old": "60parents",
+          "new": "61parents",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "replay-b4-resident-serial-quality.py",
+      "source_sha256": "466b9b8183e4a3af440150ffc0a16a01039b16d9b725e9cc5c9f6f3f934c9e59",
+      "target": "replay-b4-resident-serial-quality-v2.py",
+      "target_sha256": "d62e6bffef68e1812d2c0a309f4cd31cff5398c75268efbc600b3706711a4675",
+      "changes": [
+        {
+          "old": "b4-resident-serial-quality-attempt1",
+          "new": "b4-resident-serial-quality-attempt2",
+          "count": 2
+        },
+        {
+          "old": "b4-resident-serial-quality-preparation.json",
+          "new": "b4-resident-serial-quality-v2-preparation.json",
+          "count": 2
+        },
+        {
+          "old": "verify_b4_resident_serial_quality.py",
+          "new": "verify_b4_resident_serial_quality_v2.py",
+          "count": 1
+        }
+      ]
+    }
+  ],
+  "syntax_checked_only": true,
+  "remote_install_and_actual_replay_unrun": true
+}

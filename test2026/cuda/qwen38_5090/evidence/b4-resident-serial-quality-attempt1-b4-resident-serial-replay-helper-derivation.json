@@ -1,0 +1,72 @@
+{
+  "methods": [
+    {
+      "source": "postprocess-b4-rowwise-http-quality.py",
+      "source_sha256": "de5ae474765786792e207d65a86555016ebf31afdc5a63e500995ec3cde500f8",
+      "target": "postprocess-b4-resident-serial-quality.py",
+      "target_sha256": "5dcbfb0ffd5cf2aa82a3bc4fed6c12d294cc5af8b2e9ade09e235f538ad8c901",
+      "changes": [
+        {
+          "old": "b4-rowwise-http-quality-attempt3",
+          "new": "b4-resident-serial-quality-attempt1",
+          "count": 2
+        },
+        {
+          "old": "b4-rowwise-http-quality-preparation.json",
+          "new": "b4-resident-serial-quality-preparation.json",
+          "count": 2
+        },
+        {
+          "old": "verify_b4_rowwise_http_quality.py",
+          "new": "verify_b4_resident_serial_quality.py",
+          "count": 1
+        },
+        {
+          "old": "58parents",
+          "new": "60parents",
+          "count": 1
+        },
+        {
+          "old": "Explicit terminal source91 HTTP raw reader",
+          "new": "Explicit terminal resident/serial HTTP raw reader",
+          "count": 1
+        },
+        {
+          "old": "No benchmark or production admission.",
+          "new": "Independent actual native resident IO legacy byte comparison and31graph counter snapshots required on a successful model result. No benchmark or production admission.",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "replay-b4-rowwise-http-quality.py",
+      "source_sha256": "92ef6c972bce98e547163882d84ba42e72ef25733c7383cab70a5e8e14cb9637",
+      "target": "replay-b4-resident-serial-quality.py",
+      "target_sha256": "466b9b8183e4a3af440150ffc0a16a01039b16d9b725e9cc5c9f6f3f934c9e59",
+      "changes": [
+        {
+          "old": "b4-rowwise-http-quality-attempt3",
+          "new": "b4-resident-serial-quality-attempt1",
+          "count": 2
+        },
+        {
+          "old": "b4-rowwise-http-quality-preparation.json",
+          "new": "b4-resident-serial-quality-preparation.json",
+          "count": 2
+        },
+        {
+          "old": "verify_b4_rowwise_http_quality.py",
+          "new": "verify_b4_resident_serial_quality.py",
+          "count": 1
+        },
+        {
+          "old": "Explicit independent CPU-only source91 B4 HTTP raw archive replay",
+          "new": "Explicit independent CPU-only resident/serial B4 HTTP raw archive replay",
+          "count": 1
+        }
+      ]
+    }
+  ],
+  "CPU_only_terminal_readers": true,
+  "remote_or_local_raw_replay_unrun": true
+}

@@ -1,0 +1,138 @@
+{
+  "methods": [
+    {
+      "source": "probe_b4_host_resident_controls.py",
+      "source_sha256": "090b003a422f3da1e358bc76b092bfd5f611caac265b4cb4c95cff5e6e45aa65",
+      "target": "probe_b4_host_resident_controls_v2.draft.py",
+      "target_sha256": "89e14d6b7f458a4541aa9c109971452639d5bf01e676348638993a947191db7e",
+      "changes": [
+        {
+          "old": "checkpoint,output=sys.argv[1:3];io=garnet.cuda_tensor_io();io.open(checkpoint);io.enable_host_embedding(True);io.enable_nvfp4_head(True);records=[]",
+          "new": "checkpoint,output=sys.argv[1:3];io=garnet.cuda_tensor_io();records=[]",
+          "count": 1
+        },
+        {
+          "old": "try:\n    info=json.loads(io.memory_json());",
+          "new": "try:\n    io.open(checkpoint);io.enable_nvfp4_head(True);io.enable_host_embedding(True)\n    info=json.loads(io.memory_json());",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "launch_b4_resident_serial_controls.py",
+      "source_sha256": "003067bdd21e27ebc8a59562bc1f5145d10c2fe5b9201c62fb17fbc1a8084142",
+      "target": "launch_b4_resident_serial_controls_v2.draft.py",
+      "target_sha256": "e1fe3a9f7399dd27f382dda21d3542fd81a77c61b377f34b0b662f75ede36927",
+      "changes": [
+        {
+          "old": "probe_b4_host_resident_controls.py",
+          "new": "probe_b4_host_resident_controls_v2.py",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "launch_b4_resident_serial_http_worker.py",
+      "source_sha256": "fb83f9f2561c1a867680a764943907cfcc0266835bd85c044a1c7ffc6a868f55",
+      "target": "launch_b4_resident_serial_http_worker_v2.draft.py",
+      "target_sha256": "43664c5b31eba44c305168961a29c8f23c5623e90452976a0117ba7259b440f7",
+      "changes": [
+        {
+          "old": "b4-resident-serial-quality-preparation.json",
+          "new": "b4-resident-serial-quality-v2-preparation.json",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "probe_b4_resident_serial_quality.py",
+      "source_sha256": "9d5807b9b9715d9fbb42bca0a2a69ec8372c1c8dc475793bea1897438ec5aed7",
+      "target": "probe_b4_resident_serial_quality_v2.draft.py",
+      "target_sha256": "22160af0df90d974d5a99acd9defef34536f20db086e018967fe5431635c1fe6",
+      "changes": [
+        {
+          "old": "b4-resident-serial-quality-preparation.json",
+          "new": "b4-resident-serial-quality-v2-preparation.json",
+          "count": 1
+        },
+        {
+          "old": "launch_b4_resident_serial_http_worker.py",
+          "new": "launch_b4_resident_serial_http_worker_v2.py",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "run_b4_resident_serial_quality.py",
+      "source_sha256": "67976c635fc26bd8f855b048e5537e37652cf2a3172c4596637580585e5febd6",
+      "target": "run_b4_resident_serial_quality_v2.draft.py",
+      "target_sha256": "733452bb151b5ef6bad38949c281c7bd1439dcb7e464b18304a7153f15daa3c1",
+      "changes": [
+        {
+          "old": "b4-resident-serial-quality-attempt1",
+          "new": "b4-resident-serial-quality-attempt2",
+          "count": 1
+        },
+        {
+          "old": "b4-resident-serial-quality-preparation.json",
+          "new": "b4-resident-serial-quality-v2-preparation.json",
+          "count": 1
+        },
+        {
+          "old": "launch_b4_resident_serial_controls.py",
+          "new": "launch_b4_resident_serial_controls_v2.py",
+          "count": 2
+        },
+        {
+          "old": "probe_b4_resident_serial_quality.py",
+          "new": "probe_b4_resident_serial_quality_v2.py",
+          "count": 1
+        },
+        {
+          "old": "        code=ledger.run([sys.executable,'-m','unittest',*p['http_test_modules']],out/'cpu-ledger','correctness','Six new pure CPU graph-counter admission controls. Existing source91 protocol/805 admission remains mandatory; no model/GPU or performance claim.',common);w['cpu_exit_code']=code;save();assert code==0,'6 CPU controls failed'\n",
+          "new": "        inherited=p['cpu_control_parent'];prior=json.loads((ROOT/'results'/(inherited+'-verified.json')).read_bytes());assert prior['exit_code']==1 and prior['stages']['cpu']==prior['stages']['embedded-cpu']==0\n        assert all(sha(ROOT/n)==h==p['files'][n] for n,h in p['inherited_cpu_control_sha256'].items());w['inherited_cpu_control_parent']=inherited;save()\n",
+          "count": 1
+        },
+        {
+          "old": "        code=ledger.run([sys.executable,str(M/'launch_b4_resident_serial_controls_v2.py'),str(ROOT),'embedded-cpu'],out/'embedded-cpu-ledger','correctness','Same six new graph-counter controls in actual embedded Python. No native/model/GPU imports.',common+[library]);w['embedded_cpu_exit_code']=code;save();assert code==0,'6 embedded controls failed'\n",
+          "new": "",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "verify_b4_resident_serial_quality.py",
+      "source_sha256": "5fe9fdbb6953c441a317914c0b218ad7f05e5038e9a68cedd2b6b98247a5ad17",
+      "target": "verify_b4_resident_serial_quality_v2.draft.py",
+      "target_sha256": "497b107f74a884557f2f7704f15e5411fa44646c5871b8a56ab627f7f649987b",
+      "changes": [
+        {
+          "old": "b4-resident-serial-quality-attempt1",
+          "new": "b4-resident-serial-quality-attempt2",
+          "count": 1
+        },
+        {
+          "old": "b4-resident-serial-quality-preparation.json",
+          "new": "b4-resident-serial-quality-v2-preparation.json",
+          "count": 1
+        },
+        {
+          "old": "assert stages=={'cpu':0,'embedded-cpu':0,'resident-io':0,'candidate':0}",
+          "new": "assert stages=={'resident-io':0,'candidate':0}",
+          "count": 1
+        },
+        {
+          "old": "        summary=None",
+          "new": "        inherited=p['cpu_control_parent'];prior=doc('results/'+inherited+'-verified.json')\n        assert inherited=='b4-resident-serial-quality-attempt1' and prior['exit_code']==1 and prior['stages']['cpu']==prior['stages']['embedded-cpu']==0\n        with zipfile.ZipFile(a.proofs/(inherited+'-evidence.zip')) as previous:\n            old=json.loads(previous.read(P+'evidence/b4-resident-serial-quality-preparation.json'))\n            assert p['inherited_cpu_control_sha256'] and all(p['files'][n]==old['files'][n]==h for n,h in p['inherited_cpu_control_sha256'].items())\n        assert w['inherited_cpu_control_parent']==inherited\n        summary=None",
+          "count": 1
+        }
+      ]
+    }
+  ],
+  "native_probe_checks_AST_unchanged_below_setup": true,
+  "failed_attempt_methods_preserved": true,
+  "unchanged_CPU_controls_reused_only_from_closed_paired_failure_proof": true,
+  "fresh_native_IO_and_all_HTTP_model_controls_required": true,
+  "syntax_checked_only": true,
+  "native_model_GPU_unrun": true
+}

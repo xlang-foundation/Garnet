@@ -1,0 +1,40 @@
+"""Admit a setup-only retry after both machines replay the failed attempt."""
+from pathlib import Path
+import ast,hashlib,json,os,sys,zipfile
+W=Path(__file__).resolve().parent;O=W.parent/'outputs';R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';E=M/'evidence';P='Garnet/test2026/cuda/qwen38_5090/';sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest();J='b4-resident-serial-quality-attempt1'
+proof=O/(J+'-verified.json');q=json.loads(proof.read_bytes());assert proof.read_bytes()==(O/(J+'-remote-verified.json')).read_bytes() and q['exit_code']==1 and q['status']=='actual_B4_resident_serial_HTTP_quality_failure_preserved' and q['stages']=={'cpu':0,'embedded-cpu':0,'resident-io':1} and q['source_runtime_SDK_config_index_CMake_all34_and_full_model_files_restored'] and sha(O/(J+'-evidence.zip'))==q['archive_sha256']
+old_path=E/'b4-resident-serial-quality-preparation.json';old=json.loads(old_path.read_bytes());assert len(old['parents'])==60
+with zipfile.ZipFile(O/(J+'-evidence.zip')) as z:
+    w=json.loads(z.read('results/'+J+'/workflow.json'));assert w['all_restored'] and w['cleanup_finished'] and w['exit_code']==1 and w['source_after']==old['files']
+    assert b'Host embedding requires an independent native NVFP4 head' in z.read('results/'+J+'/resident-io-ledger/commands.log') and 'results/'+J+'/candidate-ledger/commands.jsonl' not in z.namelist()
+names=[];drafts=['probe_b4_host_resident_controls','launch_b4_resident_serial_controls','launch_b4_resident_serial_http_worker','probe_b4_resident_serial_quality','run_b4_resident_serial_quality','verify_b4_resident_serial_quality']
+for name in drafts:
+    source=W/(name+'_v2.draft.py');target=M/(name+'_v2.py');assert not target.exists();raw=source.read_bytes();ast.parse(raw);target.write_bytes(raw);names.append(target.name)
+deps=['verify_b4_resident_serial_quality_v2.py']+[n for n in old['reader_dependencies'] if n!='verify_b4_resident_serial_quality.py']
+for n in deps:
+    if n not in names:assert old['files'][P+n]==sha(M/n)
+sys.path[:0]=[str(M),str(R)];import run_logged as ledger
+ledger.source_identity=lambda:dict(scope='Explicit corrected native IO setup and candidate-v2 collector/reader import controls; no native/model/GPU or protected bodies',owned_source_sha256={n:sha(M/n) for n in dict.fromkeys(names+deps)})
+os.chdir(R)
+for name in ('probe_b4_resident_serial_quality_v2.py','verify_b4_resident_serial_quality_v2.py'):
+    assert ledger.run([sys.executable,str(M/name),'--help'],W/'b4-resident-serial-quality-v2-CLI-ledger','correctness','CPU import/CLI smoke only; actual corrected native IO and HTTP/model execution required remotely.',[M/n for n in dict.fromkeys(names+deps)])==0
+def keep(n,raw):
+    path=E/n;assert not path.exists();path.write_bytes(raw);names.append('evidence/'+n)
+for ext in ('jsonl','log'):keep('b4-resident-serial-quality-v2-CLI-commands.'+ext,(W/'b4-resident-serial-quality-v2-CLI-ledger'/('commands.'+ext)).read_bytes())
+for n in ('draft-b4-resident-serial-quality-v2.py','b4-resident-serial-quality-v2-draft-derivation.json','derive-b4-resident-serial-v2-helpers.py','b4-resident-serial-v2-helper-derivation.json','install-b4-resident-serial-quality-v2.py',Path(__file__).name):keep(n+('.txt' if n.endswith('.py') else ''),(W/n).read_bytes())
+names.append('evidence/'+old_path.name);files=dict(old['files'])
+for n in names:
+    key=P+n;h=sha(M/n)
+    if key in files:assert files[key]==h
+    files[key]=h
+parents=dict(old['parents']);assert J not in parents;parents[J]=dict(proof_sha256=sha(proof),archive_sha256=q['archive_sha256'],status=q['status'],exit_code=1);assert len(parents)==61
+cpu_names=['b4_resident_serial_graph_gate.py','test_b4_resident_serial_graph_gate.py','run_b4_resident_serial_embedded_cpu.py','launch_b4_resident_serial_controls.py'];cpu_pins={P+n:old['files'][P+n] for n in cpu_names};assert all(sha(M/n)==cpu_pins[P+n] for n in cpu_names)
+p={**old};p.update(files=files,archive_files=sorted(set(old['archive_files'])|{P+n for n in names}),parents=parents,reader_dependencies=deps,cpu_control_parent=J,inherited_cpu_control_sha256=cpu_pins,scope=old['scope']+' Setup-only retry: independent IO probe now opens checkpoint, enables native NVFP4 head, then enables host embedding, all inside try/finally. Original parity/lifetime/padding/invalid-input checks are AST-identical below initialization. Failed attempt1 archived and independently paired; no model/HTTP inference ran there. The unchanged6CPython+6embedded counter controls are reused only from its verified successful stages with four exact source pins; failure itself remainsfailed. Fresh actual native IO plus all31fixed4k/805HTTP outputs and graph-counter gates remain mandatory.61closedparents. Original failed methods and preparation preserved; v2 methods have separate names in the same fixed study folder. No native/DLL/model arithmetic change or speed admission.')
+p['installed_files']={**files,**{'Garnet/'+n:h for n,h in p['source_files'].items()}}
+prep=E/'b4-resident-serial-quality-v2-preparation.json';assert not prep.exists();prep.write_bytes(json.dumps(p,indent=2).encode())
+deploy={P+n:M/n for n in dict.fromkeys(names)};deploy[P+'evidence/'+prep.name]=prep;package=W/'b4-resident-serial-quality-v2-deployment.zip';assert not package.exists()
+with zipfile.ZipFile(package,'x',zipfile.ZIP_DEFLATED) as z:
+    for n,path in deploy.items():z.write(path,n)
+    z.writestr('deployment-manifest.json',json.dumps(dict(files={n:sha(path) for n,path in deploy.items()},native_DLL_or_model_source_change=False),indent=2))
+receipt=dict(deployment_sha256=sha(package),bytes=package.stat().st_size,files=len(deploy),preparation_sha256=sha(prep),paired_failed_attempt_proof_sha256=sha(proof),parents=61,unchanged_CPU_controls_reused=True,native_IO_and_all_HTTP_model_controls_required=True,native_model_execution_unrun=True)
+(W/'b4-resident-serial-quality-v2-package.json').write_bytes(json.dumps(receipt,indent=2).encode());(W/'b4-resident-serial-quality-v2-owned-names.json').write_bytes(json.dumps(list(dict.fromkeys(names))).encode());print(json.dumps(receipt))

@@ -1,0 +1,10 @@
+from pathlib import Path
+import ast,hashlib,json
+W=Path(__file__).resolve().parent;records=[]
+for name in ('install','postprocess','replay'):
+    source=W/(name+'-b4-resident-serial-quality.py');raw=source.read_bytes();s=raw.decode().replace('\r\n','\n');steps=[]
+    for a,b in [('b4-resident-serial-quality-attempt1','b4-resident-serial-quality-attempt2'),('b4-resident-serial-quality-preparation.json','b4-resident-serial-quality-v2-preparation.json'),('verify_b4_resident_serial_quality.py','verify_b4_resident_serial_quality_v2.py'),('b4-resident-serial-quality-deployment.zip','b4-resident-serial-quality-v2-deployment.zip'),('b4-resident-serial-quality-install.json','b4-resident-serial-quality-v2-install.json'),('60parents','61parents')]:
+        count=s.count(a)
+        if count:s=s.replace(a,b);steps.append(dict(old=a,new=b,count=count))
+    ast.parse(s);target=W/(name+'-b4-resident-serial-quality-v2.py');assert not target.exists();target.write_bytes(s.encode());records.append(dict(source=source.name,source_sha256=hashlib.sha256(raw).hexdigest(),target=target.name,target_sha256=hashlib.sha256(target.read_bytes()).hexdigest(),changes=steps))
+target=W/'b4-resident-serial-v2-helper-derivation.json';assert not target.exists();target.write_bytes(json.dumps(dict(methods=records,syntax_checked_only=True,remote_install_and_actual_replay_unrun=True),indent=2).encode());print('V2 installer and terminal readers prepared, execution unrun')

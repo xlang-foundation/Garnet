@@ -1,0 +1,25 @@
+from pathlib import Path
+import hashlib,json,subprocess,zipfile
+W=Path(__file__).resolve().parent;O=W.parent/'outputs';R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';E=M/'evidence';J='b4-resident-serial-quality-attempt1';sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest();owned=[]
+def keep(name,raw):
+    target=E/name;assert not target.exists();target.write_bytes(raw);owned.append(target)
+proof=O/(J+'-verified.json');q=json.loads(proof.read_bytes());archive=O/(J+'-evidence.zip');assert q['exit_code']==1 and q['stages']=={'cpu':0,'embedded-cpu':0,'resident-io':1} and q['source_runtime_SDK_config_index_CMake_all34_and_full_model_files_restored'] and proof.read_bytes()==(O/(J+'-remote-verified.json')).read_bytes() and sha(archive)==q['archive_sha256']
+for name in (proof.name,J+'-remote-verified.json'):keep(name,(O/name).read_bytes())
+with zipfile.ZipFile(archive) as z:
+    b='results/'+J+'/';keep(J+'-manifest.json',z.read('evidence-manifest.json'));keep(J+'-workflow.json',z.read(b+'workflow.json'))
+    for stage in ('cpu','embedded-cpu','resident-io'):
+        for ext in ('jsonl','log'):keep(J+'-'+stage+'-commands.'+ext,z.read(b+stage+'-ledger/commands.'+ext))
+    assert b'Host embedding requires an independent native NVFP4 head' in z.read(b+'resident-io-ledger/commands.log') and b+'candidate-ledger/commands.jsonl' not in z.namelist()
+for ext in ('jsonl','log'):keep(J+'-local-replay-commands.'+ext,(W/'b4-resident-serial-quality-attempt1-local-replay-ledger'/('commands.'+ext)).read_bytes())
+for name in ('derive-b4-resident-serial-replay-helpers.py','b4-resident-serial-replay-helper-derivation.json','postprocess-b4-resident-serial-quality.py','replay-b4-resident-serial-quality.py',Path(__file__).name):keep(J+'-'+name+('.txt' if name.endswith('.py') else ''),(W/name).read_bytes())
+keep(J+'-retention.json',json.dumps(dict(status=q['status'],paired_proof_sha256=sha(proof),archive_sha256=sha(archive),archive_bytes=archive.stat().st_size,CPython_counter_controls_passed=6,embedded_counter_controls_passed=6,native_IO_setup_failed_before_parity=True,model_HTTP_or_serving_benchmark_ran=False,source_runtime_all34_and_current18files_restored=True,error='Host embedding was enabled before its required native NVFP4 head; initialization order corrected only in separately named v2 probe.',candidate_quality_or_performance_qualified=False),indent=2).encode())
+receipt=json.loads((W/'b4-resident-serial-quality-v2-package.json').read_bytes());assert sha(W/'b4-resident-serial-quality-v2-deployment.zip')==receipt['deployment_sha256'] and receipt['paired_failed_attempt_proof_sha256']==sha(proof)
+owned += [M/n for n in json.loads((W/'b4-resident-serial-quality-v2-owned-names.json').read_bytes())]+[E/'b4-resident-serial-quality-v2-preparation.json']
+keep('b4-resident-serial-quality-v2-package.json',(W/'b4-resident-serial-quality-v2-package.json').read_bytes())
+entry=('\n\n2026-10-27 local: Resident/serial candidate attempt1 failed during native IO probe setup before byte comparisons or model/HTTP inference: host embedding requires the native NVFP4 head first.6CPython and6actualembedded counter controls passed. Failed raw archive '+sha(archive)+' ('+str(archive.stat().st_size)+'bytes), paired independent remote/local failure proof '+sha(proof)+'. Full source/runtime/SDK/config-index/CMake/all34/current18file restoration verified; no candidate model or speed qualification. Original failed code and preparation remain immutable.\n'
+       'Prepared separately named v2 setup-only retry: checkpoint open, enable NVFP4 head, enable host embedding, all inside try/finally. All legacy-copy/resident-control and embedding bit comparisons, argument-lifetime/padding and invalid-input no-mutation checks below initialization remain AST-identical. Unchanged6CPython+6embedded controls reused from exact source-pinned successful stages of the closed failed parent; failure itself remainsfailed. Fresh native IO B4T4/16/32 three trials each must pass, then31fixed4k HTTP/SSE plus805adapted prompt/output IDs and actual graph reuse counters remain required. Both v2 collector/reader CPU import/CLI smokes pass.61closedparents; no nativeDLL/weights/model-arithmetic or clean timing changes. Deployment '+receipt['deployment_sha256']+', preparation '+receipt['preparation_sha256']+'. Overall2x, strongest references, INT4/4B and production integration remain open.\n').encode()
+for name in ('docs/research/qwen38-5090-development-log.md','docs/research/qwen38-5090-implementation-task.md'):
+    target=R/name;assert b'Resident/serial candidate attempt1 failed during native IO probe setup' not in target.read_bytes()
+    with target.open('ab') as f:f.write(entry)
+    owned.append(target)
+paths=W/'b4-resident-serial-failure1-v2-stage-paths.bin';paths.write_bytes(b''.join(p.relative_to(R).as_posix().encode()+b'\0' for p in dict.fromkeys(owned)));subprocess.run(['git','-c','core.autocrlf=false','add','--pathspec-from-file='+str(paths),'--pathspec-file-nul'],cwd=R,check=True);print(json.dumps(dict(staged_paths=len(set(owned)),failed_proof_sha256=sha(proof),v2_actual_native_IO_and_model_unrun=True)))
