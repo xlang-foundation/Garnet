@@ -1,0 +1,128 @@
+{
+  "methods": [
+    {
+      "source": "probe_b4_rowwise_http_benchmark.py",
+      "source_sha256": "7e608e2eb779288004e9717c4a158c825bea7c14391b28b07b6ad6eec456ea11",
+      "target": "probe_b4_resident_serial_http_benchmark.draft.py",
+      "target_sha256": "a87cdf2e8e22e43949164731aafbb42a5687bdf3cb3bf7721f82afc713a34c08",
+      "changes": [
+        {
+          "old": "b4-rowwise-http-benchmark-preparation.json",
+          "new": "b4-resident-serial-http-benchmark-preparation.json",
+          "count": 1
+        },
+        {
+          "old": "B4_three_fixed4k_HTTP_trials",
+          "new": "B4_resident_serial_three_fixed4k_HTTP_trials",
+          "count": 1
+        },
+        {
+          "old": "launch_b4_rowwise_http_worker.py",
+          "new": "launch_b4_resident_serial_http_worker.py",
+          "count": 1
+        },
+        {
+          "old": "launch_b4_resident_serial_http_worker.py",
+          "new": "launch_b4_resident_serial_http_worker_v2.py",
+          "count": 1
+        },
+        {
+          "old": "    assert sha_file(root/'results'/(quality+'-evidence.zip'))",
+          "new": "    assert q['arrays']['resident_IO_controls_byte_exact'] and q['arrays']['actual_graph_policy']['status']=='resident_serial_requested_policy_and_actual_graph_reuse_replayed'\n    assert sha_file(root/'results'/(quality+'-evidence.zip'))",
+          "count": 1
+        },
+        {
+          "old": "        assert ready['source_admission']['source_bundle_sha256']",
+          "new": "        assert ready['backend_policy']==dict(resident_controls=True,serial_target_graph_reuse=True,serial_draft_graph_reuse=True,accepted_head_reuse=False)\n        assert ready['source_admission']['source_bundle_sha256']",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "run_b4_rowwise_http_benchmark.py",
+      "source_sha256": "6285a7730bbfba75c98943f0f0e4e45bb63076af15be8d4b41fa33e192b1bb7a",
+      "target": "run_b4_resident_serial_http_benchmark.draft.py",
+      "target_sha256": "edce240935c8c7cecafdeab4af42d18d835183d98764e8cb71209da1751e5728",
+      "changes": [
+        {
+          "old": "b4-rowwise-http-benchmark-attempt1",
+          "new": "b4-resident-serial-http-benchmark-attempt1",
+          "count": 1
+        },
+        {
+          "old": "b4-rowwise-http-benchmark-preparation.json",
+          "new": "b4-resident-serial-http-benchmark-preparation.json",
+          "count": 1
+        },
+        {
+          "old": "B4_rowwise_HTTP_benchmark",
+          "new": "B4_resident_serial_HTTP_benchmark",
+          "count": 2
+        },
+        {
+          "old": "B4_three_fixed4k_HTTP_trials",
+          "new": "B4_resident_serial_three_fixed4k_HTTP_trials",
+          "count": 1
+        },
+        {
+          "old": "probe_b4_rowwise_http_benchmark.py",
+          "new": "probe_b4_resident_serial_http_benchmark.py",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "verify_b4_rowwise_http_benchmark.py",
+      "source_sha256": "e5007e24cb56103553f1f600afcd6815f19c8dd86ad852f2cc821049ea502fc4",
+      "target": "verify_b4_resident_serial_http_benchmark.draft.py",
+      "target_sha256": "1e830c10f1e7da1cdcbb4df2b19bc25afec3ea81c132ceb504c7d36d9f0c0135",
+      "changes": [
+        {
+          "old": "b4-rowwise-http-benchmark-attempt1",
+          "new": "b4-resident-serial-http-benchmark-attempt1",
+          "count": 1
+        },
+        {
+          "old": "b4-rowwise-http-benchmark-preparation.json",
+          "new": "b4-resident-serial-http-benchmark-preparation.json",
+          "count": 1
+        },
+        {
+          "old": "B4_rowwise_HTTP_benchmark",
+          "new": "B4_resident_serial_HTTP_benchmark",
+          "count": 1
+        },
+        {
+          "old": "B4_three_fixed4k_HTTP_trials",
+          "new": "B4_resident_serial_three_fixed4k_HTTP_trials",
+          "count": 2
+        },
+        {
+          "old": "actual_B4_HTTP_benchmark_failure_preserved",
+          "new": "actual_B4_resident_serial_HTTP_benchmark_failure_preserved",
+          "count": 1
+        },
+        {
+          "old": "            ready=r['ready'];",
+          "new": "            assert parent['arrays']['resident_IO_controls_byte_exact'] and parent['arrays']['actual_graph_policy']['status']=='resident_serial_requested_policy_and_actual_graph_reuse_replayed'\n            ready=r['ready'];",
+          "count": 1
+        },
+        {
+          "old": "            ad=ready['source_admission'];",
+          "new": "            assert ready['backend_policy']==dict(resident_controls=True,serial_target_graph_reuse=True,serial_draft_graph_reuse=True,accepted_head_reuse=False)\n            ad=ready['source_admission'];",
+          "count": 1
+        },
+        {
+          "old": "assert 'study_transport_padding' not in body",
+          "new": "assert 'study_transport_padding' not in body and 'study_graph_snapshot' not in body",
+          "count": 1
+        }
+      ]
+    }
+  ],
+  "actual_quality_proof_required": true,
+  "same_immutable_corpus_and_all372_ID_callback_dispatch_metric_memory_checks_retained": true,
+  "clean_timing_excludes_diagnostic_markers": true,
+  "model_native_DLL_or_GPU_run": false,
+  "syntax_checked_only": true
+}

@@ -1,0 +1,32 @@
+{
+  "status": "cache_precision_labels_corrected",
+  "renderer_before_sha256": "d0fcac8ca2fea44e575c5756c3b386ce177198b4a3212b25a66e1d16aab33549",
+  "renderer_after_sha256": "7659f7ed26bf6d9a978d3d559ba5263b9fd1a809222389fda71959f720b84b1f",
+  "metadata_changes": [
+    {
+      "old": "Native cache BF16; reference SSM state FP32 and KV BF16. Reference radix/prefix caching disabled. Configurations are disclosed.",
+      "new": "Native GDN/reference SSM recurrent state: FP32; attention KV: BF16. Native conv state: FP32; reference conv dtype unverified. Prefix/radix cache off.",
+      "count": 1
+    },
+    {
+      "old": "Sampled adapter VRAM; configs differ in SSM cache precision. Overall2x unmet.",
+      "new": "Sampled adapter VRAM. FP32 recurrent state; BF16 attention KV. Overall2x unmet.",
+      "count": 1
+    },
+    {
+      "old": "mixed NVFP4/FP8; BF16 vision/cache; native NVFP4 head",
+      "new": "mixed NVFP4/FP8; BF16 vision/attention KV; FP32 GDN/convolution state; native NVFP4 head",
+      "count": 1
+    },
+    {
+      "old": "native NVFP4 head, BF16 vision/cache.",
+      "new": "native NVFP4 head, BF16 vision/attention KV, FP32 GDN/convolution state.",
+      "count": 1
+    }
+  ],
+  "numerical_series_ranges_all_raw_cohorts_comparisons_and_memory_byte_values_unchanged": true,
+  "CSV_byte_identical": true,
+  "new_model_or_benchmark_execution": false,
+  "initial_static_audit_assumption_failure": "Unchanged baseline layouts were absent from overlay ZIP; corrected using matching actual archived baseline source hashes.",
+  "reference_convolution_cache_dtype_verified": false
+}

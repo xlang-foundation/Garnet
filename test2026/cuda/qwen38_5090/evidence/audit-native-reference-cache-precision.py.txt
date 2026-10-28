@@ -1,0 +1,32 @@
+"""Static archived-source/config audit only; never execute a layout/model/replay."""
+from pathlib import Path
+import ast,hashlib,json,zipfile
+W=Path(__file__).resolve().parent;O=W.parent/'outputs';R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';sha=lambda b:hashlib.sha256(b).hexdigest();sources={}
+for name,pin,job,preparation in [('o128-canonical-source.zip','c44138f5e64b684d556830f58f09c2332d767155669c6642ba799b8445493997','o128-http-benchmark-attempt1','o128-http-benchmark-preparation.json'),('b4-rowwise-http-source.zip','4ccee24a9d58cd8297ea6a44632d54d3efd608fe323f686b12dcb56d9a179779','b4-rowwise-http-benchmark-attempt1','b4-rowwise-http-benchmark-preparation.json')]:
+    path=W/name;assert sha(path.read_bytes())==pin;rows={};archive=O/(job+'-evidence.zip');proof=O/(job+'-verified.json');q=json.loads(proof.read_bytes());assert q['exit_code']==0 and sha(archive.read_bytes())==q['archive_sha256']
+    with zipfile.ZipFile(archive) as evidence:prep=json.loads(evidence.read('Garnet/test2026/cuda/qwen38_5090/evidence/'+preparation))
+    with zipfile.ZipFile(path) as z:
+        for n in ('kv_bf16_study_layout.py','kv_bf16_low_batch_study_layout.py','kv_bf16_prefill128_study_layout.py'):
+            key='xModel/qwen35/vl_0_8b/'+n
+            if key in z.namelist():raw=z.read(key);provenance='pinned overlay member'
+            else:
+                raw=(R/key).read_bytes();assert sha(raw)==prep['files']['Garnet/'+key];provenance='unchanged baseline byte-identity pin from actual archived benchmark preparation'
+            text=raw.decode();ast.parse(text)
+            if n!='kv_bf16_prefill128_study_layout.py':assert "'linear_dtype':'fp32'" in text and "'kv_dtype':'bf16'" in text and "precision='fp32'" in text
+            else:assert 'build_bf16_low_batch_layout(1, 4096, 32' in text and 'canonical packed BF16 KV/FP32 GDN storage' in text
+            rows[key]=dict(sha256=sha(raw),provenance=provenance,precision_lines=[s.strip() for s in text.splitlines() if any(t in s for t in ('linear_dtype','kv_dtype',"precision='fp32'",'BF16 KV/FP32 GDN'))])
+    sources[name]=dict(sha256=pin,files=rows,actual_archive=archive.name,actual_archive_sha256=q['archive_sha256'],paired_benchmark_proof_sha256=sha(proof.read_bytes()))
+sg=json.loads((W/'saved-reference-settings-audit.json').read_bytes());assert sg['sglang']['configured_settings']['mamba_ssm_dtype']=='float32' and sg['sglang']['configured_settings']['kv_cache_dtype']=='bfloat16'
+reference=O/'vllm-fixed4k-ordinary-attempt3-evidence.zip';hits=[]
+with zipfile.ZipFile(reference) as z:
+    for n in z.namelist():
+        if not n.endswith(('.log','.json','.jsonl','.sh','.txt')):continue
+        raw=z.read(n)
+        if len(raw)>8*1024*1024:continue
+        text=raw.decode(errors='replace')
+        for line in text.splitlines():
+            if any(t in line for t in ('mamba_ssm_cache_dtype','--mamba-ssm-cache-dtype')):
+                hits.append(dict(file=n,sha256=sha(raw),line=line[:5000]))
+assert any('float32' in h['line'] for h in hits),'Actual saved ordinary vLLM SSM dtype not located'
+record=dict(status='static_archived_native_GDN_FP32_and_attention_KV_BF16_audited',native_source_bundles=sources,sglang_saved_settings_sha256=sha((W/'saved-reference-settings-audit.json').read_bytes()),sglang_SSM_dtype='float32',sglang_attention_KV_dtype='bfloat16',vllm_archive=reference.name,vllm_archive_sha256=sha(reference.read_bytes()),vllm_saved_SSM_evidence=hits,native_GDN_recurrent_and_convolution_state='fp32',native_attention_KV='bf16',reference_convolution_cache_dtype_verified=False,incorrect_chart_phrase='configs differ in SSM cache precision',correction='Native GDN recurrent state and reference SSM state are FP32; attention KV is BF16. Native convolution state is also FP32; reference convolution-cache precision is not established by this audit.',scope='Static metadata and actual saved reference configuration only. Layouts/models/native executables not run. No numerical replay, new benchmark or metrics changed.')
+target=W/'native-reference-cache-precision-audit.json';assert not target.exists();target.write_bytes(json.dumps(record,indent=2).encode());print(json.dumps(dict(status=record['status'],native_GDN='fp32',attention_KV='bf16',vllm_configuration_hits=len(hits),reference_convolution_cache_dtype_verified=False)))

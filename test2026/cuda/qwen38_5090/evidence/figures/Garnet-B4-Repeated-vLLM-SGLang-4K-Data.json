@@ -1,6 +1,6 @@
 {
   "model_checkpoint": "nvidia/Qwen3.8-27B-NVFP4",
-  "model_precision": "mixed NVFP4/FP8; BF16 vision/cache; native NVFP4 head",
+  "model_precision": "mixed NVFP4/FP8; BF16 vision/attention KV; FP32 GDN/convolution state; native NVFP4 head",
   "memory_sampling_by_native_trial": [
     {
       "text-c1": {
@@ -2287,7 +2287,7 @@
     "Both native lines: median of three cohort statistics; bands: observed min-max, not confidence intervals. VRAM: maximum across trials.",
     "Three repeats per native worker; ordinary references have one trial each. Native Windows; vLLM/SGLang WSL.",
     "Native B1 queues; native B4 uses fixed microbatches with private padding; references allow8 active requests. Dummy tokens excluded.",
-    "Native cache BF16; reference SSM state FP32 and KV BF16. Reference radix/prefix caching disabled. Configurations are disclosed.",
+    "Native GDN/reference SSM recurrent state: FP32; attention KV: BF16. Native conv state: FP32; reference conv dtype unverified. Prefix/radix cache off.",
     "All372 B4 prompt/output sequences match retained B1. Reference long-output variants remain; cross-engine equivalence unproven.",
     "Adapter VRAM includes background allocations; not process/instantaneous peak. Maximum B4 sample gap: 42.129s.",
     "Dashed guides use measured ordinary references only. Stronger tuned/MTP references and matched INT4/4B comparisons pending; overall2x unmet."

@@ -1,0 +1,134 @@
+{
+  "status": "static_archived_native_GDN_FP32_and_attention_KV_BF16_audited",
+  "native_source_bundles": {
+    "o128-canonical-source.zip": {
+      "sha256": "c44138f5e64b684d556830f58f09c2332d767155669c6642ba799b8445493997",
+      "files": {
+        "xModel/qwen35/vl_0_8b/kv_bf16_study_layout.py": {
+          "sha256": "1c2071308de589bff10b3e980d377dc3049416bbe96c0bfbc16c9d184a989311",
+          "provenance": "unchanged baseline byte-identity pin from actual archived benchmark preparation",
+          "precision_lines": [
+            "w1=40960;w2=786432;out1=w1;out2=w2;precision='fp32';logical=None",
+            "'hidden':5120,'canonical_dtype':'fp32_carrier_with_bf16_kv','kv_dtype':'bf16',",
+            "'linear_dtype':'fp32','canonical_state_width':canonical,'hidden_width':chunk*5120,"
+          ]
+        },
+        "xModel/qwen35/vl_0_8b/kv_bf16_low_batch_study_layout.py": {
+          "sha256": "c6112a69b09bb2cd9d8aa4dfe5835681f6bce2e308561c33032f17b7b7c0e052",
+          "provenance": "unchanged baseline byte-identity pin from actual archived benchmark preparation",
+          "precision_lines": [
+            "w1=40960;w2=786432;out1=w1;out2=w2;precision='fp32';logical=None",
+            "'hidden':5120,'canonical_dtype':'fp32_carrier_with_bf16_kv','kv_dtype':'bf16',",
+            "'linear_dtype':'fp32','canonical_state_width':canonical,'hidden_width':chunk*5120,"
+          ]
+        },
+        "xModel/qwen35/vl_0_8b/kv_bf16_prefill128_study_layout.py": {
+          "sha256": "23b83143f3b65055d58571e97497b49d9eb0e8cea79bb5ee09d080e77d6bdea9",
+          "provenance": "pinned overlay member",
+          "precision_lines": [
+            "keeps their canonical packed BF16 KV/FP32 GDN storage and emits T128 KV deltas."
+          ]
+        }
+      },
+      "actual_archive": "o128-http-benchmark-attempt1-evidence.zip",
+      "actual_archive_sha256": "0233565d6de5c4973760e4f618e91d192a070f342cfc3b8967facd4d61fb3206",
+      "paired_benchmark_proof_sha256": "c86b1a10553dbb83d5753495c3e6ede4411187ee1909e2fc05ee48a7eef9005c"
+    },
+    "b4-rowwise-http-source.zip": {
+      "sha256": "4ccee24a9d58cd8297ea6a44632d54d3efd608fe323f686b12dcb56d9a179779",
+      "files": {
+        "xModel/qwen35/vl_0_8b/kv_bf16_study_layout.py": {
+          "sha256": "1c2071308de589bff10b3e980d377dc3049416bbe96c0bfbc16c9d184a989311",
+          "provenance": "unchanged baseline byte-identity pin from actual archived benchmark preparation",
+          "precision_lines": [
+            "w1=40960;w2=786432;out1=w1;out2=w2;precision='fp32';logical=None",
+            "'hidden':5120,'canonical_dtype':'fp32_carrier_with_bf16_kv','kv_dtype':'bf16',",
+            "'linear_dtype':'fp32','canonical_state_width':canonical,'hidden_width':chunk*5120,"
+          ]
+        },
+        "xModel/qwen35/vl_0_8b/kv_bf16_low_batch_study_layout.py": {
+          "sha256": "c6112a69b09bb2cd9d8aa4dfe5835681f6bce2e308561c33032f17b7b7c0e052",
+          "provenance": "unchanged baseline byte-identity pin from actual archived benchmark preparation",
+          "precision_lines": [
+            "w1=40960;w2=786432;out1=w1;out2=w2;precision='fp32';logical=None",
+            "'hidden':5120,'canonical_dtype':'fp32_carrier_with_bf16_kv','kv_dtype':'bf16',",
+            "'linear_dtype':'fp32','canonical_state_width':canonical,'hidden_width':chunk*5120,"
+          ]
+        },
+        "xModel/qwen35/vl_0_8b/kv_bf16_prefill128_study_layout.py": {
+          "sha256": "23b83143f3b65055d58571e97497b49d9eb0e8cea79bb5ee09d080e77d6bdea9",
+          "provenance": "pinned overlay member",
+          "precision_lines": [
+            "keeps their canonical packed BF16 KV/FP32 GDN storage and emits T128 KV deltas."
+          ]
+        }
+      },
+      "actual_archive": "b4-rowwise-http-benchmark-attempt1-evidence.zip",
+      "actual_archive_sha256": "2c017420641b5d79f95746a3f110611ae8783339b4a2e19bf3e97fa5a0c48904",
+      "paired_benchmark_proof_sha256": "7b4e7ddbd6e95d38da260052665e6fac6683e7d0b137c16c375255f17b1dcadb"
+    }
+  },
+  "sglang_saved_settings_sha256": "b5ac49e11a350f7ceac0e59a5efbc1cb3018ea39ed63e5b74b4dd84fdd676679",
+  "sglang_SSM_dtype": "float32",
+  "sglang_attention_KV_dtype": "bfloat16",
+  "vllm_archive": "vllm-fixed4k-ordinary-attempt3-evidence.zip",
+  "vllm_archive_sha256": "abeebf29f6e7527bc7f3f652c6f0850a2ea309308c79419be88e2d9318130cb7",
+  "vllm_saved_SSM_evidence": [
+    {
+      "file": "results/vllm-fixed4k-ordinary-attempt3/linux-identity.json",
+      "sha256": "e018d04af35277422731245067a6bea7b92a6ec3fe2397c501b917bc3249ae03",
+      "line": "    \"--mamba-ssm-cache-dtype\","
+    },
+    {
+      "file": "results/vllm-fixed4k-ordinary-attempt3/metadata.json",
+      "sha256": "6eb2dfa75c679326557748c6e19ae677b863d354e3360efcd02afbf3954b2929",
+      "line": "      \"mamba_ssm_cache_dtype\": \"float32\","
+    },
+    {
+      "file": "results/vllm-fixed4k-ordinary-attempt3/server-info-raw.json",
+      "sha256": "7d61ff2f62d146ac9cad14a6b028758ea0601943e43632f2f911efcb2e39f581",
+      "line": "{\"vllm_config\":{\"model_config\":{\"model\":\"/mnt/d/CantorAI/5090-study-20261023/models/Qwen3.8-27B-NVFP4\",\"model_weights\":\"\",\"runner\":\"auto\",\"convert\":\"auto\",\"tokenizer\":\"/mnt/d/CantorAI/5090-study-20261023/models/Qwen3.8-27B-NVFP4\",\"tokenizer_mode\":\"auto\",\"trust_remote_code\":false,\"dtype\":\"torch.bfloat16\",\"seed\":0,\"is_submodel_config\":false,\"word_embeddings_untied_by_checkpoint\":false,\"hf_config_path\":null,\"allowed_local_media_path\":\"\",\"allowed_media_domains\":null,\"revision\":null,\"code_revision\":null,\"tokenizer_revision\":null,\"max_model_len\":4096,\"spec_target_max_model_len\":null,\"quantization\":\"modelopt_mixed\",\"quantization_config\":null,\"allow_deprecated_quantization\":false,\"enforce_eager\":false,\"return_sampling_mask\":false,\"max_logprobs\":20,\"logprobs_mode\":\"raw_logprobs\",\"use_fp64_gumbel\":false,\"enable_trace_replay\":false,\"disable_sliding_window\":false,\"disable_cascade_attn\":true,\"skip_tokenizer_init\":false,\"enable_prompt_embeds\":false,\"served_model_name\":\"qwen38-27b-nvfp4\",\"config_format\":\"auto\",\"hf_token\":null,\"hf_overrides\":{},\"model_class_overrides\":{},\"generation_config\":\"auto\",\"override_generation_config\":{},\"enable_sleep_mode\":false,\"sleep_preserve_parameter_names\":[],\"sleep_mode_backend\":\"cumem\",\"sleep_mode_offload_cudagraph\":false,\"enable_nccl_comm_suspend\":false,\"enable_cumem_allocator\":false,\"model_impl\":\"auto\",\"logits_processors\":null,\"io_processor_plugin\":null,\"renderer_num_workers\":1,\"pooler_config\":null,\"multimodal_config\":{\"language_model_only\":false,\"limit_per_prompt\":{},\"enable_mm_embeds\":false,\"media_io_kwargs\":{},\"mm_processor_kwargs\":null,\"mm_device_do_normalize\":true,\"mm_processor_cache_gb\":4.0,\"mm_processor_cache_type\":\"lru\",\"mm_hasher_algorithm\":\"blake3\",\"mm_shm_cache_max_object_size_mb\":128,\"mm_encoder_only\":false,\"mm_encoder_tp_mode\":\"weights\",\"mm_encoder_attn_backend\":null,\"mm_encoder_attn_dtype\":null,\"mm_encoder_fp8_scale_path\":null,\"mm_encoder_fp8_scale_save_path\":null,\"mm_encoder_fp8_scale_save_margin\":1.5,\"interleave_mm_strings\":false,\"skip_mm_profiling\":false,\"video_pruning_rate\":null,\"video_pruning_method\":\"evs\",\"mm_tensor_ipc\":\"direct_rpc\",\"allow_missing_mm_embeddings\":false,\"mm_ipc_gpu_memory_gb\":0.0}},\"cache_config\":{\"block_size\":784,\"user_specified_block_size\":false,\"kv_cache_layout\":null,\"prefix_match_unit\":null,\"gpu_memory_utilization\":0.88,\"cache_dtype\":\"bfloat16\",\"is_attention_free\":false,\"num_gpu_blocks_override\":null,\"sliding_window\":null,\"enable_prefix_caching\":false,\"prefix_caching_hash_algo\":\"sha256\",\"prefix_cache_retention_interval\":0,\"kv_cache_dtype_skip_layers\":[],\"mamba_page_size_padded\":null,\"skip_page_size_padded\":null,\"mamba_block_size\":4096,\"mamba_cache_dtype\":\"auto\",\"mamba_ssm_cache_dtype\":\"float32\",\"mamba_cache_mode\":\"none\",\"enable_mamba_shared_prefix_checkpoint\":false,\"replayssm_buffer_len\":16,\"use_replayssm\":false,\"use_kda_recoverssm\":false,\"num_gpu_blocks\":83,\"num_cpu_blocks\":null,\"effective_attention_block_size\":784,\"kv_cache_size_tokens\":37774,\"kv_cache_max_concurrency\":9.222222222222221,\"hash_block_size\":null,\"cache_hit_alignment_tokens\":null,\"kv_sharing_fast_prefill\":false,\"swa_bounded_replay\":true,\"kv_cache_memory_bytes\":4294967296,\"kv_offloading_size\":null,\"kv_offloading_backend\":\"native\",\"_block_size_resolved\":true},\"parallel_config\":{\"pipeline_parallel_size\":1,\"tensor_parallel_size\":1,\"prefill_context_parallel_size\":1,\"data_parallel_size\":1,\"data_parallel_size_local\":1,\"data_parallel_rank\":0,\"data_parallel_rank_local\":0,\"data_parallel_master_ip\":\"127.0.0.1\",\"data_parallel_rpc_port\":29550,\"dp_sync_interval\":16,\"data_parallel_master_port\":0,\"data_parallel_backend\":\"mp\",\"data_parallel_external_lb\":false,\"data_parallel_hybrid_lb\":false,\"is_moe_model\":false,\"enable_hc_sp\":false,\"enable_expert_parallel\":false,\"enable_batch_sharded_sampling\":false,\"enable_ep_weight_filter\":false,\"enable_eplb\":false,\"eplb_config\":{\"window_size\":1000,\"step_interval\":3000,\"num_redundant_experts\":0,\"log_balancedness\":false,\"log_balancedness_interval\":1,\"use_async\":true,\"policy\":\"default\",\"communicator\":null,\"enable_migration_batching\":false},\"expert_placement_strategy\":\"linear\",\"all2all_backend\":\"allgather_reducescatter\",\"max_parallel_loading_workers\":null,\"disable_custom_all_reduce\":false,\"enable_shm_tensor_arena\":false,\"enable_elastic_ep\":false,\"elastic_ep_max_dp_size\":1,\"enable_dbo\":false,\"ubatch_size\":0,\"dbo_decode_token_threshold\":32,\"dbo_prefill_token_threshold\":512,\"disable_nccl_for_dp_synchronization\":true,\"ray_workers_use_nsight\":false,\"ray_runtime_env\":null,\"placement_group\":null,\"distributed_executor_backend\":\"uni\",\"worker_cls\":\"vllm.v1.worker.gpu_worker.Worker\",\"worker_extension_cls\":\"\",\"master_addr\":\"127.0.0.1\",\"master_port\":29501,\"node_rank\":0,\"nnodes\":1,\"numa_bind\":false,\"numa_bind_nodes\":null,\"numa_bind_cpus\":null,\"assigned_physical_gpu_ids\":null,\"distributed_timeout_seconds\":null,\"cpu_distributed_timeout_seconds\":null,\"world_size\":1,\"rank\":0,\"_data_parallel_master_port_list\":[],\"_coord_store_port\":0,\"decode_context_parallel_size\":1,\"dcp_kv_cache_interle"
+    },
+    {
+      "file": "results/vllm-fixed4k-ordinary-attempt3/server.log",
+      "sha256": "0c0e69feacd6b2114b24d1f764eb7b61903471b2cbbb5c5167f8be9461cb22e0",
+      "line": "(APIServer pid=350) INFO 10-26 08:38:17 [api_utils.py:286] non-default args: {'model_tag': '/mnt/d/CantorAI/5090-study-20261023/models/Qwen3.8-27B-NVFP4', 'host': '127.0.0.1', 'port': 18080, 'model': '/mnt/d/CantorAI/5090-study-20261023/models/Qwen3.8-27B-NVFP4', 'dtype': 'bfloat16', 'max_model_len': 4096, 'served_model_name': ['qwen38-27b-nvfp4'], 'gpu_memory_utilization': 0.88, 'kv_cache_memory_bytes': 4294967296, 'kv_cache_dtype': 'bfloat16', 'enable_prefix_caching': False, 'mamba_ssm_cache_dtype': 'float32', 'max_num_batched_tokens': 4096, 'max_num_seqs': 8, 'max_cudagraph_capture_size': 8, 'compilation_config': {'mode': None, 'debug_dump_path': None, 'cache_dir': '', 'compile_cache_save_format': 'binary', 'backend': 'inductor', 'custom_ops': [], 'ir_enable_torch_wrap': None, 'splitting_ops': None, 'compile_mm_encoder': False, 'cudagraph_mm_encoder': False, 'encoder_cudagraph_token_budgets': [], 'encoder_cudagraph_max_vision_items_per_batch': 0, 'encoder_cudagraph_max_frames_per_batch': None, 'cudagraph_decoder_replay': True, 'decoder_replay_cudagraph_capture_sizes': [], 'decoder_replay_trim_threshold': 768, 'compile_sizes': None, 'compile_ranges_endpoints': None, 'inductor_compile_config': {'enable_auto_functionalized_v2': False, 'combo_kernels': True, 'benchmark_combo_kernel': True}, 'inductor_passes': {}, 'cudagraph_mode': <CUDAGraphMode.FULL_DECODE_ONLY: (2, 0)>, 'cudagraph_num_of_warmups': 0, 'cudagraph_capture_sizes': [1, 2, 4, 8], 'cudagraph_copy_inputs': False, 'cudagraph_specialize_lora': True, 'use_inductor_graph_partition': None, 'pass_config': {}, 'max_cudagraph_capture_size': None, 'dynamic_shapes_config': {'type': <DynamicShapesType.BACKED: 'backed'>, 'evaluate_guards': False, 'assume_32_bit_indexing': False}, 'local_cache_dir': None, 'fast_moe_cold_start': None, 'static_all_moe_layers': []}}"
+    },
+    {
+      "file": "results/vllm-fixed4k-ordinary-attempt3/client/server-identity.json",
+      "sha256": "3f76cd3ece3fbd3dc08a64af1f619bf6e4d217fc9176067135ed23df744515ef",
+      "line": "        \"mamba_ssm_cache_dtype\": \"float32\","
+    },
+    {
+      "file": "results/vllm-fixed4k-ordinary-attempt3/client/benchmark4k/e48654c06f3f42e4b461ef8fd0d06b1e-manifest.json",
+      "sha256": "8518761e3d007d73b1f89abb0267c2f5f1582f6858cc1243da62d816ae5262e0",
+      "line": "        \"mamba_ssm_cache_dtype\": \"float32\","
+    },
+    {
+      "file": "results/vllm-fixed4k-ordinary-attempt3/client/greedy-controls/server-log-snapshot.log",
+      "sha256": "382ab1587069012b333d7a05a4664fe05faf6152b3670f75f10f6c34043eec99",
+      "line": "(APIServer pid=350) INFO 10-26 08:38:17 [api_utils.py:286] non-default args: {'model_tag': '/mnt/d/CantorAI/5090-study-20261023/models/Qwen3.8-27B-NVFP4', 'host': '127.0.0.1', 'port': 18080, 'model': '/mnt/d/CantorAI/5090-study-20261023/models/Qwen3.8-27B-NVFP4', 'dtype': 'bfloat16', 'max_model_len': 4096, 'served_model_name': ['qwen38-27b-nvfp4'], 'gpu_memory_utilization': 0.88, 'kv_cache_memory_bytes': 4294967296, 'kv_cache_dtype': 'bfloat16', 'enable_prefix_caching': False, 'mamba_ssm_cache_dtype': 'float32', 'max_num_batched_tokens': 4096, 'max_num_seqs': 8, 'max_cudagraph_capture_size': 8, 'compilation_config': {'mode': None, 'debug_dump_path': None, 'cache_dir': '', 'compile_cache_save_format': 'binary', 'backend': 'inductor', 'custom_ops': [], 'ir_enable_torch_wrap': None, 'splitting_ops': None, 'compile_mm_encoder': False, 'cudagraph_mm_encoder': False, 'encoder_cudagraph_token_budgets': [], 'encoder_cudagraph_max_vision_items_per_batch': 0, 'encoder_cudagraph_max_frames_per_batch': None, 'cudagraph_decoder_replay': True, 'decoder_replay_cudagraph_capture_sizes': [], 'decoder_replay_trim_threshold': 768, 'compile_sizes': None, 'compile_ranges_endpoints': None, 'inductor_compile_config': {'enable_auto_functionalized_v2': False, 'combo_kernels': True, 'benchmark_combo_kernel': True}, 'inductor_passes': {}, 'cudagraph_mode': <CUDAGraphMode.FULL_DECODE_ONLY: (2, 0)>, 'cudagraph_num_of_warmups': 0, 'cudagraph_capture_sizes': [1, 2, 4, 8], 'cudagraph_copy_inputs': False, 'cudagraph_specialize_lora': True, 'use_inductor_graph_partition': None, 'pass_config': {}, 'max_cudagraph_capture_size': None, 'dynamic_shapes_config': {'type': <DynamicShapesType.BACKED: 'backed'>, 'evaluate_guards': False, 'assume_32_bit_indexing': False}, 'local_cache_dir': None, 'fast_moe_cold_start': None, 'static_all_moe_layers': []}}"
+    },
+    {
+      "file": "results/vllm-fixed4k-ordinary-attempt3/client/mmmu-quality/server-identity.json",
+      "sha256": "de4c2bfc45daf05cbe625533ce3ca20433202c7e7be7d62b42b1d7647f5f6615",
+      "line": "{\"engine\":\"vllm\",\"model_alias\":\"qwen38-27b-nvfp4\",\"generation_mode\":\"ordinary\",\"checkpoint_revision\":\"482ca0f3832238542f8f5295dde86b5f22711d80\",\"server_metadata\":{\"engine\":\"vllm\",\"generation_mode\":\"ordinary\",\"version\":\"0.32.0\",\"verified_settings\":{\"model_config\":{\"model\":\"/mnt/d/CantorAI/5090-study-20261023/models/Qwen3.8-27B-NVFP4\",\"max_model_len\":4096,\"dtype\":\"torch.bfloat16\",\"quantization\":\"modelopt_mixed\",\"enforce_eager\":false},\"cache_config\":{\"cache_dtype\":\"bfloat16\",\"mamba_ssm_cache_dtype\":\"float32\",\"enable_prefix_caching\":false,\"kv_cache_memory_bytes\":4294967296},\"parallel_config\":{\"tensor_parallel_size\":1,\"pipeline_parallel_size\":1,\"data_parallel_size\":1},\"scheduler_config\":{\"max_num_seqs\":8,\"max_num_batched_tokens\":4096},\"compilation_config\":{\"cudagraph_capture_sizes\":[1,2,4,8],\"max_cudagraph_capture_size\":8}},\"actual_cudagraph_mode\":[2,0],\"context_capacity\":4096,\"configured_engine_context_capacity\":4096,\"engine_context_reserved_slots\":0,\"resolved_kv_cache_tokens\":37774,\"reported_max_concurrency_full4k\":9.22,\"checkpoint_revision\":\"482ca0f3832238542f8f5295dde86b5f22711d80\",\"image_cache_policy\":\"dual_idle_reset_before_timing\",\"scope\":\"Actual ready JSON config/version and startup cache-capacity log. Separate source/PID/quality/boundary/stream/cleanup checks required. Cache budget alone is not admission evidence; actual timed client concurrency is measured separately. Not strongest tuned/MTP or broad quality admission.\",\"launcher_sha256\":\"25ccefca148c8c8141436358582093ba2d1a9e4e1cf5ff8e983b070fee80b90e\",\"source_after_startup_verified\":true,\"owned_server_pid_verified\":true,\"linux_identity_sha256\":\"e018d04af35277422731245067a6bea7b92a6ec3fe2397c501b917bc3249ae03\",\"server_info_sha256\":\"7d61ff2f62d146ac9cad14a6b028758ea0601943e43632f2f911efcb2e39f581\",\"server_version_sha256\":\"2bd89ec9b983123a225f3df0381c737a45302bb7417e345bf9ef92304e4388cf\",\"installed_config_identity_sha256\":\"5d1aabe705efffca8ec8c82bac8594fdbe1435ce462a799a6d5bfe66fc2f8eea\",\"native_http_proof_sha256\":\"e07edc63fabb0489d0e250077162e24577421402d63ac9d8bf9bf0766f4e02dd\"},\"metadata_sha256\":\"6eb2dfa75c679326557748c6e19ae677b863d354e3360efcd02afbf3954b2929\",\"scope\":\"Outer controller declaration; independently checked launcher/config/source/PID evidence must accompany this client.\"}"
+    },
+    {
+      "file": "Garnet/test2026/cuda/qwen38_5090/evidence/vllm-fixed4k-config-schema-attempt1.json",
+      "sha256": "a8b9431b47317d00341945e79ad5110ae4e95afba77735a6b32839e6f56a4229",
+      "line": "        \"mamba_ssm_cache_dtype: MambaDType = \\\"auto\\\"\","
+    },
+    {
+      "file": "Garnet/test2026/cuda/qwen38_5090/serve_vllm_fixed4k.sh",
+      "sha256": "25ccefca148c8c8141436358582093ba2d1a9e4e1cf5ff8e983b070fee80b90e",
+      "line": "  --dtype bfloat16 --kv-cache-dtype bfloat16 --mamba-ssm-cache-dtype float32 \\"
+    }
+  ],
+  "native_GDN_recurrent_and_convolution_state": "fp32",
+  "native_attention_KV": "bf16",
+  "reference_convolution_cache_dtype_verified": false,
+  "incorrect_chart_phrase": "configs differ in SSM cache precision",
+  "correction": "Native GDN recurrent state and reference SSM state are FP32; attention KV is BF16. Native convolution state is also FP32; reference convolution-cache precision is not established by this audit.",
+  "scope": "Static metadata and actual saved reference configuration only. Layouts/models/native executables not run. No numerical replay, new benchmark or metrics changed."
+}

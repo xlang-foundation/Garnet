@@ -1,0 +1,44 @@
+"""Materialize clean timing only after the candidate's exact closed quality proof."""
+from pathlib import Path
+import ast,hashlib,json,os,sys,zipfile
+W=Path(__file__).resolve().parent;O=W.parent/'outputs';R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';E=M/'evidence';P='Garnet/test2026/cuda/qwen38_5090/';sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest();J='b4-resident-serial-quality-attempt2'
+proof=O/(J+'-verified.json');q=json.loads(proof.read_bytes());assert proof.read_bytes()==(O/(J+'-remote-verified.json')).read_bytes() and q['exit_code']==0 and q['B4_HTTP_quality_case_gate_passed'] and q['arrays']['all805_prompt_and_output_IDs_exact_T32'] and q['arrays']['actual_native_HTTP_requests']==836 and q['arrays']['resident_IO_controls_byte_exact'] and q['arrays']['actual_graph_policy']['status']=='resident_serial_requested_policy_and_actual_graph_reuse_replayed' and q['arrays']['actual_graph_policy']['real_control_requests']==31 and q['source_runtime_SDK_config_index_CMake_all34_and_full_model_files_restored'] and sha(O/(J+'-evidence.zip'))==q['archive_sha256']
+old_path=E/'b4-resident-serial-quality-v2-preparation.json';old=json.loads(old_path.read_bytes());assert len(old['parents'])==61
+with zipfile.ZipFile(O/(J+'-evidence.zip')) as z:
+    w=json.loads(z.read('results/'+J+'/workflow.json'));assert w['all_restored'] and w['cleanup_finished'] and w['exit_code']==0 and w['source_after']==old['files']
+names=[];derivations=[];draft_record=json.loads((W/'b4-resident-serial-http-benchmark-draft-derivation.json').read_bytes());assert draft_record['model_native_DLL_or_GPU_run'] is False
+for kind in ('probe','run','verify'):
+    source=W/(kind+'_b4_resident_serial_http_benchmark.draft.py');row=next(n for n in draft_record['methods'] if n['target']==source.name);assert sha(source)==row['target_sha256'] and sha(M/row['source'])==row['source_sha256']
+    target=M/(kind+'_b4_resident_serial_http_benchmark.py');assert not target.exists();raw=source.read_bytes();ast.parse(raw);target.write_bytes(raw);names.append(target.name);derivations.append(dict(draft=source.name,draft_sha256=sha(source),target=target.name,target_sha256=sha(target)))
+deps=json.loads((E/'b4-rowwise-http-benchmark-preparation.json').read_bytes())['reader_dependencies'];deps=['verify_b4_resident_serial_http_benchmark.py']+[n for n in deps if n!='verify_b4_rowwise_http_benchmark.py']
+for n in deps:
+    if n not in names:assert old['files'][P+n]==sha(M/n)
+sys.path[:0]=[str(M),str(R)];import run_logged as ledger
+ledger.source_identity=lambda:dict(scope='Explicit new candidate clean HTTP benchmark collector/reader CLI checks, no native/model/GPU or protected bodies',owned_source_sha256={n:sha(M/n) for n in dict.fromkeys(names+deps)})
+os.chdir(R)
+for n in ('probe_b4_resident_serial_http_benchmark.py','verify_b4_resident_serial_http_benchmark.py'):
+    assert ledger.run([sys.executable,str(M/n),'--help'],W/'b4-resident-serial-http-benchmark-CLI-ledger','correctness','CPU import/CLI smoke for new clean collector and independent raw reader; exits before model/native/GPU work. Closed actual candidate quality and graph/IO evidence admit unchanged worker.',[M/k for k in dict.fromkeys(names+deps)])==0
+def keep(n,raw):
+    target=E/n;assert not target.exists();target.write_bytes(raw);names.append('evidence/'+n)
+for ext in ('jsonl','log'):keep('b4-resident-serial-http-benchmark-CLI-commands.'+ext,(W/'b4-resident-serial-http-benchmark-CLI-ledger'/('commands.'+ext)).read_bytes())
+keep('b4-resident-serial-http-benchmark-materialization.json',json.dumps(dict(target_files=derivations,paired_quality_proof_sha256=sha(proof),same_quality_admitted_worker_and_launcher=True,native_model_source_or_DLL_changed=False,clean_requests_exclude_graph_snapshot_markers=True,benchmark_execution_unrun=True),indent=2).encode())
+for n in ('draft-b4-resident-serial-http-benchmark.py','b4-resident-serial-http-benchmark-draft-derivation.json','derive-b4-resident-serial-benchmark-helpers.py','b4-resident-serial-benchmark-helper-derivation.json','install-b4-resident-serial-http-benchmark.py',Path(__file__).name):keep(n+('.txt' if n.endswith('.py') else ''),(W/n).read_bytes())
+names.append('evidence/'+old_path.name);files=dict(old['files'])
+for n in names:
+    key=P+n;h=sha(M/n)
+    if key in files:assert files[key]==h
+    files[key]=h
+parents=dict(old['parents']);assert J not in parents;parents[J]=dict(proof_sha256=sha(proof),archive_sha256=q['archive_sha256'],status=q['status'],exit_code=0);assert len(parents)==62
+p={**old};p.update(status='B4_resident_serial_HTTP_benchmark_prepared_GPU_unrun',files=files,archive_files=sorted(set(old['archive_files'])|{P+n for n in names}),parents=parents,quality_job=J,reader_dependencies=deps,backend_quality_preparation_sha256=sha(old_path),scope='Clean unprofiled existing resident-control and serial target/draft/wide-norm graph-reuse policy benchmark, after closed independently paired native IO byte controls, actual31full4k/805HTTP IDs and graph-reuse counters. Exact same quality-admitted private worker and v2launcher; same source91 model/transport bundle and e843 nativeDLL, no new math/weights/precision/build changes. Three repeats on one worker; each64measured+60warmups, frozen3968input+128output, text/image C1/2/4/8.372realrequests,192measured,180warmups; all124/trial prompt/output IDs exact retained B1, raw client-QPC/SSE metric and sampled adapter-memory replay, actual native callbacks/dispatch, no publicdummyIDs or dummy throughput credit. No diagnostic graph markers or large transport fixture in timing.62closedparents including preserved setup failure. Full source/runtime/SDK/config-index/CMake/all34/current18snapshot files restored, private96GiBCcache and ownednonce retirement. Only two new collector/reader CLI smokes, no repeated unchanged correctness controls. Strongest tuned/MTP references, matched INT4/4B, cross-engine output equivalence, production integration and overall2x/halfTTFT remain unqualified; actual results required, no automatic speed admission.')
+p['installed_files']={**files,**{'Garnet/'+n:h for n,h in p['source_files'].items()}}
+required=set()
+for name in ('run_b4_resident_serial_http_benchmark.py','probe_b4_resident_serial_http_benchmark.py','verify_b4_resident_serial_http_benchmark.py'):
+    for node in ast.walk(ast.parse((M/name).read_bytes())):
+        if isinstance(node,ast.Subscript) and isinstance(node.value,ast.Name) and node.value.id in ('p','prep') and isinstance(node.slice,ast.Constant) and isinstance(node.slice.value,str):required.add(node.slice.value)
+assert required<=set(p),sorted(required-set(p));prep=E/'b4-resident-serial-http-benchmark-preparation.json';assert not prep.exists();prep.write_bytes(json.dumps(p,indent=2).encode())
+deploy={P+n:M/n for n in dict.fromkeys(names)};deploy[P+'evidence/'+prep.name]=prep;package=W/'b4-resident-serial-http-benchmark-deployment.zip';assert not package.exists()
+with zipfile.ZipFile(package,'x',zipfile.ZIP_DEFLATED) as z:
+    for n,path in deploy.items():z.write(path,n)
+    z.writestr('deployment-manifest.json',json.dumps(dict(files={n:sha(path) for n,path in deploy.items()},native_DLL_or_model_source_change=False),indent=2))
+receipt=dict(deployment_sha256=sha(package),bytes=package.stat().st_size,files=len(deploy),preparation_sha256=sha(prep),paired_quality_proof_sha256=sha(proof),parents=62,literal_preparation_reads_present=sorted(required),benchmark_GPU_unrun=True)
+(W/'b4-resident-serial-http-benchmark-package.json').write_bytes(json.dumps(receipt,indent=2).encode());(W/'b4-resident-serial-http-benchmark-owned-names.json').write_bytes(json.dumps(list(dict.fromkeys(names))).encode());print(json.dumps(receipt))
