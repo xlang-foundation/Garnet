@@ -21,11 +21,12 @@ def main():
     with zipfile.ZipFile(archive) as z:r=json.loads(z.read('results/'+ref+'/reference/report.json'))
     assert r['status']=='eight_B1_full4k_oracles_collected' and r['inputs']==selection['inputs'];full_gold={row['keys'][0]:row['generated_ids'][0] for row in r['rows']};assert len(full_gold)==8
     cache=json.loads((root/'results/study-ssd-engine-cache/receipt.json').read_bytes())['cache_root']
-    worker=BatchWorker([sys.executable,str(m/'launch_b4_rowwise_http_worker.py'),str(root),cache],out/'worker',4,10);server=thread=None
+    worker=None;server=thread=None
     report=dict(status='starting',library_sha256=p['library_sha256'],checkpoint_revision=p['checkpoint_revision'],model_file_manifest_sha256=p['model_file_manifest_sha256'],reference_archive_sha256=REFERENCE_SHA,reference_quality=reference,boundary_controls=[],stream_controls=[],negative_controls=[],adapted805_only=True,HTTP_quality_or_performance_qualified=False,two_times_target_achieved=False)
     def save():(out/'report.json').write_bytes(json.dumps(report,indent=2).encode())
     save();url='http://127.0.0.1:18082'
     try:
+        worker=BatchWorker([sys.executable,str(m/'launch_b4_rowwise_http_worker.py'),str(root),cache],out/'worker',4,10)
         deadline=time.monotonic()+1800
         while not worker.healthy():
             assert worker.process.poll() is None and worker.failure is None,worker.failure
@@ -80,7 +81,7 @@ def main():
     finally:
         if server is not None:server.shutdown();server.server_close()
         if thread is not None:thread.join()
-        worker.close()
+        if worker is not None:worker.close()
     return 0
 
 if __name__=='__main__':raise SystemExit(main())

@@ -1,7 +1,7 @@
 """Exclusive reversible source91 HTTP correctness collection; never a benchmark."""
 from pathlib import Path
 import hashlib,json,os,shutil,sys,time,zipfile
-ROOT=Path('D:/CantorAI/5090-study-20261023');M=ROOT/'Garnet/test2026/cuda/qwen38_5090';JOB='b4-rowwise-http-quality-attempt2'
+ROOT=Path('D:/CantorAI/5090-study-20261023');M=ROOT/'Garnet/test2026/cuda/qwen38_5090';JOB='b4-rowwise-http-quality-attempt3'
 def sha(path):
     h=hashlib.sha256()
     with Path(path).open('rb') as f:
@@ -17,6 +17,7 @@ def main():
     from b4_http_source_bundle import load_bundle
     prep=M/'evidence/b4-rowwise-http-quality-preparation.json';p=json.loads(prep.read_bytes())
     assert p['status']=='B4_rowwise_HTTP_quality_prepared_GPU_unrun'
+    assert p['checkpoint_revision']==json.loads((ROOT/p['model_file_manifest']).read_bytes())['revision']=='482ca0f3832238542f8f5295dde86b5f22711d80'
     idle()
     for n,h in {**p['files'],**p['checkpoints'],**p['cuda_objects'],**p['model_files']}.items():assert sha(ROOT/n)==h,('Preflight drift',n)
     for n,h in p['runtime'].items():assert sha(ROOT/'build/bin'/n)==h
@@ -43,7 +44,7 @@ def main():
         for n,b in old.items():z.writestr(n,b)
     save()
     try:
-        code=ledger.run([sys.executable,'-m','unittest',*p['http_test_modules']],out/'cpu-ledger','correctness','Seventeen CPU source-bundle/protocol/raw-event replay controls; no model/GPU or performance claim.',common);w['cpu_exit_code']=code;save();assert code==0,'17 CPU controls failed'
+        code=ledger.run([sys.executable,'-m','unittest',*p['http_test_modules']],out/'cpu-ledger','correctness','Nineteen CPU startup/source-bundle/protocol/raw-event replay controls; no model/GPU or performance claim.',common);w['cpu_exit_code']=code;save();assert code==0,'19 CPU controls failed'
         for n,b in source.items():installed[n]=b;(ROOT/'Garnet'/n).write_bytes(b)
         library.write_bytes(saved.read_bytes());inventory=p['installed_files'];assert all(sha(ROOT/n)==h for n,h in inventory.items());w['installed_source']=inventory;w['candidate_library_sha256']=sha(library);save()
         code=ledger.run([sys.executable,str(M/'launch_b4_http_embedded_cpu.py'),str(ROOT)],out/'embedded-cpu-ledger','correctness','Same17 symbolic controls in actual embedded native Python. No model imports or GPU requests.',common+[library]);w['embedded_cpu_exit_code']=code;save();assert code==0,'17 embedded controls failed'

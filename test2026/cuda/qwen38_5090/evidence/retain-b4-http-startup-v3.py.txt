@@ -1,0 +1,16 @@
+from pathlib import Path
+import hashlib,json,subprocess
+W=Path(__file__).resolve().parent;R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';E=M/'evidence';sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+r=json.loads((W/'b4-rowwise-http-quality-v3-package.json').read_bytes());assert sha(W/'b4-rowwise-http-quality-v3-deployment.zip')==r['deployment_sha256'] and sha(E/'b4-rowwise-http-quality-preparation.json')==r['preparation_sha256']
+names=json.loads((W/'b4-rowwise-http-quality-v3-owned-names.json').read_bytes())+['evidence/b4-rowwise-http-quality-preparation.json']
+for n in ('install-b4-rowwise-http-quality-v3.py',Path(__file__).name):
+    p=E/(n+'.txt');assert not p.exists();p.write_bytes((W/n).read_bytes());names.append('evidence/'+p.name)
+p=E/'b4-rowwise-http-quality-v3-package.json';assert not p.exists();p.write_bytes((W/p.name).read_bytes());names.append('evidence/'+p.name)
+entry=('\n\n2026-10-27: B4 HTTP attempt3 package '+r['deployment_sha256']+', preparation '+r['preparation_sha256']+'. Adds pinned checkpoint revision482ca0 from full18file manifest, owner checks revision before source mutation, and collector instantiates worker within its cleanup guard.19 source-bound CPU controls pass, including two actual-main startup regressions with a controlled nonmodel worker. Missing revision prevents worker construction; a controlled startup failure closes the worker once and saves failure. Static audit verifies all26 literal preparation keys read by actual owner/collector/admission/launcher are present.17 embedded controls retained unchanged;58 closed parents include failed attempt2 with paired proofab33027a. Model source89 and native DLL e843 unchanged; source91 bundle4ccee24a unchanged. Actual HTTP805/836control gate and serving timing remain unrun for attempt3. Original failures preserved; no2x/halfTTFT claim.\n').encode()
+owned=[M/n for n in names]
+for n in ('docs/research/qwen38-5090-development-log.md','docs/research/qwen38-5090-implementation-task.md'):
+    p=R/n;assert b'B4 HTTP attempt3 package' not in p.read_bytes()
+    with p.open('ab') as f:f.write(entry)
+    owned.append(p)
+paths=b''.join(p.relative_to(R).as_posix().encode()+b'\0' for p in dict.fromkeys(owned));(W/'b4-http-startup-v3-stage-paths.bin').write_bytes(paths)
+subprocess.run(['git','-c','core.autocrlf=false','add','--pathspec-from-file='+str(W/'b4-http-startup-v3-stage-paths.bin'),'--pathspec-file-nul'],cwd=R,check=True);print(json.dumps(dict(staged_paths=len(set(owned)),CPU_controls=19,HTTP_GPU_unrun=True)))
