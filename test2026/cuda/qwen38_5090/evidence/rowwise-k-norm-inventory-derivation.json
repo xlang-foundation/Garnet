@@ -1,0 +1,95 @@
+{
+  "derivations": [
+    {
+      "source": "inspect-decode35-stage-build-inputs.py",
+      "target": "inspect-rowwise-k-norm-build-inputs.py",
+      "source_sha256": "82d32079558cacf81025b3cbea159b64978822617d6877bd6c4b0cbc18c3b386",
+      "target_sha256": "8796d9e9d9ef943a5af210fbaef599946e90406b052b79ff9f44bcebecb04f7b",
+      "changes": [
+        {
+          "old": "source86",
+          "new": "source87",
+          "count": 1
+        },
+        {
+          "old": "decode35-stage-build",
+          "new": "rowwise-k-norm-build",
+          "count": 3
+        },
+        {
+          "old": "decode35-stage-profile-cpu-attempt1-verified.json",
+          "new": "rowwise-k-norm-profile-cpu-attempt1-verified.json",
+          "count": 1
+        },
+        {
+          "old": "cpu['baseline_unchanged'] and cpu['source_files']==86",
+          "new": "cpu['baseline_files_runtime_SDK_config_index_CMake_all34_unchanged'] and cpu['source_files']==87",
+          "count": 1
+        },
+        {
+          "old": "new_valid=2,new_rejected=103,old_valid=2,old_rejected=2,failures=0,cases=109",
+          "new": "new_valid=17,new_rejected=161,old_valid=4,old_rejected=2,failures=0,cases=184",
+          "count": 1
+        },
+        {
+          "old": "assert cpu['source_sha256']['qwen38_decode35_stage_profile.h']==s['candidate_files']['src/backends/tensorrt/qwen38_decode35_stage_profile.h']",
+          "new": "assert cpu['executable_imports']==['kernel32.dll']",
+          "count": 1
+        },
+        {
+          "old": "decode35-stage-source.zip",
+          "new": "rowwise-k-norm-source.zip",
+          "count": 1
+        },
+        {
+          "old": "==86 and {n:",
+          "new": "==87 and {n:",
+          "count": 1
+        },
+        {
+          "old": "garnet-native-decode35-stage-attempt1.dll",
+          "new": "garnet-native-rowwise-k-norm-attempt1.dll",
+          "count": 1
+        },
+        {
+          "old": "decode35_stage_native_build_inputs_verified_no_compilation_or_GPU",
+          "new": "rowwise_k_norm_native_build_inputs_verified_no_compilation_or_GPU",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "run-decode35-stage-build-inventory.py",
+      "target": "run-rowwise-k-norm-build-inventory.py",
+      "source_sha256": "d7d8845755f4078a0623c8fed07ed8c233c562fc023659f09381ae8363c1d0ba",
+      "target_sha256": "e0e76727344d1206dbb38d4ba9486c26c3fbdf3e462b33216e7386d31750e99f",
+      "changes": [
+        {
+          "old": "decode35-stage-build",
+          "new": "rowwise-k-norm-build",
+          "count": 6
+        },
+        {
+          "old": "source86",
+          "new": "source87",
+          "count": 2
+        },
+        {
+          "old": "current1892baseline",
+          "new": "current1948baseline",
+          "count": 1
+        },
+        {
+          "old": "47closedparents including actual109nativeprofile",
+          "new": "51closedparents including actual184nativeprofile",
+          "count": 1
+        },
+        {
+          "old": "decode35-stage-source.zip",
+          "new": "rowwise-k-norm-source.zip",
+          "count": 1
+        }
+      ]
+    }
+  ]
+}

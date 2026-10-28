@@ -1,0 +1,180 @@
+{
+  "derivations": [
+    {
+      "source": "run_decode35_stage_native_build.py",
+      "source_sha256": "8eb06f339c3742ba7a51645641be715666c57cc673f3f21d0aac3d6c8277d9ff",
+      "target": "run_rowwise_k_norm_native_build.py",
+      "target_sha256": "90a9c7cadb4b18da2dae1e759d04384aefeac78ff009b4344233a19ed134fdca",
+      "changes": [
+        {
+          "old": "Exclusive observation-only native build; preserve all baselines and failures.",
+          "new": "Exclusive default-off rowwise K norm native build; preserve all baselines and failures.",
+          "count": 1
+        },
+        {
+          "old": "decode35-stage-build-attempt1",
+          "new": "rowwise-k-norm-build-attempt1",
+          "count": 1
+        },
+        {
+          "old": "decode35-stage-build-preparation.json",
+          "new": "rowwise-k-norm-build-preparation.json",
+          "count": 1
+        },
+        {
+          "old": "decode35_stage_build_prepared_unrun",
+          "new": "rowwise_k_norm_build_prepared_unrun",
+          "count": 1
+        },
+        {
+          "old": "decode35-stage-build-inputs.json",
+          "new": "rowwise-k-norm-build-inputs.json",
+          "count": 2
+        },
+        {
+          "old": "decode35-stage-build-input-inventory/",
+          "new": "rowwise-k-norm-build-input-inventory/",
+          "count": 1
+        },
+        {
+          "old": "inspect-decode35-stage-build-inputs.py",
+          "new": "inspect-rowwise-k-norm-build-inputs.py",
+          "count": 1
+        },
+        {
+          "old": "run-decode35-stage-build-inventory.py",
+          "new": "run-rowwise-k-norm-build-inventory.py",
+          "count": 1
+        },
+        {
+          "old": "garnet-native-decode35-stage-attempt1.dll",
+          "new": "garnet-native-rowwise-k-norm-attempt1.dll",
+          "count": 1
+        },
+        {
+          "old": "    cache=ROOT/'build/CMakeCache.txt';",
+          "new": "    profile=json.loads((ROOT/'results/rowwise-k-norm-profile-cpu-attempt1-verified.json').read_bytes())\n    assert profile['exit_code']==0 and profile['source_files']==87 and profile['source_bundle_sha256']==p['bundle_sha256'] and profile['baseline_files_runtime_SDK_config_index_CMake_all34_unchanged']\n    assert profile['native_contract']==dict(status='passed',new_valid=17,new_rejected=161,old_valid=4,old_rejected=2,failures=0,cases=184) and profile['executable_imports']==['kernel32.dll']\n    cache=ROOT/'build/CMakeCache.txt';",
+          "count": 1
+        },
+        {
+          "old": "original85,expected,_=decode35_sources();assert original85==qualified85 and len(expected)==86 and expected==candidate",
+          "new": "original85,qualified86,_=decode35_sources();assert original85==qualified85 and len(qualified86)==86\n        from test2026.cuda.qwen38_5090.rowwise_k_norm_source import sources as rowwise_sources\n        original86,expected,_=rowwise_sources();assert original86==qualified86 and len(expected)==87 and expected==candidate",
+          "count": 1
+        },
+        {
+          "old": "93current controls plus86historical assertions on exact qualified parent50; all old tests retained plus5new source86 operand-witness composition/defaultoff/type/shape/corruption controls. Actual new109header CPU and all old1209K/232factory/plugin/QK1248/406 parents required; no model qualification.",
+          "new": "104current controls plus86historical assertions on exact qualified parent50; all93old controls unchanged plus5source87 and6ordinary/boundary DSL controls. Actual184new native guard CPU and original109seven-stage/QK1248/factory406/K1209/factory232 parents required; no model qualification.",
+          "count": 1
+        },
+        {
+          "old": "from test2026.cuda.qwen38_5090.decode35_stage_source import sources\n",
+          "new": "from test2026.cuda.qwen38_5090.rowwise_k_norm_source import sources\n",
+          "count": 1
+        },
+        {
+          "old": "Release/MT/sm120 source86 defaultoff internal layer35 operand witness. Only observation pointer/metadata/shape/pack additions over85, no original arithmetic/precision/CUDA/oldguard/counter changes. New109actual native CPU profile plus all old Q/O/factory/wire/init/selector/tokenizer gates required. Record all34 CUDA hashes and retain original three-object whitelist; strictcache62/full4K stayFAILED. Save separate DLL, restore source/baseline runtime; no live TensorRT stage/model/quality/performance admission from build.",
+          "new": "Release/MT/sm120 source87 defaultoff rowwise K norm experiment. Original off branch/precision/CUDA/oldguards/counters unchanged; on changes only K RMS subgraph shape to four B1-shaped rows. New184CPU guard and all original109/Q-O/factory/wire/init/selector/tokenizer controls required. Record all34 object hashes, original three-object whitelist unchanged. Save separate DLL and restore source/baseline. Build does not qualify on-path model repair, quality or speed; oldcache62/full4K/observer failures stayFAILED.",
+          "count": 1
+        },
+        {
+          "old": "decode35_stage_native_built_CPU_qualified_model_unqualified",
+          "new": "rowwise_k_norm_native_built_CPU_qualified_model_unqualified",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "verify_decode35_stage_native_build.py",
+      "source_sha256": "b5e1f9c5ff16856cdf71ab241c0f6918859142de9760f442e4887d5fab29064a",
+      "target": "verify_rowwise_k_norm_native_build.py",
+      "target_sha256": "31e7d87a546206162a679cb51500e7ae3ca759b555a70861571c667e0b7d191e",
+      "changes": [
+        {
+          "old": "Verify actual native build evidence; observation build is not numerical admission.",
+          "new": "Verify actual defaultoff rowwise K norm native build; no numerical or performance admission.",
+          "count": 1
+        },
+        {
+          "old": "decode35-stage-build-attempt1",
+          "new": "rowwise-k-norm-build-attempt1",
+          "count": 1
+        },
+        {
+          "old": "decode35-stage-build-preparation.json",
+          "new": "rowwise-k-norm-build-preparation.json",
+          "count": 1
+        },
+        {
+          "old": "len(p['candidate_files'])==86",
+          "new": "len(p['candidate_files'])==87",
+          "count": 1
+        },
+        {
+          "old": "decode35-stage-native-build-derivation.json",
+          "new": "rowwise-k-norm-native-build-derivation.json",
+          "count": 1
+        },
+        {
+          "old": "len(source.namelist())==len(set(source.namelist()))==86",
+          "new": "len(source.namelist())==len(set(source.namelist()))==87",
+          "count": 1
+        },
+        {
+          "old": "decode35-stage-build-inputs.json",
+          "new": "rowwise-k-norm-build-inputs.json",
+          "count": 1
+        },
+        {
+          "old": "decode35['source_bundle_sha256']==p['bundle_sha256']",
+          "new": "decode35['source_bundle_sha256']==p['parent_bundle_sha256']",
+          "count": 1
+        },
+        {
+          "old": "        passed=w['exit_code']==0",
+          "new": "        rowwise=doc('results/rowwise-k-norm-profile-cpu-attempt1-verified.json')\n        assert rowwise['exit_code']==0 and rowwise['status']=='rowwise_k_norm_native_CPU_profile_replayed' and rowwise['baseline_files_runtime_SDK_config_index_CMake_all34_unchanged']\n        assert rowwise['source_files']==87 and rowwise['source_bundle_sha256']==p['bundle_sha256'] and rowwise['executable_imports']==['kernel32.dll']\n        assert rowwise['native_contract']==dict(status='passed',new_valid=17,new_rejected=161,old_valid=4,old_rejected=2,failures=0,cases=184)\n        passed=w['exit_code']==0",
+          "count": 1
+        },
+        {
+          "old": "decode35_stage_native_built_CPU_qualified_model_unqualified",
+          "new": "rowwise_k_norm_native_built_CPU_qualified_model_unqualified",
+          "count": 1
+        },
+        {
+          "old": "b'Ran 93 tests'",
+          "new": "b'Ran 104 tests'",
+          "count": 1
+        },
+        {
+          "old": "decode35_stage_native_CPU_build_replayed",
+          "new": "rowwise_k_norm_native_CPU_build_replayed",
+          "count": 1
+        },
+        {
+          "old": "decode35_stage_native_build_failure_replayed",
+          "new": "rowwise_k_norm_native_build_failure_replayed",
+          "count": 1
+        },
+        {
+          "old": "new_decode35_native_CPU_profile_cases=109,",
+          "new": "new_decode35_native_CPU_profile_cases=109,new_rowwise_K_native_CPU_profile_cases=184,",
+          "count": 1
+        },
+        {
+          "old": "candidate_files=86,",
+          "new": "candidate_files=87,",
+          "count": 1
+        },
+        {
+          "old": "current_CPU_controls=93 if passed",
+          "new": "current_CPU_controls=104 if passed",
+          "count": 1
+        }
+      ]
+    }
+  ],
+  "old_controls_and_three_object_whitelist_retained": true,
+  "new_native_CPU_guard_parent_cases": 184,
+  "current_CPU_controls": 104,
+  "historical_controls": 86,
+  "native_build_and_model_unrun": true
+}
