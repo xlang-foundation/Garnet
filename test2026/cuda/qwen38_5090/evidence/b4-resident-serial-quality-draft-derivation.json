@@ -1,0 +1,48 @@
+{
+  "source_collector_sha256": "8230d6a0978437d3575024505d7d7d2e4e5d7f14a2485647b446d8283d1e2c18",
+  "draft_collector_sha256": "9d5807b9b9715d9fbb42bca0a2a69ec8372c1c8dc475793bea1897438ec5aed7",
+  "source_launcher_sha256": "80d417ce828bcb2a553e0a4668b76501557dcf38c646f5f074ba9159fca067e0",
+  "draft_launcher_sha256": "fb83f9f2561c1a867680a764943907cfcc0266835bd85c044a1c7ffc6a868f55",
+  "changes": [
+    {
+      "old": "b4-rowwise-http-quality-preparation.json",
+      "new": "b4-resident-serial-quality-preparation.json",
+      "count": 1
+    },
+    {
+      "old": "launch_b4_rowwise_http_worker.py",
+      "new": "launch_b4_resident_serial_http_worker.py",
+      "count": 1
+    },
+    {
+      "old": "B4_rowwise_HTTP_controls_and_adapted805_collected_needs_independent_replay",
+      "new": "B4_resident_serial_HTTP_controls_and_adapted805_collected_needs_independent_replay",
+      "count": 1
+    },
+    {
+      "old": "        report.update(status='boundary_controls',ready=ready);save()",
+      "new": "        assert ready['backend_policy']==dict(resident_controls=True,serial_target_graph_reuse=True,serial_draft_graph_reuse=True,accepted_head_reuse=False)\n        report.update(status='boundary_controls',ready=ready);save()",
+      "count": 1
+    },
+    {
+      "old": "body['stream']=False\n                    if large:",
+      "new": "body['stream']=False;body['study_graph_snapshot']=True\n                    if large:",
+      "count": 1
+    },
+    {
+      "old": "body['stream']=True;label='stream-'+str(index)",
+      "new": "body['stream']=True;body['study_graph_snapshot']=True;label='stream-'+str(index)",
+      "count": 1
+    },
+    {
+      "old": "        report['status']='collecting805';save()",
+      "new": "        from test2026.cuda.qwen38_5090.b4_resident_serial_graph_gate import admit as admit_graphs\n        control_ids={r['id'] for g in report['boundary_controls'] for r in g['results']}|{r['id'] for r in report['stream_controls']}\n        assert len(control_ids)==31\n        # Completion precedes its optional diagnostic line. Wait only for the\n        # logger to receive that line, then evaluate counters once, before805.\n        snapshot_deadline=time.monotonic()+10\n        while True:\n            graph_raw=(out/'worker/worker-stdout.jsonl').read_bytes();snapshot_ids=set()\n            for line in graph_raw.splitlines():\n                try:event=json.loads(json.loads(line)['line'])\n                except (ValueError,TypeError,KeyError):continue\n                if isinstance(event,dict) and event.get('event')=='study_graph_snapshot':snapshot_ids.update(event['request_ids'])\n            if snapshot_ids==control_ids:break\n            assert time.monotonic()<snapshot_deadline,'Missing actual graph snapshots'\n            time.sleep(.01)\n        report['graph_usage']=admit_graphs(graph_raw,control_ids)\n        report['status']='collecting805';save()",
+      "count": 1
+    }
+  ],
+  "actual_same31_full4k_HTTP_and805_natural_stop_controls_retained": true,
+  "new_control_marker_affects_diagnostic_snapshots_only": true,
+  "all_clean_benchmark_requests_have_marker_absent": true,
+  "CPU_embedded_native_or_GPU_execution_unrun": true,
+  "syntax_checked_only": true
+}

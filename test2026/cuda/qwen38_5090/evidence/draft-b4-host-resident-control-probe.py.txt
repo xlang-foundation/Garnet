@@ -1,0 +1,19 @@
+"""Specialize the existing independent GPU scalar-transport control for this policy."""
+from pathlib import Path
+import ast,hashlib,json
+W=Path(__file__).resolve().parent;R=Path('D:/CantorAI/work/qwen38-5090');source=R/'test2026/cuda/test_qwen35_resident_controls.py';raw=source.read_bytes();s=raw.decode().replace('\r\n','\n');steps=[]
+for old,new in [
+    ('import json,os,struct,sys',"from pathlib import Path\nassert Path(__file__).resolve().parent==Path('D:/CantorAI/5090-study-20261023/Garnet/test2026/cuda/qwen38_5090'), 'Native/GPU probe is remote-only'\nimport json,os,struct,sys"),
+    ('sys.path.insert(0,os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))','sys.path.insert(0,str(Path(__file__).resolve().parents[3]))'),
+    ('io.open(checkpoint);records=[]',"io.open(checkpoint);io.enable_host_embedding(True);io.enable_nvfp4_head(True);records=[]"),
+    ('for b in (1,2,4,8):','for b in (4,):'),
+    ('for size in (4,16,64,128):','for size in (4,16,32):'),
+    ("info=json.loads(io.memory_json());h=info['hidden_size'] if 'hidden_size' in info else info['hidden_width']", "info=json.loads(io.memory_json());h=info['hidden_size'] if 'hidden_size' in info else info['hidden_width']\n    assert info['embedding_mode']=='host_mapped_bf16' and h==5120 and info['vocab_size']==248320"),
+    ('QWEN35_RESIDENT_CONTROLS_COMPLETE','B4_HOST_RESIDENT_CONTROLS_COMPLETE')]:
+    assert s.count(old)==1,(old,s.count(old));s=s.replace(old,new);steps.append(dict(old=old,new=new,count=1))
+ast.parse(s);target=W/'probe_b4_host_resident_controls.draft.py'
+if target.exists():
+    previous=json.loads((W/'b4-host-resident-control-probe-draft-derivation.json').read_bytes())
+    assert previous['native_GPU_probe_unrun'] and hashlib.sha256(target.read_bytes()).hexdigest()==previous['draft_sha256']
+target.write_bytes(s.encode())
+(W/'b4-host-resident-control-probe-draft-derivation.json').write_bytes(json.dumps(dict(source_file=str(source),source_sha256=hashlib.sha256(raw).hexdigest(),draft_sha256=hashlib.sha256(target.read_bytes()).hexdigest(),changes=steps,scope='Existing independent legacy upload/gather bytes vs resident-control/gather API comparison, narrowed to B4 and actual target32/draft16/decode4 widths;3 trials each. Pinned host-BF16 embedding mode, input argument lifetime, negative zero/fractional control values, inactive-row zero padding and invalid-input no-mutation checks retained. Native execution must occur remotely after current benchmark exits. No model inference or speed admission.',native_GPU_probe_unrun=True,syntax_checked_only=True),indent=2).encode());print('B4 host/resident transport probe draft syntax checked; native execution pending')

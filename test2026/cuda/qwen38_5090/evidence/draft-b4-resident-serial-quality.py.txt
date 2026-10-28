@@ -1,0 +1,38 @@
+from pathlib import Path
+import ast,hashlib,json
+W=Path(__file__).resolve().parent;M=Path('D:/CantorAI/work/qwen38-5090/test2026/cuda/qwen38_5090');source=M/'probe_b4_rowwise_http_quality.py';raw=source.read_bytes();s=raw.decode().replace('\r\n','\n');steps=[]
+def change(old,new):
+    global s
+    count=s.count(old);assert count>0,(old,count);s=s.replace(old,new);steps.append(dict(old=old,new=new,count=count))
+change('b4-rowwise-http-quality-preparation.json','b4-resident-serial-quality-preparation.json')
+change('launch_b4_rowwise_http_worker.py','launch_b4_resident_serial_http_worker.py')
+change('B4_rowwise_HTTP_controls_and_adapted805_collected_needs_independent_replay','B4_resident_serial_HTTP_controls_and_adapted805_collected_needs_independent_replay')
+change("        report.update(status='boundary_controls',ready=ready);save()", "        assert ready['backend_policy']==dict(resident_controls=True,serial_target_graph_reuse=True,serial_draft_graph_reuse=True,accepted_head_reuse=False)\n        report.update(status='boundary_controls',ready=ready);save()")
+change("body['stream']=False\n                    if large:","body['stream']=False;body['study_graph_snapshot']=True\n                    if large:")
+change("body['stream']=True;label='stream-'+str(index)","body['stream']=True;body['study_graph_snapshot']=True;label='stream-'+str(index)")
+change("        report['status']='collecting805';save()", """        from test2026.cuda.qwen38_5090.b4_resident_serial_graph_gate import admit as admit_graphs
+        control_ids={r['id'] for g in report['boundary_controls'] for r in g['results']}|{r['id'] for r in report['stream_controls']}
+        assert len(control_ids)==31
+        # Completion precedes its optional diagnostic line. Wait only for the
+        # logger to receive that line, then evaluate counters once, before805.
+        snapshot_deadline=time.monotonic()+10
+        while True:
+            graph_raw=(out/'worker/worker-stdout.jsonl').read_bytes();snapshot_ids=set()
+            for line in graph_raw.splitlines():
+                try:event=json.loads(json.loads(line)['line'])
+                except (ValueError,TypeError,KeyError):continue
+                if isinstance(event,dict) and event.get('event')=='study_graph_snapshot':snapshot_ids.update(event['request_ids'])
+            if snapshot_ids==control_ids:break
+            assert time.monotonic()<snapshot_deadline,'Missing actual graph snapshots'
+            time.sleep(.01)
+        report['graph_usage']=admit_graphs(graph_raw,control_ids)
+        report['status']='collecting805';save()""")
+ast.parse(s);target=W/'probe_b4_resident_serial_quality.draft.py'
+if target.exists():
+    previous=json.loads((W/'b4-resident-serial-quality-draft-derivation.json').read_bytes());assert previous['CPU_embedded_native_or_GPU_execution_unrun'] and hashlib.sha256(target.read_bytes()).hexdigest()==previous['draft_collector_sha256']
+target.write_bytes(s.encode())
+launcher=(M/'launch_b4_rowwise_http_worker.py').read_bytes();ls=launcher.decode().replace('b4-rowwise-http-quality-preparation.json','b4-resident-serial-quality-preparation.json').replace('native_b4_rowwise_http_worker.py','native_b4_resident_serial_http_worker.py');ast.parse(ls);lp=W/'launch_b4_resident_serial_http_worker.draft.py'
+if lp.exists():assert hashlib.sha256(lp.read_bytes()).hexdigest()==previous['draft_launcher_sha256']
+lp.write_bytes(ls.encode())
+record=dict(source_collector_sha256=hashlib.sha256(raw).hexdigest(),draft_collector_sha256=hashlib.sha256(target.read_bytes()).hexdigest(),source_launcher_sha256=hashlib.sha256(launcher).hexdigest(),draft_launcher_sha256=hashlib.sha256(lp.read_bytes()).hexdigest(),changes=steps,actual_same31_full4k_HTTP_and805_natural_stop_controls_retained=True,new_control_marker_affects_diagnostic_snapshots_only=True,all_clean_benchmark_requests_have_marker_absent=True,CPU_embedded_native_or_GPU_execution_unrun=True,syntax_checked_only=True)
+(W/'b4-resident-serial-quality-draft-derivation.json').write_bytes(json.dumps(record,indent=2).encode());print('Resident/serial quality collector and launcher drafts syntax checked; not deployed or run')

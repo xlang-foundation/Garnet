@@ -1,0 +1,68 @@
+"""Prepare charts that refuse incomplete/unpaired benchmark evidence."""
+from pathlib import Path
+import ast,hashlib,json
+W=Path(__file__).resolve().parent;source=W/'render-o128-repeated-comparison-v2.py';raw=source.read_bytes();s=raw.decode().replace('\r\n','\n');steps=[]
+start=s.index('def main():');end=s.index('    expected={',start)
+header='''def main():
+    proof=O/(JOB+'-verified.json');raw=proof.read_bytes();assert raw==(O/(JOB+'-remote-verified.json')).read_bytes();q=json.loads(raw)
+    assert q['status']=='actual_B4_three_fixed4k_HTTP_trials_replayed' and q['exit_code']==0 and q['B4_HTTP_benchmark_case_gate_passed'] and q['source_runtime_SDK_config_index_CMake_all34_and_full_model_files_restored']
+    assert q['benchmark_arrays']['actual_native_HTTP_requests']==372 and q['benchmark_arrays']['measured_requests']==192 and q['benchmark_arrays']['all372_prompt_and_output_IDs_exact_retained_B1'] and not q['benchmark_arrays']['private_dummy_tokens_counted_in_throughput']
+    assert sha(O/(JOB+'-evidence.zip'))==q['archive_sha256']
+    oldpath=O/'Garnet-O128-Repeated-vLLM-SGLang-4K-v2-Data.json';old=json.loads(oldpath.read_bytes());assert old['status']=='three_O128_HTTP_trials_and_retained_single_trial_references_replayed'
+    for name,h in old['source_sha256'].items():assert sha(O/name)==h
+    observed=json.loads((O/'Garnet-vLLM-SGLang-Observed-Verified-4K-Data.json').read_bytes())
+    for name,h in observed['input_sha256'].items():assert sha(O/name)==h
+    for job,key in [('prefill16-fixed4k-http-attempt1','prefill16'),('vllm-observed-fixed4k-ordinary-attempt1','vllm'),('sglang-observed-fixed4k-ordinary-attempt1','sglang')]:
+        path=O/(job+'-verified.json');parent=json.loads(path.read_bytes());assert path.read_bytes()==(O/(job+'-remote-verified.json')).read_bytes() and parent['archive_sha256']==observed['archive_sha256'][key]==sha(O/(job+'-evidence.zip'))
+'''
+s=s[:start]+header+s[end:]
+def replace(old,new):
+    global s
+    count=s.count(old);assert count>0,(old,count);s=s.replace(old,new);steps.append(dict(old=old,new=new,count=count))
+replace("JOB='o128-http-benchmark-attempt1'","JOB='b4-rowwise-http-benchmark-attempt1'")
+replace("STEM='Garnet-O128-Repeated-vLLM-SGLang-4K-v2'","STEM='Garnet-B4-Repeated-vLLM-SGLang-4K'")
+replace("trials=q['arrays']['trials']","trials=q['benchmark_arrays']['trials']")
+replace("old_label='Garnet prefill32 / MTP3 (1 trial)';new_label='Garnet prefill128 / MTP3 (3 trials)'","old_label='Garnet B1 / prefill128 / MTP3 (3 trials)';new_label='Garnet B4 / prefill32 / MTP3 (3 trials)'")
+old="samples={old_label:[old['series']['Garnet MTP3 / draft prefill16']],new_label:native,'vLLM ordinary (1 trial)':[old['series']['vLLM ordinary']],'SGLang ordinary (1 trial)':[old['series']['SGLang ordinary']]}"
+new="samples={old_label:old['raw_trial_cohorts']['Garnet prefill128 / MTP3 (3 trials)'],new_label:native,'vLLM ordinary (1 trial)':old['raw_trial_cohorts']['vLLM ordinary (1 trial)'],'SGLang ordinary (1 trial)':old['raw_trial_cohorts']['SGLang ordinary (1 trial)']}"
+replace(old,new)
+start=s.index('    notes=[');end=s.index('    comparisons=[]',start)
+s=s[:start]+'''    notes=[
+      '3968 input + 128 output; 8 measured requests/cohort; text/image; clients 1,2,4,8; one RTX5090 32GB; mixed NVFP4/FP8.',
+      'Both native lines: median of three cohort statistics; bands: observed min-max, not confidence intervals. VRAM: maximum across trials.',
+      'Three repeats per native worker; ordinary references have one trial each. Native Windows; vLLM/SGLang WSL.',
+      'Native B1 queues; native B4 uses fixed microbatches with private padding; references allow8 active requests. Dummy tokens excluded.',
+      'Native cache BF16; reference SSM state FP32 and KV BF16. Reference radix/prefix caching disabled. Configurations are disclosed.',
+      'All372 B4 prompt/output sequences match retained B1. Reference long-output variants remain; cross-engine equivalence unproven.',
+      f'Adapter VRAM includes background allocations; not process/instantaneous peak. Maximum B4 sample gap: {maximum_native_gap:.3f}s.',
+      'Dashed guides use measured ordinary references only. Stronger tuned/MTP references and matched INT4/4B comparisons pending; overall2x unmet.'
+    ]
+'''+s[end:]
+replace("status='three_O128_HTTP_trials_and_retained_single_trial_references_replayed'","status='three_B4_HTTP_trials_and_retained_B1_and_ordinary_references_replayed'")
+replace('Garnet prefill128: repeated 4K HTTP comparison','Garnet B4: repeated 4K HTTP comparison')
+replace('Garnet prefill128 vs retained vLLM / SGLang','Garnet B1 / B4 vs vLLM / SGLang')
+replace('Garnet prefill128 repeated 4K comparison','Garnet B4 repeated 4K comparison')
+replace('Garnet prefill128 repeated 4K HTTP comparison','Garnet B4 repeated 4K HTTP comparison')
+replace('native: 3 trials; references: 1 trial','B1/B4 native: 3 trials each; ordinary references: 1 trial each')
+replace('Native batch 1 queues clients; references up to 8 running. Windows / WSL. Min–max bands are not confidence intervals.','B1 queues; B4 microbatches/pads; refs up to8 active. Windows/WSL. Bands are observed ranges, not confidence intervals.')
+anchor="        ax.set_title(case.title()+' | '+title,loc='left',fontsize=11);"
+guide="""        references=[series[n] for n in ('vLLM ordinary (1 trial)','SGLang ordinary (1 trial)')]
+        if metric!='sampled_peak_adapter_used_bytes':
+            target=[(.5*min(r[case+'-c'+str(c)][metric] for r in references) if metric=='ttft_median_ms' else 2*max(r[case+'-c'+str(c)][metric] for r in references))*scale for c in cs]
+            ax.plot(cs,target,color='#414957',linestyle=(0,(3,4)),lw=1.1,label='Guide vs ordinary refs (provisional)')
+"""
+replace(anchor,guide+anchor)
+anchor="    with (O/(STEM+'-Metrics.csv')).open('w',newline='',encoding='utf8') as f:"
+individual="""    for spec in specs:
+        for case in ('text','image'):
+            fig,ax=plt.subplots(figsize=(9,6.7));fig.patch.set_facecolor('#f5f8fc');fig.subplots_adjust(left=.11,right=.97,bottom=.28,top=.70)
+            draw(ax,case,spec);fig.suptitle('Garnet B1 / B4 and ordinary references',fontsize=17,weight='bold',y=.97)
+            handles,labels=ax.get_legend_handles_labels();fig.legend(handles,labels,loc='upper center',bbox_to_anchor=(.54,.91),ncol=2,frameon=False,fontsize=8)
+            fig.text(.06,.13,'3968+128 tokens | RTX5090 | Windows native / WSL references',fontsize=9)
+            fig.text(.06,.085,'Native3 repeats; references1 each. Observed ranges, not confidence intervals.',fontsize=8)
+            fig.text(.06,.04,'Sampled adapter VRAM; configs differ in SSM cache precision. Overall2x unmet.',fontsize=8,color='#9a4521');save(fig,'-'+case.title()+'-'+spec[0])
+"""
+replace(anchor,individual+anchor)
+replace('Native: median of three trials, VRAM maximum. Retained references: single trials.','Both native lines: median of three trials, VRAM maximum. Retained ordinary references: single trials.')
+ast.parse(s);target=W/'render-b4-repeated-comparison.py';assert not target.exists();target.write_bytes(s.encode())
+(W/'b4-repeated-comparison-renderer-derivation.json').write_bytes(json.dumps(dict(source_sha256=hashlib.sha256(raw).hexdigest(),target_sha256=hashlib.sha256(target.read_bytes()).hexdigest(),changes=steps,header_replaced_with_paired_B4_case_gate=True,all_eight_panels_and_individual_workload_metric_figures=True,requires_complete_raw_benchmark_replayed_on_both_machines=True,syntax_checked_only=True,renderer_or_model_executed=False),indent=2).encode());print('Comparison renderer draft syntax checked; requires completed paired benchmark evidence')

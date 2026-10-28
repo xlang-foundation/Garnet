@@ -1,0 +1,8 @@
+from pathlib import Path
+import ast,hashlib,json
+W=Path(__file__).resolve().parent;src=W/'install-b4-rowwise-http-benchmark.py';raw=src.read_bytes();s=raw.decode().replace('\r\n','\n');changes=[]
+for a,b in [('b4-rowwise-http-benchmark','b4-resident-serial-quality'),('B4_rowwise_HTTP_benchmark','B4_resident_serial_HTTP_quality')]:
+    count=s.count(a);assert count;s=s.replace(a,b);changes.append(dict(old=a,new=b,count=count))
+ast.parse(s);dst=W/'install-b4-resident-serial-quality.py';assert not dst.exists();dst.write_bytes(s.encode())
+(W/'b4-resident-serial-installer-derivation.json').write_bytes(json.dumps(dict(source_sha256=hashlib.sha256(raw).hexdigest(),draft_sha256=hashlib.sha256(dst.read_bytes()).hexdigest(),changes=changes,exact_preflight_and_preservation_retained=True,not_deployed_or_run=True),indent=2).encode())
+print('Exclusive-method installer prepared; not deployed or run')

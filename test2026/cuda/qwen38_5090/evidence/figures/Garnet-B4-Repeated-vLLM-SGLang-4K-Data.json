@@ -1,0 +1,2303 @@
+{
+  "model_checkpoint": "nvidia/Qwen3.8-27B-NVFP4",
+  "model_precision": "mixed NVFP4/FP8; BF16 vision/cache; native NVFP4 head",
+  "memory_sampling_by_native_trial": [
+    {
+      "text-c1": {
+        "sampled_peak_adapter_used_bytes": 28283711488,
+        "samples": 4246,
+        "requested_interval_seconds": 0.02,
+        "observed_sample_gap_median_seconds": 0.03129770001396537,
+        "observed_sample_gap_max_seconds": 37.82697539997753,
+        "scope": "NVML adapter-wide used memory, including background allocations; sampled maximum, not instantaneous or process-attributed peak",
+        "snapshot_first_monotonic": 371159.9005989,
+        "snapshot_last_monotonic": 371355.3365914,
+        "measured_requests_start_monotonic": 371159.9010191,
+        "measured_requests_end_monotonic": 371355.0973518,
+        "trailing_raw_phase_samples": 0,
+        "all_raw_phase_stats": {
+          "sampled_peak_adapter_used_bytes": 28283711488,
+          "samples": 4246,
+          "requested_interval_seconds": 0.02,
+          "observed_sample_gap_median_seconds": 0.03129770001396537,
+          "observed_sample_gap_max_seconds": 37.82697539997753
+        },
+        "inside_request_wall_interval_samples": 4236,
+        "inside_request_wall_interval_sampled_peak_adapter_bytes": 28283711488,
+        "accounting": "Exact saved snapshot prefix brackets all measured requests; trailing raw samples are retained separately, all after final completion. Adapter-wide sampled values, no interpolation or process/instantaneous-peak claim."
+      },
+      "text-c2": {
+        "sampled_peak_adapter_used_bytes": 28283711488,
+        "samples": 2408,
+        "requested_interval_seconds": 0.02,
+        "observed_sample_gap_median_seconds": 0.03147060004994273,
+        "observed_sample_gap_max_seconds": 5.51183100003982,
+        "scope": "NVML adapter-wide used memory, including background allocations; sampled maximum, not instantaneous or process-attributed peak",
+        "snapshot_first_monotonic": 371444.2802697,
+        "snapshot_last_monotonic": 371525.4288662,
+        "measured_requests_start_monotonic": 371444.2811682,
+        "measured_requests_end_monotonic": 371525.4218611,
+        "trailing_raw_phase_samples": 0,
+        "all_raw_phase_stats": {
+          "sampled_peak_adapter_used_bytes": 28283711488,
+          "samples": 2408,
+          "requested_interval_seconds": 0.02,
+          "observed_sample_gap_median_seconds": 0.03147060004994273,
+          "observed_sample_gap_max_seconds": 5.51183100003982
+        },
+        "inside_request_wall_interval_samples": 2405,
+        "inside_request_wall_interval_sampled_peak_adapter_bytes": 28283711488,
+        "accounting": "Exact saved snapshot prefix brackets all measured requests; trailing raw samples are retained separately, all after final completion. Adapter-wide sampled values, no interpolation or process/instantaneous-peak claim."
+      },
+      "text-c4": {
+        "sampled_peak_adapter_used_bytes": 28283711488,
+        "samples": 1310,
+        "requested_interval_seconds": 0.02,
+        "observed_sample_gap_median_seconds": 0.03149999998277053,
+        "observed_sample_gap_max_seconds": 0.04048369999509305,
+        "scope": "NVML adapter-wide used memory, including background allocations; sampled maximum, not instantaneous or process-attributed peak",
+        "snapshot_first_monotonic": 371553.1250437,
+        "snapshot_last_monotonic": 371594.2469569,
+        "measured_requests_start_monotonic": 371553.1257242,
+        "measured_requests_end_monotonic": 371594.2389031,
+        "trailing_raw_phase_samples": 0,
+        "all_raw_phase_stats": {
+          "sampled_peak_adapter_used_bytes": 28283711488,
+          "samples": 1310,
+          "requested_interval_seconds": 0.02,
+          "observed_sample_gap_median_seconds": 0.03149999998277053,
+          "observed_sample_gap_max_seconds": 0.04048369999509305
+        },
+        "inside_request_wall_interval_samples": 1308,
+        "inside_request_wall_interval_sampled_peak_adapter_bytes": 28283711488,
+        "accounting": "Exact saved snapshot prefix brackets all measured requests; trailing raw samples are retained separately, all after final completion. Adapter-wide sampled values, no interpolation or process/instantaneous-peak claim."
+      },
+      "text-c8": {
+        "sampled_peak_adapter_used_bytes": 28283711488,
+        "samples": 766,
+        "requested_interval_seconds": 0.02,
+        "observed_sample_gap_median_seconds": 0.03131109999958426,
+        "observed_sample_gap_max_seconds": 3.565929399977904,
+        "scope": "NVML adapter-wide used memory, including background allocations; sampled maximum, not instantaneous or process-attributed peak",
+        "snapshot_first_monotonic": 371649.7287174,
+        "snapshot_last_monotonic": 371677.2403257,
+        "measured_requests_start_monotonic": 371649.7299838,
+        "measured_requests_end_monotonic": 371677.2339472,
+        "trailing_raw_phase_samples": 0,
+        "all_raw_phase_stats": {
+          "sampled_peak_adapter_used_bytes": 28283711488,
+          "samples": 766,
+          "requested_interval_seconds": 0.02,
+          "observed_sample_gap_median_seconds": 0.03131109999958426,
+          "observed_sample_gap_max_seconds": 3.565929399977904
+        },
+        "inside_request_wall_interval_samples": 764,
+        "inside_request_wall_interval_sampled_peak_adapter_bytes": 28283711488,
+        "accounting": "Exact saved snapshot prefix brackets all measured requests; trailing raw samples are retained separately, all after final completion. Adapter-wide sampled values, no interpolation or process/instantaneous-peak claim."
+      },
+      "image-c1": {
+        "sampled_peak_adapter_used_bytes": 28290002944,
+        "samples": 3194,
+        "requested_interval_seconds": 0.02,
+        "observed_sample_gap_median_seconds": 0.03143410000484437,
+        "observed_sample_gap_max_seconds": 14.574630699993577,
+        "scope": "NVML adapter-wide used memory, including background allocations; sampled maximum, not instantaneous or process-attributed peak",
+        "snapshot_first_monotonic": 371703.8002035,
+        "snapshot_last_monotonic": 371818.6222118,
+        "measured_requests_start_monotonic": 371703.8007297,
+        "measured_requests_end_monotonic": 371818.6145383,
+        "trailing_raw_phase_samples": 0,
+        "all_raw_phase_stats": {
+          "sampled_peak_adapter_used_bytes": 28290002944,
+          "samples": 3194,
+          "requested_interval_seconds": 0.02,
+          "observed_sample_gap_median_seconds": 0.03143410000484437,
+          "observed_sample_gap_max_seconds": 14.574630699993577
+        },
+        "inside_request_wall_interval_samples": 3191,
+        "inside_request_wall_interval_sampled_peak_adapter_bytes": 28290002944,
+        "accounting": "Exact saved snapshot prefix brackets all measured requests; trailing raw samples are retained separately, all after final completion. Adapter-wide sampled values, no interpolation or process/instantaneous-peak claim."
+      },
+      "image-c2": {
+        "sampled_peak_adapter_used_bytes": 28290002944,
+        "samples": 2838,
+        "requested_interval_seconds": 0.02,
+        "observed_sample_gap_median_seconds": 0.031444899970665574,
+        "observed_sample_gap_max_seconds": 3.362818600027822,
+        "scope": "NVML adapter-wide used memory, including background allocations; sampled maximum, not instantaneous or process-attributed peak",
+        "snapshot_first_monotonic": 371845.2209847,
+        "snapshot_last_monotonic": 371937.7276961,
+        "measured_requests_start_monotonic": 371845.2217988,
+        "measured_requests_end_monotonic": 371937.7200116,
+        "trailing_raw_phase_samples": 1,
+        "all_raw_phase_stats": {
+          "sampled_peak_adapter_used_bytes": 28290002944,
+          "samples": 2839,
+          "requested_interval_seconds": 0.02,
+          "observed_sample_gap_median_seconds": 0.0314447499695234,
+          "observed_sample_gap_max_seconds": 3.362818600027822
+        },
+        "inside_request_wall_interval_samples": 2836,
+        "inside_request_wall_interval_sampled_peak_adapter_bytes": 28290002944,
+        "accounting": "Exact saved snapshot prefix brackets all measured requests; trailing raw samples are retained separately, all after final completion. Adapter-wide sampled values, no interpolation or process/instantaneous-peak claim."
+      },
+      "image-c4": {
+        "sampled_peak_adapter_used_bytes": 28294197248,
+        "samples": 1290,
+        "requested_interval_seconds": 0.02,
+        "observed_sample_gap_median_seconds": 0.03138830000534654,
+        "observed_sample_gap_max_seconds": 0.07708640000782907,
+        "scope": "NVML adapter-wide used memory, including background allocations; sampled maximum, not instantaneous or process-attributed peak",
+        "snapshot_first_monotonic": 371980.1952168,
+        "snapshot_last_monotonic": 372020.7133182,
+        "measured_requests_start_monotonic": 371980.1960211,
+        "measured_requests_end_monotonic": 372020.7065395,
+        "trailing_raw_phase_samples": 0,
+        "all_raw_phase_stats": {
+          "sampled_peak_adapter_used_bytes": 28294197248,
+          "samples": 1290,
+          "requested_interval_seconds": 0.02,
+          "observed_sample_gap_median_seconds": 0.03138830000534654,
+          "observed_sample_gap_max_seconds": 0.07708640000782907
+        },
+        "inside_request_wall_interval_samples": 1288,
+        "inside_request_wall_interval_sampled_peak_adapter_bytes": 28294197248,
+        "accounting": "Exact saved snapshot prefix brackets all measured requests; trailing raw samples are retained separately, all after final completion. Adapter-wide sampled values, no interpolation or process/instantaneous-peak claim."
+      },
+      "image-c8": {
+        "sampled_peak_adapter_used_bytes": 28285808640,
+        "samples": 875,
+        "requested_interval_seconds": 0.02,
+        "observed_sample_gap_median_seconds": 0.031384749978315085,
+        "observed_sample_gap_max_seconds": 0.037987299961969256,
+        "scope": "NVML adapter-wide used memory, including background allocations; sampled maximum, not instantaneous or process-attributed peak",
+        "snapshot_first_monotonic": 372075.6599153,
+        "snapshot_last_monotonic": 372103.0837216,
+        "measured_requests_start_monotonic": 372075.6607561,
+        "measured_requests_end_monotonic": 372103.0763823,
+        "trailing_raw_phase_samples": 1,
+        "all_raw_phase_stats": {
+          "sampled_peak_adapter_used_bytes": 28285808640,
+          "samples": 876,
+          "requested_interval_seconds": 0.02,
+          "observed_sample_gap_median_seconds": 0.03138169995509088,
+          "observed_sample_gap_max_seconds": 0.037987299961969256
+        },
+        "inside_request_wall_interval_samples": 872,
+        "inside_request_wall_interval_sampled_peak_adapter_bytes": 28285808640,
+        "accounting": "Exact saved snapshot prefix brackets all measured requests; trailing raw samples are retained separately, all after final completion. Adapter-wide sampled values, no interpolation or process/instantaneous-peak claim."
+      }
+    },
+    {
+      "text-c1": {
+        "sampled_peak_adapter_used_bytes": 28287905792,
+        "samples": 3173,
+        "requested_interval_seconds": 0.02,
+        "observed_sample_gap_median_seconds": 0.031442249979591,
+        "observed_sample_gap_max_seconds": 8.547185599978548,
+        "scope": "NVML adapter-wide used memory, including background allocations; sampled maximum, not instantaneous or process-attributed peak",
+        "snapshot_first_monotonic": 372132.3366027,
+        "snapshot_last_monotonic": 372240.4917764,
+        "measured_requests_start_monotonic": 372132.3371576,
+        "measured_requests_end_monotonic": 372240.4832772,
+        "trailing_raw_phase_samples": 0,
+        "all_raw_phase_stats": {
+          "sampled_peak_adapter_used_bytes": 28287905792,
+          "samples": 3173,
+          "requested_interval_seconds": 0.02,
+          "observed_sample_gap_median_seconds": 0.031442249979591,
+          "observed_sample_gap_max_seconds": 8.547185599978548
+        },
+        "inside_request_wall_interval_samples": 3171,
+        "inside_request_wall_interval_sampled_peak_adapter_bytes": 28287905792,
+        "accounting": "Exact saved snapshot prefix brackets all measured requests; trailing raw samples are retained separately, all after final completion. Adapter-wide sampled values, no interpolation or process/instantaneous-peak claim."
+      },
+      "text-c2": {
+        "sampled_peak_adapter_used_bytes": 28287905792,
+        "samples": 2668,
+        "requested_interval_seconds": 0.02,
+        "observed_sample_gap_median_seconds": 0.03146929998183623,
+        "observed_sample_gap_max_seconds": 9.876370700018015,
+        "scope": "NVML adapter-wide used memory, including background allocations; sampled maximum, not instantaneous or process-attributed peak",
+        "snapshot_first_monotonic": 372267.7990515,
+        "snapshot_last_monotonic": 372361.5078676,
+        "measured_requests_start_monotonic": 372267.8003959,
+        "measured_requests_end_monotonic": 372361.4999447,
+        "trailing_raw_phase_samples": 0,
+        "all_raw_phase_stats": {
+          "sampled_peak_adapter_used_bytes": 28287905792,
+          "samples": 2668,
+          "requested_interval_seconds": 0.02,
+          "observed_sample_gap_median_seconds": 0.03146929998183623,
+          "observed_sample_gap_max_seconds": 9.876370700018015
+        },
+        "inside_request_wall_interval_samples": 2666,
+        "inside_request_wall_interval_sampled_peak_adapter_bytes": 28287905792,
+        "accounting": "Exact saved snapshot prefix brackets all measured requests; trailing raw samples are retained separately, all after final completion. Adapter-wide sampled values, no interpolation or process/instantaneous-peak claim."
+      },
+      "text-c4": {
+        "sampled_peak_adapter_used_bytes": 28287905792,
+        "samples": 1299,
+        "requested_interval_seconds": 0.02,
+        "observed_sample_gap_median_seconds": 0.031478349992539734,
+        "observed_sample_gap_max_seconds": 1.3186992999981157,
+        "scope": "NVML adapter-wide used memory, including background allocations; sampled maximum, not instantaneous or process-attributed peak",
+        "snapshot_first_monotonic": 372389.3081259,
+        "snapshot_last_monotonic": 372431.76241,
+        "measured_requests_start_monotonic": 372389.3087293,
+        "measured_requests_end_monotonic": 372431.7561917,
+        "trailing_raw_phase_samples": 0,
+        "all_raw_phase_stats": {
+          "sampled_peak_adapter_used_bytes": 28287905792,
+          "samples": 1299,
+          "requested_interval_seconds": 0.02,
+          "observed_sample_gap_median_seconds": 0.031478349992539734,
+          "observed_sample_gap_max_seconds": 1.3186992999981157
+        },
+        "inside_request_wall_interval_samples": 1296,
+        "inside_request_wall_interval_sampled_peak_adapter_bytes": 28287905792,
+        "accounting": "Exact saved snapshot prefix brackets all measured requests; trailing raw samples are retained separately, all after final completion. Adapter-wide sampled values, no interpolation or process/instantaneous-peak claim."
+      },
+      "text-c8": {
+        "sampled_peak_adapter_used_bytes": 28277420032,
+        "samples": 891,
+        "requested_interval_seconds": 0.02,
+        "observed_sample_gap_median_seconds": 0.03143999996245839,
+        "observed_sample_gap_max_seconds": 0.04793590004555881,
+        "scope": "NVML adapter-wide used memory, including background allocations; sampled maximum, not instantaneous or process-attributed peak",
+        "snapshot_first_monotonic": 372487.2760792,
+        "snapshot_last_monotonic": 372515.2425625,
+        "measured_requests_start_monotonic": 372487.2768286,
+        "measured_requests_end_monotonic": 372515.2350356,
+        "trailing_raw_phase_samples": 0,
+        "all_raw_phase_stats": {
+          "sampled_peak_adapter_used_bytes": 28277420032,
+          "samples": 891,
+          "requested_interval_seconds": 0.02,
+          "observed_sample_gap_median_seconds": 0.03143999996245839,
+          "observed_sample_gap_max_seconds": 0.04793590004555881
+        },
+        "inside_request_wall_interval_samples": 889,
+        "inside_request_wall_interval_sampled_peak_adapter_bytes": 28277420032,
+        "accounting": "Exact saved snapshot prefix brackets all measured requests; trailing raw samples are retained separately, all after final completion. Adapter-wide sampled values, no interpolation or process/instantaneous-peak claim."
+      },
+      "image-c1": {
+        "sampled_peak_adapter_used_bytes": 28290002944,
+        "samples": 2865,
+        "requested_interval_seconds": 0.02,
+        "observed_sample_gap_median_seconds": 0.031447799992747605,
+        "observed_sample_gap_max_seconds": 11.395922400057316,
+        "scope": "NVML adapter-wide used memory, including background allocations; sampled maximum, not instantaneous or process-attributed peak",
+        "snapshot_first_monotonic": 372544.9980846,
+        "snapshot_last_monotonic": 372657.4206463,
+        "measured_requests_start_monotonic": 372544.998562,
+        "measured_requests_end_monotonic": 372657.4005982,
+        "trailing_raw_phase_samples": 0,
+        "all_raw_phase_stats": {
+          "sampled_peak_adapter_used_bytes": 28290002944,
+          "samples": 2865,
+          "requested_interval_seconds": 0.02,
+          "observed_sample_gap_median_seconds": 0.031447799992747605,
+          "observed_sample_gap_max_seconds": 11.395922400057316
+        },
+        "inside_request_wall_interval_samples": 2862,
+        "inside_request_wall_interval_sampled_peak_adapter_bytes": 28290002944,
+        "accounting": "Exact saved snapshot prefix brackets all measured requests; trailing raw samples are retained separately, all after final completion. Adapter-wide sampled values, no interpolation or process/instantaneous-peak claim."
+      },
+      "image-c2": {
+        "sampled_peak_adapter_used_bytes": 28290002944,
+        "samples": 2535,
+        "requested_interval_seconds": 0.02,
+        "observed_sample_gap_median_seconds": 0.03147520002676174,
+        "observed_sample_gap_max_seconds": 0.07913490000646561,
+        "scope": "NVML adapter-wide used memory, including background allocations; sampled maximum, not instantaneous or process-attributed peak",
+        "snapshot_first_monotonic": 372710.4412356,
+        "snapshot_last_monotonic": 372790.247842,
+        "measured_requests_start_monotonic": 372710.4418366,
+        "measured_requests_end_monotonic": 372790.2391411,
+        "trailing_raw_phase_samples": 1,
+        "all_raw_phase_stats": {
+          "sampled_peak_adapter_used_bytes": 28290002944,
+          "samples": 2536,
+          "requested_interval_seconds": 0.02,
+          "observed_sample_gap_median_seconds": 0.03147510002600029,
+          "observed_sample_gap_max_seconds": 0.07913490000646561
+        },
+        "inside_request_wall_interval_samples": 2533,
+        "inside_request_wall_interval_sampled_peak_adapter_bytes": 28290002944,
+        "accounting": "Exact saved snapshot prefix brackets all measured requests; trailing raw samples are retained separately, all after final completion. Adapter-wide sampled values, no interpolation or process/instantaneous-peak claim."
+      },
+      "image-c4": {
+        "sampled_peak_adapter_used_bytes": 28285808640,
+        "samples": 837,
+        "requested_interval_seconds": 0.02,
+        "observed_sample_gap_median_seconds": 0.03144529997371137,
+        "observed_sample_gap_max_seconds": 9.095543300034478,
+        "scope": "NVML adapter-wide used memory, including background allocations; sampled maximum, not instantaneous or process-attributed peak",
+        "snapshot_first_monotonic": 372831.209778,
+        "snapshot_last_monotonic": 372866.5215737,
+        "measured_requests_start_monotonic": 372831.2105868,
+        "measured_requests_end_monotonic": 372866.5144064,
+        "trailing_raw_phase_samples": 0,
+        "all_raw_phase_stats": {
+          "sampled_peak_adapter_used_bytes": 28285808640,
+          "samples": 837,
+          "requested_interval_seconds": 0.02,
+          "observed_sample_gap_median_seconds": 0.03144529997371137,
+          "observed_sample_gap_max_seconds": 9.095543300034478
+        },
+        "inside_request_wall_interval_samples": 834,
+        "inside_request_wall_interval_sampled_peak_adapter_bytes": 28285808640,
+        "accounting": "Exact saved snapshot prefix brackets all measured requests; trailing raw samples are retained separately, all after final completion. Adapter-wide sampled values, no interpolation or process/instantaneous-peak claim."
+      },
+      "image-c8": {
+        "sampled_peak_adapter_used_bytes": 28296294400,
+        "samples": 872,
+        "requested_interval_seconds": 0.02,
+        "observed_sample_gap_median_seconds": 0.03148259996669367,
+        "observed_sample_gap_max_seconds": 0.047410400002263486,
+        "scope": "NVML adapter-wide used memory, including background allocations; sampled maximum, not instantaneous or process-attributed peak",
+        "snapshot_first_monotonic": 372921.2974973,
+        "snapshot_last_monotonic": 372948.6571718,
+        "measured_requests_start_monotonic": 372921.2986837,
+        "measured_requests_end_monotonic": 372948.6504687,
+        "trailing_raw_phase_samples": 1,
+        "all_raw_phase_stats": {
+          "sampled_peak_adapter_used_bytes": 28296294400,
+          "samples": 873,
+          "requested_interval_seconds": 0.02,
+          "observed_sample_gap_median_seconds": 0.03148204999160953,
+          "observed_sample_gap_max_seconds": 0.047410400002263486
+        },
+        "inside_request_wall_interval_samples": 870,
+        "inside_request_wall_interval_sampled_peak_adapter_bytes": 28296294400,
+        "accounting": "Exact saved snapshot prefix brackets all measured requests; trailing raw samples are retained separately, all after final completion. Adapter-wide sampled values, no interpolation or process/instantaneous-peak claim."
+      }
+    },
+    {
+      "text-c1": {
+        "sampled_peak_adapter_used_bytes": 28287905792,
+        "samples": 3436,
+        "requested_interval_seconds": 0.02,
+        "observed_sample_gap_median_seconds": 0.03143259999342263,
+        "observed_sample_gap_max_seconds": 0.061669400020036846,
+        "scope": "NVML adapter-wide used memory, including background allocations; sampled maximum, not instantaneous or process-attributed peak",
+        "snapshot_first_monotonic": 372977.9910596,
+        "snapshot_last_monotonic": 373085.9527324,
+        "measured_requests_start_monotonic": 372977.9915232,
+        "measured_requests_end_monotonic": 373085.943714,
+        "trailing_raw_phase_samples": 1,
+        "all_raw_phase_stats": {
+          "sampled_peak_adapter_used_bytes": 28287905792,
+          "samples": 3437,
+          "requested_interval_seconds": 0.02,
+          "observed_sample_gap_median_seconds": 0.03143249999266118,
+          "observed_sample_gap_max_seconds": 0.061669400020036846
+        },
+        "inside_request_wall_interval_samples": 3434,
+        "inside_request_wall_interval_sampled_peak_adapter_bytes": 28287905792,
+        "accounting": "Exact saved snapshot prefix brackets all measured requests; trailing raw samples are retained separately, all after final completion. Adapter-wide sampled values, no interpolation or process/instantaneous-peak claim."
+      },
+      "text-c2": {
+        "sampled_peak_adapter_used_bytes": 28287905792,
+        "samples": 2145,
+        "requested_interval_seconds": 0.02,
+        "observed_sample_gap_median_seconds": 0.031457350007258356,
+        "observed_sample_gap_max_seconds": 0.051207899989094585,
+        "scope": "NVML adapter-wide used memory, including background allocations; sampled maximum, not instantaneous or process-attributed peak",
+        "snapshot_first_monotonic": 373126.5057099,
+        "snapshot_last_monotonic": 373193.8942549,
+        "measured_requests_start_monotonic": 373126.5063165,
+        "measured_requests_end_monotonic": 373193.8868223,
+        "trailing_raw_phase_samples": 0,
+        "all_raw_phase_stats": {
+          "sampled_peak_adapter_used_bytes": 28287905792,
+          "samples": 2145,
+          "requested_interval_seconds": 0.02,
+          "observed_sample_gap_median_seconds": 0.031457350007258356,
+          "observed_sample_gap_max_seconds": 0.051207899989094585
+        },
+        "inside_request_wall_interval_samples": 2143,
+        "inside_request_wall_interval_sampled_peak_adapter_bytes": 28287905792,
+        "accounting": "Exact saved snapshot prefix brackets all measured requests; trailing raw samples are retained separately, all after final completion. Adapter-wide sampled values, no interpolation or process/instantaneous-peak claim."
+      },
+      "text-c4": {
+        "sampled_peak_adapter_used_bytes": 28287905792,
+        "samples": 1315,
+        "requested_interval_seconds": 0.02,
+        "observed_sample_gap_median_seconds": 0.031453900010092184,
+        "observed_sample_gap_max_seconds": 0.04677420004736632,
+        "scope": "NVML adapter-wide used memory, including background allocations; sampled maximum, not instantaneous or process-attributed peak",
+        "snapshot_first_monotonic": 373235.2197128,
+        "snapshot_last_monotonic": 373276.4797096,
+        "measured_requests_start_monotonic": 373235.22043,
+        "measured_requests_end_monotonic": 373276.4721821,
+        "trailing_raw_phase_samples": 0,
+        "all_raw_phase_stats": {
+          "sampled_peak_adapter_used_bytes": 28287905792,
+          "samples": 1315,
+          "requested_interval_seconds": 0.02,
+          "observed_sample_gap_median_seconds": 0.031453900010092184,
+          "observed_sample_gap_max_seconds": 0.04677420004736632
+        },
+        "inside_request_wall_interval_samples": 1312,
+        "inside_request_wall_interval_sampled_peak_adapter_bytes": 28287905792,
+        "accounting": "Exact saved snapshot prefix brackets all measured requests; trailing raw samples are retained separately, all after final completion. Adapter-wide sampled values, no interpolation or process/instantaneous-peak claim."
+      },
+      "text-c8": {
+        "sampled_peak_adapter_used_bytes": 28287905792,
+        "samples": 891,
+        "requested_interval_seconds": 0.02,
+        "observed_sample_gap_median_seconds": 0.031461099977605045,
+        "observed_sample_gap_max_seconds": 0.06144070002483204,
+        "scope": "NVML adapter-wide used memory, including background allocations; sampled maximum, not instantaneous or process-attributed peak",
+        "snapshot_first_monotonic": 373346.8582108,
+        "snapshot_last_monotonic": 373374.8222688,
+        "measured_requests_start_monotonic": 373346.8613112,
+        "measured_requests_end_monotonic": 373374.8137188,
+        "trailing_raw_phase_samples": 0,
+        "all_raw_phase_stats": {
+          "sampled_peak_adapter_used_bytes": 28287905792,
+          "samples": 891,
+          "requested_interval_seconds": 0.02,
+          "observed_sample_gap_median_seconds": 0.031461099977605045,
+          "observed_sample_gap_max_seconds": 0.06144070002483204
+        },
+        "inside_request_wall_interval_samples": 888,
+        "inside_request_wall_interval_sampled_peak_adapter_bytes": 28287905792,
+        "accounting": "Exact saved snapshot prefix brackets all measured requests; trailing raw samples are retained separately, all after final completion. Adapter-wide sampled values, no interpolation or process/instantaneous-peak claim."
+      },
+      "image-c1": {
+        "sampled_peak_adapter_used_bytes": 28290002944,
+        "samples": 2984,
+        "requested_interval_seconds": 0.02,
+        "observed_sample_gap_median_seconds": 0.031406200025230646,
+        "observed_sample_gap_max_seconds": 42.128634899971075,
+        "scope": "NVML adapter-wide used memory, including background allocations; sampled maximum, not instantaneous or process-attributed peak",
+        "snapshot_first_monotonic": 373404.6333583,
+        "snapshot_last_monotonic": 373575.8452126,
+        "measured_requests_start_monotonic": 373404.6341181,
+        "measured_requests_end_monotonic": 373575.8378006,
+        "trailing_raw_phase_samples": 0,
+        "all_raw_phase_stats": {
+          "sampled_peak_adapter_used_bytes": 28290002944,
+          "samples": 2984,
+          "requested_interval_seconds": 0.02,
+          "observed_sample_gap_median_seconds": 0.031406200025230646,
+          "observed_sample_gap_max_seconds": 42.128634899971075
+        },
+        "inside_request_wall_interval_samples": 2981,
+        "inside_request_wall_interval_sampled_peak_adapter_bytes": 28290002944,
+        "accounting": "Exact saved snapshot prefix brackets all measured requests; trailing raw samples are retained separately, all after final completion. Adapter-wide sampled values, no interpolation or process/instantaneous-peak claim."
+      },
+      "image-c2": {
+        "sampled_peak_adapter_used_bytes": 28292100096,
+        "samples": 2006,
+        "requested_interval_seconds": 0.02,
+        "observed_sample_gap_median_seconds": 0.03153139998903498,
+        "observed_sample_gap_max_seconds": 3.937204500020016,
+        "scope": "NVML adapter-wide used memory, including background allocations; sampled maximum, not instantaneous or process-attributed peak",
+        "snapshot_first_monotonic": 373602.7312571,
+        "snapshot_last_monotonic": 373669.6709509,
+        "measured_requests_start_monotonic": 373602.7318754,
+        "measured_requests_end_monotonic": 373669.6639535,
+        "trailing_raw_phase_samples": 0,
+        "all_raw_phase_stats": {
+          "sampled_peak_adapter_used_bytes": 28292100096,
+          "samples": 2006,
+          "requested_interval_seconds": 0.02,
+          "observed_sample_gap_median_seconds": 0.03153139998903498,
+          "observed_sample_gap_max_seconds": 3.937204500020016
+        },
+        "inside_request_wall_interval_samples": 2004,
+        "inside_request_wall_interval_sampled_peak_adapter_bytes": 28292100096,
+        "accounting": "Exact saved snapshot prefix brackets all measured requests; trailing raw samples are retained separately, all after final completion. Adapter-wide sampled values, no interpolation or process/instantaneous-peak claim."
+      },
+      "image-c4": {
+        "sampled_peak_adapter_used_bytes": 28296294400,
+        "samples": 579,
+        "requested_interval_seconds": 0.02,
+        "observed_sample_gap_median_seconds": 0.031430550006916746,
+        "observed_sample_gap_max_seconds": 9.288503999996465,
+        "scope": "NVML adapter-wide used memory, including background allocations; sampled maximum, not instantaneous or process-attributed peak",
+        "snapshot_first_monotonic": 373704.4544558,
+        "snapshot_last_monotonic": 373736.0366,
+        "measured_requests_start_monotonic": 373704.4553638,
+        "measured_requests_end_monotonic": 373736.0281099,
+        "trailing_raw_phase_samples": 0,
+        "all_raw_phase_stats": {
+          "sampled_peak_adapter_used_bytes": 28296294400,
+          "samples": 579,
+          "requested_interval_seconds": 0.02,
+          "observed_sample_gap_median_seconds": 0.031430550006916746,
+          "observed_sample_gap_max_seconds": 9.288503999996465
+        },
+        "inside_request_wall_interval_samples": 577,
+        "inside_request_wall_interval_sampled_peak_adapter_bytes": 28296294400,
+        "accounting": "Exact saved snapshot prefix brackets all measured requests; trailing raw samples are retained separately, all after final completion. Adapter-wide sampled values, no interpolation or process/instantaneous-peak claim."
+      },
+      "image-c8": {
+        "sampled_peak_adapter_used_bytes": 28296294400,
+        "samples": 1049,
+        "requested_interval_seconds": 0.02,
+        "observed_sample_gap_median_seconds": 0.03127849998418242,
+        "observed_sample_gap_max_seconds": 10.15453920001164,
+        "scope": "NVML adapter-wide used memory, including background allocations; sampled maximum, not instantaneous or process-attributed peak",
+        "snapshot_first_monotonic": 373824.6420724,
+        "snapshot_last_monotonic": 373876.3674386,
+        "measured_requests_start_monotonic": 373824.6428308,
+        "measured_requests_end_monotonic": 373876.3489114,
+        "trailing_raw_phase_samples": 1,
+        "all_raw_phase_stats": {
+          "sampled_peak_adapter_used_bytes": 28296294400,
+          "samples": 1050,
+          "requested_interval_seconds": 0.02,
+          "observed_sample_gap_median_seconds": 0.03127789997961372,
+          "observed_sample_gap_max_seconds": 10.15453920001164
+        },
+        "inside_request_wall_interval_samples": 1046,
+        "inside_request_wall_interval_sampled_peak_adapter_bytes": 28296294400,
+        "accounting": "Exact saved snapshot prefix brackets all measured requests; trailing raw samples are retained separately, all after final completion. Adapter-wide sampled values, no interpolation or process/instantaneous-peak claim."
+      }
+    }
+  ],
+  "status": "three_B4_HTTP_trials_and_retained_B1_and_ordinary_references_replayed",
+  "series": {
+    "Garnet B1 / prefill128 / MTP3 (3 trials)": {
+      "image-c1": {
+        "ttft_median_ms": 2810.0194499711506,
+        "decode_median_tokens_per_second": 86.64474902677856,
+        "output_tokens_per_second": 29.64240785753518,
+        "sampled_peak_adapter_used_bytes": 24024395776
+      },
+      "image-c2": {
+        "ttft_median_ms": 7030.159499990987,
+        "decode_median_tokens_per_second": 89.44510268430969,
+        "output_tokens_per_second": 29.921662982429527,
+        "sampled_peak_adapter_used_bytes": 24026492928
+      },
+      "image-c4": {
+        "ttft_median_ms": 15576.014499994926,
+        "decode_median_tokens_per_second": 87.9503698241129,
+        "output_tokens_per_second": 30.011082119596637,
+        "sampled_peak_adapter_used_bytes": 24028590080
+      },
+      "image-c8": {
+        "ttft_median_ms": 17643.683450005483,
+        "decode_median_tokens_per_second": 89.77117266728521,
+        "output_tokens_per_second": 29.910963794567202,
+        "sampled_peak_adapter_used_bytes": 24026492928
+      },
+      "text-c1": {
+        "ttft_median_ms": 2802.259949996369,
+        "decode_median_tokens_per_second": 76.2024497962012,
+        "output_tokens_per_second": 28.531293066521084,
+        "sampled_peak_adapter_used_bytes": 24026492928
+      },
+      "text-c2": {
+        "ttft_median_ms": 7064.629450032953,
+        "decode_median_tokens_per_second": 83.03332461955117,
+        "output_tokens_per_second": 29.429818026067544,
+        "sampled_peak_adapter_used_bytes": 24026492928
+      },
+      "text-c4": {
+        "ttft_median_ms": 15999.673449987313,
+        "decode_median_tokens_per_second": 78.06914113816521,
+        "output_tokens_per_second": 28.820452073517536,
+        "sampled_peak_adapter_used_bytes": 24026492928
+      },
+      "text-c8": {
+        "ttft_median_ms": 18482.93275004835,
+        "decode_median_tokens_per_second": 75.84360877850415,
+        "output_tokens_per_second": 28.629569443532557,
+        "sampled_peak_adapter_used_bytes": 24026492928
+      }
+    },
+    "Garnet B4 / prefill32 / MTP3 (3 trials)": {
+      "image-c1": {
+        "ttft_median_ms": 11161.275699996622,
+        "decode_median_tokens_per_second": 63.56129411744392,
+        "output_tokens_per_second": 8.918787839948926,
+        "sampled_peak_adapter_used_bytes": 28290002944
+      },
+      "image-c2": {
+        "ttft_median_ms": 11282.311849994585,
+        "decode_median_tokens_per_second": 62.96063493841111,
+        "output_tokens_per_second": 12.832513659654525,
+        "sampled_peak_adapter_used_bytes": 28292100096
+      },
+      "image-c4": {
+        "ttft_median_ms": 11267.219400004251,
+        "decode_median_tokens_per_second": 37.83268545490848,
+        "output_tokens_per_second": 29.005360088597993,
+        "sampled_peak_adapter_used_bytes": 28296294400
+      },
+      "image-c8": {
+        "ttft_median_ms": 18080.07669998915,
+        "decode_median_tokens_per_second": 57.574382519647976,
+        "output_tokens_per_second": 37.350961547650634,
+        "sampled_peak_adapter_used_bytes": 28296294400
+      },
+      "text-c1": {
+        "ttft_median_ms": 11157.175400003325,
+        "decode_median_tokens_per_second": 54.96927611797602,
+        "output_tokens_per_second": 9.468670755705684,
+        "sampled_peak_adapter_used_bytes": 28287905792
+      },
+      "text-c2": {
+        "ttft_median_ms": 17691.62045000121,
+        "decode_median_tokens_per_second": 58.4768647933834,
+        "output_tokens_per_second": 12.620054912053707,
+        "sampled_peak_adapter_used_bytes": 28287905792
+      },
+      "text-c4": {
+        "ttft_median_ms": 11191.393249988323,
+        "decode_median_tokens_per_second": 51.57740311566767,
+        "output_tokens_per_second": 24.823188055561573,
+        "sampled_peak_adapter_used_bytes": 28287905792
+      },
+      "text-c8": {
+        "ttft_median_ms": 18130.672700004652,
+        "decode_median_tokens_per_second": 49.337681408242545,
+        "output_tokens_per_second": 36.63369591103396,
+        "sampled_peak_adapter_used_bytes": 28287905792
+      }
+    },
+    "vLLM ordinary (1 trial)": {
+      "image-c1": {
+        "ttft_median_ms": 330.931700009387,
+        "decode_median_tokens_per_second": 69.53581898869433,
+        "output_tokens_per_second": 59.134581454535805,
+        "sampled_peak_adapter_used_bytes": 28935925760
+      },
+      "image-c2": {
+        "ttft_median_ms": 538.7116500060074,
+        "decode_median_tokens_per_second": 60.2922374223955,
+        "output_tokens_per_second": 96.46088861856155,
+        "sampled_peak_adapter_used_bytes": 28935925760
+      },
+      "image-c4": {
+        "ttft_median_ms": 881.9397500046762,
+        "decode_median_tokens_per_second": 51.7781879195042,
+        "output_tokens_per_second": 152.4663267176823,
+        "sampled_peak_adapter_used_bytes": 28935925760
+      },
+      "image-c8": {
+        "ttft_median_ms": 1486.452349985484,
+        "decode_median_tokens_per_second": 42.459814548607824,
+        "output_tokens_per_second": 224.9709937899434,
+        "sampled_peak_adapter_used_bytes": 28935925760
+      },
+      "text-c1": {
+        "ttft_median_ms": 310.9569999942323,
+        "decode_median_tokens_per_second": 69.48295311354212,
+        "output_tokens_per_second": 59.61580038549094,
+        "sampled_peak_adapter_used_bytes": 28650713088
+      },
+      "text-c2": {
+        "ttft_median_ms": 512.8690499986988,
+        "decode_median_tokens_per_second": 59.75985409558298,
+        "output_tokens_per_second": 96.53587516823137,
+        "sampled_peak_adapter_used_bytes": 28650713088
+      },
+      "text-c4": {
+        "ttft_median_ms": 741.1149999970803,
+        "decode_median_tokens_per_second": 49.350660219058156,
+        "output_tokens_per_second": 153.63590855227898,
+        "sampled_peak_adapter_used_bytes": 28935925760
+      },
+      "text-c8": {
+        "ttft_median_ms": 1412.0561499876203,
+        "decode_median_tokens_per_second": 42.459970252414834,
+        "output_tokens_per_second": 226.944545190543,
+        "sampled_peak_adapter_used_bytes": 28935925760
+      }
+    },
+    "SGLang ordinary (1 trial)": {
+      "image-c1": {
+        "ttft_median_ms": 333.74354998522904,
+        "decode_median_tokens_per_second": 60.683568860051196,
+        "output_tokens_per_second": 52.61953644075737,
+        "sampled_peak_adapter_used_bytes": 29566345216
+      },
+      "image-c2": {
+        "ttft_median_ms": 552.5568499870133,
+        "decode_median_tokens_per_second": 56.01880985431454,
+        "output_tokens_per_second": 90.7069795884229,
+        "sampled_peak_adapter_used_bytes": 29589413888
+      },
+      "image-c4": {
+        "ttft_median_ms": 946.0434000066016,
+        "decode_median_tokens_per_second": 48.369259680111504,
+        "output_tokens_per_second": 142.79433366979055,
+        "sampled_peak_adapter_used_bytes": 29589413888
+      },
+      "image-c8": {
+        "ttft_median_ms": 1603.994449993479,
+        "decode_median_tokens_per_second": 42.605846611951904,
+        "output_tokens_per_second": 146.53663524640393,
+        "sampled_peak_adapter_used_bytes": 29589413888
+      },
+      "text-c1": {
+        "ttft_median_ms": 307.270499994047,
+        "decode_median_tokens_per_second": 64.0734736095945,
+        "output_tokens_per_second": 55.7966739559403,
+        "sampled_peak_adapter_used_bytes": 29281132544
+      },
+      "text-c2": {
+        "ttft_median_ms": 613.7710499897366,
+        "decode_median_tokens_per_second": 61.58425166518379,
+        "output_tokens_per_second": 95.31620452734586,
+        "sampled_peak_adapter_used_bytes": 29566345216
+      },
+      "text-c4": {
+        "ttft_median_ms": 914.8915999976452,
+        "decode_median_tokens_per_second": 50.52915413014738,
+        "output_tokens_per_second": 148.8511749181023,
+        "sampled_peak_adapter_used_bytes": 29566345216
+      },
+      "text-c8": {
+        "ttft_median_ms": 1588.93425000133,
+        "decode_median_tokens_per_second": 44.38529041138494,
+        "output_tokens_per_second": 151.790813641028,
+        "sampled_peak_adapter_used_bytes": 29566345216
+      }
+    }
+  },
+  "ranges": {
+    "Garnet B1 / prefill128 / MTP3 (3 trials)": {
+      "image-c1": {
+        "ttft_median_ms": {
+          "min": 2810.0099000148475,
+          "max": 2826.03704999201,
+          "n": 3
+        },
+        "decode_median_tokens_per_second": {
+          "min": 86.45662110697742,
+          "max": 88.67396966417479,
+          "n": 3
+        },
+        "output_tokens_per_second": {
+          "min": 28.538125916225855,
+          "max": 29.865023829051264,
+          "n": 3
+        },
+        "sampled_peak_adapter_used_bytes": {
+          "min": 24005521408,
+          "max": 24024395776,
+          "n": 3
+        }
+      },
+      "image-c2": {
+        "ttft_median_ms": {
+          "min": 7028.376899979776,
+          "max": 7034.190149977803,
+          "n": 3
+        },
+        "decode_median_tokens_per_second": {
+          "min": 88.68278208780477,
+          "max": 89.92444013387224,
+          "n": 3
+        },
+        "output_tokens_per_second": {
+          "min": 29.87201815161697,
+          "max": 30.033070663564573,
+          "n": 3
+        },
+        "sampled_peak_adapter_used_bytes": {
+          "min": 24020201472,
+          "max": 24026492928,
+          "n": 3
+        }
+      },
+      "image-c4": {
+        "ttft_median_ms": {
+          "min": 15538.81015002844,
+          "max": 15680.855649989098,
+          "n": 3
+        },
+        "decode_median_tokens_per_second": {
+          "min": 86.93547734731152,
+          "max": 88.07048942446991,
+          "n": 3
+        },
+        "output_tokens_per_second": {
+          "min": 29.75012495271412,
+          "max": 30.029673540385787,
+          "n": 3
+        },
+        "sampled_peak_adapter_used_bytes": {
+          "min": 24026492928,
+          "max": 24028590080,
+          "n": 3
+        }
+      },
+      "image-c8": {
+        "ttft_median_ms": {
+          "min": 17563.64454998402,
+          "max": 17745.92995000421,
+          "n": 3
+        },
+        "decode_median_tokens_per_second": {
+          "min": 89.71220880649533,
+          "max": 90.70999829760738,
+          "n": 3
+        },
+        "output_tokens_per_second": {
+          "min": 29.857804596554477,
+          "max": 30.085137766831718,
+          "n": 3
+        },
+        "sampled_peak_adapter_used_bytes": {
+          "min": 24026492928,
+          "max": 24026492928,
+          "n": 3
+        }
+      },
+      "text-c1": {
+        "ttft_median_ms": {
+          "min": 2772.2294499981217,
+          "max": 2807.778350019362,
+          "n": 3
+        },
+        "decode_median_tokens_per_second": {
+          "min": 75.99556634867221,
+          "max": 76.54479412574634,
+          "n": 3
+        },
+        "output_tokens_per_second": {
+          "min": 28.44148321200243,
+          "max": 28.67832293928843,
+          "n": 3
+        },
+        "sampled_peak_adapter_used_bytes": {
+          "min": 23944704000,
+          "max": 24026492928,
+          "n": 3
+        }
+      },
+      "text-c2": {
+        "ttft_median_ms": {
+          "min": 7042.299299995648,
+          "max": 7080.518949980615,
+          "n": 3
+        },
+        "decode_median_tokens_per_second": {
+          "min": 82.39226182520349,
+          "max": 84.39926976635115,
+          "n": 3
+        },
+        "output_tokens_per_second": {
+          "min": 29.307517287730132,
+          "max": 29.537200498794498,
+          "n": 3
+        },
+        "sampled_peak_adapter_used_bytes": {
+          "min": 23959384064,
+          "max": 24026492928,
+          "n": 3
+        }
+      },
+      "text-c4": {
+        "ttft_median_ms": {
+          "min": 15983.8381500158,
+          "max": 16163.001749984687,
+          "n": 3
+        },
+        "decode_median_tokens_per_second": {
+          "min": 76.96414703376269,
+          "max": 78.2745190240278,
+          "n": 3
+        },
+        "output_tokens_per_second": {
+          "min": 28.574085786033542,
+          "max": 28.90107802514888,
+          "n": 3
+        },
+        "sampled_peak_adapter_used_bytes": {
+          "min": 23938412544,
+          "max": 24026492928,
+          "n": 3
+        }
+      },
+      "text-c8": {
+        "ttft_median_ms": {
+          "min": 18463.860049989307,
+          "max": 18552.29865000001,
+          "n": 3
+        },
+        "decode_median_tokens_per_second": {
+          "min": 75.0488822894623,
+          "max": 76.24577919493419,
+          "n": 3
+        },
+        "output_tokens_per_second": {
+          "min": 28.406993059346863,
+          "max": 28.674559777907884,
+          "n": 3
+        },
+        "sampled_peak_adapter_used_bytes": {
+          "min": 23944704000,
+          "max": 24026492928,
+          "n": 3
+        }
+      }
+    },
+    "Garnet B4 / prefill32 / MTP3 (3 trials)": {
+      "image-c1": {
+        "ttft_median_ms": {
+          "min": 11104.995000001509,
+          "max": 11167.24215002614,
+          "n": 3
+        },
+        "decode_median_tokens_per_second": {
+          "min": 63.263517711165875,
+          "max": 64.3464607325808,
+          "n": 3
+        },
+        "output_tokens_per_second": {
+          "min": 5.9811797564577756,
+          "max": 9.110155248238495,
+          "n": 3
+        },
+        "sampled_peak_adapter_used_bytes": {
+          "min": 28290002944,
+          "max": 28290002944,
+          "n": 3
+        }
+      },
+      "image-c2": {
+        "ttft_median_ms": {
+          "min": 11222.349000017857,
+          "max": 24206.591100024525,
+          "n": 3
+        },
+        "decode_median_tokens_per_second": {
+          "min": 62.756897577852044,
+          "max": 64.49819224299395,
+          "n": 3
+        },
+        "output_tokens_per_second": {
+          "min": 11.070484163990978,
+          "max": 15.299091692182818,
+          "n": 3
+        },
+        "sampled_peak_adapter_used_bytes": {
+          "min": 28290002944,
+          "max": 28292100096,
+          "n": 3
+        }
+      },
+      "image-c4": {
+        "ttft_median_ms": {
+          "min": 11265.606250002747,
+          "max": 11300.737449986627,
+          "n": 3
+        },
+        "decode_median_tokens_per_second": {
+          "min": 33.67420867795957,
+          "max": 59.31034604075046,
+          "n": 3
+        },
+        "output_tokens_per_second": {
+          "min": 25.277385736935837,
+          "max": 32.433035655372784,
+          "n": 3
+        },
+        "sampled_peak_adapter_used_bytes": {
+          "min": 28285808640,
+          "max": 28296294400,
+          "n": 3
+        }
+      },
+      "image-c8": {
+        "ttft_median_ms": {
+          "min": 18001.826499967137,
+          "max": 29805.665800027782,
+          "n": 3
+        },
+        "decode_median_tokens_per_second": {
+          "min": 21.666816821073446,
+          "max": 58.12094234624466,
+          "n": 3
+        },
+        "output_tokens_per_second": {
+          "min": 19.80424716235913,
+          "max": 37.438141605740455,
+          "n": 3
+        },
+        "sampled_peak_adapter_used_bytes": {
+          "min": 28285808640,
+          "max": 28296294400,
+          "n": 3
+        }
+      },
+      "text-c1": {
+        "ttft_median_ms": {
+          "min": 11129.274100007024,
+          "max": 11184.382400009781,
+          "n": 3
+        },
+        "decode_median_tokens_per_second": {
+          "min": 41.08550882991723,
+          "max": 55.023512672801836,
+          "n": 3
+        },
+        "output_tokens_per_second": {
+          "min": 5.246000198034766,
+          "max": 9.485680581483066,
+          "n": 3
+        },
+        "sampled_peak_adapter_used_bytes": {
+          "min": 28283711488,
+          "max": 28287905792,
+          "n": 3
+        }
+      },
+      "text-c2": {
+        "ttft_median_ms": {
+          "min": 11227.679900010116,
+          "max": 24400.273100007325,
+          "n": 3
+        },
+        "decode_median_tokens_per_second": {
+          "min": 56.03312996680317,
+          "max": 58.603685969530275,
+          "n": 3
+        },
+        "output_tokens_per_second": {
+          "min": 10.928547822419057,
+          "max": 15.197273867906558,
+          "n": 3
+        },
+        "sampled_peak_adapter_used_bytes": {
+          "min": 28283711488,
+          "max": 28287905792,
+          "n": 3
+        }
+      },
+      "text-c4": {
+        "ttft_median_ms": {
+          "min": 11190.677600010531,
+          "max": 11226.676599995699,
+          "n": 3
+        },
+        "decode_median_tokens_per_second": {
+          "min": 51.047852676978806,
+          "max": 51.64420312171272,
+          "n": 3
+        },
+        "output_tokens_per_second": {
+          "min": 24.123939149767907,
+          "max": 24.906855353846506,
+          "n": 3
+        },
+        "sampled_peak_adapter_used_bytes": {
+          "min": 28283711488,
+          "max": 28287905792,
+          "n": 3
+        }
+      },
+      "text-c8": {
+        "ttft_median_ms": {
+          "min": 17971.071800013306,
+          "max": 18184.20909999986,
+          "n": 3
+        },
+        "decode_median_tokens_per_second": {
+          "min": 48.80712794104311,
+          "max": 51.2324244877383,
+          "n": 3
+        },
+        "output_tokens_per_second": {
+          "min": 36.62609694528264,
+          "max": 37.23099776954212,
+          "n": 3
+        },
+        "sampled_peak_adapter_used_bytes": {
+          "min": 28277420032,
+          "max": 28287905792,
+          "n": 3
+        }
+      }
+    },
+    "vLLM ordinary (1 trial)": {
+      "image-c1": {
+        "ttft_median_ms": {
+          "min": 330.931700009387,
+          "max": 330.931700009387,
+          "n": 1
+        },
+        "decode_median_tokens_per_second": {
+          "min": 69.53581898869433,
+          "max": 69.53581898869433,
+          "n": 1
+        },
+        "output_tokens_per_second": {
+          "min": 59.134581454535805,
+          "max": 59.134581454535805,
+          "n": 1
+        },
+        "sampled_peak_adapter_used_bytes": {
+          "min": 28935925760,
+          "max": 28935925760,
+          "n": 1
+        }
+      },
+      "image-c2": {
+        "ttft_median_ms": {
+          "min": 538.7116500060074,
+          "max": 538.7116500060074,
+          "n": 1
+        },
+        "decode_median_tokens_per_second": {
+          "min": 60.2922374223955,
+          "max": 60.2922374223955,
+          "n": 1
+        },
+        "output_tokens_per_second": {
+          "min": 96.46088861856155,
+          "max": 96.46088861856155,
+          "n": 1
+        },
+        "sampled_peak_adapter_used_bytes": {
+          "min": 28935925760,
+          "max": 28935925760,
+          "n": 1
+        }
+      },
+      "image-c4": {
+        "ttft_median_ms": {
+          "min": 881.9397500046762,
+          "max": 881.9397500046762,
+          "n": 1
+        },
+        "decode_median_tokens_per_second": {
+          "min": 51.7781879195042,
+          "max": 51.7781879195042,
+          "n": 1
+        },
+        "output_tokens_per_second": {
+          "min": 152.4663267176823,
+          "max": 152.4663267176823,
+          "n": 1
+        },
+        "sampled_peak_adapter_used_bytes": {
+          "min": 28935925760,
+          "max": 28935925760,
+          "n": 1
+        }
+      },
+      "image-c8": {
+        "ttft_median_ms": {
+          "min": 1486.452349985484,
+          "max": 1486.452349985484,
+          "n": 1
+        },
+        "decode_median_tokens_per_second": {
+          "min": 42.459814548607824,
+          "max": 42.459814548607824,
+          "n": 1
+        },
+        "output_tokens_per_second": {
+          "min": 224.9709937899434,
+          "max": 224.9709937899434,
+          "n": 1
+        },
+        "sampled_peak_adapter_used_bytes": {
+          "min": 28935925760,
+          "max": 28935925760,
+          "n": 1
+        }
+      },
+      "text-c1": {
+        "ttft_median_ms": {
+          "min": 310.9569999942323,
+          "max": 310.9569999942323,
+          "n": 1
+        },
+        "decode_median_tokens_per_second": {
+          "min": 69.48295311354212,
+          "max": 69.48295311354212,
+          "n": 1
+        },
+        "output_tokens_per_second": {
+          "min": 59.61580038549094,
+          "max": 59.61580038549094,
+          "n": 1
+        },
+        "sampled_peak_adapter_used_bytes": {
+          "min": 28650713088,
+          "max": 28650713088,
+          "n": 1
+        }
+      },
+      "text-c2": {
+        "ttft_median_ms": {
+          "min": 512.8690499986988,
+          "max": 512.8690499986988,
+          "n": 1
+        },
+        "decode_median_tokens_per_second": {
+          "min": 59.75985409558298,
+          "max": 59.75985409558298,
+          "n": 1
+        },
+        "output_tokens_per_second": {
+          "min": 96.53587516823137,
+          "max": 96.53587516823137,
+          "n": 1
+        },
+        "sampled_peak_adapter_used_bytes": {
+          "min": 28650713088,
+          "max": 28650713088,
+          "n": 1
+        }
+      },
+      "text-c4": {
+        "ttft_median_ms": {
+          "min": 741.1149999970803,
+          "max": 741.1149999970803,
+          "n": 1
+        },
+        "decode_median_tokens_per_second": {
+          "min": 49.350660219058156,
+          "max": 49.350660219058156,
+          "n": 1
+        },
+        "output_tokens_per_second": {
+          "min": 153.63590855227898,
+          "max": 153.63590855227898,
+          "n": 1
+        },
+        "sampled_peak_adapter_used_bytes": {
+          "min": 28935925760,
+          "max": 28935925760,
+          "n": 1
+        }
+      },
+      "text-c8": {
+        "ttft_median_ms": {
+          "min": 1412.0561499876203,
+          "max": 1412.0561499876203,
+          "n": 1
+        },
+        "decode_median_tokens_per_second": {
+          "min": 42.459970252414834,
+          "max": 42.459970252414834,
+          "n": 1
+        },
+        "output_tokens_per_second": {
+          "min": 226.944545190543,
+          "max": 226.944545190543,
+          "n": 1
+        },
+        "sampled_peak_adapter_used_bytes": {
+          "min": 28935925760,
+          "max": 28935925760,
+          "n": 1
+        }
+      }
+    },
+    "SGLang ordinary (1 trial)": {
+      "image-c1": {
+        "ttft_median_ms": {
+          "min": 333.74354998522904,
+          "max": 333.74354998522904,
+          "n": 1
+        },
+        "decode_median_tokens_per_second": {
+          "min": 60.683568860051196,
+          "max": 60.683568860051196,
+          "n": 1
+        },
+        "output_tokens_per_second": {
+          "min": 52.61953644075737,
+          "max": 52.61953644075737,
+          "n": 1
+        },
+        "sampled_peak_adapter_used_bytes": {
+          "min": 29566345216,
+          "max": 29566345216,
+          "n": 1
+        }
+      },
+      "image-c2": {
+        "ttft_median_ms": {
+          "min": 552.5568499870133,
+          "max": 552.5568499870133,
+          "n": 1
+        },
+        "decode_median_tokens_per_second": {
+          "min": 56.01880985431454,
+          "max": 56.01880985431454,
+          "n": 1
+        },
+        "output_tokens_per_second": {
+          "min": 90.7069795884229,
+          "max": 90.7069795884229,
+          "n": 1
+        },
+        "sampled_peak_adapter_used_bytes": {
+          "min": 29589413888,
+          "max": 29589413888,
+          "n": 1
+        }
+      },
+      "image-c4": {
+        "ttft_median_ms": {
+          "min": 946.0434000066016,
+          "max": 946.0434000066016,
+          "n": 1
+        },
+        "decode_median_tokens_per_second": {
+          "min": 48.369259680111504,
+          "max": 48.369259680111504,
+          "n": 1
+        },
+        "output_tokens_per_second": {
+          "min": 142.79433366979055,
+          "max": 142.79433366979055,
+          "n": 1
+        },
+        "sampled_peak_adapter_used_bytes": {
+          "min": 29589413888,
+          "max": 29589413888,
+          "n": 1
+        }
+      },
+      "image-c8": {
+        "ttft_median_ms": {
+          "min": 1603.994449993479,
+          "max": 1603.994449993479,
+          "n": 1
+        },
+        "decode_median_tokens_per_second": {
+          "min": 42.605846611951904,
+          "max": 42.605846611951904,
+          "n": 1
+        },
+        "output_tokens_per_second": {
+          "min": 146.53663524640393,
+          "max": 146.53663524640393,
+          "n": 1
+        },
+        "sampled_peak_adapter_used_bytes": {
+          "min": 29589413888,
+          "max": 29589413888,
+          "n": 1
+        }
+      },
+      "text-c1": {
+        "ttft_median_ms": {
+          "min": 307.270499994047,
+          "max": 307.270499994047,
+          "n": 1
+        },
+        "decode_median_tokens_per_second": {
+          "min": 64.0734736095945,
+          "max": 64.0734736095945,
+          "n": 1
+        },
+        "output_tokens_per_second": {
+          "min": 55.7966739559403,
+          "max": 55.7966739559403,
+          "n": 1
+        },
+        "sampled_peak_adapter_used_bytes": {
+          "min": 29281132544,
+          "max": 29281132544,
+          "n": 1
+        }
+      },
+      "text-c2": {
+        "ttft_median_ms": {
+          "min": 613.7710499897366,
+          "max": 613.7710499897366,
+          "n": 1
+        },
+        "decode_median_tokens_per_second": {
+          "min": 61.58425166518379,
+          "max": 61.58425166518379,
+          "n": 1
+        },
+        "output_tokens_per_second": {
+          "min": 95.31620452734586,
+          "max": 95.31620452734586,
+          "n": 1
+        },
+        "sampled_peak_adapter_used_bytes": {
+          "min": 29566345216,
+          "max": 29566345216,
+          "n": 1
+        }
+      },
+      "text-c4": {
+        "ttft_median_ms": {
+          "min": 914.8915999976452,
+          "max": 914.8915999976452,
+          "n": 1
+        },
+        "decode_median_tokens_per_second": {
+          "min": 50.52915413014738,
+          "max": 50.52915413014738,
+          "n": 1
+        },
+        "output_tokens_per_second": {
+          "min": 148.8511749181023,
+          "max": 148.8511749181023,
+          "n": 1
+        },
+        "sampled_peak_adapter_used_bytes": {
+          "min": 29566345216,
+          "max": 29566345216,
+          "n": 1
+        }
+      },
+      "text-c8": {
+        "ttft_median_ms": {
+          "min": 1588.93425000133,
+          "max": 1588.93425000133,
+          "n": 1
+        },
+        "decode_median_tokens_per_second": {
+          "min": 44.38529041138494,
+          "max": 44.38529041138494,
+          "n": 1
+        },
+        "output_tokens_per_second": {
+          "min": 151.790813641028,
+          "max": 151.790813641028,
+          "n": 1
+        },
+        "sampled_peak_adapter_used_bytes": {
+          "min": 29566345216,
+          "max": 29566345216,
+          "n": 1
+        }
+      }
+    }
+  },
+  "raw_trial_cohorts": {
+    "Garnet B1 / prefill128 / MTP3 (3 trials)": [
+      {
+        "text-c1": {
+          "requests": 8,
+          "generated_tokens": 1024,
+          "ttft_median_ms": 2772.2294499981217,
+          "decode_median_tokens_per_second": 75.99556634867221,
+          "output_tokens_per_second": 28.67832293928843,
+          "requests_per_second": 0.22404939796319087,
+          "sampled_peak_adapter_used_bytes": 23944704000,
+          "samples": 1139,
+          "observed_sample_gap_median_seconds": 0.03137704997789115,
+          "observed_sample_gap_max_seconds": 0.0792224999750033
+        },
+        "text-c2": {
+          "requests": 8,
+          "generated_tokens": 1024,
+          "ttft_median_ms": 7042.299299995648,
+          "decode_median_tokens_per_second": 84.39926976635115,
+          "output_tokens_per_second": 29.537200498794498,
+          "requests_per_second": 0.230759378896832,
+          "sampled_peak_adapter_used_bytes": 23959384064,
+          "samples": 1103,
+          "observed_sample_gap_median_seconds": 0.031528349994914606,
+          "observed_sample_gap_max_seconds": 0.04811360000167042
+        },
+        "text-c4": {
+          "requests": 8,
+          "generated_tokens": 1024,
+          "ttft_median_ms": 15983.8381500158,
+          "decode_median_tokens_per_second": 78.06914113816521,
+          "output_tokens_per_second": 28.90107802514888,
+          "requests_per_second": 0.22578967207147563,
+          "sampled_peak_adapter_used_bytes": 23938412544,
+          "samples": 1128,
+          "observed_sample_gap_median_seconds": 0.031554700050037354,
+          "observed_sample_gap_max_seconds": 0.036307500035036355
+        },
+        "text-c8": {
+          "requests": 8,
+          "generated_tokens": 1024,
+          "ttft_median_ms": 18463.860049989307,
+          "decode_median_tokens_per_second": 76.24577919493419,
+          "output_tokens_per_second": 28.674559777907884,
+          "requests_per_second": 0.22401999826490535,
+          "sampled_peak_adapter_used_bytes": 23995035648,
+          "samples": 1138,
+          "observed_sample_gap_median_seconds": 0.03145280003082007,
+          "observed_sample_gap_max_seconds": 0.040516700013540685
+        },
+        "image-c1": {
+          "requests": 8,
+          "generated_tokens": 1024,
+          "ttft_median_ms": 2810.0194499711506,
+          "decode_median_tokens_per_second": 88.67396966417479,
+          "output_tokens_per_second": 29.865023829051264,
+          "requests_per_second": 0.233320498664463,
+          "sampled_peak_adapter_used_bytes": 24005521408,
+          "samples": 1093,
+          "observed_sample_gap_median_seconds": 0.03146725002443418,
+          "observed_sample_gap_max_seconds": 0.0422512999502942
+        },
+        "image-c2": {
+          "requests": 8,
+          "generated_tokens": 1024,
+          "ttft_median_ms": 7034.190149977803,
+          "decode_median_tokens_per_second": 88.68278208780477,
+          "output_tokens_per_second": 29.921662982429527,
+          "requests_per_second": 0.23376299205023068,
+          "sampled_peak_adapter_used_bytes": 24020201472,
+          "samples": 1092,
+          "observed_sample_gap_median_seconds": 0.0314115000073798,
+          "observed_sample_gap_max_seconds": 0.034264099958818406
+        },
+        "image-c4": {
+          "requests": 8,
+          "generated_tokens": 1024,
+          "ttft_median_ms": 15538.81015002844,
+          "decode_median_tokens_per_second": 88.07048942446991,
+          "output_tokens_per_second": 30.011082119596637,
+          "requests_per_second": 0.23446157905934872,
+          "sampled_peak_adapter_used_bytes": 24026492928,
+          "samples": 1088,
+          "observed_sample_gap_median_seconds": 0.031491000030655414,
+          "observed_sample_gap_max_seconds": 0.04157329996814951
+        },
+        "image-c8": {
+          "requests": 8,
+          "generated_tokens": 1024,
+          "ttft_median_ms": 17563.64454998402,
+          "decode_median_tokens_per_second": 89.71220880649533,
+          "output_tokens_per_second": 30.085137766831718,
+          "requests_per_second": 0.2350401388033728,
+          "sampled_peak_adapter_used_bytes": 24026492928,
+          "samples": 1084,
+          "observed_sample_gap_median_seconds": 0.03147339995484799,
+          "observed_sample_gap_max_seconds": 0.04724489996442571
+        }
+      },
+      {
+        "text-c1": {
+          "requests": 8,
+          "generated_tokens": 1024,
+          "ttft_median_ms": 2802.259949996369,
+          "decode_median_tokens_per_second": 76.54479412574634,
+          "output_tokens_per_second": 28.531293066521084,
+          "requests_per_second": 0.22290072708219597,
+          "sampled_peak_adapter_used_bytes": 24026492928,
+          "samples": 1142,
+          "observed_sample_gap_median_seconds": 0.03161130001535639,
+          "observed_sample_gap_max_seconds": 0.04748810001183301
+        },
+        "text-c2": {
+          "requests": 8,
+          "generated_tokens": 1024,
+          "ttft_median_ms": 7064.629450032953,
+          "decode_median_tokens_per_second": 83.03332461955117,
+          "output_tokens_per_second": 29.429818026067544,
+          "requests_per_second": 0.22992045332865269,
+          "sampled_peak_adapter_used_bytes": 24026492928,
+          "samples": 1109,
+          "observed_sample_gap_median_seconds": 0.03146075003314763,
+          "observed_sample_gap_max_seconds": 0.03377149999141693
+        },
+        "text-c4": {
+          "requests": 8,
+          "generated_tokens": 1024,
+          "ttft_median_ms": 15999.673449987313,
+          "decode_median_tokens_per_second": 76.96414703376269,
+          "output_tokens_per_second": 28.820452073517536,
+          "requests_per_second": 0.22515978182435575,
+          "sampled_peak_adapter_used_bytes": 24026492928,
+          "samples": 1131,
+          "observed_sample_gap_median_seconds": 0.03148610002244823,
+          "observed_sample_gap_max_seconds": 0.062420899979770184
+        },
+        "text-c8": {
+          "requests": 8,
+          "generated_tokens": 1024,
+          "ttft_median_ms": 18482.93275004835,
+          "decode_median_tokens_per_second": 75.84360877850415,
+          "output_tokens_per_second": 28.629569443532557,
+          "requests_per_second": 0.2236685112775981,
+          "sampled_peak_adapter_used_bytes": 24026492928,
+          "samples": 1139,
+          "observed_sample_gap_median_seconds": 0.03151415000320412,
+          "observed_sample_gap_max_seconds": 0.03368559997761622
+        },
+        "image-c1": {
+          "requests": 8,
+          "generated_tokens": 1024,
+          "ttft_median_ms": 2810.0099000148475,
+          "decode_median_tokens_per_second": 86.64474902677856,
+          "output_tokens_per_second": 28.538125916225855,
+          "requests_per_second": 0.2229541087205145,
+          "sampled_peak_adapter_used_bytes": 24024395776,
+          "samples": 1008,
+          "observed_sample_gap_median_seconds": 0.03147060004994273,
+          "observed_sample_gap_max_seconds": 4.283876100031193
+        },
+        "image-c2": {
+          "requests": 8,
+          "generated_tokens": 1024,
+          "ttft_median_ms": 7028.376899979776,
+          "decode_median_tokens_per_second": 89.92444013387224,
+          "output_tokens_per_second": 30.033070663564573,
+          "requests_per_second": 0.23463336455909822,
+          "sampled_peak_adapter_used_bytes": 24026492928,
+          "samples": 1084,
+          "observed_sample_gap_median_seconds": 0.031582699972204864,
+          "observed_sample_gap_max_seconds": 0.05936640000436455
+        },
+        "image-c4": {
+          "requests": 8,
+          "generated_tokens": 1024,
+          "ttft_median_ms": 15576.014499994926,
+          "decode_median_tokens_per_second": 87.9503698241129,
+          "output_tokens_per_second": 30.029673540385787,
+          "requests_per_second": 0.23460682453426396,
+          "sampled_peak_adapter_used_bytes": 24026492928,
+          "samples": 1087,
+          "observed_sample_gap_median_seconds": 0.031486949970712885,
+          "observed_sample_gap_max_seconds": 0.034145999990869313
+        },
+        "image-c8": {
+          "requests": 8,
+          "generated_tokens": 1024,
+          "ttft_median_ms": 17745.92995000421,
+          "decode_median_tokens_per_second": 90.70999829760738,
+          "output_tokens_per_second": 29.857804596554477,
+          "requests_per_second": 0.23326409841058185,
+          "sampled_peak_adapter_used_bytes": 24026492928,
+          "samples": 1090,
+          "observed_sample_gap_median_seconds": 0.03155239997431636,
+          "observed_sample_gap_max_seconds": 0.10962990002008155
+        }
+      },
+      {
+        "text-c1": {
+          "requests": 8,
+          "generated_tokens": 1024,
+          "ttft_median_ms": 2807.778350019362,
+          "decode_median_tokens_per_second": 76.2024497962012,
+          "output_tokens_per_second": 28.44148321200243,
+          "requests_per_second": 0.222199087593769,
+          "sampled_peak_adapter_used_bytes": 24026492928,
+          "samples": 1147,
+          "observed_sample_gap_median_seconds": 0.031510099972365424,
+          "observed_sample_gap_max_seconds": 0.04798490001121536
+        },
+        "text-c2": {
+          "requests": 8,
+          "generated_tokens": 1024,
+          "ttft_median_ms": 7080.518949980615,
+          "decode_median_tokens_per_second": 82.39226182520349,
+          "output_tokens_per_second": 29.307517287730132,
+          "requests_per_second": 0.22896497881039166,
+          "sampled_peak_adapter_used_bytes": 24026492928,
+          "samples": 1111,
+          "observed_sample_gap_median_seconds": 0.0315882500144653,
+          "observed_sample_gap_max_seconds": 0.06382649997249246
+        },
+        "text-c4": {
+          "requests": 8,
+          "generated_tokens": 1024,
+          "ttft_median_ms": 16163.001749984687,
+          "decode_median_tokens_per_second": 78.2745190240278,
+          "output_tokens_per_second": 28.574085786033542,
+          "requests_per_second": 0.22323504520338705,
+          "sampled_peak_adapter_used_bytes": 24026492928,
+          "samples": 1143,
+          "observed_sample_gap_median_seconds": 0.03146825000294484,
+          "observed_sample_gap_max_seconds": 0.03413939999882132
+        },
+        "text-c8": {
+          "requests": 8,
+          "generated_tokens": 1024,
+          "ttft_median_ms": 18552.29865000001,
+          "decode_median_tokens_per_second": 75.0488822894623,
+          "output_tokens_per_second": 28.406993059346863,
+          "requests_per_second": 0.22192963327614737,
+          "sampled_peak_adapter_used_bytes": 23944704000,
+          "samples": 1147,
+          "observed_sample_gap_median_seconds": 0.03154714999254793,
+          "observed_sample_gap_max_seconds": 0.047740799956955016
+        },
+        "image-c1": {
+          "requests": 8,
+          "generated_tokens": 1024,
+          "ttft_median_ms": 2826.03704999201,
+          "decode_median_tokens_per_second": 86.45662110697742,
+          "output_tokens_per_second": 29.64240785753518,
+          "requests_per_second": 0.2315813113869936,
+          "sampled_peak_adapter_used_bytes": 24011812864,
+          "samples": 1101,
+          "observed_sample_gap_median_seconds": 0.03149704998941161,
+          "observed_sample_gap_max_seconds": 0.045911399996839464
+        },
+        "image-c2": {
+          "requests": 8,
+          "generated_tokens": 1024,
+          "ttft_median_ms": 7030.159499990987,
+          "decode_median_tokens_per_second": 89.44510268430969,
+          "output_tokens_per_second": 29.87201815161697,
+          "requests_per_second": 0.23337514180950758,
+          "sampled_peak_adapter_used_bytes": 24026492928,
+          "samples": 1091,
+          "observed_sample_gap_median_seconds": 0.03149909997591749,
+          "observed_sample_gap_max_seconds": 0.06085439998423681
+        },
+        "image-c4": {
+          "requests": 8,
+          "generated_tokens": 1024,
+          "ttft_median_ms": 15680.855649989098,
+          "decode_median_tokens_per_second": 86.93547734731152,
+          "output_tokens_per_second": 29.75012495271412,
+          "requests_per_second": 0.23242285119307907,
+          "sampled_peak_adapter_used_bytes": 24028590080,
+          "samples": 1096,
+          "observed_sample_gap_median_seconds": 0.031535100017208606,
+          "observed_sample_gap_max_seconds": 0.04708109999774024
+        },
+        "image-c8": {
+          "requests": 8,
+          "generated_tokens": 1024,
+          "ttft_median_ms": 17643.683450005483,
+          "decode_median_tokens_per_second": 89.77117266728521,
+          "output_tokens_per_second": 29.910963794567202,
+          "requests_per_second": 0.23367940464505627,
+          "sampled_peak_adapter_used_bytes": 24026492928,
+          "samples": 1091,
+          "observed_sample_gap_median_seconds": 0.03150659997481853,
+          "observed_sample_gap_max_seconds": 0.04718569997930899
+        }
+      }
+    ],
+    "Garnet B4 / prefill32 / MTP3 (3 trials)": [
+      {
+        "text-c1": {
+          "requests": 8,
+          "generated_tokens": 1024,
+          "ttft_median_ms": 11129.274100007024,
+          "decode_median_tokens_per_second": 41.08550882991723,
+          "output_tokens_per_second": 5.246000198034766,
+          "requests_per_second": 0.04098437654714661,
+          "sampled_peak_adapter_used_bytes": 28283711488,
+          "samples": 4246,
+          "observed_sample_gap_median_seconds": 0.03129770001396537,
+          "observed_sample_gap_max_seconds": 37.82697539997753
+        },
+        "text-c2": {
+          "requests": 8,
+          "generated_tokens": 1024,
+          "ttft_median_ms": 17691.62045000121,
+          "decode_median_tokens_per_second": 56.03312996680317,
+          "output_tokens_per_second": 12.620054912053707,
+          "requests_per_second": 0.09859417900041959,
+          "sampled_peak_adapter_used_bytes": 28283711488,
+          "samples": 2408,
+          "observed_sample_gap_median_seconds": 0.03147060004994273,
+          "observed_sample_gap_max_seconds": 5.51183100003982
+        },
+        "text-c4": {
+          "requests": 8,
+          "generated_tokens": 1024,
+          "ttft_median_ms": 11191.393249988323,
+          "decode_median_tokens_per_second": 51.64420312171272,
+          "output_tokens_per_second": 24.906855353846506,
+          "requests_per_second": 0.19458480745192583,
+          "sampled_peak_adapter_used_bytes": 28283711488,
+          "samples": 1310,
+          "observed_sample_gap_median_seconds": 0.03149999998277053,
+          "observed_sample_gap_max_seconds": 0.04048369999509305
+        },
+        "text-c8": {
+          "requests": 8,
+          "generated_tokens": 1024,
+          "ttft_median_ms": 17971.071800013306,
+          "decode_median_tokens_per_second": 51.2324244877383,
+          "output_tokens_per_second": 37.23099776954212,
+          "requests_per_second": 0.2908671700745478,
+          "sampled_peak_adapter_used_bytes": 28283711488,
+          "samples": 766,
+          "observed_sample_gap_median_seconds": 0.03131109999958426,
+          "observed_sample_gap_max_seconds": 3.565929399977904
+        },
+        "image-c1": {
+          "requests": 8,
+          "generated_tokens": 1024,
+          "ttft_median_ms": 11104.995000001509,
+          "decode_median_tokens_per_second": 63.263517711165875,
+          "output_tokens_per_second": 8.918787839948926,
+          "requests_per_second": 0.06967802999960099,
+          "sampled_peak_adapter_used_bytes": 28290002944,
+          "samples": 3194,
+          "observed_sample_gap_median_seconds": 0.03143410000484437,
+          "observed_sample_gap_max_seconds": 14.574630699993577
+        },
+        "image-c2": {
+          "requests": 8,
+          "generated_tokens": 1024,
+          "ttft_median_ms": 24206.591100024525,
+          "decode_median_tokens_per_second": 64.49819224299395,
+          "output_tokens_per_second": 11.070484163990978,
+          "requests_per_second": 0.08648815753117951,
+          "sampled_peak_adapter_used_bytes": 28290002944,
+          "samples": 2838,
+          "observed_sample_gap_median_seconds": 0.031444899970665574,
+          "observed_sample_gap_max_seconds": 3.362818600027822
+        },
+        "image-c4": {
+          "requests": 8,
+          "generated_tokens": 1024,
+          "ttft_median_ms": 11300.737449986627,
+          "decode_median_tokens_per_second": 59.31034604075046,
+          "output_tokens_per_second": 25.277385736935837,
+          "requests_per_second": 0.19747957606981123,
+          "sampled_peak_adapter_used_bytes": 28294197248,
+          "samples": 1290,
+          "observed_sample_gap_median_seconds": 0.03138830000534654,
+          "observed_sample_gap_max_seconds": 0.07708640000782907
+        },
+        "image-c8": {
+          "requests": 8,
+          "generated_tokens": 1024,
+          "ttft_median_ms": 18080.07669998915,
+          "decode_median_tokens_per_second": 58.12094234624466,
+          "output_tokens_per_second": 37.350961547650634,
+          "requests_per_second": 0.2918043870910206,
+          "sampled_peak_adapter_used_bytes": 28285808640,
+          "samples": 875,
+          "observed_sample_gap_median_seconds": 0.031384749978315085,
+          "observed_sample_gap_max_seconds": 0.037987299961969256
+        }
+      },
+      {
+        "text-c1": {
+          "requests": 8,
+          "generated_tokens": 1024,
+          "ttft_median_ms": 11184.382400009781,
+          "decode_median_tokens_per_second": 55.023512672801836,
+          "output_tokens_per_second": 9.468670755705684,
+          "requests_per_second": 0.07397399027895066,
+          "sampled_peak_adapter_used_bytes": 28287905792,
+          "samples": 3173,
+          "observed_sample_gap_median_seconds": 0.031442249979591,
+          "observed_sample_gap_max_seconds": 8.547185599978548
+        },
+        "text-c2": {
+          "requests": 8,
+          "generated_tokens": 1024,
+          "ttft_median_ms": 24400.273100007325,
+          "decode_median_tokens_per_second": 58.603685969530275,
+          "output_tokens_per_second": 10.928547822419057,
+          "requests_per_second": 0.08537927986264889,
+          "sampled_peak_adapter_used_bytes": 28287905792,
+          "samples": 2668,
+          "observed_sample_gap_median_seconds": 0.03146929998183623,
+          "observed_sample_gap_max_seconds": 9.876370700018015
+        },
+        "text-c4": {
+          "requests": 8,
+          "generated_tokens": 1024,
+          "ttft_median_ms": 11226.676599995699,
+          "decode_median_tokens_per_second": 51.57740311566767,
+          "output_tokens_per_second": 24.123939149767907,
+          "requests_per_second": 0.18846827460756177,
+          "sampled_peak_adapter_used_bytes": 28287905792,
+          "samples": 1299,
+          "observed_sample_gap_median_seconds": 0.031478349992539734,
+          "observed_sample_gap_max_seconds": 1.3186992999981157
+        },
+        "text-c8": {
+          "requests": 8,
+          "generated_tokens": 1024,
+          "ttft_median_ms": 18184.20909999986,
+          "decode_median_tokens_per_second": 49.337681408242545,
+          "output_tokens_per_second": 36.62609694528264,
+          "requests_per_second": 0.2861413823850206,
+          "sampled_peak_adapter_used_bytes": 28277420032,
+          "samples": 891,
+          "observed_sample_gap_median_seconds": 0.03143999996245839,
+          "observed_sample_gap_max_seconds": 0.04793590004555881
+        },
+        "image-c1": {
+          "requests": 8,
+          "generated_tokens": 1024,
+          "ttft_median_ms": 11161.275699996622,
+          "decode_median_tokens_per_second": 64.3464607325808,
+          "output_tokens_per_second": 9.110155248238495,
+          "requests_per_second": 0.07117308787686324,
+          "sampled_peak_adapter_used_bytes": 28290002944,
+          "samples": 2865,
+          "observed_sample_gap_median_seconds": 0.031447799992747605,
+          "observed_sample_gap_max_seconds": 11.395922400057316
+        },
+        "image-c2": {
+          "requests": 8,
+          "generated_tokens": 1024,
+          "ttft_median_ms": 11282.311849994585,
+          "decode_median_tokens_per_second": 62.756897577852044,
+          "output_tokens_per_second": 12.832513659654525,
+          "requests_per_second": 0.10025401296605098,
+          "sampled_peak_adapter_used_bytes": 28290002944,
+          "samples": 2535,
+          "observed_sample_gap_median_seconds": 0.03147520002676174,
+          "observed_sample_gap_max_seconds": 0.07913490000646561
+        },
+        "image-c4": {
+          "requests": 8,
+          "generated_tokens": 1024,
+          "ttft_median_ms": 11267.219400004251,
+          "decode_median_tokens_per_second": 33.67420867795957,
+          "output_tokens_per_second": 29.005360088597993,
+          "requests_per_second": 0.22660437569217182,
+          "sampled_peak_adapter_used_bytes": 28285808640,
+          "samples": 837,
+          "observed_sample_gap_median_seconds": 0.03144529997371137,
+          "observed_sample_gap_max_seconds": 9.095543300034478
+        },
+        "image-c8": {
+          "requests": 8,
+          "generated_tokens": 1024,
+          "ttft_median_ms": 18001.826499967137,
+          "decode_median_tokens_per_second": 57.574382519647976,
+          "output_tokens_per_second": 37.438141605740455,
+          "requests_per_second": 0.2924854812948473,
+          "sampled_peak_adapter_used_bytes": 28296294400,
+          "samples": 872,
+          "observed_sample_gap_median_seconds": 0.03148259996669367,
+          "observed_sample_gap_max_seconds": 0.047410400002263486
+        }
+      },
+      {
+        "text-c1": {
+          "requests": 8,
+          "generated_tokens": 1024,
+          "ttft_median_ms": 11157.175400003325,
+          "decode_median_tokens_per_second": 54.96927611797602,
+          "output_tokens_per_second": 9.485680581483066,
+          "requests_per_second": 0.07410687954283646,
+          "sampled_peak_adapter_used_bytes": 28287905792,
+          "samples": 3436,
+          "observed_sample_gap_median_seconds": 0.03143259999342263,
+          "observed_sample_gap_max_seconds": 0.061669400020036846
+        },
+        "text-c2": {
+          "requests": 8,
+          "generated_tokens": 1024,
+          "ttft_median_ms": 11227.679900010116,
+          "decode_median_tokens_per_second": 58.4768647933834,
+          "output_tokens_per_second": 15.197273867906558,
+          "requests_per_second": 0.11872870209301999,
+          "sampled_peak_adapter_used_bytes": 28287905792,
+          "samples": 2145,
+          "observed_sample_gap_median_seconds": 0.031457350007258356,
+          "observed_sample_gap_max_seconds": 0.051207899989094585
+        },
+        "text-c4": {
+          "requests": 8,
+          "generated_tokens": 1024,
+          "ttft_median_ms": 11190.677600010531,
+          "decode_median_tokens_per_second": 51.047852676978806,
+          "output_tokens_per_second": 24.823188055561573,
+          "requests_per_second": 0.1939311566840748,
+          "sampled_peak_adapter_used_bytes": 28287905792,
+          "samples": 1315,
+          "observed_sample_gap_median_seconds": 0.031453900010092184,
+          "observed_sample_gap_max_seconds": 0.04677420004736632
+        },
+        "text-c8": {
+          "requests": 8,
+          "generated_tokens": 1024,
+          "ttft_median_ms": 18130.672700004652,
+          "decode_median_tokens_per_second": 48.80712794104311,
+          "output_tokens_per_second": 36.63369591103396,
+          "requests_per_second": 0.2862007493049528,
+          "sampled_peak_adapter_used_bytes": 28287905792,
+          "samples": 891,
+          "observed_sample_gap_median_seconds": 0.031461099977605045,
+          "observed_sample_gap_max_seconds": 0.06144070002483204
+        },
+        "image-c1": {
+          "requests": 8,
+          "generated_tokens": 1024,
+          "ttft_median_ms": 11167.24215002614,
+          "decode_median_tokens_per_second": 63.56129411744392,
+          "output_tokens_per_second": 5.9811797564577756,
+          "requests_per_second": 0.04672796684732637,
+          "sampled_peak_adapter_used_bytes": 28290002944,
+          "samples": 2984,
+          "observed_sample_gap_median_seconds": 0.031406200025230646,
+          "observed_sample_gap_max_seconds": 42.128634899971075
+        },
+        "image-c2": {
+          "requests": 8,
+          "generated_tokens": 1024,
+          "ttft_median_ms": 11222.349000017857,
+          "decode_median_tokens_per_second": 62.96063493841111,
+          "output_tokens_per_second": 15.299091692182818,
+          "requests_per_second": 0.11952415384517827,
+          "sampled_peak_adapter_used_bytes": 28292100096,
+          "samples": 2006,
+          "observed_sample_gap_median_seconds": 0.03153139998903498,
+          "observed_sample_gap_max_seconds": 3.937204500020016
+        },
+        "image-c4": {
+          "requests": 8,
+          "generated_tokens": 1024,
+          "ttft_median_ms": 11265.606250002747,
+          "decode_median_tokens_per_second": 37.83268545490848,
+          "output_tokens_per_second": 32.433035655372784,
+          "requests_per_second": 0.2533830910575999,
+          "sampled_peak_adapter_used_bytes": 28296294400,
+          "samples": 579,
+          "observed_sample_gap_median_seconds": 0.031430550006916746,
+          "observed_sample_gap_max_seconds": 9.288503999996465
+        },
+        "image-c8": {
+          "requests": 8,
+          "generated_tokens": 1024,
+          "ttft_median_ms": 29805.665800027782,
+          "decode_median_tokens_per_second": 21.666816821073446,
+          "output_tokens_per_second": 19.80424716235913,
+          "requests_per_second": 0.1547206809559307,
+          "sampled_peak_adapter_used_bytes": 28296294400,
+          "samples": 1049,
+          "observed_sample_gap_median_seconds": 0.03127849998418242,
+          "observed_sample_gap_max_seconds": 10.15453920001164
+        }
+      }
+    ],
+    "vLLM ordinary (1 trial)": [
+      {
+        "text-c1": {
+          "requests": 8,
+          "generated_tokens": 1024,
+          "ttft_median_ms": 310.9569999942323,
+          "decode_median_tokens_per_second": 69.48295311354212,
+          "output_tokens_per_second": 59.61580038549094,
+          "requests_per_second": 0.465748440511648,
+          "sampled_peak_adapter_used_bytes": 28650713088,
+          "observed_sample_gap_max_seconds": 0.12463069998193532
+        },
+        "text-c2": {
+          "requests": 8,
+          "generated_tokens": 1024,
+          "ttft_median_ms": 512.8690499986988,
+          "decode_median_tokens_per_second": 59.75985409558298,
+          "output_tokens_per_second": 96.53587516823137,
+          "requests_per_second": 0.7541865247518076,
+          "sampled_peak_adapter_used_bytes": 28650713088,
+          "observed_sample_gap_max_seconds": 0.12568719999399036
+        },
+        "text-c4": {
+          "requests": 8,
+          "generated_tokens": 1024,
+          "ttft_median_ms": 741.1149999970803,
+          "decode_median_tokens_per_second": 49.350660219058156,
+          "output_tokens_per_second": 153.63590855227898,
+          "requests_per_second": 1.2002805355646795,
+          "sampled_peak_adapter_used_bytes": 28935925760,
+          "observed_sample_gap_max_seconds": 0.14080570000805892
+        },
+        "text-c8": {
+          "requests": 8,
+          "generated_tokens": 1024,
+          "ttft_median_ms": 1412.0561499876203,
+          "decode_median_tokens_per_second": 42.459970252414834,
+          "output_tokens_per_second": 226.944545190543,
+          "requests_per_second": 1.7730042593011173,
+          "sampled_peak_adapter_used_bytes": 28935925760,
+          "observed_sample_gap_max_seconds": 0.04000929999165237
+        },
+        "image-c1": {
+          "requests": 8,
+          "generated_tokens": 1024,
+          "ttft_median_ms": 330.931700009387,
+          "decode_median_tokens_per_second": 69.53581898869433,
+          "output_tokens_per_second": 59.134581454535805,
+          "requests_per_second": 0.461988917613561,
+          "sampled_peak_adapter_used_bytes": 28935925760,
+          "observed_sample_gap_max_seconds": 0.12504049998824485
+        },
+        "image-c2": {
+          "requests": 8,
+          "generated_tokens": 1024,
+          "ttft_median_ms": 538.7116500060074,
+          "decode_median_tokens_per_second": 60.2922374223955,
+          "output_tokens_per_second": 96.46088861856155,
+          "requests_per_second": 0.7536006923325121,
+          "sampled_peak_adapter_used_bytes": 28935925760,
+          "observed_sample_gap_max_seconds": 0.04731309998896904
+        },
+        "image-c4": {
+          "requests": 8,
+          "generated_tokens": 1024,
+          "ttft_median_ms": 881.9397500046762,
+          "decode_median_tokens_per_second": 51.7781879195042,
+          "output_tokens_per_second": 152.4663267176823,
+          "requests_per_second": 1.191143177481893,
+          "sampled_peak_adapter_used_bytes": 28935925760,
+          "observed_sample_gap_max_seconds": 0.04702070000348613
+        },
+        "image-c8": {
+          "requests": 8,
+          "generated_tokens": 1024,
+          "ttft_median_ms": 1486.452349985484,
+          "decode_median_tokens_per_second": 42.459814548607824,
+          "output_tokens_per_second": 224.9709937899434,
+          "requests_per_second": 1.7575858889839329,
+          "sampled_peak_adapter_used_bytes": 28935925760,
+          "observed_sample_gap_max_seconds": 0.048124699998879805
+        }
+      }
+    ],
+    "SGLang ordinary (1 trial)": [
+      {
+        "text-c1": {
+          "requests": 8,
+          "generated_tokens": 1024,
+          "ttft_median_ms": 307.270499994047,
+          "decode_median_tokens_per_second": 64.0734736095945,
+          "output_tokens_per_second": 55.7966739559403,
+          "requests_per_second": 0.4359115152807836,
+          "sampled_peak_adapter_used_bytes": 29281132544
+        },
+        "text-c2": {
+          "requests": 8,
+          "generated_tokens": 1024,
+          "ttft_median_ms": 613.7710499897366,
+          "decode_median_tokens_per_second": 61.58425166518379,
+          "output_tokens_per_second": 95.31620452734586,
+          "requests_per_second": 0.7446578478698895,
+          "sampled_peak_adapter_used_bytes": 29566345216
+        },
+        "text-c4": {
+          "requests": 8,
+          "generated_tokens": 1024,
+          "ttft_median_ms": 914.8915999976452,
+          "decode_median_tokens_per_second": 50.52915413014738,
+          "output_tokens_per_second": 148.8511749181023,
+          "requests_per_second": 1.1628998040476741,
+          "sampled_peak_adapter_used_bytes": 29566345216
+        },
+        "text-c8": {
+          "requests": 8,
+          "generated_tokens": 1024,
+          "ttft_median_ms": 1588.93425000133,
+          "decode_median_tokens_per_second": 44.38529041138494,
+          "output_tokens_per_second": 151.790813641028,
+          "requests_per_second": 1.1858657315705312,
+          "sampled_peak_adapter_used_bytes": 29566345216
+        },
+        "image-c1": {
+          "requests": 8,
+          "generated_tokens": 1024,
+          "ttft_median_ms": 333.74354998522904,
+          "decode_median_tokens_per_second": 60.683568860051196,
+          "output_tokens_per_second": 52.61953644075737,
+          "requests_per_second": 0.41109012844341697,
+          "sampled_peak_adapter_used_bytes": 29566345216
+        },
+        "image-c2": {
+          "requests": 8,
+          "generated_tokens": 1024,
+          "ttft_median_ms": 552.5568499870133,
+          "decode_median_tokens_per_second": 56.01880985431454,
+          "output_tokens_per_second": 90.7069795884229,
+          "requests_per_second": 0.7086482780345539,
+          "sampled_peak_adapter_used_bytes": 29589413888
+        },
+        "image-c4": {
+          "requests": 8,
+          "generated_tokens": 1024,
+          "ttft_median_ms": 946.0434000066016,
+          "decode_median_tokens_per_second": 48.369259680111504,
+          "output_tokens_per_second": 142.79433366979055,
+          "requests_per_second": 1.1155807317952386,
+          "sampled_peak_adapter_used_bytes": 29589413888
+        },
+        "image-c8": {
+          "requests": 8,
+          "generated_tokens": 1024,
+          "ttft_median_ms": 1603.994449993479,
+          "decode_median_tokens_per_second": 42.605846611951904,
+          "output_tokens_per_second": 146.53663524640393,
+          "requests_per_second": 1.1448174628625307,
+          "sampled_peak_adapter_used_bytes": 29589413888
+        }
+      }
+    ]
+  },
+  "comparisons": [
+    {
+      "cohort": "image-c1",
+      "decode_over_best_ordinary": 0.9140798949643234,
+      "throughput_over_best_ordinary": 0.1508218646445637,
+      "TTFT_over_best_ordinary": 33.726825504114686
+    },
+    {
+      "cohort": "image-c2",
+      "decode_over_best_ordinary": 1.0442577291886075,
+      "throughput_over_best_ordinary": 0.1330333344781692,
+      "TTFT_over_best_ordinary": 20.943136926533462
+    },
+    {
+      "cohort": "image-c4",
+      "decode_over_best_ordinary": 0.7306683948407815,
+      "throughput_over_best_ordinary": 0.1902410893803877,
+      "TTFT_over_best_ordinary": 12.775497872665916
+    },
+    {
+      "cohort": "image-c8",
+      "decode_over_best_ordinary": 1.351325864828539,
+      "throughput_over_best_ordinary": 0.16602567699249896,
+      "TTFT_over_best_ordinary": 12.163240012480529
+    },
+    {
+      "cohort": "text-c1",
+      "decode_over_best_ordinary": 0.7911188810318799,
+      "throughput_over_best_ordinary": 0.15882820820116225,
+      "TTFT_over_best_ordinary": 36.310597340842946
+    },
+    {
+      "cohort": "text-c2",
+      "decode_over_best_ordinary": 0.9495425082260579,
+      "throughput_over_best_ordinary": 0.13072917078817547,
+      "TTFT_over_best_ordinary": 34.49539497469402
+    },
+    {
+      "cohort": "text-c4",
+      "decode_over_best_ordinary": 1.020745429120391,
+      "throughput_over_best_ordinary": 0.16157152510420297,
+      "TTFT_over_best_ordinary": 15.100751232983292
+    },
+    {
+      "cohort": "text-c8",
+      "decode_over_best_ordinary": 1.1115773029973754,
+      "throughput_over_best_ordinary": 0.16142135463214702,
+      "TTFT_over_best_ordinary": 12.839909163784744
+    }
+  ],
+  "notes": [
+    "3968 input + 128 output; 8 measured requests/cohort; text/image; clients 1,2,4,8; one RTX5090 32GB; mixed NVFP4/FP8.",
+    "Both native lines: median of three cohort statistics; bands: observed min-max, not confidence intervals. VRAM: maximum across trials.",
+    "Three repeats per native worker; ordinary references have one trial each. Native Windows; vLLM/SGLang WSL.",
+    "Native B1 queues; native B4 uses fixed microbatches with private padding; references allow8 active requests. Dummy tokens excluded.",
+    "Native cache BF16; reference SSM state FP32 and KV BF16. Reference radix/prefix caching disabled. Configurations are disclosed.",
+    "All372 B4 prompt/output sequences match retained B1. Reference long-output variants remain; cross-engine equivalence unproven.",
+    "Adapter VRAM includes background allocations; not process/instantaneous peak. Maximum B4 sample gap: 42.129s.",
+    "Dashed guides use measured ordinary references only. Stronger tuned/MTP references and matched INT4/4B comparisons pending; overall2x unmet."
+  ],
+  "source_sha256": {
+    "Garnet-O128-Repeated-vLLM-SGLang-4K-v2-Data.json": "6257c6beb926a100c9f76fdd6816056b28da851c4288a5c7867adf82ea7bd035",
+    "b4-rowwise-http-benchmark-attempt1-verified.json": "7b4e7ddbd6e95d38da260052665e6fac6683e7d0b137c16c375255f17b1dcadb"
+  },
+  "native_archive_sha256": "2c017420641b5d79f95746a3f110611ae8783339b4a2e19bf3e97fa5a0c48904",
+  "strongest_reference_comparison_qualified": false,
+  "two_times_target_achieved": false,
+  "new_model_or_benchmark_executed_by_renderer": false
+}

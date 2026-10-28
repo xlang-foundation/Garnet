@@ -1,0 +1,18 @@
+"""Separate the three-row legend from paired chart titles; data must stay exact."""
+from pathlib import Path
+import hashlib,json,subprocess,sys
+W=Path(__file__).resolve().parent;O=W.parent/'outputs';R=Path('D:/CantorAI/work/qwen38-5090');E=R/'test2026/cuda/qwen38_5090/evidence';J='b4-rowwise-http-benchmark-attempt1';S='Garnet-B4-Repeated-vLLM-SGLang-4K';sha=lambda b:hashlib.sha256(b).hexdigest()
+old={p.name:p.read_bytes() for p in O.glob(S+'*') if p.is_file()};script=W/'render-b4-repeated-comparison.py';raw=script.read_bytes();s=raw.decode()
+a="fig,axes=plt.subplots(1,2,figsize=(14,5.8));fig.patch.set_facecolor('#f5f8fc');fig.subplots_adjust(left=.07,right=.97,bottom=.27,top=.70,wspace=.22)"
+b="fig,axes=plt.subplots(1,2,figsize=(14,6.6));fig.patch.set_facecolor('#f5f8fc');fig.subplots_adjust(left=.07,right=.97,bottom=.27,top=.66,wspace=.22)"
+assert s.count(a)==1;script.write_bytes(s.replace(a,b).encode());subprocess.run([sys.executable,str(script)],check=True,cwd=W.parent)
+for suffix in ('-Data.json','-Metrics.csv'):assert (O/(S+suffix)).read_bytes()==old[S+suffix],suffix
+owned=[]
+for name,before in old.items():
+    target=E/'figures'/name;assert target.read_bytes()==before;target.write_bytes((O/name).read_bytes());owned.append(target)
+target=E/(J+'-render-b4-repeated-comparison.py.txt');assert target.read_bytes()==raw;target.write_bytes(script.read_bytes());owned.append(target)
+target=E/(J+'-retention.json');r=json.loads(target.read_bytes());assert r['chart_receipt_sha256']==sha(old[S+'-Receipt.json']);r['chart_receipt_sha256']=sha((O/(S+'-Receipt.json')).read_bytes());target.write_bytes(json.dumps(r,indent=2).encode());owned.append(target)
+target=E/'b4-repeated-comparison-layout-correction.json';assert not target.exists();target.write_bytes(json.dumps(dict(reason='Visual inspection found paired-chart legend too close to axes titles; increase canvas height and top margin.',renderer_before_sha256=sha(raw),renderer_after_sha256=sha(script.read_bytes()),raw_data_JSON_and_CSV_byte_identical=True,new_model_or_benchmark_execution=False),indent=2).encode());owned.append(target)
+target=E/(Path(__file__).name+'.txt');assert not target.exists();target.write_bytes(Path(__file__).read_bytes());owned.append(target)
+paths=W/'b4-chart-layout-stage-paths.bin';paths.write_bytes(b''.join(p.relative_to(R).as_posix().encode()+b'\0' for p in owned));subprocess.run(['git','-c','core.autocrlf=false','add','--pathspec-from-file='+str(paths),'--pathspec-file-nul'],cwd=R,check=True)
+print('Paired chart layout corrected; numerical data and CSV unchanged')
