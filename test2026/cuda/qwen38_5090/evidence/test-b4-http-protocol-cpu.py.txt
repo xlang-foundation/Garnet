@@ -1,0 +1,7 @@
+from pathlib import Path
+import hashlib,os,sys
+W=Path(__file__).resolve().parent;R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';sys.path[:0]=[str(M),str(R)];sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+import run_logged as ledger
+names=['b4_serving_request.py','b4_rowwise_http_admission.py','native_b4_rowwise_http_worker.py','test_b4_http_protocol.py','native_b4_http_protocol_candidate/native_http_bridge.py','native_b4_http_protocol_candidate/native_worker_io.py','native_o128_stream_worker.py','native_http_bridge.py','native_worker_io.py','evidence/b4-http-protocol-derivation.json']
+ledger.source_identity=lambda:{'scope':'Explicit prospective B4 HTTP protocol sources; CPU-only transport/validation checks, no model or native execution, protected bodies excluded','owned_source_sha256':{n:sha(M/n) for n in names}}
+os.chdir(R);raise SystemExit(ledger.run([sys.executable,'-m','unittest','test2026.cuda.qwen38_5090.test_b4_http_protocol'],W/'b4-http-protocol-cpu-ledger','correctness','Source-bound8 CPU controls: validator AST parity with qualified native worker, strict ignore_eos, stable homogeneous subgrouping, no dropped real IDs, default2MiB parser retained, explicit16MiB frame support, malformed-bound/EOF rejection, unchanged emit/transport and remaining bridge function ASTs. No HTTP/native/GPU qualification.',[M/n for n in names]))

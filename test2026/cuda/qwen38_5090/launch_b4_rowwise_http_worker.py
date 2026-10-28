@@ -1,0 +1,7 @@
+"""Launch the private native worker with the pinned source91 study flags."""
+from pathlib import Path
+import json,os,subprocess,sys
+root,cache=map(Path,sys.argv[1:3]);m=root/'Garnet/test2026/cuda/qwen38_5090';p=json.loads((m/'evidence/b4-rowwise-http-quality-preparation.json').read_bytes());env=dict(os.environ);env.update(p['flags'])
+env.update(GARNET_RUNTIME_ROOT=str(root/'build/bin'),CUDA_VISIBLE_DEVICES='0',PYTHONDONTWRITEBYTECODE='1',TMP=str(cache),TEMP=str(cache))
+env['PATH']=';'.join((str(root/'build/bin'),str(root/'tools/TensorRT/bin'),str(root/'tools/cuda13/nvidia/cu13/bin/x86_64'),env['PATH']))
+raise SystemExit(subprocess.run([str(root/'build/bin/xlang3.exe'),str(m/'native_b4_rowwise_http_worker.py'),str(root)],cwd=root/'Garnet',env=env).returncode)
