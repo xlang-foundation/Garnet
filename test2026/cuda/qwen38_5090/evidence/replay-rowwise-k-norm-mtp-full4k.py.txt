@@ -1,0 +1,11 @@
+from pathlib import Path
+import hashlib,json,os,sys
+W=Path(__file__).resolve().parent;O=W.parent/'outputs';R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest();sys.path[:0]=[str(M),str(R)]
+import run_logged as ledger
+J='rowwise-k-norm-mtp-full4k-attempt1';archive=O/(J+'-evidence.zip');remote=O/(J+'-remote-verified.json');q=json.loads(remote.read_bytes());assert sha(archive)==q['archive_sha256']
+names=['verify_rowwise_k_norm_mtp_full4k.py','b4_mtp_full4k_gate.py','b4_full4k_exact_gate.py','b4_full4k_inputs.py','b4_b1_exact_gate.py','rowwise_k_norm_analysis.py','b4_k_m4x4_control52_route.py','evidence/rowwise-k-norm-mtp-full4k-preparation.json']
+ledger.source_identity=lambda:{'scope':'Explicit CPU-only MTP full4K128 raw reader; downloaded native artifacts remain bytes, protected bodies excluded','owned_source_sha256':{n:sha(M/n) for n in names}}
+os.chdir(R);assert ledger.run([sys.executable,str(M/'verify_rowwise_k_norm_mtp_full4k.py'),'--proofs',str(O)],W/'rowwise-k-norm-mtp-full4k-local-replay','correctness','Independent146CPU/54parent/source87 B4 MTP raw replay: actual draft graphs/prefill/commits, original exact target gate,16FA traces and complete source/runtime/SDK/config-index/CMake/all34 restoration. No native execution or broader MTP/quality/HTTP/speed admission.',[M/n for n in names]+[archive,remote])==0
+proof=O/(J+'-verified.json');assert proof.read_bytes()==remote.read_bytes();q=json.loads(proof.read_bytes())
+summary={k:q[k] for k in ('status','exit_code','error','CPU_controls','observation','strict_admission','first_differing_ID_indices','routes','MTP_full4K128_target_case_gate_passed','source_runtime_SDK_config_index_CMake_all34_baseline_restored')};summary.update(proof_sha256=sha(proof),archive_sha256=sha(archive),archive_bytes=archive.stat().st_size,paired_remote_local_proof_bytes_identical=True,original_failures_preserved=True,broader_MTP_prefix_reset_quality_HTTP_or_performance_qualified=False,two_times_target_achieved=False)
+(O/'Garnet-Rowwise-K-Norm-MTP-Full4K-Progress.json').write_bytes(json.dumps(summary,indent=2).encode());print(json.dumps(summary,indent=2))

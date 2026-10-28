@@ -1,0 +1,65 @@
+{
+  "source": "run_rowwise_k_norm_full4k.py",
+  "target": "run_rowwise_k_norm_mtp_full4k.py",
+  "source_sha256": "3d3a7a97ac6e55554eadab7737cf829fed35c73e400d8dcaa041cfbf2cd57670",
+  "target_sha256": "e8b3e323ff02636c820ca281cfad4d478dc6bb8c34962be8a8bcc12deb6359ac",
+  "changes": [
+    {
+      "old": "Exclusive source87 rowwise K full4K128 ordinary exactness; no timing.",
+      "new": "Exclusive source87 rowwise K MTP full4K128 target exactness; no timing.",
+      "count": 1
+    },
+    {
+      "old": "JOB='rowwise-k-norm-full4k-attempt1'",
+      "new": "JOB='rowwise-k-norm-mtp-full4k-attempt1'",
+      "count": 1
+    },
+    {
+      "old": "from test2026.cuda.qwen38_5090.b4_full4k_exact_gate import observe,admit",
+      "new": "from test2026.cuda.qwen38_5090.b4_full4k_exact_gate import observe\n    from test2026.cuda.qwen38_5090.b4_mtp_full4k_gate import admit as mtp_admit",
+      "count": 1
+    },
+    {
+      "old": "rowwise-k-norm-full4k-preparation.json",
+      "new": "rowwise-k-norm-mtp-full4k-preparation.json",
+      "count": 1
+    },
+    {
+      "old": "rowwise_K_norm_full4k_prepared_GPU_unrun",
+      "new": "rowwise_K_norm_mtp_full4k_prepared_GPU_unrun",
+      "count": 1
+    },
+    {
+      "old": "qualified=json.loads((ROOT/'results/rowwise-k-norm-model-attempt1-verified.json').read_bytes());assert qualified['exit_code']==0 and qualified['analysis']['selected_step52_intervention_passed'] and set(qualified['controls'])=={'off-reference','off-candidate'}",
+      "new": "qualified=json.loads((ROOT/'results/rowwise-k-norm-full4k-attempt1-verified.json').read_bytes());assert qualified['exit_code']==0 and qualified['ordinary_full4K128_case_gate_passed'] and qualified['strict_admission']['all_states_and_vectors_exact'] and qualified['strict_admission']['all_128_IDs_exact']",
+      "count": 1
+    },
+    {
+      "old": "        phase='candidate';idle();",
+      "new": "        code=ledger.run([sys.executable,'-m','unittest',*p['mtp_test_modules']],out/'mtp-cpu-ledger','correctness','31 additional CPU controls on installed source87: original19 B1/workspace controls,8 B4 draft-study binding/ownership/geometry controls,4 MTP evidence and unchanged target-gate rejection controls. The T128 source provider is from the qualified overlay. No GPU model is executed by these symbolic tests.',common);w['mtp_cpu_exit_code']=code;save();assert code==0,'31 MTP CPU controls failed'\n        phase='candidate';idle();",
+      "count": 1
+    },
+    {
+      "old": "launch_rowwise_k_norm_full4k.py",
+      "new": "launch_rowwise_k_norm_mtp_full4k.py",
+      "count": 1
+    },
+    {
+      "old": "Source87 same qualified DLL/ordinary rowwise K program: three B4 text/image/mixed groups,3968prompt+128forced output IDs,4096capacity. Original four complete state/vector phases vs eight immutable source60 B1 oracles. Require all16 rowwise subgraph traces and unchanged old routes. No MTP, quality, HTTP or speed admission.",
+      "new": "Source87 same DLL and qualified rowwise K target with actual B4 MTP3/T16 draft prefill/T4 draft decode/full-vocabulary head. Three3968prompt+128forced-output text/image/mixed groups. Require target states/vectors/IDs vs eight B1 oracles, actual draft graphs/249prefill/127commits,16rowwise target traces and old routes. No broader MTP/prefix/quality/HTTP or speed admission.",
+      "count": 1
+    },
+    {
+      "old": "w['strict_admission']=admit(selection,reference,candidate,rr,rc)",
+      "new": "w['strict_admission']=mtp_admit(selection,reference,candidate,rr,rc)",
+      "count": 1
+    },
+    {
+      "old": "rowwise_K_norm_full4k128_exact_collected_MTP_quality_unqualified",
+      "new": "rowwise_K_norm_MTP_full4k128_exact_collected_quality_unqualified",
+      "count": 1
+    }
+  ],
+  "original115_CPU_preflight_restore_all34_and_owned_cache_retirement_retained": true,
+  "extra_MTP_CPU_controls_after_overlay_install": 31
+}

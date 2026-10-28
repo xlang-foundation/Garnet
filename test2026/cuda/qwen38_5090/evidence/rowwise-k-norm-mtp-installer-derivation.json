@@ -1,0 +1,39 @@
+{
+  "source": "install-rowwise-k-norm-full4k.py",
+  "source_sha256": "6a1cb78053c605e91f807b302f6cda24cd1727dc5e429b2cb7c3a89b935d3ea3",
+  "target": "install-rowwise-k-norm-mtp-full4k.py",
+  "target_sha256": "0fa1ea40c5614126c3d9af5f5ac3f8a5ef56c3d8de5454ee15157e4554a696b0",
+  "changes": [
+    {
+      "old": "rowwise-k-norm-full4k",
+      "new": "rowwise-k-norm-mtp-full4k",
+      "count": 3
+    },
+    {
+      "old": "rowwise_K_norm_full4k_prepared_GPU_unrun",
+      "new": "rowwise_K_norm_mtp_full4k_prepared_GPU_unrun",
+      "count": 1
+    },
+    {
+      "old": "rowwise_K_norm_full4k_methods_installed_GPU_unrun",
+      "new": "rowwise_K_norm_mtp_methods_installed_GPU_unrun",
+      "count": 2
+    },
+    {
+      "old": "        for n,h in {**p['files']",
+      "new": "        assert p['study_module']=='Garnet/xModel/qwen35/vl_0_8b/cuda_mtp_prefill16_b4_study.py' and p['study_module_sha256']=='41656e4f1acd2bd1c9cca8e50549e5bb82e804e1bd2daa42396b2f019ecfc02b' and mf[p['study_module']]==p['files'][p['study_module']]==p['study_module_sha256']\n        for n,h in {**p['files']",
+      "count": 1
+    },
+    {
+      "old": "target.resolve().is_relative_to(M.resolve())",
+      "new": "target.resolve().is_relative_to((ROOT/'Garnet').resolve()) and (target.resolve().is_relative_to(M.resolve()) or n==p['study_module'])",
+      "count": 1
+    },
+    {
+      "old": "production_source_or_DLL_mutated",
+      "new": "existing_production_factories_or_DLL_mutated",
+      "count": 1
+    }
+  ],
+  "additional_install_path_exactly_one_pinned_defaultoff_study_module": true
+}
