@@ -1,0 +1,36 @@
+"""Compare already-failed observer primary captures; never read operand observations."""
+from pathlib import Path
+import hashlib,json,sys,zipfile
+W=Path(__file__).resolve().parent;O=W.parent/'outputs';R=Path('D:/CantorAI/work/qwen38-5090');sys.path.insert(0,str(R))
+from test2026.cuda.qwen38_5090.b4_b1_exact_gate import _vectors
+from test2026.cuda.qwen38_5090.decode_boundary_analysis import blob
+from test2026.cuda.qwen38_5090.b4_k35_cache52 import checked_cache
+sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest();jobs=('decode35-operands-attempt1','decode35-endpoints-attempt1');proofs={}
+for job in jobs:
+    p=O/(job+'-verified.json');q=json.loads(p.read_bytes());assert p.read_bytes()==(O/(job+'-remote-verified.json')).read_bytes() and sha(O/(job+'-evidence.zip'))==q['archive_sha256'] and q['exit_code']==1 and q['analysis'] is None;proofs[job]=q
+with zipfile.ZipFile(O/(jobs[0]+'-evidence.zip')) as seven,zipfile.ZipFile(O/(jobs[1]+'-evidence.zip')) as six:
+    b7='results/'+jobs[0]+'/';b6='results/'+jobs[1]+'/'
+    specifications={'off':(seven,b7+'off-candidate/'),'seven':(seven,b7+'on-candidate/'),'six':(six,b6+'on-candidate/')}
+    reports={k:json.loads(z.read(prefix+'report.json')) for k,(z,prefix) in specifications.items()};rows={k:r['rows'][0] for k,r in reports.items()}
+    reads={k:(lambda n,z=z,prefix=prefix:z.read(prefix+n)) for k,(z,prefix) in specifications.items()}
+    def captures(row):return {'reset':row['reset_state'],'prefill':row['prefill_state'],**{'step'+str(e['step']):e['capture'] for e in row['post_step_states']},'final_reset':row['final_reset']}
+    caps={k:captures(row) for k,row in rows.items()};comparisons=[]
+    for label in caps['off']:
+        changes=[]
+        for i,(a,b) in enumerate(zip(caps['off'][label]['logical']['components'],caps['six'][label]['logical']['components'])):
+            positions=[p for p,(x,y) in enumerate(zip(a['row_sha256'],b['row_sha256'])) if x!=y]
+            if positions:changes.append({'component':i,'layer':a['layer'],'role':a['role'],'physical_rows':positions})
+        comparisons.append({'capture':label,'off_vs_six_changed_components':changes,'six_vs_seven_complete_logical_exact':caps['six'][label]['logical']==caps['seven'][label]['logical'],'six_vs_seven_complete_vectors_exact':_vectors(caps['six'][label]['vectors'],reads['six'],4)==_vectors(caps['seven'][label]['vectors'],reads['seven'],4)})
+    cache={k:checked_cache(row['key35_cache52'],row['final_state']['logical']['components'][70],4,2,reads[k]) for k,row in rows.items()}
+    boundaries={}
+    for step in (44,45):
+        records={k:next(e for e in rows[k]['layer_observations'] if e['step']==step) for k in ('six','seven')}
+        different=[]
+        for layer in range(64):
+            a=blob(records['six']['boundaries'][str(layer)],reads['six'],4*81920);b=blob(records['seven']['boundaries'][str(layer)],reads['seven'],4*81920)
+            if a!=b:different.append(layer)
+        boundaries[str(step)]={'six_vs_seven_differing_full_T4_layers':different}
+    ids={k:rows[k]['generated_ids'] for k in rows};result={'status':'failed_observer_primary_variants_audited_without_operand_interpretation','archive_sha256':{k:proofs[k]['archive_sha256'] for k in jobs},'comparisons':comparisons,'IDs_all_three_exact':ids['off']==ids['six']==ids['seven'],'selected_cache_all_three_exact':cache['off']==cache['six']==cache['seven'],'six_vs_seven_selected_timeline_exact':rows['six']['key35_coordinate_trajectory']==rows['seven']['key35_coordinate_trajectory'],'boundaries':boundaries,'operand_blobs_read':False,'native_pruning_or_original_root_cause_proved':False,'model_or_performance_qualified':False}
+target=O/'Garnet-Decode35-Endpoint-Perturbation.json';raw=json.dumps(result,indent=2).encode();assert not target.exists() or target.read_bytes()==raw
+if not target.exists():target.write_bytes(raw)
+print(json.dumps({'captures':[{'capture':r['capture'],'off_vs_six_changed_components':len(r['off_vs_six_changed_components']),'six_vs_seven_logical_exact':r['six_vs_seven_complete_logical_exact'],'six_vs_seven_vectors_exact':r['six_vs_seven_complete_vectors_exact']} for r in comparisons],'IDs_all_three_exact':result['IDs_all_three_exact'],'selected_cache_all_three_exact':result['selected_cache_all_three_exact'],'boundaries':boundaries,'operand_blobs_read':False}))

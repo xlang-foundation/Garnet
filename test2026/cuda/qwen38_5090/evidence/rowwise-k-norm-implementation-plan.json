@@ -1,0 +1,24 @@
+{
+  "status": "controlled_K_norm_shape_experiment_source_prepared_native_unrun",
+  "next_required_steps": [
+    "Compile standalone new profile guard on RTX5090 host; preserve old guards and test every pinned layer offset and invalid policy/geometry.",
+    "Add a private B4T4 decoder chunk carrying integer rowwise_full_decode_k_norm=1, bind only full-attention blocks, keep all other math and outputs exact; test binding/geometry/source derivation.",
+    "Build source87 in the fixed study root with baseline/source/runtime/SDK/config-index/CMake snapshots and all34 object hashes. Preserve original3-object whitelist for the existing cached CUDA build; a failed old gate stays failed.",
+    "Run new-DLL default-off numeric controls before enabling the feature. Test actual rowwise trace16 layers, original selected B1/B4 4K prefix, full128 text/image/mixed correctness, then batch4 MTP target equivalence and quality before HTTP timing.",
+    "Profile prefill and decode once correctness is qualified. Establish repeated strongest feasible tuned/MTP vLLM and SGLang runs under matched corpus, precision, cache, EOS and context policies.",
+    "Native-validate the committed INT4/4B ignore_eos fix, then complete matched4K comparison; existing short pilots are insufficient."
+  ],
+  "prefill_research_only": {
+    "hypothesis": "The checkout register-state GDN kernel loops serially over tokens; chunked GDN prefill is a candidate only after actual source provenance and GPU profiling. No bottleneck or speedup measured here.",
+    "primary_sources": [
+      "https://github.com/fla-org/flash-linear-attention/blob/main/fla/ops/gated_delta_rule/chunk.py",
+      "https://arxiv.org/abs/2412.06464"
+    ],
+    "possible_floating_order_change": "Any alternative parallel GDN algorithm needs independent numerical and model-quality validation; retain old exact-gate outcomes and disclose policy differences."
+  },
+  "source_fidelity": {
+    "modelopt_cublaslt_cpp_checkout_matches_current_remote_guard_sha256": "f1283406460ecf8d0b633ff49959709d86941009a73cd3bd596d86a2e4792f35",
+    "checkout_GDN_sources_not_in_source86_or_current_guard_inventory": "Verify actual compiled-source lineage before attributing timing or changing GDN kernels."
+  },
+  "overall_two_times_target_achieved": false
+}
