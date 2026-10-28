@@ -1,0 +1,11 @@
+from pathlib import Path
+import hashlib,json,os,sys
+W=Path(__file__).resolve().parent;O=W.parent/'outputs';R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest();sys.path[:0]=[str(M),str(R)]
+import run_logged as ledger
+J='rowwise-k-norm-full4k-attempt1';archive=O/(J+'-evidence.zip');remote=O/(J+'-remote-verified.json');q=json.loads(remote.read_bytes());assert sha(archive)==q['archive_sha256']
+names=['verify_rowwise_k_norm_full4k.py','b4_full4k_exact_gate.py','b4_full4k_inputs.py','b4_b1_exact_gate.py','rowwise_k_norm_analysis.py','b4_k_m4x4_control52_route.py','evidence/rowwise-k-norm-full4k-preparation.json']
+ledger.source_identity=lambda:{'scope':'Explicit CPU-only source87 full4K128 raw reader; native artifacts remain bytes, protected bodies excluded','owned_source_sha256':{n:sha(M/n) for n in names}}
+os.chdir(R);assert ledger.run([sys.executable,str(M/'verify_rowwise_k_norm_full4k.py'),'--proofs',str(O)],W/'rowwise-k-norm-full4k-local-replay','correctness','Independent full4K128 original48phase-row/all128ID gate raw replay with8immutable B1 oracles,source87/115CPU/53parents/16FAtrace and complete baseline restoration; preserve failure without MTP or speed promotion.',[M/n for n in names]+[archive,remote])==0
+proof=O/(J+'-verified.json');assert proof.read_bytes()==remote.read_bytes();q=json.loads(proof.read_bytes())
+summary={k:q[k] for k in ('status','exit_code','error','CPU_controls','observation','strict_admission','first_differing_ID_indices','routes','ordinary_full4K128_case_gate_passed','source_runtime_SDK_config_index_CMake_all34_baseline_restored')};summary.update(proof_sha256=sha(proof),archive_sha256=sha(archive),archive_bytes=archive.stat().st_size,paired_remote_local_proof_bytes_identical=True,original_source79_full4K_still_failed=True,MTP_broad_quality_HTTP_or_performance_qualified=False,two_times_target_achieved=False)
+(O/'Garnet-Rowwise-K-Norm-Full4K-Progress.json').write_bytes(json.dumps(summary,indent=2).encode());print(json.dumps(summary,indent=2))
