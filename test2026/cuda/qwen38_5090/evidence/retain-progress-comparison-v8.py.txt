@@ -1,0 +1,27 @@
+from pathlib import Path
+import hashlib,json
+W=Path(__file__).resolve().parent;O=W.parent/'outputs';R=Path('D:/CantorAI/work/qwen38-5090');E=R/'test2026/cuda/qwen38_5090/evidence';sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest();owned=[]
+stem='Garnet-Progress-Comparison-2026-10-27-v8';q=json.loads((O/(stem+'-Receipt.json')).read_bytes());assert not q['new_benchmark_executed'] and not q['overall_two_times_target_achieved'] and q['B4_MTP256_full4K_case_gate_passed'] and not q['broader_quality_HTTP_or_performance_qualified']
+for n,h in q['input_sha256'].items():assert sha(Path(n))==h
+for n,h in q['artifacts'].items():assert sha(O/n)==h
+for n in (stem+'.png',stem+'.svg',stem+'-Receipt.json'):
+    p=E/'figures'/n;assert not p.exists();p.write_bytes((O/n).read_bytes());owned.append(p)
+for n in ('prepare-progress-comparison-v8.py','render-progress-comparison-20261027-v8.py',Path(__file__).name):
+    p=E/(n+'.txt');assert not p.exists();p.write_bytes((W/n).read_bytes());owned.append(p)
+p=E/'progress-comparison-v8-derivation.json';assert not p.exists();p.write_bytes((W/p.name).read_bytes());owned.append(p)
+entry=('\n\n2026-10-27: Updated comparison dashboard v8 after independently paired source89 B4 MTP256 full4K128 pass. '
+       '45 verified retained input artifacts. Benchmark values unchanged: same source60 B1/MTP3 three native trials versus one ordinary trial each vLLM/SGLang. '
+       'New dashboard distinguishes historical source79/full4K, failed M4 intervention and rejected observers from successful rowwise-K selected/ordinary/MTP full-context cases. '
+       'MTP correctness pass covers three groups only; broader partial-prefix/lifecycle/805quality/HTTP and new serving timing remain pending. '
+       'Strongest tuned/MTP references, INT4 W4A16 and Qwen3.5-4B remain open. No new benchmark, throughput improvement or2x/halfTTFT claim. '
+       'PNG visually inspected: all three ratio panels, target lines, ten status rows and method caveats visible. '
+       '[Progress comparison v8](../../test2026/cuda/qwen38_5090/evidence/figures/'+stem+'.png).\n').encode()
+for n in ('docs/research/qwen38-5090-development-log.md','docs/research/qwen38-5090-implementation-task.md'):
+    p=R/n;before=p.read_bytes();assert b'Updated comparison dashboard v8 after independently paired' not in before
+    with p.open('ab') as f:f.write(entry)
+    assert p.read_bytes()==before+entry;owned.append(p)
+allpaths=[]
+for n in ('rowwise-k-norm-mtp256-full4k-stage-paths.bin','native-stage-attachment-cpu-stage-paths.bin'):
+    allpaths += [s for s in (W/n).read_bytes().split(b'\0') if s]
+allpaths += [p.relative_to(R).as_posix().encode() for p in owned]
+(W/'mtp256-profile-chart-v8-stage-paths.bin').write_bytes(b''.join(n+b'\0' for n in dict.fromkeys(allpaths)));print(json.dumps(dict(stage_paths=len(set(allpaths)),new_benchmark=False,chart_SHA256=q['artifacts'])))

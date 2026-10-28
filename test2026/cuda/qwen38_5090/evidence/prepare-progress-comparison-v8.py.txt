@@ -1,0 +1,61 @@
+from pathlib import Path
+import ast,hashlib,json,re
+W=Path(__file__).resolve().parent;src=W/'render-progress-comparison-20261027-v7.py';raw=src.read_bytes();text=raw.decode().replace('\r\n','\n');old_sha=hashlib.sha256(raw).hexdigest()
+extra='''def closed_update(name, job):
+    d = read(O / name)
+    proof = O / (job + '-verified.json')
+    remote = O / (job + '-remote-verified.json')
+    archive = O / (job + '-evidence.zip')
+    assert proof.read_bytes() == remote.read_bytes()
+    assert sha(proof) == d['proof_sha256'] and sha(archive) == d['archive_sha256']
+    assert d['paired_remote_local_proof_bytes_identical'] and not d['two_times_target_achieved']
+    q = json.loads(proof.read_bytes())
+    assert q['exit_code'] == d['exit_code']
+    for p in (proof, remote, archive):
+        inputs[str(p)] = sha(p)
+    return d
+
+
+selected = closed_update('Garnet-Rowwise-K-Norm-Model-Progress.json', 'rowwise-k-norm-model-attempt1')
+ordinary = closed_update('Garnet-Rowwise-K-Norm-Full4K-Progress.json', 'rowwise-k-norm-full4k-attempt1')
+mtp_old = closed_update('Garnet-Rowwise-K-Norm-MTP-Full4K-Progress.json', 'rowwise-k-norm-mtp-full4k-attempt1')
+mtp_final = closed_update('Garnet-Rowwise-K-Norm-MTP256-Full4K-Progress.json', 'rowwise-k-norm-mtp256-full4k-attempt1')
+observer = closed_update('Garnet-Decode35-Endpoints-Progress.json', 'decode35-endpoints-attempt1')
+for d in (selected, ordinary, mtp_old, mtp_final):
+    assert d['source_runtime_SDK_config_index_CMake_all34_baseline_restored']
+assert observer['baseline_restored'] and observer['exit_code'] == 1
+assert selected['exit_code'] == ordinary['exit_code'] == mtp_final['exit_code'] == 0
+assert ordinary['ordinary_full4K128_case_gate_passed']
+assert ordinary['strict_admission']['all_states_and_vectors_exact'] and ordinary['strict_admission']['all_128_IDs_exact']
+assert mtp_old['exit_code'] == 1 and not mtp_old['MTP_full4K128_target_case_gate_passed']
+assert mtp_final['CPU_controls'] == 156 and mtp_final['MTP_full4K128_target_case_gate_passed']
+assert mtp_final['strict_admission']['target']['all_states_and_vectors_exact'] and mtp_final['strict_admission']['target']['all_128_IDs_exact']
+assert not mtp_final['broader_MTP_prefix_reset_quality_HTTP_or_performance_qualified']
+
+
+'''
+assert text.count('plt.rcParams.update(')==1;text=text.replace('plt.rcParams.update(',extra+'plt.rcParams.update(')
+text=text.replace("STEM = 'Garnet-Progress-Comparison-2026-10-27-v7'","STEM = 'Garnet-Progress-Comparison-2026-10-27-v8'")
+text=text.replace('Serving measurements unchanged; step-45 layer-35 difference localized; operand diagnostic built.','Batch-4 ordinary and MTP full4K correctness PASS; serving measurements remain unchanged.')
+rows="""rows = [
+    ['Native 4K HTTP, physical batch 1', 'MEASURED', '3 native trials; 192 measured requests; ordinary references retained'],
+    ['Original batch-4 full 4K test', 'FAIL KEPT', 'Historical source79 failure retained; no failure relabeled as a pass'],
+    ['Four actual M4 calls', 'NO FIX', 'Off/on states and IDs unchanged; intervention did not repair the mismatch'],
+    ['Extra diagnostic graph outputs', 'REJECTED', 'Six/seven-output observers changed primary state; not used for the repair'],
+    ['Rowwise K norm: selected case', 'PASS', 'All four rows: 53 IDs exact; selected full K cache and state repaired'],
+    ['Rowwise K norm: ordinary full 4K', 'PASS', 'Text/image/mixed: 1,536 IDs and 48 complete state/vector checks exact'],
+    ['MTP draft-prefill 128 MiB limit', 'FAIL KEPT', 'Historical build failure retained; explicit 256 MiB option added'],
+    ['MTP with 256 MiB: full 4K', 'PASS', '156 CPU checks; all 1,536 IDs and 48 complete state/vector checks exact'],
+    ['Batch-4 broader quality / HTTP', 'PENDING', 'Partial-prefix/lifecycle, 805 quality, protocol and new serving timing remain'],
+    ['Strongest references / INT4 / 4B', 'PENDING', 'Repeated tuned/MTP vLLM and SGLang comparisons still required'],
+]"""
+text,n=re.subn(r'rows = \[\n.*?\n\]',lambda _:rows,text,flags=re.S);assert n==1
+old="cell.set_text_props(weight='bold', color='#a8322c' if row in (2, 5) else '#16856b' if row in (0, 1, 6) else '#a34c1d')"
+new="cell.set_text_props(weight='bold', color='#16856b' if rows[row][1] in ('PASS', 'MEASURED') else '#a8322c' if rows[row][1] in ('FAIL KEPT', 'REJECTED', 'NO FIX') else '#a34c1d')"
+assert text.count(old)==1;text=text.replace(old,new)
+text=text.replace('The cache difference does not prove a unique causal operator. Cross-engine full-output equivalence is unproven. No new benchmark for this report.','Full4K correctness covers three tested groups; broader quality and serving remain pending. Cross-engine full-output equivalence is unproven.')
+old="'operand_diagnostic_model_run_completed': False}"
+new="'operand_diagnostic_model_run_completed': True, 'operand_diagnostic_primary_parity_passed': False,\n          'rowwise_K_selected_case_repaired': True, 'rowwise_K_ordinary_full4K_case_gate_passed': True,\n          'B4_MTP256_full4K_case_gate_passed': True, 'broader_quality_HTTP_or_performance_qualified': False}"
+assert text.count(old)==1;text=text.replace(old,new)
+ast.parse(text);out=W/'render-progress-comparison-20261027-v8.py';assert not out.exists();out.write_bytes(text.encode())
+(W/'progress-comparison-v8-derivation.json').write_bytes(json.dumps(dict(source=src.name,source_sha256=old_sha,target=out.name,target_sha256=hashlib.sha256(text.encode()).hexdigest(),benchmark_values_changed=False,closed_correctness_status_updated=True),indent=2).encode());print('v8 reporting renderer prepared')

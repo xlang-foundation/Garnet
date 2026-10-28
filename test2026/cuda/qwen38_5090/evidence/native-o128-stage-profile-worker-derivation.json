@@ -1,0 +1,58 @@
+{
+  "source": "Garnet/test2026/cuda/qwen38_5090/native_o128_stream_worker.py",
+  "source_sha256": "3430d9adbcf1b8743955f0ecd434820b5290b65f81800123f63af32411fa3f89",
+  "qualified_benchmark_archive_sha256": "0233565d6de5c4973760e4f618e91d192a070f342cfc3b8967facd4d61fb3206",
+  "target": "native_o128_stage_profile_worker.py",
+  "target_sha256": "1af103241753d926e00837a204c72c08f0ec377b6e8ec204cd56ac85fbddac50",
+  "changes": [
+    {
+      "old": "from test2026.cuda.qwen38_5090.fixed_length_policy import generation_stop_ids",
+      "new": "from test2026.cuda.qwen38_5090.fixed_length_policy import generation_stop_ids\nfrom test2026.cuda.qwen38_5090.native_stage_timing import StageRecorder\nfrom test2026.cuda.qwen38_5090.native_stage_attachment import StageAttachment",
+      "count": 1
+    },
+    {
+      "old": "decoder=vision=session=None",
+      "new": "decoder=vision=session=None;recorder=attachment=None",
+      "count": 1
+    },
+    {
+      "old": " emit({'event':'ready'",
+      "new": " recorder=StageRecorder(emit);attachment=StageAttachment(session,recorder)\n emit({'event':'ready'",
+      "count": 1
+    },
+    {
+      "old": "'performance_admitted':False,'o128_admission'",
+      "new": "'performance_admitted':False,'host_stage_profile':True,'CUDA_kernel_elapsed_claimed':False,'o128_admission'",
+      "count": 1
+    },
+    {
+      "old": "  started=time.monotonic();body=job['body']",
+      "new": "  recorder.start_request(job['id']);prepare_span=recorder.begin('prepare_input')\n  started=time.monotonic();body=job['body']",
+      "count": 1
+    },
+    {
+      "old": "  generated=[];text=''",
+      "new": "  recorder.end(prepare_span)\n  generated=[];text=''",
+      "count": 1
+    },
+    {
+      "old": "  metrics=None",
+      "new": "  notify=recorder.wrap(notify,'token_delivery')\n  metrics=None",
+      "count": 1
+    },
+    {
+      "old": "'native_elapsed_seconds':time.monotonic()-started})",
+      "new": "'native_elapsed_seconds':time.monotonic()-started})\n  recorder.finish_request()",
+      "count": 1
+    },
+    {
+      "old": "finally:\n if session is not None:session.close()\n if vision is not None:vision.close()\n if decoder is not None:decoder.close()",
+      "new": "finally:\n try:\n  if recorder is not None and recorder.active is not None:\n   while len(recorder.stack)>1:recorder.end(recorder.stack[-1][0],False)\n   recorder.finish_request(False)\n finally:\n  try:\n   if attachment is not None:attachment.close()\n  finally:\n   if session is not None:session.close()\n   if vision is not None:vision.close()\n   if decoder is not None:decoder.close()",
+      "count": 1
+    }
+  ],
+  "instrumentation_only": true,
+  "model_request_arguments_and_output_ID_checks_preserved": true,
+  "native_GPU_execution_unrun": true,
+  "clean_throughput_or_CUDA_kernel_timing_claimed": false
+}
