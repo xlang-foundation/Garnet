@@ -7,14 +7,19 @@
 #include <mutex>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 namespace Garnet {
 // GPU request tensors and one BF16 table shared by embedding and the tied head.
 // Only token IDs and small request metadata cross the host boundary.
 class CUDATensorIO {
+    friend class CUDAMTPDraft;
     SafeTensorsIndex index_;
     X::Tensor table_,headInput_,headOutput_,tokenHeadInput_,tokenHeadOutput_;
     X::Tensor candidateScratch_,candidateOutput_,indexedScores_,indexedIds_,indexedValues_;
+    X::Tensor indexedTwoIds_,indexedTwoValues_;
     std::unordered_map<std::string,X::Tensor> projectionWeights_;
+    std::unordered_map<std::string,X::Tensor> projectionWeightGroups_;
+    std::unordered_set<std::string> projectionWeightGroupMembers_;
     std::shared_ptr<void> projection_;
     int vocab_=0,width_=0;
     mutable std::mutex mutex_;
@@ -54,8 +59,12 @@ public:
     X::Value PredictTokens(X::Value hidden);
     X::Value HeadCandidates(X::Value selectedRows,int64_t count,bool tokenHead);
     X::Value PredictIndexed(X::Value hidden,X::Value candidates);
+    X::Value PredictIndexedTop2(X::Value hidden,X::Value candidates);
+    // Per row: id0, BF16-rounded score0, id1, BF16-rounded score1. Same cached outputs.
+    X::Value PredictIndexedTop2Scored(X::Value hidden,X::Value candidates);
     std::string WeightInfo(const std::string& name);
     X::Value Weight(const std::string& name);
+    X::Value GroupWeights(X::Value names);
     X::Value PrepareImage(const std::string& path,int pixels);
     std::string MemoryJson() const;
     int64_t TensorBytes(X::Value value);
@@ -91,8 +100,11 @@ public:
         APISET().AddFunc<1>("predict_tokens",&CUDATensorIO::PredictTokens);
         APISET().AddFunc<3>("head_candidates",&CUDATensorIO::HeadCandidates);
         APISET().AddFunc<2>("predict_indexed",&CUDATensorIO::PredictIndexed);
+        APISET().AddFunc<2>("predict_indexed_top2",&CUDATensorIO::PredictIndexedTop2);
+        APISET().AddFunc<2>("predict_indexed_top2_scored",&CUDATensorIO::PredictIndexedTop2Scored);
         APISET().AddFunc<1>("weight_info",&CUDATensorIO::WeightInfo);
         APISET().AddFunc<1>("weight",&CUDATensorIO::Weight);
+        APISET().AddFunc<1>("group_weights",&CUDATensorIO::GroupWeights);
         APISET().AddFunc<2>("prepare_image",&CUDATensorIO::PrepareImage);
         APISET().AddFunc<0>("memory_json",&CUDATensorIO::MemoryJson);
         APISET().AddFunc<1>("tensor_bytes",&CUDATensorIO::TensorBytes);

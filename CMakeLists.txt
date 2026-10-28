@@ -76,8 +76,40 @@ message("CMAKE_MODULE_PATH=" ${CMAKE_MODULE_PATH})
 
 # Build against the public XLang3 SDK, never old runtime implementation sources.
 set(XLANG3_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/../xlang3" CACHE PATH "XLang3 repository")
+set(GARNET_XLANG3_PREBUILT_RUNTIME_DIR "" CACHE PATH
+    "Optional existing XLang3 runtime artifacts directory; skip rebuilding XLang3")
 if(NOT TARGET xlang3_runtime)
-    add_subdirectory("${XLANG3_ROOT}" "${CMAKE_CURRENT_BINARY_DIR}/xlang3")
+    if(GARNET_XLANG3_PREBUILT_RUNTIME_DIR)
+        set(GARNET_XLANG3_RUNTIME_FILE
+            "${GARNET_XLANG3_PREBUILT_RUNTIME_DIR}/${CMAKE_SHARED_LIBRARY_PREFIX}xlang3_runtime${CMAKE_SHARED_LIBRARY_SUFFIX}")
+        if(NOT EXISTS "${GARNET_XLANG3_RUNTIME_FILE}")
+            message(FATAL_ERROR "Missing prebuilt XLang3 runtime: ${GARNET_XLANG3_RUNTIME_FILE}")
+        endif()
+        add_library(xlang3_runtime SHARED IMPORTED GLOBAL)
+        set_target_properties(xlang3_runtime PROPERTIES
+            IMPORTED_LOCATION "${GARNET_XLANG3_RUNTIME_FILE}"
+            INTERFACE_INCLUDE_DIRECTORIES "${XLANG3_ROOT}/sdk")
+        if(WIN32)
+            set(GARNET_XLANG3_RUNTIME_IMPORT
+                "${GARNET_XLANG3_PREBUILT_RUNTIME_DIR}/xlang3_runtime.lib")
+            if(NOT EXISTS "${GARNET_XLANG3_RUNTIME_IMPORT}")
+                message(FATAL_ERROR "Missing prebuilt XLang3 import library: ${GARNET_XLANG3_RUNTIME_IMPORT}")
+            endif()
+            set_target_properties(xlang3_runtime PROPERTIES
+                IMPORTED_IMPLIB "${GARNET_XLANG3_RUNTIME_IMPORT}")
+        endif()
+        if(NOT TARGET xlang3)
+            set(GARNET_XLANG3_EXECUTABLE
+                "${GARNET_XLANG3_PREBUILT_RUNTIME_DIR}/xlang3${CMAKE_EXECUTABLE_SUFFIX}")
+            if(NOT EXISTS "${GARNET_XLANG3_EXECUTABLE}")
+                message(FATAL_ERROR "Missing prebuilt XLang3 executable: ${GARNET_XLANG3_EXECUTABLE}")
+            endif()
+            add_executable(xlang3 IMPORTED GLOBAL)
+            set_target_properties(xlang3 PROPERTIES IMPORTED_LOCATION "${GARNET_XLANG3_EXECUTABLE}")
+        endif()
+    else()
+        add_subdirectory("${XLANG3_ROOT}" "${CMAKE_CURRENT_BINARY_DIR}/xlang3")
+    endif()
 endif()
 set(xlang_sdk_folder "${XLANG3_ROOT}/sdk")
 set(GARNET_TENSORRT_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/../ThirdPartySDK/TensorRT"
@@ -197,7 +229,7 @@ if(GARNET_QWEN35_WHOLE_PROGRAM_CUDA)
 endif()
 
 # Create the shared library target.
-add_library(${PROJECT_NAME} 
+add_library(${PROJECT_NAME}
     SHARED
     ${Entry_SRC}
     ${Tensor_SRC}
@@ -504,10 +536,10 @@ endif()
 # On Windows, link against cudart (the CUDA runtime) explicitly.
 if(WIN32)
     target_link_libraries(${PROJECT_NAME} ${CUDA_LIBRARIES} ${CUDA_cuda_LIBRARY}
-            cublas.lib "${GARNET_TENSORRT_ROOT}/lib/nvinfer_10.lib"
+            cublas.lib cublasLt.lib "${GARNET_TENSORRT_ROOT}/lib/nvinfer_10.lib"
             nppc.lib nppig.lib nvjpeg.lib
             ${CUDA_CUDA_LIBRARY} # This specifically adds the cuda.lib driver library
-    ) 
+    )
     # Keep the multi-backend runtime loadable on machines without NVIDIA
     # software. These DLLs are resolved only if a CUDA/TensorRT operation is
     # actually invoked; OpenVINO CPU/Intel-GPU execution does not require them.
@@ -515,6 +547,7 @@ if(WIN32)
         target_link_libraries(${PROJECT_NAME} delayimp)
         target_link_options(${PROJECT_NAME} PRIVATE
             "/DELAYLOAD:cublas64_13.dll"
+            "/DELAYLOAD:cublasLt64_13.dll"
             "/DELAYLOAD:nvinfer_10.dll"
             "/DELAYLOAD:nppig64_13.dll"
             "/DELAYLOAD:nvjpeg64_13.dll"
@@ -535,7 +568,7 @@ if(WIN32)
         message(FATAL_ERROR "TensorRT builder resource DLLs were not found")
     endif()
     list(APPEND GARNET_VENDOR_DLLS ${GARNET_TENSORRT_BUILDER_DLLS})
-    foreach(pattern cublas64_*.dll nppig64_*.dll nvjpeg64_*.dll)
+    foreach(pattern cublas64_*.dll cublasLt64_*.dll nppig64_*.dll nvjpeg64_*.dll)
         file(GLOB matches
             "${CUDAToolkit_BIN_DIR}/${pattern}"
             "${CUDAToolkit_BIN_DIR}/x64/${pattern}")
@@ -553,7 +586,7 @@ else()
         PATHS "${GARNET_TENSORRT_ROOT}/lib" REQUIRED NO_DEFAULT_PATH)
     target_link_libraries(${PROJECT_NAME} pthread dl m
         "${GARNET_TENSORRT_LIBRARY}" CUDA::cudart CUDA::cuda_driver
-        CUDA::cublas CUDA::nppc CUDA::nppig CUDA::nvjpeg)
+        CUDA::cublas CUDA::cublasLt CUDA::nppc CUDA::nppig CUDA::nvjpeg)
     target_link_options(${PROJECT_NAME} PRIVATE "-Wl,--no-undefined")
 endif()
 
@@ -583,6 +616,17 @@ file(COPY "${PROJECT_SOURCE_DIR}/xModel/"
         PATTERN "*.py"
         PATTERN "*.json"
 )
+# CUDA serving imports the xModel namespace and locates its adapter beside it.
+# Keep the flat catalog above for existing native model discovery.
+file(COPY "${PROJECT_SOURCE_DIR}/xModel"
+    DESTINATION "${CMAKE_BINARY_DIR}"
+    FILES_MATCHING
+        PATTERN "debug_*.py" EXCLUDE
+        PATTERN "*.py"
+        PATTERN "*.json"
+)
+file(COPY "${PROJECT_SOURCE_DIR}/runtime/cuda_serving.py"
+    DESTINATION "${CMAKE_BINARY_DIR}/runtime")
 
 install(TARGETS ${PROJECT_NAME}
     RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}" COMPONENT garnet_runtime
@@ -590,6 +634,17 @@ install(TARGETS ${PROJECT_NAME}
     ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}" COMPONENT garnet_development
 )
 if(GARNET_INSTALL_XMODELS)
+    install(DIRECTORY "${PROJECT_SOURCE_DIR}/xModel"
+        DESTINATION "."
+        COMPONENT garnet_xmodels
+        FILES_MATCHING
+            PATTERN "debug_*.py" EXCLUDE
+            PATTERN "*.py"
+            PATTERN "*.json"
+    )
+    install(FILES "${PROJECT_SOURCE_DIR}/runtime/cuda_serving.py"
+        DESTINATION "runtime"
+        COMPONENT garnet_xmodels)
     install(DIRECTORY "${PROJECT_SOURCE_DIR}/xModel/"
         DESTINATION "models"
         COMPONENT garnet_xmodels

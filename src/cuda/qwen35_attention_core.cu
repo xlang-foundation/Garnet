@@ -5,6 +5,7 @@
 #include <cuda_runtime.h>
 #include <math_constants.h>
 #include <cmath>
+#include "qwen35_attention_fused_exact.cuh"
 namespace Garnet {
 namespace {
 bool valid(Qwen35AttentionCoreConfig c) {
@@ -107,5 +108,19 @@ int RunQwen35AttentionCore(const Qwen35AttentionCoreConfig& c,const void* const*
     context<<<dim3(c.dim/32,rows),256,0,stream>>>(c,(const float*)out[2],(const float*)in[3],
         (const float*)in[6],(const float*)in[7],(const float*)workspace,(float*)out[0]);
     return cudaPeekAtLastError()==cudaSuccess?0:1;
+}
+
+bool SupportsQwen35AttentionCoreFusedExact(const Qwen35AttentionCoreConfig& c) noexcept {
+    if(!valid(c)||c.capacity!=512||c.dim!=256||(c.tokens!=4&&c.tokens!=64)||
+       (c.batch!=1&&c.batch!=2&&c.batch!=4&&c.batch!=8)||
+       !((c.heads==8&&c.kv==2)||(c.heads==16&&c.kv==4)))return false;
+    int device=-1,major=0,minor=0;
+    return cudaGetDevice(&device)==cudaSuccess&&
+        cudaDeviceGetAttribute(&major,cudaDevAttrComputeCapabilityMajor,device)==cudaSuccess&&
+        cudaDeviceGetAttribute(&minor,cudaDevAttrComputeCapabilityMinor,device)==cudaSuccess&&major==8&&minor==9;
+}
+int RunQwen35AttentionCoreFusedExact(const Qwen35AttentionCoreConfig& c,const void* const* in,
+    void* const* out,void* workspace,cudaStream_t stream) noexcept {
+    return AttentionFusedExact::run(c,in,out,workspace,stream);
 }
 }

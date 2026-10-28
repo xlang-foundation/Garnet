@@ -17,10 +17,15 @@ int main(int argc, char** argv)
         return 2;
     }
 
+    const std::set<std::string> expectedIds{
+        "GPT-OSS-120B", "Qwen3-1.7B", "Qwen3-ASR-0.6B",
+        "Qwen3-TTS-12Hz-0.6B-CustomVoice",
+        "Qwen3-TTS-12Hz-1.7B-CustomVoice",
+        "Qwen3-VL-2B-Instruct", "Qwen3.5-2B", "Qwen3.5-4B"};
     const auto catalog = nlohmann::json::parse(
         Garnet::EnumerateAvailableModelsJson(argv[1]));
     if (catalog.value("schema_version", 0) != 1 ||
-        !catalog["errors"].empty() || catalog["models"].size() != 5) {
+        !catalog["errors"].empty() || catalog["models"].size() != expectedIds.size()) {
         std::cerr << catalog.dump(2) << '\n';
         return 1;
     }
@@ -38,11 +43,7 @@ int main(int argc, char** argv)
             return 1;
         }
     }
-    if (ids != std::set<std::string>{
-            "Qwen3-1.7B", "Qwen3-ASR-0.6B",
-            "Qwen3-TTS-12Hz-0.6B-CustomVoice",
-            "Qwen3-TTS-12Hz-1.7B-CustomVoice",
-            "Qwen3-VL-2B-Instruct"}) {
+    if (ids != expectedIds) {
         std::cerr << "unexpected model ids\n";
         return 1;
     }

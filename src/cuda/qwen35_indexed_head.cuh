@@ -9,6 +9,12 @@ struct Qwen35IndexedHeadConfig {int rows,hidden,vocab,candidates;};
 // all-invalid rows return ID=-1/value=-Inf. Input/output ranges must not alias.
 int RunQwen35IndexedHead(const Qwen35IndexedHeadConfig&,const float*,const void*,const int*,
     void*,long long*,float*,cudaStream_t) noexcept;
+// Proposal-only top2 DISTINCT global IDs per row, descending finite BF16 score,
+// ties by increasing ID. Uses the unchanged indexed dot kernel. Missing finite
+// choices return -1/-Inf; callers must validate before constructing proposals.
+// IDs/optional values have rows*2 entries. Unwired to serving until validated.
+int RunQwen35IndexedHeadTop2(const Qwen35IndexedHeadConfig&,const float*,const void*,const int*,
+    void*,long long*,float*,cudaStream_t) noexcept;
 // Stable descending finite logits, ties use increasing global token ID.
 // selectedRows is a HOST array validated in full before enqueue; BF16 logits.
 // Nonfinite entries yield -1. Scratch is reusable across sequential rows.

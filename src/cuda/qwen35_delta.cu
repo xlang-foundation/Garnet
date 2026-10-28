@@ -77,4 +77,23 @@ int RunQwen35Delta(const Qwen35DeltaConfig& c,int batch,int tokens,const void* c
     return cudaPeekAtLastError()==cudaSuccess?0:1;
 }
 }
+namespace Garnet { namespace {
+__global__ void convolutionHiddenOnly(Qwen35DeltaConfig c,int batch,int tokens,const float* input,const float* old,
+    const float* active,const float* weights,float* conv){
+    const int channels=2*c.kh*c.kd+c.vh*c.vd;
+    int index=blockIdx.x*blockDim.x+threadIdx.x;if(index>=batch*channels)return;
+    int b=index/channels,ch=index%channels;float h[4];
+    for(int k=0;k<c.kernel;++k)h[k]=old[index*c.kernel+k];
+    for(int t=0;t<tokens;++t){
+        float v=0;
+        if(active[b*tokens+t]!=0){
+            for(int k=0;k<c.kernel-1;++k)h[k]=h[k+1];
+            h[c.kernel-1]=input[(b*tokens+t)*channels+ch];
+            for(int k=0;k<c.kernel;++k)v=__fadd_rn(v,__fmul_rn(h[k],weights[ch*c.kernel+k]));
+            v=silu(v);
+        }
+        conv[(b*tokens+t)*channels+ch]=v;
+    }
+}
+}}
 #include "qwen35_delta_register128.cuh"

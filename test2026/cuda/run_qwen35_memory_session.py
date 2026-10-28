@@ -23,6 +23,13 @@ profile['prefillChunk']=int(os.environ.get('GARNET_PREFILL_CHUNK','4'))
 profile['decodeChunk']=int(os.environ.get('GARNET_QWEN35_DECODE_CHUNK',str(profile['prefillChunk'])))
 profile['sharedProjectionWeights']=os.environ.get('GARNET_QWEN35_SHARED_PROJECTION_WEIGHTS','0')=='1'
 profile['packPrompt']=os.environ.get('GARNET_QWEN35_PACK_PROMPT','0')=='1'
+if os.environ.get('GARNET_QWEN35_REUSE_VERIFIED_HEAD','0')=='1':profile['reuseVerifiedHead']=True
+if os.environ.get('GARNET_QWEN35_JOIN_DECODE_INPUT_PROJECTIONS','0')=='1':profile['joinDecodeInputProjections']=True
+if os.environ.get('GARNET_QWEN35_SHARED_ACTIVATION_STORAGE','0')=='1':profile['sharePackedActivationStorage']=True
+internal_stores=os.environ.get('GARNET_QWEN35_INTERNAL_PACKED_STORES','0')=='1'
+if internal_stores:profile['internalPackedStores']=True
+if os.environ.get('GARNET_QWEN35_COMPACT_KV_OUTPUTS','0')=='1':profile['compactKVOutputs']=True
+if os.environ.get('GARNET_QWEN35_VISION_CUDA_GRAPH','0')=='1':profile['visionCudaGraph']=True
 profile['packedDecoderProgram']=os.environ.get('GARNET_QWEN35_PACKED_DECODER_PROGRAM','0')=='1'
 profile['residentControls']=os.environ.get('GARNET_QWEN35_RESIDENT_CONTROLS','0')=='1'
 profile['serialGraphReuse']=os.environ.get('GARNET_QWEN35_SERIAL_GRAPH_REUSE','0')=='1'
@@ -55,11 +62,25 @@ def infer(trial):
         names=[images[(trial+b)%4] for b in range(batch)]
         paths=[os.path.join(dataset,name) for name in names]
     result=model.infer_batch([prompt]*batch,paths,32)
-    return result,{'images':names,'input_sha256':input_hashes(paths)}
+    return result,{'images':names,'input_sha256':input_hashes(paths),
+        'output_signature':{key:result[key] for key in ('generated_token_ids','sampled_tokens_including_stop','finish_reasons','stop_token_ids')}}
 emit('load_begin',scope='Memory diagnostic; timing is not primary benchmark evidence')
 model=Model(root,profile,name)
+if internal_stores:
+    native=model.decoder.memory_info();bodies=native['graphs'][:-1]
+    assert sum(g['internal_packed_stores'] for g in bodies)==len(bodies)*len(model.config['text_config']['layer_types'])
+    assert sum(g['internal_packed_root_fills'] for g in bodies)==len(bodies)
+    assert all(not g['network_output_aliases_input'] for g in native['graphs'])
 emit('loaded',owned_memory=model.memory_info())
 try:
+    native=model.decoder.memory_info()
+    if profile.get('sharePackedActivationStorage',False):
+        assert native['shared_activation_pool_bytes']>0
+        assert all(g['user_managed_workspace'] and g['external_workspace_bound'] and g['external_workspace_capacity_bytes']==native['shared_activation_pool_bytes'] for g in native['graphs'][:-1])
+    if profile.get('joinDecodeInputProjections',False):
+        expected=18 if name=='Qwen3.5-2B' else 24
+        assert native['joined_projection_group_count']==expected
+        assert sum(g['joined_projection_inputs'] for g in native['graphs'])==expected
     actual_whole=all(g.get('qwen35_whole_program_cuda',False) for g in model.decoder.memory_info()['graphs'])
     assert actual_whole==(os.environ.get('GARNET_BENCHMARK_WHOLE_PROGRAM_CUDA')=='1'),'Memory build-policy label differs from actual DLL'
     for trial in range(2):

@@ -6,6 +6,7 @@
 #include <cstdint>
 #include <climits>
 #include <cmath>
+#include <cstdlib>
 #include <deque>
 #include <functional>
 #include <stdexcept>
@@ -16,6 +17,9 @@
 #include "qwen35_delta_plugin.h"
 #include "qwen35_attention_core_plugin.h"
 #include "qwen35_f32_barrier_plugin.h"
+#include "qwen35_compact_kv_plugin.h"
+#include "qwen35_tree_plugin.h"
+#include "qwen35_fixed_rms_plugin.h"
 
 namespace Garnet {
 // Primitive TensorRT lowering for Qwen3.5. Large projection constants retain
@@ -28,6 +32,8 @@ class Qwen35TRTOps {
     std::function<T*(const std::string&)> lookup;
     std::vector<nvinfer1::IPluginV2*>& plugins;
     bool projectionWorkspace_=false;
+    bool fixedRMS_=false;
+    bool skipPhaseStateWrites_=false;
     static T* checked(nvinfer1::ILayer* l) {
         if(!l||!l->getOutput(0))throw std::runtime_error("Qwen3.5 TensorRT layer creation failed");
         return l->getOutput(0);
@@ -38,7 +44,10 @@ public:
         projectionWorkspace_=bytes!=0;
     }
     Qwen35TRTOps(nvinfer1::INetworkDefinition& network,std::deque<std::vector<float>>& storage,
-        std::function<T*(const std::string&)> weights,std::vector<nvinfer1::IPluginV2*>& owned):n(network),constants(storage),lookup(std::move(weights)),plugins(owned) {}
+        std::function<T*(const std::string&)> weights,std::vector<nvinfer1::IPluginV2*>& owned):n(network),constants(storage),lookup(std::move(weights)),plugins(owned) {
+        const char* value=std::getenv("GARNET_QWEN35_FIXED_RMS");fixedRMS_=value&&std::string(value)=="1";
+        const char* stateWrites=std::getenv("GARNET_QWEN35_SKIP_PHASE_STATE_WRITES");skipPhaseStateWrites_=stateWrites&&std::string(stateWrites)=="1";
+    }
     static nvinfer1::Dims dims(const std::vector<int>& shape) {
         if(shape.size()>nvinfer1::Dims::MAX_DIMS)throw std::invalid_argument("Qwen3.5 rank exceeds TensorRT limit");
         nvinfer1::Dims d{};d.nbDims=int(shape.size());
@@ -149,6 +158,16 @@ public:
         return cast(value);
     }
     T* rms(T* x,T* scale,float epsilon,bool offset) {
+        // Opt-in stable row order. Keep the existing builder expression/order
+        // byte-for-byte below for the default path and existing Metal behavior.
+        if(fixedRMS_){
+            auto s=shape(x);if(s.empty()||s.size()>4||s.back()>16384)throw std::invalid_argument("Fixed RMS profile invalid");
+            require(scale,{s.back()});
+            x=cast(x);scale=cast(scale);if(offset)scale=add(scale,scalar(1,1));
+            if(!EnsureQwen35FixedRMSPluginRegistered())throw std::runtime_error("Fixed RMS registration failed");
+            auto* plugin=new Qwen35FixedRMSPlugin(epsilon);plugins.push_back(plugin);
+            T* inputs[]={x,scale};return checked(n.addPluginV2(inputs,2,*plugin));
+        }
         x=cast(x);const int r=shape(x).size();
         auto* denominator=unary(add(reduce(mul(x,x),-1,true,true),scalar(epsilon,r)),nvinfer1::UnaryOperation::kSQRT);
         scale=cast(scale);if(offset)scale=add(scale,scalar(1,shape(scale).size()));
@@ -290,35 +309,65 @@ public:
         T* output=maskRows(project(core[0],w(".out_proj.weight")),active);
         return cat({output,reshape(core[1],{batch,channels*kernel}),reshape(core[2],{batch,vh*kd*vd})},1);
     }
+    T* treeMetadata(T* parents,T* active,T* prefix,int capacity) {
+        auto s=shape(parents);
+        if(s.size()!=2||parents->getType()!=nvinfer1::DataType::kFLOAT||active->getType()!=nvinfer1::DataType::kFLOAT||prefix->getType()!=nvinfer1::DataType::kFLOAT)
+            throw std::invalid_argument("Tree controls require explicit FP32 tensors");
+        require(active,s);require(prefix,{s[0],1});
+        T* inputs[]={parents,active,prefix};
+        auto* layer=AddQwen35TreePlugin(n,TreeMetadataPluginConfig({s[0],s[1],capacity}),inputs,3,plugins);
+        return layer->getOutput(0);
+    }
+    T* treeMetadataFloat(T* metadata,int batch,int nodes,int capacity) {
+        if(!Qwen35TreeMetadataProducerMatches(n,metadata,{batch,nodes,capacity}))throw std::invalid_argument("Tree metadata export requires the matching native producer");
+        return cast(metadata,nvinfer1::DataType::kFLOAT);
+    }
     T* linearDecoderChunk(T* x,T* history,T* state,T* active,const std::string& layer,
-        int kh,int vh,int kd,int vd,float eps,bool fusedDelta=false,bool retainInputs=false,bool register128=false) {
+        int kh,int vh,int kd,int vd,float eps,bool fusedDelta=false,bool retainInputs=false,bool register128=false,bool joinedInputs=false,std::vector<T*>* directParts=nullptr,T* treeMeta=nullptr,int treeCapacity=0,bool omitLinearState=false) {
+        if(omitLinearState&&(treeMeta||!fusedDelta||!retainInputs||!register128||kd!=128||vd!=128))throw std::invalid_argument("Replay-only outputs require retained native128 linear decode");
+        if(treeMeta&&(!fusedDelta||!retainInputs||!register128))throw std::invalid_argument("Tree delta requires retained native128 arithmetic");
         if(retainInputs&&!fusedDelta)throw std::invalid_argument("Qwen3.5 retained projections require fused delta");
         if(register128&&(!fusedDelta||kd!=128||vd!=128||kh>64||vh>64))throw std::invalid_argument("Register delta requires fused128 dimensions and bounded heads");
         auto xs=shape(x),hs=shape(history);
         if(xs.size()!=3||xs[1]>128||hs.size()!=3||kh<=0||vh<=0||vh%kh||kd<=0||vd<=0)
             throw std::invalid_argument("Qwen3.5 linear chunk dimensions invalid");
         const int batch=xs[0],tokens=xs[1],hidden=xs[2],channels=2*kh*kd+vh*vd,kernel=hs[2];
+        if(joinedInputs&&(tokens!=4||(batch!=1&&batch!=2&&batch!=4&&batch!=8)))throw std::invalid_argument("Joined input projections require decode width4 and batch1/2/4/8");
         require(active,{batch,tokens});
         x=select(reshape(active,{batch,tokens,1}),x,scalar(0,3));
         T* normalized=norm(x,layer+".input_layernorm.weight",eps);
         const auto prefix=layer+".linear_attn";
         auto w=[&](const char* suffix){return weight(prefix+suffix);};
-        T* qkv=project(normalized,w(".in_proj_qkv.weight"));
-        T* z=project(normalized,w(".in_proj_z.weight"));
-        T* beta=project(normalized,w(".in_proj_b.weight"));T* a=project(normalized,w(".in_proj_a.weight"));
+        T *qkv=nullptr,*z=nullptr,*beta=nullptr,*a=nullptr;
+        if(joinedInputs){
+            auto* matrix=w(".in_proj_joined.weight");require(matrix,{channels+vh*vd+2*vh,hidden});
+            auto* values=project(normalized,matrix);
+            qkv=slice(values,2,0,channels);z=slice(values,2,channels,vh*vd);
+            beta=slice(values,2,channels+vh*vd,vh);a=slice(values,2,channels+vh*vd+vh,vh);
+        }else{
+            qkv=project(normalized,w(".in_proj_qkv.weight"));z=project(normalized,w(".in_proj_z.weight"));
+            beta=project(normalized,w(".in_proj_b.weight"));a=project(normalized,w(".in_proj_a.weight"));
+        }
         auto token=[&](T* input,int index){auto s=shape(input);return reshape(slice(input,1,index,1),{batch,s[2]});};
-        std::vector<T*> outputs;T* coreOutput=nullptr;
+        std::vector<T*> outputs;T* coreOutput=nullptr;T* treeStatus=nullptr;
         if(fusedDelta){
             if(kd>128||vd>128||kernel>4||kernel<1||!(eps>0))throw std::invalid_argument("Qwen3.5 fused delta profile unsupported");
             require(history,{batch,channels,kernel});require(state,{batch,vh,kd,vd});
             auto* conv=w(".conv1d.weight");require(conv,{channels,1,kernel});
             auto* dt=w(".dt_bias");require(dt,{vh});auto* alog=w(".A_log");require(alog,{vh});
             auto* scale=w(".norm.weight");require(scale,{vd});
+            if(treeMeta){
+                T* inputs[]={cast(qkv),cast(z),cast(beta),cast(a),cast(history),cast(state),cast(active),cast(conv),cast(dt),cast(alog),cast(scale),treeMeta};
+                auto* result=AddQwen35TreePlugin(n,TreeDeltaPluginConfig({kh,vh,kd,vd,kernel,eps},{batch,tokens,treeCapacity}),inputs,12,plugins);
+                coreOutput=result->getOutput(0);treeStatus=result->getOutput(1);
+            }else{
             if(!EnsureQwen35DeltaPluginRegistered())throw std::runtime_error("Qwen3.5 delta plugin registration failed");
-            auto* plugin=new Qwen35DeltaPlugin({kh,vh,kd,vd,kernel,eps},register128);plugins.push_back(plugin);
+            auto* plugin=new Qwen35DeltaPlugin({kh,vh,kd,vd,kernel,eps},register128,omitLinearState&&skipPhaseStateWrites_);plugins.push_back(plugin);
             T* inputs[]={cast(qkv),cast(z),cast(beta),cast(a),cast(history),cast(state),cast(active),cast(conv),cast(dt),cast(alog),cast(scale)};
             auto* result=n.addPluginV2(inputs,11,*plugin);if(!result)throw std::runtime_error("Qwen3.5 fused delta construction failed");
-            coreOutput=result->getOutput(0);history=result->getOutput(1);state=result->getOutput(2);
+            coreOutput=result->getOutput(0);
+            if(!omitLinearState||!skipPhaseStateWrites_){history=result->getOutput(1);state=result->getOutput(2);}
+            }
         }else for(int t=0;t<tokens;++t) {
             auto core=linearCore(token(qkv,t),token(z,t),token(beta,t),token(a,t),history,state,
                 reshape(slice(active,1,t,1),{batch}),prefix,kh,vh,kd,vd,eps);
@@ -329,11 +378,20 @@ public:
         attention=select(reshape(active,{batch,tokens,1}),attention,scalar(0,3));
         T* residual=add(x,attention);
         T* output=add(residual,mlp(norm(residual,layer+".post_attention_layernorm.weight",eps),layer+".mlp"));
-        std::vector<T*> packed={reshape(output,{batch,tokens*hidden}),reshape(history,{batch,channels*kernel}),reshape(state,{batch,vh*kd*vd})};
+        std::vector<T*> packed;
+        if(treeMeta){
+            packed={reshape(output,{batch,tokens*hidden}),reshape(cast(qkv),{batch,tokens*channels}),
+                reshape(cast(beta),{batch,tokens*vh}),reshape(cast(a),{batch,tokens*vh}),treeStatus};
+        }else{
+        packed={reshape(output,{batch,tokens*hidden})};
+        if(!omitLinearState){packed.push_back(reshape(history,{batch,channels*kernel}));packed.push_back(reshape(state,{batch,vh*kd*vd}));}
         if(retainInputs){
             packed.push_back(reshape(cast(qkv),{batch,tokens*channels}));packed.push_back(reshape(cast(z),{batch,tokens*vh*vd}));
             packed.push_back(reshape(cast(beta),{batch,tokens*vh}));packed.push_back(reshape(cast(a),{batch,tokens*vh}));
         }
+        }
+        // The optional store path consumes these same values before packing.
+        if(directParts){*directParts=packed;return nullptr;}
         return cat(packed,1);
     }
     T* linearReplayChunk(T* packed,T* history,T* state,T* active,const std::string& layer,
@@ -360,11 +418,12 @@ public:
         return cat({reshape(result->getOutput(1),{batch,channels*kernel}),reshape(result->getOutput(2),{batch,vh*kd*vd})},1);
     }
     T* fullDecoderChunk(T* x,T* key,T* value,T* positions,T* slots,T* active,const std::string& layer,
-        int heads,int kv,int dim,int rotary,std::array<int,3> sections,float theta,float eps,bool fusedAttention=false) {
+        int heads,int kv,int dim,int rotary,std::array<int,3> sections,float theta,float eps,bool fusedAttention=false,std::vector<T*>* directParts=nullptr,bool compactKV=false,T* treeMeta=nullptr,std::vector<T*>* diagnosticParts=nullptr) {
+        if(treeMeta&&(!fusedAttention||compactKV))throw std::invalid_argument("Tree attention requires native core and direct node KV publication");
         auto xs=shape(x),ks=shape(key);
         if(xs.size()!=3||xs[1]>128||ks.size()!=4||kv<=0||dim<=0)throw std::invalid_argument("Qwen3.5 full chunk dimensions invalid");
         const int batch=xs[0],tokens=xs[1],hidden=xs[2],capacity=ks[2],width=kv*capacity*dim;
-        require(active,{batch,tokens});require(positions,{batch,tokens,3});require(slots,{batch,tokens});
+        require(active,{batch,tokens});require(positions,{batch,tokens,3});if(!treeMeta)require(slots,{batch,tokens});
         x=select(reshape(active,{batch,tokens,1}),x,scalar(0,3));
         T* normalized=norm(x,layer+".input_layernorm.weight",eps);std::vector<T*> outputs;
         const int contextWidth=heads*dim;
@@ -374,7 +433,7 @@ public:
         auto* qg=project(normalized,weight(prefix+".q_proj.weight"));
         auto* projectedK=project(normalized,weight(prefix+".k_proj.weight"));
         auto* projectedV=project(normalized,weight(prefix+".v_proj.weight"));
-        T* coreOutput=nullptr;
+        T* coreOutput=nullptr;T* treeKey=nullptr;T* treeValue=nullptr;T* treeStatus=nullptr;
         if(fusedAttention){
             if(heads<=0||heads%kv||rotary<=0||rotary>dim||rotary%2||
                 sections[0]<0||sections[1]<0||sections[2]<0||sections[0]+sections[1]+sections[2]!=rotary/2||!(theta>0)||!(eps>0))
@@ -401,6 +460,12 @@ public:
                 auto* out=add(mul(part,cosine),mul(half,sine));
                 return rotary==dim?out:cat({out,slice(input,-1,rotary,dim-rotary)},3);
             };
+            if(treeMeta){
+                treeKey=cast(rotate(k));treeValue=cast(reshape(projectedV,{batch,tokens,kv,dim}));
+                T* inputs[]={cast(rotate(q)),treeKey,treeValue,cast(gate),cast(key),cast(value),cast(active),treeMeta};
+                auto* result=AddQwen35TreePlugin(n,TreeAttentionPluginConfig({batch,tokens,heads,kv,capacity,dim}),inputs,8,plugins);
+                coreOutput=reshape(result->getOutput(0),{batch,tokens,contextWidth});treeStatus=result->getOutput(1);
+            }else{
             if(!EnsureQwen35AttentionCorePluginRegistered())throw std::runtime_error("Qwen3.5 attention plugin registration failed");
             auto* plugin=new Qwen35AttentionCorePlugin({batch,tokens,heads,kv,capacity,dim});plugins.push_back(plugin);
             T* inputs[]={cast(rotate(q)),cast(rotate(k)),cast(reshape(projectedV,{batch,tokens,kv,dim})),
@@ -408,6 +473,7 @@ public:
             auto* result=n.addPluginV2(inputs,8,*plugin);if(!result)throw std::runtime_error("Qwen3.5 fused attention construction failed");
             coreOutput=reshape(result->getOutput(0),{batch,tokens,contextWidth});
             key=result->getOutput(1);value=result->getOutput(2);
+            }
         }else for(int t=0;t<tokens;++t) {
             auto* packed=attentionProjected(
                 reshape(slice(qg,1,t,1),{batch,heads,2*dim}),
@@ -424,7 +490,23 @@ public:
         attention=select(reshape(active,{batch,tokens,1}),attention,scalar(0,3));
         T* residual=add(x,attention);
         T* output=add(residual,mlp(norm(residual,layer+".post_attention_layernorm.weight",eps),layer+".mlp"));
-        return cat({reshape(output,{batch,tokens*hidden}),reshape(key,{batch,width}),reshape(value,{batch,width})},1);
+        if(diagnosticParts)*diagnosticParts={normalized,qg,projectedK,projectedV,coreOutput,attention,residual,output};
+        if(treeMeta){
+            std::vector<T*> packed={reshape(output,{batch,tokens*hidden}),reshape(treeKey,{batch,tokens*kv*dim}),reshape(treeValue,{batch,tokens*kv*dim}),treeStatus};
+            if(directParts){*directParts=packed;return nullptr;}return cat(packed,1);
+        }
+        T* status=nullptr;int publishedWidth=width;
+        if(compactKV){
+            if(!EnsureQwen35CompactKVPluginRegistered())throw std::runtime_error("Compact KV plugin registration failed");
+            auto* plugin=new Qwen35CompactKVPlugin({batch,kv,capacity,tokens,dim});plugins.push_back(plugin);
+            T* inputs[]={key,value,slots,active};auto* layer=n.addPluginV2(inputs,4,*plugin);
+            if(!layer)throw std::runtime_error("Compact KV construction failed");
+            key=layer->getOutput(0);value=layer->getOutput(1);status=layer->getOutput(2);publishedWidth=kv*tokens*dim;
+        }
+        std::vector<T*> packed={reshape(output,{batch,tokens*hidden}),reshape(key,{batch,publishedWidth}),reshape(value,{batch,publishedWidth})};
+        if(status)packed.push_back(status);
+        if(directParts){*directParts=packed;return nullptr;}
+        return cat(packed,1);
     }
     T* mtpChunk(T* normalizedTarget,T* embedding,T* key,T* value,T* positions,T* slots,T* active,
         int heads,int kv,int dim,int rotary,std::array<int,3> sections,float theta,float eps) {
@@ -442,6 +524,81 @@ public:
         auto* hidden=reshape(slice(packed,1,0,hiddenWidth),s);
         auto* normalized=norm(hidden,"mtp.norm.weight",eps);
         return cat({reshape(normalized,{s[0],hiddenWidth}),slice(packed,1,hiddenWidth,2*cacheWidth)},1);
+    }
+    T* mtpTreeChunk(T* features,T* embedding,T* key,T* value,T* positions,T* active,T* parents,T* prefix,
+        int heads,int kv,int dim,int rotary,std::array<int,3> sections,float theta,float eps) {
+        auto s=shape(features),ks=shape(key);
+        if(s.size()!=3||(s[0]!=1&&s[0]!=2&&s[0]!=4&&s[0]!=8)||(s[1]!=8&&s[1]!=16&&s[1]!=32&&s[1]!=64)||
+            s[2]<1||s[2]>16384||ks.size()!=4||features->getType()!=nvinfer1::DataType::kFLOAT||
+            parents->getType()!=nvinfer1::DataType::kFLOAT)
+            throw std::invalid_argument("MTP tree requires bounded FP32 feature/parent profiles");
+        require(embedding,s);require(parents,{s[0],s[1]});require(active,{s[0],s[1]});
+        auto* metadata=treeMetadata(parents,active,prefix,ks[2]);
+        // Metadata rejection cannot order an independent TensorRT gather.
+        // Sanitize BEFORE the float->int cast, including NaN/Inf/fractions.
+        auto* integral=ew(parents,unary(parents,nvinfer1::UnaryOperation::kFLOOR),nvinfer1::ElementWiseOperation::kEQUAL);
+        auto* lower=ew(parents,scalar(-1,2),nvinfer1::ElementWiseOperation::kGREATER);
+        auto* upper=ew(parents,scalar(float(s[1]),2),nvinfer1::ElementWiseOperation::kLESS);
+        auto* valid=ew(integral,ew(lower,upper,nvinfer1::ElementWiseOperation::kAND),nvinfer1::ElementWiseOperation::kAND);
+        auto* indices=cast(select(valid,parents,scalar(0,2)),nvinfer1::DataType::kINT32);
+        auto* gather=n.addGatherV2(*features,*indices,nvinfer1::GatherMode::kDEFAULT);
+        if(!gather)throw std::runtime_error("MTP parent feature gather construction failed");
+        gather->setGatherAxis(1);gather->setNbElementWiseDims(1);
+        auto* previous=checked(gather);
+        auto* input=cat({norm(embedding,"mtp.pre_fc_norm_embedding.weight",eps),
+            norm(previous,"mtp.pre_fc_norm_hidden.weight",eps)},2);
+        auto* projected=project(input,weight("mtp.fc.weight"));
+        auto* packed=fullDecoderChunk(projected,key,value,positions,nullptr,active,"mtp.layers.0",
+            heads,kv,dim,rotary,sections,theta,eps,true,nullptr,false,metadata);
+        const int hiddenWidth=s[1]*s[2],payloadWidth=2*s[1]*kv*dim;
+        auto* hidden=reshape(slice(packed,1,0,hiddenWidth),s);
+        auto* normalized=norm(hidden,"mtp.norm.weight",eps);
+        // Inactive dummy root retains the already shifted canonical feature.
+        // Replaying old nodes reads their immutable finalized parent features.
+        auto* retained=select(reshape(active,{s[0],s[1],1}),normalized,features);
+        return cat({reshape(retained,{s[0],hiddenWidth}),slice(packed,1,hiddenWidth,payloadWidth+1),
+            treeMetadataFloat(metadata,s[0],s[1],ks[2])},1);
+    }
+    // Diagnostic-only outputs can perturb TensorRT fusion. Callers must first
+    // compare the exported result against uninstrumented truth graphs.
+    T* mtpStageProbe(T* features,T* embedding,T* key,T* value,T* positions,T* slots,T* active,
+        T* parents,T* prefix,bool tree,int heads,int kv,int dim,int rotary,std::array<int,3> sections,float theta,float eps) {
+        auto s=shape(features),ks=shape(key);
+        if(s.size()!=3||s[0]!=1||s[1]!=32||ks.size()!=4||features->getType()!=nvinfer1::DataType::kFLOAT)
+            throw std::invalid_argument("MTP stage probe is bounded to B1 N32 FP32");
+        require(embedding,s);require(active,{s[0],s[1]});
+        T* metadata=nullptr;T* previous=features;
+        if(tree){
+            require(parents,{s[0],s[1]});metadata=treeMetadata(parents,active,prefix,ks[2]);
+            auto* integral=ew(parents,unary(parents,nvinfer1::UnaryOperation::kFLOOR),nvinfer1::ElementWiseOperation::kEQUAL);
+            auto* lower=ew(parents,scalar(-1,2),nvinfer1::ElementWiseOperation::kGREATER);
+            auto* upper=ew(parents,scalar(float(s[1]),2),nvinfer1::ElementWiseOperation::kLESS);
+            auto* valid=ew(integral,ew(lower,upper,nvinfer1::ElementWiseOperation::kAND),nvinfer1::ElementWiseOperation::kAND);
+            auto* indices=cast(select(valid,parents,scalar(0,2)),nvinfer1::DataType::kINT32);
+            auto* gather=n.addGatherV2(*features,*indices,nvinfer1::GatherMode::kDEFAULT);
+            if(!gather)throw std::runtime_error("MTP stage probe parent gather failed");
+            gather->setGatherAxis(1);gather->setNbElementWiseDims(1);previous=checked(gather);
+        }
+        auto* normEmbedding=norm(embedding,"mtp.pre_fc_norm_embedding.weight",eps);
+        auto* normPrevious=norm(previous,"mtp.pre_fc_norm_hidden.weight",eps);
+        auto* projected=project(cat({normEmbedding,normPrevious},2),weight("mtp.fc.weight"));
+        std::vector<T*> stages;
+        auto* packed=fullDecoderChunk(projected,key,value,positions,slots,active,"mtp.layers.0",
+            heads,kv,dim,rotary,sections,theta,eps,true,nullptr,false,metadata,&stages);
+        const int hiddenWidth=s[1]*s[2];
+        auto* hidden=reshape(slice(packed,1,0,hiddenWidth),s);
+        auto* normalized=norm(hidden,"mtp.norm.weight",eps);
+        auto* retained=tree?select(reshape(active,{s[0],s[1],1}),normalized,features):normalized;
+        auto* meanSquare=reduce(mul(hidden,hidden),-1,true,true);
+        auto* denominator=unary(add(meanSquare,scalar(eps,3)),nvinfer1::UnaryOperation::kSQRT);
+        auto* scale=add(cast(weight("mtp.norm.weight")),scalar(1,1));
+        std::vector<T*> output={previous,normEmbedding,normPrevious,projected};
+        output.insert(output.end(),stages.begin(),stages.end());
+        output.insert(output.end(),{normalized,retained,meanSquare,denominator,reshape(scale,{s[0],s[2]})});
+        std::vector<T*> flat;
+        for(auto* part:output){auto ps=shape(part);int width=1;for(size_t i=1;i<ps.size();++i)width*=ps[i];flat.push_back(reshape(part,{s[0],width}));}
+        flat.push_back(tree?slice(packed,1,hiddenWidth+2*s[1]*kv*dim,1):constant({0},{1,1}));
+        return cat(flat,1);
     }
     T* vision(T* patches,int gh,int gw,int hidden,int heads,int depth,int patch,
         int temporal,int channels,int merge,int positions,int outHidden,float theta) {

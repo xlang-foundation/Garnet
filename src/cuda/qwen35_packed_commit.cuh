@@ -9,11 +9,16 @@ namespace Garnet {
 struct Qwen35PackedCommitConfig {
     int batch,tokens,key_heads,value_heads,kernel,linear_layers,full_layers,kv_heads,capacity,head_dim;
     int64_t state_width,packed_width,hidden_width;
+    int compact_kv=0,copy_only=0;
+    int64_t output_state_width=0,status_offset=0;
 };
 struct Qwen35PackedCommitSpans { int start[8],count[8]; };
 struct Qwen35PackedLinearLayout { int64_t state_offset,payload_offset; };
 size_t Qwen35PackedCommitWorkspace(const Qwen35PackedCommitConfig&) noexcept;
+bool ValidQwen35PackedCommitConfig(const Qwen35PackedCommitConfig&) noexcept;
 int RunQwen35PackedCommit(const Qwen35PackedCommitConfig&,Qwen35PackedCommitSpans,
     const float* packed,float* canonical,const Qwen35PackedLinearLayout* linear,
     const int64_t* full,const float* parameters,float* workspace,cudaStream_t) noexcept;
+int RunQwen35PackedCommitAll(const Qwen35PackedCommitConfig&,const float* packed,float* canonical,
+    const Qwen35PackedLinearLayout* linear,const int64_t* full,const float* slots,const float* active,cudaStream_t) noexcept;
 }

@@ -20,6 +20,7 @@ def main():
     parser.add_argument('--context-length',type=int,choices=[384,512],default=384)
     parser.add_argument('--memory-diagnostic',action='store_true')
     parser.add_argument('--memory-phase-output',help='Diagnostic phase holds/RPCs; never use for primary timing')
+    parser.add_argument('--cache-allocation-output',help='Diagnostic bound cache tensor views and shared storage; requires --memory-diagnostic')
     parser.add_argument('--variants',action='store_true')
     parser.add_argument('--matched-batch-inputs',action='store_true')
     parser.add_argument('--speculative-mtp',type=int,choices=[0,1,3,7],default=0)
@@ -30,6 +31,9 @@ def main():
     assert args.kv_cache_mib_per_seq>=0
     assert not args.matched_batch_inputs or args.variants
     if args.memory_phase_output:assert args.memory_diagnostic and args.rounds>=3
+    if args.cache_allocation_output:
+        assert args.memory_diagnostic and args.rounds>=3
+        assert not Path(args.cache_allocation_output).exists(),'Preserve prior cache-view evidence'
     phase_events=[]
     def phase(event,workers=None):
         if not args.memory_phase_output:return
@@ -54,6 +58,14 @@ def main():
     print(json.dumps({'event':'load_begin','unix_seconds':time.time(),'options':options}),flush=True)
     phase('load_begin')
     llm=LLM(**options)
+    cache_snapshots=[]
+    def cache_snapshot(event):
+        if not args.cache_allocation_output:return
+        cache_snapshots.append({'event':event,'unix_seconds':time.time(),'model':args.model,'batch':args.batch,
+            'workers':llm.collective_rpc('qwen35_cache_snapshot'),
+            'scope':'Actual bound tensor dtype/shape/storage metadata; diagnostic-only, timings invalid for performance acceptance.'})
+        Path(args.cache_allocation_output).write_text(json.dumps(cache_snapshots,indent=2))
+    cache_snapshot('loaded')
     if args.memory_phase_output:phase('loaded',llm.collective_rpc('qwen35_memory_snapshot'))
     sampling=SamplingParams(temperature=0,max_tokens=32,seed=0)
     print(json.dumps({'event':'load_complete','unix_seconds':time.time()}),flush=True)
@@ -62,6 +74,7 @@ def main():
     for trial in range(args.rounds):
         if args.memory_diagnostic and trial==2:
             print(json.dumps({'event':'memory_peaks_reset_after_warmup','workers':llm.collective_rpc('qwen35_memory_snapshot',args=(True,))}),flush=True)
+            cache_snapshot('after_warmup')
             if args.memory_phase_output:
                 phase('steady_before_begin',llm.collective_rpc('qwen35_memory_snapshot'));time.sleep(8);phase('steady_before_end')
         for index in range(4):
@@ -96,13 +109,17 @@ def main():
                 'frontend_torch_memory_allocated_bytes':torch.cuda.memory_allocated(),
                 'frontend_torch_memory_reserved_bytes':torch.cuda.memory_reserved(),
                 'memory_scope':'Frontend allocator only; engine worker/process VRAM requires a separate diagnostic run.'}
-            if args.memory_diagnostic:row['worker_memory']=llm.collective_rpc('qwen35_memory_snapshot')
+            if args.memory_diagnostic:
+                row['worker_memory']=llm.collective_rpc('qwen35_memory_snapshot')
+                row['diagnostic_only']=True
+                row['timing_scope']='Diagnostic run with worker RPC observations; invalid for primary performance acceptance.'
             rows.append(row);Path(args.output).write_text(json.dumps(rows,indent=2))
             print(json.dumps({'event':'request_complete','trial':trial,'images':names,'unix_seconds':time.time(),
                 'wall_seconds':elapsed,'generated_tokens':[len(r['token_ids']) for r in records]}),flush=True)
     if args.memory_phase_output:
         phase('steady_after_begin',llm.collective_rpc('qwen35_memory_snapshot'));time.sleep(8);phase('steady_after_end')
         phase('complete',llm.collective_rpc('qwen35_memory_snapshot'))
+    cache_snapshot('complete')
     print('QWEN35_VLLM_BENCHMARK_COMPLETE',args.model,'batch',batch,'requests',len(rows),flush=True)
 
 if __name__=="__main__":main()

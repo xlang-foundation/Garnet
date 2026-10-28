@@ -19,6 +19,9 @@ class Model:
             from xModel.qwen35.vl_4b import model as factory
         else:raise ValueError('CUDA Qwen3.5 model ID unsupported')
         self.factory=factory;factory.validate_config(self.config)
+        self.vision_artifact=profile.get('visionEngineArtifact');self.vision_artifact_sha256=profile.get('visionEngineArtifactSHA256')
+        self._check_vision_artifact()
+        self.vision_cuda_graph=bool(profile.get('visionCudaGraph',False))
         self.batch=int(profile.get('batch',1));self.max_input=int(profile.get('maxInputTokens',256))
         self.max_output=int(profile.get('maxOutputTokens',128));self.pixels=int(profile.get('imagePixels',65536))
         if self.batch not in (1,2,4,8) or self.max_input<1 or self.max_output<1 or self.pixels<1024:
@@ -29,6 +32,9 @@ class Model:
         self.shared_projection=bool(profile.get('sharedProjectionWeights',False))
         self.packed_program=bool(profile.get('packedDecoderProgram',False))
         self.pack_prompt=bool(profile.get('packPrompt',False))
+        self.join_decode_input_projections=bool(profile.get('joinDecodeInputProjections',False))
+        if self.join_decode_input_projections and not (self.packed_program and self.shared_projection and self.decode_chunk==4):
+            raise ValueError('Joined decode projections require packed/shared decode width4')
         if self.pack_prompt and not self.packed_program:raise ValueError('Packed prompt inputs require the packed decoder profile')
         self.register_delta_128=bool(profile.get('registerDelta128',False));self.flat_packed_concat=bool(profile.get('flatPackedConcat',False))
         if self.register_delta_128 and (not self.shared_projection or not profile.get('fusedDelta',False) or self.config['text_config']['linear_key_head_dim']!=128 or self.config['text_config']['linear_value_head_dim']!=128):
@@ -38,6 +44,14 @@ class Model:
         self.serial_graph_reuse=bool(profile.get('serialGraphReuse',False))
         self.serial_target_graph_reuse=bool(profile.get('serialTargetGraphReuse',False))
         self.shared_output_storage=bool(profile.get('sharePackedOutputStorage',False))
+        self.shared_activation_storage=bool(profile.get('sharePackedActivationStorage',False))
+        self.internal_packed_stores=bool(profile.get('internalPackedStores',False))
+        self.compact_kv_outputs=bool(profile.get('compactKVOutputs',False))
+        if self.compact_kv_outputs and not self.packed_program:raise ValueError('Compact KV outputs require the packed decoder')
+        if self.internal_packed_stores and not (self.packed_program and self.shared_projection and self.serial_target_graph_reuse and self.shared_output_storage and self.decode_chunk==4):
+            raise ValueError('Internal packed stores require packed/shared serial-target shared-output decode width4')
+        if self.shared_activation_storage and not (self.packed_program and self.shared_projection and self.serial_target_graph_reuse and self.decode_chunk in (4,8)):
+            raise ValueError('Shared decoder activations require packed/shared serial-target decode width4/8')
         if self.shared_output_storage and (not self.packed_program or not self.serial_target_graph_reuse):
             raise ValueError('Shared packed output storage requires the packed serial-target profile')
         if self.serial_target_graph_reuse and (not self.packed_program or not self.resident_controls or not profile.get('cudaGraph',False)):
@@ -52,9 +66,13 @@ class Model:
         elif self.prefill_chunk!=self.decode_chunk:raise ValueError('Different prefill/decode chunks require the shared projection profile')
         self.speculative_depth=int(profile.get('speculativeMTP',0))
         self.speculative_candidates=int(profile.get('speculativeHeadCandidates',0))
+        self.gpu_draft_bundle=bool(profile.get('gpuDraftBundle',False))
+        if self.gpu_draft_bundle and not (self.speculative_depth==3 and self.speculative_candidates==8192 and self.decode_chunk==4 and self.resident_controls and self.serial_graph_reuse):raise ValueError('GPU draft bundle requires resident serial MTP3/T4 with8192 candidates')
         self.speculative_replay=bool(profile.get('speculativePrefixReplay',False))
         self.deferred_state_commit=bool(profile.get('deferPackedStateCommit',False))
         self.native_prefix_commit=bool(profile.get('nativePackedPrefixCommit',False))
+        if self.compact_kv_outputs and self.speculative_depth and not (self.speculative_replay and self.native_prefix_commit):
+            raise ValueError('Compact KV speculation requires native prefix replay')
         self.reuse_verified_head=bool(profile.get('reuseVerifiedHead',False))
         if self.reuse_verified_head and not (self.packed_program and self.native_prefix_commit and self.speculative_replay and self.speculative_depth):
             raise ValueError('Verified head reuse requires native packed speculative replay')
@@ -68,6 +86,14 @@ class Model:
             raise ValueError('Indexed MTP proposal head requires an enabled MTP profile and valid candidate count')
         if self.speculative_depth not in (0,1,3,7) or self.speculative_depth and (self.speculative_depth+1>self.decode_chunk or self.decode_chunk>16):
             raise ValueError('Experimental MTP depth0/1/3/7 must fit the target chunk')
+        self.phase_output_partition_layers=profile.get('phaseOutputPartitionLayers',0)
+        if type(self.phase_output_partition_layers) is not int or self.phase_output_partition_layers not in (0,4,8):
+            raise ValueError('Phase output partitions require integer0/4/8')
+        if self.phase_output_partition_layers:
+            if not all((self.packed_program,self.deferred_state_commit,self.native_prefix_commit,self.register_delta_128,self.shared_output_storage,self.shared_activation_storage,self.compact_kv_outputs)):
+                raise ValueError('Phase output profile requires packed deferred native128 replay with compact KV and shared pools')
+            from xModel.qwen35.vl_0_8b.cuda_phase_output_plan import phase_output_plan
+            phase_output_plan(self.config['text_config'],self.batch,self.capacity,self.prefill_chunk,self.decode_chunk,self.phase_output_partition_layers)
         self.tokenizer=garnet.tokenizer();self.tokenizer.open(root)
         self.stops=[self.tokenizer.token_id('<|im_end|>'),self.tokenizer.token_id('<|endoftext|>')]
         eos=self.config['text_config'].get('eos_token_id')
@@ -78,7 +104,7 @@ class Model:
             if self.packed_program:
                 from xModel.qwen35.vl_0_8b.cuda_packed_decoder import CUDAPackedDecoder
                 self.decoder=CUDAPackedDecoder(root,self.config['text_config'],self.batch,self.capacity,self.prefill_chunk,self.decode_chunk,
-                    int(profile.get('projectionWorkspaceBytes',0)),self.speculative_replay or bool(profile.get('retainLinearInputs',False)),self.register_delta_128,self.flat_packed_concat,self.deferred_state_commit,self.shared_output_storage)
+                    int(profile.get('projectionWorkspaceBytes',0)),self.speculative_replay or bool(profile.get('retainLinearInputs',False)),self.register_delta_128,self.flat_packed_concat,self.deferred_state_commit,self.shared_output_storage,self.join_decode_input_projections,self.shared_activation_storage,self.internal_packed_stores,self.compact_kv_outputs,phase_output_partition_layers=self.phase_output_partition_layers)
             elif self.shared_projection:
                 from xModel.qwen35.vl_0_8b.cuda_hybrid import CUDAHybridDecoder
                 self.decoder=CUDAHybridDecoder(root,self.config['text_config'],self.batch,self.capacity,self.prefill_chunk,self.decode_chunk,
@@ -94,9 +120,19 @@ class Model:
                 gh,gw=profile['imageGrid'];self._build_vision(int(gh),int(gw))
             if self.speculative_depth:
                 from xModel.qwen35.vl_0_8b.cuda_speculative import CUDASpeculativeSession
-                self.speculative=CUDASpeculativeSession(self.decoder,self.checkpoint,self.stops,self.speculative_depth,self.speculative_candidates,self.speculative_replay)
+                self.speculative=CUDASpeculativeSession(self.decoder,self.checkpoint,self.stops,self.speculative_depth,self.speculative_candidates,self.speculative_replay,gpu_draft_bundle=self.gpu_draft_bundle)
         except:
             self.close();raise
+
+    def _check_vision_artifact(self):
+        path=self.vision_artifact;expected=self.vision_artifact_sha256
+        if path is None:
+            if expected is not None:raise ValueError('Vision engine artifact SHA256 requires its artifact path')
+            return
+        if not isinstance(path,str) or not os.path.isabs(path) or not isinstance(expected,str) or len(expected)!=64 or any(c not in '0123456789abcdef' for c in expected.lower()):
+            raise ValueError('Vision engine artifact requires an absolute path and SHA256')
+        with open(path,'rb') as stream:actual=hashlib.file_digest(stream,'sha256').hexdigest()
+        if actual!=expected.lower():raise ValueError('Vision engine artifact SHA256 differs')
 
     def _build_vision(self,gh,gw):
         if gh<2 or gw<2 or gh%2 or gw%2:raise ValueError('CUDA vision profile requires a positive merged grid')
@@ -105,7 +141,12 @@ class Model:
         if self.vision is not None:
             if self.grid!=[gh,gw]:raise ValueError('Image grid differs from loaded CUDA profile; reload the profile explicitly')
             return 0.
-        start=time.monotonic();self.vision=self.factory.create_cuda_vision(self.checkpoint,self.config,gh,gw)
+        start=time.monotonic()
+        if self.vision_artifact is None:self.vision=self.factory.create_cuda_vision(self.checkpoint,self.config,gh,gw)
+        else:
+            self._check_vision_artifact()
+            self.vision=self.factory.create_cuda_vision(self.checkpoint,self.config,gh,gw,engine_artifact=self.vision_artifact)
+        if self.vision_cuda_graph:self.vision.enable_cuda_graph()
         self.grid=[gh,gw];return (time.monotonic()-start)*1000
 
     def _prepare(self,prompt,image):
@@ -184,7 +225,7 @@ class Model:
                 'ttft_seconds':first-started,'total_seconds':done-started,'input_seconds':input_done-started,
                 'prefill_seconds':first-input_done,'decode_seconds':done-first,'vision_compile_ms':sum(r[4] for r in rows),
                 'profile':self.profile,'source':__file__,'cache_policy':{'prefix':False,'image':False,'answer':False},
-                'decoder_profiles':{'prefill_chunk':self.prefill_chunk,'decode_chunk':self.decode_chunk,'shared_projection_weights':self.shared_projection,'packed_decoder_program':self.packed_program,'resident_controls':self.resident_controls,'register_delta_128':self.register_delta_128,'flat_packed_concat':self.flat_packed_concat,'serial_target_graph_reuse':self.serial_target_graph_reuse,'deferred_state_commit':self.deferred_state_commit,'native_prefix_commit':self.native_prefix_commit,'shared_output_storage':self.shared_output_storage},
+                'decoder_profiles':{'prefill_chunk':self.prefill_chunk,'decode_chunk':self.decode_chunk,'shared_projection_weights':self.shared_projection,'packed_decoder_program':self.packed_program,'resident_controls':self.resident_controls,'register_delta_128':self.register_delta_128,'flat_packed_concat':self.flat_packed_concat,'serial_target_graph_reuse':self.serial_target_graph_reuse,'deferred_state_commit':self.deferred_state_commit,'native_prefix_commit':self.native_prefix_commit,'shared_output_storage':self.shared_output_storage,'compact_kv_outputs':self.compact_kv_outputs},
                 'speculative':{'enabled':self.speculative is not None,'mtp_depth':self.speculative_depth,
                     'reuse_verified_head':self.reuse_verified_head,
                     'serial_graph_reuse':self.serial_graph_reuse if self.speculative is not None else False,
@@ -223,12 +264,13 @@ class Model:
     def memory_info(self):
         decoder=self.decoder.memory_info()
         vision=json.loads(self.vision.graph.stats_json()) if self.vision is not None else None
+        vision_input_bytes=self.vision.input_buffer_bytes() if self.vision is not None else 0
         total=decoder['owned_decoder_bytes']
         if vision is not None:
-            total=total+vision['trt_allocator_live_bytes']+vision['device_output_bytes'] if total is not None and vision['allocator_tracking_enabled'] else None
+            total=total+vision['trt_allocator_live_bytes']+vision['device_output_bytes']+vision_input_bytes if total is not None and vision['allocator_tracking_enabled'] else None
         speculative=self.speculative.memory_info() if self.speculative is not None else None
         if speculative is not None:total=total+speculative['owned_speculative_bytes'] if total is not None and speculative['owned_speculative_bytes'] is not None else None
-        return {'decoder':decoder,'vision':vision,'speculative':speculative,'owned_model_bytes':total,
+        return {'decoder':decoder,'vision':vision,'vision_input_buffer_bytes':vision_input_bytes,'speculative':speculative,'owned_model_bytes':total,
             'scope':'Retained tensor bytes plus tracked TRT runtime allocator; transient request/build allocations, driver/external libraries and graph executable overhead may be absent. Not process VRAM peak.'}
 
     def release_runtime(self):self.close()

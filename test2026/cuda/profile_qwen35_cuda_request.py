@@ -30,6 +30,7 @@ profile.update({'decodeChunk':int(os.environ.get('GARNET_QWEN35_DECODE_CHUNK',st
     'speculativeHeadCandidates':int(os.environ.get('GARNET_QWEN35_MTP_HEAD_CANDIDATES','0')),
     'speculativePrefixReplay':os.environ.get('GARNET_QWEN35_MTP_PREFIX_REPLAY','0')=='1',
     'projectionWorkspaceBytes':int(os.environ.get('GARNET_QWEN35_PROJECTION_WORKSPACE_BYTES','0'))})
+if os.environ.get('GARNET_QWEN35_COMPACT_KV_OUTPUTS','0')=='1':profile['compactKVOutputs']=True
 runtime=ctypes.CDLL('C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v13.2/bin/x64/cudart64_13.dll')
 prompt='Describe the main objects in this image in one sentence.'
 print(json.dumps({'event':'profile_load_begin','model':name,'profile':profile,'unix_seconds':time.time()}),flush=True)

@@ -10,6 +10,9 @@
 #include "../backends/tensorrt/cuda_compiled_graph.h"
 #include "../backends/tensorrt/cuda_tensor_io.h"
 #include "../backends/tensorrt/cuda_packed_prefix.h"
+#include "../backends/tensorrt/cuda_tree_commit.h"
+#include "../backends/tensorrt/cuda_execution_bundle.h"
+#include "../backends/tensorrt/cuda_mtp_draft.h"
 #include "../backends/cpu/tokenizer_api.h"
 #include <string>
 #include <deque>
@@ -188,6 +191,9 @@ namespace Garnet
             APISET().AddClass<0,CUDACompiledGraph>("compiled_graph");
             APISET().AddClass<0,CUDATensorIO>("cuda_tensor_io");
             APISET().AddClass<0,CUDAPackedPrefix>("cuda_packed_prefix");
+            APISET().AddClass<0,CUDATreeCommit>("cuda_tree_commit");
+            APISET().AddClass<0,CUDAExecutionBundle>("cuda_execution_bundle");
+            APISET().AddClass<0,CUDAMTPDraft>("cuda_mtp_draft");
             APISET().AddClass<0,CPUTokenizer>("tokenizer");
 			APISET().AddVarFunc("replace_rows_by_mask", &GarnetAPI::ReplaceRowsByMask);
 			APISET().AddVarFunc("tensor_last_row", &GarnetAPI::TensorLastRow);

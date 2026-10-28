@@ -18,16 +18,29 @@ native_prefix=len(sys.argv)>11 and sys.argv[11]=='1'
 shared_output=len(sys.argv)>12 and sys.argv[12]=='1'
 verify_width=int(sys.argv[13]) if len(sys.argv)>13 else 4
 reuse_verified_head=len(sys.argv)>14 and sys.argv[14]=='1'
+join_decode_inputs=len(sys.argv)>15 and sys.argv[15]=='1'
+shared_activation=len(sys.argv)>16 and sys.argv[16]=='1'
+internal_stores=len(sys.argv)>17 and sys.argv[17]=='1'
 assert verify_width in (4,8) and verify_width<=chunk
 b=fixture['batch']
 if packed_program:
     from xModel.qwen35.vl_0_8b.cuda_packed_decoder import CUDAPackedDecoder
-    model=CUDAPackedDecoder(fixture['checkpoint'],fixture['config'],b,fixture['capacity'],chunk,chunk,retain_linear_inputs=prefix_replay,register_delta_128=register_delta,flat_concat=flat_concat,deferred_state_commit=deferred_state,shared_output_storage=shared_output)
+    model=CUDAPackedDecoder(fixture['checkpoint'],fixture['config'],b,fixture['capacity'],chunk,chunk,retain_linear_inputs=prefix_replay,register_delta_128=register_delta,flat_concat=flat_concat,deferred_state_commit=deferred_state,shared_output_storage=shared_output,join_decode_input_projections=join_decode_inputs,shared_activation_storage=shared_activation,internal_packed_stores=internal_stores)
 else:model=CUDADecoder(fixture['checkpoint'],fixture['config'],b,fixture['capacity'],chunk,True,True,retain_linear_inputs=prefix_replay,register_delta_128=register_delta)
 model.resident_controls=len(sys.argv)>6 and sys.argv[6]=='1'
 model.serial_target_graph_reuse=len(sys.argv)>9 and sys.argv[9]=='1'
 model.reuse_verified_head=reuse_verified_head
 model.enable_cuda_graph(True)
+if internal_stores:
+    memory=model.memory_info();bodies=memory['graphs'][:-1]
+    assert sum(g['internal_packed_stores'] for g in bodies)==len(bodies)*len(fixture['config']['layer_types'])
+    assert sum(g['internal_packed_root_fills'] for g in bodies)==len(bodies)
+    assert all(not g['network_output_aliases_input'] for g in memory['graphs'])
+if join_decode_inputs:
+    assert sum(g['joined_projection_inputs'] for g in model.memory_info()['graphs'])==fixture['config']['layer_types'].count('linear_attention')
+if shared_activation:
+    memory=model.memory_info();assert memory['shared_activation_pool_bytes']>0
+    assert all(g['user_managed_workspace'] and g['external_workspace_bound'] and g['external_workspace_capacity_bytes']==memory['shared_activation_pool_bytes'] for g in memory['graphs'][:-1])
 if prefix_replay:
     if packed_program:
         from xModel.qwen35.vl_0_8b.cuda_packed_replay import CUDAPackedDeltaReplayVerifier
@@ -43,7 +56,7 @@ request_tensors=[model.hidden,model.last_hidden,model.active,model.position,mode
 def capture(tensors):return [packed(t) for t in tensors]
 assert len(fixture['steps'])==4
 tokens=[list(fixture['steps'][t%4]['tokens']) for t in range(verify_width)]
-flags=[1]*(b-1)+[0];active=[list(flags) for _ in range(verify_width)]
+flags=[1]*(b-1)+[0] if b>1 else [1];active=[list(flags) for _ in range(verify_width)]
 positions=[[[t]*3 for t in range(verify_width)] for _ in range(b)]
 checks=[]
 try:
@@ -215,6 +228,7 @@ try:
         assert all(g['external_output_storage'] and g['owned_device_output_bytes']==0 for g in m['graphs'][:-1])
     result={'batch':b,'chunk':chunk,'prefix_replay':prefix_replay,'packed_program':packed_program,'resident_controls':model.resident_controls,'serial_target_graph_reuse':model.serial_target_graph_reuse,'deferred_state_commit':deferred_state,'native_prefix_commit':native_prefix,'register_delta_128':register_delta,'flat_concat':flat_concat,'checks':checks,'all_passed':True,'memory':memory,
         'invalid_prefix_token_control_capacity_and_close_rollback':True,'deferred_checks':deferred_checks,'shared_output_storage':shared_output,'verification_width':verify_width,
+        'join_decode_input_projections':join_decode_inputs,'shared_activation_storage':shared_activation,'native_joined_inputs':sum(g['joined_projection_inputs'] for g in model.memory_info()['graphs']),
         'scope':'Native correctness prototype, restore/recompute partial prefixes. No speculative serving, numerical-oracle or speed acceptance.'}
     with open(output,'w') as stream:json.dump(result,stream,indent=2)
     print('QWEN35_TARGET_VERIFIER_COMPLETE','batch',b,'chunk',chunk,'prefix_patterns',len(patterns),flush=True)

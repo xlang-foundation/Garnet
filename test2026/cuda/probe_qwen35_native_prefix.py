@@ -17,6 +17,9 @@ whole_program=len(sys.argv)>6 and sys.argv[6]=='1'
 finite_bytes=len(sys.argv)>7 and sys.argv[7]=='1'
 pack_prompt=len(sys.argv)>8 and sys.argv[8]=='1'
 reuse_head=len(sys.argv)>9 and sys.argv[9]=='1'
+join_decode_inputs=len(sys.argv)>10 and sys.argv[10]=='1'
+shared_activation=len(sys.argv)>11 and sys.argv[11]=='1'
+internal_stores=len(sys.argv)>12 and sys.argv[12]=='1'
 record=json.loads(Path(source).read_text())[index];b=record['batch']
 _,images=batch_inputs(record['dataset'],record['trial'],record['workload_group'],b,True)
 assert input_hashes(images)==record['input_sha256']
@@ -25,6 +28,9 @@ profile=dict(record['profile']);profile.update({'deferPackedStateCommit':True,'n
     'serialTargetGraphReuse':True,'retainLinearInputs':True,'sharePackedOutputStorage':shared_output})
 if pack_prompt:profile['packPrompt']=True
 if reuse_head:profile['reuseVerifiedHead']=True
+if join_decode_inputs:profile['joinDecodeInputProjections']=True
+if shared_activation:profile['sharePackedActivationStorage']=True
+if internal_stores:profile['internalPackedStores']=True
 assert profile['speculativeMTP']==3 and profile['packedDecoderProgram'] and profile['registerDelta128']
 
 def hashes(model):
@@ -54,6 +60,18 @@ print('NATIVE_PREFIX_LOAD_BEGIN',time.time(),b,flush=True)
 model=Model(checkpoint,profile,record['model'])
 try:
     print('NATIVE_PREFIX_LOAD_COMPLETE',time.time(),flush=True)
+    if internal_stores:
+        native=model.decoder.memory_info();bodies=native['graphs'][:-1]
+        assert sum(g['internal_packed_stores'] for g in bodies)==len(bodies)*len(model.config['text_config']['layer_types'])
+        assert sum(g['internal_packed_root_fills'] for g in bodies)==len(bodies)
+        assert all(not g['network_output_aliases_input'] for g in native['graphs'])
+    if join_decode_inputs:
+        expected=model.config['text_config']['layer_types'].count('linear_attention');native=model.decoder.memory_info()
+        assert native['joined_projection_group_count']==expected
+        assert sum(g['joined_projection_inputs'] for g in native['graphs'])==expected
+    if shared_activation:
+        native=model.decoder.memory_info();assert native['shared_activation_pool_bytes']>0
+        assert all(g['user_managed_workspace'] and g['external_workspace_bound'] and g['external_workspace_capacity_bytes']==native['shared_activation_pool_bytes'] for g in native['graphs'][:-1])
     actual_whole=all(g.get('qwen35_whole_program_cuda',False) for g in model.decoder.memory_info()['graphs'])
     assert actual_whole==whole_program,'Pretrained build-policy label differs from actual DLL'
     for trial in range(2):
@@ -73,6 +91,7 @@ finally:model.close()
 ordinary_profile=dict(profile);ordinary_profile.update({'speculativeMTP':0,'speculativeHeadCandidates':0,
     'speculativePrefixReplay':False,'deferPackedStateCommit':False,'nativePackedPrefixCommit':False,'sharePackedOutputStorage':False})
 if reuse_head:ordinary_profile['reuseVerifiedHead']=False
+if internal_stores:ordinary_profile['internalPackedStores']=False
 print('NATIVE_PREFIX_ORDINARY_LOAD_BEGIN',time.time(),flush=True)
 model=Model(checkpoint,ordinary_profile,record['model'])
 try:

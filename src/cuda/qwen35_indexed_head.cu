@@ -38,6 +38,33 @@ __global__ void indexedBest(Qwen35IndexedHeadConfig c,const int* indices,const _
     best=Reduce(temporary).Reduce(best,better);
     if(!threadIdx.x){ids[row]=best.id;if(values)values[row]=best.value;}
 }
+struct BestTwo {Best first,second;};
+__device__ BestTwo emptyTwo(){return {{-CUDART_INF_F,-1},{-CUDART_INF_F,-1}};}
+__device__ void insertTwo(BestTwo& pair,Best value){
+    if(value.id<0||!isfinite(value.value)||value.id==pair.first.id||value.id==pair.second.id)return;
+    Better better;
+    if(better(pair.first,value).id==value.id){pair.second=pair.first;pair.first=value;}
+    else if(better(pair.second,value).id==value.id)pair.second=value;
+}
+struct MergeTwo {
+    __device__ BestTwo operator()(BestTwo a,BestTwo b)const{
+        insertTwo(a,b.first);insertTwo(a,b.second);return a;
+    }
+};
+__global__ void indexedBestTwo(Qwen35IndexedHeadConfig c,const int* indices,const __nv_bfloat16* scores,
+    long long* ids,float* values){
+    int row=blockIdx.x;BestTwo pair=emptyTwo();
+    for(int i=threadIdx.x;i<c.candidates;i+=256){
+        int id=indices[row*c.candidates+i];float value=__bfloat162float(scores[row*c.candidates+i]);
+        if(id>=0&&id<c.vocab)insertTwo(pair,{value,id});
+    }
+    using Reduce=cub::BlockReduce<BestTwo,256>;__shared__ typename Reduce::TempStorage temporary;
+    pair=Reduce(temporary).Reduce(pair,MergeTwo{});
+    if(!threadIdx.x){
+        ids[2*row]=pair.first.id;ids[2*row+1]=pair.second.id;
+        if(values){values[2*row]=pair.first.value;values[2*row+1]=pair.second.value;}
+    }
+}
 struct Range{uintptr_t pointer;size_t bytes;};
 bool overlap(Range a,Range b){
     if(!a.pointer||!b.pointer)return false;
@@ -72,6 +99,25 @@ int RunQwen35IndexedHead(const Qwen35IndexedHeadConfig& c,const float* query,con
     indexedDot<<<c.rows*c.candidates,256,0,stream>>>(c,query,(const __nv_bfloat16*)table,indices,(__nv_bfloat16*)scores);
     if(cudaPeekAtLastError()!=cudaSuccess)return 1;
     indexedBest<<<c.rows,256,0,stream>>>(c,indices,(const __nv_bfloat16*)scores,ids,values);
+    return cudaPeekAtLastError()==cudaSuccess?0:1;
+}
+int RunQwen35IndexedHeadTop2(const Qwen35IndexedHeadConfig& c,const float* query,const void* table,const int* indices,
+    void* scores,long long* ids,float* values,cudaStream_t stream) noexcept {
+    if(c.rows<1||c.rows>8||c.hidden<1||c.hidden>16384||c.vocab<1||c.vocab>1048576||
+        c.candidates<1||c.candidates>65536||c.candidates>c.vocab||!query||!table||!indices||!scores||!ids)return 1;
+    Range ranges[]={{reinterpret_cast<uintptr_t>(query),size_t(c.rows)*c.hidden*4},
+        {reinterpret_cast<uintptr_t>(table),size_t(c.vocab)*c.hidden*2},
+        {reinterpret_cast<uintptr_t>(indices),size_t(c.rows)*c.candidates*4},
+        {reinterpret_cast<uintptr_t>(scores),size_t(c.rows)*c.candidates*2},
+        {reinterpret_cast<uintptr_t>(ids),size_t(c.rows)*2*8},
+        {reinterpret_cast<uintptr_t>(values),size_t(c.rows)*2*4}};
+    size_t alignment[]={4,2,4,2,8,4};
+    for(int i=0;i<6;++i)if(ranges[i].pointer&&
+        (ranges[i].pointer%alignment[i]||ranges[i].pointer>UINTPTR_MAX-ranges[i].bytes))return 1;
+    for(int out=3;out<6;++out)for(int prior=0;prior<out;++prior)if(overlap(ranges[out],ranges[prior]))return 1;
+    indexedDot<<<c.rows*c.candidates,256,0,stream>>>(c,query,(const __nv_bfloat16*)table,indices,(__nv_bfloat16*)scores);
+    if(cudaPeekAtLastError()!=cudaSuccess)return 1;
+    indexedBestTwo<<<c.rows,256,0,stream>>>(c,indices,(const __nv_bfloat16*)scores,ids,values);
     return cudaPeekAtLastError()==cudaSuccess?0:1;
 }
 size_t Qwen35HeadCandidatesWorkspace(int vocab) noexcept {

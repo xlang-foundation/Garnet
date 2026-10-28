@@ -13,6 +13,7 @@ class CUDAPackedDeltaReplayVerifier(CUDATargetVerifier):
         if not getattr(decoder,'packed_state_program',False) or not decoder.retain_linear_inputs:
             raise ValueError('Packed replay requires retained packed decoder projections')
         self.replay_graph=None;self.cache_spans=None;self.native_prefix=None
+        self.reset_commit_metrics()
         self.deferred=bool(getattr(decoder,'deferred_state_commit',False))
         if native_prefix_commit is None:native_prefix_commit=bool(getattr(decoder,'native_prefix_commit',False))
         self.reuse_verified_head=bool(getattr(decoder,'reuse_verified_head',False))
@@ -20,14 +21,14 @@ class CUDAPackedDeltaReplayVerifier(CUDATargetVerifier):
             raise ValueError('Verified head reuse requires the native packed-prefix profile')
         if native_prefix_commit and (not self.deferred or not decoder.register_delta_128):
             raise ValueError('Native prefix commit requires deferred state and register128 arithmetic')
+        if getattr(decoder,'compact_kv_outputs',False) and not native_prefix_commit:
+            raise ValueError('Compact KV verification requires native prefix commit')
         super().__init__(decoder,checkpoint,max_tokens)
         try:
             p=decoder.programs[decoder.decode_chunk_size];b=decoder.batch;t=decoder.decode_chunk_size
             if native_prefix_commit:
                 self.native_prefix=garnet.cuda_packed_prefix()
-                self.native_prefix.build(checkpoint,json.dumps({'config':decoder.config,'layout':p.layout,
-                    'batch':b,'tokens':t,'capacity':decoder.capacity,'state_width':p.state_width,
-                    'packed_width':p.output_width,'hidden_width':p.hidden_width}))
+                self.native_prefix.build(checkpoint,json.dumps(p.commit_spec(False)))
                 return
             self.cache_spans=self.io.zeros([decoder.batch,2])
             symbols=[tensor.input('whole_replay_'+str(i),shape=s,dtype=tensor.float32)
@@ -86,11 +87,26 @@ class CUDAPackedDeltaReplayVerifier(CUDATargetVerifier):
             raise
         finally:self.decoder._release_state_transaction(self)
 
+    def reset_commit_metrics(self):
+        if getattr(self,'pending',False):raise ValueError('Cannot reset commit metrics during pending verification')
+        kinds=('native_full_replay','native_partial_replay','canonical_full_copy','graph_replay_state_copy')
+        self._commit_attempts={kind:0 for kind in kinds}
+        self._commit_completed={kind:0 for kind in kinds}
+
+    def commit_operation_metrics(self):
+        return {'attempted':dict(self._commit_attempts),'completed':dict(self._commit_completed),
+            'unconfirmed':{kind:self._commit_attempts[kind]-self._commit_completed[kind] for kind in self._commit_attempts},
+            'scope':'Verifier commit calls only; prefill and direct decoder commits excluded. Unconfirmed means an attempt did not return successfully, not a proven failed GPU write.'}
+
     def _write_canonical(self,source,packed):
-        if packed:self.io.slice_into(source,self.decoder.programs[self.decoder.decode_chunk_size].hidden_width,self.decoder.state)
+        if packed and getattr(self.decoder,'compact_kv_outputs',False):
+            self.decoder.programs[self.decoder.decode_chunk_size].commit_all(source,self.decoder.state,self.decoder.slot_tensor,self.decoder.active)
+        elif packed:self.io.slice_into(source,self.decoder.programs[self.decoder.decode_chunk_size].hidden_width,self.decoder.state)
         else:self.io.copy_into(source,self.decoder.state)
 
     def _commit_canonical(self,source,packed):
+        _commit_kind='canonical_full_copy' if packed else 'graph_replay_state_copy'
+        self._commit_attempts[_commit_kind]+=1
         # This is the final write, after all recoverable validation/head work.
         # An error during that write has unknown completion; poison instead of
         # pretending an old canonical backup still exists.
@@ -99,16 +115,20 @@ class CUDAPackedDeltaReplayVerifier(CUDATargetVerifier):
             self.decoder.poisoned=True;self.pending=False
             self.decoder._release_state_transaction(self)
             raise
+        self._commit_completed[_commit_kind]+=1
 
     def _write_native(self,spans):
         self.native_prefix.commit(self.decoder.last_packed,self.decoder.state,spans)
 
-    def _commit_native(self,spans):
+    def _commit_native(self,spans,full_acceptance=False):
+        _commit_kind='native_full_replay' if full_acceptance else 'native_partial_replay'
+        self._commit_attempts[_commit_kind]+=1
         try:self._write_native(spans)
         except:
             self.decoder.poisoned=True;self.pending=False
             self.decoder._release_state_transaction(self)
             raise
+        self._commit_completed[_commit_kind]+=1
 
     def commit_prefix(self,counts):
         if not self.pending:raise ValueError('No pending verification to commit')
@@ -117,7 +137,10 @@ class CUDAPackedDeltaReplayVerifier(CUDATargetVerifier):
             raise ValueError('Accepted prefix exceeds submitted tokens')
         if counts==self.submitted:
             predictions=[self.predictions[row*self.max_tokens+n-1] if n else None for row,n in enumerate(counts)]
-            if self.deferred:self._commit_canonical(d.last_packed,True)
+            if self.deferred:
+                if d.programs[d.decode_chunk_size].replay_only_linear_state:
+                    self._commit_native([value for row in range(b) for value in (self.saved_slots[row],counts[row])],full_acceptance=True)
+                else:self._commit_canonical(d.last_packed,True)
             self.pending=False
             if self.deferred:d._release_state_transaction(self)
             return predictions
@@ -157,6 +180,7 @@ class CUDAPackedDeltaReplayVerifier(CUDATargetVerifier):
 
     def memory_info(self):
         result=super().memory_info()
+        result['commit_operations']=self.commit_operation_metrics()
         stats=json.loads(self.replay_graph.stats_json()) if self.replay_graph is not None else None
         native=json.loads(self.native_prefix.stats_json()) if self.native_prefix is not None else None
         spans=self.io.tensor_bytes(self.cache_spans) if self.cache_spans is not None else 0

@@ -238,13 +238,46 @@ class CUDADecoder:
         self.hidden=None;self.last_hidden=None;self.active=None;self.position=None;self.slot_tensor=None
 
 class CUDAImageEncoder:
-    def __init__(self,checkpoint,config,gh,gw,batch=1):
+    def __init__(self,checkpoint,config,gh,gw,batch=1,builder_workspace_bytes=None,engine_artifact=None):
+        self.staging_io=None;self.input_buffer=None
         self.shape=[batch,gh*gw,config['in_channels']*config['temporal_patch_size']*config['patch_size']**2]
         symbol=tensor.input('cuda_image_patches',shape=self.shape,dtype=tensor.float32)
         @T.fusion(name='qwen35_cuda_image',boundary='required')
         def forward(patches):return Qwen35VisionEncoder(patches,config,gh,gw)
         self.graph=garnet.compiled_graph()
-        try:self.graph.build(forward(symbol),[symbol],checkpoint)
+        try:
+            if builder_workspace_bytes is not None:self.graph.set_builder_workspace_bytes(builder_workspace_bytes)
+            if engine_artifact is None:self.graph.build(forward(symbol),[symbol],checkpoint)
+            else:
+                self.graph.load_refitted_single_input_engine(checkpoint,engine_artifact)
+                info=json.loads(self.graph.engine_info_json())
+                expected_output=[batch,gh*gw//config['spatial_merge_size']**2,config['out_hidden_size']]
+                if not info['single_static_float32_input_and_output'] or next(x['shape'] for x in info['io'] if x['input'])!=self.shape or next(x['shape'] for x in info['io'] if x['output'])!=expected_output:
+                    raise ValueError('Vision engine artifact geometry differs from loaded image/model profile')
         except:self.graph.close();raise
-    def encode_patches(self,patches):return self.graph.run_device([patches])
-    def close(self):self.graph.close()
+    def enable_cuda_graph(self):
+        if self.graph is None:raise ValueError('Vision encoder is closed')
+        if self.input_buffer is not None:raise ValueError('Vision graph replay already enabled')
+        # Fixed bindings are required for replay. The separate I/O object owns
+        # no checkpoint/table; it only supplies one stable FP32 staging tensor.
+        self.staging_io=garnet.cuda_tensor_io()
+        try:
+            self.input_buffer=self.staging_io.zeros(self.shape)
+            self.graph.enable_serial_graph_reuse(True)
+            self.graph.enable_cuda_graph(True)
+        except:
+            self.input_buffer=None;self.staging_io.close();self.staging_io=None
+            raise
+    def input_buffer_bytes(self):
+        return self.staging_io.tensor_bytes(self.input_buffer) if self.input_buffer is not None else 0
+    def encode_patches(self,patches):
+        if self.graph is None:raise ValueError('Vision encoder is closed')
+        if self.input_buffer is not None:
+            self.staging_io.copy_into(patches,self.input_buffer);patches=self.input_buffer
+        return self.graph.run_device([patches])
+    def close(self):
+        try:
+            if self.graph is not None:self.graph.close()
+        finally:
+            self.graph=None;self.input_buffer=None
+            if self.staging_io is not None:self.staging_io.close();self.staging_io=None

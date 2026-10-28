@@ -66,31 +66,53 @@ __global__ void packedCommitKV(Qwen35PackedCommitConfig c,Qwen35PackedCommitSpan
     int head=i%c.kv_heads;i/=c.kv_heads;int which=i%2;i/=2;int layer=i%c.full_layers,b=i/c.full_layers;
     if(t>=spans.count[b])return;
     int slot=spans.start[b]+t;
-    int64_t offset=layout[layer]+((int64_t(which)*c.kv_heads+head)*c.capacity+slot)*c.head_dim+dim;
-    state[int64_t(b)*c.state_width+offset]=packed[int64_t(b)*c.packed_width+c.hidden_width+offset];
+    int64_t base=layout[layer*(c.compact_kv?2:1)];
+    int64_t offset=base+((int64_t(which)*c.kv_heads+head)*c.capacity+slot)*c.head_dim+dim;
+    int64_t source=c.compact_kv?layout[layer*2+1]+((int64_t(which)*c.kv_heads+head)*c.tokens+t)*c.head_dim+dim:c.hidden_width+offset;
+    state[int64_t(b)*c.state_width+offset]=packed[int64_t(b)*c.packed_width+source];
+}
+__global__ void packedCopyLinear(Qwen35PackedCommitConfig c,const float* packed,float* state,const Qwen35PackedLinearLayout* layout){
+    int layer=blockIdx.y,channels=2*c.key_heads*128+c.value_heads*128;
+    int width=channels*c.kernel+c.value_heads*128*128;
+    size_t i=size_t(blockIdx.x)*blockDim.x+threadIdx.x;if(i>=size_t(c.batch)*width)return;
+    int b=int(i/width),d=int(i%width);auto l=layout[layer];state[size_t(b)*c.state_width+l.state_offset+d]=packed[size_t(b)*c.packed_width+l.payload_offset+d];
+}
+__global__ void packedCopyKVAll(Qwen35PackedCommitConfig c,const float* packed,float* state,const int64_t* layout,const float* slots,const float* active,size_t elements){
+    size_t i=size_t(blockIdx.x)*blockDim.x+threadIdx.x;if(i>=elements)return;
+    int dim=i%c.head_dim;i/=c.head_dim;int t=i%c.tokens;i/=c.tokens;int h=i%c.kv_heads;i/=c.kv_heads;int which=i%2;i/=2;int layer=i%c.full_layers,b=i/c.full_layers;
+    if(active[b*c.tokens+t]!=1)return;float slot=slots[b*c.tokens+t];
+    if(!isfinite(slot)||slot<0||slot>=c.capacity||slot!=floorf(slot))return;
+    int64_t destination=layout[layer*2]+((int64_t(which)*c.kv_heads+h)*c.capacity+int(slot))*c.head_dim+dim;
+    int64_t source=layout[layer*2+1]+((int64_t(which)*c.kv_heads+h)*c.tokens+t)*c.head_dim+dim;
+    state[int64_t(b)*c.state_width+destination]=packed[int64_t(b)*c.packed_width+source];
 }
 bool valid(const Qwen35PackedCommitConfig& c){
-    return c.batch>=1&&c.batch<=8&&c.tokens>=1&&c.tokens<=16&&c.key_heads>=1&&c.key_heads<=64&&
+    if(c.state_width<=0||c.state_width>INT32_MAX||c.packed_width<=0||c.packed_width>INT32_MAX||c.hidden_width<=0||c.hidden_width>c.packed_width||c.full_layers<0||c.full_layers>64)return false;
+    if(c.compact_kv&&((c.batch!=1&&c.batch!=2&&c.batch!=4&&c.batch!=8)||c.tokens>c.capacity))return false;
+    const bool layout=c.compact_kv?
+        (c.compact_kv==1&&(c.copy_only==0||c.copy_only==1)&&c.output_state_width>0&&c.output_state_width<=c.state_width&&c.hidden_width<=c.packed_width-c.output_state_width&&c.status_offset>=c.hidden_width+c.output_state_width&&c.status_offset==c.packed_width-c.full_layers):
+        (!c.copy_only&&c.packed_width>c.state_width&&c.hidden_width>0&&c.hidden_width<=c.packed_width-c.state_width);
+    return layout&&c.batch>=1&&c.batch<=8&&c.tokens>=1&&c.tokens<=(c.copy_only?128:16)&&c.key_heads>=1&&c.key_heads<=64&&
         c.value_heads>=1&&c.value_heads<=64&&c.value_heads%c.key_heads==0&&c.kernel>=1&&c.kernel<=4&&
         c.linear_layers>=1&&c.linear_layers<=64&&c.full_layers>=0&&c.full_layers<=64&&
         c.kv_heads>=1&&c.kv_heads<=32&&c.capacity>=32&&c.capacity<=8192&&c.head_dim>=1&&c.head_dim<=256&&
-        c.state_width>0&&c.state_width<=INT32_MAX&&c.packed_width>c.state_width&&c.packed_width<=INT32_MAX&&
-        c.hidden_width>0&&c.hidden_width<=c.packed_width-c.state_width;
+        c.state_width>0&&c.state_width<=INT32_MAX&&c.packed_width>0&&c.packed_width<=INT32_MAX;
 }
 bool overlap(const void* a,size_t n,const void* b,size_t m){
     auto x=reinterpret_cast<uintptr_t>(a),y=reinterpret_cast<uintptr_t>(b);return x>=y?x-y<m:y-x<n;
 }
 }
 size_t Qwen35PackedCommitWorkspace(const Qwen35PackedCommitConfig& c) noexcept {
-    return valid(c)?size_t(c.linear_layers)*c.batch*c.tokens*(2*c.key_heads*128+c.value_heads*128)*4:0;
+    return valid(c)&&!c.copy_only?size_t(c.linear_layers)*c.batch*c.tokens*(2*c.key_heads*128+c.value_heads*128)*4:0;
 }
+bool ValidQwen35PackedCommitConfig(const Qwen35PackedCommitConfig& c) noexcept{return valid(c);}
 int RunQwen35PackedCommit(const Qwen35PackedCommitConfig& c,Qwen35PackedCommitSpans spans,const float* packed,
     float* canonical,const Qwen35PackedLinearLayout* linear,const int64_t* full,const float* parameters,float* workspace,cudaStream_t stream) noexcept {
-    if(!valid(c)||!packed||!canonical||!linear||!parameters||!workspace||(c.full_layers&&!full))return 1;
+    if(!valid(c)||c.copy_only||!packed||!canonical||!linear||!parameters||!workspace||(c.full_layers&&!full))return 1;
     for(int b=0;b<c.batch;++b)if(spans.start[b]<0||spans.start[b]>c.capacity||spans.count[b]<0||
         spans.count[b]>c.tokens||spans.count[b]>c.capacity-spans.start[b])return 1;
     size_t packedBytes=size_t(c.batch)*c.packed_width*4,stateBytes=size_t(c.batch)*c.state_width*4,workBytes=Qwen35PackedCommitWorkspace(c);
-    size_t linearBytes=size_t(c.linear_layers)*sizeof(*linear),fullBytes=size_t(c.full_layers)*sizeof(*full);
+    size_t linearBytes=size_t(c.linear_layers)*sizeof(*linear),fullBytes=size_t(c.full_layers)*(c.compact_kv?2:1)*sizeof(*full);
     size_t paramBytes=size_t(c.linear_layers)*((2*c.key_heads*128+c.value_heads*128)*c.kernel+2*c.value_heads)*4;
     const void* pointers[]={packed,canonical,linear,full,parameters,workspace};
     size_t sizes[]={packedBytes,stateBytes,linearBytes,fullBytes,paramBytes,workBytes};
@@ -104,6 +126,17 @@ int RunQwen35PackedCommit(const Qwen35PackedCommitConfig& c,Qwen35PackedCommitSp
         size_t n=size_t(c.batch)*c.full_layers*2*c.kv_heads*c.tokens*c.head_dim;
         packedCommitKV<<<(n+255)/256,256,0,stream>>>(c,spans,packed,canonical,full,n);
     }
+    return cudaPeekAtLastError()==cudaSuccess?0:1;
+}
+int RunQwen35PackedCommitAll(const Qwen35PackedCommitConfig& c,const float* packed,float* canonical,
+    const Qwen35PackedLinearLayout* linear,const int64_t* full,const float* slots,const float* active,cudaStream_t stream) noexcept {
+    if(!valid(c)||!c.compact_kv||!c.copy_only||!packed||!canonical||!linear||!slots||!active||(c.full_layers&&!full))return 1;
+    const void* pointers[]={packed,canonical,linear,full,slots,active};size_t sizes[]={size_t(c.batch)*c.packed_width*4,size_t(c.batch)*c.state_width*4,size_t(c.linear_layers)*sizeof(*linear),size_t(c.full_layers)*2*sizeof(*full),size_t(c.batch)*c.tokens*4,size_t(c.batch)*c.tokens*4};
+    for(int i=0;i<6;++i)if(i!=1&&sizes[i]&&overlap(canonical,sizes[1],pointers[i],sizes[i]))return 1;
+    int width=(2*c.key_heads*128+c.value_heads*128)*c.kernel+c.value_heads*128*128;
+    packedCopyLinear<<<dim3((size_t(c.batch)*width+255)/256,c.linear_layers),256,0,stream>>>(c,packed,canonical,linear);
+    if(cudaPeekAtLastError()!=cudaSuccess)return 1;
+    if(c.full_layers){size_t n=size_t(c.batch)*c.full_layers*2*c.kv_heads*c.tokens*c.head_dim;packedCopyKVAll<<<(n+255)/256,256,0,stream>>>(c,packed,canonical,full,slots,active,n);}
     return cudaPeekAtLastError()==cudaSuccess?0:1;
 }
 }

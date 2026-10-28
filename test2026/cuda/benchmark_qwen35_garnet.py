@@ -26,6 +26,16 @@ profile['sharedProjectionWeights']=os.environ.get('GARNET_QWEN35_SHARED_PROJECTI
 profile['packedDecoderProgram']=os.environ.get('GARNET_QWEN35_PACKED_DECODER_PROGRAM','0')=='1'
 profile['packPrompt']=os.environ.get('GARNET_QWEN35_PACK_PROMPT','0')=='1'
 profile['reuseVerifiedHead']=os.environ.get('GARNET_QWEN35_REUSE_VERIFIED_HEAD','0')=='1'
+join_decode_inputs=os.environ.get('GARNET_QWEN35_JOIN_DECODE_INPUT_PROJECTIONS','0')=='1'
+if join_decode_inputs:profile['joinDecodeInputProjections']=True
+shared_activation=os.environ.get('GARNET_QWEN35_SHARED_ACTIVATION_STORAGE','0')=='1'
+if shared_activation:profile['sharePackedActivationStorage']=True
+internal_stores=os.environ.get('GARNET_QWEN35_INTERNAL_PACKED_STORES','0')=='1'
+if internal_stores:profile['internalPackedStores']=True
+compact_kv=os.environ.get('GARNET_QWEN35_COMPACT_KV_OUTPUTS','0')=='1'
+if compact_kv:profile['compactKVOutputs']=True
+vision_graph=os.environ.get('GARNET_QWEN35_VISION_CUDA_GRAPH','0')=='1'
+if vision_graph:profile['visionCudaGraph']=True
 profile['residentControls']=os.environ.get('GARNET_QWEN35_RESIDENT_CONTROLS','0')=='1'
 profile['serialGraphReuse']=os.environ.get('GARNET_QWEN35_SERIAL_GRAPH_REUSE','0')=='1'
 profile['serialTargetGraphReuse']=os.environ.get('GARNET_QWEN35_SERIAL_TARGET_GRAPH_REUSE','0')=='1'
@@ -48,6 +58,25 @@ print(json.dumps({'event':'load_begin','unix_seconds':time.time(),'engine':'garn
 model=Model(root,profile,name)
 print(json.dumps({'event':'load_complete','unix_seconds':time.time()}),flush=True)
 try:
+    if compact_kv:
+        native=model.decoder.memory_info()
+        assert native['compact_kv_outputs'] and native['compact_state_commit_bytes']>0
+        assert all(row['compact_kv_outputs'] and row['copy_only'] for row in native['compact_state_commit_helpers'])
+    if vision_graph:
+        assert json.loads(model.vision.graph.stats_json())['cuda_graph_requested']
+        assert model.vision.input_buffer_bytes()==1*12*20*1536*4
+    if internal_stores:
+        native=model.decoder.memory_info();bodies=native['graphs'][:-1]
+        assert sum(g['internal_packed_stores'] for g in bodies)==len(bodies)*len(model.config['text_config']['layer_types'])
+        assert sum(g['internal_packed_root_fills'] for g in bodies)==len(bodies)
+        assert all(not g['network_output_aliases_input'] for g in native['graphs'])
+    if join_decode_inputs:
+        expected=model.config['text_config']['layer_types'].count('linear_attention');native=model.decoder.memory_info()
+        assert native['joined_projection_group_count']==expected
+        assert sum(g['joined_projection_inputs'] for g in native['graphs'])==expected
+    if shared_activation:
+        native=model.decoder.memory_info();assert native['shared_activation_pool_bytes']>0
+        assert all(g['user_managed_workspace'] and g['external_workspace_bound'] and g['external_workspace_capacity_bytes']==native['shared_activation_pool_bytes'] for g in native['graphs'][:-1])
     actual_whole=all(g.get('qwen35_whole_program_cuda',False) for g in model.decoder.memory_info()['graphs'])
     assert actual_whole==(os.environ.get('GARNET_BENCHMARK_WHOLE_PROGRAM_CUDA')=='1'),'Benchmark build-policy label differs from actual DLL'
     for trial in range(rounds):
@@ -75,8 +104,15 @@ try:
                 'input_sha256':hashes,'workload_group':image_index,'matched_batch_inputs':matched_inputs,
                 'timing_scope':'Model.infer_batch: reset, JPEG/vision, tokenization, prefill/decode and output detokenization; load excluded'})
             result['io_memory']=json.loads(model.decoder.io.memory_json())
+            if vision_graph and trial>=2:
+                vision=json.loads(model.vision.graph.stats_json())
+                assert vision['contexts']==1 and vision['graph_captures']==1 and vision['graph_replays']>0 and vision['graph_capture_failures']==0,vision
+            if join_decode_inputs:assert result['io_memory']['joined_projection_group_count']==expected
             if os.environ.get('GARNET_BENCHMARK_MEMORY')=='1':
                 result['owned_memory']=model.memory_info()
+                if shared_activation:
+                    memory=result['owned_memory']['decoder'];assert memory['shared_activation_pool_bytes']>0
+                    assert all(g['user_managed_workspace'] and g['external_workspace_bound'] and g['contexts']==1 for g in memory['graphs'][:-1])
                 if profile['cudaGraph'] and trial>=2:
                     assert all(g['graph_captures']>0 and g['graph_replays']>0 and g['graph_capture_failures']==0 for g in result['owned_memory']['decoder']['graphs'])
             rows.append(result)

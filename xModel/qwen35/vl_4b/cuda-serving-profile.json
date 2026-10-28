@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "id": "cuda-shared-bf16",
+  "backend": "tensorrt",
+  "device": "CUDA",
+  "precision": "bf16",
+  "entrypoint": "cuda_decoder",
+  "runtime_options": {
+    "batch": 1, "maxInputTokens": 256, "maxOutputTokens": 256,
+    "imagePixels": 65536, "imageGrid": [12, 20],
+    "prefillChunk": 64, "decodeChunk": 4, "sharedProjectionWeights": true,
+    "fusedDelta": true, "fusedAttention": true, "cudaGraph": true,
+    "residentControls": true, "serialGraphReuse": true
+  },
+  "capabilities": {"single_request_generation": true, "static_batch_sizes": [1, 2, 4, 8], "continuous_batching": false}
+}

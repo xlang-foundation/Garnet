@@ -6,6 +6,7 @@
 #include "trt_context_pool.h"
 #include "trt_memory_profile.h"
 #include "qwen35_lowering.h"
+#include "qwen35_packed_store_plugin.h"
 #include "operator_execution_group.h"
 #include "trt_sync_allocator.h"
 #include "weight_streaming_policy.h"
@@ -19,6 +20,7 @@
 #include "graph_capture.h"
 #include <iostream>
 #include <algorithm>
+#include <atomic>
 #include <chrono>
 #include <fstream>
 #include <filesystem>
@@ -165,6 +167,11 @@ namespace Garnet {
         struct CachedTRTExecution {
             int device = -1;
             int64_t weightStreamingBudget = -1;
+            bool userManagedWorkspace = false;
+            std::atomic<bool> workspaceReady{false};
+            std::mutex workspaceMutex;
+            X::Value workspace;
+            size_t workspaceBytes = 0;
             // Destroyed after the destructor body has released every TRT user.
             std::unique_ptr<TRTSyncAllocator> allocator;
             nvinfer1::IRuntime* runtime = nullptr;
@@ -312,7 +319,7 @@ namespace Garnet {
 
         std::shared_ptr<CachedTRTExecution> GetCachedTRTEngine(
             const std::string& enginePath,
-            const Garnet::SafeTensorsIndex* weightIndex = nullptr) {
+            const Garnet::SafeTensorsIndex* weightIndex = nullptr,int workspacePolicy=-1) {
             int device = -1;
             if (cudaGetDevice(&device) != cudaSuccess) return nullptr;
             const auto streamingPolicy = ReadTRTWeightStreamingPolicy();
@@ -329,7 +336,8 @@ namespace Garnet {
                 if (found != g_trtExecutionCache.end()) {
                     if (auto owner = found->second.lock()) {
                         if (owner->device != device || bool(owner->allocator) != syncAllocator ||
-                            owner->weightStreamingBudget != streamingPolicy.budgetBytes) return nullptr;
+                            owner->weightStreamingBudget != streamingPolicy.budgetBytes ||
+                            (workspacePolicy>=0&&owner->userManagedWorkspace!=(workspacePolicy==1))) return nullptr;
                         return owner;
                     }
                 }
@@ -345,7 +353,8 @@ namespace Garnet {
                 if (found != g_trtExecutionCache.end()) {
                     if (auto owner = found->second.lock()) {
                         if (owner->device != device || bool(owner->allocator) != syncAllocator ||
-                            owner->weightStreamingBudget != streamingPolicy.budgetBytes) return nullptr;
+                            owner->weightStreamingBudget != streamingPolicy.budgetBytes ||
+                            (workspacePolicy>=0&&owner->userManagedWorkspace!=(workspacePolicy==1))) return nullptr;
                         return owner;
                     }
                 }
@@ -361,6 +370,7 @@ namespace Garnet {
             auto& cached = *owner;
             cached.device = device;
             cached.weightStreamingBudget = streamingPolicy.budgetBytes;
+            cached.userManagedWorkspace = workspacePolicy==1;
             cached.runtime = createInferRuntime(gLogger);
             if (!cached.runtime) {
                 std::cout << "[TRTBuilder] createInferRuntime failed for cached engine: " << enginePath << std::endl;
@@ -370,7 +380,7 @@ namespace Garnet {
                 cached.allocator = std::make_unique<TRTSyncAllocator>(device);
                 cached.runtime->setGpuAllocator(cached.allocator.get());
             }
-            if(!EnsureBF16ProjectionPluginRegistered()||!EnsureQwen35DeltaPluginRegistered())return nullptr;
+            if(!EnsureBF16ProjectionPluginRegistered()||!EnsureQwen35DeltaPluginRegistered()||!EnsureQwen35PackedStorePluginRegistered())return nullptr;
             LogTRTMemoryCheckpoint("before_engine_deserialize",enginePath);
             cached.engine = cached.runtime->deserializeCudaEngine(engineStream);
             if (!cached.engine) {
@@ -523,7 +533,7 @@ namespace Garnet {
 #endif
             LogTRTMemoryCheckpoint("after_engine_refit",enginePath,
                 cached.engine->getDeviceMemorySizeV2());
-            cached.contexts = std::make_unique<TRTContextPool>(cached.engine,8,enginePath);
+            cached.contexts = std::make_unique<TRTContextPool>(cached.engine,8,enginePath,cached.userManagedWorkspace);
 
             std::lock_guard<std::mutex> lock(g_trtExecutionCacheMutex);
             g_trtExecutionCache[enginePath] = owner;
@@ -534,8 +544,8 @@ namespace Garnet {
             std::shared_ptr<CachedTRTExecution> owner;
             TRTContextPool::Lease slot;
             explicit CachedExecutionUse(const std::string& path,
-                const SafeTensorsIndex* weights = nullptr, bool enabled = true,const std::vector<void*>* serialGraphBindings=nullptr)
-                : owner(enabled ? GetCachedTRTEngine(path, weights) : nullptr),
+                const SafeTensorsIndex* weights = nullptr, bool enabled = true,const std::vector<void*>* serialGraphBindings=nullptr,int workspacePolicy=-1)
+                : owner(enabled ? GetCachedTRTEngine(path, weights,workspacePolicy) : nullptr),
                   slot(owner ? owner->contexts->Acquire(CurrentExecutionStream(),serialGraphBindings) : TRTContextPool::Lease{}) {}
             nvinfer1::IExecutionContext* Context() const { return slot ? slot->context : nullptr; }
             nvinfer1::ICudaEngine* Engine() const { return owner ? owner->engine : nullptr; }
@@ -742,13 +752,13 @@ namespace Garnet {
     std::shared_ptr<void> TRTBuilder::RetainCachedExecution(
         const std::string& enginePath,
         const SafeTensorsIndex* weightIndex,
-        std::string& errorMessage) {
+        std::string& errorMessage,bool userManagedWorkspace) {
         try {
             if (!EnsurePagedKVDecodePluginRegistered()) {
                 errorMessage = "failed to register Garnet paged-KV TensorRT plugin";
                 return {};
             }
-            CachedExecutionUse execution(enginePath, weightIndex);
+            CachedExecutionUse execution(enginePath, weightIndex,true,nullptr,userManagedWorkspace?1:0);
             if (!execution.Context()) {
                 errorMessage = "failed to prepare captured engine " + enginePath;
                 return {};
@@ -765,14 +775,158 @@ namespace Garnet {
         if(!execution)return "{}";
         auto owner=std::static_pointer_cast<CachedTRTExecution>(execution);
         auto counts=owner->contexts->GraphCounts();
+        const bool workspaceReady=owner->workspaceReady.load(std::memory_order_acquire);
         return nlohmann::json{{"allocator_tracking_enabled",bool(owner->allocator)},
+            {"user_managed_workspace",owner->userManagedWorkspace},
+            {"context_workspace_required_bytes",owner->engine->getDeviceMemorySizeV2()},
+            {"network_output_aliases_input",owner->engine->getAliasedInputTensor("output_0")!=nullptr},
+            {"external_workspace_bound",workspaceReady},
+            {"external_workspace_capacity_bytes",workspaceReady?owner->workspaceBytes:0},
             {"trt_allocator_live_bytes",owner->allocator?nlohmann::json(owner->allocator->LiveBytes()):nlohmann::json(nullptr)},
             {"trt_allocator_peak_bytes",owner->allocator?nlohmann::json(owner->allocator->PeakBytes()):nlohmann::json(nullptr)},
             {"trt_allocator_allocations",owner->allocator?nlohmann::json(owner->allocator->Outstanding()):nlohmann::json(nullptr)},
             {"contexts",owner->contexts->Size()},{"aux_streams",owner->engine->getNbAuxStreams()},{"graph_captures",counts[0]},
             {"graph_replays",counts[1]},{"graph_capture_failures",counts[2]},
             {"serial_graph_reuses",counts[3]},{"pending_graph_reuses",counts[4]},{"serial_graph_warmup_waits",counts[5]},
-            {"scope","TensorRT runtime allocator (engine/context), excludes builder workspace, driver and external library allocations"}}.dump();
+            {"scope","TensorRT runtime allocator (engine/context), excludes caller-owned workspace, builder workspace, driver and external library allocations"}}.dump();
+    }
+    std::string TRTBuilder::RetainedEngineInfo(const std::shared_ptr<void>& execution) {
+        if(!execution)throw std::invalid_argument("Engine inspection requires a retained engine");
+        auto owner=std::static_pointer_cast<CachedTRTExecution>(execution);
+        auto* engine=owner->engine;if(!engine)throw std::invalid_argument("Retained engine is absent");
+        nlohmann::json tensors=nlohmann::json::array();int inputs=0,outputs=0;bool staticFloat=true,nonaliased=true;
+        for(int i=0;i<engine->getNbIOTensors();++i){
+            const char* name=engine->getIOTensorName(i);if(!name)throw std::runtime_error("Engine I/O name is absent");
+            const auto mode=engine->getTensorIOMode(name);const auto shape=engine->getTensorShape(name);
+            const bool input=mode==nvinfer1::TensorIOMode::kINPUT;const bool output=mode==nvinfer1::TensorIOMode::kOUTPUT;
+            inputs+=input;outputs+=output;std::vector<int64_t> dimensions;
+            if(shape.nbDims<1)staticFloat=false;
+            for(int d=0;d<shape.nbDims;++d){dimensions.push_back(shape.d[d]);if(shape.d[d]<1)staticFloat=false;}
+            staticFloat=staticFloat&&(input||output)&&engine->getTensorDataType(name)==nvinfer1::DataType::kFLOAT;
+            if(output&&engine->getAliasedInputTensor(name)!=nullptr)nonaliased=false;
+            tensors.push_back({{"name",name},{"input",input},{"output",output},{"dtype",int(engine->getTensorDataType(name))},{"shape",dimensions}});
+        }
+        std::unique_ptr<nvinfer1::IEngineInspector> inspector(engine->createEngineInspector());
+        const char* layers=inspector?inspector->getEngineInformation(nvinfer1::LayerInformationFormat::kJSON):nullptr;
+        return nlohmann::json{{"io",tensors},{"input_count",inputs},{"output_count",outputs},
+            {"single_static_float32_input_and_output",inputs==1&&outputs==1&&staticFloat&&nonaliased},
+            {"profiling_verbosity",int(engine->getProfilingVerbosity())},{"layer_information_json",layers?nlohmann::json(layers):nlohmann::json(nullptr)},
+            {"scope","Engine metadata inspection only; no inference or tactic-equality claim. Layer detail depends on original build verbosity."}}.dump();
+    }
+    bool TRTBuilder::BindCapturedWorkspace(const std::shared_ptr<void>& execution,
+        X::Value storage,std::string& errorMessage) {
+        try{
+            if(!execution||!X::Tensor::IsTensor(storage))throw std::invalid_argument("Managed CUDA workspace requires a built engine and tensor");
+            auto owner=std::static_pointer_cast<CachedTRTExecution>(execution);
+            std::lock_guard<std::mutex> lock(owner->workspaceMutex);
+            if(!owner->userManagedWorkspace||owner->workspaceReady.load(std::memory_order_acquire))
+                throw std::invalid_argument("Managed CUDA workspace policy is disabled or already bound");
+            X::Tensor value(storage);auto info=value.Info();int device=-1;
+            if(cudaGetDevice(&device)!=cudaSuccess||device!=owner->device||info.symbolic||info.readonly||!info.data||
+                reinterpret_cast<uintptr_t>(info.data)%256||info.device_type!=TensorHelper::CudaDevice||
+                info.device_id!=device||info.dtype!=X3_TENSOR_FLOAT32||info.rank<1||!IsContiguousTensor(value))
+                throw std::invalid_argument("Managed CUDA workspace requires writable aligned contiguous resident FLOAT32 storage");
+            size_t bytes=sizeof(float);
+            for(uint32_t axis=0;axis<info.rank;++axis){
+                if(info.shape[axis]<=0||uint64_t(info.shape[axis])>uint64_t(std::numeric_limits<int64_t>::max())/bytes)
+                    throw std::invalid_argument("Managed CUDA workspace logical size overflow");
+                bytes*=size_t(info.shape[axis]);
+            }
+            const auto required=owner->engine->getDeviceMemorySizeV2();
+            if(required<0||bytes>info.byte_size||uint64_t(bytes)<uint64_t(required))
+                throw std::invalid_argument("Managed CUDA workspace is smaller than the engine requirement");
+            owner->workspace=storage;
+            if(!owner->contexts->BindWorkspace(info.data,int64_t(bytes))){
+                owner->workspace=X::Value();throw std::invalid_argument("Bind managed workspace before context execution");
+            }
+            owner->workspaceBytes=bytes;owner->workspaceReady.store(true,std::memory_order_release);
+            errorMessage.clear();return true;
+        }catch(const std::exception& error){errorMessage=error.what();return false;}
+    }
+    std::shared_ptr<TRTGraphReservation> TRTBuilder::ReserveCapturedExecution(
+        const std::shared_ptr<void>& execution,X::Value inputs,X::Value output,
+        const std::shared_ptr<std::atomic<size_t>>& reservations,std::string& errorMessage) {
+        class Reservation final:public TRTGraphReservation {
+            std::shared_ptr<CachedTRTExecution> owner_;
+            std::unique_ptr<TRTContextPool::Lease> slot_;
+            std::vector<std::pair<X::Tensor,X3TensorAccess>> tensors_;
+            X::Value output_;
+            std::shared_ptr<std::atomic<size_t>> reservations_;
+            cudaStream_t stream_;
+            std::thread::id thread_;
+        public:
+            Reservation(std::shared_ptr<CachedTRTExecution> owner,TRTContextPool::Lease slot,
+                std::vector<std::pair<X::Tensor,X3TensorAccess>> tensors,X::Value output,
+                std::shared_ptr<std::atomic<size_t>> reservations,cudaStream_t stream)
+                :owner_(std::move(owner)),slot_(std::make_unique<TRTContextPool::Lease>(std::move(slot))),tensors_(std::move(tensors)),
+                 output_(output),reservations_(std::move(reservations)),stream_(stream),thread_(std::this_thread::get_id()) {
+                reservations_->fetch_add(1,std::memory_order_release);
+            }
+            ~Reservation() override {
+                int previous=-1;cudaGetDevice(&previous);cudaSetDevice(owner_->device);
+                // Cold release/cleanup only. Pointers and context survive all
+                // queued outer work, including close after a launch failure.
+                if(stream_==cudaStreamPerThread&&thread_!=std::this_thread::get_id())cudaDeviceSynchronize();
+                else cudaStreamSynchronize(stream_);
+                slot_.reset();
+                reservations_->fetch_sub(1,std::memory_order_release);
+                if(previous>=0&&previous!=owner_->device)cudaSetDevice(previous);
+            }
+            cudaGraph_t Graph() const override{return (*slot_)->graph;}
+            cudaGraphExec_t Executable() const override{return (*slot_)->executable;}
+            int Device() const override{return owner_->device;}
+            cudaStream_t Stream() const override{return stream_;}
+            X::Value Output() const override{return output_;}
+            const std::vector<std::pair<X::Tensor,X3TensorAccess>>& Tensors() const override{return tensors_;}
+        };
+        try {
+            if(!execution||!reservations||reservations->load(std::memory_order_acquire)||
+               !inputs.IsList()||!IsTensor(output)||CurrentOperatorExecutionOwner())
+                throw std::invalid_argument("Graph reservation requires unreserved static device execution outside operator groups");
+            auto owner=std::static_pointer_cast<CachedTRTExecution>(execution);
+            int device=-1;if(cudaGetDevice(&device)!=cudaSuccess||device!=owner->device)
+                throw std::invalid_argument("Reserved graph device mismatch");
+            if(owner->engine->getNbIOTensors()!=int(inputs.Size()+1))
+                throw std::invalid_argument("Reserved graph input count mismatch");
+            std::vector<void*> bindings;
+            std::vector<std::pair<X::Tensor,X3TensorAccess>> tensors;
+            auto retain=[&](X::Value value,const std::string& name,bool isOutput) {
+                if(!IsTensor(value)||value.runtime()!=output.runtime())throw std::invalid_argument("Reserved graph requires tensors in one runtime");
+                X::Tensor tensor(value);auto info=tensor.Info();auto dims=owner->engine->getTensorShape(name.c_str());
+                if(info.symbolic||!info.data||info.device_type!=TensorHelper::CudaDevice||info.device_id!=device||
+                   !IsContiguousTensor(tensor)||int(info.rank)!=dims.nbDims||(isOutput&&info.readonly))
+                    throw std::invalid_argument("Reserved graph tensor device/layout/rank invalid");
+                auto type=owner->engine->getTensorDataType(name.c_str());X3TensorDType wanted;
+                if(type==DataType::kFLOAT)wanted=X3_TENSOR_FLOAT32;
+                else if(type==DataType::kBF16)wanted=X3_TENSOR_BFLOAT16;
+                else if(type==DataType::kINT32)wanted=X3_TENSOR_INT32;
+                else if(type==DataType::kINT64)wanted=X3_TENSOR_INT64;
+                else throw std::invalid_argument("Reserved graph dtype unsupported");
+                if(info.dtype!=wanted)throw std::invalid_argument("Reserved graph tensor dtype mismatch");
+                size_t bytes=TensorHelper::ItemSize(wanted);
+                for(int axis=0;axis<dims.nbDims;++axis){
+                    if(dims.d[axis]<=0||info.shape[axis]!=dims.d[axis]||bytes>SIZE_MAX/size_t(dims.d[axis]))
+                        throw std::invalid_argument("Reserved graph requires exact static input shapes");
+                    bytes*=size_t(dims.d[axis]);
+                }
+                if(info.byte_size<bytes)throw std::invalid_argument("Reserved graph backing span is too small");
+                bindings.push_back(info.data);
+                // Match the normal execution's side-effect ownership: mutable
+                // TensorRT INPUT bindings can be written by packed-store ops.
+                tensors.emplace_back(tensor,isOutput||!info.readonly?X3_TENSOR_WRITE:X3_TENSOR_READ);
+            };
+            for(uint64_t i=0;i<inputs.Size();++i)retain(inputs.Get(i),"input_"+std::to_string(i),false);
+            retain(output,"output_0",true);
+            if(owner->userManagedWorkspace){
+                if(!owner->workspaceReady.load(std::memory_order_acquire)||!IsTensor(owner->workspace))
+                    throw std::invalid_argument("Reserved graph managed workspace is not bound");
+                tensors.emplace_back(X::Tensor(owner->workspace),X3_TENSOR_WRITE);
+            }
+            auto stream=CurrentExecutionStream();
+            auto slot=owner->contexts->ReserveCaptured(stream,bindings);
+            auto result=std::make_shared<Reservation>(owner,std::move(slot),std::move(tensors),output,reservations,stream);
+            errorMessage.clear();return result;
+        }catch(const std::exception& error){errorMessage=error.what();return {};}
     }
     bool TRTBuilder::CapturedOutputCompatible(const std::shared_ptr<void>& execution,
         X::Value output,std::string& errorMessage) {
@@ -4504,6 +4658,7 @@ namespace Garnet {
         for (auto* plugin : ownedPlugins) plugin->destroy();
         ownedPlugins.clear();
         loweringError.clear();
+        ownedV3Plugins.clear();packedStoredHidden.clear();internalPackedStores=internalPackedRoots=internalPackedFinals=0;internalPackedTail=nullptr;
         loweringActive = true;
         branchParentActivity.clear();
         flowBranchTaken.clear();
@@ -4698,6 +4853,7 @@ namespace Garnet {
                 loweringError = "TensorRT optimization profile creation failed";
             }
         }
+        if(loweringError.empty()&&internalPackedStores&&(internalPackedRoots!=1||internalPackedFinals!=1||network->getNbOutputs()!=1||network->getOutput(0)!=internalPackedTail))loweringError="Packed stores require one final root output and exactly one final hidden write";
         if (loweringError.empty()) {
             auto* serialized = builder->buildSerializedNetwork(*network, *config);
             if (!serialized) {
@@ -4732,6 +4888,7 @@ namespace Garnet {
         builder = nullptr;
         for (auto* plugin : ownedPlugins) plugin->destroy();
         ownedPlugins.clear();
+        ownedV3Plugins.clear();packedStoredHidden.clear();internalPackedTail=nullptr;
         tensorMap.clear();
         constantTensors.clear();
         capturedWeightFiles.clear();
@@ -5005,6 +5162,22 @@ namespace Garnet {
 
         X::Value inputs(inputsValue);
         ExecutionInputs execution;
+        const bool managedWorkspace=cachedUse.owner->userManagedWorkspace;
+        X3TensorInfo workspaceInfo{};
+        if(managedWorkspace){
+            if(!cachedUse.owner->workspaceReady.load(std::memory_order_acquire)||!inputShapeRanges.empty()){
+                errorMessage="Managed CUDA workspace requires bound storage and static profiles";return X::Value();
+            }
+            X::Tensor workspace(cachedUse.owner->workspace);workspaceInfo=workspace.Info();
+            if(!execution.Retain(workspace,X3_TENSOR_WRITE)){
+                errorMessage="Managed CUDA workspace device mismatch";return X::Value();
+            }
+        }
+        auto overlapsWorkspace=[&](const X3TensorInfo& other){
+            if(!managedWorkspace||other.device_type!=TensorHelper::CudaDevice||other.device_id!=workspaceInfo.device_id||!other.data)return false;
+            const auto a=reinterpret_cast<uintptr_t>(workspaceInfo.data),b=reinterpret_cast<uintptr_t>(other.data);
+            return a>=b?a-b<other.byte_size:b-a<workspaceInfo.byte_size;
+        };
         // Diagnostic opt-in to test capture without redundant context updates.
         // Query the actual context binding, rather than trusting a cached graph
         // signature that could be stale after an uncaptured invocation.
@@ -5050,6 +5223,9 @@ namespace Garnet {
             if (TensorHelper::EnsureGPUMemory(input) != TensorOpStatus::Success) {
                 errorMessage = "failed to make compiled input GPU-resident";
                 return X::Value();
+            }
+            if(overlapsWorkspace(input.Info())){
+                errorMessage="Managed CUDA workspace overlaps an input allocation";return X::Value();
             }
             // TensorRT INPUT mode does not describe plugin side effects. Reloaded
             // engines expose input_N bindings, not the capture's KV write-set.
@@ -5174,17 +5350,17 @@ namespace Garnet {
             }
         }
         if (!outputDevicePointer) {
-            if (cudaMalloc(&outputDevicePointer, outputBytes) != cudaSuccess) {
-                errorMessage = "failed to allocate TensorRT output on GPU";
-                return X::Value();
+            // Public tensors may outlive this execution stream or thread.
+            // Match WrapGPU's legacy allocation/cleanup contract; stream-ordered
+            // temporary storage remains private to its original execution path.
+            outputValue=TensorHelper::CreateGPU(inputsValue.host(),xlangOutputDataType,outputShape);
+            X::Tensor ownedOutput(outputValue);outputDevicePointer=TensorHelper::GetGPUMemory(ownedOutput);
+            if(!outputDevicePointer||ownedOutput.Info().byte_size!=outputBytes){
+                errorMessage="TensorRT owned output allocation/footprint mismatch";return X::Value();
             }
-            try {
-                outputValue = WrapDeviceOutput(inputsValue.host(), xlangOutputDataType,
-                    outputShape, outputDevicePointer, outputBytes);
-            } catch (...) {
-                cudaFree(outputDevicePointer);
-                throw;
-            }
+        }
+        if(overlapsWorkspace(X::Tensor(outputValue).Info())){
+            errorMessage="Managed CUDA workspace overlaps output allocation";return X::Value();
         }
         if (!execution.Retain(X::Tensor(outputValue), X3_TENSOR_WRITE)) {
             errorMessage = "TensorRT output device does not match the execution device";
@@ -5502,7 +5678,7 @@ namespace Garnet {
                 const std::set<std::string> allowed={"qwen35_conv_bind_state","qwen35_conv_bind_active",
                     "qwen35_delta_bind_state","qwen35_attention_bind_key","qwen35_attention_bind_value",
                     "qwen35_attention_bind_positions","qwen35_attention_bind_slots","qwen35_attention_bind_active",
-                    "qwen35_mtp_bind_embedding","qwen35_cache_bind_backup","qwen35_cache_bind_spans"};
+                    "qwen35_mtp_bind_embedding","qwen35_cache_bind_backup","qwen35_cache_bind_spans","qwen35_store_bind_root"};
                 if(allowed.count(opName)) {
                     bindings[opName]=right;qwen35Bindings[TensorId(output)]=std::move(bindings);lastOutput=left;
                 } else if(opName=="qwen35_mask_rows")lastOutput=ops.maskRows(left,right);
@@ -6039,15 +6215,32 @@ namespace Garnet {
                         X::Value key,value;if(!bindings->second.DictEntry(i,key,value)||!key.IsString()||!IsTensor(value))
                             throw std::invalid_argument("External weight bindings require checkpoint names and tensor inputs");
                         const auto name=key.ToString();auto* metadata=capturedWeightIndex?capturedWeightIndex->Find(name):nullptr;
+                        std::vector<int64_t> expectedShape;size_t expectedBytes=0;
+                        if(metadata&&metadata->dataType=="BF16"&&metadata->shape.size()==2){expectedShape=metadata->shape;expectedBytes=size_t(metadata->dataSize);}
+                        else if(opName=="qwen35_linear_decoder_chunk"&&keywordInt("joined_input_projections",0)==1&&
+                            name==keywordText("layer_prefix")+".linear_attn.in_proj_joined.weight"){
+                            int64_t total=0,inner=0;
+                            for(const char* suffix:{".in_proj_qkv.weight",".in_proj_z.weight",".in_proj_b.weight",".in_proj_a.weight"}){
+                                const auto original=keywordText("layer_prefix")+".linear_attn"+suffix;
+                                auto* entry=capturedWeightIndex?capturedWeightIndex->Find(original):nullptr;
+                                if(!entry||entry->dataType!="BF16"||entry->shape.size()!=2||entry->shape[0]<1||entry->shape[0]>32768||
+                                    entry->shape[1]<1||entry->shape[1]>16384||(inner&&inner!=entry->shape[1])||
+                                    uint64_t(entry->shape[0])*uint64_t(entry->shape[1])*2!=entry->dataSize)
+                                    throw std::invalid_argument("Joined external projection metadata invalid: "+original);
+                                total+=entry->shape[0];inner=entry->shape[1];expectedBytes+=size_t(entry->dataSize);
+                            }
+                            if(total>32768||expectedBytes>(512ULL<<20))throw std::invalid_argument("Joined external projection exceeds bounded matrix size");
+                            expectedShape={total,inner};
+                        }
                         X::Tensor tensor(value);auto info=tensor.Info();
                         auto declared=tensorMap.find(TensorId(value));
-                        if(!metadata||metadata->dataType!="BF16"||metadata->shape.size()!=2||info.dtype!=X3_TENSOR_BFLOAT16||info.rank!=2||declared==tensorMap.end()||
-                            info.shape[0]!=metadata->shape[0]||info.shape[1]!=metadata->shape[1])
+                        if(expectedShape.size()!=2||info.dtype!=X3_TENSOR_BFLOAT16||info.rank!=2||declared==tensorMap.end()||
+                            info.shape[0]!=expectedShape[0]||info.shape[1]!=expectedShape[1])
                             throw std::invalid_argument("External BF16 matrix input must match its checkpoint metadata: "+name);
                         auto previous=externalBF16Bindings.find(name);
                         if(previous!=externalBF16Bindings.end()&&previous->second.first!=TensorId(value))
                             throw std::invalid_argument("One checkpoint weight cannot bind multiple tensor inputs");
-                        externalBF16Bindings[name]={TensorId(value),size_t(metadata->dataSize)};external[name]=declared->second;
+                        externalBF16Bindings[name]={TensorId(value),expectedBytes};external[name]=declared->second;
                     }
                 }
                 Qwen35TRTOps ops(*network,vectorWeights,[&](const std::string& name){
@@ -6056,7 +6249,39 @@ namespace Garnet {
                 },ownedPlugins);
                 auto number=[&](const char* name,double fallback){auto* item=FindKeyword(kwParams,name);return item?item->second.ToDouble():fallback;};
                 ops.SetProjectionWorkspace(keywordInt("projection_workspace_bytes",0));
-                if(opName=="qwen35_packed_view") {
+                auto storeParts=[&](const std::vector<ITensor*>& parts)->ITensor*{
+                    auto bindings=qwen35Bindings[TensorId(input)];auto found=bindings.find("qwen35_store_bind_root");
+                    if(found==bindings.end()||parts.size()<3||parts.size()>7)throw std::invalid_argument("Packed store requires bound internal root and existing decoder parts");
+                    auto* root=found->second;auto rs=ops.shape(root),hs=ops.shape(parts[0]);auto offsets=IntegerAttribute(kwParams,"internal_store_offsets");
+                    if(root!=internalPackedTail||internalPackedFinals)throw std::invalid_argument("Packed store must extend the single unfinished internal root chain");
+                    if(rs.size()!=2||hs.size()!=2||rs[0]!=hs[0]||root->getType()!=DataType::kFLOAT||offsets.size()+1!=parts.size())throw std::invalid_argument("Packed store root/hidden/offsets mismatch");
+                    std::vector<int32_t> settings{rs[1],hs[1],keywordInt("internal_store_final",0),1,int32_t(offsets.size())};std::vector<ITensor*> values{root,parts[0]};
+                    for(size_t i=1;i<parts.size();++i){auto ps=ops.shape(parts[i]);if(ps.size()!=2||ps[0]!=rs[0]||parts[i]->getType()!=DataType::kFLOAT||offsets[i-1]<0||offsets[i-1]>INT_MAX)throw std::invalid_argument("Packed store part type/shape/offset invalid");settings.push_back(int32_t(offsets[i-1]));settings.push_back(ps[1]);values.push_back(parts[i]);}
+                    if(!ValidQwen35PackedStoreConfig(settings)||!EnsureQwen35PackedStorePluginRegistered())throw std::invalid_argument("Packed store config or registration failed");
+                    config->setPreviewFeature(PreviewFeature::kALIASED_PLUGIN_IO_10_03,true);
+                    ownedV3Plugins.emplace_back(CreateQwen35PackedStorePlugin(settings));auto* layer=network->addPluginV3(values.data(),int(values.size()),nullptr,0,*ownedV3Plugins.back());
+                    if(!layer||!layer->getOutput(0)||!layer->getOutput(1))throw std::runtime_error("Packed store construction failed");
+                    packedStoredHidden[TensorId(output)]=layer->getOutput(1);++internalPackedStores;internalPackedFinals+=settings[2];internalPackedTail=layer->getOutput(0);return internalPackedTail;
+                };
+                auto tensorKeyword=[&](const char* name)->ITensor* {
+                    auto item=FindKeyword(kwParams,name);if(!item||!IsTensor(item->second))throw std::invalid_argument(std::string("Tree tensor keyword missing: ")+name);
+                    return GetOrCreateTRTTensor(item->second);
+                };
+                if(opName=="qwen35_tree_metadata") {
+                    lastOutput=ops.treeMetadata(source,tensorKeyword("active"),tensorKeyword("prefix"),keywordInt("capacity",0));
+                }else if(opName=="qwen35_tree_metadata_f32") {
+                    lastOutput=ops.treeMetadataFloat(source,keywordInt("batch",0),keywordInt("nodes",0),keywordInt("capacity",0));
+                }else if(opName=="qwen35_internal_root") {
+                    auto hs=ops.shape(source);int width=keywordInt("width",0);
+                    if(hs.size()!=3||(hs[0]!=1&&hs[0]!=2&&hs[0]!=4&&hs[0]!=8)||width<1||source->getType()!=DataType::kFLOAT||internalPackedRoots)throw std::invalid_argument("Packed internal root profile invalid");
+                    auto* fill=network->addFill(ops.dims({hs[0],width}),FillOperation::kLINSPACE);if(!fill)throw std::runtime_error("Packed internal root Fill failed");
+                    fill->setInput(1,*ops.scalar(0,0));fill->setInput(2,*ops.constant({0,0},{2}));lastOutput=fill->getOutput(0);internalPackedTail=lastOutput;++internalPackedRoots;
+                }else if(opName=="qwen35_stored_hidden") {
+                    auto found=packedStoredHidden.find(TensorId(input));auto shape=IntegerAttribute(kwParams,"shape");
+                    if(found==packedStoredHidden.end()||shape.size()!=3||shape[0]<1||shape[0]>8||shape[1]<1||shape[1]>128||shape[2]<1||shape[2]>16384)throw std::invalid_argument("Packed stored hidden requires its store producer and bounded shape");
+                    auto hs=ops.shape(found->second);if(hs!=std::vector<int>{int(shape[0]),int(shape[1]*shape[2])})throw std::invalid_argument("Packed stored hidden shape mismatch");
+                    lastOutput=ops.reshape(found->second,{int(shape[0]),int(shape[1]),int(shape[2])});
+                }else if(opName=="qwen35_packed_view") {
                     auto s=ops.shape(source);int start=keywordInt("start",-1),width=keywordInt("width",0);auto requested=IntegerAttribute(kwParams,"shape");
                     if(s.size()!=2||source->getType()!=DataType::kFLOAT||start<0||width<1||start>s[1]||width>s[1]-start||requested.empty()||requested.size()>4||requested[0]!=s[0])
                         throw std::invalid_argument("Qwen3.5 packed view dimensions/type invalid");
@@ -6079,23 +6304,44 @@ namespace Garnet {
                     auto b=qwen35Bindings[TensorId(input)];
                     lastOutput=ops.restoreKVPrefix(source,b["qwen35_cache_bind_backup"],b["qwen35_cache_bind_spans"]);
                 }
-                else if(opName=="qwen35_linear_decoder_chunk") {
+                else if(opName=="qwen35_linear_decoder_chunk"||opName=="qwen35_linear_tree_chunk") {
                     auto b=qwen35Bindings[TensorId(input)];
+                    const bool store=FindKeyword(kwParams,"internal_store_offsets")!=nullptr;std::vector<ITensor*> parts;
                     lastOutput=ops.linearDecoderChunk(source,b["qwen35_conv_bind_state"],b["qwen35_delta_bind_state"],
                         b["qwen35_conv_bind_active"],keywordText("layer_prefix"),keywordInt("key_heads",0),keywordInt("value_heads",0),
-                        keywordInt("key_dim",0),keywordInt("value_dim",0),float(number("eps",1e-6)),keywordInt("fused_delta",0)!=0,keywordInt("retain_linear_inputs",0)!=0,keywordInt("register_delta_128",0)!=0);
+                        keywordInt("key_dim",0),keywordInt("value_dim",0),float(number("eps",1e-6)),keywordInt("fused_delta",0)!=0,keywordInt("retain_linear_inputs",0)!=0,keywordInt("register_delta_128",0)!=0,keywordInt("joined_input_projections",0)!=0,store?&parts:nullptr,
+                        opName=="qwen35_linear_tree_chunk"?tensorKeyword("tree_metadata"):nullptr,keywordInt("capacity",0),keywordInt("omit_linear_state_outputs",0)!=0);
+                    if(store)lastOutput=storeParts(parts);
                 }else if(opName=="qwen35_linear_replay_chunk") {
                     auto b=qwen35Bindings[TensorId(input)];
                     lastOutput=ops.linearReplayChunk(source,b["qwen35_conv_bind_state"],b["qwen35_delta_bind_state"],
                         b["qwen35_conv_bind_active"],keywordText("layer_prefix"),keywordInt("hidden_dim",0),keywordInt("tokens",0),
                         keywordInt("key_heads",0),keywordInt("value_heads",0),keywordInt("key_dim",0),keywordInt("value_dim",0),float(number("eps",1e-6)),keywordInt("register_delta_128",0)!=0);
-                }else if(opName=="qwen35_full_decoder_chunk") {
+                }else if(opName=="qwen35_full_decoder_chunk"||opName=="qwen35_full_tree_chunk") {
                     auto b=qwen35Bindings[TensorId(input)];
+                    const bool store=FindKeyword(kwParams,"internal_store_offsets")!=nullptr;std::vector<ITensor*> parts;
                     lastOutput=ops.fullDecoderChunk(source,b["qwen35_attention_bind_key"],b["qwen35_attention_bind_value"],
                         b["qwen35_attention_bind_positions"],b["qwen35_attention_bind_slots"],b["qwen35_attention_bind_active"],
                         keywordText("layer_prefix"),keywordInt("num_heads",0),keywordInt("num_kv_heads",0),keywordInt("head_dim",0),
                         keywordInt("rotary_dim",0),{keywordInt("mrope_t",0),keywordInt("mrope_h",0),keywordInt("mrope_w",0)},
-                        float(number("rope_theta",1e7)),float(number("eps",1e-6)),keywordInt("fused_attention",0)!=0);
+                        float(number("rope_theta",1e7)),float(number("eps",1e-6)),keywordInt("fused_attention",0)!=0,store?&parts:nullptr,keywordInt("compact_kv_outputs",0)!=0,
+                        opName=="qwen35_full_tree_chunk"?tensorKeyword("tree_metadata"):nullptr);
+                    if(store)lastOutput=storeParts(parts);
+                }else if(opName=="qwen35_mtp_stage_probe") {
+                    auto b=qwen35Bindings[TensorId(input)];const bool tree=keywordInt("tree",0)!=0;
+                    lastOutput=ops.mtpStageProbe(source,b["qwen35_mtp_bind_embedding"],b["qwen35_attention_bind_key"],b["qwen35_attention_bind_value"],
+                        b["qwen35_attention_bind_positions"],tree?nullptr:b["qwen35_attention_bind_slots"],b["qwen35_attention_bind_active"],
+                        tree?tensorKeyword("parents"):nullptr,tree?tensorKeyword("prefix"):nullptr,tree,
+                        keywordInt("num_heads",0),keywordInt("num_kv_heads",0),keywordInt("head_dim",0),keywordInt("rotary_dim",0),
+                        {keywordInt("mrope_t",0),keywordInt("mrope_h",0),keywordInt("mrope_w",0)},
+                        float(number("rope_theta",1e7)),float(number("eps",1e-6)));
+                }else if(opName=="qwen35_mtp_tree_chunk") {
+                    auto b=qwen35Bindings[TensorId(input)];
+                    lastOutput=ops.mtpTreeChunk(source,b["qwen35_mtp_bind_embedding"],b["qwen35_attention_bind_key"],b["qwen35_attention_bind_value"],
+                        b["qwen35_attention_bind_positions"],b["qwen35_attention_bind_active"],tensorKeyword("parents"),tensorKeyword("prefix"),
+                        keywordInt("num_heads",0),keywordInt("num_kv_heads",0),keywordInt("head_dim",0),keywordInt("rotary_dim",0),
+                        {keywordInt("mrope_t",0),keywordInt("mrope_h",0),keywordInt("mrope_w",0)},
+                        float(number("rope_theta",1e7)),float(number("eps",1e-6)));
                 }else if(opName=="qwen35_mtp_decoder_chunk") {
                     auto b=qwen35Bindings[TensorId(input)];
                     lastOutput=ops.mtpChunk(source,b["qwen35_mtp_bind_embedding"],b["qwen35_attention_bind_key"],b["qwen35_attention_bind_value"],

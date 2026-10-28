@@ -8,6 +8,8 @@
 #include "safetensors_index.h"
 #include "weight_quantization.h"
 #include "compiled_graph_capture.h"
+#include "trt_graph_reservation.h"
+#include <atomic>
 #include <string>
 #include <deque>
 #include <memory>
@@ -67,6 +69,13 @@ namespace Garnet {
         }
         void SetCapturedStrictFP32(bool value) { capturedStrictFP32 = value; }
         size_t ExternalBF16WeightInputs() const { return externalBF16Bindings.size(); }
+        size_t InternalPackedStoreCount() const { return internalPackedStores; }
+        size_t InternalPackedRootCount() const { return internalPackedRoots; }
+        size_t JoinedProjectionInputs() const {
+            size_t count=0;for(const auto& item:externalBF16Bindings)
+                if(item.first.find(".linear_attn.in_proj_joined.weight")!=std::string::npos)++count;
+            return count;
+        }
         size_t ExternalBF16WeightBytes() const {
             size_t bytes=0;for(const auto& item:externalBF16Bindings)bytes+=item.second.second;return bytes;
         }
@@ -134,12 +143,18 @@ namespace Garnet {
             std::string& errorMessage);
         static void ReleaseCachedExecutions(const std::string& cacheRoot);
         static std::string RetainedExecutionStats(const std::shared_ptr<void>& execution);
+        static std::string RetainedEngineInfo(const std::shared_ptr<void>& execution);
         static bool CapturedOutputCompatible(const std::shared_ptr<void>& execution,
             X::Value output,std::string& errorMessage);
+        static bool BindCapturedWorkspace(const std::shared_ptr<void>& execution,
+            X::Value storage,std::string& errorMessage);
+        static std::shared_ptr<TRTGraphReservation> ReserveCapturedExecution(
+            const std::shared_ptr<void>& execution,X::Value inputs,X::Value output,
+            const std::shared_ptr<std::atomic<size_t>>& reservations,std::string& errorMessage);
         static std::shared_ptr<void> RetainCachedExecution(
             const std::string& enginePath,
             const SafeTensorsIndex* weightIndex,
-            std::string& errorMessage);
+            std::string& errorMessage,bool userManagedWorkspace=false);
         X::Value RunCapturedEngine(
             const std::string& enginePath,
             X::Value inputs,
@@ -207,6 +222,11 @@ namespace Garnet {
         nvinfer1::ITensor* pendingKVActiveMask = nullptr;
         int pendingKVLayerIndex = -1;
         std::vector<nvinfer1::IPluginV2*> ownedPlugins;
+        std::vector<std::unique_ptr<nvinfer1::IPluginV3>> ownedV3Plugins;
+        std::unordered_map<unsigned long long,nvinfer1::ITensor*> packedStoredHidden;
+        size_t internalPackedStores=0,internalPackedRoots=0;
+        size_t internalPackedFinals=0;
+        nvinfer1::ITensor* internalPackedTail=nullptr;
         std::string loweringError;
         bool loweringActive = true;
         bool analysisActive = false;

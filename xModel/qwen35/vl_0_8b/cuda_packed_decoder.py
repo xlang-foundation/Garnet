@@ -12,31 +12,60 @@ from .cuda_decoder import CUDADecoder
 from .cuda_packed_program import CUDAPackedDecoderProgram
 
 class CUDAPackedDecoder:
-    def __init__(self,checkpoint,config,batch=1,capacity=512,prefill_chunk=64,decode_chunk=4,projection_workspace_bytes=0,retain_linear_inputs=False,register_delta_128=False,flat_concat=False,deferred_state_commit=False,shared_output_storage=False):
+    def __init__(self,checkpoint,config,batch=1,capacity=512,prefill_chunk=64,decode_chunk=4,projection_workspace_bytes=0,retain_linear_inputs=False,register_delta_128=False,flat_concat=False,deferred_state_commit=False,shared_output_storage=False,join_decode_input_projections=False,shared_activation_storage=False,internal_packed_stores=False,compact_kv_outputs=False,shared_workspace_min_bytes=0,shared_output_min_bytes=0,phase_output_partition_layers=0):
         if decode_chunk not in (4,8,16) or prefill_chunk not in (4,8,16,32,64,128) or prefill_chunk<decode_chunk:
             raise ValueError('Packed decoder requires bounded prefill>=decode chunk')
+        if any(type(value) is not int or not 0<=value<=1<<30 for value in (shared_workspace_min_bytes,shared_output_min_bytes)):
+            raise ValueError('Construction-only shared storage reservations require bounded integer bytes')
+        if shared_workspace_min_bytes and not shared_activation_storage or shared_output_min_bytes and not shared_output_storage:
+            raise ValueError('Shared storage reservation requires its explicit shared pool')
+        self.shared_workspace_min_bytes=shared_workspace_min_bytes;self.shared_output_min_bytes=shared_output_min_bytes
         self.config=config;self.batch=batch;self.capacity=capacity;self.checkpoint=str(checkpoint)
         self.prefill_chunk_size=prefill_chunk;self.decode_chunk_size=decode_chunk;self.prefill_mode=False
         self.projection_workspace_bytes=projection_workspace_bytes;self.retain_linear_inputs=retain_linear_inputs
         self.register_delta_128=register_delta_128;self.flat_concat=flat_concat
+        self.join_decode_input_projections=bool(join_decode_input_projections)
+        if self.join_decode_input_projections and decode_chunk!=4:raise ValueError('Joined decode input projections require width4')
         self.deferred_state_commit=bool(deferred_state_commit)
         if self.deferred_state_commit and not retain_linear_inputs:raise ValueError('Deferred state requires retained projections and the packed replay verifier')
         self.state_transaction=None;self.transaction_thread=None;self.verification_chunk_allowed=False
+        self.tree_program_borrows=0;self.state_transaction_epoch=0
         self.shared_output_storage=bool(shared_output_storage);self.output_pool=None
+        self.shared_activation_storage=bool(shared_activation_storage);self.activation_pool=None
+        self.internal_packed_stores=bool(internal_packed_stores)
+        self.compact_kv_outputs=bool(compact_kv_outputs)
+        self.phase_output_plan=None;self.phase_prefill_programs=[]
+        if type(phase_output_partition_layers) is not int or phase_output_partition_layers not in (0,4,8):raise ValueError('Phase output partitions require0/4/8 layers')
+        if phase_output_partition_layers:
+            from .cuda_phase_output_plan import phase_output_plan
+            if not all((self.deferred_state_commit,retain_linear_inputs,register_delta_128,self.shared_output_storage,self.shared_activation_storage,self.compact_kv_outputs)):
+                raise ValueError('Phase output profile requires deferred native128 replay and shared output/workspace pools')
+            self.phase_output_plan=phase_output_plan(config,batch,capacity,prefill_chunk,decode_chunk,phase_output_partition_layers)
+            self.native_prefix_commit=True
+        if self.internal_packed_stores and (not self.shared_output_storage or decode_chunk!=4):raise ValueError('Internal packed stores require shared output and decode width4')
+        if self.shared_activation_storage and decode_chunk not in (4,8):raise ValueError('Shared decoder activations require decode width4/8')
         self.fused_delta=True;self.fused_attention=True;self.packed_state_program=True
         self.programs={};self.requests={};self.head=None;self.state=None;self.last_hidden=None;self.last_packed=None
         self.io=garnet.cuda_tensor_io()
         try:
             self.io.open(checkpoint)
             for size in dict.fromkeys((decode_chunk,prefill_chunk)):
-                program=CUDAPackedDecoderProgram(checkpoint,config,self.io,batch,capacity,size,retain_linear_inputs and size==decode_chunk,projection_workspace_bytes,register_delta_128,flat_concat)
-                self.programs[size]=program
+                specifications=([self.phase_output_plan['decode_replay']] if size==decode_chunk else self.phase_output_plan['prefill_parts']) if self.phase_output_plan is not None else [None]
+                for specification in specifications:
+                    program=CUDAPackedDecoderProgram(checkpoint,config,self.io,batch,capacity,size,retain_linear_inputs and size==decode_chunk,projection_workspace_bytes,register_delta_128,flat_concat,self.join_decode_input_projections and size==decode_chunk,self.shared_activation_storage,self.internal_packed_stores,self.compact_kv_outputs,specification)
+                    if size not in self.programs:self.programs[size]=program
+                    if self.phase_output_plan is not None and size==prefill_chunk:self.phase_prefill_programs.append(program)
                 if self.state is None:self.state=self.io.zeros([batch,program.state_width])
                 self.requests[size]=[self.io.zeros(shape) for shape in ([batch,size,config['hidden_size']],[batch,size],[batch,size,3],[batch,size])]
+            if self.shared_activation_storage:
+                required=max(json.loads(p.graph.stats_json())['context_workspace_required_bytes'] for p in self.all_programs())
+                self.activation_pool=self.io.zeros([max(1,(max(required,self.shared_workspace_min_bytes)+3)//4)])
+                for p in self.all_programs():p.graph.set_workspace_storage(self.activation_pool)
             if self.shared_output_storage:
-                width=max(p.output_width for p in self.programs.values())
+                width=max(p.output_width for p in self.all_programs())
+                width=max(width,(self.shared_output_min_bytes+batch*4-1)//(batch*4))
                 self.output_pool=self.io.zeros([batch,width])
-                for p in self.programs.values():
+                for p in self.all_programs():
                     p.graph.set_output_storage(self.io.storage_view(self.output_pool,[batch,p.output_width]))
             self.last_hidden=self.io.zeros([batch,config['hidden_size']])
             symbol=tensor.input('whole_final_hidden',shape=[batch,config['hidden_size']],dtype=tensor.float32)
@@ -48,6 +77,9 @@ class CUDAPackedDecoder:
 
     @property
     def chunk_size(self):return self.prefill_chunk_size if self.prefill_mode else self.decode_chunk_size
+
+    def all_programs(self):
+        return list(self.programs.values())+self.phase_prefill_programs[1:]
     @property
     def hidden(self):return self.requests[self.chunk_size][0]
     @property
@@ -65,6 +97,7 @@ class CUDAPackedDecoder:
     def _claim_state_transaction(self,owner):
         if not self.deferred_state_commit or self.state_transaction is not None:raise ValueError('Canonical state is already borrowed or deferred verification is disabled')
         self.state_transaction=owner;self.transaction_thread=threading.get_ident();self.verification_chunk_allowed=True
+        self.state_transaction_epoch+=1
 
     def _release_state_transaction(self,owner):
         if self.state_transaction is owner:
@@ -79,7 +112,7 @@ class CUDAPackedDecoder:
             for value in buffers:self.io.zero(value)
 
     def enable_cuda_graph(self,enabled):
-        for program in self.programs.values():
+        for program in self.all_programs():
             program.graph.enable_cuda_graph(enabled)
             program.graph.enable_serial_graph_reuse(bool(getattr(self,'serial_target_graph_reuse',False)))
         self.head.enable_cuda_graph(enabled)
@@ -98,6 +131,10 @@ class CUDAPackedDecoder:
         if not 1<=count<=size or len(active_tokens)!=count or any(len(row)!=b or any(v not in (0,1) for v in row) for row in active_tokens):
             raise ValueError('Invalid packed decoder chunk controls')
         if len(positions)!=b or any(len(row)!=count or any(len(p)!=3 for p in row) for row in positions):raise ValueError('Invalid packed decoder positions')
+        if self.phase_output_plan is not None and size==self.decode_chunk_size:
+            for row in range(b):
+                values=[active_tokens[t][row] for t in range(count)]
+                if values!=[1]*sum(values)+[0]*(count-sum(values)):raise ValueError('Replay-only decode requires contiguous active prefixes')
         flags=[];slots=[];pos=[];next_slots=list(self.slots)
         for row in range(b):
             for t in range(size):
@@ -115,13 +152,24 @@ class CUDAPackedDecoder:
         else:
             self.io.update(self.active,flags);self.io.update(self.position,pos);self.io.update(self.slot_tensor,slots)
         program=self.programs[size]
-        packed=program.run([self.hidden,self.state,self.active,self.position,self.slot_tensor])
-        self.io.slice_into(packed,0,self.hidden)
-        if not deferred:self.io.slice_into(packed,program.hidden_width,self.state)
+        if self.phase_output_plan is not None and self.prefill_mode:
+            if deferred:raise ValueError('Partitioned prefill cannot borrow a deferred transaction')
+            for part in self.phase_prefill_programs:
+                packed=part.run([self.hidden,self.state,self.active,self.position,self.slot_tensor])
+                self.io.slice_into(packed,0,self.hidden)
+                part.commit_all(packed,self.state,self.slot_tensor,self.active)
+        else:
+            packed=program.run([self.hidden,self.state,self.active,self.position,self.slot_tensor])
+            self.io.slice_into(packed,0,self.hidden)
+            if not deferred:
+                if program.replay_only_linear_state:
+                    program.commit_prefix(packed,self.state,[value for row in range(b) for value in (self.slots[row],next_slots[row]-self.slots[row])])
+                elif self.compact_kv_outputs:program.commit_all(packed,self.state,self.slot_tensor,self.active)
+                else:self.io.slice_into(packed,program.hidden_width,self.state)
         if size==self.decode_chunk_size:self.last_packed=packed
         self.io.copy_last_chunk(self.hidden,self.active,self.last_hidden)
         prediction=self.io.predict(self.head.run_device([self.last_hidden])) if predict else None
-        self.slots=next_slots;self.last_layer_enqueue_ms=[program.graph.last_inference_ms];self.poisoned=False
+        self.slots=next_slots;self.last_layer_enqueue_ms=[part.graph.last_inference_ms for part in self.phase_prefill_programs] if self.phase_output_plan is not None and self.prefill_mode else [program.graph.last_inference_ms];self.poisoned=False
         return prediction
 
     def prefill_sequence(self,hidden,positions,lengths=None):
@@ -144,28 +192,36 @@ class CUDAPackedDecoder:
 
     def memory_info(self):
         if self.head is None:raise ValueError('Packed decoder is closed')
-        graphs=[program.memory_info()['graph'] for program in self.programs.values()]+[json.loads(self.head.stats_json())]
+        graphs=[program.memory_info()['graph'] for program in self.all_programs()]+[json.loads(self.head.stats_json())]
         info=json.loads(self.io.memory_json());tracked=all(g['allocator_tracking_enabled'] for g in graphs)
         runtime=sum(g['trt_allocator_live_bytes'] for g in graphs) if tracked else None
         states=self.io.tensor_bytes(self.state)
         requests=sum(self.io.tensor_bytes(value) for buffers in self.requests.values() for value in buffers)+self.io.tensor_bytes(self.last_hidden)
         pool_bytes=self.io.tensor_bytes(self.output_pool) if self.output_pool is not None else 0
+        activation_bytes=self.io.tensor_bytes(self.activation_pool) if self.activation_pool is not None else 0
         outputs=sum(g.get('owned_device_output_bytes',g['device_output_bytes']) for g in graphs)+pool_bytes
         proposal=sum(info.get(key,0) for key in ('candidate_workspace_bytes','candidate_index_bytes','indexed_head_buffers_bytes'))
         shared=sum(info.get(key,0) for key in ('embedding_head_shared_bytes','head_input_bytes','head_output_bytes','projection_weight_pool_bytes'))
-        return {'graphs':graphs,'state_bytes':states,'request_buffer_bytes':requests,'engine_output_bytes':outputs,'shared_output_pool_bytes':pool_bytes,
+        commit_helpers=[json.loads(p.state_commit.stats_json()) for p in self.all_programs() if p.state_commit is not None]
+        commit_bytes=sum(s['owned_bytes'] for s in commit_helpers)
+        return {'graphs':graphs,'state_bytes':states,'request_buffer_bytes':requests,'engine_output_bytes':outputs,'shared_output_pool_bytes':pool_bytes,'shared_activation_pool_bytes':activation_bytes,
+            'requested_shared_workspace_min_bytes':self.shared_workspace_min_bytes,'requested_shared_output_min_bytes':self.shared_output_min_bytes,
             'embedding_head_shared_bytes':info['embedding_head_shared_bytes'],'head_input_bytes':info['head_input_bytes'],'head_output_bytes':info['head_output_bytes'],
             'proposal_io_bytes':proposal,'projection_weight_pool_bytes':info.get('projection_weight_pool_bytes',0),'projection_weight_pool_entries':info.get('projection_weight_pool_entries',0),
-            'trt_runtime_allocator_live_bytes':runtime,'owned_decoder_bytes':states+requests+outputs+proposal+shared+runtime if tracked else None,
-            'packed_profiles':{'prefill':self.prefill_chunk_size,'decode':self.decode_chunk_size,'single_canonical_state':True,'register_delta_128':self.register_delta_128,'flat_concat':self.flat_concat,'deferred_state_commit':self.deferred_state_commit,'shared_output_storage':self.shared_output_storage},
+            'trt_runtime_allocator_live_bytes':runtime,'owned_decoder_bytes':states+requests+outputs+proposal+shared+activation_bytes+commit_bytes+runtime if tracked else None,
+            'compact_kv_outputs':self.compact_kv_outputs,'compact_state_commit_helpers':commit_helpers,'compact_state_commit_bytes':commit_bytes,
+            'phase_output_partition_layers':self.phase_output_plan['partition_layers'] if self.phase_output_plan is not None else 0,'phase_program_count':len(self.all_programs()),
+            'joined_projection_group_count':info.get('joined_projection_group_count',0),'joined_projection_group_bytes':info.get('joined_projection_group_bytes',0),
+            'packed_profiles':{'prefill':self.prefill_chunk_size,'decode':self.decode_chunk_size,'single_canonical_state':True,'register_delta_128':self.register_delta_128,'flat_concat':self.flat_concat,'deferred_state_commit':self.deferred_state_commit,'shared_output_storage':self.shared_output_storage,'join_decode_input_projections':self.join_decode_input_projections,'shared_activation_storage':self.shared_activation_storage,'internal_packed_stores':self.internal_packed_stores},
             'scope':'Retained canonical state, request/output buffers, one readonly projection pool/table and tracked TRT runtime. Excludes builder/driver/library/transient allocations; not process peak.'}
 
     def close(self):
+        if getattr(self,"tree_program_borrows",0):raise ValueError("Close borrowed tree programs before closing their canonical decoder")
         if self.state_transaction is not None:raise ValueError('Close or roll back the verifier before closing its borrowed decoder')
         try:
             if self.head is not None:self.head.close()
-            for program in self.programs.values():program.close()
+            for program in self.all_programs():program.close()
         finally:
-            self.head=None;self.programs={};self.requests={};self.state=None;self.last_hidden=None;self.last_packed=None
-            self.output_pool=None
+            self.head=None;self.programs={};self.phase_prefill_programs=[];self.requests={};self.state=None;self.last_hidden=None;self.last_packed=None
+            self.output_pool=None;self.activation_pool=None
             self.io.close();self.prefill_mode=False

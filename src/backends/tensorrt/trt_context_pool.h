@@ -98,16 +98,27 @@ private:
     const size_t capacity_;
     const std::string enginePath_;
     int device_ = -1;
+    const bool userManagedWorkspace_;
+    void* workspace_ = nullptr;
+    int64_t workspaceBytes_ = 0;
     std::mutex mutex_;
     std::condition_variable available_;
     std::vector<std::unique_ptr<Slot>> slots_;
 public:
     explicit TRTContextPool(nvinfer1::ICudaEngine* engine, size_t capacity = 8,
-        std::string enginePath = {})
-        : engine_(engine), capacity_(capacity), enginePath_(std::move(enginePath)) {
+        std::string enginePath = {},bool userManagedWorkspace=false)
+        : engine_(engine), capacity_(userManagedWorkspace?1:capacity), enginePath_(std::move(enginePath)),
+          userManagedWorkspace_(userManagedWorkspace) {
         if (!engine || !capacity) throw std::invalid_argument("invalid TensorRT context pool");
         if (cudaGetDevice(&device_) != cudaSuccess)
             throw std::runtime_error("TensorRT context pool device query failed");
+    }
+    bool BindWorkspace(void* pointer,int64_t bytes) {
+        std::lock_guard<std::mutex> lock(mutex_);
+        if(!userManagedWorkspace_||workspace_||!pointer||bytes<engine_->getDeviceMemorySizeV2())return false;
+        for(const auto& slot:slots_)if(slot->busy||slot->warmed||slot->graph||slot->executable)return false;
+        for(auto& slot:slots_)slot->context->setDeviceMemoryV2(pointer,bytes);
+        workspace_=pointer;workspaceBytes_=bytes;return true;
     }
     Lease Acquire(cudaStream_t stream,const std::vector<void*>* serialGraphBindings=nullptr) {
         int device = -1;
@@ -152,10 +163,13 @@ public:
                 slot->device = device_;
                 LogTRTMemoryCheckpoint("before_context_create",enginePath_,
                     engine_->getDeviceMemorySizeV2(),slots_.size());
-                slot->context = engine_->createExecutionContext();
+                slot->context = engine_->createExecutionContext(userManagedWorkspace_
+                    ?nvinfer1::ExecutionContextAllocationStrategy::kUSER_MANAGED
+                    :nvinfer1::ExecutionContextAllocationStrategy::kSTATIC);
                 if (!slot->context || cudaEventCreateWithFlags(&slot->completion,
                         cudaEventDisableTiming) != cudaSuccess)
                     throw std::runtime_error("TensorRT context slot creation failed");
+                if(userManagedWorkspace_&&workspace_)slot->context->setDeviceMemoryV2(workspace_,workspaceBytes_);
                 if(const char* policy=std::getenv("GARNET_TRT_SYNC_TEMPORARY_ALLOCATOR");policy&&*policy=='1'){
                     slot->temporaryAllocator=std::make_unique<TRTSyncAllocator>(device_);
                     if(!slot->context->setTemporaryStorageAllocator(slot->temporaryAllocator.get()))
@@ -179,6 +193,26 @@ public:
             }
             available_.wait(lock);
         }
+    }
+    Lease ReserveCaptured(cudaStream_t stream,const std::vector<void*>& bindings) {
+        int device=-1;
+        if(cudaGetDevice(&device)!=cudaSuccess||device!=device_)
+            throw std::runtime_error("TensorRT graph reservation device mismatch");
+        std::lock_guard<std::mutex> lock(mutex_);
+        for(auto& slot:slots_) {
+            if(slot->busy||!slot->graph||!slot->executable||!slot->warmed||
+               slot->bindings!=bindings||!slot->shapeSignature.empty()||slot->operatorOwner||
+               slot->lastStream!=stream||
+               (stream==cudaStreamPerThread&&slot->lastThread!=std::this_thread::get_id()))continue;
+            auto status=cudaEventQuery(slot->completion);
+            if(status!=cudaSuccess&&status!=cudaErrorNotReady)
+                throw std::runtime_error("TensorRT reserved context completion query failed");
+            // Pending work is already ordered before the bundle on this exact
+            // stream. Never rebind, recapture, enqueueV3 or create a context.
+            slot->busy=true;
+            return Lease(this,slot.get(),stream);
+        }
+        throw std::runtime_error("No exact captured TensorRT context is available for reservation");
     }
     size_t Size() {
         std::lock_guard<std::mutex> lock(mutex_);

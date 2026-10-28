@@ -2,8 +2,9 @@
 import argparse,hashlib,json,statistics
 from pathlib import Path
 p=argparse.ArgumentParser();p.add_argument('root',type=Path);p.add_argument('--model',choices=('2b','4b'),required=True)
-p.add_argument('--batch',type=int,choices=(1,2,4,8),required=True);p.add_argument('--reuse-head',action='store_true');a=p.parse_args()
-study='promptpack-reusehead' if a.reuse_head else 'promptpack';root=a.root
+p.add_argument('--batch',type=int,choices=(1,2,4,8),required=True)
+feature=p.add_mutually_exclusive_group();feature.add_argument('--reuse-head',action='store_true');feature.add_argument('--joined-decode',action='store_true');feature.add_argument('--activation-storage',action='store_true');feature.add_argument('--internal-stores',action='store_true');feature.add_argument('--vision-graph',action='store_true');a=p.parse_args()
+study='vision-graph' if a.vision_graph else 'internal-stores' if a.internal_stores else 'activation-arena' if a.activation_storage else 'joined-decode' if a.joined_decode else 'promptpack-reusehead' if a.reuse_head else 'promptpack';root=a.root
 roles=('a1','b1','c1','c2','b2','a2') if a.reuse_head else ('a1','b1','b2','a2')
 output=root/f'packed-study-{a.model}-b{a.batch}-{study}-summary.json';assert not output.exists(),'Preserve study summary'
 data={};sources={};binary=set()
@@ -19,17 +20,50 @@ base=data['a1'];keys=[k for k,r in base.items() if not r['warmup']];assert len(k
 sig=lambda r:{k:r[k] for k in ('generated_token_ids','sampled_tokens_including_stop','finish_reasons','stop_token_ids')}
 for role,rows in data.items():
     assert rows.keys()==base.keys()
-    expected_pack=not role.startswith('a');expected_reuse=role.startswith('c')
+    expected_pack=a.vision_graph or a.internal_stores or a.activation_storage or a.joined_decode or not role.startswith('a');expected_reuse=a.vision_graph or a.internal_stores or a.activation_storage or a.joined_decode or role.startswith('c')
+    expected_join=a.vision_graph or a.internal_stores or a.activation_storage or (a.joined_decode and role.startswith('b'))
+    expected_activation=a.vision_graph or a.internal_stores or (a.activation_storage and role.startswith('b'))
+    expected_internal=(a.vision_graph and a.model=='4b') or (a.internal_stores and role.startswith('b'))
     for k,r in rows.items():
         assert r['input_sha256']==base[k]['input_sha256'] and r['prompt_token_ids']==base[k]['prompt_token_ids']
         assert sig(r)==sig(base[k]),('Changed output/stop signature',role,k)
         assert r['batch']==a.batch and r['request_output_limit']==32
         assert r['profile'].get('packPrompt',False)==expected_pack
         assert r['profile'].get('reuseVerifiedHead',False)==expected_reuse
+        assert r['profile'].get('joinDecodeInputProjections',False)==expected_join
+        assert r['profile'].get('sharePackedActivationStorage',False)==expected_activation
+        assert r['profile'].get('internalPackedStores',False)==expected_internal
+        assert r['profile'].get('visionCudaGraph',False)==(a.vision_graph and role.startswith('b'))
+        assert r['warmup']==base[k]['warmup']
         original=dict(base[k]['profile']);current=dict(r['profile'])
-        for feature in ('packPrompt','reuseVerifiedHead'):original.pop(feature,None);current.pop(feature,None)
+        transitions=('visionCudaGraph',) if a.vision_graph else ('internalPackedStores',) if a.internal_stores else ('sharePackedActivationStorage',) if a.activation_storage else ('joinDecodeInputProjections',) if a.joined_decode else ('packPrompt','reuseVerifiedHead')
+        for feature in transitions:original.pop(feature,None);current.pop(feature,None)
         assert original==current,('Other profile parameters differ',role,k)
         assert r['cache_policy']=={'prefix':False,'image':False,'answer':False}
+        if a.joined_decode or a.activation_storage or a.internal_stores or a.vision_graph:
+            expected_groups=(18 if a.model=='2b' else 24) if expected_join else 0
+            assert r['io_memory']['joined_projection_group_count']==expected_groups
+            assert sum(g['joined_projection_inputs'] for g in r['owned_memory']['decoder']['graphs'])==expected_groups
+        if a.activation_storage or a.internal_stores or a.vision_graph:
+            memory=r['owned_memory']['decoder'];pool=memory['shared_activation_pool_bytes']
+            assert all(g['user_managed_workspace']==expected_activation for g in memory['graphs'][:-1])
+            if expected_activation:
+                assert pool>0 and all(g['external_workspace_bound'] and g['external_workspace_capacity_bytes']==pool and g['contexts']==1 for g in memory['graphs'][:-1])
+            else:assert pool==0
+        if a.internal_stores or a.vision_graph:
+            memory=r['owned_memory']['decoder'];bodies=memory['graphs'][:-1];layers=24 if a.model=='2b' else 32
+            assert r['profile']['prefillChunk']==64 and r['profile']['decodeChunk']==4
+            assert sum(g['internal_packed_stores'] for g in bodies)==(layers*len(bodies) if expected_internal else 0)
+            assert sum(g['internal_packed_root_fills'] for g in bodies)==(len(bodies) if expected_internal else 0)
+            assert all(not g['network_output_aliases_input'] for g in memory['graphs'])
+        if a.vision_graph:
+            vision=r['owned_memory']['vision'];enabled=role.startswith('b')
+            assert vision['cuda_graph_requested']==enabled
+            assert r['owned_memory']['vision_input_buffer_bytes']==(1474560 if enabled else 0)
+            if enabled and not r['warmup']:
+                assert vision['serial_graph_reuse_requested'] and vision['contexts']==1
+                assert vision['graph_captures']==1 and vision['graph_replays']>0 and vision['graph_capture_failures']==0
+            elif not enabled:assert vision['graph_captures']==0
     if expected_reuse:assert sum(rows[k]['speculative_metrics'].get('target_head_reuses',0) for k in keys)>0
 
 def med(values):return statistics.median(values)
@@ -50,8 +84,16 @@ for before,after in (('a','b'),('b','c'),('a','c')):
             'reduction_fraction':1-aggregates[after]/aggregates[before],
             'median_per_group_speed_ratio':med(groups[before][k]/groups[after][k] for k in keys)}
 result={'sources':sources,'garnet_dll_sha256':next(iter(binary)),'order':roles,'model':a.model,'batch':a.batch,
-    'profiles':{'a':'native-prefix/arena D4; prompt packing off; head reuse off',
-        'b':'same with prompt packing on','c':'same with prompt packing and verified-head reuse on'},
+    'profiles':({'a':'Current P64/D4 MTP3 joined/shared/head profile; internal stores off2B/on4B; ordinary serial vision',
+        'b':'same with vision CUDA graph, stable input staging and serial context reuse'} if a.vision_graph else
+        {'a':'P64/D4 packed MTP3, joined projections, shared output/activation, prompt packing and verified-head reuse; internal stores off',
+        'b':'same with internal packed stores on'} if a.internal_stores else
+        {'a':'native-prefix/output-arena D4; packed inputs, head reuse and joined projections on; independent context activations',
+        'b':'same with one shared decoder activation arena'} if a.activation_storage else
+        {'a':'native-prefix/arena D4; prompt packing and verified-head reuse on; joined decode projections off',
+        'b':'same with joined decode input projections on'} if a.joined_decode else
+        {'a':'native-prefix/arena D4; prompt packing off; head reuse off',
+        'b':'same with prompt packing on','c':'same with prompt packing and verified-head reuse on'}),
     'warm_groups':keys,'same_all_28_input_prompt_output_stop_signatures':True,'per_run':run_metrics,
     'per_group_repeated_median_ms':{letter:[{'trial':k[0],'workload_group':k[1],'ms':v} for k,v in values.items()] for letter,values in groups.items()},
     'aggregate_group_median_ms':aggregates,'comparisons':comparisons,

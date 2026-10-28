@@ -3,12 +3,15 @@
 #include <NvInfer.h>
 #include <array>
 #include <cstring>
+#include <cstdlib>
 #include <mutex>
 #include <stdexcept>
 namespace Garnet {
 using namespace nvinfer1;
 Qwen35AttentionCorePlugin::Qwen35AttentionCorePlugin(Qwen35AttentionCoreConfig c):c_(c){
     if(!Qwen35AttentionCoreWorkspace(c))throw std::invalid_argument("Invalid Qwen3.5 attention-core profile");
+    const char* requested=std::getenv("GARNET_QWEN35_FUSED_ATTENTION_EXACT");
+    fusedExact_=requested&&std::strcmp(requested,"1")==0&&SupportsQwen35AttentionCoreFusedExact(c);
 }
 bool Qwen35AttentionCorePlugin::matches(const PluginTensorDesc* in,int count) const noexcept {
     if(!in||count!=8)return false;
@@ -23,7 +26,7 @@ bool Qwen35AttentionCorePlugin::matches(const PluginTensorDesc* in,int count) co
     }return true;
 }
 IPluginV2DynamicExt* Qwen35AttentionCorePlugin::clone() const noexcept {
-    try{auto* p=new Qwen35AttentionCorePlugin(c_);p->ns_=ns_;return p;}catch(...){return nullptr;}
+    try{auto* p=new Qwen35AttentionCorePlugin(c_);p->ns_=ns_;p->fusedExact_=fusedExact_;return p;}catch(...){return nullptr;}
 }
 DimsExprs Qwen35AttentionCorePlugin::getOutputDimensions(int index,const DimsExprs* in,int count,IExprBuilder&) noexcept {
     if(!in||count!=8||index<0||index>=3)return {};
@@ -45,6 +48,7 @@ int Qwen35AttentionCorePlugin::enqueue(const PluginTensorDesc* in,const PluginTe
         for(int j=0;j<8;++j)if(outputs[i]==inputs[j])return 1;
         for(int j=0;j<i;++j)if(outputs[i]==outputs[j])return 1;
     }
+    if(fusedExact_)return RunQwen35AttentionCoreFusedExact(c_,inputs,outputs,workspace,stream);
     return RunQwen35AttentionCore(c_,inputs,outputs,workspace,stream);
 }
 void Qwen35AttentionCorePlugin::serialize(void* data) const noexcept {if(data)std::memcpy(data,&c_,sizeof(c_));}

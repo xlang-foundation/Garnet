@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
 #include <cuda_runtime.h>
 #include <cublas_v2.h>
+#include <cstdlib>
+#include <string>
+#include "bf16_projection_lt_prefill.cuh"
 #include <memory>
 #include <mutex>
 #include <unordered_map>
@@ -8,8 +11,10 @@ namespace Garnet {
 namespace {
 struct ProjectionContext {
     int device=-1;cublasHandle_t handle=nullptr;std::mutex mutex;
+    bool prefillLtRequested=false;std::unique_ptr<PrefillLtState> prefillLt;
     ~ProjectionContext(){
         int previous=-1;cudaGetDevice(&previous);cudaSetDevice(device);
+        prefillLt.reset();
         if(handle)cublasDestroy(handle);if(previous>=0)cudaSetDevice(previous);
     }
 };
@@ -26,6 +31,8 @@ std::shared_ptr<void> CreateBF16ProjectionContext(){
     // Keep the declared FP32 accumulation contract through split reductions.
     if(cublasSetMathMode(owner->handle,static_cast<cublasMath_t>(CUBLAS_DEFAULT_MATH |
         CUBLAS_MATH_DISALLOW_REDUCED_PRECISION_REDUCTION))!=CUBLAS_STATUS_SUCCESS)return {};
+    const char* prefillLt=std::getenv("GARNET_QWEN35_PREFILL_LT_DOWN");
+    owner->prefillLtRequested=prefillLt&&std::string(prefillLt)=="1";
     contexts[device]=owner;return owner;
 }
 int RunBF16Projection(const std::shared_ptr<void>& opaque,const void* input,const void* weight,
@@ -38,6 +45,16 @@ int RunBF16Projection(const std::shared_ptr<void>& opaque,const void* input,cons
     // A shared handle may enqueue onto different context streams. Do not let
     // those asynchronous GEMMs alias an implicit handle-wide scratch buffer.
     if(workspaceBytes&&!workspace)return 1;
+    if(context->prefillLtRequested&&workspaceBytes==0&&inner==9216&&columns==2560&&(rows==256||rows==512)){
+        if(!context->prefillLt){
+            cudaStreamCaptureStatus capture;
+            if(cudaStreamIsCapturing(stream,&capture)!=cudaSuccess||capture!=cudaStreamCaptureStatusNone)return 1;
+            auto candidate=std::unique_ptr<PrefillLtState>(new(std::nothrow) PrefillLtState);
+            if(!candidate||!candidate->initialize())return 1;
+            context->prefillLt=std::move(candidate);
+        }
+        return context->prefillLt->run(input,weight,output,rows,stream);
+    }
     if(cublasSetWorkspace(context->handle,workspaceBytes?workspace:nullptr,workspaceBytes)!=CUBLAS_STATUS_SUCCESS)return 1;
     const float alpha=1,beta=0;
     // Row-major X*W^T represented as column-major W*X^T. Explicit FP32

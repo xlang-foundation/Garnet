@@ -2,15 +2,17 @@
 #pragma once
 #include <NvInferRuntime.h>
 #include <string>
+#include <stdexcept>
 namespace Garnet {
 struct Qwen35DeltaConfig { int kh,vh,kd,vd,kernel; float epsilon; };
 bool Qwen35WholeProgramCUDA() noexcept;
 int RunQwen35Delta(const Qwen35DeltaConfig&,int,int,const void* const*,void* const*,void*,cudaStream_t) noexcept;
 int RunQwen35DeltaRegister128(const Qwen35DeltaConfig&,int,int,const void* const*,void* const*,void*,cudaStream_t) noexcept;
+int RunQwen35DeltaRegister128HiddenOnly(const Qwen35DeltaConfig&,int,int,const void* const*,void*,void*,cudaStream_t) noexcept;
 class Qwen35DeltaPlugin final:public nvinfer1::IPluginV2DynamicExt {
-    Qwen35DeltaConfig c_; std::string ns_;bool register128_=false;
+    Qwen35DeltaConfig c_; std::string ns_;bool register128_=false,hiddenOnly_=false;
 public:
-    explicit Qwen35DeltaPlugin(Qwen35DeltaConfig c,bool register128=false):c_(c),register128_(register128){}
+    explicit Qwen35DeltaPlugin(Qwen35DeltaConfig c,bool register128=false,bool hiddenOnly=false):c_(c),register128_(register128),hiddenOnly_(hiddenOnly){if(hiddenOnly&&!register128)throw std::invalid_argument("Hidden-only delta requires register128");}
     nvinfer1::IPluginV2DynamicExt* clone() const noexcept override;
     nvinfer1::DimsExprs getOutputDimensions(int,const nvinfer1::DimsExprs*,int,nvinfer1::IExprBuilder&) noexcept override;
     bool supportsFormatCombination(int,const nvinfer1::PluginTensorDesc*,int,int) noexcept override;
@@ -18,9 +20,9 @@ public:
     size_t getWorkspaceSize(const nvinfer1::PluginTensorDesc*,int,const nvinfer1::PluginTensorDesc*,int) const noexcept override;
     int enqueue(const nvinfer1::PluginTensorDesc*,const nvinfer1::PluginTensorDesc*,const void* const*,void* const*,void*,cudaStream_t) noexcept override;
     nvinfer1::DataType getOutputDataType(int,const nvinfer1::DataType*,int) const noexcept override{return nvinfer1::DataType::kFLOAT;}
-    const char* getPluginType() const noexcept override{return register128_?"GarnetQwen35DeltaRegister128":"GarnetQwen35Delta";}
+    const char* getPluginType() const noexcept override{return hiddenOnly_?"GarnetQwen35DeltaRegister128HiddenOnly":register128_?"GarnetQwen35DeltaRegister128":"GarnetQwen35Delta";}
     const char* getPluginVersion() const noexcept override{return "1";}
-    int getNbOutputs() const noexcept override{return 3;}
+    int getNbOutputs() const noexcept override{return hiddenOnly_?1:3;}
     int initialize() noexcept override{return 0;}
     void terminate() noexcept override{}
     size_t getSerializationSize() const noexcept override{return sizeof(c_);}

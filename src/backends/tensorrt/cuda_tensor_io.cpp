@@ -56,7 +56,7 @@ bool SameShape(const X::Tensor& tensor,const std::vector<int64_t>& shape){
 }
 CUDATensorIO::~CUDATensorIO(){Close();}
 void CUDATensorIO::CloseUnlocked(){table_=X::Tensor();headInput_=X::Tensor();headOutput_=X::Tensor();tokenHeadInput_=X::Tensor();tokenHeadOutput_=X::Tensor();
-    candidateScratch_=candidateOutput_=indexedScores_=indexedIds_=indexedValues_=X::Tensor();projectionWeights_.clear();projection_.reset();vocab_=width_=0;}
+    candidateScratch_=candidateOutput_=indexedScores_=indexedIds_=indexedValues_=indexedTwoIds_=indexedTwoValues_=X::Tensor();projectionWeights_.clear();projectionWeightGroupMembers_.clear();projectionWeightGroups_.clear();projection_.reset();vocab_=width_=0;}
 void CUDATensorIO::Close(){std::lock_guard<std::mutex> lock(mutex_);CloseUnlocked();}
 bool CUDATensorIO::Open(const std::string& checkpoint){
     std::lock_guard<std::mutex> lock(mutex_);CloseUnlocked();std::string error;
@@ -352,6 +352,54 @@ X::Value CUDATensorIO::PredictIndexed(X::Value hidden,X::Value candidates){
     Check(cudaStreamSynchronize(CurrentExecutionStream()));use.Finish();auto result=X::Value::List(Host());
     for(size_t i=0;i<ids.size();++i){if(ids[i]<0||!std::isfinite(values[i]))throw X::Error("No finite indexed proposal");result.Append(X::Value(int64_t(ids[i])));}return result;
 }
+X::Value CUDATensorIO::PredictIndexedTop2(X::Value hidden,X::Value candidates){
+    std::lock_guard<std::mutex> lock(mutex_);X::Tensor query(hidden),indices(candidates);auto a=query.Info(),b=indices.Info();
+    Require(a,X3_TENSOR_FLOAT32);Require(b,X3_TENSOR_INT32);
+    if(!table_.IsValid()||a.rank!=2||b.rank!=2||a.shape[0]<1||a.shape[0]>8||a.shape[1]!=width_||a.shape[0]!=b.shape[0]||b.shape[1]<2||b.shape[1]>65536||b.shape[1]>vocab_)
+        throw X::Error("CUDA indexed top2 proposal head shape invalid");
+    LogicalBytes(a);LogicalBytes(b);LogicalBytes(table_.Info());
+    std::vector<int64_t> scoreShape{a.shape[0],b.shape[1]},rowShape{a.shape[0],2};
+    if(!SameShape(indexedScores_,scoreShape))indexedScores_=TensorHelper::CreateGPU(Host(),X3_TENSOR_BFLOAT16,scoreShape);
+    if(!SameShape(indexedTwoIds_,rowShape))indexedTwoIds_=TensorHelper::CreateGPU(Host(),X3_TENSOR_INT64,rowShape);
+    if(!SameShape(indexedTwoValues_,rowShape))indexedTwoValues_=TensorHelper::CreateGPU(Host(),X3_TENSOR_FLOAT32,rowShape);
+    auto use=TensorHelper::AcquireGPU({{query,X3_TENSOR_READ},{indices,X3_TENSOR_READ},{table_,X3_TENSOR_READ},
+        {indexedScores_,X3_TENSOR_WRITE},{indexedTwoIds_,X3_TENSOR_WRITE},{indexedTwoValues_,X3_TENSOR_WRITE}});
+    Qwen35IndexedHeadConfig c{int(a.shape[0]),width_,vocab_,int(b.shape[1])};
+    if(RunQwen35IndexedHeadTop2(c,static_cast<const float*>(a.data),table_.Info().data,static_cast<const int*>(b.data),indexedScores_.Info().data,
+        static_cast<long long*>(indexedTwoIds_.Info().data),static_cast<float*>(indexedTwoValues_.Info().data),CurrentExecutionStream()))throw X::Error("CUDA indexed top2 proposal head failed");
+    std::vector<long long> ids(a.shape[0]*2);std::vector<float> values(a.shape[0]*2);
+    Check(cudaMemcpyAsync(ids.data(),indexedTwoIds_.Info().data,ids.size()*8,cudaMemcpyDeviceToHost,CurrentExecutionStream()));
+    Check(cudaMemcpyAsync(values.data(),indexedTwoValues_.Info().data,values.size()*4,cudaMemcpyDeviceToHost,CurrentExecutionStream()));
+    Check(cudaStreamSynchronize(CurrentExecutionStream()));use.Finish();
+    for(size_t row=0;row<size_t(a.shape[0]);++row){size_t i=2*row;
+        if(ids[i]==ids[i+1]||values[i+1]>values[i]||(values[i+1]==values[i]&&ids[i+1]<ids[i]))throw X::Error("Invalid indexed top2 ordering");}
+    auto result=X::Value::List(Host());
+    for(size_t i=0;i<ids.size();++i){if(ids[i]<0||ids[i]>=vocab_||!std::isfinite(values[i]))throw X::Error("Insufficient distinct finite indexed top2 proposals");result.Append(X::Value(int64_t(ids[i])));}return result;
+}
+X::Value CUDATensorIO::PredictIndexedTop2Scored(X::Value hidden,X::Value candidates){
+    std::lock_guard<std::mutex> lock(mutex_);X::Tensor query(hidden),indices(candidates);auto a=query.Info(),b=indices.Info();
+    Require(a,X3_TENSOR_FLOAT32);Require(b,X3_TENSOR_INT32);
+    if(!table_.IsValid()||a.rank!=2||b.rank!=2||a.shape[0]<1||a.shape[0]>8||a.shape[1]!=width_||a.shape[0]!=b.shape[0]||b.shape[1]<2||b.shape[1]>65536||b.shape[1]>vocab_)
+        throw X::Error("CUDA indexed top2 proposal head shape invalid");
+    LogicalBytes(a);LogicalBytes(b);LogicalBytes(table_.Info());
+    std::vector<int64_t> scoreShape{a.shape[0],b.shape[1]},rowShape{a.shape[0],2};
+    if(!SameShape(indexedScores_,scoreShape))indexedScores_=TensorHelper::CreateGPU(Host(),X3_TENSOR_BFLOAT16,scoreShape);
+    if(!SameShape(indexedTwoIds_,rowShape))indexedTwoIds_=TensorHelper::CreateGPU(Host(),X3_TENSOR_INT64,rowShape);
+    if(!SameShape(indexedTwoValues_,rowShape))indexedTwoValues_=TensorHelper::CreateGPU(Host(),X3_TENSOR_FLOAT32,rowShape);
+    auto use=TensorHelper::AcquireGPU({{query,X3_TENSOR_READ},{indices,X3_TENSOR_READ},{table_,X3_TENSOR_READ},
+        {indexedScores_,X3_TENSOR_WRITE},{indexedTwoIds_,X3_TENSOR_WRITE},{indexedTwoValues_,X3_TENSOR_WRITE}});
+    Qwen35IndexedHeadConfig c{int(a.shape[0]),width_,vocab_,int(b.shape[1])};
+    if(RunQwen35IndexedHeadTop2(c,static_cast<const float*>(a.data),table_.Info().data,static_cast<const int*>(b.data),indexedScores_.Info().data,
+        static_cast<long long*>(indexedTwoIds_.Info().data),static_cast<float*>(indexedTwoValues_.Info().data),CurrentExecutionStream()))throw X::Error("CUDA indexed top2 proposal head failed");
+    std::vector<long long> ids(a.shape[0]*2);std::vector<float> values(a.shape[0]*2);
+    Check(cudaMemcpyAsync(ids.data(),indexedTwoIds_.Info().data,ids.size()*8,cudaMemcpyDeviceToHost,CurrentExecutionStream()));
+    Check(cudaMemcpyAsync(values.data(),indexedTwoValues_.Info().data,values.size()*4,cudaMemcpyDeviceToHost,CurrentExecutionStream()));
+    Check(cudaStreamSynchronize(CurrentExecutionStream()));use.Finish();
+    for(size_t row=0;row<size_t(a.shape[0]);++row){size_t i=2*row;
+        if(ids[i]==ids[i+1]||values[i+1]>values[i]||(values[i+1]==values[i]&&ids[i+1]<ids[i]))throw X::Error("Invalid indexed top2 ordering");}
+    auto result=X::Value::List(Host());
+    for(size_t i=0;i<ids.size();++i){if(ids[i]<0||ids[i]>=vocab_||!std::isfinite(values[i]))throw X::Error("Insufficient distinct finite indexed top2 proposals");result.Append(X::Value(int64_t(ids[i])));result.Append(X::Value(double(values[i])));}return result;
+}
 X::Value CUDATensorIO::PrepareImage(const std::string& path,int pixels){
     if(pixels<1024)throw X::Error("Qwen3.5 image pixel budget must fit a merged 32x32 patch");
     if(pixels<1024||pixels>1048576)throw X::Error("CUDA image pixel budget outside admitted range");
@@ -369,13 +417,19 @@ X::Value CUDATensorIO::PrepareImage(const std::string& path,int pixels){
 std::string CUDATensorIO::MemoryJson() const{
     std::lock_guard<std::mutex> lock(mutex_);size_t free=0,total=0;Check(cudaMemGetInfo(&free,&total));
     auto bytes=[](const X::Tensor& t)->uint64_t{return t.IsValid()?t.Info().byte_size:0;};
-    uint64_t poolBytes=0;for(const auto& item:projectionWeights_)poolBytes+=bytes(item.second);
+    uint64_t poolBytes=0,groupBytes=0;
+    for(const auto& item:projectionWeightGroups_)groupBytes+=bytes(item.second);
+    poolBytes=groupBytes;
+    for(const auto& item:projectionWeights_)if(!projectionWeightGroupMembers_.count(item.first))poolBytes+=bytes(item.second);
     return nlohmann::json{{"vocab_size",vocab_},{"hidden_size",width_},{"embedding_head_shared_bytes",bytes(table_)},{"head_input_bytes",bytes(headInput_)+bytes(tokenHeadInput_)},{"head_output_bytes",bytes(headOutput_)+bytes(tokenHeadOutput_)},
         {"single_head_input_bytes",bytes(headInput_)},{"single_head_output_bytes",bytes(headOutput_)},
         {"token_head_input_bytes",bytes(tokenHeadInput_)},{"token_head_output_bytes",bytes(tokenHeadOutput_)},
         {"candidate_workspace_bytes",bytes(candidateScratch_)},{"candidate_index_bytes",bytes(candidateOutput_)},
-        {"indexed_head_buffers_bytes",bytes(indexedScores_)+bytes(indexedIds_)+bytes(indexedValues_)},
+        {"indexed_head_buffers_bytes",bytes(indexedScores_)+bytes(indexedIds_)+bytes(indexedValues_)+bytes(indexedTwoIds_)+bytes(indexedTwoValues_)},
+        {"indexed_top2_output_bytes",bytes(indexedTwoIds_)+bytes(indexedTwoValues_)},
         {"projection_weight_pool_bytes",poolBytes},{"projection_weight_pool_entries",projectionWeights_.size()},
+        {"joined_projection_group_count",projectionWeightGroups_.size()},{"joined_projection_group_bytes",groupBytes},
+        {"joined_projection_member_count",projectionWeightGroupMembers_.size()},
         {"device_used_bytes",total-free},{"scope","owned I/O buffers plus whole-device snapshot; engine weights/state and process peak are separate"}}.dump();
 }
 int64_t CUDATensorIO::TensorBytes(X::Value value){

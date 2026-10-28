@@ -7,6 +7,7 @@ namespace Garnet {
 // Experimental wrapper, enabled only by the explicit fusedAttention profile.
 class Qwen35AttentionCorePlugin final:public nvinfer1::IPluginV2DynamicExt {
     Qwen35AttentionCoreConfig c_;std::string ns_;
+    bool fusedExact_=false;
     bool matches(const nvinfer1::PluginTensorDesc*,int) const noexcept;
 public:
     explicit Qwen35AttentionCorePlugin(Qwen35AttentionCoreConfig);

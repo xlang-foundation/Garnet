@@ -13,4 +13,10 @@ size_t Qwen35AttentionCoreWorkspace(const Qwen35AttentionCoreConfig&) noexcept;
 // per row before enqueue. Outputs/workspace must not alias inputs or each other.
 int RunQwen35AttentionCore(const Qwen35AttentionCoreConfig&,const void* const*,
     void* const*,void*,cudaStream_t) noexcept;
+
+// Construction-time, SM89-only opt-in. The original workspace contract stays
+// unchanged. Runtime policy is captured by each plugin before CUDA capture.
+bool SupportsQwen35AttentionCoreFusedExact(const Qwen35AttentionCoreConfig&) noexcept;
+int RunQwen35AttentionCoreFusedExact(const Qwen35AttentionCoreConfig&,const void* const*,
+    void* const*,void*,cudaStream_t) noexcept;
 }

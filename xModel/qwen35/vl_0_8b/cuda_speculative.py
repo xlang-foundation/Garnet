@@ -13,12 +13,15 @@ from .cuda_mtp import CUDAMTPProgram
 from .cuda_verify import CUDATargetVerifier
 
 class CUDASpeculativeSession:
-    def __init__(self,decoder,checkpoint,stops,max_draft_tokens=3,head_candidates=0,prefix_replay=False):
+    def __init__(self,decoder,checkpoint,stops,max_draft_tokens=3,head_candidates=0,prefix_replay=False,gpu_draft_bundle=False):
         if max_draft_tokens not in (1,3,7) or max_draft_tokens+1>decoder.chunk_size:
             raise ValueError('MTP draft depth1/3/7 must fit the target chunk')
         vocab=json.loads(decoder.io.memory_json())['vocab_size']
         if head_candidates<0 or head_candidates>min(65536,vocab):raise ValueError('Invalid MTP head candidate count')
         self.head_candidates=head_candidates;self.candidates=None
+        self.draft_runner=None;self.gpu_draft_bundle=bool(gpu_draft_bundle)
+        if self.gpu_draft_bundle and not (max_draft_tokens==3 and decoder.chunk_size==4 and head_candidates==8192 and getattr(decoder,'resident_controls',False) and getattr(decoder,'serial_graph_reuse',False) and decoder.config['hidden_size'] in (2048,2560)):
+            raise ValueError('GPU draft requires Qwen3.5 2B/4B resident serial D3/T4 with8192 candidates')
         self.prefix_replay=prefix_replay
         self.decoder=decoder;self.io=decoder.io;self.stops=set(stops);self.depth=max_draft_tokens
         self.batch=decoder.batch;self.size=decoder.chunk_size;self.capacity=decoder.capacity
@@ -57,8 +60,11 @@ class CUDASpeculativeSession:
 
     def reset(self):
         if self.program is None:raise ValueError('Speculative session is closed')
+        if self.draft_runner is not None and self.poisoned:
+            self.draft_runner.close();self.draft_runner=None
         if self.verifier.pending:self.verifier.rollback()
         self.verifier.head_evaluations=0;self.verifier.head_reuses=0;self.verifier._reuse_accepted_head=False
+        if hasattr(self.verifier,'reset_commit_metrics'):self.verifier.reset_commit_metrics()
         self.decoder.reset()
         for value in self.buffers:self.io.zero(value)
         self.slots=[0]*self.batch;self.first_draft=None;self.candidates=None;self.ready=False;self.finished=False;self.poisoned=False
@@ -77,7 +83,8 @@ class CUDASpeculativeSession:
         if getattr(self.decoder,'resident_controls',False):self.io.update_request(self.active_tensor,self.position,self.slot_tensor,active,pos,slots)
         else:
             self.io.update(self.active_tensor,active);self.io.update(self.slot_tensor,slots);self.io.update(self.position,pos)
-        packed=self.program.run([self.target,self.embedding,self.key,self.value,self.position,self.slot_tensor,self.active_tensor])
+        bindings=[self.target,self.embedding,self.key,self.value,self.position,self.slot_tensor,self.active_tensor]
+        packed=self.program.run(bindings) if self.draft_runner is None else self.draft_runner.run_child(bindings)
         self.io.slice_into(packed,0,self.hidden);self.io.slice_into(packed,self.size*self.hidden_size,self.key)
         self.io.slice_into(packed,self.size*self.hidden_size+self.cache_width,self.value)
         self.io.copy_last_chunk(self.hidden,self.active_tensor,self.last_hidden);self.slots=next_slots
@@ -137,7 +144,27 @@ class CUDASpeculativeSession:
             return list(self.current)
         except:self.poisoned=True;raise
 
+    def _ensure_gpu_draft(self):
+        if self.draft_runner is not None:return
+        runner=garnet.cuda_mtp_draft()
+        try:
+            runner.build(self.program.graph,self.io,
+                [self.target,self.embedding,self.key,self.value,self.position,self.slot_tensor,self.active_tensor],
+                [self.hidden,self.last_hidden],self.candidates,
+                json.dumps({'protocol':'qwen35-mtp-draft-v1','stops':sorted(self.stops)}))
+        except:
+            runner.close();self.poisoned=True;raise
+        self.draft_runner=runner
+
     def _draft(self,current,active,remaining,positions):
+        if self.gpu_draft_bundle and min(self.depth,max(remaining[b]-1 for b in range(self.batch) if active[b]))>1:
+            self._ensure_gpu_draft()
+            controls=[[int(active[b]),int(remaining[b]),int(positions[b]),int(self.slots[b])] for b in range(self.batch)]
+            result=json.loads(self.draft_runner.run(list(self.first_draft),controls))
+            self.slots=list(result['slots']);calls=result['model_calls']
+            self.metrics['mtp_draft_calls']+=calls;self.metrics['mtp_head_calls']+=calls
+            self.metrics['proposed_draft_tokens']+=result['proposed_tokens']
+            return [list(current)]+result['draft_proposals']
         count=min(self.depth,max(remaining[b]-1 for b in range(self.batch) if active[b]))
         proposals=[list(current)];next_draft=list(self.first_draft);stopped=[False]*self.batch
         for j in range(1,count+1):
@@ -226,6 +253,7 @@ class CUDASpeculativeSession:
             self.metrics['target_forward_calls']=self.metrics['target_verification_calls']+self.metrics['target_prefix_recomputes']
             self.metrics['target_head_evaluations']=self.verifier.head_evaluations
             self.metrics['target_head_reuses']=self.verifier.head_reuses
+            if hasattr(self.verifier,'commit_operation_metrics'):self.metrics['target_commit_operations']=self.verifier.commit_operation_metrics()
             return {'generated_token_ids':outputs,'sampled_tokens_including_stop':sampled,'finish_reasons':reasons,
                 'stop_token_ids':stop_ids,'decode_steps':max(sampled)-1,'speculative_metrics':self.metrics}
         except:
@@ -241,11 +269,15 @@ class CUDASpeculativeSession:
         prefill=json.loads(self.prefill_norm.stats_json()) if self.prefill_norm is not None else None
         prefill_owned=prefill['device_output_bytes']+prefill['trt_allocator_live_bytes'] if prefill is not None and prefill['allocator_tracking_enabled'] else 0 if prefill is None else None
         owned=buffers+graph['device_output_bytes']+live+helper['owned_helper_bytes']+prefill_owned if live is not None and helper['owned_helper_bytes'] is not None and prefill_owned is not None else None
+        draft_stats=json.loads(self.draft_runner.stats_json()) if self.draft_runner is not None else None
+        if draft_stats is not None and owned is not None:owned+=draft_stats['new_tensor_bytes']
         return {'mtp_buffers_bytes':buffers,'mtp_graph':graph,'target_verifier':helper,'owned_speculative_bytes':owned,
+            **({'gpu_draft_execution':draft_stats} if draft_stats is not None else {}),
             'wide_target_norm_graph':prefill,'target_prefill_chunk':self.prefill_width,'draft_chunk':self.size,
             'scope':'Session-only buffers/engines/backups. Caller owns the one shared table/head buffers; not process peak'}
 
     def close(self):
+        if self.draft_runner is not None:self.draft_runner.close();self.draft_runner=None
         try:
             if self.verifier is not None:self.verifier.close()
         finally:

@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "id": "Qwen3.5-4B",
+  "slug": "qwen3.5-4b",
+  "display_name": "Qwen3.5-4B",
+  "family": "qwen3.5",
+  "task": "image-text-to-text",
+  "serving_adapter": "qwen35_cuda",
+  "capabilities": {"text": true, "vision": true, "paged_kv_cache": false, "continuous_batching_graph": false, "static_batch_sizes": [1, 2, 4, 8]},
+  "entrypoints": {
+    "cuda_decoder": {"file": "model.py", "function": "create_cuda_decoder"},
+    "cuda_vision": {"file": "model.py", "function": "create_cuda_vision"}
+  },
+  "profile_files": ["cuda-serving-profile.json"],
+  "weights": {"bundled": false, "format": "safetensors", "source": "Qwen/Qwen3.5-4B", "config_file": "config.json", "tokenizer_file": "tokenizer.json"}
+}
