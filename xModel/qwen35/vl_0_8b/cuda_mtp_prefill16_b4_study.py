@@ -14,11 +14,15 @@ class CUDAMTPPrefill16B4StudySession(CUDASpeculativeSession):
     _swapped_buffers=('target','embedding','position','slot_tensor','active_tensor','hidden')
 
     def __init__(self,decoder,checkpoint,stops,max_draft_tokens=3,head_candidates=0,
-                 prefix_replay=True,draft_chunk_size=4,draft_builder_workspace_bytes=256<<20):
+                 prefix_replay=True,draft_chunk_size=4,draft_builder_workspace_bytes=256<<20,
+                 draft_prefill_builder_workspace_bytes=128<<20):
         self.prefill16_program=None;self.prefill16_buffers={};self._prefill16_active=False
         policy=(max_draft_tokens,head_candidates,draft_chunk_size,draft_builder_workspace_bytes)
         if any(type(v) is not int for v in policy) or policy!=(3,0,4,256<<20) or prefix_replay is not True:
             raise ValueError('Prefill16 study retains depth3, full head, prefix replay and B4T4/256MiB decode policy')
+        if type(draft_prefill_builder_workspace_bytes) is not int or draft_prefill_builder_workspace_bytes not in (128<<20,256<<20):
+            raise ValueError('B4T16 draft prefill workspace requires explicit128MiB or256MiB')
+        self.draft_prefill_builder_workspace_bytes=draft_prefill_builder_workspace_bytes
         geometry=(getattr(decoder,'batch',None),getattr(decoder,'capacity',None),
                   getattr(decoder,'prefill_chunk_size',None),getattr(decoder,'chunk_size',None))
         if any(type(v) is not int for v in geometry) or geometry!=(4,4096,32,4) or getattr(decoder,'bf16_kv_state',None) is not True:
@@ -34,7 +38,7 @@ class CUDAMTPPrefill16B4StudySession(CUDASpeculativeSession):
                          draft_chunk_size=4,draft_builder_workspace_bytes=256<<20)
         try:
             self.prefill16_program=CUDAMTPProgram(checkpoint,config,4,4096,16,
-                decoder.projection_workspace_bytes,builder_workspace_bytes=128<<20) # Separate T16 engine retains allowed128MiB;256MiB is only legal for T4.
+                decoder.projection_workspace_bytes,builder_workspace_bytes=self.draft_prefill_builder_workspace_bytes)
             self.prefill16_program.graph.enable_cuda_graph(True)
             if getattr(decoder,'serial_graph_reuse',False):self.prefill16_program.graph.enable_serial_graph_reuse(True)
             h=self.hidden_size
@@ -72,7 +76,7 @@ class CUDAMTPPrefill16B4StudySession(CUDASpeculativeSession):
         extra=buffers+graph['device_output_bytes']+graph['trt_allocator_live_bytes'] if tracked else None
         old=result['owned_speculative_bytes'];result['owned_speculative_bytes']=old+extra if old is not None and extra is not None else None
         result.update(prefill16_graph=graph,prefill16_buffers_bytes=buffers,prefill16_extra_owned_bytes=extra,
-                      draft_prefill_chunk=16,draft_decode_chunk=4,physical_batch=4,draft_decode_builder_workspace_bytes=256<<20,draft_prefill_builder_workspace_bytes=128<<20,extra_draft_engine_weights_duplicated=True,
+                      draft_prefill_chunk=16,draft_decode_chunk=4,physical_batch=4,draft_decode_builder_workspace_bytes=256<<20,draft_prefill_builder_workspace_bytes=self.draft_prefill_builder_workspace_bytes,extra_draft_engine_weights_duplicated=True,
                       study_gpu_qualified=False,study_performance_admitted=False)
         return result
 

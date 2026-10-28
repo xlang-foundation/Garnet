@@ -1,0 +1,46 @@
+from pathlib import Path
+import ast,hashlib,io,json,os,sys,zipfile
+W=Path(__file__).resolve().parent;O=W.parent/'outputs';R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';E=M/'evidence';P='Garnet/test2026/cuda/qwen38_5090/';sha=lambda b:hashlib.sha256(b).hexdigest();shap=lambda p:sha(p.read_bytes());sys.path[:0]=[str(M),str(R)]
+import run_logged as ledger
+old=json.loads((E/'rowwise-k-norm-mtp-full4k-preparation.json').read_bytes());J='rowwise-k-norm-mtp-full4k-attempt1';proof=O/(J+'-verified.json');q=json.loads(proof.read_bytes());assert q['exit_code']==1 and q['source_runtime_SDK_config_index_CMake_all34_baseline_restored'] and proof.read_bytes()==(O/(J+'-remote-verified.json')).read_bytes() and shap(O/(J+'-evidence.zip'))==q['archive_sha256']
+with zipfile.ZipFile(O/(J+'-evidence.zip')) as z:
+    w=json.loads(z.read('results/'+J+'/workflow.json'));assert w['all_restored'] and w['cleanup_finished'] and w['source_after']==old['files']
+    base=z.read(old['bundle']);assert sha(base)==old['bundle_sha256']
+    originals={n:z.read('Garnet/'+n) for n in ('xModel/qwen35/vl_0_8b/cuda_mtp.py','xModel/qwen35/vl_0_8b/cuda_mtp_prefill16_b4_study.py')}
+files=dict(w['source_after']);changes={n:(R/n).read_bytes() for n in originals}
+assert all(sha(originals[n])==files['Garnet/'+n] for n in originals)
+assert changes.keys()==originals.keys() and all(changes[n]!=originals[n] for n in originals)
+with zipfile.ZipFile(io.BytesIO(base)) as z:source={n:z.read(n) for n in z.namelist()};assert len(source)==87 and all(n not in source for n in changes)
+source.update(changes);assert len(source)==89
+bundle=W/'rowwise-k-norm-mtp256-source.zip';assert not bundle.exists()
+with zipfile.ZipFile(bundle,'x',zipfile.ZIP_DEFLATED) as z:
+    for n,b in source.items():z.writestr(n,b)
+names=['probe_rowwise_k_norm_mtp256_full4k.py','launch_rowwise_k_norm_mtp256_full4k.py','run_rowwise_k_norm_mtp256_full4k.py','verify_rowwise_k_norm_mtp256_full4k.py','b4_mtp256_full4k_gate.py','test_b4_mtp256_full4k_gate.py','test_mtp_b4_t16_workspace.py','evidence/rowwise-k-norm-mtp256-derivation.json']
+extra=old['mtp_test_modules']+['test2026.cuda.qwen38_5090.'+n for n in ('test_mtp_b4_t16_workspace','test_b4_mtp256_full4k_gate')]
+providers=['xModel/qwen35/vl_0_8b/'+n for n in ('cuda_mtp.py','cuda_mtp_prefill16_b4_study.py','cuda_mtp_prefill16_study.py','cuda_mtp_prefill16_target128_study.py','cuda_speculative.py','cuda_verify.py','cuda_packed_replay.py','cuda_packed_decoder.py','cuda_packed_program.py')]
+for n in providers:
+    if n not in changes:assert shap(R/n)==old['installed_files']['Garnet/'+n],('Unchanged provider drift',n)
+tests=[n.replace('.','/')+'.py' for n in old['test_modules']+extra];owned=providers+tests+['test2026/cuda/qwen38_5090/'+n for n in names]
+ledger.source_identity=lambda:{'scope':'Explicit source89 symbolic CPU checks; native artifacts never executed locally; protected bodies excluded','owned_source_sha256':{n:shap(R/n) for n in dict.fromkeys(owned)}}
+os.chdir(R);log=W/'rowwise-k-norm-mtp256-cpu-ledger';assert ledger.run([sys.executable,'-m','unittest',*old['test_modules'],*extra],log,'correctness','156 CPU controls:115 retained+31 prior MTP+5 real program/workspace/ownership tests+5 MTP256 unchanged target/rejection tests. No arithmetic changes or native execution. Defaults preserved; explicit B4T16/cap4096 256MiB study only.',[R/n for n in dict.fromkeys(owned)])==0
+assert b'Ran 156 tests' in (log/'commands.log').read_bytes()
+def keep(n,b):
+    p=E/n;assert not p.exists();p.write_bytes(b);names.append('evidence/'+n)
+for ext in ('log','jsonl'):keep('rowwise-k-norm-mtp256-cpu-commands.'+ext,(log/('commands.'+ext)).read_bytes())
+for n in ('derive-rowwise-k-norm-mtp256.py',Path(__file__).name):keep(n+'.txt',(W/n).read_bytes())
+keep('rowwise-k-norm-mtp256-source-derivation.json',json.dumps(dict(parent_bundle_sha256=sha(base),source89_bundle_sha256=shap(bundle),source89_files={n:sha(b) for n,b in source.items()},changed_python={n:dict(before=sha(originals[n]),after=sha(changes[n])) for n in changes},all87_parent_members_identical=True,native_DSL_DLL_CUDA_arithmetic_unchanged=True,CPU_controls=156,historical_MTP128_failure_proof_sha256=shap(proof)),indent=2).encode())
+for n in names:
+    if n.endswith('.py'):ast.parse((M/n).read_bytes())
+    assert P+n not in files;files[P+n]=shap(M/n)
+parents=dict(old['parents']);assert J not in parents;parents[J]=dict(proof_sha256=shap(proof),archive_sha256=q['archive_sha256'],status=q['status'],exit_code=1);assert len(parents)==55
+for job,row in parents.items():
+    v=json.loads((O/(job+'-verified.json')).read_bytes());assert shap(O/(job+'-verified.json'))==row['proof_sha256'] and (O/(job+'-verified.json')).read_bytes()==(O/(job+'-remote-verified.json')).read_bytes() and shap(O/(job+'-evidence.zip'))==v['archive_sha256']==row['archive_sha256']
+p={**old};p.update(status='rowwise_K_norm_mtp256_full4k_prepared_GPU_unrun',files=files,archive_files=sorted(set(old['archive_files'])|{P+n for n in names}),parents=parents,bundle='results/'+bundle.name,bundle_sha256=shap(bundle),source_files={n:sha(b) for n,b in source.items()},candidate_base={**old['candidate_base'],**{n:sha(b) for n,b in originals.items()}},mtp_test_modules=extra,study_module_sha256=sha(changes['xModel/qwen35/vl_0_8b/cuda_mtp_prefill16_b4_study.py']),scope='Source89 = exact source87 native/DSL bytes plus two Python workspace-policy files. Same e843 native DLL. Explicit B4T16 draft prefill256MiB after source87 MTP128 build failed: tactic requested134227968B vs134217728B limit. T4 draft256MiB retained. Model math, weights, target/verifier/replay kernels and all exact target gates unchanged; new gate also checks actual graph workspace metadata. Original ordinary full4K128 pass remains prerequisite. One fresh B4 MTP process, three3968+128 text/image/mixed groups vs8immutable B1 oracles.156CPU,55closedparents; source/runtime/SDK/config-index/CMake/all34 restored; fixed Ccache96GiB admission and ownednonce retirement. No broader prefix/reset/quality/HTTP/performance or2x admission; historical failure retained.')
+p['installed_files']={**files,**{'Garnet/'+n:h for n,h in p['source_files'].items()}}
+prep=E/'rowwise-k-norm-mtp256-full4k-preparation.json';assert not prep.exists();prep.write_bytes(json.dumps(p,indent=2).encode());deploy={P+n:M/n for n in names};deploy[P+'evidence/'+prep.name]=prep
+package=W/'rowwise-k-norm-mtp256-full4k-deployment.zip';assert not package.exists()
+with zipfile.ZipFile(package,'x',zipfile.ZIP_DEFLATED) as z:
+    for n,path in deploy.items():z.write(path,n)
+    z.writestr('deployment-manifest.json',json.dumps(dict(files={n:shap(path) for n,path in deploy.items()}),indent=2))
+receipt=dict(deployment_sha256=shap(package),bytes=package.stat().st_size,source_bundle_sha256=shap(bundle),preparation_sha256=shap(prep),deployment_files=len(deploy),guarded_files=len(files),archive_files=len(p['archive_files']),CPU_controls=156,parents=55,source_files=89,library_sha256=p['library_sha256'])
+(W/'rowwise-k-norm-mtp256-package.json').write_bytes(json.dumps(receipt,indent=2).encode());(W/'rowwise-k-norm-mtp256-owned-names.json').write_bytes(json.dumps(names).encode());print(json.dumps(receipt))

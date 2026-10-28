@@ -1,0 +1,26 @@
+from pathlib import Path
+import hashlib,json
+W=Path(__file__).resolve().parent;R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';E=M/'evidence';sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest();owned=[]
+names=json.loads((W/'rowwise-k-norm-mtp256-owned-names.json').read_bytes());receipt=json.loads((W/'rowwise-k-norm-mtp256-package.json').read_bytes());p=json.loads((E/'rowwise-k-norm-mtp256-full4k-preparation.json').read_bytes());assert sha(E/'rowwise-k-norm-mtp256-full4k-preparation.json')==receipt['preparation_sha256']
+for n in names+['evidence/rowwise-k-norm-mtp256-full4k-preparation.json']:owned.append(M/n)
+for n in ('cuda_mtp.py','cuda_mtp_prefill16_b4_study.py'):
+    path=R/'xModel/qwen35/vl_0_8b'/n;assert sha(path)==p['source_files'][path.relative_to(R).as_posix()];owned.append(path)
+for n in ('prepare-rowwise-k-norm-mtp256-tools.py','install-rowwise-k-norm-mtp256-full4k.py','postprocess-rowwise-k-norm-mtp256-full4k.py','replay-rowwise-k-norm-mtp256-full4k.py',Path(__file__).name):
+    path=E/(n+'.txt');assert not path.exists();path.write_bytes((W/n).read_bytes());owned.append(path)
+for n in ('rowwise-k-norm-mtp256-package.json','rowwise-k-norm-mtp256-tool-derivation.json'):
+    path=E/n;assert not path.exists();path.write_bytes((W/n).read_bytes());owned.append(path)
+entry=('\n\n2026-10-27: Prepared source89 explicit256MiB B4T16 MTP draft-prefill validation after retained source87 MTP128 build failure. '
+       'Reported TensorRT tactic requires134227968B, exceeding128MiB134217728B by10240B. New budget is a tested hypothesis, not proof a rebuild or model will pass. '
+       'CUDAMTPProgram permits256MiB only for strict integer B4/cap4096/T4-or-T16. Default-off B4 study keeps128MiB default and accepts explicit256MiB for extra T16 engine. '
+       'Actual graph metadata must report256MiB for both T4/T16; original128MiB evidence gate and historical failures preserved. '
+       'Source89 bundle '+receipt['source_bundle_sha256']+' contains all87 source87 members byte-identically plus two Python workspace-policy files. Same e843 native DLL; CUDA/DSL/target/verifier/replay arithmetic and checkpoint unchanged. '
+       '156 local CPU controls passed (115 retained+31 existing MTP+5 workspace/ownership+5 new workspace/target-evidence controls). New remote owner will repeat115 then41 on installed candidate. '
+       '55 closed parents,2038 guarded baseline files,1692 archive inputs,89 source members; runtime/SDK/config-index/CMake/all34 pins retained with full restoration and fixed96GiB SSD admission. '
+       'One fresh GPU process with text/image/mixed3968+128 outputs vs8immutable B1 oracles, original1536IDs/48complete128component state/vector comparisons. '
+       'Deployment '+receipt['deployment_sha256']+'; prep '+receipt['preparation_sha256']+'. GPU build/model unrun at this entry. '
+       'Broader MTP partial-prefix/reset/permutation/tail/repeat/805quality/HTTP/performance and strongest references/INT4/4B remain open. No new throughput or2x/halfTTFT claim.\n').encode()
+for n in ('docs/research/qwen38-5090-development-log.md','docs/research/qwen38-5090-implementation-task.md'):
+    path=R/n;before=path.read_bytes();assert b'Prepared source89 explicit256MiB B4T16' not in before
+    with path.open('ab') as f:f.write(entry)
+    assert path.read_bytes()==before+entry;owned.append(path)
+(W/'rowwise-k-norm-mtp256-stage-paths.bin').write_bytes(b''.join(path.relative_to(R).as_posix().encode()+b'\0' for path in dict.fromkeys(owned)));print(json.dumps(dict(stage_paths=len(set(owned)),CPU=156,GPU_unrun=True)))

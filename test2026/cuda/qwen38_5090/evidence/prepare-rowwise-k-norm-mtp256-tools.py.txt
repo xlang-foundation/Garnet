@@ -1,0 +1,14 @@
+from pathlib import Path
+import ast,hashlib,json
+W=Path(__file__).resolve().parent;rows=[]
+for a,b in [('install-rowwise-k-norm-full4k.py','install-rowwise-k-norm-mtp256-full4k.py'),('postprocess-rowwise-k-norm-mtp-full4k.py','postprocess-rowwise-k-norm-mtp256-full4k.py'),('replay-rowwise-k-norm-mtp-full4k.py','replay-rowwise-k-norm-mtp256-full4k.py')]:
+    raw=(W/a).read_bytes();text=raw.decode().replace('\r\n','\n');changes=[]
+    replacements=[('rowwise-k-norm-full4k','rowwise-k-norm-mtp256-full4k'),('rowwise_K_norm_full4k','rowwise_K_norm_mtp256_full4k')] if a.startswith('install') else [('rowwise-k-norm-mtp-full4k','rowwise-k-norm-mtp256-full4k'),('rowwise_k_norm_mtp_full4k','rowwise_k_norm_mtp256_full4k'),('b4_mtp_full4k_gate','b4_mtp256_full4k_gate'),('Garnet-Rowwise-K-Norm-MTP-Full4K','Garnet-Rowwise-K-Norm-MTP256-Full4K'),('146CPU','156CPU'),('54parent','55parent'),('source87','source89')]
+    for old,new in replacements:
+        count=text.count(old)
+        if count:text=text.replace(old,new);changes.append(dict(old=old,new=new,count=count))
+    path=W/b;ast.parse(text)
+    if path.exists():assert path.read_bytes()==text.encode()
+    else:path.write_bytes(text.encode())
+    rows.append(dict(source=a,source_sha256=hashlib.sha256(raw).hexdigest(),target=b,target_sha256=hashlib.sha256(text.encode()).hexdigest(),changes=changes))
+(W/'rowwise-k-norm-mtp256-tool-derivation.json').write_bytes(json.dumps(rows,indent=2).encode());print(json.dumps(dict(tools=len(rows))))

@@ -1,0 +1,32 @@
+from pathlib import Path
+import ast,hashlib,json
+W=Path(__file__).resolve().parent;R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';E=M/'evidence';rows=[]
+def derive(source,target,changes):
+    raw=(M/source).read_bytes();text=raw.decode().replace('\r\n','\n');steps=[]
+    for old,new,count in changes:
+        assert text.count(old)==count,(source,old,text.count(old),count)
+        text=text.replace(old,new);steps.append(dict(old=old,new=new,count=count))
+    data=text.encode();ast.parse(data);path=M/target;assert not path.exists();path.write_bytes(data)
+    rows.append(dict(source=source,source_sha256=hashlib.sha256(raw).hexdigest(),target=target,target_sha256=hashlib.sha256(data).hexdigest(),changes=steps))
+derive('b4_mtp_full4k_gate.py','b4_mtp256_full4k_gate.py',[
+ ("draft_prefill_builder_workspace_bytes']==128<<20","draft_prefill_builder_workspace_bytes']==256<<20",1),
+ ("    routes=[]","    assert m['mtp_graph']['builder_workspace_limit_bytes']==m['prefill16_graph']['builder_workspace_limit_bytes']==256<<20\n    routes=[]",1)])
+derive('test_b4_mtp_full4k_gate.py','test_b4_mtp256_full4k_gate.py',[
+ ('from .b4_mtp_full4k_gate import admit','from .b4_mtp256_full4k_gate import admit',1),
+ ('draft_prefill_builder_workspace_bytes=128<<20','draft_prefill_builder_workspace_bytes=256<<20,mtp_graph=dict(builder_workspace_limit_bytes=256<<20),prefill16_graph=dict(builder_workspace_limit_bytes=256<<20)',1),
+ ("c['mtp_memory']['draft_prefill_builder_workspace_bytes']=256<<20","c['mtp_memory']['draft_prefill_builder_workspace_bytes']=128<<20",1),
+ ("if __name__=='__main__':unittest.main()","    def test_actual_graph_workspace_must_match_reported_policy(self):\n        for graph in ('mtp_graph','prefill16_graph'):\n            s,r,c,f=self.fixture();c['mtp_memory'][graph]['builder_workspace_limit_bytes']=128<<20\n            with self.assertRaises(AssertionError):self.run_gate(s,r,c,f)\nif __name__=='__main__':unittest.main()",1)])
+for source,target in [('probe_rowwise_k_norm_mtp_full4k.py','probe_rowwise_k_norm_mtp256_full4k.py'),('launch_rowwise_k_norm_mtp_full4k.py','launch_rowwise_k_norm_mtp256_full4k.py'),('run_rowwise_k_norm_mtp_full4k.py','run_rowwise_k_norm_mtp256_full4k.py'),('verify_rowwise_k_norm_mtp_full4k.py','verify_rowwise_k_norm_mtp256_full4k.py')]:
+    raw=(M/source).read_bytes().decode().replace('\r\n','\n');changes=[]
+    for old,new in [('rowwise-k-norm-mtp-full4k','rowwise-k-norm-mtp256-full4k'),('rowwise_k_norm_mtp_full4k','rowwise_k_norm_mtp256_full4k'),('b4_mtp_full4k_gate','b4_mtp256_full4k_gate'),('rowwise_K_norm_mtp_full4k_prepared_GPU_unrun','rowwise_K_norm_mtp256_full4k_prepared_GPU_unrun'),('source87','source89'),('Source87','Source89')]:
+        if raw.count(old):changes.append((old,new,raw.count(old)));raw=raw.replace(old,new)
+    if source.startswith('probe_'):
+        changes += [('draft_builder_workspace_bytes=256<<20)','draft_builder_workspace_bytes=256<<20,draft_prefill_builder_workspace_bytes=256<<20)',1),("memory['draft_prefill_builder_workspace_bytes']==128<<20","memory['draft_prefill_builder_workspace_bytes']==256<<20",1)]
+    if source.startswith('run_'):
+        changes += [('len(source)==87','len(source)==89',1),('31 additional CPU controls','41 additional CPU controls',1),('31 MTP CPU controls failed','41 MTP CPU controls failed',1),('256MiBT4+128MiBT16','256MiBT4+256MiBT16',1)] if '256MiBT4+128MiBT16' in raw else [('len(source)==87','len(source)==89',1),('31 additional CPU controls','41 additional CPU controls',1),('31 MTP CPU controls failed','41 MTP CPU controls failed',1)]
+        # Descriptive text tracks new test coverage; execution remains the same owner.
+        changes += [('and4 MTP evidence','and4 original MTP evidence',1)] if 'and4 MTP evidence' in raw else []
+    if source.startswith('verify_'):
+        changes += [('==87 and {n:sha(source.read(n))','==89 and {n:sha(source.read(n))',1),('Ran 31 tests','Ran 41 tests',1),('CPU_controls=146','CPU_controls=156',1)]
+    derive(source,target,changes)
+out=E/'rowwise-k-norm-mtp256-derivation.json';assert not out.exists();out.write_bytes(json.dumps(dict(derivations=rows,unchanged_native_DLL=True,original_gates_preserved=True,only_new_workspace_policy_and_graph_budget_evidence=True),indent=2).encode());print(json.dumps(dict(methods=len(rows),CPU_expected=156)))
