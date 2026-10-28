@@ -1,0 +1,21 @@
+from pathlib import Path
+import ast,hashlib,json,zipfile
+W=Path(__file__).resolve().parent;O=W.parent/'outputs';R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';E=M/'evidence';sha=lambda raw:hashlib.sha256(raw).hexdigest()
+J='decode35-endpoints-attempt1';raw=(O/(J+'-verified.json')).read_bytes();q=json.loads(raw)
+assert raw==(O/(J+'-remote-verified.json')).read_bytes() and q['exit_code']==1 and q['CPU_controls']==97 and q['analysis'] is None
+archive=O/(J+'-evidence.zip');assert sha(archive.read_bytes())==q['archive_sha256']
+with zipfile.ZipFile(archive) as z:w=json.loads(z.read('results/'+J+'/workflow.json'));assert w['cleanup_finished'] and w['all_restored']
+package=json.loads((W/'rowwise-k-norm-source-package.json').read_bytes());source=W/'rowwise-k-norm-source.zip';assert sha(source.read_bytes())==package['bundle_sha256']
+with zipfile.ZipFile(source) as z:
+    mapping={n:sha(z.read(n)) for n in z.namelist()};assert len(mapping)==87
+    headers={Path(n).name:z.read(n) for n in ('src/backends/tensorrt/qwen38_rowwise_k_norm_profile.h','src/backends/tensorrt/qwen38_decode35_stage_profile.h','src/backends/tensorrt/qwen38_full_chunk_stage_profile.h')}
+members={**headers,'source-files.json':json.dumps(mapping,indent=2).encode(),'probe_rowwise_k_norm_profile.cpp':(M/'probe_rowwise_k_norm_profile.cpp').read_bytes(),'build_rowwise_k_norm_profile_cpu.bat':(M/'build_rowwise_k_norm_profile_cpu.bat').read_bytes(),'verify_rowwise_k_norm_profile_cpu.py':(M/'verify_rowwise_k_norm_profile_cpu.py').read_bytes(),'runner.py':(W/'run-rowwise-k-norm-profile-cpu.py').read_bytes()}
+ast.parse(members['runner.py']);ast.parse(members['verify_rowwise_k_norm_profile_cpu.py'])
+p={'status':'rowwise_k_norm_native_CPU_profile_prepared_unrun','files':w['source_after'],'runtime':w['runtime_after'],'environment':w['environment_after'],'checkpoints':w['checkpoint_after'],'cuda_objects':w['cuda_objects_after'],'cache':w['cache_after_sha256'],'parent_proof_sha256':sha(raw),'parent_archive_sha256':q['archive_sha256'],'source_bundle_sha256':package['bundle_sha256'],'source_files':87,'input_files':{n:sha(v) for n,v in members.items()},'local_source_controls':5,'expected_native_CPU_cases':184,'vcvars':'C:/Program Files (x86)/Microsoft Visual Studio/2022/BuildTools/VC/Auxiliary/Build/vcvars64.bat','native_or_GPU_unrun_at_preparation':True,'scope':'Exclusive remote MSVC /Bv /MT /W4 /WX CPU compilation of actual source87 rowwise-K policy header plus unchanged native seven-stage/fullchunk headers.184 cases:17new valid,161rejected,4old valid,2old rejected; all16 FA offsets/neighboring values, malformed layers, modes, finite settings, observer exclusion. No TensorRT/DLL/GPU/model/operator execution. Baseline1948 files/runtime/SDK/config-index/CMake/all34 unchanged. Source87 full build and model repair unrun; old full4K and both output-observer failures remainFAILED; complete2x goal unchanged.'}
+assert len(p['files'])==1948 and len(p['cuda_objects'])==34
+members['preparation.json']=json.dumps(p,indent=2).encode();target=W/'rowwise-k-norm-profile-cpu-deployment.zip';assert not target.exists()
+with zipfile.ZipFile(target,'x',zipfile.ZIP_DEFLATED) as z:
+    for n,raw in members.items():z.writestr(n,raw)
+    z.writestr('deployment-manifest.json',json.dumps({'files':{n:sha(raw) for n,raw in members.items()}},indent=2))
+receipt={'deployment_sha256':sha(target.read_bytes()),'bytes':target.stat().st_size,'files':len(members),'source_bundle_sha256':package['bundle_sha256'],'CPU_source_controls':5,'native_CPU_contracts_unrun':True,'expected_native_CPU_cases':184}
+(W/'rowwise-k-norm-profile-cpu-package.json').write_bytes(json.dumps(receipt,indent=2).encode());print(json.dumps(receipt,indent=2))
