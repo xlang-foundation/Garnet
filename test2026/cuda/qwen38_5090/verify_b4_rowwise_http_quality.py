@@ -9,7 +9,7 @@ from test2026.cuda.qwen38_5090.mmmu_http_quality import load_corpus
 from test2026.cuda.qwen38_5090.verify_mmmu_http_quality import replay
 from test2026.cuda.qwen38_5090.probe_o128_http_quality import REFERENCE,REFERENCE_SHA
 from test2026.cuda.qwen38_5090.b4_rowwise_http_admission import LIBRARY,sha_file
-JOB='b4-rowwise-http-quality-attempt1';P='Garnet/test2026/cuda/qwen38_5090/';B='results/'+JOB+'/';sha=lambda b:hashlib.sha256(b).hexdigest()
+JOB='b4-rowwise-http-quality-attempt2';P='Garnet/test2026/cuda/qwen38_5090/';B='results/'+JOB+'/';sha=lambda b:hashlib.sha256(b).hexdigest()
 
 def main():
     ap=argparse.ArgumentParser();ap.add_argument('--proofs',type=Path,required=True);ap.add_argument('--corpus',type=Path,required=True);ap.add_argument('--scratch',type=Path,required=True);a=ap.parse_args();archive=a.proofs/(JOB+'-evidence.zip')
@@ -37,7 +37,7 @@ def main():
             expected=p['files'] if stage=='cpu' else p['installed_files'];assert rows[0]['source']['owned_source_sha256']==rows[1]['source_after']['owned_source_sha256']==expected
             stages[stage]=rows[1]['exit_code']
         for stage in ('cpu','embedded-cpu'):
-            if stages.get(stage)==0:assert b'Ran 14 tests' in z.read(B+stage+'-ledger/commands.log') and b'\nOK' in z.read(B+stage+'-ledger/commands.log')
+            if stages.get(stage)==0:assert b'Ran 17 tests' in z.read(B+stage+'-ledger/commands.log') and b'\nOK' in z.read(B+stage+'-ledger/commands.log')
         summary=None
         if w['exit_code']==0:
             assert stages=={'cpu':0,'embedded-cpu':0,'candidate':0} and w['status']=='B4_rowwise_HTTP_quality_collected_needs_independent_replay'

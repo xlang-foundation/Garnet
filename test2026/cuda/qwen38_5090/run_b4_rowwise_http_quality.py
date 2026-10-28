@@ -1,7 +1,7 @@
 """Exclusive reversible source91 HTTP correctness collection; never a benchmark."""
 from pathlib import Path
 import hashlib,json,os,shutil,sys,time,zipfile
-ROOT=Path('D:/CantorAI/5090-study-20261023');M=ROOT/'Garnet/test2026/cuda/qwen38_5090';JOB='b4-rowwise-http-quality-attempt1'
+ROOT=Path('D:/CantorAI/5090-study-20261023');M=ROOT/'Garnet/test2026/cuda/qwen38_5090';JOB='b4-rowwise-http-quality-attempt2'
 def sha(path):
     h=hashlib.sha256()
     with Path(path).open('rb') as f:
@@ -13,7 +13,8 @@ def main():
     import run_logged as ledger
     from run_bf16_low_batch_native_build import idle
     from run_bf16_batch8_admission import retire
-    from run_z128_factory_trace_native_build import candidate_bytes,snapshot_targets,restore_targets
+    from run_z128_factory_trace_native_build import snapshot_targets,restore_targets
+    from b4_http_source_bundle import load_bundle
     prep=M/'evidence/b4-rowwise-http-quality-preparation.json';p=json.loads(prep.read_bytes())
     assert p['status']=='B4_rowwise_HTTP_quality_prepared_GPU_unrun'
     idle()
@@ -24,7 +25,7 @@ def main():
     for job,row in p['parents'].items():
         q=ROOT/'results'/(job+'-verified.json');d=json.loads(q.read_bytes());assert sha(q)==row['proof_sha256'] and d['status']==row['status'] and sha(ROOT/'results'/(job+'-evidence.zip'))==d['archive_sha256']==row['archive_sha256']
         w=json.loads((ROOT/'results'/job/'workflow.json').read_bytes());assert w['cleanup_finished'] and w['exit_code']==row['exit_code']
-    bundle=ROOT/p['bundle'];assert sha(bundle)==p['bundle_sha256'];source=candidate_bytes(bundle,p['source_files']);assert len(source)==91
+    bundle=ROOT/p['bundle'];assert sha(bundle)==p['bundle_sha256'];source=load_bundle(bundle,p['model_source_files'],p['source_files']);assert len(source)==91
     assert len(p['model_source_files'])==89 and all(p['source_files'][n]==h for n,h in p['model_source_files'].items())
     old=snapshot_targets(ROOT/'Garnet',source,p['candidate_base']);library=ROOT/'build/bin/garnet.dll';baseline=ROOT/'build/bin/garnet-native-tokenizer-nfc-attempt1.dll';saved=ROOT/p['library']
     assert sha(library)==sha(baseline)==p['runtime']['garnet.dll'] and sha(saved)==p['library_sha256']
@@ -42,10 +43,10 @@ def main():
         for n,b in old.items():z.writestr(n,b)
     save()
     try:
-        code=ledger.run([sys.executable,'-m','unittest',*p['http_test_modules']],out/'cpu-ledger','correctness','Fourteen CPU protocol and raw-event replay controls; no model/GPU or performance claim.',common);w['cpu_exit_code']=code;save();assert code==0,'14 CPU controls failed'
+        code=ledger.run([sys.executable,'-m','unittest',*p['http_test_modules']],out/'cpu-ledger','correctness','Seventeen CPU source-bundle/protocol/raw-event replay controls; no model/GPU or performance claim.',common);w['cpu_exit_code']=code;save();assert code==0,'17 CPU controls failed'
         for n,b in source.items():installed[n]=b;(ROOT/'Garnet'/n).write_bytes(b)
         library.write_bytes(saved.read_bytes());inventory=p['installed_files'];assert all(sha(ROOT/n)==h for n,h in inventory.items());w['installed_source']=inventory;w['candidate_library_sha256']=sha(library);save()
-        code=ledger.run([sys.executable,str(M/'launch_b4_http_embedded_cpu.py'),str(ROOT)],out/'embedded-cpu-ledger','correctness','Same14 symbolic controls in actual embedded native Python. No model imports or GPU requests.',common+[library]);w['embedded_cpu_exit_code']=code;save();assert code==0,'14 embedded controls failed'
+        code=ledger.run([sys.executable,str(M/'launch_b4_http_embedded_cpu.py'),str(ROOT)],out/'embedded-cpu-ledger','correctness','Same17 symbolic controls in actual embedded native Python. No model imports or GPU requests.',common+[library]);w['embedded_cpu_exit_code']=code;save();assert code==0,'17 embedded controls failed'
         idle();argv=[sys.executable,str(M/'monitor_native_probe.py'),'--study',str(ROOT),'--output',str(out/'resources'),'--',sys.executable,str(M/'probe_b4_rowwise_http_quality.py'),'--root',str(ROOT),'--output',str(out/'native')]
         code=ledger.run(argv,out/'candidate-ledger','correctness','Actual source91 B4/MTP3 loopback HTTP: fixed3968+128 padding/order/repeat C1/2/3/4 and C8, joined transport fixture, text/image SSE, invalid ignore_eos, adapted805 natural-stop collection. Full raw IDs compared with retained B1 controls. No performance admission.',common+[library]);w['candidate_exit_code']=code;save();idle();assert code==0,'B4 HTTP collection failed'
         report=json.loads((out/'native/report.json').read_bytes());assert report['status']=='B4_rowwise_HTTP_controls_and_adapted805_collected_needs_independent_replay' and not report['token_mismatches']
