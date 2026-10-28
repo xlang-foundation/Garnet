@@ -1,0 +1,15 @@
+"""Package CPU-only publisher/reference provenance outside frozen model sources."""
+from pathlib import Path
+import hashlib,json,zipfile
+W=Path(__file__).resolve().parent;O=W.parent/'outputs';F=W/'qwen38-upstream-file-identity';sha=lambda b:hashlib.sha256(b).hexdigest()
+comparison=json.loads((F/'published-assets-comparison.json').read_bytes());assert comparison['status']=='all15_local_published_assets_match_pinned_publisher_identity' and comparison['weight_shards']==3
+audit=json.loads((W/'saved-reference-settings-audit.json').read_bytes());assert audit['sglang']['configured_settings']['disable_radix_cache'] is True and not audit['vllm_MTP3']['strict_greedy_ID_gate_passed']
+files={'publisher/'+p.relative_to(F).as_posix():p for p in F.rglob('*') if p.is_file()}
+for n in ('check-qwen38-upstream-lfs.py','compare-qwen38-publisher-assets.py','audit-saved-reference-settings.py','saved-reference-settings-audit.json',Path(__file__).name):files['methods/'+n]=W/n
+files['local/qwen38-nvfp4-current-inputs.json']=O/'qwen38-nvfp4-current-inputs.json'
+target=O/'Qwen38-Publisher-and-Reference-Identity-Evidence.zip';assert not target.exists()
+with zipfile.ZipFile(target,'x',zipfile.ZIP_DEFLATED) as z:
+    for n,p in files.items():z.write(p,n)
+    z.writestr('evidence-manifest.json',json.dumps(dict(files={n:sha(p.read_bytes()) for n,p in files.items()},scope='CPU-only publisher asset identity and saved reference configuration/failure-stage audit. No weights downloaded or model/GPU/benchmark execution. Includes the initial failed overinclusive18publisher expectation, then corrected15published+3localbookkeeping comparison.'),indent=2))
+receipt=dict(status='publisher_and_saved_reference_evidence_packaged',archive_sha256=sha(target.read_bytes()),archive_bytes=target.stat().st_size,files=len(files),publisher_metadata_sha256=comparison['publisher_metadata_sha256'],local_model_manifest_sha256=comparison['local_current_manifest_sha256'],published_assets=15,additional_guarded_local_bookkeeping_JSON=3,publisher_weight_LFS_shards=3,weight_bytes=comparison['weight_bytes'],SGLang_package_version=audit['sglang']['package_version'],SGLang_radix_cache_disabled=True,vLLM_MTP3_service_started_but_strict_ID_gate_failed=True,native_GPU_or_new_timing_performed=False,historical_shard_identity_retroactively_proved=False)
+(O/'Qwen38-Publisher-and-Reference-Identity-Receipt.json').write_bytes(json.dumps(receipt,indent=2).encode());print(json.dumps(receipt))

@@ -1,0 +1,16 @@
+"""Static audit of retained baseline launch evidence; no timing or numeric replay."""
+from pathlib import Path
+import ast,datetime,hashlib,json,zipfile
+W=Path(__file__).resolve().parent;O=W.parent/'outputs';sha=lambda b:hashlib.sha256(b).hexdigest();out=W/'saved-reference-settings-audit.json';assert not out.exists()
+sg=O/'sglang-fixed4k-ordinary-attempt2-evidence.zip';vl=O/'vllm-mtp3-failure-evidence.zip'
+with zipfile.ZipFile(sg) as z:
+    raw=z.read('results/sglang-fixed4k-ordinary-attempt2/server.log');line=next(n for n in raw.decode().splitlines() if 'server_args=' in n);args=ast.literal_eval(line.split('server_args=',1)[1]);metadata=z.read('results/sglang-fixed4k-ordinary-attempt2/installed-source/sglang-0.5.22.dist-info/METADATA');version=next(n.split(': ',1)[1] for n in metadata.decode().splitlines() if n.startswith('Version: '))
+    fields=('context_length','max_total_tokens','max_running_requests','chunked_prefill_size','max_prefill_tokens','dtype','kv_cache_dtype','mamba_ssm_dtype','disable_radix_cache','uses_mamba_radix_cache','enable_session_radix_cache','enable_prefix_mm_cache','cuda_graph_backend_decode','cuda_graph_backend_prefill','cuda_graph_bs_decode','speculative_algorithm','enable_deterministic_inference')
+    selected={n:args[n] for n in fields};assert selected['disable_radix_cache'] is True and selected['uses_mamba_radix_cache'] is False and selected['mamba_ssm_dtype']=='float32'
+    sgrow=dict(archive_sha256=sha(sg.read_bytes()),server_log_sha256=sha(raw),server_args_line_sha256=sha(line.encode()),package_version=version,configured_settings=selected,scope='Configured settings from the actual retained server log. Resolves the earlier unverified radix-cache flag; no fresh run, cache-hit replay or stronger-reference qualification.')
+with zipfile.ZipFile(vl) as z:
+    log=z.read('results/vllm-mtp3-server.log');gate=z.read('results/vllm-mtp3-gate-ledger/commands.log');launch=z.read('results/vllm-mtp3-start-ledger/commands.jsonl')
+    assert b'Application startup complete.' in log and b'Speculative full-ID mismatch: s3-text-c1-r0' in gate and b'Mean acceptance length' in log
+    vlrow=dict(archive_sha256=sha(vl.read_bytes()),server_log_sha256=sha(log),greedy_gate_log_sha256=sha(gate),launch_ledger_sha256=sha(launch),server_started=True,actual_MTP_acceptance_metrics_present=True,strict_greedy_ID_gate_passed=False,first_failed_case='s3-text-c1-r0',scope='Historical MTP3 service loaded and served requests; its enclosing candidate failed strict same-engine full-ID greedy equivalence. This is not a model-load/support failure and supplies no qualified throughput baseline. Numerical cause, stronger configurations and representative quality remain unestablished.')
+doc=dict(status='saved_reference_configuration_and_failure_stage_audited',UTC=datetime.datetime.now(datetime.timezone.utc).isoformat(),sglang=sgrow,vllm_MTP3=vlrow,model_GPU_or_new_benchmark_performed=False,strongest_reference_or_two_times_target_qualified=False)
+out.write_bytes(json.dumps(doc,indent=2).encode());print(json.dumps(dict(status=doc['status'],SGLang_version=version,SGLang_radix_disabled=selected['disable_radix_cache'],MTP3_load_supported_by_saved_run=True,MTP3_strict_greedy_gate_passed=False)))

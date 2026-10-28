@@ -1,0 +1,32 @@
+"""Compare published model assets separately from extra local bookkeeping JSON."""
+from pathlib import Path
+import datetime,hashlib,json
+from urllib.request import Request,urlopen
+W=Path(__file__).resolve().parent;O=W.parent/'outputs';folder=W/'qwen38-upstream-file-identity';target=folder/'published-assets-comparison.json';assert not target.exists()
+manifest=O/'qwen38-nvfp4-current-inputs.json';d=json.loads(manifest.read_bytes());raw=(folder/'publisher-metadata-response.bin').read_bytes();remote=json.loads(raw);rev='482ca0f3832238542f8f5295dde86b5f22711d80';model='nvidia/Qwen3.8-27B-NVFP4'
+assert remote['sha']==d['revision']==rev and remote['id']==model and json.loads((folder/'publisher-http.json').read_bytes())['status']==200
+entries={n['rfilename']:n for n in remote['siblings']};local_only={'download-progress.json','download-provenance.json','metadata-provenance.json'};compared=[];bookkeeping=[]
+for n,h in d['files'].items():
+    rel=n.removeprefix('models/Qwen3.8-27B-NVFP4/');size=d['file_stats'][n]['bytes']
+    if rel not in entries:
+        assert rel in local_only;bookkeeping.append(dict(file=rel,sha256=h,bytes=size,publisher_asset=False));continue
+    entry=entries[rel];assert entry['size']==size,(rel,'size')
+    if entry.get('lfs'):
+        lfs=entry['lfs'];assert lfs['sha256']==h and lfs['size']==size,(rel,'LFS identity')
+        compared.append(dict(file=rel,kind='publisher_LFS_SHA256_and_size',sha256=h,bytes=size));continue
+    assert not rel.endswith('.safetensors') and size<=32*1024*1024
+    path=folder/'side-files'/rel
+    if path.exists():body=path.read_bytes()
+    else:
+        address='https://huggingface.co/'+model+'/resolve/'+rev+'/'+rel
+        with urlopen(Request(address,headers={'User-Agent':'CantorAI-Garnet-checkpoint-identity-audit'}),timeout=40) as response:body=response.read(32*1024*1024+1)
+        assert len(body)==size and hashlib.sha256(body).hexdigest()==h,(rel,'side-file SHA256')
+        path.parent.mkdir(parents=True,exist_ok=True);path.write_bytes(body)
+    assert len(body)==size and hashlib.sha256(body).hexdigest()==h,(rel,'cached SHA256')
+    assert hashlib.sha1(b'blob '+str(size).encode()+b'\0'+body).hexdigest()==entry['blobId'],(rel,'publisher Git blob identity')
+    compared.append(dict(file=rel,kind='pinned_publisher_side_file_SHA256_and_Git_blob',sha256=h,git_blob=entry['blobId'],bytes=size))
+assert len(compared)==15 and {n['file'] for n in bookkeeping}==local_only and sum(n['file'].endswith('.safetensors') for n in compared)==3
+index=json.loads((folder/'side-files/model.safetensors.index.json').read_bytes());assert set(index['weight_map'].values())=={n['file'] for n in compared if n['file'].endswith('.safetensors')}
+config=json.loads((folder/'side-files/config.json').read_bytes());assert config['architectures']==['Qwen3_5ForConditionalGeneration']
+result=dict(status='all15_local_published_assets_match_pinned_publisher_identity',UTC=datetime.datetime.now(datetime.timezone.utc).isoformat(),source_url='https://huggingface.co/api/models/'+model+'/revision/'+rev+'?blobs=true',requested_revision=rev,publisher_metadata_sha256=hashlib.sha256(raw).hexdigest(),local_current_manifest_sha256=hashlib.sha256(manifest.read_bytes()).hexdigest(),published_assets=compared,additional_guarded_local_bookkeeping_JSON=bookkeeping,architecture=config['architectures'],weight_shards=3,weight_bytes=sum(n['bytes'] for n in compared if n['file'].endswith('.safetensors')),weight_shards_downloaded=False,historical_shard_identity_retroactively_proved=False,scope='All15 publisher assets present in the current local snapshot match pinned publisher LFS SHA256/size or side-file SHA256 plus Git blob identity. Three other guarded JSON files are local download/provenance bookkeeping and have no upstream counterpart.18-file manifest is intentionally overinclusive. This comparison was obtained after historical runs and does not retroactively establish their shard-file identities. No model/GPU execution or benchmark.')
+target.write_bytes(json.dumps(result,indent=2).encode());print(json.dumps({k:v for k,v in result.items() if k not in ('published_assets','additional_guarded_local_bookkeeping_JSON')}))
