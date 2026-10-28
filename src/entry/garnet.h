@@ -23,6 +23,7 @@
 #include <memory>
 #include <mutex>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 #if !defined(GARNET_CPU_ONLY) && !defined(GARNET_METAL)
@@ -156,6 +157,7 @@ namespace Garnet
 			mutable std::mutex mutex;
 		};
 		std::unordered_map<std::string, std::shared_ptr<ServingInstance>> m_servingInstances;
+		std::unordered_set<std::string> m_initializingServingModels;
 		std::string m_defaultServingModelId;
 		mutable std::mutex m_servingMutex;
 		mutable std::mutex m_greedyBatchMutex;

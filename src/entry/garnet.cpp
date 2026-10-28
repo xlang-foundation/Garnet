@@ -1924,6 +1924,7 @@ namespace Garnet
             ? params[4].ToString()
             : std::string();
         if (requestedModelId == "Qwen3.5-2B" || requestedModelId == "Qwen3.5-4B") {
+            bool ownsInitialization = false;
             try {
                 const json profile = params.size() > 3 && !params[3].ToString().empty()
                     ? json::parse(params[3].ToString()) : json::object();
@@ -1967,6 +1968,12 @@ namespace Garnet
                     return NativeValue(Host(), GarnetServingStatus(retainedModel, root, requestedModelId,
                         instance->inputCapability, instance->error, rt).dump());
                 }
+                if (!m_initializingServingModels.insert(requestedModelId).second)
+                    return NativeValue(Host(), GarnetJsonError("model_loading", "The requested model is already loading"));
+                ownsInitialization = true;
+                // Constructor callbacks compile and warm model graphs. Do not
+                // keep the registry locked while they re-enter the VM.
+                guard.unlock();
                 const auto runtimeRoot = sourceRoot / "runtime";
                 if (x3_runtime_add_import_root(rt, sourceRoot.string().c_str()) != X3_STATUS_OK ||
                     x3_runtime_add_import_root(rt, runtimeRoot.string().c_str()) != X3_STATUS_OK)
@@ -1981,12 +1988,22 @@ namespace Garnet
                 instance->qwen35CUDA = true; instance->servingProfile = profileJson;
                 instance->inputCapability = "vision"; instance->deviceId = deviceId;
                 instance->maxOutputTokens = profile.value("maxOutputTokens", 128);
-                m_servingInstances[requestedModelId] = instance;
-                m_defaultServingModelId = requestedModelId;
-                return NativeValue(Host(), GarnetServingStatus(instance->model, root, requestedModelId,
-                    instance->inputCapability, instance->error, rt).dump());
+                auto status = GarnetServingStatus(instance->model, root, requestedModelId,
+                    instance->inputCapability, instance->error, rt).dump();
+                {
+                    std::lock_guard<std::mutex> publish(m_servingMutex);
+                    m_servingInstances[requestedModelId] = instance;
+                    m_defaultServingModelId = requestedModelId;
+                    m_initializingServingModels.erase(requestedModelId);
+                    ownsInitialization = false;
+                }
+                return NativeValue(Host(), status);
             }
             catch (const std::exception& exception) {
+                if (ownsInitialization) {
+                    std::lock_guard<std::mutex> guard(m_servingMutex);
+                    m_initializingServingModels.erase(requestedModelId);
+                }
                 return NativeValue(Host(), GarnetJsonError("model_load_failed", exception.what()));
             }
         }
@@ -2645,6 +2662,10 @@ namespace Garnet
         std::vector<std::shared_ptr<ServingInstance>> stopped;
         {
             std::lock_guard<std::mutex> guard(m_servingMutex);
+            if ((modelId.empty() && !m_initializingServingModels.empty()) ||
+                m_initializingServingModels.count(modelId))
+                return NativeValue(Host(), GarnetJsonError("model_loading",
+                    "Model initialization is still running; retry stop after it completes"));
             if (modelId.empty()) {
                 for (const auto& item : m_servingInstances) stopped.push_back(item.second);
                 m_servingInstances.clear();

@@ -9,3 +9,5 @@ Mechrevo 的 Cantor 主进程 29128 在本地进程任务复验中仍存活，�
 `test/xlang3/serving_concurrency.py` 通过真实 Garnet 公共入口加载可控制的假解码器，不需要权重，也不执行真实推理。它让一次推理等待，同时查询状态、列举模型、复用模型并请求停止；停止必须等待推理，并禁止提前释放缓冲区。旧 DLL 失败于 `health query waited for inference`；修复 DLL 在本机通过，Mechrevo 上也通过。真实 CUDA 设备不存在时该用例明确跳过，不当作通过。
 
 验证：`garnet_native_api`、`garnet_serving_python_defaults`、`garnet_serving_concurrency` 三项 CTest 通过。Mechrevo 使用相同 DLL 哈希 `37E053B4B4883DEF2E7A48DA860C87879EF2EF023296A00893A687D7CAE562FE` 通过并发用例。真实 Qwen3.5-2B 模型的独立运行和与 RTX 5090 联合调度仍须另行验收；此处不声称已经通过，也不声称模型速度提升。
+
+另一个用例 `serving_loading_concurrency.py` 复现了冷启动占住注册表锁的问题：加载第二个模型时，第一个已就绪模型的健康查询被阻塞。修复在构造期间释放注册表锁，用独立的初始化记录防止同一模型重复加载；构造失败会清除该记录，允许重试。正在加载时停止操作返回明确的 `model_loading`，不声称已停止，也不删除其他已就绪模型。两项并发用例与上述 API/默认配置用例共四项 CTest 通过；包含冷启动修复的新 DLL 哈希为 `DB8514C0E60C41F2FFA67D93FFCA5EB4B1F7CE385BF738AC76E29A4BC1F4613A`。Mechrevo 本轮真实模型正在加载第一版锁修复，不因新增冷启动修复重新启动。
