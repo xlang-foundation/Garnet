@@ -1,0 +1,64 @@
+from pathlib import Path
+import ast,hashlib,json
+W=Path(__file__).resolve().parent;R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';E=M/'evidence';rows=[]
+def derive(source,target,changes):
+    raw=(M/source).read_bytes();text=raw.decode().replace('\r\n','\n');steps=[]
+    for old,new,count in changes:
+        assert text.count(old)==count,(source,old,text.count(old),count)
+        text=text.replace(old,new);steps.append(dict(old=old,new=new,count=count))
+    ast.parse(text);path=M/target;data=text.encode()
+    if path.exists() and path.read_bytes()!=data:assert not (W/'b4-padding-lifecycle-package.json').exists(),'Preserve packaged methods'
+    path.write_bytes(data)
+    rows.append(dict(source=source,source_sha256=hashlib.sha256(raw).hexdigest(),target=target,target_sha256=hashlib.sha256(data).hexdigest(),changes=steps))
+derive('b4_full4k_exact_gate.py','b4_padding_lifecycle_gate.py',[
+ ('from .b4_b1_exact_gate import compare_capture,require_ids',"from .b4_b1_exact_gate import compare_capture,require_ids\nfrom .b4_padding_lifecycle_inputs import select_lifecycle\nfrom .b4_public_event_gate import replay_public\nimport base64,hashlib",1),
+ ("    assert selection['status']=='retained_fixed4k_B4_correctness_inputs_selected_not_executed'","    assert selection==select_lifecycle(selection['inputs'])",1),
+ ('len(groups)==3','len(groups)==5',1),
+ ('B4_full4k_raw_capture_needs_CPython_admission','B4_padding_lifecycle_raw_capture_needs_CPython_admission',1),
+ ("assert [(row['label'],row['keys']) for row in candidate['rows']]==[(g['label'],g['keys']) for g in groups]","assert [(row['label'],row['keys'],row['real_keys'],row['real_rows'],row['public_ids']) for row in candidate['rows']]==[(g['label'],g['keys'],g['real_keys'],g['real_rows'],g['public_ids']) for g in groups]",1),
+ ("len(group['keys'])==len(set(group['keys']))==4","len(group['keys'])==4 and len(group['real_keys'])==len(set(group['real_keys']))==group['real_rows']",1),
+ ('full_phase_row_comparisons=48','full_phase_row_comparisons=80',1),
+ ('    for group,row in zip(groups,candidate[\'rows\']):',"    for group,row in zip(groups,candidate['rows']):\n        assert type(group['real_rows']) is type(row['real_rows']) is int",1),
+ ("    for row in candidate['rows']:require_ids(row['generated_ids'],[oracle[key]['generated_ids'][0] for key in row['keys']],128)\n    return {**result,'status':'B4_full4k_all_state_vectors_and_128_IDs_exact'}", "    public=[]\n    stops=candidate['default_stop_ids'];assert len(stops)==len(set(stops))==2 and all(type(t) is int for t in stops)\n    for index,row in enumerate(candidate['rows']):\n        require_ids(row['generated_ids'],[oracle[key]['generated_ids'][0] for key in row['keys']],128)\n        assert row['public_event_file']=='case'+str(index)+'-public.jsonl'\n        raw=read_candidate(row['label'],row['public_event_file']);assert hashlib.sha256(raw).hexdigest()==row['public_event_sha256']\n        keys=row['real_keys'];inputs=selection['inputs'];jobs=[dict(id=key,body=inputs[source]['body']) for key,source in zip(row['public_ids'],keys)]\n        images=[]\n        for key in keys:\n            content=inputs[key]['body']['messages'][0]['content']\n            images.append(None if isinstance(content,str) else hashlib.sha256(base64.b64decode(content[0]['image_url']['url'].split(',',1)[1],validate=True)).hexdigest())\n        public.append(replay_public(raw,jobs,[inputs[k]['prompt_ids'] for k in keys],[oracle[k]['generated_ids'][0] for k in keys],stops,images,row['speculative_metrics']))\n    assert sum(p['public_ID_values'] for p in public)==1664\n    return {**result,'status':'B4_padding_lifecycle_all_physical_state_vectors_IDs_and_public_wire_exact','public_streams':public,'physical_ID_values':2560,'public_ID_values':1664,'HTTP_quality_or_performance_qualified':False}",1)])
+derive('b4_mtp256_full4k_gate.py','b4_padding_lifecycle_mtp_gate.py',[
+ ('from .b4_full4k_exact_gate import admit as target_admit','from .b4_padding_lifecycle_gate import admit as target_admit',1),
+ ("status='B4_MTP_prefill16_full4k_target_state_vectors_and128_IDs_exact'","status='B4_MTP_padding_lifecycle_target_state_vectors_and_public_IDs_exact'",1)])
+common=[('rowwise-k-norm-mtp256-full4k','b4-padding-lifecycle'),('rowwise_k_norm_mtp256_full4k','b4_padding_lifecycle'),('b4_mtp256_full4k_gate','b4_padding_lifecycle_mtp_gate'),('b4_full4k_exact_gate','b4_padding_lifecycle_gate'),('rowwise_K_norm_mtp256_full4k_prepared_GPU_unrun','rowwise_K_norm_B4_padding_lifecycle_prepared_GPU_unrun'),('rowwise_K_norm_MTP_full4k128_exact_collected_quality_unqualified','rowwise_K_norm_B4_padding_lifecycle_collected_quality_unqualified'),('rowwise_K_norm_MTP_full4k128_failure_replayed','rowwise_K_norm_B4_padding_lifecycle_failure_replayed'),('rowwise_K_norm_MTP_full4k128_replayed','rowwise_K_norm_B4_padding_lifecycle_replayed'),('MTP_full4K128_target_case_gate_passed','B4_padding_lifecycle_case_gate_passed')]
+for source,target in [('probe_rowwise_k_norm_mtp256_full4k.py','probe_b4_padding_lifecycle.py'),('launch_rowwise_k_norm_mtp256_full4k.py','launch_b4_padding_lifecycle.py'),('run_rowwise_k_norm_mtp256_full4k.py','run_b4_padding_lifecycle.py'),('verify_rowwise_k_norm_mtp256_full4k.py','verify_b4_padding_lifecycle.py')]:
+    text=(M/source).read_bytes().decode().replace('\r\n','\n');changes=[]
+    for old,new in common:
+        count=text.count(old)
+        if count:changes.append((old,new,count));text=text.replace(old,new)
+    if not source.startswith('launch_'):
+        old='from test2026.cuda.qwen38_5090.b4_full4k_inputs import load_corpus'
+        assert text.count(old)==1;new=old+'\n'+('    ' if source.startswith(('run_','probe_')) else '')+'from test2026.cuda.qwen38_5090.b4_padding_lifecycle_inputs import select_lifecycle'
+        changes.append((old,new,1));text=text.replace(old,new)
+        old='selection=load_corpus(corpus)';assert text.count(old)==1;new="selection=select_lifecycle(load_corpus(corpus)['inputs'])";changes.append((old,new,1));text=text.replace(old,new)
+    if source.startswith('probe_'):
+        changes += [
+          ('B4_full4k_raw_capture_needs_CPython_admission','B4_padding_lifecycle_raw_capture_needs_CPython_admission',1),
+          ("from test2026.cuda.qwen38_5090.paged_prompt_rows import PagedPromptRows","from test2026.cuda.qwen38_5090.paged_prompt_rows import PagedPromptRows\n    from test2026.cuda.qwen38_5090.b4_mtp_public_stream import PublicBatchStream\n    from test2026.cuda.qwen38_5090.native_worker_io import emit",1),
+          ("report['status']='full4k_cases_running';save()","report['default_stop_ids']=[tokenizer.token_id('<|im_end|>'),tokenizer.token_id('<|endoftext|>')];report['status']='padding_lifecycle_cases_running';save()",1),
+          ("session.reset();record=dict(physical_rows=physical","session.reset();group=selection['groups'][group_index];record=dict(real_rows=group['real_rows'],real_keys=group['real_keys'],public_ids=group['public_ids'],physical_rows=physical",1),
+          ("            try:session.prefill(hidden,positions,lengths,current);record['prompt_cache']=hidden.stats()", "            wire=bytearray()\n            def sink(event):\n                def write(block):wire.extend(block);return len(block)\n                emit(event,write)\n            real=group['real_rows'];jobs=[dict(id=pid,body=selection['inputs'][key]['body']) for pid,key in zip(group['public_ids'],group['real_keys'])]\n            public=PublicBatchStream(jobs,[v['ids'] for v in prepared[:real]],report['default_stop_ids'],tokenizer.decode,sink,[inputs[i]['image_sha256'] for i in physical[:real]])\n            assert public.stop_ids==[] and session.stops==set()\n            def first(prediction):\n                for row,token in enumerate(prediction):public.notify(row,token,1)\n            try:session.prefill(hidden,positions,lengths,current,on_first_token=first);record['prompt_cache']=hidden.stats()",1),
+          ("result=session.generate(128);assert result['stop_token_ids']", "result=session.generate(128,on_token=public.notify);public.complete(result);record['public_event_file']='case'+str(group_index)+'-public.jsonl';(out/record['public_event_file']).write_bytes(bytes(wire));record['public_event_sha256']=sha(bytes(wire));assert result['stop_token_ids']",1),
+          ('B4_MTP_PREFILL16_FULL4K_COLLECTED','B4_MTP_PADDING_LIFECYCLE_COLLECTED',1)]
+    if source.startswith('run_'):
+        changes += [
+          ("    corpus=(M/'evidence/fixed-length-4096-corpus.zip').read_bytes()", "    passed=json.loads((ROOT/'results/rowwise-k-norm-mtp256-full4k-attempt1-verified.json').read_bytes());assert passed['exit_code']==0 and passed['MTP_full4K128_target_case_gate_passed'] and passed['strict_admission']['target']['all_states_and_vectors_exact'] and passed['strict_admission']['target']['all_128_IDs_exact']\n    corpus=(M/'evidence/fixed-length-4096-corpus.zip').read_bytes()",1),
+          ('41 additional CPU controls','55 additional CPU controls',1),('41 MTP CPU controls failed','55 MTP CPU controls failed',1),
+          ("        phase='candidate';idle();", "        code=ledger.run([sys.executable,str(M/'launch_b4_public_stream_embedded_cpu.py'),str(ROOT)],out/'embedded-cpu-ledger','correctness','Actual embedded Python/native executable:9 symbolic public-stream and selector controls, no model imports or GPU requests.',common+[library]);w['embedded_cpu_exit_code']=code;save();assert code==0,'9 embedded public-stream CPU controls failed'\n        phase='candidate';idle();",1)]
+    if source.startswith('verify_'):
+        changes += [
+          ("('cpu','mtp-cpu','candidate')","('cpu','mtp-cpu','embedded-cpu','candidate')",1),
+          ('Ran 41 tests','Ran 55 tests',1),('CPU_controls=156','CPU_controls=170',1),
+          ("        if 'candidate' in stages:assert stages.get('mtp-cpu')==0", "        if stages.get('embedded-cpu')==0:assert b'Ran 9 tests' in z.read(B+'embedded-cpu-ledger/commands.log') and b'\\nOK' in z.read(B+'embedded-cpu-ledger/commands.log')\n        if 'candidate' in stages:assert stages.get('mtp-cpu')==stages.get('embedded-cpu')==0",1),
+          ("stages==dict(cpu=0,**{'mtp-cpu':0},candidate=0)","stages==dict(cpu=0,**{'mtp-cpu':0,'embedded-cpu':0},candidate=0)",1),
+          ("CPU_controls=170 if stages.get('cpu')==stages.get('mtp-cpu')==0 else None,","CPU_controls=170 if stages.get('cpu')==stages.get('mtp-cpu')==0 else None,embedded_CPU_controls=9 if stages.get('embedded-cpu')==0 else None,",1),
+          ("        stages={}","        passed=doc('results/rowwise-k-norm-mtp256-full4k-attempt1-verified.json');assert passed['exit_code']==0 and passed['MTP_full4K128_target_case_gate_passed'] and passed['strict_admission']['target']['all_states_and_vectors_exact'] and passed['strict_admission']['target']['all_128_IDs_exact']\n        stages={}",1)]
+        changes += [("'b4_padding_lifecycle_mtp_gate.py'):assert sha(Path(__file__)","'b4_padding_lifecycle_mtp_gate.py','b4_padding_lifecycle_inputs.py','b4_public_event_gate.py','fixed_length_policy.py','b4_b1_exact_gate.py','b4_b1_short_m16_gate.py','padded_mtp_policy.py'):assert sha(Path(__file__)",1)]
+    derive(source,target,changes)
+path=E/'b4-padding-lifecycle-derivation.json';data=json.dumps(dict(derivations=rows,source89_and_e843_DLL_unchanged=True,original_three_group_gates_unchanged=True,scope='Five additional1/2/3/4-real-row/permutation/repeat cases; compare all four physical rows, including duplicates, to immutable B1 oracles and independently replay real public-wire IDs. No HTTP/quality/timing admission.'),indent=2).encode()
+if path.exists() and path.read_bytes()!=data:assert not (W/'b4-padding-lifecycle-package.json').exists(),'Preserve packaged derivation'
+path.write_bytes(data)
+print(json.dumps(dict(methods=len(rows),CPython_controls_expected=170,embedded_controls_expected=9)))

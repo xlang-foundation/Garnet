@@ -1,0 +1,131 @@
+[
+  {
+    "source": "install-rowwise-k-norm-full4k.py",
+    "source_sha256": "6a1cb78053c605e91f807b302f6cda24cd1727dc5e429b2cb7c3a89b935d3ea3",
+    "target": "install-b4-padding-lifecycle.py",
+    "target_sha256": "4ba45adf8abb568028f6c438c1f40afc0c28b11f46ff7e93454f54eaffed4456",
+    "changes": [
+      {
+        "old": "rowwise-k-norm-full4k",
+        "new": "b4-padding-lifecycle",
+        "count": 3
+      },
+      {
+        "old": "rowwise_K_norm_full4k",
+        "new": "rowwise_K_norm_B4_padding_lifecycle",
+        "count": 3
+      }
+    ]
+  },
+  {
+    "source": "postprocess-rowwise-k-norm-mtp256-full4k.py",
+    "source_sha256": "9537b5f77f4dc9cefd46c31c3cb25cb1d6e867563cd293513ae2fbd6dd79c559",
+    "target": "postprocess-b4-padding-lifecycle.py",
+    "target_sha256": "878d4742e042e644c1303d1c9ff17081829a9adc1cff112f7ab6ee288fbebae9",
+    "changes": [
+      {
+        "old": "rowwise-k-norm-mtp256-full4k",
+        "new": "b4-padding-lifecycle",
+        "count": 3
+      },
+      {
+        "old": "rowwise_k_norm_mtp256_full4k",
+        "new": "b4_padding_lifecycle",
+        "count": 2
+      },
+      {
+        "old": "b4_mtp256_full4k_gate",
+        "new": "b4_padding_lifecycle_mtp_gate",
+        "count": 1
+      },
+      {
+        "old": "b4_full4k_exact_gate",
+        "new": "b4_padding_lifecycle_gate",
+        "count": 1
+      },
+      {
+        "old": "156CPU",
+        "new": "170CPython+9embedded",
+        "count": 1
+      },
+      {
+        "old": "55parent",
+        "new": "56parent",
+        "count": 1
+      },
+      {
+        "old": "full4K12848state-row",
+        "new": "full4K12880state-row",
+        "count": 1
+      },
+      {
+        "old": "12x128ID",
+        "new": "20x128physicalID+1664publicID",
+        "count": 1
+      },
+      {
+        "old": "'b4_padding_lifecycle_gate.py','b4_full4k_inputs.py'",
+        "new": "'b4_padding_lifecycle_gate.py','b4_padding_lifecycle_inputs.py','b4_public_event_gate.py','b4_mtp_public_stream.py','native_worker_io.py','padded_mtp_policy.py','fixed_length_policy.py','b4_full4k_inputs.py'",
+        "count": 1
+      }
+    ]
+  },
+  {
+    "source": "replay-rowwise-k-norm-mtp256-full4k.py",
+    "source_sha256": "1f0fc0d4739ed28a7fc387f3d2880bc2a21e2e71495c145edcb570ae13f59793",
+    "target": "replay-b4-padding-lifecycle.py",
+    "target_sha256": "ace8ad8f6edd1ab7f1ec3dee7d60012683cb619b9d89a960585829ad5633a96c",
+    "changes": [
+      {
+        "old": "rowwise-k-norm-mtp256-full4k",
+        "new": "b4-padding-lifecycle",
+        "count": 3
+      },
+      {
+        "old": "rowwise_k_norm_mtp256_full4k",
+        "new": "b4_padding_lifecycle",
+        "count": 2
+      },
+      {
+        "old": "b4_mtp256_full4k_gate",
+        "new": "b4_padding_lifecycle_mtp_gate",
+        "count": 1
+      },
+      {
+        "old": "b4_full4k_exact_gate",
+        "new": "b4_padding_lifecycle_gate",
+        "count": 1
+      },
+      {
+        "old": "Garnet-Rowwise-K-Norm-MTP256-Full4K",
+        "new": "Garnet-B4-Padding-Lifecycle",
+        "count": 1
+      },
+      {
+        "old": "MTP_full4K128_target_case_gate_passed",
+        "new": "B4_padding_lifecycle_case_gate_passed",
+        "count": 1
+      },
+      {
+        "old": "156CPU",
+        "new": "170CPython+9embedded",
+        "count": 1
+      },
+      {
+        "old": "55parent",
+        "new": "56parent",
+        "count": 1
+      },
+      {
+        "old": "'b4_padding_lifecycle_gate.py','b4_full4k_inputs.py'",
+        "new": "'b4_padding_lifecycle_gate.py','b4_padding_lifecycle_inputs.py','b4_public_event_gate.py','b4_mtp_public_stream.py','native_worker_io.py','padded_mtp_policy.py','fixed_length_policy.py','b4_full4k_inputs.py'",
+        "count": 1
+      },
+      {
+        "old": "'CPU_controls','observation'",
+        "new": "'CPU_controls','embedded_CPU_controls','observation'",
+        "count": 1
+      }
+    ]
+  }
+]

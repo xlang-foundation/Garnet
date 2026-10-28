@@ -1,0 +1,30 @@
+"""Freeze the clarified, unexecuted package with its final CPU fingerprints."""
+from pathlib import Path
+import ast,hashlib,json,zipfile
+W=Path(__file__).resolve().parent;R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';E=M/'evidence';P='Garnet/test2026/cuda/qwen38_5090/';sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+old=W/'b4-padding-lifecycle-unexecuted-v1.zip';assert sha(old)=='0635d2d67ac2a3ee843cdb71dcaa68ad30c78b2bf2a3711bd700f03353e667db'
+with zipfile.ZipFile(old) as z:mf=json.loads(z.read('deployment-manifest.json'))['files']
+prep=E/'b4-padding-lifecycle-preparation.json';assert sha(prep)=='9287217ca5dd1efd82ee538c19ea70ca61007e38c112916234e7901bb6ed9a17';p=json.loads(prep.read_bytes())
+log=W/'b4-padding-lifecycle-final-cpu-ledger';events=[json.loads(s) for s in (log/'commands.jsonl').read_bytes().splitlines()];assert len(events)==2 and events[-1]['exit_code']==0 and events[0]['source']['owned_source_sha256']==events[1]['source_after']['owned_source_sha256']
+assert b'Ran 170 tests' in (log/'commands.log').read_bytes()
+for n,h in events[0]['source']['owned_source_sha256'].items():assert sha(R/n)==h
+names=[n.removeprefix(P) for n in mf if n!=P+'evidence/'+prep.name];assert all(n.startswith(P) for n in mf)
+def keep(n,b):
+    path=E/n;assert not path.exists();path.write_bytes(b);names.append('evidence/'+n)
+for ext in ('log','jsonl'):keep('b4-padding-lifecycle-final-cpu-commands.'+ext,(log/('commands.'+ext)).read_bytes())
+for n in ('clarify-b4-padding-lifecycle.py','test-b4-padding-lifecycle-final-cpu.py',Path(__file__).name):keep(n+'.txt',(W/n).read_bytes())
+for row in json.loads((E/'b4-padding-lifecycle-derivation.json').read_bytes())['derivations']:
+    raw=(M/row['source']).read_bytes();assert hashlib.sha256(raw).hexdigest()==row['source_sha256'];text=raw.decode().replace('\r\n','\n')
+    for c in row['changes']:assert text.count(c['old'])==c['count'];text=text.replace(c['old'],c['new'])
+    assert text.encode()==(M/row['target']).read_bytes() and sha(M/row['target'])==row['target_sha256']
+for n in names:
+    if n.endswith('.py'):ast.parse((M/n).read_bytes())
+    p['files'][P+n]=sha(M/n)
+retained='results/b4-padding-lifecycle-unexecuted-v1.zip';p['files'][retained]=sha(old);p['archive_files']=sorted(set(p['archive_files'])|{P+n for n in names}|{retained});p['installed_files']={**p['files'],**{'Garnet/'+n:h for n,h in p['source_files'].items()}}
+p['scope']+=' Initial unexecuted preparation0635d2d6 retained byte-for-byte; inherited three-group descriptive labels corrected before installation, with a final170-control CPU rerun. Model/gate comparisons and89source/DLL remain unchanged.'
+prep.write_bytes(json.dumps(p,indent=2).encode());deploy={P+n:M/n for n in names};deploy[P+'evidence/'+prep.name]=prep;target=W/'b4-padding-lifecycle-final-deployment.zip';assert not target.exists()
+with zipfile.ZipFile(target,'x',zipfile.ZIP_DEFLATED) as z:
+    for n,path in deploy.items():z.write(path,n)
+    z.writestr('deployment-manifest.json',json.dumps(dict(files={n:sha(path) for n,path in deploy.items()},native_DLL_or_candidate_bundle_changes=False,unexecuted_initial_package_sha256=sha(old)),indent=2))
+receipt=dict(deployment_sha256=sha(target),bytes=target.stat().st_size,deployment_files=len(deploy),guarded_files=len(p['files']),archive_files=len(p['archive_files']),parents=56,CPython_controls=170,embedded_CPU_controls_pending=9,source_files=89,preparation_sha256=sha(prep),library_sha256=p['library_sha256'],source_bundle_sha256=p['bundle_sha256'],local_package=target.name,remote_package_alias='b4-padding-lifecycle-deployment.zip',unexecuted_initial_package_sha256=sha(old))
+(W/'b4-padding-lifecycle-final-package.json').write_bytes(json.dumps(receipt,indent=2).encode());(W/'b4-padding-lifecycle-final-owned-names.json').write_bytes(json.dumps(names).encode());print(json.dumps(receipt))

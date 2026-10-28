@@ -1,0 +1,44 @@
+from pathlib import Path
+import ast,collections,hashlib,json,zipfile
+W=Path(__file__).resolve().parent;O=W.parent/'outputs';R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';E=M/'evidence';P='Garnet/test2026/cuda/qwen38_5090/';sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+old=json.loads((E/'rowwise-k-norm-mtp256-full4k-preparation.json').read_bytes());J='rowwise-k-norm-mtp256-full4k-attempt1';proof=O/(J+'-verified.json');q=json.loads(proof.read_bytes());assert q['exit_code']==0 and q['MTP_full4K128_target_case_gate_passed'] and q['source_runtime_SDK_config_index_CMake_all34_baseline_restored'] and proof.read_bytes()==(O/(J+'-remote-verified.json')).read_bytes() and sha(O/(J+'-evidence.zip'))==q['archive_sha256']
+with zipfile.ZipFile(O/(J+'-evidence.zip')) as z:
+    w=json.loads(z.read('results/'+J+'/workflow.json'));report=json.loads(z.read('results/'+J+'/candidate/report.json'))
+assert w['cleanup_finished'] and w['all_restored'] and w['source_after']==old['files'];files=dict(w['source_after']);names=json.loads((W/'b4-padding-lifecycle-owned-names.json').read_bytes())
+derivs=json.loads((E/'b4-padding-lifecycle-derivation.json').read_bytes())['derivations']
+for row in derivs:
+    raw=(M/row['source']).read_bytes();assert hashlib.sha256(raw).hexdigest()==row['source_sha256'];text=raw.decode().replace('\r\n','\n')
+    for change in row['changes']:assert text.count(change['old'])==change['count'];text=text.replace(change['old'],change['new'])
+    assert text.encode()==(M/row['target']).read_bytes() and sha(M/row['target'])==row['target_sha256'];ast.parse(text)
+ledger=W/'b4-padding-lifecycle-cpu-ledger';events=[json.loads(s) for s in (ledger/'commands.jsonl').read_bytes().splitlines()];assert len(events)==2 and events[-1]['exit_code']==0 and events[0]['source']['owned_source_sha256']==events[1]['source_after']['owned_source_sha256'];assert b'Ran 170 tests' in (ledger/'commands.log').read_bytes()
+for n,h in events[0]['source']['owned_source_sha256'].items():assert sha(R/n)==h
+def keep(n,raw):
+    path=E/n;assert not path.exists();path.write_bytes(raw);names.append('evidence/'+n)
+for ext in ('log','jsonl'):keep('b4-padding-lifecycle-cpu-commands.'+ext,(ledger/('commands.'+ext)).read_bytes())
+for n in ('derive-b4-padding-lifecycle.py','test-b4-padding-lifecycle-cpu.py',Path(__file__).name):keep(n+'.txt',(W/n).read_bytes())
+coverage=[]
+for row in report['rows']:
+    steps=row['speculative_metrics']['iterations'];counts=collections.Counter(n for step in steps for n in step['processed_target_counts']);assert set(counts)==set(range(5))
+    assert [sum(step['processed_target_counts'][i] for step in steps) for i in range(4)]==[127]*4
+    coverage.append(dict(label=row['label'],iterations=len(steps),processed_target_prefix_histogram=dict(sorted(counts.items())),heterogeneous_steps=sum(len(set(s['processed_target_counts']))>1 for s in steps),last_counts=steps[-1]['processed_target_counts']))
+assert sum(r['heterogeneous_steps'] for r in coverage)==116
+keep('b4-padding-lifecycle-parent-prefix-coverage.json',json.dumps(dict(parent=J,parent_proof_sha256=sha(proof),parent_archive_sha256=q['archive_sha256'],groups=coverage,all_prefix_lengths_0_through_4_observed=True,terminal_state_and_reset_compared_to_B1=True,per_intermediate_prefix_state_snapshot_claimed=False,public_padding_permutation_or_broader_quality_already_qualified=False),indent=2).encode())
+for n in names:
+    if n.endswith('.py'):ast.parse((M/n).read_bytes())
+    if P+n in files:assert files[P+n]==sha(M/n),('Preserve existing method',n)
+    files[P+n]=sha(M/n)
+assert files[P+'padded_mtp_policy.py']=='7cc69ec4fa224ee6866e4f4b579986fb62dae67b77a034eef15c38c0fe3fa05b'
+parents=dict(old['parents']);assert J not in parents;parents[J]=dict(proof_sha256=sha(proof),archive_sha256=q['archive_sha256'],status=q['status'],exit_code=0);assert len(parents)==56
+for job,row in parents.items():
+    path=O/(job+'-verified.json');v=json.loads(path.read_bytes());assert sha(path)==row['proof_sha256'] and path.read_bytes()==(O/(job+'-remote-verified.json')).read_bytes() and sha(O/(job+'-evidence.zip'))==v['archive_sha256']==row['archive_sha256']
+extra=old['mtp_test_modules']+['test2026.cuda.qwen38_5090.'+n for n in ('test_b4_mtp_public_stream','test_b4_padding_lifecycle_inputs','test_b4_padding_lifecycle_gate')]
+p={**old};p.update(status='rowwise_K_norm_B4_padding_lifecycle_prepared_GPU_unrun',files=files,archive_files=sorted(set(old['archive_files'])|{P+n for n in names}),parents=parents,mtp_test_modules=extra,scope='Same source89 bundle69428d73/e843 native DLL and qualified B4T32/T4 rowwise-K/MTP3/T16draft256MiB profile. Five additional fixed3968+128 cases:1/2/3/4 real rows, explicit mixed row order and repeated three-real-row case after four-real work; missing physical rows duplicate first real input. All20 physical row sequences2560IDs and80 complete phase-row128component/finite-vector comparisons vs8immutable B1 oracles, including dummy state/IDs. Public callback helper and actual native JSON emitter bytes must match1664 real-row IDs, exact prompts/images/counts/stop policy; no extra public request IDs. Original three-group gates and corpus unchanged; new selector/gates have distinct status. Parent full MTP run observed prefixes0..4 and116 heterogeneous steps, with terminal states/reset exact; no intermediate-prefix snapshot claim.170 CPython controls115+55 and9 additional actual embedded CPU controls before GPU.56 closed parents, pinned source/runtime/SDK/config-index/CMake/all34 baseline, full restoration, fixed Ccache96GiB admission/ownednonce retirement. Does not qualify all EOS/prefix combinations, adapted805, HTTP scheduling/streaming, quality or timing; no serving/2x/halfTTFT claim.')
+p['installed_files']={**files,**{'Garnet/'+n:h for n,h in p['source_files'].items()}};assert len(p['source_files'])==89 and p['cuda_objects']==w['cuda_objects_after'] and p['runtime']==w['runtime_after'] and p['environment']==w['environment_after'] and p['checkpoints']==w['checkpoint_after'] and p['cache_before_sha256']==w['cache_after_sha256']
+assert set(p['archive_files'])<=set(files)
+prep=E/'b4-padding-lifecycle-preparation.json';assert not prep.exists();prep.write_bytes(json.dumps(p,indent=2).encode());deploy={P+n:M/n for n in names};deploy[P+'evidence/'+prep.name]=prep
+target=W/'b4-padding-lifecycle-deployment.zip';assert not target.exists()
+with zipfile.ZipFile(target,'x',zipfile.ZIP_DEFLATED) as z:
+    for n,path in deploy.items():z.write(path,n)
+    z.writestr('deployment-manifest.json',json.dumps(dict(files={n:sha(path) for n,path in deploy.items()},native_DLL_or_candidate_bundle_changes=False),indent=2))
+receipt=dict(deployment_sha256=sha(target),bytes=target.stat().st_size,deployment_files=len(deploy),guarded_files=len(files),archive_files=len(p['archive_files']),parents=56,CPython_controls=170,embedded_CPU_controls_pending=9,source_files=89,preparation_sha256=sha(prep),library_sha256=p['library_sha256'],source_bundle_sha256=p['bundle_sha256'])
+(W/'b4-padding-lifecycle-package.json').write_bytes(json.dumps(receipt,indent=2).encode());(W/'b4-padding-lifecycle-owned-names.json').write_bytes(json.dumps(names).encode());print(json.dumps(receipt))

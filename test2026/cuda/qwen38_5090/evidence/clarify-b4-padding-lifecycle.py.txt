@@ -1,0 +1,22 @@
+"""Correct inherited descriptions before any method installation or native run."""
+from pathlib import Path
+import ast,hashlib,json
+W=Path(__file__).resolve().parent;R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';E=M/'evidence';sha=lambda b:hashlib.sha256(b).hexdigest()
+archive=W/'b4-padding-lifecycle-deployment.zip';assert sha(archive.read_bytes())=='0635d2d67ac2a3ee843cdb71dcaa68ad30c78b2bf2a3711bd700f03353e667db'
+preserved=W/'b4-padding-lifecycle-unexecuted-v1.zip';assert not preserved.exists();preserved.write_bytes(archive.read_bytes())
+path=E/'b4-padding-lifecycle-derivation.json';d=json.loads(path.read_bytes());patches={
+ 'b4_padding_lifecycle_mtp_gate.py':[('Fullcontext3groups only;','Fivepadding/order/repeat fullcontext cases only;')],
+ 'run_b4_padding_lifecycle.py':[
+  ('Full4K gate uses the original all48 phase-row state/vector comparisons and all128 IDs; selected repair is only its prerequisite.','Original three-group gates remain unchanged; the new lifecycle gate applies the same comparison operators to80 phase-row states/vectors and2560 physical IDs plus1664 public IDs.'),
+  ('original19 B1/workspace controls,8 B4 draft-study binding/ownership/geometry controls,4 MTP evidence and unchanged target-gate rejection controls.','41 retained MTP/workspace/ownership controls plus14 public-stream/selector/lifecycle gate controls.'),
+  ('Three3968prompt+128forced-output text/image/mixed groups. Require target states/vectors/IDs vs eight B1 oracles,','Five3968+128 padding/order/repeat cases. Require80 physical state/vector comparisons,2560 physical IDs and1664 public IDs vs eight B1 oracles,')]
+}
+for row in d['derivations']:
+    if row['target'] not in patches:continue
+    p=M/row['target'];raw=p.read_bytes();assert sha(raw)==row['target_sha256'];text=raw.decode()
+    for old,new in patches[row['target']]:
+        assert text.count(old)==1;assert old not in new;text=text.replace(old,new);row['changes'].append(dict(old=old,new=new,count=1))
+    ast.parse(text);p.write_bytes(text.encode());row['target_sha256']=sha(p.read_bytes())
+d['unexecuted_initial_preparation_sha256']=sha(archive.read_bytes());d['description_only_revision_before_installation']=True;path.write_bytes(json.dumps(d,indent=2).encode())
+src=(W/'test-b4-padding-lifecycle-cpu.py').read_bytes();target=W/'test-b4-padding-lifecycle-final-cpu.py';assert not target.exists();target.write_bytes(src.replace(b"W/'b4-padding-lifecycle-cpu-ledger'",b"W/'b4-padding-lifecycle-final-cpu-ledger'"))
+print('Inherited three-group descriptions corrected; original unexecuted package preserved; final CPU rerun required')
