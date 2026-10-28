@@ -1,0 +1,24 @@
+from pathlib import Path
+import hashlib,json,shutil,sys,zipfile
+ROOT=Path('D:/CantorAI/5090-study-20261023');M=ROOT/'Garnet/test2026/cuda/qwen38_5090';P='Garnet/test2026/cuda/qwen38_5090/';sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest();sys.path[:0]=[str(M),str(ROOT/'Garnet')]
+from run_bf16_low_batch_native_build import idle
+
+def main():
+    archive=ROOT/'results/b4-rowwise-http-quality-deployment.zip';assert sha(archive)==sys.argv[1];idle();receipt=ROOT/'results/b4-rowwise-http-quality-install.json';assert not receipt.exists()
+    with zipfile.ZipFile(archive) as z:
+        mf=json.loads(z.read('deployment-manifest.json'))['files'];assert z.testzip() is None and len(z.namelist())==len(set(z.namelist()))==len(mf)+1
+        p=json.loads(z.read(P+'evidence/b4-rowwise-http-quality-preparation.json'));assert p['status']=='B4_rowwise_HTTP_quality_prepared_GPU_unrun'
+        for n,h in {**p['files'],**p['checkpoints'],**p['cuda_objects']}.items():assert (hashlib.sha256(z.read(n)).hexdigest() if n in mf else sha(ROOT/n))==h,('Preserve source/build metadata',n)
+        for n,h in p['runtime'].items():assert sha(ROOT/'build/bin'/n)==h
+        for n,h in p['environment'].items():assert sha(Path(n))==h
+        assert sha(ROOT/'build/CMakeCache.txt')==p['cache_before_sha256'] and sha(ROOT/p['library'])==p['library_sha256']
+        for n,h in p['candidate_base'].items():
+            target=ROOT/'Garnet'/n;assert target.resolve().is_relative_to((ROOT/'Garnet').resolve()) and (sha(target) if target.exists() else None)==h
+        cache=Path(json.loads((ROOT/'results/study-ssd-engine-cache/receipt.json').read_bytes())['cache_root']);assert cache.resolve().drive.upper()=='C:' and json.loads((cache/'study-owner.json').read_bytes())['study']==str(ROOT) and shutil.disk_usage(cache).free>=96<<30
+        for n,h in mf.items():
+            target=ROOT/n;raw=z.read(n)
+            assert (target.resolve().is_relative_to(M.resolve()) or n==p['bundle']) and 'probe_native_external_prefix_batch.py' not in n and hashlib.sha256(raw).hexdigest()==h and (not target.exists() or target.read_bytes()==raw),('Preserve existing method',n)
+        for n in mf:
+            target=ROOT/n;target.parent.mkdir(parents=True,exist_ok=True);target.write_bytes(z.read(n))
+    receipt.write_bytes(json.dumps(dict(status='B4_rowwise_HTTP_quality_methods_installed_GPU_unrun',deployment_sha256=sha(archive),files=mf,production_source_or_DLL_mutated=False),indent=2).encode());print(json.dumps(dict(status='B4_rowwise_HTTP_quality_methods_installed_GPU_unrun',files=len(mf))))
+if __name__=='__main__':main()
