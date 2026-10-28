@@ -1,0 +1,30 @@
+from pathlib import Path
+import hashlib,json,subprocess,zipfile
+W=Path(__file__).resolve().parent;O=W.parent/'outputs';R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';E=M/'evidence';sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest();owned=[]
+def keep(n,raw):
+    p=E/n;assert not p.exists();p.write_bytes(raw);owned.append(p)
+J='b4-rowwise-http-quality-attempt3';proof=O/(J+'-verified.json');q=json.loads(proof.read_bytes());archive=O/(J+'-evidence.zip');assert q['exit_code']==0 and q['B4_HTTP_quality_case_gate_passed'] and proof.read_bytes()==(O/(J+'-remote-verified.json')).read_bytes() and sha(archive)==q['archive_sha256']
+assert q['arrays']['actual_native_HTTP_requests']==836 and q['arrays']['quality']['score']['correct']==502 and q['source_runtime_SDK_config_index_CMake_all34_and_full_model_files_restored']
+for n in (proof.name,J+'-remote-verified.json'):keep(n,(O/n).read_bytes())
+with zipfile.ZipFile(archive) as z:
+    base='results/'+J+'/';keep(J+'-manifest.json',z.read('evidence-manifest.json'))
+    for n in ('workflow.json','native/report.json','resources/resource-monitor.json','native/worker/batch-dispatch.jsonl','native/worker/worker-stdout.jsonl','native/worker/worker-stderr.log'):
+        keep(J+'-'+n.replace('/','-'),z.read(base+n))
+    for phase in ('cpu','embedded-cpu','candidate'):
+        for ext in ('jsonl','log'):keep(J+'-'+phase+'-commands.'+ext,z.read(base+phase+'-ledger/commands.'+ext))
+    assert json.loads(z.read(base+'workflow.json'))['all_restored']
+for ext in ('jsonl','log'):keep(J+'-local-replay-commands.'+ext,(W/'b4-rowwise-http-quality-attempt3-local-replay-ledger'/('commands.'+ext)).read_bytes())
+for n in ('postprocess-b4-rowwise-http-quality.py','replay-b4-rowwise-http-quality.py'):keep(J+'-'+n+'.txt',(W/n).read_bytes())
+keep(J+'-retention.json',json.dumps(dict(status=q['status'],proof_sha256=sha(proof),archive_sha256=sha(archive),archive_bytes=archive.stat().st_size,all805_prompt_and_output_IDs_exact_T32=True,adapted_MC_correct=502,adapted_MC_total=805,actual_native_HTTP_requests=836,full4k_nonstream_controls=29,text_image_SSE_controls=2,dispatches=q['arrays']['dispatch']['dispatches'],max_joined_frame_bytes=q['arrays']['dispatch']['max_joined_frame_bytes'],joined_frames_over_default_2MiB=q['arrays']['dispatch']['joined_frames_over_default_2MiB'],source_runtime_all34_and_full18files_restored=True,official900_MMMU_or_broad_quality_or_performance_qualified=False,two_times_target_achieved=False),indent=2).encode())
+r=json.loads((W/'b4-rowwise-http-benchmark-package.json').read_bytes());assert sha(W/'b4-rowwise-http-benchmark-deployment.zip')==r['deployment_sha256'] and r['paired_quality_proof_sha256']==sha(proof)
+for n in json.loads((W/'b4-rowwise-http-benchmark-owned-names.json').read_bytes())+['evidence/b4-rowwise-http-benchmark-preparation.json']:owned.append(M/n)
+keep('b4-rowwise-http-benchmark-package.json',(W/'b4-rowwise-http-benchmark-package.json').read_bytes())
+for n in ('derive-b4-http-benchmark-installer.py','install-b4-rowwise-http-benchmark.py','b4-http-benchmark-installer-derivation.json',Path(__file__).name):keep(n+('.txt' if n.endswith('.py') else ''),(W/n).read_bytes())
+entry=('\n\n2026-10-27 local: Source91 B4 HTTP attempt3 passes independent remote/local raw replay, byte-identical proof '+sha(proof)+'. Archive '+sha(archive)+' ('+str(archive.stat().st_size)+'bytes). All836realHTTPoutputs matched actual native callbacks/dispatch and exact prompts/IDs:805 adapted MC requests plus29fixed3968+128nonstream controls and2text/image SSE controls; invalid ignore_eos HTTP400 preserved. All805full prompt/output IDs exact retained T32 B1 control, score502/805 with0unparseable.816dispatches, two actual joined frames exceed2MiB, maximum2469542bytes; no publicdummyIDs.19CPython+17embedded controls passed. Full source/runtime/SDK/config-index/CMake/all34/current18file restoration verified. This is adapted screening, not official900MMMU, general production/EOS coverage or serving timing.\n'
+       'Prepared first clean B4 HTTP benchmark: deployment '+r['deployment_sha256']+', preparation '+r['preparation_sha256']+'. Same source91 bundle4ccee24a, same e843DLL and existing worker/bridge, no model/native math/precision changes. Three fixed3968+128HTTPtrials, each64measured+60warmups across text/imageC1/2/4/8; all124IDs/trial compared with retained B1. Raw client-QPC SSE, native callbacks/dispatch and sampled adapter VRAM independently replayed; dummy tokens excluded.59closedparents and full18file/all34/source/runtime restoration. New collector/reader each pass a CPU-only import/CLI smoke; all26literal preparation reads audited present. No unchanged correctness tests repeated in the clean timing owner; the closed actual805+31quality proof admits its unchanged model. Strongest tuned/MTP references and cross-engine output equivalence remain unqualified; overall2x and halfTTFT unmet, no new throughput result yet.\n').encode()
+for n in ('docs/research/qwen38-5090-development-log.md','docs/research/qwen38-5090-implementation-task.md'):
+    p=R/n;assert b'Source91 B4 HTTP attempt3 passes independent remote/local raw replay' not in p.read_bytes()
+    with p.open('ab') as f:f.write(entry)
+    owned.append(p)
+paths=b''.join(p.relative_to(R).as_posix().encode()+b'\0' for p in dict.fromkeys(owned));(W/'b4-http-quality3-benchmark-stage-paths.bin').write_bytes(paths)
+subprocess.run(['git','-c','core.autocrlf=false','add','--pathspec-from-file='+str(W/'b4-http-quality3-benchmark-stage-paths.bin'),'--pathspec-file-nul'],cwd=R,check=True);print(json.dumps(dict(staged_paths=len(set(owned)),quality_proof_sha256=sha(proof),benchmark_GPU_unrun=True)))

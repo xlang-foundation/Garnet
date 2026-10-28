@@ -1,0 +1,25 @@
+"""Prepare a prospective benchmark owner outside the frozen repository sources."""
+from pathlib import Path
+import ast,hashlib,json
+W=Path(__file__).resolve().parent;M=Path('D:/CantorAI/work/qwen38-5090/test2026/cuda/qwen38_5090');source=M/'run_b4_rowwise_http_quality.py';raw=source.read_bytes();text=raw.decode().replace('\r\n','\n');steps=[]
+def replace(old,new):
+    global text
+    assert text.count(old)==1,(old,text.count(old));text=text.replace(old,new);steps.append(dict(old=old,new=new,count=1))
+replace('Exclusive reversible source91 HTTP correctness collection; never a benchmark.','Exclusive reversible source91 clean HTTP benchmark; requires passed quality.')
+replace("JOB='b4-rowwise-http-quality-attempt3'","JOB='b4-rowwise-http-benchmark-attempt1'")
+replace("prep=M/'evidence/b4-rowwise-http-quality-preparation.json'","prep=M/'evidence/b4-rowwise-http-benchmark-preparation.json'")
+replace("assert p['status']=='B4_rowwise_HTTP_quality_prepared_GPU_unrun'","assert p['status']=='B4_rowwise_HTTP_benchmark_prepared_GPU_unrun'")
+replace("    bundle=ROOT/p['bundle'];assert sha(bundle)==p['bundle_sha256'];source=load_bundle(bundle,p['model_source_files'],p['source_files']);assert len(source)==91", "    quality=ROOT/'results'/(p['quality_job']+'-verified.json');qualified=json.loads(quality.read_bytes())\n    assert sha(quality)==p['parents'][p['quality_job']]['proof_sha256'] and qualified['exit_code']==0 and qualified['B4_HTTP_quality_case_gate_passed'] and qualified['arrays']['all805_prompt_and_output_IDs_exact_T32'] and qualified['arrays']['actual_native_HTTP_requests']==836\n    bundle=ROOT/p['bundle'];assert sha(bundle)==p['bundle_sha256'];source=load_bundle(bundle,p['model_source_files'],p['source_files']);assert len(source)==91")
+start=text.index("        code=ledger.run([sys.executable,'-m','unittest',*p['http_test_modules']]")
+stop=text.index('        for n,b in source.items():',start)
+steps.append(dict(old=text[start:stop],new='',count=1));text=text[:start]+text[stop:]
+start=text.index('        code=ledger.run([sys.executable,str(M/\'launch_b4_http_embedded_cpu.py\')')
+stop=text.index('        idle();argv=',start)
+steps.append(dict(old=text[start:stop],new='',count=1));text=text[:start]+text[stop:]
+replace("str(M/'probe_b4_rowwise_http_quality.py')","str(M/'probe_b4_rowwise_http_benchmark.py')")
+replace('Actual source91 B4/MTP3 loopback HTTP: fixed3968+128 padding/order/repeat C1/2/3/4 and C8, joined transport fixture, text/image SSE, invalid ignore_eos, adapted805 natural-stop collection. Full raw IDs compared with retained B1 controls. No performance admission.','Three clean source91 B4/MTP3 fixed3968+128 text/image HTTP trials C1/2/4/8,64measured+60warmups each. Require closed independent805 quality. Raw SSE/native callbacks/dispatch and adapter memory retained, all124output IDs/trial exact retained B1. Process duration is not a serving metric; actual client timings are in separate raw benchmark artifacts. No strongest-reference or2x admission.')
+replace("assert code==0,'B4 HTTP collection failed'","assert code==0,'B4 HTTP benchmark collection failed'")
+replace("assert report['status']=='B4_rowwise_HTTP_controls_and_adapted805_collected_needs_independent_replay' and not report['token_mismatches']","assert report['status']=='B4_three_fixed4k_HTTP_trials_collected_needs_independent_replay' and len(report['trials'])==3")
+replace("w['status']='B4_rowwise_HTTP_quality_collected_needs_independent_replay'","w['status']='B4_rowwise_HTTP_benchmark_collected_needs_independent_replay'")
+ast.parse(text);target=W/'run_b4_rowwise_http_benchmark.draft.py';assert not target.exists();target.write_bytes(text.encode())
+(W/'b4-http-benchmark-owner-draft-derivation.json').write_bytes(json.dumps(dict(source_file=str(source),source_sha256=hashlib.sha256(raw).hexdigest(),draft_sha256=hashlib.sha256(target.read_bytes()).hexdigest(),changes=steps,syntax_checked_only=True,deployed=False,benchmark_run=False,scope='No unchanged CPU/model checks repeated in clean timing owner; it instead requires closed actual quality proof. Original qualified source91 and DLL reinstated with before/after full-model/source/SDK/object guards and owned cache retirement. Actual benchmark/independent reader/preparation remain pending.'),indent=2).encode());print('Benchmark owner draft syntax checked; not deployed or run')

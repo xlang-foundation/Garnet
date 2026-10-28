@@ -1,0 +1,71 @@
+{
+  "source_file": "D:\\CantorAI\\work\\qwen38-5090\\test2026\\cuda\\qwen38_5090\\run_b4_rowwise_http_quality.py",
+  "source_sha256": "4124ca856b6c1c127f26bfabec7513ee7a9b8632e9dd234cede34579cecc36f7",
+  "draft_sha256": "6285a7730bbfba75c98943f0f0e4e45bb63076af15be8d4b41fa33e192b1bb7a",
+  "changes": [
+    {
+      "old": "Exclusive reversible source91 HTTP correctness collection; never a benchmark.",
+      "new": "Exclusive reversible source91 clean HTTP benchmark; requires passed quality.",
+      "count": 1
+    },
+    {
+      "old": "JOB='b4-rowwise-http-quality-attempt3'",
+      "new": "JOB='b4-rowwise-http-benchmark-attempt1'",
+      "count": 1
+    },
+    {
+      "old": "prep=M/'evidence/b4-rowwise-http-quality-preparation.json'",
+      "new": "prep=M/'evidence/b4-rowwise-http-benchmark-preparation.json'",
+      "count": 1
+    },
+    {
+      "old": "assert p['status']=='B4_rowwise_HTTP_quality_prepared_GPU_unrun'",
+      "new": "assert p['status']=='B4_rowwise_HTTP_benchmark_prepared_GPU_unrun'",
+      "count": 1
+    },
+    {
+      "old": "    bundle=ROOT/p['bundle'];assert sha(bundle)==p['bundle_sha256'];source=load_bundle(bundle,p['model_source_files'],p['source_files']);assert len(source)==91",
+      "new": "    quality=ROOT/'results'/(p['quality_job']+'-verified.json');qualified=json.loads(quality.read_bytes())\n    assert sha(quality)==p['parents'][p['quality_job']]['proof_sha256'] and qualified['exit_code']==0 and qualified['B4_HTTP_quality_case_gate_passed'] and qualified['arrays']['all805_prompt_and_output_IDs_exact_T32'] and qualified['arrays']['actual_native_HTTP_requests']==836\n    bundle=ROOT/p['bundle'];assert sha(bundle)==p['bundle_sha256'];source=load_bundle(bundle,p['model_source_files'],p['source_files']);assert len(source)==91",
+      "count": 1
+    },
+    {
+      "old": "        code=ledger.run([sys.executable,'-m','unittest',*p['http_test_modules']],out/'cpu-ledger','correctness','Nineteen CPU startup/source-bundle/protocol/raw-event replay controls; no model/GPU or performance claim.',common);w['cpu_exit_code']=code;save();assert code==0,'19 CPU controls failed'\n",
+      "new": "",
+      "count": 1
+    },
+    {
+      "old": "        code=ledger.run([sys.executable,str(M/'launch_b4_http_embedded_cpu.py'),str(ROOT)],out/'embedded-cpu-ledger','correctness','Same17 symbolic controls in actual embedded native Python. No model imports or GPU requests.',common+[library]);w['embedded_cpu_exit_code']=code;save();assert code==0,'17 embedded controls failed'\n",
+      "new": "",
+      "count": 1
+    },
+    {
+      "old": "str(M/'probe_b4_rowwise_http_quality.py')",
+      "new": "str(M/'probe_b4_rowwise_http_benchmark.py')",
+      "count": 1
+    },
+    {
+      "old": "Actual source91 B4/MTP3 loopback HTTP: fixed3968+128 padding/order/repeat C1/2/3/4 and C8, joined transport fixture, text/image SSE, invalid ignore_eos, adapted805 natural-stop collection. Full raw IDs compared with retained B1 controls. No performance admission.",
+      "new": "Three clean source91 B4/MTP3 fixed3968+128 text/image HTTP trials C1/2/4/8,64measured+60warmups each. Require closed independent805 quality. Raw SSE/native callbacks/dispatch and adapter memory retained, all124output IDs/trial exact retained B1. Process duration is not a serving metric; actual client timings are in separate raw benchmark artifacts. No strongest-reference or2x admission.",
+      "count": 1
+    },
+    {
+      "old": "assert code==0,'B4 HTTP collection failed'",
+      "new": "assert code==0,'B4 HTTP benchmark collection failed'",
+      "count": 1
+    },
+    {
+      "old": "assert report['status']=='B4_rowwise_HTTP_controls_and_adapted805_collected_needs_independent_replay' and not report['token_mismatches']",
+      "new": "assert report['status']=='B4_three_fixed4k_HTTP_trials_collected_needs_independent_replay' and len(report['trials'])==3",
+      "count": 1
+    },
+    {
+      "old": "w['status']='B4_rowwise_HTTP_quality_collected_needs_independent_replay'",
+      "new": "w['status']='B4_rowwise_HTTP_benchmark_collected_needs_independent_replay'",
+      "count": 1
+    }
+  ],
+  "syntax_checked_only": true,
+  "deployed": false,
+  "benchmark_run": false,
+  "scope": "No unchanged CPU/model checks repeated in clean timing owner; it instead requires closed actual quality proof. Original qualified source91 and DLL reinstated with before/after full-model/source/SDK/object guards and owned cache retirement. Actual benchmark/independent reader/preparation remain pending."
+}
