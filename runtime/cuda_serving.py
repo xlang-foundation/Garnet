@@ -257,6 +257,13 @@ class Model:
         r=self.infer_batch([prompt],[image],limit,on_token=on_token,ignore_eos=ignore_eos);r['text']=r['texts'][0];return r
 
     def close(self):
+        # Own the same VM-aware lock as inference before freeing graph buffers.
+        # The public native wrapper must not wait on a native mutex while a
+        # running Python decoder needs to reacquire the VM execution lock.
+        with self.lock:
+            self._close_locked()
+
+    def _close_locked(self):
         try:
             if self.speculative is not None:self.speculative.close()
         finally:

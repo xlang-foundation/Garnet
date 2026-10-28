@@ -1858,17 +1858,24 @@ namespace Garnet
 
     std::string GarnetAPI::LoadedModelsJson()
     {
-        std::lock_guard<std::mutex> guard(m_servingMutex);
+        std::vector<std::shared_ptr<ServingInstance>> instances;
+        {
+            std::lock_guard<std::mutex> guard(m_servingMutex);
+            for (const auto& item : m_servingInstances) instances.push_back(item.second);
+        }
         json response = {
             {"schema_version", 1},
             {"serving_mode", "multi_instance"},
             {"models", json::array()}
         };
-        for (const auto& item : m_servingInstances) {
-            const auto& instance = item.second;
-            std::lock_guard<std::mutex> instanceGuard(instance->mutex);
+        for (const auto& instance : instances) {
+            std::unique_lock<std::mutex> instanceGuard(instance->mutex);
+            const auto retainedModel = instance->model;
+            // Qwen3.5 serializes GPU work with its VM-aware Python RLock.
+            // Never hold a native mutex while re-entering that model's VM.
+            if (instance->qwen35CUDA) instanceGuard.unlock();
             json model = GarnetServingStatus(
-                instance->model,
+                retainedModel,
                 instance->modelRoot,
                 instance->modelId,
                 instance->inputCapability,
@@ -1943,16 +1950,21 @@ namespace Garnet
                 if (sourceRoot.empty()) throw std::runtime_error("Qwen3.5 CUDA serving runtime was not found beside xModel");
                 const std::string profileJson = profile.dump();
                 const std::string root = fs::absolute(modelRoot).lexically_normal().string();
-                std::lock_guard<std::mutex> guard(m_servingMutex);
+                std::unique_lock<std::mutex> guard(m_servingMutex);
                 auto found = m_servingInstances.find(requestedModelId);
                 if (found != m_servingInstances.end()) {
                     auto instance = found->second;
                     if (!instance->qwen35CUDA || instance->modelRoot != root || instance->servingProfile != profileJson)
                         return NativeValue(Host(), GarnetJsonError("model_instance_conflict",
                             "Stop the loaded model before changing its root or batch/shape profile"));
-                    std::lock_guard<std::mutex> instanceGuard(instance->mutex);
                     m_defaultServingModelId = requestedModelId;
-                    return NativeValue(Host(), GarnetServingStatus(instance->model, root, requestedModelId,
+                    X::Value retainedModel;
+                    {
+                        std::lock_guard<std::mutex> instanceGuard(instance->mutex);
+                        retainedModel = instance->model;
+                    }
+                    guard.unlock();
+                    return NativeValue(Host(), GarnetServingStatus(retainedModel, root, requestedModelId,
                         instance->inputCapability, instance->error, rt).dump());
                 }
                 const auto runtimeRoot = sourceRoot / "runtime";
@@ -2232,9 +2244,11 @@ namespace Garnet
                 modelId.empty() ? "Garnet serving is not started" : "The requested Garnet model is not loaded"));
             return retValue;
         }
-        std::lock_guard<std::mutex> guard(instance->mutex);
+        std::unique_lock<std::mutex> guard(instance->mutex);
+        const auto retainedModel = instance->model;
+        if (instance->qwen35CUDA) guard.unlock();
         retValue = NativeValue(Host(), GarnetServingStatus(
-            instance->model, instance->modelRoot, instance->modelId,
+            retainedModel, instance->modelRoot, instance->modelId,
             instance->inputCapability, instance->error, rt
         ).dump());
         return retValue;
@@ -2272,18 +2286,26 @@ namespace Garnet
                     "The requested Garnet model is not loaded"));
             return retValue;
         }
-        std::lock_guard<std::mutex> guard(instance->mutex);
-        CudaDeviceScope deviceScope(instance->deviceId);
         if (instance->qwen35CUDA) {
+            X::Value retainedModel;
+            {
+                std::lock_guard<std::mutex> guard(instance->mutex);
+                retainedModel = instance->model;
+            }
+            if (!retainedModel.IsValid())
+                return NativeValue(Host(), GarnetJsonError("serving_not_ready", "The model has stopped"));
             try {
+                CudaDeviceScope deviceScope(instance->deviceId);
                 const int limit = requestedMaxNewTokens > 0 ? requestedMaxNewTokens : instance->maxOutputTokens;
-                return CallChecked(instance->model["infer_json"], params[0],
+                return CallChecked(retainedModel["infer_json"], params[0],
                     imageSource.IsValid() ? imageSource : NativeValue(Host(), std::string()), X::Value(limit));
             }
             catch (const std::exception& exception) {
                 return NativeValue(Host(), GarnetJsonError("inference_failed", exception.what()));
             }
         }
+        std::lock_guard<std::mutex> guard(instance->mutex);
+        CudaDeviceScope deviceScope(instance->deviceId);
         if (instance->inputCapability == "vision" &&
             !hasImageBinary && !hasImagePath) {
             retValue = NativeValue(Host(), GarnetJsonError("request_invalid",
@@ -2641,12 +2663,14 @@ namespace Garnet
             }
         }
         for (const auto& instance : stopped) {
-            std::lock_guard<std::mutex> instanceGuard(instance->mutex);
-            if (instance->model.IsValid()) {
-                X::Value releaseCallable = instance->model["release_runtime"];
+            std::unique_lock<std::mutex> instanceGuard(instance->mutex);
+            const auto retainedModel = instance->model;
+            instance->model = X::Value();
+            if (instance->qwen35CUDA) instanceGuard.unlock();
+            if (retainedModel.IsValid()) {
+                X::Value releaseCallable = retainedModel["release_runtime"];
                 if (releaseCallable.IsObject()) CallChecked(releaseCallable);
             }
-            instance->model = X::Value();
             if (!instance->cacheRoot.empty()) {
                 TRTBuilder::ReleaseCachedExecutions(instance->cacheRoot);
             }
