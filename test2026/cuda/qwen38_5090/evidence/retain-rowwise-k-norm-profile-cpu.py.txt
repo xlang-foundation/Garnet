@@ -1,0 +1,32 @@
+from pathlib import Path
+import hashlib,json,zipfile
+W=Path(__file__).resolve().parent;O=W.parent/'outputs';R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';E=M/'evidence';sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest();owned=[];saved={}
+def keep(name,raw):
+    p=E/name;assert not p.exists();p.write_bytes(raw);owned.append(p);saved[name]=sha(p)
+J='rowwise-k-norm-profile-cpu-attempt1';proof=O/(J+'-verified.json');q=json.loads(proof.read_bytes());archive=O/(J+'-evidence.zip');assert proof.read_bytes()==(O/(J+'-remote-verified.json')).read_bytes() and q['exit_code']==0 and sha(archive)==q['archive_sha256'];assert q['native_contract']==dict(status='passed',new_valid=17,new_rejected=161,old_valid=4,old_rejected=2,failures=0,cases=184)
+for name in (proof.name,J+'-remote-verified.json','Garnet-Rowwise-K-Norm-CPU-Progress.json'):keep(name,(O/name).read_bytes())
+with zipfile.ZipFile(archive) as z:
+    keep('rowwise-k-norm-profile-cpu-manifest.json',z.read('evidence-manifest.json'));keep('rowwise-k-norm-profile-cpu-workflow.json',z.read('workflow.json'))
+    for stage in ('build','contract'):
+        for ext in ('log','jsonl'):keep('rowwise-k-norm-profile-cpu-'+stage+'-commands.'+ext,z.read(stage+'-ledger/commands.'+ext))
+    assert b'19.44.35229.0' in z.read('build-ledger/commands.log') and b'14.44.35229.0' in z.read('build-ledger/commands.log')
+for ext in ('log','jsonl'):keep('rowwise-k-norm-profile-local-replay-commands.'+ext,(W/('rowwise-k-norm-profile-local-replay/commands.'+ext)).read_bytes())
+for name in ('replay-rowwise-k-norm-profile-cpu.py',Path(__file__).name):keep(name+'.txt',(W/name).read_bytes())
+keep('rowwise-k-norm-profile-cpu-retention.json',json.dumps({'status':q['status'],'proof_sha256':sha(proof),'archive_sha256':sha(archive),'archive_bytes':archive.stat().st_size,'retained_sha256':saved,'paired_proof_bytes_identical':True,'native_contract':q['native_contract'],'executable_imports':q['executable_imports'],'MSVC_compiler_version':'19.44.35229.0','MSVC_linker_version':'14.44.35229.0','MSVC_tools_directory':'14.44.35207','locale_note':'Windows compiler output localized in Chinese; ASCII version strings and JSON counts retained.','baseline_unchanged':True,'full_TensorRT_DLL_or_model_or_performance_qualified':False},indent=2).encode())
+entry=('\n\n2026-10-27 source87 actual native CPU profile PASSED all184 cases '
+       '(17valid/161rejected new,4valid/2rejected original), zero failures. '
+       'Remote/local archive and PE byte replays are identical, proof '+sha(proof)+
+       ', archive '+sha(archive)+' ('+str(archive.stat().st_size)+' bytes). '
+       'PE imports onlykernel32.dll; no Garnet/CUDA dependency or local EXE '
+       'execution. MSVC /Bv identifies compiler19.44.35229.0 and linker '
+       '14.44.35229.0 in tools directory14.44.35207; localized console text '
+       'is retained as captured. All1948 baseline files/runtime/SDK/config-index/'
+       'CMake/current34 CUDAobjects unchanged. Header offsets/modes/policy '
+       'exclusion and old guards compiled/tested; this does not qualify '
+       'TensorRT rowwise RMS lowering, model repair, quality or speed. '
+       'Source87 full DLL and model stages remain pending.\n').encode()
+for name in ('docs/research/qwen38-5090-development-log.md','docs/research/qwen38-5090-implementation-task.md'):
+    p=R/name;before=p.read_bytes();assert b'source87 actual native CPU profile PASSED' not in before
+    with p.open('ab') as f:f.write(entry)
+    assert p.read_bytes()==before+entry;owned.append(p)
+(W/'rowwise-k-norm-profile-result-stage-paths.bin').write_bytes(b''.join(p.relative_to(R).as_posix().encode()+b'\0' for p in owned));print(json.dumps({'stage_paths':len(owned),'native_CPU_cases':184,'model_unrun':True}))
