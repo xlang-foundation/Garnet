@@ -1,0 +1,18 @@
+{
+  "status": "CPU_vendor_reader_optional_fields_only_original_failure_preserved",
+  "source": "full_chunk_stage_vendor.py",
+  "target": "full_chunk_stage_vendor_optional_fields.py",
+  "source_sha256": "2c8e7bb7d8dabb8b01f1296f4a4dec7666746e660076100d9c253abb2469772d",
+  "target_sha256": "11c038324828c126453a78eb235e205d14b8e131be0c33d6b99f6b64e2b8d41b",
+  "changes": [
+    {
+      "old": "assert {'algoId','tile','stages','reductionScheme','numSplitsK'}<=set(config)",
+      "new": "assert {'algoId','tile','stages'}<=set(config)  # Retain optional printed fields verbatim; omitted values are not assumed.",
+      "count": 1
+    }
+  ],
+  "numeric_primary_state_vector_token_readonly_repeat_array_predicates_unchanged": true,
+  "original_GPU_owner_exit_code": 1,
+  "new_GPU_run": false,
+  "original_vendor_archive_sha256": "fe1f015002e8bc4ff78211983c87c0ee202d49f7551bc5cbadaafd5d898410fc"
+}

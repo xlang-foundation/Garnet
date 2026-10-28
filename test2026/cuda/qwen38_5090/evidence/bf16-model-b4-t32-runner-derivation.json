@@ -1,0 +1,56 @@
+{
+  "source": "run_bf16_model_default_off.py",
+  "source_sha256": "fb869d1ff1fdc7645f2a2eba601c6cbf040ef757499870ec76a9bdde92c264d0",
+  "changes": [
+    [
+      "\"\"\"Actual-model regression with BF16 disabled on the newly built DLL.\"\"\"",
+      "\"\"\"Run the explicit BF16 B4/T32prefill/T4decode model gate after default-off replay.\"\"\""
+    ],
+    [
+      "name='bf16-model-default-off-attempt1'",
+      "name='bf16-model-b4-t32-attempt1'"
+    ],
+    [
+      "parent='native-kv-delta-default-off-attempt1'",
+      "parent='bf16-model-default-off-attempt1'"
+    ],
+    [
+      "parentproof['status']=='native_kv_delta_default_off_replayed'",
+      "parentproof['status']=='bf16_model_default_off_replayed'"
+    ],
+    [
+      "probe=methods/'probe_b4_host_joined_mtp.py';launcher=root/'test-b4-host-joined-mtp.bat'\nwith zipfile.ZipFile(results/(parent+'-evidence.zip')) as z:\n    assert probe.read_bytes()==z.read('Garnet/test2026/cuda/qwen38_5090/'+probe.name)\n    assert launcher.read_bytes()==z.read(launcher.name)\n",
+      "with zipfile.ZipFile(results/'native-kv-delta-default-off-attempt1-evidence.zip') as z:\n    prior=json.loads(z.read('results/native-kv-delta-default-off-attempt1/workflow.json'))\nsources={**prior['source_sha256'],**sources}\nfor n,h in sources.items():assert sha((repo/n).read_bytes())==h,('Dependency drift',n)\nprobe=methods/'probe_bf16_model_b4_t32.py';launcher=methods/'test_bf16_model_b4_t32.bat'\nprep_path=methods/'evidence/bf16-model-b4-t32-preparation.json';prep=json.loads(prep_path.read_bytes())\nfor n,h in prep['methods'].items():assert sha((methods/n).read_bytes())==h,('Probe method drift',n)\nfixture=results/'bf16-kv-metadata-fixture.json';assert sha(fixture.read_bytes())==prep['fixture_sha256']\nconfig=root/'models/Qwen3.8-27B-NVFP4/config.json';assert sha(config.read_bytes())==prep['model_config_sha256']\nrecipe=json.loads((methods/'evidence/bf16-model-b4-t32-probe-derivation.json').read_bytes())\noriginal=methods/recipe['source'];assert sha(original.read_bytes())==recipe['source_sha256']\nderived=original.read_text(encoding='utf8')\nfor before,after in recipe['changes']:assert derived.count(before)==1;derived=derived.replace(before,after)\nassert derived.encode()==probe.read_bytes() and sha(probe.read_bytes())==recipe['result_sha256']\n"
+    ],
+    [
+      "'bf16_kv_enabled':False",
+      "'bf16_kv_enabled':True,'preparation_sha256':sha(prep_path.read_bytes()),'fixture_sha256':prep['fixture_sha256'],'model_config_sha256':prep['model_config_sha256']"
+    ],
+    [
+      "'scope':'Actual new DLL default-off regression against retained B4/T4 joined-host ordinary/MTP IDs, full-state hash witnesses and raw hidden. No BF16 model or performance admission.'",
+      "'scope':prep['scope']"
+    ],
+    [
+      "'BF16 DLL default-off full-model parity'",
+      "'BF16 B4/T32prefill/T4decode helper and full-model integration'"
+    ],
+    [
+      "[library,probe,launcher,proofpath,parentpath,receipt,Path(__file__)]+[repo/n for n in sources]",
+      "[library,probe,launcher,proofpath,parentpath,receipt,Path(__file__),prep_path,fixture,config]+[methods/n for n in prep['methods']]+[repo/n for n in sources]"
+    ],
+    [
+      "raise RuntimeError('Default-off full-model regression failed')",
+      "raise RuntimeError('BF16 B4/T32prefill/T4decode model gate failed')"
+    ],
+    [
+      "'bf16_default_off_finished_needs_replay'",
+      "'bf16_b4_t32_finished_needs_replay'"
+    ],
+    [
+      "for n,h in prep['methods'].items():assert sha((methods/n).read_bytes())==h,('Probe method drift',n)",
+      "for n,h in prep['methods'].items():assert sha((methods/n).read_bytes())==h,('Probe method drift',n)\nfor n,h in prep['pinned_inputs'].items():assert sha((root/n).read_bytes())==h,('Input drift',n)"
+    ]
+  ],
+  "result_sha256": "4e8e8c0f5daba0e359679c6460250f01f58445a288b198941813edef2db6b014",
+  "scope": "Unrun BF16 model runner preparation; gated on terminal and independent default-off replay."
+}

@@ -1,0 +1,11 @@
+"""Installer and terminal-only CPU readers for the prospective clean benchmark."""
+from pathlib import Path
+import ast,hashlib,json
+W=Path(__file__).resolve().parent;records=[]
+for name in ('install','postprocess','replay'):
+    source=W/(name+'-b4-rowwise-http-benchmark.py');raw=source.read_bytes();s=raw.decode().replace('\r\n','\n');steps=[]
+    for a,b in [('b4-rowwise-http-benchmark','b4-resident-serial-http-benchmark'),('B4_rowwise_HTTP_benchmark','B4_resident_serial_HTTP_benchmark'),('verify_b4_rowwise_http_benchmark.py','verify_b4_resident_serial_http_benchmark.py'),('59closedparents','62closedparents'),('closed805quality admission','closed candidate805quality,31graph snapshots and native IO byte admission'),('source91 B4 raw HTTP benchmark replay','source91 resident/serial B4 raw HTTP benchmark replay')]:
+        count=s.count(a)
+        if count:s=s.replace(a,b);steps.append(dict(old=a,new=b,count=count))
+    ast.parse(s);target=W/(name+'-b4-resident-serial-http-benchmark.py');assert not target.exists();target.write_bytes(s.encode());records.append(dict(source=source.name,source_sha256=hashlib.sha256(raw).hexdigest(),target=target.name,target_sha256=hashlib.sha256(target.read_bytes()).hexdigest(),changes=steps))
+target=W/'b4-resident-serial-benchmark-helper-derivation.json';assert not target.exists();target.write_bytes(json.dumps(dict(methods=records,syntax_checked_only=True,actual_install_and_raw_replay_unrun=True),indent=2).encode());print('Clean benchmark installer and terminal-only readers prepared; execution unrun')

@@ -1,0 +1,17 @@
+from pathlib import Path
+import hashlib,json,zipfile
+w=Path(__file__).resolve().parent;o=w.parent/'outputs';e=Path('D:/CantorAI/work/qwen38-5090/test2026/cuda/qwen38_5090/evidence');sha=lambda b:hashlib.sha256(b).hexdigest()
+archive=o/'sglang-graph-jpeg-evidence.zip'
+with zipfile.ZipFile(archive) as z:
+ raw=z.read('sglang-graph-jpeg/server-info.json');actual=json.loads(raw)
+ keys=('version','model_path','served_model_name','context_length','dtype','kv_cache_dtype','mamba_ssm_dtype','max_running_requests','max_total_tokens','max_mamba_cache_size','chunked_prefill_size','disable_radix_cache','disable_flashinfer_autotune','cuda_graph_backend_decode','cuda_graph_bs_decode','cuda_graph_backend_prefill','mm_preprocess_cache_size_mb','enable_prefix_mm_cache','enable_mm_global_cache','speculative_algorithm')
+ fixture={'parent_archive_sha256':sha(archive.read_bytes()),'parent_file':'sglang-graph-jpeg/server-info.json','parent_file_sha256':sha(raw),'actual_historical_fields':{k:actual[k] for k in keys},'scope':'Actual historical ordinary server_info fields. Unit tests explicitly change cache to0and add synthetic resolved MTP settings; this is no new runtime or timing evidence.'}
+ target=e/'reference4k-sglang-identity-fixture.json';assert not target.exists();target.write_text(json.dumps(fixture,indent=2),encoding='utf8')
+archive=o/'sglang-corrected-ipv4-evidence.zip'
+with zipfile.ZipFile(archive) as z:
+ raw=z.read('results/sglang-corrected-grid-metadata.json');metadata=json.loads(raw);pins_path=e/'reference4k-source-pins.json';pins=json.loads(pins_path.read_bytes());checkpoint=pins['checkpoint_files']
+ for name,digest in metadata['checkpoint_config_sha256'].items():
+  assert name not in checkpoint or checkpoint[name]==digest,(name,checkpoint.get(name),digest)
+  checkpoint[name]=digest
+ pins['parent_archives_sha256']['sglang-corrected-ipv4-evidence']=sha(archive.read_bytes());pins_path.write_text(json.dumps(pins,indent=2),encoding='utf8')
+print(json.dumps({'status':'actual_historical_fixture_and_additional_checkpoint_pins_saved','actual_fixture_fields':len(keys),'checkpoint_files':len(checkpoint)}))

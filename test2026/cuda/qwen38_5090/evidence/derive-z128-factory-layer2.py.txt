@@ -1,0 +1,28 @@
+from pathlib import Path
+import hashlib,json
+m=Path('D:/CantorAI/work/qwen38-5090/test2026/cuda/qwen38_5090');sha=lambda raw:hashlib.sha256(raw).hexdigest();rows=[]
+def derive(base,target,changes):
+    raw=(m/base).read_bytes();original=raw
+    for before,after,count in changes:assert raw.count(before.encode())==count,(target,before,raw.count(before.encode()));raw=raw.replace(before.encode(),after.encode())
+    path=m/target;assert not path.exists() or path.read_bytes()==raw
+    if not path.exists():path.write_bytes(raw)
+    rows.append({'base':base,'target':target,'base_sha256':sha(original),'target_sha256':sha(raw),'changes':[{'before':a,'after':b,'count':c} for a,b,c in changes]})
+derive('probe_modelopt_trace_layer2.py','probe_z128_factory_layer2.py',[
+ ('modelopt-trace-layer2-preparation.json','z128-factory-layer2-preparation.json',1),
+ ("'trace_policy':os.environ.get('GARNET_MODELOPT_INIT_TRACE')","'trace_policy':os.environ.get('GARNET_MODELOPT_INIT_TRACE'),'factory_trace_policy':os.environ.get('GARNET_Z128_FACTORY_TRACE')",1),
+ ("assert os.environ.get('GARNET_MODELOPT_INIT_TRACE') in (None,'1')","assert os.environ.get('GARNET_MODELOPT_INIT_TRACE') in (None,'1')\n    assert os.environ.get('GARNET_Z128_FACTORY_TRACE')==os.environ.get('GARNET_MODELOPT_INIT_TRACE')",1),
+ ('modelopt-trace-layer2-attempt1-','z128-factory-layer2-attempt1-',1)])
+derive('test_modelopt_trace_layer2.bat','test_z128_factory_layer2.bat',[
+ ('set GARNET_MODELOPT_INIT_TRACE=\n','set GARNET_Z128_FACTORY_TRACE=\nset GARNET_MODELOPT_INIT_TRACE=\n',1),
+ ('if "%~3"=="1" set GARNET_MODELOPT_INIT_TRACE=1','if "%~3"=="1" set GARNET_MODELOPT_INIT_TRACE=1\nif "%~3"=="1" set GARNET_Z128_FACTORY_TRACE=1',1),
+ ('probe_modelopt_trace_layer2.py','probe_z128_factory_layer2.py',1)])
+derive('run_modelopt_trace_layer2.py','run_z128_factory_layer2.py',[
+ ('modelopt-trace-layer2-attempt1','z128-factory-layer2-attempt1',2),
+ ('modelopt-trace-layer2-preparation.json','z128-factory-layer2-preparation.json',1),
+ ('modelopt_trace_layer2_prepared_gpu_unrun','z128_factory_layer2_prepared_gpu_unrun',1),
+ ('==38','==39',2),
+ ('garnet-native-modelopt-init-trace-attempt2.dll','garnet-native-z128-factory-trace-attempt1.dll',1),
+ ('test_modelopt_trace_layer2.bat','test_z128_factory_layer2.bat',1),
+ ('83CPU retain81 composed model/cache/init controls plus2 actual trace-profile/provenance faults','88CPU retained model/cache/init/factory controls plus2 exact collector/native attribution checks',1),
+ ('modelopt_trace_layer2_collected_needs_replay','z128_factory_layer2_collected_needs_replay',1)])
+(m/'evidence/z128-factory-layer2-derivation.json').write_bytes(json.dumps({'status':'actual_factory_layer2_observation_derivatives','files':rows,'numerical_collection_changed':False},indent=2).encode());print(json.dumps({'derived_methods':len(rows)}))

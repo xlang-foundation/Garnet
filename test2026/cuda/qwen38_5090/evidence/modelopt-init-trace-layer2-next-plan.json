@@ -1,0 +1,13 @@
+{
+  "status": "actual_plugin_trace_native_CPU_qualified_GPU_correctness_next",
+  "steps": [
+    "Use saved DLL d3f15b2e3e5bf4f73042883c620bf74805dcb75f3561c9b62ab01078c4c74516 and exact native31/Python7 candidate38 source. Keep all earlier initialization and arithmetic failures immutable. CPU synthetic failures are not observed GPU failures; no root cause is identified yet.",
+    "Prepare a source/runtime/SDK/checkpoint-restoring layer2 observation with GARNET_MODELOPT_INIT_TRACE=1. Preserve current real common input, ordinary T32/T128 graph construction, three warmups/two repeats, full finite arrays and readonly/carried-state checks. Place stdout profile-boundary markers around each build so actual entry/exit events can be assigned to T32/T128.",
+    "Replay all actual trace begin/end records by ID/route/instance/shape/policy with complete pairing and original factory/context/return semantics. If construction fails, identify the actual failing plugin route and preserve its raw return/exception and the postfailure shadow-helper data separately. Add helper API/opaque instrumentation only at the identified real boundary; do not substitute an algorithm based on the shadow observer.",
+    "If trace-on construction succeeds, run a fresh trace-unset control, require silent trace output and byte-exact ordinary outputs/repeats across policies and the retained old T32 partial arrays. Do not infer initialization reliability from one success; T128 arithmetic and all full-model/quality gates remain separate.",
+    "After the controlled layer2 result, investigate the actual layer3 input/projection/cache boundary with same-profile ordinary-primary parity and linkage to retained full-model caches. Then unchanged six3968+128 ordinary/MTP state/vector/token gate, adapted805 quality and initialization qualification, matched HTTP repetitions/strongest feasible tuned MTP references/INT4/4B/concurrency. Overall2xdecodeANDthroughput/halfTTFTextra remain unmet."
+  ],
+  "GPU_initialization_cause_identified": false,
+  "full_model_or_quality_or_performance_qualified": false,
+  "two_times_target_achieved": false
+}

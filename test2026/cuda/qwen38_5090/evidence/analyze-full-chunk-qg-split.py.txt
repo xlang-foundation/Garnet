@@ -1,0 +1,22 @@
+from pathlib import Path
+import hashlib,io,json,sys,zipfile
+import numpy as np
+W=Path(__file__).resolve().parent;O=W.parent/'outputs';R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';sys.path.insert(0,str(R));from test2026.cuda.qwen38_5090.full_chunk_stage_replay import array
+sha=lambda b:hashlib.sha256(b).hexdigest();job='full-chunk-stage-attempt2';proof=(O/(job+'-verified.json')).read_bytes();assert proof==(O/(job+'-remote-verified.json')).read_bytes();q=json.loads(proof);assert q['exit_code']==0 and q['arrays']['first_different_stage']['stage']=='qg'
+archive=O/(job+'-evidence.zip');assert sha(archive.read_bytes())==q['archive_sha256']
+with zipfile.ZipFile(archive) as z:
+    p=json.loads(z.read('Garnet/test2026/cuda/qwen38_5090/evidence/full-chunk-stage-gpu-preparation-attempt2.json'))
+    with zipfile.ZipFile(io.BytesIO(z.read(p['source_bundle']))) as bundle:
+        header=bundle.read('src/backends/tensorrt/qwen35_lowering.h')
+        for s in ('reshape(qg,{batch,tokens,heads,2*dim})','slice(projectedQGate,-1,0,dim)','slice(projectedQGate,-1,dim,dim)'):assert s.encode() in header
+    values=[]
+    for phase in ('stages32','stages128'):
+        base='results/'+job+'/'+phase+'/';report=json.loads(z.read(base+'report.json'));raw=b''.join(array(row['arrays']['qg'],lambda n:z.read(base+n)) for row in report['stage_frames']);assert len(raw)==128*24*2*256*4;values.append(np.frombuffer(raw,dtype='<f4').reshape(128,24,2,256))
+    a,b=values;assert np.all((a.view('<u4')&0xffff)==0) and np.all((b.view('<u4')&0xffff)==0)
+    changes=np.argwhere(a.view('<u4')!=b.view('<u4'));assert len(changes)==q['arrays']['stages']['qg']['changed_F32_words']==102
+    counts={name:int(np.count_nonzero(a[:,:,part,:].view('<u4')!=b[:,:,part,:].view('<u4'))) for part,name in enumerate(('query','gate'))};rows=[]
+    for token,head,part,channel in changes:
+        idx=tuple(map(int,(token,head,part,channel)));left=float(a[idx]);right=float(b[idx]);lv=int(a.view('<u4')[idx])>>16;rv=int(b.view('<u4')[idx])>>16
+        rows.append(dict(token=idx[0],head=idx[1],part=('query','gate')[idx[2]],channel=idx[3],projection_dimension=idx[1]*512+idx[2]*256+idx[3],baseline=left,native=right,same_sign=(lv&0x8000)==(rv&0x8000),BF16_encoding_distance=abs(lv-rv)))
+    result=dict(status='qualified_first128_QG_difference_decomposition_replayed',original_stage_archive_sha256=q['archive_sha256'],paired_stage_proof_sha256=sha(proof),ordinary_QG_split_source_sha256=sha(header),layout=[128,24,2,256],parts=['query','gate'],both_observed_FP32_arrays_exact_BF16_roundtrip=True,changed_values=counts,all102_changed_values=rows,projection_scale_or_algorithm_cause_not_yet_proven=True,model_or_performance_qualified=False)
+raw=json.dumps(result,indent=2).encode();target=O/'Garnet-Layer3-QG-Difference-Decomposition.json';assert not target.exists() or target.read_bytes()==raw;target.write_bytes(raw);print(json.dumps(dict(status=result['status'],sha256=sha(raw),changed_values=counts,first_change=rows[0])))

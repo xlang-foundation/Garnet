@@ -1,0 +1,9 @@
+from pathlib import Path
+import hashlib,json,zipfile
+work=Path(__file__).resolve().parent;repo=Path('D:/CantorAI/work/qwen38-5090');sha=lambda raw:hashlib.sha256(raw).hexdigest();old=work/'modelopt-init-trace-native-proposal-attempt2.json';p=json.loads(old.read_bytes());assert p['status']=='modelopt_init_trace_native_build_prepared_unrun';p['status']='modelopt_init_trace_native_build_proposed_unrun';target=work/'modelopt-init-trace-native-proposal-attempt2-v2.json';assert not target.exists();target.write_bytes(json.dumps(p,indent=2).encode());deploy={name:(repo/name.removeprefix('Garnet/')).read_bytes() for name in p['methods']}
+for name,h in p['methods'].items():assert sha(deploy[name])==h
+deploy[p['bundle']]=(work/'modelopt-init-trace-native-source.zip').read_bytes();assert sha(deploy[p['bundle']])==p['bundle_sha256'];deploy['results/modelopt-init-trace-native-proposal-attempt2.json']=target.read_bytes();package=work/'modelopt-init-trace-native-deployment-attempt2-v2.zip';assert not package.exists()
+with zipfile.ZipFile(package,'x',zipfile.ZIP_DEFLATED) as z:
+    for name,raw in deploy.items():z.writestr(name,raw)
+    z.writestr('install-manifest.json',json.dumps({'files':{name:sha(raw) for name,raw in deploy.items()}},indent=2))
+result={'status':p['status'],'base_pins':len(p['base_files']),'method_pins':len(p['methods']),'candidate_sources':38,'CPU_tests':81,'deployment_targets':len(deploy),'deployment_sha256':sha(package.read_bytes()),'bytes':package.stat().st_size,'proposal_sha256':sha(target.read_bytes()),'expected_method_updates':p['expected_method_updates']};(work/'modelopt-init-trace-native-package-attempt2-v2.json').write_bytes(json.dumps(result,indent=2).encode());print(json.dumps(result))

@@ -1,0 +1,27 @@
+from pathlib import Path
+import hashlib,json,sys,zipfile
+ROOT=Path('D:/CantorAI/5090-study-20261023');P='Garnet/test2026/cuda/qwen38_5090/';M=ROOT/P;sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+sys.path[:0]=[str(M),str(ROOT/'Garnet')]
+from run_bf16_low_batch_native_build import idle
+archive=ROOT/'results/b4-prefill128-native-deployment.zip';out=ROOT/'results/b4-prefill128-native-install.json'
+assert not out.exists();assert sha(archive)=='f7b3fbb1cd57492933990870c8c2da601a528dea64208d7318a4a5bcbe5a6fbe';idle()
+with zipfile.ZipFile(archive) as z:
+    manifest=json.loads(z.read('deployment-manifest.json'));assert z.testzip() is None and len(z.namelist())==len(set(z.namelist()))==len(manifest['files'])+1==172
+    p=json.loads(z.read(P+'evidence/b4-prefill128-build-preparation.json'));assert p['status']=='b4_prefill128_build_prepared_unrun' and len(p['candidate_files'])==61
+    assert sha(ROOT/'results/b4-prefill128-build-inputs.json')==p['input_inventory_sha256']
+    assert not any('probe_native_external_prefix_batch.py' in n for n in manifest['files'])
+    for n,h in {**p['base_files'],**p['checkpoints']}.items():assert sha(ROOT/n)==h,('Baseline changed',n)
+    for n,h in p['runtime'].items():assert sha(ROOT/'build/bin'/n)==h
+    for n,h in p['environment'].items():assert sha(Path(n))==h
+    assert sha(ROOT/'build/CMakeCache.txt')==p['cache_before_sha256']
+    objects={n.relative_to(ROOT).as_posix():sha(n) for n in (ROOT/'build/garnet/CMakeFiles/garnet.dir').rglob('*.cu.obj')};assert objects==p['cuda_objects_before']
+    for n,h in manifest['files'].items():
+        target=ROOT/n
+        assert target.resolve().is_relative_to(M.resolve()) or n in ('results/b4-prefill128-source.zip','results/tokenizer-nfc-cpu-oracles.zip')
+        blob=z.read(n);assert hashlib.sha256(blob).hexdigest()==h
+        assert not target.exists() or target.read_bytes()==blob,('Preserve existing edit',n)
+    for n in manifest['files']:
+        target=ROOT/n;target.parent.mkdir(parents=True,exist_ok=True);target.write_bytes(z.read(n))
+    for n,h in p['methods'].items():assert sha(ROOT/n)==h
+out.write_bytes(json.dumps(dict(status='B4_methods_bundle_installed_native_source_runtime_deferred_to_exclusive_owner',deployment_sha256=sha(archive),files=manifest['files'],native_source_files=61),indent=2).encode())
+print(json.dumps(dict(status='B4_methods_bundle_installed',files=len(manifest['files']),native_build_or_GPU_executed=False)))

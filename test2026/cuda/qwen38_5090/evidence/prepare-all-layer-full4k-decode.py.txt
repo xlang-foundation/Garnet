@@ -1,0 +1,41 @@
+"""Run only after the ordinary prefix job and both raw replays are terminal."""
+from pathlib import Path
+import ast,hashlib,json,sys,zipfile
+W=Path(__file__).resolve().parent;O=W.parent/'outputs';R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';E=M/'evidence';P='Garnet/test2026/cuda/qwen38_5090/';sha=lambda b:hashlib.sha256(b).hexdigest();sys.path[:0]=[str(R),str(M)]
+from test2026.cuda.qwen38_5090.fa_value_sdk_control import verify_derivations
+old=json.loads((E/'b4-full4k-decode-prefix-preparation.json').read_bytes());job='b4-full4k-decode-prefix-attempt1';proof=(O/(job+'-verified.json')).read_bytes();assert proof==(O/(job+'-remote-verified.json')).read_bytes();q=json.loads(proof)
+assert q['exit_code']==0 and q['diagnostic_completed'] and not q['strict_full4k_admission_passed'] and q['source_runtime_SDK_checkpoint_CMake_all34objects_restored'] and not q['MTP_805_HTTP_or_performance_qualified'];assert sha((O/(job+'-evidence.zip')).read_bytes())==q['archive_sha256']
+ob=q['observation'];step=ob['first_nonexact_step'];assert type(step) is int and 1<=step<=7
+rows=ob['steps'][step-1]['comparison']['rows'];assert ob['steps'][step-1]['step']==step
+affected=[r for r in rows if not r['all_exact']];assert affected
+chosen=next((r for r in affected if not r['finite_raw_vector_bytes_exact']['hidden']),affected[0]);position=chosen['physical_row'];key=ob['keys'][position]
+with zipfile.ZipFile(O/(job+'-evidence.zip')) as z:
+    w=json.loads(z.read('results/'+job+'/workflow.json'));assert w['cleanup_finished'] and w['exit_code']==0 and w['build_artifacts_unchanged'] and w['source_after']==old['files'] and w['cuda_objects_after']==old['cuda_objects']
+names=['all_layer_decode_boundary_program.py','test_all_layer_decode_boundary_program.py','all_layer_full4k_decode_analysis.py','test_all_layer_full4k_decode_analysis.py','all_layer_selected_row_decode_analysis.py','test_all_layer_selected_row_decode_analysis.py','probe_all_layer_full4k_decode.py','launch_all_layer_full4k_decode.py','run_all_layer_full4k_decode.py','verify_all_layer_full4k_decode.py','evidence/all-layer-full4k-decode-derivation.json','evidence/all-layer-selected-decode-cpu-preparation.json','evidence/b4-full4k-decode-prefix-preparation.json']
+new={P+n:sha((M/n).read_bytes()) for n in names};files=dict(old['files'])
+for n,h in new.items():assert n not in files or files[n]==h
+files.update(new);verify_derivations(json.loads((E/'all-layer-full4k-decode-derivation.json').read_bytes()),lambda n:(M/n).read_bytes())
+cpu=json.loads((E/'all-layer-selected-decode-cpu-preparation.json').read_bytes());assert cpu['CPU_controls']==43 and not cpu['GPU_primary_parity_qualified']
+for n,h in cpu['source_sha256'].items():assert sha((M/n).read_bytes())==h
+events=[json.loads(line) for line in (E/'all-layer-selected-decode-cpu-commands.jsonl').read_bytes().splitlines()];assert len(events)==2 and events[-1]['exit_code']==0 and events[0]['source']['owned_source_sha256']==events[1]['source_after']['owned_source_sha256']==cpu['source_sha256']
+for n in names:
+    if n.endswith('.py'):ast.parse((M/n).read_bytes())
+parents={**old['parents'],job:dict(proof_sha256=sha(proof),archive_sha256=q['archive_sha256'],exit_code=0,status=q['status'])}
+for name,row in parents.items():
+    raw=(O/(name+'-verified.json')).read_bytes();qq=json.loads(raw);assert raw==(O/(name+'-remote-verified.json')).read_bytes() and sha(raw)==row['proof_sha256'] and qq['archive_sha256']==row['archive_sha256']==sha((O/(name+'-evidence.zip')).read_bytes()) and qq['exit_code']==row['exit_code'] and qq['status']==row['status']
+p={**old,'status':'all64_selected_decode_prepared_GPU_unrun','files':files,'new_files':new,'archive_files':{**old['archive_files'],**new},'parents':parents,'audit_dependencies':{**old['audit_dependencies'],'results/'+job+'-evidence.zip':q['archive_sha256']},'observer_step':step,'reference_key':key,'selection_reason':dict(parent_proof_sha256=sha(proof),first_ordinary_state_drift_step=step,physical_row=position,priority='First affected row with hidden-vector difference, otherwise first affected row at the earliest state-drift step; no performance selection'),
+   'scope':'OneprovedaffectedB1row/wholemixedB4 readonlyall64layer trace atfirstordinarydriftstep. Selectedfrompairedordinaryprefixproof; captureoriginal128component/physical-logicalhash/finitehidden-normalizedvector afterEVERY1..7+8IDs. These mustmatchordinarysame-profileparent for selectedB1 andALL4B4rows before anylayerinterpretation. All64completeT4hiddenarrays include5120active/15360inactivewords perrow. InheritexistingoriginalForward/Run, source60/source79DLLs/weights/precision/head unchanged; no kernel/nativebuild/default/tolerance changes.43CPU, actualGDN/V/QKroutes, allownedsource/runtime/SDK/config-index/CMake/all34/baselineguards preserved, privateSSDnonces retiredafteridle. OtherB1layeroutputs unobserved. Firstdifferentboundary isnotuniqueoperatorcausality. Original128IDfull4K FAILED, no MTP/quality/HTTP/perf/overall2xadmission.'}
+p['reference_installed_files']={**files,**{'Garnet/'+n:h for n,h in p['reference_source_files'].items()}};p['candidate_installed_files']={**files,**{'Garnet/'+n:h for n,h in p['candidate_source_files'].items()}}
+assert len(p['candidate_source_files'])==79 and len(p['reference_source_files'])==60 and len(p['cuda_objects'])==34 and not any('probe_native_external_prefix_batch.py' in n for n in files)
+prep=E/'all-layer-full4k-decode-preparation.json';assert not prep.exists();prep.write_bytes(json.dumps(p,indent=2).encode())
+deploy={n:R/n.removeprefix('Garnet/') for n in new};deploy[P+'evidence/all-layer-full4k-decode-preparation.json']=prep;target=W/'all-layer-full4k-decode-deployment.zip';assert not target.exists()
+with zipfile.ZipFile(target,'x',zipfile.ZIP_DEFLATED) as z:
+    for n,path in deploy.items():z.write(path,n)
+    z.writestr('deployment-manifest.json',json.dumps(dict(files={n:sha(path.read_bytes()) for n,path in deploy.items()},source_runtime_install_deferred=True),indent=2))
+receipt=dict(status=p['status'],files=len(deploy),deployment_sha256=sha(target.read_bytes()),bytes=target.stat().st_size,preparation_sha256=sha(prep.read_bytes()),candidate_library_sha256=p['candidate_library_sha256'],source_inventory=len(files),observer_step=step,reference_key=key);(W/'all-layer-full4k-decode-package.json').write_bytes(json.dumps(receipt,indent=2).encode())
+raw=(W/'install-b4-full4k-decode-prefix.py').read_bytes();pkg=json.loads((W/'b4-full4k-decode-prefix-package.json').read_bytes())
+for a,b in [('b4-full4k-decode-prefix','all-layer-full4k-decode'),('B4_full4k_decode_prefix_prepared_GPU_unrun','all64_selected_decode_prepared_GPU_unrun'),('B4_full4k_decode_prefix','all64_selected_decode'),(pkg['deployment_sha256'],receipt['deployment_sha256']),('len(mf)+1==10','len(mf)+1=='+str(len(deploy)+1))]:assert raw.count(a.encode())>0;raw=raw.replace(a.encode(),b.encode())
+(W/'install-all-layer-full4k-decode.py').write_bytes(raw)
+raw=(W/'postprocess-b4-full4k-decode-prefix.py').read_bytes()
+for a,b in [('b4-full4k-decode-prefix','all-layer-full4k-decode'),('verify_b4_full4k_decode_prefix.py','verify_all_layer_full4k_decode.py'),('B4_full4k_decode_prefix','all64_selected_decode'),("M/'b4_full4k_decode_prefix.py',","M/'b4_full4k_decode_prefix.py',M/'all_layer_selected_row_decode_analysis.py',M/'all_layer_full4k_decode_analysis.py',M/'all_layer_decode_boundary_program.py',")]:assert raw.count(a.encode())>0;raw=raw.replace(a.encode(),b.encode())
+(W/'postprocess-all-layer-full4k-decode.py').write_bytes(raw);print(json.dumps(receipt))

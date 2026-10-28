@@ -1,0 +1,97 @@
+{
+  "derivations": [
+    {
+      "source": "probe_decode_projection_diagnostic.py",
+      "target": "probe_decode_projection_diagnostic_attempt2.py",
+      "source_sha256": "b1fb1a10edd1ae2564b09ad8f470bcd16b9b0eea1949d89a81de758c8176cb66",
+      "target_sha256": "bf29308a6fb4208bf766a0a84808e30c106b777c757085aaad7b8581129d25e3",
+      "changes": [
+        {
+          "old": "decode-projection-preparation.json",
+          "new": "decode-projection-attempt2-preparation.json",
+          "count": 1
+        },
+        {
+          "old": "io.open(str(checkpoint));io.enable_host_embedding(True)",
+          "new": "io.open(str(checkpoint));io.enable_nvfp4_head(True);io.enable_host_embedding(True)",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "launch_decode_projection_diagnostic.py",
+      "target": "launch_decode_projection_diagnostic_attempt2.py",
+      "source_sha256": "85e3f234281ff4f97233a4c59e4cbcf68c7e284c0d76416ec7eaa6dd689d8c25",
+      "target_sha256": "d81deea723a8c551741d8c010f8259eeb1bb73e7ef74cd01e7ead86f9fb6f348",
+      "changes": [
+        {
+          "old": "decode-projection-preparation.json",
+          "new": "decode-projection-attempt2-preparation.json",
+          "count": 1
+        },
+        {
+          "old": "probe_decode_projection_diagnostic.py",
+          "new": "probe_decode_projection_diagnostic_attempt2.py",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "run_decode_projection_diagnostic.py",
+      "target": "run_decode_projection_diagnostic_attempt2.py",
+      "source_sha256": "789ad1f9e5f355784556e535d23898aa72454bf8f4b3ca07ee3ee5f05a480ad5",
+      "target_sha256": "66fc86f3a1954057ce59faa68835899cdcf9a3b470004b38370e1fd9d8c611b7",
+      "changes": [
+        {
+          "old": "decode-projection-diagnostic-attempt1",
+          "new": "decode-projection-diagnostic-attempt2",
+          "count": 1
+        },
+        {
+          "old": "decode-projection-preparation.json",
+          "new": "decode-projection-attempt2-preparation.json",
+          "count": 1
+        },
+        {
+          "old": "launch_decode_projection_diagnostic.py",
+          "new": "launch_decode_projection_diagnostic_attempt2.py",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "verify-decode-projection-diagnostic.py",
+      "target": "verify-decode-projection-diagnostic-attempt2.py",
+      "source_sha256": "cb6c7a56e3d050af71ffe4b5508fd7005542d59152e398946b566ad6df7efc11",
+      "target_sha256": "a6263a57ece245a4d39a94568db6327e53c48ba7c919f971ccf1ff5c803dc6a3",
+      "changes": [
+        {
+          "old": "decode-projection-diagnostic-attempt1",
+          "new": "decode-projection-diagnostic-attempt2",
+          "count": 1
+        },
+        {
+          "old": "decode-projection-preparation.json",
+          "new": "decode-projection-attempt2-preparation.json",
+          "count": 2
+        },
+        {
+          "old": "probe_decode_projection_diagnostic.py",
+          "new": "probe_decode_projection_diagnostic_attempt2.py",
+          "count": 1
+        },
+        {
+          "old": "run_decode_projection_diagnostic.py",
+          "new": "run_decode_projection_diagnostic_attempt2.py",
+          "count": 1
+        },
+        {
+          "old": "launch_decode_projection_diagnostic.py",
+          "new": "launch_decode_projection_diagnostic_attempt2.py",
+          "count": 1
+        }
+      ]
+    }
+  ],
+  "reason": "Required original IO contract: independent native NVFP4 head must be enabled before host embedding. Head unused in projection capture; same mode as full model. No native/math/projection/sourcebundle/guard change. Prior failed attempt preserved."
+}

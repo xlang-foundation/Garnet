@@ -1,0 +1,31 @@
+"""Correct derived report text only, after the exclusive owner has closed."""
+from pathlib import Path
+import hashlib,json,subprocess,sys,zipfile
+W=Path(__file__).resolve().parent;O=W.parent/'outputs';R=Path('D:/CantorAI/work/qwen38-5090');E=R/'test2026/cuda/qwen38_5090/evidence';J='b4-rowwise-http-benchmark-attempt1';S='Garnet-B4-Repeated-vLLM-SGLang-4K';sha=lambda b:hashlib.sha256(b).hexdigest()
+# No local source/report mutation is allowed before the model owner closes.
+quality='b4-resident-serial-quality-attempt2';peer=O/(quality+'-remote-verified.json');q=json.loads(peer.read_bytes());assert sha((O/(quality+'-evidence.zip')).read_bytes())==q['archive_sha256'] and q['source_runtime_SDK_config_index_CMake_all34_and_full_model_files_restored']
+with zipfile.ZipFile(O/(quality+'-evidence.zip')) as z:w=json.loads(z.read('results/'+quality+'/workflow.json'));assert w['cleanup_finished'] and w['all_restored'] and type(w['exit_code']) is int
+audit=W/'native-reference-cache-precision-audit.json';a=json.loads(audit.read_bytes());assert a['native_GDN_recurrent_and_convolution_state']=='fp32' and a['native_attention_KV']=='bf16' and not a['reference_convolution_cache_dtype_verified']
+old={p.name:p.read_bytes() for p in O.glob(S+'*') if p.is_file()};before=json.loads(old[S+'-Data.json']);script=W/'render-b4-repeated-comparison.py';raw=script.read_bytes();s=raw.decode();changes=[]
+for first,last in [
+ ('Native cache BF16; reference SSM state FP32 and KV BF16. Reference radix/prefix caching disabled. Configurations are disclosed.','Native GDN/reference SSM recurrent state: FP32; attention KV: BF16. Native conv state: FP32; reference conv dtype unverified. Prefix/radix cache off.'),
+ ('Sampled adapter VRAM; configs differ in SSM cache precision. Overall2x unmet.','Sampled adapter VRAM. FP32 recurrent state; BF16 attention KV. Overall2x unmet.'),
+ ('mixed NVFP4/FP8; BF16 vision/cache; native NVFP4 head','mixed NVFP4/FP8; BF16 vision/attention KV; FP32 GDN/convolution state; native NVFP4 head'),
+ ('native NVFP4 head, BF16 vision/cache.','native NVFP4 head, BF16 vision/attention KV, FP32 GDN/convolution state.')]:
+    count=s.count(first);assert count,(first,count);s=s.replace(first,last);changes.append(dict(old=first,new=last,count=count))
+script.write_bytes(s.encode());subprocess.run([sys.executable,str(script)],check=True,cwd=W.parent);after=json.loads((O/(S+'-Data.json')).read_bytes())
+for key in ('series','ranges','raw_trial_cohorts','comparisons','memory_sampling_by_native_trial','source_sha256','native_archive_sha256'):assert after[key]==before[key],key
+assert (O/(S+'-Metrics.csv')).read_bytes()==old[S+'-Metrics.csv']
+owned=[]
+for name,prior in old.items():
+    target=E/'figures'/name;assert target.read_bytes()==prior;target.write_bytes((O/name).read_bytes());owned.append(target)
+target=E/(J+'-render-b4-repeated-comparison.py.txt');assert target.read_bytes()==raw;target.write_bytes(script.read_bytes());owned.append(target)
+target=E/(J+'-retention.json');r=json.loads(target.read_bytes());assert r['chart_receipt_sha256']==sha(old[S+'-Receipt.json']);r['chart_receipt_sha256']=sha((O/(S+'-Receipt.json')).read_bytes());target.write_bytes(json.dumps(r,indent=2).encode());owned.append(target)
+for name,data in [('native-reference-cache-precision-audit.json',audit.read_bytes()),('audit-native-reference-cache-precision.py.txt',(W/'audit-native-reference-cache-precision.py').read_bytes()),(Path(__file__).name+'.txt',Path(__file__).read_bytes()),('b4-cache-precision-report-correction.json',json.dumps(dict(status='cache_precision_labels_corrected',renderer_before_sha256=sha(raw),renderer_after_sha256=sha(script.read_bytes()),metadata_changes=changes,numerical_series_ranges_all_raw_cohorts_comparisons_and_memory_byte_values_unchanged=True,CSV_byte_identical=True,new_model_or_benchmark_execution=False,initial_static_audit_assumption_failure='Unchanged baseline layouts were absent from overlay ZIP; corrected using matching actual archived baseline source hashes.',reference_convolution_cache_dtype_verified=False),indent=2).encode())]:
+    target=E/name;assert not target.exists();target.write_bytes(data);owned.append(target)
+entry=('\n\n2026-10-27 local correction: Earlier derived comparison figure wording that SSM cache precision differs was incorrect. Static archived source/config audit proves native B1/B4 GDN recurrent state is FP32 and attention KV is BF16; native convolution state is also FP32. Saved vLLM and SGLang configurations use FP32 SSM recurrent state and BF16 attention KV. Reference convolution-cache precision is not verified by this audit; do not claim complete cache implementation equivalence. Overlay source bundles omit unchanged baseline layouts, so their actual archived baseline SHA256 pins were used to verify identical source bytes. Audit '+sha(audit.read_bytes())+'. Current B4 comparison PNG/SVG/HTML/JSON metadata labels corrected, all numeric series/ranges/rawcohorts/comparisons/memory values and CSV unchanged. No benchmark rerun or new speed result; the measured throughput gap and unmet2x goal remain. Historical original wording retained above as an audit trail and superseded by this correction.\n').encode()
+for name in ('docs/research/qwen38-5090-development-log.md','docs/research/qwen38-5090-implementation-task.md'):
+    target=R/name;assert b'Earlier derived comparison figure wording that SSM cache precision differs was incorrect' not in target.read_bytes()
+    with target.open('ab') as f:f.write(entry)
+    owned.append(target)
+paths=W/'b4-cache-precision-report-correction-stage-paths.bin';paths.write_bytes(b''.join(p.relative_to(R).as_posix().encode()+b'\0' for p in owned));subprocess.run(['git','-c','core.autocrlf=false','add','--pathspec-from-file='+str(paths),'--pathspec-file-nul'],cwd=R,check=True);print(json.dumps(dict(staged_paths=len(owned),audit_sha256=sha(audit.read_bytes()),numeric_values_and_CSV_unchanged=True)))

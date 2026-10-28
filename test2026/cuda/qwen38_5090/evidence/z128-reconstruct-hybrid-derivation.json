@@ -1,0 +1,222 @@
+{
+  "status": "documented_Windows_hybrid_loader_protocol_after_preserved_metadata_assumption_failures",
+  "files": [
+    {
+      "base": "probe_z128_reconstruct_runtime_sdk.cpp",
+      "target": "probe_z128_reconstruct_hybrid_sdk.cpp",
+      "base_sha256": "9379bc25d8239669802355b54101d1f2080f503de37ba6bc98bf0a5a9f8252d4",
+      "target_sha256": "fa0b58ec90db4db1e196530af69f33446da7a66a85258ae826bc9f6b4b8f4657",
+      "changes": [
+        {
+          "before": "runtime==GetModuleHandleA(nullptr)?\"static\":\"dynamic\"",
+          "after": "runtime==GetModuleHandleA(nullptr)?\"hybrid_loader\":\"dynamic\"",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "base": "build_z128_reconstruct_runtime_sdk.bat",
+      "target": "build_z128_reconstruct_hybrid_sdk.bat",
+      "base_sha256": "09a167863a2c0a57c16cd15eeffc763bcbf4cb0de5ce2ea1327d53f525e40b35",
+      "target_sha256": "7836dd1365b39b465c042fc6e07220c6b47d59cac92e99326b06cb79983c5977",
+      "changes": [
+        {
+          "before": "probe_z128_reconstruct_runtime_sdk.cpp",
+          "after": "probe_z128_reconstruct_hybrid_sdk.cpp",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "base": "z128_reconstruct_runtime.py",
+      "target": "z128_reconstruct_hybrid.py",
+      "base_sha256": "18c8822ab3a084c0f0e34d1e992b7eb32b7a23e3f78fb7c71fc01156b00b17fb",
+      "target_sha256": "e833deef788fc37cb689976dc5f0e2bb62660ca374f3166daa1140bd90e89e57",
+      "changes": [
+        {
+          "before": "report['cuda_runtime_linkage']=='static'",
+          "after": "report['cuda_runtime_linkage']=='hybrid_loader'",
+          "count": 1
+        },
+        {
+          "before": "report['cuda_runtime_version']==report['cuda_runtime_header_version']>=12080 and report['cuda_driver_version']>=12080",
+          "after": "(report['cuda_runtime_header_version'],report['cuda_runtime_version'],report['cuda_driver_version'])==(13020,13040,13040)",
+          "count": 1
+        },
+        {
+          "before": "if 'cudaGetDevice' in line and 'cudart' in line.lower()",
+          "after": "if 'cudaGetDevice' in line and 'cudart:generated_cuda_runtime_api_loader.obj' in line",
+          "count": 1
+        },
+        {
+          "before": "static_CUDA_runtime_origin_replayed",
+          "after": "Windows_hybrid_CUDA_runtime_origin_replayed",
+          "count": 1
+        },
+        {
+          "before": "CUDA_API_origin",
+          "after": "CUDA_API_loader_origin",
+          "count": 1
+        },
+        {
+          "before": "CUDA_runtime_header_and_runtime_version",
+          "after": "CUDA_runtime_version",
+          "count": 1
+        },
+        {
+          "before": "'CUDA_driver_version':report['cuda_driver_version']",
+          "after": "'CUDA_header_version':report['cuda_runtime_header_version'],'CUDA_driver_version':report['cuda_driver_version']",
+          "count": 1
+        },
+        {
+          "before": "runtime_origin_by_address_and_static_link_map",
+          "after": "runtime_origin_by_address_and_hybrid_loader_map",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "base": "test_z128_reconstruct_runtime.py",
+      "target": "test_z128_reconstruct_hybrid.py",
+      "base_sha256": "34cbb5b59cf83fec82f8754d8382741950748bb70ad5210af43eb0c947cbc20a",
+      "target_sha256": "7d9212817be14303fa54bd6229d9fdf2c3e72adec10fac5ba81593993306187e",
+      "changes": [
+        {
+          "before": "from .z128_reconstruct_runtime import identity",
+          "after": "from .z128_reconstruct_hybrid import identity",
+          "count": 1
+        },
+        {
+          "before": "z128-reconstruct-runtime-derivation.json",
+          "after": "z128-reconstruct-hybrid-derivation.json",
+          "count": 1
+        },
+        {
+          "before": "probe_z128_reconstruct_runtime_sdk.cpp",
+          "after": "probe_z128_reconstruct_hybrid_sdk.cpp",
+          "count": 2
+        },
+        {
+          "before": "'cuda_runtime_linkage':'static'",
+          "after": "'cuda_runtime_linkage':'hybrid_loader'",
+          "count": 1
+        },
+        {
+          "before": "'cuda_runtime_version':13020",
+          "after": "'cuda_runtime_version':13040",
+          "count": 1
+        },
+        {
+          "before": "cudart.lib:cudart.obj",
+          "after": "cudart:generated_cuda_runtime_api_loader.obj",
+          "count": 1
+        },
+        {
+          "before": "runtime_origin_by_address_and_static_link_map",
+          "after": "runtime_origin_by_address_and_hybrid_loader_map",
+          "count": 2
+        }
+      ]
+    },
+    {
+      "base": "prepare_z128_reconstruct_runtime.py",
+      "target": "prepare_z128_reconstruct_hybrid.py",
+      "base_sha256": "fd188917c2c852100f6b45dbd88481af02861f9c3f0e94105528c416a8c1ad7d",
+      "target_sha256": "2c411b4940925e846d601e3e2c903e6589f9ba61ec1f1e7002f8c0b89d7c0f39",
+      "changes": [
+        {
+          "before": "z128-reconstruct-runtime-preparation.json",
+          "after": "z128-reconstruct-hybrid-preparation.json",
+          "count": 1
+        },
+        {
+          "before": "z128-reconstruct-runtime-proposal.json",
+          "after": "z128-reconstruct-hybrid-proposal.json",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "base": "run_z128_reconstruct_runtime.py",
+      "target": "run_z128_reconstruct_hybrid.py",
+      "base_sha256": "7cda165395b6d39dbc0b95e15492a2309547b37975aa249320f27fb2857dde18",
+      "target_sha256": "49bebad66dc9298dd775c2ab868b2e70e2db6daef49af4548aac127663bdbcab",
+      "changes": [
+        {
+          "before": "z128-reconstruct-runtime-attempt1",
+          "after": "z128-reconstruct-hybrid-attempt1",
+          "count": 1
+        },
+        {
+          "before": "z128-reconstruct-runtime-preparation.json",
+          "after": "z128-reconstruct-hybrid-preparation.json",
+          "count": 1
+        },
+        {
+          "before": "z128_reconstruct_runtime",
+          "after": "z128_reconstruct_hybrid",
+          "count": 3
+        },
+        {
+          "before": "static_CUDART_library_sha256",
+          "after": "hybrid_CUDART_loader_library_sha256",
+          "count": 1
+        },
+        {
+          "before": "    out=ROOT/'results'/JOB;",
+          "after": "    previous=p['previous_failure'];previous_proof=ROOT/'results'/(previous['job']+'-failure-verified.json');assert sha(previous_proof.read_bytes())==previous['proof_sha256'] and sha((ROOT/'results'/(previous['job']+'-evidence.zip')).read_bytes())==previous['archive_sha256']\n    out=ROOT/'results'/JOB;",
+          "count": 1
+        },
+        {
+          "before": "common=[prep,proof]+",
+          "after": "common=[prep,proof,previous_proof]+",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "base": "verify_z128_reconstruct_runtime.py",
+      "target": "verify_z128_reconstruct_hybrid.py",
+      "base_sha256": "3ccb19336001eaf118950a55410084fab576da595b712538c4e8b2588cc6d8dd",
+      "target_sha256": "9ed575264e880d92b4a347d52286eb0432ac5fd9694bdd486ee3950445dc814b",
+      "changes": [
+        {
+          "before": "z128-reconstruct-runtime-attempt1",
+          "after": "z128-reconstruct-hybrid-attempt1",
+          "count": 1
+        },
+        {
+          "before": "z128-reconstruct-runtime-preparation.json",
+          "after": "z128-reconstruct-hybrid-preparation.json",
+          "count": 1
+        },
+        {
+          "before": "z128_reconstruct_runtime",
+          "after": "z128_reconstruct_hybrid",
+          "count": 1
+        },
+        {
+          "before": "static_CUDART_library_sha256",
+          "after": "hybrid_CUDART_loader_library_sha256",
+          "count": 1
+        },
+        {
+          "before": "static_runtime_origin",
+          "after": "hybrid_runtime_origin",
+          "count": 1
+        },
+        {
+          "before": "        phases={}",
+          "after": "        previous=p['previous_failure'];failure=z.read('results/'+previous['job']+'-failure-verified.json');assert sha(failure)==previous['proof_sha256'] and failure==(a.proofs/(previous['job']+'-failure-verified.json')).read_bytes() and sha((a.proofs/(previous['job']+'-evidence.zip')).read_bytes())==previous['archive_sha256']\n        phases={}",
+          "count": 1
+        }
+      ]
+    }
+  ],
+  "factory_or_CPU_driver_or_algorithm_or_matmul_changed": false,
+  "documentation": [
+    "https://docs.nvidia.com/cuda/archive/13.2.0/cuda-compiler-driver-nvcc/index.html#cudart-none-shared-static-hybrid-cudart",
+    "https://docs.nvidia.com/cuda/cuda-runtime-api/cuda_runtime_api/group__CUDART____VERSION.html"
+  ],
+  "scope": "Same constructor CPP and source pins. Separate metadata probe identifies API loader code inEXE, generated_cuda_runtime_api_loader.obj map contribution, cuBLAS/root driver modules and exact header13020/runtime13040/driver13040 tuple. Original failed header==runtime check remains unchanged/preserved; no broad range or model/quality gate relaxation."
+}

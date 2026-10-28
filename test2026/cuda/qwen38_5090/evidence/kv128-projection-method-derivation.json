@@ -1,0 +1,203 @@
+{
+  "files": [
+    {
+      "source": "probe_fa3_projection_witness_attempt2.py",
+      "target": "probe_kv128_projection.py",
+      "source_sha256": "1c5c29a692d56d4981a7b73d3b9920814e7570aad20f6365629c1356ac47d6b7",
+      "target_sha256": "21a4b8537df33c70db54869bbed7b23d1ed19712f11794d2ad0978b4a7d3e883",
+      "changes": [
+        {
+          "before": "fa3-projection-witness-gpu-preparation-attempt2.json",
+          "after": "kv128-projection-gpu-preparation.json",
+          "count": 1
+        },
+        {
+          "before": "qwen38_5090.fa3_projection_witness_layout import",
+          "after": "qwen38_5090.kv128_projection_layout import",
+          "count": 1
+        },
+        {
+          "before": "    sys.path[:0]=[os.environ['GARNET_RUNTIME_ROOT'],str(repo)]",
+          "after": "    assert os.environ.get('GARNET_FP8_FULL_ATTN_KV128_CANONICAL')=='1' and os.environ.get('GARNET_KV128_FACTORY_TRACE')=='1'\n    sys.path[:0]=[os.environ['GARNET_RUNTIME_ROOT'],str(repo)]",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "test_fa3_projection_witness_attempt2.bat",
+      "target": "test_kv128_projection.bat",
+      "source_sha256": "4e6ce5eb88872818059d9348fa931ffd0958bf601e2c1a9920faa5b817b4ce15",
+      "target_sha256": "7e6a0eccf230d28cb283de55014b107705ff21a6e1cd5f5b41bee6f8e8edfd71",
+      "changes": [
+        {
+          "before": "set GARNET_Z128_FACTORY_TRACE=",
+          "after": "set GARNET_FP8_FULL_ATTN_KV128_CANONICAL=1\nset GARNET_KV128_FACTORY_TRACE=1\nset GARNET_Z128_FACTORY_TRACE=",
+          "count": 1
+        },
+        {
+          "before": "probe_fa3_projection_witness_attempt2.py",
+          "after": "probe_kv128_projection.py",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "probe_fa3_projection_embedded_metadata.py",
+      "target": "probe_kv128_embedded_metadata.py",
+      "source_sha256": "cbfeb1a31f5489fa9568eeb843bb7f29e6eb55d5f617cc2117345de1f7355e2a",
+      "target_sha256": "2a2cff3c2d2e6a63d68098a4587ccbd8613f2713b02177b5e223efd189970110",
+      "changes": [
+        {
+          "before": "qwen38_5090.fa3_projection_witness_layout import",
+          "after": "qwen38_5090.kv128_projection_layout import",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "test_fa3_projection_embedded_metadata.bat",
+      "target": "test_kv128_embedded_metadata.bat",
+      "source_sha256": "c1d9bb1b36f04db9ef92420db99039f5fb78c1203b3db21aebf6a75907e90fee",
+      "target_sha256": "2ce4e7c112a2f9db6e5ae479fe481e1e5e735034cd31f03baaa223aef4c32b17",
+      "changes": [
+        {
+          "before": "probe_fa3_projection_embedded_metadata.py",
+          "after": "probe_kv128_embedded_metadata.py",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "run_fa3_projection_witness_attempt2.py",
+      "target": "run_kv128_projection.py",
+      "source_sha256": "6a897358e4aa99077fc17c6d77b3f462560f8f09c5f95ca03591bf30e01ef28e",
+      "target_sha256": "b0e99b2dff6491d07a3f6e37347388db316de339a7e3e209c9d68f74fddadca6",
+      "changes": [
+        {
+          "before": "JOB='fa3-projection-witness-attempt2'",
+          "after": "JOB='kv128-projection-attempt1'",
+          "count": 1
+        },
+        {
+          "before": "fa3-projection-witness-gpu-preparation-attempt2.json",
+          "after": "kv128-projection-gpu-preparation.json",
+          "count": 1
+        },
+        {
+          "before": "==44",
+          "after": "==50",
+          "count": 2
+        },
+        {
+          "before": "garnet-native-fa3-projection-witness-attempt1.dll",
+          "after": "garnet-native-kv128-canonical-attempt2.dll",
+          "count": 1
+        },
+        {
+          "before": "test_fa3_projection_embedded_metadata.bat",
+          "after": "test_kv128_embedded_metadata.bat",
+          "count": 1
+        },
+        {
+          "before": "test_fa3_projection_witness_attempt2.bat",
+          "after": "test_kv128_projection.bat",
+          "count": 1
+        },
+        {
+          "before": "            from test2026.cuda.qwen38_5090.fa3_projection_witness import replay",
+          "after": "            from test2026.cuda.qwen38_5090.kv128_projection_replay import replay_control as replay,factory_replay",
+          "count": 1
+        },
+        {
+          "before": "qwen38_5090.z128_reconstructed_plugin_init_contract import",
+          "after": "qwen38_5090.kv128_plugin_init_contract import",
+          "count": 1
+        },
+        {
+          "before": "result=replay(report,read,(M/'evidence/reconstructed-fa3-common-input.f32').read_bytes())",
+          "after": "result=replay(report,read,(M/'evidence/reconstructed-fa3-common-input.f32').read_bytes(),ROOT/'results')",
+          "count": 1
+        },
+        {
+          "before": "            assert set(traced['routes'])=={'fp8'} and traced['routes']['fp8']>=2 and traced['failures']==[]",
+          "after": "            assert set(traced['routes'])=={'fp8','fp8_kv128'} and all(traced['routes'][r]>=2 for r in ('fp8','fp8_kv128')) and traced['failures']==[]",
+          "count": 1
+        },
+        {
+          "before": "            assert all((r['rows'],r['columns'],r['policy'])==(1024,5120,0) for r in rows)",
+          "after": "            assert all((r['rows'],r['columns'],r['policy'])==(1024,5120,0x4b313238 if r['route']=='fp8_kv128' else 0) for r in rows)",
+          "count": 1
+        },
+        {
+          "before": "            # Projection differences are diagnostic evidence, not arithmetic or performance admission.",
+          "after": "            factory=factory_replay((out/(phase+'-ledger/commands.log')).read_bytes(),True)\n            (out/'factory-analysis.json').write_bytes(json.dumps(factory,indent=2).encode())\n            assert result['original_eight_K_and_eight_V_differences_removed'],'KV128 projection parity failed; preserve complete outputs'\n            # This local projection gate does not admit full-model arithmetic or performance.",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "verify_fa3_projection_witness_attempt2.py",
+      "target": "verify_kv128_projection.py",
+      "source_sha256": "b4ff5ca2ff1e72a97401838475c024a4bc8d4e856463f652c69b98f00730c9c1",
+      "target_sha256": "793aad87400a8899510f51b93c5d9c62f8e0804bbebb7869415d0ce0c66dd8e5",
+      "changes": [
+        {
+          "before": "JOB='fa3-projection-witness-attempt2'",
+          "after": "JOB='kv128-projection-attempt1'",
+          "count": 1
+        },
+        {
+          "before": "fa3-projection-witness-gpu-preparation-attempt2.json",
+          "after": "kv128-projection-gpu-preparation.json",
+          "count": 1
+        },
+        {
+          "before": "qwen38_5090.fa3_projection_witness import replay",
+          "after": "qwen38_5090.kv128_projection_replay import replay_control as replay,factory_replay",
+          "count": 1
+        },
+        {
+          "before": "qwen38_5090.z128_reconstructed_plugin_init_contract import",
+          "after": "qwen38_5090.kv128_plugin_init_contract import",
+          "count": 1
+        },
+        {
+          "before": "b'Ran 15 tests'",
+          "after": "b'Ran '+str(p['expected_cpu_test_count']).encode()+b' tests'",
+          "count": 1
+        },
+        {
+          "before": "arrays=replay(r,lambda n:z.read(base+'native/'+n),fixture)",
+          "after": "arrays=replay(r,lambda n:z.read(base+'native/'+n),fixture,args.proofs)",
+          "count": 1
+        },
+        {
+          "before": "set(trace['routes'])=={'fp8'} and trace['routes']['fp8']>=2",
+          "after": "set(trace['routes'])=={'fp8','fp8_kv128'} and all(trace['routes'][n]>=2 for n in ('fp8','fp8_kv128'))",
+          "count": 1
+        },
+        {
+          "before": "(r['rows'],r['columns'],r['policy'])==(1024,5120,0)",
+          "after": "(r['rows'],r['columns'],r['policy'])==(1024,5120,0x4b313238 if r['route']=='fp8_kv128' else 0)",
+          "count": 1
+        },
+        {
+          "before": "        else:assert w['status']=='failed' and w.get('error')",
+          "after": "            factory=factory_replay(z.read(base+'native-ledger/commands.log'),True);assert factory==doc(base+'factory-analysis.json') and arrays['original_eight_K_and_eight_V_differences_removed']\n        else:assert w['status']=='failed' and w.get('error')",
+          "count": 1
+        },
+        {
+          "before": "actual_FA3_projection_complete_native_observation_replayed",
+          "after": "actual_KV128_projection_exact_intervention_replayed",
+          "count": 1
+        },
+        {
+          "before": "actual_FA3_projection_failure_preserved",
+          "after": "actual_KV128_projection_failure_preserved",
+          "count": 1
+        }
+      ]
+    }
+  ],
+  "original_full_model_and_quality_gates_unchanged": true
+}

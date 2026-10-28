@@ -1,0 +1,139 @@
+"""CPU AST and fake-file proof guards; no real Garnet/model/GPU load."""
+from pathlib import Path
+import ast
+import copy
+import hashlib
+import json
+import tempfile
+import unittest
+import zipfile
+
+from .native_prefill16_http_admission import require
+
+M = Path(__file__).resolve().parent
+
+
+class OriginalWorker(ast.NodeTransformer):
+    def visit_ImportFrom(self, node):
+        if node.module and node.module.endswith('.native_prefill16_http_admission'):
+            return None
+        if node.module == 'xModel.qwen35.vl_0_8b.cuda_mtp_prefill16_study':
+            node.module = 'xModel.qwen35.vl_0_8b.cuda_speculative'
+            node.names = [ast.alias(name='CUDASpeculativeSession')]
+        return node
+
+    def visit_Assign(self, node):
+        if any(isinstance(t, ast.Name) and t.id == 'prefill16_admission' for t in node.targets):
+            return None
+        return self.generic_visit(node)
+
+    def visit_Dict(self, node):
+        pairs = [(key, value) for key, value in zip(node.keys, node.values)
+                 if not (isinstance(key, ast.Constant) and key.value == 'mtp_prefill16_admission')]
+        node.keys, node.values = map(list, zip(*pairs))
+        return self.generic_visit(node)
+
+
+class OriginalProbe(ast.NodeTransformer):
+    def visit_Assert(self, node):
+        if (isinstance(node.msg, ast.Constant) and node.msg.value == 'Explicit candidate probe requires MTP and actual ordinary controls'):
+            return None
+        if any(isinstance(n, ast.Constant) and n.value == 'mtp_prefill16_admission' for n in ast.walk(node.test)):
+            return None
+        return self.generic_visit(node)
+
+    def visit_Constant(self, node):
+        if node.value == 'serve_native_prefill16_worker.bat':
+            node.value = 'serve_native_fixed_length_worker.bat'
+        elif node.value == 'native_prefill16_stream_worker.py':
+            node.value = 'native_fixed_length_stream_worker.py'
+        return node
+
+
+def fixture(root):
+    name = 'mtp-prefill16-full4k-admission-attempt1'
+    folder = root / 'results' / name
+    folder.mkdir(parents=True)
+    source = root / 'Garnet/xModel/qwen35/vl_0_8b/cuda_mtp_prefill16_study.py'
+    source.parent.mkdir(parents=True)
+    source.write_bytes(b'# explicit synthetic CPU fixture source\n')
+    library = root / 'build/bin/garnet.dll'
+    library.parent.mkdir(parents=True)
+    library.write_bytes(b'explicit synthetic CPU fixture; not an executable')
+    sha = lambda raw: hashlib.sha256(raw).hexdigest()
+    sources = {source.relative_to(root).as_posix(): sha(source.read_bytes())}
+    runtime = {'garnet.dll': sha(library.read_bytes())}
+    workflow = {'exit_code': 0, 'cleanup_finished': True, 'library_unchanged': True,
+                'source_sha256': sources, 'source_after_sha256': sources,
+                'runtime_dependencies': runtime, 'runtime_dependencies_after': runtime}
+    raw = json.dumps(workflow).encode()
+    (folder / 'workflow.json').write_bytes(raw)
+    path = 'results/' + name + '/workflow.json'
+    archive = root / 'results' / (name + '-evidence.zip')
+    with zipfile.ZipFile(archive, 'x') as z:
+        z.writestr(path, raw)
+        z.writestr('evidence-manifest.json', json.dumps({'files': {path: sha(raw)}}))
+    proof = {'status': 'mtp_prefill16_full4k_target_state_replayed',
+             'actual_full4k_correctness_qualified': True, 'actual_full4k_memory_fit_observed': True,
+             'library_sha256': runtime['garnet.dll'], 'archive_sha256': sha(archive.read_bytes())}
+    proof_path = root / 'results' / (name + '-verified.json')
+    proof_path.write_text(json.dumps(proof))
+    return library, source, proof_path, workflow
+
+
+class Controls(unittest.TestCase):
+    def test_entire_worker_ast_only_explicit_class_proof_gate_and_ready_identity_differ(self):
+        original = ast.parse((M / 'native_fixed_length_stream_worker.py').read_bytes())
+        candidate = OriginalWorker().visit(ast.parse((M / 'native_prefill16_stream_worker.py').read_bytes()))
+        self.assertEqual(ast.dump(original, include_attributes=False), ast.dump(candidate, include_attributes=False))
+
+    def test_entire_probe_ast_preserves_all805_controls_fixed4k_and_ordinary_id_gates(self):
+        original = ast.parse((M / 'probe_fixed_length_http.py').read_bytes())
+        candidate = OriginalProbe().visit(ast.parse((M / 'probe_prefill16_http.py').read_bytes()))
+        self.assertEqual(ast.dump(original, include_attributes=False), ast.dump(candidate, include_attributes=False))
+
+    def test_launcher_only_changes_worker_entry(self):
+        raw = (M / 'serve_native_prefill16_worker.bat').read_bytes()
+        self.assertEqual(raw.replace(b'native_prefill16_stream_worker.py', b'native_fixed_length_stream_worker.py'),
+                         (M / 'serve_native_fixed_length_worker.bat').read_bytes())
+
+    def test_closed_proof_can_only_admit_explicit_candidate_not_quality_or_speed(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp); library, _, _, _ = fixture(root)
+            digest = hashlib.sha256(library.read_bytes()).hexdigest()
+            result = require(root, 'mtp', digest)
+            self.assertEqual((result['draft_prefill_chunk'], result['draft_decode_chunk']), (16, 4))
+            self.assertFalse(result['http_quality_or_performance_qualified'])
+            with self.assertRaises(ValueError):
+                require(root, 'ordinary', digest)
+
+    def test_unqualified_proof_or_library_source_drift_is_rejected_before_model_load(self):
+        for field, wrong in (('status', 'not_qualified'), ('actual_full4k_correctness_qualified', False),
+                             ('actual_full4k_memory_fit_observed', False), ('archive_sha256', '0' * 64),
+                             ('library_sha256', '0' * 64)):
+            with self.subTest(field=field), tempfile.TemporaryDirectory() as temp:
+                root = Path(temp); library, _, proof_path, _ = fixture(root)
+                digest = hashlib.sha256(library.read_bytes()).hexdigest()
+                proof = json.loads(proof_path.read_bytes()); proof[field] = wrong; proof_path.write_text(json.dumps(proof))
+                with self.assertRaises(AssertionError):
+                    require(root, 'mtp', digest)
+        for target in ('source', 'library'):
+            with self.subTest(target=target), tempfile.TemporaryDirectory() as temp:
+                root = Path(temp); library, source, _, _ = fixture(root)
+                digest = hashlib.sha256(library.read_bytes()).hexdigest()
+                (source if target == 'source' else library).write_bytes(b'changed synthetic fixture')
+                with self.assertRaises(AssertionError):
+                    require(root, 'mtp', digest)
+
+    def test_live_or_changed_actual_workflow_cannot_release_candidate(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp); library, _, _, workflow = fixture(root)
+            digest = hashlib.sha256(library.read_bytes()).hexdigest()
+            workflow = copy.deepcopy(workflow); workflow['cleanup_finished'] = False
+            (root / 'results/mtp-prefill16-full4k-admission-attempt1/workflow.json').write_text(json.dumps(workflow))
+            with self.assertRaises(AssertionError):
+                require(root, 'mtp', digest)
+
+
+if __name__ == '__main__':
+    unittest.main()

@@ -1,0 +1,33 @@
+from pathlib import Path
+import hashlib,json
+W=Path(__file__).resolve().parent;R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';E=M/'evidence';sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest();names=json.loads((W/'rowwise-k-norm-full4k-owned-names.json').read_bytes());owned=[M/n for n in names]+[E/'rowwise-k-norm-full4k-preparation.json'];saved={}
+def keep(n,raw):
+    p=E/n;assert not p.exists();p.write_bytes(raw);owned.append(p);saved[n]=sha(p)
+for n in ('prepare-rowwise-k-norm-full4k-tools.py','install-rowwise-k-norm-full4k.py','postprocess-rowwise-k-norm-full4k.py','replay-rowwise-k-norm-full4k.py',Path(__file__).name):keep(n+'.txt',(W/n).read_bytes())
+for n in ('rowwise-k-norm-full4k-package.json','rowwise-k-norm-full4k-installer-derivation.json','prepare-rowwise-k-norm-full4k-attempt1.log','prepare-rowwise-k-norm-full4k-tools.log'):keep(n,(W/n).read_bytes())
+package=json.loads((W/'rowwise-k-norm-full4k-package.json').read_bytes());assert sha(W/'rowwise-k-norm-full4k-deployment.zip')==package['deployment_sha256']
+keep('rowwise-k-norm-full4k-preparation-retention.json',json.dumps(dict(status='source87_full4K128_ordinary_gate_prepared_GPU_unrun',package=package,retained_sha256=saved,selected_step52_repair_only=True,full4K_or_MTP_or_quality_or_performance_qualified=False),indent=2).encode())
+entry=('\n\n2026-10-27: Prepared full4K128 source87 rowwise-K ordinary validation after '
+       'selected repair paired proof09e6862bffbe6ce21fc1e27f5718b25c2a6ada04924887d1c694d3ec7e0d3d69. '
+       'One fresh B4 process, original3968prompt+128forced output tokens for three '
+       'text/image/mixed groups against eight immutable source60 B1 oracles. The '
+       'original full4K observe/admit functions are unchanged:48 complete phase-row '
+       'comparisons of128 components and finite raw vectors, plus all12x128IDs '
+       'must match without tolerance. No new graph observation outputs; actual '
+       '16FA/four-row RMS subgraph trace and unchanged GDN/V/QK routes required. '
+       'The exact selected same-DLL off/on53ID/step52 repair is a prerequisite, '
+       'not evidence for the remaining128-token trajectories.115 original CPU '
+       'controls retained;53 closed parents/current1997guardedfiles/all34 CUDA '
+       'objects/runtime/SDK/config-index/CMake remain pinned. Same e843 DLL; no '
+       'new native build. Full source/baseline DLL restoration and fixed Ccache '
+       '96GiB admission/owned nonce retirement unchanged. Deployment '
+       +package['deployment_sha256']+' ('+str(package['bytes'])+'B). Full4K run '
+       'unrun at this entry. A pass qualifies these ordinary cases only; short '
+       'prefix/permutation/tail/repeat/MTP/805quality/HTTP/performance remain '
+       'open. Original source79 full4K/cache62 and both output-observer failures '
+       'remain failed. Overall2x and halfTTFT targets unchanged and unmet.\n').encode()
+for n in ('docs/research/qwen38-5090-development-log.md','docs/research/qwen38-5090-implementation-task.md'):
+    p=R/n;before=p.read_bytes();assert b'Prepared full4K128 source87 rowwise-K ordinary validation' not in before
+    with p.open('ab') as f:f.write(entry)
+    assert p.read_bytes()==before+entry;owned.append(p)
+(W/'rowwise-k-norm-full4k-preparation-stage-paths.bin').write_bytes(b''.join(p.relative_to(R).as_posix().encode()+b'\0' for p in dict.fromkeys(owned)));print(json.dumps(dict(stage_paths=len(set(owned)),fresh_GPU_processes_unrun=1)))

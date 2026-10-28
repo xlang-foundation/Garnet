@@ -1,0 +1,77 @@
+{
+  "status": "paired_actual_FA_value_SDK_control_failure_preserved",
+  "exit_code": 1,
+  "error": "AssertionError('SDK baseline did not reproduce both actual Garnet active V caches')",
+  "proof_sha256": "b669ce653f945cebb87851e8aa096af00ca5566f869e8e24ea5898c920f7b8ff",
+  "archive_sha256": "afbecc5876164801284d28bffdbe04cccb27f8fa9f7f222ab4b7928c709bfa9d",
+  "archive_bytes": 10076454,
+  "stage_exit_codes": {
+    "cpu": 0,
+    "fixture": 0,
+    "build": 0,
+    "sdk": 0
+  },
+  "strict_replay_passed": false,
+  "cases": [
+    {
+      "projection": "v3",
+      "layer": 3,
+      "actual_decode_step": 5,
+      "repeat": 0,
+      "full_output_words": 16384,
+      "active_output_words": 4096,
+      "Garnet_M4_active_values_reproduced": false,
+      "Garnet_M16_active_values_reproduced": false,
+      "default_M16_vs_four_M4_full_different_words": 1,
+      "default_M16_vs_four_M4_active_different_words": 1,
+      "M4_algorithm_at_M16_full_different_words": 0,
+      "M4_algorithm_at_M16_active_different_words": 0
+    },
+    {
+      "projection": "v3",
+      "layer": 3,
+      "actual_decode_step": 5,
+      "repeat": 1,
+      "full_output_words": 16384,
+      "active_output_words": 4096,
+      "Garnet_M4_active_values_reproduced": false,
+      "Garnet_M16_active_values_reproduced": false,
+      "default_M16_vs_four_M4_full_different_words": 1,
+      "default_M16_vs_four_M4_active_different_words": 1,
+      "M4_algorithm_at_M16_full_different_words": 0,
+      "M4_algorithm_at_M16_active_different_words": 0
+    },
+    {
+      "projection": "v11",
+      "layer": 11,
+      "actual_decode_step": 1,
+      "repeat": 0,
+      "full_output_words": 16384,
+      "active_output_words": 4096,
+      "Garnet_M4_active_values_reproduced": true,
+      "Garnet_M16_active_values_reproduced": true,
+      "default_M16_vs_four_M4_full_different_words": 1,
+      "default_M16_vs_four_M4_active_different_words": 1,
+      "M4_algorithm_at_M16_full_different_words": 0,
+      "M4_algorithm_at_M16_active_different_words": 0
+    },
+    {
+      "projection": "v11",
+      "layer": 11,
+      "actual_decode_step": 1,
+      "repeat": 1,
+      "full_output_words": 16384,
+      "active_output_words": 4096,
+      "Garnet_M4_active_values_reproduced": true,
+      "Garnet_M16_active_values_reproduced": true,
+      "default_M16_vs_four_M4_full_different_words": 1,
+      "default_M16_vs_four_M4_active_different_words": 1,
+      "M4_algorithm_at_M16_full_different_words": 0,
+      "M4_algorithm_at_M16_active_different_words": 0
+    }
+  ],
+  "CPU_input_cast_and_FP8_quantization_exact": true,
+  "full_Garnet_inactive_V_projection_outputs_captured": false,
+  "internal_fused_normalization_directly_captured": false,
+  "full_model_or_quality_or_performance_qualified": false
+}

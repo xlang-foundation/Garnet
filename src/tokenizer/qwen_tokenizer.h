@@ -46,6 +46,7 @@ namespace Garnet::Tokenization
         std::unordered_map<unsigned char, std::string> m_byteToTokenChar;
         std::unordered_map<std::string, unsigned char> m_tokenCharToByte;
         size_t m_maxAddedTokenLength = 0;
+        bool m_normalizeNfc = false;
 
         void InitByteLevelMaps();
         std::vector<std::string> SplitSpecialAware(const std::string& text) const;

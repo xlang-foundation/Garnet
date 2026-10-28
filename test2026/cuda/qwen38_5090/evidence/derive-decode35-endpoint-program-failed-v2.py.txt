@@ -1,0 +1,22 @@
+from pathlib import Path
+import ast,hashlib,json
+M=Path('D:/CantorAI/work/qwen38-5090/test2026/cuda/qwen38_5090');sha=lambda b:hashlib.sha256(b).hexdigest()
+raw=(M/'decode35_operand_program.py').read_bytes();text=raw.decode();body=text[text.index('class Decode35OperandProgram'):];before=body;nl='\r\n' if '\r\n' in text else '\n'
+pairs=[('Decode35OperandProgram','Decode35EndpointProgram',2),('construct_with_decode35_operand_program','construct_with_decode35_endpoint_program',1),('assert cursor-self.output_width==106496','assert cursor-self.output_width==102400',1),('                    for _,width in OPERANDS:\r\n                        operand_outputs.append(packed_view(packed,cursor,width,[b,width]));cursor+=width',"                    for name,width in NATIVE_OPERANDS:\r\n                        if name!='K_normalized_pre_RoPE':operand_outputs.append(packed_view(packed,cursor,width,[b,width]))\r\n                        cursor+=width",1),('assert len(operand_outputs)==7','assert len(operand_outputs)==6',1)]
+changes=[]
+for old,new,count in pairs:
+    old=old.replace('\r\n',nl);new=new.replace('\r\n',nl)
+    assert body.count(old)==count,(old,body.count(old));body=body.replace(old,new);changes.append({'old':old,'new':new,'count':count})
+header='''"""Six final endpoint outputs over the unchanged seven-stage source86 hook.
+
+Omit only the pre-RoPE intermediate from final network outputs. This tests an
+observer-perturbation hypothesis, not a diagnosed root cause or optimization.
+Require ordinary primary/cache/timeline/all64-layer parity before interpretation.
+"""
+from .decode35_operand_program import (BoundedStep45BoundaryProgram,CUDAPackedDecoderProgram,T,Qwen35CUDAChunk,flat_concat,concat,packed_view,Qwen35Decode35CUDAChunk,OPERANDS as NATIVE_OPERANDS)
+OPERANDS=tuple((name,width) for name,width in NATIVE_OPERANDS if name!='K_normalized_pre_RoPE')
+
+'''
+out=(header+body).encode();ast.parse(out);target=M/'decode35_endpoint_program.py';assert not target.exists();target.write_bytes(out)
+record={'source':'decode35_operand_program.py','source_sha256':sha(raw),'class_source_sha256':sha(before.encode()),'target':target.name,'target_sha256':sha(out),'header':header,'class_changes':changes,'native_seven_stage_fusion_reused_unchanged':True,'native_stage_words':106496,'final_selected_stage_words':102400,'new_native_guard_or_math_or_DLL_change':False,'native_pruning_or_numerical_parity_unproved':True,'GPU_model_unrun':True}
+p=M/'evidence/decode35-endpoint-program-derivation.json';assert not p.exists();p.write_bytes(json.dumps(record,indent=2).encode());print(json.dumps({'target_sha256':sha(out),'native_DLL_changed':False,'GPU_model_unrun':True}))

@@ -1,0 +1,68 @@
+{
+  "status": "ordinary_coordinate_trajectory_probe_prepared_GPU_unrun",
+  "derivations": [
+    {
+      "source": "probe_b4_k35_cache52.py",
+      "source_sha256": "52446b2aa93991223da0c5b88b4a6210d63df82c1f67f618d8fccd05363dc504",
+      "target": "probe_b4_k35_coordinate_trajectory.py",
+      "target_sha256": "87a5ba5a09b4e0b96c92b72e1ca4c5799cb0f9be5bf1b9ba98181d07d45de0d6",
+      "changes": [
+        {
+          "old": "Unchanged-model selected-row step7/52 states before consuming differing ID52.",
+          "new": "Ordinary model with two repeated reads of an existing carrier after each decode step; no graph changes.",
+          "count": 1
+        },
+        {
+          "old": "b4-k35-cache52-preparation.json",
+          "new": "b4-k35-coordinate-trajectory-preparation.json",
+          "count": 1
+        },
+        {
+          "old": "from test2026.cuda.qwen38_5090.b4_k35_cache52 import capture_key",
+          "new": "from test2026.cuda.qwen38_5090.b4_k35_cache52 import capture_key\n    from test2026.cuda.qwen38_5090.b4_k35_coordinate_trajectory import CoordinateSampler",
+          "count": 1
+        },
+        {
+          "old": "record['post_step_states']=[];save()",
+          "new": "record['post_step_states']=[];sampler=CoordinateSampler(io,decoder.programs[4].layout,batch,0 if batch==1 else 2);sampler.read(decoder.state,0,decoder.slots);save()",
+          "count": 1
+        },
+        {
+          "old": "prediction=decoder.step(prediction,[1]*batch,[[v]*3 for v in current]);current=[v+1 for v in current]",
+          "new": "prediction=decoder.step(prediction,[1]*batch,[[v]*3 for v in current]);current=[v+1 for v in current]\n                    assert decoder.state_transaction is None and not decoder.poisoned\n                    sampler.read(decoder.state,step+1,decoder.slots)",
+          "count": 1
+        },
+        {
+          "old": "record['final_state']=record['post_step_states'][-1]['capture'];assert decoder.slots",
+          "new": "record['key35_coordinate_trajectory']=sampler.result();record['final_state']=record['post_step_states'][-1]['capture'];assert decoder.slots",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "launch_b4_k35_cache52.py",
+      "source_sha256": "403382a508500f3f17529fa01905a658becbd3d1825563a11ad7590082716dc3",
+      "target": "launch_b4_k35_coordinate_trajectory.py",
+      "target_sha256": "cd05b91ab4a823901139c4b9c4e0da537a26fe7a17d5df727319b7837a006709",
+      "changes": [
+        {
+          "old": "b4-k35-cache52-preparation.json",
+          "new": "b4-k35-coordinate-trajectory-preparation.json",
+          "count": 1
+        },
+        {
+          "old": "env['PATH']=';'.join",
+          "new": "env['GARNET_FP8_K_BATCH4_DECODE_M4X4']='0';env['GARNET_KM4X4_FACTORY_TRACE']='1'\nenv['PATH']=';'.join",
+          "count": 1
+        },
+        {
+          "old": "probe_b4_k35_cache52.py",
+          "new": "probe_b4_k35_coordinate_trajectory.py",
+          "count": 1
+        }
+      ]
+    }
+  ],
+  "new_native_or_graph_or_kernel_or_precision_changes": false,
+  "scope": "Same ordinary source60 B1 and source85 flagoff B4 math; reuse one Bx1 scratch carrier, two reads after prefill and each step1..52. Full primary and complete8MiB cache parity must pass before interpreting sample timepoints."
+}

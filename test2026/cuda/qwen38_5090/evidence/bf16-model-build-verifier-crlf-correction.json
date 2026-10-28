@@ -1,0 +1,12 @@
+{
+  "status": "verifier_parser_corrected",
+  "utc": "2026-10-25T03:17:42.633173+00:00",
+  "archive_sha256": "c8d0d802bacce24dbca95b98127533c4df189cdcfe6ff2da7c5c9d7981b5a268",
+  "archived_verifier_sha256": "e2da4937c24a27b123531fc9735ff18852316172085eeff330b9c38e0eb42d67",
+  "corrected_verifier_sha256": "35ac5d9b24d785efc3a17746642e64f1ad6a876a76bff363b1924865740c0d94",
+  "initial_failure": "AssertionError on helper compile flags: parser split CRLF Ninja file on LF-only blank lines and expected forward slashes. The entire file stayed one block; no helper build edge selected.",
+  "correction": "Normalize CRLF and backslashes before selecting exact helper object build edge; still require -MT and reject /MD or -MD on that edge. Do not change archived bytes or qualification requirements.",
+  "local_and_remote_replay_passed": true,
+  "model_qualified": false,
+  "performance_admitted": false
+}

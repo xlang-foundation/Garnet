@@ -1,0 +1,27 @@
+"""Prepare only: a new clean three-trial benchmark requires the closed quality proof."""
+from pathlib import Path
+import ast,hashlib,json
+W=Path(__file__).resolve().parent;M=Path('D:/CantorAI/work/qwen38-5090/test2026/cuda/qwen38_5090');records=[]
+for kind in ('probe','run','verify'):
+    source=M/(kind+'_b4_rowwise_http_benchmark.py');raw=source.read_bytes();s=raw.decode().replace('\r\n','\n');changes=[]
+    def replace(a,b,required=True):
+        global s
+        count=s.count(a)
+        if required:assert count,(kind,a)
+        if count:s=s.replace(a,b);changes.append(dict(old=a,new=b,count=count))
+    for a,b in [('b4-rowwise-http-benchmark-attempt1','b4-resident-serial-http-benchmark-attempt1'),('b4-rowwise-http-benchmark-preparation.json','b4-resident-serial-http-benchmark-preparation.json'),('B4_rowwise_HTTP_benchmark','B4_resident_serial_HTTP_benchmark'),('B4_three_fixed4k_HTTP_trials','B4_resident_serial_three_fixed4k_HTTP_trials'),('actual_B4_three_fixed4k_HTTP_trials','actual_B4_resident_serial_three_fixed4k_HTTP_trials'),('actual_B4_HTTP_benchmark_failure_preserved','actual_B4_resident_serial_HTTP_benchmark_failure_preserved'),('probe_b4_rowwise_http_benchmark.py','probe_b4_resident_serial_http_benchmark.py'),('launch_b4_rowwise_http_worker.py','launch_b4_resident_serial_http_worker.py')]:replace(a,b,False)
+    if kind=='probe':
+        replace('launch_b4_resident_serial_http_worker.py','launch_b4_resident_serial_http_worker_v2.py')
+        replace("    assert sha_file(root/'results'/(quality+'-evidence.zip'))", "    assert q['arrays']['resident_IO_controls_byte_exact'] and q['arrays']['actual_graph_policy']['status']=='resident_serial_requested_policy_and_actual_graph_reuse_replayed'\n    assert sha_file(root/'results'/(quality+'-evidence.zip'))")
+        replace("        assert ready['source_admission']['source_bundle_sha256']", "        assert ready['backend_policy']==dict(resident_controls=True,serial_target_graph_reuse=True,serial_draft_graph_reuse=True,accepted_head_reuse=False)\n        assert ready['source_admission']['source_bundle_sha256']")
+    if kind=='verify':
+        replace("            ready=r['ready'];", "            assert parent['arrays']['resident_IO_controls_byte_exact'] and parent['arrays']['actual_graph_policy']['status']=='resident_serial_requested_policy_and_actual_graph_reuse_replayed'\n            ready=r['ready'];")
+        replace("            ad=ready['source_admission'];", "            assert ready['backend_policy']==dict(resident_controls=True,serial_target_graph_reuse=True,serial_draft_graph_reuse=True,accepted_head_reuse=False)\n            ad=ready['source_admission'];")
+        replace("assert 'study_transport_padding' not in body", "assert 'study_transport_padding' not in body and 'study_graph_snapshot' not in body")
+    ast.parse(s);target=W/(kind+'_b4_resident_serial_http_benchmark.draft.py')
+    if target.exists():
+        previous=json.loads((W/'b4-resident-serial-http-benchmark-draft-derivation.json').read_bytes());assert previous['model_native_DLL_or_GPU_run'] is False
+        prior=next(n for n in previous['methods'] if n['target']==target.name);assert hashlib.sha256(target.read_bytes()).hexdigest()==prior['target_sha256'] and hashlib.sha256(raw).hexdigest()==prior['source_sha256']
+    target.write_bytes(s.encode())
+    records.append(dict(source=source.name,source_sha256=hashlib.sha256(raw).hexdigest(),target=target.name,target_sha256=hashlib.sha256(target.read_bytes()).hexdigest(),changes=changes))
+target=W/'b4-resident-serial-http-benchmark-draft-derivation.json';target.write_bytes(json.dumps(dict(methods=records,actual_quality_proof_required=True,same_immutable_corpus_and_all372_ID_callback_dispatch_metric_memory_checks_retained=True,clean_timing_excludes_diagnostic_markers=True,model_native_DLL_or_GPU_run=False,syntax_checked_only=True),indent=2).encode());print('Candidate clean benchmark drafts prepared; actual quality admission and execution remain unrun')

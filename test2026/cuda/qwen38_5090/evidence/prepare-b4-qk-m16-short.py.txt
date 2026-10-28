@@ -1,0 +1,39 @@
+from pathlib import Path
+import ast,hashlib,json,os,sys,zipfile
+W=Path(__file__).resolve().parent;O=W.parent/'outputs';R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';E=M/'evidence';P='Garnet/test2026/cuda/qwen38_5090/';sha=lambda b:hashlib.sha256(b).hexdigest();sys.path[:0]=[str(R),str(M)]
+from test2026.cuda.qwen38_5090.fa_value_sdk_control import verify_derivations
+old=json.loads((E/'b4-v-m16-short-preparation.json').read_bytes());cpu=json.loads((E/'b4-qk-m16-cpu-v2-preparation.json').read_bytes());build=json.loads((E/'b4-qk-m16-build-preparation.json').read_bytes());job='b4-qk-m16-build-attempt1';raw=(O/(job+'-verified.json')).read_bytes();assert raw==(O/(job+'-remote-verified.json')).read_bytes();q=json.loads(raw)
+assert q['exit_code']==0 and q['candidate_files']==79 and q['current_CPU_controls']==83 and q['source_runtime_SDK_checkpoint_CMake_restored'] and not q['model_or_quality_or_performance_qualified'];assert sha((O/(job+'-evidence.zip')).read_bytes())==q['archive_sha256']
+with zipfile.ZipFile(O/(job+'-evidence.zip')) as z:
+    w=json.loads(z.read('results/'+job+'/workflow.json'));assert w['exit_code']==0 and w['cleanup_finished'] and w['baseline_source_restored'] and w['baseline_library_restored'] and len(w['cuda_objects_built'])==34
+names=['b4_qk_m16_short_route.py','test_b4_qk_m16_short_route.py','probe_b4_qk_m16_short.py','launch_b4_qk_m16_short.py','run_b4_qk_m16_short.py','verify_b4_qk_m16_short.py','evidence/b4-qk-m16-short-owner-derivation.json','evidence/b4-qk-m16-build-attempt1-verified.json'];new={P+n:sha((M/n).read_bytes()) for n in names}
+files=dict(old['files'])
+for source in (cpu['files'],build['methods'],new):
+    for n,h in source.items():assert n not in files or files[n]==h,('Owned source overlap drift',n)
+    files.update(source)
+verify_derivations(json.loads((E/'b4-qk-m16-short-owner-derivation.json').read_bytes()),lambda n:(M/n).read_bytes())
+for n in names:
+    if n.endswith('.py'):ast.parse((M/n).read_bytes())
+parents={**old['parents'],**build['parents'],job:dict(proof_sha256=sha(raw),archive_sha256=q['archive_sha256'],status=q['status'],exit_code=0)}
+for name,row in parents.items():
+    proof=(O/(name+'-verified.json')).read_bytes();assert proof==(O/(name+'-remote-verified.json')).read_bytes() and sha(proof)==row['proof_sha256'] and sha((O/(name+'-evidence.zip')).read_bytes())==row['archive_sha256']
+flags={**old['flags'],'GARNET_FP8_QK_BATCH4_DECODE_CANONICAL':'1'};audit={**old['audit_dependencies'],'results/'+job+'-evidence.zip':q['archive_sha256']}
+archive_files={**{n:h for n,h in files.items() if n.startswith('Garnet/')},**old['checkpoints'],**{n:h for n,h in audit.items() if not n.endswith('.zip')},'results/study-ssd-engine-cache/receipt.json':files['results/study-ssd-engine-cache/receipt.json']}
+p={**old,'status':'B4_vs_B1_short_QK_M16_prepared_GPU_unrun','files':files,'new_files':new,'archive_files':archive_files,'parents':parents,'flags':flags,'audit_dependencies':audit,'cuda_objects':w['cuda_objects_built'],'cache_before_sha256':w['cache_after_sha256'],'candidate_base':build['candidate_base'],'candidate_bundle':build['bundle'],'candidate_bundle_sha256':build['bundle_sha256'],'candidate_source_files':build['candidate_files'],'candidate_library':w['candidate_saved'],'candidate_library_sha256':q['candidate_library_sha256'],'scope':'Original strict wholemodel short mixed/tail gate: fourfreshsource60/DLL841B1 vs source79/DLL2bafed B4; capacity4096,prefill32,decode4,prompts41/104/93/93,8IDs. CandidateGDN/V/QKpolicies1; alloriginalmodelcomputations/input/vision/head/pool/slots/128fullstatecomponents/finitevectors/reset/prefill/final/reset/rawexactCPythonadmission unchanged. No relaxedtolerance orcomponent substitute. Paired79nativebuild83current+86historical and1248selector/406factory/QK-V-GDN-genericCPU required. ActualGDN>=48eachN,V>=16N1024,QK>=16eachN1024/12288initializations/live7attrs/pergeometryQtuple/M4-M16checks4MiB required; referenceV/QKabsent.14CPU(original10+4QKroute). Source/runtime/SDK/config-index/all34currentCUDAobjects/CMake restored; privateSSDnonces retiredafteridle. EarlierVfullmodel/SDK/cachefailures remainfailed. Source79actualQK/wholemodel unqualified untilthisjob; anyshortpass alone doesnotqualify4K/MTP/805/HTTP/performance/tunedrefs/INT4/4B/overall2x.'}
+p['reference_installed_files']={**files,**{'Garnet/'+n:h for n,h in p['reference_source_files'].items()}};p['candidate_installed_files']={**files,**{'Garnet/'+n:h for n,h in p['candidate_source_files'].items()}}
+assert len(p['candidate_source_files'])==79 and len(p['reference_source_files'])==60 and len(p['cuda_objects'])==34 and not any('probe_native_external_prefix_batch.py' in n for n in files)
+prep=E/'b4-qk-m16-short-preparation.json';assert not prep.exists();prep.write_bytes(json.dumps(p,indent=2).encode())
+import run_logged as ledger
+ledger.source_identity=lambda:dict(scope='Explicit source79strictwholemodel/QKroute preparation; no protected/native/GPU bodies',owned_source_sha256=new);os.chdir(R)
+assert ledger.run([sys.executable,'-m','unittest','test2026.cuda.qwen38_5090.test_b4_b1_short_m16_gate','test2026.cuda.qwen38_5090.test_b4_v_m16_short_route','test2026.cuda.qwen38_5090.test_b4_qk_m16_short_route'],W/'b4-qk-m16-short-package-cpu-ledger','correctness','Original10complete-state/vector/ID/corruption/GDN-Vroute plus4QKgeometry/config/API/workspace/all16each/referenceabsence controls',[M/n for n in names]+[prep])==0
+deploy={n:R/n.removeprefix('Garnet/') for n in new};deploy[P+'evidence/b4-qk-m16-short-preparation.json']=prep;target=W/'b4-qk-m16-short-deployment.zip';assert not target.exists()
+with zipfile.ZipFile(target,'x',zipfile.ZIP_DEFLATED) as z:
+    for n,path in deploy.items():z.write(path,n)
+    z.writestr('deployment-manifest.json',json.dumps(dict(files={n:sha(path.read_bytes()) for n,path in deploy.items()},source_runtime_install_deferred=True),indent=2))
+receipt=dict(status=p['status'],files=len(deploy),deployment_sha256=sha(target.read_bytes()),bytes=target.stat().st_size,preparation_sha256=sha(prep.read_bytes()),candidate_library_sha256=p['candidate_library_sha256'],source_inventory=len(files));(W/'b4-qk-m16-short-package.json').write_bytes(json.dumps(receipt,indent=2).encode())
+raw=(W/'install-b4-v-m16-short.py').read_bytes();pkg=json.loads((W/'b4-v-m16-short-package.json').read_bytes())
+for a,b in [('b4-v-m16-short','b4-qk-m16-short'),('B4_vs_B1_short_V_M16','B4_vs_B1_short_QK_M16'),(pkg['deployment_sha256'],receipt['deployment_sha256'])]:assert raw.count(a.encode())>0;raw=raw.replace(a.encode(),b.encode())
+(W/'install-b4-qk-m16-short.py').write_bytes(raw)
+raw=(W/'postprocess-b4-v-m16-short.py').read_bytes()
+for a,b in [('b4-v-m16-short','b4-qk-m16-short'),('b4_v_m16_short','b4_qk_m16_short'),('B4_V_M16','B4_QK_M16'),('GDN+all16Vroutes/source73','GDN/V/QKall16eachroutes/source79')]:assert raw.count(a.encode())>0;raw=raw.replace(a.encode(),b.encode())
+(W/'postprocess-b4-qk-m16-short.py').write_bytes(raw);print(json.dumps(receipt))

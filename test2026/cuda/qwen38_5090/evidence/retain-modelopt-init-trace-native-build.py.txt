@@ -1,0 +1,85 @@
+"""Retain both native attempts and all preparation versions; CPU qualification is not GPU/quality admission."""
+from pathlib import Path
+import hashlib,io,json,re,zipfile
+work=Path(__file__).resolve().parent;out=work.parent/'outputs';repo=Path('D:/CantorAI/work/qwen38-5090');m=repo/'test2026/cuda/qwen38_5090';e=m/'evidence';M='Garnet/test2026/cuda/qwen38_5090/';sha=lambda raw:hashlib.sha256(raw).hexdigest();paths=[];records=[]
+def keep(name,raw):
+    target=e/name;assert not target.exists() or target.read_bytes()==raw,target
+    if not target.exists():target.write_bytes(raw)
+    paths.append(target.relative_to(repo).as_posix())
+for number in (1,2):
+    job='modelopt-init-trace-native-build-attempt'+str(number);proof=(out/(job+'-verified.json')).read_bytes();assert proof==(out/(job+'-remote-verified.json')).read_bytes();q=json.loads(proof);archive=out/(job+'-evidence.zip');assert sha(archive.read_bytes())==q['archive_sha256']
+    assert q['status']==('modelopt_init_trace_native_build_failure_preserved' if number==1 else 'modelopt_init_trace_native_build_cpu_replayed') and q['source_and_runtime_restored'] and not q['gpu_model_executed']
+    with zipfile.ZipFile(archive) as z:
+        manifest=json.loads(z.read('evidence-manifest.json'));assert z.testzip() is None and len(z.namelist())==len(set(z.namelist()))==len(manifest['files'])+1
+        for name,h in manifest['files'].items():assert sha(z.read(name))==h
+        base='results/'+job+'/';prep_name='modelopt-init-trace-native-build-preparation'+('' if number==1 else '-attempt2')+'.json';praw=z.read(M+'evidence/'+prep_name);p=json.loads(praw);w=json.loads(z.read(base+'workflow.json'));assert w['exit_code']==(1 if number==1 else 0) and w['cleanup_finished'] and w['baseline_source_restored'] and w['baseline_library_restored']
+        keep(prep_name,praw);keep(job+'-evidence-manifest.json',z.read('evidence-manifest.json'))
+        for name in z.namelist():
+            if name.startswith(base) and name.endswith(('.json','.jsonl','.log','.txt')):keep(job+'-'+name.removeprefix(base).replace('/','-'),z.read(name))
+        for name,h in p['methods'].items():
+            current=repo/name.removeprefix('Garnet/');raw=current.read_bytes()
+            if sha(raw)!=h:
+                assert number==1 and name==M+'test_modelopt_init_trace.py';original=z.read(name);assert sha(original)==h;keep('modelopt-init-trace-attempt1-original-test_modelopt_init_trace.py.txt',original)
+            else:paths.append(current.relative_to(repo).as_posix())
+        seconds=float(re.search(rb'Ran 81 tests in ([0-9.]+)s',z.read(base+'cpu-ledger/commands.log')).group(1))
+        row={'attempt':number,'status':q['status'],'archive_sha256':q['archive_sha256'],'archive_bytes':archive.stat().st_size,'archive_members':len(manifest['files'])+1,'proof_pair_sha256':sha(proof),'CPU_tests':81,'remote_CPU_seconds':seconds,'candidate_library_sha256':q['candidate_library_sha256'],'source_runtime_SDK_checkpoint_cache_restored':True}
+        if number==1:
+            assert q['candidate_library_sha256'] is None and base+'build-ledger/commands.jsonl' not in manifest['files'] and base+'init-cpu-build-ledger/commands.jsonl' not in manifest['files'];row.update(native_compilation_started=False,GPU_execution_started=False,preserved_CPU_provenance_failure=True)
+        else:
+            assert w['cache_after_sha256']==p['cache_before_sha256'] and w['checkpoint_after']==p['checkpoints'] and len(p['candidate_files'])==38 and len(p['base_files'])==1011 and len(p['methods'])==33
+            assert len(p['superseded_source_test_ids'])==2 and len(p['new_trace_test_ids'])==5
+            cpu=json.loads(z.read(base+'init-cpu/report.json'));assert cpu['actual_plugin_initialize_calls']==360 and cpu['actual_factory_stub_calls']==280 and cpu['unexpected_GPU_operator_calls']==0 and len(cpu['policies'])==10 and b'C4530' not in z.read(base+'init-cpu-build-ledger/commands.log')
+            enabled=cpu['policies'][-1]['replay']['trace_replay'];assert enabled['events']==72 and enabled['initialize_calls']==36 and enabled['exception_returns']==16 and len(enabled['failures'])==24 and enabled['cached_context_initializations']==8
+            assert len(w['cuda_objects_before'])==len(w['cuda_objects_built'])==34 and w['added_cuda_objects']==[]
+            derivation=json.loads(z.read(M+'evidence/modelopt-init-trace-source-derivation.json'));assert len(derivation['files'])==4
+            with zipfile.ZipFile(io.BytesIO(z.read(p['bundle']))) as sources:
+                assert sources.testzip() is None and len(sources.namelist())==38
+                for item in derivation['files']:
+                    original=z.read(M+'native_modelopt_init_trace_candidate/original-'+Path(item['source']).name+'.txt');assert sha(original)==item['source_sha256'];raw=original
+                    for change in item['changes']:
+                        before=change['before'].encode();assert raw.count(before)==change['count'];raw=raw.replace(before,change['after'].encode())
+                    assert raw==sources.read(item['source'])==z.read('Garnet/'+item['target']) and sha(raw)==item['target_sha256']
+                prior=json.loads((m/'evidence/layer2-ordinary-witness-preparation.json').read_bytes())['candidate_files'];changed={item['source'] for item in derivation['files']}
+                assert set(p['candidate_files'])==set(prior)|{'src/backends/tensorrt/modelopt_fp8_plugin.cpp','src/backends/tensorrt/modelopt_nvfp4_plugin.cpp','src/backends/tensorrt/modelopt_plugin_init_trace.h'}
+                for name,h in prior.items():
+                    if name not in changed:assert sha(sources.read(name))==h
+            row.update(native_sources=31,unchanged_Python_sources=7,source_pins=1011,method_pins=33,installed_pins=len(w['installed_source']),existing_targets_restored=14,new_targets_removed=24,actual_CPU_initialize_calls=360,actual_CPU_factory_stub_calls=280,unexpected_GPU_operator_calls=0,CPU_policy_processes=10,disabled_policy_processes_silent=9,enabled_CPU_events=72,CPU_cached_context_reuses=8,CPU_standard_and_nonstandard_exception_returns=16,CPU_simulated_failures=24,CUDA_object_set=34,added_CUDA_objects=[],changed_CUDA_objects=w['changed_cuda_objects'],full_four_CPP_trace_only_composition_verified=True,all_other_prior35_candidate_source_bytes_unchanged=True)
+            final=p;final_proof=q
+        records.append(row)
+    for suffix in ('-verified.json','-remote-verified.json','-local-replay.log','-remote-replay.log'):keep(job+suffix,(out/(job+suffix)).read_bytes())
+for name in ('derive-modelopt-init-trace.py','derive-modelopt-init-trace-native-build.py','derive-modelopt-init-trace-native-build-initial.py','package-modelopt-init-trace-native.py','package-modelopt-init-trace-native-initial.py','prepare-modelopt-init-trace-native-initial.py','build-v2-modelopt-installer.py','install-modelopt-init-trace-native.py','install-modelopt-init-trace-native-v2.py','derive-modelopt-init-trace-attempt2.py','package-modelopt-init-trace-attempt2.py','finalize-modelopt-trace-attempt2-proposal.py','install-modelopt-init-trace-attempt2.py','check-modelopt-trace-installed-source-view.py','retain-modelopt-init-trace-native-build.py'):
+    keep(name+'.txt',(work/name).read_bytes())
+for name in ('modelopt-init-trace-native-build-initial-derivation.json','modelopt-init-trace-native-package.json','modelopt-init-trace-native-package-v2.json','modelopt-init-trace-native-package-attempt2.json','modelopt-init-trace-native-package-attempt2-v2.json','modelopt-init-trace-native-install.json','modelopt-init-trace-native-install-attempt2.json'):
+    keep(name,(work/name).read_bytes())
+for dirname in ('modelopt-init-trace-native-local-cpu-ledger','modelopt-init-trace-native-local-cpu-ledger-v2','modelopt-init-trace-attempt2-local-cpu-ledger','modelopt-init-trace-attempt2-source-view-ledger'):
+    for file in (work/dirname).iterdir():
+        if file.is_file():keep(dirname+'-'+file.name,file.read_bytes())
+receipt=json.loads((work/'modelopt-init-trace-native-install-attempt2.json').read_bytes());backup=out/'modelopt-init-trace-methods-before-attempt2.zip';assert sha(backup.read_bytes())==receipt['original_methods_backup_sha256']
+with zipfile.ZipFile(backup) as z:
+    assert z.testzip() is None and set(z.namelist())==set(receipt['expected_method_updates'])
+    for name,h in receipt['expected_method_updates'].items():assert sha(z.read(name))==h
+initials={}
+for name in ('modelopt-init-trace-native-deployment.zip','modelopt-init-trace-native-deployment-v2.zip','modelopt-init-trace-native-deployment-attempt2.zip','modelopt-init-trace-native-deployment-attempt2-v2.zip','modelopt-init-trace-native-proposal.json','modelopt-init-trace-native-proposal-v2.json','modelopt-init-trace-native-proposal-attempt2.json','modelopt-init-trace-native-proposal-attempt2-v2.json'):
+    file=work/name;initials[name]={'sha256':sha(file.read_bytes()),'bytes':file.stat().st_size,'scope':'Preserved preparation asset; only deployment-v2 and deployment-attempt2-v2 were installed. Initial28source-count guard and inherited prepared-status proposal corrected before execution; no native or GPU work from those preparation versions.'}
+keep('modelopt-init-trace-preparation-assets.json',json.dumps(initials,indent=2).encode())
+plan={'status':'actual_plugin_trace_native_CPU_qualified_GPU_correctness_next','steps':[
+ 'Use saved DLL '+final_proof['candidate_library_sha256']+' and exact native31/Python7 candidate38 source. Keep all earlier initialization and arithmetic failures immutable. CPU synthetic failures are not observed GPU failures; no root cause is identified yet.',
+ 'Prepare a source/runtime/SDK/checkpoint-restoring layer2 observation with GARNET_MODELOPT_INIT_TRACE=1. Preserve current real common input, ordinary T32/T128 graph construction, three warmups/two repeats, full finite arrays and readonly/carried-state checks. Place stdout profile-boundary markers around each build so actual entry/exit events can be assigned to T32/T128.',
+ 'Replay all actual trace begin/end records by ID/route/instance/shape/policy with complete pairing and original factory/context/return semantics. If construction fails, identify the actual failing plugin route and preserve its raw return/exception and the postfailure shadow-helper data separately. Add helper API/opaque instrumentation only at the identified real boundary; do not substitute an algorithm based on the shadow observer.',
+ 'If trace-on construction succeeds, run a fresh trace-unset control, require silent trace output and byte-exact ordinary outputs/repeats across policies and the retained old T32 partial arrays. Do not infer initialization reliability from one success; T128 arithmetic and all full-model/quality gates remain separate.',
+ 'After the controlled layer2 result, investigate the actual layer3 input/projection/cache boundary with same-profile ordinary-primary parity and linkage to retained full-model caches. Then unchanged six3968+128 ordinary/MTP state/vector/token gate, adapted805 quality and initialization qualification, matched HTTP repetitions/strongest feasible tuned MTP references/INT4/4B/concurrency. Overall2xdecodeANDthroughput/halfTTFTextra remain unmet.'
+], 'GPU_initialization_cause_identified':False,'full_model_or_quality_or_performance_qualified':False,'two_times_target_achieved':False}
+keep('modelopt-init-trace-layer2-next-plan.json',json.dumps(plan,indent=2).encode())
+result={'status':plan['status'],'attempts':records,'candidate_library_sha256':final_proof['candidate_library_sha256'],'production_source_installed_locally':False,'baseline_source_runtime_SDK_checkpoint_cache_restored':True,'GPU_model_executed':False,'GPU_initialization_cause_or_reliability_resolved':False,'full_model_or_quality_or_performance_qualified':False,'two_times_target_achieved':False,'next_plan':plan}
+raw=json.dumps(result,indent=2).encode();keep('modelopt-init-trace-native-build-closure.json',raw);target=out/'Garnet-Actual-Plugin-Init-Trace-Native-Verified.json';assert not target.exists() or target.read_bytes()==raw
+if not target.exists():target.write_bytes(raw)
+title='Actual four-plugin initialization trace builds and passes CPU controls; GPU failure route still unobserved'
+text='\n\n### 2026-10-26 — '+title+'\n\n'
+text+='Added private exact CPP derivatives for ordinary FP8, NVFP4, GDN-output M128 and GDN-Z128 initialize only, plus default-off synchronized stderr header. Only exact GARNET_MODELOPT_INIT_TRACE=1 emits paired records with route/instance/shape/policy/context/factory/return/exception. Disabled branch preserves original factory/cached/null/catch/return behavior. Four complete CPP compositions and all other prior35 candidate source bytes verified unchanged; no helper/algorithm/descriptor/workspace/wire/enqueue implementation changes. Local production source is unmodified by this trace work. Candidate38 =native31+seven unchanged Python files;14existing/24new remote restore.\n\n'
+text+='Preparation-only old28 bundle-count guard corrected before installation, and inherited prepared-status proposal corrected before the second proposal was uploaded; initial code/packages/metadata remain immutable. Executed native-build attempt1 stopped after81CPU tests with one old whole-file M128 integration-provenance assertion, before any C++ compilation or GPU work. Preserve archive '+records[0]['archive_sha256']+' and identical failure-proof pair '+records[0]['proof_pair_sha256']+'. Both historical policy/integration byte-provenance assertions now execute in a composed original-source view whose originals and exact trace-only substitutions are independently validated; numerical assertions remain unchanged. The81-test installed-source-view simulation passes without source writes/native/GPU calls.\n\n'
+text+='Attempt2 passes81CPU controls (remote'+str(records[1]['remote_CPU_seconds'])+'s; local3.625s plus installed-view3.646s). Actual four-plugin CPP CPU-stub executable passes10fresh policy processes:360initialize calls/280factory calls/0GPUoperators. Nine disabled policies including unset/empty/0/malformed values are silent. Enabled process emits72 paired records for36calls;8cached-context reuses,16standard/nonstandard exception returns and24intentional simulated failures. Wire/clone bytes unchanged. These are CPU fault controls, not real GPU initialization failures. /EHsc used and noC4530; existing SDK charset/deprecation warnings retained, SDK unmodified.\n\n'
+text+='Full remote reused Release/MT/sm120 build succeeds; saved DLL '+final_proof['candidate_library_sha256']+'. Existing sixteen-profile T128/B1/B4/B8 wire/descriptor contracts, actual M128/Z128 wire/default/cross-family tests, pure GDN guard, ten external+ten embedded selector cases and955tokenizer cases pass. CUDA object set remains34 with no additions; changed objects recorded in raw workflow.1011source+33method pins/1068installed pins, runtime, selectedSDK/checkpoints and CMake cache restore;14old targets restored/24new removed, baseline1a1dDLL restored. Success archive '+records[1]['archive_sha256']+' ('+str(records[1]['archive_bytes'])+'bytes/167members) CRC/allfileSHA/sourcebundle38/originalsource14 verified. Both-machine success proof identical '+records[1]['proof_pair_sha256']+'. Raw source/binary/build/fault logs and unsuccessful/preparation assets retained.\n\n'
+text+='No GPU model or trace-on numerical test has run with this DLL. Next source-frozen actual layer2 trace-on observation with profile markers, complete event pairing and retained T32 raw-array parity; if successful, fresh trace-unset output parity. Identify the real failing initialize route before helper-level diagnostics or an algorithm patch. Then preserve unchanged full4K/quality and all original performance/baseline/INT4/4B/concurrency objectives. No benchmark or chart values changed; overall2xdecodeANDthroughput and halfTTFTextra remain unmet.\n'
+for name in ('qwen38-5090-development-log.md','qwen38-5090-implementation-task.md'):
+    target=repo/'docs/research'/name;before=target.read_bytes();assert title.encode() not in before;target.write_bytes(before+text.encode());paths.append(target.relative_to(repo).as_posix())
+(work/'modelopt-init-trace-native-retained-paths.json').write_bytes(json.dumps(sorted(set(paths)),indent=2).encode());print(json.dumps({'status':result['status'],'retained_paths':len(set(paths)),'candidate_library_sha256':result['candidate_library_sha256']}))

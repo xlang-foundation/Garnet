@@ -1,0 +1,13 @@
+
+{"id": "0eab7ccee3524700b0f7f4bd122c6cee", "kind": "correctness", "label": "Raw all372MTP counters/client-arrival descriptive replay; no GPU phase attribution or optimization claim", "argv": ["D:\\CantorAI\\Garnet\\.venv\\Scripts\\python.exe", "C:\\Users\\shaw9\\Documents\\Codex\\2026-10-23\\referenced-chatgpt-conversation-this-is-an\\work\\analyze-o128-mtp-counters.py", "--collect"]}
+Traceback (most recent call last):
+  File "C:\Users\shaw9\Documents\Codex\2026-10-23\referenced-chatgpt-conversation-this-is-an\work\analyze-o128-mtp-counters.py", line 35, in <module>
+    if args.collect:collect()
+                    ^^^^^^^^^
+  File "C:\Users\shaw9\Documents\Codex\2026-10-23\referenced-chatgpt-conversation-this-is-an\work\analyze-o128-mtp-counters.py", line 15, in collect
+    assert len(e['generated_ids'])==128 and len(e['prompt_ids'])==3968 and e['ignore_eos'] is True;m=e['speculative_metrics'];assert m['target_prefix_recomputes']==0 and m['target_forward_calls']==m['target_verification_calls']==len(m['iterations']);assert sum(i['processed_target_counts'][0] for i in m['iterations'])==127 and m['iterations'][-1]['sampled_so_far']==[128] and m['mtp_prefill_calls']==249 and m['target_head_reuses']==0
+                                                                                                                                                                                                                                                                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError
+
+{"id": "89916a0632014fa8837d8b516fb20136", "kind": "correctness", "label": "Raw all372MTP counters/client-arrival descriptive replay; no GPU phase attribution or optimization claim", "argv": ["D:\\CantorAI\\Garnet\\.venv\\Scripts\\python.exe", "C:\\Users\\shaw9\\Documents\\Codex\\2026-10-23\\referenced-chatgpt-conversation-this-is-an\\work\\analyze-o128-mtp-counters.py", "--collect"]}
+{"status": "actual_O128_MTP_counters_and_client_arrival_diagnostics_replayed", "text_acceptance": 0.5909517112048758, "image_acceptance": 0.6985889730859681, "requests": 372, "new_benchmark": false}

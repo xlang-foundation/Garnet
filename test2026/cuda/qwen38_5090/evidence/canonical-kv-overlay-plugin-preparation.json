@@ -1,0 +1,47 @@
+{
+  "status": "canonical_kv_overlay_operator_prepared_cpu_only",
+  "files": {
+    "canonical_kv_overlay_plugin.h": "b5d3a257bce4cb67483f25b4e916060e4e1bf7c6f515908d2bc47d6a055ff229",
+    "canonical_kv_overlay_plugin.cpp": "1751d573b16174b17d5f856d511ad735bdc5f071545cc23606e2622064e07e50",
+    "canonical_kv_overlay_fixture.cuh": "26a45bf99a15d1f28a32dc325a7d67a7963c6fa9f119696af89ed57ae53da16b",
+    "canonical_kv_overlay_plugin_test.cu": "37a775562201c5e6301f28f193ae0ff88ff125b571c5d579fbd6964ecc7bfcda"
+  },
+  "fixture_source_file": "attention_kv_delta_strided_test.cu",
+  "fixture_source_sha256": "ca7876c8e9e08eddc1f69b0fce08546256f1a1f2f28a9b09097d3c760ff6542d",
+  "fixture_prefix_end": "int main(",
+  "host_fixture_start": " std::vector<Case> cases=",
+  "host_fixture_end": "  auto nextKey=host[4]",
+  "strategies": [
+    0,
+    1
+  ],
+  "layers": [
+    3,
+    63
+  ],
+  "engines": 4,
+  "profiles": 12,
+  "operator_cases": 24,
+  "raw_context_arrays_planned": 96,
+  "timing_enabled": false,
+  "gpu_run": false,
+  "compiled": false,
+  "model_integration_admitted": false,
+  "scope": "Standalone seven-input context-only TensorRT operator over canonical packed state. Deterministic wire/clone/deserialize, shape/format/span-alias checks and four-engine/24case eager/graph/output/read-only validation pending. Current Garnet plugin/runtime/CMake unchanged.",
+  "loaded_tensorrt_path_witness": true,
+  "unchanged_source_sha256": {
+    "src/cuda/qwen35_attention_core.cu": "3ad24bb00acc2f77a5b7258e4b7fecb248c682b3ad257d28af8bc8f336635165",
+    "src/cuda/qwen35_attention_core.cuh": "1a3997a15f4aa897f2bc69bf6a3afbef9a58f166fb094bfb858fac1b170e166f",
+    "test2026/cuda/qwen38_5090/attention_kv_delta_strided_core.cu": "c20bfeed1fd10259cc6c38017c265edb00467a0c5459d627f85ca7f6472bb2a1",
+    "test2026/cuda/qwen38_5090/attention_kv_delta_strided_core.cuh": "d5a69d576eb839820dab54db2ccc0c45761c65786f8774455559870576616fec",
+    "test2026/cuda/qwen38_5090/attention_kv_delta_cached_core.cuh": "c1e6c5ba95987c9d7baf54e49bafda2921aa1647e1e4457d89dc2351a31d44f4",
+    "test2026/cuda/qwen38_5090/attention_kv_delta_core.cuh": "c53534e70b1acdf307bcd15d470aa51fe3bd040bafa37db54af0b068fdef92f9",
+    "test2026/cuda/qwen38_5090/attention_kv_canonical_layout.h": "44cd65576fb742fbdf54c6cb2453f9d3f861946f8889508b60d0cdcb6a71e3e4",
+    "test2026/cuda/qwen38_5090/attention_kv_delta_strided_test.cu": "ca7876c8e9e08eddc1f69b0fce08546256f1a1f2f28a9b09097d3c760ff6542d"
+  },
+  "method_sha256": {
+    "build_canonical_kv_overlay_plugin.bat": "ea3c81ea34c45626578eea65870b38c5a812956407c856b4f7cd40066078044a",
+    "test_canonical_kv_overlay_plugin.bat": "191730d2fda865530d95b979ba4f1172eb1ac98b4c2d6fc166c6028095237f5b",
+    "run_canonical_kv_overlay_plugin.py": "968f251238bef35e45710592e5bab03b20f8c9e22f29def812a982d279f6fda3"
+  }
+}

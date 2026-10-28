@@ -1,0 +1,54 @@
+{
+  "status": "b1_plugin_cpu_probe_prepared_unrun",
+  "source": "test2026/cuda/qwen38_5090/probe_bf16_kv_plugin_contract.cpp",
+  "source_sha256": "37c9e771606f793f523eb6490b8eb3d4f165d4bfc3ef2948045f0ced1e734efd",
+  "changes": [
+    [
+      "\"qwen38_bf16_kv_overlay_plugin.h\"",
+      "\"bf16_low_batch_overlay_plugin.h\"",
+      1
+    ],
+    [
+      "BF16KVOverlay",
+      "BF16KVLowBatchOverlay",
+      6
+    ],
+    [
+      "using namespace Garnet;",
+      "#include \"qwen38_bf16_kv_overlay_plugin.h\"\nnamespace Garnet {int BF16LowBatchPluginCPUUnexpectedEnqueues() noexcept;}\nusing namespace Garnet;",
+      1
+    ],
+    [
+      "int profiles=0,badWire=0,badDesc=0,badFormat=0;",
+      "require(EnsureBF16KVOverlayPluginRegistered(),\"Legacy BF16 creator registration failed\");\n        auto* oldCreator=registry->getPluginCreator(\"GarnetQwen38BF16KVOverlay\",\"1\",\"\");require(oldCreator,\"Legacy creator missing\");\n        int profiles=0,badWire=0,badDesc=0,badFormat=0,cross=0,legacyRoundTrips=0;",
+      1
+    ],
+    [
+      "for(int b:{4,8})",
+      "for(int b:{1})",
+      1
+    ],
+    [
+      "auto bad=wire;bad[field]=value;rejectWire(bad.data(),72);",
+      "if(value==wire[field])continue; // B1 is valid, not a negative wire.\n                auto bad=wire;bad[field]=value;rejectWire(bad.data(),72);",
+      1
+    ],
+    [
+      "require(creator->createPlugin(\"study\",nullptr)==nullptr,\"Unspecified field creation accepted\");",
+      "require(creator->createPlugin(\"study\",nullptr)==nullptr,\"Unspecified field creation accepted\");\n            auto* crossed=oldCreator->deserializePlugin(\"study\",wire.data(),72);if(crossed){crossed->destroy();throw std::runtime_error(\"Legacy creator accepted B1 wire\");}++cross;\n            for(int legacyBatch:{4,8}){\n                auto oldWire=wire;oldWire[0]=legacyBatch;auto* oldPlugin=oldCreator->deserializePlugin(\"study\",oldWire.data(),72);require(oldPlugin,\"Legacy profile rejected\");\n                std::array<int64_t,9> back{};oldPlugin->serialize(back.data());require(back==oldWire,\"Legacy roundtrip differs\");oldPlugin->destroy();++legacyRoundTrips;\n                auto* rejected=creator->deserializePlugin(\"study\",oldWire.data(),72);if(rejected){rejected->destroy();throw std::runtime_error(\"B1 creator accepted B4/B8 wire\");}++cross;\n            }",
+      1
+    ],
+    [
+      "require(profiles==64&&badWire==3328&&badDesc==1984&&badFormat==1344,\"Contract-control accounting changed\");",
+      "require(profiles==32&&badWire==1632&&badDesc==992&&badFormat==672&&cross==96&&legacyRoundTrips==64&&BF16LowBatchPluginCPUUnexpectedEnqueues()==0,\"Contract-control accounting changed\");",
+      1
+    ],
+    [
+      "        std::printf(\"{\\\"status\\\":\\\"bf16_plugin_cpu_contract_passed\\\",\\\"profiles\\\":%d,\\\"roundtrips\\\":64,\\\"clones\\\":64,\\\"bad_wires\\\":%d,\\\"bad_descriptors\\\":%d,\\\"bad_formats\\\":%d,\\\"runtime_version\\\":%d,\\\"header_version\\\":%d,\\\"loaded_tensorrt_dll\\\":\\\"%s\\\",\\\"enqueue_tested\\\":false,\\\"model_qualified\\\":false,\\\"performance_admitted\\\":false}\\n\",profiles,badWire,badDesc,badFormat,getInferLibVersion(),NV_TENSORRT_VERSION,loaded);return 0;",
+      "        std::printf(\"{\\\"status\\\":\\\"bf16_low_batch_plugin_cpu_contract_passed\\\",\\\"profiles\\\":%d,\\\"roundtrips\\\":32,\\\"clones\\\":32,\\\"bad_wires\\\":%d,\\\"bad_descriptors\\\":%d,\\\"bad_formats\\\":%d,\\\"cross_dialect_rejections\\\":%d,\\\"legacy_roundtrips\\\":%d,\\\"unexpected_operator_calls\\\":%d,\\\"runtime_version\\\":%d,\\\"header_version\\\":%d,\\\"loaded_tensorrt_dll\\\":\\\"%s\\\",\\\"enqueue_tested\\\":false,\\\"model_qualified\\\":false,\\\"performance_admitted\\\":false}\\n\",profiles,badWire,badDesc,badFormat,cross,legacyRoundTrips,BF16LowBatchPluginCPUUnexpectedEnqueues(),getInferLibVersion(),NV_TENSORRT_VERSION,loaded);return 0;",
+      1
+    ]
+  ],
+  "result_sha256": "5bff1a7df94dcd5bf9120b847141e108b0a9c2cfa9d4f775da6292524006773e",
+  "scope": "32B1layer/chunk profiles, distinct type/registry, wire roundtrip/clone/malformed descriptors/formats,96cross-dialect rejections and64legacy-positive roundtrips. Explicitly skips the valid B1 value from negative-wire enumeration. CPU-only adapter refuses all Run calls; final zero-call assertion. Runtime/ABI and valid GPU enqueue unrun."
+}

@@ -1,0 +1,16 @@
+{
+  "status": "prefill_retention_hypothesis_ruled_out_and_legacy_native_bounds_verified",
+  "source_bundle_sha256": "4ccee24a9d58cd8297ea6a44632d54d3efd608fe323f686b12dcb56d9a179779",
+  "files_sha256": {
+    "xModel/qwen35/vl_0_8b/cuda_packed_decoder.py": "be9198639d0563a335a41bdc0a3558ed1466f062486e7399503bc516243e9153",
+    "src/backends/tensorrt/qwen38_bf16_kv_overlay_plugin.cpp": "08977743c761bf91b99c6bd26f40345f914e9010f23819dc973650006bd8e4b7",
+    "src/cuda/qwen38_bf16_kv_overlay.cu": "ddafabdb6e5cd04a0beb5ee8c39526397cf9d26ac3c8deded2dc6bc63e37b2fc"
+  },
+  "prefill_extra_linear_replay_retention_already_disabled": true,
+  "decode_retention_stays_enabled": true,
+  "legacy_BF16_attention_plugin_and_CUDA_kernel_only_allow_T4_T32": true,
+  "next_action": "Do not propose disabling prefill replay retention: already disabled. Larger B4 prompt chunks also require an explicitly qualified attention/cache profile beyond the FP8 projection work. Await closed independently replayed host traces before selecting an intervention.",
+  "native_or_model_execution": false,
+  "active_native_job_not_modified": true,
+  "performance_claim": false
+}

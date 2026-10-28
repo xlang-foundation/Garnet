@@ -1,0 +1,52 @@
+from pathlib import Path
+import datetime,hashlib,json,zipfile
+w=Path(__file__).resolve().parent;r=Path('D:/CantorAI/work/qwen38-5090');e=r/'test2026/cuda/qwen38_5090/evidence';o=w.parent/'outputs';sha=lambda raw:hashlib.sha256(raw).hexdigest();name='sglang-output-characterization-attempt1';analysis=json.loads((o/'Garnet-SGLang-Output-Variation-Results.json').read_bytes());q=json.loads((o/(name+'-verified.json')).read_bytes())
+assert q==json.loads((o/(name+'-remote-verified.json')).read_bytes()) and q['status']=='sglang_output_characterization_replayed' and sha((o/(name+'-evidence.zip')).read_bytes())==q['archive_sha256']==analysis['archive_sha256']
+with zipfile.ZipFile(o/(name+'-evidence.zip')) as z:
+ wf=json.loads(z.read('results/'+name+'/workflow.json'));assert wf['exit_code']==0 and wf['cleanup_finished'] and wf['source_sha256']==wf['source_after_sha256'] and wf['runtime_dependencies']==wf['runtime_dependencies_after']
+ assert b'Ran 33 tests in 11.691s' in z.read('results/'+name+'/cpu-ledger/commands.log')
+metadata={'status':'sglang_output_characterization_closed_and_independently_replayed','recorded_utc':datetime.datetime.now(datetime.timezone.utc).isoformat(),'archive_sha256':q['archive_sha256'],'archive_bytes':(o/(name+'-evidence.zip')).stat().st_size,'archive_files_verified':q['files_verified'],'independent_proofs_identical':True,'proof_sha256':sha((o/(name+'-verified.json')).read_bytes()),'actual_requests':288,'actual_client_overlap_waves':135,'serial_before_after':analysis['serial_before_after'],'changed_concurrent_nonstream_outputs':95,'changed_stream_texts':47,'mixed_color_spatial_semantic_controls_passed':96,'concurrent_mixed_color_controls_passed':72,'actual_remote_cpu_tests':33,'actual_remote_cpu_seconds':11.691,'server_exit_code':wf['server_exit_code'],'stop_exit_code':wf['stop_exit_code'],'source_runtime_identity_and_cleanup_verified':True,'correctness_sampled_peak_adapter_used_bytes':q['profiles'][0]['correctness_sampled_peak_adapter_used_bytes'],'initial_replay_setup_failure':{'supervisor_job':'sglang-output-characterization-independent-replay-attempt1','actual_exit_code':1,'failed_check':'args.scratch.is_dir()','scope':'First CLI used an absent scratch directory and stopped before reading/replaying the archive. Same verifier rerun with existing results directory succeeded; raw archive/checker/guards unchanged.'},'physical_gpu_batch_or_numerical_cause_proven':False,'new_broad_quality_or_performance_qualified':False,'two_times_target_achieved':False,'scope':analysis['scope']}
+for suffix in ('-verified.json','-remote-verified.json'):
+ target=e/(name+suffix);assert not target.exists();target.write_bytes((o/(name+suffix)).read_bytes())
+for name in ('analyze-sglang-output-characterization.py','retain-sglang-output-characterization-closure.py','start-prefill16-full4k-preflight-from-proofs.py'):
+ target=e/(name+'.txt');assert not target.exists();target.write_bytes((w/name).read_bytes())
+for name in ('sglang-output-characterization-independent-local-replay.log',):
+ target=e/name;assert not target.exists();target.write_bytes((w/name).read_bytes());(o/name).write_bytes((w/name).read_bytes())
+target=e/'sglang-output-variation-analysis.json';assert not target.exists();target.write_bytes((o/'Garnet-SGLang-Output-Variation-Results.json').read_bytes())
+target=e/'sglang-output-characterization-closure.json';assert not target.exists();target.write_text(json.dumps(metadata,indent=2),encoding='utf8')
+entry='''
+
+### 2026-10-25 — SGLang raw output/isolation diagnosis closed and replayed twice
+
+Original supervisor48577 observed sglang-output-characterization-attempt1 terminal0,
+owned Linux parent271 stopped, wrapper terminal and adapter/process idle. Actual
+33CPU tests passed11.691s. Source/runtime unchanged. Complete70670636byte/1612file
+archive transferred and independently replayed on both machines; proofs identical.
+All288requests/135observed client-overlap waves meet strict full4K/nonstream-ID/
+raw-SSE/count/semantic-control coverage and ownership/config/source cleanup gates.
+
+All24serial after IDs/texts equal their serial-before controls. Actual concurrent
+nonstream outputs differ95times, streamed text differs47times versus serial
+controls; all96mixed-color/spatial semantic controls (72concurrent) pass. This is
+not a numerical-cause/harmlessness, global request-isolation or long-output
+semantic-equivalence proof. Rotated concurrent IDs and later streams also vary
+relative to earlier same-concurrency controls. Actual physical GPUbatch was not
+observed. Detailed per-phase raw-derived counts/variants retained. No timing,
+accuracy score, broad quality or2x admitted from this correctness study.
+
+The previous strict baseline/helper/archive remain immutable. A separate successor
+must retain3968+128counts/prompt IDs/precision/cache/source/GPU checks, raw actual
+nonstream IDs, all observed stream-text variants, semantic controls and quality
+screening rather than excluding the faster normal reference for serial-text
+inequality. Complete C1/2/4/8text/image timings, strongest tuned/MTP SGLang/vLLM and
+repetitions before any2x claim. Do not infer unobserved streamed IDs or harmlessness.
+
+First independent replay CLI failed at existing-scratch-directory assertion before
+reading archive. Same checker succeeded using existing results scratch location;
+failure observation retained, no guard/data change. Next wider MTP actual full4K
+correctness owner/preflight pins qualified native/short-model proofs and requires
+this actual closed/replayed reference archive plus idle guards before execution.
+'''
+for name in ('qwen38-5090-development-log.md','qwen38-5090-implementation-task.md'):
+ p=r/'docs/research'/name;raw=p.read_bytes();assert b'SGLang raw output/isolation diagnosis closed and replayed twice' not in raw;p.write_bytes(raw+entry.replace('\n','\r\n').encode())
+print(json.dumps(metadata))

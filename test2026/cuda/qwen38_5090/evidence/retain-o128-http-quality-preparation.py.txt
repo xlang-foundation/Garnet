@@ -1,0 +1,18 @@
+from pathlib import Path
+import json,subprocess
+W=Path(__file__).resolve().parent;R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';E=M/'evidence';owned=[]
+def keep(name,raw):
+    target=E/name;assert not target.exists() or target.read_bytes()==raw;target.write_bytes(raw);owned.append(target.relative_to(R).as_posix())
+for n in ('derive-o128-http-worker.py','prepare-o128-http-quality.py','make-o128-http-quality-installer.py','install-o128-http-quality.py','retain-o128-http-quality-preparation.py'):keep(n+'.txt',(W/n).read_bytes())
+for n in ('commands.log','commands.jsonl'):keep('o128-http-quality-local-cpu-ledger-'+n,(W/'o128-http-quality-local-cpu-ledger'/n).read_bytes())
+keep('o128-http-quality-package.json',(W/'o128-http-quality-package.json').read_bytes())
+names=['native_o128_http_admission.py','native_o128_stream_worker.py','serve_native_o128_worker.bat','probe_o128_http_quality.py','test_o128_http_admission.py','run_o128_http_quality.py','verify_o128_http_quality.py','evidence/o128-http-worker-derivation.json','evidence/o128-http-quality-preparation.json'];owned += [(M/n).relative_to(R).as_posix() for n in names]
+text='''
+
+### Qualified60 O128 research HTTP measurement prepared
+
+2026-10-27: Prepare explicit MTP-only HTTP worker on the already validated60source/DLL841 candidate, targetprefill128/decode4/draftprefill16. All request-validation and token-notification function ASTs exactly match retained prefill16 worker; original JPEG/image positions/token IDs/EOS/callback/response paths retained. Actual source/runtime/SDK/checkpoint and three pinned native/fullsix/frontend certificates checked before model construction; actual physical Q16/O16/KV32/GDN48/reconstructedZ48 routes onlyT128, allnewrouteszeroT4/draft4/draft16/vision/norm. Private per-run nonce engines only. CPU21controls pass locally, including corrupted restoration/certificate data and original805quality/protocol controls. New exclusive owner saves originalsource, installs exact60bundle/DLL, supervises four full3968+128text/image/reset HTTP controls and805 adapted low-resolution screening requests, restores baseline and retires only owned engine files even on failure. Every prompt/output ID must match complete saved correctT32 ordinary805 collection; its enclosing old HTTP benchmark FAILED later, so no oldHTTPsuccess claim. Immutable raw outcomes and independent verifier prepared. Native/model run pending at this preparation; no new speed, broadquality, official900MMMU or2x claim. Next matched performance remains required.
+'''
+for n in ('docs/research/qwen38-5090-development-log.md','docs/research/qwen38-5090-implementation-task.md'):
+    t=R/n;b=t.read_bytes();assert b'### Qualified60 O128 research HTTP measurement prepared' not in b;t.write_bytes(b+text.replace('\n','\r\n').encode());assert t.read_bytes()[:len(b)]==b;owned.append(n)
+assert not any('probe_native_external_prefix_batch.py' in n for n in owned);subprocess.run(['git','-C',str(R),'-c','core.autocrlf=false','add','--pathspec-from-file=-','--pathspec-file-nul'],input=('\0'.join(owned)+'\0').encode(),check=True);print(json.dumps(dict(owned_paths=len(owned),GPU_run=False)))

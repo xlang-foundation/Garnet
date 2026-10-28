@@ -1,0 +1,48 @@
+{
+  "status": "saved_reference_configuration_and_failure_stage_audited",
+  "UTC": "2026-10-28T03:58:11.912150+00:00",
+  "sglang": {
+    "archive_sha256": "e17f3af00fd9502a8708115f194dc4464706320baa399426855b8bf1533c0b9d",
+    "server_log_sha256": "8754ed97dd461d1b6499c832c3d478bc0a02b856d4810f48e25d22854e3c47b8",
+    "server_args_line_sha256": "dbf11db5a9e94765bca35b1e9228e1f01e2a326e832990030bc7f345b8892937",
+    "package_version": "0.5.22",
+    "configured_settings": {
+      "context_length": 4098,
+      "max_total_tokens": 32784,
+      "max_running_requests": 8,
+      "chunked_prefill_size": 4096,
+      "max_prefill_tokens": 16384,
+      "dtype": "bfloat16",
+      "kv_cache_dtype": "bfloat16",
+      "mamba_ssm_dtype": "float32",
+      "disable_radix_cache": true,
+      "uses_mamba_radix_cache": false,
+      "enable_session_radix_cache": false,
+      "enable_prefix_mm_cache": false,
+      "cuda_graph_backend_decode": "full",
+      "cuda_graph_backend_prefill": "disabled",
+      "cuda_graph_bs_decode": [
+        1,
+        2,
+        4,
+        8
+      ],
+      "speculative_algorithm": null,
+      "enable_deterministic_inference": false
+    },
+    "scope": "Configured settings from the actual retained server log. Resolves the earlier unverified radix-cache flag; no fresh run, cache-hit replay or stronger-reference qualification."
+  },
+  "vllm_MTP3": {
+    "archive_sha256": "99f359b0200ffec6a8c12f4d7166b4842d6655c98d296180598c574d04a09356",
+    "server_log_sha256": "eb45874c9cfe5ebf976f9902b4e978d4f6d8f66b75bf0866433c5c5e3dd0f8cc",
+    "greedy_gate_log_sha256": "7172c417fba35c9692879274c450c6782aba031614d6750d343b7fcc13f8c963",
+    "launch_ledger_sha256": "b324dbdb9daa80bfee8955046cc0411577af3a307d2b582abbfb9ccdebde5ffb",
+    "server_started": true,
+    "actual_MTP_acceptance_metrics_present": true,
+    "strict_greedy_ID_gate_passed": false,
+    "first_failed_case": "s3-text-c1-r0",
+    "scope": "Historical MTP3 service loaded and served requests; its enclosing candidate failed strict same-engine full-ID greedy equivalence. This is not a model-load/support failure and supplies no qualified throughput baseline. Numerical cause, stronger configurations and representative quality remain unestablished."
+  },
+  "model_GPU_or_new_benchmark_performed": false,
+  "strongest_reference_or_two_times_target_qualified": false
+}

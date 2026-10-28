@@ -1,0 +1,13 @@
+from pathlib import Path
+import ast,hashlib,json
+R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';E=M/'evidence';sha=lambda b:hashlib.sha256(b).hexdigest();rows=[]
+def derive(src,dst,changes):
+    raw=(M/src).read_bytes();s=raw.decode()
+    for a,b,n in changes:assert s.count(a)==n,(a,s.count(a),n);s=s.replace(a,b)
+    ast.parse(s);p=M/dst;assert not p.exists();p.write_bytes(s.encode());rows.append({'source':src,'source_sha256':sha(raw),'target':dst,'target_sha256':sha(p.read_bytes()),'changes':[{'old':a,'new':b,'count':n} for a,b,n in changes]})
+prep=('step45-layer-boundary-preparation.json','step45-layer-boundary2-preparation.json',1)
+derive('probe_step45_layer_boundary.py','probe_step45_layer_boundary2.py',[prep,('from test2026.cuda.qwen38_5090.all_layer_decode_boundary_program import AllLayerDecodeBoundaryProgram,construct_with_all_layer_decode_boundary_program','from test2026.cuda.qwen38_5090.bounded_step45_boundary_program import BoundedStep45BoundaryProgram as AllLayerDecodeBoundaryProgram,construct_with_bounded_step45_boundary_program as construct_with_all_layer_decode_boundary_program',1)])
+derive('launch_step45_layer_boundary.py','launch_step45_layer_boundary2.py',[prep,('probe_step45_layer_boundary.py','probe_step45_layer_boundary2.py',1)])
+derive('run_step45_layer_boundary.py','run_step45_layer_boundary2.py',[prep,('step45-layer-boundary-attempt1','step45-layer-boundary-attempt2',1),('step45_layer_boundary_prepared_GPU_unrun','step45_layer_boundary2_prepared_GPU_unrun',1),('66CPU','69CPU',1),('66 CPU controls','69 CPU controls',1),('launch_step45_layer_boundary.py','launch_step45_layer_boundary2.py',1),('step45_layer_boundary_collected_no_model_admission','step45_layer_boundary2_collected_no_model_admission',1)])
+derive('verify_step45_layer_boundary.py','verify_step45_layer_boundary2.py',[prep,('step45-layer-boundary-attempt1','step45-layer-boundary-attempt2',1),('verify_step45_layer_boundary.py','verify_step45_layer_boundary2.py',1),('Ran 66 tests','Ran 69 tests',1),("'CPU_controls':66","'CPU_controls':69",1),('step45_layer_boundary_collected_no_model_admission','step45_layer_boundary2_collected_no_model_admission',1),('step45_layer_boundary_replayed','step45_layer_boundary2_replayed',1),('step45_layer_boundary_failure_replayed','step45_layer_boundary2_failure_replayed',1)])
+(E/'step45-layer-boundary2-protocol-derivation.json').write_bytes(json.dumps({'status':'bounded_three_concat_protocol_prepared_GPU_unrun','derivations':rows,'native_guard_unchanged':True,'same_primary_cache_timeline_gates':True},indent=2).encode());print('Four exact protocol derivations parsed; native guard unchanged.')

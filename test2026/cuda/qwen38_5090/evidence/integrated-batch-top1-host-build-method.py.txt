@@ -1,0 +1,25 @@
+"""Compile only tensor-IO into private chat scratch; do not run a shared build."""
+from pathlib import Path
+import hashlib,json,sys
+repo=Path('D:/CantorAI/work/qwen38-5090');m=repo/'test2026/cuda/qwen38_5090';sys.path.insert(0,str(m));from run_logged import run
+work=Path(__file__).resolve().parents[1]/'work/parallel-top1';e=m/'evidence'
+sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+ninja=repo/'out/qwen38-native/build.ninja';lines=ninja.read_text().splitlines()
+start=next(i for i,s in enumerate(lines) if s.startswith('build garnet\\CMakeFiles\\garnet.dir\\src\\backends\\tensorrt\\cuda_tensor_io.cpp.obj:'))
+block=lines[start:start+8];assert all(' = ' in line for line in block[1:])
+values=dict(line.strip().split(' = ',1) for line in block[1:])
+bat=work/'integration-host-local.bat'
+bat.write_text('@echo off\ncall "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Auxiliary\\Build\\vcvars64.bat" -vcvars_ver=14.29\nif errorlevel 1 exit /b %errorlevel%\n'+
+ 'cl /nologo /c '+values['DEFINES']+' '+values['FLAGS']+' '+values['INCLUDES']+' "'+str(repo/'src/backends/tensorrt/cuda_tensor_io.cpp')+'" /Fo"%~dp0integration-cuda-tensor-io.obj" /Fd"%~dp0integration-cuda-tensor-io.pdb"\nexit /b %errorlevel%\n',encoding='utf8')
+pins=[repo/'src/backends/tensorrt/cuda_tensor_io.cpp',repo/'src/backends/tensorrt/cuda_tensor_io.h',repo/'src/cuda/logits_top1_batch_dispatch.h',
+ repo/'workbench/deps/xlang3/sdk/xlang3/xlang3.h',Path('D:/CantorAI/ThirdPartySDK/TensorRT/include/NvInferVersion.h')]
+before={str(p):sha(p) for p in pins}
+code=run(['cmd.exe','/d','/c',str(bat)],work/'integration-host-ledger','build','Private tensor-IO host translation unit compilation only; local SDK identity is not remote ABI qualification',[bat,ninja]+pins)
+after={str(p):sha(p) for p in pins};assert before==after
+receipt={'status':'integrated_top1_host_compile_passed' if code==0 else 'integrated_top1_host_compile_failed','exit_code':code,
+ 'source_and_local_headers_sha256':before,'original_ninja_sha256':sha(ninja),'read_only_ninja_block':block,
+ 'gpu_executed':False,'shared_build_invoked':False,'remote_uploaded':False,'remote_abi_qualified':False,'performance_admitted':False}
+if code==0:receipt['object_sha256']=sha(work/'integration-cuda-tensor-io.obj')
+(e/'integrated-batch-top1-host-local-build.json').write_text(json.dumps(receipt,indent=2),encoding='utf8')
+for n in ('commands.jsonl','commands.log'):(e/('integrated-batch-top1-host-local-'+n)).write_bytes((work/'integration-host-ledger'/n).read_bytes())
+print(json.dumps({'status':receipt['status'],'exit_code':code}));raise SystemExit(code)

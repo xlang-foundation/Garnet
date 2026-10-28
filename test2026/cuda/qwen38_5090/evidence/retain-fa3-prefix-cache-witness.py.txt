@@ -1,0 +1,50 @@
+"""Retain complete ordinary cache captures and independent paired replays."""
+from pathlib import Path
+import hashlib,json,re,zipfile
+work=Path(__file__).resolve().parent;out=work.parent/'outputs';repo=Path('D:/CantorAI/work/qwen38-5090');m=repo/'test2026/cuda/qwen38_5090';e=m/'evidence';job='fa3-prefix-cache-witness-attempt1';prefix='Garnet/test2026/cuda/qwen38_5090/';sha=lambda raw:hashlib.sha256(raw).hexdigest();paths=[]
+def keep(name,raw):
+    target=e/name;assert not target.exists() or target.read_bytes()==raw,target
+    if not target.exists():target.write_bytes(raw)
+    paths.append(target.relative_to(repo).as_posix())
+proof=(out/(job+'-verified.json')).read_bytes();analysis=(out/(job+'-analysis.json')).read_bytes();q=json.loads(proof);a=json.loads(analysis)
+assert proof==(out/(job+'-remote-verified.json')).read_bytes() and analysis==(out/(job+'-remote-analysis.json')).read_bytes()
+assert q['status']=='fa3_prefix_cache_controls_replayed' and a['status']=='fa3_prefix_source_and_final_cache_state_links_replayed' and a['original_proof_sha256']==sha(proof) and a['prefixes']==q['prefixes']
+assert q['source_runtime_SDK_checkpoint_restored'] and len(q['prefixes'])==6 and len(a['complete_final_cache_state_links'])==4
+archive=out/(job+'-evidence.zip');assert sha(archive.read_bytes())==q['archive_sha256']==a['archive_sha256']
+with zipfile.ZipFile(archive) as z:
+    manifest=json.loads(z.read('evidence-manifest.json'));assert z.testzip() is None and len(z.namelist())==len(set(z.namelist()))==len(manifest['files'])+1
+    for name,h in manifest['files'].items():assert sha(z.read(name))==h
+    base='results/'+job+'/';praw=z.read(prefix+'evidence/fa3-prefix-cache-witness-preparation.json');p=json.loads(praw);w=json.loads(z.read(base+'workflow.json'));assert w['exit_code']==0 and w['cleanup_finished'] and w['baseline_source_restored'] and w['baseline_library_restored']
+    keep(job+'-evidence-manifest.json',z.read('evidence-manifest.json'));keep('fa3-prefix-cache-witness-preparation.json',praw)
+    for name in z.namelist():
+        if name.startswith(base) and name.endswith(('.json','.jsonl','.log','.txt')):keep(job+'-'+name.removeprefix(base).replace('/','-'),z.read(name))
+    for name,h in p['new_files'].items():
+        path=repo/name.removeprefix('Garnet/');assert sha(path.read_bytes())==h;paths.append(path.relative_to(repo).as_posix())
+    remote_cpu=float(re.search(rb'Ran 74 tests in ([0-9.]+)s',z.read(base+'cpu-ledger/commands.log')).group(1))
+for suffix in ('-verified.json','-remote-verified.json','-analysis.json','-remote-analysis.json','-local-replay.log','-remote-replay.log','-local-analysis.log','-remote-analysis.log'):
+    keep(job+suffix,(out/(job+suffix)).read_bytes())
+paths.append((m/'analyze_fa3_prefix_cache_boundary.py').relative_to(repo).as_posix());assert sha((m/'analyze_fa3_prefix_cache_boundary.py').read_bytes())==a['analyzer_sha256']
+for name in ('derive-fa3-prefix-cache-witness-initial.py','derive-fa3-prefix-cache-witness.py','install-fa3-prefix-cache-witness.py','retain-fa3-prefix-cache-witness.py'):keep(name+'.txt',(work/name).read_bytes())
+keep('fa3-prefix-cache-witness-package.json',(work/'fa3-prefix-cache-witness-package.json').read_bytes());keep('fa3-prefix-cache-witness-install.json',(out/'fa3-prefix-cache-witness-install.json').read_bytes())
+for path in (work/'fa3-prefix-cache-witness-local-cpu-ledger').iterdir():
+    if path.is_file():keep('fa3-prefix-cache-witness-local-cpu-'+path.name,path.read_bytes())
+plan={'status':'complete_layer3_prefix_cache_boundary_observed_cause_unproven','first_sampled_different_prefix':q['first_sampled_different_prefix'],'steps':[
+ 'Keep the full4K admission failure immutable. This target-only capture reproduces the retained baseline T32 and failed T128 ordinary controls, not a passing T128 model/MTP/image/quality or performance gate.',
+ 'Use the earliest sampled differing cache prefix and its token/head/dimension to choose the next real-input control. Prove layer2 ordinary output equality with the same controlled layer1 input before attributing differences to attention. Matching GDN internal state hashes alone does not prove hidden-output equality.',
+ 'If upstream hidden matches, capture layer3 input norm, Q/K/V projections and canonical KV output under ordinary-versus-diagnostic same-profile primary parity. Existing full-attention diagnostic guard only permits embedded T16 and excludes canonical KV; any T32/T128 diagnostic extension needs a separate strict opt-in, CPU/source tests and remote build, with old guards unchanged.',
+ 'Do not choose a kernel/algorithm patch from cache hashes alone. Distinguish projection arithmetic, normalization/RoPE and cache commit/layout with real arrays and independently replayed controls before a typed opt-in intervention.',
+ 'Then repeat unchanged six3968+128 ordinary/MTP full-state/vector/token gate, adapted805 quality and initialization checks, followed by matched HTTP repetitions, strongest feasible tuned/MTP vLLM/SGLang and INT4/4B/concurrency work. Overall2xdecodeANDthroughput/halfTTFTextra remain unmet.'
+], 'performance_admitted':False,'two_times_target_achieved':False}
+keep('fa3-prefix-cache-boundary-next-plan.json',json.dumps(plan,indent=2).encode())
+result={'status':plan['status'],'archive_sha256':q['archive_sha256'],'archive_bytes':archive.stat().st_size,'archive_members':len(manifest['files'])+1,'proof_pair_sha256':sha(proof),'analysis_pair_sha256':sha(analysis),'CPU_tests':74,'remote_CPU_seconds':remote_cpu,'source_pins':len(p['files']),'installed_pins':len(p['installed_files']),'candidate_sources':35,'existing_targets_restored':12,'new_targets_removed':23,'source_runtime_SDK_checkpoint_restored':True,'retained_T32_and_failed_T128_ordinary_controls_exact':True,'complete_final_cache_state_links':a['complete_final_cache_state_links'],'first_sampled_different_prefix':q['first_sampled_different_prefix'],'prefixes':q['prefixes'],'cause_established':False,'performance_admitted':False,'two_times_target_achieved':False,'next_plan':plan}
+raw=json.dumps(result,indent=2).encode();keep('fa3-prefix-cache-witness-closure.json',raw);target=out/'Garnet-Layer3-Prefix-Cache-Boundary-Verified.json';assert not target.exists() or target.read_bytes()==raw
+if not target.exists():target.write_bytes(raw)
+title='Complete layer3 key/value prefix captures reproduce retained T32 and failed T128 ordinary controls'
+text='\n\n### 2026-10-26 — '+title+'\n\n'
+text+='Same native28 DLL plus seven unchanged Python profile sources; no native/model math changes. Separate exclusive ordinary-only T32 and T128 processes use the actual first text3968+128 case. Preserve all70 earlier model/state/vector/ID/MTP CPU controls plus4 bounded-cache/geometry/finite/index/raw-vector faults: local2.534s, remote'+str(remote_cpu)+'s. Candidate policies/counts are0 for T32/T4 and48each for T128 only. No vision or MTP graphs are created in this diagnostic. The full six-case admission gate remains separate and failed.\n\n'
+text+='Both processes capture COMPLETE layer3 key and value caches at prefixes128/256/512/1024/2048/3968 through <=1048576 physical FP32-carrier word reads. All24cache arrays (201326592 physical bytes) are retained, including inactive tail slots. Each process reproduces its retained empty/prefill/final128component state hashes, all hidden/normalized vectors and128ordinary IDs. The candidate reproduces the previous failed T128 result, including its divergence; it is not admitted to performance. Independent replay checks all finite BF16 values, inactive tails, bitwise differences and head/token/dimension mapping. Earliest sampled different prefix: '+str(q['first_sampled_different_prefix'])+'. Prefix128 is the earliest observation, so this does not claim the precise first divergent operation.\n\n'
+text+='Additional independent analysis verifies all35 source-bundle members,12 original-source members, and four complete final key/value captures against the corresponding layer3 logical component hashes in the retained full-state witnesses. Full archive '+q['archive_sha256']+' ('+str(archive.stat().st_size)+'bytes/'+str(len(manifest['files'])+1)+'members) passes CRC and all file hashes. Both replay tools pass on both machines with identical proofs '+sha(proof)+' and '+sha(analysis)+'.989source/1012installed pins plus runtime/selectedSDK/checkpoint/environment/cache restore;12existing source targets restored/23new removed. Source/preparation/deployment/initial generator fault source/logs/resources/raw arrays retained. Initial installer-derivation guard expected4filename references but found3; corrected before installer generation/deployment, no GPU work from that preparation failure.\n\n'
+text+='Source inspection: full-attention M32 canonical policy covers Q/O only, not K/V or T128. Existing diagnostic_full_stages is embedded T16 only and excludes canonical BF16 KV. These are leads/constraints, not causes. Next prove layer2 ordinary hidden output with common real layer1 input; then, if needed, extend a separate strict diagnostic opt-in for layer3 T32/T128 with mandatory same-profile ordinary primary parity and complete finite stage replay. No algorithm patch from cache differences alone. No new benchmarks or chart values; original overall2xdecodeANDconcurrency-throughput target and halfTTFT remain unmet.\n'
+for name in ('qwen38-5090-development-log.md','qwen38-5090-implementation-task.md'):
+    target=repo/'docs/research'/name;before=target.read_bytes();assert title.encode() not in before;target.write_bytes(before+text.encode());paths.append(target.relative_to(repo).as_posix())
+(work/'fa3-prefix-cache-witness-retained-paths.json').write_bytes(json.dumps(sorted(set(paths)),indent=2).encode());print(json.dumps({'status':result['status'],'retained_paths':len(set(paths)),'first_sampled_different_prefix':q['first_sampled_different_prefix'],'proof_pair_sha256':sha(proof)}))

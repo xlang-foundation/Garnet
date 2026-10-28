@@ -1,0 +1,101 @@
+{
+  "status": "static_token_selection_callsite_audit_no_GPU_or_numeric_replay",
+  "source_sha256_and_lines": {
+    "xModel/qwen35/vl_0_8b/cuda_packed_decoder.py": {
+      "sha256": "be9198639d0563a335a41bdc0a3558ed1466f062486e7399503bc516243e9153",
+      "matching_reference_and_candidate_pins": true,
+      "lines": {
+        "prediction=self.io.predict(self.head.run_device([self.last_hidden]))": [
+          206
+        ]
+      }
+    },
+    "src/backends/tensorrt/cuda_tensor_io.cpp": {
+      "sha256": "5c959cfa45d91125b9de66dd681a986dcb4a1c86ac433d0447ed5899c996ce62",
+      "matching_reference_and_candidate_pins": true,
+      "lines": {
+        "X::Value CUDATensorIO::LogitsUnlocked": [
+          576
+        ],
+        "std::vector<int64_t> inShape{rows,width_},outShape{rows,vocab_}": [
+          583
+        ],
+        "Check(runConvertFP32ToBF16Async": [
+          602
+        ],
+        "const auto status=RunModelOptNVFP4MatmulContext": [
+          606
+        ],
+        "nativeHeadWorkspace_.Info().data,4ULL<<20": [
+          608
+        ],
+        "X::Value CUDATensorIO::ArgmaxUnlocked": [
+          618
+        ]
+      }
+    },
+    "src/backends/tensorrt/modelopt_cublaslt.cpp": {
+      "sha256": "f1283406460ecf8d0b633ff49959709d86941009a73cd3bd596d86a2e4792f35",
+      "matching_reference_and_candidate_pins": true,
+      "lines": {
+        "cublasStatus_t RunModelOptNVFP4Matmul(cublasLtHandle_t handle": [
+          83
+        ],
+        "CUBLAS_COMPUTE_32F,CUDA_R_32F": [
+          96,
+          140
+        ],
+        "cublasLtMatrixLayoutCreate(&d.b,CUDA_R_4F_E2M1,columns,batch,columns)": [
+          108
+        ],
+        "cublasLtMatrixLayoutCreate(&d.c,CUDA_R_16BF,rows,batch,rows)": [
+          109,
+          149
+        ],
+        "cublasLtMatmulAlgoGetHeuristic(handle,d.operation,d.a,d.b,d.c,d.c,d.preference,downCandidate?32:8": [
+          113
+        ]
+      }
+    },
+    "src/cuda/logits_sampler_kernel.cu": {
+      "sha256": "b40f22f12da0c259a89fb90e19039943d019c75a92c6592f500627eb6096d76e",
+      "matching_reference_and_candidate_pins": true,
+      "lines": {
+        "SelectParallelBatchTop1(ParallelBatchTop1Enabled(), rows, vocab)": [
+          22
+        ],
+        "if (Garnet::DispatchParallelBatchTop1(rows, vocabSize))": [
+          369,
+          387
+        ]
+      }
+    },
+    "src/cuda/logits_top1_batch_dispatch.h": {
+      "sha256": "b0ec3239c288c1cea3bd9abc0c67f5f4acabdd07b86f5ee73619b565b9ee3dbe",
+      "matching_reference_and_candidate_pins": true,
+      "lines": {
+        "return enabled && rows >= 1 && rows <= 128 && vocab >= 8192;": [
+          12
+        ]
+      }
+    }
+  },
+  "actual_geometry": {
+    "hidden": 5120,
+    "vocab": 248320,
+    "B1_rows": 1,
+    "B4_rows": 4,
+    "head_workspace_bytes": 4194304
+  },
+  "facts": [
+    "Decoder calls head normalization then io.predict using last_hidden.",
+    "NativeNVFP4head convertsFP32 toBF16, invokes activationquantization and cuBLASLt withactualrows; activationkernelbody notauditedhere.",
+    "HeadcuBLASLt path sets FP32compute/scale, E2M1 A/B and BF16output, asksdefaultheuristics usingactualmatrixrows; headcall doesnotrequest the separateNVFP4downcandidate.",
+    "Withthepinnedflag1 andvocab248320, source dispatchselects the sameparallelbatchtop1implementation forrows1and4. Thisisnot a runtimeargmax-equivalence proof."
+  ],
+  "numerical_counterexample_proved": false,
+  "head_or_sampler_bug_proved": false,
+  "source_or_runtime_modified": false,
+  "performance_qualified": false,
+  "scope": "Source-only faulttree preparation duringexclusiveGPUcapture. The same-profile sources above matchbothjobinventories; no nativequantizerkernel source mapping claimed. Matrixshape-dependent logits is a candidate only. Awaitactualstep52state/prediction evidence before choosingheadreplay ordecoder-layer tracing. No diagnosis/performance/2xclaim."
+}

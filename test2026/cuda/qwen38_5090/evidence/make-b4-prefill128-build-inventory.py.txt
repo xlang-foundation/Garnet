@@ -1,0 +1,31 @@
+from pathlib import Path
+import json
+W=Path(__file__).resolve().parent;M=Path('D:/CantorAI/work/qwen38-5090/test2026/cuda/qwen38_5090');old=json.loads((M/'evidence/o128-canonical-build-preparation.json').read_bytes());expected={**old['candidate_base'],'src/backends/tensorrt/modelopt_fp8_batch4_prefill_profile.h':None};assert len(expected)==61
+source='''from pathlib import Path
+import hashlib,json,shutil,sys
+ROOT=Path('D:/CantorAI/5090-study-20261023');M=ROOT/'Garnet/test2026/cuda/qwen38_5090';sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+EXPECTED=EXPECTED_JSON
+sys.path[:0]=[str(M),str(ROOT/'Garnet')];from run_bf16_low_batch_native_build import idle
+idle();native=json.loads((M/'evidence/o128-canonical-build-preparation.json').read_bytes());cache_parent=json.loads((M/'evidence/fp8-policy-cache-production-python-preparation.json').read_bytes());base=cache_parent['files'];assert len(base)==1374 and all(base[n]==h for n,h in native['base_files'].items())
+for n,h in {**base,**native['checkpoints']}.items():assert sha(ROOT/n)==h,('Baseline drift',n)
+for n,h in native['runtime'].items():assert sha(ROOT/'build/bin'/n)==h
+for n,h in native['environment'].items():assert sha(Path(n))==h
+for n,h in EXPECTED.items():
+    t=ROOT/'Garnet'/n;assert t.resolve().is_relative_to((ROOT/'Garnet').resolve()) and (sha(t) if t.exists() else None)==h,('Candidate target drift',n)
+parents={}
+for job,status in [('o128-http-benchmark-attempt1','actual_O128_three_fixed4k_HTTP_trials_raw_stream_memory_and_IDs_replayed'),('b4-prefill128-header-attempt1','actual_B4_T32_CPU_header_controls_and_source_composition_replayed')]:
+    proof=ROOT/'results'/(job+'-verified.json');q=json.loads(proof.read_bytes());w=json.loads((ROOT/'results'/job/'workflow.json').read_bytes());assert q['status']==status and q['exit_code']==w['exit_code']==0 and w['cleanup_finished'] and sha(ROOT/'results'/(job+'-evidence.zip'))==q['archive_sha256'];parents[job]=dict(proof_sha256=sha(proof),archive_sha256=q['archive_sha256'],status=status,exit_code=0)
+objects={n.relative_to(ROOT).as_posix():sha(n) for n in (ROOT/'build/garnet/CMakeFiles/garnet.dir').rglob('*.cu.obj')};assert len(objects)==34 and objects==cache_parent['current_cuda_objects']
+cmake=ROOT/'build/CMakeCache.txt';assert sha(cmake)==native['cache_before_sha256'];assert shutil.disk_usage(ROOT).free>=12<<30
+assert not (ROOT/'results/b4-prefill128-build-attempt1').exists() and not (ROOT/'build/bin/garnet-native-b4-prefill128-attempt1.dll').exists()
+result=dict(status='B4_prefill128_native_build_inputs_verified_no_GPU_or_mutation',base_files=base,candidate_base=EXPECTED,runtime=native['runtime'],environment=native['environment'],checkpoints=native['checkpoints'],cache_before_sha256=sha(cmake),cuda_objects_before=objects,closed_parents=parents,free_bytes=shutil.disk_usage(ROOT).free,scope='Fresh restored baseline1374/61targets/runtime/SDK/checkpoints/CMake/34object inventory; current objects preserved from prior cache build, original cache-only strict identity failure staysfailed. New61B4build retains original O128 three-object whitelist, all bytehashes/provenance and original numeric/model gates; no source mutation/native/GPU execution.')
+target=ROOT/'results/b4-prefill128-build-inputs.json';raw=json.dumps(result,indent=2).encode();assert not target.exists();target.write_bytes(raw);print(json.dumps(dict(status=result['status'],sha256=hashlib.sha256(raw).hexdigest(),bytes=len(raw))))
+'''.replace('EXPECTED_JSON',repr(expected))
+(W/'inspect-b4-prefill128-build-inputs.py').write_bytes(source.encode())
+runner='''from pathlib import Path
+import hashlib,os,sys
+ROOT=Path('D:/CantorAI/5090-study-20261023');M=ROOT/'Garnet/test2026/cuda/qwen38_5090';sys.path[:0]=[str(M),str(ROOT/'Garnet')];import run_logged as ledger
+script=ROOT/'results/inspect-b4-prefill128-build-inputs.py';ledger.source_identity=lambda:{'scope':'Explicit readonly B4 native build input inventory; protected unrelated bodies excluded; no model/GPU or native compilation','owned_source_sha256':{script.name:hashlib.sha256(script.read_bytes()).hexdigest()}};os.chdir(ROOT/'Garnet')
+raise SystemExit(ledger.run([sys.executable,str(script)],ROOT/'results/b4-prefill128-build-input-inventory','correctness','Fresh restored baseline1374/61targets/runtime/SDK/checkpoints/CMake/34CUDAobject inventory against closed three-trial benchmark and235header proof; no mutation',[script,M/'evidence/o128-canonical-build-preparation.json',M/'evidence/fp8-policy-cache-production-python-preparation.json']))
+'''
+(W/'run-b4-prefill128-build-inventory.py').write_bytes(runner.encode());print('B4_BUILD_READONLY_INVENTORY_PREPARED')

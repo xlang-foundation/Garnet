@@ -1,0 +1,92 @@
+{
+  "status": "paired_before_after_B4_QK_M16_short_model_exact_pass",
+  "proofs": {
+    "before": {
+      "proof_sha256": "d206de4ab0acc44e66581be42af90204c083a6305f5606bf6f363c535bc55a9b",
+      "archive_sha256": "84a0f76b456e55686912a63306359cec5a62ffffefc9a00e77bb37cb43b26df5",
+      "exit_code": 1
+    },
+    "after": {
+      "proof_sha256": "8507a283757be743980795d4e13bf6b5b7d227091b106208bedd827ded9252eb",
+      "archive_sha256": "d69a06752cebd0160a98e0f7debc63a79c68c0e0e51ab3050bcfa661f57f0891",
+      "exit_code": 0
+    }
+  },
+  "unchanged_complete_B1_reference_snapshots": 16,
+  "rows": [
+    {
+      "physical_row": 0,
+      "input_key": "s3-text-c1-r0-greedy",
+      "before_different_state_components": 113,
+      "after_different_state_components": 0,
+      "before_first_different_state_component": {
+        "index": 14,
+        "layer": 7,
+        "role": 1,
+        "kind": "full_attention"
+      },
+      "after_first_different_state_component": null,
+      "before_first_different_generated_ID_index": null,
+      "after_first_different_generated_ID_index": null,
+      "all_8_generated_IDs_exact": true,
+      "all_7_consumed_decode_inputs_exact": true,
+      "first_same_input_prefix_length": 7
+    },
+    {
+      "physical_row": 1,
+      "input_key": "s3-image-c1-r0-greedy",
+      "before_different_state_components": 104,
+      "after_different_state_components": 0,
+      "before_first_different_state_component": {
+        "index": 24,
+        "layer": 12,
+        "role": 1,
+        "kind": "linear_attention"
+      },
+      "after_first_different_state_component": null,
+      "before_first_different_generated_ID_index": null,
+      "after_first_different_generated_ID_index": null,
+      "all_8_generated_IDs_exact": true,
+      "all_7_consumed_decode_inputs_exact": true,
+      "first_same_input_prefix_length": 7
+    },
+    {
+      "physical_row": 2,
+      "input_key": "red",
+      "before_different_state_components": 128,
+      "after_different_state_components": 0,
+      "before_first_different_state_component": {
+        "index": 0,
+        "layer": 0,
+        "role": 1,
+        "kind": "linear_attention"
+      },
+      "after_first_different_state_component": null,
+      "before_first_different_generated_ID_index": 5,
+      "after_first_different_generated_ID_index": null,
+      "all_8_generated_IDs_exact": true,
+      "all_7_consumed_decode_inputs_exact": true,
+      "first_same_input_prefix_length": 7
+    },
+    {
+      "physical_row": 3,
+      "input_key": "green",
+      "before_different_state_components": 128,
+      "after_different_state_components": 0,
+      "before_first_different_state_component": {
+        "index": 0,
+        "layer": 0,
+        "role": 1,
+        "kind": "linear_attention"
+      },
+      "after_first_different_state_component": null,
+      "before_first_different_generated_ID_index": 5,
+      "after_first_different_generated_ID_index": null,
+      "all_8_generated_IDs_exact": true,
+      "all_7_consumed_decode_inputs_exact": true,
+      "first_same_input_prefix_length": 7
+    }
+  ],
+  "scope": "Final decode state comparisons only. For rows with different consumed tokens, later layer0 state differences cannot localize a same-input arithmetic fault. First changed persistent component is not proof of the causal operation or actual internal activation. Prior source73 model job remainsFAILED; new source79 short model job passes original all128statecomponents/fullfinitevectors/8IDs/reset/prefill/final/reset equality for all4rows with actualGDN/V/QKroutes andpergeometrySDKconfig checks.16freshB1reference snapshots/rawvectors/IDs identical before comparing. This is short4case wholemodel admission only, not exhaustive/modelquality/full4K/MTP/HTTP/performance. No serving benchmark or2x result; originalfailedjobs neverpromoted. Next full4K8oracles/3groups exactgate beforeMTP/805/HTTP timing.",
+  "full4k_MTP_805_HTTP_or_performance_qualified": false
+}

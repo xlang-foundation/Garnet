@@ -1,0 +1,24 @@
+{
+  "status": "bf16_float_reference_probe_built_unrun",
+  "exit_code": 0,
+  "source_sha256": {
+    "src/cuda/qwen35_attention_core.cu": "3ad24bb00acc2f77a5b7258e4b7fecb248c682b3ad257d28af8bc8f336635165",
+    "src/cuda/qwen38_bf16_kv_overlay.cu": "ddafabdb6e5cd04a0beb5ee8c39526397cf9d26ac3c8deded2dc6bc63e37b2fc",
+    "src/cuda/qwen38_bf16_kv_float_reference.cu": "e6d538d062e96b96dd37c8ea451289bb264c8794112a97eac520455f7eb7c95c",
+    "src/cuda/qwen35_attention_core.cuh": "1a3997a15f4aa897f2bc69bf6a3afbef9a58f166fb094bfb858fac1b170e166f",
+    "src/cuda/qwen38_bf16_kv_overlay.cuh": "0e2a75461a4869107a694bf91bdbde278def41b689b86bc5b37182acdba4a372",
+    "src/cuda/qwen38_bf16_kv_commit.cuh": "82ffd816bbafcbc86f44d044d2ab5468ac400f617e5aa2b5ae107bb30b3ffb59",
+    "src/cuda/qwen38_bf16_kv_float_reference.cuh": "6ff092e0614e91f005101df65d9a902101ed9a0d4e830cd61e774eea0d227168",
+    "test2026/cuda/qwen38_5090/probe_bf16_kv_float_reference.cu": "7fe6e596f00993637aae5a7c320df824de0272de3d40d29d6e1f627c26525652"
+  },
+  "fixture_header_sha256": "fe42d2ea44d3b4fd99d503ddddaaf12407459d839a4e353a767e557c59a7b8e1",
+  "recipe_sha256": "ac82bdd65b7755db15f354996e0b6fd2e9f542702bfc33ccabf13445570dd707",
+  "compile_log_sha256": "fb7ef3fc2c8ca003d3771258196c6b21d79ff338d291bcf914c1b1da9af22ec4",
+  "executable_sha256": "61ab3582a6d8b308f71cae9fd0e9072bd374c8d070f583afe27b5920c750b1a8",
+  "object_sha256": {
+    "float_reference_legacy_core.obj": "e70da902ff3aa51f4c228b564136e257afba4f30a0d3ec3d123477fa85ba6519",
+    "float_reference_overlay.obj": "1ebe6ffc4ed99cb678d52081b52ab32c98c6fcec3cd616414c38695ccd2f3a32",
+    "float_reference_rounding.obj": "d4dd85f45f7902ca05c2b37dae777c7034d778ab6059b484ef5afe5e313a476e"
+  },
+  "scope": "Offline CUDA13.2/VS2022 sm120 compile/link only; no local GPU execution.42dense B4/T4/T32 cases, new dense reference vs packed BF16 overlay; full cache rounding/readonly/canary/negative/graph/roundtrip controls and raw reference FP64 witnesses remain unrun. No Garnet DLL build/deployment/model/timing/2x admission."
+}

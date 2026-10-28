@@ -1,0 +1,167 @@
+{
+  "files": [
+    {
+      "source": "modelopt_init_trace_cpu_stubs.cpp",
+      "target": "z128_reconstructed_plugin_init_stubs.cpp",
+      "source_sha256": "28ef521d2fd45da7b13b6afd365ae551d8ef1c6a4664af16532b019c80b3d349",
+      "target_sha256": "384cc074ef6ceae71c536171b8a9a04ff8d3731d9870b4f38469cc3076f5fb03",
+      "changes": [
+        {
+          "before": "factories{0},operators{0}",
+          "after": "factories{0},operators{0},newZ{0},oldZ{0}",
+          "count": 1
+        },
+        {
+          "before": "mode=value;factories=0;operators=0;",
+          "after": "mode=value;factories=0;operators=0;newZ=0;oldZ=0;",
+          "count": 1
+        },
+        {
+          "before": "int ModelOptInitCPUOperatorCalls(){return operators.load();}",
+          "after": "int ModelOptInitCPUOperatorCalls(){return operators.load();}\nint ModelOptInitCPUNewZCalls(){return newZ.load();}\nint ModelOptInitCPUOldZCalls(){return oldZ.load();}",
+          "count": 1
+        },
+        {
+          "before": "CreateModelOptFP8Z128Context(){return fake<ModelOptFP8Z128Context>();}",
+          "after": "CreateModelOptFP8Z128Context(){++oldZ;return fake<ModelOptFP8Z128Context>();}\nstd::shared_ptr<ModelOptFP8Z128Context> CreateModelOptFP8Z128ReconstructedContext(){++newZ;return fake<ModelOptFP8Z128Context>();}",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "probe_modelopt_init_trace_cpu.cpp",
+      "target": "probe_z128_reconstructed_plugin_init.cpp",
+      "source_sha256": "5c78c250b350f7797d5112cfdd8d8cf4437153ebbb9a10cab5703c44d343fbb3",
+      "target_sha256": "29b3b3337de8c1e50c0193ccda6dccfe0216e874ffc7b46656092786a983070f",
+      "changes": [
+        {
+          "before": "#include \"modelopt_fp8_z128_plugin.h\"",
+          "after": "#include \"modelopt_fp8_z128_plugin.h\"\n#include \"modelopt_fp8_z128_reconstructed_plugin.h\"",
+          "count": 1
+        },
+        {
+          "before": "int ModelOptInitCPUOperatorCalls();",
+          "after": "int ModelOptInitCPUOperatorCalls();int ModelOptInitCPUNewZCalls();int ModelOptInitCPUOldZCalls();",
+          "count": 1
+        },
+        {
+          "before": "    return OwnedPlugin(new ModelOptFP8Z128Plugin",
+          "after": "    if(route==4)return OwnedPlugin(new ModelOptFP8Z128ReconstructedPlugin(6144,5120,.5f,.25f));\n    return OwnedPlugin(new ModelOptFP8Z128Plugin",
+          "count": 1
+        },
+        {
+          "before": "route<4",
+          "after": "route<5",
+          "count": 1
+        },
+        {
+          "before": "            value->serialize(after.data());require(before==after,",
+          "after": "            require(ModelOptInitCPUNewZCalls()==(route==4?(mode==1?1:2):0),\"Reconstructed factory route changed\");\n            require(ModelOptInitCPUOldZCalls()==(route==3?(mode==1?1:2):0),\"Legacy factory route changed\");\n            value->serialize(after.data());require(before==after,",
+          "count": 1
+        },
+        {
+          "before": "calls==36&&factories==28&&successes==12&&failures==24&&clones==4",
+          "after": "calls==45&&factories==35&&successes==15&&failures==30&&clones==5",
+          "count": 1
+        },
+        {
+          "before": "actual_modelopt_plugin_initialize_cpu_controls_passed",
+          "after": "actual_reconstructed_plugin_initialize_cpu_controls_passed",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "modelopt_init_trace_contract.py",
+      "target": "z128_reconstructed_plugin_init_contract.py",
+      "source_sha256": "b08fba50003d919b0663fe8632d5de53eeae4630f6b51fc773f986d8df9fd72c",
+      "target_sha256": "9b6c140807e221270355f70cffbdf503f545ddb081f1ee10a69a517b8bf096f6",
+      "changes": [
+        {
+          "before": "ROUTES={'fp8','nvfp4','fp8_m128','fp8_z128'}",
+          "after": "ROUTES={'fp8','nvfp4','fp8_m128','fp8_z128','fp8_z128_reconstructed'}",
+          "count": 1
+        },
+        {
+          "before": "        elif row['route']=='fp8':",
+          "after": "        elif row['route']=='fp8_z128_reconstructed':assert (row['rows'],row['columns'],row['policy'])==(6144,5120,0x52313238)\n        elif row['route']=='fp8':",
+          "count": 1
+        },
+        {
+          "before": "actual_modelopt_plugin_initialize_cpu_controls_passed",
+          "after": "actual_reconstructed_plugin_initialize_cpu_controls_passed",
+          "count": 1
+        },
+        {
+          "before": "'actual_initialize_calls':36,'factory_calls':28,'successes':12,'failures':24,'cached_clone_initializations':4",
+          "after": "'actual_initialize_calls':45,'factory_calls':35,'successes':15,'failures':30,'cached_clone_initializations':5",
+          "count": 1
+        },
+        {
+          "before": "'initialize_calls':36,'factory_calls':28",
+          "after": "'initialize_calls':45,'factory_calls':35",
+          "count": 2
+        },
+        {
+          "before": "expected_calls=36",
+          "after": "expected_calls=45",
+          "count": 1
+        },
+        {
+          "before": "q['factory_calls']==28 and q['cached_context_initializations']==8 and q['exception_returns']==16 and len(q['failures'])==24",
+          "after": "q['factory_calls']==35 and q['cached_context_initializations']==10 and q['exception_returns']==20 and len(q['failures'])==30",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "run_modelopt_init_trace_cpu_contract.py",
+      "target": "run_z128_reconstructed_plugin_init_cpu.py",
+      "source_sha256": "b8000f9fc000662f41e0ad130fb90bcc3ad5174c79561e85a6405a9957136b9f",
+      "target_sha256": "cc5d41a7b50c680802bf6abb5a76c50d6bf3d16d8a0da5d039ca0ab7209e5bf4",
+      "changes": [
+        {
+          "before": "qwen38_5090.modelopt_init_trace_contract",
+          "after": "qwen38_5090.z128_reconstructed_plugin_init_contract",
+          "count": 1
+        },
+        {
+          "before": "actual_modelopt_initialize_CPU_policy_contracts_replayed",
+          "after": "actual_reconstructed_plugin_initialize_CPU_policy_contracts_replayed",
+          "count": 1
+        },
+        {
+          "before": "'actual_plugin_initialize_calls':360,'actual_factory_stub_calls':280",
+          "after": "'actual_plugin_initialize_calls':450,'actual_factory_stub_calls':350",
+          "count": 2
+        }
+      ]
+    },
+    {
+      "source": "build_modelopt_init_trace_cpu.bat",
+      "target": "build_z128_reconstructed_plugin_init_cpu.bat",
+      "source_sha256": "bba10e0cfccf7804903b7064273176553efe820860870ed9ff815df026225fdd",
+      "target_sha256": "cc87616ef906e65db02d41fa4817d78dd6bafe60ea2eea296313e22fb3863345",
+      "changes": [
+        {
+          "before": "\"%CANDIDATE%\\modelopt_fp8_z128_plugin.cpp\"",
+          "after": "\"%CANDIDATE%\\modelopt_fp8_z128_plugin.cpp\" \"%CANDIDATE%\\modelopt_fp8_z128_reconstructed_plugin.cpp\"",
+          "count": 1
+        },
+        {
+          "before": "modelopt_init_trace_cpu_stubs.cpp",
+          "after": "z128_reconstructed_plugin_init_stubs.cpp",
+          "count": 1
+        },
+        {
+          "before": "probe_modelopt_init_trace_cpu.cpp",
+          "after": "probe_z128_reconstructed_plugin_init.cpp",
+          "count": 1
+        }
+      ]
+    }
+  ],
+  "new_initialize_route": "fp8_z128_reconstructed",
+  "old_parser_unchanged": true,
+  "no_GPU_calls": true
+}

@@ -1,0 +1,4 @@
+from pathlib import Path
+import hashlib,json
+M=Path('D:/CantorAI/work/qwen38-5090/test2026/cuda/qwen38_5090');p=M/'o128_frontend_contract.py';raw=p.read_bytes();old=b"('invalid_Z','GARNET_FP8_GDN_Z128_CANONICAL','2'),('invalid_reconstruct','GARNET_FP8_GDN_Z128_RECONSTRUCT','2')),";new=old[:-1]+b'),';assert raw.count(old)==1
+e=M/'evidence';(e/'o128-frontend-contract-initial-syntax-error.py.txt').write_bytes(raw);fixed=raw.replace(old,new);p.write_bytes(fixed);sha=lambda b:hashlib.sha256(b).hexdigest();(e/'o128-frontend-contract-syntax-repair.json').write_bytes(json.dumps(dict(status='CPU_import_refused_missing_generator_parenthesis_before_any_remote_install_or_GPU',source_sha256=sha(raw),target_sha256=sha(fixed),old=old.decode(),new=new.decode(),count=1,numeric_or_native_guards_waived=False),indent=2).encode());print('Preserved initial CPU syntax failure and exact one-parenthesis correction')

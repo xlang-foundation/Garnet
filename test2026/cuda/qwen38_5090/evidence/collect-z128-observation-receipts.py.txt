@@ -1,0 +1,7 @@
+from pathlib import Path
+import hashlib,json,zipfile
+root=Path('D:/CantorAI/5090-study-20261023/results');names=('z128-factory-trace-native-install.json','z128-factory-trace-native-build-attempt1-remote-replay.log','z128-factory-trace-native-prepare.log','z128-factory-layer2-install.json','z128-factory-layer2-attempt1-remote-replay.log','z128-opaque-config-install.json','z128-opaque-config-install-attempt2.json','z128-opaque-config-audit-attempt1-remote-replay.log','z128-opaque-config-audit-attempt2-remote-replay.log');target=root/'z128-observation-deployment-receipts.zip';assert not target.exists();sha=lambda raw:hashlib.sha256(raw).hexdigest();raw={name:(root/name).read_bytes() for name in names}
+with zipfile.ZipFile(target,'x',zipfile.ZIP_DEFLATED) as z:
+    for name,value in raw.items():z.writestr(name,value)
+    z.writestr('receipt-manifest.json',json.dumps({'files':{name:sha(value) for name,value in raw.items()}},indent=2))
+print(json.dumps({'sha256':sha(target.read_bytes()),'bytes':target.stat().st_size,'files':len(raw)}))

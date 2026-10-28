@@ -1,0 +1,28 @@
+{
+  "package_sha256": "4e95b9dd16ac14e3f1ebcb2e43d824223f778da6bdc478a1e7183969cffbfc9d",
+  "bytes": 131528,
+  "files": {
+    "Garnet/test2026/cuda/qwen38_5090/run_fp8_policy_cache_diagnostic.py": {
+      "before_sha256": "dcc42525922b2610e64032cac0111397d006be45c054f41ec547e4eddb73f16d",
+      "after_sha256": "f4ff9eed864b7c2d1c2c11a07265274177c82f58d04daeda42c53a105e4b19cf"
+    },
+    "Garnet/test2026/cuda/qwen38_5090/evidence/fp8-policy-cache-production-preparation.json": {
+      "before_sha256": "5c37fcb942861da155bb34d1edce1d18892a42a0902a0823eff085ce147bb298",
+      "after_sha256": "aa1979840653cd61a1fcf6f24b2af0c8292fc69dc62c5cdb2c158bec5fc12583"
+    }
+  },
+  "changes": [
+    {
+      "old": "{**p['files'],**p['new_files'],**p['checkpoints']}",
+      "new": "{**p['files'],**p['new_files'],**p['checkpoints'],**p['audit_dependencies']}",
+      "count": 1
+    },
+    {
+      "old": "{**p['new_files'],**p['checkpoints']}",
+      "new": "{**p['new_files'],**p['checkpoints'],**p['audit_dependencies']}",
+      "count": 1
+    }
+  ],
+  "no_API_or_GPU_run_before_fix": true,
+  "no_native_or_numeric_gate_waiver": true
+}

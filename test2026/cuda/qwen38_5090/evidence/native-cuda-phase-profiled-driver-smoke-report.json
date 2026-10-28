@@ -1,0 +1,57 @@
+{
+  "status": "profiled_cpu_driver_ipc_verified",
+  "gpu_model_executed": false,
+  "cases": [
+    {
+      "argv": [
+        "D:\\CantorAI\\5090-study-20261023\\tools\\n26\\target-windows-x64\\nsys.exe",
+        "profile",
+        "--trace=cuda",
+        "--sample=none",
+        "--cpuctxsw=none",
+        "--cuda-graph-trace=node",
+        "--force-overwrite=false",
+        "--output=D:\\CantorAI\\5090-study-20261023\\results\\native-cuda-phase-profiled-driver-smoke-attempt1\\exit0\\driver-trace",
+        "cmd.exe",
+        "/d",
+        "/c",
+        "C:\\Python312\\python.exe -u D:\\CantorAI\\5090-study-20261023\\results\\native-cuda-phase-profiled-driver-smoke-attempt1\\cpu-profiled-driver.py D:\\CantorAI\\5090-study-20261023\\results\\native-cuda-phase-profiled-driver-smoke-attempt1\\exit0\\driver-proof.json 0"
+      ],
+      "requested_driver_exit_code": 0,
+      "actual_nsys_wrapper_exit_code": 0,
+      "driver_proof": {
+        "status": "profiled_cpu_driver_child_ipc_passed",
+        "cpu_only": true,
+        "requested_driver_exit_code": 0,
+        "child_exit_code": 0,
+        "utf8_echo_exact": true
+      }
+    },
+    {
+      "argv": [
+        "D:\\CantorAI\\5090-study-20261023\\tools\\n26\\target-windows-x64\\nsys.exe",
+        "profile",
+        "--trace=cuda",
+        "--sample=none",
+        "--cpuctxsw=none",
+        "--cuda-graph-trace=node",
+        "--force-overwrite=false",
+        "--output=D:\\CantorAI\\5090-study-20261023\\results\\native-cuda-phase-profiled-driver-smoke-attempt1\\exit7\\driver-trace",
+        "cmd.exe",
+        "/d",
+        "/c",
+        "C:\\Python312\\python.exe -u D:\\CantorAI\\5090-study-20261023\\results\\native-cuda-phase-profiled-driver-smoke-attempt1\\cpu-profiled-driver.py D:\\CantorAI\\5090-study-20261023\\results\\native-cuda-phase-profiled-driver-smoke-attempt1\\exit7\\driver-proof.json 7"
+      ],
+      "requested_driver_exit_code": 7,
+      "actual_nsys_wrapper_exit_code": 7,
+      "driver_proof": {
+        "status": "profiled_cpu_driver_child_ipc_passed",
+        "cpu_only": true,
+        "requested_driver_exit_code": 7,
+        "child_exit_code": 0,
+        "utf8_echo_exact": true
+      }
+    }
+  ],
+  "scope": "Actual CPU driver profiles one child and verifies its own normal stdin/stdout pipes. No dependency on live Nsight stdout, no GPU model or benchmark."
+}

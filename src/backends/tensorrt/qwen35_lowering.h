@@ -16,6 +16,11 @@
 #include "bf16_projection_plugin.h"
 #include "qwen35_delta_plugin.h"
 #include "qwen35_attention_core_plugin.h"
+#include "qwen35_canonical_kv_overlay_plugin.h"
+#include "qwen38_bf16_kv_overlay_plugin.h"
+#include "qwen38_bf16_low_batch_kv_overlay_plugin.h"
+#include "qwen38_bf16_prefill128_kv_overlay_plugin.h"
+#include "qwen38_bf16_kv_float_reference_plugin.h"
 #include "qwen35_f32_barrier_plugin.h"
 #include "qwen35_compact_kv_plugin.h"
 #include "qwen35_tree_plugin.h"
@@ -34,11 +39,13 @@ class Qwen35TRTOps {
     bool projectionWorkspace_=false;
     bool fixedRMS_=false;
     bool skipPhaseStateWrites_=false;
+    std::function<T*(T*,T*)> nativeProjection_;
     static T* checked(nvinfer1::ILayer* l) {
         if(!l||!l->getOutput(0))throw std::runtime_error("Qwen3.5 TensorRT layer creation failed");
         return l->getOutput(0);
     }
 public:
+    void SetNativeProjection(std::function<T*(T*,T*)> projection){nativeProjection_=std::move(projection);}
     void SetProjectionWorkspace(int bytes){
         if(bytes!=0&&bytes!=16384)throw std::invalid_argument("Qwen3.5 projection workspace requires0 or16384bytes");
         projectionWorkspace_=bytes!=0;
@@ -140,6 +147,7 @@ public:
         T* t=lookup(name);if(!t)throw std::invalid_argument("Qwen3.5 missing checkpoint weight: "+name);return t;
     }
     T* project(T* x,T* w) {
+        if(nativeProjection_)if(auto* result=nativeProjection_(x,w))return cast(result);
         auto xs=shape(x),ws=shape(w);
         if(ws.size()!=2||xs.back()!=ws[1])throw std::invalid_argument("Qwen3.5 projection shape mismatch");
         auto type=w->getType();
@@ -177,6 +185,13 @@ public:
     T* mlp(T* x,const std::string& prefix) {
         return project(mul(silu(project(x,weight(prefix+".gate_proj.weight"))),
             project(x,weight(prefix+".up_proj.weight"))),weight(prefix+".down_proj.weight"));
+    }
+    // Explicit component/study entry point. Existing decoder MLP remains unchanged.
+    T* joinedMLP(T* x,const std::string& prefix) {
+        auto* values=project(x,weight(prefix+".gate_up_proj.weight"));auto s=shape(values);
+        if(s.back()%2)throw std::invalid_argument("Joined gate/up output width must be even");
+        const int half=s.back()/2,axis=int(s.size())-1;
+        return project(mul(silu(slice(values,axis,0,half)),slice(values,axis,half,half)),weight(prefix+".down_proj.weight"));
     }
     T* maskRows(T* x,T* active) {
         auto s=shape(x);require(active,{s[0]});
@@ -237,11 +252,16 @@ public:
             return reshape(mul(reshape(input,{batch,kv,1,capacity,dim}),
                 constant(std::vector<float>(heads/kv,1),{1,1,heads/kv,1,1})),{batch,heads,capacity,dim});
         };
-        T* scores=mul(matmul(reshape(q,{batch,heads,1,dim}),repeat(nextK),true),scalar(1/std::sqrt(float(dim)),4));
+        // The verified27B profile has six query heads per KV head. Group
+        // queries inside each KV head instead of expanding both caches sixfold.
+        // Keep other profiles on their previously validated graph geometry.
+        const bool grouped27B=heads==24&&kv==4&&dim==256;
+        T* query=reshape(q,grouped27B?std::vector<int>{batch,kv,heads/kv,dim}:std::vector<int>{batch,heads,1,dim});
+        T* scores=mul(matmul(query,grouped27B?nextK:repeat(nextK),true),scalar(1/std::sqrt(float(dim)),4));
         auto* beyond=ew(range2,slots2,nvinfer1::ElementWiseOperation::kGREATER);
         auto* valid=unary(beyond,nvinfer1::UnaryOperation::kNOT);
         scores=select(reshape(valid,{batch,1,1,capacity}),scores,scalar(-1e30f,4));
-        T* context=reshape(matmul(softmax(scores,-1),repeat(nextV)),{batch,heads*dim});
+        T* context=reshape(matmul(softmax(scores,-1),grouped27B?nextV:repeat(nextV)),{batch,heads*dim});
         T* output=maskRows(mul(context,sigmoid(gate)),active);
         return cat({output,reshape(nextK,{batch,kv*capacity*dim}),reshape(nextV,{batch,kv*capacity*dim})},1);
     }
@@ -323,7 +343,7 @@ public:
         return cast(metadata,nvinfer1::DataType::kFLOAT);
     }
     T* linearDecoderChunk(T* x,T* history,T* state,T* active,const std::string& layer,
-        int kh,int vh,int kd,int vd,float eps,bool fusedDelta=false,bool retainInputs=false,bool register128=false,bool joinedInputs=false,std::vector<T*>* directParts=nullptr,T* treeMeta=nullptr,int treeCapacity=0,bool omitLinearState=false) {
+        int kh,int vh,int kd,int vd,float eps,bool fusedDelta=false,bool retainInputs=false,bool register128=false,bool joinedInputs=false,std::vector<T*>* directParts=nullptr,T* treeMeta=nullptr,int treeCapacity=0,bool omitLinearState=false,bool joinedMLPProjections=false,std::vector<T*>* diagnosticStages=nullptr) {
         if(omitLinearState&&(treeMeta||!fusedDelta||!retainInputs||!register128||kd!=128||vd!=128))throw std::invalid_argument("Replay-only outputs require retained native128 linear decode");
         if(treeMeta&&(!fusedDelta||!retainInputs||!register128))throw std::invalid_argument("Tree delta requires retained native128 arithmetic");
         if(retainInputs&&!fusedDelta)throw std::invalid_argument("Qwen3.5 retained projections require fused delta");
@@ -348,6 +368,8 @@ public:
             qkv=project(normalized,w(".in_proj_qkv.weight"));z=project(normalized,w(".in_proj_z.weight"));
             beta=project(normalized,w(".in_proj_b.weight"));a=project(normalized,w(".in_proj_a.weight"));
         }
+        // Optional diagnostic exports; normal lowering keeps the original output contract.
+        if(diagnosticStages)*diagnosticStages={x,normalized,qkv,z,beta,a};
         auto token=[&](T* input,int index){auto s=shape(input);return reshape(slice(input,1,index,1),{batch,s[2]});};
         std::vector<T*> outputs;T* coreOutput=nullptr;T* treeStatus=nullptr;
         if(fusedDelta){
@@ -374,10 +396,13 @@ public:
             outputs.push_back(reshape(core[0],{batch,1,vh*vd}));history=core[1];state=core[2];
         }
         if(!coreOutput)coreOutput=cat(outputs,1);
+        if(diagnosticStages)diagnosticStages->push_back(coreOutput);
         T* attention=project(coreOutput,w(".out_proj.weight"));
         attention=select(reshape(active,{batch,tokens,1}),attention,scalar(0,3));
         T* residual=add(x,attention);
-        T* output=add(residual,mlp(norm(residual,layer+".post_attention_layernorm.weight",eps),layer+".mlp"));
+        auto* mlpInput=norm(residual,layer+".post_attention_layernorm.weight",eps);
+        T* output=add(residual,joinedMLPProjections?joinedMLP(mlpInput,layer+".mlp"):mlp(mlpInput,layer+".mlp"));
+        if(diagnosticStages)diagnosticStages->insert(diagnosticStages->end(),{attention,residual,mlpInput,output});
         std::vector<T*> packed;
         if(treeMeta){
             packed={reshape(output,{batch,tokens*hidden}),reshape(cast(qkv),{batch,tokens*channels}),
@@ -418,11 +443,46 @@ public:
         return cat({reshape(result->getOutput(1),{batch,channels*kernel}),reshape(result->getOutput(2),{batch,vh*kd*vd})},1);
     }
     T* fullDecoderChunk(T* x,T* key,T* value,T* positions,T* slots,T* active,const std::string& layer,
-        int heads,int kv,int dim,int rotary,std::array<int,3> sections,float theta,float eps,bool fusedAttention=false,std::vector<T*>* directParts=nullptr,bool compactKV=false,T* treeMeta=nullptr,std::vector<T*>* diagnosticParts=nullptr) {
-        if(treeMeta&&(!fusedAttention||compactKV))throw std::invalid_argument("Tree attention requires native core and direct node KV publication");
-        auto xs=shape(x),ks=shape(key);
+        int heads,int kv,int dim,int rotary,std::array<int,3> sections,float theta,float eps,bool fusedAttention=false,std::vector<T*>* directParts=nullptr,bool compactKV=false,T* treeMeta=nullptr,std::vector<T*>* diagnosticParts=nullptr,bool joinedMLPProjections=false,std::vector<T*>* diagnosticStages=nullptr,
+        T* canonical=nullptr,const CanonicalKVOverlayConfig* overlay=nullptr,const BF16KVOverlayConfig* legacyBF16Overlay=nullptr,bool bf16FloatReference=false,const BF16KVLowBatchOverlayConfig* lowBatchOverlay=nullptr,const BF16KVPrefill128OverlayConfig* prefill128Overlay=nullptr) {
+        if(prefill128Overlay&&(legacyBF16Overlay||lowBatchOverlay))throw std::invalid_argument("T128 BF16 cache requires its separate exclusive profile");
+        const bool prefill128=prefill128Overlay!=nullptr;
+        if(legacyBF16Overlay&&lowBatchOverlay)throw std::invalid_argument("B1 and B4/B8 BF16 cache types are exclusive");
+        const bool lowBatch=lowBatchOverlay!=nullptr;
+        const BF16KVOverlayConfig lowBatchView=prefill128?BF16KVOverlayConfig{prefill128Overlay->attention,prefill128Overlay->state_width,prefill128Overlay->key_offset,prefill128Overlay->value_offset}:(lowBatch?BF16KVOverlayConfig{lowBatchOverlay->attention,lowBatchOverlay->state_width,lowBatchOverlay->key_offset,lowBatchOverlay->value_offset}:BF16KVOverlayConfig{});
+        const BF16KVOverlayConfig* bf16Overlay=(lowBatch||prefill128)?&lowBatchView:legacyBF16Overlay;
+        const bool bf16Delta=bf16Overlay!=nullptr;
+        if((lowBatch||prefill128)&&(theta!=1e7f||eps!=1e-6f))throw std::invalid_argument("B1 BF16 cache requires pinned RoPE theta and normalization epsilon");
+        const bool delta=canonical!=nullptr||overlay!=nullptr||bf16Delta;
+        if(treeMeta&&(delta||compactKV||!fusedAttention))throw std::invalid_argument("Tree attention excludes canonical or compact KV modes");
+        if(bf16FloatReference&&(delta||!key||!value||!fusedAttention||!joinedMLPProjections||diagnosticStages))
+            throw std::invalid_argument("BF16 float reference excludes compact state and requires fused joined mode");
+        if(bf16Delta&&(!canonical||overlay||!(prefill128?ValidBF16KVPrefill128OverlayConfig(*prefill128Overlay):(lowBatch?ValidBF16KVLowBatchOverlayConfig(*lowBatchOverlay):ValidBF16KVOverlayConfig(*bf16Overlay)))||!fusedAttention||!joinedMLPProjections||diagnosticStages))
+            throw std::invalid_argument("BF16 canonical KV requires its explicit shared joined B1 or B4/B8 cache type and T4/T32 profile");
+        if(delta&&!bf16Delta&&(!canonical||!overlay||!ValidCanonicalKVOverlayConfig(*overlay)||!fusedAttention||!joinedMLPProjections||diagnosticStages))
+            throw std::invalid_argument("Canonical KV requires qualified fused joined B4/T4 mode");
+        auto xs=shape(x),ks=bf16Delta?std::vector<int>{bf16Overlay->attention.batch,4,4096,256}:(delta?std::vector<int>{4,4,4096,256}:shape(key));
         if(xs.size()!=3||xs[1]>128||ks.size()!=4||kv<=0||dim<=0)throw std::invalid_argument("Qwen3.5 full chunk dimensions invalid");
         const int batch=xs[0],tokens=xs[1],hidden=xs[2],capacity=ks[2],width=kv*capacity*dim;
+        if(bf16FloatReference){
+            if(batch!=4||(tokens!=4&&tokens!=32)||hidden!=5120||heads!=24||kv!=4||dim!=256||capacity!=4096||rotary!=64||
+                sections!=std::array<int,3>{11,11,10}||theta!=1e7f||eps!=1e-6f||
+                key->getType()!=nvinfer1::DataType::kFLOAT||!value||value->getType()!=nvinfer1::DataType::kFLOAT)
+                throw std::invalid_argument("BF16 float reference requires pinned B4,T4/T32 full FP32 cache geometry");
+        }
+        if(bf16Delta){
+            if(xs!=std::vector<int>{bf16Overlay->attention.batch,bf16Overlay->attention.tokens,5120}||heads!=24||kv!=4||dim!=256||rotary!=64||sections!=std::array<int,3>{11,11,10}||
+                layer!="model.language_model.layers."+std::to_string(4*((bf16Overlay->key_offset-2482176)/6676480)+3)||key||value)
+                throw std::invalid_argument("BF16 canonical KV layer/geometry/binding mismatch");
+            require(canonical,{batch,int(bf16Overlay->state_width)});
+            if(canonical->getType()!=nvinfer1::DataType::kFLOAT)throw std::invalid_argument("BF16 canonical KV requires an FP32 carrier");
+        }else if(delta){
+            if(xs!=std::vector<int>{4,4,5120}||heads!=24||kv!=4||dim!=256||rotary!=64||sections!=std::array<int,3>{11,11,10}||
+                layer!="model.language_model.layers."+std::to_string(4*((overlay->key_offset-2482176)/10870784)+3)||key||value)
+                throw std::invalid_argument("Canonical KV layer/geometry/binding mismatch");
+            require(canonical,{batch,int(overlay->state_width)});
+            if(canonical->getType()!=nvinfer1::DataType::kFLOAT)throw std::invalid_argument("Canonical KV state must be FP32");
+        }
         require(active,{batch,tokens});require(positions,{batch,tokens,3});if(!treeMeta)require(slots,{batch,tokens});
         x=select(reshape(active,{batch,tokens,1}),x,scalar(0,3));
         T* normalized=norm(x,layer+".input_layernorm.weight",eps);std::vector<T*> outputs;
@@ -433,12 +493,13 @@ public:
         auto* qg=project(normalized,weight(prefix+".q_proj.weight"));
         auto* projectedK=project(normalized,weight(prefix+".k_proj.weight"));
         auto* projectedV=project(normalized,weight(prefix+".v_proj.weight"));
+        if(diagnosticStages)*diagnosticStages={x,normalized,qg,projectedK,projectedV};
         T* coreOutput=nullptr;T* treeKey=nullptr;T* treeValue=nullptr;T* treeStatus=nullptr;
         if(fusedAttention){
             if(heads<=0||heads%kv||rotary<=0||rotary>dim||rotary%2||
                 sections[0]<0||sections[1]<0||sections[2]<0||sections[0]+sections[1]+sections[2]!=rotary/2||!(theta>0)||!(eps>0))
                 throw std::invalid_argument("Qwen3.5 fused attention dimensions invalid");
-            require(key,{batch,kv,capacity,dim});require(value,shape(key));
+            if(!delta){require(key,{batch,kv,capacity,dim});require(value,shape(key));}
             auto* projectedQGate=reshape(qg,{batch,tokens,heads,2*dim});
             T* q=rms(slice(projectedQGate,-1,0,dim),weight(prefix+".q_norm.weight"),eps,true);
             T* gate=slice(projectedQGate,-1,dim,dim);
@@ -466,13 +527,42 @@ public:
                 auto* result=AddQwen35TreePlugin(n,TreeAttentionPluginConfig({batch,tokens,heads,kv,capacity,dim}),inputs,8,plugins);
                 coreOutput=reshape(result->getOutput(0),{batch,tokens,contextWidth});treeStatus=result->getOutput(1);
             }else{
-            if(!EnsureQwen35AttentionCorePluginRegistered())throw std::runtime_error("Qwen3.5 attention plugin registration failed");
-            auto* plugin=new Qwen35AttentionCorePlugin({batch,tokens,heads,kv,capacity,dim});plugins.push_back(plugin);
-            T* inputs[]={cast(rotate(q)),cast(rotate(k)),cast(reshape(projectedV,{batch,tokens,kv,dim})),
-                cast(gate),cast(key),cast(value),cast(slots),cast(active)};
-            auto* result=n.addPluginV2(inputs,8,*plugin);if(!result)throw std::runtime_error("Qwen3.5 fused attention construction failed");
-            coreOutput=reshape(result->getOutput(0),{batch,tokens,contextWidth});
-            key=result->getOutput(1);value=result->getOutput(2);
+            if(delta){
+                nvinfer1::IPluginV2DynamicExt* plugin=nullptr;
+                if(prefill128){
+                    if(!EnsureBF16KVPrefill128OverlayPluginRegistered())throw std::runtime_error("T128 BF16 canonical KV plugin registration failed");
+                    plugin=new BF16KVPrefill128OverlayPlugin(*prefill128Overlay);
+                }else if(lowBatch){
+                    if(!EnsureBF16KVLowBatchOverlayPluginRegistered())throw std::runtime_error("B1 BF16 canonical KV plugin registration failed");
+                    plugin=new BF16KVLowBatchOverlayPlugin(*lowBatchOverlay);
+                }else if(bf16Delta){
+                    if(!EnsureBF16KVOverlayPluginRegistered())throw std::runtime_error("BF16 canonical KV plugin registration failed");
+                    plugin=new BF16KVOverlayPlugin(*bf16Overlay);
+                }else{
+                    if(!EnsureCanonicalKVOverlayPluginRegistered())throw std::runtime_error("Canonical KV plugin registration failed");
+                    plugin=new CanonicalKVOverlayPlugin(*overlay);
+                }
+                plugins.push_back(plugin);
+                key=cast(rotate(k));value=cast(reshape(projectedV,{batch,tokens,kv,dim}));
+                T* inputs[]={cast(rotate(q)),key,value,cast(gate),canonical,cast(slots),cast(active)};
+                auto* result=n.addPluginV2(inputs,7,*plugin);if(!result)throw std::runtime_error("Canonical KV attention construction failed");
+                coreOutput=reshape(result->getOutput(0),{batch,tokens,contextWidth});
+            }else{
+                nvinfer1::IPluginV2DynamicExt* plugin=nullptr;
+                if(bf16FloatReference){
+                    if(!EnsureBF16KVFloatReferencePluginRegistered())throw std::runtime_error("BF16 float reference registration failed");
+                    plugin=new BF16KVFloatReferencePlugin({batch,tokens,heads,kv,capacity,dim});
+                }else{
+                    if(!EnsureQwen35AttentionCorePluginRegistered())throw std::runtime_error("Qwen3.5 attention plugin registration failed");
+                    plugin=new Qwen35AttentionCorePlugin({batch,tokens,heads,kv,capacity,dim});
+                }
+                plugins.push_back(plugin);
+                T* inputs[]={cast(rotate(q)),cast(rotate(k)),cast(reshape(projectedV,{batch,tokens,kv,dim})),
+                    cast(gate),cast(key),cast(value),cast(slots),cast(active)};
+                auto* result=n.addPluginV2(inputs,8,*plugin);if(!result)throw std::runtime_error("Qwen3.5 fused attention construction failed");
+                coreOutput=reshape(result->getOutput(0),{batch,tokens,contextWidth});
+                key=result->getOutput(1);value=result->getOutput(2);
+            }
             }
         }else for(int t=0;t<tokens;++t) {
             auto* packed=attentionProjected(
@@ -486,16 +576,19 @@ public:
             value=reshape(slice(packed,1,contextWidth+width,width),{batch,kv,capacity,dim});
         }
         if(!coreOutput)coreOutput=cat(outputs,1);
+        if(diagnosticStages)diagnosticStages->push_back(coreOutput);
         auto* attention=project(coreOutput,weight(prefix+".o_proj.weight"));
         attention=select(reshape(active,{batch,tokens,1}),attention,scalar(0,3));
         T* residual=add(x,attention);
-        T* output=add(residual,mlp(norm(residual,layer+".post_attention_layernorm.weight",eps),layer+".mlp"));
+        auto* mlpInput=norm(residual,layer+".post_attention_layernorm.weight",eps);
+        T* output=add(residual,joinedMLPProjections?joinedMLP(mlpInput,layer+".mlp"):mlp(mlpInput,layer+".mlp"));
+        if(diagnosticStages)diagnosticStages->insert(diagnosticStages->end(),{attention,residual,mlpInput,output});
         if(diagnosticParts)*diagnosticParts={normalized,qg,projectedK,projectedV,coreOutput,attention,residual,output};
         if(treeMeta){
             std::vector<T*> packed={reshape(output,{batch,tokens*hidden}),reshape(treeKey,{batch,tokens*kv*dim}),reshape(treeValue,{batch,tokens*kv*dim}),treeStatus};
             if(directParts){*directParts=packed;return nullptr;}return cat(packed,1);
         }
-        T* status=nullptr;int publishedWidth=width;
+        T* status=nullptr;int publishedWidth=delta?tokens*kv*dim:width;
         if(compactKV){
             if(!EnsureQwen35CompactKVPluginRegistered())throw std::runtime_error("Compact KV plugin registration failed");
             auto* plugin=new Qwen35CompactKVPlugin({batch,kv,capacity,tokens,dim});plugins.push_back(plugin);
@@ -601,15 +694,21 @@ public:
         return cat(flat,1);
     }
     T* vision(T* patches,int gh,int gw,int hidden,int heads,int depth,int patch,
-        int temporal,int channels,int merge,int positions,int outHidden,float theta) {
+        int temporal,int channels,int merge,int positions,int outHidden,float theta,int diagnosticFP32=0) {
         if(gh<=0||gw<=0||merge<=0||gh%merge||gw%merge||hidden<=0||heads<=0||hidden%heads||
             (hidden/heads)%4||depth<=0||patch<=0||temporal<=0||channels<=0||positions<=0||outHidden<=0||!(theta>0))
             throw std::invalid_argument("Qwen3.5 vision profile invalid");
         const int count=gh*gw,feature=channels*temporal*patch*patch,dim=hidden/heads,unit=merge*merge;
         auto ps=shape(patches);if(ps.size()!=3)throw std::invalid_argument("Qwen3.5 vision patches require rank three");
         int batch=ps[0];require(patches,{batch,count,feature});
+        if(diagnosticFP32<0||diagnosticFP32>1||
+            (diagnosticFP32&&(batch!=1||count>256||hidden!=1152||outHidden!=5120||depth>27)))
+            throw std::invalid_argument("FP32 vision diagnostic requires the bounded Qwen3.8 study profile");
         int side=int(std::sqrt(positions));if(side*side!=positions)throw std::invalid_argument("Qwen3.5 vision position table must be square");
-        auto w=[&](const std::string& name){return weight("model.visual."+name);};
+        auto w=[&](const std::string& name){
+            auto* value=weight("model.visual."+name);
+            return diagnosticFP32?cast(value,nvinfer1::DataType::kFLOAT):value;
+        };
         auto linear=[&](T* input,const std::string& prefix){return add(project(input,w(prefix+".weight")),cast(w(prefix+".bias")));};
         auto ln=[&](T* input,const std::string& prefix){
             auto s=shape(input);auto* centered=sub(input,reduce(input,-1,true,true));

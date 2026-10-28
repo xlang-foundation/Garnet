@@ -1,0 +1,53 @@
+from pathlib import Path
+import ast, copy, hashlib, json, zipfile
+W=Path(__file__).resolve().parent;O=W.parent/'outputs';R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';E=M/'evidence'
+sha=lambda b:hashlib.sha256(b).hexdigest()
+p=json.loads((E/'b4-k35-coordinate-trajectory-preparation.json').read_bytes())
+bundles={'reference':O/'b4-full4k-exact-attempt1-evidence.zip','candidate':W/'b4-k-m4x4-source.zip'}
+sources={}
+# Both exact candidate source archives are retained locally under work.
+for mode,path in [('reference',W/'o128-canonical-source.zip'),('candidate',W/'b4-k-m4x4-source.zip')]:
+    if not path.exists():
+        print('MISSING',str(path));continue
+    assert sha(path.read_bytes())==p[mode+'_bundle_sha256']
+    with zipfile.ZipFile(path) as z:
+        sources[mode]={n:z.read(n) for n in ('xModel/qwen35/vl_0_8b/cuda_packed_program.py','xModel/qwen35/vl_0_8b/cuda_packed_decoder.py')}
+assert set(sources)=={'reference','candidate'}
+def method(raw,cls,name):
+    c=next(n for n in ast.parse(raw).body if isinstance(n,ast.ClassDef) and n.name==cls)
+    return copy.deepcopy(next(n for n in c.body if isinstance(n,ast.FunctionDef) and n.name==name))
+observer=method((M/'decode_boundary_program.py').read_bytes(),'DecodeBoundaryProgram','_forward')
+# Remove only the three explicit observer operations; all original arithmetic,
+# state layouts, call arguments and commit payload construction must remain.
+removed=[]
+class Strip(ast.NodeTransformer):
+    def visit_Assign(self,n):
+        if any(isinstance(t,ast.Name) and t.id=='boundary_outputs' for t in n.targets):removed.append('initialize');return None
+        return self.generic_visit(n)
+    def visit_If(self,n):
+        if ast.unparse(n.test)=="layer['index'] in self.boundary_layers":removed.append('append');return None
+        return self.generic_visit(n)
+    def visit_BinOp(self,n):
+        if isinstance(n.op,ast.Add) and isinstance(n.right,ast.Name) and n.right.id=='boundary_outputs':removed.append('return_suffix');return self.visit(n.left)
+        return self.generic_visit(n)
+stripped=Strip().visit(observer)
+assert sorted(removed)==['append','initialize','return_suffix']
+for mode,files in sources.items():
+    original=method(files['xModel/qwen35/vl_0_8b/cuda_packed_program.py'],'CUDAPackedDecoderProgram','_forward')
+    assert ast.dump(original,include_attributes=False)==ast.dump(stripped,include_attributes=False),(mode,'arithmetic AST differs')
+    decoder=files['xModel/qwen35/vl_0_8b/cuda_packed_decoder.py']
+    node=method(decoder,'CUDAPackedDecoder','chunk_hidden')
+    text=ast.unparse(node)
+    assert 'active = active_tokens[t][row] if t < count else 0' in text
+    assert 'for t in range(size)' in text
+    assert 'step = CUDADecoder.step' in ast.unparse(ast.parse(decoder))
+    print(mode,'original arithmetic AST and row-major active prefix source verified')
+base=R/'xModel/qwen35/vl_0_8b/cuda_decoder.py'
+assert sha(base.read_bytes())==p['files']['Garnet/xModel/qwen35/vl_0_8b/cuda_decoder.py']
+step=ast.unparse(method(base.read_bytes(),'CUDADecoder','step'))
+hidden=ast.unparse(method(base.read_bytes(),'CUDADecoder','step_hidden'))
+assert 'self.chunk_tokens([tokens], [active], [[p] for p in positions], predict)' in step
+assert 'self.chunk_hidden([hidden], [active], [[positions[b]] for b in range(self.batch)], predict)' in hidden
+record={'status':'observer_original_forward_AST_exact_for_frozen_source60_and85','source_bundles':{mode:p[mode+'_bundle_sha256'] for mode in sources},'frozen_sources':{mode:{n:sha(b) for n,b in files.items()} for mode,files in sources.items()},'observer_sha256':sha((M/'decode_boundary_program.py').read_bytes()),'stripped_observer_operations':removed,'original_forward_arithmetic_AST_identical':True,'one_token_active_column':0,'step_alias_base_sha256':sha(base.read_bytes()),'active_prefix_source_audited':True,'GPU_primary_parity_still_required':True,'first_global_divergence_or_cause_proved':False}
+(O/'Garnet-Step45-Observer-Source-Audit.json').write_bytes(json.dumps(record,indent=2).encode())
+print(json.dumps(record,indent=2))

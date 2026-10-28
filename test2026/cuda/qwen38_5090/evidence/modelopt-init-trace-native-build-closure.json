@@ -1,0 +1,77 @@
+{
+  "status": "actual_plugin_trace_native_CPU_qualified_GPU_correctness_next",
+  "attempts": [
+    {
+      "attempt": 1,
+      "status": "modelopt_init_trace_native_build_failure_preserved",
+      "archive_sha256": "152d616458b28f71458eecc8ca39031bb0db35fc745361d3e1081c85ba82c791",
+      "archive_bytes": 641211,
+      "archive_members": 49,
+      "proof_pair_sha256": "35a2be986e284fe0c391543ad90e77ef4d51bf8c8c33c551ddc436dd61f35d39",
+      "CPU_tests": 81,
+      "remote_CPU_seconds": 3.133,
+      "candidate_library_sha256": null,
+      "source_runtime_SDK_checkpoint_cache_restored": true,
+      "native_compilation_started": false,
+      "GPU_execution_started": false,
+      "preserved_CPU_provenance_failure": true
+    },
+    {
+      "attempt": 2,
+      "status": "modelopt_init_trace_native_build_cpu_replayed",
+      "archive_sha256": "6e007e86fbe4d04469fe4ad26567b266f6b6cf6f52864b7778c81827e5e5b0f3",
+      "archive_bytes": 5162495,
+      "archive_members": 167,
+      "proof_pair_sha256": "5653932def2b6efd68540b1f6007a6bc9984b09a62e04d553aac01c49f350102",
+      "CPU_tests": 81,
+      "remote_CPU_seconds": 3.131,
+      "candidate_library_sha256": "d3f15b2e3e5bf4f73042883c620bf74805dcb75f3561c9b62ab01078c4c74516",
+      "source_runtime_SDK_checkpoint_cache_restored": true,
+      "native_sources": 31,
+      "unchanged_Python_sources": 7,
+      "source_pins": 1011,
+      "method_pins": 33,
+      "installed_pins": 1068,
+      "existing_targets_restored": 14,
+      "new_targets_removed": 24,
+      "actual_CPU_initialize_calls": 360,
+      "actual_CPU_factory_stub_calls": 280,
+      "unexpected_GPU_operator_calls": 0,
+      "CPU_policy_processes": 10,
+      "disabled_policy_processes_silent": 9,
+      "enabled_CPU_events": 72,
+      "CPU_cached_context_reuses": 8,
+      "CPU_standard_and_nonstandard_exception_returns": 16,
+      "CPU_simulated_failures": 24,
+      "CUDA_object_set": 34,
+      "added_CUDA_objects": [],
+      "changed_CUDA_objects": [
+        "build/garnet/CMakeFiles/garnet.dir/src/cuda/qwen38_bf16_kv_low_batch_overlay.cu.obj",
+        "build/garnet/CMakeFiles/garnet.dir/src/cuda/qwen38_bf16_prefill128_attention.cu.obj",
+        "build/garnet/CMakeFiles/garnet.dir/src/cuda/qwen38_bf16_prefill128_commit.cu.obj"
+      ],
+      "full_four_CPP_trace_only_composition_verified": true,
+      "all_other_prior35_candidate_source_bytes_unchanged": true
+    }
+  ],
+  "candidate_library_sha256": "d3f15b2e3e5bf4f73042883c620bf74805dcb75f3561c9b62ab01078c4c74516",
+  "production_source_installed_locally": false,
+  "baseline_source_runtime_SDK_checkpoint_cache_restored": true,
+  "GPU_model_executed": false,
+  "GPU_initialization_cause_or_reliability_resolved": false,
+  "full_model_or_quality_or_performance_qualified": false,
+  "two_times_target_achieved": false,
+  "next_plan": {
+    "status": "actual_plugin_trace_native_CPU_qualified_GPU_correctness_next",
+    "steps": [
+      "Use saved DLL d3f15b2e3e5bf4f73042883c620bf74805dcb75f3561c9b62ab01078c4c74516 and exact native31/Python7 candidate38 source. Keep all earlier initialization and arithmetic failures immutable. CPU synthetic failures are not observed GPU failures; no root cause is identified yet.",
+      "Prepare a source/runtime/SDK/checkpoint-restoring layer2 observation with GARNET_MODELOPT_INIT_TRACE=1. Preserve current real common input, ordinary T32/T128 graph construction, three warmups/two repeats, full finite arrays and readonly/carried-state checks. Place stdout profile-boundary markers around each build so actual entry/exit events can be assigned to T32/T128.",
+      "Replay all actual trace begin/end records by ID/route/instance/shape/policy with complete pairing and original factory/context/return semantics. If construction fails, identify the actual failing plugin route and preserve its raw return/exception and the postfailure shadow-helper data separately. Add helper API/opaque instrumentation only at the identified real boundary; do not substitute an algorithm based on the shadow observer.",
+      "If trace-on construction succeeds, run a fresh trace-unset control, require silent trace output and byte-exact ordinary outputs/repeats across policies and the retained old T32 partial arrays. Do not infer initialization reliability from one success; T128 arithmetic and all full-model/quality gates remain separate.",
+      "After the controlled layer2 result, investigate the actual layer3 input/projection/cache boundary with same-profile ordinary-primary parity and linkage to retained full-model caches. Then unchanged six3968+128 ordinary/MTP state/vector/token gate, adapted805 quality and initialization qualification, matched HTTP repetitions/strongest feasible tuned MTP references/INT4/4B/concurrency. Overall2xdecodeANDthroughput/halfTTFTextra remain unmet."
+    ],
+    "GPU_initialization_cause_identified": false,
+    "full_model_or_quality_or_performance_qualified": false,
+    "two_times_target_achieved": false
+  }
+}

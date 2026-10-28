@@ -1,0 +1,18 @@
+
+{"id": "5a3d2f15ed944c44ae9ac93a2e1791c2", "kind": "correctness", "label": "Retain frozen original KeyError for missing current-archive fixture; model already terminal and restored", "argv": ["C:\\Python312\\python.exe", "D:\\CantorAI\\5090-study-20261023\\Garnet\\test2026\\cuda\\qwen38_5090\\verify_kv128_projection.py", "--proofs", "D:\\CantorAI\\5090-study-20261023\\results"]}
+Traceback (most recent call last):
+  File "D:\CantorAI\5090-study-20261023\Garnet\test2026\cuda\qwen38_5090\verify_kv128_projection.py", line 35, in <module>
+    if __name__=='__main__':raise SystemExit(main())
+                                             ^^^^^^
+  File "D:\CantorAI\5090-study-20261023\Garnet\test2026\cuda\qwen38_5090\verify_kv128_projection.py", line 23, in main
+    assert w['status']=='FA3_projection_witness_collected_needs_replay';r=doc(base+'native/report.json');assert r['candidate_library_sha256']==p['candidate_library_sha256'];fixture=z.read(P+'evidence/reconstructed-fa3-common-input.f32');assert sha(fixture)==p['common_input_sha256']
+                                                                                                                                                                                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Python312\Lib\zipfile\__init__.py", line 1567, in read
+    with self.open(name, "r", pwd) as fp:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Python312\Lib\zipfile\__init__.py", line 1604, in open
+    zinfo = self.getinfo(name)
+            ^^^^^^^^^^^^^^^^^^
+  File "C:\Python312\Lib\zipfile\__init__.py", line 1532, in getinfo
+    raise KeyError(
+KeyError: "There is no item named 'Garnet/test2026/cuda/qwen38_5090/evidence/reconstructed-fa3-common-input.f32' in the archive"

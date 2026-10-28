@@ -1,0 +1,41 @@
+{
+  "source": "decode35_operand_program.py",
+  "source_sha256": "8e7e1c1967bf721f0176d40838dd08031c0ca340997ea8e4eb9daf0196377d8d",
+  "class_source_sha256": "94d3243eb6c4d5eb13adfa4d0309cfe3ee2b4ac98ef76ef63919b83fb66f1830",
+  "target": "decode35_endpoint_program.py",
+  "target_sha256": "6327b60f48dfb9a4663826b6f4266b82077dc4047f05a0a5609674c3df72bd52",
+  "header": "\"\"\"Six final endpoint outputs over the unchanged seven-stage source86 hook.\n\nOmit only the pre-RoPE intermediate from final network outputs. This tests an\nobserver-perturbation hypothesis, not a diagnosed root cause or optimization.\nRequire ordinary primary/cache/timeline/all64-layer parity before interpretation.\n\"\"\"\nfrom .decode35_operand_program import (BoundedStep45BoundaryProgram,CUDAPackedDecoderProgram,T,Qwen35CUDAChunk,flat_concat,concat,packed_view,Qwen35Decode35CUDAChunk,OPERANDS as NATIVE_OPERANDS)\nOPERANDS=tuple((name,width) for name,width in NATIVE_OPERANDS if name!='K_normalized_pre_RoPE')\n\n",
+  "class_changes": [
+    {
+      "old": "Decode35OperandProgram",
+      "new": "Decode35EndpointProgram",
+      "count": 2
+    },
+    {
+      "old": "construct_with_decode35_operand_program",
+      "new": "construct_with_decode35_endpoint_program",
+      "count": 1
+    },
+    {
+      "old": "assert cursor-self.output_width==106496",
+      "new": "assert cursor-self.output_width==102400",
+      "count": 1
+    },
+    {
+      "old": "                    for _,width in OPERANDS:\n                        operand_outputs.append(packed_view(packed,cursor,width,[b,width]));cursor+=width",
+      "new": "                    for name,width in NATIVE_OPERANDS:\n                        if name!='K_normalized_pre_RoPE':operand_outputs.append(packed_view(packed,cursor,width,[b,width]))\n                        cursor+=width",
+      "count": 1
+    },
+    {
+      "old": "assert len(operand_outputs)==7",
+      "new": "assert len(operand_outputs)==6",
+      "count": 1
+    }
+  ],
+  "native_seven_stage_fusion_reused_unchanged": true,
+  "native_stage_words": 106496,
+  "final_selected_stage_words": 102400,
+  "new_native_guard_or_math_or_DLL_change": false,
+  "native_pruning_or_numerical_parity_unproved": true,
+  "GPU_model_unrun": true
+}

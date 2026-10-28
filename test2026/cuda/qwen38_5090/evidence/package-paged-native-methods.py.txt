@@ -1,0 +1,13 @@
+from pathlib import Path
+import hashlib,json,zipfile
+work=Path(__file__).resolve().parent;sha=lambda raw:hashlib.sha256(raw).hexdigest()
+plan=json.loads((work/'paged-prompt-native-component-upload-plan.json').read_bytes());files={}
+for row in plan['uploads']:
+    raw=Path(row['local']).read_bytes();assert sha(raw)==row['sha256'];files[row['target']]=raw
+assert len(files)==11
+target=work/'paged-prompt-native-methods.zip';assert not target.exists()
+with zipfile.ZipFile(target,'x',zipfile.ZIP_DEFLATED) as z:
+    for n,raw in files.items():z.writestr(n,raw)
+    z.writestr('install-manifest.json',json.dumps({'files':{n:sha(raw) for n,raw in files.items()},'scope':'Absent-only study methods/evidence after actual model closure. No baseline source, runtime, SDK, model or corpus replacement.'},indent=2))
+receipt={'status':'paged_prompt_native_method_bundle_prepared','bundle_sha256':sha(target.read_bytes()),'bytes':target.stat().st_size,'new_targets':11}
+(work/'paged-prompt-native-bundle-preparation.json').write_bytes(json.dumps(receipt,indent=2).encode());print(json.dumps(receipt))

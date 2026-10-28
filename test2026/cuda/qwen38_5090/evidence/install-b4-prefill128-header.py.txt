@@ -1,0 +1,14 @@
+from pathlib import Path
+import hashlib,json,sys,zipfile
+ROOT=Path('D:/CantorAI/5090-study-20261023');P='Garnet/test2026/cuda/qwen38_5090/';archive=ROOT/'results/b4-prefill128-header-deployment.zip';sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest();assert sha(archive)=='b6221c3f7a3a4f80950d81dd2478eece3ba01ca629e01a1b7f354b3f2e2e1925'
+sys.path[:0]=[str(ROOT/'Garnet'),str(ROOT/P)];from run_bf16_low_batch_native_build import idle
+idle();job='o128-http-benchmark-attempt1';q=json.loads((ROOT/'results'/(job+'-verified.json')).read_bytes());w=json.loads((ROOT/'results'/job/'workflow.json').read_bytes());assert q['exit_code']==0 and q['status']=='actual_O128_three_fixed4k_HTTP_trials_raw_stream_memory_and_IDs_replayed' and w['exit_code']==0 and w['cleanup_finished'] and w['baseline_source_restored'] and w['baseline_library_restored'] and sha(ROOT/'results'/(job+'-evidence.zip'))==q['archive_sha256']
+with zipfile.ZipFile(archive) as z:
+    m=json.loads(z.read('deployment-manifest.json'));assert z.testzip() is None and len(z.namelist())==len(set(z.namelist()))==len(m['files'])+1==14;p=json.loads(z.read(P+'evidence/b4-prefill128-header-preparation.json'));assert p['status']=='B4_header_CPU_controls_prepared_UNRUN'
+    assert sha(ROOT/'build/bin/garnet.dll')==p['baseline_library_sha256']
+    for n,h in p['compiler'].items():assert sha(Path(n))==h
+    for n,h in m['files'].items():
+        t=ROOT/n;raw=z.read(n);assert t.resolve().is_relative_to((ROOT/P).resolve()) and hashlib.sha256(raw).hexdigest()==h and (not t.exists() or t.read_bytes()==raw),('Preserve existing edit',n)
+    for n in m['files']:
+        t=ROOT/n;t.parent.mkdir(parents=True,exist_ok=True);t.write_bytes(z.read(n))
+out=ROOT/'results/b4-prefill128-header-install.json';assert not out.exists();out.write_bytes(json.dumps(dict(status='B4_header_CPU_methods_installed_no_Garnet_build_or_GPU_execution',deployment_sha256=sha(archive),files=m['files']),indent=2).encode());print(json.dumps(dict(status='B4_header_CPU_methods_installed',files=len(m['files']),GPU_requested=False)))

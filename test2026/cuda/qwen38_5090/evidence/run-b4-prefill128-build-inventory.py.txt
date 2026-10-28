@@ -1,0 +1,5 @@
+from pathlib import Path
+import hashlib,os,sys
+ROOT=Path('D:/CantorAI/5090-study-20261023');M=ROOT/'Garnet/test2026/cuda/qwen38_5090';sys.path[:0]=[str(M),str(ROOT/'Garnet')];import run_logged as ledger
+script=ROOT/'results/inspect-b4-prefill128-build-inputs.py';ledger.source_identity=lambda:{'scope':'Explicit readonly B4 native build input inventory; protected unrelated bodies excluded; no model/GPU or native compilation','owned_source_sha256':{script.name:hashlib.sha256(script.read_bytes()).hexdigest()}};os.chdir(ROOT/'Garnet')
+raise SystemExit(ledger.run([sys.executable,str(script)],ROOT/'results/b4-prefill128-build-input-inventory','correctness','Fresh restored baseline1374/61targets/runtime/SDK/checkpoints/CMake/34CUDAobject inventory against closed three-trial benchmark and235header proof; no mutation',[script,M/'evidence/o128-canonical-build-preparation.json',M/'evidence/fp8-policy-cache-production-python-preparation.json']))

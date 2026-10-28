@@ -1,0 +1,117 @@
+{
+  "status": "private_native_CPU_owner_and_replay_prepared_unrun",
+  "rows": [
+    {
+      "source": "run_b4_qk_m16_cpu_v2.py",
+      "source_sha256": "9879c2dd214259ce9c6d718f02e34f7f772e276a8a0002f8ec21007e4905fb28",
+      "target": "run_b4_k_m4x4_cpu.py",
+      "target_sha256": "90f44623a1746fa598e182eb87fbb49720487c8dc3113f89fd9818cae13999bd",
+      "changes": [
+        {
+          "old": "qk_m16",
+          "new": "k_m4x4",
+          "count": 5
+        },
+        {
+          "old": "qk-m16",
+          "new": "k-m4x4",
+          "count": 2
+        },
+        {
+          "old": "QK_M16",
+          "new": "K_M4X4",
+          "count": 2
+        },
+        {
+          "old": "len(old)==73 and len(candidate)==79",
+          "new": "len(old)==79 and len(candidate)==85",
+          "count": 1
+        },
+        {
+          "old": "Five immutable79-source/failed-lineage/corruption controls",
+          "new": "Five immutable85-source/failed-lineage/corruption controls",
+          "count": 1
+        },
+        {
+          "old": "Actual Q/K factory;406CPU trace/config/API/state/workspace/unsupported/geometry/cache-isolation/runtime-guard faults",
+          "new": "Actual K four-M4 factory;232CPU trace/config/API/state/workspace/unsupported/geometry/cache-isolation/runtime guards plus pointer/scalar/stream/opaque/firstfailure faults",
+          "count": 1
+        },
+        {
+          "old": "b4-k-m4x4-cpu-v2-preparation.json",
+          "new": "b4-k-m4x4-cpu-preparation.json",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "verify_b4_qk_m16_cpu_v2.py",
+      "source_sha256": "a8835e9ee795264b99f4f6d9a3e633cae9d988f4faf926d3c834689d0ee9f1fb",
+      "target": "verify_b4_k_m4x4_cpu.py",
+      "target_sha256": "0cb0cdd4d3aa51f6d3ee3d07a714b21180cb613b64acbca51fd9772c47e582f9",
+      "changes": [
+        {
+          "old": "qk_m16",
+          "new": "k_m4x4",
+          "count": 6
+        },
+        {
+          "old": "qk-m16",
+          "new": "k-m4x4",
+          "count": 2
+        },
+        {
+          "old": "QK_M16",
+          "new": "K_M4X4",
+          "count": 6
+        },
+        {
+          "old": "b4-k-m4x4-cpu-v2-preparation.json",
+          "new": "b4-k-m4x4-cpu-preparation.json",
+          "count": 1
+        },
+        {
+          "old": "verify_b4_k_m4x4_cpu_v2.py",
+          "new": "verify_b4_k_m4x4_cpu.py",
+          "count": 1
+        },
+        {
+          "old": "len(candidate)==79",
+          "new": "len(candidate)==85",
+          "count": 1
+        },
+        {
+          "old": "))==79",
+          "new": "))==85",
+          "count": 1
+        },
+        {
+          "old": "cases=1248,selected=32,rejected=1216",
+          "new": "cases=1209,selected=16,rejected=1193",
+          "count": 1
+        },
+        {
+          "old": "==406",
+          "new": "==232",
+          "count": 1
+        },
+        {
+          "old": "==94",
+          "new": "==105",
+          "count": 1
+        },
+        {
+          "old": "factory_count=406",
+          "new": "factory_count=232",
+          "count": 1
+        },
+        {
+          "old": "wire_rejections=92,constructor_rejections=48,descriptor_rejections=92,format_rejections=18,cross_wire_rejections=18,initialize_calls=14,factory_calls=10",
+          "new": "wire_rejections=49,constructor_rejections=25,descriptor_rejections=46,format_rejections=9,cross_wire_rejections=13,initialize_calls=7,factory_calls=5",
+          "count": 1
+        }
+      ]
+    }
+  ],
+  "candidate_model_or_performance_qualified": false
+}

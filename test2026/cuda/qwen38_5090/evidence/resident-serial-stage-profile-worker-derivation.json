@@ -1,0 +1,54 @@
+{
+  "source_file": "D:\\CantorAI\\work\\qwen38-5090\\test2026\\cuda\\qwen38_5090\\native_b4_resident_serial_http_worker.py",
+  "source_sha256": "9c6e25155366813ad9e8a489d506b2e10d24fc20c5b1293aac9b7c7d99b4e4e9",
+  "draft_sha256": "734a28993616ba9cc53594c0909e33b1a2acbba624cb36d4209e01422f6f0a9f",
+  "changes": [
+    {
+      "old": "Candidate B4 resident controls and serial graph reuse; fresh correctness/performance admission required.",
+      "new": "Diagnostic B4 resident/serial host intervals, including instrumentation; not CUDA kernel timings or clean throughput.",
+      "count": 1
+    },
+    {
+      "old": "from test2026.cuda.qwen38_5090.b4_mtp_public_stream import PublicBatchStream",
+      "new": "from test2026.cuda.qwen38_5090.b4_mtp_public_stream import PublicBatchStream\nfrom test2026.cuda.qwen38_5090.native_stage_timing import StageRecorder\nfrom test2026.cuda.qwen38_5090.native_stage_attachment import StageAttachment",
+      "count": 1
+    },
+    {
+      "old": "decoder=vision=session=None",
+      "new": "decoder=vision=session=attachment=None\nrecorder=StageRecorder(emit)",
+      "count": 1
+    },
+    {
+      "old": "    memory=session.memory_info();",
+      "new": "    attachment=StageAttachment(session,recorder)\n    memory=session.memory_info();",
+      "count": 1
+    },
+    {
+      "old": "              backend_policy_correctness_or_performance_qualified=False))",
+      "new": "              backend_policy_correctness_or_performance_qualified=False,stage_profile=True,\n              profile_unit=\"physical_group_with_first_real_request_ID\",profile_clock_domain=\"native_worker\",\n              CUDA_kernel_elapsed_claimed=False,clean_throughput_result_claimed=False))",
+      "count": 1
+    },
+    {
+      "old": "            public=PublicBatchStream(jobs,[v['ids'] for v in prepared],stops,tokenizer.decode,emit,[v['image_hash'] for v in prepared],started)",
+      "new": "            public=PublicBatchStream(jobs,[v['ids'] for v in prepared],stops,tokenizer.decode,emit,[v['image_hash'] for v in prepared],started)\n            if profile_enabled:public.notify=recorder.wrap(public.notify,'token_delivery')",
+      "count": 1
+    },
+    {
+      "old": "finally:\n    if session is not None:session.close()",
+      "new": "finally:\n    if attachment is not None:attachment.close()\n    if session is not None:session.close()",
+      "count": 1
+    }
+  ],
+  "stage_helper_sha256": {
+    "native_stage_timing.py": "abecb7360961e6cffe084e696801427f1a30b41a19c374a65483a42044472a6d",
+    "native_stage_attachment.py": "60add79e8c73915b1dc0d53e173c1441e89f86ba1bf3349da981959203133eeb"
+  },
+  "model_constructor_arguments_AST_unchanged": true,
+  "existing_resident_serial_and_head_policies_unchanged": true,
+  "model_source_bundle_or_native_DLL_changed": false,
+  "profile_marker_default": false,
+  "physical_group_to_all_real_request_IDs_retained": true,
+  "scope": "Separate diagnostic only, never a clean benchmark. Host wall spans include instrumentation; async GPU work may be charged to a later read/wait, so nested spans cannot be added or interpreted as kernel costs. Native/bridge/client absolute clocks must not be subtracted. Reuse existing CPU-tested helpers, but actual embedded compatibility, output-ID equivalence and raw interval replay remain required. No active source mutation or GPU work.",
+  "syntax_checked_only": true,
+  "embedded_model_GPU_execution_unrun": true
+}

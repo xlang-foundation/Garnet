@@ -1,0 +1,37 @@
+from pathlib import Path
+import ast,hashlib,json,subprocess
+W=Path(__file__).resolve().parent;O=W.parent/'outputs';R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';E=M/'evidence'
+sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest();owned=[]
+def keep(name,raw):
+    p=E/name
+    if p.exists():assert p.read_bytes()==raw
+    else:p.write_bytes(raw)
+    owned.append(p)
+manifest=O/'qwen38-nvfp4-current-inputs.json';assert sha(manifest)=='ad10ddf8e44385a2fe3e08498bd5a04781835b473d335be1e622266912de4210'
+d=json.loads(manifest.read_bytes());assert len(d['files'])==18 and sum(v['bytes'] for v in d['file_stats'].values())==21944954979
+assert len([n for n in d['files'] if n.endswith('.safetensors')])==3
+assert d['posthoc_relative_to_parent'] and not d['historical_parent_shard_identity_retroactively_proved'] and not d['full_HF_LFS_OID_comparison_performed']
+for stem,folder in [('qwen38-current-inputs',O),('b4-http-protocol-cpu',W/'b4-http-protocol-cpu-ledger')]:
+    path=folder/(stem+'-commands.jsonl') if folder==O else folder/'commands.jsonl'
+    rows=[json.loads(n) for n in path.read_bytes().splitlines()];assert len(rows)==2 and rows[-1]['exit_code']==0 and rows[0]['source']==rows[-1]['source_after']
+    for ext in ('jsonl','log'):
+        source=folder/(stem+'-commands.'+ext) if folder==O else folder/('commands.'+ext)
+        keep(stem+'-commands.'+ext,source.read_bytes())
+    if folder!=O:
+        assert b'Ran 8 tests' in (folder/'commands.log').read_bytes()
+        for n,h in rows[0]['source']['owned_source_sha256'].items():assert sha(M/n)==h
+keep(manifest.name,manifest.read_bytes())
+for n in ('collect-qwen38-current-inputs.py','run-qwen38-current-inputs.py','prepare-b4-http-protocol.py','test-b4-http-protocol-cpu.py',Path(__file__).name):keep(n+'.txt',(W/n).read_bytes())
+for n in ('b4_serving_request.py','b4_rowwise_http_admission.py','native_b4_rowwise_http_worker.py','launch_b4_rowwise_http_worker.py','probe_b4_rowwise_http_quality.py','test_b4_http_protocol.py','native_b4_http_protocol_candidate/native_http_bridge.py','native_b4_http_protocol_candidate/native_worker_io.py'):
+    p=M/n;ast.parse(p.read_bytes());owned.append(p)
+owned.append(E/'b4-http-protocol-derivation.json')
+keep('b4-http-input-preparation-scope.json',json.dumps(dict(status='protocol_CPU8_passed_HTTP_and_GPU_unrun',full_current_input_manifest_sha256=sha(manifest),current_inference_files=18,current_weight_shards=3,current_inference_bytes=21944954979,historical_shard_identity_retroactively_proved=False,HF_LFS_comparison_performed=False,prospective_source_files=91,unchanged_model_source_files=89,native_DLL_change=False,root_bridge_or_parser_changed=False,HTTP_or_performance_qualified=False,two_times_target_achieved=False),indent=2).encode())
+entry=b'\n\n2026-10-27: Prospective source91 B4 HTTP transport preparation: source89 model bytes and e843 DLL retained; two Python transport candidates align strict ignore_eos validation and permit an explicit16MiB joined frame, preserving the default2MiB bound. Eight source-bound CPU protocol controls pass; worker/launcher/805 collector are syntax checked only, actual HTTP and GPU deployment unrun. Full current inference-input manifest ad10ddf8e44385a2fe3e08498bd5a04781835b473d335be1e622266912de4210 records18 files/3 shards/21944954979bytes with streamedSHA256 and stable size/mtime. This is posthoc to previous model runs and does not retroactively attest historical shards or establish a fresh full HF LFS OID comparison. Future before/after checks will use all18 hashes. B4 HTTP correctness and throughput remain unmeasured; overall2x and halfTTFT unmet.\n'
+for n in ('docs/research/qwen38-5090-development-log.md','docs/research/qwen38-5090-implementation-task.md'):
+    p=R/n;assert b'Prospective source91 B4 HTTP transport preparation:' not in p.read_bytes()
+    with p.open('ab') as f:f.write(entry)
+    owned.append(p)
+paths=(W/'b4-padding-lifecycle-stage-paths.bin').read_bytes()+b''.join(p.relative_to(R).as_posix().encode()+b'\0' for p in owned)
+paths=b'\0'.join(dict.fromkeys(paths.rstrip(b'\0').split(b'\0')))+b'\0';(W/'b4-http-input-stage-paths.bin').write_bytes(paths)
+subprocess.run(['git','-c','core.autocrlf=false','add','--pathspec-from-file='+str(W/'b4-http-input-stage-paths.bin'),'--pathspec-file-nul'],cwd=R,check=True)
+print(json.dumps(dict(staged_paths=len(paths.rstrip(b'\0').split(b'\0')),manifest_sha256=sha(manifest),HTTP_performance_unrun=True)))

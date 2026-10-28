@@ -1,0 +1,91 @@
+{
+  "status": "compact_http_pilot_prepared_unrun",
+  "probe_derivation": [
+    [
+      "b4-host-joined-mtp-stream-attempt1-verified.json",
+      "kv-delta-stream-attempt1-verified.json",
+      1
+    ],
+    [
+      "proof['status'] == 'b4_host_joined_mtp_stream_replayed'",
+      "proof['status'] == 'compact_kv_delta_stream_replayed'",
+      1
+    ],
+    [
+      "serve-native-b4-host-joined-mtp-worker.bat",
+      "serve-native-kv-delta-worker.bat",
+      2
+    ],
+    [
+      "native_b4_host_joined_mtp_stream_worker.py",
+      "native_kv_delta_stream_worker.py",
+      1
+    ],
+    [
+      "    assert worker.ready_info['joined_mlp_projections']",
+      "    assert worker.ready_info['joined_mlp_projections'] and worker.ready_info['kv_delta_state'] and worker.ready_info['shared_output_storage']",
+      1
+    ],
+    [
+      "metadata = {'physical_batch': 4, 'joined_mlp_projections': True,",
+      "metadata = {'physical_batch': 4, 'joined_mlp_projections': True, 'kv_delta_state': True, 'shared_output_storage': True,",
+      1
+    ]
+  ],
+  "probe_sha256": "34f7b469c914dd3de8f3a5a5cc2158f44a3048e662b762063114d08a889648fd",
+  "launcher_sha256": "cee6ca563d534ad8324d2ab559803d74d2d0f6be6c1cc6d9cfedaaff157ce4e4",
+  "grouping_delay_ms": 10,
+  "physical_batch": 4,
+  "concurrency": [
+    1,
+    2,
+    4,
+    8
+  ],
+  "requests_per_cohort": 8,
+  "warmups": 2,
+  "max_tokens": 128,
+  "seed": 3,
+  "files": {
+    "native_batch_http_bridge.py": "a118cef3cdc04e4b09417beaa240b8659572d54406280441fd43f0d78f5ee190",
+    "native_http_bridge.py": "0279af2fbbabf03886be8d041ffe50c2e1f461a95166ebf6c20b717933249d5b",
+    "benchmark_stream.py": "d35d1a933c6207f24c743d3023f55e7e4645a5b685e4f1e70bf4e52dd34cbdc3",
+    "metrics.py": "8620e5f08c0bd5f05cc1cbb8982a6379fd944f195e7db1780a49c209e3e20871",
+    "compare_http_runs.py": "aec306c5d310b3faea03fc08552984ef119ea4421437d7c4d9a10030406785d3",
+    "native_worker_io.py": "763d61a0e7f34794bca269e4214fa03ff64b95b913778182e7c34fe40292dc84",
+    "probe_reference_http.py": "cf6b47de8de590d4a24f7c1ca53da5a476e930ce6946b0eb7e83bd31229c26d0"
+  },
+  "gpu_run": false,
+  "performance_admitted": false,
+  "scope": "Current matched short-prompt JPEG image-first binary-grid nonce/seed3, unchanged C1/2/4/8 quality/SSE/serialization/timing methods and10ms grouping. Only compact worker/proof/ready metadata selected. Requires compact stream replay before run; no assumed gain.",
+  "runner_sha256": "05f64a44479b30b5fd07fd70ec7541d0d82a479b9be451cf51af1948e256f133",
+  "retained_http_archive_sha256": "4e6c15913e9b27488f263d9ff5c913842917915770e7ee00a9ecb4c9d35471c3",
+  "newly_recorded_helper_sources": [
+    "probe_reference_http.py"
+  ],
+  "historical_source_gap": "The retained HTTP/reference archives omit probe_reference_http.py. Its current source is pinned here; exact request-image bytes against all retained reference bodies must be verified after the run.",
+  "verifier_retained_blocks": [
+    {
+      "begin": "    quality = doc(native+'quality.json')",
+      "end": "    prior_mtp = doc(",
+      "sha256": "7b5205d9a6f1d2c8393f6411b7ddae45acec5b29eda10d4b7033014045807609"
+    },
+    {
+      "begin": "    def final(path):",
+      "end": "    metadata = doc(native+'metadata.json')",
+      "sha256": "2090fee557f5c947d3a80565e2379d2defc25069b046da47ea1c2200db8e23e4"
+    },
+    {
+      "begin": "    references = []",
+      "end": "    events = [json.loads(line) for line in z.read(base+'ledger/commands.jsonl')",
+      "sha256": "b3dba129618ba7808c329b68cbf40f02f9feef0dc33c29333597f105993c6322"
+    }
+  ],
+  "method_sha256": {
+    "probe_kv_delta_http.py": "34f7b469c914dd3de8f3a5a5cc2158f44a3048e662b762063114d08a889648fd",
+    "test_kv_delta_http.bat": "cee6ca563d534ad8324d2ab559803d74d2d0f6be6c1cc6d9cfedaaff157ce4e4",
+    "run_kv_delta_http.py": "05f64a44479b30b5fd07fd70ec7541d0d82a479b9be451cf51af1948e256f133",
+    "archive_kv_delta_http.py": "a42b1b9d42b9294efbac37ad275576b9ff777b7c9708ba54bf1bc77aeeb1beb2",
+    "verify_kv_delta_http.py": "881358643a682ec0f8b8745c55e9e1266b4b8f0073218ff51530dc343721950c"
+  }
+}

@@ -1,0 +1,24 @@
+from pathlib import Path
+import hashlib,json
+W=Path(__file__).resolve().parent;R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';E=M/'evidence';sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest();owned=[];saved={}
+events=[json.loads(s) for s in (W/'native-stage-attachment-cpu-ledger/commands.jsonl').read_bytes().splitlines()];assert len(events)==4 and events[1]['exit_code']==1 and events[-1]['exit_code']==0
+assert events[-2]['source']['owned_source_sha256']==events[-1]['source_after']['owned_source_sha256']
+for n,h in events[-2]['source']['owned_source_sha256'].items():assert sha(R/n)==h
+assert b'Ran 12 tests' in (W/'native-stage-attachment-cpu-ledger/commands.log').read_bytes()
+def keep(n,b):
+    p=E/n;assert not p.exists();p.write_bytes(b);owned.append(p);saved[n]=sha(p)
+for n in ('native_stage_attachment.py','native_o128_stage_profile_worker.py','test_native_stage_attachment.py','evidence/native-o128-stage-profile-worker-derivation.json'):owned.append(M/n)
+for ext in ('log','jsonl'):keep('native-stage-attachment-cpu-commands.'+ext,(W/('native-stage-attachment-cpu-ledger/commands.'+ext)).read_bytes())
+for n in ('derive-native-stage-profile-worker.py','test-native-stage-attachment-cpu.py',Path(__file__).name):keep(n+'.txt',(W/n).read_bytes())
+keep('native-stage-attachment-cpu-preparation.json',json.dumps(dict(status='host_stage_attachment_12_CPU_controls_passed_native_unrun',CPU_controls=12,source_sha256=events[-2]['source']['owned_source_sha256'],retained_sha256=saved,initial_fixture_missing_batch_attribute_error_preserved=True,final_fixture_corrected_without_model_code_change=True,actual_speculative_prefill_method_exercised=True,embedded_native_compatibility_unrun=True,GPU_HTTP_profiling_unrun=True,model_outputs_or_performance_qualified=False),indent=2).encode())
+entry=('\n\n2026-10-27: Prepared optional host-stage timing attachment and private source60 O128 diagnostic worker.12 CPU controls pass, including actual speculative prefill method AST exercising temporary decoder.chunk_hidden binding and restoration, return/argument/exception identity, startup silence, nested phases, independent override preservation and lock release. '
+       'Initial test fixture omitted batch; its error and corrected passing rerun are both retained. Model code was not changed for that fixture correction. '
+       'Diagnostic worker is derived from retained qualified HTTP worker3430d9ad source bytes, adding request/input-preparation/token-delivery spans and Python call boundaries for reset, prefill, draft, target verification/commit/head, and program calls. Existing model arguments and output-ID checks preserved. '
+       'All intervals are host wall time including logging; graph calls may enqueue asynchronously, so no CUDA kernel elapsed claim or clean throughput measurement is allowed. Bridge/native absolute clocks must remain separate; nested spans must not be summed as independent costs. '
+       'Embedded native compatibility and actual GPU/HTTP diagnostic requests unrun. Helpers have not been deployed during the exclusive MTP model run. Native layer profiler remains separate and its first eligible enqueue bypasses CUDA graph replay; it cannot establish warm graph serving performance. '
+       'Next use controlled diagnostics with exact retained IDs, then run uninstrumented matched serving benchmarks after batch4 quality/protocol checks. No new speed claim or2x/halfTTFT admission.\n').encode()
+for n in ('docs/research/qwen38-5090-development-log.md','docs/research/qwen38-5090-implementation-task.md'):
+    p=R/n;before=p.read_bytes();assert b'Prepared optional host-stage timing attachment and private source60' not in before
+    with p.open('ab') as f:f.write(entry)
+    assert p.read_bytes()==before+entry;owned.append(p)
+(W/'native-stage-attachment-cpu-stage-paths.bin').write_bytes(b''.join(p.relative_to(R).as_posix().encode()+b'\0' for p in dict.fromkeys(owned)));print(json.dumps(dict(stage_paths=len(set(owned)),CPU=12,native_GPU_HTTP_unrun=True)))

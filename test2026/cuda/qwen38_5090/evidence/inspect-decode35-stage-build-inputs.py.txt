@@ -1,0 +1,30 @@
+"""Fresh remote read-only inventory for source86; no compilation or model work."""
+from pathlib import Path
+import hashlib,json,shutil,sys,zipfile
+ROOT=Path('D:/CantorAI/5090-study-20261023');M=ROOT/'Garnet/test2026/cuda/qwen38_5090';sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest();sys.path[:0]=[str(M),str(ROOT/'Garnet')]
+from run_bf16_low_batch_native_build import idle
+idle();seed_path=ROOT/'results/decode35-stage-build-seed.json';s=json.loads(seed_path.read_bytes())
+for n,h in {**s['base_files'],**s['checkpoints'],**s['cuda_objects_before']}.items():assert sha(ROOT/n)==h,('Current baseline drift',n)
+for n,h in s['runtime'].items():assert sha(ROOT/'build/bin'/n)==h
+for n,h in s['environment'].items():assert sha(Path(n))==h
+assert all('probe_native_external_prefix_batch.py' not in n for n in s['base_files'])
+for n,h in s['candidate_base'].items():
+    p=ROOT/'Garnet'/n;assert p.resolve().is_relative_to((ROOT/'Garnet').resolve()) and (sha(p) if p.exists() else None)==h,('Preserve overlay target',n)
+for job,row in s['closed_parents'].items():
+    proof=ROOT/'results'/(job+'-verified.json');q=json.loads(proof.read_bytes());archive=ROOT/'results'/(job+'-evidence.zip')
+    assert sha(proof)==row['proof_sha256'] and q['status']==row['status'] and sha(archive)==q['archive_sha256']==row['archive_sha256']
+    with zipfile.ZipFile(archive) as z:
+        mf=json.loads(z.read('evidence-manifest.json'))['files'];member=row['workflow_member'];raw=z.read(member)
+        assert hashlib.sha256(raw).hexdigest()==mf[member] and raw==(ROOT/'results'/job/'workflow.json').read_bytes();w=json.loads(raw)
+    assert type(w['exit_code']) is int and w['exit_code']==row['exit_code'] and w['cleanup_finished']
+cpu=json.loads((ROOT/'results/decode35-stage-profile-cpu-attempt1-verified.json').read_bytes())
+assert cpu['exit_code']==0 and cpu['baseline_unchanged'] and cpu['source_files']==86 and cpu['source_bundle_sha256']==s['source_bundle_sha256']
+assert cpu['native_contract']==dict(status='passed',new_valid=2,new_rejected=103,old_valid=2,old_rejected=2,failures=0,cases=109)
+assert cpu['source_sha256']['qwen38_decode35_stage_profile.h']==s['candidate_files']['src/backends/tensorrt/qwen38_decode35_stage_profile.h']
+cache=ROOT/'build/CMakeCache.txt';assert sha(cache)==s['cache_before_sha256']
+objects={p.relative_to(ROOT).as_posix():sha(p) for p in (ROOT/'build/garnet/CMakeFiles/garnet.dir').rglob('*.cu.obj')};assert len(objects)==34 and objects==s['cuda_objects_before']
+bundle=ROOT/'results/decode35-stage-source.zip';assert sha(bundle)==s['source_bundle_sha256']
+with zipfile.ZipFile(bundle) as z:assert len(z.namelist())==len(set(z.namelist()))==86 and {n:hashlib.sha256(z.read(n)).hexdigest() for n in z.namelist()}==s['candidate_files']
+assert not(ROOT/'results/decode35-stage-build-attempt1').exists() and not(ROOT/'build/bin/garnet-native-decode35-stage-attempt1.dll').exists() and shutil.disk_usage(ROOT).free>=12<<30
+result={**s,'status':'decode35_stage_native_build_inputs_verified_no_compilation_or_GPU','input_seed_sha256':sha(seed_path),'free_bytes':shutil.disk_usage(ROOT).free}
+target=ROOT/'results/decode35-stage-build-inputs.json';assert not target.exists();target.write_bytes(json.dumps(result,indent=2).encode());print(json.dumps({'status':result['status'],'sha256':sha(target),'base_files':len(s['base_files']),'targets':len(s['candidate_base']),'parents':len(s['closed_parents']),'free_GiB':result['free_bytes']/(1<<30)}))

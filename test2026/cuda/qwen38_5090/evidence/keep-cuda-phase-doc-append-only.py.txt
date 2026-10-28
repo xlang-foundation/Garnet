@@ -1,0 +1,16 @@
+from pathlib import Path
+import subprocess
+
+repo=Path('D:/CantorAI/work/qwen38-5090');work=Path(__file__).resolve().parent
+for name in ('qwen38-5090-development-log.md','qwen38-5090-implementation-task.md'):
+ relative='docs/research/'+name;path=repo/relative
+ before=subprocess.check_output(['git','show','1ac05f7f7:'+relative],cwd=repo)
+ current=path.read_bytes();normalized=current.replace(b'\r\n',b'\n');prefix=before.replace(b'\r\n',b'\n')
+ assert normalized.startswith(prefix)
+ suffix=normalized[len(prefix):]
+ assert suffix.startswith(b'\n\n### 2026-10-25') and b'current B1/full4K CUDA phase diagnosis prepared' in suffix
+ backup=work/(name+'.cuda-phase-initial-newline-churn')
+ assert not backup.exists();backup.write_bytes(current)
+ # Keep the pre-existing blob byte for byte; use LF for the appended section.
+ path.write_bytes(before+suffix)
+ print(name,'original_bytes',len(before),'appended_bytes',len(suffix))

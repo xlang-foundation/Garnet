@@ -1,0 +1,8 @@
+{
+  "status": "prospective_external_replay_correction_prepared_not_uploaded",
+  "original_verifier_sha256": "51451a54670a29625cd0279cec1a3c836f5badebaf1b0195bc72c00fc7cf4779",
+  "corrected_verifier_sha256": "0d5e52f7337282395670749357bf28f54a132d08b8d167130fd4e99e0b1e3a20",
+  "change_before": "   assert prefix['positions']==[[[p+t]*3 for t in range(4)] for p in (41,104,41,104)]\n   assert prefix['before']['slots']==[41,104,41,104] and prefix['committed']['slots']==[41,105,43,108]",
+  "change_after": "   config=doc('models/Qwen3.8-27B-NVFP4/config.json');lengths=[];next_positions=[]\n   for key in ('s3-text-c1-r0-greedy','s3-image-c1-r0-greedy')*2:\n    ids=doc('results/native-mtp3-http/'+key+'-response.json')['choices'][0]['prompt_token_ids']\n    lengths.append(len(ids))\n    if key=='s3-image-c1-r0-greedy':\n     image_id=config['image_token_id'];start=ids.index(image_id)\n     assert ids.count(image_id)==64 and ids[start:start+64]==[image_id]*64\n     # Independent fixed8x8 merged-grid cursor:64cache slots advance\n     # rotary THW coordinates by8, so cache length104 has next position48.\n     next_positions.append(len(ids)-64+8)\n    else:next_positions.append(len(ids))\n   assert prefix['positions']==[[[p+t]*3 for t in range(4)] for p in next_positions]\n   assert prefix['before']['slots']==lengths and prefix['committed']['slots']==[p+n for p,n in zip(lengths,counts)]",
+  "scope": "Correct cache-slot versus rotary-position confusion in prospective external replay. Original deployed verifier/preparation/probe/worker remain unchanged; require original worker terminal/archive before any corrected-verifier upload. Original archive and its verifier bytes remain immutable. No GPU/math/quality/performance admission."
+}

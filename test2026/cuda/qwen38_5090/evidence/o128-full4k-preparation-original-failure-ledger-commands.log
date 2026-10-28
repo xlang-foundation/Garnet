@@ -1,0 +1,7 @@
+
+{"id": "a48ea28bfeef4287a89ab608e6b64e68", "kind": "correctness", "label": "Preserve initial prep refusal: legacy sixcase proof lacks newer exit_code field; no source/GPU mutation", "argv": ["D:\\CantorAI\\Garnet\\.venv\\Scripts\\python.exe", "C:\\Users\\shaw9\\Documents\\Codex\\2026-10-23\\referenced-chatgpt-conversation-this-is-an\\work\\prepare-o128-full4k.py"]}
+Traceback (most recent call last):
+  File "C:\Users\shaw9\Documents\Codex\2026-10-23\referenced-chatgpt-conversation-this-is-an\work\prepare-o128-full4k.py", line 7, in <module>
+    blob=(O/(job+'-verified.json')).read_bytes();proof=json.loads(blob);assert proof['exit_code']==0 and sha((O/(job+'-evidence.zip')).read_bytes())==proof['archive_sha256'];parents[job]=dict(proof_sha256=sha(blob),archive_sha256=proof['archive_sha256'],status=proof['status'],exit_code=0)
+                                                                               ~~~~~^^^^^^^^^^^^^
+KeyError: 'exit_code'

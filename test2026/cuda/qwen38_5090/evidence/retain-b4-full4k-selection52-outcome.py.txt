@@ -1,0 +1,34 @@
+from pathlib import Path
+import hashlib,json,zipfile
+W=Path(__file__).resolve().parent;O=W.parent/'outputs';R=Path('D:/CantorAI/work/qwen38-5090');E=R/'test2026/cuda/qwen38_5090/evidence';JOB='b4-full4k-selection52-attempt1';sha=lambda b:hashlib.sha256(b).hexdigest();owned=[]
+def keep(name,raw):
+    p=E/name;assert not p.exists();p.write_bytes(raw);owned.append(p)
+with zipfile.ZipFile(W/'b4-full4k-selection52-closure-assets.zip') as z:
+    mf=json.loads(z.read('manifest.json'));assert z.testzip() is None
+    for n,h in mf['files'].items():assert sha(z.read(n))==h
+    proof=z.read('results/'+JOB+'-verified.json');assert proof==(O/(JOB+'-verified.json')).read_bytes();p=O/(JOB+'-remote-verified.json');assert not p.exists();p.write_bytes(proof)
+    for n in mf['files']:
+        if n.startswith('results/b4-full4k-selection52-postprocess/') or n.endswith('selection52-install.json'):keep('b4-full4k-selection52-closure-'+n.removeprefix('results/').replace('/','-'),z.read(n))
+    keep('b4-full4k-selection52-closure-manifest.json',json.dumps(dict(closure_sha256=sha((W/'b4-full4k-selection52-closure-assets.zip').read_bytes()),**mf),indent=2).encode())
+q=json.loads(proof);assert q['exit_code'] in (0,1) and q['diagnostic_completed']==(q['exit_code']==0) and not q['strict_full4k_admission_passed'] and not q['full4k_state_IDs_qualified'] and q['source_runtime_SDK_checkpoint_CMake_all34objects_restored'] and not q['MTP_805_HTTP_or_performance_qualified'] and not q['original_failed_job_promoted'];keep(JOB+'-verified.json',proof)
+with zipfile.ZipFile(O/(JOB+'-evidence.zip')) as z:
+    mf=json.loads(z.read('evidence-manifest.json'));assert sha((O/(JOB+'-evidence.zip')).read_bytes())==q['archive_sha256']
+    for n,h in mf['files'].items():assert sha(z.read(n))==h
+    w=json.loads(z.read('results/'+JOB+'/workflow.json'));assert w['cleanup_finished'] and w['build_artifacts_unchanged'] and len(w['source_before'])==1790
+    p=json.loads(z.read('Garnet/test2026/cuda/qwen38_5090/evidence/b4-full4k-selection52-preparation.json'));assert p['selection_from_original']['first_differing_ID_indices']==[118,120,52,60]
+    for n in mf['files']:
+        if n.startswith('results/'+JOB+'/') and n.endswith(('.json','.jsonl','.log')):keep(JOB+'-'+n.removeprefix('results/'+JOB+'/').replace('/','-'),z.read(n))
+    keep(JOB+'-archive-manifest.json',json.dumps(dict(archive_sha256=q['archive_sha256'],archive_bytes=(O/(JOB+'-evidence.zip')).stat().st_size,files=mf['files'],raw_vectors_images_and_source_bundles_in_immutable_archive_only=True),indent=2).encode())
+ob=q['observation']
+if q['diagnostic_completed']:
+    assert ob['all52_consumed_IDs_exact'] and ob['selected_key']==p['selected_key'] and ob['physical_row']==2
+    assert ob['checkpoints'][0]['step']==7 and ob['checkpoints'][0]['comparison']['all_exact'] and ob['checkpoints'][1]['step']==52
+    assert ob['token_selection_path_differs_with_exact_decoder_state']==(ob['step52_state_hidden_normalized_exact'] and ob['prediction_52_differs'])
+summary=dict(status=q['status'],diagnostic_completed=q['diagnostic_completed'],proof_sha256=sha(proof),archive_sha256=q['archive_sha256'],error=q['error'],phase_statuses=q['phase_statuses'],phase_errors=q['phase_errors'],selection_from_original=p['selection_from_original'],observation=ob,same_profile_parent=w.get('same_profile_parent'),step7_parent_parity=w.get('step7_parent_parity'),source_runtime_SDK_config_index_CMake_all34objects_baseline_restored=True,CPU_controls=33,original_full4k_admission_still_failed=True,MTP_805_HTTP_or_performance_qualified=False,two_times_target_achieved=False,scope='Oneaffectedmixedbatchrow, all52consumedtokens identical, differingID52 unconsumed. Complete128statecomponents/physical-logicalhash/finitehidden-normvectors atstep7/52. Exactdecoderstate withdifferentprediction isolates token-selectionpath, notuniqueinternalheadoperator. OtherB1step52states unobserved; no full4K/MTP/quality/HTTP/performanceadmission.')
+raw=json.dumps(summary,indent=2).encode();keep('b4-full4k-selection52-summary.json',raw);(O/'Garnet-B4-Full4K-Selection52-Progress.json').write_bytes(raw)
+for n in ('commands.log','commands.jsonl'):keep('b4-full4k-selection52-local-replay-'+n,(W/'b4-full4k-selection52-local-replay'/n).read_bytes())
+for name in ('replay-b4-full4k-selection52-local.py','retain-b4-full4k-selection52-outcome.py'):keep(name+'.txt',(W/name).read_bytes())
+text=('\r\n\r\n2026-10-27 selectedrow step52 diagnostic terminal: '+q['status']+', diagnostic_completed='+str(q['diagnostic_completed'])+', pairedremote/localproof '+sha(proof)+', rawarchive '+q['archive_sha256']+'.33CPU, unchangedsource60B1/source79B4 nativeDLLs/modelgraphs/weights/precision/head. FirstmixedbatchdifferingID52 row2selectedfromactualparentindices[118,120,52,60],3968prompt+53predictions;all52consumedIDs requiredidentical. See b4-full4k-selection52-summary.json for complete128componentphysical-logicalhash/fullfinitehidden-normalizedvectors after7and52, sameprofileparent53IDs/endpoints andwholecurrentB4step7parity. Observation='+json.dumps(ob,separators=(',',':'))+'. Exactstate+differentunconsumedID isolates token-selectionpath, notuniqueinternalheadoperator. OtherB1step52states unobserved. All1790ownedsource/runtime/SDK/config-index/CMake/all34/baselineDLL restored; ownedSSDnonces retiredafteridle. Original128IDfull4K FAILED; noMTP/quality/HTTP/perf/2xadmission.\r\n').encode()
+for n in ('docs/research/qwen38-5090-development-log.md','docs/research/qwen38-5090-implementation-task.md'):
+    target=R/n;target.write_bytes(target.read_bytes()+text);owned.append(target)
+(W/'b4-full4k-selection52-outcome-stage-paths.bin').write_bytes(b'\0'.join(p.relative_to(R).as_posix().encode() for p in owned)+b'\0');print(json.dumps(dict(files=len(owned),diagnostic_completed=q['diagnostic_completed'],token_selection_path_differs_with_exact_decoder_state=(ob.get('token_selection_path_differs_with_exact_decoder_state') if ob else None))))

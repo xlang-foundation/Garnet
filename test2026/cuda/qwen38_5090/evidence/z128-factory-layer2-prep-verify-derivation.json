@@ -1,0 +1,156 @@
+{
+  "status": "exact_collector_preparation_and_frozen_verifier_extension",
+  "files": [
+    {
+      "base": "prepare_modelopt_trace_layer2.py",
+      "target": "prepare_z128_factory_layer2.py",
+      "base_sha256": "2964eaf6bc4a6219086d84d8323821ba04b47c6abbc72ffd7c6d59ec94e6b0b3",
+      "target_sha256": "e9bef2e6fb7edf45db0df8549ff7758ddd66cd8189545c572c06d07a74fc42d6",
+      "changes": [
+        {
+          "before": "modelopt_trace_layer2",
+          "after": "z128_factory_layer2",
+          "count": 9
+        },
+        {
+          "before": "modelopt-trace-layer2",
+          "after": "z128-factory-layer2",
+          "count": 5
+        },
+        {
+          "before": "modelopt-init-trace-native-build-attempt2",
+          "after": "z128-factory-trace-native-build-attempt1",
+          "count": 1
+        },
+        {
+          "before": "modelopt-init-trace-native-build-preparation-attempt2.json",
+          "after": "z128-factory-trace-native-build-preparation.json",
+          "count": 3
+        },
+        {
+          "before": "modelopt_init_trace_native_build_cpu_replayed",
+          "after": "z128_factory_trace_native_build_cpu_replayed",
+          "count": 1
+        },
+        {
+          "before": "==38",
+          "after": "==39",
+          "count": 1
+        },
+        {
+          "before": "==83",
+          "after": "==88",
+          "count": 1
+        },
+        {
+          "before": "count':83",
+          "after": "count':88",
+          "count": 1
+        },
+        {
+          "before": "Native38 qualified default-off plugin init trace",
+          "after": "Native39 qualified default-off actual Z128 factory plus plugin init trace",
+          "count": 1
+        },
+        {
+          "before": "Restore14old/24new",
+          "after": "Restore14old/25new",
+          "count": 1
+        },
+        {
+          "before": "83CPU: retain81 composed native/model/cache/init controls plus2 real trace-profile and exact collection-source controls",
+          "after": "88CPU retain86 exact native/model/cache/factory controls plus2 actual stderr enclosing-plugin attribution/source controls",
+          "count": 1
+        },
+        {
+          "before": "No native/math changes versus qualified d3f15 DLL",
+          "after": "Only qualified real constructor trace derivative; no forward math/algorithm changes",
+          "count": 1
+        },
+        {
+          "before": "with explicit T32/T128 build boundary markers",
+          "after": "with native stderr constructor/API/guard events joined to enclosing plugin; Python stdout profile markers retained but not used as chronology",
+          "count": 1
+        },
+        {
+          "before": "Preserve failures and any actual initialize return1 route separately from postfailure separate-TU helper.",
+          "after": "Preserve actual constructor rejection guards/SDK statuses/full opaque choices linked to plugin initialize. No extra SDK queries. Keep postfailure separate-TU helper separate.",
+          "count": 1
+        },
+        {
+          "before": "'candidate_sources':38",
+          "after": "'candidate_sources':39",
+          "count": 1
+        },
+        {
+          "before": "'CPU_tests':83",
+          "after": "'CPU_tests':88",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "base": "verify_modelopt_trace_layer2.py",
+      "target": "verify_z128_factory_layer2.py",
+      "base_sha256": "58f51dcc91b4241ac7ea76793aa72e33a0d74546ecffd9ed663ec29bb2d83993",
+      "target_sha256": "0a2d0f3c2846f684108cb46680c4a89472fdf2c25c8cbb28d05a1935f2b45908",
+      "changes": [
+        {
+          "before": "verify_modelopt_trace_layer2.py",
+          "after": "verify_z128_factory_layer2.py",
+          "count": 1
+        },
+        {
+          "before": "modelopt-trace-layer2",
+          "after": "z128-factory-layer2",
+          "count": 2
+        },
+        {
+          "before": "from test2026.cuda.qwen38_5090.fp8_z128_context_audit import replay as audit_replay",
+          "after": "from test2026.cuda.qwen38_5090.fp8_z128_context_audit import replay as audit_replay\nfrom test2026.cuda.qwen38_5090.z128_factory_layer2 import joined_replay",
+          "count": 1
+        },
+        {
+          "before": "==38",
+          "after": "==39",
+          "count": 1
+        },
+        {
+          "before": "Ran 83 tests",
+          "after": "Ran 88 tests",
+          "count": 1
+        },
+        {
+          "before": "'modelopt_init_trace_contract.py','layer2_ordinary_replay.py'",
+          "after": "'modelopt_init_trace_contract.py','layer2_ordinary_replay.py','z128_factory_layer2.py','z128_factory_trace.py'",
+          "count": 1
+        },
+        {
+          "before": "and r['trace_policy']==('1' if phase=='trace-on' else None)",
+          "after": "and r['trace_policy']==r['factory_trace_policy']==('1' if phase=='trace-on' else None)",
+          "count": 1
+        },
+        {
+          "before": "'postfailure_helper':None}",
+          "after": "'postfailure_helper':None,'actual_factory_trace':joined_replay(z.read(base+phase+'-ledger/commands.log'),phase=='trace-on')}",
+          "count": 1
+        },
+        {
+          "before": "        result={'status':",
+          "after": "        guard_failures=[failure for row in phases.values() for failure in row['actual_factory_trace'].get('failures',[])]\n        result={'actual_constructor_rejection_guards':guard_failures,'actual_constructor_rejection_guard_observed':bool(guard_failures),'status':",
+          "count": 1
+        },
+        {
+          "before": "'actual_modelopt_layer2_trace_and_controls_replayed'",
+          "after": "'actual_Z128_factory_layer2_trace_and_controls_replayed'",
+          "count": 1
+        },
+        {
+          "before": "'actual_modelopt_layer2_initialization_failure_preserved'",
+          "after": "'actual_Z128_factory_layer2_initialization_failure_preserved'",
+          "count": 1
+        }
+      ]
+    }
+  ]
+}

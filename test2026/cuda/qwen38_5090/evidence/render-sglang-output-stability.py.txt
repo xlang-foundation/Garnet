@@ -1,0 +1,28 @@
+from pathlib import Path
+import hashlib,json
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+import numpy as np
+w=Path(__file__).resolve().parent;o=w.parent/'outputs';p=o/'Garnet-SGLang-Output-Variation-Results.json';d=json.loads(p.read_bytes());assert d['status']=='sglang_output_variation_analysis_from_independently_replayed_archive' and d['independent_proofs_identical'];assert not d['performance_admitted']
+fig,axes=plt.subplots(2,2,figsize=(12.5,8.2));fig.patch.set_facecolor('#f7f9fc');colors=('#21866b','#d88738');series=[]
+for row,group in enumerate(('text','image')):
+ for col,kind in enumerate(('nonstream','stream')):
+  ax=axes[row,col];counts=[]
+  for c in (1,2,4,8):
+   rows=[r for r in d['by_phase'] if r['group']==group and r['kind']==kind and r['concurrency']==c and (r['phase']=='serial-after' if kind=='nonstream' and c==1 else (r['compared_ids']>0 if kind=='nonstream' else True))]
+   field='ids' if kind=='nonstream' else 'texts';n=sum(r['compared_'+field] for r in rows);matches=sum(r['matching_'+field] for r in rows);assert n==(8 if kind=='stream' or c==1 else 16);counts.append((matches,n))
+  x=np.arange(4);rates=[a/b*100 for a,b in counts];ax.bar(x,rates,.56,color=colors[0],label='Exact match');ax.bar(x,[100-v for v in rates],.56,bottom=rates,color=colors[1],label='Changed')
+  for i,(a,b) in enumerate(counts):ax.text(i,103,f'{a}/{b}',ha='center',va='bottom',fontsize=11,fontweight='bold',color='#243447')
+  ax.set_ylim(0,116);ax.set_yticks((0,25,50,75,100));ax.set_yticklabels(('0%','25%','50%','75%','100%'));ax.set_xticks(x,('C1','C2','C4','C8'));ax.set_xlabel('Concurrent clients');ax.set_ylabel('Exact matches to serial control');ax.set_title(('Nonstream token IDs' if kind=='nonstream' else 'Streamed text')+' · '+group.title(),loc='left',fontsize=13,pad=12);ax.spines[['top','right']].set_visible(False);ax.set_axisbelow(True);ax.grid(axis='y',alpha=.18)
+  series.append({'group':group,'kind':kind,'concurrency':[1,2,4,8],'matching_and_compared':counts})
+fig.suptitle('SGLang output stability under concurrency',x=.07,y=.98,ha='left',fontsize=20,fontweight='bold',color='#172a40')
+fig.text(.07,.925,'RTX 5090 · Qwen3.8-27B NVFP4 · SGLang 0.5.22 · 3,968 input + 128 output tokens',fontsize=11,color='#47566b')
+handles,labels=axes[0,0].get_legend_handles_labels();fig.legend(handles,labels,loc='upper right',bbox_to_anchor=(.95,.99),frameon=False,ncol=2)
+fig.text(.07,.064,'96/96 tested color/spatial replies passed semantic checks; 24/24 serial repeat outputs matched.',fontsize=11,color='#23384e')
+fig.text(.07,.033,'Scope: recorded output stability. Numerical cause and long-output semantic equivalence remain unproven.',fontsize=10,color='#526276')
+fig.subplots_adjust(left=.085,right=.96,top=.855,bottom=.17,hspace=.48,wspace=.27)
+for ext in ('png','svg'):
+ target=o/('Garnet-SGLang-Output-Stability.'+ext);assert not target.exists();fig.savefig(target,dpi=180,facecolor=fig.get_facecolor())
+target=o/'Garnet-SGLang-Output-Stability-Figure-Data.json';assert not target.exists();target.write_text(json.dumps({'status':'raw_replayed_output_stability_figure','source_analysis_sha256':hashlib.sha256(p.read_bytes()).hexdigest(),'archive_sha256':d['archive_sha256'],'renderer_sha256':hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),'series':series,'performance_admitted':False},indent=2),encoding='utf8')
+print(json.dumps({'status':'output_stability_figure_rendered_requires_visual_inspection','panels':4,'performance_metric_shown':False}))

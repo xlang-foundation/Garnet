@@ -1,0 +1,27 @@
+from pathlib import Path
+import hashlib,json,subprocess,sys,zipfile
+work=Path(__file__).resolve().parent;out=work.parent/'outputs';m=Path('D:/CantorAI/work/qwen38-5090/test2026/cuda/qwen38_5090')
+job='vllm-output-characterization-attempt1';sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+archive=out/(job+'-evidence.zip');remote=out/(job+'-remote-verified.json');q=json.loads(remote.read_bytes())
+assert sha(archive)==q['archive_sha256'] and q['status']=='vllm_output_characterization_replayed'
+log=out/(job+'-local-replay.log');argv=[sys.executable,str(m/'verify_vllm_output_characterization.py'),'--proofs',str(out),'--job',job,'--scratch',str(work)]
+with log.open('xb') as stream:code=subprocess.run(argv,stdout=stream,stderr=subprocess.STDOUT).returncode
+proof=out/(job+'-verified.json');assert code==0 and proof.read_bytes()==remote.read_bytes()
+raw=q['profiles'][0]['raw_characterization'];assert raw['actual_client_overlap_waves']==135 and raw['actual_nonstream_id_requests']==192 and raw['actual_full4k_streams']==64 and raw['actual_color_streams']==32
+restored=[v for group in raw['serial_after_comparisons'].values() for v in group.values()]
+assert len(restored)==24 and all(v['completion_ids_exact'] is v['text_exact'] is True for v in restored)
+with zipfile.ZipFile(archive) as z:
+    w=json.loads(z.read('results/'+job+'/workflow.json'))
+    assert w['exit_code']==0 and w['cleanup_finished'] is True and w['server_exit_code']==0
+    assert w['source_sha256']==w['source_after_sha256'] and w['runtime_dependencies']==w['runtime_dependencies_after']
+r={'status':'vllm_output_isolation_characterization_replayed_on_both_machines','archive_sha256':sha(archive),'archive_bytes':archive.stat().st_size,
+   'proof_pair_sha256':sha(proof),'files_verified':q['files_verified'],'local_replay':{'exit_code':code,'argv':argv,'log_sha256':sha(log)},
+   'requests':288,'overlap_waves':135,'nonstream_actual_ids':192,'full4k_streams':64,'color_streams':32,
+   'changed_nonstream_outputs':raw['changed_nonstream_outputs'],'changed_stream_texts':raw['changed_stream_texts'],
+   'serial_after_restored':24,'color_and_spatial_isolation_passed':True,'source_pins':len(w['source_sha256']),
+   'individual_streamed_ids_observed':False,'cause_or_harmlessness_proven':False,'broad_quality_qualified':False,
+   'performance_admitted':False,'two_times_target_achieved':False,
+   'scope':'Actual288requests, archive1768members bound by manifest;192nonstream IDs,64full4K/32color streams and135overlap waves independently replayed. Every concurrent variation retained; all24serial-after controls restore exactly and color/spatial checks pass. This permits preparing a separate observed-output benchmark with explicit variants, not relaxing or replacing the strict failure or claiming quality/numerical equivalence.'}
+(work/'vllm-characterization-local-receipt.json').write_bytes(json.dumps(r,indent=2).encode())
+(out/'Garnet-vLLM-Output-Isolation-Verified.json').write_bytes(json.dumps(r,indent=2).encode())
+print(json.dumps({k:r[k] for k in ('status','archive_sha256','proof_pair_sha256','changed_nonstream_outputs','changed_stream_texts','serial_after_restored')}))

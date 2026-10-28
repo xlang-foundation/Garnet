@@ -1,0 +1,26 @@
+from pathlib import Path
+import hashlib,json
+w=Path(__file__).resolve().parent
+m=Path('D:/CantorAI/work/qwen38-5090/test2026/cuda/qwen38_5090')
+p=json.loads((m/'evidence/mtp-prefill16-model-run-preparation.json').read_bytes())
+plan=json.loads((w/'mtp-prefill16-model-upload-plan.json').read_bytes())
+targets={row['target']:row['sha256'] for row in plan['uploads']}
+for row in plan['uploads']:
+ assert hashlib.sha256(Path(row['local']).read_bytes()).hexdigest()==row['sha256']
+out=w/'prefill16-model-preflight-input.json';assert not out.exists()
+out.write_text(json.dumps({'expected':targets,'existing':{k:v for k,v in p['files'].items() if k not in targets},'library_sha256':p['runtime_dependencies']['garnet.dll']},indent=2),encoding='utf8')
+for old,new in (('preflight-bf16-batch8-admission-v2.py','preflight-prefill16-model.py'),('package-bf16-batch8-admission-methods.py','package-prefill16-model-methods.py'),('install-bf16-batch8-admission-methods.py','install-prefill16-model-methods.py')):
+ text=(w/old).read_text().replace('bf16-batch8-admission','prefill16-model').replace('bf16_batch8_admission','prefill16_model')
+ if old.startswith('preflight'):
+  text=text.replace("a.add_argument('--closed-http-archive-sha256',required=True)","a.add_argument('--closed-http-archive-sha256',required=True);a.add_argument('--closed-native-archive-sha256',required=True)")
+  needle='idle();p=json.loads(';assert text.count(needle)==1
+  text=text.replace(needle,"from run_bf16_batch8_admission import closed_reference\nname='bf16-batch8-model-admission-attempt1';prior=root/'results'/(name+'-evidence.zip');assert sha(prior)==args.closed_native_archive_sha256\nwith zipfile.ZipFile(prior) as z:\n previous=json.loads(z.read('results/'+name+'/workflow.json'));assert previous==json.loads((root/'results'/name/'workflow.json').read_bytes())\n assert previous['exit_code']==0 and previous['cleanup_finished'] and previous['library_unchanged'] and previous['source_sha256']==previous['source_after_sha256'] and previous['runtime_dependencies']==previous['runtime_dependencies_after']\n proof=json.loads((root/'results'/(name+'-verified.json')).read_bytes());assert proof['status']=='bf16_batch8_internal_model_admission_replayed' and proof['archive_sha256']==args.closed_native_archive_sha256\n"+needle)
+ if old.startswith('package'):
+  text=text.replace('mtp-prefill16-model-upload-plan.json','mtp-prefill16-model-upload-plan.json')
+  text=text.replace("w/'prefill16-model-upload-plan.json'","w/'mtp-prefill16-model-upload-plan.json'")
+  text=text.replace('Only absent pinned B8 admission methods/evidence.','Only absent pinned explicit prefill16 model methods/module/evidence.')
+ if old.startswith('install'):
+  text=text.replace('assert resolved.is_relative_to(methods.resolve())',"assert resolved.is_relative_to(methods.resolve()) or resolved==(root/'Garnet/xModel/qwen35/vl_0_8b/cuda_mtp_prefill16_study.py').resolve()")
+  text=text.replace('Only absent reviewed reference methods/evidence.','Only absent pinned explicit prefill16 model methods/module/evidence.')
+ path=w/new;assert not path.exists();path.write_text(text,encoding='utf8')
+print(json.dumps({'status':'prefill16_model_deployment_prepared_not_executed','upload_targets':len(targets),'existing_inputs':len(p['files'])-len(set(p['files'])&set(targets)),'requires_successful_closed_b8_replay':True}))

@@ -1,0 +1,14 @@
+from pathlib import Path
+import hashlib,json,zipfile
+root=Path('D:/CantorAI/5090-study-20261023/results');sha=lambda raw:hashlib.sha256(raw).hexdigest();names=(
+ 'z128-reconstruct-construction-attempt1-verified.json','z128-reconstruct-construction-attempt1-remote-replay.log',
+ 'z128-reconstruct-construction-attempt2-quarantine-verified.json','z128-reconstruct-construction-attempt2-argument-analysis.json','z128-reconstruct-construction-attempt2-remote-replay.log','z128-reconstruct-construction-attempt2-remote-quarantine-replay.log',
+ 'z128-reconstruct-runtime-attempt1-failure-verified.json','z128-reconstruct-runtime-attempt1-remote-replay.log',
+ 'z128-reconstruct-hybrid-attempt1-verified.json','z128-reconstruct-hybrid-attempt1-remote-replay.log',
+ 'z128-reconstruct-install.json','z128-reconstruct-install-attempt2.json','z128-reconstruct-runtime-install.json','z128-reconstruct-hybrid-install.json',
+ 'z128-reconstruct-prepare.log','z128-reconstruct-prepare-attempt2.log','z128-reconstruct-runtime-prepare.log','z128-reconstruct-hybrid-prepare.log')
+raw={name:(root/name).read_bytes() for name in names};target=root/'z128-reconstruct-closure-assets.zip';assert not target.exists()
+with zipfile.ZipFile(target,'x',zipfile.ZIP_DEFLATED) as z:
+    for name,value in raw.items():z.writestr(name,value)
+    z.writestr('asset-manifest.json',json.dumps({'files':{name:sha(value) for name,value in raw.items()}},indent=2))
+print(json.dumps({'sha256':sha(target.read_bytes()),'bytes':target.stat().st_size,'files':len(raw)}))

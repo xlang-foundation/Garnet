@@ -1,0 +1,39 @@
+{
+  "status": "mmmu_http_quality_client_and_replay_prepared_actual_inference_unrun",
+  "recorded_utc": "2026-10-25T10:35:29.540627+00:00",
+  "branch": "qwen38-5090",
+  "cpu_tests_passed": 17,
+  "actual_corpus_requests_checked": 805,
+  "actual_source_rows": 900,
+  "adapted_wire_variants_checked": 7245,
+  "engines": [
+    "native",
+    "vllm",
+    "sglang"
+  ],
+  "declared_model_aliases": [
+    "qwen38-27b-nvfp4",
+    "qwen38-27b-int4",
+    "qwen35-4b-bf16"
+  ],
+  "manifest_sha256": "108d017c7db5be56c58f490c2a985dfbcde2e6ded0860a97e797cfac9cea1589",
+  "method_sha256": {
+    "mmmu_http_quality.py": "bd12b6c1947e6a7e55b864e8594117ea524bbb75158ac09bcb01f28982220aa8",
+    "collect_mmmu_http_quality.py": "0d85de72514b270b55b390230146690678f6954780eea3aa837ff0afd2139c62",
+    "verify_mmmu_http_quality.py": "79cecb6fc41c8e5e2a4e8ff8abca94c84537fcd786e2d7b4acbd78862e3e8b56",
+    "test_mmmu_http_quality.py": "53673ee75bc3d3846eda6456ad5fe36bbb388df63053322ecea5ec1fe9d3ff89",
+    "mmmu_quality_protocol.py": "50434e5a85f64249829184577a4415519d99cf3d3e133da91c8a67385e4d4b00",
+    "test_mmmu_quality_protocol.py": "a19c43f92dc59f86d4e1ab397bc642206dede4bb3435cf68d57f065d931b84e7"
+  },
+  "actual_http_requests_sent": 0,
+  "actual_model_responses": 0,
+  "gpu_used": false,
+  "server_started": false,
+  "runtime_prompt_ids_verified": false,
+  "runtime_image_grid_verified": false,
+  "runtime_image_preprocessing_verified": false,
+  "quality_promotion_admitted": false,
+  "performance_admitted": false,
+  "two_times_target_met": false,
+  "scope": "Prepared generic client and independent raw replay only. Sequential no-retry collection preserves canonical/adapted wire hashes+gzip bytes, raw HTTP/error bodies, actual prompt/completion IDs, usage/finish/parse failures and code hashes/UTC provenance in fixed caller-chosen attempt directory. Complete805cohort required for verified raw screening score; unparseable complete answers count incorrect, failures/incomplete cohorts get no admitted complete score. No tokenizer reconstruction or omitted failures. Server identity is declared and needs external launcher attestation; response64image-token equality does not prove image grid/pixels. Adapted single-image256px MC screening is not official900MMMU, broad/high-resolution quality promotion, actual4K or performance. Real execution awaits exclusively owned correctness-qualified servers; original model GPU job remains live."
+}

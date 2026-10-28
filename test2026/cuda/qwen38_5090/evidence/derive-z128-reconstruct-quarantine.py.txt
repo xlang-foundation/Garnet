@@ -1,0 +1,18 @@
+from pathlib import Path
+import hashlib,json
+m=Path('D:/CantorAI/work/qwen38-5090/test2026/cuda/qwen38_5090');source=m/'verify_z128_reconstruct_construction_attempt2.py';raw=source.read_bytes();original=raw;changes=[]
+def replace(before,after,count=1):
+    global raw
+    assert raw.count(before.encode())==count,(before[:90],raw.count(before.encode()));raw=raw.replace(before.encode(),after.encode());changes.append({'before':before,'after':after,'count':count})
+replace("sha(Path(__file__).read_bytes())==p['methods'][M+Path(__file__).name]","sha(Path(__file__).with_name('verify_z128_reconstruct_construction_attempt2.py').read_bytes())==p['methods'][M+'verify_z128_reconstruct_construction_attempt2.py']")
+before="path=bytes.fromhex(item['path_hex']).decode().replace('\\\\','/').lower();assert path=='d:/cantorai/5090-study-20261023/build/bin/'+item['name'].lower() and item['name'] in p['runtime']"
+after="""path=bytes.fromhex(item['path_hex']).decode().replace('\\\\','/').lower()
+                            if item['name']=='cublasLt64_13.dll':assert path=='d:/cantorai/5090-study-20261023/build/bin/cublaslt64_13.dll'
+                            else:
+                                assert item['name']=='cudart64_13.dll' and path=='d:/cantorai/5090-study-20261023/results/'+JOB+'/sdk-build/constructor.exe'
+                                # Preserve the rejected field; this checker establishes no active CUDA runtime identity.
+                                assert b'GetModuleFileNameA(GetModuleHandleA(names[i]),path,MAX_PATH)' in z.read(M+'probe_z128_reconstruct_sdk.cpp')"""
+replace(before,after)
+replace("'status':'separate_Z128_API_reconstruction_constructor_CPU_SDK_replayed' if passed else 'separate_Z128_API_reconstruction_constructor_failure_preserved'","'status':'separate_Z128_CPU_contracts_and_SDK_observations_runtime_metadata_unqualified' if passed else 'separate_Z128_partial_observation_failure_preserved','active_CUDA_runtime_identity_established':False,'original_frozen_checker_rejected_runtime_module_field':True,'CPU_and_SDK_observation_replay_only':True")
+replace("target=a.proofs/(JOB+'-verified.json')","target=a.proofs/(JOB+'-quarantine-verified.json')")
+target=m/'analyze_z128_reconstruct_quarantine.py';assert not target.exists();target.write_bytes(raw);sha=lambda raw:hashlib.sha256(raw).hexdigest();(m/'evidence/z128-reconstruct-quarantine-derivation.json').write_bytes(json.dumps({'status':'retain_all_CPU_controls_and_quarantine_unqualified_SDK_module_telemetry','base':source.name,'base_sha256':sha(original),'target':target.name,'target_sha256':sha(raw),'changes':changes,'scope':'Original frozen verifier remains rejected. Complete1400CPU and allSDKconstructor/config observations replayed, but wrong cudart module field is explicitly unqualified. This post-analysis does not qualify CUDA runtime identity or any model/numerical/performance behavior.'},indent=2).encode());print(json.dumps({'analysis_sha256':sha(raw)}))

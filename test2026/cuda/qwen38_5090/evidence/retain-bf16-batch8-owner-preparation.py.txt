@@ -1,0 +1,50 @@
+from pathlib import Path
+from datetime import datetime,timezone
+import ast,hashlib,json,shutil
+w=Path(__file__).resolve().parent;r=Path('D:/CantorAI/work/qwen38-5090');m=r/'test2026/cuda/qwen38_5090';e=m/'evidence';out=w.parent/'outputs';sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+def copy(a,b):
+ assert a.is_file() and (not b.exists() or a.read_bytes()==b.read_bytes())
+ if not b.exists():b.parent.mkdir(parents=True,exist_ok=True);shutil.copyfile(a,b)
+for name in ('bf16-batch8-owner-cpu-ledger','bf16-batch8-owner-replay-cpu-ledger'):
+ ledger=w/name;events=[json.loads(line) for line in (ledger/'commands.jsonl').read_bytes().splitlines()];assert len(events)==2 and events[-1]['exit_code']==0
+ for p in ledger.iterdir():copy(p,e/name/p.name)
+sources=('run_bf16_batch8_admission.py','prepare_bf16_batch8_admission_run.py','verify_bf16_batch8_admission.py','test_bf16_batch8_owner.py','test_bf16_batch8_replay.py')
+for name in sources:ast.parse((m/name).read_bytes(),filename=name)
+old=(m/'test_bf16_low_batch_model_fixed.bat').read_bytes();new=(m/'test_bf16_batch8_admission.bat').read_bytes();before=b'probe_bf16_low_batch_model_fixed.py D:/CantorAI/5090-study-20261023 %~3';after=b'probe_bf16_batch8_admission.py D:/CantorAI/5090-study-20261023';assert old.count(before)==1 and old.replace(before,after)==new
+copy(w/'bf16-batch8-admission-upload-plan.json',e/'bf16-batch8-admission-upload-plan.json')
+copy(Path(__file__),e/'retain-bf16-batch8-owner-preparation.py.txt')
+summary={'status':'bf16_batch8_outer_owner_and_raw_replayer_cpu_prepared_remote_unrun','recorded_utc':datetime.now(timezone.utc).isoformat(),'method_sha256':{n:sha(m/n) for n in sources+('test_bf16_batch8_admission.bat',)},'preparation_sha256':sha(e/'bf16-batch8-admission-run-preparation.json'),'actual_initial_cpu_tests_passed':24,'actual_final_cpu_tests_passed':28,'actual_final_cpu_test_report_seconds':3.099,'actual_python_syntax_files':len(sources),'launcher_derivation_byte_exact':True,'source_files_pinned':444,'upload_targets':20,'gpu_executed':False,'remote_installed':False,'memory_fit_proven':False,'external_b1_b4_numerical_equivalence_proven':False,'broad_quality_qualified':False,'performance_admitted':False,'two_times_target_achieved':False,'scope':'Offline only while original SGLang attempt2 runs. Existing B8 probe unchanged. Owner requires actual named closed reference archive/workflow, terminal owned server metadata and idle GPU/process guard before admission. Reuses bounded existing SSD engine cache and retires only new owned exact engine files. Raw replayer checks all nine actual rows/permutations/resets/components, finite full hidden/normalized bytes, frozen prompt/input image hashes and128 actual outputs; synthetic last-row/hash-consistent changed/nonfinite vector and reset/input mutation controls pass. No new remote observer/transfer/command/GPU invocation during reference timing. Actual B8 math/VRAM/model runs and independent replay, external B1/B4 equivalence and805screen, HTTP batching/MTP and speed remain required.'}
+for p in (e/'bf16-batch8-owner-replay-offline-preparation.json',out/'Garnet-Batch8-Admission-Preparation.json'):
+ assert not p.exists();p.write_text(json.dumps(summary,indent=2),encoding='utf8')
+entry='''
+
+### 2026-10-25: B8 outer owner/raw replayer prepared while SGLang runs
+
+No remote activity beyond original48577 SGLang attempt2 polls. Actual remote37
+CPU reference controls passed1.800s; readiness/boundary/screen/timing not yet
+observed at this offline preparation. Existing B8 probe remains unchanged.
+New outer owner requires a named reference archive with actual closed workflow,
+terminal server code and source/runtime unchanged, then idle GPU/process guard.
+It reuses existing bounded owned SSD engine cache, logs every new retired engine
+file hash/size and preserves older/unknown files. No new model/runtime/SDK build.
+
+B8 independent raw replayer binds unchanged frozen inputs/images and all9
+eight-row short/full3968+128 text/image cases, complete logical/component hashes,
+finite hidden/normalized bytes, inverse row mapping, reset-repeat and sampled
+construction/correctness memory. This is internal consistency only: it does not
+prove external B1/B4 model-math equivalence or broad quality/serving/speed.
+Actual28CPU controls pass3.099s, including4new synthetic mutation replay cases;
+initial24ownership/state controls passed0.222s. Missing/active/drifted reference,
+unowned/unknown cache files, last-row state/input/generated IDs, changed finite
+vectors with consistent hashes and nonfinite vectors remain rejected.
+
+Five Python sources parse; new launcher reverse-derives exactly to existing
+model launcher with only probe path/argument replacement. Preparation freezes
+444files and20upload targets against both actual closed native proof pairs.
+Remote deployment, GPUfit/model admission and independent raw replay are unrun;
+no GPU or timing evidence claimed. Next deploy only after official reference
+supervisor is authoritatively terminal.2x/halfTTFT and full scope remain open.
+'''
+for name in ('qwen38-5090-development-log.md','qwen38-5090-implementation-task.md'):
+ p=r/'docs/research'/name;raw=p.read_bytes();assert b'B8 outer owner/raw replayer prepared while SGLang runs' not in raw;p.write_bytes(raw+entry.replace('\n','\r\n').encode())
+print(json.dumps({'status':summary['status'],'actual_cpu_tests':28,'gpu_executed':False,'preparation_sha256':summary['preparation_sha256']}))

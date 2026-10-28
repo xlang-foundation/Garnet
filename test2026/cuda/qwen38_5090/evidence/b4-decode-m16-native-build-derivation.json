@@ -1,0 +1,101 @@
+{
+  "derivations": [
+    {
+      "source": "run_b4_prefill128_native_build.py",
+      "target": "run_b4_decode_m16_native_build.py",
+      "source_sha256": "c1eb0587b652a14a0ae3d4617a2af06eaac8751a44333d20f9de8d0fea035076",
+      "target_sha256": "d4fe8f2bbe32ad56a26df2190a8079fb844e521c840a96ac3ca75e9c68247ad8",
+      "changes": [
+        {
+          "old": "b4-prefill128-build",
+          "new": "b4-decode-m16-build",
+          "count": 7
+        },
+        {
+          "old": "garnet-native-b4-prefill128",
+          "new": "garnet-native-b4-decode-m16",
+          "count": 1
+        },
+        {
+          "old": "b4_prefill128_build_prepared_unrun",
+          "new": "b4_decode_m16_build_prepared_unrun",
+          "count": 1
+        },
+        {
+          "old": "b4_prefill128_native_built_CPU_qualified_model_unqualified",
+          "new": "b4_decode_m16_native_built_CPU_qualified_model_unqualified",
+          "count": 1
+        },
+        {
+          "old": "original60,expected,_=b4_sources();assert original60==qualified60 and len(expected)==61 and expected==candidate",
+          "new": "original60,prefill61,_=b4_sources();assert original60==qualified60 and len(prefill61)==61\n        from test2026.cuda.qwen38_5090.b4_decode_m16_source import sources as m16_sources\n        original61,expected,_=m16_sources();assert original61==prefill61 and len(expected)==67 and expected==candidate",
+          "count": 1
+        },
+        {
+          "old": "71current controls plus86historical assertions on exact qualified parent50; original tests unchanged, new61source eligibility composition and corruption checked independently",
+          "new": "74current controls plus86historical assertions on exact qualified parent50; original tests unchanged, new67source composition/corruption/actualSDK lineage checked independently; paired437profile/402factory/newwire contracts required parent proof",
+          "count": 1
+        },
+        {
+          "old": "from test2026.cuda.qwen38_5090.b4_prefill128_source import sources\n        _,expected,_=sources();assert candidate==expected",
+          "new": "from test2026.cuda.qwen38_5090.b4_decode_m16_source import sources\n        _,expected,_=sources();assert candidate==expected",
+          "count": 1
+        },
+        {
+          "old": "Release/MT/sm120 opt-in B4T32 flatM128 host eligibility; existing Q/O/KV/GDN plugin bodies/wires/quantizers/SDKcontext/CUDA source bytes unchanged; original three-object whitelist retained, all34hashes recorded; full model/SDK math still unqualified",
+          "new": "Release/MT/sm120 defaultoff physicalB4T4/M16 QKV/Z canonical SDK context/plugin/profile over exact61; all old plugin bodies/wires/quantizers/CUDA bytes unchanged. ActualSDK paired control and437profile/402factory/newwire CPU parent required. Original three-object whitelist retained, all34hashes recorded; new factory/wholemodel/quality/performance still unqualified",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "verify_b4_prefill128_native_build.py",
+      "target": "verify_b4_decode_m16_native_build.py",
+      "source_sha256": "df1b6c088a17320c688441380eecb2e68647ecfc99d15cdb522e69c035ed8a7b",
+      "target_sha256": "ef5b0018a5d671da90e6be860cabfa88623052b71bf1c8c3af5e8cad5e68cf89",
+      "changes": [
+        {
+          "old": "b4-prefill128-build",
+          "new": "b4-decode-m16-build",
+          "count": 2
+        },
+        {
+          "old": "b4-prefill128-native-build-derivation",
+          "new": "b4-decode-m16-native-build-derivation",
+          "count": 1
+        },
+        {
+          "old": "==61",
+          "new": "==67",
+          "count": 2
+        },
+        {
+          "old": "candidate_files=61",
+          "new": "candidate_files=67",
+          "count": 1
+        },
+        {
+          "old": "71",
+          "new": "74",
+          "count": 2
+        },
+        {
+          "old": "b4_prefill128_native",
+          "new": "b4_decode_m16_native",
+          "count": 3
+        },
+        {
+          "old": "        passed=w['exit_code']==0",
+          "new": "        cp=doc('results/b4-decode-m16-cpu-attempt1-verified.json');assert cp['exit_code']==0 and cp['status']=='B4T4_GDN_M16_actual_CPU_contracts_replayed' and cp['factory_fault_cases']==402 and cp['profile']['cases']==437 and cp['plugin']['GPU_operator_calls']==0\n        assert sha(z.read('results/b4-decode-m16-build-inputs.json'))==p['input_inventory_sha256']\n        passed=w['exit_code']==0",
+          "count": 1
+        },
+        {
+          "old": "original_all_Q_O_factory_wire_initialize_selector_tokenizer_controls_preserved=True",
+          "new": "original_all_Q_O_factory_wire_initialize_selector_tokenizer_controls_preserved=True,new_GDN_M16_CPU_contracts_parent_checked=True",
+          "count": 1
+        }
+      ]
+    }
+  ],
+  "scope": "Exact guarded derivative of original61build/replay; retainalloriginalnativeCPU/factory/wire/initialize/selector/tokenizer/restoration/threeobjectwhitelist gates; add67source chain,3Python sourcecontrols and paired402fault/437profile/newwire CPU parent"
+}

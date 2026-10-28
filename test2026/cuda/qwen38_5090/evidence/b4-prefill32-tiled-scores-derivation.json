@@ -1,0 +1,45 @@
+{
+  "status": "B4T32_tiled_score_component_source_prepared_native_unrun",
+  "baseline_source": "src/cuda/qwen38_bf16_kv_overlay.cu",
+  "baseline_sha256": "ddafabdb6e5cd04a0beb5ee8c39526397cf9d26ac3c8deded2dc6bc63e37b2fc",
+  "donor_source": "src/cuda/qwen38_bf16_prefill128_attention.cu",
+  "donor_sha256": "1b40f4c039e62e37049fe178753db4c40185f0a1faf787243032ef40c478a1ec",
+  "source_bundle_sha256": "4ccee24a9d58cd8297ea6a44632d54d3efd608fe323f686b12dcb56d9a179779",
+  "files": {
+    "src/cuda/qwen38_bf16_prefill32_tiled_scores.cu": "17b401e32054844ec29a912a679259b17b4fba01ea1b13d8552647607caa5efd",
+    "src/cuda/qwen38_bf16_prefill32_tiled_scores.cuh": "0c7dd68b95c6b3a011da27fee0a96dcbd50d69d7ddc201bae64946f9c4874c3e"
+  },
+  "ported_score_kernel_sha256": "651ca054a17dd07b55c5608b272d8a93102cfd65c5378f614dfcfa9dc7faf1fb",
+  "legacy_default_source_unchanged": true,
+  "existing_CMake_and_DDL_or_serving_factory_changed": false,
+  "normalization_context_BF16_read_dot_reduction_bodies_unchanged": true,
+  "profile": "B4 T32 Q24 KV4 D256 capacity4096 active-prefix overlay only",
+  "changes": [
+    {
+      "before": "#include \"qwen38_bf16_kv_overlay.cuh\"",
+      "after": "#include \"qwen38_bf16_prefill32_tiled_scores.cuh\""
+    },
+    {
+      "before": "(c.batch==4||c.batch==8)&&(c.tokens==4||c.tokens==32)",
+      "after": "c.batch==4&&c.tokens==32"
+    },
+    {
+      "before": "__global__ void normalize(",
+      "after": "__global__ void scoresTiled16(Qwen35AttentionCoreConfig c,const float* query,const __nv_bfloat16* key,\n    const float* chunkKey,const float* slots,const float* active,float* scratch){\n    const int row=blockIdx.y,b=row/(c.tokens*c.heads),t=(row/c.heads)%c.tokens;\n    if(active[b*c.tokens+t]==0)return;\n    const int lane=threadIdx.x%32,warp=threadIdx.x/32;\n    const int slot=int(slots[b*c.tokens+t]),kh=(row%c.heads)/(c.heads/c.kv);\n    float q[8];\n    #pragma unroll\n    for(int i=0;i<8;++i)q[i]=query[size_t(row)*256+lane+32*i];\n    #pragma unroll 1\n    for(int tile=0;tile<16;++tile){\n        const int p=blockIdx.x*128+warp+8*tile;\n        if(p>=c.capacity)continue;\n        float sum=0;\n        if(p<=slot){\n            const int current=replacement(slots,active,b,c.tokens,p);\n            #pragma unroll\n            for(int i=0;i<8;++i)sum=fmaf(q[i],readKV(key,chunkKey,b,current,kh,p,lane+32*i,c.tokens),sum);\n            sum=warpSum(sum);\n        }\n        if(!lane)scratch[size_t(row)*c.capacity+p]=p<=slot?sum*rsqrtf(float(c.dim)):-1e30f;\n    }\n}\n__global__ void normalize("
+    },
+    {
+      "symbol": "workspace",
+      "occurrences": 2
+    },
+    {
+      "before": "RunQwen38BF16KVOverlay(",
+      "after": "RunQwen38BF16KVPrefill32TiledScores("
+    },
+    {
+      "before": "scores<<<dim3((c.capacity+7)/8,rows),256,0,stream>>>",
+      "after": "scoresTiled16<<<dim3((c.capacity+127)/128,rows),256,0,stream>>>"
+    }
+  ],
+  "scope": "Separate unwired native component. Grid packs16 score positions per warp using the exact qualified B1T128 score body; each query-key dot retains eight FMA terms and the original warp reduction order. No model arithmetic equivalence, native correctness, speed or2x claim until actual tests.",
+  "native_compilation_or_GPU_execution": false
+}

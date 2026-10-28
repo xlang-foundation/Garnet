@@ -1,0 +1,43 @@
+from pathlib import Path
+import hashlib,json
+R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';sha=lambda b:hashlib.sha256(b).hexdigest();rows=[]
+def derive(source,target,changes):
+    raw=(M/source).read_bytes();before=sha(raw);steps=[]
+    for old,new,count in changes:
+        if b'\r\n' in raw:old=old.replace('\n','\r\n');new=new.replace('\n','\r\n')
+        assert raw.count(old.encode())==count,(source,old,raw.count(old.encode()),count);raw=raw.replace(old.encode(),new.encode());steps.append(dict(old=old,new=new,count=count))
+    target_path=M/target;assert not target_path.exists() or target_path.read_bytes()==raw;target_path.write_bytes(raw);rows.append(dict(source=source,target=target,source_sha256=before,target_sha256=sha(raw),changes=steps))
+def auto(source,changes):
+    raw=(M/source).read_bytes();result=[]
+    for old,new in changes:
+        if b'\r\n' in raw:old=old.replace('\n','\r\n');new=new.replace('\n','\r\n')
+        count=raw.count(old.encode());assert count>0,(source,old);result.append((old,new,count));raw=raw.replace(old.encode(),new.encode())
+    return result
+derive('probe_q128_profile_cpu.cpp','probe_o128_profile_cpu.cpp',auto('probe_q128_profile_cpu.cpp',[
+    ('modelopt_fp8_q128','modelopt_fp8_o128'),('ModelOptFP8Q128','ModelOptFP8O128'),('Q128','O128'),('12288,5120','5120,6144'),('std::string(projection)=="q"','std::string(projection)=="o"'),('q_proj.weight','o_proj.weight')]))
+derive('build_q128_profile_cpu.bat','build_o128_profile_cpu.bat',auto('build_q128_profile_cpu.bat',[('q128','o128')]))
+cross='''        ModelOptFP8Q128Plugin previousQ(12288,5120,.5f,.25f);require(EnsureModelOptFP8Q128PluginRegistered(),"Old Q registration failed");
+        auto* previousQCreator=registry->getPluginCreator("GarnetModelOptFP8Q128Canonical","1","");require(previousQCreator,"Old Q creator missing");
+        require(!previousQCreator->deserializePlugin("newO",wire.data(),20),"Old Q accepted O wire");++crossWire;
+        std::array<uint32_t,5> previousQWire{};previousQ.serialize(previousQWire.data());require(previousQWire[4]==0x51313238u&&!creator->deserializePlugin("oldQ",previousQWire.data(),20),"O accepted old Q wire");++crossWire;
+        auto* previousQRestored=previousQCreator->deserializePlugin("oldQ",previousQWire.data(),20);require(previousQRestored,"Old Q roundtrip changed");previousQRestored->destroy();
+        auto qMarkerOnly=wire;qMarkerOnly[4]=0x51313238u;reject(qMarkerOnly.data(),20);
+'''
+derive('probe_q128_plugin_wire.cpp','probe_o128_plugin_wire.cpp',auto('probe_q128_plugin_wire.cpp',[
+    ('modelopt_fp8_q128_plugin.h','modelopt_fp8_o128_plugin.h'),('modelopt_fp8_q128_profile.h','modelopt_fp8_o128_profile.h'),('ModelOptFP8Q128','ModelOptFP8O128'),('fp8_q128','fp8_o128'),('0x51313238','0x4f313238'),('q_proj.weight','o_proj.weight'),
+    ('plugin(12288,5120','plugin(5120,6144'),('wire[0]==12288&&wire[1]==5120','wire[0]==5120&&wire[1]==6144'),('{12287,5120},{12288,5119},{5120,12288},{0,5120},{12288,0},{-1,5120}','{5119,6144},{5120,6143},{6144,5120},{0,6144},{5120,0},{-1,6144}'),('invalid(12288,5120','invalid(5120,6144'),
+    ('PluginTensorDesc inputs[2]={desc(128,5120,DataType::kBF16),desc(12288,5120,DataType::kINT8)};auto output=desc(128,12288,DataType::kBF16);','PluginTensorDesc inputs[2]={desc(128,6144,DataType::kBF16),desc(5120,6144,DataType::kINT8)};auto output=desc(128,5120,DataType::kBF16);'),
+    ('desc(12288,1280,DataType::kINT32)','desc(5120,1536,DataType::kINT32)'),('desc(12288,5120,DataType::kINT8)','desc(5120,6144,DataType::kINT8)'),('4849664','9175040'),('12288,5120,weight','5120,6144,weight'),('{12287,5120},{12288,5119}','{5119,6144},{5120,6143}'),('badWire==35','badWire==36'),('crossWire==9','crossWire==11')])+[
+    ('#include "modelopt_fp8_o128_plugin.h"','#include "modelopt_fp8_o128_plugin.h"\n#include "modelopt_fp8_q128_plugin.h"',1),('        require(creator->createPlugin(',cross+'        require(creator->createPlugin(',1)])
+derive('build_q128_plugin_wire_cpu.bat','build_o128_plugin_wire_cpu.bat',[
+    ('"%CANDIDATE%\\modelopt_fp8_q128_plugin.cpp"','"%CANDIDATE%\\modelopt_fp8_o128_plugin.cpp" "%CANDIDATE%\\modelopt_fp8_q128_plugin.cpp"',1),('probe_q128_plugin_wire.cpp','probe_o128_plugin_wire.cpp',1)])
+derive('probe_q128_plugin_init.cpp','probe_o128_plugin_init.cpp',[
+    ('#include "modelopt_fp8_q128_plugin.h"','#include "modelopt_fp8_q128_plugin.h"\n#include "modelopt_fp8_o128_plugin.h"',1),('    if(route==6)','    if(route==7)return OwnedPlugin(new ModelOptFP8O128Plugin(5120,6144,.5f,.25f));\n    if(route==6)',1),('route<7','route<8',1),('calls==63&&factories==49&&successes==21&&failures==42&&clones==7','calls==72&&factories==56&&successes==24&&failures==48&&clones==8',1),('actual_q128_plugin_initialize_cpu_controls_passed','actual_o128_plugin_initialize_cpu_controls_passed',1)])
+derive('q128_plugin_init_contract.py','o128_plugin_init_contract.py',[
+    ("'fp8_q128'}","'fp8_q128','fp8_o128'}",1),("        elif row['route']=='fp8':","        elif row['route']=='fp8_o128':assert (row['rows'],row['columns'],row['policy'])==(5120,6144,0x4f313238)\n        elif row['route']=='fp8':",1),('actual_q128_plugin_initialize_cpu_controls_passed','actual_o128_plugin_initialize_cpu_controls_passed',1),
+    ("'actual_initialize_calls':63,'factory_calls':49,'successes':21,'failures':42,'cached_clone_initializations':7","'actual_initialize_calls':72,'factory_calls':56,'successes':24,'failures':48,'cached_clone_initializations':8",1),("'initialize_calls':63,'factory_calls':49","'initialize_calls':72,'factory_calls':56",2),('expected_calls=63','expected_calls=72',1),("q['factory_calls']==49 and q['cached_context_initializations']==14 and q['exception_returns']==28 and len(q['failures'])==42","q['factory_calls']==56 and q['cached_context_initializations']==16 and q['exception_returns']==32 and len(q['failures'])==48",1)])
+derive('run_q128_plugin_init_cpu.py','run_o128_plugin_init_cpu.py',auto('run_q128_plugin_init_cpu.py',[
+    ('q128_plugin_init_contract','o128_plugin_init_contract'),('actual_q128_plugin_initialize_CPU','actual_o128_plugin_initialize_CPU'),('630','720'),('490','560')]))
+derive('build_q128_plugin_init_cpu.bat','build_o128_plugin_init_cpu.bat',[
+    ('"%CANDIDATE%\\modelopt_fp8_q128_plugin.cpp"','"%CANDIDATE%\\modelopt_fp8_q128_plugin.cpp" "%CANDIDATE%\\modelopt_fp8_o128_plugin.cpp"',1),('probe_q128_plugin_init.cpp','probe_o128_plugin_init.cpp',1)])
+(M/'evidence/o128-canonical-CPU-derivations.json').write_bytes(json.dumps(dict(status='separate_O128_profile_wire_and_eighth_init_route_original_Q_and_legacy_templates_preserved',derivations=rows,original_shared_M128_context_factory_stubs_unchanged=True,GPU_or_model_executed=False),indent=2).encode());print(json.dumps(dict(derived=len(rows))))

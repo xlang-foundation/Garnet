@@ -1,0 +1,57 @@
+{
+  "status": "private_decode35_operand_program_prepared_CPU_GPU_unrun",
+  "chunk_source": "xModel/qwen35/vl_0_8b/cuda_chunk.py",
+  "chunk_source_sha256": "fe368296871c876cdbb74a246e8cbecc3ae0609ca4b73c8445ab4cb900d888b7",
+  "chunk_changes": [
+    {
+      "old": "name='qwen35_cuda_decoder_chunk'",
+      "new": "name='qwen35_decode35_operand_chunk'",
+      "count": 1
+    },
+    {
+      "old": "def Qwen35CUDAChunk(",
+      "new": "def Qwen35Decode35CUDAChunk(",
+      "count": 1
+    },
+    {
+      "old": "    p='model.language_model.layers.'+str(layer_idx)",
+      "new": "    if layer_idx!=35 or kind!='full_attention':raise ValueError('Private operand witness requires full attention layer35')\n    p='model.language_model.layers.'+str(layer_idx)",
+      "count": 1
+    },
+    {
+      "old": "    if external_compressed_weights:extra['external_compressed_weights']=external_compressed_weights",
+      "new": "    if external_compressed_weights:extra['external_compressed_weights']=external_compressed_weights\n    extra['witness_full_decode35_stages']=1",
+      "count": 1
+    }
+  ],
+  "forward_source": "bounded_step45_boundary_program.py",
+  "forward_source_sha256": "77caa6d3df3b6569a4e2ca466983a99a66d09c6ffefc912067f7ed5860357c67",
+  "forward_changes": [
+    {
+      "old": "state_outputs=[];payload_outputs=[];boundary_outputs=[]",
+      "new": "state_outputs=[];payload_outputs=[];boundary_outputs=[];operand_outputs=[]",
+      "count": 1
+    },
+    {
+      "old": "                packed=Qwen35CUDAChunk(",
+      "new": "                chunk=Qwen35Decode35CUDAChunk if layer['index']==35 else Qwen35CUDAChunk\n                packed=chunk(",
+      "count": 1
+    },
+    {
+      "old": "                if layer['index']+1<len(layout):hidden=hidden*T.unary_op('qwen35_f32_barrier')",
+      "new": "                if layer['index']==35:\n                    assert layer['kind']=='full_attention' and layer['payload_width']==0\n                    cursor=t*h+w1+w2\n                    for _,width in OPERANDS:\n                        operand_outputs.append(packed_view(packed,cursor,width,[b,width]));cursor+=width\n                if layer['index']+1<len(layout):hidden=hidden*T.unary_op('qwen35_f32_barrier')",
+      "count": 1
+    },
+    {
+      "old": "            observations=join(boundary_outputs)",
+      "new": "            assert len(operand_outputs)==7\n            observations=join(boundary_outputs+operand_outputs)",
+      "count": 1
+    }
+  ],
+  "target": "decode35_operand_program.py",
+  "target_sha256": "8e7e1c1967bf721f0176d40838dd08031c0ca340997ea8e4eb9daf0196377d8d",
+  "primary_prefix_and_all64_boundaries_retained": true,
+  "new_stage_words": 106496,
+  "new_native_or_GPU_execution": false,
+  "CPU_contracts_or_model_qualified": false
+}

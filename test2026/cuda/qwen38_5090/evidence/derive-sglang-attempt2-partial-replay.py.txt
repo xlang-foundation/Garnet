@@ -1,0 +1,34 @@
+from pathlib import Path
+import hashlib,json
+m=Path('D:/CantorAI/work/qwen38-5090/test2026/cuda/qwen38_5090');original=m/'verify_sglang_reserved_fixed4k.py';text=original.read_text()
+text=text.replace('import argparse,base64,hashlib,io,json,statistics,sys,tempfile,zipfile','import argparse,base64,hashlib,io,json,math,statistics,sys,tempfile,zipfile\nfrom metrics import summarize')
+text=text.replace("    assert actual['text']==control['text'],'Timed stream text differs from actual same-engine ID control'\n    return saved", "    expected=control['text'];observed=actual['text'];equal=observed==expected\n    divergence=next((i for i,(a,b) in enumerate(zip(expected,observed)) if a!=b),min(len(expected),len(observed)))\n    return {'saved':saved,'same_engine_serial_control_text_exact':equal,'serial_control_text_sha256':sha(expected.encode()),'stream_text_sha256':sha(observed.encode()),'first_different_character':None if equal else divergence}")
+text=text.replace('        if passed:\n', "        assert args.job=='sglang-fixed4k-ordinary-attempt2' and not passed and w['exit_code']==1\n        if True:\n",1)
+text=text.replace("assert w['status']=='reference_fixed4k_collected_needs_replay'", "assert w['status']=='failed'",1)
+text=text.replace("records[1]['exit_code']==0", "records[1]['exit_code']==(1 if ledger=='client-ledger' else 0)",1)
+text=text.replace("assert report['status']=='reference_fixed4k_profile_collected'", "assert report['status']=='failed'",1)
+text=text.replace("assert benchmark['status']=='completed'", "assert benchmark['status']=='failed'",1)
+text=text.replace('                actual_keys=set()', '                actual_keys=set();stream_observations=[]',1)
+text=text.replace("                    replay_stream(lambda n:z.read(root+n),run+'-'+key,body,control);actual_keys.add(key)", "                    if root+run+'-'+key+'-events.jsonl' in manifest['files']:\n                        observation=replay_stream(lambda n:z.read(root+n),run+'-'+key,body,control);observation['key']=key;stream_observations.append(observation);actual_keys.add(key)",1)
+text=text.replace("assert len(stream_names)==len(actual_keys)==124", "assert len(stream_names)==len(actual_keys)==12",1)
+start=text.index('                fresh=verify_run(');end=text.index('                samples=',start)
+text=text[:start]+'''                # Recompute only the actually completed cohort without changing
+                # the failed manifest's status or inventing missing cohorts.
+                assert [(c['case'],c['concurrency']) for c in benchmark['cohorts']]==[('text',1)]
+                fresh={'partial_failed_workflow':True,'transport':{'scheme':'http','hostname':'127.0.0.1','path':'/'},'cohorts':[]}
+                for saved in benchmark['cohorts']:
+                    rows=[doc(root+key+'-result.json') for key in saved['request_keys']];metrics=summarize(rows)
+                    for key,value in metrics.items():assert math.isclose(value,saved[key],rel_tol=1e-12,abs_tol=1e-9)
+                    fresh['cohorts'].append({'case':saved['case'],'concurrency':saved['concurrency'],'raw_recomputed_metrics':metrics,'request_keys':saved['request_keys']})
+                changed=[v for v in stream_observations if not v['same_engine_serial_control_text_exact']]
+                assert [v['key'] for v in changed]==['ctx4096-s3-text-c2-warmup-0-0','ctx4096-s3-text-c2-warmup-0-1']
+                assert 'ctx4096-s3-text-c2-warmup-0-0' in benchmark['error']
+''' +text[end:]
+text=text.replace("assert resource['child_exit_code']==0", "assert resource['child_exit_code']==1",1)
+text=text.replace("'actual_timed_and_warmup_streams':124,", "'actual_timed_and_warmup_streams':12,'stream_observations':stream_observations,'concurrent_stream_text_variants_preserved':2,'complete_reference_baseline':False,",1)
+text=text.replace("'reference_fixed4k_profile_replayed' if passed else 'reference_fixed4k_failure_preserved'", "'reference_fixed4k_attempt2_failure_partial_evidence_replayed'",1)
+text=text.replace("(args.job+'-verified.json')", "(args.job+'-partial-verified.json')",1).replace('return 0 if passed else 1','return 0',1)
+text=text.replace('Replay a closed SGLang reference archive, never execute a model or infer IDs.', 'Replay failed attempt2 raw partial evidence; keep both text variants and failure.',1)
+target=m/'verify_sglang_attempt2_partial.py';assert not target.exists();target.write_bytes(text.replace('\n','\r\n').encode())
+receipt={'status':'separate_failed_attempt2_partial_checker_derived','original_sha256':hashlib.sha256(original.read_bytes()).hexdigest(),'derived_sha256':hashlib.sha256(target.read_bytes()).hexdigest(),'scope':'Original reserved checker/archive unchanged. Validate real failed lifecycle/config/source, two early boundaries/4VLM/16greedy/805screen/all124nonstream128ID controls, all12raw128token streams and completed textC1 arithmetic/memory. Preserve failed manifest/client and both concurrent text variants. No copied completed status, missing-cohort inference, cause/quality-equivalence/complete-baseline/2x claim.'}
+(m/'evidence/sglang-attempt2-partial-replay-derivation.json').write_text(json.dumps(receipt,indent=2),encoding='utf8');print(json.dumps(receipt))

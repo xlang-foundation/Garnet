@@ -1,0 +1,53 @@
+{
+  "derivations": [
+    {
+      "source": "install-decode-projection-attempt2.py",
+      "target": "install-decode-projection-attempt3.py",
+      "source_sha256": "6619e7a026558945ff0ed5722e258dade9862532169809a520685f9a0044e806",
+      "target_sha256": "fe9355dd5365da708a63cf89dc371c4a7aed600562b6c0fa04bf0b401f3ae846",
+      "changes": [
+        {
+          "old": "decode-projection-attempt2",
+          "new": "decode-projection-attempt3",
+          "count": 3
+        },
+        {
+          "old": "==13",
+          "new": "==17",
+          "count": 1
+        },
+        {
+          "old": "60634cdeb59c75f02ed44cf28efdfe83a42f192fdd14c0ab48282ff94a6adf75",
+          "new": "9022449e023b0c18e686172d93d7a3ead67d5acec90f8b948267479f4571c9b8",
+          "count": 1
+        }
+      ],
+      "preexisting_identical_output_verified": true
+    },
+    {
+      "source": "run-decode-projection-attempt2-postprocess.py",
+      "target": "run-decode-projection-attempt3-postprocess.py",
+      "source_sha256": "5fda3418aab05fea3971d93f9a5cc725380dc15442f608862c960f9247aa0bc7",
+      "target_sha256": "ded759f47af423a4468ba5b8de89970ab192427d28dcede72f195ff68a11b725",
+      "changes": [
+        {
+          "old": "verify-decode-projection-diagnostic-attempt2.py",
+          "new": "verify-decode-projection-diagnostic-attempt3.py",
+          "count": 1
+        },
+        {
+          "old": "decode-projection-diagnostic-attempt2",
+          "new": "decode-projection-diagnostic-attempt3",
+          "count": 1
+        },
+        {
+          "old": "decode-projection-attempt2",
+          "new": "decode-projection-attempt3",
+          "count": 4
+        }
+      ],
+      "preexisting_identical_output_verified": false
+    }
+  ],
+  "preparation_only_failure": "Initial method packager rejected overlapping job-name substring before creating postprocessor; initial draft retained. Specific reader name replaced first. Previously produced installer bytes independently verified identical, never overwritten."
+}

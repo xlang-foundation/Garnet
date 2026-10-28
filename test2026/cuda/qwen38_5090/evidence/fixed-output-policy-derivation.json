@@ -1,0 +1,105 @@
+{
+  "status": "local_source_changed_remote_frozen_and_GPU_unrun",
+  "derivations": [
+    {
+      "file": "runtime/cuda_serving.py",
+      "before_sha256": "8928f5173a6ebf53915311abf20aee34c50103faf1b1b72c7bfb4ca79a028821",
+      "after_sha256": "8e3d8cdcba04fa5b21d289479a78f19bf0a53ea6d2662b3485a154d8468d59e5",
+      "changes": [
+        {
+          "old": "def infer_batch(self,prompts,images,limit,on_token=None):",
+          "new": "def infer_batch(self,prompts,images,limit,on_token=None,ignore_eos=False):",
+          "count": 1
+        },
+        {
+          "old": "        with self.lock:\n            if on_token is not None:",
+          "new": "        with self.lock:\n            if type(ignore_eos) is not bool:raise TypeError('ignore_eos must be a boolean')\n            if ignore_eos and self.speculative is not None:raise ValueError('ignore_eos currently requires target-only decoding')\n            if on_token is not None:",
+          "count": 1
+        },
+        {
+          "old": "if prediction[b] in self.stops:",
+          "new": "if prediction[b] in self.stops and not ignore_eos:",
+          "count": 1
+        },
+        {
+          "old": "'texts':[self.tokenizer.decode(o) for o in output]",
+          "new": "'texts':[self.tokenizer.decode([t for t in o if t not in self.stops] if ignore_eos else o) for o in output]",
+          "count": 1
+        },
+        {
+          "old": "'speculative_metrics':speculative_metrics,",
+          "new": "'speculative_metrics':speculative_metrics,\n                'generation_policy':{'ignore_eos':ignore_eos,'max_new_tokens':limit},",
+          "count": 1
+        },
+        {
+          "old": "def infer(self,prompt,image,limit,on_token=None):",
+          "new": "def infer(self,prompt,image,limit,on_token=None,ignore_eos=False):",
+          "count": 1
+        },
+        {
+          "old": "self.infer_batch([prompt],[image],limit,on_token=on_token)",
+          "new": "self.infer_batch([prompt],[image],limit,on_token=on_token,ignore_eos=ignore_eos)",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "file": "test2026/cuda/qwen38_5090/native_int4_stream_worker.py",
+      "before_sha256": "a25953473af5fdbe76b257bd8c2b8f6fdc747b3d1d1bb512bd5b090314c7f738",
+      "after_sha256": "dc23d2e36cf3cc56fcf88ef910c6ae19b75020d253bef09ccbeef0673ef0d8f3",
+      "changes": [
+        {
+          "old": "            validate_body(body,'qwen38-27b-int4')",
+          "new": "            validate_body(body,'qwen38-27b-int4')\r\n            ignore_eos=body.get('ignore_eos',False)\r\n            if type(ignore_eos) is not bool:raise TypeError('ignore_eos must be a boolean')",
+          "count": 1
+        },
+        {
+          "old": "'stop':token in stops,",
+          "new": "'stop':token in stops and not ignore_eos,",
+          "count": 1
+        },
+        {
+          "old": "if token in stops or step+1==limit:break",
+          "new": "if (token in stops and not ignore_eos) or step+1==limit:break",
+          "count": 1
+        },
+        {
+          "old": "'finish_reason':'stop' if generated[-1] in stops else 'length'",
+          "new": "'generation_policy':{'ignore_eos':ignore_eos,'max_new_tokens':limit},'finish_reason':'stop' if generated[-1] in stops and not ignore_eos else 'length'",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "file": "test2026/cuda/qwen38_5090/native_4b_stream_worker.py",
+      "before_sha256": "3afba97efa7ef995c338c8fd9cfea5f2416f2d9bfb82a6576638f27742ead0ab",
+      "after_sha256": "4ecdea27fd8195da9261c77ffb2d554226fb4f18ba9970bd88039cc1e2e578d7",
+      "changes": [
+        {
+          "old": "   validate_body(body,'qwen35-4b-bf16');limit=body['max_tokens']",
+          "new": "   validate_body(body,'qwen35-4b-bf16');limit=body['max_tokens']\n   ignore_eos=body.get('ignore_eos',False)\n   if type(ignore_eos) is not bool:raise TypeError('ignore_eos must be a boolean')",
+          "count": 1
+        },
+        {
+          "old": "'stop':token in model.stops,",
+          "new": "'stop':token in model.stops and not ignore_eos,",
+          "count": 1
+        },
+        {
+          "old": "model.infer(prompt,path,limit,on_token=notify)",
+          "new": "model.infer(prompt,path,limit,on_token=notify,ignore_eos=ignore_eos)",
+          "count": 1
+        },
+        {
+          "old": "'finish_reason':'stop' if result['finish_reasons']==['eos'] else 'length',",
+          "new": "'generation_policy':result['generation_policy'],\n    'finish_reason':'stop' if result['finish_reasons']==['eos'] else 'length',",
+          "count": 1
+        }
+      ]
+    }
+  ],
+  "default_EOS_behavior_retained": true,
+  "ignore_eos_speculative_mode_rejected": true,
+  "raw_sampled_IDs_retained_and_special_stop_tokens_hidden_from_text": true,
+  "performance_claim": false
+}

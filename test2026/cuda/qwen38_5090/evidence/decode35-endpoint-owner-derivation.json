@@ -1,0 +1,73 @@
+{
+  "source": "run_decode35_operands.py",
+  "source_sha256": "e0e545517edaafaa70f3a532f336855f32f70a5eefb6878e7359bfbab40d3fed",
+  "new_file_normalizes_CRLF_to_LF": true,
+  "target": "run_decode35_endpoints.py",
+  "target_sha256": "31e14cd5494d7805849daeeb21dbb7e68ca0f2cc8c0041f3fcfedf53f89ab606",
+  "changes": [
+    {
+      "old": "Exclusive same-DLL off/on model controls before any internal operand analysis.",
+      "new": "Two fresh six-endpoint on processes; exact source/runtime-pinned ordinary off parents reused.",
+      "count": 1
+    },
+    {
+      "old": "decode35-operands-attempt1",
+      "new": "decode35-endpoints-attempt1",
+      "count": 1
+    },
+    {
+      "old": "from test2026.cuda.qwen38_5090.decode35_operand_analysis import PHASES,primary_control,witness_trace,analyze",
+      "new": "from test2026.cuda.qwen38_5090.decode35_endpoint_analysis import PHASES,primary_control,witness_trace,analyze\n    from test2026.cuda.qwen38_5090.decode35_endpoint_reuse import checked_reuse",
+      "count": 1
+    },
+    {
+      "old": "decode35-operands-preparation.json",
+      "new": "decode35-endpoints-preparation.json",
+      "count": 1
+    },
+    {
+      "old": "decode35_operands_prepared_GPU_unrun",
+      "new": "decode35_endpoints_prepared_GPU_unrun",
+      "count": 1
+    },
+    {
+      "old": "81CPU controls: inherited69 plus5private operand program and7new library-transition/primary-first/trace/geometry/cache-rounding/RoPE-suffix guards. No relaxation of old gates.",
+      "new": "97CPU controls: all81 seven-stage controls unchanged,6 endpoint topology,7 endpoint analysis,3 immutable off reuse. Native hook remains7; no pre-RoPE suffix claim for six endpoints. Full all-row primary/cache/timeline/layer gates retained.",
+      "count": 1
+    },
+    {
+      "old": "81 CPU controls failed",
+      "new": "97 CPU controls failed",
+      "count": 1
+    },
+    {
+      "old": "with zipfile.ZipFile(ROOT/'results/step45-layer-boundary-attempt2-evidence.zip') as parent:",
+      "new": "with zipfile.ZipFile(ROOT/'results/step45-layer-boundary-attempt2-evidence.zip') as parent,zipfile.ZipFile(ROOT/'results/decode35-operands-attempt1-evidence.zip') as ordinary:",
+      "count": 1
+    },
+    {
+      "old": "            for phase in PHASES:\n",
+      "new": "            offproof=json.loads((ROOT/'results/decode35-operands-attempt1-verified.json').read_bytes())\n            reports,reads,w['reused_off']=checked_reuse(p,ordinary,offproof)\n            for phase in PHASES[:2]:\n                role=phase.split('-')[1]\n                w['controls'][phase]=primary_control(reports[phase],historical[role],reads[phase],historical_reads[role],p['selected_key'],p['library_sha256'],p['historical_libraries'][role],False,True)\n                assert w['controls'][phase]==offproof['controls'][phase]\n            save()\n            for phase in PHASES[2:]:\n",
+      "count": 1
+    },
+    {
+      "old": "launch_decode35_operands.py",
+      "new": "launch_decode35_endpoints.py",
+      "count": 1
+    },
+    {
+      "old": "Same source86DLL, ordinary3968prompt+53IDs/52consumed, fulloriginalcaptures/cache/timeline/all64layer44-45; off must reproduce historicalprofile with declaredDLLtransition, thenon must reproduce off exactly before new7internal operands can be interpreted. No model/performance admission.",
+      "new": "Same source86DLL and seven-stage native hook; six final endpoints omit pre-RoPE. Fresh on process must reproduce immutable same-DLL ordinary off: all53IDs/five all-row states and vectors/full8MiBcache/timeline/all64 layers44-45 before interpreting six endpoints. Off parents separately rechecked against historicalsource60/85. No performance admission.",
+      "count": 1
+    },
+    {
+      "old": "same_DLL_decode35_operands_collected_unqualified",
+      "new": "same_DLL_decode35_endpoints_collected_unqualified",
+      "count": 1
+    }
+  ],
+  "fresh_GPU_processes": 2,
+  "reused_ordinary_profiles": 2,
+  "all_primary_and_restoration_gates_retained": true,
+  "GPU_model_unrun": true
+}

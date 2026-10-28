@@ -1,0 +1,9 @@
+from pathlib import Path
+import ast,hashlib,json,zipfile
+W=Path(__file__).resolve().parent;M=Path('D:/CantorAI/work/qwen38-5090/test2026/cuda/qwen38_5090');P='Garnet/test2026/cuda/qwen38_5090/';sha=lambda b:hashlib.sha256(b).hexdigest();names=['q128_model_partial_replay.py','test_q128_model_partial_replay.py','analyze_q128_model_partial.py'];files={P+n:(M/n).read_bytes() for n in names};files['results/run-q128-model-single-remote.py']=(W/'run-q128-model-single-remote.py').read_bytes()
+for b in files.values():ast.parse(b)
+target=W/'q128-model-single-deployment.zip';assert not target.exists()
+with zipfile.ZipFile(target,'x',zipfile.ZIP_DEFLATED) as z:
+    for n,b in files.items():z.writestr(n,b)
+    z.writestr('install-manifest.json',json.dumps(dict(files={n:sha(b) for n,b in files.items()}),indent=2))
+h=sha(target.read_bytes());old=json.loads((W/'q128-model-postprocess-package.json').read_bytes())['deployment_sha256'];source=(W/'install-q128-model-postprocess.py').read_bytes();script=source.replace(old.encode(),h.encode()).replace(b'q128-model-postprocess-deployment.zip',b'q128-model-single-deployment.zip').replace(b'results/run-q128-model-postprocess.py',b'results/run-q128-model-single-remote.py').replace(b'len(m[\'files\'])+1==4',b'len(m[\'files\'])+1==5').replace(b'q128-model-postprocess-install.json',b'q128-model-single-install.json').replace(b'Q128_TERMINAL_POSTPROCESS_INSTALLED',b'Q128_SINGLE_OBSERVATION_METHODS_INSTALLED');ast.parse(script);(W/'install-q128-model-single.py').write_bytes(script);(W/'q128-model-single-package.json').write_bytes(json.dumps(dict(deployment_sha256=h,bytes=target.stat().st_size,files={n:sha(b) for n,b in files.items()},GPU_or_model_rerun=False),indent=2).encode());print(json.dumps(dict(deployment_sha256=h,bytes=target.stat().st_size)))

@@ -1,0 +1,38 @@
+from pathlib import Path
+import ast,hashlib,json
+R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';sha=lambda raw:hashlib.sha256(raw).hexdigest();rows=[]
+def derive(src,dst,changes):
+    raw=(M/src).read_bytes();s=raw.decode()
+    for a,b,n in changes:assert s.count(a)==n,(a,s.count(a),n);s=s.replace(a,b)
+    ast.parse(s);p=M/dst;assert not p.exists();p.write_bytes(s.encode());rows.append({'source':src,'source_sha256':sha(raw),'target':dst,'target_sha256':sha(p.read_bytes()),'changes':[{'old':a,'new':b,'count':n} for a,b,n in changes]})
+derive('probe_step45_layer_boundary2.py','probe_decode35_operands.py',[
+("root,out,mode,reference=Path(sys.argv[1]),Path(sys.argv[2]),sys.argv[3],Path(sys.argv[4]);assert mode in ('reference','candidate') and not out.exists()", "root,out,phase,reference=Path(sys.argv[1]),Path(sys.argv[2]),sys.argv[3],Path(sys.argv[4]);assert phase in ('off-reference','off-candidate','on-reference','on-candidate') and not out.exists();mode=phase.split('-')[1];enabled=phase.startswith('on-')",1),
+('step45-layer-boundary2-preparation.json','decode35-operands-preparation.json',1),
+("p[mode+'_installed_files']","p['installed_files']",1),("p[mode+'_library_sha256']","p['library_sha256']",1),
+("'GARNET_FP8_QK_BATCH4_DECODE_CANONICAL':'0' if mode=='reference' else '1'}", "'GARNET_FP8_QK_BATCH4_DECODE_CANONICAL':'0' if mode=='reference' else '1','GARNET_DECODE35_STAGE_WITNESS':'1' if enabled else '0'}",1),
+('from test2026.cuda.qwen38_5090.bounded_step45_boundary_program import BoundedStep45BoundaryProgram as AllLayerDecodeBoundaryProgram,construct_with_bounded_step45_boundary_program as construct_with_all_layer_decode_boundary_program', '''from test2026.cuda.qwen38_5090.bounded_step45_boundary_program import BoundedStep45BoundaryProgram,construct_with_bounded_step45_boundary_program
+    from test2026.cuda.qwen38_5090.decode35_operand_program import Decode35OperandProgram,construct_with_decode35_operand_program,OPERANDS
+    AllLayerDecodeBoundaryProgram=Decode35OperandProgram if enabled else BoundedStep45BoundaryProgram
+    construct_with_all_layer_decode_boundary_program=construct_with_decode35_operand_program if enabled else construct_with_bounded_step45_boundary_program''',1),
+("report=dict(status='constructing',mode=mode,", "report=dict(status='constructing',mode=mode,phase=phase,operand_witness=enabled,",1),
+("        def capture_layers(group,step,consumed):", "        report['internal_observer']=dict(names=[n for n,_ in OPERANDS],widths=[w for _,w in OPERANDS],offsets=program.operand_offsets,row_words=106496) if enabled else None\n        def capture_layers(group,step,consumed):",1),
+('        vision=create_cuda_vision', '''        def capture_operands(group,step,consumed):
+            assert enabled and step in (44,45) and len(program.operand_buffers)==7
+            result=dict(step=step,program_runs=program.boundary_runs,consumed_tokens=list(consumed),operands={})
+            for (name,width),buffer in zip(OPERANDS,program.operand_buffers):
+                raw=bytes(io.finite_f32_bytes(buffer));assert len(raw)==batch*width*4
+                filename='case'+str(group)+'-step'+str(step)+'-'+name+'.f32';assert not (out/filename).exists();(out/filename).write_bytes(raw)
+                result['operands'][name]=dict(file=filename,bytes=len(raw),sha256=sha(raw))
+            return result
+        vision=create_cuda_vision''',1),
+("record['layer_observations']=[];sampler=", "record['layer_observations']=[];record['operand_observations']=[];sampler=",1),
+("                    if step+1 in (44,45):record['layer_observations'].append(capture_layers(group_index,step+1,consumed));save()", "                    if step+1 in (44,45):\n                        record['layer_observations'].append(capture_layers(group_index,step+1,consumed))\n                        if enabled:record['operand_observations'].append(capture_operands(group_index,step+1,consumed))\n                        save()",1),
+])
+derive('launch_step45_layer_boundary2.py','launch_decode35_operands.py',[
+("mode=sys.argv[4];reference=Path(sys.argv[5]);assert mode in ('reference','candidate');", "phase=sys.argv[4];reference=Path(sys.argv[5]);assert phase in ('off-reference','off-candidate','on-reference','on-candidate');mode=phase.split('-')[1];enabled=phase.startswith('on-');",1),
+('step45-layer-boundary2-preparation.json','decode35-operands-preparation.json',1),
+("env['GARNET_FP8_K_BATCH4_DECODE_M4X4']='0';", "env['GARNET_DECODE35_STAGE_WITNESS']='1' if enabled else '0'\nenv['GARNET_FP8_K_BATCH4_DECODE_M4X4']='0';",1),
+('probe_step45_layer_boundary2.py','probe_decode35_operands.py',1),
+('str(root),str(out),mode,str(reference)','str(root),str(out),phase,str(reference)',1),
+])
+out=M/'evidence/decode35-operand-probe-derivation.json';assert not out.exists();out.write_bytes(json.dumps({'status':'same_DLL_four_phase_operand_probe_prepared_GPU_unrun','derivations':rows,'ordinary_model_math_loop_53IDs_and_original_captures_retained':True,'phases':['off-reference','off-candidate','on-reference','on-candidate'],'actual_same_profile_primary_layer_cache_timeline_controls_required':True},indent=2).encode());print('Two exact probe/launcher derivations parsed; four fresh same-DLL phases, no GPU execution.')

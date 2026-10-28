@@ -1,0 +1,22 @@
+from pathlib import Path
+import ast,hashlib,json,zipfile
+W=Path(__file__).resolve().parent;O=W.parent/'outputs';R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';P='Garnet/test2026/cuda/qwen38_5090/';sha=lambda b:hashlib.sha256(b).hexdigest();raw=(O/'full-chunk-stage-vendor-optional-fields-verified.json').read_bytes();assert raw==(O/'full-chunk-stage-vendor-optional-fields-remote-verified.json').read_bytes();q=json.loads(raw);assert q['no_new_GPU_run']
+names={P+n:M/n for n in ('probe_qg128_sdk_control.cpp','build_qg128_sdk_control.bat','run_qg128_sdk_control.py','verify_qg128_sdk_control.py')}
+for n,path in names.items():
+    if n.endswith('.py'):ast.parse(path.read_bytes())
+p=dict(status='standalone_QG_real_SDK_control_prepared_unrun',files={n:sha(path.read_bytes()) for n,path in names.items()},paired_vendor_recovery_proof_sha256=sha(raw),scope='Standalone real SDK descriptor compatibility only; canonicalM16 first successful returned SDK object must match five actual T32 printed public fields and AlgoCheckM16/M32/M128<=4MiB on pinnedSM120/cuBLASLt130400. Record other queried attrs without assuming values, active dynamic runtime/module SHA, NVCC/MSVC source/build logs. No weights or matmul, no native Garnet source/library mutation or model/numerical/performance admission.')
+prep=M/'evidence/qg128-sdk-control-preparation.json';blob=json.dumps(p,indent=2).encode();assert not prep.exists() or prep.read_bytes()==blob;prep.write_bytes(blob);names[P+'evidence/qg128-sdk-control-preparation.json']=prep;target=W/'qg128-sdk-control-deployment.zip';assert not target.exists()
+with zipfile.ZipFile(target,'x',zipfile.ZIP_DEFLATED) as z:
+    for n,path in names.items():z.write(path,n)
+    z.writestr('deployment-manifest.json',json.dumps(dict(files={n:sha(path.read_bytes()) for n,path in names.items()},paired_vendor_recovery_proof_sha256=sha(raw)),indent=2))
+receipt=dict(status='standalone_QG_SDK_deployment_prepared',sha256=sha(target.read_bytes()),bytes=target.stat().st_size,files=len(names));(W/'qg128-sdk-control-package.json').write_bytes(json.dumps(receipt,indent=2).encode())
+script='''from pathlib import Path
+import hashlib,json,zipfile
+ROOT=Path('D:/CantorAI/5090-study-20261023');sha=lambda b:hashlib.sha256(b).hexdigest();archive=ROOT/'results/qg128-sdk-control-deployment.zip';assert sha(archive.read_bytes())==ZIP_SHA
+with zipfile.ZipFile(archive) as z:
+    m=json.loads(z.read('deployment-manifest.json'));assert sha((ROOT/'results/full-chunk-stage-vendor-optional-fields-verified.json').read_bytes())==m['paired_vendor_recovery_proof_sha256'];assert z.testzip() is None and len(z.namelist())==len(set(z.namelist()))==len(m['files'])+1==6
+    for n,h in m['files'].items():
+        path=ROOT/n;raw=z.read(n);assert path.resolve().is_relative_to((ROOT/'Garnet/test2026/cuda/qwen38_5090').resolve()) and path.parent.exists() and sha(raw)==h and (not path.exists() or path.read_bytes()==raw)
+    for n in m['files']:(ROOT/n).write_bytes(z.read(n))
+out=ROOT/'results/qg128-sdk-control-install.json';assert not out.exists();out.write_bytes(json.dumps(dict(status='standalone_SDK_probe_methods_installed',deployment_archive_sha256=sha(archive.read_bytes()),files=m['files']),indent=2).encode());print(json.dumps(dict(status='standalone_SDK_probe_methods_installed',files=len(m['files']))))
+'''.replace('ZIP_SHA',repr(receipt['sha256']));(W/'install-qg128-sdk-control.py').write_bytes(script.encode());print(json.dumps(receipt))

@@ -1,0 +1,21 @@
+from pathlib import Path
+import ast,hashlib,json,zipfile
+W=Path(__file__).resolve().parent;R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';E=M/'evidence';sha=lambda b:hashlib.sha256(b).hexdigest()
+raw=(M/'decode_boundary_program.py').read_bytes();s=raw.decode();forward=s[s.index('    def _forward(self):'):s.index('    def run(self,inputs):')]
+old='            return join([flat]+state_outputs+payload_outputs+boundary_outputs)'
+new='            primary=join([flat]+state_outputs+payload_outputs)\n            observations=join(boundary_outputs)\n            return join([primary,observations])'
+assert forward.count(old)==1;forward=forward.replace(old,new)
+binder=(M/'all_layer_decode_boundary_program.py').read_text(encoding='utf8');binder=binder[binder.index('def construct_with_all_layer_decode_boundary_program'):].replace('construct_with_all_layer_decode_boundary_program','construct_with_bounded_step45_boundary_program').replace('AllLayerDecodeBoundaryProgram','BoundedStep45BoundaryProgram')
+source='''"""Bounded three-concat observer; existing native 128-extra-parts guard unchanged."""
+from .all_layer_decode_boundary_program import AllLayerDecodeBoundaryProgram,CUDAPackedDecoderProgram
+from xModel.qwen35.vl_0_8b.cuda_packed_program import T,Qwen35CUDAChunk,flat_concat,concat,packed_view
+
+class BoundedStep45BoundaryProgram(AllLayerDecodeBoundaryProgram):
+'''+forward+'\n'+binder
+ast.parse(source);target=M/'bounded_step45_boundary_program.py';assert not target.exists() or target.read_bytes()==source.encode();target.write_bytes(source.encode())
+p=json.loads((E/'step45-layer-boundary-preparation.json').read_bytes())
+with zipfile.ZipFile(W/'b4-k-m4x4-source.zip') as z:
+    assert sha((W/'b4-k-m4x4-source.zip').read_bytes())==p['candidate_bundle_sha256'];native=z.read('src/backends/tensorrt/trt_builder.cpp');assert sha(native)==p['candidate_source_files']['src/backends/tensorrt/trt_builder.cpp']
+    text=native.decode();start=text.index('}else if(opName=="qwen35_concat_parts")');end=text.index('}else if(opName=="qwen35_f32_barrier")',start);guard=text[start:end];assert 'item->second.Size()>128' in guard
+record={'status':'bounded_observer_prepared_GPU_unrun','source':'decode_boundary_program.py','source_sha256':sha(raw),'source_forward_sha256':sha(s[s.index('    def _forward(self):'):s.index('    def run(self,inputs):')].encode()),'target':target.name,'target_sha256':sha(target.read_bytes()),'old_return':old,'new_return':new,'native_guard_source_sha256':sha(native),'native_guard_source':'src/backends/tensorrt/trt_builder.cpp','native_guard_text':guard,'maximum_extra_parts':128,'original_primary_parts':113,'original_payload_parts':48,'observations_parts':64,'final_parts':2,'native_guard_or_precision_changed':False,'primary_cache_timeline_parity_still_required':True}
+(E/'bounded-step45-boundary-derivation.json').write_bytes(json.dumps(record,indent=2).encode());print(json.dumps({'target_sha256':record['target_sha256'],'native_guard_unchanged':True,'concat_total_parts':[113,64,2]}))

@@ -1,0 +1,53 @@
+{
+  "derivations": [
+    {
+      "source": "xModel/qwen35/vl_0_8b/cuda_chunk.py",
+      "source_sha256": "fe368296871c876cdbb74a246e8cbecc3ae0609ca4b73c8445ab4cb900d888b7",
+      "target": "full_chunk_stage_chunk.py",
+      "target_sha256": "9ebae56edff43d84988e7312c7340472290df0c43ab86fe5b491fabfd131538a",
+      "body_steps": [
+        {
+          "old": "name='qwen35_cuda_decoder_chunk'",
+          "new": "name='qwen35_private_full_chunk_stage'",
+          "count": 1
+        },
+        {
+          "old": "def Qwen35CUDAChunk(",
+          "new": "def FullChunkStageChunk(",
+          "count": 1
+        },
+        {
+          "old": "    rope=config['rope_parameters']",
+          "new": "    if layer_idx==3:extra['witness_full_chunk_stages']=1\n    rope=config['rope_parameters']",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "xModel/qwen35/vl_0_8b/cuda_packed_program.py",
+      "source_sha256": "623d97063edf8e5dcb22e1558bc0996965bb85dfd8f53d2d93a0fbf68d362ec6",
+      "source_method_sha256": "a064af6355b21f7ad04a3847a3e691365601952c8d0cbcbe77a0cc35f6316efb",
+      "target": "full_chunk_stage_program.py",
+      "target_sha256": "6fc71cf676813227019c500b57ec3389b4969f30e562070aa77983aac1328840",
+      "method_steps": [
+        {
+          "old": "            state_outputs=[];payload_outputs=[]",
+          "new": "            state_outputs=[];payload_outputs=[];stage_outputs=[]",
+          "count": 1
+        },
+        {
+          "old": "                state_outputs.append(packed_view(packed,t*h,w1+w2,[b,w1+w2]))",
+          "new": "                state_outputs.append(packed_view(packed,t*h,w1+w2,[b,w1+w2]))\n                if layer['index']==3:\n                    for name,offset,words in stage_offsets(t,t*h+w1+w2):stage_outputs.append(packed_view(packed,offset,words,[b,words]))",
+          "count": 1
+        },
+        {
+          "old": "            return join([flat]+state_outputs+payload_outputs)",
+          "new": "            return join([flat]+state_outputs+payload_outputs+stage_outputs)",
+          "count": 1
+        }
+      ]
+    }
+  ],
+  "original_math_barriers_state_layouts_and_T4_unchanged": true,
+  "readonly_complete_graph_input_state_checks_first128_both_repeats": true
+}

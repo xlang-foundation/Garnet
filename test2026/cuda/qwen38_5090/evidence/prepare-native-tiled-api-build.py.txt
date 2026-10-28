@@ -1,0 +1,28 @@
+from pathlib import Path
+import ast,hashlib,json,zipfile
+work=Path(__file__).resolve().parent;out=work.parent/'outputs';repo=Path('D:/CantorAI/work/qwen38-5090');m=repo/'test2026/cuda/qwen38_5090';e=m/'evidence'
+sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+failed=out/'bf16-scores-tiled-model-admission-attempt1-verified.json';q=json.loads(failed.read_bytes());assert q==json.loads((out/'bf16-scores-tiled-model-admission-attempt1-remote-verified.json').read_bytes()) and q['status']=='native_tiled_scores_model_failure_preserved'
+with zipfile.ZipFile(out/'bf16-scores-tiled-model-admission-attempt1-evidence.zip') as z:
+    w=json.loads(z.read('results/bf16-scores-tiled-model-admission-attempt1/workflow.json'));assert w['exit_code']==1 and w['cleanup_finished'] and w['baseline_library_restored'];base=w['source_after_sha256'];runtime=w['runtime_dependencies_after']
+with zipfile.ZipFile(out/'bf16-scores-tiled-native-build-attempt1-evidence.zip') as z:
+    built=json.loads(z.read('results/bf16-scores-tiled-native-build-attempt1/workflow.json'));assert built['exit_code']==0
+prior=json.loads((e/'bf16-scores-tiled-native-build-preparation.json').read_bytes());names=['run_bf16_scores_tiled_native_api_build.py','run_tiled_scores_embedded_selector.py','probe_tiled_scores_embedded_selector.py']
+for n in names:ast.parse((m/n).read_text())
+methods={'Garnet/test2026/cuda/qwen38_5090/'+n:sha(m/n) for n in names}
+for n in ('probe_native_tiled_scores_selector_cpu.py','probe_native_tokenizer_frozen_cpu.py','build_integrated_batch_top1_native.bat'):methods['Garnet/test2026/cuda/qwen38_5090/'+n]=sha(m/n)
+candidate={n:sha(repo/n) for n in ('src/cuda/qwen38_bf16_kv_low_batch_overlay.cu','src/entry/garnet.h')}
+assert candidate['src/cuda/qwen38_bf16_kv_low_batch_overlay.cu']==prior['candidate_source_sha256']
+for n,h in base.items():
+    if n.startswith('Garnet/') and n.removeprefix('Garnet/') not in candidate:assert sha(repo/n.removeprefix('Garnet/'))==h,n
+bundle=work/'bf16-scores-tiled-native-api-source.zip';assert not bundle.exists()
+with zipfile.ZipFile(bundle,'x',zipfile.ZIP_DEFLATED) as z:
+    for n in candidate:z.write(repo/n,n)
+p={'status':'native_tiled_scores_api_build_prepared_unrun','base_files':base,'runtime':runtime,'environment':prior['environment'],'methods':methods,'candidate_files':candidate,
+   'cuda_objects_before':built['cuda_objects_built'],'cache_before_sha256':built['cache_after_sha256'],'vcvars':prior['vcvars'],'test_ids':prior['test_ids'],
+   'bundle':'results/'+bundle.name,'bundle_sha256':sha(bundle),'failed_model_proof_sha256':sha(failed),
+   'scope':'Failure027f retained: embedded ctypes lacks libffi before any model. Keep identical admitted tiled CUDA source/default-off selector, add read-only Garnet API bridge calling the same process-frozen native selector without CUDA or ctypes. Actual49legacy CPU,ten external native selector,ten actual embedded native API and955tokenizer CPU cases before model. Preserve baseline source653/1a1d/runtime/SDK and restore two candidate files and DLL always; separate candidate. No GPU model, HTTP, new quality/performance or2x admission.'}
+prep=e/'bf16-scores-tiled-native-api-build-preparation.json';assert not prep.exists();prep.write_bytes(json.dumps(p,indent=2).encode())
+rows=[{'local':str(m/n),'target':'Garnet/test2026/cuda/qwen38_5090/'+n,'sha256':sha(m/n)} for n in names]
+rows += [{'local':str(bundle),'target':p['bundle'],'sha256':sha(bundle)},{'local':str(prep),'target':'Garnet/test2026/cuda/qwen38_5090/evidence/'+prep.name,'sha256':sha(prep)}]
+(work/'native-tiled-api-build-upload-plan.json').write_bytes(json.dumps({'uploads':rows},indent=2).encode());print(json.dumps({'status':p['status'],'files':len(base),'targets':len(rows),'preparation_sha256':sha(prep)}))

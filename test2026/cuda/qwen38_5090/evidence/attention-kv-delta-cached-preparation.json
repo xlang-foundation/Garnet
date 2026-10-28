@@ -1,0 +1,168 @@
+{
+  "status": "cached_kv_overlay_prepared_cpu_only",
+  "files": {
+    "attention_kv_delta_cached_core.cuh": "c1e6c5ba95987c9d7baf54e49bafda2921aa1647e1e4457d89dc2351a31d44f4",
+    "attention_kv_delta_cached_core.cu": "fd00f90269e09b7ef64a5cb78876662718ab3d8762b512e0ed98bb0840a79ade",
+    "attention_kv_delta_cached_test.cu": "585cec2149b6ddeffa893fef4bdd6671be4f9ec61d00dcf650d6c300954ba309"
+  },
+  "base_source_sha256": {
+    "src/cuda/qwen35_attention_core.cu": "3ad24bb00acc2f77a5b7258e4b7fecb248c682b3ad257d28af8bc8f336635165",
+    "test2026/cuda/qwen38_5090/attention_kv_delta_core.cu": "253bf11c8f154b4b23c1bd6cbb08462aec59717be71cec56fc0816bee704b120",
+    "test2026/cuda/qwen38_5090/attention_kv_delta_timing_test.cu": "914bb8cc4912c6ebe8127d5ef3845f9efceaf1203a0a02dd9c6911fd2c96815e"
+  },
+  "compact_derivation": [
+    [
+      "__global__ void overlay(",
+      "template<bool hybrid> __global__ void compactCached("
+    ],
+    [
+      "const int end=min(c.capacity,int(slots[b*c.tokens+t])+1);",
+      "const int end=min(c.capacity,int(slots[b*c.tokens+t])+1);\n if(hybrid&&end>512)return;\n const CachedSlots controls=loadSlots(slots,active,b);"
+    ],
+    [
+      "overlayToken(c,slots,active,b,position)",
+      "controls.find(position)"
+    ],
+    [
+      "overlayToken(c,slots,active,b,k)",
+      "controls.find(k)"
+    ]
+  ],
+  "legacy_derivation": [
+    [
+      "__global__ void scores(Qwen35AttentionCoreConfig c,const float* query,const float* key,",
+      "__global__ void scoresCached(Qwen35AttentionCoreConfig c,const float* query,const float* key,const float* chunkKey,"
+    ],
+    [
+      "const float* slots,const float* active,float* scratch){",
+      "const float* slots,const float* active,float* scratch,bool hybrid){"
+    ],
+    [
+      "if(active[b*c.tokens+t]==0)return;\n    int head=queryRow",
+      "if(active[b*c.tokens+t]==0||(hybrid&&min(c.capacity,int(slots[b*c.tokens+t])+1)<=512))return;\n    const CachedSlots controls=loadSlots(slots,active,b);\n    int head=queryRow"
+    ],
+    [
+      "for(int d=lane;d<c.dim;d+=32)sum=fmaf(query[size_t(queryRow)*c.dim+d],key[kbase+d],sum);",
+      "const int replacement=controls.find(position);\n        const float* rowKey=replacement<0?key+kbase:chunkKey+((size_t(b)*c.tokens+replacement)*c.kv+kh)*c.dim;\n        for(int d=lane;d<c.dim;d+=32)sum=fmaf(query[size_t(queryRow)*c.dim+d],rowKey[d],sum);"
+    ],
+    [
+      "__global__ void normalize(Qwen35AttentionCoreConfig c,const float* active,float* scratch){",
+      "__global__ void normalizeCached(Qwen35AttentionCoreConfig c,const float* slots,const float* active,float* scratch,bool hybrid){"
+    ],
+    [
+      "if(active[b*c.tokens+t]==0)return;\n    __shared__ float temporary",
+      "if(active[b*c.tokens+t]==0||(hybrid&&min(c.capacity,int(slots[b*c.tokens+t])+1)<=512))return;\n    __shared__ float temporary"
+    ],
+    [
+      "__global__ void context(Qwen35AttentionCoreConfig c,const float* value,const float* gate,",
+      "__global__ void contextCached(Qwen35AttentionCoreConfig c,const float* value,const float* chunkValue,const float* gate,"
+    ],
+    [
+      "const float* slots,const float* active,const float* scratch,float* output){",
+      "const float* slots,const float* active,const float* scratch,float* output,bool hybrid){"
+    ],
+    [
+      "int head=row%c.heads,kh=head/(c.heads/c.kv);float sum=0;",
+      "if(hybrid&&min(c.capacity,int(slots[b*c.tokens+t])+1)<=512)return;\n    const CachedSlots controls=loadSlots(slots,active,b);\n    int head=row%c.heads,kh=head/(c.heads/c.kv);float sum=0;"
+    ],
+    [
+      "sum=fmaf(weight,value[((size_t(b)*c.kv+kh)*c.capacity+k)*c.dim+d],sum);",
+      "const int replacement=controls.find(k);\n        const float* rowValue=replacement<0?value+((size_t(b)*c.kv+kh)*c.capacity+k)*c.dim:chunkValue+((size_t(b)*c.tokens+replacement)*c.kv+kh)*c.dim;\n        sum=fmaf(weight,rowValue[d],sum);"
+    ]
+  ],
+  "driver_derivation": [
+    [
+      "#include \"attention_kv_delta_core.cuh\"",
+      "#include \"attention_kv_delta_core.cuh\"\n#include \"attention_kv_delta_cached_core.cuh\""
+    ],
+    [
+      "{4,4,24,4,4096,256,128,3}};",
+      "{4,4,24,4,4096,256,128,3},{4,4,24,4,4096,256,511,0},{4,4,24,4,4096,256,513,0},{4,4,24,4,4096,256,1024,0},{4,4,24,4,4096,256,2048,0}};"
+    ],
+    [
+      "if(!Equal(inputs[4]->read(),host[4])||!Equal(inputs[5]->read(),host[5]))throw std::runtime_error(\"Overlay mutated canonical KV before commit\");",
+      "if(!Equal(inputs[4]->read(),host[4])||!Equal(inputs[5]->read(),host[5]))throw std::runtime_error(\"Overlay mutated canonical KV before commit\");\n  const auto readonlyReference=outputs[0]->read();\n  for(int strategy=0;strategy<3;++strategy){\n   if(Garnet::RunQwen35AttentionKVOverlayCached(c,in,out[0],workspace.data(),strategy,stream))throw std::runtime_error(\"Cached readonly overlay failed\");Check(cudaStreamSynchronize(stream));\n   if(!Equal(outputs[0]->read(),readonlyReference)||!Equal(inputs[4]->read(),host[4])||!Equal(inputs[5]->read(),host[5]))throw std::runtime_error(\"Cached overlay differs or mutates canonical KV\");\n  }"
+    ],
+    [
+      "if(mode==4){if(Garnet::RunQwen35AttentionKVOverlay(c,in,out[0],stream))return 1;return Garnet::CommitQwen35AttentionKVPrefix",
+      "if(mode>=4){int code=mode==4?Garnet::RunQwen35AttentionKVOverlay(c,in,out[0],stream):Garnet::RunQwen35AttentionKVOverlayCached(c,in,out[0],workspace.data(),mode-5,stream);if(code)return code;return Garnet::CommitQwen35AttentionKVPrefix"
+    ],
+    [
+      "Graph graphs[5];std::vector<std::vector<float>> witnessed(5);",
+      "Graph graphs[8];std::vector<std::vector<float>> witnessed(8);\n  const char* variants[8]={\"baseline\",\"compact\",\"tiled\",\"split\",\"overlay\",\"cached-compact\",\"cached-legacy\",\"hybrid\"};"
+    ],
+    [
+      "for(int mode=0;mode<5;++mode){\n   if(run(mode))",
+      "for(int mode=0;mode<8;++mode){\n   if(run(mode))"
+    ],
+    [
+      "(mode==0?\"-baseline.f32\":mode==1?\"-compact.f32\":mode==2?\"-tiled.f32\":mode==3?\"-split.f32\":\"-overlay.f32\")",
+      "(\"-\"+std::string(variants[mode])+\".f32\")"
+    ],
+    [
+      "else if(mode<3||mode==4){",
+      "else if(mode<3||mode>=4){"
+    ],
+    [
+      "for(int mode=0;mode<5;++mode)for(int warmup",
+      "for(int mode=0;mode<8;++mode)for(int warmup"
+    ],
+    [
+      "std::vector<float> milliseconds[5];",
+      "std::vector<float> milliseconds[8];"
+    ],
+    [
+      "for(int mode:{0,1,2,3,4,4,3,2,1,0})",
+      "for(int mode:{0,1,2,3,4,5,6,7,7,6,5,4,3,2,1,0})"
+    ],
+    [
+      "const char* keys[5]={\"baseline_ms\",\"compact_ms\",\"tiled_ms\",\"split_ms\",\"overlay_commit_ms\"};",
+      "const char* keys[8]={\"baseline_ms\",\"compact_ms\",\"tiled_ms\",\"split_ms\",\"overlay_commit_ms\",\"cached_compact_commit_ms\",\"cached_legacy_commit_ms\",\"hybrid_commit_ms\"};"
+    ],
+    [
+      "for(int mode=0;mode<5;++mode){printf",
+      "for(int mode=0;mode<8;++mode){printf"
+    ],
+    [
+      "if(Garnet::RunQwen35AttentionKVOverlay(invalid,in,out[0],stream)==0",
+      "if(Garnet::RunQwen35AttentionKVOverlayCached(invalid,in,out[0],workspace.data(),0,stream)==0||Garnet::RunQwen35AttentionKVOverlayCached(c,in,out[0],workspace.data(),3,stream)==0||Garnet::RunQwen35AttentionKVOverlay(invalid,in,out[0],stream)==0"
+    ],
+    [
+      "\\\"variants_checked\\\":5",
+      "\\\"variants_checked\\\":8,\\\"cached_readonly_legacy_exact\\\":true"
+    ],
+    [
+      "ABCDEEDCBAx3",
+      "ABCDEFGHHGFEDCBAx3"
+    ]
+  ],
+  "canonical_cache_comparison_replacement_count": 6,
+  "hybrid_visible_prefix_threshold": 512,
+  "strategies": [
+    "cached compact",
+    "cached legacy geometry",
+    "per-query hybrid"
+  ],
+  "profile_count": 12,
+  "original_profiles_retained": 8,
+  "additional_full_active_prefix_parameters": [
+    511,
+    513,
+    1024,
+    2048
+  ],
+  "timing_order": "ABCDEFGHHGFEDCBAx3",
+  "timing_samples_per_variant": 6,
+  "gpu_run": false,
+  "compiled": false,
+  "model_integration_admitted": false,
+  "scope": "Standalone cached slot controls and distinct long-prefix geometry. New readonly contexts plus same qualified mutable commit; unchanged current native/plugin API. Every context/full-cache/prefix/graph gate required before timing. No performance result.",
+  "unchanged_source_sha256": {
+    "src/cuda/qwen35_attention_core.cuh": "1a3997a15f4aa897f2bc69bf6a3afbef9a58f166fb094bfb858fac1b170e166f",
+    "test2026/cuda/qwen38_5090/attention_kv_delta_core.cuh": "c53534e70b1acdf307bcd15d470aa51fe3bd040bafa37db54af0b068fdef92f9"
+  },
+  "method_sha256": {
+    "build_attention_kv_delta_cached.bat": "27b19920ff99a8be8a07a4037f29b386419d9d62cf73100431cb7895f3461172",
+    "run_attention_kv_delta_cached.py": "a80adbdf862a6e8d4ad24de5b72cef22ded9dd8614000372f3c587b80c0a0b50"
+  }
+}

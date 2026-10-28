@@ -1,0 +1,18 @@
+from pathlib import Path
+import hashlib,json,ast
+W=Path(__file__).resolve().parent;rows=[]
+def derive(source,target,changes):
+    raw=(W/source).read_bytes();before=hashlib.sha256(raw).hexdigest();replacements=[]
+    for old,new,count in changes:
+        assert raw.count(old.encode())==count,(source,old,raw.count(old.encode()));raw=raw.replace(old.encode(),new.encode());replacements.append({'old':old,'new':new,'count':count})
+    ast.parse(raw);p=W/target;assert not p.exists();p.write_bytes(raw);rows.append({'source':source,'target':target,'source_sha256':before,'target_sha256':hashlib.sha256(raw).hexdigest(),'changes':replacements})
+derive('install-decode35-stage-native-build.py','install-rowwise-k-norm-native-build.py',[
+ ('decode35-stage-native','rowwise-k-norm-native',2),('==13','==17',1),('decode35-stage-build','rowwise-k-norm-build',2),('decode35_stage_build_prepared_unrun','rowwise_k_norm_build_prepared_unrun',1),('source86_native_build_methods_installed_build_unrun','source87_native_build_methods_installed_build_unrun',2),
+])
+derive('postprocess-decode35-stage-native-build.py','postprocess-rowwise-k-norm-native-build.py',[
+ ('decode35-stage-build-attempt1','rowwise-k-norm-build-attempt1',1),('verify_decode35_stage_native_build.py','verify_rowwise_k_norm_native_build.py',2),('decode35-stage-native-build-derivation.json','rowwise-k-norm-native-build-derivation.json',1),('decode35-stage-build-preparation.json','rowwise-k-norm-build-preparation.json',1),('source86','source87',2),('decode35-stage-native-build-postprocess-ledger','rowwise-k-norm-native-build-postprocess-ledger',1),('93current','104current',1),('new109actual CPU profile/header link','new184actual CPU profile and original109/header links',1),
+])
+derive('replay-decode35-stage-native-build.py','replay-rowwise-k-norm-native-build.py',[
+ ('decode35-stage-build-attempt1','rowwise-k-norm-build-attempt1',1),('verify_decode35_stage_native_build.py','verify_rowwise_k_norm_native_build.py',2),('decode35-stage-native-build-derivation.json','rowwise-k-norm-native-build-derivation.json',1),('decode35-stage-build-preparation.json','rowwise-k-norm-build-preparation.json',1),('source86','source87',2),('decode35-stage-native-build-local-replay','rowwise-k-norm-native-build-local-replay',1),('93+86Python','104+86Python',1),('new109headerproof','new184profile/original109header proofs',1),('candidate_source_files\':86','candidate_source_files\':87',1),('q[\'new_decode35_native_CPU_profile_cases\']','q[\'new_rowwise_K_native_CPU_profile_cases\']',1),('Garnet-Decode35-Stage-Native-Build-Progress.json','Garnet-Rowwise-K-Norm-Native-Build-Progress.json',1),
+])
+(W/'rowwise-k-norm-build-tools-derivation.json').write_bytes(json.dumps({'derivations':rows},indent=2).encode());print(json.dumps({'derived_files':len(rows)}))

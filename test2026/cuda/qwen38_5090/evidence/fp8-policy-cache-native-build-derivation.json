@@ -1,0 +1,179 @@
+{
+  "derivations": [
+    {
+      "source": "run_o128_canonical_native_build.py",
+      "target": "run_fp8_policy_cache_native_build.py",
+      "source_sha256": "4d94e00b18dbc71f251814db5c34b87242fc70e4f39180f25f9cb472a1f7f532",
+      "target_sha256": "66ee7b2d1f9c13e94cf351cc79a48b4377f5e5716f5c991283b7a3fc29339c76",
+      "changes": [
+        {
+          "old": "JOB='o128-canonical-build-attempt1'",
+          "new": "JOB='fp8-policy-cache-build-attempt1'",
+          "count": 1
+        },
+        {
+          "old": "o128-canonical-build-preparation.json",
+          "new": "fp8-policy-cache-build-preparation.json",
+          "count": 1
+        },
+        {
+          "old": "o128_canonical_build_prepared_unrun",
+          "new": "fp8_policy_cache_build_prepared_unrun",
+          "count": 1
+        },
+        {
+          "old": "o128-canonical-build-inputs.json",
+          "new": "fp8-policy-cache-build-inputs.json",
+          "count": 2
+        },
+        {
+          "old": "garnet-native-o128-canonical-attempt1.dll",
+          "new": "garnet-native-fp8-policy-cache-attempt1.dll",
+          "count": 1
+        },
+        {
+          "old": "o128-native-build-input-inventory",
+          "new": "fp8-policy-cache-build-input-inventory",
+          "count": 1
+        },
+        {
+          "old": "inspect-o128-build-inputs.py",
+          "new": "inspect-fp8-policy-cache-build-inputs.py",
+          "count": 1
+        },
+        {
+          "old": "run-o128-build-inventory.py",
+          "new": "run-fp8-policy-cache-build-inventory.py",
+          "count": 1
+        },
+        {
+          "old": "qualified57,expected,_=o_sources();assert len(qualified57)==57 and expected==candidate",
+          "new": "qualified57,qualified60,_=o_sources();assert len(qualified57)==57\n        from test2026.cuda.qwen38_5090.fp8_policy_cache_source import sources as cache_sources\n        original60,expected,_=cache_sources();assert original60==qualified60 and len(expected)==62 and expected==candidate",
+          "count": 1
+        },
+        {
+          "old": "68current controls plus86historical assertions on exact qualified parent50; original tests unchanged, new60source composition checked independently",
+          "new": "80current controls plus86historical assertions on exact qualified parent50; original tests unchanged,62source composition checks all60numeric sources byteexact",
+          "count": 1
+        },
+        {
+          "old": "from test2026.cuda.qwen38_5090.o128_canonical_source import sources\n        _,expected,_=sources();assert candidate==expected",
+          "new": "from test2026.cuda.qwen38_5090.fp8_policy_cache_source import sources\n        _,expected,_=sources();assert candidate==expected",
+          "count": 1
+        },
+        {
+          "old": "        run(['cmd.exe','/d','/c',str(M/'build_q128_profile_cpu.bat')",
+          "new": "        run(['cmd.exe','/d','/c',str(M/'build_fp8_policy_cache_cpu.bat'),p['vcvars'],str(out/'policy-cache-cpu')],'policy-cache-cpu','Actual pure C++ cache-key collision/normalization/coupled policy rejection controls; no GPU')\n        run(['cmd.exe','/d','/c',str(M/'build_q128_profile_cpu.bat')",
+          "count": 1
+        },
+        {
+          "old": "Release/MT/sm120 separate defaultoff O128 plugin/type/wire/counter reusing exact original M128 SDK context8MiB; original Q/KV/GDN sources/guards/quantizers/CUDA kernels unchanged",
+          "new": "Release/MT/sm120 cache policy fingerprint only; all60qualified numeric sources, factories/plugins/quantizers/CUDA kernels unchanged",
+          "count": 1
+        },
+        {
+          "old": "        w.update(cuda_objects_built=after,changed_cuda_objects=validate_cuda_objects(objects,after),candidate_library_sha256=sha(library))",
+          "new": "        assert after==objects,'Cache-only change unexpectedly rebuilt different CUDA object bytes'\n        w.update(cuda_objects_built=after,changed_cuda_objects=validate_cuda_objects(objects,after),candidate_library_sha256=sha(library))",
+          "count": 1
+        },
+        {
+          "old": "o128_canonical_native_built_CPU_qualified_model_unqualified",
+          "new": "fp8_policy_cache_native_built_CPU_qualified_production_cache_unqualified",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "verify_o128_canonical_native_build.py",
+      "target": "verify_fp8_policy_cache_native_build.py",
+      "source_sha256": "8d50eac92da8f439b258eb83fe39b1e30b7584dacb8c032fe62cabfcd2b519b5",
+      "target_sha256": "658c76db4414485bbff74200839f2f93774a4cbf353928a023b597cd52c11de1",
+      "changes": [
+        {
+          "old": "JOB='o128-canonical-build-attempt1'",
+          "new": "JOB='fp8-policy-cache-build-attempt1'",
+          "count": 1
+        },
+        {
+          "old": "o128-canonical-build-preparation.json",
+          "new": "fp8-policy-cache-build-preparation.json",
+          "count": 1
+        },
+        {
+          "old": "len(p['candidate_files'])==60",
+          "new": "len(p['candidate_files'])==62",
+          "count": 1
+        },
+        {
+          "old": "evidence/o128-canonical-native-build-derivation.json",
+          "new": "evidence/fp8-policy-cache-native-build-derivation.json",
+          "count": 1
+        },
+        {
+          "old": "len(source.namelist())==len(set(source.namelist()))==60",
+          "new": "len(source.namelist())==len(set(source.namelist()))==62",
+          "count": 1
+        },
+        {
+          "old": "assert len(expected)==14",
+          "new": "assert len(expected)==15",
+          "count": 1
+        },
+        {
+          "old": "o128_canonical_native_built_CPU_qualified_model_unqualified",
+          "new": "fp8_policy_cache_native_built_CPU_qualified_production_cache_unqualified",
+          "count": 1
+        },
+        {
+          "old": "b'Ran 68 tests'",
+          "new": "b'Ran 80 tests'",
+          "count": 1
+        },
+        {
+          "old": "for name in ('profile','o-profile'",
+          "new": "for name in ('policy-cache-cpu','profile','o-profile'",
+          "count": 1
+        },
+        {
+          "old": "            assert doc(base+'profile/report.json')",
+          "new": "            assert doc(base+'policy-cache-cpu/report.json')==dict(status='TRT_graph_policy_header_CPU_contract_passed',checks=72,strict_policies=8,additional_policies=4,distinct_keys=13,rejections=43,GPU_or_model_executed=False)\n            assert doc(base+'profile/report.json')",
+          "count": 1
+        },
+        {
+          "old": "            assert w['cuda_objects_before']==p['cuda_objects_before'] and validate_cuda_objects",
+          "new": "            assert w['cuda_objects_before']==w['cuda_objects_built']==p['cuda_objects_before']\n            assert w['cuda_objects_before']==p['cuda_objects_before'] and validate_cuda_objects",
+          "count": 1
+        },
+        {
+          "old": "o128_canonical_native_CPU_build_replayed",
+          "new": "fp8_policy_cache_native_CPU_build_replayed",
+          "count": 1
+        },
+        {
+          "old": "o128_canonical_native_build_failure_replayed",
+          "new": "fp8_policy_cache_native_build_failure_replayed",
+          "count": 1
+        },
+        {
+          "old": "candidate_files=60",
+          "new": "candidate_files=62",
+          "count": 1
+        },
+        {
+          "old": "current_CPU_controls=68 if passed",
+          "new": "current_CPU_controls=80 if passed",
+          "count": 1
+        },
+        {
+          "old": "new_separate_O_contracts_checked=True",
+          "new": "new_separate_O_contracts_checked=True,cache_policy_header_checked=passed,all34_CUDA_objects_byteexact=passed",
+          "count": 1
+        }
+      ]
+    }
+  ],
+  "all_original_Q_O_factory_wire_initialize_selector_tokenizer_contracts_preserved": true,
+  "new62source_only_adds_cache_runtime_and_header": true,
+  "all34_CUDA_objects_must_remain_byteexact": true,
+  "native_or_GPU_executed": false
+}

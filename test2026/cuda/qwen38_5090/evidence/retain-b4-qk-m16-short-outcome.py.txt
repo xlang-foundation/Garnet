@@ -1,0 +1,35 @@
+from pathlib import Path
+import hashlib,json,os,sys,zipfile
+W=Path(__file__).resolve().parent;O=W.parent/'outputs';R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';E=M/'evidence';JOB='b4-qk-m16-short-attempt1';sha=lambda b:hashlib.sha256(b).hexdigest();owned=[]
+def keep(name,raw):
+    target=E/name;assert not target.exists();target.write_bytes(raw);owned.append(target)
+with zipfile.ZipFile(W/'b4-qk-m16-short-v2-closure-assets.zip') as z:
+    mf=json.loads(z.read('manifest.json'));assert z.testzip() is None
+    for n,h in mf['files'].items():assert sha(z.read(n))==h
+    proof=z.read('results/'+JOB+'-verified.json');assert proof==(O/(JOB+'-verified.json')).read_bytes();p=O/(JOB+'-remote-verified.json');assert not p.exists();p.write_bytes(proof)
+    for n in mf['files']:
+        if n.startswith('results/b4-qk-m16-short-v2-postprocess/') or n.endswith('short-v2-install.json'):keep('b4-qk-m16-short-closure-'+n.removeprefix('results/').replace('/','-'),z.read(n))
+    keep('b4-qk-m16-short-closure-manifest.json',json.dumps(dict(closure_sha256=sha((W/'b4-qk-m16-short-v2-closure-assets.zip').read_bytes()),**mf),indent=2).encode())
+q=json.loads(proof);assert q['exit_code']==0 and q['strict_short_admission_passed'] and q['source_runtime_SDK_checkpoint_CMake_all34objects_restored'] and not q['full4k_MTP_805_HTTP_or_performance_qualified'] and not q['original_failed_job_promoted'];keep(JOB+'-verified.json',proof)
+assert q['observation']['all_states_and_vectors_exact'] and q['observation']['IDs_exact']==[True]*4
+routes=q['actual_GDN_V_QK_M16_route'];assert all(v>=16 for v in routes['QK']['initializations_by_output_rows'].values()) and set(routes['QK']['initializations_by_output_rows'])=={'1024','12288'}
+with zipfile.ZipFile(O/(JOB+'-evidence.zip')) as z:
+    mf=json.loads(z.read('evidence-manifest.json'));assert sha((O/(JOB+'-evidence.zip')).read_bytes())==q['archive_sha256']
+    for n,h in mf['files'].items():assert sha(z.read(n))==h
+    w=json.loads(z.read('results/'+JOB+'/workflow.json'));assert w['cleanup_finished'] and w['build_artifacts_unchanged'] and len(w['source_before'])==1763
+    for n in mf['files']:
+        if n.startswith('results/'+JOB+'/') and n.endswith(('.json','.jsonl','.log')):keep(JOB+'-'+n.removeprefix('results/'+JOB+'/').replace('/','-'),z.read(n))
+    keep(JOB+'-archive-manifest.json',json.dumps(dict(archive_sha256=q['archive_sha256'],archive_bytes=(O/(JOB+'-evidence.zip')).stat().st_size,files=mf['files'],raw_vectors_images_and_source_bundles_in_immutable_archive_only=True),indent=2).encode())
+sys.path[:0]=[str(M),str(R)];import run_logged as ledger
+script=W/'summarize-b4-qk-m16-model-progress.py';pins={script.name:sha(script.read_bytes()),'verify_b4_qk_m16_short_v2.py':sha((M/'verify_b4_qk_m16_short_v2.py').read_bytes())};ledger.source_identity=lambda:dict(scope='Explicit closed source73/source79 wholemodel comparison, no native/GPU/protected bodies',owned_source_sha256=pins);os.chdir(R)
+assert ledger.run([sys.executable,str(script)],W/'b4-qk-m16-model-progress-ledger','correctness','Before-after only after16completefreshB1snapshots/rawhidden+normbytes/IDs identical; previousfailedsource73 preserved, source79all4rows8IDs/all128state/vectors/reset exact. Not unique causaloperation proof or full4K/MTP/quality/performance.',[script,O/(JOB+'-verified.json'),O/(JOB+'-evidence.zip'),O/'b4-v-m16-short-attempt1-verified.json',O/'b4-v-m16-short-attempt1-evidence.zip'])==0
+progress=json.loads((O/'Garnet-B4-QK-M16-Model-Progress.json').read_bytes());assert progress['proofs']['after']['proof_sha256']==sha(proof) and progress['unchanged_complete_B1_reference_snapshots']==16;keep('b4-qk-m16-model-progress.json',(O/'Garnet-B4-QK-M16-Model-Progress.json').read_bytes())
+for n in ('commands.log','commands.jsonl'):keep('b4-qk-m16-model-progress-'+n,(W/'b4-qk-m16-model-progress-ledger'/n).read_bytes())
+for n in ('commands.log','commands.jsonl'):keep('b4-qk-m16-short-local-replay-'+n,(W/'b4-qk-m16-short-local-replay'/n).read_bytes())
+for n in ('summarize-b4-qk-m16-model-progress.py','retain-b4-qk-m16-short-outcome.py'):keep(n+'.txt',(W/n).read_bytes())
+summary=dict(status='paired_source79_B4_short_wholemodel_exact_pass_only',proof_sha256=sha(proof),archive_sha256=q['archive_sha256'],strict_short_admission_passed=True,all_four_rows_all_eight_IDs_exact=True,all_128_state_components_and_finite_hidden_normalized_vectors_exact_in_all_four_phases=True,actual_GDN_V_QK_routes=routes,unchanged_fresh_B1_reference_snapshots=16,source73_failed_job_promoted=False,source_runtime_SDK_config_index_CMake_all34objects_restored=True,full4K_MTP_quality_HTTP_or_performance_qualified=False,two_times_target_achieved=False,next='Complete full4K8B1oracles/3groups exactgate, then repeat/permutation/tail/MTP/805/HTTP before anynewtiming. Currentservingchartunchanged.')
+raw=json.dumps(summary,indent=2).encode();keep('b4-qk-m16-short-summary.json',raw);(O/'Garnet-B4-QK-M16-Short-Verified.json').write_bytes(raw)
+text=('\r\n\r\n2026-10-27 source79 short wholemodel exactgate PASSED afterv2metadata fix; pairedremote/local rawreplays identical proof '+sha(proof)+', archive '+q['archive_sha256']+' (15040039B). Bothcaptures0,14CPU; all4rows all8IDs, all128statecomponents/physical-logicalhashes/fullfinitehidden+normalizedvectors reset/prefill/final/reset exactagainstfourfreshsource60B1. All1763ownedfiles/runtime/SDK/config-index/CMake/all34objects/baselineDLL restored; privateenginenonces retiredafteridle. ActualGDN/V/QKroutes validated; QK bothN1024/12288 all16+init withgeometryspecific7attrs/liveopaque/M4-M16AlgoChecks4MiB. Source79DLL2bafed218fbd1f55a20c0b3bb303638a0f135e12bd70be2884b4a098d4b7beb4 remainsdefaultoff outsidecandidate.\r\nBefore/after comparison firstproves16completefreshB1reference snapshots, allrawhidden+normalizedbytes and8IDs unchanged. Finalcomponentmismatches source73->79 rows[113,104,128,128]->[0,0,0,0];8IDs matches[true,true,false,false]->[true,true,true,true]. Prior source73FAILED andallSDK/cachefailures remainFAILED. This is a paired candidate result, not unique Q-vs-K causal isolation; sameDLL QKoff wholemodel ablation notexecuted. Short4cases/8IDs donotqualifyfull4K,permutation/tail/repeats,MTP,805quality,HTTP orperformance. Full4Kgolden8inputs/3groups/comparator11CPU/probeAST prepared butGPUunrun; execute afterpairedshortclosure. Strongesttuned/MTPrefs,INT4/4B,overall2x remainopen andservingcharts unchanged.\r\n').encode()
+for n in ('docs/research/qwen38-5090-development-log.md','docs/research/qwen38-5090-implementation-task.md'):
+    p=R/n;p.write_bytes(p.read_bytes()+text);owned.append(p)
+paths=[p.relative_to(R).as_posix() for p in owned];(W/'b4-qk-m16-short-outcome-stage-paths.bin').write_bytes(b'\0'.join(n.encode() for n in paths)+b'\0');print(json.dumps(dict(files=len(paths),proof_sha256=sha(proof),strict_short_admission_passed=True)))

@@ -1,0 +1,20 @@
+"""Audit failed control metadata only; do not open or interpret any new operand blob."""
+from pathlib import Path
+import hashlib,json,zipfile
+W=Path(__file__).resolve().parent;O=W.parent/'outputs';J='decode35-operands-attempt1';archive=O/(J+'-evidence.zip');proof=O/(J+'-verified.json');q=json.loads(proof.read_bytes())
+assert proof.read_bytes()==(O/(J+'-remote-verified.json')).read_bytes() and hashlib.sha256(archive.read_bytes()).hexdigest()==q['archive_sha256']
+assert q['exit_code']==1 and q['analysis'] is None and q['error']=="AssertionError('Observer or DLL changed complete primary state')"
+with zipfile.ZipFile(archive) as z:
+    base='results/'+J+'/';reports={role:json.loads(z.read(base+role+'/report.json'))['rows'][0] for role in ('off-candidate','on-candidate')}
+    def captures(row):return {'reset':row['reset_state'],'prefill':row['prefill_state'],**{'step'+str(e['step']):e['capture'] for e in row['post_step_states']},'final_reset':row['final_reset']}
+    old,new=map(captures,reports.values());rows=[]
+    for label in old:
+        changes=[]
+        for i,(a,b) in enumerate(zip(old[label]['logical']['components'],new[label]['logical']['components'])):
+            positions=[p for p,(x,y) in enumerate(zip(a['row_sha256'],b['row_sha256'])) if x!=y]
+            if positions:changes.append({'component':i,'layer':a['layer'],'role':a['role'],'physical_rows':positions})
+        rows.append({'capture':label,'changed_components':changes})
+    result={'status':'failed_primary_control_metadata_audited_no_operand_interpretation','archive_sha256':q['archive_sha256'],'comparisons':rows,'first_ID_difference':[next((i for i,(x,y) in enumerate(zip(a,b)) if x!=y),None) for a,b in zip(reports['off-candidate']['generated_ids'],reports['on-candidate']['generated_ids'])]}
+raw=json.dumps(result,indent=2).encode();target=O/'Garnet-Decode35-Observer-Perturbation.json';assert not target.exists() or target.read_bytes()==raw
+if not target.exists():target.write_bytes(raw)
+print(json.dumps({'captures':[{'capture':r['capture'],'changed_components':len(r['changed_components']),'first':r['changed_components'][:1]} for r in rows],'ID_differences':result['first_ID_difference'],'operand_blobs_read':False}))

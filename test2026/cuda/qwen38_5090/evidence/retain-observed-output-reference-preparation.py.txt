@@ -1,0 +1,57 @@
+from pathlib import Path
+import ast,datetime,hashlib,json,shutil
+w=Path(__file__).resolve().parent;r=Path('D:/CantorAI/work/qwen38-5090');m=r/'test2026/cuda/qwen38_5090';e=m/'evidence';o=w.parent/'outputs';sha=lambda raw:hashlib.sha256(raw).hexdigest()
+for name in ('observed-output-reference-cpu-ledger','observed-output-reference-http-cpu-ledger','observed-output-reference-deferred-cpu-ledger','observed-output-reference-final-cpu-ledger','observed-output-reference-owner-cpu-ledger'):
+ target=e/name;assert not target.exists();shutil.copytree(w/name,target)
+for name in ('derive-observed-output-benchmark.py','check-observed-output-policy-retained-data.py','defer-observed-comparisons-until-after-timing.py','derive-observed-output-reference-pipeline.py','prepare-sglang-observed-fixed4k-deployment.py','preflight-sglang-observed-fixed4k.py','package-sglang-observed-fixed4k-methods.py','install-sglang-observed-fixed4k-methods.py','start-sglang-observed-preflight-from-proofs.py','retain-observed-output-reference-preparation.py'):
+ raw=(w/name).read_bytes();ast.parse(raw);target=e/(name+'.txt');assert not target.exists();target.write_bytes(raw)
+for name in ('sglang-observed-fixed4k-upload-plan.json','sglang-observed-fixed4k-preflight-input.json','sglang-observed-fixed4k-preflight-start-request.json'):
+ target=e/name;assert not target.exists();target.write_bytes((w/name).read_bytes())
+methods=('reference_observed_output.py','benchmark_observed_output_reference.py','test_reference_observed_output.py','test_observed_output_benchmark_http.py','run_sglang_observed_fixed4k.py','probe_reference_observed_fixed4k.py','verify_sglang_observed_fixed4k.py','prepare_sglang_observed_fixed4k_run.py','test_sglang_observed_fixed4k_owner.py')
+for name in methods:ast.parse((m/name).read_bytes())
+p=json.loads((e/'sglang-observed-fixed4k-run-preparation.json').read_bytes());assert p['expected_cpu_tests']==60;plan=json.loads((w/'sglang-observed-fixed4k-upload-plan.json').read_bytes())
+for row in plan['uploads']:assert sha(Path(row['local']).read_bytes())==row['sha256']
+retained=json.loads((e/'observed-output-policy-retained-data-check.json').read_bytes());assert retained['actual_retained_streams_checked']==12 and retained['actual_text_variants']==2 and retained['old_archive_or_manifest_or_metric_changed'] is False
+summary={'status':'ordinary_sglang_observed_output_reference_prepared_cpu_qualified_unrun','recorded_utc':datetime.datetime.now(datetime.timezone.utc).isoformat(),'method_sha256':{n:sha((m/n).read_bytes()) for n in methods},'preparation_sha256':sha((e/'sglang-observed-fixed4k-run-preparation.json').read_bytes()),'pinned_files':len(p['files']),'upload_targets':len(plan['uploads']),'actual_owner_cpu_tests_passed':60,'actual_owner_cpu_seconds':11.180,'actual_final_http_cpu_tests_passed':36,'actual_final_http_cpu_seconds':10.080,'actual_synthetic_integration_requests':248,'synthetic_request_split':{'actual_nonstream_protocol_requests':124,'actual_stream_protocol_requests':124},'cpu_fixture_scope':'Ephemeral local synthetic HTTP server, fake memory sampler and explicitly synthetic responses; no GPU/model performance data. Complete8cohorts/124sidecars raw-replay,126clamp rejection/failure cleanup and comparison-after-sampling boundary checked.','actual_retained_failed_profile_streams_checked':12,'actual_retained_stream_variants':2,'old_failed_archive_or_metrics_changed':False,'comparison_bookkeeping':'Only after all timing and serving-memory sampling closes. Strict per-request status/count/finish validation remains inside send.','ordinary_sglang_only':True,'precision_context_length_output_budget_cache_or_source_guard_relaxed':False,'new_server_gpu_or_benchmark_executed':False,'initial_preparation_errors_preserved':['Deferred comparison CPU test initially masked the original126budget failure; failed source/log retained and finalizer corrected without relaxing counts.','Pipeline source derivation asserted a different inherited job_path import spelling; partial matching outputs preserved, corrected to actual source.','Preparer invoked outside repository initially lacked package root for counting CPU tests; corrected process-only sys.path before loader, successful preparation now counts60.'],'two_times_target_achieved':False,'scope':p['scope']}
+for target in (e/'observed-output-reference-offline-preparation.json',o/'Garnet-Observed-Output-Reference-Preparation.json'):
+ assert not target.exists();target.write_text(json.dumps(summary,indent=2),encoding='utf8')
+entry='''
+
+### 2026-10-25 — ordinary observed-output reference successor CPU qualified
+
+Prepared separate ordinary SGLang benchmark/controller/probe/independent verifier.
+Old strict helper/archive remain unchanged. Require actual replayed same-profile
+288request diagnosis and closed native full4K proof before startup. Actual serial
+prompt/completion IDs,3968+128/4096usage, metadata precision/cache/context/source/
+owned-PID/stop, two early full4K boundaries, fourVLM/16short and fresh805adapted
+screening remain mandatory. All124controls and124raw streams remain frozen.
+Every stream-text variant is recorded; no hidden streamed IDs or long-output
+semantic/numeric equivalence inferred. Source helper protocol ASTs unchanged.
+
+Comparison hashes and sidecar file writing are deferred until all timing and
+serving-memory sampling closes, avoiding added CPU work while peer streams are
+measured. Actual60owner CPU tests pass11.180s; final36protocol/HTTP/metrics tests
+pass10.080s. Explicit ephemeral synthetic HTTP integration sends124ID controls+
+124streams, completes8cohorts/124sidecars and independently replays raw results.
+It proves126-token clamping still fails before a completed cohort, original failure
+retained, sampler closes, false sidecar assertions rejected. Fake CPU sampler/
+responses are not model metrics. Earlier23/36stages and failed36case ledger/source
+are retained; finalizer no longer masks the primary invalid-budget error.
+
+Read-only actual retained-data policy check binds current diagnosis metadata and
+all12old SGLang2raw streams to their real serial IDs:10text matches/2variants,
+strict lengths/hash/usage preserved. The old failed manifest stays failed; no
+retrospective cohort or benchmark promotion. Source derivation/import and initial
+preparer package-path assertion corrections preserved; no model/GPU run involved.
+
+Preparation pins525files/15targets, expected60CPU controls. Absent-only deployment
+preflight prepared with511existing inputs plus actual closed native/characterization
+proofs and idle adapter/process guards. No new reference server/timing yet. Initial
+successor is ordinary same-profile reference; stronger tuned/MTP SGLang and vLLM,
+repeated matched native candidate timings/805quality, host/GPU optimization,
+real GPUbatching, INT4/4B and2x remain open. Once HTTP timing starts, only its
+original supervisor may be polled remotely until terminal closure.
+'''
+for name in ('qwen38-5090-development-log.md','qwen38-5090-implementation-task.md'):
+ path=r/'docs/research'/name;raw=path.read_bytes();assert b'ordinary observed-output reference successor CPU qualified' not in raw;path.write_bytes(raw+entry.replace('\n','\r\n').encode())
+print(json.dumps({'status':summary['status'],'actual_cpu_tests':60,'pinned_files':summary['pinned_files'],'upload_targets':summary['upload_targets'],'new_gpu_executed':False,'two_times_target_achieved':False}))

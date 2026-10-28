@@ -1,0 +1,30 @@
+{
+  "status": "bf16_overlay_sm120_compile_and_link_passed_gpu_unrun",
+  "exit_code": 0,
+  "source_sha256": {
+    "src/cuda/qwen38_bf16_kv_overlay.cu": "ddafabdb6e5cd04a0beb5ee8c39526397cf9d26ac3c8deded2dc6bc63e37b2fc",
+    "src/cuda/qwen38_bf16_kv_overlay.cuh": "0e2a75461a4869107a694bf91bdbde278def41b689b86bc5b37182acdba4a372",
+    "src/cuda/qwen38_bf16_kv_commit.cuh": "82ffd816bbafcbc86f44d044d2ab5468ac400f617e5aa2b5ae107bb30b3ffb59",
+    "test2026/cuda/qwen38_5090/probe_bf16_kv_overlay_native.cu": "6f656761aed4cae81a8251bc53d81079144476708b76bac778b85ea5ee41a602"
+  },
+  "header_sha256": "fe42d2ea44d3b4fd99d503ddddaaf12407459d839a4e353a767e557c59a7b8e1",
+  "executable_sha256": "3e5944ad415556b05ec571716ed9b14b495725fab66b15e78a2b2a484ab1b872",
+  "operator_object_sha256": "a2a897e960515236a5238654d564adb21a911c69c89728cf4efec5cd2400cb6e",
+  "compile_log_sha256": "9f88eb778c00c0c0c42d5dd280f32bc64418e538888377d9896328864945f96e",
+  "build_recipe_sha256": "6bc28d21fb8a59a273dc4283257bf3db1ff9f122cb8634161c66af6d540de893",
+  "compiler_sha256": "537980c3892ecddbb278de6497f849cd896f9e359a5bf0001167d82f3a3cc2e3",
+  "compiler_version": "nvcc: NVIDIA (R) Cuda compiler driver\nCopyright (c) 2005-2026 NVIDIA Corporation\nBuilt on Thu_Mar_19_22:28:55_Pacific_Daylight_Time_2026\nCuda compilation tools, release 13.2, V13.2.78\nBuild cuda_13.2.r13.2/compiler.37668154_0\n",
+  "architecture": "sm_120",
+  "host_environment": "VS2022 vcvars64, v17.14.15 banner",
+  "flags": [
+    "-std=c++17",
+    "-arch=sm_120",
+    "-Xcompiler=/utf-8"
+  ],
+  "local_cpu_oracle_tests": 8,
+  "local_cpu_exit_code": 0,
+  "local_cpu_evidence": "Successful execution tool result; remote runner separately captures all eight controls before GPU launch.",
+  "model_qualified": false,
+  "performance_admitted": false,
+  "scope": "CPU compile/link only; no CUDA context opened locally. Raw compiler stdout retained. No DLL build/replacement. Native numerical/graph/readonly/alias witnesses still unrun."
+}

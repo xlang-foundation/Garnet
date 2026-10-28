@@ -1,0 +1,85 @@
+from pathlib import Path
+import hashlib,json,zipfile
+R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';W=Path(__file__).resolve().parent
+C=M/'native_z128_reconstructed_plugin_candidate';C.mkdir(exist_ok=True)
+sha=lambda b:hashlib.sha256(b).hexdigest()
+parent=W/'z128-factory-trace-native-source.zip'
+p=json.loads((M/'evidence/z128-factory-trace-native-build-preparation.json').read_bytes())
+assert sha(parent.read_bytes())==p['bundle_sha256']
+with zipfile.ZipFile(parent) as z:base={n:z.read(n) for n in z.namelist()}
+assert {n:sha(b) for n,b in base.items()}==p['candidate_files'] and len(base)==39
+keep=M/'evidence/z128-reconstructed-plugin-parent-source.zip'
+assert not keep.exists() or keep.read_bytes()==parent.read_bytes();keep.write_bytes(parent.read_bytes())
+source=dict(base);changes={};T='src/backends/tensorrt/'
+def transform(name,rows):
+    raw=base[T+name];changes[T+name]=[]
+    for before,after,count in rows:
+        a,b=before.encode(),after.encode();assert raw.count(a)==count,(name,before,raw.count(a));raw=raw.replace(a,b)
+        changes[T+name].append(dict(before=before,after=after,count=count))
+    source[T+name]=raw
+for ext in ('h','cpp'):
+    raw=base[T+'modelopt_fp8_z128_plugin.'+ext]
+    raw=raw.replace(b'modelopt_fp8_z128_plugin.h',b'modelopt_fp8_z128_reconstructed_plugin.h').replace(b'ModelOptFP8Z128Plugin',b'ModelOptFP8Z128ReconstructedPlugin').replace(b'ModelOptFP8Z128Creator',b'ModelOptFP8Z128ReconstructedCreator').replace(b'GarnetModelOptFP8Z128Canonical',b'GarnetModelOptFP8Z128Reconstructed').replace(b'0x5a313238',b'0x52313238')
+    raw=raw.replace(b'CreateModelOptFP8Z128Context()',b'CreateModelOptFP8Z128ReconstructedContext()').replace(b'"fp8_z128"',b'"fp8_z128_reconstructed"')
+    source[T+'modelopt_fp8_z128_reconstructed_plugin.'+ext]=raw
+for name in ('modelopt_fp8_z128_canonical.cpp','modelopt_fp8_z128_canonical.h','modelopt_fp8_z128_reconstruct_trace.h'):
+    source[T+name]=(M/'native_z128_reconstruct_candidate'/name).read_bytes()
+source[T+'modelopt_fp8_z128_reconstructed_profile.h']=b'''// SPDX-License-Identifier: Apache-2.0
+#pragma once
+#include "modelopt_fp8_z128_profile.h"
+namespace Garnet {
+inline bool ModelOptFP8Z128ReconstructedGDNZSelected(const char* reconstruct,const char* canonical,int batch,int tokens,int64_t inputRows,int outputRows,int columns,bool gdnZ){
+    if(reconstruct&&*reconstruct&&std::strcmp(reconstruct,"0")&&std::strcmp(reconstruct,"1"))
+        throw std::invalid_argument("GARNET_FP8_GDN_Z128_RECONSTRUCT must be0 or1");
+    const bool enabled=reconstruct&&std::strcmp(reconstruct,"1")==0;
+    if(enabled&&(!canonical||std::strcmp(canonical,"1")))
+        throw std::invalid_argument("Z128 reconstruction requires explicit canonical Z128 policy");
+    return enabled&&ModelOptFP8Z128GDNZSelected(canonical,batch,tokens,inputRows,outputRows,columns,gdnZ);
+}
+}
+'''
+transform('modelopt_fp8_lowering.cpp',[
+('#include "modelopt_fp8_z128_profile.h"','#include "modelopt_fp8_z128_profile.h"\n#include "modelopt_fp8_z128_reconstructed_plugin.h"\n#include "modelopt_fp8_z128_reconstructed_profile.h"',1),
+('    IPluginV2DynamicExt* plugin=nullptr;','    const bool reconstructedZ128=ModelOptFP8Z128ReconstructedGDNZSelected(std::getenv("GARNET_FP8_GDN_Z128_RECONSTRUCT"),std::getenv("GARNET_FP8_GDN_Z128_CANONICAL"),\n        shape.nbDims==3?int(shape.d[0]):0,shape.nbDims==3?int(shape.d[1]):0,rows,p.rows,p.columns,suffixMatches(".linear_attn.in_proj_z.weight"));\n    IPluginV2DynamicExt* plugin=nullptr;',1),
+('    if(canonicalZ128){','    if(reconstructedZ128){\n        if(!EnsureModelOptFP8Z128ReconstructedPluginRegistered())throw std::runtime_error("Reconstructed Z128 FP8 registration failed");\n        plugin=new ModelOptFP8Z128ReconstructedPlugin(p.rows,p.columns,p.weightScale,p.inputScale);\n    }else if(canonicalZ128){',1),
+('    if(canonicalZ128)++nativeFP8Z128ProjectionCount_;','    if(reconstructedZ128)++nativeFP8Z128ReconstructedProjectionCount_;\n    else if(canonicalZ128)++nativeFP8Z128ProjectionCount_;',1)])
+transform('trt_builder.h',[
+('        size_t NativeFP8Z128ProjectionCount() const { return nativeFP8Z128ProjectionCount_; }','        size_t NativeFP8Z128ProjectionCount() const { return nativeFP8Z128ProjectionCount_; }\n        size_t NativeFP8Z128ReconstructedProjectionCount() const { return nativeFP8Z128ReconstructedProjectionCount_; }',1),
+('        size_t nativeFP8Z128ProjectionCount_=0;','        size_t nativeFP8Z128ProjectionCount_=0;\n        size_t nativeFP8Z128ReconstructedProjectionCount_=0;',1)])
+transform('trt_builder.cpp',[('nativeFP8Z128ProjectionCount_=0;','nativeFP8Z128ProjectionCount_=0;nativeFP8Z128ReconstructedProjectionCount_=0;',1)])
+transform('cuda_compiled_graph.h',[('    size_t nativeFP8Z128ProjectionCount_=0;','    size_t nativeFP8Z128ProjectionCount_=0;\n    size_t nativeFP8Z128ReconstructedProjectionCount_=0;',1)])
+transform('cuda_compiled_graph.cpp',[
+('nativeFP8Z128ProjectionCount_=0;','nativeFP8Z128ProjectionCount_=0;nativeFP8Z128ReconstructedProjectionCount_=0;',1),
+('    info["native_fp8_z128_canonical_projections"]=nativeFP8Z128ProjectionCount_;','    info["native_fp8_z128_canonical_projections"]=nativeFP8Z128ProjectionCount_;\n    info["native_fp8_z128_reconstructed_projections"]=nativeFP8Z128ReconstructedProjectionCount_;',1),
+('    nativeFP8Z128ProjectionCount_=builder.NativeFP8Z128ProjectionCount();','    nativeFP8Z128ProjectionCount_=builder.NativeFP8Z128ProjectionCount();\n    nativeFP8Z128ReconstructedProjectionCount_=builder.NativeFP8Z128ReconstructedProjectionCount();',1)])
+assert len(source)==43
+for n,b in source.items():
+    if n not in base or b!=base[n]:
+        target=C/Path(n).name;assert not target.exists() or target.read_bytes()==b;target.write_bytes(b)
+# CPU wire probe preserves all existing geometry, descriptor and scale checks.
+raw=(M/'probe_fp8_z128_plugin_contract.cpp').read_bytes()
+raw=raw.replace(b'ModelOptFP8Z128Plugin',b'ModelOptFP8Z128ReconstructedPlugin').replace(b'GarnetModelOptFP8Z128Canonical',b'GarnetModelOptFP8Z128Reconstructed').replace(b'0x5a313238',b'0x52313238').replace(b'"modelopt_fp8_z128_plugin.h"',b'"modelopt_fp8_z128_reconstructed_plugin.h"\n#include "modelopt_fp8_z128_plugin.h"\n#include "modelopt_fp8_z128_reconstructed_profile.h"')
+needle=b'        require(creator->createPlugin("none",nullptr)==nullptr,"Ambiguous creator accepted");'
+extra=b'''        require(EnsureModelOptFP8Z128PluginRegistered(),"Old Z registration failed");
+        auto* legacyZ=registry->getPluginCreator("GarnetModelOptFP8Z128Canonical","1","");require(legacyZ,"Old Z missing");
+        require(!legacyZ->deserializePlugin("new",wire.data(),20),"Old Z accepted reconstructed wire");++crossWire;
+        ModelOptFP8Z128Plugin oldZ(6144,5120,.5f,.25f);std::array<uint32_t,5> oldZWire{};oldZ.serialize(oldZWire.data());
+        require(oldZWire[4]==0x5a313238u&&!creator->deserializePlugin("oldZ",oldZWire.data(),20),"Reconstructed accepted old Z wire");++crossWire;
+        auto* oldZRoundtrip=legacyZ->deserializePlugin("oldZ",oldZWire.data(),20);require(oldZRoundtrip,"Old Z roundtrip changed");oldZRoundtrip->destroy();
+'''
+assert raw.count(needle)==1;raw=raw.replace(needle,extra+needle).replace(b'crossWire==5',b'crossWire==7')
+raw=raw.replace(b'fp8_z128_plugin_cpu_contract_passed',b'fp8_z128_reconstructed_plugin_cpu_contract_passed')
+(M/'probe_z128_reconstructed_plugin_wire.cpp').write_bytes(raw)
+raw=(M/'fp8_z128_plugin_cpu_stubs.cpp').read_bytes();needle=b'std::shared_ptr<ModelOptFP8Z128Context> CreateModelOptFP8Z128Context(){++calls;return {};}'
+assert raw.count(needle)==1;raw=raw.replace(needle,needle+b'\nstd::shared_ptr<ModelOptFP8Z128Context> CreateModelOptFP8Z128ReconstructedContext(){++calls;return {};}')
+(M/'z128_reconstructed_plugin_wire_stubs.cpp').write_bytes(raw)
+raw=(M/'build_modelopt_init_trace_z128_wire_cpu.bat').read_bytes()
+raw=raw.replace(b'"%CANDIDATE%\\modelopt_fp8_z128_plugin.cpp"',b'"%CANDIDATE%\\modelopt_fp8_z128_reconstructed_plugin.cpp" "%CANDIDATE%\\modelopt_fp8_z128_plugin.cpp"').replace(b'fp8_z128_plugin_cpu_stubs.cpp',b'z128_reconstructed_plugin_wire_stubs.cpp').replace(b'probe_fp8_z128_plugin_contract.cpp',b'probe_z128_reconstructed_plugin_wire.cpp')
+(M/'build_z128_reconstructed_plugin_wire_cpu.bat').write_bytes(raw)
+record={'status':'separate_reconstructed_Z128_plugin_source_derived_unbuilt','parent_source_zip':'evidence/'+keep.name,'parent_source_zip_sha256':sha(keep.read_bytes()),'parent_candidate_files':p['candidate_files'],'candidate_files':{n:sha(b) for n,b in source.items()},'changes':changes,'new_files':sorted(set(source)-set(base)),'modified_files':sorted(n for n in base if source[n]!=base[n]),'wire_marker':0x52313238,'legacy_wire_marker':0x5a313238,'numerical_or_model_or_performance_qualified':False}
+(M/'evidence/z128-reconstructed-plugin-derivation.json').write_bytes(json.dumps(record,indent=2).encode())
+target=W/'z128-reconstructed-plugin-source.zip'
+assert not target.exists()
+with zipfile.ZipFile(target,'x',zipfile.ZIP_DEFLATED) as z:
+    for n,b in source.items():z.writestr(n,b)
+print(json.dumps({'candidate_files':len(source),'changed':len(record['modified_files']),'added':record['new_files'],'bundle_sha256':sha(target.read_bytes())}))

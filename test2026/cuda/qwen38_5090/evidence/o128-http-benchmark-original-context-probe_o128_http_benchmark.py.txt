@@ -1,0 +1,36 @@
+"""Three actual fixed4K HTTP trials, only after independently closed805 quality."""
+from pathlib import Path
+import argparse,hashlib,json,subprocess,sys,threading,time,zipfile
+from native_http_bridge import Worker,Handler,ThreadingHTTPServer
+sha=lambda b:hashlib.sha256(b).hexdigest()
+
+def main():
+    a=argparse.ArgumentParser();a.add_argument('--root',type=Path,required=True);a.add_argument('--output',type=Path,required=True);args=a.parse_args();root=args.root;out=args.output;assert not out.exists();out.mkdir();sys.path.insert(0,str(root/'Garnet'));m=root/'Garnet/test2026/cuda/qwen38_5090'
+    from test2026.cuda.qwen38_5090.native_o128_http_admission import require,LIBRARY,CERTIFICATES
+    from test2026.cuda.qwen38_5090.o128_http_benchmark_contract import replay_trial,REFERENCE,REFERENCE_SHA
+    prep=json.loads((m/'evidence/o128-http-benchmark-preparation.json').read_bytes());quality='o128-http-quality-attempt1';proof_path=root/'results'/(quality+'-verified.json');assert sha(proof_path.read_bytes())==prep['measurement_parents'][quality]['proof_sha256'];q=json.loads(proof_path.read_bytes());assert q['exit_code']==0 and q['status']=='actual_O128_HTTP_805_IDs_and_four_full4k_controls_replayed' and q['arrays']['all805_prompt_and_output_IDs_exact_T32'] is True and sha((root/'results'/(quality+'-evidence.zip')).read_bytes())==q['archive_sha256']
+    admission=require(root,'mtp',sha((root/'build/bin/garnet.dll').read_bytes()));cache=json.loads((root/'results/study-ssd-engine-cache/receipt.json').read_bytes())['cache_root'];worker=Worker(['cmd.exe','/d','/c',str(m/'serve_native_o128_worker.bat'),'mtp',cache],out/'worker');server=thread=None
+    report=dict(status='starting',library_sha256=LIBRARY,quality_proof_sha256=sha(proof_path.read_bytes()),reference_archive_sha256=REFERENCE_SHA,trials=[],physical_batch=1,queued_concurrency=True,strongest_tuned_references_qualified=False,performance_target_qualified=False,two_times_target_achieved=False)
+    def save():(out/'report.json').write_bytes(json.dumps(report,indent=2).encode())
+    save()
+    try:
+        deadline=time.monotonic()+1800
+        while not worker.healthy():
+            assert worker.process.poll() is None and worker.failure is None,worker.failure;assert time.monotonic()<deadline,'Worker startup deadline exceeded';time.sleep(.25)
+        ready=worker.ready_info;assert ready['o128_admission']==admission and ready['library_sha256']==LIBRARY and ready['prefill_chunk']==128 and ready['chunk']==4 and ready['generation_mode']=='mtp';report['ready']=ready;save()
+        server=ThreadingHTTPServer(('127.0.0.1',18082),Handler);server.worker=worker;server.model='qwen38-27b-nvfp4';thread=threading.Thread(target=server.serve_forever,daemon=True);thread.start()
+        reference=root/'results'/(REFERENCE+'-evidence.zip');assert sha(reference.read_bytes())==REFERENCE_SHA
+        with zipfile.ZipFile(reference) as old,zipfile.ZipFile(m/'evidence/fixed-context-4096-corpus.zip') as corpus:
+            oldbase='results/'+REFERENCE+'/mtp/benchmark4k/';manifests=[n for n in old.namelist() if n.startswith(oldbase) and n.endswith('-manifest.json')];assert len(manifests)==1;oldmanifest=json.loads(old.read(manifests[0]))
+            for trial in range(3):
+                report['status']='benchmark_trial_'+str(trial);save();folder=out/('trial-'+str(trial));metadata=out/('trial-'+str(trial)+'-metadata.json');metadata.write_bytes(json.dumps(dict(ready=ready,generation_mode='mtp',library_sha256=LIBRARY,model_proof_sha256=CERTIFICATES['o128-full4k-model-admission-attempt1'],quality_proof_sha256=sha(proof_path.read_bytes()),trial_index=trial,repeat_count=3,physical_batch=1,queued_concurrency=True,performance_admitted=False,scope='Exact frozen3968+128HTTPtext/image C1/2/4/8,64measured/60warmups eachtrial. Repeated within one source-bound worker; per-request decode separate from aggregate throughput; nativeWindows vs referenceWSL. No strongest-reference or2x admission.')).encode())
+                subprocess.run([sys.executable,str(m/'benchmark_fixed_context_native.py'),'--url','http://127.0.0.1:18082','--corpus-archive',str(m/'evidence/fixed-context-4096-corpus.zip'),'--output',str(folder),'--metadata',str(metadata)],check=True)
+                manifests=list(folder.glob('*-manifest.json'));assert len(manifests)==1;manifest=json.loads(manifests[0].read_bytes());result=replay_trial(manifest,lambda n:(folder/n).read_bytes(),corpus,oldmanifest,lambda n:old.read(oldbase+n));report['trials'].append(dict(index=trial,manifest_sha256=sha(manifests[0].read_bytes()),local_replay=result));save()
+        report['status']='O128_three_fixed4k_HTTP_trials_collected_needs_independent_replay';save()
+    except BaseException as e:report.update(status='failed',error=repr(e));save();raise
+    finally:
+        if server is not None:server.shutdown();server.server_close()
+        if thread is not None:thread.join()
+        worker.close()
+    return 0
+if __name__=='__main__':raise SystemExit(main())

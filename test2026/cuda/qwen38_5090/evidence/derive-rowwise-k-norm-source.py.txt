@@ -1,0 +1,62 @@
+from pathlib import Path
+import ast,hashlib,json,zipfile
+W=Path(__file__).resolve().parent;R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';E=M/'evidence';D=M/'native_rowwise_k_norm_candidate';sha=lambda b:hashlib.sha256(b).hexdigest()
+bundle=W/'decode35-stage-source.zip';assert sha(bundle.read_bytes())=='48f323c025cce22577072bc7c1819b62ade5ad08d37e94b2146ded75dac0e43f'
+with zipfile.ZipFile(bundle) as z:parent={n:z.read(n) for n in z.namelist()}
+assert len(parent)==86;candidate=dict(parent);rows=[]
+def derive(name,changes):
+    raw=parent[name];record=[]
+    for old,new,count in changes:
+        a=old.encode();b=new.encode();assert raw.count(a)==count,(name,old,raw.count(a));raw=raw.replace(a,b);record.append({'old':old,'new':new,'count':count})
+    p=D/Path(name).name;assert not p.exists();p.write_bytes(raw);candidate[name]=raw;rows.append({'source':name,'target':name,'changes':record})
+derive('src/backends/tensorrt/qwen35_lowering.h',[
+ ('#include "qwen38_decode35_stage_profile.h"','#include "qwen38_decode35_stage_profile.h"\n#include "qwen38_rowwise_k_norm_profile.h"',1),
+ ('std::vector<T*>* decode35Stages=nullptr) {','std::vector<T*>* decode35Stages=nullptr,bool rowwiseKDecodeNorm=false) {',1),
+ ('        auto* capturedStages=diagnosticStages?diagnosticStages:chunkStages;',
+  '''        if(rowwiseKDecodeNorm){
+            if(diagnosticStages||chunkStages||decode35Stages||!bf16Delta||!canonical||overlay||!legacyBF16Overlay||lowBatch||prefill128||
+                bf16FloatReference||!fusedAttention||!joinedMLPProjections||theta!=1.e7f||eps!=1.e-6f)
+                throw std::invalid_argument("Rowwise K decode norm requires its exclusive canonical B4 decode profile");
+            RequireRowwiseKDecodeNormGeometry(xs,layer,heads,kv,dim,rotary,sections,double(theta),1.e-6,
+                true,false,false,bf16Overlay->state_width,bf16Overlay->key_offset,bf16Overlay->value_offset);
+        }
+        auto* capturedStages=diagnosticStages?diagnosticStages:chunkStages;''',1),
+ ('            T* k=rms(reshape(projectedK,{batch,tokens,kv,dim}),weight(prefix+".k_norm.weight"),eps,true);',
+  '''            T* k=nullptr;
+            if(rowwiseKDecodeNorm){
+                auto* shaped=reshape(projectedK,{batch,tokens,kv,dim});
+                std::vector<T*> normalizedRows;
+                for(int row=0;row<batch;++row)
+                    normalizedRows.push_back(rms(slice(shaped,0,row,1),weight(prefix+".k_norm.weight"),eps,true));
+                k=cat(normalizedRows,0);TraceRowwiseKDecodeNorm(layer);
+            }else k=rms(reshape(projectedK,{batch,tokens,kv,dim}),weight(prefix+".k_norm.weight"),eps,true);''',1),
+])
+derive('src/backends/tensorrt/trt_builder.cpp',[
+ ('                    std::vector<ITensor*> decode35StageOutputs;',
+  '''                    auto* rowwiseKAttribute=FindKeyword(kwParams,"rowwise_full_decode_k_norm");
+                    if(rowwiseKAttribute&&(!(rowwiseKAttribute->second.IsInt64()||rowwiseKAttribute->second.IsUInt64())||
+                        (rowwiseKAttribute->second.IsUInt64()&&rowwiseKAttribute->second.ToUInt64()>1)))
+                        throw std::invalid_argument("Rowwise K decode norm metadata requires integer0 or1");
+                    const auto rowwiseKDecodeNorm=rowwiseKAttribute?rowwiseKAttribute->second.ToLongLong():0;
+                    if(rowwiseKDecodeNorm!=0&&rowwiseKDecodeNorm!=1)throw std::invalid_argument("Rowwise K decode norm must be0 or1");
+                    if(rowwiseKDecodeNorm){
+                        RequireRowwiseKDecodeNormPolicy(std::getenv("GARNET_ROWWISE_K_DECODE_NORM"),capturedWeightProfile,
+                            FindKeyword(kwParams,"external_compressed_weights")&&!external.empty(),FindKeyword(kwParams,"external_weights")!=nullptr,
+                            source->getType()==DataType::kFLOAT,diagnostic!=0,chunkWitness!=0,decode35Witness!=0,overlayMode!=0,referenceMode!=0,
+                            keywordInt("fused_attention",0)==1,keywordInt("joined_mlp_projections",0)==1);
+                        if(bf16Mode!=1||lowBatchMode||prefill128Mode)
+                            throw std::invalid_argument("Rowwise K decode norm requires legacy canonical BF16 binding");
+                        RequireRowwiseKDecodeNormGeometry(dimensions,keywordText("layer_prefix"),keywordInt("num_heads",0),keywordInt("num_kv_heads",0),
+                            keywordInt("head_dim",0),keywordInt("rotary_dim",0),{keywordInt("mrope_t",0),keywordInt("mrope_h",0),keywordInt("mrope_w",0)},
+                            number("rope_theta",1.e7),number("eps",1.e-6),true,false,false,bf16Overlay.state_width,bf16Overlay.key_offset,bf16Overlay.value_offset);
+                    }
+                    std::vector<ITensor*> decode35StageOutputs;''',1),
+ ('chunkWitness?&chunkStageOutputs:nullptr,decode35Witness?&decode35StageOutputs:nullptr);',
+  'chunkWitness?&chunkStageOutputs:nullptr,decode35Witness?&decode35StageOutputs:nullptr,rowwiseKDecodeNorm!=0);',1),
+])
+new='src/backends/tensorrt/qwen38_rowwise_k_norm_profile.h';candidate[new]=(D/Path(new).name).read_bytes();assert new not in parent and len(candidate)==87
+p=E/'rowwise-k-norm-source-derivation.json';assert not p.exists();record={'parent_files':{n:sha(v) for n,v in parent.items()},'candidate_files':{n:sha(v) for n,v in candidate.items()},'parent_bundle_sha256':sha(bundle.read_bytes()),'modified_files':[r['source'] for r in rows],'new_files':[new],'derivations':rows,'old_full_chunk_and_seven_operand_guards_unchanged':True,'all_CUDA_source_bytes_unchanged':True,'old_counters_unchanged':True,'default_off':True,'K_only_RMS_per_physical_row_same_F32_epsilon_scale_and_output_layout':True,'observed_root_cause_or_repair_proved':False,'model_or_quality_or_performance_qualified':False};p.write_bytes(json.dumps(record,indent=2).encode())
+target=W/'rowwise-k-norm-source.zip';assert not target.exists()
+with zipfile.ZipFile(target,'x',zipfile.ZIP_DEFLATED) as z:
+    for n,raw in candidate.items():z.writestr(n,raw)
+(W/'rowwise-k-norm-source-package.json').write_bytes(json.dumps({'files':87,'bundle_sha256':sha(target.read_bytes()),'bytes':target.stat().st_size,'derivation_sha256':sha(p.read_bytes()),'native_build_and_model_unrun':True},indent=2).encode());print((W/'rowwise-k-norm-source-package.json').read_text())

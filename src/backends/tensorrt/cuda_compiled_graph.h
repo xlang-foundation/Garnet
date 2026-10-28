@@ -24,6 +24,11 @@ class CUDACompiledGraph {
     unsigned long long builderWorkspaceBytes_=64ULL<<20;
     size_t externalWeightCount_=0,externalWeightBytes_=0,joinedProjectionInputs_=0;
     size_t internalPackedStores_=0,internalPackedRoots_=0;
+    size_t externalCompressedWeightCount_=0,externalCompressedWeightBytes_=0;
+    size_t nativeFP8WeightCount_=0,nativeNVFP4WeightCount_=0,nativeCTInt4WeightCount_=0;
+    size_t nativeFP8M128ProjectionCount_=0;
+    size_t nativeFP8Z128ProjectionCount_=0;
+    std::string weightPrecision_="bf16";
     mutable std::mutex mutex_;
     std::shared_ptr<std::atomic<size_t>> reservations_=std::make_shared<std::atomic<size_t>>(0);
     void CloseUnlocked();

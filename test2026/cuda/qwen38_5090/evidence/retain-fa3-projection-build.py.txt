@@ -1,0 +1,32 @@
+from pathlib import Path
+import hashlib,json,zipfile
+W=Path(__file__).resolve().parent;OUT=W.parent/'outputs';R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';E=M/'evidence';P='Garnet/test2026/cuda/qwen38_5090/';JOB='fa3-projection-witness-build-attempt1';sha=lambda b:hashlib.sha256(b).hexdigest();paths=[]
+def keep(name,raw):
+    t=E/name;assert not t.exists() or t.read_bytes()==raw;t.write_bytes(raw);paths.append(t.relative_to(R).as_posix())
+proof=(OUT/(JOB+'-verified.json')).read_bytes();assert proof==(OUT/(JOB+'-remote-verified.json')).read_bytes();q=json.loads(proof);archive=OUT/(JOB+'-evidence.zip');assert sha(archive.read_bytes())==q['archive_sha256'] and q['exit_code']==0 and q['source_runtime_SDK_checkpoint_CMake_restored'];keep(JOB+'-verified.json',proof)
+with zipfile.ZipFile(archive) as z:
+    manifest=json.loads(z.read('evidence-manifest.json'));assert z.testzip() is None and len(z.namelist())==len(manifest['files'])+1
+    for n,h in manifest['files'].items():assert sha(z.read(n))==h
+    keep(JOB+'-evidence-manifest.json',z.read('evidence-manifest.json'));prep=z.read(P+'evidence/fa3-projection-witness-build-preparation.json');p=json.loads(prep);keep('fa3-projection-witness-build-preparation.json',prep);base='results/'+JOB+'/';w=json.loads(z.read(base+'workflow.json'))
+    assert w['source_before']==w['source_after']==p['base_files'] and w['methods']==w['methods_after']==p['methods'] and w['runtime_before']==w['runtime_after']==p['runtime'] and w['environment_before']==w['environment_after']==p['environment'] and w['checkpoint_after']==p['checkpoints'] and w['cache_after_sha256']==p['cache_before_sha256']
+    profile=json.loads(z.read(base+'fa3-profile/report.json'));assert profile==dict(status='FA3_projection_profile_CPU_contract_passed',cases=47,rejected=45,selected=2,GPU_or_model_executed=False)
+    for n,h in p['methods'].items():
+        t=R/n.removeprefix('Garnet/');assert sha(t.read_bytes())==h;paths.append(t.relative_to(R).as_posix())
+    for n in z.namelist():
+        if n.startswith(base):
+            tail=n[len(base):]
+            if tail.endswith(('.json','.jsonl','.log','.txt','.map')):keep(JOB+'-'+tail.replace('/','-'),z.read(n))
+for suffix in ('remote-replay.log','local-replay.log'):keep(JOB+'-'+suffix,(OUT/(JOB+'-'+suffix)).read_bytes())
+for n in ('derive-fa3-projection-witness.py','derive-fa3-projection-build.py','package-fa3-projection-witness.py','install-fa3-projection-witness.py','retain-fa3-projection-build.py'):keep(n+'.txt',(W/n).read_bytes())
+keep('fa3-projection-witness-package.json',(W/'fa3-projection-witness-package.json').read_bytes())
+for file in (W/'fa3-projection-witness-local-cpu-ledger').iterdir():
+    if file.is_file():keep('fa3-projection-witness-local-cpu-ledger-'+file.name,file.read_bytes())
+result=dict(status='explicit_FA3_projection_witness_native_build_CPU_verified_GPU_observation_next',archive_sha256=q['archive_sha256'],archive_bytes=archive.stat().st_size,archive_members=q['archive_members'],paired_proof_sha256=sha(proof),candidate_library_sha256=q['candidate_library_sha256'],candidate_source_files=44,existing_targets_restored=14,new_targets_removed=30,source_pins=len(p['base_files']),method_pins=len(p['methods']),CPU_source_controls=10,historical_controls_in_frozen_parent_view=86,CPU_profile_cases=47,CPU_profile_rejections=45,CPU_profiles_selected=2,actual_CPU_initialize_calls=450,CPU_factory_stub_calls=350,ordinary_math_and_old_projection_and_T16_guards_unchanged=True,model_or_quality_or_performance_qualified=False,two_times_target_achieved=False)
+raw=json.dumps(result,indent=2).encode();keep('fa3-projection-witness-native-build-closure.json',raw);(OUT/'Garnet-FA3-Projection-Witness-Native-Build-Verified.json').write_bytes(raw)
+title='Explicit FA3 normalization and K/V projection witness builds in native Garnet'
+text='\n\n### '+title+'\n\n2026-10-26: Add a distinct qwen35_fp8_fa3_projection_witness unary node to a private derivative of the qualified 43-source candidate. The new 44-source bundle changes one CPP by additive branch/include and adds one header. Removing these additions restores every parent byte. Require explicit GARNET_FP8_FA3_PROJECTION_WITNESS=1, embedded modelopt_mixed weights, layer3, F32 B1 T32/T128 hidden5120, epsilon exactly 1e-6, and native FP8 K/V matrices N1024 K5120 with exact checkpoint names. Use the same ops.norm/ops.project primitives as ordinary full attention. Pack normalized5120 + K1024 + V1024; T128 output917,504 F32 words fits the existing bounded reader. Old INT4-only checkpoint projection and layer3 T16 diagnostic guards remain unchanged.\n\n'
+text+='Actual remote header tests pass 47 cases: 45 invalid configurations rejected, two intended profiles selected. Ten CPU source/retry checks preserve 86 historical assertions in their explicit frozen parent source view. Existing actual plugin wire/default/cross-family and 450 CPU initialization/350 stub factory controls pass. Full Release/MT/sm120 native build, native/embedded selectors and 955 tokenizer cases pass. No new CUDA objects, only the earlier allowed unchanged-kernel recomposition. DLL '+q['candidate_library_sha256']+'; archive '+q['archive_sha256']+' ('+str(archive.stat().st_size)+' bytes / '+str(q['archive_members'])+' members); independently replayed on both machines, proof '+sha(proof)+'. Restore 14 old and 30 new targets, native library, runtime, SDK, checkpoint and CMake identities.\n\n'
+text+='This build does not establish normalization/projection equality, the FA3 cache cause, full-model quality or performance. Observe the unresolved K/V boundary before rerunning unchanged all-stage GDN controls; this reorders diagnostics, and does not waive the original 509-entry GDN, six full4096 ordinary/MTP, adapted805 quality or concurrency gates before promotion/timing. Overall 2x faster-baseline decode AND throughput and half-TTFT objectives remain unmet.\n'
+for n in ('qwen38-5090-development-log.md','qwen38-5090-implementation-task.md'):
+    t=R/'docs/research'/n;old=t.read_bytes();assert title.encode() not in old;t.write_bytes(old+text.encode());paths.append(t.relative_to(R).as_posix())
+(W/'fa3-projection-witness-build-retained-paths.json').write_bytes(json.dumps(sorted(set(paths)),indent=2).encode());print(json.dumps(dict(status=result['status'],retained_paths=len(set(paths)),paired_proof_sha256=sha(proof))))

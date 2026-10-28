@@ -1,0 +1,70 @@
+"""Replay existing T4 MTP data with the new helper; never candidate model evidence."""
+from pathlib import Path
+import ast
+import hashlib
+import io
+import json
+import sys
+import zipfile
+
+work = Path(__file__).resolve().parent
+proofs = work.parent / 'outputs'
+methods = Path('D:/CantorAI/work/qwen38-5090/test2026/cuda/qwen38_5090')
+sys.path[:0] = [str(methods.parents[2]), str(methods)]
+from compare_http_runs import verify_run
+from benchmark_fixed_length_native import final_ids
+from cohort_memory_replay import replay_cohort_memory
+
+sha = lambda raw: hashlib.sha256(raw).hexdigest()
+name = 'fixed-length-http-study-attempt1'
+archive = proofs / (name + '-evidence.zip')
+proof_path = proofs / (name + '-verified.json')
+proof = json.loads(proof_path.read_bytes())
+assert proof == json.loads((proofs / (name + '-remote-verified.json')).read_bytes())
+assert proof['status'] == 'fixed_length_http_study_replayed' and sha(archive.read_bytes()) == proof['archive_sha256']
+helper_path = methods / 'verify_prefill16_http.py'
+tree = ast.parse(helper_path.read_bytes())
+functions = [next(node for node in ast.walk(tree) if isinstance(node, ast.FunctionDef) and node.name == name)
+             for name in ('native_match', 'benchmark_replay')]
+with zipfile.ZipFile(archive) as z:
+    doc = lambda path: json.loads(z.read(path))
+    manifest = doc('evidence-manifest.json')
+    assert z.testzip() is None and len(z.namelist()) == len(set(z.namelist())) == len(manifest['files']) + 1
+    for path, digest in manifest['files'].items():
+        assert sha(z.read(path)) == digest
+    prefix = 'results/' + name + '/mtp/'
+    completed, tokens = {}, {}
+    for line in z.read(prefix + 'worker/worker-stdout.jsonl').splitlines():
+        event = json.loads(json.loads(line)['line'])
+        if event.get('event') == 'token':
+            key = event['id']; tokens.setdefault(key, []).append(event['token_id'])
+            assert event['sampled_tokens'] == len(tokens[key])
+        elif event.get('event') == 'completed':
+            assert event['id'] not in completed and tokens[event['id']] == event['generated_ids']
+            completed[event['id']] = event
+    with zipfile.ZipFile(io.BytesIO(z.read('Garnet/test2026/cuda/qwen38_5090/evidence/fixed-length-4096-corpus.zip'))) as corpus:
+        cm = json.loads(corpus.read('manifest.json'))
+        context_ids = {row['key']: json.loads(corpus.read(row['expected_prompt_ids_file'])) for row in cm['rows']}
+        context_requests = {row['key']: json.loads(corpus.read(row['request_file'])) for row in cm['rows']}
+    scope = {'prefix': prefix, 'manifest': manifest, 'doc': doc, 'verify_run': verify_run,
+             'z': z, 'mode': 'mtp', 'prior': z, 'prior_doc': doc, 'prior_manifest': manifest,
+             'ordinary_base': 'results/' + name + '/ordinary/', 'sha': sha, 'Path': Path,
+             'context_ids': context_ids, 'context_requests': context_requests, 'json': json,
+             'final_ids': final_ids, 'replay_cohort_memory': replay_cohort_memory,
+             'used': set(), 'native_completed': completed}
+    module = ast.fix_missing_locations(ast.Module(body=functions, type_ignores=[]))
+    exec(compile(module, str(helper_path), 'exec'), scope)
+    fresh = scope['benchmark_replay']('benchmark4k', True)
+    expected = next(row['fixed_4k_benchmark'] for row in proof['profiles'] if row['mode'] == 'mtp')
+    assert fresh == expected and len(scope['used']) == 124
+result = {'status': 'prefill16_http_benchmark_replay_helper_checked_against_actual_retained_t4_data',
+          'input_archive_sha256': proof['archive_sha256'], 'new_verifier_sha256': sha(helper_path.read_bytes()),
+          'actual_raw_streams_replayed': 124, 'actual_measured_cohorts': 8,
+          'all_actual_ordinary_output_ids_exact': True, 'recomputed_existing_metrics_and_memory_exact': True,
+          'new_model_or_gpu_execution': False, 'candidate_http_run_performed': False,
+          'performance_admitted': False, 'two_times_target_achieved': False,
+          'scope': 'Existing already closed T4 MTP HTTP raw SSE/worker IDs/usage/3968+128 corpus/cohort timing/VRAM replay using the new helper. This does not relabel the old run or prove T16 worker quality/speed.'}
+target = work / 'prefill16-http-replay-retained-data-check.json'
+assert not target.exists()
+target.write_text(json.dumps(result, indent=2), encoding='utf8')
+print(json.dumps(result))

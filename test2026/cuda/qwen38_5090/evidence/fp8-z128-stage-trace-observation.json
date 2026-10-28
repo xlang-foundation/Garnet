@@ -1,0 +1,38 @@
+{
+  "status": "same_DLL_warm_T128_initialization_trace_replayed",
+  "trace_sha256": "5381d06d192d7267a6e75bb41a482a1f7057cf5079b538ea549345853acc9b05",
+  "trace_bytes": 86875,
+  "final_heuristic_query_and_cleanup": [
+    "[2026-10-27 02:55:48][cublasLt][2340][Api][cublasLtMatmulAlgoGetHeuristic] Adesc=[type=R_8F_E4M3 rows=5120 cols=6144 ld=5120] Bdesc=[type=R_8F_E4M3 rows=5120 cols=32 ld=5120] Cdesc=[type=R_16BF rows=6144 cols=32 ld=6144] Ddesc=[type=R_16BF rows=6144 cols=32 ld=6144] preference=[maxWavesCount=0.0 maxWorkspaceSizeinBytes=4194304] computeDesc=[computeType=COMPUTE_32F scaleType=R_32F transa=OP_T]",
+    "[2026-10-27 02:55:48][cublasLt][2340][Info][cublasLtMatmulAlgoGetHeuristic]  heuristicResults=[67,67,35,35,35,35,67]",
+    "[2026-10-27 02:55:48][cublasLt][2340][Api][cublasLtMatmulPreferenceDestroy] matmulPref=0X1A8AEEE0B50",
+    "[2026-10-27 02:55:48][cublasLt][2340][Api][cublasLtMatrixLayoutDestroy] matLayout=0X1A65B1A1DE0",
+    "[2026-10-27 02:55:48][cublasLt][2340][Api][cublasLtMatrixLayoutDestroy] matLayout=0X1A65B1A2560",
+    "[2026-10-27 02:55:48][cublasLt][2340][Api][cublasLtMatrixLayoutDestroy] matLayout=0X1A65B1A17E0",
+    "[2026-10-27 02:55:48][cublasLt][2340][Api][cublasLtMatrixLayoutDestroy] matLayout=0X1A65B1A20E0",
+    "[2026-10-27 02:55:48][cublasLt][2340][Api][cublasLtMatrixLayoutDestroy] matLayout=0X1A65B1A1D60",
+    "[2026-10-27 02:55:48][cublasLt][2340][Api][cublasLtMatmulDescDestroy] matmulDesc=0X1A8E1EA82F0",
+    "[2026-10-27 02:55:48][cublasLt][2340][Api][cublasLtDestroy] lightHandle=0X1A387938050",
+    "[2026-10-27 02:55:48][cublasLt][2340][Api][cublasLtDestroy] lightHandle=0X1A387938050"
+  ],
+  "observed_heuristic_IDs": [
+    67,
+    67,
+    35,
+    35,
+    35,
+    35,
+    67
+  ],
+  "M32_canonical_geometry": {
+    "K": 5120,
+    "N": 6144,
+    "M": 32,
+    "workspace_preference_bytes": 4194304
+  },
+  "M128_AlgoCheck_seen_after_final_heuristic": false,
+  "context_destroyed_after_final_heuristic": true,
+  "inference": "Failure is consistent with a Z-context selection guard before the M128 AlgoCheck. API logger does not expose full opaque candidate bytes or identify the exact rejected guard. No API error or OOM root cause is established by this trace.",
+  "exact_failure_guard_or_candidate_opaque_established": false,
+  "model_or_quality_or_performance_qualified": false
+}

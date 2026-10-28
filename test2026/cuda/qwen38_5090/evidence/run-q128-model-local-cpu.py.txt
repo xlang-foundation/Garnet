@@ -1,0 +1,8 @@
+from pathlib import Path
+import hashlib,json,os,sys
+W=Path(__file__).resolve().parent;R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';sys.path[:0]=[str(M),str(R)];import run_logged as ledger
+p=json.loads((M/'evidence/q128-canonical-build-preparation.json').read_bytes());tests=p['test_ids']+['test2026.cuda.qwen38_5090.test_q128_model_admission'];names=['q128_model_layout.py','q128_model_replay.py','test_q128_model_admission.py','evidence/q128-model-probe-derivation.json','evidence/q128-model-owner-derivation.json']
+for d in ('q128-model-probe-derivation.json','q128-model-owner-derivation.json'):
+    names += [row['target'] for row in json.loads((M/'evidence'/d).read_bytes())['derivations']]
+pins={n:hashlib.sha256((M/n).read_bytes()).hexdigest() for n in names};ledger.source_identity=lambda:{'scope':'Explicit Q128 model-admission method/route/reference controls; unchanged original full state/vector/cache/token/repeat gates; unrelated protected bodies excluded','owned_source_sha256':pins};os.chdir(R)
+assert ledger.run([sys.executable,'-m','unittest',*tests],W/'q128-model-local-cpu-ledger','correctness','59current plus86historical CPU controls; exact probe/metadata/batch/owner/verifier derivatives; q1 bound to correctT32 reference and strict0/16physical counters; no model/GPU/native compilation here',[M/n for n in names])==0

@@ -1,0 +1,30 @@
+{
+  "source": "verify_vllm_fixed4k.py",
+  "source_sha256": "78c8288c0bcceeefa2d73f5b02ee330d58ef0ada00236c1d8b4a572cfa939f66",
+  "source_newlines_normalized_to_lf": true,
+  "changes": [
+    [
+      "evidence/vllm-fixed4k-run-preparation.json",
+      "evidence/vllm-fixed4k-launcher-completed-preparation.json",
+      1
+    ],
+    [
+      "'vllm_cache_control.py'):",
+      "'vllm_cache_control.py','prepare_vllm_fixed4k_run.py'):",
+      1
+    ],
+    [
+      "assert w['engine']=='vllm'",
+      "from prepare_vllm_fixed4k_run import require_runtime_dependencies\n        require_runtime_dependencies(p['files']);assert p['preparation_version']=='launcher_dependencies_complete_v2'\n        assert w['engine']=='vllm'",
+      1
+    ],
+    [
+      "archived=sha(z.read(METHODS+'verify_vllm_fixed4k.py'))",
+      "archived=sha(z.read(METHODS+'verify_vllm_fixed4k_launcher_completed.py'))",
+      1
+    ]
+  ],
+  "result": "verify_vllm_fixed4k_launcher_completed.py",
+  "result_sha256": "fb5af2379baaf7d884997a5ec42ec0dcb8dc5d7254bd0d6133f1d62fab22f165",
+  "scope": "Pin complete ordinary launcher/runtime dependency set and new immutable preparation/checker identity. Original attempt1 checker remains byte-exact. All raw protocol/quality/control/SSE/timing/memory/cache/PID/cleanup replay arithmetic unchanged. No benchmark rerun or result generated."
+}

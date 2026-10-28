@@ -1,0 +1,13 @@
+from pathlib import Path
+import hashlib,json
+m=Path('D:/CantorAI/work/qwen38-5090/test2026/cuda/qwen38_5090');source=m/'verify_vllm_fixed4k.py';text=source.read_text();changes=[]
+for before,after,count in (
+    ('evidence/vllm-fixed4k-run-preparation.json','evidence/vllm-fixed4k-launcher-completed-preparation.json',1),
+    ("'vllm_cache_control.py'):","'vllm_cache_control.py','prepare_vllm_fixed4k_run.py'):",1),
+    ("assert w['engine']=='vllm'", "from prepare_vllm_fixed4k_run import require_runtime_dependencies\n        require_runtime_dependencies(p['files']);assert p['preparation_version']=='launcher_dependencies_complete_v2'\n        assert w['engine']=='vllm'",1),
+    ("archived=sha(z.read(METHODS+'verify_vllm_fixed4k.py'))","archived=sha(z.read(METHODS+'verify_vllm_fixed4k_launcher_completed.py'))",1)):
+    assert text.count(before)==count,(before,text.count(before));text=text.replace(before,after);changes.append([before,after,count])
+target=m/'verify_vllm_fixed4k_launcher_completed.py';assert not target.exists();target.write_bytes(text.encode())
+row={'source':source.name,'source_sha256':hashlib.sha256(source.read_bytes()).hexdigest(),'source_newlines_normalized_to_lf':True,'changes':changes,'result':target.name,'result_sha256':hashlib.sha256(target.read_bytes()).hexdigest(),
+     'scope':'Pin complete ordinary launcher/runtime dependency set and new immutable preparation/checker identity. Original attempt1 checker remains byte-exact. All raw protocol/quality/control/SSE/timing/memory/cache/PID/cleanup replay arithmetic unchanged. No benchmark rerun or result generated.'}
+(m/'evidence/vllm-fixed4k-launcher-completed-verifier-derivation.json').write_bytes(json.dumps(row,indent=2).encode());print(json.dumps({'status':'vllm_launcher_completed_checker_derived','sha256':row['result_sha256']}))

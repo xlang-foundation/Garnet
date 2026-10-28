@@ -1,0 +1,117 @@
+{
+  "derivations": [
+    {
+      "source": "build_z128_reconstructed_plugin_wire_cpu.bat",
+      "target": "build_kv128_plugin_wire_cpu.bat",
+      "source_sha256": "b81411323da9f181bfe30ed691fd6308133d02347aee640d4f0606dbc7cc9525",
+      "target_sha256": "fcbbfc90adc99449658e35f7b2120df1ffaaa2c1dee6c5aae47ae4ccff1ab837",
+      "changes": [
+        {
+          "before": "modelopt_fp8_z128_reconstructed_plugin.cpp",
+          "after": "modelopt_fp8_kv128_plugin.cpp",
+          "count": 1
+        },
+        {
+          "before": "z128_reconstructed_plugin_wire_stubs.cpp",
+          "after": "kv128_plugin_wire_stubs.cpp",
+          "count": 1
+        },
+        {
+          "before": "probe_z128_reconstructed_plugin_wire.cpp",
+          "after": "probe_kv128_plugin_wire.cpp",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "probe_z128_reconstructed_plugin_init.cpp",
+      "target": "probe_kv128_plugin_init.cpp",
+      "source_sha256": "29b3b3337de8c1e50c0193ccda6dccfe0216e874ffc7b46656092786a983070f",
+      "target_sha256": "22ee4e2dcd3717418ba789e98f0c782acb3e8619b0e3a2b78941c3a2957b04ba",
+      "changes": [
+        {
+          "before": "#include \"modelopt_plugin_init_trace.h\"",
+          "after": "#include \"modelopt_plugin_init_trace.h\"\n#include \"modelopt_fp8_kv128_plugin.h\"",
+          "count": 1
+        },
+        {
+          "before": "int ModelOptInitCPUOldZCalls();",
+          "after": "int ModelOptInitCPUOldZCalls();int ModelOptInitCPUKVCalls();",
+          "count": 1
+        },
+        {
+          "before": "    if(route==0)",
+          "after": "    if(route==5)return OwnedPlugin(new ModelOptFP8KV128Plugin(1024,5120,.5f,.25f));\n    if(route==0)",
+          "count": 1
+        },
+        {
+          "before": "route<5",
+          "after": "route<6",
+          "count": 1
+        },
+        {
+          "before": "            value->serialize(after.data());",
+          "after": "            require(ModelOptInitCPUKVCalls()==(route==5?(mode==1?1:2):0),\"KV factory route changed\");\n            value->serialize(after.data());",
+          "count": 1
+        },
+        {
+          "before": "calls==45&&factories==35&&successes==15&&failures==30&&clones==5",
+          "after": "calls==54&&factories==42&&successes==18&&failures==36&&clones==6",
+          "count": 1
+        },
+        {
+          "before": "actual_reconstructed_plugin_initialize_cpu_controls_passed",
+          "after": "actual_kv128_plugin_initialize_cpu_controls_passed",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "build_z128_reconstructed_plugin_init_cpu_attempt2.bat",
+      "target": "build_kv128_plugin_init_cpu.bat",
+      "source_sha256": "475fed32ddb4aa483b968475a0cf51f8a57d1d7a86c1193c79ca81ceeba7b7f9",
+      "target_sha256": "2fc4664fdce20376b0ae0c95345624b4b88204a4117240bd4e028bb56433117c",
+      "changes": [
+        {
+          "before": "\"%METHODS%\\z128_reconstructed_plugin_init_stubs.cpp\"",
+          "after": "\"%CANDIDATE%\\modelopt_fp8_kv128_plugin.cpp\" \"%METHODS%\\kv128_plugin_init_stubs.cpp\"",
+          "count": 1
+        },
+        {
+          "before": "probe_z128_reconstructed_plugin_init.cpp",
+          "after": "probe_kv128_plugin_init.cpp",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "run_z128_reconstructed_plugin_init_cpu.py",
+      "target": "run_kv128_plugin_init_cpu.py",
+      "source_sha256": "cc5d41a7b50c680802bf6abb5a76c50d6bf3d16d8a0da5d039ca0ab7209e5bf4",
+      "target_sha256": "a820499d0224033a140de67beaa1e30cfa7c2bee9c6189f43af6a895aa99ca14",
+      "changes": [
+        {
+          "before": "z128_reconstructed_plugin_init_contract",
+          "after": "kv128_plugin_init_contract",
+          "count": 1
+        },
+        {
+          "before": "actual_reconstructed_plugin",
+          "after": "actual_kv128_plugin",
+          "count": 1
+        },
+        {
+          "before": "450",
+          "after": "540",
+          "count": 2
+        },
+        {
+          "before": "350",
+          "after": "420",
+          "count": 2
+        }
+      ]
+    }
+  ],
+  "CPU_only": true
+}

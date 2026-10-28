@@ -1,0 +1,170 @@
+{
+  "status": "actual_embedded_ordinary_and_profiled_cpu_stdio_observed",
+  "profiler": {
+    "setup_path": "results/nsight-2026-cab-extraction/setup.json",
+    "setup_sha256": "da3c9f69402f5896f3f35e3f0c78888a6de4618c826d06057bd1cecd56ba3b2d",
+    "path": "tools/n26/target-windows-x64/nsys.exe",
+    "sha256": "e597347ef6cb45456612c0c9593401bb6d1b85497bb18534968f309955831291",
+    "version": "NVIDIA Nsight Systems version 2026.5.1.161-265138896106v0\n"
+  },
+  "runtime_before": {
+    "garnet.dll": "1a1d0229a1c0c24a8397a4dee7a614bcedf97b3bd3293e58d752ed7de30eb498",
+    "xlang3.exe": "2e2db12a2dbc1134a3a4c662c080b91d500b37af488661630d4d580e7684dc10",
+    "xlang3_runtime.dll": "8dabab841d460120b4e0b5c1539851e9ff17dbb0f5113beece4017f9f3fac4b3",
+    "nvinfer_10.dll": "73fd99ba7448ebe7b75f3a97bca5fd996f166fa75760f616c0b0eda5c2f7005b",
+    "cudart64_13.dll": "cac649f5d659f89713ebc5d426573ca7cf873d57af7e40767b068fe3606120db",
+    "cublasLt64_13.dll": "b37233a1e3516a41d27dcea49595fd1cbaff979b65c80da69935cb59d0d23f5b"
+  },
+  "sources": {
+    "probe_native_stdio_cpu.py": "75b83a64e79d39627ccd282f9b62c6042f2a119bd66b114be7d326b84e4c926e",
+    "run_native_profiled_stdio_cpu.py": "56839e925f78811677bf05ecddd8b742a60f34355d5aeb9b42c0445f27d58dbf"
+  },
+  "cases": [
+    {
+      "label": "ordinary",
+      "status": "embedded_cpu_stdio_driver_collected",
+      "argv": [
+        "cmd.exe",
+        "/d",
+        "/c",
+        "D:\\CantorAI\\5090-study-20261023\\results\\native-embedded-stdio-cpu-diagnosis-attempt1\\ordinary\\cpu-native-target.bat",
+        "D:\\CantorAI\\5090-study-20261023\\results\\native-embedded-stdio-cpu-diagnosis-attempt1\\ordinary\\embedded"
+      ],
+      "child_exit_code": 0,
+      "target": {
+        "status": "cpu_stdio_observations_collected",
+        "pid": 35376,
+        "operations": [
+          {
+            "operation": "os.write.stdout",
+            "returned": "28",
+            "completed": true
+          },
+          {
+            "operation": "sys.stdout.write",
+            "returned": "(29, None)",
+            "completed": true
+          },
+          {
+            "operation": "sys.__stdout__.write",
+            "returned": "(33, None)",
+            "completed": true
+          },
+          {
+            "operation": "os.fdopen.stdout",
+            "returned": "(26, None)",
+            "completed": true
+          },
+          {
+            "operation": "os.write.stderr",
+            "returned": "28",
+            "completed": true
+          },
+          {
+            "operation": "os.read.stdin",
+            "returned": "b'{\"probe\":\"native.stdin\",\"cpu_only\":true}\\n'",
+            "completed": true
+          },
+          {
+            "operation": "owned_file.write",
+            "returned": "39",
+            "completed": true
+          }
+        ],
+        "actual_native_model_executed": false,
+        "scope": "CPU-only embedded Python stdio observations; failures are recorded, not suppressed in a model worker.",
+        "sys_stdout_type": "TextIOWrapper",
+        "sys_stdin_type": "TextIOWrapper"
+      },
+      "stdout_bytes": 118,
+      "stderr_bytes": 29,
+      "actual_native_model_executed": false
+    },
+    {
+      "label": "profiled",
+      "status": "embedded_cpu_stdio_driver_collected",
+      "argv": [
+        "cmd.exe",
+        "/d",
+        "/c",
+        "D:\\CantorAI\\5090-study-20261023\\results\\native-embedded-stdio-cpu-diagnosis-attempt1\\profiled\\cpu-native-target.bat",
+        "D:\\CantorAI\\5090-study-20261023\\results\\native-embedded-stdio-cpu-diagnosis-attempt1\\profiled\\embedded"
+      ],
+      "child_exit_code": 0,
+      "target": {
+        "status": "cpu_stdio_observations_collected",
+        "pid": 41692,
+        "operations": [
+          {
+            "operation": "os.write.stdout",
+            "completed": false,
+            "exception_type": "OSError",
+            "exception_repr": "OSError('write failed')",
+            "errno": 9,
+            "winerror": null
+          },
+          {
+            "operation": "sys.stdout.write",
+            "returned": "(29, None)",
+            "completed": true
+          },
+          {
+            "operation": "sys.__stdout__.write",
+            "returned": "(33, None)",
+            "completed": true
+          },
+          {
+            "operation": "os.fdopen.stdout",
+            "completed": false,
+            "exception_type": "OSError",
+            "exception_repr": "OSError('file descriptor write failed: Bad file descriptor')",
+            "errno": 9,
+            "winerror": null
+          },
+          {
+            "operation": "os.write.stderr",
+            "completed": false,
+            "exception_type": "OSError",
+            "exception_repr": "OSError('write failed')",
+            "errno": 9,
+            "winerror": null
+          },
+          {
+            "operation": "os.read.stdin",
+            "returned": "b'{\"probe\":\"native.stdin\",\"cpu_only\":true}\\n'",
+            "completed": true
+          },
+          {
+            "operation": "owned_file.write",
+            "returned": "39",
+            "completed": true
+          }
+        ],
+        "actual_native_model_executed": false,
+        "scope": "CPU-only embedded Python stdio observations; failures are recorded, not suppressed in a model worker.",
+        "sys_stdout_type": "TextIOWrapper",
+        "sys_stdin_type": "TextIOWrapper"
+      },
+      "stdout_bytes": 62,
+      "stderr_bytes": 0,
+      "actual_native_model_executed": false
+    }
+  ],
+  "scope": "Actual CPU-only embedded stdio child with the same nested cmd/driver/Nsight process tree as the failed native profiler. No Garnet import/model/CUDA kernel call. All observed transport failures retained; no serving metrics.",
+  "exit_code": 0,
+  "runtime_after": {
+    "garnet.dll": "1a1d0229a1c0c24a8397a4dee7a614bcedf97b3bd3293e58d752ed7de30eb498",
+    "xlang3.exe": "2e2db12a2dbc1134a3a4c662c080b91d500b37af488661630d4d580e7684dc10",
+    "xlang3_runtime.dll": "8dabab841d460120b4e0b5c1539851e9ff17dbb0f5113beece4017f9f3fac4b3",
+    "nvinfer_10.dll": "73fd99ba7448ebe7b75f3a97bca5fd996f166fa75760f616c0b0eda5c2f7005b",
+    "cudart64_13.dll": "cac649f5d659f89713ebc5d426573ca7cf873d57af7e40767b068fe3606120db",
+    "cublasLt64_13.dll": "b37233a1e3516a41d27dcea49595fd1cbaff979b65c80da69935cb59d0d23f5b"
+  },
+  "profiler_after": {
+    "setup_path": "results/nsight-2026-cab-extraction/setup.json",
+    "setup_sha256": "da3c9f69402f5896f3f35e3f0c78888a6de4618c826d06057bd1cecd56ba3b2d",
+    "path": "tools/n26/target-windows-x64/nsys.exe",
+    "sha256": "e597347ef6cb45456612c0c9593401bb6d1b85497bb18534968f309955831291",
+    "version": "NVIDIA Nsight Systems version 2026.5.1.161-265138896106v0\n"
+  }
+}

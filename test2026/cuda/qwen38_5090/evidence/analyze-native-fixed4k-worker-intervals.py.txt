@@ -1,0 +1,38 @@
+"""Reconcile admitted HTTP requests with existing worker durations; no new run."""
+from pathlib import Path
+from datetime import datetime,timezone
+import hashlib,json,math,statistics,zipfile
+root=Path(__file__).resolve().parent.parent;out=root/'outputs';sha=lambda raw:hashlib.sha256(raw).hexdigest()
+proof=json.loads((out/'fixed-length-http-study-attempt1-verified.json').read_bytes());assert proof==json.loads((out/'fixed-length-http-study-attempt1-remote-verified.json').read_bytes()) and proof['status']=='fixed_length_http_study_replayed' and proof['native_fixed_4k_metrics_replayed']
+archive=out/'fixed-length-http-study-attempt1-evidence.zip';assert sha(archive.read_bytes())==proof['archive_sha256'];records=[];cohorts=[]
+with zipfile.ZipFile(archive) as z:
+ manifest=json.loads(z.read('evidence-manifest.json'));assert z.testzip() is None
+ for name,digest in manifest['files'].items():assert sha(z.read(name))==digest
+ for mode in ('ordinary','mtp'):
+  base='results/fixed-length-http-study-attempt1/'+mode+'/';events={}
+  for raw in z.read(base+'worker/worker-stdout.jsonl').splitlines():
+   outer=json.loads(raw);value=json.loads(outer['line'])
+   if value.get('event') in ('token','completed'):events.setdefault(value['id'],[]).append(value)
+  prefix=base+'benchmark4k/';names=[n for n in z.namelist() if n.startswith(prefix) and n.endswith('-manifest.json')];assert len(names)==1;benchmark=json.loads(z.read(names[0]));assert benchmark['status']=='completed'
+  for cohort in benchmark['cohorts']:
+   items=[]
+   for key in cohort['request_keys']:
+    client=json.loads(z.read(prefix+key+'-result.json'));wire=z.read(prefix+key+'-request.json');assert sha(wire)==client['request_sha256']
+    stream=[json.loads(line) for line in z.read(prefix+key+'-events.jsonl').splitlines()];data=[json.loads(v['data']) for v in stream if v['data']!='[DONE]'];ids={v['id'] for v in data};assert len(ids)==1;ident=ids.pop()
+    worker=events[ident];tokens=[v for v in worker if v['event']=='token'];complete=[v for v in worker if v['event']=='completed'];assert len(complete)==1;complete=complete[0]
+    assert len(tokens)==128 and [v['sampled_tokens'] for v in tokens]==list(range(1,129)) and complete['generated_ids']==[v['token_id'] for v in tokens]
+    streamed=[v['token_id'] for v in data if 'token_id' in v];assert streamed==complete['generated_ids'] and complete['prompt_ids']==data[-1]['prompt_token_ids'] and len(complete['prompt_ids'])==3968
+    assert complete['physical_batch']==1 and complete['finish_reason']=='length' and complete['ignore_eos'] is True
+    native_times=[v['native_monotonic_seconds'] for v in tokens];assert all(math.isfinite(v) for v in native_times) and all(b>=a for a,b in zip(native_times,native_times[1:]))
+    native_span=native_times[-1]-native_times[0];wall=complete['native_elapsed_seconds'];client_wall=client['completed']-client['submitted'];assert 0<native_span<=wall and client_wall>=wall
+    row={'mode':mode,'case':cohort['case'],'concurrency':cohort['concurrency'],'key':key,'worker_request_id':ident,'actual_input_ids':3968,'actual_output_ids':128,'physical_gpu_batch':1,'worker_wall_seconds':wall,'worker_first_to_last_token_seconds':native_span,'worker_wall_outside_first_to_last_token_seconds':wall-native_span,'client_wall_seconds':client_wall,'client_wall_minus_worker_wall_seconds':client_wall-wall,'client_ttft_seconds':client['first_token']-client['submitted'],'client_first_to_last_token_seconds':client['last_token']-client['first_token']}
+    records.append(row);items.append(row)
+   assert len(items)==8
+   summary={'mode':mode,'case':cohort['case'],'concurrency':cohort['concurrency'],'measured_requests':len(items)}
+   for field in ('worker_wall_seconds','worker_first_to_last_token_seconds','worker_wall_outside_first_to_last_token_seconds','client_wall_seconds','client_wall_minus_worker_wall_seconds','client_ttft_seconds','client_first_to_last_token_seconds'):
+    values=[v[field] for v in items];summary[field]={'median':statistics.median(values),'min':min(values),'max':max(values),'mean':statistics.mean(values)}
+   cohorts.append(summary)
+assert len(records)==128 and len(cohorts)==16
+result={'status':'existing_native_fixed4k_http_and_worker_intervals_reconciled','recorded_utc':datetime.now(timezone.utc).isoformat(),'archive_sha256':proof['archive_sha256'],'parent_proof_sha256':sha((out/'fixed-length-http-study-attempt1-verified.json').read_bytes()),'analysis_method_sha256':sha(Path(__file__).read_bytes()),'new_gpu_or_http_execution':False,'measured_requests_reconciled':128,'cohorts':cohorts,'requests':records,'clock_policy':'Only durations within each process clock are subtracted. Never compare absolute native worker and HTTP client timestamp epochs. Worker wall outside first-to-last emitted token includes preprocessing/prefill/first-token and finalization, not an isolated prefill/GPU measurement. Client wall minus worker wall includes queuing and transport/handling, not isolated queue or networking time.','kernel_bottleneck_proven':False,'performance_comparison_admitted':False,'two_times_target_achieved':False,'scope':'Additional arithmetic over the already independently replayed single native ordinary/MTP full4K study; unchanged3968+128 and physical batch1/queued concurrency. All128 actual measured HTTP streams are paired by request ID with worker token IDs, full prompt IDs and exact lengths. No new benchmark, reference comparison, profiler/kernel attribution or repeated-trial claim.'}
+target=out/'Garnet-Native-4K-Worker-Breakdown.json';assert not target.exists();target.write_text(json.dumps(result,indent=2),encoding='utf8')
+print(json.dumps({'status':result['status'],'requests':len(records),'cohorts':len(cohorts),'c1':[{k:v for k,v in c.items() if k in ('mode','case','worker_wall_seconds','worker_wall_outside_first_to_last_token_seconds','worker_first_to_last_token_seconds','client_wall_minus_worker_wall_seconds')} for c in cohorts if c['concurrency']==1]},indent=2))

@@ -1,0 +1,26 @@
+{
+  "status": "fp8_z128_failed_T128_build_with_exact_partial_T32_witness_replayed",
+  "archive_sha256": "a6015fcb5695fa6f153a6ca11ae063b20d5f4c77bb5b67688ca4c2ff2740c851",
+  "failure_proof_sha256": "49aeabbf91895a0c15c7747b21a7a5e9aba24882f4464eee0f5b2a990b872258",
+  "completed_policy_controls": 10,
+  "completed_frontend_rejections": 10,
+  "complete_finite_array_entries": 203,
+  "partial_profiles_replayed": 2,
+  "partial_output_f32_words_replayed": 29515776,
+  "input_readonly_carried_state_and_repeats_exact": true,
+  "diagnostic_primary_exact_to_ordinary": true,
+  "unchanged_old_T32_baseline_arrays_compared": 200,
+  "old_T32_baseline_archive_sha256": "0faf8a625ba25befbeae0877bdf0a08a7696dd3ed19845f7590238f58e1e7de3",
+  "observed_failure": "RuntimeError('TensorRT buildSerializedNetwork failed')",
+  "failed_next_profile": {
+    "layer": 0,
+    "tokens": 128,
+    "diagnostic": false
+  },
+  "T128_profile_built_or_inferred": false,
+  "plugin_initialization_root_cause_established": false,
+  "model_or_quality_or_performance_qualified": false,
+  "two_times_target_achieved": false,
+  "analyzer_sha256": "ba4d664918c15ed3d5a16a4f286906ecbaed9cadf41e2ee47142f02c730792ce",
+  "scope": "Only two completed layer0T32ordinary/diagnostic profiles, actual realfirst128input/readonly/carriedstate/repeats/all11stages/primary and200priorbaseline arrays. Tenfreshpolicygraphs built/rejected asplanned withoutgraphinference. First mainT128ordinary buildfails TensorRTPluginV2Runner.allocateResources; no T128stagevalues orfullmodel/quality/servingmetric admission. Requires initialization diagnostics, not numerical-gate relaxation."
+}

@@ -1,0 +1,29 @@
+from pathlib import Path
+import hashlib,json,zipfile,subprocess
+W=Path(__file__).resolve().parent;O=W.parent/'outputs';R=Path('D:/CantorAI/work/qwen38-5090');E='test2026/cuda/qwen38_5090/evidence/';JOB='o128-http-quality-attempt1';sha=lambda b:hashlib.sha256(b).hexdigest();owned=[]
+def put(n,b):
+    t=R/n;assert t.resolve().is_relative_to(R.resolve()) and (not t.exists() or t.read_bytes()==b),n;t.parent.mkdir(parents=True,exist_ok=True);t.write_bytes(b);owned.append(n)
+raw=(O/(JOB+'-verified.json')).read_bytes();assert raw==(O/(JOB+'-remote-verified.json')).read_bytes();q=json.loads(raw);a=q['arrays'];assert q['exit_code']==0 and q['source_runtime_SDK_checkpoint_restored'] and a['actual_adapted_quality_replayed'] and a['all805_prompt_and_output_IDs_exact_T32'] and a['actual_native_requests']==809 and a['full4k_controls']==4
+archive=O/(JOB+'-evidence.zip');assert sha(archive.read_bytes())==q['archive_sha256'];score=a['quality']['score'];assert score['count']==805
+for suffix in ('-verified.json','-remote-verified.json'):put(E+JOB+suffix,(O/(JOB+suffix)).read_bytes())
+with zipfile.ZipFile(archive) as z:
+    for n in z.namelist():
+        if n.startswith('results/'+JOB+'/') and n.endswith(('.json','.jsonl','.log','.txt')):put(E+JOB+'-'+n.removeprefix('results/'+JOB+'/').replace('/','-'),z.read(n))
+    put(E+JOB+'-manifest.json',z.read('evidence-manifest.json'))
+for n in ('extract-o128-http-quality-closure.py','replay-o128-http-quality-local.py','run-o128-http-quality-postprocess.py','retain-o128-http-quality-success.py'):put(E+n+'.txt',(W/n).read_bytes())
+for n in ('commands.log','commands.jsonl'):put(E+'o128-http-quality-local-replay-ledger-'+n,(W/'o128-http-quality-local-replay-ledger'/n).read_bytes())
+with zipfile.ZipFile(W/'o128-http-quality-closure-assets.zip') as z:
+    for n in z.namelist():
+        if n.startswith('results/o128-http-quality-postprocess/'):put(E+'o128-http-quality-remote-'+n.removeprefix('results/o128-http-quality-postprocess/').replace('/','-'),z.read(n))
+    put(E+'o128-http-quality-closure-manifest.json',z.read('manifest.json'))
+summary=dict(status=q['status'],paired_proof_sha256=sha(raw),archive_sha256=q['archive_sha256'],archive_bytes=archive.stat().st_size,adapted_correct=score['correct'],adapted_count=805,all805_prompt_and_output_IDs_exact_T32=True,full4k_text_image_reset_controls=4,native_requests_and_callbacks=809,source_runtime_restored=True,official900_MMMU_qualified=False,performance_qualified=False,two_times_target_achieved=False)
+blob=json.dumps(summary,indent=2).encode();put(E+'o128-http-quality-research-summary.json',blob);(O/'Garnet-Q128-O128-HTTP-805-Quality-Verified.json').write_bytes(blob)
+text=f'''
+
+### O128 actual HTTP805 token parity and four4K controls pass; performance still pending
+
+2026-10-27: Original o128-http-quality-attempt1 exits0. Same60-source/DLL841 research worker passes four actual3968+128 text/image/reset HTTP boundary controls, then all805 frozen low-resolution adapted screening requests. Every prompt and output token ID matches independently replayed complete correctT32 ordinary collection. Adapted strict-MC score {score['correct']}/805 (not official900 MMMU); old enclosing tokenizer-nfc HTTP timing attempt remains failed, only its complete805 collection used. Independently replay all809native requests and full token callbacks against raw HTTP replies, original four-boundary model IDs, raw805wire/responses/corpus and exact original control. Source/runtime/SDK/checkpoints restored, owned private nonce engines retired. Raw archive {q['archive_sha256']} ({archive.stat().st_size}B), paired remote/local proof {sha(raw)}. Full raw ZIP retained in outputs and fixed remote study; per-case records, worker logs, methods and checksums retained in branch. No new performance measurement, broad-quality/official900/strongest-reference/2x admission. Next three repeated matched fixed-length3968+128 HTTP trials; retain predeployment CPU-detected context-vs-fixed-length corpus error and repair, no native benchmark ran on wrong corpus.
+'''
+for n in ('docs/research/qwen38-5090-development-log.md','docs/research/qwen38-5090-implementation-task.md'):
+    t=R/n;b=t.read_bytes();assert b'### O128 actual HTTP805 token parity' not in b;t.write_bytes(b+text.replace('\n','\r\n').encode());assert t.read_bytes()[:len(b)]==b;owned.append(n)
+assert not any('probe_native_external_prefix_batch.py' in n for n in owned);subprocess.run(['git','-C',str(R),'-c','core.autocrlf=false','add','--pathspec-from-file=-','--pathspec-file-nul'],input=('\0'.join(owned)+'\0').encode(),check=True);print(json.dumps(dict(owned_paths=len(owned),actual_quality_IDs805_exact=True,performance_qualified=False)))

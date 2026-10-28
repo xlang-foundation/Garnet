@@ -1,0 +1,13 @@
+from pathlib import Path
+import hashlib,json
+m=Path('D:/CantorAI/work/qwen38-5090/test2026/cuda/qwen38_5090');sha=lambda b:hashlib.sha256(b).hexdigest()
+path=m/'verify_vllm_observed_fixed4k.py';raw=path.read_bytes();text=raw.decode()
+manifest=m/'evidence/vllm-observed-fixed4k-pipeline-derivation.json';d=json.loads(manifest.read_bytes());row=next(r for r in d['derivations'] if r['target']==path.name);assert row['target_sha256']==sha(raw)
+changes=[
+ ("'benchmark_vllm_observed_output.py'):","'benchmark_vllm_observed_output.py','vllm_observed_component_parent.py'):"),
+ ("entry=w['closed_component'];assert entry['cleanup_finished'] is True;", "entry=w['closed_component'];assert entry==p['component_parent'] and entry['cleanup_finished'] is True;"),
+ ("        passed=w['exit_code']==0", "        from test2026.cuda.qwen38_5090.vllm_observed_component_parent import admit_component\n        assert admit_component(native_archive.read_bytes(),native_proof_raw)==entry\n        assert type(w['exit_code']) is int and w['cleanup_finished'] is True\n        passed=w['exit_code']==0")]
+for old,new in changes:
+    assert text.count(old)==1;text=text.replace(old,new);row['replacements'].append({'old':old,'new':new,'count':1})
+after=text.encode();path.write_bytes(after);row['target_sha256']=sha(after);manifest.write_bytes(json.dumps(d,indent=2).encode())
+print(json.dumps({'status':'unrun_vllm_observed_checker_binds_full_closed_component'}))

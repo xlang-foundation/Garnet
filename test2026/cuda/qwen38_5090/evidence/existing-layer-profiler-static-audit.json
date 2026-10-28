@@ -1,0 +1,53 @@
+{
+  "status": "static_exact_source60_and87_profiler_regions_identical",
+  "sources": [
+    {
+      "bundle": "o128-canonical-source.zip",
+      "bundle_sha256": "c44138f5e64b684d556830f58f09c2332d767155669c6642ba799b8445493997",
+      "builder_sha256": "740fbf2cf0c48587c594a3a79179e814506d62e6dada0953423542b3ca0e95e3",
+      "regions": {
+        "profiler_class": {
+          "sha256": "2846f25cfba711203c80d6d912296a4f54fe87474de78afdae6c4dfaacc00d46",
+          "bytes": 763
+        },
+        "enqueue_and_graph_policy": {
+          "sha256": "a50c79cc20d0e981db5e757f5486643adf9b8f9c2a7f4e8e009129b839e865fe",
+          "bytes": 3705
+        },
+        "profiler_attach_write": {
+          "sha256": "173714ed4dedff5d8bef435e3d45bd5baa154a3ec51248c41fda934f25125b35",
+          "bytes": 1855
+        }
+      }
+    },
+    {
+      "bundle": "rowwise-k-norm-source.zip",
+      "bundle_sha256": "fcffdf2455d188ca555e561ddb16d337d5f172c00b4dafdc7b90e2634651f190",
+      "builder_sha256": "c3e497f76e0b1aa442e69571a787331f5ea5347b065018b60916715e4921d5fc",
+      "regions": {
+        "profiler_class": {
+          "sha256": "2846f25cfba711203c80d6d912296a4f54fe87474de78afdae6c4dfaacc00d46",
+          "bytes": 763
+        },
+        "enqueue_and_graph_policy": {
+          "sha256": "a50c79cc20d0e981db5e757f5486643adf9b8f9c2a7f4e8e009129b839e865fe",
+          "bytes": 3705
+        },
+        "profiler_attach_write": {
+          "sha256": "173714ed4dedff5d8bef435e3d45bd5baa154a3ec51248c41fda934f25125b35",
+          "bytes": 1855
+        }
+      }
+    }
+  ],
+  "existing_flag": "GARNET_PROFILE_DECODE_LAYERS",
+  "observations": [
+    "OneShotTRTLayerProfiler records IProfiler layer times to an appended engine/layer/milliseconds TSV.",
+    "The first eligible execution per enginePath attaches the profiler. No warmup counter or exposed reset appears in these inspected regions.",
+    "Active profiling bypasses optional CUDA graph launch and uses enqueueV3. Subsequent inactive-profiler calls can use CUDA graphs.",
+    "Treat this as first-eligible-enqueue diagnostics, not warmed CUDA-graph serving throughput or the complete full-context execution time."
+  ],
+  "code_or_native_execution": false,
+  "model_witnesses_replayed": false,
+  "source_or_DLL_changed": false
+}

@@ -1,0 +1,51 @@
+from pathlib import Path
+import hashlib,json
+W=Path(__file__).resolve().parent;O=W.parent/'outputs';R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';E=M/'evidence';sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest();owned=[M/'rowwise_k_norm_source.py',M/'test_rowwise_k_norm_source.py',E/'rowwise-k-norm-source-derivation.json'];owned.extend((M/'native_rowwise_k_norm_candidate').iterdir());saved={}
+events=[json.loads(v) for v in (W/'rowwise-k-norm-source-cpu-ledger/commands.jsonl').read_bytes().splitlines()];assert len(events)==2 and events[1]['exit_code']==0 and events[0]['source']['owned_source_sha256']==events[1]['source_after']['owned_source_sha256'];assert b'Ran 5 tests' in (W/'rowwise-k-norm-source-cpu-ledger/commands.log').read_bytes()
+for n,h in events[0]['source']['owned_source_sha256'].items():assert sha(M/n)==h
+def keep(name,raw):
+    p=E/name;assert not p.exists();p.write_bytes(raw);owned.append(p);saved[name]=sha(p)
+for name in ('derive-rowwise-k-norm-source.py','test-rowwise-k-norm-source-cpu.py','audit-decode35-endpoint-primary.py',Path(__file__).name):keep(name+'.txt',(W/name).read_bytes())
+for ext in ('log','jsonl'):keep('rowwise-k-norm-source-cpu-commands.'+ext,(W/('rowwise-k-norm-source-cpu-ledger/commands.'+ext)).read_bytes())
+keep('rowwise-k-norm-source-package.json',(W/'rowwise-k-norm-source-package.json').read_bytes());package=json.loads((W/'rowwise-k-norm-source-package.json').read_bytes());assert sha(W/'rowwise-k-norm-source.zip')==package['bundle_sha256']
+keep('Garnet-Decode35-Endpoint-Perturbation.json',(O/'Garnet-Decode35-Endpoint-Perturbation.json').read_bytes());audit=json.loads((O/'Garnet-Decode35-Endpoint-Perturbation.json').read_bytes());assert not audit['operand_blobs_read']
+plan={'status':'controlled_K_norm_shape_experiment_source_prepared_native_unrun','next_required_steps':['Compile standalone new profile guard on RTX5090 host; preserve old guards and test every pinned layer offset and invalid policy/geometry.','Add a private B4T4 decoder chunk carrying integer rowwise_full_decode_k_norm=1, bind only full-attention blocks, keep all other math and outputs exact; test binding/geometry/source derivation.','Build source87 in the fixed study root with baseline/source/runtime/SDK/config-index/CMake snapshots and all34 object hashes. Preserve original3-object whitelist for the existing cached CUDA build; a failed old gate stays failed.','Run new-DLL default-off numeric controls before enabling the feature. Test actual rowwise trace16 layers, original selected B1/B4 4K prefix, full128 text/image/mixed correctness, then batch4 MTP target equivalence and quality before HTTP timing.','Profile prefill and decode once correctness is qualified. Establish repeated strongest feasible tuned/MTP vLLM and SGLang runs under matched corpus, precision, cache, EOS and context policies.','Native-validate the committed INT4/4B ignore_eos fix, then complete matched4K comparison; existing short pilots are insufficient.'], 'prefill_research_only':{'hypothesis':'The checkout register-state GDN kernel loops serially over tokens; chunked GDN prefill is a candidate only after actual source provenance and GPU profiling. No bottleneck or speedup measured here.','primary_sources':['https://github.com/fla-org/flash-linear-attention/blob/main/fla/ops/gated_delta_rule/chunk.py','https://arxiv.org/abs/2412.06464'],'possible_floating_order_change':'Any alternative parallel GDN algorithm needs independent numerical and model-quality validation; retain old exact-gate outcomes and disclose policy differences.'},'source_fidelity':{'modelopt_cublaslt_cpp_checkout_matches_current_remote_guard_sha256':'f1283406460ecf8d0b633ff49959709d86941009a73cd3bd596d86a2e4792f35','checkout_GDN_sources_not_in_source86_or_current_guard_inventory':'Verify actual compiled-source lineage before attributing timing or changing GDN kernels.'},'overall_two_times_target_achieved':False}
+keep('rowwise-k-norm-implementation-plan.json',json.dumps(plan,indent=2).encode())
+keep('rowwise-k-norm-source-retention.json',json.dumps({'status':'source87_controlled_K_norm_shape_experiment_retained','CPU_source_controls':5,'source_package':package,'retained_sha256':dict(saved),'native_header_compile_full_build_and_GPU_model_unrun':True,'repair_root_cause_quality_HTTP_or_performance_qualified':False},indent=2).encode())
+entry=('\n\n2026-10-27 six-output observer failure replay is paired byte-identical '
+       '(f4cd3dbaa531eb38afb54b00ac94cea0467838a3bd33622687d5304dfdd30836; '
+       'archive39a35e3b3d2c77946e4b960e4d279ed7138944e05b2487bd1631758e8343067a, '
+       '42038263 bytes). Primary-only audit opened no operand observations: all '
+       'IDs remain exact; reset/prefill/step7/final-reset logical states exact '
+       'against ordinary off; step52 has56 changed components only row3. Six '
+       'and seven observers have identical complete primary logical states, '
+       'finite vectors, selected cache/timeline and all64 completeT4 layer '
+       'outputs at44/45. This proves no observed numeric benefit from final '
+       'selection omission, not identical compiled kernels or a root cause. '
+       'Stop final-output observer variants; do not interpret their operands. '
+       'Next source87 is a controlled K-only normalization shape intervention '
+       'over immutable source86: same F32 RMS equation/epsilon/scale, split '
+       'B4 projectedK along physical rows, apply existing RMS to four '
+       '[1,4,4,256] slices and concatenate. Default false retains original '
+       'single RMS call. Separate explicit env+integer-metadata policy rejects '
+       'wrong profiles and all native observer modes; exact B4T4 mixed weights '
+       'and sixteen FA layers with independent BF16 cache-offset guards. '
+       'Trace counts RMS subgraphs, not executed kernel launches. No dtype, '
+       'weights, RoPE, cache format, GDN, V or old native counter changes; '
+       'all CUDA bytes unchanged relative to source86. Five CPU controls pass '
+       '(source reversal/defaultoff/independent config offsets/high-precision '
+       'equation), but native header compilation, full DLL build and model '
+       'repair remain UNRUN. Source87 package '+package['bundle_sha256']+
+       ' ('+str(package['bytes'])+' bytes), derivatione50b67d6b044326849c9a6145c1e8c9a9c2cfd2b7c86a9b068ba47dee50d2f8c. '
+       'This is a testable hypothesis based on the original K-cache mismatch '
+       'and failed four-M4 projection intervention, not confounded new operands. '
+       'Implementation plan retains full4K/MTP/quality/HTTP, strongest repeated '
+       'reference, INT4/4B and2x requirements. Future prefill research cites FLA '
+       'chunk_gated_delta_rule and https://arxiv.org/abs/2412.06464; no GDN '
+       'performance claim. Local GDN source provenance must be checked against '
+       'actual remote build before attribution. No new serving measurements.\n').encode()
+for name in ('docs/research/qwen38-5090-development-log.md','docs/research/qwen38-5090-implementation-task.md'):
+    p=R/name;before=p.read_bytes();assert b'Next source87 is a controlled K-only normalization shape intervention' not in before
+    with p.open('ab') as f:f.write(entry)
+    assert p.read_bytes()==before+entry;owned.append(p)
+(W/'rowwise-k-norm-source-stage-paths.bin').write_bytes(b''.join(p.relative_to(R).as_posix().encode()+b'\0' for p in owned));print(json.dumps({'stage_paths':len(owned),'CPU_source_controls':5,'native_and_model_unrun':True}))

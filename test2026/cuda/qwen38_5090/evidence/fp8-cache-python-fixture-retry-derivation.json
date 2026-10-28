@@ -1,0 +1,123 @@
+{
+  "derivations": [
+    {
+      "source": "fp8_policy_cache_fixture.x",
+      "target": "fp8_policy_cache_fixture.py",
+      "source_sha256": "e07ed679b58cd089124578668cd2ad4e5d87bd620387c18e22f12505be2d9c52",
+      "target_sha256": "c5aca930de8ebb16d105242bc84d39fad3008ca4b805845049a07d79c9af27cd",
+      "changes": [
+        {
+          "old": "from garnet import garnet\nT = garnet.tensor()\n@T.fusion()",
+          "new": "import garnet\nfrom xModel.qwen35.vl_0_8b.tensor_compat import tensor\nT = tensor()\n@T.fusion(name='fp8_policy_cache_addition_fixture', boundary='required')",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "probe_fp8_policy_cache_production.py",
+      "target": "probe_fp8_policy_cache_production_python.py",
+      "source_sha256": "0bef7f8ef9ddddf754fc47662ccad26e84f4f2f63c05114eb80f651c19acdde3",
+      "target_sha256": "9954e155539ad67573bee648a7d05f0f16e39ff941ac502e7052a61371d4c5cf",
+      "changes": [
+        {
+          "old": "fp8-policy-cache-production-preparation.json",
+          "new": "fp8-policy-cache-production-python-preparation.json",
+          "count": 1
+        },
+        {
+          "old": "fp8_policy_cache_fixture.x",
+          "new": "fp8_policy_cache_fixture.py",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "launch_fp8_policy_cache_production_case.py",
+      "target": "launch_fp8_policy_cache_production_python_case.py",
+      "source_sha256": "cef96714f289a9a5f56d14cb48cb190d2dd5d85931b143569bd35be900ea489a",
+      "target_sha256": "d0efd141ef7b5fc2d5815b77da52cbc521827eac94657504f22336f3e9230a91",
+      "changes": [
+        {
+          "old": "probe_fp8_policy_cache_production.py",
+          "new": "probe_fp8_policy_cache_production_python.py",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "run_fp8_policy_cache_production_cases.py",
+      "target": "run_fp8_policy_cache_production_python_cases.py",
+      "source_sha256": "6c84019a545d9120890f11a582ca48e9f72ededc740250b743853df4d7373f2f",
+      "target_sha256": "c5bfbb71731357b399fbe762da19c29bc11cd26928ce905ff22232a840e2fc98",
+      "changes": [
+        {
+          "old": "fp8-policy-cache-production-preparation.json",
+          "new": "fp8-policy-cache-production-python-preparation.json",
+          "count": 1
+        },
+        {
+          "old": "launch_fp8_policy_cache_production_case.py",
+          "new": "launch_fp8_policy_cache_production_python_case.py",
+          "count": 2
+        },
+        {
+          "old": "probe_fp8_policy_cache_production.py",
+          "new": "probe_fp8_policy_cache_production_python.py",
+          "count": 1
+        },
+        {
+          "old": "fp8_policy_cache_fixture.x",
+          "new": "fp8_policy_cache_fixture.py",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "run_fp8_policy_cache_diagnostic.py",
+      "target": "run_fp8_policy_cache_diagnostic_python.py",
+      "source_sha256": "f4ff9eed864b7c2d1c2c11a07265274177c82f58d04daeda42c53a105e4b19cf",
+      "target_sha256": "6dfe96a2b383297d52ca977100973a50d6ebf1aa31b140f127b48951987790ca",
+      "changes": [
+        {
+          "old": "fp8-policy-cache-production-diagnostic-attempt1",
+          "new": "fp8-policy-cache-production-diagnostic-attempt2",
+          "count": 1
+        },
+        {
+          "old": "fp8-policy-cache-production-preparation.json",
+          "new": "fp8-policy-cache-production-python-preparation.json",
+          "count": 1
+        },
+        {
+          "old": "run_fp8_policy_cache_production_cases.py",
+          "new": "run_fp8_policy_cache_production_python_cases.py",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "verify_fp8_policy_cache_diagnostic.py",
+      "target": "verify_fp8_policy_cache_diagnostic_python.py",
+      "source_sha256": "4777e1466ef04b7f1c7ca5a50ae500ef6ba2219d67f25836e94bb395d51f5fe0",
+      "target_sha256": "6869081d4654300513ad141541988900f27f7d9d01f9f8d2b2b22adb20bc50bd",
+      "changes": [
+        {
+          "old": "fp8-policy-cache-production-diagnostic-attempt1",
+          "new": "fp8-policy-cache-production-diagnostic-attempt2",
+          "count": 1
+        },
+        {
+          "old": "fp8-policy-cache-production-preparation.json",
+          "new": "fp8-policy-cache-production-python-preparation.json",
+          "count": 1
+        }
+      ]
+    }
+  ],
+  "observed_first_attempt_error": "invalid_root_xmodel: compiled_xmodel mode requires an existing Python model file",
+  "actual_current_cpp_requires_extension_py": true,
+  "arithmetic_expression_unchanged": "(x+x)*x-x",
+  "original41case_errors_counters_cache_byte_alias_GPU_output_predicates_unchanged": true,
+  "original_failed_build_identity_gate_remains_false": true,
+  "retry_not_executed": true
+}

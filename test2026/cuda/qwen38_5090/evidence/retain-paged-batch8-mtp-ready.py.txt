@@ -1,0 +1,43 @@
+from pathlib import Path
+import json,hashlib
+work=Path(__file__).resolve().parent;out=work.parent/'outputs';repo=Path('D:/CantorAI/work/qwen38-5090')
+e=repo/'test2026/cuda/qwen38_5090/evidence'
+def keep(path,raw):
+    assert not path.exists() or path.read_bytes()==raw,path
+    if not path.exists():path.write_bytes(raw)
+for name in ('package-paged-batch8-mtp-methods.py','install-paged-batch8-mtp-methods.py','retain-paged-batch8-mtp-ready.py'):
+    keep(e/(name+'.txt'),(work/name).read_bytes())
+for name in ('paged-batch8-mtp-upload-plan.json','paged-batch8-mtp-bundle-preparation.json'):
+    keep(e/name,(work/name).read_bytes())
+for f in (work/'paged-batch8-mtp-cpu-ledger').iterdir():
+    if f.is_file():keep(e/('paged-batch8-mtp-ready-cpu-ledger-'+f.name),f.read_bytes())
+r=json.loads((work/'paged-batch8-mtp-bundle-preparation.json').read_bytes())
+keep(out/'Garnet-Batch8-MTP-Ready-Status.json',json.dumps(r,indent=2).encode())
+text='''
+
+### 2026-10-25 — actual closed B8 parent now bound to MTP trial; GPU execution pending
+
+The unchanged MTP preparer now consumes the actual two-machine closed paged B8
+ordinary parent e87316f3/archive3bbec8c5, not a hypothetical/synthetic parent.
+All immutable archive members verified; 693source pins and actual parent/runtime/
+SDK identities bound. Fresh30CPUcontrols pass12.566s. Preparation
+d87e3d2bd123d449802b2be71fde229aee138c016e495b81aac725742413240b.
+Absent-only ten-target methods packagef249f76305a0066668d7aa793ed6c662d11080ba31251cef4ef4a05e8a571b09
+(48326bytes), installer6d89538cd39c35769e8a3385ee324621eac52718e702db05a1cd65aba3c3cc01.
+Installer is an exact seven-substitution derivative of the previously executed
+ordinary B8 installer, with parent/status/preparation/package/receipt and count
+changed; same all-source/runtime/SDK and resolved-path/absent-target checks.
+No remote upload/install/start while the exclusive vLLM reference owner is live.
+
+Future actual B8 MTP trial uses existing depth3/T4/prefix-replay session with
+128MiB, bounded128/two-page input and unchanged ordinary target arithmetic.
+All nine cases, 29complete target states/58raw vectors and all IDs must match the
+actual closed ordinary run; actual model/draft/vision fit is required. No natural
+stop/805quality/HTTP or performance admission is implied by this preparation.
+The independent B4 full-cache reference producer remains prepared separately;
+shared operator numerical drift still requires that fresh reference gate.
+'''
+for name in ('qwen38-5090-development-log.md','qwen38-5090-implementation-task.md'):
+    p=repo/'docs/research'/name;raw=p.read_bytes()
+    if b'actual closed B8 parent now bound to MTP trial' not in raw:p.write_bytes(raw+text.encode())
+print(json.dumps(r))

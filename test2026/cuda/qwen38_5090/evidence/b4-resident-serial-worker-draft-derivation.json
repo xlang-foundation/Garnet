@@ -1,0 +1,52 @@
+{
+  "source_file": "D:\\CantorAI\\work\\qwen38-5090\\test2026\\cuda\\qwen38_5090\\native_b4_rowwise_http_worker.py",
+  "source_sha256": "65898a7023cad30babe4eac8146a7eb9789e314afee2f6367e3ce703854fbeca",
+  "draft_sha256": "9c6e25155366813ad9e8a489d506b2e10d24fc20c5b1293aac9b7c7d99b4e4e9",
+  "changes": [
+    {
+      "old": "Private B4 rowwise-K/MTP worker; HTTP quality admission remains separate.",
+      "new": "Candidate B4 resident controls and serial graph reuse; fresh correctness/performance admission required.",
+      "count": 1
+    },
+    {
+      "old": "    decoder.io.enable_nvfp4_head(True);decoder.enable_cuda_graph(True);io=decoder.io",
+      "new": "    # Existing production policy requires all three for packed shared output.\n    decoder.resident_controls=True\n    decoder.serial_target_graph_reuse=True\n    decoder.serial_graph_reuse=True\n    decoder.io.enable_nvfp4_head(True);decoder.enable_cuda_graph(True);io=decoder.io",
+      "count": 1
+    },
+    {
+      "old": "    memory=session.memory_info();",
+      "new": "    assert session.verifier.reuse_verified_head is False\n    if session.prefill_norm is not None:session.prefill_norm.enable_serial_graph_reuse(True)\n    def graph_snapshot():\n        objects={**{'target'+str(t):program.graph for t,program in decoder.programs.items()},\n                 'decoder_norm':decoder.head,'verifier_norm':session.verifier.graph,\n                 'prefix_commit':session.verifier.replay_graph,'draft4':session.program.graph,\n                 'draft16':session.prefill16_program.graph,'wide_norm':session.prefill_norm}\n        return {name:json.loads(graph.stats_json()) for name,graph in objects.items() if graph is not None}\n    initial_graphs=graph_snapshot()\n    assert all(value['cuda_graph_requested'] is True and value['serial_graph_reuse_requested'] is True for value in initial_graphs.values())\n    memory=session.memory_info();",
+      "count": 1
+    },
+    {
+      "old": "              research_only=True,adapted805_HTTP_or_performance_qualified=False))",
+      "new": "              research_only=True,adapted805_HTTP_or_performance_qualified=False,\n              backend_policy=dict(resident_controls=True,serial_target_graph_reuse=True,serial_draft_graph_reuse=True,\n                                  accepted_head_reuse=False),initial_graphs=initial_graphs,\n              backend_policy_correctness_or_performance_qualified=False))",
+      "count": 1
+    },
+    {
+      "old": "            started=time.monotonic();session.reset();prepared=[]",
+      "new": "            snapshot_flags=[job['body'].get('study_graph_snapshot',False) for job in jobs]\n            if any(type(value) is not bool for value in snapshot_flags):raise ValueError('study_graph_snapshot requires a boolean')\n            started=time.monotonic();session.reset();prepared=[]",
+      "count": 1
+    },
+    {
+      "old": "            public.complete(session.generate(jobs[0]['body']['max_tokens'],on_token=public.notify))",
+      "new": "            public.complete(session.generate(jobs[0]['body']['max_tokens'],on_token=public.notify))\n            # Diagnostic snapshots are outside public token delivery, opt-in,\n            # and absent from future clean timing request bodies.\n            if any(snapshot_flags):\n                emit(dict(event='study_graph_snapshot',request_ids=[job['id'] for job in jobs],\n                          real_rows=len(jobs),physical_batch=4,graphs=graph_snapshot(),\n                          io=json.loads(io.memory_json()),CUDA_kernel_elapsed_claimed=False,\n                          clean_throughput_result_claimed=False))",
+      "count": 1
+    }
+  ],
+  "static_policy_evidence_sha256": {
+    "runtime/cuda_serving.py": "8e3d8cdcba04fa5b21d289479a78f19bf0a53ea6d2662b3485a154d8468d59e5",
+    "src/backends/tensorrt/trt_context_pool.h": "d8f828b7ede7c6473af1de01fb8451818c534bbe4570050bcafce0386cc765ef",
+    "src/backends/tensorrt/trt_builder.cpp": "37b3893e2ca249415cc84c12dfd843ec9a4ddb9fc36e41a05a606a64e9f78f1f",
+    "xModel/qwen35/vl_0_8b/cuda_packed_decoder.py": "be9198639d0563a335a41bdc0a3558ed1466f062486e7399503bc516243e9153",
+    "xModel/qwen35/vl_0_8b/cuda_mtp_prefill16_b4_study.py": "bac38beeed03c6ad42bef2d9f0b55c50acb8672ed72304611554fdad44d78922",
+    "xModel/qwen35/vl_0_8b/cuda_verify.py": "b824ea0106876701a2497cbe16719121ecabd6478be3afe7a0cf5ffe952c6281",
+    "xModel/qwen35/vl_0_8b/cuda_packed_replay.py": "c4c57b265227882253a2f9800599c7607b70d4bb9a622f51cf21587da645b7a4"
+  },
+  "model_constructor_call_arguments_AST_unchanged": true,
+  "model_source_bundle_or_native_DLL_changed": false,
+  "accepted_head_reuse_still_disabled": true,
+  "syntax_checked_only": true,
+  "CPU_embedded_GPU_validation_unrun": true,
+  "scope": "Candidate uses existing resident-control and serial-graph APIs, as required together by the production frontend for shared packed output. Core context pool permits serial reuse only for identical bindings, stream and eligible fixed shape without provider-owner changes; no algorithm/precision/checkpoint changes. Optional post-group raw graph counters must establish actual captures/replays/reuse and allocator/context behavior; requested flags alone prove no speed benefit. Correctness must pass before clean timing. Serial policy and resident IO are one dependent configuration; no individual causal speed claim. Prefix replay uses retained GDN projections and does not rerun target projections. Host spans/graph counters are not CUDA kernel timings."
+}

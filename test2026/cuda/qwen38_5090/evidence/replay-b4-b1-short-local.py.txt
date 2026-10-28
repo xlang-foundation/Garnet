@@ -1,0 +1,7 @@
+from pathlib import Path
+import hashlib,json,os,sys
+W=Path(__file__).resolve().parent;O=W.parent/'outputs';R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';sys.path[:0]=[str(M),str(R)];import run_logged as ledger
+sha=lambda b:hashlib.sha256(b).hexdigest();job='b4-b1-short-admission-attempt1';peer=O/(job+'-remote-verified.json');q=json.loads(peer.read_bytes());archive=O/(job+'-evidence.zip');assert sha(archive.read_bytes())==q['archive_sha256']
+paths=[W/'verify-b4-b1-short-admission.py',Path(__file__),M/'b4_b1_exact_gate.py'];pins={str(n):sha(n.read_bytes()) for n in paths};ledger.source_identity=lambda:{'scope':'Explicit terminal short B4vsB1 original archive CPU replay only; no local model/GPU/native execution; protected unrelated bodies excluded','owned_source_sha256':pins};os.chdir(R)
+assert ledger.run([sys.executable,str(paths[0]),'--proofs',str(O),'--repo',str(R)],W/'b4-b1-short-local-replay-ledger','correctness','Independent original manifest/source/runtime/SDK/checkpoint restoration and complete four-B1-vs-B4 raw state/vector/ID short pass/failure replay; no fullscope or performance promotion',[archive,peer,*paths])==0
+raw=(O/(job+'-verified.json')).read_bytes();assert raw==peer.read_bytes();print(json.dumps(dict(status='B4_B1_short_paired_replay_passed',model_gate_exit_code=q['exit_code'],paired_proof_sha256=sha(raw))))

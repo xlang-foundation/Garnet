@@ -1,0 +1,14 @@
+from pathlib import Path
+import hashlib,json,zipfile
+W=Path(__file__).resolve().parent;sha=lambda b:hashlib.sha256(b).hexdigest();rows=[]
+for name in ('o128-canonical-source.zip','rowwise-k-norm-source.zip'):
+    bundle=(W/name).read_bytes()
+    with zipfile.ZipFile(W/name) as z:raw=z.read('src/backends/tensorrt/trt_builder.cpp')
+    source=raw.decode();regions={}
+    start=source.index('        class OneShotTRTLayerProfiler');end=source.index('\n        };',start)+len('\n        };');regions['profiler_class']=source[start:end].encode()
+    start=source.index('        bool EnqueueTRTWithOptionalCudaGraph(');end=source.index('\n        class OneShotTRTLayerProfiler',start);regions['enqueue_and_graph_policy']=source[start:end].encode()
+    start=source.index('        const char* layerProfilePath = std::getenv("GARNET_PROFILE_DECODE_LAYERS");');end=source.index('return execution.Finish(X::Tensor(outputValue), CurrentExecutionStream(), true);',start)+len('return execution.Finish(X::Tensor(outputValue), CurrentExecutionStream(), true);');regions['profiler_attach_write']=source[start:end].encode()
+    rows.append(dict(bundle=name,bundle_sha256=sha(bundle),builder_sha256=sha(raw),regions={n:dict(sha256=sha(b),bytes=len(b)) for n,b in regions.items()}))
+assert rows[0]['regions']==rows[1]['regions']
+result=dict(status='static_exact_source60_and87_profiler_regions_identical',sources=rows,existing_flag='GARNET_PROFILE_DECODE_LAYERS',observations=['OneShotTRTLayerProfiler records IProfiler layer times to an appended engine/layer/milliseconds TSV.','The first eligible execution per enginePath attaches the profiler. No warmup counter or exposed reset appears in these inspected regions.','Active profiling bypasses optional CUDA graph launch and uses enqueueV3. Subsequent inactive-profiler calls can use CUDA graphs.','Treat this as first-eligible-enqueue diagnostics, not warmed CUDA-graph serving throughput or the complete full-context execution time.'],code_or_native_execution=False,model_witnesses_replayed=False,source_or_DLL_changed=False)
+p=W/'existing-layer-profiler-static-audit.json';assert not p.exists();p.write_bytes(json.dumps(result,indent=2).encode());print(json.dumps(result))

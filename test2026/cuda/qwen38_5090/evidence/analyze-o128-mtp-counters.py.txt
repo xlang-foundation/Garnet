@@ -1,0 +1,39 @@
+"""Descriptive counters/client-arrival gaps from the verified372-request archive."""
+from pathlib import Path
+import argparse,collections,hashlib,json,math,os,statistics,sys,zipfile
+W=Path(__file__).resolve().parent;O=W.parent/'outputs';R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';JOB='o128-http-benchmark-attempt1';sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+
+def collect():
+    proof=O/(JOB+'-verified.json');assert proof.read_bytes()==(O/(JOB+'-remote-verified.json')).read_bytes();q=json.loads(proof.read_bytes());assert q['exit_code']==0 and q['arrays']['all372_prompt_and_output_IDs_exact_T32'];archive=O/(JOB+'-evidence.zip');assert sha(archive)==q['archive_sha256'];groups={'text':[],'image':[]};gaps={'text':[],'image':[]}
+    with zipfile.ZipFile(archive) as z:
+        p=json.loads(z.read('Garnet/test2026/cuda/qwen38_5090/evidence/o128-http-benchmark-preparation.json'))
+        sources={n:sha(R/n.removeprefix('Garnet/')) for n in ('Garnet/xModel/qwen35/vl_0_8b/cuda_speculative.py','Garnet/xModel/qwen35/vl_0_8b/cuda_packed_replay.py')};assert all(h==p['files'][n] for n,h in sources.items())
+        for line in z.read('results/'+JOB+'/native/worker/worker-stdout.jsonl').splitlines():
+            try:e=json.loads(json.loads(line)['line'])
+            except ValueError:continue
+            if not isinstance(e,dict) or e.get('event')!='completed':continue
+            assert len(e['generated_ids'])==128 and len(e['prompt_ids'])==3968 and e['ignore_eos'] is True;m=e['speculative_metrics'];assert m['target_prefix_recomputes']==0 and m['target_forward_calls']==m['target_verification_calls']==len(m['iterations']);assert sum(i['processed_target_counts'][0] for i in m['iterations'])==127 and m['iterations'][-1]['sampled_so_far'] in ([127],[128]) and m['mtp_prefill_calls']==249 and m['target_head_reuses']==0
+            groups['image' if e['image_sha256'] else 'text'].append(m)
+        for name in z.namelist():
+            if not(name.startswith('results/'+JOB+'/native/trial-') and name.endswith('-events.jsonl')):continue
+            arrivals=[]
+            for line in z.read(name).splitlines():
+                e=json.loads(line)
+                if e.get('data')=='[DONE]':continue
+                value=json.loads(e['data'])
+                if 'token_id' in value:arrivals.append(e['monotonic'])
+            assert len(arrivals)==128 and all(math.isfinite(t) for t in arrivals) and all(b>=a for a,b in zip(arrivals,arrivals[1:]));gaps['image' if '-image-' in name else 'text'].append([(arrivals[1]-arrivals[0])*1000,(arrivals[-1]-arrivals[1])/126*1000])
+    fields=('mtp_prefill_calls','mtp_draft_calls','mtp_correction_calls','mtp_head_calls','target_verification_calls','target_prefix_replays','proposed_draft_tokens','accepted_draft_tokens','target_forward_calls','target_head_evaluations','target_head_reuses');result={}
+    for key,rows in groups.items():
+        assert len(rows)==len(gaps[key])==186
+        result[key]=dict(requests_including_warmups=186,last_iteration_sampled_count_distribution={str(k):v for k,v in sorted(collections.Counter(r['iterations'][-1]['sampled_so_far'][0] for r in rows).items())},counters={c:dict(min=min(r[c] for r in rows),max=max(r[c] for r in rows),mean=statistics.mean(r[c] for r in rows)) for c in fields},weighted_draft_acceptance=sum(r['accepted_draft_tokens'] for r in rows)/sum(r['proposed_draft_tokens'] for r in rows),processed_tokens_per_target_verification=127*len(rows)/sum(r['target_verification_calls'] for r in rows),median_first_to_second_client_arrival_gap_ms=statistics.median(r[0] for r in gaps[key]),median_of_per_request_mean_later_client_arrival_gap_ms=statistics.median(r[1] for r in gaps[key]))
+    report=dict(status='actual_O128_MTP_counters_and_client_arrival_diagnostics_replayed',paired_benchmark_proof_sha256=sha(proof),archive_sha256=q['archive_sha256'],requests=372,source_sha256=sources,diagnostics=result,scope='Descriptive all372requests including180warmups, not a new benchmark or GPU phase timer. Last verification iteration may end at sampled127: original generate emits final remaining token directly before breaking, with no new verification iteration. Final streams still contain128IDs and127processed target tokens; original benchmark gates unchanged. Prefix replay uses retained projections and does not add a full target forward (source and counters agree). Draft acceptance/call counts do not establish speedup or justify enabling previously failed head-reuse optimization. Client SSE arrival gaps include all runtime/transport scheduling; no CUDA kernel attribution. Use further controlled profiling/actual batching math gates before choosing or admitting optimization; strongest references and overall2x still open.',new_benchmark=False,two_times_target_achieved=False)
+    target=O/'Garnet-O128-MTP-Counter-Diagnostics.json';raw=json.dumps(report,indent=2).encode();assert not target.exists() or target.read_bytes()==raw;target.write_bytes(raw);print(json.dumps(dict(status=report['status'],text_acceptance=result['text']['weighted_draft_acceptance'],image_acceptance=result['image']['weighted_draft_acceptance'],requests=372,new_benchmark=False)))
+
+if __name__=='__main__':
+    a=argparse.ArgumentParser();a.add_argument('--collect',action='store_true');args=a.parse_args()
+    if args.collect:collect()
+    else:
+        sys.path[:0]=[str(M),str(R)];import run_logged as ledger
+        pins={str(Path(__file__)):sha(Path(__file__)),**{n:sha(R/n) for n in ('xModel/qwen35/vl_0_8b/cuda_speculative.py','xModel/qwen35/vl_0_8b/cuda_packed_replay.py')}};ledger.source_identity=lambda:{'scope':'Explicit local CPU immutable counter/arrival diagnostic, no native/GPU/model/compile or benchmark; protected unrelated bodies excluded','owned_source_sha256':pins};os.chdir(R)
+        raise SystemExit(ledger.run([sys.executable,str(Path(__file__)),'--collect'],W/'o128-mtp-counter-diagnostic-ledger','correctness','Raw all372MTP counters/client-arrival descriptive replay; no GPU phase attribution or optimization claim',[Path(__file__),O/(JOB+'-verified.json'),O/(JOB+'-evidence.zip')]))

@@ -1,0 +1,43 @@
+from pathlib import Path
+import hashlib,json
+R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';sha=lambda b:hashlib.sha256(b).hexdigest();rows=[]
+def derive(source,target,changes):
+    raw=(M/source).read_bytes();before=sha(raw);steps=[]
+    for old,new,count in changes:
+        if b'\r\n' in raw:old=old.replace('\n','\r\n');new=new.replace('\n','\r\n')
+        assert raw.count(old.encode())==count,(source,old,raw.count(old.encode()),count);raw=raw.replace(old.encode(),new.encode());steps.append(dict(old=old,new=new,count=count))
+    p=M/target;assert not p.exists() or p.read_bytes()==raw;p.write_bytes(raw);rows.append(dict(source=source,target=target,source_sha256=before,target_sha256=sha(raw),changes=steps))
+graphs="from test2026.cuda.qwen38_5090.o128_full4k_model import validate_targets\ngraphs={str(t):{'native_fp8_m128_canonical_projections':48 if t==128 else 0,'native_fp8_z128_canonical_projections':0,'native_fp8_z128_reconstructed_projections':48 if t==128 else 0,'native_fp8_kv128_canonical_projections':32 if t==128 else 0,'native_fp8_q128_canonical_projections':16 if t==128 else 0,'native_fp8_o128_canonical_projections':16 if t==128 else 0,'native_full_chunk_stage_witnesses':0} for t in (4,128)}\nassert validate_targets(graphs,'1')['physical_GDN48_reconstructedZ48_KV32_verified'] is True\n"
+derive('probe_o128_model_metadata.py','probe_o128_full4k_metadata.py',[("assert 'numpy' not in sys.modules",graphs+"assert 'numpy' not in sys.modules",1),("'probe_o128_model_admission.py','o128_model_layout.py'","'probe_o128_full4k_model.py','o128_full4k_model.py'",1),('embedded_full_chunk_stage_metadata_passed','embedded_o128_full4k_metadata_passed',1)])
+derive('test_o128_model_metadata.bat','test_o128_full4k_metadata.bat',[('probe_o128_model_metadata.py','probe_o128_full4k_metadata.py',1)])
+owner=(M/'run_o128_model_admission.py').read_text();begin=owner.index('        reports={};reads={}');end=owner.index('    except BaseException as e:',begin);old_owner=owner[begin:end]
+new_owner='''        needed=json.loads((ROOT/'results/o128-model-admission-attempt1-verified.json').read_bytes());assert needed['exit_code']==0 and needed['status']=='actual_O128_one_text_case_original_admission_and_stages_replayed'
+        argv=[sys.executable,str(M/'monitor_native_probe.py'),'--study',str(ROOT),'--output',str(out/'resources'),'--','cmd.exe','/d','/c',str(M/'test_o128_full4k_model.bat'),str(out/'native'),str(cache)]
+        code=ledger.run(argv,out/'gpu-ledger','correctness','Actual six3968+128 text/image ordinary+MTP complete-state/raw-vector/ID/callback/reset cases on same60source/DLL, stagewitnessoff; all original predicates unchanged, no timing',common+[library]);idle()
+        if code:raise RuntimeError('Actual O128 six-case model admission failed; preserve raw evidence')
+        report=json.loads((out/'native/report.json').read_bytes());assert report['status']=='mtp_prefill16_full4k_collected_needs_replay'
+        from test2026.cuda.qwen38_5090.o128_full4k_model import replay_full4k_model
+        reference_archive=ROOT/'results/mtp-prefill16-full4k-admission-attempt1-evidence.zip';assert sha(reference_archive)==p['baseline_archive_sha256']
+        with zipfile.ZipFile(reference_archive) as z:
+            base='results/mtp-prefill16-full4k-admission-attempt1/native/';reference=json.loads(z.read(base+'report.json'));cases=json.loads((M/'evidence/native-host-stage-cases.json').read_bytes())['cases'];result=replay_full4k_model(report,lambda n:(out/'native'/n).read_bytes(),reference,lambda n:z.read(base+n),cases)
+        assert result==report['local_replay'];(out/'full4k-analysis.json').write_bytes(json.dumps(result,indent=2).encode());w['status']='O128_six_full4k_model_cases_collected_needs_independent_replay'
+'''
+derive('run_o128_model_admission.py','run_o128_full4k_model.py',[("JOB='o128-model-admission-attempt1'","JOB='o128-full4k-model-admission-attempt1'",1),('o128-model-admission-preparation.json','o128-full4k-model-preparation.json',1),('o128_model_admission_prepared_gpu_unrun','o128_full4k_model_prepared_gpu_unrun',1),('71current O128/Q128/reference/route/source/readonly/stage/array/corruption controls','74current O128 six-case/reference/route/source/readonly/stage/array/corruption controls',1),('test_o128_model_metadata.bat','test_o128_full4k_metadata.bat',1),(old_owner,new_owner,1)])
+verifier=(M/'verify_o128_model_admission.py').read_text();begin=verifier.index('        reports={};reads={}');end=verifier.index('        result=dict(',begin);old_verifier=verifier[begin:end]
+new_verifier='''        child=command('gpu',passed,p['installed_files']);r=doc(base+'native/report.json') if base+'native/report.json' in manifest['files'] else None
+        if r is not None:assert r['library_sha256']==p['candidate_library_sha256']
+        if base+'resources/resource-monitor.json' in manifest['files']:
+            resource=doc(base+'resources/resource-monitor.json');assert resource['gpu']['uuid']==p['gpu_uuid'] and resource['child_exit_code']==child
+        arrays=dict(status='O128_six_case_model_failure_preserved_no_broad_quality_or_performance_admission',report_status=None if r is None else r['status'],error=None if r is None else r.get('error'),captured_cases=0 if r is None else len(r['cases']))
+        if passed:
+            assert w['status']=='O128_six_full4k_model_cases_collected_needs_independent_replay' and r['status']=='mtp_prefill16_full4k_collected_needs_replay'
+            needed=json.loads((args.proofs/'o128-model-admission-attempt1-verified.json').read_bytes());assert needed['exit_code']==0 and needed['status']=='actual_O128_one_text_case_original_admission_and_stages_replayed'
+            reference_archive=args.proofs/'mtp-prefill16-full4k-admission-attempt1-evidence.zip';assert sha(reference_archive.read_bytes())==p['baseline_archive_sha256']
+            with zipfile.ZipFile(reference_archive) as reference_zip:
+                prefix='results/mtp-prefill16-full4k-admission-attempt1/native/';reference=json.loads(reference_zip.read(prefix+'report.json'));cases=doc(P+'evidence/native-host-stage-cases.json')['cases'];arrays=replay_full4k_model(r,lambda n:z.read(base+'native/'+n),reference,lambda n:reference_zip.read(prefix+n),cases)
+            assert arrays==r['local_replay']==doc(base+'full4k-analysis.json')
+        else:assert w['status']=='failed' and w.get('error')
+'''
+derive('verify_o128_model_admission.py','verify_o128_full4k_model.py',[
+    ('from test2026.cuda.qwen38_5090.o128_model_replay import replay,controls','from test2026.cuda.qwen38_5090.o128_full4k_model import replay_full4k_model',1),("JOB='o128-model-admission-attempt1'","JOB='o128-full4k-model-admission-attempt1'",1),('o128-model-admission-preparation.json','o128-full4k-model-preparation.json',1),("b'Ran 71 tests'","b'Ran 74 tests'",1),('embedded_full_chunk_stage_metadata_passed','embedded_o128_full4k_metadata_passed',1),(old_verifier,new_verifier,1),("status='actual_O128_one_text_case_original_admission_and_stages_replayed'","status='actual_O128_six_full4k_original_states_vectors_tokens_MTP_reset_replayed'",1),('actual_O128_model_or_stage_admission_failure_preserved','actual_O128_six_full4k_model_failure_preserved',1),('full_six_case_model_quality_performance_still_required=True,model_or_performance_qualified=False','full_six_case_model_qualified=passed,broader_quality_and_performance_still_required=True,broad_quality_or_performance_qualified=False',1)])
+(M/'evidence/o128-full4k-owner-derivation.json').write_bytes(json.dumps(dict(status='O128_six_case_owner_and_verifier_prepared_one_case_pass_required_before_GPU',derivations=rows,all_original_numeric_state_vector_ID_callback_reset_predicates_unchanged=True,GPU_or_model_executed=False),indent=2).encode());print(json.dumps(dict(derived=[r['target'] for r in rows])))

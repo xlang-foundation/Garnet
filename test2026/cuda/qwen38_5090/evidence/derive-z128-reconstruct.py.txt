@@ -1,0 +1,18 @@
+from pathlib import Path
+import hashlib,json
+repo=Path('D:/CantorAI/work/qwen38-5090');m=repo/'test2026/cuda/qwen38_5090';old=m/'native_z128_factory_trace_candidate';dest=m/'native_z128_reconstruct_candidate';dest.mkdir(exist_ok=True);sha=lambda raw:hashlib.sha256(raw).hexdigest();rows=[]
+def derive(base,target,changes):
+    original=base.read_bytes();raw=original
+    for a,b,count in changes:assert raw.count(a.encode())==count,(target,a,raw.count(a.encode()));raw=raw.replace(a.encode(),b.encode())
+    path=dest/target;assert not path.exists() or path.read_bytes()==raw
+    if not path.exists():path.write_bytes(raw)
+    rows.append({'source':base.relative_to(repo).as_posix(),'source_sha256':sha(original),'target':path.relative_to(repo).as_posix(),'target_sha256':sha(raw),'changes':[{'before':a,'after':b,'count':c} for a,b,c in changes]})
+body=(m/'z128_reconstruct_body.inc').read_text();derive(old/'modelopt_fp8_z128_canonical.cpp','modelopt_fp8_z128_canonical.cpp',[
+ ('#include "modelopt_fp8_z128_init_trace.h"','#include "modelopt_fp8_z128_init_trace.h"\n#include "modelopt_fp8_z128_reconstruct_trace.h"\n#include <cstdint>',1),
+ ('bool GetModelOptFP8Z128Info',body+'bool GetModelOptFP8Z128Info',1)])
+derive(old/'modelopt_fp8_z128_canonical.h','modelopt_fp8_z128_canonical.h',[
+ ('std::shared_ptr<ModelOptFP8Z128Context> CreateModelOptFP8Z128Context();','std::shared_ptr<ModelOptFP8Z128Context> CreateModelOptFP8Z128Context();\nstd::shared_ptr<ModelOptFP8Z128Context> CreateModelOptFP8Z128ReconstructedContext();',1)])
+derive(old/'modelopt_fp8_z128_init_trace.h','modelopt_fp8_z128_reconstruct_trace.h',[
+ ('ModelOptFP8Z128InitTrace','ModelOptFP8Z128ReconstructTrace',7),('GARNET_Z128_FACTORY_TRACE','GARNET_Z128_RECONSTRUCT_TRACE',1),('GARNET_Z128_FACTORY ','GARNET_Z128_RECONSTRUCT ',1)])
+(dest/'modelopt_fp8_z128_init_trace.h').write_bytes((old/'modelopt_fp8_z128_init_trace.h').read_bytes())
+(m/'evidence/z128-reconstruct-source-derivation.json').write_bytes(json.dumps({'status':'separate_explicit_API_reconstruction_factory_private_unqualified','files':rows,'body_sha256':sha((m/'z128_reconstruct_body.inc').read_bytes()),'legacy_factory_and_RunMatmul_bytes_unchanged':True,'old_plugin_or_default_route_changed':False,'numerical_equivalence_established':False,'scope':'Append separate explicit public-API factory to exact traced helper. No plugin uses it yet; no serialized wire/cache policy changes, no opaque byte masking/copy/reinterpretation, no heuristic search. Same SDK/device/type/transpose/geometry and4MiB guards;9public configurations readback;AlgoCheck bothM32/M128. Requires real numerical qualification before integration/performance.'},indent=2).encode());print(json.dumps({'derived_files':len(rows)}))

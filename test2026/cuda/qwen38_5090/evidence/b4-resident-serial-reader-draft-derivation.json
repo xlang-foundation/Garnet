@@ -1,0 +1,80 @@
+{
+  "source_sha256": "f1dd49c16914876eff70d5e65e1ad79ad6f9a21ccebe41ec4e374be42f07e6dc",
+  "draft_sha256": "5fe9fdbb6953c441a317914c0b218ad7f05e5038e9a68cedd2b6b98247a5ad17",
+  "changes": [
+    {
+      "old": "JOB='b4-rowwise-http-quality-attempt3'",
+      "new": "JOB='b4-resident-serial-quality-attempt1'",
+      "count": 1
+    },
+    {
+      "old": "b4-rowwise-http-quality-preparation.json",
+      "new": "b4-resident-serial-quality-preparation.json",
+      "count": 1
+    },
+    {
+      "old": "B4_rowwise_HTTP_quality_collected_needs_independent_replay",
+      "new": "B4_resident_serial_HTTP_quality_collected_needs_independent_replay",
+      "count": 1
+    },
+    {
+      "old": "B4_rowwise_HTTP_controls_and_adapted805_collected_needs_independent_replay",
+      "new": "B4_resident_serial_HTTP_controls_and_adapted805_collected_needs_independent_replay",
+      "count": 1
+    },
+    {
+      "old": "actual_B4_HTTP_805_IDs_dispatch_and_full4k_controls_replayed",
+      "new": "actual_B4_resident_serial_HTTP_805_IDs_dispatch_and_full4k_controls_replayed",
+      "count": 1
+    },
+    {
+      "old": "actual_B4_HTTP_quality_failure_preserved",
+      "new": "actual_B4_resident_serial_HTTP_quality_failure_preserved",
+      "count": 1
+    },
+    {
+      "old": "for stage in ('cpu','embedded-cpu','candidate'):",
+      "new": "for stage in ('cpu','embedded-cpu','resident-io','candidate'):",
+      "count": 1
+    },
+    {
+      "old": "('Ran '+str(19 if stage=='cpu' else 17)+' tests').encode()",
+      "new": "b'Ran 6 tests'",
+      "count": 1
+    },
+    {
+      "old": "assert stages=={'cpu':0,'embedded-cpu':0,'candidate':0}",
+      "new": "assert stages=={'cpu':0,'embedded-cpu':0,'resident-io':0,'candidate':0}",
+      "count": 1
+    },
+    {
+      "old": "expected={**selection['inputs'][key]['body'],'stream':False}",
+      "new": "expected={**selection['inputs'][key]['body'],'stream':False,'study_graph_snapshot':True}",
+      "count": 1
+    },
+    {
+      "old": "body=={**selection['inputs'][key]['body'],'stream':True}",
+      "new": "body=={**selection['inputs'][key]['body'],'stream':True,'study_graph_snapshot':True}",
+      "count": 1
+    },
+    {
+      "old": "            outputs=events(z.read(B+'native/worker/worker-stdout.jsonl'),ready);used=set();bodies={}",
+      "new": "            assert ready['backend_policy']==dict(resident_controls=True,serial_target_graph_reuse=True,serial_draft_graph_reuse=True,accepted_head_reuse=False)\n            control=doc(B+'resident-io/result.json');assert control['all_passed'] and control['io']['embedding_mode']=='host_mapped_bf16'\n            assert [(r['batch'],r['chunk'],r['trials']) for r in control['records']]==[(4,t,3) for t in (4,16,32)]\n            assert all(r['controls_and_embeddings_byte_exact'] and r['cpu_argument_lifetime_and_padding'] and r['invalid_inputs_preserve_outputs'] for r in control['records'])\n            outputs=events(z.read(B+'native/worker/worker-stdout.jsonl'),ready);used=set();bodies={}",
+      "count": 1
+    },
+    {
+      "old": "            assert len(used)==len(outputs)==836",
+      "new": "            assert len(used)==len(outputs)==836\n            from test2026.cuda.qwen38_5090.b4_resident_serial_graph_gate import admit as admit_graphs\n            control_ids={row['id'] for group in r['boundary_controls'] for row in group['results']}|{row['id'] for row in r['stream_controls']}\n            assert len(control_ids)==31 and control_ids<=used\n            graph_usage=admit_graphs(z.read(B+'native/worker/worker-stdout.jsonl'),control_ids);assert graph_usage==r['graph_usage']",
+      "count": 1
+    },
+    {
+      "old": "summary=dict(actual_native_HTTP_requests=836,",
+      "new": "summary=dict(actual_graph_policy=graph_usage,resident_IO_controls_byte_exact=True,actual_native_HTTP_requests=836,",
+      "count": 1
+    }
+  ],
+  "original_raw805_ID_HTTP_dispatch_source_and_restoration_gates_preserved": true,
+  "extra_native_IO_byte_parity_and_actual_graph_reuse_required": true,
+  "syntax_checked_only": true,
+  "CPU_or_GPU_execution_unrun": true
+}

@@ -1,0 +1,23 @@
+{
+  "status": "bf16_batch8_external_reference_failure_preserved",
+  "archive_sha256": "eaddf8987a88bfa37e422433c753399f42539bd378c1795fb8606e1cbc75e624",
+  "files_verified": 37,
+  "library_sha256": "1a1d0229a1c0c24a8397a4dee7a614bcedf97b3bd3293e58d752ed7de30eb498",
+  "ordinary_parent": {
+    "status": "paged_batch8_model_preservation_replayed",
+    "proof_sha256": "e87316f391f85419648842045f245495d2ea871e26614a3478c073e7b5aa5306",
+    "archive_sha256": "3bbec8c568cfcf5d7a1fdf7405b152b14593c2117cd4b4307094ddf5def00f76"
+  },
+  "b4_reference_replay": null,
+  "construction_correctness_adapter_sampled_memory": null,
+  "external_b1_b4_math_qualified": false,
+  "b8_vs_b4_same_input_cache_arithmetic_cases_qualified": false,
+  "b1_math_qualified": false,
+  "broad_quality_qualified": false,
+  "mtp_qualified": false,
+  "http_qualified": false,
+  "serving_memory_saving_qualified": false,
+  "performance_admitted": false,
+  "two_times_target_achieved": false,
+  "scope": "Actual fresh ordinary B4/T32prefill/T4decode full-FP32-cache with explicit BF16-value roundtrip using baseline1a1d and bounded128/two-page input. Require actual two-machine closed paged B8 parent, all nine same-input cases split into18four-row references;58complete logical captures/116raw finite vectors/all IDs exact to original B8. Existing guards and shared projections/linear arithmetic unchanged. This isolates cache representation/batch geometry only, not independent framework or B1/all-model math. Actual full-cache model/vision must fit; preserve failures. Source/runtime/SDK unchanged, raw CPU/GPU ledgers/memory samples/gaps/cache retirement and independent replay mandatory. No MTP/805quality/HTTP/timing/performance admission; serving peaks, strongest tuned references, matched vLLM4K/repetitions/INT4/4B and overall2x remain open. Entry wrapper binds explicit owned source inventory before unchanged owner/model commands; unrelated untracked files are excluded. Wrapper and fault controls are source-pinned and archived."
+}

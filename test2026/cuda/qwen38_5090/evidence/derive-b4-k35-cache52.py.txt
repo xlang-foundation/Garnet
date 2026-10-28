@@ -1,0 +1,58 @@
+from pathlib import Path
+import ast,hashlib,json
+R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';E=M/'evidence';sha=lambda b:hashlib.sha256(b).hexdigest();derivations=[]
+def derive(source,target,edits):
+    old=(M/source).read_bytes();raw=old;changes=[]
+    for a,b in edits:
+        if b'\r\n' in old:a=a.replace('\n','\r\n');b=b.replace('\n','\r\n')
+        assert raw.count(a.encode())==1,(source,a,raw.count(a.encode()))
+        raw=raw.replace(a.encode(),b.encode());changes.append(dict(old=a,new=b,count=1))
+    ast.parse(raw);p=M/target
+    if p.exists():assert p.read_bytes()==raw
+    else:p.write_bytes(raw)
+    derivations.append(dict(source=source,target=target,source_sha256=sha(old),target_sha256=sha(raw),changes=changes))
+derive('probe_b4_full4k_selection52.py','probe_b4_k35_cache52.py',[
+('evidence/b4-full4k-selection52-preparation.json','evidence/b4-k35-cache52-preparation.json'),
+("    from test2026.cuda.qwen38_5090.b4_full4k_selection52 import STEPS","    from test2026.cuda.qwen38_5090.b4_full4k_selection52 import STEPS\n    from test2026.cuda.qwen38_5090.b4_k35_cache52 import capture_key"),
+("assert decoder.slots==[v+52 for v in lengths];decoder.reset()","assert decoder.slots==[v+52 for v in lengths];record['key35_cache52']=capture_key(io,decoder.state,decoder.programs[4].layout,batch,0 if batch==1 else 2,out,'case'+str(group_index)+'-step52',record['final_state']['logical']['components'][70]);save();decoder.reset()")])
+derive('launch_b4_full4k_selection52.py','launch_b4_k35_cache52.py',[
+('evidence/b4-full4k-selection52-preparation.json','evidence/b4-k35-cache52-preparation.json'),('probe_b4_full4k_selection52.py','probe_b4_k35_cache52.py')])
+old="        w['observation']=observe(selection,p['selected_key'],reference,candidate,read_reference,read_candidate);(out/'analysis.json').write_bytes(json.dumps(w['observation'],indent=2).encode());save()"
+new=old+"""
+        from test2026.cuda.qwen38_5090.b4_k35_cache52 import analyze as analyze_key_cache
+        with zipfile.ZipFile(ROOT/'results/b4-full4k-selection52-attempt1-evidence.zip') as parent:
+            base='results/b4-full4k-selection52-attempt1/'
+            old_reference=json.loads(parent.read(base+'reference/report.json'));old_candidate=json.loads(parent.read(base+'candidate/report.json'))
+            w['cache_observation']=analyze_key_cache(selection,p['selected_key'],reference,candidate,old_reference,old_candidate,read_reference,read_candidate,lambda key,name:parent.read(base+'reference/'+name),lambda name:parent.read(base+'candidate/'+name))
+        (out/'cache-analysis.json').write_bytes(json.dumps(w['cache_observation'],indent=2).encode());save()"""
+derive('run_b4_full4k_selection52.py','run_b4_k35_cache52.py',[
+("JOB='b4-full4k-selection52-attempt1'","JOB='b4-k35-cache52-attempt1'"),
+('evidence/b4-full4k-selection52-preparation.json','evidence/b4-k35-cache52-preparation.json'),
+("p['status']=='B4_full4k_selection52_prepared_GPU_unrun'","p['status']=='B4_key35_cache52_prepared_GPU_unrun'"),
+("'test2026.cuda.qwen38_5090.test_b4_full4k_selection52'","'test2026.cuda.qwen38_5090.test_b4_full4k_selection52','test2026.cuda.qwen38_5090.test_b4_k35_cache52'"),
+('launch_b4_full4k_selection52.py','launch_b4_k35_cache52.py'),
+('One B1 reference for firstmixedbatch differingID52 row, thenwholeB4mixedgroup. Originalmodelgraphs/weights/precision/head/nativeDLLs unchanged,3968prompt+53outputs/cap4096. Complete128component/physical-logicalhash/finitehidden-normalizedvectors after7and52steps. All52consumedIDs mustmatch; ID52 isunconsumed. Match53same-profileIDs+endpoints againstoriginalfull4Kfailedparent; matchallcurrentstep7primaryrowsagainstqualifiedearlyprefix.33CPU/actualGDN-V-QKroute/restoration guards; no observer/kernel/nativebuild/timing/quality/performanceadmission.','Read-only completekey35cache8MiBcarriers after52decodersteps, selectedB1/wholeB4mixedgroup. Twofullreads,2x4MiBchunks/row, expandedSHA256 mustmatchactualcompletecomponent70witness; all4heads4096slots256dims comparedBF16bits. Reproduceall53IDs andfivecompleteordinaryprimarycaptures (reset,prefill,step7,step52,reset) forselectedB1/allfourB4rows againstqualifiedselection52parent BEFORE interpretingrawcache.38CPU andallpriorroute/restorationguards retained. No graphobserver/modelmath/nativeDLL/kernel/precision changes, timing orquality/performanceadmission.'),
+(old,new),
+("w['status']='selected_step52_diagnostic_collected_no_numerical_admission'","w['status']='key35_cache52_diagnostic_collected_no_numerical_admission'")])
+old="            observation=observe(selection,p['selected_key'],reference,candidate,r,c);assert observation==w['observation']==json.loads(z.read(BASE+'analysis.json'))"
+new=old+"""
+            with zipfile.ZipFile(a.proofs/'b4-full4k-selection52-attempt1-evidence.zip') as parent:
+                base='results/b4-full4k-selection52-attempt1/'
+                old_reference=json.loads(parent.read(base+'reference/report.json'));old_candidate=json.loads(parent.read(base+'candidate/report.json'))
+                cache_observation=analyze_key_cache(selection,p['selected_key'],reference,candidate,old_reference,old_candidate,r,c,lambda key,n:parent.read(base+'reference/'+n),lambda n:parent.read(base+'candidate/'+n))
+            assert cache_observation==w['cache_observation']==json.loads(z.read(BASE+'cache-analysis.json'))"""
+derive('verify_b4_full4k_selection52.py','verify_b4_k35_cache52.py',[
+("from test2026.cuda.qwen38_5090.b4_full4k_inputs import load_corpus","from test2026.cuda.qwen38_5090.b4_full4k_inputs import load_corpus\nfrom test2026.cuda.qwen38_5090.b4_k35_cache52 import analyze as analyze_key_cache"),
+("JOB='b4-full4k-selection52-attempt1'","JOB='b4-k35-cache52-attempt1'"),
+('evidence/b4-full4k-selection52-preparation.json','evidence/b4-k35-cache52-preparation.json'),
+("'verify_b4_full4k_selection52.py'","'verify_b4_full4k_selection52.py','b4_k35_cache52.py','verify_b4_k35_cache52.py'"),
+("verify_derivations(json.loads(z.read(P+'evidence/b4-full4k-selection52-derivation.json')),lambda n:z.read(P+n))","verify_derivations(json.loads(z.read(P+'evidence/b4-full4k-selection52-derivation.json')),lambda n:z.read(P+n))\n        verify_derivations(json.loads(z.read(P+'evidence/b4-k35-cache52-derivation.json')),lambda n:z.read(P+n))"),
+("b'Ran 33 tests'","b'Ran 38 tests'"),
+("observation=route=full=None;route_error=None;strict=False","observation=route=full=cache_observation=None;route_error=None;strict=False"),
+(old,new),
+("if w['exit_code']==0:assert full is not None and w['original_full4k_admission_still_failed'];strict=True","if w['exit_code']==0:assert full is not None and cache_observation is not None and w['original_full4k_admission_still_failed'];strict=True"),
+("w['status']=='selected_step52_diagnostic_collected_no_numerical_admission'","w['status']=='key35_cache52_diagnostic_collected_no_numerical_admission'"),
+("status='selected_step52_diagnostic_replayed' if strict else 'selected_step52_job_failure_replayed'","status='key35_cache52_diagnostic_replayed' if strict else 'key35_cache52_job_failure_replayed'"),
+("observation=observation,actual_GDN_M16_route","observation=observation,cache_observation=cache_observation,actual_GDN_M16_route"),
+("def main():","def main():\n    import numpy as np\n    print('INTEGER_BF16_CACHE_REPLAY_NUMPY',np.__version__,flush=True)")])
+p=E/'b4-k35-cache52-derivation.json';assert not p.exists();p.write_bytes(json.dumps(dict(derivations=derivations,scope='Puredataread extension ofunchangedordinaryselection52probe. Capturecomplete8MiBkey35carriers twiceviaexistingio.slice_into/row/finite_f32_bytes, afterlastpredictionandbefore reset; no graph/kernel/math/nativebuild changes. ExpandedSHA256 linkedtoactualcompletecomponent70witness. InterpretfullrawBF16cacheonlyafter all53IDs/fivefullprimarycaptures repeatordinarysameprofileparent forselectedB1/allfourB4. Scheduledwriterstep derivesfromdifferentcache slot, notuniqueoperatorcausality orprovenmutationtime.38CPU, oldroute/source/runtime/SDK/config-index/CMake/all34/baselineguards remain. Original128IDfull4K FAILED, no quality/performanceadmission.'),indent=2).encode());print(json.dumps(dict(files=4,GPU_unrun=True)))

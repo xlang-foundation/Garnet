@@ -1,0 +1,14 @@
+from pathlib import Path
+import hashlib,json,zipfile
+chat=Path(__file__).resolve().parents[1];archive=chat/'outputs/reference-http-api-installed-source.zip';sha=lambda b:hashlib.sha256(b).hexdigest();folder=chat/'work/reference-http-api-source';folder.mkdir(exist_ok=True)
+with zipfile.ZipFile(archive) as z:
+ m=json.loads(z.read('evidence-manifest.json'));assert z.testzip() is None and len(z.namelist())==len(set(z.namelist()))==len(m['files'])+1
+ for n,h in m['files'].items():assert sha(z.read(n))==h
+ selected={'sglang-protocol.py':'sglang/sglang/srt/entrypoints/openai/protocol.py','sglang-serving-chat.py':'sglang/sglang/srt/entrypoints/openai/serving_chat.py','vllm-protocol.py':'vllm/vllm/entrypoints/openai/chat_completion/protocol.py','vllm-serving-chat.py':'vllm/vllm/entrypoints/openai/chat_completion/serving.py'}
+ for n,source in selected.items():(folder/n).write_bytes(z.read(source))
+ versions={}
+ for n in m['files']:
+  if n.endswith('/METADATA'):versions[n.split('/')[0]]=next(line.split(': ',1)[1] for line in z.read(n).decode().splitlines() if line.startswith('Version: '))
+ source=(folder/'sglang-serving-chat.py').read_text();assert 'return_prompt_token_ids is not supported with streaming.' in source and 'return_token_ids is not supported with streaming on ' in source
+ report={'status':'installed_reference_http_source_audited_no_server_execution','archive_sha256':sha(archive.read_bytes()),'files_verified':len(m['files']),'versions':versions,'selected_source_sha256':{n:sha((folder/n).read_bytes()) for n in selected},'sglang_streaming_prompt_ids_supported':False,'sglang_streaming_completion_ids_supported':False,'reference_streaming_ids_runtime_tested':False,'scope':'Installed source only. Plan separate nonstreaming prompt/completion-ID controls and stream continuous-usage measurement without unsupported ID flags. Actual HTTP controls still required. Initial manually transcribed archive hash had one extra6 and failed before ZIP replay; corrected digest comes from actual local bytes and agrees with remote displayed digest. No source/data/assertion change.'}
+ (chat/'outputs/reference-http-api-installed-source-verified.json').write_text(json.dumps(report,indent=2),encoding='utf8');print(json.dumps(report,indent=2))

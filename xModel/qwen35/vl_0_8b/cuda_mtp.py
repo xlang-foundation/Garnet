@@ -25,17 +25,23 @@ def Qwen35MTPChunk(target,embedding,key,value,positions,slots,active,config,work
         eps=config['rms_norm_eps'],projection_workspace_bytes=workspace_bytes)
 
 class CUDAMTPProgram:
-    def __init__(self,checkpoint,config,batch=1,capacity=512,chunk_size=16,projection_workspace_bytes=0):
+    def __init__(self,checkpoint,config,batch=1,capacity=512,chunk_size=16,projection_workspace_bytes=0,builder_workspace_bytes=0):
         if batch not in (1,2,4,8) or not 32<=capacity<=8192 or chunk_size not in (1,4,8,16):
             raise ValueError('Unsupported MTP batch/capacity/chunk profile')
         if projection_workspace_bytes not in (0,16384):raise ValueError('MTP workspace must be0 or16384bytes')
+        if type(builder_workspace_bytes) is not int or builder_workspace_bytes not in (0,128<<20,256<<20):
+            raise ValueError('MTP builder workspace requires default0,128MiB or bounded B4/T4-or-T16 study256MiB')
+        if builder_workspace_bytes==256<<20 and (type(batch) is not int or batch!=4 or type(capacity) is not int or capacity!=4096 or type(chunk_size) is not int or chunk_size not in (4,16)):
+            raise ValueError('256MiB MTP builder study requires B4/T4-or-T16/cap4096')
         if config.get('mtp_num_hidden_layers',1)!=1:raise ValueError('MTP supports exactly one checkpoint layer')
         hidden=config['hidden_size'];cache=[batch,config['num_key_value_heads'],capacity,config['head_dim']]
         shapes=[[batch,chunk_size,hidden],[batch,chunk_size,hidden],cache,cache,
             [batch,chunk_size,3],[batch,chunk_size],[batch,chunk_size]]
         symbols=[tensor.input('cuda_mtp_'+str(i),shape=s,dtype=tensor.float32) for i,s in enumerate(shapes)]
         self.graph=garnet.compiled_graph()
-        try:self.graph.build(Qwen35MTPChunk(*symbols,config,projection_workspace_bytes),symbols,checkpoint)
+        try:
+            if builder_workspace_bytes:self.graph.set_builder_workspace_bytes(builder_workspace_bytes)
+            self.graph.build(Qwen35MTPChunk(*symbols,config,projection_workspace_bytes),symbols,checkpoint)
         except:self.graph.close();self.graph=None;raise
     def run(self,inputs):
         if self.graph is None:raise ValueError('MTP program is closed')

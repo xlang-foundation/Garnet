@@ -1,0 +1,27 @@
+"""Static audit against the actual frozen build inputs; never replay model numbers."""
+from pathlib import Path
+import hashlib,io,json,zipfile
+W=Path(__file__).resolve().parent;O=W.parent/'outputs';R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';E=M/'evidence';sha=lambda b:hashlib.sha256(b).hexdigest()
+old=json.loads((E/'b4-k35-cache52-preparation.json').read_bytes());build=json.loads((E/'b4-k-m4x4-build-preparation.json').read_bytes())
+with zipfile.ZipFile(O/'b4-k35-cache52-attempt1-evidence.zip') as z:reference_bundle=z.read(old['reference_bundle'])
+candidate_bundle=(W/'b4-k-m4x4-source.zip').read_bytes();assert sha(reference_bundle)==old['reference_bundle_sha256'] and sha(candidate_bundle)==build['bundle_sha256']
+name='src/backends/tensorrt/qwen35_lowering.h'
+with zipfile.ZipFile(io.BytesIO(reference_bundle)) as a,zipfile.ZipFile(io.BytesIO(candidate_bundle)) as b:
+    header=a.read(name);assert header==b.read(name) and sha(header)==build['candidate_files'][name]==old['reference_source_files'][name]
+    chunk=a.read('xModel/qwen35/vl_0_8b/cuda_chunk.py');assert chunk==b.read('xModel/qwen35/vl_0_8b/cuda_chunk.py')
+text=header.decode();lines=text.splitlines()
+phrases=['T* rms(T* x,T* scale,float epsilon,bool offset)', 'auto* denominator=unary(add(reduce(mul(x,x),-1,true,true),scalar(epsilon,r)),nvinfer1::UnaryOperation::kSQRT);', 'return mul(div(x,denominator),scale);', 'auto* projectedK=project(normalized,weight(prefix+".k_proj.weight"));', 'T* k=rms(reshape(projectedK,{batch,tokens,kv,dim}),weight(prefix+".k_norm.weight"),eps,true);', 'return rotary==dim?out:cat({out,slice(input,-1,rotary,dim-rotary)},3);', 'key=cast(rotate(k));value=cast(reshape(projectedV,{batch,tokens,kv,dim}));']
+locations={}
+for phrase in phrases:
+    matches=[i+1 for i,s in enumerate(lines) if phrase in s];assert len(matches)==1,(phrase,matches);locations[phrase]=matches[0]
+commits={}
+for relative in ('src/cuda/qwen38_bf16_kv_commit.cu','src/cuda/qwen38_bf16_low_batch_kv_commit.cu'):
+    raw=(R/relative).read_bytes();key='Garnet/'+relative;assert sha(raw)==build['base_files'][key]==old['files'][key]
+    s=raw.decode();matches=[(i+1,line.strip()) for i,line in enumerate(s.splitlines()) if '__float2bfloat16_rn' in line]
+    assert matches and any('__float2bfloat16_rn(target[source])' in v for _,v in matches)
+    commits[relative]={'sha256':sha(raw),'round_to_nearest_conversion_lines':matches,'same_guarded_source_in_both_experiments':True}
+with zipfile.ZipFile(O/'b4-k-m4x4-build-attempt1-evidence.zip') as z:
+    path=next(n for n in build['checkpoints'] if n.endswith('/config.json'));config_raw=z.read(path);assert sha(config_raw)==build['checkpoints'][path]==old['checkpoints'][path]
+config=json.loads(config_raw)['text_config'];rotary=int(config['head_dim']*config['rope_parameters']['partial_rotary_factor']);assert rotary==64 and config['head_dim']==256
+record={'status':'actual_source60_source85_key_projection_normalization_cache_callsite_audited','reference_bundle_sha256':sha(reference_bundle),'candidate_bundle_sha256':sha(candidate_bundle),'actual_header':{'path':name,'sha256':sha(header),'identical_in_both_frozen_candidates':True,'working_tree_header_matches_actual_candidate':(R/name).read_bytes()==header,'line_locations':locations},'actual_chunk_sha256':sha(chunk),'guarded_commit_sources':commits,'model_config_sha256':sha(config_raw),'head_dim':256,'rotary_dim':rotary,'sample_dimension':211,'sample_outside_intended_rotary_prefix':211>=rotary,'source_path':'input normalization -> FP8 K projection -> per-head FP32 RMS normalization -> leading64-dimension RoPE plus unchanged suffix -> float key input -> BF16 round-to-nearest cache commit','source_scope':'Root worktree header differs from actual frozen candidates; use frozen byte-identical source60/source85 header for this audit. Commit sources are guarded baseline files, not members of the candidate source bundles. This source audit does not establish equality of intermediate operands, actual TensorRT tactic arithmetic or a unique causal operator. No model/numeric replay, GPU execution or source mutation.','full4K_or_performance_qualified':False}
+target=O/'Garnet-Key35-Normalization-Callsite-Audit.json';assert not target.exists();target.write_bytes(json.dumps(record,indent=2).encode());print(json.dumps({'actual_header_sha256':sha(header),'root_header_matches':record['actual_header']['working_tree_header_matches_actual_candidate'],'rotary_dim':rotary,'sample_dimension':211,'commit_sources_checked':len(commits),'GPU_or_model_replayed':False}))

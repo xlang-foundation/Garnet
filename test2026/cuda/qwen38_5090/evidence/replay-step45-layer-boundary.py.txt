@@ -1,0 +1,12 @@
+"""Independent local CPU raw replay, never load downloaded native artifacts."""
+from pathlib import Path
+import hashlib,json,os,sys
+W=Path(__file__).resolve().parent;O=W.parent/'outputs';R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest();sys.path[:0]=[str(M),str(R)]
+import run_logged as ledger
+J='step45-layer-boundary-attempt1';archive=O/(J+'-evidence.zip');remote=O/(J+'-remote-verified.json');q=json.loads(remote.read_bytes());assert sha(archive)==q['archive_sha256']
+names=['verify_step45_layer_boundary.py','step45_layer_boundary_analysis.py','b4_k35_coordinate_trajectory.py','b4_k35_cache52.py','b4_full4k_selection52.py','b4_b1_exact_gate.py','decode_boundary_analysis.py','evidence/step45-layer-boundary-preparation.json']
+ledger.source_identity=lambda:{'scope':'Explicit local step44/45 observer replay sources, CPU only, no native/GPU/model execution or protected-body reads','owned_source_sha256':{n:sha(M/n) for n in names}}
+os.chdir(R);assert ledger.run([sys.executable,str(M/'verify_step45_layer_boundary.py'),'--proofs',str(O)],W/'step45-layer-boundary-local-replay','correctness','Independent raw observer replay after terminal model run: require complete original primary/cache/timeline parity before interpreting layer outputs; preserve failures; no native execution or benchmark.',[M/n for n in names]+[archive,remote])==0
+proof=O/(J+'-verified.json');assert proof.read_bytes()==remote.read_bytes();q=json.loads(proof.read_bytes());a=q['analysis']
+summary={'status':q['status'],'exit_code':q['exit_code'],'error':q['error'],'proof_sha256':sha(proof),'archive_sha256':sha(archive),'archive_bytes':archive.stat().st_size,'paired_remote_local_proof_bytes_identical':True,'CPU_controls':q['CPU_controls'],'baseline_restored':q['source_runtime_SDK_config_index_CMake_all34_baseline_restored'],'layer_differences':[{k:row[k] for k in ('step','key','physical_row','first_differing_active_layer','first_differing_full_T4_layer')} for row in a['rows']] if a else None,'original_full4K_still_failed':True,'model_or_performance_qualified':False,'two_times_target_achieved':False}
+(O/'Garnet-Step45-Layer-Boundary-Progress.json').write_bytes(json.dumps(summary,indent=2).encode());print(json.dumps(summary,indent=2))

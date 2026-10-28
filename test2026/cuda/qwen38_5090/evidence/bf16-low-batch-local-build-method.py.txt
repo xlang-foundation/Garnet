@@ -1,0 +1,36 @@
+"""CPU policy controls and private sm120 compile/link; never runs CUDA code."""
+from pathlib import Path
+import hashlib,json,sys
+repo=Path('D:/CantorAI/work/qwen38-5090');m=repo/'test2026/cuda/qwen38_5090';sys.path.insert(0,str(m));from run_logged import run
+chat=Path(__file__).resolve().parents[1];work=chat/'work';e=m/'evidence';sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+prepared=json.loads((e/'bf16-low-batch-attention-offline-preparation.json').read_bytes())
+before=prepared['source_sha256'];assert all(sha(repo/n)==h for n,h in before.items())
+parent=json.loads((e/'bf16-kv-overlay-native-preparation.json').read_bytes());header=work/'bf16_kv_fixture_layout.h'
+assert sha(header)==parent['fixture_header_sha256']
+setup='@echo off\ncall "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Auxiliary\\Build\\vcvars64.bat" -vcvars_ver=14.29\nif errorlevel 1 exit /b %errorlevel%\nset "TMP=%~dp0"\nset "TEMP=%TMP%"\n'
+include=' /I"'+str(repo/'src/cuda')+'" /I"C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v13.2\\include"'
+policy=work/'compile-bf16-low-batch-policy.bat'
+policy.write_text(setup+'cl /nologo /EHsc /std:c++17 /MT /utf-8 '+include+' "'+str(m/'probe_bf16_low_batch_policy.cpp')+'" /Fo"%~dp0bf16-low-batch-policy.obj" /Fe"%~dp0bf16-low-batch-policy.exe"\nif errorlevel 1 exit /b %errorlevel%\ndumpbin /imports "%~dp0bf16-low-batch-policy.exe" > "%~dp0bf16-low-batch-policy-imports.txt"\nexit /b %errorlevel%\n',encoding='utf8')
+gpu=work/'compile-bf16-low-batch-attention.bat'
+gpu.write_text(setup+'"C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v13.2\\bin\\nvcc.exe" -std=c++17 -arch=sm_120 -O3 -Xcompiler=/MT,/utf-8 "'+str(m/'bf16_kv_low_batch_candidate.cu')+'" "'+str(m/'probe_bf16_low_batch_attention.cu')+'" -I"'+str(repo/'src/cuda')+'" -I"'+str(work)+'" -o "%~dp0bf16-low-batch-attention.exe"\nexit /b %errorlevel%\n',encoding='utf8')
+artifacts=[repo/n for n in before]+[e/'bf16-low-batch-attention-offline-preparation.json',header]
+ledger=work/'bf16-low-batch-local-ledger'
+code=run(['cmd.exe','/d','/c',str(policy)],ledger,'build','CPU-only B1 policy; imports inspected before executing',[policy]+artifacts)
+if code:raise SystemExit(code)
+imports=(work/'bf16-low-batch-policy-imports.txt').read_bytes().lower()
+assert not any(name in imports for name in (b'cudart',b'nvcuda',b'cublas',b'nvinfer',b'garnet.dll'))
+code=run([str(work/'bf16-low-batch-policy.exe')],ledger,'correctness','33CPU policy cases; executable has no CUDA/Garnet imports',[work/'bf16-low-batch-policy.exe',work/'bf16-low-batch-policy-imports.txt']+artifacts)
+if code:raise SystemExit(code)
+code=run(['cmd.exe','/d','/c',str(gpu)],ledger,'build','Separate B1/T4,T32 attention candidate plus full raw-witness probe; GPU executable is not run',[gpu]+artifacts)
+if code:raise SystemExit(code)
+code=run([sys.executable,'-m','unittest','test2026.cuda.qwen38_5090.test_bf16_low_batch_candidate','test2026.cuda.qwen38_5090.test_bf16_kv_overlay_oracle'],ledger,'correctness','B1 full-T32 boundary/all-layer coverage, unchanged production rejection and independent FP64 oracle controls',[m/'test_bf16_low_batch_candidate.py']+artifacts)
+if code:raise SystemExit(code)
+assert all(sha(repo/n)==h for n,h in before.items())
+result={'status':'low_batch_cpu_policy_oracle_and_local_compile_passed_gpu_unrun','source_sha256':before,
+ 'policy_executable_sha256':sha(work/'bf16-low-batch-policy.exe'),'policy_no_cuda_imports_verified':True,'gpu_executable_sha256':sha(work/'bf16-low-batch-attention.exe'),
+ 'fixture_header_sha256':sha(header),'gpu_executed':False,'production_admission_changed':False,'native_plugin_built':False,'model_qualified':False,'performance_admitted':False,
+ 'scope':'Private CPU-only33configuration controls, low-batch corpus coverage and original independent FP64 oracle tests, sm120 compile/link. No native model profile, plugin/helper admission, allocation fit, numerical GPU or serving speed result.'}
+(e/'bf16-low-batch-attention-local-build.json').write_text(json.dumps(result,indent=2),encoding='utf8')
+for n in ('commands.jsonl','commands.log'):(e/('bf16-low-batch-local-'+n)).write_bytes((ledger/n).read_bytes())
+for path in (policy,gpu,work/'bf16-low-batch-policy-imports.txt'):(e/(path.name+'.txt')).write_bytes(path.read_bytes())
+print(json.dumps(result,indent=2))

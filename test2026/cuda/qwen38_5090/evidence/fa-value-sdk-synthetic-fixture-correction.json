@@ -1,0 +1,16 @@
+{
+  "status": "synthetic_CPU_fixture_initial_failure_preserved_then_corrected",
+  "command": "python -m unittest test2026.cuda.qwen38_5090.test_fa_value_sdk_control test2026.cuda.qwen38_5090.test_decode_fp8_sdk_control test2026.cuda.qwen38_5090.test_prefill128_fp8_projection",
+  "initial_tests": 14,
+  "initial_failures": 1,
+  "initial_failure": "test_active_stride_signedzero_roworder_and_full_padding_not_waived: AssertionError not raised at line24, row permutation control",
+  "reason": "Synthetic fixture repeated identical 1024-word values in each token and physical row; permuting indistinguishable rows changed no bytes. Add distinct per-token/row finite BF16 values to make the intended permutation fault observable. No numerical gate, actual-input fixture, GPU method or benchmark changed.",
+  "source": "test_fa_value_sdk_control.py",
+  "original_sha256": "817b41f14743aba0b827e39221cbf10b71f1984b6bac228f13a91ceda9434141",
+  "corrected_sha256": "f6d18798471db52115299c2b4ea06770168cd61dc7e5cb9be95839671499dd7f",
+  "correction": {
+    "old": "base+=0x3f00;zero=base.tobytes()",
+    "new": "base+=0x3f00+np.repeat(np.arange(16,dtype='<u2')*4,N);zero=base.tobytes()",
+    "count": 1
+  }
+}

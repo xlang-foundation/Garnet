@@ -1,0 +1,41 @@
+from pathlib import Path
+import ast,hashlib,json,zipfile
+W=Path(__file__).resolve().parent;O=W.parent/'outputs';R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';E=M/'evidence';P='Garnet/test2026/cuda/qwen38_5090/';sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+old=json.loads((E/'b4-k35-coordinate-trajectory-preparation.json').read_bytes());J='key35-coordinate-trajectory-attempt1';proof=O/(J+'-verified.json');q=json.loads(proof.read_bytes())
+assert proof.read_bytes()==(O/(J+'-remote-verified.json')).read_bytes() and q['exit_code']==0
+with zipfile.ZipFile(O/(J+'-evidence.zip')) as z:
+    assert sha(O/(J+'-evidence.zip'))==q['archive_sha256'];w=json.loads(z.read('results/'+J+'/workflow.json'));assert w['cleanup_finished'] and w['all_restored']
+files=dict(w['source_after']);names=['step45_layer_boundary_analysis.py','test_step45_layer_boundary_analysis.py','probe_step45_layer_boundary.py','launch_step45_layer_boundary.py','run_step45_layer_boundary.py','verify_step45_layer_boundary.py','evidence/step45-layer-boundary-derivation.json','all_layer_decode_boundary_program.py','decode_boundary_program.py','decode_boundary_layout.py','test_all_layer_decode_boundary_program.py','test_decode_boundary_program.py','layer_boundary_program.py','evidence/decode-boundary-program-derivation.json','decode_boundary_analysis.py']
+for row in json.loads((E/'step45-layer-boundary-derivation.json').read_bytes())['derivations']:
+    raw=(M/row['source']).read_bytes();assert hashlib.sha256(raw).hexdigest()==row['source_sha256']
+    for c in row['changes']:assert raw.count(c['old'].encode())==c['count'];raw=raw.replace(c['old'].encode(),c['new'].encode())
+    assert raw==(M/row['target']).read_bytes() and hashlib.sha256(raw).hexdigest()==row['target_sha256'];ast.parse(raw)
+ledger=W/'step45-layer-boundary-cpu-ledger';events=[json.loads(s) for s in (ledger/'commands.jsonl').read_bytes().splitlines()];assert len(events)==2 and events[-1]['exit_code']==0 and events[0]['source']['owned_source_sha256']==events[1]['source_after']['owned_source_sha256'];assert b'Ran 66 tests' in (ledger/'commands.log').read_bytes()
+for n,h in events[0]['source']['owned_source_sha256'].items():assert sha(M/n)==h
+audit=json.loads((O/'Garnet-Step45-Observer-Source-Audit.json').read_bytes());assert audit['original_forward_arithmetic_AST_identical'] and audit['active_prefix_source_audited'] and audit['one_token_active_column']==0
+assert audit['observer_sha256']==sha(M/'decode_boundary_program.py') and audit['source_bundles']=={mode:old[mode+'_bundle_sha256'] for mode in ('reference','candidate')}
+def keep(name,raw):
+    p=E/name;assert not p.exists();p.write_bytes(raw);names.append('evidence/'+name)
+keep('step45-layer-boundary-cpu-commands.log',(ledger/'commands.log').read_bytes());keep('step45-layer-boundary-cpu-commands.jsonl',(ledger/'commands.jsonl').read_bytes())
+keep('step45-layer-boundary-source-audit.json',(O/'Garnet-Step45-Observer-Source-Audit.json').read_bytes())
+for name in ('audit-step45-observer-source.py','derive-step45-layer-boundary.py','test-step45-layer-boundary-cpu.py'):keep(name+'.txt',(W/name).read_bytes())
+keep('step45-layer-boundary-cpu-preparation.json',json.dumps({'CPU_controls':66,'GPU_model_unrun':True,'source_sha256':{n:sha(M/n) for n in names},'new_native_or_precision_changes':False,'original_arithmetic_AST_exact':True,'graph_outputs_appended':True,'primary_cache_timeline_parity_required':True,'old_step_lte7_protocol_unchanged':True},indent=2).encode())
+for n in names:
+    if P+n in files:assert files[P+n]==sha(M/n),('Preserve existing deployed method',n)
+    files[P+n]=sha(M/n)
+assert all('probe_native_external_prefix_batch.py' not in n for n in files)
+parents=dict(old['parents']);parents[J]={'proof_sha256':sha(proof),'archive_sha256':q['archive_sha256'],'status':q['status'],'exit_code':0}
+for job,row in parents.items():
+    path=O/(job+'-verified.json');doc=json.loads(path.read_bytes());assert sha(path)==row['proof_sha256'] and path.read_bytes()==(O/(job+'-remote-verified.json')).read_bytes() and sha(O/(job+'-evidence.zip'))==doc['archive_sha256']==row['archive_sha256'] and doc['status']==row['status']
+archive_files=sorted(set(old['archive_files'])|{P+n for n in names});assert all(n in files for n in archive_files)
+p={k:v for k,v in old.items() if k not in ('files','archive_files','parents','reference_installed_files','candidate_installed_files','status','scope','test_modules')}
+p.update(status='step45_layer_boundary_prepared_GPU_unrun',files=files,archive_files=archive_files,parents=parents,test_modules=old['test_modules']+['test2026.cuda.qwen38_5090.test_decode_boundary_program','test2026.cuda.qwen38_5090.test_all_layer_decode_boundary_program','test2026.cuda.qwen38_5090.test_step45_layer_boundary_analysis'],scope='Separate ordinary decode44/45 all64-layer hidden-output observer for selected B1text versus B4mixed physicalrow2. Exact source60/85 arithmetic AST after removing only observer output suffix; same checkpoint/flags/DLLs, no native builds or precision edits. Appended outputs can alter tactics/fusions: require all53IDs/five complete128component checkpoints/fullfinitevectors/full8MiBcache and all53coordinate timepoints to reproduce same-profile ordinary coordinate-trajectory parents before interpretation. Observe fullT4 and activecolumn0 established from frozen step/chunk source. No unique cause/global-first-drift or performance claim. Original step<=7 protocol remains unchanged and inapplicable. Historical full4K/cache62/K-fourM4 failures retained.66CPU/44closedparents/all34/runtime/SDK/config+index/CMake/baseline restoration/fixedCcache96GiB and nonce retirement.')
+for key,field in [('runtime','runtime_after'),('environment','environment_after'),('checkpoints','checkpoint_after'),('cuda_objects','cuda_objects_after'),('cache_before_sha256','cache_after_sha256')]:assert p[key]==w[field]
+for mode in ('reference','candidate'):p[mode+'_installed_files']={**files,**{'Garnet/'+n:h for n,h in p[mode+'_source_files'].items()}}
+prep=E/'step45-layer-boundary-preparation.json';assert not prep.exists();prep.write_bytes(json.dumps(p,indent=2).encode());deploy={P+n:M/n for n in names};deploy[P+'evidence/'+prep.name]=prep
+target=W/'step45-layer-boundary-deployment.zip';assert not target.exists()
+with zipfile.ZipFile(target,'x',zipfile.ZIP_DEFLATED) as z:
+    for n,path in deploy.items():z.write(path,n)
+    z.writestr('deployment-manifest.json',json.dumps({'files':{n:sha(path) for n,path in deploy.items()},'production_install_deferred_to_exclusive_owner':True},indent=2))
+receipt={'deployment_sha256':sha(target),'bytes':target.stat().st_size,'deployment_files':len(deploy),'guarded_files':len(files),'archive_files':len(archive_files),'parents':len(parents),'CPU_controls':66,'preparation_sha256':sha(prep)}
+(W/'step45-layer-boundary-package.json').write_bytes(json.dumps(receipt,indent=2).encode());(W/'step45-layer-boundary-owned-names.json').write_bytes(json.dumps(names).encode());print(json.dumps(receipt,indent=2))

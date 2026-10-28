@@ -1,0 +1,72 @@
+{
+  "status": "startup_cleanup_and_revision_guard_prepared_CPU_unrun",
+  "changes": [
+    {
+      "file": "probe_b4_rowwise_http_quality.py",
+      "before_sha256": "aa6f361e82c80658a66411a4c38add9b991ec3214c1c48c1dd28721f3f1a21a2",
+      "after_sha256": "8230d6a0978437d3575024505d7d7d2e4e5d7f14a2485647b446d8283d1e2c18",
+      "changes": [
+        {
+          "old": "worker=BatchWorker([sys.executable,str(m/'launch_b4_rowwise_http_worker.py'),str(root),cache],out/'worker',4,10);server=thread=None",
+          "new": "worker=None;server=thread=None",
+          "count": 1
+        },
+        {
+          "old": "    try:\n        deadline=time.monotonic()+1800",
+          "new": "    try:\n        worker=BatchWorker([sys.executable,str(m/'launch_b4_rowwise_http_worker.py'),str(root),cache],out/'worker',4,10)\n        deadline=time.monotonic()+1800",
+          "count": 1
+        },
+        {
+          "old": "        worker.close()",
+          "new": "        if worker is not None:worker.close()",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "file": "run_b4_rowwise_http_quality.py",
+      "before_sha256": "c3088ec603cacdaa1f7e501a31507dfd149ecb0f1c81412fcce91ac0f5b5674a",
+      "after_sha256": "4124ca856b6c1c127f26bfabec7513ee7a9b8632e9dd234cede34579cecc36f7",
+      "changes": [
+        {
+          "old": "JOB='b4-rowwise-http-quality-attempt2'",
+          "new": "JOB='b4-rowwise-http-quality-attempt3'",
+          "count": 1
+        },
+        {
+          "old": "    assert p['status']=='B4_rowwise_HTTP_quality_prepared_GPU_unrun'",
+          "new": "    assert p['status']=='B4_rowwise_HTTP_quality_prepared_GPU_unrun'\n    assert p['checkpoint_revision']==json.loads((ROOT/p['model_file_manifest']).read_bytes())['revision']=='482ca0f3832238542f8f5295dde86b5f22711d80'",
+          "count": 1
+        },
+        {
+          "old": "Seventeen CPU source-bundle/protocol/raw-event replay controls",
+          "new": "Nineteen CPU startup/source-bundle/protocol/raw-event replay controls",
+          "count": 1
+        },
+        {
+          "old": "assert code==0,'17 CPU controls failed'",
+          "new": "assert code==0,'19 CPU controls failed'",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "file": "verify_b4_rowwise_http_quality.py",
+      "before_sha256": "cf45dedc2a319e361154b700a435b3f1ca4e00e6969adc1dce947cbb98895801",
+      "after_sha256": "f1dd49c16914876eff70d5e65e1ad79ad6f9a21ccebe41ec4e374be42f07e6dc",
+      "changes": [
+        {
+          "old": "JOB='b4-rowwise-http-quality-attempt2'",
+          "new": "JOB='b4-rowwise-http-quality-attempt3'",
+          "count": 1
+        },
+        {
+          "old": "if stages.get(stage)==0:assert b'Ran 17 tests' in z.read(B+stage+'-ledger/commands.log') and b'\\nOK' in z.read(B+stage+'-ledger/commands.log')",
+          "new": "if stages.get(stage)==0:assert ('Ran '+str(19 if stage=='cpu' else 17)+' tests').encode() in z.read(B+stage+'-ledger/commands.log') and b'\\nOK' in z.read(B+stage+'-ledger/commands.log')",
+          "count": 1
+        }
+      ]
+    }
+  ],
+  "model_bundle_or_native_DLL_changed": false
+}

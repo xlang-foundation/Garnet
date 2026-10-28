@@ -1,0 +1,208 @@
+[2026-10-27 20:06:17][cublasLt][11552][Api][cublasLtCtxInit] ctx=0X20C1CA745E0
+[2026-10-27 20:06:17][cublasLt][11552][Info][cublasLtCtxInit] Discovered per-ctx shared memory size limit = 0
+[2026-10-27 20:06:17][cublasLt][11552][Api][cublasLtCreate] lightHandle=0X20C1C06CBD8
+[2026-10-27 20:06:17][cublasLt][11552][Info][cublasLtCreate] Discovered per-ctx shared memory size limit = 0
+[2026-10-27 20:06:17][cublasLt][11552][Info][cublasLtCreate] cuBLASLt v13.4 device #0: multiProcessorCount=170 maxSharedMemPerBlock=49152 maxSharedMemoryPerBlockOptin=101376
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatmulDescCreate] matmulDesc=0XC41DBFA550 computeType=COMPUTE_32F scaleType=0
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatmulDescSetAttribute] matmulDesc=0X21172729400 attr=MATMUL_DESC_TRANSA buf=0XC41DBFA5C0 sizeInBytes=4
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatmulDescSetAttribute] matmulDesc=0X21172729400 attr=MATMUL_DESC_TRANSB buf=0XC41DBFA5C4 sizeInBytes=4
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatrixLayoutCreate] matLayout=0XC41DBFA558 type=R_8F_E4M3 rows=5120 cols=10240 ld=5120
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatrixLayoutCreate] matLayout=0XC41DBFA560 type=R_8F_E4M3 rows=5120 cols=4 ld=5120
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatrixLayoutCreate] matLayout=0XC41DBFA568 type=R_16BF rows=10240 cols=4 ld=10240
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatmulPreferenceCreate] matmulPref=0XC41DBFA570
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatmulPreferenceSetAttribute] pref=0X20EB93B0550 attr=MATMUL_PREF_MAX_WORKSPACE_BYTES buf=0XC41DBFAD18 sizeInBytes=8
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatmulAlgoGetHeuristic] Adesc=[type=R_8F_E4M3 rows=5120 cols=10240 ld=5120] Bdesc=[type=R_8F_E4M3 rows=5120 cols=4 ld=5120] Cdesc=[type=R_16BF rows=10240 cols=4 ld=10240] Ddesc=[type=R_16BF rows=10240 cols=4 ld=10240] preference=[maxWavesCount=0.0 maxWorkspaceSizeinBytes=4194304] computeDesc=[computeType=COMPUTE_32F scaleType=R_32F transa=OP_T]
+[2026-10-27 20:06:49][cublasLt][11552][Info][cublasLtMatmulAlgoGetHeuristic]  heuristicResults=[35,67,67,35,35,67]
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatmul] A=0X1923C00000 Adesc=0X20C4A043760 B=0X192AA00000 Bdesc=0X20C4A044BE0 C=0X192AE2A800 Cdesc=0X20C4A0437E0 D=0X192AE2A800 Ddesc=0X20C4A0437E0 computeDesc=0X21172729400 algo=0XC41DBFA960 workSpace=0X192AA05000 workSpaceSizeInBytes=4194304 stream=0X2
+[2026-10-27 20:06:49][cublasLt][11552][Trace][cublasLtMatmul] A=0X1923C00000 Adesc=[type=R_8F_E4M3 rows=5120 cols=10240 ld=5120] B=0X192AA00000 Bdesc=[type=R_8F_E4M3 rows=5120 cols=4 ld=5120] C=0X192AE2A800 Cdesc=[type=R_16BF rows=10240 cols=4 ld=10240] D=0X192AE2A800 Ddesc=[type=R_16BF rows=10240 cols=4 ld=10240] computeDesc=[computeType=COMPUTE_32F scaleType=R_32F transa=OP_T] algo=[algoId=35 tile=MATMUL_TILE_64x32 stages=MATMUL_STAGES_64x5 reductionScheme=REDUCTION_SCHEME_COMPUTE_TYPE numSplitsK=3 customOption=1] workSpace=0X192AA05000 workSpaceSizeInBytes=4194304 beta=0 outOfPlace=0 stream=0X2
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatmulPreferenceDestroy] matmulPref=0X20EB93B0550
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatrixLayoutDestroy] matLayout=0X20C4A0437E0
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatrixLayoutDestroy] matLayout=0X20C4A044BE0
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatrixLayoutDestroy] matLayout=0X20C4A043760
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatmulDescDestroy] matmulDesc=0X21172729400
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatmulDescCreate] matmulDesc=0XC41DBFA550 computeType=COMPUTE_32F scaleType=0
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatmulDescSetAttribute] matmulDesc=0X2117272BF90 attr=MATMUL_DESC_TRANSA buf=0XC41DBFA5C0 sizeInBytes=4
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatmulDescSetAttribute] matmulDesc=0X2117272BF90 attr=MATMUL_DESC_TRANSB buf=0XC41DBFA5C4 sizeInBytes=4
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatrixLayoutCreate] matLayout=0XC41DBFA558 type=R_8F_E4M3 rows=5120 cols=6144 ld=5120
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatrixLayoutCreate] matLayout=0XC41DBFA560 type=R_8F_E4M3 rows=5120 cols=4 ld=5120
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatrixLayoutCreate] matLayout=0XC41DBFA568 type=R_16BF rows=6144 cols=4 ld=6144
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatmulPreferenceCreate] matmulPref=0XC41DBFA570
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatmulPreferenceSetAttribute] pref=0X20EB93B0240 attr=MATMUL_PREF_MAX_WORKSPACE_BYTES buf=0XC41DBFAD18 sizeInBytes=8
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatmulAlgoGetHeuristic] Adesc=[type=R_8F_E4M3 rows=5120 cols=6144 ld=5120] Bdesc=[type=R_8F_E4M3 rows=5120 cols=4 ld=5120] Cdesc=[type=R_16BF rows=6144 cols=4 ld=6144] Ddesc=[type=R_16BF rows=6144 cols=4 ld=6144] preference=[maxWavesCount=0.0 maxWorkspaceSizeinBytes=4194304] computeDesc=[computeType=COMPUTE_32F scaleType=R_32F transa=OP_T]
+[2026-10-27 20:06:49][cublasLt][11552][Info][cublasLtMatmulAlgoGetHeuristic]  heuristicResults=[35,35,67,67,35,35,67]
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatmul] A=0X1926E00000 Adesc=0X20C4A044BE0 B=0X192AA00000 Bdesc=0X20C4A043760 C=0X192B12A800 Cdesc=0X20C4A0437E0 D=0X192B12A800 Ddesc=0X20C4A0437E0 computeDesc=0X2117272BF90 algo=0XC41DBFA960 workSpace=0X192AA05000 workSpaceSizeInBytes=4194304 stream=0X2
+[2026-10-27 20:06:49][cublasLt][11552][Trace][cublasLtMatmul] A=0X1926E00000 Adesc=[type=R_8F_E4M3 rows=5120 cols=6144 ld=5120] B=0X192AA00000 Bdesc=[type=R_8F_E4M3 rows=5120 cols=4 ld=5120] C=0X192B12A800 Cdesc=[type=R_16BF rows=6144 cols=4 ld=6144] D=0X192B12A800 Ddesc=[type=R_16BF rows=6144 cols=4 ld=6144] computeDesc=[computeType=COMPUTE_32F scaleType=R_32F transa=OP_T] algo=[algoId=35 tile=MATMUL_TILE_64x32 stages=MATMUL_STAGES_64x5 reductionScheme=REDUCTION_SCHEME_COMPUTE_TYPE numSplitsK=3 customOption=1] workSpace=0X192AA05000 workSpaceSizeInBytes=4194304 beta=0 outOfPlace=0 stream=0X2
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatmulPreferenceDestroy] matmulPref=0X20EB93B0240
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatrixLayoutDestroy] matLayout=0X20C4A0437E0
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatrixLayoutDestroy] matLayout=0X20C4A043760
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatrixLayoutDestroy] matLayout=0X20C4A044BE0
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatmulDescDestroy] matmulDesc=0X2117272BF90
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtTSTMatmulAlgoGetHeuristic] Adesc=[type=R_16BF rows=5120 cols=48 ld=5120] Bdesc=[type=R_16BF rows=5120 cols=4 ld=5120] Cdesc=[type=R_16BF rows=48 cols=4 ld=48] Ddesc=[type=R_16BF rows=48 cols=4 ld=48] preference=[maxWavesCount=0.0 reductionSchemeMask=REDUCTION_SCHEME_COMPUTE_TYPE minBytesAlignmentA=16 minBytesAlignmentB=16 minBytesAlignmentC=16 minBytesAlignmentD=16 implMask=18446744069414584319] computeDesc=[computeType=COMPUTE_32F scaleType=R_32F transa=OP_T smCountTarget=170]
+[2026-10-27 20:06:49][cublasLt][11552][Info][cublasLtTSTMatmulAlgoGetHeuristic]  heuristicResults=[21]
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtTSTMatmul] A=0X2920E78000 Adesc=0XC41DBFA660 B=0X192B196800 Bdesc=0XC41DBFA5F0 C=0X192B1D6800 Cdesc=0XC41DBFA580 D=0X192B1D6800 Ddesc=0XC41DBFA580 computeDesc=0XC41DBFA710 algo=0XC41DBFA520 workSpace=0X0 workSpaceSizeInBytes=0 stream=0X2
+[2026-10-27 20:06:49][cublasLt][11552][Trace][cublasLtTSTMatmul] A=0X2920E78000 Adesc=[type=R_16BF rows=5120 cols=48 ld=5120] B=0X192B196800 Bdesc=[type=R_16BF rows=5120 cols=4 ld=5120] C=0X192B1D6800 Cdesc=[type=R_16BF rows=48 cols=4 ld=48] D=0X192B1D6800 Ddesc=[type=R_16BF rows=48 cols=4 ld=48] computeDesc=[computeType=COMPUTE_32F scaleType=R_32F transa=OP_T smCountTarget=170] algo=[algoId=21 tile=MATMUL_TILE_16x16 stages=MATMUL_STAGES_128x2] workSpace=0X0 workSpaceSizeInBytes=0 beta=0 outOfPlace=0 stream=0X2
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtTSTMatmulAlgoGetHeuristic] Adesc=[type=R_16BF rows=5120 cols=48 ld=5120] Bdesc=[type=R_16BF rows=5120 cols=4 ld=5120] Cdesc=[type=R_16BF rows=48 cols=4 ld=48] Ddesc=[type=R_16BF rows=48 cols=4 ld=48] preference=[maxWavesCount=0.0 reductionSchemeMask=REDUCTION_SCHEME_COMPUTE_TYPE minBytesAlignmentA=16 minBytesAlignmentB=16 minBytesAlignmentC=16 minBytesAlignmentD=16 implMask=18446744069414584319] computeDesc=[computeType=COMPUTE_32F scaleType=R_32F transa=OP_T smCountTarget=170]
+[2026-10-27 20:06:49][cublasLt][11552][Info][cublasLtTSTMatmulAlgoGetHeuristic]  heuristicResults=[21]
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtTSTMatmul] A=0X2920E00000 Adesc=0XC41DBFA660 B=0X192B16E800 Bdesc=0XC41DBFA5F0 C=0X192B196800 Cdesc=0XC41DBFA580 D=0X192B196800 Ddesc=0XC41DBFA580 computeDesc=0XC41DBFA710 algo=0XC41DBFA520 workSpace=0X0 workSpaceSizeInBytes=0 stream=0X2
+[2026-10-27 20:06:49][cublasLt][11552][Trace][cublasLtTSTMatmul] A=0X2920E00000 Adesc=[type=R_16BF rows=5120 cols=48 ld=5120] B=0X192B16E800 Bdesc=[type=R_16BF rows=5120 cols=4 ld=5120] C=0X192B196800 Cdesc=[type=R_16BF rows=48 cols=4 ld=48] D=0X192B196800 Ddesc=[type=R_16BF rows=48 cols=4 ld=48] computeDesc=[computeType=COMPUTE_32F scaleType=R_32F transa=OP_T smCountTarget=170] algo=[algoId=21 tile=MATMUL_TILE_16x16 stages=MATMUL_STAGES_128x2] workSpace=0X0 workSpaceSizeInBytes=0 beta=0 outOfPlace=0 stream=0X2
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatmulDescCreate] matmulDesc=0XC41DBFA550 computeType=COMPUTE_32F scaleType=0
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatmulDescSetAttribute] matmulDesc=0X2117272AA50 attr=MATMUL_DESC_TRANSA buf=0XC41DBFA5C0 sizeInBytes=4
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatmulDescSetAttribute] matmulDesc=0X2117272AA50 attr=MATMUL_DESC_TRANSB buf=0XC41DBFA5C4 sizeInBytes=4
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatrixLayoutCreate] matLayout=0XC41DBFA558 type=R_8F_E4M3 rows=6144 cols=5120 ld=6144
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatrixLayoutCreate] matLayout=0XC41DBFA560 type=R_8F_E4M3 rows=6144 cols=4 ld=6144
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatrixLayoutCreate] matLayout=0XC41DBFA568 type=R_16BF rows=5120 cols=4 ld=5120
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatmulPreferenceCreate] matmulPref=0XC41DBFA570
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatmulPreferenceSetAttribute] pref=0X20EB93B9B60 attr=MATMUL_PREF_MAX_WORKSPACE_BYTES buf=0XC41DBFAD18 sizeInBytes=8
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatmulAlgoGetHeuristic] Adesc=[type=R_8F_E4M3 rows=6144 cols=5120 ld=6144] Bdesc=[type=R_8F_E4M3 rows=6144 cols=4 ld=6144] Cdesc=[type=R_16BF rows=5120 cols=4 ld=5120] Ddesc=[type=R_16BF rows=5120 cols=4 ld=5120] preference=[maxWavesCount=0.0 maxWorkspaceSizeinBytes=4194304] computeDesc=[computeType=COMPUTE_32F scaleType=R_32F transa=OP_T]
+[2026-10-27 20:06:49][cublasLt][11552][Info][cublasLtMatmulAlgoGetHeuristic]  heuristicResults=[35,67,35,35,35,35,67]
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatmul] A=0X1928C00000 Adesc=0X20EE1EC6210 B=0X192AA00000 Bdesc=0X20EE1EC6E90 C=0X192B202800 Cdesc=0X20EE1EC7090 D=0X192B202800 Ddesc=0X20EE1EC7090 computeDesc=0X2117272AA50 algo=0XC41DBFA960 workSpace=0X192AA06000 workSpaceSizeInBytes=4194304 stream=0X2
+[2026-10-27 20:06:49][cublasLt][11552][Trace][cublasLtMatmul] A=0X1928C00000 Adesc=[type=R_8F_E4M3 rows=6144 cols=5120 ld=6144] B=0X192AA00000 Bdesc=[type=R_8F_E4M3 rows=6144 cols=4 ld=6144] C=0X192B202800 Cdesc=[type=R_16BF rows=5120 cols=4 ld=5120] D=0X192B202800 Ddesc=[type=R_16BF rows=5120 cols=4 ld=5120] computeDesc=[computeType=COMPUTE_32F scaleType=R_32F transa=OP_T] algo=[algoId=35 tile=MATMUL_TILE_64x32 stages=MATMUL_STAGES_64x5 reductionScheme=REDUCTION_SCHEME_COMPUTE_TYPE numSplitsK=3 customOption=1] workSpace=0X192AA06000 workSpaceSizeInBytes=4194304 beta=0 outOfPlace=0 stream=0X2
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatmulPreferenceDestroy] matmulPref=0X20EB93B9B60
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatrixLayoutDestroy] matLayout=0X20EE1EC7090
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatrixLayoutDestroy] matLayout=0X20EE1EC6E90
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatrixLayoutDestroy] matLayout=0X20EE1EC6210
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatmulDescDestroy] matmulDesc=0X2117272AA50
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatmulDescCreate] matmulDesc=0XC41DBF9F70 computeType=COMPUTE_32F scaleType=0
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatmulDescSetAttribute] matmulDesc=0X21172728960 attr=MATMUL_DESC_TRANSA buf=0XC41DBF9FA0 sizeInBytes=4
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatmulDescSetAttribute] matmulDesc=0X21172728960 attr=MATMUL_DESC_TRANSB buf=0XC41DBF9FA4 sizeInBytes=4
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatmulDescSetAttribute] matmulDesc=0X21172728960 attr=MATMUL_DESC_A_SCALE_MODE buf=0XC41DBF9F9C sizeInBytes=4
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatmulDescSetAttribute] matmulDesc=0X21172728960 attr=MATMUL_DESC_B_SCALE_MODE buf=0XC41DBF9F9C sizeInBytes=4
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatmulDescSetAttribute] matmulDesc=0X21172728960 attr=MATMUL_DESC_A_SCALE_POINTER buf=0XC41DBF9FB8 sizeInBytes=8
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatmulDescSetAttribute] matmulDesc=0X21172728960 attr=MATMUL_DESC_B_SCALE_POINTER buf=0XC41DBF9FC0 sizeInBytes=8
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatrixLayoutCreate] matLayout=0XC41DBF9F78 type=R_4F_E2M1 rows=5120 cols=34816 ld=5120
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatrixLayoutCreate] matLayout=0XC41DBF9F80 type=R_4F_E2M1 rows=5120 cols=4 ld=5120
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatrixLayoutCreate] matLayout=0XC41DBF9F88 type=R_16BF rows=34816 cols=4 ld=34816
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatmulPreferenceCreate] matmulPref=0XC41DBF9F90
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatmulPreferenceSetAttribute] pref=0X20EB93B9700 attr=MATMUL_PREF_MAX_WORKSPACE_BYTES buf=0XC41DBFACA8 sizeInBytes=8
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatmulAlgoGetHeuristic] Adesc=[type=R_4F_E2M1 rows=5120 cols=34816 ld=5120] Bdesc=[type=R_4F_E2M1 rows=5120 cols=4 ld=5120] Cdesc=[type=R_16BF rows=34816 cols=4 ld=34816] Ddesc=[type=R_16BF rows=34816 cols=4 ld=34816] preference=[maxWavesCount=0.0 maxWorkspaceSizeinBytes=4194304] computeDesc=[computeType=COMPUTE_32F scaleType=R_32F transa=OP_T aScalePointer=0x191fe00000 bScalePointer=0x192aa02800 aScaleMode=VEC16_UE4M3 bScaleMode=VEC16_UE4M3]
+[2026-10-27 20:06:49][cublasLt][11552][Info][cublasLtMatmulAlgoGetHeuristic]  heuristicResults=[70,70,70,70,70]
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatmul] A=0X191A800000 Adesc=0X20EE1EC7990 B=0X192AA00000 Bdesc=0X20EE1EC7A10 C=0X192B12A800 Cdesc=0X20EE1EC7E10 D=0X192B12A800 Ddesc=0X20EE1EC7E10 computeDesc=0X21172728960 algo=0XC41DBF9FF0 workSpace=0X192AA0C800 workSpaceSizeInBytes=4194304 stream=0X2
+[2026-10-27 20:06:49][cublasLt][11552][Trace][cublasLtMatmul] A=0X191A800000 Adesc=[type=R_4F_E2M1 rows=5120 cols=34816 ld=5120] B=0X192AA00000 Bdesc=[type=R_4F_E2M1 rows=5120 cols=4 ld=5120] C=0X192B12A800 Cdesc=[type=R_16BF rows=34816 cols=4 ld=34816] D=0X192B12A800 Ddesc=[type=R_16BF rows=34816 cols=4 ld=34816] computeDesc=[computeType=COMPUTE_32F scaleType=R_32F transa=OP_T aScalePointer=0x191fe00000 bScalePointer=0x192aa02800 aScaleMode=VEC16_UE4M3 bScaleMode=VEC16_UE4M3] algo=[algoId=70 tile=MATMUL_TILE_128x128 stages=MATMUL_STAGES_256xAUTO clusterShape=CLUSTER_SHAPE_1x2x1 schedulingMode=0] workSpace=0X192AA0C800 workSpaceSizeInBytes=4194304 beta=0 outOfPlace=0 stream=0X2
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatmulPreferenceDestroy] matmulPref=0X20EB93B9700
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatrixLayoutDestroy] matLayout=0X20EE1EC7E10
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatrixLayoutDestroy] matLayout=0X20EE1EC7A10
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatrixLayoutDestroy] matLayout=0X20EE1EC7990
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatmulDescDestroy] matmulDesc=0X21172728960
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatmulDescCreate] matmulDesc=0XC41DBF9F70 computeType=COMPUTE_32F scaleType=0
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatmulDescSetAttribute] matmulDesc=0X2117272BF90 attr=MATMUL_DESC_TRANSA buf=0XC41DBF9FA0 sizeInBytes=4
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatmulDescSetAttribute] matmulDesc=0X2117272BF90 attr=MATMUL_DESC_TRANSB buf=0XC41DBF9FA4 sizeInBytes=4
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatmulDescSetAttribute] matmulDesc=0X2117272BF90 attr=MATMUL_DESC_A_SCALE_MODE buf=0XC41DBF9F9C sizeInBytes=4
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatmulDescSetAttribute] matmulDesc=0X2117272BF90 attr=MATMUL_DESC_B_SCALE_MODE buf=0XC41DBF9F9C sizeInBytes=4
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatmulDescSetAttribute] matmulDesc=0X2117272BF90 attr=MATMUL_DESC_A_SCALE_POINTER buf=0XC41DBF9FB8 sizeInBytes=8
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatmulDescSetAttribute] matmulDesc=0X2117272BF90 attr=MATMUL_DESC_B_SCALE_POINTER buf=0XC41DBF9FC0 sizeInBytes=8
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatrixLayoutCreate] matLayout=0XC41DBF9F78 type=R_4F_E2M1 rows=17408 cols=5120 ld=17408
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatrixLayoutCreate] matLayout=0XC41DBF9F80 type=R_4F_E2M1 rows=17408 cols=4 ld=17408
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatrixLayoutCreate] matLayout=0XC41DBF9F88 type=R_16BF rows=5120 cols=4 ld=5120
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatmulPreferenceCreate] matmulPref=0XC41DBF9F90
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatmulPreferenceSetAttribute] pref=0X20EB93BB220 attr=MATMUL_PREF_MAX_WORKSPACE_BYTES buf=0XC41DBFACA8 sizeInBytes=8
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatmulAlgoGetHeuristic] Adesc=[type=R_4F_E2M1 rows=17408 cols=5120 ld=17408] Bdesc=[type=R_4F_E2M1 rows=17408 cols=4 ld=17408] Cdesc=[type=R_16BF rows=5120 cols=4 ld=5120] Ddesc=[type=R_16BF rows=5120 cols=4 ld=5120] preference=[maxWavesCount=0.0 maxWorkspaceSizeinBytes=4194304] computeDesc=[computeType=COMPUTE_32F scaleType=R_32F transa=OP_T aScalePointer=0x1923600000 bScalePointer=0x192aa08800 aScaleMode=VEC16_UE4M3 bScaleMode=VEC16_UE4M3]
+[2026-10-27 20:06:49][cublasLt][11552][Info][cublasLtMatmulAlgoGetHeuristic]  heuristicResults=[70,70,70]
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatmul] A=0X1920A00000 Adesc=0X20EE1EC7990 B=0X192AA00000 Bdesc=0X20EE1EC7A10 C=0X192B1EE800 Cdesc=0X20EE1EC7E10 D=0X192B1EE800 Ddesc=0X20EE1EC7E10 computeDesc=0X2117272BF90 algo=0XC41DBF9FF0 workSpace=0X192AA2A800 workSpaceSizeInBytes=4194304 stream=0X2
+[2026-10-27 20:06:49][cublasLt][11552][Trace][cublasLtMatmul] A=0X1920A00000 Adesc=[type=R_4F_E2M1 rows=17408 cols=5120 ld=17408] B=0X192AA00000 Bdesc=[type=R_4F_E2M1 rows=17408 cols=4 ld=17408] C=0X192B1EE800 Cdesc=[type=R_16BF rows=5120 cols=4 ld=5120] D=0X192B1EE800 Ddesc=[type=R_16BF rows=5120 cols=4 ld=5120] computeDesc=[computeType=COMPUTE_32F scaleType=R_32F transa=OP_T aScalePointer=0x1923600000 bScalePointer=0x192aa08800 aScaleMode=VEC16_UE4M3 bScaleMode=VEC16_UE4M3] algo=[algoId=70 tile=MATMUL_TILE_128x128 stages=MATMUL_STAGES_256xAUTO clusterShape=CLUSTER_SHAPE_1x2x1 schedulingMode=0] workSpace=0X192AA2A800 workSpaceSizeInBytes=4194304 beta=0 outOfPlace=0 stream=0X2
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatmulPreferenceDestroy] matmulPref=0X20EB93BB220
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatrixLayoutDestroy] matLayout=0X20EE1EC7E10
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatrixLayoutDestroy] matLayout=0X20EE1EC7A10
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatrixLayoutDestroy] matLayout=0X20EE1EC7990
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatmulDescDestroy] matmulDesc=0X2117272BF90
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatmulDescCreate] matmulDesc=0XC41DBFA550 computeType=COMPUTE_32F scaleType=0
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatmulDescSetAttribute] matmulDesc=0X21172728EB0 attr=MATMUL_DESC_TRANSA buf=0XC41DBFA5C0 sizeInBytes=4
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatmulDescSetAttribute] matmulDesc=0X21172728EB0 attr=MATMUL_DESC_TRANSB buf=0XC41DBFA5C4 sizeInBytes=4
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatrixLayoutCreate] matLayout=0XC41DBFA558 type=R_8F_E4M3 rows=5120 cols=10240 ld=5120
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatrixLayoutCreate] matLayout=0XC41DBFA560 type=R_8F_E4M3 rows=5120 cols=4 ld=5120
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatrixLayoutCreate] matLayout=0XC41DBFA568 type=R_16BF rows=10240 cols=4 ld=10240
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatmulPreferenceCreate] matmulPref=0XC41DBFA570
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatmulPreferenceSetAttribute] pref=0X20EB93BD8A0 attr=MATMUL_PREF_MAX_WORKSPACE_BYTES buf=0XC41DBFAD18 sizeInBytes=8
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatmulAlgoGetHeuristic] Adesc=[type=R_8F_E4M3 rows=5120 cols=10240 ld=5120] Bdesc=[type=R_8F_E4M3 rows=5120 cols=4 ld=5120] Cdesc=[type=R_16BF rows=10240 cols=4 ld=10240] Ddesc=[type=R_16BF rows=10240 cols=4 ld=10240] preference=[maxWavesCount=0.0 maxWorkspaceSizeinBytes=4194304] computeDesc=[computeType=COMPUTE_32F scaleType=R_32F transa=OP_T]
+[2026-10-27 20:06:49][cublasLt][11552][Info][cublasLtMatmulAlgoGetHeuristic]  heuristicResults=[35,67,67,35,35,67]
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatmul] A=0X1923C00000 Adesc=0X20EE1E91210 B=0X192AA00000 Bdesc=0X20EE1E91E10 C=0X192AE2A800 Cdesc=0X20EE1E91E90 D=0X192AE2A800 Ddesc=0X20EE1E91E90 computeDesc=0X21172728EB0 algo=0XC41DBFA960 workSpace=0X192AA05000 workSpaceSizeInBytes=4194304 stream=0X2
+[2026-10-27 20:06:49][cublasLt][11552][Trace][cublasLtMatmul] A=0X1923C00000 Adesc=[type=R_8F_E4M3 rows=5120 cols=10240 ld=5120] B=0X192AA00000 Bdesc=[type=R_8F_E4M3 rows=5120 cols=4 ld=5120] C=0X192AE2A800 Cdesc=[type=R_16BF rows=10240 cols=4 ld=10240] D=0X192AE2A800 Ddesc=[type=R_16BF rows=10240 cols=4 ld=10240] computeDesc=[computeType=COMPUTE_32F scaleType=R_32F transa=OP_T] algo=[algoId=35 tile=MATMUL_TILE_64x32 stages=MATMUL_STAGES_64x5 reductionScheme=REDUCTION_SCHEME_COMPUTE_TYPE numSplitsK=3 customOption=1] workSpace=0X192AA05000 workSpaceSizeInBytes=4194304 beta=0 outOfPlace=0 stream=0X2
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatmulPreferenceDestroy] matmulPref=0X20EB93BD8A0
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatrixLayoutDestroy] matLayout=0X20EE1E91E90
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatrixLayoutDestroy] matLayout=0X20EE1E91E10
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatrixLayoutDestroy] matLayout=0X20EE1E91210
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatmulDescDestroy] matmulDesc=0X21172728EB0
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatmulDescCreate] matmulDesc=0XC41DBFA550 computeType=COMPUTE_32F scaleType=0
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatmulDescSetAttribute] matmulDesc=0X2117272AA50 attr=MATMUL_DESC_TRANSA buf=0XC41DBFA5C0 sizeInBytes=4
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatmulDescSetAttribute] matmulDesc=0X2117272AA50 attr=MATMUL_DESC_TRANSB buf=0XC41DBFA5C4 sizeInBytes=4
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatrixLayoutCreate] matLayout=0XC41DBFA558 type=R_8F_E4M3 rows=5120 cols=6144 ld=5120
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatrixLayoutCreate] matLayout=0XC41DBFA560 type=R_8F_E4M3 rows=5120 cols=4 ld=5120
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatrixLayoutCreate] matLayout=0XC41DBFA568 type=R_16BF rows=6144 cols=4 ld=6144
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatmulPreferenceCreate] matmulPref=0XC41DBFA570
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatmulPreferenceSetAttribute] pref=0X20EB93BD4B0 attr=MATMUL_PREF_MAX_WORKSPACE_BYTES buf=0XC41DBFAD18 sizeInBytes=8
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatmulAlgoGetHeuristic] Adesc=[type=R_8F_E4M3 rows=5120 cols=6144 ld=5120] Bdesc=[type=R_8F_E4M3 rows=5120 cols=4 ld=5120] Cdesc=[type=R_16BF rows=6144 cols=4 ld=6144] Ddesc=[type=R_16BF rows=6144 cols=4 ld=6144] preference=[maxWavesCount=0.0 maxWorkspaceSizeinBytes=4194304] computeDesc=[computeType=COMPUTE_32F scaleType=R_32F transa=OP_T]
+[2026-10-27 20:06:49][cublasLt][11552][Info][cublasLtMatmulAlgoGetHeuristic]  heuristicResults=[35,35,67,67,35,35,67]
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatmul] A=0X1926E00000 Adesc=0X20EE1E91090 B=0X192AA00000 Bdesc=0X20EE1E91110 C=0X192B12A800 Cdesc=0X20EE1E90090 D=0X192B12A800 Ddesc=0X20EE1E90090 computeDesc=0X2117272AA50 algo=0XC41DBFA960 workSpace=0X192AA05000 workSpaceSizeInBytes=4194304 stream=0X2
+[2026-10-27 20:06:49][cublasLt][11552][Trace][cublasLtMatmul] A=0X1926E00000 Adesc=[type=R_8F_E4M3 rows=5120 cols=6144 ld=5120] B=0X192AA00000 Bdesc=[type=R_8F_E4M3 rows=5120 cols=4 ld=5120] C=0X192B12A800 Cdesc=[type=R_16BF rows=6144 cols=4 ld=6144] D=0X192B12A800 Ddesc=[type=R_16BF rows=6144 cols=4 ld=6144] computeDesc=[computeType=COMPUTE_32F scaleType=R_32F transa=OP_T] algo=[algoId=35 tile=MATMUL_TILE_64x32 stages=MATMUL_STAGES_64x5 reductionScheme=REDUCTION_SCHEME_COMPUTE_TYPE numSplitsK=3 customOption=1] workSpace=0X192AA05000 workSpaceSizeInBytes=4194304 beta=0 outOfPlace=0 stream=0X2
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatmulPreferenceDestroy] matmulPref=0X20EB93BD4B0
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatrixLayoutDestroy] matLayout=0X20EE1E90090
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatrixLayoutDestroy] matLayout=0X20EE1E91110
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatrixLayoutDestroy] matLayout=0X20EE1E91090
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatmulDescDestroy] matmulDesc=0X2117272AA50
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtTSTMatmulAlgoGetHeuristic] Adesc=[type=R_16BF rows=5120 cols=48 ld=5120] Bdesc=[type=R_16BF rows=5120 cols=4 ld=5120] Cdesc=[type=R_16BF rows=48 cols=4 ld=48] Ddesc=[type=R_16BF rows=48 cols=4 ld=48] preference=[maxWavesCount=0.0 reductionSchemeMask=REDUCTION_SCHEME_COMPUTE_TYPE minBytesAlignmentA=16 minBytesAlignmentB=16 minBytesAlignmentC=16 minBytesAlignmentD=16 implMask=18446744069414584319] computeDesc=[computeType=COMPUTE_32F scaleType=R_32F transa=OP_T smCountTarget=170]
+[2026-10-27 20:06:49][cublasLt][11552][Info][cublasLtTSTMatmulAlgoGetHeuristic]  heuristicResults=[21]
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtTSTMatmul] A=0X2920E78000 Adesc=0XC41DBFA660 B=0X192B196800 Bdesc=0XC41DBFA5F0 C=0X192B1D6800 Cdesc=0XC41DBFA580 D=0X192B1D6800 Ddesc=0XC41DBFA580 computeDesc=0XC41DBFA710 algo=0XC41DBFA520 workSpace=0X0 workSpaceSizeInBytes=0 stream=0X2
+[2026-10-27 20:06:49][cublasLt][11552][Trace][cublasLtTSTMatmul] A=0X2920E78000 Adesc=[type=R_16BF rows=5120 cols=48 ld=5120] B=0X192B196800 Bdesc=[type=R_16BF rows=5120 cols=4 ld=5120] C=0X192B1D6800 Cdesc=[type=R_16BF rows=48 cols=4 ld=48] D=0X192B1D6800 Ddesc=[type=R_16BF rows=48 cols=4 ld=48] computeDesc=[computeType=COMPUTE_32F scaleType=R_32F transa=OP_T smCountTarget=170] algo=[algoId=21 tile=MATMUL_TILE_16x16 stages=MATMUL_STAGES_128x2] workSpace=0X0 workSpaceSizeInBytes=0 beta=0 outOfPlace=0 stream=0X2
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtTSTMatmulAlgoGetHeuristic] Adesc=[type=R_16BF rows=5120 cols=48 ld=5120] Bdesc=[type=R_16BF rows=5120 cols=4 ld=5120] Cdesc=[type=R_16BF rows=48 cols=4 ld=48] Ddesc=[type=R_16BF rows=48 cols=4 ld=48] preference=[maxWavesCount=0.0 reductionSchemeMask=REDUCTION_SCHEME_COMPUTE_TYPE minBytesAlignmentA=16 minBytesAlignmentB=16 minBytesAlignmentC=16 minBytesAlignmentD=16 implMask=18446744069414584319] computeDesc=[computeType=COMPUTE_32F scaleType=R_32F transa=OP_T smCountTarget=170]
+[2026-10-27 20:06:49][cublasLt][11552][Info][cublasLtTSTMatmulAlgoGetHeuristic]  heuristicResults=[21]
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtTSTMatmul] A=0X2920E00000 Adesc=0XC41DBFA660 B=0X192B16E800 Bdesc=0XC41DBFA5F0 C=0X192B196800 Cdesc=0XC41DBFA580 D=0X192B196800 Ddesc=0XC41DBFA580 computeDesc=0XC41DBFA710 algo=0XC41DBFA520 workSpace=0X0 workSpaceSizeInBytes=0 stream=0X2
+[2026-10-27 20:06:49][cublasLt][11552][Trace][cublasLtTSTMatmul] A=0X2920E00000 Adesc=[type=R_16BF rows=5120 cols=48 ld=5120] B=0X192B16E800 Bdesc=[type=R_16BF rows=5120 cols=4 ld=5120] C=0X192B196800 Cdesc=[type=R_16BF rows=48 cols=4 ld=48] D=0X192B196800 Ddesc=[type=R_16BF rows=48 cols=4 ld=48] computeDesc=[computeType=COMPUTE_32F scaleType=R_32F transa=OP_T smCountTarget=170] algo=[algoId=21 tile=MATMUL_TILE_16x16 stages=MATMUL_STAGES_128x2] workSpace=0X0 workSpaceSizeInBytes=0 beta=0 outOfPlace=0 stream=0X2
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatmulDescCreate] matmulDesc=0XC41DBFA550 computeType=COMPUTE_32F scaleType=0
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatmulDescSetAttribute] matmulDesc=0X21172728960 attr=MATMUL_DESC_TRANSA buf=0XC41DBFA5C0 sizeInBytes=4
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatmulDescSetAttribute] matmulDesc=0X21172728960 attr=MATMUL_DESC_TRANSB buf=0XC41DBFA5C4 sizeInBytes=4
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatrixLayoutCreate] matLayout=0XC41DBFA558 type=R_8F_E4M3 rows=6144 cols=5120 ld=6144
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatrixLayoutCreate] matLayout=0XC41DBFA560 type=R_8F_E4M3 rows=6144 cols=4 ld=6144
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatrixLayoutCreate] matLayout=0XC41DBFA568 type=R_16BF rows=5120 cols=4 ld=5120
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatmulPreferenceCreate] matmulPref=0XC41DBFA570
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatmulPreferenceSetAttribute] pref=0X20EB93BDD00 attr=MATMUL_PREF_MAX_WORKSPACE_BYTES buf=0XC41DBFAD18 sizeInBytes=8
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatmulAlgoGetHeuristic] Adesc=[type=R_8F_E4M3 rows=6144 cols=5120 ld=6144] Bdesc=[type=R_8F_E4M3 rows=6144 cols=4 ld=6144] Cdesc=[type=R_16BF rows=5120 cols=4 ld=5120] Ddesc=[type=R_16BF rows=5120 cols=4 ld=5120] preference=[maxWavesCount=0.0 maxWorkspaceSizeinBytes=4194304] computeDesc=[computeType=COMPUTE_32F scaleType=R_32F transa=OP_T]
+[2026-10-27 20:06:49][cublasLt][11552][Info][cublasLtMatmulAlgoGetHeuristic]  heuristicResults=[35,67,35,35,35,35,67]
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatmul] A=0X1928C00000 Adesc=0X20EE1E90C10 B=0X192AA00000 Bdesc=0X20EE1E91090 C=0X192B202800 Cdesc=0X20EE1E91D10 D=0X192B202800 Ddesc=0X20EE1E91D10 computeDesc=0X21172728960 algo=0XC41DBFA960 workSpace=0X192AA06000 workSpaceSizeInBytes=4194304 stream=0X2
+[2026-10-27 20:06:49][cublasLt][11552][Trace][cublasLtMatmul] A=0X1928C00000 Adesc=[type=R_8F_E4M3 rows=6144 cols=5120 ld=6144] B=0X192AA00000 Bdesc=[type=R_8F_E4M3 rows=6144 cols=4 ld=6144] C=0X192B202800 Cdesc=[type=R_16BF rows=5120 cols=4 ld=5120] D=0X192B202800 Ddesc=[type=R_16BF rows=5120 cols=4 ld=5120] computeDesc=[computeType=COMPUTE_32F scaleType=R_32F transa=OP_T] algo=[algoId=35 tile=MATMUL_TILE_64x32 stages=MATMUL_STAGES_64x5 reductionScheme=REDUCTION_SCHEME_COMPUTE_TYPE numSplitsK=3 customOption=1] workSpace=0X192AA06000 workSpaceSizeInBytes=4194304 beta=0 outOfPlace=0 stream=0X2
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatmulPreferenceDestroy] matmulPref=0X20EB93BDD00
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatrixLayoutDestroy] matLayout=0X20EE1E91D10
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatrixLayoutDestroy] matLayout=0X20EE1E91090
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatrixLayoutDestroy] matLayout=0X20EE1E90C10
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatmulDescDestroy] matmulDesc=0X21172728960
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatmulDescCreate] matmulDesc=0XC41DBF9F70 computeType=COMPUTE_32F scaleType=0
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatmulDescSetAttribute] matmulDesc=0X2117272BA40 attr=MATMUL_DESC_TRANSA buf=0XC41DBF9FA0 sizeInBytes=4
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatmulDescSetAttribute] matmulDesc=0X2117272BA40 attr=MATMUL_DESC_TRANSB buf=0XC41DBF9FA4 sizeInBytes=4
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatmulDescSetAttribute] matmulDesc=0X2117272BA40 attr=MATMUL_DESC_A_SCALE_MODE buf=0XC41DBF9F9C sizeInBytes=4
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatmulDescSetAttribute] matmulDesc=0X2117272BA40 attr=MATMUL_DESC_B_SCALE_MODE buf=0XC41DBF9F9C sizeInBytes=4
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatmulDescSetAttribute] matmulDesc=0X2117272BA40 attr=MATMUL_DESC_A_SCALE_POINTER buf=0XC41DBF9FB8 sizeInBytes=8
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatmulDescSetAttribute] matmulDesc=0X2117272BA40 attr=MATMUL_DESC_B_SCALE_POINTER buf=0XC41DBF9FC0 sizeInBytes=8
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatrixLayoutCreate] matLayout=0XC41DBF9F78 type=R_4F_E2M1 rows=5120 cols=34816 ld=5120
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatrixLayoutCreate] matLayout=0XC41DBF9F80 type=R_4F_E2M1 rows=5120 cols=4 ld=5120
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatrixLayoutCreate] matLayout=0XC41DBF9F88 type=R_16BF rows=34816 cols=4 ld=34816
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatmulPreferenceCreate] matmulPref=0XC41DBF9F90
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatmulPreferenceSetAttribute] pref=0X20EB93BD4B0 attr=MATMUL_PREF_MAX_WORKSPACE_BYTES buf=0XC41DBFACA8 sizeInBytes=8
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatmulAlgoGetHeuristic] Adesc=[type=R_4F_E2M1 rows=5120 cols=34816 ld=5120] Bdesc=[type=R_4F_E2M1 rows=5120 cols=4 ld=5120] Cdesc=[type=R_16BF rows=34816 cols=4 ld=34816] Ddesc=[type=R_16BF rows=34816 cols=4 ld=34816] preference=[maxWavesCount=0.0 maxWorkspaceSizeinBytes=4194304] computeDesc=[computeType=COMPUTE_32F scaleType=R_32F transa=OP_T aScalePointer=0x191fe00000 bScalePointer=0x192aa02800 aScaleMode=VEC16_UE4M3 bScaleMode=VEC16_UE4M3]
+[2026-10-27 20:06:49][cublasLt][11552][Info][cublasLtMatmulAlgoGetHeuristic]  heuristicResults=[70,70,70,70,70]
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatmul] A=0X191A800000 Adesc=0X20EE1E91390 B=0X192AA00000 Bdesc=0X20EE1E91990 C=0X192B12A800 Cdesc=0X20EE1E91110 D=0X192B12A800 Ddesc=0X20EE1E91110 computeDesc=0X2117272BA40 algo=0XC41DBF9FF0 workSpace=0X192AA0C800 workSpaceSizeInBytes=4194304 stream=0X2
+[2026-10-27 20:06:49][cublasLt][11552][Trace][cublasLtMatmul] A=0X191A800000 Adesc=[type=R_4F_E2M1 rows=5120 cols=34816 ld=5120] B=0X192AA00000 Bdesc=[type=R_4F_E2M1 rows=5120 cols=4 ld=5120] C=0X192B12A800 Cdesc=[type=R_16BF rows=34816 cols=4 ld=34816] D=0X192B12A800 Ddesc=[type=R_16BF rows=34816 cols=4 ld=34816] computeDesc=[computeType=COMPUTE_32F scaleType=R_32F transa=OP_T aScalePointer=0x191fe00000 bScalePointer=0x192aa02800 aScaleMode=VEC16_UE4M3 bScaleMode=VEC16_UE4M3] algo=[algoId=70 tile=MATMUL_TILE_128x128 stages=MATMUL_STAGES_256xAUTO clusterShape=CLUSTER_SHAPE_1x2x1 schedulingMode=0] workSpace=0X192AA0C800 workSpaceSizeInBytes=4194304 beta=0 outOfPlace=0 stream=0X2
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatmulPreferenceDestroy] matmulPref=0X20EB93BD4B0
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatrixLayoutDestroy] matLayout=0X20EE1E91110
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatrixLayoutDestroy] matLayout=0X20EE1E91990
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatrixLayoutDestroy] matLayout=0X20EE1E91390
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatmulDescDestroy] matmulDesc=0X2117272BA40
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatmulDescCreate] matmulDesc=0XC41DBF9F70 computeType=COMPUTE_32F scaleType=0
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatmulDescSetAttribute] matmulDesc=0X2117272AA50 attr=MATMUL_DESC_TRANSA buf=0XC41DBF9FA0 sizeInBytes=4
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatmulDescSetAttribute] matmulDesc=0X2117272AA50 attr=MATMUL_DESC_TRANSB buf=0XC41DBF9FA4 sizeInBytes=4
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatmulDescSetAttribute] matmulDesc=0X2117272AA50 attr=MATMUL_DESC_A_SCALE_MODE buf=0XC41DBF9F9C sizeInBytes=4
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatmulDescSetAttribute] matmulDesc=0X2117272AA50 attr=MATMUL_DESC_B_SCALE_MODE buf=0XC41DBF9F9C sizeInBytes=4
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatmulDescSetAttribute] matmulDesc=0X2117272AA50 attr=MATMUL_DESC_A_SCALE_POINTER buf=0XC41DBF9FB8 sizeInBytes=8
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatmulDescSetAttribute] matmulDesc=0X2117272AA50 attr=MATMUL_DESC_B_SCALE_POINTER buf=0XC41DBF9FC0 sizeInBytes=8
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatrixLayoutCreate] matLayout=0XC41DBF9F78 type=R_4F_E2M1 rows=17408 cols=5120 ld=17408
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatrixLayoutCreate] matLayout=0XC41DBF9F80 type=R_4F_E2M1 rows=17408 cols=4 ld=17408
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatrixLayoutCreate] matLayout=0XC41DBF9F88 type=R_16BF rows=5120 cols=4 ld=5120
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatmulPreferenceCreate] matmulPref=0XC41DBF9F90
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatmulPreferenceSetAttribute] pref=0X20EB93BE080 attr=MATMUL_PREF_MAX_WORKSPACE_BYTES buf=0XC41DBFACA8 sizeInBytes=8
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatmulAlgoGetHeuristic] Adesc=[type=R_4F_E2M1 rows=17408 cols=5120 ld=17408] Bdesc=[type=R_4F_E2M1 rows=17408 cols=4 ld=17408] Cdesc=[type=R_16BF rows=5120 cols=4 ld=5120] Ddesc=[type=R_16BF rows=5120 cols=4 ld=5120] preference=[maxWavesCount=0.0 maxWorkspaceSizeinBytes=4194304] computeDesc=[computeType=COMPUTE_32F scaleType=R_32F transa=OP_T aScalePointer=0x1923600000 bScalePointer=0x192aa08800 aScaleMode=VEC16_UE4M3 bScaleMode=VEC16_UE4M3]
+[2026-10-27 20:06:49][cublasLt][11552][Info][cublasLtMatmulAlgoGetHeuristic]  heuristicResults=[70,70,70]
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatmul] A=0X1920A00000 Adesc=0X20EE1E90C10 B=0X192AA00000 Bdesc=0X20EE1E91090 C=0X192B1EE800 Cdesc=0X20EE1E91210 D=0X192B1EE800 Ddesc=0X20EE1E91210 computeDesc=0X2117272AA50 algo=0XC41DBF9FF0 workSpace=0X192AA2A800 workSpaceSizeInBytes=4194304 stream=0X2
+[2026-10-27 20:06:49][cublasLt][11552][Trace][cublasLtMatmul] A=0X1920A00000 Adesc=[type=R_4F_E2M1 rows=17408 cols=5120 ld=17408] B=0X192AA00000 Bdesc=[type=R_4F_E2M1 rows=17408 cols=4 ld=17408] C=0X192B1EE800 Cdesc=[type=R_16BF rows=5120 cols=4 ld=5120] D=0X192B1EE800 Ddesc=[type=R_16BF rows=5120 cols=4 ld=5120] computeDesc=[computeType=COMPUTE_32F scaleType=R_32F transa=OP_T aScalePointer=0x1923600000 bScalePointer=0x192aa08800 aScaleMode=VEC16_UE4M3 bScaleMode=VEC16_UE4M3] algo=[algoId=70 tile=MATMUL_TILE_128x128 stages=MATMUL_STAGES_256xAUTO clusterShape=CLUSTER_SHAPE_1x2x1 schedulingMode=0] workSpace=0X192AA2A800 workSpaceSizeInBytes=4194304 beta=0 outOfPlace=0 stream=0X2
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatmulPreferenceDestroy] matmulPref=0X20EB93BE080
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatrixLayoutDestroy] matLayout=0X20EE1E91210
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatrixLayoutDestroy] matLayout=0X20EE1E91090
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatrixLayoutDestroy] matLayout=0X20EE1E90C10
+[2026-10-27 20:06:49][cublasLt][11552][Api][cublasLtMatmulDescDestroy] matmulDesc=0X2117272AA50
+[2026-10-27 20:06:51][cublasLt][11552][Api][cublasLtDestroy] lightHandle=0X20C1C5DEDC0

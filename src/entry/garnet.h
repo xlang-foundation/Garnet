@@ -13,6 +13,10 @@
 #include "../backends/tensorrt/cuda_tree_commit.h"
 #include "../backends/tensorrt/cuda_execution_bundle.h"
 #include "../backends/tensorrt/cuda_mtp_draft.h"
+#include "../backends/tensorrt/cuda_kv_delta_commit.h"
+#include "../backends/tensorrt/cuda_bf16_kv_delta_commit.h"
+#include "../backends/tensorrt/cuda_bf16_low_batch_kv_delta_commit.h"
+#include "../backends/tensorrt/cuda_bf16_prefill128_kv_delta_commit.h"
 #include "../backends/cpu/tokenizer_api.h"
 #include <string>
 #include <deque>
@@ -20,6 +24,10 @@
 #include <mutex>
 #include <unordered_map>
 #include <vector>
+
+#if !defined(GARNET_CPU_ONLY) && !defined(GARNET_METAL)
+extern "C" int GarnetQwen38BF16LowBatchTiledScoresEnabled() noexcept;
+#endif
 
 namespace Garnet
 {
@@ -159,12 +167,23 @@ namespace Garnet
 		bool LoadModelFromFile(std::string modelPath, X::Value& model);
 	public:
 		X::Value CudaDevicesJson(const X::ARGS&, const X::KWARGS&);
+		// Same process-frozen selector used by the low-batch CUDA enqueue path.
+		// No CUDA call: available to the embedded runtime without ctypes/libffi.
+		bool BF16LowBatchTiledScoresEnabled()
+		{
+#if !defined(GARNET_CPU_ONLY) && !defined(GARNET_METAL)
+			return ::GarnetQwen38BF16LowBatchTiledScoresEnabled() != 0;
+#else
+			return false;
+#endif
+		}
 		X::Value CudaSetDevice(const X::ARGS&, const X::KWARGS&);
 		X::Value CudaSynchronize(const X::ARGS&, const X::KWARGS&);
 		X::Value TensorToDevice(const X::ARGS&, const X::KWARGS&);
 		X::Value TensorZeros(const X::ARGS&, const X::KWARGS&);
 		X::Value BindOperatorModuleAPI(const X::ARGS&, const X::KWARGS&);
 		BEGIN_PACKAGE(GarnetAPI)
+			APISET().AddFunc<0>("bf16_low_batch_tiled_scores_enabled", &GarnetAPI::BF16LowBatchTiledScoresEnabled);
 			APISET().AddVarFunc("cuda_devices_json", &GarnetAPI::CudaDevicesJson);
 			APISET().AddVarFunc("cuda_set_device", &GarnetAPI::CudaSetDevice);
 			APISET().AddVarFunc("cuda_synchronize", &GarnetAPI::CudaSynchronize);
@@ -194,6 +213,10 @@ namespace Garnet
             APISET().AddClass<0,CUDATreeCommit>("cuda_tree_commit");
             APISET().AddClass<0,CUDAExecutionBundle>("cuda_execution_bundle");
             APISET().AddClass<0,CUDAMTPDraft>("cuda_mtp_draft");
+            APISET().AddClass<0,CUDAKVDeltaCommit>("cuda_kv_delta_commit");
+            APISET().AddClass<0,CUDABF16KVDeltaCommit>("cuda_bf16_kv_delta_commit");
+            APISET().AddClass<0,CUDABF16LowBatchKVDeltaCommit>("cuda_bf16_low_batch_kv_delta_commit");
+            APISET().AddClass<0,CUDABF16Prefill128KVDeltaCommit>("cuda_bf16_prefill128_kv_delta_commit");
             APISET().AddClass<0,CPUTokenizer>("tokenizer");
 			APISET().AddVarFunc("replace_rows_by_mask", &GarnetAPI::ReplaceRowsByMask);
 			APISET().AddVarFunc("tensor_last_row", &GarnetAPI::TensorLastRow);

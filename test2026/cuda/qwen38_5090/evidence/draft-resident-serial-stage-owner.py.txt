@@ -1,0 +1,24 @@
+"""Exclusive diagnostic owner; same original source/library restoration rules."""
+from pathlib import Path
+import ast,hashlib,json
+W=Path(__file__).resolve().parent;M=Path('D:/CantorAI/work/qwen38-5090/test2026/cuda/qwen38_5090');source=M/'run_b4_rowwise_http_quality.py';raw=source.read_bytes();s=raw.decode().replace('\r\n','\n');changes=[]
+def change(a,b):
+    global s
+    count=s.count(a);assert count,(a,count);s=s.replace(a,b);changes.append(dict(old=a,new=b,count=count))
+change('b4-rowwise-http-quality-attempt3','b4-resident-serial-stage-profile-attempt1')
+change('b4-rowwise-http-quality-preparation.json','b4-resident-serial-stage-profile-preparation.json')
+change('B4_rowwise_HTTP_quality_prepared_GPU_unrun','B4_resident_serial_stage_profile_prepared_GPU_unrun')
+change('B4_rowwise_HTTP_controls_and_adapted805_collected_needs_independent_replay','B4_resident_serial_host_stage_controls_collected_needs_independent_replay')
+change('B4_rowwise_HTTP_quality_collected_needs_independent_replay','B4_resident_serial_stage_profile_collected_needs_independent_replay')
+change('probe_b4_rowwise_http_quality.py','probe_b4_resident_serial_stage_profile.py')
+change('launch_b4_http_embedded_cpu.py','launch_b4_resident_serial_stage_cpu.py')
+change('Nineteen CPU startup/source-bundle/protocol/raw-event replay controls; no model/GPU or performance claim.','Six new synthetic physical-group span/ID/clock/claim controls; no model/native/GPU work.')
+change('19 CPU controls failed','6 CPU controls failed')
+change('Same17 symbolic controls in actual embedded native Python. No model imports or GPU requests.','Eighteen actual embedded pure CPU controls:12existing timing/attachment controls not previously embedded-tested, plus6new physical-group trace controls. No model/native/GPU imports.')
+change('17 embedded controls failed','18 embedded controls failed')
+change('Actual source91 B4/MTP3 loopback HTTP: fixed3968+128 padding/order/repeat C1/2/3/4 and C8, joined transport fixture, text/image SSE, invalid ignore_eos, adapted805 natural-stop collection. Full raw IDs compared with retained B1 controls. No performance admission.','Separate source91 resident/serial host-wall diagnostic: same31fixed4k controls unprofiled then profiled,62realHTTPoutputs exact retainedB1, actual callbacks/dispatch and group-span replay. No large transport fixture,805repeat,CUDAkernel elapsed or clean throughput admission.')
+change("and not report['token_mismatches']", "and report['real_request_count']==62 and report['host_stages']['status']=='B4_physical_group_host_stage_intervals_replayed'")
+change('Explicit source91 B4 HTTP study; source89 model unchanged; protected unrelated bodies excluded','Explicit source91 resident/serial host-stage diagnosis; unchanged model/DLL, protected unrelated bodies excluded')
+ast.parse(s);target=W/'run_b4_resident_serial_stage_profile.draft.py';assert not target.exists();target.write_bytes(s.encode())
+launcher=M/'launch_b4_resident_serial_http_worker_v2.py';lr=launcher.read_bytes();ls=lr.decode().replace('b4-resident-serial-quality-v2-preparation.json','b4-resident-serial-stage-profile-preparation.json').replace('native_b4_resident_serial_http_worker.py','native_b4_resident_serial_stage_profile_worker.py');ast.parse(ls);target=W/'launch_b4_resident_serial_stage_profile_worker.draft.py';assert not target.exists();target.write_bytes(ls.encode())
+target=W/'resident-serial-stage-owner-derivation.json';assert not target.exists();target.write_bytes(json.dumps(dict(owner_source_sha256=hashlib.sha256(raw).hexdigest(),owner_draft_sha256=hashlib.sha256(s.encode()).hexdigest(),launcher_source_sha256=hashlib.sha256(lr).hexdigest(),launcher_draft_sha256=hashlib.sha256(ls.encode()).hexdigest(),changes=changes,existing_source_runtime_SDK_checkpoint_all34_current18file_and_private_cache_restoration_retained=True,syntax_checked_only=True,remote_CPU_embedded_or_native_model_execution_unrun=True),indent=2).encode());print('Separate diagnostic owner/launcher prepared; no active source mutation or native execution')

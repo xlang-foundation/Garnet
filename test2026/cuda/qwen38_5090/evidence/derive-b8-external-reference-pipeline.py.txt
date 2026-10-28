@@ -1,0 +1,93 @@
+from pathlib import Path
+import ast,hashlib,json
+
+repo=Path('D:/CantorAI/work/qwen38-5090');m=repo/'test2026/cuda/qwen38_5090'
+sha=lambda raw:hashlib.sha256(raw).hexdigest()
+records={}
+def produce(source,target,replacements):
+    before=(m/source).read_bytes();text=before.decode();steps=[]
+    for a,b,count in replacements:
+        assert text.count(a)==count,(target,a,text.count(a),count)
+        text=text.replace(a,b);steps.append({'before':a,'after':b,'count':count})
+    raw=text.encode();path=m/target;assert not path.exists();path.write_bytes(raw)
+    if target.endswith('.py'):ast.parse(raw)
+    records[target]={'source':source,'source_sha256':sha(before),'source_text':before.decode(),'target_sha256':sha(raw),'replacements':steps}
+
+produce('test_paged_batch8_mtp.bat','test_bf16_batch8_external_reference.bat',[
+    ('probe_paged_batch8_mtp.py','probe_bf16_batch8_external_reference.py',1)])
+produce('run_paged_batch8_mtp.py','run_bf16_batch8_external_reference.py',[
+    ('Exclusive existing-session B8 MTP correctness and memory trial; no timing admission.',
+     'Exclusive fresh B4 full-cache reference for actual closed B8 inputs; no timing admission.',1),
+    ('paged-batch8-mtp-admission-attempt1','bf16-batch8-external-reference-attempt1',1),
+    ('paged-batch8-mtp-preparation.json','bf16-batch8-external-reference-preparation.json',1),
+    ('Paged B8 MTP source drift','B8 external B4 reference source drift',1),
+    ('30strict old/new B8 witness, MTP target-state/token/count/parent and paged input fault controls',
+     'Complete ordinary B8/state/paged and fresh B4 reference metadata/raw-vector/lifecycle dependency faults',1),
+    ('CPU B8 MTP gate failed','CPU B8 external-reference gate failed',1),
+    ('test_paged_batch8_mtp.bat','test_bf16_batch8_external_reference.bat',1),
+    ('Actual existing MTP3/T4/128MiB session: nine B8 short/full3968+128 text/image/permutation/reset cases; retained29complete target states and58raw vectors/IDs; no HTTP/timing admission',
+     'Actual B4/T32/T4 full-FP32-cache/BF16-value ordinary reference:18same-input halves of nine closed B8 cases;58complete captures/116raw vectors/all IDs; no MTP/HTTP/timing admission',1),
+    ('Actual paged B8 MTP target-state/token gate failed','Actual B8 vs B4 external cache reference gate failed',1),
+    ("report['retained_baseline_replay']['status']=='paged_batch8_mtp_retained_ordinary_exact'",
+     "report['local_replay']['status']=='bf16_batch8_external_b4_cache_reference_exact'",1),
+    ('paged_batch8_mtp_collected_needs_replay','bf16_batch8_external_reference_collected_needs_replay',1)])
+
+produce('verify_paged_batch8_mtp.py','verify_bf16_batch8_external_reference.py',[
+    ('Replay every B8 MTP target state/vector/ID against actual closed ordinary bytes.',
+     'Independently replay fresh B4 full-cache reference states/vectors/IDs against actual closed B8 bytes.',1),
+    ('from test2026.cuda.qwen38_5090.paged_batch8_mtp import PARENT, BASELINE, replay_mtp, validate_parent',
+     'from test2026.cuda.qwen38_5090.bf16_batch8_external_reference import PARENT, BASELINE, replay_reference, validate_parent',1),
+    ('paged-batch8-mtp-admission-attempt1','bf16-batch8-external-reference-attempt1',1),
+    ('paged-batch8-mtp-preparation.json','bf16-batch8-external-reference-preparation.json',1),
+    ('paged_batch8_mtp_prepared_gpu_unrun','bf16_batch8_external_reference_prepared_gpu_unrun',1),
+    ("('verify_paged_batch8_mtp.py', 'paged_batch8_mtp.py', 'paged_batch8_model.py',\n                     'verify_bf16_batch8_admission.py', 'bf16_batch8_admission.py', 'bf16_packed_state_gate.py')",
+     "('verify_bf16_batch8_external_reference.py', 'bf16_batch8_external_reference.py', 'bf16_batch8_reference_gate.py',\n                     'bf16_same_precision_gate.py', 'verify_bf16_batch8_admission.py', 'bf16_batch8_admission.py', 'bf16_packed_state_gate.py')",1),
+    ('paged_batch8_mtp_collected_needs_replay','bf16_batch8_external_reference_collected_needs_replay',1),
+    ("assert report['ordinary_parent'] == {'job': PARENT, 'archive_sha256': parent_digest,\n                'proof_sha256': sha(parent_raw), 'ordinary_model_preserved': True, 'mtp_or_http_or_performance_admitted': False}",
+     "assert report['baseline_archive_sha256'] == parent_digest and report['baseline_proof_sha256'] == sha(parent_raw)",1),
+    ('replay_mtp(report,','replay_reference(report,',1),
+    ("report['retained_baseline_replay']","report['local_replay']",1),
+    ('paged_batch8_mtp_target_state_replayed','bf16_batch8_external_reference_replayed',1),
+    ('paged_batch8_mtp_failure_preserved','bf16_batch8_external_reference_failure_preserved',1),
+    ("'mtp_target_state_replay': replayed","'b4_reference_replay': replayed",1),
+    ("'broad_quality_qualified': False, 'http_qualified': False, 'serving_memory_saving_qualified': False,",
+     "'b8_vs_b4_same_input_cache_arithmetic_cases_qualified': passed, 'b1_math_qualified': False,\n                  'broad_quality_qualified': False, 'mtp_qualified': False, 'http_qualified': False, 'serving_memory_saving_qualified': False,",1),
+    ("'target_states': 29 if passed else None","'reference_states': 58 if passed else None",1)])
+
+methods=('bf16_batch8_reference_gate.py','test_bf16_batch8_reference_gate.py',
+         'bf16_batch8_external_reference.py','test_bf16_batch8_external_reference.py',
+         'probe_bf16_batch8_external_reference.py','test_bf16_batch8_external_reference.bat',
+         'run_bf16_batch8_external_reference.py','verify_bf16_batch8_external_reference.py',
+         'test_bf16_batch8_external_pipeline.py','prepare_bf16_batch8_external_reference.py',
+         'evidence/bf16-batch8-external-reference-pipeline-derivation.json')
+source=(m/'prepare_paged_batch8_mtp.py').read_text()
+tree=ast.parse(source);node=next(n for n in tree.body if isinstance(n,ast.Assign) and any(isinstance(v,ast.Name) and v.id=='METHODS' for v in n.targets))
+old='\n'.join(source.splitlines()[node.lineno-1:node.end_lineno])
+scope=('Actual fresh ordinary B4/T32prefill/T4decode full-FP32-cache with explicit BF16-value roundtrip using baseline1a1d and bounded128/two-page input. '
+       'Require actual two-machine closed paged B8 parent, all nine same-input cases split into18four-row references;58complete logical captures/116raw finite vectors/all IDs exact to original B8. '
+       'Existing guards and shared projections/linear arithmetic unchanged. This isolates cache representation/batch geometry only, not independent framework or B1/all-model math. '
+       'Actual full-cache model/vision must fit; preserve failures. Source/runtime/SDK unchanged, raw CPU/GPU ledgers/memory samples/gaps/cache retirement and independent replay mandatory. '
+       'No MTP/805quality/HTTP/timing/performance admission; serving peaks, strongest tuned references, matched vLLM4K/repetitions/INT4/4B and overall2x remain open.')
+scope_line=next(s for s in source.splitlines() if "'scope': 'Existing baseline" in s)
+produce('prepare_paged_batch8_mtp.py','prepare_bf16_batch8_external_reference.py',[
+    ('Require actual two-machine B8 preservation proof before pinning an MTP trial.',
+     'Bind actual two-machine B8 preservation proof before preparing a fresh full-cache B4 reference.',1),
+    (old,'METHODS = '+repr(methods),1),
+    ('from test2026.cuda.qwen38_5090.paged_batch8_mtp import PARENT, BASELINE, validate_parent',
+     'from test2026.cuda.qwen38_5090.bf16_batch8_external_reference import PARENT, BASELINE, validate_parent',1),
+    ("'test_paged_batch8_model', 'test_paged_prompt_rows', 'test_paged_prompt_component', 'test_paged_batch8_mtp'",
+     "'test_paged_batch8_model', 'test_paged_prompt_rows', 'test_paged_prompt_component',\n               'test_bf16_same_precision_gate', 'test_bf16_batch8_reference_gate', 'test_bf16_batch8_external_reference', 'test_bf16_batch8_external_pipeline'",1),
+    ('== 30','== 43',1),
+    ('paged-batch8-mtp-cpu-ledger','bf16-batch8-external-reference-cpu-ledger',1),
+    ('30existing B8 ordinary/state/paged native controls and new independent MTP target-state/token/count/closed-parent faults',
+     '43existing B8/state/paged controls and strict fresh B4 cache/raw-vector/metadata/parent/lifecycle dependency faults',1),
+    ('paged_batch8_mtp_prepared_gpu_unrun','bf16_batch8_external_reference_prepared_gpu_unrun',1),
+    (scope_line,"         'scope': "+repr(scope)+'}',1),
+    ('paged-batch8-mtp-preparation.json','bf16-batch8-external-reference-preparation.json',1),
+    ('paged-batch8-mtp-upload-plan.json','bf16-batch8-external-reference-upload-plan.json',1),
+    ("'cpu_tests': 30","'cpu_tests': 43",1)])
+
+record=m/'evidence/bf16-batch8-external-reference-pipeline-derivation.json'
+assert not record.exists();record.write_bytes(json.dumps({'status':'exact_existing_owner_checker_preparer_launcher_derivation_gpu_unrun',
+    'files':records,'scope':'Lifecycle/source/cache/ledger/archive/resource replay unchanged; reference report/strict comparator/parent/scope and explicit CPU dependencies differ. No GPU result.'},indent=2).encode())
+print(json.dumps({'status':'external_reference_pipeline_derived','files':list(records)}))

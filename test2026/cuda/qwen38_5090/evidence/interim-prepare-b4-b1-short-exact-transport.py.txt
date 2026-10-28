@@ -1,0 +1,14 @@
+from pathlib import Path
+import hashlib,json,zipfile
+W=Path(__file__).resolve().parent;O=W.parent/'outputs';R=Path('D:/CantorAI/work/qwen38-5090');p=json.loads((R/'test2026/cuda/qwen38_5090/evidence/b4-b1-short-preparation.json').read_bytes());sha=lambda b:hashlib.sha256(b).hexdigest();pins={**p['files'],**p['audit_dependencies']};selected={};paths={}
+for n,h in pins.items():
+    assert 'probe_native_external_prefix_batch.py' not in n
+    path=(W/'b4-build-frozen-tokenizer-oracle.zip' if n=='results/tokenizer-nfc-cpu-oracles.zip' else O/Path(n).name if n.endswith('-evidence.zip') else R/n.removeprefix('Garnet/'))
+    if path.is_file() and path.stat().st_size>=1024 and sha(path.read_bytes())==h:selected[n]=h;paths[n]=path
+assert selected['results/mmmu-quality-corpus.zip']==pins['results/mmmu-quality-corpus.zip'] and selected['results/paged-batch8-model-preservation-attempt1-evidence.zip']==pins['results/paged-batch8-model-preservation-attempt1-evidence.zip']
+def carrier(target,paths):
+    with zipfile.ZipFile(target,'x',zipfile.ZIP_DEFLATED) as z:
+        for n,path in sorted(paths.items()):
+            info=zipfile.ZipInfo('transport/'+n,(2026,10,27,0,0,0));info.compress_type=zipfile.ZIP_DEFLATED;info.create_system=0;info.external_attr=0o600<<16;z.writestr(info,path.read_bytes())
+target=W/'b4-b1-short-transport-parent.zip';assert not target.exists();carrier(target,paths)
+receipt=dict(status='B4_B1_short_exact_transport_parent_prepared',files=selected,source_name=target.name,source_sha256=sha(target.read_bytes()),source_bytes=target.stat().st_size,model_or_archive_or_numeric_gates_changed=False);(W/'b4-b1-short-transport-inputs.json').write_bytes(json.dumps(receipt,indent=2).encode());print(json.dumps({k:v for k,v in receipt.items() if k!='files'}|dict(files=len(selected))))

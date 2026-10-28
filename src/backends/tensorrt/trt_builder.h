@@ -68,6 +68,10 @@ namespace Garnet {
             capturedOptimizationLevel = level;
         }
         void SetCapturedStrictFP32(bool value) { capturedStrictFP32 = value; }
+        size_t ExternalCompressedWeightInputs() const { return externalCompressedBindings.size(); }
+        size_t ExternalCompressedWeightBytes() const {
+            size_t bytes=0;for(const auto& item:externalCompressedBindings)bytes+=item.second.bytes;return bytes;
+        }
         size_t ExternalBF16WeightInputs() const { return externalBF16Bindings.size(); }
         size_t InternalPackedStoreCount() const { return internalPackedStores; }
         size_t InternalPackedRootCount() const { return internalPackedRoots; }
@@ -82,6 +86,11 @@ namespace Garnet {
         void SetCapturedWeightProfile(const std::string& profile) {
             capturedWeightProfile = profile;
         }
+        size_t NativeCTInt4WeightCount() const { return nativeCTInt4Weights.size(); }
+        size_t NativeFP8WeightCount() const { return nativeFP8Weights.size(); }
+        size_t NativeFP8M128ProjectionCount() const { return nativeFP8M128ProjectionCount_; }
+        size_t NativeFP8Z128ProjectionCount() const { return nativeFP8Z128ProjectionCount_; }
+        size_t NativeNVFP4WeightCount() const { return nativeNVFP4Weights.size(); }
 
         X::Value ExportMatmulEngine(const std::string& enginePath, const std::vector<int>& inputShape, const std::vector<int>& weightShape);
         X::Value RunMatmulEngine(const std::string& enginePath, X::Value inputValue, X::Value weightValue);
@@ -154,7 +163,7 @@ namespace Garnet {
         static std::shared_ptr<void> RetainCachedExecution(
             const std::string& enginePath,
             const SafeTensorsIndex* weightIndex,
-            std::string& errorMessage,bool userManagedWorkspace=false);
+            std::string& errorMessage,bool userManagedWorkspace=false,bool embeddedWeights=false);
         X::Value RunCapturedEngine(
             const std::string& enginePath,
             X::Value inputs,
@@ -197,6 +206,19 @@ namespace Garnet {
         int capturedOptimizationLevel = 3;
         bool capturedStrictFP32 = false;
         std::unordered_map<std::string, nvinfer1::ITensor*> weightTensorMap;
+        struct NativeNVFP4Weight {
+            nvinfer1::ITensor* scales=nullptr;
+            int rows=0,columns=0;
+            float weightScale=0,inputScale=0;
+        };
+        std::unordered_map<nvinfer1::ITensor*,NativeNVFP4Weight> nativeNVFP4Weights;
+        std::deque<std::vector<unsigned char>> nativeNVFP4ScaleStorage;
+        struct NativeFP8Weight {int rows,columns;float weightScale,inputScale;std::string logicalName;};
+        std::unordered_map<nvinfer1::ITensor*,NativeFP8Weight> nativeFP8Weights;
+        size_t nativeFP8M128ProjectionCount_=0;
+        size_t nativeFP8Z128ProjectionCount_=0;
+        struct NativeCTInt4Weight {nvinfer1::ITensor* scales;int rows,columns;};
+        std::unordered_map<nvinfer1::ITensor*,NativeCTInt4Weight> nativeCTInt4Weights;
         std::deque<float> scalarWeights;
         std::deque<unsigned short> bfloat16ScalarWeights;
         std::deque<long long> integerWeights;
@@ -213,6 +235,8 @@ namespace Garnet {
             std::shared_ptr<QuantizedWeight>> capturedQuantizedWeights;
         std::string capturedWeightProfile = "bf16";
         std::unordered_map<std::string,std::pair<unsigned long long,size_t>> externalBF16Bindings;
+        struct ExternalCompressedBinding {unsigned long long packedId=0,scaleId=0;size_t bytes=0;};
+        std::unordered_map<std::string,ExternalCompressedBinding> externalCompressedBindings;
         nvinfer1::ITensor* lastOutput = nullptr;
         nvinfer1::ITensor* pendingKVKeyPages = nullptr;
         nvinfer1::ITensor* pendingKVValuePages = nullptr;
@@ -244,6 +268,13 @@ namespace Garnet {
 
         nvinfer1::ITensor* GetOrCreateTRTTensor(X::Value garnetTensorVal);
         nvinfer1::ITensor* GetOrCreateTRTWeight(const std::string& weightName);
+        nvinfer1::ITensor* GetCTInt4Weight(const std::string&);
+        nvinfer1::ITensor* ProjectCTInt4(nvinfer1::ITensor*,nvinfer1::ITensor*);
+        nvinfer1::ITensor* GetModelOptFP8Weight(const std::string&,const SafeTensorMetadata&);
+        nvinfer1::ITensor* ProjectModelOptFP8(nvinfer1::ITensor*,nvinfer1::ITensor*);
+        size_t BindExternalModelOptWeight(const std::string&,nvinfer1::ITensor*,nvinfer1::ITensor*);
+        nvinfer1::ITensor* GetModelOptNVFP4Weight(const std::string&,const SafeTensorMetadata&);
+        nvinfer1::ITensor* ProjectModelOptNVFP4(nvinfer1::ITensor*,nvinfer1::ITensor*);
         nvinfer1::ITensor* GetOrCreateTRTWeightFP32(const std::string& weightName);
         nvinfer1::ITensor* BroadcastLastDimension(
             nvinfer1::ITensor* tensor,

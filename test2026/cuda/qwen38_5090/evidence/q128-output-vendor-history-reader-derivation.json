@@ -1,0 +1,36 @@
+{
+  "status": "CPU_only_historical_trace_workspace_assumption_repaired",
+  "source": "analyze-q128-output-vendor-history.py",
+  "target": "analyze-q128-output-vendor-history-attempt2.py",
+  "source_sha256": "7d5cc086d31184b964dcb92ee639feb5cec779e558d1f69e1312cd9d2eb66546",
+  "target_sha256": "3cfddcee4d788b4f3113a55c348a40ac6c53304c0768ae04a52fe83d2aab466c",
+  "changes": [
+    {
+      "old": "'workSpaceSizeInBytes=4194304 beta=0 outOfPlace=0'",
+      "new": "'beta=0 outOfPlace=0'",
+      "count": 1
+    },
+    {
+      "old": "config=dict(re.findall(r'(\\w+)=([^\\s]+)',a[1]));assert",
+      "new": "workspace=re.search(r'workSpaceSizeInBytes=(\\d+)',line);assert workspace and int(workspace[1])>0;config=dict(re.findall(r'(\\w+)=([^\\s]+)',a[1]));assert",
+      "count": 1
+    },
+    {
+      "old": "printed_algorithm=config))",
+      "new": "printed_algorithm=config,workspace_bytes=int(workspace[1])))",
+      "count": 1
+    },
+    {
+      "old": "P_configuration_histogram=",
+      "new": "P_workspace_bytes_histogram=dict(collections.Counter(e['workspace_bytes'] for e in p)),immediately_after_Q_workspace_bytes_histogram=dict(collections.Counter(e['workspace_bytes'] for e in following)),P_configuration_histogram=",
+      "count": 1
+    },
+    {
+      "old": "compute='F32',workspace_bytes=4194304",
+      "new": "compute='F32',workspace_bytes_recorded_per_actual_call=True",
+      "count": 1
+    }
+  ],
+  "original_model_or_numeric_gates_unchanged": true,
+  "GPU_or_model_rerun": false
+}

@@ -1,0 +1,10 @@
+from pathlib import Path
+import datetime,hashlib,json,struct,time,zipfile
+W=Path(__file__).resolve().parent;sha=lambda b:hashlib.sha256(b).hexdigest();begin=int(datetime.datetime(2026,10,20,tzinfo=datetime.timezone.utc).timestamp())
+with zipfile.ZipFile(W/'fp8-policy-cache-object-diagnostic.zip') as z:
+    report=json.loads(z.read('report.json'));row=next(r for r in report['changed_objects'] if not r['old_header_only_reconstructed']);raw=z.read(row['retained_file']);assert sha(raw)==row['after_sha256'];offset=row['timestamp_offset'];prefix=raw[:offset];suffix=raw[offset+4:];end=row['timestamp'];found=None;start=time.monotonic()
+    for stamp in range(end,begin-1,-1):
+        h=hashlib.sha256(prefix);h.update(struct.pack('<I',stamp));h.update(suffix)
+        if h.hexdigest()==row['before_sha256']:
+            candidate=prefix+struct.pack('<I',stamp)+suffix;target=W/'fp8-policy-cache-historical-lowbatch-full-window.cu.obj';assert not target.exists() or target.read_bytes()==candidate;target.write_bytes(candidate);found=dict(timestamp=stamp,sha256=sha(candidate),file=target.name);break
+    r=dict(status='readonly_COＦＦ_timestamp_bounded_window_search',source_sha256=sha(raw),target_sha256=row['before_sha256'],begin_epoch=begin,end_epoch=end,match=found,process_seconds=time.monotonic()-start,no_source_build_or_GPU_mutation=True);(W/'fp8-policy-cache-historical-timestamp-full-window.json').write_bytes(json.dumps(r,indent=2).encode());print(json.dumps(r),flush=True)

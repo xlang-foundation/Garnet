@@ -1,0 +1,204 @@
+{
+  "status": "strided_canonical_kv_component_prepared_cpu_only",
+  "files": {
+    "attention_kv_delta_strided_core.cuh": "d5a69d576eb839820dab54db2ccc0c45761c65786f8774455559870576616fec",
+    "attention_kv_delta_strided_core.cu": "c20bfeed1fd10259cc6c38017c265edb00467a0c5459d627f85ca7f6472bb2a1",
+    "attention_kv_delta_strided_test.cu": "ca7876c8e9e08eddc1f69b0fce08546256f1a1f2f28a9b09097d3c760ff6542d",
+    "attention_kv_canonical_layout.h": "44cd65576fb742fbdf54c6cb2453f9d3f861946f8889508b60d0cdcb6a71e3e4"
+  },
+  "base_source_sha256": {
+    "test2026/cuda/qwen38_5090/attention_kv_delta_cached_core.cu": "fd00f90269e09b7ef64a5cb78876662718ab3d8762b512e0ed98bb0840a79ade",
+    "test2026/cuda/qwen38_5090/attention_kv_delta_core.cu": "253bf11c8f154b4b23c1bd6cbb08462aec59717be71cec56fc0816bee704b120",
+    "test2026/cuda/qwen38_5090/attention_kv_delta_cached_test.cu": "585cec2149b6ddeffa893fef4bdd6671be4f9ec61d00dcf650d6c300954ba309",
+    "xModel/qwen35/vl_0_8b/cuda_packed_program.py": "a23a6b16bb64fd87bd45fd00b07f75050605aff2cc215fde4e29f9a0af61e32f"
+  },
+  "core_derivation": [
+    [
+      "#include \"attention_kv_delta_cached_core.cuh\"",
+      "#include \"attention_kv_delta_strided_core.cuh\"\n#include <climits>",
+      1
+    ],
+    [
+      "int RunQwen35AttentionKVOverlayCached(",
+      "int RunQwen35AttentionKVOverlayStrided(",
+      1
+    ],
+    [
+      "int strategy,cudaStream_t stream) noexcept {",
+      "int strategy,size_t cacheBatchStride,cudaStream_t stream) noexcept {",
+      1
+    ],
+    [
+      "if(!validCached(c)||!in||!output||strategy<0||strategy>2||(strategy!=0&&!workspace))return 1;",
+      "if(!validCached(c)||!in||!output||strategy<0||strategy>2||(strategy!=0&&!workspace)||cacheBatchStride<size_t(c.kv)*c.capacity*c.dim||cacheBatchStride>INT_MAX)return 1;",
+      1
+    ],
+    [
+      "float* scratch,bool hybrid){",
+      "float* scratch,bool hybrid,size_t cacheBatchStride){",
+      2
+    ],
+    [
+      "const float* scratch,float* output,bool hybrid){",
+      "const float* scratch,float* output,bool hybrid,size_t cacheBatchStride){",
+      1
+    ],
+    [
+      "const float* chunkValue,float* output){",
+      "const float* chunkValue,float* output,size_t cacheBatchStride){",
+      1
+    ],
+    [
+      "((size_t(b)*c.kv+kh)*c.capacity+position)*c.dim",
+      "size_t(b)*cacheBatchStride+(size_t(kh)*c.capacity+position)*c.dim",
+      2
+    ],
+    [
+      "((size_t(b)*c.kv+kh)*c.capacity+k)*c.dim",
+      "size_t(b)*cacheBatchStride+(size_t(kh)*c.capacity+k)*c.dim",
+      2
+    ],
+    [
+      "(float*)workspace,hybrid);",
+      "(float*)workspace,hybrid,cacheBatchStride);",
+      2
+    ],
+    [
+      "(float*)output,hybrid);",
+      "(float*)output,hybrid,cacheBatchStride);",
+      1
+    ],
+    [
+      "(float*)output);",
+      "(float*)output,cacheBatchStride);",
+      2
+    ]
+  ],
+  "commit_derivation": [
+    [
+      "__global__ void commitPrefix(",
+      "__global__ void commitPrefixStrided("
+    ],
+    [
+      "float* canonicalKey,float* canonicalValue){",
+      "float* canonicalKey,float* canonicalValue,size_t cacheBatchStride){"
+    ],
+    [
+      "((size_t(b)*c.kv+head)*c.capacity+slot)*c.dim+d",
+      "size_t(b)*cacheBatchStride+(size_t(head)*c.capacity+slot)*c.dim+d"
+    ]
+  ],
+  "commit_wrapper": "int CommitQwen35AttentionKVPrefixStrided(const Qwen35AttentionCoreConfig& c,const void* const* in,const float* accepted,void* key,void* value,size_t cacheBatchStride,cudaStream_t stream) noexcept {\n if(!validCached(c)||!in||!accepted||!key||!value||cacheBatchStride<size_t(c.kv)*c.capacity*c.dim||cacheBatchStride>INT_MAX)return 1;\n if(!in[1]||!in[2]||!in[6]||!in[7])return 1;\n const int count=c.batch*c.tokens*c.kv*c.dim;\n commitPrefixStrided<<<(count+255)/256,256,0,stream>>>(c,(const float*)in[1],(const float*)in[2],(const float*)in[6],(const float*)in[7],accepted,(float*)key,(float*)value,cacheBatchStride);\n return cudaGetLastError()==cudaSuccess?0:1;\n}\n",
+  "driver_derivation": [
+    [
+      "#include \"attention_kv_delta_cached_core.cuh\"",
+      "#include \"attention_kv_delta_cached_core.cuh\"\n#include \"attention_kv_delta_strided_core.cuh\"\n#include \"attention_kv_canonical_layout.h\""
+    ],
+    [
+      "if(argc<2||argc>3||(argc==3&&std::string(argv[2])!=\"--timing\"))throw std::runtime_error(\"Raw prefix and optional --timing required\");\n const bool timing=argc==3;",
+      "if(argc!=2)throw std::runtime_error(\"Strided canonical correctness requires one raw output prefix\");\n const bool timing=false;"
+    ],
+    [
+      "struct Case {",
+      "// One actual-sized canonical state allocation, with canaries in every unrelated\n// word. Only the selected layer K/V windows are initialized with fixture data.\n__global__ void checkCanonicalPadding(const unsigned* base,size_t stride,size_t keyOffset,size_t valueOffset,size_t cacheRow,unsigned* failed){\n const size_t guard=64,b=blockIdx.y;\n for(size_t p=size_t(blockIdx.x)*blockDim.x+threadIdx.x;p<stride;p+=size_t(gridDim.x)*blockDim.x){\n  if((p>=keyOffset&&p<keyOffset+cacheRow)||(p>=valueOffset&&p<valueOffset+cacheRow))continue;\n  if(base[guard+b*stride+p]!=0x42424242u)atomicExch(failed,1u);\n }\n if(b==0&&blockIdx.x==0&&threadIdx.x<guard){\n  if(base[threadIdx.x]!=0x42424242u||base[guard+4*stride+threadIdx.x]!=0x42424242u)atomicExch(failed,1u);\n }\n}\nstruct CanonicalFixture {\n float* base=nullptr;unsigned* failed=nullptr;size_t stride,keyOffset,valueOffset,cacheRow;static constexpr size_t guard=64;\n CanonicalFixture(size_t s,size_t k,size_t v,size_t row):stride(s),keyOffset(k),valueOffset(v),cacheRow(row){\n  if(k+row>s||v+row>s||!(k+row<=v||v+row<=k))throw std::runtime_error(\"Invalid canonical fixture spans\");\n  Check(cudaMalloc(reinterpret_cast<void**>(&base),(4*stride+2*guard)*4));Check(cudaMalloc(reinterpret_cast<void**>(&failed),4));\n }\n ~CanonicalFixture(){if(failed)cudaFree(failed);if(base)cudaFree(base);}\n float* key(){return base+guard+keyOffset;}float* value(){return base+guard+valueOffset;}\n void initialize(const std::vector<float>& k,const std::vector<float>& v){\n  if(k.size()!=4*cacheRow||v.size()!=4*cacheRow)throw std::runtime_error(\"Canonical fixture input size mismatch\");\n  Check(cudaMemset(base,0x42,(4*stride+2*guard)*4));\n  Check(cudaMemcpy2D(key(),stride*4,k.data(),cacheRow*4,cacheRow*4,4,cudaMemcpyHostToDevice));\n  Check(cudaMemcpy2D(value(),stride*4,v.data(),cacheRow*4,cacheRow*4,4,cudaMemcpyHostToDevice));Check(cudaDeviceSynchronize());\n }\n std::vector<float> read(bool values){std::vector<float> result(4*cacheRow);Check(cudaMemcpy2D(result.data(),cacheRow*4,values?value():key(),stride*4,cacheRow*4,4,cudaMemcpyDeviceToHost));return result;}\n void padding(cudaStream_t stream){\n  Check(cudaMemsetAsync(failed,0,4,stream));checkCanonicalPadding<<<dim3(4096,4),256,0,stream>>>((const unsigned*)base,stride,keyOffset,valueOffset,cacheRow,failed);Check(cudaGetLastError());Check(cudaStreamSynchronize(stream));\n  unsigned error=0;Check(cudaMemcpy(&error,failed,4,cudaMemcpyDeviceToHost));if(error)throw std::runtime_error(\"Unrelated canonical state or guard mutated\");\n }\n};\n\nstruct Case {"
+    ],
+    [
+      "Buffer accepted(c.batch);",
+      "const size_t which=ci%2;\n  CanonicalFixture canonical(kCanonicalStride,kCanonicalKeyOffsets[which],kCanonicalValueOffsets[which],size_t(c.kv)*c.capacity*c.dim);canonical.initialize(host[4],host[5]);\n  const void* stridedIn[8];for(int i=0;i<8;++i)stridedIn[i]=in[i];stridedIn[4]=canonical.key();stridedIn[5]=canonical.value();\n  printf(\"STRIDED_CANONICAL case=%zu stride=%zu layer=%d key_offset=%zu value_offset=%zu\\n\",ci,kCanonicalStride,kCanonicalLayers[which],kCanonicalKeyOffsets[which],kCanonicalValueOffsets[which]);fflush(stdout);\n  Buffer accepted(c.batch);"
+    ],
+    [
+      "for(int trial=0;trial<3;++trial){",
+      "for(int strategy=0;strategy<3;++strategy){\n   if(Garnet::RunQwen35AttentionKVOverlayStrided(c,stridedIn,out[0],workspace.data(),strategy,kCanonicalStride,stream))throw std::runtime_error(\"Strided readonly overlay failed\");Check(cudaStreamSynchronize(stream));\n   if(!Equal(outputs[0]->read(),readonlyReference)||!Equal(canonical.read(false),host[4])||!Equal(canonical.read(true),host[5]))throw std::runtime_error(\"Strided readonly output differs or mutates KV\");canonical.padding(stream);\n  }\n  for(int trial=0;trial<3;++trial){\n   canonical.initialize(host[4],host[5]);"
+    ],
+    [
+      "if(!Equal(inputs[4]->read(),expectedKey)||!Equal(inputs[5]->read(),expectedValue))throw std::runtime_error(\"Zero/partial prefix full KV mismatch\");",
+      "if(!Equal(inputs[4]->read(),expectedKey)||!Equal(inputs[5]->read(),expectedValue))throw std::runtime_error(\"Zero/partial prefix full KV mismatch\");\n   if(Garnet::RunQwen35AttentionKVOverlayStrided(c,stridedIn,out[0],workspace.data(),trial,kCanonicalStride,stream))throw std::runtime_error(\"Strided prefix target failed\");Check(cudaStreamSynchronize(stream));\n   if(!Equal(outputs[0]->read(),readonlyReference))throw std::runtime_error(\"Strided partial target context differs\");\n   if(Garnet::CommitQwen35AttentionKVPrefixStrided(c,stridedIn,accepted.data(),canonical.key(),canonical.value(),kCanonicalStride,stream))throw std::runtime_error(\"Strided prefix commit failed\");Check(cudaStreamSynchronize(stream));\n   if(!Equal(canonical.read(false),expectedKey)||!Equal(canonical.read(true),expectedValue))throw std::runtime_error(\"Strided zero/partial full KV mismatch\");canonical.padding(stream);"
+    ],
+    [
+      "inputs[4]->upload(host[4]);inputs[5]->upload(host[5]);accepted.upload(fullCounts);",
+      "inputs[4]->upload(host[4]);inputs[5]->upload(host[5]);accepted.upload(fullCounts);canonical.initialize(host[4],host[5]);"
+    ],
+    [
+      "auto run=[&](int mode){if(mode>=4)",
+      "auto run=[&](int mode){if(mode>=8){if(Garnet::RunQwen35AttentionKVOverlayStrided(c,stridedIn,out[0],workspace.data(),mode-8,kCanonicalStride,stream))return 1;return Garnet::CommitQwen35AttentionKVPrefixStrided(c,stridedIn,accepted.data(),canonical.key(),canonical.value(),kCanonicalStride,stream);}if(mode>=4)"
+    ],
+    [
+      "Graph graphs[8];std::vector<std::vector<float>> witnessed(8);",
+      "auto readKey=[&](int mode){return mode>=8?canonical.read(false):(mode>=4?inputs[4]:outputs[1])->read();};\n  auto readValue=[&](int mode){return mode>=8?canonical.read(true):(mode>=4?inputs[5]:outputs[2])->read();};\n  Graph graphs[11];std::vector<std::vector<float>> witnessed(11);"
+    ],
+    [
+      "const char* variants[8]={\"baseline\",\"compact\",\"tiled\",\"split\",\"overlay\",\"cached-compact\",\"cached-legacy\",\"hybrid\"};",
+      "const char* variants[11]={\"baseline\",\"compact\",\"tiled\",\"split\",\"overlay\",\"cached-compact\",\"cached-legacy\",\"hybrid\",\"strided-compact\",\"strided-legacy\",\"strided-hybrid\"};"
+    ],
+    [
+      "for(int mode=0;mode<8;++mode){\n   if(run(mode))",
+      "for(int mode=0;mode<11;++mode){\n   if(run(mode))"
+    ],
+    [
+      "if(!Equal(inputs[i]->read(),i==4?nextKey:i==5?nextValue:host[i]))throw std::runtime_error(\"Unexpected input mutation\");}",
+      "if(!Equal(inputs[i]->read(),i==4?nextKey:i==5?nextValue:host[i]))throw std::runtime_error(\"Unexpected input mutation\");}\n  if(!Equal(canonical.read(false),nextKey)||!Equal(canonical.read(true),nextValue))throw std::runtime_error(\"Strided full committed KV mismatch\");canonical.padding(stream);"
+    ],
+    [
+      "if(Garnet::RunQwen35AttentionKVOverlayCached(invalid,in,out[0],workspace.data(),0,stream)==0",
+      "if(Garnet::RunQwen35AttentionKVOverlayStrided(invalid,stridedIn,out[0],workspace.data(),0,kCanonicalStride,stream)==0||Garnet::RunQwen35AttentionKVOverlayStrided(c,stridedIn,out[0],workspace.data(),3,kCanonicalStride,stream)==0||Garnet::RunQwen35AttentionKVOverlayStrided(c,stridedIn,out[0],workspace.data(),0,0,stream)==0||Garnet::RunQwen35AttentionKVOverlayStrided(c,stridedIn,out[0],workspace.data(),0,size_t(c.kv)*c.capacity*c.dim-1,stream)==0||Garnet::CommitQwen35AttentionKVPrefixStrided(c,stridedIn,accepted.data(),canonical.key(),canonical.value(),0,stream)==0||Garnet::RunQwen35AttentionKVOverlayCached(invalid,in,out[0],workspace.data(),0,stream)==0"
+    ],
+    [
+      "\\\"variants_checked\\\":8",
+      "\\\"variants_checked\\\":11,\\\"strided_readonly_exact\\\":true,\\\"strided_prefix_trials\\\":3,\\\"canonical_padding_preserved\\\":true"
+    ]
+  ],
+  "canonical_stride_words": 173932544,
+  "canonical_state_bytes": 2782920704,
+  "selected_layers": [
+    {
+      "layer": 3,
+      "key": 2482176,
+      "value": 6676480
+    },
+    {
+      "layer": 63,
+      "key": 165543936,
+      "value": 169738240
+    }
+  ],
+  "fixture_config_sha256": "71fa01bb64de20971045cd82a82c0ebb25a54e1b0a3f09ef23cf5479e9c54df8",
+  "profile_count": 12,
+  "variants": 11,
+  "timing_enabled": false,
+  "gpu_run": false,
+  "compiled": false,
+  "scope": "Readonly strided views and explicit accepted-prefix scatter into actual-sized canonical FP32 state. First/last full-attention offsets, guards/canaries in every unrelated word. Standalone correctness only; full canonical cache checks remain in-process witnesses until raw replay; no model integration/performance admission.",
+  "post_driver_derivation": [
+    [
+      "if(Garnet::RunQwen35AttentionKVOverlayStrided(invalid,stridedIn,out[0],workspace.data(),0,kCanonicalStride,stream)==0",
+      "if(Garnet::RunQwen35AttentionKVOverlayStrided(c,stridedIn,canonical.key(),workspace.data(),0,kCanonicalStride,stream)==0||Garnet::RunQwen35AttentionKVOverlayStrided(c,stridedIn,out[0],workspace.data(),0,size_t(2147483648ULL),stream)==0||Garnet::CommitQwen35AttentionKVPrefixStrided(c,stridedIn,accepted.data(),canonical.key(),canonical.value(),size_t(2147483648ULL),stream)==0||Garnet::RunQwen35AttentionKVOverlayStrided(invalid,stridedIn,out[0],workspace.data(),0,kCanonicalStride,stream)==0"
+    ],
+    [
+      "  if(!timing){printf(",
+      "  if(!Equal(canonical.read(false),nextKey)||!Equal(canonical.read(true),nextValue))throw std::runtime_error(\"Rejected controls changed canonical KV\");canonical.padding(stream);\n  if(!timing){printf("
+    ],
+    [
+      "  for(int trial=0;trial<3;++trial){",
+      "  Graph prefixGraph;\n  Check(cudaStreamBeginCapture(stream,cudaStreamCaptureModeGlobal));\n  if(Garnet::CommitQwen35AttentionKVPrefixStrided(c,stridedIn,accepted.data(),canonical.key(),canonical.value(),kCanonicalStride,stream))throw std::runtime_error(\"Strided prefix graph capture failed\");\n  Check(cudaStreamEndCapture(stream,&prefixGraph.graph));Check(cudaGraphInstantiate(&prefixGraph.executable,prefixGraph.graph,nullptr,nullptr,0));\n  for(int trial=0;trial<3;++trial){"
+    ],
+    [
+      "   Save(std::string(argv[1])+\"-case\"+std::to_string(ci)+\"-commit\"+std::to_string(trial)+\"-counts.f32\",counts);",
+      "   canonical.initialize(host[4],host[5]);Check(cudaGraphLaunch(prefixGraph.executable,stream));Check(cudaStreamSynchronize(stream));\n   if(!Equal(canonical.read(false),expectedKey)||!Equal(canonical.read(true),expectedValue))throw std::runtime_error(\"Captured dynamic-prefix full KV mismatch\");canonical.padding(stream);\n   Save(std::string(argv[1])+\"-case\"+std::to_string(ci)+\"-commit\"+std::to_string(trial)+\"-counts.f32\",counts);"
+    ],
+    [
+      "\\\"strided_prefix_trials\\\":3",
+      "\\\"strided_prefix_trials\\\":3,\\\"strided_prefix_graph_trials\\\":3"
+    ]
+  ],
+  "unchanged_source_sha256": {
+    "src/cuda/qwen35_attention_core.cu": "3ad24bb00acc2f77a5b7258e4b7fecb248c682b3ad257d28af8bc8f336635165",
+    "src/cuda/qwen35_attention_core.cuh": "1a3997a15f4aa897f2bc69bf6a3afbef9a58f166fb094bfb858fac1b170e166f",
+    "test2026/cuda/qwen38_5090/attention_kv_delta_core.cuh": "c53534e70b1acdf307bcd15d470aa51fe3bd040bafa37db54af0b068fdef92f9",
+    "test2026/cuda/qwen38_5090/attention_kv_delta_cached_core.cuh": "c1e6c5ba95987c9d7baf54e49bafda2921aa1647e1e4457d89dc2351a31d44f4"
+  },
+  "method_sha256": {
+    "build_attention_kv_delta_strided.bat": "7334c336ccf9e8a542440944e0ba222dd5da067aaaa7c911c8ab6206f209abb4",
+    "run_attention_kv_delta_strided.py": "409daa779d679612c2439e468756158251300374b5123b02fdd7df796af21b51"
+  },
+  "cpu_source_derivation_verified": true
+}

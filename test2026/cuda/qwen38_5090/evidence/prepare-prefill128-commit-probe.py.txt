@@ -1,0 +1,26 @@
+from pathlib import Path
+import hashlib,json,os,sys
+repo=Path('D:/CantorAI/work/qwen38-5090');m=repo/'test2026/cuda/qwen38_5090';work=Path(__file__).resolve().parent
+sys.path.insert(0,str(repo));from test2026.cuda.qwen38_5090.bf16_prefill128_layout import build_bf16_prefill128_layout
+from test2026.cuda.qwen38_5090.run_logged import run
+layout=build_bf16_prefill128_layout();sha=lambda raw:hashlib.sha256(raw).hexdigest()
+header='#pragma once\n#include <cstdint>\nstruct Prefill128FixtureRow{bool full;int64_t canonical,target,first,second;};\ninline constexpr Prefill128FixtureRow prefill128Fixture[]={\n'
+for row in layout['layers']:
+    header+='    {'+','.join((str(row['kind']=='full_attention').lower(),*(str(row[n]) for n in ('offset','target_offset','state1_width','state2_width'))))+'},\n'
+header+='};\n';target=m/'prefill128_commit_fixture.h';raw=header.encode();assert not target.exists() or target.read_bytes()==raw
+if not target.exists():target.write_bytes(raw)
+fixture=m/'evidence/prefill128-commit-probe-layout.json';raw=json.dumps(layout,indent=2).encode();assert not fixture.exists() or fixture.read_bytes()==raw
+if not fixture.exists():fixture.write_bytes(raw)
+files=('bf16_prefill128_commit_oracle.py','test_bf16_prefill128_commit_oracle.py','probe_bf16_prefill128_commit.cu','prefill128_commit_fixture.h',
+       'qwen38_bf16_prefill128_commit.cu','qwen38_bf16_prefill128_commit.cuh','evidence/prefill128-commit-probe-layout.json')
+os.chdir(repo);code=run([sys.executable,'-m','unittest','test2026.cuda.qwen38_5090.test_bf16_prefill128_layout',
+    'test2026.cuda.qwen38_5090.test_bf16_prefill128_commit_oracle'],work/'prefill128-commit-probe-cpu-ledger','correctness',
+    'CPU layout/full-state lossless codec/independent integer BF16 ties/untouched cache slots and input fixtures; no GPU or model',[m/n for n in files]);assert code==0
+p={'status':'prefill128_commit_full_state_probe_prepared_gpu_unrun','files':{n:sha((m/n).read_bytes()) for n in files},
+   'planned_valid_cases':16,'planned_invalid_cases':35,'planned_graph_replays':3,
+   'canonical_body_words':106823680,'target_body_words':44564480,'guard_words_each_end':32,
+   'codec':'GNP128R1 lossless repeated32-word blocks, complete canonical outputs and full target input/final snapshots',
+   'scope':'Only separate T128 final-state commit component. Actual remote CUDA13.0 build, GPU full-state/readonly/canary/graph controls and independent raw NumPy oracle replay remain required. No forward operators/runtime/model/HTTP/performance qualification.'}
+path=m/'evidence/prefill128-commit-probe-preparation.json';raw=json.dumps(p,indent=2).encode();assert not path.exists() or path.read_bytes()==raw
+if not path.exists():path.write_bytes(raw)
+print(json.dumps({'status':p['status'],'new_input_files':len(files),'cpu_tests':8,'gpu_executed':False}))

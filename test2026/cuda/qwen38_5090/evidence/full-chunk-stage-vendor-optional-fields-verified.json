@@ -1,0 +1,1068 @@
+{
+  "status": "actual_complete_logged_stages_recovered_CPU_optional_vendor_field_reader_only",
+  "original_GPU_archive_sha256": "fe1f015002e8bc4ff78211983c87c0ee202d49f7551bc5cbadaafd5d898410fc",
+  "original_GPU_owner_exit_code": 1,
+  "original_failure_proof_sha256": "7361cb9316005adaac98fd16948e03a7b428d616ce5a527efc76831f7cbe73f5",
+  "original_reader_failure_reproduced": [
+    {
+      "file": "analyze_full_chunk_stage_vendor_optional_fields.py",
+      "line": 28,
+      "function": "main",
+      "code": "try:original.compare(reports,reads,prior,oldreads,args.proofs,logs)"
+    },
+    {
+      "file": "full_chunk_stage_vendor.py",
+      "line": 42,
+      "function": "compare",
+      "code": "weight_metadata(reports[phase]['qg_weight_metadata']);parity[phase]=stage_parity(reports[phase],prior[phase],reads[phase],oldreads[phase]);vendor[phase]=parse_qg(logs[phase],t)"
+    },
+    {
+      "file": "full_chunk_stage_vendor.py",
+      "line": 33,
+      "function": "parse_qg",
+      "code": "config=dict(re.findall(r'(\\w+)=([^\\s]+)',a[1]));assert {'algoId','tile','stages','reductionScheme','numSplitsK'}<=set(config)"
+    }
+  ],
+  "reader_derivation_sha256": "0acc54bd8e0c0f33f913e3bb164d1f3b349775da79f43a9a25f1eb76adca6f9c",
+  "fixed_reader_sha256": "11c038324828c126453a78eb235e205d14b8e131be0c33d6b99f6b64e2b8d41b",
+  "analyzer_sha256": "97601eaffe1ab13ff28902e9ef7cebb4e7d335b6486ba67acd344509b0047205",
+  "paired_unlogged_stage_proof_sha256": "1a009ce36e1d375b06ad53907ccd414c0a88e64c8487c9f1ed67ef3993f6b6f6",
+  "observations": {
+    "status": "actual_full_chunk_QG_vendor_logging_exact_stage_primary_parity",
+    "arrays": {
+      "status": "actual_complete_first128_layer3_stages_replayed",
+      "primary_equivalence": {
+        "defaultoff_and_enabled_same_profile_complete_states_vectors_all12caches_exact": true,
+        "correct_T32_128IDs_and_finalstate_exact": true,
+        "failed_T128_only_instrumentation_equivalence_control": true
+      },
+      "stages": {
+        "input": {
+          "byte_exact": true,
+          "changed_F32_words": 0,
+          "complete_F32_words_compared": 655360,
+          "maximum_absolute_difference": 0.0,
+          "first_difference": null
+        },
+        "normalized": {
+          "byte_exact": true,
+          "changed_F32_words": 0,
+          "complete_F32_words_compared": 655360,
+          "maximum_absolute_difference": 0.0,
+          "first_difference": null
+        },
+        "qg": {
+          "byte_exact": false,
+          "changed_F32_words": 102,
+          "complete_F32_words_compared": 1572864,
+          "maximum_absolute_difference": 0.03125,
+          "first_difference": {
+            "token": 0,
+            "dimension": 1585,
+            "word": 1585,
+            "baseline": -0.080078125,
+            "native": -0.07958984375
+          }
+        },
+        "key": {
+          "byte_exact": true,
+          "changed_F32_words": 0,
+          "complete_F32_words_compared": 131072,
+          "maximum_absolute_difference": 0.0,
+          "first_difference": null
+        },
+        "value": {
+          "byte_exact": true,
+          "changed_F32_words": 0,
+          "complete_F32_words_compared": 131072,
+          "maximum_absolute_difference": 0.0,
+          "first_difference": null
+        },
+        "core": {
+          "byte_exact": false,
+          "changed_F32_words": 14542,
+          "complete_F32_words_compared": 786432,
+          "maximum_absolute_difference": 0.00030332524329423904,
+          "first_difference": {
+            "token": 1,
+            "dimension": 2304,
+            "word": 8448,
+            "baseline": 0.005902253556996584,
+            "native": 0.005902254022657871
+          }
+        },
+        "attention": {
+          "byte_exact": false,
+          "changed_F32_words": 8857,
+          "complete_F32_words_compared": 655360,
+          "maximum_absolute_difference": 0.0009765625,
+          "first_difference": {
+            "token": 1,
+            "dimension": 4305,
+            "word": 9425,
+            "baseline": -0.011962890625,
+            "native": -0.01190185546875
+          }
+        },
+        "residual": {
+          "byte_exact": false,
+          "changed_F32_words": 8855,
+          "complete_F32_words_compared": 655360,
+          "maximum_absolute_difference": 0.0009765625,
+          "first_difference": {
+            "token": 1,
+            "dimension": 4305,
+            "word": 9425,
+            "baseline": -0.10600662231445312,
+            "native": -0.10594558715820312
+          }
+        },
+        "mlp_input": {
+          "byte_exact": false,
+          "changed_F32_words": 66398,
+          "complete_F32_words_compared": 655360,
+          "maximum_absolute_difference": 0.0019193142652511597,
+          "first_difference": {
+            "token": 1,
+            "dimension": 4305,
+            "word": 9425,
+            "baseline": -0.13523425161838531,
+            "native": -0.13515639305114746
+          }
+        },
+        "output": {
+          "byte_exact": false,
+          "changed_F32_words": 45291,
+          "complete_F32_words_compared": 655360,
+          "maximum_absolute_difference": 0.002685546875,
+          "first_difference": {
+            "token": 1,
+            "dimension": 4305,
+            "word": 9425,
+            "baseline": -0.11088943481445312,
+            "native": -0.11082839965820312
+          }
+        }
+      },
+      "first_different_stage": {
+        "stage": "qg",
+        "token": 0,
+        "dimension": 1585,
+        "word": 1585,
+        "baseline": -0.080078125,
+        "native": -0.07958984375
+      },
+      "complete_F32_words_compared": 6553600,
+      "complete_readonly_graph_input_state_and_controls": true,
+      "two_full_prefill_repeats_exact": true,
+      "stage_input_exact_retained_real_layer2_output": true,
+      "stage_output_exact_retained_same_profile_layer3_boundary": true,
+      "cause_established": false,
+      "model_or_performance_qualified": false,
+      "two_times_target_achieved": false
+    },
+    "stage_parity": {
+      "stages32": {
+        "complete_stage_entries": 40,
+        "complete_F32_words": 6553600,
+        "all_bytes_exact": true,
+        "complete_readonly_records_exact": true
+      },
+      "stages128": {
+        "complete_stage_entries": 10,
+        "complete_F32_words": 6553600,
+        "all_bytes_exact": true,
+        "complete_readonly_records_exact": true
+      }
+    },
+    "QG_weight_metadata": {
+      "input_scale": 0.2064732164144516,
+      "joined_mlp": false,
+      "logical_shape": [
+        12288,
+        5120
+      ],
+      "packed_bytes": 62914560,
+      "packed_dtype": "INT32",
+      "packed_shape": [
+        12288,
+        1280
+      ],
+      "recipe": "modelopt_fp8_w8a8",
+      "resident_in_compressed_pool": true,
+      "resident_packed_readonly": true,
+      "resident_scales_readonly": false,
+      "scale_bytes": 0,
+      "scale_shape": [],
+      "source_weights": [],
+      "storage_encoding": "Opaque little-endian words; raw checkpoint bits, no numeric conversion",
+      "weight_scale": 0.0007149832672439516
+    },
+    "vendor": {
+      "stages32": {
+        "process_id": 12368,
+        "geometry": {
+          "N": 12288,
+          "K": 5120,
+          "M": 32
+        },
+        "matmul_trace_calls": 32,
+        "weight_buffers": [
+          "0X1954200000",
+          "0X1994200000",
+          "0X1A08200000",
+          "0X1A48200000",
+          "0X1A88200000",
+          "0X1AC8200000",
+          "0X1B08200000",
+          "0X1B48200000",
+          "0X1B88200000",
+          "0X1BC8200000",
+          "0X1C08200000",
+          "0X1C48200000",
+          "0X1C88200000",
+          "0X1CC8200000",
+          "0X1D08200000",
+          "0X1D48200000"
+        ],
+        "unique_printed_configurations": [
+          {
+            "algoId": "67",
+            "ctaSwizzling": "1",
+            "customOption": "18",
+            "stages": "MATMUL_STAGES_64x5",
+            "tile": "MATMUL_TILE_64x32"
+          }
+        ],
+        "calls": [
+          {
+            "line": 346,
+            "tokens": 32,
+            "weight_buffer": "0X1954200000",
+            "printed_algorithm": {
+              "algoId": "67",
+              "tile": "MATMUL_TILE_64x32",
+              "stages": "MATMUL_STAGES_64x5",
+              "ctaSwizzling": "1",
+              "customOption": "18"
+            }
+          },
+          {
+            "line": 794,
+            "tokens": 32,
+            "weight_buffer": "0X1994200000",
+            "printed_algorithm": {
+              "algoId": "67",
+              "tile": "MATMUL_TILE_64x32",
+              "stages": "MATMUL_STAGES_64x5",
+              "ctaSwizzling": "1",
+              "customOption": "18"
+            }
+          },
+          {
+            "line": 1242,
+            "tokens": 32,
+            "weight_buffer": "0X1A08200000",
+            "printed_algorithm": {
+              "algoId": "67",
+              "tile": "MATMUL_TILE_64x32",
+              "stages": "MATMUL_STAGES_64x5",
+              "ctaSwizzling": "1",
+              "customOption": "18"
+            }
+          },
+          {
+            "line": 1690,
+            "tokens": 32,
+            "weight_buffer": "0X1A48200000",
+            "printed_algorithm": {
+              "algoId": "67",
+              "tile": "MATMUL_TILE_64x32",
+              "stages": "MATMUL_STAGES_64x5",
+              "ctaSwizzling": "1",
+              "customOption": "18"
+            }
+          },
+          {
+            "line": 2138,
+            "tokens": 32,
+            "weight_buffer": "0X1A88200000",
+            "printed_algorithm": {
+              "algoId": "67",
+              "tile": "MATMUL_TILE_64x32",
+              "stages": "MATMUL_STAGES_64x5",
+              "ctaSwizzling": "1",
+              "customOption": "18"
+            }
+          },
+          {
+            "line": 2586,
+            "tokens": 32,
+            "weight_buffer": "0X1AC8200000",
+            "printed_algorithm": {
+              "algoId": "67",
+              "tile": "MATMUL_TILE_64x32",
+              "stages": "MATMUL_STAGES_64x5",
+              "ctaSwizzling": "1",
+              "customOption": "18"
+            }
+          },
+          {
+            "line": 3034,
+            "tokens": 32,
+            "weight_buffer": "0X1B08200000",
+            "printed_algorithm": {
+              "algoId": "67",
+              "tile": "MATMUL_TILE_64x32",
+              "stages": "MATMUL_STAGES_64x5",
+              "ctaSwizzling": "1",
+              "customOption": "18"
+            }
+          },
+          {
+            "line": 3482,
+            "tokens": 32,
+            "weight_buffer": "0X1B48200000",
+            "printed_algorithm": {
+              "algoId": "67",
+              "tile": "MATMUL_TILE_64x32",
+              "stages": "MATMUL_STAGES_64x5",
+              "ctaSwizzling": "1",
+              "customOption": "18"
+            }
+          },
+          {
+            "line": 3930,
+            "tokens": 32,
+            "weight_buffer": "0X1B88200000",
+            "printed_algorithm": {
+              "algoId": "67",
+              "tile": "MATMUL_TILE_64x32",
+              "stages": "MATMUL_STAGES_64x5",
+              "ctaSwizzling": "1",
+              "customOption": "18"
+            }
+          },
+          {
+            "line": 4378,
+            "tokens": 32,
+            "weight_buffer": "0X1BC8200000",
+            "printed_algorithm": {
+              "algoId": "67",
+              "tile": "MATMUL_TILE_64x32",
+              "stages": "MATMUL_STAGES_64x5",
+              "ctaSwizzling": "1",
+              "customOption": "18"
+            }
+          },
+          {
+            "line": 4826,
+            "tokens": 32,
+            "weight_buffer": "0X1C08200000",
+            "printed_algorithm": {
+              "algoId": "67",
+              "tile": "MATMUL_TILE_64x32",
+              "stages": "MATMUL_STAGES_64x5",
+              "ctaSwizzling": "1",
+              "customOption": "18"
+            }
+          },
+          {
+            "line": 5274,
+            "tokens": 32,
+            "weight_buffer": "0X1C48200000",
+            "printed_algorithm": {
+              "algoId": "67",
+              "tile": "MATMUL_TILE_64x32",
+              "stages": "MATMUL_STAGES_64x5",
+              "ctaSwizzling": "1",
+              "customOption": "18"
+            }
+          },
+          {
+            "line": 5722,
+            "tokens": 32,
+            "weight_buffer": "0X1C88200000",
+            "printed_algorithm": {
+              "algoId": "67",
+              "tile": "MATMUL_TILE_64x32",
+              "stages": "MATMUL_STAGES_64x5",
+              "ctaSwizzling": "1",
+              "customOption": "18"
+            }
+          },
+          {
+            "line": 6170,
+            "tokens": 32,
+            "weight_buffer": "0X1CC8200000",
+            "printed_algorithm": {
+              "algoId": "67",
+              "tile": "MATMUL_TILE_64x32",
+              "stages": "MATMUL_STAGES_64x5",
+              "ctaSwizzling": "1",
+              "customOption": "18"
+            }
+          },
+          {
+            "line": 6618,
+            "tokens": 32,
+            "weight_buffer": "0X1D08200000",
+            "printed_algorithm": {
+              "algoId": "67",
+              "tile": "MATMUL_TILE_64x32",
+              "stages": "MATMUL_STAGES_64x5",
+              "ctaSwizzling": "1",
+              "customOption": "18"
+            }
+          },
+          {
+            "line": 7066,
+            "tokens": 32,
+            "weight_buffer": "0X1D48200000",
+            "printed_algorithm": {
+              "algoId": "67",
+              "tile": "MATMUL_TILE_64x32",
+              "stages": "MATMUL_STAGES_64x5",
+              "ctaSwizzling": "1",
+              "customOption": "18"
+            }
+          },
+          {
+            "line": 7514,
+            "tokens": 32,
+            "weight_buffer": "0X1954200000",
+            "printed_algorithm": {
+              "algoId": "67",
+              "tile": "MATMUL_TILE_64x32",
+              "stages": "MATMUL_STAGES_64x5",
+              "ctaSwizzling": "1",
+              "customOption": "18"
+            }
+          },
+          {
+            "line": 7962,
+            "tokens": 32,
+            "weight_buffer": "0X1994200000",
+            "printed_algorithm": {
+              "algoId": "67",
+              "tile": "MATMUL_TILE_64x32",
+              "stages": "MATMUL_STAGES_64x5",
+              "ctaSwizzling": "1",
+              "customOption": "18"
+            }
+          },
+          {
+            "line": 8410,
+            "tokens": 32,
+            "weight_buffer": "0X1A08200000",
+            "printed_algorithm": {
+              "algoId": "67",
+              "tile": "MATMUL_TILE_64x32",
+              "stages": "MATMUL_STAGES_64x5",
+              "ctaSwizzling": "1",
+              "customOption": "18"
+            }
+          },
+          {
+            "line": 8858,
+            "tokens": 32,
+            "weight_buffer": "0X1A48200000",
+            "printed_algorithm": {
+              "algoId": "67",
+              "tile": "MATMUL_TILE_64x32",
+              "stages": "MATMUL_STAGES_64x5",
+              "ctaSwizzling": "1",
+              "customOption": "18"
+            }
+          },
+          {
+            "line": 9306,
+            "tokens": 32,
+            "weight_buffer": "0X1A88200000",
+            "printed_algorithm": {
+              "algoId": "67",
+              "tile": "MATMUL_TILE_64x32",
+              "stages": "MATMUL_STAGES_64x5",
+              "ctaSwizzling": "1",
+              "customOption": "18"
+            }
+          },
+          {
+            "line": 9754,
+            "tokens": 32,
+            "weight_buffer": "0X1AC8200000",
+            "printed_algorithm": {
+              "algoId": "67",
+              "tile": "MATMUL_TILE_64x32",
+              "stages": "MATMUL_STAGES_64x5",
+              "ctaSwizzling": "1",
+              "customOption": "18"
+            }
+          },
+          {
+            "line": 10202,
+            "tokens": 32,
+            "weight_buffer": "0X1B08200000",
+            "printed_algorithm": {
+              "algoId": "67",
+              "tile": "MATMUL_TILE_64x32",
+              "stages": "MATMUL_STAGES_64x5",
+              "ctaSwizzling": "1",
+              "customOption": "18"
+            }
+          },
+          {
+            "line": 10650,
+            "tokens": 32,
+            "weight_buffer": "0X1B48200000",
+            "printed_algorithm": {
+              "algoId": "67",
+              "tile": "MATMUL_TILE_64x32",
+              "stages": "MATMUL_STAGES_64x5",
+              "ctaSwizzling": "1",
+              "customOption": "18"
+            }
+          },
+          {
+            "line": 11098,
+            "tokens": 32,
+            "weight_buffer": "0X1B88200000",
+            "printed_algorithm": {
+              "algoId": "67",
+              "tile": "MATMUL_TILE_64x32",
+              "stages": "MATMUL_STAGES_64x5",
+              "ctaSwizzling": "1",
+              "customOption": "18"
+            }
+          },
+          {
+            "line": 11546,
+            "tokens": 32,
+            "weight_buffer": "0X1BC8200000",
+            "printed_algorithm": {
+              "algoId": "67",
+              "tile": "MATMUL_TILE_64x32",
+              "stages": "MATMUL_STAGES_64x5",
+              "ctaSwizzling": "1",
+              "customOption": "18"
+            }
+          },
+          {
+            "line": 11994,
+            "tokens": 32,
+            "weight_buffer": "0X1C08200000",
+            "printed_algorithm": {
+              "algoId": "67",
+              "tile": "MATMUL_TILE_64x32",
+              "stages": "MATMUL_STAGES_64x5",
+              "ctaSwizzling": "1",
+              "customOption": "18"
+            }
+          },
+          {
+            "line": 12442,
+            "tokens": 32,
+            "weight_buffer": "0X1C48200000",
+            "printed_algorithm": {
+              "algoId": "67",
+              "tile": "MATMUL_TILE_64x32",
+              "stages": "MATMUL_STAGES_64x5",
+              "ctaSwizzling": "1",
+              "customOption": "18"
+            }
+          },
+          {
+            "line": 12890,
+            "tokens": 32,
+            "weight_buffer": "0X1C88200000",
+            "printed_algorithm": {
+              "algoId": "67",
+              "tile": "MATMUL_TILE_64x32",
+              "stages": "MATMUL_STAGES_64x5",
+              "ctaSwizzling": "1",
+              "customOption": "18"
+            }
+          },
+          {
+            "line": 13338,
+            "tokens": 32,
+            "weight_buffer": "0X1CC8200000",
+            "printed_algorithm": {
+              "algoId": "67",
+              "tile": "MATMUL_TILE_64x32",
+              "stages": "MATMUL_STAGES_64x5",
+              "ctaSwizzling": "1",
+              "customOption": "18"
+            }
+          },
+          {
+            "line": 13786,
+            "tokens": 32,
+            "weight_buffer": "0X1D08200000",
+            "printed_algorithm": {
+              "algoId": "67",
+              "tile": "MATMUL_TILE_64x32",
+              "stages": "MATMUL_STAGES_64x5",
+              "ctaSwizzling": "1",
+              "customOption": "18"
+            }
+          },
+          {
+            "line": 14234,
+            "tokens": 32,
+            "weight_buffer": "0X1D48200000",
+            "printed_algorithm": {
+              "algoId": "67",
+              "tile": "MATMUL_TILE_64x32",
+              "stages": "MATMUL_STAGES_64x5",
+              "ctaSwizzling": "1",
+              "customOption": "18"
+            }
+          }
+        ],
+        "unprinted_attributes_not_assumed": true,
+        "heuristic_to_trace_association_not_inferred": true
+      },
+      "stages128": {
+        "process_id": 34912,
+        "geometry": {
+          "N": 12288,
+          "K": 5120,
+          "M": 128
+        },
+        "matmul_trace_calls": 32,
+        "weight_buffers": [
+          "0X1954200000",
+          "0X1994200000",
+          "0X1A08200000",
+          "0X1A48200000",
+          "0X1A88200000",
+          "0X1AC8200000",
+          "0X1B08200000",
+          "0X1B48200000",
+          "0X1B88200000",
+          "0X1BC8200000",
+          "0X1C08200000",
+          "0X1C48200000",
+          "0X1C88200000",
+          "0X1CC8200000",
+          "0X1D08200000",
+          "0X1D48200000"
+        ],
+        "unique_printed_configurations": [
+          {
+            "algoId": "67",
+            "ctaSwizzling": "1",
+            "customOption": "18",
+            "stages": "MATMUL_STAGES_64x4",
+            "tile": "MATMUL_TILE_128x64"
+          }
+        ],
+        "calls": [
+          {
+            "line": 659,
+            "tokens": 128,
+            "weight_buffer": "0X1954200000",
+            "printed_algorithm": {
+              "algoId": "67",
+              "tile": "MATMUL_TILE_128x64",
+              "stages": "MATMUL_STAGES_64x4",
+              "ctaSwizzling": "1",
+              "customOption": "18"
+            }
+          },
+          {
+            "line": 952,
+            "tokens": 128,
+            "weight_buffer": "0X1994200000",
+            "printed_algorithm": {
+              "algoId": "67",
+              "tile": "MATMUL_TILE_128x64",
+              "stages": "MATMUL_STAGES_64x4",
+              "ctaSwizzling": "1",
+              "customOption": "18"
+            }
+          },
+          {
+            "line": 1245,
+            "tokens": 128,
+            "weight_buffer": "0X1A08200000",
+            "printed_algorithm": {
+              "algoId": "67",
+              "tile": "MATMUL_TILE_128x64",
+              "stages": "MATMUL_STAGES_64x4",
+              "ctaSwizzling": "1",
+              "customOption": "18"
+            }
+          },
+          {
+            "line": 1538,
+            "tokens": 128,
+            "weight_buffer": "0X1A48200000",
+            "printed_algorithm": {
+              "algoId": "67",
+              "tile": "MATMUL_TILE_128x64",
+              "stages": "MATMUL_STAGES_64x4",
+              "ctaSwizzling": "1",
+              "customOption": "18"
+            }
+          },
+          {
+            "line": 1831,
+            "tokens": 128,
+            "weight_buffer": "0X1A88200000",
+            "printed_algorithm": {
+              "algoId": "67",
+              "tile": "MATMUL_TILE_128x64",
+              "stages": "MATMUL_STAGES_64x4",
+              "ctaSwizzling": "1",
+              "customOption": "18"
+            }
+          },
+          {
+            "line": 2124,
+            "tokens": 128,
+            "weight_buffer": "0X1AC8200000",
+            "printed_algorithm": {
+              "algoId": "67",
+              "tile": "MATMUL_TILE_128x64",
+              "stages": "MATMUL_STAGES_64x4",
+              "ctaSwizzling": "1",
+              "customOption": "18"
+            }
+          },
+          {
+            "line": 2417,
+            "tokens": 128,
+            "weight_buffer": "0X1B08200000",
+            "printed_algorithm": {
+              "algoId": "67",
+              "tile": "MATMUL_TILE_128x64",
+              "stages": "MATMUL_STAGES_64x4",
+              "ctaSwizzling": "1",
+              "customOption": "18"
+            }
+          },
+          {
+            "line": 2710,
+            "tokens": 128,
+            "weight_buffer": "0X1B48200000",
+            "printed_algorithm": {
+              "algoId": "67",
+              "tile": "MATMUL_TILE_128x64",
+              "stages": "MATMUL_STAGES_64x4",
+              "ctaSwizzling": "1",
+              "customOption": "18"
+            }
+          },
+          {
+            "line": 3003,
+            "tokens": 128,
+            "weight_buffer": "0X1B88200000",
+            "printed_algorithm": {
+              "algoId": "67",
+              "tile": "MATMUL_TILE_128x64",
+              "stages": "MATMUL_STAGES_64x4",
+              "ctaSwizzling": "1",
+              "customOption": "18"
+            }
+          },
+          {
+            "line": 3296,
+            "tokens": 128,
+            "weight_buffer": "0X1BC8200000",
+            "printed_algorithm": {
+              "algoId": "67",
+              "tile": "MATMUL_TILE_128x64",
+              "stages": "MATMUL_STAGES_64x4",
+              "ctaSwizzling": "1",
+              "customOption": "18"
+            }
+          },
+          {
+            "line": 3589,
+            "tokens": 128,
+            "weight_buffer": "0X1C08200000",
+            "printed_algorithm": {
+              "algoId": "67",
+              "tile": "MATMUL_TILE_128x64",
+              "stages": "MATMUL_STAGES_64x4",
+              "ctaSwizzling": "1",
+              "customOption": "18"
+            }
+          },
+          {
+            "line": 3882,
+            "tokens": 128,
+            "weight_buffer": "0X1C48200000",
+            "printed_algorithm": {
+              "algoId": "67",
+              "tile": "MATMUL_TILE_128x64",
+              "stages": "MATMUL_STAGES_64x4",
+              "ctaSwizzling": "1",
+              "customOption": "18"
+            }
+          },
+          {
+            "line": 4175,
+            "tokens": 128,
+            "weight_buffer": "0X1C88200000",
+            "printed_algorithm": {
+              "algoId": "67",
+              "tile": "MATMUL_TILE_128x64",
+              "stages": "MATMUL_STAGES_64x4",
+              "ctaSwizzling": "1",
+              "customOption": "18"
+            }
+          },
+          {
+            "line": 4468,
+            "tokens": 128,
+            "weight_buffer": "0X1CC8200000",
+            "printed_algorithm": {
+              "algoId": "67",
+              "tile": "MATMUL_TILE_128x64",
+              "stages": "MATMUL_STAGES_64x4",
+              "ctaSwizzling": "1",
+              "customOption": "18"
+            }
+          },
+          {
+            "line": 4761,
+            "tokens": 128,
+            "weight_buffer": "0X1D08200000",
+            "printed_algorithm": {
+              "algoId": "67",
+              "tile": "MATMUL_TILE_128x64",
+              "stages": "MATMUL_STAGES_64x4",
+              "ctaSwizzling": "1",
+              "customOption": "18"
+            }
+          },
+          {
+            "line": 5054,
+            "tokens": 128,
+            "weight_buffer": "0X1D48200000",
+            "printed_algorithm": {
+              "algoId": "67",
+              "tile": "MATMUL_TILE_128x64",
+              "stages": "MATMUL_STAGES_64x4",
+              "ctaSwizzling": "1",
+              "customOption": "18"
+            }
+          },
+          {
+            "line": 5347,
+            "tokens": 128,
+            "weight_buffer": "0X1954200000",
+            "printed_algorithm": {
+              "algoId": "67",
+              "tile": "MATMUL_TILE_128x64",
+              "stages": "MATMUL_STAGES_64x4",
+              "ctaSwizzling": "1",
+              "customOption": "18"
+            }
+          },
+          {
+            "line": 5640,
+            "tokens": 128,
+            "weight_buffer": "0X1994200000",
+            "printed_algorithm": {
+              "algoId": "67",
+              "tile": "MATMUL_TILE_128x64",
+              "stages": "MATMUL_STAGES_64x4",
+              "ctaSwizzling": "1",
+              "customOption": "18"
+            }
+          },
+          {
+            "line": 5933,
+            "tokens": 128,
+            "weight_buffer": "0X1A08200000",
+            "printed_algorithm": {
+              "algoId": "67",
+              "tile": "MATMUL_TILE_128x64",
+              "stages": "MATMUL_STAGES_64x4",
+              "ctaSwizzling": "1",
+              "customOption": "18"
+            }
+          },
+          {
+            "line": 6226,
+            "tokens": 128,
+            "weight_buffer": "0X1A48200000",
+            "printed_algorithm": {
+              "algoId": "67",
+              "tile": "MATMUL_TILE_128x64",
+              "stages": "MATMUL_STAGES_64x4",
+              "ctaSwizzling": "1",
+              "customOption": "18"
+            }
+          },
+          {
+            "line": 6519,
+            "tokens": 128,
+            "weight_buffer": "0X1A88200000",
+            "printed_algorithm": {
+              "algoId": "67",
+              "tile": "MATMUL_TILE_128x64",
+              "stages": "MATMUL_STAGES_64x4",
+              "ctaSwizzling": "1",
+              "customOption": "18"
+            }
+          },
+          {
+            "line": 6812,
+            "tokens": 128,
+            "weight_buffer": "0X1AC8200000",
+            "printed_algorithm": {
+              "algoId": "67",
+              "tile": "MATMUL_TILE_128x64",
+              "stages": "MATMUL_STAGES_64x4",
+              "ctaSwizzling": "1",
+              "customOption": "18"
+            }
+          },
+          {
+            "line": 7105,
+            "tokens": 128,
+            "weight_buffer": "0X1B08200000",
+            "printed_algorithm": {
+              "algoId": "67",
+              "tile": "MATMUL_TILE_128x64",
+              "stages": "MATMUL_STAGES_64x4",
+              "ctaSwizzling": "1",
+              "customOption": "18"
+            }
+          },
+          {
+            "line": 7398,
+            "tokens": 128,
+            "weight_buffer": "0X1B48200000",
+            "printed_algorithm": {
+              "algoId": "67",
+              "tile": "MATMUL_TILE_128x64",
+              "stages": "MATMUL_STAGES_64x4",
+              "ctaSwizzling": "1",
+              "customOption": "18"
+            }
+          },
+          {
+            "line": 7691,
+            "tokens": 128,
+            "weight_buffer": "0X1B88200000",
+            "printed_algorithm": {
+              "algoId": "67",
+              "tile": "MATMUL_TILE_128x64",
+              "stages": "MATMUL_STAGES_64x4",
+              "ctaSwizzling": "1",
+              "customOption": "18"
+            }
+          },
+          {
+            "line": 7984,
+            "tokens": 128,
+            "weight_buffer": "0X1BC8200000",
+            "printed_algorithm": {
+              "algoId": "67",
+              "tile": "MATMUL_TILE_128x64",
+              "stages": "MATMUL_STAGES_64x4",
+              "ctaSwizzling": "1",
+              "customOption": "18"
+            }
+          },
+          {
+            "line": 8277,
+            "tokens": 128,
+            "weight_buffer": "0X1C08200000",
+            "printed_algorithm": {
+              "algoId": "67",
+              "tile": "MATMUL_TILE_128x64",
+              "stages": "MATMUL_STAGES_64x4",
+              "ctaSwizzling": "1",
+              "customOption": "18"
+            }
+          },
+          {
+            "line": 8570,
+            "tokens": 128,
+            "weight_buffer": "0X1C48200000",
+            "printed_algorithm": {
+              "algoId": "67",
+              "tile": "MATMUL_TILE_128x64",
+              "stages": "MATMUL_STAGES_64x4",
+              "ctaSwizzling": "1",
+              "customOption": "18"
+            }
+          },
+          {
+            "line": 8863,
+            "tokens": 128,
+            "weight_buffer": "0X1C88200000",
+            "printed_algorithm": {
+              "algoId": "67",
+              "tile": "MATMUL_TILE_128x64",
+              "stages": "MATMUL_STAGES_64x4",
+              "ctaSwizzling": "1",
+              "customOption": "18"
+            }
+          },
+          {
+            "line": 9156,
+            "tokens": 128,
+            "weight_buffer": "0X1CC8200000",
+            "printed_algorithm": {
+              "algoId": "67",
+              "tile": "MATMUL_TILE_128x64",
+              "stages": "MATMUL_STAGES_64x4",
+              "ctaSwizzling": "1",
+              "customOption": "18"
+            }
+          },
+          {
+            "line": 9449,
+            "tokens": 128,
+            "weight_buffer": "0X1D08200000",
+            "printed_algorithm": {
+              "algoId": "67",
+              "tile": "MATMUL_TILE_128x64",
+              "stages": "MATMUL_STAGES_64x4",
+              "ctaSwizzling": "1",
+              "customOption": "18"
+            }
+          },
+          {
+            "line": 9742,
+            "tokens": 128,
+            "weight_buffer": "0X1D48200000",
+            "printed_algorithm": {
+              "algoId": "67",
+              "tile": "MATMUL_TILE_128x64",
+              "stages": "MATMUL_STAGES_64x4",
+              "ctaSwizzling": "1",
+              "customOption": "18"
+            }
+          }
+        ],
+        "unprinted_attributes_not_assumed": true,
+        "heuristic_to_trace_association_not_inferred": true
+      }
+    },
+    "inherited_defaultoff_controls": [
+      "control32",
+      "control128"
+    ],
+    "fresh_logged_profiles": [
+      "stages32",
+      "stages128"
+    ],
+    "algorithm_cause_established": false,
+    "model_or_performance_qualified": false,
+    "two_times_target_achieved": false
+  },
+  "no_new_GPU_run": true,
+  "source_library_runtime_SDK_checkpoint_restored": true,
+  "algorithm_intervention_tested": false,
+  "model_or_performance_qualified": false,
+  "two_times_target_achieved": false
+}

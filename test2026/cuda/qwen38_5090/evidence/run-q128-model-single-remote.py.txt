@@ -1,0 +1,18 @@
+from pathlib import Path
+import hashlib,json,os,sys,zipfile
+ROOT=Path('D:/CantorAI/5090-study-20261023');M=ROOT/'Garnet/test2026/cuda/qwen38_5090';sys.path[:0]=[str(M),str(ROOT/'Garnet')];import run_logged as ledger
+from run_bf16_low_batch_native_build import idle
+sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest();job='q128-model-admission-attempt1';q=json.loads((ROOT/'results'/(job+'-verified.json')).read_bytes());assert q['exit_code']==1 and q['source_library_runtime_SDK_checkpoint_restored'];idle();out=ROOT/'results/q128-model-single-observation';assert not out.exists();out.mkdir();names=['q128_model_partial_replay.py','test_q128_model_partial_replay.py','analyze_q128_model_partial.py'];methods=[M/n for n in names]+[Path(__file__)];pins={p.relative_to(ROOT).as_posix():sha(p) for p in methods};ledger.source_identity=lambda:{'scope':'Explicit failed Q128 single-observation finite-stage diagnostic, no repeat/decode/model/performance admission and no protected unrelated bodies','owned_source_sha256':pins};os.chdir(ROOT/'Garnet');artifacts=methods+[ROOT/'results'/(job+'-evidence.zip'),ROOT/'results'/(job+'-verified.json')];code=1
+try:
+    code=ledger.run([sys.executable,'-m','unittest','test2026.cuda.qwen38_5090.test_q128_model_partial_replay'],out/'CPU-ledger','correctness','Three CPU controls reject truncated/corrupt/nonfinite QGparts, readonly mutation and fabricated repeat/decode/admission metadata',artifacts);assert code==0
+    code=ledger.run([sys.executable,str(M/'analyze_q128_model_partial.py'),'--proofs',str(ROOT/'results')],out/'replay-ledger','correctness','Retain original full-prefill state failure; compare all complete first128 finite stages from one candidate observation; no invented repeat or timing',artifacts);assert code==0
+finally:
+    (out/'workflow.json').write_bytes(json.dumps(dict(exit_code=code,method_sha256=pins,GPU_or_model_rerun=False),indent=2).encode());files={p.relative_to(ROOT).as_posix():p for p in out.rglob('*') if p.is_file()}
+    for p in methods+[ROOT/'results/q128-model-single-observation-verified.json',ROOT/'results/q128-model-single-install.json']:
+        if p.exists():files[p.relative_to(ROOT).as_posix()]=p
+    archive=ROOT/'results/q128-model-single-closure.zip';assert not archive.exists()
+    with zipfile.ZipFile(archive,'x',zipfile.ZIP_DEFLATED) as z:
+        for n,p in files.items():z.write(p,n)
+        z.writestr('evidence-manifest.json',json.dumps(dict(files={n:sha(p) for n,p in files.items()},original_model_archive_sha256=q['archive_sha256'],GPU_or_model_rerun=False),indent=2))
+    print(json.dumps(dict(status='Q128_single_observation_analysis_terminal',exit_code=code,closure_sha256=sha(archive),closure_bytes=archive.stat().st_size)),flush=True)
+raise SystemExit(code)

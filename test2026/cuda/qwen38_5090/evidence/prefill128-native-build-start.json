@@ -1,0 +1,63 @@
+{
+  "status": "packed_cache_mode_replay_closed_full_prefill128_native_build_running",
+  "job": "bf16-prefill128-native-build-attempt1",
+  "supervisor_session": 48577,
+  "observed_state": "running;56remote CPU checks passed and CMake reconfigure completed",
+  "cpu_tests_passed_local": 56,
+  "local_cpu_seconds": 0.357,
+  "cpu_tests_passed_remote": 56,
+  "remote_cpu_seconds": 0.298,
+  "build_before_cuda_objects": 32,
+  "candidate_source_files": 13,
+  "installed_method_bundle": {
+    "status": "bf16_prefill128_native_build_prepared_unrun",
+    "preparation_sha256": "20540d2724c19a3536165563c3084319ae99432fc2e57fb4074679f9fe17952c",
+    "bundle_sha256": "cce531bb7a6c233cc07550e912e6073323f53c5724ce7237fc57b49c0ba50fe9",
+    "bytes": 135782,
+    "targets": 8,
+    "base_source_pins": 717,
+    "method_pins": 10,
+    "candidate_source_files": 13,
+    "cpu_tests": 56
+  },
+  "install": {
+    "status": "bf16_prefill128_native_build_methods_installed_candidate_unrun",
+    "bundle_sha256": "cce531bb7a6c233cc07550e912e6073323f53c5724ce7237fc57b49c0ba50fe9",
+    "new_targets": 8,
+    "unchanged_targets": [],
+    "base_source_pins": 717,
+    "method_pins": 10,
+    "candidate_sources_installed": false,
+    "runtime_and_sdk_unchanged": true,
+    "gpu_executed": false
+  },
+  "packed_cache_comparison": {
+    "status": "b4_cache_mode_contrast_replayed_on_both_machines",
+    "archive_sha256": "b6dafde2728730b8996907043f61be665f888b489f6de309c484f8cec1807900",
+    "archive_bytes": 667361,
+    "archive_members": 36,
+    "proof_pair_sha256": "2afe8281117495f8479712f0b536d3a159cc94e6573694439652875beb6cc8ce",
+    "actual_case": "first four-row short-mixed inputs;8output IDs per row; prompt lengths41/104/93/93",
+    "observed_exact_pairs": {
+      "packed_vs_b8": false,
+      "packed_vs_full_repeat": true,
+      "full_repeat_vs_failed_full": true,
+      "full_repeat_vs_b8": false
+    },
+    "cpu_tests_passed_remote": 53,
+    "remote_cpu_seconds": 19.31,
+    "source_pins": 716,
+    "source_runtime_environment_preserved": true,
+    "original_gate_changed": false,
+    "cause_established": false,
+    "harmlessness_or_semantic_equivalence_proven": false,
+    "b8_mtp_or_http_qualified": false,
+    "performance_admitted": false,
+    "two_times_target_achieved": false,
+    "scope": "Packed and full BF16 cache modes agree exactly at physicalB4 in this one actual short case; both differ from retained physicalB8. This narrows the observed contrast, does not identify a cause or qualify broader quality/performance. Complete expanded state hashes and raw hidden/normalized vectors, no raw full-cache bytes."
+  },
+  "terminal_result": null,
+  "model_or_http_qualified": false,
+  "performance_admitted": false,
+  "two_times_target_achieved": false
+}

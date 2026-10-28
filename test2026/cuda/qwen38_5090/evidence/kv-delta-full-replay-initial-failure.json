@@ -1,0 +1,8 @@
+{
+  "status": "replay_initial_failure_reproduced_remote_and_local",
+  "archive_sha256": "41efc66d39e8e68d6df05b85a2db795c5422ba58aa0602b290b10af98690a1df",
+  "archived_verifier_sha256": "0a3a8b5fac7f0e0c0e7d94121e3285d78081a548c7cfd98279d0909b48c97aa1",
+  "cause": "Verifier reconstructed from CRLF parent bytes; preparation used read_text universal-newline LF normalization. Normalizing only parent text before applying the already archived literal recipe yields exact candidate bytes. Raw GPU/model results and archive unchanged.",
+  "local_raw_output": "Traceback (most recent call last):\r\n  File \"D:\\CantorAI\\work\\qwen38-5090\\test2026\\cuda\\qwen38_5090\\verify_kv_delta_full_b4_t4.py\", line 37, in <module>\r\n    assert probe.encode()==z.read(methods+'probe_kv_delta_full_b4_t4.py') and sha(probe.encode())==recipe['probe_sha256']\r\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\r\nAssertionError\r\n",
+  "normalized_candidate_exact": true
+}

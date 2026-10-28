@@ -1,0 +1,3 @@
+from pathlib import Path
+import ast
+W=Path(__file__).resolve().parent;raw=(W/'replay-connected-fa-value-v2-local.py').read_text().replace("JOB='connected-fa-value-attempt2'","JOB='connected-fa-value-attempt3'").replace('connected-fa-value-v2','connected-fa-value-v3').replace('verify_connected_fa_value_v2.py','verify_connected_fa_value_v3.py').replace("'connected_fa_value_layout.py'","'connected_fa_value_runtime.py','connected_fa_value_layout.py'").replace('Garnet-Connected-FA-Value-Verified-v2.json','Garnet-Connected-FA-Value-Verified-v3.json');ast.parse(raw);target=W/'replay-connected-fa-value-v3-local.py';assert not target.exists();target.write_bytes(raw.encode());print('CONNECTED_FA_VALUE_V3_LOCAL_REPLAY_PREPARED_NOT_EXECUTED')

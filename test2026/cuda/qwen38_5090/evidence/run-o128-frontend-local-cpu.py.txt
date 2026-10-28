@@ -1,0 +1,6 @@
+from pathlib import Path
+import hashlib,json,os,sys
+W=Path(__file__).resolve().parent;R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';sys.path[:0]=[str(M),str(R)];import run_logged as ledger
+p=json.loads((M/'evidence/o128-full4k-model-preparation.json').read_bytes());tests=p['test_ids']+['test2026.cuda.qwen38_5090.test_o128_frontend_contract'];names=['o128_frontend_contract.py','probe_o128_frontend.py','launch_o128_frontend_case.py','run_o128_frontend_cases.py','test_o128_frontend_contract.py','run_o128_frontend.py','verify_o128_frontend.py','evidence/o128-frontend-owner-derivation.json'];pins={n:hashlib.sha256((M/n).read_bytes()).hexdigest() for n in names}
+ledger.source_identity=lambda:{'scope':'Explicit actual-frontend case/replay/source CPU controls; no Garnet/model/native build/GPU on this PC; protected unrelated bodies excluded','owned_source_sha256':pins};os.chdir(R)
+assert ledger.run([sys.executable,'-m','unittest',*tests],W/'o128-frontend-local-cpu-ledger','correctness','77current plus86historical controls, strict actual native-error/case/source identity and route counts; source launch uses fresh embedded process per case before native env reads',[M/n for n in names])==0

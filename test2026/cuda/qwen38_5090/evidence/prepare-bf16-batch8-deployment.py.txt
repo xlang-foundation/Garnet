@@ -1,0 +1,13 @@
+from pathlib import Path
+import hashlib,json,zipfile
+w=Path(__file__).resolve().parent;m=Path('D:/CantorAI/work/qwen38-5090/test2026/cuda/qwen38_5090');p=json.loads((m/'evidence/bf16-batch8-admission-run-preparation.json').read_bytes());plan=json.loads((w/'bf16-batch8-admission-upload-plan.json').read_bytes());targets={row['target']:row['sha256'] for row in plan['uploads']}
+target=w/'bf16-batch8-admission-preflight-input.json';assert not target.exists();target.write_text(json.dumps({'expected':targets,'existing':{k:v for k,v in p['files'].items() if k not in targets},'library_sha256':p['runtime_dependencies']['garnet.dll']},indent=2),encoding='utf8')
+for old,new in (('preflight-sglang-fixed4k.py','preflight-bf16-batch8-admission.py'),('package-sglang-fixed4k-methods.py','package-bf16-batch8-admission-methods.py'),('install-sglang-fixed4k-methods.py','install-bf16-batch8-admission-methods.py')):
+ text=(w/old).read_text().replace('sglang-fixed4k','bf16-batch8-admission').replace('sglang_fixed4k','bf16_batch8_admission')
+ if old.startswith('preflight'):
+  needle='idle();p=json.loads(';assert text.count(needle)==1
+  text=text.replace(needle,"reference=root/'results/sglang-fixed4k-ordinary-attempt2';closed_reference=json.loads((reference/'workflow.json').read_bytes());assert closed_reference['exit_code']==1 and closed_reference['cleanup_finished'] and type(closed_reference['server_exit_code']) is int and closed_reference['source_sha256']==closed_reference['source_after_sha256'] and closed_reference['runtime_dependencies']==closed_reference['runtime_dependencies_after']\nassert sha(root/'results/sglang-fixed4k-ordinary-attempt2-evidence.zip')=='e17f3aff00fd9502a8708115f194dc4464706320baa399426855b8bf1533c0b9d'\n"+needle)
+ if old.startswith('package'):
+  text=text.replace("Only absent pinned reference methods/evidence.","Only absent pinned B8 admission methods/evidence.")
+ path=w/new;assert not path.exists();path.write_text(text,encoding='utf8')
+print(json.dumps({'status':'bf16_batch8_deployment_preflight_prepared','targets':len(targets),'existing_source_files':len(p['files'])-len(set(p['files'])&set(targets)),'gpu_executed':False}))

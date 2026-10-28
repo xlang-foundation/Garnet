@@ -1,0 +1,14 @@
+from pathlib import Path
+import hashlib,json,zipfile
+ROOT=Path('D:/CantorAI/5090-study-20261023');package=ROOT/'results/fa3-projection-witness-gpu-deployment-attempt2.zip'
+assert hashlib.sha256(package.read_bytes()).hexdigest()=='79ee8b0745e3499c5c53b95a7689fa6a806b7559a600cd3fb454b45f0e8ce3a7'
+with zipfile.ZipFile(package) as z:
+ assert z.testzip() is None and len(z.namelist())==len(set(z.namelist()))
+ manifest=json.loads(z.read('install-manifest.json'));assert set(z.namelist())==set(manifest['files'])|{'install-manifest.json'}
+ for n,h in manifest['files'].items():
+  target=ROOT/n;raw=z.read(n);assert target.resolve().is_relative_to(ROOT.resolve()) and '..' not in Path(n).parts and hashlib.sha256(raw).hexdigest()==h
+  assert not target.exists() or target.read_bytes()==raw,('Preserve outside edits',n)
+ for n in manifest['files']:
+  target=ROOT/n;target.parent.mkdir(parents=True,exist_ok=True);target.write_bytes(z.read(n))
+ (ROOT/'results/fa3-projection-witness-gpu-install-attempt2.json').write_bytes(json.dumps({'package_sha256':'79ee8b0745e3499c5c53b95a7689fa6a806b7559a600cd3fb454b45f0e8ce3a7','files':manifest['files']},indent=2).encode())
+ print(json.dumps({'status':'installed_new_owned_methods_only','files':len(manifest['files'])}))

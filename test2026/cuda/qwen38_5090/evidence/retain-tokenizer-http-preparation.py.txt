@@ -1,0 +1,62 @@
+from pathlib import Path
+from datetime import datetime,timezone
+import hashlib,json,shutil
+
+w=Path(__file__).resolve().parent;o=w.parent/'outputs'
+r=Path('D:/CantorAI/work/qwen38-5090');m=r/'test2026/cuda/qwen38_5090';e=m/'evidence'
+sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+def copy(source,target):
+ assert not target.exists() or target.read_bytes()==source.read_bytes(),target
+ if not target.exists():shutil.copyfile(source,target)
+for ledger in ('tokenizer-nfc-http-cpu-ledger','tokenizer-nfc-http-guard-ledger'):
+ for source in (w/ledger).iterdir():
+  assert source.is_file()
+  target=e/ledger/source.name;target.parent.mkdir(exist_ok=True);copy(source,target)
+for name in ('derive-tokenizer-http-methods.py','check-tokenizer-http-preparation-guard.py','retain-tokenizer-http-preparation.py'):
+ copy(w/name,e/(name+'.txt'))
+copy(w/'tokenizer-nfc-http-guard-result.json',e/'tokenizer-nfc-http-guard-result.json')
+records=[json.loads(line) for line in (w/'tokenizer-nfc-http-cpu-ledger/commands.jsonl').read_bytes().splitlines()]
+assert len(records)==2 and records[1]['exit_code']==0
+log=(w/'tokenizer-nfc-http-cpu-ledger/commands.log').read_bytes()
+assert b'Ran 29 tests' in log and b'\nOK' in log
+guard=json.loads((w/'tokenizer-nfc-http-guard-result.json').read_bytes())
+assert guard['actual_child_exit_code']==2 and not guard['preparation_file_created'] and not guard['upload_plan_created']
+for name,digest in guard['source_sha256'].items():assert sha(m/name)==digest
+now=datetime.now(timezone.utc).isoformat()
+receipt={'status':'tokenizer_nfc_http_prepared_locally_cpu_passed_model_proof_pending','recorded_utc':now,'cpu_tests_passed':29,'source_sha256':guard['source_sha256'],'derivation_sha256':sha(e/'tokenizer-nfc-http-method-derivation.json'),'actual_missing_model_guard':guard,'deployed':False,'http_executed':False,'performance_admitted':False,'scope':'Actual final derived worker CPU controls and literal method derivations. No positive preparation/plan while current model proof is absent. Seven fresh methods retain original failed HTTP data and checks. Supplemental all-vector auditor is not yet run on a closed new model archive.'}
+target=e/'tokenizer-nfc-http-local-preparation.json'
+assert not target.exists();target.write_text(json.dumps(receipt,indent=2),encoding='utf8')
+addition='''
+
+### 2026-10-25: NFC HTTP methods prepared; B4 model comparison passes
+
+Original supervisor48577 confirms tokenizer-nfc-model-consistency-attempt1
+running. Read-only workflow observation records all4B4cases complete, exit0:
+18reported states/36raw vectors and full canonical metadata, IDs and callbacks
+exactly match retained8ae. B1 remains active; observation sees3completed cases.
+This is partial correctness evidence, not final model/quality/speed admission.
+
+Seven fresh HTTP methods are literal-derived from the immutable failed HTTP1
+archive, binding the new model proof/verifier and saved tokenizer DLL alias.
+An initial module-stem substitution was caught before testing and added to the
+derivation recipe; final bytes passed29actual CPU tests in8.642s. Original
+805screen,12protocol,2boundary,124full4K and124short requests per mode, strict
+ID/usage matching, ordinary/MTP pairing and failure preservation remain intact.
+The factory replays all seven derivations and binds the original failed proof.
+Actual negative run returns2 on missing new model proof and creates neither a
+preparation nor upload plan. Methods, receipts and real command ledgers retained.
+No deployed method/runtime/cache mutation or HTTP execution occurred.
+
+Supplemental all-vector auditor is prepared to compare every persisted .f32
+file, including transient prefix snapshots absent from report state objects,
+against retained8ae after actual model closure and both independent replays.
+It has not yet run on a completed new archive. B4 report comparisons cover all
+reported vectors; do not broaden that claim to all transient files before audit.
+Original2x, full4K/quality, strongest reference/tuned/MTP, INT4/4B and repetition
+requirements remain open. Single-slot HTTP queues do not imply GPU batching.
+'''
+for name in ('docs/research/qwen38-5090-development-log.md','docs/research/qwen38-5090-implementation-task.md'):
+ f=r/name;raw=f.read_bytes();assert b'NFC HTTP methods prepared; B4 model comparison passes' not in raw;f.write_bytes(raw+addition.replace('\n','\r\n').encode())
+for name in ('Garnet-Tokenizer-NFC-Status.json','Garnet-Parallel-Top1-Integration-Status.json'):
+ f=o/name;s=json.loads(f.read_bytes());s.update(recorded_utc=now,tokenizer_nfc_http_local_preparation=receipt);s['two_times_target_achieved']=False;f.write_text(json.dumps(s,indent=2)+'\n',encoding='utf8')
+print(json.dumps({'status':receipt['status'],'cpu_tests':29,'guard_actual_child_exit':2,'deployed':False}))

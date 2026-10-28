@@ -1,0 +1,44 @@
+from pathlib import Path
+import ast,hashlib,json,sys,zipfile
+W=Path(__file__).resolve().parent;O=W.parent/'outputs';R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';E=M/'evidence';P='Garnet/test2026/cuda/qwen38_5090/';sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest();sys.path[:0]=[str(R),str(M)]
+from test2026.cuda.qwen38_5090.b4_k_m4x4_source import sources
+_,candidate,record=sources();old=json.loads((E/'b4-k35-cache52-preparation.json').read_bytes());native=json.loads((E/'b4-k-m4x4-build-preparation.json').read_bytes());proof=O/'b4-k-m4x4-build-attempt1-verified.json';q=json.loads(proof.read_bytes());assert proof.read_bytes()==(O/'b4-k-m4x4-build-attempt1-remote-verified.json').read_bytes() and q['exit_code']==0
+archive=O/'b4-k-m4x4-build-attempt1-evidence.zip';assert sha(archive)==q['archive_sha256']
+with zipfile.ZipFile(archive) as z:
+    w=json.loads(z.read('results/b4-k-m4x4-build-attempt1/workflow.json'));assert w['cleanup_finished'] and w['baseline_source_restored'] and w['baseline_library_restored'] and w['exit_code']==0
+files={}
+for mapping in (old['files'],w['source_after'],w['methods_after']):
+    for n,h in mapping.items():assert n not in files or files[n]==h,('Conflicting baseline',n);files[n]=h
+names=['b4_k_m4x4_control52.py','b4_k_m4x4_control52_route.py','test_b4_k_m4x4_control52.py','test_b4_k_m4x4_control52_route.py','probe_b4_k_m4x4_control52.py','launch_b4_k_m4x4_control52.py','run_b4_k_m4x4_control52.py','verify_b4_k_m4x4_control52.py','evidence/b4-k-m4x4-control52-probe-derivation.json']
+for row in json.loads((E/'b4-k-m4x4-control52-probe-derivation.json').read_bytes())['derivations']:
+    raw=(M/row['source']).read_bytes();assert hashlib.sha256(raw).hexdigest()==row['source_sha256']
+    for c in row['changes']:assert raw.count(c['old'].encode())==c['count'];raw=raw.replace(c['old'].encode(),c['new'].encode())
+    assert raw==(M/row['target']).read_bytes() and hashlib.sha256(raw).hexdigest()==row['target_sha256'];ast.parse(raw)
+for name in names:
+    if name.endswith('.py'):ast.parse((M/name).read_bytes())
+ledger=W/'b4-k-m4x4-control52-cpu-ledger';events=[json.loads(s) for s in (ledger/'commands.jsonl').read_bytes().splitlines()];assert len(events)==2 and events[-1]['exit_code']==0 and events[0]['source']['owned_source_sha256']==events[1]['source_after']['owned_source_sha256']
+assert b'Ran 47 tests' in (ledger/'commands.log').read_bytes()
+def keep(name,raw):
+    p=E/name;assert not p.exists();p.write_bytes(raw);names.append('evidence/'+name)
+keep('b4-k-m4x4-control52-cpu-commands.log',(ledger/'commands.log').read_bytes());keep('b4-k-m4x4-control52-cpu-commands.jsonl',(ledger/'commands.jsonl').read_bytes())
+keep('b4-k-m4x4-control52-cpu-preparation.json',json.dumps({'CPU_controls':47,'GPU_model_unrun':True,'source_sha256':{n:sha(M/n) for n in names},'native_library_sha256':q['candidate_library_sha256'],'original_full4k_still_failed':True,'full128_output_4K_or_performance_qualified':False},indent=2).encode())
+for name in ('derive-b4-k-m4x4-control52-probe.py','test-b4-k-m4x4-control52-cpu.py'):keep(name+'.txt',(W/name).read_bytes())
+for n in names:files[P+n]=sha(M/n)
+assert all('probe_native_external_prefix_batch.py' not in n for n in files)
+parents={**old['parents'],**native['parents']}
+for job in ('b4-k-m4x4-build-attempt1','b4-k-m4x4-cpu-attempt2','b4-k35-cache52-attempt1'):
+    path=O/(job+'-verified.json');doc=json.loads(path.read_bytes());assert doc['exit_code']==0;parents[job]={'proof_sha256':sha(path),'archive_sha256':doc['archive_sha256'],'status':doc['status'],'exit_code':0}
+for job,row in parents.items():
+    path=O/(job+'-verified.json');doc=json.loads(path.read_bytes());assert sha(path)==row['proof_sha256'] and path.read_bytes()==(O/(job+'-remote-verified.json')).read_bytes() and sha(O/(job+'-evidence.zip'))==row['archive_sha256']==doc['archive_sha256']
+    assert 'status' in row
+flags={**old['flags'],'GARNET_FP8_K_BATCH4_DECODE_M4X4':'0'}
+archive_files=sorted(set(old['archive_files'])|set(native['methods'])|{P+n for n in names});assert all(n in files for n in archive_files)
+p={'status':'same_DLL_control52_prepared_GPU_unrun','files':files,'archive_files':archive_files,'audit_dependencies':old['audit_dependencies'],'runtime':w['runtime_after'],'environment':w['environment_after'],'checkpoints':native['checkpoints'],'cuda_objects':w['cuda_objects_built'],'cache_before_sha256':w['cache_after_sha256'],'candidate_files':record['candidate_files'],'candidate_base':native['candidate_base'],'bundle':'results/b4-k-m4x4-source.zip','bundle_sha256':native['bundle_sha256'],'library':'build/bin/garnet-native-b4-k-m4x4-attempt1.dll','library_sha256':q['candidate_library_sha256'],'original_candidate_library_sha256':old['candidate_library_sha256'],'parents':parents,'flags':flags,'input_corpus_sha256':old['input_corpus_sha256'],'selected_key':old['selected_key'],'test_modules':['test2026.cuda.qwen38_5090.'+n for n in ['test_b4_b1_short_m16_gate','test_b4_v_m16_short_route','test_b4_qk_m16_short_route','test_b4_full4k_inputs','test_b4_full4k_exact_gate','test_b4_full4k_decode_prefix','test_b4_full4k_selection52','test_b4_k35_cache52','test_b4_k_m4x4_control52_route','test_b4_k_m4x4_control52']],'scope':'Exclusive same-DLL source85 off/on controlled intervention. Immutable complete source60 B1 and source79 B4 cache52/full4K/prefix oracles reused; no fresh B1 run. Sameflags except separate defaultoff K-fourM4. Flagoff must reproduce all4rows/53IDs/five complete128component/finitevector captures/raw8MiBcache before flagon may launch. Flagon checks actual newKlive7attrs/twoM4SDKchecks4MiB/all16initializations plus oldGDN/V/Q-only; all4 endpoints/step7/53IDs and selected independent B1step52 fullstate/raw4194304BF16 exact. Numericaltolerance neverused; not full128output/4K/MTP/quality/HTTP/performance admission. Newmodel preflight pins current post-native-build all34object hashes, not stale oldCPU hashes; source/runtime/SDK/config+index/CMake/DLL restored, fixed C-drive private SSD nonce retirement. Original full4K/cache62 remainFAILED andoverall2x unmet.'}
+p['installed_files']={**files,**{'Garnet/'+n:h for n,h in p['candidate_files'].items()}}
+prep=E/'b4-k-m4x4-control52-preparation.json';assert not prep.exists();prep.write_bytes(json.dumps(p,indent=2).encode())
+deploy={P+n:M/n for n in names};deploy[P+'evidence/'+prep.name]=prep;target=W/'b4-k-m4x4-control52-deployment.zip';assert not target.exists()
+with zipfile.ZipFile(target,'x',zipfile.ZIP_DEFLATED) as z:
+    for n,path in deploy.items():z.write(path,n)
+    z.writestr('deployment-manifest.json',json.dumps({'files':{n:sha(path) for n,path in deploy.items()},'production_install_deferred_to_exclusive_owner':True},indent=2))
+receipt={'deployment_sha256':sha(target),'deployment_files':len(deploy),'bytes':target.stat().st_size,'guarded_files':len(files),'archive_files':len(archive_files),'parents':len(parents),'CPU_controls':47,'candidate_source_files':85,'native_library_sha256':p['library_sha256'],'preparation_sha256':sha(prep)}
+(W/'b4-k-m4x4-control52-package.json').write_bytes(json.dumps(receipt,indent=2).encode());(W/'b4-k-m4x4-control52-owned-names.json').write_bytes(json.dumps(names).encode());print(json.dumps(receipt,indent=2))

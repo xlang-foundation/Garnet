@@ -1,0 +1,48 @@
+{
+  "status": "compact_warm_host_trace_prepared_unrun",
+  "full_model_archive_sha256": "41efc66d39e8e68d6df05b85a2db795c5422ba58aa0602b290b10af98690a1df",
+  "probe_derivation": [
+    [
+      "for repeat in range(2):",
+      "for repeat in range(4):",
+      1
+    ],
+    [
+      "old=qualified_cases[(group_index,repeat)]",
+      "old=qualified_cases[(group_index,repeat%2)]",
+      1
+    ],
+    [
+      "retained=prior_cases[(group_index,repeat)]",
+      "retained=prior_cases[(group_index,repeat%2)]",
+      1
+    ]
+  ],
+  "probe_sha256": "2b399e8426b997000cfa6f9dced80b956eb0916f776762bd2bd233f7318a5586",
+  "case_count": 8,
+  "groups": 2,
+  "repeats_per_group": 4,
+  "warmup_repeats": [
+    0,
+    1
+  ],
+  "capture_repeats": [
+    2,
+    3
+  ],
+  "required_parent_http_status": "compact_kv_delta_qpc_http_pilot_replayed",
+  "gpu_run": false,
+  "performance_admitted": false,
+  "scope": "Buffered nested host API intervals after two retained-case warmups per group. No added GPU barriers, per-call disk writes or native/model changes. Asynchronous launches and existing head synchronization remain; not kernel time, HTTP latency or a speedup. All eight strict token/state-hash cases and16raw hidden arrays required.",
+  "files": {
+    "warm_host_trace.py": "e79cc9545e0bc45f51dbd5593806f3ecc895bd6a601320a8d50173f29288e76c",
+    "test_warm_host_trace.py": "805d6417fa162e6cdecde3936b64c123c5a28ed36fc0ddd1e7a74ab2c4dd516e",
+    "probe_kv_delta_warm_full_b4_t4.py": "2b399e8426b997000cfa6f9dced80b956eb0916f776762bd2bd233f7318a5586",
+    "probe_kv_delta_warm_host_trace.py": "ad2d9771d2b1e6d1183781c45a0811e9d3e646034be7733a207f7aacb5dd0d91",
+    "test_kv_delta_warm_host_trace.bat": "25469478a5dfd88719ea0680c68da85a2addd2fddc04b1d7da4a7ad98b30554e",
+    "run_kv_delta_warm_host_trace.py": "49284e9509808078434b7d9db13612e86b147281c46b8bc2648cfef28b0ffdfd",
+    "archive_kv_delta_warm_host_trace.py": "b7b314298db7d7b94c363deee6bb0f65cf7885fc7f0ecfa7f0eccee047a854a4",
+    "verify_kv_delta_warm_host_trace.py": "7f1b3571eef97e559a01781c60bf8fd6a9298d1d013c25d0f0ae1a53d013191c",
+    "evidence/kv-delta-warm-host-trace-cpu-tests.json": "b88cce4b583385355ef77387b059990e55e1d0ef80302dbd660532cea3d563b4"
+  }
+}

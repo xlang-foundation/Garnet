@@ -1,0 +1,36 @@
+from pathlib import Path
+import ast,hashlib,json,os,sys,unittest,zipfile
+work=Path(__file__).resolve().parent;out=work.parent/'outputs';repo=Path('D:/CantorAI/work/qwen38-5090');m=repo/'test2026/cuda/qwen38_5090';M='Garnet/test2026/cuda/qwen38_5090/';sha=lambda raw:hashlib.sha256(raw).hexdigest();sys.path[:0]=[str(repo),str(m)]
+job='modelopt-init-trace-native-build-attempt1';proof=(out/(job+'-verified.json')).read_bytes();q=json.loads(proof);assert proof==(out/(job+'-remote-verified.json')).read_bytes() and q['status']=='modelopt_init_trace_native_build_failure_preserved' and q['candidate_library_sha256'] is None
+archive=out/(job+'-evidence.zip');assert sha(archive.read_bytes())==q['archive_sha256']
+with zipfile.ZipFile(archive) as z:
+    assert z.testzip() is None;original_prep=z.read(M+'evidence/modelopt-init-trace-native-build-preparation.json');old=json.loads(original_prep);w=json.loads(z.read('results/'+job+'/workflow.json'));log=z.read('results/'+job+'/cpu-ledger/commands.log')
+    assert w['exit_code']==1 and w['cleanup_finished'] and w['baseline_source_restored'] and w['baseline_library_restored'] and b'FAILED (failures=1)' in log and b'test_prior_gdn_stage_and_m128_policy_are_exact_compositions_before_Z' in log and 'candidate_library_sha256' not in w
+    assert 'results/'+job+'/build-ledger/commands.jsonl' not in z.namelist()
+    before_test=z.read(M+'test_modelopt_init_trace.py');assert sha(before_test)==old['methods'][M+'test_modelopt_init_trace.py'];(work/'test-modelopt-init-trace-before-attempt2.py').write_bytes(before_test)
+base=dict(old['base_files']);base[M+'evidence/modelopt-init-trace-native-build-preparation.json']=sha(original_prep);methods=dict(old['methods'])
+for name in ('prepare_modelopt_init_trace_native_build.py','run_modelopt_init_trace_native_build.py','verify_modelopt_init_trace_native_build.py'):
+    base[M+name]=methods.pop(M+name);new=name.replace('.py','_attempt2.py');methods[M+new]=sha((m/new).read_bytes())
+methods[M+'test_modelopt_init_trace.py']=sha((m/'test_modelopt_init_trace.py').read_bytes());methods[M+'evidence/modelopt-init-trace-native-build-attempt2-derivation.json']=sha((m/'evidence/modelopt-init-trace-native-build-attempt2-derivation.json').read_bytes())
+for name,h in methods.items():
+    raw=(repo/name.removeprefix('Garnet/')).read_bytes();assert sha(raw)==h
+    if name.endswith('.py'):ast.parse(raw)
+layer=json.loads((m/'evidence/layer2-ordinary-witness-preparation.json').read_bytes());oldtests=layer['test_ids'];replaced=old['superseded_source_test_ids']+['test2026.cuda.qwen38_5090.test_fp8_z128_native_integration.IntegrationProvenance.test_prior_gdn_stage_and_m128_policy_are_exact_compositions_before_Z'];assert all(oldtests.count(name)==1 for name in replaced)
+def ids(suite):
+    for item in suite:
+        if isinstance(item,unittest.TestSuite):yield from ids(item)
+        else:yield item.id()
+newtests=sorted(ids(unittest.defaultTestLoader.loadTestsFromName('test2026.cuda.qwen38_5090.test_modelopt_init_trace')));tests=[name for name in oldtests if name not in replaced]+newtests;assert len(newtests)==5 and len(tests)==len(set(tests))==81
+import run_logged as ledger
+ledger.source_identity=lambda:{'scope':'Explicit private initialize trace attempt2 methods; unrelated untracked excluded','owned_source_sha256':methods};os.chdir(repo)
+assert ledger.run([sys.executable,'-m','unittest',*tests],work/'modelopt-init-trace-attempt2-local-cpu-ledger','correctness','Retain78old controls through two exact source-composition replays plus5trace tests=81. Prior failed CPU gate preserved; no algorithm/native/GPU changes',[repo/name.removeprefix('Garnet/') for name in methods])==0
+assert ledger.run([sys.executable,str(work/'check-modelopt-trace-installed-source-view.py')],work/'modelopt-init-trace-attempt2-source-view-ledger','correctness','PureCPU simulated installed view for four exact trace-only CPP changes; no source writes or native/GPU calls',[work/'check-modelopt-trace-installed-source-view.py'])==0
+parents={**old['parents'],job:{'status':q['status'],'exit_code':1,'proof_sha256':sha(proof),'archive_sha256':q['archive_sha256']}}
+p={key:value for key,value in old.items() if key not in ('cache_before_sha256','cuda_objects_before','proposal','proposal_sha256')};p.update(status='modelopt_init_trace_native_build_proposed_unrun',base_files=base,methods=methods,test_ids=tests,superseded_source_test_ids=replaced,new_trace_test_ids=newtests,parents=parents,expected_method_updates={M+'test_modelopt_init_trace.py':sha(before_test)},scope=old['scope']+' Attempt2 preserves failed attempt1 before any native compilation and replays both original policy/integration byte-provenance assertions via verified immutable originals and exact trace-only CPP derivations; no numerical control is removed.')
+assert len(methods)==33 and not any('probe_native_external_prefix_batch.py' in name for name in [*base,*methods])
+target=work/'modelopt-init-trace-native-proposal-attempt2.json';assert not target.exists();raw=json.dumps(p,indent=2).encode();target.write_bytes(raw);source=work/'modelopt-init-trace-native-source.zip';assert sha(source.read_bytes())==p['bundle_sha256']
+deploy={name:(repo/name.removeprefix('Garnet/')).read_bytes() for name in methods};deploy[p['bundle']]=source.read_bytes();deploy['results/'+target.name]=raw;package=work/'modelopt-init-trace-native-deployment-attempt2.zip';assert not package.exists()
+with zipfile.ZipFile(package,'x',zipfile.ZIP_DEFLATED) as z:
+    for name,raw in deploy.items():z.writestr(name,raw)
+    z.writestr('install-manifest.json',json.dumps({'files':{name:sha(raw) for name,raw in deploy.items()}},indent=2))
+result={'status':p['status'],'base_pins':len(base),'method_pins':len(methods),'candidate_sources':38,'CPU_tests':81,'deployment_targets':len(deploy),'deployment_sha256':sha(package.read_bytes()),'bytes':package.stat().st_size,'proposal_sha256':sha(target.read_bytes()),'expected_method_updates':p['expected_method_updates']};(work/'modelopt-init-trace-native-package-attempt2.json').write_bytes(json.dumps(result,indent=2).encode());print(json.dumps(result))

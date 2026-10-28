@@ -1,0 +1,45 @@
+{
+  "source_file": "D:\\CantorAI\\work\\qwen38-5090\\test2026\\cuda\\test_qwen35_resident_controls.py",
+  "source_sha256": "4cb03376fb78325dc24c004729394dc9a8ade326f8e6a6fd2e935552013718b4",
+  "draft_sha256": "090b003a422f3da1e358bc76b092bfd5f611caac265b4cb4c95cff5e6e45aa65",
+  "changes": [
+    {
+      "old": "import json,os,struct,sys",
+      "new": "from pathlib import Path\nassert Path(__file__).resolve().parent==Path('D:/CantorAI/5090-study-20261023/Garnet/test2026/cuda/qwen38_5090'), 'Native/GPU probe is remote-only'\nimport json,os,struct,sys",
+      "count": 1
+    },
+    {
+      "old": "sys.path.insert(0,os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))",
+      "new": "sys.path.insert(0,str(Path(__file__).resolve().parents[3]))",
+      "count": 1
+    },
+    {
+      "old": "io.open(checkpoint);records=[]",
+      "new": "io.open(checkpoint);io.enable_host_embedding(True);io.enable_nvfp4_head(True);records=[]",
+      "count": 1
+    },
+    {
+      "old": "for b in (1,2,4,8):",
+      "new": "for b in (4,):",
+      "count": 1
+    },
+    {
+      "old": "for size in (4,16,64,128):",
+      "new": "for size in (4,16,32):",
+      "count": 1
+    },
+    {
+      "old": "info=json.loads(io.memory_json());h=info['hidden_size'] if 'hidden_size' in info else info['hidden_width']",
+      "new": "info=json.loads(io.memory_json());h=info['hidden_size'] if 'hidden_size' in info else info['hidden_width']\n    assert info['embedding_mode']=='host_mapped_bf16' and h==5120 and info['vocab_size']==248320",
+      "count": 1
+    },
+    {
+      "old": "QWEN35_RESIDENT_CONTROLS_COMPLETE",
+      "new": "B4_HOST_RESIDENT_CONTROLS_COMPLETE",
+      "count": 1
+    }
+  ],
+  "scope": "Existing independent legacy upload/gather bytes vs resident-control/gather API comparison, narrowed to B4 and actual target32/draft16/decode4 widths;3 trials each. Pinned host-BF16 embedding mode, input argument lifetime, negative zero/fractional control values, inactive-row zero padding and invalid-input no-mutation checks retained. Native execution must occur remotely after current benchmark exits. No model inference or speed admission.",
+  "native_GPU_probe_unrun": true,
+  "syntax_checked_only": true
+}

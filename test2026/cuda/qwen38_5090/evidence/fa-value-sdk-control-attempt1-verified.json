@@ -1,0 +1,587 @@
+{
+  "status": "actual_FA_value_SDK_control_failure_replayed",
+  "exit_code": 1,
+  "error": "AssertionError('SDK baseline did not reproduce both actual Garnet active V caches')",
+  "archive_sha256": "afbecc5876164801284d28bffdbe04cccb27f8fa9f7f222ab4b7928c709bfa9d",
+  "archive_bytes": 10076454,
+  "files_verified": 86,
+  "stage_exit_codes": {
+    "cpu": 0,
+    "fixture": 0,
+    "build": 0,
+    "sdk": 0
+  },
+  "fixture_cases": [
+    {
+      "label": "v3",
+      "layer": 3,
+      "actual_decode_step": 5,
+      "physical_rows": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "same_consumed_inputs_and_full_preceding_hidden_and_separate_norm": true,
+      "actual_active_V_BF16_different_words": 1,
+      "input_sha256": "e0eb19c4795c4c0365119d14bd584d95184dad2e67ac1185c868fde21afc90a4",
+      "reference_active_sha256": "1b6929ac225b4af1607b1c726ec33eb2c1eaffe6d191114dceee9e34489fb097",
+      "candidate_active_sha256": "debe0ed8aabd389689b21da2834f58099833d10ef57cd01f4d8f1b6e59886021"
+    },
+    {
+      "label": "v11",
+      "layer": 11,
+      "actual_decode_step": 1,
+      "physical_rows": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "same_consumed_inputs_and_full_preceding_hidden_and_separate_norm": true,
+      "actual_active_V_BF16_different_words": 1,
+      "input_sha256": "e096b6641d78c0bdba4713695933175514c229e784e22ca848e44053d1e0283f",
+      "reference_active_sha256": "b5b54f71d7c654c53321d2d9e7c90381ea01b05523e3a8ab494053b2f16244d6",
+      "candidate_active_sha256": "d2b9ab6a54fa5b127f8317435243f9954e1e8870c5dbf69c2a883e114cef3803"
+    }
+  ],
+  "observation": {
+    "status": "actual_FA_value_SDK_full_word_observation",
+    "cases": [
+      {
+        "projection": "v3",
+        "layer": 3,
+        "actual_decode_step": 5,
+        "repeat": 0,
+        "full_output_words": 16384,
+        "active_output_words": 4096,
+        "Garnet_M4_active_values_reproduced": false,
+        "Garnet_M16_active_values_reproduced": false,
+        "default_M16_vs_four_M4_full_different_words": 1,
+        "default_M16_vs_four_M4_active_different_words": 1,
+        "M4_algorithm_at_M16_full_different_words": 0,
+        "M4_algorithm_at_M16_active_different_words": 0
+      },
+      {
+        "projection": "v3",
+        "layer": 3,
+        "actual_decode_step": 5,
+        "repeat": 1,
+        "full_output_words": 16384,
+        "active_output_words": 4096,
+        "Garnet_M4_active_values_reproduced": false,
+        "Garnet_M16_active_values_reproduced": false,
+        "default_M16_vs_four_M4_full_different_words": 1,
+        "default_M16_vs_four_M4_active_different_words": 1,
+        "M4_algorithm_at_M16_full_different_words": 0,
+        "M4_algorithm_at_M16_active_different_words": 0
+      },
+      {
+        "projection": "v11",
+        "layer": 11,
+        "actual_decode_step": 1,
+        "repeat": 0,
+        "full_output_words": 16384,
+        "active_output_words": 4096,
+        "Garnet_M4_active_values_reproduced": true,
+        "Garnet_M16_active_values_reproduced": true,
+        "default_M16_vs_four_M4_full_different_words": 1,
+        "default_M16_vs_four_M4_active_different_words": 1,
+        "M4_algorithm_at_M16_full_different_words": 0,
+        "M4_algorithm_at_M16_active_different_words": 0
+      },
+      {
+        "projection": "v11",
+        "layer": 11,
+        "actual_decode_step": 1,
+        "repeat": 1,
+        "full_output_words": 16384,
+        "active_output_words": 4096,
+        "Garnet_M4_active_values_reproduced": true,
+        "Garnet_M16_active_values_reproduced": true,
+        "default_M16_vs_four_M4_full_different_words": 1,
+        "default_M16_vs_four_M4_active_different_words": 1,
+        "M4_algorithm_at_M16_full_different_words": 0,
+        "M4_algorithm_at_M16_active_different_words": 0
+      }
+    ],
+    "CPU_input_cast_and_FP8_quantization_exact": true,
+    "four_M4_and_default_M16_reproduce_actual_Garnet_active_cache": false,
+    "same_M4_algorithm_at_M16_full_words_exact": true,
+    "full_Garnet_inactive_V_projection_outputs_captured": false,
+    "internal_fused_normalization_directly_captured": false,
+    "full_model_or_quality_or_performance_qualified": false
+  },
+  "algorithm_replay": {
+    "status": "actual_M4_M16_SDK_attributes_and_AlgoCheck_replayed",
+    "calls": [
+      {
+        "projection": "v3",
+        "step": 0,
+        "repeat": 0,
+        "row": 0,
+        "mode": "m4",
+        "M": 4,
+        "attributes": {
+          "id": 35,
+          "tile": 13,
+          "stages": 17,
+          "split": 3,
+          "reduction": 2,
+          "swizzle": 0,
+          "custom": 1
+        },
+        "workspace": 4194304
+      },
+      {
+        "projection": "v3",
+        "step": 0,
+        "repeat": 0,
+        "row": 1,
+        "mode": "m4",
+        "M": 4,
+        "attributes": {
+          "id": 35,
+          "tile": 13,
+          "stages": 17,
+          "split": 3,
+          "reduction": 2,
+          "swizzle": 0,
+          "custom": 1
+        },
+        "workspace": 4194304
+      },
+      {
+        "projection": "v3",
+        "step": 0,
+        "repeat": 0,
+        "row": 2,
+        "mode": "m4",
+        "M": 4,
+        "attributes": {
+          "id": 35,
+          "tile": 13,
+          "stages": 17,
+          "split": 3,
+          "reduction": 2,
+          "swizzle": 0,
+          "custom": 1
+        },
+        "workspace": 4194304
+      },
+      {
+        "projection": "v3",
+        "step": 0,
+        "repeat": 0,
+        "row": 3,
+        "mode": "m4",
+        "M": 4,
+        "attributes": {
+          "id": 35,
+          "tile": 13,
+          "stages": 17,
+          "split": 3,
+          "reduction": 2,
+          "swizzle": 0,
+          "custom": 1
+        },
+        "workspace": 4194304
+      },
+      {
+        "projection": "v3",
+        "step": 0,
+        "repeat": 1,
+        "row": 0,
+        "mode": "m4",
+        "M": 4,
+        "attributes": {
+          "id": 35,
+          "tile": 13,
+          "stages": 17,
+          "split": 3,
+          "reduction": 2,
+          "swizzle": 0,
+          "custom": 1
+        },
+        "workspace": 4194304
+      },
+      {
+        "projection": "v3",
+        "step": 0,
+        "repeat": 1,
+        "row": 1,
+        "mode": "m4",
+        "M": 4,
+        "attributes": {
+          "id": 35,
+          "tile": 13,
+          "stages": 17,
+          "split": 3,
+          "reduction": 2,
+          "swizzle": 0,
+          "custom": 1
+        },
+        "workspace": 4194304
+      },
+      {
+        "projection": "v3",
+        "step": 0,
+        "repeat": 1,
+        "row": 2,
+        "mode": "m4",
+        "M": 4,
+        "attributes": {
+          "id": 35,
+          "tile": 13,
+          "stages": 17,
+          "split": 3,
+          "reduction": 2,
+          "swizzle": 0,
+          "custom": 1
+        },
+        "workspace": 4194304
+      },
+      {
+        "projection": "v3",
+        "step": 0,
+        "repeat": 1,
+        "row": 3,
+        "mode": "m4",
+        "M": 4,
+        "attributes": {
+          "id": 35,
+          "tile": 13,
+          "stages": 17,
+          "split": 3,
+          "reduction": 2,
+          "swizzle": 0,
+          "custom": 1
+        },
+        "workspace": 4194304
+      },
+      {
+        "projection": "v3",
+        "step": 0,
+        "repeat": 0,
+        "row": 0,
+        "mode": "default16",
+        "M": 16,
+        "attributes": {
+          "id": 35,
+          "tile": 15,
+          "stages": 18,
+          "split": 7,
+          "reduction": 2,
+          "swizzle": 1,
+          "custom": 0
+        },
+        "workspace": 4194304
+      },
+      {
+        "projection": "v3",
+        "step": 0,
+        "repeat": 1,
+        "row": 0,
+        "mode": "default16",
+        "M": 16,
+        "attributes": {
+          "id": 35,
+          "tile": 15,
+          "stages": 18,
+          "split": 7,
+          "reduction": 2,
+          "swizzle": 1,
+          "custom": 0
+        },
+        "workspace": 4194304
+      },
+      {
+        "projection": "v3",
+        "step": 0,
+        "repeat": 0,
+        "row": 0,
+        "mode": "shared16",
+        "M": 16,
+        "attributes": {
+          "id": 35,
+          "tile": 13,
+          "stages": 17,
+          "split": 3,
+          "reduction": 2,
+          "swizzle": 0,
+          "custom": 1
+        },
+        "workspace": 4194304
+      },
+      {
+        "projection": "v3",
+        "step": 0,
+        "repeat": 1,
+        "row": 0,
+        "mode": "shared16",
+        "M": 16,
+        "attributes": {
+          "id": 35,
+          "tile": 13,
+          "stages": 17,
+          "split": 3,
+          "reduction": 2,
+          "swizzle": 0,
+          "custom": 1
+        },
+        "workspace": 4194304
+      },
+      {
+        "projection": "v11",
+        "step": 0,
+        "repeat": 0,
+        "row": 0,
+        "mode": "m4",
+        "M": 4,
+        "attributes": {
+          "id": 35,
+          "tile": 13,
+          "stages": 17,
+          "split": 3,
+          "reduction": 2,
+          "swizzle": 0,
+          "custom": 1
+        },
+        "workspace": 4194304
+      },
+      {
+        "projection": "v11",
+        "step": 0,
+        "repeat": 0,
+        "row": 1,
+        "mode": "m4",
+        "M": 4,
+        "attributes": {
+          "id": 35,
+          "tile": 13,
+          "stages": 17,
+          "split": 3,
+          "reduction": 2,
+          "swizzle": 0,
+          "custom": 1
+        },
+        "workspace": 4194304
+      },
+      {
+        "projection": "v11",
+        "step": 0,
+        "repeat": 0,
+        "row": 2,
+        "mode": "m4",
+        "M": 4,
+        "attributes": {
+          "id": 35,
+          "tile": 13,
+          "stages": 17,
+          "split": 3,
+          "reduction": 2,
+          "swizzle": 0,
+          "custom": 1
+        },
+        "workspace": 4194304
+      },
+      {
+        "projection": "v11",
+        "step": 0,
+        "repeat": 0,
+        "row": 3,
+        "mode": "m4",
+        "M": 4,
+        "attributes": {
+          "id": 35,
+          "tile": 13,
+          "stages": 17,
+          "split": 3,
+          "reduction": 2,
+          "swizzle": 0,
+          "custom": 1
+        },
+        "workspace": 4194304
+      },
+      {
+        "projection": "v11",
+        "step": 0,
+        "repeat": 1,
+        "row": 0,
+        "mode": "m4",
+        "M": 4,
+        "attributes": {
+          "id": 35,
+          "tile": 13,
+          "stages": 17,
+          "split": 3,
+          "reduction": 2,
+          "swizzle": 0,
+          "custom": 1
+        },
+        "workspace": 4194304
+      },
+      {
+        "projection": "v11",
+        "step": 0,
+        "repeat": 1,
+        "row": 1,
+        "mode": "m4",
+        "M": 4,
+        "attributes": {
+          "id": 35,
+          "tile": 13,
+          "stages": 17,
+          "split": 3,
+          "reduction": 2,
+          "swizzle": 0,
+          "custom": 1
+        },
+        "workspace": 4194304
+      },
+      {
+        "projection": "v11",
+        "step": 0,
+        "repeat": 1,
+        "row": 2,
+        "mode": "m4",
+        "M": 4,
+        "attributes": {
+          "id": 35,
+          "tile": 13,
+          "stages": 17,
+          "split": 3,
+          "reduction": 2,
+          "swizzle": 0,
+          "custom": 1
+        },
+        "workspace": 4194304
+      },
+      {
+        "projection": "v11",
+        "step": 0,
+        "repeat": 1,
+        "row": 3,
+        "mode": "m4",
+        "M": 4,
+        "attributes": {
+          "id": 35,
+          "tile": 13,
+          "stages": 17,
+          "split": 3,
+          "reduction": 2,
+          "swizzle": 0,
+          "custom": 1
+        },
+        "workspace": 4194304
+      },
+      {
+        "projection": "v11",
+        "step": 0,
+        "repeat": 0,
+        "row": 0,
+        "mode": "default16",
+        "M": 16,
+        "attributes": {
+          "id": 35,
+          "tile": 15,
+          "stages": 18,
+          "split": 7,
+          "reduction": 2,
+          "swizzle": 1,
+          "custom": 0
+        },
+        "workspace": 4194304
+      },
+      {
+        "projection": "v11",
+        "step": 0,
+        "repeat": 1,
+        "row": 0,
+        "mode": "default16",
+        "M": 16,
+        "attributes": {
+          "id": 35,
+          "tile": 15,
+          "stages": 18,
+          "split": 7,
+          "reduction": 2,
+          "swizzle": 1,
+          "custom": 0
+        },
+        "workspace": 4194304
+      },
+      {
+        "projection": "v11",
+        "step": 0,
+        "repeat": 0,
+        "row": 0,
+        "mode": "shared16",
+        "M": 16,
+        "attributes": {
+          "id": 35,
+          "tile": 13,
+          "stages": 17,
+          "split": 3,
+          "reduction": 2,
+          "swizzle": 0,
+          "custom": 1
+        },
+        "workspace": 4194304
+      },
+      {
+        "projection": "v11",
+        "step": 0,
+        "repeat": 1,
+        "row": 0,
+        "mode": "shared16",
+        "M": 16,
+        "attributes": {
+          "id": 35,
+          "tile": 13,
+          "stages": 17,
+          "split": 3,
+          "reduction": 2,
+          "swizzle": 0,
+          "custom": 1
+        },
+        "workspace": 4194304
+      }
+    ],
+    "actual_M16_AlgoChecks": 4,
+    "reference_algorithms": {
+      "v3": [
+        35,
+        13,
+        17,
+        3,
+        2,
+        0,
+        1
+      ],
+      "v11": [
+        35,
+        13,
+        17,
+        3,
+        2,
+        0,
+        1
+      ]
+    },
+    "all_seven_attributes_queried": true,
+    "no_unsupported_or_workspace_fallback": true
+  },
+  "algorithm_error": null,
+  "observation_error": null,
+  "strict_error": "AssertionError('SDK baseline did not reproduce both actual Garnet active V caches')",
+  "strict_replay_passed": false,
+  "source_runtime_SDK_checkpoint_CMake_all34_production_objects_unchanged": true,
+  "component_value_projection_algorithm_effect_established_for_two_real_cases": false,
+  "full_Garnet_inactive_V_projection_outputs_captured": false,
+  "internal_fused_normalization_directly_captured": false,
+  "full_model_or_quality_or_performance_qualified": false,
+  "two_times_target_achieved": false,
+  "replay_verifier_sha256": "9dc8551364359ae173b5e0af089027138165e1e680c1aa5db177f4f07cbede59",
+  "scope": "Untimed private SM120/cuBLASLt13.4 control on TWO real cases qualified by paired readonly diagnostic: FA3decode5 andFA11decode1, allfour fullT4 precedinghidden andseparateRMSNorm arrays exact, actualactiveVcache differsoneBF16word each. Useactual N1024/K5120 indexed checkpoint E4M3 weights andpositiveF32calibrations, fullshardheader and10MiBweight slices archived, no checkpointcopy. Original production BF16cast/FP8quantizer/matmul andliveM4selectioninterception unchanged; comparefourM4/defaultM16/sharedM4algorithmatM16,2exactrepeats, full16x1024SDKoutputs includingpadding, all7attrs and4actualM16AlgoChecks withinoriginal4MiB/no fallback. Both SDKbaselineACTIVE outputs mustreproduceactualGarnetcache, noinactiveGarnetprojection witness claimed. Componentcontrolonly, internalfusednormnotdirectlycaptured andwholemodelstillfailed.14CPUcontrols pass (new6+original8); initialsyntheticrowpermutationfixturefailure retainedandcorrectedwithoutgatechange. Production4compiledfiles absentfrombothsource60/67bundles andsamehashusedbybothDLLs; no sourceoverlay/DLLswap/modelrun. Explicit baselinepins/runtime/SDK/checkpoint/all34productionobjects/CMake remainunchanged, privatebuildonlyonremote5090 andexclusiveGPUowner. AllrawSDKarrays/weights/nativeexecutable/hash/log/failures saved, no nativebinaryexecutedlocal. Independentremote/local CPU replay required. No newbenchmark/chart/quality/performance/2xclaim; strongesttuned/MTPrefs andmatchedINT4/4B andfull4K/MTP/805/HTTPremainopen."
+}

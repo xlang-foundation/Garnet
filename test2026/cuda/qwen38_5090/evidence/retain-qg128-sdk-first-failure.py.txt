@@ -1,0 +1,31 @@
+from pathlib import Path
+import hashlib,json,zipfile
+W=Path(__file__).resolve().parent;O=W.parent/'outputs';R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';P='Garnet/test2026/cuda/qwen38_5090/';E='test2026/cuda/qwen38_5090/evidence/';sha=lambda b:hashlib.sha256(b).hexdigest();paths=[]
+def put(n,raw):
+    p=R/n;assert p.resolve().is_relative_to(R.resolve());assert not p.exists() or p.read_bytes()==raw,n;p.write_bytes(raw);paths.append(n)
+job='qg128-sdk-control-attempt1';raw=(O/(job+'-verified.json')).read_bytes();assert raw==(O/(job+'-remote-verified.json')).read_bytes();q=json.loads(raw);assert q['exit_code']==1 and q['report']['error']=='resolved_module_path';archive=O/(job+'-evidence.zip');assert sha(archive.read_bytes())==q['archive_sha256']
+for suffix in ('-verified.json','-remote-verified.json'):put(E+job+suffix,(O/(job+suffix)).read_bytes())
+with zipfile.ZipFile(archive) as z:
+    p=json.loads(z.read(P+'evidence/qg128-sdk-control-preparation.json'))
+    for n,h in p['files'].items():assert sha(z.read(n))==h and sha((R/n.removeprefix('Garnet/')).read_bytes())==h;paths.append(n.removeprefix('Garnet/'))
+    paths.append('test2026/cuda/qwen38_5090/evidence/qg128-sdk-control-preparation.json')
+    for n in z.namelist():
+        if n.startswith('results/'+job+'/') and n.endswith(('.json','.jsonl','.log')):put(E+job+'-'+n.removeprefix('results/'+job+'/').replace('/','-'),z.read(n))
+    put(E+job+'-manifest.json',z.read('evidence-manifest.json'))
+for n in ('commands.log','commands.jsonl'):put(E+job+'-local-failure-'+n,(W/'qg128-sdk-control-attempt1-local-failure-ledger'/n).read_bytes())
+for n in ('package-qg128-sdk-control.py','install-qg128-sdk-control.py','replay-qg128-sdk-failure-local.py','derive-qg128-sdk-module-audit-retry.py','package-qg128-sdk-audit-retry.py','install-qg128-sdk-audit-retry.py','retain-qg128-sdk-first-failure.py'):put(E+n+'.txt',(W/n).read_bytes())
+for n in ('qg128-sdk-control-package.json','qg128-sdk-audit-retry-package.json'):put(E+n,(W/n).read_bytes())
+p=json.loads((M/'evidence/qg128-sdk-control-preparation-attempt2.json').read_bytes())
+for n,h in p['files'].items():assert sha((R/n.removeprefix('Garnet/')).read_bytes())==h;paths.append(n.removeprefix('Garnet/'))
+paths.append('test2026/cuda/qwen38_5090/evidence/qg128-sdk-control-preparation-attempt2.json')
+text='''
+
+### Standalone Q/Gate SDK probe: first deployment audit failure preserved; exact geometry checks unchanged in retry
+
+2026-10-26: Compile standalone probe_qg128_sdk_control.cpp with real NVCC13.2/MSVC /MT, -archsm120 and requested -cudartshared, dynamic cuBLASLt import. No Garnet native source/library build or model weights/matmul. It requires pinnedGPUUUID/SM120/cuBLASLt130400, queries actualM16 QG N12288K5120 with4MiB preference, requires first-success SDK object match observed T32 ID67/TILE64x32/STAGES64x5/CTA1/CUSTOM18, queries other public attrs without guessing, and calls AlgoCheck on exactly that SDK-owned object forM16/M32/M128 with<=4MiB. The attempt reaches module-path audit after those checks but exits1 because it requires a separate loaded cudart64_13.dll. Its catch report contains only resolved_module_path; no successful compatibility proof or numeric data is claimed from the lost partial report. Actual PE dependency inspection shows only cublasLt64_13.dll andKERNEL32.dll. Compiler explicitly warns that shared is deprecated and maps to hybrid; do not infer a separate dynamic cudart module from the command flag or claim fully static CUDA execution.
+
+Preserve original archive4ec5eed0659f5d58622d0e510abce44159c17ce295387c3fc28f7e0b1f1601fd (284234bytes/15members) and identical independent failure proof4e2026fa3d1b57ec43883c8fdddeeb944cc86a6975272e4a54c39c10dcf72fd5. Production source/library/runtime/SDK/checkpoints unchanged; native compile/run/replay jobs terminal. Retry uses separate attempt2 source/batch/owner/verifier/preparation names, preserves the first failure, and changes ONLY the deployment audit: require actual loaded cuBLASLt SHA andSystem32nvcuda path/SHA before/after; report optional cudart path/absence and validate its SHA if present. Record original failed executable PE imports with exact command/executable/tool hashes. Exact source derivation and AST checks require the entire main() selection/geometry/attribute/AlgoCheck prefix byte-identical. No API, threshold, shape, algorithm predicate, model weight or production runtime change. Retry outcome pending; no model/numerical/quality/performance admission. Original full-modelT128 admission, full six4K/image/MTP/quality, trueconcurrency, strongest repeated tuned/MTP references, matchedINT4/4B/servingVRAM/TTFT/decode/throughput and2xdecodeANDthroughput/halfTTFT remain open and goal stays active.
+'''
+for n in ('docs/research/qwen38-5090-development-log.md','docs/research/qwen38-5090-implementation-task.md'):
+    target=R/n;old=target.read_bytes();assert b'### Standalone Q/Gate SDK probe: first deployment audit failure preserved' not in old;target.write_bytes(old+text.replace('\n','\r\n').encode());assert target.read_bytes()[:len(old)]==old;paths.append(n)
+(W/'qg128-sdk-failure-and-retry-retained-paths.json').write_bytes(json.dumps(sorted(set(paths)),indent=2).encode());print(json.dumps(dict(retained_paths=len(set(paths)),paired_first_failure_proof_sha256=sha(raw))))

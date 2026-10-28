@@ -1,0 +1,14 @@
+from pathlib import Path
+import hashlib,json,os,sys,zipfile
+ROOT=Path('D:/CantorAI/5090-study-20261023');M=ROOT/'Garnet/test2026/cuda/qwen38_5090';sys.path[:0]=[str(M),str(ROOT/'Garnet')];import run_logged as ledger
+script=ROOT/'results/inspect-rowwise-k-norm-build-inputs.py';sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest();seed=ROOT/'results/rowwise-k-norm-build-seed.json'
+ledger.source_identity=lambda:{'scope':'Explicit read-only source87 build inventory scripts and seed; protected bodies excluded','owned_source_sha256':{p.name:sha(p) for p in (script,Path(__file__),seed)}};os.chdir(ROOT/'Garnet')
+code=ledger.run([sys.executable,str(script)],ROOT/'results/rowwise-k-norm-build-input-inventory','correctness','Fresh source87 targets/current1948baseline/runtime-SDK/config-index/CMake/all34objects,51closedparents including actual184nativeprofile and full4K/cache62 failures. No production mutation/native compilation/GPU/model.',[script,seed,ROOT/'results/rowwise-k-norm-source.zip'])
+paths=[script,Path(__file__),seed]+list((ROOT/'results/rowwise-k-norm-build-input-inventory').iterdir());target=ROOT/'results/rowwise-k-norm-build-inputs.json'
+if target.exists():paths.append(target)
+archive=ROOT/'results/rowwise-k-norm-build-inventory-assets.zip';assert not archive.exists()
+with zipfile.ZipFile(archive,'x',zipfile.ZIP_DEFLATED) as z:
+    files={p.relative_to(ROOT).as_posix():p for p in paths if p.is_file()}
+    for n,p in files.items():z.write(p,n)
+    z.writestr('manifest.json',json.dumps({'files':{n:sha(p) for n,p in files.items()}},indent=2))
+print(json.dumps({'exit_code':code,'archive_sha256':sha(archive),'bytes':archive.stat().st_size}));raise SystemExit(code)

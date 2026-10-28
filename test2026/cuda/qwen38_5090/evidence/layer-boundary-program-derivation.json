@@ -1,0 +1,28 @@
+{
+  "source_bundle_sha256": "a0063cb10bf32144058fee174c9e0959adcf91d21bf34a9901dfe2e291f17246",
+  "original_source": "xModel/qwen35/vl_0_8b/cuda_packed_program.py",
+  "original_source_sha256": "623d97063edf8e5dcb22e1558bc0996965bb85dfd8f53d2d93a0fbf68d362ec6",
+  "original_method_sha256": "a064af6355b21f7ad04a3847a3e691365601952c8d0cbcbe77a0cc35f6316efb",
+  "derived_method_sha256": "fe57e4d731ce6caf14edeeedf12613c32b63142d85a033516208fddd8ccb8997",
+  "target": "layer_boundary_program.py",
+  "target_sha256": "37b30d9d3ee020f084cd97bc1c5a11506fd706524372023012082eb3411b9b5e",
+  "method_changes": [
+    {
+      "old": "            state_outputs=[];payload_outputs=[]",
+      "new": "            state_outputs=[];payload_outputs=[];boundary_outputs=[]",
+      "occurrences": 1
+    },
+    {
+      "old": "                hidden=packed_view(packed,0,t*h,[b,t,h])",
+      "new": "                hidden=packed_view(packed,0,t*h,[b,t,h])\n                if layer['index'] in self.boundary_layers:boundary_outputs.append(hidden*T.unary_op('reshape',shape=[b,t*h]))",
+      "occurrences": 1
+    },
+    {
+      "old": "            return join([flat]+state_outputs+payload_outputs)",
+      "new": "            return join([flat]+state_outputs+payload_outputs+boundary_outputs)",
+      "occurrences": 1
+    }
+  ],
+  "all_original_math_barriers_layout_and_arguments_unchanged": true,
+  "shared_graph_output_width_expanded_native_commit_prefix_unchanged": true
+}

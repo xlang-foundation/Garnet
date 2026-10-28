@@ -1,0 +1,58 @@
+{
+  "derivations": [
+    {
+      "source": "run_b4_b1_short_m16_admission.py",
+      "target": "run_decode_boundaries.py",
+      "source_sha256": "09f741ad2831c77c0adda6bbf1cfc6784c621a95764819662811ae683939b4c7",
+      "target_sha256": "0c0c48cd03146a43edbd062512fd787b7ff7655d09e4a14b7415ec665d708250",
+      "changes": [
+        {
+          "old": "\"\"\"Exclusive short mixed B4-vs-B1 numerical admission; no timing promotion.\"\"\"",
+          "new": "\"\"\"Exclusive readonly decode-boundary diagnosis; no numerical gate promotion.\"\"\"",
+          "count": 1
+        },
+        {
+          "old": "JOB='b4-b1-short-m16-admission-attempt1'",
+          "new": "JOB='decode-boundaries-attempt1'",
+          "count": 1
+        },
+        {
+          "old": "b4-b1-short-m16-preparation.json",
+          "new": "decode-boundaries-preparation.json",
+          "count": 1
+        },
+        {
+          "old": "B4_vs_B1_short_M16_prepared_GPU_unrun",
+          "new": "readonly_decode_boundaries_prepared_GPU_unrun",
+          "count": 1
+        },
+        {
+          "old": "'test2026.cuda.qwen38_5090.test_b4_b1_short_m16_gate'",
+          "new": "'test2026.cuda.qwen38_5090.test_b4_b1_short_m16_gate','test2026.cuda.qwen38_5090.test_decode_boundary_program','test2026.cuda.qwen38_5090.test_decode_boundary_analysis'",
+          "count": 1
+        },
+        {
+          "old": "launch_b4_b1_short_m16_admission.py",
+          "new": "launch_decode_boundaries.py",
+          "count": 1
+        },
+        {
+          "old": "Strict complete128component/finite raw vector/signedzero/rowpermutation/slot/ID corruption gates",
+          "new": "17 CPU controls: original full gates plus readonly prefix/binding/geometry/derivation and full boundary/primary/repeat/nonfinite/slot/row/conditioning faults",
+          "count": 1
+        },
+        {
+          "old": "Four fresh source60/DLL841 B1 oracles then source67/DLL677 physicalB4 candidate with M16policy1; same41/104/93/93token text-image short/tail inputs and8IDs. Capture complete128statecomponents, finite hidden+norm rawbytes/reset/prefill/final/reset. Original exactgate enforced in CPython owner after capture; actualfactory/init traces required, no timing or quality promotion.",
+          "new": "Same source60/DLL841 B1 and source67/DLL677 B4 profiles as linked failed short gate. Only T4 readonly graph suffixes change. Preserve all4phase128component fullstate/rawfinitevectors/8IDs; require exact same-profile primary endpoints to linked prior raw captures BEFORE interpreting 7step full8hidden boundaries, separate FA3/11 RMSNorm repeats, actual active BF16 Vcache reads. M16 init/factory traces retained. No cross-profile model admission or benchmark.",
+          "count": 1
+        },
+        {
+          "old": "        from test2026.cuda.qwen38_5090.b4_b1_short_m16_gate import observe,admit,route_trace\n        reference=json.loads((out/'reference/report.json').read_bytes());candidate=json.loads((out/'candidate/report.json').read_bytes())\n        read_reference=lambda name:(out/'reference'/name).read_bytes();read_candidate=lambda name:(out/'candidate'/name).read_bytes()\n        w['observation']=observe(reference,candidate,read_reference,read_candidate);(out/'analysis.json').write_bytes(json.dumps(w['observation'],indent=2).encode());save()\n        w['actual_GDN_M16_route']=route_trace((out/'candidate-ledger/commands.log').read_bytes());(out/'route-analysis.json').write_bytes(json.dumps(w['actual_GDN_M16_route'],indent=2).encode());save()\n        w['strict_admission']=admit(reference,candidate,read_reference,read_candidate);save()\n        w['status']='B4_M16_short_mixed_tail_exact_to_four_B1_collected_unqualified_full4k_MTP_quality_performance';code=0",
+          "new": "        from test2026.cuda.qwen38_5090.decode_boundary_analysis import primary_parity,analyze\n        from test2026.cuda.qwen38_5090.b4_b1_short_m16_gate import route_trace\n        reference=json.loads((out/'reference/report.json').read_bytes());candidate=json.loads((out/'candidate/report.json').read_bytes());w['primary_parity']={}\n        with zipfile.ZipFile(ROOT/p['primary_parent_archive']) as parent:\n            for mode,report in (('reference',reference),('candidate',candidate)):\n                base='results/b4-b1-short-m16-admission-attempt1/'+mode+'/'\n                original=json.loads(parent.read(base+'report.json'))\n                def read_current(name):return (out/mode/name).read_bytes()\n                def read_parent(name):return parent.read(base+name)\n                w['primary_parity'][mode]=primary_parity(report,original,read_current,read_parent);save()\n        (out/'primary-parity.json').write_bytes(json.dumps(w['primary_parity'],indent=2).encode())\n        def read_reference(name):return (out/'reference'/name).read_bytes()\n        def read_candidate(name):return (out/'candidate'/name).read_bytes()\n        w['observation']=analyze(reference,candidate,read_reference,read_candidate);(out/'analysis.json').write_bytes(json.dumps(w['observation'],indent=2).encode());save()\n        w['actual_GDN_M16_route']=route_trace((out/'candidate-ledger/commands.log').read_bytes());(out/'route-analysis.json').write_bytes(json.dumps(w['actual_GDN_M16_route'],indent=2).encode());save()\n        w['status']='readonly_decode_boundary_diagnostic_primary_parity_verified_model_gate_unchanged';code=0",
+          "count": 1
+        }
+      ]
+    }
+  ],
+  "scope": "Original source/runtime/checkpoint/SDK/34objects/CMake/privatecache restoration and bounded archive owner guards unchanged. Versioned readonly diagnostic replaces cross-profile admission call with prerequisite same-profile primary parity and complete observation; original failed model proof remains failed."
+}

@@ -1,0 +1,6 @@
+from pathlib import Path
+import ast,json
+W=Path(__file__).resolve().parent;p=json.loads((W/'connected-fa-value-package.json').read_bytes())
+raw=(W/'install-b4-b1-short-m16.py').read_text().replace('b4-b1-short-m16','connected-fa-value').replace('B4_vs_B1_short_M16_prepared_GPU_unrun','connected_FA_value_prepared_GPU_unrun').replace('4dc03a01a8aec10f430563e62a71daeade3bdf414edba198a553e387517296d1',p['deployment_sha256']);ast.parse(raw);target=W/'install-connected-fa-value.py';assert not target.exists();target.write_bytes(raw.encode())
+raw=(W/'postprocess-decode-boundaries-v2.py').read_text().replace('decode-boundaries','connected-fa-value').replace('verify_decode_boundaries.py','verify_connected_fa_value.py').replace("M/'decode_boundary_analysis.py'","M/'connected_fa_value_gate.py',M/'fa_value_sdk_control.py',M/'fa_value_sdk_log.py',M/'prefill128_fp8_projection.py',M/'decode_fp8_sdk_control.py',M/'decode_boundary_analysis.py'")
+tree=ast.parse(raw);jobs=[node.value.value for node in ast.walk(tree) if isinstance(node,ast.Assign) and any(isinstance(t,ast.Name) and t.id=='JOB' for t in node.targets) and isinstance(node.value,ast.Constant)];assert jobs==[p['job']];target=W/'postprocess-connected-fa-value.py';assert not target.exists();target.write_bytes(raw.encode());print(json.dumps(dict(status='connected_FA_value_ops_prepared',job=jobs[0])))

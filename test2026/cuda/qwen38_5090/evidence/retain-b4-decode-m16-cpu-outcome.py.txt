@@ -1,0 +1,29 @@
+from pathlib import Path
+import ast,hashlib,json,zipfile
+W=Path(__file__).resolve().parent;O=W.parent/'outputs';R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';E=M/'evidence';JOB='b4-decode-m16-cpu-attempt1';sha=lambda b:hashlib.sha256(b).hexdigest();owned=[]
+def keep(name,raw):
+    target=E/name;assert not target.exists();target.write_bytes(raw);owned.append(target)
+raw=(O/(JOB+'-verified.json')).read_bytes();assert raw==(O/(JOB+'-remote-verified.json')).read_bytes();q=json.loads(raw);assert q['exit_code']==0 and q['factory_fault_cases']==402 and q['source_runtime_SDK_checkpoint_all34objects_CMakeCache_unchanged'];archive=O/(JOB+'-evidence.zip');assert sha(archive.read_bytes())==q['archive_sha256']
+with zipfile.ZipFile(archive) as z:
+    mf=json.loads(z.read('evidence-manifest.json'));assert z.testzip() is None
+    for n,h in mf['files'].items():assert sha(z.read(n))==h
+    for n in mf['files']:
+        if n.startswith('results/'+JOB+'/') and (n.endswith(('workflow.json','report.json')) or '-ledger/commands.' in n):keep(JOB+'-'+n.removeprefix('results/'+JOB+'/').replace('/','-'),z.read(n))
+    keep(JOB+'-archive-manifest.json',json.dumps(dict(archive_sha256=q['archive_sha256'],archive_bytes=archive.stat().st_size,files=mf['files'],all_raw402case_logs_and_private_executables_in_immutable_ZIP_only=True),indent=2).encode())
+keep(JOB+'-verified.json',raw);keep('Garnet-B4-Decode-M16-CPU-Verified.json',(O/'Garnet-B4-Decode-M16-CPU-Verified.json').read_bytes())
+with zipfile.ZipFile(W/'b4-decode-m16-cpu-closure-assets.zip') as z:
+    cmf=json.loads(z.read('manifest.json'));assert z.testzip() is None
+    for n,h in cmf['files'].items():assert sha(z.read(n))==h
+    for n in cmf['files']:
+        if n.startswith('results/b4-decode-m16-cpu-postprocess/') or n=='results/b4-decode-m16-cpu-install.json':keep('b4-decode-m16-cpu-closure-'+n.removeprefix('results/').replace('/','-'),z.read(n))
+    keep('b4-decode-m16-cpu-closure-manifest.json',json.dumps(dict(closure_sha256=sha((W/'b4-decode-m16-cpu-closure-assets.zip').read_bytes()),**cmf),indent=2).encode())
+for n in ('commands.log','commands.jsonl'):keep('b4-decode-m16-cpu-local-replay-'+n,(W/'b4-decode-m16-cpu-local-replay-ledger'/n).read_bytes())
+for n in ('replay-b4-decode-m16-cpu-local.py','retain-b4-decode-m16-cpu-outcome.py','inspect-b4-decode-m16-build-inputs.py','run-b4-decode-m16-build-inventory.py','derive-b4-decode-m16-native-build.py'):
+    ast.parse((W/n).read_bytes());keep(n+'.txt',(W/n).read_bytes())
+for n in ('run_b4_decode_m16_native_build.py','verify_b4_decode_m16_native_build.py'):
+    ast.parse((M/n).read_bytes());owned.append(M/n)
+owned.append(E/'b4-decode-m16-native-build-derivation.json')
+text=('\r\n\r\n### Actual new B4T4/M16 native CPU contracts independently passed\r\n\r\n2026-10-27: RemoteCPUjob exits0. Raw archive '+q['archive_sha256']+' ('+str(archive.stat().st_size)+'B/'+str(len(mf['files'])+1)+'members), paired remote/local identical replayproof '+sha(raw)+'.11Pythoncontrols pass. ActualMSVCprofile437cases:96eligible logicalQKV/Zweights,341rejected. Actualnewfactory402CPUfault/trace cases across93modes andbothN10240/6144 geometries: all7configattrs/bytes,24APIstatus+exceptionfaults, M4/M16state/workspace failures, unsupportedversion/SM/CUDART, exactcounts, no fallback, samegeometrycache reuse, crossgeometrycache separation, runtimeinvalidshape/pointer/scale/workspace/device guards and traceobservationparity pass. Stubmatmul forwarding testedonlyonCPU, notSDKmath.\r\n\r\nActualTRTplugin checks pass:82badwires,44badconstructors/scales/products,92baddescriptors,18badtypes,6legacycrosswire rejections,14initializecalls/10CPUfactorycalls includingstandard/unknownexceptions/cache/clone/terminate/reinitialize.0GPUoperators, actualTRT101601loadedpathpinned. All1570source/runtime/SDK/checkpoint/CMakeCache/all34productionobjects unchanged; no productionoverlay/DLLinstalled. PrioractualSDK mathcontrol remainsseparateproof, newcompiledSDKfactory andwholemodel stillUNQUALIFIED. Allraw402case stdout/stderr/privateexes retainedZIPonbothPCs; branchkeepsmethods/reports/ledgers/proofs.\r\n\r\nPrepared exactguarded67nativebuild/replay derivativeoforiginal61owner: preservealloriginal Q/O profile/factory182/wire/initialize630+720/selector20/tokenizer955tests,74current(+3source)+86historical Pythoncontrols on exactparent50, original3CUDAobjectwhitelist andfullsource/DLL/runtime/SDK/checkpoint/CMake restoration. New402CPU/437profile/wire proof andactualSDKcontrol requiredparents. Fresh readonly67target baselineinventory next; nativebuild UNRUN atthisentry. Originalfailed B4shortdecode/strictercache62identity andfull4K/MTP/805/HTTPgates stayopen; no benchmark/chart/2xclaim.\r\n').encode()
+for n in ('docs/research/qwen38-5090-development-log.md','docs/research/qwen38-5090-implementation-task.md'):
+    target=R/n;before=target.read_bytes();target.write_bytes(before+text);assert target.read_bytes().startswith(before);owned.append(target)
+(W/'b4-decode-m16-cpu-outcome-owned-paths.json').write_bytes(json.dumps([n.relative_to(R).as_posix() for n in owned],indent=2).encode());(W/'b4-decode-m16-cpu-outcome-stage-paths.bin').write_bytes(b'\0'.join(n.relative_to(R).as_posix().encode() for n in owned)+b'\0');print(json.dumps(dict(status=q['status'],owned_files=len(owned),factory_fault_cases=q['factory_fault_cases'])))

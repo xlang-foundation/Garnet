@@ -1,0 +1,96 @@
+{
+  "status": "gdn_chunk_stage_witness_arrays_replayed",
+  "archive_sha256": "0faf8a625ba25befbeae0877bdf0a08a7696dd3ed19845f7590238f58e1e7de3",
+  "files_verified": 554,
+  "complete_finite_array_entries_verified": 509,
+  "array_replay": {
+    "status": "gdn_chunk_stage_primary_witness_and_arrays_replayed",
+    "profiles": 8,
+    "frontend_rejections": 10,
+    "repeats_per_profile": 2,
+    "complete_output_f32_words_replayed": 98205696,
+    "diagnostic_primary_exact_to_ordinary": true,
+    "all_input_and_carried_state_words_exact": true,
+    "stage_comparisons": [
+      {
+        "layer": 0,
+        "input_lineage": "prompt_embeddings",
+        "different_stages": [
+          {
+            "stage": "z",
+            "different_f32_words": 27,
+            "first_different_word": 5510,
+            "total_words": 786432
+          },
+          {
+            "stage": "gdn_gated_output",
+            "different_f32_words": 27,
+            "first_different_word": 5510,
+            "total_words": 786432
+          }
+        ],
+        "first_different_stage": "z",
+        "final_history_exact": true,
+        "final_state_exact": true
+      },
+      {
+        "layer": 1,
+        "input_lineage": "common_retained_T32_layer0_output",
+        "different_stages": [
+          {
+            "stage": "z",
+            "different_f32_words": 74,
+            "first_different_word": 19654,
+            "total_words": 786432
+          },
+          {
+            "stage": "gdn_gated_output",
+            "different_f32_words": 74,
+            "first_different_word": 19654,
+            "total_words": 786432
+          },
+          {
+            "stage": "attention_output",
+            "different_f32_words": 681,
+            "first_different_word": 578565,
+            "total_words": 655360
+          },
+          {
+            "stage": "residual",
+            "different_f32_words": 681,
+            "first_different_word": 578565,
+            "total_words": 655360
+          },
+          {
+            "stage": "mlp_input_norm",
+            "different_f32_words": 3779,
+            "first_different_word": 578560,
+            "total_words": 655360
+          },
+          {
+            "stage": "output_hidden",
+            "different_f32_words": 4910,
+            "first_different_word": 578560,
+            "total_words": 655360
+          }
+        ],
+        "first_different_stage": "z",
+        "final_history_exact": true,
+        "final_state_exact": true
+      }
+    ],
+    "full3968_model_cause_established": false,
+    "model_or_quality_or_performance_qualified": false,
+    "two_times_target_achieved": false
+  },
+  "candidate_library_sha256": "0ec79f33c94c756907af9454271e7a27edfb8765a9c5f820fa84f6bdf4380d96",
+  "source_runtime_sdk_restored": true,
+  "frontend_rejections_observed": 10,
+  "profiles_observed": 8,
+  "report_error": null,
+  "full_model_cause_established": false,
+  "model_or_quality_or_performance_qualified": false,
+  "two_times_target_achieved": false,
+  "replay_verifier_sha256": "d0a8b0ddca5cc51f355ab0f6316238cbec7db8643f3affbc83e1f7eb44249543",
+  "scope": "Exclusive real first128frozen textprompt GDN layer0/1 witness with shared calibrated mixed projections and23native source profile. First actualfrontend10reject controls, then8ordinary/diagnostic B1T32/T128profiles,3warmups/2repeats with stablebuffers. Require full primary hidden/history/state parity before stage attribution, everyinput/carriedstate/repeat word andall11stage arrays with <=1Miword pieces. Layer1usescommonretainedT32layer0ordinaryinput, not fullcandidatechain. Restore8existing/15new source targets, baseline1a1d/runtime/SDK/cache. Pin config/index and nativecandidate;18CPU controls. Full3968model cause,805quality,HTTP/servingmemory/timing/2xremain unqualified."
+}

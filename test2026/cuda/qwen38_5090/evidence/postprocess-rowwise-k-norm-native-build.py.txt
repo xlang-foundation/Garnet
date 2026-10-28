@@ -1,0 +1,11 @@
+"""Terminal-only native build raw replay; never run while the owner is live."""
+from pathlib import Path
+import hashlib,json,os,sys
+ROOT=Path('D:/CantorAI/5090-study-20261023');M=ROOT/'Garnet/test2026/cuda/qwen38_5090';JOB='rowwise-k-norm-build-attempt1';sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest();sys.path[:0]=[str(M),str(ROOT/'Garnet')]
+from run_bf16_low_batch_native_build import idle
+import run_logged as ledger
+idle();w=json.loads((ROOT/'results'/JOB/'workflow.json').read_bytes());assert w['cleanup_finished'] and type(w['exit_code']) is int
+names=['verify_rowwise_k_norm_native_build.py','verify_b4_k_m4x4_native_build.py','verify_b4_qk_m16_native_build.py','run_z128_factory_trace_native_build.py','evidence/rowwise-k-norm-native-build-derivation.json','evidence/rowwise-k-norm-build-preparation.json']
+ledger.source_identity=lambda:{'scope':'Explicit terminal source87 build archive reader; no native/GPU/model execution or protected-body reads','owned_source_sha256':{n:sha(M/n) for n in names}}
+os.chdir(ROOT/'Garnet');code=ledger.run([sys.executable,str(M/'verify_rowwise_k_norm_native_build.py'),'--proofs',str(ROOT/'results')],ROOT/'results/rowwise-k-norm-native-build-postprocess-ledger','correctness','Replay actual source87 native build:104current+86historical and all original Q/O factory-wire-initialize-selector-tokenizer gates, new184actual CPU profile and original109/header links, all34objects/original3whitelist, source/runtime/SDK/config-index/CMake restoration. Build is not live TensorRT stage/model/numeric/performance admission.',[M/n for n in names]+[ROOT/'results'/(JOB+'-evidence.zip')]);assert code==0
+proof=ROOT/'results'/(JOB+'-verified.json');q=json.loads(proof.read_bytes());print(json.dumps({'status':q['status'],'exit_code':q['exit_code'],'proof_sha256':sha(proof),'archive_sha256':q['archive_sha256'],'candidate_library_sha256':q['candidate_library_sha256']}))

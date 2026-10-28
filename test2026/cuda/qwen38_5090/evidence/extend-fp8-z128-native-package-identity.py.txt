@@ -1,0 +1,27 @@
+"""Add native module-path identity before using a package with no Python __file__."""
+from pathlib import Path
+import hashlib,json
+m=Path('D:/CantorAI/work/qwen38-5090/test2026/cuda/qwen38_5090');sha=lambda raw:hashlib.sha256(raw).hexdigest();path=m/'evidence/fp8-z128-native-package-audit-derivation.json';d=json.loads(path.read_bytes())
+old='fp8_z128_context_native.cpp';new='fp8_z128_context_native_observed.cpp';before=(m/old).read_bytes();raw=before
+changes=[('#include <cstring>','#include <cstring>\nextern "C" XLANG3_PACKAGE_EXPORT X3Status Load(void*,X3Value);'),('    int Abi(){return int(X3_ABI_VERSION);}', '''    int Abi(){return int(X3_ABI_VERSION);}
+    std::string LibraryPath(){
+        HMODULE module=nullptr;char path[32768]{};
+        if(!GetModuleHandleExA(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS|GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,reinterpret_cast<LPCSTR>(&Load),&module))return {};
+        const DWORD length=GetModuleFileNameA(module,path,DWORD(sizeof(path)));
+        return length&&length<sizeof(path)?std::string(path,length):std::string();
+    }'''),('        APISET().AddFunc<0>("abi",&ContextNative::Abi);','        APISET().AddFunc<0>("abi",&ContextNative::Abi);\n        APISET().AddFunc<0>("library_path",&ContextNative::LibraryPath);')]
+for a,b in changes:
+    assert raw.count(a.encode())==1;raw=raw.replace(a.encode(),b.encode())
+assert not (m/new).exists();(m/new).write_bytes(raw);d['derivations'].append({'base':old,'target':new,'base_sha256':sha(before),'target_sha256':sha(raw),'changes':[{'before':a,'after':b} for a,b in changes]})
+
+def extend(name,changes):
+    row=next(row for row in d['derivations'] if row['target']==name);raw=(m/name).read_bytes();assert sha(raw)==row['target_sha256']
+    for a,b in changes:
+        assert raw.count(a.encode())==1,(name,a);raw=raw.replace(a.encode(),b.encode());row['changes'].append({'before':a,'after':b})
+    (m/name).write_bytes(raw);row['target_sha256']=sha(raw)
+
+extend('build_fp8_z128_context_native_eh.bat',[('fp8_z128_context_native.cpp','fp8_z128_context_native_observed.cpp')])
+extend('probe_fp8_z128_native_audit_abi.py',[("abi=native.abi();assert type(abi) is int and abi>0","abi=native.abi();assert type(abi) is int and abi==24\n+loaded=Path(native.library_path());assert loaded.resolve()==(job/'build/fp8_z128_context_native.dll').resolve()".replace('\n+','\n')),("'cpu_native_calls':4","'cpu_native_calls':5,'loaded_native_library_path':str(loaded),'loaded_native_library_sha256':hashlib.sha256(loaded.read_bytes()).hexdigest()")])
+extend('run_fp8_z128_native_package_audit.py',[("w['native_abi_report']['rejection_codes']==[20,20,20]","w['native_abi_report']['rejection_codes']==[20,20,20] and w['native_abi_report']['loaded_native_library_sha256']==sha(package)")])
+d['scope']+=' Native adapter adds readonly library_path metadata, and ABI control/bridge must compare actual loaded path/hash to the owned EHsc DLL before helper invocation.'
+path.write_bytes(json.dumps(d,indent=2).encode());print(json.dumps({'status':'native_module_identity_added','derivations':len(d['derivations'])}))

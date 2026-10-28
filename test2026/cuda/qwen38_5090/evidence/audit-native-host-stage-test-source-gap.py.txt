@@ -1,0 +1,46 @@
+from pathlib import Path
+import hashlib
+import json
+import os
+import sys
+
+work = Path(__file__).resolve().parent
+repo = Path('D:/CantorAI/work/qwen38-5090')
+methods = repo / 'test2026/cuda/qwen38_5090'
+sys.path[:0] = [str(repo), str(methods)]
+from test2026.cuda.qwen38_5090.run_logged import run
+
+sha = lambda raw: hashlib.sha256(raw).hexdigest()
+p = json.loads((methods / 'evidence/native-host-stage-run-preparation.json').read_bytes())
+names = ['test_native_host_stage_trace', 'test_native_host_stage_probe',
+         'test_native_host_stage_admission', 'test_fixed_length_worker_contract']
+for name in names:
+    path = 'Garnet/test2026/cuda/qwen38_5090/' + name + '.py'
+    assert sha((methods / (name + '.py')).read_bytes()) == p['files'][path]
+missing = 'Garnet/test2026/cuda/qwen38_5090/test_native_worker_io.py'
+assert missing not in p['files']
+new_test = methods / 'test_native_host_stage_worker_io.py'
+assert new_test.read_bytes() == (methods / 'test_native_worker_io.py').read_bytes()
+names.append('test_native_host_stage_worker_io')
+modules = ['test2026.cuda.qwen38_5090.' + name for name in names]
+artifacts = [methods / (name + '.py') for name in names] + [methods / 'native_worker_io.py']
+os.chdir(repo)
+test_code = ('import sys,unittest;sys.path.insert(0,' + repr(str(methods)) + ');'
+             'unittest.main(module=None,argv=' + repr(['unittest', *modules]) + ')')
+code = run([sys.executable, '-c', test_code], work / 'native-host-stage-test-source-gap-local-cpu-ledger',
+           'correctness', 'Explicit unique29test source pin for later remote supplemental CPU check; no model/GPU result', artifacts)
+assert code == 0
+result = {'status': 'native_host_stage_cpu_test_source_gap_identified_supplement_prepared_locally',
+          'original_preparation_expected_count': p['expected_cpu_test_count'],
+          'observed_original_remote_cpu_count': 27, 'observed_original_remote_cpu_passed': True,
+          'original_missing_test_source_pin': missing,
+          'original_preparation_changed': False, 'original_gpu_run_interrupted_or_restarted': False,
+          'current_local_frozen_supplement_test_count': 29,
+          'frozen_test_sources_sha256': {name.name: sha(name.read_bytes()) for name in artifacts},
+          'test_modules': modules, 'original_remote_io_source_not_yet_observed': True,
+          'remote_supplement_executed': False, 'diagnostic_proof_admitted': False,
+          'scope': 'Actual original supervisor reported27passed while metadata expected29. Four diagnostic/contract modules are pinned; old worker-I/O test source was omitted. Unique new IO test copy has five local tests; all29local controls pass with source hashes. Wait original model closure, retain original count-check failure, then independently pin and run supplemental CPU controls before diagnostic proof admission. No numeric/state/timing tolerance changed.'}
+target = work / 'native-host-stage-test-source-gap.json'
+assert not target.exists()
+target.write_text(json.dumps(result, indent=2), encoding='utf8')
+print(json.dumps(result))

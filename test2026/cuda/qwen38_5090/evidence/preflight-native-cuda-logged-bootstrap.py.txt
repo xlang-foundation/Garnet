@@ -1,0 +1,33 @@
+from pathlib import Path
+import hashlib,json,sys,zipfile
+
+root=Path('D:/CantorAI/5090-study-20261023');m=root/'Garnet/test2026/cuda/qwen38_5090';sys.path.insert(0,str(m))
+from run_bf16_low_batch_native_build import idle
+sha=lambda path:hashlib.sha256(path.read_bytes()).hexdigest()
+prefix='native-cuda-logged-bootstrap';input_path=root/'results'/(prefix+'-preflight-input.json');p=json.loads(input_path.read_bytes())
+receipt=root/'results'/(prefix+'-preflight.json');assert not receipt.exists()
+parent='native-cuda-phase-full4k-attempt1';archive=root/'results'/(parent+'-evidence.zip');proof_path=root/'results'/(parent+'-verified.json')
+assert sha(archive)==p['parent_archive_sha256'] and sha(proof_path)==p['parent_proof_sha256']
+q=json.loads(proof_path.read_bytes());assert q['status']=='native_cuda_phases_full4k_failure_preserved' and q['archive_sha256']==p['parent_archive_sha256']
+with zipfile.ZipFile(archive) as z:
+ manifest=json.loads(z.read('evidence-manifest.json'));assert z.testzip() is None
+ for name,digest in manifest['files'].items():assert hashlib.sha256(z.read(name)).hexdigest()==digest
+ closed=json.loads(z.read('results/'+parent+'/workflow.json'))
+assert closed==json.loads((root/'results'/parent/'workflow.json').read_bytes())
+assert type(closed['exit_code']) is int and closed['exit_code']==1 and closed['cleanup_finished'] is True
+assert closed['source_sha256']==closed['source_after_sha256'] and closed['runtime_dependencies']==closed['runtime_dependencies_after'] and closed['library_unchanged'] is True
+idle();targets={};drift={};runtime={}
+for name,expected in p['expected'].items():
+ path=root/name;assert path.resolve().is_relative_to(m.resolve());exists=path.exists();actual=sha(path) if path.is_file() else None
+ targets[name]={'exists':exists,'sha256':actual,'expected_sha256':expected,'matches':exists and actual==expected}
+for name,expected in p['existing'].items():
+ actual=sha(root/name) if (root/name).is_file() else None
+ if actual!=expected:drift[name]={'actual':actual,'expected':expected}
+for name,expected in p['runtime_dependencies'].items():
+ actual=sha(root/'build/bin'/name)
+ if actual!=expected:runtime[name]={'actual':actual,'expected':expected}
+conflicts={name:row for name,row in targets.items() if row['exists'] and not row['matches']};passed=not(drift or runtime or conflicts)
+result={'status':'native_cuda_logged_bootstrap_preflight_passed' if passed else 'native_cuda_logged_bootstrap_preflight_failed',
+ 'input_sha256':sha(input_path),'closed_failed_parent_sha256':p['parent_archive_sha256'],'targets':targets,'conflicts':conflicts,
+ 'existing_input_drift':drift,'runtime_drift':runtime,'scope':'Read-only actual failed-parent/source/runtime/idle checks before logger-only installation. No model, profiler or source replacement.'}
+receipt.write_text(json.dumps(result,indent=2),encoding='utf8');print(json.dumps(result));raise SystemExit(0 if passed else 1)

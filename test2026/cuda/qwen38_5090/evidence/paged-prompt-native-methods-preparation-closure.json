@@ -1,0 +1,277 @@
+{
+  "status": "paged_prompt_native_byte_trial_methods_prepared_parent_still_live",
+  "source_sha256": {
+    "paged_prompt_component.py": "7a64f9cd4b44f9f1783d7023151b262ab0098f634e5ae2597d9fe7b4a599695e",
+    "test_paged_prompt_component.py": "2addb495797272634037c46b95148db795137b2ba0ac4e97a4654d6f41117131",
+    "probe_paged_prompt_component.py": "cad388137b1686cf60aa4349ab9a87898838befd39b2e75161b632a4660de145",
+    "probe_paged_prompt_embedded_cpu.py": "093b04f67ab7f234e3e5bf8644acffd47c64567c36e517a8f43c78e776a2d478",
+    "run_paged_prompt_component.py": "c83beb1d67e56087b9aafab46654d5272d86adf33bbe7e909d189b406e2dc703",
+    "test_paged_prompt_component.bat": "b56cda1ba519b99c6140238ff2ed84b5d10106a4967aacc0c0718ad07596e379",
+    "verify_paged_prompt_component.py": "e0c5ac3bbf35801cc97dd3efee02b82d1fd0d9e49cb761c5229cad514cb11d72",
+    "prepare_paged_prompt_component.py": "8cd81ecca1c6a6e04ef499e4609fe110e5b5fa189222e18ee4d353ddb5cb31c0"
+  },
+  "cpu_preparation": {
+    "status": "paged_prompt_component_cpu_prepared_native_unrun",
+    "cpu_tests": 12,
+    "actual_retained_embedding_rows_replayed": 15,
+    "checkpoint_embedding_shape": [
+      248320,
+      5120
+    ],
+    "retained_fixture_archive_sha256": "7a7a7effcd1af201f103b5df5f7a74ef4b8aca67eda5c2c219eea86e57d75801",
+    "fixture_sha256": "b2a77e1a661fb958b186dee18b32ae24a570c67944879b1b76bf151506521bd9",
+    "matrix": [
+      {
+        "key": "b1-p32-mixed",
+        "batch": 1,
+        "page_size": 32,
+        "lengths": [
+          191
+        ],
+        "visual_starts": [
+          95
+        ],
+        "row_ids": [
+          0
+        ],
+        "visual_epoch": 0
+      },
+      {
+        "key": "b2-p64-mixed",
+        "batch": 2,
+        "page_size": 64,
+        "lengths": [
+          191,
+          127
+        ],
+        "visual_starts": [
+          95,
+          31
+        ],
+        "row_ids": [
+          0,
+          1
+        ],
+        "visual_epoch": 0
+      },
+      {
+        "key": "b4-p128-mixed",
+        "batch": 4,
+        "page_size": 128,
+        "lengths": [
+          191,
+          127,
+          64,
+          255
+        ],
+        "visual_starts": [
+          95,
+          31,
+          0,
+          127
+        ],
+        "row_ids": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "visual_epoch": 0
+      },
+      {
+        "key": "b8-p32-mixed",
+        "batch": 8,
+        "page_size": 32,
+        "lengths": [
+          191,
+          127,
+          64,
+          255,
+          159,
+          128,
+          96,
+          257
+        ],
+        "visual_starts": [
+          95,
+          31,
+          0,
+          127,
+          -1,
+          64,
+          32,
+          193
+        ],
+        "row_ids": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "visual_epoch": 0
+      },
+      {
+        "key": "b8-p64-mixed",
+        "batch": 8,
+        "page_size": 64,
+        "lengths": [
+          191,
+          127,
+          64,
+          255,
+          159,
+          128,
+          96,
+          257
+        ],
+        "visual_starts": [
+          95,
+          31,
+          0,
+          127,
+          -1,
+          64,
+          32,
+          193
+        ],
+        "row_ids": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "visual_epoch": 0
+      },
+      {
+        "key": "b8-p128-mixed",
+        "batch": 8,
+        "page_size": 128,
+        "lengths": [
+          191,
+          127,
+          64,
+          255,
+          159,
+          128,
+          96,
+          257
+        ],
+        "visual_starts": [
+          95,
+          31,
+          0,
+          127,
+          -1,
+          64,
+          32,
+          193
+        ],
+        "row_ids": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "visual_epoch": 0
+      },
+      {
+        "key": "b8-p32-new-visuals-rotate3",
+        "batch": 8,
+        "page_size": 32,
+        "lengths": [
+          255,
+          159,
+          128,
+          96,
+          257,
+          191,
+          127,
+          64
+        ],
+        "visual_starts": [
+          127,
+          -1,
+          64,
+          32,
+          193,
+          95,
+          31,
+          0
+        ],
+        "row_ids": [
+          3,
+          4,
+          5,
+          6,
+          7,
+          0,
+          1,
+          2
+        ],
+        "visual_epoch": 1
+      },
+      {
+        "key": "b8-p128-full3968",
+        "batch": 8,
+        "page_size": 128,
+        "lengths": [
+          3968,
+          3968,
+          3968,
+          3968,
+          3968,
+          3968,
+          3968,
+          3968
+        ],
+        "visual_starts": [
+          95,
+          127,
+          191,
+          255,
+          -1,
+          3904,
+          0,
+          3903
+        ],
+        "row_ids": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "visual_epoch": 0
+      }
+    ],
+    "matrix_read_events": 11274,
+    "raw_capture": "Lossless content-addressed row bytes plus ordered read events; every byte of every observed native read can be independently reconstructed.",
+    "gpu_executed": false,
+    "model_qualified": false,
+    "performance_admitted": false
+  },
+  "parent_job": "bf16-scores-tiled-api-model-admission-attempt1",
+  "parent_supervisor_session": 48577,
+  "observed_parent_progress": "Six default-route retained4Kcases emitted PASS; tiled route started; no terminal proof yet.",
+  "component_installed_on_remote": false,
+  "component_gpu_executed": false,
+  "serving_memory_saving_qualified": false,
+  "performance_admitted": false,
+  "two_times_target_achieved": false,
+  "scope": "Ready study-only native byte collector, lossless raw-row replay, actual embedded CPU compatibility gate and closure-dependent preparation/owner. Next native trial cannot prepare/install/start until the actual live model parent closes, both independent model replays exist, and baseline1a1d/source/RTE/SDK restoration is proven. CPU fixture tests are not observed native calls or model/performance results."
+}

@@ -3,20 +3,44 @@
 #if !defined(GARNET_CPU_ONLY) && !defined(GARNET_METAL)
 #include "xlang3/xlang3.h"
 #include "safetensors_index.h"
+#include <cstddef>
 #include <memory>
 #include <mutex>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
+#include <vector>
 namespace Garnet {
-// GPU request tensors and one BF16 table shared by embedding and the tied head.
-// Only token IDs and small request metadata cross the host boundary.
+// GPU request tensors, BF16 embedding and an optional independent output head.
+// Default device lookup transfers IDs; opt-in host lookup uploads gathered FP32 rows.
 class CUDATensorIO {
     friend class CUDAMTPDraft;
     SafeTensorsIndex index_;
+    bool modelOpen_=false;
+    std::unique_ptr<SafeTensorsMappedFile> hostEmbedding_;
+    const unsigned char* hostEmbeddingBytes_=nullptr;
+    uint64_t hostEmbeddingSize_=0;
+    void HostEmbeddingRow(int64_t id,float* destination) const;
     X::Tensor table_,headInput_,headOutput_,tokenHeadInput_,tokenHeadOutput_;
+    X::Tensor untiedHead_;
+    X::Tensor packedHead_,packedHeadScales_;
+    float packedHeadScale2_=0,packedHeadInputScale_=0;
+    bool nativeNVFP4Head_=false;
+    X::Tensor nativeHeadTiledScales_,nativeHeadPackedInput_,nativeHeadInputScales_,nativeHeadWorkspace_;
+    std::shared_ptr<void> nativeHeadContext_;
     X::Tensor candidateScratch_,candidateOutput_,indexedScores_,indexedIds_,indexedValues_;
     X::Tensor indexedTwoIds_,indexedTwoValues_;
+    // Explicit opt-in pool: opaque checkpoint bytes, never BF16 expansion.
+    struct CompressedProjection {
+        X::Tensor packed,scales;
+        int rows=0,columns=0;bool nvfp4=false;
+        float weightScale=0,inputScale=0;
+        size_t packedBytes=0,scaleBytes=0;
+        std::vector<std::string> sourceWeights;
+    };
+    std::unordered_map<std::string,CompressedProjection> compressedProjections_;
+    CompressedProjection& CompressedProjectionUnlocked(const std::string& name,bool load);
+    CompressedProjection& JoinedCompressedProjectionUnlocked(const std::string& name,bool load);
     std::unordered_map<std::string,X::Tensor> projectionWeights_;
     std::unordered_map<std::string,X::Tensor> projectionWeightGroups_;
     std::unordered_set<std::string> projectionWeightGroupMembers_;
@@ -26,10 +50,13 @@ class CUDATensorIO {
     X::Value LogitsUnlocked(X::Value input,bool reuse,bool tokens=false);
     X::Value ArgmaxUnlocked(X::Value input,int maxRows=8);
     void CloseUnlocked();
+    const X::Tensor& HeadTable() const { return untiedHead_.IsValid()?untiedHead_:table_; }
 public:
     ~CUDATensorIO();
     bool Open(const std::string& checkpoint);
     void Close();
+    void EnableNVFP4Head(bool enabled);
+    void EnableHostEmbedding(bool enabled);
     X::Value Zeros(X::Value shape);
     X::Value StorageView(X::Value source,X::Value shape);
     X::Value FiniteF32Bytes(X::Value source);
@@ -64,14 +91,20 @@ public:
     X::Value PredictIndexedTop2Scored(X::Value hidden,X::Value candidates);
     std::string WeightInfo(const std::string& name);
     X::Value Weight(const std::string& name);
+    std::string CompressedWeightInfo(const std::string& name);
+    X::Value CompressedWeight(const std::string& name);
+    X::Value CompressedScales(const std::string& name);
     X::Value GroupWeights(X::Value names);
     X::Value PrepareImage(const std::string& path,int pixels);
+    X::Value PrepareImageProfile(const std::string& path,int minPixels,int maxPixels);
     std::string MemoryJson() const;
     int64_t TensorBytes(X::Value value);
     BEGIN_PACKAGE(CUDATensorIO)
         APISET().AddFunc<1>("open",&CUDATensorIO::Open);
         APISET().AddFunc<0>("close",&CUDATensorIO::Close);
         APISET().AddFunc<1>("zeros",&CUDATensorIO::Zeros);
+        APISET().AddFunc<1>("enable_nvfp4_head",&CUDATensorIO::EnableNVFP4Head);
+        APISET().AddFunc<1>("enable_host_embedding",&CUDATensorIO::EnableHostEmbedding);
         APISET().AddFunc<2>("storage_view",&CUDATensorIO::StorageView);
         APISET().AddFunc<1>("finite_f32_bytes",&CUDATensorIO::FiniteF32Bytes);
         APISET().AddFunc<1>("zero",&CUDATensorIO::Zero);
@@ -104,8 +137,12 @@ public:
         APISET().AddFunc<2>("predict_indexed_top2_scored",&CUDATensorIO::PredictIndexedTop2Scored);
         APISET().AddFunc<1>("weight_info",&CUDATensorIO::WeightInfo);
         APISET().AddFunc<1>("weight",&CUDATensorIO::Weight);
+        APISET().AddFunc<1>("compressed_weight_info",&CUDATensorIO::CompressedWeightInfo);
+        APISET().AddFunc<1>("compressed_weight",&CUDATensorIO::CompressedWeight);
+        APISET().AddFunc<1>("compressed_scales",&CUDATensorIO::CompressedScales);
         APISET().AddFunc<1>("group_weights",&CUDATensorIO::GroupWeights);
         APISET().AddFunc<2>("prepare_image",&CUDATensorIO::PrepareImage);
+        APISET().AddFunc<3>("prepare_image_profile",&CUDATensorIO::PrepareImageProfile);
         APISET().AddFunc<0>("memory_json",&CUDATensorIO::MemoryJson);
         APISET().AddFunc<1>("tensor_bytes",&CUDATensorIO::TensorBytes);
     END_PACKAGE

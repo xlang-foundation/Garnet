@@ -1,0 +1,38 @@
+"""Retain actual completed measurements and their methods, never provisional bars."""
+from pathlib import Path
+import hashlib,json,subprocess,zipfile
+W=Path(__file__).resolve().parent;O=W.parent/'outputs';R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';E=M/'evidence';J='b4-rowwise-http-benchmark-attempt1';STEM='Garnet-B4-Repeated-vLLM-SGLang-4K';sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest();owned=[]
+def keep(name,raw):
+    path=E/name;assert not path.exists();path.parent.mkdir(parents=True,exist_ok=True);path.write_bytes(raw);owned.append(path)
+proof=O/(J+'-verified.json');q=json.loads(proof.read_bytes());archive=O/(J+'-evidence.zip')
+assert q['exit_code']==0 and q['B4_HTTP_benchmark_case_gate_passed'] and q['source_runtime_SDK_config_index_CMake_all34_and_full_model_files_restored'] and proof.read_bytes()==(O/(J+'-remote-verified.json')).read_bytes() and sha(archive)==q['archive_sha256']
+a=q['benchmark_arrays'];assert a['actual_native_HTTP_requests']==372 and a['all372_prompt_and_output_IDs_exact_retained_B1'] and a['measured_requests']==192 and not a['private_dummy_tokens_counted_in_throughput']
+data=json.loads((O/(STEM+'-Data.json')).read_bytes());receipt=json.loads((O/(STEM+'-Receipt.json')).read_bytes());assert receipt['data_sha256']==sha(O/(STEM+'-Data.json')) and data['source_sha256'][proof.name]==sha(proof) and not data['two_times_target_achieved']
+for n,h in receipt['artifacts'].items():assert sha(O/n)==h
+for n in (proof.name,J+'-remote-verified.json'):keep(n,(O/n).read_bytes())
+with zipfile.ZipFile(archive) as z:
+    b='results/'+J+'/';keep(J+'-manifest.json',z.read('evidence-manifest.json'))
+    for n in ('workflow.json','native/report.json','resources/resource-monitor.json','native/worker/batch-dispatch.jsonl','native/worker/worker-stdout.jsonl','native/worker/worker-stderr.log','candidate-ledger/commands.log','candidate-ledger/commands.jsonl'):
+        keep(J+'-'+n.replace('/','-'),z.read(b+n))
+    for i in range(3):
+        keep(J+'-trial-'+str(i)+'-metadata.json',z.read(b+'native/trial-'+str(i)+'-metadata.json'))
+        manifests=[n for n in z.namelist() if n.startswith(b+'native/trial-'+str(i)+'/') and n.endswith('-manifest.json')];assert len(manifests)==1;keep(J+'-trial-'+str(i)+'-manifest.json',z.read(manifests[0]))
+for ext in ('jsonl','log'):keep(J+'-local-replay-commands.'+ext,(W/'b4-rowwise-http-benchmark-attempt1-local-replay-ledger'/('commands.'+ext)).read_bytes())
+for n in ('postprocess-b4-rowwise-http-benchmark.py','replay-b4-rowwise-http-benchmark.py','render-b4-repeated-comparison.py','draft-b4-repeated-comparison-renderer.py','b4-repeated-comparison-renderer-derivation.json',Path(__file__).name):keep(J+'-'+n+('.txt' if n.endswith('.py') else ''),(W/n).read_bytes())
+for n in receipt['artifacts']:keep('figures/'+n,(O/n).read_bytes())
+for suffix in ('-Data.json','-Metrics.csv','-Receipt.json','-Report.html'):keep('figures/'+STEM+suffix,(O/(STEM+suffix)).read_bytes())
+keep(J+'-retention.json',json.dumps(dict(status=q['status'],paired_proof_sha256=sha(proof),raw_archive_sha256=sha(archive),raw_archive_bytes=archive.stat().st_size,actual_native_HTTP_requests=372,measured_requests=192,warmups=180,all372_prompt_and_output_IDs_exact_retained_B1=True,real_only_throughput=True,source_runtime_all34_and_current18files_restored=True,chart_receipt_sha256=sha(O/(STEM+'-Receipt.json')),strongest_reference_comparison_qualified=False,two_times_target_achieved=False),indent=2).encode())
+lines=['\n\n2026-10-27 local: Three source91 B4/MTP3 fixed3968+128 HTTP trials independently replayed remotely and locally; byte-identical proof '+sha(proof)+'. Raw archive '+sha(archive)+' ('+str(archive.stat().st_size)+' bytes).372 actual real requests:192 measured and180 warmups,47616 public output IDs,24576 measured tokens; all prompts/outputs exact retained B1. Actual native callbacks/dispatch matched, dummy tokens excluded. Source/runtime/SDK/config-index/CMake/all34/current18files restored. The same unchanged model had independently passed805 adapted prompts plus31 fixed4k controls.\n',
+       'New comparison figures include all text/image C1/2/4/8 cohorts and all four metrics, retaining B1 historical measurements and ordinary vLLM/SGLang references. Both native lines are medians of three cohort statistics; native bands are observed min-max, not confidence intervals. Adapter VRAM is the maximum sampled across repeats, includes background allocations, not process-attributed/instantaneous peak. Native Windows BF16 state vs WSL reference FP32 SSM/BF16 KV are disclosed; prefix/radix caches disabled in saved ordinary reference settings. References have one trial each; stronger tuned/MTP baselines, cross-engine output equivalence, matched INT4/4B and production integration remain open. No2x or halfTTFT goal admission.\n',
+       '\n| Cohort | B4 TTFT s | B4 decode tok/s/request | B4 aggregate tok/s | Aggregate / best ordinary |\n|---|---:|---:|---:|---:|\n']
+label='Garnet B4 / prefill32 / MTP3 (3 trials)'
+for row in data['comparisons']:
+    c=row['cohort'];r=data['series'][label][c];lines.append('| '+c+' | '+format(r['ttft_median_ms']/1000,'.4f')+' | '+format(r['decode_median_tokens_per_second'],'.4f')+' | '+format(r['output_tokens_per_second'],'.4f')+' | '+format(row['throughput_over_best_ordinary'],'.4f')+' |\n')
+entry=''.join(lines).encode()
+for name in ('docs/research/qwen38-5090-development-log.md','docs/research/qwen38-5090-implementation-task.md'):
+    path=R/name;assert b'Three source91 B4/MTP3 fixed3968+128 HTTP trials independently replayed remotely and locally' not in path.read_bytes()
+    with path.open('ab') as f:f.write(entry)
+    owned.append(path)
+paths=W/'b4-rowwise-http-benchmark-chart-stage-paths.bin';paths.write_bytes(b''.join(p.relative_to(R).as_posix().encode()+b'\0' for p in dict.fromkeys(owned)))
+subprocess.run(['git','-c','core.autocrlf=false','add','--pathspec-from-file='+str(paths),'--pathspec-file-nul'],cwd=R,check=True)
+print(json.dumps(dict(staged_paths=len(set(owned)),paired_proof_sha256=sha(proof),figure_files=len(receipt['artifacts']),two_times_target_achieved=False)))

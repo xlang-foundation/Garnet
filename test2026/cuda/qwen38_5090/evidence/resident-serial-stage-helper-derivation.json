@@ -1,0 +1,67 @@
+{
+  "methods": [
+    {
+      "source": "install-b4-resident-serial-http-benchmark.py",
+      "source_sha256": "34d817254626bc54bf52f162a504665c04f4c8f0be3b164367163bed8b26a888",
+      "target": "install-b4-resident-serial-stage-profile.py",
+      "target_sha256": "c0aba4a8a99a16ac5add455c60fd44f6e1786b344a306d62cb155df3306dbe9f",
+      "changes": [
+        {
+          "old": "b4-resident-serial-http-benchmark",
+          "new": "b4-resident-serial-stage-profile",
+          "count": 3
+        },
+        {
+          "old": "B4_resident_serial_HTTP_benchmark",
+          "new": "B4_resident_serial_stage_profile",
+          "count": 3
+        }
+      ]
+    },
+    {
+      "source": "postprocess-b4-resident-serial-http-benchmark.py",
+      "source_sha256": "2014a90a58cfad22359b54353641fe2b2bfc78ea879b97f483dbd14e6bfe8c98",
+      "target": "postprocess-b4-resident-serial-stage-profile.py",
+      "target_sha256": "804304a0fcc1176d5761dfad7985b7a336fa7a92ad9e54cd4e1cb57f9fcf27c6",
+      "changes": [
+        {
+          "old": "b4-resident-serial-http-benchmark",
+          "new": "b4-resident-serial-stage-profile",
+          "count": 4
+        },
+        {
+          "old": "verify_b4_resident_serial_http_benchmark.py",
+          "new": "verify_b4_resident_serial_stage_profile.py",
+          "count": 1
+        },
+        {
+          "change": "Replace benchmark metric replay label with actual62ID/group-span diagnostic scope"
+        }
+      ]
+    },
+    {
+      "source": "replay-b4-resident-serial-http-benchmark.py",
+      "source_sha256": "e45abfbc90c08e2626cf397fee1d028746600740a8079b53afb981e940fa8ad1",
+      "target": "replay-b4-resident-serial-stage-profile.py",
+      "target_sha256": "eb0263dfdba03fabb2008cb66e768b58dd3a0d7782546bcde819defb8d84816d",
+      "changes": [
+        {
+          "old": "b4-resident-serial-http-benchmark",
+          "new": "b4-resident-serial-stage-profile",
+          "count": 4
+        },
+        {
+          "old": "verify_b4_resident_serial_http_benchmark.py",
+          "new": "verify_b4_resident_serial_stage_profile.py",
+          "count": 1
+        },
+        {
+          "change": "Replace benchmark metric replay label with actual62ID/group-span diagnostic scope"
+        }
+      ]
+    }
+  ],
+  "syntax_checked_only": true,
+  "install_and_actual_raw_replay_unrun": true,
+  "initial_preparation_failure": "A required-replacement assertion incorrectly required an installer-only status string in the postprocessor; corrected before any remote installation/execution. Previously created unrun installer bytes preserved."
+}

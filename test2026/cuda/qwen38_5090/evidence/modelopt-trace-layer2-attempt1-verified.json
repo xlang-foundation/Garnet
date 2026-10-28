@@ -1,0 +1,142 @@
+{
+  "status": "actual_modelopt_layer2_initialization_failure_preserved",
+  "archive_sha256": "9168007668d03d4971f11ca380ee8abb000d3ee639125ccea94d9fe87bf9acc6",
+  "files_verified": 95,
+  "candidate_library_sha256": "d3f15b2e3e5bf4f73042883c620bf74805dcb75f3561c9b62ab01078c4c74516",
+  "source_runtime_SDK_checkpoint_restored": true,
+  "phases": {
+    "trace-on": {
+      "status": "failed",
+      "error": "RuntimeError('TensorRT buildSerializedNetwork failed')",
+      "trace": {
+        "status": "actual_layer2_initialize_trace_replayed",
+        "started_profiles": [
+          32,
+          128
+        ],
+        "ready_profiles": [
+          32
+        ],
+        "events": 24,
+        "trace_replay": {
+          "status": "actual_plugin_initialization_entries_exits_replayed",
+          "initialize_calls": 12,
+          "events": 24,
+          "routes": {
+            "fp8": 7,
+            "nvfp4": 4,
+            "fp8_z128": 1
+          },
+          "factory_calls": 12,
+          "cached_context_initializations": 0,
+          "exception_returns": 0,
+          "failures": [
+            {
+              "id": 12,
+              "phase": "end",
+              "route": "fp8_z128",
+              "instance": "000001C508F5BA20",
+              "rows": 6144,
+              "columns": 5120,
+              "policy": 1513173560,
+              "context_present": false,
+              "factory_called": true,
+              "result": 1,
+              "exception": false
+            }
+          ],
+          "actual_failed_plugin_route_observed": true,
+          "arithmetic_or_quality_or_performance_qualified": false
+        },
+        "call_begin_profiles": {
+          "1": null,
+          "2": null,
+          "3": null,
+          "4": null,
+          "5": null,
+          "6": null,
+          "7": null,
+          "8": null,
+          "9": null,
+          "10": null,
+          "11": null,
+          "12": null
+        },
+        "failed_initialize_returns": [
+          {
+            "id": 12,
+            "phase": "end",
+            "route": "fp8_z128",
+            "instance": "000001C508F5BA20",
+            "rows": 6144,
+            "columns": 5120,
+            "policy": 1513173560,
+            "context_present": false,
+            "factory_called": true,
+            "result": 1,
+            "exception": false,
+            "begin_profile": null,
+            "end_profile": null
+          }
+        ],
+        "actual_failed_plugin_route_observed": true,
+        "helper_API_failure_cause_established": false
+      },
+      "array_replay": null,
+      "retained_T32_comparison": {
+        "complete_finite_entries_compared": 58,
+        "profiles": [
+          32
+        ],
+        "all_raw_bytes_exact": true
+      },
+      "postfailure_helper": {
+        "status": "actual_helper_context_observations_replayed",
+        "created": true,
+        "boundary": "actual_helper_context_created",
+        "first_successful_index": 0,
+        "expected_opaque_candidate_indices": [
+          0
+        ],
+        "successful_candidate_IDs": [
+          67,
+          67,
+          35,
+          35,
+          35,
+          35,
+          67
+        ],
+        "matmul_calls": 0,
+        "algorithm_substituted": false,
+        "full_Garnet_plugin_failure_directly_instrumented": false,
+        "model_or_quality_or_performance_qualified": false
+      }
+    }
+  },
+  "trace_on_off_array_parity": null,
+  "actual_failed_initialize_returns": [
+    {
+      "id": 12,
+      "phase": "end",
+      "route": "fp8_z128",
+      "instance": "000001C508F5BA20",
+      "rows": 6144,
+      "columns": 5120,
+      "policy": 1513173560,
+      "context_present": false,
+      "factory_called": true,
+      "result": 1,
+      "exception": false,
+      "begin_profile": null,
+      "end_profile": null
+    }
+  ],
+  "actual_failed_plugin_route_observed": true,
+  "helper_API_failure_cause_established": false,
+  "initialization_reliability_resolved": false,
+  "full_model_or_quality_or_performance_qualified": false,
+  "two_times_target_achieved": false,
+  "verifier_sha256": "58f51dcc91b4241ac7ea76793aa72e33a0d74546ecffd9ed663ec29bb2d83993",
+  "scope": "Native38 qualified default-off plugin init trace, actual ordinary layer2 first128 real input from retained T32 layer1. Trace-on process first with explicit T32/T128 build boundary markers,3warmups/2repeats/full finite arrays/readonly and carried-state checks. If successful fresh trace-unset process must be silent and byte-exact. Compare retained old T32 partial58arrays. Preserve failures and any actual initialize return1 route separately from postfailure separate-TU helper. No native/math changes versus qualified d3f15 DLL, no full3968model/image/MTP/quality/timing/performance admission. Restore14old/24new source/runtime/SDK/checkpoint/cache."
+}

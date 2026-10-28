@@ -1,0 +1,20 @@
+from pathlib import Path
+import collections,hashlib,json,re,zipfile
+W=Path(__file__).resolve().parent;O=W.parent/'outputs';R=Path('D:/CantorAI/work/qwen38-5090');sha=lambda b:hashlib.sha256(b).hexdigest();job='full-chunk-stage-vendor-attempt1';archive=O/(job+'-evidence.zip');q=json.loads((O/(job+'-verified.json')).read_bytes());assert sha(archive.read_bytes())==q['archive_sha256'];result={}
+single=(O/'q128-model-single-observation-verified.json').read_bytes();assert single==(O/'q128-model-single-observation-remote-verified.json').read_bytes();s=json.loads(single);assert s['stages']['qg']['byte_exact'] and s['stages']['core']['byte_exact'] and s['first_different_stage']['stage']=='attention'
+with zipfile.ZipFile(archive) as z:
+    assert z.testzip() is None
+    for t in (32,128):
+        name=f'results/{job}/stages{t}-cublaslt.log';raw=z.read(name);events=[]
+        for i,line in enumerate(raw.decode().splitlines(),1):
+            if '[Trace][cublasLtMatmul]' not in line:continue
+            for tag,k,n in (('Q',5120,12288),('P',6144,5120)):
+                if f'Adesc=[type=R_8F_E4M3 rows={k} cols={n} ld={k}]' not in line or f'Bdesc=[type=R_8F_E4M3 rows={k} cols={t} ld={k}]' not in line:continue
+                for required in (f'Cdesc=[type=R_16BF rows={n} cols={t} ld={n}]',f'Ddesc=[type=R_16BF rows={n} cols={t} ld={n}]','computeType=COMPUTE_32F scaleType=R_32F transa=OP_T','workSpaceSizeInBytes=4194304 beta=0 outOfPlace=0'):assert required in line
+                a=re.search(r' algo=\[([^\]]+)\]',line);weight=re.search(r' A=(0X[0-9A-F]+) ',line);assert a and weight;config=dict(re.findall(r'(\w+)=([^\s]+)',a[1]));assert {'algoId','tile','stages'}<=set(config);events.append(dict(line=i,shape_tag=tag,weight_buffer=weight[1],printed_algorithm=config))
+        assert len(events)==160 and ''.join(e['shape_tag'] for e in events)=='PPPQP'*32 and [(e['shape_tag'],e['weight_buffer']) for e in events[:80]]==[(e['shape_tag'],e['weight_buffer']) for e in events[80:]]
+        p=[e for e in events if e['shape_tag']=='P'];following=[events[i+1] for i,e in enumerate(events) if e['shape_tag']=='Q'];assert len(p)==128 and len(following)==32 and len({e['weight_buffer'] for e in p})==64 and len({e['weight_buffer'] for e in following})==16
+        key=lambda e:json.dumps(e['printed_algorithm'],sort_keys=True)
+        result[str(t)]=dict(raw_log_sha256=sha(raw),matching_P_trace_calls=128,unique_P_weight_buffers=64,P_configuration_histogram=[dict(configuration=json.loads(k),calls=v) for k,v in sorted(collections.Counter(key(e) for e in p).items())],immediately_after_Q_trace_calls=32,unique_immediately_after_Q_weight_buffers=16,immediately_after_Q_configurations=[json.loads(k) for k in sorted({key(e) for e in following})],two_complete_matching_shape_traversals=True,events=events)
+report=dict(status='historical_pre_Q128_output_projection_geometry_vendor_observations',original_logger_archive_sha256=q['archive_sha256'],Q128_single_observation_proof_sha256=sha(single),P_geometry=dict(N=5120,K=6144,output='BF16',input_weight='FP8E4M3',compute='F32',workspace_bytes=4194304),profiles=result,role_association='Inference from unchanged forward source ordering (three GDN layers then one full-attention Q/O) and complete observed PPPQP trace pattern; logs do not directly label logical weight names.',historical_logs_precede_Q128_intervention=True,no_current_Q128_O_vendor_log_claim=True,unprinted_attributes_unknown=True,algorithm_causality_or_model_or_performance_admission=False,new_benchmarks=False)
+(O/'Garnet-Q128-Output-Projection-Vendor-History.json').write_bytes(json.dumps(report,indent=2).encode());print(json.dumps(dict(status=report['status'],profile_histograms={k:v['P_configuration_histogram'] for k,v in result.items()})))

@@ -1,0 +1,65 @@
+{
+  "source": "probe_kv128_prefix_cache.py",
+  "source_sha256": "4147edd7f27542f15db423dbd8e5a7570e912fa262973dd51db702c28e33a836",
+  "target": "probe_layer_boundary.py",
+  "target_sha256": "cd3c6f2c997794cf6763e7d12d2873e590afb75fb6bb8eea427077c33da8c135",
+  "steps": [
+    {
+      "old": "evidence/kv128-prefix-cache-preparation.json",
+      "new": "evidence/layer-boundary-preparation.json",
+      "occurrences": 1
+    },
+    {
+      "old": "parent='mtp-prefill16-full4k-admission-attempt1'",
+      "new": "parent='kv128-prefix-cache-attempt1';phase='baseline' if tokens==32 else 'native'",
+      "occurrences": 1
+    },
+    {
+      "old": "base='results/'+parent+'/native/';old=json.loads(z.read(base+'report.json'));expected=old['cases'][0];oldraw=",
+      "new": "base='results/'+parent+'/'+phase+'/';old=json.loads(z.read(base+'report.json'));expected=old;oldraw=",
+      "occurrences": 1
+    },
+    {
+      "old": "report={'status':'constructing'",
+      "new": "report={'boundaries':[],'admission_oracle_job':'mtp-prefill16-full4k-admission-attempt1','same_profile_primary_equivalence_passed':False,'status':'constructing'",
+      "occurrences": 1
+    },
+    {
+      "old": "        decoder=factory(str(checkpoint),config);decoder.enable_cuda_graph(True)",
+      "new": "        from test2026.cuda.qwen38_5090.layer_boundary_program import construct_with_boundary_program\n        decoder=construct_with_boundary_program(factory,str(checkpoint),config);decoder.enable_cuda_graph(True)",
+      "occurrences": 1
+    },
+    {
+      "old": "                assert decoder.slots==[end]\n                if end in PREFIXES:",
+      "new": "                assert decoder.slots==[end]\n                program=decoder.programs[tokens];boundary={'start':start,'count':tokens,'layers':{}}\n                for layer,value in zip(program.boundary_layers,program.boundary_buffers):\n                    raw=bytes(io.finite_f32_bytes(value));assert len(raw)==tokens*5120*4;filename='boundary-'+str(start)+'-L'+str(layer)+'.f32';assert not (out/filename).exists();(out/filename).write_bytes(raw)\n                    boundary['layers'][str(layer)]={'file':filename,'words':tokens*5120,'sha256':sha(raw)}\n                report['boundaries'].append(boundary)\n                if end in PREFIXES:",
+      "occurrences": 1
+    },
+    {
+      "old": "        ordinary=[];slot=3968",
+      "new": "        # Same-profile parity is diagnostic only. Correct T32 remains admission oracle.\n        from test2026.cuda.qwen38_5090.kv128_prefix_cache_witness import snapshots\n        assert snapshots(report,read)==snapshots(expected,oldraw.__getitem__)\n        ordinary=[];slot=3968",
+      "occurrences": 1
+    },
+    {
+      "old": "        for step in range(128):",
+      "new": "        for step in range(128 if tokens==32 else 0):",
+      "occurrences": 1
+    },
+    {
+      "old": "        report['ordinary_ids']=ordinary;report['ordinary_final']=state('ordinary-final');save()\n        assert ordinary==expected['ordinary_ids'] and decoder.slots==[4095];same_state(report['ordinary_final'],expected['ordinary_final'],read,oldraw.__getitem__)",
+      "new": "        if tokens==32:\n            report['ordinary_ids']=ordinary;report['ordinary_final']=state('ordinary-final');save()\n            assert ordinary==expected['ordinary_ids'] and decoder.slots==[4095];same_state(report['ordinary_final'],expected['ordinary_final'],read,oldraw.__getitem__)\n        report['same_profile_primary_equivalence_passed']=True;save()\n        decoder.reset();decoder.prefill_mode=True\n        try:\n            for index,start in enumerate(range(0,3968,tokens)):\n                end=start+tokens;decoder.chunk_hidden(hidden[start:end],[[1] for _ in range(tokens)],[positions[0][start:end]],end==3968)\n                assert decoder.slots==[end]\n                for layer,value in zip(decoder.programs[tokens].boundary_layers,decoder.programs[tokens].boundary_buffers):\n                    raw=bytes(io.finite_f32_bytes(value));assert len(raw)==tokens*5120*4\n                    value=report['boundaries'][index]['layers'][str(layer)];value['repeat_sha256']=sha(raw);assert value['repeat_sha256']==value['sha256']\n                if end in PREFIXES:print('BOUNDARY_REPEAT',tokens,end,flush=True);save()\n        finally:decoder.prefill_mode=False\n        report['repeat_prefill']=state('repeat-prefill');same_state(report['repeat_prefill'],report['ordinary_prefill'],read,read)\n        report['repeat_complete_prefill_state_vectors_exact']=True;report['boundary_runs']=decoder.programs[tokens].boundary_runs",
+      "occurrences": 1
+    },
+    {
+      "old": "        report.update(status='fa3_prefix_caches_collected_retained_ordinary_control_exact',retained_empty_prefill_final_vectors_and_states_exact=True,retained_128_output_ids_exact=True);save();return 0",
+      "new": "        report.update(status='layer_boundaries_collected_primary_profile_exact',instrumentation_equivalence_only=True,model_admission_passed=(tokens==32));save();return 0",
+      "occurrences": 1
+    },
+    {
+      "old": "Read-only canonical layer3 KV captures at six prefixes during same ordinary3968+128 text case. Both profiles must match the unchanged retained T32 complete packed state, vectors and128IDs. Old wrong T128 outputs are not the target. No mathematical/model/production source change; no quality or timing admission.",
+      "new": "Read-only hidden boundaries after layers0..4 of the actual full3968 chain, two exact repeats, and complete layer3 KV at six prefixes. Preserve primary same-profile state/vector/cache equivalence to the retained current run; T32 also retains128IDs/finalstate. Failed T128 is instrumentation-equivalence control only, never admission oracle. Original correct T32 admission target unchanged. No native/production changes or timing admission.",
+      "occurrences": 1
+    }
+  ],
+  "original_state_cache_comparison_functions_unchanged": true,
+  "known_failed_T128_only_diagnostic_equivalence_control": true
+}

@@ -1,0 +1,12 @@
+from pathlib import Path
+import hashlib,json,os,sys
+W=Path(__file__).resolve().parent;R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';sys.path[:0]=[str(M),str(R)];sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+import run_logged as ledger
+old=json.loads((M/'evidence/rowwise-k-norm-full4k-preparation.json').read_bytes());extra=['test2026.cuda.qwen38_5090.'+n for n in ('test_mtp_prefill16_b4_study','test_mtp_prefill16_study','test_mtp_prefill16_target128_study','test_mtp_builder_workspace','test_b4_mtp_full4k_gate')]
+names=['xModel/qwen35/vl_0_8b/'+n for n in ('cuda_mtp_prefill16_b4_study.py','cuda_mtp_prefill16_study.py','cuda_mtp_prefill16_target128_study.py','cuda_mtp.py','cuda_speculative.py','cuda_verify.py','cuda_packed_replay.py','cuda_packed_decoder.py','cuda_packed_program.py')]
+names+=['test2026/cuda/qwen38_5090/'+n for n in ('probe_rowwise_k_norm_mtp_full4k.py','launch_rowwise_k_norm_mtp_full4k.py','run_rowwise_k_norm_mtp_full4k.py','verify_rowwise_k_norm_mtp_full4k.py','b4_mtp_full4k_gate.py','test_b4_mtp_full4k_gate.py','test_mtp_prefill16_b4_study.py','test_mtp_prefill16_study.py','test_mtp_prefill16_target128_study.py','test_mtp_builder_workspace.py','evidence/rowwise-k-norm-mtp-probe-derivation.json','evidence/rowwise-k-norm-mtp-owner-derivation.json','evidence/rowwise-k-norm-mtp-reader-derivation.json')]
+for n in names[:9]:
+    if n.endswith('cuda_mtp_prefill16_b4_study.py'):continue
+    assert sha(R/n)==old['installed_files']['Garnet/'+n],('CPU provider must match installed overlay',n)
+ledger.source_identity=lambda:{'scope':'Explicit rowwise MTP probe/controllers and exact installed-overlay MTP providers; symbolic CPU controls, no native model imports or GPU execution','owned_source_sha256':{n:sha(R/n) for n in names}}
+os.chdir(R);raise SystemExit(ledger.run([sys.executable,'-m','unittest',*old['test_modules'],*extra],W/'rowwise-k-norm-mtp-cpu-ledger','correctness','146 CPU controls:115 existing unchanged plus27 original B1/B4 draft-prefill/workspace/ownership controls and4 MTP full-context evidence guards. Native source/DLL/core verification/replay math unchanged; actual MTP GPU/token/state/memory and timing remain unrun.',[R/n for n in names]))

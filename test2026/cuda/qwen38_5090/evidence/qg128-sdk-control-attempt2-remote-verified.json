@@ -1,0 +1,110 @@
+{
+  "status": "actual_QG_M16_SDK_control_compatibility_replayed",
+  "archive_sha256": "19f0d1da2bd6ad0fc7b41041182fbb4e3765f0309b23d5b0b109598c42538c85",
+  "archive_bytes": 292308,
+  "exit_code": 0,
+  "error": null,
+  "vendor_recovery_proof_sha256": "bd87e5b133fea32d135d414d98ad55c2fe84aca968d953b29c0bf23b7ce12696",
+  "previous_SDK_failure_proof_sha256": "4e2026fa3d1b57ec43883c8fdddeeb944cc86a6975272e4a54c39c10dcf72fd5",
+  "source_library_runtime_SDK_checkpoint_unchanged": true,
+  "report": {
+    "status": "QG_M16_SDK_control_M16_M32_M128_compatible",
+    "GPU_UUID": "GPU-265ee66c-9b79-cd3b-0c63-dd6942ddb5e6",
+    "device": 0,
+    "SM": 120,
+    "header_CUDART": 13020,
+    "runtime_version": 13040,
+    "driver_API_version": 13040,
+    "cublasLt_version": 130400,
+    "geometry": {
+      "N": 12288,
+      "K": 5120
+    },
+    "workspace_limit": 4194304,
+    "heuristic_found": 7,
+    "first_successful_index": 0,
+    "SDK_enums": {
+      "TILE_64x32": 13,
+      "STAGES_64x5": 17
+    },
+    "public_configuration": {
+      "ID": {
+        "status": 0,
+        "bytes": 4,
+        "value": 67
+      },
+      "TILE_ID": {
+        "status": 0,
+        "bytes": 4,
+        "value": 13
+      },
+      "STAGES_ID": {
+        "status": 0,
+        "bytes": 4,
+        "value": 17
+      },
+      "CTA_SWIZZLING": {
+        "status": 0,
+        "bytes": 4,
+        "value": 1
+      },
+      "CUSTOM_OPTION": {
+        "status": 0,
+        "bytes": 4,
+        "value": 18
+      },
+      "SPLITK_NUM": {
+        "status": 0,
+        "bytes": 4,
+        "value": 1
+      },
+      "REDUCTION_SCHEME": {
+        "status": 0,
+        "bytes": 4,
+        "value": 0
+      },
+      "INNER_SHAPE_ID": {
+        "status": 7,
+        "bytes": 0,
+        "value": 0
+      },
+      "CLUSTER_SHAPE_ID": {
+        "status": 7,
+        "bytes": 0,
+        "value": 0
+      }
+    },
+    "checks": [
+      {
+        "M": 16,
+        "API_status": 0,
+        "state": 0,
+        "required_workspace": 0
+      },
+      {
+        "M": 32,
+        "API_status": 0,
+        "state": 0,
+        "required_workspace": 0
+      },
+      {
+        "M": 128,
+        "API_status": 0,
+        "state": 0,
+        "required_workspace": 0
+      }
+    ],
+    "loaded_modules": {
+      "cublasLt64_13.dll": "D:\\CantorAI\\5090-study-20261023\\build\\bin\\cublasLt64_13.dll",
+      "nvcuda.dll": "C:\\WINDOWS\\SYSTEM32\\nvcuda.dll"
+    },
+    "optional_cudart_module_path": "",
+    "no_model_weights_loaded": true,
+    "no_matmul_executed": true,
+    "no_opaque_algorithm_import_or_patch": true,
+    "model_or_performance_qualified": false
+  },
+  "metadata_compatibility_only": true,
+  "numerical_equivalence_or_algorithm_cause_or_model_or_performance_qualified": false,
+  "two_times_target_achieved": false
+}

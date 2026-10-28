@@ -2,13 +2,18 @@
 #if !defined(GARNET_CPU_ONLY) && !defined(GARNET_METAL)
 #include "cuda_tensor_io.h"
 #include "bf16_projection_plugin.h"
+#include "modelopt_cublaslt.h"
+#include "modelopt_joined_mlp.h"
 #include "tensor_helper.h"
 #include "cuda_lib.h"
+#include "../../cuda/logits_top1_batch_dispatch.h"
 #include "../../cuda/qwen35_indexed_head.cuh"
 #include "../../cuda/qwen35_prefix_commit.cuh"
+#include "../../cuda/modelopt_nvfp4.cuh"
 #include <nlohmann/json.hpp>
 #include <climits>
 #include <cmath>
+#include <cstring>
 #include <fstream>
 #include <limits>
 #include <vector>
@@ -55,8 +60,10 @@ bool SameShape(const X::Tensor& tensor,const std::vector<int64_t>& shape){
 }
 }
 CUDATensorIO::~CUDATensorIO(){Close();}
-void CUDATensorIO::CloseUnlocked(){table_=X::Tensor();headInput_=X::Tensor();headOutput_=X::Tensor();tokenHeadInput_=X::Tensor();tokenHeadOutput_=X::Tensor();
-    candidateScratch_=candidateOutput_=indexedScores_=indexedIds_=indexedValues_=indexedTwoIds_=indexedTwoValues_=X::Tensor();projectionWeights_.clear();projectionWeightGroupMembers_.clear();projectionWeightGroups_.clear();projection_.reset();vocab_=width_=0;}
+void CUDATensorIO::CloseUnlocked(){modelOpen_=false;hostEmbedding_.reset();hostEmbeddingBytes_=nullptr;hostEmbeddingSize_=0;table_=X::Tensor();headInput_=X::Tensor();headOutput_=X::Tensor();tokenHeadInput_=X::Tensor();tokenHeadOutput_=X::Tensor();
+    untiedHead_=packedHead_=packedHeadScales_=X::Tensor();packedHeadScale2_=packedHeadInputScale_=0;nativeNVFP4Head_=false;
+    nativeHeadTiledScales_=nativeHeadPackedInput_=nativeHeadInputScales_=nativeHeadWorkspace_=X::Tensor();nativeHeadContext_.reset();
+    candidateScratch_=candidateOutput_=indexedScores_=indexedIds_=indexedValues_=indexedTwoIds_=indexedTwoValues_=X::Tensor();projectionWeights_.clear();compressedProjections_.clear();projectionWeightGroupMembers_.clear();projectionWeightGroups_.clear();projection_.reset();vocab_=width_=0;}
 void CUDATensorIO::Close(){std::lock_guard<std::mutex> lock(mutex_);CloseUnlocked();}
 bool CUDATensorIO::Open(const std::string& checkpoint){
     std::lock_guard<std::mutex> lock(mutex_);CloseUnlocked();std::string error;
@@ -65,11 +72,128 @@ bool CUDATensorIO::Open(const std::string& checkpoint){
     if(!entry||entry->dataType!="BF16"||entry->shape.size()!=2||entry->shape[0]<=0||entry->shape[1]<=0||
         entry->shape[0]>INT_MAX||entry->shape[1]>INT_MAX||uint64_t(entry->shape[0])*uint64_t(entry->shape[1])*2!=entry->dataSize)
         throw X::Error("Qwen3.5 tied embedding requires a valid BF16 matrix");
+    // A present output head is authoritative. Reject unsupported packed layouts
+    // before allocating the embedding; silently tying it changes model logits.
+    const auto* head=index_.Find("lm_head.weight");
+    const auto checkpointPath=std::filesystem::path(checkpoint);
+    const auto configPath=(std::filesystem::is_directory(checkpointPath)?checkpointPath:checkpointPath.parent_path())/"config.json";
+    std::ifstream configFile(configPath);
+    bool modelopt=false;
+    if(configFile){
+        nlohmann::json config;
+        try{configFile>>config;}catch(...){throw X::Error("CUDA checkpoint config.json is invalid");}
+        if(config.contains("quantization_config")&&config["quantization_config"].is_object()){
+            const auto& q=config["quantization_config"];
+            modelopt=q.value("quant_method",std::string())=="modelopt"&&
+                (q.value("quant_algo",std::string())=="MIXED_PRECISION"||q.value("quant_algo",std::string())=="NVFP4");
+        }
+        auto declaresUntied=[](const nlohmann::json& value){
+            return value.is_object()&&value.contains("tie_word_embeddings")&&value["tie_word_embeddings"].is_boolean()&&!value["tie_word_embeddings"].get<bool>();
+        };
+        if(!head&&(declaresUntied(config)||(config.contains("text_config")&&declaresUntied(config["text_config"]))))
+            throw X::Error("CUDA untied checkpoint is missing lm_head.weight");
+    }
+    const bool packed=head&&head->dataType=="U8"&&modelopt;
+    const SafeTensorMetadata* scales=nullptr;
+    SafeTensorsMappedFile scalesMapping;
+    const void* scaleBytes=nullptr;float headScale2=0,headInputScale=0;
+    if(packed){
+        const auto rows=entry->shape[0],width=entry->shape[1];
+        scales=index_.Find("lm_head.weight_scale");
+        const auto* scale2=index_.Find("lm_head.weight_scale_2");
+        const auto* inputScale=index_.Find("lm_head.input_scale");
+        auto scalar=[&](const SafeTensorMetadata* v){
+            if(!v||v->dataType!="F32"||!v->shape.empty()||v->dataSize!=4)throw X::Error("Invalid NVFP4 head scalar scale");
+            SafeTensorsMappedFile map;if(!map.Open(v->filePath,error))throw X::Error(error);
+            const auto* p=map.DataAt(v->dataOffset,4);if(!p)throw X::Error("NVFP4 scale exceeds checkpoint");
+            float value;std::memcpy(&value,p,4);
+            if(!std::isfinite(value)||value<=0)throw X::Error("NVFP4 scale must be finite and positive");return value;
+        };
+        if(width%16||head->shape!=std::vector<long long>{rows,width/2}||head->dataSize!=uint64_t(rows)*width/2||
+            !scales||(scales->dataType!="F8_E4M3"&&scales->dataType!="F8_E4M3FN")||
+            scales->shape!=std::vector<long long>{rows,width/16}||scales->dataSize!=uint64_t(rows)*width/16)
+            throw X::Error("Invalid ModelOpt NVFP4 head layout");
+        headScale2=scalar(scale2);headInputScale=scalar(inputScale);
+        if(!scalesMapping.Open(scales->filePath,error))throw X::Error(error);
+        scaleBytes=scalesMapping.DataAt(scales->dataOffset,scales->dataSize);
+        if(!scaleBytes)throw X::Error("NVFP4 block scale storage exceeds checkpoint");
+        const auto* codes=static_cast<const unsigned char*>(scaleBytes);
+        for(uint64_t i=0;i<scales->dataSize;++i)if(codes[i]>126)throw X::Error("NVFP4 block scale must be nonnegative finite E4M3");
+    }
+    if(head&&!packed&&(head->dataType!="BF16"||head->shape!=entry->shape||head->dataSize!=entry->dataSize))
+        throw X::Error("Separate CUDA output head requires matching BF16 shape; packed heads need quantized head integration");
     SafeTensorsMappedFile mapping;if(!mapping.Open(entry->filePath,error))throw X::Error(error);
     auto* bytes=mapping.DataAt(entry->dataOffset,entry->dataSize);if(!bytes)throw X::Error("embedding storage exceeds checkpoint");
     auto table=TensorHelper::CreateGPU(Host(),X3_TENSOR_BFLOAT16,entry->shape,bytes);
+    X::Tensor separateHead,packedWeight,packedScales;
+    if(head){
+        SafeTensorsMappedFile headMapping;if(!headMapping.Open(head->filePath,error))throw X::Error(error);
+        const auto* headBytes=headMapping.DataAt(head->dataOffset,head->dataSize);
+        if(!headBytes)throw X::Error("Separate output head storage exceeds checkpoint");
+        if(packed){
+            packedWeight=TensorHelper::CreateGPU(Host(),X3_TENSOR_UINT8,head->shape,headBytes);
+            packedScales=TensorHelper::CreateGPU(Host(),X3_TENSOR_UINT8,scales->shape,scaleBytes);
+        }else separateHead=TensorHelper::CreateGPU(Host(),X3_TENSOR_BFLOAT16,head->shape,headBytes);
+    }
     auto projection=CreateBF16ProjectionContext();if(!projection)throw X::Error("CUDA tied head context initialization failed");
-    table_=std::move(table);projection_=std::move(projection);vocab_=int(entry->shape[0]);width_=int(entry->shape[1]);return true;
+    table_=std::move(table);untiedHead_=std::move(separateHead);packedHead_=std::move(packedWeight);
+    packedHeadScales_=std::move(packedScales);packedHeadScale2_=headScale2;packedHeadInputScale_=headInputScale;
+    projection_=std::move(projection);vocab_=int(entry->shape[0]);width_=int(entry->shape[1]);modelOpen_=true;return true;
+}
+void CUDATensorIO::EnableNVFP4Head(bool enabled){
+    std::lock_guard<std::mutex> lock(mutex_);
+    if(!enabled&&hostEmbedding_)throw X::Error("Host embedding requires the independent native NVFP4 head");
+    if(!enabled){nativeNVFP4Head_=false;nativeHeadContext_.reset();
+        nativeHeadTiledScales_=nativeHeadPackedInput_=nativeHeadInputScales_=nativeHeadWorkspace_=X::Tensor();return;}
+    if(nativeNVFP4Head_)return;
+    if(!packedHead_.IsValid()||vocab_%16||width_%64||
+        !std::isfinite(packedHeadScale2_*packedHeadInputScale_)||packedHeadScale2_*packedHeadInputScale_<=0)
+        throw X::Error("Native NVFP4 head requires a valid packed block16 checkpoint with rows%16/K%64");
+    auto context=CreateModelOptNVFP4Context();if(!context)throw X::Error("Native NVFP4 head requires a supported Blackwell CUDA device");
+    const auto scaleBytes=ModelOptNVFP4ScaleBytes(vocab_,width_);
+    if(!scaleBytes||scaleBytes>INT_MAX)throw X::Error("Native NVFP4 head scale storage exceeds admitted size");
+    auto tiled=TensorHelper::CreateGPU(Host(),X3_TENSOR_UINT8,{int64_t(scaleBytes)});
+    auto use=TensorHelper::AcquireGPU({{packedHeadScales_,X3_TENSOR_READ},{tiled,X3_TENSOR_WRITE}});
+    Check(RepackModelOptNVFP4Scales(static_cast<const unsigned char*>(packedHeadScales_.Info().data),
+        static_cast<unsigned char*>(tiled.Info().data),vocab_,width_,CurrentExecutionStream()));use.Finish();
+    nativeHeadTiledScales_=std::move(tiled);nativeHeadContext_=std::move(context);nativeNVFP4Head_=true;
+}
+void CUDATensorIO::EnableHostEmbedding(bool enabled){
+    std::lock_guard<std::mutex> lock(mutex_);
+    if(!modelOpen_)throw X::Error("Host embedding requires an open checkpoint");
+    if(enabled==bool(hostEmbedding_))return;
+    const auto* entry=index_.Find("model.language_model.embed_tokens.weight");
+    if(!entry||entry->dataType!="BF16"||entry->shape!=std::vector<long long>{vocab_,width_}||
+        entry->dataSize!=uint64_t(vocab_)*uint64_t(width_)*2)
+        throw X::Error("Host embedding checkpoint geometry changed");
+    if(enabled){
+        if(!nativeNVFP4Head_||!packedHead_.IsValid())
+            throw X::Error("Host embedding requires an independent native NVFP4 head");
+        auto mapping=std::make_unique<SafeTensorsMappedFile>();std::string error;
+        if(!mapping->Open(entry->filePath,error))throw X::Error(error);
+        const auto* bytes=static_cast<const unsigned char*>(mapping->DataAt(entry->dataOffset,entry->dataSize));
+        if(!bytes)throw X::Error("Host embedding exceeds checkpoint storage");
+        // Configuration transition only: retire every outstanding reader before
+        // releasing the GPU table. No execution path can observe a half-switch.
+        Check(cudaDeviceSynchronize());
+        hostEmbedding_=std::move(mapping);hostEmbeddingBytes_=bytes;hostEmbeddingSize_=entry->dataSize;
+        table_=X::Tensor();
+    }else{
+        // Allocate before changing the working host mode; allocation failure
+        // leaves its mapping, head and embeddings usable.
+        auto table=TensorHelper::CreateGPU(Host(),X3_TENSOR_BFLOAT16,{vocab_,width_},hostEmbeddingBytes_);
+        table_=std::move(table);hostEmbedding_.reset();hostEmbeddingBytes_=nullptr;hostEmbeddingSize_=0;
+    }
+}
+void CUDATensorIO::HostEmbeddingRow(int64_t id,float* destination) const{
+    static_assert(sizeof(float)==4&&std::numeric_limits<float>::is_iec559,"Host embedding requires IEEE754 FP32");
+    const auto* row=hostEmbeddingBytes_+size_t(id)*size_t(width_)*2;
+    for(int column=0;column<width_;++column){
+        // Checkpoints are little endian; preserve all BF16 bits without an
+        // arithmetic conversion or dependency on host BF16 support.
+        const uint32_t bits=(uint32_t(row[2*column])|uint32_t(row[2*column+1])<<8)<<16;
+        std::memcpy(destination+column,&bits,4);
+    }
 }
 X::Value CUDATensorIO::Zeros(X::Value shape){return TensorHelper::CreateGPU(Host(),X3_TENSOR_FLOAT32,Shape(shape));}
 X::Value CUDATensorIO::StorageView(X::Value source,X::Value dimensions){
@@ -100,12 +224,168 @@ X::Value CUDATensorIO::FiniteF32Bytes(X::Value source){
 }
 std::string CUDATensorIO::WeightInfo(const std::string& name){
     std::lock_guard<std::mutex> lock(mutex_);auto* entry=index_.Find(name);
-    if(!table_.IsValid()||!entry)throw X::Error("Weight metadata requires an open checkpoint and existing name");
+    if(!modelOpen_||!entry)throw X::Error("Weight metadata requires an open checkpoint and existing name");
     return nlohmann::json{{"shape",entry->shape},{"dtype",entry->dataType},{"bytes",entry->dataSize},{"resident_in_projection_pool",projectionWeights_.find(name)!=projectionWeights_.end()}}.dump();
 }
+CUDATensorIO::CompressedProjection& CUDATensorIO::CompressedProjectionUnlocked(const std::string& name,bool load){
+    if(!modelOpen_)throw X::Error("Compressed projection pool is closed");
+    if(name.size()>512||name.size()<7||name.substr(name.size()-7)!=".weight"||
+        (name.rfind("model.language_model.layers.",0)!=0&&name.rfind("mtp.",0)!=0))
+        throw X::Error("Compressed pool admits named text-layer/MTP matrices only");
+    std::string gate,up;
+    if(JoinedNVFP4MLPNames(name,gate,up))return JoinedCompressedProjectionUnlocked(name,load);
+    if(load)for(const auto& joined:compressedProjections_)if(joined.second.packed.IsValid())
+        for(const auto& member:joined.second.sourceWeights)if(member==name)
+            throw X::Error("Original NVFP4 projection already owned by a joined MLP pool");
+    auto existing=compressedProjections_.find(name);
+    const auto* entry=index_.Find(name);
+    if(existing==compressedProjections_.end()){
+        if(!entry||entry->shape.size()!=2||entry->shape[0]<1||entry->shape[0]>1048576||entry->shape[0]%16||
+            entry->shape[1]<1||entry->shape[1]>65536)
+            throw X::Error("Compressed matrix metadata outside bounded profile: "+name);
+        CompressedProjection p;p.rows=int(entry->shape[0]);
+        p.nvfp4=entry->dataType=="U8";
+        if(p.nvfp4){
+            if(entry->shape[1]>32768||entry->shape[1]%32)throw X::Error("NVFP4 packed columns must encode block64");
+            p.columns=int(entry->shape[1])*2;
+        }else{
+            if((entry->dataType!="F8_E4M3"&&entry->dataType!="F8_E4M3FN")||entry->shape[1]%16)
+                throw X::Error("Compressed pool requires native NVFP4 or FP8, never BF16 fallback");
+            p.columns=int(entry->shape[1]);
+        }
+        p.packedBytes=size_t(entry->dataSize);
+        if(p.packedBytes!=size_t(p.rows)*size_t(p.nvfp4?p.columns/2:p.columns)||p.packedBytes>(512ULL<<20))
+            throw X::Error("Compressed matrix storage exceeds bounded512MiB contract");
+        const auto prefix=name.substr(0,name.size()-7);
+        auto scalar=[&](const char* suffix){
+            auto* value=index_.Find(prefix+suffix);
+            if(!value||value->dataType!="F32"||!value->shape.empty()||value->dataSize!=4)
+                throw X::Error("Compressed projection requires scalar FP32 calibration: "+prefix+suffix);
+            SafeTensorsMappedFile mapping;std::string error;
+            if(!mapping.Open(value->filePath,error))throw X::Error(error);
+            const auto* data=mapping.DataAt(value->dataOffset,value->dataSize);
+            if(!data)throw X::Error("Compressed calibration span outside checkpoint");
+            float result;std::memcpy(&result,data,4);
+            if(!std::isfinite(result)||result<=0)throw X::Error("Compressed calibration must be finite and positive");
+            return result;
+        };
+        p.weightScale=scalar(p.nvfp4?".weight_scale_2":".weight_scale");p.inputScale=scalar(".input_scale");
+        if(!std::isfinite(p.weightScale*p.inputScale)||p.weightScale*p.inputScale<=0)
+            throw X::Error("Compressed global scale product must remain finite and positive");
+        if(p.nvfp4){
+            auto* scales=index_.Find(prefix+".weight_scale");
+            if(!scales||(scales->dataType!="F8_E4M3"&&scales->dataType!="F8_E4M3FN")||
+                scales->shape!=std::vector<long long>{p.rows,p.columns/16}||
+                scales->dataSize!=uint64_t(p.rows)*uint64_t(p.columns/16))
+                throw X::Error("Compressed NVFP4 requires block16 checkpoint scales");
+            p.scaleBytes=ModelOptNVFP4ScaleBytes(p.rows,p.columns);
+            if(!p.scaleBytes||p.scaleBytes>(256ULL<<20))throw X::Error("Compressed tiled scales exceed bounded256MiB contract");
+        }
+        existing=compressedProjections_.emplace(name,std::move(p)).first;
+    }
+    auto& p=existing->second;
+    if(!load||p.packed.IsValid())return p;
+    if(!entry)throw X::Error("Compressed checkpoint entry disappeared");
+    SafeTensorsMappedFile mapping;std::string error;
+    if(!mapping.Open(entry->filePath,error))throw X::Error(error);
+    const auto* data=static_cast<const unsigned char*>(mapping.DataAt(entry->dataOffset,entry->dataSize));
+    if(!data)throw X::Error("Compressed matrix span outside checkpoint");
+    if(!p.nvfp4)for(size_t i=0;i<p.packedBytes;++i)
+        if((data[i]&0x7f)==0x7f)throw X::Error("Compressed FP8 weight contains NaN");
+    std::vector<unsigned char> tiled;
+    if(p.nvfp4){
+        const auto prefix=name.substr(0,name.size()-7);auto* scale=index_.Find(prefix+".weight_scale");
+        SafeTensorsMappedFile scales;std::string scaleError;
+        if(!scale||!scales.Open(scale->filePath,scaleError))throw X::Error(scaleError.empty()?"Missing compressed scales":scaleError);
+        auto* raw=static_cast<const unsigned char*>(scales.DataAt(scale->dataOffset,scale->dataSize));
+        if(!raw)throw X::Error("Compressed scale span outside checkpoint");
+        tiled.assign(p.scaleBytes,0);const int blocks=p.columns/16,paddedColumns=((blocks+3)/4)*4;
+        for(int row=0;row<p.rows;++row)for(int col=0;col<blocks;++col){
+            const auto value=raw[size_t(row)*blocks+col];
+            if(value>126)throw X::Error("Compressed NVFP4 scale is negative or nonfinite");
+            const size_t offset=size_t(row/128)*128*paddedColumns+size_t(col/4)*512+
+                (row%32)*16+((row%128)/32)*4+col%4;
+            tiled[offset]=value;
+        }
+    }
+    // Borrowed readonly views retain their allocation owner beyond the cache.
+    // Synchronize initial upload before releasing mapped host/tiled storage.
+    auto readonly=[&](X::Tensor tensor){
+        auto owner=std::make_shared<X::Tensor>(std::move(tensor));auto info=owner->Info();info.readonly=1;
+        return TensorHelper::WrapBorrowedGPU(Host(),info,owner);
+    };
+    // The SDK exposes INT32, not INT8. Word packing preserves every source
+    // byte and avoids numeric casts; projection plugins consume opaque bytes.
+    auto packed=readonly(TensorHelper::CreateGPU(Host(),X3_TENSOR_INT32,{p.rows,p.nvfp4?p.columns/8:p.columns/4},data));
+    X::Tensor scales;
+    if(p.nvfp4)scales=readonly(TensorHelper::CreateGPU(Host(),X3_TENSOR_INT32,{int64_t(p.scaleBytes/4)},tiled.data()));
+    Check(cudaStreamSynchronize(CurrentExecutionStream()));
+    p.packed=std::move(packed);p.scales=std::move(scales);return p;
+}
+CUDATensorIO::CompressedProjection& CUDATensorIO::JoinedCompressedProjectionUnlocked(const std::string& name,bool load){
+    const auto metadata=ValidateJoinedNVFP4MLP(index_,name);
+    auto found=compressedProjections_.find(name);
+    if(found==compressedProjections_.end()){
+        CompressedProjection p;p.nvfp4=true;p.rows=metadata.halfRows*2;p.columns=metadata.columns;
+        p.weightScale=metadata.weightScale;p.inputScale=metadata.inputScale;
+        p.packedBytes=size_t(metadata.gate->dataSize)*2;p.scaleBytes=ModelOptNVFP4ScaleBytes(p.rows,p.columns);
+        if(!p.scaleBytes||p.scaleBytes>(256ULL<<20))throw X::Error("Joined NVFP4 tiled scales exceed256MiB");
+        p.sourceWeights={metadata.gateName,metadata.upName};
+        found=compressedProjections_.emplace(name,std::move(p)).first;
+    }
+    auto& p=found->second;if(!load||p.packed.IsValid())return p;
+    for(const auto& member:p.sourceWeights){auto existing=compressedProjections_.find(member);
+        if(existing!=compressedProjections_.end()&&existing->second.packed.IsValid())
+            throw X::Error("Joined NVFP4 cannot duplicate resident original gate/up matrices");}
+    std::vector<unsigned char> packed(p.packedBytes),tiled(p.scaleBytes,0);
+    const SafeTensorMetadata* matrices[]={metadata.gate,metadata.up};
+    const SafeTensorMetadata* scales[]={metadata.gateScales,metadata.upScales};
+    const int blocks=p.columns/16,paddedColumns=((blocks+3)/4)*4;
+    for(int half=0;half<2;++half){
+        SafeTensorsMappedFile matrix,scale;std::string error;
+        if(!matrix.Open(matrices[half]->filePath,error)||!scale.Open(scales[half]->filePath,error))throw X::Error(error);
+        const auto* weights=matrix.DataAt(matrices[half]->dataOffset,matrices[half]->dataSize);
+        const auto* raw=static_cast<const unsigned char*>(scale.DataAt(scales[half]->dataOffset,scales[half]->dataSize));
+        if(!weights||!raw)throw X::Error("Joined NVFP4 checkpoint span invalid");
+        std::memcpy(packed.data()+size_t(half)*metadata.gate->dataSize,weights,size_t(matrices[half]->dataSize));
+        for(int row=0;row<metadata.halfRows;++row)for(int col=0;col<blocks;++col){
+            const auto value=raw[size_t(row)*blocks+col];if(value>126)throw X::Error("Joined NVFP4 block scale negative/nonfinite");
+            const int joinedRow=row+half*metadata.halfRows;
+            const size_t offset=size_t(joinedRow/128)*128*paddedColumns+size_t(col/4)*512+
+                (joinedRow%32)*16+((joinedRow%128)/32)*4+col%4;
+            tiled[offset]=value;
+        }
+    }
+    auto readonly=[&](X::Tensor tensor){auto owner=std::make_shared<X::Tensor>(std::move(tensor));auto info=owner->Info();info.readonly=1;return TensorHelper::WrapBorrowedGPU(Host(),info,owner);};
+    struct UploadFence { cudaStream_t stream;~UploadFence(){cudaStreamSynchronize(stream);} } uploadFence{CurrentExecutionStream()};
+    auto weights=readonly(TensorHelper::CreateGPU(Host(),X3_TENSOR_INT32,{p.rows,p.columns/8},packed.data()));
+    auto scalesValue=readonly(TensorHelper::CreateGPU(Host(),X3_TENSOR_INT32,{int64_t(p.scaleBytes/4)},tiled.data()));
+    Check(cudaStreamSynchronize(CurrentExecutionStream()));
+    p.packed=std::move(weights);p.scales=std::move(scalesValue);return p;
+}
+std::string CUDATensorIO::CompressedWeightInfo(const std::string& name){
+    std::lock_guard<std::mutex> lock(mutex_);auto& p=CompressedProjectionUnlocked(name,false);
+    return nlohmann::json{{"recipe",p.nvfp4?"modelopt_nvfp4_w4a4":"modelopt_fp8_w8a8"},
+        {"logical_shape",{p.rows,p.columns}},{"packed_shape",{p.rows,p.nvfp4?p.columns/8:p.columns/4}},
+        {"scale_shape",p.nvfp4?std::vector<int64_t>{int64_t(p.scaleBytes/4)}:std::vector<int64_t>{}},
+        {"packed_dtype","INT32"},{"storage_encoding","Opaque little-endian words; raw checkpoint bits, no numeric conversion"},{"packed_bytes",p.packedBytes},{"scale_bytes",p.scaleBytes},
+        {"weight_scale",p.weightScale},{"input_scale",p.inputScale},{"joined_mlp",!p.sourceWeights.empty()},{"source_weights",p.sourceWeights},
+        {"resident_in_compressed_pool",p.packed.IsValid()},
+        {"resident_packed_readonly",p.packed.IsValid()&&p.packed.Info().readonly!=0},
+        {"resident_scales_readonly",p.scales.IsValid()&&p.scales.Info().readonly!=0}}.dump();
+}
+X::Value CUDATensorIO::CompressedWeight(const std::string& name){
+    std::lock_guard<std::mutex> lock(mutex_);return CompressedProjectionUnlocked(name,true).packed;
+}
+X::Value CUDATensorIO::CompressedScales(const std::string& name){
+    std::lock_guard<std::mutex> lock(mutex_);
+    if(!CompressedProjectionUnlocked(name,false).nvfp4)throw X::Error("FP8 projection has scalar calibration, no block-scale tensor");
+    return CompressedProjectionUnlocked(name,true).scales;
+}
+
 X::Value CUDATensorIO::Weight(const std::string& name){
     std::lock_guard<std::mutex> lock(mutex_);
-    if(!table_.IsValid())throw X::Error("Projection weight pool is closed");
+    if(!modelOpen_)throw X::Error("Projection weight pool is closed");
     if(name.rfind("model.language_model.layers.",0)!=0&&name.rfind("mtp.",0)!=0)
         throw X::Error("Projection pool admits text-layer/MTP matrices; embedding/head uses its one existing table");
     auto existing=projectionWeights_.find(name);if(existing!=projectionWeights_.end())return existing->second;
@@ -208,11 +488,21 @@ void CUDATensorIO::UpdateRequest(X::Value active,X::Value positions,X::Value slo
 }
 void CUDATensorIO::EmbeddingChunk(X::Value tokens,X::Value destination){
     std::lock_guard<std::mutex> lock(mutex_);X::Tensor dst(destination);auto info=dst.Info();Require(info,X3_TENSOR_FLOAT32);
-    if(!table_.IsValid()||info.rank!=3||(info.shape[0]!=1&&info.shape[0]!=2&&info.shape[0]!=4&&info.shape[0]!=8)||info.shape[1]>128||info.shape[2]!=width_||
+    if(!modelOpen_||info.rank!=3||(info.shape[0]!=1&&info.shape[0]!=2&&info.shape[0]!=4&&info.shape[0]!=8)||info.shape[1]>128||info.shape[2]!=width_||width_>16384||
         !tokens.IsList()||tokens.Size()<1||tokens.Size()>info.shape[1])throw X::Error("Chunk embedding requires bounded batch/time/hidden shape");
     std::vector<int> ids;ids.reserve(tokens.Size()*info.shape[0]);
     for(uint64_t t=0;t<tokens.Size();++t){auto row=tokens.Get(t);if(!row.IsList()||row.Size()!=info.shape[0])throw X::Error("Chunk embedding token batch differs");
         for(uint64_t b=0;b<row.Size();++b){auto id=row.Get(b).ToInt64();if(id<0||id>=vocab_)throw X::Error("Chunk embedding token out of range");ids.push_back(int(id));}}
+    LogicalBytes(info);
+    if(hostEmbedding_){
+        std::vector<float> values(size_t(info.shape[0])*size_t(info.shape[1])*size_t(width_),0.0f);
+        for(size_t t=0;t<tokens.Size();++t)for(size_t b=0;b<size_t(info.shape[0]);++b)
+            HostEmbeddingRow(ids[t*size_t(info.shape[0])+b],values.data()+(b*size_t(info.shape[1])+t)*size_t(width_));
+        auto use=TensorHelper::AcquireGPU(dst,X3_TENSOR_WRITE);
+        Check(cudaMemcpyAsync(info.data,values.data(),values.size()*sizeof(float),cudaMemcpyHostToDevice,CurrentExecutionStream()));
+        // values is owned by this call, so complete its transfer before return.
+        Check(cudaStreamSynchronize(CurrentExecutionStream()));use.Finish();return;
+    }
     auto table=table_.Info();auto start=reinterpret_cast<uintptr_t>(table.data),end=reinterpret_cast<uintptr_t>(info.data);
     if(start<=end?end-start<table.byte_size:start-end<info.byte_size)throw X::Error("Embedding destination must not overlap table");
     auto use=TensorHelper::AcquireGPU({{table_,X3_TENSOR_READ},{dst,X3_TENSOR_WRITE}});
@@ -227,8 +517,13 @@ X::Value CUDATensorIO::ReadF32(const std::string& path,X::Value dimensions){
 }
 X::Value CUDATensorIO::Embedding(X::Value tokens){
     std::lock_guard<std::mutex> lock(mutex_);
-    if(!table_.IsValid()||!tokens.IsList()||tokens.Size()<1||tokens.Size()>8192)throw X::Error("embedding requires an open model and 1..8192 IDs");
+    if(!modelOpen_||!tokens.IsList()||tokens.Size()<1||tokens.Size()>8192)throw X::Error("embedding requires an open model and 1..8192 IDs");
     std::vector<long long> ids(tokens.Size());for(uint64_t i=0;i<tokens.Size();++i){ids[i]=tokens.Get(i).ToInt64();if(ids[i]<0||ids[i]>=vocab_)throw X::Error("embedding token out of range");}
+    if(hostEmbedding_){
+        std::vector<float> values(ids.size()*size_t(width_));
+        for(size_t row=0;row<ids.size();++row)HostEmbeddingRow(ids[row],values.data()+row*size_t(width_));
+        return TensorHelper::CreateGPU(Host(),X3_TENSOR_FLOAT32,{int64_t(ids.size()),width_},values.data());
+    }
     auto indices=TensorHelper::CreateGPU(Host(),X3_TENSOR_INT64,{int64_t(ids.size())},ids.data());
     auto output=TensorHelper::CreateGPU(Host(),X3_TENSOR_FLOAT32,{int64_t(ids.size()),width_});
     auto use=TensorHelper::AcquireGPU({{table_,X3_TENSOR_READ},{indices,X3_TENSOR_READ},{output,X3_TENSOR_WRITE}});
@@ -280,7 +575,7 @@ X::Value CUDATensorIO::StackRows(X::Value rows){
 }
 X::Value CUDATensorIO::LogitsUnlocked(X::Value hidden,bool reuse,bool tokens){
     X::Tensor input(hidden);auto a=input.Info();Require(a,X3_TENSOR_FLOAT32);
-    if(!table_.IsValid()||(a.rank!=2&&!(tokens&&a.rank==3))||a.shape[a.rank-1]!=width_)
+    if(!modelOpen_||(a.rank!=2&&!(tokens&&a.rank==3))||a.shape[a.rank-1]!=width_)
         throw X::Error("tied head input/model shape mismatch");
     int64_t rows=a.shape[0];
     if(a.rank==3){if(rows>128/a.shape[1])throw X::Error("token head exceeds128rows");rows*=a.shape[1];}
@@ -291,9 +586,31 @@ X::Value CUDATensorIO::LogitsUnlocked(X::Value hidden,bool reuse,bool tokens){
     X::Tensor output;
     if(reuse){if(!SameShape(outputBuffer,outShape))outputBuffer=TensorHelper::CreateGPU(Host(),X3_TENSOR_BFLOAT16,outShape);output=outputBuffer;}
     else output=TensorHelper::CreateGPU(Host(),X3_TENSOR_BFLOAT16,outShape);
-    auto use=TensorHelper::AcquireGPU({{input,X3_TENSOR_READ},{table_,X3_TENSOR_READ},{inputBuffer,X3_TENSOR_WRITE},{output,X3_TENSOR_WRITE}});
+    const bool packed=packedHead_.IsValid();
+    std::vector<std::pair<X::Tensor,X3TensorAccess>> accesses{{input,X3_TENSOR_READ},{packed?packedHead_:HeadTable(),X3_TENSOR_READ},
+        {inputBuffer,X3_TENSOR_WRITE},{output,X3_TENSOR_WRITE}};
+    if(packed)accesses.push_back({packedHeadScales_,X3_TENSOR_READ});
+    if(nativeNVFP4Head_){
+        const std::vector<int64_t> packedShape{rows,width_/2},scaleShape{int64_t(ModelOptNVFP4ScaleBytes(int(rows),width_))};
+        if(!SameShape(nativeHeadPackedInput_,packedShape))nativeHeadPackedInput_=TensorHelper::CreateGPU(Host(),X3_TENSOR_UINT8,packedShape);
+        if(!SameShape(nativeHeadInputScales_,scaleShape))nativeHeadInputScales_=TensorHelper::CreateGPU(Host(),X3_TENSOR_UINT8,scaleShape);
+        if(!nativeHeadWorkspace_.IsValid())nativeHeadWorkspace_=TensorHelper::CreateGPU(Host(),X3_TENSOR_UINT8,{4LL<<20});
+        accesses.push_back({nativeHeadTiledScales_,X3_TENSOR_READ});accesses.push_back({nativeHeadPackedInput_,X3_TENSOR_WRITE});
+        accesses.push_back({nativeHeadInputScales_,X3_TENSOR_WRITE});accesses.push_back({nativeHeadWorkspace_,X3_TENSOR_WRITE});
+    }
+    auto use=TensorHelper::AcquireGPU(accesses);
     Check(runConvertFP32ToBF16Async(static_cast<const float*>(a.data),static_cast<bfloat16*>(inputBuffer.Info().data),rows*width_,CurrentExecutionStream()));
-    if(RunBF16Projection(projection_,inputBuffer.Info().data,table_.Info().data,output.Info().data,rows,width_,vocab_,CurrentExecutionStream()))
+    if(nativeNVFP4Head_){
+        Check(QuantizeModelOptNVFP4Activation(inputBuffer.Info().data,static_cast<unsigned char*>(nativeHeadPackedInput_.Info().data),
+            static_cast<unsigned char*>(nativeHeadInputScales_.Info().data),packedHeadInputScale_,int(rows),width_,CurrentExecutionStream()));
+        const auto status=RunModelOptNVFP4MatmulContext(nativeHeadContext_,packedHead_.Info().data,nativeHeadTiledScales_.Info().data,
+            nativeHeadPackedInput_.Info().data,nativeHeadInputScales_.Info().data,output.Info().data,int(rows),vocab_,width_,
+            packedHeadScale2_*packedHeadInputScale_,nativeHeadWorkspace_.Info().data,4ULL<<20,CurrentExecutionStream());
+        if(status!=CUBLAS_STATUS_SUCCESS)throw X::Error("Native NVFP4 head cuBLASLt failure: "+std::to_string(int(status)));
+    }else if(packed)Check(RunModelOptNVFP4Projection(inputBuffer.Info().data,
+        static_cast<const unsigned char*>(packedHead_.Info().data),static_cast<const unsigned char*>(packedHeadScales_.Info().data),
+        packedHeadScale2_,output.Info().data,int(rows),vocab_,width_,CurrentExecutionStream()));
+    else if(RunBF16Projection(projection_,inputBuffer.Info().data,HeadTable().Info().data,output.Info().data,rows,width_,vocab_,CurrentExecutionStream()))
         throw X::Error("CUDA tied head projection failed");
     use.Finish();return output;
 }
@@ -319,7 +636,7 @@ X::Value CUDATensorIO::Predict(X::Value hidden){std::lock_guard<std::mutex> lock
 X::Value CUDATensorIO::PredictTokens(X::Value hidden){std::lock_guard<std::mutex> lock(mutex_);return ArgmaxUnlocked(LogitsUnlocked(hidden,true,true),128);}
 X::Value CUDATensorIO::HeadCandidates(X::Value selectedRows,int64_t count,bool tokenHead){
     std::lock_guard<std::mutex> lock(mutex_);auto& source=tokenHead?tokenHeadOutput_:headOutput_;
-    if(!table_.IsValid()||!source.IsValid()||!selectedRows.IsList()||selectedRows.Size()<1||selectedRows.Size()>8||count<1||count>65536||count>vocab_)
+    if(!modelOpen_||!source.IsValid()||!selectedRows.IsList()||selectedRows.Size()<1||selectedRows.Size()>8||count<1||count>65536||count>vocab_)
         throw X::Error("CUDA candidate head requires cached target logits,1..8 rows and valid candidate count");
     auto info=source.Info();std::vector<int> rows(selectedRows.Size());
     for(uint64_t i=0;i<selectedRows.Size();++i){auto r=selectedRows.Get(i).ToInt64();if(r<0||r>=info.shape[0])throw X::Error("Candidate source row out of range");rows[i]=int(r);}
@@ -334,17 +651,18 @@ X::Value CUDATensorIO::HeadCandidates(X::Value selectedRows,int64_t count,bool t
 }
 X::Value CUDATensorIO::PredictIndexed(X::Value hidden,X::Value candidates){
     std::lock_guard<std::mutex> lock(mutex_);X::Tensor query(hidden),indices(candidates);auto a=query.Info(),b=indices.Info();
+    if(packedHead_.IsValid())throw X::Error("Indexed NVFP4 head is not implemented; use full-head prediction");
     Require(a,X3_TENSOR_FLOAT32);Require(b,X3_TENSOR_INT32);
-    if(!table_.IsValid()||a.rank!=2||b.rank!=2||a.shape[0]<1||a.shape[0]>8||a.shape[1]!=width_||a.shape[0]!=b.shape[0]||b.shape[1]>65536||b.shape[1]>vocab_)
+    if(!modelOpen_||a.rank!=2||b.rank!=2||a.shape[0]<1||a.shape[0]>8||a.shape[1]!=width_||a.shape[0]!=b.shape[0]||b.shape[1]>65536||b.shape[1]>vocab_)
         throw X::Error("CUDA indexed proposal head shape invalid");
     std::vector<int64_t> scoreShape{a.shape[0],b.shape[1]},rowShape{a.shape[0]};
     if(!SameShape(indexedScores_,scoreShape))indexedScores_=TensorHelper::CreateGPU(Host(),X3_TENSOR_BFLOAT16,scoreShape);
     if(!SameShape(indexedIds_,rowShape))indexedIds_=TensorHelper::CreateGPU(Host(),X3_TENSOR_INT64,rowShape);
     if(!SameShape(indexedValues_,rowShape))indexedValues_=TensorHelper::CreateGPU(Host(),X3_TENSOR_FLOAT32,rowShape);
-    auto use=TensorHelper::AcquireGPU({{query,X3_TENSOR_READ},{indices,X3_TENSOR_READ},{table_,X3_TENSOR_READ},
+    auto use=TensorHelper::AcquireGPU({{query,X3_TENSOR_READ},{indices,X3_TENSOR_READ},{HeadTable(),X3_TENSOR_READ},
         {indexedScores_,X3_TENSOR_WRITE},{indexedIds_,X3_TENSOR_WRITE},{indexedValues_,X3_TENSOR_WRITE}});
     Qwen35IndexedHeadConfig c{int(a.shape[0]),width_,vocab_,int(b.shape[1])};
-    if(RunQwen35IndexedHead(c,static_cast<const float*>(a.data),table_.Info().data,static_cast<const int*>(b.data),indexedScores_.Info().data,
+    if(RunQwen35IndexedHead(c,static_cast<const float*>(a.data),HeadTable().Info().data,static_cast<const int*>(b.data),indexedScores_.Info().data,
         static_cast<long long*>(indexedIds_.Info().data),static_cast<float*>(indexedValues_.Info().data),CurrentExecutionStream()))throw X::Error("CUDA indexed proposal head failed");
     std::vector<long long> ids(a.shape[0]);std::vector<float> values(a.shape[0]);
     Check(cudaMemcpyAsync(ids.data(),indexedIds_.Info().data,ids.size()*8,cudaMemcpyDeviceToHost,CurrentExecutionStream()));
@@ -401,10 +719,13 @@ X::Value CUDATensorIO::PredictIndexedTop2Scored(X::Value hidden,X::Value candida
     for(size_t i=0;i<ids.size();++i){if(ids[i]<0||ids[i]>=vocab_||!std::isfinite(values[i]))throw X::Error("Insufficient distinct finite indexed top2 proposals");result.Append(X::Value(int64_t(ids[i])));result.Append(X::Value(double(values[i])));}return result;
 }
 X::Value CUDATensorIO::PrepareImage(const std::string& path,int pixels){
-    if(pixels<1024)throw X::Error("Qwen3.5 image pixel budget must fit a merged 32x32 patch");
-    if(pixels<1024||pixels>1048576)throw X::Error("CUDA image pixel budget outside admitted range");
+    return PrepareImageProfile(path,1024,pixels);
+}
+X::Value CUDATensorIO::PrepareImageProfile(const std::string& path,int minPixels,int maxPixels){
+    if(minPixels<1024||minPixels>maxPixels||maxPixels>1048576)
+        throw X::Error("CUDA image pixel bounds outside admitted range");
     void* memory=nullptr;size_t bytes=0;long long grid[3]{};int sh=0,sw=0,rh=0,rw=0,patches=0,features=0;char error[1024]{};
-    if(GarnetQwenVLPreprocessJpegFileDevice(path.c_str(),1024,pixels,&memory,&bytes,grid,&sh,&sw,&rh,&rw,&patches,&features,error,sizeof(error)))throw X::Error(error);
+    if(GarnetQwenVLPreprocessJpegFileDevice(path.c_str(),minPixels,maxPixels,&memory,&bytes,grid,&sh,&sw,&rh,&rw,&patches,&features,error,sizeof(error)))throw X::Error(error);
     try{
         if(grid[0]!=1||grid[1]<=0||grid[2]<=0||patches!=grid[1]*grid[2]||features!=1536||bytes!=size_t(patches)*features*4)
             throw X::Error("CUDA JPEG frontend returned inconsistent Qwen3.5 patches");
@@ -421,13 +742,30 @@ std::string CUDATensorIO::MemoryJson() const{
     for(const auto& item:projectionWeightGroups_)groupBytes+=bytes(item.second);
     poolBytes=groupBytes;
     for(const auto& item:projectionWeights_)if(!projectionWeightGroupMembers_.count(item.first))poolBytes+=bytes(item.second);
-    return nlohmann::json{{"vocab_size",vocab_},{"hidden_size",width_},{"embedding_head_shared_bytes",bytes(table_)},{"head_input_bytes",bytes(headInput_)+bytes(tokenHeadInput_)},{"head_output_bytes",bytes(headOutput_)+bytes(tokenHeadOutput_)},
+    uint64_t compressedBytes=0,compressedScaleBytes=0;size_t compressedEntries=0,nvfp4Entries=0,fp8Entries=0;
+    for(const auto& item:compressedProjections_)if(item.second.packed.IsValid()){
+        compressedBytes+=bytes(item.second.packed);compressedScaleBytes+=bytes(item.second.scales);++compressedEntries;
+        if(item.second.nvfp4)++nvfp4Entries;else ++fp8Entries;
+    }
+    const auto batchTop1 = GetBatchTop1DispatchSnapshot();
+    return nlohmann::json{{"vocab_size",vocab_},{"hidden_size",width_},{"embedding_head_tied",!untiedHead_.IsValid()&&!packedHead_.IsValid()},
+        {"embedding_table_bytes",bytes(table_)},{"model_open",modelOpen_},
+        {"embedding_mode",hostEmbedding_?"host_mapped_bf16":"device_bf16"},{"host_embedding_mapped_tensor_bytes",hostEmbeddingSize_},{"untied_head_bytes",bytes(untiedHead_)+bytes(packedHead_)+bytes(packedHeadScales_)},
+        {"batch_top1_parallel_enabled",batchTop1.enabled},{"batch_top1_parallel_max_rows",128},{"batch_top1_parallel_min_vocab",8192},
+        {"batch_top1_legacy_host_dispatch_calls",batchTop1.legacyHostCalls},{"batch_top1_parallel_host_dispatch_calls",batchTop1.parallelHostCalls},
+        {"batch_top1_counter_scope","host dispatch attempts including capture construction; excludes GPU graph replays"},
+        {"head_precision",nativeNVFP4Head_?"modelopt_nvfp4_w4a4":(packedHead_.IsValid()?"modelopt_nvfp4_w4a16":"bf16")},
+        {"native_head_workspace_bytes",bytes(nativeHeadTiledScales_)+bytes(nativeHeadPackedInput_)+bytes(nativeHeadInputScales_)+bytes(nativeHeadWorkspace_)},
+        {"native_head_tiled_weight_scales_bytes",bytes(nativeHeadTiledScales_)},
+        {"embedding_head_shared_bytes",untiedHead_.IsValid()||packedHead_.IsValid()?0:bytes(table_)},{"head_input_bytes",bytes(headInput_)+bytes(tokenHeadInput_)},{"head_output_bytes",bytes(headOutput_)+bytes(tokenHeadOutput_)},
         {"single_head_input_bytes",bytes(headInput_)},{"single_head_output_bytes",bytes(headOutput_)},
         {"token_head_input_bytes",bytes(tokenHeadInput_)},{"token_head_output_bytes",bytes(tokenHeadOutput_)},
         {"candidate_workspace_bytes",bytes(candidateScratch_)},{"candidate_index_bytes",bytes(candidateOutput_)},
         {"indexed_head_buffers_bytes",bytes(indexedScores_)+bytes(indexedIds_)+bytes(indexedValues_)+bytes(indexedTwoIds_)+bytes(indexedTwoValues_)},
         {"indexed_top2_output_bytes",bytes(indexedTwoIds_)+bytes(indexedTwoValues_)},
         {"projection_weight_pool_bytes",poolBytes},{"projection_weight_pool_entries",projectionWeights_.size()},
+        {"compressed_projection_weight_bytes",compressedBytes},{"compressed_projection_scale_bytes",compressedScaleBytes},
+        {"compressed_projection_pool_entries",compressedEntries},{"compressed_nvfp4_entries",nvfp4Entries},{"compressed_fp8_entries",fp8Entries},
         {"joined_projection_group_count",projectionWeightGroups_.size()},{"joined_projection_group_bytes",groupBytes},
         {"joined_projection_member_count",projectionWeightGroupMembers_.size()},
         {"device_used_bytes",total-free},{"scope","owned I/O buffers plus whole-device snapshot; engine weights/state and process peak are separate"}}.dump();

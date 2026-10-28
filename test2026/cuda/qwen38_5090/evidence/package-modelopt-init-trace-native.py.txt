@@ -1,0 +1,52 @@
+from pathlib import Path
+import ast,hashlib,json,os,sys,unittest,zipfile
+work=Path(__file__).resolve().parent;out=work.parent/'outputs';repo=Path('D:/CantorAI/work/qwen38-5090');m=repo/'test2026/cuda/qwen38_5090';M='Garnet/test2026/cuda/qwen38_5090/';sha=lambda raw:hashlib.sha256(raw).hexdigest();sys.path[:0]=[str(repo),str(m)]
+parent='layer2-ordinary-witness-attempt1';proof=(out/(parent+'-verified.json')).read_bytes();q=json.loads(proof);analysis=(out/(parent+'-analysis.json')).read_bytes();a=json.loads(analysis)
+assert proof==(out/(parent+'-remote-verified.json')).read_bytes() and analysis==(out/(parent+'-remote-analysis.json')).read_bytes() and q['status']=='layer2_ordinary_failure_preserved' and a['postfailure_helper_observation']['created'] and not a['T128_outputs_collected'] and a['original_failure_proof_sha256']==sha(proof)
+archive=out/(parent+'-evidence.zip');assert sha(archive.read_bytes())==q['archive_sha256']
+with zipfile.ZipFile(archive) as z:
+    assert z.testzip() is None;praw=z.read(M+'evidence/layer2-ordinary-witness-preparation.json');old=json.loads(praw)
+base={**old['files'],M+'evidence/layer2-ordinary-witness-preparation.json':sha(praw),M+'analyze_layer2_ordinary_initialization_failure.py':a['analyzer_sha256']}
+for name in ('modelopt_fp8_plugin.cpp','modelopt_nvfp4_plugin.cpp','modelopt_fp8_plugin.h','modelopt_nvfp4_plugin.h','modelopt_cublaslt.h'):
+    key='Garnet/src/backends/tensorrt/'+name;h=sha((repo/key.removeprefix('Garnet/')).read_bytes());assert key not in base or base[key]==h;base[key]=h
+for name in ('modelopt_fp8.cuh','modelopt_nvfp4.cuh'):
+    key='Garnet/src/cuda/'+name;h=sha((repo/key.removeprefix('Garnet/')).read_bytes());assert key not in base or base[key]==h;base[key]=h
+names=['build_modelopt_init_trace_cpu.bat','modelopt_init_trace_contract.py','modelopt_init_trace_cpu_stubs.cpp','probe_modelopt_init_trace_cpu.cpp','run_modelopt_init_trace_cpu_contract.py','test_modelopt_init_trace.py','prepare_modelopt_init_trace_native_build.py','run_modelopt_init_trace_native_build.py','verify_modelopt_init_trace_native_build.py','build_modelopt_init_trace_m128_wire_cpu.bat','build_modelopt_init_trace_z128_wire_cpu.bat','evidence/modelopt-init-trace-source-derivation.json','evidence/modelopt-init-trace-cpu-source-copies.json','evidence/modelopt-init-trace-native-build-derivation.json']
+derivation=json.loads((m/'evidence/modelopt-init-trace-source-derivation.json').read_bytes());copies=json.loads((m/'evidence/modelopt-init-trace-cpu-source-copies.json').read_bytes())
+names += [row['target'].removeprefix('test2026/cuda/qwen38_5090/') for row in derivation['files']]+['native_modelopt_init_trace_candidate/modelopt_plugin_init_trace.h']+[row['target'].removeprefix('test2026/cuda/qwen38_5090/') for row in copies['files']]
+assert len(names)==len(set(names))==32
+methods={M+name:sha((m/name).read_bytes()) for name in names}
+for name in names:
+    if name.endswith('.py'):ast.parse((m/name).read_bytes())
+candidate=dict(old['candidate_files']);baseline=dict(old['candidate_base']);payload={name:(repo/name).read_bytes() for name in candidate}
+for row in derivation['files']:
+    name=row['source'];raw=(repo/row['target']).read_bytes();assert sha(raw)==row['target_sha256'] and sha((repo/name).read_bytes())==row['source_sha256'];candidate[name]=sha(raw);payload[name]=raw
+    if name not in baseline:baseline[name]=base['Garnet/'+name]
+header='src/backends/tensorrt/modelopt_plugin_init_trace.h';raw=(m/'native_modelopt_init_trace_candidate/modelopt_plugin_init_trace.h').read_bytes();candidate[header]=sha(raw);payload[header]=raw;baseline[header]=None
+assert len(candidate)==38 and sum(h is not None for h in baseline.values())==14
+for name,h in old['candidate_files'].items():
+    if name not in {row['source'] for row in derivation['files']}:assert candidate[name]==h
+for name,h in baseline.items():
+    if h is not None:assert base['Garnet/'+name]==h
+oldtest='test2026.cuda.qwen38_5090.test_fp8_z128_native_source.SourceProvenance.test_exact_new_policy_derivation_and_untouched_legacy';assert old['test_ids'].count(oldtest)==1
+def ids(suite):
+    for item in suite:
+        if isinstance(item,unittest.TestSuite):yield from ids(item)
+        else:yield item.id()
+newtests=sorted(ids(unittest.defaultTestLoader.loadTestsFromName('test2026.cuda.qwen38_5090.test_modelopt_init_trace')));tests=[name for name in old['test_ids'] if name!=oldtest]+newtests;assert len(newtests)==4 and len(tests)==len(set(tests))==81
+assert not any('probe_native_external_prefix_batch.py' in name for name in [*base,*methods,*candidate])
+import run_logged as ledger
+pins={**methods,**{'Garnet/'+name:sha((repo/name).read_bytes()) for name in old['candidate_files']}};ledger.source_identity=lambda:{'scope':'Explicit private initialize trace and closed native35 source only; unrelated untracked excluded','owned_source_sha256':pins};os.chdir(repo)
+assert ledger.run([sys.executable,'-m','unittest',*tests],work/'modelopt-init-trace-native-local-cpu-ledger-v2','correctness','81CPU: retain78controls through exact original-source composition plus4trace controls; corrected preparation bundle-count guard; no local native/GPU or production-source mutation',[repo/name.removeprefix('Garnet/') for name in pins])==0
+bundle=work/'modelopt-init-trace-native-source.zip';assert bundle.exists()
+with zipfile.ZipFile(bundle) as z:
+    assert z.testzip() is None and len(z.namelist())==len(set(z.namelist()))==38 and set(z.namelist())==set(payload)
+    for name,raw in payload.items():assert sha(raw)==candidate[name] and z.read(name)==raw
+build=json.loads((m/'evidence/fp8-z128-native-build-preparation.json').read_bytes());parents={**old['parents'],parent:{'status':q['status'],'exit_code':1,'proof_sha256':sha(proof),'archive_sha256':q['archive_sha256']}}
+proposal={'status':'modelopt_init_trace_native_build_proposed_unrun','base_files':base,'methods':methods,'candidate_files':candidate,'candidate_base':baseline,'runtime':old['runtime'],'environment':old['environment'],'checkpoints':old['checkpoints'],'parents':parents,'bundle':'results/'+bundle.name,'bundle_sha256':sha(bundle.read_bytes()),'vcvars':build['vcvars'],'test_ids':tests,'expected_cpu_test_count':81,'superseded_source_test_ids':[oldtest],'new_trace_test_ids':newtests,'source_derivation_sha256':sha((m/'evidence/modelopt-init-trace-source-derivation.json').read_bytes()),'scope':'Separate default-off actual four-plugin initialize entry/exit trace; only exact GARNET_MODELOPT_INIT_TRACE=1 emits synchronized stderr records. Preserve original factory/cached/null/catch/return behavior and all helpers/algorithms/descriptors/workspace/wire/enqueue bodies. Native31plus7unchangedPython sources=38,14existing/24new restore.81CPU retain78tests via one exact original-source provenance composition plus4newtrace controls; actual CPU360initialize/280factory stubs/10freshpolicyprocesses/0GPUoperators; existing wire/selector/tokenizer controls retained. Remote-only build on reused Release/MT/sm120 tree, unchanged34CUDAobjectset. No GPU model, initialization-cause, numerical quality or timing/performance admission.'}
+target=work/'modelopt-init-trace-native-proposal-v2.json';assert not target.exists();raw=json.dumps(proposal,indent=2).encode();target.write_bytes(raw)
+deploy={name:(repo/name.removeprefix('Garnet/')).read_bytes() for name in methods};deploy[proposal['bundle']]=bundle.read_bytes();deploy['results/modelopt-init-trace-native-proposal.json']=raw;package=work/'modelopt-init-trace-native-deployment-v2.zip';assert not package.exists()
+with zipfile.ZipFile(package,'x',zipfile.ZIP_DEFLATED) as z:
+    for name,raw in deploy.items():z.writestr(name,raw)
+    z.writestr('install-manifest.json',json.dumps({'files':{name:sha(raw) for name,raw in deploy.items()}},indent=2))
+result={'status':proposal['status'],'base_pins':len(base),'method_pins':len(methods),'candidate_sources':38,'CPU_tests':81,'deployment_targets':len(deploy),'deployment_sha256':sha(package.read_bytes()),'bytes':package.stat().st_size,'proposal_sha256':sha(target.read_bytes())};(work/'modelopt-init-trace-native-package-v2.json').write_bytes(json.dumps(result,indent=2).encode());print(json.dumps(result))

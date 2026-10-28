@@ -1,0 +1,4 @@
+Observed private preparation errors before any CPU/compiler launch:
+1. Target-count assertion expected10; actual explicit translation-unit list has9. Corrected to9.
+2. AttributeError: test_bf16_low_batch_model_contract has no attribute Controls. Replaced assumed class name with unittest module-suite discovery.
+Both were CPU-only preparation failures; no source/SDK/production-build/GPU mutation. Raw tracebacks remain in chat tool output; this file is a summary, not a captured raw process log.

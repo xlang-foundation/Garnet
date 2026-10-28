@@ -1,0 +1,47 @@
+"""Exclusive remote standalone native component; no Garnet/model loading."""
+from pathlib import Path
+import hashlib,json,os,subprocess,sys,zipfile
+ROOT=Path('D:/CantorAI/5090-study-20261023');M=ROOT/'Garnet/test2026/cuda/qwen38_5090';J='b4-prefill32-tiled-scores-component-attempt1';sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+def main():
+ assert Path(__file__).resolve().parent==ROOT/'results';sys.path[:0]=[str(M),str(ROOT/'Garnet')]
+ import run_logged as ledger
+ from run_bf16_low_batch_native_build import idle
+ idle();bundle=ROOT/'results/b4-prefill32-tiled-scores-component-source.zip';assert sha(bundle)==sys.argv[1]
+ with zipfile.ZipFile(bundle) as z:
+  p=json.loads(z.read('preparation.json'));assert p['status']=='B4T32_standalone_component_prepared_native_unrun'
+  assert set(z.namelist())==set(p['sources'])|{'preparation.json'} and len(z.namelist())==len(set(z.namelist()))
+  sources={n:z.read(n) for n in p['sources']};assert all(hashlib.sha256(raw).hexdigest()==p['sources'][n] for n,raw in sources.items())
+ parent=ROOT/'results'/(p['parent_job']+'-verified.json');q=json.loads(parent.read_bytes());closed=json.loads((ROOT/'results'/p['parent_job']/'workflow.json').read_bytes())
+ assert sha(parent)==p['parent_proof_sha256'] and q['exit_code']==0 and q['B4_host_stage_case_gate_passed'] and closed['exit_code']==0 and closed['cleanup_finished'] and closed['all_restored']
+ assert sha(ROOT/'results'/(p['parent_job']+'-evidence.zip'))==q['archive_sha256']==p['parent_archive_sha256']
+ def actual():return dict(source={n:sha(ROOT/n) for n in p['guarded_sources']},runtime={n:sha(ROOT/'build/bin'/n) for n in p['runtime']},environment={n:sha(Path(n)) for n in p['environment']},cuda_objects={n:sha(ROOT/n) for n in p['cuda_objects']},CMake=sha(ROOT/'build/CMakeCache.txt'))
+ expected=dict(source=p['guarded_sources'],runtime=p['runtime'],environment=p['environment'],cuda_objects=p['cuda_objects'],CMake=p['CMake_sha256']);before=actual();assert before==expected,'Preserve existing source/runtime/SDK/build state'
+ out=ROOT/'results'/J;archive=ROOT/'results'/(J+'-evidence.zip');assert not out.exists() and not archive.exists();out.mkdir();src=out/'source';src.mkdir();build=out/'build';build.mkdir();native=out/'native';native.mkdir()
+ for n,raw in sources.items():assert Path(n).name==n;(src/n).write_bytes(raw)
+ (out/'preparation.json').write_bytes(json.dumps(p,indent=2).encode());inputs=[Path(__file__),bundle,parent,out/'preparation.json',*[src/n for n in sources]]
+ ledger.source_identity=lambda:dict(scope='Explicit standalone synthetic B4T32 attention component; no protected bodies or Garnet/model loading',owned_source_sha256={n.relative_to(ROOT).as_posix():sha(n) for n in inputs})
+ w=dict(status='running',before=before,parent_proof_sha256=sha(parent),source_archive_sha256=sha(bundle),cleanup_finished=False,performance_admitted=False,scope=p['scope']);code=1
+ def save():(out/'workflow.json').write_bytes(json.dumps(w,indent=2).encode())
+ save()
+ try:
+  os.chdir(build)
+  code=ledger.run(['cmd.exe','/d','/c',str(src/'build.cmd'),p['vcvars'],str(src),str(build/'attention-component.exe')],out/'build-ledger','build','Remote-only standalone SM120 CUDA component. Existing Garnet build tree/DLL/source untouched; static CUDART and MSVC/MT.',inputs+[Path(n) for n in p['environment']]);w['build_exit_code']=code;save();assert code==0,'Standalone CUDA build failed'
+  env=dict(os.environ);env['CUDA_VISIBLE_DEVICES']='0';previous=os.environ.get('CUDA_VISIBLE_DEVICES');os.environ['CUDA_VISIBLE_DEVICES']='0'
+  try:code=ledger.run([str(build/'attention-component.exe'),str(native)],out/'native-ledger','correctness','Four synthetic full-output byte comparisons to the original native attention kernel, full-word readonly checks of all7inputs, invalid-input preservation and24 native CUDA-event timing intervals. No checkpoint/model or serving throughput claim.',inputs+[build/'attention-component.exe'])
+  finally:
+   if previous is None:os.environ.pop('CUDA_VISIBLE_DEVICES',None)
+   else:os.environ['CUDA_VISIBLE_DEVICES']=previous
+  w['native_exit_code']=code;save();assert code==0,'Native component controls failed'
+  w['status']='B4T32_tiled_score_component_collected_needs_independent_replay'
+ except BaseException as error:w.update(status='failed',error=repr(error));code=code or 1
+ finally:
+  idle();after=actual();w.update(after=after,all_guarded_source_runtime_SDK_CMake_all34_unchanged=after==before,exit_code=code,cleanup_finished=True)
+  if after!=before:code=1;w.update(status='failed',exit_code=1,error='Unexpected guarded state change; preserve evidence')
+  save();paths=[f for f in out.rglob('*') if f.is_file() and f.suffix not in ('.exe','.obj','.lib','.exp')]+[Path(__file__),bundle,parent]
+  files={f.relative_to(ROOT).as_posix():f for f in paths}
+  with zipfile.ZipFile(archive,'x',zipfile.ZIP_DEFLATED) as z:
+   for n,f in files.items():z.write(f,n)
+   z.writestr('evidence-manifest.json',json.dumps(dict(files={n:sha(f) for n,f in files.items()},scope=p['scope']),indent=2))
+  print(json.dumps(dict(status=w['status'],exit_code=code,archive_sha256=sha(archive),bytes=archive.stat().st_size)),flush=True)
+ return code
+if __name__=='__main__':raise SystemExit(main())

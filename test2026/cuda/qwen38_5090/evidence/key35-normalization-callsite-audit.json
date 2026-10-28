@@ -1,0 +1,51 @@
+{
+  "status": "actual_source60_source85_key_projection_normalization_cache_callsite_audited",
+  "reference_bundle_sha256": "c44138f5e64b684d556830f58f09c2332d767155669c6642ba799b8445493997",
+  "candidate_bundle_sha256": "822f01ed23b92542425ee21d1f9e3dda704f71d18e61866c268ba093b4bf486b",
+  "actual_header": {
+    "path": "src/backends/tensorrt/qwen35_lowering.h",
+    "sha256": "87698cfd3789816b0f5186791f11dcc8e41f3112502e18db434ad917bdafd439",
+    "identical_in_both_frozen_candidates": true,
+    "working_tree_header_matches_actual_candidate": false,
+    "line_locations": {
+      "T* rms(T* x,T* scale,float epsilon,bool offset)": 160,
+      "auto* denominator=unary(add(reduce(mul(x,x),-1,true,true),scalar(epsilon,r)),nvinfer1::UnaryOperation::kSQRT);": 162,
+      "return mul(div(x,denominator),scale);": 164,
+      "auto* projectedK=project(normalized,weight(prefix+\".k_proj.weight\"));": 451,
+      "T* k=rms(reshape(projectedK,{batch,tokens,kv,dim}),weight(prefix+\".k_norm.weight\"),eps,true);": 463,
+      "return rotary==dim?out:cat({out,slice(input,-1,rotary,dim-rotary)},3);": 479,
+      "key=cast(rotate(k));value=cast(reshape(projectedV,{batch,tokens,kv,dim}));": 497
+    }
+  },
+  "actual_chunk_sha256": "fe368296871c876cdbb74a246e8cbecc3ae0609ca4b73c8445ab4cb900d888b7",
+  "guarded_commit_sources": {
+    "src/cuda/qwen38_bf16_kv_commit.cu": {
+      "sha256": "bad0f3434934dda780a2723cee43fa956222b6be1bc6e1b2c9be05e02a631723",
+      "round_to_nearest_conversion_lines": [
+        [
+          36,
+          "reinterpret_cast<__nv_bfloat16*>(canonical)[destination]=__float2bfloat16_rn(target[source]);"
+        ]
+      ],
+      "same_guarded_source_in_both_experiments": true
+    },
+    "src/cuda/qwen38_bf16_low_batch_kv_commit.cu": {
+      "sha256": "1433659ba3663c334e5afc00e3afba88514fdc988b2c20f75d8500a4df9ee833",
+      "round_to_nearest_conversion_lines": [
+        [
+          36,
+          "reinterpret_cast<__nv_bfloat16*>(canonical)[destination]=__float2bfloat16_rn(target[source]);"
+        ]
+      ],
+      "same_guarded_source_in_both_experiments": true
+    }
+  },
+  "model_config_sha256": "71fa01bb64de20971045cd82a82c0ebb25a54e1b0a3f09ef23cf5479e9c54df8",
+  "head_dim": 256,
+  "rotary_dim": 64,
+  "sample_dimension": 211,
+  "sample_outside_intended_rotary_prefix": true,
+  "source_path": "input normalization -> FP8 K projection -> per-head FP32 RMS normalization -> leading64-dimension RoPE plus unchanged suffix -> float key input -> BF16 round-to-nearest cache commit",
+  "source_scope": "Root worktree header differs from actual frozen candidates; use frozen byte-identical source60/source85 header for this audit. Commit sources are guarded baseline files, not members of the candidate source bundles. This source audit does not establish equality of intermediate operands, actual TensorRT tactic arithmetic or a unique causal operator. No model/numeric replay, GPU execution or source mutation.",
+  "full4K_or_performance_qualified": false
+}

@@ -1,0 +1,88 @@
+{
+  "status": "real_projection_fixture_extracted_unqualified",
+  "source_archive_sha256": "d05aa555feac3183d54dd7c1975741fc3bb525739eccff26a98166b5db761a99",
+  "verification_sha256": "a0e1799b721a64ca6e00cc1cd0bc6ad13c26b7fd75f7298617d696374371544e",
+  "config_sha256": "71fa01bb64de20971045cd82a82c0ebb25a54e1b0a3f09ef23cf5479e9c54df8",
+  "index_sha256": "7aa103a2582b7d26631988de33dea19e8a308ee9c239e8e14feb374af30905e2",
+  "library_sha256": "34cb221458064a4b7264586412be5b3c7acca888cd9e74681ac2a41d259413da",
+  "dimensions": {
+    "m": [
+      16,
+      32
+    ],
+    "n": 5120,
+    "k": 6144
+  },
+  "tensors": {
+    "model.language_model.layers.0.linear_attn.out_proj.weight": {
+      "shard": "model-00001-of-00003.safetensors",
+      "header_sha256": "60f09f862dd9fc8c2594641081613cc3f12f162419cfa06f2e6ee3feac7bc5f5",
+      "dtype": "F8_E4M3",
+      "shape": [
+        5120,
+        6144
+      ],
+      "data_offsets": [
+        3568884720,
+        3600342000
+      ],
+      "file": "weight-n5120-k6144.e4m3",
+      "value": null
+    },
+    "model.language_model.layers.0.linear_attn.out_proj.weight_scale": {
+      "shard": "model-00001-of-00003.safetensors",
+      "header_sha256": "60f09f862dd9fc8c2594641081613cc3f12f162419cfa06f2e6ee3feac7bc5f5",
+      "dtype": "F32",
+      "shape": [],
+      "data_offsets": [
+        20,
+        24
+      ],
+      "file": "weight-scale.f32",
+      "value": 0.003016880713403225
+    },
+    "model.language_model.layers.0.linear_attn.out_proj.input_scale": {
+      "shard": "model-00001-of-00003.safetensors",
+      "header_sha256": "60f09f862dd9fc8c2594641081613cc3f12f162419cfa06f2e6ee3feac7bc5f5",
+      "dtype": "F32",
+      "shape": [],
+      "data_offsets": [
+        16,
+        20
+      ],
+      "file": "input-scale.f32",
+      "value": 0.0322265625
+    }
+  },
+  "files": {
+    "input-m16-k6144.f32": {
+      "bytes": 393216,
+      "sha256": "b5cc88a83bd104dde7474a3dbd06d8aea4436c419d483d86326134a1a867c63e"
+    },
+    "input-m32-k6144.f32": {
+      "bytes": 786432,
+      "sha256": "1b0fb85183d15d15fb06ada3099e916f19781e9c6e033194091cbdaabd2149f2"
+    },
+    "expected-m16-n5120.bf16": {
+      "bytes": 163840,
+      "sha256": "d30a190602fa4a8d25e40992754e919b979c576ce86a691fa0fb2c8fa6b8f592"
+    },
+    "expected-m32-n5120.bf16": {
+      "bytes": 327680,
+      "sha256": "3642b1b89e89e9c1f51be3a1fdc4f3e7a310c6e8f1cee7b399b5af225527e0cc"
+    },
+    "weight-n5120-k6144.e4m3": {
+      "bytes": 31457280,
+      "sha256": "7fafb49ac3d0356a0f59fa2795ed4bc05f7ad47126fa86a351577f2cd26cb27a"
+    },
+    "weight-scale.f32": {
+      "bytes": 4,
+      "sha256": "b315b5bf1fd9f7e8cd4879bb5a071e9c96664ee2b948e391119f9fc273f43a1b"
+    },
+    "input-scale.f32": {
+      "bytes": 4,
+      "sha256": "34eafb8e514f07688e3200a2e0cd33fa7ff7101a44ebbee4d7d9bf0564a5ecfb"
+    }
+  },
+  "gate": "Reproduce all archived M16/M32 BF16 output words with the deployed native FP8 helper and real F32-to-BF16 input cast before candidates or timing. No model, batch, speed or unique-cause admission."
+}

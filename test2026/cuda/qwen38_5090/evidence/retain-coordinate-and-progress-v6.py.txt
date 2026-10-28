@@ -1,0 +1,129 @@
+"""Retain verified reporting inputs and append paper logs without rewriting history."""
+from pathlib import Path
+import hashlib
+import json
+import zipfile
+
+W = Path(__file__).resolve().parent
+O = W.parent / 'outputs'
+R = Path('D:/CantorAI/work/qwen38-5090')
+E = R / 'test2026/cuda/qwen38_5090/evidence'
+F = E / 'figures'
+sha = lambda p: hashlib.sha256(p.read_bytes()).hexdigest()
+owned = []
+retained = {}
+
+
+def keep(dest, raw):
+    assert not dest.exists(), dest
+    dest.write_bytes(raw)
+    assert dest.read_bytes() == raw
+    owned.append(dest.relative_to(R).as_posix())
+    retained[dest.relative_to(E).as_posix()] = sha(dest)
+
+
+J = 'key35-coordinate-trajectory-attempt1'
+proof = O / (J + '-verified.json')
+q = json.loads(proof.read_bytes())
+assert proof.read_bytes() == (O / (J + '-remote-verified.json')).read_bytes()
+assert q['exit_code'] == 0
+archive = O / (J + '-evidence.zip')
+assert sha(archive) == q['archive_sha256']
+summary = json.loads((O / 'Garnet-Key35-Coordinate-Trajectory-Progress.json').read_bytes())
+assert summary['first_observed_selected_value_difference_step'] == 45
+assert summary['CPU_controls'] == 52
+assert summary['same_profile_full_cache_bytes_reproduced']
+assert summary['baseline_source_runtime_SDK_config_index_CMake_all34_restored']
+assert not summary['two_times_target_achieved']
+for name in (proof.name, J + '-remote-verified.json', 'Garnet-Key35-Coordinate-Trajectory-Progress.json'):
+    keep(E / name, (O / name).read_bytes())
+with zipfile.ZipFile(archive) as z:
+    mf = json.loads(z.read('evidence-manifest.json'))
+    base = 'results/' + J + '/'
+    keep(E / 'key35-coordinate-trajectory-model1-manifest.json', z.read('evidence-manifest.json'))
+    for name in mf['files']:
+        if name.startswith(base) and name.endswith('.json'):
+            keep(E / ('key35-coordinate-trajectory-model1-' + name.removeprefix(base).replace('/', '-')), z.read(name))
+    for phase in ('cpu', 'reference', 'candidate'):
+        for ext in ('log', 'jsonl'):
+            keep(E / ('key35-coordinate-trajectory-model1-' + phase + '-commands.' + ext), z.read(base + phase + '-ledger/commands.' + ext))
+for name in ('commands.log', 'commands.jsonl'):
+    keep(E / ('key35-coordinate-trajectory-model1-local-replay-' + name), (W / 'key35-coordinate-trajectory-local-replay' / name).read_bytes())
+for name in ('postprocess-key35-coordinate-trajectory.py', 'replay-key35-coordinate-trajectory.py', Path(__file__).name):
+    keep(E / (name + '.txt'), (W / name).read_bytes())
+
+for stem, generator in (
+    ('Garnet-Key35-Coordinate-Trajectory', 'render-key35-coordinate-trajectory.py'),
+    ('Garnet-Progress-Comparison-2026-10-27-v6', 'render-progress-comparison-20261027-v6.py'),
+):
+    receipt_path = O / (stem + '-Receipt.json')
+    receipt = json.loads(receipt_path.read_bytes())
+    assert sha(W / generator) == receipt['generator_sha256']
+    for name, digest in receipt['artifacts'].items():
+        assert sha(O / name) == digest
+        keep(F / name, (O / name).read_bytes())
+    keep(F / receipt_path.name, receipt_path.read_bytes())
+    keep(F / (generator + '.txt'), (W / generator).read_bytes())
+    for name, digest in receipt.get('input_sha256', {}).items():
+        p = Path(name)
+        assert sha(p) == digest
+        if p.suffix == '.json':
+            keep(F / ('progress-v6-input-' + p.name), p.read_bytes())
+keep(F / 'prepare-progress-comparison-v6.py.txt', (W / 'prepare-progress-comparison-v6.py').read_bytes())
+record = {
+    'status': 'ordinary_coordinate_timeline_and_progress_v6_retained',
+    'archive_sha256': sha(archive), 'archive_bytes': archive.stat().st_size,
+    'proof_sha256': sha(proof), 'retained_sha256': dict(retained),
+    'paired_remote_local_proof_bytes_identical': True,
+    'CPU_controls': 52,
+    'first_observed_sampled_coordinate_difference_step': 45,
+    'first_global_divergence_or_unique_cause_proved': False,
+    'baseline_restored': True,
+    'new_benchmark_executed_for_report': False,
+    'overall_two_times_target_achieved': False,
+    'visual_QA': 'Both PNGs inspected: labels, table and step transitions visible.',
+    'raw_archive_retained_in_outputs_and_remote_results': True,
+    'remote_CPython_NumPy': '3.12.3 / 2.4.4',
+    'local_CPython_NumPy': '3.12.10 / 1.26.4',
+    'downloaded_native_artifact_executed_locally': False,
+}
+keep(E / 'key35-coordinate-trajectory-model1-retention.json', json.dumps(record, indent=2).encode())
+entry = ('\n\n2026-10-27 ordinary key35 coordinate timeline and progress comparison v6: '
+         'fresh source60 B1 and source85 flagoff B4 ordinary runs completed. '
+         'Two identical reads per timepoint of the existing four-byte carrier, '
+         'after prefill and each completed decode step 1..52. Before interpreting '
+         'the trace, all53 IDs/five complete128-component captures/full finite '
+         'hidden-normalized vectors and full8MiBcache reproduced each same-profile '
+         'immutable parent. Actual coordinate layer35/head0/slot4012/dim211 is '
+         'zero and equal through step44; first observed difference after step45: '
+         'B1 code16296=1.3125, B4 code16295=1.3046875, persisting through52. '
+         'This establishes the mutation time for this sampled coordinate only, '
+         'not the earliest global decoder divergence or a unique causal operator. '
+         'Scheduled write45 agrees with observed samples. All52 CPU controls passed; '
+         'remote/local raw replays byte-identical, proof '+sha(proof)+'. '
+         'Raw archive '+sha(archive)+' ('+str(archive.stat().st_size)+'B). '
+         'All1861 owned files/runtime/SDK/config+index/CMake/current34objects/'
+         'baselineDLL restored and owned SSD nonces retired. No native/graph/'
+         'kernel/precision changes in the diagnostic. Historical full4K/cache62 '
+         'gates and same-DLL four-actual-M4 intervention remain FAILED. '
+         'Next inspect upstream operands at step45 with primary parity before '
+         'interpreting observations; old step<=7 observer precondition stays false. '
+         'Updated v6 PNG/SVG plus coordinate PNG/SVG/CSV, generators, hashes, '
+         'resource logs and paired proofs retained. No new serving benchmark. '
+         'ImageC8: Garnet decode89.7712 tok/s/request, total29.9110 tok/s, '
+         'TTFT17.6437s; ordinary vLLM42.4598/224.9710/1.48645s and '
+         'SGLang42.6058/146.5366/1.60399s. Faster-reference decode2.107x but '
+         'throughput0.132955x, first-token speed0.084248x. Native3trials '
+         'physicalbatch1 queues clients, references1trial each up to8running; '
+         'cross-engine full-output equivalence unproven. Strongest repeated '
+         'tuned/MTP references, matched INT4 and4B pending. Overall2x goal unmet.\n').encode()
+for rel in ('docs/research/qwen38-5090-development-log.md', 'docs/research/qwen38-5090-implementation-task.md'):
+    p = R / rel
+    before = p.read_bytes()
+    assert b'ordinary key35 coordinate timeline and progress comparison v6:' not in before
+    with p.open('ab') as f:
+        f.write(entry)
+    assert p.read_bytes() == before + entry
+    owned.append(rel)
+(W / 'coordinate-progress-v6-stage-paths.bin').write_bytes(b''.join(p.encode() + b'\0' for p in owned))
+print(json.dumps({'retained_files': len(retained), 'stage_paths': len(owned), 'proof_sha256': sha(proof)}, indent=2))

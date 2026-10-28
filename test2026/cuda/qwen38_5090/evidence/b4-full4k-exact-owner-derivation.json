@@ -1,0 +1,184 @@
+{
+  "derivations": [
+    {
+      "source": "launch_b4_qk_m16_short_v2.py",
+      "target": "launch_b4_full4k_exact.py",
+      "source_sha256": "206d6c810a0a464b8324ae4f5e8fa07dc5682b8bf812f78655c60fd1a0c308a9",
+      "target_sha256": "c0f061be9c108e7e2f65d26ae9166e2eee28ef885dcb2adf6dfb39e777866a0a",
+      "changes": [
+        {
+          "old": "evidence/b4-qk-m16-short-v2-preparation.json",
+          "new": "evidence/b4-full4k-exact-preparation.json",
+          "count": 1
+        },
+        {
+          "old": "probe_b4_qk_m16_short_v2.py",
+          "new": "probe_b4_full4k_exact.py",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "run_b4_qk_m16_short_v2.py",
+      "target": "run_b4_full4k_exact.py",
+      "source_sha256": "cc2a9bf298e8da3ced3f5a4a68448089bf478effcc1de8c793afb73ca8207235",
+      "target_sha256": "f76122cbc497303b916dae940cfad3b16279a67d2fc4ee7afe939f38aeff3326",
+      "changes": [
+        {
+          "old": "Exclusive short mixed B4-vs-B1 numerical admission; no timing promotion.",
+          "new": "Exclusive full4K text/image/mixed B4-vs-eight-B1 admission; no timing.",
+          "count": 1
+        },
+        {
+          "old": "b4-qk-m16-short-attempt1",
+          "new": "b4-full4k-exact-attempt1",
+          "count": 1
+        },
+        {
+          "old": "evidence/b4-qk-m16-short-v2-preparation.json",
+          "new": "evidence/b4-full4k-exact-preparation.json",
+          "count": 1
+        },
+        {
+          "old": "B4_vs_B1_short_QK_M16_prepared_GPU_unrun",
+          "new": "B4_full4k_exact_prepared_GPU_unrun",
+          "count": 1
+        },
+        {
+          "old": "    for n,h in {**p['files'],**p['checkpoints'],**p['audit_dependencies']}.items():",
+          "new": "    from test2026.cuda.qwen38_5090.b4_full4k_inputs import load_corpus\n    corpus=(M/'evidence/fixed-length-4096-corpus.zip').read_bytes();assert hashlib.sha256(corpus).hexdigest()==p['input_corpus_sha256'];selection=load_corpus(corpus)\n    for n,h in {**p['files'],**p['checkpoints'],**p['audit_dependencies']}.items():",
+          "count": 1
+        },
+        {
+          "old": "'test2026.cuda.qwen38_5090.test_b4_qk_m16_short_route'",
+          "new": "'test2026.cuda.qwen38_5090.test_b4_qk_m16_short_route','test2026.cuda.qwen38_5090.test_b4_full4k_inputs','test2026.cuda.qwen38_5090.test_b4_full4k_exact_gate'",
+          "count": 1
+        },
+        {
+          "old": "launch_b4_qk_m16_short_v2.py",
+          "new": "launch_b4_full4k_exact.py",
+          "count": 1
+        },
+        {
+          "old": "Four fresh source60/DLL841 B1 oracles then source79/pinnedcandidateDLL physicalB4 with GDN/V/QK M16policy1; same41/104/93/93token text-image short/tail inputs and8IDs.",
+          "new": "Eight fresh source60/DLL841 B1 oracles then source79/pinnedcandidateDLL B4 text/image/mixed groups with GDN/V/QK M16policy1; pinned3968prompt+128forcedoutput IDs,4096capacity.",
+          "count": 1
+        },
+        {
+          "old": "from test2026.cuda.qwen38_5090.b4_b1_short_m16_gate import observe,admit,route_trace",
+          "new": "from test2026.cuda.qwen38_5090.b4_b1_short_m16_gate import route_trace\n        from test2026.cuda.qwen38_5090.b4_full4k_exact_gate import observe,admit",
+          "count": 1
+        },
+        {
+          "old": "read_reference=lambda name:(out/'reference'/name).read_bytes();read_candidate=lambda name:(out/'candidate'/name).read_bytes()",
+          "new": "read_reference=lambda key,name:(out/'reference'/name).read_bytes();read_candidate=lambda label,name:(out/'candidate'/name).read_bytes()",
+          "count": 1
+        },
+        {
+          "old": "observe(reference,candidate,read_reference,read_candidate)",
+          "new": "observe(selection,reference,candidate,read_reference,read_candidate)",
+          "count": 1
+        },
+        {
+          "old": "admit(reference,candidate,read_reference,read_candidate)",
+          "new": "admit(selection,reference,candidate,read_reference,read_candidate)",
+          "count": 1
+        },
+        {
+          "old": "B4_QK_M16_short_mixed_tail_exact_to_four_B1_collected_unqualified_full4k_MTP_quality_performance",
+          "new": "B4_full4k_state_vectors_and128_IDs_exact_collected_unqualified_MTP_quality_performance",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "verify_b4_qk_m16_short_v2.py",
+      "target": "verify_b4_full4k_exact.py",
+      "source_sha256": "35c3e52b4001f932b03855b18f99bff836eca97daed81487aaa9306cbeda112d",
+      "target_sha256": "96c7c7253419dbc305367e35208d21a65b63b76736a0bed3859897a3201afeb7",
+      "changes": [
+        {
+          "old": "Independent original full-state/word/ID admission and actual M16 route replay.",
+          "new": "Independent full4K8B1/3B4 complete-state/vector/128ID and M16 route replay.",
+          "count": 1
+        },
+        {
+          "old": "from test2026.cuda.qwen38_5090.b4_b1_short_m16_gate import observe,admit,route_trace",
+          "new": "from test2026.cuda.qwen38_5090.b4_b1_short_m16_gate import route_trace\nfrom test2026.cuda.qwen38_5090.b4_full4k_exact_gate import observe,admit\nfrom test2026.cuda.qwen38_5090.b4_full4k_inputs import load_corpus",
+          "count": 1
+        },
+        {
+          "old": "b4-qk-m16-short-attempt1",
+          "new": "b4-full4k-exact-attempt1",
+          "count": 1
+        },
+        {
+          "old": "evidence/b4-qk-m16-short-v2-preparation.json",
+          "new": "evidence/b4-full4k-exact-preparation.json",
+          "count": 1
+        },
+        {
+          "old": "'verify_b4_qk_m16_short_v2.py'",
+          "new": "'verify_b4_full4k_exact.py','b4_full4k_exact_gate.py','b4_full4k_inputs.py'",
+          "count": 1
+        },
+        {
+          "old": "        original=a.proofs/'paged-batch8-model-preservation-attempt1-evidence.zip';assert sha(original.read_bytes())==p['input_parent_archive_sha256']\n        with zipfile.ZipFile(original) as old:case=json.loads(old.read('results/paged-batch8-model-preservation-attempt1/model/report.json'))['cases'][0];assert case['group']=='short-mixed' and case['actual_limit']==8;inputs=case['inputs'][:4]\n        assert [len(r['prompt_ids']) for r in inputs]==[41,104,93,93]\n        for row in inputs:\n            name='results/native-mtp3-http/'+row['key']+'-request.json';assert sha(z.read(name))==p['audit_dependencies'][name]==row['request_sha256']",
+          "new": "        verify_derivations(json.loads(z.read(P+'evidence/b4-full4k-exact-owner-derivation.json')),lambda n:z.read(P+n))\n        verify_derivations(json.loads(z.read(P+'evidence/b4-full4k-exact-probe-derivation.json')),lambda n:z.read(P+n))\n        corpus=z.read(P+'evidence/fixed-length-4096-corpus.zip');assert sha(corpus)==p['input_corpus_sha256'];selection=load_corpus(corpus);inputs=selection['inputs'];assert len(inputs)==8 and all(len(r['prompt_ids'])==3968 for r in inputs.values())",
+          "count": 1
+        },
+        {
+          "old": "        assert commands('cpu',p['files'])==0 and b'Ran 14 tests' in z.read(BASE+'cpu-ledger/commands.log') and b'\\nOK' in z.read(BASE+'cpu-ledger/commands.log')",
+          "new": "        cpu_code=commands('cpu',p['files'])\n        if cpu_code==0:assert b'Ran 25 tests' in z.read(BASE+'cpu-ledger/commands.log') and b'\\nOK' in z.read(BASE+'cpu-ledger/commands.log')\n        else:assert w['exit_code']!=0 and not w['phases'] and 'CPU gate controls failed' in w['error']",
+          "count": 1
+        },
+        {
+          "old": "'four_B1_short_oracles_collected'",
+          "new": "'eight_B1_full4k_oracles_collected'",
+          "count": 1
+        },
+        {
+          "old": "'B4_short_mixed_tail_raw_capture_needs_CPython_admission'",
+          "new": "'B4_full4k_raw_capture_needs_CPython_admission'",
+          "count": 1
+        },
+        {
+          "old": "r=lambda n:z.read(BASE+'reference/'+n);c=lambda n:z.read(BASE+'candidate/'+n);observation=observe(reference,candidate,r,c)",
+          "new": "r=lambda key,n:z.read(BASE+'reference/'+n);c=lambda label,n:z.read(BASE+'candidate/'+n);observation=observe(selection,reference,candidate,r,c)",
+          "count": 1
+        },
+        {
+          "old": "admit(reference,candidate,r,c)",
+          "new": "admit(selection,reference,candidate,r,c)",
+          "count": 1
+        },
+        {
+          "old": "B4_QK_M16_short_mixed_tail_exact_to_four_B1_collected_unqualified_full4k_MTP_quality_performance",
+          "new": "B4_full4k_state_vectors_and128_IDs_exact_collected_unqualified_MTP_quality_performance",
+          "count": 1
+        },
+        {
+          "old": "actual_B4_QK_M16_short_vs_four_B1_exact_replayed",
+          "new": "actual_B4_full4k_vs_eight_B1_exact_replayed",
+          "count": 1
+        },
+        {
+          "old": "actual_B4_QK_M16_short_vs_four_B1_failure_replayed",
+          "new": "actual_B4_full4k_vs_eight_B1_failure_replayed",
+          "count": 1
+        },
+        {
+          "old": "strict_short_admission_passed",
+          "new": "strict_full4k_admission_passed",
+          "count": 2
+        },
+        {
+          "old": "short_gate_only=True,full4k_MTP_805_HTTP_or_performance_qualified=False",
+          "new": "full4k_exact_gate_only=True,full4k_state_IDs_qualified=strict,MTP_805_HTTP_or_performance_qualified=False",
+          "count": 1
+        }
+      ]
+    }
+  ],
+  "scope": "Full4K source79 admission owner/reader derived from qualifiedshortv2. Preserve original4phase128component/hash/finitebitwisevector/reset/ID comparators and GDN/V/QKroute checks. Newpinnedcorpus8freshB1/3B4text-image-mixed/3968+128/final4095slots.25CPUcontrols=original14+11full4K; successfuljobrequiresall25, failedCPUreplay recordsnegativewithoutadmission. No newnativebuild/math kernel, tolerance or performance claim. Requires pairedshort8507proof, baseline/source/runtime/config-index/all34objects/CMake restoration andownedSSDnonce retirement. Newfull4Kactualcapture GPUunrun untilpreparedexclusiveowner."
+}

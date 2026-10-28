@@ -1,0 +1,37 @@
+{
+  "package_root": "/opt/cantorai5090/sglang/lib/python3.12/site-packages/sglang",
+  "files": {
+    "srt/layers/joint_schema_head.py": "b75406f5704f72c6411e95293eabe9b63ffd08af8869c9ca6657c7ecf7fe6ac2",
+    "srt/configs/deepseek_ocr.py": "afb335136068a8169283d826b7f160f7e763457fd57dad2d4023ec84559d062f",
+    "srt/configs/unlimited_ocr.py": "12897bcb503f2f5e7ddfdff85323aab335d58734aac87cfcb4ae6828bc03bdad",
+    "srt/configs/deepseekvl2.py": "977d89366c8f20002a106fb88726efea4e3f5a3c2db60b4791c7b81c3e8eeaaf",
+    "srt/beam_search/coordinator.py": "93294bdd02e2bba900c0c6a52ecc17313334d70461d8f554fd2a6e299a6a06db",
+    "srt/ray/engine.py": "87bfacf164c32d3c0a5dca9d1a87f135fa88dd121ec1ad5a4be3040e4b9e004c",
+    "srt/ray/data_parallel_controller.py": "4690685dfa58f91a808f2a962dc8061cf4e07e32ca6a63e177a15bfbaf722564",
+    "srt/managers/tokenizer_manager.py": "c4300627da6161c7ec52998a4bf7ae13d19acf7bf3d075ed9de991097a73f355",
+    "srt/managers/utils.py": "ca5adcdee35e3a53f32d7853518b828453df104d0e3ef0892cd7129a14e9e1cc",
+    "srt/managers/tp_worker.py": "150b99df0fc8fac7f37d4ad6459374caa8efeb1866eee49cecd91f6d0a45607b",
+    "srt/managers/scheduler.py": "ab23556739fc4a1a089da5d33f8cb925c14b7c68ae564294b5ed13d96b427c36",
+    "srt/managers/data_parallel_controller.py": "ad3cfe599d4b95d7b998d24259f8b8a4d026c5f78c918c11c9ed31f2ce0e947c",
+    "srt/entrypoints/http_server.py": "a89d20bb2fa8a86c511ab4d9d054f74d707423ab220f733ff25e62fcc0e49979",
+    "srt/entrypoints/engine.py": "e0c9beca051d080ef712fa54e914e337f97d9d04a36b3ae2e2551b8ca7a1520f",
+    "srt/mem_cache/unified_memory_pool.py": "6e4a630063ff28380045ff09b57f0815eebb97b197fef1487e8d185c2d9eff0e",
+    "srt/multimodal/processors/dots_note_omni.py": "df4990f45f15087268b652ab9c50025aa3928374fcf142df01f2a8fe02a32b1f",
+    "srt/multimodal/processors/dots_vlm.py": "d56aa3f800a6fa773551e4cae90674592834e6a028e5f7bd4c2a22a4330b8669",
+    "srt/multimodal/processors/deepseek_vl_v2.py": "dd7627fbe056b3301f43df27e5a37913bf67bae38ee00b19d53ebe9bec1625ba",
+    "srt/entrypoints/systemone/serving.py": "25e0e6488fc03c270a0f256c0b9099698f7f8c75a8d032b561c9c4afd759caec"
+  },
+  "source_archive_sha256": "7b58470f0436466b1488ccb359416de5b6c581f9158457d7a9bc71e4ed37e92f",
+  "derivation": {
+    "worker": "max_req_len=min(context_len-1,kv_capacity-1)",
+    "scheduler": "max_new_tokens=min(requested,max_req_len-input_len-1)",
+    "old_configured_context": 4096,
+    "old_actual_input": 3968,
+    "old_bounded_output": 126,
+    "new_configured_context": 4098,
+    "new_actual_input": 3968,
+    "new_requested_output": 128,
+    "configured_token_pool": 32784
+  },
+  "scope": "Actual installed primary sources collected after failed attempt1; no package edits. Two-slot allowance is a configured-engine distinction, not a smaller workload or an accepted126-token result."
+}

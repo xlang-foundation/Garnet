@@ -1,0 +1,57 @@
+"""Retain exact native constructor-observation build, CPU faults and unchanged contracts."""
+from pathlib import Path
+import hashlib,io,json,re,zipfile
+work=Path(__file__).resolve().parent;out=work.parent/'outputs';repo=Path('D:/CantorAI/work/qwen38-5090');m=repo/'test2026/cuda/qwen38_5090';e=m/'evidence';M='Garnet/test2026/cuda/qwen38_5090/';job='z128-factory-trace-native-build-attempt1';base='results/'+job+'/';sha=lambda raw:hashlib.sha256(raw).hexdigest();paths=[]
+def keep(name,raw):
+    target=e/name;assert not target.exists() or target.read_bytes()==raw,target
+    if not target.exists():target.write_bytes(raw)
+    paths.append(target.relative_to(repo).as_posix())
+proof=(out/(job+'-verified.json')).read_bytes();assert proof==(out/(job+'-remote-verified.json')).read_bytes();q=json.loads(proof);archive=out/(job+'-evidence.zip');assert sha(archive.read_bytes())==q['archive_sha256'] and q['status']=='z128_factory_trace_native_build_cpu_replayed' and q['source_and_runtime_restored'] and not q['gpu_model_executed']
+with zipfile.ZipFile(archive) as z:
+    manifest=json.loads(z.read('evidence-manifest.json'));assert z.testzip() is None and len(z.namelist())==len(set(z.namelist()))==len(manifest['files'])+1==1172
+    for name,h in manifest['files'].items():assert sha(z.read(name))==h
+    p=json.loads(z.read(M+'evidence/z128-factory-trace-native-build-preparation.json'));w=json.loads(z.read(base+'workflow.json'));cpu=json.loads(z.read(base+'factory-cpu/report.json'));assert w['exit_code']==0 and w['cleanup_finished'] and w['cache_after_sha256']==p['cache_before_sha256'] and len(p['candidate_files'])==39 and sum(v is not None for v in p['candidate_base'].values())==14
+    keep(job+'-evidence-manifest.json',z.read('evidence-manifest.json'))
+    for name in z.namelist():
+        if name.startswith(base) and name.endswith(('.json','.jsonl','.log','.txt')):
+            relative=name.removeprefix(base)
+            # All raw480 stdout/stderr pairs remain in immutable archive. Keep report,
+            # 48 originals and48enabled traces in Git as well; avoid432identical silence files.
+            if relative.startswith('factory-cpu/') and relative!='factory-cpu/report.json' and not relative.endswith(('-original-stdout.json','-policy-9-stderr.log')):continue
+            keep(job+'-'+relative.replace('/','-'),z.read(name))
+    for name,h in p['methods'].items():
+        current=repo/name.removeprefix('Garnet/');assert sha(current.read_bytes())==h;paths.append(current.relative_to(repo).as_posix())
+    paths.append('test2026/cuda/qwen38_5090/evidence/z128-factory-trace-native-build-preparation.json')
+    with zipfile.ZipFile(io.BytesIO(z.read(p['bundle']))) as source:
+        assert len(source.namelist())==39 and source.testzip() is None
+        d=json.loads(z.read(M+'evidence/z128-factory-trace-source-derivation.json'));raw=z.read(M+'native_z128_factory_trace_candidate/original-modelopt_fp8_z128_canonical.cpp.txt');assert sha(raw)==d['source_sha256']
+        for row in d['changes']:
+            before=row['before'].encode();assert raw.count(before)==row['count'];raw=raw.replace(before,row['after'].encode())
+        assert source.read(d['source'])==raw==z.read('Garnet/'+d['target']) and sha(raw)==d['target_sha256']
+        assert d['original_SDK_call_expressions']==17 and d['new_SDK_calls']==0 and len(d['empty_return_guards'])==10 and not d['algorithm_descriptors_workspace_wire_enqueue_changed']
+        parent='modelopt-init-trace-native-build-attempt2'
+        with zipfile.ZipFile(out/(parent+'-evidence.zip')) as parentzip:
+            pp=json.loads(parentzip.read(M+'evidence/modelopt-init-trace-native-build-preparation-attempt2.json'))
+            with zipfile.ZipFile(io.BytesIO(parentzip.read(pp['bundle']))) as old:
+                assert set(source.namelist())==set(old.namelist())|{'src/backends/tensorrt/modelopt_fp8_z128_init_trace.h'}
+                assert old.read(d['source'])==z.read(M+'native_z128_factory_trace_candidate/original-modelopt_fp8_z128_canonical.cpp.txt')
+                assert all(source.read(name)==old.read(name) for name in old.namelist() if name!=d['source'])
+    remote_seconds=float(re.search(rb'Ran 86 tests in ([0-9.]+)s',z.read(base+'cpu-ledger/commands.log')).group(1));assert cpu['modes']==48 and cpu['policies']==10 and cpu['traced_processes']==480 and len(cpu['cases'])==480
+    enabled=[row for row in cpu['cases'] if row['policy']=='1'];assert len(enabled)==48 and all(row['replay']['factory_calls']==(2 if row['mode']=='cached' else 1) for row in enabled)
+for suffix in ('-verified.json','-remote-verified.json','-local-replay.log'):keep(job+suffix,(out/(job+suffix)).read_bytes())
+for name in ('derive-z128-factory-trace.py','derive-z128-factory-trace-build.py','package-z128-factory-trace.py','install-z128-factory-trace.py','retain-z128-factory-trace-native.py'):keep(name+'.txt',(work/name).read_bytes())
+keep('z128-factory-trace-native-package.json',(work/'z128-factory-trace-native-package.json').read_bytes());keep('z128-factory-trace-package.log',(work/'z128-factory-trace-package.log').read_bytes())
+for file in (work/'z128-factory-trace-local-cpu-ledger').iterdir():
+    if file.is_file():keep('z128-factory-trace-local-cpu-'+file.name,file.read_bytes())
+result={'status':'actual_Z128_constructor_trace_native_CPU_qualified_GPU_unqualified','archive_sha256':q['archive_sha256'],'archive_bytes':archive.stat().st_size,'archive_members':1172,'proof_pair_sha256':sha(proof),'candidate_library_sha256':q['candidate_library_sha256'],'native_sources':32,'unchanged_Python_sources':7,'source_pins':len(p['base_files']),'method_pins':len(p['methods']),'installed_pins':len(w['installed_source']),'existing_targets_restored':14,'new_targets_removed':25,'CPU_tests':86,'remote_CPU_seconds':remote_seconds,'local_CPU_seconds':3.726,'local_installed_source_view_seconds':3.706,'original_constructor_SDK_expressions':17,'original_empty_guards':10,'new_SDK_queries':0,'CPU_modes':48,'CPU_original_processes':48,'CPU_traced_processes':480,'CPU_trace_policies':10,'CPU_silent_processes':432,'CPU_enabled_processes':48,'CPU_enabled_factory_calls':49,'all_CPU_original_trace_call_transcripts_exact':True,'CPU_fixture_has_no_actual_GPU_or_SDK_library':True,'original360_plugin_CPU_initialize_contract_retained':True,'all_other_prior38_sources_byte_exact':True,'source_runtime_SDK_checkpoint_CMake_cache_restored':True,'CUDA_object_set':34,'added_CUDA_objects':w['added_cuda_objects'],'changed_CUDA_objects':w['changed_cuda_objects'],'GPU_model_executed':False,'actual_GPU_constructor_guard_observed':False,'full_model_or_quality_or_performance_qualified':False,'two_times_target_achieved':False,'scope':p['scope']}
+raw=json.dumps(result,indent=2).encode();keep('z128-factory-trace-native-closure.json',raw);target=out/'Garnet-Actual-Z128-Constructor-Trace-Native-Verified.json';assert not target.exists() or target.read_bytes()==raw
+if not target.exists():target.write_bytes(raw)
+title='Actual Z128 constructor trace builds;48CPU fault modes preserve original SDK call transcripts across10policies'
+text='\n\n### 2026-10-26 — '+title+'\n\n'
+text+='Private exact derivative of real Garnet typedZ128 helper adds defaultoff native stderr records at17existing SDK expressions and10original empty-return guards, cache/created returns and full already-returned64byte heuristic choices. Every SDK expression forwarded once in original short-circuit order. No extra SDK queries, opaque search/substitution, descriptor/workspace/math/wire/enqueue changes. Other37prior candidate files remain byte-exact; one new header yields native32+samePython7=39sources. Local production source unmodified by this trace.\n\n'
+text+='86CPU source/model/cache/failure controls pass local3.726s, simulated installed-source view3.706s and remote'+str(remote_seconds)+'s. Historical policy/integration assertions still execute through separately verified exact helper composition. Remote CPU-only fixture compiles actual original/traced helper CPP into two executables without any CUDA/Garnet/SDK DLL linkage.48modes cover every original SDK failure/exception position, device/version, no/all-failed/skip-failed candidates, opaque mismatch including later matching candidate, ID/length, state/workspace, success and weak-cache reuse. Across10policies,48original+480traced processes have identical complete SDK call/argument/order/cleanup/return/exception/cache transcripts and0matmul.432disabled-policy processes silent;48enabled processes contain49factory calls. CPU synthetic faults do not identify the actual GPU failure. Existing360actual plugin CPU initialize contracts retained.\n\n'
+text+='Full remote Release/MT/sm120 build against real SDK headers succeeds; DLL '+q['candidate_library_sha256']+'. Original T128/B1/B4/B8 wire/descriptor, M128/Z128 wire/default/cross-family, GDNprofile,10external+10embeddedselector and955tokenizer CPU contracts pass.34CUDAobjectset/noadd; only priorallowed3objects rebuilt.14old/25new source, runtime, selectedSDK/checkpoints and CMake cache restored. Archive '+q['archive_sha256']+' ('+str(archive.stat().st_size)+'bytes/1172members) passes CRC/allSHA/exact39source and14original-source checks. Both-machine proof identical '+sha(proof)+'. All480rawstdout/stderr pairs retained in immutable archive; report/48originaltranscripts/48enabledtraces also inGit.\n\n'
+text+='Next actual source-frozen real-input layer2 trace-on observation will join native stderr factory records to the single unambiguous enclosing Z128 plugin call, rather than delayed Python profile markers. Keep all finite/carry/input/retainedT32 controls; if complete, require fresh trace-unset parity. Then unchanged full4096 ordinary/MTP/quality gates and all matched baseline/INT4/4B/concurrency objectives. No new benchmark/chart values; overall2xdecodeANDthroughput and halfTTFTextra remain unmet.\n'
+for name in ('qwen38-5090-development-log.md','qwen38-5090-implementation-task.md'):
+    target=repo/'docs/research'/name;old=target.read_bytes();assert title.encode() not in old;target.write_bytes(old+text.encode());paths.append(target.relative_to(repo).as_posix())
+(work/'z128-factory-trace-native-retained-paths.json').write_bytes(json.dumps(sorted(set(paths)),indent=2).encode());print(json.dumps({'status':result['status'],'retained_paths':len(set(paths)),'candidate_library_sha256':q['candidate_library_sha256']}))

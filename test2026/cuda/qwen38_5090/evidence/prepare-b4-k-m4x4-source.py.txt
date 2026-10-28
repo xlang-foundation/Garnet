@@ -1,0 +1,23 @@
+from pathlib import Path
+import hashlib,json,os,sys,zipfile
+W=Path(__file__).resolve().parent;R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';E=M/'evidence';sys.path[:0]=[str(R),str(M)];sha=lambda b:hashlib.sha256(b).hexdigest()
+from test2026.cuda.qwen38_5090.b4_k_m4x4_source import sources
+parent,candidate,p=sources();names=['b4_k_m4x4_source.py','test_b4_k_m4x4_source.py','evidence/b4-k-m4x4-source-derivation.json'];pins={n:sha((M/n).read_bytes()) for n in names}
+pins.update({'native_b4_k_m4x4_candidate/'+Path(n).name:sha(candidate[n]) for n in p['modified_files']+p['new_files']})
+import run_logged as ledger
+ledger.source_identity=lambda:dict(scope='Explicitlocal CPU source-only candidate controls; liveGPUjob remote sources remain frozen',owned_source_sha256=pins);os.chdir(R)
+assert ledger.run([sys.executable,'-m','unittest','test2026.cuda.qwen38_5090.test_b4_k_m4x4_source'],W/'b4-k-m4x4-source-cpu-ledger','correctness','5source-only exactlineage/legacyCUDA-QK-V-GDN preservation/bodycorruption/key-onlydefaultoff/newwire/actualM4descriptors/fourorderedcalls/input-outputoffsets/failedparentcontrols. NativeC++/SDK/API/matmul/numeric/quality/performance unrun',[M/n for n in pins])==0
+target=W/'b4-k-m4x4-source.zip';assert not target.exists()
+with zipfile.ZipFile(target,'x',zipfile.ZIP_DEFLATED) as z:
+    for name,raw in candidate.items():z.writestr(name,raw)
+record=dict(status='source85_K_M4x4_composed_source_CPU_only',CPU_source_controls=5,candidate_sources=85,source_bundle_sha256=sha(target.read_bytes()),source_bundle_bytes=target.stat().st_size,source_sha256=pins,native_CXX_or_SDK_API_or_GPU_executed=False,model_or_quality_or_performance_qualified=False,remote_deployed=False,scope=p['scope'])
+owned=[M/n for n in names]+[M/'native_b4_k_m4x4_candidate'/Path(n).name for n in p['modified_files']+p['new_files']]
+def keep(name,raw):
+    path=E/name;assert not path.exists();path.write_bytes(raw);owned.append(path)
+keep('b4-k-m4x4-source-cpu-preparation.json',json.dumps(record,indent=2).encode())
+keep('b4-k-m4x4-source-bundle-manifest.json',json.dumps(dict(archive_sha256=record['source_bundle_sha256'],archive_bytes=record['source_bundle_bytes'],files={n:sha(b) for n,b in candidate.items()},native_CPU_and_GPU_unrun=True),indent=2).encode())
+for source,name in [(W/'b4-k-m4x4-source-cpu-ledger/commands.log','b4-k-m4x4-source-cpu-commands.log'),(W/'b4-k-m4x4-source-cpu-ledger/commands.jsonl','b4-k-m4x4-source-cpu-commands.jsonl'),(W/'derive-b4-k-m4x4-source.py','derive-b4-k-m4x4-source.py.txt'),(Path(__file__),'prepare-b4-k-m4x4-source.py.txt')]:keep(name,source.read_bytes())
+text=('\r\n\r\n2026-10-27 separatedefaultoff K-M4x4 controlledintervention source85 preparedlocally, undeployed/nativeCPU-SDK-GPUunrun. Source79actualM16execution usesM4selectedalgorithm; proposednewK-onlyB4T4plugin preservesactualM4descriptors andexecutesfourorderedM4matmuls overphysicalrowfour-tokenblocks, liveM4SDKopaque/sevenconfigattrs/4MiB, weights/scalar/workspace/streamshared, stopsfirstfailure. ExactinputFP8quantizationouter16 unchanged; byteoffsetsgroup*4*5120 input/group*4*1024*2 BF16output. Source79->85 adds6privatehelpers andonlyloweringdispatch; alllegacyQK/V/GDN/NVFP4/oldwires/allCUDAkernels unchanged. NewflagGARNET_FP8_K_BATCH4_DECODE_M4X4 andnew20Bwire0x4b343434.5SOURCEONLYCPUcomposition/lineage/corruption/policyscope/wire/source-shape/failedparentchecks pass; notactualC++selector/SDKeligibility/numericequivalence orspeed proof. Existingkey35rawcacheGPUjob sourcefreeze/exclusivity retained. Rationale isactualcommoninputstep52firststoredK35diff; norm/rotary/othercauses notexcluded. Beforeanyuse requiresactualnativeCPU/API/runcontract/nativebuild/model128IDfull4K/MTP/quality/HTTP/performancevalidation. Originalfailedfull4K/cache62jobs stayFAILED, target2xunmet. Sourcebundle '+record['source_bundle_sha256']+' ('+str(record['source_bundle_bytes'])+'B).\r\n').encode()
+for n in ('docs/research/qwen38-5090-development-log.md','docs/research/qwen38-5090-implementation-task.md'):
+    path=R/n;path.write_bytes(path.read_bytes()+text);owned.append(path)
+(W/'b4-k-m4x4-source-stage-paths.bin').write_bytes(b'\0'.join(n.relative_to(R).as_posix().encode() for n in owned)+b'\0');print(json.dumps(dict(files=len(owned),candidate_sources=85,CPU_source_controls=5,source_bundle_sha256=record['source_bundle_sha256'],native_CPU_and_GPU_unrun=True)))

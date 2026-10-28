@@ -1,0 +1,19 @@
+from pathlib import Path
+import hashlib,json,os,sys
+r=Path('D:/CantorAI/work/qwen38-5090');m=r/'test2026/cuda/qwen38_5090';e=m/'evidence';w=Path(__file__).resolve().parent
+sys.path.insert(0,str(m));from run_logged import run
+sdk=Path('D:/CantorAI/xlang3/sdk');cuda=Path('C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v13.2/include');sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+assert sha(sdk/'xlang3/xlang3.h')=='cffd02c2195ec0c980c526b69bae73cd2bbb16c7812de3b54c007382f5a365b4'
+units=[(m/'cuda_bf16_low_batch_kv_delta_commit.cpp','b1-helper-candidate'),(r/'src/backends/tensorrt/cuda_bf16_kv_delta_commit.cpp','b1-helper-unchanged-legacy')]
+pins=[p for p,_ in units]+[m/'cuda_bf16_low_batch_kv_delta_commit.h',m/'bf16_low_batch_layout_contract.h',m/'bf16_low_batch_commit_candidate.h',r/'src/backends/tensorrt/cuda_bf16_kv_delta_commit.h',r/'src/backends/tensorrt/qwen38_bf16_kv_layout_contract.h',r/'src/cuda/qwen38_bf16_kv_commit.cuh',r/'src/tensor/tensor_helper.h',r/'src/tensor/execution_stream.h',r/'third_party/json.hpp',sdk/'xlang3/xlang3.h',sdk/'xlang3/charconv_compat.h']
+before={str(p):sha(p) for p in pins};inc=' '.join('/I"'+str(p)+'"' for p in [m,r/'src',r/'src/tensor',r/'src/cuda',r/'src/backends/tensorrt',r/'third_party',sdk,cuda])
+lines=['@echo off','call "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Auxiliary\\Build\\vcvars64.bat" -vcvars_ver=14.29','if errorlevel 1 exit /b %errorlevel%','set "TMP=%~dp0"','set "TEMP=%TMP%"']
+for p,name in units:lines+=['cl /nologo /EHsc /std:c++17 /MT /utf-8 /DNOMINMAX /DXLANG3_USE_SHARED /DGARNET_SERVING_EXPORTS '+inc+' /c "'+str(p)+'" /Fo"%~dp0'+name+'.obj"','if errorlevel 1 exit /b %errorlevel%']
+lines+=['exit /b 0'];bat=w/'compile-bf16-low-batch-helper-local.bat';bat.write_bytes(('\r\n'.join(lines)+'\r\n').encode());os.chdir(r)
+code=run(['cmd.exe','/d','/c',str(bat)],e/'bf16-low-batch-helper-local-build-ledger','build','Private CPU compilation of B1 helper and unchanged B4/B8 helper; no linking/runtime/GPU',pins+[bat,Path(__file__)])
+assert before=={str(p):sha(p) for p in pins}
+if code:raise SystemExit(code)
+receipt={'status':'b1_native_helper_and_unchanged_legacy_private_compile_passed_runtime_unrun','input_sha256':before,'object_sha256':{name:sha(w/(name+'.obj')) for _,name in units},'linked':False,'runtime_executed':False,'gpu_used':False,'remote_mutated':False,'native_helper_model_admitted':False,'performance_admitted':False,'scope':'Separate B1 native helper literal derivation compiles against public XLang3 SDK header matching actual remote native build. Unchanged old helper also compiles. Private /MT object files only; no link/load/registration/native runtime behavior or GPU call. Metadata/parser CPU checks were separate; runtime ownership/alias/span/lease/poison semantics remain unqualified.'}
+(e/'bf16-low-batch-helper-local-build.json').write_text(json.dumps(receipt,indent=2),encoding='utf8')
+for target,source in [('bf16-low-batch-helper-local-build-method.py.txt',Path(__file__)),('bf16-low-batch-helper-local-build-method.bat.txt',bat)]: (e/target).write_bytes(source.read_bytes())
+print(json.dumps(receipt,indent=2))

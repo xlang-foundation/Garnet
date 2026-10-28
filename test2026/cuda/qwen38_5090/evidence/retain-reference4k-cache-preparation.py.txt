@@ -1,0 +1,32 @@
+from pathlib import Path
+import json,shutil
+w=Path(__file__).resolve().parent;r=Path('D:/CantorAI/work/qwen38-5090');e=r/'test2026/cuda/qwen38_5090/evidence'
+for source in (w/'fixed-context-reference-cache-cpu-ledger').iterdir():
+ target=e/'fixed-context-reference-cache-cpu-ledger'/source.name;target.parent.mkdir(exist_ok=True);assert not target.exists();shutil.copyfile(source,target)
+for name in ('prepare-reference4k-cache-launchers.py','retain-reference4k-cache-preparation.py'):
+ target=e/(name+'.txt');assert not target.exists();shutil.copyfile(w/name,target)
+entry='''
+
+### 2026-10-25: reference4K repeated-image cache boundary addressed
+
+Reference4K nonstream token controls reuse every later timed image. The prepared
+client now performs the established idle-only vLLM dual reset after all124ID
+controls and before NVML/timing, records both endpoint acknowledgements/raw
+counters, and rejects timing completion unless processor queries increase with
+zero new hits and unchanged server process. Timed corpus JPEGs are unique;
+encoder reset acknowledgement alone is not a universal cache-residency proof.
+Existing API schemas/cache-negative controls pass10actual CPU tests (0.631s).
+No vLLM server/model run occurred; config source was read without GPU imports.
+
+New SGLang ordinary/MTP3 fixed4K launchers are exact current launcher derivatives
+changing only dedicated log paths and explicit --mm-preprocess-cache-size-mb0.
+Actual installed mm.py from5027ba7f... archive defines0as disabling this CPU
+cache. Prefix-MM/global embedding caches remain default off and actual
+server_info must verify these values before timing. Both Bash syntax checks and
+reference Python compilation pass. Source recipe/actual CPU ledger retained.
+These methods are local only while original NFC model runs; no deployment,
+runtime compatibility,805quality/4K metric or2x admission follows.
+'''
+for name in ('qwen38-5090-development-log.md','qwen38-5090-implementation-task.md'):
+ target=r/'docs/research'/name;raw=target.read_bytes();assert b'reference4K repeated-image cache boundary addressed' not in raw;target.write_bytes(raw+entry.replace('\n','\r\n').encode())
+print(json.dumps({'status':'reference4k_cache_preparation_retained','actual_cpu_tests':10,'runtime_executed':False}))

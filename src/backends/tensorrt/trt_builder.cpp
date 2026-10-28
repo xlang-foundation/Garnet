@@ -3,10 +3,14 @@
 
 #include "trt_builder.h"
 #include <nlohmann/json.hpp>
+#include "modelopt_nvfp4_plugin.h"
+#include "modelopt_fp8_plugin.h"
+#include "ct_int4_plugin.h"
 #include "trt_context_pool.h"
 #include "trt_memory_profile.h"
 #include "qwen35_lowering.h"
 #include "qwen35_packed_store_plugin.h"
+#include "qwen38_gdn_chunk_stage_profile.h"
 #include "operator_execution_group.h"
 #include "trt_sync_allocator.h"
 #include "weight_streaming_policy.h"
@@ -239,7 +243,8 @@ namespace Garnet {
             const bool useCudaGraph =
                 enableCudaGraph &&
                 !(enabled && enabled[0] == '0' && enabled[1] == '\0') &&
-                context->getProfiler() == nullptr;
+                (context->getProfiler() == nullptr ||
+                 (state.layerProfilerOwner && !state.layerProfileActive));
             const auto resource=CurrentOperatorExecutionOwner();
             const bool same=(!resource && !state.operatorOwner) ||
                 (resource && state.operatorOwner && resource->Identity()==state.operatorOwner->Identity() &&
@@ -319,7 +324,7 @@ namespace Garnet {
 
         std::shared_ptr<CachedTRTExecution> GetCachedTRTEngine(
             const std::string& enginePath,
-            const Garnet::SafeTensorsIndex* weightIndex = nullptr,int workspacePolicy=-1) {
+            const Garnet::SafeTensorsIndex* weightIndex = nullptr,int workspacePolicy=-1,bool embeddedWeights=false) {
             int device = -1;
             if (cudaGetDevice(&device) != cudaSuccess) return nullptr;
             const auto streamingPolicy = ReadTRTWeightStreamingPolicy();
@@ -380,7 +385,7 @@ namespace Garnet {
                 cached.allocator = std::make_unique<TRTSyncAllocator>(device);
                 cached.runtime->setGpuAllocator(cached.allocator.get());
             }
-            if(!EnsureBF16ProjectionPluginRegistered()||!EnsureQwen35DeltaPluginRegistered()||!EnsureQwen35PackedStorePluginRegistered())return nullptr;
+            if(!EnsureBF16ProjectionPluginRegistered()||!EnsureQwen35DeltaPluginRegistered()||!EnsureQwen35PackedStorePluginRegistered()||!EnsureModelOptNVFP4PluginRegistered()||!EnsureModelOptFP8PluginRegistered()||!EnsureCTInt4G128PluginRegistered()||!EnsureBF16KVOverlayPluginRegistered()||!EnsureBF16KVLowBatchOverlayPluginRegistered()||!EnsureBF16KVPrefill128OverlayPluginRegistered()||!EnsureBF16KVFloatReferencePluginRegistered())return nullptr;
             LogTRTMemoryCheckpoint("before_engine_deserialize",enginePath);
             cached.engine = cached.runtime->deserializeCudaEngine(engineStream);
             if (!cached.engine) {
@@ -404,7 +409,7 @@ namespace Garnet {
             }
             LogTRTMemoryCheckpoint("before_engine_refit",enginePath,
                 cached.engine->getDeviceMemorySizeV2());
-            if (weightIndex && weightIndex->TensorCount() > 0) {
+            if (weightIndex && weightIndex->TensorCount() > 0 && !embeddedWeights) {
                 std::unique_ptr<nvinfer1::IRefitter> refitter(
                     nvinfer1::createInferRefitter(*cached.engine, gLogger));
                 if (!refitter) {
@@ -544,8 +549,8 @@ namespace Garnet {
             std::shared_ptr<CachedTRTExecution> owner;
             TRTContextPool::Lease slot;
             explicit CachedExecutionUse(const std::string& path,
-                const SafeTensorsIndex* weights = nullptr, bool enabled = true,const std::vector<void*>* serialGraphBindings=nullptr,int workspacePolicy=-1)
-                : owner(enabled ? GetCachedTRTEngine(path, weights,workspacePolicy) : nullptr),
+                const SafeTensorsIndex* weights = nullptr, bool enabled = true,const std::vector<void*>* serialGraphBindings=nullptr,int workspacePolicy=-1,bool embeddedWeights=false)
+                : owner(enabled ? GetCachedTRTEngine(path, weights,workspacePolicy,embeddedWeights) : nullptr),
                   slot(owner ? owner->contexts->Acquire(CurrentExecutionStream(),serialGraphBindings) : TRTContextPool::Lease{}) {}
             nvinfer1::IExecutionContext* Context() const { return slot ? slot->context : nullptr; }
             nvinfer1::ICudaEngine* Engine() const { return owner ? owner->engine : nullptr; }
@@ -752,13 +757,13 @@ namespace Garnet {
     std::shared_ptr<void> TRTBuilder::RetainCachedExecution(
         const std::string& enginePath,
         const SafeTensorsIndex* weightIndex,
-        std::string& errorMessage,bool userManagedWorkspace) {
+        std::string& errorMessage,bool userManagedWorkspace,bool embeddedWeights) {
         try {
             if (!EnsurePagedKVDecodePluginRegistered()) {
                 errorMessage = "failed to register Garnet paged-KV TensorRT plugin";
                 return {};
             }
-            CachedExecutionUse execution(enginePath, weightIndex,true,nullptr,userManagedWorkspace?1:0);
+            CachedExecutionUse execution(enginePath, weightIndex,true,nullptr,userManagedWorkspace?1:0,embeddedWeights);
             if (!execution.Context()) {
                 errorMessage = "failed to prepare captured engine " + enginePath;
                 return {};
@@ -782,6 +787,7 @@ namespace Garnet {
             {"network_output_aliases_input",owner->engine->getAliasedInputTensor("output_0")!=nullptr},
             {"external_workspace_bound",workspaceReady},
             {"external_workspace_capacity_bytes",workspaceReady?owner->workspaceBytes:0},
+            {"engine_refittable",owner->engine->isRefittable()},
             {"trt_allocator_live_bytes",owner->allocator?nlohmann::json(owner->allocator->LiveBytes()):nlohmann::json(nullptr)},
             {"trt_allocator_peak_bytes",owner->allocator?nlohmann::json(owner->allocator->PeakBytes()):nlohmann::json(nullptr)},
             {"trt_allocator_allocations",owner->allocator?nlohmann::json(owner->allocator->Outstanding()):nlohmann::json(nullptr)},
@@ -3387,6 +3393,7 @@ namespace Garnet {
     }
 
     nvinfer1::ITensor* TRTBuilder::GetOrCreateTRTWeight(const std::string& weightName) {
+        if(externalCompressedBindings.count(weightName))throw std::invalid_argument("Compressed weight requires its explicit external binding on every operation: "+weightName);
         auto existing = weightTensorMap.find(weightName);
         if (existing != weightTensorMap.end()) {
             return existing->second;
@@ -3396,11 +3403,16 @@ namespace Garnet {
             return nullptr;
         }
         const SafeTensorMetadata* metadata = capturedWeightIndex->Find(weightName);
+        if (!metadata && capturedWeightProfile=="ct_int4_g128") return GetCTInt4Weight(weightName);
         if (!metadata) {
             loweringError = "weight is absent from safetensors index: " + weightName;
             return nullptr;
         }
         DataType dataType;
+        if(metadata->dataType=="U8"&&capturedWeightProfile=="modelopt_mixed")
+            return GetModelOptNVFP4Weight(weightName,*metadata);
+        if((metadata->dataType=="F8_E4M3"||metadata->dataType=="F8_E4M3FN")&&capturedWeightProfile=="modelopt_mixed")
+            return GetModelOptFP8Weight(weightName,*metadata);
         if (metadata->dataType == "BF16") dataType = DataType::kBF16;
         else if (metadata->dataType == "F16") dataType = DataType::kHALF;
         else if (metadata->dataType == "F32") dataType = DataType::kFLOAT;
@@ -3504,7 +3516,7 @@ namespace Garnet {
             return nullptr;
         }
         if (!network->setWeightsName(weights, weightName.c_str()) ||
-            !network->markWeightsRefittable(weightName.c_str())) {
+            (capturedWeightProfile!="modelopt_mixed"&&capturedWeightProfile!="ct_int4_g128"&&!network->markWeightsRefittable(weightName.c_str()))) {
             loweringError = "TensorRT could not mark checkpoint weight refittable: " + weightName;
             return nullptr;
         }
@@ -4641,7 +4653,8 @@ namespace Garnet {
         tensorMap.clear();
         constantTensors.clear();
         weightTensorMap.clear();
-        externalBF16Bindings.clear();
+        nativeNVFP4Weights.clear();nativeNVFP4ScaleStorage.clear();nativeFP8Weights.clear();nativeCTInt4Weights.clear();nativeFP8M128ProjectionCount_=0;nativeFP8Z128ProjectionCount_=0;
+        externalBF16Bindings.clear();externalCompressedBindings.clear();
         scalarWeights.clear();
         bfloat16ScalarWeights.clear();
         integerWeights.clear();
@@ -4702,7 +4715,7 @@ namespace Garnet {
         if (streamingPolicy.Enabled()) {
             config->setFlag(BuilderFlag::kWEIGHT_STREAMING);
         }
-        if (capturedWeightIndex && capturedWeightIndex->TensorCount() > 0) {
+        if (capturedWeightIndex && capturedWeightIndex->TensorCount() > 0 && capturedWeightProfile!="modelopt_mixed"&&capturedWeightProfile!="ct_int4_g128") {
             config->setFlag(BuilderFlag::kREFIT_INDIVIDUAL);
             config->setFlag(BuilderFlag::kSTRIP_PLAN);
         }
@@ -5373,9 +5386,12 @@ namespace Garnet {
             std::lock_guard<std::mutex> lock(g_trtLayerProfileMutex);
             profileDecodeLayers = g_profiledTRTEngines.insert(enginePath).second;
         }
-        OneShotTRTLayerProfiler layerProfiler;
+        std::shared_ptr<OneShotTRTLayerProfiler> layerProfiler;
         if (profileDecodeLayers) {
-            cachedContext->setProfiler(&layerProfiler);
+            layerProfiler = std::make_shared<OneShotTRTLayerProfiler>();
+            cachedUse.slot->layerProfilerOwner = layerProfiler;
+            cachedUse.slot->layerProfileActive = true;
+            cachedContext->setProfiler(layerProfiler.get());
             cachedContext->setEnqueueEmitsProfile(true);
         }
         bindingSignature.push_back(outputDevicePointer);
@@ -5385,16 +5401,16 @@ namespace Garnet {
                 enginePath, cachedContext, *cachedUse.slot.operator->(), bindingSignature, enableCudaGraph,
                 CurrentExecutionStream(), shapeSignature)) {
             if (profileDecodeLayers) {
-                cachedContext->setProfiler(nullptr);
                 cachedContext->setEnqueueEmitsProfile(false);
+                cachedUse.slot->layerProfileActive = false;
             }
             errorMessage = "TensorRT enqueueV3 failed";
             return X::Value();
         }
         if (profileDecodeLayers) {
-            cachedContext->setProfiler(nullptr);
             cachedContext->setEnqueueEmitsProfile(false);
-            layerProfiler.Write(layerProfilePath, enginePath);
+            cachedUse.slot->layerProfileActive = false;
+            layerProfiler->Write(layerProfilePath, enginePath);
         }
 
         errorMessage.clear();
@@ -5673,10 +5689,12 @@ namespace Garnet {
                 auto* left=GetOrCreateTRTTensor(input1);
                 auto* right=GetOrCreateTRTTensor(input2);
                 Qwen35TRTOps ops(*network,vectorWeights,[&](const std::string& name){return GetOrCreateTRTWeight(name);},ownedPlugins);
+                ops.SetNativeProjection([&](ITensor* x,ITensor* w){return ProjectModelOptNVFP4(x,w);});
                 if(!left||!right)throw std::invalid_argument("Qwen3.5 binary input is missing");
                 auto bindings=qwen35Bindings[TensorId(input1)];
                 const std::set<std::string> allowed={"qwen35_conv_bind_state","qwen35_conv_bind_active",
                     "qwen35_delta_bind_state","qwen35_attention_bind_key","qwen35_attention_bind_value",
+                    "qwen35_attention_bind_canonical",
                     "qwen35_attention_bind_positions","qwen35_attention_bind_slots","qwen35_attention_bind_active",
                     "qwen35_mtp_bind_embedding","qwen35_cache_bind_backup","qwen35_cache_bind_spans","qwen35_store_bind_root"};
                 if(allowed.count(opName)) {
@@ -6243,10 +6261,49 @@ namespace Garnet {
                         externalBF16Bindings[name]={TensorId(value),expectedBytes};external[name]=declared->second;
                     }
                 }
+                // Each checkpoint name maps to [packed] for FP8 or
+                // [packed, tiled_scales] for NVFP4, both opaque INT32 tensors.
+                if(auto* bindings=FindKeyword(kwParams,"external_compressed_weights")){
+                    if(!bindings->second.IsDict()||capturedWeightProfile!="modelopt_mixed"||bindings->second.Size()>1024)
+                        throw std::invalid_argument("External compressed weights require a bounded mixed-profile dictionary");
+                    for(uint64_t i=0;i<bindings->second.Size();++i){
+                        X::Value key,value;
+                        if(!bindings->second.DictEntry(i,key,value)||!key.IsString()||!value.IsList()||value.Size()<1||value.Size()>2)
+                            throw std::invalid_argument("External compressed binding must be a named packed tensor list");
+                        const auto name=key.ToString();
+                        if(external.count(name))throw std::invalid_argument("Checkpoint name bound as both BF16 and compressed");
+                        unsigned long long ids[2]={0,0};ITensor* tensors[2]={nullptr,nullptr};
+                        for(uint64_t j=0;j<value.Size();++j){
+                            auto tensor=value.Get(j);if(!IsTensor(tensor))throw std::invalid_argument("External compressed binding requires tensor inputs");
+                            X::Tensor handle(tensor);auto info=handle.Info();ids[j]=TensorId(tensor);auto found=tensorMap.find(ids[j]);
+                            if(info.dtype!=X3_TENSOR_INT32||found==tensorMap.end()||!found->second->isNetworkInput())
+                                throw std::invalid_argument("External compressed buffer must be a declared INT32 network input");
+                            tensors[j]=found->second;
+                        }
+                        if(ids[0]==ids[1])throw std::invalid_argument("Packed weight and scales must use distinct inputs");
+                        for(const auto& previous:externalCompressedBindings){
+                            if(previous.first==name){
+                                if(previous.second.packedId!=ids[0]||previous.second.scaleId!=ids[1])
+                                    throw std::invalid_argument("One compressed checkpoint weight cannot bind multiple inputs");
+                            }else if(previous.second.packedId==ids[0]||previous.second.scaleId==ids[0]||
+                                (ids[1]&&(previous.second.packedId==ids[1]||previous.second.scaleId==ids[1])))
+                                throw std::invalid_argument("Compressed storage input cannot alias different checkpoint weights");
+                        }
+                        if(weightTensorMap.count(name))throw std::invalid_argument("Compressed weight already embedded in this graph: "+name);
+                        const auto bytes=BindExternalModelOptWeight(name,tensors[0],tensors[1]);
+                        externalCompressedBindings[name]={ids[0],ids[1],bytes};external[name]=tensors[0];
+                    }
+                }
+                if(keywordInt("joined_mlp_projections",0)!=0){
+                    if(keywordInt("joined_mlp_projections",0)!=1||(opName!="qwen35_linear_decoder_chunk"&&opName!="qwen35_full_decoder_chunk")||
+                        !external.count(keywordText("layer_prefix")+".mlp.gate_up_proj.weight"))
+                        throw std::invalid_argument("Joined decoder MLP requires an explicit validated compressed alias");
+                }
                 Qwen35TRTOps ops(*network,vectorWeights,[&](const std::string& name){
                     auto found=external.find(name);if(found==external.end())return GetOrCreateTRTWeight(name);
                     usedExternal.insert(name);return found->second;
                 },ownedPlugins);
+                ops.SetNativeProjection([&](ITensor* x,ITensor* w){return ProjectModelOptNVFP4(x,w);});
                 auto number=[&](const char* name,double fallback){auto* item=FindKeyword(kwParams,name);return item?item->second.ToDouble():fallback;};
                 ops.SetProjectionWorkspace(keywordInt("projection_workspace_bytes",0));
                 auto storeParts=[&](const std::vector<ITensor*>& parts)->ITensor*{
@@ -6305,12 +6362,62 @@ namespace Garnet {
                     lastOutput=ops.restoreKVPrefix(source,b["qwen35_cache_bind_backup"],b["qwen35_cache_bind_spans"]);
                 }
                 else if(opName=="qwen35_linear_decoder_chunk"||opName=="qwen35_linear_tree_chunk") {
+                    auto* stageAttribute=FindKeyword(kwParams,"diagnostic_linear_stages");
+                    const auto diagnostic=stageAttribute?stageAttribute->second.ToLongLong():0;
+                    if(diagnostic!=0&&diagnostic!=1)throw std::invalid_argument("Linear stage diagnostic must be0 or1");
+                    auto dimensions=ops.shape(source);
+                    if(diagnostic&&(capturedWeightProfile!="modelopt_mixed"||!external.empty()||
+                        dimensions.size()!=3||(dimensions[0]!=1&&dimensions[0]!=2)||dimensions[1]!=16||dimensions[2]!=5120||
+                        keywordText("layer_prefix")!="model.language_model.layers.0"||keywordInt("key_heads",0)!=16||keywordInt("value_heads",0)!=48||
+                        keywordInt("key_dim",0)!=128||keywordInt("value_dim",0)!=128||keywordInt("fused_delta",0)!=1||
+                        keywordInt("retain_linear_inputs",0)!=0||keywordInt("register_delta_128",0)!=0||
+                        keywordInt("joined_input_projections",0)!=0||keywordInt("joined_mlp_projections",0)!=0))
+                        throw std::invalid_argument("Stage capture requires the embedded mixed27B layer0 B1/2 T16 diagnostic profile");
+                    auto* chunkStageAttribute=FindKeyword(kwParams,"diagnostic_gdn_chunk_stages");
+                    if(chunkStageAttribute&&(!(chunkStageAttribute->second.IsInt64()||chunkStageAttribute->second.IsUInt64())||
+                        (chunkStageAttribute->second.IsUInt64()&&chunkStageAttribute->second.ToUInt64()>1)))
+                        throw std::invalid_argument("GDN chunk stage opt-in requires integer0 or1");
+                    const auto chunkStageMode=chunkStageAttribute?chunkStageAttribute->second.ToLongLong():0;
+                    if(chunkStageMode!=0&&chunkStageMode!=1)throw std::invalid_argument("GDN chunk stage opt-in must be0 or1");
                     auto b=qwen35Bindings[TensorId(input)];
+                    bool chunkStageStudy=false;
+                    if(chunkStageMode){
+                        const char* bindings[]={"qwen35_conv_bind_state","qwen35_delta_bind_state","qwen35_conv_bind_active"};
+                        if(b.size()!=3)throw std::invalid_argument("GDN chunk stage needs three exact state/active bindings");
+                        for(const auto* name:bindings)if(!b.count(name)||!b[name])throw std::invalid_argument("GDN chunk stage binding absent");
+                        GDNChunkStageProfile profile;
+                        profile.hidden=dimensions;profile.history=ops.shape(b[bindings[0]]);profile.state=ops.shape(b[bindings[1]]);profile.active=ops.shape(b[bindings[2]]);
+                        profile.layer=keywordText("layer_prefix");profile.weightProfile=capturedWeightProfile;
+                        for(const auto& value:external)profile.externalNames.push_back(value.first);
+                        profile.floatInputs={source->getType()==DataType::kFLOAT,b[bindings[0]]->getType()==DataType::kFLOAT,b[bindings[1]]->getType()==DataType::kFLOAT,b[bindings[2]]->getType()==DataType::kFLOAT};
+                        profile.compressed=FindKeyword(kwParams,"external_compressed_weights")!=nullptr;profile.bf16Bindings=FindKeyword(kwParams,"external_weights")!=nullptr;
+                        profile.keyHeads=keywordInt("key_heads",0);profile.valueHeads=keywordInt("value_heads",0);profile.keyDim=keywordInt("key_dim",0);profile.valueDim=keywordInt("value_dim",0);
+                        profile.fused=keywordInt("fused_delta",0);profile.retain=keywordInt("retain_linear_inputs",0);profile.register128=keywordInt("register_delta_128",0);
+                        profile.joinedInputs=keywordInt("joined_input_projections",0);profile.joinedMLP=keywordInt("joined_mlp_projections",0);profile.workspace=keywordInt("projection_workspace_bytes",0);profile.epsilon=float(number("eps",1e-6));
+                        chunkStageStudy=SelectGDNChunkStageProfile(true,chunkStageMode,diagnostic!=0,profile);
+                    }
+                    const bool captureStages=diagnostic||chunkStageStudy;
                     const bool store=FindKeyword(kwParams,"internal_store_offsets")!=nullptr;std::vector<ITensor*> parts;
+                    if(captureStages&&(store||opName=="qwen35_linear_tree_chunk"))throw std::invalid_argument("Diagnostic stages exclude packed stores or trees");
+                    const int stageWordLimit=chunkStageStudy?dimensions[1]*10240:1048576;
+                    std::vector<ITensor*> diagnosticStages;
                     lastOutput=ops.linearDecoderChunk(source,b["qwen35_conv_bind_state"],b["qwen35_delta_bind_state"],
                         b["qwen35_conv_bind_active"],keywordText("layer_prefix"),keywordInt("key_heads",0),keywordInt("value_heads",0),
-                        keywordInt("key_dim",0),keywordInt("value_dim",0),float(number("eps",1e-6)),keywordInt("fused_delta",0)!=0,keywordInt("retain_linear_inputs",0)!=0,keywordInt("register_delta_128",0)!=0,keywordInt("joined_input_projections",0)!=0,store?&parts:nullptr,
-                        opName=="qwen35_linear_tree_chunk"?tensorKeyword("tree_metadata"):nullptr,keywordInt("capacity",0),keywordInt("omit_linear_state_outputs",0)!=0);
+                        keywordInt("key_dim",0),keywordInt("value_dim",0),float(number("eps",1e-6)),keywordInt("fused_delta",0)!=0,keywordInt("retain_linear_inputs",0)!=0,keywordInt("register_delta_128",0)!=0,keywordInt("joined_input_projections",0)!=0,store?&parts:nullptr,opName=="qwen35_linear_tree_chunk"?tensorKeyword("tree_metadata"):nullptr,keywordInt("capacity",0),keywordInt("omit_linear_state_outputs",0)!=0,keywordInt("joined_mlp_projections",0)!=0,captureStages?&diagnosticStages:nullptr);
+                    if(captureStages){
+                        if(diagnosticStages.size()!=11)throw std::runtime_error("Linear stage diagnostic contract changed");
+                        std::vector<ITensor*> parts{lastOutput};
+                        for(auto* value:diagnosticStages){
+                            const auto shape=ops.shape(value);int width=1;
+                            if(shape.size()<2||shape[0]!=dimensions[0])throw std::runtime_error("Linear diagnostic batch differs");
+                            for(size_t i=1;i<shape.size();++i){
+                                if(shape[i]<1||width>stageWordLimit/shape[i])throw std::runtime_error("Linear diagnostic stage exceeds bounded row reader");
+                                width*=shape[i];
+                            }
+                            parts.push_back(ops.reshape(ops.cast(value),{dimensions[0],width}));
+                        }
+                        lastOutput=ops.cat(parts,1);
+                    }
                     if(store)lastOutput=storeParts(parts);
                 }else if(opName=="qwen35_linear_replay_chunk") {
                     auto b=qwen35Bindings[TensorId(input)];
@@ -6318,14 +6425,129 @@ namespace Garnet {
                         b["qwen35_conv_bind_active"],keywordText("layer_prefix"),keywordInt("hidden_dim",0),keywordInt("tokens",0),
                         keywordInt("key_heads",0),keywordInt("value_heads",0),keywordInt("key_dim",0),keywordInt("value_dim",0),float(number("eps",1e-6)),keywordInt("register_delta_128",0)!=0);
                 }else if(opName=="qwen35_full_decoder_chunk"||opName=="qwen35_full_tree_chunk") {
+                    auto* bf16Attribute=FindKeyword(kwParams,"canonical_bf16_kv_overlay");
+                    if(bf16Attribute&&!(bf16Attribute->second.IsInt64()||bf16Attribute->second.IsUInt64()))throw std::invalid_argument("BF16 canonical KV opt-in requires integer0 or1");
+                    const auto bf16Mode=bf16Attribute?bf16Attribute->second.ToLongLong():0;
+                    if(bf16Mode!=0&&bf16Mode!=1)throw std::invalid_argument("BF16 canonical KV opt-in must be0 or1");
+                    auto* overlayAttribute=FindKeyword(kwParams,"canonical_kv_overlay");
+                    const auto overlayMode=overlayAttribute?overlayAttribute->second.ToLongLong():0;
+                    if(overlayMode!=0&&overlayMode!=1)throw std::invalid_argument("Canonical KV opt-in must be0 or1");
+                    if(bf16Mode&&overlayMode)throw std::invalid_argument("FP32 and BF16 canonical KV modes are exclusive");
+                    auto* referenceAttribute=FindKeyword(kwParams,"bf16_kv_float_reference");
+                    if(referenceAttribute&&!(referenceAttribute->second.IsInt64()||referenceAttribute->second.IsUInt64()))throw std::invalid_argument("BF16 float reference requires integer0 or1");
+                    if(referenceAttribute&&referenceAttribute->second.IsUInt64()&&referenceAttribute->second.ToUInt64()>1)throw std::invalid_argument("BF16 float reference must be0 or1");
+                    const auto referenceMode=referenceAttribute?referenceAttribute->second.ToLongLong():0;
+                    if((referenceMode!=0&&referenceMode!=1)||(referenceMode&&(bf16Mode||overlayMode)))throw std::invalid_argument("BF16 float reference requires exclusive explicit0 or1");
+                    if(referenceMode){
+                        const auto dims=ops.shape(source);
+                        if(dims!=std::vector<int>{4,4,5120}&&dims!=std::vector<int>{4,32,5120})throw std::invalid_argument("BF16 float reference requires B4,T4/T32");
+                        if(capturedWeightProfile!="modelopt_mixed"||!FindKeyword(kwParams,"external_compressed_weights")||external.empty()||FindKeyword(kwParams,"external_weights")||
+                            keywordInt("fused_attention",0)!=1||keywordInt("joined_mlp_projections",0)!=1)
+                            throw std::invalid_argument("BF16 float reference requires shared mixed compressed joined projections");
+                    }
+                    auto* lowBatchAttribute=FindKeyword(kwParams,"canonical_bf16_low_batch_kv_overlay");
+                    if(lowBatchAttribute&&(!(lowBatchAttribute->second.IsInt64()||lowBatchAttribute->second.IsUInt64())||
+                        (lowBatchAttribute->second.IsUInt64()&&lowBatchAttribute->second.ToUInt64()>1)))throw std::invalid_argument("B1 BF16 cache opt-in requires integer0 or1");
+                    const auto lowBatchMode=lowBatchAttribute?lowBatchAttribute->second.ToLongLong():0;
+                    if((lowBatchMode!=0&&lowBatchMode!=1)||(lowBatchMode&&(bf16Mode||overlayMode||referenceMode)))throw std::invalid_argument("B1 BF16 cache requires an exclusive explicit cache type");
+                    auto* prefill128Attribute=FindKeyword(kwParams,"canonical_bf16_prefill128_kv_overlay");
+                    if(prefill128Attribute&&(!(prefill128Attribute->second.IsInt64()||prefill128Attribute->second.IsUInt64())||
+                        (prefill128Attribute->second.IsUInt64()&&prefill128Attribute->second.ToUInt64()>1)))throw std::invalid_argument("T128 BF16 opt-in requires integer0 or1");
+                    const auto prefill128Mode=prefill128Attribute?prefill128Attribute->second.ToLongLong():0;
+                    if((prefill128Mode!=0&&prefill128Mode!=1)||(prefill128Mode&&(bf16Mode||overlayMode||referenceMode||lowBatchMode)))throw std::invalid_argument("T128 BF16 cache requires a separate exclusive explicit profile");
+                    BF16KVPrefill128OverlayConfig prefill128Overlay{};
+                    if(prefill128Mode){
+                        const auto dims=ops.shape(source);
+                        if(dims!=std::vector<int>{1,128,5120}||capturedWeightProfile!="modelopt_mixed"||
+                            !FindKeyword(kwParams,"external_compressed_weights")||external.empty()||FindKeyword(kwParams,"external_weights")||
+                            keywordInt("fused_attention",0)!=1||keywordInt("joined_mlp_projections",0)!=1)
+                            throw std::invalid_argument("T128 BF16 cache requires pinned shared mixed joined B1,T128 geometry");
+                        auto exact=[&](const char* key)->int64_t{auto* item=FindKeyword(kwParams,key);
+                            if(!item||!(item->second.IsInt64()||item->second.IsUInt64())||(item->second.IsUInt64()&&item->second.ToUInt64()>uint64_t(INT64_MAX)))
+                                throw std::invalid_argument("T128 BF16 cache metadata requires bounded integers");return item->second.ToLongLong();};
+                        if(exact("kv_overlay_strategy")!=1)throw std::invalid_argument("T128 BF16 cache requires fixed reduction strategy1");
+                        prefill128Overlay={{1,128,24,4,4096,256},exact("canonical_state_width"),exact("canonical_key_offset"),exact("canonical_value_offset")};
+                        if(!ValidBF16KVPrefill128OverlayConfig(prefill128Overlay))throw std::invalid_argument("Unqualified T128 BF16 cache layout");
+                    }
+                    BF16KVLowBatchOverlayConfig lowBatchOverlay{};
+                    if(lowBatchMode){
+                        const auto dims=ops.shape(source);
+                        if(dims.size()!=3||dims[0]!=1||(dims[1]!=4&&dims[1]!=32)||dims[2]!=5120||
+                            capturedWeightProfile!="modelopt_mixed"||!FindKeyword(kwParams,"external_compressed_weights")||external.empty()||FindKeyword(kwParams,"external_weights")||
+                            keywordInt("fused_attention",0)!=1||keywordInt("joined_mlp_projections",0)!=1)
+                            throw std::invalid_argument("B1 BF16 cache requires shared mixed joined B1,T4/T32 geometry");
+                        auto exact=[&](const char* key)->int64_t{auto* item=FindKeyword(kwParams,key);
+                            if(!item||!(item->second.IsInt64()||item->second.IsUInt64())||(item->second.IsUInt64()&&item->second.ToUInt64()>uint64_t(INT64_MAX)))
+                                throw std::invalid_argument("B1 BF16 cache metadata requires bounded integers");return item->second.ToLongLong();};
+                        if(exact("kv_overlay_strategy")!=1)throw std::invalid_argument("B1 BF16 cache requires fixed reduction strategy1");
+                        lowBatchOverlay={{1,dims[1],24,4,4096,256},exact("canonical_state_width"),exact("canonical_key_offset"),exact("canonical_value_offset")};
+                        if(!ValidBF16KVLowBatchOverlayConfig(lowBatchOverlay))throw std::invalid_argument("Unqualified B1 BF16 cache layout");
+                    }
+                    BF16KVOverlayConfig bf16Overlay{};
+                    if(bf16Mode){
+                        const auto dims=ops.shape(source);
+                        if(dims.size()!=3||(dims[0]!=4&&dims[0]!=8)||(dims[1]!=4&&dims[1]!=32)||dims[2]!=5120||
+                            capturedWeightProfile!="modelopt_mixed"||!FindKeyword(kwParams,"external_compressed_weights")||external.empty()||FindKeyword(kwParams,"external_weights")||
+                            keywordInt("fused_attention",0)!=1||keywordInt("joined_mlp_projections",0)!=1)
+                            throw std::invalid_argument("BF16 canonical KV requires explicit shared mixed joined B4/8,T4/32 geometry");
+                        auto exact=[&](const char* key)->int64_t{auto* item=FindKeyword(kwParams,key);
+                            if(!item||!(item->second.IsInt64()||item->second.IsUInt64())||
+                                (item->second.IsUInt64()&&item->second.ToUInt64()>uint64_t(INT64_MAX)))throw std::invalid_argument("BF16 canonical KV metadata requires bounded integers");
+                            return item->second.ToLongLong();};
+                        if(exact("kv_overlay_strategy")!=1)throw std::invalid_argument("BF16 canonical KV has one fixed reduction strategy");
+                        bf16Overlay={{dims[0],dims[1],24,4,4096,256},exact("canonical_state_width"),exact("canonical_key_offset"),exact("canonical_value_offset")};
+                        if(!ValidBF16KVOverlayConfig(bf16Overlay))throw std::invalid_argument("Unqualified BF16 canonical KV layout");
+                    }
+                    CanonicalKVOverlayConfig overlay{};
+                    if(overlayMode){
+                        if(capturedWeightProfile!="modelopt_mixed"||!FindKeyword(kwParams,"external_compressed_weights")||external.empty()||FindKeyword(kwParams,"external_weights")||
+                            keywordInt("fused_attention",0)!=1||keywordInt("joined_mlp_projections",0)!=1)
+                            throw std::invalid_argument("Canonical KV requires shared mixed compressed joined projections");
+                        auto exact=[&](const char* key)->int64_t{auto* item=FindKeyword(kwParams,key);if(!item)throw std::invalid_argument("Missing canonical KV metadata");return item->second.ToLongLong();};
+                        const auto strategy=exact("kv_overlay_strategy");
+                        if(strategy!=0&&strategy!=1)throw std::invalid_argument("Unqualified canonical KV strategy");
+                        overlay={{4,4,24,4,4096,256},exact("canonical_state_width"),exact("canonical_key_offset"),exact("canonical_value_offset"),int(strategy)};
+                        if(!ValidCanonicalKVOverlayConfig(overlay))throw std::invalid_argument("Unqualified canonical KV layout");
+                    }
+                    auto* stageAttribute=FindKeyword(kwParams,"diagnostic_full_stages");
+                    const auto diagnostic=stageAttribute?stageAttribute->second.ToLongLong():0;
+                    if((diagnostic!=0&&diagnostic!=1)||(diagnostic&&(overlayMode||bf16Mode||referenceMode||lowBatchMode||prefill128Mode)))throw std::invalid_argument("Full attention stage diagnostic must be0 or1 and exclude canonical KV");
+                    auto dimensions=ops.shape(source);
+                    if(diagnostic&&(capturedWeightProfile!="modelopt_mixed"||!external.empty()||
+                        dimensions.size()!=3||(dimensions[0]!=1&&dimensions[0]!=2)||dimensions[1]!=16||dimensions[2]!=5120||
+                        keywordText("layer_prefix")!="model.language_model.layers.3"||keywordInt("num_heads",0)!=24||
+                        keywordInt("num_kv_heads",0)!=4||keywordInt("head_dim",0)!=256||keywordInt("rotary_dim",0)!=64||
+                        keywordInt("mrope_t",0)!=11||keywordInt("mrope_h",0)!=11||keywordInt("mrope_w",0)!=10||
+                        keywordInt("fused_attention",0)!=1||keywordInt("joined_mlp_projections",0)!=0))
+                        throw std::invalid_argument("Stage capture requires embedded mixed27B layer3 B1/2 T16 profile");
+                    std::vector<ITensor*> diagnosticStages;
                     auto b=qwen35Bindings[TensorId(input)];
+                    if(diagnostic){
+                        ops.require(b["qwen35_attention_bind_key"],{dimensions[0],4,4096,256});
+                        ops.require(b["qwen35_attention_bind_value"],{dimensions[0],4,4096,256});
+                    }
                     const bool store=FindKeyword(kwParams,"internal_store_offsets")!=nullptr;std::vector<ITensor*> parts;
+                    if(diagnostic&&store)throw std::invalid_argument("Diagnostic stages exclude packed stores");
                     lastOutput=ops.fullDecoderChunk(source,b["qwen35_attention_bind_key"],b["qwen35_attention_bind_value"],
                         b["qwen35_attention_bind_positions"],b["qwen35_attention_bind_slots"],b["qwen35_attention_bind_active"],
                         keywordText("layer_prefix"),keywordInt("num_heads",0),keywordInt("num_kv_heads",0),keywordInt("head_dim",0),
                         keywordInt("rotary_dim",0),{keywordInt("mrope_t",0),keywordInt("mrope_h",0),keywordInt("mrope_w",0)},
-                        float(number("rope_theta",1e7)),float(number("eps",1e-6)),keywordInt("fused_attention",0)!=0,store?&parts:nullptr,keywordInt("compact_kv_outputs",0)!=0,
-                        opName=="qwen35_full_tree_chunk"?tensorKeyword("tree_metadata"):nullptr);
+                        float(number("rope_theta",1e7)),float(number("eps",1e-6)),keywordInt("fused_attention",0)!=0,store?&parts:nullptr,keywordInt("compact_kv_outputs",0)!=0,opName=="qwen35_full_tree_chunk"?tensorKeyword("tree_metadata"):nullptr,nullptr,keywordInt("joined_mlp_projections",0)!=0,diagnostic?&diagnosticStages:nullptr,
+                        (overlayMode||bf16Mode||lowBatchMode||prefill128Mode)?b["qwen35_attention_bind_canonical"]:nullptr,overlayMode?&overlay:nullptr,bf16Mode?&bf16Overlay:nullptr,referenceMode!=0,lowBatchMode?&lowBatchOverlay:nullptr,prefill128Mode?&prefill128Overlay:nullptr);
+                    if(diagnostic){
+                        if(diagnosticStages.size()!=10)throw std::runtime_error("Full attention stage contract changed");
+                        std::vector<ITensor*> parts{lastOutput};
+                        for(auto* value:diagnosticStages){
+                            const auto shape=ops.shape(value);int width=1;
+                            if(shape.size()<2||shape[0]!=dimensions[0])throw std::runtime_error("Full diagnostic batch differs");
+                            for(size_t i=1;i<shape.size();++i){
+                                if(shape[i]<1||width>1048576/shape[i])throw std::runtime_error("Full diagnostic stage exceeds bounded row reader");
+                                width*=shape[i];
+                            }
+                            parts.push_back(ops.reshape(ops.cast(value),{dimensions[0],width}));
+                        }
+                        lastOutput=ops.cat(parts,1);
+                    }
                     if(store)lastOutput=storeParts(parts);
                 }else if(opName=="qwen35_mtp_stage_probe") {
                     auto b=qwen35Bindings[TensorId(input)];const bool tree=keywordInt("tree",0)!=0;
@@ -6352,7 +6574,7 @@ namespace Garnet {
                 }else if(opName=="qwen35_vision_encoder")lastOutput=ops.vision(source,keywordInt("grid_h",0),keywordInt("grid_w",0),
                     keywordInt("hidden_size",0),keywordInt("num_heads",0),keywordInt("depth",0),keywordInt("patch_size",0),
                     keywordInt("temporal_patch_size",0),keywordInt("in_channels",0),keywordInt("spatial_merge_size",0),
-                    keywordInt("num_position_embeddings",0),keywordInt("out_hidden_size",0),float(number("rope_theta",10000)));
+                    keywordInt("num_position_embeddings",0),keywordInt("out_hidden_size",0),float(number("rope_theta",10000)),keywordInt("diagnostic_fp32_projections",0));
                 else if(opName=="qwen35_rms_norm")lastOutput=ops.norm(source,keywordText("weight_name"),float(number("eps",1e-6)));
                 else if(opName=="qwen35_rms_norm_packed") {
                     auto s=ops.shape(source);
@@ -6361,6 +6583,11 @@ namespace Garnet {
                     lastOutput=ops.reshape(ops.norm(source,keywordText("weight_name"),float(number("eps",1e-6))),{s[0],s[1]*s[2]});
                 }
                 else if(opName=="qwen35_mlp")lastOutput=ops.mlp(source,keywordText("weight_prefix"));
+                else if(opName=="qwen35_joined_mlp"){
+                    const auto prefix=keywordText("weight_prefix");
+                    if(!external.count(prefix+".gate_up_proj.weight"))throw std::invalid_argument("Joined MLP requires explicit validated external compressed weights");
+                    lastOutput=ops.joinedMLP(source,prefix);
+                }
                 else if(opName=="qwen35_attention_step") {
                     auto b=qwen35Bindings[TensorId(input)];
                     lastOutput=ops.attentionStep(source,b["qwen35_attention_bind_key"],b["qwen35_attention_bind_value"],
@@ -6375,6 +6602,10 @@ namespace Garnet {
                         throw std::invalid_argument("Qwen3.5 packed full attention dimensions invalid");
                     if(opName=="qwen35_attention_output")lastOutput=ops.slice(source,1,0,hidden);
                     else lastOutput=ops.reshape(ops.slice(source,1,hidden+(opName=="qwen35_attention_value_cache"?width:0),width),{shape[0],kv,capacity,dim});
+                }
+                else if(opName=="qwen35_checkpoint_projection") {
+                    if(capturedWeightProfile!="ct_int4_g128")throw std::invalid_argument("Research checkpoint projection requires INT4 G128 profile");
+                    lastOutput=ops.project(source,ops.weight(keywordText("weight_name")));
                 }
                 else if(opName=="qwen35_linear_step") {
                     auto bindings=qwen35Bindings[TensorId(input)];

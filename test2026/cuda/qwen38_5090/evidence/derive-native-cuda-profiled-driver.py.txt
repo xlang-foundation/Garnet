@@ -1,0 +1,31 @@
+from pathlib import Path
+import ast,hashlib,json
+m=Path('D:/CantorAI/work/qwen38-5090/test2026/cuda/qwen38_5090');e=m/'evidence';work=Path(__file__).resolve().parent
+sha=lambda raw:hashlib.sha256(raw).hexdigest()
+for name in ('native-cuda-phase-worker-derivation.json','native-cuda-phase-probe-derivation.json','native-cuda-phase-run-preparation.json'):
+ path=e/name;backup=e/(name+'.initial-unexecuted-pipe-launch')
+ assert path.exists() and not backup.exists();path.rename(backup)
+old=json.loads((e/'native-cuda-phase-worker-derivation.json.initial-unexecuted-pipe-launch').read_bytes())
+source=m/'serve_native_host_stage_worker.bat';raw=source.read_bytes();text=raw.decode().replace('\r\n','\n')
+replacements=[('native_host_stage_stream_worker.py','native_cuda_phase_stream_worker.py')]
+for a,b in replacements:assert text.count(a)==1;text=text.replace(a,b)
+target=m/'serve_native_cuda_phase_worker.bat';target.write_bytes(text.encode())
+old[target.name]={'source':source.name,'source_sha256':sha(raw),'candidate_sha256':sha(target.read_bytes()),'replacements':replacements}
+(e/'native-cuda-phase-worker-derivation.json').write_bytes(json.dumps(old,indent=2).encode())
+source=m/'probe_native_host_stage.py';raw=source.read_bytes();text=raw.decode().replace('\r\n','\n')
+replacements=[
+ ('"""Sequential instrumented native host diagnosis; no HTTP benchmark."""','"""One-mode driver profiled from outside; normal worker IPC, no HTTP timing."""'),
+ ('sys.path.insert(0,str(Path(__file__).resolve().parent))','sys.path.insert(0,str(Path(__file__).resolve().parent))\nsys.path.insert(0,str(Path(__file__).resolve().parents[3]))'),
+ ("a.add_argument('--cache',type=Path,required=True);args=a.parse_args()","a.add_argument('--cache',type=Path,required=True);a.add_argument('--mode',choices=('ordinary','mtp'),required=True);args=a.parse_args()"),
+ ('assert not out.exists() and out.resolve().is_relative_to((root/\'results\').resolve())',"assert out.is_dir() and not (out/args.mode).exists() and not (out/('report-'+args.mode+'.json')).exists() and out.resolve().is_relative_to((root/'results').resolve())"),
+ ('out.mkdir();report={','report={'),
+ ("out/'report.json'","out/('report-'+args.mode+'.json')"),
+ ("for mode in ('ordinary','mtp'):","for mode in (args.mode,):"),
+ ('serve_native_host_stage_worker.bat','serve_native_cuda_phase_worker.bat'),
+ ("'scope':'Actual unchanged1a1d B1 fixed4K model with explicit host-phase timers. Four retained requests in three orders for each ordinary/MTP mode. Exact target IDs and image bytes required. No HTTP/concurrent throughput, isolated GPU/kernel time, comparative benchmark or speed claim.'", "'scope':'One-mode ordinary/T4MTP driver under outer Nsight process-tree collection; normal owned worker stdin/stdout unchanged. Four retained3968+128 requests in three orders, exact target IDs/image bytes and native phase markers. First-use/late repeats retained. Instrumented diagnosis, no HTTP, comparative speed or causal bottleneck claim.'"),
+ ("record['status']='instrumented_host_stages_replayed';save()", "record['status']='instrumented_host_stages_replayed';save()\n            cleanup=json.loads(trace.with_suffix('.model-closed.json').read_bytes())\n            assert cleanup['status']=='native_model_close_calls_returned' and cleanup['mode']==mode and cleanup['marker_count']==144 and cleanup['library_sha256']==p['library_sha256']\n            record['native_model_cleanup']=cleanup;save()"),
+ ('NATIVE_HOST_STAGE_DIAGNOSTIC_SAVED','NATIVE_CUDA_PHASE_DRIVER_SAVED')]
+for a,b in replacements:assert text.count(a)==1,a;text=text.replace(a,b)
+data=text.encode();ast.parse(data);(m/'probe_native_cuda_phases.py').write_bytes(data)
+(e/'native-cuda-phase-probe-derivation.json').write_bytes(json.dumps({'source':source.name,'source_sha256':sha(raw),'candidate_sha256':sha(data),'replacements':replacements},indent=2).encode())
+print(json.dumps({'status':'outer_profiled_driver_derived_gpu_unrun','probe_sha256':sha(data),'launcher_sha256':sha(target.read_bytes())}))

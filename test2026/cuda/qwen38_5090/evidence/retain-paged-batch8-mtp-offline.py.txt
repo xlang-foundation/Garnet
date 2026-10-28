@@ -1,0 +1,33 @@
+from pathlib import Path
+import hashlib,json,shutil
+w=Path(__file__).resolve().parent;repo=Path('D:/CantorAI/work/qwen38-5090');m=repo/'test2026/cuda/qwen38_5090';e=m/'evidence';out=w.parent/'outputs'
+assert not (e/'paged-batch8-mtp-preparation.json').exists()
+for name in ('derive-paged-batch8-mtp-probe.py','derive-paged-batch8-mtp-owner.py','check-paged-batch8-mtp-cpu.py','retain-paged-batch8-mtp-offline.py'):
+    shutil.copyfile(w/name,e/(name+'.txt'))
+shutil.copyfile(w/'paged-batch8-mtp-offline-cpu-check.json',e/'paged-batch8-mtp-offline-cpu-check.json')
+for file in (w/'paged-batch8-mtp-offline-cpu-ledger').iterdir():
+    assert file.name in ('commands.log','commands.jsonl');shutil.copyfile(file,e/('paged-batch8-mtp-offline-cpu-ledger-'+file.name))
+sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+result=json.loads((w/'paged-batch8-mtp-offline-cpu-check.json').read_bytes())
+result['methods_sha256']={n:sha(m/n) for n in ('paged_batch8_mtp.py','test_paged_batch8_mtp.py','probe_paged_batch8_mtp.py','test_paged_batch8_mtp.bat','run_paged_batch8_mtp.py','verify_paged_batch8_mtp.py','prepare_paged_batch8_mtp.py')}
+result['ordinary_live_job']='paged-batch8-model-preservation-attempt1'
+result['latest_read_only_observation']={'original_supervisor_confirmed_running':True,'completed_cases':2,'error':None,
+    'native_pid':31364,'native_cpu_seconds_earlier':570.4375,'native_cpu_seconds_later':720.140625,
+    'scope':'Two separate process observations and one partial report snapshot; not final correctness, elapsed latency or throughput. Preserve original supervisor; do not restart on silence.'}
+(e/'paged-batch8-mtp-offline-closure.json').write_bytes(json.dumps(result,indent=2).encode())
+(out/'Garnet-Batch8-MTP-Offline-Status.json').write_bytes(json.dumps(result,indent=2).encode())
+addition='''
+
+### 2026-10-25 — B8 MTP correctness owner/probe/checker prepared offline
+
+While the original paged B8 ordinary supervisor remained live, added an explicit existing-session B8 MTP3/T4/128MiB/prefix-replay correctness and construction-memory study. This is the existing `CUDASpeculativeSession`, not a new backend or a relaxation of its256MiB B4-only guard. Target/vision/paged input/state-witness/permutation/reset code is retained by exact recorded derivation. Empty stop list retains the ordinary fixed-count8short/128full4K oracle semantics; natural-stop/805quality remains untested.
+
+New owner, probe, actual-two-machine-parent preparer and independent raw checker require all nine mixed text/image/original/rotated/reset cases,29complete target-state witnesses,58raw hidden/normalized vectors and every output ID to match actual closed paged ordinary B8. MTP counters must cover exactly `limit-1` target commits per physical row, with bounded per-iteration accepted lengths and original target/draft geometry. Source/runtime/SDK/canonical-state/finite-vector/output-ID/counter/stop-list/parent-closure faults reject promotion. The raw resource checker recomputes sample count, adapter peak and median/max sample gaps; no memory-fit estimate or correctness-run memory snapshot becomes a serving-speed claim.
+
+Actual local30CPU controls passed in12.167s. A separate CPU checker exercise replayed the original actual B8 ordinary raw bytes with explicitly synthetic MTP metadata; this is only a checker test, not an MTP execution/result. No native/GPU MTP construction, memory fit, natural-stop quality, HTTP or benchmark occurred. See `evidence/paged-batch8-mtp-offline-closure.json`, raw append-only CPU ledger and exact probe/owner derivations.
+
+The original supervisor `paged-batch8-model-preservation-attempt1` was confirmed running; a partial report had two cases and no error. Native PID31364 CPU time increased from570.4375 to720.140625seconds between read-only observations. These establish continued activity only, not final case admission or timings. No new MTP preparation manifest/deployment was created: the preparer requires the actual terminal successful paged-B8 proof, identical two-machine replay, immutable archive and unchanged source/runtime/SDK before it can pin a GPU trial. Do not run a competing GPU job or overwrite existing study inputs while the original owner is live. HTTP candidate preparation is pushed in `79049c0ab` and remains separately unrun. Overall2x/halfTTFT, full matched vLLM4K/strongest tuned MTP baselines, B8 external math/serving/quality, repetitions and INT4/4B remain open.
+'''
+for name in ('qwen38-5090-development-log.md','qwen38-5090-implementation-task.md'):
+    path=repo/'docs/research'/name;assert addition.encode() not in path.read_bytes();path.write_bytes(path.read_bytes()+addition.encode())
+print(json.dumps({'status':result['status'],'cpu_tests':30,'native_mtp_executed':False,'new_benchmark_collected':False}))

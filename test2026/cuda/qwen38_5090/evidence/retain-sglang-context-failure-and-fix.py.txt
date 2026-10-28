@@ -1,0 +1,67 @@
+from pathlib import Path
+from datetime import datetime,timezone
+import hashlib,json,shutil
+w=Path(__file__).resolve().parent;out=w.parent/'outputs';r=Path('D:/CantorAI/work/qwen38-5090');m=r/'test2026/cuda/qwen38_5090';e=m/'evidence';sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+def copy(a,b):
+ assert a.is_file() and (not b.exists() or a.read_bytes()==b.read_bytes())
+ if not b.exists():b.parent.mkdir(parents=True,exist_ok=True);shutil.copyfile(a,b)
+for name in ('sglang-fixed4k-ordinary-attempt1-verified.json','sglang-fixed4k-ordinary-attempt1-remote-verified.json','sglang-fixed4k-ordinary-attempt1-diagnosis.json','sglang-fixed4k-ordinary-attempt1-replay-remote.log','sglang-fixed4k-ordinary-attempt1-failure-controls-verified.json','sglang-fixed4k-ordinary-attempt1-failure-controls-remote-verified.json'):copy(out/name,e/name)
+for stem,code in (('sglang-fixed4k-failure-local-replay-ledger',1),('sglang-fixed4k-failure-controls-local-replay-ledger',0),('sglang-reserved-context-cpu-ledger',0)):
+ source=w/stem;events=[json.loads(line) for line in (source/'commands.jsonl').read_bytes().splitlines()];assert len(events)==2 and events[-1]['exit_code']==code
+ for f in source.iterdir():copy(f,e/stem/f.name)
+methods=('diagnose-sglang-fixed4k-failure.py','audit-sglang-context-limits.py','derive-sglang-failure-controls-replay.py','prepare-sglang-reserved-context-methods.py','prepare-sglang-reserved-context-replay.py','prepare-sglang-reserved-deployment.py','fix-reserved-launcher-line-endings.py','update-sglang-failure-status.py','preflight-sglang-reserved-fixed4k.py','package-sglang-reserved-fixed4k-methods.py','install-sglang-reserved-fixed4k-methods.py','retain-sglang-context-failure-and-fix.py')
+for name in methods:copy(w/name,e/(name+'.txt'))
+for name in ('sglang-reserved-fixed4k-preflight-input.json','sglang-reserved-fixed4k-preflight.json','sglang-reserved-fixed4k-bundle-preparation.json','sglang-reserved-launcher-line-endings-correction.json'):
+ copy(w/name,e/name)
+for name in ('sglang-reserved-fixed4k-run-preparation.json','sglang-reserved-fixed4k-upload-plan.json','sglang-reserved-fixed4k-preflight-input.json'):
+ copy(w/(name+'.unrun-crlf-preparation'),e/('unrun-crlf-'+name))
+proof=json.loads((out/'sglang-fixed4k-ordinary-attempt1-verified.json').read_bytes());assert proof==json.loads((out/'sglang-fixed4k-ordinary-attempt1-remote-verified.json').read_bytes())
+partial=json.loads((out/'sglang-fixed4k-ordinary-attempt1-failure-controls-verified.json').read_bytes());assert partial==json.loads((out/'sglang-fixed4k-ordinary-attempt1-failure-controls-remote-verified.json').read_bytes())
+assert sha(out/'sglang-fixed4k-ordinary-attempt1-evidence.zip')==proof['archive_sha256']
+pins=json.loads((e/'sglang-context-limit-source-pins.json').read_bytes());assert sha(out/'sglang-fixed4k-context-limit-source.zip')==pins['source_archive_sha256']
+summary={'status':'sglang_attempt1_context_failure_closed_replayed_separate_reserve_aware_attempt_prepared','recorded_utc':datetime.now(timezone.utc).isoformat(),'failed_attempt':{'job':'sglang-fixed4k-ordinary-attempt1','exit_code':1,'archive_sha256':proof['archive_sha256'],'archive_bytes':99941597,'files_verified':3158,'base_replay_proof_pair_identical':True,'partial_control_replay_proof_pair_identical':True,'adapted_screen_correct':partial['screening']['score']['correct'],'adapted_screen_count':805,'official_or_broad_quality':False,'vlm_smoke_controls_replayed':4,'short_greedy_controls_replayed':16,'full4k_control':partial['failed_full4k_control'],'cleanup_finished':True,'source_and_runtime_unchanged':True,'timed_streams':0},'installed_primary_source_derivation':pins['derivation'],'installed_context_source_archive_sha256':pins['source_archive_sha256'],'context_source_files':19,'separate_preparation':{'preparation_sha256':sha(e/'sglang-reserved-fixed4k-run-preparation.json'),'actual_cpu_tests_passed':37,'actual_cpu_test_report_seconds':1.761,'syntax_and_controller_derivation':json.loads((e/'sglang-reserved-context-syntax-derivation.json').read_bytes()),'preflight':json.loads((w/'sglang-reserved-fixed4k-preflight.json').read_bytes())['status'],'bundle':json.loads((w/'sglang-reserved-fixed4k-bundle-preparation.json').read_bytes()),'server_started':False,'early_text_image_full4k_controls_required_before_screen':True,'old_attempt_methods_modified':False,'installed_engine_modified':False},'performance_admitted':False,'two_times_target_achieved':False,'scope':'Closed attempt1 remains failed, no timed reference result. Installed worker/scheduler bounds exactly explain3968+126 at configured4096. New explicitly configured4098/pool32784 exposes unchanged3968+128 workload; two early actual-ID boundary checks precede805screen. Archive replay/strongest MTP+tuned SGLang and vLLM, native optimizations, repetitions and INT4/4B matched comparisons remain open.'}
+for target in (e/'sglang-fixed4k-context-failure-and-reserve-preparation.json',out/'Garnet-SGLang-4K-Context-Failure-And-Fix.json'):
+ assert not target.exists();target.write_text(json.dumps(summary,indent=2),encoding='utf8')
+entry='''
+
+### 2026-10-25: SGLang actual two-slot context reserve; preserve failed attempt
+
+Ordinary attempt1 terminal1, owned server stopped/idle, source/runtime unchanged.
+Archive551e50256cb6efc417d06c454e893fd9a29ff5da84191a9aca45a18b48674a74,
+99941597bytes/3158files. Independent base failure proofs are identical. Separate
+partial-control checker replays actual ready-server/config/source/PID/stop,
+four image smoke/16greedy controls, all805 raw adapted screen responses and the
+first frozen4K response. Both partial replay proofs are identical:487/805screen,
+not broad/official quality; actual3968promptIDs+126completionIDs/4094usage,
+requested128/ignore_eos true, finish length. Strict128 gate still rejects this.
+No timed streams; no SGLang latency/throughput admitted.
+
+Primary installed source archive7b58470f0436466b1488ccb359416de5b6c581f9158457d7a9bc71e4ed37e92f
+contains19 named files. tp_worker.get_worker_info bounds max_req_len to
+min(context_len-1,kv_capacity-1); scheduler.init_req_max_new_tokens then bounds
+new tokens to max_req_len-input_len-1. Configured4096 therefore permits126after
+3968inputs. Separately named launch/metadata/client/controller/preparer/replayer
+use explicit configured-engine4098/pool32784 with unchanged actual3968+128/4096
+workload; engine settings and workload capacity are separately labelled. No
+installed SGLang code, precision, cache/graph controls or frozen requests changed.
+The new attempt must pass early text+image full-ID boundaries before805screen.
+Original attempt1 methods/preparation/archive remain intact.
+
+Actual37CPU controls pass1.761s; six new reserve/metadata/frozen-ID/126negative
+controls. Eleven Python files parse; controller differs only by named candidate
+paths after CRLF normalization. Initial byte-exact derivation assertion failed
+only on generated CRLF-vs-LF; normalized text is exact. Offline QA caught CRLF
+in proposed bash scripts before preflight/install; corrected to LF and retained
+unused original preparation/plan and explicit correction receipt. No server
+ran those CRLF scripts. Remote preflight passes existing433source/pin/runtime
+checks and64targets:32absent/32matching, no conflict, about591.7GiB free. Only
+absent methods/primary-source evidence are bundled296277bytes, SHA
+861935c9c28ba68ee3ac80c023295956b61f55d820fcac22559f3a006c6abd80.
+
+New reference attempt, strongest feasible MTP/tuning/vLLM, broad quality,
+repetitions, actual B8/model-level tiled optimization, INT4/4B and2x/halfTTFT
+remain open. This receipt is preparation history, not a new performance result.
+'''
+for name in ('qwen38-5090-development-log.md','qwen38-5090-implementation-task.md'):
+ target=r/'docs/research'/name;raw=target.read_bytes();assert b'SGLang actual two-slot context reserve; preserve failed attempt' not in raw;target.write_bytes(raw+entry.replace('\n','\r\n').encode())
+print(json.dumps({'status':summary['status'],'failed_screen_correct':487,'actual_fixed4k_timed_streams':0,'prepared_cpu_tests':37,'two_times_target_achieved':False}))

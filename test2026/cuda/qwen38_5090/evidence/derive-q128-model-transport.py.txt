@@ -1,0 +1,7 @@
+from pathlib import Path
+import hashlib,json
+R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';sha=lambda b:hashlib.sha256(b).hexdigest();source='run_full_chunk_stage_vendor_exact_delta.py';target='run_q128_model_exact_delta.py';raw=(M/source).read_bytes();before=sha(raw);changes=[]
+for old,new,count in [('full-chunk-stage-vendor-attempt1','q128-model-admission-attempt1',1),('run_full_chunk_stage_vendor_exact_delta.py','run_q128_model_exact_delta.py',1),('full-chunk-stage-vendor-transport','q128-model-admission-transport',1)]:
+    assert raw.count(old.encode())==count;raw=raw.replace(old.encode(),new.encode());changes.append(dict(old=old,new=new,count=count))
+p=M/target;assert not p.exists() or p.read_bytes()==raw;p.write_bytes(raw)
+(M/'evidence/q128-model-exact-transport-derivation.json').write_bytes(json.dumps(dict(status='exact_prior_lossless_transport_wrapper_retargeted_only',source=source,target=target,source_sha256=before,target_sha256=sha(raw),changes=changes,GPU_or_model_rerun=False),indent=2).encode());print(json.dumps(dict(method=target,sha256=sha(raw))))

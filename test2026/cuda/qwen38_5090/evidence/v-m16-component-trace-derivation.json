@@ -1,0 +1,40 @@
+{
+  "source": "b4_b1_short_m16_gate.py",
+  "source_sha256": "8cd56ea9cc54a495f1e25179869754a65dc9925fea70f420ecf96a83b0b76663",
+  "source_slice_start": 3416,
+  "changes": [
+    {
+      "old": "GARNET_GDNM16_FACTORY",
+      "new": "GARNET_VM16_FACTORY",
+      "count": 2
+    },
+    {
+      "old": "len(groups)>=2",
+      "new": "len(groups)>=1",
+      "count": 1
+    },
+    {
+      "old": "'fp8_gdn_m16'",
+      "new": "'fp8_v_m16'",
+      "count": 1
+    },
+    {
+      "old": "counts={10240:0,6144:0}",
+      "new": "counts={1024:0}",
+      "count": 1
+    },
+    {
+      "old": "assert all(n>=48 for n in counts.values())",
+      "new": "assert created and all(n>=2 for n in counts.values())",
+      "count": 1
+    },
+    {
+      "old": "actual_B4T4_GDN_M16_route",
+      "new": "actual_B4T4_V_M16_route",
+      "count": 1
+    }
+  ],
+  "prefix": "\"\"\"Actual V component route proof, inherited live-SDK checks, no timing claim.\"\"\"\nimport json,re\nfrom .b4_b1_short_m16_gate import FACTORY_APIS\n\n",
+  "suffix": "\ndef assert_disabled(raw):\n    if isinstance(raw,bytes):raw=raw.decode(\"utf8\",errors=\"replace\")\n    assert not any(line.startswith(\"GARNET_VM16_FACTORY \") for line in raw.splitlines())\n    assert not any(json.loads(line.split(\"GARNET_MODELOPT_INIT \",1)[1])[\"route\"]==\"fp8_v_m16\" for line in raw.splitlines() if line.startswith(\"GARNET_MODELOPT_INIT \"))\n    return {\"status\":\"V_M16_route_absent_in_reference_or_off\"}\n",
+  "target_sha256": "07d526d75e4a9758901afbeda3862e492fd23258f6550232d9143b37b1d16eef"
+}

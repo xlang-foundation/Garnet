@@ -1,0 +1,74 @@
+{
+  "status": "fp8_z128_stage_owner_derived_unrun",
+  "files": [
+    {
+      "source": "run_gdn_chunk_stage_witness_bound.py",
+      "source_sha256": "44f074021e27d2b48804ff4342a669a5d58cbfbf1385083f260747294a447fa8",
+      "target": "run_fp8_z128_stage_witness.py",
+      "target_sha256": "f9fa789023371ad1bcf0349331434d6ea3f115f736037cefc1c0435ccc18ab0f",
+      "replacements": [
+        {
+          "old": "\"\"\"Exclusive bounded-readback GDN stage witness; preserve23native profile and DLL.\"\"\"",
+          "new": "\"\"\"Exclusive native28 Z stage witness and fresh-process policy frontend controls.\"\"\"",
+          "count": 1
+        },
+        {
+          "old": "JOB='gdn-chunk-stage-witness-attempt2'",
+          "new": "JOB='fp8-z128-stage-witness-attempt1'",
+          "count": 1
+        },
+        {
+          "old": "gdn-chunk-stage-witness-bound-preparation.json",
+          "new": "fp8-z128-stage-witness-preparation.json",
+          "count": 1
+        },
+        {
+          "old": "'gdn_chunk_stage_witness_prepared_gpu_unrun' and len(p['candidate_files'])==23",
+          "new": "'fp8_z128_stage_witness_prepared_gpu_unrun' and len(p['candidate_files'])==28",
+          "count": 1
+        },
+        {
+          "old": "garnet-native-gdn-chunk-stage-attempt1.dll",
+          "new": "garnet-native-fp8-z128-attempt1.dll",
+          "count": 1
+        },
+        {
+          "old": "len(z.namelist())==len(set(z.namelist()))==23",
+          "new": "len(z.namelist())==len(set(z.namelist()))==28",
+          "count": 1
+        },
+        {
+          "old": "Explicit owned T128 model source inventory; unrelated untracked bodies excluded",
+          "new": "Explicit owned native28 Z stage/policy source inventory; unrelated untracked bodies excluded",
+          "count": 1
+        },
+        {
+          "old": "20CPU GDN source/profile/oldquantization, complete-piece/primary/hash/finite/metadata/owner provenance and actual readback retry controls; no GPU",
+          "new": "29CPU old/new source/nativebuild/real128/context/log/complete-array/policy/owner/readback controls; no GPU",
+          "count": 1
+        },
+        {
+          "old": "        command=[sys.executable,str(M/'monitor_native_probe.py')",
+          "new": "        from test2026.cuda.qwen38_5090.fp8_z128_stage_layout import POLICY_VALUES,check_policy_report\n        w['policy_controls']=[];save()\n        for index,policy in enumerate(POLICY_VALUES):\n            idle()\n            if policy is None:os.environ.pop('GARNET_FP8_GDN_Z128_CANONICAL',None)\n            else:os.environ['GARNET_FP8_GDN_Z128_CANONICAL']=policy\n            label='policy-'+str(index)\n            argv=[sys.executable,str(M/'monitor_native_probe.py'),'--study',str(ROOT),'--output',str(out/(label+'-resources')),'--','cmd.exe','/d','/c',str(M/'test_fp8_z128_policy_control.bat'),str(out/label),str(cache)]\n            code=ledger.run(argv,out/(label+'-ledger'),'correctness','Fresh embedded Z policy frontend value='+repr(policy)+'; no graph inference',common+[library]);idle()\n            if code:raise RuntimeError('Fresh policy control failed: '+repr(policy))\n            observed=json.loads((out/label/'report.json').read_bytes());validated=check_policy_report(observed,policy)\n            w['policy_controls'].append({'index':index,'expected_environment_value':policy,'validated':validated});save()\n        os.environ['GARNET_FP8_GDN_Z128_CANONICAL']='1'\n        command=[sys.executable,str(M/'monitor_native_probe.py')",
+          "count": 1
+        },
+        {
+          "old": "test_gdn_chunk_stage_witness_bound.bat",
+          "new": "test_fp8_z128_stage_witness.bat",
+          "count": 1
+        },
+        {
+          "old": "from test2026.cuda.qwen38_5090.gdn_chunk_stage_replay import replay",
+          "new": "from test2026.cuda.qwen38_5090.fp8_z128_stage_replay import replay",
+          "count": 1
+        },
+        {
+          "old": "        w['status']='gdn_chunk_stage_witness_collected_needs_replay'",
+          "new": "        if w['array_replay']['controlled_first128_all11_stages_exact']:\n            w['status']='fp8_z128_stage_witness_collected_needs_replay'\n        else:\n            w['status']='fp8_z128_stage_remaining_difference_preserved';code=1",
+          "count": 1
+        }
+      ]
+    }
+  ],
+  "scope": "Same closed source/runtime/SDK/checkpoint/cache restoration transaction fornative28,8existing20new.10freshembeddedpolicyfrontends then8realordinary/diagnosticprofiles. Preserveanyremainingfirst128stage difference with nonzeroexit, no fullmodel/performance qualification."
+}

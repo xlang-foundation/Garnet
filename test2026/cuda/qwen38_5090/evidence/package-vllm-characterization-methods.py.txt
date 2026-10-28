@@ -1,0 +1,19 @@
+from pathlib import Path
+import hashlib,json,zipfile
+work=Path(__file__).resolve().parent;repo=Path('D:/CantorAI/work/qwen38-5090');sha=lambda b:hashlib.sha256(b).hexdigest()
+plan=json.loads((work/'vllm-characterization-pipeline-upload-plan.json').read_bytes());rows=plan['uploads'];files={}
+for row in rows:
+    raw=Path(row['local']).read_bytes();assert sha(raw)==row['sha256'] and row['target'] not in files
+    files[row['target']]=raw
+assert len(files)==12
+target=work/'vllm-characterization-methods.zip';assert not target.exists()
+with zipfile.ZipFile(target,'x',zipfile.ZIP_DEFLATED) as z:
+    for n,raw in files.items():z.writestr(n,raw)
+    z.writestr('install-manifest.json',json.dumps({'files':{n:sha(raw) for n,raw in files.items()},'scope':plan['scope']},indent=2))
+p=json.loads(next(v for k,v in files.items() if k.endswith('evidence/vllm-output-characterization-run-preparation.json')))
+r={'status':'vllm_characterization_methods_packaged_gpu_unrun','bundle_sha256':sha(target.read_bytes()),'bytes':target.stat().st_size,
+   'targets':len(files),'source_pins':len(p['files']),'cpu_tests':p['expected_cpu_tests'],
+   'preparation_sha256':sha(next(v for k,v in files.items() if k.endswith('evidence/vllm-output-characterization-run-preparation.json'))),
+   'installer_sha256':sha((work/'install-vllm-characterization-methods.py').read_bytes()),
+   'actual_characterization_requests':0,'performance_admitted':False,'two_times_target_achieved':False}
+(work/'vllm-characterization-bundle-preparation.json').write_bytes(json.dumps(r,indent=2).encode());print(json.dumps(r))

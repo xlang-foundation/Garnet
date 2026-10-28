@@ -1,0 +1,19 @@
+from pathlib import Path
+import ast,hashlib,json
+W=Path(__file__).resolve().parent;M=Path('D:/CantorAI/work/qwen38-5090/test2026/cuda/qwen38_5090');source=M/'run_rowwise_k_norm_full4k.py';raw=source.read_bytes();text=raw.decode().replace('\r\n','\n');changes=[]
+def replace(old,new,count=1):
+    global text
+    assert text.count(old)==count,(old,text.count(old));text=text.replace(old,new);changes.append(dict(old=old,new=new,count=count))
+replace('Exclusive source87 rowwise K full4K128 ordinary exactness; no timing.','Exclusive source87 rowwise K MTP full4K128 target exactness; no timing.')
+replace("JOB='rowwise-k-norm-full4k-attempt1'","JOB='rowwise-k-norm-mtp-full4k-attempt1'")
+replace('from test2026.cuda.qwen38_5090.b4_full4k_exact_gate import observe,admit','from test2026.cuda.qwen38_5090.b4_full4k_exact_gate import observe\n    from test2026.cuda.qwen38_5090.b4_mtp_full4k_gate import admit as mtp_admit')
+replace('rowwise-k-norm-full4k-preparation.json','rowwise-k-norm-mtp-full4k-preparation.json')
+replace('rowwise_K_norm_full4k_prepared_GPU_unrun','rowwise_K_norm_mtp_full4k_prepared_GPU_unrun')
+replace("qualified=json.loads((ROOT/'results/rowwise-k-norm-model-attempt1-verified.json').read_bytes());assert qualified['exit_code']==0 and qualified['analysis']['selected_step52_intervention_passed'] and set(qualified['controls'])=={'off-reference','off-candidate'}", "qualified=json.loads((ROOT/'results/rowwise-k-norm-full4k-attempt1-verified.json').read_bytes());assert qualified['exit_code']==0 and qualified['ordinary_full4K128_case_gate_passed'] and qualified['strict_admission']['all_states_and_vectors_exact'] and qualified['strict_admission']['all_128_IDs_exact']")
+replace("        phase='candidate';idle();", "        code=ledger.run([sys.executable,'-m','unittest',*p['mtp_test_modules']],out/'mtp-cpu-ledger','correctness','31 additional CPU controls on installed source87: original19 B1/workspace controls,8 B4 draft-study binding/ownership/geometry controls,4 MTP evidence and unchanged target-gate rejection controls. The T128 source provider is from the qualified overlay. No GPU model is executed by these symbolic tests.',common);w['mtp_cpu_exit_code']=code;save();assert code==0,'31 MTP CPU controls failed'\n        phase='candidate';idle();")
+replace('launch_rowwise_k_norm_full4k.py','launch_rowwise_k_norm_mtp_full4k.py')
+replace('Source87 same qualified DLL/ordinary rowwise K program: three B4 text/image/mixed groups,3968prompt+128forced output IDs,4096capacity. Original four complete state/vector phases vs eight immutable source60 B1 oracles. Require all16 rowwise subgraph traces and unchanged old routes. No MTP, quality, HTTP or speed admission.','Source87 same DLL and qualified rowwise K target with actual B4 MTP3/T16 draft prefill/T4 draft decode/full-vocabulary head. Three3968prompt+128forced-output text/image/mixed groups. Require target states/vectors/IDs vs eight B1 oracles, actual draft graphs/249prefill/127commits,16rowwise target traces and old routes. No broader MTP/prefix/quality/HTTP or speed admission.')
+replace("w['strict_admission']=admit(selection,reference,candidate,rr,rc)","w['strict_admission']=mtp_admit(selection,reference,candidate,rr,rc)")
+replace('rowwise_K_norm_full4k128_exact_collected_MTP_quality_unqualified','rowwise_K_norm_MTP_full4k128_exact_collected_quality_unqualified')
+target=M/'run_rowwise_k_norm_mtp_full4k.py';assert not target.exists();target.write_bytes(text.encode());ast.parse(text)
+p=M/'evidence/rowwise-k-norm-mtp-owner-derivation.json';assert not p.exists();p.write_bytes(json.dumps(dict(source=source.name,target=target.name,source_sha256=hashlib.sha256(raw).hexdigest(),target_sha256=hashlib.sha256(text.encode()).hexdigest(),changes=changes,original115_CPU_preflight_restore_all34_and_owned_cache_retirement_retained=True,extra_MTP_CPU_controls_after_overlay_install=31),indent=2).encode());print(json.dumps(dict(derived_files=1,MTP_GPU_unrun=True)))

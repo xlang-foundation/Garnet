@@ -1,0 +1,35 @@
+from pathlib import Path
+import ast,hashlib,json,os,sys,zipfile
+W=Path(__file__).resolve().parent;O=W.parent/'outputs';R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';E=M/'evidence';P='Garnet/test2026/cuda/qwen38_5090/';sha=lambda b:hashlib.sha256(b).hexdigest();sys.path[:0]=[str(M),str(R)]
+old=json.loads((E/'b4-b1-short-preparation.json').read_bytes());qraw=(O/'b4-b1-short-admission-attempt1-verified.json').read_bytes();assert qraw==(O/'b4-b1-short-admission-attempt1-remote-verified.json').read_bytes();q=json.loads(qraw);archive=O/'b4-b1-short-admission-attempt1-evidence.zip';assert q['exit_code']==1 and sha(archive.read_bytes())==q['archive_sha256']
+with zipfile.ZipFile(archive) as z:
+    reference=json.loads(z.read('results/b4-b1-short-admission-attempt1/reference/report.json'));candidate=json.loads(z.read('results/b4-b1-short-admission-attempt1/candidate/report.json'));workflow=json.loads(z.read('results/b4-b1-short-admission-attempt1/workflow.json'))
+assert workflow['exit_code']==1 and workflow['cleanup_finished'] and reference['status']=='four_B1_short_oracles_collected'
+tokens=[[reference['rows'][r]['generated_ids'][0][s] for r in range(4)] for s in range(5)]
+assert all(tokens[s]==[candidate['rows'][0]['generated_ids'][r][s] for r in range(4)] for s in range(5))
+fixture=dict(status='first_five_agreed_consumed_decode_token_inputs',tokens=tokens,original_archive_sha256=q['archive_sha256'],original_paired_proof_sha256=sha(qraw),original_job_exit_code=1,source='Original saved four fresh B1 sequences and B4 sequences agree for indices0..4; no new generated or fabricated tokens.',scope='Layer0 consumes embeddings of these five agreed token vectors during decode, after first prefill prediction. Probe zero-history/recurrent component only, not actual full-model prefix state.')
+fixturepath=E/'decode-projection-token-inputs.json';raw=json.dumps(fixture,indent=2).encode();assert not fixturepath.exists() or fixturepath.read_bytes()==raw;fixturepath.write_bytes(raw)
+names=['decode_projection_diagnostic.py','test_decode_projection_diagnostic.py','probe_decode_projection_diagnostic.py','launch_decode_projection_diagnostic.py','run_decode_projection_diagnostic.py','evidence/decode-projection-owner-derivation.json','evidence/decode-projection-token-inputs.json']
+for n in names:
+    if n.endswith('.py'):ast.parse((M/n).read_bytes())
+deriv=json.loads((E/'decode-projection-owner-derivation.json').read_bytes())
+for d in deriv['derivations']:
+    raw=(M/d['source']).read_bytes();assert sha(raw)==d['source_sha256']
+    for c in d['changes']:assert raw.count(c['old'].encode())==c['count'];raw=raw.replace(c['old'].encode(),c['new'].encode())
+    assert raw==(M/d['target']).read_bytes() and sha(raw)==d['target_sha256']
+new={P+n:sha((M/n).read_bytes()) for n in names};files={**old['files'],**new};parents={}
+for job,row in old['parents'].items():
+    with zipfile.ZipFile(O/(job+'-evidence.zip')) as z:w=json.loads(z.read('results/'+job+'/workflow.json'))
+    assert type(w['exit_code']) is int and w['exit_code']==0 and w['cleanup_finished'];parents[job]={**row,'exit_code':0}
+parents['b4-b1-short-admission-attempt1']=dict(proof_sha256=sha(qraw),archive_sha256=q['archive_sha256'],status=q['status'],exit_code=1)
+p={k:old[k] for k in ('runtime','environment','checkpoints','candidate_base','reference_bundle','reference_bundle_sha256','reference_source_files','reference_library','reference_library_sha256','candidate_bundle','candidate_bundle_sha256','candidate_source_files','candidate_library','candidate_library_sha256','flags')}
+p.update(status='decode_projection_prepared_GPU_unrun',files=files,new_files=new,parents=parents,audit_dependencies={},capture_inputs={P+'evidence/decode-projection-token-inputs.json':sha(fixturepath.read_bytes())},token_inputs=tokens,reference_installed_files={**files,**{'Garnet/'+n:h for n,h in p['reference_source_files'].items()}},candidate_installed_files={**files,**{'Garnet/'+n:h for n,h in p['candidate_source_files'].items()}},scope='Actual existing GDN layer0 fused chunk, shared compressed5matrix pool, T4 B1/M4 versus B4/M16, source60/DLL841 versus source61/candidateDLL. First5agreed actual consumed decode tokens from preserved failed full-model short case. Zero conv/recurrent states; retained QKV/Z/beta/a projections are before the state-dependent core. Standalone normalization graph is separate and does not directly witness normalized tensor inside the fused layer; discrepancies cannot alone prove a full-model cause. Capture complete finite raw arrays at input, separate normalization and four retained projections twice, actual cuBLASLt selection logs and source/runtime/SDK/checkpoint hashes. No new native code, factory/math policy or guard relaxation. Component characterization only; original model job remainsFAILED and original complete-state/IDs/finite vectors/full4K/MTP/805/HTTP gates stay unchanged. No timing, quality, throughput or2x admission. Private nonce cache only; original source/runtime restored. Archive raw new methods, bundles, fixture, parent proofs and arrays; unchanged baseline dependency bodies stay in pinned linked artifacts, all before/after hashes still verified. Strongest repeated tuned/MTP references, matchedINT4/4B and original fullgoal remain open.')
+prep=E/'decode-projection-preparation.json';assert not prep.exists();prep.write_bytes(json.dumps(p,indent=2).encode())
+import run_logged as ledger
+ledger.source_identity=lambda:{'scope':'Explicit new decode projection CPU arrays/collection/AST controls only; unrelated bodies excluded','owned_source_sha256':new};os.chdir(R)
+assert ledger.run([sys.executable,'-m','unittest','test2026.cuda.qwen38_5090.test_decode_projection_diagnostic'],W/'decode-projection-preparation-cpu-ledger','correctness','Four controls cover exact full arrays, independent offset geometry, active/inactive and signedzero corruption, nonfinite/truncation/swapped rows, token controls, preserved input and repeat instability. Synthetic CPU only.',[M/n for n in names]+[prep])==0
+deploy={P+n:M/n for n in names};deploy[P+'evidence/decode-projection-preparation.json']=prep;package=W/'decode-projection-deployment.zip';assert not package.exists()
+with zipfile.ZipFile(package,'x',zipfile.ZIP_DEFLATED) as z:
+    for n,path in deploy.items():z.write(path,n)
+    z.writestr('deployment-manifest.json',json.dumps(dict(files={n:sha(path.read_bytes()) for n,path in deploy.items()},source_runtime_install_deferred=True),indent=2))
+receipt=dict(status='decode_projection_diagnostic_prepared_GPU_unrun',deployment_sha256=sha(package.read_bytes()),bytes=package.stat().st_size,files=len(deploy),preparation_sha256=sha(prep.read_bytes()),token_inputs=tokens,new_native_build=False);(W/'decode-projection-package.json').write_bytes(json.dumps(receipt,indent=2).encode());print(json.dumps(receipt))

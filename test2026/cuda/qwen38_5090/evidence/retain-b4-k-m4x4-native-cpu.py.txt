@@ -1,0 +1,60 @@
+from pathlib import Path
+import hashlib,json,zipfile
+W=Path(__file__).resolve().parent;O=W.parent/'outputs';R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';E=M/'evidence';sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+owned=[];retained={}
+def keep(name,raw):
+    path=E/name;assert not path.exists(),path;path.write_bytes(raw);owned.append(path);retained[name]=sha(path)
+job='b4-k-m4x4-cpu-attempt2';proof=O/(job+'-verified.json');q=json.loads(proof.read_bytes())
+assert q['exit_code']==0 and proof.read_bytes()==(O/(job+'-remote-verified.json')).read_bytes()
+archive=O/(job+'-evidence.zip');assert sha(archive)==q['archive_sha256']
+for name in (job+'-verified.json',job+'-remote-verified.json','Garnet-B4-K-M4x4-CPU-Progress.json','b4-k-m4x4-cpu-attempt1-failure-closure-verified.json'):keep(name,(O/name).read_bytes())
+with zipfile.ZipFile(archive) as z:
+    mf=json.loads(z.read('evidence-manifest.json'))
+    keep('b4-k-m4x4-cpu-attempt2-manifest.json',z.read('evidence-manifest.json'))
+    base='results/'+job+'/'
+    for name in ('workflow.json','profile/report.json','factory-controls/report.json','plugin/report.json'):
+        keep('b4-k-m4x4-cpu2-'+name.replace('/','-'),z.read(base+name))
+    for stage in ('python','profile','factory','factory-controls','plugin'):
+        for ext in ('log','jsonl'):keep('b4-k-m4x4-cpu2-'+stage+'-commands.'+ext,z.read(base+stage+'-ledger/commands.'+ext))
+with zipfile.ZipFile(O/'b4-k-m4x4-cpu-attempt1-failure-closure.zip') as z:
+    keep('b4-k-m4x4-cpu1-failure-closure-manifest.json',z.read('evidence-manifest.json'))
+    keep('b4-k-m4x4-cpu1-packaging-failure-closure.json',z.read('results/b4-k-m4x4-cpu-attempt1/packaging-failure-closure.json'))
+    keep('b4-k-m4x4-cpu1-workflow.json',z.read('results/b4-k-m4x4-cpu-attempt1/workflow.json'))
+for name in ('commands.log','commands.jsonl'):keep('b4-k-m4x4-cpu2-local-replay-'+name,(W/'b4-k-m4x4-cpu-v2-local-replay'/name).read_bytes())
+scripts=['derive-b4-k-m4x4-native-cpu.py','derive-b4-k-m4x4-cpu-owner.py','prepare-b4-k-m4x4-native-cpu.py','prepare-b4-k-m4x4-native-cpu-v2.py','install-b4-k-m4x4-cpu.py','install-b4-k-m4x4-cpu-v2.py','close-b4-k-m4x4-cpu-attempt1.py','replay-b4-k-m4x4-native-cpu.py',Path(__file__).name]
+for name in scripts:keep(name+'.txt',(W/name).read_bytes())
+d=json.loads((E/'b4-k-m4x4-native-cpu-derivation.json').read_bytes())
+for name in list(d['derived_sha256'])+['run_b4_k_m4x4_cpu.py','verify_b4_k_m4x4_cpu.py','run_b4_k_m4x4_cpu_v2.py','verify_b4_k_m4x4_cpu_v2.py','evidence/b4-k-m4x4-native-cpu-derivation.json','evidence/b4-k-m4x4-cpu-owner-derivation.json','evidence/b4-k-m4x4-cpu-v2-owner-derivation.json','evidence/b4-k-m4x4-cpu-preparation.json','evidence/b4-k-m4x4-cpu-v2-preparation.json']:owned.append(M/name)
+record={'status':'actual_remote_native_CPU_contracts_paired_replayed_retained','proof_sha256':sha(proof),'archive_sha256':sha(archive),'archive_bytes':archive.stat().st_size,'failure_closure_sha256':sha(O/'b4-k-m4x4-cpu-attempt1-failure-closure.zip'),'retained_files_sha256':retained,'production_DLL_or_GPU_model_or_performance_qualified':False,'overall_two_times_target_achieved':False}
+keep('b4-k-m4x4-cpu2-retention.json',json.dumps(record,indent=2).encode())
+entry=('\n\n2026-10-27 K four-M4 actual native CPU contracts passed on CD-RTX5090, '
+       'then independently replayed locally with byte-identical proof '+sha(proof)+'. '
+       '13 source/SDK-evidence Python tests; actual C++ selector 1,209 cases '
+       '(16 selected, 1,193 rejected); 232 actual factory/run cases under CPU SDK '
+       'fixtures. Four ordered calls verified real host input offsets [0,20480,40960,61440] '
+       'and BF16 output offsets [0,8192,16384,24576], actual M4 layouts, identical '
+       'weights/scalar/beta/workspace/stream/opaque, every first-failure/throw group '
+       'and strict runtime/shape/device/scale guards. Actual TensorRT plugin compiled '
+       'against pinned headers/runtime: 49 malformed wires, 25 bad constructors, '
+       '46 descriptors, 9 formats, 13 legacy cross-wire cases rejected; 7 initialize '
+       'calls / 5 CPU factories / zero GPU operators. All 1,827 guarded source files, '
+       'runtime/SDK, config+index, CMake and all34 CUDA objects unchanged. This does '
+       'not establish live cuBLASLt eligibility or numeric equivalence. Source85 '
+       'production DLL, same-DLL flag-off/on controls, full128-ID/4K model, MTP, '
+       'quality and HTTP tests remain required before performance admission. '
+       'Attempt1 packaging failure occurred before any CPU subcommand/native compile: '
+       'three missing evidence dependencies; partial archive/workflow/absence closure '
+       'preserved, all method/compile-input dependencies added to initial guards in '
+       'attempt2. Failure closure '+record['failure_closure_sha256']+'. Successful raw '
+       'archive '+record['archive_sha256']+' ('+str(record['archive_bytes'])+'B). '
+       'Original full4K and strict cache62 failures remain failures; serving figures '
+       'unchanged and overall2x target unmet. Raw artifacts remain under the fixed '
+       'study results folder and local outputs; methods, commands and proof receipts '
+       'retained in branch evidence.\n').encode()
+for name in ('docs/research/qwen38-5090-development-log.md','docs/research/qwen38-5090-implementation-task.md'):
+    p=R/name;before=p.read_bytes();assert b'K four-M4 actual native CPU contracts passed' not in before
+    with p.open('ab') as f:f.write(entry)
+    assert p.read_bytes()==before+entry;owned.append(p)
+assert len(owned)==len(set(owned))
+(W/'b4-k-m4x4-native-cpu-stage-paths.bin').write_bytes(b''.join(n.relative_to(R).as_posix().encode()+b'\0' for n in owned))
+print(json.dumps({'owned_stage_paths':len(owned),'new_evidence_files':len(retained),'paired_proof_sha256':sha(proof),'production_DLL_GPU_unrun':True},indent=2))

@@ -1,0 +1,2828 @@
+{
+  "status": "native_cuda_stdio_profiled_replayed",
+  "archive_sha256": "b9ce1450d7034abb266d44b41766ff4879c313be064c9f063756326108c85f30",
+  "files_verified": 700,
+  "parent_archive_sha256": "762a1b928d964969c164baec301d2094c34038bd04194fb3ff04973f51a031ae",
+  "library_sha256": "1a1d0229a1c0c24a8397a4dee7a614bcedf97b3bd3293e58d752ed7de30eb498",
+  "control_replay": {
+    "status": "native_instrumented_host_stages_replayed",
+    "requests": [
+      {
+        "id": "ordinary-stdio-profiled-retained-text",
+        "case": "text",
+        "mode": "ordinary",
+        "host_wall_seconds": 8.870109400013462,
+        "host_stage_seconds": {
+          "reset": 0.016081699985079467,
+          "input_text_or_image": 0.019714900001417845,
+          "embedding_and_rows": 0.23104650000459515,
+          "target_prefill": 5.10189829999581,
+          "target_generate": 3.475395799992839
+        },
+        "host_wall_outside_stages_seconds": 0.025972200033720583,
+        "first_token_observation_phase": "target_generate",
+        "tokens_bound_to_retained_4k_control": true
+      }
+    ],
+    "performance_admitted": false,
+    "isolated_gpu_or_kernel_time_measured": false,
+    "two_times_target_achieved": false,
+    "scope": "Flat instrumented host-wall intervals bound to actual same-process token/completion events and retained3968+128IDs. MTP may emit the first target token before draft prefill finishes; full prefill phase duration is not TTFT. No cross-process epoch comparison, HTTP timing, benchmark speedup, causal kernel attribution or isolated GPU-active timing."
+  },
+  "entry_replay": {
+    "status": "native_entry_source_imports_and_return_replayed",
+    "events": 7,
+    "actual_pid": 41412
+  },
+  "cuda_phase_replay": {
+    "status": "native_cuda_phase_markers_replayed",
+    "requests": 1,
+    "unique_markers": 12,
+    "owner": {
+      "globalPid": 282169754779648,
+      "deviceId": 0,
+      "contextId": 1,
+      "streamId": 13
+    },
+    "gpu": [
+      {
+        "id": 0,
+        "name": "NVIDIA GeForce RTX 5090",
+        "uuid": "265ee66c-9b79-cd3b-0c63-dd6942ddb5e6",
+        "computeMajor": 12,
+        "computeMinor": 0
+      }
+    ],
+    "intervals": [
+      {
+        "id": "ordinary-stdio-profiled-retained-text",
+        "mode": "ordinary",
+        "phase": "request",
+        "marker_ordinals": [
+          0,
+          11
+        ],
+        "nsight_interval_ns": [
+          155499716454,
+          164365517278
+        ],
+        "instrumented_marker_gap_ns": 8865800824,
+        "observed_cuda_activity_union_ns": 7404137426,
+        "gap_without_observed_owned_cuda_activity_ns": 1461663398,
+        "kernel_graph_node_records": 466207,
+        "kernel": {
+          "records": 471345,
+          "clipped_interval_union_ns": 7300589092,
+          "by_name": [
+            {
+              "name": "cutlass3x_sm120_bstensorop_s16864gemm_block_scaled_ue4m3xe2m1_ue4m3xe2m1_f32_bf16_bf16_128x128x256_1x1x1_0_tnn_align32_o_vs16_bias_bf16_relu",
+              "count": 32256,
+              "clipped_sum_duration_ns": 2262796598,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "Garnet::<unnamed>::scores(Garnet::Qwen35AttentionCoreConfig, const float *, const __nv_bfloat16 *, const float *, const float *, const float *, float *)",
+              "count": 4016,
+              "clipped_sum_duration_ns": 1045556270,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "sm89_xmma_gemm_e4m3bf16_e4m3f32_f32_tn_n_tilesize32x64x64_stage5_warpsize2x2x1_tensor16x8x32_execute_kernel__5x_cublas",
+              "count": 32320,
+              "clipped_sum_duration_ns": 751580775,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "Garnet::<unnamed>::context(Garnet::Qwen35AttentionCoreConfig, const __nv_bfloat16 *, const float *, const float *, const float *, const float *, const float *, float *)",
+              "count": 4016,
+              "clipped_sum_duration_ns": 726056382,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "void cutlass::Kernel2<cutlass_80_wmma_tensorop_bf16_s161616gemm_bf16_16x16_128x2_tn_align8>(T1::Params)",
+              "count": 24096,
+              "clipped_sum_duration_ns": 652080127,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "Garnet::<unnamed>::registerState128Kernel(Garnet::Qwen35DeltaConfig, int, const float *, const float *, const float *, const float *, const float *, const float *, const float *, const float *, const float *, float *, float *)",
+              "count": 12048,
+              "clipped_sum_duration_ns": 515280959,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "nvjet_sm120_qqtst_mma_64x64x64_12_32x32x64_tmaAB_alignCD4_bz_TNNN",
+              "count": 5952,
+              "clipped_sum_duration_ns": 227027079,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "nvjet_sm120_qqtst_mma_64x32x64_16_32x16x64_tmaAB_alignCD4_bz_TNNN",
+              "count": 7936,
+              "clipped_sum_duration_ns": 224919942,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "Garnet::<unnamed>::QuantizeActivation(const __nv_bfloat16 *, unsigned char *, unsigned char *, float, int, int, int, unsigned long long)",
+              "count": 32256,
+              "clipped_sum_duration_ns": 133480581,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "sm89_xmma_gemm_e4m3bf16_e4m3f32_f32_tn_n_tilesize64x128x64_stage4_warpsize2x2x1_tensor16x8x32_execute_kernel__5x_cublas",
+              "count": 2032,
+              "clipped_sum_duration_ns": 99161317,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "Garnet::<unnamed>::convolution(Garnet::Qwen35DeltaConfig, int, int, const float *, const float *, const float *, const float *, float *, float *)",
+              "count": 12048,
+              "clipped_sum_duration_ns": 88407312,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "Garnet::<unnamed>::copyLinearBF16KV(const float *, long long, float *, int, long long, Garnet::Qwen38BF16KVSpans)",
+              "count": 251,
+              "clipped_sum_duration_ns": 46520260,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "Garnet::<unnamed>::Quantize(const __nv_bfloat16 *, unsigned char *, float, unsigned long long)",
+              "count": 52208,
+              "clipped_sum_duration_ns": 46295251,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_ReshCastReshCastSeleAddMulMeanAddSqrtDivMulMul_0xd6e87c1d9529adc83cded642e4ea6ceb",
+              "count": 8128,
+              "clipped_sum_duration_ns": 28986841,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_ReshCastReshCastSeleAddMulMeanAddSqrtDivMulMul_0xa561ce508f6c305e302bc7248352bb45",
+              "count": 7936,
+              "clipped_sum_duration_ns": 27817888,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "Garnet::<unnamed>::normalize(Garnet::Qwen35AttentionCoreConfig, const float *, float *)",
+              "count": 4016,
+              "clipped_sum_duration_ns": 26578512,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_ReshCastSeleMulMeanAddSqrtDivMulMulCastReshMoveMoveMove_0x03c14527b93bd8f31d28265cf37de748",
+              "count": 6096,
+              "clipped_sum_duration_ns": 24472247,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_ReshCastSeleMulMeanAddSqrtDivMulMulCastReshMoveMoveMove_0x22e980ab627e61e47a1b095e984f966e",
+              "count": 5952,
+              "clipped_sum_duration_ns": 23821898,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_MoveMoveMoveMoveMoveMoveMoveMoveMoveMoveMoveMoveMoveMoveMoveMoveMoveMoveMoveMoveMoveMoveEtc_0xc3298a2f4f4622121d6143b94c29ccca",
+              "count": 127,
+              "clipped_sum_duration_ns": 22832079,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "sm89_xmma_gemm_e4m3bf16_e4m3f32_f32_tn_n_tilesize64x64x64_stage6_warpsize2x2x1_tensor16x8x32_execute_kernel__5x_cublas",
+              "count": 3968,
+              "clipped_sum_duration_ns": 21964022,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_ReshReshReshCastAddReshConcSlic_0x40d8b0dc3605cd2358377a1410cc7318",
+              "count": 5952,
+              "clipped_sum_duration_ns": 21747479,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_SlicSlicSlicSlicSlicSlicSlicSlicSlicSlicSlicSlicSlicSlicSlicSlicSlicSlicSlicSlicSlicSlicEtc_0x9c3615ffa2d4ffb77eac83e035e8904c",
+              "count": 124,
+              "clipped_sum_duration_ns": 21310561,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_Move_0x60f1a4ef80aed241192041c54e812fe4",
+              "count": 24096,
+              "clipped_sum_duration_ns": 20427074,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_ReshReshReshReshReshReshReshCastAddReshConcSlic_0xfe17717240d84877f279135822b57ca2",
+              "count": 6096,
+              "clipped_sum_duration_ns": 19782637,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_ReshCastSlicSiluSlicMul_0xa3541528f0051c52fd2271ea971bea0b",
+              "count": 7936,
+              "clipped_sum_duration_ns": 18725843,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_GathMulConcReshSinCosAddSqrtDivMulMulSlicSlicMulSlicSlicNegConcMulAddConcAddSqrtDivMulMulEtc_0x4e66ca26d600e64fd3c4f7816ce50791",
+              "count": 2032,
+              "clipped_sum_duration_ns": 11771040,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_GathMulConcReshSinCosAddSqrtDivMulMulSlicSlicMulSlicSlicNegConcMulAddConcAddSqrtDivMulMulEtc_0x2f3ce452f912447fcdd28108f4294a0f",
+              "count": 1984,
+              "clipped_sum_duration_ns": 11668494,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_Move_0x62f646d24f97fec42ecb88076c8068ea",
+              "count": 12048,
+              "clipped_sum_duration_ns": 10737652,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_Cast_0x5ba882589bb84d5a649b9b0af7ce3eb3",
+              "count": 7936,
+              "clipped_sum_duration_ns": 10680233,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_Move_0xdab72d3ab0cf2d499046a47c1d25ba44",
+              "count": 12048,
+              "clipped_sum_duration_ns": 10594799,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_ReshCastSlicSiluSlicMul_0x02f6476cd7766bf68134a397657a3383",
+              "count": 8128,
+              "clipped_sum_duration_ns": 9893565,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "sm89_xmma_gemm_e4m3bf16_e4m3f32_f32_tn_n_tilesize64x64x64_stage6_warpsize2x2x1_tensor16x8x32_execute_split_k_kernel__5x_cublas",
+              "count": 3968,
+              "clipped_sum_duration_ns": 9733753,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_ReshCast_0x7af8b5e70fded89312dcab19083839e7",
+              "count": 12192,
+              "clipped_sum_duration_ns": 7852818,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_ReshCast_0xe55201cd5d0e988fffcfd1299d79574d",
+              "count": 11904,
+              "clipped_sum_duration_ns": 7800041,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_ReshCastSeleMulMeanAddSqrtDivMulMulCastReshMoveMove_0x368b6ba304a3ba5782c190f5618e4a8e",
+              "count": 2032,
+              "clipped_sum_duration_ns": 6462951,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_ReshCastSeleMulMeanAddSqrtDivMulMulCastReshMoveMove_0x9520d4fdfc6e2cec1f0b6329d49f156c",
+              "count": 1984,
+              "clipped_sum_duration_ns": 6306119,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_ReshCast_0x9612e69c4dd91c5e310c479cd45bba60",
+              "count": 5952,
+              "clipped_sum_duration_ns": 5571751,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_Cast_0x99fed1cbd2d09e89c573267f5d85b9ee",
+              "count": 7936,
+              "clipped_sum_duration_ns": 5428645,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_ReshCast_0x21878d0b3360640b1ffc070a114f2080",
+              "count": 5952,
+              "clipped_sum_duration_ns": 5160874,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_Cast_0x11386ef32551698b5814c2bb957868c1",
+              "count": 7936,
+              "clipped_sum_duration_ns": 5010822,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "Garnet::<unnamed>::scatterBF16KV(const float *, float *, int, int, long long, Garnet::Qwen38BF16KVSpans)",
+              "count": 251,
+              "clipped_sum_duration_ns": 4406085,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_Cast_0xe6bcaf4cbf0131084a02f9045ff15ad5",
+              "count": 8128,
+              "clipped_sum_duration_ns": 4381125,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_Cast_0x51874e8cfc4b7db08438897d75e7de79",
+              "count": 8128,
+              "clipped_sum_duration_ns": 4289989,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_Cast_0xe91a866ec3696f1f7f4d032ef6b6c8b5",
+              "count": 8128,
+              "clipped_sum_duration_ns": 4282412,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_ReshCast_0x771e96dbb37e1d3630e8e67e2ac15361",
+              "count": 6096,
+              "clipped_sum_duration_ns": 4188105,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_ReshCast_0x236569f837b6448315ac2354c61a8fc3",
+              "count": 6096,
+              "clipped_sum_duration_ns": 3201158,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_ReshCastSlicSlicMulMean_0x7ba198088d7ed091dc17f146751e51f9",
+              "count": 1984,
+              "clipped_sum_duration_ns": 2973057,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_ReshReshReshCastAddReshConcSlic_0xd0e64076ca0e04b80bb5b86105247c4a",
+              "count": 1860,
+              "clipped_sum_duration_ns": 2839588,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_ReshCastSlicSlicMulMean_0x9c75b0e40f541886160c235eb600c677",
+              "count": 2032,
+              "clipped_sum_duration_ns": 2832356,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_ReshCastMulMean_0xca927addd9364e13ed42c60711f0e671",
+              "count": 1984,
+              "clipped_sum_duration_ns": 1964323,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_ReshReshReshCastAddReshConcSlic_0x6c4daad0e18c0b905f631d2a9030c2f0",
+              "count": 1905,
+              "clipped_sum_duration_ns": 1872258,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_ReshCast_0xa017869faeff926bae2fe34f5da4ec29",
+              "count": 2032,
+              "clipped_sum_duration_ns": 1342722,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_ReshCast_0x27be7ebb0998f9e40e3d3a17fc5830c0",
+              "count": 1984,
+              "clipped_sum_duration_ns": 1317377,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_ReshCastMulMean_0x31643270cf7e09a94baa7596226c1ade",
+              "count": 2032,
+              "clipped_sum_duration_ns": 1233505,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0x378b5163fe6c479065ced7f54bc008b6",
+              "count": 251,
+              "clipped_sum_duration_ns": 816031,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0xb40cd9c0c66cbe2505ce48ceb6bf24ca",
+              "count": 251,
+              "clipped_sum_duration_ns": 812128,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0xa9c1e5a1466968e952243a0458de898e",
+              "count": 251,
+              "clipped_sum_duration_ns": 812052,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0xe189b866c6dfe5b02a4f9083c62e87d1",
+              "count": 251,
+              "clipped_sum_duration_ns": 804476,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0x9db8e932459bc465a2f0460f5064a047",
+              "count": 251,
+              "clipped_sum_duration_ns": 800702,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0x294fde4ffb42da1d9e4ee6944e26dbca",
+              "count": 251,
+              "clipped_sum_duration_ns": 800701,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0x9a5b90e5058cea2ccff573694b44afaf",
+              "count": 251,
+              "clipped_sum_duration_ns": 799422,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0x00ceb07d3e0fdb624b2b18e693e2b80b",
+              "count": 251,
+              "clipped_sum_duration_ns": 793312,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0x6dfe101b94db0c3f786b7e07f01ec961",
+              "count": 251,
+              "clipped_sum_duration_ns": 788382,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0xbde49e1d8bf86d1aec111db57f078cc3",
+              "count": 251,
+              "clipped_sum_duration_ns": 788301,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0xcd299a78eb6bd2f3e10616da36ebd4b4",
+              "count": 251,
+              "clipped_sum_duration_ns": 780795,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0xd0600a42fd832e66e6379880dcb6803c",
+              "count": 251,
+              "clipped_sum_duration_ns": 778366,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0xd1b29ba6c8961ac4e7fe9ee3de6196c8",
+              "count": 251,
+              "clipped_sum_duration_ns": 773691,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0x7d01c689b0313813041542a46c6edb07",
+              "count": 251,
+              "clipped_sum_duration_ns": 767116,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0x3553ebd67d80706c6143626c5df90486",
+              "count": 251,
+              "clipped_sum_duration_ns": 764737,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0x3c8cc95f1de088557c98c0f2b8f1ed10",
+              "count": 251,
+              "clipped_sum_duration_ns": 763224,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0x86927e22df866a965fdaea959a8b75ca",
+              "count": 251,
+              "clipped_sum_duration_ns": 758992,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0x4192e0731dab1b3b2b51a1d904ae4b95",
+              "count": 251,
+              "clipped_sum_duration_ns": 758196,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0xed862bf9f322b2a667875d20192ca1b6",
+              "count": 251,
+              "clipped_sum_duration_ns": 757375,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0xa574f805877b28e85a5d6a2863c92090",
+              "count": 251,
+              "clipped_sum_duration_ns": 755150,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0xf8fe125ea1b17868a012501b42fd7c6c",
+              "count": 251,
+              "clipped_sum_duration_ns": 753918,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0x5a6e9e259b1bd8bcff2ec31797c3b199",
+              "count": 251,
+              "clipped_sum_duration_ns": 751595,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0x31ae6796d71610ff0a86a0b8484df890",
+              "count": 251,
+              "clipped_sum_duration_ns": 750135,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0xd2af798bd8576543e54353f5f7083c24",
+              "count": 251,
+              "clipped_sum_duration_ns": 749645,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0x286f6f42ae246ddf06e6242dbd7440b6",
+              "count": 251,
+              "clipped_sum_duration_ns": 747608,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0x64fee037f5fa739d1e1ecd8947833c95",
+              "count": 251,
+              "clipped_sum_duration_ns": 743919,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0x64d4df65e4314faf5a11dabdeb746715",
+              "count": 251,
+              "clipped_sum_duration_ns": 741926,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0xdbe86221a1268961edfb085f9bb1fc1a",
+              "count": 251,
+              "clipped_sum_duration_ns": 741178,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0x51acaa3f5001886a84239e534a43a980",
+              "count": 251,
+              "clipped_sum_duration_ns": 739357,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0xb688fea06071f51b33a96360e46755b0",
+              "count": 251,
+              "clipped_sum_duration_ns": 737745,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0x02bfbeb55be6e9d4c56e9729df388115",
+              "count": 251,
+              "clipped_sum_duration_ns": 737212,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0x12c66198adff338ab0fa945ed4645e76",
+              "count": 251,
+              "clipped_sum_duration_ns": 731168,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0x7c0627f21e9e385e9a9247813887dd42",
+              "count": 251,
+              "clipped_sum_duration_ns": 721727,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0x2ea1baddb28c235cf43c0e443e70d48f",
+              "count": 251,
+              "clipped_sum_duration_ns": 719944,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0xc89acef5f0e825624e95e9364e2f0d8e",
+              "count": 251,
+              "clipped_sum_duration_ns": 718007,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0x412df16d3bd46be1ab4b548741557e10",
+              "count": 251,
+              "clipped_sum_duration_ns": 715679,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0xec7f67a07abee026d2daa55df59a9e17",
+              "count": 251,
+              "clipped_sum_duration_ns": 714681,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0x699fd7ea101967862e0684f7d9198465",
+              "count": 251,
+              "clipped_sum_duration_ns": 711275,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0x8312ce0c5958d52985107a75f1641e55",
+              "count": 251,
+              "clipped_sum_duration_ns": 711034,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0xb51ad4940a5ae8a5717d20fc45c737c3",
+              "count": 251,
+              "clipped_sum_duration_ns": 709892,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0x25b2bbbc3e9e26d57806103d9b58cd0f",
+              "count": 251,
+              "clipped_sum_duration_ns": 706133,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0x7ba6fca991b308d1895cf751cc9a973f",
+              "count": 251,
+              "clipped_sum_duration_ns": 704574,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0x60b2367da9d35560b785d1d5f073549a",
+              "count": 251,
+              "clipped_sum_duration_ns": 703789,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0x8ff42f969acc1714eaddc496ee4ad5a5",
+              "count": 251,
+              "clipped_sum_duration_ns": 703525,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0x0070272da9a20b7b3a8f79a84199519d",
+              "count": 251,
+              "clipped_sum_duration_ns": 702962,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0x3a1bab8303df08899deb000d033b5fb4",
+              "count": 251,
+              "clipped_sum_duration_ns": 702891,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0xdcdb8128e200be237723b9115a826a79",
+              "count": 251,
+              "clipped_sum_duration_ns": 700229,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0x7bd68abfb956adf266c2ef06fc48ad95",
+              "count": 251,
+              "clipped_sum_duration_ns": 696960,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_MoveMulMeanAddSqrtDivMulMul_0x470ac9b3d3cae4f59388eab8426d5252",
+              "count": 128,
+              "clipped_sum_duration_ns": 435011,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "Garnet::<unnamed>::CopyLast(const float *, const float *, float *, int, int, int)",
+              "count": 251,
+              "clipped_sum_duration_ns": 314880,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "void Garnet::ParallelBatchTop1Candidate::chunks<__nv_bfloat16>(const T1 *, unsigned long long *, int)",
+              "count": 128,
+              "clipped_sum_duration_ns": 278337,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "void Garnet::ParallelBatchTop1Candidate::finish<__nv_bfloat16>(const T1 *, long long *, float *, int, int)",
+              "count": 128,
+              "clipped_sum_duration_ns": 101696,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "void astypeKernel<float, __nv_bfloat16>(const T1 *, T2 *, int)",
+              "count": 128,
+              "clipped_sum_duration_ns": 97952,
+              "boundary_crossing_records": 0
+            }
+          ]
+        },
+        "copy": {
+          "records": 25274,
+          "clipped_interval_union_ns": 68890944,
+          "by_name": [
+            {
+              "name": "copy_kind_8",
+              "count": 24127,
+              "clipped_sum_duration_ns": 44089706,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "copy_kind_1",
+              "count": 891,
+              "clipped_sum_duration_ns": 24639478,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "copy_kind_2",
+              "count": 256,
+              "clipped_sum_duration_ns": 161760,
+              "boundary_crossing_records": 0
+            }
+          ]
+        },
+        "memset": {
+          "records": 38970,
+          "clipped_interval_union_ns": 34657390,
+          "by_name": [
+            {
+              "name": "memset",
+              "count": 38970,
+              "clipped_sum_duration_ns": 34657390,
+              "boundary_crossing_records": 0
+            }
+          ]
+        },
+        "runtime_api": {
+          "records": 392494,
+          "clipped_interval_union_ns": 7807710186,
+          "by_name": [
+            {
+              "name": "cudaStreamSynchronize_v3020",
+              "count": 1021,
+              "clipped_sum_duration_ns": 3928686779,
+              "boundary_crossing_records": 2
+            },
+            {
+              "name": "cudaMemcpyAsync_v3020",
+              "count": 5368,
+              "clipped_sum_duration_ns": 2621907906,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "cudaGraphLaunch_v10000",
+              "count": 376,
+              "clipped_sum_duration_ns": 699410075,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "cudaEventQuery_v3020",
+              "count": 233936,
+              "clipped_sum_duration_ns": 102878423,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "cuLibraryLoadData",
+              "count": 12,
+              "clipped_sum_duration_ns": 70250162,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "cudaGraphInstantiate_v12000",
+              "count": 3,
+              "clipped_sum_duration_ns": 66466430,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "cudaStreamWaitEvent_v3020",
+              "count": 82118,
+              "clipped_sum_duration_ns": 61720358,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "cudaMemcpy2DAsync_v3020",
+              "count": 4346,
+              "clipped_sum_duration_ns": 54200828,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "cudaMemsetAsync_v3020",
+              "count": 5162,
+              "clipped_sum_duration_ns": 50036248,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "cuLaunchKernelEx",
+              "count": 4382,
+              "clipped_sum_duration_ns": 28162365,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "cudaLaunchKernel_v7000",
+              "count": 3185,
+              "clipped_sum_duration_ns": 27855423,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "cudaMalloc_v3020",
+              "count": 4368,
+              "clipped_sum_duration_ns": 25171375,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "cudaEventRecord_v3020",
+              "count": 15073,
+              "clipped_sum_duration_ns": 20863845,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "cudaFree_v3020",
+              "count": 383,
+              "clipped_sum_duration_ns": 18736174,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "cudaEventCreateWithFlags_v3020",
+              "count": 14694,
+              "clipped_sum_duration_ns": 9408123,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "cudaEventDestroy_v3020",
+              "count": 10728,
+              "clipped_sum_duration_ns": 5220085,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "cuModuleLoadFatBinary",
+              "count": 1,
+              "clipped_sum_duration_ns": 5021361,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "cudaLaunchKernelExC_v11060",
+              "count": 672,
+              "clipped_sum_duration_ns": 4000675,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "cuLaunchKernel",
+              "count": 644,
+              "clipped_sum_duration_ns": 3779095,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "cuKernelGetFunction",
+              "count": 384,
+              "clipped_sum_duration_ns": 854245,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "cudaEventSynchronize_v3020",
+              "count": 639,
+              "clipped_sum_duration_ns": 819228,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "cuKernelGetName",
+              "count": 3185,
+              "clipped_sum_duration_ns": 784381,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "cudaStreamIsCapturing_v10000",
+              "count": 1538,
+              "clipped_sum_duration_ns": 628183,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "cudaStreamEndCapture_v10000",
+              "count": 3,
+              "clipped_sum_duration_ns": 387114,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "cuKernelSetAttribute",
+              "count": 224,
+              "clipped_sum_duration_ns": 235035,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "cuLibraryGetKernel",
+              "count": 27,
+              "clipped_sum_duration_ns": 185395,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "cudaMallocAsync_v11020",
+              "count": 1,
+              "clipped_sum_duration_ns": 15194,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "cudaStreamBeginCapture_v10000",
+              "count": 3,
+              "clipped_sum_duration_ns": 13066,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "cudaOccupancyMaxActiveClusters_v11070",
+              "count": 17,
+              "clipped_sum_duration_ns": 9273,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "cudaOccupancyAvailableDynamicSMemPerBlock_v10200",
+              "count": 1,
+              "clipped_sum_duration_ns": 3342,
+              "boundary_crossing_records": 0
+            }
+          ]
+        }
+      },
+      {
+        "id": "ordinary-stdio-profiled-retained-text",
+        "mode": "ordinary",
+        "phase": "reset",
+        "marker_ordinals": [
+          1,
+          2
+        ],
+        "nsight_interval_ns": [
+          155504434442,
+          155516622516
+        ],
+        "instrumented_marker_gap_ns": 12188074,
+        "observed_cuda_activity_union_ns": 11359433,
+        "gap_without_observed_owned_cuda_activity_ns": 828641,
+        "kernel_graph_node_records": 0,
+        "kernel": {
+          "records": 0,
+          "clipped_interval_union_ns": 0,
+          "by_name": []
+        },
+        "copy": {
+          "records": 0,
+          "clipped_interval_union_ns": 0,
+          "by_name": []
+        },
+        "memset": {
+          "records": 10,
+          "clipped_interval_union_ns": 11359433,
+          "by_name": [
+            {
+              "name": "memset",
+              "count": 10,
+              "clipped_sum_duration_ns": 11359433,
+              "boundary_crossing_records": 0
+            }
+          ]
+        },
+        "runtime_api": {
+          "records": 64,
+          "clipped_interval_union_ns": 8548066,
+          "by_name": [
+            {
+              "name": "cudaStreamSynchronize_v3020",
+              "count": 2,
+              "clipped_sum_duration_ns": 8316552,
+              "boundary_crossing_records": 2
+            },
+            {
+              "name": "cudaMemsetAsync_v3020",
+              "count": 10,
+              "clipped_sum_duration_ns": 121239,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "cudaMemcpyAsync_v3020",
+              "count": 1,
+              "clipped_sum_duration_ns": 35306,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "cudaMalloc_v3020",
+              "count": 1,
+              "clipped_sum_duration_ns": 22731,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "cudaEventRecord_v3020",
+              "count": 10,
+              "clipped_sum_duration_ns": 18540,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "cudaEventQuery_v3020",
+              "count": 20,
+              "clipped_sum_duration_ns": 18426,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "cudaEventDestroy_v3020",
+              "count": 10,
+              "clipped_sum_duration_ns": 8196,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "cudaEventCreateWithFlags_v3020",
+              "count": 10,
+              "clipped_sum_duration_ns": 7076,
+              "boundary_crossing_records": 0
+            }
+          ]
+        }
+      },
+      {
+        "id": "ordinary-stdio-profiled-retained-text",
+        "mode": "ordinary",
+        "phase": "input_text_or_image",
+        "marker_ordinals": [
+          3,
+          4
+        ],
+        "nsight_interval_ns": [
+          155521616952,
+          155536935236
+        ],
+        "instrumented_marker_gap_ns": 15318284,
+        "observed_cuda_activity_union_ns": 0,
+        "gap_without_observed_owned_cuda_activity_ns": 15318284,
+        "kernel_graph_node_records": 0,
+        "kernel": {
+          "records": 0,
+          "clipped_interval_union_ns": 0,
+          "by_name": []
+        },
+        "copy": {
+          "records": 0,
+          "clipped_interval_union_ns": 0,
+          "by_name": []
+        },
+        "memset": {
+          "records": 0,
+          "clipped_interval_union_ns": 0,
+          "by_name": []
+        },
+        "runtime_api": {
+          "records": 4,
+          "clipped_interval_union_ns": 79285,
+          "by_name": [
+            {
+              "name": "cudaMemcpyAsync_v3020",
+              "count": 1,
+              "clipped_sum_duration_ns": 40491,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "cudaStreamSynchronize_v3020",
+              "count": 2,
+              "clipped_sum_duration_ns": 20288,
+              "boundary_crossing_records": 2
+            },
+            {
+              "name": "cudaMalloc_v3020",
+              "count": 1,
+              "clipped_sum_duration_ns": 18506,
+              "boundary_crossing_records": 0
+            }
+          ]
+        }
+      },
+      {
+        "id": "ordinary-stdio-profiled-retained-text",
+        "mode": "ordinary",
+        "phase": "embedding_and_rows",
+        "marker_ordinals": [
+          5,
+          6
+        ],
+        "nsight_interval_ns": [
+          155540368679,
+          155767945119
+        ],
+        "instrumented_marker_gap_ns": 227576440,
+        "observed_cuda_activity_union_ns": 57600106,
+        "gap_without_observed_owned_cuda_activity_ns": 169976334,
+        "kernel_graph_node_records": 0,
+        "kernel": {
+          "records": 0,
+          "clipped_interval_union_ns": 0,
+          "by_name": []
+        },
+        "copy": {
+          "records": 3969,
+          "clipped_interval_union_ns": 55242152,
+          "by_name": [
+            {
+              "name": "copy_kind_8",
+              "count": 3968,
+              "clipped_sum_duration_ns": 31050581,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "copy_kind_1",
+              "count": 1,
+              "clipped_sum_duration_ns": 24191571,
+              "boundary_crossing_records": 0
+            }
+          ]
+        },
+        "memset": {
+          "records": 3968,
+          "clipped_interval_union_ns": 2357954,
+          "by_name": [
+            {
+              "name": "memset",
+              "count": 3968,
+              "clipped_sum_duration_ns": 2357954,
+              "boundary_crossing_records": 0
+            }
+          ]
+        },
+        "runtime_api": {
+          "records": 43199,
+          "clipped_interval_union_ns": 157585481,
+          "by_name": [
+            {
+              "name": "cudaMemcpyAsync_v3020",
+              "count": 3970,
+              "clipped_sum_duration_ns": 76706630,
+              "boundary_crossing_records": 1
+            },
+            {
+              "name": "cudaMemsetAsync_v3020",
+              "count": 3968,
+              "clipped_sum_duration_ns": 38048643,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "cudaMalloc_v3020",
+              "count": 3970,
+              "clipped_sum_duration_ns": 20016450,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "cudaEventRecord_v3020",
+              "count": 7936,
+              "clipped_sum_duration_ns": 8712634,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "cudaEventQuery_v3020",
+              "count": 11449,
+              "clipped_sum_duration_ns": 6136164,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "cudaEventCreateWithFlags_v3020",
+              "count": 7936,
+              "clipped_sum_duration_ns": 4021043,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "cudaStreamWaitEvent_v3020",
+              "count": 3242,
+              "clipped_sum_duration_ns": 3164142,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "cudaStreamSynchronize_v3020",
+              "count": 2,
+              "clipped_sum_duration_ns": 424174,
+              "boundary_crossing_records": 1
+            },
+            {
+              "name": "cudaEventDestroy_v3020",
+              "count": 726,
+              "clipped_sum_duration_ns": 355601,
+              "boundary_crossing_records": 0
+            }
+          ]
+        }
+      },
+      {
+        "id": "ordinary-stdio-profiled-retained-text",
+        "mode": "ordinary",
+        "phase": "target_prefill",
+        "marker_ordinals": [
+          7,
+          8
+        ],
+        "nsight_interval_ns": [
+          155771412065,
+          160869918873
+        ],
+        "instrumented_marker_gap_ns": 5098506808,
+        "observed_cuda_activity_union_ns": 4471493237,
+        "gap_without_observed_owned_cuda_activity_ns": 627013571,
+        "kernel_graph_node_records": 232224,
+        "kernel": {
+          "records": 234490,
+          "clipped_interval_union_ns": 4456903334,
+          "by_name": [
+            {
+              "name": "cutlass3x_sm120_bstensorop_s16864gemm_block_scaled_ue4m3xe2m1_ue4m3xe2m1_f32_bf16_bf16_128x128x256_1x1x1_0_tnn_align32_o_vs16_bias_bf16_relu",
+              "count": 15873,
+              "clipped_sum_duration_ns": 1054070955,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "Garnet::<unnamed>::scores(Garnet::Qwen35AttentionCoreConfig, const float *, const __nv_bfloat16 *, const float *, const float *, const float *, float *)",
+              "count": 1984,
+              "clipped_sum_duration_ns": 966525308,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "Garnet::<unnamed>::context(Garnet::Qwen35AttentionCoreConfig, const __nv_bfloat16 *, const float *, const float *, const float *, const float *, const float *, float *)",
+              "count": 1984,
+              "clipped_sum_duration_ns": 526422004,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "Garnet::<unnamed>::registerState128Kernel(Garnet::Qwen35DeltaConfig, int, const float *, const float *, const float *, const float *, const float *, const float *, const float *, const float *, const float *, float *, float *)",
+              "count": 5952,
+              "clipped_sum_duration_ns": 483142945,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "void cutlass::Kernel2<cutlass_80_wmma_tensorop_bf16_s161616gemm_bf16_16x16_128x2_tn_align8>(T1::Params)",
+              "count": 11904,
+              "clipped_sum_duration_ns": 323175482,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "nvjet_sm120_qqtst_mma_64x64x64_12_32x32x64_tmaAB_alignCD4_bz_TNNN",
+              "count": 5952,
+              "clipped_sum_duration_ns": 227027079,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "nvjet_sm120_qqtst_mma_64x32x64_16_32x16x64_tmaAB_alignCD4_bz_TNNN",
+              "count": 7936,
+              "clipped_sum_duration_ns": 224919942,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "sm89_xmma_gemm_e4m3bf16_e4m3f32_f32_tn_n_tilesize32x64x64_stage5_warpsize2x2x1_tensor16x8x32_execute_kernel__5x_cublas",
+              "count": 7936,
+              "clipped_sum_duration_ns": 182300496,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "Garnet::<unnamed>::convolution(Garnet::Qwen35DeltaConfig, int, int, const float *, const float *, const float *, const float *, float *, float *)",
+              "count": 5952,
+              "clipped_sum_duration_ns": 77246744,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "Garnet::<unnamed>::QuantizeActivation(const __nv_bfloat16 *, unsigned char *, unsigned char *, float, int, int, int, unsigned long long)",
+              "count": 15873,
+              "clipped_sum_duration_ns": 70152290,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_ReshCastReshCastSeleAddMulMeanAddSqrtDivMulMul_0xa561ce508f6c305e302bc7248352bb45",
+              "count": 7936,
+              "clipped_sum_duration_ns": 27817888,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "Garnet::<unnamed>::copyLinearBF16KV(const float *, long long, float *, int, long long, Garnet::Qwen38BF16KVSpans)",
+              "count": 124,
+              "clipped_sum_duration_ns": 25141976,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_ReshCastSeleMulMeanAddSqrtDivMulMulCastReshMoveMoveMove_0x22e980ab627e61e47a1b095e984f966e",
+              "count": 5952,
+              "clipped_sum_duration_ns": 23821898,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "sm89_xmma_gemm_e4m3bf16_e4m3f32_f32_tn_n_tilesize64x64x64_stage6_warpsize2x2x1_tensor16x8x32_execute_kernel__5x_cublas",
+              "count": 3968,
+              "clipped_sum_duration_ns": 21964022,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "Garnet::<unnamed>::Quantize(const __nv_bfloat16 *, unsigned char *, float, unsigned long long)",
+              "count": 25792,
+              "clipped_sum_duration_ns": 21957117,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_ReshReshReshCastAddReshConcSlic_0x40d8b0dc3605cd2358377a1410cc7318",
+              "count": 5952,
+              "clipped_sum_duration_ns": 21747479,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_SlicSlicSlicSlicSlicSlicSlicSlicSlicSlicSlicSlicSlicSlicSlicSlicSlicSlicSlicSlicSlicSlicEtc_0x9c3615ffa2d4ffb77eac83e035e8904c",
+              "count": 124,
+              "clipped_sum_duration_ns": 21310561,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "Garnet::<unnamed>::normalize(Garnet::Qwen35AttentionCoreConfig, const float *, float *)",
+              "count": 1984,
+              "clipped_sum_duration_ns": 20498172,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_ReshCastSlicSiluSlicMul_0xa3541528f0051c52fd2271ea971bea0b",
+              "count": 7936,
+              "clipped_sum_duration_ns": 18725843,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_GathMulConcReshSinCosAddSqrtDivMulMulSlicSlicMulSlicSlicNegConcMulAddConcAddSqrtDivMulMulEtc_0x2f3ce452f912447fcdd28108f4294a0f",
+              "count": 1984,
+              "clipped_sum_duration_ns": 11668494,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_Cast_0x5ba882589bb84d5a649b9b0af7ce3eb3",
+              "count": 7936,
+              "clipped_sum_duration_ns": 10680233,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_Move_0x60f1a4ef80aed241192041c54e812fe4",
+              "count": 11904,
+              "clipped_sum_duration_ns": 10152716,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "sm89_xmma_gemm_e4m3bf16_e4m3f32_f32_tn_n_tilesize64x64x64_stage6_warpsize2x2x1_tensor16x8x32_execute_split_k_kernel__5x_cublas",
+              "count": 3968,
+              "clipped_sum_duration_ns": 9733753,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_ReshCast_0xe55201cd5d0e988fffcfd1299d79574d",
+              "count": 11904,
+              "clipped_sum_duration_ns": 7800041,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_ReshCastSeleMulMeanAddSqrtDivMulMulCastReshMoveMove_0x9520d4fdfc6e2cec1f0b6329d49f156c",
+              "count": 1984,
+              "clipped_sum_duration_ns": 6306119,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_ReshCast_0x9612e69c4dd91c5e310c479cd45bba60",
+              "count": 5952,
+              "clipped_sum_duration_ns": 5571751,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_Cast_0x99fed1cbd2d09e89c573267f5d85b9ee",
+              "count": 7936,
+              "clipped_sum_duration_ns": 5428645,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_Move_0x62f646d24f97fec42ecb88076c8068ea",
+              "count": 5952,
+              "clipped_sum_duration_ns": 5344264,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_Move_0xdab72d3ab0cf2d499046a47c1d25ba44",
+              "count": 5952,
+              "clipped_sum_duration_ns": 5202308,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_ReshCast_0x21878d0b3360640b1ffc070a114f2080",
+              "count": 5952,
+              "clipped_sum_duration_ns": 5160874,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_Cast_0x11386ef32551698b5814c2bb957868c1",
+              "count": 7936,
+              "clipped_sum_duration_ns": 5010822,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "Garnet::<unnamed>::scatterBF16KV(const float *, float *, int, int, long long, Garnet::Qwen38BF16KVSpans)",
+              "count": 124,
+              "clipped_sum_duration_ns": 3738469,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_ReshCastSlicSlicMulMean_0x7ba198088d7ed091dc17f146751e51f9",
+              "count": 1984,
+              "clipped_sum_duration_ns": 2973057,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_ReshReshReshCastAddReshConcSlic_0xd0e64076ca0e04b80bb5b86105247c4a",
+              "count": 1860,
+              "clipped_sum_duration_ns": 2839588,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_ReshCastMulMean_0xca927addd9364e13ed42c60711f0e671",
+              "count": 1984,
+              "clipped_sum_duration_ns": 1964323,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_ReshCast_0x27be7ebb0998f9e40e3d3a17fc5830c0",
+              "count": 1984,
+              "clipped_sum_duration_ns": 1317377,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0xe189b866c6dfe5b02a4f9083c62e87d1",
+              "count": 124,
+              "clipped_sum_duration_ns": 405055,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0xa574f805877b28e85a5d6a2863c92090",
+              "count": 124,
+              "clipped_sum_duration_ns": 397277,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0xd1b29ba6c8961ac4e7fe9ee3de6196c8",
+              "count": 124,
+              "clipped_sum_duration_ns": 394782,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0x9db8e932459bc465a2f0460f5064a047",
+              "count": 124,
+              "clipped_sum_duration_ns": 394110,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0x00ceb07d3e0fdb624b2b18e693e2b80b",
+              "count": 124,
+              "clipped_sum_duration_ns": 394080,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0x294fde4ffb42da1d9e4ee6944e26dbca",
+              "count": 124,
+              "clipped_sum_duration_ns": 393566,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0xcd299a78eb6bd2f3e10616da36ebd4b4",
+              "count": 124,
+              "clipped_sum_duration_ns": 393562,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0xbde49e1d8bf86d1aec111db57f078cc3",
+              "count": 124,
+              "clipped_sum_duration_ns": 393559,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0xd0600a42fd832e66e6379880dcb6803c",
+              "count": 124,
+              "clipped_sum_duration_ns": 393021,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0xdbe86221a1268961edfb085f9bb1fc1a",
+              "count": 124,
+              "clipped_sum_duration_ns": 392991,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0xb40cd9c0c66cbe2505ce48ceb6bf24ca",
+              "count": 124,
+              "clipped_sum_duration_ns": 392543,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0x5a6e9e259b1bd8bcff2ec31797c3b199",
+              "count": 124,
+              "clipped_sum_duration_ns": 392539,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0x31ae6796d71610ff0a86a0b8484df890",
+              "count": 124,
+              "clipped_sum_duration_ns": 392444,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0x64fee037f5fa739d1e1ecd8947833c95",
+              "count": 124,
+              "clipped_sum_duration_ns": 391511,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0x64d4df65e4314faf5a11dabdeb746715",
+              "count": 124,
+              "clipped_sum_duration_ns": 391423,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0x3c8cc95f1de088557c98c0f2b8f1ed10",
+              "count": 124,
+              "clipped_sum_duration_ns": 390814,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0x7d01c689b0313813041542a46c6edb07",
+              "count": 124,
+              "clipped_sum_duration_ns": 390385,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0x9a5b90e5058cea2ccff573694b44afaf",
+              "count": 124,
+              "clipped_sum_duration_ns": 390078,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0xd2af798bd8576543e54353f5f7083c24",
+              "count": 124,
+              "clipped_sum_duration_ns": 388762,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0x6dfe101b94db0c3f786b7e07f01ec961",
+              "count": 124,
+              "clipped_sum_duration_ns": 388000,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0x378b5163fe6c479065ced7f54bc008b6",
+              "count": 124,
+              "clipped_sum_duration_ns": 387743,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0xa9c1e5a1466968e952243a0458de898e",
+              "count": 124,
+              "clipped_sum_duration_ns": 387578,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0xf8fe125ea1b17868a012501b42fd7c6c",
+              "count": 124,
+              "clipped_sum_duration_ns": 386720,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0x3553ebd67d80706c6143626c5df90486",
+              "count": 124,
+              "clipped_sum_duration_ns": 383872,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0xb688fea06071f51b33a96360e46755b0",
+              "count": 124,
+              "clipped_sum_duration_ns": 383393,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0x12c66198adff338ab0fa945ed4645e76",
+              "count": 124,
+              "clipped_sum_duration_ns": 376864,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0x4192e0731dab1b3b2b51a1d904ae4b95",
+              "count": 124,
+              "clipped_sum_duration_ns": 371583,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0x2ea1baddb28c235cf43c0e443e70d48f",
+              "count": 124,
+              "clipped_sum_duration_ns": 368663,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0x86927e22df866a965fdaea959a8b75ca",
+              "count": 124,
+              "clipped_sum_duration_ns": 364597,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0xec7f67a07abee026d2daa55df59a9e17",
+              "count": 124,
+              "clipped_sum_duration_ns": 363131,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0xed862bf9f322b2a667875d20192ca1b6",
+              "count": 124,
+              "clipped_sum_duration_ns": 360287,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0xb51ad4940a5ae8a5717d20fc45c737c3",
+              "count": 124,
+              "clipped_sum_duration_ns": 356840,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0x412df16d3bd46be1ab4b548741557e10",
+              "count": 124,
+              "clipped_sum_duration_ns": 356609,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0x0070272da9a20b7b3a8f79a84199519d",
+              "count": 124,
+              "clipped_sum_duration_ns": 347675,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0x51acaa3f5001886a84239e534a43a980",
+              "count": 124,
+              "clipped_sum_duration_ns": 346780,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0x7bd68abfb956adf266c2ef06fc48ad95",
+              "count": 124,
+              "clipped_sum_duration_ns": 346689,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0x60b2367da9d35560b785d1d5f073549a",
+              "count": 124,
+              "clipped_sum_duration_ns": 346680,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0x3a1bab8303df08899deb000d033b5fb4",
+              "count": 124,
+              "clipped_sum_duration_ns": 346623,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0x7c0627f21e9e385e9a9247813887dd42",
+              "count": 124,
+              "clipped_sum_duration_ns": 346430,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0xc89acef5f0e825624e95e9364e2f0d8e",
+              "count": 124,
+              "clipped_sum_duration_ns": 346396,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0x286f6f42ae246ddf06e6242dbd7440b6",
+              "count": 124,
+              "clipped_sum_duration_ns": 345496,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0x7ba6fca991b308d1895cf751cc9a973f",
+              "count": 124,
+              "clipped_sum_duration_ns": 345120,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0x02bfbeb55be6e9d4c56e9729df388115",
+              "count": 124,
+              "clipped_sum_duration_ns": 344798,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0x25b2bbbc3e9e26d57806103d9b58cd0f",
+              "count": 124,
+              "clipped_sum_duration_ns": 344631,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0xdcdb8128e200be237723b9115a826a79",
+              "count": 124,
+              "clipped_sum_duration_ns": 344629,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0x8ff42f969acc1714eaddc496ee4ad5a5",
+              "count": 124,
+              "clipped_sum_duration_ns": 344289,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0x8312ce0c5958d52985107a75f1641e55",
+              "count": 124,
+              "clipped_sum_duration_ns": 344252,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0x699fd7ea101967862e0684f7d9198465",
+              "count": 124,
+              "clipped_sum_duration_ns": 343413,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "Garnet::<unnamed>::CopyLast(const float *, const float *, float *, int, int, int)",
+              "count": 124,
+              "clipped_sum_duration_ns": 149440,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_MoveMulMeanAddSqrtDivMulMul_0x470ac9b3d3cae4f59388eab8426d5252",
+              "count": 1,
+              "clipped_sum_duration_ns": 3584,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "void Garnet::ParallelBatchTop1Candidate::chunks<__nv_bfloat16>(const T1 *, unsigned long long *, int)",
+              "count": 1,
+              "clipped_sum_duration_ns": 2144,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "void Garnet::ParallelBatchTop1Candidate::finish<__nv_bfloat16>(const T1 *, long long *, float *, int, int)",
+              "count": 1,
+              "clipped_sum_duration_ns": 736,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "void astypeKernel<float, __nv_bfloat16>(const T1 *, T2 *, int)",
+              "count": 1,
+              "clipped_sum_duration_ns": 704,
+              "boundary_crossing_records": 0
+            }
+          ]
+        },
+        "copy": {
+          "records": 12278,
+          "clipped_interval_union_ns": 8770217,
+          "by_name": [
+            {
+              "name": "copy_kind_8",
+              "count": 11904,
+              "clipped_sum_duration_ns": 8661993,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "copy_kind_1",
+              "count": 372,
+              "clipped_sum_duration_ns": 106272,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "copy_kind_2",
+              "count": 2,
+              "clipped_sum_duration_ns": 1952,
+              "boundary_crossing_records": 0
+            }
+          ]
+        },
+        "memset": {
+          "records": 8068,
+          "clipped_interval_union_ns": 5819686,
+          "by_name": [
+            {
+              "name": "memset",
+              "count": 8068,
+              "clipped_sum_duration_ns": 5819686,
+              "boundary_crossing_records": 0
+            }
+          ]
+        },
+        "runtime_api": {
+          "records": 264414,
+          "clipped_interval_union_ns": 4568974938,
+          "by_name": [
+            {
+              "name": "cudaStreamSynchronize_v3020",
+              "count": 375,
+              "clipped_sum_duration_ns": 3915159238,
+              "boundary_crossing_records": 2
+            },
+            {
+              "name": "cudaGraphLaunch_v10000",
+              "count": 123,
+              "clipped_sum_duration_ns": 270097392,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "cuLibraryLoadData",
+              "count": 12,
+              "clipped_sum_duration_ns": 70250162,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "cudaEventQuery_v3020",
+              "count": 156426,
+              "clipped_sum_duration_ns": 68768192,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "cudaStreamWaitEvent_v3020",
+              "count": 77613,
+              "clipped_sum_duration_ns": 57077835,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "cudaMemcpyAsync_v3020",
+              "count": 501,
+              "clipped_sum_duration_ns": 51221743,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "cudaMemcpy2DAsync_v3020",
+              "count": 4092,
+              "clipped_sum_duration_ns": 47947542,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "cudaGraphInstantiate_v12000",
+              "count": 1,
+              "clipped_sum_duration_ns": 33561109,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "cuLaunchKernelEx",
+              "count": 2240,
+              "clipped_sum_duration_ns": 13910257,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "cudaLaunchKernel_v7000",
+              "count": 1336,
+              "clipped_sum_duration_ns": 10650825,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "cudaEventRecord_v3020",
+              "count": 5095,
+              "clipped_sum_duration_ns": 8221937,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "cuModuleLoadFatBinary",
+              "count": 1,
+              "clipped_sum_duration_ns": 5021361,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "cudaEventDestroy_v3020",
+              "count": 8208,
+              "clipped_sum_duration_ns": 3742154,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "cudaEventCreateWithFlags_v3020",
+              "count": 4970,
+              "clipped_sum_duration_ns": 3728202,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "cudaMemsetAsync_v3020",
+              "count": 260,
+              "clipped_sum_duration_ns": 3629972,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "cuLaunchKernel",
+              "count": 322,
+              "clipped_sum_duration_ns": 1943373,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "cudaLaunchKernelExC_v11060",
+              "count": 256,
+              "clipped_sum_duration_ns": 1608996,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "cuKernelGetFunction",
+              "count": 192,
+              "clipped_sum_duration_ns": 802154,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "cuKernelGetName",
+              "count": 1336,
+              "clipped_sum_duration_ns": 318569,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "cudaStreamIsCapturing_v10000",
+              "count": 769,
+              "clipped_sum_duration_ns": 316093,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "cudaMalloc_v3020",
+              "count": 8,
+              "clipped_sum_duration_ns": 277060,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "cuKernelSetAttribute",
+              "count": 224,
+              "clipped_sum_duration_ns": 235035,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "cudaStreamEndCapture_v10000",
+              "count": 1,
+              "clipped_sum_duration_ns": 222924,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "cuLibraryGetKernel",
+              "count": 27,
+              "clipped_sum_duration_ns": 185395,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "cudaFree_v3020",
+              "count": 2,
+              "clipped_sum_duration_ns": 36809,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "cudaMallocAsync_v11020",
+              "count": 1,
+              "clipped_sum_duration_ns": 15194,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "cudaOccupancyMaxActiveClusters_v11070",
+              "count": 17,
+              "clipped_sum_duration_ns": 9273,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "cudaStreamBeginCapture_v10000",
+              "count": 1,
+              "clipped_sum_duration_ns": 7908,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "cudaEventSynchronize_v3020",
+              "count": 4,
+              "clipped_sum_duration_ns": 4892,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "cudaOccupancyAvailableDynamicSMemPerBlock_v10200",
+              "count": 1,
+              "clipped_sum_duration_ns": 3342,
+              "boundary_crossing_records": 0
+            }
+          ]
+        }
+      },
+      {
+        "id": "ordinary-stdio-profiled-retained-text",
+        "mode": "ordinary",
+        "phase": "target_generate",
+        "marker_ordinals": [
+          9,
+          10
+        ],
+        "nsight_interval_ns": [
+          160873643584,
+          164345421167
+        ],
+        "instrumented_marker_gap_ns": 3471777583,
+        "observed_cuda_activity_union_ns": 2863552330,
+        "gap_without_observed_owned_cuda_activity_ns": 608225253,
+        "kernel_graph_node_records": 233983,
+        "kernel": {
+          "records": 236855,
+          "clipped_interval_union_ns": 2843685758,
+          "by_name": [
+            {
+              "name": "cutlass3x_sm120_bstensorop_s16864gemm_block_scaled_ue4m3xe2m1_ue4m3xe2m1_f32_bf16_bf16_128x128x256_1x1x1_0_tnn_align32_o_vs16_bias_bf16_relu",
+              "count": 16383,
+              "clipped_sum_duration_ns": 1208725643,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "sm89_xmma_gemm_e4m3bf16_e4m3f32_f32_tn_n_tilesize32x64x64_stage5_warpsize2x2x1_tensor16x8x32_execute_kernel__5x_cublas",
+              "count": 24384,
+              "clipped_sum_duration_ns": 569280279,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "void cutlass::Kernel2<cutlass_80_wmma_tensorop_bf16_s161616gemm_bf16_16x16_128x2_tn_align8>(T1::Params)",
+              "count": 12192,
+              "clipped_sum_duration_ns": 328904645,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "Garnet::<unnamed>::context(Garnet::Qwen35AttentionCoreConfig, const __nv_bfloat16 *, const float *, const float *, const float *, const float *, const float *, float *)",
+              "count": 2032,
+              "clipped_sum_duration_ns": 199634378,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "sm89_xmma_gemm_e4m3bf16_e4m3f32_f32_tn_n_tilesize64x128x64_stage4_warpsize2x2x1_tensor16x8x32_execute_kernel__5x_cublas",
+              "count": 2032,
+              "clipped_sum_duration_ns": 99161317,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "Garnet::<unnamed>::scores(Garnet::Qwen35AttentionCoreConfig, const float *, const __nv_bfloat16 *, const float *, const float *, const float *, float *)",
+              "count": 2032,
+              "clipped_sum_duration_ns": 79030962,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "Garnet::<unnamed>::QuantizeActivation(const __nv_bfloat16 *, unsigned char *, unsigned char *, float, int, int, int, unsigned long long)",
+              "count": 16383,
+              "clipped_sum_duration_ns": 63328291,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "Garnet::<unnamed>::registerState128Kernel(Garnet::Qwen35DeltaConfig, int, const float *, const float *, const float *, const float *, const float *, const float *, const float *, const float *, const float *, float *, float *)",
+              "count": 6096,
+              "clipped_sum_duration_ns": 32138014,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_ReshCastReshCastSeleAddMulMeanAddSqrtDivMulMul_0xd6e87c1d9529adc83cded642e4ea6ceb",
+              "count": 8128,
+              "clipped_sum_duration_ns": 28986841,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_ReshCastSeleMulMeanAddSqrtDivMulMulCastReshMoveMoveMove_0x03c14527b93bd8f31d28265cf37de748",
+              "count": 6096,
+              "clipped_sum_duration_ns": 24472247,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "Garnet::<unnamed>::Quantize(const __nv_bfloat16 *, unsigned char *, float, unsigned long long)",
+              "count": 26416,
+              "clipped_sum_duration_ns": 24338134,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_MoveMoveMoveMoveMoveMoveMoveMoveMoveMoveMoveMoveMoveMoveMoveMoveMoveMoveMoveMoveMoveMoveEtc_0xc3298a2f4f4622121d6143b94c29ccca",
+              "count": 127,
+              "clipped_sum_duration_ns": 22832079,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "Garnet::<unnamed>::copyLinearBF16KV(const float *, long long, float *, int, long long, Garnet::Qwen38BF16KVSpans)",
+              "count": 127,
+              "clipped_sum_duration_ns": 21378284,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_ReshReshReshReshReshReshReshCastAddReshConcSlic_0xfe17717240d84877f279135822b57ca2",
+              "count": 6096,
+              "clipped_sum_duration_ns": 19782637,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_GathMulConcReshSinCosAddSqrtDivMulMulSlicSlicMulSlicSlicNegConcMulAddConcAddSqrtDivMulMulEtc_0x4e66ca26d600e64fd3c4f7816ce50791",
+              "count": 2032,
+              "clipped_sum_duration_ns": 11771040,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "Garnet::<unnamed>::convolution(Garnet::Qwen35DeltaConfig, int, int, const float *, const float *, const float *, const float *, float *, float *)",
+              "count": 6096,
+              "clipped_sum_duration_ns": 11160568,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_Move_0x60f1a4ef80aed241192041c54e812fe4",
+              "count": 12192,
+              "clipped_sum_duration_ns": 10274358,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_ReshCastSlicSiluSlicMul_0x02f6476cd7766bf68134a397657a3383",
+              "count": 8128,
+              "clipped_sum_duration_ns": 9893565,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_ReshCast_0x7af8b5e70fded89312dcab19083839e7",
+              "count": 12192,
+              "clipped_sum_duration_ns": 7852818,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_ReshCastSeleMulMeanAddSqrtDivMulMulCastReshMoveMove_0x368b6ba304a3ba5782c190f5618e4a8e",
+              "count": 2032,
+              "clipped_sum_duration_ns": 6462951,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "Garnet::<unnamed>::normalize(Garnet::Qwen35AttentionCoreConfig, const float *, float *)",
+              "count": 2032,
+              "clipped_sum_duration_ns": 6080340,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_Move_0x62f646d24f97fec42ecb88076c8068ea",
+              "count": 6096,
+              "clipped_sum_duration_ns": 5393388,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_Move_0xdab72d3ab0cf2d499046a47c1d25ba44",
+              "count": 6096,
+              "clipped_sum_duration_ns": 5392491,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_Cast_0xe6bcaf4cbf0131084a02f9045ff15ad5",
+              "count": 8128,
+              "clipped_sum_duration_ns": 4381125,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_Cast_0x51874e8cfc4b7db08438897d75e7de79",
+              "count": 8128,
+              "clipped_sum_duration_ns": 4289989,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_Cast_0xe91a866ec3696f1f7f4d032ef6b6c8b5",
+              "count": 8128,
+              "clipped_sum_duration_ns": 4282412,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_ReshCast_0x771e96dbb37e1d3630e8e67e2ac15361",
+              "count": 6096,
+              "clipped_sum_duration_ns": 4188105,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_ReshCast_0x236569f837b6448315ac2354c61a8fc3",
+              "count": 6096,
+              "clipped_sum_duration_ns": 3201158,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_ReshCastSlicSlicMulMean_0x9c75b0e40f541886160c235eb600c677",
+              "count": 2032,
+              "clipped_sum_duration_ns": 2832356,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_ReshReshReshCastAddReshConcSlic_0x6c4daad0e18c0b905f631d2a9030c2f0",
+              "count": 1905,
+              "clipped_sum_duration_ns": 1872258,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_ReshCast_0xa017869faeff926bae2fe34f5da4ec29",
+              "count": 2032,
+              "clipped_sum_duration_ns": 1342722,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_ReshCastMulMean_0x31643270cf7e09a94baa7596226c1ade",
+              "count": 2032,
+              "clipped_sum_duration_ns": 1233505,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "Garnet::<unnamed>::scatterBF16KV(const float *, float *, int, int, long long, Garnet::Qwen38BF16KVSpans)",
+              "count": 127,
+              "clipped_sum_duration_ns": 667616,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_MoveMulMeanAddSqrtDivMulMul_0x470ac9b3d3cae4f59388eab8426d5252",
+              "count": 127,
+              "clipped_sum_duration_ns": 431427,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0x378b5163fe6c479065ced7f54bc008b6",
+              "count": 127,
+              "clipped_sum_duration_ns": 428288,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0xa9c1e5a1466968e952243a0458de898e",
+              "count": 127,
+              "clipped_sum_duration_ns": 424474,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0xb40cd9c0c66cbe2505ce48ceb6bf24ca",
+              "count": 127,
+              "clipped_sum_duration_ns": 419585,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0x9a5b90e5058cea2ccff573694b44afaf",
+              "count": 127,
+              "clipped_sum_duration_ns": 409344,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0x294fde4ffb42da1d9e4ee6944e26dbca",
+              "count": 127,
+              "clipped_sum_duration_ns": 407135,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0x9db8e932459bc465a2f0460f5064a047",
+              "count": 127,
+              "clipped_sum_duration_ns": 406592,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0x286f6f42ae246ddf06e6242dbd7440b6",
+              "count": 127,
+              "clipped_sum_duration_ns": 402112,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0x6dfe101b94db0c3f786b7e07f01ec961",
+              "count": 127,
+              "clipped_sum_duration_ns": 400382,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0xe189b866c6dfe5b02a4f9083c62e87d1",
+              "count": 127,
+              "clipped_sum_duration_ns": 399421,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0x00ceb07d3e0fdb624b2b18e693e2b80b",
+              "count": 127,
+              "clipped_sum_duration_ns": 399232,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0xed862bf9f322b2a667875d20192ca1b6",
+              "count": 127,
+              "clipped_sum_duration_ns": 397088,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0xbde49e1d8bf86d1aec111db57f078cc3",
+              "count": 127,
+              "clipped_sum_duration_ns": 394742,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0x86927e22df866a965fdaea959a8b75ca",
+              "count": 127,
+              "clipped_sum_duration_ns": 394395,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0x51acaa3f5001886a84239e534a43a980",
+              "count": 127,
+              "clipped_sum_duration_ns": 392577,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0x02bfbeb55be6e9d4c56e9729df388115",
+              "count": 127,
+              "clipped_sum_duration_ns": 392414,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0xcd299a78eb6bd2f3e10616da36ebd4b4",
+              "count": 127,
+              "clipped_sum_duration_ns": 387233,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0x4192e0731dab1b3b2b51a1d904ae4b95",
+              "count": 127,
+              "clipped_sum_duration_ns": 386613,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0xd0600a42fd832e66e6379880dcb6803c",
+              "count": 127,
+              "clipped_sum_duration_ns": 385345,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0x3553ebd67d80706c6143626c5df90486",
+              "count": 127,
+              "clipped_sum_duration_ns": 380865,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0xd1b29ba6c8961ac4e7fe9ee3de6196c8",
+              "count": 127,
+              "clipped_sum_duration_ns": 378909,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0x7d01c689b0313813041542a46c6edb07",
+              "count": 127,
+              "clipped_sum_duration_ns": 376731,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0x7c0627f21e9e385e9a9247813887dd42",
+              "count": 127,
+              "clipped_sum_duration_ns": 375297,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0x3c8cc95f1de088557c98c0f2b8f1ed10",
+              "count": 127,
+              "clipped_sum_duration_ns": 372410,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0xc89acef5f0e825624e95e9364e2f0d8e",
+              "count": 127,
+              "clipped_sum_duration_ns": 371611,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0x699fd7ea101967862e0684f7d9198465",
+              "count": 127,
+              "clipped_sum_duration_ns": 367862,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0xf8fe125ea1b17868a012501b42fd7c6c",
+              "count": 127,
+              "clipped_sum_duration_ns": 367198,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0x8312ce0c5958d52985107a75f1641e55",
+              "count": 127,
+              "clipped_sum_duration_ns": 366782,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0x25b2bbbc3e9e26d57806103d9b58cd0f",
+              "count": 127,
+              "clipped_sum_duration_ns": 361502,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0xd2af798bd8576543e54353f5f7083c24",
+              "count": 127,
+              "clipped_sum_duration_ns": 360883,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0x7ba6fca991b308d1895cf751cc9a973f",
+              "count": 127,
+              "clipped_sum_duration_ns": 359454,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0x8ff42f969acc1714eaddc496ee4ad5a5",
+              "count": 127,
+              "clipped_sum_duration_ns": 359236,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0x412df16d3bd46be1ab4b548741557e10",
+              "count": 127,
+              "clipped_sum_duration_ns": 359070,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0x5a6e9e259b1bd8bcff2ec31797c3b199",
+              "count": 127,
+              "clipped_sum_duration_ns": 359056,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0xa574f805877b28e85a5d6a2863c92090",
+              "count": 127,
+              "clipped_sum_duration_ns": 357873,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0x31ae6796d71610ff0a86a0b8484df890",
+              "count": 127,
+              "clipped_sum_duration_ns": 357691,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0x60b2367da9d35560b785d1d5f073549a",
+              "count": 127,
+              "clipped_sum_duration_ns": 357109,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0x3a1bab8303df08899deb000d033b5fb4",
+              "count": 127,
+              "clipped_sum_duration_ns": 356268,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0xdcdb8128e200be237723b9115a826a79",
+              "count": 127,
+              "clipped_sum_duration_ns": 355600,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0x0070272da9a20b7b3a8f79a84199519d",
+              "count": 127,
+              "clipped_sum_duration_ns": 355287,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0xb688fea06071f51b33a96360e46755b0",
+              "count": 127,
+              "clipped_sum_duration_ns": 354352,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0x12c66198adff338ab0fa945ed4645e76",
+              "count": 127,
+              "clipped_sum_duration_ns": 354304,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0xb51ad4940a5ae8a5717d20fc45c737c3",
+              "count": 127,
+              "clipped_sum_duration_ns": 353052,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0x64fee037f5fa739d1e1ecd8947833c95",
+              "count": 127,
+              "clipped_sum_duration_ns": 352408,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0xec7f67a07abee026d2daa55df59a9e17",
+              "count": 127,
+              "clipped_sum_duration_ns": 351550,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0x2ea1baddb28c235cf43c0e443e70d48f",
+              "count": 127,
+              "clipped_sum_duration_ns": 351281,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0x64d4df65e4314faf5a11dabdeb746715",
+              "count": 127,
+              "clipped_sum_duration_ns": 350503,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0x7bd68abfb956adf266c2ef06fc48ad95",
+              "count": 127,
+              "clipped_sum_duration_ns": 350271,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "__myl_MoveSlicSlic_0xdbe86221a1268961edfb085f9bb1fc1a",
+              "count": 127,
+              "clipped_sum_duration_ns": 348187,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "void Garnet::ParallelBatchTop1Candidate::chunks<__nv_bfloat16>(const T1 *, unsigned long long *, int)",
+              "count": 127,
+              "clipped_sum_duration_ns": 276193,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "Garnet::<unnamed>::CopyLast(const float *, const float *, float *, int, int, int)",
+              "count": 127,
+              "clipped_sum_duration_ns": 165440,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "void Garnet::ParallelBatchTop1Candidate::finish<__nv_bfloat16>(const T1 *, long long *, float *, int, int)",
+              "count": 127,
+              "clipped_sum_duration_ns": 100960,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "void astypeKernel<float, __nv_bfloat16>(const T1 *, T2 *, int)",
+              "count": 127,
+              "clipped_sum_duration_ns": 97248,
+              "boundary_crossing_records": 0
+            }
+          ]
+        },
+        "copy": {
+          "records": 9017,
+          "clipped_interval_union_ns": 4746255,
+          "by_name": [
+            {
+              "name": "copy_kind_8",
+              "count": 8255,
+              "clipped_sum_duration_ns": 4377132,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "copy_kind_1",
+              "count": 508,
+              "clipped_sum_duration_ns": 209315,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "copy_kind_2",
+              "count": 254,
+              "clipped_sum_duration_ns": 159808,
+              "boundary_crossing_records": 0
+            }
+          ]
+        },
+        "memset": {
+          "records": 26924,
+          "clipped_interval_union_ns": 15120317,
+          "by_name": [
+            {
+              "name": "memset",
+              "count": 26924,
+              "clipped_sum_duration_ns": 15120317,
+              "boundary_crossing_records": 0
+            }
+          ]
+        },
+        "runtime_api": {
+          "records": 84798,
+          "clipped_interval_union_ns": 3071653056,
+          "by_name": [
+            {
+              "name": "cudaMemcpyAsync_v3020",
+              "count": 889,
+              "clipped_sum_duration_ns": 2493563291,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "cudaGraphLaunch_v10000",
+              "count": 253,
+              "clipped_sum_duration_ns": 429312683,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "cudaGraphInstantiate_v12000",
+              "count": 2,
+              "clipped_sum_duration_ns": 32905321,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "cudaEventQuery_v3020",
+              "count": 66041,
+              "clipped_sum_duration_ns": 27955641,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "cudaFree_v3020",
+              "count": 381,
+              "clipped_sum_duration_ns": 18699365,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "cudaLaunchKernel_v7000",
+              "count": 1849,
+              "clipped_sum_duration_ns": 17204598,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "cuLaunchKernelEx",
+              "count": 2142,
+              "clipped_sum_duration_ns": 14252108,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "cudaMemsetAsync_v3020",
+              "count": 924,
+              "clipped_sum_duration_ns": 8236394,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "cudaMemcpy2DAsync_v3020",
+              "count": 254,
+              "clipped_sum_duration_ns": 6253286,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "cudaMalloc_v3020",
+              "count": 382,
+              "clipped_sum_duration_ns": 4694180,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "cudaStreamSynchronize_v3020",
+              "count": 637,
+              "clipped_sum_duration_ns": 4380060,
+              "boundary_crossing_records": 2
+            },
+            {
+              "name": "cudaEventRecord_v3020",
+              "count": 2032,
+              "clipped_sum_duration_ns": 3910734,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "cudaLaunchKernelExC_v11060",
+              "count": 416,
+              "clipped_sum_duration_ns": 2391679,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "cuLaunchKernel",
+              "count": 322,
+              "clipped_sum_duration_ns": 1835722,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "cudaEventCreateWithFlags_v3020",
+              "count": 1778,
+              "clipped_sum_duration_ns": 1651802,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "cudaStreamWaitEvent_v3020",
+              "count": 1263,
+              "clipped_sum_duration_ns": 1478381,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "cudaEventDestroy_v3020",
+              "count": 1784,
+              "clipped_sum_duration_ns": 1114134,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "cudaEventSynchronize_v3020",
+              "count": 635,
+              "clipped_sum_duration_ns": 814336,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "cuKernelGetName",
+              "count": 1849,
+              "clipped_sum_duration_ns": 465812,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "cudaStreamIsCapturing_v10000",
+              "count": 769,
+              "clipped_sum_duration_ns": 312090,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "cudaStreamEndCapture_v10000",
+              "count": 2,
+              "clipped_sum_duration_ns": 164190,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "cuKernelGetFunction",
+              "count": 192,
+              "clipped_sum_duration_ns": 52091,
+              "boundary_crossing_records": 0
+            },
+            {
+              "name": "cudaStreamBeginCapture_v10000",
+              "count": 2,
+              "clipped_sum_duration_ns": 5158,
+              "boundary_crossing_records": 0
+            }
+          ]
+        }
+      }
+    ],
+    "performance_admitted": false,
+    "two_times_target_achieved": false,
+    "scope": "Actual Nsight HtoD markers bind request/phase windows without clock conversion. GPU activity and API durations are instrumented and may overlap. Crossing records are clipped and counted. The inactive gap is not attributed to CPU, GIL, scheduling, thermals or capture. No HTTP timing, uninstrumented speedup or broad model-quality claim."
+  },
+  "construction_correctness_sampled_memory": {
+    "sampled_peak_adapter_used_bytes": 21700751360,
+    "samples": 5692,
+    "requested_interval_seconds": 0.02,
+    "observed_sample_gap_median_seconds": 0.03156380000291392,
+    "observed_sample_gap_max_seconds": 2.2774405000091065,
+    "scope": "NVML adapter-wide used memory, including background allocations; sampled maximum, not instantaneous or process-attributed peak"
+  },
+  "diagnostic_logs": {
+    "embedded-cpu/trace-fixture/synthetic-trace.bootstrap.jsonl": [
+      {
+        "stage": "trace_constructor_entered",
+        "mode": "ordinary"
+      },
+      {
+        "stage": "trace_constructor_completed",
+        "exception": null
+      },
+      {
+        "stage": "decoder_constructed_and_io_bound",
+        "exception": null
+      },
+      {
+        "stage": "native_ready_observed_before_pipe_emit",
+        "exception": null
+      },
+      {
+        "stage": "native_worker_finally_entered",
+        "exception": {
+          "type": "RuntimeError",
+          "repr": "RuntimeError('explicit embedded CPU fixture error')",
+          "traceback": "Traceback (most recent call last):\n  File \"D:\\CantorAI\\5090-study-20261023\\Garnet\\test2026\\cuda\\qwen38_5090\\probe_native_cuda_trace_embedded_cpu.py\", line 22, in <module>\n        with trace.stage('reset'):\n        ^^^^^^^^^^^^^^^^^^^^^^^^^^\n            raise RuntimeError('explicit embedded CPU fixture error')\n            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n    except RuntimeError as error:\n    ^^^^\n  File \"D:\\CantorAI\\5090-study-20261023\\Garnet\\test2026\\cuda\\qwen38_5090\\probe_native_cuda_trace_embedded_cpu.py\", line 23, in <module>\n    raise RuntimeError('explicit embedded CPU fixture error')\nRuntimeError: explicit embedded CPU fixture error\n"
+        }
+      },
+      {
+        "stage": "trace_closed",
+        "exception": null
+      }
+    ],
+    "native/control/host-stages.bootstrap.jsonl": [
+      {
+        "stage": "trace_constructor_entered",
+        "mode": "ordinary"
+      },
+      {
+        "stage": "trace_constructor_completed",
+        "exception": null
+      },
+      {
+        "stage": "decoder_constructed_and_io_bound",
+        "exception": null
+      },
+      {
+        "stage": "native_ready_observed_before_pipe_emit",
+        "exception": null
+      },
+      {
+        "stage": "native_worker_finally_entered",
+        "exception": null
+      },
+      {
+        "stage": "trace_closed",
+        "exception": null
+      },
+      {
+        "stage": "native_model_close_calls_returned",
+        "exception": null
+      }
+    ],
+    "native/control/host-stages.entry.jsonl": [
+      {
+        "ordinal": 0,
+        "stage": "python_entry_started",
+        "mode": "ordinary",
+        "pid": 41412
+      },
+      {
+        "ordinal": 1,
+        "stage": "instrumented_source_retained",
+        "mode": "ordinary",
+        "monotonic_seconds": 187452.5069303,
+        "original_sha256": "ea60d4a1a0af449d0bfa3995ee626a5464d3d195a7d1b0774b871f4a9cc4f0b3",
+        "instrumented_sha256": "6575a69f05f091a418252b13c216401037b8211f63a54489c0db40dd2a528748"
+      },
+      {
+        "ordinal": 2,
+        "stage": "before_garnet_import",
+        "mode": "ordinary",
+        "monotonic_seconds": 187452.568935
+      },
+      {
+        "ordinal": 3,
+        "stage": "garnet_import_returned",
+        "mode": "ordinary",
+        "monotonic_seconds": 187452.6954864
+      },
+      {
+        "ordinal": 4,
+        "stage": "before_model_import",
+        "mode": "ordinary",
+        "monotonic_seconds": 187453.0119522
+      },
+      {
+        "ordinal": 5,
+        "stage": "model_import_returned",
+        "mode": "ordinary",
+        "monotonic_seconds": 187453.1169613
+      },
+      {
+        "ordinal": 6,
+        "stage": "worker_execution_returned",
+        "mode": "ordinary",
+        "monotonic_seconds": 187617.1797593
+      }
+    ]
+  },
+  "profiled": true,
+  "performance_admitted": false,
+  "two_times_target_achieved": false,
+  "scope": "One exclusive ordinary B1 actual3968+128 retained text control under pinned Nsight, after actual ready-stdout os.write failure and CPU-only stdio diagnosis. Same original request parser/Unicode normalization/ASCII JSON/partial-write semantics; only this explicit diagnostic worker uses sys.stdout text-stream callback. One frozen framed request is preloaded before readiness; delayed stdout arrivals never supply timing. Production I/O, all model/vision/MTP operations and source/runtime remain unchanged. Require28CPUcontrols and actual embedded compatibility before model, then exact IDs/host states/model close,12unique HtoD markers and owned SM120 graph-node kernels/API/copies, raw nsys/SQLite/memory gaps and independent replay. Preserve failures and owned cache retirement. Instrumented activity is not HTTP speedup or serving memory saving. Full ordinary/MTP text/image phases, matched strongest references, batched correctness/HTTP, wider prefill, repeated trials, INT4/4B and overall2x remain open."
+}

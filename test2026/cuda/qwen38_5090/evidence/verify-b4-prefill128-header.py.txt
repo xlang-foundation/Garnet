@@ -1,0 +1,49 @@
+"""Replay raw remote CPU-header evidence; never execute the downloaded native EXE."""
+from pathlib import Path
+import argparse,hashlib,io,json,struct,zipfile
+JOB='b4-prefill128-header-attempt1';P='Garnet/test2026/cuda/qwen38_5090/';BUNDLE='c44138f5e64b684d556830f58f09c2332d767155669c6642ba799b8445493997';sha=lambda b:hashlib.sha256(b).hexdigest()
+
+def main():
+    a=argparse.ArgumentParser();a.add_argument('--proofs',type=Path,required=True);args=a.parse_args();archive=args.proofs/(JOB+'-evidence.zip')
+    with zipfile.ZipFile(archive) as z:
+        manifest=json.loads(z.read('evidence-manifest.json'));assert z.testzip() is None and len(z.namelist())==len(set(z.namelist()))==len(manifest['files'])+1
+        for n,h in manifest['files'].items():assert sha(z.read(n))==h
+        base='results/'+JOB+'/';doc=lambda n:json.loads(z.read(n));w=doc(base+'workflow.json');raw=z.read(P+'evidence/b4-prefill128-header-preparation.json');p=json.loads(raw);assert sha(raw)==w['preparation_sha256'] and p['status']=='B4_header_CPU_controls_prepared_UNRUN'
+        assert type(w['exit_code']) is int and w['cleanup_finished'] is True and w['actual_GEMM_or_GPU_executed'] is w['model_or_performance_qualified'] is False
+        assert w['files']==w['files_after']==p['files'] and w['compiler_before']==w['compiler_after']==p['compiler'] and w['library_before']==w['library_after']==p['baseline_library_sha256']=='1a1d0229a1c0c24a8397a4dee7a614bcedf97b3bd3293e58d752ed7de30eb498'
+        for n,h in p['files'].items():assert sha(z.read(n))==h
+        parent='o128-http-benchmark-attempt1';parent_proof=z.read('results/'+parent+'-verified.json');q=json.loads(parent_proof);assert parent_proof==(args.proofs/(parent+'-verified.json')).read_bytes() and sha(parent_proof)==w['closed_benchmark_proof_sha256']
+        assert q['exit_code']==0 and q['status']=='actual_O128_three_fixed4k_HTTP_trials_raw_stream_memory_and_IDs_replayed' and q['arrays']['all372_prompt_and_output_IDs_exact_T32'] is True and q['source_runtime_SDK_checkpoint_restored'] is True
+        parent_archive=args.proofs/(parent+'-evidence.zip');assert sha(parent_archive.read_bytes())==w['closed_benchmark_archive_sha256']==q['archive_sha256']
+        with zipfile.ZipFile(parent_archive) as old:
+            prep=old.read(P+'evidence/o128-http-benchmark-preparation.json');assert sha(prep)==p['required_closed_benchmark_preparation_sha256'];bp=json.loads(prep);bundle=old.read(bp['source_bundle']);assert sha(bundle)==bp['source_bundle_sha256']==BUNDLE
+        with zipfile.ZipFile(io.BytesIO(bundle)) as old:
+            assert old.testzip() is None and len(old.namelist())==len(set(old.namelist()))==60;parent_sources={n:old.read(n) for n in old.namelist()}
+        d=doc(P+'evidence/b4-prefill128-source-derivation.json');assert {n:sha(b) for n,b in parent_sources.items()}==d['parent_files'] and len(d['modified_files'])==7 and len(d['new_files'])==1
+        candidate=dict(parent_sources)
+        for n in d['modified_files']+d['new_files']:candidate[n]=z.read(P+'native_b4_prefill128_candidate/'+Path(n).name)
+        assert len(candidate)==61 and {n:sha(b) for n,b in candidate.items()}==d['candidate_files']
+        for n,steps in d['derivations'].items():
+            raw=parent_sources[n]
+            for c in steps:assert raw.count(c['old'].encode())==c['count'];raw=raw.replace(c['old'].encode(),c['new'].encode())
+            assert raw==candidate[n]
+        assert all(candidate[n]==b for n,b in parent_sources.items() if n not in d['modified_files']) and d['new_CUDA_kernels']==d['new_context_factories']==0 and d['SDK_or_model_or_MTP_or_quality_or_performance_qualified'] is False
+        def ledger(phase):
+            name=base+phase+'-ledger/commands.jsonl'
+            if name not in manifest['files']:return None
+            records=[json.loads(line) for line in z.read(name).splitlines()];assert len(records)==2 and records[0]['event']=='started' and records[1]['event']=='finished'
+            assert records[0]['source']['owned_source_sha256']==records[1]['source_after']['owned_source_sha256']==p['files'];assert type(records[1]['exit_code']) is int
+            return records
+        compile_records=ledger('compile');assert compile_records is not None;controls=ledger('controls');passed=w['exit_code']==0
+        if 'header_executable_sha256' in w:
+            exe=z.read(base+'header-controls.exe');assert sha(exe)==w['header_executable_sha256'] and exe[:2]==b'MZ';offset=struct.unpack_from('<I',exe,0x3c)[0];assert exe[offset:offset+4]==b'PE\0\0' and struct.unpack_from('<H',exe,offset+4)[0]==0x8664
+        if passed:
+            assert compile_records[1]['exit_code']==controls[1]['exit_code']==0 and w['status']=='B4_header_CPU_controls_collected_needs_independent_replay'
+            log=z.read(base+'controls-ledger/commands.log');reports=[json.loads(line) for line in log.splitlines() if line.startswith(b'{"status":"B4_T32_FP8_header_controls_passed"')];assert len(reports)==1 and reports[0]==w['header_controls']
+            r=reports[0];assert r==dict(status='B4_T32_FP8_header_controls_passed',checks=235,rejections=61,actual_GEMM_or_GPU_executed=False,SDK_model_MTP_quality_performance_pending=True)
+            argv=controls[0]['argv'];assert len(argv)==1 and argv[0].replace('\\','/').endswith('/results/'+JOB+'/header-controls.exe')
+            assert controls[0]['artifact_sha256'][argv[0]]==w['header_executable_sha256']
+        else:assert w['status']=='failed' and w.get('error')
+        result=dict(status='actual_B4_T32_CPU_header_controls_and_source_composition_replayed' if passed else 'actual_B4_T32_CPU_header_failure_preserved',exit_code=w['exit_code'],error=w.get('error'),archive_sha256=sha(archive.read_bytes()),archive_bytes=archive.stat().st_size,archive_members=len(z.namelist()),compiler_source_library_unchanged=True,closed_benchmark_proof_sha256=w['closed_benchmark_proof_sha256'],candidate_source_files=61,actual_header_controls=w.get('header_controls'),actual_GEMM_or_GPU_executed=False,SDK_model_MTP_quality_performance_qualified=False,two_times_target_achieved=False,replay_verifier_sha256=sha(Path(__file__).read_bytes()))
+    target=args.proofs/(JOB+'-verified.json');raw=json.dumps(result,indent=2).encode();assert not target.exists() or target.read_bytes()==raw;target.write_bytes(raw);print(json.dumps(dict(status=result['status'],proof_sha256=sha(raw),exit_code=w['exit_code'])))
+if __name__=='__main__':main()

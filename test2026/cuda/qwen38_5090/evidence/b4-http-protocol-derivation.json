@@ -1,0 +1,50 @@
+{
+  "changes": [
+    {
+      "source": "native_worker_io.py",
+      "source_sha256": "763d61a0e7f34794bca269e4214fa03ff64b95b913778182e7c34fe40292dc84",
+      "target": "native_b4_http_protocol_candidate/native_worker_io.py",
+      "target_sha256": "9b1fdd64154c79859019dd3ded6286a02555f12676faffc2e43f31225c8b9ae0",
+      "changes": [
+        {
+          "old": "def requests(read=None):",
+          "new": "def requests(read=None,max_frame_bytes=MAX_FRAME_BYTES):\n    if type(max_frame_bytes) is not int or not 1<=max_frame_bytes<=32*1024*1024:\n        raise ValueError('Native frame bound requires integer1..32MiB')",
+          "count": 1
+        },
+        {
+          "old": "len(line)>MAX_FRAME_BYTES",
+          "new": "len(line)>max_frame_bytes",
+          "count": 1
+        },
+        {
+          "old": "len(pending)>MAX_FRAME_BYTES",
+          "new": "len(pending)>max_frame_bytes",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "native_http_bridge.py",
+      "source_sha256": "0279af2fbbabf03886be8d041ffe50c2e1f461a95166ebf6c20b717933249d5b",
+      "target": "native_b4_http_protocol_candidate/native_http_bridge.py",
+      "target_sha256": "ee1f82287f04bb39f8de716945d115c38646eb25a5cddeadd467204c383e9c88",
+      "changes": [
+        {
+          "old": "def validate_body(body,model='qwen38-27b-nvfp4'):\n    if not isinstance(body,dict) or body.get('model')!=model or body.get('temperature')!=0:\n        raise ValueError('Study requires the pinned model and greedy generation')\n    if body.get('chat_template_kwargs')!={'enable_thinking':False}:raise ValueError('Thinking must be disabled')\n    limit=body.get('max_tokens')\n    if type(limit) is not int or not 2<=limit<=1024:raise ValueError('Output limit outside study profile')\n    messages=body.get('messages')\n    if not isinstance(messages,list) or len(messages)!=1 or messages[0].get('role')!='user':raise ValueError('One user message required')\n    content=messages[0].get('content')\n    if isinstance(content,str):return\n    if not isinstance(content,list) or len(content)!=2 or content[0].get('type')!='image_url' or content[1].get('type')!='text':\n        raise ValueError('Image profile requires JPEG first, then text')\n    if not isinstance(content[1].get('text'),str) or not content[0].get('image_url',{}).get('url','').startswith('data:image/jpeg;base64,'):\n        raise ValueError('Inline JPEG required')",
+          "new": "def validate_body(body,model='qwen38-27b-nvfp4'):\r\n    if not isinstance(body,dict) or body.get('model')!=model or body.get('temperature')!=0:\r\n        raise ValueError('Study requires the pinned model and greedy generation')\r\n    if body.get('chat_template_kwargs')!={'enable_thinking':False}:raise ValueError('Thinking must be disabled')\r\n    limit=body.get('max_tokens')\r\n    if type(limit) is not int or not 2<=limit<=1024:raise ValueError('Output limit outside study profile')\r\n    if type(body.get('ignore_eos',False)) is not bool:raise ValueError('ignore_eos requires an explicit boolean')\r\n    messages=body.get('messages')\r\n    if not isinstance(messages,list) or len(messages)!=1 or messages[0].get('role')!='user':raise ValueError('One user message required')\r\n    content=messages[0].get('content')\r\n    if isinstance(content,str):return\r\n    if not isinstance(content,list) or len(content)!=2 or content[0].get('type')!='image_url' or content[1].get('type')!='text':\r\n        raise ValueError('Image profile requires JPEG first, then text')\r\n    if not isinstance(content[1].get('text'),str) or not content[0].get('image_url',{}).get('url','').startswith('data:image/jpeg;base64,'):\r\n        raise ValueError('Inline JPEG required')",
+          "count": 1,
+          "scope": "Align HTTP ignore_eos boolean validation with the already-qualified native worker"
+        }
+      ]
+    }
+  ],
+  "request_policy_source_sha256": "3430d9adbcf1b8743955f0ecd434820b5290b65f81800123f63af32411fa3f89",
+  "request_policy_AST_copied_without_changes": true,
+  "request_policy_sha256": "c4226265211d647482b05f247425c90b7bd21648ca83037755fcf0dc6c423045",
+  "default_2MiB_parser_bound_preserved": true,
+  "explicit_B4_frame_bound_proposed": 16777216,
+  "emit_and_transport_text_AST_unchanged": true,
+  "root_sources_modified": false,
+  "native_CPU_GPU_HTTP_execution_unrun": true,
+  "scope": "Prospective source91=source89 plus two Python transport files, no native rebuild or model math changes. Worker partitions mixed limits/stop policies; only valid homogeneous subgroups use padded MTP. Actual CPU/HTTP validation remains required."
+}

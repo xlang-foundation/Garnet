@@ -1,0 +1,153 @@
+{
+  "derivations": [
+    {
+      "source": "prepare_fa3_projection_witness_build.py",
+      "target": "prepare_kv128_canonical_build.py",
+      "source_sha256": "df4be11facb72ace8878f7e439444a617369413c7c477cdd6e253896d5f15cb5",
+      "target_sha256": "e6a1b0ec38e14949cec5f7fe01595911ac1d704f30f762af88009b3993ceaacb",
+      "changes": [
+        {
+          "before": "fa3-projection-witness-proposal.json",
+          "after": "kv128-canonical-proposal.json",
+          "count": 1
+        },
+        {
+          "before": "FA3_projection_witness_build",
+          "after": "KV128_canonical_build",
+          "count": 2
+        },
+        {
+          "before": "fa3-projection-witness-build-preparation.json",
+          "after": "kv128-canonical-native-build-preparation.json",
+          "count": 1
+        },
+        {
+          "before": "==44",
+          "after": "==50",
+          "count": 2
+        },
+        {
+          "before": "'candidate_files':44",
+          "after": "'candidate_files':50",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "run_fa3_projection_witness_build.py",
+      "target": "run_kv128_canonical_build.py",
+      "source_sha256": "11d552669f897f163e838eae0a01ec8621c01c129afb193c48d82f2044f147b0",
+      "target_sha256": "015fbe468f72ec18f813401ef043607f2717ad7d83853d48fc37819ea19b9296",
+      "changes": [
+        {
+          "before": "fa3-projection-witness-build-attempt1",
+          "after": "kv128-canonical-build-attempt1",
+          "count": 1
+        },
+        {
+          "before": "fa3-projection-witness-build-preparation.json",
+          "after": "kv128-canonical-native-build-preparation.json",
+          "count": 1
+        },
+        {
+          "before": "FA3_projection_witness_build",
+          "after": "KV128_canonical_build",
+          "count": 1
+        },
+        {
+          "before": "garnet-native-fa3-projection-witness-attempt1.dll",
+          "after": "garnet-native-kv128-canonical-attempt1.dll",
+          "count": 1
+        },
+        {
+          "before": "qwen38_5090.fa3_projection_witness_source import sources",
+          "after": "qwen38_5090.kv128_canonical_source import sources",
+          "count": 1
+        },
+        {
+          "before": "'test2026.cuda.qwen38_5090.test_fa3_projection_witness_source']",
+          "after": "'test2026.cuda.qwen38_5090.test_fa3_projection_witness_source','test2026.cuda.qwen38_5090.test_kv128_canonical']",
+          "count": 1
+        },
+        {
+          "before": "[('fa3-profile','build_fa3_projection_profile_cpu.bat')",
+          "after": "[('kv-factory-build','build_kv128_factory_cpu.bat'),('kv-profile','build_kv128_profile_cpu.bat'),('kv-wire','build_kv128_plugin_wire_cpu.bat'),('kv-init-build','build_kv128_plugin_init_cpu.bat'),('fa3-profile','build_fa3_projection_profile_cpu.bat')",
+          "count": 1
+        },
+        {
+          "before": "        from test2026.cuda.qwen38_5090.fp8_z128_native_build_contract import z_wire_contract",
+          "after": "        run([sys.executable,str(M/'run_kv128_factory_cpu.py'),'--directory',str(out/'kv-factory-build'),'--output',str(out/'kv-factory')],'kv-factory','Actual KV128 helper against CPU SDK fault stubs, strict M32/M128 checks, trace unchanged, no GPU')\n        run([sys.executable,str(M/'run_kv128_plugin_init_cpu.py'),'--executable',str(out/'kv-init-build/contract.exe'),'--output',str(out/'kv-init')],'kv-init','Six actual plugin initialize routes, CPU factories only;540 initialize calls,420 factories, ten trace policies')\n        from test2026.cuda.qwen38_5090.fp8_z128_native_build_contract import z_wire_contract",
+          "count": 1
+        },
+        {
+          "before": "FA3_projection_witness_native_built_CPU_qualified_model_unqualified",
+          "after": "KV128_canonical_native_built_CPU_qualified_model_unqualified",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "verify_fa3_projection_witness_build.py",
+      "target": "verify_kv128_canonical_build.py",
+      "source_sha256": "4e4165d273af99f3334ca35928f4b7e19d249612ec61b9106893c3d1485b541b",
+      "target_sha256": "807044ed0389b205349f63d09855de224b6ce34a5385b4f4fd0712ada5af9cef",
+      "changes": [
+        {
+          "before": "fa3-projection-witness-build-attempt1",
+          "after": "kv128-canonical-build-attempt1",
+          "count": 1
+        },
+        {
+          "before": "fa3-projection-witness-build-preparation.json",
+          "after": "kv128-canonical-native-build-preparation.json",
+          "count": 1
+        },
+        {
+          "before": "==44",
+          "after": "==50",
+          "count": 2
+        },
+        {
+          "before": "'candidate_files':44",
+          "after": "'candidate_files':50",
+          "count": 1
+        },
+        {
+          "before": "FA3_projection_witness_native_built_CPU_qualified_model_unqualified",
+          "after": "KV128_canonical_native_built_CPU_qualified_model_unqualified",
+          "count": 1
+        },
+        {
+          "before": "('cpu-source','fa3-profile'",
+          "after": "('cpu-source','kv-factory-build','kv-profile','kv-wire','kv-init-build','kv-factory','kv-init','fa3-profile'",
+          "count": 1
+        },
+        {
+          "before": "b'Ran 10 tests'",
+          "after": "b'Ran 14 tests'",
+          "count": 1
+        },
+        {
+          "before": "'CPU_source_controls':10 if passed",
+          "after": "'CPU_source_controls':14 if passed",
+          "count": 1
+        },
+        {
+          "before": "            fa3=doc(base+'fa3-profile/report.json');",
+          "after": "            from test2026.cuda.qwen38_5090.kv128_canonical_build_contract import replay_new_contracts\n            replay_new_contracts(z,base)\n            fa3=doc(base+'fa3-profile/report.json');",
+          "count": 1
+        },
+        {
+          "before": "FA3_projection_witness_native_CPU_build_replayed",
+          "after": "KV128_canonical_native_CPU_build_replayed",
+          "count": 1
+        },
+        {
+          "before": "FA3_projection_witness_native_build_failure_replayed",
+          "after": "KV128_canonical_native_build_failure_replayed",
+          "count": 1
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,17 @@
+from pathlib import Path
+import json
+W=Path(__file__).resolve().parent;R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';source=json.loads((M/'evidence/q128-canonical-source-derivation.json').read_bytes());old=json.loads((M/'evidence/full-chunk-stage-build-preparation-attempt2.json').read_bytes());targets={n:old['candidate_base'].get(n) for n in source['candidate_files']};assert len(targets)==57
+text='''from pathlib import Path
+import hashlib,json,os,shutil
+ROOT=Path('D:/CantorAI/5090-study-20261023');M=ROOT/'Garnet/test2026/cuda/qwen38_5090';sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest();expected=TARGET_BASE
+p=json.loads((M/'evidence/full-chunk-stage-vendor-preparation.json').read_bytes());assert not any('probe_native_external_prefix_batch.py' in n for n in p['files'])
+for n,h in {**p['files'],**p['checkpoints']}.items():assert sha(ROOT/n)==h,('Baseline drift',n)
+for n,h in p['runtime'].items():assert sha(ROOT/'build/bin'/n)==h
+for n,h in p['environment'].items():assert sha(Path(n))==h
+for n,h in expected.items():
+    path=ROOT/'Garnet'/n;assert path.resolve().is_relative_to((ROOT/'Garnet/src').resolve());actual=sha(path) if path.exists() else None;assert actual==h,('Native target changed',n)
+w=json.loads((ROOT/'results/full-chunk-stage-build-attempt2/workflow.json').read_bytes());objects={f.relative_to(ROOT).as_posix():sha(f) for f in (ROOT/'build/garnet/CMakeFiles/garnet.dir').rglob('*.cu.obj')};assert objects==w['cuda_objects_built'] and len(objects)==34
+cache=ROOT/'build/CMakeCache.txt';assert sha(cache)==w['cache_after_sha256'];assert not (ROOT/'build/bin/garnet-native-q128-canonical-attempt1.dll').exists() and not (ROOT/'results/q128-canonical-build-attempt1').exists();assert shutil.disk_usage(ROOT).free>=12<<30
+result=dict(status='Q128_native_build_inputs_verified_no_GPU_or_mutation',base_files=p['files'],candidate_base=expected,runtime=p['runtime'],environment=p['environment'],checkpoints=p['checkpoints'],cache_before_sha256=sha(cache),cuda_objects_before=objects,free_bytes=shutil.disk_usage(ROOT).free)
+target=ROOT/'results/q128-canonical-build-inputs.json';assert not target.exists();raw=json.dumps(result,indent=2).encode();target.write_bytes(raw);print(json.dumps(dict(status=result['status'],sha256=hashlib.sha256(raw).hexdigest(),bytes=len(raw))))
+'''.replace('TARGET_BASE',repr(targets));(W/'inspect-q128-build-inputs.py').write_bytes(text.encode());print('Prepared57explicitnative-target inventory helper')

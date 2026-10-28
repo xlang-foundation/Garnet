@@ -1,0 +1,32 @@
+from pathlib import Path
+import hashlib,json,zipfile
+W=Path(__file__).resolve().parent;R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';E=M/'evidence';sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest();owned=[M/n for n in ('probe_rowwise_k_norm_profile.cpp','build_rowwise_k_norm_profile_cpu.bat','verify_rowwise_k_norm_profile_cpu.py')];saved={}
+def keep(name,raw):
+    p=E/name;assert not p.exists();p.write_bytes(raw);owned.append(p);saved[name]=sha(p)
+for name in ('run-rowwise-k-norm-profile-cpu.py','prepare-rowwise-k-norm-profile-cpu.py',Path(__file__).name):keep(name+'.txt',(W/name).read_bytes())
+package=json.loads((W/'rowwise-k-norm-profile-cpu-package.json').read_bytes());assert sha(W/'rowwise-k-norm-profile-cpu-deployment.zip')==package['deployment_sha256'];keep('rowwise-k-norm-profile-cpu-package.json',(W/'rowwise-k-norm-profile-cpu-package.json').read_bytes())
+with zipfile.ZipFile(W/'rowwise-k-norm-profile-cpu-deployment.zip') as z:
+    keep('rowwise-k-norm-profile-cpu-preparation.json',z.read('preparation.json'));keep('rowwise-k-norm-profile-cpu-deployment-manifest.json',z.read('deployment-manifest.json'))
+keep('rowwise-k-norm-profile-cpu-preparation-retention.json',json.dumps({'status':'rowwise_K_actual_header_CPU_contract_protocol_prepared_unrun','package':package,'retained_sha256':saved,'native_CPP_compilation_and_execution_remote_only':True,'model_or_performance_qualified':False},indent=2).encode())
+entry=('\n\n2026-10-27 source87 actual native CPU header protocol prepared:184 '
+       'cases (17 new valid,161 new rejected,4 retained original valid,2 original '
+       'rejections). Covers all16FA layer offsets and every neighboring key/'
+       'value/state span, strict env/mixed/F32/shared/joined policy, exclusion '
+       'of native output observers, malformed layers/ranks/shapes, finite '
+       'settings and cache modes. Include actual source87 rowwise guard and '
+       'unchanged seven-stage/fullchunk headers. MSVC /Bv /MT /W4 /WX compile '
+       'and CPU execution happen only on CD-RTX5090, no local EXE execution. '
+       'Independent raw reader verifies input hashes/parent closure/source87/'
+       'ledgers and parses PE imports as bytes to reject CUDA/Garnet linkage. '
+       'Guard1948 baseline files, runtime/SDK/config-index/CMake/all34 CUDA '
+       'objects unchanged; no production source/DLL modifications. Parent '
+       'six-observer failed but fully restored; failure remains failed. '
+       'Packet '+package['deployment_sha256']+' ('+str(package['bytes'])+' bytes), '
+       'source87 fcffdf2455d188ca555e561ddb16d337d5f172c00b4dafdc7b90e2634651f190. '
+       'Native guard run UNRUN at this entry. Full DLL, rowwise TensorRT path, '
+       'model repair and performance remain unqualified; complete2x goal open.\n').encode()
+for name in ('docs/research/qwen38-5090-development-log.md','docs/research/qwen38-5090-implementation-task.md'):
+    p=R/name;before=p.read_bytes();assert b'source87 actual native CPU header protocol prepared' not in before
+    with p.open('ab') as f:f.write(entry)
+    assert p.read_bytes()==before+entry;owned.append(p)
+(W/'rowwise-k-norm-profile-preparation-stage-paths.bin').write_bytes(b''.join(p.relative_to(R).as_posix().encode()+b'\0' for p in owned));print(json.dumps({'stage_paths':len(owned),'native_cases_unrun':184}))

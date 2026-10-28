@@ -1,0 +1,20 @@
+from pathlib import Path
+import hashlib,json
+R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';rows=[];sha=lambda b:hashlib.sha256(b).hexdigest()
+def derive(src,dst,changes):
+    original=(M/src).read_bytes();raw=original
+    for a,b,n in changes:assert raw.count(a.encode())==n,(src,a,raw.count(a.encode()));raw=raw.replace(a.encode(),b.encode())
+    assert not (M/dst).exists() or (M/dst).read_bytes()==raw;(M/dst).write_bytes(raw);rows.append(dict(source=src,target=dst,source_sha256=sha(original),target_sha256=sha(raw),changes=[dict(before=a,after=b,count=n) for a,b,n in changes]))
+raw=(M/'probe_z128_factory_layer2.py').read_text();begin=raw.index("        if 'buildSerializedNetwork failed' in report['error']:");end=raw.index('        raise\n',begin);removed=raw[begin:end]
+derive('probe_z128_factory_layer2.py','probe_z128_reconstructed_layer2.py',[
+('evidence/z128-factory-layer2-preparation.json','evidence/z128-reconstructed-layer2-preparation.json',1),
+("assert os.environ.get('GARNET_Z128_FACTORY_TRACE')==os.environ.get('GARNET_MODELOPT_INIT_TRACE')","assert os.environ.get('GARNET_Z128_FACTORY_TRACE') is None\n    assert os.environ.get('GARNET_Z128_RECONSTRUCT_TRACE')==os.environ.get('GARNET_MODELOPT_INIT_TRACE')\n    assert os.environ.get('GARNET_FP8_GDN_Z128_RECONSTRUCT')=='1'",1),
+('from test2026.cuda.qwen38_5090.layer2_ordinary_layout import','from test2026.cuda.qwen38_5090.z128_reconstructed_layer2_layout import',1),
+("'factory_trace_policy':os.environ.get('GARNET_Z128_FACTORY_TRACE')","'factory_trace_policy':os.environ.get('GARNET_Z128_RECONSTRUCT_TRACE')",1),
+(removed,'',1)])
+derive('test_z128_factory_layer2.bat','test_z128_reconstructed_layer2.bat',[
+('set GARNET_Z128_FACTORY_TRACE=\n','set GARNET_Z128_FACTORY_TRACE=\nset GARNET_Z128_RECONSTRUCT_TRACE=\n',1),
+('if "%~3"=="1" set GARNET_Z128_FACTORY_TRACE=1','if "%~3"=="1" set GARNET_Z128_RECONSTRUCT_TRACE=1',1),
+('set GARNET_FP8_GDN_Z128_CANONICAL=1','set GARNET_FP8_GDN_Z128_CANONICAL=1\nset GARNET_FP8_GDN_Z128_RECONSTRUCT=1',1),
+('probe_z128_factory_layer2.py','probe_z128_reconstructed_layer2.py',1)])
+(M/'evidence/z128-reconstructed-layer2-derivation.json').write_bytes(json.dumps({'status':'real_layer2_collector_derivative_unrun','derivations':rows,'all_math_shapes_captures_readonly_carry_and_repeat_code_unchanged':True,'removed_separate_TU_postfailure_observer':True,'new_factory_trace':True,'model_or_performance_qualified':False},indent=2).encode());print('derived',len(rows),'real layer2 collector/launcher methods')

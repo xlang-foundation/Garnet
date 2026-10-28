@@ -1,0 +1,51 @@
+from pathlib import Path
+import hashlib,json
+repo=Path('D:/CantorAI/work/qwen38-5090');m=repo/'test2026/cuda/qwen38_5090';sha=lambda raw:hashlib.sha256(raw).hexdigest();records=[]
+def derive(source,target,changes):
+    raw=(repo/source).read_bytes();text=raw.decode();steps=[]
+    for old,new,count in changes:
+        assert text.count(old)==count,(source,old,text.count(old));text=text.replace(old,new);steps.append({'old':old,'new':new,'count':count})
+    result=text.encode();path=repo/target;assert not path.exists();path.write_bytes(result)
+    records.append({'source':source,'source_sha256':sha(raw),'target':target,'target_sha256':sha(result),'replacements':steps})
+base='xModel/qwen35/vl_0_8b/'
+derive(base+'cuda_mtp_prefill16_study.py',base+'cuda_mtp_prefill16_target128_study.py',[
+ ('Target weights, target T32/T4 programs and verification','Target weights, target T128/T4 programs and verification',1),
+ ('class CUDAMTPPrefill16StudySession','class CUDAMTPPrefill16Target128StudySession',1),
+ ("geometry!=(1,4096,32,4) or getattr(decoder,'bf16_kv_low_batch_state',None) is not True", "geometry!=(1,4096,128,4) or getattr(decoder,'bf16_kv_low_batch_state',None) is not True or getattr(decoder,'bf16_kv_prefill128_study',None) is not True",1),
+ ('existing B1 BF16 low-batch T32/T4/cap4096 target','separate B1 BF16 T128-prefill/T4-decode/cap4096 target',1)])
+prefix='test2026/cuda/qwen38_5090/'
+derive(prefix+'test_mtp_prefill16_study.py',prefix+'test_mtp_prefill16_target128_study.py',[
+ ('cuda_mtp_prefill16_study.py','cuda_mtp_prefill16_target128_study.py',1),
+ ("'prefill_chunk_size':32,'chunk_size':4,'bf16_kv_low_batch_state':True", "'prefill_chunk_size':128,'chunk_size':4,'bf16_kv_low_batch_state':True,'bf16_kv_prefill128_study':True",1),
+ ('class Prefill16Controls','class Prefill16Target128Controls',1),
+ ("if __name__=='__main__':unittest.main()", """    def test_old_profile_and_missing_explicit_new_optin_are_rejected(self):
+        cls=load();before=FakeBase.constructions
+        for changes in ({'prefill_chunk_size':32},{'bf16_kv_prefill128_study':False},{'bf16_kv_prefill128_study':1},{'bf16_kv_prefill128_study':None}):
+            with self.subTest(changes=changes),self.assertRaises(ValueError):cls(decoder(**changes),'fixture',[])
+        self.assertEqual(FakeBase.constructions,before)
+
+    def test_existing_t32_class_keeps_its_original_t128_rejection(self):
+        from .test_mtp_prefill16_study import load as old_load
+        with self.assertRaises(ValueError):old_load()(decoder(),'fixture',[])
+
+if __name__=='__main__':unittest.main()""",1)])
+derive(prefix+'probe_bf16_scores_tiled_api_model.py',prefix+'probe_bf16_prefill128_model.py',[
+ ('Explicit real full4K correctness for the short-model-qualified MTP T16 study.','Actual T128 target prefill with retained T4 verification and T16 draft prefill; exact retained full4K gates.',1),
+ ("root,out=map(Path,sys.argv[1:3]);mode=sys.argv[3];assert mode in ('default','tiled') and not out.exists()", "root,out=map(Path,sys.argv[1:3]);mode='default';assert len(sys.argv)==3 and not out.exists()",1),
+ ('bf16-scores-tiled-api-model-preparation.json','bf16-prefill128-model-preparation.json',1),
+ ("admission['files'].items()","admission['installed_files'].items()",1),
+ ('create_cuda_bf16_low_batch_study_decoder','create_cuda_bf16_prefill128_study_decoder',2),
+ ('from xModel.qwen35.vl_0_8b.cuda_mtp_prefill16_study import CUDAMTPPrefill16StudySession','from xModel.qwen35.vl_0_8b.cuda_mtp_prefill16_target128_study import CUDAMTPPrefill16Target128StudySession',1),
+ ('session=CUDAMTPPrefill16StudySession(','session=CUDAMTPPrefill16Target128StudySession(',1),
+ ('from test2026.cuda.qwen38_5090.tiled_scores_model import same_record,replay_tiled_model','from test2026.cuda.qwen38_5090.tiled_scores_model import same_record\n    from test2026.cuda.qwen38_5090.prefill128_model import replay_prefill128_model',1),
+ ("'cases':[],'quality_qualified':False", "'cases':[],'ordinary_observations':[],'target_prefill_chunk':128,'target_decode_chunk':4,'draft_prefill_chunk':16,'target128_enabled':True,'quality_qualified':False",1),
+ ('Separate candidate DLL default/tiled route versus retained1a1d full4K baseline. Same ordinary and T16draft-prefill MTP operations, six3968+128text/image/reset-repeat cases, complete target state and raw vectors/IDs. No broad805quality, HTTP or speed admission.', 'Separate complete T128 target forward on CPU-qualified native candidate versus retained1a1d T32 full4K baseline. T4 target verification and T16 draft prefill preserved. Six3968+128text/image/reset-repeat cases require exact ordinary/MTP IDs, complete target state hashes and raw vectors. Save actual ordinary IDs and prefill/final witnesses before any equality assertion. Original old guards and gates unchanged. No broad805quality, HTTP, timing, throughput or2x admission.',1),
+ ("report['memory_after_construction']=session.memory_info();report['pool_before']=json.loads(io.memory_json());report['status']='cases_running';save()", "report['memory_after_construction']=session.memory_info();report['pool_before']=json.loads(io.memory_json());report['target_program_chunks']=sorted(decoder.programs);report['prefill_helper']=json.loads(decoder.bf16_prefill_commit.stats_json());report['decode_helper']=json.loads(decoder.delta_commit.stats_json());assert decoder.bf16_kv_prefill128_study is True and sorted(decoder.programs)==[4,128];report['status']='cases_running';save()",1),
+ ("ordinary_final=state(stem+'-ordinary-final');assert ordinary==case['generated_ids_by_mode']['ordinary'] and decoder.slots==[4095]", "ordinary_final=state(stem+'-ordinary-final');report['ordinary_observations'].append({'sequence':sequence,'case_index':index,'key':case['key'],'request_sha256':case['request_sha256'],'image_sha256':case['image_sha256'],'prompt_ids':ids,'ordinary_ids':ordinary,'reset_state':reset,'ordinary_prefill':ordinary_prefill,'ordinary_final':ordinary_final});save();assert ordinary==case['generated_ids_by_mode']['ordinary'] and decoder.slots==[4095]",1),
+ ("print('TILED_SCORES_FULL4K_CASE_PASS'","print('PREFILL128_FULL4K_CASE_PASS'",1),
+ ('replay_tiled_model(report,','replay_prefill128_model(report,',1)])
+derive(prefix+'test_bf16_scores_tiled_api_model.bat',prefix+'test_bf16_prefill128_model.bat',[
+ ('if "%~3"=="tiled" set GARNET_QWEN38_BF16_LOW_BATCH_TILED_SCORES=1','set PYTHONDONTWRITEBYTECODE=1',1),
+ ('probe_bf16_scores_tiled_api_model.py','probe_bf16_prefill128_model.py',1),
+ ('"%~1" "%~3"','"%~1"',1)])
+target=m/'evidence/prefill128-model-source-derivation.json';assert not target.exists();target.write_bytes(json.dumps({'status':'prefill128_full4k_model_candidate_gpu_unrun','files':records,'scope':'Separate explicit T128 target study, unchanged T4 verification/T16 draft algorithm and original T32 guards. Exact full4K ordinary/MTP/retained oracle requirements remain; actual ordinary evidence saved before assertions. No local native runtime/GPU execution.'},indent=2).encode());print(json.dumps({'derived_files':len(records),'gpu_run':False}))

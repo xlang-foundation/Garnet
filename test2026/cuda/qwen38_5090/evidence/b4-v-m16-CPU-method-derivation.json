@@ -1,0 +1,367 @@
+{
+  "derivations": [
+    {
+      "source": "build_b4_decode_m16_profile_cpu.bat",
+      "target": "build_b4_v_m16_profile_cpu.bat",
+      "source_sha256": "7162a2dc42c10a36dd5f9bb09ef7b524a345d45bcb4aa647837d2fc2e64c94b0",
+      "target_sha256": "48e3ca979c69965281e889f1ac8a2234c9dfc6d29608e80c89a5c9a4439118c7",
+      "changes": [
+        {
+          "old": "b4_decode_m16",
+          "new": "b4_v_m16",
+          "count": 2
+        }
+      ]
+    },
+    {
+      "source": "build_b4_decode_m16_factory_cpu.bat",
+      "target": "build_b4_v_m16_factory_cpu.bat",
+      "source_sha256": "fb67df98d6f374a4d4ab6c0b530d90f4d0cf6680d449e305a4a643d8a1ecef9c",
+      "target_sha256": "1039938ef7e7bc0158e137b5237b0445e1b9622037035b7fc698b3573f2c6de2",
+      "changes": [
+        {
+          "old": "b4_decode_m16",
+          "new": "b4_v_m16",
+          "count": 3
+        },
+        {
+          "old": "modelopt_fp8_gdn_m16",
+          "new": "modelopt_fp8_v_m16",
+          "count": 2
+        }
+      ]
+    },
+    {
+      "source": "build_b4_decode_m16_plugin_cpu.bat",
+      "target": "build_b4_v_m16_plugin_cpu.bat",
+      "source_sha256": "83165556523c638abfc9d5fc4ed96fea1dc692c63aeb00955ac23aea7d563e71",
+      "target_sha256": "e379547b724eba5700e0a61b6c03c270df7df67ee0462e1be8d9247909fc7160",
+      "changes": [
+        {
+          "old": "b4_decode_m16",
+          "new": "b4_v_m16",
+          "count": 3
+        },
+        {
+          "old": "modelopt_fp8_gdn_m16",
+          "new": "modelopt_fp8_v_m16",
+          "count": 1
+        },
+        {
+          "old": " /Fe\"contract.exe\"",
+          "new": " \"%METHODS%\\native_b4_decode_m16_candidate\\modelopt_fp8_gdn_m16_plugin.cpp\" /Fe\"contract.exe\"",
+          "count": 1
+        },
+        {
+          "old": "/I\"%CANDIDATE%\"",
+          "new": "/I\"%CANDIDATE%\" /I\"%METHODS%\\native_b4_decode_m16_candidate\"",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "probe_b4_decode_m16_factory_cpu.cpp",
+      "target": "probe_b4_v_m16_factory_cpu.cpp",
+      "source_sha256": "bbc67f7970a59747ef4091b6754e8c86abc8954bb3ca9726deffa5bfe817edad",
+      "target_sha256": "ff097322b5d1b6b111bb6a17f1df74d5dbf7c10e4ab7f37003ae89d441f1dce5",
+      "changes": [
+        {
+          "old": "modelopt_fp8_gdn_m16",
+          "new": "modelopt_fp8_v_m16",
+          "count": 1
+        },
+        {
+          "old": "ModelOptFP8GDNM16",
+          "new": "ModelOptFP8VM16",
+          "count": 8
+        },
+        {
+          "old": "mode==\"run_wrong_device\"&&calls>24",
+          "new": "(mode==\"run_wrong_device\"||mode==\"cross_device\")&&calls>24",
+          "count": 1
+        },
+        {
+          "old": "if(mode==\"cross_geometry\"){\n            auto other=Garnet::CreateModelOptFP8VM16Context(geometry==10240?6144:10240);Garnet::ModelOptFP8VM16Info second;\n            if(!context||!other||other==context||!Garnet::GetModelOptFP8VM16Info(other,second)||second.rows==geometry)return 5;\n        }",
+          "new": "if(mode==\"unsupported_geometry_isolation\"){\n            auto other=Garnet::CreateModelOptFP8VM16Context(6144);Garnet::ModelOptFP8VM16Info second;\n            if(!context||other||Garnet::GetModelOptFP8VM16Info(other,second))return 5;\n        }\n        if(mode==\"cross_device\"){\n            auto other=Garnet::CreateModelOptFP8VM16Context(geometry);Garnet::ModelOptFP8VM16Info second;\n            if(!context||!other||other==context||!Garnet::GetModelOptFP8VM16Info(other,second)||second.rows!=geometry||second.device!=1||info.device!=0)return 6;\n        }",
+          "count": 1
+        },
+        {
+          "old": "n=geometry==10240?6144:10240",
+          "new": "n=6144",
+          "count": 1
+        },
+        {
+          "old": "infoOkay=Garnet::GetModelOptFP8VM16Info(context,info)&&info.rows==geometry;",
+          "new": "infoOkay=Garnet::GetModelOptFP8VM16Info(context,info)&&info.rows==geometry;\n        if(infoOkay){cublasLtMatmulAlgo_t live{};expected(live);if(mode==\"opaque\")live.bytes[63]^=1;if(std::memcmp(&live,&info.opaque,sizeof(live)))return 7;}",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "run_b4_decode_m16_factory_cpu.py",
+      "target": "run_b4_v_m16_factory_cpu.py",
+      "source_sha256": "1ea88360111da87a8a8ac29aa31068b0021b1e561f82f7daed5ce194a6dbd4c8",
+      "target_sha256": "738ae4b08205863de6bdb45d4dc181deb2c8bafb439d1cfa16ec87c14a908319",
+      "changes": [
+        {
+          "old": "GDNM16",
+          "new": "VM16",
+          "count": 3
+        },
+        {
+          "old": "GDN_M16",
+          "new": "V_M16",
+          "count": 1
+        },
+        {
+          "old": "(2 if mode=='cross_geometry' else 1)",
+          "new": "(2 if mode=='cross_device' else 1)",
+          "count": 1
+        },
+        {
+          "old": "'cross_geometry'",
+          "new": "'unsupported_geometry_isolation','cross_device'",
+          "count": 3
+        },
+        {
+          "old": "geometry in (10240,6144)",
+          "new": "geometry in (1024,)",
+          "count": 2
+        },
+        {
+          "old": "geometry not in (10240,6144)",
+          "new": "geometry not in (1024,)",
+          "count": 1
+        },
+        {
+          "old": "if i==2 and mode=='cached':",
+          "new": "if i==2 and mode=='unsupported_geometry_isolation':assert group[-1]['name']=='empty' and not any(r['event']=='api' for r in group);continue\n            if i==2 and mode=='cached':",
+          "count": 1
+        },
+        {
+          "old": "for g in (10240,6144)",
+          "new": "for g in (1024,)",
+          "count": 3
+        },
+        {
+          "old": "for g in (0,-1,1,5120,12288)",
+          "new": "for g in (0,-1,1,5120,12288,6144,10240)",
+          "count": 1
+        },
+        {
+          "old": "Both actual GDN M16 factory geometries",
+          "new": "Actual V M16 factory geometry and device isolation",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "b4_decode_m16_plugin_cpu_stubs.cpp",
+      "target": "b4_v_m16_plugin_cpu_stubs.cpp",
+      "source_sha256": "18bf415b367db81e190b06578a00af74c75871660a3e1fac515dc633d43833ea",
+      "target_sha256": "ae0e06ca872aaaba0b2861439600108b30a16797ccf748c48ec17946ffca7d12",
+      "changes": [
+        {
+          "old": "modelopt_fp8_gdn_m16",
+          "new": "modelopt_fp8_v_m16",
+          "count": 1
+        },
+        {
+          "old": "ModelOptFP8GDNM16",
+          "new": "ModelOptFP8VM16",
+          "count": 10
+        },
+        {
+          "old": "GDNM16",
+          "new": "VM16",
+          "count": 3
+        },
+        {
+          "old": "rows!=10240&&rows!=6144",
+          "new": "rows!=1024",
+          "count": 1
+        },
+        {
+          "old": "#include \"modelopt_fp8_v_m16_canonical.h\"",
+          "new": "#include \"modelopt_fp8_v_m16_canonical.h\"\n#include \"modelopt_fp8_gdn_m16_canonical.h\"",
+          "count": 1
+        },
+        {
+          "old": "std::shared_ptr<void> CreateModelOptNVFP4Context()",
+          "new": "struct ModelOptFP8GDNM16Context{};\nstd::shared_ptr<ModelOptFP8GDNM16Context> CreateModelOptFP8GDNM16Context(int){++unexpected;return {};}\nbool GetModelOptFP8GDNM16Info(const std::shared_ptr<ModelOptFP8GDNM16Context>&,ModelOptFP8GDNM16Info&) noexcept{++unexpected;return false;}\ncublasStatus_t RunModelOptFP8GDNM16Matmul(const std::shared_ptr<ModelOptFP8GDNM16Context>&,const void*,const void*,void*,int,int,int,float,void*,size_t,cudaStream_t) noexcept{++unexpected;return CUBLAS_STATUS_NOT_INITIALIZED;}\nstd::shared_ptr<void> CreateModelOptNVFP4Context()",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "probe_b4_decode_m16_plugin_cpu.cpp",
+      "target": "probe_b4_v_m16_plugin_cpu.cpp",
+      "source_sha256": "f6715877f80b4165d80ea08cb4ff253b994bb82d43c6336973bd1f61e7dc5646",
+      "target_sha256": "2c1138cae92aedd232141d6a24740bc4ec8c916e58e14c069f6d629e43c525d3",
+      "changes": [
+        {
+          "old": "modelopt_fp8_gdn_m16",
+          "new": "modelopt_fp8_v_m16",
+          "count": 1
+        },
+        {
+          "old": "ModelOptFP8GDNM16",
+          "new": "ModelOptFP8VM16",
+          "count": 8
+        },
+        {
+          "old": "GDNM16",
+          "new": "VM16",
+          "count": 13
+        },
+        {
+          "old": "GDN_M16",
+          "new": "V_M16",
+          "count": 1
+        },
+        {
+          "old": "#include \"modelopt_fp8_v_m16_plugin.h\"",
+          "new": "#include \"modelopt_fp8_v_m16_plugin.h\"\n#include \"modelopt_fp8_gdn_m16_plugin.h\"",
+          "count": 1
+        },
+        {
+          "old": "EnsureModelOptFP8PluginRegistered()&&EnsureModelOptFP8VM16PluginRegistered()",
+          "new": "EnsureModelOptFP8PluginRegistered()&&EnsureModelOptFP8GDNM16PluginRegistered()&&EnsureModelOptFP8VM16PluginRegistered()",
+          "count": 1
+        },
+        {
+          "old": "for(int n:{10240,6144})",
+          "new": "for(int n:{1024})",
+          "count": 1
+        },
+        {
+          "old": "0x47313634u",
+          "new": "0x56313634u",
+          "count": 1
+        },
+        {
+          "old": "0u,1u,16u,128u,5120u,12288u,0xffffffffu",
+          "new": "0u,1u,16u,128u,5120u,12288u,6144u,10240u,0xffffffffu",
+          "count": 1
+        },
+        {
+          "old": "for(int badN:{0,-1,1,5120,12288,65536})",
+          "new": "for(int badN:{0,-1,1,5120,12288,65536,6144,10240})",
+          "count": 1
+        },
+        {
+          "old": "        for(int badN:",
+          "new": "        auto* gdnCreator=registry->getPluginCreator(\"GarnetModelOptFP8GDNM16Canonical\",\"1\",\"\");require(gdnCreator,\"Missing old GDN creator\");\n        for(int gdnN:{10240,6144}){ModelOptFP8GDNM16Plugin gdn(gdnN,5120,.5f,.25f);std::array<uint32_t,5> foreign{};gdn.serialize(foreign.data());require(foreign[4]==0x47313634u,\"Old GDN wire changed\");reject(foreign.data(),20);++cross;auto* bad=gdnCreator->deserializePlugin(\"V\",wire.data(),20);require(!bad,\"GDN accepted V wire\");++cross;}\n        for(int badN:",
+          "count": 1
+        },
+        {
+          "old": "wires==82&&constructors==44&&descriptors==92&&formats==18&&cross==6&&initializations==14&&VM16CPUFactoryCalls()==10",
+          "new": "wires==45&&constructors==24&&descriptors==46&&formats==9&&cross==7&&initializations==7&&VM16CPUFactoryCalls()==5",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "run_b4_decode_m16_cpu.py",
+      "target": "run_b4_v_m16_cpu.py",
+      "source_sha256": "5486d3128eec007816ccf2f479f763d6c8261a242c4e4806ac39228943e2d4df",
+      "target_sha256": "68b796a569684c021f73a869e75125f37aea21a91b33b910e77084735fa5cc97",
+      "changes": [
+        {
+          "old": "b4_decode_m16",
+          "new": "b4_v_m16",
+          "count": 5
+        },
+        {
+          "old": "b4-decode-m16",
+          "new": "b4-v-m16",
+          "count": 2
+        },
+        {
+          "old": "GDN_M16",
+          "new": "V_M16",
+          "count": 2
+        },
+        {
+          "old": "len(old)==61 and len(candidate)==67",
+          "new": "len(old)==67 and len(candidate)==73",
+          "count": 1
+        },
+        {
+          "old": "Three immutable67-source/lineage/corruption controls plus eight unchanged SDK replay and independent conversion controls",
+          "new": "Four immutable73-source/failed-lineage/corruption controls plus eight unchanged SDK replay and independent conversion controls",
+          "count": 1
+        },
+        {
+          "old": "Both actual factory geometries;402CPU",
+          "new": "Actual V factory;212CPU",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "verify_b4_decode_m16_cpu.py",
+      "target": "verify_b4_v_m16_cpu.py",
+      "source_sha256": "c46e2c672752d3f1e813624815b6371d2ecac9e67c9286b2c02bb9902a7be7a9",
+      "target_sha256": "ea88ae46f756edf2bb4781d49f56b0044135bcbb65cbae43cfa6b9e24f0054fc",
+      "changes": [
+        {
+          "old": "b4_decode_m16",
+          "new": "b4_v_m16",
+          "count": 6
+        },
+        {
+          "old": "b4-decode-m16",
+          "new": "b4-v-m16",
+          "count": 2
+        },
+        {
+          "old": "GDN_M16",
+          "new": "V_M16",
+          "count": 6
+        },
+        {
+          "old": "len(candidate)==67",
+          "new": "len(candidate)==73",
+          "count": 1
+        },
+        {
+          "old": "==67 and all(source.read",
+          "new": "==73 and all(source.read",
+          "count": 1
+        },
+        {
+          "old": "Ran 11 tests",
+          "new": "Ran 12 tests",
+          "count": 1
+        },
+        {
+          "old": "cases=437,selected=96,rejected=341",
+          "new": "cases=1209,selected=16,rejected=1193",
+          "count": 1
+        },
+        {
+          "old": "==402",
+          "new": "==212",
+          "count": 1
+        },
+        {
+          "old": "==93",
+          "new": "==94",
+          "count": 1
+        },
+        {
+          "old": "factory_count=402",
+          "new": "factory_count=212",
+          "count": 1
+        },
+        {
+          "old": "wire_rejections=82,constructor_rejections=44,descriptor_rejections=92,format_rejections=18,cross_wire_rejections=6,initialize_calls=14,factory_calls=10",
+          "new": "wire_rejections=45,constructor_rejections=24,descriptor_rejections=46,format_rejections=9,cross_wire_rejections=7,initialize_calls=7,factory_calls=5",
+          "count": 1
+        }
+      ]
+    }
+  ],
+  "scope": "Separate V-only CPU contracts; actual native compile/execution remote only; no model or numerical admission"
+}

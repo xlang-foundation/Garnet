@@ -1,0 +1,55 @@
+from pathlib import Path
+import hashlib,json
+R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';sha=lambda b:hashlib.sha256(b).hexdigest();rows=[];registry=Path(__file__).resolve().parent/'q128-cpu-generated-targets.json';owned=json.loads(registry.read_bytes()) if registry.exists() else {}
+def put(path,raw):
+    assert path.resolve().is_relative_to(M.resolve()) and path.name!='probe_native_external_prefix_batch.py';key=path.relative_to(M).as_posix()
+    if path.exists() and path.read_bytes()!=raw:assert sha(path.read_bytes())==owned.get(key),('Preserve outside edit',key)
+    path.write_bytes(raw);owned[key]=sha(raw);registry.write_bytes(json.dumps(owned,indent=2).encode())
+def derive(source,target,changes):
+    raw=(M/source).read_bytes();before=sha(raw);steps=[]
+    for old,new,count in changes:
+        if b'\r\n' in raw:old=old.replace('\n','\r\n');new=new.replace('\n','\r\n')
+        assert raw.count(old.encode())==count,(source,old,raw.count(old.encode()),count);raw=raw.replace(old.encode(),new.encode());steps.append(dict(old=old,new=new,count=count))
+    path=M/target;path.parent.mkdir(exist_ok=True);put(path,raw);rows.append(dict(source=source,target=target,source_sha256=before,target_sha256=sha(raw),changes=steps))
+def auto(source,replacements):
+    raw=(M/source).read_bytes();result=[]
+    for a,b in replacements:
+        aa=a.replace('\n','\r\n') if b'\r\n' in raw else a;bb=b.replace('\n','\r\n') if b'\r\n' in raw else b;count=raw.count(aa.encode());assert count>0,(source,a);result.append((a,b,count));raw=raw.replace(aa.encode(),bb.encode())
+    return result
+derive('probe_kv128_profile_cpu.cpp','probe_q128_profile_cpu.cpp',auto('probe_kv128_profile_cpu.cpp',[('modelopt_fp8_kv128','modelopt_fp8_q128'),('ModelOptFP8KV128','ModelOptFP8Q128'),('KV128','Q128'),('1024','12288'),('std::string(projection)=="k"||std::string(projection)=="v"','std::string(projection)=="q"'),('k_proj.weight','q_proj.weight'),('selected==32','selected==16'),('rejected==246','rejected==262'),('\\"selected\\":32','\\"selected\\":16'),('\\"rejected\\":246','\\"rejected\\":262')]))
+derive('native_kv128_canonical_cpu_sdk/cuda_runtime_api.h','native_q128_canonical_cpu_sdk/cuda_runtime_api.h',[])
+derive('native_kv128_canonical_cpu_sdk/cublasLt.h','native_q128_canonical_cpu_sdk/cublasLt.h',[('constexpr uint32_t CUBLASLT_MATMUL_TILE_64x64=15','constexpr uint32_t CUBLASLT_MATMUL_TILE_64x32=13,CUBLASLT_MATMUL_STAGES_64x5=17;\nconstexpr uint32_t CUBLASLT_MATMUL_TILE_64x64=15',1)])
+derive('probe_kv128_factory_cpu.cpp','probe_q128_factory_cpu.cpp',auto('probe_kv128_factory_cpu.cpp',[('modelopt_fp8_kv128','modelopt_fp8_q128'),('ModelOptFP8KV128','ModelOptFP8Q128'),('const int values[]={35,15,18,7,2,1}','const int values[]={67,13,17,1,0,1,18}'),('attr>5','attr>6')]))
+derive('run_kv128_factory_cpu.py','run_q128_factory_cpu.py',auto('run_kv128_factory_cpu.py',[('KV128','Q128'),('range(6)','range(7)'),('for m in (32,128)','for m in (16,32,128)'),('range(1,24)','range(1,28)'),("report['algorithm']==35","report['algorithm']==67"),("'REDUCTION_SCHEME','CTA_SWIZZLING'),(35,15,18,7,2,1)","'REDUCTION_SCHEME','CTA_SWIZZLING','CUSTOM_OPTION'),(67,13,17,1,0,1,18)"),("[('M32',0,0),('M128',0,0)]","[('M16',0,0),('M32',0,0),('M128',0,0)]"),("if r['event']=='api'])==23","if r['event']=='api'])==27"),("report['calls'].count('cublasLtMatmulAlgoCheck:32')==","report['calls'].count('cublasLtMatmulAlgoCheck:16')==report['calls'].count('cublasLtMatmulAlgoCheck:32')=="),("report['calls'][7:12]==['cublasLtMatrixLayoutCreate:28:5120:1024:5120','cublasLtMatrixLayoutCreate:28:5120:128:5120','cublasLtMatrixLayoutCreate:14:1024:128:1024','cublasLtMatrixLayoutCreate:28:5120:32:5120','cublasLtMatrixLayoutCreate:14:1024:32:1024']","report['calls'][7:14]==['cublasLtMatrixLayoutCreate:28:5120:12288:5120','cublasLtMatrixLayoutCreate:28:5120:128:5120','cublasLtMatrixLayoutCreate:14:12288:128:12288','cublasLtMatrixLayoutCreate:28:5120:16:5120','cublasLtMatrixLayoutCreate:14:12288:16:12288','cublasLtMatrixLayoutCreate:28:5120:32:5120','cublasLtMatrixLayoutCreate:14:12288:32:12288']")]))
+for source,target in [('build_kv128_profile_cpu.bat','build_q128_profile_cpu.bat'),('build_kv128_factory_cpu.bat','build_q128_factory_cpu.bat')]:derive(source,target,auto(source,[('kv128','q128')]))
+oldwire='''        ModelOptFP8KV128Plugin previousKV(1024,5120,.5f,.25f);require(EnsureModelOptFP8KV128PluginRegistered(),"Old KV registration failed");
+        auto* previousKVCreator=registry->getPluginCreator("GarnetModelOptFP8KV128Canonical","1","");require(previousKVCreator,"Old KV creator missing");
+        require(!previousKVCreator->deserializePlugin("newQ",wire.data(),20),"Old KV accepted Q wire");++crossWire;
+        std::array<uint32_t,5> previousKVWire{};previousKV.serialize(previousKVWire.data());require(previousKVWire[4]==0x4b313238u&&!creator->deserializePlugin("oldKV",previousKVWire.data(),20),"Q accepted old KV wire");++crossWire;
+        auto* previousKVRestored=previousKVCreator->deserializePlugin("oldKV",previousKVWire.data(),20);require(previousKVRestored,"Old KV roundtrip changed");previousKVRestored->destroy();
+        auto markerOnly=wire;markerOnly[4]=0x4b313238u;reject(markerOnly.data(),20);
+'''
+derive('probe_kv128_plugin_wire.cpp','probe_q128_plugin_wire.cpp',auto('probe_kv128_plugin_wire.cpp',[('modelopt_fp8_kv128','modelopt_fp8_q128'),('ModelOptFP8KV128','ModelOptFP8Q128'),('fp8_kv128','fp8_q128'),('1024','12288'),('1023','12287'),('0x4b313238','0x51313238'),('k_proj.weight','q_proj.weight'),('badWire==34','badWire==35'),('crossWire==7','crossWire==9')])+[('#include "modelopt_fp8_q128_plugin.h"','#include "modelopt_fp8_q128_plugin.h"\n#include "modelopt_fp8_kv128_plugin.h"',1),('        require(creator->createPlugin(',oldwire+'        require(creator->createPlugin(',1)])
+append='''
+namespace Garnet {
+std::shared_ptr<ModelOptFP8Q128Context> CreateModelOptFP8Q128Context(){++calls;return {};}
+bool GetModelOptFP8Q128Info(const std::shared_ptr<ModelOptFP8Q128Context>&,ModelOptFP8Q128Info&) noexcept{++calls;return false;}
+cublasStatus_t RunModelOptFP8Q128Matmul(const std::shared_ptr<ModelOptFP8Q128Context>&,const void*,const void*,void*,int,int,int,float,void*,size_t,cudaStream_t) noexcept{++calls;return CUBLAS_STATUS_NOT_INITIALIZED;}
+}
+'''
+source='kv128_plugin_wire_stubs.cpp';derive(source,'q128_plugin_wire_stubs.cpp',[('#include "modelopt_fp8_kv128_canonical.h"','#include "modelopt_fp8_kv128_canonical.h"\n#include "modelopt_fp8_q128_canonical.h"',1)])
+# Append without touching any old stub: represent the exact suffix as one derivation step.
+r=rows[-1];path=M/r['target'];old=path.read_bytes();suffix=append.replace('\n','\r\n').encode() if b'\r\n' in old else append.encode();new=old+suffix;put(path,new);r['changes'].append(dict(old=old.decode(),new=new.decode(),count=1));r['target_sha256']=sha(new)
+derive('build_kv128_plugin_wire_cpu.bat','build_q128_plugin_wire_cpu.bat',[('"%CANDIDATE%\\modelopt_fp8_kv128_plugin.cpp"','"%CANDIDATE%\\modelopt_fp8_q128_plugin.cpp" "%CANDIDATE%\\modelopt_fp8_kv128_plugin.cpp"',1),('kv128_plugin_wire_stubs.cpp','q128_plugin_wire_stubs.cpp',1),('probe_kv128_plugin_wire.cpp','probe_q128_plugin_wire.cpp',1)])
+derive('kv128_plugin_init_stubs.cpp','q128_plugin_init_stubs.cpp',[('#include "modelopt_fp8_kv128_canonical.h"','#include "modelopt_fp8_kv128_canonical.h"\n#include "modelopt_fp8_q128_canonical.h"',1),('oldZ{0},kv{0}','oldZ{0},kv{0},q{0}',1),('oldZ=0;kv=0;','oldZ=0;kv=0;q=0;',1),('int ModelOptInitCPUKVCalls(){return kv.load();}','int ModelOptInitCPUKVCalls(){return kv.load();}\nint ModelOptInitCPUQCalls(){return q.load();}',1)])
+r=rows[-1];path=M/r['target'];old=path.read_bytes();suffix='''
+namespace Garnet {
+std::shared_ptr<ModelOptFP8Q128Context> CreateModelOptFP8Q128Context(){++q;return fake<ModelOptFP8Q128Context>();}
+cublasStatus_t RunModelOptFP8Q128Matmul(const std::shared_ptr<ModelOptFP8Q128Context>&,const void*,const void*,void*,int,int,int,float,void*,size_t,cudaStream_t) noexcept{++operators;return CUBLAS_STATUS_NOT_INITIALIZED;}
+}
+''';suffix=suffix.replace('\n','\r\n') if b'\r\n' in old else suffix;new=old+suffix.encode();put(path,new);r['changes'].append(dict(old=old.decode(),new=new.decode(),count=1));r['target_sha256']=sha(new)
+derive('probe_kv128_plugin_init.cpp','probe_q128_plugin_init.cpp',[('#include "modelopt_fp8_kv128_plugin.h"','#include "modelopt_fp8_kv128_plugin.h"\n#include "modelopt_fp8_q128_plugin.h"',1),('int ModelOptInitCPUKVCalls();','int ModelOptInitCPUKVCalls();int ModelOptInitCPUQCalls();',1),('    if(route==5)','    if(route==6)return OwnedPlugin(new ModelOptFP8Q128Plugin(12288,5120,.5f,.25f));\n    if(route==5)',1),('route<6','route<7',1),('            value->serialize(after.data());','            require(ModelOptInitCPUQCalls()==(route==6?(mode==1?1:2):0),"Q factory route changed");\n            value->serialize(after.data());',1),('calls==54&&factories==42&&successes==18&&failures==36&&clones==6','calls==63&&factories==49&&successes==21&&failures==42&&clones==7',1),('actual_kv128_plugin_initialize_cpu_controls_passed','actual_q128_plugin_initialize_cpu_controls_passed',1)])
+derive('kv128_plugin_init_contract.py','q128_plugin_init_contract.py',[("'fp8_kv128'}","'fp8_kv128','fp8_q128'}",1),("        elif row['route']=='fp8':","        elif row['route']=='fp8_q128':assert (row['rows'],row['columns'],row['policy'])==(12288,5120,0x51313238)\n        elif row['route']=='fp8':",1),('actual_kv128_plugin_initialize_cpu_controls_passed','actual_q128_plugin_initialize_cpu_controls_passed',1),("'actual_initialize_calls':54,'factory_calls':42,'successes':18,'failures':36,'cached_clone_initializations':6","'actual_initialize_calls':63,'factory_calls':49,'successes':21,'failures':42,'cached_clone_initializations':7",1),("'initialize_calls':54,'factory_calls':42","'initialize_calls':63,'factory_calls':49",2),('expected_calls=54','expected_calls=63',1),("q['factory_calls']==42 and q['cached_context_initializations']==12 and q['exception_returns']==24 and len(q['failures'])==36","q['factory_calls']==49 and q['cached_context_initializations']==14 and q['exception_returns']==28 and len(q['failures'])==42",1)])
+derive('run_kv128_plugin_init_cpu.py','run_q128_plugin_init_cpu.py',auto('run_kv128_plugin_init_cpu.py',[('kv128_plugin_init_contract','q128_plugin_init_contract'),('actual_kv128_plugin_initialize_CPU','actual_q128_plugin_initialize_CPU'),('540','630'),('420','490')]))
+derive('build_kv128_plugin_init_cpu.bat','build_q128_plugin_init_cpu.bat',[('"%CANDIDATE%\\modelopt_fp8_kv128_plugin.cpp"','"%CANDIDATE%\\modelopt_fp8_kv128_plugin.cpp" "%CANDIDATE%\\modelopt_fp8_q128_plugin.cpp"',1),('kv128_plugin_init_stubs.cpp','q128_plugin_init_stubs.cpp',1),('probe_kv128_plugin_init.cpp','probe_q128_plugin_init.cpp',1)])
+(M/'evidence/q128-canonical-CPU-derivations.json').write_bytes(json.dumps(dict(status='strict_new_Q128_contracts_and_all_old_native_templates_preserved',derivations=rows,GPU_or_model_executed=False),indent=2).encode());print(json.dumps(dict(derived=len(rows))))

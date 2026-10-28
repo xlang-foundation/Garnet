@@ -1,0 +1,44 @@
+"""Exclusive remote CPU compilation of the actual policy header, no model build."""
+from pathlib import Path
+import hashlib,json,os,sys,zipfile
+ROOT=Path('D:/CantorAI/5090-study-20261023');M=ROOT/'Garnet/test2026/cuda/qwen38_5090';J='rowwise-k-norm-profile-cpu-attempt1';sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest();sys.path[:0]=[str(M),str(ROOT/'Garnet')]
+
+def main():
+    import run_logged as ledger
+    from run_bf16_low_batch_native_build import idle
+    packet=ROOT/'results/rowwise-k-norm-profile-cpu-deployment.zip';assert sha(packet)==sys.argv[1]
+    out=ROOT/'results'/J;archive=ROOT/'results'/(J+'-evidence.zip');assert not out.exists() and not archive.exists()
+    with zipfile.ZipFile(packet) as z:
+        mf=json.loads(z.read('deployment-manifest.json'))['files'];assert len(z.namelist())==len(set(z.namelist()))==len(mf)+1 and z.testzip() is None
+        for n,h in mf.items():assert hashlib.sha256(z.read(n)).hexdigest()==h and Path(n).name==n
+        p=json.loads(z.read('preparation.json'));assert sha(Path(__file__))==mf['runner.py']
+        assert sha(ROOT/'results/decode35-endpoints-attempt1-verified.json')==p['parent_proof_sha256']
+        assert sha(ROOT/'results/decode35-endpoints-attempt1-evidence.zip')==p['parent_archive_sha256']
+        assert p['native_or_GPU_unrun_at_preparation'] and p['source_files']==87
+        def state():
+            return {'files':{n:sha(ROOT/n) if (ROOT/n).is_file() else None for n in p['files']},'runtime':{n:sha(ROOT/'build/bin'/n) for n in p['runtime']},'environment':{n:sha(Path(n)) for n in p['environment']},'checkpoints':{n:sha(ROOT/n) for n in p['checkpoints']},'cuda_objects':{n:sha(ROOT/n) for n in p['cuda_objects']},'cache':sha(ROOT/'build/CMakeCache.txt')}
+        expected={k:p[k] for k in ('files','runtime','environment','checkpoints','cuda_objects','cache')};before=state();assert before==expected
+        idle();out.mkdir();inputs=out/'input';inputs.mkdir();binary=out/'bin';binary.mkdir()
+        for n in mf:(inputs/n).write_bytes(z.read(n))
+    os.chdir(ROOT/'Garnet');w={'status':'running','preparation_sha256':sha(inputs/'preparation.json'),'baseline_before':before,'cleanup_finished':False,'model_or_GPU_executed':False};code=1
+    def save():(out/'workflow.json').write_bytes(json.dumps(w,indent=2).encode())
+    inventory={str(inputs/n):h for n,h in mf.items()}
+    ledger.source_identity=lambda:{'scope':'Exact new/retained header and native CPU probe sources; explicit baseline inventory excludes protected bodies','owned_source_sha256':{n:sha(Path(n)) for n in inventory}}
+    save()
+    try:
+        code=ledger.run(['cmd.exe','/d','/c',str(inputs/'build_rowwise_k_norm_profile_cpu.bat'),p['vcvars'],str(inputs),str(binary)],out/'build-ledger','build','Compile actual defaultoff rowwiseK profile and retained seven-stage/fullchunk headers with MSVC /Bv /MT /W4 /WX; CPU only, no Garnet or CUDA DLL linked.',[inputs/n for n in mf]);w['build_exit_code']=code;save();assert code==0,'Native CPU compilation failed'
+        code=ledger.run([str(binary/'contract.exe')],out/'contract-ledger','correctness','184 actual CPU guard cases:17new valid,161new rejected,4old valid,2old rejected; all16 FA offsets/neighbors, policy types/observers/geometry/finite/modes and original header guards. No TensorRT/model qualification.',[inputs/n for n in mf]+[binary/'contract.exe']);w['contract_exit_code']=code;save();assert code==0,'Native CPU contracts failed'
+        lines=(out/'contract-ledger/commands.log').read_text(encoding='utf8').splitlines();records=[json.loads(line) for line in lines if line.startswith('{"status"')];assert len(records)==1
+        result=records[0];assert result=={'status':'passed','new_valid':17,'new_rejected':161,'old_valid':4,'old_rejected':2,'failures':0,'cases':184}
+        w.update(status='rowwise_k_norm_native_CPU_profile_passed',contract=result,executable_sha256=sha(binary/'contract.exe'));code=0
+    except BaseException as error:w.update(status='failed',error=repr(error));code=code or 1
+    finally:
+        idle();w.update(exit_code=code,baseline_after=state(),cleanup_finished=True);w['all_baseline_unchanged']=w['baseline_before']==w['baseline_after']
+        if not w['all_baseline_unchanged']:code=1;w.update(exit_code=1,status='failed',error='Unexpected baseline drift preserved')
+        save();files={n.relative_to(out).as_posix():n for n in out.rglob('*') if n.is_file()}
+        with zipfile.ZipFile(archive,'x',zipfile.ZIP_DEFLATED) as z:
+            for n,path in files.items():z.write(path,n)
+            z.writestr('evidence-manifest.json',json.dumps({'files':{n:sha(path) for n,path in files.items()},'scope':p['scope']},indent=2))
+        print(json.dumps({'status':w['status'],'exit_code':code,'archive_sha256':sha(archive),'archive_bytes':archive.stat().st_size,'files':len(files),'baseline_unchanged':w['all_baseline_unchanged'],'model_or_GPU_executed':False}),flush=True)
+    return code
+if __name__=='__main__':raise SystemExit(main())

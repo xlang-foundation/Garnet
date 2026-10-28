@@ -1,0 +1,174 @@
+{
+  "status": "b1_native_source_wired_locally_compile_runtime_gpu_unqualified",
+  "files": {
+    "src/cuda/qwen38_bf16_kv_low_batch_overlay.cuh": {
+      "source": "test2026/cuda/qwen38_5090/bf16_kv_low_batch_candidate.h",
+      "source_sha256": "96a7fb647619f6a227d5855832df3ab4fa74d5842197a18063c22d0286f43139",
+      "changes": [],
+      "result_sha256": "96a7fb647619f6a227d5855832df3ab4fa74d5842197a18063c22d0286f43139"
+    },
+    "src/cuda/qwen38_bf16_kv_low_batch_overlay.cu": {
+      "source": "test2026/cuda/qwen38_5090/bf16_kv_low_batch_candidate.cu",
+      "source_sha256": "63e7fa5b7544711bae044b853cb5adbf6db754d335fa7b0c82e4f5116d129185",
+      "changes": [
+        [
+          "\"bf16_kv_low_batch_candidate.h\"",
+          "\"qwen38_bf16_kv_low_batch_overlay.cuh\"",
+          1
+        ]
+      ],
+      "result_sha256": "fe4a826eb8a03324780afa13fad1da238882e57ecda58cd61d988287502d6193"
+    },
+    "src/cuda/qwen38_bf16_low_batch_kv_commit.cuh": {
+      "source": "test2026/cuda/qwen38_5090/bf16_low_batch_commit_candidate.h",
+      "source_sha256": "cde12eda42e98d08edcfa65bb26a9ca24d0a4748e651f5a89520e802c20c5843",
+      "changes": [],
+      "result_sha256": "cde12eda42e98d08edcfa65bb26a9ca24d0a4748e651f5a89520e802c20c5843"
+    },
+    "src/cuda/qwen38_bf16_low_batch_kv_commit.cu": {
+      "source": "test2026/cuda/qwen38_5090/bf16_low_batch_commit_candidate.cu",
+      "source_sha256": "92337972279cb6b99b30934e69cffea68241bf618dd479faf6cb9411fe836348",
+      "changes": [
+        [
+          "\"bf16_low_batch_commit_candidate.h\"",
+          "\"qwen38_bf16_low_batch_kv_commit.cuh\"",
+          1
+        ]
+      ],
+      "result_sha256": "1433659ba3663c334e5afc00e3afba88514fdc988b2c20f75d8500a4df9ee833"
+    },
+    "src/backends/tensorrt/qwen38_bf16_low_batch_kv_layout_contract.h": {
+      "source": "test2026/cuda/qwen38_5090/bf16_low_batch_layout_contract.h",
+      "source_sha256": "06b866191f512df166319d1b2c4dc370877fbace8743c4215def4b87f98a52dd",
+      "changes": [],
+      "result_sha256": "06b866191f512df166319d1b2c4dc370877fbace8743c4215def4b87f98a52dd"
+    },
+    "src/backends/tensorrt/qwen38_bf16_low_batch_kv_overlay_plugin.h": {
+      "source": "test2026/cuda/qwen38_5090/bf16_low_batch_overlay_plugin.h",
+      "source_sha256": "ff2f841498ded811dd73172710a5d11580462918d3c864ddb848f03fa1df7876",
+      "changes": [
+        [
+          "\"bf16_kv_low_batch_candidate.h\"",
+          "\"../../cuda/qwen38_bf16_kv_low_batch_overlay.cuh\"",
+          1
+        ]
+      ],
+      "result_sha256": "36ec32c9845caf90c3c2f159af2b0017b5d879611be6453252940b9dbf9106b1"
+    },
+    "src/backends/tensorrt/qwen38_bf16_low_batch_kv_overlay_plugin.cpp": {
+      "source": "test2026/cuda/qwen38_5090/bf16_low_batch_overlay_plugin.cpp",
+      "source_sha256": "43d540e67c63bf1a1266aef8e934a9b2921df6e20c0c60b8f3a6ab649a3f4ac7",
+      "changes": [
+        [
+          "\"bf16_low_batch_overlay_plugin.h\"",
+          "\"qwen38_bf16_low_batch_kv_overlay_plugin.h\"",
+          1
+        ],
+        [
+          "\"qwen38_bf16_kv_commit.cuh\"",
+          "\"../../cuda/qwen38_bf16_kv_commit.cuh\"",
+          1
+        ]
+      ],
+      "result_sha256": "64e5eb70d9f47156ef8963510747aa5ed28011f95b187f47f029dafe917a7287"
+    },
+    "src/backends/tensorrt/cuda_bf16_low_batch_kv_delta_commit.h": {
+      "source": "test2026/cuda/qwen38_5090/cuda_bf16_low_batch_kv_delta_commit.h",
+      "source_sha256": "e1714479c8c816f31774ffa957268c3bba09275fcc0aa2660dab9d61a96adc86",
+      "changes": [
+        [
+          "\"bf16_low_batch_layout_contract.h\"",
+          "\"qwen38_bf16_low_batch_kv_layout_contract.h\"",
+          1
+        ]
+      ],
+      "result_sha256": "49fe2c68db2398a688687bdc4f71ef8773e9e3173783d160e9f38d4c50acfe76"
+    },
+    "src/backends/tensorrt/cuda_bf16_low_batch_kv_delta_commit.cpp": {
+      "source": "test2026/cuda/qwen38_5090/cuda_bf16_low_batch_kv_delta_commit.cpp",
+      "source_sha256": "b8b6938e2e6cd0f4e18726bd0d0678f01bb4bf7f325065d25b6453a99530d850",
+      "changes": [
+        [
+          "\"bf16_low_batch_commit_candidate.h\"",
+          "\"../../cuda/qwen38_bf16_low_batch_kv_commit.cuh\"",
+          1
+        ]
+      ],
+      "result_sha256": "f05f209e1092cde4fa964c9a2862d6c11f7916cf88f4899808801d5d2b4ce212"
+    },
+    "src/entry/garnet.h": {
+      "base_sha256": "7602991d5699a08ba6d4461ec1a531bfdc53a1f0063df6237bee9ebda9ffab4e",
+      "changes": [
+        [
+          "#include \"../backends/tensorrt/cuda_bf16_kv_delta_commit.h\"",
+          "#include \"../backends/tensorrt/cuda_bf16_kv_delta_commit.h\"\n#include \"../backends/tensorrt/cuda_bf16_low_batch_kv_delta_commit.h\"",
+          1
+        ],
+        [
+          "APISET().AddClass<0,CUDABF16KVDeltaCommit>(\"cuda_bf16_kv_delta_commit\");",
+          "APISET().AddClass<0,CUDABF16KVDeltaCommit>(\"cuda_bf16_kv_delta_commit\");\n            APISET().AddClass<0,CUDABF16LowBatchKVDeltaCommit>(\"cuda_bf16_low_batch_kv_delta_commit\");",
+          1
+        ]
+      ],
+      "result_sha256": "68cf1af9dba152f32f11781dd738a21aa86c315bad9428b8cf65f5512ed200ca"
+    },
+    "src/backends/tensorrt/qwen35_lowering.h": {
+      "base_sha256": "80e75d25a0e0e353f2ae70cda29b16d391274d1c2bdf6b3273caa244c0e74231",
+      "changes": [
+        [
+          "#include \"qwen38_bf16_kv_overlay_plugin.h\"",
+          "#include \"qwen38_bf16_kv_overlay_plugin.h\"\n#include \"qwen38_bf16_low_batch_kv_overlay_plugin.h\"",
+          1
+        ],
+        [
+          "T* canonical=nullptr,const CanonicalKVOverlayConfig* overlay=nullptr,const BF16KVOverlayConfig* bf16Overlay=nullptr,bool bf16FloatReference=false) {\n        const bool bf16Delta=bf16Overlay!=nullptr;",
+          "T* canonical=nullptr,const CanonicalKVOverlayConfig* overlay=nullptr,const BF16KVOverlayConfig* legacyBF16Overlay=nullptr,bool bf16FloatReference=false,const BF16KVLowBatchOverlayConfig* lowBatchOverlay=nullptr) {\n        if(legacyBF16Overlay&&lowBatchOverlay)throw std::invalid_argument(\"B1 and B4/B8 BF16 cache types are exclusive\");\n        const bool lowBatch=lowBatchOverlay!=nullptr;\n        const BF16KVOverlayConfig lowBatchView=lowBatch?BF16KVOverlayConfig{lowBatchOverlay->attention,lowBatchOverlay->state_width,lowBatchOverlay->key_offset,lowBatchOverlay->value_offset}:BF16KVOverlayConfig{};\n        const BF16KVOverlayConfig* bf16Overlay=lowBatch?&lowBatchView:legacyBF16Overlay;\n        const bool bf16Delta=bf16Overlay!=nullptr;",
+          1
+        ],
+        [
+          "!ValidBF16KVOverlayConfig(*bf16Overlay)",
+          "!(lowBatch?ValidBF16KVLowBatchOverlayConfig(*lowBatchOverlay):ValidBF16KVOverlayConfig(*bf16Overlay))",
+          1
+        ],
+        [
+          "throw std::invalid_argument(\"BF16 canonical KV requires explicit shared joined B4/8,T4/32 profile\");",
+          "throw std::invalid_argument(\"BF16 canonical KV requires its explicit shared joined B1 or B4/B8 cache type and T4/T32 profile\");",
+          1
+        ],
+        [
+          "if(bf16Delta){\n                    if(!EnsureBF16KVOverlayPluginRegistered())",
+          "if(lowBatch){\n                    if(!EnsureBF16KVLowBatchOverlayPluginRegistered())throw std::runtime_error(\"B1 BF16 canonical KV plugin registration failed\");\n                    plugin=new BF16KVLowBatchOverlayPlugin(*lowBatchOverlay);\n                }else if(bf16Delta){\n                    if(!EnsureBF16KVOverlayPluginRegistered())",
+          1
+        ]
+      ],
+      "result_sha256": "12ede4881f8130df5027e871bbf6033ffee82887a26cecd3846cba049d87802f"
+    },
+    "src/backends/tensorrt/trt_builder.cpp": {
+      "base_sha256": "e92362d853fd07f6cae28892b79e71a6dad940568e34fb7f52f038ba00ace3cc",
+      "changes": [
+        [
+          "!EnsureBF16KVOverlayPluginRegistered()||!EnsureBF16KVFloatReferencePluginRegistered()",
+          "!EnsureBF16KVOverlayPluginRegistered()||!EnsureBF16KVLowBatchOverlayPluginRegistered()||!EnsureBF16KVFloatReferencePluginRegistered()",
+          1
+        ],
+        [
+          "                    BF16KVOverlayConfig bf16Overlay{};",
+          "                    auto* lowBatchAttribute=FindKeyword(kwParams,\"canonical_bf16_low_batch_kv_overlay\");\n                    if(lowBatchAttribute&&(!(lowBatchAttribute->second.IsInt64()||lowBatchAttribute->second.IsUInt64())||\n                        (lowBatchAttribute->second.IsUInt64()&&lowBatchAttribute->second.ToUInt64()>1)))throw std::invalid_argument(\"B1 BF16 cache opt-in requires integer0 or1\");\n                    const auto lowBatchMode=lowBatchAttribute?lowBatchAttribute->second.ToLongLong():0;\n                    if((lowBatchMode!=0&&lowBatchMode!=1)||(lowBatchMode&&(bf16Mode||overlayMode||referenceMode)))throw std::invalid_argument(\"B1 BF16 cache requires an exclusive explicit cache type\");\n                    BF16KVLowBatchOverlayConfig lowBatchOverlay{};\n                    if(lowBatchMode){\n                        const auto dims=ops.shape(source);\n                        if(dims.size()!=3||dims[0]!=1||(dims[1]!=4&&dims[1]!=32)||dims[2]!=5120||\n                            capturedWeightProfile!=\"modelopt_mixed\"||!FindKeyword(kwParams,\"external_compressed_weights\")||external.empty()||FindKeyword(kwParams,\"external_weights\")||\n                            keywordInt(\"fused_attention\",0)!=1||keywordInt(\"joined_mlp_projections\",0)!=1)\n                            throw std::invalid_argument(\"B1 BF16 cache requires shared mixed joined B1,T4/T32 geometry\");\n                        auto exact=[&](const char* key)->int64_t{auto* item=FindKeyword(kwParams,key);\n                            if(!item||!(item->second.IsInt64()||item->second.IsUInt64())||(item->second.IsUInt64()&&item->second.ToUInt64()>uint64_t(INT64_MAX)))\n                                throw std::invalid_argument(\"B1 BF16 cache metadata requires bounded integers\");return item->second.ToLongLong();};\n                        if(exact(\"kv_overlay_strategy\")!=1)throw std::invalid_argument(\"B1 BF16 cache requires fixed reduction strategy1\");\n                        lowBatchOverlay={{1,dims[1],24,4,4096,256},exact(\"canonical_state_width\"),exact(\"canonical_key_offset\"),exact(\"canonical_value_offset\")};\n                        if(!ValidBF16KVLowBatchOverlayConfig(lowBatchOverlay))throw std::invalid_argument(\"Unqualified B1 BF16 cache layout\");\n                    }\n                    BF16KVOverlayConfig bf16Overlay{};",
+          1
+        ],
+        [
+          "diagnostic&&(overlayMode||bf16Mode||referenceMode)",
+          "diagnostic&&(overlayMode||bf16Mode||referenceMode||lowBatchMode)",
+          1
+        ],
+        [
+          "(overlayMode||bf16Mode)?b[\"qwen35_attention_bind_canonical\"]:nullptr,overlayMode?&overlay:nullptr,bf16Mode?&bf16Overlay:nullptr,referenceMode!=0);",
+          "(overlayMode||bf16Mode||lowBatchMode)?b[\"qwen35_attention_bind_canonical\"]:nullptr,overlayMode?&overlay:nullptr,bf16Mode?&bf16Overlay:nullptr,referenceMode!=0,lowBatchMode?&lowBatchOverlay:nullptr);",
+          1
+        ]
+      ],
+      "result_sha256": "90f4f815d32dc3fbeff31c581ec56292e987d19f66e69480e1e37e3bbd04957f"
+    }
+  },
+  "scope": "Separate native class, cache dialect, plugin type and explicit low-batch lowering keyword. Legacy B4/B8 guards and default routes retained; GPU arithmetic is an include-only relocation of isolated candidates. Local source only; no deployment/build/runtime/GPU admission. Commit candidate GPU/plugin/helper/full-model gates remain mandatory."
+}

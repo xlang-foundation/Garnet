@@ -1,0 +1,44 @@
+from pathlib import Path
+import hashlib,json,zipfile
+W=Path(__file__).resolve().parent;R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';E=M/'evidence';sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest();owned=[];saved={}
+for n in ('decode35_stage_source.py','test_decode35_stage_source.py','probe_decode35_stage_profile.cpp','build_decode35_stage_profile_cpu.bat','evidence/decode35-stage-source-derivation.json','native_decode35_stage_candidate/qwen35_lowering.h','native_decode35_stage_candidate/trt_builder.cpp','native_decode35_stage_candidate/qwen38_decode35_stage_profile.h'):owned.append(M/n)
+def keep(name,raw):
+    p=E/name;assert not p.exists();p.write_bytes(raw);owned.append(p);saved[name]=sha(p)
+for ext in ('log','jsonl'):keep('decode35-stage-source-cpu-commands.'+ext,(W/'decode35-stage-source-cpu-ledger'/('commands.'+ext)).read_bytes())
+for name in ('derive-decode35-stage-source.py','run-decode35-stage-profile-cpu.py','prepare-decode35-stage-profile-cpu.py',Path(__file__).name):keep(name+'.txt',(W/name).read_bytes())
+for name in ('decode35-stage-source-package.json','decode35-stage-profile-cpu-package.json'):keep(name,(W/name).read_bytes())
+package=json.loads((W/'decode35-stage-profile-cpu-package.json').read_bytes());assert sha(W/'decode35-stage-profile-cpu-deployment.zip')==package['deployment_sha256']
+with zipfile.ZipFile(W/'decode35-stage-profile-cpu-deployment.zip') as z:keep('decode35-stage-profile-cpu-preparation.json',z.read('preparation.json'))
+keep('decode35-stage-preparation-retention.json',json.dumps({'status':'source86_defaultoff_internal_operands_prepared','package':package,'retained_sha256':saved,'local_source_controls':5,'actual_native_CPU_profile_unrun_at_preparation':True,'full_native_build_or_GPU_unrun':True,'model_or_performance_qualified':False},indent=2).encode())
+entry=('\n\n2026-10-27 source86 separate decode35 internal operand witness prepared '
+       'after paired all64layer proof3458627f8e735a84c178f585a55e2fe8313f445ec9fe19288550d397ab099f2c '
+       '(all64exact at44; first35 at45,26activeF32words). Modify only frozen '
+       'source85 qwen35_lowering.h/trt_builder.cpp plus newguardheader, defaultoff '
+       'witness_full_decode35_stages integer0/1 AND GARNET_DECODE35_STAGE_WITNESS=1. '
+       'Require exact sharedmixed F32 joined/fused layer35 B1lowbatch orB4BF16/'
+       'T4/4096 layout,heads24/KV4/d256/rotary64/sections11-11-10/theta1e7/eps1e-6 '
+       'physicalwidth106823680/Koffset55894016/Voffset57991168. Exclude existing '
+       'diagnostics, oldchunkwitness, nonBF16overlay/reference/prefill128 profiles. '
+       'Capture seven existing tensorpointers without recalculation: maskedx, '
+       'inputnorm,Qgate,Kproj,Vproj,KnormpreRoPE,KpostRoPE. AllFP32,widths '
+       '20480/20480/49152/4096/4096/4096/4096, sum106496words perphysicalrow. '
+       'Validate allshapeproducts/overflow/batch/type before packing after '
+       'originalprefix and emitting distinct nativepack trace. Existingguards, '
+       'allCUDA,allmatrixmath and oldcounters byte-identical after removing '
+       'newobservation-only additions; no newpubliccounter. Five local source '
+       'composition/reversechange/defaultoff/type/operand/size/corruption checks '
+       'pass inledger. Sourcebundle48f323c025cce22577072bc7c1819b62ade5ad08d37e94b2146ded75dac0e43f '
+       '(86files). Actualnew/oldheader CPU109case MSVC probe isprepared butUNRUN '
+       'atthisentry; fullDLL build/liveTensorRT/model/GPU unrun. Package '
+       +package['deployment_sha256']+' ('+str(package['bytes'])+'B). '
+       'CPUowner guards/restores baseline1892files/runtime/SDK/config+index/'
+       'CMake/all34 withoutproductionmutations. Before interpreting future '
+       'internaloutputs, require original53IDs/fivefullstatevectors/fullcache/'
+       'coordinate timeline plus bothsteps all64layer arrays sameprofileparent '
+       'parity; extraoutputs may alter tactics/fusions. No cause/performance '
+       'qualification. Full4K/cache62/K-fourM4/observer1 failures and2x goalopen.\n').encode()
+for name in ('docs/research/qwen38-5090-development-log.md','docs/research/qwen38-5090-implementation-task.md'):
+    p=R/name;before=p.read_bytes();assert b'source86 separate decode35 internal operand witness prepared' not in before
+    with p.open('ab') as f:f.write(entry)
+    assert p.read_bytes()==before+entry;owned.append(p)
+(W/'decode35-stage-preparation-stage-paths.bin').write_bytes(b''.join(p.relative_to(R).as_posix().encode()+b'\0' for p in owned));print(json.dumps({'stage_paths':len(owned),'local_source_controls':5,'native_GPU_unrun_at_preparation':True}))

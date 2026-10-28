@@ -1,0 +1,56 @@
+from pathlib import Path
+import hashlib,json
+work=Path(__file__).resolve().parent;m=Path('D:/CantorAI/work/qwen38-5090/test2026/cuda/qwen38_5090');sha=lambda raw:hashlib.sha256(raw).hexdigest();rows=[]
+def derive(base,target,changes):
+    raw=(m/base).read_bytes();original=raw
+    for before,after,count in changes:assert raw.count(before.encode())==count,(target,before[:80],raw.count(before.encode()));raw=raw.replace(before.encode(),after.encode())
+    path=m/target;assert not path.exists() or path.read_bytes()==raw
+    if not path.exists():path.write_bytes(raw)
+    rows.append({'base':base,'target':target,'base_sha256':sha(original),'target_sha256':sha(raw),'changes':[{'before':a,'after':b,'count':c} for a,b,c in changes]})
+derive('prepare_fp8_z128_native_build.py','prepare_modelopt_init_trace_native_build.py',[
+ ('fp8-z128-native-proposal.json','modelopt-init-trace-native-proposal.json',1),('fp8_z128_native_build_proposed_unrun','modelopt_init_trace_native_build_proposed_unrun',1),('fp8_z128_native_build_prepared_unrun','modelopt_init_trace_native_build_prepared_unrun',1),('fp8-z128-native-build-preparation.json','modelopt-init-trace-native-build-preparation.json',1),
+ ("len(p['candidate_files'])==28 and len(p['candidate_base'])==28 and p['expected_cpu_test_count']==77","len(p['candidate_files'])==38 and len(p['candidate_base'])==38 and p['expected_cpu_test_count']==81",1),
+ ("sum(value is not None for value in p['candidate_base'].values())==8","sum(value is not None for value in p['candidate_base'].values())==14",1),
+ ("name.startswith('src/')","name.startswith(('src/','xModel/'))",1),
+ ("'existing_targets':8,'absent_targets':20","'existing_targets':14,'absent_targets':24",1)])
+for family in ('m128','z128'):
+    derive('build_fp8_'+family+'_plugin_cpu.bat','build_modelopt_init_trace_'+family+'_wire_cpu.bat',[
+      ('set "CANDIDATE=%METHODS%\\native_fp8_'+family+'_candidate"','set "CANDIDATE=%SRC%\\backends\\tensorrt"',1)])
+old=(m/'run_fp8_z128_native_build.py').read_text();start=old.index('        code=ledger.run([sys.executable,\'-m\',\'unittest\',*p[\'test_ids\']]');end=old.index('        for name,raw in candidate.items():',start);pre=old[start:end]
+start2=old.index("        code=ledger.run([sys.executable,'-m','unittest','test2026.cuda.qwen38_5090.test_fp8_z128_native_source'");end2=old.index("        code=ledger.run(['cmd.exe','/d','/c',str(M/'build_integrated_batch_top1_native.bat')",start2)
+cpu="""        code=ledger.run([sys.executable,'-m','unittest',*p['test_ids']],out/'cpu-ledger','correctness','81CPU retain78controls through exact initialization-source composition and4trace controls; one historical byte-source test replayed in composed original-source view',common)
+        if code:raise RuntimeError('CPU composed source/model controls')
+        code=ledger.run(['cmd.exe','/d','/c',str(M/'build_modelopt_init_trace_cpu.bat'),p['vcvars'],str(out/'init-cpu-build')],out/'init-cpu-build-ledger','correctness','Compile actual four private plugin implementations with CPU-only factories/operators, no Garnet or CUDA context',common)
+        if code:raise RuntimeError('Private actual initialize CPU build')
+        code=ledger.run([sys.executable,str(M/'run_modelopt_init_trace_cpu_contract.py'),'--executable',str(out/'init-cpu-build/contract.exe'),'--output',str(out/'init-cpu')],out/'init-cpu-ledger','correctness','Ten fresh CPU policy processes:360actual initialize calls/280factory stubs, null/success/cached/standard+nonstandard exceptions, unchanged wire/clone,0GPU operators; only exact1 emits72events',common)
+        if code:raise RuntimeError('Actual initialize CPU policy controls')
+"""
+derive('run_fp8_z128_native_build.py','run_modelopt_init_trace_native_build.py',[
+ ("JOB='fp8-z128-native-build-attempt1'","JOB='modelopt-init-trace-native-build-attempt1'",1),('fp8-z128-native-build-preparation.json','modelopt-init-trace-native-build-preparation.json',1),('fp8_z128_native_build_prepared_unrun','modelopt_init_trace_native_build_prepared_unrun',1),
+ ("len(p['candidate_files'])==28","len(p['candidate_files'])==38",1),("name.startswith('src/')","name.startswith(('src/','xModel/'))",1),
+ ('garnet-native-fp8-z128-attempt1.dll','garnet-native-modelopt-init-trace-attempt1.dll',1),
+ (pre,'',1),(old[start2:end2],cpu,1),
+ ('Reconfigure reused Release/MT/sm120 tree for28native T128/GDNstage/typedZ sources and separate graph counters','Reused Release/MT/sm120 native31+Python7 source; actual four plugin initialize trace only, defaultoff and unchanged math/algorithms/descriptor/wire',1),
+ ('build_fp8_m128_plugin_cpu.bat','build_modelopt_init_trace_m128_wire_cpu.bat',1),('build_fp8_z128_plugin_cpu.bat','build_modelopt_init_trace_z128_wire_cpu.bat',1),
+ ('fp8_z128_native_built_cpu_qualified_witness_unqualified','modelopt_init_trace_native_built_cpu_qualified_model_unqualified',1),
+ ("common=[prep,bundle,ROOT/p['proposal']]","common=[prep,bundle,ROOT/p['proposal']]+[ROOT/name for name in p['checkpoints']]",1),
+ ("cache_after_sha256=sha(cache),baseline_library_restored=sha(library)==p['runtime']['garnet.dll']","cache_after_sha256=sha(cache),checkpoint_after={name:sha(ROOT/name) for name in p['checkpoints']},baseline_library_restored=sha(library)==p['runtime']['garnet.dll']",1)])
+add="""            from test2026.cuda.qwen38_5090.modelopt_init_trace_contract import cpu_contract
+            init=doc(base+'init-cpu/report.json');assert init['status']=='actual_modelopt_initialize_CPU_policy_contracts_replayed' and init['actual_plugin_initialize_calls']==360 and init['actual_factory_stub_calls']==280 and init['unexpected_GPU_operator_calls']==0
+            assert sha(z.read(base+'init-cpu-build/contract.exe'))==init['executable_sha256']
+            policies=(None,'','0','true','01',' 1','1 ','-1','2','1');assert len(init['policies'])==len(policies)
+            for index,(row,policy) in enumerate(zip(init['policies'],policies)):
+                stdout=z.read(base+'init-cpu/policy-'+str(index)+'-stdout.log');stderr=z.read(base+'init-cpu/policy-'+str(index)+'-stderr.log');assert row['policy_value']==policy and row['exit_code']==0 and sha(stdout)==row['stdout_sha256'] and sha(stderr)==row['stderr_sha256'] and json.loads(stdout)==row['report'];assert cpu_contract(row['report'],stderr,policy=='1')==row['replay']
+"""
+derive('verify_fp8_z128_native_build.py','verify_modelopt_init_trace_native_build.py',[
+ ("JOB='fp8-z128-native-build-attempt1'","JOB='modelopt-init-trace-native-build-attempt1'",1),('fp8-z128-native-build-preparation.json','modelopt-init-trace-native-build-preparation.json',1),
+ ("len(p['candidate_files'])==28","len(p['candidate_files'])==38",1),("len(set(source.namelist()))==28","len(set(source.namelist()))==38",1),
+ ('fp8_z128_native_build_proposed_unrun','modelopt_init_trace_native_build_proposed_unrun',1),('fp8_z128_native_built_cpu_qualified_witness_unqualified','modelopt_init_trace_native_built_cpu_qualified_model_unqualified',1),
+ ("'cpu','source-cpu','build'","'cpu','init-cpu-build','init-cpu','build'",1),
+ ("(dict(p['base_files'],**p['methods']) if name=='cpu' else expected)",'expected',1),
+ ("            assert b'Ran 6 tests' in z.read(base+'source-cpu-ledger/commands.log') and b'\\nOK' in z.read(base+'source-cpu-ledger/commands.log')\n",add,1),
+ ("assert w['environment_before']==w['environment_after']==p['environment'] and w['methods']==w['methods_after']==p['methods']","assert w['environment_before']==w['environment_after']==p['environment'] and w['methods']==w['methods_after']==p['methods'] and w['cache_after_sha256']==p['cache_before_sha256'] and w['checkpoint_after']==p['checkpoints']",1),
+ ("'fp8_z128_native_build_cpu_replayed' if passed else 'fp8_z128_native_build_failure_preserved'","'modelopt_init_trace_native_build_cpu_replayed' if passed else 'modelopt_init_trace_native_build_failure_preserved'",1)])
+target=m/'evidence/modelopt-init-trace-native-build-derivation.json';raw=json.dumps({'status':'exact_transaction_and_contract_derivations','files':rows,'old_numerical_and_wire_contracts_retained':True,'original_byte_source_test_replayed_through_exact_initialize_composition':True},indent=2).encode();assert not target.exists() or target.read_bytes()==raw
+if not target.exists():target.write_bytes(raw)
+print(json.dumps({'derived_methods':len(rows)}))

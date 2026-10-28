@@ -1,0 +1,58 @@
+{
+  "status": "implement_separate_defaultoff_O128_route_after_observed_exact_Q_and_core",
+  "evidence": {
+    "Q128_original_model_archive_sha256": "5641e31a8b378f5fab423df84bfba38fccd9a0f184ad0bbd2d1c60f41828ab4a",
+    "paired_single_observation_proof_sha256": "1dd915edba0fcfb8aa5f5bc2d3ba5e057c2a4012e812accf021d1ae31f48b2a2",
+    "first_remaining_difference": {
+      "stage": "attention",
+      "token": 1,
+      "dimension": 4305,
+      "word": 9425,
+      "baseline": -0.011962890625,
+      "candidate": -0.01190185546875
+    },
+    "original_model_gate_failed": true,
+    "historical_vendor_observation_sha256": "4929e6a231ae224b41cdf542fa97819c42622668cd840900869531821557fa64"
+  },
+  "parent_source_files": 57,
+  "planned_source_files": 60,
+  "new_files": [
+    "modelopt_fp8_o128_plugin.cpp",
+    "modelopt_fp8_o128_plugin.h",
+    "modelopt_fp8_o128_profile.h"
+  ],
+  "modify_only": [
+    "modelopt_fp8_lowering.cpp",
+    "trt_builder.cpp",
+    "trt_builder.h",
+    "cuda_compiled_graph.cpp",
+    "cuda_compiled_graph.h"
+  ],
+  "implementation": [
+    "Derive exact immutable57-source Q128 parent; preserve all original Q/KV/GDN factories/plugins/wires/math/CUDA bytes except narrowly new O routing/counters in5existing shared files",
+    "Separate defaultoff GARNET_FP8_FULL_ATTN_O128_CANONICAL strict0/1, B1T128/inputRows128/N5120/K6144 only exact16text self_attn.o_proj.weight names; vision/MTP/wrong names/geometry excluded or fail closed",
+    "New GarnetModelOptFP8O128Canonical plugin/version1/20byte marker0x4f313238; same BF16cast/FP8activation quantizer/scales/alpha-beta/output. Reuse UNCHANGED existing ModelOptFP8M128Context liveSDK-first-success canonicalM16 algorithm35 and actualM128 AlgoCheck, not imported/edited opaque attributes. Keep existing8MiB matmul workspace contract (M16 selection preference4MiB); do not mistake ordinaryO4MiB log for sharedGDN1288MiB contract",
+    "Separate native_fp8_o128_canonical_projections reset/getter/stat/counter16 in targetT128 only; originalM128GDN48/reconstructedZ48/KV32/Q16 counts unchanged, T4newcounter0",
+    "Strict frozen-source/profile/descriptor/wire/cross-family/clone/cache/initialize controls and native MSVC/Garnet API/tokenizer checks before GPU; reuse original factory fault controls because shared context remains exact, do not widen legacyGDNselector",
+    "Exclusive restored same60source/DLL O-off controls must match qualified Q128off/control and preserved single Q-enabled failure; then Q+O-enabled candidate uses ORIGINAL correctT32 complete packed-state/vectors/all12KV/128IDs/finalstate/repeats before any timing",
+    "Compare complete first128 all10finite stage parts/readonly inputs. No repeat claim for original failedQ-only candidate; isolate any next downstream discrepancy if strict admission still fails",
+    "Full original six4096ordinary/MTP/image/token/state/reset cases and805/broaderquality before performance; actual frontend negative cases/production fingerprint/promotion remain required"
+  ],
+  "unchanged_shared_context_source_sha256": {
+    "modelopt_fp8_m128_canonical.cpp": "8ca91b6b478fe0dd4ec6463f5f7fa52836350fd927532786d2cf64ee7cda10bc",
+    "modelopt_fp8_m128_canonical.h": "60914d824fab138078686309a5d24bf139f578c9f33d3eb7a125b0cdc0ae7a04",
+    "modelopt_fp8_m128_plugin.cpp": "2c78a9df431a0c963f6610cb3cbe91150caf894d984dc9463dd0820e60c429bc",
+    "modelopt_fp8_m128_plugin.h": "009580e736dc3f0688d130f4ed5c06de6025ad7a4166c94939511ffccf6a94c0"
+  },
+  "historical_role_association": "Inference from unchanged forward source ordering (three GDN layers then one full-attention Q/O) and complete observed PPPQP trace pattern; logs do not directly label logical weight names.",
+  "no_causality_or_model_admission_inferred_from_vendor_algorithm_ids": true,
+  "remaining": [
+    "true native concurrency",
+    "strongest feasible repeated tuned/MTP vLLM and SGLang baselines",
+    "matched INT4W4A16 and Qwen3.5-4B",
+    "text/image TTFT/decode/concurrency throughput/servingVRAM",
+    "at least2x faster baseline decode AND concurrency throughput; halfTTFT additional"
+  ],
+  "new_benchmarks": false,
+  "goal_complete": false
+}

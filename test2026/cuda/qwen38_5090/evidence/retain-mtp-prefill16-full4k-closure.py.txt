@@ -1,0 +1,56 @@
+from pathlib import Path
+import datetime,hashlib,json,zipfile
+w=Path(__file__).resolve().parent;r=Path('D:/CantorAI/work/qwen38-5090');m=r/'test2026/cuda/qwen38_5090';e=m/'evidence';o=w.parent/'outputs';sha=lambda raw:hashlib.sha256(raw).hexdigest();name='mtp-prefill16-full4k-admission-attempt1';proof=json.loads((o/(name+'-verified.json')).read_bytes())
+assert proof==json.loads((o/(name+'-remote-verified.json')).read_bytes()) and proof['status']=='mtp_prefill16_full4k_target_state_replayed';archive=o/(name+'-evidence.zip');assert sha(archive.read_bytes())==proof['archive_sha256'];initial=json.loads((o/(name+'-initial-misnamed-remote-verified.json')).read_bytes());left=dict(initial);right=dict(proof);left.pop('replay_verifier_sha256');right.pop('replay_verifier_sha256');assert left==right
+with zipfile.ZipFile(archive) as z:
+ base='results/'+name+'/';wf=json.loads(z.read(base+'workflow.json'));report=json.loads(z.read(base+'native/report.json'));cases=json.loads(z.read('Garnet/test2026/cuda/qwen38_5090/evidence/native-host-stage-cases.json'))['cases'];assert wf['exit_code']==0 and wf['cleanup_finished'] and wf['library_unchanged'] and wf['source_sha256']==wf['source_after_sha256'] and wf['runtime_dependencies']==wf['runtime_dependencies_after'];assert b'Ran 50 tests in 0.675s' in z.read(base+'cpu-ledger/commands.log')
+controls=[];wanted={c['parent_worker_request_ids']['mtp']:c for c in cases};baseline='fixed-length-http-study-attempt1';parent=o/(baseline+'-evidence.zip');parent_proof=json.loads((o/(baseline+'-verified.json')).read_bytes());assert sha(parent.read_bytes())==parent_proof['archive_sha256']
+with zipfile.ZipFile(parent) as z:
+ for line in z.read('results/'+baseline+'/mtp/worker/worker-stdout.jsonl').splitlines():
+  event=json.loads(json.loads(line)['line'])
+  if event.get('event')=='completed' and event['id'] in wanted:
+   case=wanted[event['id']];assert event['prompt_ids']==case['prompt_ids'] and event['generated_ids']==case['generated_ids_by_mode']['mtp'];calls=event['speculative_metrics']['mtp_prefill_calls'];assert calls==993
+   controls.append({'key':case['key'],'baseline_worker_request_id':event['id'],'actual_baseline_draft_prefill_calls':calls,'actual_candidate_draft_prefill_calls':249,'scope':'Invocation counts, never elapsed speedup.'})
+assert len(controls)==4;model=proof['replayed_model'];assert len(model['cases'])==6 and model['captured_states']==32 and all(c['actual_candidate_draft_prefill_calls']==249 for c in model['cases'])
+summary={'status':'mtp_prefill16_full4k_correctness_closed_and_independently_replayed','recorded_utc':datetime.datetime.now(datetime.timezone.utc).isoformat(),'archive_sha256':proof['archive_sha256'],'archive_bytes':archive.stat().st_size,'archive_files_verified':proof['files_verified'],'proof_sha256':sha((o/(name+'-verified.json')).read_bytes()),'independent_proofs_identical':True,'actual_remote_cpu_tests_passed':50,'actual_remote_cpu_seconds':0.675,'actual_full4k_cases':model['cases'],'actual_target_states':32,'actual_full4k_correctness_qualified':True,'actual_full4k_memory_fit_observed':True,'actual_call_controls_from_old_native_archive':controls,'correctness_sampled_peak_adapter_used_bytes':proof['correctness_sampled_peak_adapter_used_bytes'],'correctness_sampled_peak_adapter_used_gib':proof['correctness_sampled_peak_adapter_used_bytes']/2**30,'library_sha256':proof['library_sha256'],'source_runtime_identity_and_cleanup_verified':True,'proof_output_name_correction':{'original_checker_sha256':initial['replay_verifier_sha256'],'named_checker_sha256':proof['replay_verifier_sha256'],'archived_original_checker_sha256':proof['archived_replay_verifier_sha256'],'initial_actual_replay_exit_code':0,'initial_proof_remote_path':'results/memory_after-verified.json','corrected_proof_remote_path':'results/'+name+'-verified.json','correction':'Literal output filename only; entire verifier AST otherwise identical. A loop variable had shadowed job name. Original checker/source/archive/initial proof preserved; model not repeated.','actual_cpu_ast_and_filename_regression_tests':2,'actual_cpu_seconds':0.006,'all_proof_data_other_than_executing_checker_sha_identical':True},'broad_quality_qualified':False,'http_or_repeated_speed_qualified':False,'two_times_target_achieved':False,'scope':proof['scope']}
+for suffix in ('-verified.json','-remote-verified.json','-initial-misnamed-remote-verified.json'):
+ target=e/(name+suffix);assert not target.exists();target.write_bytes((o/(name+suffix)).read_bytes())
+for target in (e/'mtp-prefill16-full4k-model-closure.json',o/'Garnet-MTP-Prefill16-4K-Results.json'):
+ assert not target.exists();target.write_text(json.dumps(summary,indent=2),encoding='utf8')
+for target in (e/'mtp-prefill16-full4k-named-local-replay.log',o/'mtp-prefill16-full4k-named-local-replay.log'):
+ assert not target.exists();target.write_bytes((w/'mtp-prefill16-full4k-named-local-replay.log').read_bytes())
+target=e/'retain-mtp-prefill16-full4k-closure.py.txt';assert not target.exists();target.write_bytes(Path(__file__).read_bytes())
+entry='''
+
+### 2026-10-25 — wider MTP actual full4K correctness closed and replayed twice
+
+Original supervisor48577 observed mtp-prefill16-full4k-admission-attempt1 terminal0.
+Six3968+128 cases (four retained text/image inputs plus reset repeats) match actual
+ordinary target IDs, callbacks and complete canonical state/raw hidden/normalized
+vectors at prefill/final. All32captured target states replay. Actual50remote CPU
+tests pass0.675s. Qualified1a1d source/runtime and cleanup unchanged. Immutable
+67594006byte/666file archive fully transferred/replayed on both machines; properly
+named proof JSONs identical. Actual sampled correctness adapter peak23688986624
+bytes (~22.06GiB), construction/full4K fit observed, not serving peak or speed.
+
+Actual candidate draft-prefill counter249in every case. The same four prior native
+MTP HTTP worker records have993calls, with exact matching prompt/output IDs. These
+are invocation counts, not speedups.805quality, HTTP, repeated matched timing and
+strongest tuned/MTP references are still required before performance admission.
+
+Initial checker verified all data but wrote results/memory_after-verified.json:
+memory-loop variable shadowed the original job-name variable. Preserve that initial
+proof/source. Separate named checker changes only the literal output expression;
+2CPU whole-AST/filename regressions pass0.006s. Replayed on both machines again,
+all proof fields except executing checker SHA equal the original successful proof.
+No model run, archive, numeric/state guard or metric changed for this correction.
+
+Next exclusive ordinary SGLang successor retains all lengths/precision/cache/
+source/PID/805screen guards and raw output variants with comparison bookkeeping
+outside timing. Keep old strict failures immutable; measure complete C1/2/4/8
+text/image cohorts. Native candidate805quality/HTTP, host/GPU bottlenecks and real
+GPUbatching/INT4/4B/stronger tuned/MTP vLLM/SGLang and2x remain open.
+'''
+for name in ('qwen38-5090-development-log.md','qwen38-5090-implementation-task.md'):
+ p=r/'docs/research'/name;raw=p.read_bytes();assert b'wider MTP actual full4K correctness closed and replayed twice' not in raw;p.write_bytes(raw+entry.replace('\n','\r\n').encode())
+print(json.dumps({'status':summary['status'],'actual_cases':6,'actual_target_states':32,'sampled_correctness_peak_gib':summary['correctness_sampled_peak_adapter_used_gib'],'actual_baseline_and_candidate_call_controls':controls,'two_times_target_achieved':False}))

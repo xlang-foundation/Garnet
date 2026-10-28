@@ -1,0 +1,13 @@
+from pathlib import Path
+import hashlib,json,zipfile
+W=Path(__file__).resolve().parent;O=W.parent/'outputs';R=Path('D:/CantorAI/work/qwen38-5090');E=R/'test2026/cuda/qwen38_5090/evidence';relative='test2026/cuda/qwen38_5090/evidence/fa-value-sdk-fixture-model-00001-of-00003.safetensors-header.json';target=(R/relative).resolve();assert target.is_relative_to(E.resolve());raw=target.read_bytes()
+with zipfile.ZipFile(O/'fa-value-sdk-control-attempt1-evidence.zip') as z:assert raw==z.read('results/actual-fa-value-m4-m16-fixture/model-00001-of-00003.safetensors-header.json')
+record=dict(status='raw_safetensors_header_preserved_in_verified_immutable_archive',reason='Raw safetensors JSON header includes required whitespace padding. Preserve exact raw bytes and SHA in verified ZIP on both PCs; do not normalize for Git whitespace checks or add one huge raw line to source review.',header_bytes=len(raw),header_sha256=hashlib.sha256(raw).hexdigest(),archive='fa-value-sdk-control-attempt1-evidence.zip',member='results/actual-fa-value-m4-m16-fixture/model-00001-of-00003.safetensors-header.json');target.unlink()
+owned=json.loads((W/'fa-value-sdk-outcome-owned-paths.json').read_bytes());assert relative in owned;owned.remove(relative)
+for name,payload in [('fa-value-sdk-header-storage.json',json.dumps(record,indent=2).encode()),('retain-fa-value-sdk-header-in-archive.py.txt',Path(__file__).read_bytes())]:
+    path=E/name;assert not path.exists();path.write_bytes(payload);owned.append(path.relative_to(R).as_posix())
+(E/'retain-fa-value-sdk-outcome.py.txt').write_bytes((W/'retain-fa-value-sdk-outcome.py').read_bytes())
+text=('\r\nRaw safetensors header '+record['header_sha256']+' ('+str(len(raw))+'B) isretainedbyteexactinverifiedrawZIP onbothPCs; requiredwhitespacepadding notnormalizedforGit. Headerstoragepointer and fullindexedmetadata retainedinGit insteadofonehugesingleline. No numerical/witness change.\r\n').encode()
+for name in ('docs/research/qwen38-5090-development-log.md','docs/research/qwen38-5090-implementation-task.md'):
+    path=R/name;before=path.read_bytes();path.write_bytes(before+text);assert path.read_bytes().startswith(before)
+(W/'fa-value-sdk-outcome-owned-paths.json').write_bytes(json.dumps(owned,indent=2).encode());(W/'fa-value-sdk-outcome-stage-paths.bin').write_bytes(b'\0'.join(name.encode() for name in owned)+b'\0');print(json.dumps(record))

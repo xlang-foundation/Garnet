@@ -1,0 +1,61 @@
+{
+  "status": "full4k_gate_failed_layer3_key_and_value_first_observed_boundary",
+  "archive_sha256": "ae8ebbfac5d0abb94977873d67e5a325aa09d643d067e1013a3c80d82c580d68",
+  "archive_bytes": 1520402,
+  "archive_members": 91,
+  "failure_proof_pair_sha256": "ac88c51f39a114ec0f5289d86c6d1c154ad4eb461631fe55978ad07607190e6e",
+  "analysis_pair_sha256": "3bd9b35325b015b9e82f1a7145221b1cad4b62a164b5f89c7b543ab46e836859",
+  "CPU_tests": 70,
+  "remote_CPU_seconds": 1.844,
+  "source_pins": 978,
+  "installed_pins": 1001,
+  "candidate_sources": 35,
+  "existing_targets_restored": 12,
+  "new_targets_removed": 23,
+  "source_runtime_SDK_checkpoint_restored": true,
+  "ordinary_cases_observed": 1,
+  "first_different_output_zero_based": 57,
+  "equal_output_ids": 60,
+  "prefill_different_components": 121,
+  "first_prefill_difference": {
+    "layer": 3,
+    "kind": "full_attention",
+    "role": 1,
+    "logical_words": 4194304
+  },
+  "layer3_key_and_value_both_differ": true,
+  "prefill_vectors": {
+    "hidden": {
+      "raw_bytes_exact": false,
+      "equal_scalars": 0,
+      "scalars": 5120,
+      "max_absolute_difference": 31.052886962890625,
+      "relative_l2_difference": 0.23968307780975426
+    },
+    "normalized": {
+      "raw_bytes_exact": false,
+      "equal_scalars": 0,
+      "scalars": 5120,
+      "max_absolute_difference": 3.811379909515381,
+      "relative_l2_difference": 0.25409461762346935
+    }
+  },
+  "finite_vector_scalars_compared": 40960,
+  "mtp_or_image_executed": false,
+  "cause_established": false,
+  "initialization_reliability_resolved": false,
+  "performance_admitted": false,
+  "two_times_target_achieved": false,
+  "next_plan": {
+    "status": "full4k_gate_failed_layer3_key_and_value_first_observed_boundary",
+    "steps": [
+      "Preserve this full-model failure and earlier same-DLL initialization failures. Current initialization succeeded, but reliability/cause is unresolved. Never promote this trial to timing, quality or 2x admission.",
+      "Inspect ordinary layer2 output and layer3 full-attention input/projection/cache paths using identical real prompt input and separate T32/T128 profiles. Both layer3 key role1 and value role2 differ; previous GDN layer0/1/2 complete states match, but those state hashes do not prove the hidden input to attention matches.",
+      "Locate the first different key/value token/head/dimension or projection stage. Existing diagnostic_full_stages only supports embedded layer3 T16 and excludes canonical BF16 KV; do not silently enable it for the current T128 profile. Prefer ordinary controls and bounded cache reads before extending diagnostics.",
+      "Require same-profile ordinary/control parity and retained baseline reproduction before causal attribution. Keep input/state readonly checks, full raw finite arrays, graph counters and source/runtime restoration. A first differing cache hash alone cannot distinguish input arithmetic, projection, normalization/RoPE or cache layout/commit.",
+      "After a justified fix, repeat unchanged six3968+128 ordinary/MTP state/vector/token gate, adapted805 quality and initialization checks, then matched HTTP repetitions and strongest feasible tuned/MTP references. INT4/4B comparisons and physical concurrency remain required. Overall 2x decode AND throughput and half-TTFT remain unmet."
+    ],
+    "performance_admitted": false,
+    "two_times_target_achieved": false
+  }
+}

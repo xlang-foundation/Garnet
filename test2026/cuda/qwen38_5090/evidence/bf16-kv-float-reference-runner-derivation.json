@@ -1,0 +1,69 @@
+{
+  "source": "run_bf16_kv_overlay_native.py",
+  "source_sha256": "c091269f73e8ed40eb7b4596634dc682838bab9d327e489a3f26d494ab3a2130",
+  "changes": [
+    [
+      "\"\"\"Collect untimed BF16 attention witnesses after the closed commit-operator gate.\"\"\"",
+      "\"\"\"Qualify independent dense-FP32 BF16 reference after preserved model diagnostics.\"\"\""
+    ],
+    [
+      "bf16-kv-overlay-native-preparation.json",
+      "bf16-kv-float-reference-native-preparation.json"
+    ],
+    [
+      "parent='bf16-kv-commit-native-attempt1'",
+      "parent='bf16-prefill-diagnostic-attempt1'"
+    ],
+    [
+      "assert proof['status']=='bf16_kv_commit_native_operator_replayed' and proof['full_state_byte_cases']==34 and proof['rejected_calls']==62",
+      "assert proof['status']=='bf16_prefill_diagnostic_replayed' and not proof['quality_promoted'] and not proof['performance_admitted']"
+    ],
+    [
+      "verify_bf16_kv_commit_native.py",
+      "verify_bf16_prefill_diagnostic.py"
+    ],
+    [
+      "idle();name='bf16-kv-overlay-native-attempt1'",
+      "idle();name='bf16-kv-float-reference-native-attempt1'"
+    ],
+    [
+      "parent_commit_archive_sha256",
+      "parent_diagnostic_archive_sha256",
+      2
+    ],
+    [
+      "probe_bf16_kv_overlay_native.exe",
+      "probe_bf16_kv_float_reference.exe",
+      1
+    ],
+    [
+      "BF16 dense attention witnesses and readonly/cache/graph controls",
+      "Dense FP32 BF16 reference versus packed overlay, full-cache and FP64 controls",
+      1
+    ],
+    [
+      "bf16_overlay_collected_needs_independent_fp64_replay",
+      "bf16_float_reference_collected_needs_independent_fp64_replay",
+      1
+    ],
+    [
+      "BF16 attention native control failed",
+      "BF16 float reference native control failed",
+      1
+    ],
+    [
+      "assert sha(methods/'verify_bf16_prefill_diagnostic.py')==proof['replay_verifier_sha256']",
+      "assert sha(methods/'verify_bf16_prefill_diagnostic.py')==proof['replay_verifier_sha256']\noverlay_proof_path=results/'bf16-kv-overlay-native-attempt1-verified.json';overlay=json.loads(overlay_proof_path.read_bytes())\nassert overlay['status']=='bf16_kv_overlay_native_fp64_replayed' and len(overlay['cases'])==70 and overlay['maximum_tolerance_fraction']<=1\nassert sha(results/'bf16-kv-overlay-native-attempt1-evidence.zip')==overlay['archive_sha256']==prep['qualified_overlay_archive_sha256']"
+    ],
+    [
+      "common=[root/n for n in prep['files']]+[prep_path,proof_path,library];save()",
+      "common=[root/n for n in prep['files']]+[prep_path,proof_path,overlay_proof_path,library];save()"
+    ],
+    [
+      "'parent_diagnostic_archive_sha256':proof['archive_sha256'],'observed_unused_library_sha256':digest}",
+      "'parent_diagnostic_archive_sha256':proof['archive_sha256'],'qualified_overlay_archive_sha256':overlay['archive_sha256'],'observed_unused_library_sha256':digest}"
+    ]
+  ],
+  "result_sha256": "805ace5c835db65a525c07b500ea9029029596c885d0eb00f5ee584162daee68",
+  "scope": "Unrun reference operator workflow, from existing supervised source/idle/archive controls. Existing model mismatch remains failed; diagnostic parent only allows further reference testing, never model/timing admission."
+}

@@ -1,0 +1,20 @@
+from pathlib import Path
+import hashlib,json,os,sys,zipfile
+work=Path(__file__).resolve().parent;repo=Path('D:/CantorAI/work/qwen38-5090');m=repo/'test2026/cuda/qwen38_5090';sys.path[:0]=[str(repo),str(m)]
+from run_fp8_m128_native_control import NAMES,CANDIDATES
+sha=lambda raw:hashlib.sha256(raw).hexdigest()
+derivation=json.loads((m/'evidence/fp8-m128-native-source-derivation.json').read_bytes())
+origin={'status':'actual_native_source_copies_unqualified','candidate_copies':{name:{'production_source':'src/backends/tensorrt/'+Path(name).name,'sha256':sha((repo/'src/backends/tensorrt'/Path(name).name).read_bytes())} for name in CANDIDATES},'production_source_derivation':derivation,'scope':'Exact copies of five current production source files for isolated remote helper/wire checks; production lowering remains separately unqualified.'}
+for row in origin['candidate_copies'].values():assert row['sha256']==derivation['new_files'][row['production_source']]
+originpath=m/'evidence/fp8-m128-native-control-origin.json';assert not originpath.exists();originpath.write_bytes(json.dumps(origin,indent=2).encode())
+files={'Garnet/test2026/cuda/qwen38_5090/'+name:(m/name).read_bytes() for name in NAMES}
+files.update({'Garnet/test2026/cuda/qwen38_5090/'+name:(repo/'src/backends/tensorrt'/Path(name).name).read_bytes() for name in CANDIDATES})
+import test2026.cuda.qwen38_5090.run_logged as ledger
+pins={name:sha(raw) for name,raw in files.items()};ledger.source_identity=lambda:{'scope':'Explicit owned M128 helper control sources; unrelated untracked files excluded','owned_source_sha256':pins}
+os.chdir(repo);code=ledger.run([sys.executable,'-m','unittest',*('test2026.cuda.qwen38_5090.'+name for name in ('test_prefill128_fp8_projection','test_prefill128_fp8_workspace8','test_fp8_m128_native_control'))],work/'fp8-m128-native-control-local-cpu-ledger','correctness','8 full-word/input/quantization/source/wire/parser faults; no local runtime/GPU',[m/name for name in NAMES]);assert code==0
+bundle=work/'fp8-m128-native-control-methods.zip';assert not bundle.exists()
+with zipfile.ZipFile(bundle,'x',zipfile.ZIP_DEFLATED) as z:
+    for name,raw in files.items():z.writestr(name,raw)
+    z.writestr('install-manifest.json',json.dumps({'files':pins},indent=2))
+result={'status':'fp8_m128_native_control_packaged_gpu_unrun','sha256':sha(bundle.read_bytes()),'bytes':bundle.stat().st_size,'targets':len(files),'cpu_tests':8}
+(work/'fp8-m128-native-control-package.json').write_bytes(json.dumps(result,indent=2).encode());print(json.dumps(result))

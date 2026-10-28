@@ -1,0 +1,24 @@
+from pathlib import Path
+import hashlib,json,subprocess,sys,zipfile
+work=Path(__file__).resolve().parent;out=work.parent/'outputs';m=Path('D:/CantorAI/work/qwen38-5090/test2026/cuda/qwen38_5090')
+job='native-cuda-entry-profiled-bootstrap-attempt1';sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+archive=out/(job+'-evidence.zip');remote=out/(job+'-remote-verified.json');q=json.loads(remote.read_bytes());assert sha(archive)==q['archive_sha256']
+log=out/(job+'-local-replay.log');argv=[sys.executable,str(m/'verify_native_cuda_entry_profiled.py'),'--proofs',str(out),'--scratch',str(work)]
+with log.open('xb') as stream:code=subprocess.run(argv,stdout=stream,stderr=subprocess.STDOUT).returncode
+proof=out/(job+'-verified.json');assert code==1 and proof.read_bytes()==remote.read_bytes() and q['status']=='native_cuda_entry_profiled_failure_preserved'
+with zipfile.ZipFile(archive) as z:
+    base='results/'+job+'/';w=json.loads(z.read(base+'workflow.json'))
+    assert w['exit_code']==1 and w['cleanup_finished'] and w['source_sha256']==w['source_after_sha256'] and w['runtime_dependencies']==w['runtime_dependencies_after']
+    rows=[json.loads(v) for v in z.read(base+'native/control/host-stages.entry.jsonl').splitlines()]
+    error=rows[-1]['exception'];assert rows[-1]['stage']=='worker_raised' and error['type']=='OSError' and "OSError('write failed')"==error['repr']
+    assert 'os.write(1,raw)' in error['traceback'] and "emit({'event':'ready'" in error['traceback']
+    bootstrap=[json.loads(v) for v in z.read(base+'native/control/host-stages.bootstrap.jsonl').splitlines()]
+    assert 'native_ready_observed_before_pipe_emit' in [v['stage'] for v in bootstrap]
+    report=json.loads(z.read(base+'native/control/report.json'));assert report['requests']==[] and report['worker_exit_code']==1
+r={'status':'native_entry_profiled_ready_stdout_failure_replayed_on_both_machines','archive_sha256':sha(archive),
+   'archive_bytes':archive.stat().st_size,'proof_pair_sha256':sha(proof),'files_verified':q['files_verified'],
+   'local_replay':{'exit_code':code,'argv':argv,'log_sha256':sha(log)},'actual_model_ready_before_transport':True,
+   'actual_request_count':0,'observed_error':error,'core_runtime_preserved':True,'request_gpu_phase_metrics_admitted':False,
+   'performance_admitted':False,'two_times_target_achieved':False}
+(work/'native-entry-profiled-failure-local-receipt.json').write_bytes(json.dumps(r,indent=2).encode())
+print(json.dumps({k:v for k,v in r.items() if not isinstance(v,dict)}))

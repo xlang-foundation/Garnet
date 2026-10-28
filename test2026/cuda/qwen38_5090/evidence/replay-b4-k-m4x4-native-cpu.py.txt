@@ -1,0 +1,22 @@
+"""Replay only bytes/CPU JSON contracts. Never load or execute native artifacts."""
+from pathlib import Path
+import hashlib,json,os,sys,zipfile
+W=Path(__file__).resolve().parent;O=W.parent/'outputs';R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+sys.path[:0]=[str(M),str(R)];import run_logged as ledger
+names=['verify_b4_k_m4x4_cpu_v2.py','run_b4_k_m4x4_factory_cpu.py','b4_k_m4x4_source.py','b4_qk_m16_source.py','b4_v_m16_source.py','b4_decode_m16_source.py','b4_prefill128_source.py','o128_canonical_source.py','q128_canonical_source.py','full_chunk_stage_source.py']
+pins={n:sha(M/n) for n in names}
+ledger.source_identity=lambda:{'scope':'Explicit CPU archive reader, JSON contract checker and source-composition modules; no native execution or protected-body reads','owned_source_sha256':{n:sha(M/n) for n in names}}
+job='b4-k-m4x4-cpu-attempt2';archive=O/(job+'-evidence.zip');assert sha(archive)=='de1facae994314f32b75bad8119c9b68b339dafca815d7cda7004236f5897756'
+os.chdir(R)
+assert ledger.run([sys.executable,str(M/'verify_b4_k_m4x4_cpu_v2.py'),'--proofs',str(O)],W/'b4-k-m4x4-cpu-v2-local-replay','correctness','Independent local Python replay of actual remote compiled C++ CPU evidence, 1209 selector/232 factory and pointer contracts/TRT plugin cases, all raw hashes/SDK-runtime/config-index/all34 unchanged. Never execute downloaded native artifacts.',[M/n for n in names]+[archive,O/(job+'-remote-verified.json')])==0
+proof=O/(job+'-verified.json');assert proof.read_bytes()==(O/(job+'-remote-verified.json')).read_bytes() and sha(proof)=='fb05df24875f635625b8a8d6cef3a134f60e7ac192a004e3b081fa8bae04c189'
+failure=O/'b4-k-m4x4-cpu-attempt1-failure-closure.zip';assert sha(failure)=='a43cae97968e0e076f962963ffe26faf756e9171070d8d4cb681a4f57626a326'
+with zipfile.ZipFile(failure) as z:
+    mf=json.loads(z.read('evidence-manifest.json'));assert z.testzip() is None and len(z.namelist())==len(set(z.namelist()))==len(mf['files'])+1
+    for n,h in mf['files'].items():assert hashlib.sha256(z.read(n)).hexdigest()==h
+    f=mf['failure'];assert f['status']=='missing_evidence_dependencies_before_any_command_no_native_compile' and f['exit_code']==1 and f['no_CPU_subcommand_or_native_compile_or_GPU_model_executed'] and f['original_failure_preserved'] and len(f['missing_files'])==3
+    assert not any(n.endswith('/commands.jsonl') and n.startswith('results/b4-k-m4x4-cpu-attempt1/') for n in mf['files'])
+    (O/'b4-k-m4x4-cpu-attempt1-failure-closure-verified.json').write_bytes(json.dumps({'status':'missing_dependency_failure_closure_manifest_replayed','archive_sha256':sha(failure),'files_verified':len(mf['files']),'failure':f},indent=2).encode())
+assert pins=={n:sha(M/n) for n in names}
+q=json.loads(proof.read_bytes());summary={'status':q['status'],'proof_sha256':sha(proof),'archive_sha256':sha(archive),'CPU_source_and_SDK_replay_tests':13,'actual_CXX_selector_cases':q['profile']['cases'],'actual_CXX_factory_fault_and_pointer_cases':q['factory_fault_cases'],'actual_TRT_plugin':q['plugin'],'source_runtime_SDK_config_index_CMake_all34_unchanged':q['source_runtime_SDK_checkpoint_all34objects_CMakeCache_unchanged'],'paired_remote_local_proof_bytes_identical':True,'first_packaging_failure_preserved':True,'production_candidate_DLL_built':False,'model_or_quality_or_HTTP_or_performance_qualified':False,'original_full4k_still_failed':True,'two_times_target_achieved':False}
+(O/'Garnet-B4-K-M4x4-CPU-Progress.json').write_bytes(json.dumps(summary,indent=2).encode());print(json.dumps(summary,indent=2))

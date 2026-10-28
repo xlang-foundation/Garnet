@@ -1,0 +1,6 @@
+from pathlib import Path
+import hashlib,sys
+W=Path(__file__).resolve().parent;M=Path('D:/CantorAI/work/qwen38-5090/test2026/cuda/qwen38_5090');sys.path.insert(0,str(M));import run_logged as ledger
+names=['b4_resident_serial_graph_gate.draft.py','test_b4_resident_serial_graph_gate.draft.py','run-b4-resident-serial-draft-counter-controls.py',Path(__file__).name]
+ledger.source_identity=lambda:dict(scope='Only new synthetic counter controls in isolated W drafts; no source mutations, native/model/GPU or numerical model replay',owned_source_sha256={n:hashlib.sha256((W/n).read_bytes()).hexdigest() for n in names})
+assert ledger.run([sys.executable,str(W/'run-b4-resident-serial-draft-counter-controls.py')],W/'b4-resident-serial-draft-counter-controls-ledger','correctness','Six synthetic actual-reuse/counter monotonicity, flags-only rejection, duplicate/missing IDs, precision/capture failures and false-timing controls. No model/GPU execution.',[W/n for n in names])==0

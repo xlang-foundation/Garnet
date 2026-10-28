@@ -1,0 +1,5 @@
+@echo off
+call "C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvars64.bat"
+if errorlevel 1 exit /b %errorlevel%
+cl.exe /nologo /std:c++17 /EHsc /MT /utf-8 /DGARNET_SERVING_EXPORTS=1 /DXLANG3_USE_SHARED /DNOMINMAX /c D:\CantorAI\work\qwen38-5090\src\backends\tensorrt\cuda_bf16_kv_delta_commit.cpp /I D:\CantorAI\xlang3\sdk /I D:\CantorAI\work\qwen38-5090\third_party /I D:\CantorAI\work\qwen38-5090\src\tensor /I "C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v13.2\include" /Fo"%~dp0cuda_bf16_kv_delta_commit.obj"
+exit /b %errorlevel%

@@ -1,0 +1,49 @@
+{
+  "parent_path": "test2026/cuda/qwen38_5090/probe_bf16_prefill_diagnostic.py",
+  "parent_sha256": "51f06f76c738dfac6b302a96dd1d00c24f50fa49849d8a9169d1f671165df94e",
+  "candidate_path": "test2026/cuda/qwen38_5090/probe_bf16_same_precision_diagnostic.py",
+  "candidate_sha256": "0ef86d093e88c25eb5fb0cd5b9da1e23a68ac85c4ee4dde35c76dda495bead3b",
+  "literal_replacements": [
+    {
+      "old": "\"\"\"Teacher-forced precision/prefill diagnostic; no model promotion or timing.\"\"\"",
+      "new": "\"\"\"Same-precision full-cache reference versus packed BF16; no timing/quality promotion.\"\"\""
+    },
+    {
+      "old": "from test2026.cuda.qwen38_5090.native_prompt import image_positions",
+      "new": "from test2026.cuda.qwen38_5090.native_prompt import image_positions\nfrom test2026.cuda.qwen38_5090.bf16_float_reference_state import expand_bf16_carrier,require_bf16_roundtrip"
+    },
+    {
+      "old": "assert mode in ('fp32-t4','bf16-t4','bf16-t32');bf16=mode!='fp32-t4';batch=4;steps=32",
+      "new": "assert mode in ('fp32-t4','bf16-t4','bf16-t32','reference-t4','reference-t32');bf16=mode.startswith('bf16-');reference_mode=mode.startswith('reference-');batch=4;steps=32"
+    },
+    {
+      "old": " 'scope':'Diagnostic only. Same teacher-forced32token histories, JPEGs, mixed projections, register128, native NVFP4 head, host embedding and physicalB4. Compare FP32/T4 ordinary baseline, BF16/T4 manual ordinary prefill and BF16/T32 normal prefill. No MTP/timing or broad quality admission. Both BF16 modes use identical compiled T4/T32 programs; only prefill routing differs. Full-state arrays absent; raw pre-normalized/normalized hidden retained.'}",
+      "new": " 'scope':'Five-profile correctness diagnostic only on one unchanged DLL/source: legacy FP32/T4, packed BF16/T4/T32 and independent BF16-in-FP32 reference/T4/T32. Same physicalB4, text/image JPEGs, mixed projections, teacher-forced32histories and positions, register128 and native NVFP4 head. Retain raw hidden/normalized arrays and complete physical plus logically expanded per-layer state hash witnesses. No full-state arrays archived, MTP, timing, quality promotion, serving fit or 2x admission.'}"
+    },
+    {
+      "old": "4096,32 if bf16 else 4,4,",
+      "new": "4096,32 if (bf16 or reference_mode) else 4,4,"
+    },
+    {
+      "old": "  **({'bf16_kv_state':True} if bf16 else {}))",
+      "new": "  **({'bf16_kv_state':True} if bf16 else ({'bf16_kv_float_reference':True} if reference_mode else {})))\n assert decoder.bf16_kv_float_reference is reference_mode and decoder.bf16_kv_state is bf16\n if reference_mode:\n  assert decoder.delta_commit is None and decoder.bf16_prefill_commit is None\n  assert all(p.delta_layout is None and p.state_width==173932544 and p.bf16_kv_float_reference for p in decoder.programs.values())"
+    },
+    {
+      "old": "'bf16-prefill-diagnostic-row-'",
+      "new": "'bf16-same-precision-row-'"
+    },
+    {
+      "old": " if mode=='bf16-t4':",
+      "new": " if mode in ('bf16-t4','reference-t4'):"
+    },
+    {
+      "old": " width=decoder.programs[4].state_width\n buffers={n:io.zeros([batch,n]) for n in {min(1048576,width-i) for i in range(0,width,1048576)}}\n def state_hashes():\n  result=[hashlib.sha256() for _ in range(batch)]\n  for offset in range(0,width,1048576):\n   n=min(1048576,width-offset);part=buffers[n];io.slice_into(decoder.state,offset,part)\n   for b in range(batch):result[b].update(bytes(io.finite_f32_bytes(io.row(part,b))))\n  return {'row_sha256':[h.hexdigest() for h in result],'slots':list(decoder.slots),'words_per_row':width}\n",
+      "new": " width=decoder.programs[4].state_width\n layout=decoder.programs[4].layout\n buffers={}\n def state_hashes():\n  physical=[hashlib.sha256() for _ in range(batch)];logical=[hashlib.sha256() for _ in range(batch)];components=[];physical_words=logical_words=0\n  for layer in layout:\n   cache=layer['kind']=='full_attention'\n   for role in (1,2):\n    key='state'+str(role)+'_width';words=layer[key];base=layer['offset']+(layer['state1_width'] if role==2 else 0)\n    component=[hashlib.sha256() for _ in range(batch)]\n    for offset in range(0,words,1048576):\n     n=min(1048576,words-offset)\n     if n not in buffers:buffers[n]=io.zeros([batch,n])\n     part=buffers[n];io.slice_into(decoder.state,base+offset,part)\n     for b in range(batch):\n      raw=bytes(io.finite_f32_bytes(io.row(part,b)));assert len(raw)==n*4\n      physical[b].update(raw)\n      expanded=expand_bf16_carrier(raw) if cache and bf16 else (require_bf16_roundtrip(raw) if cache and reference_mode else raw)\n      logical[b].update(expanded);component[b].update(expanded)\n    physical_words+=words;logical_words+=words*(2 if cache and bf16 else 1)\n    row_hashes=[h.hexdigest() for h in component];assert row_hashes[:2]==row_hashes[2:]\n    components.append({'layer':layer['index'],'kind':layer['kind'],'role':role,'logical_words':words*(2 if cache and bf16 else 1),'row_sha256':row_hashes})\n  assert physical_words==width and logical_words==173932544\n  return {'row_sha256':[h.hexdigest() for h in physical],'logical_row_sha256':[h.hexdigest() for h in logical],\n   'slots':list(decoder.slots),'words_per_row':width,'logical_words_per_row':logical_words,'components':components,'reference_bf16_roundtrip_checked':reference_mode}\n"
+    },
+    {
+      "old": "print('BF16_PREFILL_DIAGNOSTIC_FINISHED',mode,flush=True)",
+      "new": "print('BF16_SAME_PRECISION_DIAGNOSTIC_FINISHED',mode,flush=True)"
+    }
+  ],
+  "scope": "Workload/history/oracle and raw hidden collection retained; add two full-cache reference modes and explicit logical full-state byte hashes. Unrun correctness only."
+}

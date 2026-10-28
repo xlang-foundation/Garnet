@@ -1,0 +1,102 @@
+from pathlib import Path
+import ast,hashlib,json,re,shutil,sqlite3
+
+work=Path(__file__).resolve().parent
+repo=Path('D:/CantorAI/work/qwen38-5090');m=repo/'test2026/cuda/qwen38_5090';e=m/'evidence';out=work.parent/'outputs'
+sha=lambda raw:hashlib.sha256(raw).hexdigest()
+p_path=e/'native-cuda-phase-run-preparation.json';p=json.loads(p_path.read_bytes())
+log=(work/'native-cuda-phase-final-cpu-ledger/commands.log').read_bytes()
+match=re.search(rb'Ran (\d+) tests in ([0-9.]+)s\s+OK',log)
+assert match and int(match[1])==p['expected_cpu_test_count']==43
+assert p['status']=='native_cuda_phases_prepared_gpu_unrun' and len(p['files'])==630
+plan=json.loads((work/'native-cuda-phase-upload-plan.json').read_bytes())
+assert len(plan['uploads'])==14
+for row in plan['uploads']:
+ assert sha(Path(row['local']).read_bytes())==row['sha256']
+ if row['local'].endswith('.py'):ast.parse(Path(row['local']).read_bytes())
+with sqlite3.connect('file:'+(work/'warm-mtp-cuda-trace-2026-attempt1.sqlite').as_posix()+'?mode=ro',uri=True) as c:
+ audit={'status':'retained_prior_short_trace_cpu_schema_audit_not_new_model_evidence',
+  'runtime_pid_encoding_mismatches':c.execute('select count(*) from CUPTI_ACTIVITY_KIND_RUNTIME a join CUPTI_ACTIVITY_KIND_MEMCPY c on a.correlationId=c.correlationId where a.globalTid-(a.globalTid%16777216)!=c.globalPid').fetchone()[0],
+  'gpu':c.execute('select id,name,uuid,computeMajor,computeMinor from TARGET_INFO_GPU where computeMajor>0').fetchall(),
+  'runtime_processes':c.execute('select distinct globalTid-(globalTid%16777216) from CUPTI_ACTIVITY_KIND_RUNTIME').fetchall(),
+  'kernel_processes':c.execute('select distinct globalPid from CUPTI_ACTIVITY_KIND_KERNEL').fetchall()}
+assert audit['runtime_pid_encoding_mismatches']==0
+result={'status':'native_cuda_phase_diagnostic_prepared_cpu_qualified_gpu_unrun','preparation_sha256':sha(p_path.read_bytes()),
+ 'pinned_files':630,'upload_targets':14,'cpu_tests':43,'cpu_test_seconds':float(match[2]),
+ 'prior_trace_schema_audit':audit,'gpu_executed':False,'remote_deployed':False,'performance_admitted':False,'two_times_target_achieved':False,
+ 'current_owned_http_job':'prefill16-fixed4k-http-attempt1','current_owned_http_supervisor':48577,'current_http_outcome':'running_when_last_polled; no terminal outcome or independent replay yet',
+ 'scope':p['scope'],'next_actions':['Close/download/replay actual wider-MTP HTTP trial before updating comparison charts.',
+ 'Read-only source/runtime/profiler/disk/idle preflight, install only absent14pinned targets, source-pinned43remote CPU checks.',
+ 'Run current ordinary/T4MTP full4K Nsight node collection with all24requests/288copy markers, preserve first-use and late-repeat delays, source/runtime checks and raw traces.',
+ 'Independent two-machine replay binds actualCUDAactivity/APIrecords to phases and all retained IDs. Trace durations are instrumented, not benchmark speedups.',
+ 'Use measured kernel/API findings for wider target prefill native contract/math changes; qualify B8MTP memory/state/quality/HTTP for real concurrency. Matched vLLM4K/tunedMTP/repeats/INT4/4B remain required.']}
+def keep(target,raw):
+ assert not target.exists() or target.read_bytes()==raw,target
+ if not target.exists():target.write_bytes(raw)
+keep(e/'native-cuda-phase-offline-preparation.json',json.dumps(result,indent=2).encode())
+keep(out/'Garnet-CUDA-Phase-Diagnostic-Preparation.json',json.dumps(result,indent=2).encode())
+for name in ('native-cuda-phase-initial-cpu-ledger','native-cuda-phase-pipeline-cpu-ledger','native-cuda-phase-final-cpu-ledger','native-cuda-phase-cli-cpu-ledger'):
+ for path in (work/name).iterdir():keep(e/(name+'-'+path.name),path.read_bytes())
+for name in ('native-cuda-phase-upload-plan.json','native-cuda-phase-preflight-input.json'):
+ keep(e/name,(work/name).read_bytes())
+for name in ('derive-native-cuda-phase-workers.py','derive-native-cuda-phase-probe.py','prepare-native-cuda-phase-deployment.py','preflight-native-cuda-phase.py','package-native-cuda-phase-methods.py','install-native-cuda-phase-methods.py','retain-native-cuda-phase-preparation.py'):
+ keep(e/(name+'.txt'),(work/name).read_bytes())
+for name in ('native-cuda-phase-run-preparation.json.initial-no-model-close-witness','native-cuda-phase-upload-plan.json.initial-no-model-close-witness','native-cuda-phase-preflight-input.json.initial-no-model-close-witness'):
+ keep(e/name,(work/name).read_bytes())
+text='''
+
+### 2026-10-25 — current B1/full4K CUDA phase diagnosis prepared, not executed
+
+Previous chart-report turn was a verified wait: original48577 supervisor confirmed
+prefill16-fixed4k-http-attempt1 live. Current turn continues polling the same owned
+job only; no remote command/upload/probe competes with its official HTTP timing.
+Actual text C1/2/4/8 and image C1 cohorts appeared on the live supervisor; their
+numbers remain provisional until terminal closure and independent raw replay.
+Earlier complete comparison charts remain the admitted result. Overall2x and
+halfTTFT targets remain unmet/unproven.
+
+Committed/pushed1ac05f7f7 records actual host24request closure, explicit original
+27vs29CPU source supplement and widerHTTP68test source pins. Source/model/runtime
+were not changed in this follow-up. New explicit CUDA-phase diagnostic source is
+prepared against actual current1a1d B1/full4K model. Original ordinary/T4MTP host
+worker operations remain identical after trace-only AST removal; generation,
+token/image/context/retained-case checks are unchanged. Full worker/launcher/probe
+derivations retained. Existing native/SDK/default/checkpoint/corpus untouched.
+
+Nsight2026 node collection runs from worker launch, avoiding the previously failed
+interactive capture method. Twelve unique HtoD copies bracket request and five
+flat phases,144markers each mode/288total. All24actual3968+128 requests in the
+three original orders remain. Raw SQLite must contain exactly one matching HtoD
+copy per marker, same process/device/context/stream and ordered GPU timestamps.
+No Python/Nsight epoch conversion. Real kernel/graph-node records required in
+prefill/generation; separate API/kernel/copy/memset activity is recomputed, crossing
+records clipped/count retained, overlaps combined by interval union. Activity gaps
+are not attributed to CPU/GIL/scheduling/thermals/capture. Profiler/marker overhead
+prevents uninstrumented model-speed claims. No HTTP timing in this diagnosis.
+
+Separate witness is written only after native session/vision/decoder close calls
+return. Nsight wrapper exit is not assumed to prove native model cleanup. Initial
+unrun preparation is retained before adding that witness. Initial9CPU and full42
+CPU pass; final43CPU pass0.979s with all test IDs and seven module sources pinned.
+Direct probe CLI import-path smoke passes without loading Garnet/GPU. New
+preparation27ed5e53806dbc0b68bef8b9d388713e88486411688a8c7b6bdf7d4fd0dedec3 pins
+630files/14uploadtargets;617existing inputs. Read-only profiler executable SHA
+e597347ef6cb45456612c0c9593401bb6d1b85497bb18534968f309955831291 and original
+signed-tool setup proof required. Prior short trace CPU schema audit confirms
+runtime thread/process encoding,0copy-correlation PID mismatches; it is not a new
+full4K trace or bottleneck result. Final all630source/runtime/profiler checks and
+43actualremote CPU IDs precede model construction. Reserve96GiB engine scratch/
+32GiB study disk; stream large trace archives rather than buffer them all in RAM.
+
+Deployment has not run while HTTP timing is live. After its closure/archive/replay,
+preflight/install only absent new methods, then profile current B1/full4K and replay
+on both machines. Investigate actual dominant prefill operations and late-repeat
+stalls without trimming cases. Wider target-prefill128 needs explicit native
+metadata/commit/plugin and math/state/ID validation. Throughput still requires
+actual B8MTP fit/externalmath/quality/padding/HTTP qualification. Strongest feasible
+tuned/MTP SGLang/vLLM4K/repetitions and INT4/4B comparisons remain open.
+'''
+for name in ('qwen38-5090-development-log.md','qwen38-5090-implementation-task.md'):
+ path=repo/'docs/research'/name;raw=path.read_text(encoding='utf8')
+ if 'current B1/full4K CUDA phase diagnosis prepared, not executed' not in raw:path.write_text(raw+text,encoding='utf8')
+print(json.dumps({k:v for k,v in result.items() if k not in ('scope','next_actions','prior_trace_schema_audit')}))

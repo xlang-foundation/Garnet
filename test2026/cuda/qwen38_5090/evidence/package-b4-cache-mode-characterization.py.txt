@@ -1,0 +1,16 @@
+from pathlib import Path
+import hashlib,json,zipfile
+work=Path(__file__).resolve().parent;sha=lambda raw:hashlib.sha256(raw).hexdigest()
+source=(work/'install-prefill128-attention-component.py').read_bytes()
+installer=source.replace(b'prefill128-attention-component',b'b4-cache-mode-characterization').replace(b'prefill128_attention_component',b'b4_cache_mode_characterization').replace(b'==32',b'==706').replace(b"p['cpu_tests']==11",b"p['expected_cpu_test_count']==50").replace(b"p['runtime_dependencies']",b"p['runtime']").replace(b"'source_pins':32",b"'source_pins':706")
+path=work/'install-b4-cache-mode-characterization.py';assert not path.exists();path.write_bytes(installer)
+plan=json.loads((work/'b4-cache-mode-characterization-upload-plan.json').read_bytes());files={}
+for row in plan['uploads']:
+    raw=Path(row['local']).read_bytes();assert sha(raw)==row['sha256'] and row['target'] not in files;files[row['target']]=raw
+assert len(files)==9
+bundle=work/'b4-cache-mode-characterization-methods.zip';assert not bundle.exists()
+with zipfile.ZipFile(bundle,'x',zipfile.ZIP_DEFLATED) as z:
+    for name,raw in files.items():z.writestr(name,raw)
+    z.writestr('install-manifest.json',json.dumps({'files':{name:sha(raw) for name,raw in files.items()},'scope':plan['scope']},indent=2))
+r={'status':'b4_cache_mode_characterization_packaged_gpu_unrun','bundle_sha256':sha(bundle.read_bytes()),'bytes':bundle.stat().st_size,'targets':len(files),'installer_sha256':sha(installer),'source_pins':706,'cpu_tests':50}
+(work/'b4-cache-mode-characterization-bundle.json').write_bytes(json.dumps(r,indent=2).encode());print(json.dumps(r))

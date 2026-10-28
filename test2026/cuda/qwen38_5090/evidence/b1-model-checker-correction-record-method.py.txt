@@ -1,0 +1,47 @@
+from pathlib import Path
+from datetime import datetime,timezone
+import hashlib,json,shutil
+r=Path('D:/CantorAI/work/qwen38-5090');m=r/'test2026/cuda/qwen38_5090';e=m/'evidence';w=Path(__file__).resolve().parent;o=w.parent/'outputs';sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest();now=datetime.now(timezone.utc).isoformat();name='bf16-low-batch-model-consistency-attempt1'
+local=json.loads((o/(name+'-verified.json')).read_bytes());assert local==json.loads((o/(name+'-remote-verified.json')).read_bytes()) and local['status']=='bf16_low_batch_model_consistency_failure_preserved' and sha(o/(name+'-evidence.zip'))==local['archive_sha256']
+for suffix in ('-verified.json','-remote-verified.json','-replay-remote.log'):shutil.copyfile(o/(name+suffix),e/(name+suffix))
+for method in ('replay-b1-model-failure-and-packed-row.py','prepare-b1-model-fixed-methods.py','prepare-b1-model-fixed-preflight-method.py','prepare-b1-model-fixed-launch-preflight.py'):shutil.copyfile(w/method,e/(method+'.txt'))
+shutil.copyfile(w/'bf16-low-batch-model-consistency-attempt2-preflight.json',e/'bf16-low-batch-model-consistency-attempt2-preflight.json')
+analysis=json.loads((e/'bf16-low-batch-model-attempt1-packed-reanalysis.json').read_bytes());assert all(analysis['checks'].values()) and analysis['archive_sha256']==local['archive_sha256']
+raw='.............\n----------------------------------------------------------------------\nRan 13 tests in 0.039s\n\nOK\n';(e/'bf16-low-batch-packed-gate-cpu-tool-output.txt').write_text(raw,encoding='utf8')
+receipt={'status':'b1_model_typed_checker_failure_preserved_fixed_method_prepared','recorded_utc':now,'original_job':name,'original_exit_code':1,'original_archive_sha256':local['archive_sha256'],'both_failure_replays_identical':True,'cause':'B4 packed state was passed to the existing packed-versus-FP32-reference comparison predicate. Representation guard rejected before comparison.','actual_partial_cases_reanalyzed':1,'first_actual_parent_ids_state_components_and_raw_row_exact':True,'new_packed_comparator_sha256':sha(m/'bf16_packed_state_gate.py'),'local_cpu_tests_passed':13,'test_output_sha256':sha(e/'bf16-low-batch-packed-gate-cpu-tool-output.txt'),'local_test_command':['D:/CantorAI/Garnet/.venv/Scripts/python.exe','-m','unittest','test2026.cuda.qwen38_5090.test_bf16_packed_state_gate','test2026.cuda.qwen38_5090.test_bf16_same_precision_gate','test2026.cuda.qwen38_5090.test_bf16_padded_state_gate'],'test_output_scope':'Copied from the actual successful exec tool transcript, LF normalized, not a run_logged invocation.','old_packed_versus_reference_gate_unchanged':True,'product_math_or_tolerance_changed':False,'native_library_sha256':local['library_sha256'],'native_library_changed':False,'next_job':'bf16-low-batch-model-consistency-attempt2','next_job_status':'prepared_unrun','planned_fresh_b4_cases':4,'planned_fresh_b1_cases':8,'planned_remote_cpu_tests':18,'model_qualified':False,'performance_admitted':False,'scope':'Fresh full attempt retains immutable original failure and strict selected complete packed-row comparisons. No fake reference flags, weakened checks or model/performance promotion.'}
+(e/'bf16-low-batch-model-checker-correction.json').write_text(json.dumps(receipt,indent=2),encoding='utf8')
+path=o/'Garnet-Parallel-Top1-Integration-Status.json';s=json.loads(path.read_bytes());s.update(recorded_utc=now,status='first_b1_model_harness_failure_preserved_fresh_attempt_prepared',current_native_full_model_lifecycle_qualified=False,new_model_speed_measurement=False,two_times_target_achieved=False)
+s['b1_model_first_attempt_failure']=receipt;s['b1_model_consistency'].update(job='bf16-low-batch-model-consistency-attempt2',status='prepared_unrun',last_authoritative_handle_state=None,actual_gpu_model_cases_verified=0,original_failed_attempt_preserved=True,partial_first_attempt_b4_cases_cpu_reanalyzed=1);path.write_text(json.dumps(s,indent=2)+'\n',encoding='utf8')
+addition='''
+
+### 2026-10-25: model attempt1 typed-comparator failure and guarded correction
+
+Original bf16-low-batch-model-consistency-attempt1 is terminal exit1, cleanup
+complete, source/runtime unchanged. Actual first B4 text ordinary/MTP/callback
+checks passed internally, then the harness incorrectly called same_logical_row
+with two packed witnesses. That predicate deliberately requires its second
+input to be the independently BF16-rounded FP32 reference. It rejected the real
+packed metadata before comparing values. Original221-file archive and methods
+are immutable; remote/local failure replays agree. B1 never executed in attempt1.
+
+Independent CPU replay of the actual saved first case checks the complete
+selected canonical/logical row, all128component hashes and both full raw hidden/
+normalized rows against the retained5ac parent: all exact, including token IDs.
+This is one archived B4 case, not a completed model qualification. Original
+failure stays failed. New bf16_packed_state_gate validates both real packed
+representations, full128component geometry/hash metadata and selected physical/
+logical/component/slot hashes. Original packed-versus-reference predicate stays
+unchanged; no fake reference flag, product math or tolerance change. Seven new
+and six unchanged CPU controls pass (13actual tests; raw tool output retained).
+
+Four fixed model methods are literal derivations from failed archived sources;
+new factory binds the original failure proof and actual partial-data reanalysis.
+Fresh attempt2 retains all4B4 and8B1 cases and adds18remote CPU controls before
+GPU execution. Same8ae DLL, old libraries and shared scratch/cache retained;
+no rebuild or runtime replacement. Read-only preflight reports no source/runtime
+drift, competing study process or target conflict. Prepared attempt2 is not a
+pass. Broad quality, actual4K, HTTP metrics and original2x objective remain open.
+'''
+for name in ('docs/research/qwen38-5090-development-log.md','docs/research/qwen38-5090-implementation-task.md'):
+ p=r/name;raw=p.read_bytes();assert b'model attempt1 typed-comparator failure and guarded correction' not in raw;p.write_bytes(raw+addition.replace('\n','\r\n').encode())
+shutil.copyfile(Path(__file__),e/'b1-model-checker-correction-record-method.py.txt');print(json.dumps({'status':receipt['status'],'original_failure_preserved':True,'actual_partial_case_exact':True,'new_model_attempt':'prepared_unrun','performance_admitted':False}))

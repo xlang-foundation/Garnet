@@ -1,0 +1,65 @@
+"""Close the actual failed full-model gate without promoting partial correctness."""
+from pathlib import Path
+import hashlib,json,re,zipfile
+work=Path(__file__).resolve().parent;out=work.parent/'outputs'
+repo=Path('D:/CantorAI/work/qwen38-5090');m=repo/'test2026/cuda/qwen38_5090';e=m/'evidence'
+job='fp8-z128-full4k-model-admission-attempt1';prefix='Garnet/test2026/cuda/qwen38_5090/'
+sha=lambda raw:hashlib.sha256(raw).hexdigest();paths=[]
+def keep(name,raw):
+    target=e/name;assert not target.exists() or target.read_bytes()==raw,target
+    if not target.exists():target.write_bytes(raw)
+    paths.append(target.relative_to(repo).as_posix())
+proof=(out/(job+'-verified.json')).read_bytes();analysis=(out/(job+'-analysis.json')).read_bytes()
+assert proof==(out/(job+'-remote-verified.json')).read_bytes()
+assert analysis==(out/(job+'-remote-analysis.json')).read_bytes()
+q=json.loads(proof);a=json.loads(analysis)
+assert q['status']=='fp8_z128_full4k_model_failure_preserved' and a['status']=='fp8_z128_first_full4k_failure_analyzed'
+assert a['original_failure_proof_sha256']==sha(proof) and a['archive_sha256']==q['archive_sha256']
+assert a['first_different_output_zero_based']==57 and a['equal_output_ids']==60 and a['source_runtime_environment_restored']
+phase=a['phases']['ordinary_prefill'];assert phase['first_different_component']=={'layer':3,'kind':'full_attention','role':1,'logical_words':4194304}
+assert [row['role'] for row in phase['different_components'] if row['layer']==3]==[1,2]
+archive=out/(job+'-evidence.zip');assert sha(archive.read_bytes())==q['archive_sha256']
+with zipfile.ZipFile(archive) as z:
+    manifest=json.loads(z.read('evidence-manifest.json'));assert z.testzip() is None and len(z.namelist())==len(set(z.namelist()))==len(manifest['files'])+1
+    for name,h in manifest['files'].items():assert sha(z.read(name))==h
+    base='results/'+job+'/';praw=z.read(prefix+'evidence/fp8-z128-full4k-model-preparation.json');p=json.loads(praw);w=json.loads(z.read(base+'workflow.json'))
+    assert w['exit_code']==1 and w['cleanup_finished'] and w['baseline_source_restored'] and w['baseline_library_restored']
+    assert len(p['files'])==978 and len(p['installed_files'])==1001 and len(p['candidate_files'])==35
+    keep(job+'-evidence-manifest.json',z.read('evidence-manifest.json'));keep('fp8-z128-full4k-model-preparation.json',praw)
+    for name in z.namelist():
+        if name.startswith(base) and name.endswith(('.json','.jsonl','.log','.txt')):keep(job+'-'+name.removeprefix(base).replace('/','-'),z.read(name))
+    for name,h in p['new_files'].items():
+        path=repo/name.removeprefix('Garnet/');assert sha(path.read_bytes())==h;paths.append(path.relative_to(repo).as_posix())
+    remote_cpu=float(re.search(rb'Ran 70 tests in ([0-9.]+)s',z.read(base+'cpu-ledger/commands.log')).group(1))
+for suffix in ('-verified.json','-remote-verified.json','-analysis.json','-remote-analysis.json','-local-replay.log','-remote-replay.log','-local-analysis.log','-remote-analysis.log'):
+    keep(job+suffix,(out/(job+suffix)).read_bytes())
+for name in ('analyze_fp8_z128_full4k_model_failure.py','evidence/fp8-z128-full4k-model-analysis-derivation.json'):
+    paths.append((m/name).relative_to(repo).as_posix())
+for name in ('derive-fp8-z128-full4k-model-initial.py','derive-fp8-z128-full4k-model.py','install-fp8-z128-full4k-model.py','retain-fp8-z128-full4k-model.py'):
+    keep(name+'.txt',(work/name).read_bytes())
+keep('fp8-z128-full4k-model-package.json',(work/'fp8-z128-full4k-model-package.json').read_bytes())
+keep('fp8-z128-full4k-model-install.json',(out/'fp8-z128-full4k-model-install.json').read_bytes())
+for path in (work/'fp8-z128-full4k-model-local-cpu-ledger').iterdir():
+    if path.is_file():keep('fp8-z128-full4k-model-local-cpu-'+path.name,path.read_bytes())
+plan={'status':'full4k_gate_failed_layer3_key_and_value_first_observed_boundary','steps':[
+    'Preserve this full-model failure and earlier same-DLL initialization failures. Current initialization succeeded, but reliability/cause is unresolved. Never promote this trial to timing, quality or 2x admission.',
+    'Inspect ordinary layer2 output and layer3 full-attention input/projection/cache paths using identical real prompt input and separate T32/T128 profiles. Both layer3 key role1 and value role2 differ; previous GDN layer0/1/2 complete states match, but those state hashes do not prove the hidden input to attention matches.',
+    'Locate the first different key/value token/head/dimension or projection stage. Existing diagnostic_full_stages only supports embedded layer3 T16 and excludes canonical BF16 KV; do not silently enable it for the current T128 profile. Prefer ordinary controls and bounded cache reads before extending diagnostics.',
+    'Require same-profile ordinary/control parity and retained baseline reproduction before causal attribution. Keep input/state readonly checks, full raw finite arrays, graph counters and source/runtime restoration. A first differing cache hash alone cannot distinguish input arithmetic, projection, normalization/RoPE or cache layout/commit.',
+    'After a justified fix, repeat unchanged six3968+128 ordinary/MTP state/vector/token gate, adapted805 quality and initialization checks, then matched HTTP repetitions and strongest feasible tuned/MTP references. INT4/4B comparisons and physical concurrency remain required. Overall 2x decode AND throughput and half-TTFT remain unmet.'
+], 'performance_admitted':False,'two_times_target_achieved':False}
+keep('fp8-z128-full4k-failure-next-plan.json',json.dumps(plan,indent=2).encode())
+result={'status':plan['status'],'archive_sha256':q['archive_sha256'],'archive_bytes':archive.stat().st_size,'archive_members':len(manifest['files'])+1,'failure_proof_pair_sha256':sha(proof),'analysis_pair_sha256':sha(analysis),'CPU_tests':70,'remote_CPU_seconds':remote_cpu,'source_pins':978,'installed_pins':1001,'candidate_sources':35,'existing_targets_restored':12,'new_targets_removed':23,'source_runtime_SDK_checkpoint_restored':True,'ordinary_cases_observed':1,'first_different_output_zero_based':57,'equal_output_ids':60,'prefill_different_components':len(phase['different_components']),'first_prefill_difference':phase['first_different_component'],'layer3_key_and_value_both_differ':True,'prefill_vectors':phase['vectors'],'finite_vector_scalars_compared':40960,'mtp_or_image_executed':False,'cause_established':False,'initialization_reliability_resolved':False,'performance_admitted':False,'two_times_target_achieved':False,'next_plan':plan}
+raw=json.dumps(result,indent=2).encode();keep('fp8-z128-full4k-model-failure-closure.json',raw)
+target=out/'Garnet-FP8-Z128-Full4K-Failure-Verified.json';assert not target.exists() or target.read_bytes()==raw
+if not target.exists():target.write_bytes(raw)
+title='Composed Z128 full4K gate fails at first ordinary text case; layer3 key and value boundary retained'
+text='\n\n### 2026-10-26 — '+title+'\n\n'
+text+='The same closed native28 DLL plus seven unchanged Python profile files (35 candidate sources) constructed separate off/on full-model graphs. Both old GDN-out M128 and new Z128 counters are 0 off and 48 at target128 on; decode4, draft4/16, vision and optional norm counters remain 0. All 70 CPU controls pass locally (1.965s) and remotely ('+str(remote_cpu)+'s). Only three superseded single-stage source tests were replaced by five current composition tests; all 61 prior model/state/vector/token/MTP controls remain, plus four new tests. Initialization succeeded this run, so the failure observer was not invoked; earlier allocation failures remain unexplained.\n\n'
+text+='The first actual 3968+128 text ordinary observation was saved before the strict token assertion failed. First mismatch is zero-based output 57; 60/128 IDs agree. Empty/reset state and vectors are exact. At prefill, the first different complete state component is layer3 full-attention KEY (role1), and its VALUE (role2) also differs; 121/128 components differ. Layer0/1/2 state hashes match, which does not establish hidden-input equality. Complete 40960 finite hidden/normalized scalars and 128-component geometry/slots are independently checked. Prefill hidden maxabs31.052886962890625/relativeL2 0.23968307780975426; normalized maxabs3.811379909515381/relativeL2 0.25409461762346935, no exact scalar matches in either prefill vector. MTP generation, image and remaining five cases were not run. No quality/performance admission.\n\n'
+text+='All 978 source/1001 installed pins, runtime, selected SDK, checkpoint and environment restore checks pass; 12 existing targets restored and 23 new targets removed. Full archive '+q['archive_sha256']+' ('+str(archive.stat().st_size)+' bytes/91 members) passes all CRC and file SHA checks. Failure verifier expected exit1 and independent analyzer exit0 on both machines, with byte-identical proofs '+sha(proof)+' and '+sha(analysis)+'. Raw errors, resources, inputs/IDs/vectors, derivations and initial generator source retained. The initial generator expected one launcher reference but found two; corrected exact count2 before deployment, no GPU work from that preparation error. Sampled adapter memory is correctness-only, not a performance result.\n\n'
+text+='Next: isolate the layer3 input/projection/cache boundary with ordinary T32/T128 real-input controls and bounded complete cache reads. Existing full-attention diagnostics are T16 embedded-only and reject canonical KV; no T128 diagnostic support is assumed. Identify first differing token/head/dimension and reproduce the retained baseline before attribution or code changes. Then preserve unchanged full-model/quality gates and all original HTTP/baseline/INT4/4B/concurrency objectives. Existing charts remain unchanged and the overall 2x decode AND throughput target remains unmet.\n'
+for name in ('qwen38-5090-development-log.md','qwen38-5090-implementation-task.md'):
+    target=repo/'docs/research'/name;before=target.read_bytes();assert title.encode() not in before;target.write_bytes(before+text.encode());paths.append(target.relative_to(repo).as_posix())
+(work/'fp8-z128-full4k-model-retained-paths.json').write_bytes(json.dumps(sorted(set(paths)),indent=2).encode())
+print(json.dumps({'status':result['status'],'retained_paths':len(set(paths)),'failure_proof_pair_sha256':sha(proof),'analysis_pair_sha256':sha(analysis)}))

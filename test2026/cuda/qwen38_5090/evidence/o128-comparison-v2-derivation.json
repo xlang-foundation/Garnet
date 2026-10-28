@@ -1,0 +1,50 @@
+{
+  "source": "render-o128-repeated-comparison.py",
+  "source_sha256": "f7a0af63aac37945b4f3802d9a54acb25661655b670811b01ee6eed47110cf1b",
+  "target": "render-o128-repeated-comparison-v2.py",
+  "target_sha256": "78c98402d875fe8e086dd3ce498d9f4c17372f83fa025ae2a6dac00e28db28f3",
+  "changes": [
+    {
+      "old": "STEM='Garnet-O128-Repeated-vLLM-SGLang-4K'",
+      "new": "STEM='Garnet-O128-Repeated-vLLM-SGLang-4K-v2'"
+    },
+    {
+      "old": "r=dict(c['metrics'],sampled_peak_adapter_used_bytes=t['memory'][key]['sampled_peak_adapter_used_bytes'])",
+      "new": "r=dict(c['metrics'],**{field:t['memory'][key][field] for field in ('sampled_peak_adapter_used_bytes','samples','observed_sample_gap_median_seconds','observed_sample_gap_max_seconds')})"
+    },
+    {
+      "old": "    notes=[",
+      "new": "    maximum_native_gap=max(t['memory'][key]['observed_sample_gap_max_seconds'] for t in trials for key in expected)\n    notes=["
+    },
+    {
+      "old": "'VRAM is sampled adapter usage including background allocations; raw sampling gaps and trailing samples are retained.'",
+      "new": "f'VRAM includes background usage. Maximum observed native sampling gap: {maximum_native_gap:.3f} s; raw samples retained.'"
+    },
+    {
+      "old": "data=dict(status='three_O128_HTTP_trials_and_retained_single_trial_references_replayed'",
+      "new": "data=dict(model_checkpoint='nvidia/Qwen3.8-27B-NVFP4',model_precision='mixed NVFP4/FP8; BF16 vision/cache; native NVFP4 head',memory_sampling_by_native_trial=[t['memory'] for t in trials],status='three_O128_HTTP_trials_and_retained_single_trial_references_replayed'"
+    },
+    {
+      "old": "RTX 5090 32GB | 3968 input + 128 output | new native: 3 trials; retained references: 1 trial",
+      "new": "Qwen3.8-27B mixed NVFP4/FP8 | RTX 5090 32GB | 3968+128 tokens | native: 3 trials; references: 1 trial"
+    },
+    {
+      "old": "Actual 4K HTTP | native median/range of 3 trials; references 1 trial each | RTX 5090 32GB",
+      "new": "Qwen3.8-27B mixed NVFP4/FP8 | RTX 5090 32GB | actual 4K | native: 3 trials; references: 1 trial"
+    },
+    {
+      "old": "'sampled_adapter_GiB']",
+      "new": "'sampled_adapter_GiB','memory_samples','maximum_sampling_gap_seconds']"
+    },
+    {
+      "old": "r['sampled_peak_adapter_used_bytes']/2**30])",
+      "new": "r['sampled_peak_adapter_used_bytes']/2**30,r.get('samples'),r.get('observed_sample_gap_max_seconds')])"
+    },
+    {
+      "old": "<p>Values: first-token seconds",
+      "new": "<p>Model: nvidia/Qwen3.8-27B-NVFP4, mixed NVFP4/FP8, native NVFP4 head, BF16 vision/cache.</p><p>Values: first-token seconds"
+    }
+  ],
+  "new_benchmark": false,
+  "scope": "Preserve v1files. Add explicit checkpoint label, native max sampling gap, per-trial memory metadata and CSV memory sample/gap columns. Numerical plotted metrics/ratios remain byte-value identical from same paired proof; verify after rendering."
+}

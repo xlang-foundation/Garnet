@@ -1,0 +1,3950 @@
+{
+  "status": "actual_GDN50_all_original_stages_states_and_509_control_entries_replayed",
+  "archive_sha256": "1db484eb08bbd209f4de1a1a67b78f8d7db5aef2f3e9affb4e2ce518e283f587",
+  "archive_bytes": 485988065,
+  "archive_members": 555,
+  "exit_code": 0,
+  "error": null,
+  "candidate_library_sha256": "5dff30dd8d2960bcfe64cc25d5014874bd893a3649407ea157eaa7759179350f",
+  "source_runtime_SDK_checkpoint_restored": true,
+  "arrays": {
+    "status": "actual_GDN50_original_stage_gates_and_all_control_arrays_replayed",
+    "original_array_replay": {
+      "status": "gdn_chunk_stage_primary_witness_and_arrays_replayed",
+      "profiles": 8,
+      "frontend_rejections": 10,
+      "repeats_per_profile": 2,
+      "complete_output_f32_words_replayed": 98205696,
+      "diagnostic_primary_exact_to_ordinary": true,
+      "all_input_and_carried_state_words_exact": true,
+      "stage_comparisons": [
+        {
+          "layer": 0,
+          "input_lineage": "prompt_embeddings",
+          "different_stages": [],
+          "first_different_stage": null,
+          "final_history_exact": true,
+          "final_state_exact": true
+        },
+        {
+          "layer": 1,
+          "input_lineage": "common_retained_T32_layer0_output",
+          "different_stages": [],
+          "first_different_stage": null,
+          "final_history_exact": true,
+          "final_state_exact": true
+        }
+      ],
+      "full3968_model_cause_established": false,
+      "model_or_quality_or_performance_qualified": false,
+      "two_times_target_achieved": false
+    },
+    "complete_finite_array_entries": 509,
+    "complete_control_array_entries_compared": 509,
+    "all_old_control_array_bytes_exact": true,
+    "controlled_first128_all11_stages_exact": true,
+    "distinct_reconstructed_Z128_and_zero_KV128_routes_verified": true,
+    "full3968_model_or_quality_or_performance_qualified": false,
+    "two_times_target_achieved": false
+  },
+  "trace": {
+    "status": "actual_reconstructed_factory_and_enclosing_plugin_replayed",
+    "plugin": {
+      "status": "actual_plugin_initialization_entries_exits_replayed",
+      "initialize_calls": 80,
+      "events": 160,
+      "routes": {
+        "fp8": 32,
+        "nvfp4": 32,
+        "fp8_z128_reconstructed": 8,
+        "fp8_m128": 8
+      },
+      "factory_calls": 80,
+      "cached_context_initializations": 0,
+      "exception_returns": 0,
+      "failures": [],
+      "actual_failed_plugin_route_observed": false,
+      "arithmetic_or_quality_or_performance_qualified": false
+    },
+    "factory": {
+      "status": "separate_API_reconstruction_factory_events_replayed",
+      "factory_calls": 8,
+      "events": 376,
+      "calls": [
+        {
+          "id": 1,
+          "outcome": "created",
+          "API_calls": 32,
+          "API_results": [
+            {
+              "id": 1,
+              "seq": 2,
+              "event": "api",
+              "name": "cudaGetDevice",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 1,
+              "seq": 3,
+              "event": "api",
+              "name": "cudaGetDeviceProperties",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 1,
+              "seq": 4,
+              "event": "api",
+              "name": "cublasLtGetVersion",
+              "a": 130400,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 1,
+              "seq": 5,
+              "event": "api",
+              "name": "cublasLtCreate",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 1,
+              "seq": 6,
+              "event": "api",
+              "name": "cublasLtMatmulDescCreate",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 1,
+              "seq": 7,
+              "event": "api",
+              "name": "cublasLtMatmulDescSetAttribute",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 1,
+              "seq": 8,
+              "event": "api",
+              "name": "cublasLtMatmulDescSetAttribute",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 1,
+              "seq": 9,
+              "event": "api",
+              "name": "cublasLtMatrixLayoutCreate",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 1,
+              "seq": 10,
+              "event": "api",
+              "name": "cublasLtMatrixLayoutCreate",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 1,
+              "seq": 11,
+              "event": "api",
+              "name": "cublasLtMatrixLayoutCreate",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 1,
+              "seq": 12,
+              "event": "api",
+              "name": "cublasLtMatrixLayoutCreate",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 1,
+              "seq": 13,
+              "event": "api",
+              "name": "cublasLtMatrixLayoutCreate",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 1,
+              "seq": 14,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoInit",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 1,
+              "seq": 15,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoConfigSetAttribute",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 1,
+              "seq": 16,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoConfigSetAttribute",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 1,
+              "seq": 17,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoConfigSetAttribute",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 1,
+              "seq": 18,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoConfigSetAttribute",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 1,
+              "seq": 19,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoConfigSetAttribute",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 1,
+              "seq": 20,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoConfigSetAttribute",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 1,
+              "seq": 21,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoConfigSetAttribute",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 1,
+              "seq": 22,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoConfigSetAttribute",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 1,
+              "seq": 23,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoConfigGetAttribute",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 1,
+              "seq": 25,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoConfigGetAttribute",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 1,
+              "seq": 27,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoConfigGetAttribute",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 1,
+              "seq": 29,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoConfigGetAttribute",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 1,
+              "seq": 31,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoConfigGetAttribute",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 1,
+              "seq": 33,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoConfigGetAttribute",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 1,
+              "seq": 35,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoConfigGetAttribute",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 1,
+              "seq": 37,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoConfigGetAttribute",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 1,
+              "seq": 39,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoConfigGetAttribute",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 1,
+              "seq": 42,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoCheck",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 1,
+              "seq": 44,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoCheck",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            }
+          ],
+          "configuration": [
+            {
+              "id": 1,
+              "seq": 24,
+              "event": "configuration",
+              "name": "ID",
+              "a": 67,
+              "b": 4,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 1,
+              "seq": 26,
+              "event": "configuration",
+              "name": "TILE_ID",
+              "a": 13,
+              "b": 4,
+              "c": 1,
+              "opaque": ""
+            },
+            {
+              "id": 1,
+              "seq": 28,
+              "event": "configuration",
+              "name": "STAGES_ID",
+              "a": 17,
+              "b": 4,
+              "c": 6,
+              "opaque": ""
+            },
+            {
+              "id": 1,
+              "seq": 30,
+              "event": "configuration",
+              "name": "SPLITK_NUM",
+              "a": 1,
+              "b": 4,
+              "c": 2,
+              "opaque": ""
+            },
+            {
+              "id": 1,
+              "seq": 32,
+              "event": "configuration",
+              "name": "REDUCTION_SCHEME",
+              "a": 0,
+              "b": 4,
+              "c": 3,
+              "opaque": ""
+            },
+            {
+              "id": 1,
+              "seq": 34,
+              "event": "configuration",
+              "name": "CTA_SWIZZLING",
+              "a": 1,
+              "b": 4,
+              "c": 4,
+              "opaque": ""
+            },
+            {
+              "id": 1,
+              "seq": 36,
+              "event": "configuration",
+              "name": "CUSTOM_OPTION",
+              "a": 18,
+              "b": 4,
+              "c": 5,
+              "opaque": ""
+            },
+            {
+              "id": 1,
+              "seq": 38,
+              "event": "configuration",
+              "name": "INNER_SHAPE_ID",
+              "a": 0,
+              "b": 2,
+              "c": 7,
+              "opaque": ""
+            },
+            {
+              "id": 1,
+              "seq": 40,
+              "event": "configuration",
+              "name": "CLUSTER_SHAPE_ID",
+              "a": 0,
+              "b": 2,
+              "c": 8,
+              "opaque": ""
+            }
+          ],
+          "algorithm": [
+            {
+              "id": 1,
+              "seq": 41,
+              "event": "algorithm",
+              "name": "configured",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": "430000000d0000001100000001000000000000000100000012000000000000000100000060fd01001c0000001c0000000e000e00440000000000000000000000"
+            }
+          ],
+          "checks": [
+            {
+              "id": 1,
+              "seq": 43,
+              "event": "check",
+              "name": "M32",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 1,
+              "seq": 45,
+              "event": "check",
+              "name": "M128",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            }
+          ],
+          "reject": null,
+          "events": 47
+        },
+        {
+          "id": 2,
+          "outcome": "created",
+          "API_calls": 32,
+          "API_results": [
+            {
+              "id": 2,
+              "seq": 2,
+              "event": "api",
+              "name": "cudaGetDevice",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 2,
+              "seq": 3,
+              "event": "api",
+              "name": "cudaGetDeviceProperties",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 2,
+              "seq": 4,
+              "event": "api",
+              "name": "cublasLtGetVersion",
+              "a": 130400,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 2,
+              "seq": 5,
+              "event": "api",
+              "name": "cublasLtCreate",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 2,
+              "seq": 6,
+              "event": "api",
+              "name": "cublasLtMatmulDescCreate",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 2,
+              "seq": 7,
+              "event": "api",
+              "name": "cublasLtMatmulDescSetAttribute",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 2,
+              "seq": 8,
+              "event": "api",
+              "name": "cublasLtMatmulDescSetAttribute",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 2,
+              "seq": 9,
+              "event": "api",
+              "name": "cublasLtMatrixLayoutCreate",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 2,
+              "seq": 10,
+              "event": "api",
+              "name": "cublasLtMatrixLayoutCreate",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 2,
+              "seq": 11,
+              "event": "api",
+              "name": "cublasLtMatrixLayoutCreate",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 2,
+              "seq": 12,
+              "event": "api",
+              "name": "cublasLtMatrixLayoutCreate",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 2,
+              "seq": 13,
+              "event": "api",
+              "name": "cublasLtMatrixLayoutCreate",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 2,
+              "seq": 14,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoInit",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 2,
+              "seq": 15,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoConfigSetAttribute",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 2,
+              "seq": 16,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoConfigSetAttribute",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 2,
+              "seq": 17,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoConfigSetAttribute",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 2,
+              "seq": 18,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoConfigSetAttribute",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 2,
+              "seq": 19,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoConfigSetAttribute",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 2,
+              "seq": 20,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoConfigSetAttribute",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 2,
+              "seq": 21,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoConfigSetAttribute",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 2,
+              "seq": 22,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoConfigSetAttribute",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 2,
+              "seq": 23,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoConfigGetAttribute",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 2,
+              "seq": 25,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoConfigGetAttribute",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 2,
+              "seq": 27,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoConfigGetAttribute",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 2,
+              "seq": 29,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoConfigGetAttribute",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 2,
+              "seq": 31,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoConfigGetAttribute",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 2,
+              "seq": 33,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoConfigGetAttribute",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 2,
+              "seq": 35,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoConfigGetAttribute",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 2,
+              "seq": 37,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoConfigGetAttribute",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 2,
+              "seq": 39,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoConfigGetAttribute",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 2,
+              "seq": 42,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoCheck",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 2,
+              "seq": 44,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoCheck",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            }
+          ],
+          "configuration": [
+            {
+              "id": 2,
+              "seq": 24,
+              "event": "configuration",
+              "name": "ID",
+              "a": 67,
+              "b": 4,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 2,
+              "seq": 26,
+              "event": "configuration",
+              "name": "TILE_ID",
+              "a": 13,
+              "b": 4,
+              "c": 1,
+              "opaque": ""
+            },
+            {
+              "id": 2,
+              "seq": 28,
+              "event": "configuration",
+              "name": "STAGES_ID",
+              "a": 17,
+              "b": 4,
+              "c": 6,
+              "opaque": ""
+            },
+            {
+              "id": 2,
+              "seq": 30,
+              "event": "configuration",
+              "name": "SPLITK_NUM",
+              "a": 1,
+              "b": 4,
+              "c": 2,
+              "opaque": ""
+            },
+            {
+              "id": 2,
+              "seq": 32,
+              "event": "configuration",
+              "name": "REDUCTION_SCHEME",
+              "a": 0,
+              "b": 4,
+              "c": 3,
+              "opaque": ""
+            },
+            {
+              "id": 2,
+              "seq": 34,
+              "event": "configuration",
+              "name": "CTA_SWIZZLING",
+              "a": 1,
+              "b": 4,
+              "c": 4,
+              "opaque": ""
+            },
+            {
+              "id": 2,
+              "seq": 36,
+              "event": "configuration",
+              "name": "CUSTOM_OPTION",
+              "a": 18,
+              "b": 4,
+              "c": 5,
+              "opaque": ""
+            },
+            {
+              "id": 2,
+              "seq": 38,
+              "event": "configuration",
+              "name": "INNER_SHAPE_ID",
+              "a": 0,
+              "b": 2,
+              "c": 7,
+              "opaque": ""
+            },
+            {
+              "id": 2,
+              "seq": 40,
+              "event": "configuration",
+              "name": "CLUSTER_SHAPE_ID",
+              "a": 0,
+              "b": 2,
+              "c": 8,
+              "opaque": ""
+            }
+          ],
+          "algorithm": [
+            {
+              "id": 2,
+              "seq": 41,
+              "event": "algorithm",
+              "name": "configured",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": "430000000d0000001100000001000000000000000100000012000000000000000100000060fd01001c0000001c0000000e000e00440000000000000000000000"
+            }
+          ],
+          "checks": [
+            {
+              "id": 2,
+              "seq": 43,
+              "event": "check",
+              "name": "M32",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 2,
+              "seq": 45,
+              "event": "check",
+              "name": "M128",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            }
+          ],
+          "reject": null,
+          "events": 47
+        },
+        {
+          "id": 3,
+          "outcome": "created",
+          "API_calls": 32,
+          "API_results": [
+            {
+              "id": 3,
+              "seq": 2,
+              "event": "api",
+              "name": "cudaGetDevice",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 3,
+              "seq": 3,
+              "event": "api",
+              "name": "cudaGetDeviceProperties",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 3,
+              "seq": 4,
+              "event": "api",
+              "name": "cublasLtGetVersion",
+              "a": 130400,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 3,
+              "seq": 5,
+              "event": "api",
+              "name": "cublasLtCreate",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 3,
+              "seq": 6,
+              "event": "api",
+              "name": "cublasLtMatmulDescCreate",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 3,
+              "seq": 7,
+              "event": "api",
+              "name": "cublasLtMatmulDescSetAttribute",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 3,
+              "seq": 8,
+              "event": "api",
+              "name": "cublasLtMatmulDescSetAttribute",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 3,
+              "seq": 9,
+              "event": "api",
+              "name": "cublasLtMatrixLayoutCreate",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 3,
+              "seq": 10,
+              "event": "api",
+              "name": "cublasLtMatrixLayoutCreate",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 3,
+              "seq": 11,
+              "event": "api",
+              "name": "cublasLtMatrixLayoutCreate",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 3,
+              "seq": 12,
+              "event": "api",
+              "name": "cublasLtMatrixLayoutCreate",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 3,
+              "seq": 13,
+              "event": "api",
+              "name": "cublasLtMatrixLayoutCreate",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 3,
+              "seq": 14,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoInit",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 3,
+              "seq": 15,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoConfigSetAttribute",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 3,
+              "seq": 16,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoConfigSetAttribute",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 3,
+              "seq": 17,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoConfigSetAttribute",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 3,
+              "seq": 18,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoConfigSetAttribute",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 3,
+              "seq": 19,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoConfigSetAttribute",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 3,
+              "seq": 20,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoConfigSetAttribute",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 3,
+              "seq": 21,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoConfigSetAttribute",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 3,
+              "seq": 22,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoConfigSetAttribute",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 3,
+              "seq": 23,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoConfigGetAttribute",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 3,
+              "seq": 25,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoConfigGetAttribute",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 3,
+              "seq": 27,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoConfigGetAttribute",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 3,
+              "seq": 29,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoConfigGetAttribute",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 3,
+              "seq": 31,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoConfigGetAttribute",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 3,
+              "seq": 33,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoConfigGetAttribute",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 3,
+              "seq": 35,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoConfigGetAttribute",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 3,
+              "seq": 37,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoConfigGetAttribute",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 3,
+              "seq": 39,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoConfigGetAttribute",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 3,
+              "seq": 42,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoCheck",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 3,
+              "seq": 44,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoCheck",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            }
+          ],
+          "configuration": [
+            {
+              "id": 3,
+              "seq": 24,
+              "event": "configuration",
+              "name": "ID",
+              "a": 67,
+              "b": 4,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 3,
+              "seq": 26,
+              "event": "configuration",
+              "name": "TILE_ID",
+              "a": 13,
+              "b": 4,
+              "c": 1,
+              "opaque": ""
+            },
+            {
+              "id": 3,
+              "seq": 28,
+              "event": "configuration",
+              "name": "STAGES_ID",
+              "a": 17,
+              "b": 4,
+              "c": 6,
+              "opaque": ""
+            },
+            {
+              "id": 3,
+              "seq": 30,
+              "event": "configuration",
+              "name": "SPLITK_NUM",
+              "a": 1,
+              "b": 4,
+              "c": 2,
+              "opaque": ""
+            },
+            {
+              "id": 3,
+              "seq": 32,
+              "event": "configuration",
+              "name": "REDUCTION_SCHEME",
+              "a": 0,
+              "b": 4,
+              "c": 3,
+              "opaque": ""
+            },
+            {
+              "id": 3,
+              "seq": 34,
+              "event": "configuration",
+              "name": "CTA_SWIZZLING",
+              "a": 1,
+              "b": 4,
+              "c": 4,
+              "opaque": ""
+            },
+            {
+              "id": 3,
+              "seq": 36,
+              "event": "configuration",
+              "name": "CUSTOM_OPTION",
+              "a": 18,
+              "b": 4,
+              "c": 5,
+              "opaque": ""
+            },
+            {
+              "id": 3,
+              "seq": 38,
+              "event": "configuration",
+              "name": "INNER_SHAPE_ID",
+              "a": 0,
+              "b": 2,
+              "c": 7,
+              "opaque": ""
+            },
+            {
+              "id": 3,
+              "seq": 40,
+              "event": "configuration",
+              "name": "CLUSTER_SHAPE_ID",
+              "a": 0,
+              "b": 2,
+              "c": 8,
+              "opaque": ""
+            }
+          ],
+          "algorithm": [
+            {
+              "id": 3,
+              "seq": 41,
+              "event": "algorithm",
+              "name": "configured",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": "430000000d0000001100000001000000000000000100000012000000000000000100000060fd01001c0000001c0000000e000e00440000000000000000000000"
+            }
+          ],
+          "checks": [
+            {
+              "id": 3,
+              "seq": 43,
+              "event": "check",
+              "name": "M32",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 3,
+              "seq": 45,
+              "event": "check",
+              "name": "M128",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            }
+          ],
+          "reject": null,
+          "events": 47
+        },
+        {
+          "id": 4,
+          "outcome": "created",
+          "API_calls": 32,
+          "API_results": [
+            {
+              "id": 4,
+              "seq": 2,
+              "event": "api",
+              "name": "cudaGetDevice",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 4,
+              "seq": 3,
+              "event": "api",
+              "name": "cudaGetDeviceProperties",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 4,
+              "seq": 4,
+              "event": "api",
+              "name": "cublasLtGetVersion",
+              "a": 130400,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 4,
+              "seq": 5,
+              "event": "api",
+              "name": "cublasLtCreate",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 4,
+              "seq": 6,
+              "event": "api",
+              "name": "cublasLtMatmulDescCreate",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 4,
+              "seq": 7,
+              "event": "api",
+              "name": "cublasLtMatmulDescSetAttribute",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 4,
+              "seq": 8,
+              "event": "api",
+              "name": "cublasLtMatmulDescSetAttribute",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 4,
+              "seq": 9,
+              "event": "api",
+              "name": "cublasLtMatrixLayoutCreate",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 4,
+              "seq": 10,
+              "event": "api",
+              "name": "cublasLtMatrixLayoutCreate",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 4,
+              "seq": 11,
+              "event": "api",
+              "name": "cublasLtMatrixLayoutCreate",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 4,
+              "seq": 12,
+              "event": "api",
+              "name": "cublasLtMatrixLayoutCreate",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 4,
+              "seq": 13,
+              "event": "api",
+              "name": "cublasLtMatrixLayoutCreate",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 4,
+              "seq": 14,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoInit",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 4,
+              "seq": 15,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoConfigSetAttribute",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 4,
+              "seq": 16,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoConfigSetAttribute",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 4,
+              "seq": 17,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoConfigSetAttribute",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 4,
+              "seq": 18,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoConfigSetAttribute",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 4,
+              "seq": 19,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoConfigSetAttribute",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 4,
+              "seq": 20,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoConfigSetAttribute",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 4,
+              "seq": 21,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoConfigSetAttribute",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 4,
+              "seq": 22,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoConfigSetAttribute",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 4,
+              "seq": 23,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoConfigGetAttribute",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 4,
+              "seq": 25,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoConfigGetAttribute",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 4,
+              "seq": 27,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoConfigGetAttribute",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 4,
+              "seq": 29,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoConfigGetAttribute",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 4,
+              "seq": 31,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoConfigGetAttribute",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 4,
+              "seq": 33,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoConfigGetAttribute",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 4,
+              "seq": 35,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoConfigGetAttribute",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 4,
+              "seq": 37,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoConfigGetAttribute",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 4,
+              "seq": 39,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoConfigGetAttribute",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 4,
+              "seq": 42,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoCheck",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 4,
+              "seq": 44,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoCheck",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            }
+          ],
+          "configuration": [
+            {
+              "id": 4,
+              "seq": 24,
+              "event": "configuration",
+              "name": "ID",
+              "a": 67,
+              "b": 4,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 4,
+              "seq": 26,
+              "event": "configuration",
+              "name": "TILE_ID",
+              "a": 13,
+              "b": 4,
+              "c": 1,
+              "opaque": ""
+            },
+            {
+              "id": 4,
+              "seq": 28,
+              "event": "configuration",
+              "name": "STAGES_ID",
+              "a": 17,
+              "b": 4,
+              "c": 6,
+              "opaque": ""
+            },
+            {
+              "id": 4,
+              "seq": 30,
+              "event": "configuration",
+              "name": "SPLITK_NUM",
+              "a": 1,
+              "b": 4,
+              "c": 2,
+              "opaque": ""
+            },
+            {
+              "id": 4,
+              "seq": 32,
+              "event": "configuration",
+              "name": "REDUCTION_SCHEME",
+              "a": 0,
+              "b": 4,
+              "c": 3,
+              "opaque": ""
+            },
+            {
+              "id": 4,
+              "seq": 34,
+              "event": "configuration",
+              "name": "CTA_SWIZZLING",
+              "a": 1,
+              "b": 4,
+              "c": 4,
+              "opaque": ""
+            },
+            {
+              "id": 4,
+              "seq": 36,
+              "event": "configuration",
+              "name": "CUSTOM_OPTION",
+              "a": 18,
+              "b": 4,
+              "c": 5,
+              "opaque": ""
+            },
+            {
+              "id": 4,
+              "seq": 38,
+              "event": "configuration",
+              "name": "INNER_SHAPE_ID",
+              "a": 0,
+              "b": 2,
+              "c": 7,
+              "opaque": ""
+            },
+            {
+              "id": 4,
+              "seq": 40,
+              "event": "configuration",
+              "name": "CLUSTER_SHAPE_ID",
+              "a": 0,
+              "b": 2,
+              "c": 8,
+              "opaque": ""
+            }
+          ],
+          "algorithm": [
+            {
+              "id": 4,
+              "seq": 41,
+              "event": "algorithm",
+              "name": "configured",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": "430000000d0000001100000001000000000000000100000012000000000000000100000060fd01001c0000001c0000000e000e00440000000000000000000000"
+            }
+          ],
+          "checks": [
+            {
+              "id": 4,
+              "seq": 43,
+              "event": "check",
+              "name": "M32",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 4,
+              "seq": 45,
+              "event": "check",
+              "name": "M128",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            }
+          ],
+          "reject": null,
+          "events": 47
+        },
+        {
+          "id": 5,
+          "outcome": "created",
+          "API_calls": 32,
+          "API_results": [
+            {
+              "id": 5,
+              "seq": 2,
+              "event": "api",
+              "name": "cudaGetDevice",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 5,
+              "seq": 3,
+              "event": "api",
+              "name": "cudaGetDeviceProperties",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 5,
+              "seq": 4,
+              "event": "api",
+              "name": "cublasLtGetVersion",
+              "a": 130400,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 5,
+              "seq": 5,
+              "event": "api",
+              "name": "cublasLtCreate",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 5,
+              "seq": 6,
+              "event": "api",
+              "name": "cublasLtMatmulDescCreate",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 5,
+              "seq": 7,
+              "event": "api",
+              "name": "cublasLtMatmulDescSetAttribute",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 5,
+              "seq": 8,
+              "event": "api",
+              "name": "cublasLtMatmulDescSetAttribute",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 5,
+              "seq": 9,
+              "event": "api",
+              "name": "cublasLtMatrixLayoutCreate",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 5,
+              "seq": 10,
+              "event": "api",
+              "name": "cublasLtMatrixLayoutCreate",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 5,
+              "seq": 11,
+              "event": "api",
+              "name": "cublasLtMatrixLayoutCreate",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 5,
+              "seq": 12,
+              "event": "api",
+              "name": "cublasLtMatrixLayoutCreate",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 5,
+              "seq": 13,
+              "event": "api",
+              "name": "cublasLtMatrixLayoutCreate",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 5,
+              "seq": 14,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoInit",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 5,
+              "seq": 15,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoConfigSetAttribute",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 5,
+              "seq": 16,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoConfigSetAttribute",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 5,
+              "seq": 17,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoConfigSetAttribute",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 5,
+              "seq": 18,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoConfigSetAttribute",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 5,
+              "seq": 19,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoConfigSetAttribute",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 5,
+              "seq": 20,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoConfigSetAttribute",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 5,
+              "seq": 21,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoConfigSetAttribute",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 5,
+              "seq": 22,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoConfigSetAttribute",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 5,
+              "seq": 23,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoConfigGetAttribute",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 5,
+              "seq": 25,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoConfigGetAttribute",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 5,
+              "seq": 27,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoConfigGetAttribute",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 5,
+              "seq": 29,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoConfigGetAttribute",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 5,
+              "seq": 31,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoConfigGetAttribute",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 5,
+              "seq": 33,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoConfigGetAttribute",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 5,
+              "seq": 35,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoConfigGetAttribute",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 5,
+              "seq": 37,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoConfigGetAttribute",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 5,
+              "seq": 39,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoConfigGetAttribute",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 5,
+              "seq": 42,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoCheck",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 5,
+              "seq": 44,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoCheck",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            }
+          ],
+          "configuration": [
+            {
+              "id": 5,
+              "seq": 24,
+              "event": "configuration",
+              "name": "ID",
+              "a": 67,
+              "b": 4,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 5,
+              "seq": 26,
+              "event": "configuration",
+              "name": "TILE_ID",
+              "a": 13,
+              "b": 4,
+              "c": 1,
+              "opaque": ""
+            },
+            {
+              "id": 5,
+              "seq": 28,
+              "event": "configuration",
+              "name": "STAGES_ID",
+              "a": 17,
+              "b": 4,
+              "c": 6,
+              "opaque": ""
+            },
+            {
+              "id": 5,
+              "seq": 30,
+              "event": "configuration",
+              "name": "SPLITK_NUM",
+              "a": 1,
+              "b": 4,
+              "c": 2,
+              "opaque": ""
+            },
+            {
+              "id": 5,
+              "seq": 32,
+              "event": "configuration",
+              "name": "REDUCTION_SCHEME",
+              "a": 0,
+              "b": 4,
+              "c": 3,
+              "opaque": ""
+            },
+            {
+              "id": 5,
+              "seq": 34,
+              "event": "configuration",
+              "name": "CTA_SWIZZLING",
+              "a": 1,
+              "b": 4,
+              "c": 4,
+              "opaque": ""
+            },
+            {
+              "id": 5,
+              "seq": 36,
+              "event": "configuration",
+              "name": "CUSTOM_OPTION",
+              "a": 18,
+              "b": 4,
+              "c": 5,
+              "opaque": ""
+            },
+            {
+              "id": 5,
+              "seq": 38,
+              "event": "configuration",
+              "name": "INNER_SHAPE_ID",
+              "a": 0,
+              "b": 2,
+              "c": 7,
+              "opaque": ""
+            },
+            {
+              "id": 5,
+              "seq": 40,
+              "event": "configuration",
+              "name": "CLUSTER_SHAPE_ID",
+              "a": 0,
+              "b": 2,
+              "c": 8,
+              "opaque": ""
+            }
+          ],
+          "algorithm": [
+            {
+              "id": 5,
+              "seq": 41,
+              "event": "algorithm",
+              "name": "configured",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": "430000000d0000001100000001000000000000000100000012000000000000000100000060fd01001c0000001c0000000e000e00440000000000000000000000"
+            }
+          ],
+          "checks": [
+            {
+              "id": 5,
+              "seq": 43,
+              "event": "check",
+              "name": "M32",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 5,
+              "seq": 45,
+              "event": "check",
+              "name": "M128",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            }
+          ],
+          "reject": null,
+          "events": 47
+        },
+        {
+          "id": 6,
+          "outcome": "created",
+          "API_calls": 32,
+          "API_results": [
+            {
+              "id": 6,
+              "seq": 2,
+              "event": "api",
+              "name": "cudaGetDevice",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 6,
+              "seq": 3,
+              "event": "api",
+              "name": "cudaGetDeviceProperties",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 6,
+              "seq": 4,
+              "event": "api",
+              "name": "cublasLtGetVersion",
+              "a": 130400,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 6,
+              "seq": 5,
+              "event": "api",
+              "name": "cublasLtCreate",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 6,
+              "seq": 6,
+              "event": "api",
+              "name": "cublasLtMatmulDescCreate",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 6,
+              "seq": 7,
+              "event": "api",
+              "name": "cublasLtMatmulDescSetAttribute",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 6,
+              "seq": 8,
+              "event": "api",
+              "name": "cublasLtMatmulDescSetAttribute",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 6,
+              "seq": 9,
+              "event": "api",
+              "name": "cublasLtMatrixLayoutCreate",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 6,
+              "seq": 10,
+              "event": "api",
+              "name": "cublasLtMatrixLayoutCreate",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 6,
+              "seq": 11,
+              "event": "api",
+              "name": "cublasLtMatrixLayoutCreate",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 6,
+              "seq": 12,
+              "event": "api",
+              "name": "cublasLtMatrixLayoutCreate",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 6,
+              "seq": 13,
+              "event": "api",
+              "name": "cublasLtMatrixLayoutCreate",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 6,
+              "seq": 14,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoInit",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 6,
+              "seq": 15,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoConfigSetAttribute",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 6,
+              "seq": 16,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoConfigSetAttribute",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 6,
+              "seq": 17,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoConfigSetAttribute",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 6,
+              "seq": 18,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoConfigSetAttribute",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 6,
+              "seq": 19,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoConfigSetAttribute",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 6,
+              "seq": 20,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoConfigSetAttribute",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 6,
+              "seq": 21,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoConfigSetAttribute",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 6,
+              "seq": 22,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoConfigSetAttribute",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 6,
+              "seq": 23,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoConfigGetAttribute",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 6,
+              "seq": 25,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoConfigGetAttribute",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 6,
+              "seq": 27,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoConfigGetAttribute",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 6,
+              "seq": 29,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoConfigGetAttribute",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 6,
+              "seq": 31,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoConfigGetAttribute",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 6,
+              "seq": 33,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoConfigGetAttribute",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 6,
+              "seq": 35,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoConfigGetAttribute",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 6,
+              "seq": 37,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoConfigGetAttribute",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 6,
+              "seq": 39,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoConfigGetAttribute",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 6,
+              "seq": 42,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoCheck",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 6,
+              "seq": 44,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoCheck",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            }
+          ],
+          "configuration": [
+            {
+              "id": 6,
+              "seq": 24,
+              "event": "configuration",
+              "name": "ID",
+              "a": 67,
+              "b": 4,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 6,
+              "seq": 26,
+              "event": "configuration",
+              "name": "TILE_ID",
+              "a": 13,
+              "b": 4,
+              "c": 1,
+              "opaque": ""
+            },
+            {
+              "id": 6,
+              "seq": 28,
+              "event": "configuration",
+              "name": "STAGES_ID",
+              "a": 17,
+              "b": 4,
+              "c": 6,
+              "opaque": ""
+            },
+            {
+              "id": 6,
+              "seq": 30,
+              "event": "configuration",
+              "name": "SPLITK_NUM",
+              "a": 1,
+              "b": 4,
+              "c": 2,
+              "opaque": ""
+            },
+            {
+              "id": 6,
+              "seq": 32,
+              "event": "configuration",
+              "name": "REDUCTION_SCHEME",
+              "a": 0,
+              "b": 4,
+              "c": 3,
+              "opaque": ""
+            },
+            {
+              "id": 6,
+              "seq": 34,
+              "event": "configuration",
+              "name": "CTA_SWIZZLING",
+              "a": 1,
+              "b": 4,
+              "c": 4,
+              "opaque": ""
+            },
+            {
+              "id": 6,
+              "seq": 36,
+              "event": "configuration",
+              "name": "CUSTOM_OPTION",
+              "a": 18,
+              "b": 4,
+              "c": 5,
+              "opaque": ""
+            },
+            {
+              "id": 6,
+              "seq": 38,
+              "event": "configuration",
+              "name": "INNER_SHAPE_ID",
+              "a": 0,
+              "b": 2,
+              "c": 7,
+              "opaque": ""
+            },
+            {
+              "id": 6,
+              "seq": 40,
+              "event": "configuration",
+              "name": "CLUSTER_SHAPE_ID",
+              "a": 0,
+              "b": 2,
+              "c": 8,
+              "opaque": ""
+            }
+          ],
+          "algorithm": [
+            {
+              "id": 6,
+              "seq": 41,
+              "event": "algorithm",
+              "name": "configured",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": "430000000d0000001100000001000000000000000100000012000000000000000100000060fd01001c0000001c0000000e000e00440000000000000000000000"
+            }
+          ],
+          "checks": [
+            {
+              "id": 6,
+              "seq": 43,
+              "event": "check",
+              "name": "M32",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 6,
+              "seq": 45,
+              "event": "check",
+              "name": "M128",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            }
+          ],
+          "reject": null,
+          "events": 47
+        },
+        {
+          "id": 7,
+          "outcome": "created",
+          "API_calls": 32,
+          "API_results": [
+            {
+              "id": 7,
+              "seq": 2,
+              "event": "api",
+              "name": "cudaGetDevice",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 7,
+              "seq": 3,
+              "event": "api",
+              "name": "cudaGetDeviceProperties",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 7,
+              "seq": 4,
+              "event": "api",
+              "name": "cublasLtGetVersion",
+              "a": 130400,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 7,
+              "seq": 5,
+              "event": "api",
+              "name": "cublasLtCreate",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 7,
+              "seq": 6,
+              "event": "api",
+              "name": "cublasLtMatmulDescCreate",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 7,
+              "seq": 7,
+              "event": "api",
+              "name": "cublasLtMatmulDescSetAttribute",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 7,
+              "seq": 8,
+              "event": "api",
+              "name": "cublasLtMatmulDescSetAttribute",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 7,
+              "seq": 9,
+              "event": "api",
+              "name": "cublasLtMatrixLayoutCreate",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 7,
+              "seq": 10,
+              "event": "api",
+              "name": "cublasLtMatrixLayoutCreate",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 7,
+              "seq": 11,
+              "event": "api",
+              "name": "cublasLtMatrixLayoutCreate",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 7,
+              "seq": 12,
+              "event": "api",
+              "name": "cublasLtMatrixLayoutCreate",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 7,
+              "seq": 13,
+              "event": "api",
+              "name": "cublasLtMatrixLayoutCreate",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 7,
+              "seq": 14,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoInit",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 7,
+              "seq": 15,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoConfigSetAttribute",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 7,
+              "seq": 16,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoConfigSetAttribute",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 7,
+              "seq": 17,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoConfigSetAttribute",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 7,
+              "seq": 18,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoConfigSetAttribute",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 7,
+              "seq": 19,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoConfigSetAttribute",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 7,
+              "seq": 20,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoConfigSetAttribute",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 7,
+              "seq": 21,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoConfigSetAttribute",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 7,
+              "seq": 22,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoConfigSetAttribute",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 7,
+              "seq": 23,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoConfigGetAttribute",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 7,
+              "seq": 25,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoConfigGetAttribute",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 7,
+              "seq": 27,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoConfigGetAttribute",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 7,
+              "seq": 29,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoConfigGetAttribute",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 7,
+              "seq": 31,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoConfigGetAttribute",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 7,
+              "seq": 33,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoConfigGetAttribute",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 7,
+              "seq": 35,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoConfigGetAttribute",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 7,
+              "seq": 37,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoConfigGetAttribute",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 7,
+              "seq": 39,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoConfigGetAttribute",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 7,
+              "seq": 42,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoCheck",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 7,
+              "seq": 44,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoCheck",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            }
+          ],
+          "configuration": [
+            {
+              "id": 7,
+              "seq": 24,
+              "event": "configuration",
+              "name": "ID",
+              "a": 67,
+              "b": 4,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 7,
+              "seq": 26,
+              "event": "configuration",
+              "name": "TILE_ID",
+              "a": 13,
+              "b": 4,
+              "c": 1,
+              "opaque": ""
+            },
+            {
+              "id": 7,
+              "seq": 28,
+              "event": "configuration",
+              "name": "STAGES_ID",
+              "a": 17,
+              "b": 4,
+              "c": 6,
+              "opaque": ""
+            },
+            {
+              "id": 7,
+              "seq": 30,
+              "event": "configuration",
+              "name": "SPLITK_NUM",
+              "a": 1,
+              "b": 4,
+              "c": 2,
+              "opaque": ""
+            },
+            {
+              "id": 7,
+              "seq": 32,
+              "event": "configuration",
+              "name": "REDUCTION_SCHEME",
+              "a": 0,
+              "b": 4,
+              "c": 3,
+              "opaque": ""
+            },
+            {
+              "id": 7,
+              "seq": 34,
+              "event": "configuration",
+              "name": "CTA_SWIZZLING",
+              "a": 1,
+              "b": 4,
+              "c": 4,
+              "opaque": ""
+            },
+            {
+              "id": 7,
+              "seq": 36,
+              "event": "configuration",
+              "name": "CUSTOM_OPTION",
+              "a": 18,
+              "b": 4,
+              "c": 5,
+              "opaque": ""
+            },
+            {
+              "id": 7,
+              "seq": 38,
+              "event": "configuration",
+              "name": "INNER_SHAPE_ID",
+              "a": 0,
+              "b": 2,
+              "c": 7,
+              "opaque": ""
+            },
+            {
+              "id": 7,
+              "seq": 40,
+              "event": "configuration",
+              "name": "CLUSTER_SHAPE_ID",
+              "a": 0,
+              "b": 2,
+              "c": 8,
+              "opaque": ""
+            }
+          ],
+          "algorithm": [
+            {
+              "id": 7,
+              "seq": 41,
+              "event": "algorithm",
+              "name": "configured",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": "430000000d0000001100000001000000000000000100000012000000000000000100000060fd01001c0000001c0000000e000e00440000000000000000000000"
+            }
+          ],
+          "checks": [
+            {
+              "id": 7,
+              "seq": 43,
+              "event": "check",
+              "name": "M32",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 7,
+              "seq": 45,
+              "event": "check",
+              "name": "M128",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            }
+          ],
+          "reject": null,
+          "events": 47
+        },
+        {
+          "id": 8,
+          "outcome": "created",
+          "API_calls": 32,
+          "API_results": [
+            {
+              "id": 8,
+              "seq": 2,
+              "event": "api",
+              "name": "cudaGetDevice",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 8,
+              "seq": 3,
+              "event": "api",
+              "name": "cudaGetDeviceProperties",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 8,
+              "seq": 4,
+              "event": "api",
+              "name": "cublasLtGetVersion",
+              "a": 130400,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 8,
+              "seq": 5,
+              "event": "api",
+              "name": "cublasLtCreate",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 8,
+              "seq": 6,
+              "event": "api",
+              "name": "cublasLtMatmulDescCreate",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 8,
+              "seq": 7,
+              "event": "api",
+              "name": "cublasLtMatmulDescSetAttribute",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 8,
+              "seq": 8,
+              "event": "api",
+              "name": "cublasLtMatmulDescSetAttribute",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 8,
+              "seq": 9,
+              "event": "api",
+              "name": "cublasLtMatrixLayoutCreate",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 8,
+              "seq": 10,
+              "event": "api",
+              "name": "cublasLtMatrixLayoutCreate",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 8,
+              "seq": 11,
+              "event": "api",
+              "name": "cublasLtMatrixLayoutCreate",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 8,
+              "seq": 12,
+              "event": "api",
+              "name": "cublasLtMatrixLayoutCreate",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 8,
+              "seq": 13,
+              "event": "api",
+              "name": "cublasLtMatrixLayoutCreate",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 8,
+              "seq": 14,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoInit",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 8,
+              "seq": 15,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoConfigSetAttribute",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 8,
+              "seq": 16,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoConfigSetAttribute",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 8,
+              "seq": 17,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoConfigSetAttribute",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 8,
+              "seq": 18,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoConfigSetAttribute",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 8,
+              "seq": 19,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoConfigSetAttribute",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 8,
+              "seq": 20,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoConfigSetAttribute",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 8,
+              "seq": 21,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoConfigSetAttribute",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 8,
+              "seq": 22,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoConfigSetAttribute",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 8,
+              "seq": 23,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoConfigGetAttribute",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 8,
+              "seq": 25,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoConfigGetAttribute",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 8,
+              "seq": 27,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoConfigGetAttribute",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 8,
+              "seq": 29,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoConfigGetAttribute",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 8,
+              "seq": 31,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoConfigGetAttribute",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 8,
+              "seq": 33,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoConfigGetAttribute",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 8,
+              "seq": 35,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoConfigGetAttribute",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 8,
+              "seq": 37,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoConfigGetAttribute",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 8,
+              "seq": 39,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoConfigGetAttribute",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 8,
+              "seq": 42,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoCheck",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 8,
+              "seq": 44,
+              "event": "api",
+              "name": "cublasLtMatmulAlgoCheck",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            }
+          ],
+          "configuration": [
+            {
+              "id": 8,
+              "seq": 24,
+              "event": "configuration",
+              "name": "ID",
+              "a": 67,
+              "b": 4,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 8,
+              "seq": 26,
+              "event": "configuration",
+              "name": "TILE_ID",
+              "a": 13,
+              "b": 4,
+              "c": 1,
+              "opaque": ""
+            },
+            {
+              "id": 8,
+              "seq": 28,
+              "event": "configuration",
+              "name": "STAGES_ID",
+              "a": 17,
+              "b": 4,
+              "c": 6,
+              "opaque": ""
+            },
+            {
+              "id": 8,
+              "seq": 30,
+              "event": "configuration",
+              "name": "SPLITK_NUM",
+              "a": 1,
+              "b": 4,
+              "c": 2,
+              "opaque": ""
+            },
+            {
+              "id": 8,
+              "seq": 32,
+              "event": "configuration",
+              "name": "REDUCTION_SCHEME",
+              "a": 0,
+              "b": 4,
+              "c": 3,
+              "opaque": ""
+            },
+            {
+              "id": 8,
+              "seq": 34,
+              "event": "configuration",
+              "name": "CTA_SWIZZLING",
+              "a": 1,
+              "b": 4,
+              "c": 4,
+              "opaque": ""
+            },
+            {
+              "id": 8,
+              "seq": 36,
+              "event": "configuration",
+              "name": "CUSTOM_OPTION",
+              "a": 18,
+              "b": 4,
+              "c": 5,
+              "opaque": ""
+            },
+            {
+              "id": 8,
+              "seq": 38,
+              "event": "configuration",
+              "name": "INNER_SHAPE_ID",
+              "a": 0,
+              "b": 2,
+              "c": 7,
+              "opaque": ""
+            },
+            {
+              "id": 8,
+              "seq": 40,
+              "event": "configuration",
+              "name": "CLUSTER_SHAPE_ID",
+              "a": 0,
+              "b": 2,
+              "c": 8,
+              "opaque": ""
+            }
+          ],
+          "algorithm": [
+            {
+              "id": 8,
+              "seq": 41,
+              "event": "algorithm",
+              "name": "configured",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": "430000000d0000001100000001000000000000000100000012000000000000000100000060fd01001c0000001c0000000e000e00440000000000000000000000"
+            }
+          ],
+          "checks": [
+            {
+              "id": 8,
+              "seq": 43,
+              "event": "check",
+              "name": "M32",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            },
+            {
+              "id": 8,
+              "seq": 45,
+              "event": "check",
+              "name": "M128",
+              "a": 0,
+              "b": 0,
+              "c": 0,
+              "opaque": ""
+            }
+          ],
+          "reject": null,
+          "events": 47
+        }
+      ],
+      "opaque_semantics_or_numerical_equivalence_established": false,
+      "model_or_quality_or_performance_qualified": false
+    },
+    "native_stderr_attribution": {
+      "1": {
+        "plugin_begin": {
+          "id": 22,
+          "phase": "begin",
+          "route": "fp8_z128_reconstructed",
+          "instance": "000001F2D4C082C0",
+          "rows": 6144,
+          "columns": 5120,
+          "policy": 1378955832,
+          "context_present": false,
+          "factory_called": false,
+          "result": -1,
+          "exception": false
+        },
+        "plugin_end": {
+          "id": 22,
+          "phase": "end",
+          "route": "fp8_z128_reconstructed",
+          "instance": "000001F2D4C082C0",
+          "rows": 6144,
+          "columns": 5120,
+          "policy": 1378955832,
+          "context_present": true,
+          "factory_called": true,
+          "result": 0,
+          "exception": false
+        }
+      },
+      "2": {
+        "plugin_begin": {
+          "id": 27,
+          "phase": "begin",
+          "route": "fp8_z128_reconstructed",
+          "instance": "000001F2D4657820",
+          "rows": 6144,
+          "columns": 5120,
+          "policy": 1378955832,
+          "context_present": false,
+          "factory_called": false,
+          "result": -1,
+          "exception": false
+        },
+        "plugin_end": {
+          "id": 27,
+          "phase": "end",
+          "route": "fp8_z128_reconstructed",
+          "instance": "000001F2D4657820",
+          "rows": 6144,
+          "columns": 5120,
+          "policy": 1378955832,
+          "context_present": true,
+          "factory_called": true,
+          "result": 0,
+          "exception": false
+        }
+      },
+      "3": {
+        "plugin_begin": {
+          "id": 32,
+          "phase": "begin",
+          "route": "fp8_z128_reconstructed",
+          "instance": "000001F7D4E96BA0",
+          "rows": 6144,
+          "columns": 5120,
+          "policy": 1378955832,
+          "context_present": false,
+          "factory_called": false,
+          "result": -1,
+          "exception": false
+        },
+        "plugin_end": {
+          "id": 32,
+          "phase": "end",
+          "route": "fp8_z128_reconstructed",
+          "instance": "000001F7D4E96BA0",
+          "rows": 6144,
+          "columns": 5120,
+          "policy": 1378955832,
+          "context_present": true,
+          "factory_called": true,
+          "result": 0,
+          "exception": false
+        }
+      },
+      "4": {
+        "plugin_begin": {
+          "id": 37,
+          "phase": "begin",
+          "route": "fp8_z128_reconstructed",
+          "instance": "000001F7D4E95F20",
+          "rows": 6144,
+          "columns": 5120,
+          "policy": 1378955832,
+          "context_present": false,
+          "factory_called": false,
+          "result": -1,
+          "exception": false
+        },
+        "plugin_end": {
+          "id": 37,
+          "phase": "end",
+          "route": "fp8_z128_reconstructed",
+          "instance": "000001F7D4E95F20",
+          "rows": 6144,
+          "columns": 5120,
+          "policy": 1378955832,
+          "context_present": true,
+          "factory_called": true,
+          "result": 0,
+          "exception": false
+        }
+      },
+      "5": {
+        "plugin_begin": {
+          "id": 62,
+          "phase": "begin",
+          "route": "fp8_z128_reconstructed",
+          "instance": "000001F80035D740",
+          "rows": 6144,
+          "columns": 5120,
+          "policy": 1378955832,
+          "context_present": false,
+          "factory_called": false,
+          "result": -1,
+          "exception": false
+        },
+        "plugin_end": {
+          "id": 62,
+          "phase": "end",
+          "route": "fp8_z128_reconstructed",
+          "instance": "000001F80035D740",
+          "rows": 6144,
+          "columns": 5120,
+          "policy": 1378955832,
+          "context_present": true,
+          "factory_called": true,
+          "result": 0,
+          "exception": false
+        }
+      },
+      "6": {
+        "plugin_begin": {
+          "id": 67,
+          "phase": "begin",
+          "route": "fp8_z128_reconstructed",
+          "instance": "000001F2D4C128B0",
+          "rows": 6144,
+          "columns": 5120,
+          "policy": 1378955832,
+          "context_present": false,
+          "factory_called": false,
+          "result": -1,
+          "exception": false
+        },
+        "plugin_end": {
+          "id": 67,
+          "phase": "end",
+          "route": "fp8_z128_reconstructed",
+          "instance": "000001F2D4C128B0",
+          "rows": 6144,
+          "columns": 5120,
+          "policy": 1378955832,
+          "context_present": true,
+          "factory_called": true,
+          "result": 0,
+          "exception": false
+        }
+      },
+      "7": {
+        "plugin_begin": {
+          "id": 72,
+          "phase": "begin",
+          "route": "fp8_z128_reconstructed",
+          "instance": "000001F587ACFEF0",
+          "rows": 6144,
+          "columns": 5120,
+          "policy": 1378955832,
+          "context_present": false,
+          "factory_called": false,
+          "result": -1,
+          "exception": false
+        },
+        "plugin_end": {
+          "id": 72,
+          "phase": "end",
+          "route": "fp8_z128_reconstructed",
+          "instance": "000001F587ACFEF0",
+          "rows": 6144,
+          "columns": 5120,
+          "policy": 1378955832,
+          "context_present": true,
+          "factory_called": true,
+          "result": 0,
+          "exception": false
+        }
+      },
+      "8": {
+        "plugin_begin": {
+          "id": 77,
+          "phase": "begin",
+          "route": "fp8_z128_reconstructed",
+          "instance": "000001F7F2B87630",
+          "rows": 6144,
+          "columns": 5120,
+          "policy": 1378955832,
+          "context_present": false,
+          "factory_called": false,
+          "result": -1,
+          "exception": false
+        },
+        "plugin_end": {
+          "id": 77,
+          "phase": "end",
+          "route": "fp8_z128_reconstructed",
+          "instance": "000001F7F2B87630",
+          "rows": 6144,
+          "columns": 5120,
+          "policy": 1378955832,
+          "context_present": true,
+          "factory_called": true,
+          "result": 0,
+          "exception": false
+        }
+      }
+    },
+    "model_or_performance_qualified": false
+  },
+  "full_cache_KEY_RoPE_six_full4K_quality_gates_still_required": true,
+  "full_model_or_quality_or_performance_qualified": false,
+  "two_times_target_achieved": false,
+  "verifier_sha256": "5e82dc7cd018f43a67d902d8a0e7c851515c6fd980c91b72afbe96d5a47b4713"
+}

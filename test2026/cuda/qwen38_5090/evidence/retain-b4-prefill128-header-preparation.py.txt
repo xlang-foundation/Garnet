@@ -1,0 +1,16 @@
+from pathlib import Path
+import json,subprocess
+W=Path(__file__).resolve().parent;R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';E=M/'evidence';owned=[]
+for n in ('prepare-b4-prefill128-header.py','install-b4-prefill128-header.py','retain-b4-prefill128-header-preparation.py'):
+    t=E/(n+'.txt');raw=(W/n).read_bytes();assert not t.exists() or t.read_bytes()==raw;t.write_bytes(raw);owned.append(t.relative_to(R).as_posix())
+receipt=(W/'b4-prefill128-header-package.json').read_bytes();t=E/'b4-prefill128-header-package.json';assert not t.exists() or t.read_bytes()==receipt;t.write_bytes(receipt);owned.append(t.relative_to(R).as_posix())
+owned += [(M/n).relative_to(R).as_posix() for n in ('test_b4_prefill128_policy.bat','run_b4_prefill128_header.py','evidence/b4-prefill128-header-preparation.json')]
+text='''
+
+### Remote-only B4 header control executable prepared; wait for benchmark closure
+
+2026-10-27: Prepare13file CPU-header deployment b6221c3f7a3a4f80950d81dd2478eece3ba01ca629e01a1b7f354b3f2e2e1925 (20633B), preparation469ae6c11cb206f3902232e0ae813ace41fbbd6b0442a2f643f40ee9dd61d6e7. Native benchmark remains the sole live GPU job; do NOT upload/deploy/compile these methods until its terminal/restored state and independently replayed complete372request proof are verified. Installer and owner enforce that prerequisite and idleGPU; preserve all pre-existing bytes. Header-only remote MSVC/stdlib executable uses the eight candidate host files and original per-family selectors, records compiler banner/tool hashes/source hashes/raw success or failure. It does not compile Garnet, link CUDA/SDK, execute a GEMM, change production code/library, load a model or produce benchmarks. C++ predicate counts and rejections are pending actual execution; preparation expectation235/61 is not a measured result. Actual SDK/projection math, full per-rowB1/B4 state/vector/ID/MTP/quality/memory and repeated HTTP performance still required. Full goal active.
+'''
+for n in ('docs/research/qwen38-5090-development-log.md','docs/research/qwen38-5090-implementation-task.md'):
+    t=R/n;b=t.read_bytes();assert b'### Remote-only B4 header control executable prepared' not in b;t.write_bytes(b+text.replace('\n','\r\n').encode());assert t.read_bytes()[:len(b)]==b;owned.append(n)
+assert not any('probe_native_external_prefix_batch.py' in n for n in owned);subprocess.run(['git','-C',str(R),'-c','core.autocrlf=false','add','--pathspec-from-file=-','--pathspec-file-nul'],input=('\0'.join(owned)+'\0').encode(),check=True);print(json.dumps(dict(owned_paths=len(owned),deployed_or_executed=False)))

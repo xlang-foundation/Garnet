@@ -1,0 +1,62 @@
+from pathlib import Path
+import ast,hashlib,json
+W=Path(__file__).resolve().parent;R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';sha=lambda b:hashlib.sha256(b).hexdigest();records=[]
+def derive(source,target,steps):
+    original=(M/source).read_bytes();raw=original;changes=[]
+    for old,new,count in steps:
+        if b'\r\n' in original:old=old.replace('\n','\r\n');new=new.replace('\n','\r\n')
+        assert raw.count(old.encode())==count,(source,old,raw.count(old.encode()));raw=raw.replace(old.encode(),new.encode());changes.append(dict(old=old,new=new,count=count))
+    ast.parse(raw);path=M/target;assert not path.exists();path.write_bytes(raw);records.append(dict(source=source,target=target,source_sha256=sha(original),target_sha256=sha(raw),changes=changes))
+setup='''        program=decoder.programs[4];assert isinstance(program,DecodeBoundaryProgram)
+        report['observer']=dict(layers=list(LAYERS),tokens=4,hidden=5120,primary_width=program.ordinary_output_width,wide_width=program.output_width,hidden_width=program.hidden_width)
+        normalizers={}
+        @T.fusion(name='qwen38_decode_boundary_norm3',boundary='required')
+        def norm3(h):return h*T.unary_op('qwen35_rms_norm',weight_name='model.language_model.layers.3.input_layernorm.weight',eps=1.e-6)
+        @T.fusion(name='qwen38_decode_boundary_norm11',boundary='required')
+        def norm11(h):return h*T.unary_op('qwen35_rms_norm',weight_name='model.language_model.layers.11.input_layernorm.weight',eps=1.e-6)
+        assert cfg['text_config']['rms_norm_eps']==1.e-6
+        for layer,function in ((3,norm3),(11,norm11)):
+            symbol=tensor.input('boundary_norm'+str(layer),shape=[batch,4,5120],dtype=tensor.float32);graph=garnet.compiled_graph();normalizers[layer]=graph;graph.set_builder_workspace_bytes(128<<20);graph.build(function(symbol),[symbol],str(checkpoint));graph.enable_cuda_graph(True)
+        report['normalizer_stats']={str(k):json.loads(v.stats_json()) for k,v in normalizers.items()}
+        for stats in report['normalizer_stats'].values():
+            assert stats['native_fp8_projection_weights']==stats['native_nvfp4_projection_weights']==0
+            for key in counts:assert stats[key]==0
+        cachepart=io.zeros([1,128])
+        def capture_bytes(raw,label,suffix):
+            name=label+suffix;assert not (out/name).exists();(out/name).write_bytes(raw);return dict(file=name,bytes=len(raw),sha256=sha(raw))
+        def capture_boundary(step,consumed,physical):
+            label='case'+str(group_index)+'-step'+str(step);entry=dict(step=step,physical_rows=list(physical),consumed_tokens=list(consumed),program_runs=program.boundary_runs,boundaries={},normalizations={},value_cache={})
+            for layer,buffer in zip(LAYERS,program.boundary_buffers):
+                raw=bytes(io.finite_f32_bytes(buffer));assert len(raw)==batch*4*5120*4;entry['boundaries'][str(layer)]=capture_bytes(raw,label+'-layer'+str(layer),'.f32')
+            for layer in (3,11):
+                buffer=program.boundary_buffers[LAYERS.index(layer-1)];view=io.storage_view(buffer,[batch,4,5120]);values=[];after=[]
+                for repeat in range(2):
+                    raw=bytes(io.finite_f32_bytes(normalizers[layer].run_device([view])));assert len(raw)==batch*4*5120*4;values.append(capture_bytes(raw,label+'-norm'+str(layer)+'-repeat'+str(repeat),'.f32'));after.append(sha(bytes(io.finite_f32_bytes(buffer))))
+                assert values[0]['sha256']==values[1]['sha256'] and after==[entry['boundaries'][str(layer-1)]['sha256']]*2;entry['normalizations'][str(layer)]=dict(repeats=values,input_after_sha256=after)
+                rows=[]
+                for row in range(batch):
+                    slot=decoder.slots[row]-1;values=[]
+                    for repeat in range(2):
+                        pieces=[]
+                        for head in range(4):
+                            io.slice_into(io.row(decoder.state,row),value_cache_word_offset(program.layout,layer,head,slot),cachepart);raw=bytes(io.finite_f32_bytes(cachepart));assert len(raw)==512;pieces.append(raw)
+                        values.append(capture_bytes(b''.join(pieces),label+'-value'+str(layer)+'-row'+str(row)+'-repeat'+str(repeat),'.bf16'))
+                    assert values[0]['sha256']==values[1]['sha256'];rows.append(dict(physical_row=physical[row],slot=slot,heads=4,values_per_head=256,repeats=values))
+                entry['value_cache'][str(layer)]=rows
+            return entry
+'''
+derive('probe_b4_b1_short_m16_admission.py','probe_decode_boundaries.py',[
+('"""First short mixed/tail gate; four fresh B1 oracles precede physical B4."""','"""Read-only decode boundaries; must reproduce same-profile primary endpoints."""',1),
+('b4-b1-short-m16-preparation.json','decode-boundaries-preparation.json',1),
+('    import garnet','    import garnet,tensor\n    from xModel.qwen35.vl_0_8b.decoder_layer import T\n    from test2026.cuda.qwen38_5090.decode_boundary_program import DecodeBoundaryProgram,construct_with_decode_boundary_program\n    from test2026.cuda.qwen38_5090.decode_boundary_layout import LAYERS,value_cache_word_offset',1),
+('out.mkdir();decoder=vision=None','out.mkdir();decoder=vision=None;normalizers={}',1),
+('if batch==1:decoder=create_cuda_bf16_low_batch_study_decoder(str(checkpoint),cfg)','if batch==1:decoder=construct_with_decode_boundary_program(create_cuda_bf16_low_batch_study_decoder,str(checkpoint),cfg)',1),
+("decoder=CUDAPackedDecoder(str(checkpoint),cfg['text_config'],4,4096,32,4,","decoder=construct_with_decode_boundary_program(CUDAPackedDecoder,str(checkpoint),cfg['text_config'],4,4096,32,4,",1),
+('        vision=create_cuda_vision',setup+'        vision=create_cuda_vision',1),
+("record['prefill_state']=snapshot('case'+str(group_index)+'-prefill');record['generated_ids']=[[] for _ in physical];save()","record['prefill_state']=snapshot('case'+str(group_index)+'-prefill');record['generated_ids']=[[] for _ in physical];record['decode_observations']=[];save()",1),
+('                if step+1<8:prediction=decoder.step(prediction,[1]*batch,[[v]*3 for v in current]);current=[v+1 for v in current]',"                if step+1<8:\n                    consumed=list(prediction);prediction=decoder.step(prediction,[1]*batch,[[v]*3 for v in current]);current=[v+1 for v in current];record['decode_observations'].append(capture_boundary(step+1,consumed,physical));save()",1),
+("report['status']='B4_short_mixed_tail_raw_capture_needs_CPython_admission' if batch==4 else 'four_B1_short_oracles_collected'","report['boundary_runs']=program.boundary_runs;report['status']='readonly_decode_boundaries_collected_needs_primary_parity'",1),
+('    finally:\n        if vision is not None:vision.close()','    finally:\n        for graph in normalizers.values():graph.close()\n        if vision is not None:vision.close()',1)])
+derive('launch_b4_b1_short_m16_admission.py','launch_decode_boundaries.py',[
+('b4-b1-short-m16-preparation.json','decode-boundaries-preparation.json',1),('probe_b4_b1_short_m16_admission.py','probe_decode_boundaries.py',1)])
+target=M/'evidence/decode-boundaries-method-derivation.json';assert not target.exists();target.write_bytes(json.dumps(dict(derivations=records,scope='Independent diagnostic only. Existing four-phase full-state/vector/8ID capture is preserved. Seven T4 decode observations append eight full hidden boundaries, separate FA3/11 normalization exact repeats and actual active Vcache BF16 reads. Same-profile original primary endpoint parity required before interpreting observations; no model or performance admission.'),indent=2).encode());print(json.dumps(dict(status='decode_boundary_probe_prepared_GPU_unrun',files=len(records))))

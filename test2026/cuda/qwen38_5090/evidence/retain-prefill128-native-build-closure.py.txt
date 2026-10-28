@@ -1,0 +1,35 @@
+from pathlib import Path
+import hashlib,json,zipfile
+work=Path(__file__).resolve().parent;out=work.parent/'outputs';repo=Path('D:/CantorAI/work/qwen38-5090');e=repo/'test2026/cuda/qwen38_5090/evidence';paths=[];sha=lambda raw:hashlib.sha256(raw).hexdigest()
+def keep(name,raw):
+    path=e/name;assert not path.exists() or path.read_bytes()==raw,path
+    if not path.exists():path.write_bytes(raw)
+    paths.append(path.relative_to(repo).as_posix())
+job='bf16-prefill128-native-build-attempt1';archive=out/(job+'-evidence.zip');raw=(out/(job+'-verified.json')).read_bytes();q=json.loads(raw)
+assert raw==(out/(job+'-remote-verified.json')).read_bytes() and q['status']=='bf16_prefill128_native_build_cpu_replayed' and sha(archive.read_bytes())==q['archive_sha256']
+receipt=json.loads((out/'Garnet-Prefill128-Native-Build-Verified.json').read_bytes());assert receipt['proof_pair_sha256']==sha(raw) and receipt['local_replay_exit_code']==0
+with zipfile.ZipFile(archive) as z:
+    manifest=json.loads(z.read('evidence-manifest.json'));assert z.testzip() is None and len(z.namelist())==len(set(z.namelist()))==len(manifest['files'])+1
+    for name,h in manifest['files'].items():assert sha(z.read(name))==h
+    prefix='results/'+job+'/';w=json.loads(z.read(prefix+'workflow.json'));assert w['exit_code']==0 and w['cleanup_finished'] and w['baseline_source_restored'] and w['baseline_library_restored']
+    assert w['source_before']==w['source_after'] and w['runtime_before']==w['runtime_after'] and w['environment_before']==w['environment_after']
+    assert sha(z.read(w['candidate_saved']))==w['candidate_library_sha256']==q['candidate_library_sha256']
+    keep(job+'-evidence-manifest.json',z.read('evidence-manifest.json'))
+    for name in z.namelist():
+        if name.startswith(prefix) and name.endswith(('.json','.jsonl','.log')):keep(job+'-'+name.removeprefix(prefix).replace('/','-'),z.read(name))
+    wire=json.loads(z.read(prefix+'wire-cpu/report.json'));assert wire['status']=='prefill128_plugin_cpu_contract_passed' and wire['unexpected_operator_calls']==0
+for suffix in ('-verified.json','-remote-verified.json','-local-replay.log','-parent-identity-local-replay.log'):keep(job+suffix,(out/(job+suffix)).read_bytes())
+keep('Garnet-Prefill128-Native-Build-Verified.json',(out/'Garnet-Prefill128-Native-Build-Verified.json').read_bytes())
+for name in ('replay-prefill128-native-build-local.py','retain-prefill128-native-build-closure.py'):keep(name+'.txt',(work/name).read_bytes())
+status={'status':'full_prefill128_native_build_cpu_qualification_closed_model_unrun','archive_sha256':q['archive_sha256'],'archive_bytes':archive.stat().st_size,'archive_members':len(manifest['files'])+1,'proof_pair_sha256':sha(raw),'candidate_library_sha256':q['candidate_library_sha256'],'baseline_library_sha256':q['baseline_library_sha256'],'remote_cpu_tests':56,'plugin_cpu_contract':wire,'native_tokenizer_cases':955,'external_selector_cases':10,'embedded_selector_cases':10,'added_cuda_objects':w['added_cuda_objects'],'changed_old_cuda_objects':w['changed_cuda_objects'],'source_runtime_environment_restored':True,'full_forward_or_model_qualified':False,'performance_admitted':False,'two_times_target_achieved':False,'next_required':'Separate model owner installs paired native/Python T128 profile temporarily, verifies actual full forward/IDs/states/image/reset/quality before any HTTP performance. Continue independent B8 arithmetic diagnosis and matched tuned/MTP/repeated/INT4/4B references.'}
+status_raw=json.dumps(status,indent=2).encode();keep('prefill128-native-build-closure.json',status_raw);(out/'Garnet-Prefill128-Native-Build-Closed-Status.json').write_bytes(status_raw)
+title='Complete T128 native candidate builds and passes both-machine CPU replay'
+text='\n\n### 2026-10-25 — '+title+'\n\n'
+text+='Actual bf16-prefill128-native-build-attempt1 completed0.56remote CPU controls0.298s; existing CMake tree reconfigured, fullGarnet DLL linked with two new T128 attention/commit CUDA objects; only the coupled existing tiled overlay changed among oldCUDA objects. Candidate DLL '+q['candidate_library_sha256']+' saved separately. Baseline original four source files restored, nine new native targets removed, original1a1d DLL restored; all717source/runtime6/SDK15/method hashes preserved and cleanup completed. Archive '+q['archive_sha256']+' ('+str(archive.stat().st_size)+'bytes/'+str(status['archive_members'])+'members).\n\n'
+text+='Actual isolated plugin CPU executable passes16profiles,16clones/roundtrips,832malformed wires,496descriptors,336formats,128cross-dialect rejections and96oldB1/B4/B8 roundtrips; zero operator/enqueue calls. Runtime/header TensorRT versions101601 agree and actual loaded DLL is pinned SDK/bin. CPU-only stubs are linked solely into this contract executable, never intoGarnet. Ten external and ten actual embedded selector cases retain exact/default/frozen behavior. All955actual native tokenizer cases match frozen oracle, no mismatches. No GPU model or HTTP executed by this build.\n\n'
+text+='Original full native-build checker passes remotely. Initial local outputs-directory replay fails its raw parent-byte identity assertion because the attention parent has the already documented tiny cross-machine FP64 error-summary differences. Failure log retained. Replayed unchanged checker in one fixed CPU-only work view using hard-linked immutable archives and exact actual archived parent-proof copies. Existing compare_replays validates both original local/remote full-FP64 attention proofs, including unchanged full28311552scalar acceptance and all non-summary fields. Original parent proofs remain untouched. Local native-build replay then passes0 and is byte-identical to remote proof '+sha(raw)+'. Canonical-view recipe/binding receipt and both checker outputs retained; no source checker or arithmetic tolerance relaxation.\n\n'
+text+='This closes build/CPU integration only. Full T128 forward GDN/projections, model IDs/state correctness, image/reset/prefix behavior,805quality and matched HTTP timing are still unrun. Six Python candidates remain local; next model owner must temporarily pair the complete native/Python source profile with saved candidate DLL, preserve old paths/runtime and restore them on exit. B8 versusB4 strict mismatch remains a separate open arithmetic/geometry diagnosis. Current charts unchanged; overall2xdecode/concurrency throughput and halfTTFT remain unmet/unproven.\n'
+for name in ('qwen38-5090-development-log.md','qwen38-5090-implementation-task.md'):
+    path=repo/'docs/research'/name;before=path.read_bytes();assert title.encode() not in before
+    path.write_bytes(before+text.encode());paths.append(path.relative_to(repo).as_posix())
+(work/'prefill128-native-build-closure-retained-paths.json').write_bytes(json.dumps(sorted(set(paths)),indent=2).encode());print(json.dumps({'status':status['status'],'retained_paths':len(set(paths)),'candidate_library_sha256':q['candidate_library_sha256']}))

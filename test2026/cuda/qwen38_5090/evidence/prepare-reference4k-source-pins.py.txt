@@ -1,0 +1,25 @@
+from pathlib import Path
+import hashlib,json,zipfile
+w=Path(__file__).resolve().parent;o=w.parent/'outputs';m=Path('D:/CantorAI/work/qwen38-5090/test2026/cuda/qwen38_5090');sha=lambda b:hashlib.sha256(b).hexdigest();pins={'vllm':{},'sglang':{}};parents={}
+def put(engine,relative,digest):
+ path='/opt/cantorai5090/'+engine+'/lib/python3.12/site-packages/'+relative
+ assert path not in pins[engine] or pins[engine][path]==digest
+ pins[engine][path]=digest
+for name in ('reference-http-api-installed-source','sglang-mtp-arguments-installed-source'):
+ archive=o/(name+'.zip');remote=json.loads((o/(name+'-remote-verified.json')).read_bytes());assert sha(archive.read_bytes())==remote['archive_sha256'];parents[name]=remote['archive_sha256']
+ with zipfile.ZipFile(archive) as z:
+  manifest=json.loads(z.read('evidence-manifest.json'));assert z.testzip() is None
+  for n,h in manifest['files'].items():
+   assert sha(z.read(n))==h
+   if name=='reference-http-api-installed-source':engine,relative=n.split('/',1)
+   else:engine='sglang';relative=n
+   put(engine,relative,h)
+archive=o/'vllm-int4-cache-self-qualified-evidence.zip';assert sha(archive.read_bytes())=='114eb8f1361fda431fd39ae7b4c942d7ecabd861f7ecc8c7b363b3062ef8ac7a';parents[archive.stem]=sha(archive.read_bytes())
+with zipfile.ZipFile(archive) as z:
+ manifest=json.loads(z.read('evidence-manifest.json'));prefix='results/vllm-int4-mm-cache-router-audit/source/'
+ for n in z.namelist():
+  if n.startswith(prefix) and n.endswith('.py'):
+   raw=z.read(n);item=manifest['files'][n];expected=item['sha256'] if isinstance(item,dict) else item;assert sha(raw)==expected;put('vllm','vllm/'+n.removeprefix(prefix),sha(raw))
+obs=json.loads((w/'long-context-assets/source-observation.json').read_bytes());assert obs['revision']=='482ca0f3832238542f8f5295dde86b5f22711d80'
+checkpoint={n:v['sha256'] for n,v in obs['files'].items()};checkpoint['model.safetensors.index.json']=sha((m/'evidence/nvfp4-headers/model.safetensors.index.json').read_bytes())
+target=m/'evidence/reference4k-source-pins.json';assert not target.exists();target.write_text(json.dumps({'status':'reference4k_sources_pinned_no_runtime','parent_archives_sha256':parents,'linux_package_files':pins,'checkpoint_files':checkpoint,'checkpoint_revision':obs['revision'],'scope':'Exact installed HTTP/API/metadata, SGLang speculative argument/model files and vLLM dev-route sources from retained verified archives; checkpoint config/tokenizer/processor/index pins. This does not hash every installed binary or checkpoint weight on each run. Actual source/PID/checkpoint checks and real server configuration still required.'},indent=2),encoding='utf8');print(json.dumps({'status':'reference4k_sources_pinned_no_runtime','files':{k:len(v) for k,v in pins.items()},'checkpoint_files':len(checkpoint)}))

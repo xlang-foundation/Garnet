@@ -1,0 +1,9 @@
+@echo off
+call "C:\Program Files\Microsoft Visual Studio\18\Community\VC\Auxiliary\Build\vcvars64.bat" -vcvars_ver=14.29
+if errorlevel 1 exit /b %errorlevel%
+set "TMP=%~dp0"
+set "TEMP=%TMP%"
+cl /nologo /EHsc /std:c++17 /MT /utf-8 /I"D:\CantorAI\work\qwen38-5090\third_party" /I"D:\CantorAI\work\qwen38-5090\src\backends\tensorrt" "D:\CantorAI\work\qwen38-5090\test2026\cuda\qwen38_5090\probe_bf16_low_batch_metadata.cpp" /Fo"%~dp0bf16-low-batch-metadata.obj" /Fe"%~dp0bf16-low-batch-metadata.exe"
+if errorlevel 1 exit /b %errorlevel%
+dumpbin /imports "%~dp0bf16-low-batch-metadata.exe" > "%~dp0bf16-low-batch-metadata-imports.txt"
+exit /b %errorlevel%

@@ -1,0 +1,26 @@
+{
+  "status": "kv_delta_layout_cpu_contract_tests_passed",
+  "command": [
+    "D:\\CantorAI\\Garnet\\.venv\\Scripts\\python.exe",
+    "-m",
+    "unittest",
+    "test2026.cuda.qwen38_5090.test_kv_delta_layout",
+    "-v"
+  ],
+  "exit_code": 0,
+  "stdout": "",
+  "stderr": "test_actual_canonical_offsets_and_logical_output_sizes (test2026.cuda.qwen38_5090.test_kv_delta_layout.KVDeltaLayoutTests.test_actual_canonical_offsets_and_logical_output_sizes) ... ok\r\ntest_bad_offsets_shapes_widths_and_unqualified_geometry_rejected (test2026.cuda.qwen38_5090.test_kv_delta_layout.KVDeltaLayoutTests.test_bad_offsets_shapes_widths_and_unqualified_geometry_rejected) ... ok\r\ntest_dispatch_boundary_mixed_rows_and_inactive_capacity_slots (test2026.cuda.qwen38_5090.test_kv_delta_layout.KVDeltaLayoutTests.test_dispatch_boundary_mixed_rows_and_inactive_capacity_slots) ... ok\r\ntest_explicit_profile_and_disabled_path (test2026.cuda.qwen38_5090.test_kv_delta_layout.KVDeltaLayoutTests.test_explicit_profile_and_disabled_path) ... ok\r\ntest_output_and_replay_regions_cover_the_declared_buffers (test2026.cuda.qwen38_5090.test_kv_delta_layout.KVDeltaLayoutTests.test_output_and_replay_regions_cover_the_declared_buffers) ... ok\r\n\r\n----------------------------------------------------------------------\r\nRan 5 tests in 0.002s\r\n\r\nOK\r\n",
+  "source_sha256": {
+    "xModel/qwen35/vl_0_8b/kv_delta_layout.py": "764bca54215e7a57b18b8697f42f4dacc1d39331f9353c48c86cb56cd30e66cf",
+    "xModel/qwen35/vl_0_8b/cuda_packed_program.py": "a23a6b16bb64fd87bd45fd00b07f75050605aff2cc215fde4e29f9a0af61e32f",
+    "test2026/cuda/qwen38_5090/test_kv_delta_layout.py": "847d8fa4fc21ddb6a9ca84f16322264ea239bf1329c9861729bf2f0ddccc6037",
+    "test2026/cuda/qwen38_5090/evidence/nvfp4-config.json": "71fa01bb64de20971045cd82a82c0ebb25a54e1b0a3f09ef23cf5479e9c54df8"
+  },
+  "logical_bytes": {
+    "canonical_state": 2782920704,
+    "linear_replay_output": 635437056,
+    "compact_target_state": 637534208,
+    "compact_target_with_hidden_and_payload": 688488448
+  },
+  "scope": "Five CPU contract tests, including original canonical-layout function extracted without GPU imports. Unwired admission/compact-output metadata/CPU dispatch only. Logical sizes are not measured allocation, traffic, peak VRAM or speed. No native/model integration qualification."
+}

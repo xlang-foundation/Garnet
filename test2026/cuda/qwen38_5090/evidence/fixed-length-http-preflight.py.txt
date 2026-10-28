@@ -1,0 +1,19 @@
+from pathlib import Path
+import datetime,hashlib,json,shutil,subprocess,zipfile
+root=Path('D:/CantorAI/5090-study-20261023');sha=lambda f:hashlib.sha256(f.read_bytes()).hexdigest();p=json.loads((root/'tools/fixed-length-http-preflight-input.json').read_bytes());targets={}
+for n,h in p['expected'].items():
+ f=root/n;assert f.resolve().is_relative_to(root.resolve()) and f.parent.is_dir();old=sha(f) if f.is_file() else None
+ targets[n]={'exists':f.exists(),'matches':old==h if old else None,'existing_sha256':old,'expected_sha256':h,'reviewed_previous':old==p['previous'].get(n) if old else False}
+conflicts=[n for n,v in targets.items() if v['exists'] and not(v['matches'] or v['reviewed_previous'])]
+drift={'files':[n for n,h in p['existing'].items() if not(root/n).is_file() or sha(root/n)!=h],'runtime':[n for n,h in p['runtime'].items() if not(root/'build/bin'/n).is_file() or sha(root/'build/bin'/n)!=h]}
+parent='tokenizer-nfc-model-consistency-attempt1';proof=root/'results'/(parent+'-verified.json');q=json.loads(proof.read_bytes());state=json.loads((root/'results'/parent/'workflow.json').read_bytes())
+assert sha(proof)==p['parent_proof_sha256'] and q['status']=='tokenizer_nfc_model_consistency_replayed' and sha(root/'results'/(parent+'-evidence.zip'))==p['parent_archive_sha256']==q['archive_sha256'] and state['exit_code']==0 and state['cleanup_finished']
+assert sha(root/'build/bin/garnet-native-tokenizer-nfc-attempt1.dll')==p['runtime']['garnet.dll']
+name='fixed-length-http-study-attempt1';occupied=[str(f) for f in (root/'results'/name,root/'results'/(name+'-evidence.zip')) if f.exists()]
+receipt=json.loads((root/'results/study-ssd-engine-cache/receipt.json').read_bytes());cache=Path(receipt['cache_root']);assert receipt['status']=='ssd_engine_scratch_prepared' and cache.resolve().drive.upper()=='C:' and json.loads((cache/'study-owner.json').read_bytes())['study']==str(root);free=shutil.disk_usage(cache).free
+memory=int(subprocess.check_output(['nvidia-smi','--query-gpu=memory.used','--format=csv,noheader,nounits'],text=True).strip())
+ready=not(conflicts or any(drift.values()) or occupied) and memory<1024 and free>=96*1024**3
+result={'status':'fixed_length_http_launch_preflight_passed' if ready else 'fixed_length_http_launch_preflight_failed','utc':datetime.datetime.now(datetime.timezone.utc).isoformat(),'targets':targets,'drift':drift,'conflicts':conflicts,'occupied':occupied,'gpu_used_mib_preflight_only':memory,'owned_scratch_free_bytes':free,'scope':'Read-only source/runtime/parent/target/scratch observation. Existing differences must match reviewed Git HEAD bytes; replacements preserved separately. No model launch/performance measurement.'}
+target=root/'results'/(name+'-preflight.json')
+with target.open('xb') as f:f.write(json.dumps(result,indent=2).encode())
+print(json.dumps(result));assert ready

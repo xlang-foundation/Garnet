@@ -1,0 +1,126 @@
+from pathlib import Path
+import hashlib,json,re,zipfile
+
+work=Path(__file__).resolve().parent;out=work.parent/'outputs';repo=Path('D:/CantorAI/work/qwen38-5090');m=repo/'test2026/cuda/qwen38_5090';e=m/'evidence'
+sha=lambda path:hashlib.sha256(path.read_bytes()).hexdigest()
+job='prefill16-fixed4k-http-attempt1';proof_path=out/(job+'-verified.json');p=json.loads(proof_path.read_bytes())
+assert p==json.loads((out/(job+'-remote-verified.json')).read_bytes()) and p['status']=='prefill16_fixed4k_http_replayed'
+archive=out/(job+'-evidence.zip');assert sha(archive)==p['archive_sha256'] and archive.stat().st_size==99391572 and p['files_verified']==3446
+receipt=json.loads((work/'prefill16-http-local-replay-receipt.json').read_bytes());assert receipt['exit_code']==0 and receipt['proof_pair_identical'] is True
+data_path=out/'Garnet-Prefill16-vs-References-Verified-4K-Data.json';data=json.loads(data_path.read_bytes())
+profile=p['profiles'][0];assert profile['screening']['score']['correct']==502 and profile['screening']['completed_requests']==805
+comparisons=[]
+for row in data['comparisons']:
+ a=row['new_draft_prefill16'];b=row['old_draft_prefill4'];sg=row['sglang_ordinary']
+ comparisons.append({'case':row['case'],'clients':row['clients'],
+  'new_ttft_ms':a['ttft_median_ms'],'old_ttft_ms':b['ttft_median_ms'],'sglang_ttft_ms':sg['ttft_median_ms'],
+  'new_decode_tps':a['decode_median_tokens_per_second'],'old_decode_tps':b['decode_median_tokens_per_second'],'sglang_decode_tps':sg['decode_median_tokens_per_second'],
+  'new_total_output_tps':a['output_tokens_per_second'],'old_total_output_tps':b['output_tokens_per_second'],'sglang_total_output_tps':sg['output_tokens_per_second'],
+  'new_over_sglang_decode':row['new_over_sglang_decode'],'new_over_sglang_total_throughput':row['new_over_sglang_total_throughput'],
+  'new_sampled_peak_adapter_used_bytes':a['sampled_peak_adapter_used_bytes'],
+  'new_max_memory_sample_gap_seconds':a['observed_sample_gap_max_seconds']})
+result={'status':'wider_mtp_http_complete_and_independently_replayed_on_both_machines','archive_sha256':p['archive_sha256'],
+ 'archive_bytes':archive.stat().st_size,'files_verified':3446,'proof_pair_sha256':sha(proof_path),'library_sha256':p['library_sha256'],
+ 'actual_screening_cases':805,'screening_correct':502,'actual_protocol_controls':12,'actual_4k_boundaries':2,
+ 'actual_fixed_4k_streams':124,'actual_worker_completions':943,'actual_prompt_tokens_each':3968,'actual_output_tokens_each':128,
+ 'all_screening_and_fixed4k_native_ordinary_output_ids_exact':True,'physical_gpu_batch':1,'client_concurrency':[1,2,4,8],
+ 'whole_study_sampled_peak_adapter_bytes':profile['whole_study_sampled_peak_adapter_bytes'],'comparisons':comparisons,
+ 'local_replay':receipt,'remote_replay_exit_code':0,'broad_quality_parity_qualified':False,'matched_vllm_4k_complete':False,
+ 'strongest_tuned_mtp_references_complete':False,'two_times_target_achieved':False,
+ 'scope':'Complete single trials over identical actual3968+128 requests. Candidate extra T16draft-prefill engine, T4draftdecode and T32targetprefill unchanged. Native actualIDs match ordinary across805screen and124fixed streams; adapted502/805, not officialMMMU. SGLang ordinary487/805, cross-engine quality parity unproven. New C8image per-request decode2.1465xthisordinaryreference only; total throughput remains far lower and first-token wait much longer. ImageC2throughput regression and all delays retained. Memory is sampled adapter-wide;3.67318s maximum gap preserved. No confidence intervals or causal optimization-speed claim.'}
+def keep(path,raw):
+ assert not path.exists() or path.read_bytes()==raw,path
+ if not path.exists():path.write_bytes(raw)
+keep(out/'Garnet-MTP-Prefill16-HTTP-Verified-Results.json',json.dumps(result,indent=2).encode())
+keep(e/'prefill16-http-verified-closure.json',json.dumps(result,indent=2).encode())
+for name in (job+'-verified.json',job+'-remote-verified.json',job+'-local-replay.log',data_path.name):keep(e/name,(out/name).read_bytes())
+keep(e/'prefill16-http-local-replay-receipt.json',(work/'prefill16-http-local-replay-receipt.json').read_bytes())
+cpu_archive=out/'native-cuda-phase-cpu-preflight-evidence.zip'
+with zipfile.ZipFile(cpu_archive) as z:
+ manifest=json.loads(z.read('evidence-manifest.json'));assert z.testzip() is None and len(z.namelist())==len(set(z.namelist()))==len(manifest['files'])+1==23
+ for name,digest in manifest['files'].items():assert hashlib.sha256(z.read(name)).hexdigest()==digest
+ assert manifest['gpu_model_executed'] is False
+cpu={'archive_sha256':sha(cpu_archive),'bytes':cpu_archive.stat().st_size,'files_verified':22,'gpu_model_executed':False}
+prep=e/'native-cuda-phase-run-preparation.json';q=json.loads(prep.read_bytes());assert len(q['files'])==633 and q['expected_cpu_test_count']==46
+installation=json.loads((work/'native-cuda-profiled-driver-install.json').read_bytes());assert installation['status']=='native_cuda_profiled_driver_methods_installed' and installation['new_targets_verified']==17
+preflight=json.loads((work/'native-cuda-profiled-driver-preflight.json').read_bytes());assert preflight['status']=='native_cuda_profiled_driver_preflight_passed' and not preflight['conflicts'] and not preflight['runtime_drift'] and not preflight['existing_input_drift']
+log=(work/'native-cuda-profiled-driver-cpu-ledger/commands.log').read_bytes();match=re.search(rb'Ran (\d+) tests in ([0-9.]+)s\s+OK',log);assert match and int(match[1])==46
+diagnosis={'status':'outer_profiled_driver_installed_gpu_unrun','preparation_sha256':sha(prep),'pinned_files':633,'upload_targets':17,
+ 'cpu_tests_local':46,'cpu_test_seconds_local':float(match[2]),'cpu_profiler_preflight_archive':cpu,
+ 'actual_cpu_driver_smoke_sha256':q['profiled_driver_cpu_smoke_sha256'],'preflight':preflight,'installation':installation,
+ 'gpu_executed':False,'performance_admitted':False,'two_times_target_achieved':False,
+ 'scope':'Two live-Nsight-output CPU pipe smoke attempts timed out before model construction, unchanged and explicitshow-outputtrue. Both raw failures retained. Actual outer-profiled CPU driver normal-child IPC passes with observed0/7driver-wrapper exits. Final collector profiles the one-mode request driver from launch; nativeworker normalIPC and all unchanged model ops remain. Per-mode raw reports merged only after actual12requests and workerexit0; real CUDA/graph-node/copymarker replay still required. Existing1a1d DLL/defaults/SDK/checkpoint unchanged. Installed17absent files,617existing inputs/runtime/idle/profiler/disk checks passed. Full GPU diagnosis not yet run in this snapshot.'}
+keep(e/'native-cuda-profiled-driver-installed-preparation.json',json.dumps(diagnosis,indent=2).encode())
+keep(out/'Garnet-CUDA-Profiled-Driver-Preparation.json',json.dumps(diagnosis,indent=2).encode())
+for name in ('native-cuda-profiled-driver-upload-plan.json','native-cuda-profiled-driver-preflight-input.json','native-cuda-profiled-driver-preflight.json','native-cuda-profiled-driver-bundle-preparation.json','native-cuda-profiled-driver-install.json','native-cuda-phase-pipe-smoke-attempt1-report.json','native-cuda-phase-pipe-smoke-attempt2-report.json','native-cuda-phase-profiled-driver-smoke-attempt1-report.json','native-cuda-profiled-driver-local-proof.json','native-cuda-profiled-driver-local-result.json'):
+ keep(e/name,(work/name).read_bytes())
+for path in (work/'native-cuda-profiled-driver-cpu-ledger').iterdir():keep(e/('native-cuda-profiled-driver-cpu-ledger-'+path.name),path.read_bytes())
+for name in ('replay-prefill16-http-local.py','render-prefill16-verified-4k-comparison.py','derive-native-cuda-profiled-driver.py','prepare-native-cuda-profiled-driver-deployment.py','preflight-native-cuda-profiled-driver.py','package-native-cuda-profiled-driver-methods.py','install-native-cuda-profiled-driver-methods.py','check-native-cuda-phase-profiler-pipes.py','check-native-cuda-phase-profiler-pipes-show-output.py','check-native-cuda-phase-profiled-driver.py','archive-native-cuda-phase-cpu-preflight.py','retain-prefill16-http-closure-and-profiled-driver.py','keep-cuda-phase-doc-append-only.py'):
+ keep(e/(name+'.txt'),(work/name).read_bytes())
+text='''
+
+### 2026-10-25 — wider-MTP HTTP closed/replayed; verified charts; outer-profiled driver installed
+
+Original48577 prefill16-fixed4k-http-attempt1 terminal0, source/runtime/1a1d unchanged,
+owned nativeworker exit0 and cache retirement complete. Archive
+d64adb0cdba9d7c3446f15034b34d095025394815d28c4dae463b0056377e748,
+99391572bytes/3446files downloaded with explicit SFTP ACK. Remote independent replay
+terminal0 and local replay exit0; proof JSONs identical SHA
+b43f4adfd3d04989312b3e1f637bb6eed61e3bf1706151660e8fec7be5ee7c27.
+All805screen cases,12protocol/two4Kboundaries/124fixed4Kstreams and943actual worker
+completions bound to raw events; all actual native ordinary output IDs exact.
+Adapted502/805 matches old native, not officialMMMU/broad cross-engine quality parity.
+
+Actual3968+128, eight measured requests per group, C1/2/4/8. New text C1 TTFT
+5327.85ms/decode75.69tok/s/total18.19tok/s; image C1 5324.77ms/88.26/17.66.
+C8text29858.89ms/73.75/18.23; C8image28624.57ms/91.45/19.08. Compared to old
+T4draft-prefill single trial, first-token medians about9-11%lower and text total
+throughput about9-10%higher; imageC2total15.45vsold17.20 is a regression retained
+without exclusions. These are independent single trials with no uncertainty or
+causal optimization-speed admission. T16 extra draft weights raise sampled memory
+to23831457792bytes=22.195GiB; maximum imageC1sample gap3.67318s preserved. All
+raw samples/summary-prefix/trailing accounting independently replayed; no instant
+or process-attributed memory peak claim.
+
+New C8image per-request decode91.45vsSGLangordinary42.61=2.1465x this one ordinary
+reference point. Total19.08vs146.54 and TTFT28.62vs1.604s remain much worse.
+Native physicalbatch1queue vsSGLangmax8. No overall2x/halfTTFT claim; strongest
+tuned/MTP and matchedvLLM4K/repetitions/INT4/4B/broadquality remain required.
+New eight-panel4K PNG/SVG, standalone HTML and all32cohort data generated only
+after identical two-machine proofs. All curves/delays/regressions retained; old
+historical charts unchanged. Final new figure visually inspected.
+
+Actual CPU Nsight IPC qualification caught a pre-model transport issue: two
+90sreadiness smoke attempts, unchanged and explicitshow-outputtrue, receive no
+live forwarded ready event. Both terminal1, no model/GPU constructed. Do not
+launch the model worker behind that direct live Nsight pipe. Reused successful
+prior process-tree architecture: outer Nsight profiles the request driver while
+its normal nativeworker pipes stay internal. Actual CPU driver/child Unicode
+echo and cleanexit checks pass, observed Nsight wrapper mirrors requested driver
+exits0and7. Raw three attempts/scripts/logs/tinyreports archived separately:
+0846e405501a70ba5dadd4e7444b55ae9cf534563f2dda29c6685f0ae6591d36,
+33103bytes/22files; local rawmanifest replay passes. No GPU model or benchmark.
+
+Final driver retains each ordinary/MTP actual worker exit, marker/nativeclose
+witness and all12retained-ID requests, merges mode reports with explicit negative
+guards. Nsight collection surrounds each full driver; export/replay follows its
+closure, without live Nsight stdout dependency. Entire worker model AST still
+equals qualified ordinary source after trace-only removal; source derivations and
+earlier unrun pipe-launch preparation retained. Local46CPU pass1.493s, all eight
+module files and46testIDs pinned. New preparation
+8d96a7783b95012c14215bcfa30258f50a6550c90bea8a0bb01ad661682f087e,
+633files/17targets. Actual read-only closed-parent/source/runtime/profiler/idle/disk
+preflight terminal0; all617existing inputs exact, no conflicts. Absent-only bundle
+f47dfa4cd78060d6aca57ae077ed95a02ec67d2aaa4a369b8214560c0c96a4c1,
+58871bytes installed17new/all17verified, no baseline/SDK/model change. GPU trace
+has not executed in this preparation snapshot. Next original supervisor owns
+native-cuda-phase-full4k-attempt1: actual46remoteCPU IDs before model,24full4K
+requests/288markers, source/runtime/cleanup/rawarchive and two-machine replay.
+Use collected kernel/API evidence for target-prefill and realB8MTP work; no causal
+kernel bottleneck or speedup is inferred from host phases or offline preparation.
+'''
+for name in ('qwen38-5090-development-log.md','qwen38-5090-implementation-task.md'):
+ path=repo/'docs/research'/name;raw=path.read_bytes()
+ if b'wider-MTP HTTP closed/replayed; verified charts; outer-profiled driver installed' not in raw:path.write_bytes(raw+text.encode())
+print(json.dumps({'http_status':result['status'],'archive_sha256':p['archive_sha256'],'proof_sha256':sha(proof_path),
+                  'diagnostic_preparation_sha256':sha(prep),'diagnostic_installed_targets':17,'cpu_tests_local':46,'overall2x':False}))

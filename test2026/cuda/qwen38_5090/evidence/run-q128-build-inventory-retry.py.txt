@@ -1,0 +1,7 @@
+from pathlib import Path
+import hashlib,json,os,sys
+ROOT=Path('D:/CantorAI/5090-study-20261023');M=ROOT/'Garnet/test2026/cuda/qwen38_5090';sys.path.insert(0,str(M));import run_logged as ledger
+sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest();names=['results/inspect-q128-build-inputs.py','results/inspect-q128-build-inputs-attempt2.py','results/run-q128-build-inventory-retry.py'];pins={n:sha(ROOT/n) for n in names};ledger.source_identity=lambda:{'scope':'Explicit CPU read-only build input inventory guard failure/retry; protected unrelated untracked excluded','owned_source_sha256':pins};out=ROOT/'results/q128-build-inventory-retry';assert not out.exists();os.chdir(ROOT/'Garnet');old=ROOT/names[0];fixed=ROOT/names[1]
+assert ledger.run([sys.executable,str(old)],out/'original-failure-ledger','correctness','Preserve actual too-narrow SRC bounds failure on frozen candidate xModel source; no GPU or source mutation',[ROOT/n for n in names])==1
+assert ledger.run([sys.executable,str(fixed)],out/'corrected-ledger','correctness','Same exact57target hash/existence checks within intended Garnet checkout root; include preserved xModel sources; no mutation',[ROOT/n for n in names])==0
+print(json.dumps(dict(status='read_only_inventory_guard_failure_preserved_and_corrected',inventory_sha256=sha(ROOT/'results/q128-canonical-build-inputs.json'))))

@@ -1,0 +1,112 @@
+{
+  "status": "selected_decode_operation_counts_matched",
+  "archive_sha256": "ceb182e066a9f97df985d5e6fb0e8a0f5eb25253773abbe44026e37b4dafa14c",
+  "proof_sha256": "349476e614b7afdfffd590f71cb0f2489d0d42a996cf3e93f4d88c5f2aa71202",
+  "auditor_sha256": "583b42df8a912aecdb4d841ae44ef2549ee8a88afe61187b539f73420427b5d5",
+  "windows": [
+    {
+      "call": 2,
+      "target_calls": 47,
+      "prefix_replays": 37,
+      "mtp_body_calls_excluding_prefill": 141,
+      "head_calls_excluding_prefill": 225,
+      "actual": {
+        "nvfp4_matmul": 6241,
+        "nvfp4_quantizer": 6241,
+        "fp8_matmul": 9776,
+        "fp8_split_k_followup": 1504,
+        "fp8_quantizer": 9776,
+        "bf16_small_tile": 5358,
+        "bf16_larger_tile": 282,
+        "gdn_recurrence": 4032,
+        "short_context_attention": 752,
+        "canonical_linear_commit": 47,
+        "canonical_kv_scatter": 47
+      },
+      "expected": {
+        "nvfp4_matmul": 6241,
+        "nvfp4_quantizer": 6241,
+        "fp8_matmul": 9776,
+        "fp8_split_k_followup": 1504,
+        "fp8_quantizer": 9776,
+        "bf16_small_tile": 5358,
+        "bf16_larger_tile": 282,
+        "gdn_recurrence": 4032,
+        "short_context_attention": 752,
+        "canonical_linear_commit": 47,
+        "canonical_kv_scatter": 47
+      },
+      "split_k_pairs_checked": 1504,
+      "split_k_grid_shapes": [
+        [
+          1,
+          16,
+          2
+        ],
+        [
+          1,
+          16,
+          7
+        ]
+      ]
+    },
+    {
+      "call": 3,
+      "target_calls": 47,
+      "prefix_replays": 37,
+      "mtp_body_calls_excluding_prefill": 141,
+      "head_calls_excluding_prefill": 225,
+      "actual": {
+        "nvfp4_matmul": 6241,
+        "nvfp4_quantizer": 6241,
+        "fp8_matmul": 9776,
+        "fp8_split_k_followup": 1504,
+        "fp8_quantizer": 9776,
+        "bf16_small_tile": 5358,
+        "bf16_larger_tile": 282,
+        "gdn_recurrence": 4032,
+        "short_context_attention": 752,
+        "canonical_linear_commit": 47,
+        "canonical_kv_scatter": 47
+      },
+      "expected": {
+        "nvfp4_matmul": 6241,
+        "nvfp4_quantizer": 6241,
+        "fp8_matmul": 9776,
+        "fp8_split_k_followup": 1504,
+        "fp8_quantizer": 9776,
+        "bf16_small_tile": 5358,
+        "bf16_larger_tile": 282,
+        "gdn_recurrence": 4032,
+        "short_context_attention": 752,
+        "canonical_linear_commit": 47,
+        "canonical_kv_scatter": 47
+      },
+      "split_k_pairs_checked": 1504,
+      "split_k_grid_shapes": [
+        [
+          1,
+          16,
+          2
+        ],
+        [
+          1,
+          16,
+          7
+        ]
+      ]
+    }
+  ],
+  "two_x_established": false,
+  "performance_admitted": false,
+  "structural_assumptions": {
+    "target_nvfp4_projections": 128,
+    "target_fp8_projections": 208,
+    "target_small_bf16_projections": 96,
+    "mtp_small_bf16_projections": 6,
+    "mtp_larger_bf16_projections": 2,
+    "linear_layers": 48,
+    "full_attention_layers": 16
+  },
+  "scope": "Partial coverage audit of eleven observed kernel families against generation counters. Initial count audit failed because an extra split-K kernel was counted as another FP8 projection; preserved separately. Every matching primary/follow-up pair now checked in time order on the same graph/stream/device/process/correlation. Prefill counters and its one MTP head are explicitly excluded because markers start after prefill. Structural projection/layer counts and observed kernel-name selectors are source-derived assumptions, not an audit of every CUPTI operation or proof of stable timing/optimization/quality/2x performance."
+}

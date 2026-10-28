@@ -1,0 +1,40 @@
+from pathlib import Path
+import hashlib,json
+R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';original=(M/'run_z128_factory_layer2.py').read_bytes();raw=original;changes=[]
+def change(a,b,n=1):
+    global raw
+    assert raw.count(a.encode())==n,(a,raw.count(a.encode()));raw=raw.replace(a.encode(),b.encode());changes.append(dict(before=a,after=b,count=n))
+change('z128-factory-layer2-attempt1','z128-reconstructed-layer2-attempt1',2)
+change('evidence/z128-factory-layer2-preparation.json','evidence/z128-reconstructed-layer2-preparation.json')
+change('z128_factory_layer2_prepared_gpu_unrun','z128_reconstructed_layer2_prepared_gpu_unrun')
+change("len(p['candidate_files'])==39","len(p['candidate_files'])==43")
+change('garnet-native-z128-factory-trace-attempt1.dll','garnet-native-z128-reconstructed-plugin-attempt2.dll')
+change('len(set(z.namelist()))==39','len(set(z.namelist()))==43')
+line="    for phase in ('on','off'):assert not (ROOT/'results/fp8-z128-native-package-audit-attempt1'/('z128-reconstructed-layer2-attempt1-'+phase+'-context.json')).exists()\n"
+change(line,'')
+change('88CPU retained model/cache/init/factory controls plus2 exact collector/native attribution checks','12CPU new integration/array/route/cross-profile fault controls, including86exact frozen historical controls')
+change('test_z128_factory_layer2.bat','test_z128_reconstructed_layer2.bat')
+needle="            report=json.loads((out/phase/'report.json').read_bytes());assert report['status']=='layer2_ordinary_collected_needs_replay'"
+analysis='''
+            from test2026.cuda.qwen38_5090.z128_reconstructed_layer2_replay import replay,require_admission
+            from test2026.cuda.qwen38_5090.z128_reconstructed_layer2_trace import replay as trace_replay
+            from test2026.cuda.qwen38_5090.modelopt_trace_layer2 import compare_profiles
+            read=lambda name:(out/phase/name).read_bytes()
+            result=replay(report,read,(M/'evidence/layer2-ordinary-common-input.f32').read_bytes())
+            # Preserve complete arithmetic differences before a strict admission assertion.
+            (out/(phase+'-array-analysis.json')).write_bytes(json.dumps(result,indent=2).encode())
+            with zipfile.ZipFile(ROOT/'results/layer2-ordinary-witness-attempt1-evidence.zip') as prior:
+                oldbase='results/layer2-ordinary-witness-attempt1/native/'
+                oldreport=json.loads(prior.read(oldbase+'report.json'))
+                compared=compare_profiles(report,oldreport,read,lambda name:prior.read(oldbase+name),(32,))
+            assert compared['complete_finite_entries_compared']==58
+            traced=trace_replay((out/(phase+'-ledger/commands.log')).read_bytes(),phase=='trace-on')
+            (out/(phase+'-trace-analysis.json')).write_bytes(json.dumps(traced,indent=2).encode())
+            (out/(phase+'-retained-T32-comparison.json')).write_bytes(json.dumps(compared,indent=2).encode())
+            require_admission(result)
+'''
+change(needle,needle+analysis)
+change('z128_factory_layer2_collected_needs_replay','z128_reconstructed_layer2_collected_needs_replay')
+target=M/'run_z128_reconstructed_layer2.py';assert not target.exists();target.write_bytes(raw)
+record={'source':'run_z128_factory_layer2.py','target':target.name,'source_sha256':hashlib.sha256(original).hexdigest(),'target_sha256':hashlib.sha256(raw).hexdigest(),'changes':changes,'cross_profile_gate_added_without_weakening_original_array_controls':True}
+(M/'evidence/z128-reconstructed-layer2-owner-derivation.json').write_bytes(json.dumps(record,indent=2).encode());print('derived source-frozen real layer2 owner')

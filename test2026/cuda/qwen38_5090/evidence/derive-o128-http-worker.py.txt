@@ -1,0 +1,30 @@
+from pathlib import Path
+import ast,hashlib,json
+W=Path(__file__).resolve().parent;R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';source=M/'native_prefill16_stream_worker.py';raw=source.read_bytes();old=raw;changes=[]
+def replace(a,b):
+    global raw
+    assert raw.count(a.encode())==1,a;raw=raw.replace(a.encode(),b.encode());changes.append(dict(old=a,new=b))
+# The factory appears twice; change both explicitly and record their count.
+assert raw.count(b'create_cuda_bf16_low_batch_study_decoder')==2
+raw=raw.replace(b'create_cuda_bf16_low_batch_study_decoder',b'create_cuda_bf16_prefill128_study_decoder');changes.append(dict(old='create_cuda_bf16_low_batch_study_decoder',new='create_cuda_bf16_prefill128_study_decoder',count=2))
+start=raw.index(b"name='tokenizer-nfc-model-consistency-attempt1'");end=raw.index(b"for flag in ('GARNET_FP8_FULL_ATTN_M32_CANONICAL'",start)
+raw=raw[:start]+b"sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest();library=sha(root/'build/bin/garnet.dll')\r\nfrom test2026.cuda.qwen38_5090.native_o128_http_admission import require as require_o128\r\no128_admission=require_o128(root,mode,library)\r\n"+raw[end:]
+replace('from xModel.qwen35.vl_0_8b.cuda_mtp_prefill16_study import CUDAMTPPrefill16StudySession as CUDASpeculativeSession','from xModel.qwen35.vl_0_8b.cuda_mtp_prefill16_target128_study import CUDAMTPPrefill16Target128StudySession as CUDASpeculativeSession')
+replace("'prefill_chunk':32","'prefill_chunk':128")
+replace("'model_consistency_proof_sha256':sha(root/'results'/(name+'-verified.json'))","'model_consistency_proof_sha256':o128_admission['certificate_proof_sha256']['o128-full4k-model-admission-attempt1']")
+replace("'mtp_prefill16_admission':prefill16_admission","'o128_admission':o128_admission,'physical_routes':selection")
+needle=" emit({'event':'ready'"
+route=""" from test2026.cuda.qwen38_5090.o128_full4k_model import validate_selection
+ assert session is not None and sorted(decoder.programs)==[4,128] and decoder.bf16_kv_prefill128_study is True
+ memory=session.memory_info()
+ selection=validate_selection({'fp8_m128_policy':os.environ['GARNET_FP8_GDN_M128_CANONICAL'],'fp8_z128_policy':os.environ['GARNET_FP8_GDN_Z128_CANONICAL'],'fp8_q128_policy':os.environ['GARNET_FP8_FULL_ATTN_Q128_CANONICAL'],'fp8_o128_policy':os.environ['GARNET_FP8_FULL_ATTN_O128_CANONICAL'],'fp8_target_graphs':{str(t):json.loads(program.graph.stats_json()) for t,program in decoder.programs.items()},'fp8_auxiliary_graphs':{'draft4':memory['mtp_graph'],'draft16':memory['prefill16_graph'],'prefill_norm':memory['wide_target_norm_graph'],'vision':json.loads(vision.graph.stats_json())}})
+""".replace('\n','\r\n')
+replace(needle,route+needle)
+replace("root=Path(sys.argv[1]);mode=sys.argv[2];assert mode in ('ordinary','mtp')","root=Path(sys.argv[1]);mode=sys.argv[2];assert mode=='mtp'")
+ast.parse(raw);target=M/'native_o128_stream_worker.py';assert not target.exists() or target.read_bytes()==raw;target.write_bytes(raw)
+def functions(b):
+    tree=ast.parse(b);return {n.name:ast.dump(n,include_attributes=False) for n in ast.walk(tree) if isinstance(n,ast.FunctionDef)}
+assert functions(old)==functions(raw)
+batch=(M/'test_o128_full4k_model.bat').read_bytes();a=b'probe_o128_full4k_model.py';assert batch.count(a)==1;batch=batch.replace(a,b'native_o128_stream_worker.py');assert batch.count(b'"%~1"')==1;batch=batch.replace(b'"%~1"',b'%~1');(M/'serve_native_o128_worker.bat').write_bytes(batch)
+record=dict(source=source.name,source_sha256=hashlib.sha256(old).hexdigest(),target=target.name,target_sha256=hashlib.sha256(raw).hexdigest(),all_request_and_notification_function_AST_identical=True,changes=changes,scope='Only factory/session/admission/actual route metadata changed; original HTTP request, EOS, IDs, image/token preparation, callbacks and response bodies retained. MTP mode only for this initial wider-prefill quality measurement.')
+(M/'evidence/o128-http-worker-derivation.json').write_bytes(json.dumps(record,indent=2).encode());print(json.dumps(dict(status='O128_HTTP_worker_derived',functions_unchanged=True)))

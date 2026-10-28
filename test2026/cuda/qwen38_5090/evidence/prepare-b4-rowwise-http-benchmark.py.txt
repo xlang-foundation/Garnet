@@ -1,0 +1,51 @@
+"""Admit the clean timing package only after paired independent HTTP quality proof."""
+from pathlib import Path
+import ast,hashlib,json,os,sys,zipfile
+W=Path(__file__).resolve().parent;O=W.parent/'outputs';R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';E=M/'evidence';P='Garnet/test2026/cuda/qwen38_5090/';sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+J='b4-rowwise-http-quality-attempt3';proof=O/(J+'-verified.json');q=json.loads(proof.read_bytes());assert proof.read_bytes()==(O/(J+'-remote-verified.json')).read_bytes() and q['exit_code']==0 and q['B4_HTTP_quality_case_gate_passed'] and q['arrays']['all805_prompt_and_output_IDs_exact_T32'] and q['arrays']['actual_native_HTTP_requests']==836 and q['source_runtime_SDK_config_index_CMake_all34_and_full_model_files_restored'] and sha(O/(J+'-evidence.zip'))==q['archive_sha256']
+quality_prep=E/'b4-rowwise-http-quality-preparation.json';old=json.loads(quality_prep.read_bytes());assert sha(quality_prep)=='dc5faa3df70d706f88331b651a3a6562f22193750b14895a3ca7f6cafb0ef82c'
+names=[];derivations=[]
+for kind in ('probe','run','verify'):
+    source=W/(kind+'_b4_rowwise_http_benchmark.draft.py');target=M/(kind+'_b4_rowwise_http_benchmark.py');assert not target.exists();raw=source.read_bytes();ast.parse(raw);target.write_bytes(raw);names.append(target.name);derivations.append(dict(draft=source.name,draft_sha256=sha(source),target=target.name,target_sha256=sha(target)))
+deps=['verify_b4_rowwise_http_benchmark.py','o128_http_benchmark_contract.py','compare_http_runs.py','benchmark_fixed_length_native.py','benchmark_stream.py','metrics.py','sample_vram.py','cohort_memory_replay.py','b4_http_event_gate.py','b4_rowwise_http_admission.py']
+for n in deps:
+    if n not in names:assert old['files'][P+n]==sha(M/n),('Require unchanged qualified dependency',n)
+names+=['evidence/b4-rowwise-http-quality-preparation.json']
+# Include the independently retained publisher and saved-reference audit methods.
+for n in (W/'qwen38-publisher-reference-stage-paths.bin').read_bytes().rstrip(b'\0').split(b'\0'):
+    path=n.decode();prefix='test2026/cuda/qwen38_5090/'
+    if path.startswith(prefix):names.append(path.removeprefix(prefix))
+names=list(dict.fromkeys(names));sys.path[:0]=[str(M),str(R)];import run_logged as ledger
+ledger.source_identity=lambda:dict(scope='Explicit source91 B4 benchmark harness CLI smoke; model/source91 unchanged; no native/model/GPU execution',owned_source_sha256={n:sha(M/n) for n in list(dict.fromkeys(names+deps))})
+os.chdir(R)
+for n in ('probe_b4_rowwise_http_benchmark.py','verify_b4_rowwise_http_benchmark.py'):
+    assert ledger.run([sys.executable,str(M/n),'--help'],W/'b4-rowwise-http-benchmark-CLI-ledger','correctness','Import and CLI smoke for new raw benchmark collector/reader; exits before model, native executable or GPU work. Reuses unchanged source91 model/worker and existing SSE/metric/memory/ID checks.',[M/k for k in list(dict.fromkeys(names+deps))])==0
+events=[json.loads(n) for n in (W/'b4-rowwise-http-benchmark-CLI-ledger/commands.jsonl').read_bytes().splitlines()];assert len(events)==4
+for first,last in zip(events[::2],events[1::2]):assert last['exit_code']==0 and first['source']==last['source_after']
+def keep(n,raw):
+    path=E/n;assert not path.exists();path.write_bytes(raw);names.append('evidence/'+n)
+for ext in ('log','jsonl'):keep('b4-rowwise-http-benchmark-CLI-commands.'+ext,(W/'b4-rowwise-http-benchmark-CLI-ledger'/('commands.'+ext)).read_bytes())
+keep('b4-rowwise-http-benchmark-derivation.json',json.dumps(dict(target_files=derivations,qualified_quality_job=J,paired_quality_proof_sha256=sha(proof),native_model_source_files_unchanged=89,transport_source_files_unchanged=2,clean_worker_source_unchanged=True,CLI_smoke_passes=2,native_DLL_or_GPU_run=False),indent=2).encode())
+for n in ('draft-b4-http-benchmark-owner.py','b4-http-benchmark-owner-draft-derivation.json','draft-b4-http-benchmark-reader.py','b4-http-benchmark-reader-draft-derivation.json',Path(__file__).name):keep(n+('.txt' if n.endswith('.py') else ''),(W/n).read_bytes())
+files=dict(old['files'])
+for n in names:
+    key=P+n;h=sha(M/n)
+    if key in files:assert files[key]==h,('Preserve qualified source',n)
+    files[key]=h
+publisher='results/Qwen38-Publisher-and-Reference-Identity-Evidence.zip';files[publisher]=sha(O/Path(publisher).name)
+parents=dict(old['parents']);assert J not in parents;parents[J]=dict(proof_sha256=sha(proof),archive_sha256=q['archive_sha256'],status=q['status'],exit_code=0);assert len(parents)==59
+p={**old};p.update(status='B4_rowwise_HTTP_benchmark_prepared_GPU_unrun',files=files,archive_files=sorted(set(old['archive_files'])|{P+n for n in names}|{publisher}),parents=parents,quality_job=J,reader_dependencies=deps,source91_quality_preparation_sha256=sha(quality_prep),scope='Clean fixed3968+128 nativeWindows B4T32/T4 rowwise-K/MTP3 HTTP benchmark after independently paired805+31control quality proof. Same89 model members plus the same two transport members/source91bundle4ccee24a, same native e843 DLL and worker/bridge10msQPC grouping; no native build/math/precision/profile changes. Three repeats on one worker, each64measured+60warmups across text/image C1/2/4/8:372realrequests,192measured,180warmup. Existing raw SSE/client-QPC metrics and sampled adapter VRAM replay; all124prompt/output IDs pertrial exact retained B1, real-only native callbacks and actual dispatcher rows. No large transport fixture in timing.18guarded snapshotfiles comprise15publisherassets+3localbookkeeping; all current15publisherassets independently verified, including3LFSshards.59closedparents, allsource/runtime/SDK/config-index/CMake/all34/full18file restoration, private96GiB Ccache admission/ownednonce retirement. Ordinary vLLM/SGLang references remain provisional: stronger tuned/MTP references, representative reference quality and cross-engine output equivalence remain unqualified. No automatic2x or halfTTFT admission. No repeated unchanged CPU/model correctness runs in clean timing owner; it requires closed actual quality proof and guards exact source/DLL. Two new collector/reader CLI smokes pass; benchmark results require independent raw replay.')
+p.pop('expected_install_replacements',None);p.pop('latest_closed_failure',None)
+p['publisher_identity_archive']=publisher;p['published_asset_identity_sha256']=sha(E/'qwen38-pinned-publisher-assets-comparison.json')
+p['installed_files']={**files,**{'Garnet/'+n:h for n,h in p['source_files'].items()}}
+required=set()
+for n in ('run_b4_rowwise_http_benchmark.py','probe_b4_rowwise_http_benchmark.py','verify_b4_rowwise_http_benchmark.py'):
+    for node in ast.walk(ast.parse((M/n).read_bytes())):
+        if isinstance(node,ast.Subscript) and isinstance(node.value,ast.Name) and node.value.id in ('p','prep') and isinstance(node.slice,ast.Constant) and isinstance(node.slice.value,str):required.add(node.slice.value)
+assert required<=set(p),sorted(required-set(p));prep=E/'b4-rowwise-http-benchmark-preparation.json';assert not prep.exists();prep.write_bytes(json.dumps(p,indent=2).encode())
+deploy={P+n:M/n for n in names};deploy[P+'evidence/'+prep.name]=prep;deploy[publisher]=O/Path(publisher).name;package=W/'b4-rowwise-http-benchmark-deployment.zip';assert not package.exists()
+with zipfile.ZipFile(package,'x',zipfile.ZIP_DEFLATED) as z:
+    for n,path in deploy.items():z.write(path,n)
+    z.writestr('deployment-manifest.json',json.dumps(dict(files={n:sha(path) for n,path in deploy.items()},native_DLL_or_model_source_change=False),indent=2))
+receipt=dict(deployment_sha256=sha(package),bytes=package.stat().st_size,files=len(deploy),preparation_sha256=sha(prep),paired_quality_proof_sha256=sha(proof),source91_bundle_sha256=p['bundle_sha256'],native_library_sha256=p['library_sha256'],parents=59,CLI_smoke_passes=2,literal_preparation_reads_present=sorted(required),native_DLL_or_model_source_changed=False,benchmark_GPU_unrun=True)
+(W/'b4-rowwise-http-benchmark-package.json').write_bytes(json.dumps(receipt,indent=2).encode());(W/'b4-rowwise-http-benchmark-owned-names.json').write_bytes(json.dumps(names).encode());print(json.dumps(receipt))

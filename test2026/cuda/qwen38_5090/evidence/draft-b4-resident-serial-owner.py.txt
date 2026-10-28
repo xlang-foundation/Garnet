@@ -1,0 +1,26 @@
+"""Prepare the next exclusive owner without changing the live source tree."""
+from pathlib import Path
+import ast,hashlib,json
+W=Path(__file__).resolve().parent;M=Path('D:/CantorAI/work/qwen38-5090/test2026/cuda/qwen38_5090');source=M/'run_b4_rowwise_http_quality.py';raw=source.read_bytes();s=raw.decode().replace('\r\n','\n');steps=[]
+def change(old,new):
+    global s
+    count=s.count(old);assert count>0,(old,count);s=s.replace(old,new);steps.append(dict(old=old,new=new,count=count))
+change('b4-rowwise-http-quality-attempt3','b4-resident-serial-quality-attempt1')
+change('b4-rowwise-http-quality-preparation.json','b4-resident-serial-quality-preparation.json')
+change('B4_rowwise_HTTP_quality_prepared_GPU_unrun','B4_resident_serial_HTTP_quality_prepared_GPU_unrun')
+change('B4_rowwise_HTTP_controls_and_adapted805_collected_needs_independent_replay','B4_resident_serial_HTTP_controls_and_adapted805_collected_needs_independent_replay')
+change('B4_rowwise_HTTP_quality_collected_needs_independent_replay','B4_resident_serial_HTTP_quality_collected_needs_independent_replay')
+change('probe_b4_rowwise_http_quality.py','probe_b4_resident_serial_quality.py')
+change("'Nineteen CPU startup/source-bundle/protocol/raw-event replay controls; no model/GPU or performance claim.'","'Six new pure CPU graph-counter admission controls. Existing source91 protocol/805 admission remains mandatory; no model/GPU or performance claim.'")
+change("'19 CPU controls failed'","'6 CPU controls failed'")
+change("str(M/'launch_b4_http_embedded_cpu.py'),str(ROOT)","str(M/'launch_b4_resident_serial_controls.py'),str(ROOT),'embedded-cpu'")
+change("'Same17 symbolic controls in actual embedded native Python. No model imports or GPU requests.'","'Same six new graph-counter controls in actual embedded Python. No native/model/GPU imports.'")
+change("'17 embedded controls failed'","'6 embedded controls failed'")
+change("        idle();argv=[sys.executable,str(M/'monitor_native_probe.py')", """        idle();(out/'resident-io').mkdir()
+        code=ledger.run([sys.executable,str(M/'launch_b4_resident_serial_controls.py'),str(ROOT),'resident-io',str(out/'resident-io/result.json')],out/'resident-io-ledger','correctness','Actual embedded native host-mapped BF16 embedding and resident controls versus independent legacy copy/gather, B4 T4/16/32 three trials each; CPU argument lifetime, zero/inactive padding and invalid-input no-mutation. Scalar data transport only, no model or speed admission.',common+[library]);w['resident_io_exit_code']=code;save();idle();assert code==0,'Resident IO byte comparison failed'
+        argv=[sys.executable,str(M/'monitor_native_probe.py')""")
+change("'Actual source91 B4/MTP3 loopback HTTP: fixed3968+128 padding/order/repeat C1/2/3/4 and C8, joined transport fixture, text/image SSE, invalid ignore_eos, adapted805 natural-stop collection. Full raw IDs compared with retained B1 controls. No performance admission.'","'Candidate existing resident-control plus serial-graph-reuse policy, unchanged source91 model/DLL. Actual B4/MTP3 fixed3968+128 boundary/C8/SSE/negative controls and adapted805 full-ID equivalence to retained B1; opt-in graph counters require actual reuse. No performance admission.'")
+change("'Explicit source91 B4 HTTP study; source89 model unchanged; protected unrelated bodies excluded'","'Explicit candidate resident/serial B4 HTTP study; source91 model and native DLL unchanged; protected unrelated bodies excluded'")
+ast.parse(s);target=W/'run_b4_resident_serial_quality.draft.py';assert not target.exists();target.write_bytes(s.encode())
+(W/'b4-resident-serial-owner-draft-derivation.json').write_bytes(json.dumps(dict(source_sha256=hashlib.sha256(raw).hexdigest(),draft_sha256=hashlib.sha256(target.read_bytes()).hexdigest(),changes=steps,original_exclusive_source_runtime_checkpoint_all34_restoration_retained=True,native_IO_added_before_model=True,syntax_checked_only=True,remote_execution_unrun=True),indent=2).encode())
+print('Exclusive resident/serial owner draft prepared; native and model execution unrun')

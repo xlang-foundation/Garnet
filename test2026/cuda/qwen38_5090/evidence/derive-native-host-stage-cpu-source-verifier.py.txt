@@ -1,0 +1,32 @@
+from pathlib import Path
+import ast
+import hashlib
+import json
+
+methods = Path('D:/CantorAI/work/qwen38-5090/test2026/cuda/qwen38_5090')
+source = methods / 'verify_native_host_stage.py'
+text = source.read_bytes().decode()
+changes = []
+def replace(before, after):
+    global text
+    assert text.count(before) == 1, before
+    text = text.replace(before, after)
+    changes.append([before, after, 1])
+
+needle = 'from test2026.cuda.qwen38_5090.native_host_stage_admission import replay_report'
+replace(needle, needle + '\nfrom test2026.cuda.qwen38_5090.native_host_stage_cpu_source import replay_supplement')
+replace('    fresh = peak = binding = None', '    fresh = peak = binding = None\n    cpu_supplement = None')
+replace("            assert ('Ran ' + str(p['expected_cpu_test_count']) + ' tests').encode() in log and b'\\nOK' in log",
+        "            assert b'Ran 27 tests' in log and b'\\nOK' in log\n            cpu_supplement = replay_supplement(archive, workflow, p, args.proofs)")
+replace("'retained_case_binding': binding,", "'retained_case_binding': binding, 'cpu_source_supplement': cpu_supplement,")
+ast.parse(text)
+target = methods / 'verify_native_host_stage_cpu_source.py'
+assert not target.exists()
+target.write_bytes(text.encode())
+row = {'source': source.name, 'source_sha256': hashlib.sha256(source.read_bytes()).hexdigest(),
+       'result': target.name, 'result_sha256': hashlib.sha256(target.read_bytes()).hexdigest(),
+       'changes': changes, 'scope': 'Separate verifier preserves original27count and requires a separately archived actual29test source-pinned supplement before replaying all unchanged raw host/token/case/timing/memory checks. Original archive/preparation/strict checker retained. No data/numeric/timing tolerance changed.'}
+path = methods / 'evidence/native-host-stage-cpu-source-verifier-derivation.json'
+assert not path.exists()
+path.write_text(json.dumps(row, indent=2), encoding='utf8')
+print(json.dumps({key: value for key, value in row.items() if key != 'changes'}))

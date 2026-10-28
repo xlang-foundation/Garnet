@@ -1,0 +1,25 @@
+from pathlib import Path
+import argparse,hashlib,json,subprocess,zipfile
+W=Path(__file__).resolve().parent;O=W.parent/'outputs';R=Path('D:/CantorAI/work/qwen38-5090');E='test2026/cuda/qwen38_5090/evidence/';sha=lambda b:hashlib.sha256(b).hexdigest();owned=[]
+a=argparse.ArgumentParser();a.add_argument('--attempt',type=int,choices=(1,2,3),required=True);args=a.parse_args();JOB='decode-projection-diagnostic-attempt'+str(args.attempt);prefix='decode-projection'+('' if args.attempt==1 else '-attempt'+str(args.attempt))
+def put(n,b):
+    t=R/n;assert t.resolve().is_relative_to(R.resolve()) and (not t.exists() or t.read_bytes()==b),n;t.parent.mkdir(parents=True,exist_ok=True);t.write_bytes(b);owned.append(n)
+raw=(O/(JOB+'-verified.json')).read_bytes();assert raw==(O/(JOB+'-remote-verified.json')).read_bytes();q=json.loads(raw);archive=O/(JOB+'-evidence.zip');assert sha(archive.read_bytes())==q['archive_sha256'] and q['source_runtime_SDK_checkpoint_restored'] and q['original_short_model_job_remains_failed']
+for suffix in ('-verified.json','-remote-verified.json'):put(E+JOB+suffix,(O/(JOB+suffix)).read_bytes())
+with zipfile.ZipFile(archive) as z:
+    for n in z.namelist():
+        if n.startswith('results/'+JOB+'/') and n.endswith(('.json','.jsonl','.log','.txt')):put(E+JOB+'-'+n.removeprefix('results/'+JOB+'/').replace('/','-'),z.read(n))
+    put(E+JOB+'-manifest.json',z.read('evidence-manifest.json'))
+reader='verify-decode-projection-diagnostic'+('' if args.attempt==1 else '-attempt'+str(args.attempt))+'.py'
+for n in (reader,'run-'+prefix+'-postprocess.py','replay-decode-projection-local.py','retain-decode-projection-outcome.py'):put(E+prefix+'-'+n+'.txt',(W/n).read_bytes())
+put(E+prefix+'-closure-receipt.json',(W/(prefix+'-closure-receipt.json')).read_bytes())
+for n in ('commands.log','commands.jsonl'):put(E+prefix+'-local-replay-'+n,(W/(prefix+'-local-replay-ledger')/n).read_bytes())
+with zipfile.ZipFile(W/(prefix+'-closure-assets.zip')) as z:
+    for n in z.namelist():
+        if n.startswith('results/'+prefix+'-postprocess/'):put(E+prefix+'-remote-'+n.removeprefix('results/'+prefix+'-postprocess/').replace('/','-'),z.read(n))
+    put(E+prefix+'-closure-manifest.json',z.read('manifest.json'))
+summary={**q,'paired_proof_sha256':sha(raw)};blob=json.dumps(summary,indent=2).encode();put(E+prefix+'-research-summary.json',blob);(O/('Garnet-Decode-Projection-Attempt'+str(args.attempt)+'-Verified.json')).write_bytes(blob)
+text='\r\n\r\n### %s original decode projection outcome independently closed\r\n\r\n2026-10-27: Job exits%s; status %s; phase errors %s. Raw archive %s (%sB/%smembers), paired proof %s, identical independent remote/local CPU replay of manifest/source/method/parent/raw arrays or capture failure. All source/runtime/SDK/checkpoints restored. Capture result %s. First failed model short gate remainsFAILED; this diagnostic cannot qualify fullmodel, quality or timing. Raw arrays/logs/SDK traces retained in immutable ZIP on both PCs, text reports/methods/hash proof retained on branch. No new native math or2x claim.\r\n'%(JOB,q['exit_code'],q['status'],json.dumps(q['phase_errors']),q['archive_sha256'],q['archive_bytes'],q['archive_members'],sha(raw),'No arrays captured; exact phase errors above preserved.' if q['comparison'] is None else json.dumps({k:v for k,v in q['comparison'].items() if k!='comparisons'}))
+for n in ('docs/research/qwen38-5090-development-log.md','docs/research/qwen38-5090-implementation-task.md'):
+    t=R/n;before=t.read_bytes();assert ('### '+JOB+' original decode projection outcome').encode() not in before;t.write_bytes(before+text.encode());assert t.read_bytes()[:len(before)]==before;owned.append(n)
+subprocess.run(['git','-C',str(R),'-c','core.autocrlf=false','add','--pathspec-from-file=-','--pathspec-file-nul'],input=('\0'.join(owned)+'\0').encode(),check=True);print(json.dumps(dict(status='decode_projection_outcome_retained',job=JOB,paths=len(owned),paired_proof_sha256=sha(raw))))

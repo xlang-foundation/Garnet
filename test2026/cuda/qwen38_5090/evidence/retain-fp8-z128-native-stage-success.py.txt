@@ -1,0 +1,55 @@
+"""Retain actual all-eight-profile success; earlier initialization failures stay unresolved."""
+from pathlib import Path
+import hashlib,json,re,zipfile
+work=Path(__file__).resolve().parent;out=work.parent/'outputs';repo=Path('D:/CantorAI/work/qwen38-5090');m=repo/'test2026/cuda/qwen38_5090';e=m/'evidence';JOB='fp8-z128-native-package-audit-attempt1';PREFIX='Garnet/test2026/cuda/qwen38_5090/';paths=[];sha=lambda raw:hashlib.sha256(raw).hexdigest()
+
+def keep(name,raw):
+    target=e/name;assert not target.exists() or target.read_bytes()==raw,target
+    if not target.exists():target.write_bytes(raw)
+    paths.append(target.relative_to(repo).as_posix())
+
+proof=(out/(JOB+'-verified.json')).read_bytes();q=json.loads(proof);assert proof==(out/(JOB+'-remote-verified.json')).read_bytes() and q['status']=='fp8_z128_native_package_all8_stage_profiles_and_cold_context_replayed'
+assert q['profiles_observed']==8 and q['unchanged_T32_baseline_arrays_compared']==400 and q['complete_finite_array_entries']==509 and not q['post_failure_audit_invoked'] and not q['initialization_failure_reliability_resolved']
+full=q['array_replay'];assert full['controlled_first128_all11_stages_exact'] and full['native_Z128_counters_verified'] and full['array_replay']['complete_output_f32_words_replayed']==98205696
+archive=out/(JOB+'-evidence.zip');assert sha(archive.read_bytes())==q['archive_sha256']
+with zipfile.ZipFile(archive) as z:
+    manifest=json.loads(z.read('evidence-manifest.json'));assert z.testzip() is None and len(z.namelist())==len(set(z.namelist()))==len(manifest['files'])+1
+    for name,h in manifest['files'].items():assert sha(z.read(name))==h
+    base='results/'+JOB+'/';praw=z.read(PREFIX+'evidence/fp8-z128-native-package-audit-preparation.json');p=json.loads(praw);w=json.loads(z.read(base+'workflow.json'))
+    assert w['exit_code']==0 and w['cleanup_finished'] and w['baseline_source_restored'] and w['baseline_library_restored']
+    keep(JOB+'-evidence-manifest.json',z.read('evidence-manifest.json'));keep('fp8-z128-native-package-audit-preparation.json',praw)
+    for name in z.namelist():
+        if name.startswith(base) and name.endswith(('.json','.jsonl','.log','.txt')):keep(JOB+'-'+name.removeprefix(base).replace('/','-'),z.read(name))
+    for name,h in p['new_files'].items():
+        path=repo/name.removeprefix('Garnet/');assert sha(path.read_bytes())==h;paths.append(path.relative_to(repo).as_posix())
+    remote_cpu=float(re.search(rb'Ran 42 tests in ([0-9.]+)s',z.read(base+'cpu-ledger/commands.log')).group(1))
+    assert b'C4530' not in z.read(base+'audit-build-ledger/commands.log')
+for suffix in ('-verified.json','-remote-verified.json','-local-success-replay.log','-remote-success-replay.log'):keep(JOB+suffix,(out/(JOB+suffix)).read_bytes())
+for name in ('verify_fp8_z128_native_stage_success.py','evidence/fp8-z128-native-stage-success-verifier-derivation.json'):paths.append((m/name).relative_to(repo).as_posix())
+for name in ('fp8-z128-native-package-audit-package.json','fp8-z128-native-package-audit-install.json'):keep(name,(work/name).read_bytes())
+for name in ('derive-fp8-z128-native-package-audit.py','extend-fp8-z128-native-package-identity.py','derive-fp8-z128-native-stage-success.py','install-fp8-z128-native-package-audit.py','retain-fp8-z128-native-stage-success.py'):keep(name+'.txt',(work/name).read_bytes())
+for path in (work/'fp8-z128-native-package-audit-local-cpu-ledger').iterdir():
+    if path.is_file():keep('fp8-z128-native-package-audit-local-cpu-'+path.name,path.read_bytes())
+with zipfile.ZipFile(work/(JOB+'-transport.zip')) as z:transport=json.loads(z.read('transport.json'))
+assert transport['original_sha256']==q['archive_sha256'] and transport['original_proof_sha256']==sha(proof)
+keep(JOB+'-transport-receipt.json',json.dumps({'transport_sha256':sha((work/(JOB+'-transport.zip')).read_bytes()),'transport_bytes':(work/(JOB+'-transport.zip')).stat().st_size,'exact_original_reconstruction':transport},indent=2).encode())
+plan={'status':'all8_controlled_stages_exact_full4K_model_gate_next_initialization_reliability_open','steps':[
+ 'Keep both earlier sameDLL initialization failures and this successful run immutable. This run reached all8profiles without error; the postfailure observer hook never executed. Cold helper selected the pinned opaque configuration and passed AlgoCheck, but no warmfailure candidate report exists. Initialization cause/reliability remains unproven; do not invent a fix or benchmark.',
+ 'Prepare full4K model admission from current closed native28 source/DLL plus seven byte-identical existing target128/T4/draft16 Python profile files:35candidate files,12existing targets restored/23owned new removed. Preserve all existing source bytes, no source/kernel change to exploit the transient success.',
+ 'Retain separate off/default full-model graph-construction control for both GDNoutM128 and Z128 policies; target128 counts0off/48on for each, decode4 and draft4/draft16/vision/optional norm counts0. Keep policies defaultoff outside explicit study. Compose latest native source provenance rather than weakening/silently skipping older superseded single-stage source assertions.',
+ 'Then unchanged six3968+128 text/image/reset-repeat ordinary/MTP cases, exact128IDs/32statewitnesses/64completefinite rawvectors versus retained1a1d T32 oracle, T4verification/T16draft and callbacks. Ordinary observations saved before equality assertion. Add only newZ selection checks and, if initialization recurs, record nativepostfailure selection separately before cleanup. No numerical gates relaxed.',
+ 'Only after full4K correctness,805quality and initialization concerns are qualified proceed to matched HTTP repetitions/strongest feasible tunedMTP references, INT4/4B and B8 arithmetic. Overall2xdecodeANDconcurrencythroughput and halfTTFTextra remain unmet; existing charts unchanged.'
+ ],'model_or_quality_or_performance_qualified':False,'two_times_target_achieved':False}
+keep('fp8-z128-full4K-model-next-plan.json',json.dumps(plan,indent=2).encode())
+result={'status':plan['status'],'archive_sha256':q['archive_sha256'],'archive_bytes':archive.stat().st_size,'archive_members':len(manifest['files'])+1,'proof_pair_sha256':sha(proof),'candidate_library_sha256':q['candidate_library_sha256'],'observer_library_sha256':q['observer_library_sha256'],'native_package_library_sha256':q['native_package_library_sha256'],'CPU_tests':42,'remote_CPU_seconds':remote_cpu,'native_ABI':24,'actual_native_ABI_CPU_calls':5,'loaded_native_DLL_identity_checked':True,'cold_helper_observation':q['context_observations']['cold'],'profiles':8,'complete_finite_entries':509,'output_F32_words_replayed':98205696,'ordinary_diagnostic_primary_exact':True,'all11_stages_and_final_history_state_exact_both_layers':True,'old_T32_baseline_arrays_compared':400,'native_Z128_counters_verified':True,'post_failure_audit_invoked':False,'initialization_failure_reliability_resolved':False,'source_pins':len(p['files']),'installed_pins':len(p['installed_files']),'existing_targets_restored':8,'new_targets_removed':20,'source_runtime_SDK_checkpoint_restored':True,'full3968_model_or_805quality_or_performance_qualified':False,'two_times_target_achieved':False,'next_plan':plan}
+raw=json.dumps(result,indent=2).encode();keep('fp8-z128-native-stage-success-closure.json',raw);(out/'Garnet-FP8-Z128-All-Stages-Verified.json').write_bytes(raw)
+title='All8 real128 GDN profiles now replay exactly; sameDLL initialization failure did not recur'
+text='\n\n### 2026-10-26 — '+title+'\n\n'
+text+='Private native adapter now uses /EHsc and adds readonly ownmodulepath, derivedexact from CPUqualified ABI24 adapter.42CPU controls pass local4.217s/remote'+str(remote_cpu)+'s. Actual5nativeCPUcalls (ABI,loadedpath,3reject-before-loader guards) pass; actualmodulepath/SHAmatchesownedbuild, noC4530. Existing observerDLL '+q['observer_library_sha256']+' unchanged. Cold actualhelper constructor succeeds, expectedfullopaque atfirstsuccessfulindex0, actualM128AlgoCheck succeeds, ID67, requiredworkspace0/4MiBsupplied,0matmulcalls. No libffi orSDK edits.\n\n'
+text+='Unexpectedly, unchangednative28 GarnetDLL '+q['candidate_library_sha256']+' andsame maincollector/order completed all8 layer0/1T32/T128ordinary/diagnostic profiles. All10frontendmalformedattrs reject;3warmups/2repeats. Fullindependent replay509finiteentries/98,205,696F32 outputwords: all11stages, readonly/carriedinputs, repeats andordinary-diagnostic primaryexact, finalhistory/stateexactbothlayers. All400T32 input/state/outputarrays exactlyequal priorclosedoldstagebaseline. NewZcounter1atT128only, oldGDNoutcounterunchanged. Actualfirst128nonrepeatedtokens fromfrozen3968prompt; layer1commoninputretainedT32layer0output, notfullcandidatechain.\n\n'
+text+='Mainrun succeeded, so plannedpostfailurehook neverinvoked; no warmfailure opaquechoices captured. Earlier two sameDLL PluginV2Runner.allocateResources failures remain unexplained. Do notclaimrootcausefixed, deterministicinitialization, full3968modelcause,805quality orperformance. Original failure-specific verifier/preparation/source preserved; distinctpost-observation full-success verifier adds mandatoryall8profiles/allwords/400oldbaselinecomparisons andallnativeABI/restoration checks, no numerical gate relaxation.\n\n'
+text+='Fullsuccess verifier passesbothmachines withidenticalproof '+sha(proof)+'. Original archive '+q['archive_sha256']+' ('+str(archive.stat().st_size)+'bytes/'+str(len(manifest['files'])+1)+'members) reconstructed byteexact fromlosslessdeduptransport, fullCRC/manifest checked.966source/986installed/runtime/selectedSDK/checkpointpins restored;8oldtargetsrestored/20newremoved/baseline1a1dDLL/ownedSSDcache restored. Allsource/binaries/rawarraypieces/logs/resources/coldcandidateopaques retained.\n\n'
+text+='Nextfullmodel35source trial =native28plus7existingPythonprofilebytes,12old/23new restoration. Separateoff/on graphcountsforbotholdGDNoutM128andnewZ128 (target12848eachon/0off,decode4/draft4/draft16/vision/norm0), then unchangedstrictsix3968+128text/image/reset-repeat ordinary/MTP oracle. Keep exact128IDs/32statewitnesses/64rawvectors/callbacks; saveordinarydata beforeassertions. Onlyafterfullmodel/805quality/initialization qualification: HTTP/repetitions/strongestMTPrefs/INT4/4B/B8. Original2xdecodeANDthroughput/halfTTFTextra remainactive; chartsunchanged.\n'
+for name in ('qwen38-5090-development-log.md','qwen38-5090-implementation-task.md'):
+    target=repo/'docs/research'/name;before=target.read_bytes();assert title.encode() not in before;target.write_bytes(before+text.encode());paths.append(target.relative_to(repo).as_posix())
+(work/'fp8-z128-native-stage-success-retained-paths.json').write_bytes(json.dumps(sorted(set(paths)),indent=2).encode());print(json.dumps({'status':result['status'],'retained_paths':len(set(paths)),'proof_pair_sha256':sha(proof)}))

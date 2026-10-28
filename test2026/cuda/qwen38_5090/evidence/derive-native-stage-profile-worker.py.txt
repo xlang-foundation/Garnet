@@ -1,0 +1,22 @@
+from pathlib import Path
+import ast,hashlib,json,zipfile
+W=Path(__file__).resolve().parent;O=W.parent/'outputs';R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';E=M/'evidence';sha=lambda b:hashlib.sha256(b).hexdigest()
+J='o128-http-benchmark-attempt1';q=json.loads((O/(J+'-verified.json')).read_bytes());archive=O/(J+'-evidence.zip');assert sha(archive.read_bytes())==q['archive_sha256'] and q['exit_code']==0
+with zipfile.ZipFile(archive) as z:
+    key='Garnet/test2026/cuda/qwen38_5090/native_o128_stream_worker.py';raw=z.read(key);assert sha(raw)==json.loads(z.read('evidence-manifest.json'))['files'][key]
+assert (M/'native_o128_stream_worker.py').read_bytes()==raw
+text=raw.decode().replace('\r\n','\n');steps=[]
+replacements=[
+ ("from test2026.cuda.qwen38_5090.fixed_length_policy import generation_stop_ids","from test2026.cuda.qwen38_5090.fixed_length_policy import generation_stop_ids\nfrom test2026.cuda.qwen38_5090.native_stage_timing import StageRecorder\nfrom test2026.cuda.qwen38_5090.native_stage_attachment import StageAttachment",1),
+ ('decoder=vision=session=None','decoder=vision=session=None;recorder=attachment=None',1),
+ (" emit({'event':'ready'"," recorder=StageRecorder(emit);attachment=StageAttachment(session,recorder)\n emit({'event':'ready'",1),
+ ("'performance_admitted':False,'o128_admission'","'performance_admitted':False,'host_stage_profile':True,'CUDA_kernel_elapsed_claimed':False,'o128_admission'",1),
+ ("  started=time.monotonic();body=job['body']","  recorder.start_request(job['id']);prepare_span=recorder.begin('prepare_input')\n  started=time.monotonic();body=job['body']",1),
+ ("  generated=[];text=''","  recorder.end(prepare_span)\n  generated=[];text=''",1),
+ ('  metrics=None',"  notify=recorder.wrap(notify,'token_delivery')\n  metrics=None",1),
+ ("'native_elapsed_seconds':time.monotonic()-started})","'native_elapsed_seconds':time.monotonic()-started})\n  recorder.finish_request()",1),
+ ("finally:\n if session is not None:session.close()\n if vision is not None:vision.close()\n if decoder is not None:decoder.close()", "finally:\n try:\n  if recorder is not None and recorder.active is not None:\n   while len(recorder.stack)>1:recorder.end(recorder.stack[-1][0],False)\n   recorder.finish_request(False)\n finally:\n  try:\n   if attachment is not None:attachment.close()\n  finally:\n   if session is not None:session.close()\n   if vision is not None:vision.close()\n   if decoder is not None:decoder.close()",1)]
+for old,new,count in replacements:
+    assert text.count(old)==count,(old,text.count(old));text=text.replace(old,new);steps.append(dict(old=old,new=new,count=count))
+ast.parse(text);target=M/'native_o128_stage_profile_worker.py';assert not target.exists();target.write_bytes(text.encode())
+out=E/'native-o128-stage-profile-worker-derivation.json';assert not out.exists();out.write_bytes(json.dumps(dict(source=key,source_sha256=sha(raw),qualified_benchmark_archive_sha256=q['archive_sha256'],target=target.name,target_sha256=sha(text.encode()),changes=steps,instrumentation_only=True,model_request_arguments_and_output_ID_checks_preserved=True,native_GPU_execution_unrun=True,clean_throughput_or_CUDA_kernel_timing_claimed=False),indent=2).encode());print(json.dumps(dict(status='host_profile_worker_prepared_unrun',source_sha256=sha(raw),target_sha256=sha(text.encode()))))

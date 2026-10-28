@@ -1,0 +1,15 @@
+from pathlib import Path
+import ast,json,zipfile
+W=Path(__file__).resolve().parent;R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';E=M/'evidence';owned=[E/'b4-decode-m16-build-inputs.json',E/'b4-decode-m16-build-preparation.json']
+for name in ('prepare-b4-decode-m16-native-build.py','install-b4-decode-m16-native-build.py','postprocess-b4-decode-m16-native-build.py','retain-b4-decode-m16-native-preparation.py','b4-decode-m16-native-package.json'):
+    raw=(W/name).read_bytes()
+    if name.endswith('.py'):ast.parse(raw)
+    target=E/(name+'.txt' if name.endswith('.py') else name);assert not target.exists();target.write_bytes(raw);owned.append(target)
+with zipfile.ZipFile(W/'b4-decode-m16-build-inventory-assets.zip') as z:
+    for name in ('commands.log','commands.jsonl'):
+        target=E/('b4-decode-m16-build-input-inventory-'+name);assert not target.exists();target.write_bytes(z.read('results/b4-decode-m16-build-input-inventory/'+name));owned.append(target)
+    target=E/'b4-decode-m16-build-input-inventory-manifest.json';assert not target.exists();target.write_bytes(z.read('manifest.json'));owned.append(target)
+p=json.loads((W/'b4-decode-m16-native-package.json').read_bytes());text=('\r\n\r\n### Actual67source native build prepared after fresh inventory\r\n\r\n2026-10-27: Fresh remote readonly inventory verifies restored1374baseline,67candidate targets(14present/53absent),6runtime/23SDKinputs,2checkpointmetadata files,CMakeCache,all34current61build CUDAobjects andclosed402CPU/SDK/native61/failedshort parents.564.34GiBfree onstudy volume atinventory. Native67sourcebundle '+p['source_bundle_sha256']+', preparation '+p['preparation_sha256']+', deployment '+p['deployment_sha256']+';201explicitownedfiles, no productionoverlay/DLLinstallation atpreparation. Frozen tokenizer oracle retained.\r\n\r\nOriginalnativebuild/replay guards preserved viaexactrecordedderivation:74current+86historicalPythoncontrols onparent50;originalQ/O278profilecases,182factoryfaults,Q/Owire/630+720initializecalls,20selector/955tokenizer smoke; original3CUDAobjectwhitelist andallsource/runtime/SDK/checkpoint/CMake/DLLrestoration. NewactualSDKcontrol andpaired437/402CPUcontracts requiredparents. Nativebuild UNRUN atthisentry; no mathematical/model/quality/timingqualification or2xclaim. Originalcache62strictobjectfailure andB4shortdecodefailure notcleared; fullB1/B4 short/tail/full4Ktext-image/state/vector/ID/reset/MTP/805/HTTPgates andstrongestmatchedrefs/INT4/4B remainopen.\r\n').encode()
+for name in ('docs/research/qwen38-5090-development-log.md','docs/research/qwen38-5090-implementation-task.md'):
+    target=R/name;before=target.read_bytes();target.write_bytes(before+text);assert target.read_bytes().startswith(before);owned.append(target)
+(W/'b4-decode-m16-native-preparation-owned-paths.json').write_bytes(json.dumps([n.relative_to(R).as_posix() for n in owned],indent=2).encode());(W/'b4-decode-m16-native-preparation-stage-paths.bin').write_bytes(b'\0'.join(n.relative_to(R).as_posix().encode() for n in owned)+b'\0');print(json.dumps(dict(owned_files=len(owned),status=p['status'])))

@@ -1,0 +1,25 @@
+from pathlib import Path
+import hashlib,json
+M=Path('D:/CantorAI/work/qwen38-5090/test2026/cuda/qwen38_5090');rows=[];sha=lambda b:hashlib.sha256(b).hexdigest()
+def derive(src,dst,changes):
+    original=(M/src).read_bytes();raw=original
+    for a,b,n in changes:assert raw.count(a.encode())==n,(src,a,raw.count(a.encode()));raw=raw.replace(a.encode(),b.encode())
+    if (M/dst).exists() and (M/dst).read_bytes()!=raw:
+        prior=json.loads((M/'evidence/fa3-projection-witness-attempt2-derivation.json').read_bytes());previous=next(r for r in prior['files'] if r['target']==dst);assert sha((M/dst).read_bytes())==previous['target_sha256']
+    (M/dst).write_bytes(raw);rows.append(dict(source=src,target=dst,source_sha256=sha(original),target_sha256=sha(raw),changes=[dict(before=a,after=b,count=n) for a,b,n in changes]))
+original=(M/'fa3_projection_witness.py').read_bytes();start=original.index(b'STAGES=');end=original.index(b'def difference(');layout=b'"""Embedded-compatible metadata; numerical replay stays in external Python."""\nimport hashlib,math\n'+original[start:end];target=M/'fa3_projection_witness_layout.py';assert not target.exists() or target.read_bytes()==layout;target.write_bytes(layout)
+derive('probe_fa3_projection_witness.py','probe_fa3_projection_witness_attempt2.py',[
+('evidence/fa3-projection-witness-gpu-preparation.json','evidence/fa3-projection-witness-gpu-preparation-attempt2.json',1),('qwen38_5090.fa3_projection_witness import STAGES,check_graph,weight_metadata','qwen38_5090.fa3_projection_witness_layout import STAGES,check_graph,weight_metadata',1)])
+derive('test_fa3_projection_witness.bat','test_fa3_projection_witness_attempt2.bat',[('probe_fa3_projection_witness.py','probe_fa3_projection_witness_attempt2.py',1)])
+derive('run_fa3_projection_witness.py','run_fa3_projection_witness_attempt2.py',[
+("JOB='fa3-projection-witness-attempt1'","JOB='fa3-projection-witness-attempt2'",1),('evidence/fa3-projection-witness-gpu-preparation.json','evidence/fa3-projection-witness-gpu-preparation-attempt2.json',1),('test_fa3_projection_witness.bat','test_fa3_projection_witness_attempt2.bat',1),('14CPU new source/profile/finite-array/readonly/repeat fault controls','15CPU new source/profile/finite-array/readonly/repeat/retry fault controls',1),
+('        library.write_bytes(candidate.read_bytes());', '''        code=ledger.run(['cmd.exe','/d','/c',str(M/'test_fa3_projection_embedded_metadata.bat'),str(out/'embedded-metadata.json')],out/'embedded-metadata-ledger','correctness','Actual embedded Python stdlib metadata import before requesting any Garnet/GPU resource',common)
+        if code:raise RuntimeError('Embedded metadata import failed before GPU')
+        library.write_bytes(candidate.read_bytes());''',1)])
+derive('verify_fa3_projection_witness.py','verify_fa3_projection_witness_attempt2.py',[
+('fa3-projection-witness-attempt1','fa3-projection-witness-attempt2',1),('evidence/fa3-projection-witness-gpu-preparation.json','evidence/fa3-projection-witness-gpu-preparation-attempt2.json',1),("b'Ran 14 tests'","b'Ran 15 tests'",1),
+('            arrays=replay(r,', '''            metadata=doc(base+'embedded-metadata.json');assert metadata['status']=='embedded_FA3_metadata_import_passed' and metadata['numpy_imported'] is metadata['GPU_or_Garnet_requested'] is False
+            em=[json.loads(line) for line in z.read(base+'embedded-metadata-ledger/commands.jsonl').splitlines()];assert len(em)==2 and em[1]['exit_code']==0 and em[0]['source']['owned_source_sha256']==em[1]['source_after']['owned_source_sha256']==p['installed_files']
+            arrays=replay(r,''',1)])
+p=dict(status='embedded_metadata_import_repaired_without_native_or_model_or_array_change',files=rows,layout_source='fa3_projection_witness.py',layout_target='fa3_projection_witness_layout.py',layout_source_sha256=sha(original),layout_target_sha256=sha(layout),layout_body_start='STAGES=',layout_body_end='def difference(',native_candidate_files_unchanged=44)
+(M/'evidence/fa3-projection-witness-attempt2-derivation.json').write_bytes(json.dumps(p,indent=2).encode());print('derived embedded metadata split and',len(rows),'retry methods')

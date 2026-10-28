@@ -1,0 +1,33 @@
+{
+  "derivations": [
+    {
+      "base": "analyze_fp8_z128_stage_trace_failure.py",
+      "target": "analyze_fp8_z128_context_audit.py",
+      "base_sha256": "c1dacfab9aade1daa4830bf8d69b6d2acd5eeecc4a05990a59bfe81d4cd70f18",
+      "target_sha256": "fecc56acd7e1fde6c6bca1170375dd1c085ef5390a4d20cf0459f99f81d9fce7",
+      "changes": [
+        {
+          "before": "JOB='fp8-z128-stage-trace-attempt1'",
+          "after": "JOB='fp8-z128-context-audit-attempt1'"
+        },
+        {
+          "before": "proof['status']=='fp8_z128_same_DLL_initialization_trace_preserved'",
+          "after": "proof['status']=='fp8_z128_context_audit_and_partial_main_failure_preserved'"
+        },
+        {
+          "before": "proof['trace_bytes']>0",
+          "after": "set(proof['context_observations'])=={'cold','native'}"
+        },
+        {
+          "before": "'status':'fp8_z128_traced_T128_build_failure_with_exact_partial_T32_witness_replayed'",
+          "after": "'status':'fp8_z128_context_audit_partial_T32_primary_and_baseline_replayed'"
+        },
+        {
+          "before": "SameDLL cuBLASLt initializationtrace preservesfailure beforeAlgoCheck; exactguard/candidateopaque cause remainsunproven.",
+          "after": "SameDLL mainfailure preserved withpostfailure separateobservedactualhelper, completeopaquechoices/coldcontrol. DirectGarnetplugin/fullmodelcausality remainsunqualified."
+        }
+      ]
+    }
+  ],
+  "scope": "Preserve strict completepartialT32 baseline/state/primary/repeat replay; link cold/warm observationproof withoutbenchmark orT128admission."
+}

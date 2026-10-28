@@ -1,0 +1,70 @@
+{
+  "source": "run_z128_reconstructed_layer2.py",
+  "target": "run_fa3_projection_witness.py",
+  "source_sha256": "9576abbdc3afe8d3894028a73b3c05d127c330583729794ff4896e73814bc37b",
+  "target_sha256": "facab0335633483a279a9678164aa687ba87f55f95fef39037672759ae0468fc",
+  "changes": [
+    {
+      "before": "z128-reconstructed-layer2-attempt1",
+      "after": "fa3-projection-witness-attempt1",
+      "count": 1
+    },
+    {
+      "before": "evidence/z128-reconstructed-layer2-preparation.json",
+      "after": "evidence/fa3-projection-witness-gpu-preparation.json",
+      "count": 1
+    },
+    {
+      "before": "z128_reconstructed_layer2_prepared_gpu_unrun",
+      "after": "FA3_projection_witness_prepared_gpu_unrun",
+      "count": 1
+    },
+    {
+      "before": "len(p['candidate_files'])==43",
+      "after": "len(p['candidate_files'])==44",
+      "count": 1
+    },
+    {
+      "before": "len(set(z.namelist()))==43",
+      "after": "len(set(z.namelist()))==44",
+      "count": 1
+    },
+    {
+      "before": "garnet-native-z128-reconstructed-plugin-attempt2.dll",
+      "after": "garnet-native-fa3-projection-witness-attempt1.dll",
+      "count": 1
+    },
+    {
+      "before": "12CPU new integration/array/route/cross-profile fault controls, including86exact frozen historical controls",
+      "after": "14CPU new source/profile/finite-array/readonly/repeat fault controls, including86frozen historical controls",
+      "count": 1
+    },
+    {
+      "before": "for phase,policy in (('trace-on','1'),('trace-off','0')):",
+      "after": "for phase,policy in (('native','1'),):",
+      "count": 1
+    },
+    {
+      "before": "test_z128_reconstructed_layer2.bat",
+      "after": "test_fa3_projection_witness.bat",
+      "count": 1
+    },
+    {
+      "before": "            from test2026.cuda.qwen38_5090.z128_reconstructed_layer2_replay import replay,require_admission\n            from test2026.cuda.qwen38_5090.z128_reconstructed_layer2_trace import replay as trace_replay\n            from test2026.cuda.qwen38_5090.modelopt_trace_layer2 import compare_profiles\n            read=lambda name:(out/phase/name).read_bytes()\n            result=replay(report,read,(M/'evidence/layer2-ordinary-common-input.f32').read_bytes())\n            # Preserve complete arithmetic differences before a strict admission assertion.\n            (out/(phase+'-array-analysis.json')).write_bytes(json.dumps(result,indent=2).encode())\n            with zipfile.ZipFile(ROOT/'results/layer2-ordinary-witness-attempt1-evidence.zip') as prior:\n                oldbase='results/layer2-ordinary-witness-attempt1/native/'\n                oldreport=json.loads(prior.read(oldbase+'report.json'))\n                compared=compare_profiles(report,oldreport,read,lambda name:prior.read(oldbase+name),(32,))\n            assert compared['complete_finite_entries_compared']==58\n            traced=trace_replay((out/(phase+'-ledger/commands.log')).read_bytes(),phase=='trace-on')\n            (out/(phase+'-trace-analysis.json')).write_bytes(json.dumps(traced,indent=2).encode())\n            (out/(phase+'-retained-T32-comparison.json')).write_bytes(json.dumps(compared,indent=2).encode())\n            require_admission(result)\n",
+      "after": "            from test2026.cuda.qwen38_5090.fa3_projection_witness import replay\n            from test2026.cuda.qwen38_5090.z128_reconstructed_plugin_init_contract import events,replay as replay_init\n            read=lambda name:(out/phase/name).read_bytes()\n            result=replay(report,read,(M/'evidence/reconstructed-fa3-common-input.f32').read_bytes())\n            (out/'array-analysis.json').write_bytes(json.dumps(result,indent=2).encode())\n            traced=replay_init(events((out/(phase+'-ledger/commands.log')).read_bytes()))\n            assert set(traced['routes'])=={'fp8'} and traced['routes']['fp8']>=2 and traced['failures']==[]\n            rows=events((out/(phase+'-ledger/commands.log')).read_bytes())\n            assert all((r['rows'],r['columns'],r['policy'])==(1024,5120,0) for r in rows)\n            (out/'trace-analysis.json').write_bytes(json.dumps(traced,indent=2).encode())\n            # Projection differences are diagnostic evidence, not arithmetic or performance admission.\n",
+      "count": 1
+    },
+    {
+      "before": "assert report['status']=='layer2_ordinary_collected_needs_replay'",
+      "after": "assert report['status']=='actual_FA3_projection_witness_collected'",
+      "count": 1
+    },
+    {
+      "before": "z128_reconstructed_layer2_collected_needs_replay",
+      "after": "FA3_projection_witness_collected_needs_replay",
+      "count": 1
+    }
+  ],
+  "diagnostic_observation_only": true,
+  "full_GDN_and_model_gates_still_required": true
+}

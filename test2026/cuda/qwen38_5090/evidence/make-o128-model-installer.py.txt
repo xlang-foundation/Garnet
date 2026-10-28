@@ -1,0 +1,6 @@
+from pathlib import Path
+import ast,hashlib,json
+W=Path(__file__).resolve().parent;old=json.loads((W/'q128-model-package.json').read_bytes());p=json.loads((W/'o128-model-package.json').read_bytes());raw=(W/'install-q128-model.py').read_bytes();before=hashlib.sha256(raw).hexdigest();changes=[]
+for a,b,count in [(old['deployment_sha256'],p['deployment_sha256'],1),('q128-model-','o128-model-',3),('q128_model_admission_prepared_gpu_unrun','o128_model_admission_prepared_gpu_unrun',1),("len(manifest['files'])+1==77","len(manifest['files'])+1==120",1),('Q128','O128',2)]:
+    assert raw.count(a.encode())==count,(a,raw.count(a.encode()));raw=raw.replace(a.encode(),b.encode());changes.append(dict(old=a,new=b,count=count))
+ast.parse(raw);target=W/'install-o128-model.py';assert not target.exists() or target.read_bytes()==raw;target.write_bytes(raw);(W/'o128-model-installer-derivation.json').write_bytes(json.dumps(dict(source='install-q128-model.py',target=target.name,source_sha256=before,target_sha256=hashlib.sha256(raw).hexdigest(),changes=changes),indent=2).encode());print('O128_MODEL_INSTALLER_PREPARED')

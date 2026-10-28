@@ -1,0 +1,99 @@
+{
+  "status": "failed",
+  "fresh_process_per_case": true,
+  "cases": [
+    {
+      "status": "failed",
+      "spec": {
+        "key": "default-miss",
+        "phase": "miss",
+        "environment": {
+          "GARNET_FP8_FULL_ATTN_M32_CANONICAL": null,
+          "GARNET_FP8_GDN_M32_CANONICAL": null,
+          "GARNET_FP8_GDN_M128_CANONICAL": null,
+          "GARNET_FP8_GDN_Z128_CANONICAL": null,
+          "GARNET_FP8_GDN_Z128_RECONSTRUCT": null,
+          "GARNET_FP8_FULL_ATTN_KV128_CANONICAL": null,
+          "GARNET_FP8_FULL_ATTN_Q128_CANONICAL": null,
+          "GARNET_FP8_FULL_ATTN_O128_CANONICAL": null,
+          "GARNET_FULL_CHUNK_STAGE_WITNESS": null,
+          "GARNET_PARALLEL_BATCH_TOP1": null,
+          "GARNET_QWEN38_BF16_LOW_BATCH_TILED_SCORES": null,
+          "GARNET_NVFP4_DOWN_CANDIDATE": null
+        },
+        "expected_error": null
+      },
+      "actual_environment": {
+        "GARNET_FP8_FULL_ATTN_M32_CANONICAL": null,
+        "GARNET_FP8_GDN_M32_CANONICAL": null,
+        "GARNET_FP8_GDN_M128_CANONICAL": null,
+        "GARNET_FP8_GDN_Z128_CANONICAL": null,
+        "GARNET_FP8_GDN_Z128_RECONSTRUCT": null,
+        "GARNET_FP8_FULL_ATTN_KV128_CANONICAL": null,
+        "GARNET_FP8_FULL_ATTN_Q128_CANONICAL": null,
+        "GARNET_FP8_FULL_ATTN_O128_CANONICAL": null,
+        "GARNET_FULL_CHUNK_STAGE_WITNESS": null,
+        "GARNET_PARALLEL_BATCH_TOP1": null,
+        "GARNET_QWEN38_BF16_LOW_BATCH_TILED_SCORES": null,
+        "GARNET_NVFP4_DOWN_CANDIDATE": null
+      },
+      "library_sha256": "dc15e4f53855fb91e182cf52e78eb3917068b8df80cde1242ff1799ce4fb99ba",
+      "actual_Garnet_load_model_called": true,
+      "cache_before": {},
+      "cache_after": {},
+      "runtime_status": {
+        "mode": "compiled_xmodel",
+        "state": "failed",
+        "ready": false,
+        "root_xmodel": "D:\\CantorAI\\5090-study-20261023\\Garnet\\test2026\\cuda\\qwen38_5090\\fp8_policy_cache_fixture.x",
+        "cache_directory": "D:\\CantorAI\\5090-study-20261023\\results\\fp8-policy-cache-production-diagnostic-attempt1\\native\\cache",
+        "weights_location": "",
+        "entry_function": "Model",
+        "frontend": "",
+        "backend": "tensorrt",
+        "precision": "bf16",
+        "graph_summary": "",
+        "scheduler": "cpu_control_gpu_execution",
+        "execution_plan_json": "",
+        "execution_plan": null,
+        "engine_path": "",
+        "engine_partition_count": 1,
+        "partition_options": {
+          "enable_preferred_boundaries": true,
+          "preferred_min_operations": 32,
+          "max_atomic_regions_per_partition": 0,
+          "builder_workspace_bytes": 67108864,
+          "builder_optimization_level": 3
+        },
+        "weight_tensor_count": 0,
+        "weight_tensor_bytes": 0,
+        "weight_index_error": "",
+        "loaded_weight_count": 0,
+        "loaded_weight_bytes": 0,
+        "engines_prepared": false,
+        "engine_prepare_ms": 0.0,
+        "frontend_prepared": false,
+        "frontend_prepare_ms": 0.0,
+        "error_code": "invalid_root_xmodel",
+        "error_message": "compiled_xmodel mode requires an existing Python model file",
+        "forbidden_path_counters": {
+          "root_x_executions": 0,
+          "hardcoded_qwen_runner_calls": 0,
+          "python_subgraph_calls": 0,
+          "direct_internal_export_calls": 0,
+          "cpu_tensor_intermediates": 0,
+          "graph_cache_hits": 0,
+          "graph_cache_misses": 0
+        }
+      },
+      "output_values": null,
+      "forward_status": "error",
+      "error": "AssertionError()"
+    }
+  ],
+  "model_quality_or_performance_admitted": false,
+  "library_sha256": "dc15e4f53855fb91e182cf52e78eb3917068b8df80cde1242ff1799ce4fb99ba",
+  "native_build_artifact_identity_gate_passed": false,
+  "exploratory_only": true,
+  "error": "AssertionError(('Exploratory production case failed; preserve exact native error', 'default-miss', 1))"
+}

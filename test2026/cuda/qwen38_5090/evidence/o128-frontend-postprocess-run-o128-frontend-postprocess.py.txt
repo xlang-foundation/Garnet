@@ -1,0 +1,20 @@
+from pathlib import Path
+import hashlib,json,os,sys,zipfile
+ROOT=Path('D:/CantorAI/5090-study-20261023');M=ROOT/'Garnet/test2026/cuda/qwen38_5090';JOB='o128-frontend-attempt1';sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+sys.path[:0]=[str(M),str(ROOT/'Garnet')];import run_logged as ledger
+from run_bf16_low_batch_native_build import idle
+p=json.loads((M/'evidence/o128-frontend-preparation.json').read_bytes());w=json.loads((ROOT/'results'/JOB/'workflow.json').read_bytes())
+assert type(w['exit_code']) is int and w['cleanup_finished'] is True
+assert w['source_after_sha256']==p['files'] and w['runtime_dependencies_after']==p['runtime'] and w['environment_after']==p['environment'] and w['checkpoint_after']==p['checkpoints']
+idle();archive=ROOT/'results'/(JOB+'-evidence.zip');assert archive.is_file();pins={n:sha(ROOT/n) for n in p['new_files']};assert pins==p['new_files']
+ledger.source_identity=lambda:{'scope':'Explicit closed actual O128 frontend/native-rejection/route/identity archive replay; protected unrelated bodies excluded; no native/model/GPU work','owned_source_sha256':pins}
+os.chdir(ROOT/'Garnet');out=ROOT/'results/o128-frontend-postprocess';assert not out.exists();out.mkdir()
+assert ledger.run([sys.executable,str(M/'verify_o128_frontend.py'),'--proofs',str(ROOT/'results')],out/'replay-ledger','correctness','Independent closed actual frontend cases, strict native errors/typed route counts and source/library/runtime/SDK/checkpoint restoration replay; no scientific data alteration',[archive,*[ROOT/n for n in pins]])==0
+proof=ROOT/'results'/(JOB+'-verified.json');q=json.loads(proof.read_bytes());assert q['exit_code']==w['exit_code'] and q['archive_sha256']==sha(archive)
+summary=dict(status='O128_actual_frontend_closed_remote_replay_finished',frontend_passed=q['actual_frontend_contracts_qualified'],proof_sha256=sha(proof),archive_sha256=sha(archive),archive_bytes=archive.stat().st_size,model_exit=w['exit_code'],performance_admitted=False)
+(out/'postprocess.json').write_bytes(json.dumps(summary,indent=2).encode())
+files=[proof,Path(__file__),*[n for n in out.rglob('*') if n.is_file()]];target=ROOT/'results/o128-frontend-closure-assets.zip';assert not target.exists()
+with zipfile.ZipFile(target,'x',zipfile.ZIP_DEFLATED) as z:
+    for path in files:z.write(path,path.relative_to(ROOT).as_posix())
+    z.writestr('evidence-manifest.json',json.dumps(dict(files={n.relative_to(ROOT).as_posix():sha(n) for n in files},model_archive_sha256=sha(archive)),indent=2))
+print(json.dumps({**summary,'closure_assets_sha256':sha(target),'closure_assets_bytes':target.stat().st_size}),flush=True)

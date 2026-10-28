@@ -1,0 +1,78 @@
+{
+  "derivations": [
+    {
+      "source": "probe_b4_qk_m16_short_v2.py",
+      "target": "probe_b4_full4k_exact.py",
+      "source_sha256": "07a5b2d9455f7cb078a4665867ab3f0dd92496994ffc9bb91b7d0994f64be53c",
+      "target_sha256": "68ee4339f77ae389d398ca5f62314293a899407ee5552c55d5348d71ab6ad2d3",
+      "changes": [
+        {
+          "old": "\"\"\"First short mixed/tail gate; four fresh B1 oracles precede physical B4.\"\"\"",
+          "new": "\"\"\"Full4K raw capture: eight fresh B1 oracles then text/image/mixed B4; no timing.\"\"\"",
+          "count": 1
+        },
+        {
+          "old": "evidence/b4-qk-m16-short-v2-preparation.json",
+          "new": "evidence/b4-full4k-exact-preparation.json",
+          "count": 1
+        },
+        {
+          "old": "    old=root/'results/paged-batch8-model-preservation-attempt1-evidence.zip';assert sha(old.read_bytes())==p['input_parent_archive_sha256']\n    with zipfile.ZipFile(old) as z:original=json.loads(z.read('results/paged-batch8-model-preservation-attempt1/model/report.json'))['cases'][0]\n    inputs=original['inputs'][:4];assert original['group']=='short-mixed' and original['actual_limit']==8 and [len(v['prompt_ids']) for v in inputs]==[41,104,93,93]\n    bodies=[]\n    for row in inputs:\n        raw=(root/'results/native-mtp3-http'/(row['key']+'-request.json')).read_bytes();assert sha(raw)==row['request_sha256'];bodies.append(json.loads(raw))",
+          "new": "    from test2026.cuda.qwen38_5090.b4_full4k_inputs import load_corpus\n    corpus=(m/'evidence/fixed-length-4096-corpus.zip').read_bytes();assert sha(corpus)==p['input_corpus_sha256'];selection=load_corpus(corpus);keys=list(selection['inputs']);assert len(keys)==8\n    bodies=[selection['inputs'][key]['body'] for key in keys];inputs=[]\n    for key,body in zip(keys,bodies):\n        row=dict(selection['inputs'][key]);content=body['messages'][0]['content'];row['image_sha256']=None if isinstance(content,str) else sha(base64.b64decode(content[0]['image_url']['url'].split(',',1)[1],validate=True));inputs.append(row)\n    assert all(len(row['prompt_ids'])==3968 for row in inputs)",
+          "count": 1
+        },
+        {
+          "old": "library_sha256=library,inputs=inputs,rows=[],performance_admitted=False,full4k_MTP_quality_qualified=False",
+          "new": "library_sha256=library,inputs=selection['inputs'],rows=[],performance_admitted=False,full4k_MTP_quality_qualified=False,MTP_quality_qualified=False",
+          "count": 1
+        },
+        {
+          "old": "report['status']='short_cases_running'",
+          "new": "report['status']='full4k_cases_running'",
+          "count": 1
+        },
+        {
+          "old": "groups=[[i] for i in range(4)] if batch==1 else [[0,1,2,3]]",
+          "new": "index={key:i for i,key in enumerate(keys)}\n        groups=[[i] for i in range(8)] if batch==1 else [[index[key] for key in group['keys']] for group in selection['groups']]",
+          "count": 1
+        },
+        {
+          "old": "record=dict(physical_rows=physical,reset_state=snapshot('case'+str(group_index)+'-reset'))",
+          "new": "record=dict(physical_rows=physical,keys=[keys[i] for i in physical],label=selection['groups'][group_index]['label'] if batch==4 else 'B1-'+keys[physical[0]],reset_state=snapshot('case'+str(group_index)+'-reset'))",
+          "count": 1
+        },
+        {
+          "old": "for step in range(8):",
+          "new": "for step in range(128):",
+          "count": 1
+        },
+        {
+          "old": "if step+1<8:",
+          "new": "if step+1<128:",
+          "count": 1
+        },
+        {
+          "old": "decoder.slots==[v+7 for v in lengths]",
+          "new": "decoder.slots==[v+127 for v in lengths]",
+          "count": 1
+        },
+        {
+          "old": "B4_B1_SHORT_COLLECTED",
+          "new": "B4_FULL4K_COLLECTED",
+          "count": 1
+        },
+        {
+          "old": "B4_short_mixed_tail_raw_capture_needs_CPython_admission",
+          "new": "B4_full4k_raw_capture_needs_CPython_admission",
+          "count": 1
+        },
+        {
+          "old": "four_B1_short_oracles_collected",
+          "new": "eight_B1_full4k_oracles_collected",
+          "count": 1
+        }
+      ]
+    }
+  ],
+  "scope": "Future full4K capture only, GPUunrun/undeployed. Sameoriginalmodelconstruct/weights/vision/tokenization/prefill/decoderstep/snapshot/finite128state/reset math. Changes onlypinnedcorpus8B1/3B4case selection,128forcedIDloop andmetadata. Goldenloader binds3968input+128output capacity4096; allrequest/template/token/imagepins remainchecked. Requires futurepreparedowner/pairedstrictshortsuccess andallfull4KexactCPUgate/routeproof before numericaladmission; no timing/MTP/quality qualification."
+}

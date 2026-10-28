@@ -1,0 +1,74 @@
+"""Distinct model retry preserves all original sixcase/state/ID/draft algorithms."""
+from pathlib import Path
+import hashlib,json
+repo=Path('D:/CantorAI/work/qwen38-5090');m=repo/'test2026/cuda/qwen38_5090';e=m/'evidence';sha=lambda raw:hashlib.sha256(raw).hexdigest();records=[]
+record_path=e/'prefill128-fp8-model-source-derivation.json';previous=json.loads(record_path.read_bytes()) if record_path.exists() else None
+def derive(source,target,changes):
+    raw=(m/source).read_bytes();text=raw.decode();steps=[]
+    for old,new,count in changes:
+        assert text.count(old)==count,(source,old,text.count(old));text=text.replace(old,new);steps.append({'old':old,'new':new,'count':count})
+    path=m/target
+    if path.exists():assert previous and sha(path.read_bytes())==next(row['target_sha256'] for row in previous['files'] if row['target']==target)
+    path.write_bytes(text.encode());records.append({'source':source,'source_sha256':sha(raw),'target':target,'target_sha256':sha(text.encode()),'replacements':steps})
+target_control="""        report['fp8_target_graphs']={str(t):json.loads(program.graph.stats_json()) for t,program in decoder.programs.items()};save()
+        validate_targets(report['fp8_target_graphs'],report['fp8_m128_policy'])
+        if selection_off:
+            report['status']='fp8_m128_selection_off_constructed';save();return 0
+"""
+aux_control="""report['fp8_auxiliary_graphs']={'draft4':report['memory_after_construction']['mtp_graph'],'draft16':report['memory_after_construction']['prefill16_graph'],'prefill_norm':report['memory_after_construction']['wide_target_norm_graph'],'vision':json.loads(vision.graph.stats_json())};save();report['fp8_selection']=validate_selection(report);report['status']='cases_running';save()"""
+derive('probe_bf16_prefill128_model_bound.py','probe_bf16_prefill128_fp8_model.py',[
+ ("root,out=map(Path,sys.argv[1:3]);mode='default';assert len(sys.argv)==3 and not out.exists()","root,out=map(Path,sys.argv[1:3]);mode='default';selection_off=len(sys.argv)==4;assert len(sys.argv) in (3,4) and (not selection_off or sys.argv[3]=='--selection-off') and not out.exists()",1),
+ ('bf16-prefill128-model-bound-preparation.json','bf16-prefill128-fp8-model-preparation.json',1),
+ ("    parent='mtp-prefill16-full4k-admission-attempt1';","    assert os.environ.get('GARNET_FP8_GDN_M128_CANONICAL')==('0' if selection_off else '1')\n    parent='mtp-prefill16-full4k-admission-attempt1';",1),
+ ('from test2026.cuda.qwen38_5090.prefill128_model import replay_prefill128_model','from test2026.cuda.qwen38_5090.prefill128_fp8_model import replay_prefill128_fp8_model as replay_prefill128_model,validate_targets,validate_selection',1),
+ ("report={'status':'constructing',","report={'fp8_m128_policy':os.environ['GARNET_FP8_GDN_M128_CANONICAL'],'status':'constructing',",1),
+ ("        decoder=create_cuda_bf16_prefill128_study_decoder(str(checkpoint),config);decoder.enable_cuda_graph(True);io=decoder.io;vision=create_cuda_vision(str(checkpoint),config,16,16);vision.graph.enable_cuda_graph(True)","        decoder=create_cuda_bf16_prefill128_study_decoder(str(checkpoint),config);decoder.enable_cuda_graph(True);io=decoder.io\n"+target_control+"        vision=create_cuda_vision(str(checkpoint),config,16,16);vision.graph.enable_cuda_graph(True)",1),
+ ("report['status']='cases_running';save()",aux_control,1)])
+derive('test_bf16_prefill128_model_bound.bat','test_bf16_prefill128_fp8_model.bat',[
+ ('set GARNET_FP8_GDN_M32_CANONICAL=1','set GARNET_FP8_GDN_M32_CANONICAL=1\nset GARNET_FP8_GDN_M128_CANONICAL=%~3\nif not "%~3"=="0" if not "%~3"=="1" exit /b 2',1),
+ ('probe_bf16_prefill128_model_bound.py','probe_bf16_prefill128_fp8_model.py',1),
+ (' "%~1"\nexit /b',' "%~1" %~4\nexit /b',1)])
+off_command="""        off_command=[sys.executable,str(M/'monitor_native_probe.py'),'--study',str(ROOT),'--output',str(out/'selection-off-resources'),'--','cmd.exe','/d','/c',str(M/'test_bf16_prefill128_fp8_model.bat'),str(out/'selection-off'),str(cache),'0','--selection-off']
+        code=ledger.run(off_command,out/'selection-off-ledger','correctness','Separate default/off target graph construction only; M128 graph counters must both be0, close model before enabled process',common+[library])
+        idle()
+        if code:raise RuntimeError('M128 default/off construction control failed')
+        off=json.loads((out/'selection-off/report.json').read_bytes())
+        from test2026.cuda.qwen38_5090.prefill128_fp8_model import validate_targets
+        assert off['status']=='fp8_m128_selection_off_constructed' and off['fp8_m128_policy']=='0' and off['cases']==[] and off['ordinary_observations']==[]
+        w['selection_off_counts']=validate_targets(off['fp8_target_graphs'],'0');save()
+"""
+derive('run_bf16_prefill128_model_bound.py','run_bf16_prefill128_fp8_model.py',[
+ ('sys.path.insert(0,str(M))','sys.path[:0]=[str(M),str(ROOT/\'Garnet\')]',1),
+ ("JOB='bf16-prefill128-model-admission-attempt2'","JOB='bf16-prefill128-fp8-model-admission-attempt1'",1),
+ ('bf16-prefill128-model-bound-preparation.json','bf16-prefill128-fp8-model-preparation.json',1),
+ ("'bf16_prefill128_full4k_model_prepared_gpu_unrun' and len(p['candidate_files'])==20","'bf16_prefill128_fp8_full4k_model_prepared_gpu_unrun' and len(p['candidate_files'])==29",1),
+ ('garnet-native-bf16-prefill128-attempt1.dll','garnet-native-bf16-prefill128-fp8-m128-attempt1.dll',1),
+ ('len(z.namelist())==len(set(z.namelist()))==20','len(z.namelist())==len(set(z.namelist()))==29',1),
+ ('        command=[sys.executable,str(M/\'monitor_native_probe.py\')',off_command+'        command=[sys.executable,str(M/\'monitor_native_probe.py\')',1),
+ ("str(M/'test_bf16_prefill128_model_bound.bat'),str(out/'native'),str(cache)]","str(M/'test_bf16_prefill128_fp8_model.bat'),str(out/'native'),str(cache),'1']",1),
+ ("w['status']='bf16_prefill128_full4k_model_collected_needs_replay'","w['status']='bf16_prefill128_fp8_full4k_model_collected_needs_replay'",1)])
+off_verify="""        off_selection=None;selection=None
+        if base+'selection-off/report.json' in manifest['files']:
+            off=doc(base+'selection-off/report.json');assert off['library_sha256']==p['candidate_library_sha256'] and off['fp8_m128_policy']=='0'
+            if off['status']=='fp8_m128_selection_off_constructed':
+                assert off['cases']==off['ordinary_observations']==[]
+                from test2026.cuda.qwen38_5090.prefill128_fp8_model import validate_targets
+                off_selection=validate_targets(off['fp8_target_graphs'],'0');assert off_selection==w['selection_off_counts']
+                resource=doc(base+'selection-off-resources/resource-monitor.json');assert resource['child_exit_code']==0 and resource['gpu']['uuid']==p['gpu_uuid']
+        passed=w['exit_code']==0;replay=None;memory=None;observed=0"""
+derive('verify_bf16_prefill128_model_bound.py','verify_bf16_prefill128_fp8_model.py',[
+ ('from test2026.cuda.qwen38_5090.prefill128_model import replay_prefill128_model','from test2026.cuda.qwen38_5090.prefill128_fp8_model import replay_prefill128_fp8_model as replay_prefill128_model,validate_selection',1),
+ ("JOB='bf16-prefill128-model-admission-attempt2';BUILD='bf16-prefill128-native-build-attempt1'","JOB='bf16-prefill128-fp8-model-admission-attempt1';BUILD='bf16-prefill128-fp8-native-build-attempt1'",1),
+ ('bf16-prefill128-model-bound-preparation.json','bf16-prefill128-fp8-model-preparation.json',1),
+ ('bf16-prefill128-native-build-preparation.json','bf16-prefill128-fp8-native-build-preparation.json',2),
+ ("len(p['candidate_files'])==20","len(p['candidate_files'])==29",1),
+ ("('prefill128_model.py','verify_bf16_prefill128_model_bound.py')","('prefill128_model.py','prefill128_fp8_model.py','verify_bf16_prefill128_fp8_model.py')",1),
+ ('len(source.namelist())==len(set(source.namelist()))==20','len(source.namelist())==len(set(source.namelist()))==29',1),
+ ('len(expected)==8','len(expected)==12',1),
+ ("        passed=w['exit_code']==0;replay=None;memory=None;observed=0",off_verify,1),
+ ("            observed=len(report.get('ordinary_observations',[]))","            observed=len(report.get('ordinary_observations',[]))\n            if 'fp8_auxiliary_graphs' in report:\n                try:selection=validate_selection(report)\n                except AssertionError:selection=None",1),
+ ("assert w['status']=='bf16_prefill128_full4k_model_collected_needs_replay'","assert w['status']=='bf16_prefill128_fp8_full4k_model_collected_needs_replay' and off_selection=={'4':0,'128':0} and selection is not None",1),
+ ("('cpu-ledger','native-ledger')","('cpu-ledger','selection-off-ledger','native-ledger')",1),
+ ("'bf16_prefill128_full4k_model_replayed' if passed else 'bf16_prefill128_full4k_model_failure_preserved'","'bf16_prefill128_fp8_full4k_model_replayed' if passed else 'bf16_prefill128_fp8_full4k_model_failure_preserved'",1),
+ ("'ordinary_observations_collected':observed,'model_replay':replay","'ordinary_observations_collected':observed,'default_off_selection':off_selection,'enabled_native_selection':selection,'model_replay':replay",1)])
+record_path.write_bytes(json.dumps({'status':'prefill128_fp8_distinct_model_methods_derived_unrun','files':records,'scope':'Separate default/off construction then original strict full4K cases with enabled native selection metadata. Original source methods, state/vector/ID replay, T4 verification and T16 draft unchanged. No quality/performance qualification.'},indent=2).encode());print(json.dumps({'derived_methods':len(records)}))

@@ -1,0 +1,34 @@
+from pathlib import Path
+import hashlib,json,zipfile
+W=Path(__file__).resolve().parent;O=W.parent/'outputs';R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';P='Garnet/test2026/cuda/qwen38_5090/';E='test2026/cuda/qwen38_5090/evidence/';JOB='full-chunk-stage-attempt2';sha=lambda b:hashlib.sha256(b).hexdigest();paths=[]
+def put(name,raw):
+    target=R/name;assert target.resolve().is_relative_to(R.resolve());assert not target.exists() or target.read_bytes()==raw,name;target.parent.mkdir(parents=True,exist_ok=True);target.write_bytes(raw);paths.append(name)
+raw=(O/(JOB+'-verified.json')).read_bytes();assert raw==(O/(JOB+'-remote-verified.json')).read_bytes();q=json.loads(raw);assert q['exit_code']==0 and q['arrays']['first_different_stage']['stage']=='qg' and not q['model_or_performance_qualified']
+for suffix in ('-verified.json','-remote-verified.json'):put(E+JOB+suffix,(O/(JOB+suffix)).read_bytes())
+archive=O/(JOB+'-evidence.zip');assert sha(archive.read_bytes())==q['archive_sha256']
+with zipfile.ZipFile(archive) as z:
+    p=json.loads(z.read(P+'evidence/full-chunk-stage-gpu-preparation-attempt2.json'));base='results/'+JOB+'/'
+    for n,h in p['new_files'].items():assert sha(z.read(n))==h and sha((R/n.removeprefix('Garnet/')).read_bytes())==h
+    for n in z.namelist():
+        if n.startswith(base) and n.endswith(('.json','.jsonl','.log')):put(E+JOB+'-'+n.removeprefix(base).replace('/','-'),z.read(n))
+    put(E+JOB+'-manifest.json',z.read('evidence-manifest.json'))
+with zipfile.ZipFile(W/(JOB+'-closure-assets.zip')) as z:
+    m=json.loads(z.read('evidence-manifest.json'));assert z.testzip() is None and len(z.namelist())==len(set(z.namelist()))==len(m['files'])+1==10 and m['raw_GPU_archive_sha256']==q['archive_sha256']
+    for n,h in m['files'].items():
+        blob=z.read(n);assert sha(blob)==h
+        if n=='results/'+JOB+'-verified.json':assert blob==raw
+        elif n.startswith('results/full-chunk-stage-transport-attempt2/'):put(E+'full-chunk-stage-transport-attempt2-'+n.removeprefix('results/full-chunk-stage-transport-attempt2/').replace('/','-'),blob)
+        elif n.endswith('.json'):put(E+Path(n).name,blob)
+        elif n.endswith('.py'):put(E+Path(n).name+'.txt',blob)
+    put(E+JOB+'-closure-assets-manifest.json',z.read('evidence-manifest.json'))
+receipt=json.loads((R/(E+JOB+'-exact-delta-receipt.json')).read_bytes())
+for n,h in receipt['method_sha256'].items():assert sha((R/n.removeprefix('Garnet/')).read_bytes())==h
+for n in ('run_full_chunk_stage_exact_delta_attempt2.py','evidence/full-chunk-stage-transport-attempt2-derivation.json'):paths.append('test2026/cuda/qwen38_5090/'+n)
+for folder,label in (('full-chunk-stage-attempt2-exact-transport-local-ledger','local-transport'),('full-chunk-stage-attempt2-independent-local-ledger','local-independent-replay'),('full-chunk-stage-attempt2-QG-decomposition-ledger','local-QG-decomposition')):
+    for n in ('commands.log','commands.jsonl'):put(E+JOB+'-'+label+'-'+n,(W/folder/n).read_bytes())
+with zipfile.ZipFile(W/(JOB+'-exact-delta.zip')) as z:put(E+JOB+'-exact-delta-manifest.json',z.read('delta-manifest.json'))
+split=(O/'Garnet-Layer3-QG-Difference-Decomposition.json').read_bytes();s=json.loads(split);assert s['original_stage_archive_sha256']==q['archive_sha256'] and s['paired_stage_proof_sha256']==sha(raw) and sum(s['changed_values'].values())==102
+put(E+'full-chunk-stage-QG-difference-decomposition.json',split)
+for n in ('analyze-full-chunk-qg-split.py','run-full-chunk-qg-decomposition.py','replay-full-chunk-stage-local-attempt2.py','retain-full-chunk-stage-success.py'):put(E+n+'.txt',(W/n).read_bytes())
+result=dict(status='all10_layer3_stages_primary_equivalence_and_QG_split_independently_replayed',raw_archive_sha256=q['archive_sha256'],raw_archive_bytes=q['archive_bytes'],paired_proof_sha256=sha(raw),candidate_library_sha256=q['candidate_library_sha256'],native_source_bundle_sha256=p['source_bundle_sha256'],complete_F32_words_compared=q['arrays']['complete_F32_words_compared'],first_different_stage=q['arrays']['first_different_stage'],QG_changed_words=102,QG_changed_parts=s['changed_values'],stages=q['arrays']['stages'],complete_same_profile_primary_readonly_repeats_exact=True,correct_T32_128IDs_finalstate_exact=True,failed_T128_instrumentation_equivalence_only=True,cause_established=False,model_or_performance_qualified=False,new_benchmarks=False,two_times_target_achieved=False,next='Observe actual QG cuBLASLt choices in logged T32/T128 stage profiles, verify exact parity against these qualified arrays before any arithmetic intervention')
+(O/'Garnet-Layer3-Full-Chunk-Stages-Verified.json').write_bytes(json.dumps(result,indent=2).encode());put(E+'full-chunk-stage-attempt2-research-summary.json',json.dumps(result,indent=2).encode());(W/'full-chunk-stage-success-retained-paths.json').write_bytes(json.dumps(sorted(set(paths)),indent=2).encode());print(json.dumps(dict(retained_paths=len(set(paths)),paired_proof_sha256=sha(raw),QG_changed_parts=s['changed_values'])))

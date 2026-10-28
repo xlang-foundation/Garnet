@@ -1,0 +1,13 @@
+from pathlib import Path
+import hashlib,json,os,sys,zipfile
+W=Path(__file__).resolve().parent;O=W.parent/'outputs';R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';sys.path[:0]=[str(M),str(R)];import run_logged as ledger
+sha=lambda b:hashlib.sha256(b).hexdigest();job='q128-canonical-build-attempt1'
+with zipfile.ZipFile(W/'q128-native-build-closure-assets.zip') as z:
+    m=json.loads(z.read('evidence-manifest.json'));assert z.testzip() is None and len(z.namelist())==len(set(z.namelist()))==len(m['files'])+1==10
+    for n,h in m['files'].items():assert sha(z.read(n))==h
+    for remote,local in [('results/'+job+'-verified.json',O/(job+'-remote-verified.json')),('results/'+job+'-evidence.zip',O/(job+'-evidence.zip'))]:
+        raw=z.read(remote);assert not local.exists() or local.read_bytes()==raw;local.write_bytes(raw)
+peer=O/(job+'-remote-verified.json');q=json.loads(peer.read_bytes());archive=O/(job+'-evidence.zip');assert q['exit_code']==0 and sha(archive.read_bytes())==q['archive_sha256'];p=json.loads((M/'evidence/q128-canonical-build-preparation.json').read_bytes());pins={n:sha((R/n.removeprefix('Garnet/')).read_bytes()) for n in p['methods']};assert pins==p['methods'];new=['verify_q128_canonical_native_build_parent.py','run_q128_build_parent_reader.py','evidence/q128-build-parent-reader-derivation.json'];pins.update({'Garnet/test2026/cuda/qwen38_5090/'+n:sha((M/n).read_bytes()) for n in new});ledger.source_identity=lambda:{'scope':'Explicit complete Q128 native-build/archive/CPU-contract/restoration independent CPU replay with original missing-parent reader failure preserved; protected unrelated untracked excluded','owned_source_sha256':pins};os.chdir(R);artifacts=[archive,peer,*[R/n.removeprefix('Garnet/') for n in pins]]
+assert ledger.run([sys.executable,str(M/'verify_q128_canonical_native_build.py'),'--proofs',str(O)],W/'q128-native-build-local-original-reader-failure-ledger','correctness','Independently reproduce original reader missing-parent-metadata KeyError; native build outcome0 unchanged',artifacts)==1
+assert ledger.run([sys.executable,str(M/'verify_q128_canonical_native_build_parent.py'),'--proofs',str(O)],W/'q128-native-build-local-replay-ledger','correctness','Independently replay exact original57source/DLL build,56+86CPU controls,278profile/182factory/wire/630init/nativeAPI/tokenizer command gates, CUDAobjects and restoration; only parent lookup repaired',artifacts)==0
+raw=(O/(job+'-verified.json')).read_bytes();assert raw==peer.read_bytes();print(json.dumps(dict(status='actual_Q128_native_build_independently_replayed',paired_proof_sha256=sha(raw),candidate_library_sha256=q['candidate_library_sha256'])))

@@ -1,0 +1,227 @@
+{
+  "status": "exact_transaction_and_contract_derivations",
+  "files": [
+    {
+      "base": "prepare_fp8_z128_native_build.py",
+      "target": "prepare_modelopt_init_trace_native_build.py",
+      "base_sha256": "4e427e7294d5ae6b54207e1a883698c5bcfad619310ede3e8853a7f5535d70ef",
+      "target_sha256": "d643490a4922f1c8485fdfd2d86541671def9a537a58313b849b9ee2d430f9ff",
+      "changes": [
+        {
+          "before": "fp8-z128-native-proposal.json",
+          "after": "modelopt-init-trace-native-proposal.json",
+          "count": 1
+        },
+        {
+          "before": "fp8_z128_native_build_proposed_unrun",
+          "after": "modelopt_init_trace_native_build_proposed_unrun",
+          "count": 1
+        },
+        {
+          "before": "fp8_z128_native_build_prepared_unrun",
+          "after": "modelopt_init_trace_native_build_prepared_unrun",
+          "count": 1
+        },
+        {
+          "before": "fp8-z128-native-build-preparation.json",
+          "after": "modelopt-init-trace-native-build-preparation.json",
+          "count": 1
+        },
+        {
+          "before": "len(p['candidate_files'])==28 and len(p['candidate_base'])==28 and p['expected_cpu_test_count']==77",
+          "after": "len(p['candidate_files'])==38 and len(p['candidate_base'])==38 and p['expected_cpu_test_count']==81",
+          "count": 1
+        },
+        {
+          "before": "sum(value is not None for value in p['candidate_base'].values())==8",
+          "after": "sum(value is not None for value in p['candidate_base'].values())==14",
+          "count": 1
+        },
+        {
+          "before": "len(z.namelist())==len(set(z.namelist()))==28",
+          "after": "len(z.namelist())==len(set(z.namelist()))==38",
+          "count": 1
+        },
+        {
+          "before": "name.startswith('src/')",
+          "after": "name.startswith(('src/','xModel/'))",
+          "count": 1
+        },
+        {
+          "before": "'existing_targets':8,'absent_targets':20",
+          "after": "'existing_targets':14,'absent_targets':24",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "base": "build_fp8_m128_plugin_cpu.bat",
+      "target": "build_modelopt_init_trace_m128_wire_cpu.bat",
+      "base_sha256": "e4a25024c773f5186aacd92e313a4ec0171014b6c8dae2a8d87686fdf9d87f06",
+      "target_sha256": "d5a2dd7f0c8928f83fc39185841ad4ae4d655a1b96ac742922571da52b86d510",
+      "changes": [
+        {
+          "before": "set \"CANDIDATE=%METHODS%\\native_fp8_m128_candidate\"",
+          "after": "set \"CANDIDATE=%SRC%\\backends\\tensorrt\"",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "base": "build_fp8_z128_plugin_cpu.bat",
+      "target": "build_modelopt_init_trace_z128_wire_cpu.bat",
+      "base_sha256": "041d2017dce8c7d92857cc9d2d105cec2b0d8456fd300e9e8599efb4343c922e",
+      "target_sha256": "8ec6ffee43dcb99b8cb9a76b41c0f158fd338e06ccc969afc50b38413d57c983",
+      "changes": [
+        {
+          "before": "set \"CANDIDATE=%METHODS%\\native_fp8_z128_candidate\"",
+          "after": "set \"CANDIDATE=%SRC%\\backends\\tensorrt\"",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "base": "run_fp8_z128_native_build.py",
+      "target": "run_modelopt_init_trace_native_build.py",
+      "base_sha256": "a7dbbcf2da57c0f53cd31a1ea7d0bb1fa1c69e213da88fe8269a0aeda58eaabc",
+      "target_sha256": "2d1f0493e636feb106afa054cb3046d84cd326b01fe65329ad89aa69e39418d9",
+      "changes": [
+        {
+          "before": "JOB='fp8-z128-native-build-attempt1'",
+          "after": "JOB='modelopt-init-trace-native-build-attempt1'",
+          "count": 1
+        },
+        {
+          "before": "fp8-z128-native-build-preparation.json",
+          "after": "modelopt-init-trace-native-build-preparation.json",
+          "count": 1
+        },
+        {
+          "before": "fp8_z128_native_build_prepared_unrun",
+          "after": "modelopt_init_trace_native_build_prepared_unrun",
+          "count": 1
+        },
+        {
+          "before": "len(p['candidate_files'])==28",
+          "after": "len(p['candidate_files'])==38",
+          "count": 1
+        },
+        {
+          "before": "name.startswith('src/')",
+          "after": "name.startswith(('src/','xModel/'))",
+          "count": 1
+        },
+        {
+          "before": "garnet-native-fp8-z128-attempt1.dll",
+          "after": "garnet-native-modelopt-init-trace-attempt1.dll",
+          "count": 1
+        },
+        {
+          "before": "        code=ledger.run([sys.executable,'-m','unittest',*p['test_ids']],out/'cpu-ledger','correctness','Retained CPU regressions plus transactional source snapshot/restore and bundle controls before native install',common)\n        if code:raise RuntimeError('Pre-build CPU controls')\n",
+          "after": "",
+          "count": 1
+        },
+        {
+          "before": "        code=ledger.run([sys.executable,'-m','unittest','test2026.cuda.qwen38_5090.test_fp8_z128_native_source','test2026.cuda.qwen38_5090.test_fp8_z128_native_integration','test2026.cuda.qwen38_5090.test_gdn_chunk_stage_source.Controls.test_original_diagnostic_guard_and_all_math_bodies_unchanged'],out/'source-cpu-ledger','correctness','Six exact typedZ/additive route/prior GDN/M128/legacy diagnostic source controls after install; no native runtime/GPU',common)\n        if code:raise RuntimeError('Z source composition controls')\n",
+          "after": "        code=ledger.run([sys.executable,'-m','unittest',*p['test_ids']],out/'cpu-ledger','correctness','81CPU retain78controls through exact initialization-source composition and4trace controls; one historical byte-source test replayed in composed original-source view',common)\n        if code:raise RuntimeError('CPU composed source/model controls')\n        code=ledger.run(['cmd.exe','/d','/c',str(M/'build_modelopt_init_trace_cpu.bat'),p['vcvars'],str(out/'init-cpu-build')],out/'init-cpu-build-ledger','correctness','Compile actual four private plugin implementations with CPU-only factories/operators, no Garnet or CUDA context',common)\n        if code:raise RuntimeError('Private actual initialize CPU build')\n        code=ledger.run([sys.executable,str(M/'run_modelopt_init_trace_cpu_contract.py'),'--executable',str(out/'init-cpu-build/contract.exe'),'--output',str(out/'init-cpu')],out/'init-cpu-ledger','correctness','Ten fresh CPU policy processes:360actual initialize calls/280factory stubs, null/success/cached/standard+nonstandard exceptions, unchanged wire/clone,0GPU operators; only exact1 emits72events',common)\n        if code:raise RuntimeError('Actual initialize CPU policy controls')\n",
+          "count": 1
+        },
+        {
+          "before": "Reconfigure reused Release/MT/sm120 tree for28native T128/GDNstage/typedZ sources and separate graph counters",
+          "after": "Reused Release/MT/sm120 native31+Python7 source; actual four plugin initialize trace only, defaultoff and unchanged math/algorithms/descriptor/wire",
+          "count": 1
+        },
+        {
+          "before": "build_fp8_m128_plugin_cpu.bat",
+          "after": "build_modelopt_init_trace_m128_wire_cpu.bat",
+          "count": 1
+        },
+        {
+          "before": "build_fp8_z128_plugin_cpu.bat",
+          "after": "build_modelopt_init_trace_z128_wire_cpu.bat",
+          "count": 1
+        },
+        {
+          "before": "fp8_z128_native_built_cpu_qualified_witness_unqualified",
+          "after": "modelopt_init_trace_native_built_cpu_qualified_model_unqualified",
+          "count": 1
+        },
+        {
+          "before": "common=[prep,bundle,ROOT/p['proposal']]",
+          "after": "common=[prep,bundle,ROOT/p['proposal']]+[ROOT/name for name in p['checkpoints']]",
+          "count": 1
+        },
+        {
+          "before": "cache_after_sha256=sha(cache),baseline_library_restored=sha(library)==p['runtime']['garnet.dll']",
+          "after": "cache_after_sha256=sha(cache),checkpoint_after={name:sha(ROOT/name) for name in p['checkpoints']},baseline_library_restored=sha(library)==p['runtime']['garnet.dll']",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "base": "verify_fp8_z128_native_build.py",
+      "target": "verify_modelopt_init_trace_native_build.py",
+      "base_sha256": "fee81f882be42b2d3fa0a483d502961c956bbb98ac02368f0ac562035df1daec",
+      "target_sha256": "e535fcdca5e89a27d341a9069a902407cffa7666309ec03dc11b41c410994d76",
+      "changes": [
+        {
+          "before": "JOB='fp8-z128-native-build-attempt1'",
+          "after": "JOB='modelopt-init-trace-native-build-attempt1'",
+          "count": 1
+        },
+        {
+          "before": "fp8-z128-native-build-preparation.json",
+          "after": "modelopt-init-trace-native-build-preparation.json",
+          "count": 1
+        },
+        {
+          "before": "len(p['candidate_files'])==28",
+          "after": "len(p['candidate_files'])==38",
+          "count": 1
+        },
+        {
+          "before": "len(set(source.namelist()))==28",
+          "after": "len(set(source.namelist()))==38",
+          "count": 1
+        },
+        {
+          "before": "fp8_z128_native_build_proposed_unrun",
+          "after": "modelopt_init_trace_native_build_proposed_unrun",
+          "count": 1
+        },
+        {
+          "before": "fp8_z128_native_built_cpu_qualified_witness_unqualified",
+          "after": "modelopt_init_trace_native_built_cpu_qualified_model_unqualified",
+          "count": 1
+        },
+        {
+          "before": "'cpu','source-cpu','build'",
+          "after": "'cpu','init-cpu-build','init-cpu','build'",
+          "count": 1
+        },
+        {
+          "before": "(dict(p['base_files'],**p['methods']) if name=='cpu' else expected)",
+          "after": "expected",
+          "count": 1
+        },
+        {
+          "before": "            assert b'Ran 6 tests' in z.read(base+'source-cpu-ledger/commands.log') and b'\\nOK' in z.read(base+'source-cpu-ledger/commands.log')\n",
+          "after": "            from test2026.cuda.qwen38_5090.modelopt_init_trace_contract import cpu_contract\n            init=doc(base+'init-cpu/report.json');assert init['status']=='actual_modelopt_initialize_CPU_policy_contracts_replayed' and init['actual_plugin_initialize_calls']==360 and init['actual_factory_stub_calls']==280 and init['unexpected_GPU_operator_calls']==0\n            assert sha(z.read(base+'init-cpu-build/contract.exe'))==init['executable_sha256']\n            policies=(None,'','0','true','01',' 1','1 ','-1','2','1');assert len(init['policies'])==len(policies)\n            for index,(row,policy) in enumerate(zip(init['policies'],policies)):\n                stdout=z.read(base+'init-cpu/policy-'+str(index)+'-stdout.log');stderr=z.read(base+'init-cpu/policy-'+str(index)+'-stderr.log');assert row['policy_value']==policy and row['exit_code']==0 and sha(stdout)==row['stdout_sha256'] and sha(stderr)==row['stderr_sha256'] and json.loads(stdout)==row['report'];assert cpu_contract(row['report'],stderr,policy=='1')==row['replay']\n",
+          "count": 1
+        },
+        {
+          "before": "assert w['environment_before']==w['environment_after']==p['environment'] and w['methods']==w['methods_after']==p['methods']",
+          "after": "assert w['environment_before']==w['environment_after']==p['environment'] and w['methods']==w['methods_after']==p['methods'] and w['cache_after_sha256']==p['cache_before_sha256'] and w['checkpoint_after']==p['checkpoints']",
+          "count": 1
+        },
+        {
+          "before": "'fp8_z128_native_build_cpu_replayed' if passed else 'fp8_z128_native_build_failure_preserved'",
+          "after": "'modelopt_init_trace_native_build_cpu_replayed' if passed else 'modelopt_init_trace_native_build_failure_preserved'",
+          "count": 1
+        }
+      ]
+    }
+  ],
+  "old_numerical_and_wire_contracts_retained": true,
+  "original_byte_source_test_replayed_through_exact_initialize_composition": true
+}

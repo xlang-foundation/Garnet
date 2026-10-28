@@ -1,0 +1,9 @@
+"""CPU controls for the opt-in allocation study; no native/model/GPU imports."""
+from pathlib import Path
+import hashlib,json,os,sys
+W=Path(__file__).resolve().parent;R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';sys.path[:0]=[str(M),str(R)];import run_logged as ledger
+names=['large_paged_prompt_rows.py','test_large_paged_prompt_rows.py','paged_prompt_rows.py','test_paged_prompt_rows.py'];sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest();pins={n:sha(M/n) for n in names}
+ledger.source_identity=lambda:dict(scope='Explicit local CPU source/page/visual/bounds controls; no protected bodies or native/model/GPU work',owned_source_sha256=pins)
+os.chdir(R);assert ledger.run([sys.executable,'-m','unittest','test2026.cuda.qwen38_5090.test_large_paged_prompt_rows'],W/'large-prompt-page-CPU-ledger','correctness','Four new source/visual/cross-page/shifted-MTP/LRU/lifetime/bounds controls. Original128page policy unchanged. Fake token-coded IO only; not native byte, VRAM or speed admission.',[M/n for n in names])==0
+result=dict(status='large_prompt_page_CPU_controls_passed_native_unrun',tests_passed=4,files_sha256=pins,model_or_native_or_speed_qualified=False)
+(W/'large-prompt-page-CPU-controls.json').write_bytes(json.dumps(result,indent=2).encode());print(json.dumps(result))

@@ -1,0 +1,27 @@
+{
+  "source_sha256": "58e79aa97c1f4510cefab9d35c933d786acf1538cdecb0f5a548f53e530b663e",
+  "target_sha256": "cf5df64a22d383f6ef4177eeb161fa0ae0eb6880049b086afbeaaa69dbd42461",
+  "changes": [
+    {
+      "old": "b4-rowwise-http-quality",
+      "new": "b4-rowwise-http-benchmark",
+      "count": 3
+    },
+    {
+      "old": "B4_rowwise_HTTP_quality",
+      "new": "B4_rowwise_HTTP_benchmark",
+      "count": 3
+    },
+    {
+      "old": "n==p['bundle']",
+      "new": "n==p['publisher_identity_archive']",
+      "count": 1
+    },
+    {
+      "old": "sha(ROOT/p['library'])==p['library_sha256']",
+      "new": "sha(ROOT/p['library'])==p['library_sha256'] and sha(ROOT/p['bundle'])==p['bundle_sha256']",
+      "count": 1
+    }
+  ],
+  "executed": false
+}

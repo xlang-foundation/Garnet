@@ -1,0 +1,120 @@
+{
+  "files": [
+    {
+      "source": "probe_fa3_projection_witness_attempt2.py",
+      "target": "probe_fa3_projection_vendor.py",
+      "source_sha256": "1c5c29a692d56d4981a7b73d3b9920814e7570aad20f6365629c1356ac47d6b7",
+      "target_sha256": "4175ab5c51719e1f66c7a0a773a75ce518d82c83a16a7273e80450c8215e33ec",
+      "changes": [
+        {
+          "before": "evidence/fa3-projection-witness-gpu-preparation-attempt2.json",
+          "after": "evidence/fa3-projection-vendor-preparation.json",
+          "count": 1
+        },
+        {
+          "before": "    sys.path[:0]=",
+          "after": "    assert os.environ.get('CUBLASLT_LOG_LEVEL')=='5' and os.environ.get('CUBLASLT_LOG_MASK')=='31'\n    assert Path(os.environ['CUBLASLT_LOG_FILE'])==Path(str(out)+'-cublaslt.log')\n    sys.path[:0]=",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "test_fa3_projection_witness_attempt2.bat",
+      "target": "test_fa3_projection_vendor.bat",
+      "source_sha256": "4e6ce5eb88872818059d9348fa931ffd0958bf601e2c1a9920faa5b817b4ce15",
+      "target_sha256": "11885b5e61972df983eb47d27711c5bf5712e9cb8cd3ec64a95a2a0e8da69638",
+      "changes": [
+        {
+          "before": "set CUDA_VISIBLE_DEVICES=0",
+          "after": "set CUDA_VISIBLE_DEVICES=0\nset CUBLASLT_LOG_LEVEL=5\nset CUBLASLT_LOG_MASK=31\nset \"CUBLASLT_LOG_FILE=%~1-cublaslt.log\"",
+          "count": 1
+        },
+        {
+          "before": "probe_fa3_projection_witness_attempt2.py",
+          "after": "probe_fa3_projection_vendor.py",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "run_fa3_projection_witness_attempt2.py",
+      "target": "run_fa3_projection_vendor.py",
+      "source_sha256": "6a897358e4aa99077fc17c6d77b3f462560f8f09c5f95ca03591bf30e01ef28e",
+      "target_sha256": "728265baf03eedfe3724a51b8ff8bf4e7cf5f11011aeb79d9c7f1a8473f3b30c",
+      "changes": [
+        {
+          "before": "JOB='fa3-projection-witness-attempt2'",
+          "after": "JOB='fa3-projection-vendor-attempt1'",
+          "count": 1
+        },
+        {
+          "before": "evidence/fa3-projection-witness-gpu-preparation-attempt2.json",
+          "after": "evidence/fa3-projection-vendor-preparation.json",
+          "count": 1
+        },
+        {
+          "before": "test_fa3_projection_witness_attempt2.bat",
+          "after": "test_fa3_projection_vendor.bat",
+          "count": 1
+        },
+        {
+          "before": "15CPU new source/profile/finite-array/readonly/repeat/retry fault controls",
+          "after": "16CPU source/profile/finite-array/readonly/repeat/retry/vendor-parity controls",
+          "count": 1
+        },
+        {
+          "before": "            (out/'trace-analysis.json').write_bytes(json.dumps(traced,indent=2).encode())",
+          "after": "            (out/'trace-analysis.json').write_bytes(json.dumps(traced,indent=2).encode())\n            from test2026.cuda.qwen38_5090.fa3_projection_vendor import compare\n            vendor=out/(phase+'-cublaslt.log');assert vendor.is_file() and vendor.stat().st_size>0\n            assert b'cublasLtMatmul' in vendor.read_bytes()\n            with zipfile.ZipFile(ROOT/'results/fa3-projection-witness-attempt2-evidence.zip') as prior:\n                oldbase='results/fa3-projection-witness-attempt2/native/';oldreport=json.loads(prior.read(oldbase+'report.json'))\n                compared=compare(report,oldreport,read,lambda n:prior.read(oldbase+n),(M/'evidence/reconstructed-fa3-common-input.f32').read_bytes())\n            (out/'vendor-array-parity.json').write_bytes(json.dumps(compared,indent=2).encode())\n",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "verify_fa3_projection_witness_attempt2.py",
+      "target": "verify_fa3_projection_vendor.py",
+      "source_sha256": "b4ff5ca2ff1e72a97401838475c024a4bc8d4e856463f652c69b98f00730c9c1",
+      "target_sha256": "01e06e62b12d527ce2876ca2c2bd33b750db42c76b4086cf0370867909b2db5e",
+      "changes": [
+        {
+          "before": "JOB='fa3-projection-witness-attempt2'",
+          "after": "JOB='fa3-projection-vendor-attempt1'",
+          "count": 1
+        },
+        {
+          "before": "evidence/fa3-projection-witness-gpu-preparation-attempt2.json",
+          "after": "evidence/fa3-projection-vendor-preparation.json",
+          "count": 1
+        },
+        {
+          "before": "b'Ran 15 tests'",
+          "after": "b'Ran 16 tests'",
+          "count": 1
+        },
+        {
+          "before": "            arrays=replay(r,lambda n:z.read(base+'native/'+n),fixture);assert arrays==doc(base+'array-analysis.json')",
+          "after": "            arrays=replay(r,lambda n:z.read(base+'native/'+n),fixture);assert arrays==doc(base+'array-analysis.json')\n            from test2026.cuda.qwen38_5090.fa3_projection_vendor import compare\n            vendor=z.read(base+'native-cublaslt.log');assert b'cublasLtMatmul' in vendor\n            with zipfile.ZipFile(args.proofs/'fa3-projection-witness-attempt2-evidence.zip') as prior:\n                oldbase='results/fa3-projection-witness-attempt2/native/';oldreport=json.loads(prior.read(oldbase+'report.json'))\n                compared=compare(r,oldreport,lambda n:z.read(base+'native/'+n),lambda n:prior.read(oldbase+n),fixture)\n            assert compared==doc(base+'vendor-array-parity.json')\n",
+          "count": 1
+        },
+        {
+          "before": "actual_FA3_projection_complete_native_observation_replayed",
+          "after": "actual_FA3_projection_vendor_logging_observation_replayed",
+          "count": 1
+        },
+        {
+          "before": "actual_FA3_projection_failure_preserved",
+          "after": "actual_FA3_projection_vendor_logging_failure_preserved",
+          "count": 1
+        },
+        {
+          "before": "verifier_sha256=sha(Path(__file__).read_bytes())",
+          "after": "verifier_sha256=sha(Path(__file__).read_bytes()),vendor_array_parity=compared if passed else None,vendor_log_sha256=sha(vendor) if passed else None",
+          "count": 1
+        }
+      ]
+    }
+  ],
+  "CUDA_or_Garnet_native_math_changed": false,
+  "SDK_logging_documentation": "https://docs.nvidia.com/cuda/cublas/index.html",
+  "SDK_logging": "CUBLASLT_LOG_LEVEL5 and LOG_MASK31 with a new owned log file before process startup; no new user SDK selection/query code",
+  "all51_entries_must_match_prior_observation": true
+}

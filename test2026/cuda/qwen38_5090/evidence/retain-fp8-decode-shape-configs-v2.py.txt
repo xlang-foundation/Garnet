@@ -1,0 +1,39 @@
+from pathlib import Path
+import hashlib,json,zipfile
+W=Path(__file__).resolve().parent;O=W.parent/'outputs';R=Path('D:/CantorAI/work/qwen38-5090');E=R/'test2026/cuda/qwen38_5090/evidence';JOB='fp8-decode-shape-configs-attempt2';sha=lambda b:hashlib.sha256(b).hexdigest();owned=[]
+def keep(name,raw):
+    p=E/name;assert not p.exists() or p.read_bytes()==raw;p.write_bytes(raw);owned.append(p)
+with zipfile.ZipFile(W/'fp8-decode-shape-configs-v2-closure-assets.zip') as z:
+    mf=json.loads(z.read('manifest.json'));assert z.testzip() is None
+    for n,h in mf['files'].items():assert sha(z.read(n))==h
+    proof=z.read('results/'+JOB+'-verified.json');assert proof==(O/(JOB+'-verified.json')).read_bytes()
+    p=O/(JOB+'-remote-verified.json');assert not p.exists() or p.read_bytes()==proof;p.write_bytes(proof)
+    for n in mf['files']:
+        if n.startswith('results/fp8-decode-shape-configs-v2-postprocess/') or n.endswith('v2-install.json'):keep('fp8-decode-shape-configs-v2-closure-'+n.removeprefix('results/').replace('/','-'),z.read(n))
+    keep('fp8-decode-shape-configs-v2-closure-manifest.json',json.dumps(dict(closure_sha256=sha((W/'fp8-decode-shape-configs-v2-closure-assets.zip').read_bytes()),**mf),indent=2).encode())
+q=json.loads(proof);assert q['exit_code']==0 and q['analysis']['valid_candidates']==70 and q['analysis']['actual_AlgoChecks']==140 and not q['model_matmul_or_performance_qualified'];keep(JOB+'-verified.json',proof)
+with zipfile.ZipFile(O/(JOB+'-evidence.zip')) as z:
+    mf=json.loads(z.read('evidence-manifest.json'));assert sha((O/(JOB+'-evidence.zip')).read_bytes())==q['archive_sha256']
+    for n,h in mf['files'].items():assert sha(z.read(n))==h
+    base='results/'+JOB+'/';raw=json.loads(z.read(base+'SDK-stdout.json'));imports=z.read(base+'private-build/imports.txt');build=z.read(base+'build-ledger/commands.log');rows={}
+    for row in raw['geometries']:rows.setdefault(row['label'],[]).append(row)
+    equal={k:v[0]['choices'][0]['opaque']==v[1]['choices'][0]['opaque'] for k,v in rows.items()};assert equal==dict(GDN_QKV=False,GDN_Z=False,FA_KV=False,FA_Q=False,FA_O=True)
+    assert b'LNK4199' in build and b'/DELAYLOAD:cudart64_13.dll' in build and b'cudart64_13.dll' not in imports.lower() and b'cublasLt64_13.dll' in imports
+    for n in mf['files']:
+        if n.startswith(base) and n.endswith(('.json','.jsonl','.log','.txt')):
+            data=z.read(n)
+            if n==base+'SDK-stdout.json':
+                keep(JOB+'-SDK-stdout-storage.json',json.dumps(dict(archive=q['archive_sha256'],member=n,sha256=sha(data),bytes=len(data),raw_bytes_retained_in_archive=True),indent=2).encode());data=json.dumps(json.loads(data),indent=2).encode();name=JOB+'-SDK-stdout-pretty.json'
+            else:name=JOB+'-'+n.removeprefix(base).replace('/','-')
+            keep(name,data)
+    keep(JOB+'-archive-manifest.json',json.dumps(dict(archive_sha256=q['archive_sha256'],files=mf['files']),indent=2).encode())
+audit=dict(status='paired_query_replay_passed_with_runtime_provider_claim_limited',proof_sha256=sha(proof),archive_sha256=q['archive_sha256'],opaque_M4_M16_equal=equal,configurations=q['analysis']['rows'],scope='Actual cuBLASLt query/eligibility only, no GEMM/model/performance. cuBLASLt is delay-imported and exact pinned Garnet DLL explicitly loaded; loaded-library hashes match preparation. Linker warns DELAYLOAD cudart ignored; import table has no cudart DLL, so explicit cudart LoadLibrary path/hash DOES NOT establish the provider of linked cudaRuntime calls. Header13020 and linked-runtime/driver API13040 recorded independently. Original preparation/derivation descriptions overstated actual runtime-provider pinning; this audit supersedes that claim without altering raw failed or successful jobs. O opaque equality does not prove numerical equality. Known Q M4 tuple differs from V/GDN; next defaultoff Q/K route must use per-geometry live SDK selection and actual whole-model admission.',numerical_or_model_or_performance_qualified=False)
+keep('fp8-decode-shape-configs-v2-provider-audit.json',json.dumps(audit,indent=2).encode())
+keep('fp8-decode-shape-configs-v2-retention-retry.json',json.dumps(dict(reason='Initial local evidence retention expected an English linker-warning suffix; actual raw diagnostic is Chinese GBK. Match language-independent LNK4199 and DELAYLOAD token plus import table. No query/code/model rerun or gate change; already written closure bytes checked exact before resuming.'),indent=2).encode())
+(O/'Garnet-FP8-Decode-Configuration-Progress.json').write_bytes(json.dumps(audit,indent=2).encode())
+for n in ('commands.log','commands.jsonl'):keep('fp8-decode-shape-configs-v2-local-replay-'+n,(W/'fp8-decode-shape-configs-v2-local-replay'/n).read_bytes())
+keep('retain-fp8-decode-shape-configs-v2.py.txt',Path(__file__).read_bytes())
+text=('\r\n\r\n2026-10-27 actual live FP8 decode geometry query attempt2 completed0; independent local/remote CPU raw replays byte-identical proof '+sha(proof)+', archive '+q['archive_sha256']+' (929562B). Four CPU controls;70validheuristics/140actualAlgoChecks/731APIevents. Live M4 eligible at M16 under4MiB for all5 geometries. Q N12288K5120 M4=[35,18,16,7,2,1,2], K/V N1024K5120 M4=[35,13,17,3,2,0,1]; do not reuse V tuple for Q. O N5120K6144 M4/M16 fullopaque equal; other4 differ. Eligibility/config differences do not prove numerical/model behavior or cause. All1695source/runtime/SDK/config-index/all34objects/CMake unchanged; no GEMM/model/timing executed.\r\nRuntime-provider audit: explicit pinned DLL paths/hashes were collected, but linker LNK4199 says cudart delay-load ignored and import table has no cudart DLL. Therefore earlier v2 preparation/derivation scope language claiming actual runtime-call provider pinning is too broad: only the explicitly loaded cudart module is pinned, linked CUDA call provider is unproven. cuBLASLt delay-import/pinned DLL remains evidenced. Header13020 vs linked-runtime/driverAPI13040 are distinct recorded fields. Original first metadata-wrapper job staysFAILED; all SDK/model/cache failures stayFAILED. Next separate defaultoff Q/K route selected by exact32logicalFA names/physicalB4T4 only, geometry-specific live M4 configs and actual M4/M16 checks; original fullstate/vector/IDs/reset/repeat gates before4K/MTP/quality/HTTP timing. Overall2x and tuned/MTP/INT4/4B comparisons remainopen.\r\n').encode()
+for n in ('docs/research/qwen38-5090-development-log.md','docs/research/qwen38-5090-implementation-task.md'):
+    p=R/n;p.write_bytes(p.read_bytes()+text);owned.append(p)
+paths=[p.relative_to(R).as_posix() for p in owned];(W/'fp8-decode-shape-configs-v2-outcome-stage-paths.bin').write_bytes(b'\0'.join(n.encode() for n in paths)+b'\0');print(json.dumps(dict(files=len(paths),proof_sha256=sha(proof),runtime_call_provider_claim_limited=True)))

@@ -4,6 +4,7 @@
 cmake_minimum_required(VERSION 3.18)
 option(GARNET_METAL "Build the experimental native Metal/MPS backend" OFF)
 option(GARNET_CPU_ONLY "Build Garnet's GPU-free OpenVINO graph runtime" OFF)
+option(GARNET_STAGE_VENDOR_DLLS "Stage vendor DLLs after Windows builds; keep ON for distributable runtimes" ON)
 if(GARNET_METAL)
     if(GARNET_CPU_ONLY)
         message(FATAL_ERROR "Select one backend build: Metal or CPU/OpenVINO")
@@ -213,6 +214,10 @@ option(GARNET_QWEN35_WHOLE_PROGRAM_CUDA "Compile self-contained Qwen3.5 state ke
 if(GARNET_QWEN35_WHOLE_PROGRAM_CUDA)
     set(GARNET_QWEN35_STATE_SOURCES
         "${CMAKE_CURRENT_SOURCE_DIR}/src/cuda/qwen35_delta.cu"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/cuda/qwen35_canonical_kv_overlay.cu"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/cuda/qwen35_kv_delta_commit.cu"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/cuda/qwen38_bf16_kv_commit.cu"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/cuda/qwen38_bf16_kv_overlay.cu"
         "${CMAKE_CURRENT_SOURCE_DIR}/src/cuda/qwen35_packed_commit.cu")
     list(REMOVE_ITEM Cuda_SRC ${GARNET_QWEN35_STATE_SOURCES})
     add_library(garnet_qwen35_state_kernels OBJECT ${GARNET_QWEN35_STATE_SOURCES})
@@ -316,6 +321,10 @@ add_executable(garnet_debug_logits_sampler_native_smoke
     "${CMAKE_CURRENT_SOURCE_DIR}/test2026/native/logits_sampler_native_smoke.cpp"
 )
 target_link_libraries(garnet_debug_logits_sampler_native_smoke ${CUDA_LIBRARIES} ${CUDA_CUDA_LIBRARY})
+
+add_executable(garnet_batch_top1_policy_test test2026/native/logits_top1_batch_policy_test.cpp)
+target_compile_features(garnet_batch_top1_policy_test PRIVATE cxx_std_17)
+add_test(NAME garnet_batch_top1_policy COMMAND garnet_batch_top1_policy_test)
 
 add_executable(garnet_repetition_sampler_test
     test2026/native/repetition_sampler_test.cpp
@@ -568,19 +577,22 @@ if(WIN32)
         message(FATAL_ERROR "TensorRT builder resource DLLs were not found")
     endif()
     list(APPEND GARNET_VENDOR_DLLS ${GARNET_TENSORRT_BUILDER_DLLS})
-    foreach(pattern cublas64_*.dll cublasLt64_*.dll nppig64_*.dll nvjpeg64_*.dll)
+    foreach(pattern cudart64_*.dll cublas64_*.dll cublasLt64_*.dll nppc64_*.dll nppig64_*.dll nvjpeg64_*.dll)
         file(GLOB matches
             "${CUDAToolkit_BIN_DIR}/${pattern}"
-            "${CUDAToolkit_BIN_DIR}/x64/${pattern}")
+            "${CUDAToolkit_BIN_DIR}/x64/${pattern}"
+            "${CUDAToolkit_BIN_DIR}/x86_64/${pattern}")
         if(NOT matches)
             message(FATAL_ERROR "Garnet runtime dependency not found: ${pattern}")
         endif()
         list(APPEND GARNET_VENDOR_DLLS ${matches})
     endforeach()
-    add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-        COMMAND "${CMAKE_COMMAND}" -E copy_if_different
-            ${GARNET_VENDOR_DLLS} "$<TARGET_FILE_DIR:${PROJECT_NAME}>"
-        COMMAND_EXPAND_LISTS VERBATIM)
+    if(GARNET_STAGE_VENDOR_DLLS)
+        add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+            COMMAND "${CMAKE_COMMAND}" -E copy_if_different
+                ${GARNET_VENDOR_DLLS} "$<TARGET_FILE_DIR:${PROJECT_NAME}>"
+            COMMAND_EXPAND_LISTS VERBATIM)
+    endif()
 else()
     find_library(GARNET_TENSORRT_LIBRARY NAMES nvinfer
         PATHS "${GARNET_TENSORRT_ROOT}/lib" REQUIRED NO_DEFAULT_PATH)

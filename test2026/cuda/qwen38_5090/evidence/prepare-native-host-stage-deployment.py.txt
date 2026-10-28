@@ -1,0 +1,29 @@
+from pathlib import Path
+import ast
+import hashlib
+import json
+
+work = Path(__file__).resolve().parent
+methods = Path('D:/CantorAI/work/qwen38-5090/test2026/cuda/qwen38_5090')
+sha = lambda raw: hashlib.sha256(raw).hexdigest()
+prep = json.loads((methods / 'evidence/native-host-stage-run-preparation.json').read_bytes())
+plan = json.loads((work / 'native-host-stage-upload-plan.json').read_bytes())
+targets = {row['target']: row['sha256'] for row in plan['uploads']}
+for row in plan['uploads']:
+    assert sha(Path(row['local']).read_bytes()) == row['sha256']
+data = {'expected': targets, 'existing': {k: v for k, v in prep['files'].items() if k not in targets},
+        'runtime_dependencies': prep['runtime_dependencies'], 'full4k_parent': prep['full4k_parent']}
+target = work / 'native-host-stage-preflight-input.json'
+raw = json.dumps(data, indent=2).encode()
+assert not target.exists()
+target.write_bytes(raw)
+for old, new in (('package-sglang-observed-fixed4k-methods.py', 'package-native-host-stage-methods.py'),
+                 ('install-sglang-observed-fixed4k-methods.py', 'install-native-host-stage-methods.py')):
+    text = (work / old).read_text().replace('sglang-observed-fixed4k', 'native-host-stage').replace(
+        'sglang_observed_fixed4k', 'native_host_stage').replace('explicit ordinary reference methods/evidence', 'explicit host diagnostic methods/evidence')
+    ast.parse(text)
+    path = work / new
+    assert not path.exists()
+    path.write_text(text, encoding='utf8')
+print(json.dumps({'status': 'native_host_stage_deployment_prepared_unrun', 'targets': len(targets),
+                  'existing_inputs': len(data['existing']), 'input_sha256': sha(raw), 'gpu_executed': False}))

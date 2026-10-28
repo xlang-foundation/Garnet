@@ -1,0 +1,53 @@
+........................EEEE......................
+======================================================================
+ERROR: test_ambiguous_flag_rejected_before_open (test2026.cuda.qwen38_5090.test_host_embedding_policy.HostEmbeddingPolicyTests.test_ambiguous_flag_rejected_before_open)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "D:\CantorAI\work\qwen38-5090\test2026\cuda\qwen38_5090\test_host_embedding_policy.py", line 50, in test_ambiguous_flag_rejected_before_open
+    with self.assertRaises(ValueError):cls('fixture',{},host_embedding_lookup=value)
+                                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\CantorAI\work\qwen38-5090\xModel\qwen35\vl_0_8b\cuda_packed_decoder.py", line 22, in __init__
+    validate_bf16_float_reference_decoder(bf16_kv_float_reference,batch,capacity,prefill_chunk,decode_chunk,config,
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+NameError: name 'validate_bf16_float_reference_decoder' is not defined
+
+======================================================================
+ERROR: test_default_keeps_existing_gpu_policy (test2026.cuda.qwen38_5090.test_host_embedding_policy.HostEmbeddingPolicyTests.test_default_keeps_existing_gpu_policy)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "D:\CantorAI\work\qwen38-5090\test2026\cuda\qwen38_5090\test_host_embedding_policy.py", line 36, in test_default_keeps_existing_gpu_policy
+    with self.assertRaises(BuildReached):cls('fixture',{})
+                                         ^^^^^^^^^^^^^^^^^
+  File "D:\CantorAI\work\qwen38-5090\xModel\qwen35\vl_0_8b\cuda_packed_decoder.py", line 22, in __init__
+    validate_bf16_float_reference_decoder(bf16_kv_float_reference,batch,capacity,prefill_chunk,decode_chunk,config,
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+NameError: name 'validate_bf16_float_reference_decoder' is not defined
+
+======================================================================
+ERROR: test_native_admission_failures_close_io_without_build (test2026.cuda.qwen38_5090.test_host_embedding_policy.HostEmbeddingPolicyTests.test_native_admission_failures_close_io_without_build)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "D:\CantorAI\work\qwen38-5090\test2026\cuda\qwen38_5090\test_host_embedding_policy.py", line 45, in test_native_admission_failures_close_io_without_build
+    with self.assertRaisesRegex(RuntimeError,message):cls('fixture',{},host_embedding_lookup=True)
+                                                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\CantorAI\work\qwen38-5090\xModel\qwen35\vl_0_8b\cuda_packed_decoder.py", line 22, in __init__
+    validate_bf16_float_reference_decoder(bf16_kv_float_reference,batch,capacity,prefill_chunk,decode_chunk,config,
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+NameError: name 'validate_bf16_float_reference_decoder' is not defined
+
+======================================================================
+ERROR: test_opt_in_orders_head_and_mapping_before_any_build (test2026.cuda.qwen38_5090.test_host_embedding_policy.HostEmbeddingPolicyTests.test_opt_in_orders_head_and_mapping_before_any_build)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "D:\CantorAI\work\qwen38-5090\test2026\cuda\qwen38_5090\test_host_embedding_policy.py", line 40, in test_opt_in_orders_head_and_mapping_before_any_build
+    with self.assertRaises(BuildReached):cls('fixture',{},host_embedding_lookup=True)
+                                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\CantorAI\work\qwen38-5090\xModel\qwen35\vl_0_8b\cuda_packed_decoder.py", line 22, in __init__
+    validate_bf16_float_reference_decoder(bf16_kv_float_reference,batch,capacity,prefill_chunk,decode_chunk,config,
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+NameError: name 'validate_bf16_float_reference_decoder' is not defined
+
+----------------------------------------------------------------------
+Ran 50 tests in 0.167s
+
+FAILED (errors=4)

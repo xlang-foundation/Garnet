@@ -1,0 +1,42 @@
+from pathlib import Path
+import hashlib,json,zipfile
+W=Path(__file__).resolve().parent;R=Path('D:/CantorAI/work/qwen38-5090');E=R/'test2026/cuda/qwen38_5090/evidence';sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest();owned=[];saved={}
+def keep(name,raw):
+    p=E/name;assert not p.exists();p.write_bytes(raw);owned.append(p);saved[name]=sha(p)
+with zipfile.ZipFile(W/'rowwise-k-norm-native-deployment.zip') as z:
+    mf=json.loads(z.read('deployment-manifest.json'))['files']
+    for n,h in mf.items():
+        p=R/n.removeprefix('Garnet/');assert sha(p)==h;owned.append(p)
+for n in ('derive-rowwise-k-norm-native-build.py','prepare-rowwise-k-norm-build-seed.py','derive-rowwise-k-norm-inventory.py','inspect-rowwise-k-norm-build-inputs.py','run-rowwise-k-norm-build-inventory.py','prepare-rowwise-k-norm-native-build.py','prepare-rowwise-k-norm-build-tools.py','install-rowwise-k-norm-native-build.py','postprocess-rowwise-k-norm-native-build.py','replay-rowwise-k-norm-native-build.py',Path(__file__).name):keep(n+'.txt',(W/n).read_bytes())
+for n in ('rowwise-k-norm-native-package.json','rowwise-k-norm-build-seed.json','rowwise-k-norm-inventory-derivation.json','rowwise-k-norm-build-tools-derivation.json'):keep(n,(W/n).read_bytes())
+for n in ('derive-rowwise-k-norm-native-build-attempt1.log','derive-rowwise-k-norm-native-build-attempt2.log','derive-rowwise-k-norm-inventory-attempt1.log','derive-rowwise-k-norm-inventory-attempt2.log','prepare-rowwise-k-norm-build-seed.log','prepare-rowwise-k-norm-native-build-attempt1.log','prepare-rowwise-k-norm-build-tools-attempt1.log'):keep(n,(W/n).read_bytes())
+inventory=W/'rowwise-k-norm-build-inventory-assets.zip'
+with zipfile.ZipFile(inventory) as z:
+    keep('rowwise-k-norm-build-input-inventory-manifest.json',z.read('manifest.json'))
+    for ext in ('log','jsonl'):keep('rowwise-k-norm-build-input-inventory-commands.'+ext,z.read('results/rowwise-k-norm-build-input-inventory/commands.'+ext))
+package=json.loads((W/'rowwise-k-norm-native-package.json').read_bytes());assert sha(W/'rowwise-k-norm-native-deployment.zip')==package['deployment_sha256']
+keep('rowwise-k-norm-native-preparation-retention.json',json.dumps({'status':'source87_native_build_prepared_unrun','package':package,'input_inventory_archive_sha256':sha(inventory),'retained_sha256':saved,'local_preparation_failures_preserved':True,'original_three_object_whitelist_preserved':True,'GPU_model_or_performance_qualified':False},indent=2).encode())
+entry=('\n\n2026-10-27: Prepared source87 default-off rowwise K-normalization native build. '
+       'The current RTX 5090 serving result remains 29.9110 aggregate tok/s at image C8; '
+       'Garnet physically executes B1 and queues clients.89.7712 decode tok/s/request '
+       'excludes prefill and waiting; the overall2x throughput target is not achieved. '
+       'Batch4 remains correctness-unqualified. This controlled experiment changes '
+       'only K RMS subgraph shape to four B1-shaped rows when explicitly enabled. '
+       'Fresh remote read-only inventory verified1948 baseline files,87 overlay targets '
+       '(14 existing),51 closed parents, runtime/SDK/config+index/CMake/all34 objects; '
+       'D.free560.405GiB. Source bundle '+package['source_bundle_sha256']+', deployment '
+       +package['deployment_sha256']+'. Native184 CPU guard parent passed, original109 '
+       'seven-stage guard parent retained. Full build retains104 current+86 historical '
+       'Python controls and Q/O/factory/wire/initialization/native+embedded selector/'
+       'tokenizer controls; original3-object whitelist and restoration remain mandatory. '
+       'Build alone cannot qualify model repair or speed. Next: paired raw build replay; '
+       'same-DLL default-off controls; explicit on B4 ablation and full4K/128 ordinary '
+       'text/image/mixed regression, quality, then matched HTTP performance. All prior '
+       'full4K/cache62 and seven/six-output observer failures remain failed. Local '
+       'preparation assertions about newline/replacement counts were corrected before '
+       'deployment; failed preparation logs retained. No model benchmarks run here.\n').encode()
+for n in ('docs/research/qwen38-5090-development-log.md','docs/research/qwen38-5090-implementation-task.md'):
+    p=R/n;before=p.read_bytes();assert b'Prepared source87 default-off rowwise K-normalization native build.' not in before
+    with p.open('ab') as f:f.write(entry)
+    assert p.read_bytes()==before+entry;owned.append(p)
+(W/'rowwise-k-norm-native-preparation-stage-paths.bin').write_bytes(b''.join(p.relative_to(R).as_posix().encode()+b'\0' for p in dict.fromkeys(owned)));print(json.dumps({'stage_paths':len(set(owned)),'native_build_unrun':True,'model_or_performance_qualified':False}))

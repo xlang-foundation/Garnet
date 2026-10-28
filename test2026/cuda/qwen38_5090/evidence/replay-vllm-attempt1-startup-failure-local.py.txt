@@ -1,0 +1,13 @@
+from pathlib import Path
+import hashlib,json,subprocess,sys
+w=Path(__file__).resolve().parent;out=w.parent/'outputs';m=Path('D:/CantorAI/work/qwen38-5090/test2026/cuda/qwen38_5090');name='vllm-fixed4k-ordinary-attempt1';sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+assert sha(out/(name+'-evidence.zip'))=='43e1d905ebecf8ae4f56cbde3e5a928b9854c860c009d7ba9110c004616ded86'
+command=[sys.executable,str(m/'verify_vllm_fixed4k.py'),'--proofs',str(out),'--job',name,'--corpus',str(w/'mmmu/quality-corpus'),'--scratch',str(w)]
+log=out/(name+'-local-replay.log')
+with log.open('xb') as stream:code=subprocess.run(command,stdout=stream,stderr=subprocess.STDOUT).returncode
+proof=out/(name+'-verified.json');q=json.loads(proof.read_bytes());remote=out/(name+'-remote-verified.json')
+assert code==1 and q['status']=='reference_fixed4k_failure_preserved' and q['profiles']==[] and proof.read_bytes()==remote.read_bytes()
+result={'status':'vllm_attempt1_startup_failure_independently_replayed','verifier_exit_code':code,'expected_failure_exit':True,'proof_pair_identical':True,
+        'archive_sha256':sha(out/(name+'-evidence.zip')),'proof_sha256':sha(proof),'files_verified':q['files_verified'],'log_sha256':sha(log),
+        'benchmark_profiles':0,'gpu_benchmark_executed':False,'scope':'Actual missing-launcher setup failure, no ready server or quality/timing requests; original archive/source/checker and expected verifier1 preserved. Not model incompatibility or a reference speed result.'}
+(w/'vllm-attempt1-startup-failure-local-receipt.json').write_bytes(json.dumps(result,indent=2).encode());print(json.dumps(result))

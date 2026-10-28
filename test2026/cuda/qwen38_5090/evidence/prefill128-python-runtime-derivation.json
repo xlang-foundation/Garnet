@@ -1,0 +1,208 @@
+{
+  "status": "prefill128_python_runtime_candidate_cpu_unverified",
+  "files": [
+    {
+      "source": "test2026/cuda/qwen38_5090/bf16_prefill128_layout.py",
+      "source_sha256": "766ac73e94ed64530f60c963572781debdb9fc7f9d2a2193fba106c1f5689e66",
+      "target": "xModel/qwen35/vl_0_8b/kv_bf16_prefill128_study_layout.py",
+      "target_sha256": "23b83143f3b65055d58571e97497b49d9eb0e8cea79bb5ee09d080e77d6bdea9",
+      "replacements": [
+        {
+          "old": "from .bf16_low_batch_layout import",
+          "new": "from .kv_bf16_low_batch_study_layout import",
+          "count": 1
+        }
+      ],
+      "existing_file_modified": false
+    },
+    {
+      "source": "xModel/qwen35/vl_0_8b/bf16_low_batch_kv_profile.py",
+      "source_sha256": "dcb08772319b1149bf0b7485c0a1f5606ed646ece0723f155c009854ffdda799",
+      "target": "xModel/qwen35/vl_0_8b/bf16_prefill128_kv_profile.py",
+      "target_sha256": "d703e543920cc8e4672f670f451580e61259b6d20c841146eea1010742bbd126",
+      "scope": "Exact old pinned geometry/RoPE/precision flags copied into a distinct T128-only program validator; separate decoder validates unchanged T4 replay plus new T128 non-replay profile."
+    },
+    {
+      "source": "test2026/cuda/qwen38_5090/evidence/prefill128-python-runtime-original-xModel__qwen35__vl_0_8b__cuda_packed_program.py.txt",
+      "source_sha256": "fc85e0bf8a2e7cd86bed416ceb192ca373ba82dbd0b275cac94ae0d7fab4d8f3",
+      "target": "xModel/qwen35/vl_0_8b/cuda_packed_program.py",
+      "target_sha256": "623d97063edf8e5dcb22e1558bc0996965bb85dfd8f53d2d93a0fbf68d362ec6",
+      "replacements": [
+        {
+          "old": "from .bf16_low_batch_kv_profile import validate_bf16_low_batch_kv_program",
+          "new": "from .bf16_low_batch_kv_profile import validate_bf16_low_batch_kv_program\nfrom .bf16_prefill128_kv_profile import validate_bf16_prefill128_kv_program\nfrom .kv_bf16_prefill128_study_layout import build_bf16_prefill128_layout",
+          "count": 1
+        },
+        {
+          "old": "bf16_kv_float_reference=False,bf16_kv_low_batch_state=False):",
+          "new": "bf16_kv_float_reference=False,bf16_kv_low_batch_state=False,bf16_kv_prefill128_state=False):",
+          "count": 1
+        },
+        {
+          "old": "        if bf16_kv_low_batch_state:\n            validate_bf16_low_batch_kv_program",
+          "new": "        if type(bf16_kv_prefill128_state) is not bool:raise ValueError(\"T128 BF16 program opt-in must be boolean\")\n        if bf16_kv_prefill128_state:\n            if bf16_kv_low_batch_state is not False:raise ValueError(\"T128 and T4/T32 BF16 program dialects are exclusive\")\n            validate_bf16_prefill128_kv_program(True,batch,capacity,chunk_size,retain_linear_inputs,config,\n                external_compressed_weights=external_compressed_weights,joined_mlp_projections=joined_mlp_projections,\n                embedded_projection_weights=embedded_projection_weights,join_input_projections=join_input_projections,\n                kv_delta_state=kv_delta_state,kv_overlay_strategy=kv_overlay_strategy,legacy_bf16_kv_state=bf16_kv_state,bf16_kv_float_reference=bf16_kv_float_reference)\n        if bf16_kv_low_batch_state:\n            validate_bf16_low_batch_kv_program",
+          "count": 1
+        },
+        {
+          "old": "        else:validate_joined_mlp_profile(joined_mlp_projections,batch,capacity,chunk_size,external_compressed_weights,embedded_projection_weights,join_input_projections,bf16_float_reference=bf16_kv_float_reference)",
+          "new": "        elif not bf16_kv_prefill128_state:validate_joined_mlp_profile(joined_mlp_projections,batch,capacity,chunk_size,external_compressed_weights,embedded_projection_weights,join_input_projections,bf16_float_reference=bf16_kv_float_reference)",
+          "count": 1
+        },
+        {
+          "old": "self.bf16_kv_state=bf16_kv_state or bf16_kv_low_batch_state;self.bf16_kv_low_batch_state=bf16_kv_low_batch_state",
+          "new": "self.bf16_kv_state=bf16_kv_state or bf16_kv_low_batch_state or bf16_kv_prefill128_state;self.bf16_kv_low_batch_state=bf16_kv_low_batch_state;self.bf16_kv_prefill128_state=bf16_kv_prefill128_state",
+          "count": 1
+        },
+        {
+          "old": "        if bf16_kv_state or bf16_kv_low_batch_state:\n            builder=build_bf16_low_batch_layout if bf16_kv_low_batch_state else build_bf16_kv_study_layout",
+          "new": "        if bf16_kv_state or bf16_kv_low_batch_state or bf16_kv_prefill128_state:\n            builder=build_bf16_prefill128_layout if bf16_kv_prefill128_state else (build_bf16_low_batch_layout if bf16_kv_low_batch_state else build_bf16_kv_study_layout)",
+          "count": 1
+        },
+        {
+          "old": "bf16_canonical_kv=bool(canonical is not None and getattr(self,'bf16_kv_state',False) and not getattr(self,'bf16_kv_low_batch_state',False)),",
+          "new": "bf16_canonical_kv=bool(canonical is not None and getattr(self,'bf16_kv_state',False) and not getattr(self,'bf16_kv_low_batch_state',False) and not getattr(self,'bf16_kv_prefill128_state',False)),",
+          "count": 1
+        },
+        {
+          "old": "                    bf16_low_batch_canonical_kv=bool(canonical is not None and getattr(self,'bf16_kv_low_batch_state',False)),",
+          "new": "                    bf16_low_batch_canonical_kv=bool(canonical is not None and getattr(self,'bf16_kv_low_batch_state',False)),\n                    bf16_prefill128_canonical_kv=bool(canonical is not None and getattr(self,'bf16_kv_prefill128_state',False)),",
+          "count": 1
+        }
+      ],
+      "existing_file_modified": true
+    },
+    {
+      "source": "test2026/cuda/qwen38_5090/evidence/prefill128-python-runtime-original-xModel__qwen35__vl_0_8b__cuda_chunk.py.txt",
+      "source_sha256": "220fb46ac77b831d195ebe38aec5a2fc9d6cb6d13603787f357398a68cda1058",
+      "target": "xModel/qwen35/vl_0_8b/cuda_chunk.py",
+      "target_sha256": "fe368296871c876cdbb74a246e8cbecc3ae0609ca4b73c8445ab4cb900d888b7",
+      "replacements": [
+        {
+          "old": "bf16_kv_float_reference=False,bf16_low_batch_canonical_kv=False):",
+          "new": "bf16_kv_float_reference=False,bf16_low_batch_canonical_kv=False,bf16_prefill128_canonical_kv=False):",
+          "count": 1
+        },
+        {
+          "old": "    if type(bf16_low_batch_canonical_kv) is not bool or",
+          "new": "    if type(bf16_prefill128_canonical_kv) is not bool or (bf16_prefill128_canonical_kv and (bf16_low_batch_canonical_kv or bf16_canonical_kv or bf16_kv_float_reference or canonical_kv_state is None or kind!=\"full_attention\")):\r\n        raise ValueError(\"T128 BF16 canonical KV requires its separate exclusive full-attention binding\")\r\n    if type(bf16_low_batch_canonical_kv) is not bool or",
+          "count": 1
+        },
+        {
+          "old": "extra.update({('canonical_bf16_low_batch_kv_overlay' if bf16_low_batch_canonical_kv else ('canonical_bf16_kv_overlay' if bf16_canonical_kv else 'canonical_kv_overlay')):1})",
+          "new": "extra.update({('canonical_bf16_prefill128_kv_overlay' if bf16_prefill128_canonical_kv else ('canonical_bf16_low_batch_kv_overlay' if bf16_low_batch_canonical_kv else ('canonical_bf16_kv_overlay' if bf16_canonical_kv else 'canonical_kv_overlay'))):1})",
+          "count": 1
+        }
+      ],
+      "existing_file_modified": true
+    },
+    {
+      "source": "test2026/cuda/qwen38_5090/evidence/prefill128-python-runtime-original-xModel__qwen35__vl_0_8b__cuda_packed_decoder.py.txt",
+      "source_sha256": "ba48f7c6ce28931894c30335b33f2c8c38add197fd25f8f12f74799cc3fc974c",
+      "target": "xModel/qwen35/vl_0_8b/cuda_packed_decoder.py",
+      "target_sha256": "be9198639d0563a335a41bdc0a3558ed1466f062486e7399503bc516243e9153",
+      "replacements": [
+        {
+          "old": "from .bf16_low_batch_kv_profile import validate_bf16_low_batch_kv_decoder",
+          "new": "from .bf16_low_batch_kv_profile import validate_bf16_low_batch_kv_decoder\nfrom .bf16_prefill128_kv_profile import validate_bf16_prefill128_kv_decoder",
+          "count": 1
+        },
+        {
+          "old": "bf16_kv_float_reference=False,bf16_kv_low_batch_state=False):",
+          "new": "bf16_kv_float_reference=False,bf16_kv_low_batch_state=False,bf16_kv_prefill128_study=False):",
+          "count": 1
+        },
+        {
+          "old": "        low_batch_helper_factory=None\n        if bf16_kv_low_batch_state:\n            validate_bf16_low_batch_kv_decoder(True,batch,capacity,prefill_chunk,decode_chunk,config,",
+          "new": "        if type(bf16_kv_prefill128_study) is not bool or (bf16_kv_prefill128_study and bf16_kv_low_batch_state is not True):raise ValueError(\"T128 BF16 study requires an explicit boolean and retained low-batch decode\")\n        low_batch_helper_factory=None;prefill128_helper_factory=None\n        if bf16_kv_low_batch_state:\n            low_batch_validator=validate_bf16_prefill128_kv_decoder if bf16_kv_prefill128_study else validate_bf16_low_batch_kv_decoder\n            low_batch_options={\"low_batch_decode\":True} if bf16_kv_prefill128_study else {}\n            low_batch_validator(True,batch,capacity,prefill_chunk,decode_chunk,config,**low_batch_options,",
+          "count": 1
+        },
+        {
+          "old": "            try:low_batch_helper_factory=garnet.cuda_bf16_low_batch_kv_delta_commit",
+          "new": "            try:\n                low_batch_helper_factory=garnet.cuda_bf16_low_batch_kv_delta_commit\n                if bf16_kv_prefill128_study:prefill128_helper_factory=garnet.cuda_bf16_prefill128_kv_delta_commit",
+          "count": 1
+        },
+        {
+          "old": "self.bf16_kv_state=bf16_kv_state or bf16_kv_low_batch_state;self.bf16_kv_low_batch_state=bf16_kv_low_batch_state;self.bf16_prefill_commit=None",
+          "new": "self.bf16_kv_state=bf16_kv_state or bf16_kv_low_batch_state;self.bf16_kv_low_batch_state=bf16_kv_low_batch_state;self.bf16_prefill_commit=None;self.bf16_kv_prefill128_study=bf16_kv_prefill128_study",
+          "count": 1
+        },
+        {
+          "old": "        for size in (prefill_chunk,decode_chunk):\n            if bf16_kv_state:",
+          "new": "        for size in (prefill_chunk,decode_chunk):\n            if bf16_kv_prefill128_study and size==128:continue # Exact separate guard above; old joined profiles stay unchanged.\n            if bf16_kv_state:",
+          "count": 1
+        },
+        {
+          "old": "                options={'bf16_kv_low_batch_state':True} if bf16_kv_low_batch_state else ({'bf16_kv_state':True} if bf16_kv_state else ({'bf16_kv_float_reference':True} if bf16_kv_float_reference else {}))",
+          "new": "                options={'bf16_kv_prefill128_state':True} if bf16_kv_prefill128_study and size==128 else ({'bf16_kv_low_batch_state':True} if bf16_kv_low_batch_state else ({'bf16_kv_state':True} if bf16_kv_state else ({'bf16_kv_float_reference':True} if bf16_kv_float_reference else {})))",
+          "count": 1
+        },
+        {
+          "old": "                self.bf16_prefill_commit=helper_factory();self.bf16_prefill_commit.build(json.dumps(self.programs[prefill_chunk].delta_layout))",
+          "new": "                prefill_factory=prefill128_helper_factory if bf16_kv_prefill128_study else helper_factory\n                self.bf16_prefill_commit=prefill_factory();self.bf16_prefill_commit.build(json.dumps(self.programs[prefill_chunk].delta_layout))",
+          "count": 1
+        },
+        {
+          "old": "        if getattr(self,'bf16_kv_low_batch_state',False):result['packed_profiles']['bf16_kv_low_batch_state']=True",
+          "new": "        if getattr(self,'bf16_kv_low_batch_state',False):result['packed_profiles']['bf16_kv_low_batch_state']=True\n        if getattr(self,'bf16_kv_prefill128_study',False):result['packed_profiles']['bf16_kv_prefill128_study']=True",
+          "count": 1
+        }
+      ],
+      "existing_file_modified": true
+    },
+    {
+      "source": "test2026/cuda/qwen38_5090/evidence/prefill128-python-runtime-original-xModel__qwen38__vl_27b__model.py.txt",
+      "source_sha256": "4d7399de83eeb503b376a493e42ced14aa2990d37556f233128dc94b52e1db6c",
+      "target": "xModel/qwen38/vl_27b/model.py",
+      "target_sha256": "1d0443a3909c96ce5d1f61ceba393051477261a8258e0c8adc6e5d89b99b1775",
+      "replacements": [
+        {
+          "old": "def validate_cuda_batch_study_profile(config,capacity,batch):",
+          "new": "\n\ndef create_cuda_bf16_prefill128_study_decoder(checkpoint,config,capacity=4096,batch=1):\n    \"\"\"Explicit experimental B1 route; GPU/model/quality admission is separate.\"\"\"\n    validate_cuda_profile(config,capacity,batch)\n    from xModel.qwen35.vl_0_8b.bf16_prefill128_kv_profile import validate_bf16_prefill128_kv_decoder\n    options=dict(retain_linear_inputs=True,deferred_state_commit=True,shared_output_storage=True,host_embedding_lookup=True,\n                 external_compressed_weights=True,joined_mlp_projections=True)\n    validate_bf16_prefill128_kv_decoder(True,batch,capacity,128,4,config['text_config'],low_batch_decode=True,**options)\n    import json\n    from xModel.qwen35.vl_0_8b.cuda_packed_decoder import CUDAPackedDecoder\n    decoder=CUDAPackedDecoder(checkpoint,config['text_config'],batch,capacity,128,4,\n        flat_concat=True,register_delta_128=True,bf16_kv_low_batch_state=True,bf16_kv_prefill128_study=True,**options)\n    try:\n        decoder.io.enable_nvfp4_head(True);pool=json.loads(decoder.io.memory_json())\n        if (pool['compressed_projection_pool_entries'],pool['compressed_nvfp4_entries'],pool['compressed_fp8_entries'])!=(336,128,208):\n            raise ValueError('B1 BF16 requires one shared128NVFP4/208FP8 joined projection pool')\n        if pool['embedding_mode']!='host_mapped_bf16' or pool['embedding_table_bytes']!=0 or pool['host_embedding_mapped_tensor_bytes']!=2542796800 or pool['head_precision']!='modelopt_nvfp4_w4a4':\n            raise ValueError('B1 BF16 requires the host-mapped BF16 embedding and native NVFP4 activation head')\n        physical=pool['compressed_projection_weight_bytes']+pool['compressed_projection_scale_bytes']\n        if set(decoder.programs)!={4,128}:raise ValueError('T128 BF16 requires exactly T4 decode and T128 prefill')\n        for size,program in decoder.programs.items():\n            expected='garnet_qwen38_bf16_prefill128_delta_study_v1' if size==128 else 'garnet_qwen38_bf16_low_batch_delta_study_v1'\n            if program.batch!=1 or program.delta_layout['chunk']!=size or program.delta_layout['contract']!=expected:\n                raise ValueError('B1 BF16 decoder used the wrong cache type or physical batch')\n            stats=json.loads(program.graph.stats_json())\n            if stats['native_nvfp4_projection_weights']!=128 or stats['native_fp8_projection_weights']!=208 or stats['external_bf16_weight_inputs']!=0 or stats['external_compressed_weight_inputs']!=336 or stats['external_compressed_weight_bytes']!=physical:\n                raise ValueError('B1 BF16 graph shared compressed projection contract mismatch')\n        return decoder\n    except:\n        decoder.close();raise\n\n\ndef validate_cuda_batch_study_profile(config,capacity,batch):",
+          "count": 1
+        }
+      ],
+      "existing_file_modified": true,
+      "factory_derivation": {
+        "source_function": "create_cuda_bf16_low_batch_study_decoder",
+        "replacements": [
+          {
+            "old": "create_cuda_bf16_low_batch_study_decoder",
+            "new": "create_cuda_bf16_prefill128_study_decoder",
+            "count": 1
+          },
+          {
+            "old": "from xModel.qwen35.vl_0_8b.bf16_low_batch_kv_profile import validate_bf16_low_batch_kv_decoder",
+            "new": "from xModel.qwen35.vl_0_8b.bf16_prefill128_kv_profile import validate_bf16_prefill128_kv_decoder",
+            "count": 1
+          },
+          {
+            "old": "validate_bf16_low_batch_kv_decoder(True,batch,capacity,32,4,config['text_config'],**options)",
+            "new": "validate_bf16_prefill128_kv_decoder(True,batch,capacity,128,4,config['text_config'],low_batch_decode=True,**options)",
+            "count": 1
+          },
+          {
+            "old": "batch,capacity,32,4,",
+            "new": "batch,capacity,128,4,",
+            "count": 1
+          },
+          {
+            "old": "bf16_kv_low_batch_state=True,**options",
+            "new": "bf16_kv_low_batch_state=True,bf16_kv_prefill128_study=True,**options",
+            "count": 1
+          },
+          {
+            "old": "        for program in decoder.programs.values():",
+            "new": "        if set(decoder.programs)!={4,128}:raise ValueError('T128 BF16 requires exactly T4 decode and T128 prefill')\n        for size,program in decoder.programs.items():",
+            "count": 1
+          },
+          {
+            "old": "            if program.batch!=1 or program.delta_layout['contract']!='garnet_qwen38_bf16_low_batch_delta_study_v1':",
+            "new": "            expected='garnet_qwen38_bf16_prefill128_delta_study_v1' if size==128 else 'garnet_qwen38_bf16_low_batch_delta_study_v1'\n            if program.batch!=1 or program.delta_layout['chunk']!=size or program.delta_layout['contract']!=expected:",
+            "count": 1
+          }
+        ]
+      }
+    }
+  ],
+  "scope": "Distinct opt-in T128 program/layout/keyword and T128prefill/T4decode construction/factory, sharing the existing projection pool and canonical state. Old admission helpers unchanged; no local GPU/native runtime/build or remote mutation. Full native build, model/GDN equivalence, quality and HTTP performance qualification remain required."
+}

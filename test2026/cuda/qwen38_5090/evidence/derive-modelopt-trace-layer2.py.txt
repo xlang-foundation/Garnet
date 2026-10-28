@@ -1,0 +1,32 @@
+from pathlib import Path
+import hashlib,json
+m=Path('D:/CantorAI/work/qwen38-5090/test2026/cuda/qwen38_5090');sha=lambda raw:hashlib.sha256(raw).hexdigest();rows=[]
+def derive(base,target,changes):
+    raw=(m/base).read_bytes();before=raw
+    for old,new,count in changes:assert raw.count(old.encode())==count,(target,old[:80],raw.count(old.encode()));raw=raw.replace(old.encode(),new.encode())
+    path=m/target;assert not path.exists();path.write_bytes(raw);rows.append({'base':base,'target':target,'base_sha256':sha(before),'target_sha256':sha(raw),'changes':[{'before':a,'after':b,'count':c} for a,b,c in changes]})
+derive('probe_layer2_ordinary_witness.py','probe_modelopt_trace_layer2.py',[
+ ('evidence/layer2-ordinary-witness-preparation.json','evidence/modelopt-trace-layer2-preparation.json',1),
+ ("'status':'constructing','candidate_library_sha256'","'status':'constructing','trace_policy':os.environ.get('GARNET_MODELOPT_INIT_TRACE'),'candidate_library_sha256'",1),
+ ("    assert os.environ.get('GARNET_NVFP4_DOWN_CANDIDATE')=='0'","    assert os.environ.get('GARNET_NVFP4_DOWN_CANDIDATE')=='0'\n    assert os.environ.get('GARNET_MODELOPT_INIT_TRACE') in (None,'1')",1),
+ ('        try:result.build(forward(*symbols),symbols,str(checkpoint));result.enable_cuda_graph(True)',"        print('GARNET_TRACE_PROFILE_BEGIN '+str(tokens),flush=True)\n        try:result.build(forward(*symbols),symbols,str(checkpoint));result.enable_cuda_graph(True)",1),
+ ('        return result,values',"        print('GARNET_TRACE_PROFILE_READY '+str(tokens),flush=True)\n        return result,values",1),
+ ("target=root/'results/fp8-z128-native-package-audit-attempt1/layer2-ordinary-attempt1-context.json'","target=root/'results/fp8-z128-native-package-audit-attempt1'/('modelopt-trace-layer2-attempt1-'+('on' if os.environ.get('GARNET_MODELOPT_INIT_TRACE')=='1' else 'off')+'-context.json')",1)])
+derive('test_layer2_ordinary_witness.bat','test_modelopt_trace_layer2.bat',[
+ ('set GARNET_NVFP4_DOWN_CANDIDATE=0','set GARNET_NVFP4_DOWN_CANDIDATE=0\nset GARNET_MODELOPT_INIT_TRACE=\nif "%~3"=="1" set GARNET_MODELOPT_INIT_TRACE=1\nif not "%~3"=="0" if not "%~3"=="1" exit /b 2',1),('probe_layer2_ordinary_witness.py','probe_modelopt_trace_layer2.py',1)])
+old=(m/'run_layer2_ordinary_witness.py').read_text();start=old.index("        command=[sys.executable,str(M/'monitor_native_probe.py')");end=old.index("        w['status']='layer2_ordinary_witness_collected_needs_replay'",start)
+replacement="""        for phase,policy in (('trace-on','1'),('trace-off','0')):
+            command=[sys.executable,str(M/'monitor_native_probe.py'),'--study',str(ROOT),'--output',str(out/(phase+'-resources')),'--','cmd.exe','/d','/c',str(M/'test_modelopt_trace_layer2.bat'),str(out/phase),str(cache),policy]
+            code=ledger.run(command,out/(phase+'-ledger'),'correctness','Actual real-input ordinary layer2 T32/T128 with plugin init trace='+policy+', full arrays/readonly/carried states/repeats; no performance admission',common+[library])
+            idle()
+            if code:raise RuntimeError('Actual layer2 initialization/array observation failed; preserve raw plugin events')
+            report=json.loads((out/phase/'report.json').read_bytes());assert report['status']=='layer2_ordinary_collected_needs_replay'
+"""
+derive('run_layer2_ordinary_witness.py','run_modelopt_trace_layer2.py',[
+ ("JOB='layer2-ordinary-witness-attempt1'","JOB='modelopt-trace-layer2-attempt1'",1),('evidence/layer2-ordinary-witness-preparation.json','evidence/modelopt-trace-layer2-preparation.json',1),('layer2_ordinary_witness_prepared_gpu_unrun','modelopt_trace_layer2_prepared_gpu_unrun',1),
+ ("len(p['candidate_files'])==35","len(p['candidate_files'])==38",1),("len(z.namelist())==len(set(z.namelist()))==35","len(z.namelist())==len(set(z.namelist()))==38",1),
+ ('garnet-native-fp8-z128-attempt1.dll','garnet-native-modelopt-init-trace-attempt2.dll',1),
+ ("    assert not (ROOT/'results/fp8-z128-native-package-audit-attempt1/layer2-ordinary-attempt1-context.json').exists()","    for phase in ('on','off'):assert not (ROOT/'results/fp8-z128-native-package-audit-attempt1'/('modelopt-trace-layer2-attempt1-'+phase+'-context.json')).exists()",1),
+ ('78CPU retained74 model/cache controls plus4 ordinary-layer2 profile/fixture/replay/source faults','83CPU retain81 composed model/cache/init controls plus2 actual trace-profile/provenance faults',1),
+ (old[start:end],replacement,1),('layer2_ordinary_witness_collected_needs_replay','modelopt_trace_layer2_collected_needs_replay',1)])
+(m/'evidence/modelopt-trace-layer2-derivation.json').write_bytes(json.dumps({'status':'exact_observation_only_derivatives','files':rows,'native_or_numerical_math_changed':False,'candidate_sources':38},indent=2).encode());print(json.dumps({'derived_methods':len(rows)}))

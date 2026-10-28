@@ -1,0 +1,121 @@
+
+{"id": "556f56c1eb8a4ba1adfb0f7894502a47", "kind": "correctness", "label": "Reconcile existing admitted 4K client streams with raw worker IDs and within-clock intervals", "argv": ["D:/CantorAI/Garnet/.venv/Scripts/python.exe", "work/analyze-native-fixed4k-worker-intervals.py"]}
+{
+  "status": "existing_native_fixed4k_http_and_worker_intervals_reconciled",
+  "requests": 128,
+  "cohorts": 16,
+  "c1": [
+    {
+      "mode": "ordinary",
+      "case": "text",
+      "worker_wall_seconds": {
+        "median": 8.236536699987482,
+        "min": 8.2258509999956,
+        "max": 8.671729099994991,
+        "mean": 8.293675687491486
+      },
+      "worker_first_to_last_token_seconds": {
+        "median": 3.2989207999926293,
+        "min": 3.283289099985268,
+        "max": 3.714052700001048,
+        "mean": 3.3509446124990063
+      },
+      "worker_wall_outside_first_to_last_token_seconds": {
+        "median": 4.9409228500007885,
+        "min": 4.903497999970568,
+        "max": 4.9717238000012,
+        "mean": 4.94273107499248
+      },
+      "client_wall_minus_worker_wall_seconds": {
+        "median": 0.027679700011503883,
+        "min": 0.017786200012778863,
+        "max": 0.04654070001561195,
+        "mean": 0.027950325013080146
+      }
+    },
+    {
+      "mode": "ordinary",
+      "case": "image",
+      "worker_wall_seconds": {
+        "median": 8.244664850004483,
+        "min": 8.213076899992302,
+        "max": 8.284084999992047,
+        "mean": 8.24751408749944
+      },
+      "worker_first_to_last_token_seconds": {
+        "median": 3.3018611499865074,
+        "min": 3.268935000000056,
+        "max": 3.313424499996472,
+        "mean": 3.3000451999942015
+      },
+      "worker_wall_outside_first_to_last_token_seconds": {
+        "median": 4.943304949993035,
+        "min": 4.914644500007853,
+        "max": 4.986064600001555,
+        "mean": 4.947468887505238
+      },
+      "client_wall_minus_worker_wall_seconds": {
+        "median": 0.021905699992203154,
+        "min": 0.01780420000432059,
+        "max": 0.05088999998406507,
+        "mean": 0.029580012502265163
+      }
+    },
+    {
+      "mode": "mtp",
+      "case": "text",
+      "worker_wall_seconds": {
+        "median": 7.678450799998245,
+        "min": 7.470204899989767,
+        "max": 7.741957500024,
+        "mean": 7.6596469875003095
+      },
+      "worker_first_to_last_token_seconds": {
+        "median": 1.69052565000311,
+        "min": 1.4929058000270743,
+        "max": 1.7675832000095397,
+        "mean": 1.6762483625061577
+      },
+      "worker_wall_outside_first_to_last_token_seconds": {
+        "median": 5.979458899979363,
+        "min": 5.963297199981753,
+        "max": 6.008202099998016,
+        "mean": 5.983398624994152
+      },
+      "client_wall_minus_worker_wall_seconds": {
+        "median": 0.03669609998178203,
+        "min": 0.03427099998225458,
+        "max": 0.05141799998818897,
+        "mean": 0.03839373749724473
+      }
+    },
+    {
+      "mode": "mtp",
+      "case": "image",
+      "worker_wall_seconds": {
+        "median": 7.410885499994038,
+        "min": 7.317334100021981,
+        "max": 7.58049980000942,
+        "mean": 7.417558274995827
+      },
+      "worker_first_to_last_token_seconds": {
+        "median": 1.4569501999940258,
+        "min": 1.3436151000205427,
+        "max": 1.6229927999957,
+        "mean": 1.4586234750058793
+      },
+      "worker_wall_outside_first_to_last_token_seconds": {
+        "median": 5.958010450005531,
+        "min": 5.944384899979923,
+        "max": 5.977947899984429,
+        "mean": 5.958934799989947
+      },
+      "client_wall_minus_worker_wall_seconds": {
+        "median": 0.03489890000491869,
+        "min": 0.0343272999743931,
+        "max": 0.04536430002190173,
+        "mean": 0.036411075005162274
+      }
+    }
+  ]
+}

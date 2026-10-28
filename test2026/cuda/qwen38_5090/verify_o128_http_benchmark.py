@@ -1,0 +1,70 @@
+"""Independent raw O128 HTTP IDs, callback, adapted805 and restoration replay."""
+from pathlib import Path
+import argparse,hashlib,json,sys,tempfile,zipfile
+sys.path.insert(0,str(Path(__file__).resolve().parents[3]))
+from test2026.cuda.qwen38_5090.verify_mmmu_http_quality import replay
+from test2026.cuda.qwen38_5090.mmmu_http_quality import load_corpus
+from test2026.cuda.qwen38_5090.native_o128_http_admission import LIBRARY,CERTIFICATES
+from test2026.cuda.qwen38_5090.o128_http_benchmark_contract import REFERENCE,REFERENCE_SHA,replay_trial
+JOB='o128-http-benchmark-attempt1';P='Garnet/test2026/cuda/qwen38_5090/';sha=lambda b:hashlib.sha256(b).hexdigest()
+
+def main():
+    a=argparse.ArgumentParser();a.add_argument('--proofs',type=Path,required=True);a.add_argument('--corpus',type=Path,required=True);a.add_argument('--scratch',type=Path,required=True);args=a.parse_args();archive=args.proofs/(JOB+'-evidence.zip')
+    with zipfile.ZipFile(archive) as z:
+        m=json.loads(z.read('evidence-manifest.json'));assert z.testzip() is None and len(z.namelist())==len(set(z.namelist()))==len(m['files'])+1
+        for n,h in m['files'].items():assert sha(z.read(n))==h
+        base='results/'+JOB+'/';doc=lambda n:json.loads(z.read(n));w=doc(base+'workflow.json');prep=z.read(P+'evidence/o128-http-benchmark-preparation.json');p=json.loads(prep);assert sha(prep)==w['preparation_sha256'] and sha(Path(__file__).read_bytes())==p['new_files'][P+Path(__file__).name]
+        assert type(w['exit_code']) is int and w['cleanup_finished'] is w['baseline_source_restored'] is w['baseline_library_restored'] is True
+        assert w['source_before_sha256']==w['source_after_sha256']==p['files'] and w['new_files_after']==w['new_files']==p['new_files']
+        assert w['runtime_dependencies']==w['runtime_dependencies_after']==p['runtime'] and w['environment_before']==w['environment_after']==p['environment'] and w['checkpoint_after']==p['checkpoints']
+        assert w['candidate_files']==p['candidate_files'] and w['candidate_base']==p['candidate_base'] and len(p['candidate_files'])==60 and w['candidate_library_sha256']==p['candidate_library_sha256']==LIBRARY and w['performance_admitted'] is False
+        for n,h in {**p['new_files'],**p['audit_dependencies']}.items():assert sha(z.read(n))==h
+        assert sha(z.read(p['source_bundle']))==p['source_bundle_sha256']
+        for job,row in p['measurement_parents'].items():
+            raw=z.read('results/'+job+'-verified.json');q=json.loads(raw);assert sha(raw)==row['proof_sha256'] and raw==(args.proofs/(job+'-verified.json')).read_bytes() and q['archive_sha256']==row['archive_sha256']==m['linked_parent_archives'][job]==sha((args.proofs/(job+'-evidence.zip')).read_bytes())
+        def ledger(phase,expected):
+            path=base+phase+'-ledger/commands.jsonl'
+            if path not in m['files']:return None
+            records=[json.loads(line) for line in z.read(path).splitlines()];assert len(records)==2 and records[0]['event']=='started' and records[1]['event']=='finished'
+            assert records[0]['source']['owned_source_sha256']==records[1]['source_after']['owned_source_sha256']==expected
+            return records[1]['exit_code']
+        cpu=ledger('cpu',{**p['files'],**p['new_files']});assert type(cpu) is int
+        candidate={**p['files'],**p['new_files'],**{'Garnet/'+n:h for n,h in p['candidate_files'].items()}};child=ledger('gpu',candidate)
+        if child is not None:assert w['installed_source_sha256']==candidate and doc(base+'resources/resource-monitor.json')['child_exit_code']==child
+        summary=dict(actual_repeated_fixed4k_benchmark_replayed=False,performance_target_qualified=False)
+        if w['exit_code']==0:
+            assert cpu==child==0 and w['status']=='O128_HTTP_benchmark_collected_needs_independent_replay'
+            r=doc(base+'native/report.json');assert r['status']=='O128_three_fixed4k_HTTP_trials_collected_needs_independent_replay' and len(r['trials'])==3 and r['library_sha256']==LIBRARY
+            quality='o128-http-quality-attempt1';raw=z.read('results/'+quality+'-verified.json');q=json.loads(raw)
+            assert sha(raw)==r['quality_proof_sha256']==p['measurement_parents'][quality]['proof_sha256'] and q['exit_code']==0 and q['status']=='actual_O128_HTTP_805_IDs_and_four_full4k_controls_replayed' and q['arrays']['all805_prompt_and_output_IDs_exact_T32'] is True
+            ready=r['ready'];assert ready['o128_admission']['certificate_proof_sha256']==CERTIFICATES and ready['prefill_chunk']==128 and ready['capacity']==4096 and ready['batch']==1 and ready['generation_mode']=='mtp' and ready['library_sha256']==LIBRARY
+            reference=args.proofs/(REFERENCE+'-evidence.zip');assert sha(reference.read_bytes())==REFERENCE_SHA
+            tokens={};outputs={};native_ready=[]
+            for line in z.read(base+'native/worker/worker-stdout.jsonl').splitlines():
+                try:event=json.loads(json.loads(line)['line'])
+                except ValueError:continue
+                if not isinstance(event,dict):continue
+                if event.get('event')=='ready':native_ready.append(event)
+                elif event.get('event')=='token':
+                    key=event['id'];assert key not in outputs;tokens.setdefault(key,[]).append(event['token_id']);assert event['sampled_tokens']==len(tokens[key])
+                elif event.get('event')=='completed':
+                    key=event['id'];assert key not in outputs and event['generated_ids']==tokens[key] and event['physical_batch']==event['real_rows']==1 and event['padded_rows']==0;outputs[key]=event
+                elif event.get('event')=='error':raise AssertionError(event)
+            assert native_ready==[ready] and len(outputs)==372;used=set();trials=[]
+            import io
+            with zipfile.ZipFile(reference) as old,zipfile.ZipFile(io.BytesIO(z.read(P+'evidence/fixed-length-4096-corpus.zip'))) as corpus:
+                oldbase='results/'+REFERENCE+'/mtp/benchmark4k/';names=[n for n in old.namelist() if n.startswith(oldbase) and n.endswith('-manifest.json')];assert len(names)==1;reference_manifest=json.loads(old.read(names[0]));rows=json.loads(corpus.read('manifest.json'))['rows']
+                for i,trial in enumerate(r['trials']):
+                    assert trial['index']==i;folder=base+'native/trial-'+str(i)+'/';names=[n for n in m['files'] if n.startswith(folder) and n.endswith('-manifest.json')];assert len(names)==1
+                    raw=z.read(names[0]);assert sha(raw)==trial['manifest_sha256'];manifest=json.loads(raw);metadata=doc(base+'native/trial-'+str(i)+'-metadata.json')
+                    assert manifest['engine_metadata']==metadata and sha(z.read(base+'native/trial-'+str(i)+'-metadata.json'))==manifest['engine_metadata_sha256'] and metadata['ready']==ready and metadata['trial_index']==i and metadata['repeat_count']==3 and metadata['quality_proof_sha256']==r['quality_proof_sha256']
+                    fresh=replay_trial(manifest,lambda n:z.read(folder+n),corpus,reference_manifest,lambda n:old.read(oldbase+n));assert fresh==trial['local_replay'];trials.append(fresh)
+                    for row in rows:
+                        events=[json.loads(line) for line in z.read(folder+manifest['run_id']+'-'+row['key']+'-events.jsonl').splitlines()];values=[json.loads(e['data']) for e in events if e['data']!='[DONE]'];last=[e for e in values if 'response_token_ids' in e];assert len(last)==1
+                        final=last[0];key=final['id'];assert key not in used and outputs[key]['prompt_ids']==final['prompt_token_ids'] and outputs[key]['generated_ids']==final['response_token_ids'];used.add(key)
+            assert len(used)==len(outputs)==372
+            summary=dict(actual_repeated_fixed4k_benchmark_replayed=True,trials=trials,actual_requests=372,measured_requests=192,all372_prompt_and_output_IDs_exact_T32=True,performance_target_qualified=False,strongest_tuned_reference_comparison_qualified=False)
+        else:assert w['status']=='failed' and w.get('error')
+        result=dict(status='actual_O128_three_fixed4k_HTTP_trials_raw_stream_memory_and_IDs_replayed' if w['exit_code']==0 else 'actual_O128_HTTP_benchmark_failure_preserved',archive_sha256=sha(archive.read_bytes()),exit_code=w['exit_code'],error=w.get('error'),source_runtime_SDK_checkpoint_restored=True,candidate_library_sha256=LIBRARY,arrays=summary,official900_MMMU_qualified=False,broad_quality_or_performance_qualified=False,two_times_target_achieved=False)
+    target=args.proofs/(JOB+'-verified.json');raw=json.dumps(result,indent=2).encode();assert not target.exists() or target.read_bytes()==raw;target.write_bytes(raw);print(json.dumps(dict(status=result['status'],proof_sha256=sha(raw),exit_code=w['exit_code'])))
+if __name__=='__main__':main()

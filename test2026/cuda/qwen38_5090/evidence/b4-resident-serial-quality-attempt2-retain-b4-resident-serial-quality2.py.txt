@@ -1,0 +1,29 @@
+"""Keep a terminal paired pass or failure, without inferring serving speed."""
+from pathlib import Path
+import hashlib,json,subprocess,zipfile
+W=Path(__file__).resolve().parent;O=W.parent/'outputs';R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';E=M/'evidence';J='b4-resident-serial-quality-attempt2';sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest();owned=[]
+def keep(n,raw):
+    target=E/n;assert not target.exists();target.write_bytes(raw);owned.append(target)
+proof=O/(J+'-verified.json');q=json.loads(proof.read_bytes());archive=O/(J+'-evidence.zip');assert type(q['exit_code']) is int and q['source_runtime_SDK_config_index_CMake_all34_and_full_model_files_restored'] and proof.read_bytes()==(O/(J+'-remote-verified.json')).read_bytes() and sha(archive)==q['archive_sha256']
+for n in (proof.name,J+'-remote-verified.json'):keep(n,(O/n).read_bytes())
+with zipfile.ZipFile(archive) as z:
+    b='results/'+J+'/';keep(J+'-manifest.json',z.read('evidence-manifest.json'));keep(J+'-workflow.json',z.read(b+'workflow.json'))
+    for n in ('resident-io/result.json','native/report.json','resources/resource-monitor.json','native/worker/batch-dispatch.jsonl','native/worker/worker-stdout.jsonl','native/worker/worker-stderr.log'):
+        if b+n in z.namelist():keep(J+'-'+n.replace('/','-'),z.read(b+n))
+    for stage in q['stages']:
+        for ext in ('jsonl','log'):keep(J+'-'+stage+'-commands.'+ext,z.read(b+stage+'-ledger/commands.'+ext))
+    w=json.loads(z.read(b+'workflow.json'));assert w['all_restored'] and w['cleanup_finished'] and w['inherited_cpu_control_parent']=='b4-resident-serial-quality-attempt1'
+for ext in ('jsonl','log'):keep(J+'-local-replay-commands.'+ext,(W/'b4-resident-serial-quality-attempt2-local-replay-ledger'/('commands.'+ext)).read_bytes())
+for n in ('postprocess-b4-resident-serial-quality-v2.py','replay-b4-resident-serial-quality-v2.py',Path(__file__).name):keep(J+'-'+n+'.txt',(W/n).read_bytes())
+passing=q['exit_code']==0
+if passing:
+    assert q['B4_HTTP_quality_case_gate_passed'] and q['arrays']['actual_native_HTTP_requests']==836 and q['arrays']['all805_prompt_and_output_IDs_exact_T32'] and q['arrays']['resident_IO_controls_byte_exact'] and q['arrays']['actual_graph_policy']['real_control_requests']==31
+keep(J+'-retention.json',json.dumps(dict(status=q['status'],exit_code=q['exit_code'],error=q['error'],paired_proof_sha256=sha(proof),archive_sha256=sha(archive),archive_bytes=archive.stat().st_size,actual_quality_summary=q['arrays'],source_runtime_all34_and_current18files_restored=True,unchanged_CPU_controls_reused_only_from_pinned_successful_parent_stages=True,new_serving_speed_claimed=False,two_times_target_achieved=False),indent=2).encode())
+entry=('\n\n2026-10-27 local: Resident/serial quality attempt2 terminal '+q['status']+', exit'+str(q['exit_code'])+', error'+str(q['error'])+'. Independently replayed remote/local proofs byte-identical '+sha(proof)+'. Raw archive '+sha(archive)+' ('+str(archive.stat().st_size)+'bytes). Full source/runtime/SDK/config-index/CMake/all34/current18file restoration verified. Original native IO setup failure remainsfailed and retained. Unchanged6CPython+6embedded counter controls reused only from its exact pinned successful stages; actual corrected native IO and model/HTTP checks required anew. No serving speed or overall2x/halfTTFT claim.\n').encode()
+if passing:
+    a=q['arrays'];entry+=('All836 actualHTTP prompt/output ID sequences match retained B1 controls:805adapted requests plus29fixed3968+128nonstream and2text/imageSSE; native callbacks/dispatch matched with no publicdummyIDs. Native host-BF16 IO legacy byte comparison passes B4T4/16/32 three trials each, with CPUargument lifetime/inactivepadding/invalid-input preservation. All31control graph snapshots independently replay actual captures/replays/serial reuse; requestedflags alone were insufficient. Actual graph usage is branch evidence, not CUDAkernel elapsed or clean servingthroughput. Same source91 model/transport bundle and e843DLL; dependent resident/serial policy does not establish individual causal speed attribution. Adapted score '+str(a['quality']['score']['correct'])+'/805; official900MMMU, broad production, strongest references and matched INT4/4B remain open.\n').encode()
+for n in ('docs/research/qwen38-5090-development-log.md','docs/research/qwen38-5090-implementation-task.md'):
+    target=R/n;assert b'Resident/serial quality attempt2 terminal' not in target.read_bytes()
+    with target.open('ab') as f:f.write(entry)
+    owned.append(target)
+paths=W/'b4-resident-serial-quality2-stage-paths.bin';paths.write_bytes(b''.join(p.relative_to(R).as_posix().encode()+b'\0' for p in dict.fromkeys(owned)));subprocess.run(['git','-c','core.autocrlf=false','add','--pathspec-from-file='+str(paths),'--pathspec-file-nul'],cwd=R,check=True);print(json.dumps(dict(staged_paths=len(set(owned)),status=q['status'],paired_proof_sha256=sha(proof),serving_speed_claimed=False)))

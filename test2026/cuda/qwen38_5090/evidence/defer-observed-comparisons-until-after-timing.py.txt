@@ -1,0 +1,29 @@
+from pathlib import Path
+import ast,hashlib,json
+w=Path(__file__).resolve().parent;m=Path('D:/CantorAI/work/qwen38-5090/test2026/cuda/qwen38_5090');e=m/'evidence';source=m/'benchmark_observed_output_reference.py';raw=source.read_bytes();p=e/'observed-output-reference-benchmark-derivation.json';old_p=p.read_bytes();d=json.loads(old_p);sha=lambda raw:hashlib.sha256(raw).hexdigest();assert sha(raw)==d['candidate_sha256']
+for target,data in ((e/'benchmark-observed-output-reference-before-deferred-comparisons.py.txt',raw),(e/'observed-output-reference-benchmark-derivation-initial.json',old_p)):
+ assert not target.exists();target.write_bytes(data)
+text=raw.decode().replace('\r\n','\n')
+old="  comparison=stream_comparison(result,actual[key],prefix+key,body)\n  with (out/(prefix+key+'-output-comparison.json')).open('xb') as stream:stream.write(json.dumps(comparison,indent=2).encode())"
+new="  if result['status']!='completed' or result['prompt_tokens']!=3968 or result['generated_tokens']!=128 or result['finish_reason']!='length':raise ValueError('Preserved failed or invalid4Kstream: '+key)";assert text.count(old)==1;text=text.replace(old,new)
+old="sum(json.loads((out/(r['key']+'-output-comparison.json')).read_bytes())['serial_control_text_exact'] for r in measured)";new="sum(r['text']==actual[r['key'].removeprefix(prefix)]['text'] for r in measured)";assert text.count(old)==1;text=text.replace(old,new)
+old="  finally:manifest['sampling_errors']=sampler.errors if sampler is not None else [];save()"
+new="""  finally:
+   # Comparison hashes/files are outside every measured stream/cohort and
+   # after the serving-memory sampler closes; preserve the original client cost.
+   manifest['sampling_errors']=sampler.errors if sampler is not None else []
+   try:
+    recorded=0
+    for key,(body,_) in prepared.items():
+     path=out/(prefix+key+'-result.json')
+     if not path.exists():continue
+     result=json.loads(path.read_bytes())
+     if result['status']!='completed':continue
+     comparison=stream_comparison(result,actual[key],prefix+key,body)
+     with (out/(prefix+key+'-output-comparison.json')).open('xb') as stream:stream.write(json.dumps(comparison,indent=2).encode())
+     recorded+=1
+    manifest['observed_stream_comparisons_recorded']=recorded
+    if manifest['status']=='completed':assert recorded==124
+   except BaseException as error:manifest.update(status='failed',error=repr(error));raise
+   finally:save()""";assert text.count(old)==1;text=text.replace(old,new);ast.parse(text);source.write_bytes(text.replace('\n','\r\n').encode());d['candidate_sha256']=sha(source.read_bytes());p.write_text(json.dumps(d,indent=2),encoding='utf8')
+audit={'status':'observed_comparison_recording_deferred_before_any_real_benchmark','initial_source_sha256':sha(raw),'source_sha256':d['candidate_sha256'],'reason':'Hashing full serial prompt/control IDs and writing variant sidecars inside send could add CPU work while peer streams are timed. Keep the original cheap status/count/finish checks in send; compute cohort text counts only after all cohort futures complete, and hash/write every comparison only after all timing and serving-memory sampling closes. Raw client timestamps, requests, precision, fixed lengths and old failure remain unchanged.','actual_model_or_benchmark_executed':False};target=e/'observed-output-reference-timing-scope-correction.json';assert not target.exists();target.write_text(json.dumps(audit,indent=2),encoding='utf8');print(json.dumps(audit))

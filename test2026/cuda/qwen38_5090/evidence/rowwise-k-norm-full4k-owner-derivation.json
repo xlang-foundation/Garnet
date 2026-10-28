@@ -1,0 +1,49 @@
+{
+  "source": "run_rowwise_k_norm_model.py",
+  "target": "run_rowwise_k_norm_full4k.py",
+  "source_sha256": "240060ef26083cad26a4187d6f482e154b564af4622c5d398627d721234a3853",
+  "target_sha256": "3d3a7a97ac6e55554eadab7737cf829fed35c73e400d8dcaa041cfbf2cd57670",
+  "changes": [
+    {
+      "old": "Exclusive ordinary source87 default-off controls followed by rowwise K ablation.",
+      "new": "Exclusive source87 rowwise K full4K128 ordinary exactness; no timing.",
+      "count": 1
+    },
+    {
+      "old": "rowwise-k-norm-model-attempt1",
+      "new": "rowwise-k-norm-full4k-attempt1",
+      "count": 1
+    },
+    {
+      "old": "from test2026.cuda.qwen38_5090.rowwise_k_norm_analysis import PHASES,control,norm_trace,analyze",
+      "new": "from test2026.cuda.qwen38_5090.rowwise_k_norm_analysis import norm_trace\n    from test2026.cuda.qwen38_5090.b4_full4k_exact_gate import observe,admit",
+      "count": 1
+    },
+    {
+      "old": "rowwise-k-norm-model-preparation.json",
+      "new": "rowwise-k-norm-full4k-preparation.json",
+      "count": 1
+    },
+    {
+      "old": "rowwise_K_norm_model_prepared_GPU_unrun",
+      "new": "rowwise_K_norm_full4k_prepared_GPU_unrun",
+      "count": 1
+    },
+    {
+      "old": "    corpus=(M/'evidence/fixed-length-4096-corpus.zip')",
+      "new": "    qualified=json.loads((ROOT/'results/rowwise-k-norm-model-attempt1-verified.json').read_bytes());assert qualified['exit_code']==0 and qualified['analysis']['selected_step52_intervention_passed'] and set(qualified['controls'])=={'off-reference','off-candidate'}\n    corpus=(M/'evidence/fixed-length-4096-corpus.zip')",
+      "count": 1
+    },
+    {
+      "old": "115 CPU controls: original97 observer/primary contracts unchanged,5 source87,6 ordinary/boundary DSL and7 ordinary off/ablation/trace guards. No observer outputs used in model.",
+      "new": "115 CPU controls retained unchanged. Full4K gate uses the original all48 phase-row state/vector comparisons and all128 IDs; selected repair is only its prerequisite. No graph observer outputs or timings.",
+      "count": 1
+    },
+    {
+      "old": "        reports={};reads={}\n        with zipfile.ZipFile(ROOT/'results/key35-coordinate-trajectory-attempt1-evidence.zip') as parent:\n            pb='results/key35-coordinate-trajectory-attempt1/'\n            for phase in PHASES:\n                idle();role=phase.split('-')[1];enabled=phase.startswith('on-')\n                if enabled:assert set(w['controls'])==set(PHASES[:2]),'Both same-DLL default-off primary controls must pass before ablation'\n                w['phases'].append(dict(phase=phase,mode=role,enabled=enabled,source_installed={n:sha(ROOT/n) for n in inventory},library_sha256=sha(library),exit_code=None));save()\n                argv=[sys.executable,str(M/'monitor_native_probe.py'),'--study',str(ROOT),'--output',str(out/(phase+'-resources')),'--',sys.executable,str(M/'launch_rowwise_k_norm_model.py'),str(ROOT),str(out/phase),str(cache),phase,str(out/'off-reference')]\n                code=ledger.run(argv,out/(phase+'-ledger'),'correctness','Fresh same-DLL source87 ordinary primary-only3968prompt+53predictions/52consumed, all-row five128-component state+finite vectors, selected twice-read8MiBcache and53 coordinate points. Off must reproduce immutable source60/85 before on. On changes only K RMS row shape; all16 FA traces required. No timing/admission.',common+[library]);w['phases'][-1]['exit_code']=code;save();idle();assert code==0,phase+' model capture failed'\n                log=(out/(phase+'-ledger/commands.log')).read_bytes();w['routes'][phase]={'original':assert_disabled(log) if role=='reference' else route_trace(log,'off'),'rowwise':norm_trace(log,enabled)}\n                reports[phase]=json.loads((out/phase/'report.json').read_bytes());reads[phase]=lambda n,phase=phase:(out/phase/n).read_bytes()\n                if not enabled:\n                    historical=json.loads(parent.read(pb+role+'/report.json'));w['controls'][phase]=control(reports[phase],historical,reads[phase],lambda n,role=role:parent.read(pb+role+'/'+n),p['library_sha256'],p['historical_libraries'][role]);save()\n            with zipfile.ZipFile(ROOT/'results/b4-full4k-exact-attempt1-evidence.zip') as full,zipfile.ZipFile(ROOT/'results/b4-full4k-decode-prefix-attempt1-evidence.zip') as prefix:\n                fb='results/b4-full4k-exact-attempt1/reference/';bb='results/b4-full4k-decode-prefix-attempt1/candidate/'\n                w['analysis']=analyze(selection,p['selected_key'],reports,reads,json.loads(full.read(fb+'report.json')),json.loads(prefix.read(bb+'report.json')),lambda n:full.read(fb+n),lambda n:prefix.read(bb+n),p['library_sha256'])\n            (out/'analysis.json').write_bytes(json.dumps(w['analysis'],indent=2).encode());save();assert w['analysis']['selected_step52_intervention_passed'],'Selected step52 rowwise K normalization did not restore exact state/cache/IDs'\n        w['status']='rowwise_K_norm_selected_intervention_passed_full4K_unqualified';code=0;save()\n",
+      "new": "        phase='candidate';idle();w['phases'].append(dict(phase=phase,mode=phase,enabled=True,source_installed={n:sha(ROOT/n) for n in inventory},library_sha256=sha(library),exit_code=None));save()\n        argv=[sys.executable,str(M/'monitor_native_probe.py'),'--study',str(ROOT),'--output',str(out/(phase+'-resources')),'--',sys.executable,str(M/'launch_rowwise_k_norm_full4k.py'),str(ROOT),str(out/phase),str(cache),phase,str(ROOT/'results/b4-full4k-exact-attempt1/reference')]\n        code=ledger.run(argv,out/(phase+'-ledger'),'correctness','Source87 same qualified DLL/ordinary rowwise K program: three B4 text/image/mixed groups,3968prompt+128forced output IDs,4096capacity. Original four complete state/vector phases vs eight immutable source60 B1 oracles. Require all16 rowwise subgraph traces and unchanged old routes. No MTP, quality, HTTP or speed admission.',common+[library]);w['phases'][-1]['exit_code']=code;save();idle();assert code==0,'Full4K candidate capture failed'\n        log=(out/(phase+'-ledger/commands.log')).read_bytes();w['routes'][phase]={'original':route_trace(log,'off'),'rowwise':norm_trace(log,True)};save()\n        candidate=json.loads((out/phase/'report.json').read_bytes());assert candidate['library_sha256']==p['library_sha256'] and candidate['rowwise_K_norm'] is candidate['primary_outputs_only'] is True\n        with zipfile.ZipFile(ROOT/'results/b4-full4k-exact-attempt1-evidence.zip') as parent:\n            pb='results/b4-full4k-exact-attempt1/reference/';reference=json.loads(parent.read(pb+'report.json'));assert reference['library_sha256']==p['reference_library_sha256']\n            rr=lambda key,n:parent.read(pb+n);rc=lambda label,n:(out/phase/n).read_bytes()\n            w['observation']=observe(selection,reference,candidate,rr,rc)\n            gold={r['keys'][0]:r['generated_ids'][0] for r in reference['rows']}\n            w['first_differing_ID_indices']={r['label']:[next((i for i,(a,b) in enumerate(zip(ids,gold[k])) if a!=b),None) for ids,k in zip(r['generated_ids'],r['keys'])] for r in candidate['rows']}\n            (out/'analysis.json').write_bytes(json.dumps(w['observation'],indent=2).encode());save()\n            w['strict_admission']=admit(selection,reference,candidate,rr,rc);save()\n        w['status']='rowwise_K_norm_full4k128_exact_collected_MTP_quality_unqualified';code=0;save()\n",
+      "count": 1
+    }
+  ],
+  "original_preflight_restore_all34_and_owned_cache_retirement_retained": true
+}

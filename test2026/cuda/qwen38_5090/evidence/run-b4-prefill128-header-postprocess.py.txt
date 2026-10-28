@@ -1,0 +1,12 @@
+from pathlib import Path
+import hashlib,json,os,sys,zipfile
+ROOT=Path('D:/CantorAI/5090-study-20261023');M=ROOT/'Garnet/test2026/cuda/qwen38_5090';JOB='b4-prefill128-header-attempt1';sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest();sys.path[:0]=[str(M),str(ROOT/'Garnet')];import run_logged as ledger
+from run_bf16_low_batch_native_build import idle
+p=json.loads((M/'evidence/b4-prefill128-header-preparation.json').read_bytes());w=json.loads((ROOT/'results'/JOB/'workflow.json').read_bytes());assert w['cleanup_finished'] and w['files_after']==p['files'] and w['compiler_after']==p['compiler'] and w['library_before']==w['library_after']==p['baseline_library_sha256'];idle();pins={n:sha(ROOT/n) for n in p['files']};assert pins==p['files']
+ledger.source_identity=lambda:{'scope':'Explicit terminal CPU B4 header/archive/source-composition replay only, no native executable/GEMM/GPU/model run; protected unrelated bodies excluded','owned_source_sha256':pins};os.chdir(ROOT/'Garnet');out=ROOT/'results/b4-prefill128-header-postprocess';assert not out.exists();out.mkdir();archive=ROOT/'results'/(JOB+'-evidence.zip');verifier=ROOT/'results/verify-b4-prefill128-header.py'
+assert ledger.run([sys.executable,str(verifier),'--proofs',str(ROOT/'results')],out/'replay-ledger','correctness','Independent raw C++235predicate/61rejection/executableSHA/PE/source61fromarchived60 and compiler/source/library preservation replay; no local/native/GPU math admission',[archive,verifier,Path(__file__),*[ROOT/n for n in pins]])==0
+proof=ROOT/'results'/(JOB+'-verified.json');q=json.loads(proof.read_bytes());assert q['exit_code']==w['exit_code'];summary=dict(status=q['status'],exit_code=q['exit_code'],proof_sha256=sha(proof),archive_sha256=sha(archive),archive_bytes=archive.stat().st_size,GEMM_GPU_model_or_performance_qualified=False);(out/'postprocess.json').write_bytes(json.dumps(summary,indent=2).encode());files=[proof,verifier,Path(__file__),*[n for n in out.rglob('*') if n.is_file()]];target=ROOT/'results/b4-prefill128-header-closure-assets.zip';assert not target.exists()
+with zipfile.ZipFile(target,'x',zipfile.ZIP_DEFLATED) as z:
+    for n in files:z.write(n,n.relative_to(ROOT).as_posix())
+    z.writestr('manifest.json',json.dumps(dict(files={n.relative_to(ROOT).as_posix():sha(n) for n in files},raw_archive_sha256=sha(archive)),indent=2))
+print(json.dumps({**summary,'closure_sha256':sha(target),'closure_bytes':target.stat().st_size}),flush=True)

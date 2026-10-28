@@ -1,0 +1,6 @@
+from pathlib import Path
+import ast,hashlib,json
+W=Path(__file__).resolve().parent;source=W/'install-b4-rowwise-http-quality.py';raw=source.read_bytes();s=raw.decode();steps=[]
+for old,new in [('b4-rowwise-http-quality','b4-rowwise-http-benchmark'),('B4_rowwise_HTTP_quality','B4_rowwise_HTTP_benchmark'),("n==p['bundle']","n==p['publisher_identity_archive']"),("sha(ROOT/p['library'])==p['library_sha256']","sha(ROOT/p['library'])==p['library_sha256'] and sha(ROOT/p['bundle'])==p['bundle_sha256']")]:
+    count=s.count(old);assert count>0;s=s.replace(old,new);steps.append(dict(old=old,new=new,count=count))
+ast.parse(s);target=W/'install-b4-rowwise-http-benchmark.py';assert not target.exists();target.write_bytes(s.encode());(W/'b4-http-benchmark-installer-derivation.json').write_bytes(json.dumps(dict(source_sha256=hashlib.sha256(raw).hexdigest(),target_sha256=hashlib.sha256(target.read_bytes()).hexdigest(),changes=steps,executed=False),indent=2).encode());print('Benchmark installer syntax checked; not executed')

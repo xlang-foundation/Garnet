@@ -1,0 +1,7 @@
+from pathlib import Path
+import ast,hashlib,json
+W=Path(__file__).resolve().parent;raw=(W/'install-rowwise-k-norm-model.py').read_bytes();before=hashlib.sha256(raw).hexdigest();changes=[]
+for a,b,n in [('rowwise-k-norm-model','rowwise-k-norm-full4k',3),('rowwise_K_norm_model_prepared_GPU_unrun','rowwise_K_norm_full4k_prepared_GPU_unrun',1),('rowwise_K_norm_methods_installed_GPU_unrun','rowwise_K_norm_full4k_methods_installed_GPU_unrun',2)]:
+    assert raw.count(a.encode())==n;raw=raw.replace(a.encode(),b.encode());changes.append(dict(old=a,new=b,count=n))
+p=W/'install-rowwise-k-norm-full4k.py';assert not p.exists();p.write_bytes(raw);ast.parse(raw)
+(W/'rowwise-k-norm-full4k-installer-derivation.json').write_bytes(json.dumps(dict(source='install-rowwise-k-norm-model.py',source_sha256=before,target=p.name,target_sha256=hashlib.sha256(raw).hexdigest(),changes=changes),indent=2).encode());print(json.dumps(dict(installer=p.name)))

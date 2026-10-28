@@ -1,0 +1,78 @@
+{
+  "status": "correct_read_only_audit_scope_after_preserved_wrong_source_view_CPU_failure",
+  "files": [
+    {
+      "base": "run_z128_opaque_config_audit.py",
+      "target": "run_z128_opaque_config_audit_attempt2.py",
+      "base_sha256": "0c8be28b4228e7b9e0d4ff96022c4f14335b5322c086cd3666e33492b88fe42c",
+      "target_sha256": "2bf47d06cac8023902df1da144610d34e5418e784acb990852066b3162290403",
+      "changes": [
+        {
+          "before": "z128-opaque-config-audit-attempt1",
+          "after": "z128-opaque-config-audit-attempt2",
+          "count": 1
+        },
+        {
+          "before": "z128-opaque-config-preparation.json",
+          "after": "z128-opaque-config-preparation-attempt2.json",
+          "count": 1
+        },
+        {
+          "before": "        code=ledger.run([sys.executable,'-m','unittest'",
+          "after": "        previous=p['previous_failure'];previous_proof=ROOT/'results'/(previous['job']+'-verified.json');previous_archive=ROOT/'results'/(previous['job']+'-evidence.zip')\n        assert sha(previous_proof.read_bytes())==previous['proof_sha256'] and sha(previous_archive.read_bytes())==previous['archive_sha256'];common.append(previous_proof)\n        code=ledger.run([sys.executable,str(M/'verify_z128_factory_layer2.py'),'--proofs',str(ROOT/'results')],out/'retained-parent-ledger','correctness','Replay immutable complete parent archive:88CPU installed-candidate controls, actual failed factory telemetry,58T32 arrays, restoration. Expected scientific failure exit1; no model rerun',common)\n        messages=[json.loads(line) for line in (out/'retained-parent-ledger/commands.log').read_bytes().splitlines() if line.startswith(b'{\"status\":')];assert code==1 and len(messages)==1 and messages[0]['status']==q['status'] and messages[0]['proof_sha256']==p['parent_proof_sha256']\n        code=0\n        code=ledger.run([sys.executable,'-m','unittest'",
+          "count": 1
+        },
+        {
+          "before": "89retained source/model/cache/factory controls plus documented-query fault handling; no local model/performance",
+          "after": "Query-only CPU fault control; parent88 installed-candidate controls replayed separately and unchanged",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "base": "verify_z128_opaque_config_audit.py",
+      "target": "verify_z128_opaque_config_audit_attempt2.py",
+      "base_sha256": "5a62920c646ee61b21536f610534a7058e774fb3a8244d4ee774b93fdeaad8d2",
+      "target_sha256": "ea743c1b89fb2bf7f04da0ff01f79224b679f96581e19de16649349e7163586b",
+      "changes": [
+        {
+          "before": "z128-opaque-config-audit-attempt1",
+          "after": "z128-opaque-config-audit-attempt2",
+          "count": 1
+        },
+        {
+          "before": "z128-opaque-config-preparation.json",
+          "after": "z128-opaque-config-preparation-attempt2.json",
+          "count": 1
+        },
+        {
+          "before": "        passed=w['exit_code']==0;r=None",
+          "after": "        previous=p['previous_failure'];previous_proof=z.read('results/'+previous['job']+'-verified.json');assert sha(previous_proof)==previous['proof_sha256'] and previous_proof==(a.proofs/(previous['job']+'-verified.json')).read_bytes() and sha((a.proofs/(previous['job']+'-evidence.zip')).read_bytes())==previous['archive_sha256']\n        passed=w['exit_code']==0;r=None",
+          "count": 1
+        },
+        {
+          "before": "Ran 89 tests",
+          "after": "Ran 1 test",
+          "count": 1
+        },
+        {
+          "before": "            for phase in ('cpu','build','query'):",
+          "after": "            for phase in ('retained-parent','cpu','build','query'):",
+          "count": 1
+        },
+        {
+          "before": "rows[1]['exit_code']==0",
+          "after": "rows[1]['exit_code']==(1 if phase=='retained-parent' else 0)",
+          "count": 1
+        },
+        {
+          "before": "            report=doc(base+'report.json');",
+          "after": "            messages=[json.loads(line) for line in z.read(base+'retained-parent-ledger/commands.log').splitlines() if line.startswith(b'{\"status\":')];assert len(messages)==1 and messages[0]['status']=='actual_Z128_factory_layer2_initialization_failure_preserved' and messages[0]['proof_sha256']==p['parent_proof_sha256']\n            report=doc(base+'report.json');",
+          "count": 1
+        }
+      ]
+    }
+  ],
+  "GPU_admission_controls_relaxed": false,
+  "scope": "Parent88CPU controls ran against installed39source model and remain unchanged/replayed. New query executes only its own CPU fault unit on restored baseline; no production installation or model qualification."
+}

@@ -1,0 +1,61 @@
+from pathlib import Path
+import datetime,hashlib,json,os,sys,zipfile
+r=Path('D:/CantorAI/work/qwen38-5090');m=r/'test2026/cuda/qwen38_5090';e=m/'evidence';w=Path(__file__).resolve().parent;o=w.parent/'outputs';sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+sys.path.insert(0,str(m));from run_logged import run
+recipe=json.loads((e/'bf16-low-batch-plugin-gpu-probe-derivation.json').read_bytes());source=r/recipe['source'];assert sha(source)==recipe['source_sha256'];text=source.read_bytes().decode().replace('\r\n','\n')
+for before,after,count in recipe['changes']:assert text.count(before)==count;text=text.replace(before,after)
+assert text.encode()==(m/'probe_bf16_low_batch_plugin_attention.cu').read_bytes() and hashlib.sha256(text.encode()).hexdigest()==recipe['result_sha256']
+parent='bf16-low-batch-attention-native-attempt1';archive=o/(parent+'-evidence.zip');p=json.loads((o/(parent+'-verified.json')).read_bytes());q=json.loads((o/(parent+'-remote-verified.json')).read_bytes())
+assert sha(archive)==p['archive_sha256']==q['archive_sha256'] and p['status']==q['status']=='bf16_low_batch_attention_fp64_replayed' and not p['numerical_failures'] and not q['numerical_failures']
+with zipfile.ZipFile(archive) as z:
+ assert hashlib.sha256(z.read('Garnet/'+recipe['source'])).hexdigest()==recipe['source_sha256']
+ for name in ['bf16_kv_low_batch_candidate.cu','bf16_kv_low_batch_candidate.h']:assert z.read('Garnet/test2026/cuda/qwen38_5090/'+name)==(m/name).read_bytes()
+build=json.loads((e/'bf16-low-batch-plugin-forwarding-local-build.json').read_bytes());assert not any(build[k] for k in ['gpu_executed','remote_mutated','runtime_abi_qualified','model_qualified','performance_admitted'])
+for name,h in build['source_sha256'].items():assert sha(Path(name))==h
+assert sha(w/'bf16-low-batch-plugin-forwarding.exe')==build['executable_sha256']
+os.chdir(r);ledger=e/'bf16-low-batch-plugin-forwarding-cpu-ledger'
+code=run([sys.executable,str(m/'test_bf16_low_batch_plugin_attention_replay.py'),str(archive)],ledger,'correctness','Six synthetic forwarding-stream mutation controls over actual closed B1 fixture',[archive,o/(parent+'-verified.json'),o/(parent+'-remote-verified.json'),m/'replay_bf16_low_batch_plugin_attention.py',m/'test_bf16_low_batch_plugin_attention_replay.py',Path(__file__)])
+assert code==0
+summary={'status':'b1_plugin_forwarding_probe_compiled_and_checker_controls_passed_gpu_unrun','recorded_utc':datetime.datetime.now(datetime.timezone.utc).isoformat(),'branch':'qwen38-5090','source_derivation_replayed':True,'qualified_parent_source_and_candidate_exact':True,'parent_archive_sha256':sha(archive),'private_sm120_compile_link_passed':True,'executable_sha256':build['executable_sha256'],'synthetic_cpu_checker_tests_passed':6,'planned_cases':44,'planned_selected_scalar_outputs':119040,'planned_host_plugin_enqueue_calls':87,'planned_graph_replays':3,'planned_cache_equivalence_cases':40,'planned_direct_kernel_negative_calls':104,'gpu_executed':False,'model_qualified':False,'performance_admitted':False,'remote_mutated':False,'two_times_target_met':False,'scope':'Forwarding-probe preparation only. Exact original44case generator and qualified candidate retained;87positive host calls route through B1 plugin, while104negative calls remain direct kernel controls. GPU results must match all90parent records (except declared final wrapper fields) and all476160selected witness bytes; separate wrapper CPU registry/negative contracts required. Six controls use transformed synthetic streams from the old closed archive, not new GPU evidence. Build warnings retained. Original model worker live; no remote upload or run.'}
+(e/'bf16-low-batch-plugin-forwarding-preparation-verified.json').write_text(json.dumps(summary,indent=2),encoding='utf8')
+(e/'bf16-low-batch-plugin-forwarding-preparation-method.py.txt').write_bytes(Path(__file__).read_bytes())
+files=[m/n for n in ['probe_bf16_low_batch_plugin_attention.cu','replay_bf16_low_batch_plugin_attention.py','test_bf16_low_batch_plugin_attention_replay.py','bf16_low_batch_overlay_plugin.h','bf16_low_batch_overlay_plugin.cpp','bf16_kv_low_batch_candidate.h','bf16_kv_low_batch_candidate.cu']]
+files+=list(e.glob('bf16-low-batch-plugin-forwarding*.json'))+list(e.glob('bf16-low-batch-plugin-forwarding*.txt'))+[e/'bf16-low-batch-plugin-gpu-probe-derivation.json']
+for folder in ['bf16-low-batch-plugin-forwarding-cpu-ledger','bf16-low-batch-plugin-forwarding-local-build-ledger']:files+=list((e/folder).glob('*'))
+raw={f.relative_to(r).as_posix():f.read_bytes() for f in files if f.is_file()};manifest={'files':{n:hashlib.sha256(v).hexdigest() for n,v in raw.items()},'linked_parent_archive_sha256':sha(archive),'scope':summary['scope']};target=o/'Garnet-B1-Plugin-Forwarding-Preparation.zip'
+with zipfile.ZipFile(target,'w',zipfile.ZIP_DEFLATED) as z:
+ for n,v in raw.items():z.writestr(n,v)
+ z.writestr('evidence-manifest.json',json.dumps(manifest,indent=2))
+with zipfile.ZipFile(target) as z:
+ for n,h in manifest['files'].items():assert hashlib.sha256(z.read(n)).hexdigest()==h
+summary.update(archive_sha256=sha(target),archive_bytes=target.stat().st_size,files=len(raw));(o/'Garnet-B1-Plugin-Forwarding-Preparation.json').write_text(json.dumps(summary,indent=2),encoding='utf8')
+status=o/'Garnet-Parallel-Top1-Integration-Status.json';s=json.loads(status.read_bytes());s['b1_overlay_plugin_preparation']['pushed_commit']='4044e1ff4';s['b1_plugin_forwarding_preparation']=summary;status.write_text(json.dumps(s,indent=2),encoding='utf8')
+note='''
+
+2026-10-25: B1 wrapper GPU forwarding probe prepared; GPU UNRUN.
+Same44case/119040scalar source fixture is pinned byte-for-byte to closed
+2eeb8aa8...operator archive, with unchanged candidate CU/header. The only
+positive-dispatch change sends87host calls through new B1 plugin descriptors,
+workspace validation and enqueue:44ordinary,3capture construction,40cached
+prefix calls. Original3graph replays, full canonical readonly/canaries and
+104direct-kernel negatives remain. Negatives are explicitly not wrapper checks.
+Separate32profile CPU registry/serialization/negative wrapper probe is required.
+
+Private local /MT sm120 compile/link passes; EXE94c6f9b3a20bf95890812c94ddc47c2d9924242802b657827c13c0ba978aef7b,
+imports nvinfer_10.dll/KERNEL32.dll (CUDA static runtime linked). Actual NVCC
+inherited-overload warnings retained unsuppressed. No local or remote GPU run.
+Strict future replay requires all90observation records (except declared final
+wrapper fields), all476160selected raw bytes and exact87dispatch count against
+qualified same-kernel parent. Whole-model/quality/performance are never admitted.
+Six actual CPU synthetic mutation controls pass: raw byte corruption/truncation,
+stream order/incompletion, GPU/control/boolean types, dispatch/admission counters,
+and wrong parent corpus. Both original independent FP64 proofs remain the parent;
+no synthetic transformed stream is counted as a new GPU result. Build/method/
+mutation ledgers and derivations archived. Original model handle re-polled LIVE;
+deployment unchanged. Next: close/replay original model, collect standalone B1
+commit and CPU/plugin forwarding checks, then helper/lowering/full-model gates.
+Original2x/halfTTFT, broad quality, actual4K, tuned/INT4/4B and repetitions open.
+'''
+for name in ['docs/research/qwen38-5090-development-log.md','docs/research/qwen38-5090-implementation-task.md']:
+ path=r/name;data=path.read_bytes();assert b'2026-10-25: B1 wrapper GPU forwarding probe prepared; GPU UNRUN.' not in data;path.write_bytes(data+note.replace('\n','\r\n').encode())
+print(json.dumps(summary,indent=2))

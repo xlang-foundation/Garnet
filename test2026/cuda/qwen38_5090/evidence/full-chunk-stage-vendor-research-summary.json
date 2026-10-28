@@ -1,0 +1,132 @@
+{
+  "status": "complete_QG_vendor_selection_and_logger_only_stage_parity_independently_verified",
+  "original_GPU_archive_sha256": "fe1f015002e8bc4ff78211983c87c0ee202d49f7551bc5cbadaafd5d898410fc",
+  "original_GPU_archive_bytes": 111339157,
+  "original_GPU_owner_exit_code": 1,
+  "paired_original_failure_proof_sha256": "7361cb9316005adaac98fd16948e03a7b428d616ce5a527efc76831f7cbe73f5",
+  "paired_CPU_reader_recovery_proof_sha256": "bd87e5b133fea32d135d414d98ad55c2fe84aca968d953b29c0bf23b7ce12696",
+  "native_candidate_library_sha256": "3574f8cc1f772933f117b484d9a57844fb3846a4e1ada59f62399876c31fa48a",
+  "native_source_bundle_sha256": "86d4fb95b4df9f5b0fb8a1422cbd192da4c04cb4511dba5dd15e67ed8e78840c",
+  "stage_parity": {
+    "stages32": {
+      "complete_stage_entries": 40,
+      "complete_F32_words": 6553600,
+      "all_bytes_exact": true,
+      "complete_readonly_records_exact": true
+    },
+    "stages128": {
+      "complete_stage_entries": 10,
+      "complete_F32_words": 6553600,
+      "all_bytes_exact": true,
+      "complete_readonly_records_exact": true
+    }
+  },
+  "QG_weight_metadata": {
+    "input_scale": 0.2064732164144516,
+    "joined_mlp": false,
+    "logical_shape": [
+      12288,
+      5120
+    ],
+    "packed_bytes": 62914560,
+    "packed_dtype": "INT32",
+    "packed_shape": [
+      12288,
+      1280
+    ],
+    "recipe": "modelopt_fp8_w8a8",
+    "resident_in_compressed_pool": true,
+    "resident_packed_readonly": true,
+    "resident_scales_readonly": false,
+    "scale_bytes": 0,
+    "scale_shape": [],
+    "source_weights": [],
+    "storage_encoding": "Opaque little-endian words; raw checkpoint bits, no numeric conversion",
+    "weight_scale": 0.0007149832672439516
+  },
+  "vendor": {
+    "stages32": {
+      "process_id": 12368,
+      "geometry": {
+        "N": 12288,
+        "K": 5120,
+        "M": 32
+      },
+      "matmul_trace_calls": 32,
+      "weight_buffers": [
+        "0X1954200000",
+        "0X1994200000",
+        "0X1A08200000",
+        "0X1A48200000",
+        "0X1A88200000",
+        "0X1AC8200000",
+        "0X1B08200000",
+        "0X1B48200000",
+        "0X1B88200000",
+        "0X1BC8200000",
+        "0X1C08200000",
+        "0X1C48200000",
+        "0X1C88200000",
+        "0X1CC8200000",
+        "0X1D08200000",
+        "0X1D48200000"
+      ],
+      "unique_printed_configurations": [
+        {
+          "algoId": "67",
+          "ctaSwizzling": "1",
+          "customOption": "18",
+          "stages": "MATMUL_STAGES_64x5",
+          "tile": "MATMUL_TILE_64x32"
+        }
+      ],
+      "unprinted_attributes_not_assumed": true,
+      "heuristic_to_trace_association_not_inferred": true
+    },
+    "stages128": {
+      "process_id": 34912,
+      "geometry": {
+        "N": 12288,
+        "K": 5120,
+        "M": 128
+      },
+      "matmul_trace_calls": 32,
+      "weight_buffers": [
+        "0X1954200000",
+        "0X1994200000",
+        "0X1A08200000",
+        "0X1A48200000",
+        "0X1A88200000",
+        "0X1AC8200000",
+        "0X1B08200000",
+        "0X1B48200000",
+        "0X1B88200000",
+        "0X1BC8200000",
+        "0X1C08200000",
+        "0X1C48200000",
+        "0X1C88200000",
+        "0X1CC8200000",
+        "0X1D08200000",
+        "0X1D48200000"
+      ],
+      "unique_printed_configurations": [
+        {
+          "algoId": "67",
+          "ctaSwizzling": "1",
+          "customOption": "18",
+          "stages": "MATMUL_STAGES_64x4",
+          "tile": "MATMUL_TILE_128x64"
+        }
+      ],
+      "unprinted_attributes_not_assumed": true,
+      "heuristic_to_trace_association_not_inferred": true
+    }
+  },
+  "original_numeric_predicates_unchanged": true,
+  "algorithm_cause_established": false,
+  "algorithm_intervention_tested": false,
+  "model_or_performance_qualified": false,
+  "new_benchmarks": false,
+  "two_times_target_achieved": false,
+  "next": "Actual typed SDK M16 first-success QG control, match observed T32 public configuration and AlgoCheck M16/M32/M128 within4MiB. Then narrowly defaultoff Q128 algorithm context/plugin and original stage/model gates before performance."
+}

@@ -1,0 +1,46 @@
+{
+  "derivations": [
+    {
+      "source": "run_b4_v_m16_cpu.py",
+      "target": "run_b4_v_m16_cpu_v2.py",
+      "source_sha256": "68b796a569684c021f73a869e75125f37aea21a91b33b910e77084735fa5cc97",
+      "target_sha256": "830850a5e0265e7521e5c34c7f607cac22993659ee80a25ca280bb6c56b83b84",
+      "changes": [
+        {
+          "old": "b4-v-m16-cpu-attempt1",
+          "new": "b4-v-m16-cpu-attempt2",
+          "count": 1
+        },
+        {
+          "old": "evidence/b4-v-m16-cpu-preparation.json",
+          "new": "evidence/b4-v-m16-cpu-v2-preparation.json",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "verify_b4_v_m16_cpu.py",
+      "target": "verify_b4_v_m16_cpu_v2.py",
+      "source_sha256": "ea88ae46f756edf2bb4781d49f56b0044135bcbb65cbae43cfa6b9e24f0054fc",
+      "target_sha256": "292341a940f061201424114486650756d8d044cad9ce44a2cadf13e688df83c2",
+      "changes": [
+        {
+          "old": "b4-v-m16-cpu-attempt1",
+          "new": "b4-v-m16-cpu-attempt2",
+          "count": 1
+        },
+        {
+          "old": "evidence/b4-v-m16-cpu-preparation.json",
+          "new": "evidence/b4-v-m16-cpu-v2-preparation.json",
+          "count": 1
+        },
+        {
+          "old": "'verify_b4_v_m16_cpu.py'",
+          "new": "'verify_b4_v_m16_cpu_v2.py'",
+          "count": 1
+        }
+      ]
+    }
+  ],
+  "reason": "Package omitted immutable M/evidence connected baseline proof; retain original failed attempt and original checks, add exact paired parent proofs explicitly to new preparation."
+}

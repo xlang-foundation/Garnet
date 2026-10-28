@@ -1,0 +1,7 @@
+
+{"id": "a7357975f1f24e9e9e237c9c5c75ec39", "kind": "correctness", "label": "Actual embedded native host-mapped BF16 embedding and resident controls versus independent legacy copy/gather, B4 T4/16/32 three trials each; CPU argument lifetime, zero/inactive padding and invalid-input no-mutation. Scalar data transport only, no model or speed admission.", "argv": ["C:\\Python312\\python.exe", "D:\\CantorAI\\5090-study-20261023\\Garnet\\test2026\\cuda\\qwen38_5090\\launch_b4_resident_serial_controls.py", "D:\\CantorAI\\5090-study-20261023", "resident-io", "D:\\CantorAI\\5090-study-20261023\\results\\b4-resident-serial-quality-attempt1\\resident-io\\result.json"]}
+Traceback (most recent call last):
+  File "D:\CantorAI\5090-study-20261023\Garnet\test2026\cuda\qwen38_5090\probe_b4_host_resident_controls.py", line 8, in <module>
+    checkpoint,output=sys.argv[1:3];io=garnet.cuda_tensor_io();io.open(checkpoint);io.enable_host_embedding(True);io.enable_nvfp4_head(True);records=[]
+                                                                                   ~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+RuntimeError: Host embedding requires an independent native NVFP4 head

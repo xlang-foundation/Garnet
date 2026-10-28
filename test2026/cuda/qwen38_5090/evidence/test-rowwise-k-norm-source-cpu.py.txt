@@ -1,0 +1,7 @@
+from pathlib import Path
+import hashlib,os,sys
+W=Path(__file__).resolve().parent;R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';sys.path[:0]=[str(M),str(R)];sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+import run_logged as ledger
+names=['rowwise_k_norm_source.py','test_rowwise_k_norm_source.py','native_rowwise_k_norm_candidate/qwen35_lowering.h','native_rowwise_k_norm_candidate/trt_builder.cpp','native_rowwise_k_norm_candidate/qwen38_rowwise_k_norm_profile.h','evidence/rowwise-k-norm-source-derivation.json','evidence/nvfp4-config.json','decode35_stage_source.py','evidence/decode35-stage-source-derivation.json']
+ledger.source_identity=lambda:{'scope':'Explicit source87 derivation/default-off/geometry/high-precision equation controls only; no native or GPU model execution, no protected-body reads','owned_source_sha256':{n:sha(M/n) for n in names}}
+os.chdir(R);assert ledger.run([sys.executable,'-m','unittest','test2026.cuda.qwen38_5090.test_rowwise_k_norm_source'],W/'rowwise-k-norm-source-cpu-ledger','correctness','5 CPU source controls: exact87=parent86+twohost edits+one strictguard; reverse all modifications; defaultoff original branch/dtype preserved; offsets independently derived from pinned model geometry; high-precision same RMS equation under per-row slicing/concatenation. No TensorRT or native guard compiled, model repair or performance claim.',[M/n for n in names])==0

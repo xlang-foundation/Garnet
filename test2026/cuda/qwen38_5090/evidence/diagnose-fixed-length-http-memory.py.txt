@@ -1,0 +1,15 @@
+from pathlib import Path
+import hashlib,json,statistics
+root=Path('D:/CantorAI/5090-study-20261023');out=root/'results/fixed-length-http-memory-diagnosis.json';assert not out.exists();records=[]
+def stats(rows):
+ gaps=[b['monotonic']-a['monotonic'] for a,b in zip(rows,rows[1:])]
+ return {'sampled_peak_adapter_used_bytes':max(r['used_bytes'] for r in rows),'samples':len(rows),'requested_interval_seconds':.02,'observed_sample_gap_median_seconds':statistics.median(gaps) if gaps else None,'observed_sample_gap_max_seconds':max(gaps) if gaps else None}
+for mode in ('ordinary','mtp'):
+ for directory in ('benchmark','benchmark4k'):
+  folder=root/'results/fixed-length-http-study-attempt1'/mode/directory;paths=list(folder.glob('*-manifest.json'));assert len(paths)==1;m=json.loads(paths[0].read_bytes());samples=[json.loads(line) for line in (folder/(m['run_id']+'-vram.jsonl')).read_bytes().splitlines()]
+  for row in m['cohorts']:
+   phase=row['case']+'-c'+str(row['concurrency']);selected=[s for s in samples if s['phase']==phase];prefix=selected[:row['samples']];fresh=stats(prefix);full=stats(selected)
+   requests=[json.loads((folder/(key+'-result.json')).read_bytes()) for key in row['request_keys']];start=min(r['submitted'] for r in requests);end=max(r['completed'] for r in requests)
+   records.append({'mode':mode,'directory':directory,'phase':phase,'saved':{k:row[k] for k in fresh},'phase_prefix':fresh,'all_raw_phase':full,'summary_matches_prefix':fresh=={k:row[k] for k in fresh},'summary_matches_all_phase':full=={k:row[k] for k in full},'prefix_brackets_all_measured_requests':prefix[0]['monotonic']<=start<=end<=prefix[-1]['monotonic'],'trailing_samples':len(selected)-len(prefix),'all_trailing_after_measured_completion':all(s['monotonic']>=end for s in selected[len(prefix):])})
+method=root/'Garnet/test2026/cuda/qwen38_5090/sample_vram.py';result={'status':'raw_memory_snapshot_diagnosis_collected','sampler_sha256':hashlib.sha256(method.read_bytes()).hexdigest(),'cohorts':records,'scope':'Actual saved raw phase samples and immutable summary comparison only. Prefix hypothesis checked for every cohort; no changed summary, metric, archive or model run.'}
+out.write_text(json.dumps(result,indent=2),encoding='utf8');print(json.dumps({'status':result['status'],'cohorts':len(records),'all_prefix_stats_exact':all(r['summary_matches_prefix'] for r in records),'all_prefixes_bracket_requests':all(r['prefix_brackets_all_measured_requests'] for r in records),'all_trailing_after_completion':all(r['all_trailing_after_measured_completion'] for r in records),'all_phase_mismatches':sum(not r['summary_matches_all_phase'] for r in records),'trailing_samples':sum(r['trailing_samples'] for r in records)}))

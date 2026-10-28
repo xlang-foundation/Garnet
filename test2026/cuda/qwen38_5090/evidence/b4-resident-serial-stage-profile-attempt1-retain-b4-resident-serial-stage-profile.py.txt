@@ -1,0 +1,52 @@
+"""Retain independently replayed host-call diagnosis, without serving-speed claims."""
+from pathlib import Path
+from datetime import datetime,timezone
+import csv,hashlib,json,statistics,subprocess,zipfile
+W=Path(__file__).resolve().parent;O=W.parent/'outputs';R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';E=M/'evidence'
+J='b4-resident-serial-stage-profile-attempt1';sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest();owned=[]
+proof=O/(J+'-verified.json');peer=O/(J+'-remote-verified.json');archive=O/(J+'-evidence.zip')
+q=json.loads(proof.read_bytes());assert proof.read_bytes()==peer.read_bytes() and q['status']=='actual_B4_resident_serial_host_stage_controls_replayed' and q['exit_code']==0
+assert q['B4_host_stage_case_gate_passed'] and q['source_runtime_SDK_config_index_CMake_all34_and_full_model_files_restored'] and sha(archive)==q['archive_sha256']
+a=q['arrays'];assert a['actual_native_HTTP_requests']==62 and a['profiled_real_request_IDs']==a['unprofiled_real_request_IDs']==31 and a['public_output_IDs']==7936 and a['all62_prompt_and_output_IDs_exact_retained_B1'] and a['all_real_native_callbacks_and_dispatches_matched']
+assert q['CUDA_kernel_elapsed_or_clean_serving_speed_qualified'] is a['CUDA_kernel_elapsed_or_clean_serving_speed_qualified'] is False
+host=a['host_stages'];assert host['status']=='B4_physical_group_host_stage_intervals_replayed' and host['real_request_IDs']==31
+groups=[]
+for g in host['groups']:
+ rows=g['intervals'];root=[r for r in rows if r['stage']=='worker_request'];assert len(root)==1;root=root[0]
+ direct=[r for r in rows if r['parent_span']==root['span']];assert {r['stage'] for r in direct}=={'reset','session_prefill','session_generate'}
+ covered=sum(r['host_wall_seconds'] for r in direct);residual=root['host_wall_seconds']-covered;assert residual>=-1e-7
+ phases={r['stage']:r['host_wall_seconds'] for r in direct}
+ groups.append(dict(root_id=g['id'],real_rows=len(g['request_ids']),request_ids=g['request_ids'],worker_request_host_seconds=root['host_wall_seconds'],**{n+'_host_seconds':v for n,v in phases.items()},unwrapped_root_host_seconds=max(0,residual),inclusive_seconds=g['inclusive_seconds'],call_counts=g['counts']))
+notes=[
+ 'Physical-group native-worker host wall, including logging and instrumentation; never CUDA kernel elapsed or clean serving speed.',
+ 'All62 prompts/output sequences exact retained B1, including31 unprofiled and31 profiled real HTTP requests. Private dummy callbacks excluded from public output counts.',
+ 'Root direct children reset/prefill/generate are disjoint host intervals. Other labels are nested inclusive intervals: do not add across labels.',
+ 'Unwrapped root wall includes preprocessing, completion and instrumentation outside those three direct calls. It is not an isolated CPU or GPU component cost.',
+ 'Asynchronous device work can be charged to later reads/waits. token_delivery includes suppressed dummy and duplicate callbacks; not public token count.',
+ 'Native/bridge/client absolute clocks cannot be subtracted. These diagnostic observations cannot update clean benchmark figures or establish2x/halfTTFT.'
+]
+summary=dict(status='paired_B4_resident_serial_host_call_diagnosis_retained',paired_proof_sha256=sha(proof),archive_sha256=sha(archive),profiled_physical_groups=len(groups),profiled_real_requests=31,groups=groups,notes=notes,CUDA_kernel_elapsed_or_clean_serving_speed_qualified=False,two_times_target_achieved=False)
+summary_path=O/'Garnet-Resident-Serial-Host-Stage-Diagnosis.json';assert not summary_path.exists();summary_path.write_bytes(json.dumps(summary,indent=2).encode())
+table=O/'Garnet-Resident-Serial-Host-Stage-Diagnosis.csv';assert not table.exists()
+with table.open('w',newline='',encoding='utf-8') as f:
+ fields=['root_id','real_rows','worker_request_host_seconds','reset_host_seconds','session_prefill_host_seconds','session_generate_host_seconds','unwrapped_root_host_seconds'];writer=csv.DictWriter(f,fieldnames=fields);writer.writeheader();writer.writerows({k:g[k] for k in fields} for g in groups)
+def keep(name,raw):
+ p=E/name;assert not p.exists();p.parent.mkdir(parents=True,exist_ok=True);p.write_bytes(raw);owned.append(p)
+for p in (proof,peer,summary_path,table):keep(p.name,p.read_bytes())
+with zipfile.ZipFile(archive) as z:
+ b='results/'+J+'/'
+ for n in ('evidence-manifest.json',b+'workflow.json',b+'native/report.json',b+'native/worker/worker-stdout.jsonl',b+'native/worker/worker-stderr.log',b+'native/worker/batch-dispatch.jsonl',b+'resources/resource-monitor.json'):
+  keep(J+'-'+n.removeprefix(b).replace('/','-'),z.read(n))
+ for stage in ('cpu','embedded-cpu','candidate'):
+  for ext in ('jsonl','log'):keep(J+'-'+stage+'-commands.'+ext,z.read(b+stage+'-ledger/commands.'+ext))
+for ext in ('jsonl','log'):keep(J+'-local-replay-commands.'+ext,(W/(J+'-local-replay-ledger')/('commands.'+ext)).read_bytes())
+for name in ('postprocess-b4-resident-serial-stage-profile.py','replay-b4-resident-serial-stage-profile.py',Path(__file__).name):keep(J+'-'+name+'.txt',(W/name).read_bytes())
+keep(J+'-retention.json',json.dumps(dict(status=q['status'],paired_proof_sha256=sha(proof),raw_archive_sha256=sha(archive),raw_archive_bytes=archive.stat().st_size,summary_sha256=sha(summary_path),table_sha256=sha(table),source_runtime_all34_and_current18files_restored=True,CUDA_kernel_elapsed_or_clean_serving_speed_qualified=False,two_times_target_achieved=False),indent=2).encode())
+entry='\n\n'+datetime.now(timezone.utc).isoformat()+': Separate resident/serial B4 host-stage diagnostic independently replayed remotely and locally; paired proof '+sha(proof)+', raw archive '+sha(archive)+'.6 new actual remote CPython and18 embedded CPU controls passed.62 real HTTP requests (31 unprofiled/31 profiled), all7936 public output IDs and prompt IDs exact retained B1; actual native callbacks and dispatch matched. All31 profiled real IDs mapped to '+str(len(groups))+' closed physical-group span trees. Source/runtime/SDK/CMake/all34/current18files restored.\n'+' '.join(notes)+'\n'
+for name in ('docs/research/qwen38-5090-development-log.md','docs/research/qwen38-5090-implementation-task.md'):
+ p=R/name;assert b'Separate resident/serial B4 host-stage diagnostic independently replayed remotely and locally' not in p.read_bytes()
+ with p.open('ab') as f:f.write(entry.encode())
+ owned.append(p)
+paths=W/'b4-resident-serial-stage-profile-retention-stage-paths.bin';paths.write_bytes(b''.join(p.relative_to(R).as_posix().encode()+b'\0' for p in dict.fromkeys(owned)))
+subprocess.run(['git','-c','core.autocrlf=false','add','--pathspec-from-file='+str(paths),'--pathspec-file-nul'],cwd=R,check=True)
+print(json.dumps(dict(staged_paths=len(set(owned)),profiled_physical_groups=len(groups),paired_proof_sha256=sha(proof),CUDA_kernel_elapsed_or_clean_serving_speed_qualified=False)))

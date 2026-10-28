@@ -1,0 +1,107 @@
+{
+  "derivations": [
+    {
+      "source": "launch_b4_b1_short_admission.py",
+      "target": "launch_decode_projection_diagnostic.py",
+      "source_sha256": "ee8aa17fd487d44ba799c89123a0aecb330188692f0c41711cdb8c94083a3213",
+      "target_sha256": "85e3f234281ff4f97233a4c59e4cbcf68c7e284c0d76416ec7eaa6dd689d8c25",
+      "changes": [
+        {
+          "old": "root,out,cache=map(Path,sys.argv[1:4]);mode=sys.argv[4];reference=Path(sys.argv[5]);",
+          "new": "root,out,cache=map(Path,sys.argv[1:4]);mode=sys.argv[4];",
+          "count": 1
+        },
+        {
+          "old": "b4-b1-short-preparation.json",
+          "new": "decode-projection-preparation.json",
+          "count": 1
+        },
+        {
+          "old": "env['PATH']=';'.join(",
+          "new": "env.update(CUBLASLT_LOG_LEVEL='5',CUBLASLT_LOG_MASK='31',CUBLASLT_LOG_FILE=str(out/'cublaslt.log'))\nenv['PATH']=';'.join(",
+          "count": 1
+        },
+        {
+          "old": "probe_b4_b1_short_admission.py",
+          "new": "probe_decode_projection_diagnostic.py",
+          "count": 1
+        },
+        {
+          "old": "str(out),mode,str(reference)",
+          "new": "str(out),mode",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "run_b4_b1_short_admission.py",
+      "target": "run_decode_projection_diagnostic.py",
+      "source_sha256": "ab84bbeab36eb0b2f394fac513157e587bb701592bedcf074c978bd18da9c74d",
+      "target_sha256": "789ad1f9e5f355784556e535d23898aa72454bf8f4b3ca07ee3ee5f05a480ad5",
+      "changes": [
+        {
+          "old": "b4-b1-short-admission-attempt1",
+          "new": "decode-projection-diagnostic-attempt1",
+          "count": 1
+        },
+        {
+          "old": "b4-b1-short-preparation.json",
+          "new": "decode-projection-preparation.json",
+          "count": 1
+        },
+        {
+          "old": "B4_vs_B1_short_prepared_GPU_unrun",
+          "new": "decode_projection_prepared_GPU_unrun",
+          "count": 1
+        },
+        {
+          "old": "w['exit_code']==0 and w['cleanup_finished']",
+          "new": "w['exit_code']==row['exit_code'] and w['exit_code'] in (0,1) and w['cleanup_finished']",
+          "count": 1
+        },
+        {
+          "old": "common=[prep,*bundles.values()]+[ROOT/n for n in {**p['files'],**p['checkpoints'],**p['audit_dependencies']}]+[ROOT/'results'/(n+'-verified.json') for n in p['parents']]",
+          "new": "common=[prep,*bundles.values()]+[ROOT/n for n in {**p['new_files'],**p['checkpoints'],**p['capture_inputs']}]+[ROOT/'results'/(n+'-verified.json') for n in p['parents']]",
+          "count": 1
+        },
+        {
+          "old": "test2026.cuda.qwen38_5090.test_b4_b1_exact_gate",
+          "new": "test2026.cuda.qwen38_5090.test_decode_projection_diagnostic",
+          "count": 1
+        },
+        {
+          "old": "Strict complete128component/finite raw vector/signedzero/rowpermutation/slot/ID corruption gates",
+          "new": "Strict diagnostic full-array finite/geometry/row/active-inactive/signedzero/input-token/repeat corruption controls; original model admission gates unchanged",
+          "count": 1
+        },
+        {
+          "old": "launch_b4_b1_short_admission.py",
+          "new": "launch_decode_projection_diagnostic.py",
+          "count": 1
+        },
+        {
+          "old": ",mode,str(out/'reference')",
+          "new": ",mode",
+          "count": 1
+        },
+        {
+          "old": "Four fresh source60/DLL841 B1 oracles then source61/B4 candidate, same41/104/93/93token text-image short/tail inputs and8IDs; complete128statecomponents, finite hidden+norm raw bytes, reset/prefill/final/reset. No timing or quality promotion.",
+          "new": "Actual existing one-layer GDN chunk with shared compressed weights, first5agreed decode input tokens, T4 B1/M4 versus B4/M16. Zero recurrent/conv states; capture full retained QKV/Z/beta/a and separate normalization arrays twice. No new native source or math policy, fullmodel or timing promotion.",
+          "count": 1
+        },
+        {
+          "old": "if code:raise RuntimeError(mode+' numerical admission failed; preserve raw witnesses and errors')",
+          "new": "if code:raise RuntimeError(mode+' diagnostic capture failed; preserve raw arrays and errors')\n            assert (out/mode/'cublaslt.log').is_file() and (out/mode/'cublaslt.log').stat().st_size>0,'Requested actual SDK selection trace missing'",
+          "count": 1
+        },
+        {
+          "old": "w['status']='B4_short_mixed_tail_exact_to_four_B1_collected_unqualified_full4k_MTP_quality_performance';code=0",
+          "new": "from test2026.cuda.qwen38_5090.decode_projection_diagnostic import replay\n        reference=json.loads((out/'reference/report.json').read_bytes());candidate=json.loads((out/'candidate/report.json').read_bytes())\n        result=replay(reference,candidate,lambda n:(out/'reference'/n).read_bytes(),lambda n:(out/'candidate'/n).read_bytes(),p['token_inputs']);(out/'analysis.json').write_bytes(json.dumps(result,indent=2).encode())\n        w['status']='actual_decode_projection_diagnostic_collected_no_model_or_performance_admission';code=0",
+          "count": 1
+        }
+      ]
+    }
+  ],
+  "original_source_runtime_SDK_checkpoint_snapshot_and_restoration_retained": true,
+  "original_model_gate_unchanged": true
+}

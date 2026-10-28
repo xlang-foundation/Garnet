@@ -1,0 +1,15 @@
+from pathlib import Path
+import base64,hashlib,json,subprocess
+r=Path('D:/CantorAI/5090-study-20261023');repo=r/'Garnet';results=r/'results';sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+cache=(r/'build/CMakeCache.txt').read_text();values={}
+for line in cache.splitlines():
+ if ':' in line and '=' in line and not line.startswith(('#','//')):
+  key,value=line.split('=',1);values[key.split(':',1)[0]]=value
+required=('CMAKE_BUILD_TYPE','CMAKE_CUDA_ARCHITECTURES','CMAKE_CUDA_COMPILER','CMAKE_CXX_COMPILER','CMAKE_MAKE_PROGRAM','XLANG3_ROOT','XLANG3_RUNTIME_DIR','GARNET_TENSORRT_ROOT','GARNET_QWEN35_WHOLE_PROGRAM_CUDA','GARNET_STAGE_VENDOR_DLLS')
+selected={k:values[k] for k in required};assert selected['CMAKE_BUILD_TYPE']=='Release' and selected['CMAKE_CUDA_ARCHITECTURES']=='120' and selected['GARNET_QWEN35_WHOLE_PROGRAM_CUDA']=='OFF' and selected['GARNET_STAGE_VENDOR_DLLS']=='OFF'
+files=[r/'tools/python/cmake/data/bin/cmake.exe',Path(values['CMAKE_MAKE_PROGRAM']),Path(values['CMAKE_CUDA_COMPILER']),Path(values['CMAKE_CXX_COMPILER']),Path('C:/Program Files (x86)/Microsoft Visual Studio/2022/BuildTools/VC/Auxiliary/Build/vcvars64.bat'),repo/'test2026/cuda/qwen38_5090/CMakeLists.txt',Path(values['GARNET_TENSORRT_ROOT'])/'include/NvInfer.h',Path(values['GARNET_TENSORRT_ROOT'])/'include/NvInferVersion.h',Path(values['GARNET_TENSORRT_ROOT'])/'lib/nvinfer_10.lib',Path(values['XLANG3_ROOT'])/'sdk/xlang3/xlang3.h',Path(values['XLANG3_RUNTIME_DIR'])/'xlang3_runtime.lib']
+used=int(subprocess.check_output(['nvidia-smi','--query-gpu=memory.used','--format=csv,noheader,nounits'],text=True).strip());assert used<1024
+command=r"$ProgressPreference='SilentlyContinue'; Get-CimInstance Win32_Process | Where-Object { $_.ExecutablePath -and $_.ExecutablePath.StartsWith('D:\CantorAI\5090-study-20261023\',[System.StringComparison]::OrdinalIgnoreCase) } | Select-Object ProcessId,ExecutablePath | ConvertTo-Json -Compress"
+processes=subprocess.check_output(['powershell.exe','-NoProfile','-EncodedCommand',base64.b64encode(command.encode('utf-16le')).decode()],text=True).strip();assert not processes,('Study executable live',processes)
+report={'status':'integrated_top1_native_build_environment_observed','files':{str(f):sha(f) for f in files},'cache':selected,'cmake_cache_sha256':sha(r/'build/CMakeCache.txt'),'runtime_dependencies':{n:sha(r/'build/bin'/n) for n in ('garnet.dll','xlang3.exe','xlang3_runtime.dll','nvinfer_10.dll','cudart64_13.dll','cublasLt64_13.dll')},'gpu_used_mib':used,'live_study_executables':[],'observer_sha256':sha(Path(__file__)),'scope':'Read-only native build inputs on actual Windows5090 SDK; no build/CUDA initialization/source or runtime replacement.'}
+p=results/'integrated-top1-native-build-environment.json';assert not p.exists();p.write_text(json.dumps(report,indent=2),encoding='utf8');print(json.dumps(report))

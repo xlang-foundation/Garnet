@@ -1,0 +1,12 @@
+"""Independent local CPU replay; downloaded native artifacts are never loaded."""
+from pathlib import Path
+import hashlib,json,os,sys
+W=Path(__file__).resolve().parent;O=W.parent/'outputs';R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest();sys.path[:0]=[str(M),str(R)]
+import run_logged as ledger
+J='decode35-endpoints-attempt1';archive=O/(J+'-evidence.zip');remote=O/(J+'-remote-verified.json');q=json.loads(remote.read_bytes());assert sha(archive)==q['archive_sha256']
+names=['verify_decode35_endpoints.py','decode35_endpoint_analysis.py','decode35_endpoint_program.py','decode35_endpoint_reuse.py','b4_k35_coordinate_trajectory.py','b4_k35_cache52.py','b4_full4k_selection52.py','b4_b1_exact_gate.py','decode_boundary_analysis.py','evidence/decode35-endpoints-preparation.json']
+ledger.source_identity=lambda:{'scope':'Explicit local same-DLL operand reader sources; CPU only, no native/GPU/model execution or protected-body reads','owned_source_sha256':{n:sha(M/n) for n in names}}
+os.chdir(R);assert ledger.run([sys.executable,str(M/'verify_decode35_endpoints.py'),'--proofs',str(O)],W/'decode35-endpoints-local-replay','correctness','Independent CPU raw replay after terminal-only remote proof. Require all historical/off/on complete primary state/cache/timeline/layers before operand analysis; verify actual trace/geometry/rounding/cache links, preserve failures without speed or model admission.',[M/n for n in names]+[archive,remote])==0
+proof=O/(J+'-verified.json');assert proof.read_bytes()==remote.read_bytes();q=json.loads(proof.read_bytes());a=q['analysis']
+summary={'status':q['status'],'exit_code':q['exit_code'],'error':q['error'],'proof_sha256':sha(proof),'archive_sha256':sha(archive),'archive_bytes':archive.stat().st_size,'paired_remote_local_proof_bytes_identical':True,'CPU_controls':q['CPU_controls'],'baseline_restored':q['source_runtime_SDK_config_index_CMake_all34_baseline_restored'],'controls':q['controls'],'reused_off':q['reused_off'],'fresh_model_processes':q['fresh_model_processes'],'first_differing_key_path_operands':[{k:r[k] for k in ('step','first_differing_active_key_path_operand')} for r in a['rows']] if a else None,'original_full4K_still_failed':True,'model_or_performance_qualified':False,'two_times_target_achieved':False}
+(O/'Garnet-Decode35-Endpoints-Progress.json').write_bytes(json.dumps(summary,indent=2).encode());print(json.dumps(summary,indent=2))

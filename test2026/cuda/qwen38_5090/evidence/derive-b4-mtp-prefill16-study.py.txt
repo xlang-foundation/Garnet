@@ -1,0 +1,22 @@
+from pathlib import Path
+import ast,hashlib,json
+R=Path('D:/CantorAI/work/qwen38-5090');source=R/'xModel/qwen35/vl_0_8b/cuda_mtp_prefill16_study.py';target=source.with_name('cuda_mtp_prefill16_b4_study.py');original=source.read_bytes();raw=original;changes=[];sha=lambda b:hashlib.sha256(b).hexdigest()
+def replace(a,b,count=1):
+    global raw
+    if b'\r\n' in original:a=a.replace('\n','\r\n');b=b.replace('\n','\r\n')
+    assert raw.count(a.encode())==count,(a,raw.count(a.encode()));raw=raw.replace(a.encode(),b.encode());changes.append(dict(old=a,new=b,count=count))
+replace('Explicit B1 study: T16 MTP prefill plus unchanged T4 verified decoding.','Explicit B4 BF16/host/joined study: T16 draft prefill and unchanged T4 verification.')
+replace('CUDAMTPPrefill16StudySession','CUDAMTPPrefill16B4StudySession')
+replace('draft_builder_workspace_bytes=128<<20):','draft_builder_workspace_bytes=256<<20):')
+replace('policy!=(3,0,4,128<<20)','policy!=(3,0,4,256<<20)')
+replace('depth3, full head, prefix replay and T4/128MiB decode policy','depth3, full head, prefix replay and B4T4/256MiB decode policy')
+replace("geometry!=(1,4096,32,4) or getattr(decoder,'bf16_kv_low_batch_state',None) is not True","geometry!=(4,4096,32,4) or getattr(decoder,'bf16_kv_state',None) is not True")
+replace('the existing B1 BF16 low-batch T32/T4/cap4096 target','the explicit B4 BF16 KV T32/T4/cap4096 target')
+replace("        config=decoder.config", "        for flag in ('external_compressed_weights','joined_mlp_projections','host_embedding_lookup','retain_linear_inputs','register_delta_128','flat_concat','deferred_state_commit','shared_output_storage','packed_state_program'):\n            if getattr(decoder,flag,None) is not True:raise ValueError('B4 MTP requires explicit '+flag)\n        for flag in ('bf16_kv_low_batch_state','bf16_kv_prefill128_study','embedded_projection_weights','join_decode_input_projections','kv_delta_state'):\n            if getattr(decoder,flag,None) is not False:raise ValueError('B4 MTP excludes '+flag)\n        config=decoder.config")
+replace('draft_chunk_size=4,draft_builder_workspace_bytes=128<<20)','draft_chunk_size=4,draft_builder_workspace_bytes=256<<20)')
+replace('CUDAMTPProgram(checkpoint,config,1,4096,16,','CUDAMTPProgram(checkpoint,config,4,4096,16,')
+replace('decoder.projection_workspace_bytes,builder_workspace_bytes=128<<20)','decoder.projection_workspace_bytes,builder_workspace_bytes=128<<20) # Separate T16 engine retains allowed128MiB;256MiB is only legal for T4.')
+replace('[1,16,h]','[4,16,h]',3);replace('[1,16,3]','[4,16,3]');replace('[1,16]','[4,16]',2)
+replace('draft_prefill_chunk=16,draft_decode_chunk=4,extra_draft_engine_weights_duplicated=True,','draft_prefill_chunk=16,draft_decode_chunk=4,physical_batch=4,draft_decode_builder_workspace_bytes=256<<20,draft_prefill_builder_workspace_bytes=128<<20,extra_draft_engine_weights_duplicated=True,')
+ast.parse(raw);assert not target.exists();target.write_bytes(raw)
+p=R/'test2026/cuda/qwen38_5090/evidence/b4-mtp-prefill16-study-derivation.json';assert not p.exists();p.write_bytes(json.dumps(dict(derivations=[dict(source=source.relative_to(R).as_posix(),target=target.relative_to(R).as_posix(),source_sha256=sha(original),target_sha256=sha(raw),changes=changes)],scope='Defaultoff separate B4BF16KV/hostembedding/joinedMLP targetT32/decodeT4 study only; no productionfactory/default/globalMTP policy changed. OriginalB1 temporarybinding/cache/reentrancy/failure/reset/memory/close hook preserved. T4decode retains allowedB4workspace256MiB; extraT16prefill uses separatelyallowed128MiB withoutrelaxing original256MiB-only-T4 guard. Target/compressedweights/state/verification unchanged, draft engineweights duplicated andmustmeasureVRAM. CPUcontracts/GPU/MTP/quality/HTTP/performance unqualified atderivation; deployonlyafterpairedfull4K+futureMTPadmission.'),indent=2).encode());print(json.dumps(dict(source_sha256=sha(original),target_sha256=sha(raw))))

@@ -1,0 +1,28 @@
+from pathlib import Path
+import hashlib,json,sys,zipfile
+ROOT=Path('D:/CantorAI/5090-study-20261023');P='Garnet/test2026/cuda/qwen38_5090/';M=ROOT/P
+sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest();sys.path[:0]=[str(M),str(ROOT/'Garnet')]
+from run_bf16_low_batch_native_build import idle
+def main():
+    archive=ROOT/'results/b4-k-m4x4-cpu-deployment.zip'
+    expected=sys.argv[1];assert sha(archive)==expected;idle()
+    receipt=ROOT/'results/b4-k-m4x4-cpu-install.json';assert not receipt.exists()
+    with zipfile.ZipFile(archive) as z:
+        mf=json.loads(z.read('deployment-manifest.json'))['files'];assert z.testzip() is None and len(z.namelist())==len(set(z.namelist()))==len(mf)+1==25
+        p=json.loads(z.read(P+'evidence/b4-k-m4x4-cpu-preparation.json'))
+        assert p['status']=='B4T4_K_M4X4_CPU_prepared_unrun'
+        assert sha(M/'evidence/b4-k35-cache52-preparation.json')==p['baseline_preparation_sha256']
+        for n,h in {**p['files'],**p['checkpoints'],**p['cuda_objects'],**p['compile_inputs']}.items():
+            assert (hashlib.sha256(z.read(n)).hexdigest() if n in mf else sha(ROOT/n))==h,('Preflight drift',n)
+        for n,h in p['runtime'].items():assert sha(ROOT/'build/bin'/n)==h
+        for n,h in p['environment'].items():assert sha(Path(n))==h
+        assert sha(ROOT/'build/CMakeCache.txt')==p['cache_before_sha256'] and sha(ROOT/p['bundle'])==p['bundle_sha256']
+        for n,h in mf.items():
+            target=ROOT/n;raw=z.read(n)
+            assert target.resolve().is_relative_to(M.resolve()) and 'probe_native_external_prefix_batch.py' not in n
+            assert hashlib.sha256(raw).hexdigest()==h and (not target.exists() or target.read_bytes()==raw),('Preserve edit',n)
+        for n in mf:
+            target=ROOT/n;target.parent.mkdir(parents=True,exist_ok=True);target.write_bytes(z.read(n))
+    receipt.write_bytes(json.dumps({'status':'private_K_fourM4_CPU_methods_installed_unrun','deployment_sha256':sha(archive),'files':mf,'production_source_DLL_CMake_objects_changed':False},indent=2).encode())
+    print(json.dumps({'status':'private_K_fourM4_CPU_methods_installed_unrun','files':len(mf)}))
+if __name__=='__main__':main()

@@ -1,0 +1,34 @@
+"""Read publisher metadata only; never download weight shards or execute code."""
+from pathlib import Path
+import datetime,hashlib,json
+from urllib.request import Request,urlopen
+from urllib.error import HTTPError
+W=Path(__file__).resolve().parent;O=W.parent/'outputs';folder=W/'qwen38-upstream-file-identity';assert not folder.exists();folder.mkdir()
+rev='482ca0f3832238542f8f5295dde86b5f22711d80';model='nvidia/Qwen3.8-27B-NVFP4';url='https://huggingface.co/api/models/'+model+'/revision/'+rev+'?blobs=true';manifest=O/'qwen38-nvfp4-current-inputs.json';d=json.loads(manifest.read_bytes());assert d['revision']==rev
+result=dict(status='not_verified',requested_revision=rev,source_url=url,local_current_manifest_sha256=hashlib.sha256(manifest.read_bytes()).hexdigest(),UTC=datetime.datetime.now(datetime.timezone.utc).isoformat(),weight_shards_downloaded=False,historical_shard_identity_retroactively_proved=False)
+try:
+    try:
+        with urlopen(Request(url,headers={'User-Agent':'CantorAI-Garnet-checkpoint-identity-audit'}),timeout=40) as response:status=response.status;raw=response.read();headers=dict(response.headers)
+    except HTTPError as error:status=error.code;raw=error.read();headers=dict(error.headers)
+    (folder/'publisher-metadata-response.bin').write_bytes(raw);(folder/'publisher-http.json').write_bytes(json.dumps(dict(status=status,headers=headers),indent=2).encode());assert status==200,('Publisher metadata HTTP status',status)
+    remote=json.loads(raw);assert remote['sha']==rev and remote.get('id',remote.get('modelId'))==model
+    entries={n['rfilename']:n for n in remote['siblings']};compared=[]
+    for n,h in d['files'].items():
+        rel=n.removeprefix('models/Qwen3.8-27B-NVFP4/');assert rel in entries
+        entry=entries[rel];lfs=entry.get('lfs')
+        if lfs:
+            oid=lfs.get('sha256',lfs.get('oid','')).removeprefix('sha256:');assert oid==h and lfs['size']==d['file_stats'][n]['bytes']
+            compared.append(dict(file=rel,kind='publisher_LFS_SHA256',sha256=oid,bytes=lfs['size']))
+        elif not rel.endswith('.safetensors'):
+            # Bound side-file reads. Large weights are metadata-only above.
+            assert d['file_stats'][n]['bytes']<=32*1024*1024
+            address='https://huggingface.co/'+model+'/resolve/'+rev+'/'+rel
+            with urlopen(Request(address,headers={'User-Agent':'CantorAI-Garnet-checkpoint-identity-audit'}),timeout=40) as response:body=response.read(32*1024*1024+1)
+            assert len(body)==d['file_stats'][n]['bytes'] and hashlib.sha256(body).hexdigest()==h
+            target=folder/'side-files'/rel;assert target.resolve().is_relative_to((folder/'side-files').resolve());target.parent.mkdir(parents=True,exist_ok=True);target.write_bytes(body)
+            compared.append(dict(file=rel,kind='pinned_publisher_side_file_SHA256',sha256=h,bytes=len(body)))
+        else:raise AssertionError(('Missing publisher LFS identity for weight shard',rel))
+    assert len(compared)==18
+    result.update(status='all18_current_inference_files_match_pinned_publisher_metadata_or_bytes',publisher_revision=remote['sha'],files=compared,weight_LFS_shards=sum(n['file'].endswith('.safetensors') for n in compared),scope='Current full local SHA256 manifest independently compared to pinned publisher LFS SHA256/size and small side-file bytes. No weight download or GPU/model work. This later upstream comparison does not retroactively establish older benchmark shard hashes.')
+except Exception as error:result.update(error=repr(error))
+(folder/'comparison.json').write_bytes(json.dumps(result,indent=2).encode());print(json.dumps({k:v for k,v in result.items() if k!='files'}))

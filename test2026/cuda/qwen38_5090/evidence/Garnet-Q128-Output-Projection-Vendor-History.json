@@ -1,0 +1,4493 @@
+{
+  "status": "historical_pre_Q128_output_projection_geometry_vendor_observations",
+  "original_logger_archive_sha256": "fe1f015002e8bc4ff78211983c87c0ee202d49f7551bc5cbadaafd5d898410fc",
+  "Q128_single_observation_proof_sha256": "1dd915edba0fcfb8aa5f5bc2d3ba5e057c2a4012e812accf021d1ae31f48b2a2",
+  "P_geometry": {
+    "N": 5120,
+    "K": 6144,
+    "output": "BF16",
+    "input_weight": "FP8E4M3",
+    "compute": "F32",
+    "workspace_bytes_recorded_per_actual_call": true
+  },
+  "profiles": {
+    "32": {
+      "raw_log_sha256": "5ed32ed6ab8d7daa5a25de9edee9ef85c6c124e55913d08d199642478ead2069",
+      "matching_P_trace_calls": 128,
+      "unique_P_weight_buffers": 64,
+      "P_workspace_bytes_histogram": {
+        "4194304": 128
+      },
+      "immediately_after_Q_workspace_bytes_histogram": {
+        "4194304": 32
+      },
+      "P_configuration_histogram": [
+        {
+          "configuration": {
+            "algoId": "35",
+            "customOption": "1",
+            "numSplitsK": "3",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "stages": "MATMUL_STAGES_64x5",
+            "tile": "MATMUL_TILE_64x32"
+          },
+          "calls": 128
+        }
+      ],
+      "immediately_after_Q_trace_calls": 32,
+      "unique_immediately_after_Q_weight_buffers": 16,
+      "immediately_after_Q_configurations": [
+        {
+          "algoId": "35",
+          "customOption": "1",
+          "numSplitsK": "3",
+          "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+          "stages": "MATMUL_STAGES_64x5",
+          "tile": "MATMUL_TILE_64x32"
+        }
+      ],
+      "two_complete_matching_shape_traversals": true,
+      "events": [
+        {
+          "line": 64,
+          "shape_tag": "P",
+          "weight_buffer": "0X1928C00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 172,
+          "shape_tag": "P",
+          "weight_buffer": "0X1938E00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 280,
+          "shape_tag": "P",
+          "weight_buffer": "0X1949000000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 346,
+          "shape_tag": "Q",
+          "weight_buffer": "0X1954200000",
+          "printed_algorithm": {
+            "algoId": "67",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "ctaSwizzling": "1",
+            "customOption": "18"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 404,
+          "shape_tag": "P",
+          "weight_buffer": "0X1958A00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 512,
+          "shape_tag": "P",
+          "weight_buffer": "0X1968C00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 620,
+          "shape_tag": "P",
+          "weight_buffer": "0X1978E00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 728,
+          "shape_tag": "P",
+          "weight_buffer": "0X1989000000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 794,
+          "shape_tag": "Q",
+          "weight_buffer": "0X1994200000",
+          "printed_algorithm": {
+            "algoId": "67",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "ctaSwizzling": "1",
+            "customOption": "18"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 852,
+          "shape_tag": "P",
+          "weight_buffer": "0X1998A00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 960,
+          "shape_tag": "P",
+          "weight_buffer": "0X19A8C00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 1068,
+          "shape_tag": "P",
+          "weight_buffer": "0X19EDA00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 1176,
+          "shape_tag": "P",
+          "weight_buffer": "0X19FD000000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 1242,
+          "shape_tag": "Q",
+          "weight_buffer": "0X1A08200000",
+          "printed_algorithm": {
+            "algoId": "67",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "ctaSwizzling": "1",
+            "customOption": "18"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 1300,
+          "shape_tag": "P",
+          "weight_buffer": "0X1A0CA00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 1408,
+          "shape_tag": "P",
+          "weight_buffer": "0X1A1CC00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 1516,
+          "shape_tag": "P",
+          "weight_buffer": "0X1A2CE00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 1624,
+          "shape_tag": "P",
+          "weight_buffer": "0X1A3D000000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 1690,
+          "shape_tag": "Q",
+          "weight_buffer": "0X1A48200000",
+          "printed_algorithm": {
+            "algoId": "67",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "ctaSwizzling": "1",
+            "customOption": "18"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 1748,
+          "shape_tag": "P",
+          "weight_buffer": "0X1A4CA00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 1856,
+          "shape_tag": "P",
+          "weight_buffer": "0X1A5CC00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 1964,
+          "shape_tag": "P",
+          "weight_buffer": "0X1A6CE00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 2072,
+          "shape_tag": "P",
+          "weight_buffer": "0X1A7D000000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 2138,
+          "shape_tag": "Q",
+          "weight_buffer": "0X1A88200000",
+          "printed_algorithm": {
+            "algoId": "67",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "ctaSwizzling": "1",
+            "customOption": "18"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 2196,
+          "shape_tag": "P",
+          "weight_buffer": "0X1A8CA00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 2304,
+          "shape_tag": "P",
+          "weight_buffer": "0X1A9CC00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 2412,
+          "shape_tag": "P",
+          "weight_buffer": "0X1AACE00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 2520,
+          "shape_tag": "P",
+          "weight_buffer": "0X1ABD000000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 2586,
+          "shape_tag": "Q",
+          "weight_buffer": "0X1AC8200000",
+          "printed_algorithm": {
+            "algoId": "67",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "ctaSwizzling": "1",
+            "customOption": "18"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 2644,
+          "shape_tag": "P",
+          "weight_buffer": "0X1ACCA00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 2752,
+          "shape_tag": "P",
+          "weight_buffer": "0X1ADCC00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 2860,
+          "shape_tag": "P",
+          "weight_buffer": "0X1AECE00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 2968,
+          "shape_tag": "P",
+          "weight_buffer": "0X1AFD000000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 3034,
+          "shape_tag": "Q",
+          "weight_buffer": "0X1B08200000",
+          "printed_algorithm": {
+            "algoId": "67",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "ctaSwizzling": "1",
+            "customOption": "18"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 3092,
+          "shape_tag": "P",
+          "weight_buffer": "0X1B0CA00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 3200,
+          "shape_tag": "P",
+          "weight_buffer": "0X1B1CC00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 3308,
+          "shape_tag": "P",
+          "weight_buffer": "0X1B2CE00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 3416,
+          "shape_tag": "P",
+          "weight_buffer": "0X1B3D000000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 3482,
+          "shape_tag": "Q",
+          "weight_buffer": "0X1B48200000",
+          "printed_algorithm": {
+            "algoId": "67",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "ctaSwizzling": "1",
+            "customOption": "18"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 3540,
+          "shape_tag": "P",
+          "weight_buffer": "0X1B4CA00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 3648,
+          "shape_tag": "P",
+          "weight_buffer": "0X1B5CC00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 3756,
+          "shape_tag": "P",
+          "weight_buffer": "0X1B6CE00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 3864,
+          "shape_tag": "P",
+          "weight_buffer": "0X1B7D000000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 3930,
+          "shape_tag": "Q",
+          "weight_buffer": "0X1B88200000",
+          "printed_algorithm": {
+            "algoId": "67",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "ctaSwizzling": "1",
+            "customOption": "18"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 3988,
+          "shape_tag": "P",
+          "weight_buffer": "0X1B8CA00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 4096,
+          "shape_tag": "P",
+          "weight_buffer": "0X1B9CC00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 4204,
+          "shape_tag": "P",
+          "weight_buffer": "0X1BACE00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 4312,
+          "shape_tag": "P",
+          "weight_buffer": "0X1BBD000000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 4378,
+          "shape_tag": "Q",
+          "weight_buffer": "0X1BC8200000",
+          "printed_algorithm": {
+            "algoId": "67",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "ctaSwizzling": "1",
+            "customOption": "18"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 4436,
+          "shape_tag": "P",
+          "weight_buffer": "0X1BCCA00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 4544,
+          "shape_tag": "P",
+          "weight_buffer": "0X1BDCC00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 4652,
+          "shape_tag": "P",
+          "weight_buffer": "0X1BECE00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 4760,
+          "shape_tag": "P",
+          "weight_buffer": "0X1BFD000000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 4826,
+          "shape_tag": "Q",
+          "weight_buffer": "0X1C08200000",
+          "printed_algorithm": {
+            "algoId": "67",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "ctaSwizzling": "1",
+            "customOption": "18"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 4884,
+          "shape_tag": "P",
+          "weight_buffer": "0X1C0CA00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 4992,
+          "shape_tag": "P",
+          "weight_buffer": "0X1C1CC00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 5100,
+          "shape_tag": "P",
+          "weight_buffer": "0X1C2CE00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 5208,
+          "shape_tag": "P",
+          "weight_buffer": "0X1C3D000000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 5274,
+          "shape_tag": "Q",
+          "weight_buffer": "0X1C48200000",
+          "printed_algorithm": {
+            "algoId": "67",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "ctaSwizzling": "1",
+            "customOption": "18"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 5332,
+          "shape_tag": "P",
+          "weight_buffer": "0X1C4CA00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 5440,
+          "shape_tag": "P",
+          "weight_buffer": "0X1C5CC00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 5548,
+          "shape_tag": "P",
+          "weight_buffer": "0X1C6CE00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 5656,
+          "shape_tag": "P",
+          "weight_buffer": "0X1C7D000000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 5722,
+          "shape_tag": "Q",
+          "weight_buffer": "0X1C88200000",
+          "printed_algorithm": {
+            "algoId": "67",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "ctaSwizzling": "1",
+            "customOption": "18"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 5780,
+          "shape_tag": "P",
+          "weight_buffer": "0X1C8CA00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 5888,
+          "shape_tag": "P",
+          "weight_buffer": "0X1C9CC00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 5996,
+          "shape_tag": "P",
+          "weight_buffer": "0X1CACE00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 6104,
+          "shape_tag": "P",
+          "weight_buffer": "0X1CBD000000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 6170,
+          "shape_tag": "Q",
+          "weight_buffer": "0X1CC8200000",
+          "printed_algorithm": {
+            "algoId": "67",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "ctaSwizzling": "1",
+            "customOption": "18"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 6228,
+          "shape_tag": "P",
+          "weight_buffer": "0X1CCCA00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 6336,
+          "shape_tag": "P",
+          "weight_buffer": "0X1CDCC00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 6444,
+          "shape_tag": "P",
+          "weight_buffer": "0X1CECE00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 6552,
+          "shape_tag": "P",
+          "weight_buffer": "0X1CFD000000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 6618,
+          "shape_tag": "Q",
+          "weight_buffer": "0X1D08200000",
+          "printed_algorithm": {
+            "algoId": "67",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "ctaSwizzling": "1",
+            "customOption": "18"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 6676,
+          "shape_tag": "P",
+          "weight_buffer": "0X1D0CA00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 6784,
+          "shape_tag": "P",
+          "weight_buffer": "0X1D1CC00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 6892,
+          "shape_tag": "P",
+          "weight_buffer": "0X1D2CE00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 7000,
+          "shape_tag": "P",
+          "weight_buffer": "0X1D3D000000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 7066,
+          "shape_tag": "Q",
+          "weight_buffer": "0X1D48200000",
+          "printed_algorithm": {
+            "algoId": "67",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "ctaSwizzling": "1",
+            "customOption": "18"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 7124,
+          "shape_tag": "P",
+          "weight_buffer": "0X1D4CA00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 7232,
+          "shape_tag": "P",
+          "weight_buffer": "0X1928C00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 7340,
+          "shape_tag": "P",
+          "weight_buffer": "0X1938E00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 7448,
+          "shape_tag": "P",
+          "weight_buffer": "0X1949000000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 7514,
+          "shape_tag": "Q",
+          "weight_buffer": "0X1954200000",
+          "printed_algorithm": {
+            "algoId": "67",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "ctaSwizzling": "1",
+            "customOption": "18"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 7572,
+          "shape_tag": "P",
+          "weight_buffer": "0X1958A00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 7680,
+          "shape_tag": "P",
+          "weight_buffer": "0X1968C00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 7788,
+          "shape_tag": "P",
+          "weight_buffer": "0X1978E00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 7896,
+          "shape_tag": "P",
+          "weight_buffer": "0X1989000000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 7962,
+          "shape_tag": "Q",
+          "weight_buffer": "0X1994200000",
+          "printed_algorithm": {
+            "algoId": "67",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "ctaSwizzling": "1",
+            "customOption": "18"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 8020,
+          "shape_tag": "P",
+          "weight_buffer": "0X1998A00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 8128,
+          "shape_tag": "P",
+          "weight_buffer": "0X19A8C00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 8236,
+          "shape_tag": "P",
+          "weight_buffer": "0X19EDA00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 8344,
+          "shape_tag": "P",
+          "weight_buffer": "0X19FD000000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 8410,
+          "shape_tag": "Q",
+          "weight_buffer": "0X1A08200000",
+          "printed_algorithm": {
+            "algoId": "67",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "ctaSwizzling": "1",
+            "customOption": "18"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 8468,
+          "shape_tag": "P",
+          "weight_buffer": "0X1A0CA00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 8576,
+          "shape_tag": "P",
+          "weight_buffer": "0X1A1CC00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 8684,
+          "shape_tag": "P",
+          "weight_buffer": "0X1A2CE00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 8792,
+          "shape_tag": "P",
+          "weight_buffer": "0X1A3D000000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 8858,
+          "shape_tag": "Q",
+          "weight_buffer": "0X1A48200000",
+          "printed_algorithm": {
+            "algoId": "67",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "ctaSwizzling": "1",
+            "customOption": "18"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 8916,
+          "shape_tag": "P",
+          "weight_buffer": "0X1A4CA00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 9024,
+          "shape_tag": "P",
+          "weight_buffer": "0X1A5CC00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 9132,
+          "shape_tag": "P",
+          "weight_buffer": "0X1A6CE00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 9240,
+          "shape_tag": "P",
+          "weight_buffer": "0X1A7D000000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 9306,
+          "shape_tag": "Q",
+          "weight_buffer": "0X1A88200000",
+          "printed_algorithm": {
+            "algoId": "67",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "ctaSwizzling": "1",
+            "customOption": "18"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 9364,
+          "shape_tag": "P",
+          "weight_buffer": "0X1A8CA00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 9472,
+          "shape_tag": "P",
+          "weight_buffer": "0X1A9CC00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 9580,
+          "shape_tag": "P",
+          "weight_buffer": "0X1AACE00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 9688,
+          "shape_tag": "P",
+          "weight_buffer": "0X1ABD000000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 9754,
+          "shape_tag": "Q",
+          "weight_buffer": "0X1AC8200000",
+          "printed_algorithm": {
+            "algoId": "67",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "ctaSwizzling": "1",
+            "customOption": "18"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 9812,
+          "shape_tag": "P",
+          "weight_buffer": "0X1ACCA00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 9920,
+          "shape_tag": "P",
+          "weight_buffer": "0X1ADCC00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 10028,
+          "shape_tag": "P",
+          "weight_buffer": "0X1AECE00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 10136,
+          "shape_tag": "P",
+          "weight_buffer": "0X1AFD000000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 10202,
+          "shape_tag": "Q",
+          "weight_buffer": "0X1B08200000",
+          "printed_algorithm": {
+            "algoId": "67",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "ctaSwizzling": "1",
+            "customOption": "18"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 10260,
+          "shape_tag": "P",
+          "weight_buffer": "0X1B0CA00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 10368,
+          "shape_tag": "P",
+          "weight_buffer": "0X1B1CC00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 10476,
+          "shape_tag": "P",
+          "weight_buffer": "0X1B2CE00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 10584,
+          "shape_tag": "P",
+          "weight_buffer": "0X1B3D000000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 10650,
+          "shape_tag": "Q",
+          "weight_buffer": "0X1B48200000",
+          "printed_algorithm": {
+            "algoId": "67",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "ctaSwizzling": "1",
+            "customOption": "18"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 10708,
+          "shape_tag": "P",
+          "weight_buffer": "0X1B4CA00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 10816,
+          "shape_tag": "P",
+          "weight_buffer": "0X1B5CC00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 10924,
+          "shape_tag": "P",
+          "weight_buffer": "0X1B6CE00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 11032,
+          "shape_tag": "P",
+          "weight_buffer": "0X1B7D000000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 11098,
+          "shape_tag": "Q",
+          "weight_buffer": "0X1B88200000",
+          "printed_algorithm": {
+            "algoId": "67",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "ctaSwizzling": "1",
+            "customOption": "18"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 11156,
+          "shape_tag": "P",
+          "weight_buffer": "0X1B8CA00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 11264,
+          "shape_tag": "P",
+          "weight_buffer": "0X1B9CC00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 11372,
+          "shape_tag": "P",
+          "weight_buffer": "0X1BACE00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 11480,
+          "shape_tag": "P",
+          "weight_buffer": "0X1BBD000000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 11546,
+          "shape_tag": "Q",
+          "weight_buffer": "0X1BC8200000",
+          "printed_algorithm": {
+            "algoId": "67",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "ctaSwizzling": "1",
+            "customOption": "18"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 11604,
+          "shape_tag": "P",
+          "weight_buffer": "0X1BCCA00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 11712,
+          "shape_tag": "P",
+          "weight_buffer": "0X1BDCC00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 11820,
+          "shape_tag": "P",
+          "weight_buffer": "0X1BECE00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 11928,
+          "shape_tag": "P",
+          "weight_buffer": "0X1BFD000000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 11994,
+          "shape_tag": "Q",
+          "weight_buffer": "0X1C08200000",
+          "printed_algorithm": {
+            "algoId": "67",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "ctaSwizzling": "1",
+            "customOption": "18"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 12052,
+          "shape_tag": "P",
+          "weight_buffer": "0X1C0CA00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 12160,
+          "shape_tag": "P",
+          "weight_buffer": "0X1C1CC00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 12268,
+          "shape_tag": "P",
+          "weight_buffer": "0X1C2CE00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 12376,
+          "shape_tag": "P",
+          "weight_buffer": "0X1C3D000000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 12442,
+          "shape_tag": "Q",
+          "weight_buffer": "0X1C48200000",
+          "printed_algorithm": {
+            "algoId": "67",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "ctaSwizzling": "1",
+            "customOption": "18"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 12500,
+          "shape_tag": "P",
+          "weight_buffer": "0X1C4CA00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 12608,
+          "shape_tag": "P",
+          "weight_buffer": "0X1C5CC00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 12716,
+          "shape_tag": "P",
+          "weight_buffer": "0X1C6CE00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 12824,
+          "shape_tag": "P",
+          "weight_buffer": "0X1C7D000000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 12890,
+          "shape_tag": "Q",
+          "weight_buffer": "0X1C88200000",
+          "printed_algorithm": {
+            "algoId": "67",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "ctaSwizzling": "1",
+            "customOption": "18"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 12948,
+          "shape_tag": "P",
+          "weight_buffer": "0X1C8CA00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 13056,
+          "shape_tag": "P",
+          "weight_buffer": "0X1C9CC00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 13164,
+          "shape_tag": "P",
+          "weight_buffer": "0X1CACE00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 13272,
+          "shape_tag": "P",
+          "weight_buffer": "0X1CBD000000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 13338,
+          "shape_tag": "Q",
+          "weight_buffer": "0X1CC8200000",
+          "printed_algorithm": {
+            "algoId": "67",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "ctaSwizzling": "1",
+            "customOption": "18"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 13396,
+          "shape_tag": "P",
+          "weight_buffer": "0X1CCCA00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 13504,
+          "shape_tag": "P",
+          "weight_buffer": "0X1CDCC00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 13612,
+          "shape_tag": "P",
+          "weight_buffer": "0X1CECE00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 13720,
+          "shape_tag": "P",
+          "weight_buffer": "0X1CFD000000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 13786,
+          "shape_tag": "Q",
+          "weight_buffer": "0X1D08200000",
+          "printed_algorithm": {
+            "algoId": "67",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "ctaSwizzling": "1",
+            "customOption": "18"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 13844,
+          "shape_tag": "P",
+          "weight_buffer": "0X1D0CA00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 13952,
+          "shape_tag": "P",
+          "weight_buffer": "0X1D1CC00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 14060,
+          "shape_tag": "P",
+          "weight_buffer": "0X1D2CE00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 14168,
+          "shape_tag": "P",
+          "weight_buffer": "0X1D3D000000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 14234,
+          "shape_tag": "Q",
+          "weight_buffer": "0X1D48200000",
+          "printed_algorithm": {
+            "algoId": "67",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "ctaSwizzling": "1",
+            "customOption": "18"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 14292,
+          "shape_tag": "P",
+          "weight_buffer": "0X1D4CA00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 4194304
+        }
+      ]
+    },
+    "128": {
+      "raw_log_sha256": "70c88fadfdef8cfe5c35264daafbdcba325a20f22fddf3c0d9c29d047d6f1c20",
+      "matching_P_trace_calls": 128,
+      "unique_P_weight_buffers": 64,
+      "P_workspace_bytes_histogram": {
+        "8388608": 96,
+        "4194304": 32
+      },
+      "immediately_after_Q_workspace_bytes_histogram": {
+        "4194304": 32
+      },
+      "P_configuration_histogram": [
+        {
+          "configuration": {
+            "algoId": "35",
+            "customOption": "1",
+            "numSplitsK": "3",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "stages": "MATMUL_STAGES_64x5",
+            "tile": "MATMUL_TILE_64x32"
+          },
+          "calls": 96
+        },
+        {
+          "configuration": {
+            "algoId": "67",
+            "ctaSwizzling": "1",
+            "customOption": "18",
+            "stages": "MATMUL_STAGES_64x6",
+            "tile": "MATMUL_TILE_64x64"
+          },
+          "calls": 32
+        }
+      ],
+      "immediately_after_Q_trace_calls": 32,
+      "unique_immediately_after_Q_weight_buffers": 16,
+      "immediately_after_Q_configurations": [
+        {
+          "algoId": "67",
+          "ctaSwizzling": "1",
+          "customOption": "18",
+          "stages": "MATMUL_STAGES_64x6",
+          "tile": "MATMUL_TILE_64x64"
+        }
+      ],
+      "two_complete_matching_shape_traversals": true,
+      "events": [
+        {
+          "line": 463,
+          "shape_tag": "P",
+          "weight_buffer": "0X1928C00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 8388608
+        },
+        {
+          "line": 534,
+          "shape_tag": "P",
+          "weight_buffer": "0X1938E00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 8388608
+        },
+        {
+          "line": 605,
+          "shape_tag": "P",
+          "weight_buffer": "0X1949000000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 8388608
+        },
+        {
+          "line": 659,
+          "shape_tag": "Q",
+          "weight_buffer": "0X1954200000",
+          "printed_algorithm": {
+            "algoId": "67",
+            "tile": "MATMUL_TILE_128x64",
+            "stages": "MATMUL_STAGES_64x4",
+            "ctaSwizzling": "1",
+            "customOption": "18"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 680,
+          "shape_tag": "P",
+          "weight_buffer": "0X1958A00000",
+          "printed_algorithm": {
+            "algoId": "67",
+            "tile": "MATMUL_TILE_64x64",
+            "stages": "MATMUL_STAGES_64x6",
+            "ctaSwizzling": "1",
+            "customOption": "18"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 756,
+          "shape_tag": "P",
+          "weight_buffer": "0X1968C00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 8388608
+        },
+        {
+          "line": 827,
+          "shape_tag": "P",
+          "weight_buffer": "0X1978E00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 8388608
+        },
+        {
+          "line": 898,
+          "shape_tag": "P",
+          "weight_buffer": "0X1989000000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 8388608
+        },
+        {
+          "line": 952,
+          "shape_tag": "Q",
+          "weight_buffer": "0X1994200000",
+          "printed_algorithm": {
+            "algoId": "67",
+            "tile": "MATMUL_TILE_128x64",
+            "stages": "MATMUL_STAGES_64x4",
+            "ctaSwizzling": "1",
+            "customOption": "18"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 973,
+          "shape_tag": "P",
+          "weight_buffer": "0X1998A00000",
+          "printed_algorithm": {
+            "algoId": "67",
+            "tile": "MATMUL_TILE_64x64",
+            "stages": "MATMUL_STAGES_64x6",
+            "ctaSwizzling": "1",
+            "customOption": "18"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 1049,
+          "shape_tag": "P",
+          "weight_buffer": "0X19A8C00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 8388608
+        },
+        {
+          "line": 1120,
+          "shape_tag": "P",
+          "weight_buffer": "0X19EDA00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 8388608
+        },
+        {
+          "line": 1191,
+          "shape_tag": "P",
+          "weight_buffer": "0X19FD000000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 8388608
+        },
+        {
+          "line": 1245,
+          "shape_tag": "Q",
+          "weight_buffer": "0X1A08200000",
+          "printed_algorithm": {
+            "algoId": "67",
+            "tile": "MATMUL_TILE_128x64",
+            "stages": "MATMUL_STAGES_64x4",
+            "ctaSwizzling": "1",
+            "customOption": "18"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 1266,
+          "shape_tag": "P",
+          "weight_buffer": "0X1A0CA00000",
+          "printed_algorithm": {
+            "algoId": "67",
+            "tile": "MATMUL_TILE_64x64",
+            "stages": "MATMUL_STAGES_64x6",
+            "ctaSwizzling": "1",
+            "customOption": "18"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 1342,
+          "shape_tag": "P",
+          "weight_buffer": "0X1A1CC00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 8388608
+        },
+        {
+          "line": 1413,
+          "shape_tag": "P",
+          "weight_buffer": "0X1A2CE00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 8388608
+        },
+        {
+          "line": 1484,
+          "shape_tag": "P",
+          "weight_buffer": "0X1A3D000000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 8388608
+        },
+        {
+          "line": 1538,
+          "shape_tag": "Q",
+          "weight_buffer": "0X1A48200000",
+          "printed_algorithm": {
+            "algoId": "67",
+            "tile": "MATMUL_TILE_128x64",
+            "stages": "MATMUL_STAGES_64x4",
+            "ctaSwizzling": "1",
+            "customOption": "18"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 1559,
+          "shape_tag": "P",
+          "weight_buffer": "0X1A4CA00000",
+          "printed_algorithm": {
+            "algoId": "67",
+            "tile": "MATMUL_TILE_64x64",
+            "stages": "MATMUL_STAGES_64x6",
+            "ctaSwizzling": "1",
+            "customOption": "18"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 1635,
+          "shape_tag": "P",
+          "weight_buffer": "0X1A5CC00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 8388608
+        },
+        {
+          "line": 1706,
+          "shape_tag": "P",
+          "weight_buffer": "0X1A6CE00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 8388608
+        },
+        {
+          "line": 1777,
+          "shape_tag": "P",
+          "weight_buffer": "0X1A7D000000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 8388608
+        },
+        {
+          "line": 1831,
+          "shape_tag": "Q",
+          "weight_buffer": "0X1A88200000",
+          "printed_algorithm": {
+            "algoId": "67",
+            "tile": "MATMUL_TILE_128x64",
+            "stages": "MATMUL_STAGES_64x4",
+            "ctaSwizzling": "1",
+            "customOption": "18"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 1852,
+          "shape_tag": "P",
+          "weight_buffer": "0X1A8CA00000",
+          "printed_algorithm": {
+            "algoId": "67",
+            "tile": "MATMUL_TILE_64x64",
+            "stages": "MATMUL_STAGES_64x6",
+            "ctaSwizzling": "1",
+            "customOption": "18"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 1928,
+          "shape_tag": "P",
+          "weight_buffer": "0X1A9CC00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 8388608
+        },
+        {
+          "line": 1999,
+          "shape_tag": "P",
+          "weight_buffer": "0X1AACE00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 8388608
+        },
+        {
+          "line": 2070,
+          "shape_tag": "P",
+          "weight_buffer": "0X1ABD000000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 8388608
+        },
+        {
+          "line": 2124,
+          "shape_tag": "Q",
+          "weight_buffer": "0X1AC8200000",
+          "printed_algorithm": {
+            "algoId": "67",
+            "tile": "MATMUL_TILE_128x64",
+            "stages": "MATMUL_STAGES_64x4",
+            "ctaSwizzling": "1",
+            "customOption": "18"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 2145,
+          "shape_tag": "P",
+          "weight_buffer": "0X1ACCA00000",
+          "printed_algorithm": {
+            "algoId": "67",
+            "tile": "MATMUL_TILE_64x64",
+            "stages": "MATMUL_STAGES_64x6",
+            "ctaSwizzling": "1",
+            "customOption": "18"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 2221,
+          "shape_tag": "P",
+          "weight_buffer": "0X1ADCC00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 8388608
+        },
+        {
+          "line": 2292,
+          "shape_tag": "P",
+          "weight_buffer": "0X1AECE00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 8388608
+        },
+        {
+          "line": 2363,
+          "shape_tag": "P",
+          "weight_buffer": "0X1AFD000000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 8388608
+        },
+        {
+          "line": 2417,
+          "shape_tag": "Q",
+          "weight_buffer": "0X1B08200000",
+          "printed_algorithm": {
+            "algoId": "67",
+            "tile": "MATMUL_TILE_128x64",
+            "stages": "MATMUL_STAGES_64x4",
+            "ctaSwizzling": "1",
+            "customOption": "18"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 2438,
+          "shape_tag": "P",
+          "weight_buffer": "0X1B0CA00000",
+          "printed_algorithm": {
+            "algoId": "67",
+            "tile": "MATMUL_TILE_64x64",
+            "stages": "MATMUL_STAGES_64x6",
+            "ctaSwizzling": "1",
+            "customOption": "18"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 2514,
+          "shape_tag": "P",
+          "weight_buffer": "0X1B1CC00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 8388608
+        },
+        {
+          "line": 2585,
+          "shape_tag": "P",
+          "weight_buffer": "0X1B2CE00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 8388608
+        },
+        {
+          "line": 2656,
+          "shape_tag": "P",
+          "weight_buffer": "0X1B3D000000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 8388608
+        },
+        {
+          "line": 2710,
+          "shape_tag": "Q",
+          "weight_buffer": "0X1B48200000",
+          "printed_algorithm": {
+            "algoId": "67",
+            "tile": "MATMUL_TILE_128x64",
+            "stages": "MATMUL_STAGES_64x4",
+            "ctaSwizzling": "1",
+            "customOption": "18"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 2731,
+          "shape_tag": "P",
+          "weight_buffer": "0X1B4CA00000",
+          "printed_algorithm": {
+            "algoId": "67",
+            "tile": "MATMUL_TILE_64x64",
+            "stages": "MATMUL_STAGES_64x6",
+            "ctaSwizzling": "1",
+            "customOption": "18"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 2807,
+          "shape_tag": "P",
+          "weight_buffer": "0X1B5CC00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 8388608
+        },
+        {
+          "line": 2878,
+          "shape_tag": "P",
+          "weight_buffer": "0X1B6CE00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 8388608
+        },
+        {
+          "line": 2949,
+          "shape_tag": "P",
+          "weight_buffer": "0X1B7D000000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 8388608
+        },
+        {
+          "line": 3003,
+          "shape_tag": "Q",
+          "weight_buffer": "0X1B88200000",
+          "printed_algorithm": {
+            "algoId": "67",
+            "tile": "MATMUL_TILE_128x64",
+            "stages": "MATMUL_STAGES_64x4",
+            "ctaSwizzling": "1",
+            "customOption": "18"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 3024,
+          "shape_tag": "P",
+          "weight_buffer": "0X1B8CA00000",
+          "printed_algorithm": {
+            "algoId": "67",
+            "tile": "MATMUL_TILE_64x64",
+            "stages": "MATMUL_STAGES_64x6",
+            "ctaSwizzling": "1",
+            "customOption": "18"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 3100,
+          "shape_tag": "P",
+          "weight_buffer": "0X1B9CC00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 8388608
+        },
+        {
+          "line": 3171,
+          "shape_tag": "P",
+          "weight_buffer": "0X1BACE00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 8388608
+        },
+        {
+          "line": 3242,
+          "shape_tag": "P",
+          "weight_buffer": "0X1BBD000000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 8388608
+        },
+        {
+          "line": 3296,
+          "shape_tag": "Q",
+          "weight_buffer": "0X1BC8200000",
+          "printed_algorithm": {
+            "algoId": "67",
+            "tile": "MATMUL_TILE_128x64",
+            "stages": "MATMUL_STAGES_64x4",
+            "ctaSwizzling": "1",
+            "customOption": "18"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 3317,
+          "shape_tag": "P",
+          "weight_buffer": "0X1BCCA00000",
+          "printed_algorithm": {
+            "algoId": "67",
+            "tile": "MATMUL_TILE_64x64",
+            "stages": "MATMUL_STAGES_64x6",
+            "ctaSwizzling": "1",
+            "customOption": "18"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 3393,
+          "shape_tag": "P",
+          "weight_buffer": "0X1BDCC00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 8388608
+        },
+        {
+          "line": 3464,
+          "shape_tag": "P",
+          "weight_buffer": "0X1BECE00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 8388608
+        },
+        {
+          "line": 3535,
+          "shape_tag": "P",
+          "weight_buffer": "0X1BFD000000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 8388608
+        },
+        {
+          "line": 3589,
+          "shape_tag": "Q",
+          "weight_buffer": "0X1C08200000",
+          "printed_algorithm": {
+            "algoId": "67",
+            "tile": "MATMUL_TILE_128x64",
+            "stages": "MATMUL_STAGES_64x4",
+            "ctaSwizzling": "1",
+            "customOption": "18"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 3610,
+          "shape_tag": "P",
+          "weight_buffer": "0X1C0CA00000",
+          "printed_algorithm": {
+            "algoId": "67",
+            "tile": "MATMUL_TILE_64x64",
+            "stages": "MATMUL_STAGES_64x6",
+            "ctaSwizzling": "1",
+            "customOption": "18"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 3686,
+          "shape_tag": "P",
+          "weight_buffer": "0X1C1CC00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 8388608
+        },
+        {
+          "line": 3757,
+          "shape_tag": "P",
+          "weight_buffer": "0X1C2CE00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 8388608
+        },
+        {
+          "line": 3828,
+          "shape_tag": "P",
+          "weight_buffer": "0X1C3D000000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 8388608
+        },
+        {
+          "line": 3882,
+          "shape_tag": "Q",
+          "weight_buffer": "0X1C48200000",
+          "printed_algorithm": {
+            "algoId": "67",
+            "tile": "MATMUL_TILE_128x64",
+            "stages": "MATMUL_STAGES_64x4",
+            "ctaSwizzling": "1",
+            "customOption": "18"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 3903,
+          "shape_tag": "P",
+          "weight_buffer": "0X1C4CA00000",
+          "printed_algorithm": {
+            "algoId": "67",
+            "tile": "MATMUL_TILE_64x64",
+            "stages": "MATMUL_STAGES_64x6",
+            "ctaSwizzling": "1",
+            "customOption": "18"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 3979,
+          "shape_tag": "P",
+          "weight_buffer": "0X1C5CC00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 8388608
+        },
+        {
+          "line": 4050,
+          "shape_tag": "P",
+          "weight_buffer": "0X1C6CE00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 8388608
+        },
+        {
+          "line": 4121,
+          "shape_tag": "P",
+          "weight_buffer": "0X1C7D000000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 8388608
+        },
+        {
+          "line": 4175,
+          "shape_tag": "Q",
+          "weight_buffer": "0X1C88200000",
+          "printed_algorithm": {
+            "algoId": "67",
+            "tile": "MATMUL_TILE_128x64",
+            "stages": "MATMUL_STAGES_64x4",
+            "ctaSwizzling": "1",
+            "customOption": "18"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 4196,
+          "shape_tag": "P",
+          "weight_buffer": "0X1C8CA00000",
+          "printed_algorithm": {
+            "algoId": "67",
+            "tile": "MATMUL_TILE_64x64",
+            "stages": "MATMUL_STAGES_64x6",
+            "ctaSwizzling": "1",
+            "customOption": "18"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 4272,
+          "shape_tag": "P",
+          "weight_buffer": "0X1C9CC00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 8388608
+        },
+        {
+          "line": 4343,
+          "shape_tag": "P",
+          "weight_buffer": "0X1CACE00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 8388608
+        },
+        {
+          "line": 4414,
+          "shape_tag": "P",
+          "weight_buffer": "0X1CBD000000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 8388608
+        },
+        {
+          "line": 4468,
+          "shape_tag": "Q",
+          "weight_buffer": "0X1CC8200000",
+          "printed_algorithm": {
+            "algoId": "67",
+            "tile": "MATMUL_TILE_128x64",
+            "stages": "MATMUL_STAGES_64x4",
+            "ctaSwizzling": "1",
+            "customOption": "18"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 4489,
+          "shape_tag": "P",
+          "weight_buffer": "0X1CCCA00000",
+          "printed_algorithm": {
+            "algoId": "67",
+            "tile": "MATMUL_TILE_64x64",
+            "stages": "MATMUL_STAGES_64x6",
+            "ctaSwizzling": "1",
+            "customOption": "18"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 4565,
+          "shape_tag": "P",
+          "weight_buffer": "0X1CDCC00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 8388608
+        },
+        {
+          "line": 4636,
+          "shape_tag": "P",
+          "weight_buffer": "0X1CECE00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 8388608
+        },
+        {
+          "line": 4707,
+          "shape_tag": "P",
+          "weight_buffer": "0X1CFD000000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 8388608
+        },
+        {
+          "line": 4761,
+          "shape_tag": "Q",
+          "weight_buffer": "0X1D08200000",
+          "printed_algorithm": {
+            "algoId": "67",
+            "tile": "MATMUL_TILE_128x64",
+            "stages": "MATMUL_STAGES_64x4",
+            "ctaSwizzling": "1",
+            "customOption": "18"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 4782,
+          "shape_tag": "P",
+          "weight_buffer": "0X1D0CA00000",
+          "printed_algorithm": {
+            "algoId": "67",
+            "tile": "MATMUL_TILE_64x64",
+            "stages": "MATMUL_STAGES_64x6",
+            "ctaSwizzling": "1",
+            "customOption": "18"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 4858,
+          "shape_tag": "P",
+          "weight_buffer": "0X1D1CC00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 8388608
+        },
+        {
+          "line": 4929,
+          "shape_tag": "P",
+          "weight_buffer": "0X1D2CE00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 8388608
+        },
+        {
+          "line": 5000,
+          "shape_tag": "P",
+          "weight_buffer": "0X1D3D000000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 8388608
+        },
+        {
+          "line": 5054,
+          "shape_tag": "Q",
+          "weight_buffer": "0X1D48200000",
+          "printed_algorithm": {
+            "algoId": "67",
+            "tile": "MATMUL_TILE_128x64",
+            "stages": "MATMUL_STAGES_64x4",
+            "ctaSwizzling": "1",
+            "customOption": "18"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 5075,
+          "shape_tag": "P",
+          "weight_buffer": "0X1D4CA00000",
+          "printed_algorithm": {
+            "algoId": "67",
+            "tile": "MATMUL_TILE_64x64",
+            "stages": "MATMUL_STAGES_64x6",
+            "ctaSwizzling": "1",
+            "customOption": "18"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 5151,
+          "shape_tag": "P",
+          "weight_buffer": "0X1928C00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 8388608
+        },
+        {
+          "line": 5222,
+          "shape_tag": "P",
+          "weight_buffer": "0X1938E00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 8388608
+        },
+        {
+          "line": 5293,
+          "shape_tag": "P",
+          "weight_buffer": "0X1949000000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 8388608
+        },
+        {
+          "line": 5347,
+          "shape_tag": "Q",
+          "weight_buffer": "0X1954200000",
+          "printed_algorithm": {
+            "algoId": "67",
+            "tile": "MATMUL_TILE_128x64",
+            "stages": "MATMUL_STAGES_64x4",
+            "ctaSwizzling": "1",
+            "customOption": "18"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 5368,
+          "shape_tag": "P",
+          "weight_buffer": "0X1958A00000",
+          "printed_algorithm": {
+            "algoId": "67",
+            "tile": "MATMUL_TILE_64x64",
+            "stages": "MATMUL_STAGES_64x6",
+            "ctaSwizzling": "1",
+            "customOption": "18"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 5444,
+          "shape_tag": "P",
+          "weight_buffer": "0X1968C00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 8388608
+        },
+        {
+          "line": 5515,
+          "shape_tag": "P",
+          "weight_buffer": "0X1978E00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 8388608
+        },
+        {
+          "line": 5586,
+          "shape_tag": "P",
+          "weight_buffer": "0X1989000000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 8388608
+        },
+        {
+          "line": 5640,
+          "shape_tag": "Q",
+          "weight_buffer": "0X1994200000",
+          "printed_algorithm": {
+            "algoId": "67",
+            "tile": "MATMUL_TILE_128x64",
+            "stages": "MATMUL_STAGES_64x4",
+            "ctaSwizzling": "1",
+            "customOption": "18"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 5661,
+          "shape_tag": "P",
+          "weight_buffer": "0X1998A00000",
+          "printed_algorithm": {
+            "algoId": "67",
+            "tile": "MATMUL_TILE_64x64",
+            "stages": "MATMUL_STAGES_64x6",
+            "ctaSwizzling": "1",
+            "customOption": "18"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 5737,
+          "shape_tag": "P",
+          "weight_buffer": "0X19A8C00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 8388608
+        },
+        {
+          "line": 5808,
+          "shape_tag": "P",
+          "weight_buffer": "0X19EDA00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 8388608
+        },
+        {
+          "line": 5879,
+          "shape_tag": "P",
+          "weight_buffer": "0X19FD000000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 8388608
+        },
+        {
+          "line": 5933,
+          "shape_tag": "Q",
+          "weight_buffer": "0X1A08200000",
+          "printed_algorithm": {
+            "algoId": "67",
+            "tile": "MATMUL_TILE_128x64",
+            "stages": "MATMUL_STAGES_64x4",
+            "ctaSwizzling": "1",
+            "customOption": "18"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 5954,
+          "shape_tag": "P",
+          "weight_buffer": "0X1A0CA00000",
+          "printed_algorithm": {
+            "algoId": "67",
+            "tile": "MATMUL_TILE_64x64",
+            "stages": "MATMUL_STAGES_64x6",
+            "ctaSwizzling": "1",
+            "customOption": "18"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 6030,
+          "shape_tag": "P",
+          "weight_buffer": "0X1A1CC00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 8388608
+        },
+        {
+          "line": 6101,
+          "shape_tag": "P",
+          "weight_buffer": "0X1A2CE00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 8388608
+        },
+        {
+          "line": 6172,
+          "shape_tag": "P",
+          "weight_buffer": "0X1A3D000000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 8388608
+        },
+        {
+          "line": 6226,
+          "shape_tag": "Q",
+          "weight_buffer": "0X1A48200000",
+          "printed_algorithm": {
+            "algoId": "67",
+            "tile": "MATMUL_TILE_128x64",
+            "stages": "MATMUL_STAGES_64x4",
+            "ctaSwizzling": "1",
+            "customOption": "18"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 6247,
+          "shape_tag": "P",
+          "weight_buffer": "0X1A4CA00000",
+          "printed_algorithm": {
+            "algoId": "67",
+            "tile": "MATMUL_TILE_64x64",
+            "stages": "MATMUL_STAGES_64x6",
+            "ctaSwizzling": "1",
+            "customOption": "18"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 6323,
+          "shape_tag": "P",
+          "weight_buffer": "0X1A5CC00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 8388608
+        },
+        {
+          "line": 6394,
+          "shape_tag": "P",
+          "weight_buffer": "0X1A6CE00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 8388608
+        },
+        {
+          "line": 6465,
+          "shape_tag": "P",
+          "weight_buffer": "0X1A7D000000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 8388608
+        },
+        {
+          "line": 6519,
+          "shape_tag": "Q",
+          "weight_buffer": "0X1A88200000",
+          "printed_algorithm": {
+            "algoId": "67",
+            "tile": "MATMUL_TILE_128x64",
+            "stages": "MATMUL_STAGES_64x4",
+            "ctaSwizzling": "1",
+            "customOption": "18"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 6540,
+          "shape_tag": "P",
+          "weight_buffer": "0X1A8CA00000",
+          "printed_algorithm": {
+            "algoId": "67",
+            "tile": "MATMUL_TILE_64x64",
+            "stages": "MATMUL_STAGES_64x6",
+            "ctaSwizzling": "1",
+            "customOption": "18"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 6616,
+          "shape_tag": "P",
+          "weight_buffer": "0X1A9CC00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 8388608
+        },
+        {
+          "line": 6687,
+          "shape_tag": "P",
+          "weight_buffer": "0X1AACE00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 8388608
+        },
+        {
+          "line": 6758,
+          "shape_tag": "P",
+          "weight_buffer": "0X1ABD000000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 8388608
+        },
+        {
+          "line": 6812,
+          "shape_tag": "Q",
+          "weight_buffer": "0X1AC8200000",
+          "printed_algorithm": {
+            "algoId": "67",
+            "tile": "MATMUL_TILE_128x64",
+            "stages": "MATMUL_STAGES_64x4",
+            "ctaSwizzling": "1",
+            "customOption": "18"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 6833,
+          "shape_tag": "P",
+          "weight_buffer": "0X1ACCA00000",
+          "printed_algorithm": {
+            "algoId": "67",
+            "tile": "MATMUL_TILE_64x64",
+            "stages": "MATMUL_STAGES_64x6",
+            "ctaSwizzling": "1",
+            "customOption": "18"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 6909,
+          "shape_tag": "P",
+          "weight_buffer": "0X1ADCC00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 8388608
+        },
+        {
+          "line": 6980,
+          "shape_tag": "P",
+          "weight_buffer": "0X1AECE00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 8388608
+        },
+        {
+          "line": 7051,
+          "shape_tag": "P",
+          "weight_buffer": "0X1AFD000000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 8388608
+        },
+        {
+          "line": 7105,
+          "shape_tag": "Q",
+          "weight_buffer": "0X1B08200000",
+          "printed_algorithm": {
+            "algoId": "67",
+            "tile": "MATMUL_TILE_128x64",
+            "stages": "MATMUL_STAGES_64x4",
+            "ctaSwizzling": "1",
+            "customOption": "18"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 7126,
+          "shape_tag": "P",
+          "weight_buffer": "0X1B0CA00000",
+          "printed_algorithm": {
+            "algoId": "67",
+            "tile": "MATMUL_TILE_64x64",
+            "stages": "MATMUL_STAGES_64x6",
+            "ctaSwizzling": "1",
+            "customOption": "18"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 7202,
+          "shape_tag": "P",
+          "weight_buffer": "0X1B1CC00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 8388608
+        },
+        {
+          "line": 7273,
+          "shape_tag": "P",
+          "weight_buffer": "0X1B2CE00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 8388608
+        },
+        {
+          "line": 7344,
+          "shape_tag": "P",
+          "weight_buffer": "0X1B3D000000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 8388608
+        },
+        {
+          "line": 7398,
+          "shape_tag": "Q",
+          "weight_buffer": "0X1B48200000",
+          "printed_algorithm": {
+            "algoId": "67",
+            "tile": "MATMUL_TILE_128x64",
+            "stages": "MATMUL_STAGES_64x4",
+            "ctaSwizzling": "1",
+            "customOption": "18"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 7419,
+          "shape_tag": "P",
+          "weight_buffer": "0X1B4CA00000",
+          "printed_algorithm": {
+            "algoId": "67",
+            "tile": "MATMUL_TILE_64x64",
+            "stages": "MATMUL_STAGES_64x6",
+            "ctaSwizzling": "1",
+            "customOption": "18"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 7495,
+          "shape_tag": "P",
+          "weight_buffer": "0X1B5CC00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 8388608
+        },
+        {
+          "line": 7566,
+          "shape_tag": "P",
+          "weight_buffer": "0X1B6CE00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 8388608
+        },
+        {
+          "line": 7637,
+          "shape_tag": "P",
+          "weight_buffer": "0X1B7D000000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 8388608
+        },
+        {
+          "line": 7691,
+          "shape_tag": "Q",
+          "weight_buffer": "0X1B88200000",
+          "printed_algorithm": {
+            "algoId": "67",
+            "tile": "MATMUL_TILE_128x64",
+            "stages": "MATMUL_STAGES_64x4",
+            "ctaSwizzling": "1",
+            "customOption": "18"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 7712,
+          "shape_tag": "P",
+          "weight_buffer": "0X1B8CA00000",
+          "printed_algorithm": {
+            "algoId": "67",
+            "tile": "MATMUL_TILE_64x64",
+            "stages": "MATMUL_STAGES_64x6",
+            "ctaSwizzling": "1",
+            "customOption": "18"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 7788,
+          "shape_tag": "P",
+          "weight_buffer": "0X1B9CC00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 8388608
+        },
+        {
+          "line": 7859,
+          "shape_tag": "P",
+          "weight_buffer": "0X1BACE00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 8388608
+        },
+        {
+          "line": 7930,
+          "shape_tag": "P",
+          "weight_buffer": "0X1BBD000000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 8388608
+        },
+        {
+          "line": 7984,
+          "shape_tag": "Q",
+          "weight_buffer": "0X1BC8200000",
+          "printed_algorithm": {
+            "algoId": "67",
+            "tile": "MATMUL_TILE_128x64",
+            "stages": "MATMUL_STAGES_64x4",
+            "ctaSwizzling": "1",
+            "customOption": "18"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 8005,
+          "shape_tag": "P",
+          "weight_buffer": "0X1BCCA00000",
+          "printed_algorithm": {
+            "algoId": "67",
+            "tile": "MATMUL_TILE_64x64",
+            "stages": "MATMUL_STAGES_64x6",
+            "ctaSwizzling": "1",
+            "customOption": "18"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 8081,
+          "shape_tag": "P",
+          "weight_buffer": "0X1BDCC00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 8388608
+        },
+        {
+          "line": 8152,
+          "shape_tag": "P",
+          "weight_buffer": "0X1BECE00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 8388608
+        },
+        {
+          "line": 8223,
+          "shape_tag": "P",
+          "weight_buffer": "0X1BFD000000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 8388608
+        },
+        {
+          "line": 8277,
+          "shape_tag": "Q",
+          "weight_buffer": "0X1C08200000",
+          "printed_algorithm": {
+            "algoId": "67",
+            "tile": "MATMUL_TILE_128x64",
+            "stages": "MATMUL_STAGES_64x4",
+            "ctaSwizzling": "1",
+            "customOption": "18"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 8298,
+          "shape_tag": "P",
+          "weight_buffer": "0X1C0CA00000",
+          "printed_algorithm": {
+            "algoId": "67",
+            "tile": "MATMUL_TILE_64x64",
+            "stages": "MATMUL_STAGES_64x6",
+            "ctaSwizzling": "1",
+            "customOption": "18"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 8374,
+          "shape_tag": "P",
+          "weight_buffer": "0X1C1CC00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 8388608
+        },
+        {
+          "line": 8445,
+          "shape_tag": "P",
+          "weight_buffer": "0X1C2CE00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 8388608
+        },
+        {
+          "line": 8516,
+          "shape_tag": "P",
+          "weight_buffer": "0X1C3D000000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 8388608
+        },
+        {
+          "line": 8570,
+          "shape_tag": "Q",
+          "weight_buffer": "0X1C48200000",
+          "printed_algorithm": {
+            "algoId": "67",
+            "tile": "MATMUL_TILE_128x64",
+            "stages": "MATMUL_STAGES_64x4",
+            "ctaSwizzling": "1",
+            "customOption": "18"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 8591,
+          "shape_tag": "P",
+          "weight_buffer": "0X1C4CA00000",
+          "printed_algorithm": {
+            "algoId": "67",
+            "tile": "MATMUL_TILE_64x64",
+            "stages": "MATMUL_STAGES_64x6",
+            "ctaSwizzling": "1",
+            "customOption": "18"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 8667,
+          "shape_tag": "P",
+          "weight_buffer": "0X1C5CC00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 8388608
+        },
+        {
+          "line": 8738,
+          "shape_tag": "P",
+          "weight_buffer": "0X1C6CE00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 8388608
+        },
+        {
+          "line": 8809,
+          "shape_tag": "P",
+          "weight_buffer": "0X1C7D000000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 8388608
+        },
+        {
+          "line": 8863,
+          "shape_tag": "Q",
+          "weight_buffer": "0X1C88200000",
+          "printed_algorithm": {
+            "algoId": "67",
+            "tile": "MATMUL_TILE_128x64",
+            "stages": "MATMUL_STAGES_64x4",
+            "ctaSwizzling": "1",
+            "customOption": "18"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 8884,
+          "shape_tag": "P",
+          "weight_buffer": "0X1C8CA00000",
+          "printed_algorithm": {
+            "algoId": "67",
+            "tile": "MATMUL_TILE_64x64",
+            "stages": "MATMUL_STAGES_64x6",
+            "ctaSwizzling": "1",
+            "customOption": "18"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 8960,
+          "shape_tag": "P",
+          "weight_buffer": "0X1C9CC00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 8388608
+        },
+        {
+          "line": 9031,
+          "shape_tag": "P",
+          "weight_buffer": "0X1CACE00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 8388608
+        },
+        {
+          "line": 9102,
+          "shape_tag": "P",
+          "weight_buffer": "0X1CBD000000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 8388608
+        },
+        {
+          "line": 9156,
+          "shape_tag": "Q",
+          "weight_buffer": "0X1CC8200000",
+          "printed_algorithm": {
+            "algoId": "67",
+            "tile": "MATMUL_TILE_128x64",
+            "stages": "MATMUL_STAGES_64x4",
+            "ctaSwizzling": "1",
+            "customOption": "18"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 9177,
+          "shape_tag": "P",
+          "weight_buffer": "0X1CCCA00000",
+          "printed_algorithm": {
+            "algoId": "67",
+            "tile": "MATMUL_TILE_64x64",
+            "stages": "MATMUL_STAGES_64x6",
+            "ctaSwizzling": "1",
+            "customOption": "18"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 9253,
+          "shape_tag": "P",
+          "weight_buffer": "0X1CDCC00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 8388608
+        },
+        {
+          "line": 9324,
+          "shape_tag": "P",
+          "weight_buffer": "0X1CECE00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 8388608
+        },
+        {
+          "line": 9395,
+          "shape_tag": "P",
+          "weight_buffer": "0X1CFD000000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 8388608
+        },
+        {
+          "line": 9449,
+          "shape_tag": "Q",
+          "weight_buffer": "0X1D08200000",
+          "printed_algorithm": {
+            "algoId": "67",
+            "tile": "MATMUL_TILE_128x64",
+            "stages": "MATMUL_STAGES_64x4",
+            "ctaSwizzling": "1",
+            "customOption": "18"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 9470,
+          "shape_tag": "P",
+          "weight_buffer": "0X1D0CA00000",
+          "printed_algorithm": {
+            "algoId": "67",
+            "tile": "MATMUL_TILE_64x64",
+            "stages": "MATMUL_STAGES_64x6",
+            "ctaSwizzling": "1",
+            "customOption": "18"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 9546,
+          "shape_tag": "P",
+          "weight_buffer": "0X1D1CC00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 8388608
+        },
+        {
+          "line": 9617,
+          "shape_tag": "P",
+          "weight_buffer": "0X1D2CE00000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 8388608
+        },
+        {
+          "line": 9688,
+          "shape_tag": "P",
+          "weight_buffer": "0X1D3D000000",
+          "printed_algorithm": {
+            "algoId": "35",
+            "tile": "MATMUL_TILE_64x32",
+            "stages": "MATMUL_STAGES_64x5",
+            "reductionScheme": "REDUCTION_SCHEME_COMPUTE_TYPE",
+            "numSplitsK": "3",
+            "customOption": "1"
+          },
+          "workspace_bytes": 8388608
+        },
+        {
+          "line": 9742,
+          "shape_tag": "Q",
+          "weight_buffer": "0X1D48200000",
+          "printed_algorithm": {
+            "algoId": "67",
+            "tile": "MATMUL_TILE_128x64",
+            "stages": "MATMUL_STAGES_64x4",
+            "ctaSwizzling": "1",
+            "customOption": "18"
+          },
+          "workspace_bytes": 4194304
+        },
+        {
+          "line": 9763,
+          "shape_tag": "P",
+          "weight_buffer": "0X1D4CA00000",
+          "printed_algorithm": {
+            "algoId": "67",
+            "tile": "MATMUL_TILE_64x64",
+            "stages": "MATMUL_STAGES_64x6",
+            "ctaSwizzling": "1",
+            "customOption": "18"
+          },
+          "workspace_bytes": 4194304
+        }
+      ]
+    }
+  },
+  "role_association": "Inference from unchanged forward source ordering (three GDN layers then one full-attention Q/O) and complete observed PPPQP trace pattern; logs do not directly label logical weight names.",
+  "historical_logs_precede_Q128_intervention": true,
+  "no_current_Q128_O_vendor_log_claim": true,
+  "unprinted_attributes_unknown": true,
+  "algorithm_causality_or_model_or_performance_admission": false,
+  "new_benchmarks": false
+}

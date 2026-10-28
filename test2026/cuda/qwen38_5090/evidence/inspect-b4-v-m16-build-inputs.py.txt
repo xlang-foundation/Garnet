@@ -1,0 +1,24 @@
+from pathlib import Path
+import hashlib,json,shutil,sys,zipfile
+ROOT=Path('D:/CantorAI/5090-study-20261023');M=ROOT/'Garnet/test2026/cuda/qwen38_5090';sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest();sys.path[:0]=[str(M),str(ROOT/'Garnet')]
+from run_bf16_low_batch_native_build import idle
+from test2026.cuda.qwen38_5090.b4_v_m16_source import sources
+idle();old=json.loads((M/'evidence/b4-decode-m16-build-preparation.json').read_bytes());cpu=json.loads((M/'evidence/b4-v-m16-cpu-v2-preparation.json').read_bytes());_,candidate,record=sources();assert len(candidate)==73
+base=old['base_files'];assert len(base)==1374;targets={**old['candidate_base'],**{n:None for n in record['new_files']}};assert len(targets)==73
+for n,h in {**cpu['files'],**base,**cpu['checkpoints'],**cpu['cuda_objects']}.items():assert sha(ROOT/n)==h,('Baseline drift',n)
+for n,h in cpu['runtime'].items():assert sha(ROOT/'build/bin'/n)==h
+for n,h in cpu['environment'].items():assert sha(Path(n))==h
+for n,h in targets.items():
+    path=ROOT/'Garnet'/n;assert path.resolve().is_relative_to((ROOT/'Garnet').resolve()) and (sha(path) if path.exists() else None)==h,('Preserve candidate target',n)
+parents={}
+for job,code in [('b4-v-m16-cpu-attempt2',0),('b4-v-m16-cpu-attempt1',1),('b4-decode-m16-build-attempt1',0),('connected-fa-value-attempt4',0),('fa-value-sdk-control-attempt1',1),('b4-b1-short-m16-admission-attempt1',1)]:
+    proof=ROOT/'results'/(job+'-verified.json');q=json.loads(proof.read_bytes());archive=ROOT/'results'/(job+'-evidence.zip');assert sha(archive)==q['archive_sha256']
+    with zipfile.ZipFile(archive) as z:
+        mf=json.loads(z.read('evidence-manifest.json'));name='results/'+job+'/workflow.json';raw=z.read(name);assert hashlib.sha256(raw).hexdigest()==mf['files'][name] and raw==(ROOT/name).read_bytes();w=json.loads(raw)
+    assert type(w['exit_code']) is int and w['exit_code']==code and w['cleanup_finished'];parents[job]=dict(proof_sha256=sha(proof),archive_sha256=q['archive_sha256'],status=q['status'],exit_code=code)
+    if job=='b4-v-m16-cpu-attempt2':assert q['status']=='B4T4_V_M16_actual_CPU_contracts_replayed' and q['factory_fault_cases']==212 and q['profile']['cases']==1209 and w['unchanged_before_after']
+cache=ROOT/'build/CMakeCache.txt';assert sha(cache)==cpu['cache_before_sha256'];objects={n.relative_to(ROOT).as_posix():sha(n) for n in (ROOT/'build/garnet/CMakeFiles/garnet.dir').rglob('*.cu.obj')};assert len(objects)==34 and objects==cpu['cuda_objects']
+assert not(ROOT/'results/b4-v-m16-build-attempt1').exists() and not(ROOT/'build/bin/garnet-native-b4-v-m16-attempt1.dll').exists();assert shutil.disk_usage(ROOT).free>=12<<30
+bundle=ROOT/'results/b4-v-m16-source.zip';assert sha(bundle)==cpu['bundle_sha256']
+result=dict(status='B4_V_M16_native_build_inputs_verified_no_GPU_or_mutation',base_files=base,candidate_base=targets,runtime=cpu['runtime'],environment=cpu['environment'],checkpoints=cpu['checkpoints'],cache_before_sha256=sha(cache),cuda_objects_before=objects,closed_parents=parents,source_bundle_sha256=sha(bundle),free_bytes=shutil.disk_usage(ROOT).free,scope='Fresh restored1374baseline/73targets/runtime/SDK/checkpoint/CMake/34currentCUDAobjects, paired212factory/1209profile/VCPU, faithfulconnectedbaseline required. OriginalSDK/fullmodel/cache62failures preserved. No mutation/GPU/nativebuild. Originalnativecontrols andthreeobjectwhitelist retained.')
+target=ROOT/'results/b4-v-m16-build-inputs.json';raw=json.dumps(result,indent=2).encode();assert not target.exists();target.write_bytes(raw);print(json.dumps(dict(status=result['status'],sha256=hashlib.sha256(raw).hexdigest(),bytes=len(raw),free_GiB=result['free_bytes']/(1<<30))))

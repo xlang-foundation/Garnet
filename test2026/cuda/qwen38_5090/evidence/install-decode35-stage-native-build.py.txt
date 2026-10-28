@@ -1,0 +1,24 @@
+from pathlib import Path
+import hashlib,json,sys,zipfile
+ROOT=Path('D:/CantorAI/5090-study-20261023');P='Garnet/test2026/cuda/qwen38_5090/';M=ROOT/P;sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest();sys.path[:0]=[str(M),str(ROOT/'Garnet')]
+from run_bf16_low_batch_native_build import idle
+
+def main():
+    archive=ROOT/'results/decode35-stage-native-deployment.zip';assert sha(archive)==sys.argv[1];idle()
+    receipt=ROOT/'results/decode35-stage-native-install.json';assert not receipt.exists()
+    with zipfile.ZipFile(archive) as z:
+        mf=json.loads(z.read('deployment-manifest.json'))['files'];assert z.testzip() is None and len(z.namelist())==len(set(z.namelist()))==len(mf)+1==13
+        p=json.loads(z.read(P+'evidence/decode35-stage-build-preparation.json'));assert p['status']=='decode35_stage_build_prepared_unrun'
+        for n,h in {**p['base_files'],**p['methods'],**p['checkpoints'],**p['cuda_objects_before']}.items():assert (hashlib.sha256(z.read(n)).hexdigest() if n in mf else sha(ROOT/n))==h,('Preserve current input',n)
+        for n,h in p['runtime'].items():assert sha(ROOT/'build/bin'/n)==h
+        for n,h in p['environment'].items():assert sha(Path(n))==h
+        assert sha(ROOT/'build/CMakeCache.txt')==p['cache_before_sha256'] and sha(ROOT/p['bundle'])==p['bundle_sha256']
+        assert sha(ROOT/'results/decode35-stage-build-inputs.json')==p['input_inventory_sha256']
+        for n,h in p['candidate_base'].items():
+            path=ROOT/'Garnet'/n;assert path.resolve().is_relative_to((ROOT/'Garnet').resolve()) and (sha(path) if path.exists() else None)==h
+        for n,h in mf.items():
+            path=ROOT/n;raw=z.read(n);assert path.resolve().is_relative_to(M.resolve()) and 'probe_native_external_prefix_batch.py' not in n and hashlib.sha256(raw).hexdigest()==h and (not path.exists() or path.read_bytes()==raw),('Preserve method',n)
+        for n in mf:
+            path=ROOT/n;path.parent.mkdir(parents=True,exist_ok=True);path.write_bytes(z.read(n))
+    receipt.write_bytes(json.dumps({'status':'source86_native_build_methods_installed_build_unrun','deployment_sha256':sha(archive),'files':mf,'production_source_or_DLL_mutated':False},indent=2).encode());print(json.dumps({'status':'source86_native_build_methods_installed_build_unrun','files':len(mf)}))
+if __name__=='__main__':main()

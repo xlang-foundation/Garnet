@@ -2,6 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include "qwen_tokenizer.h"
+#include "qwen_unicode_categories.h"
+#include "qwen_unicode_normalization.h"
 
 #include <algorithm>
 #include <cctype>
@@ -194,6 +196,7 @@ namespace Garnet::Tokenization
         m_specialIds.clear();
         m_mergeRanks.clear();
         m_maxAddedTokenLength = 0;
+        m_normalizeNfc = false;
 
         std::string jsonText;
         std::string path = modelDir + "/tokenizer.json";
@@ -241,6 +244,14 @@ namespace Garnet::Tokenization
             if (!root.contains("model") || !root["model"].is_object()) {
                 if (error) *error = "tokenizer.json missing model object";
                 return false;
+            }
+            if (root.contains("normalizer") && !root["normalizer"].is_null()) {
+                const auto& normalizer=root["normalizer"];
+                if (!normalizer.is_object() || normalizer.value("type", std::string())!="NFC") {
+                    if (error) *error="Qwen tokenizer supports only NFC or no normalizer";
+                    return false;
+                }
+                m_normalizeNfc=true;
             }
             const nlohmann::json& model = root["model"];
             if (!model.contains("vocab") || !model["vocab"].is_object()) {
@@ -413,81 +424,84 @@ namespace Garnet::Tokenization
         return parts;
     }
 
-    std::vector<std::string> QwenTokenizer::PreTokenizeAscii(const std::string& text) const
+    std::vector<std::string> QwenTokenizer::PreTokenizeAscii(const std::string& input) const
     {
+        // Match the configured NFC stage and Qwen Unicode regex, preserving
+        // case and normalized UTF-8 bytes for BPE. Added special tokens are
+        // recognized before this plain-segment operation.
+        auto scalars=Unicode::DecodeUtf8(input);
+        if (m_normalizeNfc) scalars=Unicode::NormalizeNfc(scalars);
+        struct Character { std::uint32_t cp; size_t byte; unsigned flags; };
+        constexpr unsigned letter=1, mark=2, number=4, space=8;
+        std::vector<Character> characters;
+        std::string text;
+        for (auto cp:scalars) {
+            const size_t begin=text.size();
+            Unicode::AppendUtf8(text,cp);
+            unsigned flags=0;
+            if (cp<0x80) {
+                if (IsAsciiLetter(static_cast<unsigned char>(cp))) flags|=letter;
+                if (IsAsciiDigit(static_cast<unsigned char>(cp))) flags|=number;
+                if (cp==' ' || (cp>='\t' && cp<='\r')) flags|=space;
+            } else {
+                if (Unicode::Contains(cp,Unicode::kLetters)) flags|=letter;
+                if (Unicode::Contains(cp,Unicode::kMarks)) flags|=mark;
+                if (Unicode::Contains(cp,Unicode::kNumbers)) flags|=number;
+                if (Unicode::Contains(cp,Unicode::kSpaces)) flags|=space;
+            }
+            characters.push_back({cp,begin,flags});
+        }
+        const size_t n=characters.size();
+        characters.push_back({0,text.size(),0});
         std::vector<std::string> out;
-        size_t i = 0;
-        while (i < text.size()) {
-            unsigned char c = static_cast<unsigned char>(text[i]);
-            const char* contractions[] = { "'s", "'t", "'re", "'ve", "'m", "'ll", "'d" };
-            bool matchedContraction = false;
-            for (const char* contraction : contractions) {
-                if (StartsWithCaseInsensitive(text, i, contraction)) {
-                    out.emplace_back(contraction, std::strlen(contraction));
-                    i += std::strlen(contraction);
-                    matchedContraction = true;
-                    break;
+        size_t i=0;
+        auto emit=[&](size_t end) {
+            out.push_back(text.substr(characters[i].byte,characters[end].byte-characters[i].byte));
+            i=end;
+        };
+        auto isLM=[&](size_t k) { return (characters[k].flags&(letter|mark))!=0; };
+        auto isPunctuation=[&](size_t k) { return (characters[k].flags&(space|letter|mark|number))==0; };
+        while (i<n) {
+            const auto c=characters[i];
+            const char* contractions[]={"'s","'t","'re","'ve","'m","'ll","'d"};
+            bool contraction=false;
+            for (const char* value:contractions) {
+                if (StartsWithCaseInsensitive(text,c.byte,value)) {
+                    emit(i+std::strlen(value)); contraction=true; break;
                 }
             }
-            if (matchedContraction) continue;
+            if (contraction) continue;
+            // Unicode case folding of the ASCII 's alternative also matches long s.
+            if (c.cp=='\'' && i+1<n && characters[i+1].cp==0x017F) { emit(i+2); continue; }
 
-            if (c == ' ' && i + 1 < text.size() && IsAsciiLetter(static_cast<unsigned char>(text[i + 1]))) {
-                size_t start = i++;
-                while (i < text.size() && IsAsciiLetter(static_cast<unsigned char>(text[i]))) ++i;
-                out.push_back(text.substr(start, i - start));
+            size_t j=i;
+            if (c.cp!='\r' && c.cp!='\n' && !(c.flags&(letter|number)) && i+1<n && isLM(i+1)) ++j;
+            if (j<n && isLM(j)) {
+                do { ++j; } while (j<n && isLM(j));
+                emit(j); continue;
             }
-            else if (IsAsciiLetter(c)) {
-                size_t start = i++;
-                while (i < text.size() && IsAsciiLetter(static_cast<unsigned char>(text[i]))) ++i;
-                out.push_back(text.substr(start, i - start));
+            if (c.flags&number) { emit(i+1); continue; }
+
+            j=i;
+            if (c.cp==' ' && i+1<n && isPunctuation(i+1)) ++j;
+            if (isPunctuation(j)) {
+                do { ++j; } while (j<n && isPunctuation(j));
+                while (j<n && (characters[j].cp=='\r' || characters[j].cp=='\n')) ++j;
+                emit(j); continue;
             }
-            else if (IsAsciiDigit(c)) {
-                out.push_back(text.substr(i, 1));
-                ++i;
-            }
-            else if (!std::isspace(c) && i + 1 < text.size() &&
-                     IsAsciiLetter(static_cast<unsigned char>(text[i + 1]))) {
-                // Qwen's pre-tokenizer permits one non-letter prefix before a
-                // letter run (for example ",y" in JSON coordinates).
-                size_t start = i++;
-                while (i < text.size() && IsAsciiLetter(static_cast<unsigned char>(text[i]))) ++i;
-                out.push_back(text.substr(start, i - start));
-            }
-            else if (c == ' ' && i + 1 < text.size() && !std::isspace(static_cast<unsigned char>(text[i + 1])) &&
-                     !IsAsciiLetter(static_cast<unsigned char>(text[i + 1])) &&
-                     !IsAsciiDigit(static_cast<unsigned char>(text[i + 1]))) {
-                size_t start = i++;
-                while (i < text.size()) {
-                    unsigned char p = static_cast<unsigned char>(text[i]);
-                    if (std::isspace(p) || IsAsciiLetter(p) || IsAsciiDigit(p)) break;
-                    ++i;
+            if (c.flags&space) {
+                j=i;
+                size_t afterNewline=i;
+                while (j<n && (characters[j].flags&space)) {
+                    if (characters[j].cp=='\r' || characters[j].cp=='\n') afterNewline=j+1;
+                    ++j;
                 }
-                while (i < text.size() && (text[i] == '\r' || text[i] == '\n')) ++i;
-                out.push_back(text.substr(start, i - start));
+                if (afterNewline>i) emit(afterNewline); // \s*[\r\n]+
+                else if (j<n && j-i>1) emit(j-1); // \s+(?!\S), leave the last prefix space
+                else emit(j); // final \s+ or all trailing whitespace
+                continue;
             }
-            else if (c == '\r' || c == '\n') {
-                size_t start = i++;
-                while (i < text.size() && (text[i] == '\r' || text[i] == '\n')) ++i;
-                out.push_back(text.substr(start, i - start));
-            }
-            else if (std::isspace(c)) {
-                size_t start = i++;
-                while (i < text.size() && std::isspace(static_cast<unsigned char>(text[i])) &&
-                       text[i] != '\r' && text[i] != '\n') {
-                    ++i;
-                }
-                out.push_back(text.substr(start, i - start));
-            }
-            else {
-                size_t start = i++;
-                while (i < text.size()) {
-                    unsigned char p = static_cast<unsigned char>(text[i]);
-                    if (std::isspace(p) || IsAsciiLetter(p) || IsAsciiDigit(p)) break;
-                    ++i;
-                }
-                while (i < text.size() && (text[i] == '\r' || text[i] == '\n')) ++i;
-                out.push_back(text.substr(start, i - start));
-            }
+            throw std::logic_error("unclassified Qwen pre-tokenizer character");
         }
         return out;
     }

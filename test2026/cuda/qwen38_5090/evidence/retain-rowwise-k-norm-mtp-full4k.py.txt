@@ -1,0 +1,38 @@
+"""Retain terminal MTP validation, including failures, without speed claims."""
+from pathlib import Path
+import hashlib,json,zipfile
+W=Path(__file__).resolve().parent;O=W.parent/'outputs';R=Path('D:/CantorAI/work/qwen38-5090');E=R/'test2026/cuda/qwen38_5090/evidence';sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest();owned=[];saved={}
+def keep(n,raw):
+    p=E/n
+    if p.exists():assert p.read_bytes()==raw,('Preserve retained bytes',n)
+    else:p.write_bytes(raw)
+    owned.append(p);saved[n]=sha(p)
+J='rowwise-k-norm-mtp-full4k-attempt1';proof=O/(J+'-verified.json');q=json.loads(proof.read_bytes());archive=O/(J+'-evidence.zip')
+assert proof.read_bytes()==(O/(J+'-remote-verified.json')).read_bytes() and sha(archive)==q['archive_sha256']
+assert q['source_runtime_SDK_config_index_CMake_all34_baseline_restored'] and not q['broader_MTP_prefix_reset_quality_HTTP_or_performance_qualified'] and not q['two_times_target_achieved']
+if q['exit_code']==0:
+    assert q['MTP_full4K128_target_case_gate_passed'] and q['strict_admission']['target']['all_states_and_vectors_exact'] and q['strict_admission']['target']['all_128_IDs_exact'] and q['CPU_controls']==146
+else:assert not q['MTP_full4K128_target_case_gate_passed'] and q['error']
+for n in (proof.name,J+'-remote-verified.json','Garnet-Rowwise-K-Norm-MTP-Full4K-Progress.json'):keep(n,(O/n).read_bytes())
+with zipfile.ZipFile(archive) as z:
+    base='results/'+J+'/';mf=json.loads(z.read('evidence-manifest.json'))['files'];keep('rowwise-k-norm-mtp-full4k1-manifest.json',z.read('evidence-manifest.json'))
+    for n in mf:
+        if n.startswith(base) and (n.endswith('.json') or n.endswith('/commands.log') or n.endswith('/commands.jsonl')):keep('rowwise-k-norm-mtp-full4k1-'+n.removeprefix(base).replace('/','-'),z.read(n))
+    w=json.loads(z.read(base+'workflow.json'));assert w['cleanup_finished'] and w['all_restored']
+for n in ('commands.log','commands.jsonl'):keep('rowwise-k-norm-mtp-full4k1-local-replay-'+n,(W/'rowwise-k-norm-mtp-full4k-local-replay'/n).read_bytes())
+for n in ('postprocess-rowwise-k-norm-mtp-full4k.py','replay-rowwise-k-norm-mtp-full4k.py',Path(__file__).name):keep(n+'.txt',(W/n).read_bytes())
+keep('rowwise-k-norm-mtp-full4k1-retention.json',json.dumps(dict(status=q['status'],exit_code=q['exit_code'],proof_sha256=sha(proof),archive_sha256=sha(archive),archive_bytes=archive.stat().st_size,MTP_full4K128_target_case_gate_passed=q['MTP_full4K128_target_case_gate_passed'],first_differing_ID_indices=q['first_differing_ID_indices'],CPU_controls=q['CPU_controls'],retained_sha256=saved,source_runtime_SDK_config_index_CMake_all34_restored=True,original_failures_preserved=True,broader_MTP_prefix_reset_quality_HTTP_or_performance_qualified=False,two_times_target_achieved=False),indent=2).encode())
+entry=('\n\n2026-10-27: Source87 rowwise-K MTP full4K128 terminal result '+q['status']+', exit'+str(q['exit_code'])+', error'+str(q['error'])+'. '
+       'Independent remote/local raw replay proofs byte-identical: '+sha(proof)+'. Raw archive '+sha(archive)+' ('+str(archive.stat().st_size)+'bytes). '
+       'MTP full4K128 target case gate passed='+str(q['MTP_full4K128_target_case_gate_passed'])+'. CPU controls='+str(q['CPU_controls'])+'. '
+       'A candidate capture failure is not a numerical mismatch diagnosis and provides no serving benchmark. Actual draft/target runtime failures must be investigated from retained logs before another attempt. '
+       'Source87 ordinary full4K128 pass remains independently valid; MTP and broader prefix/reset/permutation/tail/repeat/805quality/HTTP/performance remain unqualified. '
+       'Complete runtime/source/baselineDLL/SDK/config-index/CMake/all34 restoration verified. Original source79 full4K/cache62 and six/seven observer failures remain failed. '
+       'Historical image C8 aggregate throughput stays29.9110tok/s versus vLLM224.9710 and SGLang146.5366; native single-request decode89.7712tok/s excludes prefill and queuing. '
+       'Native physicalB1 serialized eight clients while references batched; fast decode does not establish aggregate serving speed. No new speed claim; overall2x and halfTTFT goals unmet.\n').encode()
+for n in ('docs/research/qwen38-5090-development-log.md','docs/research/qwen38-5090-implementation-task.md'):
+    p=R/n;before=p.read_bytes();assert b'Source87 rowwise-K MTP full4K128 terminal result' not in before
+    with p.open('ab') as f:f.write(entry)
+    assert p.read_bytes()==before+entry;owned.append(p)
+(W/'rowwise-k-norm-mtp-full4k-stage-paths.bin').write_bytes(b''.join(p.relative_to(R).as_posix().encode()+b'\0' for p in dict.fromkeys(owned)))
+print(json.dumps(dict(stage_paths=len(set(owned)),status=q['status'],MTP_full4K128_target_case_gate_passed=q['MTP_full4K128_target_case_gate_passed'],performance_qualified=False)))

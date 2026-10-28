@@ -1,0 +1,1982 @@
+{
+  "status": "bf16_prefill_diagnostic_replayed",
+  "archive_sha256": "84d1cd0729b18c57afffc3966672193314b5f0ff1942c0a7883abf560f4bdb4f",
+  "files_verified": 270,
+  "library_sha256": "01a3d784a5b780898e128828e846c6e2c4019f30a65a43a44b32e17fe76d6b8f",
+  "first_teacher_mismatch": {
+    "fp32-t4": [
+      null,
+      null,
+      null,
+      null
+    ],
+    "bf16-t4": [
+      null,
+      19,
+      null,
+      19
+    ],
+    "bf16-t32": [
+      26,
+      8,
+      26,
+      8
+    ]
+  },
+  "comparisons": [
+    {
+      "left": "fp32-t4",
+      "right": "bf16-t4",
+      "points": [
+        {
+          "step": 0,
+          "row": 0,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 3.1204917430877686,
+          "rms_difference": 0.34909425273840267,
+          "relative_l2_difference": 0.18253950917871806,
+          "cosine": 0.9833815594796042,
+          "prediction_equal": true
+        },
+        {
+          "step": 0,
+          "row": 1,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 5.133795142173767,
+          "rms_difference": 1.3160849651593656,
+          "relative_l2_difference": 0.6740971634191039,
+          "cosine": 0.773789287202833,
+          "prediction_equal": true
+        },
+        {
+          "step": 1,
+          "row": 0,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 2.0909500122070312,
+          "rms_difference": 0.26057572967400205,
+          "relative_l2_difference": 0.16729415922335827,
+          "cosine": 0.9859235621449686,
+          "prediction_equal": true
+        },
+        {
+          "step": 1,
+          "row": 1,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 4.374835014343262,
+          "rms_difference": 1.0032491771973497,
+          "relative_l2_difference": 0.5175008583245072,
+          "cosine": 0.8663896416259617,
+          "prediction_equal": true
+        },
+        {
+          "step": 2,
+          "row": 0,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 1.2101006507873535,
+          "rms_difference": 0.208441329516749,
+          "relative_l2_difference": 0.13933786797558212,
+          "cosine": 0.9904149996087345,
+          "prediction_equal": true
+        },
+        {
+          "step": 2,
+          "row": 1,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 5.056040287017822,
+          "rms_difference": 0.6168775151202538,
+          "relative_l2_difference": 0.34868189264974897,
+          "cosine": 0.9409616615490127,
+          "prediction_equal": true
+        },
+        {
+          "step": 3,
+          "row": 0,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 1.7033195495605469,
+          "rms_difference": 0.20962988591844886,
+          "relative_l2_difference": 0.12296060681358346,
+          "cosine": 0.9927193759124244,
+          "prediction_equal": true
+        },
+        {
+          "step": 3,
+          "row": 1,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 3.1901580840349197,
+          "rms_difference": 0.4490143948693729,
+          "relative_l2_difference": 0.24904323419958924,
+          "cosine": 0.9697677084889389,
+          "prediction_equal": true
+        },
+        {
+          "step": 4,
+          "row": 0,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 1.3072729110717773,
+          "rms_difference": 0.18182926369695068,
+          "relative_l2_difference": 0.09864828571121607,
+          "cosine": 0.9951946574403246,
+          "prediction_equal": true
+        },
+        {
+          "step": 4,
+          "row": 1,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 2.1655092239379883,
+          "rms_difference": 0.40567658636859644,
+          "relative_l2_difference": 0.21021617454789487,
+          "cosine": 0.9778719011229852,
+          "prediction_equal": true
+        },
+        {
+          "step": 5,
+          "row": 0,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 1.3629884719848633,
+          "rms_difference": 0.17693182442936545,
+          "relative_l2_difference": 0.09516223608064199,
+          "cosine": 0.9955426516958025,
+          "prediction_equal": true
+        },
+        {
+          "step": 5,
+          "row": 1,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 5.097316741943359,
+          "rms_difference": 0.3795911634861053,
+          "relative_l2_difference": 0.19610838242549666,
+          "cosine": 0.980694055180653,
+          "prediction_equal": true
+        },
+        {
+          "step": 6,
+          "row": 0,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 1.1939477920532227,
+          "rms_difference": 0.21345399945886598,
+          "relative_l2_difference": 0.14533330926438134,
+          "cosine": 0.9898160047389357,
+          "prediction_equal": true
+        },
+        {
+          "step": 6,
+          "row": 1,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 5.805248260498047,
+          "rms_difference": 0.3505303405763826,
+          "relative_l2_difference": 0.18089940286467274,
+          "cosine": 0.983586418632965,
+          "prediction_equal": true
+        },
+        {
+          "step": 7,
+          "row": 0,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 1.5230178833007812,
+          "rms_difference": 0.18945888569460217,
+          "relative_l2_difference": 0.129974184008609,
+          "cosine": 0.9922518161401505,
+          "prediction_equal": true
+        },
+        {
+          "step": 7,
+          "row": 1,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 4.001276016235352,
+          "rms_difference": 0.38233491201529063,
+          "relative_l2_difference": 0.19768640199279366,
+          "cosine": 0.9803790621426153,
+          "prediction_equal": true
+        },
+        {
+          "step": 8,
+          "row": 0,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 1.1994667053222656,
+          "rms_difference": 0.1671607288613785,
+          "relative_l2_difference": 0.09406411923958197,
+          "cosine": 0.9955684549834211,
+          "prediction_equal": true
+        },
+        {
+          "step": 8,
+          "row": 1,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 7.24372673034668,
+          "rms_difference": 0.4652161700861408,
+          "relative_l2_difference": 0.24240406259919273,
+          "cosine": 0.9704514360324628,
+          "prediction_equal": true
+        },
+        {
+          "step": 9,
+          "row": 0,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 1.2766399383544922,
+          "rms_difference": 0.20010103017464623,
+          "relative_l2_difference": 0.11619570513701688,
+          "cosine": 0.9932338389570122,
+          "prediction_equal": true
+        },
+        {
+          "step": 9,
+          "row": 1,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 4.636518478393555,
+          "rms_difference": 0.41732345975380447,
+          "relative_l2_difference": 0.21723910641614044,
+          "cosine": 0.9763027863531609,
+          "prediction_equal": true
+        },
+        {
+          "step": 10,
+          "row": 0,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 1.0039761364459991,
+          "rms_difference": 0.1726974313511726,
+          "relative_l2_difference": 0.09735042634461451,
+          "cosine": 0.9952513137472155,
+          "prediction_equal": true
+        },
+        {
+          "step": 10,
+          "row": 1,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 4.046516418457031,
+          "rms_difference": 0.3645425844609252,
+          "relative_l2_difference": 0.19500487624723856,
+          "cosine": 0.9808460044542259,
+          "prediction_equal": true
+        },
+        {
+          "step": 11,
+          "row": 0,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 1.538553774356842,
+          "rms_difference": 0.18921420061573546,
+          "relative_l2_difference": 0.10912439304635707,
+          "cosine": 0.9940460193653187,
+          "prediction_equal": true
+        },
+        {
+          "step": 11,
+          "row": 1,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 2.9890356063842773,
+          "rms_difference": 0.31222028606883157,
+          "relative_l2_difference": 0.1632410880049665,
+          "cosine": 0.9866110877594203,
+          "prediction_equal": true
+        },
+        {
+          "step": 12,
+          "row": 0,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 1.4875984191894531,
+          "rms_difference": 0.2158754651040231,
+          "relative_l2_difference": 0.12561533406962996,
+          "cosine": 0.9920796039614656,
+          "prediction_equal": true
+        },
+        {
+          "step": 12,
+          "row": 1,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 2.5238380432128906,
+          "rms_difference": 0.2959966937835396,
+          "relative_l2_difference": 0.1665793379116916,
+          "cosine": 0.986032383896112,
+          "prediction_equal": true
+        },
+        {
+          "step": 13,
+          "row": 0,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 1.2049503326416016,
+          "rms_difference": 0.181498623413505,
+          "relative_l2_difference": 0.11850900118549337,
+          "cosine": 0.9929949355332881,
+          "prediction_equal": true
+        },
+        {
+          "step": 13,
+          "row": 1,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 2.376352310180664,
+          "rms_difference": 0.3270979539006547,
+          "relative_l2_difference": 0.16963886826867988,
+          "cosine": 0.985581612761205,
+          "prediction_equal": true
+        },
+        {
+          "step": 14,
+          "row": 0,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 0.6945963799953461,
+          "rms_difference": 0.1765987699342452,
+          "relative_l2_difference": 0.09737564714294854,
+          "cosine": 0.9952686795230443,
+          "prediction_equal": true
+        },
+        {
+          "step": 14,
+          "row": 1,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 3.045928955078125,
+          "rms_difference": 0.36545866527994153,
+          "relative_l2_difference": 0.21350209510918824,
+          "cosine": 0.9771340567844863,
+          "prediction_equal": true
+        },
+        {
+          "step": 15,
+          "row": 0,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 2.360165596008301,
+          "rms_difference": 0.22087388007434688,
+          "relative_l2_difference": 0.11877507188027274,
+          "cosine": 0.9929529685992697,
+          "prediction_equal": true
+        },
+        {
+          "step": 15,
+          "row": 1,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 5.374713897705078,
+          "rms_difference": 0.4052454132459572,
+          "relative_l2_difference": 0.214355650761828,
+          "cosine": 0.9767586996559678,
+          "prediction_equal": true
+        },
+        {
+          "step": 16,
+          "row": 0,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 1.8306035995483398,
+          "rms_difference": 0.20079526260843997,
+          "relative_l2_difference": 0.11974328713985372,
+          "cosine": 0.9928765886964955,
+          "prediction_equal": true
+        },
+        {
+          "step": 16,
+          "row": 1,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 5.077596664428711,
+          "rms_difference": 0.3408298389362662,
+          "relative_l2_difference": 0.1770011769641581,
+          "cosine": 0.984249250398833,
+          "prediction_equal": true
+        },
+        {
+          "step": 17,
+          "row": 0,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 1.3796100616455078,
+          "rms_difference": 0.23327292753544515,
+          "relative_l2_difference": 0.1276873107032674,
+          "cosine": 0.9918145260554713,
+          "prediction_equal": true
+        },
+        {
+          "step": 17,
+          "row": 1,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 2.6865453720092773,
+          "rms_difference": 0.42148759111704487,
+          "relative_l2_difference": 0.24433285525350645,
+          "cosine": 0.970640919580659,
+          "prediction_equal": true
+        },
+        {
+          "step": 18,
+          "row": 0,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 1.5818424224853516,
+          "rms_difference": 0.2189646524610771,
+          "relative_l2_difference": 0.12559566933639185,
+          "cosine": 0.9920822419360816,
+          "prediction_equal": true
+        },
+        {
+          "step": 18,
+          "row": 1,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 1.9284570068120956,
+          "rms_difference": 0.4854232552568848,
+          "relative_l2_difference": 0.2659801998118687,
+          "cosine": 0.964339013002472,
+          "prediction_equal": true
+        },
+        {
+          "step": 19,
+          "row": 0,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 2.2662220001220703,
+          "rms_difference": 0.29481457745901274,
+          "relative_l2_difference": 0.15357500392198076,
+          "cosine": 0.988157413708038,
+          "prediction_equal": true
+        },
+        {
+          "step": 19,
+          "row": 1,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 5.523720741271973,
+          "rms_difference": 0.5897344353229497,
+          "relative_l2_difference": 0.31550802340786216,
+          "cosine": 0.9490985841959154,
+          "prediction_equal": false
+        },
+        {
+          "step": 20,
+          "row": 0,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 1.9486665725708008,
+          "rms_difference": 0.2786948947922096,
+          "relative_l2_difference": 0.14518395520483116,
+          "cosine": 0.9895452887136512,
+          "prediction_equal": true
+        },
+        {
+          "step": 20,
+          "row": 1,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 3.4944019317626953,
+          "rms_difference": 0.40562011506106105,
+          "relative_l2_difference": 0.2525215712327198,
+          "cosine": 0.9675930929708618,
+          "prediction_equal": true
+        },
+        {
+          "step": 21,
+          "row": 0,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 1.6130180358886719,
+          "rms_difference": 0.23354313440174754,
+          "relative_l2_difference": 0.12151752062997412,
+          "cosine": 0.9926657576967854,
+          "prediction_equal": true
+        },
+        {
+          "step": 21,
+          "row": 1,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 8.309852600097656,
+          "rms_difference": 0.4872080201662684,
+          "relative_l2_difference": 0.264201725674036,
+          "cosine": 0.9650111897743809,
+          "prediction_equal": true
+        },
+        {
+          "step": 22,
+          "row": 0,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 3.645059585571289,
+          "rms_difference": 0.20669719532504055,
+          "relative_l2_difference": 0.11383786558689153,
+          "cosine": 0.9939327814150675,
+          "prediction_equal": true
+        },
+        {
+          "step": 22,
+          "row": 1,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 6.4448347091674805,
+          "rms_difference": 0.44847949882960625,
+          "relative_l2_difference": 0.24124818587995495,
+          "cosine": 0.9705340334004608,
+          "prediction_equal": true
+        },
+        {
+          "step": 23,
+          "row": 0,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 1.6465158462524414,
+          "rms_difference": 0.24537029722959577,
+          "relative_l2_difference": 0.13071517630327922,
+          "cosine": 0.9915644104042755,
+          "prediction_equal": true
+        },
+        {
+          "step": 23,
+          "row": 1,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 5.001895904541016,
+          "rms_difference": 0.38576995396595004,
+          "relative_l2_difference": 0.22072236189575736,
+          "cosine": 0.9756710828800992,
+          "prediction_equal": true
+        },
+        {
+          "step": 24,
+          "row": 0,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 1.1558856964111328,
+          "rms_difference": 0.21843733823220252,
+          "relative_l2_difference": 0.11172035193012197,
+          "cosine": 0.9937610807136654,
+          "prediction_equal": true
+        },
+        {
+          "step": 24,
+          "row": 1,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 4.5759124755859375,
+          "rms_difference": 0.5579530626032313,
+          "relative_l2_difference": 0.3613376243625571,
+          "cosine": 0.9325731143508997,
+          "prediction_equal": true
+        },
+        {
+          "step": 25,
+          "row": 0,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 0.9475860595703125,
+          "rms_difference": 0.1949273085899144,
+          "relative_l2_difference": 0.1027021436919251,
+          "cosine": 0.9947304512030312,
+          "prediction_equal": true
+        },
+        {
+          "step": 25,
+          "row": 1,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 5.513286113739014,
+          "rms_difference": 0.7136056728921425,
+          "relative_l2_difference": 0.3691371554188686,
+          "cosine": 0.9306308967319076,
+          "prediction_equal": true
+        },
+        {
+          "step": 26,
+          "row": 0,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 1.2278413772583008,
+          "rms_difference": 0.20257986910825831,
+          "relative_l2_difference": 0.10683806041373947,
+          "cosine": 0.9943211154707817,
+          "prediction_equal": true
+        },
+        {
+          "step": 26,
+          "row": 1,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 1.6678290367126465,
+          "rms_difference": 0.24387821104854085,
+          "relative_l2_difference": 0.13343683009321258,
+          "cosine": 0.9910583029092085,
+          "prediction_equal": true
+        },
+        {
+          "step": 27,
+          "row": 0,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 1.187096118927002,
+          "rms_difference": 0.21466789030323477,
+          "relative_l2_difference": 0.1105820780039462,
+          "cosine": 0.9938934420833929,
+          "prediction_equal": true
+        },
+        {
+          "step": 27,
+          "row": 1,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 1.2439403533935547,
+          "rms_difference": 0.21237501368926653,
+          "relative_l2_difference": 0.11998007934702204,
+          "cosine": 0.9928176476377604,
+          "prediction_equal": true
+        },
+        {
+          "step": 28,
+          "row": 0,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 1.1837849617004395,
+          "rms_difference": 0.21363704258892538,
+          "relative_l2_difference": 0.12060078168740418,
+          "cosine": 0.9927553245787388,
+          "prediction_equal": true
+        },
+        {
+          "step": 28,
+          "row": 1,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 1.94728422164917,
+          "rms_difference": 0.2527693997345216,
+          "relative_l2_difference": 0.13072874657520214,
+          "cosine": 0.9914214004971952,
+          "prediction_equal": true
+        },
+        {
+          "step": 29,
+          "row": 0,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 3.508859872817993,
+          "rms_difference": 0.3021503265001777,
+          "relative_l2_difference": 0.1915894962313977,
+          "cosine": 0.9825047919072809,
+          "prediction_equal": true
+        },
+        {
+          "step": 29,
+          "row": 1,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 2.1413650512695312,
+          "rms_difference": 0.2897619869280534,
+          "relative_l2_difference": 0.15035243036407267,
+          "cosine": 0.9886465313268917,
+          "prediction_equal": true
+        },
+        {
+          "step": 30,
+          "row": 0,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 1.5073175430297852,
+          "rms_difference": 0.26490954424120894,
+          "relative_l2_difference": 0.1527990422781988,
+          "cosine": 0.988543686756549,
+          "prediction_equal": true
+        },
+        {
+          "step": 30,
+          "row": 1,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 1.5899581909179688,
+          "rms_difference": 0.3333704795012509,
+          "relative_l2_difference": 0.22496749696538593,
+          "cosine": 0.9743825720489343,
+          "prediction_equal": true
+        },
+        {
+          "step": 31,
+          "row": 0,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 1.0510821342468262,
+          "rms_difference": 0.2071087994877286,
+          "relative_l2_difference": 0.10655552718792068,
+          "cosine": 0.9943229691359837,
+          "prediction_equal": true
+        },
+        {
+          "step": 31,
+          "row": 1,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 2.431909054517746,
+          "rms_difference": 0.35516251211412575,
+          "relative_l2_difference": 0.21776016350101532,
+          "cosine": 0.9760383316611948,
+          "prediction_equal": true
+        }
+      ],
+      "prediction_agreements": 63,
+      "points_compared": 64
+    },
+    {
+      "left": "bf16-t4",
+      "right": "bf16-t32",
+      "points": [
+        {
+          "step": 0,
+          "row": 0,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 2.3101072311401367,
+          "rms_difference": 0.3483090201260223,
+          "relative_l2_difference": 0.1817011408039417,
+          "cosine": 0.9833673050670633,
+          "prediction_equal": true
+        },
+        {
+          "step": 0,
+          "row": 1,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 7.124525547027588,
+          "rms_difference": 1.3879448985137064,
+          "relative_l2_difference": 0.7078268318438395,
+          "cosine": 0.749209374110834,
+          "prediction_equal": true
+        },
+        {
+          "step": 1,
+          "row": 0,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 1.4190587997436523,
+          "rms_difference": 0.2406663051949572,
+          "relative_l2_difference": 0.1558155556035321,
+          "cosine": 0.9880064611470166,
+          "prediction_equal": true
+        },
+        {
+          "step": 1,
+          "row": 1,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 4.5131224393844604,
+          "rms_difference": 0.991813916590952,
+          "relative_l2_difference": 0.5104910352729247,
+          "cosine": 0.869221732577708,
+          "prediction_equal": true
+        },
+        {
+          "step": 2,
+          "row": 0,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 1.6594009399414062,
+          "rms_difference": 0.1957728233651715,
+          "relative_l2_difference": 0.12973151562922797,
+          "cosine": 0.9918203373104039,
+          "prediction_equal": true
+        },
+        {
+          "step": 2,
+          "row": 1,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 3.380901575088501,
+          "rms_difference": 0.5075440132181501,
+          "relative_l2_difference": 0.2800068930155907,
+          "cosine": 0.9601679265813143,
+          "prediction_equal": true
+        },
+        {
+          "step": 3,
+          "row": 0,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 1.1964340209960938,
+          "rms_difference": 0.19556413232189535,
+          "relative_l2_difference": 0.1127440250142599,
+          "cosine": 0.9936428809255988,
+          "prediction_equal": true
+        },
+        {
+          "step": 3,
+          "row": 1,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 3.944976806640625,
+          "rms_difference": 0.39099527958078467,
+          "relative_l2_difference": 0.21271817219883105,
+          "cosine": 0.9771385965472366,
+          "prediction_equal": true
+        },
+        {
+          "step": 4,
+          "row": 0,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 1.127995491027832,
+          "rms_difference": 0.19889738151461775,
+          "relative_l2_difference": 0.10713796250525429,
+          "cosine": 0.9942550764471791,
+          "prediction_equal": true
+        },
+        {
+          "step": 4,
+          "row": 1,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 3.0478343963623047,
+          "rms_difference": 0.3733174091921613,
+          "relative_l2_difference": 0.19374444839167507,
+          "cosine": 0.9812591470463892,
+          "prediction_equal": true
+        },
+        {
+          "step": 5,
+          "row": 0,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 0.9210995733737946,
+          "rms_difference": 0.19787161280489654,
+          "relative_l2_difference": 0.10555568992164105,
+          "cosine": 0.99441438734705,
+          "prediction_equal": true
+        },
+        {
+          "step": 5,
+          "row": 1,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 6.397777557373047,
+          "rms_difference": 0.41061468092592623,
+          "relative_l2_difference": 0.21309420001791576,
+          "cosine": 0.9773830453529054,
+          "prediction_equal": true
+        },
+        {
+          "step": 6,
+          "row": 0,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 1.0998725891113281,
+          "rms_difference": 0.20786874951977258,
+          "relative_l2_difference": 0.13887807644816308,
+          "cosine": 0.9907402159203011,
+          "prediction_equal": true
+        },
+        {
+          "step": 6,
+          "row": 1,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 4.8685760498046875,
+          "rms_difference": 0.3464805567459769,
+          "relative_l2_difference": 0.17943691616225543,
+          "cosine": 0.9839432671313469,
+          "prediction_equal": true
+        },
+        {
+          "step": 7,
+          "row": 0,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 1.1968460083007812,
+          "rms_difference": 0.17949366437780057,
+          "relative_l2_difference": 0.11950227281982388,
+          "cosine": 0.9929556311312503,
+          "prediction_equal": true
+        },
+        {
+          "step": 7,
+          "row": 1,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 5.338139533996582,
+          "rms_difference": 0.38100463008023433,
+          "relative_l2_difference": 0.19792628279081856,
+          "cosine": 0.9805764119911936,
+          "prediction_equal": true
+        },
+        {
+          "step": 8,
+          "row": 0,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 1.6868534088134766,
+          "rms_difference": 0.18190388016179715,
+          "relative_l2_difference": 0.10259477807912476,
+          "cosine": 0.994911031503402,
+          "prediction_equal": true
+        },
+        {
+          "step": 8,
+          "row": 1,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 5.481838226318359,
+          "rms_difference": 0.40303602380316733,
+          "relative_l2_difference": 0.21135798819156837,
+          "cosine": 0.9778162759334591,
+          "prediction_equal": false
+        },
+        {
+          "step": 9,
+          "row": 0,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 1.7710390090942383,
+          "rms_difference": 0.2310792705285802,
+          "relative_l2_difference": 0.13562550914295016,
+          "cosine": 0.9908467003422219,
+          "prediction_equal": true
+        },
+        {
+          "step": 9,
+          "row": 1,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 3.119852066040039,
+          "rms_difference": 0.3324291537757828,
+          "relative_l2_difference": 0.17386855452428848,
+          "cosine": 0.9849198929674855,
+          "prediction_equal": true
+        },
+        {
+          "step": 10,
+          "row": 0,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 1.8217048645019531,
+          "rms_difference": 0.1894172349300362,
+          "relative_l2_difference": 0.10744805292300373,
+          "cosine": 0.9944287219276251,
+          "prediction_equal": true
+        },
+        {
+          "step": 10,
+          "row": 1,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 2.403718948364258,
+          "rms_difference": 0.31346260652469426,
+          "relative_l2_difference": 0.16935590148984955,
+          "cosine": 0.9857549604753102,
+          "prediction_equal": true
+        },
+        {
+          "step": 11,
+          "row": 0,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 1.4199066162109375,
+          "rms_difference": 0.18945858049858758,
+          "relative_l2_difference": 0.1105837541987825,
+          "cosine": 0.9940614645421278,
+          "prediction_equal": true
+        },
+        {
+          "step": 11,
+          "row": 1,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 2.0705475211143494,
+          "rms_difference": 0.27458844830446194,
+          "relative_l2_difference": 0.14448785637584963,
+          "cosine": 0.989590337733029,
+          "prediction_equal": true
+        },
+        {
+          "step": 12,
+          "row": 0,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 2.402711868286133,
+          "rms_difference": 0.22744361848950326,
+          "relative_l2_difference": 0.13354784025343108,
+          "cosine": 0.9915708391772934,
+          "prediction_equal": true
+        },
+        {
+          "step": 12,
+          "row": 1,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 1.8938941955566406,
+          "rms_difference": 0.2551899412733053,
+          "relative_l2_difference": 0.14521837627343182,
+          "cosine": 0.9897380722170008,
+          "prediction_equal": true
+        },
+        {
+          "step": 13,
+          "row": 0,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 1.4922599792480469,
+          "rms_difference": 0.19292543914968452,
+          "relative_l2_difference": 0.12570321341102805,
+          "cosine": 0.9926123831877571,
+          "prediction_equal": true
+        },
+        {
+          "step": 13,
+          "row": 1,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 3.142749786376953,
+          "rms_difference": 0.3119256328395325,
+          "relative_l2_difference": 0.16213242251901602,
+          "cosine": 0.9868897538421119,
+          "prediction_equal": true
+        },
+        {
+          "step": 14,
+          "row": 0,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 1.1936759948730469,
+          "rms_difference": 0.19354041795811128,
+          "relative_l2_difference": 0.10653277991909466,
+          "cosine": 0.9944136373212206,
+          "prediction_equal": true
+        },
+        {
+          "step": 14,
+          "row": 1,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 2.051222801208496,
+          "rms_difference": 0.30156748750783946,
+          "relative_l2_difference": 0.17679971704943837,
+          "cosine": 0.9843492912068698,
+          "prediction_equal": true
+        },
+        {
+          "step": 15,
+          "row": 0,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 1.9052400588989258,
+          "rms_difference": 0.2059958939076981,
+          "relative_l2_difference": 0.11246038186829506,
+          "cosine": 0.9937923745801447,
+          "prediction_equal": true
+        },
+        {
+          "step": 15,
+          "row": 1,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 4.876825332641602,
+          "rms_difference": 0.37224254793759176,
+          "relative_l2_difference": 0.20208641208366912,
+          "cosine": 0.9801156639565931,
+          "prediction_equal": true
+        },
+        {
+          "step": 16,
+          "row": 0,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 1.7320685386657715,
+          "rms_difference": 0.20614779468436986,
+          "relative_l2_difference": 0.12532334524721556,
+          "cosine": 0.9923232971260871,
+          "prediction_equal": true
+        },
+        {
+          "step": 16,
+          "row": 1,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 4.669651031494141,
+          "rms_difference": 0.32451365283476735,
+          "relative_l2_difference": 0.16972139472636583,
+          "cosine": 0.9856865054359318,
+          "prediction_equal": true
+        },
+        {
+          "step": 17,
+          "row": 0,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 3.224946975708008,
+          "rms_difference": 0.2570830126737469,
+          "relative_l2_difference": 0.1418356911155151,
+          "cosine": 0.9904754713587186,
+          "prediction_equal": true
+        },
+        {
+          "step": 17,
+          "row": 1,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 2.07440185546875,
+          "rms_difference": 0.3311003623619335,
+          "relative_l2_difference": 0.18936766115239698,
+          "cosine": 0.9823910196294152,
+          "prediction_equal": true
+        },
+        {
+          "step": 18,
+          "row": 0,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 2.1840267181396484,
+          "rms_difference": 0.24946178225763135,
+          "relative_l2_difference": 0.14440555182807388,
+          "cosine": 0.9900413442761732,
+          "prediction_equal": true
+        },
+        {
+          "step": 18,
+          "row": 1,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 1.8352775573730469,
+          "rms_difference": 0.4315491134126769,
+          "relative_l2_difference": 0.23867906379124199,
+          "cosine": 0.9719760455234,
+          "prediction_equal": true
+        },
+        {
+          "step": 19,
+          "row": 0,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 4.046205997467041,
+          "rms_difference": 0.3612672380747829,
+          "relative_l2_difference": 0.18923043167156609,
+          "cosine": 0.9822794780205991,
+          "prediction_equal": true
+        },
+        {
+          "step": 19,
+          "row": 1,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 6.328489303588867,
+          "rms_difference": 0.5054019256363731,
+          "relative_l2_difference": 0.27951378257986387,
+          "cosine": 0.9631599147924956,
+          "prediction_equal": true
+        },
+        {
+          "step": 20,
+          "row": 0,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 2.01043701171875,
+          "rms_difference": 0.31700337731647493,
+          "relative_l2_difference": 0.16411859661171024,
+          "cosine": 0.9865643112952921,
+          "prediction_equal": true
+        },
+        {
+          "step": 20,
+          "row": 1,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 1.8637192249298096,
+          "rms_difference": 0.3084538397618143,
+          "relative_l2_difference": 0.19807654415765602,
+          "cosine": 0.9812508912203787,
+          "prediction_equal": true
+        },
+        {
+          "step": 21,
+          "row": 0,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 1.4237546920776367,
+          "rms_difference": 0.23659479720939777,
+          "relative_l2_difference": 0.1224944799931278,
+          "cosine": 0.9924751834912856,
+          "prediction_equal": true
+        },
+        {
+          "step": 21,
+          "row": 1,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 6.941009521484375,
+          "rms_difference": 0.4304031818631421,
+          "relative_l2_difference": 0.25026013558886456,
+          "cosine": 0.9723357737353022,
+          "prediction_equal": true
+        },
+        {
+          "step": 22,
+          "row": 0,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 2.96405029296875,
+          "rms_difference": 0.22451389817083073,
+          "relative_l2_difference": 0.12083691923673924,
+          "cosine": 0.9927286789607183,
+          "prediction_equal": true
+        },
+        {
+          "step": 22,
+          "row": 1,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 5.488895416259766,
+          "rms_difference": 0.36051113244651206,
+          "relative_l2_difference": 0.20225477087476346,
+          "cosine": 0.9803641125104224,
+          "prediction_equal": false
+        },
+        {
+          "step": 23,
+          "row": 0,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 2.235973358154297,
+          "rms_difference": 0.2624870049486737,
+          "relative_l2_difference": 0.138656656104148,
+          "cosine": 0.9903523243827668,
+          "prediction_equal": true
+        },
+        {
+          "step": 23,
+          "row": 1,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 5.018560409545898,
+          "rms_difference": 0.3376839531545154,
+          "relative_l2_difference": 0.20335085781308757,
+          "cosine": 0.9815944267456322,
+          "prediction_equal": true
+        },
+        {
+          "step": 24,
+          "row": 0,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 2.273941993713379,
+          "rms_difference": 0.24468996824215364,
+          "relative_l2_difference": 0.12511204528678918,
+          "cosine": 0.9921681051683088,
+          "prediction_equal": true
+        },
+        {
+          "step": 24,
+          "row": 1,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 2.553180456161499,
+          "rms_difference": 0.43457447203472954,
+          "relative_l2_difference": 0.30706808646470984,
+          "cosine": 0.9533859565917489,
+          "prediction_equal": true
+        },
+        {
+          "step": 25,
+          "row": 0,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 1.123748779296875,
+          "rms_difference": 0.21473513226145027,
+          "relative_l2_difference": 0.11305202716596272,
+          "cosine": 0.9935922427526734,
+          "prediction_equal": true
+        },
+        {
+          "step": 25,
+          "row": 1,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 2.8768930435180664,
+          "rms_difference": 0.6610905394282572,
+          "relative_l2_difference": 0.34932012901473297,
+          "cosine": 0.9398077876371566,
+          "prediction_equal": true
+        },
+        {
+          "step": 26,
+          "row": 0,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 1.1275923252105713,
+          "rms_difference": 0.2222316933938701,
+          "relative_l2_difference": 0.11676463882667988,
+          "cosine": 0.9931969510499672,
+          "prediction_equal": false
+        },
+        {
+          "step": 26,
+          "row": 1,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 1.0643408298492432,
+          "rms_difference": 0.24790207121813423,
+          "relative_l2_difference": 0.13666980522800234,
+          "cosine": 0.9907000413549814,
+          "prediction_equal": true
+        },
+        {
+          "step": 27,
+          "row": 0,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 1.43212890625,
+          "rms_difference": 0.2354321498179754,
+          "relative_l2_difference": 0.12113981047745882,
+          "cosine": 0.9926693755389399,
+          "prediction_equal": true
+        },
+        {
+          "step": 27,
+          "row": 1,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 1.8180294036865234,
+          "rms_difference": 0.23691828631336087,
+          "relative_l2_difference": 0.13359469300250607,
+          "cosine": 0.9910473959897523,
+          "prediction_equal": true
+        },
+        {
+          "step": 28,
+          "row": 0,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 1.9353597164154053,
+          "rms_difference": 0.2346077335909429,
+          "relative_l2_difference": 0.13202544671949876,
+          "cosine": 0.991346942941105,
+          "prediction_equal": true
+        },
+        {
+          "step": 28,
+          "row": 1,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 1.2065820693969727,
+          "rms_difference": 0.24720712388651458,
+          "relative_l2_difference": 0.1286301083216054,
+          "cosine": 0.991766875833575,
+          "prediction_equal": true
+        },
+        {
+          "step": 29,
+          "row": 0,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 4.7485752031207085,
+          "rms_difference": 0.3935541524608328,
+          "relative_l2_difference": 0.24287477966171364,
+          "cosine": 0.9702519575818758,
+          "prediction_equal": true
+        },
+        {
+          "step": 29,
+          "row": 1,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 2.244355246424675,
+          "rms_difference": 0.3159685462004189,
+          "relative_l2_difference": 0.1649533511005167,
+          "cosine": 0.9864084871258393,
+          "prediction_equal": true
+        },
+        {
+          "step": 30,
+          "row": 0,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 1.1069271564483643,
+          "rms_difference": 0.23198627307555936,
+          "relative_l2_difference": 0.13217818617674484,
+          "cosine": 0.9913800376220334,
+          "prediction_equal": true
+        },
+        {
+          "step": 30,
+          "row": 1,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 2.787033762782812,
+          "rms_difference": 0.3597105931556449,
+          "relative_l2_difference": 0.2505739736354835,
+          "cosine": 0.9693784292096036,
+          "prediction_equal": true
+        },
+        {
+          "step": 31,
+          "row": 0,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 0.9628596305847168,
+          "rms_difference": 0.2115644300816717,
+          "relative_l2_difference": 0.10884772844416302,
+          "cosine": 0.9940801058764138,
+          "prediction_equal": true
+        },
+        {
+          "step": 31,
+          "row": 1,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 1.2149982452392578,
+          "rms_difference": 0.3233408633258219,
+          "relative_l2_difference": 0.20138627389713257,
+          "cosine": 0.9795340562266905,
+          "prediction_equal": true
+        }
+      ],
+      "prediction_agreements": 61,
+      "points_compared": 64
+    },
+    {
+      "left": "fp32-t4",
+      "right": "bf16-t32",
+      "points": [
+        {
+          "step": 0,
+          "row": 0,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 2.122486114501953,
+          "rms_difference": 0.3463567398348964,
+          "relative_l2_difference": 0.1811080783893063,
+          "cosine": 0.9834907209240655,
+          "prediction_equal": true
+        },
+        {
+          "step": 0,
+          "row": 1,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 7.284759521484375,
+          "rms_difference": 1.2437829794267867,
+          "relative_l2_difference": 0.6370641717945865,
+          "cosine": 0.7977307542529347,
+          "prediction_equal": true
+        },
+        {
+          "step": 1,
+          "row": 0,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 1.405466079711914,
+          "rms_difference": 0.23896005502429335,
+          "relative_l2_difference": 0.15341651942515924,
+          "cosine": 0.9882368212041003,
+          "prediction_equal": true
+        },
+        {
+          "step": 1,
+          "row": 1,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 3.6870707273483276,
+          "rms_difference": 0.9155768505107708,
+          "relative_l2_difference": 0.4722772933888678,
+          "cosine": 0.8883066248428826,
+          "prediction_equal": true
+        },
+        {
+          "step": 2,
+          "row": 0,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 1.5351998805999756,
+          "rms_difference": 0.1850180026713381,
+          "relative_l2_difference": 0.12367995391841566,
+          "cosine": 0.9924403581128005,
+          "prediction_equal": true
+        },
+        {
+          "step": 2,
+          "row": 1,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 3.0963504314422607,
+          "rms_difference": 0.5033736100597787,
+          "relative_l2_difference": 0.28452530488384725,
+          "cosine": 0.9596161883061348,
+          "prediction_equal": true
+        },
+        {
+          "step": 3,
+          "row": 0,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 1.6447029113769531,
+          "rms_difference": 0.1862866530830379,
+          "relative_l2_difference": 0.10926838892271694,
+          "cosine": 0.9942764057660454,
+          "prediction_equal": true
+        },
+        {
+          "step": 3,
+          "row": 1,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 1.570281982421875,
+          "rms_difference": 0.3701428951486743,
+          "relative_l2_difference": 0.20529761356680498,
+          "cosine": 0.978753785218601,
+          "prediction_equal": true
+        },
+        {
+          "step": 4,
+          "row": 0,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 1.3150770962238312,
+          "rms_difference": 0.18056931905235257,
+          "relative_l2_difference": 0.09796472478843862,
+          "cosine": 0.995248995694184,
+          "prediction_equal": true
+        },
+        {
+          "step": 4,
+          "row": 1,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 2.5276546478271484,
+          "rms_difference": 0.3764112791010482,
+          "relative_l2_difference": 0.19505128422030035,
+          "cosine": 0.9809753602431994,
+          "prediction_equal": true
+        },
+        {
+          "step": 5,
+          "row": 0,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 1.2646499574184418,
+          "rms_difference": 0.17807952440134883,
+          "relative_l2_difference": 0.09577952297086581,
+          "cosine": 0.9954395402611596,
+          "prediction_equal": true
+        },
+        {
+          "step": 5,
+          "row": 1,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 2.4912636280059814,
+          "rms_difference": 0.3262413994100404,
+          "relative_l2_difference": 0.16854626575329987,
+          "cosine": 0.9857833780862667,
+          "prediction_equal": true
+        },
+        {
+          "step": 6,
+          "row": 0,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 2.023212432861328,
+          "rms_difference": 0.21539677232859622,
+          "relative_l2_difference": 0.14665607487675097,
+          "cosine": 0.990401887199154,
+          "prediction_equal": true
+        },
+        {
+          "step": 6,
+          "row": 1,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 1.3398265838623047,
+          "rms_difference": 0.2870044159204522,
+          "relative_l2_difference": 0.14811535964094538,
+          "cosine": 0.9890197423007056,
+          "prediction_equal": true
+        },
+        {
+          "step": 7,
+          "row": 0,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 1.1809327602386475,
+          "rms_difference": 0.1629832794224436,
+          "relative_l2_difference": 0.11181116511012369,
+          "cosine": 0.9938188120635861,
+          "prediction_equal": true
+        },
+        {
+          "step": 7,
+          "row": 1,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 1.505034327507019,
+          "rms_difference": 0.30884619865400303,
+          "relative_l2_difference": 0.15968903665961773,
+          "cosine": 0.9872831982382565,
+          "prediction_equal": true
+        },
+        {
+          "step": 8,
+          "row": 0,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 1.3724403381347656,
+          "rms_difference": 0.16895939994365936,
+          "relative_l2_difference": 0.0950762613396368,
+          "cosine": 0.9956037535725903,
+          "prediction_equal": true
+        },
+        {
+          "step": 8,
+          "row": 1,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 1.7618885040283203,
+          "rms_difference": 0.3655818553221439,
+          "relative_l2_difference": 0.19048892244271973,
+          "cosine": 0.9818498668881722,
+          "prediction_equal": false
+        },
+        {
+          "step": 9,
+          "row": 0,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 1.5464134216308594,
+          "rms_difference": 0.20620744155422083,
+          "relative_l2_difference": 0.11974160780172129,
+          "cosine": 0.9928052004697603,
+          "prediction_equal": true
+        },
+        {
+          "step": 9,
+          "row": 1,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 2.107583999633789,
+          "rms_difference": 0.3325788798523728,
+          "relative_l2_difference": 0.17312503522958667,
+          "cosine": 0.9849785879621596,
+          "prediction_equal": true
+        },
+        {
+          "step": 10,
+          "row": 0,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 1.0820541381835938,
+          "rms_difference": 0.18143136710562682,
+          "relative_l2_difference": 0.10227379065125346,
+          "cosine": 0.9948553701517981,
+          "prediction_equal": true
+        },
+        {
+          "step": 10,
+          "row": 1,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 1.9598493576049805,
+          "rms_difference": 0.32308236963540565,
+          "relative_l2_difference": 0.17282655084476156,
+          "cosine": 0.9850098908921145,
+          "prediction_equal": true
+        },
+        {
+          "step": 11,
+          "row": 0,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 0.813645988702774,
+          "rms_difference": 0.18521675370642457,
+          "relative_l2_difference": 0.10681896900157578,
+          "cosine": 0.994305586785765,
+          "prediction_equal": true
+        },
+        {
+          "step": 11,
+          "row": 1,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 2.0036911368370056,
+          "rms_difference": 0.2804076577992642,
+          "relative_l2_difference": 0.14660819039152678,
+          "cosine": 0.9892183537709865,
+          "prediction_equal": true
+        },
+        {
+          "step": 12,
+          "row": 0,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 1.3892555236816406,
+          "rms_difference": 0.19085906165811686,
+          "relative_l2_difference": 0.11105859009428326,
+          "cosine": 0.9940294380545396,
+          "prediction_equal": true
+        },
+        {
+          "step": 12,
+          "row": 1,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 1.3495464324951172,
+          "rms_difference": 0.2691748299042532,
+          "relative_l2_difference": 0.1514846817199017,
+          "cosine": 0.9885861116806532,
+          "prediction_equal": true
+        },
+        {
+          "step": 13,
+          "row": 0,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 1.576385498046875,
+          "rms_difference": 0.19880764473101978,
+          "relative_l2_difference": 0.12981087658960433,
+          "cosine": 0.9921736815913409,
+          "prediction_equal": true
+        },
+        {
+          "step": 13,
+          "row": 1,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 1.8614699691534042,
+          "rms_difference": 0.33245499136093803,
+          "relative_l2_difference": 0.17241712402111847,
+          "cosine": 0.9851374776021633,
+          "prediction_equal": true
+        },
+        {
+          "step": 14,
+          "row": 0,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 1.7080488204956055,
+          "rms_difference": 0.18930779891372118,
+          "relative_l2_difference": 0.10438333990261923,
+          "cosine": 0.9946643545191579,
+          "prediction_equal": true
+        },
+        {
+          "step": 14,
+          "row": 1,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 1.7515745162963867,
+          "rms_difference": 0.3078530069269571,
+          "relative_l2_difference": 0.17984868935648762,
+          "cosine": 0.9837588713986254,
+          "prediction_equal": true
+        },
+        {
+          "step": 15,
+          "row": 0,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 1.475545883178711,
+          "rms_difference": 0.21147119994089975,
+          "relative_l2_difference": 0.11371877455647203,
+          "cosine": 0.9935142414952192,
+          "prediction_equal": true
+        },
+        {
+          "step": 15,
+          "row": 1,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 2.0680928230285645,
+          "rms_difference": 0.3243888936916046,
+          "relative_l2_difference": 0.17158637737614674,
+          "cosine": 0.9851943886820661,
+          "prediction_equal": true
+        },
+        {
+          "step": 16,
+          "row": 0,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 2.1399106979370117,
+          "rms_difference": 0.19893664943407918,
+          "relative_l2_difference": 0.11863491213076104,
+          "cosine": 0.9929380129796087,
+          "prediction_equal": true
+        },
+        {
+          "step": 16,
+          "row": 1,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 1.9812030792236328,
+          "rms_difference": 0.29123217195940065,
+          "relative_l2_difference": 0.1512439091821457,
+          "cosine": 0.9885435730579208,
+          "prediction_equal": true
+        },
+        {
+          "step": 17,
+          "row": 0,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 2.2901229858398438,
+          "rms_difference": 0.22382289207509384,
+          "relative_l2_difference": 0.12251461609729164,
+          "cosine": 0.9927499610300192,
+          "prediction_equal": true
+        },
+        {
+          "step": 17,
+          "row": 1,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 2.524209976196289,
+          "rms_difference": 0.3410866257348481,
+          "relative_l2_difference": 0.19772508351601,
+          "cosine": 0.9813208796306042,
+          "prediction_equal": true
+        },
+        {
+          "step": 18,
+          "row": 0,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 1.3993034362792969,
+          "rms_difference": 0.21921351480010334,
+          "relative_l2_difference": 0.12573841398349045,
+          "cosine": 0.992277480225322,
+          "prediction_equal": true
+        },
+        {
+          "step": 18,
+          "row": 1,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 1.8999339044094086,
+          "rms_difference": 0.477905413269804,
+          "relative_l2_difference": 0.261860914029362,
+          "cosine": 0.9658533656324927,
+          "prediction_equal": true
+        },
+        {
+          "step": 19,
+          "row": 0,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 1.9568023681640625,
+          "rms_difference": 0.27063043108806273,
+          "relative_l2_difference": 0.14097698246123816,
+          "cosine": 0.9900949338172979,
+          "prediction_equal": true
+        },
+        {
+          "step": 19,
+          "row": 1,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 1.8351222276687622,
+          "rms_difference": 0.5102448760946209,
+          "relative_l2_difference": 0.27298109567307904,
+          "cosine": 0.9629563236822908,
+          "prediction_equal": false
+        },
+        {
+          "step": 20,
+          "row": 0,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 2.263028144836426,
+          "rms_difference": 0.28150351737499574,
+          "relative_l2_difference": 0.14664708546974156,
+          "cosine": 0.9893723737476048,
+          "prediction_equal": true
+        },
+        {
+          "step": 20,
+          "row": 1,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 2.2841546535491943,
+          "rms_difference": 0.34088048682299416,
+          "relative_l2_difference": 0.21221747378617725,
+          "cosine": 0.9773919484901672,
+          "prediction_equal": true
+        },
+        {
+          "step": 21,
+          "row": 0,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 1.7119197845458984,
+          "rms_difference": 0.21589857028008982,
+          "relative_l2_difference": 0.11233667405894171,
+          "cosine": 0.9936962402579091,
+          "prediction_equal": true
+        },
+        {
+          "step": 21,
+          "row": 1,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 1.401031494140625,
+          "rms_difference": 0.36249678365034416,
+          "relative_l2_difference": 0.19657368480720946,
+          "cosine": 0.9805405038390623,
+          "prediction_equal": true
+        },
+        {
+          "step": 22,
+          "row": 0,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 1.1064910888671875,
+          "rms_difference": 0.19573833802022542,
+          "relative_l2_difference": 0.10780230751901515,
+          "cosine": 0.9942309250891345,
+          "prediction_equal": true
+        },
+        {
+          "step": 22,
+          "row": 1,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 3.03041934967041,
+          "rms_difference": 0.3682692081994235,
+          "relative_l2_difference": 0.19810109185685104,
+          "cosine": 0.9801859388667269,
+          "prediction_equal": false
+        },
+        {
+          "step": 23,
+          "row": 0,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 1.4581470489501953,
+          "rms_difference": 0.2299704224466216,
+          "relative_l2_difference": 0.12251126014051195,
+          "cosine": 0.9925292822369322,
+          "prediction_equal": true
+        },
+        {
+          "step": 23,
+          "row": 1,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 1.8805794715881348,
+          "rms_difference": 0.3359888780232393,
+          "relative_l2_difference": 0.19223959244514063,
+          "cosine": 0.9815041218274057,
+          "prediction_equal": true
+        },
+        {
+          "step": 24,
+          "row": 0,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 1.118056297302246,
+          "rms_difference": 0.2317912888440631,
+          "relative_l2_difference": 0.11855026514042034,
+          "cosine": 0.992969929924042,
+          "prediction_equal": true
+        },
+        {
+          "step": 24,
+          "row": 1,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 4.067249298095703,
+          "rms_difference": 0.5762947116041024,
+          "relative_l2_difference": 0.37321591363288514,
+          "cosine": 0.9277462761823086,
+          "prediction_equal": true
+        },
+        {
+          "step": 25,
+          "row": 0,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 0.966766357421875,
+          "rms_difference": 0.19568179709983705,
+          "relative_l2_difference": 0.10309966412105594,
+          "cosine": 0.994673443117491,
+          "prediction_equal": true
+        },
+        {
+          "step": 25,
+          "row": 1,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 4.222042083740234,
+          "rms_difference": 0.7949109735675588,
+          "relative_l2_difference": 0.41119512742203573,
+          "cosine": 0.9147370069070847,
+          "prediction_equal": true
+        },
+        {
+          "step": 26,
+          "row": 0,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 1.8375086784362793,
+          "rms_difference": 0.20790376173024275,
+          "relative_l2_difference": 0.1096458140374713,
+          "cosine": 0.9940375386363258,
+          "prediction_equal": false
+        },
+        {
+          "step": 26,
+          "row": 1,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 1.8160333633422852,
+          "rms_difference": 0.2561130572081766,
+          "relative_l2_difference": 0.14013106932516664,
+          "cosine": 0.9901501273421004,
+          "prediction_equal": true
+        },
+        {
+          "step": 27,
+          "row": 0,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 1.4756593704223633,
+          "rms_difference": 0.23019351440642696,
+          "relative_l2_difference": 0.11857980776788042,
+          "cosine": 0.9929856293945944,
+          "prediction_equal": true
+        },
+        {
+          "step": 27,
+          "row": 1,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 1.412191390991211,
+          "rms_difference": 0.21940481759797534,
+          "relative_l2_difference": 0.1239515278527062,
+          "cosine": 0.9922969031401235,
+          "prediction_equal": true
+        },
+        {
+          "step": 28,
+          "row": 0,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 1.2384204864501953,
+          "rms_difference": 0.22302510310943266,
+          "relative_l2_difference": 0.1259004592319974,
+          "cosine": 0.9921791084387401,
+          "prediction_equal": true
+        },
+        {
+          "step": 28,
+          "row": 1,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 1.3553762435913086,
+          "rms_difference": 0.24230316497033827,
+          "relative_l2_difference": 0.12531575847806492,
+          "cosine": 0.9921332553699006,
+          "prediction_equal": true
+        },
+        {
+          "step": 29,
+          "row": 0,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 2.3853306770324707,
+          "rms_difference": 0.2467133701714354,
+          "relative_l2_difference": 0.15643766085643418,
+          "cosine": 0.9881062531825462,
+          "prediction_equal": true
+        },
+        {
+          "step": 29,
+          "row": 1,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 2.235175848007202,
+          "rms_difference": 0.30073298189000397,
+          "relative_l2_difference": 0.15604508789147578,
+          "cosine": 0.9877753405670574,
+          "prediction_equal": true
+        },
+        {
+          "step": 30,
+          "row": 0,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 2.318023681640625,
+          "rms_difference": 0.26355005325170033,
+          "relative_l2_difference": 0.1520148918929125,
+          "cosine": 0.9889089651798959,
+          "prediction_equal": true
+        },
+        {
+          "step": 30,
+          "row": 1,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 2.1840996742248535,
+          "rms_difference": 0.2989529432793539,
+          "relative_l2_difference": 0.20174160429744614,
+          "cosine": 0.9794704165845679,
+          "prediction_equal": true
+        },
+        {
+          "step": 31,
+          "row": 0,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 1.5018086433410645,
+          "rms_difference": 0.22174103094333658,
+          "relative_l2_difference": 0.11408367249388758,
+          "cosine": 0.9934968650650533,
+          "prediction_equal": true
+        },
+        {
+          "step": 31,
+          "row": 1,
+          "normalized_bit_exact": false,
+          "maximum_absolute_difference": 2.07647705078125,
+          "rms_difference": 0.3412528215441646,
+          "relative_l2_difference": 0.2092317394994699,
+          "cosine": 0.9778920810953342,
+          "prediction_equal": true
+        }
+      ],
+      "prediction_agreements": 60,
+      "points_compared": 64
+    }
+  ],
+  "correctness_sampled_peak_adapter_bytes": {
+    "fp32-t4": 28795281408,
+    "bf16-t4": 24984756224,
+    "bf16-t32": 24984756224
+  },
+  "replay_verifier_sha256": "6ebd1b87d91e1195d6e2adada2cba506516875a824f3049cb4a716c255609a5f",
+  "archived_replay_verifier_sha256": "6ebd1b87d91e1195d6e2adada2cba506516875a824f3049cb4a716c255609a5f",
+  "quality_promoted": false,
+  "performance_admitted": false,
+  "scope": "Diagnostic, not timing or quality promotion. After closed/replayed BF16 model failure, run3sequential native processes on unchanged01a3DLL/source: FP32/T4 register128 reference, BF16/T4 manual ordinary prefill using existing T4 program, BF16/T32 normal prefill. Same physicalB4,41text/104image,teacher-forced32steps,identical expected histories/positions/JPEGs/weights/nativeNVFP4head. Require FP32 retained teacher IDs and all duplicate pair predictions. Capture raw hidden/normalized vectors, complete canonical hash witnesses and adapter correctness memory; analyze BF16 precision versus prefill effect without assuming either is harmless. No BF16/B8 serving, broaderquality/actual4K/protocol/throughput/2x admission."
+}

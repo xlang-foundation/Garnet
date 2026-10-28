@@ -1,0 +1,47 @@
+{
+  "status": "exact_prior_terminal_replay_and_transport_local_methods_retargeted",
+  "derivations": [
+    {
+      "source": "package-q128-model-postprocess.py",
+      "target": "package-o128-model-postprocess.py",
+      "source_sha256": "cd5c4f9cb21f8faefdd99e15235f50f24f2c3e5f4dd31719472c8ce9e55c011a",
+      "target_sha256": "8edfe2aefd58c3f847194f4da6226ed39f2f5d77235e9365401278e6162257bb",
+      "changes": [
+        {
+          "old": "q128",
+          "new": "o128",
+          "count": 13
+        },
+        {
+          "old": "Q128",
+          "new": "O128",
+          "count": 2
+        }
+      ]
+    },
+    {
+      "source": "replay-q128-model-local.py",
+      "target": "replay-o128-model-local.py",
+      "source_sha256": "b58bf8c6f4d47f7f50c14aa4ae7270f0e34c1c62f59246c4c0b98743596128f1",
+      "target_sha256": "caa6d8a899ac19f07a36de07b46d9d8bd6bc83c85672cd90da2fe21edaab33a9",
+      "changes": [
+        {
+          "old": "q128",
+          "new": "o128",
+          "count": 6
+        },
+        {
+          "old": "Q128",
+          "new": "O128",
+          "count": 4
+        },
+        {
+          "old": "source=O/'full-chunk-stage-attempt2-evidence.zip'",
+          "new": "source=O/'q128-model-admission-attempt1-evidence.zip'",
+          "count": 1
+        }
+      ]
+    }
+  ],
+  "no_model_or_GPU_or_remote_mutation": true
+}

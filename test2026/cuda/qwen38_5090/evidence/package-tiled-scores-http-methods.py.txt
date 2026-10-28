@@ -1,0 +1,12 @@
+from pathlib import Path
+import hashlib,json,zipfile
+w=Path(__file__).resolve().parent;sha=lambda raw:hashlib.sha256(raw).hexdigest()
+plan=json.loads((w/'tiled-scores-http-upload-plan.json').read_bytes());files={}
+for row in plan['uploads']:
+    raw=Path(row['local']).read_bytes();assert sha(raw)==row['sha256'];files[row['target']]=raw
+assert len(files)==13;archive=w/'tiled-scores-http-methods.zip';assert not archive.exists()
+with zipfile.ZipFile(archive,'x',zipfile.ZIP_DEFLATED) as z:
+    for n,raw in files.items():z.writestr(n,raw)
+    z.writestr('install-manifest.json',json.dumps({'files':{n:sha(raw) for n,raw in files.items()},'scope':'Absent-only explicit tiled-kernel HTTP methods/checkers/preparation. No runtime/model/SDK/baseline source replacement. GPU execution separately owned and logged.'},indent=2))
+result={'status':'tiled_scores_http_method_bundle_prepared','bundle_sha256':sha(archive.read_bytes()),'bytes':archive.stat().st_size,'targets':13,'installer_sha256':sha((w/'install-tiled-scores-http-methods.py').read_bytes())}
+(w/'tiled-scores-http-bundle-preparation.json').write_bytes(json.dumps(result,indent=2).encode());print(json.dumps(result))

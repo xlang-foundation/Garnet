@@ -1,0 +1,33 @@
+from pathlib import Path
+import hashlib,json,os,sys,zipfile
+W=Path(__file__).resolve().parent;O=W.parent/'outputs';R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';E=M/'evidence';P='Garnet/test2026/cuda/qwen38_5090/';sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+sys.path[:0]=[str(M),str(R)];import run_logged as ledger
+prep=E/'b4-rowwise-http-quality-preparation.json';assert sha(prep)=='940e7fee408f3c2591b2a28ef49d7856433e57070323c2cc2905d7c2f1ac9088';old=json.loads(prep.read_bytes())
+audit=O/'b4-rowwise-http-quality-attempt1-preflight-audit.json';a=json.loads(audit.read_bytes());assert a['observed_owner_exit_code']==1 and a['error_reproduced_without_native_or_model_execution'] and a['all_source_runtime_environment_config_index_CMake_all34_and_full18_model_hashes_match_before'] and not a['model_or_GPU_execution_performed']
+names=json.loads((W/'b4-rowwise-http-quality-owned-names.json').read_bytes())+['b4_http_source_bundle.py','test_b4_http_source_bundle.py'];names=list(dict.fromkeys(names));files=dict(old['files'])
+ledger.source_identity=lambda:dict(scope='Explicit source91 HTTP loader-domain correction; CPU-only17 transport/event/bundle controls, no native/model/GPU execution',owned_source_sha256={n:sha(M/n) for n in names})
+tests=old['http_test_modules']+['test2026.cuda.qwen38_5090.test_b4_http_source_bundle'];os.chdir(R)
+assert ledger.run([sys.executable,'-m','unittest',*tests],W/'b4-rowwise-http-quality-v2-cpu-ledger','correctness','17 CPU controls including exact89model+2transport path allowlist; first native/model-only loader rejection retained. No model or GPU execution.',[M/n for n in names])==0
+def keep(n,raw):
+    p=E/n;assert not p.exists();p.write_bytes(raw);names.append('evidence/'+n)
+keep('b4-rowwise-http-quality-attempt1-preflight-preparation.json',prep.read_bytes());keep(audit.name,audit.read_bytes())
+for ext in ('log','jsonl'):keep('b4-rowwise-http-quality-v2-cpu-commands.'+ext,(W/'b4-rowwise-http-quality-v2-cpu-ledger'/('commands.'+ext)).read_bytes())
+for n in ('audit-b4-http-preflight1.py',Path(__file__).name):keep(n+'.txt',(W/n).read_bytes())
+replacements={}
+for n in names:
+    key=P+n;h=sha(M/n)
+    if key in old['files'] and h!=old['files'][key]:replacements[key]=old['files'][key]
+    files[key]=h
+replacements[P+'evidence/'+prep.name]=sha(prep)
+frozen='results/b4-rowwise-http-quality-attempt1-preflight-deployment.zip';files[frozen]=sha(W/'b4-rowwise-http-quality-deployment.zip');assert files[frozen]==a['original_deployment_sha256']
+p={**old};p.update(files=files,archive_files=sorted(set(old['archive_files'])|{P+n for n in names}|{frozen}),http_test_modules=tests,first_preflight_failure=a,expected_install_replacements=replacements)
+p['reader_dependencies']=list(dict.fromkeys(old['reader_dependencies']+['b4_http_source_bundle.py']))
+p['scope']=old['scope'].replace('14 CPU and14 actual embedded','17 CPU and17 actual embedded')+' Attempt1 exited before source overlay/model/native execution because historical candidate_bytes accepts src/xModel only. Original package/preparation and CPU-only postfailure hash audit retained; exact89model+two fixed transport path loader replaces that incompatible helper for attempt2. No native/model bundle/DLL math change.'
+p['installed_files']={**files,**{'Garnet/'+n:h for n,h in p['source_files'].items()}}
+prep.write_bytes(json.dumps(p,indent=2).encode());deploy={P+n:M/n for n in names};deploy[P+'evidence/'+prep.name]=prep
+package=W/'b4-rowwise-http-quality-v2-deployment.zip';assert not package.exists()
+with zipfile.ZipFile(package,'x',zipfile.ZIP_DEFLATED) as z:
+    for n,path in deploy.items():z.write(path,n)
+    z.writestr('deployment-manifest.json',json.dumps(dict(files={n:sha(path) for n,path in deploy.items()},native_DLL_change=False,expected_replacements=replacements),indent=2))
+receipt=dict(deployment_sha256=sha(package),bytes=package.stat().st_size,files=len(deploy),preparation_sha256=sha(prep),source_bundle_sha256=p['bundle_sha256'],changed_native_model_bytes=False,expected_install_replacements=replacements,CPU_controls_passed=17,embedded_HTTP_GPU_unrun=True,failed_attempt1_audit_sha256=sha(audit))
+(W/'b4-rowwise-http-quality-v2-package.json').write_bytes(json.dumps(receipt,indent=2).encode());(W/'b4-rowwise-http-quality-v2-owned-names.json').write_bytes(json.dumps(names).encode());print(json.dumps(receipt))

@@ -1,0 +1,27 @@
+"""Keep new native sources, controls and reference source audit reviewable."""
+from pathlib import Path
+from datetime import datetime,timezone
+import hashlib,json,subprocess
+W=Path(__file__).resolve().parent;O=W.parent/'outputs';R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';E=M/'evidence';sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest();owned=[]
+d=json.loads((W/'b4-prefill32-tiled-scores-derivation.json').read_bytes());p=json.loads((W/'b4-prefill32-tiled-scores-component-package.json').read_bytes());assert p['source_archive_sha256']==sha(W/'b4-prefill32-tiled-scores-component-source.zip') and p['owner_sha256']==sha(W/'run-b4-prefill32-tiled-scores-component.py')
+for n,h in d['files'].items():assert sha(R/n)==h;owned.append(R/n)
+owned.append(M/'probe_b4_prefill32_tiled_scores.cu')
+c=json.loads((W/'large-prompt-page-CPU-controls.json').read_bytes());assert c['tests_passed']==4 and not c['model_or_native_or_speed_qualified']
+for n,h in c['files_sha256'].items():assert sha(M/n)==h
+owned += [M/'large_paged_prompt_rows.py',M/'test_large_paged_prompt_rows.py']
+def keep(name,path):
+ f=E/name;assert not f.exists();f.parent.mkdir(parents=True,exist_ok=True);f.write_bytes(path.read_bytes());owned.append(f)
+for n in ('derive-b4-prefill32-tiled-scores.py','b4-prefill32-tiled-scores-derivation.json','run-b4-prefill32-tiled-scores-component.py','prepare-b4-tiled-score-component.py','b4-prefill32-tiled-scores-component-package.json','b4-prefill32-tiled-scores-component-source.zip','check-large-prompt-page-controls.py','large-prompt-page-CPU-controls.json','snapshot-reference-backend-guidance.py','snapshot-reference-backend-guidance-linux.py','audit-installed-reference-backends.py','installed-reference-backend-guidance-audit.json',Path(__file__).name):keep(n+('.txt' if n.endswith('.py') else ''),W/n)
+for ext in ('jsonl','log'):keep('large-prompt-page-CPU-commands.'+ext,W/'large-prompt-page-CPU-ledger'/('commands.'+ext))
+keep('reference-installed-backend-guidance-attempt1-evidence.zip',O/'reference-installed-backend-guidance-attempt1-evidence.zip')
+up=W/'upstream-reference-guidance'
+for f in sorted(up.iterdir()):
+ if f.is_file():keep('reference-upstream-guidance/'+f.name+('.txt' if f.suffix=='.py' else ''),f)
+keep('reference-upstream-guidance/retain-reference-upstream-guidance.py.txt',W/'retain-reference-upstream-guidance.py')
+entry='\n\n'+datetime.now(timezone.utc).isoformat()+': Closed paired host diagnosis e2d4c0ca0e5ef5f7152cbe9345cb5d45bfbce48361ab5b894290e786c7aeb551 covers12actual physical groups/31profiled IDs plus31unprofiled controls. Median inclusive physical-group host prefill11.037453s and generation3.187057s; nested substage medians cannot be added or called GPU kernel costs. Source reads identify asynchronous enqueue and prompt-source materialization outside child spans, so no isolated culprit is asserted.\nPrepared a separate unwired B4T32 native score-tiling component, source package '+p['source_archive_sha256']+'. Existing legacy CUDA source unchanged. Copy the exact qualified B1T128 scoresTiled16 body, retaining eight-FMA/warp dot order and byte-identical normalization/context/BF16 read helpers; restrict the new export to B4T32. No existing CMake target, Garnet DLL, factory or serving path changes. Actual remote SM120 compilation, four synthetic native full-output/readonly/negative fixtures and24 CUDA-event intervals required next. Component timing cannot establish VLM speed. A separate opt-in larger prompt-page helper passes4 CPU source/visual/shifted-MTP/LRU/lifetime/bounds controls; old128-page policy unchanged. Native byte/IO timing and model admission remain unrun, and that alternative is deferred behind the direct native component test.\nRead-only installed reference snapshot 8b3eab0e12634dadb7709f382620e609ad237aee07c3a933c979bf28f4283870 independently verifies12manifest entries including9engine source files and version metadata: vLLM0.32.0, SGLang0.5.22. Installed vLLM attention base/GDN and SGLang server_args bytes exactly match fetched official upstream tags. GDN inherits batch-invariance support=False; this is static advertised capability, not an actual flag invocation or cause of earlier MTP ID mismatch. SGLang deterministic field names alone do not establish mixed-quantization/MTP compatibility. A malformed65character manual PTY hash copy was rejected and corrected from an independent remote SHA read in32character halves; archive bytes unchanged. No engine/Torch/CUDA imports or reference model run in this snapshot. Strongest repeated tuned/MTP references, INT4/4B, production integration and2x/halfTTFT remain open.\n'
+for n in ('docs/research/qwen38-5090-development-log.md','docs/research/qwen38-5090-implementation-task.md'):
+ f=R/n;assert b'Prepared a separate unwired B4T32 native score-tiling component' not in f.read_bytes()
+ with f.open('ab') as stream:stream.write(entry.encode())
+ owned.append(f)
+stage=W/'tiled-component-and-reference-preparation-stage-paths.bin';stage.write_bytes(b''.join(f.relative_to(R).as_posix().encode()+b'\0' for f in dict.fromkeys(owned)))
+subprocess.run(['git','-c','core.autocrlf=false','add','--pathspec-from-file='+str(stage),'--pathspec-file-nul'],cwd=R,check=True);print(json.dumps(dict(staged_paths=len(set(owned)),native_component_GPU_unrun=True,model_speed_claim=False)))

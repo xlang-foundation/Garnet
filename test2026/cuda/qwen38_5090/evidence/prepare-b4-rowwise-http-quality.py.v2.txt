@@ -1,0 +1,56 @@
+from pathlib import Path
+import ast,hashlib,json,os,sys,zipfile
+W=Path(__file__).resolve().parent;O=W.parent/'outputs';R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';E=M/'evidence';P='Garnet/test2026/cuda/qwen38_5090/';sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+sys.path[:0]=[str(M),str(R)];import run_logged as ledger
+names=['b4_serving_request.py','b4_rowwise_http_admission.py','native_b4_rowwise_http_worker.py','launch_b4_rowwise_http_worker.py','probe_b4_rowwise_http_quality.py','test_b4_http_protocol.py','native_b4_http_protocol_candidate/native_http_bridge.py','native_b4_http_protocol_candidate/native_worker_io.py','b4_http_event_gate.py','test_b4_http_event_gate.py','run_b4_http_embedded_cpu.py','launch_b4_http_embedded_cpu.py','run_b4_rowwise_http_quality.py','verify_b4_rowwise_http_quality.py','evidence/b4-http-protocol-derivation.json','evidence/qwen38-nvfp4-current-inputs.json']
+for n in names:
+    if n.endswith('.py'):ast.parse((M/n).read_bytes())
+ledger.source_identity=lambda:dict(scope='Explicit source91 protocol and independent event reader controls; CPU only, protected bodies excluded',owned_source_sha256={n:sha(M/n) for n in names})
+os.chdir(R);tests=['test2026.cuda.qwen38_5090.test_b4_http_protocol','test2026.cuda.qwen38_5090.test_b4_http_event_gate']
+if not (W/'b4-rowwise-http-quality-cpu-ledger').exists():
+    assert ledger.run([sys.executable,'-m','unittest',*tests],W/'b4-rowwise-http-quality-cpu-ledger','correctness','Fourteen protocol and raw callback/dispatch replay CPU controls; no native, HTTP or GPU execution.',[M/n for n in names])==0
+rows=[json.loads(n) for n in (W/'b4-rowwise-http-quality-cpu-ledger/commands.jsonl').read_bytes().splitlines()];assert len(rows)==2 and rows[0]['source']==rows[1]['source_after'] and rows[1]['exit_code']==0
+for n,h in rows[0]['source']['owned_source_sha256'].items():assert sha(M/n)==h
+def keep(n,raw):
+    path=E/n
+    if path.exists():assert path.read_bytes()==raw
+    else:path.write_bytes(raw)
+    names.append('evidence/'+n)
+for ext in ('jsonl','log'):keep('b4-rowwise-http-quality-cpu-commands.'+ext,(W/'b4-rowwise-http-quality-cpu-ledger'/('commands.'+ext)).read_bytes())
+names.append('evidence/'+Path(__file__).name+'.txt') # Preserve initial unexecuted preparation attempt.
+keep(Path(__file__).name+'.v2.txt',Path(__file__).read_bytes())
+for n,h in {'native_http_bridge.py':'0279af2fbbabf03886be8d041ffe50c2e1f461a95166ebf6c20b717933249d5b','native_worker_io.py':'763d61a0e7f34794bca269e4214fa03ff64b95b913778182e7c34fe40292dc84'}.items():
+    assert sha(M/n)==h;names.append(n) # Fresh SSH observation matched these local bytes before installation.
+old=json.loads((E/'b4-padding-lifecycle-preparation.json').read_bytes());job='b4-padding-lifecycle-attempt1';proof=O/(job+'-verified.json');q=json.loads(proof.read_bytes());assert q['B4_padding_lifecycle_case_gate_passed'] and q['exit_code']==0 and q['source_runtime_SDK_config_index_CMake_all34_baseline_restored'] and proof.read_bytes()==(O/(job+'-remote-verified.json')).read_bytes()
+assert sha(O/(job+'-evidence.zip'))==q['archive_sha256']
+with zipfile.ZipFile(O/(job+'-evidence.zip')) as z:w=json.loads(z.read('results/'+job+'/workflow.json'))
+assert w['all_restored'] and w['source_after']==old['files'];files=dict(w['source_after'])
+for n in names:
+    if P+n in files:assert files[P+n]==sha(M/n)
+    files[P+n]=sha(M/n)
+manifest=E/'qwen38-nvfp4-current-inputs.json';d=json.loads(manifest.read_bytes());assert sha(manifest)=='ad10ddf8e44385a2fe3e08498bd5a04781835b473d335be1e622266912de4210'
+files['results/qwen38-nvfp4-current-inputs.json']=sha(manifest)
+source89=W/'rowwise-k-norm-mtp256-source.zip';assert sha(source89)==old['bundle_sha256']
+with zipfile.ZipFile(source89) as z:source={n:z.read(n) for n in z.namelist()}
+assert {n:hashlib.sha256(b).hexdigest() for n,b in source.items()}==old['source_files'] and len(source)==89
+base=dict(old['candidate_base'])
+for n in ('native_http_bridge.py','native_worker_io.py'):
+    target='test2026/cuda/qwen38_5090/'+n;assert target not in source and sha(M/n)==files[P+n]
+    base[target]=files[P+n];source[target]=(M/'native_b4_http_protocol_candidate'/n).read_bytes()
+bundle=W/'b4-rowwise-http-source.zip';assert not bundle.exists()
+with zipfile.ZipFile(bundle,'x',zipfile.ZIP_DEFLATED) as z:
+    for n,b in source.items():z.writestr(n,b)
+parents=dict(old['parents']);assert job not in parents;parents[job]=dict(proof_sha256=sha(proof),archive_sha256=q['archive_sha256'],status=q['status'],exit_code=0)
+assert len(parents)==57
+for name,row in parents.items():
+    path=O/(name+'-verified.json');v=json.loads(path.read_bytes());assert sha(path)==row['proof_sha256'] and path.read_bytes()==(O/(name+'-remote-verified.json')).read_bytes() and sha(O/(name+'-evidence.zip'))==v['archive_sha256']==row['archive_sha256']
+p={**old};p.update(status='B4_rowwise_HTTP_quality_prepared_GPU_unrun',files=files,archive_files=sorted(set(old['archive_files'])|{P+n for n in names}),parents=parents,model_parents={n:parents[n] for n in ('rowwise-k-norm-mtp256-full4k-attempt1',job)},model_source_files=old['source_files'],source_files={n:hashlib.sha256(b).hexdigest() for n,b in source.items()},candidate_base=base,bundle='results/b4-rowwise-http-source.zip',bundle_sha256=sha(bundle),model_file_manifest='results/qwen38-nvfp4-current-inputs.json',model_file_manifest_sha256=sha(manifest),model_files=d['files'],http_test_modules=tests,reader_dependencies=['verify_b4_rowwise_http_quality.py','b4_http_event_gate.py','b4_rowwise_http_admission.py','b4_full4k_inputs.py','b4_padding_lifecycle_inputs.py','mmmu_http_quality.py','mmmu_quality_protocol.py','verify_mmmu_http_quality.py','probe_o128_http_quality.py'],scope='Source91=qualified source89 exact model bytes plus two Python transport files; e843 native DLL unchanged, no rebuild. Actual private B4T32/T4 rowwise-K/MTP3/T16 workspace256MiB worker;14 CPU and14 actual embedded controls before HTTP. Fixed3968+128 controls for1/2/3/4 real rows/order/repeat, two C8 waves including explicitly non-performance600000-byte ignored transport padding/request, two text/image SSE controls, invalid ignore_eos rejection, adapted805 natural-stop screening. Independent raw callback/dispatch/request/response replay must prove836 real HTTP outputs, no public dummy IDs, actual joined frame>2MiB and all805 exact IDs vs complete T32 control subset from old enclosing failed HTTP attempt. Posthoc full current18-file SHA256 manifest checked before/after future run, not retroactive historical shard proof or fresh HF LFS verification.57 closed parents, original failures retained. All source/runtime/SDK/config-index/CMake/all34/fullcurrentmodel files restored, owned Ccache nonce retirement. Quality/control run is not a serving benchmark, production admission or2x/halfTTFT evidence.')
+p['installed_files']={**files,**{'Garnet/'+n:h for n,h in p['source_files'].items()}}
+prep=E/'b4-rowwise-http-quality-preparation.json';assert not prep.exists();prep.write_bytes(json.dumps(p,indent=2).encode())
+deploy={P+n:M/n for n in names};deploy[P+'evidence/'+prep.name]=prep;deploy[p['bundle']]=bundle
+package=W/'b4-rowwise-http-quality-deployment.zip';assert not package.exists()
+with zipfile.ZipFile(package,'x',zipfile.ZIP_DEFLATED) as z:
+    for n,path in deploy.items():z.write(path,n)
+    z.writestr('deployment-manifest.json',json.dumps(dict(files={n:sha(path) for n,path in deploy.items()},native_DLL_change=False),indent=2))
+receipt=dict(deployment_sha256=sha(package),bytes=package.stat().st_size,files=len(deploy),source_files=91,model_source_files=89,parents=57,preparation_sha256=sha(prep),bundle_sha256=sha(bundle),CPU_controls_passed=14,embedded_HTTP_GPU_unrun=True)
+(W/'b4-rowwise-http-quality-package.json').write_bytes(json.dumps(receipt,indent=2).encode());(W/'b4-rowwise-http-quality-owned-names.json').write_bytes(json.dumps(names).encode());print(json.dumps(receipt))

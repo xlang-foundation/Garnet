@@ -1,0 +1,57 @@
+{
+  "status": "actual_Q128_model_or_stage_admission_failure_preserved",
+  "archive_sha256": "5641e31a8b378f5fab423df84bfba38fccd9a0f184ad0bbd2d1c60f41828ab4a",
+  "archive_bytes": 155555172,
+  "archive_members": 264,
+  "exit_code": 1,
+  "error": "RuntimeError('Actual stage/control collection failed; preserve raw evidence')",
+  "candidate_library_sha256": "584be8a125d0e2334d5d3d1bcb2ecd8f807cae0b42b047e4198f8830f800347e",
+  "source_library_runtime_SDK_checkpoint_restored": true,
+  "arrays": {
+    "status": "failed_stage_or_primary_capture_preserved_no_full_model_admission",
+    "reports": {
+      "off32": {
+        "status": "full_chunk_stages_collected_primary_profile_exact",
+        "error": null,
+        "stage_frames": 4
+      },
+      "off128": {
+        "status": "full_chunk_stages_collected_primary_profile_exact",
+        "error": null,
+        "stage_frames": 1
+      },
+      "enabled128": {
+        "status": "failed",
+        "error": "AssertionError()",
+        "stage_frames": 1
+      }
+    },
+    "defaultoff": {
+      "status": "Q128_defaultoff_complete_primary_and_stage_parity_passed",
+      "original_primary": {
+        "same_profile_complete_primary_states_vectors_all12cache_arrays_exact": true,
+        "T32_retained128IDs_finalstate_exact": true,
+        "T128_known_failed_full_model_gate_preserved": true
+      },
+      "complete_stage_parity": {
+        "off32": {
+          "complete_stage_entries": 40,
+          "complete_F32_words": 6553600,
+          "all_bytes_exact": true,
+          "complete_readonly_records_exact": true
+        },
+        "off128": {
+          "complete_stage_entries": 10,
+          "complete_F32_words": 6553600,
+          "all_bytes_exact": true,
+          "complete_readonly_records_exact": true
+        }
+      },
+      "no_Q128_route_selected": true
+    }
+  },
+  "actual_Garnet_frontend_negative_cases_pending": true,
+  "full_six_case_model_quality_performance_still_required": true,
+  "model_or_performance_qualified": false,
+  "two_times_target_achieved": false
+}

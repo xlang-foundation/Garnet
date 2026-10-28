@@ -1,0 +1,26 @@
+from pathlib import Path
+import hashlib,json
+work=Path(__file__).resolve().parent;repo=Path('D:/CantorAI/work/qwen38-5090');m=repo/'test2026/cuda/qwen38_5090';e=m/'evidence';paths=[]
+sha=lambda raw:hashlib.sha256(raw).hexdigest()
+def keep(name,raw):
+    path=e/name;assert not path.exists() or path.read_bytes()==raw
+    if not path.exists():path.write_bytes(raw)
+    paths.append(path.relative_to(repo).as_posix())
+r=json.loads((work/'prefill128-native-build-local-inputs.json').read_bytes());assert r['cpu_tests']==56 and len(r['candidate_files'])==13
+for name,h in r['methods'].items():
+    path=repo/name.removeprefix('Garnet/');assert sha(path.read_bytes())==h;paths.append(path.relative_to(repo).as_posix())
+for name in ('prefill128-native-build-local-inputs.json','prefill128-native-build-before-verifier-local-inputs.json'):keep(name,(work/name).read_bytes())
+for name in ('prepare-prefill128-native-build-local.py','prepare-prefill128-native-build-before-verifier-local.py','retain-prefill128-native-build-local.py'):keep(name+'.txt',(work/name).read_bytes())
+for path in (work/'prefill128-native-build-local-cpu-ledger').iterdir():
+    if path.is_file():keep('prefill128-native-build-local-cpu-'+path.name,path.read_bytes())
+status={'status':r['status'],'native_candidate_files':13,'cpu_tests_passed_local':56,'runtime_candidate_bundle_sha256':r['bundle_sha256'],'remote_candidate_deployed':False,'model_or_performance_qualified':False,'two_times_target_achieved':False,'packed_cache_diagnosis_last_observed':'reference_cases_running; empty capture passed; case collection underway','scope':'Native build owner/preflight/restoration, exact source bundle and independent CPU/build replay prepared locally while the sole remote packed model owner remains live. No transfer, source change or second model on remote.'}
+keep('prefill128-native-build-local-status.json',json.dumps(status,indent=2).encode())
+title='Full T128 native build transaction and independent replay prepared locally'
+text='\n\n### 2026-10-25 — '+title+'\n\n'
+text+='Prepared complete native T128 build owner using the fixed existing5090study/build directory. Thirteen source candidates comprise12native T128 sources plus the paired inherited optional tiled-scores overlay; six Python candidates remain separate for later model deployment. Owner saves every original byte, checks absent new targets, reconfigures existingCMake/Release/MT/sm120, builds actualGarnet, runs an isolated plugin CPU contract with stubs never linked intoGarnet, ten external+ten embedded selector checks and955native tokenizer checks, saves a separate candidate DLL and restores original sources/library even on build failure. Source/environment/runtime/parent hashes, failures and actual raw output are archived. This owner remains unrun remotely.\n\n'
+text+='Five pure source transaction/archive controls cover existing+new restoration, unexpected outside edits, unrecorded sources/wrong base, partial installation and malformed source archive; two pure wire replay controls reject missing accounting, enqueue/quality promotion, foreign DLL/version and boolean counts. With49retained constructor/transaction controls,56local tests pass0.299s. Earlier54test inputs and both ledger event pairs retained. Source bundle '+r['bundle_sha256']+'; independent full archive verifier prepared, requiring baseline source/runtime/SDK restoration, actual native build and all CPU raw cases. No local native executable/link/GPU run, no remote transfer during live model, and no model or performance admission.\n\n'
+text+='The sole packed cache diagnostic progressed from construction to reference_cases_running and saved one empty capture, with about22.7GB VRAM in use; actual case and both-machine replay remain pending. After terminal cleanup, bind current remote build/cache snapshot and closed proofs before deployment/build. Then full T128 model equivalence/quality/HTTP checks and wider batch arithmetic repair remain required; overall2x target remains unmet.\n'
+for name in ('qwen38-5090-development-log.md','qwen38-5090-implementation-task.md'):
+    path=repo/'docs/research'/name;raw=path.read_bytes();assert title.encode() not in raw
+    path.write_bytes(raw+text.encode());paths.append(path.relative_to(repo).as_posix())
+(work/'prefill128-native-build-local-retained-paths.json').write_bytes(json.dumps(sorted(set(paths)),indent=2).encode());print(json.dumps({'status':status['status'],'retained_paths':len(set(paths))}))

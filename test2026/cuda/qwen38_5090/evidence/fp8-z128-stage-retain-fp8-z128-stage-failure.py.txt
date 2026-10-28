@@ -1,0 +1,58 @@
+"""Retain failed integrated Z128 stage evidence without promoting partial profiles."""
+from pathlib import Path
+import hashlib,json,re,zipfile
+work=Path(__file__).resolve().parent;out=work.parent/'outputs';repo=Path('D:/CantorAI/work/qwen38-5090');m=repo/'test2026/cuda/qwen38_5090';e=m/'evidence';paths=[]
+sha=lambda raw:hashlib.sha256(raw).hexdigest()
+JOB='fp8-z128-stage-witness-attempt1';PREFIX='Garnet/test2026/cuda/qwen38_5090/'
+
+def keep(name,raw):
+    target=e/name;assert not target.exists() or target.read_bytes()==raw,target
+    if not target.exists():target.write_bytes(raw)
+    paths.append(target.relative_to(repo).as_posix())
+
+proof=(out/(JOB+'-verified.json')).read_bytes();analysis=(out/(JOB+'-analysis.json')).read_bytes()
+assert proof==(out/(JOB+'-remote-verified.json')).read_bytes() and analysis==(out/(JOB+'-remote-analysis.json')).read_bytes()
+q=json.loads(proof);a=json.loads(analysis);archive=out/(JOB+'-evidence.zip');assert sha(archive.read_bytes())==q['archive_sha256']
+assert q['status']=='fp8_z128_stage_failure_or_remaining_difference_preserved' and a['unchanged_old_T32_baseline_arrays_compared']==200 and a['partial_output_f32_words_replayed']==29515776
+with zipfile.ZipFile(archive) as z:
+    manifest=json.loads(z.read('evidence-manifest.json'));assert z.testzip() is None and len(z.namelist())==len(set(z.namelist()))==len(manifest['files'])+1
+    for name,h in manifest['files'].items():assert sha(z.read(name))==h
+    base='results/'+JOB+'/';praw=z.read(PREFIX+'evidence/fp8-z128-stage-witness-preparation.json');p=json.loads(praw);w=json.loads(z.read(base+'workflow.json'))
+    assert w['exit_code']==1 and w['cleanup_finished'] and w['baseline_source_restored'] and w['baseline_library_restored']
+    assert len(w['policy_controls'])==10 and len(p['candidate_files'])==28
+    keep(JOB+'-evidence-manifest.json',z.read('evidence-manifest.json'));keep('fp8-z128-stage-witness-preparation.json',praw)
+    for name in z.namelist():
+        if name.startswith(base) and name.endswith(('.json','.jsonl','.log','.txt')):keep(JOB+'-'+name.removeprefix(base).replace('/','-'),z.read(name))
+    for name,h in p['new_files'].items():
+        path=repo/name.removeprefix('Garnet/');assert sha(path.read_bytes())==h
+        paths.append(path.relative_to(repo).as_posix())
+    remote_cpu=float(re.search(rb'Ran 29 tests in ([0-9.]+)s',z.read(base+'cpu-ledger/commands.log')).group(1))
+for suffix in ('-verified.json','-remote-verified.json','-analysis.json','-remote-analysis.json','-local-replay.log','-local-analysis.log'):keep(JOB+suffix,(out/(JOB+suffix)).read_bytes())
+for name in ('fp8-z128-stage-witness-package.json','fp8-z128-stage-witness-install.json'):keep(name,(work/name).read_bytes())
+for path in (work/'fp8-z128-stage-witness-local-cpu-ledger').iterdir():
+    if path.is_file():keep('fp8-z128-stage-local-cpu-'+path.name,path.read_bytes())
+for name in ('derive-fp8-z128-stage-witness.py','derive-fp8-z128-stage-owner.py','install-fp8-z128-stage-witness.py','retain-fp8-z128-stage-failure.py','pack-verified-zip-transport.py','reconstruct-verified-zip-transport.py'):keep('fp8-z128-stage-'+name+'.txt',(work/name).read_bytes())
+paths.append((m/'analyze_fp8_z128_stage_failure.py').relative_to(repo).as_posix())
+with zipfile.ZipFile(work/(JOB+'-transport.zip')) as z:transport=json.loads(z.read('transport.json'))
+assert transport['original_sha256']==q['archive_sha256'] and transport['original_bytes']==archive.stat().st_size and transport['original_proof_sha256']==sha(proof)
+keep(JOB+'-transport-receipt.json',json.dumps({'transport_sha256':sha((work/(JOB+'-transport.zip')).read_bytes()),'transport_bytes':(work/(JOB+'-transport.zip')).stat().st_size,'exact_reconstruction':transport},indent=2).encode())
+plan={'status':'initialization_failure_preserved_requires_diagnostics','steps':[
+ 'Keep original failed stage owner/preparation/collector/checker and raw evidence immutable. Both full failure proofs and independent partial analysis must agree across machines.',
+ 'Trace the same native28 DLL initialization after T32 graph executions using a distinct exclusive diagnostic owner and documented cuBLASLt logging. Fresh T128 policy-only graph construction succeeded; main T128 graph construction failed after two T32 profiles. Root cause is unproven. Capture API status, descriptors, algorithm choice and resource state before changing selection logic.',
+ 'Preserve full opaque/shape/device/version/workspace/numerical gates. If a source fix is justified by trace, qualify its actual native helper and plugin, build the full DLL with a restore transaction, then repeat all policy and eight real128 primary/stage profiles.',
+ 'Only after stage gates pass, run unchanged full3968+128 six-case state/vector/ID gate and805quality, then matched HTTP repetitions and strongest feasible tuned/MTP references. Original2xdecodeANDthroughput, halfTTFT additional, INT4/4B and B8 arithmetic work remain open.'
+ ],'model_or_quality_or_performance_qualified':False,'two_times_target_achieved':False}
+keep('fp8-z128-stage-failure-next-plan.json',json.dumps(plan,indent=2).encode())
+result={'status':a['status'],'archive_sha256':q['archive_sha256'],'archive_bytes':archive.stat().st_size,'archive_members':len(manifest['files'])+1,'proof_pair_sha256':sha(proof),'analysis_pair_sha256':sha(analysis),'candidate_library_sha256':p['candidate_library_sha256'],'source_pins':len(p['files']),'installed_pins':len(p['installed_files']),'native_source_union':28,'existing_targets_restored':8,'new_targets_removed':20,'CPU_tests':29,'remote_CPU_seconds':remote_cpu,'fresh_policy_controls':10,'frontend_rejections':10,'complete_finite_array_entries':203,'completed_T32_profiles':2,'partial_output_F32_words_replayed':a['partial_output_f32_words_replayed'],'old_T32_baseline_arrays_compared':200,'ordinary_diagnostic_primary_exact':True,'first_main_T128_graph_built_or_inferred':False,'plugin_initialization_root_cause_established':False,'source_runtime_sdk_checkpoint_restored':True,'model_or_quality_or_performance_qualified':False,'two_times_target_achieved':False,'next_plan':plan}
+raw=json.dumps(result,indent=2).encode();keep('fp8-z128-stage-failure-closure.json',raw);(out/'Garnet-FP8-Z128-Stage-Failure-Verified.json').write_bytes(raw)
+title='Integrated Z128 stage attempt: fresh policy controls pass, main T128 graph initialization fails'
+text='\n\n### 2026-10-26 — '+title+'\n\n'
+text+='Exclusive native28 stage owner used closed DLL '+p['candidate_library_sha256']+'. All29CPU tests passed locally4.246s/remote'+str(remote_cpu)+'s. Ten fresh-process policy frontend controls passed: unset/empty/0/1 plus six malformed strings. Default/off graph counters stayed0; on T128 Z counter1 and oldM128 counter1. These policy graphs did not execute inference. All10 malformed diagnostic frontend attributes also rejected.\n\n'
+text+='The main actual-real128 collector completed only layer0T32 ordinary and diagnostic profiles (3warmups/2repeats/four carried32-token chunks), then failed building first layer0T128 ordinary graph. TensorRT reported PluginV2Runner.allocateResources ErrorCode5 and buildSerializedNetwork failed. No main T128 graph output or stage array exists. Fresh T128 policy-only construction had succeeded in another process; cause of the later failure is unproven. Preserve opaque/shape/workspace/numerical gates and diagnose initialization before modifying code.\n\n'
+text+='Full frozen failed-run verifier replays on both machines with identical proof '+sha(proof)+', expected exit1. Separate postfailure analyzer passes on both with identical proof '+sha(analysis)+':203complete finite entries,29,515,776F32 output words across two completed T32 profiles, exact ordinary/diagnostic primary, readonly inputs/carriedhistory/state/repeats, all200completed input/state/output arrays exactly equal oldstage baseline. This establishes only partialT32 preservation, not T128 qualification or full-model cause.\n\n'
+text+='Original archive '+q['archive_sha256']+' ('+str(archive.stat().st_size)+'bytes/'+str(len(manifest['files'])+1)+'members) reconstructed losslessly from deduplicated transport; original ZIP bytes/hash/CRC and every manifest file checked. Source905/installed925/runtime/SDK/checkpoint pins restored;8existing native files restored/20new removed, baseline1a1d DLL restored, owned SSD engine files retired. Raw failures, original methods, source/prep/ledgers/resource observations and both proof pairs retained.\n\n'
+text+='Next distinct diagnostic will enable cuBLASLt API/heuristic logging for same DLL and graph order; logged execution is correctness diagnostics only, never a benchmark. Full3968+128 state/vector/ID,805quality, HTTP/repetitions/tunedMTPreferences and original2xdecodeANDthroughput/halfTTFTextra/INT4/4B goals remain active. Published comparison charts remain unchanged.\n'
+for name in ('qwen38-5090-development-log.md','qwen38-5090-implementation-task.md'):
+    target=repo/'docs/research'/name;before=target.read_bytes();assert title.encode() not in before;target.write_bytes(before+text.encode());paths.append(target.relative_to(repo).as_posix())
+(work/'fp8-z128-stage-retained-paths.json').write_bytes(json.dumps(sorted(set(paths)),indent=2).encode())
+print(json.dumps({'status':result['status'],'paths':len(set(paths)),'proof_pair_sha256':sha(proof),'analysis_pair_sha256':sha(analysis),'model_or_performance_qualified':False}))

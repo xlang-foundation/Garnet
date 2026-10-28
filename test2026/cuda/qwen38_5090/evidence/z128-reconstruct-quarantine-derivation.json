@@ -1,0 +1,30 @@
+{
+  "status": "retain_all_CPU_controls_and_quarantine_unqualified_SDK_module_telemetry",
+  "base": "verify_z128_reconstruct_construction_attempt2.py",
+  "base_sha256": "dd234d6c4042392db82060fb480e3f207ac3547ba03ac5c55ee59a2c39037b8f",
+  "target": "analyze_z128_reconstruct_quarantine.py",
+  "target_sha256": "01c75fe58000cbcc9fafb8a984a5ad665ec0f73e1f70c7c76234eb7a3d534c71",
+  "changes": [
+    {
+      "before": "sha(Path(__file__).read_bytes())==p['methods'][M+Path(__file__).name]",
+      "after": "sha(Path(__file__).with_name('verify_z128_reconstruct_construction_attempt2.py').read_bytes())==p['methods'][M+'verify_z128_reconstruct_construction_attempt2.py']",
+      "count": 1
+    },
+    {
+      "before": "path=bytes.fromhex(item['path_hex']).decode().replace('\\\\','/').lower();assert path=='d:/cantorai/5090-study-20261023/build/bin/'+item['name'].lower() and item['name'] in p['runtime']",
+      "after": "path=bytes.fromhex(item['path_hex']).decode().replace('\\\\','/').lower()\n                            if item['name']=='cublasLt64_13.dll':assert path=='d:/cantorai/5090-study-20261023/build/bin/cublaslt64_13.dll'\n                            else:\n                                assert item['name']=='cudart64_13.dll' and path=='d:/cantorai/5090-study-20261023/results/'+JOB+'/sdk-build/constructor.exe'\n                                # Preserve the rejected field; this checker establishes no active CUDA runtime identity.\n                                assert b'GetModuleFileNameA(GetModuleHandleA(names[i]),path,MAX_PATH)' in z.read(M+'probe_z128_reconstruct_sdk.cpp')",
+      "count": 1
+    },
+    {
+      "before": "'status':'separate_Z128_API_reconstruction_constructor_CPU_SDK_replayed' if passed else 'separate_Z128_API_reconstruction_constructor_failure_preserved'",
+      "after": "'status':'separate_Z128_CPU_contracts_and_SDK_observations_runtime_metadata_unqualified' if passed else 'separate_Z128_partial_observation_failure_preserved','active_CUDA_runtime_identity_established':False,'original_frozen_checker_rejected_runtime_module_field':True,'CPU_and_SDK_observation_replay_only':True",
+      "count": 1
+    },
+    {
+      "before": "target=a.proofs/(JOB+'-verified.json')",
+      "after": "target=a.proofs/(JOB+'-quarantine-verified.json')",
+      "count": 1
+    }
+  ],
+  "scope": "Original frozen verifier remains rejected. Complete1400CPU and allSDKconstructor/config observations replayed, but wrong cudart module field is explicitly unqualified. This post-analysis does not qualify CUDA runtime identity or any model/numerical/performance behavior."
+}

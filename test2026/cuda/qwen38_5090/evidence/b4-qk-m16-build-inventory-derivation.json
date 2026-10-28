@@ -1,0 +1,130 @@
+{
+  "derivations": [
+    {
+      "source": "inspect-b4-v-m16-build-inputs.py",
+      "target": "inspect-b4-qk-m16-build-inputs.py",
+      "source_sha256": "556a8f07438a5844148bdef2ad4f3837ba95acfb00e6e9c443d3ed4bc7196327",
+      "target_sha256": "14d29490a8d8f32f6250a1cda2a045c79d83ecbff65d4506eb3d8709cedfc4b2",
+      "changes": [
+        {
+          "old": "b4-decode-m16-build-preparation.json",
+          "new": "b4-v-m16-build-preparation.json",
+          "count": 1
+        },
+        {
+          "old": "b4-v-m16-cpu-v2-preparation.json",
+          "new": "b4-qk-m16-cpu-v2-preparation.json",
+          "count": 1
+        },
+        {
+          "old": "b4_v_m16_source",
+          "new": "b4_qk_m16_source",
+          "count": 1
+        },
+        {
+          "old": "len(candidate)==73",
+          "new": "len(candidate)==79",
+          "count": 1
+        },
+        {
+          "old": "len(targets)==73",
+          "new": "len(targets)==79",
+          "count": 1
+        },
+        {
+          "old": "[('b4-v-m16-cpu-attempt2',0),('b4-v-m16-cpu-attempt1',1),('b4-decode-m16-build-attempt1',0),('connected-fa-value-attempt4',0),('fa-value-sdk-control-attempt1',1),('b4-b1-short-m16-admission-attempt1',1)]",
+          "new": "[('b4-qk-m16-cpu-attempt1',0),('b4-v-m16-build-attempt1',0),('b4-v-m16-short-attempt1',1),('v-m16-connected-attempt1',0),('fp8-decode-shape-configs-attempt2',0)]",
+          "count": 1
+        },
+        {
+          "old": "job=='b4-v-m16-cpu-attempt2'",
+          "new": "job=='b4-qk-m16-cpu-attempt1'",
+          "count": 1
+        },
+        {
+          "old": "B4T4_V_M16_actual_CPU_contracts_replayed",
+          "new": "B4T4_QK_M16_actual_CPU_contracts_replayed",
+          "count": 1
+        },
+        {
+          "old": "q['factory_fault_cases']==212",
+          "new": "q['factory_fault_cases']==406",
+          "count": 1
+        },
+        {
+          "old": "q['profile']['cases']==1209",
+          "new": "q['profile']['cases']==1248",
+          "count": 1
+        },
+        {
+          "old": "b4-v-m16-build-attempt1",
+          "new": "b4-qk-m16-build-attempt1",
+          "count": 2
+        },
+        {
+          "old": "('b4-qk-m16-build-attempt1',0)",
+          "new": "('b4-v-m16-build-attempt1',0)",
+          "count": 1
+        },
+        {
+          "old": "garnet-native-b4-v-m16",
+          "new": "garnet-native-b4-qk-m16",
+          "count": 1
+        },
+        {
+          "old": "b4-v-m16-source.zip",
+          "new": "b4-qk-m16-source.zip",
+          "count": 1
+        },
+        {
+          "old": "B4_V_M16_native_build_inputs",
+          "new": "B4_QK_M16_native_build_inputs",
+          "count": 1
+        },
+        {
+          "old": "b4-v-m16-build-inputs.json",
+          "new": "b4-qk-m16-build-inputs.json",
+          "count": 1
+        },
+        {
+          "old": "Fresh restored1374baseline/73targets/runtime/SDK/checkpoint/CMake/34currentCUDAobjects, paired212factory/1209profile/VCPU, faithfulconnectedbaseline required.",
+          "new": "Fresh restored1374baseline/79targets/runtime/SDK/config-index/CMake/34currentCUDAobjects, paired406factory/1248profile/QKCPU required; source73Vcomponentpassed butfullmodelFAILED. LiveQKqueryeligibility notnumericalproof.",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "run-b4-v-m16-build-inventory.py",
+      "target": "run-b4-qk-m16-build-inventory.py",
+      "source_sha256": "5c39a4e0f0461f31d95fecf4922395df595abd2289db6527929359d92a28b7a1",
+      "target_sha256": "e1de565521c98187f56e6c53777070de2190370717c742886a14147951be8200",
+      "changes": [
+        {
+          "old": "b4-v-m16-build",
+          "new": "b4-qk-m16-build",
+          "count": 5
+        },
+        {
+          "old": "b4-decode-m16-build-preparation.json",
+          "new": "b4-v-m16-build-preparation.json",
+          "count": 1
+        },
+        {
+          "old": "b4-v-m16-cpu-v2-preparation.json",
+          "new": "b4-qk-m16-cpu-v2-preparation.json",
+          "count": 1
+        },
+        {
+          "old": "readonly73target",
+          "new": "readonly79target",
+          "count": 1
+        },
+        {
+          "old": "Fresh1374source/73targets/runtime/SDK/checkpoint/CMake/all34objects and closed212VCPU/faithfulconnected/failedSDK-model parents",
+          "new": "Fresh1374source/79targets/runtime/SDK/config-index/CMake/all34objects and closed406QKCPU/source73V/failedfullmodel/livequery parents",
+          "count": 1
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,33 @@
+from pathlib import Path
+import hashlib,json
+work=Path(__file__).resolve().parent;out=work.parent/'outputs';repo=Path('D:/CantorAI/work/qwen38-5090');m=repo/'test2026/cuda/qwen38_5090';e=m/'evidence'
+sha=lambda raw:hashlib.sha256(raw).hexdigest();paths=[]
+def keep(name,raw):
+    path=e/name;assert not path.exists() or path.read_bytes()==raw
+    if not path.exists():path.write_bytes(raw)
+    paths.append(path.relative_to(repo).as_posix())
+p=json.loads((e/'bf16-batch8-external-reference-preparation.json').read_bytes());bundle=json.loads((work/'b8-external-reference-bound-bundle.json').read_bytes());install=json.loads((work/'bf16-batch8-external-reference-install-v2.json').read_bytes())
+assert len(p['files'])==697 and p['expected_cpu_test_count']==45 and len(p['test_ids'])==45
+assert install['all_source_pins_verified']==697 and install['new_targets_verified']==14 and install['runtime_and_sdk_unchanged'] is True
+for name in ('run_bf16_batch8_external_reference_bound.py','test_bf16_batch8_external_bound.py','evidence/bf16-batch8-external-reference-preparation.json','evidence/bf16-batch8-external-reference-before-inventory-binding-preparation.json'):
+    paths.append((m/name).relative_to(repo).as_posix())
+for name in ('bind-b8-external-reference-owned-inventory.py','install-b8-external-reference-methods-v2.py','retain-b8-reference-owned-inventory-start.py'):
+    keep(name+'.txt',(work/name).read_bytes())
+for name in ('b8-external-reference-bound-bundle.json','bf16-batch8-external-reference-install-v2.json','before-inventory-binding-bf16-batch8-external-reference-upload-plan.json','before-inventory-binding-bf16-batch8-external-reference-bundle-preparation.json'):
+    keep(name,(work/name).read_bytes())
+keep('bf16-batch8-external-reference-bound-upload-plan.json',(work/'bf16-batch8-external-reference-upload-plan.json').read_bytes())
+for path in (work/'b8-external-reference-bound-cpu-ledger').iterdir():
+    if path.is_file():keep('b8-external-reference-bound-cpu-'+path.name,path.read_bytes())
+r={'status':'t128_attention_closed_b4_reference_for_b8_started','t128_attention':json.loads((out/'Garnet-T128-Attention-Component-Verified.json').read_bytes()),'active_job':'bf16-batch8-external-reference-attempt1','active_supervisor_session':48577,'observed_state':'running','b4_reference_terminal_result':None,'bundle':bundle,'installation':install,'source_pins':697,'cpu_tests_prepared':45,'b8_mtp_or_serving_qualified':False,'new_performance_result':False,'two_times_target_achieved':False}
+raw=json.dumps(r,indent=2).encode();keep('t128-attention-closure-and-b4-reference-start.json',raw)
+(out/'Garnet-T128-Attention-and-B8-Validation-Status.json').write_bytes(raw)
+text='\n\n### 2026-10-25 — Fresh B4 same-input reference for B8 started after T128 attention closure\n\n'
+text+='T128 attention GPU owner and both independent CPU replay processes completed; archive/proof transfers ACKed and both complete checks accepted before the next model owner. Isolated T128 component is correctness-qualified only; full-forward integration and performance remain open. Returning next to wider-batch serving qualification because current physical-batch1 queuing limits total throughput.\n\n'
+text+='Revalidated the queued fresh B4 full-FP32-cache/BF16-value reference for the closed ordinary B8 input cases. Original model/vision requests, owner lifecycle and raw checker remain byte-identical. Added a source-pinned entry wrapper that binds run_logged.source_identity to the explicit expected owned inventory before calling the original owner, excluding unrelated untracked files. Two wrapper dependency/copy-isolation faults join all43existing controls. Original unrun695pin/43test preparation and package retained; new697pin/45test preparation and bundle '+bundle['bundle_sha256']+' ('+str(bundle['bytes'])+'bytes/14targets). Actual local45CPU tests pass16.884s.\n\n'
+text+='Actual absent-only installation verifies684existing sources, adds14targets, verifies697total source/proof pins plus runtime/SDK; receipt downloaded and ACKed before original supervisor48577 starts bf16-batch8-external-reference-attempt1 through the bound entry. Workflow is observed live. Planned model reference:18same-input four-row cases (halves of all9closed B8 cases),58complete captures/116raw vectors and all actual token IDs. The reference shares projections/linear arithmetic and isolates cache representation/batch geometry; it is not independent-framework/all-model/B1 equivalence. Source frozen, one model only, no transfers/replays/second GPU job while live. Raw failures, sampled resource gaps, cache cleanup and same checker on both machines required before any qualification. No new performance result, B8 MTP/quality/HTTP or overall2x claim. Strongest tuned/MTP references, repeated trials, T128 full forward and matched INT4/4B remain open.\n'
+for name in ('qwen38-5090-development-log.md','qwen38-5090-implementation-task.md'):
+    path=repo/'docs/research'/name;previous=path.read_bytes()
+    assert b'Fresh B4 same-input reference for B8 started after T128 attention closure' not in previous
+    path.write_bytes(previous+text.encode());paths.append(path.relative_to(repo).as_posix())
+(work/'b8-reference-bound-retained-paths.json').write_bytes(json.dumps(paths,indent=2).encode())
+print(json.dumps({'status':r['status'],'new_performance_result':False,'retained_paths':len(paths)}))

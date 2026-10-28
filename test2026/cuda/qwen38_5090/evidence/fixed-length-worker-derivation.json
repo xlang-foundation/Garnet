@@ -1,0 +1,99 @@
+{
+  "status": "fixed_length_worker_derived_unrun",
+  "recipes": {
+    "native_fixed_length_stream_worker.py": {
+      "source": "native_tokenizer_nfc_stream_worker.py",
+      "source_sha256": "636878b5cafa4136a2a5526ef5b01b383af55122866fee7ab233a5ceb78cedf6",
+      "changes": [
+        [
+          "    messages=body.get('messages')",
+          "    if type(body.get('ignore_eos',False)) is not bool:raise ValueError('ignore_eos requires an explicit boolean')\n    messages=body.get('messages')",
+          1
+        ],
+        [
+          "from test2026.cuda.qwen38_5090.native_worker_io import requests,emit",
+          "from test2026.cuda.qwen38_5090.native_worker_io import requests,emit\nfrom test2026.cuda.qwen38_5090.fixed_length_policy import generation_stop_ids",
+          1
+        ],
+        [
+          "'research_only':True,'broad_quality_qualified'",
+          "'research_only':True,'explicit_ignore_eos_supported':True,'broad_quality_qualified'",
+          1
+        ],
+        [
+          "  if session is None:decoder.reset()\n  else:session.reset()",
+          "  request_stops=generation_stop_ids(body,stops)\n  if session is None:decoder.reset()\n  else:session.reset();session.stops=set(request_stops)",
+          1
+        ],
+        [
+          "'stop':token in stops",
+          "'stop':token in request_stops",
+          1
+        ],
+        [
+          "if generated[-1] in stops or len(generated)==limit:break",
+          "if generated[-1] in request_stops or len(generated)==limit:break",
+          1
+        ],
+        [
+          "'finish_reason':'stop' if generated[-1] in stops else 'length'",
+          "'ignore_eos':body.get('ignore_eos',False),'finish_reason':'stop' if generated[-1] in request_stops else 'length'",
+          1
+        ]
+      ],
+      "result_sha256": "46c2565ac3a5cd9df08a2129071bd75cc698f0a4da091c1fdb28f8857b7a781c",
+      "test_class_addition": false
+    },
+    "native_fixed_length_http_bridge.py": {
+      "source": "native_http_bridge.py",
+      "source_sha256": "0279af2fbbabf03886be8d041ffe50c2e1f461a95166ebf6c20b717933249d5b",
+      "changes": [
+        [
+          "    messages=body.get('messages')",
+          "    if type(body.get('ignore_eos',False)) is not bool:raise ValueError('ignore_eos requires an explicit boolean')\n    messages=body.get('messages')",
+          1
+        ]
+      ],
+      "result_sha256": "cc13136547069c23543018223b26d44910395f5897e488473b55d2b29fb25615",
+      "test_class_addition": false
+    },
+    "serve_native_fixed_length_worker.bat": {
+      "source": "serve_native_tokenizer_nfc_worker.bat",
+      "source_sha256": "8f244789102cc406fce56f95045f871df369ed876d83af9295dd537474d611e0",
+      "changes": [
+        [
+          "native_tokenizer_nfc_stream_worker.py",
+          "native_fixed_length_stream_worker.py",
+          1
+        ]
+      ],
+      "result_sha256": "66365bdbeb583f6e6cddcbf004561ad2f41fc988fc6a9ee3277c144d6ea5dc2b",
+      "test_class_addition": false
+    },
+    "test_fixed_length_worker_contract.py": {
+      "source": "test_tokenizer_nfc_worker_contract.py",
+      "source_sha256": "078c86b86fb29c0f32644fd607c3cdb4079960f74ff1566e4b889a6d464856bf",
+      "changes": [
+        [
+          "native_tokenizer_nfc_stream_worker.py",
+          "native_fixed_length_stream_worker.py",
+          3
+        ],
+        [
+          "native_http_bridge.py",
+          "native_fixed_length_http_bridge.py",
+          1
+        ],
+        [
+          "'stops':[2],",
+          "'stops':[2],'request_stops':[2],",
+          1
+        ]
+      ],
+      "result_sha256": "1bcc99fc83a35d55a1e317f62bf4e8a25a8244cebe3866bbb9c7d22cfc237ea9",
+      "test_class_addition": true
+    }
+  },
+  "policy_sha256": "5d77f2dc998c812d6828569b7d7c990ac095b12a74a0be8b64be716fa844cd4d",
+  "scope": "Only explicit ignore_eos stop behavior and strict boolean validation change. All ordinary default-stop model/template/projection/stream paths otherwise retained. New bridge/worker names preserve original failed methods. Real prefix74EOS/128ordinary-MTP controls are still required before timing."
+}

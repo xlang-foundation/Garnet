@@ -1,0 +1,125 @@
+{
+  "status": "bf16_batch8_admission_probe_prepared_gpu_unrun",
+  "source_sha256": "0b5cbe9a68041720ed9482a042e97db1491bf2777d9c7feb3ef50719ecd38a60",
+  "helper_sha256": "3f984488011b730a00ba15a2c1d94f537f4f02e1938e354fb214a842fd2b1424",
+  "test_sha256": "99b6a291094d0fa4f5d3fc704e3d899b8eade0d44905ebd98a0c2a794fa4c2ff",
+  "native_parent_archive_sha256": "90098fe581655c8c7eb3bdf3e43d6baed2b899b41388be601f2fe840b6a7b65c",
+  "config_sha256": "71fa01bb64de20971045cd82a82c0ebb25a54e1b0a3f09ef23cf5479e9c54df8",
+  "actual_probe_syntax_compile_passed": true,
+  "current_python_profile_validation_passed": true,
+  "constructor_dimensions": [
+    8,
+    4096,
+    32,
+    4
+  ],
+  "constructor_options": {
+    "flat_concat": true,
+    "external_compressed_weights": true,
+    "retain_linear_inputs": true,
+    "deferred_state_commit": true,
+    "host_embedding_lookup": true,
+    "joined_mlp_projections": true,
+    "shared_output_storage": true,
+    "bf16_kv_state": true,
+    "register_delta_128": true
+  },
+  "short_inputs_twice": [
+    {
+      "key": "s3-text-c1-r0-greedy",
+      "prompt_tokens": 41,
+      "response_sha256": "5ddc47fbc550e16b2e8d8f989a9fd6675c463e9836e3f1b6059c147b14cf5eed"
+    },
+    {
+      "key": "s3-image-c1-r0-greedy",
+      "prompt_tokens": 104,
+      "response_sha256": "0327ab2230ffcd93f1c9fdab1e35d259bd2a0f901e45bb0d40f2e2e1e34ac849"
+    },
+    {
+      "key": "red",
+      "prompt_tokens": 93,
+      "response_sha256": "b296350e9d5067e8305a8bda254065514fc28011b7efd91318473ad2e9593f1b"
+    },
+    {
+      "key": "green",
+      "prompt_tokens": 93,
+      "response_sha256": "f7f8eaef45f7b34ee8c11bec3aa97675c3054b179e3fe5a7effcb1fd92a033a4"
+    }
+  ],
+  "full_context_groups": [
+    {
+      "case": "text",
+      "keys": [
+        "ctx4096-s3-text-c8-r0",
+        "ctx4096-s3-text-c8-r1",
+        "ctx4096-s3-text-c8-r2",
+        "ctx4096-s3-text-c8-r3",
+        "ctx4096-s3-text-c8-r4",
+        "ctx4096-s3-text-c8-r5",
+        "ctx4096-s3-text-c8-r6",
+        "ctx4096-s3-text-c8-r7"
+      ],
+      "actual_input_ids_each": 3968,
+      "required_actual_generated_tokens_each": 128
+    },
+    {
+      "case": "image",
+      "keys": [
+        "ctx4096-s3-image-c8-r0",
+        "ctx4096-s3-image-c8-r1",
+        "ctx4096-s3-image-c8-r2",
+        "ctx4096-s3-image-c8-r3",
+        "ctx4096-s3-image-c8-r4",
+        "ctx4096-s3-image-c8-r5",
+        "ctx4096-s3-image-c8-r6",
+        "ctx4096-s3-image-c8-r7"
+      ],
+      "actual_input_ids_each": 3968,
+      "required_actual_generated_tokens_each": 128
+    }
+  ],
+  "orders": [
+    [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7
+    ],
+    [
+      3,
+      4,
+      5,
+      6,
+      7,
+      0,
+      1,
+      2
+    ],
+    [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7
+    ]
+  ],
+  "expected_gpu_cases": 9,
+  "logical_canonical_bytes_only": 3418357760,
+  "logical_output_bytes_by_chunk": {
+    "4": 1376976896,
+    "32": 1309671424
+  },
+  "gpu_model_executed": false,
+  "memory_fit_proven": false,
+  "mtp_executed": false,
+  "performance_admitted": false,
+  "two_times_target_achieved": false,
+  "scope": "Actual source syntax compile only, literal constructor AST/current pure Python profile+layout validation against archived pinned checkpoint config, frozen actual input-ID/request hashes. These do not build/run the GPU graph or prove B8 VRAM fit, row math, vision, MTP, broad quality or throughput. Logical buffer sizes omit other allocations; never sum/label them as measured VRAM. After exclusive original HTTP terminal, actual B8 correctness may use otherwise idle GPU during archive transfer; it is not a timing run."
+}

@@ -1,0 +1,88 @@
+{
+  "derivations": [
+    {
+      "source": "actual_decode_fp8_m4_m16.cu",
+      "target": "actual_decode_fa_value_m4_m16.cu",
+      "source_sha256": "974d6424fd354cc2229a3ab3d4798952141835146b094dc7608daeb87d5afd16",
+      "target_sha256": "722dbe9f74e59fc42f0a081e5237549a639ced7349ffa9d981daebab6a7d8580",
+      "changes": [
+        {
+          "old": "for(const char* label:{\"qkv\",\"z\"})",
+          "new": "for(const char* label:{\"v3\",\"v11\"})",
+          "count": 1
+        },
+        {
+          "old": "const int n=!std::strcmp(label,\"qkv\")?10240:6144",
+          "new": "const int n=1024",
+          "count": 1
+        },
+        {
+          "old": "for(int step=0;step<5;++step)",
+          "new": "for(int step=0;step<1;++step)",
+          "count": 1
+        },
+        {
+          "old": "fixture+\"step\"+std::to_string(step)+\"-normalized.f32\"",
+          "new": "fixture+std::string(label)+\"-step\"+std::to_string(step)+\"-normalized.f32\"",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "build_decode_fp8_sdk_control.bat",
+      "target": "build_fa_value_sdk_control.bat",
+      "source_sha256": "3fa8e245d31c95a19d541ddc7ee9d96f01982ba8576a818bc20ceee4bb9dbdd0",
+      "target_sha256": "f5f396a6f36a91914b8a5f2d5c1842fc5f21c0927d79de3dbd1d38bcd2189b0b",
+      "changes": [
+        {
+          "old": "actual_decode_fp8_m4_m16.cu",
+          "new": "actual_decode_fa_value_m4_m16.cu",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "decode_fp8_sdk_control.py",
+      "target": "fa_value_sdk_log.py",
+      "source_sha256": "f2009032d9395488b77cf464595454d471d1b1afca2a82a6fce24fef181f4bd1",
+      "target_sha256": "4156958d16f2b25a41bec778aecac9bc957ab7e68f98f79ae084f2018ee3cacd",
+      "changes": [
+        {
+          "old": "PROJECTIONS={'qkv':10240,'z':6144}",
+          "new": "PROJECTIONS={'v3':1024,'v11':1024}",
+          "count": 1
+        },
+        {
+          "old": "range(5)",
+          "new": "range(1)",
+          "count": 3
+        },
+        {
+          "old": "(qkv|z)",
+          "new": "(v3|v11)",
+          "count": 2
+        },
+        {
+          "old": "len(calls)==120",
+          "new": "len(calls)==24",
+          "count": 1
+        },
+        {
+          "old": "len(checks)==20",
+          "new": "len(checks)==4",
+          "count": 1
+        },
+        {
+          "old": "actual_M16_AlgoChecks=20",
+          "new": "actual_M16_AlgoChecks=4",
+          "count": 1
+        }
+      ],
+      "intermediate_sha256": "0a018aca0abe206f7c071db8b5324931cc7ea547c488c3308fc1e9ed9fc2e2e0",
+      "retained_function": "parse_log",
+      "retained_function_sha256": "4ae48f7c3f5d20ca90e235660c7468af2280adfe1e513997c101051f1f39527e",
+      "final_prefix": "\"\"\"Original SDK log parser adapted only to two FA value cases and one matrix each.\"\"\"\nimport re\nPROJECTIONS={'v3':1024,'v11':1024}\n\n"
+    }
+  ],
+  "scope": "Private SDK control changes only two actual N1024 projection labels, one real input per layer and label-specific input path. Production BF16 cast/FP8 quantizer/matmul, actual live M4 algorithm interception, all7attributes, M16 AlgoCheck, original4MiB and full output writes unchanged. Parser original body adapted only label/count domain. No native model change or performance claim."
+}

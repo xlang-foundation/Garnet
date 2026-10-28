@@ -1,0 +1,129 @@
+{
+  "derivations": [
+    {
+      "source": "probe_b4_b1_short_admission.py",
+      "target": "probe_b4_b1_short_m16_admission.py",
+      "source_sha256": "67bfd0c00f47b7659aa57b75586cc4009516612e5431fea6839cde4aa2d67463",
+      "target_sha256": "1d067484d0f0d0bb0de4fe63cb4aa90c6ba5666e81b551c5141da5a73eac6d50",
+      "changes": [
+        {
+          "old": "b4-b1-short-preparation.json",
+          "new": "b4-b1-short-m16-preparation.json",
+          "count": 1
+        },
+        {
+          "old": "'GARNET_FP8_BATCH4_PREFILL_CANONICAL':'0' if mode=='reference' else '1'}",
+          "new": "'GARNET_FP8_BATCH4_PREFILL_CANONICAL':'0' if mode=='reference' else '1','GARNET_FP8_GDN_BATCH4_DECODE_CANONICAL':'0' if mode=='reference' else '1'}",
+          "count": 1
+        },
+        {
+          "old": "        if batch==4:\n            gold=json.loads((reference/'report.json').read_bytes());assert gold['status']=='four_B1_short_oracles_collected' and gold['inputs']==inputs and gold['library_sha256']==p['reference_library_sha256'] and len(gold['rows'])==4\n            actual=report['rows'][0];report['exact_comparisons']={phase:compare_capture(actual[phase],[r[phase] for r in gold['rows']],lambda name:(out/name).read_bytes(),lambda row,name:(reference/name).read_bytes()) for phase in ('reset_state','prefill_state','final_state','final_reset')};save()\n            report['IDs_exact']=[actual['generated_ids'][r]==gold['rows'][r]['generated_ids'][0] for r in range(4)];save()\n            assert all(v['all_exact'] for v in report['exact_comparisons'].values()),'B4 complete state/raw vector mismatch against four independent B1 oracles'\n            require_ids(actual['generated_ids'],[v['generated_ids'][0] for v in gold['rows']],8);report['status']='B4_short_mixed_tail_exact_to_four_B1'\n        else:report['status']='four_B1_short_oracles_collected'\n",
+          "new": "        # Raw capture only: the exclusive CPython owner enforces the unchanged full gates.\n        report['status']='B4_short_mixed_tail_raw_capture_needs_CPython_admission' if batch==4 else 'four_B1_short_oracles_collected'\n",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "launch_b4_b1_short_admission.py",
+      "target": "launch_b4_b1_short_m16_admission.py",
+      "source_sha256": "ee8aa17fd487d44ba799c89123a0aecb330188692f0c41711cdb8c94083a3213",
+      "target_sha256": "389c1decb3615afebb933a777f14da66a34b65b6618edb6a5b75ad259f65cc11",
+      "changes": [
+        {
+          "old": "b4-b1-short-preparation.json",
+          "new": "b4-b1-short-m16-preparation.json",
+          "count": 1
+        },
+        {
+          "old": "probe_b4_b1_short_admission.py",
+          "new": "probe_b4_b1_short_m16_admission.py",
+          "count": 1
+        },
+        {
+          "old": "env['GARNET_FP8_BATCH4_PREFILL_CANONICAL']='0' if mode=='reference' else '1';",
+          "new": "env['GARNET_FP8_BATCH4_PREFILL_CANONICAL']='0' if mode=='reference' else '1';env['GARNET_FP8_GDN_BATCH4_DECODE_CANONICAL']='0' if mode=='reference' else '1';",
+          "count": 1
+        },
+        {
+          "old": "env['PATH']=';'.join",
+          "new": "env['GARNET_GDNM16_FACTORY_TRACE']='1' if mode=='candidate' else '0';env['GARNET_MODELOPT_INIT_TRACE']='1' if mode=='candidate' else '0'\nenv['PATH']=';'.join",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "run_b4_b1_short_admission.py",
+      "target": "run_b4_b1_short_m16_admission.py",
+      "source_sha256": "ab84bbeab36eb0b2f394fac513157e587bb701592bedcf074c978bd18da9c74d",
+      "target_sha256": "09f741ad2831c77c0adda6bbf1cfc6784c621a95764819662811ae683939b4c7",
+      "changes": [
+        {
+          "old": "b4-b1-short-admission-attempt1",
+          "new": "b4-b1-short-m16-admission-attempt1",
+          "count": 1
+        },
+        {
+          "old": "b4-b1-short-preparation.json",
+          "new": "b4-b1-short-m16-preparation.json",
+          "count": 1
+        },
+        {
+          "old": "B4_vs_B1_short_prepared_GPU_unrun",
+          "new": "B4_vs_B1_short_M16_prepared_GPU_unrun",
+          "count": 1
+        },
+        {
+          "old": "w['exit_code']==0 and w['cleanup_finished']",
+          "new": "w['exit_code']==row['exit_code'] and w['exit_code'] in (0,1) and w['cleanup_finished']",
+          "count": 1
+        },
+        {
+          "old": "len(sources['candidate'])==61",
+          "new": "len(sources['candidate'])==67",
+          "count": 1
+        },
+        {
+          "old": "    bundles={mode:ROOT/p[mode+'_bundle']",
+          "new": "    for n,h in p['cuda_objects'].items():assert sha(ROOT/n)==h\n    assert sha(ROOT/'build/CMakeCache.txt')==p['cache_before_sha256']\n    bundles={mode:ROOT/p[mode+'_bundle']",
+          "count": 1
+        },
+        {
+          "old": "common=[prep,*bundles.values()]+[ROOT/n for n in {**p['files'],**p['checkpoints'],**p['audit_dependencies']}]",
+          "new": "common=[prep,*bundles.values()]+[ROOT/n for n in p['archive_files']]",
+          "count": 1
+        },
+        {
+          "old": "phases=[])",
+          "new": "phases=[],cuda_objects_before=p['cuda_objects'],cache_before_sha256=p['cache_before_sha256'])",
+          "count": 1
+        },
+        {
+          "old": "'test2026.cuda.qwen38_5090.test_b4_b1_exact_gate'",
+          "new": "'test2026.cuda.qwen38_5090.test_b4_b1_short_m16_gate'",
+          "count": 1
+        },
+        {
+          "old": "launch_b4_b1_short_admission.py",
+          "new": "launch_b4_b1_short_m16_admission.py",
+          "count": 1
+        },
+        {
+          "old": "Four fresh source60/DLL841 B1 oracles then source61/B4 candidate, same41/104/93/93token text-image short/tail inputs and8IDs; complete128statecomponents, finite hidden+norm raw bytes, reset/prefill/final/reset. No timing or quality promotion.",
+          "new": "Four fresh source60/DLL841 B1 oracles then source67/DLL677 physicalB4 candidate with M16policy1; same41/104/93/93token text-image short/tail inputs and8IDs. Capture complete128statecomponents, finite hidden+norm rawbytes/reset/prefill/final/reset. Original exactgate enforced in CPython owner after capture; actualfactory/init traces required, no timing or quality promotion.",
+          "count": 1
+        },
+        {
+          "old": "        w['status']='B4_short_mixed_tail_exact_to_four_B1_collected_unqualified_full4k_MTP_quality_performance';code=0",
+          "new": "        from test2026.cuda.qwen38_5090.b4_b1_short_m16_gate import observe,admit,route_trace\n        reference=json.loads((out/'reference/report.json').read_bytes());candidate=json.loads((out/'candidate/report.json').read_bytes())\n        read_reference=lambda name:(out/'reference'/name).read_bytes();read_candidate=lambda name:(out/'candidate'/name).read_bytes()\n        w['observation']=observe(reference,candidate,read_reference,read_candidate);(out/'analysis.json').write_bytes(json.dumps(w['observation'],indent=2).encode());save()\n        w['actual_GDN_M16_route']=route_trace((out/'candidate-ledger/commands.log').read_bytes());(out/'route-analysis.json').write_bytes(json.dumps(w['actual_GDN_M16_route'],indent=2).encode());save()\n        w['strict_admission']=admit(reference,candidate,read_reference,read_candidate);save()\n        w['status']='B4_M16_short_mixed_tail_exact_to_four_B1_collected_unqualified_full4k_MTP_quality_performance';code=0",
+          "count": 1
+        },
+        {
+          "old": "w['cleanup_finished']=True;save()",
+          "new": "w['cleanup_finished']=True;w['cuda_objects_after']={n:sha(ROOT/n) for n in p['cuda_objects']};w['cache_after_sha256']=sha(ROOT/'build/CMakeCache.txt');w['build_artifacts_unchanged']=w['cuda_objects_before']==w['cuda_objects_after'] and w['cache_before_sha256']==w['cache_after_sha256'];save()\n        if not w['build_artifacts_unchanged']:code=1;w.update(status='failed',exit_code=1,error='Production build artifacts changed during model gate');save()",
+          "count": 1
+        }
+      ]
+    }
+  ],
+  "scope": "Original complete modelcapture/mathgates retained; versioned67candidate+newflag/traces, exactcomparison moved from embeddedcomprehension lambda toexclusiveCPython owner. Allbaselinehashes audited, boundedarchive linksoriginaldatasets instead ofcopyingunrelatedcorpus. Originalfailedcapture keptunchanged."
+}

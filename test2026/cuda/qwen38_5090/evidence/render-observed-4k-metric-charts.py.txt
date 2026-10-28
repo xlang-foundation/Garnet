@@ -1,0 +1,70 @@
+"""Export individual paper charts only from the fully admitted comparison data."""
+from pathlib import Path
+import csv,hashlib,json
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+from matplotlib.ticker import FuncFormatter
+
+work=Path(__file__).resolve().parent
+out=work.parent/'outputs'
+stem='Garnet-vLLM-SGLang-Observed-Verified-4K'
+path=out/(stem+'-Data.json')
+data=json.loads(path.read_bytes())
+sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+assert data['status']=='complete_native_and_observed_references_actual4k_single_trials_replayed_on_both_machines'
+assert data['two_times_target_achieved'] is False
+for name,digest in data['input_sha256'].items():
+    assert sha(out/name)==digest
+    if name.endswith('-verified.json'):
+        assert (out/name).read_bytes()==(out/name.replace('-verified.json','-remote-verified.json')).read_bytes()
+series=data['series']
+assert len(series)==5 and all(len(rows)==8 for rows in series.values())
+styles=[('#7790a6','o','--'),('#d06b26','s','--'),('#7650a1','D','-'),('#32977b','^','-'),('#be4778','v','-')]
+plt.rcParams.update({'font.family':'DejaVu Sans','font.size':10,'axes.spines.top':False,'axes.spines.right':False})
+specs=[('TTFT','Time to first token (seconds; lower is better)','ttft_median_ms',.001),
+       ('Decode','Decode per request (tokens/s; higher is better)','decode_median_tokens_per_second',1),
+       ('Throughput','Total output throughput (tokens/s; higher is better)','output_tokens_per_second',1),
+       ('VRAM','Sampled adapter VRAM (GiB; lower is better)','sampled_peak_adapter_used_bytes',1/2**30)]
+artifacts={}
+for tag,title,key,scale in specs:
+    fig,axes=plt.subplots(1,2,figsize=(14,5.6))
+    fig.patch.set_facecolor('#f5f8fc')
+    fig.subplots_adjust(top=.67,bottom=.29,left=.07,right=.97,wspace=.22)
+    fig.text(.05,.94,'Garnet vs vLLM and SGLang',fontsize=21,weight='bold')
+    fig.text(.05,.879,title,fontsize=13)
+    fig.text(.05,.828,'RTX 5090 32GB | Qwen3.8-27B mixed NVFP4/FP8 | 3968 input + 128 output | HTTP streaming',fontsize=10.5,color='#43546b')
+    for ax,case in zip(axes,('text','image')):
+        for (label,rows),(color,marker,line) in zip(series.items(),styles):
+            cs=[1,2,4,8]
+            ax.plot(cs,[rows[case+'-c'+str(c)][key]*scale for c in cs],label=label,color=color,marker=marker,linestyle=line,lw=2)
+        ax.set_title(case.title(),loc='left',fontsize=12)
+        ax.set_xticks([1,2,4,8]);ax.set_xlabel('Concurrent client requests');ax.grid(axis='y',alpha=.2)
+        if tag=='TTFT':
+            ax.set_yscale('log');ax.yaxis.set_major_formatter(FuncFormatter(lambda v,_:f'{v:g}'))
+        else:ax.set_ylim(bottom=0)
+    handles,labels=axes[0].get_legend_handles_labels()
+    fig.legend(handles,labels,loc='upper center',bbox_to_anchor=(.52,.78),ncol=3,frameon=False,fontsize=9)
+    notes=['8 measured requests/cohort; separate single trials verified on both machines. Native physical batch 1; references up to 8.',
+           'Reference text variations retained; individual streamed IDs and long-output semantic equivalence remain unproven.',
+           'VRAM is a sampled adapter-wide maximum; gaps retained. Strongest tuned/MTP references and repetitions remain open.',
+           'Overall 2x decode/throughput and half-TTFT objectives remain unmet/unproven.']
+    for i,note in enumerate(notes):fig.text(.05,.17-.035*i,note,fontsize=9,color='#9a4521' if i==3 else '#24364c')
+    for ext in ('png','svg'):
+        target=out/(stem+'-'+tag+'.'+ext)
+        fig.savefig(target,dpi=160,facecolor=fig.get_facecolor())
+        artifacts[target.name]=sha(target)
+    plt.close(fig)
+csv_path=out/(stem+'-Metrics.csv')
+fields=['engine','input','clients','ttft_seconds','decode_tokens_per_second','total_output_tokens_per_second','sampled_adapter_gib']
+with csv_path.open('w',newline='',encoding='utf-8') as stream:
+    writer=csv.DictWriter(stream,fieldnames=fields);writer.writeheader()
+    for label,rows in series.items():
+        for case in ('text','image'):
+            for c in (1,2,4,8):
+                row=rows[case+'-c'+str(c)]
+                writer.writerow(dict(zip(fields,[label,case,c,row['ttft_median_ms']/1000,row['decode_median_tokens_per_second'],row['output_tokens_per_second'],row['sampled_peak_adapter_used_bytes']/2**30])))
+artifacts[csv_path.name]=sha(csv_path)
+receipt={'status':'individual_charts_exported_from_admitted_comparison','input_data_sha256':sha(path),'artifacts':artifacts,'source_sha256':sha(Path(__file__)),'new_model_execution':False}
+(out/(stem+'-Metric-Charts-Receipt.json')).write_bytes(json.dumps(receipt,indent=2).encode())
+print(json.dumps(receipt))

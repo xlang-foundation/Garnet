@@ -1,0 +1,13 @@
+from pathlib import Path
+import hashlib,json,zipfile
+ROOT=Path('D:/CantorAI/5090-study-20261023');P='Garnet/test2026/cuda/qwen38_5090/';sha=lambda b:hashlib.sha256(b).hexdigest();archive=ROOT/'results/full-chunk-stage-vendor-deployment.zip';assert sha(archive.read_bytes())=='48bc77fb855fe4aa889b90f55c7f808f91807eb69acf1bc23829d1a3da9cedce'
+with zipfile.ZipFile(archive) as z:
+    manifest=json.loads(z.read('deployment-manifest.json'));assert len(z.namelist())==len(set(z.namelist()))==len(manifest['files'])+1==9 and z.testzip() is None and manifest['native_source_and_library_unchanged']
+    p=json.loads(z.read(P+'evidence/full-chunk-stage-vendor-preparation.json'));parent=json.loads((ROOT/(P+'evidence/full-chunk-stage-gpu-preparation-attempt2.json')).read_bytes());assert p['files']==parent['files'] and p['candidate_files']==parent['candidate_files'] and p['candidate_library_sha256']==parent['candidate_library_sha256']
+    for n,h in {**p['files'],**parent['new_files'],**p['checkpoints'],**p['audit_dependencies']}.items():assert sha((ROOT/n).read_bytes())==h,('Baseline drift',n)
+    for n,h in p['runtime'].items():assert sha((ROOT/'build/bin'/n).read_bytes())==h
+    for n,h in manifest['files'].items():
+        target=ROOT/n;assert target.resolve().is_relative_to((ROOT/'Garnet/test2026/cuda/qwen38_5090').resolve());blob=z.read(n);assert sha(blob)==h;assert not target.exists() or target.read_bytes()==blob;assert target.parent.exists()
+    for n in manifest['files']:(ROOT/n).write_bytes(z.read(n))
+    for n,h in p['new_files'].items():assert sha((ROOT/n).read_bytes())==h
+receipt=dict(status='logger_only_stage_methods_installed',deployment_archive_sha256=sha(archive.read_bytes()),preparation_sha256=sha((ROOT/(P+'evidence/full-chunk-stage-vendor-preparation.json')).read_bytes()),files=manifest['files'],native_source_library_unchanged=True);out=ROOT/'results/full-chunk-stage-vendor-install.json';assert not out.exists();out.write_bytes(json.dumps(receipt,indent=2).encode());print(json.dumps(dict(status=receipt['status'],files=len(manifest['files']))))

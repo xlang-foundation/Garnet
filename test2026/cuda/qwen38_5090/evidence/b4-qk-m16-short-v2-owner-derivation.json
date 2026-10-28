@@ -1,0 +1,77 @@
+{
+  "derivations": [
+    {
+      "source": "probe_b4_qk_m16_short.py",
+      "target": "probe_b4_qk_m16_short_v2.py",
+      "source_sha256": "d97b5f2cd2032e896acdd21960886d07e5e8db51752be2cfdc6110d0781af863",
+      "target_sha256": "07a5b2d9455f7cb078a4665867ab3f0dd92496994ffc9bb91b7d0994f64be53c",
+      "changes": [
+        {
+          "old": "evidence/b4-qk-m16-short-preparation.json",
+          "new": "evidence/b4-qk-m16-short-v2-preparation.json",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "launch_b4_qk_m16_short.py",
+      "target": "launch_b4_qk_m16_short_v2.py",
+      "source_sha256": "4fec920911a5ce0c1ed832ea0a0f4e21a01fefbb87d4a0be353de03bdf210967",
+      "target_sha256": "206d6c810a0a464b8324ae4f5e8fa07dc5682b8bf812f78655c60fd1a0c308a9",
+      "changes": [
+        {
+          "old": "evidence/b4-qk-m16-short-preparation.json",
+          "new": "evidence/b4-qk-m16-short-v2-preparation.json",
+          "count": 1
+        },
+        {
+          "old": "probe_b4_qk_m16_short.py",
+          "new": "probe_b4_qk_m16_short_v2.py",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "run_b4_qk_m16_short.py",
+      "target": "run_b4_qk_m16_short_v2.py",
+      "source_sha256": "0b1632e17b2b81081841d0671ee87681d96a1e536b938f091e8cac9d69dbe9a1",
+      "target_sha256": "cc2a9bf298e8da3ced3f5a4a68448089bf478effcc1de8c793afb73ca8207235",
+      "changes": [
+        {
+          "old": "evidence/b4-qk-m16-short-preparation.json",
+          "new": "evidence/b4-qk-m16-short-v2-preparation.json",
+          "count": 1
+        },
+        {
+          "old": "launch_b4_qk_m16_short.py",
+          "new": "launch_b4_qk_m16_short_v2.py",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "verify_b4_qk_m16_short.py",
+      "target": "verify_b4_qk_m16_short_v2.py",
+      "source_sha256": "647797befb9f6583a9dd93eea787b3e19fc40a430cf68d9a0b1df52a7498a152",
+      "target_sha256": "35c3e52b4001f932b03855b18f99bff836eca97daed81487aaa9306cbeda112d",
+      "changes": [
+        {
+          "old": "evidence/b4-qk-m16-short-preparation.json",
+          "new": "evidence/b4-qk-m16-short-v2-preparation.json",
+          "count": 1
+        },
+        {
+          "old": "'verify_b4_qk_m16_short.py'",
+          "new": "'verify_b4_qk_m16_short_v2.py'",
+          "count": 1
+        },
+        {
+          "old": "verify_derivations(json.loads(z.read(P+'evidence/b4-qk-m16-short-owner-derivation.json')),lambda n:z.read(P+n))",
+          "new": "verify_derivations(json.loads(z.read(P+'evidence/b4-qk-m16-short-owner-derivation.json')),lambda n:z.read(P+n))\n        verify_derivations(json.loads(z.read(P+'evidence/b4-qk-m16-short-v2-owner-derivation.json')),lambda n:z.read(P+n))",
+          "count": 1
+        }
+      ]
+    }
+  ],
+  "scope": "Metadata-only versioned preparation for missing historical parent.status fields; source79,DLL,allmodelprobe computations and all numerical/route gates unchanged. Original launcher exitedbeforeoutdir/overlay/model/GPUexecution."
+}

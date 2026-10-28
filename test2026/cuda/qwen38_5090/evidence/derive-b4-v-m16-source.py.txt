@@ -1,0 +1,41 @@
+from pathlib import Path
+import hashlib,json,sys,zipfile
+W=Path(__file__).resolve().parent;R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';E=M/'evidence';O=W.parent/'outputs';sys.path.insert(0,str(R));from test2026.cuda.qwen38_5090.b4_decode_m16_source import sources as parent_sources
+sha=lambda raw:hashlib.sha256(raw).hexdigest();_,parent,_=parent_sources();assert len(parent)==67;candidate=dict(parent);directory=M/'native_b4_v_m16_candidate';directory.mkdir(exist_ok=True);records=[]
+partial={p.name:sha(p.read_bytes()) for p in directory.iterdir() if p.is_file()}
+def derive(source,target,steps):
+    original=parent[source];raw=original;changes=[]
+    for old,new,count in steps:
+        if b'\r\n' in original:old=old.replace('\n','\r\n');new=new.replace('\n','\r\n')
+        assert raw.count(old.encode())==count,(source,old,raw.count(old.encode()));raw=raw.replace(old.encode(),new.encode());changes.append(dict(old=old,new=new,count=count))
+    output=directory/Path(target).name
+    if output.exists():assert output.read_bytes()==raw,output
+    else:output.write_bytes(raw)
+    candidate[target]=raw;records.append(dict(source=source,target=target,source_sha256=sha(original),target_sha256=sha(raw),changes=changes))
+prefix='src/backends/tensorrt/';common=[('modelopt_fp8_gdn_m16','modelopt_fp8_v_m16'),('ModelOptFP8GDNM16','ModelOptFP8VM16'),('GDNM16','VM16'),('GARNET_GDNM16','GARNET_VM16')]
+for suffix in ('canonical.h','canonical.cpp','init_trace.h','plugin.h','plugin.cpp','profile.h'):
+    source=prefix+'modelopt_fp8_gdn_m16_'+suffix;target=prefix+'modelopt_fp8_v_m16_'+suffix;text=parent[source].decode();steps=[]
+    for old,new in common:
+        count=text.count(old)
+        if count:steps.append((old,new,count));text=text.replace(old,new)
+    specific=[]
+    if suffix=='canonical.cpp':specific=[('rows!=10240&&rows!=6144','rows!=1024',1),('info.rows==10240||info.rows==6144','info.rows==1024',1)]
+    if suffix in ('plugin.h','plugin.cpp'):specific.append(('0x47313634u','0x56313634u',text.count('0x47313634u')))
+    if suffix=='plugin.cpp':specific.extend([('rows!=10240&&rows!=6144','rows!=1024',1),('exact GDN QKV/Z decode geometry','exact full-attention V decode geometry',1),('"fp8_gdn_m16"','"fp8_v_m16"',1)])
+    if suffix=='profile.h':specific=[('if(layer%4==3)continue;','if(layer%4!=3)continue;',1),('.linear_attn.','.self_attn.',1),('        if(name==prefix+"in_proj_qkv.weight")return 10240;\n        if(name==prefix+"in_proj_z.weight")return 6144;','        if(name==prefix+"v_proj.weight")return 1024;',1),('GARNET_FP8_GDN_BATCH4_DECODE_CANONICAL','GARNET_FP8_V_BATCH4_DECODE_CANONICAL',2),('GDN FP8 QKV/Z projection','full-attention V FP8 projection',1)]
+    specific=[(old,new,1 if old=='GARNET_FP8_GDN_BATCH4_DECODE_CANONICAL' else count) for old,new,count in specific]
+    derive(source,target,steps+specific)
+source=prefix+'modelopt_fp8_lowering.cpp';derive(source,source,[
+('#include "modelopt_fp8_gdn_m16_plugin.h"','#include "modelopt_fp8_gdn_m16_plugin.h"\n#include "modelopt_fp8_v_m16_plugin.h"\n#include "modelopt_fp8_v_m16_profile.h"',1),
+('    const bool canonicalGDNM16=ModelOptFP8GDNM16Selected','    const bool canonicalVM16=ModelOptFP8VM16Selected(std::getenv("GARNET_FP8_V_BATCH4_DECODE_CANONICAL"),\n        shape.nbDims==3?int(shape.d[0]):0,shape.nbDims==3?int(shape.d[1]):0,rows,p.rows,p.columns,p.logicalName);\n    const bool canonicalGDNM16=ModelOptFP8GDNM16Selected',1),
+('    if(canonicalGDNM16){','    if(canonicalVM16){\n        if(!EnsureModelOptFP8VM16PluginRegistered())throw std::runtime_error("Native physicalB4T4 V FP8 registration failed");\n        plugin=new ModelOptFP8VM16Plugin(p.rows,p.columns,p.weightScale,p.inputScale);\n    }else if(canonicalGDNM16){',1)])
+assert len(candidate)==73 and all(candidate[name]==raw for name,raw in parent.items() if name!=source)
+proofs={}
+for job,exit_code in [('connected-fa-value-attempt4',0),('fa-value-sdk-control-attempt1',1),('b4-b1-short-m16-admission-attempt1',1)]:
+    raw=(O/(job+'-verified.json')).read_bytes();assert raw==(O/(job+'-remote-verified.json')).read_bytes();q=json.loads(raw);assert q['exit_code']==exit_code and sha((O/(job+'-evidence.zip')).read_bytes())==q['archive_sha256'];proofs[job]=dict(proof_sha256=sha(raw),archive_sha256=q['archive_sha256'],status=q['status'],exit_code=exit_code)
+record=dict(status='defaultoff_B4T4_M16_V_FP8_source_prepared_native_uncompiled',parent_files={name:sha(raw) for name,raw in parent.items()},candidate_files={name:sha(raw) for name,raw in candidate.items()},modified_files=[source],new_files=[name for name in candidate if name not in parent],derivations=records,parents=proofs,new_CUDA_kernels=0,new_context_factories=1,BlasWorkspace=4<<20,wire_tag='0x56313634',model_or_quality_or_performance_qualified=False,scope='Separate defaultoff physicalB4T4/M16 only, exact16full-attentionVlogicalnames N1024/K5120. LiveM4selectedSDKalgorithm with all7observedattrs[35,13,17,3,2,0,1] andbothM4/M16AlgoChecks withinoriginal4MiB; opaquebytes retainedfromliveSDK, unsupportedfails withoutfallback. Original67source bodies unchangedexceptloweringdispatch; genericFP8/GDNM16/NVFP4/oldwires andallCUDA unchanged. Original2caseSDKFAILED andmodelFAILED remainfailed; faithfulconnectedcomponent4baselinePASSED qualifiesnextnativecomponentoff/on intervention, notwholemodel/performance. Private fresh-nonceCUDACompiledGraph cache only atthisstage; productioncache62stricterall34identityfailure notpromoted andproductionfrontendpolicycache qualification remainsopen.')
+record['preparation_retry']={'reason':'Initial profile environment-name replacement expected 2 occurrences; actual immutable parent has 1. Corrected source-derivation count before any compile or deployment. Existing five derived files byte-checked against exact parent transformations.','partial_files_before_retry':partial}
+target=E/'b4-v-m16-source-derivation.json';assert not target.exists();target.write_bytes(json.dumps(record,indent=2).encode());bundle=W/'b4-v-m16-source.zip';assert not bundle.exists()
+with zipfile.ZipFile(bundle,'x',zipfile.ZIP_DEFLATED) as z:
+    for name,raw in candidate.items():z.writestr(name,raw)
+print(json.dumps(dict(status=record['status'],parent_files=len(parent),candidate_files=len(candidate),bundle_sha256=sha(bundle.read_bytes()),bundle_bytes=bundle.stat().st_size)))

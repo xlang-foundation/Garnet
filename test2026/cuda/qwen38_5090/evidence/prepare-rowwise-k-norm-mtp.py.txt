@@ -1,0 +1,42 @@
+from pathlib import Path
+import ast,hashlib,json,zipfile
+W=Path(__file__).resolve().parent;O=W.parent/'outputs';R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';E=M/'evidence';P='Garnet/test2026/cuda/qwen38_5090/';X='xModel/qwen35/vl_0_8b/cuda_mtp_prefill16_b4_study.py';sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+old=json.loads((E/'rowwise-k-norm-full4k-preparation.json').read_bytes());J='rowwise-k-norm-full4k-attempt1';proof=O/(J+'-verified.json');q=json.loads(proof.read_bytes());assert proof.read_bytes()==(O/(J+'-remote-verified.json')).read_bytes() and q['exit_code']==0 and q['ordinary_full4K128_case_gate_passed'] and q['strict_admission']['all_states_and_vectors_exact'] and q['strict_admission']['all_128_IDs_exact'] and sha(O/(J+'-evidence.zip'))==q['archive_sha256']
+with zipfile.ZipFile(O/(J+'-evidence.zip')) as z:w=json.loads(z.read('results/'+J+'/workflow.json'))
+assert w['cleanup_finished'] and w['all_restored'] and w['source_after']==old['files'];files=dict(w['source_after'])
+names=['probe_rowwise_k_norm_mtp_full4k.py','launch_rowwise_k_norm_mtp_full4k.py','run_rowwise_k_norm_mtp_full4k.py','verify_rowwise_k_norm_mtp_full4k.py','b4_mtp_full4k_gate.py','test_b4_mtp_full4k_gate.py','test_mtp_prefill16_b4_study.py','test_mtp_prefill16_study.py','test_mtp_prefill16_target128_study.py','test_mtp_builder_workspace.py','evidence/rowwise-k-norm-mtp-probe-derivation.json','evidence/rowwise-k-norm-mtp-owner-derivation.json','evidence/rowwise-k-norm-mtp-reader-derivation.json','evidence/b4-mtp-prefill16-study-derivation.json','evidence/b4-mtp-prefill16-study-cpu-preparation.json','evidence/b4-mtp-full4k-cpu-preparation.json','evidence/rowwise-k-norm-full4k-preparation.json','evidence/rowwise-k-norm-full4k-attempt1-verified.json']
+derivs=json.loads((E/'rowwise-k-norm-mtp-probe-derivation.json').read_bytes())['derivations']+[json.loads((E/'rowwise-k-norm-mtp-owner-derivation.json').read_bytes()),json.loads((E/'rowwise-k-norm-mtp-reader-derivation.json').read_bytes())]
+for row in derivs:
+    raw=(M/row['source']).read_bytes();assert hashlib.sha256(raw).hexdigest()==row['source_sha256'];text=raw.decode().replace('\r\n','\n')
+    for c in row['changes']:assert text.count(c['old'])==c['count'];text=text.replace(c['old'],c['new'])
+    assert text.encode()==(M/row['target']).read_bytes() and sha(M/row['target'])==row['target_sha256'];ast.parse(text)
+module=json.loads((E/'b4-mtp-prefill16-study-cpu-preparation.json').read_bytes());assert module['CPU_controls']==27 and sha(R/X)==module['source_sha256'][X]
+gate=json.loads((E/'b4-mtp-full4k-cpu-preparation.json').read_bytes());assert gate['CPU_controls']==15 and sha(M/'b4_mtp_full4k_gate.py')==gate['files']['b4_mtp_full4k_gate.py']
+ledger=W/'rowwise-k-norm-mtp-cpu-ledger';events=[json.loads(s) for s in (ledger/'commands.jsonl').read_bytes().splitlines()];assert len(events)==2 and events[-1]['exit_code']==0 and events[0]['source']['owned_source_sha256']==events[1]['source_after']['owned_source_sha256'];assert b'Ran 146 tests' in (ledger/'commands.log').read_bytes()
+for n,h in events[0]['source']['owned_source_sha256'].items():assert sha(R/n)==h
+def keep(n,raw):
+    path=E/n;assert not path.exists();path.write_bytes(raw);names.append('evidence/'+n)
+for ext in ('log','jsonl'):keep('rowwise-k-norm-mtp-cpu-commands.'+ext,(ledger/('commands.'+ext)).read_bytes())
+for n in ('derive-rowwise-k-norm-mtp-probe.py','derive-rowwise-k-norm-mtp-owner.py','derive-rowwise-k-norm-mtp-reader.py','test-rowwise-k-norm-mtp-cpu.py',Path(__file__).name):keep(n+'.txt',(W/n).read_bytes())
+for n in ('derive-rowwise-k-norm-mtp-probe.log','derive-rowwise-k-norm-mtp-owner.log','derive-rowwise-k-norm-mtp-reader.log','test-rowwise-k-norm-mtp-cpu.log'):keep(n,(W/n).read_bytes())
+keep('rowwise-k-norm-mtp-cpu-preparation.json',json.dumps(dict(CPU_controls=146,original_before_overlay=115,additional_after_overlay=31,new_target_arithmetic=False,MTP_GPU_or_quality_or_performance_qualified=False),indent=2).encode())
+for n in names:
+    if n.endswith('.py'):ast.parse((M/n).read_bytes())
+    if P+n in files:assert files[P+n]==sha(M/n),('Preserve existing method',n)
+    files[P+n]=sha(M/n)
+assert 'Garnet/'+X not in files;files['Garnet/'+X]=sha(R/X)
+parents=dict(old['parents']);parents[J]={'proof_sha256':sha(proof),'archive_sha256':q['archive_sha256'],'status':q['status'],'exit_code':0};assert len(parents)==54
+for job,row in parents.items():
+    path=O/(job+'-verified.json');v=json.loads(path.read_bytes());assert sha(path)==row['proof_sha256'] and path.read_bytes()==(O/(job+'-remote-verified.json')).read_bytes() and sha(O/(job+'-evidence.zip'))==v['archive_sha256']==row['archive_sha256'] and v['status']==row['status']
+extra=['test2026.cuda.qwen38_5090.'+n for n in ('test_mtp_prefill16_b4_study','test_mtp_prefill16_study','test_mtp_prefill16_target128_study','test_mtp_builder_workspace','test_b4_mtp_full4k_gate')]
+p={k:v for k,v in old.items() if k not in ('status','files','archive_files','parents','installed_files','scope')}
+p.update(status='rowwise_K_norm_mtp_full4k_prepared_GPU_unrun',files=files,archive_files=sorted(set(old['archive_files'])|{P+n for n in names}|{'Garnet/'+X}),parents=parents,mtp_test_modules=extra,study_module='Garnet/'+X,study_module_sha256=sha(R/X),scope='One fresh B4 MTP3/T16draft-prefill/T4draft-decode/full-vocabulary forced128-output process after paired source87 ordinary full4K128 pass4461f2cc. Same e843 DLL/source87/rowwise-K target; core MTP/verifier/replay arithmetic unchanged. Actual study module41656e explicitly installed defaultoff. Three3968prompt+128output text/image/mixed groups vs8immutable B1 oracles; original48phase-row128component/finitevector andall12x128ID target gate plus unchanged MTP gate: actual draft graphs/256MiBT4+128MiBT16/duplicated extra draft weights/249prefill calls/positive proposals+verification/127committed target inputs each row/no target-prefix recompute.146CPU controls:115 before overlay,31 new MTP controls after exact overlay so T128 CPU provider exists.54closedparents; all source/runtime/SDK/config-index/CMake/all34 pins and restoration, fixed Ccache96GiB admission/ownednonce retirement. No graph observer outputs. A pass covers these MTP full-context cases only; prefix0/1/2/4, heterogeneous acceptance, reset/permutation/tail/repeat,805quality/HTTP/performance and strongest references/INT4/4B remain open. Original failures preserved; no2x claim.')
+assert p['cuda_objects']==w['cuda_objects_after'] and p['runtime']==w['runtime_after'] and p['environment']==w['environment_after'] and p['checkpoints']==w['checkpoint_after'] and p['cache_before_sha256']==w['cache_after_sha256']
+p['installed_files']={**files,**{'Garnet/'+n:h for n,h in p['source_files'].items()}};assert set(p['archive_files'])<=set(files)
+prep=E/'rowwise-k-norm-mtp-full4k-preparation.json';assert not prep.exists();prep.write_bytes(json.dumps(p,indent=2).encode());deploy={P+n:M/n for n in names};deploy[P+'evidence/'+prep.name]=prep;deploy['Garnet/'+X]=R/X
+target=W/'rowwise-k-norm-mtp-deployment.zip';assert not target.exists()
+with zipfile.ZipFile(target,'x',zipfile.ZIP_DEFLATED) as z:
+    for n,path in deploy.items():z.write(path,n)
+    z.writestr('deployment-manifest.json',json.dumps(dict(files={n:sha(path) for n,path in deploy.items()},explicit_new_study_module='Garnet/'+X,production_factories_and_DLL_install_unchanged=True),indent=2))
+receipt=dict(deployment_sha256=sha(target),bytes=target.stat().st_size,deployment_files=len(deploy),guarded_files=len(files),archive_files=len(p['archive_files']),parents=54,CPU_controls=146,remote_CPU_stages=[115,31],fresh_GPU_processes=1,source_files=87,preparation_sha256=sha(prep),library_sha256=p['library_sha256'],study_module_sha256=p['study_module_sha256'])
+(W/'rowwise-k-norm-mtp-package.json').write_bytes(json.dumps(receipt,indent=2).encode());(W/'rowwise-k-norm-mtp-owned-names.json').write_bytes(json.dumps(names).encode());print(json.dumps(receipt))

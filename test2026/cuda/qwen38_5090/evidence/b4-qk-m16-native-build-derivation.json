@@ -1,0 +1,131 @@
+{
+  "derivations": [
+    {
+      "source": "run_b4_v_m16_native_build.py",
+      "target": "run_b4_qk_m16_native_build.py",
+      "source_sha256": "5ffb5a961db2f1e5c174502a6fee73f15b5d2fad2ab14a0bbb345908f15a9390",
+      "target_sha256": "a3df91185f8bbc1c9513d4fb47ea4e3eef52b39e2756bd75ff5c02e2cdb28320",
+      "changes": [
+        {
+          "old": "b4-v-m16-build",
+          "new": "b4-qk-m16-build",
+          "count": 7
+        },
+        {
+          "old": "garnet-native-b4-v-m16",
+          "new": "garnet-native-b4-qk-m16",
+          "count": 1
+        },
+        {
+          "old": "b4_v_m16_build_prepared",
+          "new": "b4_qk_m16_build_prepared",
+          "count": 1
+        },
+        {
+          "old": "b4_v_m16_native_built",
+          "new": "b4_qk_m16_native_built",
+          "count": 1
+        },
+        {
+          "old": "original67,expected,_=v_sources();assert original67==gdn67 and len(expected)==73 and expected==candidate",
+          "new": "original67,v73,_=v_sources();assert original67==gdn67 and len(v73)==73\n        from test2026.cuda.qwen38_5090.b4_qk_m16_source import sources as qk_sources\n        original73,expected,_=qk_sources();assert original73==v73 and len(expected)==79 and expected==candidate",
+          "count": 1
+        },
+        {
+          "old": "from test2026.cuda.qwen38_5090.b4_v_m16_source import sources\n        _,expected,_=sources();assert candidate==expected",
+          "new": "from test2026.cuda.qwen38_5090.b4_qk_m16_source import sources\n        _,expected,_=sources();assert candidate==expected",
+          "count": 1
+        },
+        {
+          "old": "78current controls",
+          "new": "83current controls",
+          "count": 1
+        },
+        {
+          "old": "new73source and preserved67 composition/corruption/failedSDK-model lineage checked independently; paired1209Vprofile/212factory/V-GDN-genericcrosswire contracts required parent proof",
+          "new": "new79source plus preserved73/67 composition/corruption/failedSDK-model lineage; paired1248QKprofile/406factory/QK-V-GDN-genericcrosswire CPU proof required",
+          "count": 1
+        },
+        {
+          "old": "Release/MT/sm120 defaultoff physicalB4T4/M16 V canonical SDK context/plugin/profile over exact67",
+          "new": "Release/MT/sm120 defaultoff physicalB4T4/M16 Q/K canonical SDK context/plugin/profile over exact73",
+          "count": 1
+        },
+        {
+          "old": "Faithfulconnected component baseline passed; original standaloneSDK andfullmodel failures retained.1209profile/212factory/V-GDN-genericcrosswire CPU parent required.",
+          "new": "FaithfulVcomponent correction passed, originalfullmodel stillFAILED; actualpergeometryliveM4Q/K query informs candidate, notmathproof.1248profile/406factory/QK-V-GDN-genericcrosswire CPU parent required.",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "verify_b4_v_m16_native_build.py",
+      "target": "verify_b4_qk_m16_native_build.py",
+      "source_sha256": "77632ce1bcdc66274732cdd9816a55c318da88a38058e629b1fd8f00b3c02a25",
+      "target_sha256": "c2a96c8b3dcd305f072528db66564d497ce225516f86cd2a95e19806f0b6ed5d",
+      "changes": [
+        {
+          "old": "b4-v-m16-build",
+          "new": "b4-qk-m16-build",
+          "count": 3
+        },
+        {
+          "old": "b4-v-m16-native-build-derivation",
+          "new": "b4-qk-m16-native-build-derivation",
+          "count": 1
+        },
+        {
+          "old": "b4_v_m16_native",
+          "new": "b4_qk_m16_native",
+          "count": 3
+        },
+        {
+          "old": "==73",
+          "new": "==79",
+          "count": 2
+        },
+        {
+          "old": "candidate_files=73",
+          "new": "candidate_files=79",
+          "count": 1
+        },
+        {
+          "old": "b4-v-m16-cpu-attempt2",
+          "new": "b4-qk-m16-cpu-attempt1",
+          "count": 1
+        },
+        {
+          "old": "B4T4_V_M16_actual_CPU_contracts_replayed",
+          "new": "B4T4_QK_M16_actual_CPU_contracts_replayed",
+          "count": 1
+        },
+        {
+          "old": "cp['factory_fault_cases']==212",
+          "new": "cp['factory_fault_cases']==406",
+          "count": 1
+        },
+        {
+          "old": "cp['profile']['cases']==1209",
+          "new": "cp['profile']['cases']==1248",
+          "count": 1
+        },
+        {
+          "old": "Ran 78 tests",
+          "new": "Ran 83 tests",
+          "count": 1
+        },
+        {
+          "old": "current_CPU_controls=78",
+          "new": "current_CPU_controls=83",
+          "count": 1
+        },
+        {
+          "old": "new_V_M16_CPU_contracts_parent_checked=True",
+          "new": "new_V_M16_CPU_contracts_parent_checked=True,new_QK_M16_CPU_contracts_parent_checked=True",
+          "count": 1
+        }
+      ]
+    }
+  ],
+  "scope": "Defaultoff79source nativebuild; alloriginalQ/O factory/wire/init/selector/tokenizer/CUDAobjectwhitelist preservation retained. Adds5QKsourcecontrols to78existing=83, original86historical unchanged. New QKCPUcontracts required; noGPUmath/model/timing inbuild."
+}

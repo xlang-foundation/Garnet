@@ -1,0 +1,60 @@
+from pathlib import Path
+import hashlib,json,zipfile
+r=Path('D:/CantorAI/work/qwen38-5090');m=r/'test2026/cuda/qwen38_5090';out=Path(__file__).resolve().parent.parent/'outputs';e=m/'evidence'
+def new(name,text):
+ p=m/name;assert not p.exists();p.write_bytes(text.replace('\r\n','\n').replace('\n','\r\n').encode())
+new('reference_fixed4k_sglang_reserved_identity.py','''"""Explicit engine4098 capacity for an unchanged actual4096-token workload.
+
+Installed tp_worker bounds max_req_len to context_len-1; scheduler then bounds
+new tokens to max_req_len-input_len-1. No installed engine code is modified.
+"""
+from reference_fixed4k_sglang_identity import validate as original_validate,CHECKPOINT
+
+def validate(info,mode):
+ if not isinstance(info,dict):raise ValueError('Actual server_info required')
+ for key,value in (('context_length',4098),('max_total_tokens',32784)):
+  if type(info.get(key)) is not int or info[key]!=value:raise ValueError('Explicit reserved context setting differs: '+key)
+ projected=dict(info);projected.update(context_length=4096,max_total_tokens=32768)
+ result=original_validate(projected,mode)
+ result['verified_settings'].update(context_length=4098,max_total_tokens=32784)
+ result.update(context_capacity=4096,context_capacity_semantics='actual_prompt_plus_completion_workload_limit',configured_engine_context_capacity=4098,engine_context_reserved_slots=2,configured_engine_token_pool=32784)
+ return result
+''')
+for old,newname in [('serve_sglang_fixed4k.sh','serve_sglang_reserved_fixed4k.sh'),('serve_sglang_mtp3_fixed4k.sh','serve_sglang_reserved_mtp3_fixed4k.sh')]:
+ text=(m/old).read_text().replace('--context-length 4096','--context-length 4098').replace('--max-total-tokens 32768','--max-total-tokens 32784').replace('# The32768-token pool preserves eight requests at4096 total context.','# Installed worker/scheduler reserve two context slots. Engine4098 exposes\n# exactly3968+128 actual user tokens; configured pool32784=8*4098.\n# This is not a claim that the configured engine context equals4096.')
+ new(newname,text)
+text=(m/'prepare_sglang_fixed4k_metadata.py').read_text().replace('from reference_fixed4k_sglang_identity import validate','from reference_fixed4k_sglang_reserved_identity import validate').replace('serve_sglang_fixed4k.sh','serve_sglang_reserved_fixed4k.sh').replace('serve_sglang_mtp3_fixed4k.sh','serve_sglang_reserved_mtp3_fixed4k.sh')
+needle=" metadata.update(launcher_sha256="
+assert text.count(needle)==1
+text=text.replace(needle," subprocess.run(['wsl.exe','-d','Ubuntu-24.04','--','/usr/bin/python3',linux_methods+'/inspect_reference_context_limits_linux.py','--output',linux_job+'/context-limit-identity.json'],check=True)\n metadata['installed_context_limit_identity_sha256']=sha(job/'context-limit-identity.json')\n"+needle)
+new('prepare_sglang_reserved_fixed4k_metadata.py',text)
+text=(m/'probe_reference_fixed4k.py').read_text()
+needle="  command=[sys.executable,str(methods/'run_reference_greedy_candidate.py')"
+assert text.count(needle)==1
+text=text.replace(needle,"  assert metadata['configured_engine_context_capacity']==4098 and metadata['engine_context_reserved_slots']==2\n  from reference_fixed4k_boundary import collect as collect_boundary\n  boundary=collect_boundary(methods/'evidence/fixed-length-4096-corpus.zip',out/'boundary-controls',url,args.ordinary/'boundary-controls' if args.ordinary is not None else None)\n  report['early_full4k_controls']=boundary;save()\n"+needle)
+new('probe_reference_reserved_fixed4k.py',text)
+text=(m/'run_sglang_fixed4k.py').read_text().replace('serve_sglang_fixed4k.sh','serve_sglang_reserved_fixed4k.sh').replace('serve_sglang_mtp3_fixed4k.sh','serve_sglang_reserved_mtp3_fixed4k.sh').replace('prepare_sglang_fixed4k_metadata.py','prepare_sglang_reserved_fixed4k_metadata.py').replace('probe_reference_fixed4k.py','probe_reference_reserved_fixed4k.py')
+new('run_sglang_reserved_fixed4k.py',text)
+with zipfile.ZipFile(out/'sglang-fixed4k-context-limit-source.zip') as z:
+ manifest=json.loads(z.read('file-manifest.json'));assert len(manifest['files'])==20
+ sources={n.removeprefix('source/sglang/'):h for n,h in manifest['files'].items() if n.startswith('source/sglang/')}
+ assert len(sources)==19
+ for n,h in sources.items():
+  raw=z.read('source/sglang/'+n);assert hashlib.sha256(raw).hexdigest()==h
+  p=e/'sglang-context-limit-source'/n;assert not p.exists();p.parent.mkdir(parents=True,exist_ok=True);p.write_bytes(raw)
+ pins={'package_root':'/opt/cantorai5090/sglang/lib/python3.12/site-packages/sglang','files':sources,'source_archive_sha256':hashlib.sha256((out/'sglang-fixed4k-context-limit-source.zip').read_bytes()).hexdigest(),'derivation':{'worker':'max_req_len=min(context_len-1,kv_capacity-1)','scheduler':'max_new_tokens=min(requested,max_req_len-input_len-1)','old_configured_context':4096,'old_actual_input':3968,'old_bounded_output':126,'new_configured_context':4098,'new_actual_input':3968,'new_requested_output':128,'configured_token_pool':32784},'scope':'Actual installed primary sources collected after failed attempt1; no package edits. Two-slot allowance is a configured-engine distinction, not a smaller workload or an accepted126-token result.'}
+ (e/'sglang-context-limit-source-pins.json').write_text(json.dumps(pins,indent=2),encoding='utf8')
+new('inspect_reference_context_limits_linux.py','''"""Read and archive actual installed context-limit sources; no framework imports."""
+from pathlib import Path
+import argparse,hashlib,json
+sha=lambda raw:hashlib.sha256(raw).hexdigest()
+def main():
+ a=argparse.ArgumentParser(description=__doc__);a.add_argument('--output',type=Path,required=True);args=a.parse_args();target=args.output.resolve();root=Path('/mnt/d/CantorAI/5090-study-20261023');assert target.is_relative_to(root/'results') and target.parent.is_dir() and not target.exists()
+ pins_path=Path(__file__).with_name('evidence')/'sglang-context-limit-source-pins.json';pins=json.loads(pins_path.read_bytes());package=Path(pins['package_root']);files={}
+ for name,digest in pins['files'].items():
+  path=package/name;raw=path.read_bytes();assert sha(raw)==digest,('Installed context source drift',name)
+  relative='installed-context-source/'+name;copy=target.parent/relative;assert not copy.exists();copy.parent.mkdir(parents=True,exist_ok=True);copy.write_bytes(raw);files[name]={'sha256':digest,'archived_copy':relative}
+ result={'status':'installed_context_limit_sources_verified','pins_sha256':sha(pins_path.read_bytes()),'files':files,'configured_engine_context_capacity':4098,'actual_workload_context_capacity':4096,'source_modified':False};target.write_text(json.dumps(result,indent=2),encoding='utf8');print(json.dumps({'status':result['status'],'files':len(files)}));return 0
+if __name__=='__main__':raise SystemExit(main())
+''')
+print(json.dumps({'status':'separate_reserved_context_methods_prepared_unrun','engine_context':4098,'actual_workload':4096,'source_files':len(sources),'performance_admitted':False}))

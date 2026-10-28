@@ -1,0 +1,53 @@
+"""Prepare only isolated B1 numerical candidates; never widen production guards."""
+from pathlib import Path
+import hashlib,json,sys
+repo=Path('D:/CantorAI/work/qwen38-5090');m=repo/'test2026/cuda/qwen38_5090';sha=lambda b:hashlib.sha256(b).hexdigest()
+recipes={}
+prior_path=m/'evidence/bf16-low-batch-attention-offline-preparation.json'
+prior=json.loads(prior_path.read_bytes()) if prior_path.exists() else None
+def derive(source,target,replacements):
+ raw=(repo/source).read_bytes();text=raw.decode().replace('\r\n','\n');record=[]
+ for before,after,wanted in replacements:
+  count=text.count(before);assert count==wanted,(source,before,count,wanted)
+  text=text.replace(before,after);record.append([before,after,count])
+ path=m/target
+ if path.exists():assert prior and sha(path.read_bytes())==prior['files'][target]['result_sha256'],('Preserve unknown candidate edit',target)
+ path.write_bytes(text.encode())
+ recipes[target]={'source':source,'source_sha256':sha(raw),'replacements':record,'result_sha256':sha(path.read_bytes())}
+source='src/cuda/qwen38_bf16_kv_overlay.cu'
+p=json.loads((m/'evidence/bf16-padded-lifecycle-scope-fixed-preparation.json').read_bytes());assert sha((repo/source).read_bytes())==p['source_sha256'][source]
+derive(source,'bf16_kv_low_batch_candidate.cu',[
+ ('#include "qwen38_bf16_kv_overlay.cuh"','#include "bf16_kv_low_batch_candidate.h"',1),
+ ('return (c.batch==4||c.batch==8)&&(c.tokens==4||c.tokens==32)&&\n        c.heads==24&&c.kv==4&&c.capacity==4096&&c.dim==256;','return BF16KVLowBatchCandidateProfile(c);',1),
+ ('Qwen38BF16KVOverlayWorkspace','Qwen38BF16KVLowBatchCandidateWorkspace',2),
+ ('RunQwen38BF16KVOverlay','RunQwen38BF16KVLowBatchCandidate',1)])
+source='test2026/cuda/qwen38_5090/probe_bf16_kv_overlay_native.cu'
+original=(repo/source).read_text();workspace_count=original.count('Qwen38BF16KVOverlayWorkspace');run_count=original.count('RunQwen38BF16KVOverlay')
+derive(source,'probe_bf16_low_batch_attention.cu',[
+ ('#include "qwen38_bf16_kv_overlay.cuh"','#include "bf16_kv_low_batch_candidate.h"',1),
+ ('Qwen38BF16KVOverlayWorkspace','Qwen38BF16KVLowBatchCandidateWorkspace',workspace_count),
+ ('RunQwen38BF16KVOverlay','RunQwen38BF16KVLowBatchCandidate',run_count),
+ ('if(id==0||id==14||id==28||id==42)','if(id==0||id==14)',1),
+ ('const bool graph=(id==1||id==15||id==29||id==43);','const bool graph=(id==1||id==15||id==63);',1),
+ ('for(int batch:{4,8})','for(int batch:{1})',1),
+ ('execute(id++,8,4,layer,513,witnesses,offset);','execute(id++,1,4,layer,513,witnesses,offset);\n        execute(63,1,32,3,32,witnesses,offset);execute(95,1,32,63,4096,witnesses,offset);id+=2;',1),
+ ('id==70','id==44',1),
+ ('bf16_overlay_collected_needs_fp64_replay','bf16_low_batch_overlay_collected_needs_fp64_replay',1),
+ ('void execute(int id,int batch,int chunk,int layer,int end,std::ofstream& witnesses,uint64_t& witnessOffset){',
+  'void execute(int id,int batch,int chunk,int layer,int end,std::ofstream& witnesses,uint64_t& witnessOffset){\n    std::printf("{\\"event\\":\\"case_started\\",\\"id\\":%d,\\"batch\\":%d,\\"chunk\\":%d,\\"layer\\":%d,\\"end\\":%d}\\n",id,batch,chunk,layer,end);std::fflush(stdout);',1),
+ ('        for(auto key:{int64_t(-1),ko+1',
+  '        for(int badBatch:{4,8}){auto bad=c;bad.batch=badBatch;require(Qwen38BF16KVLowBatchCandidateWorkspace(bad)==0,"Legacy batch admitted into low-batch profile");reject(bad,inputs,result,workspace,ko,vo);}\n        for(auto key:{int64_t(-1),ko+1',1)])
+sys.path.insert(0,str(m));from bf16_low_batch_attention_oracle import case_plan,sample_triples
+plan=case_plan();assert len(plan)==44 and all(c['chunk']==32 and c['id']%32==31 for c in plan[-2:])
+record={'status':'separate_low_batch_attention_candidate_prepared_gpu_unrun','files':recipes,'case_plan':plan,
+ 'source_sha256':{n:sha((repo/n).read_bytes()) for n in [
+  'src/cuda/qwen38_bf16_kv_overlay.cu','src/cuda/qwen38_bf16_kv_overlay.cuh','src/cuda/qwen38_bf16_kv_commit.cuh','src/cuda/qwen35_attention_core.cuh',
+  'test2026/cuda/qwen38_5090/bf16_kv_low_batch_candidate.h','test2026/cuda/qwen38_5090/bf16_kv_low_batch_candidate.cu',
+  'test2026/cuda/qwen38_5090/probe_bf16_low_batch_attention.cu','test2026/cuda/qwen38_5090/probe_bf16_low_batch_policy.cpp',
+  'test2026/cuda/qwen38_5090/bf16_low_batch_attention_oracle.py','test2026/cuda/qwen38_5090/bf16_kv_overlay_oracle.py']},
+ 'planned_fp64_witness_scalars':sum(len(sample_triples(c))*256 for c in plan),'planned_graph_profiles':3,'planned_negative_calls':104,
+ 'canonical_carrier_words_per_row':106823680,'b1_canonical_bytes':106823680*4,'b4_canonical_bytes':106823680*4*4,
+ 'production_admission_changed':False,'gpu_executed':False,'model_qualified':False,'performance_admitted':False,
+ 'scope':'Explicit unintegrated B1/T4,T32/cap4096 attention numerical profile to support C1 compact-state work. Identical kernel math and cache offsets, separate exported names and strict CPU policy; old B4/B8 source remains unchanged.44FP64 cases cover all16full-attention layers and0/1/511/512/513/4095/4096 boundaries, including full32active-token first/last boundaries through predeclared fixture IDs63/95. Operator correctness, commit/profile/lowering/model/4K/protocol/memory fit and real speed remain unqualified.'}
+(m/'evidence/bf16-low-batch-attention-offline-preparation.json').write_text(json.dumps(record,indent=2),encoding='utf8')
+print(json.dumps({k:record[k] for k in ['status','planned_fp64_witness_scalars','planned_negative_calls','b1_canonical_bytes','b4_canonical_bytes','production_admission_changed']}))

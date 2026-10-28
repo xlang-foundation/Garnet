@@ -1,0 +1,26 @@
+from pathlib import Path
+import hashlib,json,zipfile
+chat=Path(__file__).resolve().parents[1];repo=Path('D:/CantorAI/work/qwen38-5090');m=repo/'test2026/cuda/qwen38_5090';archive=chat/'outputs/bf16-low-batch-http-study-attempt1-evidence.zip';sha=lambda b:hashlib.sha256(b).hexdigest();prefix='Garnet/test2026/cuda/qwen38_5090/'
+pairs=[('native_bf16_low_batch_stream_worker.py','native_tokenizer_nfc_stream_worker.py'),('serve_native_bf16_low_batch_worker.bat','serve_native_tokenizer_nfc_worker.bat'),('probe_bf16_low_batch_http.py','probe_tokenizer_nfc_http.py'),('run_bf16_low_batch_http.py','run_tokenizer_nfc_http.py'),('prepare_bf16_low_batch_http.py','prepare_tokenizer_nfc_http.py'),('verify_bf16_low_batch_http.py','verify_tokenizer_nfc_http.py'),('test_bf16_low_batch_worker_contract.py','test_tokenizer_nfc_worker_contract.py')]
+replacements=pairs+[('test_bf16_low_batch_worker_contract','test_tokenizer_nfc_worker_contract'),('bf16-low-batch-model-consistency-attempt2','tokenizer-nfc-model-consistency-attempt1'),('bf16_low_batch_model_consistency_replayed','tokenizer_nfc_model_consistency_replayed'),('verify_bf16_low_batch_model_fixed.py','verify_tokenizer_nfc_model.py'),('garnet-native-bf16-low-batch-attempt1.dll','garnet-native-tokenizer-nfc-attempt1.dll'),('bf16-low-batch-http-study-attempt1','tokenizer-nfc-http-study-attempt1'),('bf16-low-batch-http-preparation.json','tokenizer-nfc-http-preparation.json'),('bf16_low_batch_http_study_collected_needs_replay','tokenizer_nfc_http_study_collected_needs_replay'),('bf16_low_batch_http_study_replayed','tokenizer_nfc_http_study_replayed'),('bf16_low_batch_http_study_failure_preserved','tokenizer_nfc_http_study_failure_preserved'),('bf16_low_batch_http_profile_collected','tokenizer_nfc_http_profile_collected'),('b1_http_study_prepared_unrun','tokenizer_nfc_http_study_prepared_unrun')]
+ancestry=''' derivation=json.loads((m/'evidence/tokenizer-nfc-http-method-derivation.json').read_bytes());failed='bf16-low-batch-http-study-attempt1';failure_raw=(args.proofs/(failed+'-remote-verified.json')).read_bytes();failure=json.loads(failure_raw)
+ assert failure==json.loads((args.proofs/(failed+'-verified.json')).read_bytes()) and failure['status']=='bf16_low_batch_http_study_failure_preserved' and failure['archive_sha256']==sha(args.proofs/(failed+'-evidence.zip'))==derivation['parent_failed_archive_sha256']
+ with zipfile.ZipFile(args.proofs/(failed+'-evidence.zip')) as previous:
+  for target,row in derivation['files'].items():
+   original=previous.read(row['source']);assert hashlib.sha256(original).hexdigest()==row['source_sha256'];text=original.decode()
+   for before,after,count in row['changes']:assert text.count(before)==count;text=text.replace(before,after)
+   assert text.encode()==(m/target).read_bytes() and sha(m/target)==row['result_sha256']
+ files['results/'+failed+'-verified.json']=hashlib.sha256(failure_raw).hexdigest()
+'''
+prior=m/'evidence/tokenizer-nfc-http-method-derivation.json';old_recipes=json.loads(prior.read_bytes())['files'] if prior.exists() else {};recipes={}
+with zipfile.ZipFile(archive) as z:
+ for source,target in pairs:
+  raw=z.read(prefix+source);text=raw.decode();changes=[]
+  for before,after in replacements:
+   count=text.count(before)
+   if count:text=text.replace(before,after);changes.append([before,after,count])
+  if source=='prepare_bf16_low_batch_http.py':
+   old="'evidence/fixed-context-4096-corpus.zip')";new="'evidence/fixed-context-4096-corpus.zip','evidence/tokenizer-nfc-http-method-derivation.json')";assert text.count(old)==1;text=text.replace(old,new);changes.append([old,new,1])
+   old=" files.update({'Garnet/test2026/cuda/qwen38_5090/'+n:sha(m/n) for n in METHODS})";assert text.count(old)==1;text=text.replace(old,ancestry+old);changes.append([old,ancestry+old,1])
+  path=m/target;assert not path.exists() or sha(path.read_bytes())==old_recipes[target]['result_sha256'];result=text.encode();path.write_bytes(result);recipes[target]={'source':prefix+source,'source_sha256':sha(raw),'changes':changes,'result_sha256':sha(result)}
+doc={'parent_failed_archive_sha256':sha(archive.read_bytes()),'files':recipes,'scope':'Fresh named HTTP study from immutable failed attempt1. Bind new actual model proof/verifier/retained alias, use new worker-targeted CPU test and require exact source derivation/failed-parent proof. All805quality,4K/short workloads, request/token checks and immutable failure policy unchanged. No model proof/plan materialized until actual current model closes and both replays pass.'};(m/'evidence/tokenizer-nfc-http-method-derivation.json').write_text(json.dumps(doc,indent=2),encoding='utf8');print(json.dumps({'methods_derived':len(recipes),'http_executed':False}))

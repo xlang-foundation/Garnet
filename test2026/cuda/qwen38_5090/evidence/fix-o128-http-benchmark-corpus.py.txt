@@ -1,0 +1,7 @@
+from pathlib import Path
+import ast,hashlib,json
+W=Path(__file__).resolve().parent;M=Path('D:/CantorAI/work/qwen38-5090/test2026/cuda/qwen38_5090');sha=lambda b:hashlib.sha256(b).hexdigest();rows=[]
+targets=[M/'o128_http_benchmark_contract.py',M/'probe_o128_http_benchmark.py',M/'verify_o128_http_benchmark.py',W/'check-o128-http-benchmark-contract.py',W/'derive-o128-http-benchmark-verifier.py']
+for target in targets:
+    raw=target.read_bytes();preserved=M/'evidence'/('o128-http-benchmark-original-context-'+target.name+'.txt');assert not preserved.exists() or preserved.read_bytes()==raw;preserved.write_bytes(raw);new=raw.replace(b'benchmark_fixed_context_native',b'benchmark_fixed_length_native').replace(b'fixed-context-4096-corpus.zip',b'fixed-length-4096-corpus.zip');assert new!=raw;ast.parse(new);target.write_bytes(new);rows.append(dict(path=target.name,before_sha256=sha(raw),after_sha256=sha(new)))
+(M/'evidence/o128-http-benchmark-corpus-repair.json').write_bytes(json.dumps(dict(status='predeployment_CPU_positive_control_caught_wrong_corpus_fixed',reason='Retained actual reference uses fixed-length4096 ignore_eos=true archive596991dd/manifest25808fff; selected context corpusca78/829d differs. Preserve failed CPU ledger and original methods; use existing unchanged fixed-length harness/constants and exact original reference corpus. No GPU benchmark started and no timing/ID/count requirement relaxed.',changes=rows),indent=2).encode());print('CORRECT_MATCHED_FIXED_LENGTH_CORPUS_SELECTED')

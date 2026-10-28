@@ -1,0 +1,86 @@
+{
+  "source_sha256": "78c98402d875fe8e086dd3ce498d9f4c17372f83fa025ae2a6dac00e28db28f3",
+  "target_sha256": "8ea95554c7093cc865ace27e9e6f43b49d460d24985cb7742d239a9a103fe2ed",
+  "changes": [
+    {
+      "old": "JOB='o128-http-benchmark-attempt1'",
+      "new": "JOB='b4-rowwise-http-benchmark-attempt1'",
+      "count": 1
+    },
+    {
+      "old": "STEM='Garnet-O128-Repeated-vLLM-SGLang-4K-v2'",
+      "new": "STEM='Garnet-B4-Repeated-vLLM-SGLang-4K'",
+      "count": 1
+    },
+    {
+      "old": "trials=q['arrays']['trials']",
+      "new": "trials=q['benchmark_arrays']['trials']",
+      "count": 1
+    },
+    {
+      "old": "old_label='Garnet prefill32 / MTP3 (1 trial)';new_label='Garnet prefill128 / MTP3 (3 trials)'",
+      "new": "old_label='Garnet B1 / prefill128 / MTP3 (3 trials)';new_label='Garnet B4 / prefill32 / MTP3 (3 trials)'",
+      "count": 1
+    },
+    {
+      "old": "samples={old_label:[old['series']['Garnet MTP3 / draft prefill16']],new_label:native,'vLLM ordinary (1 trial)':[old['series']['vLLM ordinary']],'SGLang ordinary (1 trial)':[old['series']['SGLang ordinary']]}",
+      "new": "samples={old_label:old['raw_trial_cohorts']['Garnet prefill128 / MTP3 (3 trials)'],new_label:native,'vLLM ordinary (1 trial)':old['raw_trial_cohorts']['vLLM ordinary (1 trial)'],'SGLang ordinary (1 trial)':old['raw_trial_cohorts']['SGLang ordinary (1 trial)']}",
+      "count": 1
+    },
+    {
+      "old": "status='three_O128_HTTP_trials_and_retained_single_trial_references_replayed'",
+      "new": "status='three_B4_HTTP_trials_and_retained_B1_and_ordinary_references_replayed'",
+      "count": 1
+    },
+    {
+      "old": "Garnet prefill128: repeated 4K HTTP comparison",
+      "new": "Garnet B4: repeated 4K HTTP comparison",
+      "count": 1
+    },
+    {
+      "old": "Garnet prefill128 vs retained vLLM / SGLang",
+      "new": "Garnet B1 / B4 vs vLLM / SGLang",
+      "count": 1
+    },
+    {
+      "old": "Garnet prefill128 repeated 4K comparison",
+      "new": "Garnet B4 repeated 4K comparison",
+      "count": 1
+    },
+    {
+      "old": "Garnet prefill128 repeated 4K HTTP comparison",
+      "new": "Garnet B4 repeated 4K HTTP comparison",
+      "count": 1
+    },
+    {
+      "old": "native: 3 trials; references: 1 trial",
+      "new": "B1/B4 native: 3 trials each; ordinary references: 1 trial each",
+      "count": 2
+    },
+    {
+      "old": "Native batch 1 queues clients; references up to 8 running. Windows / WSL. Min\u2013max bands are not confidence intervals.",
+      "new": "B1 queues; B4 microbatches/pads; refs up to8 active. Windows/WSL. Bands are observed ranges, not confidence intervals.",
+      "count": 1
+    },
+    {
+      "old": "        ax.set_title(case.title()+' | '+title,loc='left',fontsize=11);",
+      "new": "        references=[series[n] for n in ('vLLM ordinary (1 trial)','SGLang ordinary (1 trial)')]\n        if metric!='sampled_peak_adapter_used_bytes':\n            target=[(.5*min(r[case+'-c'+str(c)][metric] for r in references) if metric=='ttft_median_ms' else 2*max(r[case+'-c'+str(c)][metric] for r in references))*scale for c in cs]\n            ax.plot(cs,target,color='#414957',linestyle=(0,(3,4)),lw=1.1,label='Guide vs ordinary refs (provisional)')\n        ax.set_title(case.title()+' | '+title,loc='left',fontsize=11);",
+      "count": 1
+    },
+    {
+      "old": "    with (O/(STEM+'-Metrics.csv')).open('w',newline='',encoding='utf8') as f:",
+      "new": "    for spec in specs:\n        for case in ('text','image'):\n            fig,ax=plt.subplots(figsize=(9,6.7));fig.patch.set_facecolor('#f5f8fc');fig.subplots_adjust(left=.11,right=.97,bottom=.28,top=.70)\n            draw(ax,case,spec);fig.suptitle('Garnet B1 / B4 and ordinary references',fontsize=17,weight='bold',y=.97)\n            handles,labels=ax.get_legend_handles_labels();fig.legend(handles,labels,loc='upper center',bbox_to_anchor=(.54,.91),ncol=2,frameon=False,fontsize=8)\n            fig.text(.06,.13,'3968+128 tokens | RTX5090 | Windows native / WSL references',fontsize=9)\n            fig.text(.06,.085,'Native3 repeats; references1 each. Observed ranges, not confidence intervals.',fontsize=8)\n            fig.text(.06,.04,'Sampled adapter VRAM; configs differ in SSM cache precision. Overall2x unmet.',fontsize=8,color='#9a4521');save(fig,'-'+case.title()+'-'+spec[0])\n    with (O/(STEM+'-Metrics.csv')).open('w',newline='',encoding='utf8') as f:",
+      "count": 1
+    },
+    {
+      "old": "Native: median of three trials, VRAM maximum. Retained references: single trials.",
+      "new": "Both native lines: median of three trials, VRAM maximum. Retained ordinary references: single trials.",
+      "count": 1
+    }
+  ],
+  "header_replaced_with_paired_B4_case_gate": true,
+  "all_eight_panels_and_individual_workload_metric_figures": true,
+  "requires_complete_raw_benchmark_replayed_on_both_machines": true,
+  "syntax_checked_only": true,
+  "renderer_or_model_executed": false
+}

@@ -1,0 +1,45 @@
+"""Exact derived matrix control, with separately compiled real native helper."""
+from pathlib import Path
+import hashlib,json
+repo=Path('D:/CantorAI/work/qwen38-5090');m=repo/'test2026/cuda/qwen38_5090';sha=lambda raw:hashlib.sha256(raw).hexdigest()
+source=m/'actual_prefill128_fp8_workspace8.cu';text=source.read_bytes().decode();steps=[]
+def replace(old,new,count=1):
+    global text
+    assert text.count(old)==count,(old,text.count(old));text=text.replace(old,new);steps.append({'old':old,'new':new,'count':count})
+replace('#include "modelopt_fp8.cuh"','#include "modelopt_fp8.cuh"\n#include "modelopt_fp8_m128_canonical.h"')
+replace('static bool sameAlgorithm = false, nativeCanonical = false, savedAlgorithmValid = false;','static bool sameAlgorithm = false, nativeCanonical = false, savedAlgorithmValid = false, nativeM128 = false;')
+replace('static cublasStatus_t ObserveMatmul(', 'cublasStatus_t ObserveMatmul(')
+replace('    const auto status = cublasLtMatmul(handle, operation, alpha, a, ad, b, bd,', '''    if (nativeM128 && m == 128 && (!savedAlgorithmValid || !algo ||
+        std::memcmp(algo, &savedAlgorithm, sizeof(savedAlgorithm)) || workspaceBytes != (8ULL << 20)))
+        return CUBLAS_STATUS_INVALID_VALUE;
+    const auto status = cublasLtMatmul(handle, operation, alpha, a, ad, b, bd,''')
+replace('[--same-algorithm|--native-canonical]', '[--same-algorithm|--native-canonical|--native-m128]')
+replace('            else throw std::runtime_error("Unknown mode");','            else if (!std::strcmp(argv[3], "--native-m128")) { nativeM128 = true; nativeCanonical = true; }\n            else throw std::runtime_error("Unknown mode");')
+replace('            for (int repeat = 0; repeat < 2; ++repeat) {\n                printf("CONTROL', '''            std::shared_ptr<Garnet::ModelOptFP8M128Context> m128Context;
+            if (nativeM128 && m == 128) {
+                m128Context = Garnet::CreateModelOptFP8M128Context();
+                Garnet::ModelOptFP8M128Info info;
+                if (!Garnet::GetModelOptFP8M128Info(m128Context, info) || info.algorithm != 35 ||
+                    info.requiredWorkspace != 5246879 || info.device != 0 ||
+                    std::memcmp(&info.opaque, &savedAlgorithm, sizeof(savedAlgorithm)))
+                    throw std::runtime_error("New typed M128 context does not match qualified algorithm");
+                printf("NATIVE_M128_CONTEXT algorithm=%d device=%d required_workspace=%zu opaque=", info.algorithm, info.device, info.requiredWorkspace);
+                const auto* bytes = reinterpret_cast<const unsigned char*>(&info.opaque);
+                for (size_t i = 0; i < sizeof(info.opaque); ++i) printf("%02x", bytes[i]);
+                puts("");
+            }
+            for (int repeat = 0; repeat < 2; ++repeat) {
+                printf("CONTROL''')
+replace('''                const auto status = Garnet::RunModelOptFP8Matmul(handle, w.p, packed.p,
+                    result.p, m, n, k, weightScale * inputScale, workspace.p, sameAlgorithm && m == 128 ? (8ULL << 20) : (4ULL << 20), nullptr,nativeCanonical&&m==32);''','''                const auto status = nativeM128 && m == 128
+                    ? Garnet::RunModelOptFP8M128Matmul(m128Context, w.p, packed.p, result.p,
+                        m, n, k, weightScale * inputScale, workspace.p, 8ULL << 20, nullptr)
+                    : Garnet::RunModelOptFP8Matmul(handle, w.p, packed.p,
+                        result.p, m, n, k, weightScale * inputScale, workspace.p, sameAlgorithm && m == 128 ? (8ULL << 20) : (4ULL << 20), nullptr,nativeCanonical&&m==32);''')
+replace('        if (nativeCanonical) puts(', '        if (nativeM128) puts(totalChanged ? "NATIVE_M128_TYPED_HELPER_FAILED" : "NATIVE_M128_TYPED_HELPER_PASSED");\n        else if (nativeCanonical) puts(')
+target=m/'actual_fp8_m128_native_control.cu';assert not target.exists();target.write_bytes(text.encode())
+declaration=text.split('cublasStatus_t ObserveMatmul(',1)[1].split(') {',1)[0]
+wrapper='// Actual native helper compiled in a separate TU; observe calls without changing them.\n#include "modelopt_fp8_m128_canonical.h"\n'+ 'cublasStatus_t ObserveMatmul('+declaration+');\n#define cublasLtMatmul ObserveMatmul\n#include "modelopt_fp8_m128_canonical.cpp"\n#undef cublasLtMatmul\n'
+wrapped=m/'fp8_m128_observed_helper.cpp';assert not wrapped.exists();wrapped.write_bytes(wrapper.encode())
+r={'status':'fp8_m128_actual_helper_control_derived_unrun','files':[{'source':source.name,'source_sha256':sha(source.read_bytes()),'target':target.name,'target_sha256':sha(target.read_bytes()),'replacements':steps}], 'observer_wrapper_sha256':sha(wrapped.read_bytes()),'observer_wrapper':wrapper,'scope':'Same archived real M16 inputs repeated for M128; separately compile exact production typed helper with only cublas call observation, not substitution. Old M16 and canonical M32 retained. Full-word equality required. No model or performance admission.'}
+path=m/'evidence/fp8-m128-native-control-derivation.json';assert not path.exists();path.write_bytes(json.dumps(r,indent=2).encode());print(json.dumps({'collector_sha256':sha(target.read_bytes()),'observer_sha256':sha(wrapped.read_bytes())}))

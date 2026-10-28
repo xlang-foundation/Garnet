@@ -1,0 +1,21 @@
+from pathlib import Path
+import ast,hashlib,json
+W=Path(__file__).resolve().parent;R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';E=M/'evidence';sha=lambda b:hashlib.sha256(b).hexdigest();records=[]
+def change(name,pairs):
+    p=M/name;old=p.read_bytes();s=old.decode().replace('\r\n','\n');steps=[]
+    for a,b in pairs:
+        count=s.count(a);assert count==1,(name,a,count);s=s.replace(a,b);steps.append(dict(old=a,new=b,count=1))
+    ast.parse(s);p.write_bytes(s.encode());records.append(dict(file=name,before_sha256=sha(old),after_sha256=sha(p.read_bytes()),changes=steps))
+change('probe_b4_rowwise_http_quality.py',[
+    ("worker=BatchWorker([sys.executable,str(m/'launch_b4_rowwise_http_worker.py'),str(root),cache],out/'worker',4,10);server=thread=None","worker=None;server=thread=None"),
+    ('    try:\n        deadline=time.monotonic()+1800',"    try:\n        worker=BatchWorker([sys.executable,str(m/'launch_b4_rowwise_http_worker.py'),str(root),cache],out/'worker',4,10)\n        deadline=time.monotonic()+1800"),
+    ('        worker.close()','        if worker is not None:worker.close()')])
+change('run_b4_rowwise_http_quality.py',[
+    ("JOB='b4-rowwise-http-quality-attempt2'","JOB='b4-rowwise-http-quality-attempt3'"),
+    ("    assert p['status']=='B4_rowwise_HTTP_quality_prepared_GPU_unrun'","    assert p['status']=='B4_rowwise_HTTP_quality_prepared_GPU_unrun'\n    assert p['checkpoint_revision']==json.loads((ROOT/p['model_file_manifest']).read_bytes())['revision']=='482ca0f3832238542f8f5295dde86b5f22711d80'"),
+    ('Seventeen CPU source-bundle/protocol/raw-event replay controls','Nineteen CPU startup/source-bundle/protocol/raw-event replay controls'),
+    ("assert code==0,'17 CPU controls failed'","assert code==0,'19 CPU controls failed'")])
+change('verify_b4_rowwise_http_quality.py',[
+    ("JOB='b4-rowwise-http-quality-attempt2'","JOB='b4-rowwise-http-quality-attempt3'"),
+    ("if stages.get(stage)==0:assert b'Ran 17 tests' in z.read(B+stage+'-ledger/commands.log') and b'\\nOK' in z.read(B+stage+'-ledger/commands.log')","if stages.get(stage)==0:assert ('Ran '+str(19 if stage=='cpu' else 17)+' tests').encode() in z.read(B+stage+'-ledger/commands.log') and b'\\nOK' in z.read(B+stage+'-ledger/commands.log')")])
+p=E/'b4-http-startup-v3-derivation.json';assert not p.exists();p.write_bytes(json.dumps(dict(status='startup_cleanup_and_revision_guard_prepared_CPU_unrun',changes=records,model_bundle_or_native_DLL_changed=False),indent=2).encode());print(json.dumps(dict(changed_files=len(records),CPU_unrun=True)))

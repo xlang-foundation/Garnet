@@ -1,0 +1,7 @@
+
+{"id": "39cc8e66a87d4cefb68ac13d916f123b", "kind": "correctness", "label": "Preserve original analysis refusal: it incorrectly assumed every P matmul workspace4MiB; actual existingGDN128uses8MiB", "argv": ["D:\\CantorAI\\Garnet\\.venv\\Scripts\\python.exe", "C:\\Users\\shaw9\\Documents\\Codex\\2026-10-23\\referenced-chatgpt-conversation-this-is-an\\work\\analyze-q128-output-vendor-history.py"]}
+Traceback (most recent call last):
+  File "C:\Users\shaw9\Documents\Codex\2026-10-23\referenced-chatgpt-conversation-this-is-an\work\analyze-q128-output-vendor-history.py", line 13, in <module>
+    for required in (f'Cdesc=[type=R_16BF rows={n} cols={t} ld={n}]',f'Ddesc=[type=R_16BF rows={n} cols={t} ld={n}]','computeType=COMPUTE_32F scaleType=R_32F transa=OP_T','workSpaceSizeInBytes=4194304 beta=0 outOfPlace=0'):assert required in line
+                                                                                                                                                                                                                                      ^^^^^^^^^^^^^^^^
+AssertionError

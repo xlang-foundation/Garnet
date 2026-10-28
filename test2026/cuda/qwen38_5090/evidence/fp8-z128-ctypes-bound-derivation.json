@@ -1,0 +1,34 @@
+{
+  "status": "preloaded_host_module_assumption_corrected",
+  "derivations": [
+    {
+      "base": "probe_fp8_z128_ctypes.py",
+      "target": "probe_fp8_z128_ctypes_bound.py",
+      "base_sha256": "c84f9668a2ab531e66a368e7e008ecede857799bc7e416655fb2324cc781aaac",
+      "target_sha256": "dada574d9e78ac3f9699e51c34ed61ed3b0c50f1042f13787ea10c7b0cc0f693",
+      "changes": [
+        {
+          "before": "assert 'garnet' not in sys.modules and 'tensor' not in sys.modules\n",
+          "after": ""
+        },
+        {
+          "before": "'garnet_imported':False",
+          "after": "'garnet_preloaded_by_host':'garnet' in sys.modules,'tensor_preloaded_by_host':'tensor' in sys.modules,'garnet_explicitly_imported_by_probe':False"
+        }
+      ]
+    },
+    {
+      "base": "test_fp8_z128_ctypes.bat",
+      "target": "test_fp8_z128_ctypes_bound.bat",
+      "base_sha256": "8e9f07110d4c15132ce862462b3f83e12794be35755e003cfaf7e48410c1a8c7",
+      "target_sha256": "be89a78b466d6a7419f3e464174d7f518486286181f6a1675c9940d4e98443d1",
+      "changes": [
+        {
+          "before": "probe_fp8_z128_ctypes.py",
+          "after": "probe_fp8_z128_ctypes_bound.py"
+        }
+      ]
+    }
+  ],
+  "scope": "Original failed capability probe preserved. ctypes import succeeded; xlang preloads Garnet/tensor. Bound probe records presence without explicitly importing Garnet or loading GPU DLLs."
+}

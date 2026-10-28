@@ -1,0 +1,13 @@
+from pathlib import Path
+import hashlib,json,os,sys,zipfile
+W=Path(__file__).resolve().parent;O=W.parent/'outputs';R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';sys.path[:0]=[str(M),str(R)];import run_logged as ledger
+sha=lambda b:hashlib.sha256(b).hexdigest();job='qg128-sdk-control-attempt2'
+with zipfile.ZipFile(W/'qg128-sdk-control-closure-assets.zip') as z:
+    manifest=json.loads(z.read('evidence-manifest.json'));assert z.testzip() is None and len(z.namelist())==len(set(z.namelist()))==len(manifest['files'])+1==7
+    for n,h in manifest['files'].items():assert sha(z.read(n))==h
+    assert z.read('results/qg128-sdk-control-attempt1-verified.json')==(O/'qg128-sdk-control-attempt1-verified.json').read_bytes()
+    for remote,local in [('results/'+job+'-verified.json',O/(job+'-remote-verified.json')),('results/'+job+'-evidence.zip',O/(job+'-evidence.zip'))]:
+        raw=z.read(remote);assert not local.exists() or local.read_bytes()==raw;local.write_bytes(raw)
+peer=O/(job+'-remote-verified.json');q=json.loads(peer.read_bytes());archive=O/(job+'-evidence.zip');assert q['exit_code']==0 and sha(archive.read_bytes())==q['archive_sha256'];p=json.loads((M/'evidence/qg128-sdk-control-preparation-attempt2.json').read_bytes());pins={n:sha((R/n.removeprefix('Garnet/')).read_bytes()) for n in p['files']};assert pins==p['files'];ledger.source_identity=lambda:{'scope':'Explicit standalone actual SDK compatibility complete independent CPU replay, original failed audit preserved; protected unrelated untracked excluded','owned_source_sha256':pins};os.chdir(R)
+assert ledger.run([sys.executable,str(M/'verify_qg128_sdk_control_attempt2.py'),'--proofs',str(O)],W/'qg128-sdk-control-attempt2-local-replay-ledger','correctness','Independent complete actual SDK descriptor/config/AlgoCheck M16/M32/M128 replay, loaded modules/driver hashes and source/runtime/SDK/checkpoints unchanged; not model arithmetic admission',[archive,peer,*[R/n.removeprefix('Garnet/') for n in p['files']]])==0
+raw=(O/(job+'-verified.json')).read_bytes();assert raw==peer.read_bytes();print(json.dumps(dict(status='actual_QG_SDK_control_independently_replayed',paired_proof_sha256=sha(raw))))

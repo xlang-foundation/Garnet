@@ -1,0 +1,470 @@
+{
+  "status": "strict_new_Q128_contracts_and_all_old_native_templates_preserved",
+  "derivations": [
+    {
+      "source": "probe_kv128_profile_cpu.cpp",
+      "target": "probe_q128_profile_cpu.cpp",
+      "source_sha256": "a81fff6cccc8e738920331eb990c73cd079018bb1246b58aafb77b70295eb32f",
+      "target_sha256": "44f17f14eeaf767114d08538cb3f1b54e62cc016b13890802cab9ea4629e6d06",
+      "changes": [
+        {
+          "old": "modelopt_fp8_kv128",
+          "new": "modelopt_fp8_q128",
+          "count": 1
+        },
+        {
+          "old": "ModelOptFP8KV128",
+          "new": "ModelOptFP8Q128",
+          "count": 5
+        },
+        {
+          "old": "KV128",
+          "new": "Q128",
+          "count": 2
+        },
+        {
+          "old": "1024",
+          "new": "12288",
+          "count": 5
+        },
+        {
+          "old": "std::string(projection)==\"k\"||std::string(projection)==\"v\"",
+          "new": "std::string(projection)==\"q\"",
+          "count": 1
+        },
+        {
+          "old": "k_proj.weight",
+          "new": "q_proj.weight",
+          "count": 5
+        },
+        {
+          "old": "selected==32",
+          "new": "selected==16",
+          "count": 1
+        },
+        {
+          "old": "rejected==246",
+          "new": "rejected==262",
+          "count": 1
+        },
+        {
+          "old": "\\\"selected\\\":32",
+          "new": "\\\"selected\\\":16",
+          "count": 1
+        },
+        {
+          "old": "\\\"rejected\\\":246",
+          "new": "\\\"rejected\\\":262",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "native_kv128_canonical_cpu_sdk/cuda_runtime_api.h",
+      "target": "native_q128_canonical_cpu_sdk/cuda_runtime_api.h",
+      "source_sha256": "4f35bff12e708d84ac5d0f7ad03a77c6e134d4568390c9aff4f3d02ebcb1e854",
+      "target_sha256": "4f35bff12e708d84ac5d0f7ad03a77c6e134d4568390c9aff4f3d02ebcb1e854",
+      "changes": []
+    },
+    {
+      "source": "native_kv128_canonical_cpu_sdk/cublasLt.h",
+      "target": "native_q128_canonical_cpu_sdk/cublasLt.h",
+      "source_sha256": "ee60455c9ff3f15932080e04c6a782c7811d84025d4100a78eca0f3b2abe2d67",
+      "target_sha256": "c90f0f70869e933fb708f434482582c5b4510057c130da994b5a752c4a29b9a2",
+      "changes": [
+        {
+          "old": "constexpr uint32_t CUBLASLT_MATMUL_TILE_64x64=15",
+          "new": "constexpr uint32_t CUBLASLT_MATMUL_TILE_64x32=13,CUBLASLT_MATMUL_STAGES_64x5=17;\nconstexpr uint32_t CUBLASLT_MATMUL_TILE_64x64=15",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "probe_kv128_factory_cpu.cpp",
+      "target": "probe_q128_factory_cpu.cpp",
+      "source_sha256": "72979920a2388779fbb5f17a3ff04f4f184775468e379c527544feae1b647031",
+      "target_sha256": "9046c40091a1b0f14a8924790857e74e7548eb90a0c69213eec9f25411a0e9fa",
+      "changes": [
+        {
+          "old": "modelopt_fp8_kv128",
+          "new": "modelopt_fp8_q128",
+          "count": 1
+        },
+        {
+          "old": "ModelOptFP8KV128",
+          "new": "ModelOptFP8Q128",
+          "count": 4
+        },
+        {
+          "old": "const int values[]={35,15,18,7,2,1}",
+          "new": "const int values[]={67,13,17,1,0,1,18}",
+          "count": 1
+        },
+        {
+          "old": "attr>5",
+          "new": "attr>6",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "run_kv128_factory_cpu.py",
+      "target": "run_q128_factory_cpu.py",
+      "source_sha256": "5d3b88661fbdc1186050e68c300c40b088a5a474ba3ceaf4310246a5cbd77b59",
+      "target_sha256": "57054b796d19a605fbd58e3b7b5aab3f2e915c7db2242c336bbd78a8dbc3ea50",
+      "changes": [
+        {
+          "old": "KV128",
+          "new": "Q128",
+          "count": 4
+        },
+        {
+          "old": "range(6)",
+          "new": "range(7)",
+          "count": 1
+        },
+        {
+          "old": "for m in (32,128)",
+          "new": "for m in (16,32,128)",
+          "count": 1
+        },
+        {
+          "old": "range(1,24)",
+          "new": "range(1,28)",
+          "count": 1
+        },
+        {
+          "old": "report['algorithm']==35",
+          "new": "report['algorithm']==67",
+          "count": 1
+        },
+        {
+          "old": "'REDUCTION_SCHEME','CTA_SWIZZLING'),(35,15,18,7,2,1)",
+          "new": "'REDUCTION_SCHEME','CTA_SWIZZLING','CUSTOM_OPTION'),(67,13,17,1,0,1,18)",
+          "count": 1
+        },
+        {
+          "old": "[('M32',0,0),('M128',0,0)]",
+          "new": "[('M16',0,0),('M32',0,0),('M128',0,0)]",
+          "count": 1
+        },
+        {
+          "old": "if r['event']=='api'])==23",
+          "new": "if r['event']=='api'])==27",
+          "count": 1
+        },
+        {
+          "old": "report['calls'].count('cublasLtMatmulAlgoCheck:32')==",
+          "new": "report['calls'].count('cublasLtMatmulAlgoCheck:16')==report['calls'].count('cublasLtMatmulAlgoCheck:32')==",
+          "count": 1
+        },
+        {
+          "old": "report['calls'][7:12]==['cublasLtMatrixLayoutCreate:28:5120:1024:5120','cublasLtMatrixLayoutCreate:28:5120:128:5120','cublasLtMatrixLayoutCreate:14:1024:128:1024','cublasLtMatrixLayoutCreate:28:5120:32:5120','cublasLtMatrixLayoutCreate:14:1024:32:1024']",
+          "new": "report['calls'][7:14]==['cublasLtMatrixLayoutCreate:28:5120:12288:5120','cublasLtMatrixLayoutCreate:28:5120:128:5120','cublasLtMatrixLayoutCreate:14:12288:128:12288','cublasLtMatrixLayoutCreate:28:5120:16:5120','cublasLtMatrixLayoutCreate:14:12288:16:12288','cublasLtMatrixLayoutCreate:28:5120:32:5120','cublasLtMatrixLayoutCreate:14:12288:32:12288']",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "build_kv128_profile_cpu.bat",
+      "target": "build_q128_profile_cpu.bat",
+      "source_sha256": "8d490497557581718d65ea930301d2f21483a7318f23264fb69b5196058bb581",
+      "target_sha256": "7b3c501c65e98c92ca0337a8bb6d844fd203e193b5618e625181fb072a9a4dc5",
+      "changes": [
+        {
+          "old": "kv128",
+          "new": "q128",
+          "count": 2
+        }
+      ]
+    },
+    {
+      "source": "build_kv128_factory_cpu.bat",
+      "target": "build_q128_factory_cpu.bat",
+      "source_sha256": "d4bea735305c1b03a13144c5968fc509315511cbcff56e49719bafc1d8a943eb",
+      "target_sha256": "cf6a4f52a4a3c7c91e568ca0da36e374ecad779ecc5846a14d53e5d0d2bed980",
+      "changes": [
+        {
+          "old": "kv128",
+          "new": "q128",
+          "count": 6
+        }
+      ]
+    },
+    {
+      "source": "probe_kv128_plugin_wire.cpp",
+      "target": "probe_q128_plugin_wire.cpp",
+      "source_sha256": "7bf9f0abb21053dc17784093cdff53377d151f3eb6a4a602ba32cd8dab374677",
+      "target_sha256": "98ebfdfab985ea8c1131f1170387725a031f44eef9a7b0a6a3df8311c8f1f8e6",
+      "changes": [
+        {
+          "old": "modelopt_fp8_kv128",
+          "new": "modelopt_fp8_q128",
+          "count": 2
+        },
+        {
+          "old": "ModelOptFP8KV128",
+          "new": "ModelOptFP8Q128",
+          "count": 13
+        },
+        {
+          "old": "fp8_kv128",
+          "new": "fp8_q128",
+          "count": 1
+        },
+        {
+          "old": "1024",
+          "new": "12288",
+          "count": 17
+        },
+        {
+          "old": "1023",
+          "new": "12287",
+          "count": 2
+        },
+        {
+          "old": "0x4b313238",
+          "new": "0x51313238",
+          "count": 1
+        },
+        {
+          "old": "k_proj.weight",
+          "new": "q_proj.weight",
+          "count": 1
+        },
+        {
+          "old": "badWire==34",
+          "new": "badWire==35",
+          "count": 1
+        },
+        {
+          "old": "crossWire==7",
+          "new": "crossWire==9",
+          "count": 1
+        },
+        {
+          "old": "#include \"modelopt_fp8_q128_plugin.h\"",
+          "new": "#include \"modelopt_fp8_q128_plugin.h\"\n#include \"modelopt_fp8_kv128_plugin.h\"",
+          "count": 1
+        },
+        {
+          "old": "        require(creator->createPlugin(",
+          "new": "        ModelOptFP8KV128Plugin previousKV(1024,5120,.5f,.25f);require(EnsureModelOptFP8KV128PluginRegistered(),\"Old KV registration failed\");\n        auto* previousKVCreator=registry->getPluginCreator(\"GarnetModelOptFP8KV128Canonical\",\"1\",\"\");require(previousKVCreator,\"Old KV creator missing\");\n        require(!previousKVCreator->deserializePlugin(\"newQ\",wire.data(),20),\"Old KV accepted Q wire\");++crossWire;\n        std::array<uint32_t,5> previousKVWire{};previousKV.serialize(previousKVWire.data());require(previousKVWire[4]==0x4b313238u&&!creator->deserializePlugin(\"oldKV\",previousKVWire.data(),20),\"Q accepted old KV wire\");++crossWire;\n        auto* previousKVRestored=previousKVCreator->deserializePlugin(\"oldKV\",previousKVWire.data(),20);require(previousKVRestored,\"Old KV roundtrip changed\");previousKVRestored->destroy();\n        auto markerOnly=wire;markerOnly[4]=0x4b313238u;reject(markerOnly.data(),20);\n        require(creator->createPlugin(",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "kv128_plugin_wire_stubs.cpp",
+      "target": "q128_plugin_wire_stubs.cpp",
+      "source_sha256": "62cfbb9c8bcc9108a5d7bc77fb0493e6a9ced0d45db12e496d1bf8b24d74935e",
+      "target_sha256": "24a6ca6651403abd539cd69bf04c0bbcda00b78265ebc49cd76714b38031afc6",
+      "changes": [
+        {
+          "old": "#include \"modelopt_fp8_kv128_canonical.h\"",
+          "new": "#include \"modelopt_fp8_kv128_canonical.h\"\n#include \"modelopt_fp8_q128_canonical.h\"",
+          "count": 1
+        },
+        {
+          "old": "// CPU-only link stubs. Never link this file into Garnet or a GPU helper.\n#include \"modelopt_fp8_z128_canonical.h\"\n#include \"modelopt_fp8_kv128_canonical.h\"\n#include \"modelopt_fp8_q128_canonical.h\"\n#include \"modelopt_fp8_m128_canonical.h\"\n#include \"modelopt_cublaslt.h\"\n#include \"modelopt_fp8.cuh\"\nnamespace Garnet {\nnamespace {int calls=0;}\nint FP8Z128CPUUnexpectedCalls() noexcept{return calls;}\nstd::shared_ptr<ModelOptFP8Z128Context> CreateModelOptFP8Z128Context(){++calls;return {};}\nstd::shared_ptr<ModelOptFP8Z128Context> CreateModelOptFP8Z128ReconstructedContext(){++calls;return {};}\nbool GetModelOptFP8Z128Info(const std::shared_ptr<ModelOptFP8Z128Context>&,ModelOptFP8Z128Info&) noexcept{++calls;return false;}\ncublasStatus_t RunModelOptFP8Z128Matmul(const std::shared_ptr<ModelOptFP8Z128Context>&,const void*,const void*,void*,int,int,int,float,void*,size_t,cudaStream_t) noexcept{++calls;return CUBLAS_STATUS_NOT_INITIALIZED;}\nstd::shared_ptr<ModelOptFP8M128Context> CreateModelOptFP8M128Context(){++calls;return {};}\nbool GetModelOptFP8M128Info(const std::shared_ptr<ModelOptFP8M128Context>&,ModelOptFP8M128Info&) noexcept{++calls;return false;}\ncublasStatus_t RunModelOptFP8M128Matmul(const std::shared_ptr<ModelOptFP8M128Context>&,const void*,const void*,void*,int,int,int,float,void*,size_t,cudaStream_t) noexcept{++calls;return CUBLAS_STATUS_NOT_INITIALIZED;}\nstd::shared_ptr<void> CreateModelOptNVFP4Context(){++calls;return {};}\ncublasStatus_t RunModelOptFP8MatmulContext(const std::shared_ptr<void>&,const void*,const void*,void*,int,int,int,float,void*,size_t,cudaStream_t,bool) noexcept{++calls;return CUBLAS_STATUS_NOT_INITIALIZED;}\ncudaError_t QuantizeModelOptFP8Activation(const void*,unsigned char*,float,int,int,cudaStream_t){++calls;return cudaErrorInvalidValue;}\n\nstd::shared_ptr<ModelOptFP8KV128Context> CreateModelOptFP8KV128Context(){++calls;return {};}\nbool GetModelOptFP8KV128Info(const std::shared_ptr<ModelOptFP8KV128Context>&,ModelOptFP8KV128Info&) noexcept{++calls;return false;}\ncublasStatus_t RunModelOptFP8KV128Matmul(const std::shared_ptr<ModelOptFP8KV128Context>&,const void*,const void*,void*,int,int,int,float,void*,size_t,cudaStream_t) noexcept{++calls;return CUBLAS_STATUS_NOT_INITIALIZED;}\n}\n",
+          "new": "// CPU-only link stubs. Never link this file into Garnet or a GPU helper.\n#include \"modelopt_fp8_z128_canonical.h\"\n#include \"modelopt_fp8_kv128_canonical.h\"\n#include \"modelopt_fp8_q128_canonical.h\"\n#include \"modelopt_fp8_m128_canonical.h\"\n#include \"modelopt_cublaslt.h\"\n#include \"modelopt_fp8.cuh\"\nnamespace Garnet {\nnamespace {int calls=0;}\nint FP8Z128CPUUnexpectedCalls() noexcept{return calls;}\nstd::shared_ptr<ModelOptFP8Z128Context> CreateModelOptFP8Z128Context(){++calls;return {};}\nstd::shared_ptr<ModelOptFP8Z128Context> CreateModelOptFP8Z128ReconstructedContext(){++calls;return {};}\nbool GetModelOptFP8Z128Info(const std::shared_ptr<ModelOptFP8Z128Context>&,ModelOptFP8Z128Info&) noexcept{++calls;return false;}\ncublasStatus_t RunModelOptFP8Z128Matmul(const std::shared_ptr<ModelOptFP8Z128Context>&,const void*,const void*,void*,int,int,int,float,void*,size_t,cudaStream_t) noexcept{++calls;return CUBLAS_STATUS_NOT_INITIALIZED;}\nstd::shared_ptr<ModelOptFP8M128Context> CreateModelOptFP8M128Context(){++calls;return {};}\nbool GetModelOptFP8M128Info(const std::shared_ptr<ModelOptFP8M128Context>&,ModelOptFP8M128Info&) noexcept{++calls;return false;}\ncublasStatus_t RunModelOptFP8M128Matmul(const std::shared_ptr<ModelOptFP8M128Context>&,const void*,const void*,void*,int,int,int,float,void*,size_t,cudaStream_t) noexcept{++calls;return CUBLAS_STATUS_NOT_INITIALIZED;}\nstd::shared_ptr<void> CreateModelOptNVFP4Context(){++calls;return {};}\ncublasStatus_t RunModelOptFP8MatmulContext(const std::shared_ptr<void>&,const void*,const void*,void*,int,int,int,float,void*,size_t,cudaStream_t,bool) noexcept{++calls;return CUBLAS_STATUS_NOT_INITIALIZED;}\ncudaError_t QuantizeModelOptFP8Activation(const void*,unsigned char*,float,int,int,cudaStream_t){++calls;return cudaErrorInvalidValue;}\n\nstd::shared_ptr<ModelOptFP8KV128Context> CreateModelOptFP8KV128Context(){++calls;return {};}\nbool GetModelOptFP8KV128Info(const std::shared_ptr<ModelOptFP8KV128Context>&,ModelOptFP8KV128Info&) noexcept{++calls;return false;}\ncublasStatus_t RunModelOptFP8KV128Matmul(const std::shared_ptr<ModelOptFP8KV128Context>&,const void*,const void*,void*,int,int,int,float,void*,size_t,cudaStream_t) noexcept{++calls;return CUBLAS_STATUS_NOT_INITIALIZED;}\n}\n\nnamespace Garnet {\nstd::shared_ptr<ModelOptFP8Q128Context> CreateModelOptFP8Q128Context(){++calls;return {};}\nbool GetModelOptFP8Q128Info(const std::shared_ptr<ModelOptFP8Q128Context>&,ModelOptFP8Q128Info&) noexcept{++calls;return false;}\ncublasStatus_t RunModelOptFP8Q128Matmul(const std::shared_ptr<ModelOptFP8Q128Context>&,const void*,const void*,void*,int,int,int,float,void*,size_t,cudaStream_t) noexcept{++calls;return CUBLAS_STATUS_NOT_INITIALIZED;}\n}\n",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "build_kv128_plugin_wire_cpu.bat",
+      "target": "build_q128_plugin_wire_cpu.bat",
+      "source_sha256": "fcbbfc90adc99449658e35f7b2120df1ffaaa2c1dee6c5aae47ae4ccff1ab837",
+      "target_sha256": "6897ce041d6397fea217eb4264f9a524b75333fcf03ad37d50c446a71eb98239",
+      "changes": [
+        {
+          "old": "\"%CANDIDATE%\\modelopt_fp8_kv128_plugin.cpp\"",
+          "new": "\"%CANDIDATE%\\modelopt_fp8_q128_plugin.cpp\" \"%CANDIDATE%\\modelopt_fp8_kv128_plugin.cpp\"",
+          "count": 1
+        },
+        {
+          "old": "kv128_plugin_wire_stubs.cpp",
+          "new": "q128_plugin_wire_stubs.cpp",
+          "count": 1
+        },
+        {
+          "old": "probe_kv128_plugin_wire.cpp",
+          "new": "probe_q128_plugin_wire.cpp",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "kv128_plugin_init_stubs.cpp",
+      "target": "q128_plugin_init_stubs.cpp",
+      "source_sha256": "d70643ddf6e3f8732cf4814417446bc71f4e382d793d2ca9466fa54ef44f48a8",
+      "target_sha256": "fa9945b26e20484ea63ce4098b18d412f93d98f862f507dfac7cf954a374a7c7",
+      "changes": [
+        {
+          "old": "#include \"modelopt_fp8_kv128_canonical.h\"",
+          "new": "#include \"modelopt_fp8_kv128_canonical.h\"\n#include \"modelopt_fp8_q128_canonical.h\"",
+          "count": 1
+        },
+        {
+          "old": "oldZ{0},kv{0}",
+          "new": "oldZ{0},kv{0},q{0}",
+          "count": 1
+        },
+        {
+          "old": "oldZ=0;kv=0;",
+          "new": "oldZ=0;kv=0;q=0;",
+          "count": 1
+        },
+        {
+          "old": "int ModelOptInitCPUKVCalls(){return kv.load();}",
+          "new": "int ModelOptInitCPUKVCalls(){return kv.load();}\nint ModelOptInitCPUQCalls(){return q.load();}",
+          "count": 1
+        },
+        {
+          "old": "// CPU-only factory and operator stubs. Never link into Garnet or a GPU helper.\n#include \"modelopt_fp8_z128_canonical.h\"\n#include \"modelopt_fp8_kv128_canonical.h\"\n#include \"modelopt_fp8_q128_canonical.h\"\n#include \"modelopt_fp8_m128_canonical.h\"\n#include \"modelopt_cublaslt.h\"\n#include \"modelopt_fp8.cuh\"\n#include \"modelopt_nvfp4.cuh\"\n#include <atomic>\n#include <stdexcept>\nnamespace Garnet {\nnamespace {std::atomic<int> mode{0},factories{0},operators{0},newZ{0},oldZ{0},kv{0},q{0};}\nvoid ModelOptInitCPUSetMode(int value){mode=value;factories=0;operators=0;newZ=0;oldZ=0;kv=0;q=0;}\nint ModelOptInitCPUFactoryCalls(){return factories.load();}\nint ModelOptInitCPUOperatorCalls(){return operators.load();}\nint ModelOptInitCPUNewZCalls(){return newZ.load();}\nint ModelOptInitCPUKVCalls(){return kv.load();}\nint ModelOptInitCPUQCalls(){return q.load();}\nint ModelOptInitCPUOldZCalls(){return oldZ.load();}\ntemplate<class T> std::shared_ptr<T> fake(){\n    ++factories;const int value=mode.load();\n    if(value==2)throw std::runtime_error(\"synthetic factory exception\");\n    if(value==3)throw 17;\n    if(value==1){auto value=std::make_shared<int>(1);return std::shared_ptr<T>(value,reinterpret_cast<T*>(value.get()));}\n    return {};\n}\nstd::shared_ptr<ModelOptFP8Z128Context> CreateModelOptFP8Z128Context(){++oldZ;return fake<ModelOptFP8Z128Context>();}\nstd::shared_ptr<ModelOptFP8Z128Context> CreateModelOptFP8Z128ReconstructedContext(){++newZ;return fake<ModelOptFP8Z128Context>();}\nstd::shared_ptr<ModelOptFP8M128Context> CreateModelOptFP8M128Context(){return fake<ModelOptFP8M128Context>();}\nstd::shared_ptr<void> CreateModelOptNVFP4Context(){return fake<void>();}\ncublasStatus_t RunModelOptFP8Z128Matmul(const std::shared_ptr<ModelOptFP8Z128Context>&,const void*,const void*,void*,int,int,int,float,void*,size_t,cudaStream_t) noexcept{++operators;return CUBLAS_STATUS_NOT_INITIALIZED;}\ncublasStatus_t RunModelOptFP8M128Matmul(const std::shared_ptr<ModelOptFP8M128Context>&,const void*,const void*,void*,int,int,int,float,void*,size_t,cudaStream_t) noexcept{++operators;return CUBLAS_STATUS_NOT_INITIALIZED;}\ncublasStatus_t RunModelOptFP8MatmulContext(const std::shared_ptr<void>&,const void*,const void*,void*,int,int,int,float,void*,size_t,cudaStream_t,bool) noexcept{++operators;return CUBLAS_STATUS_NOT_INITIALIZED;}\ncublasStatus_t RunModelOptNVFP4MatmulContext(const std::shared_ptr<void>&,const void*,const void*,const void*,const void*,void*,int,int,int,float,void*,size_t,cudaStream_t,bool) noexcept{++operators;return CUBLAS_STATUS_NOT_INITIALIZED;}\ncudaError_t QuantizeModelOptFP8Activation(const void*,unsigned char*,float,int,int,cudaStream_t){++operators;return cudaErrorInvalidValue;}\ncudaError_t QuantizeModelOptNVFP4Activation(const void*,unsigned char*,unsigned char*,float,int,int,cudaStream_t){++operators;return cudaErrorInvalidValue;}\nsize_t ModelOptNVFP4ScaleBytes(int rows,int columns){return rows>0&&columns>0&&columns%16==0?size_t((rows+127)/128)*128*size_t(((columns/16)+3)/4)*4:0;}\n\nstd::shared_ptr<ModelOptFP8KV128Context> CreateModelOptFP8KV128Context(){++kv;return fake<ModelOptFP8KV128Context>();}\ncublasStatus_t RunModelOptFP8KV128Matmul(const std::shared_ptr<ModelOptFP8KV128Context>&,const void*,const void*,void*,int,int,int,float,void*,size_t,cudaStream_t) noexcept{++operators;return CUBLAS_STATUS_NOT_INITIALIZED;}\n}\n",
+          "new": "// CPU-only factory and operator stubs. Never link into Garnet or a GPU helper.\n#include \"modelopt_fp8_z128_canonical.h\"\n#include \"modelopt_fp8_kv128_canonical.h\"\n#include \"modelopt_fp8_q128_canonical.h\"\n#include \"modelopt_fp8_m128_canonical.h\"\n#include \"modelopt_cublaslt.h\"\n#include \"modelopt_fp8.cuh\"\n#include \"modelopt_nvfp4.cuh\"\n#include <atomic>\n#include <stdexcept>\nnamespace Garnet {\nnamespace {std::atomic<int> mode{0},factories{0},operators{0},newZ{0},oldZ{0},kv{0},q{0};}\nvoid ModelOptInitCPUSetMode(int value){mode=value;factories=0;operators=0;newZ=0;oldZ=0;kv=0;q=0;}\nint ModelOptInitCPUFactoryCalls(){return factories.load();}\nint ModelOptInitCPUOperatorCalls(){return operators.load();}\nint ModelOptInitCPUNewZCalls(){return newZ.load();}\nint ModelOptInitCPUKVCalls(){return kv.load();}\nint ModelOptInitCPUQCalls(){return q.load();}\nint ModelOptInitCPUOldZCalls(){return oldZ.load();}\ntemplate<class T> std::shared_ptr<T> fake(){\n    ++factories;const int value=mode.load();\n    if(value==2)throw std::runtime_error(\"synthetic factory exception\");\n    if(value==3)throw 17;\n    if(value==1){auto value=std::make_shared<int>(1);return std::shared_ptr<T>(value,reinterpret_cast<T*>(value.get()));}\n    return {};\n}\nstd::shared_ptr<ModelOptFP8Z128Context> CreateModelOptFP8Z128Context(){++oldZ;return fake<ModelOptFP8Z128Context>();}\nstd::shared_ptr<ModelOptFP8Z128Context> CreateModelOptFP8Z128ReconstructedContext(){++newZ;return fake<ModelOptFP8Z128Context>();}\nstd::shared_ptr<ModelOptFP8M128Context> CreateModelOptFP8M128Context(){return fake<ModelOptFP8M128Context>();}\nstd::shared_ptr<void> CreateModelOptNVFP4Context(){return fake<void>();}\ncublasStatus_t RunModelOptFP8Z128Matmul(const std::shared_ptr<ModelOptFP8Z128Context>&,const void*,const void*,void*,int,int,int,float,void*,size_t,cudaStream_t) noexcept{++operators;return CUBLAS_STATUS_NOT_INITIALIZED;}\ncublasStatus_t RunModelOptFP8M128Matmul(const std::shared_ptr<ModelOptFP8M128Context>&,const void*,const void*,void*,int,int,int,float,void*,size_t,cudaStream_t) noexcept{++operators;return CUBLAS_STATUS_NOT_INITIALIZED;}\ncublasStatus_t RunModelOptFP8MatmulContext(const std::shared_ptr<void>&,const void*,const void*,void*,int,int,int,float,void*,size_t,cudaStream_t,bool) noexcept{++operators;return CUBLAS_STATUS_NOT_INITIALIZED;}\ncublasStatus_t RunModelOptNVFP4MatmulContext(const std::shared_ptr<void>&,const void*,const void*,const void*,const void*,void*,int,int,int,float,void*,size_t,cudaStream_t,bool) noexcept{++operators;return CUBLAS_STATUS_NOT_INITIALIZED;}\ncudaError_t QuantizeModelOptFP8Activation(const void*,unsigned char*,float,int,int,cudaStream_t){++operators;return cudaErrorInvalidValue;}\ncudaError_t QuantizeModelOptNVFP4Activation(const void*,unsigned char*,unsigned char*,float,int,int,cudaStream_t){++operators;return cudaErrorInvalidValue;}\nsize_t ModelOptNVFP4ScaleBytes(int rows,int columns){return rows>0&&columns>0&&columns%16==0?size_t((rows+127)/128)*128*size_t(((columns/16)+3)/4)*4:0;}\n\nstd::shared_ptr<ModelOptFP8KV128Context> CreateModelOptFP8KV128Context(){++kv;return fake<ModelOptFP8KV128Context>();}\ncublasStatus_t RunModelOptFP8KV128Matmul(const std::shared_ptr<ModelOptFP8KV128Context>&,const void*,const void*,void*,int,int,int,float,void*,size_t,cudaStream_t) noexcept{++operators;return CUBLAS_STATUS_NOT_INITIALIZED;}\n}\n\nnamespace Garnet {\nstd::shared_ptr<ModelOptFP8Q128Context> CreateModelOptFP8Q128Context(){++q;return fake<ModelOptFP8Q128Context>();}\ncublasStatus_t RunModelOptFP8Q128Matmul(const std::shared_ptr<ModelOptFP8Q128Context>&,const void*,const void*,void*,int,int,int,float,void*,size_t,cudaStream_t) noexcept{++operators;return CUBLAS_STATUS_NOT_INITIALIZED;}\n}\n",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "probe_kv128_plugin_init.cpp",
+      "target": "probe_q128_plugin_init.cpp",
+      "source_sha256": "22ee4e2dcd3717418ba789e98f0c782acb3e8619b0e3a2b78941c3a2957b04ba",
+      "target_sha256": "337156863644ac6b0a04b424be9512ec3bd60e6f05476f2ad7b0faecde36c757",
+      "changes": [
+        {
+          "old": "#include \"modelopt_fp8_kv128_plugin.h\"",
+          "new": "#include \"modelopt_fp8_kv128_plugin.h\"\n#include \"modelopt_fp8_q128_plugin.h\"",
+          "count": 1
+        },
+        {
+          "old": "int ModelOptInitCPUKVCalls();",
+          "new": "int ModelOptInitCPUKVCalls();int ModelOptInitCPUQCalls();",
+          "count": 1
+        },
+        {
+          "old": "    if(route==5)",
+          "new": "    if(route==6)return OwnedPlugin(new ModelOptFP8Q128Plugin(12288,5120,.5f,.25f));\n    if(route==5)",
+          "count": 1
+        },
+        {
+          "old": "route<6",
+          "new": "route<7",
+          "count": 1
+        },
+        {
+          "old": "            value->serialize(after.data());",
+          "new": "            require(ModelOptInitCPUQCalls()==(route==6?(mode==1?1:2):0),\"Q factory route changed\");\n            value->serialize(after.data());",
+          "count": 1
+        },
+        {
+          "old": "calls==54&&factories==42&&successes==18&&failures==36&&clones==6",
+          "new": "calls==63&&factories==49&&successes==21&&failures==42&&clones==7",
+          "count": 1
+        },
+        {
+          "old": "actual_kv128_plugin_initialize_cpu_controls_passed",
+          "new": "actual_q128_plugin_initialize_cpu_controls_passed",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "kv128_plugin_init_contract.py",
+      "target": "q128_plugin_init_contract.py",
+      "source_sha256": "b329ac56bc63227deba29a8d45d3984b2c9aa2ea02d9cb4be618e71dc4e3446c",
+      "target_sha256": "b444f06f8b6e4075c4cfef6831732c7e0386565045aeb89ac9e5d0117785cc8b",
+      "changes": [
+        {
+          "old": "'fp8_kv128'}",
+          "new": "'fp8_kv128','fp8_q128'}",
+          "count": 1
+        },
+        {
+          "old": "        elif row['route']=='fp8':",
+          "new": "        elif row['route']=='fp8_q128':assert (row['rows'],row['columns'],row['policy'])==(12288,5120,0x51313238)\n        elif row['route']=='fp8':",
+          "count": 1
+        },
+        {
+          "old": "actual_kv128_plugin_initialize_cpu_controls_passed",
+          "new": "actual_q128_plugin_initialize_cpu_controls_passed",
+          "count": 1
+        },
+        {
+          "old": "'actual_initialize_calls':54,'factory_calls':42,'successes':18,'failures':36,'cached_clone_initializations':6",
+          "new": "'actual_initialize_calls':63,'factory_calls':49,'successes':21,'failures':42,'cached_clone_initializations':7",
+          "count": 1
+        },
+        {
+          "old": "'initialize_calls':54,'factory_calls':42",
+          "new": "'initialize_calls':63,'factory_calls':49",
+          "count": 2
+        },
+        {
+          "old": "expected_calls=54",
+          "new": "expected_calls=63",
+          "count": 1
+        },
+        {
+          "old": "q['factory_calls']==42 and q['cached_context_initializations']==12 and q['exception_returns']==24 and len(q['failures'])==36",
+          "new": "q['factory_calls']==49 and q['cached_context_initializations']==14 and q['exception_returns']==28 and len(q['failures'])==42",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "run_kv128_plugin_init_cpu.py",
+      "target": "run_q128_plugin_init_cpu.py",
+      "source_sha256": "a820499d0224033a140de67beaa1e30cfa7c2bee9c6189f43af6a895aa99ca14",
+      "target_sha256": "41b73c41d4df14a67dd28fb565ead7306ed6095a1dce0a7a745f65daf6673f00",
+      "changes": [
+        {
+          "old": "kv128_plugin_init_contract",
+          "new": "q128_plugin_init_contract",
+          "count": 1
+        },
+        {
+          "old": "actual_kv128_plugin_initialize_CPU",
+          "new": "actual_q128_plugin_initialize_CPU",
+          "count": 1
+        },
+        {
+          "old": "540",
+          "new": "630",
+          "count": 2
+        },
+        {
+          "old": "420",
+          "new": "490",
+          "count": 2
+        }
+      ]
+    },
+    {
+      "source": "build_kv128_plugin_init_cpu.bat",
+      "target": "build_q128_plugin_init_cpu.bat",
+      "source_sha256": "2fc4664fdce20376b0ae0c95345624b4b88204a4117240bd4e028bb56433117c",
+      "target_sha256": "64829a75be08af6b95cc0414debc2f376eb8aacc4bd7cb5ef874ea7e29b1ee74",
+      "changes": [
+        {
+          "old": "\"%CANDIDATE%\\modelopt_fp8_kv128_plugin.cpp\"",
+          "new": "\"%CANDIDATE%\\modelopt_fp8_kv128_plugin.cpp\" \"%CANDIDATE%\\modelopt_fp8_q128_plugin.cpp\"",
+          "count": 1
+        },
+        {
+          "old": "kv128_plugin_init_stubs.cpp",
+          "new": "q128_plugin_init_stubs.cpp",
+          "count": 1
+        },
+        {
+          "old": "probe_kv128_plugin_init.cpp",
+          "new": "probe_q128_plugin_init.cpp",
+          "count": 1
+        }
+      ]
+    }
+  ],
+  "GPU_or_model_executed": false
+}

@@ -1,0 +1,27 @@
+from pathlib import Path
+import hashlib,json
+W=Path(__file__).resolve().parent;R=Path('D:/CantorAI/work/qwen38-5090');E=R/'test2026/cuda/qwen38_5090/evidence';p=json.loads((E/'b4-full4k-selection52-preparation.json').read_bytes());sha=lambda b:hashlib.sha256(b).hexdigest()
+specs={
+'xModel/qwen35/vl_0_8b/cuda_packed_decoder.py':['prediction=self.io.predict(self.head.run_device([self.last_hidden]))'],
+'src/backends/tensorrt/cuda_tensor_io.cpp':['X::Value CUDATensorIO::LogitsUnlocked','std::vector<int64_t> inShape{rows,width_},outShape{rows,vocab_}','Check(runConvertFP32ToBF16Async','const auto status=RunModelOptNVFP4MatmulContext','nativeHeadWorkspace_.Info().data,4ULL<<20','X::Value CUDATensorIO::ArgmaxUnlocked'],
+'src/backends/tensorrt/modelopt_cublaslt.cpp':['cublasStatus_t RunModelOptNVFP4Matmul(cublasLtHandle_t handle','CUBLAS_COMPUTE_32F,CUDA_R_32F','cublasLtMatrixLayoutCreate(&d.b,CUDA_R_4F_E2M1,columns,batch,columns)','cublasLtMatrixLayoutCreate(&d.c,CUDA_R_16BF,rows,batch,rows)','cublasLtMatmulAlgoGetHeuristic(handle,d.operation,d.a,d.b,d.c,d.c,d.preference,downCandidate?32:8'],
+'src/cuda/logits_sampler_kernel.cu':['SelectParallelBatchTop1(ParallelBatchTop1Enabled(), rows, vocab)','if (Garnet::DispatchParallelBatchTop1(rows, vocabSize))'],
+'src/cuda/logits_top1_batch_dispatch.h':['return enabled && rows >= 1 && rows <= 128 && vocab >= 8192;']}
+sources={}
+for n,needles in specs.items():
+    raw=(R/n).read_bytes();h=sha(raw);assert h==p['reference_installed_files']['Garnet/'+n]==p['candidate_installed_files']['Garnet/'+n]
+    lines=raw.decode().splitlines();locations={needle:[i for i,line in enumerate(lines,1) if needle in line] for needle in needles};assert all(locations.values());sources[n]=dict(sha256=h,matching_reference_and_candidate_pins=True,lines=locations)
+assert p['flags']['GARNET_PARALLEL_BATCH_TOP1']=='1'
+record=dict(status='static_token_selection_callsite_audit_no_GPU_or_numeric_replay',source_sha256_and_lines=sources,actual_geometry=dict(hidden=5120,vocab=248320,B1_rows=1,B4_rows=4,head_workspace_bytes=4<<20),facts=[
+'Decoder calls head normalization then io.predict using last_hidden.',
+'NativeNVFP4head convertsFP32 toBF16, invokes activationquantization and cuBLASLt withactualrows; activationkernelbody notauditedhere.',
+'HeadcuBLASLt path sets FP32compute/scale, E2M1 A/B and BF16output, asksdefaultheuristics usingactualmatrixrows; headcall doesnotrequest the separateNVFP4downcandidate.',
+'Withthepinnedflag1 andvocab248320, source dispatchselects the sameparallelbatchtop1implementation forrows1and4. Thisisnot a runtimeargmax-equivalence proof.'],
+numerical_counterexample_proved=False,head_or_sampler_bug_proved=False,source_or_runtime_modified=False,performance_qualified=False,
+scope='Source-only faulttree preparation duringexclusiveGPUcapture. The same-profile sources above matchbothjobinventories; no nativequantizerkernel source mapping claimed. Matrixshape-dependent logits is a candidate only. Awaitactualstep52state/prediction evidence before choosingheadreplay ordecoder-layer tracing. No diagnosis/performance/2xclaim.')
+target=E/'b4-token-selection-callsite-audit.json';assert not target.exists();target.write_bytes(json.dumps(record,indent=2).encode());owned=[target]
+target=E/'retain-token-selection-source-audit.py.txt';assert not target.exists();target.write_bytes(Path(__file__).read_bytes());owned.append(target)
+text=b'\r\n\r\n2026-10-27 static token-selectioncallsiteaudit retained:5sourcefiles matchbothsource60reference/source79candidate inventorypins. Decoder normalizeslast_hidden thenio.predict; nativeNVFP4head convertsinputF32toBF16, callsactivationquantizer andFP32compute cuBLASLt E2M1/BF16out usingactualM1/M4,4MiB, defaultheuristics (headdoesnotrequestseparateNVFP4downcandidate). Pinnedparallel-top1flag1 andvocab248320 selectsameparallelbatchsampler sourceimplementation forrows1/4. Noactivationkernel-body mapping orruntimeargmax-equivalence proof claimed. Matrixshape-dependent logits remainsunprovedcandidate pendingstep52 state/prediction result. No code/runtime/GPUchange orindependentnumericreplay duringlivecapture; no head/samplerbug orperformanceclaim.\r\n'
+for n in ('docs/research/qwen38-5090-development-log.md','docs/research/qwen38-5090-implementation-task.md'):
+    target=R/n;target.write_bytes(target.read_bytes()+text);owned.append(target)
+(W/'token-selection-source-audit-stage-paths.bin').write_bytes(b'\0'.join(n.relative_to(R).as_posix().encode() for n in owned)+b'\0');print(json.dumps(dict(files=len(owned),source_files=5,numerical_bug_proved=False)))

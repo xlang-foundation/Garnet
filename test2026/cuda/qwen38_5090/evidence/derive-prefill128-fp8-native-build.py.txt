@@ -1,0 +1,55 @@
+"""Preserve prior transaction semantics; derive a distinct combined native build."""
+from pathlib import Path
+import hashlib,json
+repo=Path('D:/CantorAI/work/qwen38-5090');m=repo/'test2026/cuda/qwen38_5090';e=m/'evidence';sha=lambda raw:hashlib.sha256(raw).hexdigest();records=[]
+record_path=e/'prefill128-fp8-native-build-derivation.json';previous=json.loads(record_path.read_bytes()) if record_path.exists() else None
+def derive(source,target,changes):
+    raw=(m/source).read_bytes();text=raw.decode();steps=[]
+    for old,new,count in changes:
+        assert text.count(old)==count,(source,old,text.count(old));text=text.replace(old,new);steps.append({'old':old,'new':new,'count':count})
+    path=m/target
+    if path.exists():assert previous and sha(path.read_bytes())==next(row['target_sha256'] for row in previous['files'] if row['target']==target)
+    path.write_bytes(text.encode());records.append({'source':source,'source_sha256':sha(raw),'target':target,'target_sha256':sha(text.encode()),'replacements':steps})
+object_check='''        assert set(objects)<=set(after) and len(added)==2
+        assert {Path(name).name for name in added}=={'qwen38_bf16_prefill128_attention.cu.obj','qwen38_bf16_prefill128_commit.cu.obj'}
+        assert all(name.endswith('/qwen38_bf16_kv_low_batch_overlay.cu.obj') for name in changed)'''
+object_function='''def validate_cuda_objects(before,after):
+    assert len(before)==len(after)==34 and set(before)==set(after)
+    changed=sorted(name for name in before if after[name]!=before[name])
+    allowed={'qwen38_bf16_kv_low_batch_overlay.cu.obj','qwen38_bf16_prefill128_attention.cu.obj','qwen38_bf16_prefill128_commit.cu.obj'}
+    assert all(Path(name).name in allowed for name in changed)
+    return changed
+
+'''
+wire_insert='''        code=ledger.run(['cmd.exe','/d','/c',str(M/'build_fp8_m128_plugin_cpu.bat'),p['vcvars'],str(out/'fp8-wire-cpu')],out/'fp8-wire-cpu-ledger','correctness','Separate M128 FP8 wire/descriptor/default and legacy compatibility; no GPU stubs may run',common+[library])
+        if code:raise RuntimeError('Actual M128 FP8 plugin wire contract')
+        from test2026.cuda.qwen38_5090.fp8_m128_native_control import wire_contract as fp8_wire_contract
+        w['fp8_wire_contract']=fp8_wire_contract(json.loads((out/'fp8-wire-cpu/report.json').read_bytes()));save()
+'''
+derive('run_bf16_prefill128_native_build.py','run_bf16_prefill128_fp8_native_build.py',[
+ ('"""Build the complete T128 native candidate in the existing study tree, then restore baseline."""','"""Build combined T128 plus default-off M128 FP8 candidate; restore baseline."""',1),
+ ("JOB='bf16-prefill128-native-build-attempt1'","JOB='bf16-prefill128-fp8-native-build-attempt1'",1),
+ ('def main():',object_function+'def main():',1),
+ ('sys.path.insert(0,str(M))','sys.path[:0]=[str(M),str(ROOT/\'Garnet\')]',1),
+ ("prep=M/'evidence/bf16-prefill128-native-build-preparation.json'","prep=M/'evidence/bf16-prefill128-fp8-native-build-preparation.json'",1),
+ ("'bf16_prefill128_native_build_prepared_unrun' and len(p['candidate_files'])==13","'bf16_prefill128_fp8_native_build_prepared_unrun' and len(p['candidate_files'])==22",1),
+ ('garnet-native-bf16-prefill128-attempt1.dll','garnet-native-bf16-prefill128-fp8-m128-attempt1.dll',1),
+ ('common=[prep,bundle]+','common=[prep,bundle,ROOT/p[\'proposal\']]+',1),
+ ('Reconfigure existing Release/MT/sm120 tree for complete T128 native route plus required inherited tiled API implementation','Reconfigure existing Release/MT/sm120 tree for complete T128 route plus separately qualified M128 FP8 helper/plugin and graph counters',1),
+ (object_check,"        assert not added and changed==validate_cuda_objects(objects,after)",1),
+ ("        for name,argv in (",wire_insert+"        for name,argv in (",1),
+ ("status='bf16_prefill128_native_built_cpu_qualified_model_unqualified'","status='bf16_prefill128_fp8_native_built_cpu_qualified_model_unqualified'",1)])
+derive('verify_bf16_prefill128_native_build.py','verify_bf16_prefill128_fp8_native_build.py',[
+ ('"""Replay the complete native T128 build/CPU contracts; no model or timing admission."""','"""Replay combined T128/M128 FP8 native build/CPU contracts; no model/timing admission."""',1),
+ ('import argparse,hashlib,io,json,zipfile','import argparse,hashlib,io,json,sys,zipfile\nsys.path.insert(0,str(Path(__file__).resolve().parents[3]))',1),
+ ("JOB='bf16-prefill128-native-build-attempt1'","JOB='bf16-prefill128-fp8-native-build-attempt1'",1),
+ ('METHODS+\'evidence/bf16-prefill128-native-build-preparation.json\'','METHODS+\'evidence/bf16-prefill128-fp8-native-build-preparation.json\'',1),
+ ("len(p['candidate_files'])==13","len(p['candidate_files'])==22",1),
+ ("        for name,h in p['methods'].items():assert sha(z.read(name))==h","        assert sha(z.read(p['proposal']))==p['proposal_sha256']\n        proposal=doc(p['proposal']);assert proposal['status']=='bf16_prefill128_fp8_native_build_proposed_unrun'\n        assert all(p[name]==value for name,value in proposal.items() if name!='status')\n        for name,h in p['methods'].items():assert sha(z.read(name))==h",1),
+ ("len(source.namelist())==len(set(source.namelist()))==13","len(source.namelist())==len(set(source.namelist()))==22",1),
+ ("'bf16_prefill128_native_built_cpu_qualified_model_unqualified'","'bf16_prefill128_fp8_native_built_cpu_qualified_model_unqualified'",1),
+ ("('cpu','build','wire-cpu','selector-cpu','embedded-selector-cpu','tokenizer-cpu')","('cpu','build','wire-cpu','fp8-wire-cpu','selector-cpu','embedded-selector-cpu','tokenizer-cpu')",1),
+ ("            assert added==w['added_cuda_objects'] and changed==w['changed_cuda_objects'] and len(added)==2\n            assert {Path(name).name for name in added}=={'qwen38_bf16_prefill128_attention.cu.obj','qwen38_bf16_prefill128_commit.cu.obj'}\n            assert all(name.endswith('/qwen38_bf16_kv_low_batch_overlay.cu.obj') for name in changed)","            from test2026.cuda.qwen38_5090.run_bf16_prefill128_fp8_native_build import validate_cuda_objects\n            assert added==w['added_cuda_objects']==[] and changed==w['changed_cuda_objects']==validate_cuda_objects(before,after)",1),
+ ("            wire=wire_contract(doc(base+'wire-cpu/report.json'),dll)","            wire=wire_contract(doc(base+'wire-cpu/report.json'),dll)\n            from test2026.cuda.qwen38_5090.fp8_m128_native_control import wire_contract as fp8_wire_contract\n            assert fp8_wire_contract(doc(base+'fp8-wire-cpu/report.json'))==w['fp8_wire_contract']",1),
+ ("'bf16_prefill128_native_build_cpu_replayed' if passed else 'bf16_prefill128_native_build_failure_preserved'","'bf16_prefill128_fp8_native_build_cpu_replayed' if passed else 'bf16_prefill128_fp8_native_build_failure_preserved'",1)])
+record_path.write_bytes(json.dumps({'status':'combined_native_build_method_derived_unrun','files':records,'scope':'Original source snapshot/restore and native CPU gates preserved;22source union, existing34CUDA objects, separate FP8 wire gate. No model or performance qualification.'},indent=2).encode());print(json.dumps({'derived_methods':len(records)}))

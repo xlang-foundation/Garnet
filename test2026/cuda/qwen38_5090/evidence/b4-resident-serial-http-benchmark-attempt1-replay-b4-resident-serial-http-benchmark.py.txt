@@ -1,0 +1,10 @@
+from pathlib import Path
+import hashlib,json,os,sys
+W=Path(__file__).resolve().parent;O=W.parent/'outputs';R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';J='b4-resident-serial-http-benchmark-attempt1';sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest();sys.path[:0]=[str(M),str(R)];import run_logged as ledger
+p=json.loads((M/'evidence/b4-resident-serial-http-benchmark-preparation.json').read_bytes());names=p['reader_dependencies']+['evidence/b4-resident-serial-http-benchmark-preparation.json'];pins={n:sha(M/n) for n in names}
+for n,h in pins.items():
+    if not n.endswith('preparation.json'):assert p['files']['Garnet/test2026/cuda/qwen38_5090/'+n]==h
+archive=O/(J+'-evidence.zip');peer=O/(J+'-remote-verified.json');q=json.loads(peer.read_bytes());assert sha(archive)==q['archive_sha256']
+ledger.source_identity=lambda:dict(scope='Explicit independent local CPU-only source91 resident/serial B4 raw HTTP benchmark replay; no native/model/GPU or protected bodies',owned_source_sha256=pins)
+os.chdir(R);assert ledger.run([sys.executable,str(M/'verify_b4_resident_serial_http_benchmark.py'),'--proofs',str(O)],W/'b4-resident-serial-http-benchmark-attempt1-local-replay-ledger','correctness','Independent raw metric/SSE/memory and all372real ID/callback/dispatch replay; source/runtime/all34/current18file restoration. Preserve failures; no strongest-reference or2x claim.',[archive,peer,*[M/n for n in names]])==0
+assert (O/(J+'-verified.json')).read_bytes()==peer.read_bytes();print(json.dumps(dict(status=q['status'],paired_proof_sha256=sha(peer),exit_code=q['exit_code'],two_times_target_achieved=False)))

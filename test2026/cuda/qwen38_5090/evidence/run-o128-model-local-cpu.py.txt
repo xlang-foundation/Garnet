@@ -1,0 +1,7 @@
+from pathlib import Path
+import hashlib,json,os,sys
+W=Path(__file__).resolve().parent;R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';sys.path[:0]=[str(M),str(R)];import run_logged as ledger
+p=json.loads((M/'evidence/o128-canonical-build-preparation.json').read_bytes());tests=p['test_ids']+['test2026.cuda.qwen38_5090.test_o128_model_admission'];names=['o128_model_layout.py','o128_model_replay.py','test_o128_model_admission.py','evidence/o128-model-probe-derivation.json','evidence/o128-model-owner-derivation.json']
+for d in ('o128-model-probe-derivation.json','o128-model-owner-derivation.json'):names += [row['target'] for row in json.loads((M/'evidence'/d).read_bytes())['derivations']]
+pins={n:hashlib.sha256((M/n).read_bytes()).hexdigest() for n in names};ledger.source_identity=lambda:{'scope':'Explicit strict O128 model admission and failedQ-only diagnostic reference controls; unchanged original state/vector/cache/token/repeat predicates, protected unrelated bodies excluded','owned_source_sha256':pins};os.chdir(R)
+assert ledger.run([sys.executable,'-m','unittest',*tests],W/'o128-model-local-cpu-ledger','correctness','71current plus86historical CPU tests; exact probe/metadata/batch/owner/verifier derivatives; Q+OonlycorrectT32 oracle and strictphysicalO16 route; failedQ-only can never admit model; no model/GPU/native compilation here',[M/n for n in names])==0

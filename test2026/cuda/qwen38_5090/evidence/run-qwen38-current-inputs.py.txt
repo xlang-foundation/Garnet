@@ -1,0 +1,6 @@
+from pathlib import Path
+import hashlib,os,sys
+ROOT=Path('D:/CantorAI/5090-study-20261023');M=ROOT/'Garnet/test2026/cuda/qwen38_5090';sys.path.insert(0,str(M));import run_logged as ledger
+script=ROOT/'results/collect-qwen38-current-inputs.py';owned=[script,M/'evidence/b4-padding-lifecycle-preparation.json',ROOT/'results/b4-padding-lifecycle-attempt1-verified.json'];sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+ledger.source_identity=lambda:{'scope':'Explicit CPU-only current checkpoint fingerprint collector; no model/framework imports or protected bodies','owned_source_sha256':{str(n):sha(n) for n in owned}}
+os.chdir(ROOT/'Garnet');raise SystemExit(ledger.run([sys.executable,str(script)],ROOT/'results/qwen38-current-inputs-ledger','setup','Stream8MiB SHA256 over current indexed shards and inference metadata after closed lifecycle proof. Records posthoc limitation; no retroactive shard identity, HF LFS verification, GPU execution or serving benchmark.',owned))

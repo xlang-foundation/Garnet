@@ -1,0 +1,29 @@
+"""CPU-only scope regression: no garnet/CUDA/model imports or calls."""
+class Decoder:
+    def step(self,tokens,active,positions):return positions
+decoder=Decoder()
+
+def original():
+    base=[41,48,41,48];tokens=[[10,20,10,20]]
+    controls=[('parent-step',lambda:decoder.step(tokens[0],[1]*4,[[p]*3 for p in base]))]
+    return controls[0][1]()
+
+def direct():
+    base=[41,48,41,48];tokens=[[10,20,10,20]]
+    positions=[[p]*3 for p in base]
+    for label in ('parent-step',):
+        if label=='parent-step':result=decoder.step(tokens[0],[1]*4,positions)
+    return result
+
+def defaults():
+    base=[41,48,41,48];tokens=[[10,20,10,20]]
+    controls=[lambda token=tokens[0],position=[[p]*3 for p in base]:decoder.step(token,[1]*4,position)]
+    return controls[0]()
+
+expected=[[41]*3,[48]*3,[41]*3,[48]*3]
+for name,call in [('original',original),('direct',direct),('defaults',defaults)]:
+    try:
+        result=call();assert result==expected
+        print('CPU_SCOPE_RESULT',name,'passed',flush=True)
+    except BaseException as error:
+        print('CPU_SCOPE_RESULT',name,type(error).__name__,str(error),flush=True)

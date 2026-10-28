@@ -1,0 +1,24 @@
+from pathlib import Path
+import hashlib,json
+W=Path(__file__).resolve().parent;rows=[];sha=lambda b:hashlib.sha256(b).hexdigest()
+for source,target in [('inspect-b4-v-m16-build-inputs.py','inspect-b4-qk-m16-build-inputs.py'),('run-b4-v-m16-build-inventory.py','run-b4-qk-m16-build-inventory.py')]:
+    original=(W/source).read_bytes();raw=original;changes=[]
+    def replace(a,b,count=None):
+        global raw
+        n=raw.count(a.encode());assert n and (count is None or n==count),(source,a,n);raw=raw.replace(a.encode(),b.encode());changes.append(dict(old=a,new=b,count=n))
+    if source.startswith('inspect'):
+        replace('b4-decode-m16-build-preparation.json','b4-v-m16-build-preparation.json',1)
+        replace('b4-v-m16-cpu-v2-preparation.json','b4-qk-m16-cpu-v2-preparation.json',1)
+        replace('b4_v_m16_source','b4_qk_m16_source',1);replace('len(candidate)==73','len(candidate)==79',1);replace('len(targets)==73','len(targets)==79',1)
+        replace("[('b4-v-m16-cpu-attempt2',0),('b4-v-m16-cpu-attempt1',1),('b4-decode-m16-build-attempt1',0),('connected-fa-value-attempt4',0),('fa-value-sdk-control-attempt1',1),('b4-b1-short-m16-admission-attempt1',1)]","[('b4-qk-m16-cpu-attempt1',0),('b4-v-m16-build-attempt1',0),('b4-v-m16-short-attempt1',1),('v-m16-connected-attempt1',0),('fp8-decode-shape-configs-attempt2',0)]",1)
+        replace("job=='b4-v-m16-cpu-attempt2'","job=='b4-qk-m16-cpu-attempt1'",1);replace('B4T4_V_M16_actual_CPU_contracts_replayed','B4T4_QK_M16_actual_CPU_contracts_replayed',1);replace("q['factory_fault_cases']==212","q['factory_fault_cases']==406",1);replace("q['profile']['cases']==1209","q['profile']['cases']==1248",1)
+        # Keep the qualified source73 preparation path above as the parent.
+        replace('b4-v-m16-build-attempt1','b4-qk-m16-build-attempt1')
+        # The closed-parent list must refer to the existing source73 build, not the unrun candidate.
+        replace("('b4-qk-m16-build-attempt1',0)","('b4-v-m16-build-attempt1',0)",1)
+        replace('garnet-native-b4-v-m16','garnet-native-b4-qk-m16',1);replace('b4-v-m16-source.zip','b4-qk-m16-source.zip',1);replace('B4_V_M16_native_build_inputs','B4_QK_M16_native_build_inputs',1);replace('b4-v-m16-build-inputs.json','b4-qk-m16-build-inputs.json',1)
+        replace('Fresh restored1374baseline/73targets/runtime/SDK/checkpoint/CMake/34currentCUDAobjects, paired212factory/1209profile/VCPU, faithfulconnectedbaseline required.','Fresh restored1374baseline/79targets/runtime/SDK/config-index/CMake/34currentCUDAobjects, paired406factory/1248profile/QKCPU required; source73Vcomponentpassed butfullmodelFAILED. LiveQKqueryeligibility notnumericalproof.',1)
+    else:
+        replace('b4-v-m16-build','b4-qk-m16-build');replace('b4-decode-m16-build-preparation.json','b4-v-m16-build-preparation.json',1);replace('b4-v-m16-cpu-v2-preparation.json','b4-qk-m16-cpu-v2-preparation.json',1);replace('readonly73target','readonly79target',1);replace('Fresh1374source/73targets/runtime/SDK/checkpoint/CMake/all34objects and closed212VCPU/faithfulconnected/failedSDK-model parents','Fresh1374source/79targets/runtime/SDK/config-index/CMake/all34objects and closed406QKCPU/source73V/failedfullmodel/livequery parents',1)
+    p=W/target;assert not p.exists() or p.read_bytes()==raw;p.write_bytes(raw);rows.append(dict(source=source,target=target,source_sha256=sha(original),target_sha256=sha(raw),changes=changes))
+p=W/'b4-qk-m16-build-inventory-derivation.json';assert not p.exists();p.write_bytes(json.dumps(dict(derivations=rows),indent=2).encode());print(len(rows))

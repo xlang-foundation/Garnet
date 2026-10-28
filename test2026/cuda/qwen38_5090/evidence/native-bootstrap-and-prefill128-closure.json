@@ -1,0 +1,42 @@
+{
+  "status": "failed_profile_preserved_unprofiled_control_replayed_cpu_prefill128_scaffold",
+  "jobs": {
+    "native-cuda-phase-full4k-attempt1": {
+      "status": "native_cuda_phases_full4k_failure_preserved",
+      "exit_code": 1,
+      "archive_sha256": "a698a95d3f2b8a3e7f7fa60794260cb4451ae2712785be6ecff9266e0283297f",
+      "archive_bytes": 68326635,
+      "proof_pair_sha256": "8a269e39ab2410ce3c097c2054f624d9b830b472f122c53aef921e103083d703",
+      "files_verified": 663
+    },
+    "native-cuda-phase-logged-bootstrap-attempt1": {
+      "status": "native_cuda_logged_bootstrap_replayed",
+      "exit_code": 0,
+      "archive_sha256": "8104499a0eace60c00e9af1add17640b5d29e0810894eee8e1b264164b31a9b7",
+      "archive_bytes": 151303,
+      "proof_pair_sha256": "9d5b3a3f4f0fad830d53c6be2b64dea5f5ec34c88ad5ec197412d3b747e57107",
+      "files_verified": 33
+    }
+  },
+  "prefill128": {
+    "source_sha256": {
+      "src/backends/tensorrt/qwen38_bf16_prefill128_layout_contract.h": "75bd1a283fd8ca27ed3eced85d0079bd40c21978a4cf02addba0f598ce5c6998",
+      "src/cuda/qwen38_bf16_prefill128_commit.cu": "970ffcb160b321032b8238580d4c00830bf9de7ea81ac95a6ee976575e67e6f5",
+      "src/cuda/qwen38_bf16_prefill128_commit.cuh": "037371b8aaae91afb108e857ee51468a331ef0409a5dc38c75b42e8e3624c9a0",
+      "test2026/cuda/qwen38_5090/bf16_prefill128_layout.py": "766ac73e94ed64530f60c963572781debdb9fc7f9d2a2193fba106c1f5689e66",
+      "test2026/cuda/qwen38_5090/probe_bf16_prefill128_metadata.cpp": "bce8c5d808cbe57add3491a5948d64f0072e870b1109e3dde0e99dfff8b315dd",
+      "test2026/cuda/qwen38_5090/test_bf16_prefill128_layout.py": "f37a4e0aae27cfcf0c5e41024fdff6804f7bef21f86d2aa5d5964afdb73ad389"
+    },
+    "python_cpu_tests": 11,
+    "native_metadata_invalid_cases": 2241,
+    "native_profile_tuples": 2827,
+    "fixture_sha256": "26c7786301a60934de80c83ce034864918cd1bb7eef1d673bb8f29603b5911c2",
+    "metadata_executable_sha256": "0543816fc54450d4b24ab60a8a5848c36a0d3d6fbd8e6b85b693a42819667530",
+    "imports_sha256": "97badd6c8637dfdd293b82c99e5884d70c7425a4714e9bc8bef298ef4ce53b41",
+    "gpu_compiled": false,
+    "runtime_qualified": false,
+    "target_logical_bytes": 178257920
+  },
+  "performance_admitted": false,
+  "two_times_target_achieved": false
+}

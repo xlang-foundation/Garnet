@@ -1,0 +1,80 @@
+{
+  "methods": [
+    {
+      "source": "install-b4-rowwise-http-benchmark.py",
+      "source_sha256": "cf5df64a22d383f6ef4177eeb161fa0ae0eb6880049b086afbeaaa69dbd42461",
+      "target": "install-b4-resident-serial-http-benchmark.py",
+      "target_sha256": "34d817254626bc54bf52f162a504665c04f4c8f0be3b164367163bed8b26a888",
+      "changes": [
+        {
+          "old": "b4-rowwise-http-benchmark",
+          "new": "b4-resident-serial-http-benchmark",
+          "count": 3
+        },
+        {
+          "old": "B4_rowwise_HTTP_benchmark",
+          "new": "B4_resident_serial_HTTP_benchmark",
+          "count": 3
+        }
+      ]
+    },
+    {
+      "source": "postprocess-b4-rowwise-http-benchmark.py",
+      "source_sha256": "a94fcaca21161ce3f1d6511eaa5c902b497635d73feb179a1a8ace21a02a2ad4",
+      "target": "postprocess-b4-resident-serial-http-benchmark.py",
+      "target_sha256": "2014a90a58cfad22359b54353641fe2b2bfc78ea879b97f483dbd14e6bfe8c98",
+      "changes": [
+        {
+          "old": "b4-rowwise-http-benchmark",
+          "new": "b4-resident-serial-http-benchmark",
+          "count": 4
+        },
+        {
+          "old": "verify_b4_rowwise_http_benchmark.py",
+          "new": "verify_b4_resident_serial_http_benchmark.py",
+          "count": 1
+        },
+        {
+          "old": "59closedparents",
+          "new": "62closedparents",
+          "count": 1
+        },
+        {
+          "old": "closed805quality admission",
+          "new": "closed candidate805quality,31graph snapshots and native IO byte admission",
+          "count": 1
+        },
+        {
+          "old": "source91 B4 raw HTTP benchmark replay",
+          "new": "source91 resident/serial B4 raw HTTP benchmark replay",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "replay-b4-rowwise-http-benchmark.py",
+      "source_sha256": "9b4659d8063adf6901562bf8280ca0251b9774c07becd0a9b6f594adb8285aea",
+      "target": "replay-b4-resident-serial-http-benchmark.py",
+      "target_sha256": "e45abfbc90c08e2626cf397fee1d028746600740a8079b53afb981e940fa8ad1",
+      "changes": [
+        {
+          "old": "b4-rowwise-http-benchmark",
+          "new": "b4-resident-serial-http-benchmark",
+          "count": 4
+        },
+        {
+          "old": "verify_b4_rowwise_http_benchmark.py",
+          "new": "verify_b4_resident_serial_http_benchmark.py",
+          "count": 1
+        },
+        {
+          "old": "source91 B4 raw HTTP benchmark replay",
+          "new": "source91 resident/serial B4 raw HTTP benchmark replay",
+          "count": 1
+        }
+      ]
+    }
+  ],
+  "syntax_checked_only": true,
+  "actual_install_and_raw_replay_unrun": true
+}

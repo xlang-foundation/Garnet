@@ -1,0 +1,65 @@
+{
+  "status": "separate_b1_commit_and_layout_prepared_gpu_unrun",
+  "files": {
+    "bf16_low_batch_layout.py": {
+      "source": "xModel/qwen35/vl_0_8b/kv_bf16_study_layout.py",
+      "source_sha256": "1c2071308de589bff10b3e980d377dc3049416bbe96c0bfbc16c9d184a989311",
+      "changes": [
+        [
+          "CONTRACT='garnet_qwen38_bf16_kv_delta_study_v1'",
+          "CONTRACT='garnet_qwen38_bf16_low_batch_delta_study_v1'",
+          1
+        ],
+        [
+          "build_bf16_kv_study_layout(batch=8",
+          "build_bf16_low_batch_layout(batch=1",
+          1
+        ],
+        [
+          "batch not in (4,8)",
+          "batch!=1",
+          1
+        ],
+        [
+          "BF16 KV study requires B4/B8, cap4096, T4/T32",
+          "Separate BF16 low-batch study requires B1, cap4096, T4/T32",
+          1
+        ],
+        [
+          "def bf16_kv_byte_offset(",
+          "def bf16_low_batch_byte_offset(",
+          1
+        ],
+        [
+          "tensor sizes are not allocator usage or proof that B8 fits the RTX 5090.",
+          "tensor sizes are not allocator usage or proof of whole-model B1 memory fit.",
+          1
+        ]
+      ],
+      "result_sha256": "c6112a69b09bb2cd9d8aa4dfe5835681f6bce2e308561c33032f17b7b7c0e052"
+    },
+    "bf16_low_batch_commit_candidate.cu": {
+      "source": "src/cuda/qwen38_bf16_kv_commit.cu",
+      "source_sha256": "bad0f3434934dda780a2723cee43fa956222b6be1bc6e1b2c9be05e02a631723",
+      "changes": [
+        [
+          "#include \"qwen38_bf16_kv_commit.cuh\"",
+          "#include \"bf16_low_batch_commit_candidate.h\"",
+          1
+        ],
+        [
+          "RunQwen38BF16KVCommit",
+          "RunQwen38BF16LowBatchCommitCandidate",
+          1
+        ],
+        [
+          "(batch!=4&&batch!=8)||(chunk!=4&&chunk!=32)",
+          "!BF16LowBatchCommitCandidateProfile(batch,chunk)",
+          1
+        ]
+      ],
+      "result_sha256": "92337972279cb6b99b30934e69cffea68241bf618dd479faf6cb9411fe836348"
+    }
+  },
+  "scope": "Separate B1 contract/function names and strict B1-only shape policy. GPU commit kernel math, pointer/overlap/width/span checks and indices unchanged. Legacy B4/B8 public operator/profile/schema unchanged. Not native helper/plugin/model/quality/serving/performance admission."
+}

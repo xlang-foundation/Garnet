@@ -1,0 +1,234 @@
+{
+  "status": "separate_step44_step45_protocol_prepared_GPU_unrun",
+  "derivations": [
+    {
+      "source": "probe_b4_k35_coordinate_trajectory.py",
+      "source_sha256": "87a5ba5a09b4e0b96c92b72e1ca4c5799cb0f9be5bf1b9ba98181d07d45de0d6",
+      "target": "probe_step45_layer_boundary.py",
+      "target_sha256": "0f3338d9622512c404ac7f0c018c8964508c8ce63a84a146de1508984be93db4",
+      "changes": [
+        {
+          "old": "Ordinary model with two repeated reads of an existing carrier after each decode step; no graph changes.",
+          "new": "Private all64 layer outputs at44/45; ordinary primary/cache/timeline parity required before interpretation.",
+          "count": 1
+        },
+        {
+          "old": "b4-k35-coordinate-trajectory-preparation.json",
+          "new": "step45-layer-boundary-preparation.json",
+          "count": 1
+        },
+        {
+          "old": "    import garnet",
+          "new": "    from test2026.cuda.qwen38_5090.all_layer_decode_boundary_program import AllLayerDecodeBoundaryProgram,construct_with_all_layer_decode_boundary_program\n    import garnet",
+          "count": 1
+        },
+        {
+          "old": "decoder=create_cuda_bf16_low_batch_study_decoder(str(checkpoint),cfg)",
+          "new": "decoder=construct_with_all_layer_decode_boundary_program(create_cuda_bf16_low_batch_study_decoder,str(checkpoint),cfg)",
+          "count": 1
+        },
+        {
+          "old": "decoder=CUDAPackedDecoder(str(checkpoint),cfg['text_config'],4,4096,32,4,",
+          "new": "decoder=construct_with_all_layer_decode_boundary_program(CUDAPackedDecoder,str(checkpoint),cfg['text_config'],4,4096,32,4,",
+          "count": 1
+        },
+        {
+          "old": "        vision=create_cuda_vision",
+          "new": "        program=decoder.programs[4];assert isinstance(program,AllLayerDecodeBoundaryProgram)\n        report['observer']=dict(layers=list(program.boundary_layers),tokens=4,hidden=5120,hidden_width=program.hidden_width,primary_width=program.ordinary_output_width,wide_width=program.output_width,selected_steps=[44,45])\n        def capture_layers(group,step,consumed):\n            assert step in (44,45)\n            result=dict(step=step,program_runs=program.boundary_runs,consumed_tokens=list(consumed),boundaries={})\n            for layer,buffer in zip(program.boundary_layers,program.boundary_buffers):\n                raw=bytes(io.finite_f32_bytes(buffer));assert len(raw)==batch*4*5120*4\n                name='case'+str(group)+'-step'+str(step)+'-layer'+str(layer)+'.f32';assert not (out/name).exists();(out/name).write_bytes(raw)\n                result['boundaries'][str(layer)]=dict(file=name,bytes=len(raw),sha256=sha(raw))\n            return result\n        vision=create_cuda_vision",
+          "count": 1
+        },
+        {
+          "old": "record['post_step_states']=[];sampler=",
+          "new": "record['post_step_states']=[];record['layer_observations']=[];sampler=",
+          "count": 1
+        },
+        {
+          "old": "                    prediction=decoder.step(prediction,[1]*batch,[[v]*3 for v in current]);",
+          "new": "                    consumed=list(prediction);prediction=decoder.step(prediction,[1]*batch,[[v]*3 for v in current]);",
+          "count": 1
+        },
+        {
+          "old": "                    sampler.read(decoder.state,step+1,decoder.slots)",
+          "new": "                    sampler.read(decoder.state,step+1,decoder.slots)\n                    if step+1 in (44,45):record['layer_observations'].append(capture_layers(group_index,step+1,consumed));save()",
+          "count": 1
+        },
+        {
+          "old": "        report['status']='selected_full4k",
+          "new": "        report['boundary_runs']=program.boundary_runs;report['status']='selected_full4k",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "launch_b4_k35_coordinate_trajectory.py",
+      "source_sha256": "cd05b91ab4a823901139c4b9c4e0da537a26fe7a17d5df727319b7837a006709",
+      "target": "launch_step45_layer_boundary.py",
+      "target_sha256": "633e68c9c57456b67de374038beceb4f3bf0f350f52d65e342877e8b8cef84e2",
+      "changes": [
+        {
+          "old": "b4-k35-coordinate-trajectory-preparation.json",
+          "new": "step45-layer-boundary-preparation.json",
+          "count": 1
+        },
+        {
+          "old": "probe_b4_k35_coordinate_trajectory.py",
+          "new": "probe_step45_layer_boundary.py",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "run_key35_coordinate_trajectory.py",
+      "source_sha256": "91eaeb4b95915780d2e0279eb3913d718f00b2f67029b327e9ae52ba6e492ae2",
+      "target": "run_step45_layer_boundary.py",
+      "target_sha256": "c8b2780d326964530400afac9cc7067f11d89a8af847b5e38cc4fc15f4f1425e",
+      "changes": [
+        {
+          "old": "key35-coordinate-trajectory-attempt1",
+          "new": "step45-layer-boundary-attempt1",
+          "count": 1
+        },
+        {
+          "old": "b4-k35-coordinate-trajectory-preparation.json",
+          "new": "step45-layer-boundary-preparation.json",
+          "count": 1
+        },
+        {
+          "old": "ordinary_key35_coordinate_trajectory_prepared_GPU_unrun",
+          "new": "step45_layer_boundary_prepared_GPU_unrun",
+          "count": 1
+        },
+        {
+          "old": "from test2026.cuda.qwen38_5090.b4_k35_coordinate_trajectory import analyze",
+          "new": "from test2026.cuda.qwen38_5090.step45_layer_boundary_analysis import analyze",
+          "count": 1
+        },
+        {
+          "old": "trajectory_analysis",
+          "new": "layer_analysis",
+          "count": 2
+        },
+        {
+          "old": "ordinary_coordinate_trajectory_collected_no_model_admission",
+          "new": "step45_layer_boundary_collected_no_model_admission",
+          "count": 1
+        },
+        {
+          "old": "Exclusive ordinary B1/B4 coordinate sampling; full primary parity before analysis.",
+          "new": "Exclusive all64 layer outputs at steps44/45; complete ordinary primary/cache/timeline parity before analysis.",
+          "count": 1
+        },
+        {
+          "old": "launch_b4_k35_coordinate_trajectory.py",
+          "new": "launch_step45_layer_boundary.py",
+          "count": 1
+        },
+        {
+          "old": "52CPU",
+          "new": "66CPU",
+          "count": 1
+        },
+        {
+          "old": "52 CPU controls",
+          "new": "66 CPU controls",
+          "count": 1
+        },
+        {
+          "old": "including full primary/cache/ID/row/finite guards and single-carrier repeated reads/geometry/ordered timepoints/fullcache linkage/actual-vs-scheduled time distinction",
+          "new": "including original observer source derivation, binding/row suffixes, full primary/cache/timeline guards, selected44/45 geometry/finite/hash/active-column guards",
+          "count": 1
+        },
+        {
+          "old": "Unchanged ordinary model,3968prompt+53IDs/52consumed: two reads of existing layer35K/head0/slot4012/dim211 carrier after prefill and each decode step; all complete primary checkpoints and full cache must reproduce same-profile parents before interpreting timepoints. No graph observer/native changes or benchmark.",
+          "new": "Private all64-layer T4 output observer at44/45,3968prompt+53IDs/52consumed, two ordinary coordinate reads after each step. Complete primary/checkpoint/cache/timeline parity against immutable ordinary parents is required before interpreting any layer output. No native changes or performance admission.",
+          "count": 1
+        },
+        {
+          "old": "with zipfile.ZipFile(ROOT/'results/b4-k35-cache52-attempt1-evidence.zip') as rp,zipfile.ZipFile(ROOT/'results/b4-k-m4x4-control52-attempt1-evidence.zip') as cp:\n            rb='results/b4-k35-cache52-attempt1/reference/';cb='results/b4-k-m4x4-control52-attempt1/off/'",
+          "new": "with zipfile.ZipFile(ROOT/'results/key35-coordinate-trajectory-attempt1-evidence.zip') as rp,zipfile.ZipFile(ROOT/'results/key35-coordinate-trajectory-attempt1-evidence.zip') as cp:\n            rb='results/key35-coordinate-trajectory-attempt1/reference/';cb='results/key35-coordinate-trajectory-attempt1/candidate/'",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "verify_key35_coordinate_trajectory.py",
+      "source_sha256": "885e5631e576e71ba303adc6353e858937d383fec5d55beecbd65e906e93b6fb",
+      "target": "verify_step45_layer_boundary.py",
+      "target_sha256": "886b3f8721f85654a537bb55a2bfb26e3ba8e0337cfebda6f56b35b8e1748600",
+      "changes": [
+        {
+          "old": "Independent raw replay of ordinary coordinate trajectory or preserved failure.",
+          "new": "Independent raw replay of step44/45 all-layer observations or preserved failure.",
+          "count": 1
+        },
+        {
+          "old": "key35-coordinate-trajectory-attempt1",
+          "new": "step45-layer-boundary-attempt1",
+          "count": 1
+        },
+        {
+          "old": "b4-k35-coordinate-trajectory-preparation.json",
+          "new": "step45-layer-boundary-preparation.json",
+          "count": 1
+        },
+        {
+          "old": "from test2026.cuda.qwen38_5090.b4_k35_coordinate_trajectory import analyze",
+          "new": "from test2026.cuda.qwen38_5090.step45_layer_boundary_analysis import analyze",
+          "count": 1
+        },
+        {
+          "old": "('b4_k35_coordinate_trajectory.py','verify_key35_coordinate_trajectory.py')",
+          "new": "('step45_layer_boundary_analysis.py','verify_step45_layer_boundary.py')",
+          "count": 1
+        },
+        {
+          "old": "Ran 52 tests",
+          "new": "Ran 66 tests",
+          "count": 1
+        },
+        {
+          "old": "trajectory_analysis",
+          "new": "layer_analysis",
+          "count": 2
+        },
+        {
+          "old": "with zipfile.ZipFile(args.proofs/'b4-k35-cache52-attempt1-evidence.zip') as rp,zipfile.ZipFile(args.proofs/'b4-k-m4x4-control52-attempt1-evidence.zip') as cp:",
+          "new": "with zipfile.ZipFile(args.proofs/'key35-coordinate-trajectory-attempt1-evidence.zip') as rp,zipfile.ZipFile(args.proofs/'key35-coordinate-trajectory-attempt1-evidence.zip') as cp:",
+          "count": 1
+        },
+        {
+          "old": "rb='results/b4-k35-cache52-attempt1/reference/';cb='results/b4-k-m4x4-control52-attempt1/off/'",
+          "new": "rb='results/key35-coordinate-trajectory-attempt1/reference/';cb='results/key35-coordinate-trajectory-attempt1/candidate/'",
+          "count": 1
+        },
+        {
+          "old": "ordinary_coordinate_trajectory_collected_no_model_admission",
+          "new": "step45_layer_boundary_collected_no_model_admission",
+          "count": 1
+        },
+        {
+          "old": "ordinary_key35_coordinate_trajectory_replayed",
+          "new": "step45_layer_boundary_replayed",
+          "count": 1
+        },
+        {
+          "old": "ordinary_key35_coordinate_trajectory_failure_replayed",
+          "new": "step45_layer_boundary_failure_replayed",
+          "count": 1
+        },
+        {
+          "old": "'CPU_controls':52",
+          "new": "'CPU_controls':66",
+          "count": 1
+        },
+        {
+          "old": "'first_observed_difference_step':result_analysis['trajectory']['first_observed_selected_value_difference_step'] if result_analysis else None",
+          "new": "'layer_differences':[{k:row[k] for k in ('step','first_differing_active_layer','first_differing_full_T4_layer')} for row in result_analysis['rows']] if result_analysis else None",
+          "count": 1
+        }
+      ]
+    }
+  ],
+  "old_step_lte7_protocol_unchanged": true,
+  "primary_cache_timeline_parity_required_before_interpreting_outputs": true
+}

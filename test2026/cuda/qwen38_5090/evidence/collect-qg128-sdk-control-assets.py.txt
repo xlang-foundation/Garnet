@@ -1,0 +1,7 @@
+from pathlib import Path
+import hashlib,json,zipfile
+ROOT=Path('D:/CantorAI/5090-study-20261023');sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest();job='qg128-sdk-control-attempt2';q=json.loads((ROOT/'results'/(job+'-verified.json')).read_bytes());assert q['exit_code']==0 and q['source_library_runtime_SDK_checkpoint_unchanged'];assert sha(ROOT/'results'/(job+'-evidence.zip'))==q['archive_sha256'];names=['results/'+job+'-verified.json','results/'+job+'-evidence.zip','results/qg128-sdk-control-attempt1-verified.json','results/qg128-sdk-control-install.json','results/qg128-sdk-audit-retry-install.json','results/collect-qg128-sdk-control-assets.py'];target=ROOT/'results/qg128-sdk-control-closure-assets.zip';assert not target.exists()
+with zipfile.ZipFile(target,'x',zipfile.ZIP_DEFLATED) as z:
+    for n in names:z.write(ROOT/n,n)
+    z.writestr('evidence-manifest.json',json.dumps(dict(files={n:sha(ROOT/n) for n in names}),indent=2))
+print(json.dumps(dict(status='actual_QG_SDK_control_and_original_failure_assets_retained',sha256=sha(target),bytes=target.stat().st_size,files=len(names))))

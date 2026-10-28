@@ -1,0 +1,21 @@
+from pathlib import Path
+import hashlib,json,sys,zipfile
+ROOT=Path('D:/CantorAI/5090-study-20261023');P='Garnet/test2026/cuda/qwen38_5090/';M=ROOT/P;sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest();sys.path[:0]=[str(M),str(ROOT/'Garnet')]
+from run_bf16_low_batch_native_build import idle
+archive=ROOT/'results/b4-decode-m16-native-deployment.zip';assert sha(archive)=='a05063e6d13c9ad0a88839acc969d901aa76a8f4ebc746e93cb16bcbbaeb28f2';idle();out=ROOT/'results/b4-decode-m16-native-install.json';assert not out.exists()
+with zipfile.ZipFile(archive) as z:
+    mf=json.loads(z.read('deployment-manifest.json'))['files'];assert z.testzip() is None and len(z.namelist())==len(set(z.namelist()))==len(mf)+1==202
+    p=json.loads(z.read(P+'evidence/b4-decode-m16-build-preparation.json'));assert p['status']=='b4_decode_m16_build_prepared_unrun'
+    for n,h in {**p['base_files'],**p['methods'],**p['checkpoints'],**p['cuda_objects_before']}.items():
+        if n in mf:assert hashlib.sha256(z.read(n)).hexdigest()==h
+        else:assert sha(ROOT/n)==h,('Preserve baseline',n)
+    for n,h in p['runtime'].items():assert sha(ROOT/'build/bin'/n)==h
+    for n,h in p['environment'].items():assert sha(Path(n))==h
+    for n,h in p['candidate_base'].items():
+        target=ROOT/'Garnet'/n;assert (sha(target) if target.exists() else None)==h,('Preserve native target',n)
+    assert sha(ROOT/'build/CMakeCache.txt')==p['cache_before_sha256'] and sha(ROOT/'results/b4-decode-m16-build-inputs.json')==p['input_inventory_sha256']
+    allowed={'results/tokenizer-nfc-cpu-oracles.zip','results/inspect-b4-decode-m16-build-inputs.py','results/run-b4-decode-m16-build-inventory.py',p['bundle']}
+    for n,h in mf.items():
+        target=ROOT/n;assert target.resolve().is_relative_to(ROOT.resolve()) and (target.resolve().is_relative_to(M.resolve()) or n in allowed) and 'probe_native_external_prefix_batch.py' not in n;raw=z.read(n);assert hashlib.sha256(raw).hexdigest()==h and (not target.exists() or target.read_bytes()==raw),('Preserve existing edit',n)
+    for n in mf:target=ROOT/n;target.parent.mkdir(parents=True,exist_ok=True);target.write_bytes(z.read(n))
+out.write_bytes(json.dumps(dict(status='B4T4_GDN_M16_native_build_methods_installed_unrun',deployment_sha256=sha(archive),files=mf),indent=2).encode());print(json.dumps(dict(status='B4T4_GDN_M16_native_build_methods_installed',files=len(mf))))

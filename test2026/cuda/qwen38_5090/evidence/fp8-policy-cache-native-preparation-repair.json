@@ -1,0 +1,22 @@
+{
+  "source": "prepare-fp8-policy-cache-native.py",
+  "target": "prepare-fp8-policy-cache-native-attempt2.py",
+  "source_sha256": "758084118e504a542947730198931998936afec78e99ab47fbc15ba4c061c4cd",
+  "target_sha256": "be29b969fa95f903f5c1ffd49e5ee7084b2ce230936913399aa0c6c690a5e0bf",
+  "observed_original_exception": "AssertionError at parent dictionary whole-row equality",
+  "reason": "Frontend metadata adds status fields to identical hash/exit identities and omits qg SDK parent; union must retain every native parent and compare every existing identity field",
+  "changes": [
+    {
+      "old": "bundle=W/'fp8-policy-cache-source.zip';assert not bundle.exists()\nwith zipfile.ZipFile(bundle,'x',zipfile.ZIP_DEFLATED) as z:\n    for n,b in sorted(candidate.items()):z.writestr(n,b)",
+      "new": "bundle=W/'fp8-policy-cache-source.zip'\nif bundle.exists():\n    with zipfile.ZipFile(bundle) as z:assert z.testzip() is None and len(z.namelist())==len(set(z.namelist()))==62 and {n:z.read(n) for n in z.namelist()}==candidate\nelse:\n    with zipfile.ZipFile(bundle,'x',zipfile.ZIP_DEFLATED) as z:\n        for n,b in sorted(candidate.items()):z.writestr(n,b)",
+      "count": 1
+    },
+    {
+      "old": "parents=dict(front['parents']);assert all(n in parents and parents[n]==row for n,row in native['parents'].items())",
+      "new": "parents=dict(front['parents'])\nfor name,row in native['parents'].items():\n    if name in parents:assert all(parents[name][k]==v for k,v in row.items()),('Parent identity mismatch',name)\n    parents[name]={**row,**parents.get(name,{})}",
+      "count": 1
+    }
+  ],
+  "existing_source_zip_must_be_byte_content_exact_without_mutation": true,
+  "no_numeric_or_native_gate_waiver": true
+}

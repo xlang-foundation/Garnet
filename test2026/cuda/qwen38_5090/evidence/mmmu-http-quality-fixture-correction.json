@@ -1,0 +1,7 @@
+{
+  "status": "synthetic_fixture_missing_manifest_corrected",
+  "observed_initial_failure": "Expected corpus-hash rejection was reached as FileNotFoundError because the synthetic fixture omitted manifest.json. Actual failing14test ledger and original test/client bytes retained.",
+  "correction": "Add an explicitly synthetic manifest so the real frozen-manifest hash guard rejects it with ValueError. No assertion, parser, corpus requirement or quality threshold was relaxed. Additional transport/replay controls and frozen protocol-source/UTC provenance checks were added separately.",
+  "actual_model_responses": 0,
+  "actual_http_requests": 0
+}

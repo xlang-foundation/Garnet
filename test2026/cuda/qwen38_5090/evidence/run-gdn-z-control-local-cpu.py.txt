@@ -1,0 +1,10 @@
+from pathlib import Path
+import ast,hashlib,sys
+repo=Path('D:/CantorAI/work/qwen38-5090');m=repo/'test2026/cuda/qwen38_5090';sys.path[:0]=[str(m),str(repo)]
+import run_logged as ledger
+tree=ast.parse((m/'run_gdn_z_projection.py').read_bytes());names=next(ast.literal_eval(n.value) for n in tree.body if isinstance(n,ast.Assign) and any(isinstance(t,ast.Name) and t.id=='NAMES' for t in n.targets))
+pins={str(m/name):hashlib.sha256((m/name).read_bytes()).hexdigest() for name in names}
+ledger.source_identity=lambda:{'scope':'Explicit owned standalone Z control methods; unrelated untracked excluded','owned_source_sha256':{name:hashlib.sha256(Path(name).read_bytes()).hexdigest() for name in pins}}
+code=ledger.run([sys.executable,'-m','unittest','test2026.cuda.qwen38_5090.test_gdn_z_projection','test2026.cuda.qwen38_5090.test_gdn_z_algorithm_log','-v'],Path(__file__).resolve().parent/'gdn-z-control-local-cpu-ledger','correctness','Eight synthetic complete-word/scale/lineage/algorithm/workspace controls; no local native/GPU/model',list(pins))
+assert pins==ledger.source_identity()['owned_source_sha256']
+raise SystemExit(code)

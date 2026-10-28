@@ -1,0 +1,38 @@
+from pathlib import Path
+import ast,hashlib,json
+W=Path(__file__).resolve().parent;R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';sha=lambda b:hashlib.sha256(b).hexdigest();rows=[]
+def derive(source,target,changes):
+    original=(M/source).read_bytes();raw=original;record=[]
+    for old,new,count in changes:
+        if b'\r\n' not in original:old=old.replace('\r\n','\n');new=new.replace('\r\n','\n')
+        assert raw.count(old.encode())==count,(source,old,raw.count(old.encode()));raw=raw.replace(old.encode(),new.encode());record.append(dict(old=old,new=new,count=count))
+    ast.parse(raw);out=M/target;assert not out.exists();out.write_bytes(raw);rows.append(dict(source=source,target=target,source_sha256=sha(original),target_sha256=sha(raw),changes=record))
+source='probe_b4_b1_short_admission.py';text=(M/source).read_text();start=text.index('        if batch==4:\n            gold=');end=text.index('        save()\n    except BaseException',start);old_tail=text[start:end]
+derive(source,'probe_b4_b1_short_m16_admission.py',[
+    ('b4-b1-short-preparation.json','b4-b1-short-m16-preparation.json',1),
+    ("'GARNET_FP8_BATCH4_PREFILL_CANONICAL':'0' if mode=='reference' else '1'}","'GARNET_FP8_BATCH4_PREFILL_CANONICAL':'0' if mode=='reference' else '1','GARNET_FP8_GDN_BATCH4_DECODE_CANONICAL':'0' if mode=='reference' else '1'}",1),
+    (old_tail,"        # Raw capture only: the exclusive CPython owner enforces the unchanged full gates.\n        report['status']='B4_short_mixed_tail_raw_capture_needs_CPython_admission' if batch==4 else 'four_B1_short_oracles_collected'\n",1)])
+derive('launch_b4_b1_short_admission.py','launch_b4_b1_short_m16_admission.py',[
+    ('b4-b1-short-preparation.json','b4-b1-short-m16-preparation.json',1),('probe_b4_b1_short_admission.py','probe_b4_b1_short_m16_admission.py',1),
+    ("env['GARNET_FP8_BATCH4_PREFILL_CANONICAL']='0' if mode=='reference' else '1';","env['GARNET_FP8_BATCH4_PREFILL_CANONICAL']='0' if mode=='reference' else '1';env['GARNET_FP8_GDN_BATCH4_DECODE_CANONICAL']='0' if mode=='reference' else '1';",1),
+    ("env['PATH']=';'.join", "env['GARNET_GDNM16_FACTORY_TRACE']='1' if mode=='candidate' else '0';env['GARNET_MODELOPT_INIT_TRACE']='1' if mode=='candidate' else '0'\nenv['PATH']=';'.join",1)])
+analysis=r'''        from test2026.cuda.qwen38_5090.b4_b1_short_m16_gate import observe,admit,route_trace
+        reference=json.loads((out/'reference/report.json').read_bytes());candidate=json.loads((out/'candidate/report.json').read_bytes())
+        read_reference=lambda name:(out/'reference'/name).read_bytes();read_candidate=lambda name:(out/'candidate'/name).read_bytes()
+        w['observation']=observe(reference,candidate,read_reference,read_candidate);(out/'analysis.json').write_bytes(json.dumps(w['observation'],indent=2).encode());save()
+        w['actual_GDN_M16_route']=route_trace((out/'candidate-ledger/commands.log').read_bytes());(out/'route-analysis.json').write_bytes(json.dumps(w['actual_GDN_M16_route'],indent=2).encode());save()
+        w['strict_admission']=admit(reference,candidate,read_reference,read_candidate);save()
+'''
+derive('run_b4_b1_short_admission.py','run_b4_b1_short_m16_admission.py',[
+    ('b4-b1-short-admission-attempt1','b4-b1-short-m16-admission-attempt1',1),('b4-b1-short-preparation.json','b4-b1-short-m16-preparation.json',1),('B4_vs_B1_short_prepared_GPU_unrun','B4_vs_B1_short_M16_prepared_GPU_unrun',1),
+    ("w['exit_code']==0 and w['cleanup_finished']","w['exit_code']==row['exit_code'] and w['exit_code'] in (0,1) and w['cleanup_finished']",1),
+    ("len(sources['candidate'])==61","len(sources['candidate'])==67",1),
+    ("    bundles={mode:ROOT/p[mode+'_bundle']", "    for n,h in p['cuda_objects'].items():assert sha(ROOT/n)==h\n    assert sha(ROOT/'build/CMakeCache.txt')==p['cache_before_sha256']\n    bundles={mode:ROOT/p[mode+'_bundle']",1),
+    ("common=[prep,*bundles.values()]+[ROOT/n for n in {**p['files'],**p['checkpoints'],**p['audit_dependencies']}]","common=[prep,*bundles.values()]+[ROOT/n for n in p['archive_files']]",1),
+    ("phases=[])","phases=[],cuda_objects_before=p['cuda_objects'],cache_before_sha256=p['cache_before_sha256'])",1),
+    ("'test2026.cuda.qwen38_5090.test_b4_b1_exact_gate'","'test2026.cuda.qwen38_5090.test_b4_b1_short_m16_gate'",1),
+    ('launch_b4_b1_short_admission.py','launch_b4_b1_short_m16_admission.py',1),
+    ('Four fresh source60/DLL841 B1 oracles then source61/B4 candidate, same41/104/93/93token text-image short/tail inputs and8IDs; complete128statecomponents, finite hidden+norm raw bytes, reset/prefill/final/reset. No timing or quality promotion.','Four fresh source60/DLL841 B1 oracles then source67/DLL677 physicalB4 candidate with M16policy1; same41/104/93/93token text-image short/tail inputs and8IDs. Capture complete128statecomponents, finite hidden+norm rawbytes/reset/prefill/final/reset. Original exactgate enforced in CPython owner after capture; actualfactory/init traces required, no timing or quality promotion.',1),
+    ("        w['status']='B4_short_mixed_tail_exact_to_four_B1_collected_unqualified_full4k_MTP_quality_performance';code=0",analysis+"        w['status']='B4_M16_short_mixed_tail_exact_to_four_B1_collected_unqualified_full4k_MTP_quality_performance';code=0",1),
+    ("w['cleanup_finished']=True;save()","w['cleanup_finished']=True;w['cuda_objects_after']={n:sha(ROOT/n) for n in p['cuda_objects']};w['cache_after_sha256']=sha(ROOT/'build/CMakeCache.txt');w['build_artifacts_unchanged']=w['cuda_objects_before']==w['cuda_objects_after'] and w['cache_before_sha256']==w['cache_after_sha256'];save()\n        if not w['build_artifacts_unchanged']:code=1;w.update(status='failed',exit_code=1,error='Production build artifacts changed during model gate');save()",1)])
+target=M/'evidence/b4-b1-short-m16-method-derivation.json';assert not target.exists();target.write_bytes(json.dumps(dict(derivations=rows,scope='Original complete modelcapture/mathgates retained; versioned67candidate+newflag/traces, exactcomparison moved from embeddedcomprehension lambda toexclusiveCPython owner. Allbaselinehashes audited, boundedarchive linksoriginaldatasets instead ofcopyingunrelatedcorpus. Originalfailedcapture keptunchanged.'),indent=2).encode());print(json.dumps(dict(methods=len(rows))))

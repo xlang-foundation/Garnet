@@ -1,0 +1,40 @@
+"""Retain the actual terminal outcome, including failed controls and raw logs."""
+from pathlib import Path
+import hashlib,json,zipfile
+W=Path(__file__).resolve().parent;O=W.parent/'outputs';R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';E=M/'evidence';sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest();owned=[];retained={}
+def keep(dest,raw):
+    assert not dest.exists(),dest
+    dest.write_bytes(raw);assert dest.read_bytes()==raw;owned.append(dest);retained[dest.relative_to(E).as_posix()]=sha(dest)
+J='decode35-endpoints-attempt1';proof=O/(J+'-verified.json');q=json.loads(proof.read_bytes());archive=O/(J+'-evidence.zip')
+assert proof.read_bytes()==(O/(J+'-remote-verified.json')).read_bytes() and sha(archive)==q['archive_sha256']
+assert q['source_runtime_SDK_config_index_CMake_all34_baseline_restored'] and q['CPU_controls']==97
+for name in (proof.name,J+'-remote-verified.json','Garnet-Decode35-Endpoints-Progress.json'):keep(E/name,(O/name).read_bytes())
+with zipfile.ZipFile(archive) as z:
+    base='results/'+J+'/';mf=json.loads(z.read('evidence-manifest.json'))
+    keep(E/'decode35-endpoints-model1-manifest.json',z.read('evidence-manifest.json'))
+    for name in mf['files']:
+        if name.startswith(base) and name.endswith('.json'):keep(E/('decode35-endpoints-model1-'+name.removeprefix(base).replace('/','-')),z.read(name))
+    for phase in ('cpu','on-reference','on-candidate'):
+        for ext in ('log','jsonl'):
+            name=base+phase+'-ledger/commands.'+ext
+            if name in mf['files']:keep(E/('decode35-endpoints-model1-'+phase+'-commands.'+ext),z.read(name))
+for name in ('commands.log','commands.jsonl'):keep(E/('decode35-endpoints-model1-local-replay-'+name),(W/'decode35-endpoints-local-replay'/name).read_bytes())
+for name in ('postprocess-decode35-endpoints.py','replay-decode35-endpoints.py',Path(__file__).name):keep(E/(name+'.txt'),(W/name).read_bytes())
+a=q['analysis'];rows=[{'step':r['step'],'first_differing_active_key_path_operand':r['first_differing_active_key_path_operand'],'coordinate_samples':r['coordinate_samples'],'operands':r['operands']} for r in a['rows']] if a else None
+keep(E/'decode35-endpoints-model1-retention.json',json.dumps({'status':q['status'],'exit_code':q['exit_code'],'error':q['error'],'archive_sha256':sha(archive),'archive_bytes':archive.stat().st_size,'proof_sha256':sha(proof),'retained_sha256':dict(retained),'CPU_controls':97,'paired_replay_bytes_identical':True,'observations':rows,'controls':q['controls'],'reused_off':q['reused_off'],'fresh_model_processes':q['fresh_model_processes'],'baseline_restored':True,'model_or_performance_qualified':False,'two_times_target_achieved':False},indent=2).encode())
+entry=('\n\n2026-10-27 same-DLL six-endpoint diagnostic terminal outcome: '+q['status']+
+       ', exit '+str(q['exit_code'])+'. Independent remote/local raw replay proofs '
+       'are byte-identical: '+sha(proof)+'. Raw archive '+sha(archive)+' ('+str(archive.stat().st_size)+
+       ' bytes). All 97 CPU controls passed. Completed primary controls: '+', '.join(q['controls'])+
+       '. Two fresh on processes; ordinary off captures reused under exact source/runtime pins. Native trace stayed7, final outputs6; pre-RoPE suffix not observed or claimed. Error: '+str(q['error'])+'. Operand summary: '+json.dumps(rows,separators=(',',':'))+
+       '. Source, baseline DLL, runtime, SDK, config/index, CMake and all34 latest '
+       'CUDA object hashes restored; private owned cache nonces retired. Actual '
+       'raw phase logs, workflow, manifests, resources, reports, replay and helper '
+       'sources retained. Failed or incomplete controls do not admit operand '
+       'interpretation. Full4K failure remains; no quality/MTP/HTTP/performance '
+       'qualification or 2x claim.\n').encode()
+for name in ('docs/research/qwen38-5090-development-log.md','docs/research/qwen38-5090-implementation-task.md'):
+    p=R/name;before=p.read_bytes();assert b'same-DLL six-endpoint diagnostic terminal outcome' not in before
+    with p.open('ab') as f:f.write(entry)
+    assert p.read_bytes()==before+entry;owned.append(p)
+(W/'decode35-endpoints-result-stage-paths.bin').write_bytes(b''.join(p.relative_to(R).as_posix().encode()+b'\0' for p in owned));print(json.dumps({'stage_paths':len(owned),'exit_code':q['exit_code'],'error':q['error'],'observations':rows},indent=2))

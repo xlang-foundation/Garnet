@@ -1,0 +1,40 @@
+"""Correct only the native probe setup; keep the failed attempt immutable."""
+from pathlib import Path
+import ast,hashlib,json
+W=Path(__file__).resolve().parent;M=Path('D:/CantorAI/work/qwen38-5090/test2026/cuda/qwen38_5090');records=[]
+names=['probe_b4_host_resident_controls','launch_b4_resident_serial_controls','launch_b4_resident_serial_http_worker','probe_b4_resident_serial_quality','run_b4_resident_serial_quality','verify_b4_resident_serial_quality']
+for name in names:
+    source=M/(name+'.py');raw=source.read_bytes();s=raw.decode().replace('\r\n','\n');changes=[]
+    def replace(a,b,required=True):
+        global s
+        count=s.count(a)
+        if required:assert count,(name,a)
+        if count:s=s.replace(a,b);changes.append(dict(old=a,new=b,count=count))
+    for a,b in [('b4-resident-serial-quality-attempt1','b4-resident-serial-quality-attempt2'),('b4-resident-serial-quality-preparation.json','b4-resident-serial-quality-v2-preparation.json')]:replace(a,b,False)
+    for child in names:
+        if child!=name:replace(child+'.py',child+'_v2.py',False)
+    if name=='probe_b4_host_resident_controls':
+        replace('checkpoint,output=sys.argv[1:3];io=garnet.cuda_tensor_io();io.open(checkpoint);io.enable_host_embedding(True);io.enable_nvfp4_head(True);records=[]','checkpoint,output=sys.argv[1:3];io=garnet.cuda_tensor_io();records=[]')
+        replace('try:\n    info=json.loads(io.memory_json());', 'try:\n    io.open(checkpoint);io.enable_nvfp4_head(True);io.enable_host_embedding(True)\n    info=json.loads(io.memory_json());')
+        old=ast.parse(raw);new=ast.parse(s)
+        old_try=next(n for n in old.body if isinstance(n,ast.Try));new_try=next(n for n in new.body if isinstance(n,ast.Try))
+        # The independent scalar parity, lifetime, padding and invalid-input
+        # controls below initialization remain exactly the same AST.
+        assert [ast.dump(n,include_attributes=False) for n in old_try.body]==[ast.dump(n,include_attributes=False) for n in new_try.body[3:]]
+    if name=='run_b4_resident_serial_quality':
+        lines=s.splitlines(keepends=True)
+        cpu=[n for n in lines if "out/'cpu-ledger'" in n];embedded=[n for n in lines if "out/'embedded-cpu-ledger'" in n];assert len(cpu)==len(embedded)==1
+        replace(cpu[0],"        inherited=p['cpu_control_parent'];prior=json.loads((ROOT/'results'/(inherited+'-verified.json')).read_bytes());assert prior['exit_code']==1 and prior['stages']['cpu']==prior['stages']['embedded-cpu']==0\n        assert all(sha(ROOT/n)==h==p['files'][n] for n,h in p['inherited_cpu_control_sha256'].items());w['inherited_cpu_control_parent']=inherited;save()\n")
+        replace(embedded[0],'')
+    if name=='verify_b4_resident_serial_quality':
+        replace("assert stages=={'cpu':0,'embedded-cpu':0,'resident-io':0,'candidate':0}","assert stages=={'resident-io':0,'candidate':0}")
+        replace("        summary=None", """        inherited=p['cpu_control_parent'];prior=doc('results/'+inherited+'-verified.json')
+        assert inherited=='b4-resident-serial-quality-attempt1' and prior['exit_code']==1 and prior['stages']['cpu']==prior['stages']['embedded-cpu']==0
+        with zipfile.ZipFile(a.proofs/(inherited+'-evidence.zip')) as previous:
+            old=json.loads(previous.read(P+'evidence/b4-resident-serial-quality-preparation.json'))
+            assert p['inherited_cpu_control_sha256'] and all(p['files'][n]==old['files'][n]==h for n,h in p['inherited_cpu_control_sha256'].items())
+        assert w['inherited_cpu_control_parent']==inherited
+        summary=None""")
+    ast.parse(s);target=W/(name+'_v2.draft.py');assert not target.exists();target.write_bytes(s.encode())
+    records.append(dict(source=source.name,source_sha256=hashlib.sha256(raw).hexdigest(),target=target.name,target_sha256=hashlib.sha256(target.read_bytes()).hexdigest(),changes=changes))
+target=W/'b4-resident-serial-quality-v2-draft-derivation.json';assert not target.exists();target.write_bytes(json.dumps(dict(methods=records,native_probe_checks_AST_unchanged_below_setup=True,failed_attempt_methods_preserved=True,unchanged_CPU_controls_reused_only_from_closed_paired_failure_proof=True,fresh_native_IO_and_all_HTTP_model_controls_required=True,syntax_checked_only=True,native_model_GPU_unrun=True),indent=2).encode());print('V2 drafts preserve failed methods and scalar checks; correct setup order and cleanup; execution unrun')

@@ -1,0 +1,50 @@
+"""Materialize only after the current exclusive benchmark has closed and replayed."""
+from pathlib import Path
+import ast,hashlib,json,os,sys,zipfile
+W=Path(__file__).resolve().parent;O=W.parent/'outputs';R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';E=M/'evidence';P='Garnet/test2026/cuda/qwen38_5090/';sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+J='b4-rowwise-http-benchmark-attempt1';proof=O/(J+'-verified.json');q=json.loads(proof.read_bytes())
+assert proof.read_bytes()==(O/(J+'-remote-verified.json')).read_bytes() and q['exit_code']==0 and q['B4_HTTP_benchmark_case_gate_passed'] and sha(O/(J+'-evidence.zip'))==q['archive_sha256']
+with zipfile.ZipFile(O/(J+'-evidence.zip')) as z:
+    w=json.loads(z.read('results/'+J+'/workflow.json'));assert w['cleanup_finished'] and w['all_restored'] and w['exit_code']==0
+old_path=E/'b4-rowwise-http-benchmark-preparation.json';old=json.loads(old_path.read_bytes());assert w['source_after']==old['files'] and len(old['parents'])==59
+names=[];derivations=[]
+drafts=['native_b4_resident_serial_http_worker','launch_b4_resident_serial_http_worker','probe_b4_host_resident_controls','b4_resident_serial_graph_gate','test_b4_resident_serial_graph_gate','run_b4_resident_serial_embedded_cpu','launch_b4_resident_serial_controls','probe_b4_resident_serial_quality','run_b4_resident_serial_quality','verify_b4_resident_serial_quality']
+for name in drafts:
+    src=W/(name+'.draft.py');dst=M/(name+'.py');assert not dst.exists();raw=src.read_bytes();ast.parse(raw);dst.write_bytes(raw);names.append(dst.name);derivations.append(dict(draft=src.name,draft_sha256=sha(src),target=dst.name,target_sha256=sha(dst)))
+deps=json.loads((E/'b4-rowwise-http-quality-preparation.json').read_bytes())['reader_dependencies']
+deps=['verify_b4_resident_serial_quality.py','b4_resident_serial_graph_gate.py']+[n for n in deps if n!='verify_b4_rowwise_http_quality.py']
+for n in deps:
+    if n not in names:assert old['files'][P+n]==sha(M/n),('Preserve qualified dependency',n)
+sys.path[:0]=[str(M),str(R)];import run_logged as ledger
+ledger.source_identity=lambda:dict(scope='Explicit new resident/serial collector and independent reader CLI controls; no native/model/GPU or protected bodies',owned_source_sha256={n:sha(M/n) for n in dict.fromkeys(names+deps)})
+os.chdir(R)
+for n in ('probe_b4_resident_serial_quality.py','verify_b4_resident_serial_quality.py'):
+    assert ledger.run([sys.executable,str(M/n),'--help'],W/'b4-resident-serial-quality-CLI-ledger','correctness','CPU import/CLI smoke for new backend-policy collector and independent raw reader; exits before any native/model/GPU work.',[M/k for k in dict.fromkeys(names+deps)])==0
+rows=[json.loads(n) for n in (W/'b4-resident-serial-quality-CLI-ledger/commands.jsonl').read_bytes().splitlines()];assert len(rows)==4
+for a,b in zip(rows[::2],rows[1::2]):assert b['exit_code']==0 and a['source']==b['source_after']
+def keep(n,raw):
+    target=E/n;assert not target.exists();target.write_bytes(raw);names.append('evidence/'+n)
+for ext in ('jsonl','log'):
+    keep('b4-resident-serial-quality-CLI-commands.'+ext,(W/'b4-resident-serial-quality-CLI-ledger'/('commands.'+ext)).read_bytes())
+    keep('b4-resident-serial-draft-counter-controls-commands.'+ext,(W/'b4-resident-serial-draft-counter-controls-ledger'/('commands.'+ext)).read_bytes())
+keep('b4-resident-serial-quality-materialization.json',json.dumps(dict(target_files=derivations,preceding_benchmark=J,paired_benchmark_proof_sha256=sha(proof),model_source_members_unchanged=89,transport_source_members_unchanged=2,model_or_native_DLL_changed=False,new_backend_policy_unqualified=True),indent=2).encode())
+for n in ('draft-b4-resident-serial-worker.py','b4-resident-serial-worker-draft-derivation.json','draft-b4-host-resident-control-probe.py','b4-host-resident-control-probe-draft-derivation.json','draft-b4-resident-serial-quality.py','b4-resident-serial-quality-draft-derivation.json','draft-b4-resident-serial-reader.py','b4-resident-serial-reader-draft-derivation.json','draft-b4-resident-serial-owner.py','b4-resident-serial-owner-draft-derivation.json','draft-b4-resident-serial-installer.py','b4-resident-serial-installer-derivation.json','install-b4-resident-serial-quality.py','run-b4-resident-serial-draft-counter-controls.py','check-b4-resident-serial-draft-counter-controls.py',Path(__file__).name):keep(n+('.txt' if n.endswith('.py') else ''),(W/n).read_bytes())
+names.append('evidence/'+old_path.name);files=dict(old['files'])
+for n in names:
+    key=P+n;h=sha(M/n)
+    if key in files:assert files[key]==h
+    files[key]=h
+parents=dict(old['parents']);assert J not in parents;parents[J]=dict(proof_sha256=sha(proof),archive_sha256=q['archive_sha256'],status=q['status'],exit_code=0);assert len(parents)==60
+p={**old};p.update(status='B4_resident_serial_HTTP_quality_prepared_GPU_unrun',files=files,archive_files=sorted(set(old['archive_files'])|{P+n for n in names}),parents=parents,reader_dependencies=deps,http_test_modules=['test2026.cuda.qwen38_5090.test_b4_resident_serial_graph_gate'],scope='Existing resident IO plus serial target/draft/wide-normalization graph reuse under the same source91 model, exact89 model members plus2transport members, unchanged e843 nativeDLL, pinned current18snapshot files and publisher identity. Correctness first:6new CPU counter controls and same6embedded controls; independent actual native legacy-copy/embedding byte parity B4T4/16/32,3trials each, CPU argument lifetime, zero/inactivepadding, invalid inputs preserve outputs. Actual805adapted screening plus29fixed4k nonstream and2text/imageSSE full prompt/output-ID equivalence to retained B1; real-only callbacks, actualdispatch; opt-in actual graph captures/replays/serial-reuse counters on31full4k controls. Requestedflags alone insufficient. Accepted-head reuse remainsdisabled. Existing unchanged source91 protocol/control proof remains required; no repeating unrelated unchanged tests. No arithmetic/weights/precision/DLL changes, no CUDAkernel elapsed or servingthroughput claim.60closedparents, source/runtime/SDK/config-index/CMake/all34/current18files restored;96GiBprivateCcache and ownednonce retirement. Diagnostic markers absent from future clean benchmark. Joint dependent policy candidate; no individual causal speed attribution. Overall2x, strongesttuned/MTP references, INT4/4B comparison and production integration remain open.')
+p.pop('quality_job',None);p['installed_files']={**files,**{'Garnet/'+n:h for n,h in p['source_files'].items()}}
+required=set()
+for name in ('run_b4_resident_serial_quality.py','probe_b4_resident_serial_quality.py','verify_b4_resident_serial_quality.py'):
+    for node in ast.walk(ast.parse((M/name).read_bytes())):
+        if isinstance(node,ast.Subscript) and isinstance(node.value,ast.Name) and node.value.id in ('p','prep') and isinstance(node.slice,ast.Constant) and isinstance(node.slice.value,str):required.add(node.slice.value)
+assert required<=set(p),sorted(required-set(p));prep=E/'b4-resident-serial-quality-preparation.json';assert not prep.exists();prep.write_bytes(json.dumps(p,indent=2).encode())
+deploy={P+n:M/n for n in dict.fromkeys(names)};deploy[P+'evidence/'+prep.name]=prep;package=W/'b4-resident-serial-quality-deployment.zip';assert not package.exists()
+with zipfile.ZipFile(package,'x',zipfile.ZIP_DEFLATED) as z:
+    for n,path in deploy.items():z.write(path,n)
+    z.writestr('deployment-manifest.json',json.dumps(dict(files={n:sha(path) for n,path in deploy.items()},native_DLL_or_model_source_change=False),indent=2))
+receipt=dict(deployment_sha256=sha(package),bytes=package.stat().st_size,files=len(deploy),preparation_sha256=sha(prep),paired_preceding_benchmark_proof_sha256=sha(proof),source91_bundle_sha256=p['bundle_sha256'],native_library_sha256=p['library_sha256'],parents=60,literal_preparation_reads_present=sorted(required),native_IO_model_quality_or_performance_unrun=True)
+(W/'b4-resident-serial-quality-package.json').write_bytes(json.dumps(receipt,indent=2).encode());(W/'b4-resident-serial-quality-owned-names.json').write_bytes(json.dumps(list(dict.fromkeys(names))).encode());print(json.dumps(receipt))

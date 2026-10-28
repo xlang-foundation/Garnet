@@ -1,0 +1,36 @@
+{
+  "derivations": [
+    {
+      "source": "run_b4_qk_m16_cpu.py",
+      "target": "run_b4_qk_m16_cpu_v2.py",
+      "source_sha256": "952d0367a63bce8bf775bf8a705bf650c42b26bc06569c1df6ace75294cf04f5",
+      "target_sha256": "9879c2dd214259ce9c6d718f02e34f7f772e276a8a0002f8ec21007e4905fb28",
+      "changes": [
+        {
+          "old": "evidence/b4-qk-m16-cpu-preparation.json",
+          "new": "evidence/b4-qk-m16-cpu-v2-preparation.json",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "verify_b4_qk_m16_cpu.py",
+      "target": "verify_b4_qk_m16_cpu_v2.py",
+      "source_sha256": "41953165e90f6fc649c56ddf5790d7f25e55bf239e76023185b887811b3409fd",
+      "target_sha256": "a8835e9ee795264b99f4f6d9a3e633cae9d988f4faf926d3c834689d0ee9f1fb",
+      "changes": [
+        {
+          "old": "evidence/b4-qk-m16-cpu-preparation.json",
+          "new": "evidence/b4-qk-m16-cpu-v2-preparation.json",
+          "count": 1
+        },
+        {
+          "old": "verify_b4_qk_m16_cpu.py",
+          "new": "verify_b4_qk_m16_cpu_v2.py",
+          "count": 1
+        }
+      ]
+    }
+  ],
+  "scope": "Deployment-only preparation snapshot correction; original selector/factory/plugin/source/math/contracts unchanged. No CPUowner or C++ job started during rejected initialinstaller."
+}

@@ -1,0 +1,109 @@
+{
+  "status": "b1_model_fixed_harness_methods_derived_gpu_unrun",
+  "parent_failed_archive_sha256": "b367d972a38be2ad28dc53e5f369381e05da2099ff7d14180861764e18719500",
+  "files": {
+    "probe_bf16_low_batch_model_fixed.py": {
+      "source": "Garnet/test2026/cuda/qwen38_5090/probe_bf16_low_batch_model.py",
+      "source_sha256": "853939c8fb5e5684238bae86085a6d289242e622f8b4cf8044bdfda52814134d",
+      "changes": [
+        [
+          "from test2026.cuda.qwen38_5090.bf16_padded_state_gate import same_logical_row",
+          "from test2026.cuda.qwen38_5090.bf16_packed_state_gate import same_packed_bf16_row",
+          1
+        ],
+        [
+          "same_logical_row(ordinary_state",
+          "same_packed_bf16_row(ordinary_state",
+          1
+        ]
+      ],
+      "result_sha256": "17b1a3a4e20c2e278a7786abcceee666bd3a8f28de9c5450231c245fa616f44a"
+    },
+    "test_bf16_low_batch_model_fixed.bat": {
+      "source": "Garnet/test2026/cuda/qwen38_5090/test_bf16_low_batch_model.bat",
+      "source_sha256": "35e8db1d30410e0289060e287dfd98ff1197b05892a2d0639c2a5c2ae046c743",
+      "changes": [
+        [
+          "probe_bf16_low_batch_model.py",
+          "probe_bf16_low_batch_model_fixed.py",
+          1
+        ]
+      ],
+      "result_sha256": "282ef64ae2f3eea6799df88fe86b15c1687e0d6ea2a0616e116e9ac100e7fc45"
+    },
+    "run_bf16_low_batch_model_fixed.py": {
+      "source": "Garnet/test2026/cuda/qwen38_5090/run_bf16_low_batch_model.py",
+      "source_sha256": "e07d22de256d0488f41f2663c05f0960a4b9efe1e909b2c827c773b700811b9d",
+      "changes": [
+        [
+          "bf16-low-batch-model-consistency-attempt1",
+          "bf16-low-batch-model-consistency-attempt2",
+          1
+        ],
+        [
+          "evidence/bf16-low-batch-model-preparation.json",
+          "evidence/bf16-low-batch-model-preparation-attempt2.json",
+          1
+        ],
+        [
+          "test_bf16_low_batch_model.bat",
+          "test_bf16_low_batch_model_fixed.bat",
+          1
+        ],
+        [
+          "assert closed['exit_code']==0 and closed['cleanup_finished']",
+          "assert closed['cleanup_finished'] and closed['exit_code']==(1 if parent=='bf16-low-batch-model-consistency-attempt1' else 0)",
+          1
+        ],
+        [
+          "try:\n for label,batch",
+          "try:\n code=run([sys.executable,'-m','unittest','test2026.cuda.qwen38_5090.test_bf16_packed_state_gate','test2026.cuda.qwen38_5090.test_bf16_model_state_witness','test2026.cuda.qwen38_5090.test_bf16_same_precision_gate','test2026.cuda.qwen38_5090.test_bf16_padded_state_gate'],OUT/'cpu-ledger','correctness','New packed representation controls and unchanged reference/witness guards',common)\n if code:raise RuntimeError('Packed-state checker CPU controls failed')\n for label,batch",
+          1
+        ]
+      ],
+      "result_sha256": "2fdd18985cf7620ae25457003a458bb989b39b5ffbae221a1907a176771664e7"
+    },
+    "verify_bf16_low_batch_model_fixed.py": {
+      "source": "Garnet/test2026/cuda/qwen38_5090/verify_bf16_low_batch_model.py",
+      "source_sha256": "11352be3acbbd236962abae496ea14e09138bf45f8fb1b5752c901526afc0ce5",
+      "changes": [
+        [
+          "from bf16_padded_state_gate import same_logical_row",
+          "from bf16_packed_state_gate import same_packed_bf16_row",
+          1
+        ],
+        [
+          "bf16-low-batch-model-consistency-attempt1",
+          "bf16-low-batch-model-consistency-attempt2",
+          1
+        ],
+        [
+          "evidence/bf16-low-batch-model-preparation.json",
+          "evidence/bf16-low-batch-model-preparation-attempt2.json",
+          2
+        ],
+        [
+          "same_logical_row(c[",
+          "same_packed_bf16_row(c[",
+          1
+        ],
+        [
+          "verify_bf16_low_batch_model.py",
+          "verify_bf16_low_batch_model_fixed.py",
+          1
+        ],
+        [
+          " if passed:assert w['status']==",
+          " if passed:\n  assert b'Ran 18 tests' in z.read(base+'cpu-ledger/commands.log') and b'\\nOK' in z.read(base+'cpu-ledger/commands.log')\n  assert w['status']==",
+          1
+        ]
+      ],
+      "result_sha256": "d90f650a6ae15f6923237e1999943495b66033a21421ad65dcdcd05a9228924b"
+    }
+  },
+  "new_packed_gate_sha256": "a40a7655d10408031d788cc346d73728e279522a53231f27db8ceb0b27ac48b4",
+  "product_source_or_native_library_changed": false,
+  "reference_representation_guard_changed": false,
+  "tolerance_changed": false,
+  "scope": "Literal method-only derivation from immutable failed attempt. New explicit packed-versus-packed comparator validates full geometry and physical/logical/component/slot hashes; no fake FP32-reference flag or guard relaxation. Fresh full B4/B1 plan remains unrun."
+}

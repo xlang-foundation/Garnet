@@ -1,0 +1,22 @@
+from pathlib import Path
+import ast,hashlib,json
+W=Path(__file__).resolve().parent;O=W.parent/'outputs';M=Path('D:/CantorAI/work/qwen38-5090/test2026/cuda/qwen38_5090');proof=O/'rowwise-k-norm-full4k-attempt1-verified.json';q=json.loads(proof.read_bytes());assert q['exit_code']==0 and q['ordinary_full4K128_case_gate_passed'] and proof.read_bytes()==(O/'rowwise-k-norm-full4k-attempt1-remote-verified.json').read_bytes();rows=[]
+def derive(source,target,changes):
+    raw=(M/source).read_bytes();before=hashlib.sha256(raw).hexdigest();text=raw.decode().replace('\r\n','\n');cs=[]
+    for old,new,count in changes:
+        assert text.count(old)==count,(source,old,text.count(old));text=text.replace(old,new);cs.append(dict(old=old,new=new,count=count))
+    raw=text.encode();ast.parse(raw);p=M/target;assert not p.exists();p.write_bytes(raw);rows.append(dict(source=source,target=target,source_sha256=before,target_sha256=hashlib.sha256(raw).hexdigest(),changes=cs,newline_normalization='CRLF to LF'))
+derive('probe_b4_mtp_prefill16_full4k.py','probe_rowwise_k_norm_mtp_full4k.py',[
+ ('Future B4 MTP3/prefill16 raw full4K capture; require independent qualified B1 oracles.','Source87 rowwise-K B4 MTP3/prefill16 full4K capture after paired ordinary128 pass; no timing.',1),
+ ('b4-mtp-prefill16-full4k-preparation.json','rowwise-k-norm-mtp-full4k-preparation.json',1),
+ ("p[mode+'_installed_files']","p['installed_files']",1),("p[mode+'_library_sha256']","p['library_sha256']",1),
+ ('    import garnet\n',"    from test2026.cuda.qwen38_5090.rowwise_k_norm_program import RowwiseKDecodeNormProgram,construct_with_rowwise_k_decode_norm_program\n    import garnet\n",1),
+ ("report=dict(status='constructing',mode=mode,","report=dict(status='constructing',mode=mode,rowwise_K_norm=True,primary_outputs_only=True,",1),
+ ("            decoder=CUDAPackedDecoder(str(checkpoint)","            decoder=construct_with_rowwise_k_decode_norm_program(CUDAPackedDecoder,str(checkpoint)",1),
+ ('        decoder.enable_cuda_graph(True);',"        assert isinstance(decoder.programs[4],RowwiseKDecodeNormProgram) and all(not hasattr(program,'boundary_buffers') and not hasattr(program,'operand_buffers') for program in decoder.programs.values())\n        decoder.enable_cuda_graph(True);",1),
+])
+derive('launch_rowwise_k_norm_full4k.py','launch_rowwise_k_norm_mtp_full4k.py',[
+ ('rowwise-k-norm-full4k-preparation.json','rowwise-k-norm-mtp-full4k-preparation.json',1),
+ ('probe_rowwise_k_norm_full4k.py','probe_rowwise_k_norm_mtp_full4k.py',1),
+])
+p=M/'evidence/rowwise-k-norm-mtp-probe-derivation.json';assert not p.exists();p.write_bytes(json.dumps(dict(derivations=rows,paired_ordinary_proof_sha256=hashlib.sha256(proof.read_bytes()).hexdigest(),native_DLL_MTP_core_and_replay_arithmetic_unchanged=True,MTP_GPU_or_performance_unrun=True),indent=2).encode());print(json.dumps(dict(derived_files=2,MTP_GPU_unrun=True)))

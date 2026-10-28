@@ -1,0 +1,8 @@
+
+_garnet_entry_mark('before_garnet_import')
+import garnet
+_garnet_entry_mark('garnet_import_returned')
+_garnet_entry_mark('before_model_import')
+from xModel.qwen38.vl_27b.model import create_cuda_bf16_low_batch_study_decoder,create_cuda_vision,prepare_cuda_image
+_garnet_entry_mark('model_import_returned')
+raise RuntimeError("embedded fake native error")

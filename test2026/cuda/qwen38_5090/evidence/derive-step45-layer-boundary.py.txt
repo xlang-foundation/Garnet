@@ -1,0 +1,75 @@
+from pathlib import Path
+import ast, hashlib, json
+R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';E=M/'evidence';rows=[];sha=lambda b:hashlib.sha256(b).hexdigest()
+
+def derive(src,dst,changes):
+    raw=(M/src).read_bytes();s=raw.decode()
+    for a,b,n in changes:
+        assert s.count(a)==n,(a,s.count(a),n)
+        s=s.replace(a,b)
+    ast.parse(s);p=M/dst;assert not p.exists() or p.read_bytes()==s.encode();p.write_bytes(s.encode())
+    rows.append({'source':src,'source_sha256':sha(raw),'target':dst,'target_sha256':sha(p.read_bytes()),'changes':[{'old':a,'new':b,'count':n} for a,b,n in changes]})
+
+observer='''        program=decoder.programs[4];assert isinstance(program,AllLayerDecodeBoundaryProgram)
+        report['observer']=dict(layers=list(program.boundary_layers),tokens=4,hidden=5120,hidden_width=program.hidden_width,primary_width=program.ordinary_output_width,wide_width=program.output_width,selected_steps=[44,45])
+        def capture_layers(group,step,consumed):
+            assert step in (44,45)
+            result=dict(step=step,program_runs=program.boundary_runs,consumed_tokens=list(consumed),boundaries={})
+            for layer,buffer in zip(program.boundary_layers,program.boundary_buffers):
+                raw=bytes(io.finite_f32_bytes(buffer));assert len(raw)==batch*4*5120*4
+                name='case'+str(group)+'-step'+str(step)+'-layer'+str(layer)+'.f32';assert not (out/name).exists();(out/name).write_bytes(raw)
+                result['boundaries'][str(layer)]=dict(file=name,bytes=len(raw),sha256=sha(raw))
+            return result
+'''
+derive('probe_b4_k35_coordinate_trajectory.py','probe_step45_layer_boundary.py',[
+('Ordinary model with two repeated reads of an existing carrier after each decode step; no graph changes.','Private all64 layer outputs at44/45; ordinary primary/cache/timeline parity required before interpretation.',1),
+('b4-k35-coordinate-trajectory-preparation.json','step45-layer-boundary-preparation.json',1),
+('    import garnet','    from test2026.cuda.qwen38_5090.all_layer_decode_boundary_program import AllLayerDecodeBoundaryProgram,construct_with_all_layer_decode_boundary_program\n    import garnet',1),
+('decoder=create_cuda_bf16_low_batch_study_decoder(str(checkpoint),cfg)','decoder=construct_with_all_layer_decode_boundary_program(create_cuda_bf16_low_batch_study_decoder,str(checkpoint),cfg)',1),
+("decoder=CUDAPackedDecoder(str(checkpoint),cfg['text_config'],4,4096,32,4,", "decoder=construct_with_all_layer_decode_boundary_program(CUDAPackedDecoder,str(checkpoint),cfg['text_config'],4,4096,32,4,",1),
+('        vision=create_cuda_vision',observer+'        vision=create_cuda_vision',1),
+("record['post_step_states']=[];sampler=", "record['post_step_states']=[];record['layer_observations']=[];sampler=",1),
+('                    prediction=decoder.step(prediction,[1]*batch,[[v]*3 for v in current]);', '                    consumed=list(prediction);prediction=decoder.step(prediction,[1]*batch,[[v]*3 for v in current]);',1),
+('                    sampler.read(decoder.state,step+1,decoder.slots)', "                    sampler.read(decoder.state,step+1,decoder.slots)\n                    if step+1 in (44,45):record['layer_observations'].append(capture_layers(group_index,step+1,consumed));save()",1),
+("        report['status']='selected_full4k", "        report['boundary_runs']=program.boundary_runs;report['status']='selected_full4k",1),
+])
+derive('launch_b4_k35_coordinate_trajectory.py','launch_step45_layer_boundary.py',[
+('b4-k35-coordinate-trajectory-preparation.json','step45-layer-boundary-preparation.json',1),
+('probe_b4_k35_coordinate_trajectory.py','probe_step45_layer_boundary.py',1),
+])
+common=[('key35-coordinate-trajectory-attempt1','step45-layer-boundary-attempt1',1),
+('b4-k35-coordinate-trajectory-preparation.json','step45-layer-boundary-preparation.json',1),
+('ordinary_key35_coordinate_trajectory_prepared_GPU_unrun','step45_layer_boundary_prepared_GPU_unrun',1),
+('from test2026.cuda.qwen38_5090.b4_k35_coordinate_trajectory import analyze','from test2026.cuda.qwen38_5090.step45_layer_boundary_analysis import analyze',1),
+('trajectory_analysis','layer_analysis',2),
+('ordinary_coordinate_trajectory_collected_no_model_admission','step45_layer_boundary_collected_no_model_admission',1),
+]
+oldparents="""with zipfile.ZipFile(ROOT/'results/b4-k35-cache52-attempt1-evidence.zip') as rp,zipfile.ZipFile(ROOT/'results/b4-k-m4x4-control52-attempt1-evidence.zip') as cp:
+            rb='results/b4-k35-cache52-attempt1/reference/';cb='results/b4-k-m4x4-control52-attempt1/off/'"""
+newparents="""with zipfile.ZipFile(ROOT/'results/key35-coordinate-trajectory-attempt1-evidence.zip') as rp,zipfile.ZipFile(ROOT/'results/key35-coordinate-trajectory-attempt1-evidence.zip') as cp:
+            rb='results/key35-coordinate-trajectory-attempt1/reference/';cb='results/key35-coordinate-trajectory-attempt1/candidate/'"""
+derive('run_key35_coordinate_trajectory.py','run_step45_layer_boundary.py',common+[
+('Exclusive ordinary B1/B4 coordinate sampling; full primary parity before analysis.','Exclusive all64 layer outputs at steps44/45; complete ordinary primary/cache/timeline parity before analysis.',1),
+('launch_b4_k35_coordinate_trajectory.py','launch_step45_layer_boundary.py',1),
+('52CPU','66CPU',1),('52 CPU controls','66 CPU controls',1),
+('including full primary/cache/ID/row/finite guards and single-carrier repeated reads/geometry/ordered timepoints/fullcache linkage/actual-vs-scheduled time distinction','including original observer source derivation, binding/row suffixes, full primary/cache/timeline guards, selected44/45 geometry/finite/hash/active-column guards',1),
+('Unchanged ordinary model,3968prompt+53IDs/52consumed: two reads of existing layer35K/head0/slot4012/dim211 carrier after prefill and each decode step; all complete primary checkpoints and full cache must reproduce same-profile parents before interpreting timepoints. No graph observer/native changes or benchmark.','Private all64-layer T4 output observer at44/45,3968prompt+53IDs/52consumed, two ordinary coordinate reads after each step. Complete primary/checkpoint/cache/timeline parity against immutable ordinary parents is required before interpreting any layer output. No native changes or performance admission.',1),
+(oldparents,newparents,1),
+])
+derive('verify_key35_coordinate_trajectory.py','verify_step45_layer_boundary.py',[
+('Independent raw replay of ordinary coordinate trajectory or preserved failure.','Independent raw replay of step44/45 all-layer observations or preserved failure.',1),
+('key35-coordinate-trajectory-attempt1','step45-layer-boundary-attempt1',1),
+('b4-k35-coordinate-trajectory-preparation.json','step45-layer-boundary-preparation.json',1),
+('from test2026.cuda.qwen38_5090.b4_k35_coordinate_trajectory import analyze','from test2026.cuda.qwen38_5090.step45_layer_boundary_analysis import analyze',1),
+("('b4_k35_coordinate_trajectory.py','verify_key35_coordinate_trajectory.py')", "('step45_layer_boundary_analysis.py','verify_step45_layer_boundary.py')",1),
+('Ran 52 tests','Ran 66 tests',1),('trajectory_analysis','layer_analysis',2),
+("with zipfile.ZipFile(args.proofs/'b4-k35-cache52-attempt1-evidence.zip') as rp,zipfile.ZipFile(args.proofs/'b4-k-m4x4-control52-attempt1-evidence.zip') as cp:", "with zipfile.ZipFile(args.proofs/'key35-coordinate-trajectory-attempt1-evidence.zip') as rp,zipfile.ZipFile(args.proofs/'key35-coordinate-trajectory-attempt1-evidence.zip') as cp:",1),
+("rb='results/b4-k35-cache52-attempt1/reference/';cb='results/b4-k-m4x4-control52-attempt1/off/'", "rb='results/key35-coordinate-trajectory-attempt1/reference/';cb='results/key35-coordinate-trajectory-attempt1/candidate/'",1),
+('ordinary_coordinate_trajectory_collected_no_model_admission','step45_layer_boundary_collected_no_model_admission',1),
+('ordinary_key35_coordinate_trajectory_replayed','step45_layer_boundary_replayed',1),
+('ordinary_key35_coordinate_trajectory_failure_replayed','step45_layer_boundary_failure_replayed',1),
+("'CPU_controls':52", "'CPU_controls':66",1),
+("'first_observed_difference_step':result_analysis['trajectory']['first_observed_selected_value_difference_step'] if result_analysis else None", "'layer_differences':[{k:row[k] for k in ('step','first_differing_active_layer','first_differing_full_T4_layer')} for row in result_analysis['rows']] if result_analysis else None",1),
+])
+(E/'step45-layer-boundary-derivation.json').write_bytes(json.dumps({'status':'separate_step44_step45_protocol_prepared_GPU_unrun','derivations':rows,'old_step_lte7_protocol_unchanged':True,'primary_cache_timeline_parity_required_before_interpreting_outputs':True},indent=2).encode())
+print('Four exact source derivations parsed; no GPU execution.')

@@ -1,0 +1,15 @@
+from pathlib import Path
+import hashlib,json,os,sys,zipfile
+W=Path(__file__).resolve().parent;O=W.parent/'outputs';R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';sys.path[:0]=[str(M),str(R)];import run_logged as ledger
+sha=lambda b:hashlib.sha256(b).hexdigest();job='q128-model-admission-attempt1';closure=W/'q128-model-closure-assets.zip';peer=O/(job+'-remote-verified.json');receipt_path=W/(job+'-exact-delta-receipt.json')
+with zipfile.ZipFile(closure) as z:
+    m=json.loads(z.read('evidence-manifest.json'));assert z.testzip() is None and len(z.namelist())==len(set(z.namelist()))==len(m['files'])+1
+    for n,h in m['files'].items():assert sha(z.read(n))==h
+    for n,path in [('results/'+job+'-verified.json',peer),('results/'+job+'-exact-delta-receipt.json',receipt_path)]:
+        raw=z.read(n);assert not path.exists() or path.read_bytes()==raw;path.write_bytes(raw)
+q=json.loads(peer.read_bytes());receipt=json.loads(receipt_path.read_bytes());delta=W/(job+'-exact-delta.zip');source=O/'full-chunk-stage-attempt2-evidence.zip';target=O/(job+'-evidence.zip')
+assert sha(delta.read_bytes())==receipt['delta_sha256'] and delta.stat().st_size==receipt['delta_bytes'] and receipt['target_archive_sha256']==q['archive_sha256']==m['model_archive_sha256'] and sha(source.read_bytes())==receipt['source_archive_sha256']
+p=json.loads((M/'evidence/q128-model-admission-preparation.json').read_bytes());pins={n:sha((R/n.removeprefix('Garnet/')).read_bytes()) for n in p['new_files']};assert pins==p['new_files'];ledger.source_identity=lambda:{'scope':'Explicit exact original Q128 model-admission archive independent CPU replay; original gates/failures retained, protected unrelated bodies excluded','owned_source_sha256':pins};os.chdir(R);methods=[R/n.removeprefix('Garnet/') for n in pins]
+assert ledger.run([sys.executable,str(M/'exact_zip_payload_delta.py'),'apply','--source',str(source),'--target',str(target),'--delta',str(delta),'--expected-target-sha',q['archive_sha256']],W/'q128-model-local-transport-ledger','correctness','Reconstruct every byte of closed original Q128 raw archive; validate parent/delta/target hashes and every segment; no scientific byte changes',[source,delta,peer,closure,*methods])==0
+assert ledger.run([sys.executable,str(M/'verify_q128_model_admission.py'),'--proofs',str(O)],W/'q128-model-local-replay-ledger','correctness','Independently replay actual Q128 outcome, full original model/state/vector/cache/token/repeat and complete defaultoff stage controls, exact source/runtime/SDK/checkpoint restoration; numerical failure is retained without admission',[target,peer,closure,*methods])==0
+raw=(O/(job+'-verified.json')).read_bytes();assert raw==peer.read_bytes();print(json.dumps(dict(status='Q128_original_model_admission_outcome_independently_replayed',paired_proof_sha256=sha(raw),model_exit_code=q['exit_code'],no_new_benchmarks=True)))

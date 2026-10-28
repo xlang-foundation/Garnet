@@ -1,0 +1,17 @@
+from pathlib import Path
+import hashlib,json,os,sys
+W=Path(__file__).resolve().parent;R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';E=M/'evidence';sys.path[:0]=[str(R),str(M)];sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+names=['connected_fa_value_intervention.py','test_connected_fa_value_intervention.py','v_m16_component_trace.py','test_v_m16_component_trace.py','evidence/v-m16-component-trace-derivation.json'];owned=[M/n for n in names];dependencies=[M/n for n in ['connected_fa_value_gate.py','test_connected_fa_value_gate.py','decode_boundary_analysis.py','decode_fp8_sdk_control.py','fa_value_sdk_control.py','b4_b1_short_m16_gate.py']]
+p=json.loads((E/'v-m16-component-trace-derivation.json').read_bytes());raw=(M/p['source']).read_bytes();assert sha(M/p['source'])==p['source_sha256'];raw=raw[p['source_slice_start']:]
+for c in p['changes']:assert raw.count(c['old'].encode())==c['count'];raw=raw.replace(c['old'].encode(),c['new'].encode())
+assert p['prefix'].encode()+raw+p['suffix'].encode()==(M/'v_m16_component_trace.py').read_bytes() and sha(M/'v_m16_component_trace.py')==p['target_sha256']
+import run_logged as ledger
+pins={p.relative_to(R).as_posix():sha(p) for p in owned+dependencies};ledger.source_identity=lambda:dict(scope='Explicit owned connected V off/on CPU gate preparation; no protected bodies/native/GPU',owned_source_sha256=pins);os.chdir(R)
+code=ledger.run([sys.executable,'-m','unittest','test2026.cuda.qwen38_5090.test_connected_fa_value_intervention','test2026.cuda.qwen38_5090.test_v_m16_component_trace'],W/'v-m16-connected-gate-cpu-ledger','correctness','Combined10new CPU controls validate exact original-off baseline, allfourB1 V/fullT4hidden equality and strictliveSDKtrace; tests reject skippedbaseline, unchangedV, allrowpermutations/inactive/signedzero/nonfinite/repeat/inputcache faults; all7SDKattributes/APIstatuses/M4-M16workspace/liveopaque/bothN1024routes required, Vroute absent reference/off. No native/model/performance execution.',owned+dependencies+[Path(__file__)])
+assert code==0 and b'Ran 10 tests' in (W/'v-m16-connected-gate-cpu-ledger/commands.log').read_bytes()
+record=dict(status='connected_V_M16_intervention_gates_CPU_prepared_GPU_unrun',files=pins,new_CPU_controls=10,CPU_exit_code=code,full_model_or_quality_or_performance_qualified=False,scope='Future faithfulconnectedcomponentoff/on admission only. Original SDK/model/cache failures remain failed. Actualnativecandidate route, bothactualcases/all4rows/fullT4hidden before unchangedfullmodel gates; no performance admission.')
+target=E/'v-m16-connected-gates-preparation.json';assert not target.exists();target.write_bytes(json.dumps(record,indent=2).encode());owned.append(target)
+for name in ['commands.log','commands.jsonl']:
+    target=E/('v-m16-connected-gate-cpu-'+name);assert not target.exists();target.write_bytes((W/'v-m16-connected-gate-cpu-ledger'/name).read_bytes());owned.append(target)
+target=E/'prepare-v-m16-connected-gates.py.txt';assert not target.exists();target.write_bytes(Path(__file__).read_bytes());owned.append(target)
+paths=[p.relative_to(R).as_posix() for p in owned];(W/'v-m16-connected-gates-owned-paths.json').write_bytes(json.dumps(paths,indent=2).encode());(W/'v-m16-connected-gates-stage-paths.bin').write_bytes(b'\0'.join(s.encode() for s in paths)+b'\0');print(json.dumps(dict(files=len(paths),controls=10,exit_code=code)))

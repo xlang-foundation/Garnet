@@ -1,0 +1,15 @@
+from pathlib import Path
+import hashlib,json,sys,zipfile
+W=Path(__file__).resolve().parent;O=W.parent/'outputs';R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';sys.path.insert(0,str(R));sha=lambda raw:hashlib.sha256(raw).hexdigest()
+from test2026.cuda.qwen38_5090.b4_full4k_inputs import load_corpus,CORPUS_SHA256
+raw=(M/'evidence/fixed-length-4096-corpus.zip').read_bytes();q=load_corpus(raw);assert sha(raw)==CORPUS_SHA256
+job='paged-batch8-model-preservation-attempt1';proof=(O/(job+'-verified.json')).read_bytes();assert proof==(O/(job+'-remote-verified.json')).read_bytes();p=json.loads(proof);assert sha((O/(job+'-evidence.zip')).read_bytes())==p['archive_sha256']
+with zipfile.ZipFile(O/(job+'-evidence.zip')) as z:
+    old=json.loads(z.read('results/'+job+'/model/report.json'))
+    for group in q['groups'][:2]:
+        baseline=next(c for c in old['cases'] if c['group']==group['label']);assert baseline['actual_limit']==128
+        assert group['keys']==[r['key'] for r in baseline['inputs'][:4]]
+        for row in baseline['inputs'][:4]:
+            actual=q['inputs'][row['key']];assert actual['request_sha256']==row['request_sha256'] and actual['prompt_ids']==row['prompt_ids']
+result=dict(status='retained_B4_full4k_inputs_byte_and_ID_exact_to_original_model_corpus',corpus_sha256=CORPUS_SHA256,parent_proof_sha256=sha(proof),parent_archive_sha256=p['archive_sha256'],inputs={key:{k:row[k] for k in ('case','request_sha256','expected_prompt_ids_sha256')} for key,row in q['inputs'].items()},groups=q['groups'],distinct_B1_oracles_required=8,new_prompts_created=False,model_or_benchmark_executed=False)
+target=W/'b4-full4k-inputs-audit.json';assert not target.exists();target.write_bytes(json.dumps(result,indent=2).encode());print(json.dumps(dict(status=result['status'],selected=len(q['inputs']),groups=len(q['groups']),model_or_benchmark_executed=False)))

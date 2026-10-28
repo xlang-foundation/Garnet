@@ -12,19 +12,30 @@ from .decoder_layer import T
 from .cuda_mtp import CUDAMTPProgram
 from .cuda_verify import CUDATargetVerifier
 
+def resolve_mtp_chunk(target_chunk,depth,draft_chunk=None):
+    size=target_chunk if draft_chunk is None else draft_chunk
+    if type(size) is not int or size not in (4,8,16) or size>target_chunk or depth+1>size:
+        raise ValueError('MTP draft chunk must fit correction width and target profile')
+    return size
+
 class CUDASpeculativeSession:
-    def __init__(self,decoder,checkpoint,stops,max_draft_tokens=3,head_candidates=0,prefix_replay=False,gpu_draft_bundle=False):
+    def __init__(self,decoder,checkpoint,stops,max_draft_tokens=3,head_candidates=0,prefix_replay=False,gpu_draft_bundle=False,draft_chunk_size=None,draft_builder_workspace_bytes=0):
         if max_draft_tokens not in (1,3,7) or max_draft_tokens+1>decoder.chunk_size:
             raise ValueError('MTP draft depth1/3/7 must fit the target chunk')
         vocab=json.loads(decoder.io.memory_json())['vocab_size']
         if head_candidates<0 or head_candidates>min(65536,vocab):raise ValueError('Invalid MTP head candidate count')
+        if type(draft_builder_workspace_bytes) is not int or draft_builder_workspace_bytes not in (0,128<<20,256<<20):
+            raise ValueError('MTP draft builder workspace requires default0,128MiB or bounded B4/T4 study256MiB')
+        if draft_builder_workspace_bytes==256<<20 and (type(decoder.batch) is not int or decoder.batch!=4 or type(decoder.capacity) is not int or decoder.capacity!=4096 or type(decoder.chunk_size) is not int or decoder.chunk_size!=4 or draft_chunk_size not in (None,4)):
+            raise ValueError('256MiB MTP draft builder study requires B4/T4/cap4096')
+        self.draft_builder_workspace_bytes=draft_builder_workspace_bytes
         self.head_candidates=head_candidates;self.candidates=None
         self.draft_runner=None;self.gpu_draft_bundle=bool(gpu_draft_bundle)
         if self.gpu_draft_bundle and not (max_draft_tokens==3 and decoder.chunk_size==4 and head_candidates==8192 and getattr(decoder,'resident_controls',False) and getattr(decoder,'serial_graph_reuse',False) and decoder.config['hidden_size'] in (2048,2560)):
             raise ValueError('GPU draft requires Qwen3.5 2B/4B resident serial D3/T4 with8192 candidates')
         self.prefix_replay=prefix_replay
         self.decoder=decoder;self.io=decoder.io;self.stops=set(stops);self.depth=max_draft_tokens
-        self.batch=decoder.batch;self.size=decoder.chunk_size;self.capacity=decoder.capacity
+        self.batch=decoder.batch;self.size=resolve_mtp_chunk(decoder.chunk_size,max_draft_tokens,draft_chunk_size);self.capacity=decoder.capacity
         self.hidden_size=decoder.config['hidden_size'];self.program=None;self.verifier=None;self.prefill_norm=None;self.buffers=[]
         self.ready=False;self.finished=False;self.poisoned=False
         self.reset_required=True
@@ -38,11 +49,11 @@ class CUDASpeculativeSession:
                     from .cuda_delta_replay import CUDADeltaReplayVerifier
                     self.verifier=CUDADeltaReplayVerifier(decoder,checkpoint,max_draft_tokens+1)
             else:self.verifier=CUDATargetVerifier(decoder,checkpoint,max_draft_tokens+1)
-            self.program=CUDAMTPProgram(checkpoint,decoder.config,b,self.capacity,t,decoder.projection_workspace_bytes)
+            self.program=CUDAMTPProgram(checkpoint,decoder.config,b,self.capacity,t,decoder.projection_workspace_bytes,builder_workspace_bytes=draft_builder_workspace_bytes)
             self.program.graph.enable_cuda_graph(True)
             if getattr(decoder,'serial_graph_reuse',False):self.program.graph.enable_serial_graph_reuse(True)
-            self.prefill_width=getattr(decoder,'prefill_chunk_size',t)
-            if self.prefill_width!=t:
+            self.prefill_width=getattr(decoder,'prefill_chunk_size',decoder.chunk_size)
+            if self.prefill_width!=decoder.chunk_size:
                 config=decoder.config
                 @T.fusion(name='qwen35_mtp_wide_target_norm',boundary='required')
                 def wide_norm(value):
@@ -103,6 +114,7 @@ class CUDASpeculativeSession:
 
     def _prefill_hook(self,hidden_tokens,active_tokens,positions,predict=True):
         prediction=self._original_chunk(hidden_tokens,active_tokens,positions,predict)
+        if predict and self._prefill_emit is not None:self._prefill_emit(list(prediction))
         count=len(hidden_tokens);start=self._prefill_index
         graph=self.prefill_norm if self.prefill_norm is not None else self.verifier.graph
         normalized=graph.run_device([self.decoder.hidden])
@@ -121,9 +133,10 @@ class CUDASpeculativeSession:
         self._prefill_index+=count
         return prediction
 
-    def prefill(self,hidden_tokens,positions,lengths,next_positions):
+    def prefill(self,hidden_tokens,positions,lengths,next_positions,on_first_token=None):
         if self.program is None or self.reset_required or self.poisoned or self.ready:raise ValueError('Reset an open speculative session before prefill')
         self._prefill_hidden=hidden_tokens;self._prefill_positions=positions;self._prefill_lengths=list(lengths);self._prefill_index=0
+        self._prefill_emit=on_first_token
         self._had_chunk_override='chunk_hidden' in self.decoder.__dict__
         self._chunk_override=self.decoder.__dict__.get('chunk_hidden')
         self._original_chunk=self.decoder.chunk_hidden;self.decoder.chunk_hidden=self._prefill_hook
@@ -135,6 +148,7 @@ class CUDASpeculativeSession:
             else:delattr(self.decoder,'chunk_hidden')
             self._original_chunk=None;self._chunk_override=None
             self._prefill_hidden=None;self._prefill_positions=None
+            self._prefill_emit=None
         try:
             if self.head_candidates:self.candidates=self.io.head_candidates(list(range(self.batch)),self.head_candidates,False)
             normalized=self.decoder.head.run_device([self.decoder.last_hidden])
@@ -197,7 +211,7 @@ class CUDASpeculativeSession:
         if resident:self.io.embedding_chunk(token_rows,self.embedding)
         return self._call(flags,shifted_positions,predict,'correction')
 
-    def generate(self,limit):
+    def generate(self,limit,on_token=None):
         if not self.ready or self.finished or self.poisoned:raise ValueError('Prefill a fresh speculative request first')
         if limit<1 or any(slot+limit-1>self.capacity for slot in self.decoder.slots):raise ValueError('Speculative output exceeds target capacity')
         b=self.batch;active=[1]*b;outputs=[[] for _ in range(b)];sampled=[0]*b;reasons=['length']*b;stop_ids=[None]*b
@@ -207,8 +221,10 @@ class CUDASpeculativeSession:
                     if not active[row]:continue
                     if self.current[row] in self.stops:
                         sampled[row]+=1;active[row]=0;reasons[row]='eos';stop_ids[row]=self.current[row]
+                        if on_token is not None:on_token(row,self.current[row],sampled[row])
                     elif sampled[row]+1==limit:
                         outputs[row].append(self.current[row]);sampled[row]+=1;active[row]=0
+                        if on_token is not None:on_token(row,self.current[row],sampled[row])
                 if not any(active):break
                 working=list(active);remaining=[limit-n for n in sampled]
                 base_slots=list(self.decoder.slots);base_positions=list(self.current_positions)
@@ -227,11 +243,13 @@ class CUDASpeculativeSession:
                 for row in range(b):
                     if not working[row]:continue
                     outputs[row].append(self.current[row]);sampled[row]+=1
+                    if on_token is not None:on_token(row,self.current[row],sampled[row])
                     for j in range(1,n):
                         proposed=proposals[j][row];actual=verified[row][j-1]
                         if proposed!=actual:
                             counts[row]=j;self.current[row]=actual;break
                         self.metrics['accepted_draft_tokens']+=1;sampled[row]+=1;self.current[row]=proposed
+                        if on_token is not None:on_token(row,proposed,sampled[row])
                         if proposed in self.stops:
                             active[row]=0;reasons[row]='eos';stop_ids[row]=proposed;counts[row]=j;break
                         outputs[row].append(proposed)
@@ -271,7 +289,7 @@ class CUDASpeculativeSession:
         owned=buffers+graph['device_output_bytes']+live+helper['owned_helper_bytes']+prefill_owned if live is not None and helper['owned_helper_bytes'] is not None and prefill_owned is not None else None
         draft_stats=json.loads(self.draft_runner.stats_json()) if self.draft_runner is not None else None
         if draft_stats is not None and owned is not None:owned+=draft_stats['new_tensor_bytes']
-        return {'mtp_buffers_bytes':buffers,'mtp_graph':graph,'target_verifier':helper,'owned_speculative_bytes':owned,
+        return {'mtp_buffers_bytes':buffers,'mtp_graph':graph,'target_verifier':helper,'owned_speculative_bytes':owned,'draft_builder_workspace_bytes':self.draft_builder_workspace_bytes,
             **({'gpu_draft_execution':draft_stats} if draft_stats is not None else {}),
             'wide_target_norm_graph':prefill,'target_prefill_chunk':self.prefill_width,'draft_chunk':self.size,
             'scope':'Session-only buffers/engines/backups. Caller owns the one shared table/head buffers; not process peak'}

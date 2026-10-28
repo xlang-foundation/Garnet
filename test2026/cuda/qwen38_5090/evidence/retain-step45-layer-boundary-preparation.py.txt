@@ -1,0 +1,34 @@
+from pathlib import Path
+import hashlib,json
+W=Path(__file__).resolve().parent;R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';E=M/'evidence';sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest();owned=[];saved={}
+names=json.loads((W/'step45-layer-boundary-owned-names.json').read_bytes());owned.extend(M/n for n in names);owned.append(E/'step45-layer-boundary-preparation.json')
+def keep(name,raw):
+    p=E/name;assert not p.exists();p.write_bytes(raw);owned.append(p);saved[name]=sha(p)
+for name in ('prepare-step45-layer-boundary.py','install-step45-layer-boundary.py',Path(__file__).name):keep(name+'.txt',(W/name).read_bytes())
+keep('step45-layer-boundary-package.json',(W/'step45-layer-boundary-package.json').read_bytes());package=json.loads((W/'step45-layer-boundary-package.json').read_bytes());assert sha(W/'step45-layer-boundary-deployment.zip')==package['deployment_sha256']
+keep('step45-layer-boundary-preparation-retention.json',json.dumps({'status':'separate_step44_step45_observer_preparation_retained','package':package,'retained_sha256':saved,'GPU_unrun_at_preparation':True,'model_or_performance_qualified':False},indent=2).encode())
+entry=('\n\n2026-10-27 separate step44/45 all-layer boundary diagnostic prepared after '
+       'ordinary coordinate trajectory proof614f9a17b2f8edd2059331584a212fd1369a458b7eecdd6fc87ff6bffa5c0639. '
+       'The sampled layer35K value first differs at45; responsible upstream operation '
+       'remains unproved. Append all64-layer completeT4hidden outputs only to private '
+       'decode4 graphs, collect at completed44/45 for selected B1text and B4mixed '
+       'physicalrow2. Keep53IDs/52ordinarycommits and all original five complete '
+       '128component state snapshots/finitevectors/full8MiBcache plus53coordinate '
+       'samples. Require exact same-profile ordinary parent parity BEFORE '
+       'interpreting observer outputs; added outputs may alter TRT tactics/fusions '
+       'despite original arithmetic AST equivalence. Frozen source60/85 arithmetic '
+       'AST exact after removing only three observer suffix operations; step/chunk '
+       'source proves one-token activecolumn0. 66CPU controls passed: inherited52 '
+       'plus8originalobserver/all64suffix/binding/profile and6newprimary-first/'
+       'timeline/ID/selectedrow/shape/hash/nonfinite/active-inactive checks. '
+       'No native/kernel/precision edits, no relaxation of old step<=7 protocol. '
+       'Guard1877files/44closedparents/current34objects/runtime/SDK/config+index/'
+       'CMake/baselineDLL; fixed C SSD>=96GiB and owned nonce retirement. '
+       'Package '+package['deployment_sha256']+' ('+str(package['bytes'])+'B). '
+       'GPU unrun at preparation; full4K/cache62/K-fourM4 failures preserved, '
+       'no MTP/quality/HTTP/performance admission or2x claim.\n').encode()
+for name in ('docs/research/qwen38-5090-development-log.md','docs/research/qwen38-5090-implementation-task.md'):
+    p=R/name;before=p.read_bytes();assert b'separate step44/45 all-layer boundary diagnostic prepared' not in before
+    with p.open('ab') as f:f.write(entry)
+    assert p.read_bytes()==before+entry;owned.append(p)
+(W/'step45-layer-boundary-preparation-stage-paths.bin').write_bytes(b''.join(p.relative_to(R).as_posix().encode()+b'\0' for p in owned));print(json.dumps({'stage_paths':len(owned),'CPU_controls':66,'GPU_unrun_at_preparation':True}))

@@ -1,0 +1,162 @@
+{
+  "derivations": [
+    {
+      "source": "probe_b4_b1_short_m16_admission.py",
+      "target": "probe_b4_v_m16_short.py",
+      "source_sha256": "1d067484d0f0d0bb0de4fe63cb4aa90c6ba5666e81b551c5141da5a73eac6d50",
+      "target_sha256": "9e39cb7809bdace155fa1d5a84aeb3dd6f87872313a5855862ae1d1345021a1a",
+      "changes": [
+        {
+          "old": "evidence/b4-b1-short-m16-preparation.json",
+          "new": "evidence/b4-v-m16-short-preparation.json",
+          "count": 1
+        },
+        {
+          "old": "'GARNET_FP8_GDN_BATCH4_DECODE_CANONICAL':'0' if mode=='reference' else '1'",
+          "new": "'GARNET_FP8_GDN_BATCH4_DECODE_CANONICAL':'0' if mode=='reference' else '1','GARNET_FP8_V_BATCH4_DECODE_CANONICAL':'0' if mode=='reference' else '1'",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "launch_b4_b1_short_m16_admission.py",
+      "target": "launch_b4_v_m16_short.py",
+      "source_sha256": "389c1decb3615afebb933a777f14da66a34b65b6618edb6a5b75ad259f65cc11",
+      "target_sha256": "b2ecc90c77d75187978914345484eaf314eb4b82f1a714df136a827b1fba5dd9",
+      "changes": [
+        {
+          "old": "evidence/b4-b1-short-m16-preparation.json",
+          "new": "evidence/b4-v-m16-short-preparation.json",
+          "count": 1
+        },
+        {
+          "old": "env['GARNET_MODELOPT_INIT_TRACE']='1' if mode=='candidate' else '0'",
+          "new": "env['GARNET_MODELOPT_INIT_TRACE']='1' if mode=='candidate' else '0';env['GARNET_VM16_FACTORY_TRACE']='1' if mode=='candidate' else '0';env['GARNET_FP8_V_BATCH4_DECODE_CANONICAL']='0' if mode=='reference' else '1'",
+          "count": 1
+        },
+        {
+          "old": "probe_b4_b1_short_m16_admission.py",
+          "new": "probe_b4_v_m16_short.py",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "run_b4_b1_short_m16_admission.py",
+      "target": "run_b4_v_m16_short.py",
+      "source_sha256": "09f741ad2831c77c0adda6bbf1cfc6784c621a95764819662811ae683939b4c7",
+      "target_sha256": "e31fbfddad4567e50395b9937e66e12fe056b6838050b2986540d3c46210eb4a",
+      "changes": [
+        {
+          "old": "b4-b1-short-m16-admission-attempt1",
+          "new": "b4-v-m16-short-attempt1",
+          "count": 1
+        },
+        {
+          "old": "evidence/b4-b1-short-m16-preparation.json",
+          "new": "evidence/b4-v-m16-short-preparation.json",
+          "count": 1
+        },
+        {
+          "old": "B4_vs_B1_short_M16_prepared_GPU_unrun",
+          "new": "B4_vs_B1_short_V_M16_prepared_GPU_unrun",
+          "count": 1
+        },
+        {
+          "old": "len(sources['candidate'])==67",
+          "new": "len(sources['candidate'])==73",
+          "count": 1
+        },
+        {
+          "old": "'test2026.cuda.qwen38_5090.test_b4_b1_short_m16_gate'",
+          "new": "'test2026.cuda.qwen38_5090.test_b4_b1_short_m16_gate','test2026.cuda.qwen38_5090.test_b4_v_m16_short_route'",
+          "count": 1
+        },
+        {
+          "old": "launch_b4_b1_short_m16_admission.py",
+          "new": "launch_b4_v_m16_short.py",
+          "count": 1
+        },
+        {
+          "old": "source67/DLL677 physicalB4 candidate with M16policy1",
+          "new": "source73/DLLab248 physicalB4 candidate with bothGDN/V M16policy1",
+          "count": 1
+        },
+        {
+          "old": "        w['strict_admission']=admit(reference,candidate,read_reference,read_candidate);save()",
+          "new": "        from test2026.cuda.qwen38_5090.b4_v_m16_short_route import route_trace as full_route\n        from test2026.cuda.qwen38_5090.v_m16_component_trace import assert_disabled\n        w['reference_no_V_route']=assert_disabled((out/'reference-ledger/commands.log').read_bytes());w['actual_GDN_and_V_M16_route']=full_route((out/'candidate-ledger/commands.log').read_bytes());(out/'full-route-analysis.json').write_bytes(json.dumps(w['actual_GDN_and_V_M16_route'],indent=2).encode());save()\n        w['strict_admission']=admit(reference,candidate,read_reference,read_candidate);save()",
+          "count": 1
+        },
+        {
+          "old": "B4_M16_short_mixed_tail_exact_to_four_B1_collected",
+          "new": "B4_V_M16_short_mixed_tail_exact_to_four_B1_collected",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "verify_b4_b1_short_m16_admission.py",
+      "target": "verify_b4_v_m16_short.py",
+      "source_sha256": "271019c71000922a9d9e982c437287aa12e3022adaaff5bf83de52850b5c76c6",
+      "target_sha256": "64714da2398d6437ccaf976d3cb3fba4c96707297f13667e1bb3031d562f4268",
+      "changes": [
+        {
+          "old": "b4-b1-short-m16-admission-attempt1",
+          "new": "b4-v-m16-short-attempt1",
+          "count": 1
+        },
+        {
+          "old": "evidence/b4-b1-short-m16-preparation.json",
+          "new": "evidence/b4-v-m16-short-preparation.json",
+          "count": 1
+        },
+        {
+          "old": "'verify_b4_b1_short_m16_admission.py'",
+          "new": "'verify_b4_v_m16_short.py'",
+          "count": 1
+        },
+        {
+          "old": "B4_M16_short_mixed_tail_exact_to_four_B1_collected",
+          "new": "B4_V_M16_short_mixed_tail_exact_to_four_B1_collected",
+          "count": 1
+        },
+        {
+          "old": "actual_B4_M16_short_vs_four_B1",
+          "new": "actual_B4_V_M16_short_vs_four_B1",
+          "count": 2
+        },
+        {
+          "old": "Ran 7 tests",
+          "new": "Ran 10 tests",
+          "count": 1
+        },
+        {
+          "old": "        original=a.proofs/'paged-batch8-model-preservation-attempt1-evidence.zip'",
+          "new": "        verify_derivations(json.loads(z.read(P+'evidence/b4-v-m16-short-owner-derivation.json')),lambda n:z.read(P+n))\n        original=a.proofs/'paged-batch8-model-preservation-attempt1-evidence.zip'",
+          "count": 1
+        },
+        {
+          "old": "        observation=route=None;route_error=None;strict=False",
+          "new": "        observation=route=full=None;route_error=None;strict=False",
+          "count": 1
+        },
+        {
+          "old": "            if w['exit_code']==0:assert admit(reference,candidate,r,c)==w['strict_admission'];strict=True",
+          "new": "            from test2026.cuda.qwen38_5090.b4_v_m16_short_route import route_trace as full_route\n            from test2026.cuda.qwen38_5090.v_m16_component_trace import assert_disabled\n            try:\n                assert assert_disabled(z.read(BASE+'reference-ledger/commands.log'))==w['reference_no_V_route'];full=full_route(z.read(BASE+'candidate-ledger/commands.log'))\n            except AssertionError as error:route_error=repr(error);assert w['exit_code']!=0 and 'actual_GDN_and_V_M16_route' not in w\n            if full is not None:assert full==w['actual_GDN_and_V_M16_route']==json.loads(z.read(BASE+'full-route-analysis.json'))\n            if w['exit_code']==0:assert full is not None and admit(reference,candidate,r,c)==w['strict_admission'];strict=True",
+          "count": 1
+        },
+        {
+          "old": "actual_GDN_M16_route=route,route_error=route_error",
+          "new": "actual_GDN_M16_route=route,actual_GDN_and_V_M16_route=full,route_error=route_error",
+          "count": 1
+        },
+        {
+          "old": "from test2026.cuda.qwen38_5090.b4_b1_short_m16_gate import observe,admit,route_trace",
+          "new": "from test2026.cuda.qwen38_5090.b4_b1_short_m16_gate import observe,admit,route_trace\nfrom test2026.cuda.qwen38_5090.fa_value_sdk_control import verify_derivations",
+          "count": 1
+        }
+      ]
+    }
+  ],
+  "scope": "Keep original modelprobe computations/inputIDs/full128statecomponents/finitevectors/reset/prefill/final/reset/all8IDs and exactCPython admission unchanged. Source73bothGDN/Vdecodepolicies andall16FA Vactualroute proof added; reference VM16absent. Actualconnectedcomponentproof required beforefutureGPUexecution. No full4K/MTP/quality/performance admission."
+}

@@ -1,0 +1,65 @@
+"""Prepare private Python graph observations; native/model validation remains required."""
+from pathlib import Path
+import ast,hashlib,json,zipfile
+W=Path(__file__).resolve().parent;R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';E=M/'evidence';sha=lambda b:hashlib.sha256(b).hexdigest()
+p=json.loads((E/'decode35-stage-source-derivation.json').read_bytes())
+with zipfile.ZipFile(W/'decode35-stage-source.zip') as z:
+    raw=z.read('xModel/qwen35/vl_0_8b/cuda_chunk.py');assert sha(raw)==p['candidate_files']['xModel/qwen35/vl_0_8b/cuda_chunk.py']
+s=raw.decode();chunk=s[s.index('@T.fusion('):];chunk_changes=[("name='qwen35_cuda_decoder_chunk'","name='qwen35_decode35_operand_chunk'",1),('def Qwen35CUDAChunk(','def Qwen35Decode35CUDAChunk(',1),("    p='model.language_model.layers.'+str(layer_idx)","    if layer_idx!=35 or kind!='full_attention':raise ValueError('Private operand witness requires full attention layer35')\n    p='model.language_model.layers.'+str(layer_idx)",1),('    if external_compressed_weights:extra[\'external_compressed_weights\']=external_compressed_weights',"    if external_compressed_weights:extra['external_compressed_weights']=external_compressed_weights\n    extra['witness_full_decode35_stages']=1",1)]
+for a,b,n in chunk_changes:assert chunk.count(a)==n;chunk=chunk.replace(a,b)
+base=(M/'bounded_step45_boundary_program.py').read_bytes();s=base.decode();forward=s[s.index('    def _forward(self):'):s.index('def construct_with_bounded_step45_boundary_program')]
+changes=[('state_outputs=[];payload_outputs=[];boundary_outputs=[]','state_outputs=[];payload_outputs=[];boundary_outputs=[];operand_outputs=[]',1),('                packed=Qwen35CUDAChunk(',"                chunk=Qwen35Decode35CUDAChunk if layer['index']==35 else Qwen35CUDAChunk\n                packed=chunk(",1),("                if layer['index']+1<len(layout):hidden=hidden*T.unary_op('qwen35_f32_barrier')",'''                if layer['index']==35:
+                    assert layer['kind']=='full_attention' and layer['payload_width']==0
+                    cursor=t*h+w1+w2
+                    for _,width in OPERANDS:
+                        operand_outputs.append(packed_view(packed,cursor,width,[b,width]));cursor+=width
+                if layer['index']+1<len(layout):hidden=hidden*T.unary_op('qwen35_f32_barrier')''',1),('            observations=join(boundary_outputs)','            assert len(operand_outputs)==7\n            observations=join(boundary_outputs+operand_outputs)',1)]
+for a,b,n in changes:assert forward.count(a)==n;forward=forward.replace(a,b)
+prefix='''"""Private actual layer35 operands plus all64 boundaries; original primary prefix retained.
+
+Requires matching source86 DLL, explicit native witness opt-in and exact ordinary
+primary/cache/timeline/all64-boundary parity before interpreting any new tensor.
+"""
+from .bounded_step45_boundary_program import BoundedStep45BoundaryProgram,CUDAPackedDecoderProgram
+from xModel.qwen35.vl_0_8b.cuda_packed_program import T,Qwen35CUDAChunk,flat_concat,concat,packed_view
+OPERANDS=(('masked_input',20480),('input_normalized',20480),('projected_Q_gate',49152),('projected_K',4096),('projected_V',4096),('K_normalized_pre_RoPE',4096),('K_post_RoPE',4096))
+
+'''
+init='''class Decode35OperandProgram(BoundedStep45BoundaryProgram):
+    def __init__(self,*args,**kwargs):
+        self.operand_buffers=[];self.operand_offsets=[]
+        super().__init__(*args,**kwargs)
+        try:
+            cursor=self.output_width
+            self.operand_buffers=[self.io.zeros([self.batch,width]) for _,width in OPERANDS]
+            for name,width in OPERANDS:self.operand_offsets.append((name,cursor,width));cursor+=width
+            assert cursor-self.output_width==106496
+            self.output_width=cursor
+        except:self.close();raise
+
+'''
+run='''    def run(self,inputs):
+        wide=CUDAPackedDecoderProgram.run(self,inputs)
+        self.io.slice_into(wide,0,self.primary_output)
+        for i,value in enumerate(self.boundary_buffers):self.io.slice_into(wide,self.ordinary_output_width+i*self.hidden_width,value)
+        for (_,start,_),value in zip(self.operand_offsets,self.operand_buffers):self.io.slice_into(wide,start,value)
+        self.boundary_runs+=1
+        return self.primary_output
+
+    def close(self):
+        self.operand_buffers=[];self.operand_offsets=[]
+        super().close()
+
+def construct_with_decode35_operand_program(factory,*args,**kwargs):
+    from xModel.qwen35.vl_0_8b import cuda_packed_decoder as module
+    original=module.CUDAPackedDecoderProgram
+    assert original is CUDAPackedDecoderProgram
+    def choose(*values,**options):
+        return (Decode35OperandProgram if len(values)>=6 and values[5]==4 else original)(*values,**options)
+    module.CUDAPackedDecoderProgram=choose
+    try:return factory(*args,**kwargs)
+    finally:module.CUDAPackedDecoderProgram=original
+'''
+result=prefix+chunk+'\n'+init+forward+run;ast.parse(result);target=M/'decode35_operand_program.py';assert not target.exists();target.write_bytes(result.encode())
+record={'status':'private_decode35_operand_program_prepared_CPU_GPU_unrun','chunk_source':'xModel/qwen35/vl_0_8b/cuda_chunk.py','chunk_source_sha256':sha(raw),'chunk_changes':[{'old':a,'new':b,'count':n} for a,b,n in chunk_changes],'forward_source':'bounded_step45_boundary_program.py','forward_source_sha256':sha(base),'forward_changes':[{'old':a,'new':b,'count':n} for a,b,n in changes],'target':target.name,'target_sha256':sha(target.read_bytes()),'primary_prefix_and_all64_boundaries_retained':True,'new_stage_words':106496,'new_native_or_GPU_execution':False,'CPU_contracts_or_model_qualified':False}
+out=E/'decode35-operand-program-derivation.json';assert not out.exists();out.write_bytes(json.dumps(record,indent=2).encode());print(json.dumps({'program_sha256':record['target_sha256'],'AST_parsed':True,'CPU_GPU_unrun':True}))

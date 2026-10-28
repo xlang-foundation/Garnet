@@ -1,0 +1,28 @@
+from pathlib import Path
+import ast,hashlib,json,zipfile
+work=Path(__file__).resolve().parent;out=work.parent/'outputs';repo=Path('D:/CantorAI/work/qwen38-5090');m=repo/'test2026/cuda/qwen38_5090';M='Garnet/test2026/cuda/qwen38_5090/';sha=lambda raw:hashlib.sha256(raw).hexdigest();job='z128-reconstruct-construction-attempt1';proof=(out/(job+'-verified.json')).read_bytes();assert proof==(out/(job+'-remote-verified.json')).read_bytes();q=json.loads(proof);assert q['status']=='separate_Z128_API_reconstruction_constructor_failure_preserved' and q['CPU_processes'] is None and sha((out/(job+'-evidence.zip')).read_bytes())==q['archive_sha256']
+with zipfile.ZipFile(out/(job+'-evidence.zip')) as z:
+    original=z.read(M+'evidence/z128-reconstruct-construction-preparation.json');old=json.loads(original);log=z.read('results/'+job+'/cpu-source-ledger/commands.log');assert b'FAILED (errors=1)' in log and b'z128-opaque-config-audit-attempt2-verified.json' in log and 'results/'+job+'/cpu-build-ledger/commands.jsonl' not in z.namelist()
+    target=m/'evidence/z128-reconstruct-construction-preparation.json';assert not target.exists() or target.read_bytes()==original
+    if not target.exists():target.write_bytes(original)
+files={**old['files'],**old['methods'],M+'evidence/z128-reconstruct-construction-preparation.json':sha(original)};methods=dict(old['methods'])
+for name in ('prepare_z128_reconstruct_construction_attempt2.py','run_z128_reconstruct_construction_attempt2.py','verify_z128_reconstruct_construction_attempt2.py','evidence/z128-reconstruct-attempt2-derivation.json','evidence/z128-opaque-config-audit-attempt2-verified.json'):methods[M+name]=sha((m/name).read_bytes())
+dependency=M+'evidence/z128-opaque-config-audit-attempt2-verified.json';assert dependency in methods and (repo/dependency.removeprefix('Garnet/')).read_bytes()==(out/'z128-opaque-config-audit-attempt2-verified.json').read_bytes();assert not any('probe_native_external_prefix_batch.py' in name for name in [*files,*methods])
+d=json.loads((m/'evidence/z128-reconstruct-attempt2-derivation.json').read_bytes());assert not d['candidate_CPP_CPU_driver_or_assertions_changed']
+for row in d['files']:
+    raw=(m/row['base']).read_bytes();assert sha(raw)==row['base_sha256']
+    for step in row['changes']:
+        before=step['before'].encode();assert raw.count(before)==step['count'];raw=raw.replace(before,step['after'].encode())
+    assert raw==(m/row['target']).read_bytes() and sha(raw)==row['target_sha256']
+for name,h in methods.items():
+    raw=(repo/name.removeprefix('Garnet/')).read_bytes();assert sha(raw)==h
+    if name.endswith('.py'):ast.parse(raw)
+parents={**old['parents'],job:{'proof_sha256':sha(proof),'archive_sha256':q['archive_sha256'],'status':q['status']}};p=dict(old);p.pop('proposal_sha256',None);p.update(status='separate_Z128_reconstruction_constructor_proposed_unrun',files=files,methods=methods,parents=parents,scope=old['scope']+' Attempt1missing provenance copy preserved beforeCPUcompilation/SDK. Attempt2 explicitly ships/pins exact public configuration proof in evidence path; unchanged3assertions, candidateCPP/CPUdriver/SDKprobe/callpolicy andalllegacycontrols. No model/performance admission.')
+proposal=work/'z128-reconstruct-construction-proposal-attempt2.json';assert not proposal.exists();proposal.write_bytes(json.dumps(p,indent=2).encode());deploy={name:(repo/name.removeprefix('Garnet/')).read_bytes() for name in methods};deploy['results/'+proposal.name]=proposal.read_bytes();package=work/'z128-reconstruct-deployment-attempt2.zip';assert not package.exists()
+with zipfile.ZipFile(package,'x',zipfile.ZIP_DEFLATED) as z:
+    for name,raw in deploy.items():z.writestr(name,raw)
+    z.writestr('install-manifest.json',json.dumps({'files':{name:sha(raw) for name,raw in deploy.items()}},indent=2))
+result={'status':p['status'],'source_pins':len(files),'method_pins':len(methods),'deployment_sha256':sha(package.read_bytes()),'deployment_bytes':package.stat().st_size,'proposal_sha256':sha(proposal.read_bytes()),'previous_failure_proof_sha256':sha(proof)};(work/'z128-reconstruct-package-attempt2.json').write_bytes(json.dumps(result,indent=2).encode());print(json.dumps(result))
+raw=(work/'install-z128-reconstruct.py').read_bytes()
+for before,after in [('z128-reconstruct-deployment.zip','z128-reconstruct-deployment-attempt2.zip'),('z128-reconstruct-install.json','z128-reconstruct-install-attempt2.json'),('z128-reconstruct-construction-proposal.json','z128-reconstruct-construction-proposal-attempt2.json')]:assert raw.count(before.encode())==1;raw=raw.replace(before.encode(),after.encode())
+target=work/'install-z128-reconstruct-attempt2.py';assert not target.exists();target.write_bytes(raw)

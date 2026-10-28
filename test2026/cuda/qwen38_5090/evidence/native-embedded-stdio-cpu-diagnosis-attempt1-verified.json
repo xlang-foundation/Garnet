@@ -1,0 +1,111 @@
+{
+  "status": "embedded_stdio_cpu_archive_observations_replayed",
+  "archive_sha256": "58c2d74880076137e9dba4e2bc55898aaca611c319b0ba3fc32c965b1f4400d8",
+  "files_verified": 20,
+  "observations": {
+    "ordinary": {
+      "stdout_labels": [
+        "os.write.stdout",
+        "fdopen.stdout",
+        "sys.stdout.write",
+        "sys.__stdout__.write"
+      ],
+      "operations": [
+        {
+          "operation": "os.write.stdout",
+          "returned": "28",
+          "completed": true
+        },
+        {
+          "operation": "sys.stdout.write",
+          "returned": "(29, None)",
+          "completed": true
+        },
+        {
+          "operation": "sys.__stdout__.write",
+          "returned": "(33, None)",
+          "completed": true
+        },
+        {
+          "operation": "os.fdopen.stdout",
+          "returned": "(26, None)",
+          "completed": true
+        },
+        {
+          "operation": "os.write.stderr",
+          "returned": "28",
+          "completed": true
+        },
+        {
+          "operation": "os.read.stdin",
+          "returned": "b'{\"probe\":\"native.stdin\",\"cpu_only\":true}\\n'",
+          "completed": true
+        },
+        {
+          "operation": "owned_file.write",
+          "returned": "39",
+          "completed": true
+        }
+      ]
+    },
+    "profiled": {
+      "stdout_labels": [
+        "sys.stdout.write",
+        "sys.__stdout__.write"
+      ],
+      "operations": [
+        {
+          "operation": "os.write.stdout",
+          "completed": false,
+          "exception_type": "OSError",
+          "exception_repr": "OSError('write failed')",
+          "errno": 9,
+          "winerror": null
+        },
+        {
+          "operation": "sys.stdout.write",
+          "returned": "(29, None)",
+          "completed": true
+        },
+        {
+          "operation": "sys.__stdout__.write",
+          "returned": "(33, None)",
+          "completed": true
+        },
+        {
+          "operation": "os.fdopen.stdout",
+          "completed": false,
+          "exception_type": "OSError",
+          "exception_repr": "OSError('file descriptor write failed: Bad file descriptor')",
+          "errno": 9,
+          "winerror": null
+        },
+        {
+          "operation": "os.write.stderr",
+          "completed": false,
+          "exception_type": "OSError",
+          "exception_repr": "OSError('write failed')",
+          "errno": 9,
+          "winerror": null
+        },
+        {
+          "operation": "os.read.stdin",
+          "returned": "b'{\"probe\":\"native.stdin\",\"cpu_only\":true}\\n'",
+          "completed": true
+        },
+        {
+          "operation": "owned_file.write",
+          "returned": "39",
+          "completed": true
+        }
+      ]
+    }
+  },
+  "runtime_and_profiler_hashes_preserved": true,
+  "live_delivery_observed": false,
+  "only_end_of_process_capture": true,
+  "model_executed": false,
+  "request_gpu_phase_metrics_admitted": false,
+  "performance_admitted": false,
+  "scope": "Actual ordinary/profiled CPU embedded-runtime observations and captured pipe bytes. Raw descriptor9failure is reproducible under Nsight; text-stream writes and stdin complete. End-of-process capture alone does not prove prompt live delivery. Preloaded profiling control must use native markers, not arrival times."
+}

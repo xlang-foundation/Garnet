@@ -1,0 +1,21 @@
+from pathlib import Path
+import ast,hashlib,json,os,sys,zipfile
+work=Path(__file__).resolve().parent;out=work.parent/'outputs';repo=Path('D:/CantorAI/work/qwen38-5090');m=repo/'test2026/cuda/qwen38_5090';M='Garnet/test2026/cuda/qwen38_5090/';sha=lambda raw:hashlib.sha256(raw).hexdigest();sys.path[:0]=[str(repo),str(m)];job='z128-reconstruct-runtime-attempt1';failure=(out/(job+'-failure-verified.json')).read_bytes();f=json.loads(failure);assert f['status']=='SDK_origin_observation_header_runtime_equality_assumption_failure_preserved' and sha((out/(job+'-evidence.zip')).read_bytes())==f['archive_sha256']
+with zipfile.ZipFile(out/(job+'-evidence.zip')) as z:
+    raw=z.read(M+'evidence/z128-reconstruct-runtime-preparation.json');bp=json.loads(raw);target=m/'evidence/z128-reconstruct-runtime-preparation.json';assert not target.exists() or target.read_bytes()==raw
+    if not target.exists():target.write_bytes(raw)
+files={**bp['files'],**bp['methods'],M+'evidence/z128-reconstruct-runtime-preparation.json':sha(raw)}
+names=('probe_z128_reconstruct_hybrid_sdk.cpp','build_z128_reconstruct_hybrid_sdk.bat','z128_reconstruct_hybrid.py','test_z128_reconstruct_hybrid.py','run_z128_reconstruct_hybrid.py','verify_z128_reconstruct_hybrid.py','prepare_z128_reconstruct_hybrid.py','evidence/z128-reconstruct-hybrid-derivation.json','analyze_z128_runtime_version_failure.py');methods={M+name:sha((m/name).read_bytes()) for name in names}
+for name in names:
+    if name.endswith('.py'):ast.parse((m/name).read_bytes())
+import run_logged as ledger;ledger.source_identity=lambda:{'scope':'Explicit documented hybrid-loader metadata only; unrelated untracked excluded','owned_source_sha256':methods};os.chdir(repo)
+assert ledger.run([sys.executable,'-m','unittest','test2026.cuda.qwen38_5090.test_z128_reconstruct_hybrid'],work/'z128-reconstruct-hybrid-local-cpu-ledger','correctness','Two hybrid-loader source/identity fault controls; exact pinned header13020/runtime13040/driver13040 and actual generated loader map; unchanged factory1400CPU reused',[m/name for name in names])==0
+p=dict(bp);p.pop('proposal_sha256',None);p.update(status='separate_reconstruction_runtime_origin_proposed_unrun',files=files,methods=methods,previous_failure={'job':job,'proof_sha256':sha(failure),'archive_sha256':f['archive_sha256']},scope=bp['scope']+' Hybrid-specific correction after preservedwrong header==runtime assumption. NVIDIA CUDA13Windows runtime fromdisplaydriver documented; exactpinned tuple header13020/runtime13040/driver13040, APIloaderentrymoduleEXE and generated_cuda_runtime_api_loader.objrequired. Does not claimfullystatic runtime. Same factory, CPUdriver, configs,M32/M128 checks; previousfailedmetadata remains immutable; no numerical or model/performance promotion.')
+proposal=work/'z128-reconstruct-hybrid-proposal.json';assert not proposal.exists();proposal.write_bytes(json.dumps(p,indent=2).encode());deploy={M+name:(m/name).read_bytes() for name in names};deploy['results/'+proposal.name]=proposal.read_bytes();package=work/'z128-reconstruct-hybrid-deployment.zip';assert not package.exists()
+with zipfile.ZipFile(package,'x',zipfile.ZIP_DEFLATED) as z:
+    for name,raw in deploy.items():z.writestr(name,raw)
+    z.writestr('install-manifest.json',json.dumps({'files':{name:sha(raw) for name,raw in deploy.items()}},indent=2))
+result={'status':p['status'],'source_pins':len(files),'method_pins':len(methods),'deployment_sha256':sha(package.read_bytes()),'deployment_bytes':package.stat().st_size,'proposal_sha256':sha(proposal.read_bytes()),'previous_failure_proof_sha256':sha(failure)};(work/'z128-reconstruct-hybrid-package.json').write_bytes(json.dumps(result,indent=2).encode());print(json.dumps(result))
+raw=(work/'install-z128-reconstruct-runtime.py').read_bytes()
+for before,after in [('z128-reconstruct-runtime-deployment.zip','z128-reconstruct-hybrid-deployment.zip'),('z128-reconstruct-runtime-install.json','z128-reconstruct-hybrid-install.json'),('z128-reconstruct-runtime-proposal.json','z128-reconstruct-hybrid-proposal.json')]:assert raw.count(before.encode())==1;raw=raw.replace(before.encode(),after.encode())
+target=work/'install-z128-reconstruct-hybrid.py';assert not target.exists();target.write_bytes(raw)

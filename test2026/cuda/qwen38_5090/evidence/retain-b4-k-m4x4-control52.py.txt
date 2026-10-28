@@ -1,0 +1,54 @@
+from pathlib import Path
+import hashlib,json,zipfile
+W=Path(__file__).resolve().parent;O=W.parent/'outputs';R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';E=M/'evidence';sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest();owned=[];retained={}
+def keep(name,raw):
+    p=E/name;assert not p.exists(),p;p.write_bytes(raw);owned.append(p);retained[name]=sha(p)
+job='b4-k-m4x4-control52-attempt1';proof=O/(job+'-verified.json');assert proof.read_bytes()==(O/(job+'-remote-verified.json')).read_bytes();q=json.loads(proof.read_bytes());assert q['exit_code']==1 and q['off_control'] and not q['intervention']['selected_step52_intervention_passed']
+archive=O/(job+'-evidence.zip');assert sha(archive)==q['archive_sha256'];summary=json.loads((O/'Garnet-B4-K-M4x4-Control52-Progress.json').read_bytes());direct=summary['direct_off_on_comparison']
+assert all(direct['all_four_53_IDs_exact_between_off_on']) and direct['selected_raw_key_cache_bytes_exact_between_off_on'] and all(v['all_logical_and_physical_hashes_and_slots_exact'] and all(v['finite_raw_vectors_exact'].values()) for v in direct['captures'].values())
+for name in (proof.name,job+'-remote-verified.json','Garnet-B4-K-M4x4-Control52-Progress.json','b4-k-m4x4-control52-off-on-comparison.json'):keep(name,(O/name).read_bytes())
+with zipfile.ZipFile(archive) as z:
+    mf=json.loads(z.read('evidence-manifest.json'));base='results/'+job+'/'
+    keep('b4-k-m4x4-control52-model1-manifest.json',z.read('evidence-manifest.json'))
+    for name in mf['files']:
+        if name.startswith(base) and name.endswith('.json'):keep('b4-k-m4x4-control52-model1-'+name.removeprefix(base).replace('/','-'),z.read(name))
+    for phase in ('cpu','off','on'):
+        for ext in ('log','jsonl'):keep('b4-k-m4x4-control52-model1-'+phase+'-commands.'+ext,z.read(base+phase+'-ledger/commands.'+ext))
+for name in ('commands.log','commands.jsonl'):keep('b4-k-m4x4-control52-model1-local-replay-'+name,(W/'b4-k-m4x4-control52-local-replay'/name).read_bytes())
+for name in ('postprocess-b4-k-m4x4-control52.py','replay-b4-k-m4x4-control52.py',Path(__file__).name):keep(name+'.txt',(W/name).read_bytes())
+keep('b4-k-m4x4-control52-model1-replay-environments.json',json.dumps({'remote_CPython':'3.12.3','remote_NumPy':'2.4.4','local_CPython':'3.12.10','local_NumPy':'1.26.4','versions_read_after_terminal_run':True,'paired_proof_bytes_identical':True,'no_downloaded_native_artifact_loaded_or_executed_locally':True},indent=2).encode())
+keep('b4-k-m4x4-control52-model1-retention.json',json.dumps({'status':'failed_same_DLL_K_fourM4_intervention_paired_replayed_retained','archive_sha256':sha(archive),'archive_bytes':archive.stat().st_size,'proof_sha256':sha(proof),'retained_sha256':retained,'all_captured_off_on_primary_states_IDs_and_cache_exact_between_flags':True,'intervention_failed_to_match_B1_at_step52':True,'all1849_owned_source_runtime_SDK_config_index_CMake_all34_baseline_restored':True,'full128_output_4K_MTP_quality_HTTP_or_performance_qualified':False,'two_times_target_achieved':False},indent=2).encode())
+entry=('\n\n2026-10-27 same-DLL source85 K-fourM4 actual model intervention FAILED the '
+       'selected step52 exactness gate, with remote/local byte-identical proof '
+       +sha(proof)+'. All47 CPU controls passed; both fresh GPU phase captures '
+       'completed successfully. Flagoff exact parity against retained source79: '
+       'all4rows/53IDs/five complete128component physical-logical hashes/fullfinite '
+       'hidden-normalized vectors and8MiBrawkey35cache. Flagon actual newK '
+       'liveSDK7attrs/twoM4checks/4MiB/all16initializations and unchangedGDN/V/Q-only '
+       'routes replayed. Nonetheless direct off/on comparison is exact at ALL '
+       'five captured primary checkpoints for all4rows, all53IDs and complete '
+       'selected8MiBcache. Against source60 B1, same single BF16 difference persists '
+       '(1/4,194,304): layer35 K/head0/slot4012/dim211, reference0x3fa8=1.3125, '
+       'candidate0x3fa7=1.3046875; adjacent BF16 codes, not a one-bit difference. '
+       'ID52 remains11352 versus264, earlier52consumed IDs exact, other3rows '
+       'first53IDs exact. Selected final components70 and72..127 plus hidden/norm '
+       'still differ. This K-only actual-M4 execution-shape intervention doesnot '
+       'repair this case; doesnot prove all intermediate tensors equal or a '
+       'unique cause. Scheduled writer45 still inferred fromslot, not proven '
+       'mutation time. Next diagnostic should read this existing carrier coordinate '
+       'after each ordinary decode step, require the same primary/fullcache parity, '
+       'then localize upstream hidden/projection/normalization operands before '
+       'another arithmetic change. Original step<=7 all-layer observer package '
+       'precondition remains false; do not silently relax it or launch full128/MTP '
+       'admission from this failure. All1,849 owned files/runtime/SDK/config+index/'
+       'CMake/currentall34/baselineDLL restored; ownedSSDnonces retired afteridle. '
+       'Raw archive '+sha(archive)+' ('+str(archive.stat().st_size)+'B /1590members). '
+       'Both raw captures, route evidence, resource logs, failures, reader and '
+       'paper metrics retained. RemotePython3.12.3/NumPy2.4.4 and local3.12.10/'
+       '1.26.4 replays identical. No new serving benchmark or performance gain; '
+       'full4K/cache62 remainFAILED andoverall2x unmet.\n').encode()
+for name in ('docs/research/qwen38-5090-development-log.md','docs/research/qwen38-5090-implementation-task.md'):
+    p=R/name;before=p.read_bytes();assert b'same-DLL source85 K-fourM4 actual model intervention FAILED' not in before
+    with p.open('ab') as f:f.write(entry)
+    assert p.read_bytes()==before+entry;owned.append(p)
+(W/'b4-k-m4x4-control52-model-stage-paths.bin').write_bytes(b''.join(n.relative_to(R).as_posix().encode()+b'\0' for n in owned));print(json.dumps({'stage_paths':len(owned),'proof_sha256':sha(proof),'negative_intervention_preserved':True,'off_on_all_captured_values_equal':True},indent=2))

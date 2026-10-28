@@ -1,0 +1,65 @@
+{
+  "status": "distinct_attempt_after_preserved_CPU_provenance_failure",
+  "files": [
+    {
+      "base": "prepare_modelopt_init_trace_native_build.py",
+      "target": "prepare_modelopt_init_trace_native_build_attempt2.py",
+      "base_sha256": "d643490a4922f1c8485fdfd2d86541671def9a537a58313b849b9ee2d430f9ff",
+      "target_sha256": "f095f8b0861a384e2937a386cddd89c5bef3b8a06ad261f0fa89b4b89cd233b1",
+      "changes": [
+        {
+          "before": "modelopt-init-trace-native-build-preparation.json",
+          "after": "modelopt-init-trace-native-build-preparation-attempt2.json",
+          "count": 1
+        },
+        {
+          "before": "modelopt-init-trace-native-proposal.json",
+          "after": "modelopt-init-trace-native-proposal-attempt2.json",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "base": "run_modelopt_init_trace_native_build.py",
+      "target": "run_modelopt_init_trace_native_build_attempt2.py",
+      "base_sha256": "2d1f0493e636feb106afa054cb3046d84cd326b01fe65329ad89aa69e39418d9",
+      "target_sha256": "31c63ed48ac18ae0a8ac2b7d8bac8c395c1b57eedc3abac071b62473837bd3b6",
+      "changes": [
+        {
+          "before": "modelopt-init-trace-native-build-preparation.json",
+          "after": "modelopt-init-trace-native-build-preparation-attempt2.json",
+          "count": 1
+        },
+        {
+          "before": "modelopt-init-trace-native-build-attempt1",
+          "after": "modelopt-init-trace-native-build-attempt2",
+          "count": 1
+        },
+        {
+          "before": "garnet-native-modelopt-init-trace-attempt1.dll",
+          "after": "garnet-native-modelopt-init-trace-attempt2.dll",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "base": "verify_modelopt_init_trace_native_build.py",
+      "target": "verify_modelopt_init_trace_native_build_attempt2.py",
+      "base_sha256": "e535fcdca5e89a27d341a9069a902407cffa7666309ec03dc11b41c410994d76",
+      "target_sha256": "4b0a72faa904609e0cdf147d1bd50bbea31614398c7b8eb99ee9daa64f91ac76",
+      "changes": [
+        {
+          "before": "modelopt-init-trace-native-build-preparation.json",
+          "after": "modelopt-init-trace-native-build-preparation-attempt2.json",
+          "count": 1
+        },
+        {
+          "before": "modelopt-init-trace-native-build-attempt1",
+          "after": "modelopt-init-trace-native-build-attempt2",
+          "count": 1
+        }
+      ]
+    }
+  ],
+  "native_candidate_source_changed": false
+}

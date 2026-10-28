@@ -1,0 +1,45 @@
+from pathlib import Path
+import hashlib,json,zipfile
+work=Path(__file__).resolve().parent;out=work.parent/'outputs';repo=Path('D:/CantorAI/work/qwen38-5090');m=repo/'test2026/cuda/qwen38_5090';e=m/'evidence';paths=[]
+sha=lambda raw:hashlib.sha256(raw).hexdigest()
+def keep(name,raw):
+    path=e/name;assert not path.exists() or path.read_bytes()==raw,path
+    if not path.exists():path.write_bytes(raw)
+    paths.append(path.relative_to(repo).as_posix())
+job='bf16-batch8-external-reference-attempt1';receipt=json.loads((work/'b8-b4-failure-local-receipt.json').read_bytes());analysis=json.loads((out/'Garnet-B8-B4-Reference-Failure-Analysis.json').read_bytes())
+assert receipt['archive_sha256']==analysis['archive_sha256'] and (out/(job+'-verified.json')).read_bytes()==(out/(job+'-remote-verified.json')).read_bytes()
+archive=out/(job+'-evidence.zip');assert sha(archive.read_bytes())==receipt['archive_sha256']
+with zipfile.ZipFile(archive) as z:
+    keep(job+'-evidence-manifest.json',z.read('evidence-manifest.json'))
+    for name in z.namelist():
+        prefix='results/'+job+'/'
+        if name.startswith(prefix) and name.endswith(('.json','.jsonl','.log')) and not name.endswith('resource-vram.jsonl'):
+            keep(job+'-'+name.removeprefix(prefix).replace('/','-'),z.read(name))
+for suffix in ('-verified.json','-remote-verified.json','-local-replay.log'):keep(job+suffix,(out/(job+suffix)).read_bytes())
+for name in ('Garnet-B8-B4-Reference-Failure-Verified.json','Garnet-B8-B4-Reference-Failure-Analysis.json'):keep(name,(out/name).read_bytes())
+for name in ('replay-b8-external-reference-failure-local.py','analyze-b8-b4-reference-failure.py','derive-prefill128-native-runtime.py','derive-prefill128-python-runtime.py','compile-prefill128-runtime-offline.py','retain-b8-failure-and-prefill128-runtime.py'):
+    keep(name+('.v2.txt' if name=='retain-b8-failure-and-prefill128-runtime.py' else '.txt'),(work/name).read_bytes())
+for name in ('prefill128-native-runtime-derivation.json','prefill128-python-runtime-derivation.json'):
+    paths.append((e/name).relative_to(repo).as_posix())
+    for row in json.loads((e/name).read_bytes())['files']:
+        target=repo/row['target'];assert sha(target.read_bytes())==row['target_sha256'];paths.append(row['target'])
+        if row.get('existing_file_modified',False):paths.append(row['source'])
+paths.append((m/'test_bf16_prefill128_runtime_contract.py').relative_to(repo).as_posix())
+folder=work/'prefill128-runtime-development/offline-build';result=json.loads((folder/'result.json').read_bytes());assert result['exit_code']==0 and len(result['objects'])==4 and result['cpu_tests']==26
+for path in folder.rglob('*'):
+    if path.is_file() and path.suffix in ('.json','.jsonl','.log','.bat'):keep('prefill128-runtime-offline-'+path.relative_to(folder).as_posix().replace('/','-'),path.read_bytes())
+status={'status':'prefill128_full_forward_runtime_candidate_cpu_compiled_gpu_unrun','native_and_python_candidate_source_files':18,'cpu_tests_passed':26,'cpu_integration_objects':result['objects'],
+        'runtime_or_sdk_or_production_build_mutated':False,'linked':False,'target_executable_run':False,'full_forward_gpu_qualified':False,'model_or_http_qualified':False,'performance_admitted':False,'two_times_target_achieved':False,'strict_b8_reference_failure':receipt,'failure_boundary_analysis':{'first_different_component':analysis['phase_observations'][1]['different_components'][0],'first_different_generated_token':[row['first_different_token_zero_based'] for row in analysis['generated_ids']]}}
+keep('prefill128-runtime-candidate-and-b8-reference-failure-status.json',json.dumps(status,indent=2).encode())
+(out/'Garnet-Prefill128-Runtime-Candidate-CPU-Status.json').write_bytes(json.dumps(status,indent=2).encode())
+text='\n\n### 2026-10-25 — Strict B8/B4 reference failure preserved; full T128 runtime candidate passes CPU compilation\n\n'
+text+='Actual bf16-batch8-external-reference-attempt1 stops in the first short-mixed four-row half on generated_ids. All45remote CPU controls passed18.722s; strict owner exits1 with source697/runtime/environment preserved, cache retired, library1a1d unchanged and cleanup complete. Archive '+receipt['archive_sha256']+' ('+str(receipt['archive_bytes'])+'bytes/37members). Same original full checker returns expected1 on both machines, identical failure proof '+receipt['proof_pair_sha256']+'. Original strict gate is unchanged. Remaining17cases are unrun; B8 external cache arithmetic/MTP/quality/HTTP admission remains false.\n\n'
+text+='Independent inspection of raw actual first-case data confirms identical inputs with prompt lengths41/104/93/93 and8outputs each. Output row0 matches; first differing output indices for rows1/2/3 are0/5/5. Reset complete logical-state hashes and raw hidden/normalized vectors match exactly. Post-prefill, the first six stored GDN component hashes (layers0/1/2, both roles) still match all four B8 rows; the first differing component is layer3 full-attention key, all four rows.122of128post-prefill components differ. Raw final-hidden relative L2 differences versus B8 are '+json.dumps([r['relative_l2_difference'] for r in analysis['phase_observations'][1]['vectors']['hidden']])+'. This is a boundary observation, not a cause, harmless-rounding or semantic-equivalence conclusion. Complete raw caches are not archived; hashes and raw hidden/normalized vectors are.\n\n'
+text+='Implemented a separate local T128 native/Python forward candidate using byte-identical copies of the already GPU-qualified attention and final-state commit kernels. New T128-specific TensorRT plugin/wire type, strict bounded integer keyword, canonical binding, native commit class/API, Python layout/admission/program/decoder routing and27Bfactory. Prefill usesT128 while retained speculative decode remainsT4, one shared128NVFP4/208FP8 projection pool and canonical state. Old4/32andB4/B8 guard functions remain unchanged. Existing GDN source already accepts up to128tokens, but full T128 GDN/model equivalence remains unproven.\n\n'
+text+='Eight new pure CPU controls cover layout, strict flags, complete64layer symbolic forward, no legacy KV slices, native capability/factory failures, copied kernel bytes and exact recorded source transforms; combined with18existing B1/B4/B8 regressions,26tests pass0.161s. Private CPU-only MSVC /c compilation passes for the new attention plugin, commit wrapper, actual modified TensorRT builder and actual app entry. Four object hashes, compile recipe, inputs and selected SDK before/after hashes retained. No linking, target executable, SDK/runtime/production build mutation or local GPU/model execution. Native/Python runtime candidate is local and not installed on RTX5090. Actual native DLL build, plugin/commit contracts, full forward/model IDs/state,805quality and HTTP performance remain required.\n\n'
+text+='Next controlled diagnosis compares the same actual first short case with B4 full-cache and B4 packed-cache, sequentially on unchanged1a1d. Require full-repeat comparison against this preserved failed run and compare both to closed B8, retaining every state/vector/ID difference. This separates observed cache-mode and batch-geometry contrasts without relaxing the original failed strict gate or claiming a cause. Overall2xdecode/throughput and halfTTFT remain unmet/unproven; strongest tuned/MTP references/repetitions, wider-batch serving and matched INT4/4B remain open. Comparison charts remain unchanged.\n'
+for name in ('qwen38-5090-development-log.md','qwen38-5090-implementation-task.md'):
+    path=repo/'docs/research'/name;raw=path.read_bytes();assert b'Strict B8/B4 reference failure preserved; full T128 runtime candidate passes CPU compilation' not in raw
+    path.write_bytes(raw+text.encode());paths.append(path.relative_to(repo).as_posix())
+(work/'b8-failure-prefill128-runtime-retained-paths.json').write_bytes(json.dumps(sorted(set(paths)),indent=2).encode())
+print(json.dumps({'status':status['status'],'retained_paths':len(set(paths)),'strict_failure_preserved':True}))

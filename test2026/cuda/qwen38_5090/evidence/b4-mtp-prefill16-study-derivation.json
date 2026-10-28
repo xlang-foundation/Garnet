@@ -1,0 +1,88 @@
+{
+  "derivations": [
+    {
+      "source": "xModel/qwen35/vl_0_8b/cuda_mtp_prefill16_study.py",
+      "target": "xModel/qwen35/vl_0_8b/cuda_mtp_prefill16_b4_study.py",
+      "source_sha256": "2ffaff1da0404f669b9efeb54995c873e145ba5cd4b495ef0453b28af46b2225",
+      "target_sha256": "41656e4f1acd2bd1c9cca8e50549e5bb82e804e1bd2daa42396b2f019ecfc02b",
+      "changes": [
+        {
+          "old": "Explicit B1 study: T16 MTP prefill plus unchanged T4 verified decoding.",
+          "new": "Explicit B4 BF16/host/joined study: T16 draft prefill and unchanged T4 verification.",
+          "count": 1
+        },
+        {
+          "old": "CUDAMTPPrefill16StudySession",
+          "new": "CUDAMTPPrefill16B4StudySession",
+          "count": 1
+        },
+        {
+          "old": "draft_builder_workspace_bytes=128<<20):",
+          "new": "draft_builder_workspace_bytes=256<<20):",
+          "count": 1
+        },
+        {
+          "old": "policy!=(3,0,4,128<<20)",
+          "new": "policy!=(3,0,4,256<<20)",
+          "count": 1
+        },
+        {
+          "old": "depth3, full head, prefix replay and T4/128MiB decode policy",
+          "new": "depth3, full head, prefix replay and B4T4/256MiB decode policy",
+          "count": 1
+        },
+        {
+          "old": "geometry!=(1,4096,32,4) or getattr(decoder,'bf16_kv_low_batch_state',None) is not True",
+          "new": "geometry!=(4,4096,32,4) or getattr(decoder,'bf16_kv_state',None) is not True",
+          "count": 1
+        },
+        {
+          "old": "the existing B1 BF16 low-batch T32/T4/cap4096 target",
+          "new": "the explicit B4 BF16 KV T32/T4/cap4096 target",
+          "count": 1
+        },
+        {
+          "old": "        config=decoder.config",
+          "new": "        for flag in ('external_compressed_weights','joined_mlp_projections','host_embedding_lookup','retain_linear_inputs','register_delta_128','flat_concat','deferred_state_commit','shared_output_storage','packed_state_program'):\n            if getattr(decoder,flag,None) is not True:raise ValueError('B4 MTP requires explicit '+flag)\n        for flag in ('bf16_kv_low_batch_state','bf16_kv_prefill128_study','embedded_projection_weights','join_decode_input_projections','kv_delta_state'):\n            if getattr(decoder,flag,None) is not False:raise ValueError('B4 MTP excludes '+flag)\n        config=decoder.config",
+          "count": 1
+        },
+        {
+          "old": "draft_chunk_size=4,draft_builder_workspace_bytes=128<<20)",
+          "new": "draft_chunk_size=4,draft_builder_workspace_bytes=256<<20)",
+          "count": 1
+        },
+        {
+          "old": "CUDAMTPProgram(checkpoint,config,1,4096,16,",
+          "new": "CUDAMTPProgram(checkpoint,config,4,4096,16,",
+          "count": 1
+        },
+        {
+          "old": "decoder.projection_workspace_bytes,builder_workspace_bytes=128<<20)",
+          "new": "decoder.projection_workspace_bytes,builder_workspace_bytes=128<<20) # Separate T16 engine retains allowed128MiB;256MiB is only legal for T4.",
+          "count": 1
+        },
+        {
+          "old": "[1,16,h]",
+          "new": "[4,16,h]",
+          "count": 3
+        },
+        {
+          "old": "[1,16,3]",
+          "new": "[4,16,3]",
+          "count": 1
+        },
+        {
+          "old": "[1,16]",
+          "new": "[4,16]",
+          "count": 2
+        },
+        {
+          "old": "draft_prefill_chunk=16,draft_decode_chunk=4,extra_draft_engine_weights_duplicated=True,",
+          "new": "draft_prefill_chunk=16,draft_decode_chunk=4,physical_batch=4,draft_decode_builder_workspace_bytes=256<<20,draft_prefill_builder_workspace_bytes=128<<20,extra_draft_engine_weights_duplicated=True,",
+          "count": 1
+        }
+      ]
+    }
+  ],
+  "scope": "Defaultoff separate B4BF16KV/hostembedding/joinedMLP targetT32/decodeT4 study only; no productionfactory/default/globalMTP policy changed. OriginalB1 temporarybinding/cache/reentrancy/failure/reset/memory/close hook preserved. T4decode retains allowedB4workspace256MiB; extraT16prefill uses separatelyallowed128MiB withoutrelaxing original256MiB-only-T4 guard. Target/compressedweights/state/verification unchanged, draft engineweights duplicated andmustmeasureVRAM. CPUcontracts/GPU/MTP/quality/HTTP/performance unqualified atderivation; deployonlyafterpairedfull4K+futureMTPadmission."
+}

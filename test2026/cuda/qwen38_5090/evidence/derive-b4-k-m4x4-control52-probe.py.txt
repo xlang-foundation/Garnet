@@ -1,0 +1,27 @@
+from pathlib import Path
+import ast,hashlib,json
+R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';rows=[];sha=lambda b:hashlib.sha256(b).hexdigest()
+def derive(src,dst,changes):
+    raw=(M/src).read_bytes();s=raw.decode()
+    for a,b,n in changes:assert s.count(a)==n,(a,s.count(a),n);s=s.replace(a,b)
+    ast.parse(s);p=M/dst;assert not p.exists();p.write_bytes(s.encode());rows.append({'source':src,'source_sha256':sha(raw),'target':dst,'target_sha256':sha(p.read_bytes()),'changes':[{'old':a,'new':b,'count':n} for a,b,n in changes]})
+derive('probe_b4_k35_cache52.py','probe_b4_k_m4x4_control52.py',[
+ ('Unchanged-model selected-row step7/52 states before consuming differing ID52.','Same-DLL off/on K-fourM4 intervention, immutable B1/state/cache oracles; no timing.',1),
+ ("mode in ('reference','candidate')","mode in ('off','on')",1),
+ ('b4-k35-cache52-preparation.json','b4-k-m4x4-control52-preparation.json',1),
+ ("batch=1 if mode=='reference' else 4","batch=4",1),
+ ("p[mode+'_installed_files']","p['installed_files']",1),
+ ("p[mode+'_library_sha256']","p['library_sha256']",1),
+ ("{**p['flags'],'GARNET_FP8_BATCH4_PREFILL_CANONICAL':'0' if mode=='reference' else '1','GARNET_FP8_GDN_BATCH4_DECODE_CANONICAL':'0' if mode=='reference' else '1','GARNET_FP8_V_BATCH4_DECODE_CANONICAL':'0' if mode=='reference' else '1','GARNET_FP8_QK_BATCH4_DECODE_CANONICAL':'0' if mode=='reference' else '1'}", "{**p['flags'],'GARNET_FP8_K_BATCH4_DECODE_M4X4':'1' if mode=='on' else '0'}",1),
+ ('mode=mode,physical_batch=batch',"mode='candidate',intervention_policy=mode,physical_batch=batch",1),
+ ])
+derive('launch_b4_k35_cache52.py','launch_b4_k_m4x4_control52.py',[
+ ('Fresh embedded process per B1-reference/B4-candidate phase; fixed owner cache.','Fresh embedded B4 process per same-DLL flag-off/flag-on phase; fixed owner cache.',1),
+ ("mode in ('reference','candidate')","mode in ('off','on')",1),
+ ('b4-k35-cache52-preparation.json','b4-k-m4x4-control52-preparation.json',1),
+ ("'0' if mode=='reference' else '1'","'1'",4),
+ ("'1' if mode=='candidate' else '0'","'1'",4),
+ ("env['PATH']=';'.join", "env['GARNET_FP8_K_BATCH4_DECODE_M4X4']='1' if mode=='on' else '0';env['GARNET_KM4X4_FACTORY_TRACE']='1'\nenv['PATH']=';'.join",1),
+ ('probe_b4_k35_cache52.py','probe_b4_k_m4x4_control52.py',1),
+ ])
+p=M/'evidence/b4-k-m4x4-control52-probe-derivation.json';assert not p.exists();p.write_bytes(json.dumps({'status':'same_DLL_flagoff_flagon_control52_probe_prepared_GPU_unrun','derivations':rows,'same_source85_and_DLL_both_phases':True,'new_graph_observer_or_kernel_or_tolerance':False,'full128_output_4K_or_performance_qualified':False,'scope':'PhysicalB4 mixed group,3968 prompt+53 predicted IDs/52 consumed steps. Flagoff must exactly reproduce all4rows/five complete states/53IDs/raw key35 bytes under newDLL vs retainedsource79. Flagon compares selected independent source60 B1 step7/52 all128components/fullfinitevectors/rawcache plus all4rows endpoints/step7/53IDs. No new B1 model run or full4K admission.'},indent=2).encode());print('Two exact source derivations / AST passed, GPU unrun')

@@ -1,0 +1,25 @@
+from pathlib import Path
+import hashlib,json,os,sys
+r=Path('D:/CantorAI/work/qwen38-5090');m=r/'test2026/cuda/qwen38_5090';e=m/'evidence';w=Path(__file__).resolve().parent
+sys.path.insert(0,str(m));from run_logged import run
+sdk=Path('D:/CantorAI/ThirdPartySDK/TensorRT');cuda=Path('C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v13.2');xlang=Path('D:/CantorAI/xlang3/sdk');sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+cpp=[('src/backends/tensorrt/cuda_bf16_low_batch_kv_delta_commit.cpp','b1-wired-helper'),('src/backends/tensorrt/qwen38_bf16_low_batch_kv_overlay_plugin.cpp','b1-wired-overlay'),('src/backends/tensorrt/trt_builder.cpp','b1-wired-builder'),('src/entry/garnet.cpp','b1-wired-entry')]
+cu=[('src/cuda/qwen38_bf16_kv_low_batch_overlay.cu','b1-wired-attention'),('src/cuda/qwen38_bf16_low_batch_kv_commit.cu','b1-wired-commit')]
+names=set()
+for recipe in ('bf16-low-batch-native-local-wiring.json','bf16-low-batch-python-local-wiring.json'):
+ names.update(json.loads((e/recipe).read_bytes())['files'])
+extra=['src/backends/tensorrt/trt_builder.h','src/backends/tensorrt/qwen38_bf16_kv_overlay_plugin.h','src/backends/tensorrt/qwen38_bf16_kv_layout_contract.h','src/cuda/qwen38_bf16_kv_commit.cuh','src/cuda/qwen35_attention_core.cuh','src/tensor/tensor_helper.h','src/tensor/execution_stream.h','third_party/nlohmann/json.hpp']
+pins=[r/n for n in sorted(names|set(extra))]+[xlang/'xlang3/xlang3.h',xlang/'xlang3/charconv_compat.h',sdk/'include/NvInfer.h',sdk/'include/NvInferRuntime.h',sdk/'include/NvInferVersion.h'];before={str(p):sha(p) for p in pins}
+dirs=['src/common','src/core','src/entry','src/include','src/model','src/runtime/kv','src/runtime/scheduler','src/tensor','src/test','src/log','src/cuda','src/image','src/image/qwen_vl','src/tokenizer','third_party','src/backends/tensorrt','src/backends/openvino','src/backends/cpu','plugins/gpt_oss/include']
+inc=' '.join('/I"'+str(p)+'"' for p in [xlang,sdk/'include',cuda/'include']+[r/n for n in dirs]);cc='C:/Program Files/Microsoft Visual Studio/18/Community/VC/Tools/MSVC/14.29.30133/bin/Hostx64/x64'
+lines=['@echo off','call "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Auxiliary\\Build\\vcvars64.bat" -vcvars_ver=14.29','if errorlevel 1 exit /b %errorlevel%','set "TMP=%~dp0"','set "TEMP=%TMP%"','cd /d "%~dp0"']
+for name,obj in cpp:lines+=['cl /nologo /EHsc /std:c++17 /MT /utf-8 /DNOMINMAX /DXLANG3_USE_SHARED /DGARNET_SERVING_EXPORTS '+inc+' /c "'+str(r/name)+'" /Fo"%~dp0'+obj+'.obj"','if errorlevel 1 exit /b %errorlevel%']
+for name,obj in cu:lines+=['"'+str(cuda/'bin/nvcc.exe')+'" -std=c++17 -arch=sm_120 -O3 -ccbin "'+cc+'" -Xcompiler=/MT,/utf-8 -I"'+str(r/'src/cuda')+'" -c "'+str(r/name)+'" -o "%~dp0'+obj+'.obj"','if errorlevel 1 exit /b %errorlevel%']
+lines+=['exit /b 0'];bat=w/'compile-bf16-low-batch-wired-local.bat';bat.write_bytes(('\r\n'.join(lines)+'\r\n').encode());os.chdir(r)
+code=run(['cmd.exe','/d','/c',str(bat)],e/'bf16-low-batch-wired-local-build-ledger','build','Private selected B1 native helper/plugin/builder/entry and sm120 CUDA-unit compilation; no link/load/GPU',pins+[bat,Path(__file__)])
+assert before=={str(p):sha(p) for p in pins},'Build input changed'
+if code:raise SystemExit(code)
+receipt={'status':'b1_wired_selected_native_units_private_compile_passed_runtime_unrun','source_sha256':before,'compiled_units':[name for name,_ in cpp+cu],'object_sha256':{obj:sha(w/(obj+'.obj')) for _,obj in cpp+cu},'native_dll_linked':False,'runtime_loaded':False,'gpu_executed':False,'deployed_source_runtime_changed':False,'model_qualified':False,'performance_admitted':False,'scope':'Private /MT C++17 and sm120 compilation of changed native entry/builder/helper/plugin plus both relocated CUDA candidates. Full DLL link/install, actual ABI/helper/lowering/model behavior, component GPU gates, quality/4K/HTTP and speed remain unqualified.'}
+(e/'bf16-low-batch-wired-local-build.json').write_text(json.dumps(receipt,indent=2),encoding='utf8')
+for name,source in [('bf16-low-batch-wired-local-build-method.py.txt',Path(__file__)),('bf16-low-batch-wired-local-build-method.bat.txt',bat)]: (e/name).write_bytes(source.read_bytes())
+print(json.dumps({'status':receipt['status'],'compiled_units':receipt['compiled_units'],'object_sha256':receipt['object_sha256']}))

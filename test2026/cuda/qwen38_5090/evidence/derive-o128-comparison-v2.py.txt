@@ -1,0 +1,18 @@
+"""Presentation revision only: explicit checkpoint and complete sampling metadata."""
+from pathlib import Path
+import ast,hashlib,json
+W=Path(__file__).resolve().parent;source=W/'render-o128-repeated-comparison.py';raw=source.read_bytes();before=hashlib.sha256(raw).hexdigest();changes=[]
+for a,b in [
+ ("STEM='Garnet-O128-Repeated-vLLM-SGLang-4K'","STEM='Garnet-O128-Repeated-vLLM-SGLang-4K-v2'"),
+ ("r=dict(c['metrics'],sampled_peak_adapter_used_bytes=t['memory'][key]['sampled_peak_adapter_used_bytes'])","r=dict(c['metrics'],**{field:t['memory'][key][field] for field in ('sampled_peak_adapter_used_bytes','samples','observed_sample_gap_median_seconds','observed_sample_gap_max_seconds')})"),
+ ("    notes=[","    maximum_native_gap=max(t['memory'][key]['observed_sample_gap_max_seconds'] for t in trials for key in expected)\n    notes=["),
+ ("'VRAM is sampled adapter usage including background allocations; raw sampling gaps and trailing samples are retained.'","f'VRAM includes background usage. Maximum observed native sampling gap: {maximum_native_gap:.3f} s; raw samples retained.'"),
+ ("data=dict(status='three_O128_HTTP_trials_and_retained_single_trial_references_replayed'","data=dict(model_checkpoint='nvidia/Qwen3.8-27B-NVFP4',model_precision='mixed NVFP4/FP8; BF16 vision/cache; native NVFP4 head',memory_sampling_by_native_trial=[t['memory'] for t in trials],status='three_O128_HTTP_trials_and_retained_single_trial_references_replayed'"),
+ ("RTX 5090 32GB | 3968 input + 128 output | new native: 3 trials; retained references: 1 trial","Qwen3.8-27B mixed NVFP4/FP8 | RTX 5090 32GB | 3968+128 tokens | native: 3 trials; references: 1 trial"),
+ ("Actual 4K HTTP | native median/range of 3 trials; references 1 trial each | RTX 5090 32GB","Qwen3.8-27B mixed NVFP4/FP8 | RTX 5090 32GB | actual 4K | native: 3 trials; references: 1 trial"),
+ ("'sampled_adapter_GiB']","'sampled_adapter_GiB','memory_samples','maximum_sampling_gap_seconds']"),
+ ("r['sampled_peak_adapter_used_bytes']/2**30])","r['sampled_peak_adapter_used_bytes']/2**30,r.get('samples'),r.get('observed_sample_gap_max_seconds')])"),
+ ("<p>Values: first-token seconds","<p>Model: nvidia/Qwen3.8-27B-NVFP4, mixed NVFP4/FP8, native NVFP4 head, BF16 vision/cache.</p><p>Values: first-token seconds"),
+]:
+    assert raw.count(a.encode())==1,(a,raw.count(a.encode()));raw=raw.replace(a.encode(),b.encode());changes.append(dict(old=a,new=b))
+ast.parse(raw);target=W/'render-o128-repeated-comparison-v2.py';assert not target.exists() or target.read_bytes()==raw;target.write_bytes(raw);(W/'o128-comparison-v2-derivation.json').write_bytes(json.dumps(dict(source=source.name,source_sha256=before,target=target.name,target_sha256=hashlib.sha256(raw).hexdigest(),changes=changes,new_benchmark=False,scope='Preserve v1files. Add explicit checkpoint label, native max sampling gap, per-trial memory metadata and CSV memory sample/gap columns. Numerical plotted metrics/ratios remain byte-value identical from same paired proof; verify after rendering.'),indent=2).encode());print('PRESENTATION_V2_DERIVED_NO_NEW_MEASUREMENTS')

@@ -1,0 +1,77 @@
+from pathlib import Path
+import argparse
+import hashlib
+import json
+import re
+import shutil
+import sys
+import zipfile
+
+root = Path('D:/CantorAI/5090-study-20261023')
+methods = root / 'Garnet/test2026/cuda/qwen38_5090'
+sys.path.insert(0, str(methods))
+from run_bf16_low_batch_native_build import idle
+sha = lambda path: hashlib.sha256(path.read_bytes()).hexdigest()
+parser = argparse.ArgumentParser()
+parser.add_argument('--closed-prefill16-http-archive-sha256', required=True)
+args = parser.parse_args()
+digest = args.closed_prefill16_http_archive_sha256
+assert re.fullmatch('[0-9a-f]{64}', digest)
+receipt = root / 'results/native-cuda-phase-preflight.json'
+assert not receipt.exists()
+input_path = root / 'results/native-cuda-phase-preflight-input.json'
+p = json.loads(input_path.read_bytes())
+host = 'prefill16-fixed4k-http-attempt1'
+parents = dict(p['parents'])
+parents[host] = {'archive_sha256': digest}
+closed_parents = {}
+for name, entry in parents.items():
+    archive = root / 'results' / (name + '-evidence.zip')
+    assert sha(archive) == entry['archive_sha256']
+    with zipfile.ZipFile(archive) as z:
+        manifest = json.loads(z.read('evidence-manifest.json'))
+        assert z.testzip() is None and len(z.namelist()) == len(set(z.namelist())) == len(manifest['files']) + 1
+        for path, expected in manifest['files'].items():
+            assert hashlib.sha256(z.read(path)).hexdigest() == expected
+        w = json.loads(z.read('results/' + name + '/workflow.json'))
+    assert w == json.loads((root / 'results' / name / 'workflow.json').read_bytes())
+    assert type(w['exit_code']) is int and w['cleanup_finished'] is True and w['library_unchanged'] is True
+    assert w['source_sha256'] == w['source_after_sha256'] and w['runtime_dependencies'] == w['runtime_dependencies_after']
+    proof_path = root / 'results' / (name + '-verified.json')
+    proof = json.loads(proof_path.read_bytes())
+    assert proof['archive_sha256'] == entry['archive_sha256']
+    if name == host:
+        assert proof['status'] == ('prefill16_fixed4k_http_replayed' if w['exit_code'] == 0 else 'prefill16_fixed4k_http_failure_preserved')
+    else:
+        assert w['exit_code'] == 0 and sha(proof_path) == entry['proof_sha256'] and proof['status'] == entry['status']
+    closed_parents[name] = {'archive_sha256': entry['archive_sha256'], 'proof_sha256': sha(proof_path), 'exit_code': w['exit_code']}
+tool=p['profiler']
+assert sha(root/tool['path'])==tool['sha256'] and sha(root/tool['setup_path'])==tool['setup_sha256']
+assert shutil.disk_usage(root).free>=32*1024**3
+idle()
+targets, drift, runtime = {}, {}, {}
+for name, expected in p['expected'].items():
+    path = root / name
+    assert path.resolve().is_relative_to(methods.resolve())
+    exists = path.exists()
+    actual = sha(path) if exists and path.is_file() else None
+    targets[name] = {'exists': exists, 'sha256': actual, 'expected_sha256': expected, 'matches': exists and actual == expected}
+for name, expected in p['existing'].items():
+    path = root / name
+    actual = sha(path) if path.is_file() else None
+    if actual != expected:
+        drift[name] = {'expected': expected, 'actual': actual}
+for name, expected in p['runtime_dependencies'].items():
+    actual = sha(root / 'build/bin' / name)
+    if actual != expected:
+        runtime[name] = {'expected': expected, 'actual': actual}
+conflicts = {name: row for name, row in targets.items() if row['exists'] and not row['matches']}
+passed = not drift and not runtime and not conflicts
+result = {'status': 'native_cuda_phase_preflight_passed' if passed else 'native_cuda_phase_preflight_failed',
+          'closed_parents': closed_parents, 'input_sha256': sha(input_path), 'targets': targets,
+          'existing_input_drift': drift, 'runtime_drift': runtime, 'conflicts': conflicts,
+          'free_study_disk_bytes': shutil.disk_usage(root).free,
+          'scope': 'Actual closed host/native archives/proofs, source/runtime and idle-process checks. Read-only except receipt; no model execution or source replacement.'}
+receipt.write_text(json.dumps(result, indent=2), encoding='utf8')
+print(json.dumps(result))
+raise SystemExit(0 if passed else 1)

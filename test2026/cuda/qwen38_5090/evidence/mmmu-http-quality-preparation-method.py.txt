@@ -1,0 +1,76 @@
+from pathlib import Path
+import ast,datetime,hashlib,json,os,re,sys,zipfile
+r=Path('D:/CantorAI/work/qwen38-5090');m=r/'test2026/cuda/qwen38_5090';e=m/'evidence';w=Path(__file__).resolve().parent;o=w.parent/'outputs';sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+sys.path.insert(0,str(m));from run_logged import run
+methods=[m/n for n in ('mmmu_http_quality.py','collect_mmmu_http_quality.py','verify_mmmu_http_quality.py','test_mmmu_http_quality.py','mmmu_quality_protocol.py','test_mmmu_quality_protocol.py')]
+for p in methods:ast.parse(p.read_bytes(),filename=str(p))
+os.chdir(r);ledger=e/'mmmu-http-quality-final-cpu-ledger'
+assert run([sys.executable,'-m','unittest','test2026.cuda.qwen38_5090.test_mmmu_http_quality','test2026.cuda.qwen38_5090.test_mmmu_quality_protocol'],ledger,'correctness','Synthetic CPU transport/parser/full805 replay/failure/tamper controls; no real HTTP/model requests',methods+[Path(__file__)])==0
+events=[json.loads(line) for line in (ledger/'commands.jsonl').read_text().splitlines()];last=events[-1];raw=(ledger/'commands.log').read_bytes()[last['raw_start_offset']:last['raw_end_offset']];assert int(re.search(rb'Ran (\d+) tests',raw)[1])==17 and b'\nOK' in raw
+before=(e/'mmmu-http-adapters-cpu-verified.json').read_bytes();adapter=w/'verify-mmmu-http-adapters-cpu.py'
+assert run([sys.executable,str(adapter)],e/'mmmu-http-quality-adapter-cpu-ledger','correctness','Actual frozen805corpus file identity and7245engine/model wire adapters on CPU only',methods+[adapter,w/'mmmu/quality-corpus/manifest.json'])==0
+assert (e/'mmmu-http-adapters-cpu-verified.json').read_bytes()==before
+(e/'mmmu-http-adapters-cpu-method.py.txt').write_bytes(adapter.read_bytes())
+correction={'status':'synthetic_fixture_missing_manifest_corrected','observed_initial_failure':'Expected corpus-hash rejection was reached as FileNotFoundError because the synthetic fixture omitted manifest.json. Actual failing14test ledger and original test/client bytes retained.','correction':'Add an explicitly synthetic manifest so the real frozen-manifest hash guard rejects it with ValueError. No assertion, parser, corpus requirement or quality threshold was relaxed. Additional transport/replay controls and frozen protocol-source/UTC provenance checks were added separately.','actual_model_responses':0,'actual_http_requests':0}
+(e/'mmmu-http-quality-fixture-correction.json').write_text(json.dumps(correction,indent=2),encoding='utf8')
+summary={'status':'mmmu_http_quality_client_and_replay_prepared_actual_inference_unrun','recorded_utc':datetime.datetime.now(datetime.timezone.utc).isoformat(),'branch':'qwen38-5090','cpu_tests_passed':17,'actual_corpus_requests_checked':805,'actual_source_rows':900,'adapted_wire_variants_checked':7245,'engines':['native','vllm','sglang'],'declared_model_aliases':['qwen38-27b-nvfp4','qwen38-27b-int4','qwen35-4b-bf16'],'manifest_sha256':'108d017c7db5be56c58f490c2a985dfbcde2e6ded0860a97e797cfac9cea1589','method_sha256':{p.name:sha(p) for p in methods},'actual_http_requests_sent':0,'actual_model_responses':0,'gpu_used':False,'server_started':False,'runtime_prompt_ids_verified':False,'runtime_image_grid_verified':False,'runtime_image_preprocessing_verified':False,'quality_promotion_admitted':False,'performance_admitted':False,'two_times_target_met':False,
+ 'scope':'Prepared generic client and independent raw replay only. Sequential no-retry collection preserves canonical/adapted wire hashes+gzip bytes, raw HTTP/error bodies, actual prompt/completion IDs, usage/finish/parse failures and code hashes/UTC provenance in fixed caller-chosen attempt directory. Complete805cohort required for verified raw screening score; unparseable complete answers count incorrect, failures/incomplete cohorts get no admitted complete score. No tokenizer reconstruction or omitted failures. Server identity is declared and needs external launcher attestation; response64image-token equality does not prove image grid/pixels. Adapted single-image256px MC screening is not official900MMMU, broad/high-resolution quality promotion, actual4K or performance. Real execution awaits exclusively owned correctness-qualified servers; original model GPU job remains live.'}
+(e/'mmmu-http-quality-preparation.json').write_text(json.dumps(summary,indent=2),encoding='utf8');(e/'mmmu-http-quality-preparation-method.py.txt').write_bytes(Path(__file__).read_bytes())
+files=methods+[e/'mmmu-http-adapters-cpu-verified.json',e/'mmmu-http-adapters-cpu-method.py.txt',e/'mmmu-http-quality-fixture-correction.json',e/'mmmu-http-quality-preparation.json',e/'mmmu-http-quality-preparation-method.py.txt',e/'mmmu-http-quality-test-initial.py.txt',e/'mmmu-http-quality-client-initial.py.txt']
+for folder in ('mmmu-http-quality-initial-cpu-ledger','mmmu-http-quality-final-cpu-ledger','mmmu-http-quality-adapter-cpu-ledger'):files+=list((e/folder).glob('*'))
+payload={p.relative_to(r).as_posix():p.read_bytes() for p in files};manifest={'files':{n:hashlib.sha256(b).hexdigest() for n,b in payload.items()},'scope':summary['scope']};target=o/'Garnet-MMMU-HTTP-Quality-Preparation.zip'
+with zipfile.ZipFile(target,'w',zipfile.ZIP_DEFLATED) as z:
+ for n,b in payload.items():z.writestr(n,b)
+ z.writestr('evidence-manifest.json',json.dumps(manifest,indent=2))
+with zipfile.ZipFile(target) as z:
+ for n,h in manifest['files'].items():assert hashlib.sha256(z.read(n)).hexdigest()==h
+summary.update(archive_sha256=sha(target),archive_bytes=target.stat().st_size,files=len(payload));(o/'Garnet-MMMU-HTTP-Quality-Preparation.json').write_text(json.dumps(summary,indent=2),encoding='utf8')
+status=o/'Garnet-Parallel-Top1-Integration-Status.json';s=json.loads(status.read_bytes());s['mmmu_http_quality_preparation']=summary
+for v in s.values():
+ if isinstance(v,dict) and 'last_readonly_observed_case_records' in v:v['last_readonly_observed_case_records']={'disabled':14,'enabled':11};v['last_readonly_prefix_phase']='passed'
+status.write_text(json.dumps(s,indent=2),encoding='utf8')
+note='''
+
+2026-10-25: Adapted805MMMU HTTP quality collector/replayer prepared, real inference UNRUN.
+Added standalone stdlib client and independent raw-file replay for already-ready
+native/vLLM/SGLang servers, with no server launch or GPU work. Caller must first
+establish exclusive GPU ownership/native-model correctness and externally bind
+server/checkpoint/runtime identity. Native and SGLang choice-level actual IDs,
+vLLM root prompt/choice output IDs follow installed-study reference adapters.
+Only ID-return flags and declared NVFP4/INT4/4B alias may change canonical wire.
+
+Every frozen805request/prompt/JPEG/gold hash and protocol-source hash is checked.
+Actual CPU replay checks7245wire adaptations (3engines x3aliases x805requests),
+semantic payload unchanged; alternate-model tokenizer compatibility is unproven.
+Sequential no-retry HTTP collection preserves gzipped exact wire, raw success/
+error reply, IDs/usage/finish metadata, errors, source-before/after hashes, UTC
+and file manifests in one explicit attempt directory; existing attempts cannot
+be overwritten. No latency/tok/s numbers are collected by this quality client.
+
+Independent replay recomputes all raw parsing, frozen prompt IDs/64image tokens,
+context/output/usage counts, wire adaptation, strict letter scoring and complete
+805cohort. Completed non-letter answers remain incorrect. Failed/interrupted
+cohorts retain raw prefix/failure and any unadmitted score artifact, no verified
+complete accuracy. No token inference from text or hidden retry/drop selection.
+Provided server identity is explicitly not attested by client. Actual pixel/grid
+preprocessing remains unverified even when image-token count agrees; external
+runtime pixel/grid evidence is still required. This adapted single-image256px
+MC screen is not full900MMMU, broad/high-resolution quality or speed promotion.
+
+Actual17CPU tests pass, including synthetic complete805 raw replay, failure
+prefix/no-retry/timeout/unsupported schema and prompt mutation despite refreshed
+file hashes. All transport responses are synthetic temporary CPU fixtures;
+actualHTTP requests/model responses/GPU executions remain0. Initial14test run
+failed because the synthetic fixture omitted its manifest; original raw failure
+and bytes kept. Added explicit synthetic manifest to reach unchanged frozen
+hash rejection, no assertion/protocol/threshold relaxation. Methods/logs/pins and
+preparation ZIP/JSON preserved. No actual quality score is claimed or published.
+
+Original integrated full-model handle remains LIVE: disabled14/102closed and
+locally observed; enabled11partial records, prefix checks report passed, no
+recorded error. Remote sources/DLL/SDK unchanged. B1 component/run/native/model
+gates, quality/preprocessing, actual4K, tuned/INT4/4B/repetitions and2x remain open.
+'''
+for name in ['docs/research/qwen38-5090-development-log.md','docs/research/qwen38-5090-implementation-task.md']:
+ path=r/name;data=path.read_bytes();assert b'2026-10-25: Adapted805MMMU HTTP quality collector/replayer prepared' not in data;path.write_bytes(data+note.replace('\n','\r\n').encode())
+print(json.dumps({k:v for k,v in summary.items() if k!='method_sha256'},indent=2))

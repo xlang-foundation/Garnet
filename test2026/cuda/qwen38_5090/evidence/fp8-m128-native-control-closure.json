@@ -1,0 +1,106 @@
+{
+  "status": "actual_fp8_m128_native_helper_and_plugin_cpu_wire_replayed_on_both_machines",
+  "archive_sha256": "eb942175496d7c6a7163ba0bfbadb224587f9b02c3b95849c91bdaca530b76d1",
+  "archive_bytes": 13410018,
+  "archive_members": 75,
+  "proof_pair_sha256": "1daf2b05a784031d4b88b859d321af14ec9159a9f2ec645136fa47f528dc44b2",
+  "source_pins": 787,
+  "runtime_pins": 6,
+  "selected_sdk_environment_pins": 20,
+  "local_cpu_tests": 28,
+  "local_private_cpp_objects": 9,
+  "remote_cpu_tests": 8,
+  "remote_actual_plugin_wire": {
+    "status": "fp8_m128_plugin_cpu_contract_passed",
+    "wire_bytes": 20,
+    "wire_policy": 128,
+    "roundtrips": 1,
+    "clones": 1,
+    "bad_wires": 33,
+    "bad_constructors": 18,
+    "bad_descriptors": 23,
+    "bad_formats": 11,
+    "policy_rejections": 8,
+    "cross_wire_rejections": 3,
+    "workspace_bytes": 9175040,
+    "unexpected_gpu_calls": 0,
+    "runtime_version": 101601,
+    "header_version": 101601,
+    "loaded_tensorrt_dll": "D:/CantorAI/5090-study-20261023/tools/TensorRT/bin/nvinfer_10.dll",
+    "enqueue_tested": false,
+    "model_qualified": false,
+    "performance_admitted": false
+  },
+  "algorithm_observations": {
+    "control": {
+      "algorithms": [
+        {
+          "m": 16,
+          "id": 35,
+          "opaque": "230000000d0000001100000003000000020000000000000001000000000000000100000060fd01001c0000001c0000000e000e00440000000000000000000000"
+        },
+        {
+          "m": 32,
+          "id": 67,
+          "opaque": "430000000d0000001100000001000000000000000100000012000000000000000100000060fd01001c0000001c0000000e000e00440000000000000000000000"
+        },
+        {
+          "m": 128,
+          "id": 67,
+          "opaque": "430000000f0000001200000001000000000000000100000012000000000000000100000060fd01001c0000001c0000000e000e00440000000000000000000000"
+        }
+      ],
+      "typed_context_required_workspace_bytes": null
+    },
+    "native": {
+      "algorithms": [
+        {
+          "m": 16,
+          "id": 35,
+          "opaque": "230000000d0000001100000003000000020000000000000001000000000000000100000060fd01001c0000001c0000000e000e00440000000000000000000000"
+        },
+        {
+          "m": 32,
+          "id": 35,
+          "opaque": "230000000d0000001100000003000000020000000000000001000000000000000100000060fd01001c0000001c0000000e000e00440000000000000000000000"
+        },
+        {
+          "m": 128,
+          "id": 35,
+          "opaque": "230000000d0000001100000003000000020000000000000001000000000000000100000060fd01001c0000001c0000000e000e00440000000000000000000000"
+        }
+      ],
+      "typed_context_required_workspace_bytes": 5246879
+    }
+  },
+  "total_output_words_independently_replayed": 3604480,
+  "real_fixture_scope": "Actual retained layer0 GDN output matrix and16real input rows repeated identically at32/128, two repeats; not full3968prompt activation sequence",
+  "native_source_modified": true,
+  "default_enabled": false,
+  "legacy_plugin_and_helper_sources_unchanged": {
+    "src/backends/tensorrt/modelopt_fp8_plugin.h": "1e8e5bb0bf18302593adacec25b503d82575b27d530f7dedb79b2bc42b8e78b0",
+    "src/backends/tensorrt/modelopt_fp8_plugin.cpp": "ec338161b9fba92373f163d229393d6fdf1afa13cf5446619e0cde2af1188776",
+    "src/backends/tensorrt/modelopt_cublaslt.h": "67c4850bb4e1e6d025fd2d1514447e82f7c36f04e9c3db3fd61e0e347027641a",
+    "src/backends/tensorrt/modelopt_cublaslt.cpp": "f1283406460ecf8d0b633ff49959709d86941009a73cd3bd596d86a2e4792f35"
+  },
+  "application_source_runtime_sdk_fixture_unchanged_remotely": true,
+  "complete_garnet_native_build_qualified": false,
+  "full_model_mismatch_cause_established": false,
+  "model_or_quality_or_performance_qualified": false,
+  "two_times_target_achieved": false,
+  "next_plan": {
+    "status": "actual_fp8_m128_helper_and_plugin_wire_verified_complete_native_model_gate_pending",
+    "goal_unchanged": "Original>=2x faster-reference matched decode AND concurrency throughput; halfTTFT additional; INT4/4B/strongest feasible references and complete quality/performance remain required",
+    "next_steps": [
+      "Create combined22native-file candidate:13qualifiedT128 native files plus10M128 native files, trt_builder.cpp overlap counted once. Fresh remote source/cache/34CUDA-object snapshot, exact8existing-target bytes and14absent targets expected; refuse unknown outside edits. Use same study build tree and restore baseline1a1d DLL/source in finally.",
+      "Reconfigure real Release/MT/sm120 build for two newCPP translation units. Retain all CPU object provenance; require no new/unrelatedCUDA objects beyond existing34 and allow changedCUDA bytes only for recompiled T128attention/commit and inherited coupled tiled overlay. Actual full native CPU wire/selector/955tokenizer checks before model; save candidate separately.",
+      "Retry original strict six3968+128 ordinary/MTP text/image/reset-repeat cases with paired29native/Python source files. Enable only GARNET_FP8_GDN_M128_CANONICAL=1 on candidate, assert graph counter48atB1T128 and0atT4decode/T16draft. Default/off companion counter0; retain all old M32 controls and baseline1a1d T32 oracle unchanged.",
+      "Require complete states/raw vectors/IDs under unchanged strict oracle. Save first observed failure before assertion. Do not waive output/state differences or extend untested projection geometry; isolate the next real operator if a mismatch remains.",
+      "Only after model correctness and805quality gates, measure actual fixed4K HTTP text/image TTFT, decode/concurrency throughput and sampledVRAM, then update all charts from verified results. Preserve B8 failure diagnosis, tuned/MTP/repeated references and matched INT4/4B scope."
+    ],
+    "complete_native_build_qualified": false,
+    "full_model_mismatch_cause_established": false,
+    "performance_admitted": false,
+    "two_times_target_achieved": false
+  }
+}

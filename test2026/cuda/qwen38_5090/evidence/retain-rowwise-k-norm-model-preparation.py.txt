@@ -1,0 +1,35 @@
+from pathlib import Path
+import hashlib,json
+W=Path(__file__).resolve().parent;R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';E=M/'evidence';sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest();names=json.loads((W/'rowwise-k-norm-model-owned-names.json').read_bytes());owned=[M/n for n in names]+[E/'rowwise-k-norm-model-preparation.json'];saved={}
+def keep(n,raw):
+    p=E/n;assert not p.exists();p.write_bytes(raw);owned.append(p);saved[n]=sha(p)
+for n in ('prepare-rowwise-k-norm-model-tools.py','install-rowwise-k-norm-model.py','postprocess-rowwise-k-norm-model.py','replay-rowwise-k-norm-model.py',Path(__file__).name):keep(n+'.txt',(W/n).read_bytes())
+for n in ('rowwise-k-norm-model-package.json','rowwise-k-norm-model-installer-derivation.json','prepare-rowwise-k-norm-model-attempt1.log','prepare-rowwise-k-norm-model-tools.log'):keep(n,(W/n).read_bytes())
+package=json.loads((W/'rowwise-k-norm-model-package.json').read_bytes());assert sha(W/'rowwise-k-norm-model-deployment.zip')==package['deployment_sha256']
+keep('rowwise-k-norm-model-preparation-retention.json',json.dumps(dict(status='ordinary_source87_ablation_prepared_GPU_unrun',package=package,retained_sha256=saved,local_derivation_assertion_failures_preserved=True,full4K_or_MTP_or_quality_or_performance_qualified=False),indent=2).encode())
+entry=('\n\n2026-10-27: Prepared the source87 ordinary-output rowwise K-normalization GPU ablation after paired native build proof2398a5d2f44ae4a9f6cf1b81cc09100dcdf893edef9d2efba8a62c6eef96c4a7. '
+       '115 CPU controls passed: original97 unchanged plus5 source,6 DSL and7 new '
+       'analysis/trace/all-row/consumed-trajectory guards. Three fresh same-DLL '
+       'processes: off B1 selected row,off B4 mixed four rows,then on B4. Both off '
+       'controls must reproduce immutable ordinary source60/85 all53IDs, five '
+       'complete128-component state and finite-vector captures, selected8MiB '
+       'twice-read cache and53 coordinate points before enabling on. On changes '
+       'only K RMS graph shape into four B1-shaped row subgraphs at16 FA layers; '
+       'trace counts subgraphs, not executed kernels. No added graph observation '
+       'outputs; six/seven endpoint observer failures remain failed. Earlier '
+       'consumed-token divergence blocks same-input cache interpretation. Only '
+       'selected step52 has an independent complete-state/cache oracle; a pass '
+       'cannot qualify full4K128/MTP/805/HTTP or performance. Pin1984currentfiles, '
+       '52closedparents, exact post-source87-build34objects/runtime/SDK/config-index/'
+       'CMake; snapshot87 targets and baseline DLL; fixed Ccache96GiB admission and '
+       'owned nonce retirement. Deployment '+package['deployment_sha256']+' ('
+       +str(package['bytes'])+'B). DLL '+package['library_sha256']+'. Local probe '
+       'derivation assertion failures occurred before remote deployment because '
+       'the original argument line lacked a trailing semicolon; corrected exact '
+       'match and retained all three logs. GPU experiments unrun at this entry. '
+       'Throughput29.9110 imageC8 remains unchanged and overall2x is unmet.\n').encode()
+for n in ('docs/research/qwen38-5090-development-log.md','docs/research/qwen38-5090-implementation-task.md'):
+    p=R/n;before=p.read_bytes();assert b'Prepared the source87 ordinary-output rowwise K-normalization GPU ablation' not in before
+    with p.open('ab') as f:f.write(entry)
+    assert p.read_bytes()==before+entry;owned.append(p)
+(W/'rowwise-k-norm-model-preparation-stage-paths.bin').write_bytes(b''.join(p.relative_to(R).as_posix().encode()+b'\0' for p in dict.fromkeys(owned)));print(json.dumps({'stage_paths':len(set(owned)),'GPU_processes_unrun':3}))

@@ -1,0 +1,152 @@
+{
+  "status": "b1_python_source_wired_locally_tests_runtime_gpu_unqualified",
+  "files": {
+    "xModel/qwen35/vl_0_8b/bf16_low_batch_kv_profile.py": {
+      "source": "test2026/cuda/qwen38_5090/bf16_low_batch_profile.py",
+      "source_sha256": "dcb08772319b1149bf0b7485c0a1f5606ed646ece0723f155c009854ffdda799",
+      "result_sha256": "dcb08772319b1149bf0b7485c0a1f5606ed646ece0723f155c009854ffdda799",
+      "changes": []
+    },
+    "xModel/qwen35/vl_0_8b/kv_bf16_low_batch_study_layout.py": {
+      "source": "test2026/cuda/qwen38_5090/bf16_low_batch_layout.py",
+      "source_sha256": "c6112a69b09bb2cd9d8aa4dfe5835681f6bce2e308561c33032f17b7b7c0e052",
+      "result_sha256": "c6112a69b09bb2cd9d8aa4dfe5835681f6bce2e308561c33032f17b7b7c0e052",
+      "changes": []
+    },
+    "xModel/qwen35/vl_0_8b/joined_mlp_profile.py": {
+      "base_sha256": "a1a5266b72b47ee14387d669434c96f877ba89de89af245df4241b53b49fcaa1",
+      "changes": [
+        [
+          "bf16_cache_profile=False,bf16_float_reference=False):",
+          "bf16_cache_profile=False,bf16_float_reference=False,bf16_low_batch_cache_profile=False):",
+          1
+        ],
+        [
+          "    if type(bf16_float_reference) is not bool",
+          "    if type(bf16_low_batch_cache_profile) is not bool or (bf16_low_batch_cache_profile and (bf16_cache_profile or bf16_float_reference)):\n        raise ValueError(\"B1 BF16 joined profile requires its own exclusive boolean cache type\")\n    if type(bf16_float_reference) is not bool",
+          1
+        ],
+        [
+          "if bf16_cache_profile or bf16_float_reference:",
+          "if bf16_cache_profile or bf16_float_reference or bf16_low_batch_cache_profile:",
+          1
+        ],
+        [
+          "    if not (original or batch4_study or bf16_study or float_reference):",
+          "    low_batch_study=bf16_low_batch_cache_profile and typed and batch==1 and capacity==4096 and chunk_size in (4,32)\n    if bf16_low_batch_cache_profile and not low_batch_study:raise ValueError(\"B1 BF16 joined projections require B1/cap4096/T4-or-T32\")\n    if not (original or batch4_study or bf16_study or float_reference or low_batch_study):",
+          1
+        ]
+      ],
+      "result_sha256": "bdc19d5505f0eaa55d400629f278a54b112b6ec4d7310d675dfe6fe440c77b3b"
+    },
+    "xModel/qwen35/vl_0_8b/cuda_chunk.py": {
+      "base_sha256": "95f95d9b878005ea22edd0d63f8c2305838c3db3e6144062078173ffc5a8838d",
+      "changes": [
+        [
+          "bf16_canonical_kv=False,bf16_kv_float_reference=False):",
+          "bf16_canonical_kv=False,bf16_kv_float_reference=False,bf16_low_batch_canonical_kv=False):",
+          1
+        ],
+        [
+          "    if type(bf16_kv_float_reference) is not bool",
+          "    if type(bf16_low_batch_canonical_kv) is not bool or (bf16_low_batch_canonical_kv and (bf16_canonical_kv or bf16_kv_float_reference or canonical_kv_state is None)):\n        raise ValueError(\"B1 BF16 canonical KV requires its own exclusive explicit binding\")\n    if type(bf16_kv_float_reference) is not bool",
+          1
+        ],
+        [
+          "('canonical_bf16_kv_overlay' if bf16_canonical_kv else 'canonical_kv_overlay')",
+          "('canonical_bf16_low_batch_kv_overlay' if bf16_low_batch_canonical_kv else ('canonical_bf16_kv_overlay' if bf16_canonical_kv else 'canonical_kv_overlay'))",
+          1
+        ]
+      ],
+      "result_sha256": "e5c7d4a42e0407363fca82867d9c3b1fa86bc1d16d8dc4e86bbc85b0822d4008"
+    },
+    "xModel/qwen35/vl_0_8b/cuda_packed_program.py": {
+      "base_sha256": "a375fc82317c535c630aea208afed5420c2f3bde100f9477e5b21d69999510c1",
+      "changes": [
+        [
+          "from .bf16_kv_profile import validate_bf16_kv_program",
+          "from .bf16_kv_profile import validate_bf16_kv_program\nfrom .bf16_low_batch_kv_profile import validate_bf16_low_batch_kv_program\nfrom .kv_bf16_low_batch_study_layout import build_bf16_low_batch_layout",
+          1
+        ],
+        [
+          "bf16_kv_state=False,bf16_kv_float_reference=False):",
+          "bf16_kv_state=False,bf16_kv_float_reference=False,bf16_kv_low_batch_state=False):",
+          1
+        ],
+        [
+          "        if projection_workspace_bytes not in (0,16384):raise ValueError('Invalid projection workspace')",
+          "        if projection_workspace_bytes not in (0,16384):raise ValueError('Invalid projection workspace')\n        if type(bf16_kv_low_batch_state) is not bool:raise ValueError('B1 BF16 KV opt-in must be boolean')\n        if bf16_kv_low_batch_state:\n            validate_bf16_low_batch_kv_program(True,batch,capacity,chunk_size,retain_linear_inputs,config,\n                external_compressed_weights=external_compressed_weights,joined_mlp_projections=joined_mlp_projections,\n                embedded_projection_weights=embedded_projection_weights,join_input_projections=join_input_projections,\n                kv_delta_state=kv_delta_state,kv_overlay_strategy=kv_overlay_strategy,legacy_bf16_kv_state=bf16_kv_state,bf16_kv_float_reference=bf16_kv_float_reference)\n",
+          1
+        ],
+        [
+          "        else:validate_joined_mlp_profile(joined_mlp_projections,batch,capacity,chunk_size,external_compressed_weights,embedded_projection_weights,join_input_projections,bf16_float_reference=bf16_kv_float_reference)",
+          "        elif bf16_kv_low_batch_state:validate_joined_mlp_profile(joined_mlp_projections,batch,capacity,chunk_size,external_compressed_weights,embedded_projection_weights,join_input_projections,bf16_low_batch_cache_profile=True)\n        else:validate_joined_mlp_profile(joined_mlp_projections,batch,capacity,chunk_size,external_compressed_weights,embedded_projection_weights,join_input_projections,bf16_float_reference=bf16_kv_float_reference)",
+          1
+        ],
+        [
+          "        self.bf16_kv_state=bf16_kv_state",
+          "        self.bf16_kv_state=bf16_kv_state or bf16_kv_low_batch_state;self.bf16_kv_low_batch_state=bf16_kv_low_batch_state",
+          1
+        ],
+        [
+          "        if bf16_kv_state:\n            self.delta_layout=build_bf16_kv_study_layout(batch,capacity,chunk_size,retain_linear_inputs=retain_linear_inputs)",
+          "        if bf16_kv_state or bf16_kv_low_batch_state:\n            builder=build_bf16_low_batch_layout if bf16_kv_low_batch_state else build_bf16_kv_study_layout\n            self.delta_layout=builder(batch,capacity,chunk_size,retain_linear_inputs=retain_linear_inputs)",
+          1
+        ],
+        [
+          "bf16_canonical_kv=bool(canonical is not None and getattr(self,'bf16_kv_state',False)),",
+          "bf16_canonical_kv=bool(canonical is not None and getattr(self,'bf16_kv_state',False) and not getattr(self,'bf16_kv_low_batch_state',False)),\n                    bf16_low_batch_canonical_kv=bool(canonical is not None and getattr(self,'bf16_kv_low_batch_state',False)),",
+          1
+        ]
+      ],
+      "result_sha256": "fc85e0bf8a2e7cd86bed416ceb192ca373ba82dbd0b275cac94ae0d7fab4d8f3"
+    },
+    "xModel/qwen35/vl_0_8b/cuda_packed_decoder.py": {
+      "base_sha256": "b6331cc2c1c03940c59403d70f50056c5a40dc048c12950aca304c889e92ce21",
+      "changes": [
+        [
+          "from .bf16_kv_profile import validate_bf16_kv_decoder",
+          "from .bf16_kv_profile import validate_bf16_kv_decoder\nfrom .bf16_low_batch_kv_profile import validate_bf16_low_batch_kv_decoder",
+          1
+        ],
+        [
+          "bf16_kv_state=False,bf16_kv_float_reference=False):",
+          "bf16_kv_state=False,bf16_kv_float_reference=False,bf16_kv_low_batch_state=False):",
+          1
+        ],
+        [
+          "        validate_bf16_float_reference_decoder(bf16_kv_float_reference,batch,capacity,prefill_chunk,decode_chunk,config,",
+          "        if type(bf16_kv_low_batch_state) is not bool:raise ValueError('B1 BF16 KV opt-in must be boolean')\n        low_batch_helper_factory=None\n        if bf16_kv_low_batch_state:\n            validate_bf16_low_batch_kv_decoder(True,batch,capacity,prefill_chunk,decode_chunk,config,\n                retain_linear_inputs=retain_linear_inputs,deferred_state_commit=deferred_state_commit,shared_output_storage=shared_output_storage,\n                host_embedding_lookup=host_embedding_lookup,external_compressed_weights=external_compressed_weights,joined_mlp_projections=joined_mlp_projections,\n                embedded_projection_weights=embedded_projection_weights,join_input_projections=join_decode_input_projections,kv_delta_state=kv_delta_state,\n                legacy_bf16_kv_state=bf16_kv_state,bf16_kv_float_reference=bf16_kv_float_reference)\n            try:low_batch_helper_factory=garnet.cuda_bf16_low_batch_kv_delta_commit\n            except AttributeError as error:raise ValueError('B1 BF16 requires the matching experimental native build') from error\n        validate_bf16_float_reference_decoder(bf16_kv_float_reference,batch,capacity,prefill_chunk,decode_chunk,config,",
+          1
+        ],
+        [
+          "        self.bf16_kv_state=bf16_kv_state;self.bf16_prefill_commit=None",
+          "        self.bf16_kv_state=bf16_kv_state or bf16_kv_low_batch_state;self.bf16_kv_low_batch_state=bf16_kv_low_batch_state;self.bf16_prefill_commit=None",
+          1
+        ],
+        [
+          "            else:validate_joined_mlp_profile(joined_mlp_projections,batch,capacity,size,external_compressed_weights,embedded_projection_weights,join_decode_input_projections,bf16_float_reference=bf16_kv_float_reference)",
+          "            elif bf16_kv_low_batch_state:validate_joined_mlp_profile(joined_mlp_projections,batch,capacity,size,external_compressed_weights,embedded_projection_weights,join_decode_input_projections,bf16_low_batch_cache_profile=True)\n            else:validate_joined_mlp_profile(joined_mlp_projections,batch,capacity,size,external_compressed_weights,embedded_projection_weights,join_decode_input_projections,bf16_float_reference=bf16_kv_float_reference)",
+          1
+        ],
+        [
+          "options={'bf16_kv_state':True} if bf16_kv_state else ({'bf16_kv_float_reference':True} if bf16_kv_float_reference else {})",
+          "options={'bf16_kv_low_batch_state':True} if bf16_kv_low_batch_state else ({'bf16_kv_state':True} if bf16_kv_state else ({'bf16_kv_float_reference':True} if bf16_kv_float_reference else {}))",
+          1
+        ],
+        [
+          "            elif bf16_kv_state:\n                self.delta_commit=garnet.cuda_bf16_kv_delta_commit();self.delta_commit.build(json.dumps(self.programs[decode_chunk].delta_layout))\n                self.bf16_prefill_commit=garnet.cuda_bf16_kv_delta_commit();self.bf16_prefill_commit.build(json.dumps(self.programs[prefill_chunk].delta_layout))",
+          "            elif bf16_kv_state or bf16_kv_low_batch_state:\n                helper_factory=low_batch_helper_factory if bf16_kv_low_batch_state else garnet.cuda_bf16_kv_delta_commit\n                self.delta_commit=helper_factory();self.delta_commit.build(json.dumps(self.programs[decode_chunk].delta_layout))\n                self.bf16_prefill_commit=helper_factory();self.bf16_prefill_commit.build(json.dumps(self.programs[prefill_chunk].delta_layout))",
+          1
+        ],
+        [
+          "        return result\n\n    def close(self):",
+          "        if getattr(self,'bf16_kv_low_batch_state',False):result['packed_profiles']['bf16_kv_low_batch_state']=True\n        return result\n\n    def close(self):",
+          1
+        ]
+      ],
+      "result_sha256": "ba48f7c6ce28931894c30335b33f2c8c38add197fd25f8f12f74799cc3fc974c"
+    }
+  },
+  "scope": "Default-off bf16_kv_low_batch_state keyword with strict B1/4096/T4,T32 mixed joined/deferred/shared/host checks, distinct low-batch native helper and lowering marker. Internal packed-state transactions reuse existing BF16 path. Existing default/B4/B8/reference branches retained. Missing native helper fails before tensor I/O allocation. Local source only; no deployment/runtime/GPU/model/quality/performance admission."
+}

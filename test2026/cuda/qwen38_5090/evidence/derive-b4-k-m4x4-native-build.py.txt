@@ -1,0 +1,45 @@
+"""Extend the retained source79 build owner/reader without dropping old gates."""
+from pathlib import Path
+import ast,hashlib,json
+R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';sha=lambda b:hashlib.sha256(b).hexdigest();rows=[]
+def derive(source,target,changes):
+    raw=(M/source).read_bytes();s=raw.decode()
+    record=[]
+    for old,new,count in changes:
+        actual=s.count(old);assert actual==count,(old,actual,count)
+        s=s.replace(old,new);record.append({'old':old,'new':new,'count':count})
+    ast.parse(s);p=M/target;assert not p.exists();p.write_bytes(s.encode());rows.append({'source':source,'source_sha256':sha(raw),'target':target,'target_sha256':sha(p.read_bytes()),'changes':record})
+shared=[('b4-qk-m16-build-attempt1','b4-k-m4x4-build-attempt1',1),('b4-qk-m16-build-preparation.json','b4-k-m4x4-build-preparation.json',1)]
+oldchain="original73,expected,_=qk_sources();assert original73==v73 and len(expected)==79 and expected==candidate"
+newchain="original73,qk79,_=qk_sources();assert original73==v73 and len(qk79)==79\n        from test2026.cuda.qwen38_5090.b4_k_m4x4_source import sources as k_sources\n        original79,expected,_=k_sources();assert original79==qk79 and len(expected)==85 and expected==candidate"
+derive('run_b4_qk_m16_native_build.py','run_b4_k_m4x4_native_build.py',shared+[
+ ("p['status']=='b4_qk_m16_build_prepared_unrun'","p['status']=='b4_k_m4x4_build_prepared_unrun'",1),
+ ('b4-qk-m16-build-inputs.json','b4-k-m4x4-build-inputs.json',2),
+ ('garnet-native-b4-qk-m16-attempt1.dll','garnet-native-b4-k-m4x4-attempt1.dll',1),
+ ('b4-qk-m16-build-input-inventory/','b4-k-m4x4-build-input-inventory-v2/',1),
+ ('inspect-b4-qk-m16-build-inputs.py','inspect-b4-k-m4x4-build-inputs-v2.py',1),
+ ('run-b4-qk-m16-build-inventory.py','run-b4-k-m4x4-build-inventory-v2.py',1),
+ (oldchain,newchain,1),
+ ('from test2026.cuda.qwen38_5090.b4_qk_m16_source import sources\n        _,expected,_=sources();assert candidate==expected','from test2026.cuda.qwen38_5090.b4_k_m4x4_source import sources\n        _,expected,_=sources();assert candidate==expected',1),
+ ('83current controls plus86historical assertions','88current controls plus86historical assertions',1),
+ ('new79source plus preserved73/67 composition','new85source plus preserved79/73/67 composition',1),
+ ('paired1248QKprofile/406factory/QK-V-GDN-genericcrosswire CPU proof required','paired1209Kprofile/232four-M4factory/plugin CPU proof plus original1248QK/406 and all legacy proofs required',1),
+ ('Release/MT/sm120 defaultoff physicalB4T4/M16 Q/K canonical SDK context/plugin/profile over exact73; all old plugin bodies/wires/quantizers/CUDA bytes unchanged. FaithfulVcomponent correction passed, originalfullmodel stillFAILED; actualpergeometryliveM4Q/K query informs candidate, notmathproof.1248profile/406factory/QK-V-GDN-genericcrosswire CPU parent required. Original three-object whitelist retained, all34hashes recorded; new factory/wholemodel/quality/performance still unqualified',
+  'Release/MT/sm120 source85 defaultoff K-only physicalB4T4 intervention: four actual M4 matmuls with pinned live SDK selection, seven attrs and two M4 checks. Original QK-M16/V/GDN/NVFP4 and every CUDA kernel/wire preserved. Paired1209selector/232factory-pointer/plugin CPU required alongside all original native gates. All34 CUDA hashes and original three-object whitelist retained. Originalfull4K FAILED; no live SDK math/model/quality/HTTP/performance admission from build.',1),
+ ('b4_qk_m16_native_built_CPU_qualified_model_unqualified','b4_k_m4x4_native_built_CPU_qualified_model_unqualified',1),
+ ])
+derive('verify_b4_qk_m16_native_build.py','verify_b4_k_m4x4_native_build.py',shared+[
+ ('len(p[\'candidate_files\'])==79','len(p[\'candidate_files\'])==85',1),
+ ('b4-qk-m16-native-build-derivation.json','b4-k-m4x4-native-build-derivation.json',1),
+ ('==79 and {n:sha(source.read(n))','==85 and {n:sha(source.read(n))',1),
+ ("assert sha(z.read('results/b4-qk-m16-build-inputs.json'))==p['input_inventory_sha256']", "assert sha(z.read('results/b4-k-m4x4-build-inputs.json'))==p['input_inventory_sha256']\n        kcp=doc('results/b4-k-m4x4-cpu-attempt2-verified.json');assert kcp['exit_code']==0 and kcp['status']=='B4T4_K_M4X4_actual_CPU_contracts_replayed' and kcp['factory_fault_cases']==232 and kcp['profile']['cases']==1209 and kcp['plugin']['GPU_operator_calls']==0",1),
+ ('b4_qk_m16_native_built_CPU_qualified_model_unqualified','b4_k_m4x4_native_built_CPU_qualified_model_unqualified',1),
+ ("b'Ran 83 tests'","b'Ran 88 tests'",1),
+ ('b4_qk_m16_native_CPU_build_replayed','b4_k_m4x4_native_CPU_build_replayed',1),
+ ('b4_qk_m16_native_build_failure_replayed','b4_k_m4x4_native_build_failure_replayed',1),
+ ('candidate_files=79','candidate_files=85',1),
+ ('current_CPU_controls=83','current_CPU_controls=88',1),
+ ('new_QK_M16_CPU_contracts_parent_checked=True','new_QK_M16_CPU_contracts_parent_checked=True,new_K_fourM4_CPU_contracts_parent_checked=True',1),
+ ])
+p=M/'evidence/b4-k-m4x4-native-build-derivation.json';assert not p.exists();p.write_bytes(json.dumps({'status':'source85_native_build_owner_reader_prepared_unrun','derivations':rows,'original_native_gates_preserved':True,'original_three_object_whitelist_preserved':True,'new_GPU_or_model_admission':False},indent=2).encode())
+print(json.dumps({'derived_files':[r['target'] for r in rows],'original_current_CPU_controls':83,'extended_current_CPU_controls':88,'historical_controls':86,'native_compile_unrun':True}))

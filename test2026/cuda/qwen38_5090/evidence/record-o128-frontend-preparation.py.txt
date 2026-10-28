@@ -1,0 +1,24 @@
+from pathlib import Path
+import json,subprocess
+W=Path(__file__).resolve().parent;R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';E=M/'evidence';owned=[]
+for n in ('o128_frontend_contract.py','probe_o128_frontend.py','launch_o128_frontend_case.py','run_o128_frontend_cases.py','test_o128_frontend_contract.py','run_o128_frontend.py','verify_o128_frontend.py','evidence/o128-frontend-owner-derivation.json','evidence/o128-frontend-contract-initial-syntax-error.py.txt','evidence/o128-frontend-contract-syntax-repair.json','evidence/o128-frontend-cache-source-audit.json','evidence/o128-frontend-preparation.json'):owned.append((M/n).relative_to(R).as_posix())
+def put(n,b):
+    t=E/n;assert not t.exists() or t.read_bytes()==b,n;t.write_bytes(b);owned.append(t.relative_to(R).as_posix())
+for n in ('derive-o128-frontend-owner.py','run-o128-frontend-local-cpu.py','repair-o128-frontend-syntax.py','prepare-o128-frontend.py','make-o128-frontend-installer.py','install-o128-frontend.py','record-o128-frontend-preparation.py'):put(n+'.txt',(W/n).read_bytes())
+for n in ('o128-frontend-package.json','o128-frontend-installer-derivation.json'):put(n,(W/n).read_bytes())
+for n in ('commands.log','commands.jsonl'):put('o128-frontend-local-cpu-'+n,(W/'o128-frontend-local-cpu-ledger'/n).read_bytes())
+p=json.loads((W/'o128-frontend-package.json').read_bytes())
+text='''
+
+### Actual O128 Garnet frontend contracts prepared after full-six correctness
+
+2026-10-27: Prepare17actual frontend cases on same60source c44138f5/DLL8414795d, requiring paired full-six original4096ordinary/MTP proof4058a4f1c4b542883b97c9dc046bebae440e96fb415e95f5952895ef2a9ac9d1 beforeGPU. Use real Qwen35CUDAChunk capture/native lowering with pinned mixed checkpoint, not INT4-only generic projection operation. Six positive fused full decoder-layer engine builds: enabledB1T128 layer3/layer7 Q1/O1/KV2, policyoff, T32/T4 and nonmatchingB2T128 with zero new routes where required. Eleven actual native errors: malformed Q/O/KV/M/Z/reconstruct policy, reconstruction without explicit canonicalZ, T129 and missing full-attention weight. Strict exact case identity, observed flags, error substring, source/DLL and typed physical counters are independently replayed. Every case uses a fresh embedded process so Windows native environment tables are initialized from declared flags; one graph/process at a time. No model decode or numerical/performance admission by these graph tests.
+
+Local77current+86historical CPU controls pass. First CPU import caught one missing generator parenthesis; failed raw source, original command/output, exact one-parenthesis repair and corrected passing CPU run are retained. No native run occurred for that failure and no predicate was waived. Deployment PACKAGE_SHA (PACKAGE_BYTESB/PACKAGE_FILESfiles), preparation PREP_SHA. Installer preserves existing files and defers exact60source/DLL installation to audited exclusive owner, which retains original source/runtime/SDK/checkpoint/privatecache restoration. Actual native outcome is pending at preparation.
+
+Source audit records compiled_model_runtime.cpp MakeGraphFingerprint omits study FP8 policy material, while candidate CUDACompiledGraph uses unique temporary nonce paths. This is source evidence, not an executed production cache-collision test. Production policy fingerprint fix/cache test remains required. Following actual frontend contracts: broader805adapted quality and variable/short/tail/image correctness, research HTTP serving with exact candidate source/flags/identity, matched repeated C1/2/4/8 measurements and trueconcurrency optimization, strongest feasible tuned/MTP references, INT4W4A16/Qwen3.5-4B. No benchmark chart or overall2x decode AND throughput/halfTTFT claim changes; full goal active.
+'''.replace('PACKAGE_SHA',p['deployment_sha256']).replace('PACKAGE_BYTES',str(p['bytes'])).replace('PACKAGE_FILES',str(p['files'])).replace('PREP_SHA',p['preparation_sha256'])
+for n in ('docs/research/qwen38-5090-development-log.md','docs/research/qwen38-5090-implementation-task.md'):
+    t=R/n;b=t.read_bytes();assert b'### Actual O128 Garnet frontend contracts prepared after full-six correctness' not in b;t.write_bytes(b+text.replace('\n','\r\n').encode());assert t.read_bytes()[:len(b)]==b;owned.append(n)
+owned=sorted(set(owned));assert not any('probe_native_external_prefix_batch.py' in n for n in owned);assert subprocess.check_output(['git','-C',str(R),'branch','--show-current'],text=True).strip()=='qwen38-5090'
+(W/'o128-frontend-preparation-retained-paths.json').write_bytes(json.dumps(owned,indent=2).encode());subprocess.run(['git','-C',str(R),'-c','core.autocrlf=false','add','--pathspec-from-file=-','--pathspec-file-nul'],input=('\0'.join(owned)+'\0').encode(),check=True);print(json.dumps(dict(owned_paths=len(owned),actual_frontend_cases=17,CPU_current=77,CPU_historical=86,native_outcome_pending=True)))

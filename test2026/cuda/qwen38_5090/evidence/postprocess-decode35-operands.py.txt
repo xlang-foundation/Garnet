@@ -1,0 +1,11 @@
+"""Terminal-only CPU replay; never run alongside the exclusive model owner."""
+from pathlib import Path
+import hashlib,json,os,sys
+ROOT=Path('D:/CantorAI/5090-study-20261023');M=ROOT/'Garnet/test2026/cuda/qwen38_5090';JOB='decode35-operands-attempt1';sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest();sys.path[:0]=[str(M),str(ROOT/'Garnet')]
+from run_bf16_low_batch_native_build import idle
+import run_logged as ledger
+idle();w=json.loads((ROOT/'results'/JOB/'workflow.json').read_bytes());assert w['cleanup_finished'] and type(w['exit_code']) is int and w['all_restored']
+names=['verify_decode35_operands.py','decode35_operand_analysis.py','decode35_operand_program.py','b4_k35_coordinate_trajectory.py','b4_k35_cache52.py','b4_full4k_selection52.py','b4_b1_exact_gate.py','decode_boundary_analysis.py','evidence/decode35-operands-preparation.json']
+ledger.source_identity=lambda:{'scope':'Explicit terminal-only same-DLL operand raw reader; no native/model execution or protected-body reads','owned_source_sha256':{n:sha(M/n) for n in names}}
+os.chdir(ROOT/'Garnet');code=ledger.run([sys.executable,str(M/'verify_decode35_operands.py'),'--proofs',str(ROOT/'results')],ROOT/'results/decode35-operands-postprocess-ledger','correctness','Replay all48 parents/source86/library/81CPU/fourphase source identities, actual trace and complete primary/cache/timeline/all64-layer parity before operand analysis; independently check K-to-BF16-cache and unchanged RoPE suffix. Preserve any failed stage/control; no performance admission.',[M/n for n in names]+[ROOT/'results'/(JOB+'-evidence.zip')]);assert code==0
+proof=ROOT/'results'/(JOB+'-verified.json');q=json.loads(proof.read_bytes());print(json.dumps({'status':q['status'],'exit_code':q['exit_code'],'error':q['error'],'proof_sha256':sha(proof),'archive_sha256':q['archive_sha256'],'first_differing_key_path_operands':[{k:r[k] for k in ('step','first_differing_active_key_path_operand')} for r in q['analysis']['rows']] if q['analysis'] else None}))

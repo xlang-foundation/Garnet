@@ -1,0 +1,216 @@
+{
+  "status": "paired_query_replay_passed_with_runtime_provider_claim_limited",
+  "proof_sha256": "259fd065a553c50f206538f0bbc7180ef3bb495fcff5c8765936131008301d00",
+  "archive_sha256": "88225b0df3638d54a46af78e584b6ba28beb8bec9a6bb1c9fc84fabbcc4f4710",
+  "opaque_M4_M16_equal": {
+    "GDN_QKV": false,
+    "GDN_Z": false,
+    "FA_KV": false,
+    "FA_Q": false,
+    "FA_O": true
+  },
+  "configurations": [
+    {
+      "label": "GDN_QKV",
+      "N": 10240,
+      "K": 5120,
+      "M4_configuration": [
+        35,
+        13,
+        17,
+        3,
+        2,
+        0,
+        1
+      ],
+      "M16_configuration": [
+        67,
+        15,
+        18,
+        1,
+        0,
+        1,
+        18
+      ],
+      "M4_and_M16_configurations_equal": false,
+      "live_M4_eligible_at_M4_and_M16": true,
+      "M4_checks": [
+        {
+          "M": 4,
+          "status": 0,
+          "state": 0,
+          "workspace": 2623519
+        },
+        {
+          "M": 16,
+          "status": 0,
+          "state": 0,
+          "workspace": 2623519
+        }
+      ],
+      "known_M4_reference_matches": true
+    },
+    {
+      "label": "GDN_Z",
+      "N": 6144,
+      "K": 5120,
+      "M4_configuration": [
+        35,
+        13,
+        17,
+        3,
+        2,
+        0,
+        1
+      ],
+      "M16_configuration": [
+        67,
+        13,
+        17,
+        1,
+        0,
+        1,
+        18
+      ],
+      "M4_and_M16_configurations_equal": false,
+      "live_M4_eligible_at_M4_and_M16": true,
+      "M4_checks": [
+        {
+          "M": 4,
+          "status": 0,
+          "state": 0,
+          "workspace": 1574175
+        },
+        {
+          "M": 16,
+          "status": 0,
+          "state": 0,
+          "workspace": 1574175
+        }
+      ],
+      "known_M4_reference_matches": true
+    },
+    {
+      "label": "FA_KV",
+      "N": 1024,
+      "K": 5120,
+      "M4_configuration": [
+        35,
+        13,
+        17,
+        3,
+        2,
+        0,
+        1
+      ],
+      "M16_configuration": [
+        35,
+        15,
+        18,
+        7,
+        2,
+        1,
+        0
+      ],
+      "M4_and_M16_configurations_equal": false,
+      "live_M4_eligible_at_M4_and_M16": true,
+      "M4_checks": [
+        {
+          "M": 4,
+          "status": 0,
+          "state": 0,
+          "workspace": 262495
+        },
+        {
+          "M": 16,
+          "status": 0,
+          "state": 0,
+          "workspace": 262495
+        }
+      ],
+      "known_M4_reference_matches": true
+    },
+    {
+      "label": "FA_Q",
+      "N": 12288,
+      "K": 5120,
+      "M4_configuration": [
+        35,
+        18,
+        16,
+        7,
+        2,
+        1,
+        2
+      ],
+      "M16_configuration": [
+        67,
+        13,
+        17,
+        1,
+        0,
+        1,
+        18
+      ],
+      "M4_and_M16_configurations_equal": false,
+      "live_M4_eligible_at_M4_and_M16": true,
+      "M4_checks": [
+        {
+          "M": 4,
+          "status": 0,
+          "state": 0,
+          "workspace": 3146655
+        },
+        {
+          "M": 16,
+          "status": 0,
+          "state": 0,
+          "workspace": 3146655
+        }
+      ],
+      "known_M4_reference_matches": null
+    },
+    {
+      "label": "FA_O",
+      "N": 5120,
+      "K": 6144,
+      "M4_configuration": [
+        35,
+        13,
+        17,
+        3,
+        2,
+        0,
+        1
+      ],
+      "M16_configuration": [
+        35,
+        13,
+        17,
+        3,
+        2,
+        0,
+        1
+      ],
+      "M4_and_M16_configurations_equal": true,
+      "live_M4_eligible_at_M4_and_M16": true,
+      "M4_checks": [
+        {
+          "M": 4,
+          "status": 0,
+          "state": 0,
+          "workspace": 1311839
+        },
+        {
+          "M": 16,
+          "status": 0,
+          "state": 0,
+          "workspace": 1311839
+        }
+      ],
+      "known_M4_reference_matches": null
+    }
+  ],
+  "scope": "Actual cuBLASLt query/eligibility only, no GEMM/model/performance. cuBLASLt is delay-imported and exact pinned Garnet DLL explicitly loaded; loaded-library hashes match preparation. Linker warns DELAYLOAD cudart ignored; import table has no cudart DLL, so explicit cudart LoadLibrary path/hash DOES NOT establish the provider of linked cudaRuntime calls. Header13020 and linked-runtime/driver API13040 recorded independently. Original preparation/derivation descriptions overstated actual runtime-provider pinning; this audit supersedes that claim without altering raw failed or successful jobs. O opaque equality does not prove numerical equality. Known Q M4 tuple differs from V/GDN; next defaultoff Q/K route must use per-geometry live SDK selection and actual whole-model admission.",
+  "numerical_or_model_or_performance_qualified": false
+}

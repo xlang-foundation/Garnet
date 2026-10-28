@@ -1,0 +1,38 @@
+from pathlib import Path
+from datetime import datetime,timezone
+import json,hashlib,shutil
+w=Path(__file__).resolve().parent;r=Path('D:/CantorAI/work/qwen38-5090');m=r/'test2026/cuda/qwen38_5090';e=m/'evidence';o=w.parent/'outputs';sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+preflight=json.loads((w/'tokenizer-nfc-http-study-attempt1-preflight.json').read_bytes());plan=json.loads((w/'tokenizer-nfc-http-upload-plan.json').read_bytes())
+assert preflight['status']=='tokenizer_nfc_http_launch_preflight_passed' and not preflight['conflicts'] and not preflight['occupied'] and not any(preflight['drift'].values())
+missing={n for n,row in preflight['targets'].items() if not row['exists']};assert len(missing)==9 and all(row['matches'] or not row['exists'] for row in preflight['targets'].values())
+for row in plan['uploads']:assert sha(Path(row['local']))==row['sha256']==preflight['targets'][row['target']]['expected_sha256']
+for source in ('tokenizer-nfc-http-study-attempt1-preflight.json','tokenizer-http-launch-preflight-input.json','tokenizer-nfc-http-upload-plan.json'):
+ target=e/source;assert not target.exists();shutil.copyfile(w/source,target)
+for source in ('tokenizer-http-launch-preflight.py','retain-tokenizer-http-launch.py'):
+ target=e/(source+'.txt');assert not target.exists();shutil.copyfile(w/source,target)
+now=datetime.now(timezone.utc).isoformat();receipt={'status':'tokenizer_nfc_http_original_supervisor_running','recorded_utc':now,'original_supervisor_session':48577,'job':'tokenizer-nfc-http-study-attempt1','last_authoritative_handle_state':'running','preflight':preflight,'uploaded_absent_targets':sorted(missing),'matching_targets_skipped':len(preflight['targets'])-len(missing),'transfer_acknowledgements':'Nine individual SFTP UPLOADED acknowledgements observed before original supervisor launch; this is a tool observation, not an execution ledger.','model_archive_sha256':'90098fe581655c8c7eb3bdf3e43d6baed2b899b41388be601f2fe840b6a7b65c','http_preparation_sha256':sha(e/'tokenizer-nfc-http-preparation.json'),'quality_or_timing_results_admitted':False,'scope':'Preflight actual runtime/source/parents/cache/idle checks passed. Same805corpus and20matching target files reused. Only original supervisor polling while HTTP job lives; no competing remote model/observer/upload. Actual29CPU/protocol/805screen/4K/ordinary-MTP/timing closure remains pending.'}
+target=e/'tokenizer-nfc-http-launch-observation.json';assert not target.exists();target.write_text(json.dumps(receipt,indent=2),encoding='utf8')
+for filename in ('Garnet-Tokenizer-NFC-Status.json','Garnet-Parallel-Top1-Integration-Status.json'):
+ target=o/filename;s=json.loads(target.read_bytes());s.update(recorded_utc=now,status='tokenizer_nfc_model_closed_http_running',tokenizer_nfc_http_job=receipt,pushed_commit='ef0c78c55',streaming_http_qualified=False,new_speed_measurement=False,two_times_target_achieved=False,scope='Current rebuilt model and168raw vectors replayed. Original native HTTP job started after idle/pin preflight and nine acknowledged new files; no current HTTP/quality/4K/speed result admitted. Full original2x scope remains open.');target.write_text(json.dumps(s,indent=2)+'\n',encoding='utf8')
+entry='''
+
+### 2026-10-25: fresh proof-bound native HTTP study starts
+
+Read-only tokenizer-nfc-http-study-attempt1 preflight passed: no392pinned-file or
+six-runtime drift, no target conflicts/occupied result, GPU125MiB used before
+launch and750900301824B free in owned C scratch.20of29targets matched and were
+skipped, including the existing805corpus. Nine absent new methods/recipe/prep
+files received individual acknowledged uploads. No product source/DLL changed.
+Actual preflight/input/upload plan/method and explicit tool observation retained.
+
+Only original supervisor48577 started tokenizer-nfc-http-study-attempt1 and
+confirms it running with CPU-test progress. No completed HTTP/quality/4K or new
+timing result is claimed. One controller owns29CPU gates,12protocol/805screen/
+2boundary/124full4K/124short requests for ordinary then MTP with actual paired
+IDs and immutable failure archive/owned cleanup. Only that original handle will
+be polled while timing may run; no auxiliary remote observers/uploads/jobs.
+Original2x and matched/tuned/MTP references, INT4/4B, repetitions remain open.
+'''
+for filename in ('qwen38-5090-development-log.md','qwen38-5090-implementation-task.md'):
+ target=r/'docs/research'/filename;raw=target.read_bytes();assert b'fresh proof-bound native HTTP study starts' not in raw;target.write_bytes(raw+entry.replace('\n','\r\n').encode())
+print(json.dumps({'status':receipt['status'],'new_targets_uploaded':9,'matched_targets_reused':20,'performance_admitted':False}))

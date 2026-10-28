@@ -1,0 +1,116 @@
+{
+  "derivations": [
+    {
+      "source": "kv128_canonical_source.py",
+      "target": "kv128_canonical_source_attempt2.py",
+      "source_sha256": "96e722010a22f46936693733b022885947fdb33caa29390759f2ff14c3ba7f0a",
+      "target_sha256": "24d8e18c88b90c50c155c20b27689db70d5374aba2bf38db8ea8fd26062b4b31",
+      "changes": [
+        {
+          "before": "        raw=(M.parents[2]/row['source']).read_bytes();assert sha(raw)==row['source_sha256']",
+          "after": "        source=M/'native_kv128_canonical_inputs/original-modelopt_fp8_z128_canonical.h.txt' if row['source']=='src/backends/tensorrt/modelopt_fp8_z128_canonical.h' else M.parents[2]/row['source']\n        raw=source.read_bytes();assert sha(raw)==row['source_sha256']",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "test_kv128_canonical.py",
+      "target": "test_kv128_canonical_attempt2.py",
+      "source_sha256": "1c960b0aa61671aa9c6414574963ad8f143b6019dc6628b8f617fcc6ecfc4e82",
+      "target_sha256": "9813e8d709bb30315f843b445f54534cff8af1f5c795e05337896780df57a934",
+      "changes": [
+        {
+          "before": "from .kv128_canonical_source import sources",
+          "after": "from .kv128_canonical_source_attempt2 import sources",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "prepare_kv128_canonical_build.py",
+      "target": "prepare_kv128_canonical_build_attempt2.py",
+      "source_sha256": "e6a1b0ec38e14949cec5f7fe01595911ac1d704f30f762af88009b3993ceaacb",
+      "target_sha256": "3375cb2ef4aa342fc512576f2a04afb10145bcd87e401a8789a89b65a5033872",
+      "changes": [
+        {
+          "before": "kv128-canonical-proposal.json",
+          "after": "kv128-canonical-proposal-attempt2.json",
+          "count": 1
+        },
+        {
+          "before": "kv128-canonical-native-build-preparation.json",
+          "after": "kv128-canonical-native-build-preparation-attempt2.json",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "run_kv128_canonical_build.py",
+      "target": "run_kv128_canonical_build_attempt2.py",
+      "source_sha256": "015fbe468f72ec18f813401ef043607f2717ad7d83853d48fc37819ea19b9296",
+      "target_sha256": "a1daea7389500d48fee85dfcc6c0ed7af52b9959e9ea6545d08f7639887794aa",
+      "changes": [
+        {
+          "before": "kv128-canonical-build-attempt1",
+          "after": "kv128-canonical-build-attempt2",
+          "count": 1
+        },
+        {
+          "before": "kv128-canonical-native-build-preparation.json",
+          "after": "kv128-canonical-native-build-preparation-attempt2.json",
+          "count": 1
+        },
+        {
+          "before": "garnet-native-kv128-canonical-attempt1.dll",
+          "after": "garnet-native-kv128-canonical-attempt2.dll",
+          "count": 1
+        },
+        {
+          "before": "qwen38_5090.kv128_canonical_source import sources",
+          "after": "qwen38_5090.kv128_canonical_source_attempt2 import sources",
+          "count": 1
+        },
+        {
+          "before": "qwen38_5090.test_kv128_canonical'",
+          "after": "qwen38_5090.test_kv128_canonical_attempt2'",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "verify_kv128_canonical_build.py",
+      "target": "verify_kv128_canonical_build_attempt2.py",
+      "source_sha256": "807044ed0389b205349f63d09855de224b6ce34a5385b4f4fd0712ada5af9cef",
+      "target_sha256": "3474c9ce6a81735affee5e908ef19f0115013a55279aea5685d4e3f355c7dcb1",
+      "changes": [
+        {
+          "before": "kv128-canonical-build-attempt1",
+          "after": "kv128-canonical-build-attempt2",
+          "count": 1
+        },
+        {
+          "before": "kv128-canonical-native-build-preparation.json",
+          "after": "kv128-canonical-native-build-preparation-attempt2.json",
+          "count": 1
+        }
+      ]
+    }
+  ],
+  "reason": "Attempt1 source validation read mutable installed legacy header, not the frozen derivation input; assertion before CPU compilation or GPU execution. Pin original header in a private text fixture. All50 candidate source bytes, CPU SDK/fault/wire/profile/initialize contracts, numerical gates and thresholds unchanged.",
+  "original_header_sha256": "d792c27b8997fddabc1605865bc0883311451d7b38e0b7c66aad6b74a292e830",
+  "candidate_or_runtime_math_changed": false,
+  "post_derivation_extensions": [
+    {
+      "target": "test_kv128_canonical_attempt2.py",
+      "derived_before_sha256": "9813e8d709bb30315f843b445f54534cff8af1f5c795e05337896780df57a934",
+      "extended_sha256": "b64f093cd9b0f842ec6d7af430f6b5276f19d3e9084cc303f9160fe5aa874145",
+      "purpose": "Add installed-header regression test and account for15 source controls"
+    },
+    {
+      "target": "verify_kv128_canonical_build_attempt2.py",
+      "derived_before_sha256": "3474c9ce6a81735affee5e908ef19f0115013a55279aea5685d4e3f355c7dcb1",
+      "extended_sha256": "56569e0d153fa7505bd9dd10302f59de0513c6944737648a71940406f48b229f",
+      "purpose": "Add installed-header regression test and account for15 source controls"
+    }
+  ]
+}

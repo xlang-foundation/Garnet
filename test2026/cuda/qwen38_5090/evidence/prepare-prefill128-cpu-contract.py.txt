@@ -1,0 +1,44 @@
+from pathlib import Path
+import hashlib,json,sys
+
+repo=Path('D:/CantorAI/work/qwen38-5090');sys.path.insert(0,str(repo))
+from test2026.cuda.qwen38_5090.bf16_prefill128_layout import build_bf16_prefill128_layout
+from test2026.cuda.qwen38_5090.bf16_low_batch_layout import build_bf16_low_batch_layout
+work=Path(__file__).resolve().parent;build=work/'prefill128-cpu-build';build.mkdir(exist_ok=True)
+candidate=build_bf16_prefill128_layout();patches=[]
+def visit(value,path=''):
+ if isinstance(value,dict):
+  for key,child in value.items():
+   name=path+'/'+key;patches.append({'op':'remove','path':name});visit(child,name)
+ elif isinstance(value,list):
+  for index,child in enumerate(value):visit(child,path+'/'+str(index))
+ else:
+  if type(value) is bool:wrong=int(value)
+  elif type(value) is int:wrong=float(value)
+  elif value is None:wrong=0
+  else:wrong='unqualified'
+  patches.append({'op':'replace','path':path,'value':wrong})
+visit(candidate)
+fixture={'candidate':candidate,'qualified':[build_bf16_low_batch_layout(),build_bf16_low_batch_layout(chunk=32,retain_linear_inputs=False)],'invalid':patches}
+data=json.dumps(fixture,indent=2,allow_nan=False).encode();path=build/'fixture.json'
+assert not path.exists() or path.read_bytes()==data
+if not path.exists():path.write_bytes(data)
+vcvars='C:/Program Files/Microsoft Visual Studio/18/Community/VC/Auxiliary/Build/vcvars64.bat'
+cuda='C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v13.2/include'
+batch='''@echo off
+call "VCVARS" -vcvars_ver=14.29
+if errorlevel 1 exit /b %errorlevel%
+set "TMP=%~dp0"
+set "TEMP=%~dp0"
+cl /nologo /EHsc /std:c++17 /MT /utf-8 /I"REPO/third_party" /I"REPO/src/backends/tensorrt" /I"REPO/src/cuda" /I"CUDA" "REPO/test2026/cuda/qwen38_5090/probe_bf16_prefill128_metadata.cpp" /Fo"%~dp0metadata.obj" /Fd"%~dp0metadata.pdb" /Fe"%~dp0metadata.exe"
+if errorlevel 1 exit /b %errorlevel%
+dumpbin /imports "%~dp0metadata.exe" > "%~dp0metadata-imports.txt"
+exit /b %errorlevel%
+'''.replace('VCVARS',vcvars).replace('REPO',repo.as_posix()).replace('CUDA',cuda)
+path=build/'compile-metadata.bat';raw=batch.replace('\n','\r\n').encode()
+assert not path.exists() or path.read_bytes()==raw
+if not path.exists():path.write_bytes(raw)
+result={'status':'prefill128_cpu_fixture_prepared_no_model_or_gpu','invalid_metadata':len(patches),'fixture_sha256':hashlib.sha256(data).hexdigest(),'target_words':candidate['output_width'],'target_logical_bytes':candidate['output_width']*4,'canonical_words':candidate['canonical_state_width'],'gpu_executed':False,'runtime_qualified':False}
+path=build/'preparation.json';data=json.dumps(result,indent=2).encode();assert not path.exists() or path.read_bytes()==data
+if not path.exists():path.write_bytes(data)
+print(json.dumps(result))

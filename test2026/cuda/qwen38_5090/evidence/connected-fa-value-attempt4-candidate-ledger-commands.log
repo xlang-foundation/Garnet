@@ -1,0 +1,133 @@
+
+{"id": "463a747da1634ccd8e690f9a244e5772", "kind": "correctness", "label": "Connected original fullDecoderChunk component at B1/B4T4, actualFA3step5/FA11step1 preceding hidden rows, original six compressed weights, internal mask/RMS/threeQKV/BF16projection path. Ordinary zeroFP32cache/slot/position controls intentionally isolate history-independent Vprojection; no modelhidden/state/output equivalence claimed. Require standalone unmaskednorm allfullarrays reproduceoldcapture, full inputKVcaches remainzero/readonly, fullhidden/V repeats exact, all4row actualoriginalVcache baselines exact. No originalwitnessguardchange or benchmark.", "argv": ["C:\\Python312\\python.exe", "D:\\CantorAI\\5090-study-20261023\\Garnet\\test2026\\cuda\\qwen38_5090\\monitor_native_probe.py", "--study", "D:\\CantorAI\\5090-study-20261023", "--output", "D:\\CantorAI\\5090-study-20261023\\results\\connected-fa-value-attempt4\\candidate-resources", "--", "C:\\Python312\\python.exe", "D:\\CantorAI\\5090-study-20261023\\Garnet\\test2026\\cuda\\qwen38_5090\\launch_connected_fa_value_v4.py", "D:\\CantorAI\\5090-study-20261023", "D:\\CantorAI\\5090-study-20261023\\results\\connected-fa-value-attempt4\\candidate", "C:\\Users\\zsdx\\AppData\\Local\\CantorAI\\5090-engine-cache", "candidate", "D:\\CantorAI\\5090-study-20261023\\results\\connected-fa-value-attempt4\\reference"]}
+ERROR:root:code for hash md5 was not found.
+Traceback (most recent call last):
+  File "C:\Python\Python314\Lib\hashlib.py", line 247, in <module>
+    globals()[__func_name] = __get_hash(__func_name)
+                             ~~~~~~~~~~^^^^^^^^^^^^^
+  File "C:\Python\Python314\Lib\hashlib.py", line 123, in __get_builtin_constructor
+    raise ValueError('unsupported hash type ' + name)
+ValueError: unsupported hash type md5
+ERROR:root:code for hash sha1 was not found.
+Traceback (most recent call last):
+  File "C:\Python\Python314\Lib\hashlib.py", line 247, in <module>
+    globals()[__func_name] = __get_hash(__func_name)
+                             ~~~~~~~~~~^^^^^^^^^^^^^
+  File "C:\Python\Python314\Lib\hashlib.py", line 123, in __get_builtin_constructor
+    raise ValueError('unsupported hash type ' + name)
+ValueError: unsupported hash type sha1
+ERROR:root:code for hash blake2b was not found.
+Traceback (most recent call last):
+  File "C:\Python\Python314\Lib\hashlib.py", line 247, in <module>
+    globals()[__func_name] = __get_hash(__func_name)
+                             ~~~~~~~~~~^^^^^^^^^^^^^
+  File "C:\Python\Python314\Lib\hashlib.py", line 123, in __get_builtin_constructor
+    raise ValueError('unsupported hash type ' + name)
+ValueError: unsupported hash type blake2b
+ERROR:root:code for hash blake2s was not found.
+Traceback (most recent call last):
+  File "C:\Python\Python314\Lib\hashlib.py", line 247, in <module>
+    globals()[__func_name] = __get_hash(__func_name)
+                             ~~~~~~~~~~^^^^^^^^^^^^^
+  File "C:\Python\Python314\Lib\hashlib.py", line 123, in __get_builtin_constructor
+    raise ValueError('unsupported hash type ' + name)
+ValueError: unsupported hash type blake2s
+ERROR:root:code for hash sha3_224 was not found.
+Traceback (most recent call last):
+  File "C:\Python\Python314\Lib\hashlib.py", line 247, in <module>
+    globals()[__func_name] = __get_hash(__func_name)
+                             ~~~~~~~~~~^^^^^^^^^^^^^
+  File "C:\Python\Python314\Lib\hashlib.py", line 123, in __get_builtin_constructor
+    raise ValueError('unsupported hash type ' + name)
+ValueError: unsupported hash type sha3_224
+ERROR:root:code for hash sha3_256 was not found.
+Traceback (most recent call last):
+  File "C:\Python\Python314\Lib\hashlib.py", line 247, in <module>
+    globals()[__func_name] = __get_hash(__func_name)
+                             ~~~~~~~~~~^^^^^^^^^^^^^
+  File "C:\Python\Python314\Lib\hashlib.py", line 123, in __get_builtin_constructor
+    raise ValueError('unsupported hash type ' + name)
+ValueError: unsupported hash type sha3_256
+ERROR:root:code for hash sha3_384 was not found.
+Traceback (most recent call last):
+  File "C:\Python\Python314\Lib\hashlib.py", line 247, in <module>
+    globals()[__func_name] = __get_hash(__func_name)
+                             ~~~~~~~~~~^^^^^^^^^^^^^
+  File "C:\Python\Python314\Lib\hashlib.py", line 123, in __get_builtin_constructor
+    raise ValueError('unsupported hash type ' + name)
+ValueError: unsupported hash type sha3_384
+ERROR:root:code for hash sha3_512 was not found.
+Traceback (most recent call last):
+  File "C:\Python\Python314\Lib\hashlib.py", line 247, in <module>
+    globals()[__func_name] = __get_hash(__func_name)
+                             ~~~~~~~~~~^^^^^^^^^^^^^
+  File "C:\Python\Python314\Lib\hashlib.py", line 123, in __get_builtin_constructor
+    raise ValueError('unsupported hash type ' + name)
+ValueError: unsupported hash type sha3_512
+ERROR:root:code for hash shake_128 was not found.
+Traceback (most recent call last):
+  File "C:\Python\Python314\Lib\hashlib.py", line 247, in <module>
+    globals()[__func_name] = __get_hash(__func_name)
+                             ~~~~~~~~~~^^^^^^^^^^^^^
+  File "C:\Python\Python314\Lib\hashlib.py", line 123, in __get_builtin_constructor
+    raise ValueError('unsupported hash type ' + name)
+ValueError: unsupported hash type shake_128
+ERROR:root:code for hash shake_256 was not found.
+Traceback (most recent call last):
+  File "C:\Python\Python314\Lib\hashlib.py", line 247, in <module>
+    globals()[__func_name] = __get_hash(__func_name)
+                             ~~~~~~~~~~^^^^^^^^^^^^^
+  File "C:\Python\Python314\Lib\hashlib.py", line 123, in __get_builtin_constructor
+    raise ValueError('unsupported hash type ' + name)
+ValueError: unsupported hash type shake_256
+GARNET_MODELOPT_INIT {"id":1,"phase":"begin","route":"fp8","instance":"0000027DEDAD69A0","rows":12288,"columns":5120,"policy":0,"context_present":false,"factory_called":false,"result":-1,"exception":false}
+GARNET_MODELOPT_INIT {"id":1,"phase":"end","route":"fp8","instance":"0000027DEDAD69A0","rows":12288,"columns":5120,"policy":0,"context_present":true,"factory_called":true,"result":0,"exception":false}
+GARNET_MODELOPT_INIT {"id":2,"phase":"begin","route":"fp8","instance":"0000027DEDAD6D00","rows":1024,"columns":5120,"policy":0,"context_present":false,"factory_called":false,"result":-1,"exception":false}
+GARNET_MODELOPT_INIT {"id":2,"phase":"end","route":"fp8","instance":"0000027DEDAD6D00","rows":1024,"columns":5120,"policy":0,"context_present":true,"factory_called":true,"result":0,"exception":false}
+GARNET_MODELOPT_INIT {"id":3,"phase":"begin","route":"fp8","instance":"0000027DEDAD6DC0","rows":1024,"columns":5120,"policy":0,"context_present":false,"factory_called":false,"result":-1,"exception":false}
+GARNET_MODELOPT_INIT {"id":3,"phase":"end","route":"fp8","instance":"0000027DEDAD6DC0","rows":1024,"columns":5120,"policy":0,"context_present":true,"factory_called":true,"result":0,"exception":false}
+GARNET_MODELOPT_INIT {"id":4,"phase":"begin","route":"fp8","instance":"0000027DEDAD7720","rows":5120,"columns":6144,"policy":0,"context_present":false,"factory_called":false,"result":-1,"exception":false}
+GARNET_MODELOPT_INIT {"id":4,"phase":"end","route":"fp8","instance":"0000027DEDAD7720","rows":5120,"columns":6144,"policy":0,"context_present":true,"factory_called":true,"result":0,"exception":false}
+GARNET_MODELOPT_INIT {"id":5,"phase":"begin","route":"nvfp4","instance":"0000027DEDACAA60","rows":34816,"columns":5120,"policy":0,"context_present":false,"factory_called":false,"result":-1,"exception":false}
+GARNET_MODELOPT_INIT {"id":5,"phase":"end","route":"nvfp4","instance":"0000027DEDACAA60","rows":34816,"columns":5120,"policy":0,"context_present":true,"factory_called":true,"result":0,"exception":false}
+GARNET_MODELOPT_INIT {"id":6,"phase":"begin","route":"nvfp4","instance":"0000027DEDACBC60","rows":5120,"columns":17408,"policy":0,"context_present":false,"factory_called":false,"result":-1,"exception":false}
+GARNET_MODELOPT_INIT {"id":6,"phase":"end","route":"nvfp4","instance":"0000027DEDACBC60","rows":5120,"columns":17408,"policy":0,"context_present":true,"factory_called":true,"result":0,"exception":false}
+GARNET_MODELOPT_INIT {"id":7,"phase":"begin","route":"fp8","instance":"0000027DEA85E5C0","rows":12288,"columns":5120,"policy":0,"context_present":false,"factory_called":false,"result":-1,"exception":false}
+GARNET_MODELOPT_INIT {"id":7,"phase":"end","route":"fp8","instance":"0000027DEA85E5C0","rows":12288,"columns":5120,"policy":0,"context_present":true,"factory_called":true,"result":0,"exception":false}
+GARNET_MODELOPT_INIT {"id":8,"phase":"begin","route":"fp8","instance":"0000027DEA85DF00","rows":1024,"columns":5120,"policy":0,"context_present":false,"factory_called":false,"result":-1,"exception":false}
+GARNET_MODELOPT_INIT {"id":8,"phase":"end","route":"fp8","instance":"0000027DEA85DF00","rows":1024,"columns":5120,"policy":0,"context_present":true,"factory_called":true,"result":0,"exception":false}
+GARNET_MODELOPT_INIT {"id":9,"phase":"begin","route":"fp8","instance":"0000027DEA85D9C0","rows":1024,"columns":5120,"policy":0,"context_present":false,"factory_called":false,"result":-1,"exception":false}
+GARNET_MODELOPT_INIT {"id":9,"phase":"end","route":"fp8","instance":"0000027DEA85D9C0","rows":1024,"columns":5120,"policy":0,"context_present":true,"factory_called":true,"result":0,"exception":false}
+GARNET_MODELOPT_INIT {"id":10,"phase":"begin","route":"fp8","instance":"0000027DEA85E920","rows":5120,"columns":6144,"policy":0,"context_present":false,"factory_called":false,"result":-1,"exception":false}
+GARNET_MODELOPT_INIT {"id":10,"phase":"end","route":"fp8","instance":"0000027DEA85E920","rows":5120,"columns":6144,"policy":0,"context_present":true,"factory_called":true,"result":0,"exception":false}
+GARNET_MODELOPT_INIT {"id":11,"phase":"begin","route":"nvfp4","instance":"0000027DEA85ED40","rows":34816,"columns":5120,"policy":0,"context_present":false,"factory_called":false,"result":-1,"exception":false}
+GARNET_MODELOPT_INIT {"id":11,"phase":"end","route":"nvfp4","instance":"0000027DEA85ED40","rows":34816,"columns":5120,"policy":0,"context_present":true,"factory_called":true,"result":0,"exception":false}
+GARNET_MODELOPT_INIT {"id":12,"phase":"begin","route":"nvfp4","instance":"0000027DEA85E8C0","rows":5120,"columns":17408,"policy":0,"context_present":false,"factory_called":false,"result":-1,"exception":false}
+GARNET_MODELOPT_INIT {"id":12,"phase":"end","route":"nvfp4","instance":"0000027DEA85E8C0","rows":5120,"columns":17408,"policy":0,"context_present":true,"factory_called":true,"result":0,"exception":false}
+GARNET_MODELOPT_INIT {"id":13,"phase":"begin","route":"fp8","instance":"0000027D616A87F0","rows":12288,"columns":5120,"policy":0,"context_present":false,"factory_called":false,"result":-1,"exception":false}
+GARNET_MODELOPT_INIT {"id":13,"phase":"end","route":"fp8","instance":"0000027D616A87F0","rows":12288,"columns":5120,"policy":0,"context_present":true,"factory_called":true,"result":0,"exception":false}
+GARNET_MODELOPT_INIT {"id":14,"phase":"begin","route":"fp8","instance":"0000027D616A7590","rows":1024,"columns":5120,"policy":0,"context_present":false,"factory_called":false,"result":-1,"exception":false}
+GARNET_MODELOPT_INIT {"id":14,"phase":"end","route":"fp8","instance":"0000027D616A7590","rows":1024,"columns":5120,"policy":0,"context_present":true,"factory_called":true,"result":0,"exception":false}
+GARNET_MODELOPT_INIT {"id":15,"phase":"begin","route":"fp8","instance":"0000027D616A75F0","rows":1024,"columns":5120,"policy":0,"context_present":false,"factory_called":false,"result":-1,"exception":false}
+GARNET_MODELOPT_INIT {"id":15,"phase":"end","route":"fp8","instance":"0000027D616A75F0","rows":1024,"columns":5120,"policy":0,"context_present":true,"factory_called":true,"result":0,"exception":false}
+GARNET_MODELOPT_INIT {"id":16,"phase":"begin","route":"fp8","instance":"0000027D24DC6E80","rows":5120,"columns":6144,"policy":0,"context_present":false,"factory_called":false,"result":-1,"exception":false}
+GARNET_MODELOPT_INIT {"id":16,"phase":"end","route":"fp8","instance":"0000027D24DC6E80","rows":5120,"columns":6144,"policy":0,"context_present":true,"factory_called":true,"result":0,"exception":false}
+GARNET_MODELOPT_INIT {"id":17,"phase":"begin","route":"nvfp4","instance":"0000027D24DC7A20","rows":34816,"columns":5120,"policy":0,"context_present":false,"factory_called":false,"result":-1,"exception":false}
+GARNET_MODELOPT_INIT {"id":17,"phase":"end","route":"nvfp4","instance":"0000027D24DC7A20","rows":34816,"columns":5120,"policy":0,"context_present":true,"factory_called":true,"result":0,"exception":false}
+GARNET_MODELOPT_INIT {"id":18,"phase":"begin","route":"nvfp4","instance":"0000027D24DC7720","rows":5120,"columns":17408,"policy":0,"context_present":false,"factory_called":false,"result":-1,"exception":false}
+GARNET_MODELOPT_INIT {"id":18,"phase":"end","route":"nvfp4","instance":"0000027D24DC7720","rows":5120,"columns":17408,"policy":0,"context_present":true,"factory_called":true,"result":0,"exception":false}
+GARNET_MODELOPT_INIT {"id":19,"phase":"begin","route":"fp8","instance":"0000027DEDABA980","rows":12288,"columns":5120,"policy":0,"context_present":false,"factory_called":false,"result":-1,"exception":false}
+GARNET_MODELOPT_INIT {"id":19,"phase":"end","route":"fp8","instance":"0000027DEDABA980","rows":12288,"columns":5120,"policy":0,"context_present":true,"factory_called":true,"result":0,"exception":false}
+GARNET_MODELOPT_INIT {"id":20,"phase":"begin","route":"fp8","instance":"0000027DEDABA1A0","rows":1024,"columns":5120,"policy":0,"context_present":false,"factory_called":false,"result":-1,"exception":false}
+GARNET_MODELOPT_INIT {"id":20,"phase":"end","route":"fp8","instance":"0000027DEDABA1A0","rows":1024,"columns":5120,"policy":0,"context_present":true,"factory_called":true,"result":0,"exception":false}
+GARNET_MODELOPT_INIT {"id":21,"phase":"begin","route":"fp8","instance":"0000027DEDABA440","rows":1024,"columns":5120,"policy":0,"context_present":false,"factory_called":false,"result":-1,"exception":false}
+GARNET_MODELOPT_INIT {"id":21,"phase":"end","route":"fp8","instance":"0000027DEDABA440","rows":1024,"columns":5120,"policy":0,"context_present":true,"factory_called":true,"result":0,"exception":false}
+GARNET_MODELOPT_INIT {"id":22,"phase":"begin","route":"fp8","instance":"0000027DEDABA260","rows":5120,"columns":6144,"policy":0,"context_present":false,"factory_called":false,"result":-1,"exception":false}
+GARNET_MODELOPT_INIT {"id":22,"phase":"end","route":"fp8","instance":"0000027DEDABA260","rows":5120,"columns":6144,"policy":0,"context_present":true,"factory_called":true,"result":0,"exception":false}
+GARNET_MODELOPT_INIT {"id":23,"phase":"begin","route":"nvfp4","instance":"0000027DEDABA8C0","rows":34816,"columns":5120,"policy":0,"context_present":false,"factory_called":false,"result":-1,"exception":false}
+GARNET_MODELOPT_INIT {"id":23,"phase":"end","route":"nvfp4","instance":"0000027DEDABA8C0","rows":34816,"columns":5120,"policy":0,"context_present":true,"factory_called":true,"result":0,"exception":false}
+GARNET_MODELOPT_INIT {"id":24,"phase":"begin","route":"nvfp4","instance":"0000027DEDABAF20","rows":5120,"columns":17408,"policy":0,"context_present":false,"factory_called":false,"result":-1,"exception":false}
+GARNET_MODELOPT_INIT {"id":24,"phase":"end","route":"nvfp4","instance":"0000027DEDABAF20","rows":5120,"columns":17408,"policy":0,"context_present":true,"factory_called":true,"result":0,"exception":false}
+CONNECTED_FA_VALUE_CAPTURED candidate v3 [0, 1, 2, 3]
+CONNECTED_FA_VALUE_CAPTURED candidate v11 [0, 1, 2, 3]
+NATIVE_CORRECTNESS_RESOURCE_REPORT_SAVED

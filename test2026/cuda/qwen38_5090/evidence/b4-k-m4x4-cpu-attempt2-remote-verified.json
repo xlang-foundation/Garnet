@@ -1,0 +1,41 @@
+{
+  "status": "B4T4_K_M4X4_actual_CPU_contracts_replayed",
+  "exit_code": 0,
+  "error": null,
+  "archive_sha256": "de1facae994314f32b75bad8119c9b68b339dafca815d7cda7004236f5897756",
+  "files_verified": 601,
+  "stage_exit_codes": {
+    "python": 0,
+    "profile": 0,
+    "factory": 0,
+    "factory-controls": 0,
+    "plugin": 0
+  },
+  "profile": {
+    "status": "B4T4_K_M4X4_profile_CPU_contract_passed",
+    "cases": 1209,
+    "selected": 16,
+    "rejected": 1193,
+    "GPU_or_model_executed": false
+  },
+  "factory_fault_cases": 232,
+  "plugin": {
+    "status": "B4T4_K_M4X4_plugin_wire_and_initialize_CPU_contract_passed",
+    "wire_rejections": 49,
+    "constructor_rejections": 25,
+    "descriptor_rejections": 46,
+    "format_rejections": 9,
+    "cross_wire_rejections": 13,
+    "initialize_calls": 7,
+    "factory_calls": 5,
+    "GPU_operator_calls": 0,
+    "TRT_DLL": "D:/CantorAI/5090-study-20261023/tools/TensorRT/bin/nvinfer_10.dll",
+    "TRT_version": 101601
+  },
+  "source_runtime_SDK_checkpoint_all34objects_CMakeCache_unchanged": true,
+  "production_source_or_DLL_installed": false,
+  "SDK_or_model_or_quality_or_performance_qualified": false,
+  "two_times_target_achieved": false,
+  "replay_verifier_sha256": "2510ac4575e453982f98a8b252657429388d4e2ba608000e3603dc6fcdf58cff",
+  "scope": "Private actual native C++ selector/factory/run-contract/TRT-plugin validation only. CPU SDK stubs perform no CUDA math. Four ordered actual-M4 calls verify real host pointer offsets, identical weights/scale/beta/workspace/stream/opaque, firstfailure and thrown exception propagation; strict SM120/version/attributes/workspace/shape/defaultoff/wire guards. No production source, DLL, CMake or CUDA-object modification; no model/quality/HTTP/performance admission. Original full4K remains failed; overall2x unmet. Attempt1 stopped before any CPU subcommand/native compile because three common evidence dependencies were absent; original partial archive/workflow/absence closure preserved. Attempt2 changes packaging/initial file guards only, no candidate/test-body changes."
+}

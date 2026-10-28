@@ -1,0 +1,107 @@
+{
+  "source_sha256": "7659f7ed26bf6d9a978d3d559ba5263b9fd1a809222389fda71959f720b84b1f",
+  "draft_sha256": "f002fc18b9cbe5ed2b80b50abf31f72fcfb72eb1c61c964cd02874e54dc36aca",
+  "changes": [
+    {
+      "old": "JOB='b4-rowwise-http-benchmark-attempt1'",
+      "new": "JOB='b4-resident-serial-http-benchmark-attempt1'",
+      "count": 1
+    },
+    {
+      "old": "STEM='Garnet-B4-Repeated-vLLM-SGLang-4K'",
+      "new": "STEM='Garnet-Resident-Serial-vLLM-SGLang-4K'",
+      "count": 1
+    },
+    {
+      "old": "actual_B4_three_fixed4k_HTTP_trials_replayed",
+      "new": "actual_B4_resident_serial_three_fixed4k_HTTP_trials_replayed",
+      "count": 1
+    },
+    {
+      "old": "oldpath=O/'Garnet-O128-Repeated-vLLM-SGLang-4K-v2-Data.json';old=json.loads(oldpath.read_bytes());assert old['status']=='three_O128_HTTP_trials_and_retained_single_trial_references_replayed'",
+      "new": "oldpath=O/'Garnet-B4-Repeated-vLLM-SGLang-4K-Data.json';old=json.loads(oldpath.read_bytes());assert old['status']=='three_B4_HTTP_trials_and_retained_B1_and_ordinary_references_replayed'\n    assert 'FP32 GDN/convolution state' in old['model_precision']",
+      "count": 1
+    },
+    {
+      "old": "old_label='Garnet B1 / prefill128 / MTP3 (3 trials)';new_label='Garnet B4 / prefill32 / MTP3 (3 trials)'",
+      "new": "old_label='Garnet B1 / prefill128 / MTP3 (3 trials)';old_b4_label='Garnet B4 / prefill32 / MTP3 (3 trials)';new_label='Garnet B4 / resident+serial / MTP3 (3 trials)'",
+      "count": 1
+    },
+    {
+      "old": "samples={old_label:old['raw_trial_cohorts']['Garnet prefill128 / MTP3 (3 trials)'],new_label:native,'vLLM ordinary (1 trial)':old['raw_trial_cohorts']['vLLM ordinary (1 trial)'],'SGLang ordinary (1 trial)':old['raw_trial_cohorts']['SGLang ordinary (1 trial)']}",
+      "new": "samples={old_label:old['raw_trial_cohorts'][old_label],old_b4_label:old['raw_trial_cohorts'][old_b4_label],new_label:native,'vLLM ordinary (1 trial)':old['raw_trial_cohorts']['vLLM ordinary (1 trial)'],'SGLang ordinary (1 trial)':old['raw_trial_cohorts']['SGLang ordinary (1 trial)']}",
+      "count": 1
+    },
+    {
+      "old": "Both native lines",
+      "new": "All three native lines",
+      "count": 2
+    },
+    {
+      "old": "bands: observed min-max",
+      "new": "new-policy band: observed min-max",
+      "count": 1
+    },
+    {
+      "old": "Three repeats per native worker; ordinary references have one trial each. Native Windows; vLLM/SGLang WSL.",
+      "new": "Three repeats per native worker; ordinary refs one each. Windows/WSL. Resident+serial is one combined policy; both B4 configurations prefill32.",
+      "count": 1
+    },
+    {
+      "old": "All372 B4 prompt/output sequences match retained B1.",
+      "new": "All372 resident/serial prompt/output sequences match retained B1.",
+      "count": 1
+    },
+    {
+      "old": "Maximum B4 sample gap",
+      "new": "Maximum new-policy sample gap",
+      "count": 1
+    },
+    {
+      "old": "status='three_B4_HTTP_trials_and_retained_B1_and_ordinary_references_replayed'",
+      "new": "status='three_resident_serial_HTTP_trials_and_retained_B1_B4_and_ordinary_references_replayed'",
+      "count": 1
+    },
+    {
+      "old": "styles=[('#9b8aaf','o','--'),('#366bd1','D','-'),('#bd4775','v','-'),('#278d70','^','-')]",
+      "new": "styles=[('#a1a7b0','o','--'),('#9b8aaf','s','--'),('#2166d1','D','-'),('#bd4775','v','-'),('#278d70','^','-')]",
+      "count": 1
+    },
+    {
+      "old": "Garnet B4: repeated 4K HTTP comparison",
+      "new": "Garnet resident/serial: repeated 4K HTTP comparison",
+      "count": 1
+    },
+    {
+      "old": "Garnet B1 / B4 vs vLLM / SGLang",
+      "new": "Garnet progress vs vLLM / SGLang",
+      "count": 1
+    },
+    {
+      "old": "Garnet B1 / B4 and ordinary references",
+      "new": "Garnet progress and ordinary references",
+      "count": 1
+    },
+    {
+      "old": "B1/B4 native: 3 trials each",
+      "new": "Native configs: 3 trials each",
+      "count": 2
+    },
+    {
+      "old": "Garnet B4 repeated 4K",
+      "new": "Garnet resident/serial repeated 4K",
+      "count": 2
+    },
+    {
+      "old": "comparisons.append(dict(cohort=key,",
+      "new": "comparisons.append(dict(throughput_over_previous_B4=r['output_tokens_per_second']/series[old_b4_label][key]['output_tokens_per_second'],decode_over_previous_B4=r['decode_median_tokens_per_second']/series[old_b4_label][key]['decode_median_tokens_per_second'],TTFT_over_previous_B4=r['ttft_median_ms']/series[old_b4_label][key]['ttft_median_ms'],cohort=key,",
+      "count": 1
+    }
+  ],
+  "syntax_checked_only": true,
+  "actual_paired_three_trial_proof_required": true,
+  "all_eight_cohorts_four_metrics_and_previous_native_configs_retained": true,
+  "old_native_B4_and_new_policy_both_prefill32": true,
+  "combined_policy_no_individual_causal_speed_claim": true,
+  "new_model_or_benchmark_or_plot_executed": false
+}

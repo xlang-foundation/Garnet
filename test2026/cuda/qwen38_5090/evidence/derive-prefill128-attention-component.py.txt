@@ -1,0 +1,27 @@
+from pathlib import Path
+import hashlib,json
+repo=Path('D:/CantorAI/work/qwen38-5090');m=repo/'test2026/cuda/qwen38_5090';source=repo/'src/cuda/qwen38_bf16_kv_low_batch_overlay.cu'
+sha=lambda b:hashlib.sha256(b).hexdigest();raw=source.read_bytes();text=raw.decode();steps=[]
+def replace(old,new):
+    global text
+    count=text.count(old);assert count>0,old;text=text.replace(old,new);steps.append({'old':old,'new':new,'count':count})
+start=text.index('#if defined(_WIN32)');end=text.index('namespace Garnet { namespace {',start)
+replace(text[start:end],'')
+replace('qwen38_bf16_kv_low_batch_overlay.cuh','qwen38_bf16_prefill128_attention.cuh')
+replace('#include <cstdlib>\n#include <cstring>\n','')
+replace('BF16KVLowBatchCandidateProfile','BF16KVPrefill128AttentionProfile')
+replace('Qwen38BF16KVLowBatchCandidateWorkspace','Qwen38BF16KVPrefill128AttentionWorkspace')
+replace('RunQwen38BF16KVLowBatchCandidate','RunQwen38BF16KVPrefill128Attention')
+replace('int64_t keyOffset,int64_t valueOffset,cudaStream_t stream)','int64_t keyOffset,int64_t valueOffset,int strategy,cudaStream_t stream)')
+replace('if(!valid(c)||!in||!output||!workspace||keyOffset<2482176||','if((strategy!=0&&strategy!=1)||!valid(c)||!in||!output||!workspace||keyOffset<2482176||')
+replace('    const size_t queryBytes=', '''    if(reinterpret_cast<uintptr_t>(output)%alignof(float)||reinterpret_cast<uintptr_t>(workspace)%alignof(float))return 1;
+    for(int i=0;i<7;++i)if(!in[i]||reinterpret_cast<uintptr_t>(in[i])%alignof(float))return 1;
+    const size_t queryBytes=''')
+replace('if(GarnetQwen38BF16LowBatchTiledScoresEnabled())','if(strategy==1)')
+target=m/'qwen38_bf16_prefill128_attention.cu';data=text.encode();assert not target.exists() or target.read_bytes()==data
+if not target.exists():target.write_bytes(data)
+d={'source':source.relative_to(repo).as_posix(),'source_sha256':sha(raw),'target':target.name,'target_sha256':sha(data),'replacements':steps,
+   'scope':'Same scores/normalize/context/overlay math and loop/reduction ordering, separate exact B1/T128 profile/public names, explicit strategy0/1, added float-alignment guards, no environment selector or existing-source/default/runtime change. Actual GPU/math/graph and model integration pending.'}
+path=m/'evidence/prefill128-attention-component-derivation.json';blob=json.dumps(d,indent=2).encode();assert not path.exists() or path.read_bytes()==blob
+if not path.exists():path.write_bytes(blob)
+print(json.dumps({'status':'prefill128_attention_component_derived_gpu_unrun','source_sha256':d['source_sha256'],'target_sha256':d['target_sha256']}))

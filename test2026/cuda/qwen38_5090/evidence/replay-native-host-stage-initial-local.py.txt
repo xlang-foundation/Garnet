@@ -1,0 +1,27 @@
+from pathlib import Path
+import hashlib
+import json
+import subprocess
+import sys
+
+work = Path(__file__).resolve().parent
+out = work.parent / 'outputs'
+methods = Path('D:/CantorAI/work/qwen38-5090/test2026/cuda/qwen38_5090')
+name = 'native-host-stage-full4k-attempt1'
+archive = out / (name + '-evidence.zip')
+assert archive.stat().st_size == 66604875
+log = out / (name + '-initial-local-replay.log')
+command = [sys.executable, str(methods / 'verify_native_host_stage.py'), '--proofs', str(out)]
+with log.open('xb') as stream:
+    code = subprocess.run(command, stdout=stream, stderr=subprocess.STDOUT).returncode
+raw = log.read_bytes()
+result = {'status': 'original_strict_cpu_count_failure_preserved', 'exit_code': code,
+          'archive_sha256': hashlib.sha256(archive.read_bytes()).hexdigest(),
+          'verifier_sha256': hashlib.sha256((methods / 'verify_native_host_stage.py').read_bytes()).hexdigest(),
+          'log_sha256': hashlib.sha256(raw).hexdigest(), 'model_rerun': False,
+          'scope': 'Original metadata expected29; actual archive log27. Preserve strict failure; no diagnostic proof or timing admission.'}
+target = work / 'native-host-stage-initial-local-replay-receipt.json'
+assert not target.exists()
+target.write_text(json.dumps(result, indent=2), encoding='utf8')
+print(json.dumps(result))
+assert code == 1 and b"p['expected_cpu_test_count']" in raw and b'AssertionError' in raw, raw[-3000:]

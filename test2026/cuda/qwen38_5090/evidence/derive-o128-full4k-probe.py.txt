@@ -1,0 +1,34 @@
+from pathlib import Path
+import hashlib,json
+R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';sha=lambda b:hashlib.sha256(b).hexdigest();rows=[]
+def derive(source,target,changes):
+    raw=(M/source).read_bytes();before=sha(raw);steps=[]
+    for old,new,count in changes:
+        if b'\r\n' in raw:old=old.replace('\n','\r\n');new=new.replace('\n','\r\n')
+        assert raw.count(old.encode())==count,(source,old,raw.count(old.encode()),count);raw=raw.replace(old.encode(),new.encode());steps.append(dict(old=old,new=new,count=count))
+    p=M/target;assert not p.exists() or p.read_bytes()==raw;p.write_bytes(raw);rows.append(dict(source=source,target=target,source_sha256=before,target_sha256=sha(raw),changes=steps))
+flags="    for flag in ('GARNET_FP8_GDN_M128_CANONICAL','GARNET_FP8_GDN_Z128_CANONICAL','GARNET_FP8_GDN_Z128_RECONSTRUCT','GARNET_FP8_FULL_ATTN_KV128_CANONICAL','GARNET_FP8_FULL_ATTN_Q128_CANONICAL','GARNET_FP8_FULL_ATTN_O128_CANONICAL'):assert os.environ.get(flag)=='1'\n    assert os.environ.get('GARNET_FULL_CHUNK_STAGE_WITNESS')=='0'\n"
+derive('probe_bf16_prefill128_model_bound.py','probe_o128_full4k_model.py',[
+    ('bf16-prefill128-model-bound-preparation.json','o128-full4k-model-preparation.json',1),("    parent='mtp-prefill16-full4k-admission-attempt1';",flags+"    parent='mtp-prefill16-full4k-admission-attempt1';",1),
+    ('from test2026.cuda.qwen38_5090.prefill128_model import replay_prefill128_model','from test2026.cuda.qwen38_5090.o128_full4k_model import replay_full4k_model as replay_prefill128_model,validate_targets,validate_selection',1),
+    ("report={'status':'constructing'","report={'fp8_m128_policy':os.environ['GARNET_FP8_GDN_M128_CANONICAL'],'fp8_z128_policy':os.environ['GARNET_FP8_GDN_Z128_CANONICAL'],'fp8_q128_policy':os.environ['GARNET_FP8_FULL_ATTN_Q128_CANONICAL'],'fp8_o128_policy':os.environ['GARNET_FP8_FULL_ATTN_O128_CANONICAL'],'status':'constructing'",1),
+    ('decoder.enable_cuda_graph(True);io=decoder.io;vision=create_cuda_vision','decoder.enable_cuda_graph(True);io=decoder.io;report[\'fp8_target_graphs\']={str(t):json.loads(program.graph.stats_json()) for t,program in decoder.programs.items()};save();validate_targets(report[\'fp8_target_graphs\'],report[\'fp8_m128_policy\']);vision=create_cuda_vision',1),
+    ("report['status']='cases_running';save()","report['fp8_auxiliary_graphs']={'draft4':report['memory_after_construction']['mtp_graph'],'draft16':report['memory_after_construction']['prefill16_graph'],'prefill_norm':report['memory_after_construction']['wide_target_norm_graph'],'vision':json.loads(vision.graph.stats_json())};report['fp8_selection']=validate_selection(report);report['status']='cases_running';save()",1)])
+batch_flags='''set GARNET_FP8_GDN_M32_CANONICAL=1
+set GARNET_FP8_GDN_M128_CANONICAL=1
+set GARNET_FP8_GDN_Z128_CANONICAL=1
+set GARNET_FP8_GDN_Z128_RECONSTRUCT=1
+set GARNET_FP8_FULL_ATTN_KV128_CANONICAL=1
+set GARNET_FP8_FULL_ATTN_Q128_CANONICAL=1
+set GARNET_FP8_FULL_ATTN_O128_CANONICAL=1
+set GARNET_FULL_CHUNK_STAGE_WITNESS=0
+set GARNET_MODELOPT_INIT_TRACE=
+set GARNET_Z128_RECONSTRUCT_TRACE=
+set GARNET_Z128_FACTORY_TRACE=
+set GARNET_KV128_FACTORY_TRACE=
+set GARNET_Q128_FACTORY_TRACE=
+set CUBLASLT_LOG_LEVEL=
+set CUBLASLT_LOG_MASK=
+set CUBLASLT_LOG_FILE='''
+derive('test_bf16_prefill128_model_bound.bat','test_o128_full4k_model.bat',[('set GARNET_FP8_GDN_M32_CANONICAL=1',batch_flags,1),('probe_bf16_prefill128_model_bound.py','probe_o128_full4k_model.py',1)])
+(M/'evidence/o128-full4k-probe-derivation.json').write_bytes(json.dumps(dict(status='O128_six_case_probe_prepared_conditionally_not_deployed_or_run',derivations=rows,original_six_case_complete_state_vector_ID_callback_reset_predicates_unchanged=True,new_Q_O_KV_reconstructed_Z_physical_checks_additive_only=True,one_case_admission_required_before_GPU=True,GPU_or_model_executed=False),indent=2).encode());print(json.dumps(dict(derived=[r['target'] for r in rows],deployed_or_run=False)))

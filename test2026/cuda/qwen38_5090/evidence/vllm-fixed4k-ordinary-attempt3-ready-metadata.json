@@ -1,0 +1,58 @@
+{
+  "engine": "vllm",
+  "generation_mode": "ordinary",
+  "version": "0.32.0",
+  "verified_settings": {
+    "model_config": {
+      "model": "/mnt/d/CantorAI/5090-study-20261023/models/Qwen3.8-27B-NVFP4",
+      "max_model_len": 4096,
+      "dtype": "torch.bfloat16",
+      "quantization": "modelopt_mixed",
+      "enforce_eager": false
+    },
+    "cache_config": {
+      "cache_dtype": "bfloat16",
+      "mamba_ssm_cache_dtype": "float32",
+      "enable_prefix_caching": false,
+      "kv_cache_memory_bytes": 4294967296
+    },
+    "parallel_config": {
+      "tensor_parallel_size": 1,
+      "pipeline_parallel_size": 1,
+      "data_parallel_size": 1
+    },
+    "scheduler_config": {
+      "max_num_seqs": 8,
+      "max_num_batched_tokens": 4096
+    },
+    "compilation_config": {
+      "cudagraph_capture_sizes": [
+        1,
+        2,
+        4,
+        8
+      ],
+      "max_cudagraph_capture_size": 8
+    }
+  },
+  "actual_cudagraph_mode": [
+    2,
+    0
+  ],
+  "context_capacity": 4096,
+  "configured_engine_context_capacity": 4096,
+  "engine_context_reserved_slots": 0,
+  "resolved_kv_cache_tokens": 37774,
+  "reported_max_concurrency_full4k": 9.22,
+  "checkpoint_revision": "482ca0f3832238542f8f5295dde86b5f22711d80",
+  "image_cache_policy": "dual_idle_reset_before_timing",
+  "scope": "Actual ready JSON config/version and startup cache-capacity log. Separate source/PID/quality/boundary/stream/cleanup checks required. Cache budget alone is not admission evidence; actual timed client concurrency is measured separately. Not strongest tuned/MTP or broad quality admission.",
+  "launcher_sha256": "25ccefca148c8c8141436358582093ba2d1a9e4e1cf5ff8e983b070fee80b90e",
+  "source_after_startup_verified": true,
+  "owned_server_pid_verified": true,
+  "linux_identity_sha256": "e018d04af35277422731245067a6bea7b92a6ec3fe2397c501b917bc3249ae03",
+  "server_info_sha256": "7d61ff2f62d146ac9cad14a6b028758ea0601943e43632f2f911efcb2e39f581",
+  "server_version_sha256": "2bd89ec9b983123a225f3df0381c737a45302bb7417e345bf9ef92304e4388cf",
+  "installed_config_identity_sha256": "5d1aabe705efffca8ec8c82bac8594fdbe1435ce462a799a6d5bfe66fc2f8eea",
+  "native_http_proof_sha256": "e07edc63fabb0489d0e250077162e24577421402d63ac9d8bf9bf0766f4e02dd"
+}

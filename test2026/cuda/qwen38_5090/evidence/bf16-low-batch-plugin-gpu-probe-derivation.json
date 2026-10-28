@@ -1,0 +1,44 @@
+{
+  "status": "b1_plugin_gpu_forwarding_probe_prepared_unrun",
+  "source": "test2026/cuda/qwen38_5090/probe_bf16_low_batch_attention.cu",
+  "source_sha256": "b6776d79c22acbf042aacdf3aced4a0b2b25e77e31afcccd4e01db238caaf1af",
+  "changes": [
+    [
+      "#include \"bf16_kv_low_batch_candidate.h\"",
+      "#include \"bf16_kv_low_batch_candidate.h\"\n#include \"bf16_low_batch_overlay_plugin.h\"",
+      1
+    ],
+    [
+      "void execute(int id,int batch,int chunk,int layer,int end,std::ofstream& witnesses,uint64_t& witnessOffset){",
+      "int pluginEnqueues=0;\nint RunViaB1Plugin(const Qwen35AttentionCoreConfig& c,const void* const* inputs,void* result,void* workspace,int64_t ko,int64_t vo,cudaStream_t stream){\n    BF16KVLowBatchOverlayConfig config{c,Qwen38BF16KVCanonicalWidth,ko,vo};\n    require(ValidBF16KVLowBatchOverlayConfig(config),\"Plugin config rejected\");\n    BF16KVLowBatchOverlayPlugin plugin(config);\n    nvinfer1::PluginTensorDesc descriptors[8]{};\n    const int64_t shapes[8][4]={{c.batch,c.tokens,24,256},{c.batch,c.tokens,4,256},{c.batch,c.tokens,4,256},\n        {c.batch,c.tokens,24,256},{c.batch,Qwen38BF16KVCanonicalWidth,0,0},{c.batch,c.tokens,0,0},\n        {c.batch,c.tokens,0,0},{c.batch,c.tokens,24,256}};\n    for(int i=0;i<8;++i){auto& d=descriptors[i];d.type=nvinfer1::DataType::kFLOAT;d.format=nvinfer1::TensorFormat::kLINEAR;\n        d.dims.nbDims=(i<4||i==7)?4:2;for(int j=0;j<d.dims.nbDims;++j)d.dims.d[j]=shapes[i][j];\n        require(plugin.supportsFormatCombination(i,descriptors,7,1),\"Plugin positive format rejected\");}\n    require(plugin.getWorkspaceSize(descriptors,7,descriptors+7,1)==Qwen38BF16KVLowBatchCandidateWorkspace(c),\"Plugin workspace differs\");\n    void* outputs[1]={result};++pluginEnqueues;\n    return plugin.enqueue(descriptors,descriptors+7,inputs,outputs,workspace,stream);\n}\nvoid execute(int id,int batch,int chunk,int layer,int end,std::ofstream& witnesses,uint64_t& witnessOffset){",
+      1
+    ],
+    [
+      "RunQwen38BF16KVLowBatchCandidate(c,inputs,result,workspace,ko,vo,s)",
+      "RunViaB1Plugin(c,inputs,result,workspace,ko,vo,s)",
+      3
+    ],
+    [
+      "int count=0;check(cudaGetDeviceCount(&count));",
+      "require(EnsureBF16KVLowBatchOverlayPluginRegistered(),\"Plugin registry failed\");\n        int count=0;check(cudaGetDeviceCount(&count));",
+      1
+    ],
+    [
+      "witnesses.close();require(bool(witnesses)&&id==44,\"Witness completion failed\");",
+      "witnesses.close();require(bool(witnesses)&&id==44&&pluginEnqueues==87,\"Witness/plugin-call completion failed\");",
+      1
+    ],
+    [
+      "bf16_low_batch_overlay_collected_needs_fp64_replay",
+      "bf16_low_batch_plugin_collected_needs_fp64_replay",
+      1
+    ],
+    [
+      "\\\"cases\\\":%d,\\\"witness_bytes\\\":%llu,\\\"performance_admitted\\\":false",
+      "\\\"cases\\\":%d,\\\"witness_bytes\\\":%llu,\\\"host_plugin_enqueue_calls\\\":87,\\\"negative_calls_use_direct_kernel\\\":true,\\\"performance_admitted\\\":false",
+      1
+    ]
+  ],
+  "result_sha256": "dc2880064a43a5e99c4e907d9a9177498c08d70f412191938c44038ca841c330",
+  "scope": "Same44case/119040scalar corpus, fixture generation/full canonical read-only checks/canaries/3graph replays/40cache equivalence controls as actual qualified B1 candidate. All87positive host dispatches now use new plugin.enqueue with matching input/output descriptors and exact workspace. Existing104negative operator calls remain direct kernel controls, not wrapper-negative evidence. Separate CPU wrapper probe is required for registry/serialization/negative descriptors. No GPU execution/model/quality/performance qualification."
+}

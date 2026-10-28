@@ -133,9 +133,12 @@ class CUDADecoder:
         runtime_bytes=sum(g['trt_allocator_live_bytes'] for g in graphs) if tracked else None
         proposal_bytes=io.get('candidate_workspace_bytes',0)+io.get('candidate_index_bytes',0)+io.get('indexed_head_buffers_bytes',0)
         pool_bytes=io.get('projection_weight_pool_bytes',0)
-        owned=state_bytes+request_bytes+output_bytes+io['embedding_head_shared_bytes']+io['head_input_bytes']+io['head_output_bytes']+proposal_bytes+pool_bytes
+        weight_bytes=io['embedding_table_bytes']+io['untied_head_bytes']
+        native_head_bytes=io.get('native_head_workspace_bytes',0)
+        owned=state_bytes+request_bytes+output_bytes+weight_bytes+native_head_bytes+io['head_input_bytes']+io['head_output_bytes']+proposal_bytes+pool_bytes
         return {'graphs':graphs,'register_delta_128':self.register_delta_128,'state_bytes':state_bytes,'request_buffer_bytes':request_bytes,'engine_output_bytes':output_bytes,
-            'embedding_head_shared_bytes':io['embedding_head_shared_bytes'],'head_input_bytes':io['head_input_bytes'],'head_output_bytes':io['head_output_bytes'],
+            'embedding_head_shared_bytes':io['embedding_head_shared_bytes'],'embedding_table_bytes':io['embedding_table_bytes'],
+            'untied_head_bytes':io['untied_head_bytes'],'native_head_workspace_bytes':native_head_bytes,'head_input_bytes':io['head_input_bytes'],'head_output_bytes':io['head_output_bytes'],
             'proposal_io_bytes':proposal_bytes,'proposal_io':{key:io.get(key,0) for key in ('candidate_workspace_bytes','candidate_index_bytes','indexed_head_buffers_bytes')},
             'projection_weight_pool_bytes':pool_bytes,'projection_weight_pool_entries':io.get('projection_weight_pool_entries',0),
             'trt_runtime_allocator_live_bytes':runtime_bytes,'owned_decoder_bytes':owned+runtime_bytes if tracked else None,
@@ -240,6 +243,7 @@ class CUDADecoder:
 class CUDAImageEncoder:
     def __init__(self,checkpoint,config,gh,gw,batch=1,builder_workspace_bytes=None,engine_artifact=None):
         self.staging_io=None;self.input_buffer=None
+        self.resident_io=None;self.resident_patches=None;self.resident_input_bytes=0
         self.shape=[batch,gh*gw,config['in_channels']*config['temporal_patch_size']*config['patch_size']**2]
         symbol=tensor.input('cuda_image_patches',shape=self.shape,dtype=tensor.float32)
         @T.fusion(name='qwen35_cuda_image',boundary='required')
@@ -257,7 +261,7 @@ class CUDAImageEncoder:
         except:self.graph.close();raise
     def enable_cuda_graph(self):
         if self.graph is None:raise ValueError('Vision encoder is closed')
-        if self.input_buffer is not None:raise ValueError('Vision graph replay already enabled')
+        if self.input_buffer is not None or self.resident_patches is not None:raise ValueError('Vision stable input already enabled')
         # Fixed bindings are required for replay. The separate I/O object owns
         # no checkpoint/table; it only supplies one stable FP32 staging tensor.
         self.staging_io=garnet.cuda_tensor_io()
@@ -270,8 +274,17 @@ class CUDAImageEncoder:
             raise
     def input_buffer_bytes(self):
         return self.staging_io.tensor_bytes(self.input_buffer) if self.input_buffer is not None else 0
+    def enable_resident_input(self,io):
+        """Opt-in stable graph binding; caller IO must outlive this encoder."""
+        if self.resident_patches is not None or self.input_buffer is not None:raise ValueError('Resident vision input already enabled')
+        patches=io.zeros(self.shape)
+        self.resident_input_bytes=io.tensor_bytes(patches)
+        self.resident_io=io;self.resident_patches=patches
+
     def encode_patches(self,patches):
         if self.graph is None:raise ValueError('Vision encoder is closed')
+        if self.resident_patches is not None:
+            self.resident_io.copy_into(patches,self.resident_patches);patches=self.resident_patches
         if self.input_buffer is not None:
             self.staging_io.copy_into(patches,self.input_buffer);patches=self.input_buffer
         return self.graph.run_device([patches])
@@ -279,5 +292,5 @@ class CUDAImageEncoder:
         try:
             if self.graph is not None:self.graph.close()
         finally:
-            self.graph=None;self.input_buffer=None
+            self.graph=None;self.input_buffer=None;self.resident_patches=None;self.resident_io=None;self.resident_input_bytes=0
             if self.staging_io is not None:self.staging_io.close();self.staging_io=None

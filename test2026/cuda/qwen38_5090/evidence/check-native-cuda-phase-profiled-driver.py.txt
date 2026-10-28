@@ -1,0 +1,37 @@
+"""Test IPC inside a profiled process tree, without live Nsight stdout forwarding."""
+from pathlib import Path
+import hashlib,json,subprocess,sys
+
+root=Path('D:/CantorAI/5090-study-20261023');out=root/'results/native-cuda-phase-profiled-driver-smoke-attempt1'
+nsys=root/'tools/n26/target-windows-x64/nsys.exe'
+assert hashlib.sha256(nsys.read_bytes()).hexdigest()=='e597347ef6cb45456612c0c9593401bb6d1b85497bb18534968f309955831291'
+assert not out.exists();out.mkdir()
+target=out/'cpu-profiled-driver.py'
+target.write_bytes(b'''from pathlib import Path
+import json,subprocess,sys
+echo="import json,sys; print(json.dumps({'event':'ready'}),flush=True); body=json.loads(sys.stdin.buffer.readline()); sys.stdout.buffer.write((json.dumps({'event':'completed','body':body},ensure_ascii=False)+'\\\\n').encode('utf8'));sys.stdout.buffer.flush()"
+with subprocess.Popen([sys.executable,'-u','-c',echo],stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE,bufsize=0) as child:
+ ready=json.loads(child.stdout.readline());assert ready=={'event':'ready'}
+ body={'id':'cpu-only-profiled-driver','text':'\\u4e2d\\u6587 \\U0001f680','tokens':128}
+ wire=(json.dumps(body,ensure_ascii=False)+'\\n').encode('utf8');child.stdin.write(wire);child.stdin.flush();child.stdin.close()
+ actual=json.loads(child.stdout.readline());assert actual=={'event':'completed','body':body}
+ code=child.wait(timeout=30);assert code==0;stderr=child.stderr.read();assert stderr==b''
+Path(sys.argv[1]).write_text(json.dumps({'status':'profiled_cpu_driver_child_ipc_passed','cpu_only':True,'requested_driver_exit_code':int(sys.argv[2]),'child_exit_code':code,'utf8_echo_exact':True}),encoding='utf8')
+raise SystemExit(int(sys.argv[2]))
+''')
+report={'status':'running','gpu_model_executed':False,'cases':[],'scope':'Actual CPU driver profiles one child and verifies its own normal stdin/stdout pipes. No dependency on live Nsight stdout, no GPU model or benchmark.'}
+def save():(out/'report.json').write_bytes(json.dumps(report,indent=2).encode())
+save()
+try:
+ for requested in (0,7):
+  folder=out/('exit'+str(requested));folder.mkdir();proof=folder/'driver-proof.json'
+  application=subprocess.list2cmdline([sys.executable,'-u',str(target),str(proof),str(requested)])
+  command=[str(nsys),'profile','--trace=cuda','--sample=none','--cpuctxsw=none','--cuda-graph-trace=node','--force-overwrite=false','--output='+str(folder/'driver-trace'),'cmd.exe','/d','/c',application]
+  row={'argv':command,'requested_driver_exit_code':requested};report['cases'].append(row);save()
+  with (folder/'stdout.log').open('xb') as stdout,(folder/'stderr.log').open('xb') as stderr:
+   code=subprocess.run(command,stdout=stdout,stderr=stderr).returncode
+  actual=json.loads(proof.read_bytes());assert actual['status']=='profiled_cpu_driver_child_ipc_passed' and actual['requested_driver_exit_code']==requested and actual['child_exit_code']==0 and actual['utf8_echo_exact'] is True
+  row.update(actual_nsys_wrapper_exit_code=code,driver_proof=actual);save()
+  if requested==0:assert type(code) is int and code==0
+ report['status']='profiled_cpu_driver_ipc_verified';save();print(json.dumps(report),flush=True)
+except BaseException as error:report.update(status='failed',error=repr(error));save();raise

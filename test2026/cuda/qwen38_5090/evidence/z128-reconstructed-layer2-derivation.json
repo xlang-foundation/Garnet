@@ -1,0 +1,70 @@
+{
+  "status": "real_layer2_collector_derivative_unrun",
+  "derivations": [
+    {
+      "source": "probe_z128_factory_layer2.py",
+      "target": "probe_z128_reconstructed_layer2.py",
+      "source_sha256": "f19b7f8c6e8142908c24b68d8d80e10794117fa632c86732a7527dd98e52a90d",
+      "target_sha256": "87bb273ba55b0b80161381a0ea0b63fe0c5db93788b7574a4e865efedd4c4deb",
+      "changes": [
+        {
+          "before": "evidence/z128-factory-layer2-preparation.json",
+          "after": "evidence/z128-reconstructed-layer2-preparation.json",
+          "count": 1
+        },
+        {
+          "before": "assert os.environ.get('GARNET_Z128_FACTORY_TRACE')==os.environ.get('GARNET_MODELOPT_INIT_TRACE')",
+          "after": "assert os.environ.get('GARNET_Z128_FACTORY_TRACE') is None\n    assert os.environ.get('GARNET_Z128_RECONSTRUCT_TRACE')==os.environ.get('GARNET_MODELOPT_INIT_TRACE')\n    assert os.environ.get('GARNET_FP8_GDN_Z128_RECONSTRUCT')=='1'",
+          "count": 1
+        },
+        {
+          "before": "from test2026.cuda.qwen38_5090.layer2_ordinary_layout import",
+          "after": "from test2026.cuda.qwen38_5090.z128_reconstructed_layer2_layout import",
+          "count": 1
+        },
+        {
+          "before": "'factory_trace_policy':os.environ.get('GARNET_Z128_FACTORY_TRACE')",
+          "after": "'factory_trace_policy':os.environ.get('GARNET_Z128_RECONSTRUCT_TRACE')",
+          "count": 1
+        },
+        {
+          "before": "        if 'buildSerializedNetwork failed' in report['error']:\n            try:\n                from test2026.cuda.qwen38_5090.fp8_z128_native_audit_bridge import observe\n                target=root/'results/fp8-z128-native-package-audit-attempt1'/('z128-factory-layer2-attempt1-'+('on' if os.environ.get('GARNET_MODELOPT_INIT_TRACE')=='1' else 'off')+'-context.json')\n                report['initialization_context_audit']=observe(root,target)\n                copy=out/'context-audit.json';assert not copy.exists();copy.write_bytes(target.read_bytes());save()\n            except BaseException as audit_error:report['initialization_audit_error']=repr(audit_error);save()\n",
+          "after": "",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "test_z128_factory_layer2.bat",
+      "target": "test_z128_reconstructed_layer2.bat",
+      "source_sha256": "2ea6acea799ac5f8168446855cdbdb54a92bdb149ac896b4df62c2ba60b00f93",
+      "target_sha256": "93cd47d90d77cc59a7a8057903bdc8afb55f74dbc9aa41bc76e66a3dd3184156",
+      "changes": [
+        {
+          "before": "set GARNET_Z128_FACTORY_TRACE=\n",
+          "after": "set GARNET_Z128_FACTORY_TRACE=\nset GARNET_Z128_RECONSTRUCT_TRACE=\n",
+          "count": 1
+        },
+        {
+          "before": "if \"%~3\"==\"1\" set GARNET_Z128_FACTORY_TRACE=1",
+          "after": "if \"%~3\"==\"1\" set GARNET_Z128_RECONSTRUCT_TRACE=1",
+          "count": 1
+        },
+        {
+          "before": "set GARNET_FP8_GDN_Z128_CANONICAL=1",
+          "after": "set GARNET_FP8_GDN_Z128_CANONICAL=1\nset GARNET_FP8_GDN_Z128_RECONSTRUCT=1",
+          "count": 1
+        },
+        {
+          "before": "probe_z128_factory_layer2.py",
+          "after": "probe_z128_reconstructed_layer2.py",
+          "count": 1
+        }
+      ]
+    }
+  ],
+  "all_math_shapes_captures_readonly_carry_and_repeat_code_unchanged": true,
+  "removed_separate_TU_postfailure_observer": true,
+  "new_factory_trace": true,
+  "model_or_performance_qualified": false
+}

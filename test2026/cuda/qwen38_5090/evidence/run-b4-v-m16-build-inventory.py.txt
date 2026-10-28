@@ -1,0 +1,13 @@
+from pathlib import Path
+import hashlib,json,os,sys,zipfile
+ROOT=Path('D:/CantorAI/5090-study-20261023');M=ROOT/'Garnet/test2026/cuda/qwen38_5090';sys.path[:0]=[str(M),str(ROOT/'Garnet')];import run_logged as ledger
+script=ROOT/'results/inspect-b4-v-m16-build-inputs.py';sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest();ledger.source_identity=lambda:dict(scope='Explicit readonly73target native-build inventory; protected bodies excluded',owned_source_sha256={script.name:sha(script)});os.chdir(ROOT/'Garnet')
+code=ledger.run([sys.executable,str(script)],ROOT/'results/b4-v-m16-build-input-inventory','correctness','Fresh1374source/73targets/runtime/SDK/checkpoint/CMake/all34objects and closed212VCPU/faithfulconnected/failedSDK-model parents; no mutation',[script,M/'evidence/b4-decode-m16-build-preparation.json',M/'evidence/b4-v-m16-cpu-v2-preparation.json'])
+paths=[script,Path(__file__)]+list((ROOT/'results/b4-v-m16-build-input-inventory').iterdir());target=ROOT/'results/b4-v-m16-build-inputs.json'
+if target.exists():paths.append(target)
+archive=ROOT/'results/b4-v-m16-build-inventory-assets.zip';assert not archive.exists()
+with zipfile.ZipFile(archive,'x',zipfile.ZIP_DEFLATED) as z:
+    files={p.relative_to(ROOT).as_posix():p for p in paths if p.is_file()}
+    for n,p in files.items():z.write(p,n)
+    z.writestr('manifest.json',json.dumps(dict(files={n:sha(p) for n,p in files.items()}),indent=2))
+print(json.dumps(dict(exit_code=code,archive_sha256=sha(archive),bytes=archive.stat().st_size)));raise SystemExit(code)

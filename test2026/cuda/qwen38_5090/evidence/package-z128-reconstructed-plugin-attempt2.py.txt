@@ -1,0 +1,17 @@
+from pathlib import Path
+import ast,hashlib,json,os,sys,zipfile
+W=Path(__file__).resolve().parent;OUT=W.parent/'outputs';R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';P='Garnet/test2026/cuda/qwen38_5090/';sha=lambda b:hashlib.sha256(b).hexdigest()
+p=json.loads((W/'z128-reconstructed-plugin-proposal.json').read_bytes());newnames=['prepare_z128_reconstructed_plugin_build_attempt2.py','run_z128_reconstructed_plugin_build_attempt2.py','verify_z128_reconstructed_plugin_build_attempt2.py','build_z128_reconstructed_plugin_init_cpu_attempt2.bat','test_z128_reconstructed_plugin_retry.py','evidence/z128-reconstructed-plugin-attempt2-derivation.json']
+methods={P+n:sha((M/n).read_bytes()) for n in newnames};p['base_files']={**p['base_files'],**p['methods'],P+'evidence/z128-reconstructed-plugin-build-preparation.json':sha((M/'evidence/z128-reconstructed-plugin-build-preparation.json').read_bytes())};p['methods']={**p['methods'],**methods}
+for n in newnames:
+    if n.endswith('.py'):ast.parse((M/n).read_bytes())
+proof=(OUT/'z128-reconstructed-plugin-build-attempt1-verified.json').read_bytes();assert proof==(OUT/'z128-reconstructed-plugin-build-attempt1-remote-verified.json').read_bytes();q=json.loads(proof);assert q['exit_code']==2 and q['source_runtime_SDK_checkpoint_CMake_restored'];p['parents']['z128-reconstructed-plugin-build-attempt1']={'status':q['status'],'proof_sha256':sha(proof),'archive_sha256':q['archive_sha256']}
+sys.path[:0]=[str(M),str(R)];import run_logged as ledger
+ledger.source_identity=lambda:{'scope':'Explicit retry methods and unchanged43candidate sources; unrelated probe excluded','owned_source_sha256':p['methods']};os.chdir(R)
+assert ledger.run([sys.executable,'-m','unittest','test2026.cuda.qwen38_5090.test_z128_reconstructed_plugin','test2026.cuda.qwen38_5090.test_z128_reconstructed_plugin_retry'],W/'z128-reconstructed-plugin-attempt2-local-cpu-ledger','correctness','Seven controls including86frozen historical sources; CPU compilation directory repaired, no plugin or numerical assertion changed',[M/n for n in newnames])==0
+proposal=W/'z128-reconstructed-plugin-proposal-attempt2.json';assert not proposal.exists();proposal.write_bytes(json.dumps(p,indent=2).encode());deploy={P+n:(M/n).read_bytes() for n in newnames};deploy['results/'+proposal.name]=proposal.read_bytes();package=W/'z128-reconstructed-plugin-deployment-attempt2.zip';assert not package.exists()
+with zipfile.ZipFile(package,'x',zipfile.ZIP_DEFLATED) as z:
+    for n,b in deploy.items():z.writestr(n,b)
+    z.writestr('install-manifest.json',json.dumps({'files':{n:sha(b) for n,b in deploy.items()}},indent=2))
+result={'package_sha256':sha(package.read_bytes()),'package_bytes':package.stat().st_size,'source_pins':len(p['base_files']),'method_pins':len(p['methods']),'candidate_files':43,'proposal_sha256':sha(proposal.read_bytes())};(W/'z128-reconstructed-plugin-package-attempt2.json').write_bytes(json.dumps(result,indent=2).encode())
+old=(W/'install-z128-reconstructed-plugin.py').read_bytes();old=old.replace(b'z128-reconstructed-plugin-deployment.zip',b'z128-reconstructed-plugin-deployment-attempt2.zip').replace(b'z128-reconstructed-plugin-install.json',b'z128-reconstructed-plugin-install-attempt2.json').replace(json.loads((W/'z128-reconstructed-plugin-package.json').read_bytes())['package_sha256'].encode(),result['package_sha256'].encode());(W/'install-z128-reconstructed-plugin-attempt2.py').write_bytes(old);print(json.dumps(result))

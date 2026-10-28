@@ -19,4 +19,18 @@ int RunQwen35AttentionCore(const Qwen35AttentionCoreConfig&,const void* const*,
 bool SupportsQwen35AttentionCoreFusedExact(const Qwen35AttentionCoreConfig&) noexcept;
 int RunQwen35AttentionCoreFusedExact(const Qwen35AttentionCoreConfig&,const void* const*,
     void* const*,void*,cudaStream_t) noexcept;
+// Unwired research candidate. Zero global scratch; same input/output contract.
+// Shared-memory use and long-prefix tradeoffs require independent qualification.
+int RunQwen35AttentionCompact(const Qwen35AttentionCoreConfig&,const void* const*,
+    void* const*,void*,cudaStream_t) noexcept;
+
+// Separate output-tiled candidate; replicates scores to expose more query work.
+int RunQwen35AttentionCompactTiled(const Qwen35AttentionCoreConfig&,const void* const*,
+    void* const*,void*,cudaStream_t) noexcept;
+
+// Unwired split-key candidate. FP32 reduction order differs; qualify numerically.
+size_t Qwen35AttentionSplitWorkspace(const Qwen35AttentionCoreConfig&) noexcept;
+int RunQwen35AttentionSplit(const Qwen35AttentionCoreConfig&,const void* const*,
+    void* const*,void*,cudaStream_t) noexcept;
+
 }

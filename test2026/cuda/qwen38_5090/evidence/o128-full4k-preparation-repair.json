@@ -1,0 +1,16 @@
+{
+  "status": "legacy_baseline_proof_schema_read_from_SHA_verified_raw_workflow",
+  "source": "prepare-o128-full4k.py",
+  "target": "prepare-o128-full4k-attempt2.py",
+  "source_sha256": "57a4a6535589e71f00ed1fc27fbe437716a3b5a48edc04e23d663456f63fc7dc",
+  "target_sha256": "86eaca4cbfdee3ca98cd4f705f18c5106254673e0b3d7c709f39ac112a9ce168",
+  "changes": [
+    {
+      "old": "blob=(O/(job+'-verified.json')).read_bytes();proof=json.loads(blob);assert proof['exit_code']==0 and sha((O/(job+'-evidence.zip')).read_bytes())==proof['archive_sha256'];parents[job]=dict(proof_sha256=sha(blob),archive_sha256=proof['archive_sha256'],status=proof['status'],exit_code=0)",
+      "new": "blob=(O/(job+'-verified.json')).read_bytes();proof=json.loads(blob);parent_archive=O/(job+'-evidence.zip');assert sha(parent_archive.read_bytes())==proof['archive_sha256']\n    with zipfile.ZipFile(parent_archive) as z:workflow=json.loads(z.read('results/'+job+'/workflow.json'))\n    assert type(workflow['exit_code']) is int and workflow['exit_code']==0 and workflow['cleanup_finished'] is True\n    if job==one:assert proof['exit_code']==0\n    else:assert proof['status']=='mtp_prefill16_full4k_target_state_replayed' and proof['replayed_model']['captured_states']==32 and len(proof['replayed_model']['cases'])==6 and workflow['source_sha256']==workflow['source_after_sha256'] and workflow['runtime_dependencies']==workflow['runtime_dependencies_after'] and workflow['library_unchanged']\n    parents[job]=dict(proof_sha256=sha(blob),archive_sha256=proof['archive_sha256'],status=proof['status'],exit_code=workflow['exit_code'])",
+      "count": 1
+    }
+  ],
+  "numeric_or_runtime_gates_not_waived": true,
+  "GPU_or_model_rerun": false
+}

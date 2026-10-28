@@ -1,0 +1,9 @@
+from pathlib import Path
+import hashlib,json,zipfile
+W=Path(__file__).resolve().parent;O=W.parent/'outputs';sha=lambda b:hashlib.sha256(b).hexdigest();r=json.loads((W/'b4-b1-short-closure-receipt.json').read_bytes());archive=W/'b4-b1-short-closure-assets.zip';assert sha(archive.read_bytes())==r['closure_sha256'] and archive.stat().st_size==r['closure_bytes'] and r['exit_code']==0
+with zipfile.ZipFile(archive) as z:
+    mf=json.loads(z.read('manifest.json'));assert z.testzip() is None and len(z.namelist())==len(set(z.namelist()))==len(mf['files'])+1
+    for n,h in mf['files'].items():assert sha(z.read(n))==h
+    assert mf['original_archive_sha256']==sha((O/'b4-b1-short-admission-attempt1-evidence.zip').read_bytes())
+    raw=z.read('results/b4-b1-short-admission-attempt1-verified.json');target=O/'b4-b1-short-admission-attempt1-remote-verified.json';assert not target.exists() or target.read_bytes()==raw;target.write_bytes(raw)
+print(json.dumps(dict(status='B4_B1_short_closure_verified',remote_status=json.loads(raw)['status'])))

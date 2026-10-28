@@ -1,0 +1,58 @@
+"""Derive an updated reporting-only chart from the retained v5 generator."""
+from pathlib import Path
+
+W = Path(__file__).resolve().parent
+s = (W / 'render-progress-comparison-20261027-v5.py').read_text(encoding='utf8')
+s = s.replace("STEM = 'Garnet-Progress-Comparison-2026-10-27-v5'", "STEM = 'Garnet-Progress-Comparison-2026-10-27-v6'")
+start = s.index("candidate = read(E / 'b4-k-m4x4-source-cpu-preparation.json')")
+end = s.index('\nplt.rcParams', start)
+s = s[:start] + '''def latest_diagnostic(name, job):
+    d = read(O / name)
+    proof = O / (job + '-verified.json')
+    remote = O / (job + '-remote-verified.json')
+    raw = O / (job + '-evidence.zip')
+    assert proof.read_bytes() == remote.read_bytes()
+    assert sha(proof) == d['proof_sha256']
+    assert sha(raw) == d['archive_sha256']
+    for p in (proof, remote, raw):
+        inputs[str(p)] = sha(p)
+    assert d['baseline_source_runtime_SDK_config_index_CMake_all34_restored']
+    assert not d['two_times_target_achieved']
+    return d
+
+
+control = latest_diagnostic('Garnet-B4-K-M4x4-Control52-Progress.json', 'b4-k-m4x4-control52-attempt1')
+timeline = latest_diagnostic('Garnet-Key35-Coordinate-Trajectory-Progress.json', 'key35-coordinate-trajectory-attempt1')
+assert not control['selected_step52_intervention_passed']
+assert control['direct_off_on_comparison']['selected_raw_key_cache_bytes_exact_between_off_on']
+assert timeline['CPU_controls'] == 52
+assert timeline['first_observed_selected_value_difference_step'] == 45
+assert timeline['selected_value_differing_steps'] == list(range(45, 53))
+assert timeline['same_profile_full_cache_bytes_reproduced']
+assert not timeline['first_global_decoder_divergence_or_unique_causal_operator_proved']
+''' + s[end:]
+s = s.replace('figsize=(16, 11.4)', 'figsize=(16, 12.4)')
+s = s.replace('height_ratios=[1, 1.05]', 'height_ratios=[1, 1.25]')
+s = s.replace('hspace=.54', 'hspace=.46')
+s = s.replace('Serving measurements unchanged; latest work localizes the batch-4 correctness failure.', 'Serving measurements unchanged; cache difference first observed at step 45; K-only fix failed.')
+start = s.index('rows = [')
+end = s.index('\ntable = ', start)
+s = s[:start] + '''rows = [
+    ['Native 4K HTTP measurements', 'COMPLETE', '3 native trials; 192 measured requests; ordinary references retained'],
+    ['Batch-4 short model test', 'PASS', '4 rows: all 8 IDs and all 128 state components exact'],
+    ['Batch-4 full 4K / 128 outputs', 'FAIL', 'Text, image and mixed groups diverge; new serving path not admitted'],
+    ['Full-context early decode', 'PASS: STEPS 1–7', '4 mixed rows: every recorded state component and vector exact'],
+    ['Layer-35 key-cache diagnosis', 'LOCALIZED', 'At step 52: 1 of 4,194,304 BF16 values differs; slot 4012, dim 211'],
+    ['Four actual M4 calls: built / tested', 'FIX FAILED', 'Live K route verified; switching it on leaves captured states and IDs unchanged'],
+    ['Sampled cache-value timeline', 'OBSERVED: 45', 'Zero/exact through step 44; B1 1.3125 vs B4 1.3046875 at steps 45–52'],
+    ['Diagnostic controls / restoration', 'PASS', '52 CPU controls; paired raw replay identical; baseline files restored'],
+    ['Batch-4 MTP / quality / HTTP', 'PENDING', 'Next: inspect operands at step 45; full correctness pass required'],
+    ['Strongest references / INT4 / 4B', 'PENDING', 'Repeated tuned/MTP vLLM and SGLang comparisons still required'],
+]
+''' + s[end:]
+s = s.replace("'#a8322c' if row == 2", "'#a8322c' if row in (2, 5)")
+s = s.replace('row in (0, 1, 3)', 'row in (0, 1, 3, 7)')
+s = s.replace("'candidate_native_compiled': False,", "'candidate_native_compiled': True,\n          'K_four_M4_intervention_repaired_selected_case': False,\n          'first_observed_sampled_coordinate_difference_step': 45,")
+assert 'PREPARED' not in s and 'source-cpu-preparation' not in s
+(W / 'render-progress-comparison-20261027-v6.py').write_text(s, encoding='utf8')
+print('Prepared v6 report generator; no benchmark or native execution.')

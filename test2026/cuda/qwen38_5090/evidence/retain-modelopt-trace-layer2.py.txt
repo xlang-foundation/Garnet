@@ -1,0 +1,53 @@
+"""Keep actual failing plugin evidence immutable; delayed Python markers are not chronology."""
+from pathlib import Path
+import hashlib,json,re,zipfile
+work=Path(__file__).resolve().parent;out=work.parent/'outputs';repo=Path('D:/CantorAI/work/qwen38-5090');m=repo/'test2026/cuda/qwen38_5090';e=m/'evidence';M='Garnet/test2026/cuda/qwen38_5090/';job='modelopt-trace-layer2-attempt1';base='results/'+job+'/';sha=lambda raw:hashlib.sha256(raw).hexdigest();paths=[]
+def keep(name,raw):
+    target=e/name;assert not target.exists() or target.read_bytes()==raw,target
+    if not target.exists():target.write_bytes(raw)
+    paths.append(target.relative_to(repo).as_posix())
+proof=(out/(job+'-verified.json')).read_bytes();assert proof==(out/(job+'-remote-verified.json')).read_bytes();q=json.loads(proof);archive=out/(job+'-evidence.zip');assert sha(archive.read_bytes())==q['archive_sha256']
+assert q['status']=='actual_modelopt_layer2_initialization_failure_preserved' and q['source_runtime_SDK_checkpoint_restored'] and q['actual_failed_plugin_route_observed'] and not q['helper_API_failure_cause_established']
+with zipfile.ZipFile(archive) as z:
+    manifest=json.loads(z.read('evidence-manifest.json'));assert z.testzip() is None and len(z.namelist())==len(set(z.namelist()))==len(manifest['files'])+1==96
+    for name,h in manifest['files'].items():assert sha(z.read(name))==h
+    p=json.loads(z.read(M+'evidence/modelopt-trace-layer2-preparation.json'));w=json.loads(z.read(base+'workflow.json'));phase=q['phases']['trace-on'];t=phase['trace'];failure=q['actual_failed_initialize_returns'];assert len(failure)==1
+    assert w['exit_code']==1 and w['cleanup_finished'] and len(p['candidate_files'])==38 and sum(v is not None for v in p['candidate_base'].values())==14
+    assert failure[0]['route']=='fp8_z128' and failure[0]['id']==12 and failure[0]['result']==1 and failure[0]['factory_called'] and not failure[0]['context_present'] and not failure[0]['exception']
+    assert t['events']==24 and t['trace_replay']['initialize_calls']==12 and t['trace_replay']['factory_calls']==12 and t['trace_replay']['routes']=={'fp8':7,'nvfp4':4,'fp8_z128':1}
+    assert all(v is None for v in t['call_begin_profiles'].values()) and failure[0]['begin_profile'] is failure[0]['end_profile'] is None
+    assert t['started_profiles']==[32,128] and t['ready_profiles']==[32] and phase['retained_T32_comparison']=={'complete_finite_entries_compared':58,'profiles':[32],'all_raw_bytes_exact':True}
+    assert phase['postfailure_helper']['created'] and phase['postfailure_helper']['first_successful_index']==0 and phase['postfailure_helper']['matmul_calls']==0
+    assert base+'trace-off-ledger/commands.jsonl' not in manifest['files'] and q['trace_on_off_array_parity'] is None
+    keep(job+'-evidence-manifest.json',z.read('evidence-manifest.json'))
+    for name in z.namelist():
+        if name.startswith(base) and name.endswith(('.json','.jsonl','.log','.txt')):keep(job+'-'+name.removeprefix(base).replace('/','-'),z.read(name))
+    for name,h in p['new_files'].items():
+        current=repo/name.removeprefix('Garnet/');assert sha(current.read_bytes())==h;paths.append(current.relative_to(repo).as_posix())
+    paths.append('test2026/cuda/qwen38_5090/evidence/modelopt-trace-layer2-preparation.json')
+    remote_seconds=float(re.search(rb'Ran 83 tests in ([0-9.]+)s',z.read(base+'cpu-ledger/commands.log')).group(1))
+for suffix in ('-verified.json','-remote-verified.json','-local-replay.log','-remote-replay.log'):keep(job+suffix,(out/(job+suffix)).read_bytes())
+for name in ('derive-modelopt-trace-layer2.py','install-modelopt-trace-layer2.py','retain-modelopt-trace-layer2.py'):keep(name+'.txt',(work/name).read_bytes())
+for name in ('modelopt-trace-layer2-package.json','modelopt-trace-layer2-install.json'):keep(name,(work/name).read_bytes())
+for file in (work/'modelopt-trace-layer2-local-cpu-ledger').iterdir():
+    if file.is_file():keep('modelopt-trace-layer2-local-cpu-'+file.name,file.read_bytes())
+with zipfile.ZipFile(work/(job+'-transport.zip')) as transport:
+    record=json.loads(transport.read('transport.json'));assert record['original_sha256']==q['archive_sha256'] and record['original_proof_sha256']==sha(proof)
+    keep(job+'-transport-receipt.json',json.dumps({'transport_sha256':sha((work/(job+'-transport.zip')).read_bytes()),'transport_bytes':(work/(job+'-transport.zip')).stat().st_size,'original_bytes':archive.stat().st_size,'original_sha256':q['archive_sha256'],'proof_pair_sha256':sha(proof),'all_raw_original_archive_bytes_reconstructed_exact':True},indent=2).encode())
+plan={'status':'actual_Z128_plugin_empty_context_identified_underlying_guard_unproven','next_steps':[
+ 'Instrument the real Garnet CreateModelOptFP8Z128Context constructor, not the separate-TU observer. Default-off native stderr should record original CUDA/cuBLAS calls once in their original short-circuit order, guard outcomes, complete already-returned opaque heuristic choices, original config/check outputs and cached/created/empty returns. Preserve strict first-successful opaque rejection and all original algorithms/descriptors/workspace/wire/enqueue behavior.',
+ 'Validate exact whole-source composition and CPU fault controls comparing original and instrumented helpers. Build only on CD-RTX5090 in the fixed study root; restore baseline sources/runtime/SDK/checkpoints/cache. Use the same source-frozen layer2 real-input observation, retain every failed/successful attempt and array control. Python stdout profile markers were delayed behind native stderr; never infer call chronology from those markers.',
+ 'Use direct actual failing guard/API data to choose a correctness-preserving fix. Keep unchanged T32/T128 finite/carry/input controls and layer3 full-model linkage, six actual4096 ordinary/MTP oracle and adapted805 quality gates before performance. Repeat matched strongest feasible tuned/MTP vLLM/SGLang, INT4 W4A16, Qwen3.5-4B and concurrency tests. Overall2xdecodeANDthroughput and halfTTFTextra remain unmet.'
+ ],'helper_API_cause_established':False,'trace_on_off_array_parity_observed':False,'full_model_or_quality_or_performance_qualified':False,'two_times_target_achieved':False}
+keep('modelopt-trace-layer2-next-plan.json',json.dumps(plan,indent=2).encode())
+result={'status':plan['status'],'archive_sha256':q['archive_sha256'],'archive_bytes':archive.stat().st_size,'archive_members':96,'proof_pair_sha256':sha(proof),'native_library_sha256':q['candidate_library_sha256'],'CPU_tests':83,'remote_CPU_seconds':remote_seconds,'local_CPU_seconds':3.614,'native_sources':31,'unchanged_Python_sources':7,'source_pins':len(p['files']),'installed_pins':len(p['installed_files']),'existing_targets_restored':14,'new_targets_removed':24,'T32_complete_finite_entries_exact_to_parent':58,'actual_initialize_calls':12,'paired_native_events':24,'actual_failed_initialize':failure[0],'postfailure_separate_TU_helper':phase['postfailure_helper'],'profile_marker_ordering_limitation':'All native stderr events preceded Python stdout BEGIN/READY markers despite flush=True. Profile fields are null; no event-to-profile chronological attribution is established. T32 complete/T128 build failed is supported by report and plugin route/shape, not by marker ordering.','source_runtime_SDK_checkpoint_restored':True,'trace_unset_control_executed':False,'helper_API_cause_established':False,'initialization_reliability_resolved':False,'full_model_or_quality_or_performance_qualified':False,'two_times_target_achieved':False,'next_plan':plan}
+raw=json.dumps(result,indent=2).encode();keep('modelopt-trace-layer2-closure.json',raw);target=out/'Garnet-Actual-Z128-Plugin-Initialization-Failure-Verified.json';assert not target.exists() or target.read_bytes()==raw
+if not target.exists():target.write_bytes(raw)
+title='Actual Z128 plugin initialize returns1 from an empty context; underlying helper guard still unproven'
+text='\n\n### 2026-10-26 — '+title+'\n\n'
+text+='Source-frozen native38 trace-on real-input ordinary layer2 observation uses qualified d3f15 DLL.83CPU controls pass local3.614s/remote'+str(remote_seconds)+'s. T32 completes with58complete finite array entries byte-exact to retained earlier control; T128 TensorRT build fails before outputs. Twelve actual native initialize calls have24complete begin/end events:7ordinaryFP8,4NVFP4,1Z128. First11return0. Call12 fp8_z128 N6144/K5120/policy0x5a313238 calls its factory and returns1 with no context and no exception. This directly locates actual Garnet failure at CreateModelOptFP8Z128Context returning empty. Underlying CUDA/cuBLAS status, device/version guard, opaque heuristic mismatch or algorithm-check cause is not yet identified.\n\n'
+text+='Postfailure sameprocess/thread separate-TU helper succeeds on firstcandidate0/expectedopaque/ID67 with0matmul; it is separate evidence and cannot explain actual plugin failure. Python stdout BEGIN/READY markers arrive after native stderr despite flush=True; all call profile fields remainnull. Preserve this ordering limitation; do not claim chronology worked. Trace-unset process was not run after failure, so no on/off numerical parity or reliability claim.14existing/24new source targets, runtime, selectedSDK/checkpoints restored. Failure archive '+q['archive_sha256']+' ('+str(archive.stat().st_size)+'bytes/96members) passes CRC/allSHA/sourcebundle38/original14 and both-machine frozen checker with identical proof '+sha(proof)+'. Raw arrays/logs/failure and transport retained; no benchmark/chart values changed.\n\n'
+text+='Next: actual constructor SDK/guard telemetry with no extra SDK queries or algorithm changes; CPU forwarding/fault and exact-source controls, then remote native build and controlled real-input rerun. All original full4096 quality/MTP/baseline/INT4/4B/concurrency objectives retained; overall2xdecodeANDthroughput and halfTTFTextra remain unmet.\n'
+for name in ('qwen38-5090-development-log.md','qwen38-5090-implementation-task.md'):
+    target=repo/'docs/research'/name;old=target.read_bytes();assert title.encode() not in old;target.write_bytes(old+text.encode());paths.append(target.relative_to(repo).as_posix())
+(work/'modelopt-trace-layer2-retained-paths.json').write_bytes(json.dumps(sorted(set(paths)),indent=2).encode());print(json.dumps({'status':result['status'],'retained_paths':len(set(paths)),'proof_pair_sha256':sha(proof)}))

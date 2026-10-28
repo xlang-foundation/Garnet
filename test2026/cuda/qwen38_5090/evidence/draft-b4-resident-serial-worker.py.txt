@@ -1,0 +1,58 @@
+"""Prospective existing-backend policy experiment; never change the live worker."""
+from pathlib import Path
+import ast,hashlib,json
+W=Path(__file__).resolve().parent;R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';source=M/'native_b4_rowwise_http_worker.py';raw=source.read_bytes();s=raw.decode().replace('\r\n','\n');steps=[]
+def replace(old,new):
+    global s
+    assert s.count(old)==1,(old,s.count(old));s=s.replace(old,new);steps.append(dict(old=old,new=new,count=1))
+replace('Private B4 rowwise-K/MTP worker; HTTP quality admission remains separate.','Candidate B4 resident controls and serial graph reuse; fresh correctness/performance admission required.')
+replace('    decoder.io.enable_nvfp4_head(True);decoder.enable_cuda_graph(True);io=decoder.io',
+'''    # Existing production policy requires all three for packed shared output.
+    decoder.resident_controls=True
+    decoder.serial_target_graph_reuse=True
+    decoder.serial_graph_reuse=True
+    decoder.io.enable_nvfp4_head(True);decoder.enable_cuda_graph(True);io=decoder.io''')
+replace('    memory=session.memory_info();',
+'''    assert session.verifier.reuse_verified_head is False
+    if session.prefill_norm is not None:session.prefill_norm.enable_serial_graph_reuse(True)
+    def graph_snapshot():
+        objects={**{'target'+str(t):program.graph for t,program in decoder.programs.items()},
+                 'decoder_norm':decoder.head,'verifier_norm':session.verifier.graph,
+                 'prefix_commit':session.verifier.replay_graph,'draft4':session.program.graph,
+                 'draft16':session.prefill16_program.graph,'wide_norm':session.prefill_norm}
+        return {name:json.loads(graph.stats_json()) for name,graph in objects.items() if graph is not None}
+    initial_graphs=graph_snapshot()
+    assert all(value['cuda_graph_requested'] is True and value['serial_graph_reuse_requested'] is True for value in initial_graphs.values())
+    memory=session.memory_info();''')
+replace("              research_only=True,adapted805_HTTP_or_performance_qualified=False))",
+'''              research_only=True,adapted805_HTTP_or_performance_qualified=False,
+              backend_policy=dict(resident_controls=True,serial_target_graph_reuse=True,serial_draft_graph_reuse=True,
+                                  accepted_head_reuse=False),initial_graphs=initial_graphs,
+              backend_policy_correctness_or_performance_qualified=False))''')
+replace("            started=time.monotonic();session.reset();prepared=[]",
+'''            snapshot_flags=[job['body'].get('study_graph_snapshot',False) for job in jobs]
+            if any(type(value) is not bool for value in snapshot_flags):raise ValueError('study_graph_snapshot requires a boolean')
+            started=time.monotonic();session.reset();prepared=[]''')
+replace("            public.complete(session.generate(jobs[0]['body']['max_tokens'],on_token=public.notify))",
+'''            public.complete(session.generate(jobs[0]['body']['max_tokens'],on_token=public.notify))
+            # Diagnostic snapshots are outside public token delivery, opt-in,
+            # and absent from future clean timing request bodies.
+            if any(snapshot_flags):
+                emit(dict(event='study_graph_snapshot',request_ids=[job['id'] for job in jobs],
+                          real_rows=len(jobs),physical_batch=4,graphs=graph_snapshot(),
+                          io=json.loads(io.memory_json()),CUDA_kernel_elapsed_claimed=False,
+                          clean_throughput_result_claimed=False))''')
+ast.parse(s)
+def calls(text,name):return [ast.dump(n,include_attributes=False) for n in ast.walk(ast.parse(text)) if isinstance(n,ast.Call) and isinstance(n.func,ast.Name) and n.func.id==name]
+for name in ('construct_with_rowwise_k_decode_norm_program','CUDAMTPPrefill16B4StudySession','create_cuda_vision','prepare_cuda_image','PagedPromptRows','PublicBatchStream'):
+    assert calls(raw,name)==calls(s,name),name
+target=W/'native_b4_resident_serial_http_worker.draft.py'
+if target.exists():
+    previous=json.loads((W/'b4-resident-serial-worker-draft-derivation.json').read_bytes())
+    assert previous['CPU_embedded_GPU_validation_unrun'] and hashlib.sha256(target.read_bytes()).hexdigest()==previous['draft_sha256']
+target.write_bytes(s.encode())
+evidence={}
+for name in ('runtime/cuda_serving.py','src/backends/tensorrt/trt_context_pool.h','src/backends/tensorrt/trt_builder.cpp','xModel/qwen35/vl_0_8b/cuda_packed_decoder.py','xModel/qwen35/vl_0_8b/cuda_mtp_prefill16_b4_study.py','xModel/qwen35/vl_0_8b/cuda_verify.py','xModel/qwen35/vl_0_8b/cuda_packed_replay.py'):
+    evidence[name]=hashlib.sha256((R/name).read_bytes()).hexdigest()
+record=dict(source_file=str(source),source_sha256=hashlib.sha256(raw).hexdigest(),draft_sha256=hashlib.sha256(target.read_bytes()).hexdigest(),changes=steps,static_policy_evidence_sha256=evidence,model_constructor_call_arguments_AST_unchanged=True,model_source_bundle_or_native_DLL_changed=False,accepted_head_reuse_still_disabled=True,syntax_checked_only=True,CPU_embedded_GPU_validation_unrun=True,scope='Candidate uses existing resident-control and serial-graph APIs, as required together by the production frontend for shared packed output. Core context pool permits serial reuse only for identical bindings, stream and eligible fixed shape without provider-owner changes; no algorithm/precision/checkpoint changes. Optional post-group raw graph counters must establish actual captures/replays/reuse and allocator/context behavior; requested flags alone prove no speed benefit. Correctness must pass before clean timing. Serial policy and resident IO are one dependent configuration; no individual causal speed claim. Prefix replay uses retained GDN projections and does not rerun target projections. Host spans/graph counters are not CUDA kernel timings.')
+(W/'b4-resident-serial-worker-draft-derivation.json').write_bytes(json.dumps(record,indent=2).encode());print('Resident/serial worker draft syntax and unchanged model-call checks passed; not deployed or run')

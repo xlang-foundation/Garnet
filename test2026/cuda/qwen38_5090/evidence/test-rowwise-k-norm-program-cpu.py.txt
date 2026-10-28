@@ -1,0 +1,7 @@
+from pathlib import Path
+import hashlib,os,sys
+W=Path(__file__).resolve().parent;R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';sys.path[:0]=[str(M),str(R)];sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+import run_logged as ledger
+names=['rowwise_k_norm_program.py','test_rowwise_k_norm_program.py','evidence/rowwise-k-norm-program-derivation.json','evidence/decode35-frozen-cuda-chunk.py.txt','evidence/step45-frozen-cuda-packed-program.py.txt','bounded_step45_boundary_program.py','test_decode35_operand_program.py','test_all_layer_decode_boundary_program.py','test_decode_boundary_program.py']
+ledger.source_identity=lambda:{'scope':'Explicit private rowwise ordinary/boundary DSL and frozen derivations; CPU symbols only, no native or GPU model execution or protected-body reads','owned_source_sha256':{n:sha(M/n) for n in names}}
+os.chdir(R);assert ledger.run([sys.executable,'-m','unittest','test2026.cuda.qwen38_5090.test_rowwise_k_norm_program'],W/'rowwise-k-norm-program-cpu-ledger','correctness','Six CPU checks: ordinary primary only, existing64boundaries unchanged, preallocation B4T4 guard, binding+prefill/B1 preservation and finally restoration, exact native marker/16FA offsets/exclusive modes, exact frozen chunk and ordinary/boundary forward reversal. No new native observations, model repair or performance admission.',[M/n for n in names])==0

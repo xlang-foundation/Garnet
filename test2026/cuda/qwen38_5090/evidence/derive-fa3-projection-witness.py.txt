@@ -1,0 +1,36 @@
+from pathlib import Path
+import hashlib,json,sys,zipfile
+R=Path('D:/CantorAI/work/qwen38-5090');M=R/'test2026/cuda/qwen38_5090';W=Path(__file__).resolve().parent;sys.path[:0]=[str(M),str(R)]
+from z128_reconstructed_plugin_source import sources
+_,old,_=sources();source=dict(old);T='src/backends/tensorrt/';name=T+'trt_builder.cpp';raw=old[name];changes=[];sha=lambda b:hashlib.sha256(b).hexdigest()
+def change(a,b,n=1):
+    global raw
+    assert raw.count(a.encode())==n,(a,raw.count(a.encode()));raw=raw.replace(a.encode(),b.encode());changes.append(dict(before=a,after=b,count=n))
+change('#include "qwen38_gdn_chunk_stage_profile.h"','#include "qwen38_gdn_chunk_stage_profile.h"\n#include "qwen38_fa3_projection_witness_profile.h"')
+needle='                else if(opName=="qwen35_rms_norm")lastOutput=ops.norm(source,keywordText("weight_name"),float(number("eps",1e-6)));'
+addition='''                else if(opName=="qwen35_fp8_fa3_projection_witness") {
+                    const auto dimensions=ops.shape(source);const auto layer=keywordText("layer_prefix");
+                    RequireQwen38FA3ProjectionWitness(std::getenv("GARNET_FP8_FA3_PROJECTION_WITNESS"),capturedWeightProfile,
+                        dimensions,layer,number("eps",1.e-6),!external.empty(),source->getType()==DataType::kFLOAT);
+                    auto* normalized=ops.norm(source,layer+".input_layernorm.weight",1.e-6f);
+                    std::vector<ITensor*> projected;
+                    for(const char* suffix:{".self_attn.k_proj.weight",".self_attn.v_proj.weight"}){
+                        const auto name=layer+suffix;auto* weight=ops.weight(name);auto found=nativeFP8Weights.find(weight);
+                        if(found==nativeFP8Weights.end()||found->second.rows!=1024||found->second.columns!=5120||found->second.logicalName!=name)
+                            throw std::invalid_argument("FA3 witness requires exact native FP8 K/V checkpoint matrices");
+                        projected.push_back(ops.project(normalized,weight));
+                    }
+                    // Same normalization and projection primitives as ordinary full attention.
+                    // Only this explicit witness packs diagnostic outputs; ordinary routes are untouched.
+                    lastOutput=ops.cat({ops.reshape(ops.cast(normalized),{1,dimensions[1]*5120}),
+                        ops.reshape(ops.cast(projected[0]),{1,dimensions[1]*1024}),
+                        ops.reshape(ops.cast(projected[1]),{1,dimensions[1]*1024})},1);
+                }
+'''
+change(needle,addition+needle);source[name]=raw;header=T+'qwen38_fa3_projection_witness_profile.h';source[header]=(M/'native_fa3_projection_witness_candidate'/Path(header).name).read_bytes();assert len(source)==44
+dest=M/'native_fa3_projection_witness_candidate/trt_builder.cpp';assert not dest.exists();dest.write_bytes(raw)
+p={'status':'explicit_FA3_native_projection_witness_derived_unbuilt','parent_candidate_files':{n:sha(b) for n,b in old.items()},'candidate_files':{n:sha(b) for n,b in source.items()},'modified_source':name,'source_sha256':sha(old[name]),'target_sha256':sha(raw),'changes':changes,'new_header':header,'new_header_sha256':sha(source[header]),'ordinary_math_or_old_guards_changed':False,'new_CUDA_kernels':0,'full_model_or_performance_qualified':False}
+(M/'evidence/fa3-projection-witness-source-derivation.json').write_bytes(json.dumps(p,indent=2).encode());bundle=W/'fa3-projection-witness-source.zip';assert not bundle.exists()
+with zipfile.ZipFile(bundle,'x',zipfile.ZIP_DEFLATED) as z:
+    for n,b in source.items():z.writestr(n,b)
+print(json.dumps({'candidate_files':44,'modified_CPP':1,'new_header':1,'bundle_sha256':sha(bundle.read_bytes())}))

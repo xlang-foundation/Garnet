@@ -1,0 +1,53 @@
+from pathlib import Path
+import ast,datetime,hashlib,json,shutil
+w=Path(__file__).resolve().parent;r=Path('D:/CantorAI/work/qwen38-5090');m=r/'test2026/cuda/qwen38_5090';e=m/'evidence';o=w.parent/'outputs';sha=lambda raw:hashlib.sha256(raw).hexdigest()
+for name in ('mtp-prefill16-full4k-cpu-ledger','mtp-prefill16-full4k-owner-cpu-ledger'):
+ target=e/name;assert not target.exists();shutil.copytree(w/name,target)
+for name in ('correct-prefill16-full4k-before-first-output.py','prepare-mtp-prefill16-full4k-deployment.py','preflight-prefill16-full4k.py','package-prefill16-full4k-methods.py','install-prefill16-full4k-methods.py','retain-mtp-prefill16-full4k-preparation.py'):
+ raw=(w/name).read_bytes();ast.parse(raw);target=e/(name+'.txt');assert not target.exists();target.write_bytes(raw)
+for name in ('mtp-prefill16-full4k-upload-plan.json','prefill16-full4k-preflight-input.json'):
+ target=e/name;assert not target.exists();target.write_bytes((w/name).read_bytes())
+p=json.loads((e/'mtp-prefill16-full4k-run-preparation.json').read_bytes());plan=json.loads((w/'mtp-prefill16-full4k-upload-plan.json').read_bytes())
+for row in plan['uploads']:assert sha(Path(row['local']).read_bytes())==row['sha256']
+methods=('mtp_prefill16_full4k.py','probe_mtp_prefill16_full4k.py','test_mtp_prefill16_full4k.py','run_mtp_prefill16_full4k.py','test_mtp_prefill16_full4k_owner.py','prepare_mtp_prefill16_full4k_run.py','verify_mtp_prefill16_full4k.py','test_mtp_prefill16_full4k.bat')
+for name in methods:
+ if name.endswith('.py'):ast.parse((m/name).read_bytes())
+summary={'status':'mtp_prefill16_full4k_correctness_owner_prepared_gpu_unrun','recorded_utc':datetime.datetime.now(datetime.timezone.utc).isoformat(),'method_sha256':{n:sha((m/n).read_bytes()) for n in methods},'preparation_sha256':sha((e/'mtp-prefill16-full4k-run-preparation.json').read_bytes()),'pinned_files':len(p['files']),'upload_targets':len(plan['uploads']),'planned_full4k_cases':6,'planned_target_state_snapshots':32,'planned_actual_prompt_tokens_each':3968,'planned_actual_output_tokens_each':128,'required_draft_prefill_calls_each':249,'actual_gpu_cases_or_states_observed':0,'actual_initial_cpu_tests_passed':29,'actual_initial_cpu_seconds':0.406,'actual_owner_cpu_tests_passed':50,'actual_owner_cpu_seconds':0.775,'cpu_tested_modules_unchanged_by_final_verifier_memory_metadata_correction':True,'final_verifier_syntax_passed':True,'unrun_memory_metadata_correction_preserved':True,'parents':p['parents'],'remote_deployment_executed':False,'full4k_model_quality_http_or_performance_admitted':False,'two_times_target_achieved':False,'scope':p['scope'],'next_deployment_guards':'Only absent reviewed files,575existing-input/runtime/target hashes, exact actual closed reference characterization archive and independent proof, previous native/B8/short-MTP closures and idle adapter/process. Reuse fixed study root and owned SSD cache. Original active HTTP supervisor alone is polled remotely until closure.'}
+for target in (e/'mtp-prefill16-full4k-offline-preparation.json',o/'Garnet-MTP-Prefill16-4K-Preparation.json'):
+ assert not target.exists();target.write_text(json.dumps(summary,indent=2),encoding='utf8')
+entry='''
+
+### 2026-10-25 — full4K wider-MTP target-state admission prepared, CPU qualified
+
+Actual short-model T16 qualification is closed/replayed; next owner/probe/replayer
+is prepared for actual3968+128 full4K. Use four retained native C1 inputs (two text,
+two distinct JPEG nonces), then first-text/image reset repeats. Six cases compare
+ordinary versus explicit candidate target canonical hashes and finite hidden/
+normalized raw vectors at prefill/final, all actual prompt/output/callback IDs,
+empty/final reset and actual249draft-prefill calls. Fixed128outputs explicitly
+ignore EOS; target slots must be3968after prefill and4095at final prediction.
+No805quality, HTTP, throughput or speed admission from this correctness study.
+
+Actual29CPU tests pass0.406s. Complete owner suite50CPU pass0.775s, including
+synthetic six-case/32state raw/count/ID/image/reset/callback/slot fault rejection,
+closed-reference source/runtime/server/proof lifecycle and unchanged target/MTP
+guards. CPU fixture bytes/hashes are explicitly synthetic, not model evidence.
+Before deployment, source audit corrected an unrun replayer metadata expectation:
+CUDACompiledGraph output storage is absent before first execution (0bytes) and
+33882112bytes after T16 execution. Initial verifier/preparation/plan preserved;
+model, raw-state/count gates and admitted results unchanged. Final checker parses;
+CPU-tested modules unchanged by this checker-only metadata correction.
+
+Final preparation pins586files/12targets; absent-only deployment preflight is
+prepared with575existing inputs and explicit actual reference-characterization
+closure/proof plus previous HTTP/B8/short-MTP closure and idle guards. No remote
+installation or GPU execution yet. Active SGLang characterization remains the
+sole remote HTTP/GPU study; only its original supervisor is polled. After actual
+closure, archive/replay all variants and color/isolation results, then select the
+next matched reference benchmark policy from evidence. Qualify candidate4K,
+805quality and current host/GPU bottlenecks before repeated speed comparison.
+Stronger tuned/MTP vLLM/SGLang, externalB8/HTTP/MTP, INT4/4B and2x remain open.
+'''
+for name in ('qwen38-5090-development-log.md','qwen38-5090-implementation-task.md'):
+ p=r/'docs/research'/name;raw=p.read_bytes();assert b'full4K wider-MTP target-state admission prepared, CPU qualified' not in raw;p.write_bytes(raw+entry.replace('\n','\r\n').encode())
+print(json.dumps({'status':summary['status'],'actual_cpu_tests':50,'preparation_sha256':summary['preparation_sha256'],'pinned_files':summary['pinned_files'],'upload_targets':summary['upload_targets'],'actual_gpu_cases_observed':0,'two_times_target_achieved':False}))

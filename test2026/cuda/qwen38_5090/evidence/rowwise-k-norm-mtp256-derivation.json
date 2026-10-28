@@ -1,0 +1,190 @@
+{
+  "derivations": [
+    {
+      "source": "b4_mtp_full4k_gate.py",
+      "source_sha256": "d5af40aa2711b2975b9572d91d6c8edf21b14b0f1bfee8afcce1da5f84ac02eb",
+      "target": "b4_mtp256_full4k_gate.py",
+      "target_sha256": "589e8cb8a838c1e6e6fa8f1aa420d8fd5e639ac7e402538190cd5d8abd98e0dc",
+      "changes": [
+        {
+          "old": "draft_prefill_builder_workspace_bytes']==128<<20",
+          "new": "draft_prefill_builder_workspace_bytes']==256<<20",
+          "count": 1
+        },
+        {
+          "old": "    routes=[]",
+          "new": "    assert m['mtp_graph']['builder_workspace_limit_bytes']==m['prefill16_graph']['builder_workspace_limit_bytes']==256<<20\n    routes=[]",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "test_b4_mtp_full4k_gate.py",
+      "source_sha256": "e6ccdec4ab30dd48de241e195016784ff83500abbe9f357059a0c06515598ffa",
+      "target": "test_b4_mtp256_full4k_gate.py",
+      "target_sha256": "14a978dfa8c6cc023063ae666fb1cc3766f7077cbefee447078a7f3058735e48",
+      "changes": [
+        {
+          "old": "from .b4_mtp_full4k_gate import admit",
+          "new": "from .b4_mtp256_full4k_gate import admit",
+          "count": 1
+        },
+        {
+          "old": "draft_prefill_builder_workspace_bytes=128<<20",
+          "new": "draft_prefill_builder_workspace_bytes=256<<20,mtp_graph=dict(builder_workspace_limit_bytes=256<<20),prefill16_graph=dict(builder_workspace_limit_bytes=256<<20)",
+          "count": 1
+        },
+        {
+          "old": "c['mtp_memory']['draft_prefill_builder_workspace_bytes']=256<<20",
+          "new": "c['mtp_memory']['draft_prefill_builder_workspace_bytes']=128<<20",
+          "count": 1
+        },
+        {
+          "old": "if __name__=='__main__':unittest.main()",
+          "new": "    def test_actual_graph_workspace_must_match_reported_policy(self):\n        for graph in ('mtp_graph','prefill16_graph'):\n            s,r,c,f=self.fixture();c['mtp_memory'][graph]['builder_workspace_limit_bytes']=128<<20\n            with self.assertRaises(AssertionError):self.run_gate(s,r,c,f)\nif __name__=='__main__':unittest.main()",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "probe_rowwise_k_norm_mtp_full4k.py",
+      "source_sha256": "66453f10ade9df7f23c4cdcd6eeeb98f9815d4de7b3ceba2849a7a9899e56828",
+      "target": "probe_rowwise_k_norm_mtp256_full4k.py",
+      "target_sha256": "2c98ddf5ab1f5ff4931f411a088bc50930e34c04491d6b75ba18f56996781913",
+      "changes": [
+        {
+          "old": "rowwise-k-norm-mtp-full4k",
+          "new": "rowwise-k-norm-mtp256-full4k",
+          "count": 1
+        },
+        {
+          "old": "Source87",
+          "new": "Source89",
+          "count": 1
+        },
+        {
+          "old": "draft_builder_workspace_bytes=256<<20)",
+          "new": "draft_builder_workspace_bytes=256<<20,draft_prefill_builder_workspace_bytes=256<<20)",
+          "count": 1
+        },
+        {
+          "old": "memory['draft_prefill_builder_workspace_bytes']==128<<20",
+          "new": "memory['draft_prefill_builder_workspace_bytes']==256<<20",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "launch_rowwise_k_norm_mtp_full4k.py",
+      "source_sha256": "ef598325142784c03fd277b44e49b62aea6014dbcc0c190859f78ba4c8c4b054",
+      "target": "launch_rowwise_k_norm_mtp256_full4k.py",
+      "target_sha256": "daad8d5131d1654d1becf4253be1c6f1a291beea754182c9846e26d862cc0517",
+      "changes": [
+        {
+          "old": "rowwise-k-norm-mtp-full4k",
+          "new": "rowwise-k-norm-mtp256-full4k",
+          "count": 1
+        },
+        {
+          "old": "rowwise_k_norm_mtp_full4k",
+          "new": "rowwise_k_norm_mtp256_full4k",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "run_rowwise_k_norm_mtp_full4k.py",
+      "source_sha256": "e8b3e323ff02636c820ca281cfad4d478dc6bb8c34962be8a8bcc12deb6359ac",
+      "target": "run_rowwise_k_norm_mtp256_full4k.py",
+      "target_sha256": "1a7fd7e7a4ee694f87b4df542a49ae6174ec3107848037d0d94cd7b82ba35368",
+      "changes": [
+        {
+          "old": "rowwise-k-norm-mtp-full4k",
+          "new": "rowwise-k-norm-mtp256-full4k",
+          "count": 2
+        },
+        {
+          "old": "rowwise_k_norm_mtp_full4k",
+          "new": "rowwise_k_norm_mtp256_full4k",
+          "count": 1
+        },
+        {
+          "old": "b4_mtp_full4k_gate",
+          "new": "b4_mtp256_full4k_gate",
+          "count": 1
+        },
+        {
+          "old": "rowwise_K_norm_mtp_full4k_prepared_GPU_unrun",
+          "new": "rowwise_K_norm_mtp256_full4k_prepared_GPU_unrun",
+          "count": 1
+        },
+        {
+          "old": "source87",
+          "new": "source89",
+          "count": 3
+        },
+        {
+          "old": "Source87",
+          "new": "Source89",
+          "count": 1
+        },
+        {
+          "old": "len(source)==87",
+          "new": "len(source)==89",
+          "count": 1
+        },
+        {
+          "old": "31 additional CPU controls",
+          "new": "41 additional CPU controls",
+          "count": 1
+        },
+        {
+          "old": "31 MTP CPU controls failed",
+          "new": "41 MTP CPU controls failed",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "source": "verify_rowwise_k_norm_mtp_full4k.py",
+      "source_sha256": "b9acea23119bae04a3070a67c82069e7390d8f6bb0198d2123c8692633f53479",
+      "target": "verify_rowwise_k_norm_mtp256_full4k.py",
+      "target_sha256": "a482237ca12bfc01fc5ada77ba462e5031b857c40d82f52c6e5910b341be7de7",
+      "changes": [
+        {
+          "old": "rowwise-k-norm-mtp-full4k",
+          "new": "rowwise-k-norm-mtp256-full4k",
+          "count": 2
+        },
+        {
+          "old": "rowwise_k_norm_mtp_full4k",
+          "new": "rowwise_k_norm_mtp256_full4k",
+          "count": 1
+        },
+        {
+          "old": "b4_mtp_full4k_gate",
+          "new": "b4_mtp256_full4k_gate",
+          "count": 2
+        },
+        {
+          "old": "==87 and {n:sha(source.read(n))",
+          "new": "==89 and {n:sha(source.read(n))",
+          "count": 1
+        },
+        {
+          "old": "Ran 31 tests",
+          "new": "Ran 41 tests",
+          "count": 1
+        },
+        {
+          "old": "CPU_controls=146",
+          "new": "CPU_controls=156",
+          "count": 1
+        }
+      ]
+    }
+  ],
+  "unchanged_native_DLL": true,
+  "original_gates_preserved": true,
+  "only_new_workspace_policy_and_graph_budget_evidence": true
+}

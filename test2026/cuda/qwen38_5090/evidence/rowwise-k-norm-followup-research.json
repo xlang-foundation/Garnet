@@ -1,0 +1,43 @@
+{
+  "status": "read_only_followup_research_no_model_or_performance_admission",
+  "date_utc": "2026-10-28",
+  "installed_TensorRT_version": 101601,
+  "native_source_bundle_sha256": "fcffdf2455d188ca555e561ddb16d337d5f172c00b4dafdc7b90e2634651f190",
+  "documentation_scope": "The official 10.x archive identifies 10.16.1 as its latest release, matching the installed SDK family. Current latest documentation describes 11.4; do not assume its type-policy changes apply to this build. Exact-version numbered URLs returned404; use the verified official10.x archive.",
+  "sources": [
+    {
+      "url": "https://docs.nvidia.com/deeplearning/tensorrt/10.x.x/inference-library/precision-control.html",
+      "finding": "Builder tactic selection can vary with timing noise; different accumulation orders can change bits. Editable timing caches record and constrain choices. Strong typing fixes tensor types but does not establish bitwise equality across shapes.",
+      "application": "Potential deterministic-tactic audit. This does not prove the cause of Garnet's mismatch or qualify accuracy."
+    },
+    {
+      "url": "https://docs.nvidia.com/deeplearning/tensorrt/10.x.x/inference-library/engine-tools.html",
+      "finding": "Engine inspection detail depends on build-time profiling verbosity. Explicit tensor-debug marking can inhibit fusion; marking all unfused tensors is documented to preserve fusion. Runtime listeners receive tensor data and require correct stream synchronization; some unfused tensors cannot be marked.",
+      "application": "If the ordinary rowwise ablation fails, consider existing plugin-boundary capture or unfused-debug inspection before another final-output observer. First establish same-DLL off/on all-row primary parity. Verify actual SDK headers, tensor coverage and CUDA-graph/listener behavior before claiming usable observation. No assumption that internal fused RMS intermediates are visible."
+    },
+    {
+      "url": "https://docs.pytorch.org/docs/main/notes/numerical_accuracy.html",
+      "finding": "Batch-wide and per-slice floating computations can differ in bits despite equivalent mathematical expressions.",
+      "application": "General numerical context only. This is not evidence that Garnet's state or token differences are harmless, and it does not pass any existing exactness or quality gate."
+    }
+  ],
+  "static_source_audit": {
+    "mechanism": "CPU-only ZIP text inspection of the exact87-file bundle; no native artifact loaded or model witness replayed",
+    "terms": ["ProfilingVerbosity", "createEngineInspector", "markUnfused", "IDebugListener", "kTF32"],
+    "hits": [
+      {
+        "path": "src/backends/tensorrt/trt_builder.cpp",
+        "line": 4546,
+        "text": "if(config && capturedStrictFP32)config->clearFlag(BuilderFlag::kTF32);"
+      }
+    ],
+    "limitation": "Only the candidate bundle was inspected. Absence of these terms there is not proof of absence in all repository or SDK code."
+  },
+  "current_experiment_unchanged": true,
+  "next_priority_after_owner_terminal": "Close the current raw archive with independent paired replays first. Then profile the already-qualified source60 B1/MTP HTTP path to separate queue/dispatch, prompt/image preparation, target prefill, draft prefill, decode verification/replay and output formatting before selecting another throughput optimization. Use within-process clock intervals; do not subtract absolute clocks from the bridge and native worker. CUDA enqueue wall time alone is not kernel elapsed time. Run only one remote model/profile owner and repeat final HTTP timing without profiling overhead. Full batching/MTP/quality, strongest repeated reference baselines and INT4/4B comparisons remain in scope.",
+  "source_or_DLL_changes": false,
+  "all_historical_exactness_failures_remain_failed": true,
+  "current_acceptance_gates_unchanged": true,
+  "unique_causal_operator_proved": false,
+  "new_benchmark_result": false
+}
