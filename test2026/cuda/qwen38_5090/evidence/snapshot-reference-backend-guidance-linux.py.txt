@@ -1,0 +1,28 @@
+"""Read installed reference sources without importing either engine or CUDA."""
+from pathlib import Path
+from datetime import datetime,timezone
+from email.parser import BytesParser
+import hashlib,json,zipfile
+ROOT=Path('/mnt/d/CantorAI/5090-study-20261023');J='reference-installed-backend-guidance-attempt1';OUT=ROOT/'results'/J
+assert ROOT.is_dir() and not OUT.exists();OUT.mkdir()
+selected={
+ 'vllm':['vllm/v1/attention/backend.py','vllm/v1/attention/backends/gdn_attn.py','vllm/config/speculative.py','vllm/config/compilation.py'],
+ 'sglang':['sglang/srt/server_args.py','sglang/srt/arg_groups/fields/exec_.py','sglang/srt/arg_groups/fields/spec.py','sglang/srt/arg_groups/fields/memory.py','sglang/srt/arg_groups/choices.py'],
+}
+sha=lambda b:hashlib.sha256(b).hexdigest();raws={};packages={};missing=[];pins={}
+for engine,names in selected.items():
+ base=Path('/opt/cantorai5090')/engine/'lib/python3.12/site-packages';assert base.is_dir()
+ metadata=list(base.glob(engine+'-*.dist-info/METADATA'));assert len(metadata)==1
+ meta=metadata[0].read_bytes();headers=BytesParser().parsebytes(meta,headersonly=True);packages[engine]=dict(name=headers['Name'],version=headers['Version'],site_packages=str(base),metadata_sha256=sha(meta));raws[engine+'/package-METADATA']=meta
+ for name in names:
+  path=base/name;assert path.resolve().is_relative_to(base.resolve())
+  if not path.exists():missing.append(dict(engine=engine,path=name));continue
+  raw=path.read_bytes();assert path.is_file() and sha(path.read_bytes())==sha(raw)
+  key=engine+'/'+name;raws[key]=raw;pins[key]=dict(path=str(path),sha256=sha(raw),bytes=len(raw))
+ assert metadata[0].read_bytes()==meta
+result=dict(status='reference_installed_backend_guidance_collected_CPU_only' if not missing else 'reference_installed_backend_guidance_partial_CPU_only',utc=datetime.now(timezone.utc).isoformat(),packages=packages,files=pins,missing=missing,each_source_byte_identical_on_two_immediate_reads=True,package_metadata_identical_before_after_each_engine=True,whole_package_snapshot_atomic=False,engine_or_torch_or_CUDA_imported=False,model_or_GPU_executed=False,scope='Installed package source snapshot only. No imports of either reference engine, Torch or CUDA, no package edits/installation, no determinism or MTP runtime-support claim. Latest documentation and upstream tags must be compared to these exact installed bytes before selecting new settings.')
+raws['receipt.json']=json.dumps(result,indent=2).encode();archive=ROOT/'results'/(J+'-evidence.zip');assert not archive.exists()
+with zipfile.ZipFile(archive,'x',zipfile.ZIP_DEFLATED) as z:
+ for n,raw in raws.items():z.writestr(n,raw)
+ z.writestr('evidence-manifest.json',json.dumps(dict(files={n:sha(raw) for n,raw in raws.items()}),indent=2))
+result['archive_sha256']=sha(archive.read_bytes());result['archive_bytes']=archive.stat().st_size;(OUT/'receipt.json').write_bytes(json.dumps(result,indent=2).encode());print(json.dumps(result))

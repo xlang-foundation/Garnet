@@ -1,0 +1,12 @@
+"""CPU-only package evidence after the exclusive native owner has closed."""
+from pathlib import Path
+import hashlib,json,os,sys
+ROOT=Path('D:/CantorAI/5090-study-20261023');M=ROOT/'Garnet/test2026/cuda/qwen38_5090';J='reference-installed-backend-guidance-attempt1';PARENT='b4-resident-serial-stage-profile-attempt1';sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+sys.path[:0]=[str(M),str(ROOT/'Garnet')];import run_logged as ledger
+from run_bf16_low_batch_native_build import idle
+idle();proof=ROOT/'results'/(PARENT+'-verified.json');q=json.loads(proof.read_bytes());workflow=ROOT/'results'/PARENT/'workflow.json';w=json.loads(workflow.read_bytes())
+assert q['exit_code']==0 and q['B4_host_stage_case_gate_passed'] and q['source_runtime_SDK_config_index_CMake_all34_and_full_model_files_restored'] and w['exit_code']==0 and w['cleanup_finished'] and w['all_restored'] and sha(ROOT/'results'/(PARENT+'-evidence.zip'))==q['archive_sha256']
+linux=ROOT/'results/snapshot-reference-backend-guidance-linux.py';inputs=[Path(__file__),linux,proof,workflow];assert not (ROOT/'results'/J).exists()
+ledger.source_identity=lambda:dict(scope='Explicit CPU-only installed reference source snapshot; no engine/Torch/CUDA imports or protected bodies',owned_source_sha256={n.relative_to(ROOT).as_posix():sha(n) for n in inputs})
+os.chdir(ROOT/'Garnet');assert ledger.run(['wsl.exe','-d','Ubuntu-24.04','--','/usr/bin/python3','-S','/mnt/d/CantorAI/5090-study-20261023/results/snapshot-reference-backend-guidance-linux.py'],ROOT/'results'/(J+'-ledger'),'correctness','Read nine named installed reference source files and distribution version metadata only. No engine/Torch/CUDA/model imports or runtime determinism claim; wait for native owner closure first.',inputs)==0
+idle();print(json.dumps(dict(status='reference_backend_source_snapshot_owner_closed_CPU_only',receipt_sha256=sha(ROOT/'results'/J/'receipt.json'))))

@@ -1,0 +1,32 @@
+{
+  "status": "installed_reference_backend_source_snapshot_independently_audited",
+  "archive_sha256": "8b3eab0e12634dadb7709f382620e609ad237aee07c3a933c979bf28f4283870",
+  "files_verified": 12,
+  "installed_versions": {
+    "vllm": "0.32.0",
+    "sglang": "0.5.22"
+  },
+  "upstream_comparisons": {
+    "vllm/vllm/v1/attention/backend.py": {
+      "upstream_file": "vllm-0.32.0-attention-backend.py",
+      "byte_identical": true
+    },
+    "vllm/vllm/v1/attention/backends/gdn_attn.py": {
+      "upstream_file": "vllm-0.32.0-gdn-attn.py",
+      "byte_identical": true
+    },
+    "sglang/sglang/srt/server_args.py": {
+      "upstream_file": "sglang-0.5.22-server-args.py",
+      "byte_identical": true
+    }
+  },
+  "installed_GDN_backend_inherits_batch_invariance_false": true,
+  "sglang_deterministic_dataclass_fields": [
+    "enable_deterministic_inference",
+    "rl_on_policy_target"
+  ],
+  "initial_hash_copy_check_failure": "A65character manual copy from wrapped PTY output was rejected; corrected against an independent remote SHA256 read in two32character halves. Archive bytes unchanged.",
+  "scope": "Static installed source only. GDN advertises no batch-invariance support; no actual flag invocation or compatibility/runtime conclusion for mixed NVFP4/FP8 or MTP. SGLang field names alone do not prove supported options or compatibility. Existing MTP strict-ID failure remains failed. No package changes, model/GPU work or reference benchmark.",
+  "runtime_determinism_or_MTP_qualified": false,
+  "two_times_target_achieved": false
+}
