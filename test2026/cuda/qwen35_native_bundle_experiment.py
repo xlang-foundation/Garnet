@@ -42,6 +42,8 @@ def dispatch(self):
 
 class NativeBundleMTPSession(base.CUDASpeculativeSession):
     def __init__(self,*args,**kwargs):
+        if kwargs.get('gpu_draft_bundle',False) or (len(args)>6 and args[6]):
+            raise ValueError('The bundle experiment requires the ordinary MTP parent')
         self.native_bundle=None
         self.bundle_submissions=0
         self.bundle_fallback_calls=0
@@ -65,16 +67,24 @@ assert len(classes)==1
 methods=[x for x in classes[0].body if isinstance(x,ast.FunctionDef) and x.name=='_call']
 assert len(methods)==1
 original=methods[0]
-expected=ast.parse('''packed=self.program.run([self.target,self.embedding,self.key,self.value,self.position,self.slot_tensor,self.active_tensor])
+legacy=ast.parse('''packed=self.program.run([self.target,self.embedding,self.key,self.value,self.position,self.slot_tensor,self.active_tensor])
+self.io.slice_into(packed,0,self.hidden)
+self.io.slice_into(packed,self.size*self.hidden_size,self.key)
+self.io.slice_into(packed,self.size*self.hidden_size+self.cache_width,self.value)
+self.io.copy_last_chunk(self.hidden,self.active_tensor,self.last_hidden)
+''').body
+current=ast.parse('''bindings=[self.target,self.embedding,self.key,self.value,self.position,self.slot_tensor,self.active_tensor]
+packed=self.program.run(bindings) if self.draft_runner is None else self.draft_runner.run_child(bindings)
 self.io.slice_into(packed,0,self.hidden)
 self.io.slice_into(packed,self.size*self.hidden_size,self.key)
 self.io.slice_into(packed,self.size*self.hidden_size+self.cache_width,self.value)
 self.io.copy_last_chunk(self.hidden,self.active_tensor,self.last_hidden)
 ''').body
 dump=lambda nodes:ast.dump(ast.Module(body=nodes,type_ignores=[]),include_attributes=False)
-hits=[i for i in range(len(original.body)-len(expected)+1) if dump(original.body[i:i+len(expected)])==dump(expected)]
+hits=[(i,expected) for expected in (legacy,current) for i in range(len(original.body)-len(expected)+1)
+      if dump(original.body[i:i+len(expected)])==dump(expected)]
 assert len(hits)==1,'Original MTP dispatch shape changed; do not patch by approximation'
-index=hits[0]
+index,expected=hits[0]
 before=dump(original.body[:index]);after=dump(original.body[index+len(expected):])
 original.body=original.body[:index]+ast.parse('_native_bundle_dispatch(self)').body+original.body[index+len(expected):]
 assert dump(original.body[:index])==before and dump(original.body[index+1:])==after
@@ -84,6 +94,6 @@ namespace['_native_bundle_dispatch']=dispatch
 exec(compile(ast.fix_missing_locations(ast.Module(body=[original],type_ignores=[])),str(source_path)+'::native-bundle-experiment','exec'),namespace)
 NativeBundleMTPSession._call=namespace['_call']
 AST_PROOF={'original_source':str(source_path),'original_source_sha256':hashlib.sha256(source_path.read_bytes()).hexdigest(),
-           'replaced_statements':5,'original_dispatch_ast_sha256':hashlib.sha256(dump(expected).encode()).hexdigest(),
+           'replaced_statements':len(expected),'original_dispatch_ast_sha256':hashlib.sha256(dump(expected).encode()).hexdigest(),
            'all_prefix_and_suffix_statements_unchanged':True,'extra_model_passes':0,
            'not_yet_qualified':True}

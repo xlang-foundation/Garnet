@@ -1,3 +1,13 @@
+# WorldSense demo checkpoint — October 28, 2026
+
+The optimization goal is paused and its recurring schedule is deleted. The
+combined CUDA build, 29 component checks, and six public-API image/reset requests
+for Qwen3.5-2B/4B passed. The user shortened the 72-role suite; it is incomplete.
+Qwen27B changes are included without 27B runtime validation. WorldSense feature
+validation follows separately. No new speed, quality or full-model sanitizer
+acceptance is implied. See [the current checkpoint](../qwen35-cuda-checkpoint.md)
+and [its exact record](qwen35-cuda-checkpoint.json). Historical evidence follows.
+
 ## 2026-10-28T08:02:37.617667+00:00 - Reboot recovery actually closed and incomplete evidence sealed
 
 Recovery session38244 exited0; both exact recovery Python identities are now closed. The reserved GPU quiet guard cleared naturally without stopping a peer. All1337 frozen file hashes and4 large-file size/mtime records match. Original attempt39559 remains incomplete:2/5 cases, original exit unknown, observer graceful stop unproven, no model result. Recovery archive D:\CantorAI\work\qwen35-cuda\fixed-vision-racecheck-tool2026-3-v2-interrupted-recovery-v1-evidence.zip SHA256 1d7c80b387d3f6a920fb78a4cf6f97c3af7e12ccd57268f6524111ee0fba2b34. Archive members were verified against SHA256 manifest. No sanitizer/model/quality/performance/memory acceptance. Offline source inspection shows _prefill_hook spans original target chunk, normalization and sliced MTP calls; the last coarse hook-entry marker cannot identify which internal operation consumed the interval or prove a deadlock. No further GPU run registered; refine diagnostic localization while preserving all five cases and lifetime checks. Full goal including2x all eight profiles remains active/unmet.
@@ -3665,3 +3675,18 @@ CPU-only recovery actual session38244 is registered with exact process identitie
 ## 2026-10-28T08:23:39.232306+00:00 - User paused the optimization goal and deleted its schedule
 
 The user requested a WorldSense demo checkpoint, inclusion of27B code without27B validation, full fresh2B/4B inference regression and commit to main after checks. Goal state is paused; heartbeat schedule deleted through the app tool. No original validation process survives the reboot and no V3 model/controller was started. The V3 preparation source is unrun, waiting on peer GPU ownership; its original assertion payload is retained. New work is the explicit manual integration/regression request, not automatic resumption or completion of the optimization goal.
+
+
+## 2026-10-28T08:46:22.322409+00:00 - Manual WorldSense integration prepared; GPU regression awaits camera window
+
+Optimization goal paused and its schedule deleted at user request. Local private checkpoint commits935f7e274,1d6b07dfe and53b33a950 preserve current2B/4B development, Qwen27B branchb0606e372 and latest main593cfa078. The primary checkout is untouched.32 original conflicts were resolved;1,824 changed Python modules parse. An obsolete native-bundle research adapter AST guard failed, was corrected for the exact current ordinary-parent dispatch, and its CPU controls now pass;135-case independent math test and six bounded-observer tail checks pass. Fresh combined native build has NOT started: registered CPU controllerPID21952/ctime1793176633.8263118, session37133, is waiting for reserved GPU ownership held by Wyze/Cantor PID21528. Earlier user no-camera-stop instruction is preserved; user approval to close that app is pending. No peer/camera was stopped. New manual run-worldsense-demo-final-build.py and run-worldsense-demo-full-regression.py plus worldsense-demo-public-inference-worker.py are syntax-valid and unrun beyond the CPU quiet guard. Regression plan is72 fresh roles:53 original component roles plusQ3,80 real-image cases across16 control/candidate roles, eight source-closed lifetime profiles and six dynamic-vision public A/B/A requests. No27B model run is planned. Local main has NOT moved to the integration and no push occurred; both remain pending fresh build/regression acceptance. No inference, quality, full-model sanitizer, speed, isolated memory or2x acceptance is inferred from source/CPU checks.
+
+
+## 2026-10-28T09:03:29.070875+00:00 - Manual combined demo build passed; fresh regression running
+
+The user approved camera-app shutdown for testing. Exact CantorPID21528 and its separate camera preview hostPID7548 were closed; no unrelated model/services stopped. Build session37133 actually exited0; all61steps completed, source and SDK identities stable. New combined nativeSHA25691498fec58814f625bf94cbb61fd79925d89b6bf424f8fc15de0b1f09604ab9f. Fresh manual regression session63812, controllerPID31232/ctime1793178065.4869494, registers72roles and has begun; no old-native passes are adopted. Models, code, SDK, requests and inputs are frozen for this run. No27B inference validation. Goal remains paused and schedule remains deleted. Main commit remains contingent on complete fresh regression.
+
+
+## 2026-10-28T09:28:15.334069+00:00 - User-requested shortened WorldSense demo check passed
+
+{"build_passed": true, "native_sha256": "91498fec58814f625bf94cbb61fd79925d89b6bf424f8fc15de0b1f09604ab9f", "partial_component_checks_passed": 29, "full72_regression_completed": false, "long_suite_stopped_per_user_request": true, "public_API_smoke": [{"model_id": "Qwen3.5-2B", "passed": true, "requests": 3, "reset_A_B_A_exact": true}, {"model_id": "Qwen3.5-4B", "passed": true, "requests": 3, "reset_A_B_A_exact": true}], "short_smoke_evidence": {"archive": "D:\\CantorAI\\work\\qwen35-cuda\\worldsense-demo-smoke-v1-evidence.zip", "archive_sha256": "b75eb91a74bebc344025eadb27e78dc88557227c456a698bcc2839584304a9b2", "short_2B_4B_public_smoke_passed": true, "all_owned_workers_closed": true, "full72_regression_completed": false, "27B_validated": false}, "27B_snapshot_included": "b0606e372", "27B_runtime_validated": false, "WorldSense_feature_validation_next": true, "all_owned_build_model_controllers_closed": true, "goal_paused": true, "schedule_deleted": true, "full_optimization_goal_met": false}

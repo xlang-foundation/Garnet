@@ -1,95 +1,64 @@
 # Qwen3.5 CUDA checkpoint for WorldSense
 
-This development checkpoint adds Qwen3.5-2B and 4B CUDA execution, shared BF16
-projection weights, batched profiles, allocation accounting, and opt-in packed
-prefill/speculative decoding. The optimization goal continues after this commit.
+This checkpoint combines the current Qwen3.5-2B/4B CUDA work with the Qwen27B
+branch snapshot `b0606e372`. The optimization goal is paused and its recurring
+schedule has been deleted. The user requested a short inference check so
+WorldSense can perform the broader feature validation next.
 
-The exact measured profiles, checkpoint hashes, native binary hashes, environment,
-and metrics are in [the checkpoint record](research/qwen35-cuda-checkpoint.json).
-Use these explicit profiles to reproduce the current path; the experimental
-options are not enabled by default. The two latest real-image cohorts are:
+## Checks completed on October 28, 2026
 
-| Model | Batch | Garnet ms | LM Studio ms | vLLM ms | GPU allocations kept by Garnet |
-|---|---:|---:|---:|---:|---:|
-| Qwen3.5-2B | 1 | 186.14 | 302.21 | 203.27 | 4.749 GB |
-| Qwen3.5-4B | 8 | 678.38 | 1,348.27 | 665.65 | 12.706 GB |
+- Combined native build: all 61 steps passed; existing XLang3 SDK unchanged.
+- 29 CUDA component checks passed, including memory, race and synchronization
+  fixtures, verifier coverage and default/joined sessions at batches 1/2/4/8.
+- Qwen3.5-2B and 4B each passed three real-image requests through
+  `garnet.serve_model` / `garnet.infer_json`, using their actual checkpoints.
+- Each model processed image A, image B, then image A again. Generated IDs,
+  request/stop accounting and speculative work matched exactly for the replay.
+  Prefix, image and answer caches were off, and both models closed successfully.
+- Python syntax checks, fake-native adapter controls and 135 independent CPU
+  math cases passed. The stale research adapter AST guard was corrected and
+  competing native-draft ownership is rejected before construction.
 
-These are medians on 17 and 15 common equal-32-output groups respectively, from
-strictly sequential RTX4080 GPU0 runs. Each Garnet cohort preserves all 28 saved
-output sequences. External baselines are historical matched-input cohorts, with
-different intermediate arithmetic and speculative settings. Same-build repeats
-were still running when this checkpoint was recorded. The 2× target is unmet.
+The original 72-role regression was stopped after the current check at the
+user's request to shorten verification. It is **not a full regression pass**.
+Qwen27B code is included; no Qwen27B model validation ran. WorldSense UI/camera
+feature testing, independent quality, full-model sanitizer closure, fresh
+performance/memory comparisons and the 2x optimization target remain separate.
 
-Across all 20 measured groups, aggregate full-request sampled throughput is
-171.50 tok/s for 2B B1 and 374.47 tok/s for 4B B8. These groups differ from the
-equal-32 latency subset. Tracked allocation totals count shared buffers once;
-they are not process peak or physical-residency measurements.
+## Using the tested build
 
-## Using the current checkout
+The tested private DLL is
+`D:/CantorAI/work/qwen35-cuda/build-vs18/bin/garnet.dll`, SHA256
+`91498fec58814f625bf94cbb61fd79925d89b6bf424f8fc15de0b1f09604ab9f`.
+The primary checkout and the existing WorldSense app bundle were not updated.
 
-Build the CUDA backend with the existing XLang3 SDK and TensorRT dependencies.
-The measured binary used CUDA13.2, SM89, MSVC14.51, and the default
-`GARNET_QWEN35_WHOLE_PROGRAM_CUDA=OFF`. Set the environment entries from the
-checkpoint record **before loading Garnet**. Keep the source checkout available:
-the serving adapter imports `runtime/` and `xModel/`; standalone installation of
-that adapter has not yet been validated.
+[The checkpoint record](research/qwen35-cuda-checkpoint.json) contains exact
+batch-1 model profiles, checkpoint/input identities, environment and evidence.
+Apply the environment before loading Garnet, and keep the checkout available
+for the `runtime/` and `xModel/` imports. Ordinary CPython does not provide the
+native Garnet/tensor packages; use the existing XLang3 runtime and CUDA/TensorRT
+installation. The public API setup used the checkout's `xModel` directory and
+the explicit profile from the record. Reload the model to change its static
+batch, context capacity or image grid.
 
-Inside the XLang3 Python runtime with Garnet available, the same batched adapter
-used by the benchmark can be called directly:
+The tested profiles use a 12x20 image patch grid, 512-token capacity and
+32-token requests. Every request resets state and re-encodes its JPEG. These
+checks establish the observed inference/reset behavior, not broader feature or
+quality acceptance. The older benchmark charts remain historical measurements.
 
-```python
-import json
-from runtime.cuda_serving import Model
+## Reproducing the local check
 
-with open(checkout + '/docs/research/qwen35-cuda-checkpoint.json') as stream:
-    record = json.load(stream)
-entry = record['profiles']['2b-b1']  # Or '4b-b8' with eight input rows.
-model = Model(checkpoint_directory, entry['profile'], entry['model_id'])
-try:
-    result = model.infer_batch(
-        ['Describe the main objects in this image in one sentence.'],
-        [jpeg_path],
-        32,
-    )
-finally:
-    model.close()
-```
+Exact workflow script snapshots are retained under `test2026/cuda/`:
+`run-worldsense-demo-final-build.py`, `run-worldsense-demo-full-regression.py`,
+`run-worldsense-demo-smoke.py` and `worldsense-demo-public-inference-worker.py`.
+They are local workflow snapshots: copy them to the existing
+`D:/CantorAI/work/qwen35-cuda` workflow root before use; they expect its existing
+SDK, model, input and baseline evidence. Preserve old attempts instead of
+reusing output names. The full-regression script is included for traceability;
+the shorter smoke script implements the final requested scope.
 
-Add the checkout to the runtime import roots. Use one prompt and image path per
-row of the selected static batch. Stop and recreate the model to change its
-batch, context capacity, or image grid. The measured profile uses a fixed 12×20
-patch grid, 512-token slots, and a 32-token request limit. Every request resets
-state and decodes/encodes its images again; prefix, image, and answer caching are
-off. Larger images, longer prompts, and WorldSense camera workloads require their
-own validation and measurements.
-
-For the native single-request API, pass the model ID, checkout xModel directory,
-and explicit profile to `garnet.serve_model(...)`, then use `garnet.infer_json(...)`.
-The batched path above is the measured entry point. Ordinary CPython alone does
-not supply the native `garnet` and `tensor` packages.
-
-## Validation and remaining work
-
-The current packed/native-prefix/head-reuse implementation passes 12 numerical
-batch/prefill profiles, including state, stop, rollback and fault handling.
-Unfiltered verifier and full 24-case batch-8 session memchecks report zero errors.
-Race/sync evidence is component or prefix scoped, not full-integration coverage.
-Real 2B B1 and 4B B8 probes preserve complete finite target-state hashes and
-outputs against the preceding implementation and a separately ordinary target.
-The native logical-view correction passes eight boundary/lifetime cases with
-unfiltered memcheck, racecheck and synccheck. The current DLL also passes the
-Qwen3-VL-2B two-request serving/reset/vision smoke.
-
-Independent pretrained teacher agreement still has recorded discrepancies.
-Fresh current-source Metal build preservation, optimized real-image coverage for
-every batch, comparator expansion, isolated memory coverage, and standalone
-packaging remain open. This checkpoint does not claim production-quality
-acceptance or completion of the performance goal. Rejected D8 and NoRDC trials
-remain explicit experiments.
-
-Benchmark, reference, sanitizer-oracle, memory and analysis sources are under
-`test2026/cuda/`. The detailed [report](research/qwen35-cuda-comparison-report.md)
-and [development log](research/qwen35-cuda-development-log.md) retain outcomes,
-failures and method limits. Raw local evidence, controller scripts, and verified
-source/runtime archives remain in `D:/CantorAI/work/qwen35-cuda`; checkpoints,
-images, vendor binaries, and generated engines are not included in this commit.
+Raw requests, results, exact process exits and verified evidence archives remain
+in that workflow root. Model weights, images, vendor binaries and generated
+engines are excluded from the source checkpoint. The historical October 23
+record is retained inside the JSON, and the detailed research report/log preserve
+all earlier failures, interruptions, rejected trials and measurement limits.

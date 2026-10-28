@@ -1,22 +1,53 @@
 {
-  "recorded_utc": "2026-10-23T20:02:50.107930+00:00",
-  "purpose": "WorldSense development checkpoint; continue optimization from this source snapshot",
-  "hardware": "RTX4080 GPU0 16GiB / Windows / CUDA13.2 / SM89",
-  "garnet_dll_sha256": "371953ad1770e1170e1a9202203529fa51e4b56f921b25a8b01d04cd6d5b4b81",
-  "xlang3_sha256": "59db0f87c4b5c0b50430420ea8b0f9e0a0be9c81c9d956419264451faa4cac6f",
-  "xlang3_runtime_sha256": "5b442cbd05bec7539b5300efb76b47867acc132e54e5b966505d0ea9c0d6d107",
-  "checkpoint_2b_sha256": "aa33250c4fc64891ddfaba3a314fd9542ea371843c387178b425fbcc5ed680b1",
-  "checkpoint_4b_sha256": {
-    "model.safetensors-00001-of-00002.safetensors": "26a93f066e1916adb13453dae5a0c707c0fbc71299ed98779571a907b8e74c61",
-    "model.safetensors-00002-of-00002.safetensors": "cb544bd9bfae93dc59b0f22b292f5933573854a7f9b97835c67060d7d910e188"
+  "recorded_utc": "2026-10-28T09:28:15.334069+00:00",
+  "purpose": "WorldSense demo development checkpoint; user shortened full regression to real inference smoke checks",
+  "goal_status": "paused_by_user",
+  "scheduled_goal_automation_deleted": true,
+  "hardware": "reserved RTX4080 / Windows / CUDA13.2 / SM89",
+  "garnet_dll_sha256": "91498fec58814f625bf94cbb61fd79925d89b6bf424f8fc15de0b1f09604ab9f",
+  "private_build": "D:/CantorAI/work/qwen35-cuda/build-vs18/bin/garnet.dll",
+  "source_snapshots": {
+    "qwen35_checkpoint": "935f7e274",
+    "qwen27_branch": "b0606e3726f30d89a5bfd028b51cd98b998d9712",
+    "integrated_source_head": "53b33a9508db9f345e26efbd8fe5c820d234d00b",
+    "upstream_main_included": "593cfa0784b9fbb744e4e33da6e9ff171b234c1a"
   },
-  "environment": {
-    "CUDA_VISIBLE_DEVICES": "0",
-    "GARNET_TRT_SYNC_ALLOCATOR": "1",
-    "GARNET_TRT_ZERO_AUX_STREAMS": "1",
-    "GARNET_TRT_REUSE_STATIC_BINDINGS": "0",
-    "GARNET_TRT_SYNC_TEMPORARY_ALLOCATOR": "0",
-    "GARNET_TRT_ALLOC_TRACE": "0"
+  "native_build": {
+    "utc": "2026-10-28T09:00:16.046234+00:00",
+    "actual_build_exit_code": 0,
+    "error": null,
+    "started_unix": 1793177887.4643826,
+    "ended_unix": 1793178016.0462348,
+    "source_changes_while_building": [],
+    "SDK_changes": [],
+    "native_before_sha256": "eb22009cbfda81f522e1ca5eac2b95f631b87484201427d8b9dee3bae9bf3092",
+    "native_after_sha256": "91498fec58814f625bf94cbb61fd79925d89b6bf424f8fc15de0b1f09604ab9f",
+    "build_passed": true,
+    "2B_4B_regression_passed": false,
+    "27B_validation_run": false,
+    "full_optimization_goal_met": false,
+    "goal_paused": true
+  },
+  "verification": {
+    "scope": "Short public native API inference and reset checks, not full regression/quality/performance completion",
+    "component_checks_passed": 29,
+    "component_check_failures_observed": 0,
+    "planned_long_suite_roles": 72,
+    "long_suite_completed": false,
+    "long_suite_stopped_at_user_request": true,
+    "public_API_models": [
+      "Qwen3.5-2B",
+      "Qwen3.5-4B"
+    ],
+    "public_API_real_image_requests_passed": 6,
+    "reset_A_B_A_exact_both_models": true,
+    "source_native_SDK_inputs_exact": true,
+    "CPU_adapter_controls_passed": true,
+    "independent_math_CPU_cases": 135,
+    "qwen27_code_included": true,
+    "qwen27_runtime_validated": false,
+    "WorldSense_feature_tests_performed_here": false,
+    "optimization_2x_goal_met": false
   },
   "profiles": {
     "2b-b1": {
@@ -36,6 +67,10 @@
         "packedDecoderProgram": true,
         "packPrompt": true,
         "reuseVerifiedHead": true,
+        "joinDecodeInputProjections": true,
+        "sharePackedActivationStorage": true,
+        "compactKVOutputs": true,
+        "visionCudaGraph": true,
         "residentControls": true,
         "serialGraphReuse": true,
         "serialTargetGraphReuse": true,
@@ -50,13 +85,22 @@
         "projectionWorkspaceBytes": 0,
         "speculativeMTP": 3,
         "speculativeHeadCandidates": 8192,
-        "speculativePrefixReplay": true
-      }
+        "speculativePrefixReplay": true,
+        "phaseOutputPartitionLayers": 4,
+        "gpuDraftBundle": false
+      },
+      "checkpoint": "D:\\CantorAI\\work\\qwen35-cuda\\models\\Qwen3.5-2B",
+      "input_sha256": [
+        "5bc08669f1a3ead3f9a1d60dc52ebc1e6e1e592beb1e0e84e7ed925080d657a8",
+        "1b55db105bd6b81d05be8bd34fd2fe9f3c9b47ba29c97e22268c81e184f6a6e8"
+      ],
+      "three_public_requests_passed": true,
+      "A_B_A_reset_exact": true
     },
-    "4b-b8": {
+    "4b-b1": {
       "model_id": "Qwen3.5-4B",
       "profile": {
-        "batch": 8,
+        "batch": 1,
         "maxInputTokens": 384,
         "maxOutputTokens": 128,
         "imagePixels": 65536,
@@ -70,6 +114,11 @@
         "packedDecoderProgram": true,
         "packPrompt": true,
         "reuseVerifiedHead": true,
+        "joinDecodeInputProjections": true,
+        "sharePackedActivationStorage": true,
+        "internalPackedStores": true,
+        "compactKVOutputs": true,
+        "visionCudaGraph": true,
         "residentControls": true,
         "serialGraphReuse": true,
         "serialTargetGraphReuse": true,
@@ -84,72 +133,204 @@
         "projectionWorkspaceBytes": 0,
         "speculativeMTP": 3,
         "speculativeHeadCandidates": 8192,
-        "speculativePrefixReplay": true
-      }
+        "speculativePrefixReplay": true,
+        "phaseOutputPartitionLayers": 4,
+        "gpuDraftBundle": true
+      },
+      "checkpoint": "D:\\CantorAI\\work\\qwen35-cuda\\models\\Qwen3.5-4B",
+      "input_sha256": [
+        "3b42beb6d3f896b343699a2c924b7e3a032383fc788c3b0060ce008401174160",
+        "1b55db105bd6b81d05be8bd34fd2fe9f3c9b47ba29c97e22268c81e184f6a6e8"
+      ],
+      "three_public_requests_passed": true,
+      "A_B_A_reset_exact": true
     }
   },
-  "metrics": [
-    {
-      "model": "2b",
-      "batch": 1,
-      "common_equal32_groups": 17,
-      "median_group_ms": {
-        "control": 199.03010000416543,
-        "candidate": 186.1399000044912,
-        "vllm": 203.27382100003888,
-        "lmstudio": 302.20900000131223
+  "environment": {
+    "CUDA_VISIBLE_DEVICES": "GPU-472bb21a-0ca8-9d60-47a0-c527bb3d2d81",
+    "GARNET_RUNTIME_ROOT": "D:/CantorAI/work/qwen35-cuda/build-vs18/bin",
+    "GARNET_TRT_SYNC_ALLOCATOR": "1",
+    "GARNET_TRT_ZERO_AUX_STREAMS": "1",
+    "GARNET_TRT_REUSE_STATIC_BINDINGS": "0",
+    "GARNET_TRT_SYNC_TEMPORARY_ALLOCATOR": "0",
+    "GARNET_QWEN35_FIXED_RMS": "0",
+    "GARNET_QWEN35_FUSED_ATTENTION_EXACT": "0",
+    "GARNET_QWEN35_SKIP_PHASE_STATE_WRITES": "1",
+    "GARNET_QWEN35_PREFILL_LT_DOWN": "1"
+  },
+  "evidence": {
+    "short_smoke": {
+      "archive": "D:\\CantorAI\\work\\qwen35-cuda\\worldsense-demo-smoke-v1-evidence.zip",
+      "archive_sha256": "b75eb91a74bebc344025eadb27e78dc88557227c456a698bcc2839584304a9b2",
+      "short_2B_4B_public_smoke_passed": true,
+      "all_owned_workers_closed": true,
+      "full72_regression_completed": false,
+      "27B_validated": false
+    },
+    "partial_long_suite": {
+      "archive": "D:\\CantorAI\\work\\qwen35-cuda\\worldsense-demo-full-regression-v1-evidence.zip",
+      "archive_sha256": "c3fe667de22dfe85ab174ebe05133beaea03361658ff243001f37f5e09449c6d",
+      "all_owned_workers_closed": true,
+      "all72_roles_passed": false,
+      "27B_validated": false,
+      "goal_paused": true
+    },
+    "full_suite_stop_explanation": "Original controller exit1 resulted from intentional collector stop after the current child, per the user request to shorten testing; no executed component failed. Original logs and error are retained.",
+    "all_owned_test_and_build_controllers_closed": true
+  },
+  "historical_2026_10_23_record": {
+    "recorded_utc": "2026-10-23T20:02:50.107930+00:00",
+    "purpose": "WorldSense development checkpoint; continue optimization from this source snapshot",
+    "hardware": "RTX4080 GPU0 16GiB / Windows / CUDA13.2 / SM89",
+    "garnet_dll_sha256": "371953ad1770e1170e1a9202203529fa51e4b56f921b25a8b01d04cd6d5b4b81",
+    "xlang3_sha256": "59db0f87c4b5c0b50430420ea8b0f9e0a0be9c81c9d956419264451faa4cac6f",
+    "xlang3_runtime_sha256": "5b442cbd05bec7539b5300efb76b47867acc132e54e5b966505d0ea9c0d6d107",
+    "checkpoint_2b_sha256": "aa33250c4fc64891ddfaba3a314fd9542ea371843c387178b425fbcc5ed680b1",
+    "checkpoint_4b_sha256": {
+      "model.safetensors-00001-of-00002.safetensors": "26a93f066e1916adb13453dae5a0c707c0fbc71299ed98779571a907b8e74c61",
+      "model.safetensors-00002-of-00002.safetensors": "cb544bd9bfae93dc59b0f22b292f5933573854a7f9b97835c67060d7d910e188"
+    },
+    "environment": {
+      "CUDA_VISIBLE_DEVICES": "0",
+      "GARNET_TRT_SYNC_ALLOCATOR": "1",
+      "GARNET_TRT_ZERO_AUX_STREAMS": "1",
+      "GARNET_TRT_REUSE_STATIC_BINDINGS": "0",
+      "GARNET_TRT_SYNC_TEMPORARY_ALLOCATOR": "0",
+      "GARNET_TRT_ALLOC_TRACE": "0"
+    },
+    "profiles": {
+      "2b-b1": {
+        "model_id": "Qwen3.5-2B",
+        "profile": {
+          "batch": 1,
+          "maxInputTokens": 384,
+          "maxOutputTokens": 128,
+          "imagePixels": 65536,
+          "imageGrid": [
+            12,
+            20
+          ],
+          "prefillChunk": 64,
+          "decodeChunk": 4,
+          "sharedProjectionWeights": true,
+          "packedDecoderProgram": true,
+          "packPrompt": true,
+          "reuseVerifiedHead": true,
+          "residentControls": true,
+          "serialGraphReuse": true,
+          "serialTargetGraphReuse": true,
+          "deferPackedStateCommit": true,
+          "nativePackedPrefixCommit": true,
+          "sharePackedOutputStorage": true,
+          "registerDelta128": true,
+          "flatPackedConcat": true,
+          "cudaGraph": true,
+          "fusedDelta": true,
+          "fusedAttention": true,
+          "projectionWorkspaceBytes": 0,
+          "speculativeMTP": 3,
+          "speculativeHeadCandidates": 8192,
+          "speculativePrefixReplay": true
+        }
       },
-      "same_saved_output_sequences": 28,
-      "total_requests": 28,
-      "kept_gpu_allocation_bytes": [
-        4749211752
-      ],
-      "all20_warm_sampled_tokens_per_second": 171.5002508714268,
-      "all20_warm_median_derived_post_first_sample_tokens_per_second": 207.1688292343198,
-      "summary_file": "matched512-2b-b1-packed-p64-d4-mtp3-k8192-replay-resident-serial-register128-flat-targetserial-aux0-deferred-nativecommit-arena-promptpack-headreuse-mtp3-cache128-candidate.json",
-      "raw_file": "matched512-garnet-2b-b1-packed-p64-d4-mtp3-k8192-replay-resident-serial-register128-flat-targetserial-aux0-deferred-nativecommit-arena-promptpack-headreuse.json",
-      "cache_policy": {
-        "prefix": false,
-        "image": false,
-        "answer": false
+      "4b-b8": {
+        "model_id": "Qwen3.5-4B",
+        "profile": {
+          "batch": 8,
+          "maxInputTokens": 384,
+          "maxOutputTokens": 128,
+          "imagePixels": 65536,
+          "imageGrid": [
+            12,
+            20
+          ],
+          "prefillChunk": 64,
+          "decodeChunk": 4,
+          "sharedProjectionWeights": true,
+          "packedDecoderProgram": true,
+          "packPrompt": true,
+          "reuseVerifiedHead": true,
+          "residentControls": true,
+          "serialGraphReuse": true,
+          "serialTargetGraphReuse": true,
+          "deferPackedStateCommit": true,
+          "nativePackedPrefixCommit": true,
+          "sharePackedOutputStorage": true,
+          "registerDelta128": true,
+          "flatPackedConcat": true,
+          "cudaGraph": true,
+          "fusedDelta": true,
+          "fusedAttention": true,
+          "projectionWorkspaceBytes": 0,
+          "speculativeMTP": 3,
+          "speculativeHeadCandidates": 8192,
+          "speculativePrefixReplay": true
+        }
       }
     },
-    {
-      "model": "4b",
-      "batch": 8,
-      "common_equal32_groups": 15,
-      "median_group_ms": {
-        "control": 698.5165999940364,
-        "candidate": 678.3774000068661,
-        "vllm": 665.6472650029173,
-        "lmstudio": 1348.2737000013003
+    "metrics": [
+      {
+        "model": "2b",
+        "batch": 1,
+        "common_equal32_groups": 17,
+        "median_group_ms": {
+          "control": 199.03010000416543,
+          "candidate": 186.1399000044912,
+          "vllm": 203.27382100003888,
+          "lmstudio": 302.20900000131223
+        },
+        "same_saved_output_sequences": 28,
+        "total_requests": 28,
+        "kept_gpu_allocation_bytes": [
+          4749211752
+        ],
+        "all20_warm_sampled_tokens_per_second": 171.5002508714268,
+        "all20_warm_median_derived_post_first_sample_tokens_per_second": 207.1688292343198,
+        "summary_file": "matched512-2b-b1-packed-p64-d4-mtp3-k8192-replay-resident-serial-register128-flat-targetserial-aux0-deferred-nativecommit-arena-promptpack-headreuse-mtp3-cache128-candidate.json",
+        "raw_file": "matched512-garnet-2b-b1-packed-p64-d4-mtp3-k8192-replay-resident-serial-register128-flat-targetserial-aux0-deferred-nativecommit-arena-promptpack-headreuse.json",
+        "cache_policy": {
+          "prefix": false,
+          "image": false,
+          "answer": false
+        }
       },
-      "same_saved_output_sequences": 28,
-      "total_requests": 28,
-      "kept_gpu_allocation_bytes": [
-        12705559484
-      ],
-      "all20_warm_sampled_tokens_per_second": 374.47423550318894,
-      "all20_warm_median_derived_post_first_sample_tokens_per_second": 563.136309361834,
-      "summary_file": "matched512-4b-b8-packed-p64-d4-mtp3-k8192-replay-resident-serial-register128-flat-targetserial-aux0-deferred-nativecommit-arena-promptpack-headreuse-candidate.json",
-      "raw_file": "matched512-garnet-4b-b8-packed-p64-d4-mtp3-k8192-replay-resident-serial-register128-flat-targetserial-aux0-deferred-nativecommit-arena-promptpack-headreuse.json",
-      "cache_policy": {
-        "prefix": false,
-        "image": false,
-        "answer": false
+      {
+        "model": "4b",
+        "batch": 8,
+        "common_equal32_groups": 15,
+        "median_group_ms": {
+          "control": 698.5165999940364,
+          "candidate": 678.3774000068661,
+          "vllm": 665.6472650029173,
+          "lmstudio": 1348.2737000013003
+        },
+        "same_saved_output_sequences": 28,
+        "total_requests": 28,
+        "kept_gpu_allocation_bytes": [
+          12705559484
+        ],
+        "all20_warm_sampled_tokens_per_second": 374.47423550318894,
+        "all20_warm_median_derived_post_first_sample_tokens_per_second": 563.136309361834,
+        "summary_file": "matched512-4b-b8-packed-p64-d4-mtp3-k8192-replay-resident-serial-register128-flat-targetserial-aux0-deferred-nativecommit-arena-promptpack-headreuse-candidate.json",
+        "raw_file": "matched512-garnet-4b-b8-packed-p64-d4-mtp3-k8192-replay-resident-serial-register128-flat-targetserial-aux0-deferred-nativecommit-arena-promptpack-headreuse.json",
+        "cache_policy": {
+          "prefix": false,
+          "image": false,
+          "answer": false
+        }
       }
-    }
-  ],
-  "evidence_directory": "D:/CantorAI/work/qwen35-cuda",
-  "source_archive": "paired-head-before-study-source-runtime.zip",
-  "limitations": [
-    "Single latest timing cohorts; fresh same-build ABCCBA repetitions were in progress at checkpoint.",
-    "Kept GPU allocations are not process peak, physical residency, or isolated head-reuse memory measurements.",
-    "Historical external baselines use different APIs, intermediate arithmetic and speculative settings; LM2B MTP observed, LM4B unresolved.",
-    "Derived post-first-sample rate includes host/stop overhead; it is not an isolated kernel decode rate.",
-    "Independent pretrained teacher agreement, fresh current-source Metal build preservation, all-batch optimization, comparator coverage, and standalone packaging verification remain incomplete.",
-    "Default-off experimental options are explicit in these profiles. D8 and NoRDC speed trials were not selected."
-  ],
-  "goal_2x_achieved": false,
-  "independent_quality_accepted": false
+    ],
+    "evidence_directory": "D:/CantorAI/work/qwen35-cuda",
+    "source_archive": "paired-head-before-study-source-runtime.zip",
+    "limitations": [
+      "Single latest timing cohorts; fresh same-build ABCCBA repetitions were in progress at checkpoint.",
+      "Kept GPU allocations are not process peak, physical residency, or isolated head-reuse memory measurements.",
+      "Historical external baselines use different APIs, intermediate arithmetic and speculative settings; LM2B MTP observed, LM4B unresolved.",
+      "Derived post-first-sample rate includes host/stop overhead; it is not an isolated kernel decode rate.",
+      "Independent pretrained teacher agreement, fresh current-source Metal build preservation, all-batch optimization, comparator coverage, and standalone packaging verification remain incomplete.",
+      "Default-off experimental options are explicit in these profiles. D8 and NoRDC speed trials were not selected."
+    ],
+    "goal_2x_achieved": false,
+    "independent_quality_accepted": false
+  }
 }

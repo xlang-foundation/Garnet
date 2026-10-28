@@ -42,11 +42,15 @@ class Bundle:
 fake=types.ModuleType('garnet');fake.cuda_execution_bundle=Bundle;sys.modules['garnet']=fake
 spec=importlib.util.spec_from_file_location('qwen35_native_bundle_experiment_cpu',directory/'qwen35_native_bundle_experiment.py')
 module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)
+for args,kwargs in [([] ,{'gpu_draft_bundle':True}),([None]*6+[True],{})]:
+    try:module.NativeBundleMTPSession(*args,**kwargs)
+    except ValueError:pass
+    else:raise AssertionError('Competing native draft ownership must reject before construction')
 def session(cls):
     s=object.__new__(cls);s.batch=1;s.size=4;s.hidden_size=8;s.cache_width=16;s.capacity=32;s.slots=[0];s.head_candidates=0
     s.decoder=types.SimpleNamespace(resident_controls=True);s.io=IO();s.program=Program(s);s.events=[]
     for name in ('target','embedding','key','value','position','slot_tensor','active_tensor','hidden','last_hidden'):setattr(s,name,name)
-    s.metrics={'mtp_prefill_calls':0,'mtp_head_calls':0};s.native_bundle=None;s.bundle_submissions=0;s.bundle_fallback_calls=0;s.poisoned=False
+    s.metrics={'mtp_prefill_calls':0,'mtp_head_calls':0};s.native_bundle=None;s.bundle_submissions=0;s.bundle_fallback_calls=0;s.poisoned=False;s.draft_runner=None
     return s
 original=session(StubBase);candidate=session(module.NativeBundleMTPSession)
 for index in range(3):
