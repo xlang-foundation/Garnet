@@ -1,0 +1,44 @@
+{
+  "provenance": "captured native Qwen3.5-2B output from an actual xMind request; no replay",
+  "receipt_sha256": "e21a181f11b7ad6a4d4a5d8d1327f29f7f8d9913a3a488cb9954bf6660090ed5",
+  "redactions": [
+    "folder_id value"
+  ],
+  "tool": {
+    "type": "function",
+    "function": {
+      "name": "edit_file",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "old_text": {
+            "type": "string",
+            "minLength": 1
+          },
+          "new_text": {
+            "type": "string"
+          },
+          "expected_occurrences": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1024
+          },
+          "folder_id": {
+            "type": "string",
+            "description": "Optional registered workspace folder ID; omit it to use the primary folder."
+          }
+        },
+        "required": [
+          "path",
+          "old_text",
+          "new_text"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "text": "<tool_call>\n<function=edit_file>\n<parameter=folder_id>\nexisting-workspace-folder\n</parameter>\n<parameter=new_text>\n<h1>Community Workshop</h1>\n<p class=\"subtitle\">Join us for an amazing day of learning and connection</p>\n<p style=\"text-align: center; color: white; margin-bottom: 30px; font-size: 1.1rem;\">\n    Our workshops are designed specifically for complete beginners who want to start their coding journey.\n</p>\n</parameter>\n<parameter=old_text>\n<h1>Community Workshop</h1>\n<p class=\"subtitle\">Join us for an amazing day of learning and connection</p>\n</parameter>\n</function>\n</tool_call>"
+}
