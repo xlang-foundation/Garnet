@@ -8,6 +8,29 @@ Serial prefill is the initial correctness path, not the final speed target.
 import json,os,time,threading,hashlib
 import garnet
 
+try:
+    from builtins import lrpc_call_cancelled as _lrpc_call_cancelled
+except ImportError:
+    _lrpc_call_cancelled = None
+
+def _check_request_cancelled():
+    if _lrpc_call_cancelled is not None and _lrpc_call_cancelled():
+        raise TimeoutError('Garnet inference caller timed out or exited')
+
+class _InferenceRequest:
+    """Wait for model ownership without retaining abandoned IPC requests."""
+    def __init__(self,lock):self.lock=lock
+    def __enter__(self):
+        while True:
+            _check_request_cancelled()
+            if self.lock.acquire(timeout=0.05):break
+        try:_check_request_cancelled()
+        except BaseException:
+            self.lock.release()
+            raise
+        return self
+    def __exit__(self,*args):self.lock.release()
+
 class Model:
     def __init__(self,root,profile,name):
         self.root=root;self.name=name;self.profile=profile;self.vision=None;self.decoder=None;self.grid=None;self.speculative=None
@@ -28,6 +51,9 @@ class Model:
             raise ValueError('CUDA batch/capacity profile invalid')
         self.image_min_pixels=profile.get('imageMinPixels')
         if self.image_min_pixels is not None and (type(self.image_min_pixels) is not int or not 1024<=self.image_min_pixels<=self.pixels):raise ValueError('Invalid CUDA minimum image pixels')
+        self.vision_builder_workspace_bytes=profile.get('visionBuilderWorkspaceBytes')
+        if self.vision_builder_workspace_bytes is not None and (type(self.vision_builder_workspace_bytes) is not int or not 1<<20<=self.vision_builder_workspace_bytes<=1<<30):
+            raise ValueError('CUDA vision builder workspace requires integer1MiB..1GiB')
         self.capacity=self.max_input+self.max_output
         if self.capacity>8192:raise ValueError('CUDA context profile exceeds admitted capacity')
         self.prefill_chunk=int(profile.get('prefillChunk',1));self.decode_chunk=int(profile.get('decodeChunk',self.prefill_chunk))
@@ -144,7 +170,7 @@ class Model:
             if self.grid!=[gh,gw]:raise ValueError('Image grid differs from loaded CUDA profile; reload the profile explicitly')
             return 0.
         start=time.monotonic()
-        if self.vision_artifact is None:self.vision=self.factory.create_cuda_vision(self.checkpoint,self.config,gh,gw)
+        if self.vision_artifact is None:self.vision=self.factory.create_cuda_vision(self.checkpoint,self.config,gh,gw,builder_workspace_bytes=self.vision_builder_workspace_bytes)
         else:
             self._check_vision_artifact()
             self.vision=self.factory.create_cuda_vision(self.checkpoint,self.config,gh,gw,engine_artifact=self.vision_artifact)
@@ -182,7 +208,7 @@ class Model:
         return hidden,positions,ids,current,compile_ms,visual_count
 
     def infer_batch(self,prompts,images,limit,on_token=None,ignore_eos=False):
-        with self.lock:
+        with _InferenceRequest(self.lock):
             if type(ignore_eos) is not bool:raise TypeError('ignore_eos must be a boolean')
             if ignore_eos and self.speculative is not None:raise ValueError('ignore_eos currently requires target-only decoding')
             if on_token is not None:
@@ -194,6 +220,7 @@ class Model:
             if self.speculative is not None:self.speculative.reset()
             else:self.decoder.reset()
             rows=[self._prepare(prompts[b],images[b]) for b in range(self.batch)]
+            _check_request_cancelled()
             lengths=[len(r[2]) for r in rows];count=max(lengths)
             if self.pack_prompt:
                 hidden=list(self.decoder.io.pack_prompt([r[0] for r in rows],[r[6] for r in rows],[r[7] for r in rows]))
@@ -214,6 +241,7 @@ class Model:
             else:
                 current=[r[3] for r in rows]
                 for step in range(limit):
+                    _check_request_cancelled()
                     for b in range(self.batch):
                         if active[b]:
                             sampled[b]+=1

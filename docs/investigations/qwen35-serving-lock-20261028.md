@@ -11,3 +11,9 @@ Mechrevo 的 Cantor 主进程 29128 在本地进程任务复验中仍存活，�
 验证：`garnet_native_api`、`garnet_serving_python_defaults`、`garnet_serving_concurrency` 三项 CTest 通过。Mechrevo 使用相同 DLL 哈希 `37E053B4B4883DEF2E7A48DA860C87879EF2EF023296A00893A687D7CAE562FE` 通过并发用例。真实 Qwen3.5-2B 模型的独立运行和与 RTX 5090 联合调度仍须另行验收；此处不声称已经通过，也不声称模型速度提升。
 
 另一个用例 `serving_loading_concurrency.py` 复现了冷启动占住注册表锁的问题：加载第二个模型时，第一个已就绪模型的健康查询被阻塞。修复在构造期间释放注册表锁，用独立的初始化记录防止同一模型重复加载；构造失败会清除该记录，允许重试。正在加载时停止操作返回明确的 `model_loading`，不声称已停止，也不删除其他已就绪模型。两项并发用例与上述 API/默认配置用例共四项 CTest 通过；包含冷启动修复的新 DLL 哈希为 `DB8514C0E60C41F2FFA67D93FFCA5EB4B1F7CE385BF738AC76E29A4BC1F4613A`。Mechrevo 本轮真实模型正在加载第一版锁修复，不因新增冷启动修复重新启动。
+
+## Cancel abandoned IPC inference requests
+
+Model-lock admission now polls the current IPC cancellation state and releases ownership if cancellation arrives at lock grant. Input preparation and target decoding also check cancellation. A checkpoint-free regression verifies waiting, in-flight decoding, cross-thread lock release and cancellation at grant. The XLang3 IPC transport separately reclaims message slots and bounds its pending dispatcher queue; the slot count remains 32.
+
+The local Qwen3.5-4B checkpoint completed a continuous 60-minute seven-source WorldSense window on October 28, 2026 (22:45–23:45 America/Los_Angeles), with 1,145 recorded VLM observations and 12/12 fixed-image probes successful. Fixed-probe median speed was 44.47 tokens/s for the first three and 46.33 for the last three; model TTFT was 105 ms and 99 ms. Actual video TTFT medians in the first and last ten-minute buckets were 472 ms and 453 ms. Model TTFT excludes admission/IPC time. No sampled readiness failure or residual dead-client/60-second IPC call was observed. This is finite-window local checkpoint evidence, not an acceptance claim for all other main-branch model profiles or all skill accuracy.

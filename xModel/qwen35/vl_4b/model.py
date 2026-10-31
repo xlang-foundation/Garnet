@@ -36,7 +36,7 @@ def create_cuda_decoder(checkpoint,config,capacity,batch=1,chunk_size=1,fused_de
     from xModel.qwen35.vl_0_8b.cuda_decoder import CUDADecoder
     return CUDADecoder(checkpoint,config['text_config'],batch,capacity,chunk_size,fused_delta,fused_attention,projection_workspace_bytes,retain_linear_inputs)
 
-def create_cuda_vision(checkpoint,config,gh,gw,engine_artifact=None):
+def create_cuda_vision(checkpoint,config,gh,gw,engine_artifact=None,builder_workspace_bytes=None):
     validate_config(config)
     from xModel.qwen35.vl_0_8b.cuda_decoder import CUDAImageEncoder
-    return CUDAImageEncoder(checkpoint,config['vision_config'],gh,gw,1,engine_artifact=engine_artifact)
+    return CUDAImageEncoder(checkpoint,config['vision_config'],gh,gw,1,engine_artifact=engine_artifact,builder_workspace_bytes=builder_workspace_bytes)

@@ -483,6 +483,10 @@ add_test(NAME garnet_serving_python_defaults COMMAND "$<TARGET_FILE:xlang3>"
     "${CMAKE_CURRENT_SOURCE_DIR}/test/xlang3/serving_defaults.py")
 add_test(NAME garnet_serving_concurrency COMMAND "$<TARGET_FILE:xlang3>"
     "${CMAKE_CURRENT_SOURCE_DIR}/test/xlang3/serving_concurrency.py")
+add_test(NAME garnet_serving_cancellation COMMAND "$<TARGET_FILE:xlang3>"
+    "${CMAKE_CURRENT_SOURCE_DIR}/test/xlang3/serving_cancellation.py" "${CMAKE_CURRENT_SOURCE_DIR}")
+set_tests_properties(garnet_serving_cancellation PROPERTIES TIMEOUT 10
+    WORKING_DIRECTORY "$<TARGET_FILE_DIR:garnet>")
 set_tests_properties(garnet_serving_concurrency PROPERTIES TIMEOUT 25 SKIP_RETURN_CODE 77
     WORKING_DIRECTORY "$<TARGET_FILE_DIR:garnet>")
 add_test(NAME garnet_serving_loading_concurrency COMMAND "$<TARGET_FILE:xlang3>"
