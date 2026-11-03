@@ -2450,6 +2450,29 @@ void MetalContext::ZeroRow(const MetalMatrix& matrix,size_t row) {
                     0,native.columns*sizeof(float));
     }
 }
+std::vector<float> MetalContext::ReadRow(const MetalMatrix& matrix,size_t row) const {
+    @autoreleasepool {
+        ValidateCompletedRow(matrix,row);
+        const auto native=matrix.impl_->matrix;
+        std::vector<float> values(native.columns);
+        std::memcpy(values.data(),static_cast<const char*>(native.data.contents)+native.offset+row*native.rowBytes,
+                    values.size()*sizeof(float));
+        if(!std::all_of(values.begin(),values.end(),[](float value){return std::isfinite(value);}))
+            throw std::runtime_error("Cannot snapshot nonfinite request-row state");
+        return values;
+    }
+}
+void MetalContext::WriteRow(const MetalMatrix& matrix,size_t row,const std::vector<float>& values) {
+    @autoreleasepool {
+        ValidateCompletedRow(matrix,row);
+        const auto native=matrix.impl_->matrix;
+        if(values.size()!=native.columns||
+           !std::all_of(values.begin(),values.end(),[](float value){return std::isfinite(value);}))
+            throw std::invalid_argument("Request-row restore requires exact finite logical columns");
+        std::memcpy(static_cast<char*>(native.data.contents)+native.offset+row*native.rowBytes,
+                    values.data(),values.size()*sizeof(float));
+    }
+}
 #endif
 void MetalContext::Zero(const MetalMatrix& matrix) {
 #ifdef GARNET_METAL_LAZY_RESIDENT_DEFAULTS

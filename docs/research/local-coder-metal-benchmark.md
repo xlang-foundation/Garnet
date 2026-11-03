@@ -348,3 +348,32 @@ hardware-specific extension policy separate.
   capacity4096, not a full4K sequence, output128 benchmark or coding quality.
   The study profile remains unqualified. Continuous scheduling, hybrid prefix
   snapshots, learned batch4 admission and multimodal execution remain pending.
+- SGLang's capped active2 full campaign completed all three fresh-process
+  cohorts and six cells:90 measured waves/210 measured requests. The full audit
+  found zero accounting or memory-bracketing issues. Every final request has a
+  trailing sample, with no driver-forced shutdowns. Cohorts2/3 exited0; cohort1
+  self-terminated during cleanup (exit-9). Retain the variable throughput and
+  system paging rather than selecting a slow cohort to inflate Garnet ratios.
+  Evidence: `evidence/baseline-phase1/sglang-active2-full-audit.json` and the
+  immutable `sglang-active2-cache512m` campaign. This is an active2 baseline;
+  client4 includes queueing, and active4 admission failures remain retained.
+- Actual MLX/native embedding parity now passes all35,840 values from seven
+  selected real checkpoint rows exactly, including the final vocabulary row.
+  The oracle reads only packed selected rows and calls actual MLX dequantize
+  with its inferred BF16 output. A separate native process uses ModelTensorIO.
+  Evidence: `evidence/27b-embedding-mlx-oracle.json` and
+  `evidence/27b-embedding-native-parity.json`. Whole-model parity remains a
+  separate gate.
+- The word-tile INT4 candidate loads each packed word once per tile and unpacks
+  eight values, with padded transposed threadgroup storage. Expanded FP64
+  contraction tests include row/column tails and learned inner widths. All10
+  CTests pass in the separate `native-wordtiles-build`. Native row read/write
+  primitives also pass immutable capture, cross-row restore, isolation and
+  invalid-write rejection; these are not yet hybrid cache integration.
+- Learned context4k word-tile smoke retained the same four IDs on both runs.
+  Warm TTFT excluding reset was22.73s (reset0.048s), mean decode0.1496s/token,
+  and allocation17,938,432,000 Metal bytes. Evidence:
+  `evidence/native27b-wordtiles-smoke`, with retained library/source/workload
+  digests. The sampler started after process initialization began, so it does
+  not bracket all startup activity. These are output4 native observations;
+  full output128 HTTP comparison, quality and broader admission remain pending.
