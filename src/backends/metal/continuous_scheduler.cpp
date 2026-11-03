@@ -82,6 +82,20 @@ bool MetalContinuousScheduler::Initialize(X::Value value,int64_t pending) {
     sessionOwner_=value;rows_=layout.first;capacity_=layout.second;
     scheduler_=std::move(policy);allocator_=std::move(allocator);failed_=false;return true;
 }
+bool MetalContinuousScheduler::SetPrefillChunk(int64_t tokens) {
+    std::lock_guard<std::mutex> lock(mutex_);Ready();
+    if(tokens<0||tokens>64||uint64_t(tokens)>capacity_||!inflight_.empty())return false;
+    return scheduler_->SetPrefillChunkTokens(int(tokens));
+}
+bool MetalContinuousScheduler::CompletePrefillChunk(int64_t id,int64_t tokens) {
+    std::lock_guard<std::mutex> lock(mutex_);Ready();
+    auto found=inflight_.find(uint64_t(id));
+    if(id<=0||tokens<1||tokens>64||found==inflight_.end()||found->second!=RequestStage::Prefill)return false;
+    try {
+        if(!scheduler_->CompletePrefillChunk(uint64_t(id),int(tokens),*allocator_))return false;
+        inflight_.erase(found);return true;
+    }catch(...){failed_=true;throw;}
+}
 int64_t MetalContinuousScheduler::Submit(int64_t prompt,int64_t output,int64_t priority) {
     std::lock_guard<std::mutex> lock(mutex_);Ready();
     if(prompt<1||output<1||uint64_t(prompt)>capacity_||uint64_t(output)>capacity_-size_t(prompt)||
@@ -105,7 +119,8 @@ std::string MetalContinuousScheduler::NextJson() {
                 const auto row=size_t(request.requestRow);mask[row]=1;epochs[row]=request.rowEpoch;
                 requests.push_back({{"id",request.id},{"row",row},{"epoch",request.rowEpoch},{"token_id",request.tokenId},
                     {"slot",request.slotPosition},{"context_length",request.contextLength},{"prompt_tokens",request.promptTokens},
-                    {"generated_tokens",request.generatedTokens},{"position_delta",request.positionDelta}});
+                    {"generated_tokens",request.generatedTokens},{"position_delta",request.positionDelta},
+                    {"prefill_offset",request.prefillOffset},{"prefill_tokens",request.prefillTokens}});
                 if(!inflight_.emplace(request.id,batch.stage).second)throw std::logic_error("Duplicate request in native scheduler tick");
             }
             batches.push_back({{"stage",batch.stage==RequestStage::Prefill?"prefill":"decode"},

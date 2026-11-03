@@ -1119,3 +1119,40 @@ than assuming the collector's input filename was `profile.json`. Original
 collection artifacts remain unchanged. A six-cell, one-wave timing admission
 is frozen in `native27b-batch-wide64-http-admission1`; it is not the required
 three-cohort serving campaign.
+
+The wide64 FP32 batch2 timing admission finished with a preserved failure
+(`native27b-batch-wide64-http-admission1`). Short-prompt overall tokens/s were
+2.142/3.444/3.212 for1/2/4 clients. Long-prompt one/two-client cells were
+0.539/0.697; the four-client cell failed a queued client's600s observation
+limit. Exact one-client long TTFT was208.290s and decode4.345 tokens/s. Thirteen
+native completions and496 combined decode plans are retained; the incomplete
+cell has no valid overall throughput. The failed accounting report retains all
+seven issues, including incomplete final memory bracketing and a native stream
+without completion. The collector stopped its owned group viaSIGTERM with no
+forced kill; this timing run has no graceful native-close snapshot. Separate
+quality cleanup evidence is not substituted for that missing timing evidence.
+Five tamper checks each introduce a distinct additional detected issue, without
+turning the already failed campaign into a passing one.
+
+A frozen isolated-op probe of the same binary
+(`native27b-batch-wide64-op-probe1`) passed two exact16-token ragged repeats and
+cleanup. Across serialized diagnostic submissions, MatMul accounts for94.00%
+of summed GPU time:19,561.975ms for1,984 prefill projections with128 physical
+input rows and4,394.117ms for14,912 two-row decode projections. Total diagnostic
+GPU time is25,485.225ms. Some fusions are disabled by this mode, so these sums
+attribute cost and are not serving latency or speedup measurements. Existing
+projection microbenchmarks stop at64 rows; the128-row packed case remains a
+specific missing operator measurement.
+
+Native optional chunked prefill is now implemented in the backend-neutral
+scheduler and Metal row adapter. Each chunk retains its physical row/epoch,
+commits partial logical length and requeues the remainder; decode plans run
+between chunks. Early final-token completion, wrong chunk counts, duplicate
+partial completion and mode changes while requests are tracked reject. Final
+chunks require the first sampled token. The whole-prompt default remains in
+place. All12 native CTests pass, including portable row-lease/tail/cancellation
+and decode-interleaving cases. The experimental text worker can select
+`prefill_schedule=chunked`; prefix reuse with this new schedule is explicitly
+unadmitted until native restored-prefix progress is integrated. The existing
+whole-prompt native prefix profile remains unchanged. Full learned chunked
+coding/HTTP qualification is next; no serving improvement is yet established.

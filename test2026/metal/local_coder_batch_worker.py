@@ -26,6 +26,11 @@ def main():
     with open(folder+'/config.json') as stream:config=json.load(stream)
     batch=profile['batch'];capacity=profile['capacity'];chunk=profile['prefill_chunk'];prefix=profile.get('prefix_cache',False)
     if type(prefix) is not bool:raise ValueError('Explicit boolean prefix policy required')
+    prefill_schedule=profile.get('prefill_schedule','whole')
+    if prefill_schedule not in ('whole','chunked'):raise ValueError('Explicit supported prefill scheduling mode required')
+    chunked=prefill_schedule=='chunked'
+    if chunked and (prefix or 'chunked_prefill_scheduler' not in garnet.backend_info()):
+        raise ValueError('Chunked prefill study requires native chunk scheduling and an uncached profile')
     if not profile.get('profile_id'):raise ValueError('Frozen profile identity required')
     if 'row_final_hidden' not in garnet.backend_info():raise ValueError('Native per-row final hidden extension required')
     if profile.get('require_mpp',False):
@@ -67,6 +72,7 @@ def main():
             decoder.session.configure_token_prefix(profile['prefix_identity'],profile.get('prefix_entries',2),profile.get('prefix_host_bytes',384*1024*1024))
         graphs=decoder._resident_prefill_graphs(chunk)
         policy=garnet.continuous_scheduler();policy.initialize(decoder.session,16)
+        if chunked and not policy.set_prefill_chunk(chunk):raise ValueError('Native prefill chunk configuration rejected')
         tokenizer=garnet.tokenizer();tokenizer.open(folder)
         stops=[tokenizer.token_id('<|im_end|>'),tokenizer.token_id('<|endoftext|>')]
         reader=threading.Thread(target=read,daemon=True);reader.start()
@@ -131,6 +137,31 @@ def main():
             for plan in plans:
                 if shutdown.is_set():break
                 emit(dict(event='native_batch',stage=plan['stage'],active_rows=plan['active_rows'],requests=plan['requests']))
+                if plan['stage']=='prefill' and chunked:
+                    requests={request['row']:request for request in plan['requests']}
+                    ids=[];flags=[];slots=[];final_epochs=[0]*batch
+                    for row in range(batch):
+                        request=requests.get(row)
+                        if request is not None:
+                            offset=request['prefill_offset'];count=request['prefill_tokens'];job=jobs[request['id']]
+                            if not 0<count<=chunk or offset<0 or offset+count>len(job['prompt']):raise ValueError('Native prefill chunk plan out of bounds')
+                            if offset+count==len(job['prompt']):final_epochs[row]=request['epoch']
+                        for t in range(chunk):
+                            valid=request is not None and t<request['prefill_tokens']
+                            position=request['prefill_offset']+t if valid else 0
+                            ids.append(jobs[request['id']]['prompt'][position] if valid else 0)
+                            flags.append(1.0 if valid else 0.0);slots.append(float(position))
+                    hidden=decoder.io.stack_tokens([decoder.io.embedding([ids[row*chunk+t] for row in range(batch)]) for t in range(chunk)])
+                    execute(graphs,hidden,f32([slot for slot in slots for axis in range(3)],[batch,chunk,3]),
+                        f32(slots,[batch,chunk]),f32(flags,[batch,chunk]),-1,plan['epochs'],ids)
+                    predicted=decoder.session.predict_rows(final_epochs) if any(final_epochs) else None
+                    for request in plan['requests']:
+                        final=final_epochs[request['row']]!=0
+                        if final:deliver(request,predicted[request['row']],'prefill')
+                        elif not policy.complete_prefill_chunk(request['id'],request['prefill_tokens']):raise ValueError('Native prefill chunk completion rejected')
+                        emit(dict(event='native_prefill_chunk',native_request=request['id'],row=request['row'],epoch=request['epoch'],
+                            offset=request['prefill_offset'],tokens=request['prefill_tokens'],final=final))
+                    continue
                 if plan['stage']=='prefill':
                     rows={request['row']:jobs[request['id']] for request in plan['requests']}
                     for request in plan['requests']:

@@ -196,7 +196,7 @@ public:
 #ifdef GARNET_METAL_REQUEST_ROWS
         info+="; request_row_reset";
 #ifdef GARNET_METAL_CONTINUOUS_ROWS
-        info+="; native_request_row_leases; native_continuous_scheduler";
+        info+="; native_request_row_leases; native_continuous_scheduler; chunked_prefill_scheduler";
 #ifdef GARNET_METAL_ROW_FINAL_HIDDEN
         info+="; row_final_hidden";
 #ifdef GARNET_METAL_TOKEN_PREFIX_CACHE

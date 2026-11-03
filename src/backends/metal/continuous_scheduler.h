@@ -23,6 +23,8 @@ public:
     MetalContinuousScheduler();
     ~MetalContinuousScheduler();
     bool Initialize(X::Value session,int64_t maxPending);
+    bool SetPrefillChunk(int64_t tokens);
+    bool CompletePrefillChunk(int64_t request,int64_t tokens);
     int64_t Submit(int64_t prompt,int64_t output,int64_t priority);
     std::string NextJson();
     int64_t CompletePrefill(int64_t request,int64_t token,bool finished);
@@ -32,6 +34,8 @@ public:
     bool Close();
     BEGIN_PACKAGE(MetalContinuousScheduler)
         APISET().AddFunc<2>("initialize",&MetalContinuousScheduler::Initialize);
+        APISET().AddFunc<1>("set_prefill_chunk",&MetalContinuousScheduler::SetPrefillChunk);
+        APISET().AddFunc<2>("complete_prefill_chunk",&MetalContinuousScheduler::CompletePrefillChunk);
         APISET().AddFunc<3>("submit",&MetalContinuousScheduler::Submit);
         APISET().AddFunc<0>("next_json",&MetalContinuousScheduler::NextJson);
         APISET().AddFunc<3>("complete_prefill",&MetalContinuousScheduler::CompletePrefill);

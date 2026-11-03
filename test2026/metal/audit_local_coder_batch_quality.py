@@ -25,11 +25,15 @@ def audit(root,reference=None):
     if status['status']!='collected_pending_sandbox_evaluation' or status.get('parallel_tasks')!=8:issues.append('Concurrent coding collection differs')
     if status['tasks']!=[dict(id=plan['id'],client_exit_code=0) for plan in plans]:issues.append('Task set/status differs')
     ready=[];closed=[];completed={};streams={};batch_plans=[];prompt_counts={};mpp=[]
-    for event in native_events(root/'server/worker-stdout.jsonl'):
+    chunks={};decode_events=[]
+    for event_index,event in enumerate(native_events(root/'server/worker-stdout.jsonl')):
         kind=event.get('event');key=event.get('id')
         if kind=='ready':ready.append(event)
         elif kind=='closed':closed.append(event)
-        elif kind=='native_batch':batch_plans.append(event)
+        elif kind=='native_batch':
+            batch_plans.append(event)
+            if event['stage']=='decode':decode_events.append((event_index,event))
+        elif kind=='native_prefill_chunk':chunks.setdefault(event['native_request'],[]).append((event_index,event))
         elif kind=='native_mpp':mpp.append(event)
         elif kind=='error':issues.append('Native request/runtime error: '+event.get('error',''))
         elif kind=='token':
@@ -91,10 +95,26 @@ def audit(root,reference=None):
     if matched!=set(completed):issues.append('Unmatched native completions')
     combined=sum(plan['stage']=='decode' and sum(plan['active_rows'])==2 for plan in batch_plans)
     if combined<1:issues.append('No actual combined decode plan')
+    interleavings=0
+    if profile.get('prefill_schedule','whole')=='chunked':
+        if set(chunks)!={event['native_request'] for event in completed.values()}:issues.append('Chunked prefill request set differs')
+        for event in completed.values():
+            parts=chunks.get(event['native_request'],[]);offset=0
+            for index,(_,part) in enumerate(parts):
+                count=min(profile['prefill_chunk'],len(event['prompt_ids'])-offset)
+                if (part['offset']!=offset or part['tokens']!=count or count<=0 or
+                    part['row']!=event['native_row'] or part['epoch']!=event['native_epoch'] or
+                    part['final']!=(index==len(parts)-1)):issues.append('Native prefill chunk progression/lease differs')
+                offset+=part['tokens']
+            if offset!=len(event['prompt_ids']):issues.append('Native prefill chunks do not cover prompt')
+            for (left,_),(right,_) in zip(parts,parts[1:]):
+                interleavings+=sum(left<i<right and any(r['id']!=event['native_request'] for r in plan['requests']) for i,plan in decode_events)
+        if interleavings<1:issues.append('No existing decode advanced between native prefill chunks')
+    elif chunks:issues.append('Whole-prompt profile emitted chunk scheduling evidence')
     epochs=[event['native_epoch'] for event in completed.values()]
     if len(set(epochs))!=len(plans):issues.append('Request epochs were reused')
     if set(event['native_row'] for event in completed.values())!={0,1}:issues.append('Physical row profile differs')
-    return dict(status='passed' if not issues else 'failed',issues=issues,tasks=results,combined_decode_plans=combined,
+    return dict(status='passed' if not issues else 'failed',issues=issues,tasks=results,combined_decode_plans=combined,prefill_decode_interleavings=interleavings,
         context_capacity=ready[0]['capacity'] if ready else None,mpp_prefill_calls=len(mpp),
         scope='Concurrent native frozen prompt/stream/HTTP accounting and row lifecycle; coding correctness requires separate sandbox evaluation',
         auditor_sha256=digest(Path(__file__)),reference_worker_log_sha256=digest(reference) if reference else None,

@@ -76,5 +76,42 @@ int main() {
     Check(!scheduler.ForgetFinished(ids[2]));
     Check(single.TrackedRequestCount()==2&&single.ForgetFinished(one)&&single.ForgetFinished(eos));
     Check(!single.ForgetFinished(eos)&&single.TrackedRequestCount()==0);
-    std::cout<<"portable_continuous_scheduler PASS stable rows, queued refill, cancellation, one-token budget, prefill EOS and invalid-token rejection\n";
+    FixedRows chunkStorage;
+    ContinuousBatchSchedulerConfig chunkConfig;chunkConfig.decodeBuckets={1,2};chunkConfig.maxPrefillBatch=2;
+    chunkConfig.maxPrefillTokensPerTick=8;
+    ContinuousBatchScheduler chunked(chunkConfig);
+    Check(!chunked.SetPrefillChunkTokens(-1)&&!chunked.SetPrefillChunkTokens(9)&&chunked.SetPrefillChunkTokens(4));
+    GenerationRequest shortPrompt;shortPrompt.promptTokens=3;shortPrompt.maxNewTokens=10;
+    GenerationRequest longPrompt;longPrompt.promptTokens=11;longPrompt.maxNewTokens=3;
+    auto shortId=chunked.Submit(shortPrompt),longId=chunked.Submit(longPrompt);
+    Check(!chunked.SetPrefillChunkTokens(0));
+    tick=chunked.Schedule(chunkStorage);Check(tick.batches.size()==1&&tick.batches[0].scheduledTokens==7);
+    Check(tick.batches[0].requests[0].prefillTokens==3&&tick.batches[0].requests[1].prefillTokens==4);
+    const auto longLease=chunkStorage.Placement(longId);
+    Check(!chunked.CompletePrefill(longId,9,chunkStorage)); // A partial prompt cannot generate yet.
+    Check(!chunked.CompletePrefillChunk(longId,3,chunkStorage));
+    Check(chunked.CompletePrefill(shortId,7,chunkStorage));
+    Check(chunked.CompletePrefillChunk(longId,4,chunkStorage)&&chunkStorage.LogicalLength(longId)==4);
+    Check(!chunked.CompletePrefillChunk(longId,4,chunkStorage)); // Duplicate completion.
+    tick=chunked.Schedule(chunkStorage);Check(tick.batches.size()==2);
+    Check(tick.batches[0].stage==RequestStage::Decode&&tick.batches[0].requests[0].id==shortId);
+    const auto middle=tick.batches[1].requests[0];
+    Check(middle.id==longId&&middle.prefillOffset==4&&middle.prefillTokens==4&&middle.slotPosition==4&&middle.contextLength==8);
+    Check(middle.requestRow==longLease.requestRow&&middle.rowEpoch==longLease.rowEpoch);
+    Check(chunked.CompleteDecode(shortId,8,false,chunkStorage));
+    Check(chunked.CompletePrefillChunk(longId,4,chunkStorage));
+    tick=chunked.Schedule(chunkStorage);Check(tick.batches.size()==2);
+    const auto tail=tick.batches[1].requests[0];Check(tail.prefillOffset==8&&tail.prefillTokens==3&&tail.contextLength==11);
+    Check(!chunked.CompletePrefillChunk(longId,3,chunkStorage)); // Final chunk requires a first token.
+    Check(chunked.CompleteDecode(shortId,8,false,chunkStorage)&&chunked.CompletePrefill(longId,9,chunkStorage));
+    Check(chunkStorage.LogicalLength(longId)==11);
+    tick=chunked.Schedule(chunkStorage);Check(tick.batches.size()==1&&tick.batches[0].requests.size()==2);
+    Check(chunked.Cancel(shortId,chunkStorage)&&chunked.Cancel(longId,chunkStorage));
+    Check(chunked.ForgetFinished(shortId)&&chunked.ForgetFinished(longId));
+    longId=chunked.Submit(longPrompt);tick=chunked.Schedule(chunkStorage);
+    Check(chunked.CompletePrefillChunk(longId,4,chunkStorage));
+    Check(chunked.Cancel(longId,chunkStorage)&&chunkStorage.LogicalLength(longId)==-1);
+    Check(!chunked.CompletePrefillChunk(longId,4,chunkStorage)&&!chunked.CompletePrefill(longId,1,chunkStorage));
+    Check(chunked.ForgetFinished(longId)&&chunked.SetPrefillChunkTokens(0));
+    std::cout<<"portable_continuous_scheduler PASS stable rows, queued refill, cancellation, one-token budget, prefill EOS, invalid-token rejection and chunked prefill fairness/tail/lease lifecycle\n";
 }

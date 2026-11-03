@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <utility>
+#include <stdexcept>
 
 namespace Garnet
 {
@@ -12,6 +13,8 @@ namespace Garnet
         ContinuousBatchSchedulerConfig config)
         : m_config(std::move(config))
     {
+        if (m_config.prefillChunkTokens < 0 || m_config.prefillChunkTokens > m_config.maxPrefillTokensPerTick)
+            throw std::invalid_argument("Invalid native prefill chunk budget");
         std::sort(m_config.decodeBuckets.begin(), m_config.decodeBuckets.end());
         m_config.decodeBuckets.erase(
             std::unique(
@@ -139,36 +142,68 @@ namespace Garnet
             m_prefillQueue.pop_front();
             auto found = m_requests.find(id);
             if (found == m_requests.end() ||
-                found->second.stage != RequestStage::Queued) {
+                (found->second.stage != RequestStage::Queued && found->second.stage != RequestStage::Prefill)) {
                 continue;
             }
             State& state = found->second;
-            if (prefill.scheduledTokens + state.request.promptTokens >
+            if (state.prefillScheduled) continue;
+            const int remaining = state.request.promptTokens - state.prefillProcessed;
+            const int count = m_config.prefillChunkTokens ? std::min(remaining, m_config.prefillChunkTokens) : remaining;
+            if (int64_t(prefill.scheduledTokens) + count >
                     m_config.maxPrefillTokensPerTick &&
                 !prefill.requests.empty()) {
                 m_prefillQueue.push_back(id);
                 continue;
             }
-            if (!kvPool.Reserve(id, state.request.promptTokens + 1)) {
+            const bool available = state.stage == RequestStage::Queued
+                ? kvPool.Reserve(id, state.request.promptTokens + 1)
+                : kvPool.EnsureCapacity(id, state.prefillProcessed + count);
+            if (!available) {
                 m_prefillQueue.push_back(id);
                 continue;
             }
             state.stage = RequestStage::Prefill;
+            state.prefillScheduled = count;
             ScheduledRequest item;
             item.id = id;
             item.promptTokens = state.request.promptTokens;
-            item.contextLength = state.request.promptTokens;
-            item.slotPosition = 0;
+            item.contextLength = state.prefillProcessed + count;
+            item.slotPosition = state.prefillProcessed;
+            item.prefillOffset = state.prefillProcessed;
+            item.prefillTokens = count;
             item.positionDelta = state.request.positionDelta;
             item.pageTable = kvPool.PageTable(id);
             const auto placement=kvPool.Placement(id);
             item.requestRow=placement.requestRow;item.rowEpoch=placement.rowEpoch;
             prefill.activeMask[prefill.requests.size()] = 1;
-            prefill.scheduledTokens += state.request.promptTokens;
+            prefill.scheduledTokens += count;
             prefill.requests.push_back(std::move(item));
         }
         if (!prefill.requests.empty()) tick.batches.push_back(std::move(prefill));
         return tick;
+    }
+
+    bool ContinuousBatchScheduler::SetPrefillChunkTokens(int tokens)
+    {
+        if (tokens < 0 || tokens > m_config.maxPrefillTokensPerTick || !m_requests.empty()) return false;
+        m_config.prefillChunkTokens = tokens;
+        return true;
+    }
+
+    bool ContinuousBatchScheduler::CompletePrefillChunk(
+        std::uint64_t requestId, int tokens, KVSequenceAllocator& kvPool)
+    {
+        auto found = m_requests.find(requestId);
+        if (!m_config.prefillChunkTokens || tokens <= 0 || found == m_requests.end()) return false;
+        State& state = found->second;
+        if (state.stage != RequestStage::Prefill || tokens != state.prefillScheduled ||
+            tokens >= state.request.promptTokens - state.prefillProcessed) return false;
+        const int length = state.prefillProcessed + tokens;
+        if (!kvPool.CommitLength(requestId, length)) return false;
+        state.prefillProcessed = length;
+        state.prefillScheduled = 0;
+        m_prefillQueue.push_back(requestId);
+        return true;
     }
 
     bool ContinuousBatchScheduler::CompletePrefill(
@@ -180,11 +215,15 @@ namespace Garnet
         auto found = m_requests.find(requestId);
         if (firstTokenId < 0 || found == m_requests.end() ||
             found->second.stage != RequestStage::Prefill ||
+            found->second.prefillScheduled <= 0 ||
+            found->second.prefillProcessed + found->second.prefillScheduled != found->second.request.promptTokens ||
             !kvPool.CommitLength(
                 requestId, found->second.request.promptTokens)) {
             return false;
         }
         State& state = found->second;
+        state.prefillProcessed = state.request.promptTokens;
+        state.prefillScheduled = 0;
         state.nextTokenId = firstTokenId;
         state.generatedTokens = 1;
         if (finished || state.request.maxNewTokens == 1) {

@@ -40,6 +40,8 @@ namespace Garnet
         int promptTokens = 0;
         int generatedTokens = 0;
         int positionDelta = 0;
+        int prefillOffset = 0;
+        int prefillTokens = 0;
         std::vector<int> pageTable;
         int requestRow = -1;
         std::uint64_t rowEpoch = 0;
@@ -65,6 +67,7 @@ namespace Garnet
         int maxPrefillBatch = 4;
         int maxPrefillTokensPerTick = 2048;
         int maxActiveRequests = 256;
+        int prefillChunkTokens = 0; // Zero retains whole-prompt scheduling.
     };
 
     // Backend-neutral policy engine. It creates tensor-ready batch metadata;
@@ -78,6 +81,8 @@ namespace Garnet
             std::uint64_t enqueueOrder = 0;
             int generatedTokens = 0;
             int nextTokenId = 0;
+            int prefillProcessed = 0;
+            int prefillScheduled = 0;
         };
 
         ContinuousBatchSchedulerConfig m_config;
@@ -97,6 +102,8 @@ namespace Garnet
         std::uint64_t Submit(GenerationRequest request);
         bool Cancel(std::uint64_t requestId, KVSequenceAllocator& kvPool);
         SchedulerTick Schedule(KVSequenceAllocator& kvPool);
+        bool SetPrefillChunkTokens(int tokens);
+        bool CompletePrefillChunk(std::uint64_t requestId, int tokens, KVSequenceAllocator& kvPool);
         bool CompletePrefill(
             std::uint64_t requestId,
             int firstTokenId,
