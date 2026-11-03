@@ -53,6 +53,7 @@ try:
                 if final:
                     generated[identity].append(predicted[row]);assert policy.complete_prefill(identity,predicted[row],False)==2
                 offset+=length
+                if offset%128==0 or final:print('native_batch_prefill_progress',repeat,row,offset,len(tokens),flush=True)
         prefill_seconds=time.monotonic()-began;decode_start=time.monotonic()
         for index in range(1,limit):
             tick=json.loads(policy.next_json())['batches'];assert len(tick)==1 and tick[0]['stage']=='decode'

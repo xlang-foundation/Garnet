@@ -680,3 +680,11 @@ pooled read/write callers. Giving validation its own pool returns the test to
 pass (`row-validation-retention-before.log`,
 `native-row-validation-pool-ctest.log`, `native-row-validation-pool-scheduler.log`).
 The same learned batch study must confirm complete cleanup before admission.
+
+Study4 confirms the fix on the learned checkpoint: both batch2 repeats still
+match both16-token sequences, and complete close returns to720,896Metal bytes,
+also unchanged after quiescence. Session close now releases its private state;
+prefill graphs, decode graphs and the head release the remaining owners in
+their staged snapshots (`evidence/native27b-batch2-study4`). This admits only
+that finite correctness/cleanup study, not full coding quality, longer context,
+batch4, combined prefill or HTTP serving.
