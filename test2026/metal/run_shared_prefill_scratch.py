@@ -46,6 +46,7 @@ try:
     positions=tensor.tensor([float(t) for row in range(batch) for t in range(chunk) for axis in range(3)],shape=[batch,chunk,3],dtype=tensor.float32)
     active=tensor.tensor([1.,1.,1.,0.,1.,0.,0.,0.,1.,1.,1.,1.,0.,0.,0.,0.],shape=[batch,chunk],dtype=tensor.float32)
     session.run(packed,hidden,positions,slots,active,-1)
+    if 'chunk_kv_inplace' in garnet.backend_info():assert session.kv_inplace_updates==4
     wanted_hidden=session.hidden().tolist();wanted_state=snapshot(session)
     legacy=[]
     for i,graph in enumerate(packed):

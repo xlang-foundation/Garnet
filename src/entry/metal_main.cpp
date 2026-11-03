@@ -189,6 +189,9 @@ public:
 #ifdef GARNET_METAL_CONTINUOUS_ROWS
         info+="; native_request_row_leases; native_continuous_scheduler";
 #endif
+#ifdef GARNET_METAL_CHUNK_KV_INPLACE
+        info+="; chunk_kv_inplace";
+#endif
 #endif
 #ifdef GARNET_METAL_COMPACT_ATTENTION_INDEX
         info+="; compact_attention_index";

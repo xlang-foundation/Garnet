@@ -2864,6 +2864,13 @@ void MetalContext::EncodeStateKernel(unsigned operation,const std::vector<MetalM
         if(c.data==input.impl_->matrix.data) {
 #ifdef GARNET_METAL_RESIDENT_KV_INPLACE
             if(operation==20&&inputs.size()==4&&inputIndex==1&&output.CompatibleLayout(inputs[1]))continue;
+#ifdef GARNET_METAL_CHUNK_KV_INPLACE
+            // Each chunk-update thread owns one cache element/vector. Its
+            // fallback reads exactly the element it writes; chunk token data
+            // is separate. Only identical cache views may alias this way.
+            if((operation==12||operation==17)&&inputs.size()==4&&inputIndex==1&&
+               c.offset==input.impl_->matrix.offset&&output.CompatibleLayout(inputs[1]))continue;
+#endif
 #endif
             throw std::invalid_argument("In-place state kernel is unsupported");
         }

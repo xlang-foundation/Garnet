@@ -50,6 +50,8 @@ try:
                 final=offset+length==len(tokens)
                 predicted=decoder.session.run_leased(prefill_graphs,hidden,tensor_f32(positions,[batch,chunk,3]),
                     tensor_f32(slots,[batch,chunk]),tensor_f32(flags,[batch,chunk]),length-1 if final else -1,plan['epochs'])
+                if 'chunk_kv_inplace' in garnet.backend_info():
+                    assert decoder.session.kv_inplace_updates==sum([2 if kind=='full_attention' else 0 for kind in config['text_config']['layer_types']])
                 if final:
                     generated[identity].append(predicted[row]);assert policy.complete_prefill(identity,predicted[row],False)==2
                 offset+=length

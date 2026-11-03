@@ -436,8 +436,21 @@ bool MetalCompiledGraph::BuildInternal(X::Value graph,X::Value symbols,const std
                     else{if(d<=0||uint64_t(d)>total/known)throw std::runtime_error("Invalid Metal reshape dimension");known*=size_t(d);}}
                 if(inferred>=0){if(total%known)throw std::runtime_error("Indivisible Metal reshape");shape[inferred]=total/known;}
                 else if(known!=total)throw std::runtime_error("Metal reshape element count mismatch");
-                out=Allocate(shape[0],total/size_t(shape[0]));slots_[out].shape=shape;
-                Op op{Kind::Layout,a,a,out};op.dimensions={0};ops_.push_back(std::move(op));
+                bool aliasCache=false;size_t root=a;
+#ifdef GARNET_METAL_CHUNK_KV_INPLACE
+                while(aliases.count(root))root=aliases.at(root);
+                // Only complete row-preserving views of a fresh chunk-cache
+                // writer can share storage. Inputs and arbitrary reshapes keep
+                // the existing copy path and immutable host-input contract.
+                if(slots_[a].rows==size_t(shape[0])&&slots_[a].columns==total/size_t(shape[0])&&
+                   gpu_->IsDefaultLayout(slots_[a].matrix,slots_[a].rows,slots_[a].columns))
+                    for(const auto& producer:ops_)if(producer.kind==Kind::KVChunk&&producer.out==root)aliasCache=true;
+#endif
+                if(aliasCache){auto view=slots_[a];view.shape=shape;out=slots_.size();slots_.push_back(std::move(view));aliases[out]=root;}
+                else {
+                    out=Allocate(shape[0],total/size_t(shape[0]));slots_[out].shape=shape;
+                    Op op{Kind::Layout,a,a,out};op.dimensions={0};ops_.push_back(std::move(op));
+                }
             }else if(node.name=="qwen35_chunk_token") {
                 auto shape=slots_[a].shape;auto index=node.attributes.Get("index").ToInt64();
                 if((shape.size()!=2&&shape.size()!=3)||index<0||index>=shape[1])throw std::runtime_error("Invalid Metal chunk token");
@@ -509,14 +522,27 @@ bool MetalCompiledGraph::BuildInternal(X::Value graph,X::Value symbols,const std
                 Op qrope{Kind::NormRope,q,qw,qr,float(epsilon)};qrope.arguments={q,qw,ropePositions,freq};qrope.dimensions={heads,dim,rotary,size_t(normalize)};qrope.offset=normOffset;ops_.push_back(std::move(qrope));
                 Op krope{Kind::NormRope,kp,kw,kr,float(epsilon)};krope.arguments={kp,kw,ropePositions,freq};krope.dimensions={kv,dim,rotary,size_t(normalize)};krope.offset=normOffset;ops_.push_back(std::move(krope));
                 auto nextKey=Allocate(batch,cacheWidth),nextValue=Allocate(batch,cacheWidth);
-                for(auto pair:{std::make_pair(kr,std::make_pair(key,nextKey)),std::make_pair(vp,std::make_pair(value,nextValue))}) {
-                    Op update{isChunk?Kind::KVChunk:Kind::KVUpdate,pair.first,pair.second.first,pair.second.second};
-                    update.arguments={pair.first,pair.second.first,slot,active,positions};update.dimensions={kv,dim,capacity,chunk};ops_.push_back(std::move(update));
-                }
+                auto updateCaches=[&]() {
+                    for(auto pair:{std::make_pair(kr,std::make_pair(key,nextKey)),std::make_pair(vp,std::make_pair(value,nextValue))}) {
+                        Op update{isChunk?Kind::KVChunk:Kind::KVUpdate,pair.first,pair.second.first,pair.second.second};
+                        update.arguments={pair.first,pair.second.first,slot,active,positions};update.dimensions={kv,dim,capacity,chunk};ops_.push_back(std::move(update));
+                    }
+                };
+#ifdef GARNET_METAL_CHUNK_KV_INPLACE
+                if(!isChunk)updateCaches();
+#else
+                updateCaches();
+#endif
                 auto context=Allocate(rows,heads*dim);
                 if(isChunk) {
                     Op attend{Kind::AttentionChunk,qr,key,context};attend.arguments={qr,kr,vp,key,value,slot,active,gate};
                     attend.dimensions={heads,kv,dim,capacity,chunk,size_t(!text)};ops_.push_back(std::move(attend));
+#ifdef GARNET_METAL_CHUNK_KV_INPLACE
+                    // Attention must see the old cache for earlier queries if
+                    // a later token overwrites that slot. Commit updates only
+                    // after all queries have consumed old-cache + chunk K/V.
+                    updateCaches();
+#endif
                 } else {
                     auto probabilities=Allocate(batch,heads*capacity);
                     Op scores{Kind::Scores,qr,nextKey,probabilities};scores.arguments={qr,nextKey,slot,active};scores.dimensions={heads,kv,dim,capacity};ops_.push_back(std::move(scores));
@@ -835,20 +861,32 @@ bool MetalCompiledGraph::BuildInternal(X::Value graph,X::Value symbols,const std
             gpu_->PrepareBF16BodyShape(slots_[op.a].matrix,slots_[op.b].bf16,slots_[op.out].matrix);
 #endif
         sharedWeights_.clear();ready_=true;
+#ifdef GARNET_METAL_CHUNK_KV_INPLACE
+        // Metadata is enough to construct private session state. Retire proved
+        // resident-unused defaults before the next layer is built, avoiding a
+        // model-wide construction peak. Standalone Run rehydrates the plan.
+        RetireResidentDefaults();
+#endif
         compileMs_=std::chrono::duration<double,std::milli>(std::chrono::steady_clock::now()-start).count();
         return true;
     }catch(...){Clear();throw;}
 }
 bool MetalCompiledGraph::CanUpdateKVInPlace(size_t part) const {
 #ifdef GARNET_METAL_RESIDENT_KV_INPLACE
-    if(part<1||part>2||inputs_.size()!=6||inputShapes_[0].size()!=2||
+    if(inputShapes_.empty())return false;
+    const bool chunk=inputShapes_[0].size()==3;
+    bool admitted=inputShapes_[0].size()==2;
+#ifdef GARNET_METAL_CHUNK_KV_INPLACE
+    admitted=admitted||chunk;
+#endif
+    if(part<1||part>2||inputs_.size()!=6||!admitted||
         part>=outputStorageGroups_.size()||outputStorageGroups_[part].empty())return false;
     const auto& group=outputStorageGroups_[part];size_t writer=SIZE_MAX;
     auto member=[&](size_t id){return std::find(group.begin(),group.end(),id)!=group.end();};
     for(size_t i=0;i<ops_.size();++i)if(i<residentOps_.size()&&residentOps_[i]&&
         (member(ops_[i].out)||member(ops_[i].auxiliaryOutput))) {
         const auto& op=ops_[i];
-        if(writer!=SIZE_MAX||op.kind!=Kind::KVUpdate||op.arguments.size()!=5||op.arguments[1]!=inputs_[part])return false;
+        if(writer!=SIZE_MAX||op.kind!=(chunk?Kind::KVChunk:Kind::KVUpdate)||op.arguments.size()!=5||op.arguments[1]!=inputs_[part])return false;
         writer=i;
     }
     if(writer==SIZE_MAX)return false;

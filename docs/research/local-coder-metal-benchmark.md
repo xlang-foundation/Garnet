@@ -688,3 +688,29 @@ prefill graphs, decode graphs and the head release the remaining owners in
 their staged snapshots (`evidence/native27b-batch2-study4`). This admits only
 that finite correctness/cleanup study, not full coding quality, longer context,
 batch4, combined prefill or HTTP serving.
+
+The same batch2 study also passed at capacity2560 with2054/71-token inputs,
+two repeats and both frozen16-token output prefixes. Metal allocation after
+prefill compilation was18,526,502,912bytes; close/quiescence returned to720,896.
+Evidence: `evidence/native27b-batch2-context2560-study1`. It remains a correctness
+study with serial masked prefill, not a throughput measurement.
+
+`GARNET_METAL_CHUNK_KV_INPLACE` is a new default-off memory experiment. It aliases
+only complete row-preserving views of fresh chunk-cache outputs and schedules
+attention's old-cache reads before committing KV updates. Native in-place
+analysis must prove no later old-cache read. The kernel alias guard accepts
+only identical cache views at the cache operand. Proven resident-unused graph
+defaults retire at build completion; standalone execution rehydrates them.
+The first candidate correctly hit the generic alias guard before its narrow
+chunk-cache allowance was added; that failure is retained.
+
+All12 CTests pass. New scalar and vector regressions pass with the feature off
+and on, comparing append, backward overwrites, duplicate slots and inactive/
+reactivated rows against sequential decode and standalone execution. The first
+eight-channel fixture's invalid rotary sections were rejected on both builds;
+the corrected fixture is retained separately. Scratch sharing and scheduler
+GPU integration still pass. Evidence: `native-chunkcache-ctest2.log`,
+`chunk-kv-inplace-control.log`, `chunk-kv-inplace-candidate2.log`,
+`chunk-kv-vector-control2.log`, `chunk-kv-vector-candidate2.log`,
+`chunk-kv-sharedscratch.log`, `chunk-kv-scheduler.log`. Learned-model memory and
+coding gates remain necessary before profile admission.
