@@ -455,3 +455,20 @@ proof of the2x target. Evidence is in `evidence/native27b-wideprefill-study1`
 and `study2`. All10 CTests and independent mixed batch4 row lifecycle checks
 with/without a prediction head passed after the retirement change
 (`native-wideprefill-ctest2.log`, `native-wideprefill-row-session.log`).
+
+Width16 subsequently produced identical32-token sequences across two resets
+(`evidence/native27b-prefill16-output32`). Its separate HTTP coding replay
+passed all8 frozen sandbox contracts with no truncation, and the native/HTTP
+input-output audit found zero issues (`evidence/native27b-prefill16-quality1`).
+The worker and bridge exited before the subsequent timing admission started.
+These results preserve the bounded quality gate, not the broader performance,
+batching or general model qualification gates.
+
+The sequential campaign driver's process guard now includes native Garnet
+bridges and27B model workers alongside reference engines. On macOS, executable
+paths must be inventoried with `comm` last in its own `ps` query: adding `args`
+after it truncates that field to15 characters even with `-ww`. Separate PID
+inventories are joined before matching. Both guard regression tests pass, and
+a live check detected the actual native bridge and worker; the old unrelated
+WorldSense XLang process is not classified as a model engine. This change does
+not alter any previously frozen reference driver or result.
