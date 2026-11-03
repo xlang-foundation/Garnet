@@ -21,6 +21,9 @@ X::Value TensorValue(X3PackageHost* host,MetalContext& gpu,const MetalMatrix& ma
 }
 }
 void MetalDecoderSession::Clear() {
+#ifdef GARNET_METAL_SHARED_PREFILL_SCRATCH
+    prefillScratch_.reset();
+#endif
 #ifdef GARNET_METAL_REQUEST_ROWS
     predictionInitialized_=false;rowResetBytes_=0;
 #endif
@@ -139,6 +142,9 @@ bool MetalDecoderSession::Build(X::Value graphs,X::Value head) {
         throw std::invalid_argument("Metal session requires a nonempty graph list");
     try {
         gpu_=std::make_unique<MetalContext>();
+#ifdef GARNET_METAL_SHARED_PREFILL_SCRATCH
+        prefillScratch_=std::make_shared<MetalPrefillScratch>();
+#endif
         size_t width=0,batch=0;
         for(uint64_t i=0;i<graphs.Size();++i) {
             auto owner=graphs.Get(i);auto graph=Graph(owner,Host());
@@ -210,7 +216,11 @@ bool MetalDecoderSession::PreparePrefill(X::Value value,int64_t layer) {
        graph->inputShapes_[0][1]<1||graph->inputShapes_[0][1]>int64_t(kMetalPrefillChunkLimit)||
        graph->inputShapes_[1]!=state.shape[0]||graph->inputShapes_[2]!=state.shape[1])
         throw std::invalid_argument("Prefill preparation does not match resident layer state");
-    graph->RetireResidentDefaults();return true;
+    graph->RetireResidentDefaults();
+#ifdef GARNET_METAL_SHARED_PREFILL_SCRATCH
+    graph->SharePrefillScratch(prefillScratch_);
+#endif
+    return true;
 }
 #endif
 X::Value MetalDecoderSession::Run(X::Value graphs,X::Value hidden,X::Value positions,
@@ -226,6 +236,16 @@ X::Value MetalDecoderSession::Run(X::Value graphs,X::Value hidden,X::Value posit
     if(std::adjacent_find(locked.begin(),locked.end())!=locked.end())throw std::invalid_argument("Metal session graphs must be distinct");
     std::vector<std::unique_lock<std::mutex>> graphLocks;
     for(auto graph:locked)graphLocks.emplace_back(graph->mutex_);
+#ifdef GARNET_METAL_SHARED_PREFILL_SCRATCH
+    // Lock all owners after graph locks in one stable order. Shared temporaries
+    // are safe across sessions and standalone graph calls only under this lease.
+    std::vector<MetalPrefillScratch*> scratchOwners;
+    for(auto graph:locked)if(graph->prefillScratch_)scratchOwners.push_back(graph->prefillScratch_.get());
+    std::sort(scratchOwners.begin(),scratchOwners.end(),std::less<MetalPrefillScratch*>());
+    scratchOwners.erase(std::unique(scratchOwners.begin(),scratchOwners.end()),scratchOwners.end());
+    std::vector<std::unique_lock<std::mutex>> scratchLocks;
+    for(auto owner:scratchOwners)scratchLocks.emplace_back(owner->mutex);
+#endif
     if(head_&&(!head_->ready_||head_->generation_!=headGeneration_))throw std::logic_error("Metal session head was closed/rebuilt");
     const auto start=std::chrono::steady_clock::now();
     const auto& inputShape=layers[0]->inputShapes_;

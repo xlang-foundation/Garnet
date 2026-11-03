@@ -253,6 +253,9 @@ size_t MetalCompiledGraph::LowerVision(size_t input,const X::Value& attrs) {
     return output;
 }
 void MetalCompiledGraph::Clear() {
+#ifdef GARNET_METAL_SHARED_PREFILL_SCRATCH
+    prefillScratch_.reset();sharedPrefillScratchBytes_=0;
+#endif
 #ifdef GARNET_METAL_LAZY_RESIDENT_DEFAULTS
     lazyDefaultPlanReady_=false;lazyDefaultSlots_.clear();lazyRetiredBytes_=lazyRehydratedBytes_=0;
 #endif
@@ -1140,6 +1143,10 @@ void MetalCompiledGraph::Encode(MetalContext& gpu,bool packedOutput,const MetalM
 }
 X::Value MetalCompiledGraph::Run(X::Value inputs) {
     std::lock_guard<std::mutex> lock(mutex_);
+#ifdef GARNET_METAL_SHARED_PREFILL_SCRATCH
+    std::unique_lock<std::mutex> scratchLock;
+    if(prefillScratch_)scratchLock=std::unique_lock<std::mutex>(prefillScratch_->mutex);
+#endif
 #ifdef GARNET_METAL_RETIRE_INPLACE_DEFAULTS
     // Standalone packed execution owns its outputs rather than receiving the
     // session's private KV bindings. Restore every retired default first.
@@ -1197,9 +1204,87 @@ std::vector<MetalResourceReference> MetalCompiledGraph::MemoryReferences() {
     };
     for(size_t i=0;i<slots_.size();++i)append(slots_[i],i,"slot",names[i],!names[i].empty(),input[i],output[i],active[i],i==output_);
     auto held=[&](const auto& records,const char* role){std::vector<std::string> keys;for(const auto& entry:records)keys.push_back(entry.first);std::sort(keys.begin(),keys.end());for(const auto& key:keys)append(records.at(key).slot,SIZE_MAX,role,key,true,false,false,false,false);};
-    held(sharedWeights_,"shared_weight_record");held(weightRecords_,"weight_record");return result;
+    held(sharedWeights_,"shared_weight_record");held(weightRecords_,"weight_record");
+#ifdef GARNET_METAL_SHARED_PREFILL_SCRATCH
+    if(prefillScratch_) {
+        std::lock_guard<std::mutex> scratchLock(prefillScratch_->mutex);
+        for(const auto& entry:prefillScratch_->buffers)for(const auto& matrix:entry.second) {
+            MetalResourceReference reference;reference.buffer=MetalContext::MatrixBufferInfo(matrix);
+            reference.slot=SIZE_MAX;reference.role="shared_prefill_scratch_pool";
+            reference.shape={int64_t(entry.first.first),int64_t(entry.first.second)};
+            result.push_back(std::move(reference));
+        }
+    }
+#endif
+    return result;
 }
 }
+
+#ifdef GARNET_METAL_SHARED_PREFILL_SCRATCH
+namespace Garnet {
+void MetalCompiledGraph::SharePrefillScratch(const std::shared_ptr<MetalPrefillScratch>& owner) {
+    if(!owner||!ready_||outputParts_.size()!=3||residentOps_.size()!=ops_.size())
+        throw std::invalid_argument("Shared prefill scratch requires a ready resident graph");
+    if(prefillScratch_==owner)return;
+    if(prefillScratch_)throw std::logic_error("Prefill graph already belongs to another scratch owner");
+    std::lock_guard<std::mutex> scratchLock(owner->mutex);
+    std::vector<MetalBufferInfo> infos;
+    std::unordered_map<uintptr_t,size_t> counts;
+    std::unordered_set<uintptr_t> protectedStorage;
+    auto protect=[&](const Slot& slot) {
+        auto info=MetalContext::MatrixBufferInfo(slot.matrix);
+        if(info.identity)protectedStorage.insert(info.identity);
+        for(const auto& buffer:MetalContext::WeightBufferInfo(slot.bf16))protectedStorage.insert(buffer.identity);
+#ifdef GARNET_METAL_MLX_AFFINE_INT4
+        for(const auto& buffer:MetalContext::AffineInt4BufferInfo(slot.affineInt4))protectedStorage.insert(buffer.identity);
+#endif
+    };
+    for(const auto& slot:slots_) {
+        auto info=MetalContext::MatrixBufferInfo(slot.matrix);infos.push_back(info);
+        if(info.identity)++counts[info.identity];
+    }
+    for(auto id:inputs_)protect(slots_[id]);
+    protect(slots_[output_]);
+    for(auto id:outputParts_)protect(slots_[id]);
+    for(const auto& entry:weights_)protect(slots_[entry.second]);
+    for(const auto& entry:weightRecords_)protect(entry.second.slot);
+    for(const auto& entry:sharedWeights_)protect(entry.second.slot);
+    // Prove initialization for both resident and standalone packed execution.
+    // A prior read (including a same-op read/write) rejects the buffer.
+    std::vector<size_t> firstRead(slots_.size(),SIZE_MAX),firstWrite(slots_.size(),SIZE_MAX);
+    std::vector<bool> residentWriter(slots_.size(),false),fullyInitialized(slots_.size(),false);
+    for(size_t i=0;i<ops_.size();++i) {
+        const auto& op=ops_[i];
+        const bool fullWrite=op.kind==Kind::MatMul||op.kind==Kind::BF16MatVec||op.kind==Kind::Norm||
+            op.kind==Kind::Silu||op.kind==Kind::Add||op.kind==Kind::Bias||op.kind==Kind::Slice||
+            op.kind==Kind::Concat||op.kind==Kind::NormRope;
+        auto read=[&](size_t id){if(id<slots_.size())firstRead[id]=std::min(firstRead[id],i);};
+        auto write=[&](size_t id){if(id<slots_.size()){
+            if(firstWrite[id]==SIZE_MAX)fullyInitialized[id]=fullWrite;
+            firstWrite[id]=std::min(firstWrite[id],i);residentWriter[id]=residentWriter[id]||residentOps_[i];}};
+        read(op.a);read(op.b);for(auto id:op.arguments)read(id);
+        write(op.out);write(op.auxiliaryOutput);
+    }
+    std::map<std::pair<size_t,size_t>,size_t> next;
+    size_t reused=0;
+    for(size_t id=0;id<slots_.size();++id) {
+        auto& slot=slots_[id];const auto& info=infos[id];
+        if(!info.identity||counts[info.identity]!=1||protectedStorage.count(info.identity)||
+           !residentWriter[id]||!fullyInitialized[id]||firstWrite[id]==SIZE_MAX||firstRead[id]<=firstWrite[id]||
+           !gpu_->IsDefaultLayout(slot.matrix,slot.rows,slot.columns))continue;
+        const auto key=std::make_pair(slot.rows,slot.columns);const auto lane=next[key]++;
+        auto& buffers=owner->buffers[key];
+        if(lane==buffers.size())buffers.push_back(slot.matrix);
+        else {
+            if(!slot.matrix.CompatibleLayout(buffers[lane]))throw std::logic_error("Shared prefill scratch layout mismatch");
+            if(reused>SIZE_MAX-info.allocatedBytes)throw std::overflow_error("Shared prefill scratch accounting overflow");
+            reused+=info.allocatedBytes;slot.matrix=buffers[lane];
+        }
+    }
+    prefillScratch_=owner;sharedPrefillScratchBytes_=reused;
+}
+}
+#endif
 
 namespace Garnet {
 void MetalCompiledGraph::RetireResidentDefaults() {

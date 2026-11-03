@@ -502,3 +502,26 @@ these widths. Width64 still failed the workspace guard before inference.
 All raw successes and failures remain in `evidence/native27b-retiredkv-study1`.
 Width32 now has an explicit experimental worker option requiring the retirement
 extension; coding and longer-request checks remain necessary before admission.
+
+The width32 worker subsequently passed all8 original coding contracts, with no
+truncation and zero native prompt/stream/HTTP accounting issues
+(`evidence/native27b-prefill32-quality1`). This still does not qualify batching
+or establish the performance target.
+
+`GARNET_METAL_SHARED_PREFILL_SCRATCH` is a separate default-off native experiment
+requiring the bounded wide-prefill build. It pools exclusively owned temporary
+buffers by layout and per-graph lane. Inputs, checkpoint storage, hidden and
+state outputs, aliases and read-before-write buffers are excluded. Only known
+full-buffer initialization kernels can initialize pooled storage. Graphs retain
+the pool, and both session and standalone execution lock it through GPU
+completion; a graph cannot migrate to a second pool. Memory inventories include
+pool-retained buffers even when another graph supplied them.
+
+All10 CTests passed in `native-sharedscratch-build`. A four-layer mixed
+linear/full-attention test matched pre-sharing outputs and states exactly with
+padded/inactive batch4 rows. It also covered private sessions, reverse standalone
+execution, foreign-owner rejection and standalone reuse after session close,
+with43,904reused bytes in the small fixture. Evidence:
+`native-sharedscratch-ctest.log`, `native-sharedscratch-mixed-session2.log`.
+These storage checks do not yet qualify the learned27B route or simultaneous
+host-call stress.

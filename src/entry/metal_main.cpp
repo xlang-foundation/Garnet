@@ -156,6 +156,9 @@ public:
 #endif
 #ifdef GARNET_METAL_QWEN38_WIDE_PREFILL
         info+="; qwen38_wide_prefill; bounded_prefill_workspace";
+#ifdef GARNET_METAL_SHARED_PREFILL_SCRATCH
+        info+="; shared_prefill_scratch";
+#endif
 #ifdef GARNET_METAL_RETIRE_INPLACE_DEFAULTS
         info+="; retired_inplace_defaults";
 #endif

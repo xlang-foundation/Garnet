@@ -10,7 +10,16 @@
 #include <unordered_set>
 #include <vector>
 #include <mutex>
+#include <map>
 namespace Garnet {
+#ifdef GARNET_METAL_SHARED_PREFILL_SCRATCH
+// Graphs retain this owner independently of the preparing session. Every
+// execution path locks it through GPU completion, including standalone Run.
+struct MetalPrefillScratch {
+    std::mutex mutex;
+    std::map<std::pair<size_t,size_t>,std::vector<MetalMatrix>> buffers;
+};
+#endif
 class MetalCompiledGraph {
     friend class MetalDecoderSession;
     struct Slot {MetalMatrix matrix;size_t rows=0,columns=0;std::vector<int64_t> shape;MetalBF16Weight bf16;
@@ -48,6 +57,11 @@ class MetalCompiledGraph {
     bool resetKVPrefix_[2]={false,false};
     bool ready_=false,bf16Projections_=false;
     mutable std::mutex mutex_;
+#ifdef GARNET_METAL_SHARED_PREFILL_SCRATCH
+    std::shared_ptr<MetalPrefillScratch> prefillScratch_;
+    size_t sharedPrefillScratchBytes_=0;
+    void SharePrefillScratch(const std::shared_ptr<MetalPrefillScratch>&);
+#endif
     SafeTensorsIndex index_;
     const SafeTensorMetadata* FindWeightMetadata(const std::string&) const;
 #ifdef GARNET_METAL_MLX_AFFINE_INT4
@@ -83,6 +97,9 @@ public:
     size_t LazyRetiredBytes() const;
     size_t LazyRehydratedBytes() const;
     size_t LazyPlannedSlots() const;
+#ifdef GARNET_METAL_SHARED_PREFILL_SCRATCH
+    size_t SharedPrefillScratchBytes() const {return sharedPrefillScratchBytes_;}
+#endif
     bool Ready() const {return ready_;}
     double CompileMs() const {return compileMs_;}
     double LastInferenceMs() const {return inferenceMs_;}
@@ -93,6 +110,9 @@ public:
     size_t LastVisionVectorDispatches() const {return visionVectorDispatches_;}
     size_t LastMlpGraphDispatches() const {return mlpGraphDispatches_;}
     BEGIN_PACKAGE(MetalCompiledGraph)
+#ifdef GARNET_METAL_SHARED_PREFILL_SCRATCH
+        APISET().AddProp("shared_prefill_scratch_bytes",&MetalCompiledGraph::SharedPrefillScratchBytes);
+#endif
         APISET().AddFunc<3>("build",&MetalCompiledGraph::Build);
         APISET().AddFunc<3>("build_bf16",&MetalCompiledGraph::BuildBF16);
         APISET().AddFunc<4>("build_shared",&MetalCompiledGraph::BuildShared);

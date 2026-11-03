@@ -21,6 +21,9 @@ class MetalDecoderSession {
 #endif
     };
     std::unique_ptr<MetalContext> gpu_;
+#ifdef GARNET_METAL_SHARED_PREFILL_SCRATCH
+    std::shared_ptr<MetalPrefillScratch> prefillScratch_;
+#endif
     std::vector<X::Value> owners_;
     std::vector<State> states_;
 #ifdef GARNET_METAL_REUSED_ZERO_SOURCE
