@@ -24,6 +24,8 @@ def main():
     parser.add_argument('--output', type=Path, required=True)
     parser.add_argument('--font', type=Path, default=Path('/System/Library/Fonts/Menlo.ttc'))
     parser.add_argument('--model', default='local-coder-27b')
+    parser.add_argument('--grounding-only', action='store_true',
+                        help='Paired identical prompts whose answers depend on image-only constants')
     args = parser.parse_args()
     fixtures = [dict(id='repair-search-screenshot', title='search.py', lines=[
         'def lower_bound(a, x):',
@@ -48,6 +50,18 @@ def main():
             '"/%20"         ["%20"]'],
         prompt='Read the examples in the image. Implement Python decode_pointer(pointer) for RFC6901 JSON Pointer. Follow those examples; reject nonempty input without an initial slash and reject invalid tilde escapes with ValueError. Return only complete code with any standard-library imports.',
         quality_contract='Same assertion contract as patch-json-pointer.')]
+    if args.grounding_only:
+        prompt='Transcribe the Python function shown in the image exactly. Return only complete Python code.'
+        fixtures = [
+            dict(id='grounding-negative-shift', title='snippet.py',
+                 lines=['def clamp_shift(x):', '    return min(', '        max(x - 13, -7),', '        29)'],
+                 prompt=prompt, quality_contract='Image-only subtraction and clamp constants must determine behavior.',
+                 tests='assert [clamp_shift(x) for x in [-100, -13, 0, 9, 50, 100]] == [-7, -7, -7, -4, 29, 29]\n'),
+            dict(id='grounding-positive-shift', title='snippet.py',
+                 lines=['def clamp_shift(x):', '    return min(', '        max(x + 17, -11),', '        43)'],
+                 prompt=prompt, quality_contract='Image-only addition and clamp constants must determine behavior.',
+                 tests='assert [clamp_shift(x) for x in [-100, -13, 0, 9, 50, 100]] == [-11, 4, 17, 26, 43, 43]\n'),
+        ]
     args.output.mkdir(parents=True, exist_ok=False)
     font = ImageFont.truetype(str(args.font), 11)
     tokenizer = Tokenizer.from_file(str(args.checkpoint/'tokenizer.json'))
@@ -100,6 +114,10 @@ def main():
         preprocessor_sha256=sha(args.checkpoint/'preprocessor_config.json'),
         generator_sha256=sha(Path(__file__)),
         policy='Same exact PNG and requests across engines. Qualify actual grid/counts first. Preserve unsupported backends, failures and truncations. No text-only substitution.'), indent=2)+'\n')
+    if args.grounding_only:
+        suite = dict(scope='Paired screenshot grounding: identical text prompts, image-only arithmetic constants. Both behavior contracts must pass; this is not a coding leaderboard.',
+                     tasks=[dict(id=f['id'], prompt=f['prompt'], tests=f['tests']) for f in fixtures])
+        (args.output/'suite.json').write_text(json.dumps(suite, indent=2)+'\n')
     print(json.dumps(dict(fixtures=len(plans), predicted_prompt_tokens=[p['prompt_tokens'] for p in plans])))
 
 

@@ -377,3 +377,40 @@ hardware-specific extension policy separate.
   digests. The sampler started after process initialization began, so it does
   not bracket all startup activity. These are output4 native observations;
   full output128 HTTP comparison, quality and broader admission remain pending.
+- The single-active native HTTP study now completes both frozen single-client
+  requests with128 sampled output tokens and exact prompt-token IDs. Short
+  input260: TTFT30.35s, decode6.28tokens/s; long input2054: TTFT199.56s,
+  decode4.64tokens/s. These one-wave admissions are not a full native campaign
+  and are below the intended performance target. The bridge queues clients;
+  it does not establish active batching. Evidence:
+  `evidence/native27b-http-admission1`, including source snapshots and audits.
+- All eight native coding regression tasks pass their sandboxed assertions.
+  Every response stops within the frozen1024-token budget, and a separate audit
+  checks every prompt ID and streamed output ID. Evidence:
+  `evidence/native27b-quality1`, `native27b-quality1-evaluation.json` and its
+  input-output audit. This proves only these bounded contracts. Equivalent
+  reference-engine quality collection remains pending. The native supervisor
+  was interrupted after collection and closed its worker stdin; both exited.
+  Exact child exit code was not retained by this bridge version.
+- Paired screenshot fixtures are frozen at
+  `evidence/multimodal-grounding-phase1-v2`. Text prompts and rendered token IDs
+  are identical; arithmetic constants differ only in the actual images. Both
+  PNGs were visually checked. The first draft hit the clipping guard and is
+  preserved separately; wrapping the source fixed clipping without shrinking
+  the font. Image-token prediction remains distinct from runtime evidence.
+- Standalone learned vision parity now passes on all333 actual BF16 tensors:
+  native image patches match the independent CPU preprocessing exactly at
+  grid16x16, producing64 merged image tokens. All327,680 vision output values
+  pass the declared tolerance; maximum absolute error0.000210, cosine
+  0.999999999997. The native graph allocated2,904,604,672 Metal bytes, so the
+  bounded factory reserves3.5GB before construction. Evidence:
+  `evidence/native27b-vision-reference1`, including raw tensor/payload hashes.
+- Both native image-to-code grounding contracts pass their sandbox assertions.
+  Each request uses the real image, native vision output and multimodal rotary
+  positions. Vision closes before the text decoder loads: retained Metal bytes
+  at handoff were737,280; text completion snapshots were17,938,432,000. The
+  identical prompts yield the different constants shown in their images.
+  Evidence: `evidence/native27b-grounding1` and its evaluation. This is a staged
+  256px study, not simultaneous-residency or general multimodal serving
+  admission. `create_metal_vision_study` is explicit; the general vision factory
+  remains closed pending serving integration and broader qualification.
