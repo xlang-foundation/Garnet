@@ -943,3 +943,20 @@ rejection checks. All12 CTests pass in `native-mpp-affine-build`; evidence:
 `mpp-affine-ctest-detail1.log` (`device=Apple M5 available=1 non_relaxed=1`).
 This is operator correctness only. Operator timing, learned-model coding and
 end-to-end admission remain required; no MPP speedup is claimed.
+
+
+The first MPP concurrent coding attempt is retained as incomplete in
+`evidence/native27b-mpp-quality1`. Five completed tasks exactly matched their
+frozen successful single-request token oracles. A queued task then hit the
+transport's300s event deadline before its first token, propagating failure to
+other active streams; the native worker was still producing tokens and exited0
+after collection stopped. This is not full MPP coding qualification or evidence
+that a speed target was met (`partial-diagnosis.json`).
+
+The bridge now separates bounded queued first-token wait from active-stream
+idle wait. Both the bridge and quality client accept explicit frozen observation
+limits; serial quality defaults remain unchanged. A CPU regression accepts a
+first-token wait longer than the active-idle limit while still rejecting an
+actual active-stream stall. Existing routing/SSE/rejection tests still pass.
+This changes observation bounds, not sampling, kernel math, reported timings or
+the original performance targets. The failed attempt is not overwritten.

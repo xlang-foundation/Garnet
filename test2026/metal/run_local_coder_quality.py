@@ -15,12 +15,14 @@ import sys
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--request-timeout',type=float,default=600)
     parser.add_argument('--parallel-tasks',type=int,default=1,help='Bounded concurrent task clients; default serial replay')
     parser.add_argument('--manifest', type=Path, required=True)
     parser.add_argument('--url', required=True)
     parser.add_argument('--engine-label', required=True)
     parser.add_argument('--output', type=Path, required=True)
     args = parser.parse_args()
+    if not 1<=args.request_timeout<=7200:parser.error('Request timeout must be1..7200seconds')
     if not 1<=args.parallel_tasks<=8:parser.error('Parallel task limit must be1..8')
     manifest = json.loads(args.manifest.read_text())
     benchmark = Path(__file__).with_name('local_coder_stream_benchmark.py')
@@ -50,7 +52,7 @@ def main():
                   manifest_sha256=hashlib.sha256(args.manifest.read_bytes()).hexdigest(),
                   runner_sha256=hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
                   benchmark_sha256=hashlib.sha256(benchmark.read_bytes()).hexdigest(),
-                  scope=manifest['scope'], tasks=[],parallel_tasks=args.parallel_tasks)
+                  scope=manifest['scope'], tasks=[],parallel_tasks=args.parallel_tasks,request_timeout_seconds=args.request_timeout)
     def save():
         temporary = args.output/'status.tmp'
         temporary.write_text(json.dumps(status, indent=2)+'\n')
@@ -63,7 +65,7 @@ def main():
             with (args.output/(identity+'.client.log')).open('x') as log:
                 result=subprocess.run([sys.executable,str(frozen/benchmark.name),'--url',args.url,
                     '--cases',str(task/'cases.json'),'--workload',str(task/'workload.json'),
-                    '--metadata',str(frozen/'manifest.json'),'--output',str(args.output/identity)],stdout=log,stderr=subprocess.STDOUT)
+                    '--metadata',str(frozen/'manifest.json'),'--timeout',str(args.request_timeout),'--output',str(args.output/identity)],stdout=log,stderr=subprocess.STDOUT)
             return dict(id=identity,client_exit_code=result.returncode)
         status['completion_order']=[]
         with concurrent.futures.ThreadPoolExecutor(args.parallel_tasks) as executor:
@@ -84,7 +86,7 @@ def main():
             with (args.output/(identity+'.client.log')).open('x') as log:
                 completed = subprocess.run([sys.executable, str(frozen/benchmark.name),
                     '--url', args.url, '--cases', str(task/'cases.json'),
-                    '--workload', str(task/'workload.json'), '--metadata', str(frozen/'manifest.json'),
+                    '--workload', str(task/'workload.json'), '--metadata', str(frozen/'manifest.json'), '--timeout',str(args.request_timeout),
                     '--output', str(args.output/identity)], stdout=log, stderr=subprocess.STDOUT)
             status['tasks'].append(dict(id=identity, client_exit_code=completed.returncode))
             save()

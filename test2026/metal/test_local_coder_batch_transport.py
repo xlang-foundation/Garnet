@@ -36,4 +36,26 @@ class TransportTest(unittest.TestCase):
    finally:worker.close()
    self.assertEqual(worker.process.returncode,0)
 
+ def test_queued_first_token_wait_is_separate_from_active_idle(self):
+  for first_delay,idle_delay,passes in ((.15,0,True),(0,.15,False)):
+   fake="""import json,sys,time
+print(json.dumps(dict(event='ready')),flush=True)
+job=json.loads(sys.stdin.readline());key=job['id']
+time.sleep(FIRST)
+print(json.dumps(dict(event='token',id=key,token_id=1,sampled_tokens=1,prompt_tokens=1)),flush=True)
+time.sleep(IDLE)
+print(json.dumps(dict(event='token',id=key,token_id=2,sampled_tokens=2,prompt_tokens=1)),flush=True)
+print(json.dumps(dict(event='completed',id=key,generated_ids=[1,2],prompt_ids=[7])),flush=True)
+""".replace('FIRST',str(first_delay)).replace('IDLE',str(idle_delay))
+   with tempfile.TemporaryDirectory() as temp:
+    worker=BatchWorker([sys.executable,'-u','-c',fake],Path(temp),event_timeout=.05,first_token_timeout=1)
+    try:
+     deadline=time.monotonic()+3
+     while not worker.healthy() and time.monotonic()<deadline:time.sleep(.005)
+     self.assertTrue(worker.healthy())
+     if passes:self.assertEqual(len(list(worker.generate({},'A'))),3)
+     else:
+      with self.assertRaises(TimeoutError):list(worker.generate({},'A'))
+    finally:worker.close()
+
 if __name__=='__main__':unittest.main()

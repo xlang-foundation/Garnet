@@ -1,14 +1,18 @@
 """Bounded CPU event routing for one native worker with multiple live requests."""
-import json,queue,subprocess,threading,time
+import json,math,queue,subprocess,threading,time
 from pathlib import Path
 
 class RequestRejected(ValueError):pass
 
 class BatchWorker:
-    def __init__(self,command,root,max_pending=16,event_timeout=300):
+    def __init__(self,command,root,max_pending=16,event_timeout=300,first_token_timeout=3600):
+        if (type(max_pending) is not int or not 1<=max_pending<=64 or
+            not math.isfinite(event_timeout) or not 0<event_timeout<=3600 or
+            not math.isfinite(first_token_timeout) or not 0<first_token_timeout<=7200):
+            raise ValueError('Bounded pending, first-token and active-idle limits required')
         self.root=Path(root);self.root.mkdir(parents=True,exist_ok=True)
         self.lock=threading.RLock();self.write_lock=threading.Lock();self.pending={}
-        self.max_pending=max_pending;self.event_timeout=event_timeout
+        self.max_pending=max_pending;self.event_timeout=event_timeout;self.first_token_timeout=first_token_timeout
         self.ready=False;self.ready_info={};self.failure=None;self.closed=False
         self.stderr=(self.root/'worker-stderr.log').open('ab',buffering=0)
         self.process=subprocess.Popen(command,stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=self.stderr,bufsize=0)
@@ -64,7 +68,7 @@ class BatchWorker:
         try:
             self._write({'id':key,'body':body});count=0;ids=[];prompt=None;cached=None
             while True:
-                try:event=target.get(timeout=self.event_timeout)
+                try:event=target.get(timeout=self.event_timeout if count else self.first_token_timeout)
                 except queue.Empty:raise TimeoutError('Native batch request event deadline')
                 kind=event['event']
                 if kind=='worker_exit':raise RuntimeError(str(event['error']))

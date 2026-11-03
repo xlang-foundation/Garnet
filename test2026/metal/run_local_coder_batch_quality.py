@@ -23,7 +23,7 @@ def main():
     def save():(args.output/'collection.json').write_text(json.dumps(report,indent=2)+'\n')
     save();url='http://127.0.0.1:'+str(args.port)
     environment=dict(os.environ);environment['PYTHONPATH']=str(source)+os.pathsep+str(repo/'test2026/cuda/qwen38_5090')
-    command=[sys.executable,str(frozen/'local_coder_batch_http.py'),'--checkpoint',str(args.checkpoint),'--log-root',str(args.output/'server'),'--port',str(args.port),'--',str(args.runtime),'-B',str(frozen/'local_coder_batch_worker.py'),str(args.build),str(repo),str(args.checkpoint),str(frozen/args.profile.name)]
+    command=[sys.executable,str(frozen/'local_coder_batch_http.py'),'--checkpoint',str(args.checkpoint),'--first-token-timeout',str(json.loads(args.profile.read_text()).get('first_token_timeout_seconds',3600)),'--log-root',str(args.output/'server'),'--port',str(args.port),'--',str(args.runtime),'-B',str(frozen/'local_coder_batch_worker.py'),str(args.build),str(repo),str(args.checkpoint),str(frozen/args.profile.name)]
     serverlog=(args.output/'server.log').open('wb');process=subprocess.Popen(command,stdout=serverlog,stderr=subprocess.STDOUT,env=environment,start_new_session=True)
     try:
         deadline=time.monotonic()+600
@@ -38,7 +38,7 @@ def main():
         report['status']='collecting';save()
         with (args.output/'quality-client.log').open('w') as log:
             result=subprocess.run([sys.executable,str(frozen/'run_local_coder_quality.py'),'--manifest',str(frozen/args.manifest.name),
-                '--url',url,'--engine-label','native27b-continuous-batch','--output',str(args.output/'responses'),'--parallel-tasks','8'],stdout=log,stderr=subprocess.STDOUT)
+                '--url',url,'--engine-label','native27b-continuous-batch','--output',str(args.output/'responses'),'--parallel-tasks','8','--request-timeout',str(json.loads(args.profile.read_text()).get('client_timeout_seconds',1800))],stdout=log,stderr=subprocess.STDOUT)
         report['client_exit_code']=result.returncode;report['status']='collected_pending_evaluation' if result.returncode==0 else 'client_failure'
     except Exception as error:report['status']='failed';report['issues'].append(repr(error));raise
     finally:

@@ -20,7 +20,7 @@ def main():
     report=dict(status='running',responses=[],issues=[])
     def save():(args.output/'result.json').write_text(json.dumps(report,indent=2)+'\n')
     save();url='http://127.0.0.1:'+str(args.port)
-    command=[sys.executable,str(frozen/'local_coder_batch_http.py'),'--checkpoint',str(args.checkpoint),'--log-root',str(args.output/'server'),'--port',str(args.port),'--',str(args.runtime),'-B',str(frozen/'local_coder_batch_worker.py'),str(args.build),str(repo),str(args.checkpoint),str(frozen/args.profile.name)]
+    command=[sys.executable,str(frozen/'local_coder_batch_http.py'),'--checkpoint',str(args.checkpoint),'--first-token-timeout',str(json.loads(args.profile.read_text()).get('first_token_timeout_seconds',3600)),'--log-root',str(args.output/'server'),'--port',str(args.port),'--',str(args.runtime),'-B',str(frozen/'local_coder_batch_worker.py'),str(args.build),str(repo),str(args.checkpoint),str(frozen/args.profile.name)]
     # Frozen sibling modules take precedence; retain repository imports for
     # model factories and other runtime dependencies fixed by the source commit.
     environment=dict(os.environ);environment['PYTHONPATH']=str(repo/'test2026/metal')+os.pathsep+str(repo/'test2026/cuda/qwen38_5090')
