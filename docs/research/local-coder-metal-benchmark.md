@@ -558,3 +558,24 @@ This provides native state ownership for the scheduler adapter; it is not yet
 an integrated continuous scheduler or learned27B batch admission. Existing
 `ContinuousBatchScheduler` policy still needs its paged-cache plans bound to
 these fixed Metal rows and hybrid state.
+
+Width64's separate single-client HTTP timing admission completed both128-output
+requests with zero accounting issues. Short260 input: TTFT23.201s,
+decode6.434tokens/s, total42.947s. Long2054 input: TTFT122.139s,
+decode4.961tokens/s, total147.750s. The same one-wave/no-warmup admission policy
+was used as width16; the results do not show a clear benefit from wider chunks
+and do not meet the target. Raw memory, streams and shutdown are retained in
+`evidence/native27b-prefill64-http-admission1`. The process guard found no live
+engine after collection, before building the scheduler portability check.
+
+The existing scheduler now consumes a `KVSequenceAllocator` interface rather
+than the concrete CUDA-implemented `PagedKVPool`. CUDA retains its concrete
+storage API and supplies the default no-fixed-row placement; other backends
+can supply a stable physical row/epoch in each scheduled item. A CPU-only
+fixed-row fixture passed priority reordering, stable A/B/C/D placement, E queued
+behind four occupied rows, refill after A completes, and cancellation. The
+CMake test `native_portable_continuous_scheduler` passes without CUDA
+(`portable-scheduler-ctest2.log`); the initial unreconfigured missing-target
+attempt is retained separately. This tests scheduling and metadata placement,
+not actual Metal tensor execution or CUDA GPU regression. The Metal allocator
+callbacks and batch executor still need integration.

@@ -5,6 +5,7 @@
 
 #include "compiled_model_runtime.h"
 #include "continuous_batch_scheduler.h"
+#include "paged_kv_pool.h"
 
 #include <cstdint>
 #include <memory>

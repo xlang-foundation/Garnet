@@ -3,7 +3,7 @@
 
 #pragma once
 
-#include "paged_kv_pool.h"
+#include "../kv/kv_sequence_allocator.h"
 
 #include <cstdint>
 #include <deque>
@@ -41,6 +41,8 @@ namespace Garnet
         int generatedTokens = 0;
         int positionDelta = 0;
         std::vector<int> pageTable;
+        int requestRow = -1;
+        std::uint64_t rowEpoch = 0;
     };
 
     struct BatchPlan
@@ -93,17 +95,17 @@ namespace Garnet
             ContinuousBatchSchedulerConfig config = {});
 
         std::uint64_t Submit(GenerationRequest request);
-        bool Cancel(std::uint64_t requestId, PagedKVPool& kvPool);
-        SchedulerTick Schedule(PagedKVPool& kvPool);
+        bool Cancel(std::uint64_t requestId, KVSequenceAllocator& kvPool);
+        SchedulerTick Schedule(KVSequenceAllocator& kvPool);
         bool CompletePrefill(
             std::uint64_t requestId,
             int firstTokenId,
-            PagedKVPool& kvPool);
+            KVSequenceAllocator& kvPool);
         bool CompleteDecode(
             std::uint64_t requestId,
             int nextTokenId,
             bool finished,
-            PagedKVPool& kvPool);
+            KVSequenceAllocator& kvPool);
 
         RequestStage Stage(std::uint64_t requestId) const;
         int ActiveRequestCount() const;

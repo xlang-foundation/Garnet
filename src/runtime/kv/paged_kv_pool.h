@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #pragma once
+#include "kv_sequence_allocator.h"
 
 #include <cstddef>
 #include <cstdint>
@@ -34,7 +35,7 @@ namespace Garnet
 
     // One physical KV arena per GPU. Requests own only logical-to-physical
     // page tables, so joining/leaving a decode batch never moves KV tensors.
-    class PagedKVPool
+    class PagedKVPool : public KVSequenceAllocator
     {
         struct Sequence
         {
@@ -55,7 +56,7 @@ namespace Garnet
 
     public:
         PagedKVPool() = default;
-        ~PagedKVPool();
+        ~PagedKVPool() override;
 
         PagedKVPool(const PagedKVPool&) = delete;
         PagedKVPool& operator=(const PagedKVPool&) = delete;
@@ -63,13 +64,13 @@ namespace Garnet
         bool Initialize(const PagedKVPoolConfig& config);
         void Reset();
 
-        bool Reserve(std::uint64_t sequenceId, int tokenCapacity);
-        bool EnsureCapacity(std::uint64_t sequenceId, int tokenCapacity);
-        bool CommitLength(std::uint64_t sequenceId, int logicalLength);
-        bool Release(std::uint64_t sequenceId);
+        bool Reserve(std::uint64_t sequenceId, int tokenCapacity) override;
+        bool EnsureCapacity(std::uint64_t sequenceId, int tokenCapacity) override;
+        bool CommitLength(std::uint64_t sequenceId, int logicalLength) override;
+        bool Release(std::uint64_t sequenceId) override;
 
-        int LogicalLength(std::uint64_t sequenceId) const;
-        std::vector<int> PageTable(std::uint64_t sequenceId) const;
+        int LogicalLength(std::uint64_t sequenceId) const override;
+        std::vector<int> PageTable(std::uint64_t sequenceId) const override;
         PagedKVPoolStats Stats() const;
 
         const PagedKVPoolConfig& Config() const { return m_config; }

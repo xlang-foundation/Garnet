@@ -41,7 +41,7 @@ namespace Garnet
 
     bool ContinuousBatchScheduler::Cancel(
         std::uint64_t requestId,
-        PagedKVPool& kvPool)
+        KVSequenceAllocator& kvPool)
     {
         auto found = m_requests.find(requestId);
         if (found == m_requests.end() ||
@@ -75,7 +75,7 @@ namespace Garnet
         return left->enqueueOrder < right->enqueueOrder;
     }
 
-    SchedulerTick ContinuousBatchScheduler::Schedule(PagedKVPool& kvPool)
+    SchedulerTick ContinuousBatchScheduler::Schedule(KVSequenceAllocator& kvPool)
     {
         SchedulerTick tick;
 
@@ -119,6 +119,8 @@ namespace Garnet
                 item.generatedTokens = state->generatedTokens;
                 item.positionDelta = state->request.positionDelta;
                 item.pageTable = kvPool.PageTable(state->request.id);
+                const auto placement=kvPool.Placement(state->request.id);
+                item.requestRow=placement.requestRow;item.rowEpoch=placement.rowEpoch;
                 decode.activeMask[decode.requests.size()] = 1;
                 decode.requests.push_back(std::move(item));
             }
@@ -159,6 +161,8 @@ namespace Garnet
             item.slotPosition = 0;
             item.positionDelta = state.request.positionDelta;
             item.pageTable = kvPool.PageTable(id);
+            const auto placement=kvPool.Placement(id);
+            item.requestRow=placement.requestRow;item.rowEpoch=placement.rowEpoch;
             prefill.activeMask[prefill.requests.size()] = 1;
             prefill.scheduledTokens += state.request.promptTokens;
             prefill.requests.push_back(std::move(item));
@@ -170,7 +174,7 @@ namespace Garnet
     bool ContinuousBatchScheduler::CompletePrefill(
         std::uint64_t requestId,
         int firstTokenId,
-        PagedKVPool& kvPool)
+        KVSequenceAllocator& kvPool)
     {
         auto found = m_requests.find(requestId);
         if (found == m_requests.end() ||
@@ -191,7 +195,7 @@ namespace Garnet
         std::uint64_t requestId,
         int nextTokenId,
         bool finished,
-        PagedKVPool& kvPool)
+        KVSequenceAllocator& kvPool)
     {
         auto found = m_requests.find(requestId);
         if (found == m_requests.end() ||

@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include "continuous_batch_scheduler.h"
+#include "paged_kv_pool.h"
 
 #include <iostream>
 #include <stdexcept>
