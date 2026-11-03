@@ -960,3 +960,32 @@ first-token wait longer than the active-idle limit while still rejecting an
 actual active-stream stall. Existing routing/SSE/rejection tests still pass.
 This changes observation bounds, not sampling, kernel math, reported timings or
 the original performance targets. The failed attempt is not overwritten.
+
+
+The FP32 MPP operator comparison completed three fresh processes per variant,
+strictly sequential base/tall/MPP order,21 shapes, three warmups and nine
+measured calls per shape (`evidence/affine-mpp-comparison1`). All binaries,
+cache flags, source, raw GPU/wall samples and FP64 spot checks are retained.
+The audit found zero issues; five tamper cases reject invalid timings, missing
+shapes/cohorts, missing MPP execution and altered binaries. Aggregation takes the
+median of within-cohort medians without discarding samples.
+
+FP32 MPP is not adopted: at8/16 rows its GPU speed ratio versus the tall control
+was0.65..0.72x (about1.4..1.5times slower). At64 rows it was0.95..1.08x versus
+the tall control, depending on projection shape. These are synthetic projection
+measurements, not TTFT, decode or throughput results. They do not establish any
+2x goal and do not justify rerunning the incomplete FP32 MPP coding campaign.
+
+`GARNET_METAL_MPP_AFFINE_BF16` is a separate default-off candidate, mutually
+exclusive with the FP32 MPP profile. It explicitly rounds prefill projection
+inputs and dequantized tile weights to BF16 and accumulates in FP32, with
+relaxed precision still disabled. Packed weights, graph MatMul operations,
+FP32 outputs and decode rows1..4 stay unchanged. Metadata identifies the operand
+type, including per-cell fallback/decode paths; model study profiles must request
+the correct MPP type explicitly. This is a precision-profile change, not an
+exact FP32 replacement. Its numerical oracle independently rounds operands
+before FP64 contraction rather than weakening tolerances. All24 projection
+cases and12 CTests pass on the M5; the FP32 path also still passes after the
+shared implementation refactor (`mpp-bf16-ctest.log`,
+`mpp-bf16-ctest-detail1.log`, `mpp-fp32-refactor-numerics.log`). Learned coding
+and end-to-end timing gates remain required before enabling it.

@@ -35,7 +35,7 @@ void Cell(MetalContext& gpu,size_t m,size_t n,size_t k,int warmups,int repetitio
         const auto start=std::chrono::steady_clock::now();
         gpu.Begin();gpu.EncodeAffineInt4MatMul(a,weight,out);gpu.SubmitAndWait();
         const auto finish=std::chrono::steady_clock::now();
-#ifdef GARNET_METAL_MPP_AFFINE_FP32
+#ifdef GARNET_METAL_MPP_AFFINE
         mppDispatches=gpu.LastMPPAffineDispatches();
         Require(mppDispatches==size_t(m>4&&gpu.HasMPPAffine()),"Operator MPP route/counter mismatch");
 #endif
@@ -47,11 +47,21 @@ void Cell(MetalContext& gpu,size_t m,size_t n,size_t k,int warmups,int repetitio
     std::vector<float> row(k);double maximum=0;
     for(auto sample:std::array<std::array<size_t,2>,3>{{{0,0},{m/2,n/2},{m-1,n-1}}}) {
         view.DecodeRow(sample[1],row.data(),k);double expected=0;
-        for(size_t inner=0;inner<k;++inner)expected+=double(input[sample[0]*k+inner])*row[inner];
+        for(size_t inner=0;inner<k;++inner) {
+            float left=input[sample[0]*k+inner],right=row[inner];
+#ifdef GARNET_METAL_MPP_AFFINE_BF16
+            if(m>4&&gpu.HasMPPAffine()){left=AffineInt4RoundBF16(left);right=AffineInt4RoundBF16(right);}
+#endif
+            expected+=double(left)*right;
+        }
         const auto error=std::abs(double(actual[sample[0]*n+sample[1]])-expected);maximum=std::max(maximum,error);
         Require(error<=std::max(1e-4,std::abs(expected)*3e-4),"Large-shape FP64 sample differs");
     }
-    std::cout<<"{\"kind\":\"cell\",\"rows\":"<<m<<",\"outputs\":"<<n<<",\"inner\":"<<k
+    const char* operand="float32";
+#ifdef GARNET_METAL_MPP_AFFINE_BF16
+    if(m>4&&gpu.HasMPPAffine())operand="bfloat16";
+#endif
+    std::cout<<"{\"kind\":\"cell\",\"operand_dtype\":"<<std::quoted(operand)<<",\"rows\":"<<m<<",\"outputs\":"<<n<<",\"inner\":"<<k
              <<",\"warmups\":"<<warmups<<",\"repetitions\":"<<repetitions<<",\"mpp_dispatches_per_call\":"<<mppDispatches
              <<",\"sample_max_abs\":"<<maximum<<",\"gpu_ms\":";Array(gpuMs);std::cout<<",\"wall_ms\":";Array(wallMs);std::cout<<"}\n"<<std::flush;
 }
@@ -61,11 +71,15 @@ int main(int argc,char** argv) {
         const int repetitions=argc>1?std::stoi(argv[1]):9,warmups=argc>2?std::stoi(argv[2]):3;
         Require(repetitions>=3&&repetitions<=100&&warmups>=1&&warmups<=20,"Invalid benchmark repetitions/warmups");
         MetalContext gpu;bool mpp=false;
-#ifdef GARNET_METAL_MPP_AFFINE_FP32
+#ifdef GARNET_METAL_MPP_AFFINE
         mpp=gpu.HasMPPAffine();
 #endif
+        const char* operand="float32";
+#ifdef GARNET_METAL_MPP_AFFINE_BF16
+        if(mpp)operand="bfloat16";
+#endif
         std::cout<<std::setprecision(12)<<"{\"kind\":\"metadata\",\"device\":"<<std::quoted(gpu.DeviceName())<<",\"mpp_available\":"<<(mpp?"true":"false")
-                 <<",\"scope\":\"Synthetic affine projection GPU/wall latency; excludes loading, compilation and downloads; not model throughput\"}\n";
+                 <<",\"operand_dtype\":"<<std::quoted(operand)<<",\"accumulator_dtype\":\"float32\",\"scope\":\"Synthetic affine projection GPU/wall latency; excludes loading, compilation and downloads; not model throughput\"}\n";
         for(size_t m:{1,2,4,8,16,32,64})for(auto dimensions:std::array<std::array<size_t,2>,3>{{{5120,5120},{17408,5120},{5120,17408}}})
             Cell(gpu,m,dimensions[0],dimensions[1],warmups,repetitions);
         return 0;

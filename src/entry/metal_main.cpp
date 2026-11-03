@@ -186,6 +186,9 @@ public:
 #ifdef GARNET_METAL_MPP_AFFINE_FP32
         info+="; mpp_affine_fp32_optional";
 #endif
+#ifdef GARNET_METAL_MPP_AFFINE_BF16
+        info+="; mpp_affine_bf16_optional";
+#endif
 #endif
 #ifdef GARNET_METAL_REQUEST_ROWS
         info+="; request_row_reset";

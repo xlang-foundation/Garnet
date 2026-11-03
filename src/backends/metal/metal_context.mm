@@ -5,7 +5,7 @@
 #endif
 #ifdef GARNET_METAL_MLX_AFFINE_INT4
 #include "affine_int4_shader.h"
-#ifdef GARNET_METAL_MPP_AFFINE_FP32
+#ifdef GARNET_METAL_MPP_AFFINE
 #include "affine_int4_mpp_shader.h"
 #endif
 #ifdef GARNET_METAL_AFFINE_TALL_TILES
@@ -214,9 +214,9 @@ struct MetalPipelines {
     id<MTLLibrary> affineInt4Library;
     std::array<id<MTLComputePipelineState>,4> affineInt4Decode{};
     id<MTLComputePipelineState> affineInt4Gemm;
-#ifdef GARNET_METAL_MPP_AFFINE_FP32
+#ifdef GARNET_METAL_MPP_AFFINE
     id<MTLLibrary> mppAffineLibrary;
-    id<MTLComputePipelineState> mppAffineFP32;
+    id<MTLComputePipelineState> mppAffine;
 #endif
 #ifdef GARNET_METAL_AFFINE_TALL_TILES
     std::array<id<MTLComputePipelineState>,2> affineInt4Tall{};
@@ -324,7 +324,7 @@ struct MetalContext::Impl {
     std::map<std::array<size_t,2>,MetalMatrix> halfScratch;
     std::map<std::array<size_t,3>,MetalMatrix> splitScratch;
     size_t joinedPrefillPairs=0;
-#ifdef GARNET_METAL_MPP_AFFINE_FP32
+#ifdef GARNET_METAL_MPP_AFFINE
     size_t mppAffineDispatches=0;
 #endif
     size_t constantHeadDispatches=0;
@@ -1482,17 +1482,21 @@ kernel void bf16_native_dot_t128(device const float* a [[buffer(0)]],device cons
                 throw std::runtime_error("Affine INT4 decode requires four 32-lane SIMD groups");
             impl_->kernels->affineInt4Decode[rows-1]=pipeline;
         }
-#ifdef GARNET_METAL_MPP_AFFINE_FP32
+#ifdef GARNET_METAL_MPP_AFFINE
         if(@available(macOS 26.0,*))if([impl_->device supportsFamily:MTLGPUFamilyApple10]) {
             auto mppOptions=[MTLCompileOptions new];mppOptions.languageVersion=MTLLanguageVersion4_0;
             mppOptions.mathMode=MTLMathModeSafe;
-            auto mppLibrary=[impl_->device newLibraryWithSource:[NSString stringWithUTF8String:kAffineInt4MPPShader] options:mppOptions error:&error];
-            if(!mppLibrary)throw std::runtime_error("Cannot compile FP32 affine MPP candidate: "+std::string(error.localizedDescription.UTF8String));
-            auto pipeline=[impl_->device newComputePipelineStateWithFunction:[mppLibrary newFunctionWithName:@"affine_q4_mpp_fp32"] error:&error];
+            NSString* mppSource=[NSString stringWithUTF8String:kAffineInt4MPPShader];
+#ifdef GARNET_METAL_MPP_AFFINE_BF16
+            mppSource=[@"#define GARNET_MPP_BF16 1\n" stringByAppendingString:mppSource];
+#endif
+            auto mppLibrary=[impl_->device newLibraryWithSource:mppSource options:mppOptions error:&error];
+            if(!mppLibrary)throw std::runtime_error("Cannot compile affine MPP candidate: "+std::string(error.localizedDescription.UTF8String));
+            auto pipeline=[impl_->device newComputePipelineStateWithFunction:[mppLibrary newFunctionWithName:@"affine_q4_mpp"] error:&error];
             if(!pipeline||pipeline.threadExecutionWidth!=32||pipeline.maxTotalThreadsPerThreadgroup<128||
                pipeline.staticThreadgroupMemoryLength>impl_->device.maxThreadgroupMemoryLength)
-                throw std::runtime_error("FP32 affine MPP candidate exceeds device limits");
-            impl_->kernels->mppAffineLibrary=mppLibrary;impl_->kernels->mppAffineFP32=pipeline;
+                throw std::runtime_error("Affine MPP candidate exceeds device limits");
+            impl_->kernels->mppAffineLibrary=mppLibrary;impl_->kernels->mppAffine=pipeline;
         }
 #endif
         impl_->kernels->affineInt4Gemm=[impl_->device newComputePipelineStateWithFunction:[affineLibrary newFunctionWithName:@"affine_q4_gemm"] error:&error];
@@ -1752,9 +1756,9 @@ void MetalContext::EncodeAffineInt4MatMul(const MetalMatrix& input,const MetalAf
 #ifdef GARNET_METAL_AFFINE_TALL_TILES
         if(a.rows>=32){tileRows=a.rows>32?64:32;pipeline=impl_->kernels->affineInt4Tall[tileRows==64?1:0];}
 #endif
-#ifdef GARNET_METAL_MPP_AFFINE_FP32
-        if(a.rows>4&&impl_->kernels->mppAffineFP32) {
-            pipeline=impl_->kernels->mppAffineFP32;tileRows=32;++impl_->mppAffineDispatches;
+#ifdef GARNET_METAL_MPP_AFFINE
+        if(a.rows>4&&impl_->kernels->mppAffine) {
+            pipeline=impl_->kernels->mppAffine;tileRows=32;++impl_->mppAffineDispatches;
         }
 #endif
         [encoder setComputePipelineState:pipeline];
@@ -2153,8 +2157,8 @@ bool MetalContext::EncodeJoinedGlobalMlp(const MetalMatrix& input,const MetalBF1
 #endif
 }
 size_t MetalContext::LastJoinedGlobalMlpBlocks() const {return impl_->joinedGlobalMlpBlocks;}
-#ifdef GARNET_METAL_MPP_AFFINE_FP32
-bool MetalContext::HasMPPAffine() const {return impl_->kernels->mppAffineFP32!=nil;}
+#ifdef GARNET_METAL_MPP_AFFINE
+bool MetalContext::HasMPPAffine() const {return impl_->kernels->mppAffine!=nil;}
 size_t MetalContext::LastMPPAffineDispatches() const {return impl_->mppAffineDispatches;}
 #endif
 size_t MetalContext::LastJoinedPrefillPairs() const {return impl_->joinedPrefillPairs;}
@@ -2695,7 +2699,7 @@ void MetalContext::Begin() {
     impl_->partialSubmissions=0;
     impl_->bodyShapeDispatches=impl_->bodyShapeMisses=0;
     impl_->joinedPrefillPairs=0;
-#ifdef GARNET_METAL_MPP_AFFINE_FP32
+#ifdef GARNET_METAL_MPP_AFFINE
     impl_->mppAffineDispatches=0;
 #endif
     impl_->fusedHeadArgmaxDispatches=0;
@@ -3417,7 +3421,7 @@ void MetalContext::Abort() {
     impl_->submitted=nil;impl_->partialSubmissions=0;
     impl_->bodyShapeDispatches=impl_->bodyShapeMisses=0;
     impl_->joinedPrefillPairs=0;
-#ifdef GARNET_METAL_MPP_AFFINE_FP32
+#ifdef GARNET_METAL_MPP_AFFINE
     impl_->mppAffineDispatches=0;
 #endif
     impl_->fusedHeadArgmaxDispatches=0;

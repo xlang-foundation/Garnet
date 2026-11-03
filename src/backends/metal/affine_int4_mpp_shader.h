@@ -6,15 +6,21 @@ inline constexpr const char* kAffineInt4MPPShader=R"METAL(
 #include <MetalPerformancePrimitives/MetalPerformancePrimitives.h>
 using namespace metal;
 using namespace mpp::tensor_ops;
+#ifdef GARNET_MPP_BF16
+using Operand=bfloat;
+#else
+using Operand=float;
+#endif
 struct MPPQ4Params {ulong rows,inner,columns,aStride,oStride;};
-kernel void affine_q4_mpp_fp32(device const float* input [[buffer(0)]],
+kernel void affine_q4_mpp(device const float* input [[buffer(0)]],
  device const uint* packed [[buffer(1)]],device const ushort* scales [[buffer(2)]],
  device const ushort* biases [[buffer(3)]],device float* output [[buffer(4)]],
  constant MPPQ4Params& p [[buffer(5)]],uint2 group [[threadgroup_position_in_grid]],
  uint tid [[thread_index_in_threadgroup]]) {
-    // Dequantize one bounded tile, never a whole projection/checkpoint. Both
-    // operands and accumulation stay FP32; relaxed precision is explicitly off.
-    threadgroup float aTile[32*32],bTile[32*33];
+    // Dequantize one bounded tile, never a whole projection/checkpoint.
+    // Operand type is an explicit build profile, accumulation is FP32 and
+    // relaxed precision is always off.
+    threadgroup Operand aTile[32*32],bTile[32*33];
     auto a=tensor(aTile,extents<int,32,32>{},array<int,2>{1,32});
     auto b=tensor(bTile,extents<int,32,32>{},array<int,2>{1,33});
     constexpr auto descriptor=matmul2d_descriptor(32,32,32,false,false,false,
@@ -25,7 +31,7 @@ kernel void affine_q4_mpp_fp32(device const float* input [[buffer(0)]],
     for(ulong base=0;base<p.inner;base+=32) {
         for(uint i=tid;i<32*32;i+=128) {
             const ulong row=ulong(group.y)*32+i/32,k=base+i%32;
-            aTile[i]=(row<p.rows&&k<p.inner)?input[row*p.aStride+k]:0.0f;
+            aTile[i]=Operand((row<p.rows&&k<p.inner)?input[row*p.aStride+k]:0.0f);
         }
         const uint localN=tid/4,localK=(tid%4)*8;
         const ulong n=ulong(group.x)*32+localN,k=base+localK;
@@ -37,7 +43,7 @@ kernel void affine_q4_mpp_fp32(device const float* input [[buffer(0)]],
             bias=as_type<float>(uint(biases[coefficient])<<16);
         }
         for(uint j=0;j<8;++j)bTile[(localK+j)*33+localN]=
-            (n<p.columns&&k+j<p.inner)?fma(float((values>>(4*j))&15u),scale,bias):0.0f;
+            Operand((n<p.columns&&k+j<p.inner)?fma(float((values>>(4*j))&15u),scale,bias):0.0f);
         threadgroup_barrier(mem_flags::mem_threadgroup);
         multiply.run(a,b,accumulator);
         threadgroup_barrier(mem_flags::mem_threadgroup);

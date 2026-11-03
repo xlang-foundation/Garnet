@@ -145,7 +145,7 @@ public:
     X::Value Snapshot(int64_t layer);
     X::Value Hidden();
     void Close();
-#ifdef GARNET_METAL_MPP_AFFINE_FP32
+#ifdef GARNET_METAL_MPP_AFFINE
     size_t LastMPPAffineDispatches() {std::lock_guard<std::mutex> lock(mutex_);return gpu_?gpu_->LastMPPAffineDispatches():0;}
 #endif
     size_t LastKVInplaceUpdates() const {return kvInplaceUpdates_;}
@@ -218,7 +218,7 @@ public:
         APISET().AddFunc<1>("snapshot",&MetalDecoderSession::Snapshot);
         APISET().AddFunc<0>("hidden",&MetalDecoderSession::Hidden);
         APISET().AddFunc<0>("close",&MetalDecoderSession::Close);
-#ifdef GARNET_METAL_MPP_AFFINE_FP32
+#ifdef GARNET_METAL_MPP_AFFINE
         APISET().AddProp("mpp_affine_dispatches",&MetalDecoderSession::LastMPPAffineDispatches);
 #endif
         APISET().AddProp("kv_inplace_updates",&MetalDecoderSession::LastKVInplaceUpdates);

@@ -95,13 +95,19 @@ void Case(MetalContext& gpu,size_t m,size_t n,size_t k) {
     // Encoded commands must retain their resources through submission.
     weight=MetalAffineInt4Weight();
     gpu.SubmitAndWait();const auto actual=gpu.Download(out);
-#ifdef GARNET_METAL_MPP_AFFINE_FP32
+#ifdef GARNET_METAL_MPP_AFFINE
     Require(gpu.LastMPPAffineDispatches()==size_t(m>4&&gpu.HasMPPAffine()),"MPP affine route/counter mismatch");
 #endif
     double maximum=0;
     for(size_t row=0;row<m;++row)for(size_t column=0;column<n;++column) {
         double expected=0;
-        for(size_t inner=0;inner<k;++inner)expected+=double(input[row*k+inner])*decoded[column*k+inner];
+        for(size_t inner=0;inner<k;++inner) {
+            float left=input[row*k+inner],right=decoded[column*k+inner];
+#ifdef GARNET_METAL_MPP_AFFINE_BF16
+            if(m>4&&gpu.HasMPPAffine()){left=AffineInt4RoundBF16(left);right=AffineInt4RoundBF16(right);}
+#endif
+            expected+=double(left)*right;
+        }
         const auto error=std::abs(double(actual[row*n+column])-expected);
         maximum=std::max(maximum,error);
         Require(std::isfinite(actual[row*n+column])&&error<=std::max(1e-4,std::abs(expected)*3e-4),
@@ -117,8 +123,13 @@ int main() {
         CodecGolden();
         VisionPatchGolden();
         MetalContext gpu;
-#ifdef GARNET_METAL_MPP_AFFINE_FP32
-        std::cout<<"mpp_affine_fp32 device="<<gpu.DeviceName()<<" available="<<gpu.HasMPPAffine()<<" non_relaxed=1\n";
+#ifdef GARNET_METAL_MPP_AFFINE
+#ifdef GARNET_METAL_MPP_AFFINE_BF16
+        std::cout<<"mpp_affine_bf16 ";
+#else
+        std::cout<<"mpp_affine_fp32 ";
+#endif
+        std::cout<<"device="<<gpu.DeviceName()<<" available="<<gpu.HasMPPAffine()<<" non_relaxed=1\n";
         Require(gpu.DeviceName().find("M5")==std::string::npos||gpu.HasMPPAffine(),"M5 did not select its MPP candidate");
 #endif
         for(auto shape:std::array<std::array<size_t,3>,24>{{
