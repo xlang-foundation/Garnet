@@ -652,3 +652,31 @@ Tracked request metadata returns to zero. Evidence: `native-scheduler-ctest.log`
 one-token prompts. The learned27B batch profile, chunked-prompt integration,
 serving wrapper and prefix reuse remain required; the local HTTP study worker
 still advertises one active request.
+
+The revised tall-tile HTTP admission completed with zero accounting issues:
+short260 input TTFT20.518s, decode6.732tokens/s, total39.390s; long2054 input
+TTFT101.057s, decode5.582tokens/s, total123.818s. This remains one wave per
+cell, not a repeated qualification campaign or proof of the2x target.
+Evidence: `evidence/native27b-talltiles-http-admission1`.
+
+An explicit `metal_batch_study` factory now isolates an unqualified batch2 text
+profile from normal batch1 admission. It requires the native scheduler and
+guarded compressed-weight/workspace extensions. The study uses serial masked
+prefill for different prompt lengths and genuinely combined decode. Two
+distinct79/71-token prompts matched their frozen successful single-request
+16-token prefixes across two repeats at capacity512, with no tracked scheduler
+requests left. Metal allocation was about16.64GB
+(`evidence/native27b-batch2-study2`). The initial harness failure from a missing
+compile-timing counter is retained in study1; study3 repeats correctness with
+staged cleanup observations. This is not a throughput benchmark, full coding
+suite, combined prefill admission or general serving profile.
+
+Those studies exposed1.22GB of retained Metal resources after close. A native
+regression reproduced a16MiB temporary buffer retained by standalone row
+validation (737,280bytes before versus17,514,496after). The validator read
+Objective-C buffer properties without a local autorelease pool, unlike its
+pooled read/write callers. Giving validation its own pool returns the test to
+737,280bytes afterward. All12 CTests and the scheduler GPU integration still
+pass (`row-validation-retention-before.log`,
+`native-row-validation-pool-ctest.log`, `native-row-validation-pool-scheduler.log`).
+The same learned batch study must confirm complete cleanup before admission.
