@@ -24,12 +24,13 @@ def audit(root,reference=None):
     responses=root/'responses';manifest=json.loads((responses/'frozen/manifest.json').read_text());status=json.loads((responses/'status.json').read_text());plans=manifest['plans']
     if status['status']!='collected_pending_sandbox_evaluation' or status.get('parallel_tasks')!=8:issues.append('Concurrent coding collection differs')
     if status['tasks']!=[dict(id=plan['id'],client_exit_code=0) for plan in plans]:issues.append('Task set/status differs')
-    ready=[];closed=[];completed={};streams={};batch_plans=[];prompt_counts={}
+    ready=[];closed=[];completed={};streams={};batch_plans=[];prompt_counts={};mpp=[]
     for event in native_events(root/'server/worker-stdout.jsonl'):
         kind=event.get('event');key=event.get('id')
         if kind=='ready':ready.append(event)
         elif kind=='closed':closed.append(event)
         elif kind=='native_batch':batch_plans.append(event)
+        elif kind=='native_mpp':mpp.append(event)
         elif kind=='error':issues.append('Native request/runtime error: '+event.get('error',''))
         elif kind=='token':
             tokens=streams.setdefault(key,[]);tokens.append(event['token_id'])
@@ -41,6 +42,7 @@ def audit(root,reference=None):
             if event['generated_ids']!=streams.get(key) or event.get('cached_tokens')!=0:issues.append('Native streamed/final IDs or cache usage differ')
     if len(ready)!=1 or ready[0].get('active_requests')!=2 or ready[0].get('prefix_cache') is not False:issues.append('Ready profile differs from uncached batch2')
     profile=json.loads((root/'frozen/profile.json').read_text())
+    if profile.get('require_mpp',False) and (not mpp or any(event.get('affine_dispatches',0)<1 for event in mpp)):issues.append('Required native MPP route missing')
     if len(ready)==1 and (ready[0].get('profile')!=profile or ready[0].get('capacity')!=profile['capacity']):issues.append('Frozen context/profile differs from ready event')
     if len(ready)==1 and ready[0]['memory']['metal_allocated_bytes']>=ready[0]['memory']['metal_recommended_working_set_bytes']:issues.append('Ready device working set exceeded')
     if len(closed)!=1 or closed[0]['memory']['metal_allocated_bytes']!=720896:issues.append('Native close allocation differs')
@@ -87,7 +89,7 @@ def audit(root,reference=None):
     if len(set(epochs))!=len(plans):issues.append('Request epochs were reused')
     if set(event['native_row'] for event in completed.values())!={0,1}:issues.append('Physical row profile differs')
     return dict(status='passed' if not issues else 'failed',issues=issues,tasks=results,combined_decode_plans=combined,
-        context_capacity=ready[0]['capacity'] if ready else None,
+        context_capacity=ready[0]['capacity'] if ready else None,mpp_prefill_calls=len(mpp),
         scope='Concurrent native frozen prompt/stream/HTTP accounting and row lifecycle; coding correctness requires separate sandbox evaluation',
         auditor_sha256=digest(Path(__file__)),reference_worker_log_sha256=digest(reference) if reference else None,
         artifacts_sha256=digest(root/'artifacts.json'),worker_log_sha256=digest(root/'server/worker-stdout.jsonl'))

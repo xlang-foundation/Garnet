@@ -28,6 +28,7 @@ def main():
     if type(prefix) is not bool:raise ValueError('Explicit boolean prefix policy required')
     if not profile.get('profile_id'):raise ValueError('Frozen profile identity required')
     if 'row_final_hidden' not in garnet.backend_info():raise ValueError('Native per-row final hidden extension required')
+    if profile.get('require_mpp',False) and 'mpp_affine_fp32_optional' not in garnet.backend_info():raise ValueError('Frozen profile requires the native MPP extension')
     width=config['text_config']['hidden_size'];vocab=config['text_config']['vocab_size']
     incoming=queue.Queue(maxsize=16);shutdown=threading.Event();input_failure=[]
     decoder=None;policy=None;jobs={};keys=set()
@@ -76,8 +77,13 @@ def main():
                 keys.add(key)
             except Exception as error:emit(dict(event='error',id=key,error=str(error),fatal=False))
         def execute(graphs,hidden,positions,slots,active,prediction,epochs,ids):
-            if prefix:return decoder.session.run_tokens(graphs,hidden,positions,slots,active,prediction,epochs,ids)
-            return decoder.session.run_leased(graphs,hidden,positions,slots,active,prediction,epochs)
+            if prefix:result=decoder.session.run_tokens(graphs,hidden,positions,slots,active,prediction,epochs,ids)
+            else:result=decoder.session.run_leased(graphs,hidden,positions,slots,active,prediction,epochs)
+            if profile.get('require_mpp',False) and len(ids)>batch:
+                count=decoder.session.mpp_affine_dispatches
+                if count<1:raise ValueError('Required MPP prefill route was not exercised')
+                emit(dict(event='native_mpp',affine_dispatches=count))
+            return result
         def deliver(request,token,stage):
             identity=request['id'];job=jobs[identity]
             if token<0 or token>=vocab:raise ValueError('Native batch output outside vocabulary')
