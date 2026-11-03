@@ -15,6 +15,8 @@ def main():
     args.output.mkdir(parents=True,exist_ok=False);repo=Path(__file__).resolve().parents[2];source=Path(__file__).parent;frozen=args.output/'frozen';frozen.mkdir()
     for path in (args.profile,args.manifest,Path(__file__),source/'local_coder_batch_http.py',source/'local_coder_batch_worker.py',source/'local_coder_batch_transport.py',source/'run_local_coder_quality.py',source/'local_coder_stream_benchmark.py',repo/'test2026/cuda/qwen38_5090/native_http_bridge.py'):
         shutil.copy2(path,frozen/path.name)
+    for name,path in (('metal_batch_factory.py',repo/'xModel/qwen38/vl_27b/metal_batch_study.py'),('metal_decoder.py',repo/'xModel/qwen35/vl_0_8b/metal_decoder.py'),('CMakeCache.txt',args.build/'CMakeCache.txt')):
+        shutil.copy2(path,frozen/name)
     shutil.copy2(args.build/'libgarnet.dylib',args.output/'libgarnet.dylib')
     manifest=dict(scope=__doc__,source_commit=subprocess.check_output(['git','rev-parse','HEAD'],cwd=repo,text=True).strip(),
         files={p.name:hashlib.sha256(p.read_bytes()).hexdigest() for p in frozen.iterdir()},library_sha256=hashlib.sha256((args.output/'libgarnet.dylib').read_bytes()).hexdigest())
