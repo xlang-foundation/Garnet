@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include <cuda_runtime.h>
+#include <algorithm>
 
 namespace
 {
@@ -242,7 +243,11 @@ namespace
         float std1,
         float std2,
         int patchCount,
-        int featureDim)
+        int featureDim,
+        int contentHeight,
+        int contentWidth,
+        int top,
+        int left)
     {
         int idx = blockIdx.x * blockDim.x + threadIdx.x;
         int total = patchCount * featureDim;
@@ -273,9 +278,13 @@ namespace
         int dstY = (outerY * mergeSize + mergeY) * patchSize + patchY;
         int dstX = (outerX * mergeSize + mergeX) * patchSize + patchX;
 
-        float srcY = (static_cast<float>(dstY) + 0.5f) * static_cast<float>(srcHeight) / static_cast<float>(dstHeight) - 0.5f;
-        float srcX = (static_cast<float>(dstX) + 0.5f) * static_cast<float>(srcWidth) / static_cast<float>(dstWidth) - 0.5f;
-        float value = SampleBicubicRGB8(input, srcHeight, srcWidth, srcPitchBytes, srcY, srcX, channel);
+        // Padding is neutral gray in the model's normalized [-1, 1] space.
+        float value = 127.5f;
+        if (dstY >= top && dstY < top + contentHeight && dstX >= left && dstX < left + contentWidth) {
+            float srcY = (static_cast<float>(dstY - top) + 0.5f) * static_cast<float>(srcHeight) / static_cast<float>(contentHeight) - 0.5f;
+            float srcX = (static_cast<float>(dstX - left) + 0.5f) * static_cast<float>(srcWidth) / static_cast<float>(contentWidth) - 0.5f;
+            value = SampleBicubicRGB8(input, srcHeight, srcWidth, srcPitchBytes, srcY, srcX, channel);
+        }
         value = fminf(255.0f, fmaxf(0.0f, value));
 
         float mean = channel == 0 ? mean0 : (channel == 1 ? mean1 : mean2);
@@ -360,6 +369,7 @@ extern "C" cudaError_t runQwenVLResizeNormalizePatchLayoutRGB8(
     float std0,
     float std1,
     float std2,
+    bool letterbox,
     cudaStream_t stream)
 {
     if (!input || !output || srcHeight <= 0 || srcWidth <= 0 || srcPitchBytes < srcWidth * 3 ||
@@ -377,6 +387,12 @@ extern "C" cudaError_t runQwenVLResizeNormalizePatchLayoutRGB8(
     int total = patchCount * featureDim;
     int block = 256;
     int grid = (total + block - 1) / block;
+    int contentHeight = dstHeight, contentWidth = dstWidth;
+    if (letterbox) {
+        const double scale = fmin(double(dstHeight) / srcHeight, double(dstWidth) / srcWidth);
+        contentHeight = std::max(1, std::min(dstHeight, int(floor(srcHeight * scale + 0.5))));
+        contentWidth = std::max(1, std::min(dstWidth, int(floor(srcWidth * scale + 0.5))));
+    }
     QwenVLResizeNormalizePatchLayoutRGB8Kernel<<<grid, block, 0, stream>>>(
         input,
         output,
@@ -396,7 +412,11 @@ extern "C" cudaError_t runQwenVLResizeNormalizePatchLayoutRGB8(
         std1,
         std2,
         patchCount,
-        featureDim);
+        featureDim,
+        contentHeight,
+        contentWidth,
+        (dstHeight - contentHeight) / 2,
+        (dstWidth - contentWidth) / 2);
     return cudaGetLastError();
 }
 

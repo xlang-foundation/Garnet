@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 #if !defined(GARNET_CPU_ONLY) && !defined(GARNET_METAL)
 #include "cuda_tensor_io.h"
+#include "../../image/qwen_vl/qwen_vl_image_preprocessor.h"
 #include "bf16_projection_plugin.h"
 #include "modelopt_cublaslt.h"
 #include "modelopt_joined_mlp.h"
@@ -726,6 +727,16 @@ X::Value CUDATensorIO::PrepareImageProfile(const std::string& path,int minPixels
         throw X::Error("CUDA image pixel bounds outside admitted range");
     void* memory=nullptr;size_t bytes=0;long long grid[3]{};int sh=0,sw=0,rh=0,rw=0,patches=0,features=0;char error[1024]{};
     if(GarnetQwenVLPreprocessJpegFileDevice(path.c_str(),minPixels,maxPixels,&memory,&bytes,grid,&sh,&sw,&rh,&rw,&patches,&features,error,sizeof(error)))throw X::Error(error);
+    return WrapPreparedImage(memory,bytes,grid,patches,features);
+}
+X::Value CUDATensorIO::PrepareImageGrid(const std::string& path,int gridHeight,int gridWidth,int maxPixels){
+    if(maxPixels<1024||maxPixels>1048576||gridHeight<2||gridWidth<2||gridHeight%2||gridWidth%2||
+        int64_t(gridHeight)*gridWidth>maxPixels/256)
+        throw X::Error("CUDA fixed image grid outside admitted pixel profile");
+    auto result=Image::QwenVL::PreprocessJpegFileToDeviceBuffer(path,1024,maxPixels,gridHeight,gridWidth);
+    return WrapPreparedImage(result.pixelValuesDevice,result.outputBytes,result.imageGridTHW,result.patchCount,result.featureDim);
+}
+X::Value CUDATensorIO::WrapPreparedImage(void* memory,size_t bytes,const long long* grid,int patches,int features){
     try{
         if(grid[0]!=1||grid[1]<=0||grid[2]<=0||patches!=grid[1]*grid[2]||features!=1536||bytes!=size_t(patches)*features*4)
             throw X::Error("CUDA JPEG frontend returned inconsistent Qwen3.5 patches");

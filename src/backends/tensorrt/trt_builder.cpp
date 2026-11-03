@@ -9,6 +9,7 @@
 #include "trt_context_pool.h"
 #include "trt_memory_profile.h"
 #include "qwen35_lowering.h"
+#include "qwen_tts_sampling.h"
 #include "qwen35_packed_store_plugin.h"
 #include "qwen38_gdn_chunk_stage_profile.h"
 #include "operator_execution_group.h"
@@ -5714,6 +5715,20 @@ namespace Garnet {
                 }else throw std::invalid_argument("unsupported Qwen3.5 CUDA binary operation: "+opName);
                 tensorMap[TensorId(output)]=lastOutput;return X::Value(true);
             }catch(const std::exception& e){loweringError=e.what();return X::Value();}
+        }
+        if (opName=="qwen3_tts_sample_top_k") {
+            try {
+                auto* group=FindKeyword(kwParams,"group");
+                auto* topK=FindKeyword(kwParams,"top_k");
+                auto* temperature=FindKeyword(kwParams,"temperature");
+                if (!group || !topK || !temperature)
+                    throw std::invalid_argument("TTS sampling contract attributes missing");
+                lastOutput=LowerQwenTTSSample(*network,vectorWeights,
+                    GetOrCreateTRTTensor(input1),GetOrCreateTRTTensor(input2),
+                    static_cast<int>(group->second.ToLongLong()),static_cast<int>(topK->second.ToLongLong()),
+                    static_cast<float>(temperature->second.ToDouble()));
+                tensorMap[TensorId(output)]=lastOutput;return X::Value(true);
+            } catch (const std::exception& exception) {loweringError=exception.what();return X::Value();}
         }
         const bool isLinear =
             opName == "linear" || opName == "qkv_linear" ||

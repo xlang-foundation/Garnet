@@ -58,6 +58,7 @@ for tts in tts_models:
     assert tts_manifest["task"] == "text-to-speech"
     assert tts_manifest["entrypoints"]["prefill"]["frontend"] == "qwen3_tts"
     assert tts_manifest["weights"]["codec_subdirectory"] == "speech_tokenizer"
+    assert tts_manifest["code_predictor_sampling"] == {"method": "gumbel_top_k_v1", "top_k": 50, "temperature": 0.9}
     require_entrypoints(tts, tts_manifest)
     assert tts_manifest["capabilities"]["instruction_control"] == (
         "1.7B" in tts_manifest["id"]
@@ -81,6 +82,8 @@ for tts in tts_models:
     "Qwen3TTSCodePredictor",
     "qwen3_tts_dense_attention_packed",
     "num_code_groups",
+    "qwen3_tts_sample_top_k",
+    '"gumbels"',
     ])
     require(tts / "codec_decode.py", [
     "Qwen3TTSCodecDecode",

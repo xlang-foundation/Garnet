@@ -11,8 +11,10 @@
 #include <fstream>
 #include <atomic>
 #include <chrono>
+#include <dlfcn.h>
 namespace Garnet {
 class GarnetMetalAPI {
+    static void LibraryAnchor() {}
     X::Module Serving(X3PackageHost* host) {
         const std::string root = GARNET_METAL_SOURCE_ROOT;
         if (x3_runtime_add_import_root(host->runtime, root.c_str()) != X3_STATUS_OK ||
@@ -21,6 +23,12 @@ class GarnetMetalAPI {
         return X::Module(host, "metal_serving");
     }
 public:
+    std::string NativeLibraryPath() const {
+        Dl_info info{};
+        if (!dladdr(reinterpret_cast<const void*>(&LibraryAnchor), &info) || !info.dli_fname)
+            throw X::Error("Cannot identify the loaded native Metal library");
+        return info.dli_fname;
+    }
     std::string PrimaryStatsJson() {
         const auto p=MetalContext::PrimaryStats();
         return nlohmann::json{{"active_weights",p.activeWeights},{"original_bytes",p.originalBytes},{"payload_bytes",p.payloadBytes},{"metadata_bytes",p.metadataBytes},{"allocated_bytes",p.allocatedBytes},{"uploads",p.uploads},{"decode_encoded",p.decodeEncoded},{"prefill_encoded",p.prefillEncoded},{"head_encoded",p.headEncoded},{"vector_decode_encoded",p.vectorDecodeEncoded},{"vector_head_encoded",p.vectorHeadEncoded}}.dump();
@@ -72,6 +80,10 @@ public:
     std::string ServeStatus(X::Value model) {
         auto module = Serving(model.host());
         return module["serve_status_json"](model).ToString();
+    }
+    X::Value StopServing(X::Value model) {
+        auto module = Serving(model.host());
+        return module["stop_serving"](model);
     }
     std::string InferJson(X::Value prompt, X::Value image, X::Value limit, X::Value model) {
         auto module = Serving(prompt.host());
@@ -221,8 +233,10 @@ public:
         APISET().AddFunc<0>("primary_storage_stats_json",&GarnetMetalAPI::PrimaryStatsJson);
         APISET().AddFunc<0>("memory_stats_json",&GarnetMetalAPI::MemoryStatsJson);
         APISET().AddFunc<0>("backend_info",&GarnetMetalAPI::BackendInfo);
+        APISET().AddFunc<0>("native_library_path",&GarnetMetalAPI::NativeLibraryPath);
         APISET().AddFunc<5>("serve_model",&GarnetMetalAPI::ServeModel);
         APISET().AddFunc<1>("serve_status_json",&GarnetMetalAPI::ServeStatus);
+        APISET().AddFunc<1>("stop_serving",&GarnetMetalAPI::StopServing);
         APISET().AddFunc<4>("infer_json",&GarnetMetalAPI::InferJson);
         APISET().AddFunc<1>("set_benchmark_prefill_policy",&GarnetMetalAPI::BenchmarkPrefillPolicy);
         APISET().AddFunc<0>("shutdown",&GarnetMetalAPI::Shutdown);

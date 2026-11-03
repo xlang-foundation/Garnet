@@ -363,7 +363,9 @@ if(GARNET_METAL_XMODEL)
         src/model/safetensors_index.cpp src/tokenizer/qwen_tokenizer.cpp)
     target_include_directories(garnet PRIVATE "${XLANG3_SDK_ROOT}" src/tensor src/core src/model src/tokenizer src/backends/cpu src/backends/metal third_party)
     target_compile_definitions(garnet PRIVATE GARNET_WITH_METAL=1 XLANG3_USE_SHARED=1)
-    target_compile_definitions(garnet PRIVATE GARNET_METAL_SOURCE_ROOT="${CMAKE_CURRENT_SOURCE_DIR}")
+    set(GARNET_METAL_RUNTIME_SOURCE_ROOT "${CMAKE_CURRENT_SOURCE_DIR}" CACHE PATH
+        "Fixed deployment root containing Garnet runtime and xModel assets")
+    target_compile_definitions(garnet PRIVATE GARNET_METAL_SOURCE_ROOT="${GARNET_METAL_RUNTIME_SOURCE_ROOT}")
     target_link_libraries(garnet PRIVATE garnet_metal garnet_native_image ${_garnet_metal_runtime})
 endif()
 

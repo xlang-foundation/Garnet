@@ -51,6 +51,10 @@ namespace Garnet::Image::QwenVL
         int minPixels,
         int maxPixels);
 
+    // A compiled engine fixes the patch count. Choose a merge-aligned canvas
+    // with that exact count and the least padding for this source aspect.
+    SmartResizeResult CompiledResize(int height, int width, int patchCount, int maxPixels);
+
     PreprocessResult PreprocessRawImageTensor(
         X::Value rawImageValue,
         int height,
@@ -61,23 +65,25 @@ namespace Garnet::Image::QwenVL
         X3PackageHost* host,
         const std::string& jpegPath,
         int minPixels,
-        int maxPixels);
+        int maxPixels, int compiledPatchCount = 0);
 
     PreprocessResult PreprocessJpegBytesToTensor(
         X3PackageHost* host,
         const unsigned char* jpegData,
         size_t jpegSize,
         int minPixels,
-        int maxPixels);
+        int maxPixels, int compiledPatchCount = 0);
 
     DevicePreprocessResult PreprocessJpegFileToDeviceBuffer(
         const std::string& jpegPath,
         int minPixels,
-        int maxPixels);
+        int maxPixels,
+        int gridHeight = 0,
+        int gridWidth = 0, int compiledPatchCount = 0);
 
     DevicePreprocessResult PreprocessJpegBytesToDeviceBuffer(
         const unsigned char* jpegData,
         size_t jpegSize,
         int minPixels,
-        int maxPixels);
+        int maxPixels, int compiledPatchCount = 0);
 }

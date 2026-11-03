@@ -75,6 +75,7 @@ extern "C" cudaError_t runQwenVLResizeNormalizePatchLayoutRGB8(
     float std0,
     float std1,
     float std2,
+    bool letterbox,
     cudaStream_t stream);
 
 #if defined(_WIN32)
@@ -115,13 +116,23 @@ namespace Garnet::Image::QwenVL
             const unsigned char* jpegBytes,
             size_t jpegSize,
             int minPixels,
-            int maxPixels)
+            int maxPixels,
+            int fixedGridH = 0,
+            int fixedGridW = 0, int compiledPatchCount = 0)
         {
             constexpr int patchSize = 16;
             constexpr int temporalPatchSize = 2;
             constexpr int mergeSize = 2;
             if (!jpegBytes || jpegSize == 0 || minPixels <= 0 || maxPixels <= 0) {
                 throw std::invalid_argument("invalid Qwen-VL JPEG preprocess arguments");
+            }
+            bool fixedGrid = fixedGridH != 0 || fixedGridW != 0;
+            if (compiledPatchCount < 0 || (compiledPatchCount &&
+                (fixedGrid || compiledPatchCount % 4 || compiledPatchCount > maxPixels / (patchSize * patchSize))))
+                throw std::invalid_argument("compiled Qwen-VL patch count exceeds the admitted profile or merge size");
+            if (fixedGrid && (fixedGridH < 2 || fixedGridW < 2 || fixedGridH % 2 || fixedGridW % 2 ||
+                static_cast<int64_t>(fixedGridH) * fixedGridW > maxPixels / (patchSize * patchSize))) {
+                throw std::invalid_argument("fixed Qwen-VL grid exceeds admitted pixel profile or merge size");
             }
 
             cudaStream_t stream = nullptr;
@@ -144,7 +155,11 @@ namespace Garnet::Image::QwenVL
 
             SmartResizeResult resize;
             try {
-                resize = SmartResize(decoded.height, decoded.width, patchSize * mergeSize, minPixels, maxPixels);
+                if (compiledPatchCount) {
+                    resize = CompiledResize(decoded.height, decoded.width, compiledPatchCount, maxPixels);
+                    fixedGrid = true;
+                } else resize = fixedGrid ? SmartResizeResult{fixedGridH * patchSize, fixedGridW * patchSize}
+                    : SmartResize(decoded.height, decoded.width, patchSize * mergeSize, minPixels, maxPixels);
             }
             catch (...) {
                 Cuda::FreeDecodedImage(&decoded);
@@ -194,6 +209,7 @@ namespace Garnet::Image::QwenVL
                 0.5f,
                 0.5f,
                 0.5f,
+                fixedGrid,
                 stream);
             if (status == cudaSuccess) {
                 status = cudaStreamSynchronize(stream);
@@ -212,7 +228,9 @@ namespace Garnet::Image::QwenVL
     DevicePreprocessResult PreprocessJpegFileToDeviceBuffer(
         const std::string& jpegPath,
         int minPixels,
-        int maxPixels)
+        int maxPixels,
+        int gridHeight,
+        int gridWidth, int compiledPatchCount)
     {
         if (jpegPath.empty()) {
             throw std::invalid_argument("invalid Qwen-VL JPEG path");
@@ -226,7 +244,7 @@ namespace Garnet::Image::QwenVL
         }
         try {
             DevicePreprocessResult result = PreprocessJpegBytesToDeviceBufferImpl(
-                jpegBytes, jpegSize, minPixels, maxPixels);
+                jpegBytes, jpegSize, minPixels, maxPixels, gridHeight, gridWidth, compiledPatchCount);
             delete[] jpegBytes;
             return result;
         }
@@ -240,10 +258,31 @@ namespace Garnet::Image::QwenVL
         const unsigned char* jpegData,
         size_t jpegSize,
         int minPixels,
-        int maxPixels)
+        int maxPixels, int compiledPatchCount)
     {
         return PreprocessJpegBytesToDeviceBufferImpl(
-            jpegData, jpegSize, minPixels, maxPixels);
+            jpegData, jpegSize, minPixels, maxPixels, 0, 0, compiledPatchCount);
+    }
+
+    SmartResizeResult CompiledResize(int height, int width, int patchCount, int maxPixels)
+    {
+        if (height <= 0 || width <= 0 || patchCount <= 0 || patchCount % 4 ||
+            patchCount > maxPixels / 256 || double(std::max(height,width)) / std::min(height,width) > 200.)
+            throw std::invalid_argument("invalid compiled Qwen-VL canvas or source dimensions");
+        SmartResizeResult best;
+        double bestScore = (std::numeric_limits<double>::infinity)();
+        const auto consider = [&](int gh, int gw) {
+            const double score = std::abs(std::log(double(gw) * height / (double(gh) * width)));
+            if (score < bestScore) { bestScore = score; best = {gh * 16, gw * 16}; }
+        };
+        for (int gh = 2; gh <= patchCount / gh; gh += 2) {
+            if (patchCount % gh) continue;
+            const int gw = patchCount / gh;
+            if (gw % 2) continue;
+            consider(gh,gw); consider(gw,gh);
+        }
+        if (!best.height) throw std::invalid_argument("compiled Qwen-VL profile has no merge-aligned canvas");
+        return best;
     }
 
     SmartResizeResult SmartResize(
@@ -480,11 +519,11 @@ namespace Garnet::Image::QwenVL
         X3PackageHost* host,
         const std::string& jpegPath,
         int minPixels,
-        int maxPixels)
+        int maxPixels, int compiledPatchCount)
     {
         return PreprocessJpegDeviceBufferToTensor(
             host,
-            PreprocessJpegFileToDeviceBuffer(jpegPath, minPixels, maxPixels));
+            PreprocessJpegFileToDeviceBuffer(jpegPath, minPixels, maxPixels, 0, 0, compiledPatchCount));
     }
 
     PreprocessResult PreprocessJpegBytesToTensor(
@@ -492,12 +531,12 @@ namespace Garnet::Image::QwenVL
         const unsigned char* jpegData,
         size_t jpegSize,
         int minPixels,
-        int maxPixels)
+        int maxPixels, int compiledPatchCount)
     {
         return PreprocessJpegDeviceBufferToTensor(
             host,
             PreprocessJpegBytesToDeviceBuffer(
-                jpegData, jpegSize, minPixels, maxPixels));
+                jpegData, jpegSize, minPixels, maxPixels, compiledPatchCount));
     }
 }
 
@@ -865,6 +904,7 @@ namespace
             0.5f,
             0.5f,
             0.5f,
+            false,
             stream);
 
         if (status == cudaSuccess) {

@@ -21,6 +21,7 @@ class Model:
     def __init__(self, root, xmodel, cache, profile, name):
         self.initialization_memory = dict(before=json.loads(garnet.memory_stats_json()), other_model_ids_at_start=list(_models))
         self.collect_inventory = bool(profile.get("collectNativeInventory", False))
+        self.profile = dict(profile)
         self.root, self.name = root, name
         self.cache = cache or os.path.join(root, 'metal-cache')
         os.makedirs(self.cache, exist_ok=True)
@@ -44,6 +45,8 @@ class Model:
                 image_mean=processor['image_mean'], image_std=processor['image_std']))
         self.text_config = self.config['text_config'] if self.visual else self.config
         self.capacity = int(profile.get('maxInputTokens', 1536)) + int(profile.get('maxOutputTokens', 512))
+        self.max_input = profile.get('maxInputTokens', 1536)
+        self.max_output = profile.get('maxOutputTokens', 512)
         if self.capacity < 64 or self.capacity > 8192:
             raise ValueError('Metal serving capacity must be between 64 and 8192 tokens')
         self._prefix_supported = not self.visual and self.text_config.get('model_type') == 'qwen3' and self.text_config.get('hidden_size') == 2048 and self.text_config.get('num_hidden_layers') == 28 and 'dense_prefix_cache' in garnet.backend_info()
@@ -140,6 +143,8 @@ class Model:
         return prediction
 
     def infer(self, prompt, image, limit):
+        if type(limit) is not int or not 1 <= limit <= self.max_output:
+            raise ValueError('Requested output exceeds the admitted Metal output profile')
         start = time.monotonic()
         stages = dict(initialization_memory=self.initialization_memory, memory_before_request=json.loads(garnet.memory_stats_json()))
         hidden, positions, token_ids = [], [], []
@@ -149,6 +154,8 @@ class Model:
         def append_text(text):
             nonlocal current
             for token in self.tokenizer.encode(text):
+                if len(hidden) >= self.max_input:
+                    raise ValueError('Prompt exceeds the admitted Metal input profile')
                 token_ids.append(token)
                 hidden.append(self.decoder.io.embedding([token]))
                 positions.append([current, current, current])
@@ -184,7 +191,7 @@ class Model:
             current = image_base + max(mh, mw)
             append_text('<|vision_end|>')
         append_text(prompt + '<|im_end|>\n<|im_start|>assistant\n<think>\n\n</think>\n\n')
-        if len(hidden) + limit > self.capacity:
+        if len(hidden) > self.max_input or len(hidden) + limit > self.capacity:
             raise ValueError('Prompt and requested output exceed the admitted Metal capacity')
         stages['memory_after_input'] = json.loads(garnet.memory_stats_json())
         prefill_start = time.monotonic()
@@ -255,19 +262,58 @@ class Model:
                     timings=stages, generated_token_ids=output,
                     ttft_seconds=first-start, total_seconds=time.monotonic()-start)
 
+    def close(self):
+        if self.vision is not None:
+            self.vision.close()
+            self.vision = None
+        self.decoder.close()
+        self._prefix_keys.clear()
+
 
 def serve_model(root, xmodel, cache, profile, name):
     with _lock:
         try:
+            settings = json.loads(profile) if profile else {}
+            if not isinstance(settings, dict):
+                raise ValueError('Metal profile must be a dictionary')
+            for key, default in (('batch', 1), ('deviceId', 0), ('maxInputTokens', 1536), ('maxOutputTokens', 512)):
+                settings.setdefault(key, default)
+            if type(settings['batch']) is not int or settings['batch'] != 1:
+                raise ValueError('Metal serving supports batch one only')
+            if type(settings['deviceId']) is not int or settings['deviceId'] != 0:
+                raise ValueError('Metal serving requires the qualified default device')
+            if any(type(settings[key]) is not int or not 1 <= settings[key] <= 8192 for key in ('maxInputTokens', 'maxOutputTokens')):
+                raise ValueError('Metal token bounds must be positive integers')
+            identity = (os.path.realpath(root), os.path.realpath(xmodel) if xmodel else '',
+                        os.path.realpath(cache) if cache else '', settings)
+            if name in _models and _models[name].identity != identity:
+                raise ValueError('Loaded Metal model conflicts with its checkpoint, cache or profile')
             if name not in _models:
-                _models[name] = Model(root, xmodel, cache, json.loads(profile) if profile else {}, name)
+                instance = Model(root, xmodel, cache, settings, name)
+                instance.identity = identity
+                _models[name] = instance
             return serve_status_json(name)
         except Exception as error:
             return json.dumps(dict(ready=False, model_id=name, error_message=str(error)))
 
 
 def serve_status_json(name):
-    return json.dumps(dict(ready=name in _models, state='ready' if name in _models else 'unloaded', model_id=name))
+    with _lock:
+        model = _models.get(name)
+        result = dict(ready=model is not None, state='ready' if model is not None else 'unloaded', model_id=name)
+        if model is not None:
+            result.update(profile_json=json.dumps(model.profile), input_capability='vision' if model.visual else 'text')
+        return json.dumps(result)
+
+
+def stop_serving(name):
+    with _lock:
+        model = _models.get(name)
+        if model is None:
+            return False
+        model.close()
+        del _models[name]
+        return True
 
 
 def infer_json(prompt, image, limit, name):
@@ -278,7 +324,7 @@ def infer_json(prompt, image, limit, name):
             outer_started=time.monotonic()
             before=json.loads(garnet.primary_storage_stats_json())
             model_started=time.monotonic()
-            result=_models[name].infer(prompt,image,int(limit))
+            result=_models[name].infer(prompt,image,limit)
             after=json.loads(garnet.primary_storage_stats_json())
             if result.get('status')=='ok':
                 result['ttft_seconds'] += model_started-outer_started

@@ -9,6 +9,7 @@ GARNET_MODEL_SPEC = {
     "arguments": [
         {"name": "talker_hidden", "kind": "tensor"},
         {"name": "first_code", "kind": "tensor"},
+        {"name": "gumbels", "kind": "tensor"},
         {"name": "weights", "kind": "weights"},
         {"name": "config", "kind": "config"}
     ]
@@ -68,7 +69,7 @@ def layer(x, config, layer_idx):
     return residual + x
 
 
-def predict(sequence, config, group):
+def predict(sequence, config, group, gumbels):
     x = sequence
     for layer_idx in range(config['num_hidden_layers']):
         x = layer(x, config, layer_idx)
@@ -79,11 +80,12 @@ def predict(sequence, config, group):
     logits = linear(
         x, "talker.code_predictor.lm_head." + str(group) + ".weight",
         op="lm_head")
-    return logits * T.unary_op("argmax_last_dim")
+    return logits * T.binary_op(
+        "qwen3_tts_sample_top_k", group=group, top_k=50, temperature=0.9) * gumbels
 
 
 @T.fusion(name="qwen3_tts_code_predictor", role="audio_code_predictor", boundary="required")
-def Qwen3TTSCodePredictor(talker_hidden, first_code, weights, config):
+def Qwen3TTSCodePredictor(talker_hidden, first_code, gumbels, weights, config):
     predictor = config['talker_config']['code_predictor_config']
     first_embedding = first_code * T.unary_op(
         "embedding", weight_name="talker.model.codec_embedding.weight")
@@ -94,7 +96,7 @@ def Qwen3TTSCodePredictor(talker_hidden, first_code, weights, config):
         bias_name="talker.code_predictor.small_to_mtp_projection.bias")
     codes = first_code
     for group in range(predictor['num_code_groups'] - 2):
-        next_code = predict(sequence, predictor, group)
+        next_code = predict(sequence, predictor, group, gumbels)
         codes = codes * T.binary_op("concat_tokens") * next_code
         next_embedding = next_code * T.unary_op(
             "embedding",
@@ -106,6 +108,6 @@ def Qwen3TTSCodePredictor(talker_hidden, first_code, weights, config):
             bias_name="talker.code_predictor.small_to_mtp_projection.bias")
         sequence = sequence * T.binary_op("concat_sequence") * next_embedding
     final_group = predictor['num_code_groups'] - 2
-    next_code = predict(sequence, predictor, final_group)
+    next_code = predict(sequence, predictor, final_group, gumbels)
     codes = codes * T.binary_op("concat_tokens") * next_code
     return codes

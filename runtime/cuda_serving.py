@@ -185,7 +185,11 @@ class Model:
         text('<|im_start|>user\n')
         if image:
             minimum=getattr(self,'image_min_pixels',None)
-            prepared=io.prepare_image(image,self.pixels) if minimum is None else io.prepare_image_profile(image,minimum,self.pixels)
+            # A compiled vision engine owns one grid. Fit subsequent inputs to
+            # that grid on the GPU rather than smart-resizing to another shape.
+            grid=getattr(self,'grid',None)
+            if grid is not None:prepared=io.prepare_image_grid(image,grid[0],grid[1],self.pixels)
+            else:prepared=io.prepare_image(image,self.pixels) if minimum is None else io.prepare_image_profile(image,minimum,self.pixels)
             gh,gw=prepared[1],prepared[2]
             compile_ms=self._build_vision(gh,gw)
             visual=self.vision.encode_patches(prepared[0]);text('<|vision_start|>')

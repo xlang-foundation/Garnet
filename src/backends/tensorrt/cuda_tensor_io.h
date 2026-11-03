@@ -48,6 +48,7 @@ class CUDATensorIO {
     int vocab_=0,width_=0;
     mutable std::mutex mutex_;
     X::Value LogitsUnlocked(X::Value input,bool reuse,bool tokens=false);
+    X::Value WrapPreparedImage(void* memory,size_t bytes,const long long* grid,int patches,int features);
     X::Value ArgmaxUnlocked(X::Value input,int maxRows=8);
     void CloseUnlocked();
     const X::Tensor& HeadTable() const { return untiedHead_.IsValid()?untiedHead_:table_; }
@@ -97,6 +98,7 @@ public:
     X::Value GroupWeights(X::Value names);
     X::Value PrepareImage(const std::string& path,int pixels);
     X::Value PrepareImageProfile(const std::string& path,int minPixels,int maxPixels);
+    X::Value PrepareImageGrid(const std::string& path,int gridHeight,int gridWidth,int maxPixels);
     std::string MemoryJson() const;
     int64_t TensorBytes(X::Value value);
     BEGIN_PACKAGE(CUDATensorIO)
@@ -143,6 +145,7 @@ public:
         APISET().AddFunc<1>("group_weights",&CUDATensorIO::GroupWeights);
         APISET().AddFunc<2>("prepare_image",&CUDATensorIO::PrepareImage);
         APISET().AddFunc<3>("prepare_image_profile",&CUDATensorIO::PrepareImageProfile);
+        APISET().AddFunc<4>("prepare_image_grid",&CUDATensorIO::PrepareImageGrid);
         APISET().AddFunc<0>("memory_json",&CUDATensorIO::MemoryJson);
         APISET().AddFunc<1>("tensor_bytes",&CUDATensorIO::TensorBytes);
     END_PACKAGE

@@ -18,6 +18,8 @@
 #include <vector>
 #include <thread>
 #include <chrono>
+#include <algorithm>
+#include <utility>
 
 namespace {
 using namespace Garnet;
@@ -287,6 +289,69 @@ void DecoderDevices(const std::filesystem::path& path, int deviceCount) {
     std::cout << "garnet-image-decoder-stream-device-passed: devices=" << deviceCount << '\n';
 }
 
+void FixedGridJpeg(const std::filesystem::path& path) {
+    for (auto shape : {std::pair<int,int>{12,20}, {20,12}, {16,16}}) {
+        const int gh=shape.first, gw=shape.second, height=gh*16, width=gw*16;
+        // A fixed grid is authoritative even if a legacy dynamic minimum is
+        // larger than its area. The maximum remains a strict memory bound.
+        auto result=PreprocessJpegFileToDeviceBuffer(path.string(),65536,65536,gh,gw);
+        std::unique_ptr<float,decltype(&cudaFree)> owned(result.pixelValuesDevice,&cudaFree);
+        Require(result.imageGridTHW[1]==gh && result.imageGridTHW[2]==gw, "fixed grid shape changed");
+        Require(result.outputBytes==size_t(gh*gw)*1536*4, "fixed grid allocation differs");
+        std::vector<float> actual(result.outputBytes/sizeof(float));
+        Check(cudaMemcpy(actual.data(),owned.get(),result.outputBytes,cudaMemcpyDeviceToHost));
+        const double scale=std::min(double(height)/result.sourceHeight,double(width)/result.sourceWidth);
+        const int contentH=std::max(1,int(std::floor(result.sourceHeight*scale+0.5)));
+        const int contentW=std::max(1,int(std::floor(result.sourceWidth*scale+0.5)));
+        const int top=(height-contentH)/2, left=(width-contentW)/2;
+        size_t i=0, padding=0, content=0;
+        for(int by=0;by<gh;by+=2) for(int bx=0;bx<gw;bx+=2)
+            for(int my=0;my<2;++my) for(int mx=0;mx<2;++mx)
+                for(int c=0;c<3;++c) for(int t=0;t<2;++t)
+                    for(int py=0;py<16;++py) for(int px=0;px<16;++px,++i) {
+                        int y=(by+my)*16+py, x=(bx+mx)*16+px;
+                        Require(std::isfinite(actual[i]) && std::abs(actual[i])<=1.000001f,"invalid fixed grid pixel");
+                        if(y<top || y>=top+contentH || x<left || x>=left+contentW) {
+                            Require(actual[i]==0.0f,"letterbox padding is not neutral or layout differs");++padding;
+                        } else if(std::abs(actual[i])>0.001f) ++content;
+                    }
+        Require(i==actual.size() && content>0,"fixed grid discarded image content");
+        Require(padding==size_t(height*width-contentH*contentW)*6,"letterbox aspect ratio differs");
+    }
+    Rejected([&]{PreprocessJpegFileToDeviceBuffer(path.string(),1024,65536,11,20);},"odd fixed grid accepted");
+    Rejected([&]{PreprocessJpegFileToDeviceBuffer(path.string(),1024,65536,20,20);},"oversized fixed grid accepted");
+    Rejected([&]{PreprocessJpegFileToDeviceBuffer(path.string(),1024,65536,0,20);},"partial fixed grid accepted");
+    std::cout << "garnet-image-fixed-grid-letterbox-passed\n";
+}
+
+void CompiledProfileJpeg(X::Runtime& runtime, const std::filesystem::path& path) {
+    auto resize = CompiledResize(720,1280,4096,1048576);
+    Require(resize.height==1024 && resize.width==1024,"compiled 1M profile changed its patch budget");
+    auto portrait = CompiledResize(1280,720,240,65536);
+    auto landscape = CompiledResize(720,1280,240,65536);
+    Require(portrait.height==landscape.width && portrait.width==landscape.height,"compiled canvas lost source orientation");
+    Rejected([&]{CompiledResize(720,1280,4096,65536);},"compiled canvas exceeded admitted pixels");
+    Rejected([&]{CompiledResize(720,1280,6,65536);},"unmergeable compiled canvas accepted");
+    std::ifstream input(path,std::ios::binary);
+    std::vector<unsigned char> bytes((std::istreambuf_iterator<char>(input)),std::istreambuf_iterator<char>());
+    for (int count : {240,4096}) {
+        const int maximum=count==4096?1048576:65536;
+        auto file=PreprocessJpegFileToTensor(runtime.host(),path.string(),maximum,maximum,count);
+        auto binary=PreprocessJpegBytesToTensor(runtime.host(),bytes.data(),bytes.size(),maximum,maximum,count);
+        auto grid=TensorHelper::CopyToCPU(X::Tensor(file.imageGridTHW));
+        auto use=grid.Acquire();
+        auto* dimensions=static_cast<const int64_t*>(grid.Info().data);
+        Require(dimensions[0]*dimensions[1]*dimensions[2]==count,"compiled JPEG patch count differs");
+        Require(X::Tensor(file.pixelValues).Info().shape[0]==count,"compiled tensor profile changed");
+        auto cpu=TensorHelper::CopyToCPU(X::Tensor(file.pixelValues));
+        auto pixelsUse=cpu.Acquire();
+        const auto* data=static_cast<const float*>(cpu.Info().data);
+        std::vector<float> pixels(data,data+cpu.Info().byte_size/sizeof(float));
+        Compare(binary.pixelValues,pixels);
+    }
+    std::cout << "garnet-image-compiled-profile-file-binary-passed\n";
+}
+
 void CUDART_CB DelayProducer(void*) {
     // No CUDA calls are permitted from a stream host callback.
     std::this_thread::sleep_for(std::chrono::milliseconds(80));
@@ -352,6 +417,12 @@ int main(int argc, char** argv) {
         Ownership(runtime);
         InvalidInputs(runtime);
         Jpeg(runtime, argv[1]);
+        for(int device=0;device<devices;++device) {
+            Check(cudaSetDevice(device));
+            FixedGridJpeg(argv[1]);
+            CompiledProfileJpeg(runtime,argv[1]);
+        }
+        Check(cudaSetDevice(0));
         DecoderDevices(argv[1], devices);
         CrossThreadReadiness(runtime);
         Check(cudaDeviceSynchronize());

@@ -254,6 +254,7 @@ namespace Garnet
 			APISET().AddClass<0, QwenVLRequestContext>("QwenVLRequestContext");
 			APISET().AddClass<0, Model>("model");
 			APISET().AddClass<0, GarnetTensor>("tensor");
+			APISET().AddFunc<0>("native_library_path", &GarnetAPI::NativeLibraryPath);
 		END_PACKAGE
 
 		GarnetAPI();
@@ -263,6 +264,10 @@ namespace Garnet
 		void SetBaseFolder(std::string folder)
 		{
 			m_baseFolder = folder;
+		}
+		std::string NativeLibraryPath()
+		{
+			return Host() && Host()->library_path ? Host()->library_path : std::string();
 		}
 		std::string GetBaseFolder()
 		{

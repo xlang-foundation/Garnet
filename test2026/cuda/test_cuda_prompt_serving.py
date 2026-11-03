@@ -15,6 +15,9 @@ class FakeIO:
     def __getattr__(self,key):return getattr(io,key)
     def embedding(self,ids):return io.from_host([float(t*10+j) for t in ids for j in range(h)],[len(ids),h])
     def prepare_image(self,image,pixels):return [int(image),2,4]
+    def prepare_image_grid(self,image,gh,gw,pixels):
+        assert [gh,gw]==[2,4]
+        return [int(image),gh,gw]
 
 class ReusedVision:
     def __init__(self):self.storage=io.zeros([1,2,h])

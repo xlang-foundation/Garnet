@@ -149,7 +149,7 @@ namespace Garnet
                     host, static_cast<const unsigned char*>(binary),
                     static_cast<size_t>(bytes),
                     minPixels,
-                    maxPixels);
+                    maxPixels, profileShapes[1][0]);
             }
             else {
                 const std::string imagePath = imageSource.ToString();
@@ -158,7 +158,7 @@ namespace Garnet
                         "Qwen-VL image must be a JPEG binary or file path");
                 }
                 image = Image::QwenVL::PreprocessJpegFileToTensor(
-                    host, imagePath, minPixels, maxPixels);
+                    host, imagePath, minPixels, maxPixels, profileShapes[1][0]);
             }
             X::Tensor gridTensor = TensorHelper::CopyToCPU(X::Tensor(image.imageGridTHW));
             auto gridUse = gridTensor.Acquire();

@@ -17,6 +17,7 @@
 #include "qwen_text_compiled_frontend.h"
 #include "qwen_asr_compiled_frontend.h"
 #include "qwen_tts_compiled_frontend.h"
+#include "qwen_speech_sampling.h"
 #include "cuda_lib.h"
 #include "repetition_sampler.h"
 #include "qwen_tokenizer.h"
@@ -1132,12 +1133,29 @@ namespace Garnet
                 auto auxiliary = std::make_shared<CompiledModelRuntime>(m_host);
                 FusionPartitionOptions predictorOptions = m_partitionOptions;
                 predictorOptions.builderOptimizationLevel = 0;
+                std::vector<std::vector<int>> predictorShapes{{1,1,talkerHiddenSize},{1,1}};
+                std::vector<std::string> predictorTypes{"float32","int64"};
+                try {
+                    const auto manifestSource=ReadFile(rootPath.parent_path()/"model.json");
+                    const auto manifest=manifestSource.empty()?nlohmann::json::object():nlohmann::json::parse(manifestSource);
+                    if (manifest.contains("code_predictor_sampling")) {
+                        const auto& sampling=manifest.at("code_predictor_sampling");
+                        if (!sampling.is_object() || sampling.value("method",std::string())!="gumbel_top_k_v1" ||
+                            sampling.value("top_k",0)!=QwenTTSPredictorTopK ||
+                            std::abs(sampling.value("temperature",0.0)-QwenTTSPredictorTemperature)>1e-6)
+                            throw std::invalid_argument("unsupported native code-predictor sampling contract");
+                        predictorShapes.push_back({1,QwenTTSPredictorGroups,QwenTTSPredictorVocab});
+                        predictorTypes.push_back("float32");
+                    }
+                } catch (const std::exception& exception) {
+                    m_errorCode="tts_code_predictor_sampling_invalid";
+                    m_errorMessage=exception.what();return false;
+                }
                 if (!auxiliary->Initialize(
                         (rootPath.parent_path() / "code_predictor.py").string(),
                         (std::filesystem::path(m_cacheDirectory) / "code_predictor").string(),
                         m_weightsLocation, "Qwen3TTSCodePredictor", "",
-                        {{1, 1, talkerHiddenSize}, {1, 1}},
-                        {"float32", "int64"},
+                        predictorShapes, predictorTypes,
                         predictorOptions, m_backend, m_precision)) {
                     X::Value status(auxiliary->Status());
                     m_errorCode = "tts_code_predictor_initialization_failed";
@@ -1604,6 +1622,9 @@ namespace Garnet
         status.SetItem("weights_location", NativeValue(host, m_weightsLocation));
         status.SetItem("entry_function", NativeValue(host, m_entryFunction));
         status.SetItem("frontend", NativeValue(host, m_frontend));
+        if (m_frontend=="qwen3_tts" && m_auxRuntime)
+            status.SetItem("code_predictor_sampling",NativeValue(host,
+                m_auxRuntime->m_inputShapes.size()==3?"gumbel_top_k_v1":"legacy_greedy"));
         status.SetItem("backend", NativeValue(host, m_backend));
         status.SetItem("precision", NativeValue(host, m_precision));
         status.SetItem("graph_summary", NativeValue(host, m_graphSummary));
@@ -2015,12 +2036,11 @@ namespace Garnet
                         std::memcpy(&logits[index], &expanded, sizeof(float));
                     }
                 }
-                for (long long previous : firstCodeHistory) {
-                    if (previous >= 0 && previous < vocabSize) {
-                        float& value = logits[static_cast<size_t>(previous)];
-                        value = value < 0.0F
-                            ? value * repetitionPenalty : value / repetitionPenalty;
-                    }
+                if (!PrepareQwenSpeechLogits(logits,
+                        ttsFrontendInputs.codecEosTokenId,
+                        firstCodeHistory, repetitionPenalty)) {
+                    errorText = "talker returned invalid speech sampling logits";
+                    return false;
                 }
                 std::vector<int> order(static_cast<size_t>(vocabSize));
                 for (int index = 0; index < vocabSize; ++index) order[index] = index;
@@ -2066,6 +2086,11 @@ namespace Garnet
                 X::Value predictorInputs = X::Value::List(host);
                 predictorInputs.Append(hidden);
                 predictorInputs.Append(firstCodeTensor);
+                if (m_auxRuntime->m_inputShapes.size()==3) {
+                    const auto noise=MakeQwenTTSPredictorNoise(random);
+                    predictorInputs.Append(MakeCudaTensorFromHost(host,X3_TENSOR_FLOAT32,
+                        {1,QwenTTSPredictorGroups,QwenTTSPredictorVocab},noise.data(),noise.size()*sizeof(float)));
+                }
                 X::Value predictorRequest = X::Value::Dict(host);
                 predictorRequest.SetItem("inputs", NativeValue(host, predictorInputs));
                 X::Value predictorValue = m_auxRuntime->Forward(predictorRequest);

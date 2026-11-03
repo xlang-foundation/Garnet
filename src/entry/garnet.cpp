@@ -92,7 +92,8 @@ namespace
         const std::string& modelId,
         const std::string& inputCapability,
         const std::string& lastError,
-        X3Runtime* runtime = nullptr)
+        X3Runtime* runtime = nullptr,
+        const std::string& servingProfile = {})
     {
         json status = {
             {"state", modelValue.IsValid() ? "ready" :
@@ -103,6 +104,7 @@ namespace
             {"input_capability", inputCapability},
             {"error", lastError}
         };
+        if (!servingProfile.empty()) status["profile_json"] = servingProfile;
         if (!modelValue.IsValid()) return status;
         X::Value runtimeStatusCallable = modelValue["runtime_status"];
         if (!runtimeStatusCallable.IsObject()) {
@@ -1879,7 +1881,7 @@ namespace Garnet
                 instance->modelRoot,
                 instance->modelId,
                 instance->inputCapability,
-                instance->error);
+                instance->error, nullptr, instance->servingProfile);
             model["instance_id"] = instance->modelId;
             model["device_id"] = instance->deviceId;
             response["models"].push_back(std::move(model));
@@ -2044,6 +2046,7 @@ namespace Garnet
         int maxOutputTokens = 256;
         int audioChunks = 5;
         int deviceId = 0;
+        int batch = 1;
         if (params.size() > 3 && !params[3].ToString().empty()) {
             try {
                 const json profile = json::parse(params[3].ToString());
@@ -2056,6 +2059,7 @@ namespace Garnet
                     "maxOutputTokens", maxOutputTokens);
                 audioChunks = profile.value("audioChunks", audioChunks);
                 deviceId = profile.value("deviceId", deviceId);
+                batch = profile.value("batch", batch);
             }
             catch (const std::exception&) {
                 retValue = NativeValue(Host(), GarnetJsonError(
@@ -2083,7 +2087,7 @@ namespace Garnet
             maxInputTokens >= 128 && maxInputTokens <= 2048 &&
             kvPages >= 16 && kvPages <= 256;
         if ((!asrProfile && !ttsProfile && !textProfile && !fastProfile && !visionProfile) ||
-            maxOutputTokens < 1 || maxOutputTokens > 32768 || deviceId < 0) {
+            maxOutputTokens < 1 || maxOutputTokens > 32768 || deviceId < 0 || batch != 1) {
             retValue = NativeValue(Host(), GarnetJsonError(
                 "profile_unsupported",
                 "The requested Garnet inference profile is not supported"));
@@ -2123,21 +2127,36 @@ namespace Garnet
             }
         }
 
+        // Retain the resolved native profile, including defaults. Legacy
+        // compiled runtimes do not report it through runtime_status, but a
+        // managed host must verify exactly what was admitted and reject an
+        // attempt to reuse this model ID with different limits or GPU.
+        json resolvedProfile = {{"batch", 1}, {"deviceId", deviceId},
+            {"maxInputTokens", maxInputTokens}, {"maxOutputTokens", maxOutputTokens},
+            {"kvPages", kvPages}};
+        if (!textModel && !asrModel && !ttsModel) {
+            resolvedProfile["patchCount"] = patchCount;
+            resolvedProfile["minPixels"] = minPixels;
+            resolvedProfile["maxPixels"] = maxPixels;
+        }
+        if (asrModel) resolvedProfile["audioChunks"] = audioChunks;
+        const std::string resolvedProfileJson = resolvedProfile.dump();
         std::lock_guard<std::mutex> guard(m_servingMutex);
         const auto existing = m_servingInstances.find(modelId);
         if (existing != m_servingInstances.end() && existing->second->model.IsValid()) {
             const auto& instance = existing->second;
             if (instance->modelRoot != modelRoot.string() ||
-                instance->cacheRoot != cacheRoot.string()) {
+                instance->cacheRoot != cacheRoot.string() ||
+                instance->servingProfile != resolvedProfileJson) {
                 retValue = NativeValue(Host(), GarnetJsonError(
                     "model_instance_conflict",
-                    "The model UID is already loaded from a different root"));
+                    "The model UID is already loaded with a different root, GPU or profile"));
                 return retValue;
             }
             m_defaultServingModelId = modelId;
             retValue = NativeValue(Host(), GarnetServingStatus(
                 instance->model, instance->modelRoot, instance->modelId,
-                instance->inputCapability, instance->error, rt).dump());
+                instance->inputCapability, instance->error, rt, instance->servingProfile).dump());
             return retValue;
         }
         auto instance = std::make_shared<ServingInstance>();
@@ -2150,6 +2169,7 @@ namespace Garnet
         instance->maxPixels = maxPixels;
         instance->maxOutputTokens = maxOutputTokens;
         instance->deviceId = deviceId;
+        instance->servingProfile = resolvedProfileJson;
         try {
             int deviceCount = 0;
             if (cudaGetDeviceCount(&deviceCount) != cudaSuccess || deviceId >= deviceCount)
@@ -2239,7 +2259,7 @@ namespace Garnet
             m_defaultServingModelId = modelId;
             retValue = NativeValue(Host(), GarnetServingStatus(
                 instance->model, instance->modelRoot, instance->modelId,
-                instance->inputCapability, instance->error, rt
+                instance->inputCapability, instance->error, rt, instance->servingProfile
             ).dump());
         }
         catch (const std::exception& exception) {
@@ -2266,7 +2286,7 @@ namespace Garnet
         if (instance->qwen35CUDA) guard.unlock();
         retValue = NativeValue(Host(), GarnetServingStatus(
             retainedModel, instance->modelRoot, instance->modelId,
-            instance->inputCapability, instance->error, rt
+            instance->inputCapability, instance->error, rt, instance->servingProfile
         ).dump());
         return retValue;
     }

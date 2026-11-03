@@ -70,6 +70,7 @@ def symbolic(name, serial):
     shapes = {
         "input_ids": [1, 2], "aligned_ids": [1, 2, 2], "codec_ids": [1, 3],
         "codes": [1, 3, 2], "first_code": [1, 1], "talker_hidden": [1, 1, 8],
+        "gumbels": [1, 2, 2048],
         "position_ids": [3, 1, 2], "attention_mask": [1, 2],
         "key_pages": [2, 2, 2, 1, 4], "value_pages": [2, 2, 2, 1, 4],
         "page_table": [2], "context_lengths": [1], "slot_positions": [1],
@@ -84,7 +85,7 @@ def symbolic(name, serial):
     }
     assert name in shapes, "unhandled production input: " + name
     floating = name in ("pixel_values", "vision_bilinear_weights", "bilinear_weights",
-                        "talker_hidden", "input_features", "key_pages", "value_pages")
+                        "talker_hidden", "input_features", "key_pages", "value_pages", "gumbels")
     return tensor.input(str(serial) + "_" + name, shape=shapes[name],
                         dtype=tensor.float32 if floating else tensor.int64)
 
