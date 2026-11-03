@@ -3,6 +3,9 @@
 #include "garnet_tensor.h"
 #include "../backends/metal/compiled_graph.h"
 #include "../backends/metal/decoder_session.h"
+#ifdef GARNET_METAL_CONTINUOUS_ROWS
+#include "../backends/metal/continuous_scheduler.h"
+#endif
 #include "model_tensor_io.h"
 #include "tokenizer_api.h"
 #include "../image/native_image.h"
@@ -184,7 +187,7 @@ public:
 #ifdef GARNET_METAL_REQUEST_ROWS
         info+="; request_row_reset";
 #ifdef GARNET_METAL_CONTINUOUS_ROWS
-        info+="; native_request_row_leases";
+        info+="; native_request_row_leases; native_continuous_scheduler";
 #endif
 #endif
 #ifdef GARNET_METAL_COMPACT_ATTENTION_INDEX
@@ -256,6 +259,9 @@ public:
         APISET().AddClass<0,GarnetTensor>("tensor");
         APISET().AddClass<0,MetalCompiledGraph>("compiled_graph");
         APISET().AddClass<0,MetalDecoderSession>("decoder_session");
+#ifdef GARNET_METAL_CONTINUOUS_ROWS
+        APISET().AddClass<0,MetalContinuousScheduler>("continuous_scheduler");
+#endif
         APISET().AddClass<0,ModelTensorIO>("tensor_io");
         APISET().AddClass<0,CPUTokenizer>("tokenizer");
         APISET().AddFunc<2>("prepare_image",&GarnetMetalAPI::PrepareImage);

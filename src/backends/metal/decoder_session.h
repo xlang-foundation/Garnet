@@ -95,6 +95,8 @@ public:
 #ifdef GARNET_METAL_CONTINUOUS_ROWS
     X::Value ClaimRequestRow(int64_t request);
     bool ReleaseRequestRow(int64_t row,int64_t epoch);
+    std::pair<size_t,size_t> RequestRowLayout();
+    bool RequestRowMatches(size_t row,uint64_t epoch);
     X::Value RunLeased(X::Value graphs,X::Value hidden,X::Value positions,
         X::Value slots,X::Value active,int64_t predictionToken,X::Value epochs);
 #endif

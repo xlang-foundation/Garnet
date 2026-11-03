@@ -235,6 +235,15 @@ namespace Garnet
             : found->second.stage;
     }
 
+    bool ContinuousBatchScheduler::ForgetFinished(std::uint64_t requestId)
+    {
+        auto found=m_requests.find(requestId);
+        if(found==m_requests.end()||(found->second.stage!=RequestStage::Finished&&
+           found->second.stage!=RequestStage::Cancelled))return false;
+        m_prefillQueue.erase(std::remove(m_prefillQueue.begin(),m_prefillQueue.end(),requestId),m_prefillQueue.end());
+        m_requests.erase(found);return true;
+    }
+
     int ContinuousBatchScheduler::ActiveRequestCount() const
     {
         int count = 0;

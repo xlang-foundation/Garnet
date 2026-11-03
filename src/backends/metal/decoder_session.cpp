@@ -168,6 +168,28 @@ bool MetalDecoderSession::ReleaseRequestRow(int64_t row,int64_t epoch) {
     ResetRowUnlocked(row);
     return requestRows_->Release(size_t(row),uint64_t(epoch));
 }
+bool MetalDecoderSession::RequestRowMatches(size_t row,uint64_t epoch) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    return gpu_&&!poisoned_&&requestRows_&&requestRows_->Matches(row,epoch);
+}
+std::pair<size_t,size_t> MetalDecoderSession::RequestRowLayout() {
+    std::lock_guard<std::mutex> lock(mutex_);
+    if(!gpu_||poisoned_||!requestRows_||states_.empty())throw std::logic_error("Native scheduler requires a ready Metal session");
+    const auto rows=states_[0].rows;size_t capacity=SIZE_MAX;
+    for(size_t row=0;row<rows;++row)if(requestRows_->Owned(row))
+        throw std::logic_error("Native scheduler requires exclusive unclaimed request rows");
+    for(size_t i=0;i<states_.size();++i) {
+        auto graph=Graph(owners_[i],Host());std::lock_guard<std::mutex> graphLock(graph->mutex_);
+        if(!graph->ready_)throw std::logic_error("Native scheduler graph owner is closed");
+        for(size_t part=0;part<2;++part)if(graph->CanResetKVPrefix(part+1)) {
+            const auto& shape=states_[i].shape[part];
+            if(shape.size()!=4||shape[0]!=int64_t(rows)||shape[2]<=0)throw std::logic_error("Native scheduler KV row layout is invalid");
+            capacity=std::min(capacity,size_t(shape[2]));
+        }
+    }
+    if(capacity==SIZE_MAX)throw std::logic_error("Native scheduler requires a proved bounded KV layout");
+    return {rows,capacity};
+}
 #endif
 bool MetalDecoderSession::Build(X::Value graphs,X::Value head) {
     std::lock_guard<std::mutex> lock(mutex_);Clear();

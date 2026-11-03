@@ -630,3 +630,25 @@ sharing remains valid (`native-leaseddispatch-ctest.log`,
 `native-leaseddispatch-row-session.log`, `native-leaseddispatch-sharedscratch.log`).
 Scheduler-driven execution must use this leased entrypoint; policy metadata
 alone cannot protect a row reassigned between planning and GPU submission.
+
+The shared-memory tall-tile kernel subsequently passed all8 frozen coding
+contracts without truncation, with zero token-accounting issues
+(`evidence/native27b-talltiles-quality1`). Serving timing remains a separate gate.
+
+The default-off continuous-row extension now exposes a native
+`continuous_scheduler` bridge. Its allocator claims/releases actual Metal
+session state, derives the row/context bounds from proved native KV layouts,
+and returns physical masks and epochs for `run_leased`. It rejects duplicate
+ticks while work is outstanding. Completion/cancellation retires finished
+policy metadata; closing clears its owned rows without touching a replacement
+with another epoch. The bridge retains its session owner through cleanup.
+
+All12 CTests pass in `native-scheduler-build`. Its GPU integration test compares
+combined mixed linear/full execution with separate per-request sessions through
+A-to-E refill, priority reorder, decode plus incoming prefill ticks, budget/EOS,
+queued/inflight cancellation, stale dispatch rejection, close and row reuse.
+Tracked request metadata returns to zero. Evidence: `native-scheduler-ctest.log`,
+`native-scheduler-gpu-integration2.log`. These are small synthetic layers with
+one-token prompts. The learned27B batch profile, chunked-prompt integration,
+serving wrapper and prefix reuse remain required; the local HTTP study worker
+still advertises one active request.

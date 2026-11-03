@@ -73,5 +73,8 @@ int main() {
     Check(single.Stage(eos)==RequestStage::Prefill);
     Check(single.CompletePrefill(eos,9,singleStorage,true));
     Check(single.Stage(eos)==RequestStage::Finished&&single.Schedule(singleStorage).batches.empty());
+    Check(!scheduler.ForgetFinished(ids[2]));
+    Check(single.TrackedRequestCount()==2&&single.ForgetFinished(one)&&single.ForgetFinished(eos));
+    Check(!single.ForgetFinished(eos)&&single.TrackedRequestCount()==0);
     std::cout<<"portable_continuous_scheduler PASS stable rows, queued refill, cancellation, one-token budget, prefill EOS and invalid-token rejection\n";
 }

@@ -111,5 +111,7 @@ namespace Garnet
         RequestStage Stage(std::uint64_t requestId) const;
         int ActiveRequestCount() const;
         int QueuedRequestCount() const;
+        bool ForgetFinished(std::uint64_t requestId);
+        std::size_t TrackedRequestCount() const {return m_requests.size();}
     };
 }

@@ -1,0 +1,44 @@
+// SPDX-License-Identifier: Apache-2.0
+#pragma once
+#include "decoder_session.h"
+#include "../../runtime/scheduler/continuous_batch_scheduler.h"
+#include <map>
+#include <memory>
+
+namespace Garnet {
+// Native policy/row-state bridge. The inference runtime supplies embeddings
+// and calls session.run_leased with each returned plan's epochs and masks.
+class MetalContinuousScheduler {
+    class RowAllocator;
+    std::unique_ptr<RowAllocator> allocator_;
+    std::unique_ptr<ContinuousBatchScheduler> scheduler_;
+    X::Value sessionOwner_;
+    std::map<uint64_t,RequestStage> inflight_;
+    size_t rows_=0,capacity_=0;
+    bool failed_=false;
+    std::mutex mutex_;
+    void Ready() const;
+    bool CloseUnlocked();
+public:
+    MetalContinuousScheduler();
+    ~MetalContinuousScheduler();
+    bool Initialize(X::Value session,int64_t maxPending);
+    int64_t Submit(int64_t prompt,int64_t output,int64_t priority);
+    std::string NextJson();
+    int64_t CompletePrefill(int64_t request,int64_t token,bool finished);
+    int64_t CompleteDecode(int64_t request,int64_t token,bool finished);
+    bool Cancel(int64_t request);
+    std::string StatusJson();
+    bool Close();
+    BEGIN_PACKAGE(MetalContinuousScheduler)
+        APISET().AddFunc<2>("initialize",&MetalContinuousScheduler::Initialize);
+        APISET().AddFunc<3>("submit",&MetalContinuousScheduler::Submit);
+        APISET().AddFunc<0>("next_json",&MetalContinuousScheduler::NextJson);
+        APISET().AddFunc<3>("complete_prefill",&MetalContinuousScheduler::CompletePrefill);
+        APISET().AddFunc<3>("complete_decode",&MetalContinuousScheduler::CompleteDecode);
+        APISET().AddFunc<1>("cancel",&MetalContinuousScheduler::Cancel);
+        APISET().AddFunc<0>("status_json",&MetalContinuousScheduler::StatusJson);
+        APISET().AddFunc<0>("close",&MetalContinuousScheduler::Close);
+    END_PACKAGE
+};
+}

@@ -439,6 +439,10 @@ if(GARNET_METAL_XMODEL)
         src/backends/metal/decoder_session.cpp
         src/tensor/garnet_tensor.cpp src/tensor/graph_capture.cpp src/core/lowering_context.cpp
         src/model/safetensors_index.cpp src/tokenizer/qwen_tokenizer.cpp)
+    if(GARNET_METAL_CONTINUOUS_ROWS)
+        target_sources(garnet PRIVATE src/backends/metal/continuous_scheduler.cpp
+            src/runtime/scheduler/continuous_batch_scheduler.cpp)
+    endif()
     target_include_directories(garnet PRIVATE "${XLANG3_SDK_ROOT}" src/tensor src/core src/model src/tokenizer src/backends/cpu src/backends/metal third_party)
     target_compile_definitions(garnet PRIVATE GARNET_WITH_METAL=1 XLANG3_USE_SHARED=1)
     set(GARNET_METAL_RUNTIME_SOURCE_ROOT "${CMAKE_CURRENT_SOURCE_DIR}" CACHE PATH
