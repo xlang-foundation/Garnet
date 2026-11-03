@@ -2466,6 +2466,7 @@ void MetalContext::Update(const MetalMatrix& matrix,const float* values,size_t c
 }
 #ifdef GARNET_METAL_REQUEST_ROWS
 void MetalContext::ValidateCompletedRow(const MetalMatrix& matrix,size_t row) const {
+    @autoreleasepool {
     if(impl_->command)throw std::logic_error("Request-row access requires a closed command batch");
     if(!matrix.impl_||matrix.impl_->matrix.device!=impl_->device)
         throw std::invalid_argument("Request row belongs to another device or an empty matrix");
@@ -2477,6 +2478,7 @@ void MetalContext::ValidateCompletedRow(const MetalMatrix& matrix,size_t row) co
        row>(native.data.length-native.offset)/native.rowBytes||
        native.columns*sizeof(float)>native.data.length-native.offset-row*native.rowBytes)
         throw std::invalid_argument("Request row exceeds matrix storage bounds");
+    }
 }
 void MetalContext::ZeroRow(const MetalMatrix& matrix,size_t row) {
     @autoreleasepool {

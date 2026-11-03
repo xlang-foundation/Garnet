@@ -64,6 +64,16 @@ int main(){try{
     gpu.Begin();Rejected([&]{gpu.ReadRowPrefixGroups(cache,0,2,5,3,3);});
     Rejected([&]{gpu.WriteRowPrefixGroups(cache,0,2,5,3,3,prefix);});gpu.Abort();
     Need(gpu.Download(cache)==retained,"Rejected prefix operation mutated state");
-    std::cout<<"request-row padded-stride isolation, bounds, readiness, active-command rejection and reuse gates passed\n";
+    const auto beforeRelease=MetalContext::MemoryStats().allocated;
+    {
+        auto temporary=gpu.Upload(std::vector<float>(4*1024*1024,1.0f),4,1024*1024);
+        // Session row reset validates every owner before its pooled write.
+        // Standalone validation must not retain autoreleased buffer properties.
+        for(size_t row=0;row<4;++row)gpu.ValidateCompletedRow(temporary,row);
+    }
+    const auto afterRelease=MetalContext::MemoryStats().allocated;
+    std::cout<<"standalone_row_validation_release before="<<beforeRelease<<" after="<<afterRelease<<"\n";
+    Need(afterRelease<=beforeRelease+1024*1024,"Standalone row validation retained released Metal storage");
+    std::cout<<"request-row padded-stride isolation, bounds, readiness, active-command rejection, reuse and buffer release gates passed\n";
     return 0;
 }catch(const std::exception& error){std::cerr<<error.what()<<"\n";return 1;}}
