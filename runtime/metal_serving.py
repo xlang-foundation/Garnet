@@ -72,7 +72,11 @@ class Model:
             else:
                 from xModel.qwen38.vl_27b import model
             self.model_factory = model
-            self.decoder = model.create_decoder(checkpoint, self.config, self.capacity)
+            if self.xmodel == 'vl_27b':
+                self.decoder = model.create_decoder(checkpoint, self.config, self.capacity,
+                    linear_chunk=bool(profile.get('linearChunk', False)))
+            else:
+                self.decoder = model.create_decoder(checkpoint, self.config, self.capacity)
         else:
             if self.visual and self.text_config.get('hidden_size') == 2560:
                 raise ValueError('Qwen3.5-4B requires xmodelRoot xModel/qwen35/vl_4b')

@@ -752,11 +752,16 @@ kernel void kv_chunk_vector4(device const float* token [[buffer(0)]],device cons
     next[row*uint(p.oStride/4)+col]=latest<0?previous[row*uint(p.cStride/4)+col]:source[(row*chunk+uint(latest))*uint(p.tStride/4)+h*dim+d];
 }
 struct ChunkAttentionParams {ulong batch,chunk,heads,kvHeads,dim,capacity,qStride,kStride,vStride,kcStride,vcStride,sStride,aStride,gStride,oStride,gated;};
+#ifdef GARNET_COMPACT_ATTENTION_INDEX
+typedef char ChunkAttentionIndex;
+#else
+typedef int ChunkAttentionIndex;
+#endif
 kernel void attention_chunk(device const float* query [[buffer(0)]],device const float* key [[buffer(1)]],
     device const float* value [[buffer(2)]],device const float* keyCache [[buffer(3)]],device const float* valueCache [[buffer(4)]],
     device const float* slots [[buffer(5)]],device const float* active [[buffer(6)]],device const float* gate [[buffer(7)]],
     device float* output [[buffer(8)]],constant ChunkAttentionParams& p [[buffer(9)]],
-    threadgroup float* scratch [[threadgroup(0)]],threadgroup int* selected [[threadgroup(1)]],
+    threadgroup float* scratch [[threadgroup(0)]],threadgroup ChunkAttentionIndex* selected [[threadgroup(1)]],
     uint id [[threadgroup_position_in_grid]],uint tid [[thread_index_in_threadgroup]],
     uint lane [[thread_index_in_simdgroup]],uint simd [[simdgroup_index_in_threadgroup]]) {
     ulong flatRow=id/p.heads,head=id%p.heads,row=flatRow/p.chunk,token=flatRow%p.chunk,kv=head/(p.heads/p.kvHeads);
@@ -1282,6 +1287,9 @@ kernel void vision_op(device const float* a [[buffer(0)]],device const float* b 
         NSError* error=nil;
 #ifdef GARNET_METAL_ATTENTION_PREFIX
         source=[@"#define GARNET_ATTENTION_PREFIX 1\n" stringByAppendingString:source];
+#endif
+#ifdef GARNET_METAL_COMPACT_ATTENTION_INDEX
+        source=[@"#define GARNET_COMPACT_ATTENTION_INDEX 1\n" stringByAppendingString:source];
 #endif
 #ifdef GARNET_METAL_FUSED_VISION_CONTEXT
         source=[source stringByAppendingString:[NSString stringWithUTF8String:R"METAL(
@@ -2915,7 +2923,10 @@ void MetalContext::EncodeStateKernel(unsigned operation,const std::vector<MetalM
             const size_t width=(operation==1||operation==16||operation==8||operation==13)?128:32;
             if(pipeline.threadExecutionWidth!=32||pipeline.maxTotalThreadsPerThreadgroup<width)throw std::runtime_error("Parallel attention requires 32-lane SIMD groups");
             if(operation==8||operation==13)[encoder setThreadgroupMemoryLength:((capacity*sizeof(float)+15)&~size_t(15)) atIndex:0];
-            if(operation==13)[encoder setThreadgroupMemoryLength:((capacity*sizeof(int)+15)&~size_t(15)) atIndex:1];
+            if(operation==13) {
+                const size_t indexBytes=(capacity*kMetalAttentionIndexBytes+15)&~size_t(15);
+                [encoder setThreadgroupMemoryLength:indexBytes atIndex:1];
+            }
             [encoder dispatchThreadgroups:MTLSizeMake((operation==1||operation==16)?threads/fields[3]:threads,1,1) threadsPerThreadgroup:MTLSizeMake(width,1,1)];
         }
     } else [encoder dispatchThreads:MTLSizeMake(threads,1,1)
@@ -3145,7 +3156,11 @@ void MetalContext::EncodeKVChunk(const MetalMatrix& token,const MetalMatrix& cac
 }
 void MetalContext::EncodeAttentionChunk(const std::vector<MetalMatrix>& inputs,const MetalMatrix& output,
     size_t heads,size_t kvHeads,size_t dim,size_t capacity,size_t chunk,bool gated) {
-    if(inputs.size()!=8||!output.impl_||!chunk||chunk>kMetalPrefillChunkLimit||!capacity||capacity>2048||!kvHeads||heads%kvHeads)throw std::invalid_argument("Invalid chunk attention profile");
+    if(inputs.size()!=8||!output.impl_||!chunk||chunk>kMetalPrefillChunkLimit||chunk>127||!capacity||capacity>kMetalAttentionChunkCapacityLimit||!kvHeads||heads%kvHeads)throw std::invalid_argument("Invalid chunk attention profile");
+    const size_t scoresBytes=(capacity*sizeof(float)+15)&~size_t(15);
+    const size_t indexBytes=(capacity*kMetalAttentionIndexBytes+15)&~size_t(15);
+    if(scoresBytes+indexBytes+4*sizeof(float)+sizeof(int)>impl_->device.maxThreadgroupMemoryLength)
+        throw std::invalid_argument("Attention chunk scratch exceeds device threadgroup limit");
     for(auto& input:inputs)if(!input.impl_)throw std::invalid_argument("Missing chunk attention input");
     auto q=inputs[0].impl_->matrix,k=inputs[1].impl_->matrix,v=inputs[2].impl_->matrix,kc=inputs[3].impl_->matrix,vc=inputs[4].impl_->matrix,
         s=inputs[5].impl_->matrix,a=inputs[6].impl_->matrix,g=inputs[7].impl_->matrix,o=output.impl_->matrix;

@@ -1,0 +1,24 @@
+{
+  "status": "unqualified_4k_context_study",
+  "backend": "metal",
+  "checkpointFormat": "mlx_qwen35_affine_int4_g64_bf16",
+  "maxInputTokens": 3072,
+  "maxOutputTokens": 1024,
+  "prefillChunk": 8,
+  "linearChunk": true,
+  "batchSize": 1,
+  "requiredExtensions": [
+    "compact_attention_index",
+    "lazy_resident_defaults",
+    "resident_kv_inplace",
+    "linear_chunk_conv",
+    "linear_chunk_delta"
+  ],
+  "remainingGates": [
+    "learned-model 4K memory and numerical qualification",
+    "coding quality and exact baseline workload execution",
+    "continuous scheduling and hybrid prefix ownership",
+    "8K/16K and batch4 memory-safe profiles",
+    "multimodal runtime and grounding qualification"
+  ]
+}

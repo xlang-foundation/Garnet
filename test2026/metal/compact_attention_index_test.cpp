@@ -1,0 +1,69 @@
+// SPDX-License-Identifier: Apache-2.0
+// Independent FP64 softmax/contraction, including old-cache -1 and latest writes.
+#include "metal_context.h"
+#include <algorithm>
+#include <cmath>
+#include <iostream>
+#include <stdexcept>
+#include <vector>
+using namespace Garnet;
+static void Need(bool value,const char* message){if(!value)throw std::runtime_error(message);}
+static void Case(MetalContext& gpu,size_t batch,size_t chunk,size_t capacity,bool gated) {
+    const size_t heads=4,kvHeads=2,dim=8,rows=batch*chunk,qWidth=heads*dim,kvWidth=kvHeads*dim;
+    std::vector<float> q(rows*qWidth),k(rows*kvWidth),v(k.size()),kc(batch*kvHeads*capacity*dim),vc(kc.size()),gate(q.size()),slots(rows),active(rows,1);
+    auto fill=[](std::vector<float>& values,double phase){for(size_t i=0;i<values.size();++i)values[i]=float(std::sin(i*.131+phase)*.2);};
+    fill(q,.1);fill(k,.7);fill(v,1.1);fill(kc,2.1);fill(vc,3.2);fill(gate,4.3);
+    for(size_t row=0;row<batch;++row)for(size_t t=0;t<chunk;++t) {
+        // Duplicate/backward slots exercise latest-token selection; high slots
+        // ensure the compact index is not accidentally storing a KV position.
+        slots[row*chunk+t]=float(capacity-chunk-2+t-(t>=3?2:0));
+        if(t==1&&row==batch-1)active[row*chunk+t]=0;
+    }
+    std::vector<MetalMatrix> inputs={gpu.Upload(q,rows,qWidth),gpu.Upload(k,rows,kvWidth),gpu.Upload(v,rows,kvWidth),
+        gpu.Upload(kc,batch,kvHeads*capacity*dim),gpu.Upload(vc,batch,kvHeads*capacity*dim),
+        gpu.Upload(slots,batch,chunk),gpu.Upload(active,batch,chunk),gpu.Upload(gate,rows,qWidth)};
+    auto output=gpu.Allocate(rows,qWidth);
+    gpu.Begin();gpu.EncodeAttentionChunk(inputs,output,heads,kvHeads,dim,capacity,chunk,gated);gpu.SubmitAndWait();
+    const auto actual=gpu.Download(output);
+    double maximumError=0;
+    for(size_t row=0;row<batch;++row)for(size_t t=0;t<chunk;++t)for(size_t head=0;head<heads;++head) {
+        const size_t flat=row*chunk+t,kv=head/(heads/kvHeads);
+        if(!active[flat]) {
+            for(size_t d=0;d<dim;++d)Need(actual[flat*qWidth+head*dim+d]==0,"Inactive query row was not zero");
+            continue;
+        }
+        const size_t visible=size_t(slots[flat])+1;
+        std::vector<int> selected(visible,-1);std::vector<double> scores(visible);
+        for(size_t s=0;s<visible;++s) {
+            for(size_t prior=0;prior<=t;++prior)if(active[row*chunk+prior]&&slots[row*chunk+prior]==float(s))selected[s]=int(prior);
+            double dot=0;
+            for(size_t d=0;d<dim;++d) {
+                const auto key=selected[s]<0?kc[((row*kvHeads+kv)*capacity+s)*dim+d]:k[(row*chunk+size_t(selected[s]))*kvWidth+kv*dim+d];
+                dot+=double(q[flat*qWidth+head*dim+d])*key;
+            }
+            scores[s]=dot/std::sqrt(double(dim));
+        }
+        const double largest=*std::max_element(scores.begin(),scores.end());double sum=0;
+        for(auto& value:scores){value=std::exp(value-largest);sum+=value;}
+        for(size_t d=0;d<dim;++d) {
+            double expected=0;
+            for(size_t s=0;s<visible;++s) {
+                const auto value=selected[s]<0?vc[((row*kvHeads+kv)*capacity+s)*dim+d]:v[(row*chunk+size_t(selected[s]))*kvWidth+kv*dim+d];
+                expected+=scores[s]/sum*value;
+            }
+            const size_t index=flat*qWidth+head*dim+d;
+            if(gated)expected/=1+std::exp(-double(gate[index]));
+            const double error=std::abs(double(actual[index])-expected);maximumError=std::max(maximumError,error);
+            Need(std::isfinite(actual[index])&&error<=1e-5+2e-4*std::abs(expected),"Compact index changed attention semantics");
+        }
+    }
+    std::cout<<"compact_attention capacity="<<capacity<<" batch="<<batch<<" chunk="<<chunk<<" gated="<<gated<<" max_abs="<<maximumError<<"\n";
+}
+int main(){try{
+    MetalContext gpu;
+    Case(gpu,2,8,64,true);Case(gpu,2,8,4096,true);Case(gpu,1,64,4096,false);
+    bool rejected=false;auto out=gpu.Allocate(1,1);gpu.Begin();
+    try{gpu.EncodeAttentionChunk({},out,4,2,8,4097,8,true);}catch(const std::invalid_argument&){rejected=true;}
+    gpu.Abort();Need(rejected,"Unqualified attention capacity accepted");
+    std::cout<<"compact signed index, causal overwrite, inactive rows and 4K FP64 reference gates passed\n";return 0;
+}catch(const std::exception& error){std::cerr<<error.what()<<"\n";return 1;}}

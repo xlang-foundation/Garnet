@@ -172,6 +172,15 @@ public:
 #ifdef GARNET_METAL_REQUEST_ROWS
         info+="; request_row_reset";
 #endif
+#ifdef GARNET_METAL_COMPACT_ATTENTION_INDEX
+        info+="; compact_attention_index";
+#endif
+#ifdef GARNET_METAL_LINEAR_CHUNK_CONV
+        info+="; linear_chunk_conv";
+#endif
+#ifdef GARNET_METAL_LINEAR_CHUNK_DELTA
+        info+="; linear_chunk_delta";
+#endif
 #ifdef GARNET_METAL_BODY_SHAPE
         info+="; body_shape";
 #endif

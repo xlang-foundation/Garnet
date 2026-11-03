@@ -2,11 +2,12 @@
 """Exact Qwen3.8-27B VLM contract. Runtime admission requires separate GPU gates."""
 
 
-def create_decoder(checkpoint,config,capacity):
+def create_decoder(checkpoint,config,capacity,linear_chunk=False):
     """Bounded first Metal qualification profile; not general serving admission.
 
-    Batch4, long contexts and vision remain required subsequent gates. The small
-    initial capacity avoids the current flat FP32 state's full-capacity copies.
+    Capacity above512 requires the explicit chunk-recurrence and compact-index
+    extensions before allocation. Batch4, full-length 4K execution, longer
+    contexts and vision remain separate qualification gates.
     """
     validate_config(config)
     quant=config.get('quantization',{})
@@ -15,11 +16,17 @@ def create_decoder(checkpoint,config,capacity):
     text=config['text_config']
     if text.get('hidden_act')!='silu' or text.get('attention_bias') is not False:
         raise ValueError('Native Metal profile requires SiLU MLP and bias-free text projections')
-    if type(capacity) is not int or capacity<64 or capacity>512:
-        raise ValueError('Initial Qwen3.8 Metal correctness profile admits capacity64..512 only')
+    if type(capacity) is not int or capacity<64 or capacity>4096:
+        raise ValueError('Qwen3.8 Metal study requires capacity64..4096')
     import garnet
-    if 'mlx_qwen35_affine_int4_g64_bf16' not in garnet.backend_info():
+    backend=garnet.backend_info()
+    if 'mlx_qwen35_affine_int4_g64_bf16' not in backend:
         raise ValueError('Native Metal affine INT4 extension is required')
+    if capacity>512:
+        required=['compact_attention_index','lazy_resident_defaults','resident_kv_inplace',
+                  'linear_chunk_conv','linear_chunk_delta']
+        if not linear_chunk or any(flag not in backend for flag in required):
+            raise ValueError('Extended Metal context requires bounded chunk attention, shared resident state and chunk recurrence')
     from xModel.qwen35.vl_0_8b.metal_decoder import MetalDecoder
     return MetalDecoder(checkpoint,text,1,capacity,
                         required_checkpoint_format='mlx_qwen35_affine_int4_g64_bf16')

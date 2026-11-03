@@ -7,6 +7,13 @@
 #include <utility>
 #include <cstdint>
 namespace Garnet {
+#ifdef GARNET_METAL_COMPACT_ATTENTION_INDEX
+inline constexpr size_t kMetalAttentionChunkCapacityLimit=4096;
+inline constexpr size_t kMetalAttentionIndexBytes=1;
+#else
+inline constexpr size_t kMetalAttentionChunkCapacityLimit=2048;
+inline constexpr size_t kMetalAttentionIndexBytes=sizeof(int32_t);
+#endif
 #ifdef GARNET_METAL_QWEN35_EXTENDED_PREFILL
 inline constexpr size_t kMetalPrefillChunkLimit=80;
 inline constexpr size_t kMetalPrefillPackedHiddenLimit=80*1024;

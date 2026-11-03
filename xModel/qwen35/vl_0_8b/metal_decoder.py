@@ -106,7 +106,8 @@ class MetalDecoder(CPUDecoder):
 
     def _prefill_layer(self,hidden,state1,state2,positions,slots,active,config,idx,batch,chunk,capacity,kind):
         from .prefill_layer import PrefillLayer
-        return PrefillLayer(hidden,state1,state2,positions,slots,active,config,idx,batch,chunk,capacity,kind,parallel_attention=True,parallel_linear=self.linear_chunk)
+        limit=4096 if 'compact_attention_index' in garnet.backend_info() else 2048
+        return PrefillLayer(hidden,state1,state2,positions,slots,active,config,idx,batch,chunk,capacity,kind,parallel_attention=True,parallel_linear=self.linear_chunk,attention_capacity_limit=limit)
 
     def prefill_sequence(self,hidden_tokens,positions,predict=True):
         if self.session is not None:return self._resident_prefill(hidden_tokens,positions,predict)

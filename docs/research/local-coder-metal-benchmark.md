@@ -327,3 +327,24 @@ hardware-specific extension policy separate.
   `evidence/native-request-row-session-heads.log` and its persisted fixtures.
   This proves the row lifecycle primitive, not a serving scheduler or prefix
   cache integration. Both remain required work.
+- The capped active2 SGLang candidate passed repeated admission at external
+  concurrency4 for both short and 2K prompts. Its scheduler reported at most2
+  active requests; remaining clients queued. The full six-cell, three-cohort
+  campaign is now running alone at
+  `evidence/baseline-phase1/sglang-active2-cache512m`. Its frozen engine and
+  manifest retain the failed active4 attempts. Admission is not a completed
+  baseline, and this profile does not establish active4 support.
+- An opt-in compact attention index stores only the latest chunk-token index
+  in a signed byte, retaining the -1 old-cache sentinel and FP32 scores. The
+  4K attention scratch fits the device limit and is checked before encoding.
+  Independent FP64 attention tests cover 4K, duplicate/backward slots,
+  inactive rows and gated/ungated outputs. All10 context-build CTests pass;
+  evidence is `evidence/native-context-ctest.log`.
+- The learned 27B context4k smoke completed two reset-separated requests with
+  the same260-token frozen prompt and four output tokens. Both returned IDs
+  `[71093,12305,198,727]`; allocation was17,938,432,000 Metal bytes. The second
+  request took38.89s to first token including reset, with mean decode0.1384s.
+  See `evidence/native27b-context4k-smoke`. This proves bounded execution at
+  capacity4096, not a full4K sequence, output128 benchmark or coding quality.
+  The study profile remains unqualified. Continuous scheduling, hybrid prefix
+  snapshots, learned batch4 admission and multimodal execution remain pending.
