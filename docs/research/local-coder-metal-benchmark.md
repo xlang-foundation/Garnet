@@ -889,3 +889,36 @@ freezes the worker/profile/library, collects all eight tasks and closes the
 worker before separate sandbox evaluation. This remains coding qualification,
 not a throughput campaign. The guarded batch2/context4096 profile is the next
 admission attempt; unsupported memory admission will be retained as a failure.
+
+
+The concurrent coding gate passed8/8 at batch2/context-capacity4096/chunk8,
+prefix reuse disabled (`evidence/native27b-batch-quality1`). Eight clients queued
+against two native rows; the raw log contains1,132combined decode plans, eight
+distinct row epochs and repeated row refill. All complete generated sequences
+were byte-identical in token IDs to the frozen successful single-request native
+quality oracle (62..478output tokens). Native/frozen/HTTP accounting found zero
+issues (`input-output-audit2.json`); five CPU tamper checks reject absent
+combined plans, reused epochs, altered text, false cache counts and retained
+close allocations. Native subprocess exit was0 and final Metal allocation was
+720,896bytes. Ready allocation was17,793,024,000bytes versus the device's
+19,069,665,280recommended working set.
+
+Sandbox evaluation initially used Xcode's Python and failed infrastructure
+startup before candidate execution (`evaluation.json`). The identical evaluator
+and deny-default policy passed8/8 with the prepared interpreter
+(`evaluation2.json`); sandbox permissions were not widened. This qualifies the
+bounded coding suite with concurrent native serving at the allocated4K profile,
+not every4K-length execution or general coding quality. Long-input performance
+admission, repeated native campaigns and the2x speed/throughput targets remain
+required. The frozen reference campaigns remain unchanged and run no engines
+in parallel with Garnet.
+
+The next prefill candidate is an explicit hardware-gated native Metal4 MPP
+extension. Apple's [MPP programming guide](https://developer.apple.com/download/files/Metal-Performance-Primitives-Programming-Guide.pdf)
+describes tensor operations targeting M5 GPU neural accelerators. The installed
+MLX headers already contain a separate NAX quantized path using those APIs;
+Garnet's current Q4 path still uses its own SIMD-group matrix kernels. This is
+a concrete implementation difference to investigate, not a predicted speedup.
+Start with non-relaxed FP32 input/accumulation semantics, separate allocation/
+numerical gates and existing-hardware fallback. Do not enable relaxed precision
+or change the frozen comparators to manufacture a ratio.
