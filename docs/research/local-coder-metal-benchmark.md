@@ -763,3 +763,16 @@ the corrected test wraps fixture slots within capacity. Evidence:
 the study harness selects `prefill_mode=parallel` explicitly and keeps serial
 mode as the default. HTTP integration, hybrid prefix snapshots and the2x
 performance targets remain incomplete.
+
+
+The learned parallel-prefill gate passed in
+`evidence/native27b-parallel-batch4-study1`: the same four variable-length
+prompts and16-token oracles matched in both repeats, with true combined
+prefill and decode. The native head bank handled the shorter rows after they
+became inactive. Scheduler state drained completely, Metal allocation was
+18,306,416,640bytes, and close/quiescence returned to720,896bytes. The retained
+artifact/token/resource audit found zero issues. Observed prefill times were
+32.933s/20.335s and decode windows5.019s/5.289s. These are bounded correctness
+study timings, not matched campaign results or evidence for the2x target.
+The default-off feature is qualified only for this finite learned batch4 gate;
+full coding output, serving and hybrid token-prefix integration remain required.
