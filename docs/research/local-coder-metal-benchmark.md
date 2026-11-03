@@ -1,7 +1,9 @@
 # Local coding Metal qualification
 
 Status: vLLM phase1 collection complete (90 measured waves, 210 requests,
-three cleanly stopped cohorts); SGLang admission pending. Native INT4 package
+three cleanly stopped cohorts); five SGLang cells admitted, baseline next.
+SGLang 2K-input/batch4 failed Metal memory admission and is explicitly retained.
+Native INT4 package
 build, eight component tests, seven benchmark/evaluator tests and independent
 linear-attention/decoder references for batch1/2/4 pass. The INT4-disabled
 control package builds and all seven control component tests pass. Full-model Garnet,
@@ -265,3 +267,18 @@ hardware-specific extension policy separate.
   unsupported Darwin address-space/data limits are replaced by a parent-side
   sampled RSS guard. Build/test logs are retained under `evidence/native-*`
   and `evidence/benchmark-tool-tests.log`. SGLang batch4 admission is next.
+- SGLang stock overlap scheduling passed short-input batch4, but 2K-input
+  batch4 failed with Metal command-buffer OOM at both prefill512 and128.
+  The documented no-overlap candidate failed even the short wave with an
+  MPS/CPU device mismatch. All three attempts and server failures are preserved;
+  comparator runtime source was not changed. A subsequent stock-prefill512
+  admission completed short batch4 and 2K batches1/2 with exact token counts,
+  no cache hits and fully bracketed memory samples. Its process group exited
+  after TERM; SGLang's own cleanup killed its root (exit-9), with no driver
+  forced kill. Five supported performance cells are frozen in
+  `evidence/baseline-phase1/sglang-manifest.json`; the omitted 2K/batch4 cell is
+  listed explicitly as failed admission, not silently removed from the goal.
+- Admission auditing exposed a caller-filename assumption in the report tool.
+  It now reads the exact manifest embedded in frozen metadata and the campaign
+  fixture tests a descriptive manifest filename. The three accounting/campaign
+  tests pass. Audit also recognizes SGLang's periodic scheduler log format.

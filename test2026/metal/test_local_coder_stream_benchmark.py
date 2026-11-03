@@ -49,12 +49,12 @@ HTTPServer(('127.0.0.1',int(sys.argv[1])),Handler).serve_forever()
                             warmup_waves_per_cell=1, measured_waves_per_cell=1,
                             plans=[dict(id='fixture', cases='cases.json', workload='workload.json',
                                         cases_sha256=sha)])
-            (root/'manifest.json').write_text(json.dumps(manifest))
+            (root/'fixture-manifest.json').write_text(json.dumps(manifest))
             spec = dict(engine='synthetic_fixture_not_model', url='http://127.0.0.1:'+str(port),
                         argv=[sys.executable, str(server), str(port)], startup_observation_seconds=0)
             (root/'engine.json').write_text(json.dumps(spec))
             command = [sys.executable, str(Path(__file__).with_name('run_local_coder_baseline.py')),
-                       '--experiment-root', str(root), '--manifest', str(root/'manifest.json'),
+                       '--experiment-root', str(root), '--manifest', str(root/'fixture-manifest.json'),
                        '--engine-spec', str(root/'engine.json'), '--output', str(root/'out'),
                        '--cohorts', '2']
             result = subprocess.run(command, capture_output=True, text=True, timeout=45)

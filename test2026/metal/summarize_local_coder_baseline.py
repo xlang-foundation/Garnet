@@ -36,7 +36,9 @@ def paging(rows):
 
 
 def audit(root):
-    manifest = read(root/'frozen'/'manifest.json')
+    # The driver preserves caller filenames; metadata also embeds the exact
+    # frozen plan, including admission plans with descriptive filenames.
+    manifest = read(root/'frozen'/'metadata.json')['manifest']
     status = read(root/'status.json')
     report = dict(status=status, scope=manifest['scope'], cohorts=[], issues=[],
                   admission='Pending explicit review; this report makes no speedup claim')
@@ -53,9 +55,9 @@ def audit(root):
         if log_path.exists():
             log = re.sub(r'\x1b\[[0-9;]*m', '', log_path.read_text())
             cohort['cache_allocation_log_evidence'] = [line for line in log.splitlines()
-                if re.search(r'KV cache sized down|reporting .* KV budget|KV cache size:', line)]
-            running = [int(value) for value in re.findall(r'Running: (\d+) reqs', log)]
-            waiting = [int(value) for value in re.findall(r'Waiting: (\d+) reqs', log)]
+                if re.search(r'KV cache sized down|reporting .* KV budget|KV cache size:|MLX stub: initialized minimal pools|max_total_num_tokens=', line)]
+            running = [int(value) for value in re.findall(r'(?:Running:|#running-req:)\s*(\d+)', log)]
+            waiting = [int(value) for value in re.findall(r'(?:Waiting:|#queue-req:)\s*(\d+)', log)]
             cohort['periodic_log_max_running_requests'] = max(running, default=None)
             cohort['periodic_log_max_waiting_requests'] = max(waiting, default=None)
             cohort['scheduler_observation_scope'] = 'Periodic log samples can miss transitions; client concurrency is not proof of simultaneous decode'
