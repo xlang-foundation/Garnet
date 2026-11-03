@@ -13,11 +13,12 @@ class EngineGuardTest(unittest.TestCase):
 105 /build/bin/Cantor /build/bin/Cantor
 106 /env/bin/python /env/bin/python local_coder_batch_http.py --port 8129
 107 /build/xlang3 /build/xlang3 local_coder_batch_worker.py /profile.json
+108 /build/garnet_affine_int4_benchmark /build/garnet_affine_int4_benchmark 9 3
 '''
         commands = '\n'.join(' '.join(line.split()[:2]) for line in processes.splitlines() if line.strip())
         arguments = '\n'.join(line.split(None, 2)[0]+' '+line.split(None, 2)[2] for line in processes.splitlines() if line.strip())
         with patch('run_local_coder_baseline.subprocess.check_output', side_effect=[commands, arguments]):
-            self.assertEqual(len(engine_processes()), 7)
+            self.assertEqual(len(engine_processes()), 8)
 
     def test_unrelated_runtime_and_shell_diagnostics_are_ignored(self):
         processes = '''
