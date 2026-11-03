@@ -100,7 +100,8 @@ namespace Garnet
         bool CompletePrefill(
             std::uint64_t requestId,
             int firstTokenId,
-            KVSequenceAllocator& kvPool);
+            KVSequenceAllocator& kvPool,
+            bool finished = false);
         bool CompleteDecode(
             std::uint64_t requestId,
             int nextTokenId,

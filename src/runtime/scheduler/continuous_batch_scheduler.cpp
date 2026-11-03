@@ -174,19 +174,25 @@ namespace Garnet
     bool ContinuousBatchScheduler::CompletePrefill(
         std::uint64_t requestId,
         int firstTokenId,
-        KVSequenceAllocator& kvPool)
+        KVSequenceAllocator& kvPool,
+        bool finished)
     {
         auto found = m_requests.find(requestId);
-        if (found == m_requests.end() ||
+        if (firstTokenId < 0 || found == m_requests.end() ||
             found->second.stage != RequestStage::Prefill ||
             !kvPool.CommitLength(
                 requestId, found->second.request.promptTokens)) {
             return false;
         }
         State& state = found->second;
-        state.stage = RequestStage::Decode;
         state.nextTokenId = firstTokenId;
         state.generatedTokens = 1;
+        if (finished || state.request.maxNewTokens == 1) {
+            state.stage = RequestStage::Finished;
+            kvPool.Release(requestId);
+            return true;
+        }
+        state.stage = RequestStage::Decode;
         m_decode.push_back(requestId);
         return true;
     }
@@ -198,7 +204,7 @@ namespace Garnet
         KVSequenceAllocator& kvPool)
     {
         auto found = m_requests.find(requestId);
-        if (found == m_requests.end() ||
+        if (nextTokenId < 0 || found == m_requests.end() ||
             found->second.stage != RequestStage::Decode) {
             return false;
         }

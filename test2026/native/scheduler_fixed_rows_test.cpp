@@ -57,5 +57,21 @@ int main() {
     tick=scheduler.Schedule(storage);Check(tick.batches[0].requests.size()==4);
     Check(scheduler.Cancel(ids[1],storage)&&!scheduler.CompleteDecode(ids[1],0,false,storage));
     Check(!scheduler.CompleteDecode(ids[0],0,false,storage));
-    std::cout<<"portable_continuous_scheduler PASS CPU allocation interface, priority order, stable A/B/C/D rows, queued E refill and cancellation\n";
+    Check(!scheduler.CompleteDecode(ids[2],-1,false,storage));
+    tick=scheduler.Schedule(storage);
+    for(const auto& item:tick.batches[0].requests)if(item.id==ids[2])Check(item.generatedTokens==1);
+    FixedRows singleStorage;ContinuousBatchScheduler single(config);
+    GenerationRequest request;request.promptTokens=2;request.maxNewTokens=1;
+    auto one=single.Submit(request);Check(one!=0);
+    Check(single.Schedule(singleStorage).batches.size()==1);
+    Check(single.CompletePrefill(one,7,singleStorage));
+    Check(single.Stage(one)==RequestStage::Finished&&singleStorage.LogicalLength(one)==-1);
+    Check(single.Schedule(singleStorage).batches.empty()&&!single.CompleteDecode(one,8,false,singleStorage));
+    request.maxNewTokens=8;auto eos=single.Submit(request);
+    Check(single.Schedule(singleStorage).batches.size()==1);
+    Check(!single.CompletePrefill(eos,-1,singleStorage));
+    Check(single.Stage(eos)==RequestStage::Prefill);
+    Check(single.CompletePrefill(eos,9,singleStorage,true));
+    Check(single.Stage(eos)==RequestStage::Finished&&single.Schedule(singleStorage).batches.empty());
+    std::cout<<"portable_continuous_scheduler PASS stable rows, queued refill, cancellation, one-token budget, prefill EOS and invalid-token rejection\n";
 }
