@@ -579,3 +579,21 @@ CMake test `native_portable_continuous_scheduler` passes without CUDA
 attempt is retained separately. This tests scheduling and metadata placement,
 not actual Metal tensor execution or CUDA GPU regression. The Metal allocator
 callbacks and batch executor still need integration.
+
+The isolated width64 operator diagnostic completed both reset requests. Across
+them, 4,960 row64 MatMul dispatches accounted for23,795.217GPU ms, versus
+850.762ms for160 chunk-attention dispatches. Raw per-op records and the hashed
+summary are in `evidence/native27b-prefill64-op-profile1`. These submissions
+disable some fusion and deliberately wait between operations; their timings
+are diagnostic rather than normal serving latency. Q4 projection is the next
+prefill target rather than further chunk-width changes.
+
+`GARNET_METAL_AFFINE_TALL_TILES` is a default-off FP32 Q4 experiment. It reuses
+one unpacked B tile across32/64 activation rows instead of16, retaining the
+same per-output K accumulation order and existing rows1..4 decode kernels.
+Pipelines check SIMD width, thread count and static threadgroup memory against
+the device. All12 native tests pass in `native-talltiles-build`, split between
+the Q4 test and the other11 tests. Q4 coverage now includes33/63/65/127-row
+boundaries as well as actual5120/17408 inner dimensions and column tails
+(`native-talltiles-affine-ctest.log`, `native-talltiles-other-ctest.log`). Learned
+model correctness and performance remain separate required checks.

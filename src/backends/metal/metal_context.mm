@@ -2,6 +2,9 @@
 #include "metal_context.h"
 #ifdef GARNET_METAL_MLX_AFFINE_INT4
 #include "affine_int4_shader.h"
+#ifdef GARNET_METAL_AFFINE_TALL_TILES
+#include "affine_int4_tall_shader.h"
+#endif
 #include "../../model/affine_int4_codec.h"
 #endif
 #ifdef GARNET_METAL_PRIMARY_BF16_BLOCKS
@@ -202,6 +205,9 @@ struct MetalPipelines {
     id<MTLLibrary> affineInt4Library;
     std::array<id<MTLComputePipelineState>,4> affineInt4Decode{};
     id<MTLComputePipelineState> affineInt4Gemm;
+#ifdef GARNET_METAL_AFFINE_TALL_TILES
+    std::array<id<MTLComputePipelineState>,2> affineInt4Tall{};
+#endif
 #endif
 #ifdef GARNET_METAL_SERIAL_VISION_PREFETCH
     id<MTLLibrary> visionPrefetchLibrary;
@@ -1436,7 +1442,11 @@ kernel void bf16_native_dot_t128(device const float* a [[buffer(0)]],device cons
 #ifdef GARNET_METAL_MLX_AFFINE_INT4
         auto affineOptions=[MTLCompileOptions new];
         affineOptions.languageVersion=MTLLanguageVersion3_1;affineOptions.fastMathEnabled=NO;
-        auto affineLibrary=[impl_->device newLibraryWithSource:[NSString stringWithUTF8String:kAffineInt4Shader] options:affineOptions error:&error];
+        NSString* affineSource=[NSString stringWithUTF8String:kAffineInt4Shader];
+#ifdef GARNET_METAL_AFFINE_TALL_TILES
+        affineSource=[affineSource stringByAppendingString:[NSString stringWithUTF8String:kAffineInt4TallShader]];
+#endif
+        auto affineLibrary=[impl_->device newLibraryWithSource:affineSource options:affineOptions error:&error];
         if(!affineLibrary)throw std::runtime_error("Cannot compile affine INT4 kernels: "+std::string(error.localizedDescription.UTF8String));
         impl_->kernels->affineInt4Library=affineLibrary;
         for(uint32_t rows=1;rows<=4;++rows) {
@@ -1453,6 +1463,16 @@ kernel void bf16_native_dot_t128(device const float* a [[buffer(0)]],device cons
         if(!impl_->kernels->affineInt4Gemm||impl_->kernels->affineInt4Gemm.threadExecutionWidth!=32||
            impl_->kernels->affineInt4Gemm.maxTotalThreadsPerThreadgroup<128)
             throw std::runtime_error("Affine INT4 GEMM requires four 32-lane SIMD groups");
+#ifdef GARNET_METAL_AFFINE_TALL_TILES
+        for(size_t i=0;i<2;++i) {
+            NSString* name=i?@"affine_q4_gemm64":@"affine_q4_gemm32";
+            auto pipeline=[impl_->device newComputePipelineStateWithFunction:[affineLibrary newFunctionWithName:name] error:&error];
+            if(!pipeline||pipeline.threadExecutionWidth!=32||pipeline.maxTotalThreadsPerThreadgroup<128||
+               pipeline.staticThreadgroupMemoryLength>impl_->device.maxThreadgroupMemoryLength)
+                throw std::runtime_error("Affine INT4 tall tile exceeds device execution/scratch limits");
+            impl_->kernels->affineInt4Tall[i]=pipeline;
+        }
+#endif
 #endif
         impl_->kernels->argmax=[impl_->device newComputePipelineStateWithFunction:[library newFunctionWithName:@"argmax_rows"] error:&error];
 #ifdef GARNET_METAL_SERIAL_VISION_PREFETCH
@@ -1691,11 +1711,16 @@ void MetalContext::EncodeAffineInt4MatMul(const MetalMatrix& input,const MetalAf
         Params params{a.rows,a.columns,o.columns,a.rowBytes/4,o.rowBytes/4};
         auto encoder=[impl_->command computeCommandEncoder];
         if(!encoder)throw std::runtime_error("Cannot encode affine INT4 projection");
-        [encoder setComputePipelineState:a.rows<=4?impl_->kernels->affineInt4Decode[a.rows-1]:impl_->kernels->affineInt4Gemm];
+        size_t tileRows=16;
+        auto pipeline=a.rows<=4?impl_->kernels->affineInt4Decode[a.rows-1]:impl_->kernels->affineInt4Gemm;
+#ifdef GARNET_METAL_AFFINE_TALL_TILES
+        if(a.rows>=32){tileRows=a.rows>32?64:32;pipeline=impl_->kernels->affineInt4Tall[tileRows==64?1:0];}
+#endif
+        [encoder setComputePipelineState:pipeline];
         [encoder setBuffer:a.data offset:a.offset atIndex:0];[encoder setBuffer:w->packed offset:0 atIndex:1];
         [encoder setBuffer:w->scales offset:0 atIndex:2];[encoder setBuffer:w->biases offset:0 atIndex:3];
         [encoder setBuffer:o.data offset:o.offset atIndex:4];[encoder setBytes:&params length:sizeof(params) atIndex:5];
-        const auto groups=a.rows<=4?MTLSizeMake((o.columns+3)/4,1,1):MTLSizeMake((o.columns+31)/32,(a.rows+15)/16,1);
+        const auto groups=a.rows<=4?MTLSizeMake((o.columns+3)/4,1,1):MTLSizeMake((o.columns+31)/32,(a.rows+tileRows-1)/tileRows,1);
         [encoder dispatchThreadgroups:groups threadsPerThreadgroup:MTLSizeMake(128,1,1)];[encoder endEncoding];
         output.impl_->ready=false;output.impl_->pending=true;
         if(impl_->pendingOutputs.insert(output.impl_.get()).second)impl_->outputs.push_back(output.impl_);
