@@ -25,11 +25,26 @@ def digest(path):
 
 
 def engine_processes():
-    raw = subprocess.check_output(['ps', '-axo', 'pid=,comm='], text=True)
-    return [line.strip() for line in raw.splitlines()
-            if any(key in line for key in ('VLLM::', 'sglang::',
-                   'vllm-metal/.venv-vllm-metal/bin/', 'sglang-env/bin/python'))
-            or line.rstrip().endswith('/bin/Cantor')]
+    raw = subprocess.check_output(['ps', '-axo', 'pid=,comm=,args='], text=True)
+    result = []
+    for line in raw.splitlines():
+        fields = line.strip().split(None, 2)
+        if len(fields) < 2:
+            continue
+        command, arguments = fields[1], fields[2] if len(fields) > 2 else ''
+        reference = any(key in command for key in ('VLLM::', 'sglang::',
+            'vllm-metal/.venv-vllm-metal/bin/', 'sglang-env/bin/python'))
+        # A native bridge may be starting before its model worker exists.
+        # Inspect arguments only for actual Python/XLang executables, so shell
+        # diagnostics mentioning these names do not count as inference engines.
+        executable = Path(command).name.lower()
+        native = ((executable.startswith('python') or executable == 'xlang3') and
+                  ('local_coder_native_http.py' in arguments or
+                   'local_coder_native_worker.py' in arguments or
+                   (executable == 'xlang3' and 'Qwen3.8-27B' in arguments)))
+        if reference or native or command.endswith('/bin/Cantor'):
+            result.append(line.strip())
+    return result
 
 
 def group_members(group):
