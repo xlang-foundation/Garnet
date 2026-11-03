@@ -2,7 +2,7 @@
 
 Arguments: native-package directory, Garnet source, model directory, frozen
 single-request workload.json, output JSON, optional output-token count (<=32),
-capacity and chunk-recurrence flag. This is not the matched performance run.
+capacity, chunk-recurrence flag and prefill chunk. This is not the matched performance run.
 """
 import sys,json,time
 sys.path.insert(0,sys.argv[1]);sys.path.insert(0,sys.argv[2])
@@ -17,17 +17,18 @@ tokens=workload['requests'][0]['token_ids']
 limit=int(sys.argv[6]) if len(sys.argv)>6 else 4
 capacity=int(sys.argv[7]) if len(sys.argv)>7 else 512
 linear_chunk=bool(int(sys.argv[8])) if len(sys.argv)>8 else False
+prefill_chunk=int(sys.argv[9]) if len(sys.argv)>9 else 8
 if limit<1 or limit>32 or len(tokens)+limit>capacity:
     raise ValueError('Bounded correctness smoke exceeds its initial profile')
 decoder=None;tokenizer=None
 report=dict(status='running',scope='Native 27B correctness bring-up; not matched performance admission',
-    backend=garnet.backend_info(),capacity=capacity,prefill_chunk=8,linear_chunk=linear_chunk,batch=1,
+    backend=garnet.backend_info(),capacity=capacity,prefill_chunk=prefill_chunk,linear_chunk=linear_chunk,batch=1,
     prompt_tokens=len(tokens),requested_output_tokens=limit,runs=[])
 began=time.monotonic()
 try:
     report['memory_before']=json.loads(garnet.memory_stats_json())
     decoder=model.create_decoder(folder+'/model.safetensors.index.json',config,capacity,linear_chunk=linear_chunk)
-    decoder.enable_prefill(8,'shared',linear_chunk)
+    decoder.enable_prefill(prefill_chunk,'shared',linear_chunk)
     tokenizer=garnet.tokenizer();tokenizer.open(folder)
     report['initialization_seconds']=time.monotonic()-began
     report['memory_after_decoder']=json.loads(garnet.memory_stats_json())

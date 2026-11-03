@@ -14,7 +14,10 @@ inline constexpr size_t kMetalAttentionIndexBytes=1;
 inline constexpr size_t kMetalAttentionChunkCapacityLimit=2048;
 inline constexpr size_t kMetalAttentionIndexBytes=sizeof(int32_t);
 #endif
-#ifdef GARNET_METAL_QWEN35_EXTENDED_PREFILL
+#ifdef GARNET_METAL_QWEN38_WIDE_PREFILL
+inline constexpr size_t kMetalPrefillChunkLimit=64;
+inline constexpr size_t kMetalPrefillPackedHiddenLimit=64*5120;
+#elif defined(GARNET_METAL_QWEN35_EXTENDED_PREFILL)
 inline constexpr size_t kMetalPrefillChunkLimit=80;
 inline constexpr size_t kMetalPrefillPackedHiddenLimit=80*1024;
 #else

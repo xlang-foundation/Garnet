@@ -420,7 +420,10 @@ hardware-specific extension policy separate.
   reports zero issues, with evidence at `evidence/sglang27b-quality1` and its
   evaluation/audit reports. The auditor now accepts either explicit cohort
   count field while rejecting missing, nonpositive or conflicting counts;
-  its three campaign/accounting tests pass. vLLM quality collection is live.
+  its three campaign/accounting tests pass. vLLM subsequently passed all eight
+  identical contracts; its quality accounting audit also reports zero issues
+  (`evidence/vllm27b-quality1`, evaluation and audit). Neither quality collection
+  changes the frozen performance baselines.
 - Native request-row prefix group copies now retain only the selected dense KV
   tokens, respecting request/group boundaries and physical row stride. The
   restored destination must first be cleared; recurrent/convolution state
@@ -429,3 +432,26 @@ hardware-specific extension policy separate.
   rejection without mutation. All10 CTests pass in `native-prefixrows-build`,
   retained at `evidence/native-prefixrows-ctest.log`. These primitives are not
   yet connected to native token-history matching or the serving scheduler.
+
+### Bounded 27B wider-prefill study
+
+`GARNET_METAL_QWEN38_WIDE_PREFILL` is opt-in and defaults off. It permits
+16/32/64-token graph experiments with batch1 resident shared projections and
+chunk recurrence. It keeps one padded graph shape for tails and retires proven
+unused graph defaults after the session owns initialized private state. The
+normal workspace allocator rejects allocations above the device recommended
+working set minus256MiB, conservatively charging the next allocation at64KiB
+alignment. This guards these workspace allocations, not every allocation in
+the process or system free memory.
+
+The first probes rejected all three widths while compiling graphs. Early
+default retirement then allowed width16; widths32/64 still rejected before
+inference. Both failures remain retained, without increasing the memory limit.
+The successful width16 probe generated the same four golden tokens on both
+reset requests. Loaded TTFT excluding reset was24.426s then12.426s; completion
+Metal allocation was18,321,817,600bytes against a19,069,665,280byte recommended
+working set. These are short correctness probes, not matched benchmarks or
+proof of the2x target. Evidence is in `evidence/native27b-wideprefill-study1`
+and `study2`. All10 CTests and independent mixed batch4 row lifecycle checks
+with/without a prediction head passed after the retirement change
+(`native-wideprefill-ctest2.log`, `native-wideprefill-row-session.log`).

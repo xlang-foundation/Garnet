@@ -69,6 +69,9 @@ public:
     X::Value Run(X::Value graphs,X::Value hidden,X::Value positions,
         X::Value slots,X::Value active,int64_t predictionToken);
     void Reset();
+#ifdef GARNET_METAL_QWEN38_WIDE_PREFILL
+    bool PreparePrefill(X::Value graph,int64_t layer);
+#endif
 #ifdef GARNET_METAL_REQUEST_ROWS
     void ResetRow(int64_t row);
     size_t LastRowResetBytes() const {return rowResetBytes_;}
@@ -121,6 +124,9 @@ public:
         APISET().AddFunc<2>("build",&MetalDecoderSession::Build);
         APISET().AddFunc<6>("run",&MetalDecoderSession::Run);
         APISET().AddFunc<0>("reset",&MetalDecoderSession::Reset);
+#ifdef GARNET_METAL_QWEN38_WIDE_PREFILL
+        APISET().AddFunc<2>("prepare_prefill",&MetalDecoderSession::PreparePrefill);
+#endif
 #ifdef GARNET_METAL_REQUEST_ROWS
         APISET().AddFunc<1>("reset_row",&MetalDecoderSession::ResetRow);
         APISET().AddProp("row_reset_bytes",&MetalDecoderSession::LastRowResetBytes);

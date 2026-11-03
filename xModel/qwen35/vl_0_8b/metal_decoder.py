@@ -79,6 +79,10 @@ class MetalDecoder(CPUDecoder):
         return (2,4,8,16,32,64)
 
     def _prefill_chunk_size(self,remaining,maximum):
+        # A second tail-shape graph family duplicates large hybrid defaults.
+        # Keep one bounded shape for the 27B study and mask its final padding.
+        if self.config['hidden_size']==5120 and 'qwen38_wide_prefill' in garnet.backend_info():
+            return maximum
         chunk=maximum
         if maximum>16 and remaining<maximum:
             chunk=2
@@ -88,6 +92,10 @@ class MetalDecoder(CPUDecoder):
     def enable_prefill(self,chunk=16,projection='shared',linear_chunk=False):
         if chunk not in self._prefill_profiles():raise ValueError('Unsupported Metal prefill chunk')
         if projection not in ('shared','mps'):raise ValueError('Prefill projection must be shared or mps')
+        if self.config['hidden_size']==5120 and chunk>8:
+            if ('qwen38_wide_prefill' not in garnet.backend_info() or projection!='shared' or
+                not linear_chunk or self.session is None or self.batch!=1):
+                raise ValueError('27B wide prefill requires its bounded native extension, batch1 and resident shared chunk recurrence')
         wide_batch=self.batch==2 and chunk==80 and 'qwen35_wide_batch_prefill' in garnet.backend_info()
         if chunk in (40,80) and (projection!='shared' or not linear_chunk or self.session is None or (self.batch*chunk>128 and not wide_batch) or self.config['hidden_size']>1024):
             raise ValueError('Extended Qwen3.5 chunks require resident shared chunk recurrence, an admitted row count, and hidden size <= 1024')
@@ -165,7 +173,10 @@ class MetalDecoder(CPUDecoder):
                 def forward(hidden,state1,state2,position,slots,active):
                     return self._prefill_layer(hidden,state1,state2,position,slots,active,config,idx,batch,chunk,capacity,kind)
                 graph=garnet.compiled_graph()
-                try:self._build_prefill_graph(graph,forward(*symbols),symbols,layer['graph'])
+                try:
+                    self._build_prefill_graph(graph,forward(*symbols),symbols,layer['graph'])
+                    if self.config['hidden_size']==5120 and 'qwen38_wide_prefill' in garnet.backend_info():
+                        self.session.prepare_prefill(graph,idx)
                 except:graph.close();raise
                 self.prefill_graphs[key]=graph;self.prefill_compile_ms+=graph.compile_ms
             graphs.append(graph)

@@ -178,9 +178,41 @@ bool MetalDecoderSession::Build(X::Value graphs,X::Value head) {
         for(const auto& state:states_)for(size_t k=0;k<2;++k)maximum=std::max(maximum,state.rows*state.columns[k]);
         resetZeroSource_.assign(maximum,0.0f);reusedSourceBytes_=maximum*sizeof(float);
 #endif
-        ResetUnlocked();return true;
+        ResetUnlocked();
+#ifdef GARNET_METAL_QWEN38_WIDE_PREFILL
+        // Private resident state is initialized. Retire only the defaults
+        // proved unused by resident execution before compiling wider graphs.
+        for(size_t i=0;i<states_.size();++i) {
+            auto graph=Graph(owners_[i],Host());
+            std::lock_guard<std::mutex> graphLock(graph->mutex_);
+            graph->RetireResidentDefaults();
+        }
+#endif
+        return true;
     }catch(...){Clear();throw;}
 }
+#ifdef GARNET_METAL_QWEN38_WIDE_PREFILL
+bool MetalDecoderSession::PreparePrefill(X::Value value,int64_t layer) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    if(!gpu_||poisoned_||layer<0||uint64_t(layer)>=states_.size())
+        throw std::invalid_argument("Prefill preparation requires a ready resident layer");
+    auto graph=Graph(value,Host()),original=Graph(owners_[size_t(layer)],Host());
+    std::vector<MetalCompiledGraph*> ordered={graph,original};
+    std::sort(ordered.begin(),ordered.end(),std::less<MetalCompiledGraph*>());
+    ordered.erase(std::unique(ordered.begin(),ordered.end()),ordered.end());
+    std::vector<std::unique_lock<std::mutex>> locks;
+    for(auto owner:ordered)locks.emplace_back(owner->mutex_);
+    const auto& state=states_[size_t(layer)];
+    if(!original->ready_||original->inputShapes_.empty()||!graph->ready_||graph->outputParts_.size()!=3||
+       graph->inputShapes_.size()<3||graph->inputShapes_[0].size()!=3||
+       graph->inputShapes_[0][0]!=int64_t(state.rows)||
+       graph->inputShapes_[0].back()!=original->inputShapes_[0].back()||
+       graph->inputShapes_[0][1]<1||graph->inputShapes_[0][1]>int64_t(kMetalPrefillChunkLimit)||
+       graph->inputShapes_[1]!=state.shape[0]||graph->inputShapes_[2]!=state.shape[1])
+        throw std::invalid_argument("Prefill preparation does not match resident layer state");
+    graph->RetireResidentDefaults();return true;
+}
+#endif
 X::Value MetalDecoderSession::Run(X::Value graphs,X::Value hidden,X::Value positions,
     X::Value slots,X::Value active,int64_t predictionToken) {
     std::lock_guard<std::mutex> lock(mutex_);

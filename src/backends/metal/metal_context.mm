@@ -1623,6 +1623,17 @@ MetalMatrix MetalContext::Allocate(size_t rows,size_t columns) {
     if(stride>std::numeric_limits<size_t>::max()/rows)
         throw std::overflow_error("Metal matrix storage overflow");
     if(rows*stride>impl_->device.maxBufferLength)throw std::runtime_error("Metal matrix exceeds device buffer limit");
+#ifdef GARNET_METAL_QWEN38_WIDE_PREFILL
+    // Only this opt-in study uses a live workspace envelope. Shared compressed
+    // weights already exist before wider prefill graphs allocate their slots.
+    // Keep a 256MiB driver margin and conservatively round the next allocation.
+    constexpr size_t reserve=256*1024*1024,alignment=64*1024;
+    const size_t bytes=rows*stride,used=impl_->device.currentAllocatedSize,limit=impl_->device.recommendedMaxWorkingSetSize;
+    if(bytes>SIZE_MAX-(alignment-1))throw std::overflow_error("Wide prefill allocation charge overflow");
+    const size_t charge=(bytes+alignment-1)&~(alignment-1);
+    if(limit<=reserve||used>limit-reserve||charge>limit-reserve-used)
+        throw std::runtime_error("27B wide prefill workspace exceeds recommended working set minus256MiB");
+#endif
     id<MTLBuffer> buffer=[impl_->device newBufferWithLength:rows*stride options:MTLResourceStorageModeShared];
     if(!buffer)throw std::runtime_error("Metal matrix allocation failed");
     auto descriptor=[MPSMatrixDescriptor matrixDescriptorWithRows:rows columns:columns

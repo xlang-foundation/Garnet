@@ -114,9 +114,10 @@ int main() {
         CodecGolden();
         VisionPatchGolden();
         MetalContext gpu;
-        for(auto shape:std::array<std::array<size_t,3>,16>{{
+        for(auto shape:std::array<std::array<size_t,3>,20>{{
             {1,37,128},{2,48,5120},{4,37,17408},{4,257,512},{8,64,128},{9,37,128},
             {5,1,64},{5,31,128},{8,37,5120},{8,33,17408},
+            {16,37,5120},{32,33,17408},{64,37,5120},{64,33,17408},
             {16,80,64},{17,37,128},{32,48,512},{64,257,128},{128,64,64},{512,48,128}}})
             Case(gpu,shape[0],shape[1],shape[2]);
         std::vector<uint32_t> packed(64*64/8,0);

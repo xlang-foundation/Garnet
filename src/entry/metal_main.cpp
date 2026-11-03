@@ -154,6 +154,9 @@ public:
 #ifdef GARNET_METAL_QWEN35_4B_WIDE_PREFILL
         info+="; qwen35_4b_wide_prefill";
 #endif
+#ifdef GARNET_METAL_QWEN38_WIDE_PREFILL
+        info+="; qwen38_wide_prefill; bounded_prefill_workspace";
+#endif
 #ifdef GARNET_METAL_CACHED_MATRIX_METADATA
     info += " cached_matrix_metadata";
 #endif

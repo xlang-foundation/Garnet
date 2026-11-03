@@ -1,6 +1,7 @@
 """Single active native Metal request, exact rendered prompt, real token events.
 
-XLang3 arguments: native build, source root, checkpoint folder. This study
+XLang3 arguments: native build, source root, checkpoint folder, optional
+prefill chunk (8 or experimental16). This study
 worker deliberately provides no continuous batching or prefix cache claim.
 """
 import sys,json,os,time
@@ -30,15 +31,17 @@ def requests():
         if len(pending)>2*1024*1024:raise ValueError('Native request frame too large')
 
 folder=sys.argv[3]
+prefill_chunk=int(sys.argv[4]) if len(sys.argv)>4 else 8
+if prefill_chunk not in (8,16):raise ValueError('Text study admits only chunk8 or experimental16')
 with open(folder+'/config.json') as stream:config=json.load(stream)
 decoder=None
 try:
     decoder=model.create_decoder(folder+'/model.safetensors.index.json',config,4096,linear_chunk=True)
-    decoder.enable_prefill(8,'shared',True)
+    decoder.enable_prefill(prefill_chunk,'shared',True)
     tokenizer=garnet.tokenizer();tokenizer.open(folder)
     stops=[tokenizer.token_id('<|im_end|>'),tokenizer.token_id('<|endoftext|>')]
     emit(dict(event='ready',backend=garnet.backend_info(),active_requests=1,capacity=4096,
-              prefill_chunk=8,prefix_cache=False,multimodal=False,
+              prefill_chunk=prefill_chunk,prefix_cache=False,multimodal=False,
               memory=json.loads(garnet.memory_stats_json())))
     for request in requests():
         key=request['id'];body=request['body']

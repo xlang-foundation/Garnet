@@ -61,6 +61,8 @@ class Model:
         self.checkpoint = checkpoint
         cls = MetalDecoder if self.visual else DenseMetalDecoder
         packed_limit = 64 * 2560 if self.visual and self.xmodel == 'vl_4b' and 'qwen35_4b_wide_prefill' in garnet.backend_info() else 65536
+        if self.visual and self.xmodel=='vl_27b' and 'qwen38_wide_prefill' in garnet.backend_info():
+            packed_limit=64*5120
         if self.visual and self.prefill_chunk * self.text_config['hidden_size'] > packed_limit:
             raise ValueError('Metal prefill chunk times hidden size exceeds the packed width limit')
         self.model_factory = None
