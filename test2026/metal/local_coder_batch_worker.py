@@ -34,6 +34,9 @@ def main():
         tile=profile.get('mpp_tile_k',32)
         if type(tile) is not int or tile not in (32,64,128) or 'mpp_affine_tile_k='+str(tile) not in garnet.backend_info():
             raise ValueError('Frozen profile requires its explicit MPP reduction tile')
+        relaxed=profile.get('mpp_relaxed',False)
+        if type(relaxed) is not bool or 'mpp_affine_relaxed='+str(int(relaxed)) not in garnet.backend_info():
+            raise ValueError('Frozen profile requires its explicit MPP tensor precision mode')
     width=config['text_config']['hidden_size'];vocab=config['text_config']['vocab_size']
     incoming=queue.Queue(maxsize=16);shutdown=threading.Event();input_failure=[]
     decoder=None;policy=None;jobs={};keys=set()

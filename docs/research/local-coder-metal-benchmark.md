@@ -920,8 +920,9 @@ MLX headers already contain a separate NAX quantized path using those APIs;
 Garnet's current Q4 path still uses its own SIMD-group matrix kernels. This is
 a concrete implementation difference to investigate, not a predicted speedup.
 Start with non-relaxed FP32 input/accumulation semantics, separate allocation/
-numerical gates and existing-hardware fallback. Do not enable relaxed precision
-or change the frozen comparators to manufacture a ratio.
+numerical gates and existing-hardware fallback. Any relaxed-precision experiment needs its own explicit profile, unchanged
+numerical and coding gates, and preserved control results. Frozen comparators
+must remain unchanged.
 
 
 `GARNET_METAL_MPP_AFFINE_FP32` is a new default-off native prefill candidate.
@@ -1023,3 +1024,27 @@ small-row decode (`mpp-bf16-k64-ctest.log`, `mpp-bf16-k128-ctest.log` and retain
 expanded test logs). Operator timing is next; no serving profile is enabled.
 The reusable projection collector freezes binaries/flags/source and blocks any
 other inference process before each strictly sequential fresh-process run.
+
+
+The K-tile comparison completed all three sequential fresh-process cohorts for
+base, tall, BF16 K32/K64/K128 across21 shapes
+(`evidence/affine-mpp-ktile-comparison1`). Audits confirm dtype, actual MPP route
+and compiled K tile. K64 gave1.15..1.38x GPU speed ratios versus tall at64 rows,
+but only0.86..0.94x at8/16 rows. K128 regressed several larger shapes as well.
+These results keep both wider-K strict candidates disabled in serving.
+
+A separate `GARNET_METAL_MPP_AFFINE_RELAXED` experiment is now explicit and
+default-off, allowed only with the BF16-operand candidate. The installed MLX
+NAX implementation sets the tensor API's relaxed-precision descriptor flag;
+this motivates testing the implementation difference, not assuming a speedup
+or silently changing the qualified control. Native backend metadata, frozen
+profiles and per-cell records identify this mode; mismatched modes reject
+before model loading. Ordinary Metal compile math remains safe, operand types
+remain explicit, and accumulator/output storage remains FP32.
+
+The relaxed BF16 K64 candidate passed the same24 independent projection cases
+and12 CTests without changing numerical tolerances
+(`mpp-bf16-relaxed-k64-ctest.log` and expanded log). This is not learned coding
+qualification. An isolated timing comparison is next. The audit also now checks
+frozen collector hashes and rejects tampered tile/precision metadata; seven
+CPU tamper cases pass against the archived K-tile comparison.

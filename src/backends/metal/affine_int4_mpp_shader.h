@@ -14,6 +14,9 @@ using Operand=float;
 #ifndef GARNET_MPP_K
 #define GARNET_MPP_K 32
 #endif
+#ifndef GARNET_MPP_RELAXED
+#define GARNET_MPP_RELAXED 0
+#endif
 constant constexpr uint BK=GARNET_MPP_K;
 struct MPPQ4Params {ulong rows,inner,columns,aStride,oStride;};
 kernel void affine_q4_mpp(device const float* input [[buffer(0)]],
@@ -22,12 +25,12 @@ kernel void affine_q4_mpp(device const float* input [[buffer(0)]],
  constant MPPQ4Params& p [[buffer(5)]],uint2 group [[threadgroup_position_in_grid]],
  uint tid [[thread_index_in_threadgroup]]) {
     // Dequantize one bounded tile, never a whole projection/checkpoint.
-    // Operand type is an explicit build profile, accumulation is FP32 and
-    // relaxed precision is always off.
+    // Operand type and tensor precision mode are explicit build profiles;
+    // accumulator storage and output remain FP32.
     threadgroup Operand aTile[32*BK],bTile[BK*33];
     auto a=tensor(aTile,extents<int,BK,32>{},array<int,2>{1,int(BK)});
     auto b=tensor(bTile,extents<int,32,BK>{},array<int,2>{1,33});
-    constexpr auto descriptor=matmul2d_descriptor(32,32,BK,false,false,false,
+    constexpr auto descriptor=matmul2d_descriptor(32,32,BK,false,false,GARNET_MPP_RELAXED!=0,
         matmul2d_descriptor::mode::multiply_accumulate);
     matmul2d<descriptor,execution_simdgroups<4>> multiply;
     auto accumulator=multiply.get_destination_cooperative_tensor<decltype(a),decltype(b),float>();

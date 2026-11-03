@@ -9,6 +9,7 @@ def summarize(root):
     order=manifest['variant_order'];cohorts=manifest['cohorts']
     if [(run['cohort'],run['variant']) for run in status['runs']]!=[(cohort,variant) for cohort in range(1,cohorts+1) for variant in order]:issues.append('Cohort/order differs from manifest')
     if digest(root/'benchmark-source.cpp')!=manifest['source_sha256']:issues.append('Frozen source hash differs')
+    if 'runner_sha256' in manifest and digest(root/'runner-source.py')!=manifest['runner_sha256']:issues.append('Frozen collector hash differs')
     expected={(m,n,k) for m in (1,2,4,8,16,32,64) for n,k in ((5120,5120),(17408,5120),(5120,17408))}
     metadata={}
     for variant in order:
@@ -30,6 +31,7 @@ def summarize(root):
                 if not math.isfinite(row['sample_max_abs']) or row['sample_max_abs']<0:issues.append('Invalid numerical diagnostic')
                 wants_mpp=bool(meta and meta[0]['mpp_available'] and key[0]>4)
                 wanted_dtype=meta[0].get('operand_dtype','float32') if wants_mpp else 'float32'
+                if row.get('relaxed_precision',False)!=(meta[0].get('relaxed_precision',False) if wants_mpp else False):issues.append('Per-cell precision mode differs from actual route')
                 if row.get('operand_dtype','float32')!=wanted_dtype:issues.append('Per-cell operand type differs from actual route')
                 if row['mpp_dispatches_per_call']!=int(wants_mpp):issues.append('MPP dispatch evidence differs')
                 cells.setdefault(key,[]).append(dict(cohort=cohort,gpu_ms=statistics.median(row['gpu_ms']),wall_ms=statistics.median(row['wall_ms']),sample_max_abs=row['sample_max_abs']))
@@ -41,6 +43,8 @@ def summarize(root):
         tile_values={item.get('mpp_tile_k',32 if item['mpp_available'] else 0) for item in metadata[variant]}
         cache_tile=next((int(line.split('=',1)[1]) for line in cache.splitlines() if line.startswith('GARNET_METAL_MPP_AFFINE_TILE_K:STRING=')),32)
         if len(tile_values)!=1 or (meta and meta[0]['mpp_available'] and tile_values!={cache_tile}):issues.append(variant+': reduction tile metadata differs from build')
+        relaxed_values={item.get('relaxed_precision',False) for item in metadata[variant]}
+        if len(relaxed_values)!=1 or (meta and meta[0]['mpp_available'] and relaxed_values!={('GARNET_METAL_MPP_AFFINE_RELAXED:BOOL=ON' in cache)}):issues.append(variant+': tensor precision mode differs from build')
         data[variant]=cells
     for variant in manifest.get('required_mpp_variants',['mpp'] if 'mpp' in metadata else []):
         if not all(item['mpp_available'] for item in metadata[variant]):issues.append(variant+': MPP candidate was not available')
