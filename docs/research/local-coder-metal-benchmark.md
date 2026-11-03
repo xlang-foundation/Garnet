@@ -493,3 +493,12 @@ CTests and the independent mixed batch4 row test passed, including standalone
 rehydration, private-state isolation and subsequent resident reuse, with and
 without a head (`native-retiredkv-ctest.log`, `native-retiredkv-row-session.log`).
 Learned model probes remain a separate qualification gate.
+
+The retirement experiment subsequently passed both reset requests and golden
+tokens at widths16 and32. Width16 retained17,784,946,688Metal bytes,512MiB less
+than its previous build; width32 retained18,551,848,960bytes. Warm smoke TTFT
+was13.560s/13.178s respectively, which does not establish a speedup between
+these widths. Width64 still failed the workspace guard before inference.
+All raw successes and failures remain in `evidence/native27b-retiredkv-study1`.
+Width32 now has an explicit experimental worker option requiring the retirement
+extension; coding and longer-request checks remain necessary before admission.

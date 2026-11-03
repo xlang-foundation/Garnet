@@ -1,7 +1,7 @@
 """Single active native Metal request, exact rendered prompt, real token events.
 
 XLang3 arguments: native build, source root, checkpoint folder, optional
-prefill chunk (8 or experimental16). This study
+prefill chunk (8 or experimental16/32). This study
 worker deliberately provides no continuous batching or prefix cache claim.
 """
 import sys,json,os,time
@@ -32,7 +32,9 @@ def requests():
 
 folder=sys.argv[3]
 prefill_chunk=int(sys.argv[4]) if len(sys.argv)>4 else 8
-if prefill_chunk not in (8,16):raise ValueError('Text study admits only chunk8 or experimental16')
+if prefill_chunk not in (8,16,32):raise ValueError('Text study admits only chunk8 or experimental16/32')
+if prefill_chunk==32 and 'retired_inplace_defaults' not in garnet.backend_info():
+    raise ValueError('Chunk32 text study requires its memory retirement extension')
 with open(folder+'/config.json') as stream:config=json.load(stream)
 decoder=None
 try:
