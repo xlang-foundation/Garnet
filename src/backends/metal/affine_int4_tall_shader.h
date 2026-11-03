@@ -53,8 +53,9 @@ kernel void NAME(device const float* a [[buffer(0)]],device const uint* packed [
  device float* out [[buffer(4)]],constant Q4Params& p [[buffer(5)]], \
  uint2 group [[threadgroup_position_in_grid]],uint tid [[thread_index_in_threadgroup]], \
  uint simd [[simdgroup_index_in_threadgroup]]) { \
- threadgroup float atile[M*32],btile[32*33],result[M*32]; \
- affine_q4_tall<M>(a,packed,scales,biases,out,p,group,tid,simd,atile,btile,result); \
+ threadgroup float workspace[M*32],btile[32*33]; \
+ /* Final K-loop barrier ends all A reads before this storage becomes output. */ \
+ affine_q4_tall<M>(a,packed,scales,biases,out,p,group,tid,simd,workspace,btile,workspace); \
 }
 Q4_TALL_ENTRY(affine_q4_gemm32,32)
 Q4_TALL_ENTRY(affine_q4_gemm64,64)

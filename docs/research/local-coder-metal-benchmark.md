@@ -597,3 +597,18 @@ the Q4 test and the other11 tests. Q4 coverage now includes33/63/65/127-row
 boundaries as well as actual5120/17408 inner dimensions and column tails
 (`native-talltiles-affine-ctest.log`, `native-talltiles-other-ctest.log`). Learned
 model correctness and performance remain separate required checks.
+
+The first tall-tile learned diagnostic preserved both golden token sequences,
+but its4,960 row64 MatMul dispatches took25,616.176GPU ms versus23,795.217ms
+in the earlier diagnostic. It is not a speedup or an admitted optimization.
+Evidence: `evidence/native27b-talltiles-op-profile1` and its hashed summary.
+The next revision aliases activation and final-result threadgroup storage
+across their disjoint phases. The final K-loop barrier precedes all result
+stores. This reduces static scratch without changing arithmetic; all12 CTests
+pass (`native-talltiles-reuse-ctest.log`). Learned timing still needs checking.
+
+The portable scheduler now completes a one-token budget at prefill instead of
+scheduling an unwanted second token. Its prefill completion API also accepts
+an explicit finished flag for EOS, and negative output tokens reject before
+changing request progress. The CPU regression covers all three cases along
+with row refill (`portable-scheduler-budget-ctest.log`).
