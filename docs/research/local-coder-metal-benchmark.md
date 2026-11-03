@@ -534,3 +534,27 @@ build passes without raising the guard. Evidence:
 `evidence/native27b-sharedscratch-study1`. This remains short-output correctness
 evidence, not proof of coding quality or a performance improvement. The worker
 admits an explicit experimental64 option only with both native memory features.
+
+The width64 scratch-sharing worker subsequently passed all8 frozen sandbox
+coding contracts without truncation, and the native/HTTP token audit found zero
+issues (`evidence/native27b-prefill64-quality1`). Its worker exited before any
+subsequent native build or GPU test.
+
+`GARNET_METAL_CONTINUOUS_ROWS` is a default-off native row-ownership extension,
+requiring request-row reset. `claim_request_row(request)` returns a stable
+physical row and process-unique epoch; `release_request_row(row,epoch)` clears
+and releases only that current owner. Duplicate/full claims reject without
+replacing live ownership. Late releases cannot clear a replacement or a rebuilt
+session. Once managed row mode is entered, execution rejects active unowned
+rows before changing private state. A full reset cancels all leases and returns
+to the existing unmanaged study contract.
+
+All11 CTests pass in `native-leasedrows-build`. Independent mixed linear/full
+batch4 tests with/without a prediction head cover A-to-E refill, B/C/D isolation,
+stale release, unowned-row rejection and reset. Scratch sharing and legacy
+rehydration still pass. Evidence: `native-leasedrows-ctest.log`,
+`native-leasedrows-row-session.log`, `native-leasedrows-sharedscratch.log`.
+This provides native state ownership for the scheduler adapter; it is not yet
+an integrated continuous scheduler or learned27B batch admission. Existing
+`ContinuousBatchScheduler` policy still needs its paged-cache plans bound to
+these fixed Metal rows and hybrid state.

@@ -180,6 +180,9 @@ public:
 #endif
 #ifdef GARNET_METAL_REQUEST_ROWS
         info+="; request_row_reset";
+#ifdef GARNET_METAL_CONTINUOUS_ROWS
+        info+="; native_request_row_leases";
+#endif
 #endif
 #ifdef GARNET_METAL_COMPACT_ATTENTION_INDEX
         info+="; compact_attention_index";

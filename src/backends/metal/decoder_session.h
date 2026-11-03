@@ -3,6 +3,9 @@
 #include "compiled_graph.h"
 #include <array>
 #include <map>
+#ifdef GARNET_METAL_CONTINUOUS_ROWS
+#include "../../runtime/scheduler/request_row_leases.h"
+#endif
 namespace Garnet {
 // One synchronous request context. Graph owners are retained; request state is
 // private to this session, including when graphs are reused by another session.
@@ -58,6 +61,10 @@ class MetalDecoderSession {
 #endif
     double inferenceMs_=0,prepareMs_=0,encodeMs_=0,gpuMs_=0,waitMs_=0;
     std::mutex mutex_;
+#ifdef GARNET_METAL_CONTINUOUS_ROWS
+    std::unique_ptr<RequestRowLeases> requestRows_;
+    bool managedRows_=false;
+#endif
 #ifdef GARNET_METAL_DENSE_PREFIX_CACHE
     struct PrefixSnapshot {size_t tokens=0,bytes=0;uint64_t lastUse=0;std::vector<std::array<std::vector<float>,2>> layers;};
     std::map<int64_t,PrefixSnapshot> prefixCache_;
@@ -67,6 +74,9 @@ class MetalDecoderSession {
 #endif
     void Clear();
     void ResetUnlocked();
+#ifdef GARNET_METAL_REQUEST_ROWS
+    void ResetRowUnlocked(int64_t row);
+#endif
 public:
     bool Build(X::Value graphs,X::Value head);
     X::Value Run(X::Value graphs,X::Value hidden,X::Value positions,
@@ -78,6 +88,10 @@ public:
 #ifdef GARNET_METAL_REQUEST_ROWS
     void ResetRow(int64_t row);
     size_t LastRowResetBytes() const {return rowResetBytes_;}
+#endif
+#ifdef GARNET_METAL_CONTINUOUS_ROWS
+    X::Value ClaimRequestRow(int64_t request);
+    bool ReleaseRequestRow(int64_t row,int64_t epoch);
 #endif
     int64_t CapturePrefix(int64_t tokens);
     int64_t RestorePrefix(int64_t id);
@@ -133,6 +147,10 @@ public:
 #ifdef GARNET_METAL_REQUEST_ROWS
         APISET().AddFunc<1>("reset_row",&MetalDecoderSession::ResetRow);
         APISET().AddProp("row_reset_bytes",&MetalDecoderSession::LastRowResetBytes);
+#endif
+#ifdef GARNET_METAL_CONTINUOUS_ROWS
+        APISET().AddFunc<1>("claim_request_row",&MetalDecoderSession::ClaimRequestRow);
+        APISET().AddFunc<2>("release_request_row",&MetalDecoderSession::ReleaseRequestRow);
 #endif
         APISET().AddFunc<1>("capture_prefix",&MetalDecoderSession::CapturePrefix);
         APISET().AddFunc<1>("restore_prefix",&MetalDecoderSession::RestorePrefix);

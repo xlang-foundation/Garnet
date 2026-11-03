@@ -21,6 +21,9 @@ X::Value TensorValue(X3PackageHost* host,MetalContext& gpu,const MetalMatrix& ma
 }
 }
 void MetalDecoderSession::Clear() {
+#ifdef GARNET_METAL_CONTINUOUS_ROWS
+    requestRows_.reset();managedRows_=false;
+#endif
 #ifdef GARNET_METAL_SHARED_PREFILL_SCRATCH
     prefillScratch_.reset();
 #endif
@@ -44,6 +47,9 @@ void MetalDecoderSession::Clear() {
 }
 void MetalDecoderSession::Close() {std::lock_guard<std::mutex> lock(mutex_);Clear();}
 void MetalDecoderSession::ResetUnlocked() {
+#ifdef GARNET_METAL_CONTINUOUS_ROWS
+    if(requestRows_)requestRows_->Clear();managedRows_=false;
+#endif
 #ifdef GARNET_METAL_REQUEST_ROWS
     predictionInitialized_=false;rowResetBytes_=0;
 #endif
@@ -56,6 +62,9 @@ void MetalDecoderSession::ResetUnlocked() {
     joinedPrefillPairs_=0;
     constantHeadDispatches_=0;singleCoderHeadDispatches_=0;residualNormDispatches_=0;packedPrefillNormDispatches_=0;globalHalfAlphaDispatches_=0;wideBatchPrefillDispatches_=0;interleavedBodyDispatches_=0;coalescedBlockDispatches_=0;mlpGraphDispatches_=0;joinedGlobalMlpBlocks_=0;
     if(!gpu_)throw std::logic_error("Metal session is closed");
+#if defined(GARNET_METAL_CONTINUOUS_ROWS) && !defined(GARNET_METAL_DIRTY_PREFIX_RESET)
+    poisoned_=true;
+#endif
     dirtyPrefixResetBytes_=dirtyPrefixResetStates_=dirtyPrefixResetFallbackStates_=0;
 #ifdef GARNET_METAL_DIRTY_PREFIX_RESET
     const bool forceFull=poisoned_;poisoned_=true;
@@ -103,6 +112,9 @@ void MetalDecoderSession::Reset() {std::lock_guard<std::mutex> lock(mutex_);Rese
 #ifdef GARNET_METAL_REQUEST_ROWS
 void MetalDecoderSession::ResetRow(int64_t row) {
     std::lock_guard<std::mutex> lock(mutex_);
+    ResetRowUnlocked(row);
+}
+void MetalDecoderSession::ResetRowUnlocked(int64_t row) {
     if(!gpu_||poisoned_||states_.empty())throw std::logic_error("Request-row reset requires a ready session; use full reset after failure");
     if(row<0||uint64_t(row)>=states_[0].rows)throw std::invalid_argument("Request-row reset index out of bounds");
     std::vector<MetalMatrix> matrices;
@@ -134,6 +146,27 @@ void MetalDecoderSession::ResetRow(int64_t row) {
     poisoned_=true;
     for(const auto& matrix:matrices)gpu_->ZeroRow(matrix,size_t(row));
     rowResetBytes_=bytes;poisoned_=false;
+}
+#endif
+#ifdef GARNET_METAL_CONTINUOUS_ROWS
+X::Value MetalDecoderSession::ClaimRequestRow(int64_t request) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    if(!gpu_||poisoned_||!requestRows_||request<=0)
+        throw std::invalid_argument("Native row claim requires a ready session and positive request identity");
+    const auto lease=requestRows_->Claim(uint64_t(request));
+    try {
+        auto result=X::Value::List(Host());
+        result.Append(X::Value(int64_t(lease.row)));result.Append(X::Value(int64_t(lease.epoch)));
+        ResetRowUnlocked(int64_t(lease.row));managedRows_=true;return result;
+    }
+    catch(...) {requestRows_->Release(lease.row,lease.epoch);poisoned_=true;throw;}
+}
+bool MetalDecoderSession::ReleaseRequestRow(int64_t row,int64_t epoch) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    if(!gpu_||poisoned_||!requestRows_)throw std::logic_error("Native row release requires a ready session");
+    if(row<0||epoch<=0||!requestRows_->Matches(size_t(row),uint64_t(epoch)))return false;
+    ResetRowUnlocked(row);
+    return requestRows_->Release(size_t(row),uint64_t(epoch));
 }
 #endif
 bool MetalDecoderSession::Build(X::Value graphs,X::Value head) {
@@ -183,6 +216,9 @@ bool MetalDecoderSession::Build(X::Value graphs,X::Value head) {
         size_t maximum=0;
         for(const auto& state:states_)for(size_t k=0;k<2;++k)maximum=std::max(maximum,state.rows*state.columns[k]);
         resetZeroSource_.assign(maximum,0.0f);reusedSourceBytes_=maximum*sizeof(float);
+#endif
+#ifdef GARNET_METAL_CONTINUOUS_ROWS
+        requestRows_=std::make_unique<RequestRowLeases>(states_[0].rows);
 #endif
         ResetUnlocked();
 #ifdef GARNET_METAL_QWEN38_WIDE_PREFILL
@@ -271,6 +307,10 @@ X::Value MetalDecoderSession::Run(X::Value graphs,X::Value hidden,X::Value posit
         const size_t count=states_[0].rows*chunk;
         for(size_t i=0;i<count;++i)if(!std::isfinite(data[i])||(data[i]!=0&&data[i]!=1))
             throw std::invalid_argument("Invalid Metal session active flags");
+#ifdef GARNET_METAL_CONTINUOUS_ROWS
+        if(managedRows_)for(size_t i=0;i<count;++i)if(data[i]!=0&&!requestRows_->Owned(i/chunk))
+            throw std::invalid_argument("Active Metal row has no native request lease");
+#endif
     }
 #ifdef GARNET_METAL_DIRTY_PREFIX_RESET
     // Host controls were validated above. Mark before submission so a failed

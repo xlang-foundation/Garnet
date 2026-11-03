@@ -29,10 +29,26 @@ try:
         def head_forward(hidden):return hidden * T.binary_op('add') * hidden
         head=garnet.compiled_graph();head.build(head_forward(head_symbol),[head_symbol],f['checkpoint'])
     session.build(graphs,head)
+    managed='native_request_row_leases' in garnet.backend_info();leases=[]
+    if managed:
+        for request in range(batch):
+            lease=session.claim_request_row(request+1);assert lease[0]==request;leases.append(lease)
+        for request in (0,1,batch+1):
+            rejected=False
+            try:session.claim_request_row(request)
+            except Exception:rejected=True
+            assert rejected
     for step in f['steps']:
         if step['reset_row']>=0:
             saved=snapshot();hidden_saved=session.hidden().tolist();row=step['reset_row']
-            session.reset_row(row);actual=snapshot()
+            if managed:
+                old=leases[row]
+                assert session.release_request_row(row,old[1])
+                leases[row]=session.claim_request_row(batch+1);assert leases[row][0]==row
+                current=snapshot()
+                assert not session.release_request_row(row,old[1]) and snapshot()==current
+            else:session.reset_row(row)
+            actual=snapshot()
             for layer in range(2):
                 for part in range(2):
                     columns=len(saved[layer][part])//batch
@@ -56,6 +72,20 @@ try:
         try:session.reset_row(row)
         except Exception:rejected=True
         assert rejected and snapshot()==saved
+    if managed:
+        old=leases[3]
+        assert session.release_request_row(3,old[1])
+        saved=snapshot();step=f['steps'][-1]
+        hidden=tensor.tensor(step['hidden'],shape=[batch,width],dtype=tensor.float32)
+        positions=tensor.tensor(step['positions'],shape=[batch,3],dtype=tensor.float32)
+        slots=tensor.tensor(step['slots'],shape=[batch],dtype=tensor.float32)
+        active=tensor.tensor([1.0]*batch,shape=[batch],dtype=tensor.float32)
+        rejected=False
+        try:session.run(graphs,hidden,positions,slots,active,0 if f['with_head'] else -1)
+        except Exception:rejected=True
+        assert rejected and snapshot()==saved
+        session.reset();assert not session.release_request_row(0,leases[0][1]);saved=snapshot()
+        print('native_request_row_leases PASS A-to-E refill, stable B/C/D, stale cancellation and unowned-row rejection',flush=True)
     if 'retired_inplace_defaults' in garnet.backend_info():
         # The optimized session borrows no default KV output storage. Standalone
         # graph.run must rehydrate its defaults and leave private rows untouched.
