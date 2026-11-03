@@ -2473,6 +2473,38 @@ void MetalContext::WriteRow(const MetalMatrix& matrix,size_t row,const std::vect
                     values.data(),values.size()*sizeof(float));
     }
 }
+std::vector<float> MetalContext::ReadRowPrefixGroups(const MetalMatrix& matrix,size_t row,
+    size_t groups,size_t capacity,size_t width,size_t tokens) const {
+    @autoreleasepool {
+        ValidateCompletedRow(matrix,row);
+        const auto native=matrix.impl_->matrix;
+        if(!groups||!capacity||!width||!tokens||tokens>capacity||capacity>SIZE_MAX/width||
+           groups>SIZE_MAX/(capacity*width)||groups*capacity*width!=native.columns)
+            throw std::invalid_argument("Request-row prefix capture layout/bounds mismatch");
+        std::vector<float> values(groups*tokens*width);
+        const auto* source=static_cast<const char*>(native.data.contents)+native.offset+row*native.rowBytes;
+        for(size_t group=0;group<groups;++group)
+            std::memcpy(values.data()+group*tokens*width,source+group*capacity*width*sizeof(float),tokens*width*sizeof(float));
+        if(!std::all_of(values.begin(),values.end(),[](float value){return std::isfinite(value);}))
+            throw std::runtime_error("Cannot capture nonfinite request-row prefix");
+        return values;
+    }
+}
+void MetalContext::WriteRowPrefixGroups(const MetalMatrix& matrix,size_t row,
+    size_t groups,size_t capacity,size_t width,size_t tokens,const std::vector<float>& values) {
+    @autoreleasepool {
+        ValidateCompletedRow(matrix,row);
+        const auto native=matrix.impl_->matrix;
+        if(!groups||!capacity||!width||!tokens||tokens>capacity||capacity>SIZE_MAX/width||
+           groups>SIZE_MAX/(capacity*width)||groups*capacity*width!=native.columns||
+           values.size()!=groups*tokens*width||
+           !std::all_of(values.begin(),values.end(),[](float value){return std::isfinite(value);}))
+            throw std::invalid_argument("Request-row prefix restore requires exact finite layout");
+        auto* destination=static_cast<char*>(native.data.contents)+native.offset+row*native.rowBytes;
+        for(size_t group=0;group<groups;++group)
+            std::memcpy(destination+group*capacity*width*sizeof(float),values.data()+group*tokens*width,tokens*width*sizeof(float));
+    }
+}
 #endif
 void MetalContext::Zero(const MetalMatrix& matrix) {
 #ifdef GARNET_METAL_LAZY_RESIDENT_DEFAULTS

@@ -414,3 +414,18 @@ hardware-specific extension policy separate.
   256px study, not simultaneous-residency or general multimodal serving
   admission. `create_metal_vision_study` is explicit; the general vision factory
   remains closed pending serving integration and broader qualification.
+- SGLang now passes the same eight frozen coding contracts at the same1024-token
+  budget. Its separate quality-only collection uses one request per task and
+  no warmups; the performance baseline is unchanged. Accounting/memory audit
+  reports zero issues, with evidence at `evidence/sglang27b-quality1` and its
+  evaluation/audit reports. The auditor now accepts either explicit cohort
+  count field while rejecting missing, nonpositive or conflicting counts;
+  its three campaign/accounting tests pass. vLLM quality collection is live.
+- Native request-row prefix group copies now retain only the selected dense KV
+  tokens, respecting request/group boundaries and physical row stride. The
+  restored destination must first be cleared; recurrent/convolution state
+  still requires complete snapshots at the same boundary. Tests cover cross-row
+  restore, empty future slots, invalid extents/overflow, nonfinite payloads and
+  rejection without mutation. All10 CTests pass in `native-prefixrows-build`,
+  retained at `evidence/native-prefixrows-ctest.log`. These primitives are not
+  yet connected to native token-history matching or the serving scheduler.

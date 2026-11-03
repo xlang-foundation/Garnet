@@ -77,6 +77,19 @@ HTTPServer(('127.0.0.1',int(sys.argv[1])),Handler).serve_forever()
             for cohort in report['cohorts']:
                 self.assertEqual(len(cohort['cells'][0]['waves']), 1)
                 self.assertEqual(cohort['cells'][0]['waves'][0]['generated_tokens'], [3])
+            # Quality-only collection declares its explicit count as cohorts.
+            # Audit it without rewriting any actual collected campaign.
+            metadata_path = root/'out/frozen/metadata.json'
+            metadata = json.loads(metadata_path.read_text())
+            metadata['manifest']['cohorts'] = metadata['manifest'].pop('required_fresh_process_cohorts')
+            metadata_path.write_text(json.dumps(metadata))
+            self.assertEqual(len(audit(root/'out')['cohorts']), 2)
+            metadata['manifest']['required_fresh_process_cohorts'] = 3
+            metadata_path.write_text(json.dumps(metadata))
+            with self.assertRaises(ValueError):
+                audit(root/'out')
+            metadata['manifest']['required_fresh_process_cohorts'] = 2
+            metadata_path.write_text(json.dumps(metadata))
             (root/'out/cohort-2/fixture-measured-0/summary.json').unlink()
             self.assertTrue(any('Missing measured wave 0' in issue for issue in audit(root/'out')['issues']))
 

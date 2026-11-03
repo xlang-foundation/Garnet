@@ -42,7 +42,11 @@ def audit(root):
     status = read(root/'status.json')
     report = dict(status=status, scope=manifest['scope'], cohorts=[], issues=[],
                   admission='Pending explicit review; this report makes no speedup claim')
-    required = manifest['required_fresh_process_cohorts']
+    required = manifest.get('required_fresh_process_cohorts', manifest.get('cohorts'))
+    if type(required) is not int or required < 1:
+        raise ValueError('Frozen manifest must declare a positive cohort count')
+    if 'cohorts' in manifest and manifest['cohorts'] != required:
+        raise ValueError('Frozen manifest declares conflicting cohort counts')
     if status['status'] != 'completed_collection_not_automatic_qualification':
         report['issues'].append('Campaign is not complete')
     for number in range(1, required+1):

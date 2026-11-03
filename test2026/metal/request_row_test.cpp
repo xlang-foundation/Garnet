@@ -42,6 +42,28 @@ int main(){try{
     Need(gpu.Download(matrix)==saved,"Rejected active-command reset mutated state");
     gpu.Update(matrix,values);gpu.ZeroRow(matrix,0);actual=gpu.Download(matrix);
     for(size_t i=0;i<actual.size();++i)Need(actual[i]==(i<37?0:values[i]),"Row reuse/recovery leaked state");
+    std::vector<float> kv(4*2*5*3);
+    for(size_t i=0;i<kv.size();++i)kv[i]=float(i+1);
+    auto cache=gpu.Upload(kv,4,30);
+    const auto prefix=gpu.ReadRowPrefixGroups(cache,1,2,5,3,3);
+    Need(prefix.size()==18,"Prefix retained full-capacity state");
+    for(size_t group=0;group<2;++group)for(size_t i=0;i<9;++i)
+        Need(prefix[group*9+i]==kv[30+group*15+i],"Prefix capture mixed requests/groups");
+    gpu.ZeroRow(cache,3);gpu.WriteRowPrefixGroups(cache,3,2,5,3,3,prefix);
+    actual=gpu.Download(cache);
+    for(size_t row=0;row<4;++row)for(size_t group=0;group<2;++group)for(size_t i=0;i<15;++i)
+        Need(actual[row*30+group*15+i]==(row==3?(i<9?prefix[group*9+i]:0):kv[row*30+group*15+i]),
+             "Prefix restore leaked state or modified another request");
+    const auto retained=actual;
+    Rejected([&]{gpu.ReadRowPrefixGroups(cache,4,2,5,3,3);});
+    Rejected([&]{gpu.ReadRowPrefixGroups(cache,0,2,5,3,6);});
+    Rejected([&]{gpu.ReadRowPrefixGroups(cache,0,SIZE_MAX,5,3,3);});
+    Rejected([&]{gpu.WriteRowPrefixGroups(cache,0,2,5,3,3,std::vector<float>(17,1));});
+    auto badPrefix=prefix;badPrefix.back()=std::numeric_limits<float>::quiet_NaN();
+    Rejected([&]{gpu.WriteRowPrefixGroups(cache,0,2,5,3,3,badPrefix);});
+    gpu.Begin();Rejected([&]{gpu.ReadRowPrefixGroups(cache,0,2,5,3,3);});
+    Rejected([&]{gpu.WriteRowPrefixGroups(cache,0,2,5,3,3,prefix);});gpu.Abort();
+    Need(gpu.Download(cache)==retained,"Rejected prefix operation mutated state");
     std::cout<<"request-row padded-stride isolation, bounds, readiness, active-command rejection and reuse gates passed\n";
     return 0;
 }catch(const std::exception& error){std::cerr<<error.what()<<"\n";return 1;}}

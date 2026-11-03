@@ -125,6 +125,11 @@ public:
     void ZeroRow(const MetalMatrix&,size_t row);
     std::vector<float> ReadRow(const MetalMatrix&,size_t row) const;
     void WriteRow(const MetalMatrix&,size_t row,const std::vector<float>&);
+    // Compact one request's dense KV prefix. Recurrent/convolution state must
+    // use complete ReadRow snapshots at the same boundary. Caller clears the
+    // destination row before installing a prefix, so future slots stay empty.
+    std::vector<float> ReadRowPrefixGroups(const MetalMatrix&,size_t row,size_t groups,size_t capacity,size_t width,size_t tokens) const;
+    void WriteRowPrefixGroups(const MetalMatrix&,size_t row,size_t groups,size_t capacity,size_t width,size_t tokens,const std::vector<float>&);
 #endif
     MetalBF16Weight UploadBF16(const void* data,size_t bytes,size_t rows,size_t columns,bool floatPrefill=false,bool visionPrefill=false);
     bool PrepareScreenedHead(const MetalBF16Weight&);
