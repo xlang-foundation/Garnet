@@ -74,6 +74,9 @@ class MetalDecoderSession {
 #endif
     void Clear();
     void ResetUnlocked();
+    X::Value RunUnlocked(X::Value graphs,X::Value hidden,X::Value positions,
+        X::Value slots,X::Value active,int64_t predictionToken,
+        const std::vector<uint64_t>* epochs=nullptr);
 #ifdef GARNET_METAL_REQUEST_ROWS
     void ResetRowUnlocked(int64_t row);
 #endif
@@ -92,6 +95,8 @@ public:
 #ifdef GARNET_METAL_CONTINUOUS_ROWS
     X::Value ClaimRequestRow(int64_t request);
     bool ReleaseRequestRow(int64_t row,int64_t epoch);
+    X::Value RunLeased(X::Value graphs,X::Value hidden,X::Value positions,
+        X::Value slots,X::Value active,int64_t predictionToken,X::Value epochs);
 #endif
     int64_t CapturePrefix(int64_t tokens);
     int64_t RestorePrefix(int64_t id);
@@ -151,6 +156,7 @@ public:
 #ifdef GARNET_METAL_CONTINUOUS_ROWS
         APISET().AddFunc<1>("claim_request_row",&MetalDecoderSession::ClaimRequestRow);
         APISET().AddFunc<2>("release_request_row",&MetalDecoderSession::ReleaseRequestRow);
+        APISET().AddFunc<7>("run_leased",&MetalDecoderSession::RunLeased);
 #endif
         APISET().AddFunc<1>("capture_prefix",&MetalDecoderSession::CapturePrefix);
         APISET().AddFunc<1>("restore_prefix",&MetalDecoderSession::RestorePrefix);

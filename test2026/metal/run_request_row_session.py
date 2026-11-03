@@ -38,7 +38,7 @@ try:
             try:session.claim_request_row(request)
             except Exception:rejected=True
             assert rejected
-    for step in f['steps']:
+    for step_index,step in enumerate(f['steps']):
         if step['reset_row']>=0:
             saved=snapshot();hidden_saved=session.hidden().tolist();row=step['reset_row']
             if managed:
@@ -60,7 +60,22 @@ try:
         positions=tensor.tensor(step['positions'],shape=[batch,3],dtype=tensor.float32)
         slots=tensor.tensor(step['slots'],shape=[batch],dtype=tensor.float32)
         active=tensor.tensor(step['active'],shape=[batch],dtype=tensor.float32)
-        predicted=session.run(graphs,hidden,positions,slots,active,0 if f['with_head'] else -1)
+        if managed:
+            epochs=[lease[1] for lease in leases]
+            if step_index==0:
+                missing=[value for value in epochs];missing[0]=0
+                saved=snapshot();rejected=False
+                try:session.run_leased(graphs,hidden,positions,slots,active,0 if f['with_head'] else -1,missing)
+                except Exception:rejected=True
+                assert rejected and snapshot()==saved
+            if step['reset_row']>=0:
+                stale=[value for value in epochs];stale[step['reset_row']]=old[1]
+                saved=snapshot();rejected=False
+                try:session.run_leased(graphs,hidden,positions,slots,active,0 if f['with_head'] else -1,stale)
+                except Exception:rejected=True
+                assert rejected and snapshot()==saved
+            predicted=session.run_leased(graphs,hidden,positions,slots,active,0 if f['with_head'] else -1,epochs)
+        else:predicted=session.run(graphs,hidden,positions,slots,active,0 if f['with_head'] else -1)
         if f['with_head']:assert predicted==step['expected_predictions']
         close_enough(session.hidden().tolist(),step['expected_hidden'])
         actual=snapshot()

@@ -262,6 +262,32 @@ bool MetalDecoderSession::PreparePrefill(X::Value value,int64_t layer) {
 X::Value MetalDecoderSession::Run(X::Value graphs,X::Value hidden,X::Value positions,
     X::Value slots,X::Value active,int64_t predictionToken) {
     std::lock_guard<std::mutex> lock(mutex_);
+    return RunUnlocked(graphs,hidden,positions,slots,active,predictionToken);
+}
+#ifdef GARNET_METAL_CONTINUOUS_ROWS
+X::Value MetalDecoderSession::RunLeased(X::Value graphs,X::Value hidden,X::Value positions,
+    X::Value slots,X::Value active,int64_t predictionToken,X::Value epochs) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    if(!gpu_||poisoned_||!requestRows_||states_.empty()||epochs.runtime()!=Host()->runtime||
+       !epochs.IsList()||epochs.Size()!=states_[0].rows)
+        throw std::invalid_argument("Leased Metal execution requires one epoch per physical request row");
+    std::vector<uint64_t> expected;
+    for(uint64_t row=0;row<epochs.Size();++row) {
+        auto value=epochs.Get(row);
+        if(!value.IsInt64()||value.ToInt64()<0)throw std::invalid_argument("Native request epochs must be nonnegative integers");
+        auto epoch=uint64_t(value.ToInt64());
+        if(epoch&&!requestRows_->Matches(size_t(row),epoch))throw std::invalid_argument("Stale native request row execution");
+        expected.push_back(epoch);
+    }
+    // Keep the session lock through validation, encoding and GPU completion.
+    return RunUnlocked(graphs,hidden,positions,slots,active,predictionToken,&expected);
+}
+#endif
+X::Value MetalDecoderSession::RunUnlocked(X::Value graphs,X::Value hidden,X::Value positions,
+    X::Value slots,X::Value active,int64_t predictionToken,const std::vector<uint64_t>* epochs) {
+#ifndef GARNET_METAL_CONTINUOUS_ROWS
+    (void)epochs;
+#endif
     if(!gpu_||poisoned_)throw std::logic_error("Reset a closed/failed Metal session before running");
     if(graphs.runtime()!=Host()->runtime||!graphs.IsList()||graphs.Size()!=states_.size())
         throw std::invalid_argument("Metal session layer count mismatch");
@@ -310,6 +336,9 @@ X::Value MetalDecoderSession::Run(X::Value graphs,X::Value hidden,X::Value posit
 #ifdef GARNET_METAL_CONTINUOUS_ROWS
         if(managedRows_)for(size_t i=0;i<count;++i)if(data[i]!=0&&!requestRows_->Owned(i/chunk))
             throw std::invalid_argument("Active Metal row has no native request lease");
+        if(epochs)for(size_t i=0;i<count;++i)if(data[i]!=0&&
+            (!(*epochs)[i/chunk]||!requestRows_->Matches(i/chunk,(*epochs)[i/chunk])))
+            throw std::invalid_argument("Active Metal row does not match the scheduled request epoch");
 #endif
     }
 #ifdef GARNET_METAL_DIRTY_PREFIX_RESET

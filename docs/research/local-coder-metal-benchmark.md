@@ -612,3 +612,21 @@ scheduling an unwanted second token. Its prefill completion API also accepts
 an explicit finished flag for EOS, and negative output tokens reject before
 changing request progress. The CPU regression covers all three cases along
 with row refill (`portable-scheduler-budget-ctest.log`).
+
+The shared-memory tall-tile revision preserved both golden sequences and took
+19,328.246GPU ms for the same4,960 row64 MatMul dispatches, versus23,795.217ms
+for the original kernel. This is about19% less serialized diagnostic GPU time,
+not an end-to-end speedup. Raw evidence and hashed summary:
+`evidence/native27b-talltiles-op-profile2`.
+
+Native `run_leased` now checks the expected epoch of every scheduled row under
+the same session lock held through encoding and GPU completion. Missing epochs
+on active rows and late A execution after E owns A's old row reject before
+private state mutation. Ordinary `run` remains the existing unmanaged study
+entrypoint. All12 CTests pass in `native-leaseddispatch-build`; independent
+batch4 mixed-state tests with/without a head prove the stale-dispatch and
+missing-epoch rejections as well as correct current-lease execution. Scratch
+sharing remains valid (`native-leaseddispatch-ctest.log`,
+`native-leaseddispatch-row-session.log`, `native-leaseddispatch-sharedscratch.log`).
+Scheduler-driven execution must use this leased entrypoint; policy metadata
+alone cannot protect a row reassigned between planning and GPU submission.
