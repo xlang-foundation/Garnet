@@ -13,7 +13,7 @@ folder=sys.argv[3]
 with open(folder+'/config.json') as stream:config=json.load(stream)
 with open(sys.argv[4]) as stream:study=json.load(stream)
 cases=study['requests'];batch=study.get('batch',2);chunk=study.get('prefill_chunk',8);width=config['text_config']['hidden_size']
-assert batch in (2,4) and chunk in (2,4,8)
+assert batch in (2,4) and chunk in ((2,4,8,16,32,64) if batch==2 else (2,4,8))
 assert len(cases)==batch
 capacity=study['capacity'];limit=study['output_tokens']
 prefill_mode=study.get('prefill_mode','serial');assert prefill_mode in ('serial','parallel')

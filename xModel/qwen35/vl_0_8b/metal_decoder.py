@@ -89,13 +89,15 @@ class MetalDecoder(CPUDecoder):
             while chunk<remaining:chunk*=2
         return min(chunk,maximum)
 
+    def _wide_prefill_batches(self):return (1,)
+
     def enable_prefill(self,chunk=16,projection='shared',linear_chunk=False):
         if chunk not in self._prefill_profiles():raise ValueError('Unsupported Metal prefill chunk')
         if projection not in ('shared','mps'):raise ValueError('Prefill projection must be shared or mps')
         if self.config['hidden_size']==5120 and chunk>8:
             if ('qwen38_wide_prefill' not in garnet.backend_info() or projection!='shared' or
-                not linear_chunk or self.session is None or self.batch!=1):
-                raise ValueError('27B wide prefill requires its bounded native extension, batch1 and resident shared chunk recurrence')
+                not linear_chunk or self.session is None or self.batch not in self._wide_prefill_batches()):
+                raise ValueError('27B wide prefill requires its bounded native extension, admitted batch and resident shared chunk recurrence')
         wide_batch=self.batch==2 and chunk==80 and 'qwen35_wide_batch_prefill' in garnet.backend_info()
         if chunk in (40,80) and (projection!='shared' or not linear_chunk or self.session is None or (self.batch*chunk>128 and not wide_batch) or self.config['hidden_size']>1024):
             raise ValueError('Extended Qwen3.5 chunks require resident shared chunk recurrence, an admitted row count, and hidden size <= 1024')

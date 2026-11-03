@@ -1295,7 +1295,14 @@ void MetalCompiledGraph::SharePrefillScratch(const std::shared_ptr<MetalPrefillS
         const auto& op=ops_[i];
         const bool fullWrite=op.kind==Kind::MatMul||op.kind==Kind::BF16MatVec||op.kind==Kind::Norm||
             op.kind==Kind::Silu||op.kind==Kind::Add||op.kind==Kind::Bias||op.kind==Kind::Slice||
-            op.kind==Kind::Concat||op.kind==Kind::NormRope;
+            op.kind==Kind::Concat||op.kind==Kind::NormRope||op.kind==Kind::Layout||
+            op.kind==Kind::Mask||op.kind==Kind::Prepare||op.kind==Kind::ConvChunk||op.kind==Kind::DeltaChunk||
+            (op.kind==Kind::GateNorm&&op.dimensions.size()>=2&&
+             (op.dimensions.size()==2||op.dimensions[2]==0)&&op.out<slots_.size()&&
+             slots_[op.out].columns==op.dimensions[0]*op.dimensions[1]);
+        // Chunk kernels write every logical output element, including zeros
+        // for inactive tokens. GateNorm may instead write a slice, so only its
+        // zero-offset, whole-width form can initialize shared scratch.
         auto read=[&](size_t id){if(id<slots_.size())firstRead[id]=std::min(firstRead[id],i);};
         auto write=[&](size_t id){if(id<slots_.size()){
             if(firstWrite[id]==SIZE_MAX)fullyInitialized[id]=fullWrite;

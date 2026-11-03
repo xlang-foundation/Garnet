@@ -1,19 +1,23 @@
 # Local coding Metal qualification
 
-Status: vLLM phase1 collection complete (90 measured waves, 210 requests,
-three cleanly stopped cohorts). SGLang's first frozen five-cell campaign and
-the stock512MiB allocator-cache-cap active4 candidate failed repeated short
-batch4 memory admission. A two-active-request profile is under qualification,
-with four-client workloads explicitly queued. All failed runs remain retained.
-Native INT4 package
-build, eight component tests, seven benchmark/evaluator tests and independent
-linear-attention/decoder references for batch1/2/4 pass. The INT4-disabled
-control package builds and all seven control component tests pass. Native 27B
-passes a bounded 79-input/four-output smoke twice with identical reset results;
-the optimized projection/row-lifecycle build passes nine component tests.
-Matched 4K performance, coding quality, continuous batching, hybrid prefix
-integration and multimodal runtime gates remain pending. No comparator speedup
-claim. See evidence paths in the progress notes.
+Status: 27B qualification remains active. Frozen vLLM-Metal and SGLang Apple
+reference collections each contain three cohorts, 90 measured waves and 210
+requests. SGLang uses two active requests and queues four-client workloads;
+failed active4 admissions remain preserved. Native continuous batching, hybrid
+host token-prefix reuse, batch2/4 ragged prefill and batch2/4K concurrent coding
+have correctness evidence. The latter passes all eight sandboxed coding tasks
+with exact single-native token sequences. Native text-only input has no dummy
+image; bounded native vision parity and two image-grounding cases pass, while
+general VLM and reference multimodal qualification remain incomplete.
+
+The most recent end-to-end native performance evidence is a single-active,
+one-wave-per-cell admission, not a full repeated serving campaign. Short/long
+aggregate throughput is 3.250/1.034 output tokens/s; TTFT is 20.518/101.057s and
+decode is 6.732/5.582 tokens/s. Reference single-client medians are vLLM
+5.761/3.382 overall tokens/s and SGLang 5.502/3.275. Native batch correctness
+runs and synthetic projection timing do not fill the missing batch serving
+measurements. All 2x targets remain unproven; prefill is the largest measured
+gap. Reference results remain fixed and engines run sequentially.
 
 Order: Qwen3.8-27B, Qwen3.5-9B, Qwen3.5-4B. Current target is 27B.
 Hardware: Apple M5, 24 GiB unified memory. This is separate from historical
@@ -1048,3 +1052,46 @@ and12 CTests without changing numerical tolerances
 qualification. An isolated timing comparison is next. The audit also now checks
 frozen collector hashes and rejects tampered tile/precision metadata; seven
 CPU tamper cases pass against the archived K-tile comparison.
+
+
+The explicit relaxed BF16 K64 operator campaign completed three cohorts and
+21 shapes per variant (`evidence/affine-mpp-precision-comparison1`). Relaxed
+arithmetic gave no material overall advantage; it remains default-off and has
+no full learned coding qualification.
+
+`GARNET_METAL_MPP_AFFINE_N_MAJOR` adds a separately identified, default-off
+coalesced packed-K load layout, stages contiguous N-major weights and sets the
+right tensor operand transpose explicitly. Strict BF16 K64/K128 both passed
+24 independent numerical cases and all12 CTests. The frozen sequential
+`evidence/affine-mpp-nmajor-comparison1` campaign passed all21-shape audits and
+eight tamper checks. N-major K64 versus tall FP32 gave0.93..0.96x at8 rows,
+0.94..1.01x at16,1.25..1.40x at32 and1.22..1.43x at64. K128 was less effective.
+These explicit precision-profile operator ratios do not establish end-to-end
+speed or coding quality; candidates remain disabled by default.
+
+The experimental batch factory now permits bounded batch2 chunks16/32/64 only
+with wide-prefill, in-place-cache and per-row-hidden native extensions. The
+normal decoder still admits only batch1 wide prefill; batch4 stays chunk<=8.
+A batch2/context4096/chunk32 parallel ragged learned admission is in progress,
+using the already qualified FP32 control and frozen single-request tokens.
+Native workspace guards remain enabled; neither allocation nor correctness is
+assumed from profile construction.
+
+The first batch2/context4096/chunk32 admission hit the native workspace guard
+while constructing graphs (`native27b-batch2-wide32-context4096-study1`). It
+exited1, retained diagnostics and released its resources. The limit was not
+relaxed. Inspection found fully initialized layout, mask, linear-prepare,
+chunk-convolution, chunk-delta and whole-width gated-normalization temporary
+buffers excluded from existing cross-layer scratch sharing. Sharing now
+includes those outputs under the existing alias/weight/input/output protection
+and first-read/first-write proofs. Partial gated-normalization writes remain
+excluded. All12 native component tests pass.
+
+The identical wider profile then passes two exact16-output-token repeats for
+79/71-token ragged prompts, with genuinely combined native decode and fresh
+scheduler resets (`native27b-batch2-wide32-context4096-study2`). Allocated Metal
+storage after graph construction is17,850,728,448 bytes and returns to720,896
+bytes after close. The finite-study auditor independently matches frozen cases
+to the pinned single-request oracle and verifies two repeats, process exit,
+sampled admission limits and cleanup; five tamper checks pass. This establishes
+neither execution to the4K limit nor full coding/performance qualification.
