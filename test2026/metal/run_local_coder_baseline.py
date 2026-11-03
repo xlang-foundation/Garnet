@@ -25,13 +25,21 @@ def digest(path):
 
 
 def engine_processes():
-    raw = subprocess.check_output(['ps', '-axo', 'pid=,comm=,args='], text=True)
+    # macOS truncates comm to15 characters when args follows it, even with -ww.
+    # Keep comm last in its own inventory, then join the full argument listing.
+    commands = subprocess.check_output(['ps', '-axo', 'pid=,comm='], text=True)
+    arguments = subprocess.check_output(['ps', '-axww', '-o', 'pid=,args='], text=True)
+    by_pid = {}
+    for line in arguments.splitlines():
+        parts = line.strip().split(None, 1)
+        if len(parts) == 2:
+            by_pid[parts[0]] = parts[1]
     result = []
-    for line in raw.splitlines():
-        fields = line.strip().split(None, 2)
+    for line in commands.splitlines():
+        fields = line.strip().split(None, 1)
         if len(fields) < 2:
             continue
-        command, arguments = fields[1], fields[2] if len(fields) > 2 else ''
+        command, arguments = fields[1], by_pid.get(fields[0], '')
         reference = any(key in command for key in ('VLLM::', 'sglang::',
             'vllm-metal/.venv-vllm-metal/bin/', 'sglang-env/bin/python'))
         # A native bridge may be starting before its model worker exists.

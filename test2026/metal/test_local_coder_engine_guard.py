@@ -12,7 +12,9 @@ class EngineGuardTest(unittest.TestCase):
 104 /env/vllm-metal/.venv-vllm-metal/bin/python python -m vllm
 105 /build/bin/Cantor /build/bin/Cantor
 '''
-        with patch('run_local_coder_baseline.subprocess.check_output', return_value=processes):
+        commands = '\n'.join(' '.join(line.split()[:2]) for line in processes.splitlines() if line.strip())
+        arguments = '\n'.join(line.split(None, 2)[0]+' '+line.split(None, 2)[2] for line in processes.splitlines() if line.strip())
+        with patch('run_local_coder_baseline.subprocess.check_output', side_effect=[commands, arguments]):
             self.assertEqual(len(engine_processes()), 5)
 
     def test_unrelated_runtime_and_shell_diagnostics_are_ignored(self):
@@ -21,7 +23,9 @@ class EngineGuardTest(unittest.TestCase):
 202 /bin/zsh /bin/zsh -c rg local_coder_native_http.py
 203 /env/bin/python /env/bin/python run_local_coder_baseline.py --engine-spec native.json
 '''
-        with patch('run_local_coder_baseline.subprocess.check_output', return_value=processes):
+        commands = '\n'.join(' '.join(line.split()[:2]) for line in processes.splitlines() if line.strip())
+        arguments = '\n'.join(line.split(None, 2)[0]+' '+line.split(None, 2)[2] for line in processes.splitlines() if line.strip())
+        with patch('run_local_coder_baseline.subprocess.check_output', side_effect=[commands, arguments]):
             self.assertEqual(engine_processes(), [])
 
 
