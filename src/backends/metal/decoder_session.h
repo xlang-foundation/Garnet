@@ -3,6 +3,9 @@
 #include "compiled_graph.h"
 #include <array>
 #include <map>
+#ifdef GARNET_METAL_TOKEN_PREFIX_CACHE
+#include "../../runtime/kv/prefix_cache.h"
+#endif
 #ifdef GARNET_METAL_CONTINUOUS_ROWS
 #include "../../runtime/scheduler/request_row_leases.h"
 #endif
@@ -15,6 +18,10 @@ class MetalDecoderSession {
         std::array<std::vector<int64_t>,2> shape;
         std::array<size_t,2> columns;
         size_t rows;
+#ifdef GARNET_METAL_TOKEN_PREFIX_CACHE
+        uint64_t tokenOwnerGeneration=0;
+        std::array<bool,2> tokenCompact{false,false};
+#endif
 #ifdef GARNET_METAL_DENSE_PREFIX_CACHE
         bool prefixEligible=false;uint64_t prefixOwnerGeneration=0;
 #endif
@@ -26,6 +33,16 @@ class MetalDecoderSession {
     std::unique_ptr<MetalContext> gpu_;
 #ifdef GARNET_METAL_SHARED_PREFILL_SCRATCH
     std::shared_ptr<MetalPrefillScratch> prefillScratch_;
+#endif
+#ifdef GARNET_METAL_TOKEN_PREFIX_CACHE
+    std::unique_ptr<PrefixCache> tokenCache_;
+    PrefixCacheIdentity tokenIdentity_;
+    size_t tokenCacheBudget_=0,tokenCapacity_=0;
+    std::vector<std::vector<int64_t>> rowTokens_;
+    std::vector<uint8_t> rowTokensValid_;
+    std::unordered_map<MetalCompiledGraph*,std::pair<size_t,uint64_t>> tokenGraphs_;
+    std::vector<X::Value> tokenGraphOwners_;
+    void ValidateTokenOwners(std::vector<std::unique_lock<std::mutex>>&);
 #endif
     std::vector<X::Value> owners_;
     std::vector<State> states_;
@@ -81,7 +98,7 @@ class MetalDecoderSession {
     void ResetUnlocked();
     X::Value RunUnlocked(X::Value graphs,X::Value hidden,X::Value positions,
         X::Value slots,X::Value active,int64_t predictionToken,
-        const std::vector<uint64_t>* epochs=nullptr);
+        const std::vector<uint64_t>* epochs=nullptr,const std::vector<int64_t>* tokenIds=nullptr);
 #ifdef GARNET_METAL_REQUEST_ROWS
     void ResetRowUnlocked(int64_t row);
 #endif
@@ -107,6 +124,15 @@ public:
 #endif
 #ifdef GARNET_METAL_ROW_FINAL_HIDDEN
     X::Value PredictRows(X::Value epochs);
+#endif
+#ifdef GARNET_METAL_TOKEN_PREFIX_CACHE
+    bool ConfigureTokenPrefix(X::Value identity,int64_t maxEntries,int64_t maxBytes);
+    X::Value RunTokens(X::Value graphs,X::Value hidden,X::Value positions,X::Value slots,
+        X::Value active,int64_t predictionToken,X::Value epochs,X::Value tokens);
+    bool CacheTokenPrefix(int64_t row,int64_t epoch);
+    int64_t RestoreTokenPrefix(int64_t row,int64_t epoch,X::Value tokens);
+    std::string TokenPrefixStatsJson();
+    bool ClearTokenPrefixes();
 #endif
     int64_t CapturePrefix(int64_t tokens);
     int64_t RestorePrefix(int64_t id);
@@ -170,6 +196,14 @@ public:
 #endif
 #ifdef GARNET_METAL_ROW_FINAL_HIDDEN
         APISET().AddFunc<1>("predict_rows",&MetalDecoderSession::PredictRows);
+#endif
+#ifdef GARNET_METAL_TOKEN_PREFIX_CACHE
+        APISET().AddFunc<3>("configure_token_prefix",&MetalDecoderSession::ConfigureTokenPrefix);
+        APISET().AddFunc<8>("run_tokens",&MetalDecoderSession::RunTokens);
+        APISET().AddFunc<2>("cache_token_prefix",&MetalDecoderSession::CacheTokenPrefix);
+        APISET().AddFunc<3>("restore_token_prefix",&MetalDecoderSession::RestoreTokenPrefix);
+        APISET().AddFunc<0>("token_prefix_stats_json",&MetalDecoderSession::TokenPrefixStatsJson);
+        APISET().AddFunc<0>("clear_token_prefixes",&MetalDecoderSession::ClearTokenPrefixes);
 #endif
         APISET().AddFunc<1>("capture_prefix",&MetalDecoderSession::CapturePrefix);
         APISET().AddFunc<1>("restore_prefix",&MetalDecoderSession::RestorePrefix);

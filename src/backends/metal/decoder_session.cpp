@@ -21,6 +21,10 @@ X::Value TensorValue(X3PackageHost* host,MetalContext& gpu,const MetalMatrix& ma
 }
 }
 void MetalDecoderSession::Clear() {
+#ifdef GARNET_METAL_TOKEN_PREFIX_CACHE
+    tokenCache_.reset();tokenIdentity_={};tokenCacheBudget_=tokenCapacity_=0;rowTokens_.clear();rowTokensValid_.clear();
+    tokenGraphs_.clear();tokenGraphOwners_.clear();
+#endif
 #ifdef GARNET_METAL_ROW_FINAL_HIDDEN
     rowFinalHidden_=MetalMatrix();rowFinalWidth_=0;finalHiddenReady_.clear();
 #endif
@@ -50,6 +54,9 @@ void MetalDecoderSession::Clear() {
 }
 void MetalDecoderSession::Close() {std::lock_guard<std::mutex> lock(mutex_);Clear();}
 void MetalDecoderSession::ResetUnlocked() {
+#ifdef GARNET_METAL_TOKEN_PREFIX_CACHE
+    rowTokens_.assign(states_.empty()?0:states_[0].rows,{});rowTokensValid_.assign(rowTokens_.size(),1);
+#endif
 #ifdef GARNET_METAL_ROW_FINAL_HIDDEN
     rowFinalHidden_=MetalMatrix();rowFinalWidth_=0;finalHiddenReady_.clear();
 #endif
@@ -160,6 +167,9 @@ void MetalDecoderSession::ResetRowUnlocked(int64_t row) {
 #ifdef GARNET_METAL_ROW_FINAL_HIDDEN
     if(!finalHiddenReady_.empty())finalHiddenReady_[size_t(row)]=0;
 #endif
+#ifdef GARNET_METAL_TOKEN_PREFIX_CACHE
+    rowTokens_[size_t(row)].clear();rowTokensValid_[size_t(row)]=1;
+#endif
     rowResetBytes_=bytes;poisoned_=false;
 }
 #endif
@@ -241,6 +251,11 @@ bool MetalDecoderSession::Build(X::Value graphs,X::Value head) {
             state.prefixEligible=batch==1&&graph->CanResetKVPrefix(1)&&graph->CanResetKVPrefix(2);
             state.prefixOwnerGeneration=graph->generation_;
 #endif
+#ifdef GARNET_METAL_TOKEN_PREFIX_CACHE
+            state.tokenOwnerGeneration=graph->generation_;
+            for(size_t part=0;part<2;++part)state.tokenCompact[part]=graph->CanResetKVPrefix(part+1);
+            tokenGraphs_[graph]={size_t(i),graph->generation_};
+#endif
             states_.push_back(std::move(state));owners_.push_back(std::move(owner));
         }
         if(head.IsValid()&&!head.IsNone()) {
@@ -289,6 +304,28 @@ bool MetalDecoderSession::PreparePrefill(X::Value value,int64_t layer) {
        graph->inputShapes_[0][1]<1||graph->inputShapes_[0][1]>int64_t(kMetalPrefillChunkLimit)||
        graph->inputShapes_[1]!=state.shape[0]||graph->inputShapes_[2]!=state.shape[1])
         throw std::invalid_argument("Prefill preparation does not match resident layer state");
+#ifdef GARNET_METAL_TOKEN_PREFIX_CACHE
+    // Prefix histories may only execute graph families sharing the base weights.
+    if(original->generation_!=state.tokenOwnerGeneration||graph->weightRecords_.size()!=original->weightRecords_.size())
+        throw std::invalid_argument("Token-prefix prefill source changed");
+    auto buffers=[](const MetalCompiledGraph::Slot& slot) {
+        std::vector<uintptr_t> ids;
+        auto add=[&](const MetalBufferInfo& info){if(info.identity)ids.push_back(info.identity);};
+        add(MetalContext::MatrixBufferInfo(slot.matrix));
+        for(const auto& info:MetalContext::WeightBufferInfo(slot.bf16))add(info);
+#ifdef GARNET_METAL_MLX_AFFINE_INT4
+        for(const auto& info:MetalContext::AffineInt4BufferInfo(slot.affineInt4))add(info);
+#endif
+        return ids;
+    };
+    for(const auto& item:graph->weightRecords_) {
+        auto found=original->weightRecords_.find(item.first);
+        if(found==original->weightRecords_.end()||buffers(item.second.slot)!=buffers(found->second.slot))
+            throw std::invalid_argument("Token-prefix prefill must share original native weights");
+    }
+    if(!tokenGraphs_.count(graph))tokenGraphOwners_.push_back(value);
+    tokenGraphs_[graph]={size_t(layer),graph->generation_};
+#endif
     graph->RetireResidentDefaults();
 #ifdef GARNET_METAL_SHARED_PREFILL_SCRATCH
     graph->SharePrefillScratch(prefillScratch_);
@@ -321,7 +358,10 @@ X::Value MetalDecoderSession::RunLeased(X::Value graphs,X::Value hidden,X::Value
 }
 #endif
 X::Value MetalDecoderSession::RunUnlocked(X::Value graphs,X::Value hidden,X::Value positions,
-    X::Value slots,X::Value active,int64_t predictionToken,const std::vector<uint64_t>* epochs) {
+    X::Value slots,X::Value active,int64_t predictionToken,const std::vector<uint64_t>* epochs,const std::vector<int64_t>* tokenIds) {
+#ifndef GARNET_METAL_TOKEN_PREFIX_CACHE
+    (void)tokenIds;
+#endif
 #ifndef GARNET_METAL_CONTINUOUS_ROWS
     (void)epochs;
 #endif
@@ -335,6 +375,13 @@ X::Value MetalDecoderSession::RunUnlocked(X::Value graphs,X::Value hidden,X::Val
     if(std::adjacent_find(locked.begin(),locked.end())!=locked.end())throw std::invalid_argument("Metal session graphs must be distinct");
     std::vector<std::unique_lock<std::mutex>> graphLocks;
     for(auto graph:locked)graphLocks.emplace_back(graph->mutex_);
+#ifdef GARNET_METAL_TOKEN_PREFIX_CACHE
+    if(tokenIds)for(size_t layer=0;layer<layers.size();++layer) {
+        auto found=tokenGraphs_.find(layers[layer]);
+        if(found==tokenGraphs_.end()||found->second.first!=layer||found->second.second!=layers[layer]->generation_)
+            throw std::invalid_argument("Tracked execution requires unchanged native graph families");
+    }
+#endif
 #ifdef GARNET_METAL_SHARED_PREFILL_SCRATCH
     // Lock all owners after graph locks in one stable order. Shared temporaries
     // are safe across sessions and standalone graph calls only under this lease.
@@ -375,6 +422,33 @@ X::Value MetalDecoderSession::RunUnlocked(X::Value graphs,X::Value hidden,X::Val
             throw std::invalid_argument("Invalid Metal session active flags");
 #ifdef GARNET_METAL_ROW_FINAL_HIDDEN
         for(size_t i=0;i<count;++i)if(data[i]!=0)rowWillUpdate[i/chunk]=1;
+#endif
+#ifdef GARNET_METAL_TOKEN_PREFIX_CACHE
+        if(tokenIds) {
+            if(!tokenCache_||tokenIds->size()!=count)throw std::invalid_argument("Tracked input token profile mismatch");
+            X::Tensor slotTensor(slots),positionTensor(positions);auto sl=slotTensor.Acquire();auto pl=positionTensor.Acquire();
+            auto slotInfo=slotTensor.Info(),positionInfo=positionTensor.Info();
+            if(slotInfo.dtype!=X3_TENSOR_FLOAT32||positionInfo.dtype!=X3_TENSOR_FLOAT32||
+               slotInfo.device_type||positionInfo.device_type||slotInfo.symbolic||positionInfo.symbolic||
+               !slotInfo.data||!positionInfo.data||!IsContiguousTensor(slotTensor)||!IsContiguousTensor(positionTensor)||
+               slotInfo.byte_size!=count*sizeof(float)||positionInfo.byte_size!=count*3*sizeof(float))
+                throw std::invalid_argument("Token-prefix controls require text slots and three position axes");
+            const auto* slotData=static_cast<const float*>(slotInfo.data);
+            const auto* positionData=static_cast<const float*>(positionInfo.data);
+            for(size_t row=0;row<states_[0].rows;++row) {
+                size_t next=rowTokens_[row].size();
+                for(size_t token=0;token<chunk;++token)if(data[row*chunk+token]!=0) {
+                    if(!rowTokensValid_[row]||slotData[row*chunk+token]!=float(next))
+                        throw std::invalid_argument("Tracked tokens require a contiguous native history");
+                    for(size_t axis=0;axis<3;++axis)if(positionData[(row*chunk+token)*3+axis]!=float(next))
+                        throw std::invalid_argument("Token-prefix positions do not match text policy");
+                    ++next;
+                }
+                // Allocate before any GPU/state mutation so commit cannot fail.
+                if(next>tokenCapacity_)throw std::invalid_argument("Tracked history exceeds the native context profile");
+                rowTokens_[row].reserve(next);
+            }
+        }
 #endif
 #ifdef GARNET_METAL_CONTINUOUS_ROWS
         if(managedRows_)for(size_t i=0;i<count;++i)if(data[i]!=0&&!requestRows_->Owned(i/chunk))
@@ -508,6 +582,15 @@ X::Value MetalDecoderSession::RunUnlocked(X::Value graphs,X::Value hidden,X::Val
     }
 #ifdef GARNET_METAL_ROW_FINAL_HIDDEN
     for(size_t row=0;row<rowWillUpdate.size();++row)if(rowWillUpdate[row])finalHiddenReady_[row]=1;
+#endif
+#ifdef GARNET_METAL_TOKEN_PREFIX_CACHE
+    if(tokenCache_) {
+        X::Tensor flags(active);auto fl=flags.Acquire();const auto* data=static_cast<const float*>(flags.Info().data);
+        for(size_t row=0;row<states_[0].rows;++row)for(size_t token=0;token<chunk;++token)if(data[row*chunk+token]!=0) {
+            if(tokenIds)rowTokens_[row].push_back((*tokenIds)[row*chunk+token]);
+            else rowTokensValid_[row]=0;
+        }
+    }
 #endif
     inferenceMs_=std::chrono::duration<double,std::milli>(std::chrono::steady_clock::now()-start).count();
     poisoned_=false;return result;

@@ -190,6 +190,9 @@ public:
         info+="; native_request_row_leases; native_continuous_scheduler";
 #ifdef GARNET_METAL_ROW_FINAL_HIDDEN
         info+="; row_final_hidden";
+#ifdef GARNET_METAL_TOKEN_PREFIX_CACHE
+        info+="; native_hybrid_token_prefix";
+#endif
 #endif
 #endif
 #ifdef GARNET_METAL_CHUNK_KV_INPLACE

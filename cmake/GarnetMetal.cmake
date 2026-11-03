@@ -32,6 +32,13 @@ option(GARNET_METAL_RETIRE_INPLACE_DEFAULTS "Retire proven unused native in-plac
 option(GARNET_METAL_SHARED_PREFILL_SCRATCH "Serialize and share proven temporary buffers across prefill layers" OFF)
 option(GARNET_METAL_CONTINUOUS_ROWS "Native stable request row ownership and stale-release protection" OFF)
 option(GARNET_METAL_CHUNK_KV_INPLACE "Read old chunk cache before native in-place updates and alias cache reshapes" OFF)
+option(GARNET_METAL_TOKEN_PREFIX_CACHE "Native token-matched hybrid row snapshots" OFF)
+if(GARNET_METAL_TOKEN_PREFIX_CACHE)
+    if(NOT GARNET_METAL_ROW_FINAL_HIDDEN OR NOT GARNET_METAL_QWEN38_WIDE_PREFILL)
+        message(FATAL_ERROR "Token prefix snapshots require native final hidden state and prepared prefill families")
+    endif()
+    target_compile_definitions(garnet_metal PUBLIC GARNET_METAL_TOKEN_PREFIX_CACHE=1)
+endif()
 option(GARNET_METAL_ROW_FINAL_HIDDEN "Retain each request row's last active hidden vector for parallel prefill" OFF)
 if(GARNET_METAL_ROW_FINAL_HIDDEN)
     if(NOT GARNET_METAL_CONTINUOUS_ROWS)
@@ -451,6 +458,7 @@ if(GARNET_METAL_XMODEL)
     target_link_libraries(garnet_native_image PUBLIC JPEG::JPEG PNG::PNG)
     add_library(garnet SHARED src/entry/metal_main.cpp src/backends/metal/compiled_graph.cpp
         src/backends/metal/decoder_session.cpp
+        src/backends/metal/token_prefix_session.cpp
         src/tensor/garnet_tensor.cpp src/tensor/graph_capture.cpp src/core/lowering_context.cpp
         src/model/safetensors_index.cpp src/tokenizer/qwen_tokenizer.cpp)
     if(GARNET_METAL_CONTINUOUS_ROWS)

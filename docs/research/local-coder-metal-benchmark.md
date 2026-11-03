@@ -776,3 +776,45 @@ artifact/token/resource audit found zero issues. Observed prefill times were
 study timings, not matched campaign results or evidence for the2x target.
 The default-off feature is qualified only for this finite learned batch4 gate;
 full coding output, serving and hybrid token-prefix integration remain required.
+
+
+`GARNET_METAL_TOKEN_PREFIX_CACHE` connects the backend-neutral exact-token
+prefix index to native hybrid row snapshots. It is default-off and requires
+native row ownership/final-hidden state and prepared prefill families.
+Configure a session before claiming rows with six identity strings (model,
+execution profile, tokenizer, position policy, isolation scope, modality), an
+entry limit and a host-memory budget (maximum512MiB). Initial admission is
+plain text with `text_zero_based_3axis_v1` positions and proved KV capacity up
+to4096; multimodal prefix reuse remains closed.
+
+`run_tokens` receives token IDs alongside the existing embeddings/controls and
+request epochs. Native code validates contiguous slots/positions, bounded
+history and unchanged registered graph families. The runtime caller remains
+responsible for embedding/token-ID consistency. Prepared prefill graphs must
+share the original native weight buffers. Untracked execution invalidates the
+affected row's history until reset/release; it cannot later label that state
+with arbitrary token IDs.
+
+`cache_token_prefix(row,epoch)` copies compact KV prefixes plus complete
+convolution/recurrent rows and final hidden state into an immutable host
+snapshot at the current tracked boundary. `restore_token_prefix(row,epoch,ids)`
+looks up the longest stored token checkpoint in the configured identity and
+requires a fresh current row. It clears that row before restore, leaving other
+rows unchanged; exact hits can immediately use `predict_rows`. Changed or
+appended suffixes continue from the returned token count. The cache survives
+request release and full live-state reset; close clears it. These copies are
+bounded host snapshots, not paged KV, zero-copy device leases or COW. The budget
+accounts retained entries; one temporary candidate can coexist with retained
+entries while capture/eviction completes. Normal admission remains unchanged.
+
+All12 CTests and existing final-hidden, independent mixed-row, scheduler and
+scratch regressions pass in `native-tokenprefix-build`. The dedicated mixed
+linear/full test compares exact, appended and changed-prefix restoration with
+fresh recurrent/KV/head execution, preserves B/C/D through A-to-E reuse, checks
+misses/LRU/reset/clear, and rejects stale epochs, untracked history, wrong text
+positions, mismatched graph families and closed owners. A too-small snapshot
+budget declines capture without breaking prediction. Initial harness errors
+(foreign scratch preparation and an overcounted expected hit total) are retained.
+Evidence: `tokenprefix-ctest.log`, `tokenprefix-regressions.log`,
+`tokenprefix-hybrid-test.log` through `tokenprefix-hybrid-test4.log`.
+The learned checkpoint and HTTP integration remain separate gates.
