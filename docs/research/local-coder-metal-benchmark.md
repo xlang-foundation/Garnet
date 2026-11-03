@@ -1107,3 +1107,15 @@ observation limits. No quality pass or serving speedup is claimed before that
 collection, independent sandbox evaluation and native accounting audit finish.
 Coding collections now retain factory/decoder sources and CMake flags as well
 as the native library and transport scripts.
+
+Full wide64 concurrent coding qualification completed successfully:
+`native27b-batch-wide64-quality1/evaluation.json` reports8/8 sandbox passes.
+`input-output-audit.json` has zero issues, all eight full sequences exactly
+match the frozen single-request control, and1037 combined decode plans are
+observed. Epoch/refill, frozen inputs, uncached usage, native exit and720,896-byte
+close baseline pass; all five existing accounting tamper checks pass. The auditor
+now resolves exactly one hash-verified profile by its profile identity rather
+than assuming the collector's input filename was `profile.json`. Original
+collection artifacts remain unchanged. A six-cell, one-wave timing admission
+is frozen in `native27b-batch-wide64-http-admission1`; it is not the required
+three-cohort serving campaign.

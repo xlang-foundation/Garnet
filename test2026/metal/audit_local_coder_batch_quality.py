@@ -41,7 +41,13 @@ def audit(root,reference=None):
             completed[key]=event
             if event['generated_ids']!=streams.get(key) or event.get('cached_tokens')!=0:issues.append('Native streamed/final IDs or cache usage differ')
     if len(ready)!=1 or ready[0].get('active_requests')!=2 or ready[0].get('prefix_cache') is not False:issues.append('Ready profile differs from uncached batch2')
-    profile=json.loads((root/'frozen/profile.json').read_text())
+    profiles=[]
+    for name in artifacts['files']:
+        if name.endswith('.json'):
+            candidate=json.loads((root/'frozen'/name).read_text())
+            if isinstance(candidate,dict) and 'profile_id' in candidate:profiles.append(candidate)
+    if len(profiles)!=1:raise ValueError('Exactly one hash-verified frozen native profile required')
+    profile=profiles[0]
     if profile.get('require_mpp',False) and (not mpp or any(event.get('affine_dispatches',0)<1 for event in mpp)):issues.append('Required native MPP route missing')
     if len(ready)==1 and (ready[0].get('profile')!=profile or ready[0].get('capacity')!=profile['capacity']):issues.append('Frozen context/profile differs from ready event')
     if len(ready)==1 and ready[0]['memory']['metal_allocated_bytes']>=ready[0]['memory']['metal_recommended_working_set_bytes']:issues.append('Ready device working set exceeded')
