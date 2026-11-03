@@ -1,7 +1,8 @@
 # Qwen3.8-27B qualification
 
 The existing CUDA factories and research gates remain separate from the new
-Metal bring-up. Full-model Metal execution is **not yet validated**. Do not register
+Metal bring-up. Initial full-model execution passes a bounded smoke;
+**production qualification is incomplete**. Do not register
 the qualification profile as a production catalog model or claim a speedup.
 
 The draft Metal path consumes the pinned
@@ -44,4 +45,14 @@ early-exit rejection. Independent original-format linear attention and decoder
 references pass for batches1/2/4, including inactive-row preservation and the
 three-to-one value/key head ratio. The INT4-disabled control package also builds
 and passes all seven configured component tests.
-These results do not establish full-model coding, batching or vision support.
+The opt-in request-row build passes nine component tests. Two reset-separated
+79-input/four-output native runs produce identical token IDs, including after
+small-row projection specialization. That smoke uses capacity512 and is not
+the matched 4K benchmark, a coding-quality score, continuous batching, prefix
+reuse or vision qualification.
+
+`GARNET_METAL_REQUEST_ROWS=ON` adds synchronous native `reset_row` lifecycle
+support. An independent mixed linear/KV batch4 fixture verifies A-to-E row
+replacement while B/C/D retain their state, including pause/reactivation and
+optional head prediction. This is a prerequisite for continuous scheduling;
+the serving scheduler and native hybrid prefix capture/restore remain pending.

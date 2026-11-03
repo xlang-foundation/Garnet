@@ -169,6 +169,9 @@ public:
 #ifdef GARNET_METAL_MLX_AFFINE_INT4
         info+="; mlx_qwen35_affine_int4_g64_bf16";
 #endif
+#ifdef GARNET_METAL_REQUEST_ROWS
+        info+="; request_row_reset";
+#endif
 #ifdef GARNET_METAL_BODY_SHAPE
         info+="; body_shape";
 #endif

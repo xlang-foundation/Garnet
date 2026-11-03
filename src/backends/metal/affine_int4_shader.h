@@ -6,6 +6,7 @@ inline constexpr const char* kAffineInt4Shader=R"METAL(
 #include <metal_simdgroup_matrix>
 using namespace metal;
 struct Q4Params {ulong rows,inner,columns,aStride,oStride;};
+constant uint affine_decode_rows [[function_constant(0)]];
 inline float q4_bf16(ushort value){return as_type<float>(uint(value)<<16);}
 kernel void affine_q4_decode(device const float* a [[buffer(0)]],
  device const uint* packed [[buffer(1)]],device const ushort* scales [[buffer(2)]],
@@ -14,18 +15,24 @@ kernel void affine_q4_decode(device const float* a [[buffer(0)]],
  uint lane [[thread_index_in_simdgroup]],uint simd [[simdgroup_index_in_threadgroup]]) {
     const ulong n=ulong(group)*4+simd;
     if(n>=p.columns)return;
-    float sum[8]={0};
+    float sum0=0,sum1=0,sum2=0,sum3=0;
     for(ulong word=lane;word<p.inner/8;word+=32) {
         const uint values=packed[n*(p.inner/8)+word];
         const ulong coefficient=n*(p.inner/64)+word/8;
         const float scale=q4_bf16(scales[coefficient]),bias=q4_bf16(biases[coefficient]);
         for(uint j=0;j<8;++j) {
             const float weight=fma(float((values>>(4*j))&15u),scale,bias);
-            for(ulong row=0;row<p.rows;++row)
-                sum[row]=fma(a[row*p.aStride+word*8+j],weight,sum[row]);
+            const ulong k=word*8+j;
+            sum0=fma(a[k],weight,sum0);
+            if(affine_decode_rows>1)sum1=fma(a[p.aStride+k],weight,sum1);
+            if(affine_decode_rows>2)sum2=fma(a[2*p.aStride+k],weight,sum2);
+            if(affine_decode_rows>3)sum3=fma(a[3*p.aStride+k],weight,sum3);
         }
     }
-    for(ulong row=0;row<p.rows;++row){const float total=simd_sum(sum[row]);if(lane==0)out[row*p.oStride+n]=total;}
+    float total=simd_sum(sum0);if(lane==0)out[n]=total;
+    if(affine_decode_rows>1){total=simd_sum(sum1);if(lane==0)out[p.oStride+n]=total;}
+    if(affine_decode_rows>2){total=simd_sum(sum2);if(lane==0)out[2*p.oStride+n]=total;}
+    if(affine_decode_rows>3){total=simd_sum(sum3);if(lane==0)out[3*p.oStride+n]=total;}
 }
 kernel void affine_q4_gemm(device const float* a [[buffer(0)]],
  device const uint* packed [[buffer(1)]],device const ushort* scales [[buffer(2)]],

@@ -49,6 +49,10 @@ class MetalDecoderSession {
     size_t deferredZeroBytes_=0,deferredZeroStates_=0;
     size_t dirtyPrefixResetBytes_=0,dirtyPrefixResetStates_=0,dirtyPrefixResetFallbackStates_=0;
     bool poisoned_=false;
+#ifdef GARNET_METAL_REQUEST_ROWS
+    bool predictionInitialized_=false;
+    size_t rowResetBytes_=0;
+#endif
     double inferenceMs_=0,prepareMs_=0,encodeMs_=0,gpuMs_=0,waitMs_=0;
     std::mutex mutex_;
 #ifdef GARNET_METAL_DENSE_PREFIX_CACHE
@@ -65,6 +69,10 @@ public:
     X::Value Run(X::Value graphs,X::Value hidden,X::Value positions,
         X::Value slots,X::Value active,int64_t predictionToken);
     void Reset();
+#ifdef GARNET_METAL_REQUEST_ROWS
+    void ResetRow(int64_t row);
+    size_t LastRowResetBytes() const {return rowResetBytes_;}
+#endif
     int64_t CapturePrefix(int64_t tokens);
     int64_t RestorePrefix(int64_t id);
     bool ClearPrefixCache();
@@ -113,6 +121,10 @@ public:
         APISET().AddFunc<2>("build",&MetalDecoderSession::Build);
         APISET().AddFunc<6>("run",&MetalDecoderSession::Run);
         APISET().AddFunc<0>("reset",&MetalDecoderSession::Reset);
+#ifdef GARNET_METAL_REQUEST_ROWS
+        APISET().AddFunc<1>("reset_row",&MetalDecoderSession::ResetRow);
+        APISET().AddProp("row_reset_bytes",&MetalDecoderSession::LastRowResetBytes);
+#endif
         APISET().AddFunc<1>("capture_prefix",&MetalDecoderSession::CapturePrefix);
         APISET().AddFunc<1>("restore_prefix",&MetalDecoderSession::RestorePrefix);
         APISET().AddFunc<0>("clear_prefix_cache",&MetalDecoderSession::ClearPrefixCache);

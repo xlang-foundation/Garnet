@@ -66,6 +66,14 @@ class MetalDecoder(CPUDecoder):
         self.poisoned=False
         return prediction if predict else None
 
+    def reset_row(self,row):
+        if self.session is None or 'request_row_reset' not in garnet.backend_info():
+            raise ValueError('Native request-row lifecycle extension is required')
+        if self.poisoned:raise ValueError('full reset required after failed inference')
+        if type(row) is not int or row<0 or row>=self.batch:raise ValueError('invalid request row')
+        self.session.reset_row(row)
+        self.slots[row]=0
+
     def _prefill_profiles(self):
         if 'qwen35_extended_prefill' in garnet.backend_info():return (2,4,8,16,32,40,64,80)
         return (2,4,8,16,32,64)

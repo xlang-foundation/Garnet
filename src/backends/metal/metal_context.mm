@@ -200,7 +200,8 @@ struct MetalPipelines {
     id<MTLLibrary> library;
 #ifdef GARNET_METAL_MLX_AFFINE_INT4
     id<MTLLibrary> affineInt4Library;
-    id<MTLComputePipelineState> affineInt4Decode,affineInt4Gemm;
+    std::array<id<MTLComputePipelineState>,4> affineInt4Decode{};
+    id<MTLComputePipelineState> affineInt4Gemm;
 #endif
 #ifdef GARNET_METAL_SERIAL_VISION_PREFETCH
     id<MTLLibrary> visionPrefetchLibrary;
@@ -1430,11 +1431,20 @@ kernel void bf16_native_dot_t128(device const float* a [[buffer(0)]],device cons
         auto affineLibrary=[impl_->device newLibraryWithSource:[NSString stringWithUTF8String:kAffineInt4Shader] options:affineOptions error:&error];
         if(!affineLibrary)throw std::runtime_error("Cannot compile affine INT4 kernels: "+std::string(error.localizedDescription.UTF8String));
         impl_->kernels->affineInt4Library=affineLibrary;
-        impl_->kernels->affineInt4Decode=[impl_->device newComputePipelineStateWithFunction:[affineLibrary newFunctionWithName:@"affine_q4_decode"] error:&error];
-        impl_->kernels->affineInt4Gemm=[impl_->device newComputePipelineStateWithFunction:[affineLibrary newFunctionWithName:@"affine_q4_gemm"] error:&error];
-        for(auto pipeline:{impl_->kernels->affineInt4Decode,impl_->kernels->affineInt4Gemm})
+        for(uint32_t rows=1;rows<=4;++rows) {
+            auto constants=[MTLFunctionConstantValues new];
+            [constants setConstantValue:&rows type:MTLDataTypeUInt atIndex:0];
+            auto function=[affineLibrary newFunctionWithName:@"affine_q4_decode" constantValues:constants error:&error];
+            if(!function)throw std::runtime_error("Cannot specialize affine INT4 decode rows");
+            auto pipeline=[impl_->device newComputePipelineStateWithFunction:function error:&error];
             if(!pipeline||pipeline.threadExecutionWidth!=32||pipeline.maxTotalThreadsPerThreadgroup<128)
-                throw std::runtime_error("Affine INT4 requires four 32-lane SIMD groups");
+                throw std::runtime_error("Affine INT4 decode requires four 32-lane SIMD groups");
+            impl_->kernels->affineInt4Decode[rows-1]=pipeline;
+        }
+        impl_->kernels->affineInt4Gemm=[impl_->device newComputePipelineStateWithFunction:[affineLibrary newFunctionWithName:@"affine_q4_gemm"] error:&error];
+        if(!impl_->kernels->affineInt4Gemm||impl_->kernels->affineInt4Gemm.threadExecutionWidth!=32||
+           impl_->kernels->affineInt4Gemm.maxTotalThreadsPerThreadgroup<128)
+            throw std::runtime_error("Affine INT4 GEMM requires four 32-lane SIMD groups");
 #endif
         impl_->kernels->argmax=[impl_->device newComputePipelineStateWithFunction:[library newFunctionWithName:@"argmax_rows"] error:&error];
 #ifdef GARNET_METAL_SERIAL_VISION_PREFETCH
@@ -1662,11 +1672,11 @@ void MetalContext::EncodeAffineInt4MatMul(const MetalMatrix& input,const MetalAf
         Params params{a.rows,a.columns,o.columns,a.rowBytes/4,o.rowBytes/4};
         auto encoder=[impl_->command computeCommandEncoder];
         if(!encoder)throw std::runtime_error("Cannot encode affine INT4 projection");
-        [encoder setComputePipelineState:a.rows<=8?impl_->kernels->affineInt4Decode:impl_->kernels->affineInt4Gemm];
+        [encoder setComputePipelineState:a.rows<=4?impl_->kernels->affineInt4Decode[a.rows-1]:impl_->kernels->affineInt4Gemm];
         [encoder setBuffer:a.data offset:a.offset atIndex:0];[encoder setBuffer:w->packed offset:0 atIndex:1];
         [encoder setBuffer:w->scales offset:0 atIndex:2];[encoder setBuffer:w->biases offset:0 atIndex:3];
         [encoder setBuffer:o.data offset:o.offset atIndex:4];[encoder setBytes:&params length:sizeof(params) atIndex:5];
-        const auto groups=a.rows<=8?MTLSizeMake((o.columns+3)/4,1,1):MTLSizeMake((o.columns+31)/32,(a.rows+15)/16,1);
+        const auto groups=a.rows<=4?MTLSizeMake((o.columns+3)/4,1,1):MTLSizeMake((o.columns+31)/32,(a.rows+15)/16,1);
         [encoder dispatchThreadgroups:groups threadsPerThreadgroup:MTLSizeMake(128,1,1)];[encoder endEncoding];
         output.impl_->ready=false;output.impl_->pending=true;
         if(impl_->pendingOutputs.insert(output.impl_.get()).second)impl_->outputs.push_back(output.impl_);
@@ -2410,6 +2420,29 @@ void MetalContext::Update(const MetalMatrix& matrix,const float* values,size_t c
     }
 #endif
 }
+#ifdef GARNET_METAL_REQUEST_ROWS
+void MetalContext::ValidateCompletedRow(const MetalMatrix& matrix,size_t row) const {
+    if(impl_->command)throw std::logic_error("Request-row access requires a closed command batch");
+    if(!matrix.impl_||matrix.impl_->matrix.device!=impl_->device)
+        throw std::invalid_argument("Request row belongs to another device or an empty matrix");
+    if(matrix.impl_->pending||!matrix.impl_->ready)
+        throw std::logic_error("Request-row access requires completed initialized storage");
+    auto native=matrix.impl_->matrix;
+    if(row>=native.rows||!native.data.contents||!native.columns||!native.rowBytes||native.columns>SIZE_MAX/sizeof(float)||
+       native.rowBytes<native.columns*sizeof(float)||native.offset>native.data.length||
+       row>(native.data.length-native.offset)/native.rowBytes||
+       native.columns*sizeof(float)>native.data.length-native.offset-row*native.rowBytes)
+        throw std::invalid_argument("Request row exceeds matrix storage bounds");
+}
+void MetalContext::ZeroRow(const MetalMatrix& matrix,size_t row) {
+    @autoreleasepool {
+        ValidateCompletedRow(matrix,row);
+        auto native=matrix.impl_->matrix;
+        std::memset(static_cast<char*>(native.data.contents)+native.offset+row*native.rowBytes,
+                    0,native.columns*sizeof(float));
+    }
+}
+#endif
 void MetalContext::Zero(const MetalMatrix& matrix) {
 #ifdef GARNET_METAL_LAZY_RESIDENT_DEFAULTS
     @autoreleasepool {

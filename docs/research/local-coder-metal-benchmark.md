@@ -1,14 +1,19 @@
 # Local coding Metal qualification
 
 Status: vLLM phase1 collection complete (90 measured waves, 210 requests,
-three cleanly stopped cohorts); five SGLang cells admitted, baseline next.
-SGLang 2K-input/batch4 failed Metal memory admission and is explicitly retained.
+three cleanly stopped cohorts). SGLang's first frozen five-cell campaign and
+the stock512MiB allocator-cache-cap active4 candidate failed repeated short
+batch4 memory admission. A two-active-request profile is under qualification,
+with four-client workloads explicitly queued. All failed runs remain retained.
 Native INT4 package
 build, eight component tests, seven benchmark/evaluator tests and independent
 linear-attention/decoder references for batch1/2/4 pass. The INT4-disabled
-control package builds and all seven control component tests pass. Full-model Garnet,
-continuous batching, hybrid prefix integration and multimodal runtime gates
-remain pending. No speedup claim. See evidence paths in the progress notes.
+control package builds and all seven control component tests pass. Native 27B
+passes a bounded 79-input/four-output smoke twice with identical reset results;
+the optimized projection/row-lifecycle build passes nine component tests.
+Matched 4K performance, coding quality, continuous batching, hybrid prefix
+integration and multimodal runtime gates remain pending. No comparator speedup
+claim. See evidence paths in the progress notes.
 
 Order: Qwen3.8-27B, Qwen3.5-9B, Qwen3.5-4B. Current target is 27B.
 Hardware: Apple M5, 24 GiB unified memory. This is separate from historical
@@ -282,3 +287,43 @@ hardware-specific extension policy separate.
   It now reads the exact manifest embedded in frozen metadata and the campaign
   fixture tests a descriptive manifest filename. The three accounting/campaign
   tests pass. Audit also recognizes SGLang's periodic scheduler log format.
+- The first frozen SGLang five-cell campaign completed short batches1/2 but
+  failed with Metal OOM during short batch4 warmup1. The prior one-wave
+  admissions therefore did not establish long-lived repeatability. Preserve
+  this failed campaign at `evidence/baseline-phase1/sglang`; do not report it
+  as a completed baseline. Stock SGLang exposes `SGLANG_MLX_CACHE_LIMIT_GB`
+  specifically to bound freed-buffer retention before model load. A new,
+  separately recorded candidate caps that cache at512MiB without runtime
+  source changes; repeated short/long batch4 admission is running.
+- Native 27B now executes all64 learned layers and the untied head. The first
+  512-capacity smoke used79 exact prompt tokens and returned the same four
+  IDs `[71093,12305,198,727]` on two reset-separated requests. It allocated
+  18,054,987,776 Metal bytes and was slow (~0.72s per decode step); system
+  paging was retained. See `evidence/native27b-smoke1`.
+- A serialized operator diagnostic identified quantized MatMul as dominant.
+  Small-row decode now uses row-specialized scalar accumulators; rows>=5 use
+  the tiled FP32 contraction. All numerical component tests pass. The same
+  bounded smoke then retained the exact IDs, with the second request's mean
+  decode step0.134s and warm TTFT11.56s versus0.739s/48.32s previously. These
+  are native iteration observations at capacity512/output4, not equivalent to
+  the frozen 4K/output128 comparisons or a quality score. Artifacts:
+  `evidence/native27b-op-diagnostic1` and `evidence/native27b-smoke2`; native
+  libraries, smoke source and input digests are pinned separately.
+- The opt-in request-row lifecycle extension builds, and its primitive test
+  verifies padded-stride row isolation, rejection and reuse. It is not yet
+  continuous serving, and actual mixed-request session reuse still requires
+  integration gates. The native prefix index likewise still needs hybrid
+  snapshot/restore and owning storage integration.
+- The512MiB capped active4 SGLang admission also failed on repetition of the
+  short batch4 wave, despite the cap being confirmed in its startup log. The
+  next stock profile retains that cap and limits GPU-active requests to2;
+  external client concurrency4 is still requested and its queueing must be
+  disclosed. It cannot establish native active4 support.
+- Actual native session row reuse now passes an independent mixed
+  linear-attention/full-KV reference at batch4: replace A with E while B/C/D
+  continue, pause/reactivate C, preserve all untouched state and hidden rows,
+  reject invalid row indexes without mutation, and verify predictions both
+  with and without a head. The fixtures cover seven steps. Evidence:
+  `evidence/native-request-row-session-heads.log` and its persisted fixtures.
+  This proves the row lifecycle primitive, not a serving scheduler or prefix
+  cache integration. Both remain required work.

@@ -21,6 +21,9 @@ X::Value TensorValue(X3PackageHost* host,MetalContext& gpu,const MetalMatrix& ma
 }
 }
 void MetalDecoderSession::Clear() {
+#ifdef GARNET_METAL_REQUEST_ROWS
+    predictionInitialized_=false;rowResetBytes_=0;
+#endif
 #ifdef GARNET_METAL_DENSE_PREFIX_CACHE
     prefixCache_.clear();prefixBytes_=prefixRestoreBytes_=prefixCaptureBytes_=0;prefixClock_=0;prefixFreshReset_=false;
 #endif
@@ -38,6 +41,9 @@ void MetalDecoderSession::Clear() {
 }
 void MetalDecoderSession::Close() {std::lock_guard<std::mutex> lock(mutex_);Clear();}
 void MetalDecoderSession::ResetUnlocked() {
+#ifdef GARNET_METAL_REQUEST_ROWS
+    predictionInitialized_=false;rowResetBytes_=0;
+#endif
 #ifdef GARNET_METAL_DENSE_PREFIX_CACHE
     prefixFreshReset_=false;prefixRestoreBytes_=prefixCaptureBytes_=0;
 #endif
@@ -91,6 +97,42 @@ void MetalDecoderSession::ResetUnlocked() {
 #endif
 }
 void MetalDecoderSession::Reset() {std::lock_guard<std::mutex> lock(mutex_);ResetUnlocked();}
+#ifdef GARNET_METAL_REQUEST_ROWS
+void MetalDecoderSession::ResetRow(int64_t row) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    if(!gpu_||poisoned_||states_.empty())throw std::logic_error("Request-row reset requires a ready session; use full reset after failure");
+    if(row<0||uint64_t(row)>=states_[0].rows)throw std::invalid_argument("Request-row reset index out of bounds");
+    std::vector<MetalMatrix> matrices;
+    for(const auto& state:states_)for(size_t part=0;part<2;++part) {
+        if(state.rows!=states_[0].rows)throw std::logic_error("Inconsistent native request row count");
+        matrices.push_back(state.matrix[part]);
+    }
+    if(hidden_.Valid())matrices.push_back(hidden_);
+    if(predictionInitialized_)matrices.push_back(prediction_);
+    size_t bytes=0;
+    // Validate every owner and range before touching any request's state.
+    for(const auto& matrix:matrices)gpu_->ValidateCompletedRow(matrix,size_t(row));
+    auto charge=[&](size_t columns){
+        if(columns>SIZE_MAX/sizeof(float)||bytes>SIZE_MAX-columns*sizeof(float))
+            throw std::overflow_error("Request-row state byte count overflow");
+        bytes+=columns*sizeof(float);
+    };
+    for(const auto& state:states_)for(auto columns:state.columns)charge(columns);
+    if(hidden_.Valid()) {
+        size_t columns=1;
+        for(size_t i=1;i<hiddenShape_.size();++i) {
+            if(hiddenShape_[i]<=0||uint64_t(hiddenShape_[i])>SIZE_MAX/columns)
+                throw std::overflow_error("Request-row hidden width overflow");
+            columns*=size_t(hiddenShape_[i]);
+        }
+        charge(columns);
+    }
+    if(predictionInitialized_)charge(2);
+    poisoned_=true;
+    for(const auto& matrix:matrices)gpu_->ZeroRow(matrix,size_t(row));
+    rowResetBytes_=bytes;poisoned_=false;
+}
+#endif
 bool MetalDecoderSession::Build(X::Value graphs,X::Value head) {
     std::lock_guard<std::mutex> lock(mutex_);Clear();
     if(graphs.runtime()!=Host()->runtime||!graphs.IsList()||graphs.Size()==0)
@@ -274,6 +316,9 @@ X::Value MetalDecoderSession::Run(X::Value graphs,X::Value hidden,X::Value posit
     hiddenShape_=inputShape[0];
     auto result=X::Value::List(Host());
     if(predictionToken>=0) {
+#ifdef GARNET_METAL_REQUEST_ROWS
+        predictionInitialized_=true;
+#endif
         auto prediction=gpu_->Download(prediction_);
         for(size_t row=0;row<states_[0].rows;++row) {
             if(prediction[row*2+1]!=0)throw std::runtime_error("Nonfinite Metal session logits");

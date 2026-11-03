@@ -113,6 +113,10 @@ public:
 #endif
     MetalMatrix Upload(const std::vector<float>& values, size_t rows, size_t columns);
     MetalMatrix Allocate(size_t rows, size_t columns);
+#ifdef GARNET_METAL_REQUEST_ROWS
+    void ValidateCompletedRow(const MetalMatrix&,size_t row) const;
+    void ZeroRow(const MetalMatrix&,size_t row);
+#endif
     MetalBF16Weight UploadBF16(const void* data,size_t bytes,size_t rows,size_t columns,bool floatPrefill=false,bool visionPrefill=false);
     bool PrepareScreenedHead(const MetalBF16Weight&);
     bool EncodeScreenedArgmax(const MetalMatrix&,const MetalBF16Weight&,const MetalMatrix&);
