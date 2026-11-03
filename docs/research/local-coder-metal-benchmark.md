@@ -818,3 +818,22 @@ budget declines capture without breaking prediction. Initial harness errors
 Evidence: `tokenprefix-ctest.log`, `tokenprefix-regressions.log`,
 `tokenprefix-hybrid-test.log` through `tokenprefix-hybrid-test4.log`.
 The learned checkpoint and HTTP integration remain separate gates.
+
+
+The learned hybrid-prefix gate passed in
+`evidence/native27b-tokenprefix-study1` at batch2/context512/chunk8. It captured
+A at token64 and its full79-token prompt while B's distinct71-token prompt
+shared execution. Original and exact-restored16-token outputs matched the
+frozen successful single-request oracles. An appended first generated token
+continued with the remaining15 oracle tokens. A changed token after64 restored
+only that stored boundary, then matched four tokens from fresh execution of
+the changed prompt. B's saved prediction stayed unchanged through A's release,
+replacement, restoration and suffix execution.
+
+The native index reported two entries, three hits and336,511,388accounted host
+bytes under a384MiB retained-entry budget. Metal allocation before clear was
+16,372,826,112bytes; close/quiescence returned to720,896bytes. Retained source,
+artifact, token and resource audit found zero issues. This proves that finite
+native learned prefix path; it does not admit HTTP prefix reuse, general
+multimodal prefixes, paged KV, complete batched coding quality or performance
+ratios. The serving wrapper still needs native scheduler/token-cache integration.
