@@ -837,3 +837,24 @@ artifact, token and resource audit found zero issues. This proves that finite
 native learned prefix path; it does not admit HTTP prefix reuse, general
 multimodal prefixes, paged KV, complete batched coding quality or performance
 ratios. The serving wrapper still needs native scheduler/token-cache integration.
+
+
+A separate research HTTP path now multiplexes multiple requests into one native
+continuous scheduler (`local_coder_batch_http.py` / `local_coder_batch_worker.py`).
+The bounded CPU transport routes interleaved native token events by request
+identity, checks complete IDs/counts and exposes cached-token usage. Profile
+rejection affects only that request; fatal execution/routing errors stop
+admission. Native row allocation, prefix lookup and state ownership remain in
+the runtime. The worker supplies tokenization, embeddings and graph dispatch.
+A5ms idle coalescing window is included in client TTFT and frozen with the
+profile. Prompt prefill shares chunk graphs, but whole-prompt policy ticks can
+still stall existing decode during a new long prompt. HTTP disconnects drain
+the bounded request; they do not yet expose native cancellation.
+
+CPU-only fake-event transport and HTTP tests pass, covering interleaved client
+routing, SSE final IDs/cache counts, isolated rejection and clean subprocess
+exit. These tests are never performance evidence. The one-engine guard also
+recognizes both new bridge/worker names. The common study HTTP handler adds
+optional cached-token accounting and an opt-in request-error hook; existing
+single-request/CUDA workers keep fatal errors as their default. Learned-model
+HTTP admission and complete batched coding quality remain pending.

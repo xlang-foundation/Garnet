@@ -11,11 +11,13 @@ class EngineGuardTest(unittest.TestCase):
 103 /env/sglang-env/bin/python /env/sglang-env/bin/python -m sglang.launch_server
 104 /env/vllm-metal/.venv-vllm-metal/bin/python python -m vllm
 105 /build/bin/Cantor /build/bin/Cantor
+106 /env/bin/python /env/bin/python local_coder_batch_http.py --port 8129
+107 /build/xlang3 /build/xlang3 local_coder_batch_worker.py /profile.json
 '''
         commands = '\n'.join(' '.join(line.split()[:2]) for line in processes.splitlines() if line.strip())
         arguments = '\n'.join(line.split(None, 2)[0]+' '+line.split(None, 2)[2] for line in processes.splitlines() if line.strip())
         with patch('run_local_coder_baseline.subprocess.check_output', side_effect=[commands, arguments]):
-            self.assertEqual(len(engine_processes()), 5)
+            self.assertEqual(len(engine_processes()), 7)
 
     def test_unrelated_runtime_and_shell_diagnostics_are_ignored(self):
         processes = '''

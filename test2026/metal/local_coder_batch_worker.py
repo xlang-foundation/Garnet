@@ -1,0 +1,165 @@
+"""Native Metal continuous-batch text study worker.
+
+XLang args: native build, Garnet source, checkpoint folder, frozen profile JSON.
+CPU code supplies tokenization/embeddings and transports real native events;
+row allocation, scheduling, prefix matching and hybrid state live in native code.
+Prefill prompts share a chunk graph; policy ticks still finish whole prompts,
+so incoming long prefill can delay existing decode until that prefill completes.
+"""
+import sys,json,os,time,threading,queue
+sys.path.insert(0,sys.argv[1]);sys.path.insert(0,sys.argv[2])
+import garnet,tensor
+from xModel.qwen38.vl_27b.metal_batch_study import create_decoder
+
+def emit(value):
+    raw=(json.dumps(value,ensure_ascii=True,separators=(',',':'))+'\n').encode()
+    while raw:
+        count=os.write(1,raw)
+        if count<1:raise OSError('Native batch event pipe closed')
+        raw=raw[count:]
+
+def f32(values,shape):return tensor.tensor(values,shape=shape,dtype=tensor.float32)
+
+def main():
+    folder=sys.argv[3]
+    with open(sys.argv[4]) as stream:profile=json.load(stream)
+    with open(folder+'/config.json') as stream:config=json.load(stream)
+    batch=profile['batch'];capacity=profile['capacity'];chunk=profile['prefill_chunk'];prefix=profile.get('prefix_cache',False)
+    if type(prefix) is not bool:raise ValueError('Explicit boolean prefix policy required')
+    if not profile.get('profile_id'):raise ValueError('Frozen profile identity required')
+    if 'row_final_hidden' not in garnet.backend_info():raise ValueError('Native per-row final hidden extension required')
+    width=config['text_config']['hidden_size'];vocab=config['text_config']['vocab_size']
+    incoming=queue.Queue(maxsize=16);shutdown=threading.Event();input_failure=[]
+    decoder=None;policy=None;jobs={};keys=set()
+    def read():
+        pending=b''
+        try:
+            while not shutdown.is_set():
+                block=os.read(0,65536)
+                if not block:
+                    if pending:raise ValueError('Incomplete native batch request frame')
+                    return
+                pending+=block
+                while b'\n' in pending:
+                    line,pending=pending.split(b'\n',1)
+                    if len(line)>2*1024*1024:raise ValueError('Native batch request frame too large')
+                    incoming.put(json.loads(line))
+                if len(pending)>2*1024*1024:raise ValueError('Native batch request frame too large')
+        except Exception as error:input_failure.append(str(error))
+        finally:shutdown.set()
+    try:
+        decoder=create_decoder(folder+'/model.safetensors.index.json',config,capacity,batch,chunk)
+        decoder.prefill_compile_ms=0
+        if prefix:
+            if 'native_hybrid_token_prefix' not in garnet.backend_info():raise ValueError('Native hybrid token prefix extension required')
+            decoder.session.configure_token_prefix(profile['prefix_identity'],profile.get('prefix_entries',2),profile.get('prefix_host_bytes',384*1024*1024))
+        graphs=decoder._resident_prefill_graphs(chunk)
+        policy=garnet.continuous_scheduler();policy.initialize(decoder.session,16)
+        tokenizer=garnet.tokenizer();tokenizer.open(folder)
+        stops=[tokenizer.token_id('<|im_end|>'),tokenizer.token_id('<|endoftext|>')]
+        reader=threading.Thread(target=read,daemon=True);reader.start()
+        emit(dict(event='ready',backend=garnet.backend_info(),profile=profile,active_requests=batch,capacity=capacity,
+            prefill_chunk=chunk,prefix_cache=prefix,multimodal=False,memory=json.loads(garnet.memory_stats_json())))
+        def admit(request):
+            key=request.get('id') if isinstance(request,dict) else None
+            if not isinstance(key,str) or not key or len(key)>128:raise ValueError('Native batch request identity invalid')
+            if key in keys:raise ValueError('Duplicate native batch request identity')
+            try:
+                body=request['body'];limit=body['max_tokens'];prompt=body['rendered_prompt']
+                if not isinstance(prompt,str) or type(limit) is not int or not 2<=limit<=1024:
+                    raise ValueError('Native batch request contract invalid')
+                ids=list(tokenizer.encode(prompt))
+                if not ids or len(ids)+limit>capacity:raise ValueError('Request exceeds the frozen native context profile')
+                identity=policy.submit(len(ids),limit,0)
+                if identity<=0:raise ValueError('Native scheduler queue or context profile full')
+                jobs[identity]=dict(id=key,prompt=ids,limit=limit,generated=[],text_ids=[],cached_tokens=0,began=time.monotonic())
+                keys.add(key)
+            except Exception as error:emit(dict(event='error',id=key,error=str(error),fatal=False))
+        def execute(graphs,hidden,positions,slots,active,prediction,epochs,ids):
+            if prefix:return decoder.session.run_tokens(graphs,hidden,positions,slots,active,prediction,epochs,ids)
+            return decoder.session.run_leased(graphs,hidden,positions,slots,active,prediction,epochs)
+        def deliver(request,token,stage):
+            identity=request['id'];job=jobs[identity]
+            if token<0 or token>=vocab:raise ValueError('Native batch output outside vocabulary')
+            job['generated'].append(token)
+            if token not in stops:job['text_ids'].append(token)
+            text=tokenizer.decode(job['text_ids']).encode('utf8').decode('utf8','replace')
+            emit(dict(event='token',id=job['id'],token_id=token,sampled_tokens=len(job['generated']),
+                prompt_tokens=len(job['prompt']),cached_tokens=job['cached_tokens'],text=text))
+            finished=token in stops or len(job['generated'])>=job['limit']
+            fn=policy.complete_prefill if stage=='prefill' else policy.complete_decode
+            result=fn(identity,token,finished)
+            if result!=(3 if finished else 2):raise ValueError('Native scheduler completion disagrees with output budget')
+            if finished:
+                emit(dict(event='completed',id=job['id'],generated_ids=job['generated'],prompt_ids=job['prompt'],text=text,
+                    cached_tokens=job['cached_tokens'],finish_reason='stop' if token in stops else 'length',
+                    generation_mode='native_metal_continuous_batch',profile_id=profile['profile_id'],
+                    native_request=identity,native_row=request['row'],native_epoch=request['epoch'],
+                    request_window_seconds=time.monotonic()-job['began'],memory=json.loads(garnet.memory_stats_json())))
+                keys.remove(job['id']);del jobs[identity]
+        while not shutdown.is_set():
+            if not jobs:
+                try:admit(incoming.get(timeout=.1))
+                except queue.Empty:continue
+                # Bounded coalescing is part of the frozen serving profile and
+                # included in client TTFT, not a benchmark warmup adjustment.
+                deadline=time.monotonic()+.005
+                while time.monotonic()<deadline and not shutdown.is_set():
+                    try:admit(incoming.get(timeout=max(.0001,deadline-time.monotonic())))
+                    except queue.Empty:break
+            while not incoming.empty():admit(incoming.get_nowait())
+            if not jobs:continue
+            plans=json.loads(policy.next_json())['batches']
+            if not plans:raise ValueError('Native scheduler has live jobs but made no progress')
+            for plan in plans:
+                if shutdown.is_set():break
+                emit(dict(event='native_batch',stage=plan['stage'],active_rows=plan['active_rows'],requests=plan['requests']))
+                if plan['stage']=='prefill':
+                    rows={request['row']:jobs[request['id']] for request in plan['requests']}
+                    for request in plan['requests']:
+                        job=jobs[request['id']]
+                        if prefix:job['cached_tokens']=decoder.session.restore_token_prefix(request['row'],request['epoch'],job['prompt'])
+                    remaining=max(len(job['prompt'])-job['cached_tokens'] for job in rows.values())
+                    for offset in range(0,remaining,chunk):
+                        if shutdown.is_set():break
+                        ids=[];flags=[];slots=[];by_token=[]
+                        for t in range(chunk):
+                            by_token.append([rows[row]['prompt'][rows[row]['cached_tokens']+offset+t]
+                                if row in rows and rows[row]['cached_tokens']+offset+t<len(rows[row]['prompt']) else 0 for row in range(batch)])
+                        for row in range(batch):
+                            job=rows.get(row)
+                            for t in range(chunk):
+                                position=job['cached_tokens']+offset+t if job else 0
+                                valid=job is not None and position<len(job['prompt'])
+                                ids.append(by_token[t][row]);flags.append(1.0 if valid else 0.0);slots.append(float(position) if valid else 0.0)
+                        positions=[slot for slot in slots for axis in range(3)]
+                        execute(graphs,decoder.io.stack_tokens([decoder.io.embedding(tokens) for tokens in by_token]),
+                            f32(positions,[batch,chunk,3]),f32(slots,[batch,chunk]),f32(flags,[batch,chunk]),-1,plan['epochs'],ids)
+                    if shutdown.is_set():break
+                    predicted=decoder.session.predict_rows(plan['epochs'])
+                    if prefix:
+                        for request in plan['requests']:
+                            job=jobs[request['id']]
+                            if job['cached_tokens']<len(job['prompt']):decoder.session.cache_token_prefix(request['row'],request['epoch'])
+                else:
+                    ids=[0]*batch;slots=[0.0]*batch
+                    for request in plan['requests']:ids[request['row']]=request['token_id'];slots[request['row']]=float(request['slot'])
+                    positions=[slot for slot in slots for axis in range(3)]
+                    predicted=execute([layer['graph'] for layer in decoder.layers],decoder.io.embedding(ids),f32(positions,[batch,3]),
+                        f32(slots,[batch]),f32([float(value) for value in plan['active_rows']],[batch]),0,plan['epochs'],ids)
+                for request in plan['requests']:deliver(request,predicted[request['row']],plan['stage'])
+        if input_failure:raise ValueError(input_failure[0])
+    except Exception as error:
+        for job in jobs.values():emit(dict(event='error',id=job['id'],error=str(error),fatal=True))
+        raise
+    finally:
+        shutdown.set()
+        try:
+            if policy is not None:policy.close()
+        finally:
+            try:
+                if decoder is not None:decoder.close()
+                emit(dict(event='closed',memory=json.loads(garnet.memory_stats_json())))
+            finally:garnet.shutdown()
+
+main()

@@ -49,6 +49,8 @@ def engine_processes():
         native = ((executable.startswith('python') or executable == 'xlang3') and
                   ('local_coder_native_http.py' in arguments or
                    'local_coder_native_worker.py' in arguments or
+                   'local_coder_batch_http.py' in arguments or
+                   'local_coder_batch_worker.py' in arguments or
                    (executable == 'xlang3' and 'Qwen3.8-27B' in arguments)))
         if reference or native or command.endswith('/bin/Cantor'):
             result.append(line.strip())

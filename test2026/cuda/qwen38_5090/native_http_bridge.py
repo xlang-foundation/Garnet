@@ -107,19 +107,21 @@ class Handler(BaseHTTPRequestHandler):
                     if not text.startswith(previous):raise ValueError('Tokenizer prefix revision cannot be streamed losslessly')
                     delta=text[len(previous):];previous=text
                     if stream:send({'id':key,'object':'chat.completion.chunk','choices':[{'index':0,'delta':{'content':delta},'finish_reason':None}],
-                        'usage':{'prompt_tokens':prompt,'completion_tokens':count,'total_tokens':prompt+count},'token_id':event['token_id']})
+                        'usage':{'prompt_tokens':prompt,'completion_tokens':count,'total_tokens':prompt+count,'prompt_tokens_details':{'cached_tokens':event.get('cached_tokens',0)}},'token_id':event['token_id']})
                 else:
                     if tokens!=event['generated_ids'] or len(event['prompt_ids'])!=prompt:raise ValueError('Worker final IDs disagree with streamed events')
                     full_text=event['text']
                     if not full_text.startswith(previous):raise ValueError('Final tokenizer text revises streamed prefix')
-                    usage={'prompt_tokens':prompt,'completion_tokens':count,'total_tokens':prompt+count}
+                    usage={'prompt_tokens':prompt,'completion_tokens':count,'total_tokens':prompt+count,'prompt_tokens_details':{'cached_tokens':event.get('cached_tokens',0)}}
                     if stream:
                         send({'id':key,'choices':[{'index':0,'delta':{'content':full_text[len(previous):]},'finish_reason':event['finish_reason']}],'usage':usage,
                             'prompt_token_ids':event['prompt_ids'],'response_token_ids':tokens,'study':{'generation_mode':event.get('generation_mode'),'speculative_metrics':event.get('speculative_metrics')}});send('[DONE]')
                     else:self.reply(200,{'id':key,'choices':[{'index':0,'message':{'role':'assistant','content':full_text},'finish_reason':event['finish_reason'],
                         'prompt_token_ids':event['prompt_ids'],'response_token_ids':tokens}],'usage':usage,'study':{'generation_mode':event.get('generation_mode'),'speculative_metrics':event.get('speculative_metrics')}})
         except Exception as error:
-            self.server.worker.ready=False
+            hook=getattr(self.server.worker,'request_failed',None)
+            if hook is not None:hook(error)
+            else:self.server.worker.ready=False
             if started:send({'error':repr(error)})
             else:self.reply(500,{'error':repr(error)})
 
