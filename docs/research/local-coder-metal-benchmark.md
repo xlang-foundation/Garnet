@@ -729,3 +729,37 @@ native state still initializes independently. A no-weight-open rejection test
 confirms both default admission and extension gating
 (`batch4-study-admission.log`). Learned batch4 is pending, with the working-set
 guard unchanged.
+
+
+The batch4 learned study passed at context512 with four distinct79/71/100/113-
+token prompts,16 output tokens per row and two repeats. Every sequence matched
+its frozen single-request native oracle; scheduler tracking drained to zero.
+Metal allocation was18,306,334,720bytes and complete close/quiescence returned
+to720,896bytes (`evidence/native27b-batch4-study1`). Prefill was serial and
+masked; decode combined all four rows. These study timings are not a matched
+benchmark or full coding-quality qualification. Reference and Garnet measured
+campaigns must run one engine at a time, without concurrent builds or GPU work.
+
+`GARNET_METAL_ROW_FINAL_HIDDEN` is a default-off native extension requiring
+continuous row ownership. Each completed layer stack gathers each row's last
+active token into a session-private hidden bank. Fully inactive rows retain
+their earlier vector. `predict_rows(epochs)` projects that bank only after
+validating current leases and completed hidden state under the session lock;
+unselected rows return-1. Row release/replacement zeroes and invalidates the
+bank; reset clears it. Inventory and row-reset byte accounting include it.
+This allows variable-length prompts to prefill together without a shared final
+head index or retaining full logits on the host.
+
+All12 CTests, independent mixed-layer row tests with/without a head, scheduler
+GPU integration and shared-scratch storage tests pass in `native-rowhidden-build`.
+The dedicated bank regression compares different final indices, padding,
+inactive retention and gapped reactivation with sequential token execution,
+and rejects stale/replaced/uninitialized epochs and prediction after reset.
+Its initial harness used slots beyond the fixture's capacity8 and was rejected;
+the corrected test wraps fixture slots within capacity. Evidence:
+`rowhidden-ctest.log`, `rowhidden-bank-test.log`, `rowhidden-bank-test2.log`,
+`rowhidden-row-session.log`, `rowhidden-scheduler.log`,
+`rowhidden-sharedscratch.log`. Learned parallel prefill remains a separate gate;
+the study harness selects `prefill_mode=parallel` explicitly and keeps serial
+mode as the default. HTTP integration, hybrid prefix snapshots and the2x
+performance targets remain incomplete.

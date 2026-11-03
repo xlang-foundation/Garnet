@@ -37,6 +37,11 @@ class MetalDecoderSession {
     uint64_t headGeneration_=0;
     MetalMatrix hidden_;
     MetalMatrix prediction_;
+#ifdef GARNET_METAL_ROW_FINAL_HIDDEN
+    MetalMatrix rowFinalHidden_;
+    size_t rowFinalWidth_=0;
+    std::vector<uint8_t> finalHiddenReady_;
+#endif
     std::vector<int64_t> hiddenShape_;
     size_t kvInplaceUpdates_=0;
     size_t joinedPrefillPairs_=0;
@@ -100,6 +105,9 @@ public:
     X::Value RunLeased(X::Value graphs,X::Value hidden,X::Value positions,
         X::Value slots,X::Value active,int64_t predictionToken,X::Value epochs);
 #endif
+#ifdef GARNET_METAL_ROW_FINAL_HIDDEN
+    X::Value PredictRows(X::Value epochs);
+#endif
     int64_t CapturePrefix(int64_t tokens);
     int64_t RestorePrefix(int64_t id);
     bool ClearPrefixCache();
@@ -159,6 +167,9 @@ public:
         APISET().AddFunc<1>("claim_request_row",&MetalDecoderSession::ClaimRequestRow);
         APISET().AddFunc<2>("release_request_row",&MetalDecoderSession::ReleaseRequestRow);
         APISET().AddFunc<7>("run_leased",&MetalDecoderSession::RunLeased);
+#endif
+#ifdef GARNET_METAL_ROW_FINAL_HIDDEN
+        APISET().AddFunc<1>("predict_rows",&MetalDecoderSession::PredictRows);
 #endif
         APISET().AddFunc<1>("capture_prefix",&MetalDecoderSession::CapturePrefix);
         APISET().AddFunc<1>("restore_prefix",&MetalDecoderSession::RestorePrefix);

@@ -188,6 +188,9 @@ public:
         info+="; request_row_reset";
 #ifdef GARNET_METAL_CONTINUOUS_ROWS
         info+="; native_request_row_leases; native_continuous_scheduler";
+#ifdef GARNET_METAL_ROW_FINAL_HIDDEN
+        info+="; row_final_hidden";
+#endif
 #endif
 #ifdef GARNET_METAL_CHUNK_KV_INPLACE
         info+="; chunk_kv_inplace";

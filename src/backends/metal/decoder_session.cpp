@@ -21,6 +21,9 @@ X::Value TensorValue(X3PackageHost* host,MetalContext& gpu,const MetalMatrix& ma
 }
 }
 void MetalDecoderSession::Clear() {
+#ifdef GARNET_METAL_ROW_FINAL_HIDDEN
+    rowFinalHidden_=MetalMatrix();rowFinalWidth_=0;finalHiddenReady_.clear();
+#endif
 #ifdef GARNET_METAL_CONTINUOUS_ROWS
     requestRows_.reset();managedRows_=false;
 #endif
@@ -47,6 +50,9 @@ void MetalDecoderSession::Clear() {
 }
 void MetalDecoderSession::Close() {std::lock_guard<std::mutex> lock(mutex_);Clear();}
 void MetalDecoderSession::ResetUnlocked() {
+#ifdef GARNET_METAL_ROW_FINAL_HIDDEN
+    rowFinalHidden_=MetalMatrix();rowFinalWidth_=0;finalHiddenReady_.clear();
+#endif
 #ifdef GARNET_METAL_CONTINUOUS_ROWS
     if(requestRows_)requestRows_->Clear();managedRows_=false;
 #endif
@@ -122,6 +128,9 @@ void MetalDecoderSession::ResetRowUnlocked(int64_t row) {
         if(state.rows!=states_[0].rows)throw std::logic_error("Inconsistent native request row count");
         matrices.push_back(state.matrix[part]);
     }
+#ifdef GARNET_METAL_ROW_FINAL_HIDDEN
+    if(rowFinalHidden_.Valid())matrices.push_back(rowFinalHidden_);
+#endif
     if(hidden_.Valid())matrices.push_back(hidden_);
     if(predictionInitialized_)matrices.push_back(prediction_);
     size_t bytes=0;
@@ -142,9 +151,15 @@ void MetalDecoderSession::ResetRowUnlocked(int64_t row) {
         }
         charge(columns);
     }
+#ifdef GARNET_METAL_ROW_FINAL_HIDDEN
+    if(rowFinalHidden_.Valid())charge(rowFinalWidth_);
+#endif
     if(predictionInitialized_)charge(2);
     poisoned_=true;
     for(const auto& matrix:matrices)gpu_->ZeroRow(matrix,size_t(row));
+#ifdef GARNET_METAL_ROW_FINAL_HIDDEN
+    if(!finalHiddenReady_.empty())finalHiddenReady_[size_t(row)]=0;
+#endif
     rowResetBytes_=bytes;poisoned_=false;
 }
 #endif
@@ -349,12 +364,18 @@ X::Value MetalDecoderSession::RunUnlocked(X::Value graphs,X::Value hidden,X::Val
         else throw std::invalid_argument("Metal session unsupported controls");
         graph->PrepareInputs(inputs,i?std::unordered_set<size_t>{0,1,2}:std::unordered_set<size_t>{1,2});
     }
+#ifdef GARNET_METAL_ROW_FINAL_HIDDEN
+    std::vector<uint8_t> rowWillUpdate(states_[0].rows,0);
+#endif
     {
         X::Tensor flags(active);auto info=flags.Info();auto lease=flags.Acquire();
         const auto* data=static_cast<const float*>(info.data);
         const size_t count=states_[0].rows*chunk;
         for(size_t i=0;i<count;++i)if(!std::isfinite(data[i])||(data[i]!=0&&data[i]!=1))
             throw std::invalid_argument("Invalid Metal session active flags");
+#ifdef GARNET_METAL_ROW_FINAL_HIDDEN
+        for(size_t i=0;i<count;++i)if(data[i]!=0)rowWillUpdate[i/chunk]=1;
+#endif
 #ifdef GARNET_METAL_CONTINUOUS_ROWS
         if(managedRows_)for(size_t i=0;i<count;++i)if(data[i]!=0&&!requestRows_->Owned(i/chunk))
             throw std::invalid_argument("Active Metal row has no native request lease");
@@ -389,6 +410,13 @@ X::Value MetalDecoderSession::RunUnlocked(X::Value graphs,X::Value hidden,X::Val
     }
     prefillPartialSubmissions_=0;fusedHeadArgmaxDispatches_=0;bodyShapeDispatches_=bodyShapeMisses_=0;deferredZeroBytes_=deferredZeroStates_=0;
     screenedHeadDispatches_=0;screenedHeadSeedRows_=0;interleavedScreenDispatches_=0;
+#ifdef GARNET_METAL_ROW_FINAL_HIDDEN
+    if(!rowFinalHidden_.Valid()) {
+        const size_t width=size_t(inputShape[0].back());
+        rowFinalHidden_=gpu_->Upload(std::vector<float>(states_[0].rows*width,0),states_[0].rows,width);
+        rowFinalWidth_=width;finalHiddenReady_.assign(states_[0].rows,0);
+    } else if(rowFinalWidth_!=size_t(inputShape[0].back()))throw std::invalid_argument("Last-active hidden width changed");
+#endif
     const auto prepared=std::chrono::steady_clock::now();
     prepareMs_=std::chrono::duration<double,std::milli>(prepared-start).count();
 #ifdef GARNET_METAL_DENSE_PREFIX_CACHE
@@ -440,6 +468,9 @@ X::Value MetalDecoderSession::RunUnlocked(X::Value graphs,X::Value hidden,X::Val
             if(chunk>1&&(i+1)%4==0&&i+1<layers.size())gpu_->Flush();
 #endif
         }
+#ifdef GARNET_METAL_ROW_FINAL_HIDDEN
+        gpu_->EncodeLastActiveHidden(current,layers[0]->slots_[layers[0]->inputs_.back()].matrix,rowFinalHidden_,chunk);
+#endif
         const size_t hiddenWidth=size_t(inputShape[0].back())*chunk;
         gpu_->EncodeSliceGroups(current,hidden_,1,hiddenWidth,0,hiddenWidth);
         if(predictionToken>=0) {
@@ -475,9 +506,51 @@ X::Value MetalDecoderSession::RunUnlocked(X::Value graphs,X::Value hidden,X::Val
             result.Append(X::Value(int64_t(prediction[row*2])));
         }
     }
+#ifdef GARNET_METAL_ROW_FINAL_HIDDEN
+    for(size_t row=0;row<rowWillUpdate.size();++row)if(rowWillUpdate[row])finalHiddenReady_[row]=1;
+#endif
     inferenceMs_=std::chrono::duration<double,std::milli>(std::chrono::steady_clock::now()-start).count();
     poisoned_=false;return result;
 }
+#ifdef GARNET_METAL_ROW_FINAL_HIDDEN
+X::Value MetalDecoderSession::PredictRows(X::Value epochs) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    if(!gpu_||poisoned_||!head_||!requestRows_||!rowFinalHidden_.Valid()||
+       epochs.runtime()!=Host()->runtime||!epochs.IsList()||epochs.Size()!=states_[0].rows)
+        throw std::invalid_argument("Row prediction requires completed hidden states and request epochs");
+    std::vector<bool> selected(states_[0].rows,false);bool any=false;
+    for(size_t row=0;row<selected.size();++row) {
+        auto value=epochs.Get(row);
+        if(!value.IsInt64()||value.ToInt64()<0)throw std::invalid_argument("Invalid prediction epoch");
+        const auto epoch=uint64_t(value.ToInt64());
+        if(epoch&&(!requestRows_->Matches(row,epoch)||!finalHiddenReady_[row]))
+            throw std::invalid_argument("Stale or uninitialized row prediction");
+        selected[row]=epoch!=0;any=any||selected[row];
+    }
+    if(!any)throw std::invalid_argument("Row prediction requires an active request");
+    std::lock_guard<std::mutex> headLock(head_->mutex_);
+#ifdef GARNET_METAL_SHARED_PREFILL_SCRATCH
+    std::unique_lock<std::mutex> scratchLock;
+    if(head_->prefillScratch_)scratchLock=std::unique_lock<std::mutex>(head_->prefillScratch_->mutex);
+#endif
+    if(!head_->ready_||head_->generation_!=headGeneration_||head_->inputShapes_[0]!=
+       std::vector<int64_t>{int64_t(states_[0].rows),int64_t(rowFinalWidth_)})
+        throw std::logic_error("Row prediction head was closed, rebuilt or changed shape");
+    poisoned_=true;
+    try {
+        gpu_->Begin();
+        gpu_->EncodeSliceGroups(rowFinalHidden_,head_->slots_[head_->inputs_[0]].matrix,1,rowFinalWidth_,0,rowFinalWidth_);
+        head_->EncodeGreedy(*gpu_,prediction_);gpu_->SubmitAndWait();
+        auto values=gpu_->Download(prediction_);auto result=X::Value::List(Host());
+        predictionInitialized_=true;
+        for(size_t row=0;row<selected.size();++row) {
+            if(selected[row]&&values[row*2+1]!=0)throw std::runtime_error("Nonfinite row prediction logits");
+            result.Append(X::Value(selected[row]?int64_t(values[row*2]):-1));
+        }
+        poisoned_=false;return result;
+    } catch(...) {gpu_->Abort();throw;}
+}
+#endif
 X::Value MetalDecoderSession::Snapshot(int64_t layer) {
     std::lock_guard<std::mutex> lock(mutex_);
     if(!gpu_||poisoned_||layer<0||uint64_t(layer)>=states_.size())throw std::invalid_argument("Metal session state snapshot invalid");
@@ -602,6 +675,9 @@ std::vector<MetalResourceReference> MetalDecoderSession::MemoryReferences() {
     std::lock_guard<std::mutex> lock(mutex_);if(!gpu_)throw std::logic_error("Inventory requires an open session");std::vector<MetalResourceReference> result;
     auto append=[&](const MetalMatrix& matrix,size_t slot,const std::string& role,const std::vector<int64_t>& shape){auto info=MetalContext::MatrixBufferInfo(matrix);if(!info.identity)return;MetalResourceReference r;r.buffer=info;r.slot=slot;r.role=role;r.shape=shape;r.residentOperand=true;result.push_back(std::move(r));};
     for(size_t i=0;i<states_.size();++i)for(size_t k=0;k<2;++k)append(states_[i].matrix[k],i,"private_state"+std::to_string(k+1),states_[i].shape[k]);
+#ifdef GARNET_METAL_ROW_FINAL_HIDDEN
+    if(rowFinalHidden_.Valid())append(rowFinalHidden_,SIZE_MAX,"last_active_hidden",{int64_t(states_[0].rows),int64_t(rowFinalWidth_)});
+#endif
     append(hidden_,SIZE_MAX,"hidden",hiddenShape_);append(prediction_,SIZE_MAX,"prediction",{});return result;
 }
 }

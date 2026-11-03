@@ -123,6 +123,9 @@ public:
 #endif
     MetalMatrix Upload(const std::vector<float>& values, size_t rows, size_t columns);
     MetalMatrix Allocate(size_t rows, size_t columns);
+#ifdef GARNET_METAL_ROW_FINAL_HIDDEN
+    void EncodeLastActiveHidden(const MetalMatrix&,const MetalMatrix&,const MetalMatrix&,size_t chunk);
+#endif
 #ifdef GARNET_METAL_REQUEST_ROWS
     void ValidateCompletedRow(const MetalMatrix&,size_t row) const;
     void ZeroRow(const MetalMatrix&,size_t row);

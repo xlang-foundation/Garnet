@@ -55,7 +55,7 @@ try:
                     for i,value in enumerate(actual[layer][part]):
                         assert value==(0 if i//columns==row else saved[layer][part][i])
             for i,value in enumerate(session.hidden().tolist()):assert value==(0 if i//width==row else hidden_saved[i])
-            assert session.row_reset_bytes==(29*4+3*7*5+2*capacity*6+width+(2 if f['with_head'] else 0))*4
+            assert session.row_reset_bytes==(29*4+3*7*5+2*capacity*6+width+(width if 'row_final_hidden' in garnet.backend_info() else 0)+(2 if f['with_head'] else 0))*4
         hidden=tensor.tensor(step['hidden'],shape=[batch,width],dtype=tensor.float32)
         positions=tensor.tensor(step['positions'],shape=[batch,3],dtype=tensor.float32)
         slots=tensor.tensor(step['slots'],shape=[batch],dtype=tensor.float32)

@@ -1,8 +1,9 @@
 """Learned batch2/4 native scheduling and variable-length prompt correctness.
 
 XLang arguments: build, source, checkpoint folder, frozen study JSON, result.
-Serial masked prefill avoids assuming equal prompt lengths or a shared final
-head index. Decode is genuinely combined. Not a performance campaign.
+Serial masked or parallel prefill is selected explicitly in the frozen study.
+Parallel mode uses native per-row final hidden state and lease-checked prediction.
+Decode is genuinely combined. Not a performance campaign.
 """
 import sys,json,time
 sys.path.insert(0,sys.argv[1]);sys.path.insert(0,sys.argv[2])
@@ -15,11 +16,13 @@ cases=study['requests'];batch=study.get('batch',2);chunk=study.get('prefill_chun
 assert batch in (2,4) and chunk in (2,4,8)
 assert len(cases)==batch
 capacity=study['capacity'];limit=study['output_tokens']
+prefill_mode=study.get('prefill_mode','serial');assert prefill_mode in ('serial','parallel')
+if prefill_mode=='parallel':assert 'row_final_hidden' in garnet.backend_info()
 assert type(limit) is int and 2<=limit<=32
 assert all(len(case['expected_ids'])==limit and len(case['token_ids'])+limit<=capacity for case in cases)
 decoder=None;policy=None
 report=dict(status='running',scope=__doc__,capacity=capacity,batch=batch,prefill_chunk=chunk,
-            requested_output_tokens=limit,backend=garnet.backend_info(),runs=[])
+            requested_output_tokens=limit,prefill_mode=prefill_mode,backend=garnet.backend_info(),runs=[])
 def save():
     with open(sys.argv[5],'w') as stream:stream.write(json.dumps(report,indent=2)+'\n')
 def tensor_f32(values,shape):return tensor.tensor(values,shape=shape,dtype=tensor.float32)
@@ -37,26 +40,47 @@ try:
         assert all(identity>0 for identity in ids)
         tick=json.loads(policy.next_json())['batches'];assert len(tick)==1 and tick[0]['stage']=='prefill'
         plan=tick[0];generated={identity:[] for identity in ids};began=time.monotonic()
-        for request in plan['requests']:
-            identity=request['id'];row=request['row'];tokens=cases[ids.index(identity)]['token_ids']
-            offset=0
-            while offset<len(tokens):
-                length=min(chunk,len(tokens)-offset);values=[]
+        if prefill_mode=='parallel':
+            by_row={request['row']:cases[ids.index(request['id'])]['token_ids'] for request in plan['requests']}
+            longest=max(len(tokens) for tokens in by_row.values())
+            for offset in range(0,longest,chunk):
+                values=[]
                 for t in range(chunk):
-                    values.append(decoder.io.embedding([tokens[offset+t] if r==row else 0 for r in range(batch)]) if t<length else decoder.io.zeros([batch,width]))
+                    values.append(decoder.io.embedding([by_row[row][offset+t] if offset+t<len(by_row[row]) else 0 for row in range(batch)]))
                 hidden=decoder.io.stack_tokens(values)
-                flags=[1.0 if r==row and t<length else 0.0 for r in range(batch) for t in range(chunk)]
-                slots=[float(offset+t) if r==row and t<length else 0.0 for r in range(batch) for t in range(chunk)]
-                positions=[float(offset+t) if r==row and t<length else 0.0 for r in range(batch) for t in range(chunk) for axis in range(3)]
-                final=offset+length==len(tokens)
-                predicted=decoder.session.run_leased(prefill_graphs,hidden,tensor_f32(positions,[batch,chunk,3]),
-                    tensor_f32(slots,[batch,chunk]),tensor_f32(flags,[batch,chunk]),length-1 if final else -1,plan['epochs'])
-                if 'chunk_kv_inplace' in garnet.backend_info():
-                    assert decoder.session.kv_inplace_updates==sum([2 if kind=='full_attention' else 0 for kind in config['text_config']['layer_types']])
-                if final:
-                    generated[identity].append(predicted[row]);assert policy.complete_prefill(identity,predicted[row],False)==2
-                offset+=length
-                if offset%128==0 or final:print('native_batch_prefill_progress',repeat,row,offset,len(tokens),flush=True)
+                flags=[1.0 if offset+t<len(by_row[row]) else 0.0 for row in range(batch) for t in range(chunk)]
+                slots=[float(offset+t) if offset+t<len(by_row[row]) else 0.0 for row in range(batch) for t in range(chunk)]
+                positions=[slot for slot in slots for axis in range(3)]
+                decoder.session.run_leased(prefill_graphs,hidden,tensor_f32(positions,[batch,chunk,3]),
+                    tensor_f32(slots,[batch,chunk]),tensor_f32(flags,[batch,chunk]),-1,plan['epochs'])
+                assert decoder.session.kv_inplace_updates==sum([2 if kind=='full_attention' else 0 for kind in config['text_config']['layer_types']])
+                if (offset+chunk)%128==0 or offset+chunk>=longest:
+                    print('native_batch_parallel_prefill_progress',repeat,min(offset+chunk,longest),longest,flush=True)
+            predicted=decoder.session.predict_rows(plan['epochs'])
+            for request in plan['requests']:
+                identity=request['id'];token=predicted[request['row']]
+                generated[identity].append(token);assert policy.complete_prefill(identity,token,False)==2
+        else:
+            for request in plan['requests']:
+                identity=request['id'];row=request['row'];tokens=cases[ids.index(identity)]['token_ids']
+                offset=0
+                while offset<len(tokens):
+                    length=min(chunk,len(tokens)-offset);values=[]
+                    for t in range(chunk):
+                        values.append(decoder.io.embedding([tokens[offset+t] if r==row else 0 for r in range(batch)]) if t<length else decoder.io.zeros([batch,width]))
+                    hidden=decoder.io.stack_tokens(values)
+                    flags=[1.0 if r==row and t<length else 0.0 for r in range(batch) for t in range(chunk)]
+                    slots=[float(offset+t) if r==row and t<length else 0.0 for r in range(batch) for t in range(chunk)]
+                    positions=[float(offset+t) if r==row and t<length else 0.0 for r in range(batch) for t in range(chunk) for axis in range(3)]
+                    final=offset+length==len(tokens)
+                    predicted=decoder.session.run_leased(prefill_graphs,hidden,tensor_f32(positions,[batch,chunk,3]),
+                        tensor_f32(slots,[batch,chunk]),tensor_f32(flags,[batch,chunk]),length-1 if final else -1,plan['epochs'])
+                    if 'chunk_kv_inplace' in garnet.backend_info():
+                        assert decoder.session.kv_inplace_updates==sum([2 if kind=='full_attention' else 0 for kind in config['text_config']['layer_types']])
+                    if final:
+                        generated[identity].append(predicted[row]);assert policy.complete_prefill(identity,predicted[row],False)==2
+                    offset+=length
+                    if offset%128==0 or final:print('native_batch_prefill_progress',repeat,row,offset,len(tokens),flush=True)
         prefill_seconds=time.monotonic()-began;decode_start=time.monotonic()
         for index in range(1,limit):
             tick=json.loads(policy.next_json())['batches'];assert len(tick)==1 and tick[0]['stage']=='decode'

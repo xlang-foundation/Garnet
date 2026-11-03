@@ -36,6 +36,9 @@ def controls(plan):
 def run(plan,stop=False,complete=True):
     hidden,positions,slots,active=controls(plan)
     predictions=session.run_leased(graphs,hidden,positions,slots,active,0,plan['epochs'])
+    if 'row_final_hidden' in garnet.backend_info():
+        bank=session.predict_rows(plan['epochs'])
+        for row in range(batch):assert bank[row]==(predictions[row] if plan['active_rows'][row] else -1)
     actual=snapshot(session);actual_hidden=session.hidden().tolist()
     for request in plan['requests']:
         identity=request['id'];row=request['row']

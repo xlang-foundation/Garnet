@@ -1,5 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 #include "metal_context.h"
+#ifdef GARNET_METAL_ROW_FINAL_HIDDEN
+#include "row_final_hidden_shader.h"
+#endif
 #ifdef GARNET_METAL_MLX_AFFINE_INT4
 #include "affine_int4_shader.h"
 #ifdef GARNET_METAL_AFFINE_TALL_TILES
@@ -200,6 +203,9 @@ bool MetalBF16Weight::InterleavedBodyReady() const {
 #endif
 }
 struct MetalPipelines {
+#ifdef GARNET_METAL_ROW_FINAL_HIDDEN
+    id<MTLComputePipelineState> lastActiveHidden;
+#endif
     id<MTLLibrary> library;
 #ifdef GARNET_METAL_MLX_AFFINE_INT4
     id<MTLLibrary> affineInt4Library;
@@ -1436,9 +1442,16 @@ kernel void bf16_native_dot_t128(device const float* a [[buffer(0)]],device cons
 #ifdef GARNET_METAL_PRIMARY_BF16_BLOCKS
         source=[source stringByAppendingString:[NSString stringWithUTF8String:kPrimaryBlockShader]];
 #endif
+#ifdef GARNET_METAL_ROW_FINAL_HIDDEN
+        source=[source stringByAppendingString:[NSString stringWithUTF8String:kRowFinalHiddenShader]];
+#endif
         auto library=[impl_->device newLibraryWithSource:source options:compileOptions error:&error];
         if(!library)throw std::runtime_error(std::string(error.localizedDescription.UTF8String));
         impl_->kernels->library=library;
+#ifdef GARNET_METAL_ROW_FINAL_HIDDEN
+        impl_->kernels->lastActiveHidden=[impl_->device newComputePipelineStateWithFunction:[library newFunctionWithName:@"gather_last_active_hidden"] error:&error];
+        if(!impl_->kernels->lastActiveHidden)throw std::runtime_error("Cannot compile last-active hidden kernel");
+#endif
 #ifdef GARNET_METAL_MLX_AFFINE_INT4
         auto affineOptions=[MTLCompileOptions new];
         affineOptions.languageVersion=MTLLanguageVersion3_1;affineOptions.fastMathEnabled=NO;
@@ -2886,14 +2899,20 @@ void MetalContext::EncodeStateKernel(unsigned operation,const std::vector<MetalM
         for(const auto& input:inputs)if(second->matrix.data==input.impl_->matrix.data)
             throw std::invalid_argument("In-place secondary state output is unsupported");
     }
-#ifdef GARNET_METAL_RESIDENT_KV_INPLACE
+#ifdef GARNET_METAL_ROW_FINAL_HIDDEN
+    constexpr unsigned maxOperation=21;
+#elif defined(GARNET_METAL_RESIDENT_KV_INPLACE)
     constexpr unsigned maxOperation=20;
 #else
     constexpr unsigned maxOperation=19;
 #endif
     if(operation>maxOperation)throw std::invalid_argument("Unknown Metal state kernel");
     id<MTLComputePipelineState> pipelines[]={impl_->kernels->conv,impl_->kernels->delta,impl_->kernels->slice,impl_->kernels->prepare,impl_->kernels->gatedNorm,
-        impl_->kernels->concat,impl_->kernels->normRope,impl_->kernels->kvUpdate,impl_->kernels->scores,impl_->kernels->attentionContext,impl_->kernels->vision,impl_->kernels->layout,impl_->kernels->kvChunk,impl_->kernels->attentionChunk,impl_->kernels->kvUpdateVector,impl_->kernels->sliceVector,impl_->kernels->deltaSplit,impl_->kernels->kvChunkVector,impl_->kernels->convChunk,impl_->kernels->deltaChunk,impl_->kernels->kvInplace};
+        impl_->kernels->concat,impl_->kernels->normRope,impl_->kernels->kvUpdate,impl_->kernels->scores,impl_->kernels->attentionContext,impl_->kernels->vision,impl_->kernels->layout,impl_->kernels->kvChunk,impl_->kernels->attentionChunk,impl_->kernels->kvUpdateVector,impl_->kernels->sliceVector,impl_->kernels->deltaSplit,impl_->kernels->kvChunkVector,impl_->kernels->convChunk,impl_->kernels->deltaChunk,impl_->kernels->kvInplace
+#ifdef GARNET_METAL_ROW_FINAL_HIDDEN
+        ,impl_->kernels->lastActiveHidden
+#endif
+    };
     auto pipeline=pipelines[operation];
     if(!pipeline)throw std::runtime_error("Metal state pipeline is unavailable in this build");
 #ifdef GARNET_METAL_PARALLEL_DELTA_SPLIT
@@ -3106,6 +3125,22 @@ void MetalContext::EncodeSliceGroups(const MetalMatrix& input,const MetalMatrix&
         i.rows<=limit/p.iStride&&o.rows<=limit/p.oStride&&impl_->kernels->sliceVector;
     EncodeStateKernel(vectorized?15:2,{input},output,&p,sizeof(p),Elements(o.rows,o.columns)/(vectorized?4:1));
 }
+#ifdef GARNET_METAL_ROW_FINAL_HIDDEN
+void MetalContext::EncodeLastActiveHidden(const MetalMatrix& input,const MetalMatrix& active,
+    const MetalMatrix& output,size_t chunk) {
+    @autoreleasepool {
+    if(!input.impl_||!active.impl_||!output.impl_||!chunk||chunk>kMetalPrefillChunkLimit)
+        throw std::invalid_argument("Invalid last-active hidden arguments");
+    auto i=input.impl_->matrix,a=active.impl_->matrix,o=output.impl_->matrix;
+    if(i.rows!=o.rows||a.rows!=o.rows||a.columns!=chunk||i.columns!=Elements(chunk,o.columns)||
+       !output.impl_->ready||i.offset||a.offset||o.offset)
+        throw std::invalid_argument("Last-active hidden layout or initialized bank mismatch");
+    struct Params {uint64_t rows,width,chunk,iStride,aStride,oStride;};
+    Params p{o.rows,o.columns,chunk,i.rowBytes/4,a.rowBytes/4,o.rowBytes/4};
+    EncodeStateKernel(21,{input,active},output,&p,sizeof(p),Elements(o.rows,o.columns));
+    }
+}
+#endif
 void MetalContext::EncodeCausalConvChunk(const MetalMatrix& tokens,const MetalMatrix& weight,
     const MetalMatrix& state,const MetalMatrix& active,const MetalMatrix& output,
     const MetalMatrix& nextState,size_t chunk,size_t kernel) {
