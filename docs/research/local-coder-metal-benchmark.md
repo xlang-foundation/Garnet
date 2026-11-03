@@ -989,3 +989,20 @@ cases and12 CTests pass on the M5; the FP32 path also still passes after the
 shared implementation refactor (`mpp-bf16-ctest.log`,
 `mpp-bf16-ctest-detail1.log`, `mpp-fp32-refactor-numerics.log`). Learned coding
 and end-to-end timing gates remain required before enabling it.
+
+
+The explicit BF16-operand comparison also completed all three fresh sequential
+cohorts per variant with the same21 shapes, three warmups and nine measurements
+(`evidence/affine-mpp-bf16-comparison1`). Its audit and five tamper checks pass.
+Per-cell metadata confirms FP32 decode rows1..4 and BF16 MPP operands for rows
+above4; accumulators are FP32 throughout. All raw samples, binaries, flags and
+CPU spot-check evidence are retained.
+
+This32-reduction-tile BF16 candidate is also not admitted to serving: speed
+ratios versus the tall FP32 control were0.77..0.91x at8/16 rows,1.01..1.18x at32
+rows and1.10..1.27x at64 rows. Small packed profiles still regress. These are
+operator-only ratios across explicit precision profiles and do not qualify
+end-to-end speed or coding quality. Larger reduction tiles are the next
+implementation experiment; do not rerun unchanged reference engines or claim
+the2x target from these data. The qualified batch2/4K coding control remains
+unchanged and both MPP candidates remain default-off.
