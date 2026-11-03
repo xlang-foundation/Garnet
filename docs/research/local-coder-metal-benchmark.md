@@ -879,3 +879,13 @@ matched performance measurements. Capacity512 and8/24-token outputs do not
 qualify the4K/128-token comparator campaign; whole-prompt prefill interference
 and HTTP cancellation remain limitations. Full batched coding output and the
 larger context profile must be qualified before performance comparison.
+
+
+The coding collector now accepts an explicit bounded `--parallel-tasks` option
+(default1 preserves serial replay). Concurrent task clients retain separate
+frozen inputs/raw SSE/results; the main thread records completion order and
+canonical per-task status. A dedicated one-engine native batch-quality driver
+freezes the worker/profile/library, collects all eight tasks and closes the
+worker before separate sandbox evaluation. This remains coding qualification,
+not a throughput campaign. The guarded batch2/context4096 profile is the next
+admission attempt; unsupported memory admission will be retained as a failure.
