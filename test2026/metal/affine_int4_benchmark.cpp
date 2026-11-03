@@ -74,12 +74,16 @@ int main(int argc,char** argv) {
 #ifdef GARNET_METAL_MPP_AFFINE
         mpp=gpu.HasMPPAffine();
 #endif
+        int tileK=0;
+#ifdef GARNET_METAL_MPP_AFFINE
+        if(mpp)tileK=GARNET_METAL_MPP_AFFINE_TILE_K;
+#endif
         const char* operand="float32";
 #ifdef GARNET_METAL_MPP_AFFINE_BF16
         if(mpp)operand="bfloat16";
 #endif
         std::cout<<std::setprecision(12)<<"{\"kind\":\"metadata\",\"device\":"<<std::quoted(gpu.DeviceName())<<",\"mpp_available\":"<<(mpp?"true":"false")
-                 <<",\"operand_dtype\":"<<std::quoted(operand)<<",\"accumulator_dtype\":\"float32\",\"scope\":\"Synthetic affine projection GPU/wall latency; excludes loading, compilation and downloads; not model throughput\"}\n";
+                 <<",\"mpp_tile_k\":"<<tileK<<",\"operand_dtype\":"<<std::quoted(operand)<<",\"accumulator_dtype\":\"float32\",\"scope\":\"Synthetic affine projection GPU/wall latency; excludes loading, compilation and downloads; not model throughput\"}\n";
         for(size_t m:{1,2,4,8,16,32,64})for(auto dimensions:std::array<std::array<size_t,2>,3>{{{5120,5120},{17408,5120},{5120,17408}}})
             Cell(gpu,m,dimensions[0],dimensions[1],warmups,repetitions);
         return 0;

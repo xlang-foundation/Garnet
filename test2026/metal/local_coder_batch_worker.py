@@ -31,6 +31,9 @@ def main():
     if profile.get('require_mpp',False):
         tag={'float32':'mpp_affine_fp32_optional','bfloat16':'mpp_affine_bf16_optional'}.get(profile.get('mpp_operand_dtype','float32'))
         if tag is None or tag not in garnet.backend_info():raise ValueError('Frozen profile requires its explicit native MPP operand type')
+        tile=profile.get('mpp_tile_k',32)
+        if type(tile) is not int or tile not in (32,64,128) or 'mpp_affine_tile_k='+str(tile) not in garnet.backend_info():
+            raise ValueError('Frozen profile requires its explicit MPP reduction tile')
     width=config['text_config']['hidden_size'];vocab=config['text_config']['vocab_size']
     incoming=queue.Queue(maxsize=16);shutdown=threading.Event();input_failure=[]
     decoder=None;policy=None;jobs={};keys=set()

@@ -38,8 +38,12 @@ def summarize(root):
         cache=(root/variant/'CMakeCache.txt').read_text()
         expected_dtype='bfloat16' if 'GARNET_METAL_MPP_AFFINE_BF16:BOOL=ON' in cache else 'float32'
         if meta and meta[0]['mpp_available'] and types!={expected_dtype}:issues.append(variant+': precision profile differs from build')
+        tile_values={item.get('mpp_tile_k',32 if item['mpp_available'] else 0) for item in metadata[variant]}
+        cache_tile=next((int(line.split('=',1)[1]) for line in cache.splitlines() if line.startswith('GARNET_METAL_MPP_AFFINE_TILE_K:STRING=')),32)
+        if len(tile_values)!=1 or (meta and meta[0]['mpp_available'] and tile_values!={cache_tile}):issues.append(variant+': reduction tile metadata differs from build')
         data[variant]=cells
-    if 'mpp' in metadata and not all(item['mpp_available'] for item in metadata['mpp']):issues.append('MPP candidate was not available')
+    for variant in manifest.get('required_mpp_variants',['mpp'] if 'mpp' in metadata else []):
+        if not all(item['mpp_available'] for item in metadata[variant]):issues.append(variant+': MPP candidate was not available')
     results=[]
     for m,n,k in sorted(expected):
         key=(m,n,k);entry=dict(rows=m,outputs=n,inner=k,variants={})
@@ -50,6 +54,7 @@ def summarize(root):
         if all(label in order for label in ('base','tall','mpp')):
             entry['mpp_vs_base']=entry['variants']['base']['gpu_ms']/entry['variants']['mpp']['gpu_ms']
             entry['mpp_vs_tall']=entry['variants']['tall']['gpu_ms']/entry['variants']['mpp']['gpu_ms']
+        if 'tall' in order:entry['speedup_vs_tall']={variant:entry['variants']['tall']['gpu_ms']/entry['variants'][variant]['gpu_ms'] for variant in order if variant not in ('base','tall')}
         results.append(entry)
     return dict(status='passed' if not issues else 'failed',issues=issues,scope=manifest['scope'],aggregation='Median of within-cohort medians; all raw samples and cohorts retained',metadata=metadata,cells=results,manifest_sha256=digest(root/'manifest.json'),auditor_sha256=digest(Path(__file__)))
 def main():

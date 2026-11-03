@@ -1006,3 +1006,20 @@ end-to-end speed or coding quality. Larger reduction tiles are the next
 implementation experiment; do not rerun unchanged reference engines or claim
 the2x target from these data. The qualified batch2/4K coding control remains
 unchanged and both MPP candidates remain default-off.
+
+
+MPP reduction tiling is now an explicit bounded build parameter:
+`GARNET_METAL_MPP_AFFINE_TILE_K=32/64/128` (FP32 excludes128 because its staged
+scratch exceeds the initial admitted bound). The BF16 variants retain coalesced
+32-K unpack waves while reducing synchronization/MPP calls over larger K tiles.
+Zero padding handles partial final K tiles. The native pipeline still checks
+actual static threadgroup memory against the device limit. Backend/profile
+metadata identifies the compiled K tile; a model profile must request that tile
+explicitly rather than silently using a different candidate.
+
+Both BF16 K64 and K128 passed all24 independent projection cases and all12
+CTests, including K64 inputs padded inside K128, output tails and unchanged
+small-row decode (`mpp-bf16-k64-ctest.log`, `mpp-bf16-k128-ctest.log` and retained
+expanded test logs). Operator timing is next; no serving profile is enabled.
+The reusable projection collector freezes binaries/flags/source and blocks any
+other inference process before each strictly sequential fresh-process run.

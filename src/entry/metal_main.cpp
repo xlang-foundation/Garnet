@@ -183,6 +183,9 @@ public:
 #endif
 #ifdef GARNET_METAL_MLX_AFFINE_INT4
         info+="; mlx_qwen35_affine_int4_g64_bf16";
+#ifdef GARNET_METAL_MPP_AFFINE
+        info+="; mpp_affine_tile_k="+std::to_string(GARNET_METAL_MPP_AFFINE_TILE_K);
+#endif
 #ifdef GARNET_METAL_MPP_AFFINE_FP32
         info+="; mpp_affine_fp32_optional";
 #endif
