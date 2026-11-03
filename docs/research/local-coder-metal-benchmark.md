@@ -1,6 +1,12 @@
 # Local coding Metal qualification
 
-Status: preparation; no new baseline or speedup measured.
+Status: vLLM phase1 collection complete (90 measured waves, 210 requests,
+three cleanly stopped cohorts); SGLang admission pending. Native INT4 package
+build, eight component tests, seven benchmark/evaluator tests and independent
+linear-attention/decoder references for batch1/2/4 pass. The INT4-disabled
+control package builds and all seven control component tests pass. Full-model Garnet,
+continuous batching, hybrid prefix integration and multimodal runtime gates
+remain pending. No speedup claim. See evidence paths in the progress notes.
 
 Order: Qwen3.8-27B, Qwen3.5-9B, Qwen3.5-4B. Current target is 27B.
 Hardware: Apple M5, 24 GiB unified memory. This is separate from historical
@@ -148,6 +154,9 @@ hardware-specific extension policy separate.
   matched baseline. A 2K-input/128-output SGLang admission request is in flight.
 - Explicit user constraint reaffirmed: vLLM, SGLang and Garnet model execution
   must be strictly sequential. Verify prior server/worker exit before switching.
+  Complete each reference campaign, stop its server and workers, and verify
+  their exit before starting the next engine. Do not overlap benchmark windows
+  with builds, package installation, model downloads, or GPU component tests.
 - SGLang's 2054-input request completed with 110 output tokens at natural EOS.
   This admission window still had large paging deltas, so it is not admitted as
   a performance baseline. Five bounded checks of its generated merge function
@@ -156,3 +165,103 @@ hardware-specific extension policy separate.
 - SGLang server PID 35472 and workers 35495/35496 were stopped and verified
   absent after that request. Shut down the booted iPhone simulator between
   runs to reduce unrelated memory/GPU activity; no benchmark engine overlaps.
+- Fresh text-only vLLM (max sequences 4, prefill 2048, context 4096) passed its
+  resident-cache probe without swap/compression, admitted 12288 KV tokens with
+  1.29 GiB hybrid backing, and completed four concurrent short requests with
+  exact prompt counts. The actual request window still paged memory. This is
+  concurrency admission evidence, not the frozen benchmark. Check lower prefill
+  workspace before selecting the reference configuration.
+- Phase1 frozen vLLM collection is running sequential fresh-process cohorts at
+  context4096, max sequences4 and prefill512. No other engine or build overlaps
+  its measured windows. Cohort1 completed all six cells and shut down cleanly.
+  The read-only partial audit retains all five measured waves per cell and
+  flags system swap activity in the 2K/concurrency4 cell. Its final measured
+  wave lacks a memory sample after completion because shutdown follows the
+  last wave; retain this instrumentation limitation rather than assert zero
+  paging for an incompletely bracketed interval. Full collection and review
+  remain pending. Partial artifact: `evidence/baseline-phase1/vllm-partial-audit-1.json`.
+  A later read-only audit also verifies exact saved request bodies and token
+  accounting. The working campaign driver now waits for one trailing memory
+  sample after its final request; the active vLLM campaign retains its frozen
+  original driver and will honestly retain its existing sampling limitation.
+- Native affine INT4 loading, Metal kernels and 27B dispatch are unvalidated
+  drafts behind an opt-in build flag. Their initial 512-token/batch1 profile
+  is a correctness bring-up stage, not equivalent to the frozen 4K reference.
+  The new native prefix index has checkpoint/isolation/lifetime tests prepared,
+  but still requires actual hybrid-state capture/restore integration. Builds
+  and native numerical tests are deferred until the reference campaign exits.
+- A header-only inspection matched all 497 text projections plus the embedding
+  table to the 27B xModel contract, including U32 packing, BF16 scales/biases,
+  converted convolution shape, full-attention norms and linear recurrent
+  parameters. These quantized tensors total 15,127,511,040 bytes including
+  embedding; this is representation evidence, not an execution or GPU-memory
+  result. See `evidence/27b-native-text-layout.json`.
+- Frozen original coding-quality requests live in `evidence/quality-phase1`:
+  eight independent Python contracts, temperature0, thinking disabled and
+  output budget1024. Unlike the 128-output throughput fixtures they request
+  complete implementations. Exact rendered token counts are 79..145. Preserve
+  every failure/truncation and run the same tests for each engine; the bounded
+  suite does not establish a general coding leaderboard score. Model responses
+  and executable quality evaluation remain pending.
+- Header inspection also matches all 333 BF16 vision tensors (921,460,192
+  bytes). The draft native vision adapter now maps the converted root and
+  transposes only its small Conv3d patch weight; an independent tiny packing
+  golden is prepared. The model's vision factory still rejects admission
+  until native numerical and end-to-end image gates execute. See
+  `evidence/27b-native-vlm-layout.json` for header-only evidence.
+- Frozen multimodal inputs are in `evidence/multimodal-phase1`: two visually
+  checked 256x256 PNG screenshots (search-function repair and JSON Pointer
+  examples). Their manifests pin exact PNG, font, tokenizer, template,
+  preprocessor and generator hashes. A 16x16 patch grid with 2x2 merging predicts
+  64 image tokens and total prompt counts132/131. These are explicit predictions
+  requiring actual backend processor/grid/usage admission, not measured facts.
+  Quality requests allow1024 output tokens. Unsupported image execution must
+  be recorded; a text-only replacement cannot qualify the multimodal arm.
+- vLLM cohort2 completed all30 measured waves across the six frozen cells and
+  exited with code0/no forced kill. Its partial audit found no body/token/
+  concurrency mismatch and all measured windows have bracketing memory samples;
+  paging remains part of the retained results. Cohort3 is live in a new process
+  after the prior server and workers exited. Collection is not yet complete.
+- The saved-response quality evaluator and containment/early-exit/timeout
+  tests are prepared. They use a separate bounded macOS sandbox subprocess,
+  require a post-assertion completion marker, and distinguish infrastructure
+  errors from code failures and generation truncation. Execution and sandbox
+  containment validation are deferred until the reference campaign exits.
+- Frozen vLLM CLI settings do not freeze its automatic physical cache sizing:
+  cohort1 admitted7736 tokens (17 hybrid blocks), cohort2 admitted5916 (13),
+  and cohort3 admitted5461 (12). Its own resident probe reduced each allocation
+  under memory pressure. Preserve this geometry per cohort; external request
+  concurrency4 is not proof that all four requests decode simultaneously.
+  Compare qualified per-cell results conservatively and disclose queueing,
+  preemption, paging and physical memory instead of attributing variability
+  solely to kernels. The collection remains unchanged. Read-only power/cache
+  observation is in `evidence/baseline-phase1/vllm-cohort3-power-cache-observation.json`;
+  current AC power/no thermal warning does not prove earlier thermal conditions.
+- Source review identified an embedding precision boundary: installed MLX
+  `QuantizedEmbedding.__call__` uses `dequantize` without a dtype override, whose
+  documented default infers output dtype from scales/biases (BF16 here). The
+  draft native requested-row lookup now rounds to BF16 before exposing host
+  FP32 rows. It leaves projection-weight FMA values/FP32 accumulation separate.
+  Independent even/odd/negative tie goldens are prepared. Actual MLX/native
+  row parity is still pending; source reasoning alone is not numerical proof.
+- Phase1 vLLM collection is now complete:90 measured waves/210 requests, three
+  clean process-group shutdowns and no request-accounting mismatch. Full audit
+  records one limitation: cohort1's final wave lacks a trailing memory sample.
+  Preserve the auto-sized cache differences and paging. Retained summary:
+  `evidence/baseline-phase1/vllm-collection-summary.json`; full audit:
+  `evidence/baseline-phase1/vllm-full-audit.json`. No speedup or broad quality
+  qualification follows from this collection alone.
+- Native package builds with affine INT4 enabled, and all eight CTests pass.
+  The disabled-option control builds and all seven CTests pass. Existing BF16
+  projection tests now explicitly check the disabled body-shape policy instead
+  of requiring an opt-in pipeline unconditionally. Independent original-format
+  attention/decoder references pass batch1/2/4, including three-to-one head
+  grouping, seven recurrent steps and inactive-row preservation. Native full
+  27B execution and actual MLX row parity have not yet run.
+- All seven benchmark/evaluator tests pass, including exact collection and
+  process cleanup, token accounting, paging counters, sandbox outside-write/
+  loopback-network denial, early-exit rejection and timeout. The sandbox grants
+  dyld read access to the literal root directory, not all descendant file data;
+  unsupported Darwin address-space/data limits are replaced by a parent-side
+  sampled RSS guard. Build/test logs are retained under `evidence/native-*`
+  and `evidence/benchmark-tool-tests.log`. SGLang batch4 admission is next.

@@ -37,11 +37,16 @@ def main():
         raise ValueError('Root process is not live')
     with open(a.output, 'x') as stream:
         while time.monotonic()-began < a.duration:
-            current = subprocess.check_output(['ps', '-p', str(a.root_pid), '-o', 'lstart='], text=True).strip() if snapshot(a.root_pid) is not None else ''
+            tree = snapshot(a.root_pid)
+            if tree is None:
+                break
+            identity_query = subprocess.run(['ps', '-p', str(a.root_pid), '-o', 'lstart='],
+                                            capture_output=True, text=True)
+            current = identity_query.stdout.strip()
             if current != identity:
                 break
             row = dict(monotonic=time.monotonic(), wall_time=time.time(), root_pid=a.root_pid,
-                       processes=snapshot(a.root_pid),
+                       processes=tree,
                        swap=subprocess.check_output(['sysctl', '-n', 'vm.swapusage'], text=True).strip(),
                        vm_stat=subprocess.check_output(['vm_stat'], text=True),
                        scope='Per-process RSS may share pages; system paging includes other apps; not unique GPU allocation')

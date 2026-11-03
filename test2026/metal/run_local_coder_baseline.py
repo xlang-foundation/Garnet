@@ -1,0 +1,202 @@
+"""Collect pinned reference cohorts sequentially, retaining failures and raw streams.
+
+The engine specification contains an argv list and explicit environment overrides.
+This driver never changes a reference engine's source or selects faster samples.
+"""
+import argparse
+import hashlib
+import json
+import os
+from pathlib import Path
+import shutil
+import signal
+import subprocess
+import sys
+import time
+from urllib.request import urlopen
+
+
+def write(path, value):
+    path.write_text(json.dumps(value, indent=2)+'\n')
+
+
+def digest(path):
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def engine_processes():
+    raw = subprocess.check_output(['ps', '-axo', 'pid=,comm='], text=True)
+    return [line.strip() for line in raw.splitlines()
+            if any(key in line for key in ('VLLM::', 'sglang::',
+                   'vllm-metal/.venv-vllm-metal/bin/', 'sglang-env/bin/python'))
+            or line.rstrip().endswith('/bin/Cantor')]
+
+
+def group_members(group):
+    raw = subprocess.check_output(['ps', '-axo', 'pid=,pgid=,stat='], text=True)
+    return [int(line.split()[0]) for line in raw.splitlines()
+            if int(line.split()[1]) == group and not line.split()[2].startswith('Z')]
+
+
+def stop_owned(process):
+    members = group_members(process.pid)
+    if members:
+        os.killpg(process.pid, signal.SIGTERM)
+    deadline = time.monotonic()+30
+    while group_members(process.pid) and time.monotonic() < deadline:
+        process.poll()  # Reap a terminated root before checking its process group.
+        time.sleep(.5)
+    remaining = group_members(process.pid)
+    if remaining:
+        os.killpg(process.pid, signal.SIGKILL)
+    process.wait(timeout=15)
+    if group_members(process.pid):
+        raise RuntimeError('Owned engine process group did not close')
+    return dict(exit_code=process.returncode, forced_kill=bool(remaining))
+
+
+def wait_for_trailing_memory_sample(path, boundary, sampler, timeout=6):
+    """Keep the idle engine alive for one sample after its final request.
+
+    Shutdown previously raced the sampler's two-second interval. Do not change
+    request timing or retry a measurement when instrumentation is incomplete.
+    """
+    deadline = time.monotonic()+timeout
+    while time.monotonic() < deadline:
+        if path.exists():
+            lines = path.read_text().splitlines()
+            if lines:
+                try:
+                    sampled = json.loads(lines[-1])['monotonic']
+                    if sampled >= boundary:
+                        return dict(status='bracketed', boundary=boundary, sample=sampled)
+                except (json.JSONDecodeError, KeyError):
+                    pass  # A concurrent write can expose a partial last line.
+        if sampler.poll() is not None:
+            break
+        time.sleep(.2)
+    return dict(status='missing_trailing_sample', boundary=boundary)
+
+
+def main():
+    p = argparse.ArgumentParser(description=__doc__)
+    p.add_argument('--experiment-root', type=Path, required=True)
+    p.add_argument('--manifest', type=Path, required=True)
+    p.add_argument('--engine-spec', type=Path, required=True)
+    p.add_argument('--output', type=Path, required=True)
+    p.add_argument('--cohorts', type=int, default=3)
+    a = p.parse_args()
+    if a.cohorts < 1:
+        raise ValueError('At least one fresh-process cohort required')
+    root = a.experiment_root.resolve()
+    manifest = json.loads(a.manifest.read_text())
+    spec = json.loads(a.engine_spec.read_text())
+    url = spec['url']
+    if not url.startswith('http://127.0.0.1:'):
+        raise ValueError('Reference endpoint must be loopback')
+    if engine_processes():
+        raise RuntimeError('An inference engine is already live: '+str(engine_processes()))
+    a.output.mkdir(parents=True, exist_ok=False)
+    output = a.output.resolve()
+    frozen = output/'frozen'
+    frozen.mkdir()
+    client = Path(__file__).with_name('local_coder_stream_benchmark.py')
+    sampler = Path(__file__).with_name('sample_local_coder_memory.py')
+    for source in (client, sampler, Path(__file__), a.manifest, a.engine_spec):
+        shutil.copyfile(source, frozen/source.name)
+    plans = []
+    for plan in manifest['plans']:
+        folder = frozen/plan['id']
+        folder.mkdir()
+        cases, workload = root/plan['cases'], root/plan['workload']
+        if digest(cases) != plan['cases_sha256']:
+            raise ValueError('Frozen request body changed: '+plan['id'])
+        shutil.copyfile(cases, folder/'cases.json')
+        shutil.copyfile(workload, folder/'workload.json')
+        plans.append(dict(id=plan['id'], cases=folder/'cases.json',
+                          workload=folder/'workload.json'))
+    metadata = dict(engine=spec, manifest=manifest,
+                    client_sha256=digest(frozen/client.name),
+                    sampler_sha256=digest(frozen/sampler.name),
+                    driver_sha256=digest(frozen/Path(__file__).name),
+                    scope='Repeated sequential reference cohort; admission is reviewed separately')
+    write(frozen/'metadata.json', metadata)
+    status = dict(status='running', completed_cohorts=0, engine=spec['engine'])
+    write(output/'status.json', status)
+    try:
+        for cohort in range(a.cohorts):
+            if engine_processes():
+                raise RuntimeError('Prior/competing engine still live')
+            folder = output/('cohort-'+str(cohort+1))
+            folder.mkdir()
+            process = memory = None
+            cohort_state = dict(status='starting', server_argv=spec['argv'],
+                                environment_overrides=spec.get('env', {}))
+            write(folder/'cohort.json', cohort_state)
+            with (folder/'server.log').open('w') as log:
+                try:
+                    env = dict(os.environ, **spec.get('env', {}))
+                    began = time.monotonic()
+                    process = subprocess.Popen(spec['argv'], cwd=root, env=env,
+                                               stdout=log, stderr=subprocess.STDOUT,
+                                               start_new_session=True)
+                    cohort_state.update(pid=process.pid, spawn_monotonic=began)
+                    write(folder/'cohort.json', cohort_state)
+                    memory = subprocess.Popen([sys.executable, str(frozen/sampler.name),
+                                               '--root-pid', str(process.pid), '--output',
+                                               str(folder/'memory.jsonl'), '--duration', '21600'])
+                    while True:
+                        if process.poll() is not None:
+                            raise RuntimeError('Engine exited during startup')
+                        try:
+                            with urlopen(url+'/health', timeout=2) as response:
+                                if response.status == 200:
+                                    break
+                        except OSError:
+                            pass
+                        if (time.monotonic()-began > spec.get('startup_observation_seconds', 300)
+                                and not cohort_state.get('startup_observation_expired')):
+                            # An observation timeout is not a terminal engine event.
+                            cohort_state['startup_observation_expired'] = True
+                            write(folder/'cohort.json', cohort_state)
+                        time.sleep(1)
+                    cohort_state.update(status='measuring', startup_seconds=time.monotonic()-began)
+                    write(folder/'cohort.json', cohort_state)
+                    for plan in plans:
+                        for phase, count in (('warmup', manifest['warmup_waves_per_cell']),
+                                             ('measured', manifest['measured_waves_per_cell'])):
+                            for wave in range(count):
+                                status.update(cohort=cohort+1, cell=plan['id'], phase=phase, wave=wave)
+                                write(output/'status.json', status)
+                                dest = folder/(plan['id']+'-'+phase+'-'+str(wave))
+                                command = [sys.executable, str(frozen/client.name), '--url', url,
+                                           '--cases', str(plan['cases']), '--workload', str(plan['workload']),
+                                           '--metadata', str(frozen/'metadata.json'), '--output', str(dest)]
+                                with (folder/'client.log').open('a') as client_log:
+                                    subprocess.run(command, cwd=root, check=True,
+                                                   stdout=client_log, stderr=subprocess.STDOUT)
+                    cohort_state['status'] = 'completed'
+                    cohort_state['final_memory_sample'] = wait_for_trailing_memory_sample(
+                        folder/'memory.jsonl', time.monotonic(), memory)
+                except BaseException as error:
+                    cohort_state.update(status='failed', error=repr(error))
+                    raise
+                finally:
+                    if process is not None:
+                        cohort_state['shutdown'] = stop_owned(process)
+                    if memory is not None:
+                        memory.terminate()
+                        memory.wait(timeout=10)
+                    write(folder/'cohort.json', cohort_state)
+            status['completed_cohorts'] += 1
+            write(output/'status.json', status)
+        status.update(status='completed_collection_not_automatic_qualification')
+    except BaseException as error:
+        status.update(status='failed', error=repr(error))
+        raise
+    finally:
+        write(output/'status.json', status)
+
+
+if __name__ == '__main__':
+    main()
