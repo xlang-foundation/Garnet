@@ -525,3 +525,12 @@ with43,904reused bytes in the small fixture. Evidence:
 `native-sharedscratch-ctest.log`, `native-sharedscratch-mixed-session2.log`.
 These storage checks do not yet qualify the learned27B route or simultaneous
 host-call stress.
+
+With scratch sharing, both widths32/64 subsequently passed the two-reset
+learned27B smoke and golden token check. Width32 retained17,718,099,968Metal
+bytes; width64 retained18,418,941,952bytes. Warm smoke TTFT was12.503s/13.856s.
+The width64 working-set rejection from earlier builds is preserved; this new
+build passes without raising the guard. Evidence:
+`evidence/native27b-sharedscratch-study1`. This remains short-output correctness
+evidence, not proof of coding quality or a performance improvement. The worker
+admits an explicit experimental64 option only with both native memory features.
