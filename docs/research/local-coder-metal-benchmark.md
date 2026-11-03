@@ -714,3 +714,18 @@ GPU integration still pass. Evidence: `native-chunkcache-ctest2.log`,
 `chunk-kv-vector-control2.log`, `chunk-kv-vector-candidate2.log`,
 `chunk-kv-sharedscratch.log`, `chunk-kv-scheduler.log`. Learned-model memory and
 coding gates remain necessary before profile admission.
+
+The learned in-place-cache batch2 study passed both repeats and both frozen
+16-token prefixes, asserted32 real in-place KV updates per prefill dispatch,
+and returned to720,896Metal bytes after close. At context512, prefill-compiled
+allocation fell from16,641,163,264to16,372,727,808bytes
+(`evidence/native27b-chunkcache-batch2-study1`). Larger contexts remain a gate.
+
+The explicit batch-study factory can now construct batch4 only when the native
+chunk-cache extension is present. Normal CPU/Metal constructors still admit
+only batches1/2, and normal27B admission remains batch1. The study subclass
+defers unused legacy host state while the resident session is being built;
+native state still initializes independently. A no-weight-open rejection test
+confirms both default admission and extension gating
+(`batch4-study-admission.log`). Learned batch4 is pending, with the working-set
+guard unchanged.

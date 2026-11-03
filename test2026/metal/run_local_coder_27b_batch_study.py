@@ -1,4 +1,4 @@
-"""Learned batch2 native scheduling and variable-length prompt correctness.
+"""Learned batch2/4 native scheduling and variable-length prompt correctness.
 
 XLang arguments: build, source, checkpoint folder, frozen study JSON, result.
 Serial masked prefill avoids assuming equal prompt lengths or a shared final
@@ -11,7 +11,8 @@ from xModel.qwen38.vl_27b.metal_batch_study import create_decoder
 folder=sys.argv[3]
 with open(folder+'/config.json') as stream:config=json.load(stream)
 with open(sys.argv[4]) as stream:study=json.load(stream)
-cases=study['requests'];batch=2;chunk=8;width=config['text_config']['hidden_size']
+cases=study['requests'];batch=study.get('batch',2);chunk=study.get('prefill_chunk',8);width=config['text_config']['hidden_size']
+assert batch in (2,4) and chunk in (2,4,8)
 assert len(cases)==batch
 capacity=study['capacity'];limit=study['output_tokens']
 assert type(limit) is int and 2<=limit<=32
@@ -24,7 +25,7 @@ def save():
 def tensor_f32(values,shape):return tensor.tensor(values,shape=shape,dtype=tensor.float32)
 try:
     report['memory_before']=json.loads(garnet.memory_stats_json());start=time.monotonic()
-    decoder=create_decoder(folder+'/model.safetensors.index.json',config,capacity)
+    decoder=create_decoder(folder+'/model.safetensors.index.json',config,capacity,batch,chunk)
     report['initialization_seconds']=time.monotonic()-start
     report['memory_after_decoder']=json.loads(garnet.memory_stats_json());save()
     decoder.prefill_compile_ms=0
@@ -74,7 +75,7 @@ try:
         report['runs'].append(dict(repeat=repeat,generated_ids=sequences,prefill_seconds=prefill_seconds,
             decode_window_seconds=time.monotonic()-decode_start,memory=json.loads(garnet.memory_stats_json()),scheduler=status))
         assert policy.close();policy=None;save()
-    report['status']='batch2_study_passed_not_full_qualification'
+    report['status']='batch_study_passed_not_full_qualification'
 except:
     report['status']='failed';raise
 finally:
