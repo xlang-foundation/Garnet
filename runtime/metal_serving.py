@@ -64,11 +64,13 @@ class Model:
         if self.visual and self.prefill_chunk * self.text_config['hidden_size'] > packed_limit:
             raise ValueError('Metal prefill chunk times hidden size exceeds the packed width limit')
         self.model_factory = None
-        if self.visual and self.xmodel in ('vl_2b','vl_4b'):
+        if self.visual and self.xmodel in ('vl_2b','vl_4b','vl_27b'):
             if self.xmodel == 'vl_2b':
                 from xModel.qwen35.vl_2b import model
-            else:
+            elif self.xmodel == 'vl_4b':
                 from xModel.qwen35.vl_4b import model
+            else:
+                from xModel.qwen38.vl_27b import model
             self.model_factory = model
             self.decoder = model.create_decoder(checkpoint, self.config, self.capacity)
         else:

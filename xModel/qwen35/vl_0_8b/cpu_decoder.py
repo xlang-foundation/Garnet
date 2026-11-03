@@ -10,10 +10,13 @@ import time
 from .decoder_layer import T,Qwen35LinearDecoderLayer,Qwen35FullDecoderLayer,norm
 
 class CPUDecoder:
-    def __init__(self,checkpoint,config,batch=1,capacity=256):
+    def __init__(self,checkpoint,config,batch=1,capacity=256,required_checkpoint_format=None):
         if batch not in (1,2) or capacity<1:raise ValueError('fixed batch 1/2 and positive capacity required')
         self.config=config;self.batch=batch;self.capacity=capacity;self.checkpoint=checkpoint
         self.io=garnet.tensor_io();self.io.open(checkpoint)
+        if required_checkpoint_format is not None and self.io.checkpoint_format!=required_checkpoint_format:
+            self.io.close()
+            raise ValueError('checkpoint representation does not match the selected native profile')
         self.layers=[];self.head=None
         try:
             for idx,kind in enumerate(config['layer_types']):

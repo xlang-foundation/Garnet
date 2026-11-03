@@ -13,13 +13,62 @@
 #include <cstdlib>
 #include <cstdio>
 namespace Garnet {
+const SafeTensorMetadata* MetalCompiledGraph::FindWeightMetadata(const std::string& name) const {
+#ifdef GARNET_METAL_MLX_AFFINE_INT4
+    return mlxCheckpoint_.Find(index_,name);
+#else
+    return index_.Find(name);
+#endif
+}
+#ifdef GARNET_METAL_MLX_AFFINE_INT4
+size_t MetalCompiledGraph::AffineInt4Weight(const std::string& name) {
+    auto found=weights_.find(name);if(found!=weights_.end())return found->second;
+    const auto metadata=AffineInt4Metadata::Resolve(index_,mlxCheckpoint_,name);
+    const auto& layout=metadata.layout;
+    std::vector<CheckpointDependency> dependencies;
+    for(const auto* tensor:metadata.tensors)
+        dependencies.push_back({*tensor,std::filesystem::last_write_time(tensor->filePath),std::filesystem::file_size(tensor->filePath)});
+    auto unchanged=[](const CheckpointDependency& a,const CheckpointDependency& b){
+        return a.metadata.filePath==b.metadata.filePath&&a.metadata.dataType==b.metadata.dataType&&
+            a.metadata.shape==b.metadata.shape&&a.metadata.dataOffset==b.metadata.dataOffset&&
+            a.metadata.dataSize==b.metadata.dataSize&&a.modified==b.modified&&a.bytes==b.bytes;
+    };
+    auto shared=sharedWeights_.find(name);
+    if(shared!=sharedWeights_.end()) {
+        const auto& record=shared->second;
+        if(!record.slot.affineInt4.Valid()||record.dependencies.size()!=dependencies.size())
+            throw std::runtime_error("Shared affine INT4 representation mismatch");
+        for(size_t i=0;i<dependencies.size();++i)
+            if(!unchanged(record.dependencies[i],dependencies[i]))throw std::runtime_error("Shared affine INT4 checkpoint changed");
+        const auto id=slots_.size();slots_.push_back(record.slot);weights_[name]=id;weightRecords_[name]=record;return id;
+    }
+    AffineInt4Mapping mapped;mapped.Open(metadata);
+    auto weight=gpu_->UploadAffineInt4(mapped.Data(0),layout.weightBytes,mapped.Data(1),layout.coefficientBytes,
+                                      mapped.Data(2),layout.coefficientBytes,layout.rows,layout.columns);
+    for(const auto& dependency:dependencies)
+        if(dependency.modified!=std::filesystem::last_write_time(dependency.metadata.filePath)||
+           dependency.bytes!=std::filesystem::file_size(dependency.metadata.filePath))
+            throw std::runtime_error("Affine INT4 checkpoint changed during upload");
+    const auto id=slots_.size();
+    slots_.push_back({MetalMatrix(),layout.rows,layout.columns,{int64_t(layout.rows),int64_t(layout.columns)},MetalBF16Weight(),std::move(weight)});
+    weightRecords_[name]={slots_[id],*metadata.tensors[0],dependencies[0].modified,dependencies[0].bytes,std::move(dependencies)};
+    weights_[name]=id;return id;
+}
+#endif
 size_t MetalCompiledGraph::Allocate(size_t rows,size_t columns) {
     auto id=slots_.size();slots_.push_back({gpu_->Allocate(rows,columns),rows,columns,{int64_t(rows),int64_t(columns)}});return id;
 }
 size_t MetalCompiledGraph::Weight(const std::string& name) {
     auto found=weights_.find(name);if(found!=weights_.end())return found->second;
-    auto entry=index_.Find(name);
+    auto entry=FindWeightMetadata(name);
     if(!entry)throw std::runtime_error("Metal checkpoint weight missing: "+name);
+#ifdef GARNET_METAL_MLX_AFFINE_INT4
+    if(entry->dataType=="U32")return AffineInt4Weight(name);
+    const bool convertedConv=mlxCheckpoint_.ConvertedConvolution(name,*entry);
+    const bool convertedPatch=mlxCheckpoint_.ConvertedVisionPatch(name,*entry);
+#else
+    const bool convertedConv=false;
+#endif
 #ifdef GARNET_METAL_VISION_GLOBAL_ALPHA
     auto ends=[&](const std::string& suffix){return name.size()>=suffix.size()&&name.compare(name.size()-suffix.size(),suffix.size(),suffix)==0;};
     const bool visionProjection=name.rfind("model.visual.blocks.",0)==0&&
@@ -44,11 +93,11 @@ size_t MetalCompiledGraph::Weight(const std::string& name) {
     }
     const bool patch=entry&&name=="model.visual.patch_embed.proj.weight"&&entry->shape.size()==5;
     if(!entry||entry->shape.empty()||(!patch&&(entry->shape.size()>3||
-        (entry->shape.size()==3&&entry->shape[1]!=1))))
+        (entry->shape.size()==3&&entry->shape[1]!=1&&!convertedConv))))
         throw std::runtime_error("Metal matrix weight missing/invalid: "+name);
     for(auto dim:entry->shape)if(dim<=0)throw std::runtime_error("Invalid Metal checkpoint dimension");
     const size_t rows=entry->shape.size()==1?1:entry->shape[0];
-    size_t columns=entry->shape.back();
+    size_t columns=convertedConv?size_t(entry->shape[1]):size_t(entry->shape.back());
     if(patch){columns=1;for(size_t i=1;i<entry->shape.size();++i){
         if(uint64_t(entry->shape[i])>std::numeric_limits<size_t>::max()/columns)throw std::runtime_error("Metal patch dimension overflow");
         columns*=entry->shape[i];}}
@@ -67,8 +116,16 @@ size_t MetalCompiledGraph::Weight(const std::string& name) {
         if(entry->dataSize!=data.size()*4)throw std::runtime_error("Invalid FP32 weight length");
         std::memcpy(data.data(),raw,entry->dataSize);
     }else throw std::runtime_error("Unsupported initial Metal weight dtype: "+entry->dataType);
-    const auto id=slots_.size();slots_.push_back({gpu_->Upload(data,rows,columns),rows,columns,
-        std::vector<int64_t>(entry->shape.begin(),entry->shape.end())});
+    auto logicalShape=std::vector<int64_t>(entry->shape.begin(),entry->shape.end());
+    if(convertedConv)logicalShape={int64_t(rows),1,int64_t(columns)};
+#ifdef GARNET_METAL_MLX_AFFINE_INT4
+    if(convertedPatch) {
+        data=MlxVisionPatchToCanonical(data,rows,size_t(entry->shape[1]),size_t(entry->shape[2]),
+                                        size_t(entry->shape[3]),size_t(entry->shape[4]));
+        logicalShape={int64_t(rows),entry->shape[4],entry->shape[1],entry->shape[2],entry->shape[3]};
+    }
+#endif
+    const auto id=slots_.size();slots_.push_back({gpu_->Upload(data,rows,columns),rows,columns,std::move(logicalShape)});
     if(modified!=std::filesystem::last_write_time(entry->filePath)||bytes!=std::filesystem::file_size(entry->filePath))
         throw std::runtime_error("Metal checkpoint changed while loading weights");
     weightRecords_[name]={slots_[id],*entry,modified,bytes};
@@ -76,7 +133,10 @@ size_t MetalCompiledGraph::Weight(const std::string& name) {
 }
 size_t MetalCompiledGraph::BF16Weight(const std::string& name,bool visionPrefill) {
     const auto key=name+(visionPrefill?"|VisionGlobalBF16":"|BF16");auto found=weights_.find(key);if(found!=weights_.end())return found->second;
-    auto entry=index_.Find(name);
+    auto entry=FindWeightMetadata(name);
+#ifdef GARNET_METAL_MLX_AFFINE_INT4
+    if(entry&&entry->dataType=="U32")return AffineInt4Weight(name);
+#endif
     if(!entry||entry->shape.size()!=2||entry->shape[0]<=0||entry->shape[1]<=0)
         throw std::runtime_error("Invalid vocabulary checkpoint matrix");
     // F32 fixtures retain their exact original representation through MPS.
@@ -224,6 +284,9 @@ bool MetalCompiledGraph::BuildInternal(X::Value graph,X::Value symbols,const std
         if(graph.runtime()!=Host()->runtime||symbols.runtime()!=Host()->runtime||!symbols.IsList())
             throw std::runtime_error("Metal graph inputs must belong to this runtime");
         std::string error;if(!index_.Open(checkpoint,error))throw std::runtime_error(error);
+#ifdef GARNET_METAL_MLX_AFFINE_INT4
+        mlxCheckpoint_.Open(index_);
+#endif
         gpu_=std::make_unique<MetalContext>();
         for(uint64_t i=0;i<symbols.Size();++i) {
             X::Tensor symbol(symbols.Get(i));auto info=symbol.Info();
@@ -436,8 +499,12 @@ bool MetalCompiledGraph::BuildInternal(X::Value graph,X::Value symbols,const std
                 }
                 auto freq=slots_.size();slots_.push_back({gpu_->Upload(frequencies,2,rotary/2),2,rotary/2,{2,int64_t(rotary/2)}});
                 auto qr=Allocate(rows,heads*dim),kr=Allocate(rows,kv*dim);
-                Op qrope{Kind::NormRope,q,qw,qr,float(epsilon)};qrope.arguments={q,qw,ropePositions,freq};qrope.dimensions={heads,dim,rotary,size_t(normalize)};qrope.offset=text?0:1;ops_.push_back(std::move(qrope));
-                Op krope{Kind::NormRope,kp,kw,kr,float(epsilon)};krope.arguments={kp,kw,ropePositions,freq};krope.dimensions={kv,dim,rotary,size_t(normalize)};krope.offset=text?0:1;ops_.push_back(std::move(krope));
+                float normOffset=text?0.f:1.f;
+#ifdef GARNET_METAL_MLX_AFFINE_INT4
+                if(mlxCheckpoint_.Enabled())normOffset=0;
+#endif
+                Op qrope{Kind::NormRope,q,qw,qr,float(epsilon)};qrope.arguments={q,qw,ropePositions,freq};qrope.dimensions={heads,dim,rotary,size_t(normalize)};qrope.offset=normOffset;ops_.push_back(std::move(qrope));
+                Op krope{Kind::NormRope,kp,kw,kr,float(epsilon)};krope.arguments={kp,kw,ropePositions,freq};krope.dimensions={kv,dim,rotary,size_t(normalize)};krope.offset=normOffset;ops_.push_back(std::move(krope));
                 auto nextKey=Allocate(batch,cacheWidth),nextValue=Allocate(batch,cacheWidth);
                 for(auto pair:{std::make_pair(kr,std::make_pair(key,nextKey)),std::make_pair(vp,std::make_pair(value,nextValue))}) {
                     Op update{isChunk?Kind::KVChunk:Kind::KVUpdate,pair.first,pair.second.first,pair.second.second};
@@ -649,7 +716,11 @@ bool MetalCompiledGraph::BuildInternal(X::Value graph,X::Value symbols,const std
                 if(slots_[weight].rows!=1||slots_[weight].columns!=slots_[a].columns)
                     throw std::runtime_error("Metal normalization shape mismatch");
                 out=Allocate(slots_[a].rows,slots_[a].columns);
-                ops_.push_back({Kind::Norm,a,weight,out,float(node.attributes.Get("eps").ToDouble()),node.name=="qwen_text_norm"?0.0f:1.0f,false});
+                float offset=node.name=="qwen_text_norm"?0.f:1.f;
+#ifdef GARNET_METAL_MLX_AFFINE_INT4
+                if(mlxCheckpoint_.Enabled())offset=0;
+#endif
+                ops_.push_back({Kind::Norm,a,weight,out,float(node.attributes.Get("eps").ToDouble()),offset,false});
             }else if(node.name=="qwen35_mlp") {
                 auto prefix=node.attributes.Get("weight_prefix").ToString();
                 auto gate=matmul(a,Weight(prefix+".gate_proj.weight"));
@@ -665,7 +736,11 @@ bool MetalCompiledGraph::BuildInternal(X::Value graph,X::Value symbols,const std
 #ifdef GARNET_METAL_SCREENED_HEAD
                 if(bf16&&slots_[weight].bf16.Valid())gpu_->PrepareScreenedHead(slots_[weight].bf16);
 #endif
-                if(bf16&&index_.Find(name)->dataType=="BF16") {
+#ifdef GARNET_METAL_MLX_AFFINE_INT4
+                if(slots_[weight].affineInt4.Valid())out=matmul(a,weight);
+                else
+#endif
+                if(bf16&&FindWeightMetadata(name)->dataType=="BF16") {
                     if(slots_[a].columns!=slots_[weight].columns||slots_[a].rows>2)throw std::runtime_error("BF16 vocabulary profile requires batch 1/2");
                     out=Allocate(slots_[a].rows,slots_[weight].rows);ops_.push_back({Kind::BF16MatVec,a,weight,out});
                 }else out=matmul(a,weight);
@@ -986,6 +1061,12 @@ void MetalCompiledGraph::Encode(MetalContext& gpu,bool packedOutput,const MetalM
         }
 #endif
         if(op.kind==Kind::MatMul) {
+#ifdef GARNET_METAL_MLX_AFFINE_INT4
+            if(slots_[op.b].affineInt4.Valid()){
+                if(!op.transpose)throw std::logic_error("Affine INT4 projection must transpose checkpoint rows");
+                gpu.EncodeAffineInt4MatMul(a,slots_[op.b].affineInt4,out);
+            }else
+#endif
             if(slots_[op.b].bf16.Valid()){if(!op.transpose)throw std::logic_error("BF16 projection must transpose checkpoint rows");gpu.EncodeBF16MatVec(a,slots_[op.b].bf16,out);}
             else gpu.EncodeMatMul(a,b,out,op.transpose);
         }
@@ -1098,6 +1179,9 @@ std::vector<MetalResourceReference> MetalCompiledGraph::MemoryReferences() {
     auto append=[&](const Slot& slot,size_t i,const std::string& role,const std::string& name,bool weight,bool in,bool out,bool resident,bool legacy){
         auto emit=[&](const MetalBufferInfo& info){if(!info.identity)return;MetalResourceReference r;r.buffer=info;r.slot=i;r.role=role;r.name=name;r.shape=slot.shape;r.weight=weight;r.input=in;r.outputPart=out;r.residentOperand=resident;r.anyWriter=i<anyWriter.size()&&anyWriter[i];r.residentWriter=i<residentWriter.size()&&residentWriter[i];r.legacyOutput=legacy;result.push_back(std::move(r));};
         emit(MetalContext::MatrixBufferInfo(slot.matrix));for(const auto& info:MetalContext::WeightBufferInfo(slot.bf16))emit(info);
+#ifdef GARNET_METAL_MLX_AFFINE_INT4
+        for(const auto& info:MetalContext::AffineInt4BufferInfo(slot.affineInt4))emit(info);
+#endif
     };
     for(size_t i=0;i<slots_.size();++i)append(slots_[i],i,"slot",names[i],!names[i].empty(),input[i],output[i],active[i],i==output_);
     auto held=[&](const auto& records,const char* role){std::vector<std::string> keys;for(const auto& entry:records)keys.push_back(entry.first);std::sort(keys.begin(),keys.end());for(const auto& key:keys)append(records.at(key).slot,SIZE_MAX,role,key,true,false,false,false,false);};
@@ -1111,8 +1195,14 @@ void MetalCompiledGraph::RetireResidentDefaults() {
     if(!lazyDefaultPlanReady_) {
         if(!ready_||outputParts_.size()!=3||inputs_.size()<3||residentOps_.size()!=ops_.size())return;
         std::vector<MetalBufferInfo> infos;std::unordered_map<uintptr_t,size_t> counts;std::unordered_set<uintptr_t> protectedWeights;
-        for(const auto& slot:slots_){auto info=MetalContext::MatrixBufferInfo(slot.matrix);infos.push_back(info);if(info.identity)++counts[info.identity];for(const auto& b:MetalContext::WeightBufferInfo(slot.bf16))protectedWeights.insert(b.identity);}
-        for(const auto& record:weightRecords_){auto info=MetalContext::MatrixBufferInfo(record.second.slot.matrix);if(info.identity)protectedWeights.insert(info.identity);for(const auto& b:MetalContext::WeightBufferInfo(record.second.slot.bf16))protectedWeights.insert(b.identity);}
+        auto protect=[&](const Slot& slot){
+            for(const auto& b:MetalContext::WeightBufferInfo(slot.bf16))protectedWeights.insert(b.identity);
+#ifdef GARNET_METAL_MLX_AFFINE_INT4
+            for(const auto& b:MetalContext::AffineInt4BufferInfo(slot.affineInt4))protectedWeights.insert(b.identity);
+#endif
+        };
+        for(const auto& slot:slots_){auto info=MetalContext::MatrixBufferInfo(slot.matrix);infos.push_back(info);if(info.identity)++counts[info.identity];protect(slot);}
+        for(const auto& record:weightRecords_){auto info=MetalContext::MatrixBufferInfo(record.second.slot.matrix);if(info.identity)protectedWeights.insert(info.identity);protect(record.second.slot);}
         auto eligible=[&](size_t id){const auto& slot=slots_[id];const auto& info=infos[id];return info.identity&&counts[info.identity]==1&&!protectedWeights.count(info.identity)&&gpu_->IsDefaultLayout(slot.matrix,slot.rows,slot.columns);};
         std::vector<size_t> plan;
         for(size_t part=1;part<=2;++part){auto id=inputs_[part];if(inputShapes_[part].size()<3||std::find(outputParts_.begin(),outputParts_.end(),id)!=outputParts_.end())continue;if(eligible(id))plan.push_back(id);}

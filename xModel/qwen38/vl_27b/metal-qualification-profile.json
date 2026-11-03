@@ -1,0 +1,19 @@
+{
+  "status": "unvalidated_correctness_bringup_only",
+  "backend": "metal",
+  "checkpointFormat": "mlx_qwen35_affine_int4_g64_bf16",
+  "maxInputTokens": 384,
+  "maxOutputTokens": 128,
+  "prefillChunk": 8,
+  "linearChunk": false,
+  "batchSize": 1,
+  "requiredRemainingGates": [
+    "native codec and Metal numerical tests",
+    "full learned-model parity and coding quality",
+    "memory-efficient native request state and continuous batching",
+    "native prefix matching with hybrid state checkpoints",
+    "4K/8K/16K context and concurrency1/2/4 admission",
+    "vision layout and multimodal inference",
+    "matched frozen-baseline performance comparison"
+  ]
+}

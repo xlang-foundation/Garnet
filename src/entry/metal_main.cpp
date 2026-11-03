@@ -166,6 +166,9 @@ public:
 #ifdef GARNET_METAL_DENSE_PREFIX_CACHE
         info+="; dense_prefix_cache";
 #endif
+#ifdef GARNET_METAL_MLX_AFFINE_INT4
+        info+="; mlx_qwen35_affine_int4_g64_bf16";
+#endif
 #ifdef GARNET_METAL_BODY_SHAPE
         info+="; body_shape";
 #endif

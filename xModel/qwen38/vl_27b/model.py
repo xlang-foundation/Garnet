@@ -2,6 +2,33 @@
 """Exact Qwen3.8-27B VLM contract. Runtime admission requires separate GPU gates."""
 
 
+def create_decoder(checkpoint,config,capacity):
+    """Bounded first Metal qualification profile; not general serving admission.
+
+    Batch4, long contexts and vision remain required subsequent gates. The small
+    initial capacity avoids the current flat FP32 state's full-capacity copies.
+    """
+    validate_config(config)
+    quant=config.get('quantization',{})
+    if quant.get('bits')!=4 or quant.get('group_size')!=64 or quant.get('mode')!='affine':
+        raise ValueError('Qwen3.8 Metal qualification requires the pinned affine INT4/group64 conversion')
+    text=config['text_config']
+    if text.get('hidden_act')!='silu' or text.get('attention_bias') is not False:
+        raise ValueError('Native Metal profile requires SiLU MLP and bias-free text projections')
+    if type(capacity) is not int or capacity<64 or capacity>512:
+        raise ValueError('Initial Qwen3.8 Metal correctness profile admits capacity64..512 only')
+    import garnet
+    if 'mlx_qwen35_affine_int4_g64_bf16' not in garnet.backend_info():
+        raise ValueError('Native Metal affine INT4 extension is required')
+    from xModel.qwen35.vl_0_8b.metal_decoder import MetalDecoder
+    return MetalDecoder(checkpoint,text,1,capacity,
+                        required_checkpoint_format='mlx_qwen35_affine_int4_g64_bf16')
+
+
+def create_vision(checkpoint,config,gh,gw,shared_encoder=None):
+    raise ValueError('Qwen3.8 MLX vision layout and end-to-end Metal qualification are pending')
+
+
 def validate_config(config):
     if config.get('architectures') != ['Qwen3_5ForConditionalGeneration'] or config.get('model_type') != 'qwen3_5':
         raise ValueError('Qwen3.8-27B requires the Qwen3.5 conditional-generation architecture')

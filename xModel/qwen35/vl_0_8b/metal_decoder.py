@@ -5,7 +5,7 @@ from .cpu_decoder import CPUDecoder
 from .decoder_layer import T,norm,Qwen35LinearDecoderLayer,Qwen35FullDecoderLayer
 
 class MetalDecoder(CPUDecoder):
-    def __init__(self,checkpoint,config,batch=1,capacity=256,bf16_head=True,resident=True,bf16_projections=True):
+    def __init__(self,checkpoint,config,batch=1,capacity=256,bf16_head=True,resident=True,bf16_projections=True,required_checkpoint_format=None):
         self.session=None;self.bf16_projections=bf16_projections
         backend=garnet.backend_info();self.joined_prefill_enabled='joined_mps_prefill' in backend
         self.packed_prefill_norm_enabled='packed_prefill_norm' in backend
@@ -13,13 +13,16 @@ class MetalDecoder(CPUDecoder):
         self.joined_global_mlp_enabled='joined_global_mlp' in backend
         if not backend.startswith('Garnet Metal/MPS '):
             raise ValueError('MetalDecoder requires the native Garnet Metal package')
-        CPUDecoder.__init__(self,checkpoint,config,batch,capacity)
+        CPUDecoder.__init__(self,checkpoint,config,batch,capacity,required_checkpoint_format)
         try:
             self.head.close()
             symbol=tensor.input('metal_final_hidden',shape=[batch,config['hidden_size']],dtype=tensor.float32)
-            @T.fusion(name='qwen35_metal_tied_head',boundary='required')
+            @T.fusion(name='qwen35_metal_tied_head' if config.get('tie_word_embeddings',True) else 'qwen35_metal_untied_head',boundary='required')
             def head(hidden):
-                return norm(hidden,'model.language_model.norm',config) * T.unary_op('qwen35_tied_head',bf16_weight=1 if bf16_head else 0)
+                normalized=norm(hidden,'model.language_model.norm',config)
+                if config.get('tie_word_embeddings',True):
+                    return normalized * T.unary_op('qwen35_tied_head',bf16_weight=1 if bf16_head else 0)
+                return normalized * T.unary_op('qwen_text_head',weight_name='lm_head.weight',bf16_weight=1 if bf16_head else 0)
             self.head=garnet.compiled_graph();self.head.build(head(symbol),[symbol],checkpoint)
             if resident:self.enable_resident()
         except:

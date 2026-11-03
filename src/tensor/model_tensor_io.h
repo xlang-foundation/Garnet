@@ -3,6 +3,9 @@
 #include "xlang3/xlang3.h"
 #include "safetensors_index.h"
 #include "lowering_context.h"
+#ifdef GARNET_METAL_MLX_AFFINE_INT4
+#include "mlx_qwen35_checkpoint.h"
+#endif
 #include <cstring>
 #include <limits>
 #include <cmath>
@@ -13,6 +16,12 @@ class ModelTensorIO {
     SafeTensorsIndex index_;
     SafeTensorsMappedFile mapping_;
     const SafeTensorMetadata* embedding_=nullptr;
+    size_t embeddingWidth_=0;
+#ifdef GARNET_METAL_MLX_AFFINE_INT4
+    MlxQwen35Checkpoint mlxCheckpoint_;
+    AffineInt4Mapping affineEmbedding_;
+    bool affineEmbeddingReady_=false;
+#endif
     static std::vector<int64_t> Shape(X::Value dimensions) {
         if(!dimensions.IsList()||!dimensions.Size())throw X::Error("shape must be a nonempty list");
         std::vector<int64_t> shape;
@@ -30,9 +39,28 @@ class ModelTensorIO {
             throw X::Error("expected contiguous host FP32 tensor");
     }
 public:
-    void Close(){embedding_=nullptr;mapping_.Close();}
+    void Close(){embedding_=nullptr;embeddingWidth_=0;mapping_.Close();
+#ifdef GARNET_METAL_MLX_AFFINE_INT4
+        affineEmbedding_.Close();affineEmbeddingReady_=false;
+#endif
+    }
+    std::string CheckpointFormat() const {
+        if(!embedding_)return "closed";
+#ifdef GARNET_METAL_MLX_AFFINE_INT4
+        if(affineEmbeddingReady_)return "mlx_qwen35_affine_int4_g64_bf16";
+#endif
+        return "bf16";
+    }
     bool Open(const std::string& path) {
         Close();std::string error;if(!index_.Open(path,error))throw X::Error(error);
+#ifdef GARNET_METAL_MLX_AFFINE_INT4
+        mlxCheckpoint_.Open(index_);
+        if(mlxCheckpoint_.Enabled()) {
+            const auto metadata=AffineInt4Metadata::Resolve(index_,mlxCheckpoint_,"model.language_model.embed_tokens.weight");
+            affineEmbedding_.Open(metadata);embedding_=metadata.tensors[0];
+            embeddingWidth_=metadata.layout.columns;affineEmbeddingReady_=true;return true;
+        }
+#endif
         const auto* entry=index_.Find("model.language_model.embed_tokens.weight");
         if(!entry)entry=index_.Find("model.embed_tokens.weight");
         if(!entry||entry->dataType!="BF16"||entry->shape.size()!=2||!entry->shape[0]||!entry->shape[1]||
@@ -40,12 +68,21 @@ public:
             entry->shape[0]*entry->shape[1]*2!=entry->dataSize)throw X::Error("invalid BF16 embedding table");
         if(!mapping_.Open(entry->filePath,error))throw X::Error(error);
         if(!mapping_.DataAt(entry->dataOffset,entry->dataSize))throw X::Error("embedding exceeds checkpoint");
-        embedding_=entry;return true;
+        embedding_=entry;embeddingWidth_=size_t(entry->shape[1]);return true;
     }
     X::Value Embedding(X::Value tokens) {
         if(!embedding_||!tokens.IsList()||!tokens.Size())throw X::Error("open checkpoint and supply token IDs");
-        const auto width=embedding_->shape[1];std::vector<int64_t> shape{int64_t(tokens.Size()),int64_t(width)};
+        const auto width=embeddingWidth_;std::vector<int64_t> shape{int64_t(tokens.Size()),int64_t(width)};
         std::vector<float> values(Count(shape));
+#ifdef GARNET_METAL_MLX_AFFINE_INT4
+        if(affineEmbeddingReady_) {
+            const auto view=affineEmbedding_.View();
+            for(uint64_t b=0;b<tokens.Size();++b){const auto id=tokens.Get(b).ToInt64();
+                if(id<0||uint64_t(id)>=embedding_->shape[0])throw X::Error("embedding token out of range");
+                view.DecodeEmbeddingRow(size_t(id),values.data()+b*width,width);}
+            return X::Tensor::Create(Host(),X3_TENSOR_FLOAT32,shape,values.data(),values.size()*4);
+        }
+#endif
         const auto* bytes=static_cast<const unsigned char*>(mapping_.DataAt(embedding_->dataOffset,embedding_->dataSize));
         for(uint64_t b=0;b<tokens.Size();++b){auto id=tokens.Get(b).ToInt64();
             if(id<0||uint64_t(id)>=embedding_->shape[0])throw X::Error("embedding token out of range");
@@ -111,6 +148,7 @@ public:
     BEGIN_PACKAGE(ModelTensorIO)
         APISET().AddFunc<1>("open",&ModelTensorIO::Open);
         APISET().AddFunc<0>("close",&ModelTensorIO::Close);
+        APISET().AddProp("checkpoint_format",&ModelTensorIO::CheckpointFormat);
         APISET().AddFunc<1>("embedding",&ModelTensorIO::Embedding);
         APISET().AddFunc<1>("zeros",&ModelTensorIO::Zeros);
         APISET().AddFunc<3>("slice",&ModelTensorIO::Slice);

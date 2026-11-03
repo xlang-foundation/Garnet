@@ -1,5 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
 #include "metal_context.h"
+#ifdef GARNET_METAL_MLX_AFFINE_INT4
+#include "affine_int4_shader.h"
+#include "../../model/affine_int4_codec.h"
+#endif
 #ifdef GARNET_METAL_PRIMARY_BF16_BLOCKS
 #include "primary_block_codec.h"
 #include "primary_32_contract.h"
@@ -139,6 +143,12 @@ struct MetalBF16Weight::Impl {
     size_t rows,columns;
     bool floatPrefill=false;
 };
+#ifdef GARNET_METAL_MLX_AFFINE_INT4
+struct MetalAffineInt4Weight::Impl {
+    id<MTLBuffer> packed,scales,biases;
+    size_t rows=0,columns=0;
+};
+#endif
 bool MetalBF16Weight::PrimaryReady() const {
 #ifdef GARNET_METAL_PRIMARY_BF16_BLOCKS
  return impl_&&impl_->primaryCharged&&impl_->primaryPayload&&impl_->primaryMetadata&&!impl_->buffer;
@@ -188,6 +198,10 @@ bool MetalBF16Weight::InterleavedBodyReady() const {
 }
 struct MetalPipelines {
     id<MTLLibrary> library;
+#ifdef GARNET_METAL_MLX_AFFINE_INT4
+    id<MTLLibrary> affineInt4Library;
+    id<MTLComputePipelineState> affineInt4Decode,affineInt4Gemm;
+#endif
 #ifdef GARNET_METAL_SERIAL_VISION_PREFETCH
     id<MTLLibrary> visionPrefetchLibrary;
     id<MTLComputePipelineState> visionPrefetch,visionVector;
@@ -1410,6 +1424,18 @@ kernel void bf16_native_dot_t128(device const float* a [[buffer(0)]],device cons
         auto library=[impl_->device newLibraryWithSource:source options:compileOptions error:&error];
         if(!library)throw std::runtime_error(std::string(error.localizedDescription.UTF8String));
         impl_->kernels->library=library;
+#ifdef GARNET_METAL_MLX_AFFINE_INT4
+        auto affineOptions=[MTLCompileOptions new];
+        affineOptions.languageVersion=MTLLanguageVersion3_1;affineOptions.fastMathEnabled=NO;
+        auto affineLibrary=[impl_->device newLibraryWithSource:[NSString stringWithUTF8String:kAffineInt4Shader] options:affineOptions error:&error];
+        if(!affineLibrary)throw std::runtime_error("Cannot compile affine INT4 kernels: "+std::string(error.localizedDescription.UTF8String));
+        impl_->kernels->affineInt4Library=affineLibrary;
+        impl_->kernels->affineInt4Decode=[impl_->device newComputePipelineStateWithFunction:[affineLibrary newFunctionWithName:@"affine_q4_decode"] error:&error];
+        impl_->kernels->affineInt4Gemm=[impl_->device newComputePipelineStateWithFunction:[affineLibrary newFunctionWithName:@"affine_q4_gemm"] error:&error];
+        for(auto pipeline:{impl_->kernels->affineInt4Decode,impl_->kernels->affineInt4Gemm})
+            if(!pipeline||pipeline.threadExecutionWidth!=32||pipeline.maxTotalThreadsPerThreadgroup<128)
+                throw std::runtime_error("Affine INT4 requires four 32-lane SIMD groups");
+#endif
         impl_->kernels->argmax=[impl_->device newComputePipelineStateWithFunction:[library newFunctionWithName:@"argmax_rows"] error:&error];
 #ifdef GARNET_METAL_SERIAL_VISION_PREFETCH
         auto prefetchOptions=[MTLCompileOptions new];prefetchOptions.fastMathEnabled=NO;
@@ -1596,6 +1622,65 @@ MetalMatrix MetalContext::Allocate(size_t rows,size_t columns) {
     return MetalMatrix(storage);
     }
 }
+#ifdef GARNET_METAL_MLX_AFFINE_INT4
+MetalAffineInt4Weight MetalContext::UploadAffineInt4(const void* packed,size_t packedBytes,
+    const void* scales,size_t scaleBytes,const void* biases,size_t biasBytes,size_t rows,size_t columns) {
+    @autoreleasepool {
+        const auto layout=AffineInt4Layout::Create(rows,columns);
+        AffineInt4View checked(layout,packed,packedBytes,scales,scaleBytes,biases,biasBytes);
+        (void)checked;
+        if(packedBytes>impl_->device.maxBufferLength||scaleBytes>impl_->device.maxBufferLength||biasBytes>impl_->device.maxBufferLength)
+            throw std::invalid_argument("Affine INT4 buffer exceeds device limit");
+        for(size_t i=0;i<scaleBytes/2;++i) {
+            const float s=AffineInt4BF16(static_cast<const unsigned char*>(scales)+2*i);
+            const float b=AffineInt4BF16(static_cast<const unsigned char*>(biases)+2*i);
+            if(!std::isfinite(s)||!std::isfinite(b)||!std::isfinite(std::fma(15.f,s,b)))
+                throw std::invalid_argument("Nonfinite/overflowing affine INT4 coefficient");
+        }
+        auto value=std::make_shared<MetalAffineInt4Weight::Impl>();value->rows=rows;value->columns=columns;
+        value->packed=[impl_->device newBufferWithBytes:packed length:packedBytes options:MTLResourceStorageModeShared];
+        value->scales=[impl_->device newBufferWithBytes:scales length:scaleBytes options:MTLResourceStorageModeShared];
+        value->biases=[impl_->device newBufferWithBytes:biases length:biasBytes options:MTLResourceStorageModeShared];
+        if(!value->packed||!value->scales||!value->biases)throw std::runtime_error("Cannot allocate packed affine INT4 weights");
+        return MetalAffineInt4Weight(std::move(value));
+    }
+}
+void MetalContext::EncodeAffineInt4MatMul(const MetalMatrix& input,const MetalAffineInt4Weight& weight,const MetalMatrix& output) {
+    @autoreleasepool {
+        if(!impl_->command||!input.impl_||!weight.impl_||!output.impl_)
+            throw std::invalid_argument("Missing affine INT4 projection command/input");
+        auto a=input.impl_->matrix,o=output.impl_->matrix;const auto& w=weight.impl_;
+        if(a.device!=impl_->device||o.device!=impl_->device||w->packed.device!=impl_->device||
+           w->scales.device!=impl_->device||w->biases.device!=impl_->device||
+           !a.rows||a.rows>512||a.columns!=w->columns||o.rows!=a.rows||o.columns!=w->rows||a.data==o.data)
+            throw std::invalid_argument("Affine INT4 projection shape/device mismatch");
+        if(!input.impl_->ready&&!(input.impl_->pending&&impl_->pendingOutputs.count(input.impl_.get())))
+            throw std::logic_error("Uninitialized affine INT4 input");
+        if(output.impl_->pending&&!impl_->pendingOutputs.count(output.impl_.get()))
+            throw std::logic_error("Affine INT4 output belongs to another command");
+        struct Params {uint64_t rows,inner,columns,aStride,oStride;};
+        Params params{a.rows,a.columns,o.columns,a.rowBytes/4,o.rowBytes/4};
+        auto encoder=[impl_->command computeCommandEncoder];
+        if(!encoder)throw std::runtime_error("Cannot encode affine INT4 projection");
+        [encoder setComputePipelineState:a.rows<=8?impl_->kernels->affineInt4Decode:impl_->kernels->affineInt4Gemm];
+        [encoder setBuffer:a.data offset:a.offset atIndex:0];[encoder setBuffer:w->packed offset:0 atIndex:1];
+        [encoder setBuffer:w->scales offset:0 atIndex:2];[encoder setBuffer:w->biases offset:0 atIndex:3];
+        [encoder setBuffer:o.data offset:o.offset atIndex:4];[encoder setBytes:&params length:sizeof(params) atIndex:5];
+        const auto groups=a.rows<=8?MTLSizeMake((o.columns+3)/4,1,1):MTLSizeMake((o.columns+31)/32,(a.rows+15)/16,1);
+        [encoder dispatchThreadgroups:groups threadsPerThreadgroup:MTLSizeMake(128,1,1)];[encoder endEncoding];
+        output.impl_->ready=false;output.impl_->pending=true;
+        if(impl_->pendingOutputs.insert(output.impl_.get()).second)impl_->outputs.push_back(output.impl_);
+    }
+}
+std::vector<MetalBufferInfo> MetalContext::AffineInt4BufferInfo(const MetalAffineInt4Weight& weight) {
+    @autoreleasepool {
+        std::vector<MetalBufferInfo> result;if(!weight.impl_)return result;
+        auto add=[&](id<MTLBuffer> buffer,const char* kind){if(buffer)result.push_back({reinterpret_cast<uintptr_t>((__bridge void*)buffer),uint64_t(buffer.allocatedSize),uint64_t(buffer.length),kind});};
+        add(weight.impl_->packed,"affine_int4_payload");add(weight.impl_->scales,"affine_int4_bf16_scales");add(weight.impl_->biases,"affine_int4_bf16_biases");
+        return result;
+    }
+}
+#endif
 MetalBF16Weight MetalContext::UploadBF16(const void* data,size_t bytes,size_t rows,size_t columns,bool floatPrefill,bool visionPrefill) {
     @autoreleasepool {
 #ifndef GARNET_METAL_VISION_GLOBAL_ALPHA

@@ -45,6 +45,17 @@ public:
     size_t CoalescedBlockCount() const;
     size_t CoalescedCompactCount() const;
 };
+#ifdef GARNET_METAL_MLX_AFFINE_INT4
+class MetalAffineInt4Weight {
+    struct Impl;
+    std::shared_ptr<Impl> impl_;
+    explicit MetalAffineInt4Weight(std::shared_ptr<Impl> impl):impl_(std::move(impl)) {}
+    friend class MetalContext;
+public:
+    MetalAffineInt4Weight()=default;
+    bool Valid() const {return bool(impl_);}
+};
+#endif
 // C++ interface keeps Objective-C ownership out of model-facing headers.
 struct MetalScreenedDiagnostics {
     size_t rows=0,columns=0;
@@ -93,6 +104,13 @@ public:
     static MetalBufferInfo MatrixBufferInfo(const MetalMatrix&);
     bool IsDefaultLayout(const MetalMatrix&,size_t rows,size_t columns) const;
     static std::vector<MetalBufferInfo> WeightBufferInfo(const MetalBF16Weight&);
+#ifdef GARNET_METAL_MLX_AFFINE_INT4
+    static std::vector<MetalBufferInfo> AffineInt4BufferInfo(const MetalAffineInt4Weight&);
+    MetalAffineInt4Weight UploadAffineInt4(const void* packed,size_t packedBytes,
+        const void* scales,size_t scaleBytes,const void* biases,size_t biasBytes,
+        size_t rows,size_t columns);
+    void EncodeAffineInt4MatMul(const MetalMatrix&,const MetalAffineInt4Weight&,const MetalMatrix&);
+#endif
     MetalMatrix Upload(const std::vector<float>& values, size_t rows, size_t columns);
     MetalMatrix Allocate(size_t rows, size_t columns);
     MetalBF16Weight UploadBF16(const void* data,size_t bytes,size_t rows,size_t columns,bool floatPrefill=false,bool visionPrefill=false);

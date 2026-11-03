@@ -3,6 +3,9 @@
 #include "xlang3/xlang3.h"
 #include "metal_context.h"
 #include "safetensors_index.h"
+#ifdef GARNET_METAL_MLX_AFFINE_INT4
+#include "mlx_qwen35_checkpoint.h"
+#endif
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
@@ -10,7 +13,11 @@
 namespace Garnet {
 class MetalCompiledGraph {
     friend class MetalDecoderSession;
-    struct Slot {MetalMatrix matrix;size_t rows=0,columns=0;std::vector<int64_t> shape;MetalBF16Weight bf16;};
+    struct Slot {MetalMatrix matrix;size_t rows=0,columns=0;std::vector<int64_t> shape;MetalBF16Weight bf16;
+#ifdef GARNET_METAL_MLX_AFFINE_INT4
+        MetalAffineInt4Weight affineInt4;
+#endif
+    };
     enum class Kind {MatMul,BF16MatVec,Norm,Silu,Add,Bias,Mask,Conv,Delta,Slice,Prepare,GateNorm,Concat,NormRope,KVUpdate,KVChunk,AttentionChunk,Scores,AttentionContext,Vision,Layout,DeltaSplit,ConvChunk,DeltaChunk};
     struct Op {Kind kind;size_t a,b,out;float epsilon=0,offset=0;bool transpose=false;
         std::vector<size_t> arguments={},dimensions={};bool contiguousSlots=false;size_t auxiliaryOutput=SIZE_MAX;};
@@ -21,8 +28,11 @@ class MetalCompiledGraph {
     std::vector<std::vector<int64_t>> inputShapes_;
     std::unordered_map<uint64_t,size_t> tensors_;
     std::unordered_map<std::string,size_t> weights_;
+    struct CheckpointDependency {SafeTensorMetadata metadata;std::filesystem::file_time_type modified;uintmax_t bytes;};
     struct SharedWeight {Slot slot;SafeTensorMetadata metadata;
-        std::filesystem::file_time_type modified;uintmax_t bytes;};
+        std::filesystem::file_time_type modified;uintmax_t bytes;
+        std::vector<CheckpointDependency> dependencies;
+    };
     std::unordered_map<std::string,SharedWeight> sharedWeights_,weightRecords_;
     std::unordered_map<uint64_t,std::unordered_map<std::string,size_t>> bindings_;
     std::unordered_map<size_t,std::pair<size_t,size_t>> controlSources_;
@@ -39,6 +49,11 @@ class MetalCompiledGraph {
     bool ready_=false,bf16Projections_=false;
     mutable std::mutex mutex_;
     SafeTensorsIndex index_;
+    const SafeTensorMetadata* FindWeightMetadata(const std::string&) const;
+#ifdef GARNET_METAL_MLX_AFFINE_INT4
+    MlxQwen35Checkpoint mlxCheckpoint_;
+    size_t AffineInt4Weight(const std::string&);
+#endif
     size_t Weight(const std::string&);
     size_t BF16Weight(const std::string&,bool visionPrefill=false);
     size_t Allocate(size_t,size_t);
