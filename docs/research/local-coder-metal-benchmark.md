@@ -858,3 +858,24 @@ recognizes both new bridge/worker names. The common study HTTP handler adds
 optional cached-token accounting and an opt-in request-error hook; existing
 single-request/CUDA workers keep fatal errors as their default. Learned-model
 HTTP admission and complete batched coding quality remain pending.
+
+
+The learned native HTTP finite gate passed in
+`evidence/native27b-batch-http-study1` with batch2/context512/chunk8 and prefix
+reuse enabled. A and B began together; C arrived after A's first token, queued,
+and reused A's physical row with a new epoch after A finished while B continued.
+The raw log contains14 actual combined-decode plans. All8/24/8 output prefixes
+matched frozen successful native quality-oracle tokens. Returning C produced
+the same8 tokens with100 cached prompt tokens reported through SSE usage.
+An oversized context request was rejected nonfatally and health stayed ready.
+The native subprocess exited0 and final Metal allocation was720,896bytes.
+
+The artifact/raw-event audit found zero issues, verifies native versus client
+IDs/usage, row refill while B continues, exact prefix counts, working-set bounds
+and clean close. Five CPU tamper checks reject missing combined execution,
+reused epochs, corrupted outputs, false cache counts and retained allocations.
+These are finite serving correctness gates, not complete coding quality or
+matched performance measurements. Capacity512 and8/24-token outputs do not
+qualify the4K/128-token comparator campaign; whole-prompt prefill interference
+and HTTP cancellation remain limitations. Full batched coding output and the
+larger context profile must be qualified before performance comparison.
