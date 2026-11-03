@@ -922,3 +922,24 @@ a concrete implementation difference to investigate, not a predicted speedup.
 Start with non-relaxed FP32 input/accumulation semantics, separate allocation/
 numerical gates and existing-hardware fallback. Do not enable relaxed precision
 or change the frozen comparators to manufacture a ratio.
+
+
+`GARNET_METAL_MPP_AFFINE_FP32` is a new default-off native prefill candidate.
+On macOS26+ devices reporting Apple10 support, it compiles a separate Metal4
+MPP pipeline for affine Q4 projections with more than four input rows. Other
+devices retain the existing pipeline; decode rows1..4 are unchanged. Each
+threadgroup dequantizes only a32x32 tile from the existing packed weights,
+keeps inputs/weights/accumulators FP32 and explicitly disables relaxed precision.
+The original xModel MatMul operations and packed checkpoint representation stay
+unchanged. Dynamic output extents handle partial row/column tiles. Native
+context/session dispatch counters distinguish an exercised MPP route from an
+optional build merely containing it.
+
+The M5 route is confirmed available and exercised. All24 projection shapes
+(including model-width inner dimensions, tails and unchanged decode cases)
+passed the existing independent FP64 contraction tolerances, ownership and
+rejection checks. All12 CTests pass in `native-mpp-affine-build`; evidence:
+`mpp-affine-numerics1.log`, `mpp-affine-ctest.log`,
+`mpp-affine-ctest-detail1.log` (`device=Apple M5 available=1 non_relaxed=1`).
+This is operator correctness only. Operator timing, learned-model coding and
+end-to-end admission remain required; no MPP speedup is claimed.

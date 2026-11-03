@@ -138,6 +138,10 @@ public:
     void WriteRowPrefixGroups(const MetalMatrix&,size_t row,size_t groups,size_t capacity,size_t width,size_t tokens,const std::vector<float>&);
 #endif
     MetalBF16Weight UploadBF16(const void* data,size_t bytes,size_t rows,size_t columns,bool floatPrefill=false,bool visionPrefill=false);
+#ifdef GARNET_METAL_MPP_AFFINE_FP32
+    bool HasMPPAffine() const;
+    size_t LastMPPAffineDispatches() const;
+#endif
     bool PrepareScreenedHead(const MetalBF16Weight&);
     bool EncodeScreenedArgmax(const MetalMatrix&,const MetalBF16Weight&,const MetalMatrix&);
     size_t LastScreenedHeadDispatches() const;
