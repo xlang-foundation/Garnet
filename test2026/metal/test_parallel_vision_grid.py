@@ -4,7 +4,7 @@ from pathlib import Path
 import numpy as np
 root=Path(sys.argv[1]).resolve();out=Path(sys.argv[2]).resolve();candidate=Path(sys.argv[3]).resolve();out.mkdir(exist_ok=False)
 worker=Path(__file__).with_name('run_parallel_vision_grid.py');reports=[]
-runtime='/Users/zsdx/CantorAI/out/build/macos-arm64-release/bin/xlang3'
+runtime='/Users/developer/CantorAI/out/build/macos-arm64-release/bin/xlang3'
 for batch in (1,2):
     old=root/'logs/threaded-striped-inference-confirm-20261015/jobs'/('Qwen3.5-0.8B-b'+str(batch)+'-0')
     case=json.loads((old/'case.json').read_text());patch=old/'garnet-selected-0/protocol/frame-0.f32'

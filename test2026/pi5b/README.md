@@ -12,9 +12,9 @@ and independent test references; they are not a replacement inference engine.
 cmake -S source -B cpu-runtime-build \
   -DCMAKE_BUILD_TYPE=Release \
   -DGARNET_CPU_ONLY=ON -DGARNET_CPU_DOTPROD=ON \
-  -DXLANG3_SDK_ROOT=/home/shawn/cantorai-ci/xlang3/sdk \
-  -DGARNET_XLANG3_RUNTIME_LIBRARY=/home/shawn/cantorai-ci/out/build/linux-arm64-release/bin/libxlang3_runtime.so \
-  -DOpenVINO_DIR=/home/shawn/garnet-pi5b-investigation/venv/lib/python3.13/site-packages/openvino/cmake
+  -DXLANG3_SDK_ROOT=/home/developer/cantorai-ci/xlang3/sdk \
+  -DGARNET_XLANG3_RUNTIME_LIBRARY=/home/developer/cantorai-ci/out/build/linux-arm64-release/bin/libxlang3_runtime.so \
+  -DOpenVINO_DIR=/home/developer/garnet-pi5b-investigation/venv/lib/python3.13/site-packages/openvino/cmake
 cmake --build cpu-runtime-build -j1
 ```
 
@@ -27,7 +27,7 @@ Default root CMake behavior remains unchanged when GARNET_CPU_ONLY is off.
 
 ## Actual image inference
 
-Run from `/home/shawn/garnet-pi5b-investigation`. Download the pinned checkpoint
+Run from `/home/developer/garnet-pi5b-investigation`. Download the pinned checkpoint
 with `download_full_checkpoint.py`, which verifies its upstream LFS SHA256.
 The model revision, image URL/hash, full results, and limitations are recorded
 in `docs/investigations/qwen35-vl-pi5b.md` in the local investigation branch.
@@ -36,7 +36,7 @@ in `docs/investigations/qwen35-vl-pi5b.md` in the local investigation branch.
 venv/bin/python source/test2026/pi5b/prepare_cpu_image.py \
   inputs/RealWorld-04.png models/Qwen3.5-0.8B inputs/RealWorld-04-b1.f32 1
 GARNET_OPENVINO_CPU_THREADS=2 venv/bin/python source/test2026/pi5b/measure_process.py \
-  /home/shawn/cantorai-ci/out/build/linux-arm64-release/bin/xlang3 \
+  /home/developer/cantorai-ci/out/build/linux-arm64-release/bin/xlang3 \
   source/test2026/pi5b/run_image_decoder.py cpu-runtime-build source \
   models/Qwen3.5-0.8B inputs/RealWorld-04-b1.json
 ```
@@ -91,7 +91,7 @@ For the faster execution profile, explicitly set both:
 ```sh
 GARNET_OPENVINO_CPU_THREADS=2 GARNET_OPENVINO_CPU_INFERENCE_PRECISION=f16 \
   venv/bin/python source/test2026/pi5b/measure_process.py \
-  /home/shawn/cantorai-ci/out/build/linux-arm64-release/bin/xlang3 \
+  /home/developer/cantorai-ci/out/build/linux-arm64-release/bin/xlang3 \
   source/test2026/pi5b/run_image_decoder.py cpu-runtime-build source \
   models/Qwen3.5-0.8B inputs/RealWorld-04-b1.json
 ```
@@ -181,5 +181,5 @@ intermediate matrices stay GPU-backed. Contexts are single-thread-owned.
 The initial RMS kernel is a correctness implementation with a serial reduction
 per row; it requires performance profiling and parallelization. FP16, attention,
 checkpoint-backed xModel graph execution and full Qwen inference remain undone.
-The existing Mac XLang3 SDK was found under /Users/zsdx/CantorAI/xlang3/sdk;
+The existing Mac XLang3 SDK was found under /Users/developer/CantorAI/xlang3/sdk;
 shared project files/builds remain read-only for this investigation.

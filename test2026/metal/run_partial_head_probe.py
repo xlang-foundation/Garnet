@@ -7,7 +7,7 @@ import hashlib,json,os,subprocess,sys,time
 from pathlib import Path
 root=Path(sys.argv[1]).resolve();output=Path(sys.argv[2]).resolve();output.mkdir(parents=True,exist_ok=False)
 scripts=root/'source/test2026/metal';build=root/'build-state-handoff'
-runtime=Path('/Users/zsdx/CantorAI/out/build/macos-arm64-release/bin/xlang3');statuses=[]
+runtime=Path('/Users/developer/CantorAI/out/build/macos-arm64-release/bin/xlang3');statuses=[]
 
 def digest(path):
     with path.open('rb') as stream:return hashlib.file_digest(stream,'sha256').hexdigest()
@@ -23,7 +23,7 @@ def guard(label):
                 info=subprocess.run(['/bin/ps','-p',str(current),'-o','ppid=,args='],capture_output=True,text=True)
                 parts=info.stdout.strip().split(None,1)
                 if info.returncode or len(parts)!=2:break
-                if '/Users/zsdx/cantorai-release-tests/current/bin/WorldSense/Backend/package_runtime.py' in parts[1]:identified=True;break
+                if '/Users/developer/cantorai-release-tests/current/bin/WorldSense/Backend/package_runtime.py' in parts[1]:identified=True;break
                 current=int(parts[0])
                 if current<=1:break
             libraries=subprocess.run(['/usr/sbin/lsof','-p',str(pid),'-Fn'],capture_output=True,text=True)

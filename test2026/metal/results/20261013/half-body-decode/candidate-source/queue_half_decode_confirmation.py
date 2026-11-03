@@ -1,8 +1,8 @@
 import subprocess
 from pathlib import Path
-root=Path('/Users/zsdx/garnet-metal-investigation');s=root/'source/test2026/metal';py='/opt/homebrew/bin/python3'
+root=Path('/Users/developer/garnet-metal-investigation');s=root/'source/test2026/metal';py='/opt/homebrew/bin/python3'
 text=root/'logs/native-ab-half-decode-confirm2-20261013'
-base=[py,str(s/'compare_vllm_metal.py'),'/Users/zsdx/CantorAI/out/build/macos-arm64-release/bin/xlang3',str(root/'build-exact-half-decode'),str(root/'source'),str(root/'comparators/vllm/venv/bin/python')]
+base=[py,str(s/'compare_vllm_metal.py'),'/Users/developer/CantorAI/out/build/macos-arm64-release/bin/xlang3',str(root/'build-exact-half-decode'),str(root/'source'),str(root/'comparators/vllm/venv/bin/python')]
 subprocess.run([py,str(s/'background_comparison.py'),'launch',str(text),*base,str(text/'jobs'),'shared',str(root/'build-kv-chunk-vector')],check=True)
 def launch(folder,prior,command):
  subprocess.run([py,str(s/'background_comparison.py'),'launch',str(folder),py,str(s/'run_after_owned_job.py'),str(prior),*command],check=True)

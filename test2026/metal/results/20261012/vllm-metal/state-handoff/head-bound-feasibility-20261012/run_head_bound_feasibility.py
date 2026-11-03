@@ -1,12 +1,12 @@
 import json,mmap,struct,subprocess,sys
 from pathlib import Path
 import numpy as np
-root=Path('/Users/zsdx/garnet-metal-investigation');output=root/'logs/head-bound-feasibility-20261012';output.mkdir(parents=True,exist_ok=True)
+root=Path('/Users/developer/garnet-metal-investigation');output=root/'logs/head-bound-feasibility-20261012';output.mkdir(parents=True,exist_ok=True)
 models=[('Qwen3-0.6B','What is the capital of France? Answer briefly.'),('Qwen2.5-Coder-0.5B-Instruct','Write a Python function add(a, b) that returns their sum. Output only code.'),('Qwen3.5-0.8B','What is the capital of France? Answer briefly.')]
 summary=[]
 for name,prompt in models:
  folder=output/name;folder.mkdir(exist_ok=True);model=root/'models'/name
- command=['/Users/zsdx/CantorAI/out/build/macos-arm64-release/bin/xlang3',str(root/'source/test2026/metal/probe_head_bound_inputs.py'),str(root/'build-state-handoff'),str(root/'source'),str(model),prompt]
+ command=['/Users/developer/CantorAI/out/build/macos-arm64-release/bin/xlang3',str(root/'source/test2026/metal/probe_head_bound_inputs.py'),str(root/'build-state-handoff'),str(root/'source'),str(model),prompt]
  print('Feasibility-only native command',json.dumps(command),flush=True)
  with (folder/'output.log').open('w') as stream:result=subprocess.run(command,stdout=stream,stderr=subprocess.STDOUT)
  (folder/'exit.json').write_text(json.dumps(dict(command=command,exit_code=result.returncode),indent=2)+'\n')

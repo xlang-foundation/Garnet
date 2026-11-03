@@ -1,6 +1,6 @@
 import hashlib,json,tarfile
 from pathlib import Path
-root=Path('/Users/zsdx/garnet-metal-investigation')
+root=Path('/Users/developer/garnet-metal-investigation')
 source=root/'snapshots/exact-half-fast-before-hoist-20261013'
 names=['exact-half-fast-pack-build-20261013','exact-half-fast-pack-checks-20261013','native-ab-exact-half-fast-pack-20261013','exact-half-fast-text-summary-20261013','native-frame-ab-exact-half-fast-pack-20261013','exact-half-fast-frame-summary-20261013','exact-half-full-codec-checks-20261013','exact-half-fast-op-attribution-20261013','vllm-matched-text-exact-half-fast-20261013','vllm-text-exact-half-fast-summary-20261013','vllm-matched-vl-exact-half-fast-20261013','vllm-frame-exact-half-fast-summary-20261013']
 with tarfile.open(root/'exact-half-fast-evidence.tar.gz','w:gz') as archive:

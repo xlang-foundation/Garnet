@@ -13,7 +13,7 @@ def digest(p):
 assert digest(root/'delta-value-tile64-native-continuation-20261016.tar.gz')=='b22c3531007f4d234e276820c22418bce688558993937006fc8de1e2af8a2054'
 assert digest(build/'libgarnet.dylib')=='d52c37e09edf7afb61889037863b1cb338f9ac0b6d98ea62043c3a016af5b55e'
 assert not out.exists();out.mkdir(parents=True);output=out;start=time.monotonic();code=1;statuses=[];background_checks=[]
-worldsense_script=Path('/Users/zsdx/cantorai-release-tests/current/bin/WorldSense/Backend/package_runtime.py')
+worldsense_script=Path('/Users/developer/cantorai-release-tests/current/bin/WorldSense/Backend/package_runtime.py')
 nodes=[n for n in ast.parse((shared/'compare_vllm_metal.py').read_text()).body if isinstance(n,ast.FunctionDef) and n.name in ('verified_worldsense_service','snapshot','guard')]
 exec(compile(ast.Module(body=nodes,type_ignores=[]),'exclusive_guard','exec'),globals());strict_guard=guard
 

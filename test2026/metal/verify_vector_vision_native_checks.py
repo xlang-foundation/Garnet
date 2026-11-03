@@ -51,8 +51,8 @@ replace("assert stages[:27]==oldstatus and stages[27]['name']=='wide-batch-train
 replace("assert {v['name'] for v in stages}==names","assert {v['name'] for v in stages}==names|{'vector-vision-primitive-compile','vector-vision-primitive'}")
 replace("        assert (folder/(stage['name']+'.log')).stat().st_size>0","""        log=folder/(stage['name']+'.log');assert log.is_file()
         if stage['name']!='vector-vision-primitive-compile':assert log.stat().st_size>0""")
-assert source.count(".relative_to('/Users/zsdx/garnet-metal-investigation')")==3
-source=source.replace(".relative_to('/Users/zsdx/garnet-metal-investigation')",".relative_to(preparation['target'])")
+assert source.count(".relative_to('/Users/developer/garnet-metal-investigation')")==3
+source=source.replace(".relative_to('/Users/developer/garnet-metal-investigation')",".relative_to(preparation['target'])")
 replace("assert 'metal_mlp_prefill_graph_reference' in ctext and '0 tests failed out of 8' in ctext","assert '0 tests failed out of 7' in ctext")
 replace("assert 'MLP graph pending producer, ownership, abort/recovery and native bound PASS: 64 cases' in last","assert 'Coalesced body original bits/FP64, policy/tail/fallback, ownership, abort/recovery and prefill checks=80 PASS' in last")
 replace('validation_stages=28,ctests=8,graph_primitive_cases=64,','validation_stages=30,ctests=7,coalesced_primitive_cases=80,vector_primitive_checks=96,vector_serving_checks=8,vector_fallback_checks=88,')

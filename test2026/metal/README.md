@@ -34,7 +34,7 @@ Both vLLM-relative targets remain unmet.
 ## Isolation and checkpoint
 
 Windows source: `D:/CantorAI/Garnet-metal`, branch `feature/qwen35-metal`.
-Mac source/build: `/Users/zsdx/garnet-metal-investigation/{source,build}`.
+Mac source/build: `/Users/developer/garnet-metal-investigation/{source,build}`.
 The existing Garnet checkouts and shared xlang3 SDK/runtime are reused read-only.
 `feature/gpt-oss-120b` and the Pi investigation branch were not edited.
 The existing Mac checkout remained clean.

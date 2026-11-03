@@ -7,7 +7,7 @@ from pathlib import Path
 r=Path(sys.argv[1]);output=Path(sys.argv[2]);model=sys.argv[3];batch=int(sys.argv[4])
 assert model in ('Qwen3-0.6B','Qwen2.5-Coder-0.5B-Instruct','Qwen3.5-0.8B') and batch in (1,2)
 output.mkdir(parents=True,exist_ok=False);s=r/'source/test2026/metal';statuses=[];records=[];background_checks=[]
-worldsense_script=Path('/Users/zsdx/cantorai-release-tests/current/bin/WorldSense/Backend/package_runtime.py')
+worldsense_script=Path('/Users/developer/cantorai-release-tests/current/bin/WorldSense/Backend/package_runtime.py')
 real_subprocess=subprocess;owned_group=None
 def owned(pid):
     if owned_group is None:return False
@@ -57,7 +57,7 @@ else:
     expected=next(json.loads(v.split(' ',1)[1]) for v in text.splitlines() if v.startswith('matched_result '))
     native_prompt=next(json.loads(v.split(' ',1)[1]) for v in text.splitlines() if v.startswith('matched_prompt '))
 casefile=output/'case.json';casefile.write_text(json.dumps(case,indent=2))
-runtime='/Users/zsdx/CantorAI/out/build/macos-arm64-release/bin/xlang3';python=str(r/'comparators/vllm/venv/bin/python')
+runtime='/Users/developer/CantorAI/out/build/macos-arm64-release/bin/xlang3';python=str(r/'comparators/vllm/venv/bin/python')
 metadata=dict(scope=__doc__,counts_as_default_bf16_speedup=False,native_library_sha256=digest(build/'libgarnet.dylib'),learned_values_bit_exact=True,
     source_checkpoint_sha256=proof['source_sha256'],comparator_checkpoint_sha256=proof['destination_sha256'],equivalence_proof_sha256=digest(proof_path),
     source_sha256={p.name:digest(p) for p in [Path(__file__),s/'run_matched_garnet.py',s/'run_matched_vllm.py',s/'frame_worker_garnet.py',s/'frame_worker_vllm.py',s/'run_matched_frame_process.py',s/'benchmark_matched_process.py']})

@@ -7,7 +7,7 @@ workload at a time and require the unchanged complete baseline outputs.
 import hashlib,json,os,subprocess,sys,time
 from pathlib import Path
 root=Path(sys.argv[1]).resolve();output=Path(sys.argv[2]).resolve();output.mkdir(parents=True,exist_ok=False)
-scripts=root/'source/test2026/metal';build=root/(sys.argv[3] if len(sys.argv)>3 else 'build-vector-slice');runtime='/Users/zsdx/CantorAI/out/build/macos-arm64-release/bin/xlang3'
+scripts=root/'source/test2026/metal';build=root/(sys.argv[3] if len(sys.argv)>3 else 'build-vector-slice');runtime='/Users/developer/CantorAI/out/build/macos-arm64-release/bin/xlang3'
 models=('Qwen3-0.6B','Qwen2.5-Coder-0.5B-Instruct','Qwen3.5-0.8B')
 if len(sys.argv)>4:
     assert sys.argv[4] in models;models=(sys.argv[4],)
@@ -25,7 +25,7 @@ def guard(label):
             for _ in range(3):
                 info=subprocess.run(['/bin/ps','-p',str(current),'-o','ppid=,args='],capture_output=True,text=True);parts=info.stdout.strip().split(None,1)
                 if info.returncode or len(parts)!=2:break
-                if '/Users/zsdx/cantorai-release-tests/current/bin/WorldSense/Backend/package_runtime.py' in parts[1]:identified=True;break
+                if '/Users/developer/cantorai-release-tests/current/bin/WorldSense/Backend/package_runtime.py' in parts[1]:identified=True;break
                 current=int(parts[0])
                 if current<=1:break
             libraries=subprocess.run(['/usr/sbin/lsof','-p',str(pid),'-Fn'],capture_output=True,text=True)

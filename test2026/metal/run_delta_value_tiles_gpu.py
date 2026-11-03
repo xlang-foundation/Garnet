@@ -28,7 +28,7 @@ for i,p in enumerate(paths):
 def unchanged():
  for name,sha in identities.items():assert digest(Path(name))==sha,name
 
-background_checks=[];worldsense_script=Path('/Users/zsdx/cantorai-release-tests/current/bin/WorldSense/Backend/package_runtime.py')
+background_checks=[];worldsense_script=Path('/Users/developer/cantorai-release-tests/current/bin/WorldSense/Backend/package_runtime.py')
 nodes=[n for n in ast.parse((shared/'compare_vllm_metal.py').read_text()).body if isinstance(n,ast.FunctionDef) and n.name in ('verified_worldsense_service','snapshot','guard')]
 exec(compile(ast.Module(body=nodes,type_ignores=[]),'exclusive_guard','exec'),globals())
 generated=out/'delta-value-tiles.metal';generated.write_bytes(shader(context.read_text()).encode())

@@ -7,8 +7,8 @@ Checkout: D:/CantorAI/Garnet-pi5b
 
 ## Execution evidence
 
-Command: ssh -o BatchMode=yes -o ConnectTimeout=10 shawn-pi5 "uname -m"
-Result: exit 255 from SSH (shell invocation returned failure); hostname shawn-pi5 could not be resolved.
+Command: ssh -o BatchMode=yes -o ConnectTimeout=10 developer-pi5 "uname -m"
+Result: exit 255 from SSH (shell invocation returned failure); hostname developer-pi5 could not be resolved.
 No remote command executed. No Pi hardware/software measurements or inference results exist.
 Requested reachable Pi hostname/IP and SSH username. Do not infer connection details from unrelated hosts.
 
@@ -36,7 +36,7 @@ Investigation started. Pi access is unresolved. No successful build or model exe
 
 ## Pi connection and inventory (2026-10-10)
 
-Connection succeeded using saved alias shawn-pi5 with HostName=192.168.1.157 and User=shawn, from WorkSense/doc/tool_use_memo.md. No credential values are recorded.
+Connection succeeded using saved alias developer-pi5 with HostName=192.0.2.1 and User=developer, from WorkSense/doc/tool_use_memo.md. No credential values are recorded.
 
 Verified Pi 5 Model B Rev 1.0; aarch64; Debian 13.5; four Cortex-A76 cores up to 2400 MHz. CPU flags include asimd, fphp, asimdhp, and asimddp (NEON, FP16, and integer dot product). RAM 7.9 GiB, about 5.4 GiB available at observation; active swap is 2 GiB zram. /var/swap occupies another 1.5 GiB on disk but was absent from /proc/swaps; do not delete without investigating configuration.
 
@@ -53,15 +53,15 @@ Requested storage choice: additional storage or review/approval of selected stal
 ## Authorized storage cleanup
 
 User authorized cleanup of safe candidates. Immediately before deletion, inspected accessible process cwd/executable/open-file/memory-map references and verified exact resolved paths were not symlinks. Deleted only:
-- /home/shawn/CantorAI/out/build
-- /home/shawn/cantorai-ci/out/validation/official-linux-arm64-fadf41a
-- /home/shawn/cantorai-ci/out/validation/official-linux-arm64-665c4fe
+- /home/developer/CantorAI/out/build
+- /home/developer/cantorai-ci/out/validation/official-linux-arm64-fadf41a
+- /home/developer/cantorai-ci/out/validation/official-linux-arm64-665c4fe
 
 Root available space increased from 269,651,968 to 2,490,028,032 bytes (about 2.32 GiB). Active cantorai-ci/out/build, running release-tests/current deployment, source trees, and SDKs were preserved. No process was stopped.
 
 ## OpenVINO ARM execution prerequisite (actual Pi execution)
 
-Installed isolated venv at /home/shawn/garnet-pi5b-investigation/venv using python3 -m venv, then venv/bin/python -m pip install --no-cache-dir openvino==2026.2.1. Installed ARM64 cp313 OpenVINO 2026.2.1-21919 and numpy 2.4.6. System Python was not modified.
+Installed isolated venv at /home/developer/garnet-pi5b-investigation/venv using python3 -m venv, then venv/bin/python -m pip install --no-cache-dir openvino==2026.2.1. Installed ARM64 cp313 OpenVINO 2026.2.1-21919 and numpy 2.4.6. System Python was not modified.
 
 Ran test2026/pi5b/probe_openvino.py via SSH stdin using that venv. It compiles MatMul+ReLU with [batch,64] input and [64,32] weights, compares against numpy, exports/imports the compiled model, and checks numerical cache reload.
 
@@ -93,7 +93,7 @@ Removed x86-only intrinsics from the ARM compilation branch of the existing Qwen
 
 Added test2026/pi5b/CMakeLists.txt: a separate validation build compiles the actual Q4/Q8 kernel, native Qwen3 decoder, weight quantizer, and safetensors mapper into garnet_native_cpu with no CUDA, OpenVINO, or XLang3 dependency. This is a reusable CPU-component validation target, not a replacement for the full Garnet package or completion of CPU-only serving.
 
-Command on Pi: cmake -S /home/shawn/garnet-pi5b-investigation/source/test2026/pi5b -B /home/shawn/garnet-pi5b-investigation/cpu-build -DCMAKE_BUILD_TYPE=Release -DGARNET_PI5B_DOTPROD=ON ; cmake --build ... -j 1 ; ctest --test-dir ... --output-on-failure. Configure succeeded. Full build/test was running at this record; outcome must be checked before claiming success. An isolated source subset was transferred, and other source/build trees were not edited.
+Command on Pi: cmake -S /home/developer/garnet-pi5b-investigation/source/test2026/pi5b -B /home/developer/garnet-pi5b-investigation/cpu-build -DCMAKE_BUILD_TYPE=Release -DGARNET_PI5B_DOTPROD=ON ; cmake --build ... -j 1 ; ctest --test-dir ... --output-on-failure. Configure succeeded. Full build/test was running at this record; outcome must be checked before claiming success. An isolated source subset was transferred, and other source/build trees were not edited.
 
 Separately compiled qwen3_native_decode_engine.cpp to an ARM64 object successfully. Full decode fixture validation remains pending.
 
@@ -115,7 +115,7 @@ Added gated_delta_lowering.h using standard OpenVINO FP32 operations; it validat
 
 Added host_tensor.h so GARNET_CPU_ONLY builds can accept materialized host tensors and explicitly reject accelerator transfers without including CUDA headers; normal GPU builds retain the existing TensorHelper transfer path.
 
-Actual Pi build/test: gated_delta_openvino_probe compiles/runs the C++ lowering helper through OpenVINO 2026.2.1 with FP32 and two threads. Independent NumPy tests passed for batch 1/2 across recurrence, inactive row isolation, zero Q/K. Pi CTest: 3/3 passed (Q4/Q8, native recurrence, OpenVINO recurrence), total 1.38 s. Full openvino_builder.cpp also compiled on Pi as garnet_openvino_lowering with GARNET_CPU_ONLY=1, GARNET_WITH_OPENVINO=1, public XLang3 SDK at /home/shawn/cantorai-ci/xlang3/sdk, and no CUDA headers/libraries. This object is not yet a linked Garnet serving package.
+Actual Pi build/test: gated_delta_openvino_probe compiles/runs the C++ lowering helper through OpenVINO 2026.2.1 with FP32 and two threads. Independent NumPy tests passed for batch 1/2 across recurrence, inactive row isolation, zero Q/K. Pi CTest: 3/3 passed (Q4/Q8, native recurrence, OpenVINO recurrence), total 1.38 s. Full openvino_builder.cpp also compiled on Pi as garnet_openvino_lowering with GARNET_CPU_ONLY=1, GARNET_WITH_OPENVINO=1, public XLang3 SDK at /home/developer/cantorai-ci/xlang3/sdk, and no CUDA headers/libraries. This object is not yet a linked Garnet serving package.
 
 Added xModel/qwen35/vl_0_8b/gated_delta.py component using backend-neutral tensor expressions, compatible with surrounding nested fusion. It is explicitly not a complete model manifest/entrypoint. Actual desktop xlang3.exe with native Garnet captured the source component and extraction operations for batches 1 and 2 (nine Garnet operations each); topological dependency checks passed. The first direct helper invocation outside the fusion returned a graph rather than tensor; the test was corrected to capture helpers inside an enclosing fusion. No mock Garnet module was used.
 
@@ -129,7 +129,7 @@ First execution failed with an invalid graph during capture. Diagnosis: GARNET_W
 
 CPU precision selection now applies both when compiling and importing the OpenVINO graph; the precision environment variable is included in the compiled-model cache fingerprint. Errors identify the failing compilation stage; graph capture errors identify output/replay access. The source runtime fingerprint change has not been compiled in the full CUDA-dependent serving package.
 
-Reproduction: configure the component build with XLANG3_RUNTIME_LIBRARY=/home/shawn/cantorai-ci/out/build/linux-arm64-release/bin/libxlang3_runtime.so and XLANG3_SDK_ROOT=/home/shawn/cantorai-ci/xlang3/sdk; build gated_delta_graph_probe; run ctest --test-dir /home/shawn/garnet-pi5b-investigation/cpu-build -R gated_delta_xmodel_graph --output-on-failure. Existing CI sources/runtime are reused read-only.
+Reproduction: configure the component build with XLANG3_RUNTIME_LIBRARY=/home/developer/cantorai-ci/out/build/linux-arm64-release/bin/libxlang3_runtime.so and XLANG3_SDK_ROOT=/home/developer/cantorai-ci/xlang3/sdk; build gated_delta_graph_probe; run ctest --test-dir /home/developer/garnet-pi5b-investigation/cpu-build -R gated_delta_xmodel_graph --output-on-failure. Existing CI sources/runtime are reused read-only.
 
 The model weights, complete vision/text graph, image preprocessing, and real image-plus-text generation remain outstanding. No end-to-end inference success, memory footprint, first-token latency, or token throughput is claimed.
 
@@ -165,7 +165,7 @@ Independent NumPy captured-graph tests execute the full-attention source plus Ga
 
 Actual full-size pretrained layer 3 execution, eight query heads/two KV heads/head dimension 256/rotary dimension 64/mRoPE sections [11,11,10], passed both batches across four input steps. Validation capacity was 8 tokens; performance at longer contexts remains unmeasured. Batch 1 compile/export 169.158 ms, RunCapturedEngine calls [4.650595,4.625336,4.255093,4.185573] ms. Batch 2 compile/export 167.403 ms, calls [4.822245,4.317074,4.291297,4.619169] ms. Native probe cumulative max RSS 148,736 KiB after batch 1 and 150,288 KiB after batch 2, including validation fixtures. No whole-decoder or image-generation performance claimed.
 
-Reproduce: use download_checkpoint_subset.py with checkpoint-header.json, output checkpoint/layer0.safetensors, prefix model.language_model.layers.0.linear_attn; repeat for layer3 and prefix model.language_model.layers.3.self_attn. Run venv/bin/python test_pretrained_linear_graph.py cpu-build/graph_fixture_probe source checkpoint/layer0.safetensors, then test_pretrained_attention_graph.py with layer3. Environment: OPENBLAS_NUM_THREADS=2, GARNET_OPENVINO_CPU_THREADS=2, GARNET_OPENVINO_CPU_INFERENCE_PRECISION=f32. Paths above are relative to /home/shawn/garnet-pi5b-investigation (scripts under source/test2026/pi5b). Repeatable offline numerical tests run through CTest.
+Reproduce: use download_checkpoint_subset.py with checkpoint-header.json, output checkpoint/layer0.safetensors, prefix model.language_model.layers.0.linear_attn; repeat for layer3 and prefix model.language_model.layers.3.self_attn. Run venv/bin/python test_pretrained_linear_graph.py cpu-build/graph_fixture_probe source checkpoint/layer0.safetensors, then test_pretrained_attention_graph.py with layer3. Environment: OPENBLAS_NUM_THREADS=2, GARNET_OPENVINO_CPU_THREADS=2, GARNET_OPENVINO_CPU_INFERENCE_PRECISION=f32. Paths above are relative to /home/developer/garnet-pi5b-investigation (scripts under source/test2026/pi5b). Repeatable offline numerical tests run through CTest.
 
 Built all current Pi targets and ran CTest: 7/7 passed, total 11.82 seconds. Final free root disk 2,259,992,576 bytes; temperature 56.2 C. Existing CI/build/service trees were not changed. Source changes remain in isolated Garnet-pi5b branch.
 
@@ -190,7 +190,7 @@ Pretrained complete-block timings, FP32/two CPU threads, four sequential steps:
 
 Full-attention test capacity remains eight tokens. These are block calls, not full-model token rates. Child cumulative maximum RSS reached 565,184 KiB and includes large fixtures and numerical validation; it is not isolated model memory. All eight component CTests passed in 12.68 seconds; the separate real-package synthetic and pretrained tests also passed.
 
-Reproduction from the investigation directory: configure source into cpu-runtime-build with GARNET_CPU_ONLY=ON, GARNET_CPU_DOTPROD=ON, XLANG3_SDK_ROOT=/home/shawn/cantorai-ci/xlang3/sdk, GARNET_XLANG3_RUNTIME_LIBRARY=/home/shawn/cantorai-ci/out/build/linux-arm64-release/bin/libxlang3_runtime.so, and OpenVINO_DIR=/home/shawn/garnet-pi5b-investigation/venv/lib/python3.13/site-packages/openvino/cmake. Build with one job. Run OPENBLAS_NUM_THREADS=2 GARNET_OPENVINO_CPU_THREADS=2 venv/bin/python source/test2026/pi5b/test_pretrained_decoder_graph.py /home/shawn/cantorai-ci/out/build/linux-arm64-release/bin/xlang3 source checkpoint cpu-runtime-build.
+Reproduction from the investigation directory: configure source into cpu-runtime-build with GARNET_CPU_ONLY=ON, GARNET_CPU_DOTPROD=ON, XLANG3_SDK_ROOT=/home/developer/cantorai-ci/xlang3/sdk, GARNET_XLANG3_RUNTIME_LIBRARY=/home/developer/cantorai-ci/out/build/linux-arm64-release/bin/libxlang3_runtime.so, and OpenVINO_DIR=/home/developer/garnet-pi5b-investigation/venv/lib/python3.13/site-packages/openvino/cmake. Build with one job. Run OPENBLAS_NUM_THREADS=2 GARNET_OPENVINO_CPU_THREADS=2 venv/bin/python source/test2026/pi5b/test_pretrained_decoder_graph.py /home/developer/cantorai-ci/out/build/linux-arm64-release/bin/xlang3 source checkpoint cpu-runtime-build.
 
 The full official Qwen/Qwen3.5-0.8B checkpoint is now downloaded at models/Qwen3.5-0.8B/model.safetensors. Pinned revision 2fc06364715b967f1860aea9cf38778875588b17; 1,746,942,600 bytes; upstream LFS SHA256 verified as 04b1c301231dd422b8860db31311ab2721511346a32cb1e079c4c4e5f1fe4696. download_full_checkpoint.py validates resumable byte ranges, disk reserve, full hash, and records garnet_checkpoint_revision.json; metadata includes config, tokenizer, processor config, and chat template. It does not log signed redirect URLs. After download root free space was 410,796,032 bytes, available RAM 5,779 MiB, temperature 51.25 C. In-memory compilation is necessary to avoid duplicating the checkpoint on this disk.
 
@@ -202,7 +202,7 @@ Added CPUDecoder in xModel/qwen35/vl_0_8b/cpu_decoder.py. It captures and compil
 
 First actual full-checkpoint batch-1 text run on Pi completed successfully, exit 0. Explicit official token IDs represented <|im_start|>user\nHello<|im_end|>\n<|im_start|>assistant\n. Generated opening tokens [248068,198,31248,11], decoded as <think>, newline, Okay, comma. This establishes full text decoder execution, not image inference or full-Hugging-Face-model parity. All 24 layers and final norm/tied head executed; existing independent block references still establish the narrower numerical checks.
 
-Initial all-OpenVINO FP32-head version: compile_seconds 27.079 (after a slow script tokenizer JSON parse); nine prefill calls [1.2814,0.7299,0.7248,0.7527,0.7430,0.7227,0.7211,0.7528,0.7432] seconds. Four timed subsequent decode calls [0.72345,0.75636,0.72610,0.72667] seconds, approximately 1.36 tokens/second in this short sample. Final head alone approximately 235-240 ms. Process max RSS 6,254,720 KiB, total wall 87.951 seconds, 19,232 major faults. RAM availability fell to 472 MiB and zram usage rose to 1,948 MiB during the run; temperature 64.45 C. This footprint is too tight for adding vision without optimization. The original run is recorded in /home/shawn/garnet-pi5b-investigation/full-decoder-b1.log (later runs use distinct filenames).
+Initial all-OpenVINO FP32-head version: compile_seconds 27.079 (after a slow script tokenizer JSON parse); nine prefill calls [1.2814,0.7299,0.7248,0.7527,0.7430,0.7227,0.7211,0.7528,0.7432] seconds. Four timed subsequent decode calls [0.72345,0.75636,0.72610,0.72667] seconds, approximately 1.36 tokens/second in this short sample. Final head alone approximately 235-240 ms. Process max RSS 6,254,720 KiB, total wall 87.951 seconds, 19,232 major faults. RAM availability fell to 472 MiB and zram usage rose to 1,948 MiB during the run; temperature 64.45 C. This footprint is too tight for adding vision without optimization. The original run is recorded in /home/developer/garnet-pi5b-investigation/full-decoder-b1.log (later runs use distinct filenames).
 
 Native embedding/state split and offset-norm/tied-head tests passed independent numerical references on Pi. Batch 1/2 decoder block tests also passed with native state extraction checked against every expected packed segment. New CPU tokenizer bindings reuse Garnet's existing QwenTokenizer; the greeting's token IDs are checked explicitly. General Unicode/pretokenization parity remains unverified.
 
@@ -212,7 +212,7 @@ The native BF16 head now passed both a small complete-logit numerical fixture an
 
 Updated full-checkpoint batch-1 execution with native head and Garnet's tokenizer completed, exit 0, and reproduced [248068,198,31248,11]. The greeting tokenizer is checked against its nine known official IDs before generation. Compile_seconds 64.130; first prefill call 21.658 seconds with cold mapped-table reads; remaining prefill calls [0.5485,0.5155,0.5036,0.5137,0.4607,0.5478,0.3907,0.4043] seconds. Subsequent decode calls [0.38885,0.38614,0.45170,0.41151] seconds, approximately 2.44 tokens/sec in the short warm sample. Native head approximately 46-47 ms per batch-1 step. Max RSS 4,651,616 KiB (4.44 GiB), compared with initial 6,254,720 KiB (5.96 GiB). Full process wall 93.228 seconds, 6,463 major faults. Report cold startup separately from warm throughput; these sequential runs occurred with existing CI/services active and different cache residency, and are not a controlled latency comparison. New run log full-decoder-native-b1.log preserves the earlier full-decoder-b1.log.
 
-Reproduction: from /home/shawn/garnet-pi5b-investigation set GARNET_OPENVINO_CPU_THREADS=2 and run venv/bin/python source/test2026/pi5b/measure_process.py /home/shawn/cantorai-ci/out/build/linux-arm64-release/bin/xlang3 source/test2026/pi5b/run_full_decoder.py cpu-runtime-build source models/Qwen3.5-0.8B 1. measure_process.py reports child wall/RSS/page faults without requiring the absent /usr/bin/time package. The only completed generation at this point is text input; no vision success is claimed.
+Reproduction: from /home/developer/garnet-pi5b-investigation set GARNET_OPENVINO_CPU_THREADS=2 and run venv/bin/python source/test2026/pi5b/measure_process.py /home/developer/cantorai-ci/out/build/linux-arm64-release/bin/xlang3 source/test2026/pi5b/run_full_decoder.py cpu-runtime-build source models/Qwen3.5-0.8B 1. measure_process.py reports child wall/RSS/page faults without requiring the absent /usr/bin/time package. The only completed generation at this point is text input; no vision success is claimed.
 
 Remaining end state: verified image encoder/preprocessing and image-token/mRoPE integration, actual image-plus-text generation, batch comparison and end-to-end measurements. Goal remains active.
 
@@ -230,9 +230,9 @@ run_image_decoder.py loads the actual vision graph through the real libgarnet.so
 
 > A large statue of a man with a golden headband stands on a balcony overlooking a densely populated city nestled in a mountainous landscape.
 
-Actual Pi process exited 0. Vision compile 1,124.150 ms; vision inference 642.967 ms. Initialization including vision/text loading 18.797 seconds. Prefill 79 tokens, 39.101 seconds; next text mRoPE position 34, correctly distinct from sequence slot 79. First generated token from process-model start 57.898 seconds (excludes separate image preprocessing). Twenty-seven subsequent decode calls average approximately 0.483 seconds, approximately 2.07 generated tokens/sec in this sample. Response reached im_end at 28 total generated tokens. Full child wall 71.506 seconds; peak RSS 4,877,904 KiB (4.65 GiB), 8,191 major faults. A snapshot during generation was 65.55 C; afterward 56.2 C, throttled=0xe0000 with no active low bits. Root free space approximately 374 MB. Log: /home/shawn/garnet-pi5b-investigation/image-b1.log.
+Actual Pi process exited 0. Vision compile 1,124.150 ms; vision inference 642.967 ms. Initialization including vision/text loading 18.797 seconds. Prefill 79 tokens, 39.101 seconds; next text mRoPE position 34, correctly distinct from sequence slot 79. First generated token from process-model start 57.898 seconds (excludes separate image preprocessing). Twenty-seven subsequent decode calls average approximately 0.483 seconds, approximately 2.07 generated tokens/sec in this sample. Response reached im_end at 28 total generated tokens. Full child wall 71.506 seconds; peak RSS 4,877,904 KiB (4.65 GiB), 8,191 major faults. A snapshot during generation was 65.55 C; afterward 56.2 C, throttled=0xe0000 with no active low bits. Root free space approximately 374 MB. Log: /home/developer/garnet-pi5b-investigation/image-b1.log.
 
-Reproduction from the investigation directory: venv/bin/python source/test2026/pi5b/prepare_cpu_image.py inputs/RealWorld-04.png models/Qwen3.5-0.8B inputs/RealWorld-04-b1.f32 1; then GARNET_OPENVINO_CPU_THREADS=2 venv/bin/python source/test2026/pi5b/measure_process.py /home/shawn/cantorai-ci/out/build/linux-arm64-release/bin/xlang3 source/test2026/pi5b/run_image_decoder.py cpu-runtime-build source models/Qwen3.5-0.8B inputs/RealWorld-04-b1.json. Batch 2 uses the same preprocessing command with suffix b2 and final argument 2.
+Reproduction from the investigation directory: venv/bin/python source/test2026/pi5b/prepare_cpu_image.py inputs/RealWorld-04.png models/Qwen3.5-0.8B inputs/RealWorld-04-b1.f32 1; then GARNET_OPENVINO_CPU_THREADS=2 venv/bin/python source/test2026/pi5b/measure_process.py /home/developer/cantorai-ci/out/build/linux-arm64-release/bin/xlang3 source/test2026/pi5b/run_image_decoder.py cpu-runtime-build source models/Qwen3.5-0.8B inputs/RealWorld-04-b1.json. Batch 2 uses the same preprocessing command with suffix b2 and final argument 2.
 
 This is actual Garnet image-plus-text execution, not just component compatibility. Remaining investigation work: complete the batch-2 image run, archive reproducible logs/commands and current verification, and audit all requirements before goal completion. Accuracy and serving limitations above remain explicit.
 

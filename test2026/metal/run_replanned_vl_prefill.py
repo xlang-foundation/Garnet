@@ -3,7 +3,7 @@ from pathlib import Path
 source=Path(__file__).with_name('run_joined_prefill_checks.py').read_text().split("assert not build.exists()",1)[0]
 exec(compile(source,__file__,'exec'))
 import shutil
-build=r/'build-interleaved-screen-index';runtime='/Users/zsdx/CantorAI/out/build/macos-arm64-release/bin/xlang3'
+build=r/'build-interleaved-screen-index';runtime='/Users/developer/CantorAI/out/build/macos-arm64-release/bin/xlang3'
 def digest(p):
     with p.open('rb') as stream:return hashlib.file_digest(stream,'sha256').hexdigest()
 manifest=json.loads((r/'interleaved-head-staging/manifest.json').read_text())

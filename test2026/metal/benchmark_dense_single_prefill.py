@@ -3,12 +3,12 @@ import ast,hashlib,json,os,statistics,subprocess,sys,time
 from pathlib import Path
 root=Path(sys.argv[1]);output=Path(sys.argv[2]);output.mkdir(parents=True,exist_ok=False)
 scripts=root/'source/test2026/metal';background_checks=[]
-worldsense_script=Path('/Users/zsdx/cantorai-release-tests/current/bin/WorldSense/Backend/package_runtime.py')
+worldsense_script=Path('/Users/developer/cantorai-release-tests/current/bin/WorldSense/Backend/package_runtime.py')
 tree=ast.parse((scripts/'compare_vllm_metal.py').read_text())
 functions=[n for n in tree.body if isinstance(n,ast.FunctionDef) and n.name in ('verified_worldsense_service','snapshot','guard')]
 exec(compile(ast.Module(body=functions,type_ignores=[]),'owned_guard','exec'),globals())
 assert os.environ.get('GARNET_METAL_PROFILE_OPS')!='1'
-runtime='/Users/zsdx/CantorAI/out/build/macos-arm64-release/bin/xlang3'
+runtime='/Users/developer/CantorAI/out/build/macos-arm64-release/bin/xlang3'
 candidate=root/'build-dense-single-prefill';control=root/'build-linear-chunk'
 def digest(path):return hashlib.file_digest(path.open('rb'),'sha256').hexdigest()
 metadata=dict(scope='Native ABBA; no vLLM/2x claim',candidate_sha256=digest(candidate/'libgarnet.dylib'),control_sha256=digest(control/'libgarnet.dylib'),worker_sha256=digest(scripts/'run_matched_garnet.py'),runner_sha256=digest(Path(__file__)))

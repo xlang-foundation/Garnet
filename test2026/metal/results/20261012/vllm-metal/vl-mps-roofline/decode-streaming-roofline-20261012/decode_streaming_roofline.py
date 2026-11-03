@@ -1,6 +1,6 @@
 import json,struct
 from pathlib import Path
-root=Path('/Users/zsdx/garnet-metal-investigation');reports=[]
+root=Path('/Users/developer/garnet-metal-investigation');reports=[]
 for name in ('Qwen3-0.6B','Qwen2.5-Coder-0.5B-Instruct','Qwen3.5-0.8B'):
  model=root/'models'/name;c=json.loads((model/'config.json').read_text());vl='text_config' in c
  if vl:c=c['text_config']

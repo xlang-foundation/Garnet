@@ -42,8 +42,8 @@ def replace(old,new):
     assert source.count(old)==1,(old,source.count(old))
     source=source.replace(old,new)
 replace("assert stages[:27]==oldstatus and stages[27]['name']=='wide-batch-trained-reference'","assert stages[27]['name']=='wide-batch-trained-reference'")
-assert source.count(".relative_to('/Users/zsdx/garnet-metal-investigation')")==3
-source=source.replace(".relative_to('/Users/zsdx/garnet-metal-investigation')",".relative_to(preparation['target'])")
+assert source.count(".relative_to('/Users/developer/garnet-metal-investigation')")==3
+source=source.replace(".relative_to('/Users/developer/garnet-metal-investigation')",".relative_to(preparation['target'])")
 replace("assert 'metal_mlp_prefill_graph_reference' in ctext and '0 tests failed out of 8' in ctext","assert '0 tests failed out of 7' in ctext")
 replace("assert 'MLP graph pending producer, ownership, abort/recovery and native bound PASS: 64 cases' in last", "assert 'Coalesced body original bits/FP64, policy/tail/fallback, ownership, abort/recovery and prefill checks=104 PASS' in last")
 replace('ctests=8,graph_primitive_cases=64,','ctests=7,coalesced_primitive_cases=104,')

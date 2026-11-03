@@ -1,6 +1,6 @@
 import hashlib,json,tarfile
 from pathlib import Path
-root=Path('/Users/zsdx/garnet-metal-investigation')
+root=Path('/Users/developer/garnet-metal-investigation')
 names=['exact-half-prefill-build-20261013','exact-half-prefill-checks-20261013','native-ab-exact-half-prefill-20261013','exact-half-text-summary-20261013','native-frame-ab-exact-half-prefill-20261013','exact-half-frame-summary-20261013','exact-half-op-attribution-20261013']
 with tarfile.open(root/'exact-half-prefill-evidence.tar.gz','w:gz') as archive:
  for name in names:

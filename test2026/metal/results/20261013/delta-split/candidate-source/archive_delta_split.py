@@ -1,6 +1,6 @@
 import json,tarfile
 from pathlib import Path
-root=Path('/Users/zsdx/garnet-metal-investigation')
+root=Path('/Users/developer/garnet-metal-investigation')
 names=['delta-split-build-20261013','delta-split-checks-20261013','native-frame-ab-delta-split-20261013','delta-split-frame-summary-20261013','delta-split-op-attribution-20261013']
 names+=['vllm-matched-text-delta-split-20261013','vllm-text-delta-summary-20261013','vllm-matched-vl-delta-split-20261013','vllm-frame-delta-summary-20261013']
 with tarfile.open(root/'delta-split-evidence.tar.gz','w:gz') as archive:

@@ -105,7 +105,7 @@ for p in full['profiles']:
         a=np.asarray(raw['values'],dtype='<f4');assert a.size==p['values'] and np.all(np.isfinite(a))
         assert hashlib.sha256(a.tobytes()).hexdigest()==p['embedding_sha256'];arrays.append(a)
         from pathlib import PurePosixPath
-        patch_name=str(PurePosixPath(fixture['patch_file']).relative_to('/Users/zsdx/garnet-metal-investigation'))
+        patch_name=str(PurePosixPath(fixture['patch_file']).relative_to('/Users/developer/garnet-metal-investigation'))
         assert proof['omitted'][patch_name]['sha256']==p['patch_sha256']
     assert np.array_equal(arrays[0].view('<u4'),arrays[1].view('<u4'))
 recovered=0;prefix_recovered=0
@@ -136,8 +136,8 @@ for path in fixtures:
     assert f['config']==json.loads((root/'models/Qwen3.5-0.8B/config.json').read_text())['text_config']
     for step in f['steps']:
         for name,shape in zip(step['inputs'],f['shapes']):
-            rel=str(PurePosixPath(name).relative_to('/Users/zsdx/garnet-metal-investigation'));assert proof['omitted'][rel]['bytes']==math.prod(shape)*4
-        rel=str(PurePosixPath(step['expected']).relative_to('/Users/zsdx/garnet-metal-investigation'));assert proof['omitted'][rel]['bytes']==step['count']*4
+            rel=str(PurePosixPath(name).relative_to('/Users/developer/garnet-metal-investigation'));assert proof['omitted'][rel]['bytes']==math.prod(shape)*4
+        rel=str(PurePosixPath(step['expected']).relative_to('/Users/developer/garnet-metal-investigation'));assert proof['omitted'][rel]['bytes']==step['count']*4
 assert coverage=={('linear_attention',0),('linear_attention',22),('full_attention',3),('full_attention',23)}
 
 assert 'metal_mlp_prefill_graph_reference' in ctext and '0 tests failed out of 8' in ctext

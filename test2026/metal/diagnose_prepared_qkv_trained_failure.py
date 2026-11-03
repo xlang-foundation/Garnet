@@ -18,5 +18,5 @@ diag_driver=diag_control/'source/test2026/metal/run_dense_reference.py';diag_pre
 diag_archived_driver=diag_root/'logs/prepared-qkv-native-checks-20261016/jobs.prepared_qkv.complete33.executed.py';diag_raw=diag_archived_driver.read_text();diag_prefix=diag_raw[:diag_raw.index('\nexternal=')]
 exec(compile(diag_prefix,'archived_original_exclusive_diagnostic_functions','exec'))
 (diag_output/'metadata.json').write_bytes((json.dumps(dict(failed_archive_sha256=diag_digest(diag_archive),control_library_sha256=diag_digest(diag_library),control_driver_sha256=diag_digest(diag_driver),checkpoint_sha256=diag_digest(diag_checkpoint),fixture_sha256=diag_digest(diag_fixture),input_sha256=diag_inputs,scope=__doc__,full_goal_met=False),indent=2)+'\n').encode())
-run('accepted-d52-exact-trained-fixture',['/Users/zsdx/CantorAI/out/build/macos-arm64-release/bin/xlang3',str(diag_driver),str(diag_fixture),str(diag_control/'build-vector-vision-width4'),str(diag_control/'source'),'bf16'])
+run('accepted-d52-exact-trained-fixture',['/Users/developer/CantorAI/out/build/macos-arm64-release/bin/xlang3',str(diag_driver),str(diag_fixture),str(diag_control/'build-vector-vision-width4'),str(diag_control/'source'),'bf16'])
 print('Accepted d52 exact saved fixture completed under original bounds; diagnostic only, no model speed claim.',flush=True)

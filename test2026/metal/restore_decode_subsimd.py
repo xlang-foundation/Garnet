@@ -1,7 +1,7 @@
 """Restore only the verified authored integration files in the owned Mac root."""
 import hashlib,json,sys
 from pathlib import Path
-r=Path(sys.argv[1]).resolve();assert r==Path('/Users/zsdx/garnet-metal-investigation')
+r=Path(sys.argv[1]).resolve();assert r==Path('/Users/developer/garnet-metal-investigation')
 s=(r/'source').resolve();backup=r/'logs/decode-subsimd-original-source-20261013'
 manifest=json.loads((r/'work/decode-subsimd-manifest.json').read_text())
 names=['cmake/GarnetMetal.cmake','src/backends/metal/metal_context.mm','src/entry/metal_main.cpp',

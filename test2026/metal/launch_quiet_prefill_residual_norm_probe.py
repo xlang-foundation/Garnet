@@ -11,7 +11,7 @@ if len(sys.argv)==4:
 else:
  start=time.monotonic();code=1;waits=[];quiet=None
  try:
-  worldsense_script=Path('/Users/zsdx/cantorai-release-tests/current/bin/WorldSense/Backend/package_runtime.py');background_checks=[]
+  worldsense_script=Path('/Users/developer/cantorai-release-tests/current/bin/WorldSense/Backend/package_runtime.py');background_checks=[]
   nodes=[n for n in ast.parse((root/'source/test2026/metal/compare_vllm_metal.py').read_text()).body if isinstance(n,ast.FunctionDef) and n.name in ('verified_worldsense_service','snapshot','guard')]
   exec(compile(ast.Module(body=nodes,type_ignores=[]),'exclusive_guard','exec'),globals())
   while True:

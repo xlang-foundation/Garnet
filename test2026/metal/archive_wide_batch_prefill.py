@@ -13,7 +13,7 @@ for name,sha in closure.items():
 for model in ('Qwen3-0.6B','Qwen2.5-Coder-0.5B-Instruct','Qwen3.5-0.8B'):
     for name in ('model.safetensors','tokenizer.json'):
         p=root/'models'/model/name;omitted[str(p.relative_to(root))]=dict(bytes=p.stat().st_size,sha256=digest(p))
-p=Path('/Users/zsdx/CantorAI/out/build/macos-arm64-release/bin/xlang3');omitted['external/xlang3']=dict(bytes=p.stat().st_size,sha256=digest(p))
+p=Path('/Users/developer/CantorAI/out/build/macos-arm64-release/bin/xlang3');omitted['external/xlang3']=dict(bytes=p.stat().st_size,sha256=digest(p))
 for name in ('garnet_wide_batch_prefill_test','libgarnet.dylib'):
     p=root/'build-wide-batch-prefill'/name;omitted[str(p.relative_to(root))]=dict(bytes=p.stat().st_size,sha256=digest(p))
 hardware={name:subprocess.check_output(['/usr/sbin/sysctl','-n',name],text=True).strip() for name in ('machdep.cpu.brand_string','hw.memsize')}

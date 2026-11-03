@@ -9,7 +9,7 @@ if len(sys.argv)==3:
   p=subprocess.Popen([sys.executable,str(Path(__file__).resolve()),str(root),str(out),'--worker'],stdin=subprocess.DEVNULL,stdout=stream,stderr=subprocess.STDOUT,start_new_session=True)
  (out/'pid.json').write_text(json.dumps(dict(pid=p.pid)));print(json.dumps(dict(pid=p.pid,output=str(out))))
 else:
- begin=time.monotonic();code=1;groups=[];worldsense_script=Path('/Users/zsdx/cantorai-release-tests/current/bin/WorldSense/Backend/package_runtime.py');background_checks=[]
+ begin=time.monotonic();code=1;groups=[];worldsense_script=Path('/Users/developer/cantorai-release-tests/current/bin/WorldSense/Backend/package_runtime.py');background_checks=[]
  nodes=[n for n in ast.parse((root/'source/test2026/metal/compare_vllm_metal.py').read_text()).body if isinstance(n,ast.FunctionDef) and n.name in ('verified_worldsense_service','snapshot','guard')]
  exec(compile(ast.Module(body=nodes,type_ignores=[]),'exclusive_guard','exec'),globals())
  try:

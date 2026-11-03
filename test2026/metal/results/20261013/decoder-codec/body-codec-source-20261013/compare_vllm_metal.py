@@ -14,7 +14,7 @@ if prefill_projection not in ('shared','mps'):raise ValueError('Unknown prefill 
 if os.environ.get('GARNET_METAL_PROFILE_OPS')=='1':raise RuntimeError('Serialized GPU diagnostics cannot be used for speed comparisons')
 output.mkdir(parents=True,exist_ok=True);scripts=source/'test2026/metal';statuses=[]
 background_checks=[]
-worldsense_script=Path('/Users/zsdx/cantorai-release-tests/current/bin/WorldSense/Backend/package_runtime.py')
+worldsense_script=Path('/Users/developer/cantorai-release-tests/current/bin/WorldSense/Backend/package_runtime.py')
 
 def verified_worldsense_service(pid):
     # A generic xlang3 HTTP service is not itself an inference runtime. Identify

@@ -10,7 +10,7 @@ from pathlib import Path
 source=Path(sys.argv[1]).resolve()
 expected_size=1746942600
 expected_sha='04b1c301231dd422b8860db31311ab2721511346a32cb1e079c4c4e5f1fe4696'
-remote='/Users/zsdx/garnet-metal-investigation/models/Qwen3.5-0.8B/model.safetensors'
+remote='/Users/developer/garnet-metal-investigation/models/Qwen3.5-0.8B/model.safetensors'
 logfile=source.parents[2]/'logs'/'checkpoint-transfer.jsonl'
 logfile.parent.mkdir(parents=True,exist_ok=True)
 def emit(record):
@@ -19,7 +19,7 @@ def emit(record):
     with logfile.open('a',encoding='utf-8') as log:log.write(line+'\n')
     print(line,flush=True)
 ssh=['ssh','-o','BatchMode=yes','-o','ConnectTimeout=15','-o','ServerAliveInterval=10',
-     '-o','ServerAliveCountMax=2','-o','HostKeyAlias=192.168.193.215','zsdx@100.112.239.81']
+     '-o','ServerAliveCountMax=2','-o','HostKeyAlias=192.0.2.1','zsdx@100.112.239.81']
 if source.stat().st_size!=expected_size:raise ValueError('Local checkpoint size mismatch')
 with source.open('rb') as stream:
     if hashlib.file_digest(stream,'sha256').hexdigest()!=expected_sha:

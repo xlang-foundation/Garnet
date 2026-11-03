@@ -932,9 +932,9 @@ External timing cohorts reused;384/512context and arithmetic limits remain.
 
 ### Method 024: Metal regression prerequisites and sharded reference reader
 
-Read-only SSH inspection through shawns-air-ssh verified Shawns-Air Darwin,
+Read-only SSH inspection through development-mac-ssh verified development-mac Darwin,
 AppleM5/24GB, clean Garnet checkout637ec954b246ed1fb79d2ec3988b458a555f2f63,
-and /Users/shawn/CantorAI/out/models/Qwen3.5-4B with two indexed shards.
+and /Users/developer/CantorAI/out/models/Qwen3.5-4B with two indexed shards.
 No remote model job launched alongside CUDA benchmarking. Existing native
 build found at out/build/macos-arm64-release/bin; other experiment builds
 exist, so filenames alone do not establish the correct baseline binary.

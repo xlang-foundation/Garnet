@@ -18,10 +18,10 @@ identities={str(p.relative_to(copy)):hashlib.sha256(p.read_bytes()).hexdigest() 
 reference=json.loads((r/'logs/global-half-alpha-checks-20261014/jobs/metadata.json').read_text())
 options=reference['options'];assert 'METAL_GLOBAL_HALF_ALPHA' in options and 'METAL_PREFILL_STREAM' not in options and 'METAL_DIRTY_PREFIX_RESET' not in options
 os.environ['GARNET_METAL_PROFILE_OPS']='0';os.environ['GARNET_METAL_COUNTER_TRACE']='0'
-command=['/opt/homebrew/bin/cmake','-S',str(copy),'-B',str(build)]+['-DGARNET_'+x+'=ON' for x in options]+['-DXLANG3_SDK_ROOT=/Users/zsdx/CantorAI/xlang3/sdk','-DGARNET_XLANG3_RUNTIME_LIBRARY=/Users/zsdx/CantorAI/out/build/macos-arm64-release/bin/libxlang3_runtime.dylib','-DCMAKE_BUILD_TYPE=Release']
+command=['/opt/homebrew/bin/cmake','-S',str(copy),'-B',str(build)]+['-DGARNET_'+x+'=ON' for x in options]+['-DXLANG3_SDK_ROOT=/Users/developer/CantorAI/xlang3/sdk','-DGARNET_XLANG3_RUNTIME_LIBRARY=/Users/developer/CantorAI/out/build/macos-arm64-release/bin/libxlang3_runtime.dylib','-DCMAKE_BUILD_TYPE=Release']
 run('configure',command);run('build',['/opt/homebrew/bin/cmake','--build',str(build),'--parallel','4']);run('ctest',['/opt/homebrew/bin/ctest','--test-dir',str(build),'--output-on-failure'])
 (output/'metadata.json').write_text(json.dumps(dict(scope=__doc__,library_sha256=hashlib.sha256((build/'libgarnet.dylib').read_bytes()).hexdigest(),options=options,source_sha256={name:hashlib.sha256((s/name).read_bytes()).hexdigest() for name in ('run_counter_trace_profiles.py','make_counter_trace_source.py','counter_trace_helpers.inc','run_matched_garnet.py','frame_worker_garnet.py','run_matched_frame_process.py')}),indent=2))
-runtime='/Users/zsdx/CantorAI/out/build/macos-arm64-release/bin/xlang3';frontend=str(r/'comparators/vllm/venv/bin/python');profiles=[]
+runtime='/Users/developer/CantorAI/out/build/macos-arm64-release/bin/xlang3';frontend=str(r/'comparators/vllm/venv/bin/python');profiles=[]
 for model in ('Qwen3-0.6B','Qwen2.5-Coder-0.5B-Instruct','Qwen3.5-0.8B'):
     for batch in (1,2):
         label=model+'-b'+str(batch);vl=model=='Qwen3.5-0.8B'

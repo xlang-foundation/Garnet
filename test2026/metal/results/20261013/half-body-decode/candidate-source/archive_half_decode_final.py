@@ -1,6 +1,6 @@
 import hashlib,json,tarfile
 from pathlib import Path
-root=Path('/Users/zsdx/garnet-metal-investigation')
+root=Path('/Users/developer/garnet-metal-investigation')
 names=['exact-half-decode-build-retry1-20261013','exact-half-decode-checks-retry1-20261013','native-ab-exact-half-decode-retry1-20261013','exact-half-decode-text-summary-retry1-20261013','native-frame-ab-exact-half-decode-retry1-20261013','exact-half-decode-frame-summary-retry1-20261013','restore-kv-control-after-helper-error-20261013','native-ab-half-decode-confirm2-20261013','half-decode-confirm2-text-summary-20261013']
 initial=['exact-half-decode-build-20261013','exact-half-decode-checks-20261013','native-ab-exact-half-decode-20261013','exact-half-decode-text-summary-20261013','native-frame-ab-exact-half-decode-20261013','exact-half-decode-frame-summary-20261013','native-ab-exact-half-decode-confirm-20261013','exact-half-decode-confirm-summary-20261013','native-frame-ab-exact-half-decode-confirm-20261013','exact-half-decode-confirm-frame-summary-20261013','native-frame-ab-half-decode-confirm2-20261013','half-decode-confirm2-frame-summary-20261013']
 with tarfile.open(root/'half-decode-final-evidence.tar.gz','w:gz') as archive:

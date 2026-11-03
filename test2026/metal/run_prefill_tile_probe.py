@@ -18,7 +18,7 @@ def guard(label):
                 info=subprocess.run(['/bin/ps','-p',str(current),'-o','ppid=,args='],capture_output=True,text=True)
                 parts=info.stdout.strip().split(None,1)
                 if info.returncode or len(parts)!=2:break
-                if '/Users/zsdx/cantorai-release-tests/current/bin/WorldSense/Backend/package_runtime.py' in parts[1]:identified=True;break
+                if '/Users/developer/cantorai-release-tests/current/bin/WorldSense/Backend/package_runtime.py' in parts[1]:identified=True;break
                 current=int(parts[0])
                 if current<=1:break
             libraries=subprocess.run(['/usr/sbin/lsof','-p',str(pid),'-Fn'],capture_output=True,text=True)

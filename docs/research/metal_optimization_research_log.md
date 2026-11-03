@@ -149,7 +149,7 @@ A key-only read of the exact owned remote job records observed:
 | `coalesced-body-native-20261015` | 88983 | exit 0; wall 1591.253100541886 s |
 | `combined-graph-prefill-20261015` | 6026 | PID record present; no terminal record observed |
 
-Folders are under `/Users/zsdx/garnet-metal-investigation/logs/`. Benchmark
+Folders are under `/Users/developer/garnet-metal-investigation/logs/`. Benchmark
 wall time includes the dependency wait and is not request latency. The native
 benchmark's successful process exit does not substitute for the pending archive,
 independent complete-output audit, repeat or fresh vLLM comparison. No new native

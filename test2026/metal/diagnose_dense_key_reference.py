@@ -10,7 +10,7 @@ from reference_dense import weights,rms,project
 root=Path(sys.argv[1]);output=Path(sys.argv[2]);output.mkdir(parents=True,exist_ok=False)
 build=root/(sys.argv[3] if len(sys.argv)>3 else 'build-linear-chunk')
 scripts=root/'source/test2026/metal';background_checks=[]
-worldsense_script=Path('/Users/zsdx/cantorai-release-tests/current/bin/WorldSense/Backend/package_runtime.py')
+worldsense_script=Path('/Users/developer/cantorai-release-tests/current/bin/WorldSense/Backend/package_runtime.py')
 tree=ast.parse((scripts/'compare_vllm_metal.py').read_text())
 functions=[n for n in tree.body if isinstance(n,ast.FunctionDef) and n.name in ('verified_worldsense_service','snapshot','guard')]
 assert len(functions)==3
@@ -37,7 +37,7 @@ flat=(hidden*active[:,:,None]).reshape(batch*chunk,d)
 flatpath=output/'flat-input.f32';flat.tofile(flatpath)
 fixture=dict(config=c,batch=batch,chunk=chunk,capacity=capacity,checkpoint=str(checkpoint),shapes=[list(v.shape) for v in inputs],inputs=paths,flat_input=str(flatpath),output=str(output/'actual.json'))
 (output/'fixture.json').write_text(json.dumps(fixture,indent=2)+'\n')
-command=['/Users/zsdx/CantorAI/out/build/macos-arm64-release/bin/xlang3',str(scripts/'run_dense_key_diagnostic.py'),str(output/'fixture.json'),str(build),str(root/'source')]
+command=['/Users/developer/CantorAI/out/build/macos-arm64-release/bin/xlang3',str(scripts/'run_dense_key_diagnostic.py'),str(output/'fixture.json'),str(build),str(root/'source')]
 with (output/'worker.log').open('w') as stream:result=subprocess.run(command,stdout=stream,stderr=subprocess.STDOUT,timeout=180)
 (output/'status.json').write_text(json.dumps(dict(command=command,exit_code=result.returncode),indent=2)+'\n')
 assert result.returncode==0

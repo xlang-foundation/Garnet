@@ -1,6 +1,6 @@
 import json,tarfile
 from pathlib import Path
-root=Path('/Users/zsdx/garnet-metal-investigation')
+root=Path('/Users/developer/garnet-metal-investigation')
 names=['mps-bf16-compatibility-20261013','exact-half-weight-survey-20261013','mps-exact-half-compatibility-20261013']
 with tarfile.open(root/'exact-half-probe-evidence.tar.gz','w:gz') as archive:
  for name in names:

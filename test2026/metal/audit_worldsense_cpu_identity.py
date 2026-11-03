@@ -1,7 +1,7 @@
 """Read-only role diagnosis; never emit unrelated argv, constants or library paths."""
 import ast,hashlib,json,subprocess
 from pathlib import Path
-script=Path('/Users/zsdx/cantorai-release-tests/current/bin/WorldSense/Backend/package_runtime.py')
+script=Path('/Users/developer/cantorai-release-tests/current/bin/WorldSense/Backend/package_runtime.py')
 launch=script.with_name('launch.py');raw=script.read_bytes();text=raw.decode(errors='replace').lower()
 budget="'garnet_trt_weight_streaming_budget_mib'"
 tree=ast.parse(raw.decode());imports=[];calls=set()

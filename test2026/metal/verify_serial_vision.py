@@ -26,7 +26,7 @@ for p in full['profiles']:
         a=np.asarray(raw['values'],dtype='<f4');assert a.size==p['values'] and np.all(np.isfinite(a))
         assert hashlib.sha256(a.tobytes()).hexdigest()==p['embedding_sha256'];arrays.append(a)
         from pathlib import PurePosixPath
-        patch_name=str(PurePosixPath(fixture['patch_file']).relative_to('/Users/zsdx/garnet-metal-investigation'))
+        patch_name=str(PurePosixPath(fixture['patch_file']).relative_to('/Users/developer/garnet-metal-investigation'))
         assert proof['omitted'][patch_name]['sha256']==p['patch_sha256']
     assert np.array_equal(arrays[0].view('<u4'),arrays[1].view('<u4'))
 '''+needle)

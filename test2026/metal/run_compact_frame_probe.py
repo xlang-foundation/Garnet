@@ -7,7 +7,7 @@ from frame_preprocessing import prepare_frame as control
 from frame_preprocessing_compact import prepare_frame as candidate
 root=Path(sys.argv[1]).resolve();out=Path(sys.argv[2]).resolve();out.mkdir(parents=True,exist_ok=False);output=out
 s=root/'source/test2026/metal';background_checks=[]
-worldsense_script=Path('/Users/zsdx/cantorai-release-tests/current/bin/WorldSense/Backend/package_runtime.py')
+worldsense_script=Path('/Users/developer/cantorai-release-tests/current/bin/WorldSense/Backend/package_runtime.py')
 nodes=[n for n in ast.parse((s/'compare_vllm_metal.py').read_text()).body if isinstance(n,ast.FunctionDef) and n.name in ('verified_worldsense_service','snapshot','guard')]
 exec(compile(ast.Module(body=nodes,type_ignores=[]),'exclusive_guard','exec'),globals())
 def check():

@@ -46,7 +46,7 @@ source=template.read_text();source=source[source.index("stages=json.loads((check
 needle="assert stages[:27]==oldstatus and stages[27]['name']=='wide-batch-trained-reference'"
 assert source.count(needle)==1
 source=source.replace(needle,"assert stages[27]['name']=='wide-batch-trained-reference'")
-needle=".relative_to('/Users/zsdx/garnet-metal-investigation')"
+needle=".relative_to('/Users/developer/garnet-metal-investigation')"
 assert source.count(needle)==3
 source=source.replace(needle,".relative_to(preparation['target'])")
 needle="assert 'MLP graph pending producer, ownership, abort/recovery and native bound PASS: 64 cases' in last"

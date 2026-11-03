@@ -1,6 +1,6 @@
-Running ["/Users/zsdx/garnet-metal-investigation/comparators/vllm/bin/uv", "python", "install", "3.12", "--no-bin"]
+Running ["/Users/developer/garnet-metal-investigation/comparators/vllm/bin/uv", "python", "install", "3.12", "--no-bin"]
 Python 3.12 is already installed
-Running ["/Users/zsdx/garnet-metal-investigation/comparators/vllm/bin/uv", "pip", "install", "--offline", "--find-links", "/Users/zsdx/garnet-metal-investigation/comparators/vllm/downloads", "--python", "/Users/zsdx/garnet-metal-investigation/comparators/vllm/venv/bin/python", "--requirement", "/Users/zsdx/garnet-metal-investigation/comparators/vllm/downloads/requirements.txt"]
+Running ["/Users/developer/garnet-metal-investigation/comparators/vllm/bin/uv", "pip", "install", "--offline", "--find-links", "/Users/developer/garnet-metal-investigation/comparators/vllm/downloads", "--python", "/Users/developer/garnet-metal-investigation/comparators/vllm/venv/bin/python", "--requirement", "/Users/developer/garnet-metal-investigation/comparators/vllm/downloads/requirements.txt"]
 Using Python 3.12.15 environment at: garnet-metal-investigation/comparators/vllm/venv
 Resolved 161 packages in 74ms
 Prepared 6 packages in 1.52s
@@ -160,16 +160,16 @@ Installed 161 packages in 1.39s
  + urllib3==2.8.0
  + uvicorn==0.54.0
  + uvloop==0.23.0
- + vllm==0.30.0+cpu (from file:///Users/zsdx/garnet-metal-investigation/comparators/vllm/downloads/vllm-0.30.0+cpu-cp312-cp312-macosx_11_0_arm64.whl)
- + vllm-metal==0.30.0 (from file:///Users/zsdx/garnet-metal-investigation/comparators/vllm/downloads/vllm_metal-0.30.0-cp312-cp312-macosx_15_0_arm64.whl)
+ + vllm==0.30.0+cpu (from file:///Users/developer/garnet-metal-investigation/comparators/vllm/downloads/vllm-0.30.0+cpu-cp312-cp312-macosx_11_0_arm64.whl)
+ + vllm-metal==0.30.0 (from file:///Users/developer/garnet-metal-investigation/comparators/vllm/downloads/vllm_metal-0.30.0-cp312-cp312-macosx_15_0_arm64.whl)
  + watchfiles==1.3.0
  + websockets==17.2
  + xgrammar==0.2.8
  + yarl==1.25.1
-Running ["/Users/zsdx/garnet-metal-investigation/comparators/vllm/venv/bin/python", "-c", "import importlib.metadata as m,platform; print(platform.machine()); print({n:m.version(n) for n in [\"vllm\",\"vllm-metal\",\"mlx\",\"mlx-lm\",\"torch\"]})"]
+Running ["/Users/developer/garnet-metal-investigation/comparators/vllm/venv/bin/python", "-c", "import importlib.metadata as m,platform; print(platform.machine()); print({n:m.version(n) for n in [\"vllm\",\"vllm-metal\",\"mlx\",\"mlx-lm\",\"torch\"]})"]
 arm64
 {'vllm': '0.30.0+cpu', 'vllm-metal': '0.30.0', 'mlx': '0.32.1', 'mlx-lm': '0.32.0', 'torch': '2.13.0'}
-Running ["/Users/zsdx/garnet-metal-investigation/comparators/vllm/venv/bin/python", "-c", "import vllm,vllm_metal,torch; import mlx.core as mx; assert mx.metal.is_available(); print(\"Comparator imports passed; Metal device\", mx.metal.device_info()[\"device_name\"])"]
+Running ["/Users/developer/garnet-metal-investigation/comparators/vllm/venv/bin/python", "-c", "import vllm,vllm_metal,torch; import mlx.core as mx; assert mx.metal.is_available(); print(\"Comparator imports passed; Metal device\", mx.metal.device_info()[\"device_name\"])"]
 INFO 10-13 10:20:35 [__init__.py:52] Available plugins for group vllm.platform_plugins:
 INFO 10-13 10:20:35 [__init__.py:54] - metal -> vllm_metal:register
 INFO 10-13 10:20:35 [__init__.py:57] All plugins in this group will be loaded. Set `VLLM_PLUGINS` to control which plugins to load.

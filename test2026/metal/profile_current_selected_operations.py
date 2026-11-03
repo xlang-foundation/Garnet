@@ -7,7 +7,7 @@ workload at a time and require the unchanged complete baseline outputs.
 import hashlib,json,os,subprocess,sys,time
 from pathlib import Path
 root=Path(sys.argv[1]).resolve();output=Path(sys.argv[2]).resolve();output.mkdir(parents=True,exist_ok=False)
-scripts=root/'source/test2026/metal';build=root/(sys.argv[3] if len(sys.argv)>3 else 'build-qwen35-extended-prefill');runtime='/Users/zsdx/CantorAI/out/build/macos-arm64-release/bin/xlang3'
+scripts=root/'source/test2026/metal';build=root/(sys.argv[3] if len(sys.argv)>3 else 'build-qwen35-extended-prefill');runtime='/Users/developer/CantorAI/out/build/macos-arm64-release/bin/xlang3'
 models=('Qwen3-0.6B','Qwen2.5-Coder-0.5B-Instruct','Qwen3.5-0.8B')
 if len(sys.argv)>4:
     assert sys.argv[4] in models;models=(sys.argv[4],)
@@ -18,7 +18,7 @@ frontend=str(root/'comparators/vllm/venv/bin/python');statuses=[];summaries=[]
 
 import ast
 background_checks=[]
-worldsense_script=Path('/Users/zsdx/cantorai-release-tests/current/bin/WorldSense/Backend/package_runtime.py')
+worldsense_script=Path('/Users/developer/cantorai-release-tests/current/bin/WorldSense/Backend/package_runtime.py')
 nodes=[n for n in ast.parse((scripts/'compare_vllm_metal.py').read_text()).body if isinstance(n,ast.FunctionDef) and n.name in ('verified_worldsense_service','snapshot','guard')]
 exec(compile(ast.Module(body=nodes,type_ignores=[]),'owned_guard','exec'),globals())
 strict_guard=guard

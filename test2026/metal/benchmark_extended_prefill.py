@@ -18,7 +18,7 @@ def guard(label):
                 info=subprocess.run(['/bin/ps','-p',str(current),'-o','ppid=,args='],capture_output=True,text=True)
                 parts=info.stdout.strip().split(None,1)
                 if info.returncode or len(parts)!=2:break
-                if '/Users/zsdx/cantorai-release-tests/current/bin/WorldSense/Backend/package_runtime.py' in parts[1]:identified=True;break
+                if '/Users/developer/cantorai-release-tests/current/bin/WorldSense/Backend/package_runtime.py' in parts[1]:identified=True;break
                 current=int(parts[0])
                 if current<=1:break
             libraries=subprocess.run(['/usr/sbin/lsof','-p',str(pid),'-Fn'],capture_output=True,text=True)
@@ -40,7 +40,7 @@ def run(name,command):
     (output/'statuses.json').write_text(json.dumps(statuses,indent=2)+'\n')
     if result.returncode:raise RuntimeError(name+' failed; retained log')
 
-frontend=str(root/'comparators/vllm/venv/bin/python');runtime='/Users/zsdx/CantorAI/out/build/macos-arm64-release/bin/xlang3'
+frontend=str(root/'comparators/vllm/venv/bin/python');runtime='/Users/developer/CantorAI/out/build/macos-arm64-release/bin/xlang3'
 build=root/'build-linear-chunk';control=root/'build-parallel-delta'
 metadata=dict(scope='Native ABBA batched recurrent output projection and adaptive tails; no vLLM speed claim',candidate_sha256=digest(build/'libgarnet.dylib'),control_sha256=digest(control/'libgarnet.dylib'),worker_sha256=digest(scripts/'frame_worker_garnet.py'),decoder_sha256=digest(root/'source/xModel/qwen35/vl_0_8b/metal_decoder.py'))
 (output/'metadata.json').write_text(json.dumps(metadata,indent=2)+'\n')

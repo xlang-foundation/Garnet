@@ -29,8 +29,8 @@ for path in fixtures:
     for step in f['steps']:
         assert len(step['inputs'])==len(f['shapes'])==6
         for name,shape in zip(step['inputs'],f['shapes']):
-            rel=str(PurePosixPath(name).relative_to('/Users/zsdx/garnet-metal-investigation'));assert proof['omitted'][rel]['bytes']==math.prod(shape)*4
-        rel=str(PurePosixPath(step['expected']).relative_to('/Users/zsdx/garnet-metal-investigation'));assert proof['omitted'][rel]['bytes']==step['count']*4
+            rel=str(PurePosixPath(name).relative_to('/Users/developer/garnet-metal-investigation'));assert proof['omitted'][rel]['bytes']==math.prod(shape)*4
+        rel=str(PurePosixPath(step['expected']).relative_to('/Users/developer/garnet-metal-investigation'));assert proof['omitted'][rel]['bytes']==step['count']*4
 layers=text_config['num_hidden_layers'];assert coverage=={(kind,layer,chunk) for kind,indices in [('linear_attention',(0,layers-2)),('full_attention',(3,layers-1))] for layer in indices for chunk in (16,32,64)}
 outer=json.loads((jobs/'summary.json').read_text())['profiles'];assert len(outer)==2 and {p['maximum'] for p in outer}=={16,64};requests=0
 episodes=[(jobs,maximum,'initial') for maximum in (16,64)];common_assets=None

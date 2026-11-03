@@ -3,7 +3,7 @@ import ast,hashlib,json,os,signal,subprocess,sys,time,shutil
 from pathlib import Path
 r=Path(sys.argv[1]);output=Path(sys.argv[2]);output.mkdir(parents=True,exist_ok=False)
 s=r/'vector-vision-native-investigation-20261016/source/test2026/metal';background_checks=[];statuses=[];profiles=[];audits=[]
-worldsense_script=Path('/Users/zsdx/cantorai-release-tests/current/bin/WorldSense/Backend/package_runtime.py')
+worldsense_script=Path('/Users/developer/cantorai-release-tests/current/bin/WorldSense/Backend/package_runtime.py')
 nodes=[n for n in ast.parse((r/'source/test2026/metal/compare_vllm_metal.py').read_text()).body if isinstance(n,ast.FunctionDef) and n.name in ('verified_worldsense_service','snapshot','guard')]
 exec(compile(ast.Module(body=nodes,type_ignores=[]),'guard','exec'),globals())
 py=str(r/'comparators/vllm/venv/bin/python')

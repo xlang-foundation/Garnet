@@ -9,7 +9,7 @@ for name,sha in audit['source_manifest'].items():
 source=Path(__file__).with_name('run_vision_global_alpha_profiles.py').read_text()
 source=source.replace("str(s/'compare_vision_global_alpha.py')","str(Path(__file__).with_name('compare_shape_selected_two_native.py'))")
 source=source.replace("confirm='--confirm' in sys.argv[3:]",'confirm=False')
-needle="worldsense_script=Path('/Users/zsdx/cantorai-release-tests/current/bin/WorldSense/Backend/package_runtime.py')"
+needle="worldsense_script=Path('/Users/developer/cantorai-release-tests/current/bin/WorldSense/Backend/package_runtime.py')"
 assert source.count(needle)==1
 source=source.replace(needle,'''import shutil
 source_identities=json.loads((r/'shape-selected-two-checks-verification.json').read_text())['source_manifest']

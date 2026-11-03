@@ -1,6 +1,6 @@
 import hashlib,json,shutil,subprocess
 from pathlib import Path
-root=Path('/Users/zsdx/garnet-metal-investigation')
+root=Path('/Users/developer/garnet-metal-investigation')
 shutil.copyfile(root/'kv-control-context.mm',root/'source/src/backends/metal/metal_context.mm')
 shutil.copyfile(root/'kv-control-cmake.cmake',root/'source/cmake/GarnetMetal.cmake')
 subprocess.run(['/opt/homebrew/bin/python3',str(root/'build_kv_chunk_vector.py')],check=True)

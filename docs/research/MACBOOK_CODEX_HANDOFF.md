@@ -25,12 +25,12 @@ Preserve these Windows checkouts completely:
 - `D:\CantorAI\Garnet`, branch `feature/gpt-oss-120b`.
 - `D:\CantorAI\Garnet-pi5b`, branch `feature/qwen35-vl-pi5b`.
 
-Preserve the Mac's original checkout `/Users/zsdx/CantorAI/Garnet`. The investigation root on the Mac mini is `/Users/zsdx/garnet-metal-investigation` (called ROOT below). Use private experiment directories and freeze consumed source before launch. Never mutate source, drivers or libraries used by a running job. `.work/` contains local working material and must not be staged indiscriminately.
+Preserve the Mac's original checkout `/Users/developer/CantorAI/Garnet`. The investigation root on the Mac mini is `/Users/developer/garnet-metal-investigation` (called ROOT below). Use private experiment directories and freeze consumed source before launch. Never mutate source, drivers or libraries used by a running job. `.work/` contains local working material and must not be staged indiscriminately.
 
 The previously verified Windows SSH route was:
 
 ```sh
-ssh -C -o BatchMode=yes -o StrictHostKeyChecking=yes -o ConnectTimeout=15 -o ServerAliveInterval=10 -o ServerAliveCountMax=2 -o HostKeyAlias=192.168.193.215 zsdx@100.112.239.81
+ssh -C -o BatchMode=yes -o StrictHostKeyChecking=yes -o ConnectTimeout=15 -o ServerAliveInterval=10 -o ServerAliveCountMax=2 -o HostKeyAlias=192.0.2.1 zsdx@100.112.239.81
 ```
 
 The reachable address was a Tailscale route. The HostKeyAlias is a pinned identity, not proof of a reachable LAN address. Earlier ZeroTier connections were unstable. On the MacBook first inspect its own saved SSH configuration, authorized authentication and host trust. Do not copy private keys or passwords, print secrets, disable host-key checking or invent trust from this document. If access is missing, ask me for the necessary connection setup. For Windows SCP the working invocation also required `-O`; do not assume that is necessary on macOS.
@@ -40,8 +40,8 @@ Known target: Mac16,10, Apple M4, 10 CPU cores (4 performance and 6 efficiency),
 Important installed paths:
 
 ```text
-/Users/zsdx/CantorAI/out/build/macos-arm64-release/bin/xlang3
-/Users/zsdx/CantorAI/xlang3/sdk
+/Users/developer/CantorAI/out/build/macos-arm64-release/bin/xlang3
+/Users/developer/CantorAI/xlang3/sdk
 ROOT/comparators/vllm/venv/bin/python
 ROOT/models/<model>
 ROOT/models-exact-f32/<model>

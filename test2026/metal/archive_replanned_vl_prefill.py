@@ -9,7 +9,7 @@ for name,key in [('models/Qwen3.5-0.8B/model.safetensors','checkpoint_sha256'),(
     with p.open('rb') as stream:sha=hashlib.file_digest(stream,'sha256').hexdigest()
     assert sha==meta[key];omitted[name]=dict(bytes=p.stat().st_size,sha256=sha)
 p=root/'models/Qwen3.5-0.8B/config.json';assert hashlib.sha256(p.read_bytes()).hexdigest()==meta['config_sha256'];files['evidence/models/Qwen3.5-0.8B/config.json']=p
-p=Path('/Users/zsdx/CantorAI/out/build/macos-arm64-release/bin/xlang3')
+p=Path('/Users/developer/CantorAI/out/build/macos-arm64-release/bin/xlang3')
 with p.open('rb') as stream:sha=hashlib.file_digest(stream,'sha256').hexdigest()
 assert sha==meta['runtime_sha256'];omitted['external/xlang3']=dict(bytes=p.stat().st_size,sha256=sha)
 '''+needle)

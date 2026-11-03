@@ -11,7 +11,7 @@ prior=root/'logs/nibble-screen-index-20261016';pid=json.loads((prior/'pid.json')
 assert json.loads((prior/'exit.json').read_text())['exit_code']==0 and digest(root/'nibble-screen-index-20261016.tar.gz')=='de0ccb3e0085a73793d839b0e8d403ab175ea538ee13dd1e4b64a9fc249e8a85'
 assert digest(build/'libgarnet.dylib')=='d52c37e09edf7afb61889037863b1cb338f9ac0b6d98ea62043c3a016af5b55e'
 assert not out.exists();out.mkdir(parents=True);output=out;start=time.monotonic();code=1;statuses=[];background_checks=[]
-worldsense_script=Path('/Users/zsdx/cantorai-release-tests/current/bin/WorldSense/Backend/package_runtime.py')
+worldsense_script=Path('/Users/developer/cantorai-release-tests/current/bin/WorldSense/Backend/package_runtime.py')
 nodes=[n for n in ast.parse((shared/'compare_vllm_metal.py').read_text()).body if isinstance(n,ast.FunctionDef) and n.name in ('verified_worldsense_service','snapshot','guard')]
 exec(compile(ast.Module(body=nodes,type_ignores=[]),'exclusive_guard','exec'),globals());strict_guard=guard
 

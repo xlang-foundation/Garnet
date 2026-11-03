@@ -1,6 +1,6 @@
 import json,tarfile
 from pathlib import Path
-root=Path('/Users/zsdx/garnet-metal-investigation')
+root=Path('/Users/developer/garnet-metal-investigation')
 names=['selected-op-attribution-20261013','vector-slice-build-20261013','vector-slice-checks-20261013','native-ab-vector-slice-20261013','vector-slice-text-summary-20261013','native-frame-ab-vector-slice-20261013','vector-slice-frame-summary-20261013','vector-slice-boundary-checks-20261013']
 names+=['vllm-matched-text-vector-slice-20261013','vllm-text-vector-summary-20261013','vllm-matched-vl-vector-slice-20261013','vllm-frame-vector-summary-20261013']
 with tarfile.open(root/'vector-slice-evidence.tar.gz','w:gz') as archive:

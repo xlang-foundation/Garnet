@@ -1,6 +1,6 @@
 import hashlib,json,tarfile
 from pathlib import Path
-root=Path('/Users/zsdx/garnet-metal-investigation')
+root=Path('/Users/developer/garnet-metal-investigation')
 names=['decode-input-tiles-20261013','decode-input-tiles-complete-heads-20261013','decode-input-tiles-runtime-heads-20261013']
 with tarfile.open(root/'decode-input-tile-evidence.tar.gz','w:gz') as archive:
  for name in names:

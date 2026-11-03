@@ -21,14 +21,14 @@ shutil.copytree(prior/'jobs',output)
 completion=dict(prior=str(prior),prior_archive_sha256='61d83b39924e0093104b01850979d1725b9e00afe2ec5875d1f8d4d91cd82153',
     reused_stages=[v['name'] for v in statuses],fresh_stages=['wide-batch-trained-reference'],candidate_sha256=meta['candidate_sha256'],source_manifest=manifest)
 (output/'completion-provenance.json').write_text(json.dumps(completion,indent=2)+'\n')
-background_checks=[];worldsense_script=Path('/Users/zsdx/cantorai-release-tests/current/bin/WorldSense/Backend/package_runtime.py')
+background_checks=[];worldsense_script=Path('/Users/developer/cantorai-release-tests/current/bin/WorldSense/Backend/package_runtime.py')
 nodes=[n for n in ast.parse((s/'compare_vllm_metal.py').read_text()).body if isinstance(n,ast.FunctionDef) and n.name in ('verified_worldsense_service','snapshot','guard')]
 exec(compile(ast.Module(body=nodes,type_ignores=[]),'original_guard','exec'),globals())
 strict_guard=guard;raw_snapshot=snapshot;owned_group=None
 nodes=[n for n in ast.parse((prior/'jobs.executed.py').read_text()).body if isinstance(n,ast.FunctionDef) and n.name in ('snapshot','guard','run_once','run')]
 assert len(nodes)==4
 exec(compile(ast.Module(body=nodes,type_ignores=[]),'preserved_retry_and_ownership','exec'),globals())
-runtime='/Users/zsdx/CantorAI/out/build/macos-arm64-release/bin/xlang3'
+runtime='/Users/developer/CantorAI/out/build/macos-arm64-release/bin/xlang3'
 run('wide-batch-trained-reference',[sys.executable,str(s/'test_wide_batch_prefill_reference.py'),runtime,str(build),str(r/'source'),str(r/'models/Qwen3.5-0.8B'),str(output/'wide-reference')])
 assert len(statuses)==28 and all(v['exit_code']==0 for v in statuses)
 assert all(hashlib.sha256((r/'source'/name).read_bytes()).hexdigest()==sha for name,sha in manifest.items())

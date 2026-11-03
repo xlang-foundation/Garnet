@@ -38,7 +38,7 @@ for resume_path in resume_paths:
 resume_record=dict(prior_archive_sha256=resume_digest(resume_archive),prior_status=json.loads((resume_prior.parent/'exit.json').read_text()),original_driver_sha256=resume_digest(resume_original),candidate_sha256=resume_meta['candidate_sha256'],source_manifest=resume_preparation['source_sha256'],reused_stages=[v['name'] for v in resume_statuses],fresh_stages=[],reused_file_sha256=resume_copied,resume_source_sha256=resume_hashes,
  original_count_assertions=[23,29,33],corrected_counts=[25,31,33],scope='Only stage-count bookkeeping corrected; unchanged library/source/bounds, archived passing25 reused, missing8 execute fresh.',full_goal_met=False)
 (resume_output/'resume-provenance.json').write_bytes((json.dumps(resume_record,indent=2)+'\n').encode());statuses=list(resume_statuses)
-runtime='/Users/zsdx/CantorAI/out/build/macos-arm64-release/bin/xlang3';py=sys.executable;models=resume_root/'models'
+runtime='/Users/developer/CantorAI/out/build/macos-arm64-release/bin/xlang3';py=sys.executable;models=resume_root/'models'
 exec(compile(resume_tail,str(resume_output/'resumed-tail.executed.py'),'exec'))
 assert len(statuses)==33 and statuses[:25]==resume_statuses
 resume_record['fresh_stages']=[v['name'] for v in statuses[25:]];assert len(resume_record['fresh_stages'])==8

@@ -7,10 +7,10 @@ vision lowering remain required before text/image inference and model benchmarks
 
 ## Verified on Apple M4, 16 GiB, 2026-10-11
 
-The existing Mac checkout is `/Users/zsdx/CantorAI/Garnet`, clean `main` at
+The existing Mac checkout is `/Users/developer/CantorAI/Garnet`, clean `main` at
 `f133306`. The SDK and runtime are reused from the existing CantorAI build.
 The investigation source and build are isolated under
-`/Users/zsdx/garnet-metal-investigation`; shared checkouts/builds are read-only.
+`/Users/developer/garnet-metal-investigation`; shared checkouts/builds are read-only.
 
 The native library compiled with AppleClang 17.0.0. The numerical Metal/MPS
 CTest passed 1/1 in 0.74 seconds including process startup. It covers padded
@@ -35,18 +35,18 @@ The earlier norm/MLP/head-only fixture also passed both batches.
 ## Reproduce on the Mac
 
 ```sh
-cd /Users/zsdx/garnet-metal-investigation
+cd /Users/developer/garnet-metal-investigation
 /opt/homebrew/bin/cmake -S source -B build \
   -DGARNET_METAL=ON -DGARNET_METAL_XMODEL=ON \
-  -DXLANG3_SDK_ROOT=/Users/zsdx/CantorAI/xlang3/sdk \
-  -DGARNET_XLANG3_RUNTIME_LIBRARY=/Users/zsdx/CantorAI/out/build/macos-arm64-release/bin/libxlang3_runtime.dylib \
+  -DXLANG3_SDK_ROOT=/Users/developer/CantorAI/xlang3/sdk \
+  -DGARNET_XLANG3_RUNTIME_LIBRARY=/Users/developer/CantorAI/out/build/macos-arm64-release/bin/libxlang3_runtime.dylib \
   -DCMAKE_BUILD_TYPE=Release
 /opt/homebrew/bin/cmake --build build -j4
 /opt/homebrew/bin/ctest --test-dir build --output-on-failure
 /opt/homebrew/bin/python3 source/test2026/metal/test_model_graph.py \
-  /Users/zsdx/CantorAI/out/build/macos-arm64-release/bin/xlang3 \
-  /Users/zsdx/garnet-metal-investigation/build \
-  /Users/zsdx/garnet-metal-investigation/source
+  /Users/developer/CantorAI/out/build/macos-arm64-release/bin/xlang3 \
+  /Users/developer/garnet-metal-investigation/build \
+  /Users/developer/garnet-metal-investigation/source
 ```
 
 The Python reference requires NumPy (existing Mac installation: 2.3.4).
@@ -78,9 +78,9 @@ states; end-to-end decoder feedback is still required.
 
 ```sh
 /opt/homebrew/bin/python3 source/test2026/metal/test_state_graph.py \
-  /Users/zsdx/CantorAI/out/build/macos-arm64-release/bin/xlang3 \
-  /Users/zsdx/garnet-metal-investigation/build \
-  /Users/zsdx/garnet-metal-investigation/source
+  /Users/developer/CantorAI/out/build/macos-arm64-release/bin/xlang3 \
+  /Users/developer/garnet-metal-investigation/build \
+  /Users/developer/garnet-metal-investigation/source
 ```
 
 ## Complete linear attention and decoder layers
@@ -107,9 +107,9 @@ code 0 under `logs/linear-batch2-20261011` on the Mac. The native CTest also pas
 
 ```sh
 /opt/homebrew/bin/python3 source/test2026/metal/test_linear_graph.py \
-  /Users/zsdx/CantorAI/out/build/macos-arm64-release/bin/xlang3 \
-  /Users/zsdx/garnet-metal-investigation/build \
-  /Users/zsdx/garnet-metal-investigation/source
+  /Users/developer/CantorAI/out/build/macos-arm64-release/bin/xlang3 \
+  /Users/developer/garnet-metal-investigation/build \
+  /Users/developer/garnet-metal-investigation/source
 ```
 
 `background_test.py` can preserve test output and exit evidence across SSH drops.
@@ -142,9 +142,9 @@ the Mac. No full-size pretrained result is established by these fixtures.
 
 ```sh
 /opt/homebrew/bin/python3 source/test2026/metal/test_attention_graph.py \
-  /Users/zsdx/CantorAI/out/build/macos-arm64-release/bin/xlang3 \
-  /Users/zsdx/garnet-metal-investigation/build \
-  /Users/zsdx/garnet-metal-investigation/source
+  /Users/developer/CantorAI/out/build/macos-arm64-release/bin/xlang3 \
+  /Users/developer/garnet-metal-investigation/build \
+  /Users/developer/garnet-metal-investigation/source
 ```
 
 The Pi-to-PC checkpoint copy completed: 1,746,942,600 bytes, SHA256

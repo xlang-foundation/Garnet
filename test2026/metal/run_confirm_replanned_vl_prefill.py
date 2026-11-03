@@ -10,7 +10,7 @@ assert digest(root/'build-interleaved-screen-index/libgarnet.dylib')==meta['libr
 assert digest(root/'models/Qwen3.5-0.8B/model.safetensors')==meta['checkpoint_sha256']
 assert digest(root/'models/Qwen3.5-0.8B/config.json')==meta['config_sha256']
 assert all(digest(root/'source'/name)==sha for name,sha in meta['source_sha256'].items())
-assert digest(Path('/Users/zsdx/CantorAI/out/build/macos-arm64-release/bin/xlang3'))==meta['runtime_sha256']
+assert digest(Path('/Users/developer/CantorAI/out/build/macos-arm64-release/bin/xlang3'))==meta['runtime_sha256']
 (out/'dependency.json').write_bytes((json.dumps(dict(metadata=meta,reused_independent_profiles=12,reused_carried_steps=36),indent=2)+'\n').encode())
 (out/'run-confirm-source.py').write_bytes(Path(__file__).read_bytes())
 code=subprocess.call([sys.executable,str(root/'source/test2026/metal/compare_replanned_vl_prefill.py'),str(root),str(out/'chunk64'),'64']);assert code==0

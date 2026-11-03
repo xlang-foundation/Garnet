@@ -7,7 +7,7 @@ r=Path(sys.argv[1]).resolve();output=Path(sys.argv[2]).resolve();output.mkdir(pa
 s=r/'source/test2026/metal';sys.path.insert(0,str(s));background_checks=[]
 from frame_preprocessing import prepare_frame
 from frame_webp_threaded import WebPDecoder
-worldsense_script=Path('/Users/zsdx/cantorai-release-tests/current/bin/WorldSense/Backend/package_runtime.py')
+worldsense_script=Path('/Users/developer/cantorai-release-tests/current/bin/WorldSense/Backend/package_runtime.py')
 nodes=[n for n in ast.parse((s/'compare_vllm_metal.py').read_text()).body if isinstance(n,ast.FunctionDef) and n.name in ('verified_worldsense_service','snapshot','guard')]
 exec(compile(ast.Module(body=nodes,type_ignores=[]),'owned_guard','exec'),globals());strict_guard=guard
 def check():

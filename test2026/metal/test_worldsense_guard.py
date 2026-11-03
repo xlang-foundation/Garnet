@@ -11,7 +11,7 @@ script=Path(sys.argv[1]);output=Path(sys.argv[2]);pid=int(sys.argv[3]);output.mk
 tree=ast.parse(script.read_text())
 function=next(n for n in tree.body if isinstance(n,ast.FunctionDef) and n.name=='verified_worldsense_service')
 scope=dict(subprocess=subprocess,hashlib=hashlib,json=json,time=time,background_checks=[],output=output,
- worldsense_script=Path('/Users/zsdx/cantorai-release-tests/current/bin/WorldSense/Backend/package_runtime.py'))
+ worldsense_script=Path('/Users/developer/cantorai-release-tests/current/bin/WorldSense/Backend/package_runtime.py'))
 exec(compile(ast.Module(body=[function],type_ignores=[]),str(script),'exec'),scope)
 verify=scope['verified_worldsense_service'];service=scope['worldsense_script']
 actual=subprocess.run(['/bin/ps','-p',str(pid),'-o','ppid=,args='],capture_output=True,text=True)

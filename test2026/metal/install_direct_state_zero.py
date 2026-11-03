@@ -1,7 +1,7 @@
 """Verify and preserve every original before installing into the owned root."""
 import hashlib,json,sys,tarfile
 from pathlib import Path
-r=Path(sys.argv[1]).resolve();assert r==Path('/Users/zsdx/garnet-metal-investigation')
+r=Path(sys.argv[1]).resolve();assert r==Path('/Users/developer/garnet-metal-investigation')
 s=(r/'source').resolve();assert s.is_relative_to(r)
 manifest=json.loads((r/'work/direct-state-zero-manifest.json').read_text());pending=[]
 assert len(manifest)==10

@@ -3,7 +3,7 @@ import ast,hashlib,json,os,signal,statistics,subprocess,sys,time
 from pathlib import Path
 r=Path(sys.argv[1]);output=Path(sys.argv[2]);output.mkdir(parents=True,exist_ok=False)
 s=r/'source/test2026/metal';statuses=[];background_checks=[];records=[];profiles=[]
-worldsense_script=Path('/Users/zsdx/cantorai-release-tests/current/bin/WorldSense/Backend/package_runtime.py')
+worldsense_script=Path('/Users/developer/cantorai-release-tests/current/bin/WorldSense/Backend/package_runtime.py')
 nodes=[n for n in ast.parse((s/'compare_vllm_metal.py').read_text()).body if isinstance(n,ast.FunctionDef) and n.name in ('verified_worldsense_service','snapshot','guard')]
 exec(compile(ast.Module(body=nodes,type_ignores=[]),'owned_guard','exec'),globals());strict_guard=guard
 raw_snapshot=snapshot;owned_group=None
@@ -30,7 +30,7 @@ def guard(label):
 builds={key:r/name for key,name in [('control','build-qwen35-extended-prefill'),('candidate','build-resident-kv-inplace')]}
 metadata=dict(scope=__doc__,library_sha256={key:hashlib.file_digest((p/'libgarnet.dylib').open('rb'),'sha256').hexdigest() for key,p in builds.items()},source_sha256={p.name:hashlib.file_digest(p.open('rb'),'sha256').hexdigest() for p in [Path(__file__),s/'run_matched_garnet.py',s/'run_matched_frame_process.py',s/'frame_worker_garnet.py']},assets={})
 assert metadata['library_sha256']['control']=='cc5539990dcb4effbece7c611787a656df56b51271f1f40e1c3e8b5dbf90c8f8'
-runtime='/Users/zsdx/CantorAI/out/build/macos-arm64-release/bin/xlang3';frontend=str(r/'comparators/vllm/venv/bin/python')
+runtime='/Users/developer/CantorAI/out/build/macos-arm64-release/bin/xlang3';frontend=str(r/'comparators/vllm/venv/bin/python')
 selected_model=sys.argv[sys.argv.index('--model')+1] if '--model' in sys.argv else None
 selected_batch=int(sys.argv[sys.argv.index('--batch')+1]) if '--batch' in sys.argv else None
 assert selected_model in (None,'Qwen3-0.6B','Qwen2.5-Coder-0.5B-Instruct','Qwen3.5-0.8B') and selected_batch in (None,1,2)

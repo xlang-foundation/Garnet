@@ -2,7 +2,7 @@
 import ast,hashlib,json,shlex,subprocess,sys
 from pathlib import Path
 
-allowed=Path('/Users/zsdx/cantorai-release-tests/current/bin').resolve()
+allowed=Path('/Users/developer/cantorai-release-tests/current/bin').resolve()
 inference=('libgarnet','libmlx','libtorch','metal.framework','metalperformanceshaders.framework',
            'libopenvino','coreml.framework','appleneuralengine','ane.framework','bnns')
 records=[]

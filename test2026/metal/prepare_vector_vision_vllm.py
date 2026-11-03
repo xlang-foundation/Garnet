@@ -23,7 +23,7 @@ library=native/'build-vector-vision-width4/libgarnet.dylib';assert digest(librar
 bridge=root/'logs/webp-thread-probe-confirm-20261013/jobs/libwebp_thread.dylib';private_bridge=native/'logs/webp-thread-probe-confirm-20261013/jobs/libwebp_thread.dylib'
 assert digest(bridge)==digest(private_bridge)=='3c86ac196227b3729477cd24704ea4cea4e796fe5f9933c7a5a20361a32804a3'
 source_manifest[bridge.relative_to(root).as_posix()]=digest(bridge)
-runtime=Path('/Users/zsdx/CantorAI/out/build/macos-arm64-release/bin/xlang3');hardware={k:subprocess.check_output(['/usr/sbin/sysctl','-n',k],text=True).strip() for k in ('machdep.cpu.brand_string','hw.memsize','hw.model')}
+runtime=Path('/Users/developer/CantorAI/out/build/macos-arm64-release/bin/xlang3');hardware={k:subprocess.check_output(['/usr/sbin/sysctl','-n',k],text=True).strip() for k in ('machdep.cpu.brand_string','hw.memsize','hw.model')}
 assert hardware['machdep.cpu.brand_string']=='Apple M4' and int(hardware['hw.memsize'])==16*2**30 and platform.machine()=='arm64'
 assets={}
 models=('Qwen3-0.6B','Qwen2.5-Coder-0.5B-Instruct','Qwen3.5-0.8B')

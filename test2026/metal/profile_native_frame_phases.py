@@ -18,7 +18,7 @@ def guard(label):
                 info=subprocess.run(['/bin/ps','-p',str(current),'-o','ppid=,args='],capture_output=True,text=True)
                 parts=info.stdout.strip().split(None,1)
                 if info.returncode or len(parts)!=2:break
-                if '/Users/zsdx/cantorai-release-tests/current/bin/WorldSense/Backend/package_runtime.py' in parts[1]:identified=True;break
+                if '/Users/developer/cantorai-release-tests/current/bin/WorldSense/Backend/package_runtime.py' in parts[1]:identified=True;break
                 current=int(parts[0])
                 if current<=1:break
             libraries=subprocess.run(['/usr/sbin/lsof','-p',str(pid),'-Fn'],capture_output=True,text=True)
@@ -40,7 +40,7 @@ def run(name,command):
     (output/'statuses.json').write_text(json.dumps(statuses,indent=2)+'\n')
     if result.returncode:raise RuntimeError(name+' failed; retained log')
 
-frontend=str(root/'comparators/vllm/venv/bin/python');runtime='/Users/zsdx/CantorAI/out/build/macos-arm64-release/bin/xlang3'
+frontend=str(root/'comparators/vllm/venv/bin/python');runtime='/Users/developer/CantorAI/out/build/macos-arm64-release/bin/xlang3'
 build=root/'build-mps-vision-scores'
 metadata=dict(scope='Native serving phase counters; no serialized GPU operations',library_sha256=digest(build/'libgarnet.dylib'),worker_sha256=digest(scripts/'frame_worker_garnet.py'))
 (output/'metadata.json').write_text(json.dumps(metadata,indent=2)+'\n')

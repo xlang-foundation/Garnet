@@ -29,8 +29,8 @@ for path in fixtures:
     assert f['config']==json.loads((root/'models/Qwen3.5-0.8B/config.json').read_text())['text_config']
     for step in f['steps']:
         for name,shape in zip(step['inputs'],f['shapes']):
-            rel=str(PurePosixPath(name).relative_to('/Users/zsdx/garnet-metal-investigation'));assert proof['omitted'][rel]['bytes']==math.prod(shape)*4
-        rel=str(PurePosixPath(step['expected']).relative_to('/Users/zsdx/garnet-metal-investigation'));assert proof['omitted'][rel]['bytes']==step['count']*4
+            rel=str(PurePosixPath(name).relative_to('/Users/developer/garnet-metal-investigation'));assert proof['omitted'][rel]['bytes']==math.prod(shape)*4
+        rel=str(PurePosixPath(step['expected']).relative_to('/Users/developer/garnet-metal-investigation'));assert proof['omitted'][rel]['bytes']==step['count']*4
 assert coverage=={('linear_attention',0),('linear_attention',22),('full_attention',3),('full_attention',23)}
 for p in profiles:
     directory=native/Path(p['evidence']).name;meta=json.loads((directory/'metadata.json').read_text());model=p['model']

@@ -1,7 +1,7 @@
 """Cancel only the owned preflight waiter, never a benchmark or user process."""
 import json,os,shlex,signal,subprocess,time
 from pathlib import Path
-root=Path('/Users/zsdx/garnet-metal-investigation').resolve();out=root/'logs/private-bf16-confirm-clean-20261014'
+root=Path('/Users/developer/garnet-metal-investigation').resolve();out=root/'logs/private-bf16-confirm-clean-20261014'
 info=json.loads((out/'pid.json').read_text());assert info['pid']==4319
 state=json.loads((out/'preflight/wait.json').read_text())
 assert state['benchmark_started'] is False and state['quiet_seconds']<1 and not (out/'jobs').exists()
