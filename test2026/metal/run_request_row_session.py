@@ -56,6 +56,35 @@ try:
         try:session.reset_row(row)
         except Exception:rejected=True
         assert rejected and snapshot()==saved
+    if 'retired_inplace_defaults' in garnet.backend_info():
+        # The optimized session borrows no default KV output storage. Standalone
+        # graph.run must rehydrate its defaults and leave private rows untouched.
+        assert graphs[1].lazy_default_planned_slots>=5
+        step=f['steps'][0]
+        hidden=tensor.tensor(step['hidden'],shape=[batch,width],dtype=tensor.float32)
+        active=tensor.tensor(step['active'],shape=[batch],dtype=tensor.float32)
+        conv=tensor.tensor([0.0]*(batch*29*4),shape=shapes[0][1],dtype=tensor.float32)
+        state=tensor.tensor([0.0]*(batch*3*7*5),shape=shapes[0][2],dtype=tensor.float32)
+        linear=graphs[0].run([hidden,conv,state,active]).tolist()
+        packed=width+29*4+3*7*5
+        values=[]
+        for row in range(batch):values+=linear[row*packed:row*packed+width]
+        hidden=tensor.tensor(values,shape=[batch,width],dtype=tensor.float32)
+        key=tensor.tensor([0.0]*(batch*capacity*6),shape=shapes[1][1],dtype=tensor.float32)
+        value=tensor.tensor([0.0]*(batch*capacity*6),shape=shapes[1][2],dtype=tensor.float32)
+        positions=tensor.tensor(step['positions'],shape=[batch,3],dtype=tensor.float32)
+        slots=tensor.tensor(step['slots'],shape=[batch],dtype=tensor.float32)
+        full=graphs[1].run([hidden,key,value,positions,slots,active]).tolist()
+        packed=width+2*capacity*6
+        values=[]
+        for row in range(batch):values+=full[row*packed:row*packed+width]
+        close_enough(values,step['expected_hidden'])
+        assert snapshot()==saved
+        session.reset()
+        hidden=tensor.tensor(step['hidden'],shape=[batch,width],dtype=tensor.float32)
+        session.run(graphs,hidden,positions,slots,active,0 if f['with_head'] else -1)
+        close_enough(session.hidden().tolist(),step['expected_hidden'])
+        print('retired_inplace_defaults PASS legacy rehydration and resident reuse',flush=True)
     print('native_request_rows PASS batch4 mixed linear/KV independent reference, A-to-E replacement, B/C/D isolation, inactive/reactivated C, bounds, with_head',f['with_head'],flush=True)
 finally:
     session.close()

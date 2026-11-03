@@ -292,7 +292,14 @@ X::Value MetalDecoderSession::Run(X::Value graphs,X::Value hidden,X::Value posit
             std::vector<std::pair<size_t,MetalMatrix>> savedOutputs;
             for(size_t k=0;k<2;++k)if(graph->CanUpdateKVInPlace(k+1)) {
                 const auto& group=graph->outputStorageGroups_[k+1];
-                if(!states_[i].matrix[k].CompatibleLayout(graph->slots_[graph->outputParts_[k+1]].matrix))
+                const auto outputId=graph->outputParts_[k+1];
+                bool compatible=states_[i].matrix[k].CompatibleLayout(graph->slots_[outputId].matrix);
+#ifdef GARNET_METAL_RETIRE_INPLACE_DEFAULTS
+                if(!graph->slots_[outputId].matrix.Valid()&&
+                   std::find(graph->lazyDefaultSlots_.begin(),graph->lazyDefaultSlots_.end(),outputId)!=graph->lazyDefaultSlots_.end())
+                    compatible=gpu_->IsDefaultLayout(states_[i].matrix[k],graph->slots_[outputId].rows,graph->slots_[outputId].columns);
+#endif
+                if(!compatible)
                     throw std::logic_error("Private KV cache layout mismatch");
                 for(auto id:group){savedOutputs.emplace_back(id,graph->slots_[id].matrix);}
                 inplace[k]=true;

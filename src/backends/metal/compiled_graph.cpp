@@ -1140,6 +1140,18 @@ void MetalCompiledGraph::Encode(MetalContext& gpu,bool packedOutput,const MetalM
 }
 X::Value MetalCompiledGraph::Run(X::Value inputs) {
     std::lock_guard<std::mutex> lock(mutex_);
+#ifdef GARNET_METAL_RETIRE_INPLACE_DEFAULTS
+    // Standalone packed execution owns its outputs rather than receiving the
+    // session's private KV bindings. Restore every retired default first.
+    for(size_t part=1;part<outputStorageGroups_.size();++part) {
+        const auto& group=outputStorageGroups_[part];
+        if(group.empty()||slots_[group.front()].matrix.Valid()||
+           std::find(lazyDefaultSlots_.begin(),lazyDefaultSlots_.end(),group.front())==lazyDefaultSlots_.end())continue;
+        MaterializeDefault(group.front());
+        for(auto id:group)slots_[id].matrix=slots_[group.front()].matrix;
+    }
+    for(auto id:lazyDefaultSlots_)MaterializeDefault(id);
+#endif
     visionParallelDispatches_=0;
     visionPrefetchDispatches_=0;visionVectorDispatches_=0;mlpGraphDispatches_=0;
     visionGlobalAlphaDispatches_=0;
@@ -1207,6 +1219,24 @@ void MetalCompiledGraph::RetireResidentDefaults() {
         std::vector<size_t> plan;
         for(size_t part=1;part<=2;++part){auto id=inputs_[part];if(inputShapes_[part].size()<3||std::find(outputParts_.begin(),outputParts_.end(),id)!=outputParts_.end())continue;if(eligible(id))plan.push_back(id);}
         if(!ops_.empty()&&ops_.back().kind==Kind::Concat&&ops_.back().out==output_&&!residentOps_.back()&&std::find(inputs_.begin(),inputs_.end(),output_)==inputs_.end()&&std::find(outputParts_.begin(),outputParts_.end(),output_)==outputParts_.end()&&eligible(output_))plan.push_back(output_);
+#ifdef GARNET_METAL_RETIRE_INPLACE_DEFAULTS
+        // In-place session execution binds every proven output alias to its
+        // private cache. Retire only complete, exclusively owned alias groups;
+        // hidden outputs, inputs and checkpoint owners must remain protected.
+        for(size_t part=1;part<=2;++part)if(CanUpdateKVInPlace(part)) {
+            const auto& group=outputStorageGroups_[part];
+            const auto identity=infos[group.front()].identity;
+            std::unordered_set<size_t> unique(group.begin(),group.end());
+            bool safe=identity&&unique.size()==group.size()&&counts[identity]==group.size()&&!protectedWeights.count(identity);
+            for(auto id:group) {
+                const auto& slot=slots_[id];
+                safe=safe&&infos[id].identity==identity&&id!=output_&&id!=outputParts_[0]&&
+                    std::find(inputs_.begin(),inputs_.end(),id)==inputs_.end()&&
+                    gpu_->IsDefaultLayout(slot.matrix,slot.rows,slot.columns);
+            }
+            if(safe)plan.insert(plan.end(),group.begin(),group.end());
+        }
+#endif
         lazyDefaultSlots_=std::move(plan);lazyDefaultPlanReady_=true;
     }
     for(auto id:lazyDefaultSlots_)if(slots_[id].matrix.Valid()) {auto info=MetalContext::MatrixBufferInfo(slots_[id].matrix);lazyRetiredBytes_+=info.allocatedBytes;slots_[id].matrix=MetalMatrix();}
