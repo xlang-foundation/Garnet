@@ -472,3 +472,24 @@ inventories are joined before matching. Both guard regression tests pass, and
 a live check detected the actual native bridge and worker; the old unrelated
 WorldSense XLang process is not classified as a model engine. This change does
 not alter any previously frozen reference driver or result.
+
+The subsequent width16 HTTP timing admission completed both single-client
+128-output requests, with zero collection/accounting issues and a bracketed
+final memory sample. Short260-token input: TTFT20.485s, decode6.325tokens/s,
+total40.569s. Long2054-token input: TTFT124.863s, decode5.375tokens/s,
+total148.497s. One wave per cell, no warmups and one fresh process were planned;
+these are admissions, not full repeated native baseline results. System swap
+was in use. Shutdown used SIGTERM with no driver forced kill and the process
+guard subsequently found no model engine. Evidence:
+`evidence/native27b-prefill16-http-admission2`.
+
+A separate default-off `GARNET_METAL_RETIRE_INPLACE_DEFAULTS` experiment now
+retires complete exclusively owned KV output alias groups only when native
+in-place update analysis proves the session replaces them. Checkpoint owners,
+inputs and hidden outputs remain protected. Standalone execution recreates
+those alias groups before running; resident execution validates private cache
+layout before binding it. It requires the isolated wide-prefill build. All10
+CTests and the independent mixed batch4 row test passed, including standalone
+rehydration, private-state isolation and subsequent resident reuse, with and
+without a head (`native-retiredkv-ctest.log`, `native-retiredkv-row-session.log`).
+Learned model probes remain a separate qualification gate.
