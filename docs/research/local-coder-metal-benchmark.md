@@ -1095,3 +1095,15 @@ bytes after close. The finite-study auditor independently matches frozen cases
 to the pinned single-request oracle and verifies two repeats, process exit,
 sampled admission limits and cleanup; five tamper checks pass. This establishes
 neither execution to the4K limit nor full coding/performance qualification.
+
+The matching batch2/context4096/chunk64 finite admission also passes two
+exact16-token repeats, including masked final chunks
+(`native27b-batch2-wide64-context4096-study1`). Graph-ready allocations are
+18,259,361,792 bytes, below the unchanged device limit minus256MiB; close returns
+to720,896 bytes. The independent audit and all five tamper cases pass. The full
+eight-task concurrent coding collector is now running as
+`native27b-batch-wide64-quality1`, prefix disabled with explicit1800s queue/client
+observation limits. No quality pass or serving speedup is claimed before that
+collection, independent sandbox evaluation and native accounting audit finish.
+Coding collections now retain factory/decoder sources and CMake flags as well
+as the native library and transport scripts.
