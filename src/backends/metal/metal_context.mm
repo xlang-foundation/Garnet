@@ -1486,7 +1486,7 @@ kernel void bf16_native_dot_t128(device const float* a [[buffer(0)]],device cons
         if(@available(macOS 26.0,*))if([impl_->device supportsFamily:MTLGPUFamilyApple10]) {
             auto mppOptions=[MTLCompileOptions new];mppOptions.languageVersion=MTLLanguageVersion4_0;
             mppOptions.mathMode=MTLMathModeSafe;
-            NSString* mppSource=[[NSString stringWithFormat:@"#define GARNET_MPP_K %u\n#define GARNET_MPP_RELAXED %u\n",unsigned(GARNET_METAL_MPP_AFFINE_TILE_K),unsigned(GARNET_METAL_MPP_AFFINE_RELAXED_VALUE)] stringByAppendingString:[NSString stringWithUTF8String:kAffineInt4MPPShader]];
+            NSString* mppSource=[[NSString stringWithFormat:@"#define GARNET_MPP_K %u\n#define GARNET_MPP_RELAXED %u\n#define GARNET_MPP_N_MAJOR %u\n",unsigned(GARNET_METAL_MPP_AFFINE_TILE_K),unsigned(GARNET_METAL_MPP_AFFINE_RELAXED_VALUE),unsigned(GARNET_METAL_MPP_AFFINE_N_MAJOR_VALUE)] stringByAppendingString:[NSString stringWithUTF8String:kAffineInt4MPPShader]];
 #ifdef GARNET_METAL_MPP_AFFINE_BF16
             mppSource=[@"#define GARNET_MPP_BF16 1\n" stringByAppendingString:mppSource];
 #endif

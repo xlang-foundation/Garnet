@@ -37,6 +37,9 @@ def main():
         relaxed=profile.get('mpp_relaxed',False)
         if type(relaxed) is not bool or 'mpp_affine_relaxed='+str(int(relaxed)) not in garnet.backend_info():
             raise ValueError('Frozen profile requires its explicit MPP tensor precision mode')
+        layout=profile.get('mpp_n_major',False)
+        if type(layout) is not bool or 'mpp_affine_n_major='+str(int(layout)) not in garnet.backend_info():
+            raise ValueError('Frozen profile requires its explicit MPP weight layout')
     width=config['text_config']['hidden_size'];vocab=config['text_config']['vocab_size']
     incoming=queue.Queue(maxsize=16);shutdown=threading.Event();input_failure=[]
     decoder=None;policy=None;jobs={};keys=set()

@@ -129,7 +129,7 @@ int main() {
 #else
         std::cout<<"mpp_affine_fp32 ";
 #endif
-        std::cout<<"device="<<gpu.DeviceName()<<" available="<<gpu.HasMPPAffine()<<" relaxed="<<GARNET_METAL_MPP_AFFINE_RELAXED_VALUE<<" tile_k="<<GARNET_METAL_MPP_AFFINE_TILE_K<<"\n";
+        std::cout<<"device="<<gpu.DeviceName()<<" available="<<gpu.HasMPPAffine()<<" relaxed="<<GARNET_METAL_MPP_AFFINE_RELAXED_VALUE<<" n_major="<<GARNET_METAL_MPP_AFFINE_N_MAJOR_VALUE<<" tile_k="<<GARNET_METAL_MPP_AFFINE_TILE_K<<"\n";
         Require(gpu.DeviceName().find("M5")==std::string::npos||gpu.HasMPPAffine(),"M5 did not select its MPP candidate");
 #endif
         for(auto shape:std::array<std::array<size_t,3>,24>{{
