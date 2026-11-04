@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 #include "../../src/runtime/scheduler/continuous_batch_scheduler.h"
 #include "../../src/runtime/scheduler/request_row_leases.h"
+#include "../../src/runtime/scheduler/packed_token_plan.h"
 #include "../../src/runtime/kv/paged_kv_pool.h"
 #include <iostream>
 #include <stdexcept>
@@ -98,6 +99,24 @@ int main() {
     const auto middle=tick.batches[1].requests[0];
     Check(middle.id==longId&&middle.prefillOffset==4&&middle.prefillTokens==4&&middle.slotPosition==4&&middle.contextLength==8);
     Check(middle.requestRow==longLease.requestRow&&middle.rowEpoch==longLease.rowEpoch);
+    // Real scheduler output packs decode + ragged prompt work without padding.
+    const auto packed=BuildPackedTokenPlan(tick,chunkStorage,5,64);
+    Check(packed.tokenCount==5&&packed.segments.size()==2);
+    Check(packed.segments[0].stage==RequestStage::Decode&&packed.segments[0].tokenCount==1);
+    Check(packed.segments[1].packedOffset==1&&packed.segments[1].tokenCount==4&&
+        packed.segments[1].absolutePosition==4);
+    auto RejectPacked=[&](const SchedulerTick& candidate,int budget=5) {
+        bool rejected=false;
+        try{BuildPackedTokenPlan(candidate,chunkStorage,budget,64);}
+        catch(const std::invalid_argument&){rejected=true;}
+        Check(rejected);
+    };
+    RejectPacked(tick,4); // Total workspace budget, not per-request budget.
+    auto corrupt=tick;corrupt.batches[1].requests[0].rowEpoch++;RejectPacked(corrupt);
+    corrupt=tick;corrupt.batches[1].requests[0].prefillOffset++;RejectPacked(corrupt);
+    corrupt=tick;corrupt.batches.push_back(tick.batches[0]);RejectPacked(corrupt);
+    corrupt=tick;corrupt.batches[1].requests[0].prefillTokens=0;RejectPacked(corrupt);
+    corrupt=tick;corrupt.batches[1].stage=RequestStage::Cancelled;RejectPacked(corrupt);
     Check(chunked.CompleteDecode(shortId,8,false,chunkStorage));
     Check(chunked.CompletePrefillChunk(longId,4,chunkStorage));
     tick=chunked.Schedule(chunkStorage);Check(tick.batches.size()==2);

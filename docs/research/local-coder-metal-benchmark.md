@@ -1253,3 +1253,18 @@ proof. The next full-model coding run is
 chunk scheduling, prefixOFF, strict BF16 tensor operands and FP32 accumulator/
 output. Its profile requires actual native MPP dispatches, outerK64, tensorK16
 and register storage. No full-model quality or model speed result is assumed.
+
+The register candidate's full coding run is now complete:
+`native27b-mpp-registers-chunk16-quality1` passes8/8 sandboxed coding tasks.
+All eight generated token sequences exactly match the FP32 single-request
+reference. The raw-stream audit passes with978 combined decode plans and45
+prefill/decode interleavings; all eight audit tamper cases are rejected. This
+qualifies the finite coding suite, not a serving speedup or general precision
+equivalence. The collected profile allocates17,646,501,888 Metal bytes.
+
+`packed_token_plan.h` begins the proposed packed hybrid executor contract.
+It packs actual scheduler segments without padding, orders decode first, and
+rejects stale/repeated leases, invalid prompt/context ranges, unsupported stages,
+position overflow, and total token-budget overflow. The portable scheduler test
+passes these checks on real mixed scheduler output. This metadata helper is not
+yet connected to a GPU executor and provides no measured speedup.
