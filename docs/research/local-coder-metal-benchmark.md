@@ -10,16 +10,17 @@ with exact single-native token sequences. Native text-only input has no dummy
 image; bounded native vision parity and two image-grounding cases pass, while
 general VLM and reference multimodal qualification remain incomplete.
 
-The earlier tall-FP32 single-active timing admission is one wave per cell,
-not a repeated serving campaign: short/long aggregate throughput3.250/1.034
-output tokens/s, TTFT20.518/101.057s and decode6.732/5.582 tokens/s. Reference
-single-client medians are vLLM5.761/3.382 overall tokens/s and SGLang5.502/3.275.
-The later batch2/wide64 FP32 timing admission preserves five completed cells and
-a four-client long-prompt600s timeout; it is a failed campaign. Native chunked
-scheduling passes full concurrent coding, but its serving performance remains
-unmeasured. All2x targets remain unmet. Reference results stay fixed and engines
-run sequentially. Full chunk-selection and isolated kernel diagnostics are
-recorded below; neither substitutes for matched serving performance.
+The latest batch2/chunk128 bounded-kernel-profile admission completes the two
+single-client cells with128 outputs each. Short/long overall throughput is
+3.130/1.326 output tokens/s, TTFT16.898/70.731s and decode5.305/4.930 tokens/s.
+These are single cold waves, not repeated serving qualification. The earlier
+batch1 tall-FP32 control still has higher decode6.732/5.582 tokens/s; its
+TTFT20.518/101.057s is slower. Reference single-client medians are
+vLLM5.761/3.382 overall tokens/s and SGLang5.502/3.275. The batch2/wide64 FP32
+admission retains its four-client long-prompt600s timeout as a failed campaign.
+All2x targets remain unmet. Reference results stay fixed and engines run
+sequentially. Full chunk-selection and isolated kernel diagnostics are recorded
+below; neither substitutes for matched serving performance.
 
 Order: Qwen3.8-27B, Qwen3.5-9B, Qwen3.5-4B. Current target is 27B.
 Hardware: Apple M5, 24 GiB unified memory. This is separate from historical
@@ -1693,9 +1694,27 @@ commands, with zero misses;1,138 decode plans combine requests and nine
 forwards mix decode/prefill. Ready allocation is17,853,775,872bytes with497
 affine weight owners,2,737 matrix owners and one pipeline set. Native close
 reports all four owner counts zero,1,507,328 Metal bytes and worker exit0.
-Serving performance remains pending. The experiment does not yet constitute
-a complete compiled engine memory arena, tile autotuner or portable production
-xModel profile.
+The matching `native27b-bounded-affine-profile-chunk128-http-admission1` uses
+the exact qualified library and worker. Both C1 cells complete128 outputs;
+the accounting audit and11 corruption checks pass. Its276 profile commands
+include254 decode,20 prefill and two standalone head calls. Close reports
+zero Garnet owners,1,507,328 Metal bytes and worker exit0.
+
+| One cold C1 admission | Actual prompt tokens | TTFT (s) | Decode (tokens/s) | Total (s) | Overall output tokens/s |
+|---|---:|---:|---:|---:|---:|
+| Short |260|16.898080|5.304505|40.898939|3.129666|
+| Long |2054|70.730545|4.929651|96.531900|1.325987|
+
+The preceding active-FP32 batch2 candidate had short/long TTFT20.428/81.655s
+and decode5.158/4.255 tokens/s in separate cold admissions. The latest profile
+also includes hidden-input retirement, so these end-to-end differences cannot
+be attributed to kernel specialization alone. The older batch1 tall control
+still decodes faster. Frozen vLLM-Metal single-client TTFT is2.450/15.228s and
+decode6.417/6.278 tokens/s; SGLang is2.389/14.633s and6.094/5.843 tokens/s.
+Those references are repeated cohort medians, unlike this admission. All2x
+targets remain unmet. The experiment does not yet constitute a complete
+compiled engine memory arena, tile autotuner or portable production xModel
+profile; a full matched repeated Garnet campaign is still pending.
 
 ### Parent MTP asset discovery
 
