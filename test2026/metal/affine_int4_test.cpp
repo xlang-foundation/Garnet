@@ -181,6 +181,9 @@ int main() {
             {16,80,64},{17,37,128},{32,48,512},{33,37,128},{63,35,64},{65,37,128},{127,33,64},
             {64,257,128},{128,64,64},{512,48,128}}})
             Case(gpu,shape[0],shape[1],shape[2]);
+#ifdef GARNET_METAL_QWEN38_LARGE_PREFILL
+        Case(gpu,256,37,5120);Case(gpu,512,33,17408);
+#endif
         std::vector<uint32_t> packed(64*64/8,0);
         std::vector<uint16_t> scales(64,BF16(.25f)),biases(64,BF16(-.5f));
         Reject([&]{gpu.UploadAffineInt4(packed.data(),packed.size()*4-1,scales.data(),128,biases.data(),128,64,64);});

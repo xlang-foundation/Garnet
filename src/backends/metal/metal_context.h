@@ -9,14 +9,22 @@
 namespace Garnet {
 #ifdef GARNET_METAL_COMPACT_ATTENTION_INDEX
 inline constexpr size_t kMetalAttentionChunkCapacityLimit=4096;
+#ifdef GARNET_METAL_QWEN38_LARGE_PREFILL
+inline constexpr size_t kMetalAttentionIndexBytes=sizeof(int16_t);
+#else
 inline constexpr size_t kMetalAttentionIndexBytes=1;
+#endif
 #else
 inline constexpr size_t kMetalAttentionChunkCapacityLimit=2048;
 inline constexpr size_t kMetalAttentionIndexBytes=sizeof(int32_t);
 #endif
 #ifdef GARNET_METAL_QWEN38_WIDE_PREFILL
+#ifdef GARNET_METAL_QWEN38_LARGE_PREFILL
+inline constexpr size_t kMetalPrefillChunkLimit=256;
+#else
 inline constexpr size_t kMetalPrefillChunkLimit=64;
-inline constexpr size_t kMetalPrefillPackedHiddenLimit=64*5120;
+#endif
+inline constexpr size_t kMetalPrefillPackedHiddenLimit=kMetalPrefillChunkLimit*5120;
 #elif defined(GARNET_METAL_QWEN35_EXTENDED_PREFILL)
 inline constexpr size_t kMetalPrefillChunkLimit=80;
 inline constexpr size_t kMetalPrefillPackedHiddenLimit=80*1024;
@@ -27,6 +35,11 @@ inline constexpr size_t kMetalPrefillPackedHiddenLimit=64*2560;
 #else
 inline constexpr size_t kMetalPrefillPackedHiddenLimit=65536;
 #endif
+#endif
+#ifdef GARNET_METAL_QWEN38_LARGE_PREFILL
+inline constexpr size_t kMetalAttentionChunkTokenLimit=256;
+#else
+inline constexpr size_t kMetalAttentionChunkTokenLimit=127;
 #endif
 class MetalMatrix {
     struct Impl;

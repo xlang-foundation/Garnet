@@ -200,3 +200,17 @@ A separate chunk16 lifetime-only coding profile is prepared with
 that explicit policy against the native backend tag before loading model
 weights. This avoids accidentally qualifying the control build as the lifetime
 candidate. The profile has not yet been executed.
+
+## Large-chunk native guard preparation
+
+A default-OFF `GARNET_METAL_QWEN38_LARGE_PREFILL` source candidate now couples
+128/256-token native limits to signed16-bit attention indices and the
+corresponding threadgroup scratch accounting. It requires bounded27B wide
+prefill, compact4K attention and nonresident pack retirement. Existing profiles
+keep their previous native64-token scheduler limit when disabled. Extra native
+oracle cases target indices127/255, contiguous and overwritten slots, inactive
+queries,4K attention, and256/512-row real-inner-dimension projections.
+These changes are not yet compiled or admitted as xModel profiles; compilation
+waits for the live pack-retirement coding run. The xModel factory still rejects
+chunks above64. Passing component cases alone will not establish memory-safe
+learned-model execution at128 or256.

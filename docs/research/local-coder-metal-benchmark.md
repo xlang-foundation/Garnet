@@ -1389,3 +1389,31 @@ only the public chunk limit would be unsafe. The installed MLX primary source
 cooperatively dequantized shared weights and per-SIMD register tiles. This is a
 specific projection-reuse reference for larger-M work, not evidence that our
 current register kernel or scheduler budget already matches its performance.
+
+`native27b-retired-packs-chunk16-quality1` passes8/8 sandboxed coding tasks;
+all eight full generated sequences exactly match the FP32 reference. The stream
+audit passes1034 combined decode plans, clean close and all eight tamper cases.
+Ready Metal allocation is17,051,959,296bytes,594,542,592bytes below the otherwise
+matching register chunk16 control. This is a device-resource saving, not a claim
+about peak system RAM. It qualifies the finite chunk16 memory/coding gate.
+
+The default-OFF large-prefill extension now compiles in separate control and
+indexed builds. Each passes13 native tests (`large-prefill-ctest1.log`,
+`large-indexed-ctest1.log` plus expanded logs). At4K capacity the independent
+attention oracle passes128-token contiguous and256-token overwritten-slot cases
+with2-byte signed indices (max errors1.35e-8/2.68e-8); batch2/chunk256 is also
+covered at512 capacity. Projection cases now include256x5120 and512x17408 rows/
+inner dimensions (max errors4.14e-6/8.13e-6) without tolerance changes. The indexed
+build retains all41 indexed mask cases. Prefill standalone restoration and native
+scheduler GPU reference checks also pass in that build. These are component
+results, not learned large-profile or serving acceptance.
+
+The xModel batch study exposes128/256 only for batch2 with the explicit large,
+16-bit-index and retired-pack extensions; base shapes and batch4 limits remain
+unchanged. The worker requires exact large/indexed/retirement and optional
+contiguous-slot policy identities. The first learned candidate is
+`native27b-large-indexed-mixed-chunk128-quality1`: context4096,batch2,chunk128,
+strict BF16 register operands, indexed/mixed execution, pack retirement and the
+GPU-verified contiguous slot fast path. It uses one fixed graph family and the
+existing recommended-working-set-minus256MiB allocation guard. Chunk256 is not
+assumed to fit or qualify. No learned result or speedup is assumed for128 yet.

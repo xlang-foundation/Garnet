@@ -159,6 +159,9 @@ public:
 #endif
 #ifdef GARNET_METAL_QWEN38_WIDE_PREFILL
         info+="; qwen38_wide_prefill; bounded_prefill_workspace";
+#ifdef GARNET_METAL_QWEN38_LARGE_PREFILL
+        info+="; qwen38_large_prefill; attention_index_i16";
+#endif
 #ifdef GARNET_METAL_AFFINE_TALL_TILES
         info+="; affine_q4_tall_tiles";
 #endif

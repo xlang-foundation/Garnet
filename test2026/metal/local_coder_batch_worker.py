@@ -40,6 +40,13 @@ def main():
     retire_packs=profile.get('retire_nonresident_packs',False)
     if type(retire_packs) is not bool or retire_packs!=('retired_nonresident_packs' in garnet.backend_info()):
         raise ValueError('Frozen profile requires its explicit nonresident pack policy')
+    large=profile.get('large_prefill',False)
+    if type(large) is not bool or large!=('qwen38_large_prefill' in garnet.backend_info()):
+        raise ValueError('Frozen profile requires its explicit large prefill policy')
+    if 'require_attention_prefix' in profile:
+        attention_prefix=profile['require_attention_prefix']
+        if type(attention_prefix) is not bool or attention_prefix!=('attention_prefix' in garnet.backend_info()):
+            raise ValueError('Frozen profile requires its explicit attention slot lookup policy')
     if 'require_lifetime_reuse' in profile:
         lifetime=profile['require_lifetime_reuse']
         if type(lifetime) is not bool or lifetime!=('prefill_lifetime_reuse' in garnet.backend_info()):

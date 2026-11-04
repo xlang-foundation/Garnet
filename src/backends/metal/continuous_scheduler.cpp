@@ -5,6 +5,11 @@
 #include <limits>
 #include <climits>
 namespace Garnet {
+#ifdef GARNET_METAL_QWEN38_LARGE_PREFILL
+static constexpr size_t kSchedulerPrefillChunkLimit=256;
+#else
+static constexpr size_t kSchedulerPrefillChunkLimit=64;
+#endif
 class MetalContinuousScheduler::RowAllocator final:public KVSequenceAllocator {
     struct Sequence {int64_t row=0,epoch=0;int length=0;};
     MetalDecoderSession* session_;
@@ -85,13 +90,13 @@ bool MetalContinuousScheduler::Initialize(X::Value value,int64_t pending) {
 }
 bool MetalContinuousScheduler::SetPrefillChunk(int64_t tokens) {
     std::lock_guard<std::mutex> lock(mutex_);Ready();
-    if(tokens<0||tokens>64||uint64_t(tokens)>capacity_||!inflight_.empty())return false;
+    if(tokens<0||uint64_t(tokens)>kSchedulerPrefillChunkLimit||uint64_t(tokens)>capacity_||!inflight_.empty())return false;
     return scheduler_->SetPrefillChunkTokens(int(tokens));
 }
 bool MetalContinuousScheduler::CompletePrefillChunk(int64_t id,int64_t tokens) {
     std::lock_guard<std::mutex> lock(mutex_);Ready();
     auto found=inflight_.find(uint64_t(id));
-    if(id<=0||tokens<1||tokens>64||found==inflight_.end()||found->second!=RequestStage::Prefill)return false;
+    if(id<=0||tokens<1||uint64_t(tokens)>kSchedulerPrefillChunkLimit||found==inflight_.end()||found->second!=RequestStage::Prefill)return false;
     try {
         if(!scheduler_->CompletePrefillChunk(uint64_t(id),int(tokens),*allocator_))return false;
         inflight_.erase(found);return true;

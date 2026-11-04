@@ -44,6 +44,11 @@ and serialized operator traces are not HTTP serving measurements.
   Batch2 permits chunks2/4/8/16/32/64; batch4 remains chunk<=8. Wider shapes require
   native guarded workspace, shared scratch, in-place caches and per-row hidden
   support. Separate fixed-shape admissions do not admit all shapes resident at once.
+  The default-off `qwen38_large_prefill` extension additionally exposes experimental
+  batch2 chunks128/256 with signed16-bit attention indices and nonresident pack
+  retirement. Component tests pass; learned chunk128 qualification is pending.
+  Each requested shape must still pass the native working-set guard; this does
+  not guarantee that chunk256 fits this Mac or admit these shapes for production.
 - `garnet.continuous_scheduler()` owns allocation and lifecycle in native code.
   The optional native chunk schedule retains leases while committing partial
   prompt lengths. Python study transports supply inputs and route native events.

@@ -8,7 +8,7 @@
 #include <vector>
 using namespace Garnet;
 static void Need(bool value,const char* message){if(!value)throw std::runtime_error(message);}
-static void Case(MetalContext& gpu,size_t batch,size_t chunk,size_t capacity,bool gated) {
+static void Case(MetalContext& gpu,size_t batch,size_t chunk,size_t capacity,bool gated,bool contiguous=false) {
     const size_t heads=4,kvHeads=2,dim=8,rows=batch*chunk,qWidth=heads*dim,kvWidth=kvHeads*dim;
     std::vector<float> q(rows*qWidth),k(rows*kvWidth),v(k.size()),kc(batch*kvHeads*capacity*dim),vc(kc.size()),gate(q.size()),slots(rows),active(rows,1);
     auto fill=[](std::vector<float>& values,double phase){for(size_t i=0;i<values.size();++i)values[i]=float(std::sin(i*.131+phase)*.2);};
@@ -16,8 +16,8 @@ static void Case(MetalContext& gpu,size_t batch,size_t chunk,size_t capacity,boo
     for(size_t row=0;row<batch;++row)for(size_t t=0;t<chunk;++t) {
         // Duplicate/backward slots exercise latest-token selection; high slots
         // ensure the compact index is not accidentally storing a KV position.
-        slots[row*chunk+t]=float(capacity-chunk-2+t-(t>=3?2:0));
-        if(t==1&&row==batch-1)active[row*chunk+t]=0;
+        slots[row*chunk+t]=float(capacity-chunk-2+t-(!contiguous&&t>=3?2:0));
+        if(!contiguous&&t==1&&row==batch-1)active[row*chunk+t]=0;
     }
     std::vector<MetalMatrix> inputs={gpu.Upload(q,rows,qWidth),gpu.Upload(k,rows,kvWidth),gpu.Upload(v,rows,kvWidth),
         gpu.Upload(kc,batch,kvHeads*capacity*dim),gpu.Upload(vc,batch,kvHeads*capacity*dim),
@@ -57,11 +57,19 @@ static void Case(MetalContext& gpu,size_t batch,size_t chunk,size_t capacity,boo
             Need(std::isfinite(actual[index])&&error<=1e-5+2e-4*std::abs(expected),"Compact index changed attention semantics");
         }
     }
-    std::cout<<"compact_attention capacity="<<capacity<<" batch="<<batch<<" chunk="<<chunk<<" gated="<<gated<<" max_abs="<<maximumError<<"\n";
+    gpu.Begin();bool rejected=false;
+    try{gpu.EncodeAttentionChunk(inputs,output,heads,kvHeads,dim,capacity,kMetalPrefillChunkLimit+1,gated);}
+    catch(const std::invalid_argument&){rejected=true;}
+    gpu.Abort();Need(rejected&&gpu.Download(output)==actual,"Chunk limit rejection changed attention output");
+    std::cout<<"compact_attention capacity="<<capacity<<" batch="<<batch<<" chunk="<<chunk<<" gated="<<gated<<" contiguous="<<contiguous<<" index_bytes="<<kMetalAttentionIndexBytes<<" max_abs="<<maximumError<<"\n";
 }
 int main(){try{
     MetalContext gpu;
     Case(gpu,2,8,64,true);Case(gpu,2,8,4096,true);Case(gpu,1,64,4096,false);
+#ifdef GARNET_METAL_QWEN38_LARGE_PREFILL
+    static_assert(kMetalAttentionIndexBytes==2&&kMetalPrefillChunkLimit==256,"Large chunks require the signed 16-bit profile");
+    Case(gpu,1,128,4096,true,true);Case(gpu,1,256,4096,false);Case(gpu,2,256,512,true);
+#endif
     bool rejected=false;auto out=gpu.Allocate(1,1);gpu.Begin();
     try{gpu.EncodeAttentionChunk({},out,4,2,8,4097,8,true);}catch(const std::invalid_argument&){rejected=true;}
     gpu.Abort();Need(rejected,"Unqualified attention capacity accepted");

@@ -784,7 +784,9 @@ kernel void kv_chunk_vector4(device const float* token [[buffer(0)]],device cons
     next[row*uint(p.oStride/4)+col]=latest<0?previous[row*uint(p.cStride/4)+col]:source[(row*chunk+uint(latest))*uint(p.tStride/4)+h*dim+d];
 }
 struct ChunkAttentionParams {ulong batch,chunk,heads,kvHeads,dim,capacity,qStride,kStride,vStride,kcStride,vcStride,sStride,aStride,gStride,oStride,gated;};
-#ifdef GARNET_COMPACT_ATTENTION_INDEX
+#ifdef GARNET_ATTENTION_INDEX_I16
+typedef short ChunkAttentionIndex;
+#elif defined(GARNET_COMPACT_ATTENTION_INDEX)
 typedef char ChunkAttentionIndex;
 #else
 typedef int ChunkAttentionIndex;
@@ -1323,6 +1325,9 @@ kernel void vision_op(device const float* a [[buffer(0)]],device const float* b 
 #ifdef GARNET_METAL_COMPACT_ATTENTION_INDEX
         source=[@"#define GARNET_COMPACT_ATTENTION_INDEX 1\n" stringByAppendingString:source];
 #endif
+#ifdef GARNET_METAL_QWEN38_LARGE_PREFILL
+        source=[@"#define GARNET_ATTENTION_INDEX_I16 1\n" stringByAppendingString:source];
+#endif
 #ifdef GARNET_METAL_FUSED_VISION_CONTEXT
         source=[source stringByAppendingString:[NSString stringWithUTF8String:R"METAL(
 kernel void vision_softmax_context(device const float* a [[buffer(0)]],device const float* b [[buffer(1)]],device const float* c [[buffer(2)]],
@@ -1817,10 +1822,11 @@ void MetalContext::EncodeAffineInt4IndexedMatMul(const MetalMatrix& input,const 
         if(output.impl_->pending&&!impl_->pendingOutputs.count(output.impl_.get()))
             throw std::logic_error("Indexed affine output belongs to another command");
         std::vector<uint32_t> indices;indices.reserve(selectedRows.size());
-        std::unordered_set<size_t> unique;
+        std::array<bool,512> unique{};
         for(auto row:selectedRows) {
-            if(row>=a.rows||!unique.insert(row).second)
+            if(row>=a.rows||unique[row])
                 throw std::invalid_argument("Indexed affine rows must be unique and within physical storage");
+            unique[row]=true;
             indices.push_back(uint32_t(row));
         }
         // Validate before encoding any zero or projection. Padding bytes are
@@ -3415,7 +3421,7 @@ void MetalContext::EncodeKVChunk(const MetalMatrix& token,const MetalMatrix& cac
 }
 void MetalContext::EncodeAttentionChunk(const std::vector<MetalMatrix>& inputs,const MetalMatrix& output,
     size_t heads,size_t kvHeads,size_t dim,size_t capacity,size_t chunk,bool gated) {
-    if(inputs.size()!=8||!output.impl_||!chunk||chunk>kMetalPrefillChunkLimit||chunk>127||!capacity||capacity>kMetalAttentionChunkCapacityLimit||!kvHeads||heads%kvHeads)throw std::invalid_argument("Invalid chunk attention profile");
+    if(inputs.size()!=8||!output.impl_||!chunk||chunk>kMetalPrefillChunkLimit||chunk>kMetalAttentionChunkTokenLimit||!capacity||capacity>kMetalAttentionChunkCapacityLimit||!kvHeads||heads%kvHeads)throw std::invalid_argument("Invalid chunk attention profile");
     const size_t scoresBytes=(capacity*sizeof(float)+15)&~size_t(15);
     const size_t indexBytes=(capacity*kMetalAttentionIndexBytes+15)&~size_t(15);
     if(scoresBytes+indexBytes+4*sizeof(float)+sizeof(int)>impl_->device.maxThreadgroupMemoryLength)
