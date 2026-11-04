@@ -1364,3 +1364,28 @@ cells, one cold measured wave each, no warmups,128 maximum generated tokens.
 This isolates latency feedback before larger-batch changes; it does not replace
 the full repeated serving campaign or qualify aggregate throughput. It uses the
 already-qualified frozen indexed library/worker and graceful native shutdown.
+
+The indexed single-client admission completed both frozen cells with clean
+native close/worker exit0. Short/long TTFT is22.1556/112.4734s, decode is
+4.5233/3.8069tokens/s, and end-to-end time is50.2590/145.8518s for128 generated
+tokens each. The earlier batch2/chunk16 control measured25.8263/161.2150s TTFT
+and4.3850/3.7023decode tokens/s. These are individual cold samples, not repeated
+speedup qualification; the earlier batch1 tall control's long TTFT101.057s is
+still lower. All requested2x targets remain unmet against frozen references.
+The first campaign audit falsely required combined decode in this predeclared
+single-client-only manifest. It is preserved as `accounting-audit1.json`.
+The corrected auditor derives the requirement from frozen request-body counts,
+not observed completions. `accounting-audit2.json` passes both requests; all
+four applicable tamper checks pass. The existing six-cell concurrency campaign
+still passes all five checks including removal of combined decode.
+
+Larger token budgets have another concrete guard: the current signed-char
+attention token index path and explicit127-token cap cannot admit256-token
+chunks. A future large-chunk extension must change representation and scratch
+accounting together, then verify high token indices, old-cache selection,
+causal overwrite and inactive queries against the independent oracle. Raising
+only the public chunk limit would be unsafe. The installed MLX primary source
+`mlx/backend/metal/kernels/quantized_nax.h` also shows64x64 block tiling with
+cooperatively dequantized shared weights and per-SIMD register tiles. This is a
+specific projection-reuse reference for larger-M work, not evidence that our
+current register kernel or scheduler budget already matches its performance.

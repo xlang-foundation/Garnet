@@ -5,7 +5,9 @@ from audit_local_coder_batch_campaign import audit
 root=Path(sys.argv[1]).resolve();baseline=audit(root)
 expected={'throughput':'Aggregate throughput arithmetic differs','prompt':'Frozen prompt token IDs differ',
     'no_combined':'No actual combined decode','completion':'SSE request has no native completion','epoch':'Native request epochs reused'}
-for mutation in ('throughput','prompt','no_combined','completion','epoch'):
+mutations=['throughput','prompt','completion','epoch']
+if baseline.get('combined_decode_required',True):mutations.append('no_combined')
+for mutation in mutations:
     with tempfile.TemporaryDirectory() as folder:
         path=Path(folder)
         for item in root.iterdir():
@@ -33,4 +35,4 @@ for mutation in ('throughput','prompt','no_combined','completion','epoch'):
         result=audit(path);assert result['status']=='failed' and expected[mutation] in result['issues'] and expected[mutation] not in baseline['issues'],mutation
         print('batch campaign audit rejects',mutation)
 print('batch campaign audit baseline status:',baseline['status'])
-print('batch campaign audit PASS five distinct tamper detections; baseline failures retained')
+print('batch campaign audit PASS',len(mutations),'distinct tamper detections; baseline failures retained')

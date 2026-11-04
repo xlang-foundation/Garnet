@@ -35,10 +35,11 @@ def audit(root):
             completed[key]=e
             if e['generated_ids']!=streams.get(key) or e.get('cached_tokens')!=0:issues.append('Native final output/cache mismatch')
     if set(completed)!=set(streams):issues.append('Native stream/completion sets differ')
-    matched=set();requests=[];cells=[]
+    matched=set();requests=[];cells=[];combined_required=False
     for folder in sorted(campaign.glob('cohort-*')):
         for plan in manifest['plans']:
             frozen=campaign/'frozen'/plan['id'];workload=read(frozen/'workload.json');bodies=read(frozen/'cases.json')
+            if profile['batch']>1 and len(bodies)>1:combined_required=True
             for phase,count in [('warmup',manifest['warmup_waves_per_cell']),('measured',manifest['measured_waves_per_cell'])]:
                 for wave in range(count):
                     path=folder/f"{plan['id']}-{phase}-{wave}";summary=read(path/'summary.json');local=[]
@@ -79,7 +80,7 @@ def audit(root):
     if matched!=set(completed):issues.append('Native completions unmatched to client results')
     if len({r['native_epoch'] for r in requests})!=len(requests):issues.append('Native request epochs reused')
     combined=sum(e['stage']=='decode' and sum(e['active_rows'])>1 for e in batches)
-    if profile['batch']>1 and combined<1:issues.append('No actual combined decode')
+    if combined_required and combined<1:issues.append('No actual combined decode')
     # The legacy timing collector stops the owned process group via SIGTERM.
     # Record this explicitly rather than asserting a graceful native close.
     graceful=spec.get('graceful_native_shutdown',False)
@@ -91,7 +92,8 @@ def audit(root):
     if not closed:shutdown['limitations'].append('No graceful native close snapshot; rely on separate coding cleanup gate and collector group termination evidence')
     if any(e.get('memory',{}).get('metal_allocated_bytes',0)>1024*1024 for e in closed):issues.append('Observed native cleanup exceeds baseline')
     return dict(status='passed' if not issues else 'failed',issues=issues,scope=manifest['scope'],requests=requests,cells=cells,
-        combined_decode_plans=combined,shutdown=shutdown,baseline_accounting=base,worker_log_sha256=digest(root/'server/worker-stdout.jsonl'))
+        combined_decode_plans=combined,combined_decode_required=combined_required,
+        shutdown=shutdown,baseline_accounting=base,worker_log_sha256=digest(root/'server/worker-stdout.jsonl'))
 
 def main():
     p=argparse.ArgumentParser(description=__doc__);p.add_argument('--root',type=Path,required=True);p.add_argument('--output',type=Path,required=True);args=p.parse_args();report=audit(args.root)
