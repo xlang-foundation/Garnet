@@ -30,7 +30,7 @@ void Cell(MetalContext& gpu,size_t activeRows,size_t activeTokens,size_t prefix,
         const auto began=std::chrono::steady_clock::now();
         gpu.Begin();gpu.EncodeAttentionChunk(inputs,outputs[variant],heads,kvHeads,dim,capacity,chunk,true,variant==0);gpu.SubmitAndWait();
         const auto ended=std::chrono::steady_clock::now();
-        Need(gpu.LastChunkProbabilityReuseDispatches()==size_t(variant==1),"Probability policy route differs");
+        Need(gpu.LastChunkAttentionOptimizedDispatches()==size_t(variant==1),"Probability policy route differs");
         if(repeat>=0){gpuMs[variant].push_back(gpu.LastGPUMs());wallMs[variant].push_back(std::chrono::duration<double,std::milli>(ended-began).count());}
     }
     const auto control=gpu.Download(outputs[0]),candidate=gpu.Download(outputs[1]);
@@ -53,9 +53,16 @@ int main(int argc,char** argv) {
         const int repetitions=argc>1?std::stoi(argv[1]):9,warmups=argc>2?std::stoi(argv[2]):3;
         Need(repetitions>=3&&repetitions<=100&&warmups>=1&&warmups<=20,"Invalid sample policy");
         MetalContext gpu;
+#ifdef GARNET_METAL_CHUNK_ATTENTION_INDEX32
+        const char* policy="index32";
+        const char* rounding="32-bit bounded element indexes; FP32 operands and arithmetic order retained; bit parity measured";
+#else
+        const char* policy="probability";
+        const char* rounding="Default fast math; shared normalized probabilities may change rounding; bit parity measured";
+#endif
         std::cout<<std::setprecision(12)<<"{\"kind\":\"metadata\",\"device\":"<<std::quoted(gpu.DeviceName())
-            <<",\"physical_batch\":2,\"chunk\":128,\"capacity\":4096,\"heads\":24,\"kv_heads\":4,\"dim\":256,\"index_bytes\":"<<kMetalAttentionIndexBytes
-            <<",\"rounding_scope\":\"Default fast math; shared normalized probabilities may change rounding; not bitwise equivalent\",\"dtype\":\"float32\",\"gated\":true,\"order\":\"alternating within each cell\",\"scope\":\"Isolated read-only attention control/candidate comparison; excludes load, compile and upload; not model throughput\"}\n";
+            <<",\"candidate_policy\":"<<std::quoted(policy)<<",\"physical_batch\":2,\"chunk\":128,\"capacity\":4096,\"heads\":24,\"kv_heads\":4,\"dim\":256,\"index_bytes\":"<<kMetalAttentionIndexBytes
+            <<",\"rounding_scope\":"<<std::quoted(rounding)<<",\"dtype\":\"float32\",\"gated\":true,\"order\":\"alternating within each cell\",\"scope\":\"Isolated read-only attention control/candidate comparison; excludes load, compile and upload; not model throughput\"}\n";
         for(size_t activeRows:{1,2})for(size_t prefix:{0,128,1024,1920,3968})Cell(gpu,activeRows,128,prefix,warmups,repetitions);
         Cell(gpu,1,4,256,warmups,repetitions);Cell(gpu,1,6,2048,warmups,repetitions);
         return 0;

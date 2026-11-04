@@ -13,6 +13,8 @@ def write(path,value):
     with path.open('x') as stream:stream.write(json.dumps(value,indent=2)+'\n')
 def audit(root):
     manifest=json.loads((root/'manifest.json').read_text());status=json.loads((root/'status.json').read_text());issues=[]
+    policy=manifest.get('candidate_policy','probability')
+    if policy not in ('probability','index32'):issues.append('Unsupported attention policy')
     for name,wanted in manifest['files'].items():
         if digest(root/name)!=wanted:issues.append('Frozen artifact changed: '+name)
     if status['status']!='collected' or [(r['cohort'],r['returncode']) for r in status['runs']]!=[(i,0) for i in range(1,manifest['cohorts']+1)]:issues.append('Collection/cohort policy differs')
@@ -22,6 +24,7 @@ def audit(root):
         metadata=[r for r in rows if r.get('kind')=='metadata'];measurements=[r for r in rows if r.get('kind')=='cell']
         if len(metadata)!=1:issues.append('Metadata missing or duplicated');continue
         meta=metadata[0]
+        if meta.get('candidate_policy','probability')!=policy:issues.append('Compiled attention policy differs')
         for field,wanted in dict(device='Apple M5',physical_batch=2,chunk=128,capacity=4096,heads=24,kv_heads=4,dim=256,index_bytes=2,dtype='float32',gated=True,order='alternating within each cell').items():
             if meta.get(field)!=wanted:issues.append('Attention geometry/precision/order differs: '+field)
         keys=[(r['active_rows'],r['active_tokens_per_row'],r['prefix']) for r in measurements]
@@ -35,7 +38,9 @@ def audit(root):
                 if len(samples)!=manifest['repetitions'] or any(not math.isfinite(v) or v<=0 for v in samples):issues.append('Invalid timing samples')
             cells.setdefault(key,[]).append(dict(cohort=cohort,control_gpu_ms=statistics.median(row['control_gpu_ms']),candidate_gpu_ms=statistics.median(row['candidate_gpu_ms']),maximum_control_delta=delta,bitwise_equal=bitwise))
     cache=(root/'CMakeCache.txt').read_text()
-    if 'GARNET_METAL_CHUNK_PROBABILITY_REUSE:BOOL=ON' not in cache:issues.append('Required candidate pipeline was not compiled')
+    flag='GARNET_METAL_CHUNK_ATTENTION_INDEX32' if policy=='index32' else 'GARNET_METAL_CHUNK_PROBABILITY_REUSE'
+    other='GARNET_METAL_CHUNK_PROBABILITY_REUSE' if policy=='index32' else 'GARNET_METAL_CHUNK_ATTENTION_INDEX32'
+    if flag+':BOOL=ON' not in cache or other+':BOOL=ON' in cache:issues.append('Required isolated candidate pipeline was not compiled')
     results=[]
     for key,values in sorted(cells.items()):
         if len(values)!=manifest['cohorts']:issues.append('Missing shape cohort')
@@ -44,11 +49,12 @@ def audit(root):
             bitwise_equal=all(v['bitwise_equal'] for v in values),maximum_control_delta=max(v['maximum_control_delta'] for v in values),cohorts=values))
     return dict(status='passed' if not issues else 'failed',issues=issues,scope=__doc__,strict_bitwise_equivalence=all(r['bitwise_equal'] for r in results),cells=results,manifest_sha256=digest(root/'manifest.json'),auditor_sha256=digest(Path(__file__)))
 def main():
-    parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('--build',type=Path,required=True);parser.add_argument('--output',type=Path,required=True);args=parser.parse_args()
+    parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('--build',type=Path,required=True);parser.add_argument('--output',type=Path,required=True);parser.add_argument('--policy',choices=('probability','index32'),default='probability');args=parser.parse_args()
     if engine_processes():raise RuntimeError('An inference engine is live')
     root=args.output.resolve();root.mkdir(parents=True,exist_ok=False);source=Path(__file__).with_name('chunk_probability_benchmark.cpp');repo=source.parents[2]
     for path,name in [(args.build/'garnet_chunk_probability_benchmark','garnet_chunk_probability_benchmark'),(args.build/'CMakeCache.txt','CMakeCache.txt'),(source,'benchmark-source.cpp'),(Path(__file__),'runner-source.py'),(repo/'src/backends/metal/metal_context.mm','native-source.mm'),(repo/'src/backends/metal/metal_context.h','native-source.h')]:shutil.copy2(path,root/name)
-    manifest=dict(cohorts=3,warmups=3,repetitions=9,source_commit=subprocess.check_output(['git','rev-parse','HEAD'],cwd=repo,text=True).strip(),files={p.name:digest(p) for p in root.iterdir()})
+    if args.policy=='index32':shutil.copy2(repo/'src/backends/metal/chunk_attention_index_bounds.h',root/'index-bounds.h')
+    manifest=dict(candidate_policy=args.policy,cohorts=3,warmups=3,repetitions=9,source_commit=subprocess.check_output(['git','rev-parse','HEAD'],cwd=repo,text=True).strip(),files={p.name:digest(p) for p in root.iterdir()})
     write(root/'manifest.json',manifest);status=dict(status='running',runs=[])
     def save():(root/'status.json').write_text(json.dumps(status,indent=2)+'\n')
     save()

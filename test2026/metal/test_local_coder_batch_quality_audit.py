@@ -14,6 +14,7 @@ if baseline.get('reuse64_prefill_calls',0):mutations+=['missing_reuse64','bad_re
 if baseline.get('indexed_decode_calls',0):mutations+=['missing_indexed_decode','missing_indexed_decode_body','missing_indexed_decode_head','bad_indexed_decode_count','bad_indexed_decode_stage']
 if baseline.get('affine_profile_calls',0):mutations+=['missing_affine_profile','missing_affine_profile_decode','missing_affine_profile_head','bad_affine_profile_count','bad_affine_profile_miss','bad_affine_profile_stage','retained_profile_owner','missing_profile_owner','bad_affine_index_width']
 if baseline.get('affine_profile_index_bits')==32:mutations+=['missing_affine_index_width']
+if baseline.get('chunk_attention_index32_calls',0):mutations+=['missing_attention_index32','bad_attention_index32_count','bad_attention_index32_stage']
 for mutation in mutations:
     with tempfile.TemporaryDirectory() as temporary:
         path=Path(temporary)/'study';shutil.copytree(root,path)
@@ -24,6 +25,9 @@ for mutation in mutations:
             except json.JSONDecodeError:lines.append(line);continue
             if isinstance(event,dict):
                 kind=event.get('event')
+                if mutation=='missing_attention_index32' and kind=='native_chunk_attention_index32':continue
+                if mutation=='bad_attention_index32_count' and kind=='native_chunk_attention_index32':event['dispatches']=-1
+                if mutation=='bad_attention_index32_stage' and kind=='native_chunk_attention_index32':event['stage']='unvalidated'
                 if mutation=='missing_affine_index_width' and kind=='native_affine_profile':event.pop('index_bits',None)
                 if mutation=='bad_affine_index_width' and kind=='native_affine_profile':event['index_bits']=17
                 if mutation=='retained_profile_owner' and kind=='closed':event['memory']['garnet_live_matrix_owners']=1

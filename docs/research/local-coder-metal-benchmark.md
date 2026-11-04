@@ -1886,6 +1886,84 @@ Attention still uses64-bit index arithmetic in its hot loops, while the affine
 profile's successful narrowing does not cover those kernels. Proved bounded
 attention indexes and compiled geometry are the next candidates to evaluate.
 
+### Bounded attention indexes and profile semantics
+
+A compiled profile specifies upper bounds. A512-token input bound accepts
+shorter inputs; it does not require512 real input tokens. Layout, resource and
+tile choices can be compiled from that envelope while actual row counts,
+positions and masks remain runtime values. Chunk capacity and total context
+capacity are separate bounds. Sparse indexed projections skip unused token
+rows; the fixed chunk graph still masks its inactive attention queries.
+
+Default-OFF `GARNET_METAL_CHUNK_ATTENTION_INDEX32` narrows only the chunk
+attention element-index arithmetic after a host proof checks all16 ABI fields,
+batch/chunk/head products, logical widths and padded stride spans against
+UINT32_MAX. Pointers and the16-ulong host parameter ABI retain native width.
+Batch1..64, chunk1..256 and context up to4096 are bounded independently of the
+number of active tokens. Unsafe spans are rejected before dispatch. The
+original64-bit pipeline is compiled separately before ready as the A/B control.
+Probability reuse remains OFF; CMake rejects enabling both experiments.
+
+All16 native tests pass, including35 portable Qwen geometry profiles, nine
+padded-stride boundary pairs, every wide ABI field, invalid geometry and the
+original FP64 attention gates. The separate strict bitwise diagnostic also
+passes every attention test case. No numerical tolerance was changed.
+
+`chunk-attention-index32-kernel-comparison1` repeats the previous isolated
+attention protocol: three fresh sequential process cohorts, three warmups,
+nine measured calls per variant and alternating order within each cell. All
+12 cells are bitwise equal with maximum control delta0; archive audit and
+eight corruption checks pass. Times below are medians of cohort medians in
+milliseconds, for physical batch2/chunk128, heads24/KVheads4/dim256, FP32 KV
+capacity4096. Ratio is original64-bit time divided by candidate32-bit time.
+
+| Active rows | Actual tokens per row | Cached prefix | Control GPU ms | Candidate GPU ms | Ratio |
+|---:|---:|---:|---:|---:|---:|
+|1|4|256|0.652|0.491|1.328|
+|1|6|2048|8.107|7.395|1.096|
+|1|128|0|3.795|2.943|1.290|
+|1|128|128|9.845|8.239|1.195|
+|1|128|1024|70.131|62.455|1.123|
+|1|128|1920|151.266|138.079|1.096|
+|1|128|3968|308.573|281.717|1.095|
+|2|128|0|7.505|5.829|1.288|
+|2|128|128|19.460|15.950|1.220|
+|2|128|1024|143.204|127.967|1.119|
+|2|128|1920|300.510|274.687|1.094|
+|2|128|3968|614.772|560.415|1.097|
+
+These are operator measurements, not token throughput or evidence of a2x
+model gain.
+
+`native27b-chunk-attention-index32-chunk128-quality1` subsequently passes all
+eight sandbox coding tasks and all eight complete output-token sequences
+exactly match the original single-native reference. Accounting and33 corruption
+checks pass. The study records1026 combined decode plans, nine mixed forwards,
+three prefill/decode interleavings and1278 checked attention-policy commands.
+Each prefill command uses all16 full-attention layers; ordinary decode uses
+zero chunk-attention dispatches. Ready allocation remains17,853,775,872bytes;
+close allocation is1,507,328bytes with all four Garnet owner counts zero and
+worker exit0. Serving performance remains a separate gate.
+
+The exact qualified library/worker then completes
+`native27b-chunk-attention-index32-chunk128-http-admission1`: one cold C1 wave
+per cell, no warmups,128 outputs each. Both full output sequences match the
+preceding affine-index32 admission. Native accounting and15 corruption checks
+pass;274 checked attention-policy commands cover both requests.
+
+| Actual prompt tokens | First token s | Decode tokens/s | Total s | Overall output tokens/s |
+|---:|---:|---:|---:|---:|
+|260|14.376|6.926|32.741|3.909|
+|2054|47.738|6.032|68.830|1.860|
+
+The preceding single cold admission recorded13.050/49.951s first-token times
+and4.070/1.801 overall output tokens/s. The new short result is slower and the
+long result is faster; these individual cold observations cannot establish a
+repeatable model gain. Ordinary decode is outside this kernel change. The
+frozen vLLM/SGLang warm/cohort references are unchanged. No2x target or full
+matched campaign is satisfied. Retain the candidate as optional and keep
+both attention experiment flags OFF by default.
+
 ### Parent MTP asset discovery
 
 The converted pinned artifact contains no MTP parameters, but the original

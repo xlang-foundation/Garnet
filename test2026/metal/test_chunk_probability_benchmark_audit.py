@@ -18,7 +18,7 @@ for mutation in mutations:
             elif mutation=='negative_time':rows[1]['candidate_gpu_ms'][0]=-1
             elif mutation=='precision':rows[0]['dtype']='float16'
             elif mutation=='false_bitwise':
-                changed=next(r for r in rows if r.get('maximum_control_delta',0)>0);changed['bitwise_equal']=True
+                rows[1]['bitwise_equal']=True;rows[1]['maximum_control_delta']=1e-8
             elif mutation=='negative_delta':rows[1]['maximum_control_delta']=-1
             raw.write_text('\n'.join(json.dumps(row) for row in rows)+'\n')
         result=audit(path);assert result['status']=='failed' and result['issues'],mutation

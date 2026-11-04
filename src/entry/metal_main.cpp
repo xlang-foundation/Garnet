@@ -208,6 +208,9 @@ public:
 #ifdef GARNET_METAL_CHUNK_PROBABILITY_REUSE
     info+="; chunk_probability_reuse";
 #endif
+#ifdef GARNET_METAL_CHUNK_ATTENTION_INDEX32
+    info+="; chunk_attention_index32";
+#endif
 #ifdef GARNET_METAL_RETIRE_PREFILL_INPUTS
     info+="; retired_prefill_hidden_inputs";
 #endif

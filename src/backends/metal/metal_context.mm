@@ -1,5 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 #include "metal_context.h"
+#ifdef GARNET_METAL_CHUNK_ATTENTION_INDEX32
+#include "chunk_attention_index_bounds.h"
+#endif
 #ifdef GARNET_METAL_ROW_FINAL_HIDDEN
 #include "row_final_hidden_shader.h"
 #endif
@@ -347,7 +350,7 @@ struct MetalPipelines {
     id<MTLComputePipelineState> delta,deltaSplit;
     id<MTLComputePipelineState> deltaSplitParallel,deltaChunk;
     id<MTLComputePipelineState> slice,sliceVector;
-#ifdef GARNET_METAL_CHUNK_PROBABILITY_REUSE
+#if defined(GARNET_METAL_CHUNK_PROBABILITY_REUSE)||defined(GARNET_METAL_CHUNK_ATTENTION_INDEX32)
     id<MTLComputePipelineState> attentionChunkReference;
 #endif
     id<MTLComputePipelineState> prepare;
@@ -395,7 +398,7 @@ struct MetalContext::Impl {
 #endif
     size_t fusedHeadArgmaxDispatches=0;
     size_t bodyShapeDispatches=0,bodyShapeMisses=0;
-    size_t chunkProbabilityReuseDispatches=0;
+    size_t chunkProbabilityReuseDispatches=0,chunkAttentionIndex32Dispatches=0;
 #ifdef GARNET_METAL_AFFINE_PROFILE
     size_t affineProfileDispatches=0,affineProfileMisses=0,affineProfileMaxThreads=0;
 #endif
@@ -871,6 +874,12 @@ kernel void kv_chunk_vector4(device const float* token [[buffer(0)]],device cons
     next[row*uint(p.oStride/4)+col]=latest<0?previous[row*uint(p.cStride/4)+col]:source[(row*chunk+uint(latest))*uint(p.tStride/4)+h*dim+d];
 }
 struct ChunkAttentionParams {ulong batch,chunk,heads,kvHeads,dim,capacity,qStride,kStride,vStride,kcStride,vcStride,sStride,aStride,gStride,oStride,gated;};
+#ifdef GARNET_CHUNK_ATTENTION_INDEX32
+using ChunkIndex=uint;
+struct BoundedChunkAttentionParams {uint batch,chunk,heads,kvHeads,dim,capacity,qStride,kStride,vStride,kcStride,vcStride,sStride,aStride,gStride,oStride,gated;};
+#else
+using ChunkIndex=ulong;
+#endif
 constant bool chunk_probability_reuse [[function_constant(30)]];
 #ifdef GARNET_ATTENTION_INDEX_I16
 typedef short ChunkAttentionIndex;
@@ -882,26 +891,32 @@ typedef int ChunkAttentionIndex;
 kernel void attention_chunk(device const float* query [[buffer(0)]],device const float* key [[buffer(1)]],
     device const float* value [[buffer(2)]],device const float* keyCache [[buffer(3)]],device const float* valueCache [[buffer(4)]],
     device const float* slots [[buffer(5)]],device const float* active [[buffer(6)]],device const float* gate [[buffer(7)]],
-    device float* output [[buffer(8)]],constant ChunkAttentionParams& p [[buffer(9)]],
+    device float* output [[buffer(8)]],constant ChunkAttentionParams& runtime [[buffer(9)]],
     threadgroup float* scratch [[threadgroup(0)]],threadgroup ChunkAttentionIndex* selected [[threadgroup(1)]],
     uint id [[threadgroup_position_in_grid]],uint tid [[thread_index_in_threadgroup]],
     uint lane [[thread_index_in_simdgroup]],uint simd [[simdgroup_index_in_threadgroup]]) {
-    ulong flatRow=id/p.heads,head=id%p.heads,row=flatRow/p.chunk,token=flatRow%p.chunk,kv=head/(p.heads/p.kvHeads);
+#ifdef GARNET_CHUNK_ATTENTION_INDEX32
+    const BoundedChunkAttentionParams p{uint(runtime.batch),uint(runtime.chunk),uint(runtime.heads),uint(runtime.kvHeads),uint(runtime.dim),uint(runtime.capacity),
+        uint(runtime.qStride),uint(runtime.kStride),uint(runtime.vStride),uint(runtime.kcStride),uint(runtime.vcStride),uint(runtime.sStride),uint(runtime.aStride),uint(runtime.gStride),uint(runtime.oStride),uint(runtime.gated)};
+#else
+    constant ChunkAttentionParams& p=runtime;
+#endif
+    ChunkIndex flatRow=id/p.heads,head=id%p.heads,row=flatRow/p.chunk,token=flatRow%p.chunk,kv=head/(p.heads/p.kvHeads);
     if(flatRow>=p.batch*p.chunk)return;
-    if(active[row*p.aStride+token]==0.0f){for(ulong d=tid;d<p.dim;d+=128)output[flatRow*p.oStride+head*p.dim+d]=0.0f;return;}
-    const ulong visible=min(p.capacity,ulong(slots[row*p.sStride+token])+1);
+    if(active[row*p.aStride+token]==0.0f){for(ChunkIndex d=tid;d<p.dim;d+=128)output[flatRow*p.oStride+head*p.dim+d]=0.0f;return;}
+    const ChunkIndex visible=ChunkIndex(min(ulong(p.capacity),ulong(slots[row*p.sStride+token])+1));
     threadgroup float partial[4];
 #ifdef GARNET_ATTENTION_PREFIX
     threadgroup int contiguousPrefix;
     if(tid==0) {
         float first=slots[row*p.sStride];
         int valid=isfinite(first)&&first>=0.0f&&first==floor(first);
-        for(ulong t=0;t<=token;++t)if(active[row*p.aStride+t]==0.0f||slots[row*p.sStride+t]!=first+float(t))valid=0;
+        for(ChunkIndex t=0;t<=token;++t)if(active[row*p.aStride+t]==0.0f||slots[row*p.sStride+t]!=first+float(t))valid=0;
         contiguousPrefix=valid;
     }
     threadgroup_barrier(mem_flags::mem_threadgroup);
 #endif
-    for(ulong s=simd;s<visible;s+=4) {
+    for(ChunkIndex s=simd;s<visible;s+=4) {
 #ifdef GARNET_ATTENTION_PREFIX
         int latest=-1;
         if(contiguousPrefix) {
@@ -914,8 +929,8 @@ kernel void attention_chunk(device const float* query [[buffer(0)]],device const
         float score=-1e30f;
         if(float(s)<=slots[row*p.sStride+token]) {
             score=0.0f;
-            for(ulong d=lane;d<p.dim;d+=32) {
-                float k=latest<0?keyCache[row*p.kcStride+(kv*p.capacity+s)*p.dim+d]:key[(row*p.chunk+ulong(latest))*p.kStride+kv*p.dim+d];
+            for(ChunkIndex d=lane;d<p.dim;d+=32) {
+                float k=latest<0?keyCache[row*p.kcStride+(kv*p.capacity+s)*p.dim+d]:key[(row*p.chunk+ChunkIndex(latest))*p.kStride+kv*p.dim+d];
                 score+=query[flatRow*p.qStride+head*p.dim+d]*k;
             }
             score=simd_sum(score)*rsqrt(float(p.dim));
@@ -923,25 +938,25 @@ kernel void attention_chunk(device const float* query [[buffer(0)]],device const
         if(lane==0){scratch[s]=score;selected[s]=latest;}
     }
     threadgroup_barrier(mem_flags::mem_threadgroup);
-    float maximum=-INFINITY;for(ulong s=tid;s<visible;s+=128)maximum=max(maximum,scratch[s]);
+    float maximum=-INFINITY;for(ChunkIndex s=tid;s<visible;s+=128)maximum=max(maximum,scratch[s]);
     maximum=simd_max(maximum);if(lane==0)partial[simd]=maximum;
     threadgroup_barrier(mem_flags::mem_threadgroup);
     maximum=simd_max(lane<4?partial[lane]:-INFINITY);
     threadgroup_barrier(mem_flags::mem_threadgroup);
     float denominator=0.0f;
-    for(ulong s=tid;s<visible;s+=128){float probability=exp(scratch[s]-maximum);scratch[s]=probability;denominator+=probability;}
+    for(ChunkIndex s=tid;s<visible;s+=128){float probability=exp(scratch[s]-maximum);scratch[s]=probability;denominator+=probability;}
     denominator=simd_sum(denominator);if(lane==0)partial[simd]=denominator;
     threadgroup_barrier(mem_flags::mem_threadgroup);
     denominator=simd_sum(lane<4?partial[lane]:0.0f);
     if(chunk_probability_reuse) {
         // Each SIMD group has computed the same denominator. Preserve the
         // FP32 division and ordered value sum, but share its rounded result.
-        for(ulong s=tid;s<visible;s+=128)scratch[s]=scratch[s]/denominator;
+        for(ChunkIndex s=tid;s<visible;s+=128)scratch[s]=scratch[s]/denominator;
         threadgroup_barrier(mem_flags::mem_threadgroup);
     }
-    for(ulong d=tid;d<p.dim;d+=128) {
+    for(ChunkIndex d=tid;d<p.dim;d+=128) {
         float sum=0.0f;
-        for(ulong s=0;s<visible;++s){int latest=selected[s];float v=latest<0?valueCache[row*p.vcStride+(kv*p.capacity+s)*p.dim+d]:value[(row*p.chunk+ulong(latest))*p.vStride+kv*p.dim+d];float probability=chunk_probability_reuse?scratch[s]:scratch[s]/denominator;sum+=probability*v;}
+        for(ChunkIndex s=0;s<visible;++s){int latest=selected[s];float v=latest<0?valueCache[row*p.vcStride+(kv*p.capacity+s)*p.dim+d]:value[(row*p.chunk+ChunkIndex(latest))*p.vStride+kv*p.dim+d];float probability=chunk_probability_reuse?scratch[s]:scratch[s]/denominator;sum+=probability*v;}
         output[flatRow*p.oStride+head*p.dim+d]=p.gated?sum/(1.0f+exp(-gate[flatRow*p.gStride+head*p.dim+d])):sum;
     }
 }
@@ -1564,6 +1579,10 @@ kernel void bf16_native_dot_t128(device const float* a [[buffer(0)]],device cons
 #ifdef GARNET_METAL_ROW_FINAL_HIDDEN
         source=[source stringByAppendingString:[NSString stringWithUTF8String:kRowFinalHiddenShader]];
 #endif
+#ifdef GARNET_METAL_CHUNK_ATTENTION_INDEX32
+        NSString* referenceAttentionSource=source;
+        source=[@"#define GARNET_CHUNK_ATTENTION_INDEX32 1\n" stringByAppendingString:source];
+#endif
         auto library=[impl_->device newLibraryWithSource:source options:compileOptions error:&error];
         if(!library)throw std::runtime_error(std::string(error.localizedDescription.UTF8String));
         impl_->kernels->library=library;
@@ -1841,9 +1860,9 @@ kernel void bf16_native_dot_t128(device const float* a [[buffer(0)]],device cons
         impl_->kernels->vision=[impl_->device newComputePipelineStateWithFunction:[library newFunctionWithName:@"vision_op"] error:&error];
         impl_->kernels->kvChunk=[impl_->device newComputePipelineStateWithFunction:[library newFunctionWithName:@"kv_chunk"] error:&error];
         impl_->kernels->kvChunkVector=[impl_->device newComputePipelineStateWithFunction:[library newFunctionWithName:@"kv_chunk_vector4"] error:&error];
-        auto attentionPipeline=[&](bool reuse) {
+        auto attentionPipeline=[&](id<MTLLibrary> attentionLibrary,bool reuse) {
             auto constants=[MTLFunctionConstantValues new];[constants setConstantValue:&reuse type:MTLDataTypeBool atIndex:30];
-            auto function=[library newFunctionWithName:@"attention_chunk" constantValues:constants error:&error];
+            auto function=[attentionLibrary newFunctionWithName:@"attention_chunk" constantValues:constants error:&error];
             if(!function)throw std::runtime_error("Cannot specialize chunk attention probability policy");
             auto pipeline=[impl_->device newComputePipelineStateWithFunction:function error:&error];
             if(!pipeline||pipeline.threadExecutionWidth!=32||pipeline.maxTotalThreadsPerThreadgroup<128)
@@ -1851,10 +1870,15 @@ kernel void bf16_native_dot_t128(device const float* a [[buffer(0)]],device cons
             return pipeline;
         };
 #ifdef GARNET_METAL_CHUNK_PROBABILITY_REUSE
-        impl_->kernels->attentionChunk=attentionPipeline(true);
-        impl_->kernels->attentionChunkReference=attentionPipeline(false);
+        impl_->kernels->attentionChunk=attentionPipeline(library,true);
+        impl_->kernels->attentionChunkReference=attentionPipeline(library,false);
+#elif defined(GARNET_METAL_CHUNK_ATTENTION_INDEX32)
+        impl_->kernels->attentionChunk=attentionPipeline(library,false);
+        auto referenceLibrary=[impl_->device newLibraryWithSource:referenceAttentionSource options:compileOptions error:&error];
+        if(!referenceLibrary)throw std::runtime_error("Cannot compile original64-bit attention control");
+        impl_->kernels->attentionChunkReference=attentionPipeline(referenceLibrary,false);
 #else
-        impl_->kernels->attentionChunk=attentionPipeline(false);
+        impl_->kernels->attentionChunk=attentionPipeline(library,false);
 #endif
         impl_->kernels->layout=[impl_->device newComputePipelineStateWithFunction:[library newFunctionWithName:@"chunk_layout"] error:&error];
         if(!impl_->kernels->argmax||!impl_->kernels->bf16Decode||!impl_->kernels->bf16Gemm||!impl_->kernels->rms||!impl_->kernels->silu||!impl_->kernels->add||!impl_->kernels->mask||!impl_->kernels->conv||!impl_->kernels->delta||!impl_->kernels->slice||
@@ -3162,7 +3186,7 @@ void MetalContext::Begin() {
     impl_->screenDiagnosticReady=false;
 #endif
     impl_->partialSubmissions=0;
-    impl_->bodyShapeDispatches=impl_->bodyShapeMisses=0;impl_->chunkProbabilityReuseDispatches=0;
+    impl_->bodyShapeDispatches=impl_->bodyShapeMisses=0;impl_->chunkProbabilityReuseDispatches=impl_->chunkAttentionIndex32Dispatches=0;
 #ifdef GARNET_METAL_AFFINE_PROFILE
     impl_->affineProfileDispatches=impl_->affineProfileMisses=impl_->affineProfileMaxThreads=0;
 #endif
@@ -3431,10 +3455,14 @@ void MetalContext::EncodeStateKernel(unsigned operation,const std::vector<MetalM
     };
     auto pipeline=pipelines[operation];
     if(referenceAttention&&operation!=13)throw std::invalid_argument("Reference attention requires the chunk attention operation");
-#ifdef GARNET_METAL_CHUNK_PROBABILITY_REUSE
+#if defined(GARNET_METAL_CHUNK_PROBABILITY_REUSE)||defined(GARNET_METAL_CHUNK_ATTENTION_INDEX32)
     if(operation==13) {
         if(referenceAttention)pipeline=impl_->kernels->attentionChunkReference;
+#ifdef GARNET_METAL_CHUNK_PROBABILITY_REUSE
         else ++impl_->chunkProbabilityReuseDispatches;
+#else
+        else ++impl_->chunkAttentionIndex32Dispatches;
+#endif
     }
 #else
     if(referenceAttention)throw std::logic_error("Reference attention comparison requires the probability-reuse study build");
@@ -3830,9 +3858,15 @@ void MetalContext::EncodeAttentionChunk(const std::vector<MetalMatrix>& inputs,c
         g.rows!=q.rows||g.columns!=q.columns||o.rows!=q.rows||o.columns!=q.columns)throw std::invalid_argument("Chunk attention layout mismatch");
     struct Params {uint64_t batch,chunk,heads,kvHeads,dim,capacity,qStride,kStride,vStride,kcStride,vcStride,sStride,aStride,gStride,oStride,gated;};
     Params p{kc.rows,chunk,heads,kvHeads,dim,capacity,q.rowBytes/4,k.rowBytes/4,v.rowBytes/4,kc.rowBytes/4,vc.rowBytes/4,s.rowBytes/4,a.rowBytes/4,g.rowBytes/4,o.rowBytes/4,uint64_t(gated)};
+#ifdef GARNET_METAL_CHUNK_ATTENTION_INDEX32
+    const std::array<uint64_t,16> fields{p.batch,p.chunk,p.heads,p.kvHeads,p.dim,p.capacity,p.qStride,p.kStride,p.vStride,p.kcStride,p.vcStride,p.sStride,p.aStride,p.gStride,p.oStride,p.gated};
+    if(!reference&&!ChunkAttentionIndex32Fits(fields))throw std::invalid_argument("Chunk attention profile exceeds proved32-bit indexes");
+#endif
     EncodeStateKernel(13,inputs,output,&p,sizeof(p),Elements(q.rows,heads),nullptr,reference);
 }
 size_t MetalContext::LastChunkProbabilityReuseDispatches() const {return impl_->chunkProbabilityReuseDispatches;}
+size_t MetalContext::LastChunkAttentionIndex32Dispatches() const {return impl_->chunkAttentionIndex32Dispatches;}
+size_t MetalContext::LastChunkAttentionOptimizedDispatches() const {return impl_->chunkProbabilityReuseDispatches+impl_->chunkAttentionIndex32Dispatches;}
 void MetalContext::EncodeAttentionScores(const MetalMatrix& query,const MetalMatrix& key,const MetalMatrix& slots,
     const MetalMatrix& active,const MetalMatrix& output,size_t heads,size_t kvHeads,size_t dim,size_t capacity) {
     if(!query.impl_||!key.impl_||!slots.impl_||!active.impl_||!output.impl_||!kvHeads||!heads||heads%kvHeads)
@@ -3906,7 +3940,7 @@ void MetalContext::Abort() {
     // for reset/reuse; the uncommitted continuation is discarded.
     for(id<MTLCommandBuffer> prior in impl_->submitted)[prior waitUntilCompleted];
     impl_->submitted=nil;impl_->partialSubmissions=0;
-    impl_->bodyShapeDispatches=impl_->bodyShapeMisses=0;impl_->chunkProbabilityReuseDispatches=0;
+    impl_->bodyShapeDispatches=impl_->bodyShapeMisses=0;impl_->chunkProbabilityReuseDispatches=impl_->chunkAttentionIndex32Dispatches=0;
 #ifdef GARNET_METAL_AFFINE_PROFILE
     impl_->affineProfileDispatches=impl_->affineProfileMisses=impl_->affineProfileMaxThreads=0;
 #endif

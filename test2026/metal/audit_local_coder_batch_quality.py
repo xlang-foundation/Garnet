@@ -73,6 +73,25 @@ def profile_close_issues(profile,memory):
         if type(memory.get(key)) is not int or memory[key]!=0:issues.append('Native compiled profile resource owners remain or are unobserved')
     return issues
 
+def chunk_attention_issues(profile,events,backend,prefill_calls,decode_calls):
+    issues=[]
+    for policy in ('chunk_probability_reuse','chunk_attention_index32'):
+        enabled=profile.get(policy,False);calls=[e for e in events if e.get('event')=='native_'+policy]
+        if type(enabled) is not bool or enabled!=(policy in backend):issues.append('Chunk attention backend policy differs: '+policy)
+        if not enabled:
+            if calls:issues.append('Unexpected chunk attention experiment events: '+policy)
+            continue
+        coverage=profile.get('expected_chunk_attention_dispatches')
+        if type(coverage) is not int or coverage<1:issues.append('Invalid frozen chunk attention coverage');continue
+        if (sum(e.get('stage')=='prefill' for e in calls)!=prefill_calls or
+            sum(e.get('stage')=='decode' for e in calls)!=decode_calls):issues.append('Chunk attention command coverage differs')
+        for event in calls:
+            stage=event.get('stage');count=event.get('dispatches')
+            if stage not in ('prefill','decode') or type(count) is not int or count!=(coverage if stage=='prefill' else 0):
+                issues.append('Chunk attention route/count differs')
+    if profile.get('chunk_probability_reuse') and profile.get('chunk_attention_index32'):issues.append('Attention experiments must be isolated')
+    return issues
+
 def audit(root,reference=None):
     issues=[];artifacts=json.loads((root/'artifacts.json').read_text());collection=json.loads((root/'collection.json').read_text())
     for name,expected in artifacts['files'].items():
@@ -85,7 +104,8 @@ def audit(root,reference=None):
     if status['tasks']!=[dict(id=plan['id'],client_exit_code=0) for plan in plans]:issues.append('Task set/status differs')
     ready=[];closed=[];completed={};streams={};batch_plans=[];prompt_counts={};mpp=[]
     chunks={};decode_events=[];mixed_events=[];indexed_batches=[];indexed_events=[];reuse64_events=[];indexed_decode_events=[];affine_profile_events=[]
-    for event_index,event in enumerate(native_events(root/'server/worker-stdout.jsonl')):
+    events=list(native_events(root/'server/worker-stdout.jsonl'))
+    for event_index,event in enumerate(events):
         kind=event.get('event');key=event.get('id')
         if kind=='ready':ready.append(event)
         elif kind=='closed':closed.append(event)
@@ -117,6 +137,8 @@ def audit(root,reference=None):
             if isinstance(candidate,dict) and 'profile_id' in candidate:profiles.append(candidate)
     if len(profiles)!=1:raise ValueError('Exactly one hash-verified frozen native profile required')
     profile=profiles[0]
+    issues.extend(chunk_attention_issues(profile,events,ready[0].get('backend','') if ready else '',
+        sum(e['stage']=='prefill' for e in batch_plans),len(decode_events)-len(mixed_events)))
     if profile.get('require_reuse64',False):
         if not reuse64_events or not any(e.get('affine_dispatches',0)>0 for e in reuse64_events):
             issues.append('Required cooperative64 projection route missing')
@@ -233,6 +255,7 @@ def audit(root,reference=None):
         context_capacity=ready[0]['capacity'] if ready else None,mpp_prefill_calls=len(mpp),mixed_forward_calls=len(mixed_events),
         indexed_prefill_calls=len(indexed_events),
         reuse64_prefill_calls=len(reuse64_events),indexed_decode_calls=len(indexed_decode_events),affine_profile_calls=len(affine_profile_events),affine_profile_index_bits=profile.get('affine_profile_index_bits',64) if profile.get('bounded_affine_kernel_profiles') else 0,
+        chunk_attention_index32_calls=sum(e.get('event')=='native_chunk_attention_index32' for e in events),
         scope='Concurrent native frozen prompt/stream/HTTP accounting and row lifecycle; coding correctness requires separate sandbox evaluation',
         auditor_sha256=digest(Path(__file__)),reference_worker_log_sha256=digest(reference) if reference else None,
         artifacts_sha256=digest(root/'artifacts.json'),worker_log_sha256=digest(root/'server/worker-stdout.jsonl'))

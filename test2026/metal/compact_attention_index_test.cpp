@@ -28,12 +28,12 @@ static void Case(MetalContext& gpu,size_t batch,size_t chunk,size_t capacity,boo
     gpu.Begin();gpu.EncodeAttentionChunk(inputs,output,heads,kvHeads,dim,capacity,chunk,gated);gpu.SubmitAndWait();
     const auto actual=gpu.Download(output);
     for(float value:actual)Need(std::isfinite(value),"Nonfinite chunk attention output");
-#ifdef GARNET_METAL_CHUNK_PROBABILITY_REUSE
-    Need(gpu.LastChunkProbabilityReuseDispatches()==1,"Probability-reuse route was not exercised");
+#if defined(GARNET_METAL_CHUNK_PROBABILITY_REUSE)||defined(GARNET_METAL_CHUNK_ATTENTION_INDEX32)
+    Need(gpu.LastChunkAttentionOptimizedDispatches()==1,"Probability-reuse route was not exercised");
     auto reference=gpu.Allocate(rows,qWidth);
     gpu.Begin();gpu.EncodeAttentionChunk(inputs,reference,heads,kvHeads,dim,capacity,chunk,gated,true);gpu.SubmitAndWait();
     const auto original=gpu.Download(reference);
-    Need(gpu.LastChunkProbabilityReuseDispatches()==0,"Reference unexpectedly used shared normalized probabilities");
+    Need(gpu.LastChunkAttentionOptimizedDispatches()==0,"Reference unexpectedly used shared normalized probabilities");
     if(std::memcmp(actual.data(),original.data(),actual.size()*sizeof(float))!=0) {
         size_t mismatches=0;double maximum=0;
         for(size_t i=0;i<actual.size();++i)if(actual[i]!=original[i]) {

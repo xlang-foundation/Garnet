@@ -301,6 +301,8 @@ public:
     void EncodeAttentionChunk(const std::vector<MetalMatrix>&,const MetalMatrix&,size_t heads,size_t kvHeads,
         size_t dim,size_t capacity,size_t chunk,bool gated,bool reference=false);
     size_t LastChunkProbabilityReuseDispatches() const;
+    size_t LastChunkAttentionIndex32Dispatches() const;
+    size_t LastChunkAttentionOptimizedDispatches() const;
     void EncodeAttentionScores(const MetalMatrix&,const MetalMatrix&,const MetalMatrix&,const MetalMatrix&,
         const MetalMatrix&,size_t heads,size_t kvHeads,size_t dim,size_t capacity);
     void EncodeAttentionContext(const MetalMatrix&,const MetalMatrix&,const MetalMatrix&,const MetalMatrix&,const MetalMatrix&,

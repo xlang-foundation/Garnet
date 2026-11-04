@@ -30,10 +30,14 @@ def main():
     if prefill_schedule not in ('whole','chunked'):raise ValueError('Explicit supported prefill scheduling mode required')
     chunked=prefill_schedule=='chunked'
     probability_reuse=profile.get('chunk_probability_reuse',False)
+    attention_index32=profile.get('chunk_attention_index32',False)
+    if type(attention_index32) is not bool or attention_index32!=('chunk_attention_index32' in garnet.backend_info()):
+        raise ValueError('Frozen profile requires its explicit chunk attention index policy')
     if type(probability_reuse) is not bool or probability_reuse!=('chunk_probability_reuse' in garnet.backend_info()):
         raise ValueError('Frozen profile requires its explicit chunk probability policy')
-    if probability_reuse and (type(profile.get('expected_chunk_attention_dispatches')) is not int or profile['expected_chunk_attention_dispatches']<1):
-        raise ValueError('Chunk probability policy requires explicit full-attention layer coverage')
+    if probability_reuse and attention_index32:raise ValueError('Attention experiments must be isolated')
+    if (probability_reuse or attention_index32) and (type(profile.get('expected_chunk_attention_dispatches')) is not int or profile['expected_chunk_attention_dispatches']<1):
+        raise ValueError('Chunk attention policy requires explicit full-attention layer coverage')
     trace_stages=profile.get('trace_stage_latency',False)
     if type(trace_stages) is not bool:raise ValueError('Stage tracing requires an explicit boolean policy')
     mixed=profile.get('mixed_forward',False)
@@ -194,6 +198,11 @@ def main():
                 expected=profile['expected_chunk_attention_dispatches'] if len(ids)>batch else 0
                 emit(dict(event='native_chunk_probability_reuse',stage='prefill' if len(ids)>batch else 'decode',dispatches=count))
                 if count!=expected:raise ValueError('Native probability reuse coverage differs from the profile')
+            if attention_index32:
+                count=decoder.session.chunk_attention_index32_dispatches
+                expected=profile['expected_chunk_attention_dispatches'] if len(ids)>batch else 0
+                emit(dict(event='native_chunk_attention_index32',stage='prefill' if len(ids)>batch else 'decode',dispatches=count))
+                if count!=expected:raise ValueError('Native attention index coverage differs from the profile')
             if trace_stages:
                 emit(dict(event='native_stage_trace',stage='prefill' if len(ids)>batch else 'decode',
                     embedding_wall_ms=embedding_ms[0],run_wall_ms=elapsed,
