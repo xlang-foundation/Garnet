@@ -181,6 +181,9 @@ public:
 #ifdef GARNET_METAL_INDEXED_TOKEN_PROJECTIONS
     info+="; indexed_token_projections";
 #endif
+#ifdef GARNET_METAL_MPP_AFFINE_REUSE64
+    info+="; mpp_affine_reuse64_optional; mpp_affine_reuse64_min_outputs=5120";
+#endif
 #ifdef GARNET_METAL_RETIRE_NONRESIDENT_PACKS
     info+="; retired_nonresident_packs";
 #endif

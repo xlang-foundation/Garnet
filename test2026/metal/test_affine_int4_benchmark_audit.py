@@ -5,7 +5,8 @@ from summarize_affine_int4_benchmark import summarize
 root=Path(sys.argv[1]);assert summarize(root)['status']=='passed'
 manifest=json.loads((root/'manifest.json').read_text());candidates=manifest.get('required_mpp_variants',['mpp'] if 'mpp' in manifest['variant_order'] else [])
 assert candidates,'MPP archive required';candidate=candidates[0]
-for mutation in ('negative_gpu_time','missing_cell','missing_mpp','changed_binary','skipped_cohort','bad_precision','bad_tile','bad_layout','bad_rows','bad_registers','bad_tensor_k'):
+mutations=['negative_gpu_time','missing_cell','missing_mpp','changed_binary','skipped_cohort','bad_precision','bad_tile','bad_layout','bad_rows','bad_registers','bad_tensor_k','bad_reuse64_availability','bad_reuse64_count','bad_shape_set','bad_reuse64_threshold','bad_reuse64_storage']
+for mutation in mutations:
     with tempfile.TemporaryDirectory() as temporary:
         path=Path(temporary)/'study';shutil.copytree(root,path)
         if mutation=='changed_binary':
@@ -23,7 +24,12 @@ for mutation in ('negative_gpu_time','missing_cell','missing_mpp','changed_binar
             elif mutation=='bad_tensor_k':rows[0]['mpp_tensor_k']=99
             elif mutation=='bad_rows':rows[0]['maximum_rows']=0
             elif mutation=='bad_layout':rows[0]['mpp_n_major']=not rows[0].get('mpp_n_major',False)
+            elif mutation=='bad_reuse64_availability':rows[0]['reuse64_available']=not rows[0].get('reuse64_available',False)
+            elif mutation=='bad_reuse64_count':rows[1]['reuse64_dispatches_per_call']=99
+            elif mutation=='bad_shape_set':rows[0]['shape_set']='invalid'
+            elif mutation=='bad_reuse64_threshold':rows[0]['reuse64_min_outputs']=1
+            elif mutation=='bad_reuse64_storage':rows[0]['reuse64_registers']=not rows[0].get('reuse64_registers',False)
             raw.write_text('\n'.join(json.dumps(row) for row in rows)+'\n')
         result=summarize(path);assert result['status']=='failed' and result['issues'],mutation
         print('affine_int4_benchmark_audit rejects',mutation)
-print('affine_int4_benchmark_audit PASS baseline and eleven tamper cases')
+print('affine_int4_benchmark_audit PASS baseline and',len(mutations),'tamper cases')

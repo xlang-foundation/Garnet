@@ -98,6 +98,9 @@ void Case(MetalContext& gpu,size_t m,size_t n,size_t k) {
 #ifdef GARNET_METAL_MPP_AFFINE
     Require(gpu.LastMPPAffineDispatches()==size_t(m>4&&gpu.HasMPPAffine()),"MPP affine route/counter mismatch");
 #endif
+#ifdef GARNET_METAL_MPP_AFFINE_REUSE64
+    Require(gpu.LastReuse64AffineDispatches()==size_t(m>=64&&n>=5120&&gpu.HasReuse64Affine()),"Cooperative64 affine route/counter mismatch");
+#endif
     double maximum=0;
     for(size_t row=0;row<m;++row)for(size_t column=0;column<n;++column) {
         double expected=0;
@@ -135,6 +138,9 @@ void IndexedCase(MetalContext& gpu,size_t m,size_t n,size_t k) {
     for(const auto& selected:selections) {
         gpu.Begin();gpu.EncodeAffineInt4IndexedMatMul(a,weight,out,selected);gpu.SubmitAndWait();
         Require(gpu.LastIndexedAffineDispatches()==size_t(!selected.empty()),"indexed affine route/counter mismatch");
+#ifdef GARNET_METAL_MPP_AFFINE_REUSE64
+        Require(gpu.LastReuse64AffineDispatches()==size_t(selected.size()>=64&&n>=5120&&gpu.HasReuse64Affine()),"indexed cooperative64 route mismatch");
+#endif
         const auto actual=gpu.Download(out);std::set<size_t> active(selected.begin(),selected.end());
         for(size_t row=0;row<m;++row)for(size_t column=0;column<n;++column) {
             double expected=0;
@@ -160,6 +166,11 @@ int main() {
         CodecGolden();
         VisionPatchGolden();
         MetalContext gpu;
+#ifdef GARNET_METAL_MPP_AFFINE_REUSE64
+        Require(gpu.HasReuse64Affine(),"cooperative64 affine unavailable");
+        Case(gpu,63,5121,128);Case(gpu,64,5121,128);Case(gpu,65,5127,128);
+        IndexedCase(gpu,128,5127,128);
+#endif
 #ifdef GARNET_METAL_INDEXED_AFFINE
         Require(gpu.HasIndexedAffine(),"indexed affine candidate unavailable");
         for(auto shape:std::array<std::array<size_t,3>,6>{{{1,37,64},{17,33,128},{32,37,5120},

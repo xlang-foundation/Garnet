@@ -1417,3 +1417,102 @@ strict BF16 register operands, indexed/mixed execution, pack retirement and the
 GPU-verified contiguous slot fast path. It uses one fixed graph family and the
 existing recommended-working-set-minus256MiB allocation guard. Chunk256 is not
 assumed to fit or qualify. No learned result or speedup is assumed for128 yet.
+
+The chunk128 coding run has now completed:8/8 sandboxed tasks pass, all eight
+full token sequences exactly match the single-request reference, the stream
+audit records1,063 combined decode plans and9 mixed forwards, and all13
+corruption checks pass. Ready Metal allocation is18,188,271,616bytes and close
+returns to720,896bytes. Its timing admission is separately frozen at
+`native27b-large-indexed-mixed-chunk128-http-admission1`: the same qualified
+library and worker, short/long single-client cells, one cold wave each, no
+warmups. This does not qualify repeated performance or concurrent throughput.
+
+### Further direct vLLM/MLX inspection and cooperative projection experiments
+
+`evidence/vllm-source-inspection2` freezes and hashes the installed vLLM0.32.0
+core scheduler/cache manager, pinned vLLM-Metal runner/linear wrapper, and
+MLX0.32.4 quantized headers. Core `schedule()` budgets outstanding token
+positions using `num_computed_tokens`, `num_tokens_with_spec` and remaining
+shared input capacity; it is not a fixed per-request chunk loop. Core
+`get_computed_blocks()` delegates longest block-hash prefix lookup to the cache
+coordinator. The actual baseline disables prefix caching, so cache reuse cannot
+explain its uncached speed. The Metal runner packs valid decode/prompt tokens
+into one matrix, while each request retains independent convolution/recurrent
+state. Garnet's indexed projections skip inactive rows, but other graph
+operators and storage remain padded. These are distinct scheduling, kernel and
+layout gaps; matching the512-token budget alone does not fix them.
+
+The first default-OFF `GARNET_METAL_MPP_AFFINE_REUSE64` prototype stages64x64
+BF16 A/B tiles, reuses dequantized weights across64 queries and uses an MPP
+operation spanning four SIMD groups. Independent native references and all13
+CTests pass without tolerance changes (`reuse64-ctest1.log`). The frozen
+`affine-reuse64-comparison1` measures30 shapes over three sequential cohorts
+with3 warmups and9 samples. Larger256/512-row synthetic projections improve,
+but some64/128-row cases regress. The eight actual checkpoint projection
+dimensions are separately measured in `affine-reuse64-qwen-shapes1` (80 cells
+per variant, three cohorts). This includes48-output gates and1024-output K/V
+projections; a5120x5120 synthetic shape is not representative of all layers.
+Both campaigns pass route/precision/hash/count audits. Initial sources/library
+are retained in `affine-reuse64-sources1` before changing the prototype.
+
+A direct isolated MLX large-prefill probe uses the same deterministic affine
+INT4/group64/BF16 operands, three fresh shape traversals and3+9 warmup/measured
+calls (`mlx-affine-shapes-probe2.json`,96 cells). It excludes loading,
+compilation and transfers, measures synchronized wall time, and verifies three
+FP64 samples per shape plus all-output finiteness. MLX stores BF16 output;
+Garnet stores FP32, so this is a diagnostic comparison with different output
+precision. The first probe incorrectly applied the matrix oracle to MLX's
+small-row grouped quantized-matvec arithmetic and failed; its partial archive
+and traceback are preserved. The corrected probe explicitly covers only
+64/128/256/512-row matrix work and passes the unchanged matrix-oracle bound.
+No serving reference is rerun or replaced by this operator probe.
+
+MLX's source combines cooperative padded weight staging with per-SIMD register
+matrix operations. A second Garnet prototype follows that structure using a
+64x64 weight tile padded to72 BF16 elements per row, two16x32 FP32 accumulators
+per SIMD group and mapped active-row loads/stores. It keeps strict BF16 operand
+and FP32 accumulator/output semantics. All13 native tests pass
+(`reuse64-registers-ctest2.log`). `affine-reuse64-qwen-shapes2` passes80-cell
+three-cohort accounting; ordinary decode still uses its original kernel.
+Illustrative synchronized operator wall medians in milliseconds:
+
+| Valid rows; output x inner | Existing registers | First cooperative prototype | Second cooperative prototype | MLX BF16 output |
+| --- | ---: | ---: | ---: | ---: |
+|128;17408x5120|10.401|7.791|8.203|2.099|
+|128;5120x17408|10.605|10.346|8.566|2.428|
+|256;17408x5120|22.931|15.942|16.012|3.942|
+
+The existing-register column is from the first actual-shape campaign; its raw
+control is remeasured in the second campaign and retained, rather than assuming
+identical controls across runs. These are isolated operators, not model token
+rates or a speedup qualification. Narrow projections still regress under the
+new prototype. Both prototypes remain default-OFF with full learned coding and
+serving gates pending; all2x goals remain unmet.
+
+The chunk128 single-client admission then completed both cells with a passing
+accounting audit, all four applicable corruption checks, native close and
+worker exit0. Short/long TTFT is22.4204/104.6731s; decode is4.2286/3.5956tokens/s;
+full request time is52.4915/140.0375s for128 output tokens each. Relative to the
+previous indexed chunk16 cold samples, long TTFT improves6.94%, but short TTFT
+and both decode rates regress. The older batch1 tall control's101.057s long
+TTFT remains lower. These are cold admissions, not repeated speedup evidence.
+Frozen vLLM-Metal's corresponding long single-client TTFT is15.228s.
+
+Based on actual-shape operator results, the next default-OFF cooperative
+dispatch keeps narrow output projections on the existing kernel: at least64
+valid rows **and**5120 outputs are required. The backend/worker profile exposes
+the threshold explicitly. New independent route/oracle cases cover63/64/65
+rows, large unaligned output widths and sparse/reversed128-row maps. Earlier
+unconditional prototype timings remain archived and cannot stand in for this
+gated policy's measurements or learned-model qualification.
+
+The gated build passes all13 native tests including the new route boundaries
+(`reuse64-gated-ctest3.log`). Its frozen sequential operator campaign,
+`affine-reuse64-gated-qwen-shapes3`, passes80-cell accounting and16 independent
+corruption checks. GPU-time speed ratios versus the matched strict register
+control for projections with at least5120 outputs are1.035..1.159x at64 valid
+rows,1.128..1.178x at128,1.163..1.238x at256 and1.244..1.503x at512. Narrow
+projections retain the original route. These component ratios are not token
+rates, a repeated model campaign or evidence that the2x target is reached.
+The next learned gate uses the explicit `require_reuse64` and
+`reuse64_min_outputs:5120` profile identities on batch2/4K/chunk128.

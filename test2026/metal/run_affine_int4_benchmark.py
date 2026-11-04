@@ -13,7 +13,8 @@ def main():
     parser.add_argument('--variant',action='append',required=True,help='LABEL=BUILD_DIRECTORY; CLI order is measured order')
     parser.add_argument('--output',type=Path,required=True);parser.add_argument('--cohorts',type=int,default=3)
     parser.add_argument('--warmups',type=int,default=3);parser.add_argument('--repetitions',type=int,default=9)
-    parser.add_argument('--maximum-rows',type=int,choices=(64,128),default=64,help='128 covers batch2 x chunk64 packed prefill')
+    parser.add_argument('--maximum-rows',type=int,choices=(64,128,512),default=64,help='128 covers batch2 x chunk64;512 includes large-chunk256 at batch2')
+    parser.add_argument('--shape-set',choices=('synthetic','qwen27b'),default='synthetic')
     args=parser.parse_args()
     if not 1<=args.cohorts<=10 or not 1<=args.warmups<=20 or not 3<=args.repetitions<=100:parser.error('Invalid cohort/warmup/repetition bounds')
     variants={}
@@ -28,7 +29,7 @@ def main():
     out=args.output.resolve();out.mkdir(parents=True,exist_ok=False)
     source=Path(__file__).with_name('affine_int4_benchmark.cpp');repo=source.parents[2]
     manifest=dict(scope='Synthetic projection GPU/wall latency, explicit operand profiles per variant; excludes loading/compilation/downloads, not model quality or throughput',
-        maximum_rows=args.maximum_rows,source_commit=subprocess.check_output(['git','rev-parse','HEAD'],cwd=repo,text=True).strip(),warmups=args.warmups,repetitions=args.repetitions,cohorts=args.cohorts,
+        maximum_rows=args.maximum_rows,shape_set=args.shape_set,source_commit=subprocess.check_output(['git','rev-parse','HEAD'],cwd=repo,text=True).strip(),warmups=args.warmups,repetitions=args.repetitions,cohorts=args.cohorts,
         variant_order=list(variants),variants={},required_mpp_variants=[])
     for label,folder in variants.items():
         target=out/label;target.mkdir()
@@ -49,7 +50,7 @@ def main():
                 if live:raise RuntimeError('An inference engine is live: '+str(live))
                 began=time.monotonic()
                 with (out/f'{label}-cohort{cohort}.jsonl').open('x') as stdout,(out/f'{label}-cohort{cohort}.stderr').open('x') as stderr:
-                    process=subprocess.Popen([str(out/label/'garnet_affine_int4_benchmark'),str(args.repetitions),str(args.warmups),str(args.maximum_rows)],stdout=stdout,stderr=stderr)
+                    process=subprocess.Popen([str(out/label/'garnet_affine_int4_benchmark'),str(args.repetitions),str(args.warmups),str(args.maximum_rows),args.shape_set],stdout=stdout,stderr=stderr)
                     status['current']=dict(variant=label,cohort=cohort,pid=process.pid);save();returncode=process.wait()
                 status['runs'].append(dict(variant=label,cohort=cohort,returncode=returncode,total_seconds=time.monotonic()-began));status.pop('current',None);save()
                 print(json.dumps(status['runs'][-1]),flush=True)

@@ -103,6 +103,10 @@ struct MetalPrimaryStats {
 class MetalContext {
     struct Impl;
     std::unique_ptr<Impl> impl_;
+#ifdef GARNET_METAL_INDEXED_AFFINE
+    void EncodeAffineInt4IndexedImpl(const MetalMatrix&,const MetalAffineInt4Weight&,
+        const MetalMatrix&,const std::vector<size_t>&,bool reportIndexed);
+#endif
     void EncodePointwise(const MetalMatrix&, const MetalMatrix&, const MetalMatrix&,
         unsigned operation, float epsilon, float offset);
     void EncodeStateKernel(unsigned operation,const std::vector<MetalMatrix>&,
@@ -140,6 +144,10 @@ public:
         const MetalMatrix&,const std::vector<size_t>& selectedRows);
     bool HasIndexedAffine() const;
     size_t LastIndexedAffineDispatches() const;
+#endif
+#ifdef GARNET_METAL_MPP_AFFINE_REUSE64
+    bool HasReuse64Affine() const;
+    size_t LastReuse64AffineDispatches() const;
 #endif
 #endif
     MetalMatrix Upload(const std::vector<float>& values, size_t rows, size_t columns);

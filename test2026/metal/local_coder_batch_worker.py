@@ -43,6 +43,11 @@ def main():
     large=profile.get('large_prefill',False)
     if type(large) is not bool or large!=('qwen38_large_prefill' in garnet.backend_info()):
         raise ValueError('Frozen profile requires its explicit large prefill policy')
+    reuse64=profile.get('require_reuse64',False)
+    if type(reuse64) is not bool or reuse64!=('mpp_affine_reuse64_optional' in garnet.backend_info()):
+        raise ValueError('Frozen profile requires its explicit cooperative64 projection policy')
+    if reuse64 and (profile.get('reuse64_min_outputs')!=5120 or 'mpp_affine_reuse64_min_outputs=5120' not in garnet.backend_info()):
+        raise ValueError('Frozen cooperative64 profile requires its measured large-output threshold')
     if 'require_attention_prefix' in profile:
         attention_prefix=profile['require_attention_prefix']
         if type(attention_prefix) is not bool or attention_prefix!=('attention_prefix' in garnet.backend_info()):
@@ -139,6 +144,12 @@ def main():
                 valid=sum(1 for flag in active.tolist() if flag!=0)
                 if valid<len(ids) and count<1:raise ValueError('Required sparse indexed projection route was not exercised')
                 emit(dict(event='native_indexed',affine_dispatches=count,active_tokens=valid,physical_rows=len(ids)))
+            if reuse64 and len(ids)>batch:
+                valid=sum(1 for flag in active.tolist() if flag!=0)
+                logical=valid if indexed else len(ids);count=decoder.session.mpp_reuse64_dispatches
+                if (logical>=64 and count<1) or (logical<64 and count!=0):
+                    raise ValueError('Cooperative64 route disagrees with native token count')
+                emit(dict(event='native_reuse64',affine_dispatches=count,logical_rows=logical,physical_rows=len(ids)))
             return result
         def deliver(request,token,stage):
             identity=request['id'];job=jobs[identity]

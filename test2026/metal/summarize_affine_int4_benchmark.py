@@ -11,8 +11,11 @@ def summarize(root):
     if digest(root/'benchmark-source.cpp')!=manifest['source_sha256']:issues.append('Frozen source hash differs')
     if 'runner_sha256' in manifest and digest(root/'runner-source.py')!=manifest['runner_sha256']:issues.append('Frozen collector hash differs')
     maximum_rows=manifest.get('maximum_rows',64)
-    if maximum_rows not in (64,128):raise ValueError('Unsupported frozen maximum packed row count')
-    expected={(m,n,k) for m in (1,2,4,8,16,32,64,128) if m<=maximum_rows for n,k in ((5120,5120),(17408,5120),(5120,17408))}
+    if maximum_rows not in (64,128,512):raise ValueError('Unsupported frozen maximum packed row count')
+    shape_set=manifest.get('shape_set','synthetic')
+    if shape_set not in ('synthetic','qwen27b'):raise ValueError('Unsupported frozen projection shape set')
+    dimensions=((48,5120),(1024,5120),(5120,6144),(5120,17408),(6144,5120),(10240,5120),(12288,5120),(17408,5120)) if shape_set=='qwen27b' else ((5120,5120),(17408,5120),(5120,17408))
+    expected={(m,n,k) for m in (1,2,4,8,16,32,64,128,256,512) if m<=maximum_rows for n,k in dimensions}
     metadata={}
     for variant in order:
         for name,wanted in manifest['variants'][variant].items():
@@ -23,6 +26,7 @@ def summarize(root):
             meta=[row for row in rows if row['kind']=='metadata'];measurements=[row for row in rows if row['kind']=='cell']
             if len(meta)!=1 or meta[0]['device']!='Apple M5':issues.append(variant+': device/metadata differs')
             if len(meta)==1 and meta[0].get('maximum_rows',64)!=maximum_rows:issues.append(variant+': packed row coverage metadata differs from frozen plan')
+            if len(meta)==1 and meta[0].get('shape_set','synthetic')!=shape_set:issues.append(variant+': projection shape set differs from frozen plan')
             metadata.setdefault(variant,[]).extend(meta)
             keys=[(row['rows'],row['outputs'],row['inner']) for row in measurements]
             if len(keys)!=len(expected) or set(keys)!=expected:issues.append(variant+': shape coverage differs')
@@ -33,12 +37,15 @@ def summarize(root):
                     if len(values)!=manifest['repetitions'] or any(not math.isfinite(value) or value<=0 for value in values):issues.append('Invalid timing samples')
                 if not math.isfinite(row['sample_max_abs']) or row['sample_max_abs']<0:issues.append('Invalid numerical diagnostic')
                 wants_mpp=bool(meta and meta[0]['mpp_available'] and key[0]>4)
+                wants_reuse64=bool(wants_mpp and meta[0].get('reuse64_available',False) and key[0]>=64 and key[1]>=meta[0].get('reuse64_min_outputs',0))
                 if row.get('mpp_n_major',False)!=(meta[0].get('mpp_n_major',False) if wants_mpp else False):issues.append('Per-cell staging layout differs from actual route')
-                if row.get('mpp_registers',False)!=(meta[0].get('mpp_registers',False) if wants_mpp else False):issues.append('Per-cell operand storage differs from actual route')
+                wanted_registers=meta[0].get('reuse64_registers',False) if wants_reuse64 else (meta[0].get('mpp_registers',False) if wants_mpp else False)
+                if row.get('mpp_registers',False)!=wanted_registers:issues.append('Per-cell operand storage differs from actual route')
                 wanted_dtype=meta[0].get('operand_dtype','float32') if wants_mpp else 'float32'
                 if row.get('relaxed_precision',False)!=(meta[0].get('relaxed_precision',False) if wants_mpp else False):issues.append('Per-cell precision mode differs from actual route')
                 if row.get('operand_dtype','float32')!=wanted_dtype:issues.append('Per-cell operand type differs from actual route')
                 if row['mpp_dispatches_per_call']!=int(wants_mpp):issues.append('MPP dispatch evidence differs')
+                if row.get('reuse64_dispatches_per_call',0)!=int(wants_reuse64):issues.append('Reuse64 dispatch evidence differs')
                 cells.setdefault(key,[]).append(dict(cohort=cohort,gpu_ms=statistics.median(row['gpu_ms']),wall_ms=statistics.median(row['wall_ms']),sample_max_abs=row['sample_max_abs']))
         types={item.get('operand_dtype','float32') for item in metadata[variant]}
         if len(types)!=1 or any(item.get('accumulator_dtype','float32')!='float32' for item in metadata[variant]):issues.append(variant+': operand/accumulator metadata changed')
@@ -54,6 +61,12 @@ def summarize(root):
         if len(layout_values)!=1 or (meta and meta[0]['mpp_available'] and layout_values!={('GARNET_METAL_MPP_AFFINE_N_MAJOR:BOOL=ON' in cache)}):issues.append(variant+': staging layout differs from build')
         register_values={item.get('mpp_registers',False) for item in metadata[variant]}
         if len(register_values)!=1 or (meta and meta[0]['mpp_available'] and register_values!={('GARNET_METAL_MPP_AFFINE_REGISTERS:BOOL=ON' in cache)}):issues.append(variant+': operand storage metadata differs from build')
+        reuse_values={item.get('reuse64_available',False) for item in metadata[variant]}
+        if len(reuse_values)!=1 or reuse_values!={('GARNET_METAL_MPP_AFFINE_REUSE64:BOOL=ON' in cache)}:issues.append(variant+': reuse64 availability differs from build')
+        storage_values={item.get('reuse64_registers',False) for item in metadata[variant]}
+        if len(storage_values)!=1 or (True in storage_values and reuse_values!={True}):issues.append(variant+': reuse64 operand storage metadata differs')
+        output_thresholds={item.get('reuse64_min_outputs',0) for item in metadata[variant]}
+        if len(output_thresholds)!=1 or not output_thresholds.issubset({0,5120}):issues.append(variant+': reuse64 output threshold metadata differs')
         if meta and meta[0]['mpp_available']:
             tensor_k=16 if meta[0].get('mpp_registers',False) else cache_tile
             if any(item.get('mpp_tensor_k',cache_tile)!=tensor_k for item in metadata[variant]):issues.append(variant+': tensor reduction extent differs from build')

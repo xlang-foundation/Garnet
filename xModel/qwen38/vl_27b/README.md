@@ -46,7 +46,10 @@ and serialized operator traces are not HTTP serving measurements.
   support. Separate fixed-shape admissions do not admit all shapes resident at once.
   The default-off `qwen38_large_prefill` extension additionally exposes experimental
   batch2 chunks128/256 with signed16-bit attention indices and nonresident pack
-  retirement. Component tests pass; learned chunk128 qualification is pending.
+  retirement. The finite batch2/4K/chunk128 indexed/mixed coding study passes8/8
+  tasks with all full token sequences matching the single-request reference,
+  1,063 combined decode plans and13 audit corruption checks. Ready Metal
+  allocation is18,188,271,616bytes. Serving performance remains unmeasured.
   Each requested shape must still pass the native working-set guard; this does
   not guarantee that chunk256 fits this Mac or admit these shapes for production.
 - `garnet.continuous_scheduler()` owns allocation and lifecycle in native code.
