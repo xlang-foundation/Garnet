@@ -10,12 +10,13 @@ with exact single-native token sequences. Native text-only input has no dummy
 image; bounded native vision parity and two image-grounding cases pass, while
 general VLM and reference multimodal qualification remain incomplete.
 
-The latest batch2/chunk128 bounded-kernel-profile admission completes the two
-single-client cells with128 outputs each. Short/long overall throughput is
-3.130/1.326 output tokens/s, TTFT16.898/70.731s and decode5.305/4.930 tokens/s.
-These are single cold waves, not repeated serving qualification. The earlier
-batch1 tall-FP32 control still has higher decode6.732/5.582 tokens/s; its
-TTFT20.518/101.057s is slower. Reference single-client medians are
+The latest batch2/chunk128 bounded32-bit kernel-profile admission completes the
+two single-client cells with128 outputs each. Short/long overall throughput is
+4.070/1.801 output tokens/s, TTFT13.050/49.951s and decode6.913/6.024 tokens/s.
+These are single admission waves without warmups, not repeated serving
+qualification. The preceding64-bit profile had decode5.305/4.930 tokens/s and
+TTFT16.898/70.731s; the older batch1 tall-FP32 control had decode6.732/5.582
+tokens/s and TTFT20.518/101.057s. Reference single-client medians are
 vLLM5.761/3.382 overall tokens/s and SGLang5.502/3.275. The batch2/wide64 FP32
 admission retains its four-client long-prompt600s timeout as a failed campaign.
 All2x targets remain unmet. Reference results stay fixed and engines run
@@ -1756,8 +1757,32 @@ ratios across shapes at1/2/4/64/128/256/512 rows are
 at2/128 rows are1.266/1.673. These sums exclude the head, state, activations,
 embedding, scheduler and transport; they are not tokens/s or whole-model
 speedups. The compiler128-thread option remains disabled, so index width is
-the only build-policy change in this study. Full coding and serving admission
-for `native27b-bounded-index32-chunk128-quality1` remain pending.
+the only build-policy change in this study.
+
+`native27b-bounded-index32-chunk128-quality1` passes all eight sandboxed coding
+tasks with all eight full sequences matching the single-native reference and30
+corruption checks. All1,176 projection commands report32-bit indexes and zero
+misses:1,156 decode, ten prefill and ten standalone head commands. The trace
+contains1,138 combined decode plans, nine mixed forwards and three prefill/
+decode interleavings. Ready allocation remains17,853,775,872bytes. Close
+reports zero matrix/affine/BF16/pipeline-set owners,1,507,328 Metal bytes and
+worker exit0.
+
+The exact qualified library/worker completes the two C1 cells in
+`native27b-bounded-index32-chunk128-http-admission1`. Its accounting audit and12
+corruption checks pass, with276 specialized commands and clean native close.
+
+| One C1 admission wave | Actual prompt tokens | TTFT (s) | Decode (tokens/s) | Total (s) | Overall output tokens/s |
+|---|---:|---:|---:|---:|---:|
+| Short |260|13.050460|6.912587|31.450907|4.069835|
+| Long |2054|49.950831|6.024020|71.067979|1.801092|
+
+These separate cold-admission samples improve on the preceding64-bit profile,
+but they are not repeated performance qualification. Short decode exceeds the
+frozen vLLM median in this sample; long decode is below it, and both TTFTs and
+overall output throughput remain substantially worse. All2x targets remain
+unmet. A four-cell C2/C4 admission is prepared to measure actual combined and
+queued throughput using the same qualified artifact and frozen requests.
 
 ### Parent MTP asset discovery
 
