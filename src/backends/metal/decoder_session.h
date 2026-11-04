@@ -154,6 +154,7 @@ public:
 #ifdef GARNET_METAL_MPP_AFFINE_REUSE64
     size_t LastReuse64AffineDispatches() {std::lock_guard<std::mutex> lock(mutex_);return gpu_?gpu_->LastReuse64AffineDispatches():0;}
 #endif
+    size_t LastChunkProbabilityReuseDispatches() {std::lock_guard<std::mutex> lock(mutex_);return gpu_?gpu_->LastChunkProbabilityReuseDispatches():0;}
     size_t LastKVInplaceUpdates() const {return kvInplaceUpdates_;}
 #ifdef GARNET_METAL_INDEXED_DECODE
     size_t LastIndexedDecodeAffineDispatches() {std::lock_guard<std::mutex> lock(mutex_);return gpu_?gpu_->LastIndexedDecodeAffineDispatches():0;}
@@ -243,6 +244,7 @@ public:
 #ifdef GARNET_METAL_MPP_AFFINE_REUSE64
         APISET().AddProp("mpp_reuse64_dispatches",&MetalDecoderSession::LastReuse64AffineDispatches);
 #endif
+        APISET().AddProp("chunk_probability_reuse_dispatches",&MetalDecoderSession::LastChunkProbabilityReuseDispatches);
         APISET().AddProp("kv_inplace_updates",&MetalDecoderSession::LastKVInplaceUpdates);
 #ifdef GARNET_METAL_INDEXED_DECODE
         APISET().AddProp("indexed_decode_affine_dispatches",&MetalDecoderSession::LastIndexedDecodeAffineDispatches);

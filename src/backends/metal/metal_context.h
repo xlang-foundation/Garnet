@@ -111,7 +111,8 @@ class MetalContext {
     void EncodePointwise(const MetalMatrix&, const MetalMatrix&, const MetalMatrix&,
         unsigned operation, float epsilon, float offset);
     void EncodeStateKernel(unsigned operation,const std::vector<MetalMatrix>&,
-        const MetalMatrix&,const void* parameters,size_t parameterBytes,size_t threads,const MetalMatrix* secondOutput=nullptr);
+        const MetalMatrix&,const void* parameters,size_t parameterBytes,size_t threads,const MetalMatrix* secondOutput=nullptr,
+        bool referenceAttention=false);
     std::vector<uint32_t> PrimaryReadWordsInternal(const MetalBF16Weight&,size_t start,size_t count,bool vector);
 public:
     static MetalPrimaryStats PrimaryStats();
@@ -298,7 +299,8 @@ public:
     void EncodeKVChunk(const MetalMatrix&,const MetalMatrix&,const MetalMatrix&,const MetalMatrix&,
         const MetalMatrix&,size_t kvHeads,size_t dim,size_t capacity,size_t chunk,bool contiguousSlots=false);
     void EncodeAttentionChunk(const std::vector<MetalMatrix>&,const MetalMatrix&,size_t heads,size_t kvHeads,
-        size_t dim,size_t capacity,size_t chunk,bool gated);
+        size_t dim,size_t capacity,size_t chunk,bool gated,bool reference=false);
+    size_t LastChunkProbabilityReuseDispatches() const;
     void EncodeAttentionScores(const MetalMatrix&,const MetalMatrix&,const MetalMatrix&,const MetalMatrix&,
         const MetalMatrix&,size_t heads,size_t kvHeads,size_t dim,size_t capacity);
     void EncodeAttentionContext(const MetalMatrix&,const MetalMatrix&,const MetalMatrix&,const MetalMatrix&,const MetalMatrix&,

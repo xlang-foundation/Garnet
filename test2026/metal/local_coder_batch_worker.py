@@ -29,6 +29,11 @@ def main():
     prefill_schedule=profile.get('prefill_schedule','whole')
     if prefill_schedule not in ('whole','chunked'):raise ValueError('Explicit supported prefill scheduling mode required')
     chunked=prefill_schedule=='chunked'
+    probability_reuse=profile.get('chunk_probability_reuse',False)
+    if type(probability_reuse) is not bool or probability_reuse!=('chunk_probability_reuse' in garnet.backend_info()):
+        raise ValueError('Frozen profile requires its explicit chunk probability policy')
+    if probability_reuse and (type(profile.get('expected_chunk_attention_dispatches')) is not int or profile['expected_chunk_attention_dispatches']<1):
+        raise ValueError('Chunk probability policy requires explicit full-attention layer coverage')
     trace_stages=profile.get('trace_stage_latency',False)
     if type(trace_stages) is not bool:raise ValueError('Stage tracing requires an explicit boolean policy')
     mixed=profile.get('mixed_forward',False)
@@ -183,8 +188,13 @@ def main():
             started=time.monotonic() if trace_stages else 0
             if prefix:result=decoder.session.run_tokens(graphs,hidden,positions,slots,active,prediction,epochs,ids)
             else:result=decoder.session.run_leased(graphs,hidden,positions,slots,active,prediction,epochs)
+            elapsed=(time.monotonic()-started)*1000 if trace_stages else 0
+            if probability_reuse:
+                count=decoder.session.chunk_probability_reuse_dispatches
+                expected=profile['expected_chunk_attention_dispatches'] if len(ids)>batch else 0
+                emit(dict(event='native_chunk_probability_reuse',stage='prefill' if len(ids)>batch else 'decode',dispatches=count))
+                if count!=expected:raise ValueError('Native probability reuse coverage differs from the profile')
             if trace_stages:
-                elapsed=(time.monotonic()-started)*1000
                 emit(dict(event='native_stage_trace',stage='prefill' if len(ids)>batch else 'decode',
                     embedding_wall_ms=embedding_ms[0],run_wall_ms=elapsed,
                     prepare_ms=decoder.session.prepare_ms,encode_ms=decoder.session.encode_ms,

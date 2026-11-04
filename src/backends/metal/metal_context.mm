@@ -347,6 +347,9 @@ struct MetalPipelines {
     id<MTLComputePipelineState> delta,deltaSplit;
     id<MTLComputePipelineState> deltaSplitParallel,deltaChunk;
     id<MTLComputePipelineState> slice,sliceVector;
+#ifdef GARNET_METAL_CHUNK_PROBABILITY_REUSE
+    id<MTLComputePipelineState> attentionChunkReference;
+#endif
     id<MTLComputePipelineState> prepare;
     id<MTLComputePipelineState> gatedNorm;
     id<MTLComputePipelineState> concat;
@@ -392,6 +395,7 @@ struct MetalContext::Impl {
 #endif
     size_t fusedHeadArgmaxDispatches=0;
     size_t bodyShapeDispatches=0,bodyShapeMisses=0;
+    size_t chunkProbabilityReuseDispatches=0;
 #ifdef GARNET_METAL_AFFINE_PROFILE
     size_t affineProfileDispatches=0,affineProfileMisses=0,affineProfileMaxThreads=0;
 #endif
@@ -867,6 +871,7 @@ kernel void kv_chunk_vector4(device const float* token [[buffer(0)]],device cons
     next[row*uint(p.oStride/4)+col]=latest<0?previous[row*uint(p.cStride/4)+col]:source[(row*chunk+uint(latest))*uint(p.tStride/4)+h*dim+d];
 }
 struct ChunkAttentionParams {ulong batch,chunk,heads,kvHeads,dim,capacity,qStride,kStride,vStride,kcStride,vcStride,sStride,aStride,gStride,oStride,gated;};
+constant bool chunk_probability_reuse [[function_constant(30)]];
 #ifdef GARNET_ATTENTION_INDEX_I16
 typedef short ChunkAttentionIndex;
 #elif defined(GARNET_COMPACT_ATTENTION_INDEX)
@@ -928,9 +933,15 @@ kernel void attention_chunk(device const float* query [[buffer(0)]],device const
     denominator=simd_sum(denominator);if(lane==0)partial[simd]=denominator;
     threadgroup_barrier(mem_flags::mem_threadgroup);
     denominator=simd_sum(lane<4?partial[lane]:0.0f);
+    if(chunk_probability_reuse) {
+        // Each SIMD group has computed the same denominator. Preserve the
+        // FP32 division and ordered value sum, but share its rounded result.
+        for(ulong s=tid;s<visible;s+=128)scratch[s]=scratch[s]/denominator;
+        threadgroup_barrier(mem_flags::mem_threadgroup);
+    }
     for(ulong d=tid;d<p.dim;d+=128) {
         float sum=0.0f;
-        for(ulong s=0;s<visible;++s){int latest=selected[s];float v=latest<0?valueCache[row*p.vcStride+(kv*p.capacity+s)*p.dim+d]:value[(row*p.chunk+ulong(latest))*p.vStride+kv*p.dim+d];sum+=scratch[s]/denominator*v;}
+        for(ulong s=0;s<visible;++s){int latest=selected[s];float v=latest<0?valueCache[row*p.vcStride+(kv*p.capacity+s)*p.dim+d]:value[(row*p.chunk+ulong(latest))*p.vStride+kv*p.dim+d];float probability=chunk_probability_reuse?scratch[s]:scratch[s]/denominator;sum+=probability*v;}
         output[flatRow*p.oStride+head*p.dim+d]=p.gated?sum/(1.0f+exp(-gate[flatRow*p.gStride+head*p.dim+d])):sum;
     }
 }
@@ -1830,7 +1841,21 @@ kernel void bf16_native_dot_t128(device const float* a [[buffer(0)]],device cons
         impl_->kernels->vision=[impl_->device newComputePipelineStateWithFunction:[library newFunctionWithName:@"vision_op"] error:&error];
         impl_->kernels->kvChunk=[impl_->device newComputePipelineStateWithFunction:[library newFunctionWithName:@"kv_chunk"] error:&error];
         impl_->kernels->kvChunkVector=[impl_->device newComputePipelineStateWithFunction:[library newFunctionWithName:@"kv_chunk_vector4"] error:&error];
-        impl_->kernels->attentionChunk=[impl_->device newComputePipelineStateWithFunction:[library newFunctionWithName:@"attention_chunk"] error:&error];
+        auto attentionPipeline=[&](bool reuse) {
+            auto constants=[MTLFunctionConstantValues new];[constants setConstantValue:&reuse type:MTLDataTypeBool atIndex:30];
+            auto function=[library newFunctionWithName:@"attention_chunk" constantValues:constants error:&error];
+            if(!function)throw std::runtime_error("Cannot specialize chunk attention probability policy");
+            auto pipeline=[impl_->device newComputePipelineStateWithFunction:function error:&error];
+            if(!pipeline||pipeline.threadExecutionWidth!=32||pipeline.maxTotalThreadsPerThreadgroup<128)
+                throw std::runtime_error("Chunk attention requires four32-lane SIMD groups");
+            return pipeline;
+        };
+#ifdef GARNET_METAL_CHUNK_PROBABILITY_REUSE
+        impl_->kernels->attentionChunk=attentionPipeline(true);
+        impl_->kernels->attentionChunkReference=attentionPipeline(false);
+#else
+        impl_->kernels->attentionChunk=attentionPipeline(false);
+#endif
         impl_->kernels->layout=[impl_->device newComputePipelineStateWithFunction:[library newFunctionWithName:@"chunk_layout"] error:&error];
         if(!impl_->kernels->argmax||!impl_->kernels->bf16Decode||!impl_->kernels->bf16Gemm||!impl_->kernels->rms||!impl_->kernels->silu||!impl_->kernels->add||!impl_->kernels->mask||!impl_->kernels->conv||!impl_->kernels->delta||!impl_->kernels->slice||
             !impl_->kernels->prepare||!impl_->kernels->gatedNorm||!impl_->kernels->concat||!impl_->kernels->normRope||!impl_->kernels->kvUpdate||!impl_->kernels->kvUpdateVector||!impl_->kernels->scores||!impl_->kernels->scoresSerial||!impl_->kernels->attentionContext||!impl_->kernels->vision||!impl_->kernels->visionNorm||!impl_->kernels->visionScores||!impl_->kernels->layout||!impl_->kernels->kvChunk||!impl_->kernels->attentionChunk)
@@ -3137,7 +3162,7 @@ void MetalContext::Begin() {
     impl_->screenDiagnosticReady=false;
 #endif
     impl_->partialSubmissions=0;
-    impl_->bodyShapeDispatches=impl_->bodyShapeMisses=0;
+    impl_->bodyShapeDispatches=impl_->bodyShapeMisses=0;impl_->chunkProbabilityReuseDispatches=0;
 #ifdef GARNET_METAL_AFFINE_PROFILE
     impl_->affineProfileDispatches=impl_->affineProfileMisses=impl_->affineProfileMaxThreads=0;
 #endif
@@ -3349,7 +3374,7 @@ void MetalContext::EncodeMaskRows(const MetalMatrix& a,const MetalMatrix& mask,c
     EncodePointwise(a,mask,out,3,0,0);
 }
 void MetalContext::EncodeStateKernel(unsigned operation,const std::vector<MetalMatrix>& inputs,
-    const MetalMatrix& output,const void* parameters,size_t parameterBytes,size_t threads,const MetalMatrix* secondOutput) {
+    const MetalMatrix& output,const void* parameters,size_t parameterBytes,size_t threads,const MetalMatrix* secondOutput,bool referenceAttention) {
     @autoreleasepool {
     if(!impl_->command)throw std::logic_error("Begin a Metal command batch first");
     if(!output.impl_||!threads||threads>std::numeric_limits<uint32_t>::max())
@@ -3405,6 +3430,15 @@ void MetalContext::EncodeStateKernel(unsigned operation,const std::vector<MetalM
 #endif
     };
     auto pipeline=pipelines[operation];
+    if(referenceAttention&&operation!=13)throw std::invalid_argument("Reference attention requires the chunk attention operation");
+#ifdef GARNET_METAL_CHUNK_PROBABILITY_REUSE
+    if(operation==13) {
+        if(referenceAttention)pipeline=impl_->kernels->attentionChunkReference;
+        else ++impl_->chunkProbabilityReuseDispatches;
+    }
+#else
+    if(referenceAttention)throw std::logic_error("Reference attention comparison requires the probability-reuse study build");
+#endif
     if(!pipeline)throw std::runtime_error("Metal state pipeline is unavailable in this build");
 #ifdef GARNET_METAL_PARALLEL_DELTA_SPLIT
     const auto* deltaFields=static_cast<const uint64_t*>(parameters);
@@ -3781,7 +3815,7 @@ void MetalContext::EncodeKVChunk(const MetalMatrix& token,const MetalMatrix& cac
     EncodeStateKernel(vector?17:12,{token,cache,slots,active},output,&p,sizeof(p),vector?count/4:count);
 }
 void MetalContext::EncodeAttentionChunk(const std::vector<MetalMatrix>& inputs,const MetalMatrix& output,
-    size_t heads,size_t kvHeads,size_t dim,size_t capacity,size_t chunk,bool gated) {
+    size_t heads,size_t kvHeads,size_t dim,size_t capacity,size_t chunk,bool gated,bool reference) {
     if(inputs.size()!=8||!output.impl_||!chunk||chunk>kMetalPrefillChunkLimit||chunk>kMetalAttentionChunkTokenLimit||!capacity||capacity>kMetalAttentionChunkCapacityLimit||!kvHeads||heads%kvHeads)throw std::invalid_argument("Invalid chunk attention profile");
     const size_t scoresBytes=(capacity*sizeof(float)+15)&~size_t(15);
     const size_t indexBytes=(capacity*kMetalAttentionIndexBytes+15)&~size_t(15);
@@ -3796,8 +3830,9 @@ void MetalContext::EncodeAttentionChunk(const std::vector<MetalMatrix>& inputs,c
         g.rows!=q.rows||g.columns!=q.columns||o.rows!=q.rows||o.columns!=q.columns)throw std::invalid_argument("Chunk attention layout mismatch");
     struct Params {uint64_t batch,chunk,heads,kvHeads,dim,capacity,qStride,kStride,vStride,kcStride,vcStride,sStride,aStride,gStride,oStride,gated;};
     Params p{kc.rows,chunk,heads,kvHeads,dim,capacity,q.rowBytes/4,k.rowBytes/4,v.rowBytes/4,kc.rowBytes/4,vc.rowBytes/4,s.rowBytes/4,a.rowBytes/4,g.rowBytes/4,o.rowBytes/4,uint64_t(gated)};
-    EncodeStateKernel(13,inputs,output,&p,sizeof(p),Elements(q.rows,heads));
+    EncodeStateKernel(13,inputs,output,&p,sizeof(p),Elements(q.rows,heads),nullptr,reference);
 }
+size_t MetalContext::LastChunkProbabilityReuseDispatches() const {return impl_->chunkProbabilityReuseDispatches;}
 void MetalContext::EncodeAttentionScores(const MetalMatrix& query,const MetalMatrix& key,const MetalMatrix& slots,
     const MetalMatrix& active,const MetalMatrix& output,size_t heads,size_t kvHeads,size_t dim,size_t capacity) {
     if(!query.impl_||!key.impl_||!slots.impl_||!active.impl_||!output.impl_||!kvHeads||!heads||heads%kvHeads)
@@ -3871,7 +3906,7 @@ void MetalContext::Abort() {
     // for reset/reuse; the uncommitted continuation is discarded.
     for(id<MTLCommandBuffer> prior in impl_->submitted)[prior waitUntilCompleted];
     impl_->submitted=nil;impl_->partialSubmissions=0;
-    impl_->bodyShapeDispatches=impl_->bodyShapeMisses=0;
+    impl_->bodyShapeDispatches=impl_->bodyShapeMisses=0;impl_->chunkProbabilityReuseDispatches=0;
 #ifdef GARNET_METAL_AFFINE_PROFILE
     impl_->affineProfileDispatches=impl_->affineProfileMisses=impl_->affineProfileMaxThreads=0;
 #endif

@@ -1841,8 +1841,50 @@ stores unnormalized exponentials and repeats `scratch[s]/denominator` inside
 each output-dimension loop. The same denominator/probability pair is therefore
 divided repeatedly. A future candidate can normalize each probability once,
 synchronize the threadgroup and keep the original ordered value accumulation.
-This candidate is not implemented or measured yet; the trace does not prove
-its eventual speedup or a complete per-operator attribution.
+The candidate was subsequently implemented and rejected in the experiment
+below. The trace alone does not establish a complete per-operator attribution.
+
+### Shared attention probability normalization: negative experiment
+
+Default-OFF `GARNET_METAL_CHUNK_PROBABILITY_REUSE` specializes a function
+constant in `attention_chunk`: after the existing softmax denominator reduction,
+normalize each probability once in shared memory, synchronize, then use the
+original ordered value accumulation. A control pipeline retains the original
+division expression. No extra scratch allocation, cache format, projection or
+scheduler change is involved. Native coverage counters and an explicit worker
+policy prevent silently measuring the control as the candidate.
+
+The initial stricter bitwise gate fails: for batch2/chunk8/capacity64/dim8,
+423 values differ, with maximum absolute delta1.86265e-9. The original main
+shader library uses default compile options, unlike the explicitly safe affine
+libraries; the installed Metal SDK documents default fast-math behavior.
+The prototype's changed rounding therefore cannot be advertised as bitwise
+equivalent. Initial sources/failures remain in `chunk-probability-sources1`,
+`chunk-probability-strict-sources2` and the original CTest/parity logs.
+
+The unchanged standard FP64 error bounds pass all15 native tests, including
+real27B heads24/KVheads4/dim256 at4K capacity, causal overwrites and inactive
+queries. The optional `--strict-bitwise` diagnostic remains failed and is not
+converted into a pass. The numerical test also compares every candidate output
+with control under the original bounds. Neither numerical acceptance nor the
+kernel benchmark would substitute for exact frozen coding sequences and
+sandboxed model correctness before serving admission.
+
+`chunk-probability-kernel-comparison1` measures12 cases across three fresh
+process cohorts, alternating control/candidate order within each cell, with
+three warmups and nine measured calls per variant. Physical batch2/chunk128,
+24/4 heads, dimension256,4K FP32 KV and gated outputs match the text profile;
+one/two active rows, prefixes0/128/1024/1920/3968 and4/6-token tails are covered.
+All collections and eight corruption checks pass. Maximum candidate/control
+delta is1.11759e-8 and strict bitwise equivalence is explicitly false.
+Control/candidate GPU latency ratios range0.989..0.997: the candidate is slightly
+slower in every cell. Keep it disabled; it has no learned-model or serving
+admission and does not meet any2x target. Source-level repeated division alone
+did not establish an executed GPU cost that this rewrite improves.
+
+Attention still uses64-bit index arithmetic in its hot loops, while the affine
+profile's successful narrowing does not cover those kernels. Proved bounded
+attention indexes and compiled geometry are the next candidates to evaluate.
 
 ### Parent MTP asset discovery
 
