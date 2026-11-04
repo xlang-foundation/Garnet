@@ -112,7 +112,11 @@ class MetalContext {
         unsigned operation, float epsilon, float offset);
     void EncodeStateKernel(unsigned operation,const std::vector<MetalMatrix>&,
         const MetalMatrix&,const void* parameters,size_t parameterBytes,size_t threads,const MetalMatrix* secondOutput=nullptr,
-        bool referenceAttention=false);
+        bool referenceAttention=false,const MetalMatrix* thirdOutput=nullptr);
+#ifdef GARNET_METAL_VERIFY_ATTENTION
+    void ValidateVerificationRecurrent(const std::vector<MetalMatrix>&,
+        const MetalMatrix&,const MetalMatrix&,const MetalMatrix&) const;
+#endif
     std::vector<uint32_t> PrimaryReadWordsInternal(const MetalBF16Weight&,size_t start,size_t count,bool vector);
 public:
     static MetalPrimaryStats PrimaryStats();
@@ -282,6 +286,19 @@ public:
         const MetalMatrix& result,const MetalMatrix& nextState,size_t heads,size_t keyDim,size_t valueDim);
     void EncodeGatedDeltaChunk(const MetalMatrix& prepared,const MetalMatrix& state,const MetalMatrix& active,
         const MetalMatrix& output,const MetalMatrix& nextState,size_t chunk,size_t heads,size_t keyDim,size_t valueDim);
+#ifdef GARNET_METAL_VERIFY_ATTENTION
+    // Explicit caller-owned outputs include S1 after the first known token.
+    // Controls are nonpending host-readable prefix masks; no allocation/readback
+    // occurs during encoding. An entirely inactive row retains its input state.
+    void EncodeVerificationConvCheckpoint(const MetalMatrix& tokens,const MetalMatrix& weight,
+        const MetalMatrix& state,const MetalMatrix& active,const MetalMatrix& output,
+        const MetalMatrix& nextState,const MetalMatrix& firstState,size_t chunk,size_t kernel);
+    void EncodeVerificationDeltaCheckpoint(const MetalMatrix& prepared,const MetalMatrix& state,
+        const MetalMatrix& active,const MetalMatrix& output,const MetalMatrix& nextState,
+        const MetalMatrix& firstState,size_t chunk,size_t heads,size_t keyDim,size_t valueDim);
+    size_t LastVerificationConvCheckpoints() const;
+    size_t LastVerificationDeltaCheckpoints() const;
+#endif
     void EncodeSliceGroups(const MetalMatrix&,const MetalMatrix&,size_t groups,size_t sourceWidth,size_t start,size_t count);
     // kernel=0 accepts convolution values without interleaved state fields.
     void EncodeLinearPrepare(const MetalMatrix& conv,const MetalMatrix& a,const MetalMatrix& b,

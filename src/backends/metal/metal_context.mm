@@ -2,6 +2,7 @@
 #include "metal_context.h"
 #ifdef GARNET_METAL_VERIFY_ATTENTION
 #include "verification_attention_shader.h"
+#include "verification_recurrent_shader.h"
 #endif
 #ifdef GARNET_METAL_CHUNK_ATTENTION_MPS
 #include "chunk_attention_mps_shader.h"
@@ -358,6 +359,7 @@ struct MetalPipelines {
     id<MTLComputePipelineState> deltaSplitParallel,deltaChunk;
 #ifdef GARNET_METAL_VERIFY_ATTENTION
     id<MTLComputePipelineState> verificationScores,verificationContext;
+    id<MTLComputePipelineState> verificationConvCheckpoint,verificationDeltaCheckpoint;
 #endif
     id<MTLComputePipelineState> slice,sliceVector;
 #if defined(GARNET_METAL_CHUNK_PROBABILITY_REUSE)||defined(GARNET_METAL_CHUNK_ATTENTION_INDEX32)
@@ -434,6 +436,7 @@ struct MetalContext::Impl {
     size_t chunkProbabilityReuseDispatches=0,chunkAttentionIndex32Dispatches=0;
 #ifdef GARNET_METAL_VERIFY_ATTENTION
     size_t verificationAttentionDispatches=0;
+    size_t verificationConvCheckpoints=0,verificationDeltaCheckpoints=0;
 #endif
     size_t chunkAttentionMPSDispatches=0;
     size_t chunkAttentionBucketDispatches=0,chunkAttentionTailDispatches=0,chunkAttentionBucketCapacity=0,chunkAttentionUnknownControls=0;
@@ -1636,6 +1639,7 @@ kernel void bf16_native_dot_t128(device const float* a [[buffer(0)]],device cons
 #endif
 #ifdef GARNET_METAL_VERIFY_ATTENTION
         source=[source stringByAppendingString:[NSString stringWithUTF8String:kVerificationAttentionShader]];
+        source=[source stringByAppendingString:[NSString stringWithUTF8String:kVerificationRecurrentShader]];
 #endif
 #ifdef GARNET_METAL_CHUNK_ATTENTION_MPS
         source=[source stringByAppendingString:[NSString stringWithUTF8String:kChunkAttentionMPSShader]];
@@ -1929,6 +1933,12 @@ kernel void bf16_native_dot_t128(device const float* a [[buffer(0)]],device cons
         if(!impl_->kernels->verificationScores||!impl_->kernels->verificationContext||
            impl_->kernels->verificationScores.threadExecutionWidth!=32||impl_->kernels->verificationScores.maxTotalThreadsPerThreadgroup<128)
             throw std::runtime_error("Cannot compile FP32 verification attention kernels");
+        impl_->kernels->verificationConvCheckpoint=[impl_->device newComputePipelineStateWithFunction:[library newFunctionWithName:@"verification_conv_checkpoint"] error:&error];
+        impl_->kernels->verificationDeltaCheckpoint=[impl_->device newComputePipelineStateWithFunction:[library newFunctionWithName:@"verification_delta_checkpoint"] error:&error];
+        if(!impl_->kernels->verificationConvCheckpoint||!impl_->kernels->verificationDeltaCheckpoint||
+           impl_->kernels->verificationDeltaCheckpoint.threadExecutionWidth!=32||
+           impl_->kernels->verificationDeltaCheckpoint.maxTotalThreadsPerThreadgroup<128)
+            throw std::runtime_error("Cannot compile verification recurrent checkpoint kernels");
 #endif
         impl_->kernels->visionNorm=[impl_->device newComputePipelineStateWithFunction:[library newFunctionWithName:@"vision_norm"] error:&error];
         impl_->kernels->visionScores=[impl_->device newComputePipelineStateWithFunction:[library newFunctionWithName:@"vision_scores"] error:&error];
@@ -3267,6 +3277,7 @@ void MetalContext::Begin() {
     if(impl_->submitted.count)throw std::logic_error("Undrained Metal partial batches");
 #ifdef GARNET_METAL_VERIFY_ATTENTION
     impl_->verificationAttentionDispatches=0;
+    impl_->verificationConvCheckpoints=impl_->verificationDeltaCheckpoints=0;
 #endif
     impl_->screenedHeadDispatches=0;
     impl_->screenedHeadSeedRows=0;
@@ -3489,7 +3500,8 @@ void MetalContext::EncodeMaskRows(const MetalMatrix& a,const MetalMatrix& mask,c
     EncodePointwise(a,mask,out,3,0,0);
 }
 void MetalContext::EncodeStateKernel(unsigned operation,const std::vector<MetalMatrix>& inputs,
-    const MetalMatrix& output,const void* parameters,size_t parameterBytes,size_t threads,const MetalMatrix* secondOutput,bool referenceAttention) {
+    const MetalMatrix& output,const void* parameters,size_t parameterBytes,size_t threads,const MetalMatrix* secondOutput,bool referenceAttention,
+    const MetalMatrix* thirdOutput) {
     @autoreleasepool {
     if(!impl_->command)throw std::logic_error("Begin a Metal command batch first");
     if(!output.impl_||!threads||threads>std::numeric_limits<uint32_t>::max())
@@ -3519,7 +3531,9 @@ void MetalContext::EncodeStateKernel(unsigned operation,const std::vector<MetalM
             throw std::invalid_argument("In-place state kernel is unsupported");
         }
     }
-    if((operation==16||operation==18||operation==19)!=(secondOutput!=nullptr))throw std::invalid_argument("Metal secondary output operation mismatch");
+    const bool checkpoint=operation==24||operation==25;
+    if((operation==16||operation==18||operation==19||checkpoint)!=(secondOutput!=nullptr))throw std::invalid_argument("Metal secondary output operation mismatch");
+    if(checkpoint!=(thirdOutput!=nullptr))throw std::invalid_argument("Metal checkpoint output operation mismatch");
     if(secondOutput) {
         if(!secondOutput->impl_||secondOutput->impl_->matrix.device!=impl_->device)
             throw std::invalid_argument("Invalid Metal secondary output/device");
@@ -3530,8 +3544,19 @@ void MetalContext::EncodeStateKernel(unsigned operation,const std::vector<MetalM
         for(const auto& input:inputs)if(second->matrix.data==input.impl_->matrix.data)
             throw std::invalid_argument("In-place secondary state output is unsupported");
     }
+    if(thirdOutput) {
+        if(!thirdOutput->impl_||thirdOutput->impl_->matrix.device!=impl_->device)
+            throw std::invalid_argument("Invalid Metal checkpoint output/device");
+        const auto& third=thirdOutput->impl_;
+        if(third->pending&&!impl_->pendingOutputs.count(third.get()))
+            throw std::logic_error("Metal checkpoint output is in another command batch");
+        if(third->matrix.data==c.data||third->matrix.data==secondOutput->impl_->matrix.data)
+            throw std::invalid_argument("Metal checkpoint outputs overlap");
+        for(const auto& input:inputs)if(third->matrix.data==input.impl_->matrix.data)
+            throw std::invalid_argument("In-place checkpoint state output is unsupported");
+    }
 #ifdef GARNET_METAL_VERIFY_ATTENTION
-    constexpr unsigned maxOperation=23;
+    constexpr unsigned maxOperation=25;
 #elif defined(GARNET_METAL_ROW_FINAL_HIDDEN)
     constexpr unsigned maxOperation=21;
 #elif defined(GARNET_METAL_RESIDENT_KV_INPLACE)
@@ -3549,6 +3574,7 @@ void MetalContext::EncodeStateKernel(unsigned operation,const std::vector<MetalM
 #endif
 #ifdef GARNET_METAL_VERIFY_ATTENTION
         ,impl_->kernels->verificationScores,impl_->kernels->verificationContext
+        ,impl_->kernels->verificationConvCheckpoint,impl_->kernels->verificationDeltaCheckpoint
 #endif
     };
     auto pipeline=pipelines[operation];
@@ -3666,7 +3692,8 @@ void MetalContext::EncodeStateKernel(unsigned operation,const std::vector<MetalM
 #endif
     [encoder setBuffer:c.data offset:0 atIndex:inputs.size()];
     if(secondOutput)[encoder setBuffer:secondOutput->impl_->matrix.data offset:0 atIndex:inputs.size()+1];
-    [encoder setBytes:parameters length:parameterBytes atIndex:inputs.size()+1+(secondOutput?1:0)];
+    if(thirdOutput)[encoder setBuffer:thirdOutput->impl_->matrix.data offset:0 atIndex:inputs.size()+2];
+    [encoder setBytes:parameters length:parameterBytes atIndex:inputs.size()+1+(secondOutput?1:0)+(thirdOutput?1:0)];
     if(serialVisionPrefetch) {
         const size_t count=vectorVisionContext?threads/4:threads;
         [encoder dispatchThreads:MTLSizeMake(count,1,1) threadsPerThreadgroup:MTLSizeMake(std::min(count,size_t(128)),1,1)];
@@ -3689,7 +3716,7 @@ void MetalContext::EncodeStateKernel(unsigned operation,const std::vector<MetalM
         [encoder setThreadgroupMemoryLength:((capacity*sizeof(float)+15)&~size_t(15)) atIndex:0];
         [encoder dispatchThreadgroups:MTLSizeMake(threads,1,1) threadsPerThreadgroup:MTLSizeMake(128,1,1)];
 #endif
-    } else if(operation==19) {
+    } else if(operation==19||operation==25) {
         if(pipeline.threadExecutionWidth!=32||pipeline.maxTotalThreadsPerThreadgroup<128)throw std::runtime_error("Recurrent chunk requires 32-lane SIMD groups");
         [encoder dispatchThreadgroups:MTLSizeMake(threads,1,1) threadsPerThreadgroup:MTLSizeMake(128,1,1)];
     } else if(operation==1||operation==16||operation==4||operation==6||operation==8||operation==13) {
@@ -3712,6 +3739,7 @@ void MetalContext::EncodeStateKernel(unsigned operation,const std::vector<MetalM
         threadsPerThreadgroup:MTLSizeMake(std::min(threads,size_t(pipeline.maxTotalThreadsPerThreadgroup)),1,1)];
     [encoder endEncoding];output.impl_->ready=false;output.impl_->pending=true;if(impl_->pendingOutputs.insert(output.impl_.get()).second)impl_->outputs.push_back(output.impl_);
     if(secondOutput){const auto& second=secondOutput->impl_;second->ready=false;second->pending=true;if(impl_->pendingOutputs.insert(second.get()).second)impl_->outputs.push_back(second);}
+    if(thirdOutput){const auto& third=thirdOutput->impl_;third->ready=false;third->pending=true;if(impl_->pendingOutputs.insert(third.get()).second)impl_->outputs.push_back(third);}
     }
 }
 void MetalContext::EncodeLayout(const MetalMatrix& input,const MetalMatrix& flags,const MetalMatrix& output,size_t tokenWidth) {
@@ -3863,6 +3891,85 @@ void MetalContext::EncodeGatedDeltaChunk(const MetalMatrix& prepared,const Metal
     Params p{batch,chunk,heads,keyDim,valueDim,a.rowBytes/4,s.rowBytes/4,mask.rowBytes/4,o.rowBytes/4,n.rowBytes/4};
     EncodeStateKernel(19,{prepared,state,active},output,&p,sizeof(p),Elements(Elements(batch,heads),valueDim/16),&nextState);
 }
+#ifdef GARNET_METAL_VERIFY_ATTENTION
+void MetalContext::ValidateVerificationRecurrent(const std::vector<MetalMatrix>& inputs,
+    const MetalMatrix& output,const MetalMatrix& nextState,const MetalMatrix& firstState) const {
+    if(!impl_->command)throw std::logic_error("Begin a verification checkpoint batch first");
+    const MetalMatrix* outputs[]={&output,&nextState,&firstState};
+    for(size_t i=0;i<3;++i) {
+        const auto& target=outputs[i]->impl_;
+        if(!target||target->matrix.device!=impl_->device||target->matrix.dataType!=MPSDataTypeFloat32||target->matrix.offset)
+            throw std::invalid_argument("Verification checkpoint output device/type/layout mismatch");
+        if(target->pending&&!impl_->pendingOutputs.count(target.get()))
+            throw std::logic_error("Verification checkpoint output is pending in another batch");
+        for(size_t j=0;j<i;++j)if(target->matrix.data==outputs[j]->impl_->matrix.data)
+            throw std::invalid_argument("Verification checkpoint outputs overlap");
+    }
+    for(const auto& input:inputs) {
+        const auto& source=input.impl_;
+        if(!source||source->matrix.device!=impl_->device||source->matrix.dataType!=MPSDataTypeFloat32||source->matrix.offset)
+            throw std::invalid_argument("Verification checkpoint input device/type/layout mismatch");
+        if((source->pending&&!impl_->pendingOutputs.count(source.get()))||
+           (!source->ready&&!(source->pending&&impl_->pendingOutputs.count(source.get()))))
+            throw std::logic_error("Verification checkpoint input is uninitialized or owned by another batch");
+        for(const auto* target:outputs)if(source->matrix.data==target->impl_->matrix.data)
+            throw std::invalid_argument("Verification checkpoint input/output alias");
+    }
+    const auto& mask=inputs.back().impl_;const auto a=mask->matrix;
+    if(!mask->ready||mask->pending||a.data.storageMode!=MTLStorageModeShared||!a.data.contents)
+        throw std::logic_error("Verification checkpoint mask requires host-readable nonpending storage");
+    const auto* flags=static_cast<const float*>(a.data.contents);
+    for(size_t row=0;row<a.rows;++row) {
+        bool ended=false;
+        for(size_t token=0;token<a.columns;++token) {
+            const float flag=flags[row*(a.rowBytes/4)+token];
+            if(flag!=0&&flag!=1)throw std::invalid_argument("Verification checkpoint mask must be binary");
+            if(flag==0)ended=true;
+            else if(ended)throw std::invalid_argument("Verification checkpoint mask must be a contiguous prefix");
+        }
+    }
+}
+void MetalContext::EncodeVerificationConvCheckpoint(const MetalMatrix& tokens,const MetalMatrix& weight,
+    const MetalMatrix& state,const MetalMatrix& active,const MetalMatrix& output,
+    const MetalMatrix& nextState,const MetalMatrix& firstState,size_t chunk,size_t kernel) {
+    if(!tokens.impl_||!weight.impl_||!state.impl_||!active.impl_||!output.impl_||!nextState.impl_||!firstState.impl_||
+       !chunk||chunk>4||!kernel||kernel>8)
+        throw std::invalid_argument("Invalid bounded verification convolution checkpoint");
+    const auto t=tokens.impl_->matrix,w=weight.impl_->matrix,s=state.impl_->matrix,a=active.impl_->matrix,
+        o=output.impl_->matrix,n=nextState.impl_->matrix,c=firstState.impl_->matrix;
+    const size_t batch=s.rows,stateWidth=Elements(t.columns,kernel);
+    if(!batch||batch>4||Elements(batch,chunk)>4||!t.columns||t.columns>10240||t.rows!=Elements(batch,chunk)||
+       w.rows!=t.columns||w.columns!=kernel||s.columns!=stateWidth||a.rows!=batch||a.columns!=chunk||
+       o.rows!=t.rows||o.columns!=t.columns||n.rows!=batch||n.columns!=stateWidth||c.rows!=batch||c.columns!=stateWidth)
+        throw std::invalid_argument("Verification convolution checkpoint profile mismatch");
+    ValidateVerificationRecurrent({tokens,weight,state,active},output,nextState,firstState);
+    struct Params {uint64_t batch,chunk,channels,kSize,tStride,wStride,sStride,aStride,oStride,nStride,cStride;};
+    Params p{batch,chunk,t.columns,kernel,t.rowBytes/4,w.rowBytes/4,s.rowBytes/4,a.rowBytes/4,o.rowBytes/4,n.rowBytes/4,c.rowBytes/4};
+    EncodeStateKernel(24,{tokens,weight,state,active},output,&p,sizeof(p),Elements(batch,t.columns),&nextState,false,&firstState);
+    ++impl_->verificationConvCheckpoints;
+}
+void MetalContext::EncodeVerificationDeltaCheckpoint(const MetalMatrix& prepared,const MetalMatrix& state,
+    const MetalMatrix& active,const MetalMatrix& output,const MetalMatrix& nextState,const MetalMatrix& firstState,
+    size_t chunk,size_t heads,size_t keyDim,size_t valueDim) {
+    if(!prepared.impl_||!state.impl_||!active.impl_||!output.impl_||!nextState.impl_||!firstState.impl_||
+       !chunk||chunk>4||!heads||heads>48||keyDim!=128||!valueDim||valueDim>128||valueDim%16)
+        throw std::invalid_argument("Invalid bounded verification delta checkpoint");
+    const auto a=prepared.impl_->matrix,s=state.impl_->matrix,mask=active.impl_->matrix,
+        o=output.impl_->matrix,n=nextState.impl_->matrix,c=firstState.impl_->matrix;
+    const size_t batch=s.rows,qw=Elements(heads,keyDim),vw=Elements(heads,valueDim),stateWidth=Elements(qw,valueDim);
+    if(!batch||batch>4||Elements(batch,chunk)>4||a.rows!=Elements(batch,chunk)||a.columns!=2*qw+vw+2*heads||s.columns!=stateWidth||
+       mask.rows!=batch||mask.columns!=chunk||o.rows!=a.rows||o.columns!=vw||n.rows!=batch||n.columns!=stateWidth||
+       c.rows!=batch||c.columns!=stateWidth||a.rowBytes%16||s.rowBytes%16||o.rowBytes%16||n.rowBytes%16||c.rowBytes%16)
+        throw std::invalid_argument("Verification delta checkpoint profile mismatch");
+    ValidateVerificationRecurrent({prepared,state,active},output,nextState,firstState);
+    struct Params {uint64_t batch,chunk,heads,keyDim,valueDim,pStride,sStride,aStride,oStride,nextStride,cStride;};
+    Params p{batch,chunk,heads,keyDim,valueDim,a.rowBytes/4,s.rowBytes/4,mask.rowBytes/4,o.rowBytes/4,n.rowBytes/4,c.rowBytes/4};
+    EncodeStateKernel(25,{prepared,state,active},output,&p,sizeof(p),Elements(Elements(batch,heads),valueDim/16),&nextState,false,&firstState);
+    ++impl_->verificationDeltaCheckpoints;
+}
+size_t MetalContext::LastVerificationConvCheckpoints() const {return impl_->verificationConvCheckpoints;}
+size_t MetalContext::LastVerificationDeltaCheckpoints() const {return impl_->verificationDeltaCheckpoints;}
+#endif
 void MetalContext::EncodeLinearPrepare(const MetalMatrix& conv,const MetalMatrix& a,const MetalMatrix& b,
     const MetalMatrix& aLog,const MetalMatrix& dtBias,const MetalMatrix& output,
     size_t keyHeads,size_t valueHeads,size_t keyDim,size_t valueDim,size_t kernel) {
@@ -4325,6 +4432,7 @@ double MetalContext::LastGPUMs() const {return impl_->gpuMs;}
 void MetalContext::Abort() {
 #ifdef GARNET_METAL_VERIFY_ATTENTION
     impl_->verificationAttentionDispatches=0;
+    impl_->verificationConvCheckpoints=impl_->verificationDeltaCheckpoints=0;
 #endif
     impl_->screenedHeadDispatches=0;
     impl_->screenedHeadSeedRows=0;

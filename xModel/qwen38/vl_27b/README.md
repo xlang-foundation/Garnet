@@ -71,6 +71,14 @@ slots with earlier cache entries zero; it does not qualify a full4K prompt.
 Its per-position heads still use a diagnostic hidden download/upload. No
 verification speedup is admitted.
 
+Native first-token Conv/GDN checkpoint primitives and state-only prefix replay
+now also pass130 synthetic cases at bounded and actual27B recurrent geometry,
+with103,007,792 FP32 words matching separate decode steps. They remain separate
+from compiled verification graphs and do not yet implement model-level accepted
+prefix commit, KV restoration, EOS handling or MTP generation. The enabled/
+disabled native suites pass22/22 and19/19. No new trained checkpoint/replay or
+speed qualification is claimed for these component gates.
+
 ## Entry points and limits
 
 Profile sizes are upper bounds. Actual input lengths and occupied request slots

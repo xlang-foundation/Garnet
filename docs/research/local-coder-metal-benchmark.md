@@ -2518,7 +2518,7 @@ build passes19. Sources and logs are under
 
 These component gates did not admit an integrated verifier. The subsequent
 compiled-graph gate is recorded below. Ordinary sparse prefill can select BF16
-operands and must not be relabeled as verification. Hybrid Conv/GDN checkpoint/
+operands and must not be relabeled as verification. Model-level Conv/GDN checkpoint/
 replay and accepted-prefix commit, lease/epoch/EOS/cancellation handling, and
 integration of the pinned auxiliary MTP parameters remain unfinished. No MTP
 acceptance, speculative coding gate or speed result is admitted. All2x targets
@@ -2604,6 +2604,61 @@ correctness prototype, not the final device-resident verification API. No draft
 is generated or accepted, and no rejected speculative state is rolled back.
 The trained checks cover batch1 only. The synthetic batch2/4 gates do not admit
 trained multi-request verification profiles.
+
+### Native recurrent checkpoints and prefix replay
+
+The default-OFF verification extension now also exposes explicit native Conv/GDN
+checkpoint primitives. Separate shader entry points preserve the qualified chunk
+arithmetic while returning three prepared outputs: all token results, the final
+state, and S1 after token zero. An inactive row stores its unchanged input as S1.
+Ordinary chunk kernels and compiled graph routing remain unchanged. Encoding
+does not allocate GPU workspace or read state back to the CPU.
+
+The bounded contract is at most four physical token rows total, chunk1..4,
+batch1..4, convolution kernel1..8 and channels<=10240. Delta checkpoints require
+key dimension128, value dimension16..128 divisible by16, and at most48 value
+heads. Every matrix is zero-offset FP32. Masks must be ready, host-readable,
+nonpending contiguous binary prefixes. Output/input aliases, overlapping output
+banks, uninitialized inputs and foreign-batch writers reject before dispatch.
+The generic native encoder tracks the third output through completion, partial
+submission, abort and retry, and checkpoint counters reset with command batches.
+
+The correctness gate executes checkpoint Conv -> preparation -> checkpoint GDN,
+then replays only accepted draft positions from GPU-owned S1 and retained QKV/
+prepared rows using the existing chunk kernels. This replay performs no weight
+matrix products, CPU state uploads or CPU state readbacks. Its130 cases pass
+1,529 checks and103,007,792 FP32 words equal bit for bit to separate ordinary
+Conv/preparation/parallel-delta decode steps. The962 rejection/readability checks
+include invalid/pending masks, aliases, foreign pending inputs/outputs,
+unsupported eight-row profiles, nested Begin, and abort after partial submission.
+All four native owner counts return to zero.
+
+Coverage includes physical occupancy0..4, unequal row lengths, batch1/2/4,
+inactive NaN projections, signed-zero state, three value widths, actual27B
+linear geometry16/48/128/128 with10240 convolution channels, convolution kernels
+1/4/8, a37-channel tail, GPU-produced pending projections, and partial submission
+between Conv capture and its consumer. Caller-owned masks and every workspace
+are prepared before Begin; matrix/pipeline owner counts do not grow while
+encoding. The initial fixture tried to upload inside an open batch and was
+correctly rejected. Its source and failed log remain archived; moving those
+uploads into preparation repaired the fixture without changing arithmetic.
+
+The final enabled suite passes22/22 and the disabled compatibility suite19/19.
+The compiled four-layer forward gate still passes396 checks/30,497,536 exact
+words, and the ordinary mixed-layer alias/scratch regression passes. Evidence is
+`verification-recurrent-checkpoint-on-ctest1.log`,
+`verification-recurrent-checkpoint-off-ctest1.log`,
+`verification-recurrent-compiled-forward-regression1.log`, and
+`verification-recurrent-ordinary-alias-regression1.log`; initial failures are
+retained in `verification-recurrent-checkpoint-focused1.log` and `source2`.
+
+These are native component gates. Compiled verification graphs do not yet bind
+these checkpoints, retain replay operands per model layer, or commit an accepted
+prefix. Native per-position heads, bounded KV-slot backup/restore, acceptance/
+EOS/lease/history handling and auxiliary MTP integration remain required. The
+primitive tests use synthetic tensors at model geometry, not a trained27B
+checkpoint/replay run. No speculative coding or speed result is admitted, and
+all2x targets remain unmet.
 
 A source-backed planning estimate is retained in
 `evidence/27b-m5-decode-bandwidth-analysis1.json`:497 native affine projections
