@@ -68,8 +68,17 @@ through several chunks when the context profile allows it.
   archive. All14 serving outputs exactly match the preceding candidate, with498
   combined decode plans in the concurrent archive. These single-wave checks do
   not establish repeated performance or production admission.
-  Each requested shape must still pass the native working-set guard; this does
-  not guarantee that chunk256 fits this Mac or admit these shapes for production.
+  A separate alias-group/lifetime-reuse chunk256 profile also passes the unchanged
+  eight coding contracts and full token equality. Its short coding prompts fit
+  in one chunk, so their original audit retains two missing-coverage failures.
+  Eight additional canonical short/long requests supply the missing multi-chunk
+  and sparse-head coverage, with full token equality,16 interleavings and53
+  corruption checks. A combined qualification audit requires identical native
+  libraries, implementations and runtime profiles and passes18 more corruption
+  checks. Prepared allocation is18,027,708,416 bytes; largest sampled allocation
+  is18,038,292,480 bytes, within the configured guard. Each requested profile must
+  still pass its native working-set guard. Repeated performance and production
+  admission remain incomplete.
 - `garnet.continuous_scheduler()` owns allocation and lifecycle in native code.
   The optional native chunk schedule retains leases while committing partial
   prompt lengths. Python study transports supply inputs and route native events.

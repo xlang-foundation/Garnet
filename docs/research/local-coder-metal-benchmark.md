@@ -2306,6 +2306,79 @@ the native worker exits0. Evidence is
 `evidence/native27b-prefill-alias-chunk128-batch-admission1`. The upgraded auditor
 also accepts the prior alias-disabled C1 archive without rerunning inference.
 
+The next batch2/4K/chunk256 profile prepares within the same native guards, with
+512 physical projection rows,160 alias groups and320 views. Prepared Metal
+allocation is18,027,708,416 bytes; preparation close returns to458,752 bytes with
+all4 owner counters zero. Its MPS attention workspace is255,852,544 bytes with
+one prepared plan and six context buckets. This is a separate bounded profile,
+not a requirement that every input contain256 tokens.
+
+All8 unchanged coding tasks pass sandbox evaluation and retain complete token
+equality to the original native control. Their standalone accounting audit is
+preserved as failed: all prompts are71..145 tokens and fit in a single chunk,
+so this trace lacks decode between chunks and sparse FP32 head coverage. Do not
+remove these checks or call that original audit passed.
+
+A separate correctness-only execution trace replays eight exact requests split
+from the canonical short/long four-client workloads (actual lengths260..263 and
+2054..2057). All8 outputs match the preceding qualified native control. Its full
+standalone audit and53 corruption checks pass, with16 decode-between-chunk
+interleavings,18 mixed forwards and426 combined decode plans. It supplies the
+missing execution coverage without modifying the original coding inputs.
+
+`test2026/metal/audit_local_coder_profile_qualification.py` composes these two
+archives. It requires the same native library, worker, decoder, factory and
+runtime profile (only the inventory destination may differ), unchanged original
+coding manifest,8 sandbox passes tied to response/code/suite hashes, and full
+token equality in both traces. Only the two named missing coverage observations
+may transfer from a short-only coding trace; the supplemental standalone audit
+must pass in full and actually observe a multi-chunk prompt, interleaving and
+combined decode. The combined gate passes18 additional corruption checks,
+including different internally hash-consistent library/worker/profile identities
+and replacement of long coverage with the short-only coding archive.
+
+Evidence is `evidence/native27b-prefill-alias-chunk256-quality1` and
+`evidence/native27b-prefill-alias-chunk256-execution-coverage1`; the original failed
+audit remains alongside the passing combined qualification. Both workers exit0,
+all4 owner counters close to zero, and close allocation is1,507,328 bytes. The
+largest sampled allocation in either run is18,038,292,480 bytes, within the
+recommended working set minus256MiB; this is not a peak measurement. No repeated
+model performance improvement has been established for chunk256.
+
+Chunk256 subsequently passes both C1 and C2/C4 serving admissions, with all14
+complete output token sequences equal to the chunk128 control. Each archive
+passes31 corruption checks. The concurrent archive joins487 combined decode
+plans and795 attention-bucket commands; native close returns all4 owner counters
+to zero and1,507,328 allocated Metal bytes, and the worker exits0.
+
+These separate cold, single-wave observations favor chunk128 in every cell:
+
+| Prompt target | Clients | Chunk128 overall tokens/s | Chunk256 overall tokens/s |
+|---|---:|---:|---:|
+|256 |1 |4.057 |3.652 |
+|256 |2 |5.764 |4.843 |
+|256 |4 |8.255 |4.698 |
+|2048 |1 |2.398 |1.990 |
+|2048 |2 |2.356 |1.549 |
+|2048 |4 |2.664 |1.756 |
+
+Overall rates include prefill and queueing. Actual prompts remain260..263 and
+2054..2057 tokens, with output budgets128 and natural EOS retained. Chunk256 C1
+short/long TTFT is16.101/39.484 seconds and decode is6.714/5.124 tokens/s, versus
+chunk12813.126/32.251 seconds and6.902/6.026 tokens/s. There are no warmups or
+repeated matched cohorts in these admissions. They do not replace the complete
+three-cohort native/reference campaign, isolate a causal kernel effect or
+establish a statistically repeatable regression. Retain chunk256 as a negative
+performance candidate; do not promote it on the strength of its larger budget.
+
+During the short four-client cell, system-wide compression/decompression averages
+approximately1.3GiB/s for chunk256, versus a few MiB/s for chunk128. These counters
+include other apps and do not establish Garnet-specific causation. They reinforce
+that passing the allocation guard alone does not establish a fast profile.
+`evidence/prefill-alias-chunk128-vs256-admission-comparison1.json` contains all
+six cells, complete request-window timings, pressure-sample intervals, limitations
+and input hashes. Its review script is `review_prefill_alias_chunk_sizes1.py`.
+
 A source-backed planning estimate is retained in
 `evidence/27b-m5-decode-bandwidth-analysis1.json`:497 native affine projections
 contain14,412,349,440 logical payload/coefficient bytes. Apple's published M5
