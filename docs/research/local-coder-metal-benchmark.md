@@ -1781,8 +1781,28 @@ These separate cold-admission samples improve on the preceding64-bit profile,
 but they are not repeated performance qualification. Short decode exceeds the
 frozen vLLM median in this sample; long decode is below it, and both TTFTs and
 overall output throughput remain substantially worse. All2x targets remain
-unmet. A four-cell C2/C4 admission is prepared to measure actual combined and
-queued throughput using the same qualified artifact and frozen requests.
+unmet. The four-cell C2/C4 admission
+`native27b-bounded-index32-chunk128-batch-admission1` also passes accounting and12
+corruption checks:12 requests,495 actual combined decode plans and833
+specialized projection commands. Four-client workloads queue through two
+physical request rows. Natural EOS is retained and aggregate rates use actual
+output counts, not an assumed128 tokens per request. Native close releases all
+tracked owners, returns to1,507,328 Metal bytes and exits0.
+
+| Prompt target | Clients | Garnet admission overall output tokens/s | Frozen vLLM-Metal | Frozen SGLang |
+|---|---:|---:|---:|---:|
+|256|1|4.070|5.761|5.502|
+|256|2|5.581|7.352|6.834|
+|256|4|7.881|9.935|7.546|
+|2048|1|1.801|3.382|3.275|
+|2048|2|1.701|3.525|3.281|
+|2048|4|1.945|3.479|3.789|
+
+Garnet entries are one wave per cell without warmups, from the two admissions;
+references are medians across three repeated cohorts. The table does not
+establish a repeated speedup. No reference engine was rerun. Long-prompt
+prefill and queueing still dominate the batched overall rates, so further
+stage attribution is needed; all2x targets remain unmet.
 
 ### Parent MTP asset discovery
 
