@@ -303,6 +303,11 @@ public:
     size_t LastChunkProbabilityReuseDispatches() const;
     size_t LastChunkAttentionIndex32Dispatches() const;
     size_t LastChunkAttentionOptimizedDispatches() const;
+    size_t LastChunkAttentionMPSDispatches() const;
+    size_t ChunkAttentionMPSPlanCount() const;
+    size_t ChunkAttentionMPSScratchBytes() const;
+    void PrepareAttentionChunk(const std::vector<MetalMatrix>&,size_t heads,size_t kvHeads,
+        size_t dim,size_t capacity,size_t chunk);
     void EncodeAttentionScores(const MetalMatrix&,const MetalMatrix&,const MetalMatrix&,const MetalMatrix&,
         const MetalMatrix&,size_t heads,size_t kvHeads,size_t dim,size_t capacity);
     void EncodeAttentionContext(const MetalMatrix&,const MetalMatrix&,const MetalMatrix&,const MetalMatrix&,const MetalMatrix&,

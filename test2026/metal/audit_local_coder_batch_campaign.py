@@ -110,6 +110,7 @@ def audit(root):
         combined_decode_plans=combined,combined_decode_required=combined_required,
         shutdown=shutdown,affine_profile_calls=len(affine_profiles),indexed_decode_calls=len(indexed_decode),indexed_decode_command_calls=sum(e.get('stage')=='decode' for e in indexed_decode),
         chunk_attention_index32_calls=sum(e.get('event')=='native_chunk_attention_index32' for e in events),
+        chunk_attention_mps_calls=sum(e.get('event')=='native_chunk_attention_mps' for e in events),
         indexed_decode_sparse_required=require_sparse,baseline_accounting=base,worker_log_sha256=digest(root/'server/worker-stdout.jsonl'),
         auditor_sha256=digest(Path(__file__)),decode_auditor_sha256=digest(Path(__file__).with_name('audit_local_coder_batch_quality.py')))
 

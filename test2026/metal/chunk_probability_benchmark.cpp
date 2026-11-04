@@ -24,22 +24,23 @@ void Cell(MetalContext& gpu,size_t activeRows,size_t activeTokens,size_t prefix,
         gpu.Upload(kc,batch,kvHeads*capacity*dim),gpu.Upload(vc,batch,kvHeads*capacity*dim),
         gpu.Upload(slots,batch,chunk),gpu.Upload(active,batch,chunk),gpu.Upload(gate,rows,qWidth)};
     std::array<MetalMatrix,2> outputs{gpu.Allocate(rows,qWidth),gpu.Allocate(rows,qWidth)};
+    gpu.PrepareAttentionChunk(inputs,heads,kvHeads,dim,capacity,chunk);
     std::array<std::vector<double>,2> gpuMs,wallMs;
     for(int repeat=-warmups;repeat<repetitions;++repeat)for(int step=0;step<2;++step) {
         const int variant=(repeat+warmups+step)%2;
         const auto began=std::chrono::steady_clock::now();
         gpu.Begin();gpu.EncodeAttentionChunk(inputs,outputs[variant],heads,kvHeads,dim,capacity,chunk,true,variant==0);gpu.SubmitAndWait();
         const auto ended=std::chrono::steady_clock::now();
-        Need(gpu.LastChunkAttentionOptimizedDispatches()==size_t(variant==1),"Probability policy route differs");
+        Need(gpu.LastChunkAttentionOptimizedDispatches()==size_t(variant==1),"Attention policy route differs");
         if(repeat>=0){gpuMs[variant].push_back(gpu.LastGPUMs());wallMs[variant].push_back(std::chrono::duration<double,std::milli>(ended-began).count());}
     }
     const auto control=gpu.Download(outputs[0]),candidate=gpu.Download(outputs[1]);
-    Need(control.size()==candidate.size(),"Probability policy changed output shape");
+    Need(control.size()==candidate.size(),"Attention policy changed output shape");
     const bool bitwise=std::memcmp(control.data(),candidate.data(),control.size()*sizeof(float))==0;
     double maximumDelta=0;
     for(size_t i=0;i<candidate.size();++i) {
         const double delta=std::abs(double(candidate[i])-control[i]);maximumDelta=std::max(maximumDelta,delta);
-        Need(std::isfinite(control[i])&&std::isfinite(candidate[i])&&delta<=1e-5+2e-4*std::abs(double(control[i])),"Probability policy exceeds the original control/FP64 error bound");
+        Need(std::isfinite(control[i])&&std::isfinite(candidate[i])&&delta<=1e-5+2e-4*std::abs(double(control[i])),"Attention policy exceeds the original control/FP64 error bound");
     }
     for(size_t b=0;b<batch;++b)for(size_t t=0;t<chunk;++t)if(!active[b*chunk+t])
         for(size_t d=0;d<qWidth;++d)Need(candidate[(b*chunk+t)*qWidth+d]==0,"Inactive query retained stale output");
@@ -53,7 +54,10 @@ int main(int argc,char** argv) {
         const int repetitions=argc>1?std::stoi(argv[1]):9,warmups=argc>2?std::stoi(argv[2]):3;
         Need(repetitions>=3&&repetitions<=100&&warmups>=1&&warmups<=20,"Invalid sample policy");
         MetalContext gpu;
-#ifdef GARNET_METAL_CHUNK_ATTENTION_INDEX32
+#ifdef GARNET_METAL_CHUNK_ATTENTION_MPS
+        const char* policy="mps";
+        const char* rounding="FP32 MPS matrix reduction order; original numerical gates and bit parity measured; index32 control";
+#elif defined(GARNET_METAL_CHUNK_ATTENTION_INDEX32)
         const char* policy="index32";
         const char* rounding="32-bit bounded element indexes; FP32 operands and arithmetic order retained; bit parity measured";
 #else

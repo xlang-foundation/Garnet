@@ -156,6 +156,9 @@ public:
 #endif
     size_t LastChunkProbabilityReuseDispatches() {std::lock_guard<std::mutex> lock(mutex_);return gpu_?gpu_->LastChunkProbabilityReuseDispatches():0;}
     size_t LastChunkAttentionIndex32Dispatches() {std::lock_guard<std::mutex> lock(mutex_);return gpu_?gpu_->LastChunkAttentionIndex32Dispatches():0;}
+    size_t LastChunkAttentionMPSDispatches() {std::lock_guard<std::mutex> lock(mutex_);return gpu_?gpu_->LastChunkAttentionMPSDispatches():0;}
+    size_t ChunkAttentionMPSPlanCount() {std::lock_guard<std::mutex> lock(mutex_);return gpu_?gpu_->ChunkAttentionMPSPlanCount():0;}
+    size_t ChunkAttentionMPSScratchBytes() {std::lock_guard<std::mutex> lock(mutex_);return gpu_?gpu_->ChunkAttentionMPSScratchBytes():0;}
     size_t LastKVInplaceUpdates() const {return kvInplaceUpdates_;}
 #ifdef GARNET_METAL_INDEXED_DECODE
     size_t LastIndexedDecodeAffineDispatches() {std::lock_guard<std::mutex> lock(mutex_);return gpu_?gpu_->LastIndexedDecodeAffineDispatches():0;}
@@ -247,6 +250,9 @@ public:
 #endif
         APISET().AddProp("chunk_probability_reuse_dispatches",&MetalDecoderSession::LastChunkProbabilityReuseDispatches);
         APISET().AddProp("chunk_attention_index32_dispatches",&MetalDecoderSession::LastChunkAttentionIndex32Dispatches);
+        APISET().AddProp("chunk_attention_mps_dispatches",&MetalDecoderSession::LastChunkAttentionMPSDispatches);
+        APISET().AddProp("chunk_attention_mps_plan_count",&MetalDecoderSession::ChunkAttentionMPSPlanCount);
+        APISET().AddProp("chunk_attention_mps_scratch_bytes",&MetalDecoderSession::ChunkAttentionMPSScratchBytes);
         APISET().AddProp("kv_inplace_updates",&MetalDecoderSession::LastKVInplaceUpdates);
 #ifdef GARNET_METAL_INDEXED_DECODE
         APISET().AddProp("indexed_decode_affine_dispatches",&MetalDecoderSession::LastIndexedDecodeAffineDispatches);

@@ -75,7 +75,7 @@ def profile_close_issues(profile,memory):
 
 def chunk_attention_issues(profile,events,backend,prefill_calls,decode_calls):
     issues=[]
-    for policy in ('chunk_probability_reuse','chunk_attention_index32'):
+    for policy in ('chunk_probability_reuse','chunk_attention_index32','chunk_attention_mps'):
         enabled=profile.get(policy,False);calls=[e for e in events if e.get('event')=='native_'+policy]
         if type(enabled) is not bool or enabled!=(policy in backend):issues.append('Chunk attention backend policy differs: '+policy)
         if not enabled:
@@ -83,12 +83,24 @@ def chunk_attention_issues(profile,events,backend,prefill_calls,decode_calls):
             continue
         coverage=profile.get('expected_chunk_attention_dispatches')
         if type(coverage) is not int or coverage<1:issues.append('Invalid frozen chunk attention coverage');continue
+        if policy=='chunk_attention_index32' and profile.get('chunk_attention_mps'):coverage=0
         if (sum(e.get('stage')=='prefill' for e in calls)!=prefill_calls or
             sum(e.get('stage')=='decode' for e in calls)!=decode_calls):issues.append('Chunk attention command coverage differs')
         for event in calls:
             stage=event.get('stage');count=event.get('dispatches')
             if stage not in ('prefill','decode') or type(count) is not int or count!=(coverage if stage=='prefill' else 0):
                 issues.append('Chunk attention route/count differs')
+            if policy=='chunk_attention_mps':
+                for key in ('plan_count','scratch_bytes'):
+                    if event.get(key)!=profile.get('expected_attention_mps_'+key):issues.append('MPS attention prepared storage differs')
+    prepared=[e for e in events if e.get('event')=='native_chunk_attention_mps_prepared']
+    if profile.get('chunk_attention_mps'):
+        if len(prepared)!=1:issues.append('MPS attention preparation evidence missing')
+        for key in ('plan_count','scratch_bytes'):
+            wanted=profile.get('expected_attention_mps_'+key)
+            if type(wanted) is not int or wanted<=0 or any(e.get(key)!=wanted for e in prepared):issues.append('MPS attention prepared storage differs')
+        if not profile.get('chunk_attention_index32') or profile.get('chunk_probability_reuse'):issues.append('MPS attention control policy differs')
+    elif prepared:issues.append('Unexpected MPS attention preparation')
     if profile.get('chunk_probability_reuse') and profile.get('chunk_attention_index32'):issues.append('Attention experiments must be isolated')
     return issues
 
@@ -256,6 +268,7 @@ def audit(root,reference=None):
         indexed_prefill_calls=len(indexed_events),
         reuse64_prefill_calls=len(reuse64_events),indexed_decode_calls=len(indexed_decode_events),affine_profile_calls=len(affine_profile_events),affine_profile_index_bits=profile.get('affine_profile_index_bits',64) if profile.get('bounded_affine_kernel_profiles') else 0,
         chunk_attention_index32_calls=sum(e.get('event')=='native_chunk_attention_index32' for e in events),
+        chunk_attention_mps_calls=sum(e.get('event')=='native_chunk_attention_mps' for e in events),
         scope='Concurrent native frozen prompt/stream/HTTP accounting and row lifecycle; coding correctness requires separate sandbox evaluation',
         auditor_sha256=digest(Path(__file__)),reference_worker_log_sha256=digest(reference) if reference else None,
         artifacts_sha256=digest(root/'artifacts.json'),worker_log_sha256=digest(root/'server/worker-stdout.jsonl'))

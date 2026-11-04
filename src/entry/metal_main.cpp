@@ -211,6 +211,9 @@ public:
 #ifdef GARNET_METAL_CHUNK_ATTENTION_INDEX32
     info+="; chunk_attention_index32";
 #endif
+#ifdef GARNET_METAL_CHUNK_ATTENTION_MPS
+    info+="; chunk_attention_mps";
+#endif
 #ifdef GARNET_METAL_RETIRE_PREFILL_INPUTS
     info+="; retired_prefill_hidden_inputs";
 #endif

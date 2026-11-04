@@ -52,7 +52,7 @@ def engine_processes():
                    'local_coder_batch_http.py' in arguments or
                    'local_coder_batch_worker.py' in arguments or
                    (executable == 'xlang3' and 'Qwen3.8-27B' in arguments)))
-        if reference or native or executable in ('garnet_affine_int4_benchmark','garnet_chunk_probability_benchmark') or command.endswith('/bin/Cantor'):
+        if reference or native or executable in ('garnet_affine_int4_benchmark','garnet_chunk_probability_benchmark','garnet_chunk_attention_mps_plan_test') or command.endswith('/bin/Cantor'):
             result.append(line.strip())
     return result
 

@@ -977,6 +977,12 @@ bool MetalCompiledGraph::BuildInternal(X::Value graph,X::Value symbols,const std
             if(eligible&&writer)outputStorageGroups_[part]=std::move(group);
         }
         resetKVPrefix_[0]=ComputeResetKVPrefix(1);resetKVPrefix_[1]=ComputeResetKVPrefix(2);
+#ifdef GARNET_METAL_CHUNK_ATTENTION_MPS
+        for(const auto& op:ops_)if(op.kind==Kind::AttentionChunk) {
+            std::vector<MetalMatrix> args;for(auto id:op.arguments)args.push_back(slots_[id].matrix);
+            gpu_->PrepareAttentionChunk(args,op.dimensions[0],op.dimensions[1],op.dimensions[2],op.dimensions[3],op.dimensions[4]);
+        }
+#endif
 #ifdef GARNET_METAL_AFFINE_PROFILE
         // Profiles are upper bounds: valid row counts/masks vary at execution.
         // Prepare before readiness and before singleton scratch is retired.

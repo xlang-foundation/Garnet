@@ -20,6 +20,9 @@ if baseline.get('affine_profile_calls',0):
 if baseline.get('chunk_attention_index32_calls',0):
     mutations+=['attention_missing','attention_count','attention_stage']
     expected.update(attention_missing='Chunk attention command coverage differs',attention_count='Chunk attention route/count differs',attention_stage='Chunk attention route/count differs')
+if baseline.get('chunk_attention_mps_calls',0):
+    mutations+=['mps_missing','mps_count','mps_storage','mps_prepared_missing']
+    expected.update(mps_missing='Chunk attention command coverage differs',mps_count='Chunk attention route/count differs',mps_storage='MPS attention prepared storage differs',mps_prepared_missing='MPS attention preparation evidence missing')
 for mutation in mutations:
     with tempfile.TemporaryDirectory() as folder:
         path=Path(folder)
@@ -40,6 +43,10 @@ for mutation in mutations:
                 except json.JSONDecodeError:lines.append(line);continue
                 if isinstance(event,dict):
                     kind=event.get('event')
+                    if mutation=='mps_missing' and kind=='native_chunk_attention_mps' and not changed:changed=True;continue
+                    if mutation=='mps_count' and kind=='native_chunk_attention_mps' and not changed:event['dispatches']=-1;changed=True
+                    if mutation=='mps_storage' and kind=='native_chunk_attention_mps' and not changed:event['scratch_bytes']+=4;changed=True
+                    if mutation=='mps_prepared_missing' and kind=='native_chunk_attention_mps_prepared':continue
                     if mutation=='attention_missing' and kind=='native_chunk_attention_index32' and not changed:changed=True;continue
                     if mutation=='attention_count' and kind=='native_chunk_attention_index32' and not changed:event['dispatches']=-1;changed=True
                     if mutation=='attention_stage' and kind=='native_chunk_attention_index32' and not changed:event['stage']='unvalidated';changed=True

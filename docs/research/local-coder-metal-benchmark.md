@@ -1964,6 +1964,117 @@ frozen vLLM/SGLang warm/cohort references are unchanged. No2x target or full
 matched campaign is satisfied. Retain the candidate as optional and keep
 both attention experiment flags OFF by default.
 
+### Profile-prepared FP32 cached/live matrix attention
+
+Default-OFF `GARNET_METAL_CHUNK_ATTENTION_MPS` replaces the scalar chunk
+attention contraction with four FP32 MPS matrix products. Cached and live
+keys produce separate score matrices. The causal softmax selects the latest
+active live token at each slot, sends its probability to the live operand,
+and zeros the corresponding cache probability. Two value products and a
+gated merge produce the output. Earlier queries retain old cache values when
+a later token overwrites the same slot; cache commits still follow attention.
+No BF16 conversion, cache-format change or speculative tokens are involved.
+The qualified index32 kernel is the comparison control.
+
+Matrix dimensions and seven scratch buffers are prepared during graph
+compilation. Identical profiles share a device pipeline-owned plan across
+graphs and the executing session. A native lease protects its mutable scratch
+through partial submissions and GPU completion; preparation is forbidden while
+encoding. The process cache is weak, so the final context releases all owners.
+For batch2/chunk128/24 query heads/4 KV heads/dim256/capacity4096, the single
+plan owns exactly121,634,816bytes (116MiB), independent of the number of layers.
+
+All17 native tests pass the original FP64 and control-comparison bounds,
+including causal overwrites, duplicate/backward slots, inactive rows, gated
+and ungated outputs, chunk256 and real27B geometry. The new lifecycle test runs
+two contexts against the same scratch through24 partial-submission runs in
+each of two cycles, verifies separate outputs against control, rejects lazy
+preparation and closes every Garnet resource owner. Device allocation after
+each test cycle is737,280bytes. The explicit strict bitwise diagnostic fails
+(420 values, maximum delta2.56114e-9 in its first small case); matrix reduction
+order differs and bitwise kernel equivalence is not claimed.
+
+`chunk-attention-mps-kernel-comparison2` freezes the shared-plan implementation
+and uses three sequential fresh process cohorts, three warmups and nine
+alternating-order measurements per variant. All12 cells pass numerical checks;
+maximum control delta is2.60770e-8. Archive audit and eight corruption checks
+pass. The initial single-context implementation/study remains archived under
+`chunk-attention-mps-sources1` and `chunk-attention-mps-kernel-comparison1`.
+
+| Active rows | Actual tokens per row | Cached prefix | Index32 control GPU ms | Matrix candidate GPU ms | Ratio |
+|---:|---:|---:|---:|---:|---:|
+|1|4|256|0.633|9.941|0.064|
+|1|6|2048|8.317|10.397|0.800|
+|1|128|0|3.800|10.999|0.345|
+|1|128|128|8.064|8.802|0.916|
+|1|128|1024|62.200|9.139|6.806|
+|1|128|1920|137.799|9.235|14.922|
+|1|128|3968|277.688|9.752|28.475|
+|2|128|0|5.822|8.952|0.650|
+|2|128|128|15.709|9.028|1.740|
+|2|128|1024|134.666|9.575|14.064|
+|2|128|1920|274.651|10.076|27.259|
+|2|128|3968|559.074|11.200|49.916|
+
+These are isolated attention milliseconds, not model tokens/s. Full-bound
+matrix work explains the structural tradeoff: this prototype still computes
+the physical batch/chunk/context envelope, including inactive queries and
+unused cache positions. It accepts shorter inputs but does extra work for
+short prefixes and small tails. Keep those regressions visible; dynamic
+context buckets or a sparse-tail route require a separate measured candidate.
+`native27b-chunk-attention-mps-chunk128-quality1` passes all eight sandboxed
+coding tasks and all eight complete output-token sequences exactly match the
+original single-native reference. Accounting and39 corruption checks pass.
+It records1036 combined decode plans, nine mixed forwards, three interleavings
+and1268 checked attention commands. Every prefill command uses all16 MPS
+full-attention dispatches; ordinary decode has zero, and the index32 control
+dispatch count remains zero. Both routes report native coverage separately.
+The same one-plan/121,634,816-byte scratch inventory remains fixed throughout.
+Ready allocation is17,975,410,688bytes, below19,069,665,280 recommended bytes.
+Close records1,769,472bytes, all four Garnet owner counts zero and worker exit0,
+inside the profile's unchanged2MiB close limit. Serving timing remains separate.
+
+The exact qualified library/worker completes
+`native27b-chunk-attention-mps-chunk128-http-admission1`: two cold C1 cells,
+one wave each, no warmups,128 output tokens each. Both full output sequences
+match the preceding attention-index32 admission; accounting and19 corruption
+checks pass, with274 checked MPS command events.
+
+| Actual prompt tokens | First token s | Decode tokens/s | Total s | Overall output tokens/s |
+|---:|---:|---:|---:|---:|
+|260|16.444|6.817|35.121|3.645|
+|2054|43.153|5.905|64.695|1.979|
+
+The preceding attention-index32 cold samples were14.376/47.738s first-token
+time and3.909/1.860 overall output tokens/s. The matrix candidate's short case
+is slower, while its long case improves modestly. Individual cold samples are
+not repeated performance qualification. The large isolated attention gain does
+not translate into a comparable whole-model gain here. Decode kernels are
+unchanged, but the measured decode samples are slightly slower. Keep the
+candidate optional, all failures/regressions visible and every2x target unmet.
+
+`native27b-chunk-attention-mps-stage-diagnostic1` then uses the same qualified
+library with the timing observer enabled. All two128-token sequences match
+the admission exactly; stage/accounting checks pass. Long-prefill preparation
+and encoding sum0.113s, versus50.322s GPU duration nested in50.332s wait.
+Full128-token chunks are approximately flat at2.906..3.100s instead of growing
+with context; the six-token tail takes2.361s. Short-prefill GPU sum is15.748s,
+including a12.903s first-use chunk. These diagnostics identify GPU execution
+as the dominant interval; they do not identify its internal cause.
+
+An immediate sequential remeasurement of the exact earlier affine-index32
+control (which retains64-bit attention),
+`native27b-bounded-index32-stage-diagnostic2`, preserves both full output
+sequences and passes accounting. Its long-prefill GPU sum is53.059s, versus
+47.366s in its earlier diagnostic; short-prefill sums are13.657/14.975s.
+Long ordinary-decode GPU sums are21.266s for the remeasured control and26.180s
+for the matrix diagnostic. Control drift is observed, but it does not explain
+every candidate difference or prove a thermal, paging or private-driver cause.
+The Mac reports AC power and no recorded thermal/performance warning.
+No repeatable model-level speed gain is accepted. A subsequent candidate
+should select precompiled context buckets and a sparse-tail path from actual
+validated controls while retaining the maximum profile's memory envelope.
+
 ### Parent MTP asset discovery
 
 The converted pinned artifact contains no MTP parameters, but the original

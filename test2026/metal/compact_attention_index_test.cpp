@@ -25,30 +25,31 @@ static void Case(MetalContext& gpu,size_t batch,size_t chunk,size_t capacity,boo
         gpu.Upload(kc,batch,kvHeads*capacity*dim),gpu.Upload(vc,batch,kvHeads*capacity*dim),
         gpu.Upload(slots,batch,chunk),gpu.Upload(active,batch,chunk),gpu.Upload(gate,rows,qWidth)};
     auto output=gpu.Allocate(rows,qWidth);
+    gpu.PrepareAttentionChunk(inputs,heads,kvHeads,dim,capacity,chunk);
     gpu.Begin();gpu.EncodeAttentionChunk(inputs,output,heads,kvHeads,dim,capacity,chunk,gated);gpu.SubmitAndWait();
     const auto actual=gpu.Download(output);
     for(float value:actual)Need(std::isfinite(value),"Nonfinite chunk attention output");
 #if defined(GARNET_METAL_CHUNK_PROBABILITY_REUSE)||defined(GARNET_METAL_CHUNK_ATTENTION_INDEX32)
-    Need(gpu.LastChunkAttentionOptimizedDispatches()==1,"Probability-reuse route was not exercised");
+    Need(gpu.LastChunkAttentionOptimizedDispatches()==1,"Attention candidate route was not exercised");
     auto reference=gpu.Allocate(rows,qWidth);
     gpu.Begin();gpu.EncodeAttentionChunk(inputs,reference,heads,kvHeads,dim,capacity,chunk,gated,true);gpu.SubmitAndWait();
     const auto original=gpu.Download(reference);
-    Need(gpu.LastChunkAttentionOptimizedDispatches()==0,"Reference unexpectedly used shared normalized probabilities");
+    Need(gpu.LastChunkAttentionOptimizedDispatches()==0,"Reference unexpectedly used the candidate attention route");
     if(std::memcmp(actual.data(),original.data(),actual.size()*sizeof(float))!=0) {
         size_t mismatches=0;double maximum=0;
         for(size_t i=0;i<actual.size();++i)if(actual[i]!=original[i]) {
-            if(mismatches<8)std::cerr<<"probability parity index="<<i<<" candidate="<<std::hexfloat<<actual[i]<<" control="<<original[i]<<std::defaultfloat<<"\n";
+            if(mismatches<8)std::cerr<<"attention parity index="<<i<<" candidate="<<std::hexfloat<<actual[i]<<" control="<<original[i]<<std::defaultfloat<<"\n";
             ++mismatches;maximum=std::max(maximum,std::abs(double(actual[i])-original[i]));
         }
-        std::cerr<<"probability parity batch="<<batch<<" chunk="<<chunk<<" dim="<<dim<<" capacity="<<capacity<<" gated="<<gated<<" mismatches="<<mismatches<<" max_abs="<<maximum<<"\n";
+        std::cerr<<"attention parity batch="<<batch<<" chunk="<<chunk<<" dim="<<dim<<" capacity="<<capacity<<" gated="<<gated<<" mismatches="<<mismatches<<" max_abs="<<maximum<<"\n";
     }
     // The original main library uses default fast math. Retain the strict
     // experiment explicitly; admission still requires the original FP64 bound
     // and the frozen model's full output-token/functional quality gates.
     for(size_t i=0;i<actual.size();++i)Need(std::isfinite(original[i])&&
         std::abs(double(actual[i])-original[i])<=1e-5+2e-4*std::abs(double(original[i])),
-        "Shared probabilities exceed the original numerical error bound versus control");
-    if(strictBitwise)Need(std::memcmp(actual.data(),original.data(),actual.size()*sizeof(float))==0,"Shared probabilities differ bitwise from the original kernel");
+        "Attention candidate exceeds the original numerical error bound versus control");
+    if(strictBitwise)Need(std::memcmp(actual.data(),original.data(),actual.size()*sizeof(float))==0,"Attention candidate differs bitwise from the original kernel");
 #endif
     double maximumError=0;
     for(size_t row=0;row<batch;++row)for(size_t t=0;t<chunk;++t)for(size_t head=0;head<heads;++head) {
