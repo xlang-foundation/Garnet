@@ -3,6 +3,7 @@
 #ifdef GARNET_METAL_VERIFY_ATTENTION
 #include "verification_attention_shader.h"
 #include "verification_recurrent_shader.h"
+#include "verification_kv_span_shader.h"
 #endif
 #ifdef GARNET_METAL_CHUNK_ATTENTION_MPS
 #include "chunk_attention_mps_shader.h"
@@ -360,6 +361,7 @@ struct MetalPipelines {
 #ifdef GARNET_METAL_VERIFY_ATTENTION
     id<MTLComputePipelineState> verificationScores,verificationContext;
     id<MTLComputePipelineState> verificationConvCheckpoint,verificationDeltaCheckpoint;
+    id<MTLComputePipelineState> verificationKVBackup,verificationKVRestore;
 #endif
     id<MTLComputePipelineState> slice,sliceVector;
 #if defined(GARNET_METAL_CHUNK_PROBABILITY_REUSE)||defined(GARNET_METAL_CHUNK_ATTENTION_INDEX32)
@@ -437,6 +439,7 @@ struct MetalContext::Impl {
 #ifdef GARNET_METAL_VERIFY_ATTENTION
     size_t verificationAttentionDispatches=0;
     size_t verificationConvCheckpoints=0,verificationDeltaCheckpoints=0;
+    size_t verificationKVBackups=0,verificationKVRestores=0;
 #endif
     size_t chunkAttentionMPSDispatches=0;
     size_t chunkAttentionBucketDispatches=0,chunkAttentionTailDispatches=0,chunkAttentionBucketCapacity=0,chunkAttentionUnknownControls=0;
@@ -1640,6 +1643,7 @@ kernel void bf16_native_dot_t128(device const float* a [[buffer(0)]],device cons
 #ifdef GARNET_METAL_VERIFY_ATTENTION
         source=[source stringByAppendingString:[NSString stringWithUTF8String:kVerificationAttentionShader]];
         source=[source stringByAppendingString:[NSString stringWithUTF8String:kVerificationRecurrentShader]];
+        source=[source stringByAppendingString:[NSString stringWithUTF8String:kVerificationKVSpanShader]];
 #endif
 #ifdef GARNET_METAL_CHUNK_ATTENTION_MPS
         source=[source stringByAppendingString:[NSString stringWithUTF8String:kChunkAttentionMPSShader]];
@@ -1939,6 +1943,10 @@ kernel void bf16_native_dot_t128(device const float* a [[buffer(0)]],device cons
            impl_->kernels->verificationDeltaCheckpoint.threadExecutionWidth!=32||
            impl_->kernels->verificationDeltaCheckpoint.maxTotalThreadsPerThreadgroup<128)
             throw std::runtime_error("Cannot compile verification recurrent checkpoint kernels");
+        impl_->kernels->verificationKVBackup=[impl_->device newComputePipelineStateWithFunction:[library newFunctionWithName:@"verification_kv_backup"] error:&error];
+        impl_->kernels->verificationKVRestore=[impl_->device newComputePipelineStateWithFunction:[library newFunctionWithName:@"verification_kv_restore"] error:&error];
+        if(!impl_->kernels->verificationKVBackup||!impl_->kernels->verificationKVRestore)
+            throw std::runtime_error("Cannot compile bounded verification KV-span kernels");
 #endif
         impl_->kernels->visionNorm=[impl_->device newComputePipelineStateWithFunction:[library newFunctionWithName:@"vision_norm"] error:&error];
         impl_->kernels->visionScores=[impl_->device newComputePipelineStateWithFunction:[library newFunctionWithName:@"vision_scores"] error:&error];
@@ -3278,6 +3286,7 @@ void MetalContext::Begin() {
 #ifdef GARNET_METAL_VERIFY_ATTENTION
     impl_->verificationAttentionDispatches=0;
     impl_->verificationConvCheckpoints=impl_->verificationDeltaCheckpoints=0;
+    impl_->verificationKVBackups=impl_->verificationKVRestores=0;
 #endif
     impl_->screenedHeadDispatches=0;
     impl_->screenedHeadSeedRows=0;
@@ -3556,7 +3565,7 @@ void MetalContext::EncodeStateKernel(unsigned operation,const std::vector<MetalM
             throw std::invalid_argument("In-place checkpoint state output is unsupported");
     }
 #ifdef GARNET_METAL_VERIFY_ATTENTION
-    constexpr unsigned maxOperation=25;
+    constexpr unsigned maxOperation=27;
 #elif defined(GARNET_METAL_ROW_FINAL_HIDDEN)
     constexpr unsigned maxOperation=21;
 #elif defined(GARNET_METAL_RESIDENT_KV_INPLACE)
@@ -3575,6 +3584,7 @@ void MetalContext::EncodeStateKernel(unsigned operation,const std::vector<MetalM
 #ifdef GARNET_METAL_VERIFY_ATTENTION
         ,impl_->kernels->verificationScores,impl_->kernels->verificationContext
         ,impl_->kernels->verificationConvCheckpoint,impl_->kernels->verificationDeltaCheckpoint
+        ,impl_->kernels->verificationKVBackup,impl_->kernels->verificationKVRestore
 #endif
     };
     auto pipeline=pipelines[operation];
@@ -3969,6 +3979,82 @@ void MetalContext::EncodeVerificationDeltaCheckpoint(const MetalMatrix& prepared
 }
 size_t MetalContext::LastVerificationConvCheckpoints() const {return impl_->verificationConvCheckpoints;}
 size_t MetalContext::LastVerificationDeltaCheckpoints() const {return impl_->verificationDeltaCheckpoints;}
+MetalContext::VerificationKVSpanParams MetalContext::ValidateVerificationKVSpan(
+    const MetalMatrix& cache,const MetalMatrix& slots,const MetalMatrix& submitted,const MetalMatrix* accepted,
+    const MetalMatrix& backup,size_t heads,size_t dim,size_t capacity,size_t chunk) const {
+    if(!impl_->command)throw std::logic_error("Begin a verification KV-span batch first");
+    if(!cache.impl_||!slots.impl_||!submitted.impl_||!backup.impl_||(accepted&&!accepted->impl_)||
+       !heads||heads>8||!dim||dim>256||!capacity||capacity>4096||!chunk||chunk>4)
+        throw std::invalid_argument("Invalid bounded verification KV-span profile");
+    const auto c=cache.impl_->matrix,s=slots.impl_->matrix,m=submitted.impl_->matrix,b=backup.impl_->matrix;
+    const size_t batch=c.rows,rows=Elements(batch,chunk),width=Elements(heads,dim);
+    if(!batch||batch>4||rows>4||c.columns!=Elements(width,capacity)||b.rows!=rows||b.columns!=width||
+       s.rows!=batch||s.columns!=chunk||m.rows!=batch||m.columns!=chunk||
+       (accepted&&(accepted->impl_->matrix.rows!=batch||accepted->impl_->matrix.columns!=chunk)))
+        throw std::invalid_argument("Verification KV-span shape mismatch");
+    const MetalMatrix* output=accepted?&cache:&backup;
+    std::vector<const MetalMatrix*> operands{&cache,&backup,&slots,&submitted};
+    if(accepted)operands.push_back(accepted);
+    for(const auto* value:operands) {
+        const auto& owner=value->impl_;const auto matrix=owner->matrix;
+        if(matrix.device!=impl_->device||matrix.dataType!=MPSDataTypeFloat32||matrix.offset)
+            throw std::invalid_argument("Verification KV-span device/type/layout mismatch");
+        if(owner->pending&&!impl_->pendingOutputs.count(owner.get()))
+            throw std::logic_error("Verification KV-span operand is pending in another batch");
+        // Restore is a partial writer and requires an initialized cache bank.
+        if((value!=output||accepted)&&!owner->ready&&!(owner->pending&&impl_->pendingOutputs.count(owner.get())))
+            throw std::logic_error("Verification KV-span input or restore cache is uninitialized");
+    }
+    if(c.data==b.data)throw std::invalid_argument("Verification KV backup/cache alias");
+    for(const auto* control:{&slots,&submitted,accepted})if(control) {
+        const auto& owner=control->impl_;const auto matrix=owner->matrix;
+        if(matrix.data==c.data||matrix.data==b.data)
+            throw std::invalid_argument("Verification KV data/control alias");
+        if(!owner->ready||owner->pending||matrix.data.storageMode!=MTLStorageModeShared||!matrix.data.contents)
+            throw std::logic_error("Verification KV controls require host-readable nonpending storage");
+    }
+    const auto* slotValues=static_cast<const float*>(s.data.contents);
+    const auto* submittedValues=static_cast<const float*>(m.data.contents);
+    const auto a=accepted?accepted->impl_->matrix:m;
+    const auto* acceptedValues=accepted?static_cast<const float*>(a.data.contents):nullptr;
+    for(size_t row=0;row<batch;++row) {
+        bool ended=false,acceptedEnded=false;float first=0;
+        for(size_t t=0;t<chunk;++t) {
+            const float flag=submittedValues[row*(m.rowBytes/4)+t];
+            const float keep=acceptedValues?acceptedValues[row*(a.rowBytes/4)+t]:0;
+            if((flag!=0&&flag!=1)||(keep!=0&&keep!=1))
+                throw std::invalid_argument("Verification KV masks must be binary");
+            if(keep==0)acceptedEnded=true;
+            else if(acceptedEnded||flag==0)
+                throw std::invalid_argument("Accepted KV slots must be a prefix of the submitted span");
+            if(flag==0){ended=true;continue;}
+            const float slot=slotValues[row*(s.rowBytes/4)+t];
+            if(ended||!std::isfinite(slot)||slot<0||slot>=float(capacity)||slot!=std::floor(slot))
+                throw std::invalid_argument("Verification KV slots require an in-bounds active prefix");
+            if(!t)first=slot;
+            if(slot!=first+float(t))throw std::invalid_argument("Verification KV slots must increase by one");
+        }
+    }
+    return {batch,chunk,heads,dim,capacity,c.rowBytes/4,s.rowBytes/4,m.rowBytes/4,
+        accepted?a.rowBytes/4:0,b.rowBytes/4};
+}
+void MetalContext::EncodeVerificationKVBackup(const MetalMatrix& cache,const MetalMatrix& slots,
+    const MetalMatrix& submitted,const MetalMatrix& backup,size_t heads,size_t dim,size_t capacity,size_t chunk) {
+    const auto p=ValidateVerificationKVSpan(cache,slots,submitted,nullptr,backup,heads,dim,capacity,chunk);
+    EncodeStateKernel(26,{cache,slots,submitted},backup,&p,sizeof(p),Elements(Elements(p.batch,p.chunk),Elements(heads,dim)));
+    ++impl_->verificationKVBackups;
+}
+void MetalContext::EncodeVerificationKVRestore(const MetalMatrix& backup,const MetalMatrix& slots,
+    const MetalMatrix& submitted,const MetalMatrix& accepted,const MetalMatrix& cache,
+    size_t heads,size_t dim,size_t capacity,size_t chunk) {
+    const auto p=ValidateVerificationKVSpan(cache,slots,submitted,&accepted,backup,heads,dim,capacity,chunk);
+    // The initialized cache is only an output binding: each rejected slot has
+    // exactly one writer, and every other element retains its prior contents.
+    EncodeStateKernel(27,{backup,slots,submitted,accepted},cache,&p,sizeof(p),Elements(Elements(p.batch,p.chunk),Elements(heads,dim)));
+    ++impl_->verificationKVRestores;
+}
+size_t MetalContext::LastVerificationKVBackups() const {return impl_->verificationKVBackups;}
+size_t MetalContext::LastVerificationKVRestores() const {return impl_->verificationKVRestores;}
 #endif
 void MetalContext::EncodeLinearPrepare(const MetalMatrix& conv,const MetalMatrix& a,const MetalMatrix& b,
     const MetalMatrix& aLog,const MetalMatrix& dtBias,const MetalMatrix& output,
@@ -4433,6 +4519,7 @@ void MetalContext::Abort() {
 #ifdef GARNET_METAL_VERIFY_ATTENTION
     impl_->verificationAttentionDispatches=0;
     impl_->verificationConvCheckpoints=impl_->verificationDeltaCheckpoints=0;
+    impl_->verificationKVBackups=impl_->verificationKVRestores=0;
 #endif
     impl_->screenedHeadDispatches=0;
     impl_->screenedHeadSeedRows=0;

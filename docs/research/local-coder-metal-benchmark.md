@@ -2660,6 +2660,62 @@ primitive tests use synthetic tensors at model geometry, not a trained27B
 checkpoint/replay run. No speculative coding or speed result is admitted, and
 all2x targets remain unmet.
 
+### Bounded native KV-slot backup and restore
+
+The default-OFF verification extension now includes explicit native KV-span
+backup/restore primitives. Backup gathers the old contents of submitted token
+slots into a prepared `[batch*tokens, KV_heads*head_dim]` matrix. After target
+verification, restore writes back only the rejected submitted slots into an
+initialized cache bank. Accepted slots and every cache word outside the submitted
+span retain their exact contents. Raw uint32 loads/stores preserve all FP32 bits,
+including signed zeros, infinities, subnormals and NaN payloads.
+
+Bounds are four physical token rows total, batch1..4, chunk1..4, KV heads<=8,
+head dimension<=256 and context<=4096. Matrices must be zero-offset FP32 on the
+same device. Slot and mask controls must be ready, host-readable and nonpending.
+Submitted masks are contiguous binary prefixes, active slots are integral,
+in-bounds and increase by one, and accepted masks must be prefixes contained
+within their submitted spans. Inactive slots are ignored. Aliased data/control
+banks, uninitialized inputs/restore banks and foreign-batch writers reject before
+dispatch. A cache or backup produced earlier in the same GPU batch is supported.
+The restore cache is an initialized partial-write output; it does not require an
+input/output alias exception in the generic native encoder.
+
+For the pinned27B geometry, sixteen full-attention layers with KV heads4 and
+head dimension256 need524,288 bytes for both K/V four-token backups, versus
+536,870,912 bytes for a full4K-cache backup. These are prepared logical buffer
+sizes derived from the pinned configuration, not measured peaks or speedups.
+Working-set admission must still account for actual device allocation alignment.
+No GPU workspace is allocated and no cache contents are read back to the CPU
+while either span primitive encodes.
+
+The final component gate passes188 cases,1,158 checks and1,762,367,884 exact FP32
+word comparisons. Each restored complete cache matches both a CPU slot-update
+reference and separate ordinary native single-token KV updates. Cases cover all
+accepted prefix lengths, partial/unequal submitted rows, batch1/2/4, actual27B
+4K KV geometry ending at4095, dimension tails, eight-head bounds, capacity1,
+signed-zero/NaN payload changes, pending GPU cache/backup producers, partial
+submissions before and after restoration, and two carried GPU transactions.
+The814 rejection/readability checks include invalid/pending controls, aliasing,
+foreign writers, uninitialized banks, unsupported eight-row layouts, nested
+Begin, abort after partial submission and retry. All four tracked native owner
+counts return to zero. Caller workspaces and masks are prepared before Begin;
+native matrix/pipeline owner counts remain constant while encoding.
+
+The first focused gate passed181 cases; seven additional degenerate/eight-head
+tail cases expanded that gate without changing kernel code. Raw logs remain in
+`verification-kv-span-focused1.log` and `verification-kv-span-on-ctest1.log`.
+The enabled suite passes23/23 and the disabled compatibility suite19/19. The
+compiled-forward regression passes396 checks/30,497,536 exact words, and the
+ordinary mixed-layer alias/scratch regression passes. Their logs are
+`verification-kv-span-off-ctest1.log`,
+`verification-kv-span-compiled-forward-regression1.log`, and
+`verification-kv-span-ordinary-alias-regression1.log`.
+These are native component tests. Compiled verification/session paths
+do not yet bind the span backups or Conv/GDN checkpoints into a complete accepted
+prefix transaction. No trained model-level cache rollback, speculative coding
+gate, MTP generation or speed result is admitted for this component milestone.
+
 A source-backed planning estimate is retained in
 `evidence/27b-m5-decode-bandwidth-analysis1.json`:497 native affine projections
 contain14,412,349,440 logical payload/coefficient bytes. Apple's published M5

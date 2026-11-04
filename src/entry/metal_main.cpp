@@ -283,6 +283,7 @@ public:
 #ifdef GARNET_METAL_VERIFY_ATTENTION
         info+="; verification_attention_fp32";
         info+="; verification_recurrent_checkpoint";
+        info+="; verification_kv_span_checkpoint";
 #if defined(GARNET_METAL_MLX_AFFINE_INT4)&&defined(GARNET_METAL_INDEXED_TOKEN_PROJECTIONS)&&defined(GARNET_METAL_ACTIVE_DECODE_PROJECTIONS)&&defined(GARNET_METAL_INDEXED_DECODE)&&defined(GARNET_METAL_AFFINE_PROFILE)&&defined(GARNET_METAL_LINEAR_CHUNK_CONV)&&defined(GARNET_METAL_LINEAR_CHUNK_DELTA)
         info+="; compiled_verification_fp32";
 #endif

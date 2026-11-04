@@ -79,6 +79,12 @@ prefix commit, KV restoration, EOS handling or MTP generation. The enabled/
 disabled native suites pass22/22 and19/19. No new trained checkpoint/replay or
 speed qualification is claimed for these component gates.
 
+Bounded native KV-slot backup/restore now passes188 cases and1.76billion exact
+FP32 word comparisons against whole-cache ordinary-prefix references. The27B
+four-token K/V span uses512KiB of logical backup storage across all sixteen full
+layers, compared with512MiB for the full4K cache. This remains a component gate;
+model-level acceptance, checkpoint binding and MTP generation are unfinished.
+
 ## Entry points and limits
 
 Profile sizes are upper bounds. Actual input lengths and occupied request slots

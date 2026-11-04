@@ -116,6 +116,13 @@ class MetalContext {
 #ifdef GARNET_METAL_VERIFY_ATTENTION
     void ValidateVerificationRecurrent(const std::vector<MetalMatrix>&,
         const MetalMatrix&,const MetalMatrix&,const MetalMatrix&) const;
+    struct VerificationKVSpanParams {
+        uint64_t batch,chunk,heads,dim,capacity,cacheStride,slotStride,
+            submittedStride,acceptedStride,backupStride;
+    };
+    VerificationKVSpanParams ValidateVerificationKVSpan(const MetalMatrix& cache,
+        const MetalMatrix& slots,const MetalMatrix& submitted,const MetalMatrix* accepted,
+        const MetalMatrix& backup,size_t heads,size_t dim,size_t capacity,size_t chunk) const;
 #endif
     std::vector<uint32_t> PrimaryReadWordsInternal(const MetalBF16Weight&,size_t start,size_t count,bool vector);
 public:
@@ -298,6 +305,16 @@ public:
         const MetalMatrix& firstState,size_t chunk,size_t heads,size_t keyDim,size_t valueDim);
     size_t LastVerificationConvCheckpoints() const;
     size_t LastVerificationDeltaCheckpoints() const;
+    // Backup before speculative writes. Restore only rejected submitted slots
+    // into an initialized cache; all other cache words remain untouched.
+    void EncodeVerificationKVBackup(const MetalMatrix& cache,const MetalMatrix& slots,
+        const MetalMatrix& submitted,const MetalMatrix& backup,
+        size_t heads,size_t dim,size_t capacity,size_t chunk);
+    void EncodeVerificationKVRestore(const MetalMatrix& backup,const MetalMatrix& slots,
+        const MetalMatrix& submitted,const MetalMatrix& accepted,const MetalMatrix& cache,
+        size_t heads,size_t dim,size_t capacity,size_t chunk);
+    size_t LastVerificationKVBackups() const;
+    size_t LastVerificationKVRestores() const;
 #endif
     void EncodeSliceGroups(const MetalMatrix&,const MetalMatrix&,size_t groups,size_t sourceWidth,size_t start,size_t count);
     // kernel=0 accepts convolution values without interleaved state fields.
