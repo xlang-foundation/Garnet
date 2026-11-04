@@ -143,6 +143,23 @@ execution, continuous speculative scheduling, auxiliary prefix reuse and matched
 speed qualification remain unfinished. The existing non-speculative batch and
 prefix studies retain their separate qualifications.
 
+The B1 MTP path now also passes the native HTTP admission: all eight sandboxed
+coding tasks, all six canonical256/2048-token cells at client concurrency1/2/4,
+and a valid request after an isolated profile rejection. All23 complete prompt/
+output sequences agree with their frozen references. CPU transport queues clients;
+this worker does not claim native speculative continuous batching or prefix reuse.
+The native ledger, streamed IDs and cumulative usage agree in25,556 checks;
+14 corruption checks and seven transport/evaluator regressions pass. All tracked
+native owners close to zero. See `local_coder_mtp_worker.py` and its explicit
+profile fields for the fixed compiled bounds and actual runtime input counts.
+
+Initial single-run admission observations remain below the speed targets:
+C1 short/long TTFT4.485/30.857 seconds and decode9.403/7.717 tokens/s. These are
+diagnostics after coding work, not repeated campaign medians. The complete
+three-cohort MTP campaign plan is prepared; fresh repeated measurements and
+performance admission remain pending. Phase costs and native B2 speculative
+scheduling are the next optimization candidates.
+
 ## Entry points and limits
 
 Profile sizes are upper bounds. Actual input lengths and occupied request slots

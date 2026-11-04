@@ -3157,3 +3157,75 @@ unfinished. Do not advance to9B or4B on this evidence.
 Final implementation, collectors/auditors, build flags and enabled/disabled
 libraries are retained in `native-mtp-profiles-source1`. The final coding
 accounting review passes4,071 checks in `accounting-audit3.json`.
+
+### Native MTP HTTP admission and long prefill
+
+`local_coder_mtp_worker.py` connects the qualified B1 study to the existing
+bounded HTTP transport. Native `mtp_generate` owns every draft/verify/correct
+transaction; Python routes request IDs, decodes text and emits each newly
+returned token once. Tokens emitted by one verification call remain a burst in
+the raw arrival timestamps. The transport queues concurrent clients, while the
+native worker explicitly reports one active request and no native speculative
+continuous batching. Prefix reuse and multimodal input remain disabled.
+
+The frozen profile admits input up to3072 tokens, output up to1024 and context
+up to4096, independently. Its target/teacher prefill bound is128, auxiliary
+draft1 and verification/correction4. Actual input and active mask lengths remain
+runtime values. Invalid input/output/context combinations reject before changing
+inference state, and the next valid request still executes normally.
+
+`native27b-mtp-http-admission1` rehashes all15 target files and the pinned raw
+auxiliary asset before launching one engine with the frozen qualified library.
+All eight coding tasks arrive concurrently and queue; their sandbox tests all
+pass and their complete output IDs/text match the original control. All six
+canonical cells execute once, including real2048-token target prefill and client
+concurrency1/2/4. A final valid short request succeeds after an oversized request
+receives an isolated error. All23 complete native/HTTP prompt and output
+sequences match their frozen references, totaling3,967 output tokens. The1,137
+native transactions accept2,807 of3,376 proposed draft tokens.
+
+The25,556-check HTTP audit verifies frozen source/workload/library identities,
+native request ownership, exactly-once emitted IDs, per-token cumulative usage,
+actual prefill counts, budgets/EOS, T1/T4 selection, evaluated response hashes,
+lossless decoded text and graceful cleanup. All four native owner counts close
+to zero. Fourteen corruption checks reject altered native/HTTP IDs, usage,
+profiles, input lengths, request bytes, source files and cleanup evidence.
+Seven CPU transport/HTTP/evaluator regressions pass. The first regression command
+incorrectly imported a standalone cohort-fixture script as a unittest module;
+its log is retained, and the corrected command runs the three unittest modules.
+No native implementation or acceptance criterion changed to repair that command.
+
+Initial admission observations below are **one wave per cell after coding work**,
+not warmed repeated campaign medians. Request decode/TTFT columns are medians
+within each wave; total output TPS includes queued time and actual EOS lengths.
+
+|Input target|Clients|TTFT seconds|Request decode tokens/s|Total output tokens/s|
+|---|---:|---:|---:|---:|
+|256|1|4.485|9.403|7.112|
+|256|2|9.545|10.186|6.772|
+|256|4|31.243|9.574|6.934|
+|2048|1|30.857|7.717|2.705|
+|2048|2|49.278|8.550|2.257|
+|2048|4|100.778|8.151|2.505|
+
+These observations expose substantial remaining prefill and generation cost;
+they do not admit any2x or half-TTFT gain. The raw transaction traces are retained
+for phase-cost analysis. High draft acceptance alone does not explain the
+remaining latency. Native B2 verification with two tokens per row is another
+candidate: it fits the existing four-total-row target envelope and avoids the
+two recursive draft calls used by a B1 four-token proposal. Memory-safe compiled
+profiles, scheduling and actual model measurements must still qualify it.
+
+The complete2-warmup/5-measured-wave, three-fresh-cohort, six-cell collector and
+native/HTTP accounting auditor are prepared as separate scripts. Only the
+`--prepare-only` path has run in `native27b-mtp-campaign-preparation2`; it rehashes
+assets and freezes the full plan without starting inference. Its campaign
+auditor has not yet been exercised on a completed MTP campaign. Do not treat the
+prepared plan or this finite admission as repeated model performance evidence.
+The frozen vLLM-Metal/SGLang results are unchanged, all performance targets remain
+unmet, and27B is still incomplete. General multimodal/xMind admission, full4K
+target prompts, native speculative continuous batching and auxiliary prefix
+snapshots remain unfinished;9B/4B work has not started.
+
+Current serving sources, executed frozen-source identities, unchanged qualified
+native libraries and final evidence are retained in `native-mtp-http-source1`.
