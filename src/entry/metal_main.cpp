@@ -172,6 +172,9 @@ public:
         info+="; retired_inplace_defaults";
 #endif
 #endif
+#ifdef GARNET_METAL_INDEXED_AFFINE
+    info+="; indexed_affine_primitive";
+#endif
 #ifdef GARNET_METAL_CACHED_MATRIX_METADATA
     info += " cached_matrix_metadata";
 #endif

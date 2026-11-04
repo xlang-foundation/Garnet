@@ -120,6 +120,14 @@ public:
         const void* scales,size_t scaleBytes,const void* biases,size_t biasBytes,
         size_t rows,size_t columns);
     void EncodeAffineInt4MatMul(const MetalMatrix&,const MetalAffineInt4Weight&,const MetalMatrix&);
+#ifdef GARNET_METAL_INDEXED_AFFINE
+    // Experimental strict BF16 indexed prefill. Does not change graph dispatch.
+    // Selected rows must be unique. Empty selection explicitly zeros output.
+    void EncodeAffineInt4IndexedMatMul(const MetalMatrix&,const MetalAffineInt4Weight&,
+        const MetalMatrix&,const std::vector<size_t>& selectedRows);
+    bool HasIndexedAffine() const;
+    size_t LastIndexedAffineDispatches() const;
+#endif
 #endif
     MetalMatrix Upload(const std::vector<float>& values, size_t rows, size_t columns);
     MetalMatrix Allocate(size_t rows, size_t columns);

@@ -5,6 +5,9 @@
 #endif
 #ifdef GARNET_METAL_MLX_AFFINE_INT4
 #include "affine_int4_shader.h"
+#ifdef GARNET_METAL_INDEXED_AFFINE
+#include "affine_int4_indexed_shader.h"
+#endif
 #ifdef GARNET_METAL_MPP_AFFINE
 #include "affine_int4_mpp_shader.h"
 #endif
@@ -217,6 +220,10 @@ struct MetalPipelines {
 #ifdef GARNET_METAL_MPP_AFFINE
     id<MTLLibrary> mppAffineLibrary;
     id<MTLComputePipelineState> mppAffine;
+#ifdef GARNET_METAL_INDEXED_AFFINE
+    id<MTLLibrary> indexedAffineLibrary;
+    id<MTLComputePipelineState> indexedAffine;
+#endif
 #endif
 #ifdef GARNET_METAL_AFFINE_TALL_TILES
     std::array<id<MTLComputePipelineState>,2> affineInt4Tall{};
@@ -326,6 +333,9 @@ struct MetalContext::Impl {
     size_t joinedPrefillPairs=0;
 #ifdef GARNET_METAL_MPP_AFFINE
     size_t mppAffineDispatches=0;
+#ifdef GARNET_METAL_INDEXED_AFFINE
+    size_t indexedAffineDispatches=0;
+#endif
 #endif
     size_t constantHeadDispatches=0;
     size_t singleCoderHeadDispatches=0;
@@ -1497,6 +1507,17 @@ kernel void bf16_native_dot_t128(device const float* a [[buffer(0)]],device cons
                pipeline.staticThreadgroupMemoryLength>impl_->device.maxThreadgroupMemoryLength)
                 throw std::runtime_error("Affine MPP candidate exceeds device limits");
             impl_->kernels->mppAffineLibrary=mppLibrary;impl_->kernels->mppAffine=pipeline;
+#ifdef GARNET_METAL_INDEXED_AFFINE
+            NSString* indexedSource=[[NSString stringWithFormat:@"#define GARNET_INDEXED_K %u\n",unsigned(GARNET_METAL_MPP_AFFINE_TILE_K)]
+                stringByAppendingString:[NSString stringWithUTF8String:kAffineInt4IndexedShader]];
+            auto indexedLibrary=[impl_->device newLibraryWithSource:indexedSource options:mppOptions error:&error];
+            if(!indexedLibrary)throw std::runtime_error("Cannot compile indexed affine candidate: "+std::string(error.localizedDescription.UTF8String));
+            auto indexedPipeline=[impl_->device newComputePipelineStateWithFunction:[indexedLibrary newFunctionWithName:@"affine_q4_indexed"] error:&error];
+            if(!indexedPipeline||indexedPipeline.threadExecutionWidth!=32||indexedPipeline.maxTotalThreadsPerThreadgroup<128||
+               indexedPipeline.staticThreadgroupMemoryLength>impl_->device.maxThreadgroupMemoryLength)
+                throw std::runtime_error("Indexed affine candidate exceeds device limits");
+            impl_->kernels->indexedAffineLibrary=indexedLibrary;impl_->kernels->indexedAffine=indexedPipeline;
+#endif
         }
 #endif
         impl_->kernels->affineInt4Gemm=[impl_->device newComputePipelineStateWithFunction:[affineLibrary newFunctionWithName:@"affine_q4_gemm"] error:&error];
@@ -1777,6 +1798,60 @@ void MetalContext::EncodeAffineInt4MatMul(const MetalMatrix& input,const MetalAf
         if(impl_->pendingOutputs.insert(output.impl_.get()).second)impl_->outputs.push_back(output.impl_);
     }
 }
+#ifdef GARNET_METAL_INDEXED_AFFINE
+bool MetalContext::HasIndexedAffine() const {return impl_->kernels->indexedAffine!=nil;}
+size_t MetalContext::LastIndexedAffineDispatches() const {return impl_->indexedAffineDispatches;}
+void MetalContext::EncodeAffineInt4IndexedMatMul(const MetalMatrix& input,const MetalAffineInt4Weight& weight,
+    const MetalMatrix& output,const std::vector<size_t>& selectedRows) {
+    @autoreleasepool {
+        if(!impl_->command||!input.impl_||!weight.impl_||!output.impl_||!HasIndexedAffine())
+            throw std::invalid_argument("Indexed affine projection requires its native pipeline and command");
+        auto a=input.impl_->matrix,o=output.impl_->matrix;const auto& w=weight.impl_;
+        if(a.device!=impl_->device||o.device!=impl_->device||w->packed.device!=impl_->device||
+           w->scales.device!=impl_->device||w->biases.device!=impl_->device||
+           !a.rows||a.rows>512||a.columns!=w->columns||o.rows!=a.rows||o.columns!=w->rows||a.data==o.data||
+           selectedRows.size()>a.rows||a.rowBytes%4||o.rowBytes%4)
+            throw std::invalid_argument("Indexed affine shape/device mismatch");
+        if(!input.impl_->ready&&!(input.impl_->pending&&impl_->pendingOutputs.count(input.impl_.get())))
+            throw std::logic_error("Uninitialized indexed affine input");
+        if(output.impl_->pending&&!impl_->pendingOutputs.count(output.impl_.get()))
+            throw std::logic_error("Indexed affine output belongs to another command");
+        std::vector<uint32_t> indices;indices.reserve(selectedRows.size());
+        std::unordered_set<size_t> unique;
+        for(auto row:selectedRows) {
+            if(row>=a.rows||!unique.insert(row).second)
+                throw std::invalid_argument("Indexed affine rows must be unique and within physical storage");
+            indices.push_back(uint32_t(row));
+        }
+        // Validate before encoding any zero or projection. Padding bytes are
+        // irrelevant, but every logical inactive output must become zero.
+        if(o.rows-1>(SIZE_MAX-o.columns*sizeof(float))/o.rowBytes)
+            throw std::overflow_error("Indexed affine zero range overflow");
+        const size_t bytes=(o.rows-1)*o.rowBytes+o.columns*sizeof(float);
+        if(o.offset>o.data.length||bytes>o.data.length-o.offset)
+            throw std::invalid_argument("Indexed affine zero range exceeds storage");
+        auto blit=[impl_->command blitCommandEncoder];
+        if(!blit)throw std::runtime_error("Cannot encode indexed affine output initialization");
+        [blit fillBuffer:o.data range:NSMakeRange(o.offset,bytes) value:0];[blit endEncoding];
+        if(!indices.empty()) {
+            struct Params {uint64_t rows,inner,columns,aStride,oStride;};
+            Params params{indices.size(),a.columns,o.columns,a.rowBytes/4,o.rowBytes/4};
+            auto encoder=[impl_->command computeCommandEncoder];
+            if(!encoder)throw std::runtime_error("Cannot encode indexed affine projection");
+            [encoder setComputePipelineState:impl_->kernels->indexedAffine];
+            [encoder setBuffer:a.data offset:a.offset atIndex:0];[encoder setBuffer:w->packed offset:0 atIndex:1];
+            [encoder setBuffer:w->scales offset:0 atIndex:2];[encoder setBuffer:w->biases offset:0 atIndex:3];
+            [encoder setBuffer:o.data offset:o.offset atIndex:4];[encoder setBytes:&params length:sizeof(params) atIndex:5];
+            [encoder setBytes:indices.data() length:indices.size()*sizeof(uint32_t) atIndex:6];
+            [encoder dispatchThreadgroups:MTLSizeMake((o.columns+31)/32,(indices.size()+63)/64,1)
+                threadsPerThreadgroup:MTLSizeMake(128,1,1)];[encoder endEncoding];
+            ++impl_->indexedAffineDispatches;
+        }
+        output.impl_->ready=false;output.impl_->pending=true;
+        if(impl_->pendingOutputs.insert(output.impl_.get()).second)impl_->outputs.push_back(output.impl_);
+    }
+}
+#endif
 std::vector<MetalBufferInfo> MetalContext::AffineInt4BufferInfo(const MetalAffineInt4Weight& weight) {
     @autoreleasepool {
         std::vector<MetalBufferInfo> result;if(!weight.impl_)return result;
@@ -2707,6 +2782,9 @@ void MetalContext::Begin() {
     impl_->joinedPrefillPairs=0;
 #ifdef GARNET_METAL_MPP_AFFINE
     impl_->mppAffineDispatches=0;
+#ifdef GARNET_METAL_INDEXED_AFFINE
+    impl_->indexedAffineDispatches=0;
+#endif
 #endif
     impl_->fusedHeadArgmaxDispatches=0;
     impl_->deferredZeroBytes=impl_->deferredZeroStates=0;
@@ -3429,6 +3507,9 @@ void MetalContext::Abort() {
     impl_->joinedPrefillPairs=0;
 #ifdef GARNET_METAL_MPP_AFFINE
     impl_->mppAffineDispatches=0;
+#ifdef GARNET_METAL_INDEXED_AFFINE
+    impl_->indexedAffineDispatches=0;
+#endif
 #endif
     impl_->fusedHeadArgmaxDispatches=0;
     impl_->deferredZeroBytes=impl_->deferredZeroStates=0;

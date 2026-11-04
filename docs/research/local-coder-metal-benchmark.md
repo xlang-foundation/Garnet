@@ -1291,3 +1291,22 @@ and deterministic interval-planner checks. The native test set does not prove
 learned prefill alias correctness or actual memory savings; those remain
 required before profile admission. Mixed-forward and lifetime experiments use
 separate profiles/builds so their effects can be attributed independently.
+
+`native27b-registers-mixed-chunk16-quality1` passes8/8 sandboxed coding tasks,
+with all eight complete generated token sequences exactly matching the FP32
+single-request reference. Its stream audit passes1127 combined decode plans,
+47 actual masked mixed forwards and41 prefill/decode interleavings. All eleven
+tamper checks pass, including missing/changed mixed-call evidence. This proves
+the finite mixed coding gate, not a serving speedup or compact projections.
+
+`GARNET_METAL_INDEXED_AFFINE` is a new default-OFF native primitive, requiring
+strict BF16 register MPP. It projects only explicit unique token indices,
+loads/stores existing physical activation rows, and zeros inactive outputs via
+an ordered blit. Even one selected token retains BF16 operands/FP32 accumulation;
+it does not silently take the FP32 small-row decode path. It has no graph/model
+routing yet. All13 native tests pass (`indexed-affine-ctest1.log` and expanded
+log), including41 indexed mask cases across physical rows1/17/32/65/128/512,
+K64/128/5120/17408, column tails, reversed/noncontiguous selections, empty/full
+masks, reused output storage, independent BF16/FP64 oracles and rejected duplicate/
+out-of-range selections. Existing24 affine numerical cases also pass. No indexed
+operator timing or learned-model result has been measured.
