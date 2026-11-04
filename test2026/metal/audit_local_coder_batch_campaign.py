@@ -9,14 +9,48 @@ from audit_local_coder_batch_quality import native_events,indexed_decode_issues,
 
 def read(path):return json.loads(path.read_text())
 def digest(path):return hashlib.sha256(path.read_bytes()).hexdigest()
-def audit(root):
-    campaign=root/'campaign';base=baseline_audit(campaign);issues=list(base['issues'])
+def audit(root,cohort_number=None,_base=None):
+    campaign=root/'campaign';base=_base if _base is not None else baseline_audit(campaign);issues=list(base['issues'])
     spec=read(root/'engine.json');metadata=read(campaign/'frozen/metadata.json')
     if metadata['engine']!=spec:issues.append('Engine specification differs from campaign freeze')
     for name,wanted in spec['sources'].items():
         if digest(root/'sources'/name)!=wanted:issues.append('Frozen source/library differs: '+name)
-    profile=read(root/'sources/profile.json');manifest=metadata['manifest']
-    events=list(native_events(root/'server/worker-stdout.jsonl'))
+    if 'benchmark-manifest.json' in spec['sources'] and metadata['manifest']!=read(root/'sources/benchmark-manifest.json'):
+        issues.append('Frozen native benchmark manifest differs')
+    manifest=metadata['manifest'];required=manifest.get('required_fresh_process_cohorts',manifest.get('cohorts',1))
+    if cohort_number is None and required>1:
+        parts=[];identities=[];starts=[]
+        keys={str(n) for n in range(1,required+1)}
+        if set(spec.get('native_cohort_profiles',{}))!=keys or set(spec.get('native_cohort_log_roots',{}))!=keys:
+            issues.append('Native cohort profile/log coverage differs')
+        canonical=read(root/'sources/profile.json');canonical.pop('memory_inventory_path',None)
+        for number in range(1,required+1):
+            key=str(number);folder=campaign/f'cohort-{number}'
+            log_root=root/spec.get('native_cohort_log_roots',{}).get(key,f'server/cohort-{number}')
+            profile_path=root/'sources'/spec.get('native_cohort_profiles',{}).get(key,f'profile-{number}.json')
+            if not folder.exists() or not (log_root/'worker-stdout.jsonl').exists() or not profile_path.exists():
+                issues.append('Missing native cohort evidence: '+key);continue
+            profile=read(profile_path);profile.pop('memory_inventory_path',None)
+            if profile!=canonical:issues.append('Native cohort runtime profile differs')
+            state=read(folder/'cohort.json');identities.append((state.get('pid'),state.get('spawn_monotonic')));starts.append(state.get('spawn_monotonic'))
+            expected=[arg.replace('{cohort}',key) for arg in spec['argv']]
+            if state.get('server_argv')!=expected:issues.append('Resolved native cohort argv differs')
+            part=audit(root,number,base);parts.append(dict(number=number,report=part));issues.extend(part['issues'])
+        if len(identities)!=required or len(set(identities))!=required or any(type(t) not in (int,float) or not math.isfinite(t) for t in starts) or any(a>=b for a,b in zip(starts,starts[1:])):
+            issues.append('Native cohorts do not have distinct fresh-process identities')
+        issues=list(dict.fromkeys(issues));reports=[p['report'] for p in parts]
+        totals={name:sum(p.get(name,0) for p in reports) for name in ('combined_decode_plans','affine_profile_calls','indexed_decode_calls','indexed_decode_command_calls','chunk_attention_index32_calls','chunk_attention_mps_calls','chunk_attention_bucket_calls')}
+        return dict(status='passed' if not issues else 'failed',issues=issues,scope=manifest['scope'],cohorts=parts,
+            requests=[dict(r,cohort=p['number']) for p in parts for r in p['report']['requests']],
+            cells=[dict(c,cohort=p['number']) for p in parts for c in p['report']['cells']],**totals,
+            combined_decode_required=any(p.get('combined_decode_required') for p in reports),
+            indexed_decode_sparse_required=any(p.get('indexed_decode_sparse_required') for p in reports),
+            shutdown=dict(mode='Sequential fresh native cohorts',native_close_observed=len(reports)==required and all(p['shutdown']['native_close_observed'] for p in reports),cohorts=[p['shutdown'] for p in reports]),
+            baseline_accounting=base,auditor_sha256=digest(Path(__file__)),decode_auditor_sha256=digest(Path(__file__).with_name('audit_local_coder_batch_quality.py')))
+    profile_name=spec.get('native_cohort_profiles',{}).get(str(cohort_number),'profile.json')
+    profile=read(root/'sources'/profile_name)
+    server=root/spec.get('native_cohort_log_roots',{}).get(str(cohort_number),'server')
+    events=list(native_events(server/'worker-stdout.jsonl'))
     ready=[e for e in events if e.get('event')=='ready'];closed=[e for e in events if e.get('event')=='closed']
     if len(ready)!=1 or ready[0].get('profile')!=profile:issues.append('Native ready profile differs')
     if profile['prefix_cache'] is not False:issues.append('Matched uncached policy required')
@@ -48,7 +82,8 @@ def audit(root):
             if e['generated_ids']!=streams.get(key) or e.get('cached_tokens')!=0:issues.append('Native final output/cache mismatch')
     if set(completed)!=set(streams):issues.append('Native stream/completion sets differ')
     matched=set();requests=[];cells=[];combined_required=False
-    for folder in sorted(campaign.glob('cohort-*')):
+    folders=[campaign/f'cohort-{cohort_number}'] if cohort_number is not None else sorted(campaign.glob('cohort-*'))
+    for folder in folders:
         for plan in manifest['plans']:
             frozen=campaign/'frozen'/plan['id'];workload=read(frozen/'workload.json');bodies=read(frozen/'cases.json')
             if profile['batch']>1 and len(bodies)>1:combined_required=True
@@ -98,7 +133,7 @@ def audit(root):
     graceful=spec.get('graceful_native_shutdown',False)
     shutdown=dict(mode='root SIGINT then owned group fallback' if graceful else 'owned process-group SIGTERM',native_close_observed=bool(closed),limitations=[])
     if graceful:
-        exit_path=root/'server/worker-exit.json'
+        exit_path=server/'worker-exit.json'
         exit_record=read(exit_path) if exit_path.exists() else {}
         if len(closed)!=1 or exit_record.get('returncode')!=0 or not exit_record.get('expected_close'):issues.append('Requested graceful native shutdown evidence missing')
     if not closed:shutdown['limitations'].append('No graceful native close snapshot; rely on separate coding cleanup gate and collector group termination evidence')
@@ -111,7 +146,8 @@ def audit(root):
         shutdown=shutdown,affine_profile_calls=len(affine_profiles),indexed_decode_calls=len(indexed_decode),indexed_decode_command_calls=sum(e.get('stage')=='decode' for e in indexed_decode),
         chunk_attention_index32_calls=sum(e.get('event')=='native_chunk_attention_index32' for e in events),
         chunk_attention_mps_calls=sum(e.get('event')=='native_chunk_attention_mps' for e in events),
-        indexed_decode_sparse_required=require_sparse,baseline_accounting=base,worker_log_sha256=digest(root/'server/worker-stdout.jsonl'),
+        chunk_attention_bucket_calls=sum(e.get('event')=='native_chunk_attention_bucket' for e in events),
+        indexed_decode_sparse_required=require_sparse,baseline_accounting=base,worker_log_sha256=digest(server/'worker-stdout.jsonl'),
         auditor_sha256=digest(Path(__file__)),decode_auditor_sha256=digest(Path(__file__).with_name('audit_local_coder_batch_quality.py')))
 
 def main():

@@ -26,12 +26,20 @@ void Cell(MetalContext& gpu,size_t activeRows,size_t activeTokens,size_t prefix,
     std::array<MetalMatrix,2> outputs{gpu.Allocate(rows,qWidth),gpu.Allocate(rows,qWidth)};
     gpu.PrepareAttentionChunk(inputs,heads,kvHeads,dim,capacity,chunk);
     std::array<std::vector<double>,2> gpuMs,wallMs;
+    size_t mps=0,tail=0,extent=0,unknown=0;
     for(int repeat=-warmups;repeat<repetitions;++repeat)for(int step=0;step<2;++step) {
         const int variant=(repeat+warmups+step)%2;
         const auto began=std::chrono::steady_clock::now();
         gpu.Begin();gpu.EncodeAttentionChunk(inputs,outputs[variant],heads,kvHeads,dim,capacity,chunk,true,variant==0);gpu.SubmitAndWait();
         const auto ended=std::chrono::steady_clock::now();
         Need(gpu.LastChunkAttentionOptimizedDispatches()==size_t(variant==1),"Attention policy route differs");
+#ifdef GARNET_METAL_CHUNK_ATTENTION_BUCKETS
+        if(variant==1) {
+            mps=gpu.LastChunkAttentionMPSDispatches();tail=gpu.LastChunkAttentionTailDispatches();
+            extent=gpu.LastChunkAttentionBucketCapacity();unknown=gpu.LastChunkAttentionUnknownControls();
+            Need(mps+tail==1&&unknown==0,"Attention bucket/tail coverage differs");
+        }
+#endif
         if(repeat>=0){gpuMs[variant].push_back(gpu.LastGPUMs());wallMs[variant].push_back(std::chrono::duration<double,std::milli>(ended-began).count());}
     }
     const auto control=gpu.Download(outputs[0]),candidate=gpu.Download(outputs[1]);
@@ -45,6 +53,9 @@ void Cell(MetalContext& gpu,size_t activeRows,size_t activeTokens,size_t prefix,
     for(size_t b=0;b<batch;++b)for(size_t t=0;t<chunk;++t)if(!active[b*chunk+t])
         for(size_t d=0;d<qWidth;++d)Need(candidate[(b*chunk+t)*qWidth+d]==0,"Inactive query retained stale output");
     std::cout<<"{\"kind\":\"cell\",\"active_rows\":"<<activeRows<<",\"active_tokens_per_row\":"<<activeTokens<<",\"prefix\":"<<prefix
+#ifdef GARNET_METAL_CHUNK_ATTENTION_BUCKETS
+        <<",\"candidate_mps_dispatches\":"<<mps<<",\"candidate_tail_dispatches\":"<<tail<<",\"candidate_bucket_capacity\":"<<extent<<",\"candidate_unknown_controls\":"<<unknown
+#endif
         <<",\"warmups\":"<<warmups<<",\"repetitions\":"<<repetitions<<",\"bitwise_equal\":"<<(bitwise?"true":"false")<<",\"maximum_control_delta\":"<<maximumDelta<<",\"control_gpu_ms\":";Array(gpuMs[0]);
     std::cout<<",\"candidate_gpu_ms\":";Array(gpuMs[1]);std::cout<<",\"control_wall_ms\":";Array(wallMs[0]);std::cout<<",\"candidate_wall_ms\":";Array(wallMs[1]);std::cout<<"}\n"<<std::flush;
 }
@@ -54,7 +65,10 @@ int main(int argc,char** argv) {
         const int repetitions=argc>1?std::stoi(argv[1]):9,warmups=argc>2?std::stoi(argv[2]):3;
         Need(repetitions>=3&&repetitions<=100&&warmups>=1&&warmups<=20,"Invalid sample policy");
         MetalContext gpu;
-#ifdef GARNET_METAL_CHUNK_ATTENTION_MPS
+#ifdef GARNET_METAL_CHUNK_ATTENTION_BUCKETS
+        const char* policy="buckets";
+        const char* rounding="Prepared FP32 MPS context buckets and index32 sparse tails; original numerical limits; index32 control";
+#elif defined(GARNET_METAL_CHUNK_ATTENTION_MPS)
         const char* policy="mps";
         const char* rounding="FP32 MPS matrix reduction order; original numerical gates and bit parity measured; index32 control";
 #elif defined(GARNET_METAL_CHUNK_ATTENTION_INDEX32)

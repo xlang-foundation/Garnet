@@ -3,6 +3,7 @@ import json,shutil,sys,tempfile
 from pathlib import Path
 from audit_local_coder_batch_campaign import audit
 root=Path(sys.argv[1]).resolve();baseline=audit(root)
+spec=json.loads((root/'engine.json').read_text());server=Path(spec.get('native_cohort_log_roots',{}).get('1','server'))
 expected={'throughput':'Aggregate throughput arithmetic differs','prompt':'Frozen prompt token IDs differ',
     'no_combined':'No actual combined decode','completion':'SSE request has no native completion','epoch':'Native request epochs reused'}
 mutations=['throughput','prompt','completion','epoch']
@@ -23,26 +24,41 @@ if baseline.get('chunk_attention_index32_calls',0):
 if baseline.get('chunk_attention_mps_calls',0):
     mutations+=['mps_missing','mps_count','mps_storage','mps_prepared_missing']
     expected.update(mps_missing='Chunk attention command coverage differs',mps_count='Chunk attention route/count differs',mps_storage='MPS attention prepared storage differs',mps_prepared_missing='MPS attention preparation evidence missing')
+if baseline.get('chunk_attention_bucket_calls',0):
+    mutations+=['bucket_missing','bucket_extent','bucket_tail','bucket_unknown','bucket_prepared_missing']
+    expected.update(bucket_missing='Attention bucket command coverage differs',bucket_extent='Attention bucket decision differs from native request plans',bucket_tail='Attention bucket decision differs from native request plans',bucket_unknown='Attention bucket decision differs from native request plans',bucket_prepared_missing='Compiled attention bucket preparation differs')
+if baseline.get('cohorts'):
+    mutations+=['cohort_argv','cohort_identity']
+    expected.update(cohort_argv='Resolved native cohort argv differs',cohort_identity='Native cohorts do not have distinct fresh-process identities')
 for mutation in mutations:
     with tempfile.TemporaryDirectory() as folder:
         path=Path(folder)
         for item in root.iterdir():
             if item.name=='campaign':shutil.copytree(item,path/item.name)
-            elif item.name=='server':
-                (path/item.name).mkdir();shutil.copy2(item/'worker-stdout.jsonl',path/item.name/'worker-stdout.jsonl')
-                if (item/'worker-exit.json').exists():shutil.copy2(item/'worker-exit.json',path/item.name/'worker-exit.json')
+            elif item.name=='server':shutil.copytree(item,path/item.name)
             else:(path/item.name).symlink_to(item)
         if mutation=='throughput':
             summary=next((path/'campaign/cohort-1').glob('*measured-0/summary.json'))
             data=json.loads(summary.read_text());data['aggregate_output_tokens_per_second']*=2;summary.write_text(json.dumps(data))
+        elif mutation in ('cohort_argv','cohort_identity'):
+            file=path/'campaign/cohort-2/cohort.json';data=json.loads(file.read_text())
+            if mutation=='cohort_argv':data['server_argv'][0]='/changed-native-command'
+            else:
+                first=json.loads((path/'campaign/cohort-1/cohort.json').read_text());data['pid']=first['pid'];data['spawn_monotonic']=first['spawn_monotonic']
+            file.write_text(json.dumps(data))
         else:
-            log=path/'server/worker-stdout.jsonl';lines=[];changed=False
+            log=path/server/'worker-stdout.jsonl';lines=[];changed=False
             for line in log.read_text().splitlines():
                 outer=json.loads(line)
                 try:event=json.loads(outer['line'])
                 except json.JSONDecodeError:lines.append(line);continue
                 if isinstance(event,dict):
                     kind=event.get('event')
+                    if mutation=='bucket_missing' and kind=='native_chunk_attention_bucket' and not changed:changed=True;continue
+                    if mutation=='bucket_extent' and kind=='native_chunk_attention_bucket' and not changed:event['capacity']=-1;changed=True
+                    if mutation=='bucket_tail' and kind=='native_chunk_attention_bucket' and not changed:event['tail_dispatches']+=1;changed=True
+                    if mutation=='bucket_unknown' and kind=='native_chunk_attention_bucket' and not changed:event['unknown_controls']=1;changed=True
+                    if mutation=='bucket_prepared_missing' and kind=='native_chunk_attention_buckets_prepared':continue
                     if mutation=='mps_missing' and kind=='native_chunk_attention_mps' and not changed:changed=True;continue
                     if mutation=='mps_count' and kind=='native_chunk_attention_mps' and not changed:event['dispatches']=-1;changed=True
                     if mutation=='mps_storage' and kind=='native_chunk_attention_mps' and not changed:event['scratch_bytes']+=4;changed=True

@@ -10,7 +10,7 @@
 using namespace Garnet;
 static bool strictBitwise=false;
 static void Need(bool value,const char* message){if(!value)throw std::runtime_error(message);}
-static void Case(MetalContext& gpu,size_t batch,size_t chunk,size_t capacity,bool gated,bool contiguous=false,size_t heads=4,size_t kvHeads=2,size_t dim=8) {
+static void Case(MetalContext& gpu,size_t batch,size_t chunk,size_t capacity,bool gated,bool contiguous=false,size_t heads=4,size_t kvHeads=2,size_t dim=8,size_t prefix=SIZE_MAX) {
     const size_t rows=batch*chunk,qWidth=heads*dim,kvWidth=kvHeads*dim;
     std::vector<float> q(rows*qWidth),k(rows*kvWidth),v(k.size()),kc(batch*kvHeads*capacity*dim),vc(kc.size()),gate(q.size()),slots(rows),active(rows,1);
     auto fill=[](std::vector<float>& values,double phase){for(size_t i=0;i<values.size();++i)values[i]=float(std::sin(i*.131+phase)*.2);};
@@ -18,7 +18,7 @@ static void Case(MetalContext& gpu,size_t batch,size_t chunk,size_t capacity,boo
     for(size_t row=0;row<batch;++row)for(size_t t=0;t<chunk;++t) {
         // Duplicate/backward slots exercise latest-token selection; high slots
         // ensure the compact index is not accidentally storing a KV position.
-        slots[row*chunk+t]=float(capacity-chunk-2+t-(!contiguous&&t>=3?2:0));
+        slots[row*chunk+t]=float((prefix==SIZE_MAX?capacity-chunk-2:prefix)+t-(!contiguous&&t>=3?2:0));
         if(!contiguous&&t==1&&row==batch-1)active[row*chunk+t]=0;
     }
     std::vector<MetalMatrix> inputs={gpu.Upload(q,rows,qWidth),gpu.Upload(k,rows,kvWidth),gpu.Upload(v,rows,kvWidth),
@@ -101,6 +101,9 @@ int main(int argc,char** argv){try{
     static_assert(kMetalAttentionIndexBytes==2&&kMetalPrefillChunkLimit==256,"Large chunks require the signed 16-bit profile");
     Case(gpu,1,128,4096,true,true);Case(gpu,1,256,4096,false);Case(gpu,2,256,512,true);
     Case(gpu,2,128,4096,true,true,24,4,256);Case(gpu,2,8,4096,false,false,24,4,256);
+#ifdef GARNET_METAL_CHUNK_ATTENTION_BUCKETS
+    for(size_t prefix:{0,128,384,896,1920,3968})Case(gpu,2,128,4096,true,true,24,4,256,prefix);
+#endif
 #endif
     bool rejected=false;auto out=gpu.Allocate(1,1);gpu.Begin();
     try{gpu.EncodeAttentionChunk({},out,4,2,8,4097,8,true);}catch(const std::invalid_argument&){rejected=true;}

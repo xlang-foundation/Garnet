@@ -169,14 +169,17 @@ def main():
             folder = output/('cohort-'+str(cohort+1))
             folder.mkdir()
             process = memory = None
-            cohort_state = dict(status='starting', server_argv=spec['argv'],
+            # Native bridges need distinct exclusive log/inventory files on
+            # each fresh restart. Other engines' argv remains byte-for-byte.
+            server_argv=[arg.replace('{cohort}',str(cohort+1)) for arg in spec['argv']]
+            cohort_state = dict(status='starting', server_argv=server_argv,
                                 environment_overrides=spec.get('env', {}))
             write(folder/'cohort.json', cohort_state)
             with (folder/'server.log').open('w') as log:
                 try:
                     env = dict(os.environ, **spec.get('env', {}))
                     began = time.monotonic()
-                    process = subprocess.Popen(spec['argv'], cwd=root, env=env,
+                    process = subprocess.Popen(server_argv, cwd=root, env=env,
                                                stdout=log, stderr=subprocess.STDOUT,
                                                start_new_session=True)
                     cohort_state.update(pid=process.pid, spawn_monotonic=began)

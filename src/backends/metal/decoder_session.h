@@ -159,6 +159,11 @@ public:
     size_t LastChunkAttentionMPSDispatches() {std::lock_guard<std::mutex> lock(mutex_);return gpu_?gpu_->LastChunkAttentionMPSDispatches():0;}
     size_t ChunkAttentionMPSPlanCount() {std::lock_guard<std::mutex> lock(mutex_);return gpu_?gpu_->ChunkAttentionMPSPlanCount():0;}
     size_t ChunkAttentionMPSScratchBytes() {std::lock_guard<std::mutex> lock(mutex_);return gpu_?gpu_->ChunkAttentionMPSScratchBytes():0;}
+    size_t ChunkAttentionMPSBucketCount() {std::lock_guard<std::mutex> lock(mutex_);return gpu_?gpu_->ChunkAttentionMPSBucketCount():0;}
+    size_t LastChunkAttentionBucketDispatches() {std::lock_guard<std::mutex> lock(mutex_);return gpu_?gpu_->LastChunkAttentionBucketDispatches():0;}
+    size_t LastChunkAttentionTailDispatches() {std::lock_guard<std::mutex> lock(mutex_);return gpu_?gpu_->LastChunkAttentionTailDispatches():0;}
+    size_t LastChunkAttentionBucketCapacity() {std::lock_guard<std::mutex> lock(mutex_);return gpu_?gpu_->LastChunkAttentionBucketCapacity():0;}
+    size_t LastChunkAttentionUnknownControls() {std::lock_guard<std::mutex> lock(mutex_);return gpu_?gpu_->LastChunkAttentionUnknownControls():0;}
     size_t LastKVInplaceUpdates() const {return kvInplaceUpdates_;}
 #ifdef GARNET_METAL_INDEXED_DECODE
     size_t LastIndexedDecodeAffineDispatches() {std::lock_guard<std::mutex> lock(mutex_);return gpu_?gpu_->LastIndexedDecodeAffineDispatches():0;}
@@ -253,6 +258,11 @@ public:
         APISET().AddProp("chunk_attention_mps_dispatches",&MetalDecoderSession::LastChunkAttentionMPSDispatches);
         APISET().AddProp("chunk_attention_mps_plan_count",&MetalDecoderSession::ChunkAttentionMPSPlanCount);
         APISET().AddProp("chunk_attention_mps_scratch_bytes",&MetalDecoderSession::ChunkAttentionMPSScratchBytes);
+        APISET().AddProp("chunk_attention_mps_bucket_count",&MetalDecoderSession::ChunkAttentionMPSBucketCount);
+        APISET().AddProp("chunk_attention_bucket_dispatches",&MetalDecoderSession::LastChunkAttentionBucketDispatches);
+        APISET().AddProp("chunk_attention_tail_dispatches",&MetalDecoderSession::LastChunkAttentionTailDispatches);
+        APISET().AddProp("chunk_attention_bucket_capacity",&MetalDecoderSession::LastChunkAttentionBucketCapacity);
+        APISET().AddProp("chunk_attention_unknown_controls",&MetalDecoderSession::LastChunkAttentionUnknownControls);
         APISET().AddProp("kv_inplace_updates",&MetalDecoderSession::LastKVInplaceUpdates);
 #ifdef GARNET_METAL_INDEXED_DECODE
         APISET().AddProp("indexed_decode_affine_dispatches",&MetalDecoderSession::LastIndexedDecodeAffineDispatches);

@@ -3,6 +3,9 @@
 namespace Garnet {
 inline constexpr const char* kChunkAttentionMPSShader=R"METAL(
 #ifdef GARNET_CHUNK_ATTENTION_INDEX32
+#ifdef GARNET_CHUNK_ATTENTION_BUCKETS
+constant uint chunk_mps_extent [[function_constant(31)]];
+#endif
 // FP32 matrix products consume separate old-cache and live-token operands.
 // Causal selection sends each probability to exactly one operand set, so a
 // later overwrite never changes the cache value seen by an earlier query.
@@ -36,12 +39,17 @@ kernel void chunk_mps_softmax(device float* cacheScores [[buffer(0)]],device con
     uint lane [[thread_index_in_simdgroup]],uint simd [[simdgroup_index_in_threadgroup]]) {
     const auto p=chunk_mps_params(runtime);
     uint t=query%p.chunk,b=query/(p.chunk*p.heads);
+#ifdef GARNET_CHUNK_ATTENTION_BUCKETS
+    const uint extent=chunk_mps_extent;
+#else
+    const uint extent=p.capacity;
+#endif
     if(active[b*p.aStride+t]==0) {
-        for(uint s=tid;s<p.capacity;s+=128)cacheScores[query*pitch.cacheScore+s]=0;
+        for(uint s=tid;s<extent;s+=128)cacheScores[query*pitch.cacheScore+s]=0;
         for(uint j=tid;j<p.chunk;j+=128)liveProb[query*pitch.liveScore+j]=0;
         return;
     }
-    uint visible=uint(min(ulong(p.capacity),ulong(slots[b*p.sStride+t])+1));
+    uint visible=uint(min(ulong(extent),ulong(slots[b*p.sStride+t])+1));
     threadgroup int contiguous;threadgroup float partial[4];
     if(tid==0) {
         float first=slots[b*p.sStride];int valid=isfinite(first)&&first>=0&&first==floor(first);
@@ -69,7 +77,7 @@ kernel void chunk_mps_softmax(device float* cacheScores [[buffer(0)]],device con
     denominator=simd_sum(lane<4?partial[lane]:0.0f);
     // All scratch reads below follow the last writes before the reduction's
     // threadgroup barrier. Each output probability has one owning thread.
-    for(uint s=tid;s<p.capacity;s+=128)
+    for(uint s=tid;s<extent;s+=128)
         cacheScores[query*pitch.cacheScore+s]=s<visible&&selected[s]<0?scratch[s]/denominator:0;
     for(uint j=tid;j<p.chunk;j+=128) {
         float position=slots[b*p.sStride+j];

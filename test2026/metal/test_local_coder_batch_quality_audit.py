@@ -16,6 +16,7 @@ if baseline.get('affine_profile_calls',0):mutations+=['missing_affine_profile','
 if baseline.get('affine_profile_index_bits')==32:mutations+=['missing_affine_index_width']
 if baseline.get('chunk_attention_index32_calls',0):mutations+=['missing_attention_index32','bad_attention_index32_count','bad_attention_index32_stage']
 if baseline.get('chunk_attention_mps_calls',0):mutations+=['missing_attention_mps','bad_attention_mps_count','bad_attention_mps_stage','bad_attention_mps_plan','bad_attention_mps_bytes','missing_attention_mps_prepared']
+if baseline.get('chunk_attention_bucket_calls',0):mutations+=['missing_attention_bucket','bad_attention_bucket_extent','bad_attention_bucket_tail','bad_attention_bucket_unknown','bad_attention_bucket_tokens','missing_attention_buckets_prepared','bad_attention_bucket_count']
 for mutation in mutations:
     with tempfile.TemporaryDirectory() as temporary:
         path=Path(temporary)/'study';shutil.copytree(root,path)
@@ -26,6 +27,13 @@ for mutation in mutations:
             except json.JSONDecodeError:lines.append(line);continue
             if isinstance(event,dict):
                 kind=event.get('event')
+                if mutation=='missing_attention_bucket' and kind=='native_chunk_attention_bucket':continue
+                if mutation=='bad_attention_bucket_extent' and kind=='native_chunk_attention_bucket':event['capacity']=-1
+                if mutation=='bad_attention_bucket_tail' and kind=='native_chunk_attention_bucket':event['tail_dispatches']+=1
+                if mutation=='bad_attention_bucket_unknown' and kind=='native_chunk_attention_bucket':event['unknown_controls']=1
+                if mutation=='bad_attention_bucket_tokens' and kind=='native_chunk_attention_bucket':event['active_tokens']+=1
+                if mutation=='bad_attention_bucket_count' and kind=='native_chunk_attention_bucket':event['bucket_count']+=1
+                if mutation=='missing_attention_buckets_prepared' and kind=='native_chunk_attention_buckets_prepared':continue
                 if mutation=='missing_attention_mps' and kind=='native_chunk_attention_mps':continue
                 if mutation=='bad_attention_mps_count' and kind=='native_chunk_attention_mps':event['dispatches']=-1
                 if mutation=='bad_attention_mps_stage' and kind=='native_chunk_attention_mps':event['stage']='unvalidated'

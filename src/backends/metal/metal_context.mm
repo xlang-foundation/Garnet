@@ -2,6 +2,7 @@
 #include "metal_context.h"
 #ifdef GARNET_METAL_CHUNK_ATTENTION_MPS
 #include "chunk_attention_mps_shader.h"
+#include "chunk_attention_policy.h"
 #endif
 #ifdef GARNET_METAL_CHUNK_ATTENTION_INDEX32
 #include "chunk_attention_index_bounds.h"
@@ -371,6 +372,15 @@ struct MetalPipelines {
         MPSMatrixDescriptor* cacheDescriptor;
         MPSMatrixMultiplication *qkCache,*qkLive,*pvCache,*pvLive;
         std::array<uint32_t,3> pitches{};
+#ifdef GARNET_METAL_CHUNK_ATTENTION_BUCKETS
+        struct Bucket {
+            MPSMatrix* scores;
+            MPSMatrixDescriptor* cache;
+            MPSMatrixMultiplication *qk,*pv;
+            id<MTLComputePipelineState> softmax;
+        };
+        std::map<size_t,Bucket> buckets;
+#endif
     };
     std::mutex chunkMPSMutex;
     std::map<std::array<size_t,6>,ChunkMPSPlan> chunkMPSPlans;
@@ -417,6 +427,7 @@ struct MetalContext::Impl {
     size_t bodyShapeDispatches=0,bodyShapeMisses=0;
     size_t chunkProbabilityReuseDispatches=0,chunkAttentionIndex32Dispatches=0;
     size_t chunkAttentionMPSDispatches=0;
+    size_t chunkAttentionBucketDispatches=0,chunkAttentionTailDispatches=0,chunkAttentionBucketCapacity=0,chunkAttentionUnknownControls=0;
 #ifdef GARNET_METAL_CHUNK_ATTENTION_MPS
     std::unique_lock<std::mutex> chunkMPSLock;
 #endif
@@ -1607,6 +1618,9 @@ kernel void bf16_native_dot_t128(device const float* a [[buffer(0)]],device cons
         NSString* referenceAttentionSource=source;
         source=[@"#define GARNET_CHUNK_ATTENTION_INDEX32 1\n" stringByAppendingString:source];
 #endif
+#ifdef GARNET_METAL_CHUNK_ATTENTION_BUCKETS
+        source=[@"#define GARNET_CHUNK_ATTENTION_BUCKETS 1\n" stringByAppendingString:source];
+#endif
         auto library=[impl_->device newLibraryWithSource:source options:compileOptions error:&error];
         if(!library)throw std::runtime_error(std::string(error.localizedDescription.UTF8String));
         impl_->kernels->library=library;
@@ -1618,7 +1632,9 @@ kernel void bf16_native_dot_t128(device const float* a [[buffer(0)]],device cons
             return pipeline;
         };
         impl_->kernels->chunkMPSPack=mpsChunkPipeline(@"chunk_mps_pack");
+#ifndef GARNET_METAL_CHUNK_ATTENTION_BUCKETS
         impl_->kernels->chunkMPSSoftmax=mpsChunkPipeline(@"chunk_mps_softmax");
+#endif
         impl_->kernels->chunkMPSUnpack=mpsChunkPipeline(@"chunk_mps_unpack");
 #endif
 #ifdef GARNET_METAL_ROW_FINAL_HIDDEN
@@ -3222,6 +3238,7 @@ void MetalContext::Begin() {
 #endif
     impl_->partialSubmissions=0;
     impl_->bodyShapeDispatches=impl_->bodyShapeMisses=0;impl_->chunkProbabilityReuseDispatches=impl_->chunkAttentionIndex32Dispatches=impl_->chunkAttentionMPSDispatches=0;
+    impl_->chunkAttentionBucketDispatches=impl_->chunkAttentionTailDispatches=impl_->chunkAttentionBucketCapacity=impl_->chunkAttentionUnknownControls=0;
 #ifdef GARNET_METAL_AFFINE_PROFILE
     impl_->affineProfileDispatches=impl_->affineProfileMisses=impl_->affineProfileMaxThreads=0;
 #endif
@@ -3934,6 +3951,25 @@ void MetalContext::PrepareAttentionChunk(const std::vector<MetalMatrix>& inputs,
     if(!plan.queryView||!plan.keyView||!plan.valueView||!plan.cacheScoreView||!plan.liveScoreView||!plan.liveProbView||
        !plan.livePartView||!plan.cacheDescriptor||!plan.qkCache||!plan.qkLive||!plan.pvCache||!plan.pvLive)
         throw std::runtime_error("Cannot prepare MPS chunk attention plan");
+#ifdef GARNET_METAL_CHUNK_ATTENTION_BUCKETS
+    for(size_t bound:ChunkAttentionContextBuckets(capacity)) {
+        MetalPipelines::ChunkMPSPlan::Bucket bucket;
+        // Keep the physical matrix descriptors fixed. MPS GEMM dimensions
+        // select the leading context submatrix within that compiled layout.
+        bucket.scores=plan.cacheScoreView;
+        bucket.cache=plan.cacheDescriptor;
+        bucket.qk=bound==capacity?plan.qkCache:product(bound,dim,true);
+        bucket.pv=bound==capacity?plan.pvCache:product(dim,bound,false);
+        auto constants=[MTLFunctionConstantValues new];uint32_t extent=uint32_t(bound);
+        [constants setConstantValue:&extent type:MTLDataTypeUInt atIndex:31];NSError* error=nil;
+        auto function=[impl_->kernels->library newFunctionWithName:@"chunk_mps_softmax" constantValues:constants error:&error];
+        if(!function)throw std::runtime_error("Cannot specialize MPS attention context bucket");
+        bucket.softmax=[impl_->device newComputePipelineStateWithFunction:function error:&error];
+        if(!bucket.scores||!bucket.cache||!bucket.qk||!bucket.pv||!bucket.softmax||bucket.softmax.threadExecutionWidth!=32||bucket.softmax.maxTotalThreadsPerThreadgroup<128)
+            throw std::runtime_error("Cannot prepare MPS attention context bucket");
+        plan.buckets.emplace(bound,std::move(bucket));
+    }
+#endif
     impl_->kernels->chunkMPSPlans.emplace(key,std::move(plan));
     }
 #else
@@ -3974,10 +4010,31 @@ void MetalContext::EncodeAttentionChunk(const std::vector<MetalMatrix>& inputs,c
                 throw std::logic_error("Uninitialized MPS attention input");
         }
         if(kc.rowBytes!=kc.columns*4||vc.rowBytes!=vc.columns*4)throw std::invalid_argument("MPS attention cache stride differs from prepared layout");
+#ifdef GARNET_METAL_CHUNK_ATTENTION_BUCKETS
+        const bool controlsReady=inputs[5].impl_->ready&&!inputs[5].impl_->pending&&inputs[6].impl_->ready&&!inputs[6].impl_->pending&&
+            s.data.storageMode==MTLStorageModeShared&&a.data.storageMode==MTLStorageModeShared&&s.data.contents&&a.data.contents;
+        const auto policy=SelectChunkAttentionPolicy(capacity,size_t(p.batch),chunk,
+            controlsReady?reinterpret_cast<const float*>(static_cast<const char*>(s.data.contents)+s.offset):nullptr,size_t(p.sStride),
+            controlsReady?reinterpret_cast<const float*>(static_cast<const char*>(a.data.contents)+a.offset):nullptr,size_t(p.aStride));
+        if(policy.scalar) {
+            // Tail inputs retain the same fixed layouts. Avoid packing and
+            // dense matrix products when there are at most eight real tokens.
+            EncodeStateKernel(13,inputs,output,&p,sizeof(p),Elements(q.rows,heads),nullptr,false);
+            ++impl_->chunkAttentionBucketDispatches;++impl_->chunkAttentionTailDispatches;
+            return;
+        }
+#endif
         if(!impl_->chunkMPSLock.owns_lock())impl_->chunkMPSLock=std::unique_lock<std::mutex>(impl_->kernels->chunkMPSMutex);
         auto found=impl_->kernels->chunkMPSPlans.find({size_t(p.batch),heads,kvHeads,dim,capacity,chunk});
         if(found==impl_->kernels->chunkMPSPlans.end())throw std::logic_error("MPS attention profile must be prepared before encoding");
         auto& plan=found->second;
+        auto cacheDescriptor=plan.cacheDescriptor;auto cacheScoreView=plan.cacheScoreView;
+        auto qkCache=plan.qkCache,pvCache=plan.pvCache;auto softmaxPipeline=impl_->kernels->chunkMPSSoftmax;
+        size_t extent=capacity;
+#ifdef GARNET_METAL_CHUNK_ATTENTION_BUCKETS
+        const auto& bucket=plan.buckets.at(policy.capacity);extent=policy.capacity;
+        cacheDescriptor=bucket.cache;cacheScoreView=bucket.scores;qkCache=bucket.qk;pvCache=bucket.pv;softmaxPipeline=bucket.softmax;
+#endif
         auto bind=[](id<MTLComputeCommandEncoder> encoder,const MetalMatrix& owner,size_t index) {
             auto matrix=owner.impl_->matrix;[encoder setBuffer:matrix.data offset:matrix.offset atIndex:index];
         };
@@ -3989,22 +4046,22 @@ void MetalContext::EncodeAttentionChunk(const std::vector<MetalMatrix>& inputs,c
         bind(pack,plan.query,4);bind(pack,plan.key,5);bind(pack,plan.value,6);
         [pack setBytes:&p length:sizeof(p) atIndex:7];[pack setBytes:plan.pitches.data() length:sizeof(plan.pitches) atIndex:8];
         [pack dispatchThreads:MTLSizeMake(count,1,1) threadsPerThreadgroup:MTLSizeMake(128,1,1)];[pack endEncoding];
-        auto keyView=[[MPSMatrix alloc] initWithBuffer:kc.data offset:kc.offset descriptor:plan.cacheDescriptor];
-        auto valueView=[[MPSMatrix alloc] initWithBuffer:vc.data offset:vc.offset descriptor:plan.cacheDescriptor];
+        auto keyView=[[MPSMatrix alloc] initWithBuffer:kc.data offset:kc.offset descriptor:cacheDescriptor];
+        auto valueView=[[MPSMatrix alloc] initWithBuffer:vc.data offset:vc.offset descriptor:cacheDescriptor];
         if(!keyView||!valueView)throw std::runtime_error("Cannot bind prepared MPS attention cache views");
-        [plan.qkCache encodeToCommandBuffer:impl_->command leftMatrix:plan.queryView rightMatrix:keyView resultMatrix:plan.cacheScoreView];
+        [qkCache encodeToCommandBuffer:impl_->command leftMatrix:plan.queryView rightMatrix:keyView resultMatrix:cacheScoreView];
         [plan.qkLive encodeToCommandBuffer:impl_->command leftMatrix:plan.queryView rightMatrix:plan.keyView resultMatrix:plan.liveScoreView];
         auto softmax=[impl_->command computeCommandEncoder];
         if(!softmax)throw std::runtime_error("Cannot encode MPS attention selection/softmax");
-        [softmax setComputePipelineState:impl_->kernels->chunkMPSSoftmax];
+        [softmax setComputePipelineState:softmaxPipeline];
         bind(softmax,plan.cacheScores,0);bind(softmax,plan.liveScores,1);bind(softmax,plan.liveProb,2);
         bind(softmax,inputs[5],3);bind(softmax,inputs[6],4);
         [softmax setBytes:&p length:sizeof(p) atIndex:5];[softmax setBytes:plan.pitches.data() length:sizeof(plan.pitches) atIndex:6];
-        [softmax setThreadgroupMemoryLength:scoresBytes atIndex:0];[softmax setThreadgroupMemoryLength:(capacity*2+15)&~size_t(15) atIndex:1];
+        [softmax setThreadgroupMemoryLength:(extent*4+15)&~size_t(15) atIndex:0];[softmax setThreadgroupMemoryLength:(extent*2+15)&~size_t(15) atIndex:1];
         [softmax dispatchThreadgroups:MTLSizeMake(q.rows*heads,1,1) threadsPerThreadgroup:MTLSizeMake(128,1,1)];[softmax endEncoding];
         // Both QK products have consumed packed queries. Reuse their storage
         // for the old-cache contribution, keeping scratch fixed per profile.
-        [plan.pvCache encodeToCommandBuffer:impl_->command leftMatrix:plan.cacheScoreView rightMatrix:valueView resultMatrix:plan.queryView];
+        [pvCache encodeToCommandBuffer:impl_->command leftMatrix:cacheScoreView rightMatrix:valueView resultMatrix:plan.queryView];
         [plan.pvLive encodeToCommandBuffer:impl_->command leftMatrix:plan.liveProbView rightMatrix:plan.valueView resultMatrix:plan.livePartView];
         auto unpack=[impl_->command computeCommandEncoder];
         if(!unpack)throw std::runtime_error("Cannot encode MPS attention merge");
@@ -4015,6 +4072,11 @@ void MetalContext::EncodeAttentionChunk(const std::vector<MetalMatrix>& inputs,c
         output.impl_->ready=false;output.impl_->pending=true;
         if(impl_->pendingOutputs.insert(output.impl_.get()).second)impl_->outputs.push_back(output.impl_);
         ++impl_->chunkAttentionMPSDispatches;
+#ifdef GARNET_METAL_CHUNK_ATTENTION_BUCKETS
+        ++impl_->chunkAttentionBucketDispatches;
+        impl_->chunkAttentionBucketCapacity=std::max(impl_->chunkAttentionBucketCapacity,extent);
+        if(!policy.known)++impl_->chunkAttentionUnknownControls;
+#endif
         }
         return;
     }
@@ -4027,6 +4089,23 @@ void MetalContext::EncodeAttentionChunk(const std::vector<MetalMatrix>& inputs,c
 size_t MetalContext::LastChunkProbabilityReuseDispatches() const {return impl_->chunkProbabilityReuseDispatches;}
 size_t MetalContext::LastChunkAttentionIndex32Dispatches() const {return impl_->chunkAttentionIndex32Dispatches;}
 size_t MetalContext::LastChunkAttentionMPSDispatches() const {return impl_->chunkAttentionMPSDispatches;}
+size_t MetalContext::LastChunkAttentionBucketDispatches() const {return impl_->chunkAttentionBucketDispatches;}
+size_t MetalContext::LastChunkAttentionTailDispatches() const {return impl_->chunkAttentionTailDispatches;}
+size_t MetalContext::LastChunkAttentionBucketCapacity() const {return impl_->chunkAttentionBucketCapacity;}
+size_t MetalContext::LastChunkAttentionUnknownControls() const {return impl_->chunkAttentionUnknownControls;}
+size_t MetalContext::ChunkAttentionMPSBucketCount() const {
+#ifdef GARNET_METAL_CHUNK_ATTENTION_MPS
+    std::unique_lock<std::mutex> lock(impl_->kernels->chunkMPSMutex,std::defer_lock);
+    if(!impl_->chunkMPSLock.owns_lock())lock.lock();
+#ifdef GARNET_METAL_CHUNK_ATTENTION_BUCKETS
+    size_t count=0;for(const auto& entry:impl_->kernels->chunkMPSPlans)count+=entry.second.buckets.size();return count;
+#else
+    return impl_->kernels->chunkMPSPlans.size();
+#endif
+#else
+    return 0;
+#endif
+}
 size_t MetalContext::ChunkAttentionMPSPlanCount() const {
 #ifdef GARNET_METAL_CHUNK_ATTENTION_MPS
     std::unique_lock<std::mutex> lock(impl_->kernels->chunkMPSMutex,std::defer_lock);
@@ -4052,7 +4131,9 @@ size_t MetalContext::ChunkAttentionMPSScratchBytes() const {
 #endif
 }
 size_t MetalContext::LastChunkAttentionOptimizedDispatches() const {
-#ifdef GARNET_METAL_CHUNK_ATTENTION_MPS
+#ifdef GARNET_METAL_CHUNK_ATTENTION_BUCKETS
+    return impl_->chunkAttentionBucketDispatches;
+#elif defined(GARNET_METAL_CHUNK_ATTENTION_MPS)
     return impl_->chunkAttentionMPSDispatches;
 #else
     return impl_->chunkProbabilityReuseDispatches+impl_->chunkAttentionIndex32Dispatches;
@@ -4135,6 +4216,7 @@ void MetalContext::Abort() {
     for(id<MTLCommandBuffer> prior in impl_->submitted)[prior waitUntilCompleted];
     impl_->submitted=nil;impl_->partialSubmissions=0;
     impl_->bodyShapeDispatches=impl_->bodyShapeMisses=0;impl_->chunkProbabilityReuseDispatches=impl_->chunkAttentionIndex32Dispatches=impl_->chunkAttentionMPSDispatches=0;
+    impl_->chunkAttentionBucketDispatches=impl_->chunkAttentionTailDispatches=impl_->chunkAttentionBucketCapacity=impl_->chunkAttentionUnknownControls=0;
 #ifdef GARNET_METAL_AFFINE_PROFILE
     impl_->affineProfileDispatches=impl_->affineProfileMisses=impl_->affineProfileMaxThreads=0;
 #endif

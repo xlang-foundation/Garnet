@@ -2075,6 +2075,129 @@ No repeatable model-level speed gain is accepted. A subsequent candidate
 should select precompiled context buckets and a sparse-tail path from actual
 validated controls while retaining the maximum profile's memory envelope.
 
+### Actual-control context buckets and scalar tails
+
+Default-OFF `GARNET_METAL_CHUNK_ATTENTION_BUCKETS` requires the MPS/index32
+study flags and prepares128/256/512/1024/2048/4096 context variants for the4K
+profile. Physical matrix descriptors, row/batch strides and the seven-buffer
+116MiB scratch envelope remain fixed. GEMM dimensions select leading context
+submatrices; function constant31 specializes softmax extent. Execution only
+looks up prepared variants. Smaller inputs are valid within the profile.
+
+Native code reads the small slot/active buffers only when their shared Metal
+storage is completed, host-readable and not pending GPU output. It validates
+flags/integer slots, counts real tokens and selects a context bucket containing
+every active query's visible prefix. At most eight real tokens use the original
+index32 scalar kernel. Unknown/pending GPU controls retain the full prepared
+context without readback. Python observes counters and verifies decisions;
+the routing decision lives in the native inference runtime.
+
+The first reduced-descriptor prototype fails the unchanged numerical gate
+at the256-token bucket, with maximum control delta0.00149938. Sources and
+`chunk-attention-buckets-ctest1.log` remain archived. Retaining full physical
+descriptors while limiting GEMM submatrix dimensions repairs the failure;
+the installed SDK explicitly permits larger operand/result matrices than
+the requested GEMM dimensions. No private-driver cause is established.
+
+All18 native tests pass after repair and the explicit host-readability guard.
+Coverage includes18 context boundaries,13 active-token counts, padded control
+strides, invalid flags/slots, pending GPU controls, concurrent shared-plan
+partial submissions and FP64 attention checks at all six real27B bucket sizes.
+The strict bitwise diagnostic still fails for the FP32 matrix route; its first
+small case has the previously observed2.56114e-9 maximum delta. Original error
+limits are unchanged. Scalar tails remain bitwise equal to control.
+
+`chunk-attention-buckets-kernel-comparison2` freezes the final native library
+components and runs three fresh sequential cohorts, three warmups and nine
+alternating-order calls per variant. Geometry, precision and12 cases match
+the preceding studies. Numerical checks and13 corruption checks pass;
+maximum control delta is2.60770e-8. Rows below are medians of cohort medians.
+
+| Active rows | Actual tokens per row | Cached prefix | Index32 control GPU ms | Bucket/tail GPU ms | Ratio |
+|---:|---:|---:|---:|---:|---:|
+|1|4|256|0.490|0.491|0.997|
+|1|6|2048|7.404|7.402|1.000|
+|1|128|0|2.951|0.874|3.378|
+|1|128|128|8.307|1.121|7.413|
+|1|128|1024|64.859|4.642|13.972|
+|1|128|1920|137.802|4.782|28.817|
+|1|128|3968|281.328|9.734|28.902|
+|2|128|0|5.830|1.028|5.674|
+|2|128|128|16.006|1.297|12.338|
+|2|128|1024|132.145|4.953|26.680|
+|2|128|1920|273.430|5.202|52.561|
+|2|128|3968|559.393|11.164|50.105|
+
+The earlier full-bound prototype's short-context regression is removed in
+these isolated operator cases; scalar-tail samples are approximately neutral.
+These are attention milliseconds, not model token throughput or2x model gains.
+
+`native27b-chunk-attention-buckets-chunk128-quality1` passes all eight sandbox
+coding tasks, with all eight full token sequences exactly matching the original
+single-native reference. Accounting and46 corruption checks pass, including
+joining bucket decisions to native scheduler slots/token counts rather than
+trusting a worker flag. The run records1050 combined decode plans, nine mixed
+forwards, three interleavings and1254 checked bucket commands. It exercises
+128/256/512/1024 context buckets and two scalar-tail commands, with zero unknown
+controls. All six buckets are prepared before ready; their count and the
+121,634,816-byte scratch inventory remain fixed. Ready allocation remains
+17,975,410,688bytes. Close is1,507,328bytes, all four owner counts zero, worker0,
+inside the unchanged2MiB profile limit.
+
+The exact qualified library/worker completes the two-cell cold C1 admission
+`native27b-chunk-attention-buckets-chunk128-http-admission1`, one wave each,
+no warmups. Both complete128-token sequences match the preceding index32
+admission. Accounting and24 corruption checks pass.
+
+| Actual prompt tokens | First token s | Decode tokens/s | Total s | Overall output tokens/s |
+|---:|---:|---:|---:|---:|
+|260|14.603|6.754|33.439|3.828|
+|2054|36.738|5.729|58.942|2.172|
+
+The preceding full-bound matrix cold samples were16.444/43.153s first-token
+time; the attention-index32 samples were14.376/47.738s. This bucket candidate's
+long cold sample is lower, while decode shows no speed gain. The reference
+vLLM/SGLang campaigns remain frozen and use warmups/cohorts; these admissions
+do not establish a matched repeated comparison. Every model-level2x target
+remains unmet. Keep the experimental flags OFF by default.
+
+`native27b-chunk-attention-buckets-chunk128-batch-admission1` completes four
+C2/C4 cells, one wave each, no explicit warmups, through physical batch2.
+All12 full output sequences match the preceding affine-index32 batch archive;
+accounting and24 corruption checks pass. It records495 combined decode plans
+and822 checked bucket commands. Natural EOS is retained; output counts are
+190 tokens for each C2 wave and446 for each C4 wave.
+
+| Target input tokens | Clients | Overall output tokens/s |
+|---:|---:|---:|
+|256|2|5.454|
+|256|4|7.568|
+|2048|2|2.338|
+|2048|4|2.674|
+
+Overall throughput includes prefill and queueing. The preceding single-wave
+affine-index32 batch observations were5.581/7.881/1.701/1.945 in this order.
+Short observations are slightly slower and long observations faster; these
+are still admissions, not repeated performance acceptance.
+
+The strengthened plan test separately exercises capacity64 and4096 with two
+concurrent contexts and24 partial-submission runs per context pair/cycle.
+In the4K case, completed controls select128 while pending GPU-produced controls
+retain4096; outputs match the original numerical limits and all owners close.
+Driver allocation after the two different-capacity cycles is737,280 and
+1,785,856bytes. The exact qualified model library remains unchanged by this
+test-only rebuild.
+
+`run_local_coder_native_campaign.py` prepares the exact frozen phase1 manifest
+for three fresh native processes, six cells, two warmups and five measured
+waves per cell. It checks coding/full-token qualification, prior serving
+admission, runtime xModel identity and every pinned checkpoint byte before
+launch. Per-cohort profiles differ only in inventory output paths; logs and
+restart identities are independently audited. Native request epochs are
+scoped per process. A CPU-only synthetic namespace fixture and26 corruption
+checks validate this audit plumbing; the temporary fixture is not GPU or
+performance evidence. Actual matched collection remains pending launch.
+
 ### Parent MTP asset discovery
 
 The converted pinned artifact contains no MTP parameters, but the original

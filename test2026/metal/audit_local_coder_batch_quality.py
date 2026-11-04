@@ -75,6 +75,8 @@ def profile_close_issues(profile,memory):
 
 def chunk_attention_issues(profile,events,backend,prefill_calls,decode_calls):
     issues=[]
+    buckets=profile.get('chunk_attention_buckets',False)
+    if type(buckets) is not bool or buckets!=('chunk_attention_buckets' in backend):issues.append('Chunk attention bucket backend policy differs')
     for policy in ('chunk_probability_reuse','chunk_attention_index32','chunk_attention_mps'):
         enabled=profile.get(policy,False);calls=[e for e in events if e.get('event')=='native_'+policy]
         if type(enabled) is not bool or enabled!=(policy in backend):issues.append('Chunk attention backend policy differs: '+policy)
@@ -88,7 +90,15 @@ def chunk_attention_issues(profile,events,backend,prefill_calls,decode_calls):
             sum(e.get('stage')=='decode' for e in calls)!=decode_calls):issues.append('Chunk attention command coverage differs')
         for event in calls:
             stage=event.get('stage');count=event.get('dispatches')
-            if stage not in ('prefill','decode') or type(count) is not int or count!=(coverage if stage=='prefill' else 0):
+            expected=coverage if stage=='prefill' else 0
+            if buckets and policy in ('chunk_attention_index32','chunk_attention_mps'):
+                valid=event.get('active_tokens')
+                if type(valid) is not int or not 0<=valid<=profile['batch']*profile['prefill_chunk']:
+                    issues.append('Chunk attention active token count differs');continue
+                use_scalar=valid<=8
+                enabled_route=use_scalar if policy=='chunk_attention_index32' else not use_scalar
+                expected=profile['expected_chunk_attention_dispatches'] if stage=='prefill' and enabled_route else 0
+            if stage not in ('prefill','decode') or type(count) is not int or count!=expected:
                 issues.append('Chunk attention route/count differs')
             if policy=='chunk_attention_mps':
                 for key in ('plan_count','scratch_bytes'):
@@ -101,6 +111,35 @@ def chunk_attention_issues(profile,events,backend,prefill_calls,decode_calls):
             if type(wanted) is not int or wanted<=0 or any(e.get(key)!=wanted for e in prepared):issues.append('MPS attention prepared storage differs')
         if not profile.get('chunk_attention_index32') or profile.get('chunk_probability_reuse'):issues.append('MPS attention control policy differs')
     elif prepared:issues.append('Unexpected MPS attention preparation')
+    bucket_calls=[e for e in events if e.get('event')=='native_chunk_attention_bucket']
+    bucket_prepared=[e for e in events if e.get('event')=='native_chunk_attention_buckets_prepared']
+    if buckets:
+        capacity=profile['capacity'];bounds=[min(128,capacity)]
+        while bounds[-1]<capacity:bounds.append(min(bounds[-1]*2,capacity))
+        count=profile.get('expected_attention_mps_bucket_count')
+        if count!=len(bounds) or len(bucket_prepared)!=1 or any(e.get('bucket_count')!=count for e in bucket_prepared):
+            issues.append('Compiled attention bucket preparation differs')
+        if len(bucket_calls)!=prefill_calls+decode_calls:issues.append('Attention bucket command coverage differs')
+        pending=[];index_calls=[e for e in events if e.get('event')=='native_chunk_attention_index32']
+        mps_calls=[e for e in events if e.get('event')=='native_chunk_attention_mps'];call_index=0
+        for event in events:
+            if event.get('event')=='native_batch':pending.append(event)
+            if event.get('event')!='native_chunk_attention_bucket':continue
+            stage='prefill' if any(p['stage']=='prefill' for p in pending) else 'decode'
+            tokens=sum(1 if p['stage']=='decode' else r['prefill_tokens'] for p in pending for r in p['requests'])
+            visible=max([r['slot']+(1 if p['stage']=='decode' else r['prefill_tokens']) for p in pending for r in p['requests']] or [1])
+            dispatches=profile.get('expected_chunk_attention_dispatches',0) if stage=='prefill' else 0
+            tail=dispatches if tokens<=8 else 0
+            extent=next((b for b in bounds if b>=visible),None) if dispatches and not tail else 0
+            expected=dict(stage=stage,active_tokens=tokens,dispatches=dispatches,tail_dispatches=tail,capacity=extent,unknown_controls=0,bucket_count=count)
+            if not pending or any(event.get(k)!=v for k,v in expected.items()):issues.append('Attention bucket decision differs from native request plans')
+            for calls,wanted in ((index_calls,tail),(mps_calls,dispatches-tail)):
+                if call_index>=len(calls) or any(calls[call_index].get(k)!=v for k,v in dict(stage=stage,active_tokens=tokens,dispatches=wanted).items()):
+                    issues.append('Attention bucket component coverage differs')
+            call_index+=1;pending=[]
+        if pending or len(index_calls)!=call_index or len(mps_calls)!=call_index:issues.append('Attention bucket component coverage differs')
+        if not profile.get('chunk_attention_mps'):issues.append('Attention buckets require matrix profiles')
+    elif bucket_calls or bucket_prepared:issues.append('Unexpected attention bucket evidence')
     if profile.get('chunk_probability_reuse') and profile.get('chunk_attention_index32'):issues.append('Attention experiments must be isolated')
     return issues
 
@@ -269,6 +308,7 @@ def audit(root,reference=None):
         reuse64_prefill_calls=len(reuse64_events),indexed_decode_calls=len(indexed_decode_events),affine_profile_calls=len(affine_profile_events),affine_profile_index_bits=profile.get('affine_profile_index_bits',64) if profile.get('bounded_affine_kernel_profiles') else 0,
         chunk_attention_index32_calls=sum(e.get('event')=='native_chunk_attention_index32' for e in events),
         chunk_attention_mps_calls=sum(e.get('event')=='native_chunk_attention_mps' for e in events),
+        chunk_attention_bucket_calls=sum(e.get('event')=='native_chunk_attention_bucket' for e in events),
         scope='Concurrent native frozen prompt/stream/HTTP accounting and row lifecycle; coding correctness requires separate sandbox evaluation',
         auditor_sha256=digest(Path(__file__)),reference_worker_log_sha256=digest(reference) if reference else None,
         artifacts_sha256=digest(root/'artifacts.json'),worker_log_sha256=digest(root/'server/worker-stdout.jsonl'))

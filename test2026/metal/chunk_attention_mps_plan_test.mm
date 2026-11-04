@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 #include "metal_context.h"
+#include <algorithm>
 #include <cmath>
 #include <exception>
 #include <iostream>
@@ -12,9 +13,11 @@ struct Job {
     MetalContext gpu;
     std::vector<MetalMatrix> inputs;
     MetalMatrix output;
+    MetalMatrix copiedSlots,zeroSlots;
     std::vector<float> control;
-    explicit Job(float phase) {
-        constexpr size_t batch=2,chunk=8,heads=4,kv=2,dim=8,capacity=64,rows=batch*chunk;
+    size_t capacity;
+    explicit Job(float phase,size_t context):capacity(context) {
+        constexpr size_t batch=2,chunk=8,heads=4,kv=2,dim=8,rows=batch*chunk;
         auto values=[&](size_t count,float offset){std::vector<float> v(count);for(size_t i=0;i<count;++i)v[i]=.2f*std::sin(i*.17f+phase+offset);return v;};
         std::vector<float> slots(rows),active(rows,1);
         for(size_t b=0;b<batch;++b)for(size_t t=0;t<chunk;++t)slots[b*chunk+t]=float(32+t-(t>3?2:0));
@@ -24,6 +27,9 @@ struct Job {
             gpu.Upload(values(batch*kv*capacity*dim,4),batch,kv*capacity*dim),gpu.Upload(slots,batch,chunk),
             gpu.Upload(active,batch,chunk),gpu.Upload(values(rows*heads*dim,5),rows,heads*dim)};
         output=gpu.Allocate(rows,heads*dim);
+#ifdef GARNET_METAL_CHUNK_ATTENTION_BUCKETS
+        copiedSlots=gpu.Allocate(batch,chunk);zeroSlots=gpu.Upload(std::vector<float>(rows,0),batch,chunk);
+#endif
         if(!gpu.ChunkAttentionMPSPlanCount()) {
             gpu.Begin();bool rejected=false;
             try{gpu.EncodeAttentionChunk(inputs,output,heads,kv,dim,capacity,chunk,true);}catch(const std::logic_error&){rejected=true;}
@@ -36,10 +42,19 @@ struct Job {
     void Run() {
         for(size_t step=0;step<12;++step) {
             @autoreleasepool {
-                gpu.Begin();gpu.EncodeAttentionChunk(inputs,output,4,2,8,64,8,true);
+                gpu.Begin();auto args=inputs;
+#ifdef GARNET_METAL_CHUNK_ATTENTION_BUCKETS
+                if(step%4==0){gpu.EncodeAdd(inputs[5],zeroSlots,copiedSlots);args[5]=copiedSlots;}
+#endif
+                gpu.EncodeAttentionChunk(args,output,4,2,8,capacity,8,true);
                 // Shared scratch stays leased through partial submissions.
                 gpu.Flush();gpu.SubmitAndWait();
                 Need(gpu.LastChunkAttentionMPSDispatches()==1,"MPS plan coverage differs");
+#ifdef GARNET_METAL_CHUNK_ATTENTION_BUCKETS
+                Need(gpu.LastChunkAttentionUnknownControls()==size_t(step%4==0)&&
+                    gpu.LastChunkAttentionBucketCapacity()==(step%4==0?capacity:std::min(size_t(128),capacity)),
+                    "Pending GPU controls narrowed the compiled context");
+#endif
                 const auto actual=gpu.Download(output);
                 for(size_t i=0;i<actual.size();++i)
                     Need(std::isfinite(actual[i])&&std::abs(double(actual[i])-control[i])<=1e-5+2e-4*std::abs(double(control[i])),
@@ -51,13 +66,14 @@ struct Job {
 }
 int main(){try{
     for(size_t cycle=0;cycle<2;++cycle) {
+        const size_t capacity=cycle?4096:64;
         @autoreleasepool {
-            Job first(.1f),second(2.4f);
+            Job first(.1f,capacity),second(2.4f,capacity);
             Need(first.gpu.ChunkAttentionMPSPlanCount()==1&&second.gpu.ChunkAttentionMPSPlanCount()==1,"Identical profiles duplicated MPS scratch");
             const auto bytes=first.gpu.ChunkAttentionMPSScratchBytes();
             Need(bytes>0&&bytes==second.gpu.ChunkAttentionMPSScratchBytes(),"Shared plan byte accounting differs");
             first.gpu.Begin();bool rejected=false;
-            try{first.gpu.PrepareAttentionChunk(first.inputs,4,2,8,64,8);}catch(const std::logic_error&){rejected=true;}
+            try{first.gpu.PrepareAttentionChunk(first.inputs,4,2,8,capacity,8);}catch(const std::logic_error&){rejected=true;}
             first.gpu.Abort();Need(rejected,"Prepared new scratch during command encoding");
             std::exception_ptr failures[2];
             std::thread a([&]{try{first.Run();}catch(...){first.gpu.Abort();failures[0]=std::current_exception();}});
@@ -67,7 +83,7 @@ int main(){try{
         }
         const auto owners=MetalContext::ProfileOwnerStats();
         Need(!owners.matrices&&!owners.affineWeights&&!owners.bf16Weights&&!owners.pipelineSets,"Shared MPS plan retained Garnet resource owners");
-        std::cout<<"MPS shared plan cycle="<<cycle<<" two contexts,24 partial-submission runs, all owners closed; device bytes="<<MetalContext::MemoryStats().allocated<<"\n";
+        std::cout<<"MPS shared plan cycle="<<cycle<<" capacity="<<capacity<<" two contexts,24 partial-submission runs, all owners closed; device bytes="<<MetalContext::MemoryStats().allocated<<"\n";
     }
     return 0;
 }catch(const std::exception& error){std::cerr<<error.what()<<"\n";return 1;}}

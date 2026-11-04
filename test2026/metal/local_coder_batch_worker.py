@@ -32,6 +32,10 @@ def main():
     probability_reuse=profile.get('chunk_probability_reuse',False)
     attention_index32=profile.get('chunk_attention_index32',False)
     attention_mps=profile.get('chunk_attention_mps',False)
+    attention_buckets=profile.get('chunk_attention_buckets',False)
+    if type(attention_buckets) is not bool or attention_buckets!=('chunk_attention_buckets' in garnet.backend_info()):
+        raise ValueError('Frozen profile requires its explicit native context-bucket policy')
+    if attention_buckets and not attention_mps:raise ValueError('Context buckets require the prepared native matrix profile')
     if type(attention_mps) is not bool or attention_mps!=('chunk_attention_mps' in garnet.backend_info()):
         raise ValueError('Frozen profile requires its explicit chunk attention matrix policy')
     if attention_mps and (not attention_index32 or probability_reuse):raise ValueError('MPS attention requires its isolated index32 control')
@@ -163,6 +167,10 @@ def main():
             if plans!=profile.get('expected_attention_mps_plan_count') or scratch!=profile.get('expected_attention_mps_scratch_bytes'):
                 raise ValueError('Prepared MPS attention plans/storage differ from the frozen profile')
             emit(dict(event='native_chunk_attention_mps_prepared',plan_count=plans,scratch_bytes=scratch))
+            if attention_buckets:
+                buckets=decoder.session.chunk_attention_mps_bucket_count
+                if buckets!=profile.get('expected_attention_mps_bucket_count'):raise ValueError('Compiled context-bucket coverage differs')
+                emit(dict(event='native_chunk_attention_buckets_prepared',bucket_count=buckets))
         emit(dict(event='ready',backend=garnet.backend_info(),profile=profile,active_requests=batch,capacity=capacity,
             prefill_chunk=chunk,prefix_cache=prefix,multimodal=False,memory=json.loads(garnet.memory_stats_json())))
         def admit(request):
@@ -202,6 +210,7 @@ def main():
             if prefix:result=decoder.session.run_tokens(graphs,hidden,positions,slots,active,prediction,epochs,ids)
             else:result=decoder.session.run_leased(graphs,hidden,positions,slots,active,prediction,epochs)
             elapsed=(time.monotonic()-started)*1000 if trace_stages else 0
+            attention_valid=sum(1 for flag in active.tolist() if flag!=0) if attention_buckets else None
             if probability_reuse:
                 count=decoder.session.chunk_probability_reuse_dispatches
                 expected=profile['expected_chunk_attention_dispatches'] if len(ids)>batch else 0
@@ -210,16 +219,32 @@ def main():
             if attention_index32:
                 count=decoder.session.chunk_attention_index32_dispatches
                 expected=profile['expected_chunk_attention_dispatches'] if len(ids)>batch and not attention_mps else 0
-                emit(dict(event='native_chunk_attention_index32',stage='prefill' if len(ids)>batch else 'decode',dispatches=count))
+                if attention_buckets:expected=profile['expected_chunk_attention_dispatches'] if len(ids)>batch and attention_valid<=8 else 0
+                emit(dict(event='native_chunk_attention_index32',stage='prefill' if len(ids)>batch else 'decode',dispatches=count,active_tokens=attention_valid))
                 if count!=expected:raise ValueError('Native attention index coverage differs from the profile')
             if attention_mps:
                 count=decoder.session.chunk_attention_mps_dispatches
                 expected=profile['expected_chunk_attention_dispatches'] if len(ids)>batch else 0
+                if attention_buckets and attention_valid<=8:expected=0
                 plans=decoder.session.chunk_attention_mps_plan_count;scratch=decoder.session.chunk_attention_mps_scratch_bytes
                 emit(dict(event='native_chunk_attention_mps',stage='prefill' if len(ids)>batch else 'decode',dispatches=count,
-                    plan_count=plans,scratch_bytes=scratch))
+                    plan_count=plans,scratch_bytes=scratch,active_tokens=attention_valid))
                 if (count!=expected or plans!=profile['expected_attention_mps_plan_count'] or scratch!=profile['expected_attention_mps_scratch_bytes']):
                     raise ValueError('Native MPS attention coverage/storage differ from the profile')
+            if attention_buckets:
+                total=decoder.session.chunk_attention_bucket_dispatches;tail=decoder.session.chunk_attention_tail_dispatches
+                extent=decoder.session.chunk_attention_bucket_capacity;unknown=decoder.session.chunk_attention_unknown_controls
+                buckets=decoder.session.chunk_attention_mps_bucket_count
+                expected=profile['expected_chunk_attention_dispatches'] if len(ids)>batch else 0
+                expected_tail=expected if attention_valid<=8 else 0;expected_extent=0
+                if expected and not expected_tail:
+                    visible=max([int(position)+1 for position,flag in zip(slots.tolist(),active.tolist()) if flag!=0])
+                    expected_extent=min(128,capacity)
+                    while expected_extent<visible:expected_extent=min(expected_extent*2,capacity)
+                emit(dict(event='native_chunk_attention_bucket',stage='prefill' if len(ids)>batch else 'decode',dispatches=total,
+                    tail_dispatches=tail,capacity=extent,unknown_controls=unknown,bucket_count=buckets,active_tokens=attention_valid))
+                if (total!=expected or tail!=expected_tail or extent!=expected_extent or unknown!=0 or buckets!=profile['expected_attention_mps_bucket_count']):
+                    raise ValueError('Native context bucket/tail decision differs from validated controls')
             if trace_stages:
                 emit(dict(event='native_stage_trace',stage='prefill' if len(ids)>batch else 'decode',
                     embedding_wall_ms=embedding_ms[0],run_wall_ms=elapsed,
