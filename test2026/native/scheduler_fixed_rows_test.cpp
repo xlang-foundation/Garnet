@@ -114,6 +114,8 @@ int main() {
     RejectPacked(tick,4); // Total workspace budget, not per-request budget.
     auto corrupt=tick;corrupt.batches[1].requests[0].rowEpoch++;RejectPacked(corrupt);
     corrupt=tick;corrupt.batches[1].requests[0].prefillOffset++;RejectPacked(corrupt);
+    corrupt=tick;auto& shifted=corrupt.batches[1].requests[0];
+    shifted.prefillOffset++;shifted.slotPosition++;shifted.contextLength++;RejectPacked(corrupt);
     corrupt=tick;corrupt.batches.push_back(tick.batches[0]);RejectPacked(corrupt);
     corrupt=tick;corrupt.batches[1].requests[0].prefillTokens=0;RejectPacked(corrupt);
     corrupt=tick;corrupt.batches[1].stage=RequestStage::Cancelled;RejectPacked(corrupt);

@@ -164,6 +164,9 @@ public:
 #endif
 #ifdef GARNET_METAL_SHARED_PREFILL_SCRATCH
         info+="; shared_prefill_scratch";
+#ifdef GARNET_METAL_PREFILL_LIFETIME_REUSE
+        info+="; prefill_lifetime_reuse";
+#endif
 #endif
 #ifdef GARNET_METAL_RETIRE_INPLACE_DEFAULTS
         info+="; retired_inplace_defaults";
@@ -196,7 +199,7 @@ public:
 #ifdef GARNET_METAL_REQUEST_ROWS
         info+="; request_row_reset";
 #ifdef GARNET_METAL_CONTINUOUS_ROWS
-        info+="; native_request_row_leases; native_continuous_scheduler; chunked_prefill_scheduler";
+        info+="; native_request_row_leases; native_continuous_scheduler; chunked_prefill_scheduler; packed_token_plan";
 #ifdef GARNET_METAL_ROW_FINAL_HIDDEN
         info+="; row_final_hidden";
 #ifdef GARNET_METAL_TOKEN_PREFIX_CACHE

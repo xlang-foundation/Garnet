@@ -43,7 +43,8 @@ inline PackedTokenPlan BuildPackedTokenPlan(const SchedulerTick& tick,
                     throw std::invalid_argument("Invalid or repeated packed row lease");
                 if(count<=0||position<0||position>contextCapacity||count>contextCapacity-position||
                     count>maximumTokens-result.tokenCount||
-                    request.contextLength!=position+count||request.slotPosition!=position)
+                    request.contextLength!=position+count||request.slotPosition!=position||
+                    storage.LogicalLength(request.id)!=position)
                     throw std::invalid_argument("Invalid packed token range");
                 if(stage==RequestStage::Prefill&&
                     (request.promptTokens<position||count>request.promptTokens-position))

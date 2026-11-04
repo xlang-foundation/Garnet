@@ -77,3 +77,114 @@ Reject the method if packing overhead erases the gain, decode tail latency
 worsens beyond the declared budget, memory exceeds the profile, or correctness
 fails. Single-request decode still needs its own optimization if unchanged;
 prefill gains alone cannot satisfy the 2x decode target.
+
+## Implementation checkpoint
+
+The portable packed-plan helper is implemented and its initial mixed-tick
+range/lease/budget rejection tests pass. Follow-up source changes expose this
+metadata from `MetalContinuousScheduler::NextJson` with an explicit
+`execution: metadata_only` marker, and additionally require each segment to
+start at the allocator's committed logical length. Native integration tests
+now compare every packed segment with its source scheduler request.
+These follow-up changes await compilation and execution after
+`native27b-registers-chunk16-http-admission1` exits; that live campaign uses
+its own frozen pre-change library. No packed GPU execution is implemented yet.
+
+The worker now has an opt-in `mixed_forward: true` source path requiring the
+native `packed_token_plan` backend extension. A mixed native tick materializes
+one existing chunk graph input: decode rows have one active token; prefill rows
+have the scheduled prompt segment. A single session execution updates disjoint
+leased rows, then predicts decode/final-prefill rows and acknowledges each
+request with its original stage. `native_mixed_forward` records valid tokens
+and padded projection rows. This is an intermediate masked execution method,
+not compact matrix execution. It may change decode precision when a BF16
+prefill kernel is selected and therefore requires fresh coding qualification.
+
+The quality auditor requires mixed-forward evidence when enabled and joins its
+segments/counts/leases against preceding native plans; three new tamper cases
+cover missing mixed calls, changed counts and stale epochs. The archived
+non-mixed register coding run still passes all eight existing tamper checks.
+Python syntax has been checked. Compilation, native integration tests, the
+three mixed tamper cases and actual mixed coding execution remain pending until
+the frozen serving campaign releases the device. Default behavior stays off.
+
+## Compact projection implementation choice
+
+Inspection of `MetalContext::EncodeAffineInt4MatMul` and the register cooperative
+shader suggests a smaller implementation than allocating gathered matrices.
+Pass an immutable active-token row index table to an indexed affine kernel.
+Its logical M is the number of valid tokens; input loads and output stores map
+logical rows back to the existing physical activation rows. Attention,
+convolution, recurrence and residual operations retain their existing layout.
+This can remove both padded projection arithmetic and separate activation
+pack/unpack copies. The existing masked mixed path is the correctness control.
+
+Required safeguards before implementation/acceptance:
+
+- The session derives indices from validated active flags after epoch checks;
+  indices must be unique, in range and immutable through command completion.
+- Apply indexing only to token projections with the exact controlled row
+  layout. Exclude the vocabulary head, state matrices and any incompatible
+  reshape. An equal row count alone is insufficient proof of layout identity.
+- Define inactive outputs explicitly, preferably zero, so reused scratch never
+  leaks old values or NaNs into later operations. Include that write cost.
+- Keep precision selection explicit: compacting a BF16 matrix to four or fewer
+  rows must not silently switch to a different arithmetic contract. Report
+  selected kernel, logical/physical rows and actual indexed dispatch counts.
+- Compare active results and untouched state with the masked control across
+  noncontiguous row selections, one-token decode plus prompt tails, empty/full
+  masks and reused buffers. Then run the full learned coding gate.
+- Account for index storage and scratch in the xModel memory profile. Compare
+  total request latency, not just an indexed projection microbenchmark.
+
+This indexed kernel is not implemented yet. First qualify the optional masked
+mixed execution and its native metadata integration after the live campaign.
+
+## Direct comparison with the frozen vLLM-Metal run
+
+The preserved `baseline-phase1/vllm/cohort-1/server.log` confirms the actual
+baseline enabled chunked prefill with a **512-token total scheduler budget**.
+This is not equivalent to Garnet's fixed16-token-per-row graph. The log also
+records native paged attention and NAX prefill-attention kernel loading; that
+log message does not establish the matrix projection instruction path.
+
+At the pinned vLLM-Metal source revision, inspect:
+
+- `vllm_metal/v1/model_runner.py::_start_paged_forward`: builds one unpadded
+  token sequence with decode segments first and prompt segments afterward;
+  `cu_seqlens` provides request boundaries. Populates per-request hybrid state
+  positions before one lazy target forward and asynchronous output submission.
+- `vllm_metal/attention/impls/linear.py::_project_inputs`: projects the full
+  packed token matrix first, then `_run_conv` and recurrent operations use
+  request-specific state slots. This directly supports the intended Garnet
+  architecture, rather than treating batching as separate graph calls.
+- `vllm_metal/compiled_mlp.py::CompiledMLPBlocks`: compiles bounded decode-shaped
+  stateless MLP blocks, with a four-token routing threshold. Source capability
+  alone does not prove that this option was enabled in the frozen run.
+
+The most actionable gap is projection amortization over a larger **valid-token
+matrix**, without allocating a full fixed512-token scratch family per layer.
+Do not merely raise Garnet's existing graph size to512: its measured scratch
+budget and fixed-row layout are different. Qualify masked mixed execution,
+then indexed valid-row projections and bounded shared workspace. Recheck
+weight-read cost and actual layer/command timing before choosing larger
+scheduler budgets. Asynchronous submission is another explicit implementation
+contrast to inspect; it is not a standalone explanation for the full gap.
+
+## Workspace lifetime candidate
+
+`GARNET_METAL_PREFILL_LIFETIME_REUSE` is a new default-OFF source candidate,
+requiring serialized shared prefill scratch. The existing eligibility checks
+still exclude protected storage, existing aliases, incompatible layouts and
+incomplete first writers. A portable interval planner additionally tracks the
+last read **and write** of eligible temporaries and reuses equal-shape storage
+only when the prior lifetime ends strictly before the next first write.
+Same-operation read/write intervals cannot alias. The owner retains the maximum
+required pool across graphs and the existing execution lock remains mandatory.
+
+A new native test covers overlap boundaries, nonoverlap reuse, independent
+shapes, deterministic ordering, duplicate slots and invalid ranges. Both this
+test and the Metal candidate await compilation/execution after the ongoing
+serving run. No memory saving or quality result has been measured. Qualify this
+flag separately from the default-OFF mixed-forward worker option so their
+correctness and performance effects remain distinguishable.

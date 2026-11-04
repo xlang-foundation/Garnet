@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 #include "continuous_scheduler.h"
+#include "../../runtime/scheduler/packed_token_plan.h"
 #include "nlohmann/json.hpp"
 #include <limits>
 #include <climits>
@@ -110,6 +111,15 @@ std::string MetalContinuousScheduler::NextJson() {
     if(!inflight_.empty())throw std::logic_error("Complete or cancel the prior native scheduler tick before scheduling again");
     try {
         const auto tick=scheduler_->Schedule(*allocator_);nlohmann::json batches=nlohmann::json::array();
+        const auto packed=BuildPackedTokenPlan(tick,*allocator_,int(rows_*capacity_),int(capacity_));
+        nlohmann::json segments=nlohmann::json::array();
+        for(const auto& segment:packed.segments) {
+            const auto& request=segment.request;
+            segments.push_back({{"id",request.id},{"row",request.requestRow},{"epoch",request.rowEpoch},
+                {"stage",segment.stage==RequestStage::Decode?"decode":"prefill"},
+                {"packed_offset",segment.packedOffset},{"token_count",segment.tokenCount},
+                {"slot",request.slotPosition},{"absolute_position",segment.absolutePosition}});
+        }
         for(const auto& batch:tick.batches) {
             std::vector<int> mask(rows_,0);std::vector<uint64_t> epochs(rows_,0);
             nlohmann::json requests=nlohmann::json::array();
@@ -126,7 +136,9 @@ std::string MetalContinuousScheduler::NextJson() {
             batches.push_back({{"stage",batch.stage==RequestStage::Prefill?"prefill":"decode"},
                 {"bucket_size",rows_},{"active_rows",mask},{"epochs",epochs},{"requests",requests}});
         }
-        return nlohmann::json{{"batches",batches},{"scope","Native policy and Metal row state; dispatch via run_leased"}}.dump();
+        return nlohmann::json{{"batches",batches},
+            {"packed",{{"token_count",packed.tokenCount},{"segments",segments},{"execution","metadata_only"}}},
+            {"scope","Native policy and Metal row state; dispatch via run_leased"}}.dump();
     }catch(...){failed_=true;throw;}
 }
 int64_t MetalContinuousScheduler::CompletePrefill(int64_t id,int64_t token,bool finished) {

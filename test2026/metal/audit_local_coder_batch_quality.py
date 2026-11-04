@@ -25,16 +25,18 @@ def audit(root,reference=None):
     if status['status']!='collected_pending_sandbox_evaluation' or status.get('parallel_tasks')!=8:issues.append('Concurrent coding collection differs')
     if status['tasks']!=[dict(id=plan['id'],client_exit_code=0) for plan in plans]:issues.append('Task set/status differs')
     ready=[];closed=[];completed={};streams={};batch_plans=[];prompt_counts={};mpp=[]
-    chunks={};decode_events=[]
+    chunks={};decode_events=[];mixed_events=[];indexed_batches=[]
     for event_index,event in enumerate(native_events(root/'server/worker-stdout.jsonl')):
         kind=event.get('event');key=event.get('id')
         if kind=='ready':ready.append(event)
         elif kind=='closed':closed.append(event)
         elif kind=='native_batch':
             batch_plans.append(event)
+            indexed_batches.append((event_index,event))
             if event['stage']=='decode':decode_events.append((event_index,event))
         elif kind=='native_prefill_chunk':chunks.setdefault(event['native_request'],[]).append((event_index,event))
         elif kind=='native_mpp':mpp.append(event)
+        elif kind=='native_mixed_forward':mixed_events.append((event_index,event))
         elif kind=='error':issues.append('Native request/runtime error: '+event.get('error',''))
         elif kind=='token':
             tokens=streams.setdefault(key,[]);tokens.append(event['token_id'])
@@ -52,6 +54,28 @@ def audit(root,reference=None):
             if isinstance(candidate,dict) and 'profile_id' in candidate:profiles.append(candidate)
     if len(profiles)!=1:raise ValueError('Exactly one hash-verified frozen native profile required')
     profile=profiles[0]
+    if profile.get('mixed_forward',False):
+        if not mixed_events:issues.append('Required mixed forward missing')
+        previous=-1
+        for index,event in mixed_events:
+            preceding=[plan for i,plan in indexed_batches if previous<i<index][-2:]
+            expected=[];offset=0
+            for stage in ('decode','prefill'):
+                for plan in preceding:
+                    if plan['stage']!=stage:continue
+                    for request in plan['requests']:
+                        count=1 if stage=='decode' else request['prefill_tokens']
+                        expected.append(dict(id=request['id'],row=request['row'],epoch=request['epoch'],stage=stage,
+                            packed_offset=offset,token_count=count,slot=request['slot'],
+                            absolute_position=request['slot']+request['position_delta']))
+                        offset+=count
+            if ({plan['stage'] for plan in preceding}!={'decode','prefill'} or
+                event.get('segments')!=expected or event.get('actual_tokens')!=offset or
+                event.get('projection_rows')!=profile['batch']*profile['prefill_chunk'] or
+                len({segment['row'] for segment in expected})!=len(expected)):
+                issues.append('Mixed forward differs from native tick')
+            previous=index
+    elif mixed_events:issues.append('Unexpected mixed forward in control profile')
     if profile.get('require_mpp',False) and (not mpp or any(event.get('affine_dispatches',0)<1 for event in mpp)):issues.append('Required native MPP route missing')
     if len(ready)==1 and (ready[0].get('profile')!=profile or ready[0].get('capacity')!=profile['capacity']):issues.append('Frozen context/profile differs from ready event')
     if len(ready)==1 and ready[0]['memory']['metal_allocated_bytes']>=ready[0]['memory']['metal_recommended_working_set_bytes']:issues.append('Ready device working set exceeded')
@@ -115,7 +139,7 @@ def audit(root,reference=None):
     if len(set(epochs))!=len(plans):issues.append('Request epochs were reused')
     if set(event['native_row'] for event in completed.values())!={0,1}:issues.append('Physical row profile differs')
     return dict(status='passed' if not issues else 'failed',issues=issues,tasks=results,combined_decode_plans=combined,prefill_decode_interleavings=interleavings,
-        context_capacity=ready[0]['capacity'] if ready else None,mpp_prefill_calls=len(mpp),
+        context_capacity=ready[0]['capacity'] if ready else None,mpp_prefill_calls=len(mpp),mixed_forward_calls=len(mixed_events),
         scope='Concurrent native frozen prompt/stream/HTTP accounting and row lifecycle; coding correctness requires separate sandbox evaluation',
         auditor_sha256=digest(Path(__file__)),reference_worker_log_sha256=digest(reference) if reference else None,
         artifacts_sha256=digest(root/'artifacts.json'),worker_log_sha256=digest(root/'server/worker-stdout.jsonl'))

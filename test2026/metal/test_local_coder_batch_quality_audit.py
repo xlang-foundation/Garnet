@@ -8,6 +8,7 @@ from audit_local_coder_batch_quality import audit
 root=Path(sys.argv[1]);baseline=audit(root);assert baseline['status']=='passed'
 mutations=['no_combined','reused_epochs','bad_close','bad_text','cached_output']
 if baseline.get('prefill_decode_interleavings',0):mutations+=['bad_chunk_offset','missing_chunks','no_chunk_interleaving']
+if baseline.get('mixed_forward_calls',0):mutations+=['missing_mixed','bad_mixed_count','bad_mixed_lease']
 for mutation in mutations:
     with tempfile.TemporaryDirectory() as temporary:
         path=Path(temporary)/'study';shutil.copytree(root,path)
@@ -18,6 +19,9 @@ for mutation in mutations:
             except json.JSONDecodeError:lines.append(line);continue
             if isinstance(event,dict):
                 kind=event.get('event')
+                if mutation=='missing_mixed' and kind=='native_mixed_forward':continue
+                if mutation=='bad_mixed_count' and kind=='native_mixed_forward':event['actual_tokens']+=1
+                if mutation=='bad_mixed_lease' and kind=='native_mixed_forward':event['segments'][0]['epoch']+=1
                 if mutation=='bad_chunk_offset' and kind=='native_prefill_chunk':event['offset']+=1
                 if mutation=='missing_chunks' and kind=='native_prefill_chunk':continue
                 if mutation=='no_chunk_interleaving' and kind=='native_batch' and event['stage']=='decode':deferred.append(line);continue

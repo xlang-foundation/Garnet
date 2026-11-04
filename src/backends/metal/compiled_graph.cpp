@@ -2,6 +2,9 @@
 #include "compiled_graph.h"
 #include "graph_capture.h"
 #include "lowering_context.h"
+#ifdef GARNET_METAL_PREFILL_LIFETIME_REUSE
+#include "../../runtime/memory/scratch_lifetime_plan.h"
+#endif
 #include <chrono>
 #include <cstring>
 #include <stdexcept>
@@ -1290,6 +1293,9 @@ void MetalCompiledGraph::SharePrefillScratch(const std::shared_ptr<MetalPrefillS
     // Prove initialization for both resident and standalone packed execution.
     // A prior read (including a same-op read/write) rejects the buffer.
     std::vector<size_t> firstRead(slots_.size(),SIZE_MAX),firstWrite(slots_.size(),SIZE_MAX);
+#ifdef GARNET_METAL_PREFILL_LIFETIME_REUSE
+    std::vector<size_t> lastUse(slots_.size(),0);
+#endif
     std::vector<bool> residentWriter(slots_.size(),false),fullyInitialized(slots_.size(),false);
     for(size_t i=0;i<ops_.size();++i) {
         const auto& op=ops_[i];
@@ -1303,21 +1309,41 @@ void MetalCompiledGraph::SharePrefillScratch(const std::shared_ptr<MetalPrefillS
         // Chunk kernels write every logical output element, including zeros
         // for inactive tokens. GateNorm may instead write a slice, so only its
         // zero-offset, whole-width form can initialize shared scratch.
-        auto read=[&](size_t id){if(id<slots_.size())firstRead[id]=std::min(firstRead[id],i);};
+        auto read=[&](size_t id){if(id<slots_.size()){
+            firstRead[id]=std::min(firstRead[id],i);
+#ifdef GARNET_METAL_PREFILL_LIFETIME_REUSE
+            lastUse[id]=std::max(lastUse[id],i);
+#endif
+        }};
         auto write=[&](size_t id){if(id<slots_.size()){
+#ifdef GARNET_METAL_PREFILL_LIFETIME_REUSE
+            lastUse[id]=std::max(lastUse[id],i);
+#endif
             if(firstWrite[id]==SIZE_MAX)fullyInitialized[id]=fullWrite;
             firstWrite[id]=std::min(firstWrite[id],i);residentWriter[id]=residentWriter[id]||residentOps_[i];}};
         read(op.a);read(op.b);for(auto id:op.arguments)read(id);
         write(op.out);write(op.auxiliaryOutput);
     }
+#ifdef GARNET_METAL_PREFILL_LIFETIME_REUSE
+    std::vector<ScratchLifetime> lifetimes;
+#else
     std::map<std::pair<size_t,size_t>,size_t> next;
+#endif
     size_t reused=0;
     for(size_t id=0;id<slots_.size();++id) {
         auto& slot=slots_[id];const auto& info=infos[id];
         if(!info.identity||counts[info.identity]!=1||protectedStorage.count(info.identity)||
            !residentWriter[id]||!fullyInitialized[id]||firstWrite[id]==SIZE_MAX||firstRead[id]<=firstWrite[id]||
            !gpu_->IsDefaultLayout(slot.matrix,slot.rows,slot.columns))continue;
+#ifdef GARNET_METAL_PREFILL_LIFETIME_REUSE
+        lifetimes.push_back({id,slot.rows,slot.columns,firstWrite[id],lastUse[id]});
+    }
+    for(const auto& assignment:PlanScratchLifetimes(std::move(lifetimes))) {
+        const auto id=assignment.slot;auto& slot=slots_[id];const auto& info=infos[id];
+        const auto key=std::make_pair(slot.rows,slot.columns);const auto lane=assignment.lane;
+#else
         const auto key=std::make_pair(slot.rows,slot.columns);const auto lane=next[key]++;
+#endif
         auto& buffers=owner->buffers[key];
         if(lane==buffers.size())buffers.push_back(slot.matrix);
         else {

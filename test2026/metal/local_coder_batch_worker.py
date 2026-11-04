@@ -3,8 +3,8 @@
 XLang args: native build, Garnet source, checkpoint folder, frozen profile JSON.
 CPU code supplies tokenization/embeddings and transports real native events;
 row allocation, scheduling, prefix matching and hybrid state live in native code.
-Prefill prompts share a chunk graph; policy ticks still finish whole prompts,
-so incoming long prefill can delay existing decode until that prefill completes.
+Prefill prompts share a chunk graph. Profiles explicitly choose whole-prompt
+or bounded chunk scheduling; an optional mixed forward remains experimental.
 """
 import sys,json,os,time,threading,queue
 sys.path.insert(0,sys.argv[1]);sys.path.insert(0,sys.argv[2])
@@ -29,6 +29,11 @@ def main():
     prefill_schedule=profile.get('prefill_schedule','whole')
     if prefill_schedule not in ('whole','chunked'):raise ValueError('Explicit supported prefill scheduling mode required')
     chunked=prefill_schedule=='chunked'
+    mixed=profile.get('mixed_forward',False)
+    if type(mixed) is not bool or (mixed and (not chunked or prefix)):
+        raise ValueError('Mixed forward requires explicit uncached chunked scheduling')
+    if mixed and 'packed_token_plan' not in garnet.backend_info():
+        raise ValueError('Mixed forward requires the native packed plan extension')
     if chunked and (prefix or 'chunked_prefill_scheduler' not in garnet.backend_info()):
         raise ValueError('Chunked prefill study requires native chunk scheduling and an uncached profile')
     if not profile.get('profile_id'):raise ValueError('Frozen profile identity required')
@@ -137,8 +142,50 @@ def main():
                     except queue.Empty:break
             while not incoming.empty():admit(incoming.get_nowait())
             if not jobs:continue
-            plans=json.loads(policy.next_json())['batches']
+            tick=json.loads(policy.next_json());plans=tick['batches']
             if not plans:raise ValueError('Native scheduler has live jobs but made no progress')
+            if mixed and len(plans)==2 and {plan['stage'] for plan in plans}=={'decode','prefill'}:
+                # One existing masked chunk graph executes all physical rows.
+                # Native policy supplies leases and progress; this bridge only
+                # materializes inputs. Projection rows still include padding.
+                packed=tick.get('packed')
+                if packed is None or packed.get('execution')!='metadata_only':
+                    raise ValueError('Mixed forward requires the native packed segment contract')
+                rows={};epochs=[0]*batch;final_epochs=[0]*batch
+                for plan in plans:
+                    emit(dict(event='native_batch',stage=plan['stage'],active_rows=plan['active_rows'],requests=plan['requests']))
+                    for request in plan['requests']:
+                        row=request['row']
+                        if row in rows:raise ValueError('Mixed native tick repeats a physical row')
+                        rows[row]=(plan['stage'],request);epochs[row]=request['epoch']
+                        if plan['stage']=='decode' or request['prefill_offset']+request['prefill_tokens']==len(jobs[request['id']]['prompt']):
+                            final_epochs[row]=request['epoch']
+                ids=[];flags=[];slots=[]
+                for row in range(batch):
+                    entry=rows.get(row)
+                    for t in range(chunk):
+                        stage,request=entry if entry else (None,None)
+                        count=(1 if stage=='decode' else request['prefill_tokens']) if entry else 0
+                        valid=t<count
+                        position=request['slot']+t if valid else 0
+                        token=(request['token_id'] if stage=='decode' else jobs[request['id']]['prompt'][position]) if valid else 0
+                        ids.append(token);flags.append(float(valid));slots.append(float(position))
+                actual_tokens=sum(int(flag) for flag in flags)
+                if actual_tokens!=packed['token_count']:raise ValueError('Mixed input count disagrees with native packed plan')
+                hidden=decoder.io.stack_tokens([decoder.io.embedding([ids[row*chunk+t] for row in range(batch)]) for t in range(chunk)])
+                execute(graphs,hidden,f32([slot for slot in slots for axis in range(3)],[batch,chunk,3]),
+                    f32(slots,[batch,chunk]),f32(flags,[batch,chunk]),-1,epochs,ids)
+                predicted=decoder.session.predict_rows(final_epochs)
+                emit(dict(event='native_mixed_forward',segments=packed['segments'],actual_tokens=actual_tokens,
+                    projection_rows=batch*chunk,scope='One masked chunk forward; projections retain padding'))
+                for row,(stage,request) in rows.items():
+                    if final_epochs[row]:deliver(request,predicted[row],stage)
+                    elif not policy.complete_prefill_chunk(request['id'],request['prefill_tokens']):
+                        raise ValueError('Native mixed prefill completion rejected')
+                    if stage=='prefill':
+                        emit(dict(event='native_prefill_chunk',native_request=request['id'],row=row,epoch=request['epoch'],
+                            offset=request['prefill_offset'],tokens=request['prefill_tokens'],final=bool(final_epochs[row])))
+                continue
             for plan in plans:
                 if shutdown.is_set():break
                 emit(dict(event='native_batch',stage=plan['stage'],active_rows=plan['active_rows'],requests=plan['requests']))

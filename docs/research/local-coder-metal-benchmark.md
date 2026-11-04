@@ -1268,3 +1268,26 @@ rejects stale/repeated leases, invalid prompt/context ranges, unsupported stages
 position overflow, and total token-budget overflow. The portable scheduler test
 passes these checks on real mixed scheduler output. This metadata helper is not
 yet connected to a GPU executor and provides no measured speedup.
+
+`native27b-registers-chunk16-http-admission1` completed all six single-wave,
+zero-warmup timing cells. Aggregate output tokens/s for clients1/2/4 are
+2.33488/3.84976/4.29588 at short input and0.65457/0.84110/0.85533 at long input.
+The accounting audit passes all14 requests with432 combined decode plans and
+clean native close/worker exit0; all five distinct campaign tamper checks pass.
+Single-client TTFT/decode are25.826s/4.385tokens/s short and161.215s/3.702tokens/s
+long. This is admission evidence, not three-cohort qualification, and all2x
+performance targets remain unmet. Frozen reference engines were not rerun.
+
+The packed native metadata integration builds and all13 CTests pass with
+lifetime reuseOFF (`packed-contract-ctest1.log`). The real mixed-layer native
+scheduler fixture also passes (`packed-native-scheduler1.log`), checking every
+packed segment against source request/epoch/position metadata and comparing
+per-request GPU execution. The opt-in masked mixed-forward worker still needs
+its learned coding gate. Its default remainsOFF.
+
+The separate default-OFF lifetime scratch candidate compiles with its flagON
+and passes all13 CTests (`prefill-lifetime-ctest1.log`), including overlap-boundary
+and deterministic interval-planner checks. The native test set does not prove
+learned prefill alias correctness or actual memory savings; those remain
+required before profile admission. Mixed-forward and lifetime experiments use
+separate profiles/builds so their effects can be attributed independently.

@@ -61,7 +61,21 @@ def reject_old(plan):
     try:session.run_leased(graphs,h,p,s,a,0,plan['epochs'])
     except Exception:rejected=True
     assert rejected and snapshot(session)==saved
-def next_tick():return json.loads(policy.next_json())['batches']
+def next_tick():
+    result=json.loads(policy.next_json());batches=result['batches'];packed=result['packed']
+    assert packed['execution']=='metadata_only'
+    expected=[(stage,request) for stage in ('decode','prefill')
+        for plan in batches if plan['stage']==stage for request in plan['requests']]
+    assert len(packed['segments'])==len(expected)
+    offset=0
+    for segment,(stage,request) in zip(packed['segments'],expected):
+        count=1 if stage=='decode' else request['prefill_tokens']
+        assert segment==dict(id=request['id'],row=request['row'],epoch=request['epoch'],
+            stage=stage,packed_offset=offset,token_count=count,slot=request['slot'],
+            absolute_position=request['slot']+request['position_delta'])
+        offset+=count
+    assert offset==packed['token_count']
+    return batches
 try:
     for layer in range(2):
         symbols=[tensor.input('scheduler_'+str(layer)+'_'+str(i),shape=shape,dtype=tensor.float32) for i,shape in enumerate(shapes[layer])]
