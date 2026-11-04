@@ -792,6 +792,55 @@ bool MetalCompiledGraph::BuildInternal(X::Value graph,X::Value symbols,const std
         // All operations write fresh slots. Trace only matrices needed by the
         // returned value, resolving storage aliases before removing unused packs.
         auto canonical=[&](size_t id){while(aliases.count(id))id=aliases.at(id);return id;};
+#ifdef GARNET_METAL_ACTIVE_DECODE_PROJECTIONS
+        // Propagate request-row identity from a 2D decoder/head hidden input.
+        // Stateful operations must use this graph's active controls; unrelated
+        // matrices with the same row count do not establish that identity.
+        if(!inputShapes_.empty()&&inputShapes_[0].size()==2) {
+            const auto rows=size_t(inputShapes_[0][0]);size_t activeId=SIZE_MAX;
+            const bool head=inputs_.size()==1;
+            if(inputs_.size()==4&&inputShapes_[3]==std::vector<int64_t>{int64_t(rows)})activeId=canonical(inputs_[3]);
+            if(inputs_.size()==6&&inputShapes_[3]==std::vector<int64_t>{int64_t(rows),3}&&
+               inputShapes_[4]==std::vector<int64_t>{int64_t(rows)}&&inputShapes_[5]==inputShapes_[4])activeId=canonical(inputs_[5]);
+            if(rows&&rows<=4&&(head||activeId!=SIZE_MAX)) {
+                std::vector<bool> layout(slots_.size(),false);layout[canonical(inputs_[0])]=true;
+                auto rowwise=[&](size_t id){return id<slots_.size()&&layout[canonical(id)]&&slots_[id].rows==rows;};
+                auto active=[&](size_t id){return activeId!=SIZE_MAX&&canonical(id)==activeId;};
+                for(auto& op:ops_) {
+                    bool known=false;
+                    switch(op.kind) {
+                    case Kind::MatMul:
+                    case Kind::BF16MatVec:
+                        known=rowwise(op.a);
+                        if(known&&op.kind==Kind::MatMul&&op.transpose&&slots_[op.b].affineInt4.Valid())op.indexedDecodeProjection=true;
+                        break;
+                    case Kind::Norm:case Kind::Bias:case Kind::Mask:case Kind::NormRope:case Kind::Slice:
+                        known=rowwise(op.a);break;
+                    case Kind::Layout:
+                        known=rowwise(op.a)&&op.dimensions.size()==1&&slots_[op.out].columns==slots_[op.a].columns&&
+                            (!op.dimensions[0]||(active(op.b)&&op.dimensions[0]==slots_[op.a].columns));break;
+                    case Kind::Add:case Kind::Silu:
+                        known=rowwise(op.a)&&rowwise(op.b);break;
+                    case Kind::Conv:
+                        known=rowwise(op.a)&&op.arguments.size()==4&&active(op.arguments[3]);break;
+                    case Kind::Prepare:
+                        known=op.arguments.size()==5&&rowwise(op.arguments[0])&&rowwise(op.arguments[1])&&rowwise(op.arguments[2]);break;
+                    case Kind::Delta:
+                        known=op.arguments.size()==7&&rowwise(op.arguments[0])&&rowwise(op.arguments[1])&&rowwise(op.arguments[2])&&
+                            rowwise(op.arguments[3])&&rowwise(op.arguments[4])&&active(op.arguments[6]);break;
+                    case Kind::GateNorm:
+                        known=rowwise(op.a)&&rowwise(op.b)&&op.dimensions.size()==2&&slots_[op.out].columns==op.dimensions[0]*op.dimensions[1];break;
+                    case Kind::Scores:
+                        known=rowwise(op.a)&&op.arguments.size()==4&&active(op.arguments[3]);break;
+                    case Kind::AttentionContext:
+                        known=op.arguments.size()>=3&&rowwise(op.arguments[0])&&rowwise(op.arguments[2]);break;
+                    default:break;
+                    }
+                    if(known&&slots_[op.out].rows==rows)layout[canonical(op.out)]=true;
+                }
+            }
+        }
+#endif
 #ifdef GARNET_METAL_INDEXED_TOKEN_PROJECTIONS
         // Prove token-row order from the hidden input through known lowering
         // operations. Shape coincidence alone never enables indexed dispatch.
@@ -1079,16 +1128,16 @@ bool MetalCompiledGraph::SwapOutputStorage(size_t part,MetalMatrix& replacement)
     for(auto id:outputStorageGroups_[part])slots_[id].matrix=replacement;
     replacement=finished;return true;
 }
-void MetalCompiledGraph::EncodeGreedy(MetalContext& gpu,const MetalMatrix& prediction) {
+void MetalCompiledGraph::EncodeGreedy(MetalContext& gpu,const MetalMatrix& prediction,const std::vector<size_t>* selectedRows) {
 #if defined(GARNET_METAL_FUSED_HEAD_ARGMAX)||defined(GARNET_METAL_SCREENED_HEAD)
-    Encode(gpu,true,&prediction);
+    Encode(gpu,true,&prediction,selectedRows);
 #else
-    Encode(gpu);gpu.EncodeArgmax(slots_[output_].matrix,prediction);
+    Encode(gpu,true,nullptr,selectedRows);gpu.EncodeArgmax(slots_[output_].matrix,prediction);
 #endif
 }
 void MetalCompiledGraph::Encode(MetalContext& gpu,bool packedOutput,const MetalMatrix* greedyOutput,
     const std::vector<size_t>* selectedTokenRows) {
-#ifndef GARNET_METAL_INDEXED_TOKEN_PROJECTIONS
+#if !defined(GARNET_METAL_INDEXED_TOKEN_PROJECTIONS)&&!defined(GARNET_METAL_ACTIVE_DECODE_PROJECTIONS)
     (void)selectedTokenRows;
 #endif
     bool greedyEncoded=false;
@@ -1182,6 +1231,11 @@ void MetalCompiledGraph::Encode(MetalContext& gpu,bool packedOutput,const MetalM
 #ifdef GARNET_METAL_MLX_AFFINE_INT4
             if(slots_[op.b].affineInt4.Valid()){
                 if(!op.transpose)throw std::logic_error("Affine INT4 projection must transpose checkpoint rows");
+#ifdef GARNET_METAL_ACTIVE_DECODE_PROJECTIONS
+                if(selectedTokenRows&&op.indexedDecodeProjection&&selectedTokenRows->size()<slots_[op.a].rows)
+                    gpu.EncodeAffineInt4IndexedDecode(a,slots_[op.b].affineInt4,out,*selectedTokenRows);
+                else
+#endif
 #ifdef GARNET_METAL_INDEXED_TOKEN_PROJECTIONS
                 if(selectedTokenRows&&op.indexedTokenProjection&&selectedTokenRows->size()<slots_[op.a].rows)
                     gpu.EncodeAffineInt4IndexedMatMul(a,slots_[op.b].affineInt4,out,*selectedTokenRows);

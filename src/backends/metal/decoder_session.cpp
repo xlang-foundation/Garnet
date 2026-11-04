@@ -414,8 +414,15 @@ X::Value MetalDecoderSession::RunUnlocked(X::Value graphs,X::Value hidden,X::Val
 #ifdef GARNET_METAL_ROW_FINAL_HIDDEN
     std::vector<uint8_t> rowWillUpdate(states_[0].rows,0);
 #endif
-#ifdef GARNET_METAL_INDEXED_TOKEN_PROJECTIONS
+#if defined(GARNET_METAL_INDEXED_TOKEN_PROJECTIONS)||defined(GARNET_METAL_ACTIVE_DECODE_PROJECTIONS)
     std::vector<size_t> selectedTokenRows;
+    bool selectProjectionRows=false;
+#ifdef GARNET_METAL_INDEXED_TOKEN_PROJECTIONS
+    selectProjectionRows=chunk>1;
+#endif
+#ifdef GARNET_METAL_ACTIVE_DECODE_PROJECTIONS
+    selectProjectionRows=selectProjectionRows||chunk==1;
+#endif
 #endif
     {
         X::Tensor flags(active);auto info=flags.Info();auto lease=flags.Acquire();
@@ -423,8 +430,8 @@ X::Value MetalDecoderSession::RunUnlocked(X::Value graphs,X::Value hidden,X::Val
         const size_t count=states_[0].rows*chunk;
         for(size_t i=0;i<count;++i)if(!std::isfinite(data[i])||(data[i]!=0&&data[i]!=1))
             throw std::invalid_argument("Invalid Metal session active flags");
-#ifdef GARNET_METAL_INDEXED_TOKEN_PROJECTIONS
-        if(chunk>1)for(size_t i=0;i<count;++i)if(data[i]!=0)selectedTokenRows.push_back(i);
+#if defined(GARNET_METAL_INDEXED_TOKEN_PROJECTIONS)||defined(GARNET_METAL_ACTIVE_DECODE_PROJECTIONS)
+        if(selectProjectionRows)for(size_t i=0;i<count;++i)if(data[i]!=0)selectedTokenRows.push_back(i);
 #endif
 #ifdef GARNET_METAL_ROW_FINAL_HIDDEN
         for(size_t i=0;i<count;++i)if(data[i]!=0)rowWillUpdate[i/chunk]=1;
@@ -534,8 +541,8 @@ X::Value MetalDecoderSession::RunUnlocked(X::Value graphs,X::Value hidden,X::Val
                 for(auto& entry:savedOutputs)graph->slots_[entry.first].matrix=entry.second;
             };
             try {
-#ifdef GARNET_METAL_INDEXED_TOKEN_PROJECTIONS
-                graph->Encode(*gpu_,false,nullptr,chunk>1?&selectedTokenRows:nullptr);
+#if defined(GARNET_METAL_INDEXED_TOKEN_PROJECTIONS)||defined(GARNET_METAL_ACTIVE_DECODE_PROJECTIONS)
+                graph->Encode(*gpu_,false,nullptr,selectProjectionRows?&selectedTokenRows:nullptr);
 #else
                 graph->Encode(*gpu_,false);
 #endif
@@ -569,7 +576,11 @@ X::Value MetalDecoderSession::RunUnlocked(X::Value graphs,X::Value hidden,X::Val
                 gpu_->EncodeArgmax(head_->slots_[head_->output_].matrix,prediction_);
             } else
 #endif
+#ifdef GARNET_METAL_ACTIVE_DECODE_PROJECTIONS
+            head_->EncodeGreedy(*gpu_,prediction_,chunk==1?&selectedTokenRows:nullptr);
+#else
             head_->EncodeGreedy(*gpu_,prediction_);
+#endif
         }
         const auto encoded=std::chrono::steady_clock::now();
         encodeMs_=std::chrono::duration<double,std::milli>(encoded-prepared).count();
@@ -635,7 +646,14 @@ X::Value MetalDecoderSession::PredictRows(X::Value epochs) {
     try {
         gpu_->Begin();
         gpu_->EncodeSliceGroups(rowFinalHidden_,head_->slots_[head_->inputs_[0]].matrix,1,rowFinalWidth_,0,rowFinalWidth_);
-        head_->EncodeGreedy(*gpu_,prediction_);gpu_->SubmitAndWait();
+#ifdef GARNET_METAL_ACTIVE_DECODE_PROJECTIONS
+        std::vector<size_t> selectedRows;
+        for(size_t row=0;row<selected.size();++row)if(selected[row])selectedRows.push_back(row);
+        head_->EncodeGreedy(*gpu_,prediction_,&selectedRows);
+#else
+        head_->EncodeGreedy(*gpu_,prediction_);
+#endif
+        gpu_->SubmitAndWait();
         auto values=gpu_->Download(prediction_);auto result=X::Value::List(Host());
         predictionInitialized_=true;
         for(size_t row=0;row<selected.size();++row) {

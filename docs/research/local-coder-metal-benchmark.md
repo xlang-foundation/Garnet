@@ -1516,3 +1516,53 @@ projections retain the original route. These component ratios are not token
 rates, a repeated model campaign or evidence that the2x target is reached.
 The next learned gate uses the explicit `require_reuse64` and
 `reuse64_min_outputs:5120` profile identities on batch2/4K/chunk128.
+
+`native27b-reuse64-gated-chunk128-quality1` now passes8/8 sandboxed coding
+tasks and all eight complete reference token sequences. Its audit records1,128
+combined decode plans,7 mixed forwards,9 indexed/reuse64 prefill calls and a
+clean close; all15 corruption checks pass. The qualified library is frozen
+for `native27b-reuse64-gated-chunk128-http-admission1`. Both single-client
+cells pass serving accounting and four corruption checks, with128 outputs each
+and graceful native close/worker exit0. Short/long TTFT is17.4112/82.1074s,
+decode4.5663/3.8018tokens/s and total request time45.2549/115.5511s. Compared
+with the prior chunk128 cold samples, TTFT is about22% lower. These individual
+cold admissions do not establish repeated performance or attribute changes in
+the unchanged decode kernel to prefill optimization. Frozen vLLM-Metal/SGLang
+references remain unchanged, and all2x targets remain unmet.
+
+### Active request rows for FP32 decode
+
+The existing batch2 graph still projects both physical rows when only one
+request is decoding. Unlike indexed BF16 prefill, this requires preserving
+ordinary decode's unrounded FP32 operands and reduction order. The new default-OFF
+`GARNET_METAL_INDEXED_DECODE` primitive specializes the selected row count1..4,
+uses validated indices for loads/stores, zeros inactive outputs, rejects invalid
+or duplicate rows before encoding and retains command ownership checks. Five
+native shapes exercise46 mask variants, including reversed maps, reused buffers,
+real inner widths5120/17408 and large unaligned output dimensions. Selected
+outputs must equal ordinary decode bit-for-bit as well as satisfy the existing
+independent FP64 bound. The first test run failed because its uninitialized-input
+check expected `invalid_argument` instead of the intended `logic_error`; the
+corrected fixture passes all13 CTests (`indexed-fp32-decode-ctest2.log`). The
+native candidate and numerical tolerances were unchanged by that fixture repair.
+
+`GARNET_METAL_ACTIVE_DECODE_PROJECTIONS` separately enables graph/session routing,
+requiring the primitive, native continuous rows and final hidden rows. Lowering
+proves request-row identity from2D decoder/head hidden inputs through supported
+operations and stateful controls; unrelated equal-shape matrices do not suffice.
+The session derives sparse rows from validated flags/leases and prediction
+epochs, while full-active projections retain their existing route. Prefill
+keeps its explicitly identified BF16 policy. The new routed build passes all13
+native tests (`active-fp32-decode-ctest1.log`), but full learned concurrency and
+serving qualification remain pending.
+
+The one-request preflight first failed its coverage assertion because a native
+decode command includes the vocabulary head: its counter must cover496 body
+projections **plus**1 head, not496 alone. That failed archive and cleanup remain
+at `native27b-active-fp32-decode-preflight1`. The worker now records actual
+coverage before checking and distinguishes combined decode commands from
+standalone head prediction. Without changing native code, preflight2 passes:
+the frozen71-token stable-unique prompt produces all62 reference output tokens
+exactly,61 decode commands each report497 indexed FP32 projections, the initial
+head reports1, and native close returns to720,896bytes with worker exit0. This
+is one learned active-row preflight, not concurrent coding or speed acceptance.

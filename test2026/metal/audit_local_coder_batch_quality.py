@@ -25,7 +25,7 @@ def audit(root,reference=None):
     if status['status']!='collected_pending_sandbox_evaluation' or status.get('parallel_tasks')!=8:issues.append('Concurrent coding collection differs')
     if status['tasks']!=[dict(id=plan['id'],client_exit_code=0) for plan in plans]:issues.append('Task set/status differs')
     ready=[];closed=[];completed={};streams={};batch_plans=[];prompt_counts={};mpp=[]
-    chunks={};decode_events=[];mixed_events=[];indexed_batches=[];indexed_events=[];reuse64_events=[]
+    chunks={};decode_events=[];mixed_events=[];indexed_batches=[];indexed_events=[];reuse64_events=[];indexed_decode_events=[]
     for event_index,event in enumerate(native_events(root/'server/worker-stdout.jsonl')):
         kind=event.get('event');key=event.get('id')
         if kind=='ready':ready.append(event)
@@ -38,6 +38,7 @@ def audit(root,reference=None):
         elif kind=='native_mpp':mpp.append(event)
         elif kind=='native_indexed':indexed_events.append(event)
         elif kind=='native_reuse64':reuse64_events.append(event)
+        elif kind=='native_indexed_decode':indexed_decode_events.append(event)
         elif kind=='native_mixed_forward':mixed_events.append((event_index,event))
         elif kind=='error':issues.append('Native request/runtime error: '+event.get('error',''))
         elif kind=='token':
@@ -65,6 +66,20 @@ def audit(root,reference=None):
                 count<0 or (logical>=64 and count<1) or (logical<64 and count!=0)):
                 issues.append('Cooperative64 projection route/count differs')
     elif reuse64_events:issues.append('Unexpected cooperative64 projection in control profile')
+    if profile.get('active_decode_projections',False):
+        coverage={stage:profile.get('expected_'+stage+'_indexed_decode_projections',-1) for stage in ('body','head')}
+        coverage['decode']=coverage['body']+coverage['head']
+        for stage in ('decode','head'):
+            calls=[e for e in indexed_decode_events if e.get('stage')==stage]
+            expected=coverage[stage]
+            if expected<=0 or not calls or not any(e.get('affine_dispatches',0)>0 for e in calls):
+                issues.append('Required active FP32 '+stage+' projection coverage missing')
+        for event in indexed_decode_events:
+            stage=event.get('stage');valid=event.get('active_rows',-1);physical=event.get('physical_rows',-1)
+            expected=coverage.get(stage,-1) if valid<physical else 0
+            if stage not in coverage or physical!=profile['batch'] or not 0<valid<=physical or event.get('affine_dispatches')!=expected:
+                issues.append('Active FP32 decode projection route/coverage differs')
+    elif indexed_decode_events:issues.append('Unexpected active FP32 decode projections in control profile')
     if profile.get('indexed_projections',False):
         if not indexed_events or not any(e.get('affine_dispatches',0)>0 for e in indexed_events):
             issues.append('Required indexed projection route missing')
@@ -162,7 +177,7 @@ def audit(root,reference=None):
     return dict(status='passed' if not issues else 'failed',issues=issues,tasks=results,combined_decode_plans=combined,prefill_decode_interleavings=interleavings,
         context_capacity=ready[0]['capacity'] if ready else None,mpp_prefill_calls=len(mpp),mixed_forward_calls=len(mixed_events),
         indexed_prefill_calls=len(indexed_events),
-        reuse64_prefill_calls=len(reuse64_events),
+        reuse64_prefill_calls=len(reuse64_events),indexed_decode_calls=len(indexed_decode_events),
         scope='Concurrent native frozen prompt/stream/HTTP accounting and row lifecycle; coding correctness requires separate sandbox evaluation',
         auditor_sha256=digest(Path(__file__)),reference_worker_log_sha256=digest(reference) if reference else None,
         artifacts_sha256=digest(root/'artifacts.json'),worker_log_sha256=digest(root/'server/worker-stdout.jsonl'))

@@ -155,6 +155,9 @@ public:
     size_t LastReuse64AffineDispatches() {std::lock_guard<std::mutex> lock(mutex_);return gpu_?gpu_->LastReuse64AffineDispatches():0;}
 #endif
     size_t LastKVInplaceUpdates() const {return kvInplaceUpdates_;}
+#ifdef GARNET_METAL_INDEXED_DECODE
+    size_t LastIndexedDecodeAffineDispatches() {std::lock_guard<std::mutex> lock(mutex_);return gpu_?gpu_->LastIndexedDecodeAffineDispatches():0;}
+#endif
     size_t LastJoinedPrefillPairs() const {return joinedPrefillPairs_;}
     size_t LastConstantHeadDispatches() const {return constantHeadDispatches_;}
     size_t LastSingleCoderHeadDispatches() const {return singleCoderHeadDispatches_;}
@@ -234,6 +237,9 @@ public:
         APISET().AddProp("mpp_reuse64_dispatches",&MetalDecoderSession::LastReuse64AffineDispatches);
 #endif
         APISET().AddProp("kv_inplace_updates",&MetalDecoderSession::LastKVInplaceUpdates);
+#ifdef GARNET_METAL_INDEXED_DECODE
+        APISET().AddProp("indexed_decode_affine_dispatches",&MetalDecoderSession::LastIndexedDecodeAffineDispatches);
+#endif
         APISET().AddProp("joined_prefill_pairs",&MetalDecoderSession::LastJoinedPrefillPairs);
         APISET().AddProp("constant_head_dispatches",&MetalDecoderSession::LastConstantHeadDispatches);
         APISET().AddProp("single_coder_head_dispatches",&MetalDecoderSession::LastSingleCoderHeadDispatches);

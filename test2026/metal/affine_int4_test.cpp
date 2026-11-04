@@ -159,6 +159,47 @@ void IndexedCase(MetalContext& gpu,size_t m,size_t n,size_t k) {
 }
 #endif
 }
+#ifdef GARNET_METAL_INDEXED_DECODE
+void IndexedDecodeCase(MetalContext& gpu,size_t m,size_t n,size_t k) {
+    const auto layout=AffineInt4Layout::Create(n,k);
+    std::vector<uint32_t> packed(layout.weightBytes/4);
+    std::vector<uint16_t> scales(layout.coefficientBytes/2),biases(scales.size());
+    for(size_t i=0;i<packed.size();++i)packed[i]=uint32_t(i*2654435761u)^0x76543210u;
+    for(size_t i=0;i<scales.size();++i){scales[i]=BF16(float(int(i%13)-6)*.017f);biases[i]=BF16(float(int(i%17)-8)*.031f);}
+    std::vector<float> input(m*k),decoded(n*k);
+    for(size_t i=0;i<input.size();++i)input[i]=float(std::sin(double(i)*.173)*.05);
+    AffineInt4View view(layout,packed.data(),layout.weightBytes,scales.data(),layout.coefficientBytes,biases.data(),layout.coefficientBytes);
+    for(size_t row=0;row<n;++row)view.DecodeRow(row,decoded.data()+row*k,k);
+    auto weight=gpu.UploadAffineInt4(packed.data(),layout.weightBytes,scales.data(),layout.coefficientBytes,biases.data(),layout.coefficientBytes,n,k);
+    auto a=gpu.Upload(input,m,k),out=gpu.Upload(std::vector<float>(m*n,17.f),m,n),dense=gpu.Allocate(m,n);
+    gpu.Begin();gpu.EncodeAffineInt4MatMul(a,weight,dense);gpu.SubmitAndWait();
+    const auto reference=gpu.Download(dense);
+    for(size_t mask=0;mask<(size_t(1)<<m);++mask) {
+        std::vector<size_t> selected;
+        for(size_t row=m;row>0;--row)if(mask&(size_t(1)<<(row-1)))selected.push_back(row-1);
+        gpu.Begin();gpu.EncodeAffineInt4IndexedDecode(a,weight,out,selected);gpu.SubmitAndWait();
+        Require(gpu.LastIndexedDecodeAffineDispatches()==size_t(!selected.empty()),"Indexed FP32 decode route/counter mismatch");
+        const auto actual=gpu.Download(out);
+        for(size_t row=0;row<m;++row)for(size_t column=0;column<n;++column) {
+            double expected=0;const bool active=mask&(size_t(1)<<row);
+            if(active)for(size_t inner=0;inner<k;++inner)expected+=double(input[row*k+inner])*decoded[column*k+inner];
+            Require(std::isfinite(actual[row*n+column])&&std::abs(double(actual[row*n+column])-expected)<=std::max(1e-4,std::abs(expected)*3e-4),
+                "Indexed decode differs from unrounded FP32/FP64 oracle");
+            Require(actual[row*n+column]==(active?reference[row*n+column]:0.f),"Indexed decode differs from ordinary decode or retained inactive values");
+        }
+    }
+    const auto before=gpu.Download(out);
+    gpu.Begin();Reject([&]{gpu.EncodeAffineInt4IndexedDecode(a,weight,out,{0,0});});gpu.Abort();
+    gpu.Begin();Reject([&]{gpu.EncodeAffineInt4IndexedDecode(a,weight,out,{m});});gpu.Abort();
+    gpu.Begin();Reject([&]{gpu.EncodeAffineInt4IndexedDecode(a,weight,a,{0});});gpu.Abort();
+    auto uninitialized=gpu.Allocate(m,k);
+    bool uninitializedRejected=false;gpu.Begin();
+    try{gpu.EncodeAffineInt4IndexedDecode(uninitialized,weight,out,{0});}catch(const std::logic_error&){uninitializedRejected=true;}
+    gpu.Abort();Require(uninitializedRejected,"Uninitialized indexed FP32 decode input was accepted");
+    Require(gpu.Download(out)==before,"Rejected indexed decode mutated output");
+    std::cout<<"indexed_decode physical_rows="<<m<<" outputs="<<n<<" inner="<<k<<" masks="<<(size_t(1)<<m)<<" exact_dense=1\n";
+}
+#endif
 int main() {
     try {
         Reject([]{AffineInt4Layout::Create(1,63);});
@@ -166,6 +207,11 @@ int main() {
         CodecGolden();
         VisionPatchGolden();
         MetalContext gpu;
+#ifdef GARNET_METAL_INDEXED_DECODE
+        Require(gpu.HasIndexedDecodeAffine(),"Indexed FP32 decode pipeline unavailable");
+        for(auto shape:std::array<std::array<size_t,3>,5>{{{1,37,64},{2,48,5120},{3,33,17408},{4,17408,64},{4,5127,128}}})
+            IndexedDecodeCase(gpu,shape[0],shape[1],shape[2]);
+#endif
 #ifdef GARNET_METAL_MPP_AFFINE_REUSE64
         Require(gpu.HasReuse64Affine(),"cooperative64 affine unavailable");
         Case(gpu,63,5121,128);Case(gpu,64,5121,128);Case(gpu,65,5127,128);

@@ -11,6 +11,9 @@
 #ifdef GARNET_METAL_MPP_AFFINE_REUSE64
 #include "affine_int4_reuse64_shader.h"
 #endif
+#ifdef GARNET_METAL_INDEXED_DECODE
+#include "affine_int4_indexed_decode_shader.h"
+#endif
 #ifdef GARNET_METAL_MPP_AFFINE
 #include "affine_int4_mpp_shader.h"
 #endif
@@ -219,6 +222,10 @@ struct MetalPipelines {
 #ifdef GARNET_METAL_MLX_AFFINE_INT4
     id<MTLLibrary> affineInt4Library;
     std::array<id<MTLComputePipelineState>,4> affineInt4Decode{};
+#ifdef GARNET_METAL_INDEXED_DECODE
+    id<MTLLibrary> indexedDecodeAffineLibrary;
+    std::array<id<MTLComputePipelineState>,4> indexedDecodeAffine{};
+#endif
     id<MTLComputePipelineState> affineInt4Gemm;
 #ifdef GARNET_METAL_MPP_AFFINE
     id<MTLLibrary> mppAffineLibrary;
@@ -338,6 +345,9 @@ struct MetalContext::Impl {
     std::map<std::array<size_t,2>,MetalMatrix> halfScratch;
     std::map<std::array<size_t,3>,MetalMatrix> splitScratch;
     size_t joinedPrefillPairs=0;
+#ifdef GARNET_METAL_INDEXED_DECODE
+    size_t indexedDecodeAffineDispatches=0;
+#endif
 #ifdef GARNET_METAL_MPP_AFFINE
     size_t mppAffineDispatches=0;
 #ifdef GARNET_METAL_INDEXED_AFFINE
@@ -1507,6 +1517,21 @@ kernel void bf16_native_dot_t128(device const float* a [[buffer(0)]],device cons
                 throw std::runtime_error("Affine INT4 decode requires four 32-lane SIMD groups");
             impl_->kernels->affineInt4Decode[rows-1]=pipeline;
         }
+#ifdef GARNET_METAL_INDEXED_DECODE
+        auto indexedDecodeLibrary=[impl_->device newLibraryWithSource:[NSString stringWithUTF8String:kAffineInt4IndexedDecodeShader] options:affineOptions error:&error];
+        if(!indexedDecodeLibrary)throw std::runtime_error("Cannot compile indexed FP32 decode: "+std::string(error.localizedDescription.UTF8String));
+        impl_->kernels->indexedDecodeAffineLibrary=indexedDecodeLibrary;
+        for(uint32_t rows=1;rows<=4;++rows) {
+            auto constants=[MTLFunctionConstantValues new];
+            [constants setConstantValue:&rows type:MTLDataTypeUInt atIndex:0];
+            auto function=[indexedDecodeLibrary newFunctionWithName:@"affine_q4_indexed_decode" constantValues:constants error:&error];
+            if(!function)throw std::runtime_error("Cannot specialize indexed FP32 decode");
+            auto pipeline=[impl_->device newComputePipelineStateWithFunction:function error:&error];
+            if(!pipeline||pipeline.threadExecutionWidth!=32||pipeline.maxTotalThreadsPerThreadgroup<128)
+                throw std::runtime_error("Indexed FP32 decode requires four 32-lane SIMD groups");
+            impl_->kernels->indexedDecodeAffine[rows-1]=pipeline;
+        }
+#endif
 #ifdef GARNET_METAL_MPP_AFFINE
         if(@available(macOS 26.0,*))if([impl_->device supportsFamily:MTLGPUFamilyApple10]) {
             auto mppOptions=[MTLCompileOptions new];mppOptions.languageVersion=MTLLanguageVersion4_0;
@@ -1830,6 +1855,60 @@ void MetalContext::EncodeAffineInt4MatMul(const MetalMatrix& input,const MetalAf
         if(impl_->pendingOutputs.insert(output.impl_.get()).second)impl_->outputs.push_back(output.impl_);
     }
 }
+#ifdef GARNET_METAL_INDEXED_DECODE
+bool MetalContext::HasIndexedDecodeAffine() const {
+    return std::all_of(impl_->kernels->indexedDecodeAffine.begin(),impl_->kernels->indexedDecodeAffine.end(),
+        [](id<MTLComputePipelineState> pipeline){return pipeline!=nil;});
+}
+size_t MetalContext::LastIndexedDecodeAffineDispatches() const {return impl_->indexedDecodeAffineDispatches;}
+void MetalContext::EncodeAffineInt4IndexedDecode(const MetalMatrix& input,const MetalAffineInt4Weight& weight,
+    const MetalMatrix& output,const std::vector<size_t>& selectedRows) {
+    @autoreleasepool {
+        if(!impl_->command||!input.impl_||!weight.impl_||!output.impl_||!HasIndexedDecodeAffine())
+            throw std::invalid_argument("Indexed FP32 decode requires its native pipelines and command");
+        auto a=input.impl_->matrix,o=output.impl_->matrix;const auto& w=weight.impl_;
+        if(a.device!=impl_->device||o.device!=impl_->device||w->packed.device!=impl_->device||
+           w->scales.device!=impl_->device||w->biases.device!=impl_->device||
+           !a.rows||a.rows>4||a.columns!=w->columns||o.rows!=a.rows||o.columns!=w->rows||
+           a.data==o.data||selectedRows.size()>a.rows||a.rowBytes%4||o.rowBytes%4)
+            throw std::invalid_argument("Indexed FP32 decode shape/device mismatch");
+        if(!input.impl_->ready&&!(input.impl_->pending&&impl_->pendingOutputs.count(input.impl_.get())))
+            throw std::logic_error("Uninitialized indexed FP32 decode input");
+        if(output.impl_->pending&&!impl_->pendingOutputs.count(output.impl_.get()))
+            throw std::logic_error("Indexed FP32 decode output belongs to another command");
+        std::vector<uint32_t> indices;indices.reserve(selectedRows.size());std::array<bool,4> unique{};
+        for(auto row:selectedRows) {
+            if(row>=a.rows||unique[row])throw std::invalid_argument("Indexed FP32 decode rows must be unique and in bounds");
+            unique[row]=true;indices.push_back(uint32_t(row));
+        }
+        if(o.rows-1>(SIZE_MAX-o.columns*sizeof(float))/o.rowBytes)
+            throw std::overflow_error("Indexed FP32 decode zero range overflow");
+        const size_t bytes=(o.rows-1)*o.rowBytes+o.columns*sizeof(float);
+        if(o.offset>o.data.length||bytes>o.data.length-o.offset)
+            throw std::invalid_argument("Indexed FP32 decode zero range exceeds storage");
+        if(indices.size()<a.rows) {
+            auto blit=[impl_->command blitCommandEncoder];
+            if(!blit)throw std::runtime_error("Cannot initialize inactive indexed FP32 decode rows");
+            [blit fillBuffer:o.data range:NSMakeRange(o.offset,bytes) value:0];[blit endEncoding];
+        }
+        if(!indices.empty()) {
+            struct Params {uint64_t rows,inner,columns,aStride,oStride;};
+            Params params{indices.size(),a.columns,o.columns,a.rowBytes/4,o.rowBytes/4};
+            auto encoder=[impl_->command computeCommandEncoder];
+            if(!encoder)throw std::runtime_error("Cannot encode indexed FP32 decode");
+            [encoder setComputePipelineState:impl_->kernels->indexedDecodeAffine[indices.size()-1]];
+            [encoder setBuffer:a.data offset:a.offset atIndex:0];[encoder setBuffer:w->packed offset:0 atIndex:1];
+            [encoder setBuffer:w->scales offset:0 atIndex:2];[encoder setBuffer:w->biases offset:0 atIndex:3];
+            [encoder setBuffer:o.data offset:o.offset atIndex:4];[encoder setBytes:&params length:sizeof(params) atIndex:5];
+            [encoder setBytes:indices.data() length:indices.size()*sizeof(uint32_t) atIndex:6];
+            [encoder dispatchThreadgroups:MTLSizeMake((o.columns+3)/4,1,1) threadsPerThreadgroup:MTLSizeMake(128,1,1)];
+            [encoder endEncoding];++impl_->indexedDecodeAffineDispatches;
+        }
+        output.impl_->ready=false;output.impl_->pending=true;
+        if(impl_->pendingOutputs.insert(output.impl_.get()).second)impl_->outputs.push_back(output.impl_);
+    }
+}
+#endif
 #ifdef GARNET_METAL_INDEXED_AFFINE
 bool MetalContext::HasIndexedAffine() const {return impl_->kernels->indexedAffine!=nil;}
 size_t MetalContext::LastIndexedAffineDispatches() const {return impl_->indexedAffineDispatches;}
@@ -2834,6 +2913,9 @@ void MetalContext::Begin() {
     impl_->partialSubmissions=0;
     impl_->bodyShapeDispatches=impl_->bodyShapeMisses=0;
     impl_->joinedPrefillPairs=0;
+#ifdef GARNET_METAL_INDEXED_DECODE
+    impl_->indexedDecodeAffineDispatches=0;
+#endif
 #ifdef GARNET_METAL_MPP_AFFINE
     impl_->mppAffineDispatches=0;
 #ifdef GARNET_METAL_INDEXED_AFFINE
@@ -3562,6 +3644,9 @@ void MetalContext::Abort() {
     impl_->submitted=nil;impl_->partialSubmissions=0;
     impl_->bodyShapeDispatches=impl_->bodyShapeMisses=0;
     impl_->joinedPrefillPairs=0;
+#ifdef GARNET_METAL_INDEXED_DECODE
+    impl_->indexedDecodeAffineDispatches=0;
+#endif
 #ifdef GARNET_METAL_MPP_AFFINE
     impl_->mppAffineDispatches=0;
 #ifdef GARNET_METAL_INDEXED_AFFINE

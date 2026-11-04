@@ -137,6 +137,12 @@ public:
         const void* scales,size_t scaleBytes,const void* biases,size_t biasBytes,
         size_t rows,size_t columns);
     void EncodeAffineInt4MatMul(const MetalMatrix&,const MetalAffineInt4Weight&,const MetalMatrix&);
+#ifdef GARNET_METAL_INDEXED_DECODE
+    void EncodeAffineInt4IndexedDecode(const MetalMatrix&,const MetalAffineInt4Weight&,
+        const MetalMatrix&,const std::vector<size_t>& selectedRows);
+    bool HasIndexedDecodeAffine() const;
+    size_t LastIndexedDecodeAffineDispatches() const;
+#endif
 #ifdef GARNET_METAL_INDEXED_AFFINE
     // Experimental strict BF16 indexed prefill. Does not change graph dispatch.
     // Selected rows must be unique. Empty selection explicitly zeros output.

@@ -48,6 +48,12 @@ def main():
         raise ValueError('Frozen profile requires its explicit cooperative64 projection policy')
     if reuse64 and (profile.get('reuse64_min_outputs')!=5120 or 'mpp_affine_reuse64_min_outputs=5120' not in garnet.backend_info()):
         raise ValueError('Frozen cooperative64 profile requires its measured large-output threshold')
+    active_decode=profile.get('active_decode_projections',False)
+    if type(active_decode) is not bool or active_decode!=('active_decode_projections' in garnet.backend_info()):
+        raise ValueError('Frozen profile requires its explicit active FP32 decode projection policy')
+    if active_decode:
+        for key in ('expected_body_indexed_decode_projections','expected_head_indexed_decode_projections'):
+            if type(profile.get(key)) is not int or profile[key]<=0:raise ValueError('Active decode requires explicit expected projection coverage')
     if 'require_attention_prefix' in profile:
         attention_prefix=profile['require_attention_prefix']
         if type(attention_prefix) is not bool or attention_prefix!=('attention_prefix' in garnet.backend_info()):
@@ -150,6 +156,21 @@ def main():
                 if (logical>=64 and count<1) or (logical<64 and count!=0):
                     raise ValueError('Cooperative64 route disagrees with native token count')
                 emit(dict(event='native_reuse64',affine_dispatches=count,logical_rows=logical,physical_rows=len(ids)))
+            if active_decode and len(ids)==batch:
+                valid=sum(1 for flag in active.tolist() if flag!=0);count=decoder.session.indexed_decode_affine_dispatches
+                stage='decode' if prediction>=0 else 'body'
+                coverage=profile['expected_body_indexed_decode_projections']+(profile['expected_head_indexed_decode_projections'] if prediction>=0 else 0)
+                expected=coverage if valid<batch else 0
+                emit(dict(event='native_indexed_decode',stage=stage,affine_dispatches=count,active_rows=valid,physical_rows=batch))
+                if count!=expected:raise ValueError('Active FP32 '+stage+' projection coverage '+str(count)+' differs from expected '+str(expected))
+            return result
+        def predict_rows(epochs):
+            result=decoder.session.predict_rows(epochs)
+            if active_decode:
+                valid=sum(1 for epoch in epochs if epoch!=0);count=decoder.session.indexed_decode_affine_dispatches
+                expected=profile['expected_head_indexed_decode_projections'] if valid<batch else 0
+                emit(dict(event='native_indexed_decode',stage='head',affine_dispatches=count,active_rows=valid,physical_rows=batch))
+                if count!=expected:raise ValueError('Active FP32 head projection coverage '+str(count)+' differs from expected '+str(expected))
             return result
         def deliver(request,token,stage):
             identity=request['id'];job=jobs[identity]
@@ -215,7 +236,7 @@ def main():
                 hidden=decoder.io.stack_tokens([decoder.io.embedding([ids[row*chunk+t] for row in range(batch)]) for t in range(chunk)])
                 execute(graphs,hidden,f32([slot for slot in slots for axis in range(3)],[batch,chunk,3]),
                     f32(slots,[batch,chunk]),f32(flags,[batch,chunk]),-1,epochs,ids)
-                predicted=decoder.session.predict_rows(final_epochs)
+                predicted=predict_rows(final_epochs)
                 emit(dict(event='native_mixed_forward',segments=packed['segments'],actual_tokens=actual_tokens,
                     projection_rows=batch*chunk,scope='One masked chunk forward; projections retain padding'))
                 for row,(stage,request) in rows.items():
@@ -246,7 +267,7 @@ def main():
                     hidden=decoder.io.stack_tokens([decoder.io.embedding([ids[row*chunk+t] for row in range(batch)]) for t in range(chunk)])
                     execute(graphs,hidden,f32([slot for slot in slots for axis in range(3)],[batch,chunk,3]),
                         f32(slots,[batch,chunk]),f32(flags,[batch,chunk]),-1,plan['epochs'],ids)
-                    predicted=decoder.session.predict_rows(final_epochs) if any(final_epochs) else None
+                    predicted=predict_rows(final_epochs) if any(final_epochs) else None
                     for request in plan['requests']:
                         final=final_epochs[request['row']]!=0
                         if final:deliver(request,predicted[request['row']],'prefill')
@@ -276,7 +297,7 @@ def main():
                         execute(graphs,decoder.io.stack_tokens([decoder.io.embedding(tokens) for tokens in by_token]),
                             f32(positions,[batch,chunk,3]),f32(slots,[batch,chunk]),f32(flags,[batch,chunk]),-1,plan['epochs'],ids)
                     if shutdown.is_set():break
-                    predicted=decoder.session.predict_rows(plan['epochs'])
+                    predicted=predict_rows(plan['epochs'])
                     if prefix:
                         for request in plan['requests']:
                             job=jobs[request['id']]

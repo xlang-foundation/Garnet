@@ -184,6 +184,12 @@ public:
 #ifdef GARNET_METAL_MPP_AFFINE_REUSE64
     info+="; mpp_affine_reuse64_optional; mpp_affine_reuse64_min_outputs=5120";
 #endif
+#ifdef GARNET_METAL_INDEXED_DECODE
+    info+="; indexed_fp32_decode_primitive";
+#endif
+#ifdef GARNET_METAL_ACTIVE_DECODE_PROJECTIONS
+    info+="; active_decode_projections";
+#endif
 #ifdef GARNET_METAL_RETIRE_NONRESIDENT_PACKS
     info+="; retired_nonresident_packs";
 #endif
