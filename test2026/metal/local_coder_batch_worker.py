@@ -48,7 +48,13 @@ def main():
         raise ValueError('Frozen profile requires its explicit cooperative64 projection policy')
     if reuse64 and (profile.get('reuse64_min_outputs')!=5120 or 'mpp_affine_reuse64_min_outputs=5120' not in garnet.backend_info()):
         raise ValueError('Frozen cooperative64 profile requires its measured large-output threshold')
+    reuse64_relaxed=profile.get('reuse64_relaxed',False)
+    if type(reuse64_relaxed) is not bool or reuse64_relaxed!=('mpp_affine_reuse64_relaxed=1' in garnet.backend_info()):
+        raise ValueError('Frozen cooperative64 profile requires its explicit tensor precision mode')
     active_decode=profile.get('active_decode_projections',False)
+    retire_prefill_inputs=profile.get('retire_prefill_hidden_inputs',False)
+    if type(retire_prefill_inputs) is not bool or retire_prefill_inputs!=('retired_prefill_hidden_inputs' in garnet.backend_info()):
+        raise ValueError('Frozen profile requires its explicit prefill hidden input retirement policy')
     if type(active_decode) is not bool or active_decode!=('active_decode_projections' in garnet.backend_info()):
         raise ValueError('Frozen profile requires its explicit active FP32 decode projection policy')
     if active_decode:
@@ -109,6 +115,8 @@ def main():
             if 'native_hybrid_token_prefix' not in garnet.backend_info():raise ValueError('Native hybrid token prefix extension required')
             decoder.session.configure_token_prefix(profile['prefix_identity'],profile.get('prefix_entries',2),profile.get('prefix_host_bytes',384*1024*1024))
         graphs=decoder._resident_prefill_graphs(chunk)
+        if retire_prefill_inputs and any(graph.retired_prefill_hidden_input_slots!=1 for graph in graphs):
+            raise ValueError('Frozen prefill input retirement did not cover every layer')
         if 'memory_inventory_path' in profile:
             path=profile['memory_inventory_path']
             if not isinstance(path,str) or not path.startswith('/'):raise ValueError('Inventory output requires an absolute research path')

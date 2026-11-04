@@ -7,6 +7,13 @@ expected={'throughput':'Aggregate throughput arithmetic differs','prompt':'Froze
     'no_combined':'No actual combined decode','completion':'SSE request has no native completion','epoch':'Native request epochs reused'}
 mutations=['throughput','prompt','completion','epoch']
 if baseline.get('combined_decode_required',True):mutations.append('no_combined')
+if baseline.get('indexed_decode_calls',0):
+    mutations+=['projection_count','projection_stage']
+    if baseline.get('indexed_decode_command_calls',0):mutations.append('projection_missing')
+    if baseline.get('indexed_decode_sparse_required',False):mutations.append('projection_head_missing')
+    expected.update(projection_missing='Indexed FP32 decode command count differs from native plans',
+        projection_head_missing='Required active FP32 head projection coverage missing',
+        projection_count='Active FP32 decode projection route/coverage differs',projection_stage='Active FP32 decode projection route/coverage differs')
 for mutation in mutations:
     with tempfile.TemporaryDirectory() as folder:
         path=Path(folder)
@@ -14,6 +21,7 @@ for mutation in mutations:
             if item.name=='campaign':shutil.copytree(item,path/item.name)
             elif item.name=='server':
                 (path/item.name).mkdir();shutil.copy2(item/'worker-stdout.jsonl',path/item.name/'worker-stdout.jsonl')
+                if (item/'worker-exit.json').exists():shutil.copy2(item/'worker-exit.json',path/item.name/'worker-exit.json')
             else:(path/item.name).symlink_to(item)
         if mutation=='throughput':
             summary=next((path/'campaign/cohort-1').glob('*measured-0/summary.json'))
@@ -30,6 +38,10 @@ for mutation in mutations:
                     elif mutation=='prompt' and kind=='completed' and not changed:event['prompt_ids'][0]+=1;changed=True
                     elif mutation=='completion' and kind=='completed' and not changed:changed=True;continue
                     elif mutation=='epoch' and kind=='completed':event['native_epoch']=1
+                    elif mutation=='projection_missing' and kind=='native_indexed_decode' and event.get('stage')=='decode' and not changed:changed=True;continue
+                    elif mutation=='projection_head_missing' and kind=='native_indexed_decode' and event.get('stage')=='head':continue
+                    elif mutation=='projection_count' and kind=='native_indexed_decode' and not changed:event['affine_dispatches']=-1;changed=True
+                    elif mutation=='projection_stage' and kind=='native_indexed_decode' and not changed:event['stage']='unvalidated';changed=True
                 outer['line']=json.dumps(event);lines.append(json.dumps(outer))
             log.write_text('\n'.join(lines)+'\n')
         result=audit(path);assert result['status']=='failed' and expected[mutation] in result['issues'] and expected[mutation] not in baseline['issues'],mutation

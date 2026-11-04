@@ -42,7 +42,8 @@ def summarize(root):
                 wanted_registers=meta[0].get('reuse64_registers',False) if wants_reuse64 else (meta[0].get('mpp_registers',False) if wants_mpp else False)
                 if row.get('mpp_registers',False)!=wanted_registers:issues.append('Per-cell operand storage differs from actual route')
                 wanted_dtype=meta[0].get('operand_dtype','float32') if wants_mpp else 'float32'
-                if row.get('relaxed_precision',False)!=(meta[0].get('relaxed_precision',False) if wants_mpp else False):issues.append('Per-cell precision mode differs from actual route')
+                wanted_relaxed=meta[0].get('reuse64_relaxed',False) if wants_reuse64 else (meta[0].get('relaxed_precision',False) if wants_mpp else False)
+                if row.get('relaxed_precision',False)!=wanted_relaxed:issues.append('Per-cell precision mode differs from actual route')
                 if row.get('operand_dtype','float32')!=wanted_dtype:issues.append('Per-cell operand type differs from actual route')
                 if row['mpp_dispatches_per_call']!=int(wants_mpp):issues.append('MPP dispatch evidence differs')
                 if row.get('reuse64_dispatches_per_call',0)!=int(wants_reuse64):issues.append('Reuse64 dispatch evidence differs')
@@ -63,6 +64,8 @@ def summarize(root):
         if len(register_values)!=1 or (meta and meta[0]['mpp_available'] and register_values!={('GARNET_METAL_MPP_AFFINE_REGISTERS:BOOL=ON' in cache)}):issues.append(variant+': operand storage metadata differs from build')
         reuse_values={item.get('reuse64_available',False) for item in metadata[variant]}
         if len(reuse_values)!=1 or reuse_values!={('GARNET_METAL_MPP_AFFINE_REUSE64:BOOL=ON' in cache)}:issues.append(variant+': reuse64 availability differs from build')
+        reuse_relaxed={item.get('reuse64_relaxed',False) for item in metadata[variant]}
+        if len(reuse_relaxed)!=1 or reuse_relaxed!={('GARNET_METAL_MPP_REUSE64_RELAXED:BOOL=ON' in cache)}:issues.append(variant+': reuse64 precision mode differs from build')
         storage_values={item.get('reuse64_registers',False) for item in metadata[variant]}
         if len(storage_values)!=1 or (True in storage_values and reuse_values!={True}):issues.append(variant+': reuse64 operand storage metadata differs')
         output_thresholds={item.get('reuse64_min_outputs',0) for item in metadata[variant]}

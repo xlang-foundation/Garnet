@@ -490,7 +490,7 @@ X::Value MetalDecoderSession::RunUnlocked(X::Value graphs,X::Value hidden,X::Val
         state.dirtyExtent[k]=std::max(state.dirtyExtent[k],writeExtent);
     }
 #endif
-    for(auto graph:layers)graph->RetireResidentDefaults();
+    for(size_t i=0;i<layers.size();++i)layers[i]->RetireResidentDefaults(i==0);
     if(hiddenShape_!=inputShape[0]) {
         const auto& slot=layers[0]->slots_[layers[0]->inputs_[0]];
         hidden_=gpu_->Allocate(slot.rows,slot.columns);

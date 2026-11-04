@@ -1566,3 +1566,74 @@ the frozen71-token stable-unique prompt produces all62 reference output tokens
 exactly,61 decode commands each report497 indexed FP32 projections, the initial
 head reports1, and native close returns to720,896bytes with worker exit0. This
 is one learned active-row preflight, not concurrent coding or speed acceptance.
+
+The concurrent active-row gate, `native27b-active-fp32-decode-chunk128-quality1`,
+passes8/8 sandboxed tasks and all eight complete reference token sequences.
+It records1,139 combined decode plans,9 mixed forwards and1,165 FP32 projection
+records:1,139 full-active decode commands use the original route,16 sparse
+commands report497 indexed projections, and three sparse standalone heads
+report1. Seven full-active standalone heads report0. All20 corruption checks
+pass; cleanup returns to720,896 Metal bytes.
+
+The matching frozen single-client admission completes both128-output cells.
+Short/long TTFT is20.4280/81.6551s, decode5.1582/4.2548tokens/s and total time
+45.0788/111.5435s. Decode is higher than the preceding cooperative-prefill cold
+samples4.5663/3.8018, but short TTFT regresses and these are individual cold
+admissions. The older batch1 tall control still has higher decode rates than
+this batch2 profile. All2x targets against frozen references remain unmet.
+`accounting-audit3.json` additionally matches every pure decode command to its
+native plan, subtracting actual mixed executions, and verifies exact FP32
+projection coverage. Eight corruption checks pass, including missing commands,
+missing sparse head coverage and altered projection counts/stages. CPU edge
+cases preserve valid first-token-only EOS and full-active-only campaigns.
+
+The cooperative SIMD tensor-policy experiment is separately identified by
+default-OFF `GARNET_METAL_MPP_REUSE64_RELAXED`; ordinary prefill/decode policy is
+unchanged. Its source reference is the installed MLX0.32.4 NAX descriptor in
+`steel/gemm/nax.h`, frozen in `reuse64-tensor-policy-reference1`. All13 native
+tests and the unchanged FP64 bounds pass. The80-cell, three-cohort operator
+comparison `affine-reuse64-relaxed-qwen-shapes1` passes precision/route accounting
+and17 corruption checks, but shows no useful speed advantage: median strict/
+relaxed GPU ratios for large-output shapes at64/128/256/512 rows are
+0.985/0.972/0.969/0.973. Keep the strict serving candidate. The relaxed candidate
+has no learned-model or serving admission.
+
+### Bounded prefill hidden-input retirement
+
+The qualified chunk128 memory inventory identifies335,544,320bytes in64 hidden
+input defaults, plus the same amount in hidden outputs. This is a resource
+inventory, not permission to free arbitrary outputs. The new default-OFF
+`GARNET_METAL_RETIRE_PREFILL_INPUTS` targets only uniquely owned, default-layout,
+read-only hidden inputs of explicit six-input chunk graphs. Checkpoint owners,
+aliases and public outputs remain excluded. The first layer retains its freshly
+uploaded input; later layers borrow the predecessor's hidden output and may
+retire their unused defaults. Standalone execution uses the existing lazy
+materialization path. Backend/profile identities and per-layer planned-slot
+checks must agree before loading this research profile.
+
+The candidate passes13 native tests and the linear/full-attention standalone,
+three-cycle restoration, two-session/host-input isolation and native scheduler
+GPU fixtures (`retired-prefill-inputs-ctest1.log`, `...-restoration1.log`,
+`...-scheduler1.log`). Learned memory saving, full coding and any larger chunk
+admission remain pending. In particular, retiring an input does not prove that
+the corresponding output can be pooled or that chunk256 fits this Mac.
+
+### Parent MTP asset discovery
+
+The converted pinned artifact contains no MTP parameters, but the original
+`Qwen/Qwen3.8-27B` parent at revision
+`1d4bf0f2ff6012fd82039f2fa52739d0dd7c60c0` publishes15 MTP tensors in its final
+shard. Exact bounded HTTP Range header reads identify eight BF16 matrices and
+seven normalization vectors, totaling849,398,784 payload bytes. This establishes
+available auxiliary weights, not conversion lineage or runtime support.
+
+`fetch_qwen_parent_mtp.py` extracts exactly that contiguous auxiliary range,
+requires206/range/length agreement, preserves raw BF16 bits, checks every value
+for finiteness and records source/package hashes. The resulting MTP-only file
+is849,400,560bytes, SHA256
+`dec6630788d1ba4557230ca02b5df2db239f2b2bbcfff1c6742776e231e7540b`.
+Its manifest status is explicitly raw/not runtime-qualified. The fixed generator
+artifact is unchanged. A derived INT4 auxiliary package, target/head sharing,
+Metal MTP lowering, verification and hybrid-state commit/rollback all remain
+unimplemented/unqualified. Existing pinned vLLM `qwen3_5_mtp.py` and Garnet's
+CUDA MTP/verifier are relevant implementation references, not Metal support.

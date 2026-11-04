@@ -43,6 +43,7 @@ try:
             graph.build_shared(prefill(*symbols),symbols,f['checkpoint'],base)
             session.prepare_prefill(graph,0)
             assert graph.nonresident_pack_slots>0
+            if 'retired_prefill_hidden_inputs' in garnet.backend_info():assert graph.retired_prefill_hidden_input_slots==1
             for repeat in range(3):
                 session.reset();other.reset()
                 # The previous standalone call rehydrates defaults. Explicitly

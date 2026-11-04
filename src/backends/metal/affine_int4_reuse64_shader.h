@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 #pragma once
 namespace Garnet {
-// Strict BF16 operands, FP32 accumulation. Cooperative weight staging shares
+// BF16 operands, FP32 accumulator/output storage; tensor precision is explicit.
+// Cooperative weight staging shares
 // each unpacked tile across64 query rows; indexed loads preserve physical state.
 // Per-SIMD register multiplication avoids cross-SIMD tensor redistribution.
 inline constexpr const char* kAffineInt4Reuse64Shader=R"METAL(
@@ -18,7 +19,7 @@ kernel void affine_q4_reuse64(device const float* input [[buffer(0)]],
  uint simd [[simdgroup_index_in_threadgroup]],uint lane [[thread_index_in_simdgroup]]) {
     // Pad each64-element weight row by16 bytes to separate shared-memory banks.
     threadgroup bfloat weights[64*72];
-    constexpr auto descriptor=matmul2d_descriptor(16,32,16,false,true,false,
+    constexpr auto descriptor=matmul2d_descriptor(16,32,16,false,true,GARNET_REUSE64_RELAXED,
         matmul2d_descriptor::mode::multiply_accumulate);
     matmul2d<descriptor,execution_simdgroup> multiply;
     auto left=multiply.get_left_input_cooperative_tensor<bfloat,bfloat,float>();

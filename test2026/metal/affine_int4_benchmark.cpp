@@ -65,7 +65,11 @@ void Cell(MetalContext& gpu,size_t m,size_t n,size_t k,int warmups,int repetitio
 #ifdef GARNET_METAL_MPP_AFFINE
     if(m>4&&gpu.HasMPPAffine()){relaxed=GARNET_METAL_MPP_AFFINE_RELAXED_VALUE!=0;nMajor=GARNET_METAL_MPP_AFFINE_N_MAJOR_VALUE!=0;registers=GARNET_METAL_MPP_AFFINE_REGISTERS_VALUE!=0;}
 #endif
-    if(reuse64Dispatches){registers=true;nMajor=false;}
+    if(reuse64Dispatches){registers=true;nMajor=false;
+#ifdef GARNET_METAL_MPP_AFFINE_REUSE64
+        relaxed=GARNET_METAL_REUSE64_RELAXED_VALUE!=0;
+#endif
+    }
     const char* operand="float32";
 #ifdef GARNET_METAL_MPP_AFFINE_BF16
     if(m>4&&gpu.HasMPPAffine())operand="bfloat16";
@@ -95,16 +99,17 @@ int main(int argc,char** argv) {
         if(mpp){tileK=GARNET_METAL_MPP_AFFINE_TILE_K;relaxed=GARNET_METAL_MPP_AFFINE_RELAXED_VALUE!=0;nMajor=GARNET_METAL_MPP_AFFINE_N_MAJOR_VALUE!=0;registers=GARNET_METAL_MPP_AFFINE_REGISTERS_VALUE!=0;}
 #endif
         const char* operand="float32";
-        bool reuse64=false;
+        bool reuse64=false,reuse64Relaxed=false;
 #ifdef GARNET_METAL_MPP_AFFINE_REUSE64
         reuse64=gpu.HasReuse64Affine();
+        reuse64Relaxed=reuse64&&GARNET_METAL_REUSE64_RELAXED_VALUE!=0;
 #endif
 #ifdef GARNET_METAL_MPP_AFFINE_BF16
         if(mpp)operand="bfloat16";
 #endif
         std::cout<<std::setprecision(12)<<"{\"kind\":\"metadata\",\"device\":"<<std::quoted(gpu.DeviceName())<<",\"mpp_available\":"<<(mpp?"true":"false")
                  <<",\"shape_set\":"<<std::quoted(shapeSet)
-                 <<",\"reuse64_available\":"<<(reuse64?"true":"false")<<",\"reuse64_min_outputs\":"<<(reuse64?5120:0)<<",\"reuse64_registers\":"<<(reuse64?"true":"false")<<",\"relaxed_precision\":"<<(relaxed?"true":"false")<<",\"mpp_n_major\":"<<(nMajor?"true":"false")<<",\"mpp_registers\":"<<(registers?"true":"false")<<",\"maximum_rows\":"<<maximumRows<<",\"mpp_tensor_k\":"<<(registers?16:tileK)<<",\"mpp_tile_k\":"<<tileK<<",\"operand_dtype\":"<<std::quoted(operand)<<",\"accumulator_dtype\":\"float32\",\"scope\":\"Synthetic affine projection GPU/wall latency; excludes loading, compilation and downloads; not model throughput\"}\n";
+                 <<",\"reuse64_available\":"<<(reuse64?"true":"false")<<",\"reuse64_relaxed\":"<<(reuse64Relaxed?"true":"false")<<",\"reuse64_min_outputs\":"<<(reuse64?5120:0)<<",\"reuse64_registers\":"<<(reuse64?"true":"false")<<",\"relaxed_precision\":"<<(relaxed?"true":"false")<<",\"mpp_n_major\":"<<(nMajor?"true":"false")<<",\"mpp_registers\":"<<(registers?"true":"false")<<",\"maximum_rows\":"<<maximumRows<<",\"mpp_tensor_k\":"<<(registers?16:tileK)<<",\"mpp_tile_k\":"<<tileK<<",\"operand_dtype\":"<<std::quoted(operand)<<",\"accumulator_dtype\":\"float32\",\"scope\":\"Synthetic affine projection GPU/wall latency; excludes loading, compilation and downloads; not model throughput\"}\n";
         for(size_t m:{1,2,4,8,16,32,64,128,256,512})if(m<=size_t(maximumRows))for(auto shape:dimensions)
             Cell(gpu,m,shape[0],shape[1],warmups,repetitions);
         return 0;

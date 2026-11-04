@@ -1558,7 +1558,9 @@ kernel void bf16_native_dot_t128(device const float* a [[buffer(0)]],device cons
                 throw std::runtime_error("Indexed affine candidate exceeds device limits");
             impl_->kernels->indexedAffineLibrary=indexedLibrary;impl_->kernels->indexedAffine=indexedPipeline;
 #ifdef GARNET_METAL_MPP_AFFINE_REUSE64
-            auto reuseLibrary=[impl_->device newLibraryWithSource:[NSString stringWithUTF8String:kAffineInt4Reuse64Shader] options:mppOptions error:&error];
+            NSString* reuseSource=[[NSString stringWithFormat:@"#define GARNET_REUSE64_RELAXED %u\n",unsigned(GARNET_METAL_REUSE64_RELAXED_VALUE)]
+                stringByAppendingString:[NSString stringWithUTF8String:kAffineInt4Reuse64Shader]];
+            auto reuseLibrary=[impl_->device newLibraryWithSource:reuseSource options:mppOptions error:&error];
             if(!reuseLibrary)throw std::runtime_error("Cannot compile cooperative64 affine candidate: "+std::string(error.localizedDescription.UTF8String));
             auto reusePipeline=[impl_->device newComputePipelineStateWithFunction:[reuseLibrary newFunctionWithName:@"affine_q4_reuse64"] error:&error];
             if(!reusePipeline||reusePipeline.threadExecutionWidth!=32||reusePipeline.maxTotalThreadsPerThreadgroup<128||

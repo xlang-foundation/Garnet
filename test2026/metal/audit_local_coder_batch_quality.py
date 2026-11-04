@@ -14,6 +14,28 @@ def native_events(path):
         except json.JSONDecodeError:continue
         if isinstance(event,dict):yield event
 
+def indexed_decode_issues(profile,calls,expected_decode_calls=None,require_sparse=True):
+    if not profile.get('active_decode_projections',False):
+        return ['Unexpected active FP32 decode projections in control profile'] if calls else []
+    issues=[];coverage={stage:profile.get('expected_'+stage+'_indexed_decode_projections') for stage in ('body','head')}
+    if any(type(value) is not int or value<=0 for value in coverage.values()):return ['Invalid frozen active FP32 projection coverage']
+    coverage['decode']=coverage['body']+coverage['head']
+    if expected_decode_calls is not None and sum(e.get('stage')=='decode' for e in calls)!=expected_decode_calls:
+        issues.append('Indexed FP32 decode command count differs from native plans')
+    if require_sparse:
+        for stage in ('decode','head'):
+            if stage=='decode' and expected_decode_calls==0:continue
+            if not any(e.get('stage')==stage and type(e.get('affine_dispatches')) is int and e['affine_dispatches']>0 for e in calls):
+                issues.append('Required active FP32 '+stage+' projection coverage missing')
+    for event in calls:
+        stage=event.get('stage');valid=event.get('active_rows');physical=event.get('physical_rows');count=event.get('affine_dispatches')
+        if stage not in ('body','head','decode') or any(type(value) is not int for value in (valid,physical,count)):
+            issues.append('Active FP32 decode projection route/coverage differs');continue
+        expected=coverage[stage] if valid<physical else 0
+        if physical!=profile['batch'] or not 0<valid<=physical or count!=expected:
+            issues.append('Active FP32 decode projection route/coverage differs')
+    return issues
+
 def audit(root,reference=None):
     issues=[];artifacts=json.loads((root/'artifacts.json').read_text());collection=json.loads((root/'collection.json').read_text())
     for name,expected in artifacts['files'].items():
@@ -66,20 +88,7 @@ def audit(root,reference=None):
                 count<0 or (logical>=64 and count<1) or (logical<64 and count!=0)):
                 issues.append('Cooperative64 projection route/count differs')
     elif reuse64_events:issues.append('Unexpected cooperative64 projection in control profile')
-    if profile.get('active_decode_projections',False):
-        coverage={stage:profile.get('expected_'+stage+'_indexed_decode_projections',-1) for stage in ('body','head')}
-        coverage['decode']=coverage['body']+coverage['head']
-        for stage in ('decode','head'):
-            calls=[e for e in indexed_decode_events if e.get('stage')==stage]
-            expected=coverage[stage]
-            if expected<=0 or not calls or not any(e.get('affine_dispatches',0)>0 for e in calls):
-                issues.append('Required active FP32 '+stage+' projection coverage missing')
-        for event in indexed_decode_events:
-            stage=event.get('stage');valid=event.get('active_rows',-1);physical=event.get('physical_rows',-1)
-            expected=coverage.get(stage,-1) if valid<physical else 0
-            if stage not in coverage or physical!=profile['batch'] or not 0<valid<=physical or event.get('affine_dispatches')!=expected:
-                issues.append('Active FP32 decode projection route/coverage differs')
-    elif indexed_decode_events:issues.append('Unexpected active FP32 decode projections in control profile')
+    issues.extend(indexed_decode_issues(profile,indexed_decode_events,len(decode_events)-len(mixed_events)))
     if profile.get('indexed_projections',False):
         if not indexed_events or not any(e.get('affine_dispatches',0)>0 for e in indexed_events):
             issues.append('Required indexed projection route missing')

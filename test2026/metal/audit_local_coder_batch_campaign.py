@@ -5,7 +5,7 @@ Timing admission evidence is distinct from repeated performance qualification.
 import argparse,hashlib,json,math
 from pathlib import Path
 from summarize_local_coder_baseline import audit as baseline_audit
-from audit_local_coder_batch_quality import native_events
+from audit_local_coder_batch_quality import native_events,indexed_decode_issues
 
 def read(path):return json.loads(path.read_text())
 def digest(path):return hashlib.sha256(path.read_bytes()).hexdigest()
@@ -21,6 +21,10 @@ def audit(root):
     if len(ready)!=1 or ready[0].get('profile')!=profile:issues.append('Native ready profile differs')
     if profile['prefix_cache'] is not False:issues.append('Matched uncached policy required')
     if any(e.get('event')=='error' for e in events):issues.append('Native error event present')
+    indexed_decode=[e for e in events if e.get('event')=='native_indexed_decode']
+    pure_decodes=sum(e.get('event')=='native_batch' and e.get('stage')=='decode' for e in events)-sum(e.get('event')=='native_mixed_forward' for e in events)
+    require_sparse=profile['batch']>1 and any(len(read(campaign/'frozen'/plan['id']/'cases.json'))==1 for plan in manifest['plans'])
+    issues.extend(indexed_decode_issues(profile,indexed_decode,pure_decodes,require_sparse))
     streams={};completed={};batches=[]
     for e in events:
         kind=e.get('event');key=e.get('id')
@@ -93,7 +97,9 @@ def audit(root):
     if any(e.get('memory',{}).get('metal_allocated_bytes',0)>1024*1024 for e in closed):issues.append('Observed native cleanup exceeds baseline')
     return dict(status='passed' if not issues else 'failed',issues=issues,scope=manifest['scope'],requests=requests,cells=cells,
         combined_decode_plans=combined,combined_decode_required=combined_required,
-        shutdown=shutdown,baseline_accounting=base,worker_log_sha256=digest(root/'server/worker-stdout.jsonl'))
+        shutdown=shutdown,indexed_decode_calls=len(indexed_decode),indexed_decode_command_calls=sum(e.get('stage')=='decode' for e in indexed_decode),
+        indexed_decode_sparse_required=require_sparse,baseline_accounting=base,worker_log_sha256=digest(root/'server/worker-stdout.jsonl'),
+        auditor_sha256=digest(Path(__file__)),decode_auditor_sha256=digest(Path(__file__).with_name('audit_local_coder_batch_quality.py')))
 
 def main():
     p=argparse.ArgumentParser(description=__doc__);p.add_argument('--root',type=Path,required=True);p.add_argument('--output',type=Path,required=True);args=p.parse_args();report=audit(args.root)

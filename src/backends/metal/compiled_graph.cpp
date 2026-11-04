@@ -1491,7 +1491,10 @@ void MetalCompiledGraph::SharePrefillScratch(const std::shared_ptr<MetalPrefillS
 #endif
 
 namespace Garnet {
-void MetalCompiledGraph::RetireResidentDefaults() {
+void MetalCompiledGraph::RetireResidentDefaults(bool preserveHiddenInput) {
+#ifndef GARNET_METAL_RETIRE_PREFILL_INPUTS
+    (void)preserveHiddenInput;
+#endif
 #ifdef GARNET_METAL_LAZY_RESIDENT_DEFAULTS
     if(!lazyDefaultPlanReady_) {
         if(!ready_||outputParts_.size()!=3||inputs_.size()<3||residentOps_.size()!=ops_.size())return;
@@ -1506,6 +1509,16 @@ void MetalCompiledGraph::RetireResidentDefaults() {
         for(const auto& record:weightRecords_){auto info=MetalContext::MatrixBufferInfo(record.second.slot.matrix);if(info.identity)protectedWeights.insert(info.identity);protect(record.second.slot);}
         auto eligible=[&](size_t id){const auto& slot=slots_[id];const auto& info=infos[id];return info.identity&&counts[info.identity]==1&&!protectedWeights.count(info.identity)&&gpu_->IsDefaultLayout(slot.matrix,slot.rows,slot.columns);};
         std::vector<size_t> plan;
+#ifdef GARNET_METAL_RETIRE_PREFILL_INPUTS
+        if(inputs_.size()==6&&inputShapes_[0].size()==3) {
+            const auto batch=inputShapes_[0][0],chunk=inputShapes_[0][1];const auto id=inputs_[0];
+            bool safe=batch>0&&chunk>1&&inputShapes_[3]==std::vector<int64_t>{batch,chunk,3}&&
+                inputShapes_[4]==std::vector<int64_t>{batch,chunk}&&inputShapes_[5]==inputShapes_[4]&&
+                id!=output_&&std::find(outputParts_.begin(),outputParts_.end(),id)==outputParts_.end()&&eligible(id);
+            for(const auto& op:ops_)if(op.out==id||op.auxiliaryOutput==id)safe=false;
+            if(safe)plan.push_back(id);
+        }
+#endif
         for(size_t part=1;part<=2;++part){auto id=inputs_[part];if(inputShapes_[part].size()<3||std::find(outputParts_.begin(),outputParts_.end(),id)!=outputParts_.end())continue;if(eligible(id))plan.push_back(id);}
         if(!ops_.empty()&&ops_.back().kind==Kind::Concat&&ops_.back().out==output_&&!residentOps_.back()&&std::find(inputs_.begin(),inputs_.end(),output_)==inputs_.end()&&std::find(outputParts_.begin(),outputParts_.end(),output_)==outputParts_.end()&&eligible(output_))plan.push_back(output_);
 #ifdef GARNET_METAL_RETIRE_NONRESIDENT_PACKS
@@ -1556,7 +1569,14 @@ void MetalCompiledGraph::RetireResidentDefaults() {
 #endif
         lazyDefaultSlots_=std::move(plan);lazyDefaultPlanReady_=true;
     }
-    for(auto id:lazyDefaultSlots_)if(slots_[id].matrix.Valid()) {auto info=MetalContext::MatrixBufferInfo(slots_[id].matrix);lazyRetiredBytes_+=info.allocatedBytes;slots_[id].matrix=MetalMatrix();}
+    for(auto id:lazyDefaultSlots_)if(slots_[id].matrix.Valid()) {
+#ifdef GARNET_METAL_RETIRE_PREFILL_INPUTS
+        // The first layer just uploaded its host hidden input. Subsequent
+        // layers skip that upload and borrow their predecessor's hidden output.
+        if(preserveHiddenInput&&id==inputs_[0])continue;
+#endif
+        auto info=MetalContext::MatrixBufferInfo(slots_[id].matrix);lazyRetiredBytes_+=info.allocatedBytes;slots_[id].matrix=MetalMatrix();
+    }
 #endif
 }
 void MetalCompiledGraph::MaterializeDefault(size_t id) {
@@ -1566,6 +1586,14 @@ void MetalCompiledGraph::MaterializeDefault(size_t id) {
     auto matrix=gpu_->Allocate(slots_[id].rows,slots_[id].columns);auto info=MetalContext::MatrixBufferInfo(matrix);slots_[id].matrix=std::move(matrix);lazyRehydratedBytes_+=info.allocatedBytes;
 #else
     (void)id;
+#endif
+}
+size_t MetalCompiledGraph::RetiredPrefillHiddenInputSlots() const {
+#if defined(GARNET_METAL_RETIRE_PREFILL_INPUTS)&&defined(GARNET_METAL_LAZY_RESIDENT_DEFAULTS)
+    std::lock_guard<std::mutex> lock(mutex_);
+    return !inputs_.empty()&&std::find(lazyDefaultSlots_.begin(),lazyDefaultSlots_.end(),inputs_[0])!=lazyDefaultSlots_.end()?1:0;
+#else
+    return 0;
 #endif
 }
 size_t MetalCompiledGraph::LazyRetiredBytes() const {

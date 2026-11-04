@@ -80,7 +80,7 @@ class MetalCompiledGraph {
     size_t nonresidentPackSlots_=0;
 #endif
 #endif
-    void RetireResidentDefaults();
+    void RetireResidentDefaults(bool preserveHiddenInput=false);
     void MaterializeDefault(size_t slot);
     void Clear();
     void PrepareInputs(X::Value,const std::unordered_set<size_t>& skip={});
@@ -100,6 +100,7 @@ public:
     void Close();
     std::vector<MetalResourceReference> MemoryReferences();
     size_t LazyRetiredBytes() const;
+    size_t RetiredPrefillHiddenInputSlots() const;
     size_t LazyRehydratedBytes() const;
     size_t LazyPlannedSlots() const;
 #ifdef GARNET_METAL_RETIRE_NONRESIDENT_PACKS
@@ -127,6 +128,7 @@ public:
         APISET().AddFunc<1>("run",&MetalCompiledGraph::Run);
         APISET().AddFunc<0>("close",&MetalCompiledGraph::Close);
         APISET().AddProp("lazy_default_retired_bytes",&MetalCompiledGraph::LazyRetiredBytes);
+        APISET().AddProp("retired_prefill_hidden_input_slots",&MetalCompiledGraph::RetiredPrefillHiddenInputSlots);
         APISET().AddProp("lazy_default_rehydrated_bytes",&MetalCompiledGraph::LazyRehydratedBytes);
         APISET().AddProp("lazy_default_planned_slots",&MetalCompiledGraph::LazyPlannedSlots);
 #ifdef GARNET_METAL_RETIRE_NONRESIDENT_PACKS
