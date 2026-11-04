@@ -926,6 +926,7 @@ std::vector<MetalResourceReference> MetalDecoderSession::MemoryReferences() {
     if(mtp_) {
         const auto& m=*mtp_;
         for(size_t i=0;i<7;++i)append(m.inputs[i],i,"mtp_input",{});
+        for(const auto& profile:m.profiles)for(size_t i:{size_t(0),size_t(1),size_t(4),size_t(5),size_t(6)})append(profile.second.inputs[i],profile.first,"mtp_profile_input",{});
         for(size_t i=0;i<2;++i){append(m.cache[i],i,"mtp_private_cache",{});append(m.backup[i],i,"mtp_draft_backup",{});}
         append(m.lastTarget,SIZE_MAX,"mtp_normalized_target_last",{});append(m.lastHidden,SIZE_MAX,"mtp_last_hidden",{});
         append(m.prediction,SIZE_MAX,"mtp_prediction",{});append(m.baseHidden,SIZE_MAX,"mtp_base_hidden",{});append(m.basePrediction,SIZE_MAX,"mtp_base_prediction",{});

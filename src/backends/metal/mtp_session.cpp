@@ -88,10 +88,47 @@ bool MetalDecoderSession::PrepareMTP(X::Value graphValue,X::Value headValue,X::V
         throw std::runtime_error("MTP bridge exceeds the native working-set guard");
     mtp_=std::move(p);ResetMTP();return true;
 }
+bool MetalDecoderSession::PrepareMTPProfiles(X::Value values) {
+    std::lock_guard<std::mutex> sessionLock(mutex_);
+    if(!mtp_||!gpu_||poisoned_||!hiddenShape_.empty()||!mtp_->profiles.empty())
+        throw std::invalid_argument("Prepare additional MTP profiles once before target execution");
+    if(values.runtime()!=Host()->runtime||!values.IsList()||!values.Size()||values.Size()>3)
+        throw std::invalid_argument("Declare one to three additional MTP profiles");
+    auto& p=*mtp_;std::vector<MetalCompiledGraph*> graphs{p.graph};
+    std::vector<X::Value> owners;
+    for(uint64_t i=0;i<values.Size();++i){auto owner=values.Get(i);auto graph=MGraph(owner,Host());
+        if(std::find(graphs.begin(),graphs.end(),graph)!=graphs.end())throw std::invalid_argument("Duplicate MTP profile owner");
+        graphs.push_back(graph);owners.push_back(owner);}
+    std::sort(graphs.begin(),graphs.end(),std::less<MetalCompiledGraph*>());
+    std::vector<std::unique_lock<std::mutex>> locks;for(auto graph:graphs)locks.emplace_back(graph->mutex_);
+    if(!p.graph->ready_||p.graph->generation_!=p.generation)throw std::invalid_argument("MTP source owner changed");
+    std::map<size_t,MTPProfile> prepared;
+    // Validate every profile and shared buffer identity before allocating any workspace.
+    for(auto owner:owners) {
+        auto graph=MGraph(owner,Host());
+        if(!graph->ready_||!graph->mtpProgram_||graph->inputShapes_.size()!=7||
+           !graph->SharesVerificationWeights(*p.graph))throw std::invalid_argument("MTP profiles must share all fifteen raw weights");
+        const auto& shape=graph->inputShapes_[0];const size_t t=size_t(shape[1]);
+        if(shape[0]!=int64_t(p.batch)||shape[2]!=int64_t(p.width)||graph->inputShapes_[2]!=p.graph->inputShapes_[2]||
+           t==p.chunk||prepared.count(t)||!p.captures.count(t)||(t!=1&&!graph->mtpPrefill_))
+            throw std::invalid_argument("MTP profile batch/cache/capture or explicit teacher role mismatch");
+        MTPProfile entry;entry.owner=owner;entry.graph=graph;entry.generation=graph->generation_;prepared.emplace(t,std::move(entry));
+    }
+    for(auto& item:prepared)for(size_t i=0;i<7;++i) {
+        const auto& slot=item.second.graph->slots_[item.second.graph->inputs_[i]];
+        // Cache inputs are rebound to private session KV and need no unused copies.
+        if(i!=2&&i!=3)item.second.inputs[i]=gpu_->Allocate(slot.rows,slot.columns);
+    }
+    auto memory=MetalContext::MemoryStats();if(memory.recommended<=256*1024*1024||memory.allocated>memory.recommended-256*1024*1024)
+        throw std::runtime_error("Additional MTP profiles exceed the native working-set guard");
+    for(auto& item:prepared)for(size_t i:{size_t(0),size_t(1),size_t(4),size_t(5),size_t(6)})gpu_->Zero(item.second.inputs[i]);
+    p.profiles=std::move(prepared);return true;
+}
 void MetalDecoderSession::ResetMTP() {
     if(!mtp_)return;auto& p=*mtp_;
     for(auto& m:p.cache)gpu_->Zero(m);
     for(auto& m:p.inputs)gpu_->Zero(m);
+    for(auto& item:p.profiles)for(size_t i:{size_t(0),size_t(1),size_t(4),size_t(5),size_t(6)})gpu_->Zero(item.second.inputs[i]);
     for(auto m:{p.lastTarget,p.lastHidden,p.prediction,p.baseHidden,p.basePrediction})gpu_->Zero(m);
     for(auto& entry:p.captures){gpu_->Zero(entry.second.packed);std::fill(entry.second.flags.begin(),entry.second.flags.end(),0);}
     std::fill(p.committed.begin(),p.committed.end(),0);p.tentative=p.committed;
@@ -104,6 +141,7 @@ void MetalDecoderSession::ResetMTPRow(size_t row) {
     if(!mtp_)return;auto& p=*mtp_;
     for(auto& m:p.cache)gpu_->ZeroRow(m,row);
     for(auto& m:p.inputs)gpu_->ZeroRow(m,row);
+    for(auto& item:p.profiles)for(size_t i:{size_t(0),size_t(1),size_t(4),size_t(5),size_t(6)})gpu_->ZeroRow(item.second.inputs[i],row);
     for(auto m:{p.lastTarget,p.lastHidden,p.prediction,p.baseHidden,p.basePrediction})gpu_->ZeroRow(m,row);
     for(auto& entry:p.captures){gpu_->ZeroRow(entry.second.packed,row);std::fill_n(entry.second.flags.begin()+row*entry.first,entry.first,0);}
     p.committed[row]=p.tentative[row]=0;
@@ -139,19 +177,37 @@ X::Value MetalDecoderSession::MTPStep(X::Value embedding,X::Value pos,X::Value s
 }
 X::Value MetalDecoderSession::MTPStepUnlocked(X::Value embedding,X::Value pos,X::Value slots,X::Value active,int64_t offset,X::Value epochs,bool draft,bool predict) {
     if(!mtp_||!gpu_||poisoned_||!mtp_->currentCapture)throw std::logic_error("MTP needs completed target hidden states");
-    auto& p=*mtp_;auto graph=p.graph,head=p.head;
-    std::vector<MetalCompiledGraph*> ordered{graph,head,head_};std::sort(ordered.begin(),ordered.end(),std::less<MetalCompiledGraph*>());
+    auto& p=*mtp_;
+    if(embedding.runtime()!=Host()->runtime)throw std::invalid_argument("MTP embedding runtime mismatch");
+    X::Tensor embeddingTensor(embedding);const auto embeddingInfo=embeddingTensor.Info();
+    if(embeddingInfo.rank!=3||embeddingInfo.shape[1]<1)throw std::invalid_argument("MTP embedding profile rank mismatch");
+    const size_t selected=size_t(embeddingInfo.shape[1]);auto graph=p.graph,head=p.head;
+    auto* inputs=&p.inputs;uint64_t generation=p.generation;
+    if(selected!=p.chunk) {
+        const auto entry=p.profiles.find(selected);
+        if(entry==p.profiles.end())throw std::invalid_argument("MTP chunk profile was not prepared");
+        graph=entry->second.graph;generation=entry->second.generation;inputs=&entry->second.inputs;
+    }
+    if((draft&&selected!=1&&selected!=p.chunk)||(!draft&&p.pending&&selected!=p.chunk))
+        throw std::invalid_argument("MTP draft/correction profile role mismatch");
+    std::vector<MetalCompiledGraph*> ordered{graph,head,head_,p.graph};
+    for(const auto& profile:p.profiles)ordered.push_back(profile.second.graph);
+    std::sort(ordered.begin(),ordered.end(),std::less<MetalCompiledGraph*>());ordered.erase(std::unique(ordered.begin(),ordered.end()),ordered.end());
     std::vector<std::unique_lock<std::mutex>> locks;for(auto g:ordered)locks.emplace_back(g->mutex_);
 #ifdef GARNET_METAL_SHARED_PREFILL_SCRATCH
     std::vector<MetalPrefillScratch*> pools;for(auto g:ordered)if(g->prefillScratch_)pools.push_back(g->prefillScratch_.get());
     std::sort(pools.begin(),pools.end(),std::less<MetalPrefillScratch*>());pools.erase(std::unique(pools.begin(),pools.end()),pools.end());
     std::vector<std::unique_lock<std::mutex>> poolLocks;for(auto pool:pools)poolLocks.emplace_back(pool->mutex);
 #endif
-    if(!graph->ready_||graph->generation_!=p.generation||!head->ready_||head->generation_!=p.headGeneration||!head_->ready_||head_->generation_!=headGeneration_)
+    if(!graph->ready_||graph->generation_!=generation||!head->ready_||head->generation_!=p.headGeneration||!head_->ready_||head_->generation_!=headGeneration_)
         throw std::invalid_argument("Prepared MTP/target graph owner changed");
-    const auto b=p.batch,t=p.chunk,w=p.width;auto& capture=p.captures.at(p.currentCapture);
+    if(!p.graph->ready_||p.graph->generation_!=p.generation)throw std::invalid_argument("Prepared MTP source owner changed");
+    for(const auto& profile:p.profiles)if(!profile.second.graph->ready_||profile.second.graph->generation_!=profile.second.generation)
+        throw std::invalid_argument("Prepared MTP profile owner changed");
+    const auto b=p.batch,t=selected,w=p.width;auto& capture=p.captures.at(p.currentCapture);
     if(!draft&&(offset<0||uint64_t(offset)>=p.currentCapture))throw std::invalid_argument("MTP teacher source offset invalid");
     const size_t count=draft?1:std::min(t,p.currentCapture-size_t(offset));
+    if(selected!=p.chunk&&count!=t)throw std::invalid_argument("MTP teacher profile needs a complete captured window; actual active length may be shorter");
     std::vector<float> flags,slotValues,positionValues;
     embedding=HostCopy(embedding,Host(),graph->inputShapes_[1]);pos=HostCopy(pos,Host(),graph->inputShapes_[4],&positionValues);
     slots=HostCopy(slots,Host(),graph->inputShapes_[5],&slotValues);active=HostCopy(active,Host(),graph->inputShapes_[6],&flags);
@@ -166,7 +222,7 @@ X::Value MetalDecoderSession::MTPStepUnlocked(X::Value embedding,X::Value pos,X:
             }}
         const auto start=draft?p.tentative[row]:p.committed[row];
         if(!draft&&start+lengths[row]>p.targetLengths[row])throw std::invalid_argument("MTP teacher would advance beyond target history");
-        if(draft&&lengths[row]&&(!p.predictionReady[row]||p.committed[row]==0||p.tentative[row]-p.committed[row]+lengths[row]>=t))throw std::invalid_argument("MTP draft needs a current prediction and bounded backup span");
+        if(draft&&lengths[row]&&(!p.predictionReady[row]||p.committed[row]==0||p.tentative[row]-p.committed[row]+lengths[row]>=p.chunk))throw std::invalid_argument("MTP draft needs a current prediction and bounded backup span");
         for(size_t j=0;j<lengths[row];++j)if(slotValues[row*t+j]!=float(start+j)||start+j>=p.capacity)
             throw std::invalid_argument("MTP cache slots disagree with native history");
     }
@@ -180,35 +236,35 @@ X::Value MetalDecoderSession::MTPStepUnlocked(X::Value embedding,X::Value pos,X:
     }else if(managedRows_)throw std::invalid_argument("Managed MTP requires explicit row epochs");
 #endif
     auto args=X::Value::List(Host());args.Append(X::Value());args.Append(embedding);args.Append(X::Value());args.Append(X::Value());args.Append(pos);args.Append(slots);args.Append(active);
-    std::array<MetalMatrix,7> saved;for(size_t i=0;i<7;++i){auto& s=graph->slots_[graph->inputs_[i]];saved[i]=s.matrix;s.matrix=(i==2||i==3)?p.cache[i-2]:p.inputs[i];}
+    std::array<MetalMatrix,7> saved;for(size_t i=0;i<7;++i){auto& s=graph->slots_[graph->inputs_[i]];saved[i]=s.matrix;s.matrix=(i==2||i==3)?p.cache[i-2]:(*inputs)[i];}
     auto restore=[&](){for(size_t i=0;i<7;++i)graph->slots_[graph->inputs_[i]].matrix=saved[i];};
     try{graph->PrepareInputs(args,{0,2,3});}catch(...){restore();throw;}
     const bool beginDraft=draft&&!p.pending;
     if(beginDraft) {
-        std::vector<float> backupSlots(b*t);for(size_t row=0;row<b;++row)for(size_t j=0;j<t;++j){backupSlots[row*t+j]=float(p.committed[row]+j);p.backupFlags[row*t+j]=float(p.committed[row]+j<p.capacity);}
+        std::vector<float> backupSlots(b*p.chunk);for(size_t row=0;row<b;++row)for(size_t j=0;j<p.chunk;++j){backupSlots[row*p.chunk+j]=float(p.committed[row]+j);p.backupFlags[row*p.chunk+j]=float(p.committed[row]+j<p.capacity);}
         gpu_->Update(p.backupSlots,backupSlots);gpu_->Update(p.backupActive,p.backupFlags);
     }
     poisoned_=true;gpu_->Begin();
     try {
         if(beginDraft) {
-            for(size_t i=0;i<2;++i)gpu_->EncodeVerificationKVBackup(p.cache[i],p.backupSlots,p.backupActive,p.backup[i],p.heads,p.dim,p.capacity,t);
+            for(size_t i=0;i<2;++i)gpu_->EncodeVerificationKVBackup(p.cache[i],p.backupSlots,p.backupActive,p.backup[i],p.heads,p.dim,p.capacity,p.chunk);
             gpu_->EncodeLayout(p.lastHidden,p.lastHidden,p.baseHidden);gpu_->EncodeLayout(p.prediction,p.prediction,p.basePrediction);
         }
         const auto& source=draft?p.lastHidden:capture.packed;const auto sourceTokens=draft?1:p.currentCapture;
         const auto start=draft?0:size_t(offset);
-        if(count==t)gpu_->EncodeSliceGroups(source,p.inputs[0],1,sourceTokens*w,start*w,t*w);
+        if(count==t)gpu_->EncodeSliceGroups(source,(*inputs)[0],1,sourceTokens*w,start*w,t*w);
         else {
             gpu_->EncodeSliceGroups(source,p.slices.at(count),1,sourceTokens*w,start*w,count*w);
-            gpu_->EncodeConcat(p.slices.at(count),p.zeros.at(count),p.zeros.at(count),p.inputs[0],false);
+            gpu_->EncodeConcat(p.slices.at(count),p.zeros.at(count),p.zeros.at(count),(*inputs)[0],false);
         }
         graph->Encode(*gpu_,false);
         for(size_t i=0;i<2;++i)gpu_->EncodeLayout(graph->slots_[graph->outputParts_[i+1]].matrix,graph->slots_[graph->outputParts_[i+1]].matrix,p.cache[i]);
         if(!draft&&p.pending) {
-            for(size_t i=0;i<2;++i)gpu_->EncodeVerificationKVRestore(p.backup[i],p.backupSlots,p.backupActive,p.inputs[6],p.cache[i],p.heads,p.dim,p.capacity,t);
-            gpu_->EncodeLastActiveHidden(graph->slots_[graph->outputParts_[0]].matrix,p.inputs[6],p.baseHidden,t);
+            for(size_t i=0;i<2;++i)gpu_->EncodeVerificationKVRestore(p.backup[i],p.backupSlots,p.backupActive,(*inputs)[6],p.cache[i],p.heads,p.dim,p.capacity,t);
+            gpu_->EncodeLastActiveHidden(graph->slots_[graph->outputParts_[0]].matrix,(*inputs)[6],p.baseHidden,t);
             gpu_->EncodeLayout(p.baseHidden,p.baseHidden,p.lastHidden);
         } else {
-            gpu_->EncodeLastActiveHidden(graph->slots_[graph->outputParts_[0]].matrix,p.inputs[6],p.lastHidden,t);
+            gpu_->EncodeLastActiveHidden(graph->slots_[graph->outputParts_[0]].matrix,(*inputs)[6],p.lastHidden,t);
         }
         if(predict) {
             auto& input=head->slots_[head->inputs_[0]];const auto old=input.matrix;input.matrix=p.lastHidden;
@@ -233,7 +289,7 @@ X::Value MetalDecoderSession::MTPStepUnlocked(X::Value embedding,X::Value pos,X:
         p.stats=nlohmann::json{{"committed",p.committed},{"tentative",p.tentative},{"pending",p.pending},{"teacher_calls",p.teacherCalls},
             {"draft_calls",p.draftCalls},{"corrections",p.restoreCalls},{"gpu_ms",gpu_->LastGPUMs()},
             {"head_calls",p.headCalls},{"validation_only_calls",p.validationCalls},{"prediction_ready",p.predictionReady},
-            {"scope","Native MTP bridge; only argmax IDs/status read to CPU, no serving/speed qualification"}}.dump();
+            {"profile_chunk",t},{"scope","Native MTP bridge; only argmax IDs/status read to CPU, no serving/speed qualification"}}.dump();
         poisoned_=false;return result;
     }catch(...){restore();gpu_->Abort();throw;}
 }

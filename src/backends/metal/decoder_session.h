@@ -59,6 +59,12 @@ class MetalDecoderSession {
         MetalMatrix flat,normalized,packed,active;
         std::vector<float> flags;
     };
+    struct MTPProfile {
+        X::Value owner;
+        MetalCompiledGraph* graph=nullptr;
+        uint64_t generation=0;
+        std::array<MetalMatrix,7> inputs;
+    };
     struct MTPWorkspace {
         X::Value graphOwner,headOwner;
         MetalCompiledGraph *graph=nullptr,*head=nullptr;
@@ -68,6 +74,7 @@ class MetalDecoderSession {
         std::array<MetalMatrix,7> inputs;
         std::array<MetalMatrix,2> cache,backup;
         std::map<size_t,MTPCapture> captures;
+        std::map<size_t,MTPProfile> profiles;
         std::map<size_t,MetalMatrix> slices,zeros;
         std::vector<size_t> committed,tentative;
         std::vector<size_t> targetLengths;
@@ -91,7 +98,7 @@ class MetalDecoderSession {
     void CommitMTPTarget(const MetalMatrix&,const std::vector<float>&,size_t);
     X::Value MTPStep(X::Value,X::Value,X::Value,X::Value,int64_t,X::Value,bool,bool predict=true);
     X::Value MTPStepUnlocked(X::Value,X::Value,X::Value,X::Value,int64_t,X::Value,bool,bool);
-    X::Value MTPEmbed(const std::vector<int64_t>&);
+    X::Value MTPEmbed(const std::vector<int64_t>&,size_t);
 #endif
 #ifdef GARNET_METAL_VERIFY_ATTENTION
     struct VerificationWorkspace {
@@ -181,6 +188,7 @@ public:
 #ifdef GARNET_METAL_MTP_BRIDGE
     bool PrepareMTP(X::Value graph,X::Value head,X::Value sourceChunks);
     bool PrepareMTPEmbedding(const std::string& checkpoint);
+    bool PrepareMTPProfiles(X::Value);
     X::Value MTPTeacher(X::Value embedding,X::Value positions,X::Value slots,X::Value active,int64_t sourceOffset,X::Value epochs);
     X::Value MTPDraft(X::Value embedding,X::Value positions,X::Value slots,X::Value active,X::Value epochs);
     X::Value MTPTeacherCache(X::Value embedding,X::Value positions,X::Value slots,X::Value active,int64_t sourceOffset,X::Value epochs);
@@ -303,6 +311,7 @@ public:
 #ifdef GARNET_METAL_MTP_BRIDGE
         APISET().AddFunc<3>("prepare_mtp",&MetalDecoderSession::PrepareMTP);
         APISET().AddFunc<1>("prepare_mtp_embedding",&MetalDecoderSession::PrepareMTPEmbedding);
+        APISET().AddFunc<1>("prepare_mtp_profiles",&MetalDecoderSession::PrepareMTPProfiles);
         APISET().AddFunc<6>("mtp_teacher",&MetalDecoderSession::MTPTeacher);
         APISET().AddFunc<5>("mtp_draft",&MetalDecoderSession::MTPDraft);
         APISET().AddFunc<6>("mtp_teacher_cache",&MetalDecoderSession::MTPTeacherCache);

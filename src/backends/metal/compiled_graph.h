@@ -81,7 +81,7 @@ class MetalCompiledGraph {
     size_t BF16Weight(const std::string&,bool visionPrefill=false);
     size_t Allocate(size_t,size_t);
     size_t LowerVision(size_t input,const X::Value& attributes);
-    bool mtpProgram_=false;
+    bool mtpProgram_=false,mtpPrefill_=false;
     void ValidateMTPProgram(bool metadataOnly=false) const;
 #ifdef GARNET_METAL_LAZY_RESIDENT_DEFAULTS
     bool lazyDefaultPlanReady_=false;std::vector<size_t> lazyDefaultSlots_;
@@ -110,13 +110,14 @@ class MetalCompiledGraph {
     bool ComputeResetKVPrefix(size_t part) const;
     bool CanResetKVPrefix(size_t part) const {return part>=1&&part<=2&&resetKVPrefix_[part-1];}
     bool SwapOutputStorage(size_t part,MetalMatrix& replacement);
-    bool BuildInternal(X::Value,X::Value,const std::string&,std::unordered_map<std::string,SharedWeight>,bool bf16Projections=false,bool verification=false,bool mtp=false);
+    bool BuildInternal(X::Value,X::Value,const std::string&,std::unordered_map<std::string,SharedWeight>,bool bf16Projections=false,bool verification=false,bool mtp=false,bool mtpPrefill=false);
 #ifdef GARNET_METAL_VERIFY_ATTENTION
     bool SharesVerificationWeights(const MetalCompiledGraph&) const;
 #endif
 public:
 #ifdef GARNET_METAL_MTP
     bool BuildMTP(X::Value,X::Value,const std::string&);
+    bool BuildMTPPrefill(X::Value,X::Value,const std::string&,X::Value);
 #endif
     bool Build(X::Value graph,X::Value symbols,const std::string& checkpoint);
     bool BuildBF16(X::Value graph,X::Value symbols,const std::string& checkpoint);
@@ -169,6 +170,7 @@ public:
         APISET().AddFunc<3>("build_bf16",&MetalCompiledGraph::BuildBF16);
 #ifdef GARNET_METAL_MTP
         APISET().AddFunc<3>("build_mtp",&MetalCompiledGraph::BuildMTP);
+        APISET().AddFunc<4>("build_mtp_prefill",&MetalCompiledGraph::BuildMTPPrefill);
 #endif
         APISET().AddFunc<4>("build_shared",&MetalCompiledGraph::BuildShared);
 #ifdef GARNET_METAL_VERIFY_ATTENTION

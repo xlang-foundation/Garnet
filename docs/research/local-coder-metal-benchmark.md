@@ -3078,3 +3078,82 @@ review verifies current provenance, complete output IDs, target/auxiliary state
 hashes, budget/draft accounting, skipped-head routing, shared projection buffers
 and zero owner cleanup in `native-mtp-generation-review1.json`. Final sources
 and both libraries are retained in `native-mtp-generation-source1`.
+
+### Separate compiled MTP draft and teacher profiles
+
+The default-OFF MTP extension now separates the one-token auxiliary draft from
+the target's four-token verification/correction window. The original `build_mtp`
+bound remains four total physical rows. Explicit `build_mtp_prefill` admits up
+to128 total BF16 teacher rows, with batch/cache/control/checkpoint dimensions
+validated before allocation. Shared children inherit the explicit profile mode;
+raw norm offsets remain +1. No precision or numerical criterion changed.
+
+`prepare_mtp_profiles` attaches up to three additional compiled owners before
+target execution. It checks all15 shared weight buffer identities, batch, cache
+and declared target captures before allocating private fixed input workspaces.
+Each profile retains its owner/generation. Native calls lock and validate the
+whole auxiliary family; closed/rebuilt owners reject even shallow generation.
+T1 drafts retain the T4 backup envelope, and correction uses the original T4
+profile. All profiles share private auxiliary K/V and committed/tentative history.
+Wide teacher windows require a complete captured physical window while their
+actual active prefix can be shorter. Row reset/release and memory inventories
+include the new profile workspaces. The embedding map decodes only the selected
+draft profile's requested rows.
+
+Profiles specify upper bounds, not required real input lengths: a512-token input
+bound accepts73 tokens. Input length, prefill chunk and total context bounds are
+independent. Target indexed projections already skip unused token rows. Wide
+auxiliary BF16 projections still execute masked physical rows; this remains
+optimization work. The T1 draft removes the previous T4 padded draft work.
+
+The finite gates are:
+
+- `native-mtp-profiles-oracle2`:76 synthetic cases across13 profiles in5,577
+  checks, including batch1/2/4 and up to128 total teacher rows. The independent
+  FP32 oracle retains abs(error)<=5e-4+5e-4*abs(reference), with untouched cache
+  spans byte-exact. The earlier `oracle1` is retained as preliminary evidence
+  before the final capability string and wrapper check.
+- `native27b-mtp-profiles-oracle1`:34 learned auxiliary cases across five
+  profiles in6,415 checks, including T128/C4096, actual73-token masks and carried
+  cache state. The largest normalized element error is0.075977 of the unchanged
+  bound. These are operator inputs, not full4K target prompts.
+- `native-mtp-profiles-fixture2`:44 generation transactions plus17 bridge cases
+  in1,428 checks. Complete target/auxiliary state agrees with ordinary/standalone
+  references. T1 native draft selection, T8 ragged teachers, shared buffers,
+  duplicate preparation, source windows, leases, rejection/rollback, EOS and
+  closed added-profile owners are covered. The first fixture run correctly
+  rejected a closed profile but failed a diagnostic substring assertion; its
+  log and exact runner source are retained. Only that test assertion changed.
+- `native27b-mtp-profiles-coding1`:all eight original frozen coding tasks pass
+  the sandbox evaluator. All2,311 complete output IDs and decoded text match
+  the saved original-control sequences. Prompt lengths are71..145 tokens, so
+  ragged and multi-chunk prefill both execute. The B1 study uses target/teacher
+  T128, auxiliary draft T1, target verification/correction T4, context4096 and
+  native `mtp_generate`, with prefix reuse disabled. The655 native transactions
+  accept1,648 of1,956 proposed drafts; acceptance is not a model speed metric.
+  Prepared allocation is17,262,231,552 bytes, a snapshot within the working-set
+  reserve, with eight raw BF16 matrix owners shared across all three auxiliary
+  profiles. All four native owner counts close to zero.
+
+`MetalMTPStudy` is an explicit bounded helper, outside production serving
+admission. The full coding collector rehashes all15 pinned target files and the
+raw auxiliary asset before launch. It preserves prompts, expected/actual IDs,
+responses, every native transaction and inventory. The accounting audit checks
+complete sequences, exact evaluated responses, real prefill counts, budgets,
+draft accounting, T1/T4 selection, shared auxiliary/target-head buffers and
+cleanup. Its corruption suite rejects13 changed-evidence cases. One initial
+corruption test expected the wrong rejection message after altering an interior
+emitted token; the audit correctly rejected the reconstructed sequence. That
+failed log/source remain, and the final test checks the actual rejection site.
+
+Enabled native tests pass23/23 and disabled compatibility19/19. The existing
+greedy verifier also passes211 cases/2,633 checks. No vLLM-Metal or SGLang
+baseline was rerun. These gates establish finite correctness, not performance:
+all2x decode/aggregate-throughput and half-TTFT targets remain unmet. Full4K
+prompt execution, continuous speculative scheduling, auxiliary prefix snapshots,
+matched performance, general multimodal admission and xMind binding remain
+unfinished. Do not advance to9B or4B on this evidence.
+
+Final implementation, collectors/auditors, build flags and enabled/disabled
+libraries are retained in `native-mtp-profiles-source1`. The final coding
+accounting review passes4,071 checks in `accounting-audit3.json`.

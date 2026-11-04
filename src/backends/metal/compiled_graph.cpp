@@ -264,7 +264,7 @@ size_t MetalCompiledGraph::LowerVision(size_t input,const X::Value& attrs) {
     return output;
 }
 void MetalCompiledGraph::Clear() {
-    mtpProgram_=false;
+    mtpProgram_=mtpPrefill_=false;
 #ifdef GARNET_METAL_RETIRE_NONRESIDENT_PACKS
     nonresidentPackSlots_=0;
 #endif
@@ -297,6 +297,17 @@ bool MetalCompiledGraph::BuildBF16(X::Value graph,X::Value symbols,const std::st
 bool MetalCompiledGraph::BuildMTP(X::Value graph,X::Value symbols,const std::string& checkpoint) {
     std::lock_guard<std::mutex> lock(mutex_);return BuildInternal(graph,symbols,checkpoint,{},true,false,true);
 }
+bool MetalCompiledGraph::BuildMTPPrefill(X::Value graph,X::Value symbols,const std::string& checkpoint,X::Value source) {
+    if(!source.IsValid()||source.IsNone()) {
+        std::lock_guard<std::mutex> lock(mutex_);return BuildInternal(graph,symbols,checkpoint,{},true,false,true,true);
+    }
+    if(source.runtime()!=Host()->runtime)throw std::invalid_argument("MTP prefill source runtime mismatch");
+    auto peer=source.NativeData<MetalCompiledGraph>();
+    if(!peer||peer==this)throw std::invalid_argument("MTP prefill requires another raw MTP source");
+    std::scoped_lock lock(mutex_,peer->mutex_);
+    if(!peer->ready_||!peer->mtpProgram_)throw std::invalid_argument("MTP prefill source must be ready raw MTP");
+    return BuildInternal(graph,symbols,checkpoint,peer->weightRecords_,true,false,true,true);
+}
 #endif
 bool MetalCompiledGraph::BuildShared(X::Value graph,X::Value symbols,const std::string& checkpoint,X::Value source) {
     if(source.runtime()!=Host()->runtime)throw std::invalid_argument("Shared Metal graph runtime mismatch");
@@ -304,7 +315,7 @@ bool MetalCompiledGraph::BuildShared(X::Value graph,X::Value symbols,const std::
     if(!peer||peer==this)throw std::invalid_argument("Shared Metal weights require another compiled graph");
     std::scoped_lock lock(mutex_,peer->mutex_);
     if(!peer->ready_)throw std::invalid_argument("Shared Metal weight source is closed");
-    return BuildInternal(graph,symbols,checkpoint,peer->weightRecords_,peer->bf16Projections_,false,peer->mtpProgram_);
+    return BuildInternal(graph,symbols,checkpoint,peer->weightRecords_,peer->bf16Projections_,false,peer->mtpProgram_,peer->mtpPrefill_);
 }
 #ifdef GARNET_METAL_VERIFY_ATTENTION
 bool MetalCompiledGraph::SharesVerificationWeights(const MetalCompiledGraph& source) const {
@@ -423,14 +434,14 @@ void MetalCompiledGraph::ValidateMTPProgram(bool metadataOnly) const {
         throw std::invalid_argument("MTP must return normalized hidden plus K/V from exactly one complete auxiliary layer");
 }
 bool MetalCompiledGraph::BuildInternal(X::Value graph,X::Value symbols,const std::string& checkpoint,
-    std::unordered_map<std::string,SharedWeight> shared,bool bf16Projections,bool verification,bool mtp) {
+    std::unordered_map<std::string,SharedWeight> shared,bool bf16Projections,bool verification,bool mtp,bool mtpPrefill) {
     Clear();sharedWeights_=std::move(shared);bf16Projections_=bf16Projections;
     auto start=std::chrono::steady_clock::now();
     try {
 #ifndef GARNET_METAL_MTP
         if(mtp)throw std::logic_error("MTP graph extension is disabled");
 #endif
-        mtpProgram_=mtp;
+        mtpProgram_=mtp;mtpPrefill_=mtpPrefill;
         if(graph.runtime()!=Host()->runtime||symbols.runtime()!=Host()->runtime||!symbols.IsList())
             throw std::runtime_error("Metal graph inputs must belong to this runtime");
         std::string error;if(!index_.Open(checkpoint,error))throw std::runtime_error(error);
@@ -456,11 +467,11 @@ bool MetalCompiledGraph::BuildInternal(X::Value graph,X::Value symbols,const std
                 for(auto d:inputShapes_.back())if(d<=0)throw std::invalid_argument("MTP input dimensions must be positive");
             }
             const auto& h=inputShapes_[0];const auto& k=inputShapes_[2];
-            if(h.size()!=3||h[0]>4||h[1]>4/h[0]||h[2]>5120||inputShapes_[1]!=h||
+            if(h.size()!=3||h[0]>4||h[1]>(mtpPrefill_?128:4)/h[0]||h[2]>5120||inputShapes_[1]!=h||
                k.size()!=4||k[0]!=h[0]||k[1]>8||k[2]>4096||k[3]>256||inputShapes_[3]!=k||
                inputShapes_[4]!=std::vector<int64_t>{h[0],h[1],3}||
                inputShapes_[5]!=std::vector<int64_t>{h[0],h[1]}||inputShapes_[6]!=inputShapes_[5])
-                throw std::invalid_argument("MTP profile requires up to four token rows and bounded FP32 KV/control inputs");
+                throw std::invalid_argument("MTP profile requires bounded FP32 KV/control inputs and at most four decode or128 explicit prefill rows");
             // Reject oversized auxiliary profiles/weights before any GPU allocation.
             ValidateMTPProgram(true);
         }

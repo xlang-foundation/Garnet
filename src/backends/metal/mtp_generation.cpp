@@ -45,8 +45,8 @@ bool MetalDecoderSession::PrepareMTPEmbedding(const std::string& path) {
         throw std::invalid_argument("Native embedding changed during mapping");
     mtp_->embedding=std::move(embedding);return true;
 }
-X::Value MetalDecoderSession::MTPEmbed(const std::vector<int64_t>& ids) {
-    auto& p=*mtp_;if(!p.embedding||ids.size()!=p.batch*p.chunk)throw std::logic_error("Prepare the native target embedding map");
+X::Value MetalDecoderSession::MTPEmbed(const std::vector<int64_t>& ids,size_t chunk) {
+    auto& p=*mtp_;if(!p.embedding||ids.size()!=p.batch*chunk)throw std::logic_error("Prepare the native target embedding map");
     for(const auto& d:p.embedding->dependencies)if(d.modified!=std::filesystem::last_write_time(d.path)||d.bytes!=std::filesystem::file_size(d.path))
         throw std::invalid_argument("Native embedding checkpoint changed");
     std::vector<float> values(ids.size()*p.width);const auto view=p.embedding->mapping.View();
@@ -54,7 +54,7 @@ X::Value MetalDecoderSession::MTPEmbed(const std::vector<int64_t>& ids) {
         if(ids[i]<0||uint64_t(ids[i])>=verification_->vocab)throw std::invalid_argument("Native embedding token outside vocabulary");
         view.DecodeEmbeddingRow(size_t(ids[i]),values.data()+i*p.width,p.width);
     }
-    return FloatTensor(Host(),values,{int64_t(p.batch),int64_t(p.chunk),int64_t(p.width)});
+    return FloatTensor(Host(),values,{int64_t(p.batch),int64_t(chunk),int64_t(p.width)});
 }
 X::Value MetalDecoderSession::MTPGenerate(X::Value knownValue,X::Value remainingValue,X::Value stopsValue,X::Value epochsValue) {
     // One runtime transaction owns proposals, verification and teacher correction.
@@ -95,10 +95,13 @@ X::Value MetalDecoderSession::MTPGenerate(X::Value knownValue,X::Value remaining
             auto layer=verification_->graphs.Get(i).NativeData<MetalCompiledGraph>();layers.push_back(layer);graphs.push_back(layer);
             graphs.push_back(owners_[i].NativeData<MetalCompiledGraph>());
         }
+        for(const auto& profile:p.profiles)graphs.push_back(profile.second.graph);
         std::sort(graphs.begin(),graphs.end(),std::less<MetalCompiledGraph*>());graphs.erase(std::unique(graphs.begin(),graphs.end()),graphs.end());
         std::vector<std::unique_lock<std::mutex>> locks;for(auto graph:graphs)locks.emplace_back(graph->mutex_);
         if(!p.graph->ready_||p.graph->generation_!=p.generation||!p.head->ready_||p.head->generation_!=p.headGeneration||!head_->ready_||head_->generation_!=headGeneration_)
             throw std::invalid_argument("Native generation graph owner changed");
+        for(const auto& profile:p.profiles)if(!profile.second.graph->ready_||profile.second.graph->generation_!=profile.second.generation)
+            throw std::invalid_argument("Native generation MTP profile owner changed");
         VerificationRun check;check.plan=verification_.get();ValidateVerificationRun(check,layers);
     }
     // Even a caller-supplied known token must be the authoritative unconsumed
@@ -108,7 +111,8 @@ X::Value MetalDecoderSession::MTPGenerate(X::Value knownValue,X::Value remaining
     for(size_t row=0;row<b;++row)if(lengths[row]&&(targetIds[row*2+1]!=0||targetIds[row*2]!=float(known[row])))
         throw std::invalid_argument("Native known token differs from target prediction");
     const auto bases=p.committed;const auto positions=p.nextPositions;
-    auto controls=[&](const std::vector<size_t>& starts,const std::vector<size_t>& sizes,size_t shift) {
+    auto controls=[&](const std::vector<size_t>& starts,const std::vector<size_t>& sizes,size_t shift,size_t chunk) {
+        const size_t t=chunk;
         std::vector<float> pos(b*t*3),slots(b*t),active(b*t);
         for(size_t row=0;row<b;++row)for(size_t j=0;j<t;++j){slots[row*t+j]=float(starts[row]+j);active[row*t+j]=float(j<sizes[row]);
             for(size_t axis=0;axis<3;++axis)pos[(row*t+j)*3+axis]=positions[row*3+axis]+float(shift+j);}
@@ -119,23 +123,24 @@ X::Value MetalDecoderSession::MTPGenerate(X::Value knownValue,X::Value remaining
             throw std::invalid_argument("Native auxiliary prediction is invalid");
         proposals[row*t]=known[row];nextDraft[row]=int64_t(draftIds[row*2]);
     }
+    const size_t draftChunk=p.profiles.count(1)?1:t;
     bool mutated=false;size_t proposed=0;
     const auto oldHeads=p.headCalls,oldValidation=p.validationCalls;
     try {
         for(size_t j=1;j<t;++j) {
-            std::vector<size_t> advance(b,0);std::vector<int64_t> inputIds(b*t,0);bool run=false;
+            std::vector<size_t> advance(b,0);std::vector<int64_t> inputIds(b*draftChunk,0);bool run=false;
             for(size_t row=0;row<b;++row)if(j<lengths[row]) {
                 proposals[row*t+j]=nextDraft[row];++proposed;
                 if(isStop(nextDraft[row]))lengths[row]=j+1;
-                if(j+1<lengths[row]){advance[row]=1;inputIds[row*t]=nextDraft[row];run=true;}
+                if(j+1<lengths[row]){advance[row]=1;inputIds[row*draftChunk]=nextDraft[row];run=true;}
             }
             if(run) {
-                auto embedding=MTPEmbed(inputIds);auto ctl=controls(p.tentative,advance,j);
+                auto embedding=MTPEmbed(inputIds,draftChunk);auto ctl=controls(p.tentative,advance,j,draftChunk);
                 mutated=true;auto result=MTPStepUnlocked(embedding,ctl[0],ctl[1],ctl[2],-1,epochsValue,true,true);
                 for(size_t row=0;row<b;++row)if(advance[row])nextDraft[row]=result.Get(uint64_t(row)).ToInt64();
             }
         }
-        auto hidden=MTPEmbed(proposals);auto ctl=controls(bases,lengths,0);
+        auto hidden=MTPEmbed(proposals,t);auto ctl=controls(bases,lengths,0,t);
         mutated=true;auto result=VerifyGreedyUnlocked(hidden,ctl[0],ctl[1],ctl[2],IntList(Host(),proposals),stopsValue,IntList(Host(),remaining),epochsValue);
         std::vector<size_t> consumed(b,0);std::vector<int64_t> teacherIds(b*t,0);size_t accepted=0;bool predict=false;
         for(size_t row=0;row<b;++row) {
@@ -143,10 +148,10 @@ X::Value MetalDecoderSession::MTPGenerate(X::Value knownValue,X::Value remaining
             for(uint64_t j=0;j<ids.Size();++j)teacherIds[row*t+j]=ids.Get(j).ToInt64();
             if(consumed[row]){accepted+=consumed[row]-1;predict=predict||(remaining[row]>int64_t(consumed[row])&&!isStop(teacherIds[row*t+consumed[row]-1]));}
         }
-        auto embedding=MTPEmbed(teacherIds);ctl=controls(bases,consumed,1);
+        auto embedding=MTPEmbed(teacherIds,t);ctl=controls(bases,consumed,1,t);
         MTPStepUnlocked(embedding,ctl[0],ctl[1],ctl[2],0,epochsValue,false,predict);
         p.generationStats=nlohmann::json{{"proposals",proposals},{"submitted_lengths",lengths},{"consumed",consumed},{"proposed_drafts",proposed},{"accepted_drafts",accepted},
-            {"auxiliary_head_calls",p.headCalls-oldHeads},{"auxiliary_validation_calls",p.validationCalls-oldValidation},
+            {"draft_profile_chunk",draftChunk},{"correction_profile_chunk",t},{"auxiliary_head_calls",p.headCalls-oldHeads},{"auxiliary_validation_calls",p.validationCalls-oldValidation},
             {"wall_ms",std::chrono::duration<double,std::milli>(std::chrono::steady_clock::now()-started).count()},
             {"scope","One native generation transaction; no benchmark admission"}}.dump();return result;
     }catch(...){if(mutated)poisoned_=true;throw;}

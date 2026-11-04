@@ -89,7 +89,7 @@ state and every Conv/GDN/KV state hash in22 cases at capacity64/4096. The4K case
 use seeded late positions, not a full4K prompt. Per-position heads, checkpoint/
 replay and exact KV restoration stay native; source output banks supply S1 under
 locks. Preparation initializes a prediction bank when predict-false prefill has
-not produced an earlier prediction. Auxiliary MTP serving/coding integration
+not produced an earlier prediction. Auxiliary MTP serving integration
 and2x speed targets remain unfinished. The extension stays off by
 default.
 
@@ -117,17 +117,40 @@ actual three-axis positions and per-row budget/EOS/lease checks. Cache-only
 teacher updates skip the vocabulary projection while validating hidden state.
 The same real16-token completion passes through this call with exact target
 and auxiliary parity; auxiliary head evaluations fall from22 to13. Synthetic
-batch1/2/4 checks cover44 transactions, including eight EOS events. Full coding,
-wide real prefill, continuous speculative scheduling and auxiliary prefix reuse
-remain unfinished; no new speed admission is claimed.
+batch1/2/4 checks cover44 transactions, including eight EOS events.
+
+Explicit profile families now use a T1 auxiliary draft, T4 corrector and up to
+128 total auxiliary teacher rows, sharing all15 raw weight records. The original
+decode builder retains its four-total-row bound; `build_mtp_prefill` explicitly
+prepares the wider teacher graph. Native `prepare_mtp_profiles` validates shared
+weights and cache/capture bounds before allocating fixed input workspaces.
+Generation chooses the prepared T1 draft automatically. Wide auxiliary graphs
+still compute masked physical projection rows; skipping these unused BF16 rows
+remains an optimization. Actual input lengths need not equal the compiled bound.
+
+The B1 `MetalMTPStudy` helper in `metal_mtp_study.py` now passes all eight frozen
+coding tasks and their complete reference token sequences with the pinned27B
+target, T128 target/teacher prefill and native generation transactions. All2,311
+output IDs and decoded text match the original control; all eight sandboxed
+contracts pass. The655 transactions accept1,648 of1,956 proposed draft tokens.
+Prepared Metal allocation is17,262,231,552 bytes, a snapshot within the reserve,
+and all native owner counts close to zero. Independent wide auxiliary references
+pass76 synthetic and34 learned cases, including actual73-token masks, carried
+caches and capacity4096. The numerical criterion is unchanged.
+
+This is a bounded B1 coding gate, with prompts71..145 tokens. Full4K prompt
+execution, continuous speculative scheduling, auxiliary prefix reuse and matched
+speed qualification remain unfinished. The existing non-speculative batch and
+prefix studies retain their separate qualifications.
 
 ## Entry points and limits
 
 Profile sizes are upper bounds. Actual input lengths and occupied request slots
 may be smaller. Prepared memory layouts and kernel variants support those
 lengths; input capacity, prefill chunk budget and total context capacity are
-separate limits. A512-token chunk budget permits a longer prompt to progress
-through several chunks when the context profile allows it.
+separate limits. An input bound512 accepts a73-token prompt; a separate128-token
+prefill chunk bound permits that prompt to execute in one partial chunk. Longer
+prompts use several chunks when both the input and context profiles admit them.
 
 - `model.create_decoder` is the bounded batch1 Metal study factory, capacity64..4096.
 - `metal_batch_study.create_decoder` is a separate experimental batch2/4 factory.

@@ -24,7 +24,7 @@ try:
   key=(b,t,cap)
   if profile!=key:
    close_programs();source=MetalMTPProgram(f['checkpoint'],f['config'],b,cap,1)
-   program=MetalMTPProgram(f['checkpoint'],f['config'],b,cap,t,source=source)
+   program=MetalMTPProgram(f['checkpoint'],f['config'],b,cap,t,source=source,prefill=b*t>4)
    inventory=json.loads(garnet.memory_inventory_json([{'tag':'source','object':source.graph},{'tag':'child','object':program.graph}],None))
    owners={}
    for tag in ('source','child'):

@@ -44,11 +44,16 @@ def MetalMTPChunk(target, embedding, key, value, positions, slots, active,
 
 
 class MetalMTPProgram:
-    def __init__(self, checkpoint, config, batch=1, capacity=4096, chunk=4, source=None):
+    def __init__(self, checkpoint, config, batch=1, capacity=4096, chunk=4, source=None, prefill=False):
         if 'raw_bf16_mtp_graph' not in garnet.backend_info():
             raise ValueError('Explicit native MTP extension is required')
-        if any(type(x) is not int for x in (batch, capacity, chunk)) or batch not in (1, 2, 4) or not 1 <= chunk <= 4//batch or not 1 <= capacity <= 4096:
-            raise ValueError('MTP requires up to four token rows and capacity1..4096')
+        if type(prefill) is not bool:
+            raise ValueError('MTP prefill mode must be explicit bool')
+        if prefill and 'raw_bf16_mtp_prefill_profiles' not in garnet.backend_info():
+            raise ValueError('Explicit MTP prefill profile extension is required')
+        row_limit = 128 if prefill else 4
+        if any(type(x) is not int for x in (batch, capacity, chunk)) or batch not in (1, 2, 4) or not 1 <= chunk <= row_limit//batch or not 1 <= capacity <= 4096:
+            raise ValueError('MTP exceeds explicit decode/prefill row or capacity bounds')
         if config.get('mtp_num_hidden_layers', 1) != 1:
             raise ValueError('Exactly one auxiliary MTP layer is required')
         width = config['hidden_size']
@@ -59,7 +64,9 @@ class MetalMTPProgram:
         self.graph = garnet.compiled_graph()
         try:
             captured = MetalMTPChunk(*symbols, config, batch, chunk, capacity)
-            if source is None:
+            if prefill:
+                self.graph.build_mtp_prefill(captured, symbols, checkpoint, None if source is None else source.graph)
+            elif source is None:
                 self.graph.build_mtp(captured, symbols, checkpoint)
             else:
                 self.graph.build_shared(captured, symbols, checkpoint, source.graph)

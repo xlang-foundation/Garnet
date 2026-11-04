@@ -490,7 +490,7 @@ option(GARNET_METAL_VERIFY_ATTENTION "Bounded up-to-four-token FP32 attention wi
 if(GARNET_METAL_VERIFY_ATTENTION)
     target_compile_definitions(garnet_metal PUBLIC GARNET_METAL_VERIFY_ATTENTION=1)
 endif()
-option(GARNET_METAL_MTP "Explicit raw-BF16 seven-input MTP graph, up to four token rows" OFF)
+option(GARNET_METAL_MTP "Explicit raw-BF16 MTP graphs: four decode or128 prefill token rows" OFF)
 if(GARNET_METAL_MTP)
     target_compile_definitions(garnet_metal PUBLIC GARNET_METAL_MTP=1)
 endif()

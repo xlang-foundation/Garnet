@@ -282,10 +282,12 @@ public:
 #endif
 #ifdef GARNET_METAL_MTP
         info+="; raw_bf16_mtp_graph";
+        info+="; raw_bf16_mtp_prefill_profiles";
 #endif
 #ifdef GARNET_METAL_MTP_BRIDGE
         info+="; native_mtp_target_bridge";
         info+="; native_mtp_generation";
+        info+="; native_mtp_profile_family";
 #endif
 #ifdef GARNET_METAL_VERIFY_ATTENTION
         info+="; verification_attention_fp32";

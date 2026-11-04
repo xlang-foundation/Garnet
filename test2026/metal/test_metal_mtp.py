@@ -14,7 +14,8 @@ runtime, build, source, destination = sys.argv[1:5]
 out = Path(destination); out.mkdir(exist_ok=False)
 rng = np.random.default_rng(380028)
 sha = lambda p: hashlib.sha256(Path(p).read_bytes()).hexdigest()
-trained = len(sys.argv) > 5
+wide = 'profiles' in sys.argv[5:]
+trained = len(sys.argv) > 5 and sys.argv[5] != 'profiles'
 if trained:
     checkpoint = Path(sys.argv[5]); config_path = Path(sys.argv[6])
     assert sha(checkpoint) == 'dec6630788d1ba4557230ca02b5df2db239f2b2bbcfff1c6742776e231e7540b'
@@ -89,9 +90,11 @@ def oracle(inputs,b,t,cap,swap=False):
 
 cases=[];sensitivity=[]
 profiles=[(1,4,64),(1,4,4096)] if trained else [(1,1,16),(1,2,16),(1,3,16),(1,4,16),(2,2,16),(4,1,16),(1,4,4096)]
+if wide:
+    profiles += [(1,8,64),(1,128,256),(1,128,4096)] if trained else [(1,8,16),(1,32,64),(1,128,256),(2,64,256),(4,32,256),(1,128,4096)]
 for b,t,cap in profiles:
     previous=None
-    trials=[0,1,2,3,4] if trained else list(range(t+1))
+    trials=sorted(set([0,1,min(73,t),t-1,t])) if b*t>4 else ([0,1,2,3,4] if trained else list(range(t+1)))
     # Every profile also has two carried calls; the T4 boundary cases reach cap-1.
     for trial in trials+['carry-first','carry-second']:
         carry=trial=='carry-second'

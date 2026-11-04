@@ -6,6 +6,7 @@ from xModel.qwen35.vl_0_8b.decoder_layer import T,norm,Qwen35LinearDecoderLayer,
 from xModel.qwen35.vl_0_8b.prefill_layer import PrefillLayer
 from xModel.qwen38.vl_27b.metal_mtp import MetalMTPProgram
 with open(sys.argv[1]) as stream:f=json.load(stream)
+profile_mode='profiles' in sys.argv[5:]
 c=f['config'];w=c['hidden_size'];generation=len(sys.argv)>5 and sys.argv[5]=='generation'
 if generation:
  # This synthetic fixture alone uses whole-second mtimes so the XLang/Python
@@ -26,7 +27,7 @@ def reject(call,label):
  return message
 def hashes(parts):return [io.verification_f32_sha256(x) for x in parts]
 for batch,chunk,capacity in [(1,4,16),(2,2,16),(4,1,16),(1,4,4096)]:
- base=[];verify=[];heads=[];extra=[];session=garnet.decoder_session();reference=garnet.decoder_session();mtp=None;oracle=None
+ base=[];verify=[];heads=[];extra=[];session=garnet.decoder_session();reference=garnet.decoder_session();mtp=None;oracle=None;profile_programs=[]
  label='B'+str(batch)+'T'+str(chunk)+'C'+str(capacity)
  try:
   for i in range(4):
@@ -64,6 +65,25 @@ for batch,chunk,capacity in [(1,4,16),(2,2,16),(4,1,16),(1,4,4096)]:
   capture_chunks=[1] if chunk==1 else [1,chunk]
   if batch==1 and capacity==16:capture_chunks.append(8)
   session.prepare_mtp(mtp.graph,projection_head,capture_chunks)
+  if profile_mode:
+   if chunk>1:profile_programs.append(MetalMTPProgram(sys.argv[4],c,batch,capacity,1,source=mtp))
+   if 8 in capture_chunks:profile_programs.append(MetalMTPProgram(sys.argv[4],c,batch,capacity,8,source=mtp,prefill=True))
+   if profile_programs:
+    before=json.loads(garnet.memory_stats_json())['metal_allocated_bytes']
+    reject(lambda:session.prepare_mtp_profiles([profile_programs[0].graph]*2),label+' duplicate profile')
+    equal(json.loads(garnet.memory_stats_json())['metal_allocated_bytes'],before,label+' rejected profile no allocation')
+    session.prepare_mtp_profiles([program.graph for program in profile_programs])
+    reject(lambda:session.prepare_mtp_profiles([profile_programs[0].graph]),label+' repeated profile preparation')
+    inv=json.loads(garnet.memory_inventory_json([{'tag':'primary','object':mtp.graph}]+[{'tag':'profile'+str(i),'object':program.graph} for i,program in enumerate(profile_programs)],session))
+    weights={}
+    for ref in inv['references']:
+     if ref['role']=='weight_record':
+      tag=ref['tag']
+      if tag not in weights:weights[tag]={}
+      if ref['name'] not in weights[tag]:weights[tag][ref['name']]=[]
+      weights[tag][ref['name']].append(ref['buffer_id'])
+    for tag in weights:equal(weights[tag],weights['primary'],label+' shared profile weights '+tag)
+
   if generation:
    reject(lambda:session.prepare_mtp_embedding(sys.argv[4]),label+' foreign embedding checkpoint')
    session.prepare_mtp_embedding(f['checkpoint'])
@@ -126,6 +146,7 @@ for batch,chunk,capacity in [(1,4,16),(2,2,16),(4,1,16),(1,4,4096)]:
      bases=list(slots);base_key=key;base_value=value;base_last=last;base_pred=list(predicted)
      # Closing an external helper cannot close the runtime's private mapping.
      io.close();result=session.mtp_generate(known,remaining,stops,epochs);io.open(f['checkpoint']);stats=json.loads(session.mtp_generation_stats_json())
+     if profile_mode:equal(stats['draft_profile_chunk'],1,label+' native T1 draft selection')
      proposals=stats['proposals'];lengths=stats['submitted_lengths'];counts=[x[1] for x in result]
      def gctl(starts,sizes,shift):
       s=[float(starts[row]+j) for row in range(batch) for j in range(chunk)];a=[float(j<sizes[row]) for row in range(batch) for j in range(chunk)]
@@ -215,6 +236,19 @@ for batch,chunk,capacity in [(1,4,16),(2,2,16),(4,1,16),(1,4,4096)]:
     if len(next_ids)<4:next_ids.append(prediction[0])
     embedding=stack_ids([next_ids]);controls=ctl([offset],[4]);expected=oracle_step(io.stack_tokens(normalized[offset:offset+4]),embedding,controls,[4])
     equal(session.mtp_teacher(embedding,*controls,offset,None),expected,label+' wide shifted teacher');compare(label+' wide teacher');cases+=1
+  if profile_mode and batch==1 and capacity==16:
+   wide_oracle=profile_programs[-1]
+   for valid in (1,3,7,8):
+    session.reset();reference.reset()
+    key=io.zeros([1,2,capacity,32]);value=io.zeros([1,2,capacity,32]);last=io.zeros([1,w]);predicted=[0]
+    ids=[3+j*7 for j in range(8)];embedding=io.stack_tokens([io.embedding([x]) for x in ids]);p=val([float(j) for j in range(8) for axis in range(3)],[1,8,3]);slots=val([float(j) for j in range(8)],[1,8]);flags=val([float(j<valid) for j in range(8)],[1,8])
+    actual=session.run(wide,embedding,p,slots,flags,valid-1);equal(actual,reference.run(wide,embedding,p,slots,flags,valid-1),label+' profile target')
+    packed=io.stack_tokens([normalizer.run([io.visual_token(reference.hidden(),j)]) for j in range(8)])
+    next_ids=ids[1:valid]+[actual[0]]+[0]*(8-valid);embedding=io.stack_tokens([io.embedding([x]) for x in next_ids]);p=val([float(j+1) for j in range(8) for axis in range(3)],[1,8,3]);ctl_w=[p,slots,flags]
+    result=wide_oracle.run([packed,embedding,key,value]+ctl_w);key=io.slice(result,8*w,[1,2,capacity,32]);value=io.slice(result,8*w+2*capacity*32,[1,2,capacity,32]);last=io.slice(result,(valid-1)*w,[1,w]);predicted=io.argmax(projection_head.run([last]))
+    before=hashes(session.mtp_snapshot());reject(lambda:session.mtp_teacher(embedding,*ctl_w,1,None),label+' incomplete wide source window');equal(hashes(session.mtp_snapshot()),before,label+' incomplete source unchanged')
+    equal(session.mtp_teacher(embedding,*ctl_w,0,None),predicted,label+' wide profile prediction');compare(label+' ragged wide profile')
+    equal(json.loads(session.mtp_stats_json())['committed'],[valid],label+' actual wide length');equal(json.loads(session.mtp_stats_json())['profile_chunk'],8,label+' wide profile chosen');cases+=1
   # Leases guard auxiliary history as well as target state, including inactive rows.
   session.reset();lease=session.claim_request_row(41);epochs=[0]*batch;epochs[lease[0]]=lease[1]
   flags=[0.]*batch;flags[lease[0]]=1.
@@ -235,12 +269,13 @@ for batch,chunk,capacity in [(1,4,16),(2,2,16),(4,1,16),(1,4,4096)]:
   reject(lambda:session.mtp_teacher(bad,*controls,0,None),label+' nonfinite poison');reject(lambda:session.mtp_snapshot(),label+' poisoned snapshot');reject(lambda:session.hidden(),label+' poisoned target hidden')
   session.reset();current=target_step(session,[3]*batch,0);session.mtp_teacher(embedding,*controls,0,None);checks+=1
   if generation:
-   before=hashes(session.mtp_snapshot());mtp.graph.close();message=reject(lambda:session.mtp_generate(current,[1]*batch,[],None),label+' closed owner before shallow generation')
-   assert 'graph owner changed' in message,message
+   before=hashes(session.mtp_snapshot());(profile_programs[0].graph if profile_programs else mtp.graph).close();message=reject(lambda:session.mtp_generate(current,[1]*batch,[],None),label+' closed owner before shallow generation')
+   assert ('Native generation MTP profile owner changed' if profile_programs else 'Native generation graph owner changed') in message,message
    equal(hashes(session.mtp_snapshot()),before,label+' closed owner rejection unchanged')
   print('mtp_bridge_profile PASS',label,'cases',cases,'checks',checks,flush=True)
  finally:
   session.close();reference.close()
+  for program in profile_programs:program.close()
   if mtp is not None:mtp.close()
   if oracle is not None:oracle.close()
   for graph in base+verify+heads+extra:graph.close()
