@@ -1310,3 +1310,24 @@ K64/128/5120/17408, column tails, reversed/noncontiguous selections, empty/full
 masks, reused output storage, independent BF16/FP64 oracles and rejected duplicate/
 out-of-range selections. Existing24 affine numerical cases also pass. No indexed
 operator timing or learned-model result has been measured.
+
+`native27b-lifetime-chunk16-quality1` passes8/8 sandboxed tasks and all eight
+complete token sequences exactly match the FP32 reference. Its stream audit
+passes1005 combined decode plans and all eight tamper checks. Ready Metal
+allocation is17,642,569,728bytes versus17,646,501,888 for the same chunk16
+register control: only3,932,160bytes saved. This is a limited saving and does
+not establish that512-token prefill will fit. Larger workspace owners still
+need inspection; no performance target is satisfied by this result.
+
+The separate default-OFF `GARNET_METAL_INDEXED_TOKEN_PROJECTIONS` graph route
+builds and passes13 native tests (`indexed-token-ctest1.log`). A lowering pass
+proves token order from a six-input chunk graph's hidden input through known
+layout, row-local, projection and chunk attention/recurrent operations,
+resolving aliases. Unknown/state layouts remain on the original path. Shape
+coincidence alone never enables indexing. The resident session derives indices
+from validated active flags and native leases; the head and ordinary decode
+retain their original route. Full-active chunks avoid indexed zeroing overhead.
+The frozen worker profile requires an exact indexed-policy backend match and
+emits actual sparse dispatch counts before head prediction can reset counters.
+The previous mixed coding archive still passes all eleven audit tamper checks.
+Learned indexed model qualification remains pending.

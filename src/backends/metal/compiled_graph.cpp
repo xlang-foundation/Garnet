@@ -789,6 +789,73 @@ bool MetalCompiledGraph::BuildInternal(X::Value graph,X::Value symbols,const std
         // All operations write fresh slots. Trace only matrices needed by the
         // returned value, resolving storage aliases before removing unused packs.
         auto canonical=[&](size_t id){while(aliases.count(id))id=aliases.at(id);return id;};
+#ifdef GARNET_METAL_INDEXED_TOKEN_PROJECTIONS
+        // Prove token-row order from the hidden input through known lowering
+        // operations. Shape coincidence alone never enables indexed dispatch.
+        if(inputs_.size()==6&&inputShapes_[0].size()==3) {
+            const auto batch=size_t(inputShapes_[0][0]),chunk=size_t(inputShapes_[0][1]);
+            if(batch&&batch<=512&&chunk>1&&chunk<=512/batch&&
+               inputShapes_[3]==std::vector<int64_t>{int64_t(batch),int64_t(chunk),3}&&
+               inputShapes_[4]==std::vector<int64_t>{int64_t(batch),int64_t(chunk)}&&inputShapes_[5]==inputShapes_[4]) {
+                const size_t rows=batch*chunk;
+                std::vector<unsigned char> layout(slots_.size(),0); // 1 flat,2 packed;0 unknown/state.
+                layout[canonical(inputs_[0])]=2;
+                auto flat=[&](size_t id){return id<slots_.size()&&layout[canonical(id)]==1&&slots_[id].rows==rows;};
+                auto packed=[&](size_t id){return id<slots_.size()&&layout[canonical(id)]==2&&slots_[id].rows==batch&&slots_[id].columns%chunk==0;};
+                auto active=[&](size_t id){return canonical(id)==canonical(inputs_[5]);};
+                for(auto& op:ops_) {
+                    bool outFlat=false,outPacked=false;
+                    switch(op.kind) {
+                    case Kind::Layout:
+                        if(op.dimensions.size()==1&&!op.dimensions[0]) {
+                            outFlat=(flat(op.a)&&slots_[op.out].columns==slots_[op.a].columns)||
+                                (packed(op.a)&&slots_[op.out].columns==slots_[op.a].columns/chunk);
+                            outPacked=(packed(op.a)&&slots_[op.out].columns==slots_[op.a].columns)||
+                                (flat(op.a)&&slots_[op.out].columns/chunk==slots_[op.a].columns&&slots_[op.out].columns%chunk==0);
+                        }else if(op.dimensions.size()==1&&packed(op.a)&&active(op.b)&&
+                            op.dimensions[0]==slots_[op.a].columns/chunk&&slots_[op.out].columns==slots_[op.a].columns)
+                            outPacked=true;
+                        break;
+                    case Kind::MatMul:
+                    case Kind::BF16MatVec:
+                        outFlat=flat(op.a);
+                        if(outFlat&&op.kind==Kind::MatMul&&op.transpose&&slots_[op.b].affineInt4.Valid())
+                            op.indexedTokenProjection=true;
+                        break;
+                    case Kind::Norm:
+                    case Kind::Bias:
+                    case Kind::Mask:
+                    case Kind::NormRope:
+                    case Kind::Slice:
+                        outFlat=flat(op.a);break;
+                    case Kind::Add:
+                    case Kind::Silu:
+                        outFlat=flat(op.a)&&flat(op.b);
+                        outPacked=packed(op.a)&&packed(op.b)&&slots_[op.a].columns==slots_[op.b].columns;
+                        break;
+                    case Kind::ConvChunk:
+                        outFlat=flat(op.a)&&op.arguments.size()==4&&active(op.arguments[3])&&
+                            op.dimensions.size()==2&&op.dimensions[0]==chunk;break;
+                    case Kind::Prepare:
+                        outFlat=op.arguments.size()==5&&flat(op.arguments[0])&&flat(op.arguments[1])&&flat(op.arguments[2]);break;
+                    case Kind::DeltaChunk:
+                        outFlat=flat(op.a)&&op.arguments.size()==3&&active(op.arguments[2])&&
+                            op.dimensions.size()==4&&op.dimensions[0]==chunk;break;
+                    case Kind::GateNorm:
+                        outFlat=flat(op.a)&&flat(op.b)&&op.dimensions.size()>=2&&
+                            (op.dimensions.size()==2||op.dimensions[2]==0)&&
+                            slots_[op.out].columns==op.dimensions[0]*op.dimensions[1];break;
+                    case Kind::AttentionChunk:
+                        outFlat=op.arguments.size()==8&&flat(op.arguments[0])&&flat(op.arguments[1])&&flat(op.arguments[2])&&
+                            active(op.arguments[6])&&op.dimensions.size()==6&&op.dimensions[4]==chunk;break;
+                    default:break;
+                    }
+                    if(outFlat&&slots_[op.out].rows==rows)layout[canonical(op.out)]=1;
+                    else if(outPacked&&slots_[op.out].rows==batch)layout[canonical(op.out)]=2;
+                }
+            }
+        }
+#endif
         // A delta temporary consumed only by its complete output/state slices
         // can write those independent matrices directly, without packing/copying.
         std::unordered_set<size_t> removedSlices;
@@ -1016,7 +1083,11 @@ void MetalCompiledGraph::EncodeGreedy(MetalContext& gpu,const MetalMatrix& predi
     Encode(gpu);gpu.EncodeArgmax(slots_[output_].matrix,prediction);
 #endif
 }
-void MetalCompiledGraph::Encode(MetalContext& gpu,bool packedOutput,const MetalMatrix* greedyOutput) {
+void MetalCompiledGraph::Encode(MetalContext& gpu,bool packedOutput,const MetalMatrix* greedyOutput,
+    const std::vector<size_t>* selectedTokenRows) {
+#ifndef GARNET_METAL_INDEXED_TOKEN_PROJECTIONS
+    (void)selectedTokenRows;
+#endif
     bool greedyEncoded=false;
     // Opt-in isolated-operation diagnostics deliberately split submissions.
     // They identify expensive kernels; their latency is not a serving metric.
@@ -1108,7 +1179,12 @@ void MetalCompiledGraph::Encode(MetalContext& gpu,bool packedOutput,const MetalM
 #ifdef GARNET_METAL_MLX_AFFINE_INT4
             if(slots_[op.b].affineInt4.Valid()){
                 if(!op.transpose)throw std::logic_error("Affine INT4 projection must transpose checkpoint rows");
-                gpu.EncodeAffineInt4MatMul(a,slots_[op.b].affineInt4,out);
+#ifdef GARNET_METAL_INDEXED_TOKEN_PROJECTIONS
+                if(selectedTokenRows&&op.indexedTokenProjection&&selectedTokenRows->size()<slots_[op.a].rows)
+                    gpu.EncodeAffineInt4IndexedMatMul(a,slots_[op.b].affineInt4,out,*selectedTokenRows);
+                else
+#endif
+                    gpu.EncodeAffineInt4MatMul(a,slots_[op.b].affineInt4,out);
             }else
 #endif
             if(slots_[op.b].bf16.Valid()){if(!op.transpose)throw std::logic_error("BF16 projection must transpose checkpoint rows");gpu.EncodeBF16MatVec(a,slots_[op.b].bf16,out);}

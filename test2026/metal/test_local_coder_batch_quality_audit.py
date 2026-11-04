@@ -9,6 +9,7 @@ root=Path(sys.argv[1]);baseline=audit(root);assert baseline['status']=='passed'
 mutations=['no_combined','reused_epochs','bad_close','bad_text','cached_output']
 if baseline.get('prefill_decode_interleavings',0):mutations+=['bad_chunk_offset','missing_chunks','no_chunk_interleaving']
 if baseline.get('mixed_forward_calls',0):mutations+=['missing_mixed','bad_mixed_count','bad_mixed_lease']
+if baseline.get('indexed_prefill_calls',0):mutations+=['missing_indexed','bad_indexed_count']
 for mutation in mutations:
     with tempfile.TemporaryDirectory() as temporary:
         path=Path(temporary)/'study';shutil.copytree(root,path)
@@ -19,6 +20,8 @@ for mutation in mutations:
             except json.JSONDecodeError:lines.append(line);continue
             if isinstance(event,dict):
                 kind=event.get('event')
+                if mutation=='missing_indexed' and kind=='native_indexed':continue
+                if mutation=='bad_indexed_count' and kind=='native_indexed':event['affine_dispatches']=-1
                 if mutation=='missing_mixed' and kind=='native_mixed_forward':continue
                 if mutation=='bad_mixed_count' and kind=='native_mixed_forward':event['actual_tokens']+=1
                 if mutation=='bad_mixed_lease' and kind=='native_mixed_forward':event['segments'][0]['epoch']+=1

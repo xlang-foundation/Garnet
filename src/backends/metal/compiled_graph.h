@@ -29,7 +29,8 @@ class MetalCompiledGraph {
     };
     enum class Kind {MatMul,BF16MatVec,Norm,Silu,Add,Bias,Mask,Conv,Delta,Slice,Prepare,GateNorm,Concat,NormRope,KVUpdate,KVChunk,AttentionChunk,Scores,AttentionContext,Vision,Layout,DeltaSplit,ConvChunk,DeltaChunk};
     struct Op {Kind kind;size_t a,b,out;float epsilon=0,offset=0;bool transpose=false;
-        std::vector<size_t> arguments={},dimensions={};bool contiguousSlots=false;size_t auxiliaryOutput=SIZE_MAX;};
+        std::vector<size_t> arguments={},dimensions={};bool contiguousSlots=false;size_t auxiliaryOutput=SIZE_MAX;
+        bool indexedTokenProjection=false;};
     std::unique_ptr<MetalContext> gpu_;
     std::vector<Slot> slots_;
     std::vector<Op> ops_;
@@ -80,7 +81,8 @@ class MetalCompiledGraph {
     void MaterializeDefault(size_t slot);
     void Clear();
     void PrepareInputs(X::Value,const std::unordered_set<size_t>& skip={});
-    void Encode(MetalContext&,bool packedOutput=true,const MetalMatrix* greedyOutput=nullptr);
+    void Encode(MetalContext&,bool packedOutput=true,const MetalMatrix* greedyOutput=nullptr,
+        const std::vector<size_t>* selectedTokenRows=nullptr);
     void EncodeGreedy(MetalContext&,const MetalMatrix& prediction);
     bool CanUpdateKVInPlace(size_t part) const;
     bool ComputeResetKVPrefix(size_t part) const;

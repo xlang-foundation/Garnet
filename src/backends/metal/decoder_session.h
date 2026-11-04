@@ -148,6 +148,9 @@ public:
 #ifdef GARNET_METAL_MPP_AFFINE
     size_t LastMPPAffineDispatches() {std::lock_guard<std::mutex> lock(mutex_);return gpu_?gpu_->LastMPPAffineDispatches():0;}
 #endif
+#ifdef GARNET_METAL_INDEXED_AFFINE
+    size_t LastIndexedAffineDispatches() {std::lock_guard<std::mutex> lock(mutex_);return gpu_?gpu_->LastIndexedAffineDispatches():0;}
+#endif
     size_t LastKVInplaceUpdates() const {return kvInplaceUpdates_;}
     size_t LastJoinedPrefillPairs() const {return joinedPrefillPairs_;}
     size_t LastConstantHeadDispatches() const {return constantHeadDispatches_;}
@@ -220,6 +223,9 @@ public:
         APISET().AddFunc<0>("close",&MetalDecoderSession::Close);
 #ifdef GARNET_METAL_MPP_AFFINE
         APISET().AddProp("mpp_affine_dispatches",&MetalDecoderSession::LastMPPAffineDispatches);
+#endif
+#ifdef GARNET_METAL_INDEXED_AFFINE
+        APISET().AddProp("indexed_affine_dispatches",&MetalDecoderSession::LastIndexedAffineDispatches);
 #endif
         APISET().AddProp("kv_inplace_updates",&MetalDecoderSession::LastKVInplaceUpdates);
         APISET().AddProp("joined_prefill_pairs",&MetalDecoderSession::LastJoinedPrefillPairs);

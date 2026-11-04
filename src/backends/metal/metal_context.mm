@@ -1846,6 +1846,7 @@ void MetalContext::EncodeAffineInt4IndexedMatMul(const MetalMatrix& input,const 
             [encoder dispatchThreadgroups:MTLSizeMake((o.columns+31)/32,(indices.size()+63)/64,1)
                 threadsPerThreadgroup:MTLSizeMake(128,1,1)];[encoder endEncoding];
             ++impl_->indexedAffineDispatches;
+            ++impl_->mppAffineDispatches;
         }
         output.impl_->ready=false;output.impl_->pending=true;
         if(impl_->pendingOutputs.insert(output.impl_.get()).second)impl_->outputs.push_back(output.impl_);

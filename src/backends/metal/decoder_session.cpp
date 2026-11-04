@@ -414,12 +414,18 @@ X::Value MetalDecoderSession::RunUnlocked(X::Value graphs,X::Value hidden,X::Val
 #ifdef GARNET_METAL_ROW_FINAL_HIDDEN
     std::vector<uint8_t> rowWillUpdate(states_[0].rows,0);
 #endif
+#ifdef GARNET_METAL_INDEXED_TOKEN_PROJECTIONS
+    std::vector<size_t> selectedTokenRows;
+#endif
     {
         X::Tensor flags(active);auto info=flags.Info();auto lease=flags.Acquire();
         const auto* data=static_cast<const float*>(info.data);
         const size_t count=states_[0].rows*chunk;
         for(size_t i=0;i<count;++i)if(!std::isfinite(data[i])||(data[i]!=0&&data[i]!=1))
             throw std::invalid_argument("Invalid Metal session active flags");
+#ifdef GARNET_METAL_INDEXED_TOKEN_PROJECTIONS
+        if(chunk>1)for(size_t i=0;i<count;++i)if(data[i]!=0)selectedTokenRows.push_back(i);
+#endif
 #ifdef GARNET_METAL_ROW_FINAL_HIDDEN
         for(size_t i=0;i<count;++i)if(data[i]!=0)rowWillUpdate[i/chunk]=1;
 #endif
@@ -527,7 +533,13 @@ X::Value MetalDecoderSession::RunUnlocked(X::Value graphs,X::Value hidden,X::Val
                 for(size_t k=0;k<3;++k)graph->slots_[graph->inputs_[k]].matrix=saved[k];
                 for(auto& entry:savedOutputs)graph->slots_[entry.first].matrix=entry.second;
             };
-            try {graph->Encode(*gpu_,false);}
+            try {
+#ifdef GARNET_METAL_INDEXED_TOKEN_PROJECTIONS
+                graph->Encode(*gpu_,false,nullptr,chunk>1?&selectedTokenRows:nullptr);
+#else
+                graph->Encode(*gpu_,false);
+#endif
+            }
             catch(...){restore();throw;}
             restore();
             kvInplaceUpdates_+=size_t(inplace[0])+size_t(inplace[1]);

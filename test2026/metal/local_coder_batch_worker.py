@@ -34,6 +34,9 @@ def main():
         raise ValueError('Mixed forward requires explicit uncached chunked scheduling')
     if mixed and 'packed_token_plan' not in garnet.backend_info():
         raise ValueError('Mixed forward requires the native packed plan extension')
+    indexed=profile.get('indexed_projections',False)
+    if type(indexed) is not bool or indexed!=('indexed_token_projections' in garnet.backend_info()):
+        raise ValueError('Frozen profile requires its explicit indexed projection policy')
     if 'require_lifetime_reuse' in profile:
         lifetime=profile['require_lifetime_reuse']
         if type(lifetime) is not bool or lifetime!=('prefill_lifetime_reuse' in garnet.backend_info()):
@@ -85,6 +88,13 @@ def main():
             if 'native_hybrid_token_prefix' not in garnet.backend_info():raise ValueError('Native hybrid token prefix extension required')
             decoder.session.configure_token_prefix(profile['prefix_identity'],profile.get('prefix_entries',2),profile.get('prefix_host_bytes',384*1024*1024))
         graphs=decoder._resident_prefill_graphs(chunk)
+        if 'memory_inventory_path' in profile:
+            path=profile['memory_inventory_path']
+            if not isinstance(path,str) or not path.startswith('/'):raise ValueError('Inventory output requires an absolute research path')
+            descriptors=[dict(tag='decode-'+str(i),object=layer['graph']) for i,layer in enumerate(decoder.layers)]
+            descriptors+=[dict(tag='prefill-'+str(i),object=graph) for i,graph in enumerate(graphs)]
+            descriptors.append(dict(tag='head',object=decoder.head))
+            with open(path,'x') as stream:stream.write(garnet.memory_inventory_json(descriptors,decoder.session))
         policy=garnet.continuous_scheduler();policy.initialize(decoder.session,16)
         if chunked and not policy.set_prefill_chunk(chunk):raise ValueError('Native prefill chunk configuration rejected')
         tokenizer=garnet.tokenizer();tokenizer.open(folder)
@@ -114,6 +124,11 @@ def main():
                 count=decoder.session.mpp_affine_dispatches
                 if count<1:raise ValueError('Required MPP prefill route was not exercised')
                 emit(dict(event='native_mpp',affine_dispatches=count))
+            if indexed and len(ids)>batch:
+                count=decoder.session.indexed_affine_dispatches
+                valid=sum(1 for flag in active.tolist() if flag!=0)
+                if valid<len(ids) and count<1:raise ValueError('Required sparse indexed projection route was not exercised')
+                emit(dict(event='native_indexed',affine_dispatches=count,active_tokens=valid,physical_rows=len(ids)))
             return result
         def deliver(request,token,stage):
             identity=request['id'];job=jobs[identity]
