@@ -1205,3 +1205,19 @@ library, CMake flags, model factory, decoder and runner remain identical, and
 that only chunk size varies within each prompt regime. Partial summaries remain
 explicitly `in_progress` until all eight probes finish. No adaptive multi-shape
 resident profile is admitted merely by completing separate fixed-shape probes.
+
+The long8 chunk probe completed both exact-token repeats and bounded cleanup:
+255.713/256.621s paired native prefill for2054/2057 tokens. Larger long chunks
+remain running sequentially. Four sweep-auditor tamper cases reject negative
+timing, re-signed changed CMake flags, changed planned context and missing
+coverage while retaining `in_progress` for the unfinished sweep.
+
+A separate default-off BF16 MPP register-cooperative-tensor candidate is being
+prepared. It uses independent16x32x16 SIMD-group operations within64-row output
+blocks, avoiding shared-memory operand staging and cross-SIMD barriers. The
+outer reduction block and inner tensor extent are reported separately; native
+profiles/audits identify register versus staged operands explicitly. All prior
+operator archives remain auditable, and eleven metadata/timing tamper checks
+pass. This candidate has not been built or numerically qualified yet: builds
+and GPU tests must wait until the frozen chunk sweep exits. No physical NAX
+instruction use, model correctness or speedup is inferred from the tensor API.
