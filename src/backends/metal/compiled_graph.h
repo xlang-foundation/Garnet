@@ -27,7 +27,7 @@ class MetalCompiledGraph {
         MetalAffineInt4Weight affineInt4;
 #endif
     };
-    enum class Kind {MatMul,BF16MatVec,Norm,Silu,Add,Bias,Mask,Conv,Delta,Slice,Prepare,GateNorm,Concat,NormRope,KVUpdate,KVChunk,AttentionChunk,Scores,AttentionContext,Vision,Layout,DeltaSplit,ConvChunk,DeltaChunk};
+    enum class Kind {MatMul,BF16MatVec,Norm,Silu,Add,Bias,Mask,Conv,Delta,Slice,Prepare,GateNorm,Concat,NormRope,KVUpdate,KVChunk,AttentionChunk,Scores,AttentionContext,Vision,Layout,DeltaSplit,ConvChunk,DeltaChunk,VerificationAttention};
     struct Op {Kind kind;size_t a,b,out;float epsilon=0,offset=0;bool transpose=false;
         std::vector<size_t> arguments={},dimensions={};bool contiguousSlots=false;size_t auxiliaryOutput=SIZE_MAX;
         bool indexedTokenProjection=false,indexedDecodeProjection=false;};
@@ -57,6 +57,7 @@ class MetalCompiledGraph {
     size_t visionPrefetchDispatches_=0,visionVectorDispatches_=0,mlpGraphDispatches_=0;
     bool resetKVPrefix_[2]={false,false};
     bool ready_=false,bf16Projections_=false;
+    size_t verificationTokens_=0;
     mutable std::mutex mutex_;
 #ifdef GARNET_METAL_SHARED_PREFILL_SCRATCH
     std::shared_ptr<MetalPrefillScratch> prefillScratch_;
@@ -97,11 +98,18 @@ class MetalCompiledGraph {
     bool ComputeResetKVPrefix(size_t part) const;
     bool CanResetKVPrefix(size_t part) const {return part>=1&&part<=2&&resetKVPrefix_[part-1];}
     bool SwapOutputStorage(size_t part,MetalMatrix& replacement);
-    bool BuildInternal(X::Value,X::Value,const std::string&,std::unordered_map<std::string,SharedWeight>,bool bf16Projections=false);
+    bool BuildInternal(X::Value,X::Value,const std::string&,std::unordered_map<std::string,SharedWeight>,bool bf16Projections=false,bool verification=false);
+#ifdef GARNET_METAL_VERIFY_ATTENTION
+    bool SharesVerificationWeights(const MetalCompiledGraph&) const;
+#endif
 public:
     bool Build(X::Value graph,X::Value symbols,const std::string& checkpoint);
     bool BuildBF16(X::Value graph,X::Value symbols,const std::string& checkpoint);
     bool BuildShared(X::Value graph,X::Value symbols,const std::string& checkpoint,X::Value source);
+#ifdef GARNET_METAL_VERIFY_ATTENTION
+    bool BuildVerificationShared(X::Value graph,X::Value symbols,const std::string& checkpoint,X::Value source);
+    size_t VerificationTokens() const {return verificationTokens_;}
+#endif
     X::Value Run(X::Value inputs);
     void Close();
     std::vector<MetalResourceReference> MemoryReferences();
@@ -145,6 +153,10 @@ public:
         APISET().AddFunc<3>("build",&MetalCompiledGraph::Build);
         APISET().AddFunc<3>("build_bf16",&MetalCompiledGraph::BuildBF16);
         APISET().AddFunc<4>("build_shared",&MetalCompiledGraph::BuildShared);
+#ifdef GARNET_METAL_VERIFY_ATTENTION
+        APISET().AddFunc<4>("build_verification_shared",&MetalCompiledGraph::BuildVerificationShared);
+        APISET().AddProp("verification_tokens",&MetalCompiledGraph::VerificationTokens);
+#endif
         APISET().AddFunc<1>("run",&MetalCompiledGraph::Run);
         APISET().AddFunc<0>("close",&MetalCompiledGraph::Close);
         APISET().AddProp("lazy_default_retired_bytes",&MetalCompiledGraph::LazyRetiredBytes);

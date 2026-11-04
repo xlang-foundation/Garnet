@@ -278,6 +278,7 @@ void MetalCompiledGraph::Clear() {
     visionParallelDispatches_=0;
     visionPrefetchDispatches_=0;visionVectorDispatches_=0;mlpGraphDispatches_=0;
     resetKVPrefix_[0]=resetKVPrefix_[1]=false;
+    verificationTokens_=0;
     visionGlobalAlphaDispatches_=0;++generation_;ready_=false;bf16Projections_=false;outputParts_.clear();outputStorageGroups_.clear();residentOps_.clear();controlSources_.clear();ops_.clear();inputs_.clear();inputShapes_.clear();tensors_.clear();weights_.clear();sharedWeights_.clear();weightRecords_.clear();bindings_.clear();slots_.clear();gpu_.reset();
 }
 void MetalCompiledGraph::Close() {std::lock_guard<std::mutex> lock(mutex_);Clear();}
@@ -295,8 +296,57 @@ bool MetalCompiledGraph::BuildShared(X::Value graph,X::Value symbols,const std::
     if(!peer->ready_)throw std::invalid_argument("Shared Metal weight source is closed");
     return BuildInternal(graph,symbols,checkpoint,peer->weightRecords_,peer->bf16Projections_);
 }
+#ifdef GARNET_METAL_VERIFY_ATTENTION
+bool MetalCompiledGraph::SharesVerificationWeights(const MetalCompiledGraph& source) const {
+    if(weightRecords_.size()!=source.weightRecords_.size())return false;
+    auto buffers=[](const Slot& slot) {
+        std::vector<uintptr_t> ids;
+        auto add=[&](const MetalBufferInfo& info){if(info.identity)ids.push_back(info.identity);};
+        add(MetalContext::MatrixBufferInfo(slot.matrix));
+        for(const auto& info:MetalContext::WeightBufferInfo(slot.bf16))add(info);
+#ifdef GARNET_METAL_MLX_AFFINE_INT4
+        for(const auto& info:MetalContext::AffineInt4BufferInfo(slot.affineInt4))add(info);
+#endif
+        return ids;
+    };
+    for(const auto& entry:weightRecords_) {
+        auto found=source.weightRecords_.find(entry.first);
+        if(found==source.weightRecords_.end()||buffers(entry.second.slot)!=buffers(found->second.slot))return false;
+    }
+    return !weightRecords_.empty();
+}
+bool MetalCompiledGraph::BuildVerificationShared(X::Value graph,X::Value symbols,const std::string& checkpoint,X::Value source) {
+#if !defined(GARNET_METAL_MLX_AFFINE_INT4)||!defined(GARNET_METAL_INDEXED_TOKEN_PROJECTIONS)||!defined(GARNET_METAL_ACTIVE_DECODE_PROJECTIONS)||!defined(GARNET_METAL_INDEXED_DECODE)||!defined(GARNET_METAL_AFFINE_PROFILE)||!defined(GARNET_METAL_LINEAR_CHUNK_CONV)||!defined(GARNET_METAL_LINEAR_CHUNK_DELTA)
+    throw std::logic_error("Compiled verification requires prepared FP32 affine and packed recurrent kernels");
+#else
+    if(source.runtime()!=Host()->runtime)throw std::invalid_argument("Shared Metal graph runtime mismatch");
+    auto peer=source.NativeData<MetalCompiledGraph>();
+    if(!peer||peer==this)throw std::invalid_argument("Verification requires another compiled decoder graph");
+    std::scoped_lock lock(mutex_,peer->mutex_);
+    if(!peer->ready_||peer->verificationTokens_||peer->bf16Projections_||peer->inputs_.size()!=6||
+       peer->inputShapes_[0].size()!=2||peer->outputParts_.size()!=3)
+        throw std::invalid_argument("Verification source must be a ready ordinary six-input decoder layer");
+    const auto batch=peer->inputShapes_[0][0];
+    if(peer->inputShapes_[3]!=std::vector<int64_t>{batch,3}||
+       peer->inputShapes_[4]!=std::vector<int64_t>{batch}||peer->inputShapes_[5]!=peer->inputShapes_[4])
+        throw std::invalid_argument("Verification source control profile mismatch");
+    if(symbols.runtime()!=Host()->runtime||!symbols.IsList()||symbols.Size()!=6)
+        throw std::invalid_argument("Verification requires six symbolic inputs");
+    for(size_t i=0;i<3;++i) {
+        X::Tensor symbol(symbols.Get(i));auto info=symbol.Info();const auto& expected=peer->inputShapes_[i];
+        if(!info.symbolic||info.dtype!=X3_TENSOR_FLOAT32||info.rank!=(i?expected.size():3)||
+           (i?!std::equal(expected.begin(),expected.end(),info.shape):
+                (info.shape[0]!=expected[0]||info.shape[2]!=expected[1])))
+            throw std::invalid_argument("Verification source hidden/state profile mismatch");
+    }
+    const bool built=BuildInternal(graph,symbols,checkpoint,peer->weightRecords_,false,true);
+    if(!SharesVerificationWeights(*peer)){Clear();throw std::invalid_argument("Verification must share all source decoder weights");}
+    return built;
+#endif
+}
+#endif
 bool MetalCompiledGraph::BuildInternal(X::Value graph,X::Value symbols,const std::string& checkpoint,
-    std::unordered_map<std::string,SharedWeight> shared,bool bf16Projections) {
+    std::unordered_map<std::string,SharedWeight> shared,bool bf16Projections,bool verification) {
     Clear();sharedWeights_=std::move(shared);bf16Projections_=bf16Projections;
     auto start=std::chrono::steady_clock::now();
     try {
@@ -305,7 +355,15 @@ bool MetalCompiledGraph::BuildInternal(X::Value graph,X::Value symbols,const std
         std::string error;if(!index_.Open(checkpoint,error))throw std::runtime_error(error);
 #ifdef GARNET_METAL_MLX_AFFINE_INT4
         mlxCheckpoint_.Open(index_);
+        if(verification&&!mlxCheckpoint_.Enabled())throw std::invalid_argument("Verification requires converted affine INT4/group64 weights");
 #endif
+        if(verification) {
+            if(symbols.Size()!=6)throw std::invalid_argument("Verification requires six symbolic inputs");
+            X::Tensor hidden(symbols.Get(uint64_t(0)));auto info=hidden.Info();
+            if(info.rank!=3||info.shape[0]<1||info.shape[0]>4||info.shape[1]<1||info.shape[1]>4/info.shape[0])
+                throw std::invalid_argument("Verification supports at most four physical token rows");
+            verificationTokens_=size_t(info.shape[1]);
+        }
         gpu_=std::make_unique<MetalContext>();
         for(uint64_t i=0;i<symbols.Size();++i) {
             X::Tensor symbol(symbols.Get(i));auto info=symbol.Info();
@@ -324,6 +382,13 @@ bool MetalCompiledGraph::BuildInternal(X::Value graph,X::Value symbols,const std
             const auto id=Allocate(info.shape[0],columns);inputs_.push_back(id);slots_[id].shape=inputShapes_.back();
             if(!tensors_.emplace(info.id,id).second)throw std::runtime_error("Duplicate Metal symbolic input");
         }
+        if(verificationTokens_) {
+            const auto batch=inputShapes_[0][0],chunk=int64_t(verificationTokens_);
+            if(inputShapes_[3]!=std::vector<int64_t>{batch,chunk,3}||
+               inputShapes_[4]!=std::vector<int64_t>{batch,chunk}||inputShapes_[5]!=inputShapes_[4])
+                throw std::invalid_argument("Verification control profile mismatch");
+        }
+        size_t verificationBlocks=0;
         TensorGraphCapture capture(graph);
         auto lookup=[&](const X::Value& value){auto found=tensors_.find(TensorId(value));
             if(found==tensors_.end())throw std::runtime_error("Unknown Metal graph operand");
@@ -494,6 +559,11 @@ bool MetalCompiledGraph::BuildInternal(X::Value graph,X::Value symbols,const std
                 auto key=require("qwen35_attention_bind_key"),value=require("qwen35_attention_bind_value"),positions=require("qwen35_attention_bind_positions"),
                     slot=require("qwen35_attention_bind_slots"),active=require("qwen35_attention_bind_active");
                 const bool isChunk=node.name=="qwen35_attention_chunk"||node.name=="qwen_text_attention_chunk";
+                if(verificationTokens_) {
+                    if(!isChunk||heads>32||kv>8||dim>256)
+                        throw std::invalid_argument("Verification requires one bounded packed attention block");
+                    ++verificationBlocks;
+                }
                 const auto hs=slots_[a].shape,cs=slots_[key].shape;
                 const size_t chunk=isChunk&&hs.size()==3?size_t(hs[1]):1;
                 if(hs.size()!=(isChunk?3:2)||cs.size()!=4||cs[0]!=hs[0]||uint64_t(cs[1])!=kv||cs[2]<=0||cs[2]>8192||uint64_t(cs[3])!=dim||
@@ -505,6 +575,8 @@ bool MetalCompiledGraph::BuildInternal(X::Value graph,X::Value symbols,const std
                 for(auto control:{positions,slot,active})if(std::find(inputs_.begin(),inputs_.end(),control)==inputs_.end()&&!controlSources_.count(control))
                     throw std::runtime_error("Metal attention control tensors must be graph inputs");
                 const size_t batch=hs[0],capacity=cs[2],cacheWidth=kv*capacity*dim,rows=batch*chunk,width=hs.back();
+                if(verificationTokens_&&(chunk!=verificationTokens_||rows>4||capacity>4096))
+                    throw std::invalid_argument("Verification attention exceeds prepared bounds");
                 auto flatten=[&](size_t input,size_t columns){auto output=Allocate(rows,columns);Op op{Kind::Layout,input,input,output};op.dimensions={0};ops_.push_back(std::move(op));return output;};
                 if(isChunk)a=flatten(a,width);
                 const auto ropePositions=isChunk?flatten(positions,3):positions;
@@ -551,7 +623,9 @@ bool MetalCompiledGraph::BuildInternal(X::Value graph,X::Value symbols,const std
 #endif
                 auto context=Allocate(rows,heads*dim);
                 if(isChunk) {
-                    Op attend{Kind::AttentionChunk,qr,key,context};attend.arguments={qr,kr,vp,key,value,slot,active,gate};
+                    Op attend{verificationTokens_?Kind::VerificationAttention:Kind::AttentionChunk,qr,key,context};
+                    attend.arguments={qr,kr,vp,key,value,slot,active,gate};
+                    if(verificationTokens_)attend.auxiliaryOutput=Allocate(rows,heads*capacity);
                     attend.dimensions={heads,kv,dim,capacity,chunk,size_t(!text)};ops_.push_back(std::move(attend));
 #ifdef GARNET_METAL_CHUNK_KV_INPLACE
                     // Attention must see the old cache for earlier queries if
@@ -587,6 +661,10 @@ bool MetalCompiledGraph::BuildInternal(X::Value graph,X::Value symbols,const std
                 if(vh%kh)throw std::runtime_error("Metal linear head grouping mismatch");
                 const auto hiddenShape=slots_[a].shape;
                 const bool isChunk=node.name=="qwen35_linear_chunk";
+                if(verificationTokens_) {
+                    if(!isChunk)throw std::invalid_argument("Verification requires one packed recurrent block");
+                    ++verificationBlocks;
+                }
                 const size_t chunk=isChunk&&hiddenShape.size()==3?size_t(hiddenShape[1]):1;
                 const auto bound=bindings_[TensorId(node.inputs[0])];
                 auto require=[&](const char* name){auto it=bound.find(name);
@@ -648,6 +726,8 @@ bool MetalCompiledGraph::BuildInternal(X::Value graph,X::Value symbols,const std
                     Op gate{Kind::GateNorm,cores,z,gatedFlat,epsilon};gate.arguments={cores,z,norm};gate.dimensions={vh,vd};ops_.push_back(std::move(gate));
                 }
 #endif
+                if(verificationTokens_&&(!chunkConv||!chunkDelta||chunk!=verificationTokens_||batch*chunk>4))
+                    throw std::invalid_argument("Verification recurrent block requires packed convolution and delta kernels");
                 size_t accumulated=0;
                 bool directWrite=false;
 #ifdef GARNET_METAL_LINEAR_CHUNK_DIRECT_WRITE
@@ -799,6 +879,18 @@ bool MetalCompiledGraph::BuildInternal(X::Value graph,X::Value symbols,const std
         if(!IsTensor(output))throw std::runtime_error("Initial Metal graph requires one tensor output");
         output_=lookup(output);
         if(packedParts.count(output_))outputParts_=packedParts.at(output_);
+        if(verificationTokens_) {
+            if(verificationBlocks!=1||outputParts_.size()!=3||
+               slots_[outputParts_[0]].rows!=size_t(inputShapes_[0][0])||
+               slots_[outputParts_[0]].columns!=verificationTokens_*size_t(inputShapes_[0][2])||
+               slots_[outputParts_[1]].columns!=slots_[inputs_[1]].columns||
+               slots_[outputParts_[2]].columns!=slots_[inputs_[2]].columns)
+                throw std::invalid_argument("Verification must return one complete decoder layer");
+            // Every weight must have been shared from this layer's source;
+            // another layer with coincidentally equal shapes is not its verifier.
+            for(const auto& entry:weightRecords_)if(!sharedWeights_.count(entry.first))
+                throw std::invalid_argument("Verification used a weight outside its source decoder layer");
+        }
         // All operations write fresh slots. Trace only matrices needed by the
         // returned value, resolving storage aliases before removing unused packs.
         auto canonical=[&](size_t id){while(aliases.count(id))id=aliases.at(id);return id;};
@@ -856,14 +948,16 @@ bool MetalCompiledGraph::BuildInternal(X::Value graph,X::Value symbols,const std
         // operations. Shape coincidence alone never enables indexed dispatch.
         if(inputs_.size()==6&&inputShapes_[0].size()==3) {
             const auto batch=size_t(inputShapes_[0][0]),chunk=size_t(inputShapes_[0][1]);
-            if(batch&&batch<=512&&chunk>1&&chunk<=512/batch&&
+            if(batch&&batch<=512&&(chunk>1||verificationTokens_)&&chunk<=512/batch&&
                inputShapes_[3]==std::vector<int64_t>{int64_t(batch),int64_t(chunk),3}&&
                inputShapes_[4]==std::vector<int64_t>{int64_t(batch),int64_t(chunk)}&&inputShapes_[5]==inputShapes_[4]) {
                 const size_t rows=batch*chunk;
-                std::vector<unsigned char> layout(slots_.size(),0); // 1 flat,2 packed;0 unknown/state.
+                // A one-token block has both physical layouts. Retain both
+                // proven identities instead of arbitrarily dropping one.
+                std::vector<unsigned char> layout(slots_.size(),0); // bit1 flat,bit2 packed;0 unknown/state.
                 layout[canonical(inputs_[0])]=2;
-                auto flat=[&](size_t id){return id<slots_.size()&&layout[canonical(id)]==1&&slots_[id].rows==rows;};
-                auto packed=[&](size_t id){return id<slots_.size()&&layout[canonical(id)]==2&&slots_[id].rows==batch&&slots_[id].columns%chunk==0;};
+                auto flat=[&](size_t id){return id<slots_.size()&&(layout[canonical(id)]&1)&&slots_[id].rows==rows;};
+                auto packed=[&](size_t id){return id<slots_.size()&&(layout[canonical(id)]&2)&&slots_[id].rows==batch&&slots_[id].columns%chunk==0;};
                 auto active=[&](size_t id){return canonical(id)==canonical(inputs_[5]);};
                 for(auto& op:ops_) {
                     bool outFlat=false,outPacked=false;
@@ -882,7 +976,7 @@ bool MetalCompiledGraph::BuildInternal(X::Value graph,X::Value symbols,const std
                     case Kind::BF16MatVec:
                         outFlat=flat(op.a);
                         if(outFlat&&op.kind==Kind::MatMul&&op.transpose&&slots_[op.b].affineInt4.Valid())
-                            op.indexedTokenProjection=true;
+                            {op.indexedTokenProjection=!verificationTokens_;op.indexedDecodeProjection=verificationTokens_!=0;}
                         break;
                     case Kind::Norm:
                     case Kind::Bias:
@@ -908,16 +1002,27 @@ bool MetalCompiledGraph::BuildInternal(X::Value graph,X::Value symbols,const std
                             (op.dimensions.size()==2||op.dimensions[2]==0)&&
                             slots_[op.out].columns==op.dimensions[0]*op.dimensions[1];break;
                     case Kind::AttentionChunk:
+                    case Kind::VerificationAttention:
                         outFlat=op.arguments.size()==8&&flat(op.arguments[0])&&flat(op.arguments[1])&&flat(op.arguments[2])&&
                             active(op.arguments[6])&&op.dimensions.size()==6&&op.dimensions[4]==chunk;break;
                     default:break;
                     }
-                    if(outFlat&&slots_[op.out].rows==rows)layout[canonical(op.out)]=1;
-                    else if(outPacked&&slots_[op.out].rows==batch)layout[canonical(op.out)]=2;
+                    unsigned char proven=0;
+                    if(outFlat&&slots_[op.out].rows==rows)proven|=1;
+                    if(outPacked&&slots_[op.out].rows==batch)proven|=2;
+                    if(proven)layout[canonical(op.out)]=proven;
                 }
             }
         }
 #endif
+        if(verificationTokens_)for(const auto& op:ops_)if(op.kind==Kind::MatMul||op.kind==Kind::BF16MatVec) {
+#ifdef GARNET_METAL_MLX_AFFINE_INT4
+            if(op.kind!=Kind::MatMul||!op.transpose||!slots_[op.b].affineInt4.Valid()||
+               !op.indexedDecodeProjection||op.indexedTokenProjection||
+               slots_[op.a].rows!=size_t(inputShapes_[0][0])*verificationTokens_)
+#endif
+                throw std::invalid_argument("Verification projection lacks proven FP32 token-row identity at slot "+std::to_string(op.a));
+        }
         // A delta temporary consumed only by its complete output/state slices
         // can write those independent matrices directly, without packing/copying.
         std::unordered_set<size_t> removedSlices;
@@ -1090,8 +1195,15 @@ bool MetalCompiledGraph::ComputeResetKVPrefix(size_t part) const {
 void MetalCompiledGraph::PrepareInputs(X::Value inputs,const std::unordered_set<size_t>& skip) {
     if(!ready_||inputs.runtime()!=Host()->runtime||!inputs.IsList()||inputs.Size()!=inputs_.size())
         throw std::runtime_error("Metal graph not ready or input count invalid");
+    const char* profile=std::getenv("GARNET_METAL_PROFILE_OPS");
+    if(verificationTokens_&&profile&&std::strcmp(profile,"1")==0)
+        throw std::invalid_argument("Verification does not support serialized operation profiling");
     std::unordered_map<size_t,std::vector<float>> hostInputs;
     std::unordered_set<size_t> controls;
+    if(verificationTokens_)for(size_t i=3;i<6;++i) {
+        if(skip.count(i))throw std::invalid_argument("Verification controls must be validated host inputs");
+        controls.insert(inputs_[i]);
+    }
     for(const auto& op:ops_)if(op.kind==Kind::KVUpdate||op.kind==Kind::KVChunk)
         for(auto i:{2,3,4}){auto id=op.arguments[i];controls.insert(controlSources_.count(id)?controlSources_.at(id).first:id);}
     for(const auto& op:ops_)if(op.kind==Kind::Layout&&op.dimensions[0])controls.insert(op.b);
@@ -1103,6 +1215,26 @@ void MetalCompiledGraph::PrepareInputs(X::Value inputs,const std::unordered_set<
             throw std::runtime_error("Metal runtime input shape/storage mismatch");
         auto lease=tensor.Acquire();auto data=static_cast<const float*>(info.data);
         if(controls.count(inputs_[i]))hostInputs[inputs_[i]]=std::vector<float>(data,data+slot.rows*slot.columns);
+    }
+    if(verificationTokens_) {
+        // Validate linear layers too, before ANY layer is encoded by a session.
+        // Partial blocks occupy a contiguous prefix of each physical row.
+        const auto& active=hostInputs.at(inputs_[5]);const auto& slots=hostInputs.at(inputs_[4]);
+        const auto& positions=hostInputs.at(inputs_[3]);
+        for(size_t base=0;base<active.size();base+=verificationTokens_) {
+            bool ended=false;
+            for(size_t t=0;t<verificationTokens_;++t) {
+                const auto i=base+t;
+                if(!std::isfinite(active[i])||(active[i]!=0&&active[i]!=1)||
+                   !std::isfinite(slots[i])||slots[i]<0||std::floor(slots[i])!=slots[i])
+                    throw std::invalid_argument("Invalid verification active mask/slot");
+                for(size_t axis=0;axis<3;++axis)if(!std::isfinite(positions[i*3+axis]))
+                    throw std::invalid_argument("Verification positions must be finite");
+                if(active[i]==0)ended=true;
+                else if(ended||slots[i]>=4096||slots[i]!=slots[base]+float(t))
+                    throw std::invalid_argument("Verification requires contiguous active prefixes and increasing slots");
+            }
+        }
     }
     for(const auto& op:ops_)if(op.kind==Kind::Layout&&op.dimensions[0]) {
         const auto& flags=hostInputs.at(op.b);
@@ -1169,7 +1301,7 @@ void MetalCompiledGraph::Encode(MetalContext& gpu,bool packedOutput,const MetalM
     // They identify expensive kernels; their latency is not a serving metric.
     const char* profile=std::getenv("GARNET_METAL_PROFILE_OPS");
     const bool profileOps=profile&&std::strcmp(profile,"1")==0;
-    static const char* names[]={"MatMul","BF16MatVec","Norm","Silu","Add","Bias","Mask","Conv","Delta","Slice","Prepare","GateNorm","Concat","NormRope","KVUpdate","KVChunk","AttentionChunk","Scores","AttentionContext","Vision","Layout","DeltaSplit","ConvChunk","DeltaChunk"};
+    static const char* names[]={"MatMul","BF16MatVec","Norm","Silu","Add","Bias","Mask","Conv","Delta","Slice","Prepare","GateNorm","Concat","NormRope","KVUpdate","KVChunk","AttentionChunk","Scores","AttentionContext","Vision","Layout","DeltaSplit","ConvChunk","DeltaChunk","VerificationAttention"};
     for(size_t i=0;i<ops_.size();++i) {
         if(!packedOutput&&!residentOps_[i])continue;
         const auto& op=ops_[i];
@@ -1312,6 +1444,12 @@ void MetalCompiledGraph::Encode(MetalContext& gpu,bool packedOutput,const MetalM
         }else if(op.kind==Kind::AttentionChunk) {
             std::vector<MetalMatrix> args;for(auto id:op.arguments)args.push_back(slots_[id].matrix);
             gpu.EncodeAttentionChunk(args,out,op.dimensions[0],op.dimensions[1],op.dimensions[2],op.dimensions[3],op.dimensions[4],op.dimensions[5]!=0);
+#ifdef GARNET_METAL_VERIFY_ATTENTION
+        }else if(op.kind==Kind::VerificationAttention) {
+            std::vector<MetalMatrix> args;for(auto id:op.arguments)args.push_back(slots_[id].matrix);
+            gpu.EncodeVerificationAttention(args,slots_[op.auxiliaryOutput].matrix,out,
+                op.dimensions[0],op.dimensions[1],op.dimensions[2],op.dimensions[3],op.dimensions[4],op.dimensions[5]!=0);
+#endif
         }else if(op.kind==Kind::KVUpdate) {
             auto& args=op.arguments;gpu.EncodeKVUpdate(slots_[args[0]].matrix,slots_[args[1]].matrix,slots_[args[2]].matrix,
                 slots_[args[3]].matrix,out,op.dimensions[0],op.dimensions[1],op.dimensions[2]);
@@ -1470,6 +1608,7 @@ void MetalCompiledGraph::SharePrefillScratch(const std::shared_ptr<MetalPrefillS
             op.kind==Kind::Silu||op.kind==Kind::Add||op.kind==Kind::Bias||op.kind==Kind::Slice||
             op.kind==Kind::Concat||op.kind==Kind::NormRope||op.kind==Kind::Layout||
             op.kind==Kind::Mask||op.kind==Kind::Prepare||op.kind==Kind::ConvChunk||op.kind==Kind::DeltaChunk||
+            op.kind==Kind::VerificationAttention||
             (op.kind==Kind::GateNorm&&op.dimensions.size()>=2&&
              (op.dimensions.size()==2||op.dimensions[2]==0)&&op.out<slots_.size()&&
              slots_[op.out].columns==op.dimensions[0]*op.dimensions[1]);

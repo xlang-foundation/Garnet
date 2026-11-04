@@ -373,6 +373,13 @@ X::Value MetalDecoderSession::RunUnlocked(X::Value graphs,X::Value hidden,X::Val
     locked=layers;if(head_)locked.push_back(head_);
     std::sort(locked.begin(),locked.end(),std::less<MetalCompiledGraph*>());
     if(std::adjacent_find(locked.begin(),locked.end())!=locked.end())throw std::invalid_argument("Metal session graphs must be distinct");
+#ifdef GARNET_METAL_VERIFY_ATTENTION
+    // Verification may only advance state belonging to the exact source layer.
+    // Lock those owners too so close/rebuild cannot race the family check.
+    for(size_t i=0;i<states_.size();++i)locked.push_back(Graph(owners_[i],Host()));
+    std::sort(locked.begin(),locked.end(),std::less<MetalCompiledGraph*>());
+    locked.erase(std::unique(locked.begin(),locked.end()),locked.end());
+#endif
     std::vector<std::unique_lock<std::mutex>> graphLocks;
     for(auto graph:locked)graphLocks.emplace_back(graph->mutex_);
 #ifdef GARNET_METAL_TOKEN_PREFIX_CACHE
@@ -402,6 +409,15 @@ X::Value MetalDecoderSession::RunUnlocked(X::Value graphs,X::Value hidden,X::Val
     // Validate and upload every host input before encoding or changing state.
     for(size_t i=0;i<layers.size();++i) {
         auto graph=layers[i];const auto& state=states_[i];
+#ifdef GARNET_METAL_VERIFY_ATTENTION
+        if(graph->verificationTokens_!=layers[0]->verificationTokens_)
+            throw std::invalid_argument("Verification cannot mix ordinary and verification layers");
+        if(graph->verificationTokens_) {
+            auto original=Graph(owners_[i],Host());
+            if(!original->ready_||!graph->SharesVerificationWeights(*original))
+                throw std::invalid_argument("Verification source layer was closed, rebuilt or replaced");
+        }
+#endif
         if(!graph->ready_||graph->outputParts_.size()!=3||graph->inputShapes_.size()<3||graph->inputShapes_[0]!=inputShape[0]||
             graph->inputShapes_[1]!=state.shape[0]||graph->inputShapes_[2]!=state.shape[1])
             throw std::invalid_argument("Metal session layer/state profile mismatch");

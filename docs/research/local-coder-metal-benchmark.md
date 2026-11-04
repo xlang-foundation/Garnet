@@ -2516,14 +2516,94 @@ build passes19. Sources and logs are under
 `fp32-verify-attention-on-ctest1.log` retaining the initial failure and
 `fp32-verify-attention-on-ctest3.log` recording the clean full gate.
 
-Remaining work includes an explicit compiled verification-graph mode that keeps
-every projection FP32 even for sparse temporal rows, per-position head outputs,
-hybrid Conv/GDN checkpoint/replay and accepted-prefix commit, lease/epoch/EOS/
-cancellation handling, and integration of the pinned auxiliary MTP parameters.
-The existing prefill path must not be relabeled as verification: sparse prefill
-can select BF16 operands and does not implement recurrent rollback. No27B
-verification inference, MTP acceptance, coding gate or speed result is claimed
-for this component milestone. All2x targets remain unmet.
+These component gates did not admit an integrated verifier. The subsequent
+compiled-graph gate is recorded below. Ordinary sparse prefill can select BF16
+operands and must not be relabeled as verification. Hybrid Conv/GDN checkpoint/
+replay and accepted-prefix commit, lease/epoch/EOS/cancellation handling, and
+integration of the pinned auxiliary MTP parameters remain unfinished. No MTP
+acceptance, speculative coding gate or speed result is admitted. All2x targets
+remain unmet.
+
+### Compiled FP32 verification graphs
+
+Under the same default-OFF extension, `build_verification_shared` explicitly
+compiles a packed decoder layer sharing all native weights with a ready ordinary
+six-input decoder layer. Hidden/state/control shapes must agree with that source.
+The current FP32 affine kernels support at most four physical token rows total:
+batch1 with1..4 tokens, batch2 with1..2, or batch4 with1. Batch2 with4 temporal
+tokens is rejected. This bound is kernel-specific, not an assertion that profile
+sizes are mandatory actual lengths.
+
+Lowering requires exactly one packed causal attention or Conv/GDN block. It
+rejects sequential-unrolled fallback, nonaffine projections and unproved token
+row layouts. All projections retain the ordinary FP32 decode math, including
+sparse blocks with fewer valid tokens than the prepared layout. Full attention
+uses the new FP32 probability boundary and a prepared probability matrix instead
+of the ordinary MPS chunk primitive. One-token layouts retain both flat and
+packed provenance, since their physical row order is identical.
+
+Host preflight checks contiguous active prefixes, increasing integral slots,
+finite positions and context bounds for every layer before any layer encodes
+state changes. Serialized per-operation profiling is rejected. Sessions require
+one consistent mode across layers and exact shared native weight ownership with
+their source layer, protected by the same graph locks through GPU completion.
+Closed/rebuilt sources and same-shaped replacements from another layer reject
+without advancing session state. Standalone compiled graphs retain their shared
+weights after source closure.
+
+The synthetic converted-affine four-layer gate compares all per-position hidden
+values, all vocabulary logits and every final Conv/GDN/KV word with repeated
+ordinary decode. Its396 checks pass with30,497,536 FP32 words equal bit for bit.
+Cases include physical occupancy0..4, different row lengths, inactive NaN inputs,
+two carried blocks, batch1/2/4, and the final legal4K cache slot. Controls, source
+closure/rebuild, mixed modes, wrong-layer weights, unrolled/five-token graphs
+and eight-row profiles are rejected. All four native owner counts return to zero.
+The diagnostic-only `tensor_io.verification_f32_sha256` hashes contiguous host
+FP32 logical bytes, avoiding large Python float lists in trained-state checks.
+Its signed-zero/raw-byte result is checked against Python SHA256.
+
+The initial integration failed its one-token row-layout proof and is retained in
+`compiled-verification-graph-source2` and `compiled-verification-graph-fixture1.log`.
+Retaining both proven layouts repaired that compiler rejection; it did not change
+arithmetic or numerical bounds. `compiled-verification-graph-fixture2.log` retains
+the earlier303-check parity pass; `compiled-verification-graph-fixture3.log`
+records the expanded396-check gate. The enabled native suite passes21/21 in
+`compiled-verification-graph-on-ctest1.log`.
+The disabled compatibility suite passes19/19 in
+`compiled-verification-graph-off-ctest1.log`. The enabled ordinary mixed-layer
+alias/scratch regression also passes, including independent request-row state,
+stale leases, private sessions, standalone rehydration and shared-pool lifetime;
+see `compiled-verification-ordinary-alias-regression1.log`.
+
+The pinned trained27B target also passes bounded forward parity in fresh,
+sequential batch1 processes at context capacity64 and4096. Both use the same
+native library and497 shared affine weight owners. Each checks six physical
+four-token blocks with actual occupancy0,1,2,3,3,4, including a carried2+3 case.
+All twelve hidden/logit hash pairs and all1,536 per-layer state hash pairs match
+repeated ordinary decode. All four native owner counters return to zero after
+each process. Prepared Metal allocation snapshots are15,157,477,376 bytes and
+16,222,142,464 bytes respectively; these are not peak-memory measurements.
+
+Raw records are `native27b-compiled-verification-forward64-1` and
+`native27b-compiled-verification-forward4096-2`. Each controller rehashes all15
+pinned asset files before launching its engine and retains binary/source hashes.
+The4K cases exercise the final legal slot with three seed positions and zeroed
+earlier cache entries. They do not qualify a full4K prompt or its latency. The
+first4K run is retained as `native27b-compiled-verification-forward4096-1`: its
+carried2+3 fixture mistakenly reserved only four positions, so native preflight
+rejected the fifth active token beyond capacity. Moving the seed start back by
+one for that case repaired the fixture without changing kernels, inputs' active
+counts, arithmetic or equality criteria. Its partial passes, rejection, and
+zero-owner cleanup remain in the original log. A CoreAnalytics context warning
+in that raw log is also retained; owner counts describe tracked Garnet resources,
+not all internal framework allocations.
+
+Per-position heads in this diagnostic use a small hidden download/upload before
+a shared FP32 four-row head and retain full vocabulary outputs. This is a
+correctness prototype, not the final device-resident verification API. No draft
+is generated or accepted, and no rejected speculative state is rolled back.
+The trained checks cover batch1 only. The synthetic batch2/4 gates do not admit
+trained multi-request verification profiles.
 
 A source-backed planning estimate is retained in
 `evidence/27b-m5-decode-bandwidth-analysis1.json`:497 native affine projections

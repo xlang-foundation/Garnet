@@ -58,9 +58,18 @@ outside the production profile catalog.
 The default-OFF native FP32 verification-attention primitive now matches repeated
 ordinary decode for probabilities, outputs and full KV contents in226 cases.
 Existing dense/selected four-row FP32 projections also match separate one-row
-decodes, including the full vocabulary head. These are component gates only;
-compiled verification graphs, per-token outputs and hybrid-state rollback remain
-unfinished. No speculative generation or verification speedup is admitted.
+decodes, including the full vocabulary head. An explicit compiled FP32 graph
+mode now also passes a synthetic four-layer hybrid gate:396 checks and30,497,536
+FP32 words match separate decode steps, including all per-position logits,
+partial blocks and the final4K cache slot. It supports at most four physical
+token rows total and rejects invalid controls or mismatched source weights before
+advancing session state. Hybrid-state rollback and speculative generation remain
+unfinished. The trained27B target also matches ordinary decode for hidden/logit
+hashes and every layer's state hashes across twelve bounded four-token blocks at
+capacity64/4096, including partial and carried blocks. The4K test uses three seed
+slots with earlier cache entries zero; it does not qualify a full4K prompt.
+Its per-position heads still use a diagnostic hidden download/upload. No
+verification speedup is admitted.
 
 ## Entry points and limits
 

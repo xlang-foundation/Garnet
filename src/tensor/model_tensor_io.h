@@ -10,6 +10,11 @@
 #include <limits>
 #include <cmath>
 #include <fstream>
+#ifdef GARNET_METAL_VERIFY_ATTENTION
+#include <CommonCrypto/CommonDigest.h>
+#include <iomanip>
+#include <sstream>
+#endif
 namespace Garnet {
 // Host-side token lookup and state movement. Neural projections belong to the graph.
 class ModelTensorIO {
@@ -39,6 +44,25 @@ class ModelTensorIO {
             throw X::Error("expected contiguous host FP32 tensor");
     }
 public:
+#ifdef GARNET_METAL_VERIFY_ATTENTION
+    // Diagnostic only: hash native FP32 bytes without Python float lists.
+    // This does not execute a model or change any GPU/session state.
+    std::string VerificationF32SHA256(X::Value source) {
+        X::Tensor tensor(source);RequireHost(tensor);auto lease=tensor.Acquire();auto info=tensor.Info();
+        CC_SHA256_CTX context;CC_SHA256_Init(&context);
+        auto* bytes=static_cast<const unsigned char*>(info.data);
+        uint64_t remaining=Count(std::vector<int64_t>(info.shape,info.shape+info.rank))*sizeof(float);
+        if(remaining>info.byte_size)throw X::Error("verification hash exceeds host tensor storage");
+        while(remaining) {
+            const auto count=CC_LONG(std::min<uint64_t>(remaining,UINT32_MAX));
+            CC_SHA256_Update(&context,bytes,count);bytes+=count;remaining-=count;
+        }
+        unsigned char digest[CC_SHA256_DIGEST_LENGTH];CC_SHA256_Final(digest,&context);
+        std::ostringstream result;result<<std::hex<<std::setfill('0');
+        for(auto byte:digest)result<<std::setw(2)<<unsigned(byte);
+        return result.str();
+    }
+#endif
     void Close(){embedding_=nullptr;embeddingWidth_=0;mapping_.Close();
 #ifdef GARNET_METAL_MLX_AFFINE_INT4
         affineEmbedding_.Close();affineEmbeddingReady_=false;
@@ -146,6 +170,9 @@ public:
             result.Append(X::Value(best));}return result;
     }
     BEGIN_PACKAGE(ModelTensorIO)
+#ifdef GARNET_METAL_VERIFY_ATTENTION
+        APISET().AddFunc<1>("verification_f32_sha256",&ModelTensorIO::VerificationF32SHA256);
+#endif
         APISET().AddFunc<1>("open",&ModelTensorIO::Open);
         APISET().AddFunc<0>("close",&ModelTensorIO::Close);
         APISET().AddProp("checkpoint_format",&ModelTensorIO::CheckpointFormat);
