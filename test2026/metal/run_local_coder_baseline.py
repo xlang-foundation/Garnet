@@ -63,7 +63,16 @@ def group_members(group):
             if int(line.split()[1]) == group and not line.split()[2].startswith('Z')]
 
 
-def stop_owned(process):
+def stop_owned(process,graceful_native=False):
+    graceful_closed=False
+    if graceful_native and process.poll() is None:
+        # Interrupt only the bridge: its finally block closes worker stdin and
+        # waits for native state cleanup before the owned group disappears.
+        process.send_signal(signal.SIGINT)
+        deadline=time.monotonic()+150
+        while group_members(process.pid) and time.monotonic()<deadline:
+            process.poll();time.sleep(.5)
+        graceful_closed=not group_members(process.pid)
     members = group_members(process.pid)
     if members:
         os.killpg(process.pid, signal.SIGTERM)
@@ -77,7 +86,8 @@ def stop_owned(process):
     process.wait(timeout=15)
     if group_members(process.pid):
         raise RuntimeError('Owned engine process group did not close')
-    return dict(exit_code=process.returncode, forced_kill=bool(remaining))
+    return dict(exit_code=process.returncode, forced_kill=bool(remaining),
+                graceful_native_requested=graceful_native,graceful_native_closed=graceful_closed)
 
 
 def wait_for_trailing_memory_sample(path, boundary, sampler, timeout=6):
@@ -116,6 +126,10 @@ def main():
     root = a.experiment_root.resolve()
     manifest = json.loads(a.manifest.read_text())
     spec = json.loads(a.engine_spec.read_text())
+    graceful_native=spec.get('graceful_native_shutdown',False)
+    request_timeout=spec.get('request_timeout_seconds',600)
+    if type(graceful_native) is not bool or type(request_timeout) not in (int,float) or not 0<request_timeout<=7200:
+        raise ValueError('Explicit bounded timeout and boolean native shutdown policy required')
     url = spec['url']
     if not url.startswith('http://127.0.0.1:'):
         raise ValueError('Reference endpoint must be loopback')
@@ -196,7 +210,7 @@ def main():
                                 dest = folder/(plan['id']+'-'+phase+'-'+str(wave))
                                 command = [sys.executable, str(frozen/client.name), '--url', url,
                                            '--cases', str(plan['cases']), '--workload', str(plan['workload']),
-                                           '--metadata', str(frozen/'metadata.json'), '--output', str(dest)]
+                                           '--metadata', str(frozen/'metadata.json'), '--timeout', str(request_timeout), '--output', str(dest)]
                                 with (folder/'client.log').open('a') as client_log:
                                     subprocess.run(command, cwd=root, check=True,
                                                    stdout=client_log, stderr=subprocess.STDOUT)
@@ -208,7 +222,7 @@ def main():
                     raise
                 finally:
                     if process is not None:
-                        cohort_state['shutdown'] = stop_owned(process)
+                        cohort_state['shutdown'] = stop_owned(process,graceful_native)
                     if memory is not None:
                         memory.terminate()
                         memory.wait(timeout=10)

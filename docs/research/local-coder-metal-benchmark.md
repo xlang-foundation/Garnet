@@ -1156,3 +1156,25 @@ and decode-interleaving cases. The experimental text worker can select
 unadmitted until native restored-prefix progress is integrated. The existing
 whole-prompt native prefix profile remains unchanged. Full learned chunked
 coding/HTTP qualification is next; no serving improvement is yet established.
+
+Native chunked64 concurrent coding completed:8/8 sandbox passes, every full
+sequence exactly matching the frozen single-request control,1,058 combined
+decode plans and9 observed decode advances between prefill chunks. Frozen
+chunk progression, tail sizes, row epochs, native close and uncached usage pass;
+all eight accounting tamper cases reject, including changed offsets, missing
+chunks and removed interleavings (`native27b-batch-chunked64-quality1`). Serving
+performance remains unmeasured for this schedule.
+
+The projection collector now has explicit maximum packed rows64(default) or128,
+so batch2/chunk64's actual shape can be measured. Metadata and shape audits
+validate the frozen bound; old21-cell archives remain auditable without change,
+and nine tamper checks pass. Native timing specifications can now request a
+bounded client timeout and bridge-first graceful shutdown explicitly. A real
+owned parent/child fixture verifies child cleanup before group disappearance;
+legacy group termination stays the default for unchanged reference specs.
+
+Next chunk selection study: compare8/16/32/64 on fixed prompts, context4K,
+uncached policy and the same native FP32 projection build. Kernel operator
+screening includes the actual16/32/64/128 packed row counts before expensive
+model admissions. Smaller tails and interleaving tradeoffs must be measured;
+no single chunk is assumed optimal for all prompt lengths or occupancy.

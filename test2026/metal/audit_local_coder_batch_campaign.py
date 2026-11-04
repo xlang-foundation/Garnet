@@ -82,7 +82,12 @@ def audit(root):
     if profile['batch']>1 and combined<1:issues.append('No actual combined decode')
     # The legacy timing collector stops the owned process group via SIGTERM.
     # Record this explicitly rather than asserting a graceful native close.
-    shutdown=dict(mode='owned process-group SIGTERM',native_close_observed=bool(closed),limitations=[])
+    graceful=spec.get('graceful_native_shutdown',False)
+    shutdown=dict(mode='root SIGINT then owned group fallback' if graceful else 'owned process-group SIGTERM',native_close_observed=bool(closed),limitations=[])
+    if graceful:
+        exit_path=root/'server/worker-exit.json'
+        exit_record=read(exit_path) if exit_path.exists() else {}
+        if len(closed)!=1 or exit_record.get('returncode')!=0 or not exit_record.get('expected_close'):issues.append('Requested graceful native shutdown evidence missing')
     if not closed:shutdown['limitations'].append('No graceful native close snapshot; rely on separate coding cleanup gate and collector group termination evidence')
     if any(e.get('memory',{}).get('metal_allocated_bytes',0)>1024*1024 for e in closed):issues.append('Observed native cleanup exceeds baseline')
     return dict(status='passed' if not issues else 'failed',issues=issues,scope=manifest['scope'],requests=requests,cells=cells,

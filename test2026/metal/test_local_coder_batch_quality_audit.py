@@ -5,17 +5,22 @@ Argument: collected study directory. No engine runs or candidate code executes.
 import json,shutil,sys,tempfile
 from pathlib import Path
 from audit_local_coder_batch_quality import audit
-root=Path(sys.argv[1]);assert audit(root)['status']=='passed'
-for mutation in ('no_combined','reused_epochs','bad_close','bad_text','cached_output'):
+root=Path(sys.argv[1]);baseline=audit(root);assert baseline['status']=='passed'
+mutations=['no_combined','reused_epochs','bad_close','bad_text','cached_output']
+if baseline.get('prefill_decode_interleavings',0):mutations+=['bad_chunk_offset','missing_chunks','no_chunk_interleaving']
+for mutation in mutations:
     with tempfile.TemporaryDirectory() as temporary:
         path=Path(temporary)/'study';shutil.copytree(root,path)
-        log=path/'server/worker-stdout.jsonl';lines=[]
+        log=path/'server/worker-stdout.jsonl';lines=[];deferred=[]
         for line in log.read_text().splitlines():
             outer=json.loads(line)
             try:event=json.loads(outer['line'])
             except json.JSONDecodeError:lines.append(line);continue
             if isinstance(event,dict):
                 kind=event.get('event')
+                if mutation=='bad_chunk_offset' and kind=='native_prefill_chunk':event['offset']+=1
+                if mutation=='missing_chunks' and kind=='native_prefill_chunk':continue
+                if mutation=='no_chunk_interleaving' and kind=='native_batch' and event['stage']=='decode':deferred.append(line);continue
                 if mutation=='no_combined' and kind=='native_batch':event['active_rows']=[1,0]
                 if mutation=='reused_epochs' and kind=='completed':event['native_epoch']=1
                 if mutation=='bad_close' and kind=='closed':event['memory']['metal_allocated_bytes']=1024**3
@@ -23,7 +28,7 @@ for mutation in ('no_combined','reused_epochs','bad_close','bad_text','cached_ou
                 if mutation=='cached_output' and kind in ('token','completed'):event['cached_tokens']=1
                 outer['line']=json.dumps(event)
             lines.append(json.dumps(outer))
-        log.write_text('\n'.join(lines)+'\n');result=audit(path)
+        log.write_text('\n'.join(lines+deferred)+'\n');result=audit(path)
         assert result['status']=='failed' and result['issues'],mutation
         print('batch_quality_audit rejects',mutation)
-print('batch_quality_audit PASS baseline and five tamper cases')
+print('batch_quality_audit PASS baseline and',len(mutations),'tamper cases')

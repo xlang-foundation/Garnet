@@ -10,7 +10,9 @@ def summarize(root):
     if [(run['cohort'],run['variant']) for run in status['runs']]!=[(cohort,variant) for cohort in range(1,cohorts+1) for variant in order]:issues.append('Cohort/order differs from manifest')
     if digest(root/'benchmark-source.cpp')!=manifest['source_sha256']:issues.append('Frozen source hash differs')
     if 'runner_sha256' in manifest and digest(root/'runner-source.py')!=manifest['runner_sha256']:issues.append('Frozen collector hash differs')
-    expected={(m,n,k) for m in (1,2,4,8,16,32,64) for n,k in ((5120,5120),(17408,5120),(5120,17408))}
+    maximum_rows=manifest.get('maximum_rows',64)
+    if maximum_rows not in (64,128):raise ValueError('Unsupported frozen maximum packed row count')
+    expected={(m,n,k) for m in (1,2,4,8,16,32,64,128) if m<=maximum_rows for n,k in ((5120,5120),(17408,5120),(5120,17408))}
     metadata={}
     for variant in order:
         for name,wanted in manifest['variants'][variant].items():
@@ -20,6 +22,7 @@ def summarize(root):
             rows=[json.loads(line) for line in (root/f'{variant}-cohort{cohort}.jsonl').read_text().splitlines()]
             meta=[row for row in rows if row['kind']=='metadata'];measurements=[row for row in rows if row['kind']=='cell']
             if len(meta)!=1 or meta[0]['device']!='Apple M5':issues.append(variant+': device/metadata differs')
+            if len(meta)==1 and meta[0].get('maximum_rows',64)!=maximum_rows:issues.append(variant+': packed row coverage metadata differs from frozen plan')
             metadata.setdefault(variant,[]).extend(meta)
             keys=[(row['rows'],row['outputs'],row['inner']) for row in measurements]
             if len(keys)!=len(expected) or set(keys)!=expected:issues.append(variant+': shape coverage differs')

@@ -74,6 +74,8 @@ int main(int argc,char** argv) {
     try {
         const int repetitions=argc>1?std::stoi(argv[1]):9,warmups=argc>2?std::stoi(argv[2]):3;
         Require(repetitions>=3&&repetitions<=100&&warmups>=1&&warmups<=20,"Invalid benchmark repetitions/warmups");
+        const int maximumRows=argc>3?std::stoi(argv[3]):64;
+        Require(maximumRows==64||maximumRows==128,"Invalid maximum packed row count");
         MetalContext gpu;bool mpp=false;
 #ifdef GARNET_METAL_MPP_AFFINE
         mpp=gpu.HasMPPAffine();
@@ -87,8 +89,8 @@ int main(int argc,char** argv) {
         if(mpp)operand="bfloat16";
 #endif
         std::cout<<std::setprecision(12)<<"{\"kind\":\"metadata\",\"device\":"<<std::quoted(gpu.DeviceName())<<",\"mpp_available\":"<<(mpp?"true":"false")
-                 <<",\"relaxed_precision\":"<<(relaxed?"true":"false")<<",\"mpp_n_major\":"<<(nMajor?"true":"false")<<",\"mpp_tile_k\":"<<tileK<<",\"operand_dtype\":"<<std::quoted(operand)<<",\"accumulator_dtype\":\"float32\",\"scope\":\"Synthetic affine projection GPU/wall latency; excludes loading, compilation and downloads; not model throughput\"}\n";
-        for(size_t m:{1,2,4,8,16,32,64})for(auto dimensions:std::array<std::array<size_t,2>,3>{{{5120,5120},{17408,5120},{5120,17408}}})
+                 <<",\"relaxed_precision\":"<<(relaxed?"true":"false")<<",\"mpp_n_major\":"<<(nMajor?"true":"false")<<",\"maximum_rows\":"<<maximumRows<<",\"mpp_tile_k\":"<<tileK<<",\"operand_dtype\":"<<std::quoted(operand)<<",\"accumulator_dtype\":\"float32\",\"scope\":\"Synthetic affine projection GPU/wall latency; excludes loading, compilation and downloads; not model throughput\"}\n";
+        for(size_t m:{1,2,4,8,16,32,64,128})if(m<=size_t(maximumRows))for(auto dimensions:std::array<std::array<size_t,2>,3>{{{5120,5120},{17408,5120},{5120,17408}}})
             Cell(gpu,m,dimensions[0],dimensions[1],warmups,repetitions);
         return 0;
     }catch(const std::exception& error){std::cerr<<error.what()<<"\n";return 1;}
