@@ -2469,6 +2469,62 @@ investigate reusing weight passes across verified tokens; the bandwidth planning
 estimate above is a hypothesis guide, not a measured traffic bound or an MTP
 speed result.
 
+### Native FP32 verification building blocks
+
+Default-OFF `GARNET_METAL_VERIFY_ATTENTION` adds an explicit low-level attention
+primitive for up to4 query tokens per request. It leaves ordinary decode and
+prefill routing unchanged. This is the first component of target verification,
+not an integrated speculative decoder.
+
+The new primitive preserves ordinary <=4096-context decode's two-dispatch
+rounding boundary: SIMD dot products and softmax write FP32 probabilities, then
+a separate kernel performs the same ordered value accumulation and gating.
+Queries read old cache entries plus earlier/current live K/V. Caller-owned
+probability/output matrices are prepared before execution; no GPU workspace is
+allocated while encoding. Bounds are batch1..4, chunk1..4, query heads<=32,
+KV heads<=8, head dimension<=256 and context<=4096. Matrices must be FP32 and
+zero-offset. The current controls contract requires host-readable, nonpending
+slot/mask storage and a contiguous active prefix with increasing integral slots.
+Duplicate/backward slots, gaps, nonbinary masks and pending controls are rejected
+before either dispatch changes output ownership. This restriction is explicit;
+it does not silently read back GPU-produced controls.
+
+The primitive passes226 cases against repeated ordinary native decode, with
+988,132,000 FP32 probability/context/full-KV words equal bit for bit. Cases
+include actual27B head geometry24/4/256 at4K capacity, positions ending at4095,
+physical four-token layouts with shorter active prefixes, inactive-query NaN
+poison, generic batch1/2/4, dimension tails, gated/ungated results, cache updates
+before or after attention, GPU-produced pending queries and partial submissions.
+Its470 rejection/readability checks include invalid metadata, pending controls,
+uninitialized inputs, output aliases, foreign writers and abort/recovery. Native
+owner counters return to zero.
+
+A separate test checks the existing FP32 affine four-row weight-reuse path
+against four independent one-row decodes. All48 dense/selected-row comparisons
+pass, covering8,832,576 output words, model K/N dimensions5120/17408 and the full
+248,320-column vocabulary projection. Valid occupancy0..4 includes noncontiguous
+selected rows; MPP/BF16 dispatches remain zero and prepared-profile misses remain
+zero. The first test run failed because the fixture incorrectly expected
+inactive indexed outputs to retain a sentinel. The API explicitly zeroes those
+rows; the repaired fixture checks positive zero while preserving strict active
+word equality. Both the original fixture and failed log remain archived. No
+kernel arithmetic or tolerance changed to repair that test.
+
+After the fixture repair, all21 enabled CTests pass; the disabled compatibility
+build passes19. Sources and logs are under
+`evidence/fp32-verify-attention-source1`, `source2` and `source3`, with
+`fp32-verify-attention-on-ctest1.log` retaining the initial failure and
+`fp32-verify-attention-on-ctest3.log` recording the clean full gate.
+
+Remaining work includes an explicit compiled verification-graph mode that keeps
+every projection FP32 even for sparse temporal rows, per-position head outputs,
+hybrid Conv/GDN checkpoint/replay and accepted-prefix commit, lease/epoch/EOS/
+cancellation handling, and integration of the pinned auxiliary MTP parameters.
+The existing prefill path must not be relabeled as verification: sparse prefill
+can select BF16 operands and does not implement recurrent rollback. No27B
+verification inference, MTP acceptance, coding gate or speed result is claimed
+for this component milestone. All2x targets remain unmet.
+
 A source-backed planning estimate is retained in
 `evidence/27b-m5-decode-bandwidth-analysis1.json`:497 native affine projections
 contain14,412,349,440 logical payload/coefficient bytes. Apple's published M5

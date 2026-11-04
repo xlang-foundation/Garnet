@@ -55,6 +55,13 @@ token equality, but five cells report lower overall output rates than the
 control. All2x targets remain unmet. The policy stays disabled by default and
 outside the production profile catalog.
 
+The default-OFF native FP32 verification-attention primitive now matches repeated
+ordinary decode for probabilities, outputs and full KV contents in226 cases.
+Existing dense/selected four-row FP32 projections also match separate one-row
+decodes, including the full vocabulary head. These are component gates only;
+compiled verification graphs, per-token outputs and hybrid-state rollback remain
+unfinished. No speculative generation or verification speedup is admitted.
+
 ## Entry points and limits
 
 Profile sizes are upper bounds. Actual input lengths and occupied request slots

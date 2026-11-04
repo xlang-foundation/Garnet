@@ -300,6 +300,15 @@ public:
         const MetalMatrix&,size_t kvHeads,size_t dim,size_t capacity,size_t chunk,bool contiguousSlots=false);
     void EncodeAttentionChunk(const std::vector<MetalMatrix>&,const MetalMatrix&,size_t heads,size_t kvHeads,
         size_t dim,size_t capacity,size_t chunk,bool gated,bool reference=false);
+#ifdef GARNET_METAL_VERIFY_ATTENTION
+    // Explicitly prepared probability/output matrices; no GPU workspace allocation.
+    // Inputs use chunk attention order: Q,K,V,oldK,oldV,slots,active,gate.
+    // Host-readable, nonpending controls must describe a contiguous active
+    // prefix in each row. The cache remains unchanged; commit KV separately.
+    void EncodeVerificationAttention(const std::vector<MetalMatrix>&,const MetalMatrix& probabilities,
+        const MetalMatrix& output,size_t heads,size_t kvHeads,size_t dim,size_t capacity,size_t chunk,bool gated);
+    size_t LastVerificationAttentionDispatches() const;
+#endif
     size_t LastChunkProbabilityReuseDispatches() const;
     size_t LastChunkAttentionIndex32Dispatches() const;
     size_t LastChunkAttentionOptimizedDispatches() const;

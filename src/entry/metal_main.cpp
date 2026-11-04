@@ -280,6 +280,9 @@ public:
 #ifdef GARNET_METAL_LINEAR_CHUNK_ACTIVE_ONLY
         info+="; linear_chunk_active_only";
 #endif
+#ifdef GARNET_METAL_VERIFY_ATTENTION
+        info+="; verification_attention_fp32";
+#endif
 #ifdef GARNET_METAL_BODY_SHAPE
         info+="; body_shape";
 #endif

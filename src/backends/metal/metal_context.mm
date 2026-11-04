@@ -1,5 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 #include "metal_context.h"
+#ifdef GARNET_METAL_VERIFY_ATTENTION
+#include "verification_attention_shader.h"
+#endif
 #ifdef GARNET_METAL_CHUNK_ATTENTION_MPS
 #include "chunk_attention_mps_shader.h"
 #include "chunk_attention_policy.h"
@@ -353,6 +356,9 @@ struct MetalPipelines {
     id<MTLComputePipelineState> conv,convChunk;
     id<MTLComputePipelineState> delta,deltaSplit;
     id<MTLComputePipelineState> deltaSplitParallel,deltaChunk;
+#ifdef GARNET_METAL_VERIFY_ATTENTION
+    id<MTLComputePipelineState> verificationScores,verificationContext;
+#endif
     id<MTLComputePipelineState> slice,sliceVector;
 #if defined(GARNET_METAL_CHUNK_PROBABILITY_REUSE)||defined(GARNET_METAL_CHUNK_ATTENTION_INDEX32)
     id<MTLComputePipelineState> attentionChunkReference;
@@ -426,6 +432,9 @@ struct MetalContext::Impl {
     size_t fusedHeadArgmaxDispatches=0;
     size_t bodyShapeDispatches=0,bodyShapeMisses=0;
     size_t chunkProbabilityReuseDispatches=0,chunkAttentionIndex32Dispatches=0;
+#ifdef GARNET_METAL_VERIFY_ATTENTION
+    size_t verificationAttentionDispatches=0;
+#endif
     size_t chunkAttentionMPSDispatches=0;
     size_t chunkAttentionBucketDispatches=0,chunkAttentionTailDispatches=0,chunkAttentionBucketCapacity=0,chunkAttentionUnknownControls=0;
 #ifdef GARNET_METAL_CHUNK_ATTENTION_MPS
@@ -1625,6 +1634,9 @@ kernel void bf16_native_dot_t128(device const float* a [[buffer(0)]],device cons
 #ifdef GARNET_METAL_ROW_FINAL_HIDDEN
         source=[source stringByAppendingString:[NSString stringWithUTF8String:kRowFinalHiddenShader]];
 #endif
+#ifdef GARNET_METAL_VERIFY_ATTENTION
+        source=[source stringByAppendingString:[NSString stringWithUTF8String:kVerificationAttentionShader]];
+#endif
 #ifdef GARNET_METAL_CHUNK_ATTENTION_MPS
         source=[source stringByAppendingString:[NSString stringWithUTF8String:kChunkAttentionMPSShader]];
 #endif
@@ -1911,6 +1923,13 @@ kernel void bf16_native_dot_t128(device const float* a [[buffer(0)]],device cons
         impl_->kernels->scores=[impl_->device newComputePipelineStateWithFunction:[library newFunctionWithName:@"attention_scores"] error:&error];
         impl_->kernels->scoresSerial=[impl_->device newComputePipelineStateWithFunction:[library newFunctionWithName:@"attention_scores_serial"] error:&error];
         impl_->kernels->attentionContext=[impl_->device newComputePipelineStateWithFunction:[library newFunctionWithName:@"attention_context"] error:&error];
+#ifdef GARNET_METAL_VERIFY_ATTENTION
+        impl_->kernels->verificationScores=[impl_->device newComputePipelineStateWithFunction:[library newFunctionWithName:@"verification_attention_scores"] error:&error];
+        impl_->kernels->verificationContext=[impl_->device newComputePipelineStateWithFunction:[library newFunctionWithName:@"verification_attention_context"] error:&error];
+        if(!impl_->kernels->verificationScores||!impl_->kernels->verificationContext||
+           impl_->kernels->verificationScores.threadExecutionWidth!=32||impl_->kernels->verificationScores.maxTotalThreadsPerThreadgroup<128)
+            throw std::runtime_error("Cannot compile FP32 verification attention kernels");
+#endif
         impl_->kernels->visionNorm=[impl_->device newComputePipelineStateWithFunction:[library newFunctionWithName:@"vision_norm"] error:&error];
         impl_->kernels->visionScores=[impl_->device newComputePipelineStateWithFunction:[library newFunctionWithName:@"vision_scores"] error:&error];
 #ifdef GARNET_METAL_MPS_VISION_SCORES
@@ -3246,6 +3265,9 @@ void MetalContext::Begin() {
     @autoreleasepool {
     if(impl_->command)throw std::logic_error("Metal command batch already open");
     if(impl_->submitted.count)throw std::logic_error("Undrained Metal partial batches");
+#ifdef GARNET_METAL_VERIFY_ATTENTION
+    impl_->verificationAttentionDispatches=0;
+#endif
     impl_->screenedHeadDispatches=0;
     impl_->screenedHeadSeedRows=0;
     impl_->interleavedScreenDispatches=0;
@@ -3508,7 +3530,9 @@ void MetalContext::EncodeStateKernel(unsigned operation,const std::vector<MetalM
         for(const auto& input:inputs)if(second->matrix.data==input.impl_->matrix.data)
             throw std::invalid_argument("In-place secondary state output is unsupported");
     }
-#ifdef GARNET_METAL_ROW_FINAL_HIDDEN
+#ifdef GARNET_METAL_VERIFY_ATTENTION
+    constexpr unsigned maxOperation=23;
+#elif defined(GARNET_METAL_ROW_FINAL_HIDDEN)
     constexpr unsigned maxOperation=21;
 #elif defined(GARNET_METAL_RESIDENT_KV_INPLACE)
     constexpr unsigned maxOperation=20;
@@ -3520,6 +3544,11 @@ void MetalContext::EncodeStateKernel(unsigned operation,const std::vector<MetalM
         impl_->kernels->concat,impl_->kernels->normRope,impl_->kernels->kvUpdate,impl_->kernels->scores,impl_->kernels->attentionContext,impl_->kernels->vision,impl_->kernels->layout,impl_->kernels->kvChunk,impl_->kernels->attentionChunk,impl_->kernels->kvUpdateVector,impl_->kernels->sliceVector,impl_->kernels->deltaSplit,impl_->kernels->kvChunkVector,impl_->kernels->convChunk,impl_->kernels->deltaChunk,impl_->kernels->kvInplace
 #ifdef GARNET_METAL_ROW_FINAL_HIDDEN
         ,impl_->kernels->lastActiveHidden
+#elif defined(GARNET_METAL_VERIFY_ATTENTION)
+        ,nil
+#endif
+#ifdef GARNET_METAL_VERIFY_ATTENTION
+        ,impl_->kernels->verificationScores,impl_->kernels->verificationContext
 #endif
     };
     auto pipeline=pipelines[operation];
@@ -3650,6 +3679,15 @@ void MetalContext::EncodeStateKernel(unsigned operation,const std::vector<MetalM
     } else if(parallelDelta) {
         if(pipeline.threadExecutionWidth!=32||pipeline.maxTotalThreadsPerThreadgroup<128)throw std::runtime_error("Parallel recurrent reduction requires 32-lane SIMD groups");
         [encoder dispatchThreadgroups:MTLSizeMake(threads/16,1,1) threadsPerThreadgroup:MTLSizeMake(128,1,1)];
+#endif
+#ifdef GARNET_METAL_VERIFY_ATTENTION
+    } else if(operation==22) {
+        const auto* fields=static_cast<const uint64_t*>(parameters);
+        const size_t capacity=fields[5];
+        if(pipeline.threadExecutionWidth!=32||pipeline.maxTotalThreadsPerThreadgroup<128)
+            throw std::runtime_error("Verification scores require four SIMD groups");
+        [encoder setThreadgroupMemoryLength:((capacity*sizeof(float)+15)&~size_t(15)) atIndex:0];
+        [encoder dispatchThreadgroups:MTLSizeMake(threads,1,1) threadsPerThreadgroup:MTLSizeMake(128,1,1)];
 #endif
     } else if(operation==19) {
         if(pipeline.threadExecutionWidth!=32||pipeline.maxTotalThreadsPerThreadgroup<128)throw std::runtime_error("Recurrent chunk requires 32-lane SIMD groups");
@@ -4103,6 +4141,70 @@ void MetalContext::EncodeAttentionChunk(const std::vector<MetalMatrix>& inputs,c
 #endif
     EncodeStateKernel(13,inputs,output,&p,sizeof(p),Elements(q.rows,heads),nullptr,reference);
 }
+#ifdef GARNET_METAL_VERIFY_ATTENTION
+void MetalContext::EncodeVerificationAttention(const std::vector<MetalMatrix>& inputs,
+    const MetalMatrix& probabilities,const MetalMatrix& output,size_t heads,size_t kvHeads,
+    size_t dim,size_t capacity,size_t chunk,bool gated) {
+    @autoreleasepool {
+    if(!impl_->command)throw std::logic_error("Begin a Metal verification batch first");
+    if(inputs.size()!=8||!probabilities.impl_||!output.impl_||!chunk||chunk>4||
+       !heads||heads>32||!kvHeads||kvHeads>8||heads%kvHeads||!dim||dim>256||!capacity||capacity>4096)
+        throw std::invalid_argument("Invalid bounded verification attention profile");
+    for(const auto& input:inputs)if(!input.impl_)throw std::invalid_argument("Missing verification attention input");
+    const auto q=inputs[0].impl_->matrix,k=inputs[1].impl_->matrix,v=inputs[2].impl_->matrix,
+        kc=inputs[3].impl_->matrix,vc=inputs[4].impl_->matrix,s=inputs[5].impl_->matrix,
+        a=inputs[6].impl_->matrix,g=inputs[7].impl_->matrix,p=probabilities.impl_->matrix,o=output.impl_->matrix;
+    const size_t batch=kc.rows,rows=Elements(batch,chunk),queryWidth=Elements(heads,dim),
+        kvWidth=Elements(kvHeads,dim),cacheWidth=Elements(kvWidth,capacity);
+    if(!batch||batch>4||q.rows!=rows||q.columns!=queryWidth||k.rows!=rows||k.columns!=kvWidth||
+       v.rows!=rows||v.columns!=kvWidth||kc.columns!=cacheWidth||vc.rows!=batch||vc.columns!=cacheWidth||
+       s.rows!=batch||s.columns!=chunk||a.rows!=batch||a.columns!=chunk||g.rows!=rows||g.columns!=queryWidth||
+       p.rows!=rows||p.columns!=Elements(heads,capacity)||o.rows!=rows||o.columns!=queryWidth)
+        throw std::invalid_argument("Verification attention layout mismatch");
+    // Validate both dispatches before changing any output/pending ownership.
+    // Probabilities are an explicit, separately owned prepared resource.
+    if(p.device!=impl_->device||o.device!=impl_->device||p.dataType!=MPSDataTypeFloat32||o.dataType!=MPSDataTypeFloat32||p.offset||o.offset||p.data==o.data)
+        throw std::invalid_argument("Verification output device/type or alias mismatch");
+    for(const auto* target:{&probabilities,&output})if(target->impl_->pending&&!impl_->pendingOutputs.count(target->impl_.get()))
+        throw std::logic_error("Verification output is pending in another batch");
+    for(const auto& input:inputs) {
+        const auto matrix=input.impl_->matrix;
+        if(matrix.device!=impl_->device||matrix.dataType!=MPSDataTypeFloat32||matrix.offset||matrix.data==p.data||matrix.data==o.data)
+            throw std::invalid_argument("Verification input device/type or output alias mismatch");
+        if(!input.impl_->ready&&!(input.impl_->pending&&impl_->pendingOutputs.count(input.impl_.get())))
+            throw std::logic_error("Uninitialized verification attention input");
+    }
+    if(!inputs[5].impl_->ready||inputs[5].impl_->pending||!inputs[6].impl_->ready||inputs[6].impl_->pending||
+       s.data.storageMode!=MTLStorageModeShared||a.data.storageMode!=MTLStorageModeShared||!s.data.contents||!a.data.contents)
+        throw std::logic_error("Verification controls require host-readable nonpending storage");
+    const auto* slots=reinterpret_cast<const float*>(static_cast<const char*>(s.data.contents)+s.offset);
+    const auto* flags=reinterpret_cast<const float*>(static_cast<const char*>(a.data.contents)+a.offset);
+    for(size_t row=0;row<batch;++row) {
+        bool ended=false;float first=0;
+        for(size_t token=0;token<chunk;++token) {
+            const float flag=flags[row*(a.rowBytes/4)+token];
+            if(flag!=0&&flag!=1)throw std::invalid_argument("Verification active flags must be zero or one");
+            if(flag==0){ended=true;continue;}
+            const float slot=slots[row*(s.rowBytes/4)+token];
+            if(ended||!std::isfinite(slot)||slot<0||slot>=float(capacity)||slot!=std::floor(slot))
+                throw std::invalid_argument("Verification requires a contiguous active prefix");
+            if(!token)first=slot;
+            if(slot!=first+float(token))throw std::invalid_argument("Verification slots must increase by one");
+        }
+    }
+    struct Params {uint64_t batch,chunk,heads,kvHeads,dim,capacity,qStride,kStride,vStride,
+        kcStride,vcStride,sStride,aStride,gStride,pStride,oStride,gated;};
+    Params params{batch,chunk,heads,kvHeads,dim,capacity,q.rowBytes/4,k.rowBytes/4,v.rowBytes/4,
+        kc.rowBytes/4,vc.rowBytes/4,s.rowBytes/4,a.rowBytes/4,g.rowBytes/4,p.rowBytes/4,o.rowBytes/4,uint64_t(gated)};
+    EncodeStateKernel(22,{inputs[0],inputs[1],inputs[3],inputs[5],inputs[6]},probabilities,
+        &params,sizeof(params),Elements(rows,heads));
+    EncodeStateKernel(23,{probabilities,inputs[2],inputs[4],inputs[7],inputs[5],inputs[6]},output,
+        &params,sizeof(params),Elements(rows,queryWidth));
+    ++impl_->verificationAttentionDispatches;
+    }
+}
+size_t MetalContext::LastVerificationAttentionDispatches() const {return impl_->verificationAttentionDispatches;}
+#endif
 size_t MetalContext::LastChunkProbabilityReuseDispatches() const {return impl_->chunkProbabilityReuseDispatches;}
 size_t MetalContext::LastChunkAttentionIndex32Dispatches() const {return impl_->chunkAttentionIndex32Dispatches;}
 size_t MetalContext::LastChunkAttentionMPSDispatches() const {return impl_->chunkAttentionMPSDispatches;}
@@ -4221,6 +4323,9 @@ void MetalContext::SubmitAndWait() {
 }
 double MetalContext::LastGPUMs() const {return impl_->gpuMs;}
 void MetalContext::Abort() {
+#ifdef GARNET_METAL_VERIFY_ATTENTION
+    impl_->verificationAttentionDispatches=0;
+#endif
     impl_->screenedHeadDispatches=0;
     impl_->screenedHeadSeedRows=0;
     impl_->interleavedScreenDispatches=0;
