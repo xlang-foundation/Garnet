@@ -256,6 +256,9 @@ size_t MetalCompiledGraph::LowerVision(size_t input,const X::Value& attrs) {
     return output;
 }
 void MetalCompiledGraph::Clear() {
+#ifdef GARNET_METAL_RETIRE_NONRESIDENT_PACKS
+    nonresidentPackSlots_=0;
+#endif
 #ifdef GARNET_METAL_SHARED_PREFILL_SCRATCH
     prefillScratch_.reset();sharedPrefillScratchBytes_=0;
 #endif
@@ -1451,6 +1454,34 @@ void MetalCompiledGraph::RetireResidentDefaults() {
         std::vector<size_t> plan;
         for(size_t part=1;part<=2;++part){auto id=inputs_[part];if(inputShapes_[part].size()<3||std::find(outputParts_.begin(),outputParts_.end(),id)!=outputParts_.end())continue;if(eligible(id))plan.push_back(id);}
         if(!ops_.empty()&&ops_.back().kind==Kind::Concat&&ops_.back().out==output_&&!residentOps_.back()&&std::find(inputs_.begin(),inputs_.end(),output_)==inputs_.end()&&std::find(outputParts_.begin(),outputParts_.end(),output_)==outputParts_.end()&&eligible(output_))plan.push_back(output_);
+#ifdef GARNET_METAL_RETIRE_NONRESIDENT_PACKS
+        // Only fresh complete concat outputs, never arbitrary "unused" slots.
+        // Resolve ownership by storage identity so resident aliases protect the
+        // same allocation even when the writer uses another slot number.
+        std::unordered_set<uintptr_t> residentStorage;
+        auto mark=[&](size_t id){if(id<infos.size()&&infos[id].identity)residentStorage.insert(infos[id].identity);};
+        for(size_t i=0;i<ops_.size();++i)if(residentOps_[i]) {
+            const auto& op=ops_[i];mark(op.a);mark(op.b);mark(op.out);mark(op.auxiliaryOutput);
+            for(auto id:op.arguments)mark(id);
+        }
+        for(size_t i=0;i<ops_.size();++i) {
+            const auto& op=ops_[i];const auto id=op.out;
+            if(residentOps_[i]||op.kind!=Kind::Concat||id==output_||!eligible(id)||
+               residentStorage.count(infos[id].identity)||
+               std::find(inputs_.begin(),inputs_.end(),id)!=inputs_.end()||
+               std::find(outputParts_.begin(),outputParts_.end(),id)!=outputParts_.end()||
+               std::find(plan.begin(),plan.end(),id)!=plan.end())continue;
+            // Build lowers concats into fresh output allocations. Reconfirm
+            // that this is the only writer and no prior op consumes it.
+            bool safe=true;
+            for(size_t j=0;j<ops_.size();++j) {
+                const auto& other=ops_[j];
+                if(j!=i&&(other.out==id||other.auxiliaryOutput==id))safe=false;
+                if(j<=i&&(other.a==id||other.b==id||std::find(other.arguments.begin(),other.arguments.end(),id)!=other.arguments.end()))safe=false;
+            }
+            if(safe){plan.push_back(id);++nonresidentPackSlots_;}
+        }
+#endif
 #ifdef GARNET_METAL_RETIRE_INPLACE_DEFAULTS
         // In-place session execution binds every proven output alias to its
         // private cache. Retire only complete, exclusively owned alias groups;

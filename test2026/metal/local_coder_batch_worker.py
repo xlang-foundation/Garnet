@@ -37,6 +37,9 @@ def main():
     indexed=profile.get('indexed_projections',False)
     if type(indexed) is not bool or indexed!=('indexed_token_projections' in garnet.backend_info()):
         raise ValueError('Frozen profile requires its explicit indexed projection policy')
+    retire_packs=profile.get('retire_nonresident_packs',False)
+    if type(retire_packs) is not bool or retire_packs!=('retired_nonresident_packs' in garnet.backend_info()):
+        raise ValueError('Frozen profile requires its explicit nonresident pack policy')
     if 'require_lifetime_reuse' in profile:
         lifetime=profile['require_lifetime_reuse']
         if type(lifetime) is not bool or lifetime!=('prefill_lifetime_reuse' in garnet.backend_info()):

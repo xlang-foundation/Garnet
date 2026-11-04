@@ -178,6 +178,9 @@ public:
 #ifdef GARNET_METAL_INDEXED_TOKEN_PROJECTIONS
     info+="; indexed_token_projections";
 #endif
+#ifdef GARNET_METAL_RETIRE_NONRESIDENT_PACKS
+    info+="; retired_nonresident_packs";
+#endif
 #ifdef GARNET_METAL_CACHED_MATRIX_METADATA
     info += " cached_matrix_metadata";
 #endif

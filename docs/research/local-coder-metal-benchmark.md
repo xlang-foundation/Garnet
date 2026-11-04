@@ -1331,3 +1331,36 @@ The frozen worker profile requires an exact indexed-policy backend match and
 emits actual sparse dispatch counts before head prediction can reset counters.
 The previous mixed coding archive still passes all eleven audit tamper checks.
 Learned indexed model qualification remains pending.
+
+`native27b-indexed-mixed-chunk16-quality1` passes8/8 sandboxed tasks, all eight
+full token sequences exactly matching the FP32 single-request reference. The
+stream audit passes1061 combined decode plans,51 mixed forwards,45 interleavings
+and56 indexed-prefill diagnostic records. Sparse records demonstrate496 actual
+indexed projection dispatches; full-active chunks keep the regular route.
+All13 tamper checks pass, including missing/invalid indexed-route records.
+The captured memory inventory declares17,645,764,256 unique resource bytes:
+14,425,303,040 weights,1,391,460,384 session state,23,884,288 shared scratch,
+1,368,436,736 other prefill storage and436,679,808 other decode/head storage.
+A hash-linked inspection report identifies594,542,592bytes with no resident
+read/write references; this diagnostic alone is not a proof to free them.
+
+`GARNET_METAL_RETIRE_NONRESIDENT_PACKS` is a separate default-OFF candidate.
+It retires only uniquely owned, default-layout, complete concat outputs with
+one writer, no earlier reader, no resident storage references, and no input,
+public output-part or weight ownership. Existing standalone materialization
+restores these defaults before packed execution. The candidate builds and
+passes13 native tests (`retired-packs-ctest1.log`). Initial restoration checks
+used a decode fixture with no extra retireable pack, then failed to re-retire
+already-restored buffers between cycles; both failure logs remain. The corrected
+prefill fixture (`retired-packs-native-restoration3.log`) exercises an actual
+retired pack in both linear and full attention, three cycles each, checking
+standalone/private-session parity, rehydration and two-session/host-input
+isolation. Native candidate code was unchanged between these fixture repairs.
+Learned-model cleanup, memory saving and quality remain unqualified.
+
+The next indexed serving admission is frozen at
+`native27b-indexed-mixed-chunk16-http-admission1`: only short/long single-client
+cells, one cold measured wave each, no warmups,128 maximum generated tokens.
+This isolates latency feedback before larger-batch changes; it does not replace
+the full repeated serving campaign or qualify aggregate throughput. It uses the
+already-qualified frozen indexed library/worker and graceful native shutdown.

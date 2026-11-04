@@ -76,6 +76,9 @@ class MetalCompiledGraph {
 #ifdef GARNET_METAL_LAZY_RESIDENT_DEFAULTS
     bool lazyDefaultPlanReady_=false;std::vector<size_t> lazyDefaultSlots_;
     size_t lazyRetiredBytes_=0,lazyRehydratedBytes_=0;
+#ifdef GARNET_METAL_RETIRE_NONRESIDENT_PACKS
+    size_t nonresidentPackSlots_=0;
+#endif
 #endif
     void RetireResidentDefaults();
     void MaterializeDefault(size_t slot);
@@ -99,6 +102,9 @@ public:
     size_t LazyRetiredBytes() const;
     size_t LazyRehydratedBytes() const;
     size_t LazyPlannedSlots() const;
+#ifdef GARNET_METAL_RETIRE_NONRESIDENT_PACKS
+    size_t NonresidentPackSlots() const {std::lock_guard<std::mutex> lock(mutex_);return nonresidentPackSlots_;}
+#endif
 #ifdef GARNET_METAL_SHARED_PREFILL_SCRATCH
     size_t SharedPrefillScratchBytes() const {return sharedPrefillScratchBytes_;}
 #endif
@@ -123,6 +129,9 @@ public:
         APISET().AddProp("lazy_default_retired_bytes",&MetalCompiledGraph::LazyRetiredBytes);
         APISET().AddProp("lazy_default_rehydrated_bytes",&MetalCompiledGraph::LazyRehydratedBytes);
         APISET().AddProp("lazy_default_planned_slots",&MetalCompiledGraph::LazyPlannedSlots);
+#ifdef GARNET_METAL_RETIRE_NONRESIDENT_PACKS
+        APISET().AddProp("nonresident_pack_slots",&MetalCompiledGraph::NonresidentPackSlots);
+#endif
         APISET().AddProp("ready",&MetalCompiledGraph::Ready);
         APISET().AddProp("compile_ms",&MetalCompiledGraph::CompileMs);
         APISET().AddProp("last_inference_ms",&MetalCompiledGraph::LastInferenceMs);
