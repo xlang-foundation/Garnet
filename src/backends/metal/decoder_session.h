@@ -47,6 +47,36 @@ class MetalDecoderSession {
     std::vector<X::Value> owners_;
     std::vector<State> states_;
     struct VerificationRun;
+#ifdef GARNET_METAL_MTP_BRIDGE
+    struct MTPCapture {
+        MetalMatrix flat,normalized,packed,active;
+        std::vector<float> flags;
+    };
+    struct MTPWorkspace {
+        X::Value graphOwner,headOwner;
+        MetalCompiledGraph *graph=nullptr,*head=nullptr;
+        uint64_t generation=0,headGeneration=0;
+        size_t batch=0,chunk=0,width=0,heads=0,dim=0,capacity=0,currentCapture=0;
+        MetalMatrix normWeight,lastTarget,lastHidden,prediction,baseHidden,basePrediction,backupSlots,backupActive;
+        std::array<MetalMatrix,7> inputs;
+        std::array<MetalMatrix,2> cache,backup;
+        std::map<size_t,MTPCapture> captures;
+        std::map<size_t,MetalMatrix> slices,zeros;
+        std::vector<size_t> committed,tentative;
+        std::vector<float> backupFlags;
+        float epsilon=0,offset=0;
+        bool pending=false;
+        size_t teacherCalls=0,draftCalls=0,restoreCalls=0;
+        std::string stats="{}";
+    };
+    std::unique_ptr<MTPWorkspace> mtp_;
+    void ResetMTP();
+    void ResetMTPRow(size_t);
+    void ValidateMTPTarget(size_t);
+    void EncodeMTPTarget(const MetalMatrix&,size_t,bool verification);
+    void CommitMTPTarget(const MetalMatrix&,const std::vector<float>&,size_t);
+    X::Value MTPStep(X::Value,X::Value,X::Value,X::Value,int64_t,X::Value,bool);
+#endif
 #ifdef GARNET_METAL_VERIFY_ATTENTION
     struct VerificationWorkspace {
         X::Value graphs,headOwner;
@@ -131,6 +161,13 @@ class MetalDecoderSession {
     void ResetRowUnlocked(int64_t row);
 #endif
 public:
+#ifdef GARNET_METAL_MTP_BRIDGE
+    bool PrepareMTP(X::Value graph,X::Value head,X::Value sourceChunks);
+    X::Value MTPTeacher(X::Value embedding,X::Value positions,X::Value slots,X::Value active,int64_t sourceOffset,X::Value epochs);
+    X::Value MTPDraft(X::Value embedding,X::Value positions,X::Value slots,X::Value active,X::Value epochs);
+    X::Value MTPSnapshot();
+    std::string MTPStatsJson();
+#endif
     bool Build(X::Value graphs,X::Value head);
     X::Value Run(X::Value graphs,X::Value hidden,X::Value positions,
         X::Value slots,X::Value active,int64_t predictionToken);
@@ -242,6 +279,13 @@ public:
     double GPUMs() const {return gpuMs_;}
     double WaitMs() const {return waitMs_;}
     BEGIN_PACKAGE(MetalDecoderSession)
+#ifdef GARNET_METAL_MTP_BRIDGE
+        APISET().AddFunc<3>("prepare_mtp",&MetalDecoderSession::PrepareMTP);
+        APISET().AddFunc<6>("mtp_teacher",&MetalDecoderSession::MTPTeacher);
+        APISET().AddFunc<5>("mtp_draft",&MetalDecoderSession::MTPDraft);
+        APISET().AddFunc<0>("mtp_snapshot",&MetalDecoderSession::MTPSnapshot);
+        APISET().AddFunc<0>("mtp_stats_json",&MetalDecoderSession::MTPStatsJson);
+#endif
 #ifdef GARNET_METAL_VERIFY_ATTENTION
         APISET().AddFunc<2>("prepare_verification",&MetalDecoderSession::PrepareVerification);
         APISET().AddFunc<8>("verify_greedy",&MetalDecoderSession::VerifyGreedy);

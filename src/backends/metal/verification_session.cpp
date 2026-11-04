@@ -37,6 +37,9 @@ bool MetalDecoderSession::PrepareVerification(X::Value values,X::Value headValue
     throw std::logic_error("Native greedy verification requires prepared affine and row-hidden extensions");
 #else
     std::lock_guard<std::mutex> sessionLock(mutex_);
+#ifdef GARNET_METAL_MTP_BRIDGE
+    if(mtp_)throw std::invalid_argument("Prepare verification before attaching MTP");
+#endif
     if(!gpu_||poisoned_||states_.empty()||!head_||values.runtime()!=Host()->runtime||!values.IsList()||values.Size()!=states_.size())
         throw std::invalid_argument("Prepare verification on a ready decoder session with its full layer list");
     auto staged=std::make_unique<VerificationWorkspace>();staged->graphs=X::Value::List(Host());
@@ -213,6 +216,9 @@ void MetalDecoderSession::CommitVerification(VerificationRun& run,const std::vec
     gpu_->EncodeLayout(rowFinalHidden_,rowFinalHidden_,p.finalHidden,0);
     gpu_->EncodeLayout(p.predictions,p.predictions,p.packedPredictions,0);
     gpu_->EncodeLastActiveHidden(p.packedPredictions,p.acceptedMask,prediction_,p.chunk);
+#ifdef GARNET_METAL_MTP_BRIDGE
+    if(mtp_)CommitMTPTarget(p.acceptedMask,run.accepted,p.chunk);
+#endif
     gpu_->SubmitAndWait();stats["commit_gpu_ms"]=gpu_->LastGPUMs();stats["sequential_gpu_duration_sum_ms"]=targetGPU+gpu_->LastGPUMs();
     stats["commit_replay_layers"]=replayLayers;stats["commit_kv_restores"]=gpu_->LastVerificationKVRestores();
     stats["consumed_inputs"]=run.consumed;stats["emitted_tokens"]=run.emitted;stats["eos"]=run.eos;

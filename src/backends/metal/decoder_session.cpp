@@ -21,6 +21,9 @@ X::Value TensorValue(X3PackageHost* host,MetalContext& gpu,const MetalMatrix& ma
 }
 }
 void MetalDecoderSession::Clear() {
+#ifdef GARNET_METAL_MTP_BRIDGE
+    mtp_.reset();
+#endif
 #ifdef GARNET_METAL_VERIFY_ATTENTION
     verification_.reset();verificationStats_="{}";
 #endif
@@ -119,6 +122,9 @@ void MetalDecoderSession::ResetUnlocked() {
 #endif
 #endif
     }
+#ifdef GARNET_METAL_MTP_BRIDGE
+    ResetMTP();
+#endif
     hidden_=MetalMatrix();hiddenShape_.clear();kvInplaceUpdates_=0;poisoned_=false;inferenceMs_=0;prepareMs_=encodeMs_=gpuMs_=waitMs_=0;
 #ifdef GARNET_METAL_DENSE_PREFIX_CACHE
     prefixFreshReset_=true;
@@ -172,6 +178,9 @@ void MetalDecoderSession::ResetRowUnlocked(int64_t row) {
 #endif
 #ifdef GARNET_METAL_TOKEN_PREFIX_CACHE
     rowTokens_[size_t(row)].clear();rowTokensValid_[size_t(row)]=1;
+#endif
+#ifdef GARNET_METAL_MTP_BRIDGE
+    ResetMTPRow(size_t(row));
 #endif
     rowResetBytes_=bytes;poisoned_=false;
 }
@@ -414,6 +423,10 @@ X::Value MetalDecoderSession::RunUnlocked(X::Value graphs,X::Value hidden,X::Val
     const auto& inputShape=layers[0]->inputShapes_;
     if(inputShape.empty()||(inputShape[0].size()!=2&&inputShape[0].size()!=3))throw std::invalid_argument("Metal session hidden profile missing");
     const size_t chunk=inputShape[0].size()==3?size_t(inputShape[0][1]):1;
+#ifdef GARNET_METAL_MTP_BRIDGE
+    if(mtp_)ValidateMTPTarget(chunk);
+    std::vector<float> mtpRunFlags;
+#endif
     if(predictionToken<-1||(predictionToken>=0&&(!head_||uint64_t(predictionToken)>=chunk)))
         throw std::invalid_argument("Metal session prediction token/head invalid");
 #ifdef GARNET_METAL_VERIFY_ATTENTION
@@ -440,6 +453,12 @@ X::Value MetalDecoderSession::RunUnlocked(X::Value graphs,X::Value hidden,X::Val
         else throw std::invalid_argument("Metal session unsupported controls");
         graph->PrepareInputs(inputs,i?std::unordered_set<size_t>{0,1,2}:std::unordered_set<size_t>{1,2});
     }
+#ifdef GARNET_METAL_MTP_BRIDGE
+    if(mtp_) {
+        X::Tensor flags(active);auto lease=flags.Acquire();const auto* data=static_cast<const float*>(flags.Info().data);
+        mtpRunFlags.assign(data,data+mtp_->batch*chunk);
+    }
+#endif
 #ifdef GARNET_METAL_ROW_FINAL_HIDDEN
     std::vector<uint8_t> rowWillUpdate(states_[0].rows,0);
 #endif
@@ -542,6 +561,9 @@ X::Value MetalDecoderSession::RunUnlocked(X::Value graphs,X::Value hidden,X::Val
 #ifdef GARNET_METAL_DENSE_PREFIX_CACHE
     prefixFreshReset_=false;
 #endif
+#ifdef GARNET_METAL_MTP_BRIDGE
+    if(mtp_)gpu_->Update(mtp_->captures.at(chunk).active,mtpRunFlags);
+#endif
     kvInplaceUpdates_=0;constantHeadDispatches_=0;singleCoderHeadDispatches_=0;residualNormDispatches_=0;packedPrefillNormDispatches_=0;globalHalfAlphaDispatches_=0;wideBatchPrefillDispatches_=0;interleavedBodyDispatches_=0;coalescedBlockDispatches_=0;mlpGraphDispatches_=0;joinedGlobalMlpBlocks_=0;poisoned_=true;gpu_->Begin();
     try {
 #ifdef GARNET_METAL_VERIFY_ATTENTION
@@ -605,6 +627,9 @@ X::Value MetalDecoderSession::RunUnlocked(X::Value graphs,X::Value hidden,X::Val
         if(!verification)gpu_->EncodeLastActiveHidden(current,layers[0]->slots_[layers[0]->inputs_.back()].matrix,rowFinalHidden_,chunk);
 #endif
         const size_t hiddenWidth=size_t(inputShape[0].back())*chunk;
+#ifdef GARNET_METAL_MTP_BRIDGE
+        if(mtp_)EncodeMTPTarget(current,chunk,verification!=nullptr);
+#endif
         gpu_->EncodeSliceGroups(current,hidden_,1,hiddenWidth,0,hiddenWidth);
 #ifdef GARNET_METAL_VERIFY_ATTENTION
         if(verification)EncodeVerificationHead(*verification,current);
@@ -672,6 +697,12 @@ X::Value MetalDecoderSession::RunUnlocked(X::Value graphs,X::Value hidden,X::Val
     }
 #endif
     inferenceMs_=std::chrono::duration<double,std::milli>(std::chrono::steady_clock::now()-start).count();
+#ifdef GARNET_METAL_MTP_BRIDGE
+    if(mtp_) {
+        if(!verification)mtp_->captures.at(chunk).flags=std::move(mtpRunFlags);
+        mtp_->currentCapture=chunk;
+    }
+#endif
     poisoned_=false;return result;
 }
 #ifdef GARNET_METAL_ROW_FINAL_HIDDEN
@@ -762,6 +793,9 @@ void MetalDecoderSession::ValidatePrefixOwners(std::vector<std::unique_lock<std:
 #endif
 int64_t MetalDecoderSession::CapturePrefix(int64_t tokens) {
     std::lock_guard<std::mutex> lock(mutex_);
+#ifdef GARNET_METAL_MTP_BRIDGE
+    if(mtp_)throw std::invalid_argument("MTP auxiliary prefix snapshots are not prepared");
+#endif
 #ifndef GARNET_METAL_DENSE_PREFIX_CACHE
     (void)tokens;throw std::logic_error("Dense prefix cache is not enabled");
 #else
@@ -786,6 +820,9 @@ int64_t MetalDecoderSession::CapturePrefix(int64_t tokens) {
 }
 int64_t MetalDecoderSession::RestorePrefix(int64_t id) {
     std::lock_guard<std::mutex> lock(mutex_);
+#ifdef GARNET_METAL_MTP_BRIDGE
+    if(mtp_)throw std::invalid_argument("MTP auxiliary prefix snapshots are not prepared");
+#endif
 #ifndef GARNET_METAL_DENSE_PREFIX_CACHE
     (void)id;throw std::logic_error("Dense prefix cache is not enabled");
 #else
@@ -859,6 +896,19 @@ std::vector<MetalResourceReference> MetalDecoderSession::MemoryReferences() {
         append(p.predictions,SIZE_MAX,"verification_predictions",{});append(p.packedPredictions,SIZE_MAX,"verification_packed_predictions",{});
         append(p.acceptedMask,SIZE_MAX,"verification_accepted_mask",{});append(p.replayMask,SIZE_MAX,"verification_replay_mask",{});
         append(p.finalHidden,SIZE_MAX,"verification_visible_hidden",{});
+    }
+#endif
+#ifdef GARNET_METAL_MTP_BRIDGE
+    if(mtp_) {
+        const auto& m=*mtp_;
+        for(size_t i=0;i<7;++i)append(m.inputs[i],i,"mtp_input",{});
+        for(size_t i=0;i<2;++i){append(m.cache[i],i,"mtp_private_cache",{});append(m.backup[i],i,"mtp_draft_backup",{});}
+        append(m.lastTarget,SIZE_MAX,"mtp_normalized_target_last",{});append(m.lastHidden,SIZE_MAX,"mtp_last_hidden",{});
+        append(m.prediction,SIZE_MAX,"mtp_prediction",{});append(m.baseHidden,SIZE_MAX,"mtp_base_hidden",{});append(m.basePrediction,SIZE_MAX,"mtp_base_prediction",{});
+        append(m.backupSlots,SIZE_MAX,"mtp_backup_slots",{});append(m.backupActive,SIZE_MAX,"mtp_backup_active",{});
+        for(const auto& c:m.captures){append(c.second.flat,c.first,"mtp_target_flat",{});append(c.second.normalized,c.first,"mtp_target_normalized",{});append(c.second.packed,c.first,"mtp_target_packed",{});append(c.second.active,c.first,"mtp_target_active",{});}
+        for(const auto& s:m.slices)append(s.second,s.first,"mtp_slice",{});
+        for(const auto& s:m.zeros)append(s.second,s.first,"mtp_zero_tail",{});
     }
 #endif
     return result;

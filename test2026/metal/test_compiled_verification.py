@@ -88,4 +88,4 @@ fixture.write_text(json.dumps(dict(config=config, checkpoint=str(checkpoint))))
 (output/'checkpoint-sha256.txt').write_text(hashlib.sha256(checkpoint.read_bytes()).hexdigest()+'\n')
 runner = sys.argv[5] if len(sys.argv)>5 else 'run_compiled_verification.py'
 subprocess.run([runtime, '-B', str(Path(__file__).with_name(runner)),
-                str(fixture), build, source], check=True)
+                str(fixture), build, source]+sys.argv[6:], check=True)

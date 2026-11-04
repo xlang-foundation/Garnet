@@ -24,7 +24,7 @@ capacity=int(capacity);assert capacity in (64,4096)
 fixture=output/'fixture.json';fixture.write_text(json.dumps(dict(config=str(model/'config.json'),
     checkpoint=str(model/'model.safetensors.index.json'),capacity=capacity,output=str(output/'result.json'))))
 runner=Path(__file__).with_name(sys.argv[7] if len(sys.argv)>7 else 'run_trained_verification_forward.py')
-command=[runtime,'-B',str(runner),str(fixture),build,source]
+command=[runtime,'-B',str(runner),str(fixture),build,source]+sys.argv[8:]
 paths=[Path(build)/'libgarnet.dylib',Path(runtime),Path(source)/'src/backends/metal/compiled_graph.cpp',
        Path(source)/'src/backends/metal/compiled_graph.h',Path(source)/'src/backends/metal/decoder_session.cpp',
        Path(source)/'src/tensor/model_tensor_io.h',runner,Path(__file__)]

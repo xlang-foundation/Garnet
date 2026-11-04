@@ -2917,3 +2917,90 @@ This is an auxiliary-only graph admission. Native target-hidden transfer,
 shared target output projection, shifted teacher prefill/correction, draft
 acceptance rates, complete coding/full-token parity and speculative serving
 performance remain unfinished. No model speedup is claimed.
+
+### Native MTP target bridge and teacher correction
+
+When the MTP, verification, row-hidden and prepared affine extensions are
+enabled together, `native_mtp_target_bridge` adds session-owned auxiliary state.
+`prepare_mtp(graph, projection_only_head, source_chunks)` binds the raw auxiliary
+graph, the target's actual output-projection buffers and up to eight declared
+target capture profiles. Decode and verification profiles are required. Each
+profile retains final target normalization on the GPU using the target head's
+existing norm weights/offset. The bridge captures every position, including
+wide prefill rows; teacher calls select bounded windows with existing native
+slice/concat/layout operations. Norms and matrix layouts do not change model
+operations.
+
+`mtp_teacher(embedding, positions, slots, active, source_offset, epochs)` pairs
+captured normalized target rows with shifted embeddings. `mtp_draft` uses the
+last normalized auxiliary hidden vector instead. The caller supplies embeddings
+and controls; hidden states, caches, intermediate projections and full logits
+remain on the GPU in these native calls. Only argmax IDs/status cross back to
+the caller. A diagnostic `mtp_snapshot` separately downloads state for tests.
+The projection-only head must share the target's affine payload/coefficient
+buffers and must not apply the target final norm to already normalized MTP
+outputs.
+
+Auxiliary K/V, accepted and tentative lengths, last hidden and per-position
+target captures belong to the native session. The first tentative draft backs
+up only a bounded K/V span and the committed last hidden. Teacher correction
+overwrites the accepted prefix, restores rejected original slots and selects
+the last accepted auxiliary hidden. Inactive rows recover their committed
+hidden too. Each call holds session, graph, head and scratch-owner locks through
+GPU completion. Epochs, source availability, contiguous cache history and
+profile bounds reject before state advances. Release/reset clears auxiliary
+row state; GPU/nonfinite failures poison both target and auxiliary access until
+full reset. Prefix-cache combination explicitly rejects while auxiliary prefix
+snapshots remain unqualified.
+
+Synthetic `native-mtp-bridge-fixture7` passes13 cases/297 checks across batch1/2/4
+and capacities16/4096. Native target-to-MTP transfer, full auxiliary K/V and last
+hidden match standalone MTP fed diagnostic ordinary-target normalized states
+exactly. Coverage includes every target acceptance depth, unequal/inactive row
+correction, eight-token target capture consumed in four-token windows, explicit
+leases, row release, rejected source access and poison/reset. These are short
+prefixes at the stated capacities, not full4K prompt qualification.
+
+The first trained bridge gate uses the pinned actual27B factory and raw parent
+auxiliary on the nine-token plain coding prompt `def add(a, b):\n    return`.
+All16 output IDs match ordinary target decoding. Five target verification
+blocks consume3/2/4/4/2 inputs;10 of13 real auxiliary proposals are accepted.
+Every committed target hidden and every layer's Conv/GDN/KV hashes match the
+ordinary reference. Auxiliary caches/last hidden and next predictions match a
+standalone teacher oracle after prefill, drafting and correction. This is a
+single short completion; it is not the frozen eight-task coding gate or an
+acceptance-rate estimate for general workloads. Diagnostic references execute
+in the same process, so their GPU timings do not qualify performance.
+
+Final trained evidence is `native27b-mtp-bridge3`:383 checks,640 exact target
+state-hash pairs and66 auxiliary K/V/last-hidden hash pairs across22 stages.
+The output IDs match the earlier diagnostic runs. The inventory confirms that
+the MTP output head shares the target's three affine buffers and retains eight
+BF16 auxiliary matrices. Prepared Metal allocation is16,042,147,840 bytes;
+all four native owner counts close to zero. This is a snapshot, not a peak.
+`native-mtp-bridge-review1.json` independently reviews1,127 provenance,
+token/accounting, state-hash, inventory and cleanup checks. The trained bridge
+uses physical batch1/capacity64; synthetic multi-row checks do not qualify
+trained batched serving.
+
+Two native defects are retained. `native-mtp-bridge-fixture1` rejected a
+last-active selector after a pending base-hidden copy; correction now selects
+into the completed committed bank before publishing the result. The failed
+source/library is `native-mtp-bridge-source1`. `native-mtp-bridge-fixture6`
+showed that an unowned target row could reject after changing capture metadata;
+capture flags are now staged and published only after successful execution.
+The failed source/library is `native-mtp-bridge-source2`. The diagnostic fixture3
+also used a rank-two slice helper on rank-three hidden state; it now selects
+the token with the existing rank-three helper. No arithmetic or target assets
+changed.
+
+The final enabled native suite passes23/23, disabled compatibility passes19/19,
+and the existing greedy verifier still passes211 cases/2,633 checks. Final
+bridge sources and both libraries are retained in `native-mtp-bridge-source3`.
+
+These are native bridge primitives, called by a diagnostic driver. A combined
+native generation transaction, teacher prefill without unnecessary head calls,
+wide real-prompt admission, complete coding/full-token gates, continuous
+speculative scheduling and auxiliary prefix reuse remain unfinished. The
+earlier native target prefix/scheduler gates do not admit those combinations.
+All2x decode/throughput and half-TTFT targets remain unmet.

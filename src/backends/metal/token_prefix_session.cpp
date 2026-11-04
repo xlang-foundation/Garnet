@@ -40,6 +40,9 @@ void MetalDecoderSession::ValidateTokenOwners(std::vector<std::unique_lock<std::
 }
 bool MetalDecoderSession::ConfigureTokenPrefix(X::Value identity,int64_t maxEntries,int64_t maxBytes) {
     std::lock_guard<std::mutex> lock(mutex_);
+#ifdef GARNET_METAL_MTP_BRIDGE
+    if(mtp_)throw std::invalid_argument("MTP auxiliary prefix snapshots are not prepared");
+#endif
     if(!gpu_||poisoned_||!head_||!requestRows_||tokenCache_||maxEntries<1||maxEntries>256||maxBytes<1024||maxBytes>512LL*1024*1024||
        identity.runtime()!=Host()->runtime||!identity.IsList()||identity.Size()!=6)
         throw std::invalid_argument("Token-prefix configuration requires a ready session, six identity strings and bounded host budget");

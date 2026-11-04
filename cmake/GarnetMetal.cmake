@@ -494,6 +494,9 @@ option(GARNET_METAL_MTP "Explicit raw-BF16 seven-input MTP graph, up to four tok
 if(GARNET_METAL_MTP)
     target_compile_definitions(garnet_metal PUBLIC GARNET_METAL_MTP=1)
 endif()
+if(GARNET_METAL_MTP AND GARNET_METAL_VERIFY_ATTENTION AND GARNET_METAL_ROW_FINAL_HIDDEN AND GARNET_METAL_MLX_AFFINE_INT4 AND GARNET_METAL_AFFINE_PROFILE AND GARNET_METAL_INDEXED_DECODE AND GARNET_METAL_ACTIVE_DECODE_PROJECTIONS AND GARNET_METAL_INDEXED_TOKEN_PROJECTIONS AND GARNET_METAL_LINEAR_CHUNK_CONV AND GARNET_METAL_LINEAR_CHUNK_DELTA)
+    target_compile_definitions(garnet_metal PUBLIC GARNET_METAL_MTP_BRIDGE=1)
+endif()
 option(GARNET_METAL_QWEN35_EXTENDED_PREFILL "Validate Qwen3.5 prefill chunks up to 80 tokens" OFF)
 if(GARNET_METAL_QWEN35_EXTENDED_PREFILL)
     if(NOT GARNET_METAL_LINEAR_CHUNK_CONV OR NOT GARNET_METAL_LINEAR_CHUNK_DELTA OR NOT GARNET_METAL_PARALLEL_DELTA_SPLIT)
@@ -710,6 +713,7 @@ if(GARNET_METAL_XMODEL)
     add_library(garnet SHARED src/entry/metal_main.cpp src/backends/metal/compiled_graph.cpp
         src/backends/metal/decoder_session.cpp
         src/backends/metal/verification_session.cpp
+        src/backends/metal/mtp_session.cpp
         src/backends/metal/token_prefix_session.cpp
         src/tensor/garnet_tensor.cpp src/tensor/graph_capture.cpp src/core/lowering_context.cpp
         src/model/safetensors_index.cpp src/tokenizer/qwen_tokenizer.cpp)

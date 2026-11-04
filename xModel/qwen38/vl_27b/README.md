@@ -102,6 +102,16 @@ target/embedding inputs; target-hidden transfer, shared target vocabulary projec
 shifted teacher correction and real speculative generation remain unfinished.
 See `metal_mtp.py` and the research record for the explicit numerical criterion.
 
+The opt-in native MTP target bridge now retains normalized target rows on the
+GPU, shares the target vocabulary projection and owns auxiliary caches, draft
+span rollback and teacher correction. Synthetic batch1/2/4 cases include
+unequal/inactive corrections, wide capture windows, leases and poison/reset.
+A real nine-token coding prompt produces16 IDs matching ordinary decoding;
+10 of13 actual MTP proposals are accepted across five verified blocks, with
+exact committed target and auxiliary state parity. This short diagnostic is not
+the eight-task coding gate or a speed measurement. The native combined driver,
+continuous speculative scheduling and auxiliary prefix reuse remain unfinished.
+
 ## Entry points and limits
 
 Profile sizes are upper bounds. Actual input lengths and occupied request slots
