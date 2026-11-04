@@ -199,6 +199,11 @@ public:
 #endif
 #ifdef GARNET_METAL_AFFINE_PROFILE
     info+="; bounded_affine_kernel_profiles";
+#ifdef GARNET_METAL_AFFINE_PROFILE_TGP128
+    info+="; affine_profile_max_threads=128";
+#else
+    info+="; affine_profile_max_threads=0";
+#endif
 #endif
 #ifdef GARNET_METAL_RETIRE_PREFILL_INPUTS
     info+="; retired_prefill_hidden_inputs";

@@ -56,6 +56,9 @@ def main():
     if type(kernel_profiles) is not bool or kernel_profiles!=('bounded_affine_kernel_profiles' in garnet.backend_info()):
         raise ValueError('Frozen profile requires its explicit bounded kernel compilation policy')
     if kernel_profiles:
+        thread_limit=profile.get('affine_profile_max_threads',0)
+        if type(thread_limit) is not int or thread_limit not in (0,128) or 'affine_profile_max_threads='+str(thread_limit) not in garnet.backend_info():
+            raise ValueError('Frozen compiled profile requires its explicit compiler thread bound')
         close_limit=profile.get('compiled_engine_close_bytes_limit')
         if type(close_limit) is not int or not 0<close_limit<=4*1024*1024:raise ValueError('Compiled engine requires its frozen bounded post-close driver allocation limit')
         for key in ('expected_body_affine_projections','expected_head_affine_projections'):
@@ -157,12 +160,12 @@ def main():
         def record_kernel_profile(stage,physical,valid):
             if not kernel_profiles:return
             count=decoder.session.affine_profile_dispatches;misses=decoder.session.affine_profile_misses
-            pipelines=decoder.session.affine_profile_pipeline_count
+            pipelines=decoder.session.affine_profile_pipeline_count;max_threads=decoder.session.affine_profile_max_threads
             expected=profile['expected_head_affine_projections'] if stage=='head' else profile['expected_body_affine_projections']
             if stage=='decode':expected+=profile['expected_head_affine_projections']
             emit(dict(event='native_affine_profile',stage=stage,affine_dispatches=count,misses=misses,
-                pipeline_count=pipelines,active_rows=valid,physical_rows=physical))
-            if count!=expected or misses!=0 or not 0<pipelines<=512:
+                pipeline_count=pipelines,pipeline_max_threads=max_threads,active_rows=valid,physical_rows=physical))
+            if count!=expected or misses!=0 or not 0<pipelines<=512 or (thread_limit==128 and max_threads!=128):
                 raise ValueError('Bounded kernel profile '+stage+' projection coverage or fallback differs')
         def execute(graphs,hidden,positions,slots,active,prediction,epochs,ids):
             if prefix:result=decoder.session.run_tokens(graphs,hidden,positions,slots,active,prediction,epochs,ids)

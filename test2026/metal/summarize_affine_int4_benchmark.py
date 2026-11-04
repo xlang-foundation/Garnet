@@ -50,12 +50,18 @@ def summarize(root):
                 wants_profile=bool(meta and meta[0].get('affine_profile_available',False))
                 if row.get('affine_profile_dispatches_per_call',0)!=int(wants_profile):issues.append('Bounded affine profile dispatch evidence differs')
                 if row.get('affine_profile_misses_per_call',0)!=0:issues.append('Bounded affine profile fell back during measurement')
+                thread_limit=meta[0].get('affine_profile_requested_max_threads',0) if meta else 0
+                actual_threads=row.get('affine_profile_pipeline_max_threads',0)
+                if thread_limit not in (0,128) or (thread_limit==128 and actual_threads!=128):issues.append('Affine profile compiler thread bound differs')
+                if 'affine_profile_pipeline_max_threads' in row and ((wants_profile and not 128<=actual_threads<=1024) or (not wants_profile and actual_threads!=0)):issues.append('Invalid affine profile pipeline thread inventory')
                 pipelines=row.get('affine_profile_pipeline_count',0)
                 if type(pipelines) is not int or (wants_profile and not 1<=pipelines<=512) or (not wants_profile and pipelines!=0):issues.append('Invalid bounded affine pipeline inventory')
                 cells.setdefault(key,[]).append(dict(cohort=cohort,gpu_ms=statistics.median(row['gpu_ms']),wall_ms=statistics.median(row['wall_ms']),sample_max_abs=row['sample_max_abs']))
         types={item.get('operand_dtype','float32') for item in metadata[variant]}
         if len(types)!=1 or any(item.get('accumulator_dtype','float32')!='float32' for item in metadata[variant]):issues.append(variant+': operand/accumulator metadata changed')
         cache=(root/variant/'CMakeCache.txt').read_text()
+        thread_limits={item.get('affine_profile_requested_max_threads',0) for item in metadata[variant]}
+        if thread_limits!={128 if 'GARNET_METAL_AFFINE_PROFILE_TGP128:BOOL=ON' in cache else 0}:issues.append(variant+': compiler thread bound differs from build')
         profile_values={item.get('affine_profile_available',False) for item in metadata[variant]}
         expected_profile='GARNET_METAL_AFFINE_PROFILE:BOOL=ON' in cache
         if profile_values!={expected_profile}:issues.append(variant+': bounded affine profile availability differs from build')

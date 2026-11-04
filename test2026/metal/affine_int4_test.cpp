@@ -100,6 +100,9 @@ void Case(MetalContext& gpu,size_t m,size_t n,size_t k) {
     gpu.SubmitAndWait();const auto actual=gpu.Download(out);
 #ifdef GARNET_METAL_AFFINE_PROFILE
     Require(gpu.LastAffineProfileDispatches()==1&&gpu.LastAffineProfileMisses()==0,"Prepared affine profile missed");
+#ifdef GARNET_METAL_AFFINE_PROFILE_TGP128
+    Require(gpu.LastAffineProfileMaxThreads()==128,"Prepared affine pipeline has the wrong compiler thread bound");
+#endif
 #endif
 #ifdef GARNET_METAL_MPP_AFFINE
     Require(gpu.LastMPPAffineDispatches()==size_t(m>4&&gpu.HasMPPAffine()),"MPP affine route/counter mismatch");

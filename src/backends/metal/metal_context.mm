@@ -358,12 +358,12 @@ static std::map<uint64_t,std::weak_ptr<MetalPipelines>> pipelineCache;
 namespace {
 id<MTLComputePipelineState> SelectAffineProfile(MetalPipelines& kernels,AffineProfileRoute route,
     size_t rows,size_t inner,size_t columns,size_t aStride,size_t oStride,size_t decodeRows,
-    id<MTLComputePipelineState> fallback,size_t& dispatches,size_t& misses) {
+    id<MTLComputePipelineState> fallback,size_t& dispatches,size_t& misses,size_t& maxThreads) {
     const AffineProfileKey key{size_t(route),inner,columns,aStride,oStride,decodeRows};
     std::shared_lock<std::shared_mutex> lock(kernels.affineProfileMutex);
     auto found=kernels.affineProfiles.find(key);
-    if(found==kernels.affineProfiles.end()||rows>found->second.maximumRows) {++misses;return fallback;}
-    ++dispatches;return found->second.pipeline;
+    if(found==kernels.affineProfiles.end()||rows>found->second.maximumRows) {++misses;maxThreads=fallback.maxTotalThreadsPerThreadgroup;return fallback;}
+    ++dispatches;maxThreads=found->second.pipeline.maxTotalThreadsPerThreadgroup;return found->second.pipeline;
 }
 }
 #endif
@@ -390,7 +390,7 @@ struct MetalContext::Impl {
     size_t fusedHeadArgmaxDispatches=0;
     size_t bodyShapeDispatches=0,bodyShapeMisses=0;
 #ifdef GARNET_METAL_AFFINE_PROFILE
-    size_t affineProfileDispatches=0,affineProfileMisses=0;
+    size_t affineProfileDispatches=0,affineProfileMisses=0,affineProfileMaxThreads=0;
 #endif
 #ifdef GARNET_METAL_FUSED_HEAD_ARGMAX
     std::map<std::array<size_t,2>,MetalMatrix> fusedHeadScratch;
@@ -1904,7 +1904,17 @@ bool MetalContext::PrepareAffineInt4Profile(const MetalMatrix& input,const Metal
             auto library=impl_->kernels->affineProfileLibraries[size_t(route)];NSError* error=nil;
             auto function=[library newFunctionWithName:names[size_t(route)] constantValues:constants error:&error];
             if(!function)throw std::runtime_error("Cannot specialize affine kernel profile: "+std::string(error.localizedDescription.UTF8String));
-            auto pipeline=[impl_->device newComputePipelineStateWithFunction:function error:&error];
+            id<MTLComputePipelineState> pipeline=nil;
+#ifdef GARNET_METAL_AFFINE_PROFILE_TGP128
+            auto descriptor=[MTLComputePipelineDescriptor new];descriptor.computeFunction=function;
+            descriptor.maxTotalThreadsPerThreadgroup=128;
+            pipeline=[impl_->device newComputePipelineStateWithDescriptor:descriptor options:MTLPipelineOptionNone reflection:nullptr error:&error];
+#else
+            pipeline=[impl_->device newComputePipelineStateWithFunction:function error:&error];
+#endif
+#ifdef GARNET_METAL_AFFINE_PROFILE_TGP128
+            if(pipeline&&pipeline.maxTotalThreadsPerThreadgroup!=128)throw std::runtime_error("Affine profile compiler thread bound differs from128");
+#endif
             if(!pipeline||pipeline.threadExecutionWidth!=32||pipeline.maxTotalThreadsPerThreadgroup<128||
                pipeline.staticThreadgroupMemoryLength>impl_->device.maxThreadgroupMemoryLength)
                 throw std::runtime_error("Affine profile pipeline exceeds its execution limits");
@@ -1943,6 +1953,13 @@ size_t MetalContext::LastAffineProfileDispatches() const {
 size_t MetalContext::LastAffineProfileMisses() const {
 #ifdef GARNET_METAL_AFFINE_PROFILE
     return impl_->affineProfileMisses;
+#else
+    return 0;
+#endif
+}
+size_t MetalContext::LastAffineProfileMaxThreads() const {
+#ifdef GARNET_METAL_AFFINE_PROFILE
+    return impl_->affineProfileMaxThreads;
 #else
     return 0;
 #endif
@@ -2013,7 +2030,7 @@ void MetalContext::EncodeAffineInt4MatMul(const MetalMatrix& input,const MetalAf
 #ifdef GARNET_METAL_AFFINE_PROFILE
         pipeline=SelectAffineProfile(*impl_->kernels,a.rows<=4?AffineProfileRoute::Decode:AffineProfileRoute::MPP,
             a.rows,a.columns,o.columns,a.rowBytes/4,o.rowBytes/4,a.rows<=4?a.rows:0,
-            pipeline,impl_->affineProfileDispatches,impl_->affineProfileMisses);
+            pipeline,impl_->affineProfileDispatches,impl_->affineProfileMisses,impl_->affineProfileMaxThreads);
 #endif
         [encoder setComputePipelineState:pipeline];
         [encoder setBuffer:a.data offset:a.offset atIndex:0];[encoder setBuffer:w->packed offset:0 atIndex:1];
@@ -2070,7 +2087,7 @@ void MetalContext::EncodeAffineInt4IndexedDecode(const MetalMatrix& input,const 
 #ifdef GARNET_METAL_AFFINE_PROFILE
             pipeline=SelectAffineProfile(*impl_->kernels,AffineProfileRoute::IndexedDecode,
                 a.rows,a.columns,o.columns,a.rowBytes/4,o.rowBytes/4,indices.size(),
-                pipeline,impl_->affineProfileDispatches,impl_->affineProfileMisses);
+                pipeline,impl_->affineProfileDispatches,impl_->affineProfileMisses,impl_->affineProfileMaxThreads);
 #endif
             [encoder setComputePipelineState:pipeline];
             [encoder setBuffer:a.data offset:a.offset atIndex:0];[encoder setBuffer:w->packed offset:0 atIndex:1];
@@ -2146,7 +2163,7 @@ void MetalContext::EncodeAffineInt4IndexedImpl(const MetalMatrix& input,const Me
 #ifdef GARNET_METAL_AFFINE_PROFILE
             const auto route=tileColumns==64?AffineProfileRoute::Reuse64:AffineProfileRoute::Indexed;
             pipeline=SelectAffineProfile(*impl_->kernels,route,a.rows,a.columns,o.columns,
-                a.rowBytes/4,o.rowBytes/4,0,pipeline,impl_->affineProfileDispatches,impl_->affineProfileMisses);
+                a.rowBytes/4,o.rowBytes/4,0,pipeline,impl_->affineProfileDispatches,impl_->affineProfileMisses,impl_->affineProfileMaxThreads);
 #endif
             [encoder setComputePipelineState:pipeline];
             [encoder setBuffer:a.data offset:a.offset atIndex:0];[encoder setBuffer:w->packed offset:0 atIndex:1];
@@ -3101,7 +3118,7 @@ void MetalContext::Begin() {
     impl_->partialSubmissions=0;
     impl_->bodyShapeDispatches=impl_->bodyShapeMisses=0;
 #ifdef GARNET_METAL_AFFINE_PROFILE
-    impl_->affineProfileDispatches=impl_->affineProfileMisses=0;
+    impl_->affineProfileDispatches=impl_->affineProfileMisses=impl_->affineProfileMaxThreads=0;
 #endif
     impl_->joinedPrefillPairs=0;
 #ifdef GARNET_METAL_INDEXED_DECODE
@@ -3835,7 +3852,7 @@ void MetalContext::Abort() {
     impl_->submitted=nil;impl_->partialSubmissions=0;
     impl_->bodyShapeDispatches=impl_->bodyShapeMisses=0;
 #ifdef GARNET_METAL_AFFINE_PROFILE
-    impl_->affineProfileDispatches=impl_->affineProfileMisses=0;
+    impl_->affineProfileDispatches=impl_->affineProfileMisses=impl_->affineProfileMaxThreads=0;
 #endif
     impl_->joinedPrefillPairs=0;
 #ifdef GARNET_METAL_INDEXED_DECODE

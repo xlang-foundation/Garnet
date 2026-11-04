@@ -52,6 +52,9 @@ def affine_profile_issues(profile,calls,expected_counts):
         count=event.get('affine_dispatches');misses=event.get('misses');pipelines=event.get('pipeline_count')
         if stage not in coverage or any(type(value) is not int for value in (valid,physical,count,misses,pipelines)):
             issues.append('Bounded affine profile route/coverage differs');continue
+        thread_limit=profile.get('affine_profile_max_threads',0)
+        if type(thread_limit) is not int or thread_limit not in (0,128) or (thread_limit==128 and event.get('pipeline_max_threads')!=128):
+            issues.append('Bounded affine profile compiler thread limit differs')
         expected_rows=profile['batch']*(profile['prefill_chunk'] if stage=='prefill' else 1)
         if (physical!=expected_rows or not 0<valid<=physical or count!=coverage[stage] or misses!=0 or not 0<pipelines<=512):
             issues.append('Bounded affine profile route/coverage differs')

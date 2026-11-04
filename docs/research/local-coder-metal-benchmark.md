@@ -1716,6 +1716,22 @@ targets remain unmet. The experiment does not yet constitute a complete
 compiled engine memory arena, tile autotuner or portable production xModel
 profile; a full matched repeated Garnet campaign is still pending.
 
+### Compiler threadgroup bound: negative experiment
+
+Default-OFF `GARNET_METAL_AFFINE_PROFILE_TGP128` sets the specialized pipeline
+descriptor's maximum threads to128, matching the unchanged dispatch. It leaves
+threadgroup-multiple assumptions, precision, dimensions and tiles unchanged.
+The control reports an actual pipeline maximum of1024 and the candidate128.
+Both pass14 native tests, including upper-bound and owner-lifecycle cases.
+
+`affine-profile-tgp128-qwen-shapes1` passes80-cell/three-cohort accounting and23
+corruption checks. Median control/candidate GPU ratios across shapes at
+2/4/64/128/256/512 rows are1.002/1.001/1.000/0.998/0.985/0.993. One-row
+weighted body sum ratio is0.984 and larger-row body sums likewise show no
+useful improvement. Keep the compiler-bound option disabled. This candidate
+has no learned-model or serving admission. Source hashes and build commands
+are in `affine-profile-tgp128-sources1` and its configuration evidence.
+
 ### Parent MTP asset discovery
 
 The converted pinned artifact contains no MTP parameters, but the original
