@@ -21,6 +21,9 @@ X::Value TensorValue(X3PackageHost* host,MetalContext& gpu,const MetalMatrix& ma
 }
 }
 void MetalDecoderSession::Clear() {
+#ifdef GARNET_METAL_VERIFY_ATTENTION
+    verification_.reset();verificationStats_="{}";
+#endif
 #ifdef GARNET_METAL_TOKEN_PREFIX_CACHE
     tokenCache_.reset();tokenIdentity_={};tokenCacheBudget_=tokenCapacity_=0;rowTokens_.clear();rowTokensValid_.clear();
     tokenGraphs_.clear();tokenGraphOwners_.clear();
@@ -358,7 +361,11 @@ X::Value MetalDecoderSession::RunLeased(X::Value graphs,X::Value hidden,X::Value
 }
 #endif
 X::Value MetalDecoderSession::RunUnlocked(X::Value graphs,X::Value hidden,X::Value positions,
-    X::Value slots,X::Value active,int64_t predictionToken,const std::vector<uint64_t>* epochs,const std::vector<int64_t>* tokenIds) {
+    X::Value slots,X::Value active,int64_t predictionToken,const std::vector<uint64_t>* epochs,const std::vector<int64_t>* tokenIds,
+    VerificationRun* verification) {
+#ifndef GARNET_METAL_VERIFY_ATTENTION
+    (void)verification;
+#endif
 #ifndef GARNET_METAL_TOKEN_PREFIX_CACHE
     (void)tokenIds;
 #endif
@@ -371,6 +378,9 @@ X::Value MetalDecoderSession::RunUnlocked(X::Value graphs,X::Value hidden,X::Val
     std::vector<MetalCompiledGraph*> layers,locked;
     for(uint64_t i=0;i<graphs.Size();++i)layers.push_back(Graph(graphs.Get(i),Host()));
     locked=layers;if(head_)locked.push_back(head_);
+#ifdef GARNET_METAL_VERIFY_ATTENTION
+    if(verification)locked.push_back(verification->plan->head);
+#endif
     std::sort(locked.begin(),locked.end(),std::less<MetalCompiledGraph*>());
     if(std::adjacent_find(locked.begin(),locked.end())!=locked.end())throw std::invalid_argument("Metal session graphs must be distinct");
 #ifdef GARNET_METAL_VERIFY_ATTENTION
@@ -406,6 +416,9 @@ X::Value MetalDecoderSession::RunUnlocked(X::Value graphs,X::Value hidden,X::Val
     const size_t chunk=inputShape[0].size()==3?size_t(inputShape[0][1]):1;
     if(predictionToken<-1||(predictionToken>=0&&(!head_||uint64_t(predictionToken)>=chunk)))
         throw std::invalid_argument("Metal session prediction token/head invalid");
+#ifdef GARNET_METAL_VERIFY_ATTENTION
+    if(verification)ValidateVerificationRun(*verification,layers);
+#endif
     // Validate and upload every host input before encoding or changing state.
     for(size_t i=0;i<layers.size();++i) {
         auto graph=layers[i];const auto& state=states_[i];
@@ -507,6 +520,10 @@ X::Value MetalDecoderSession::RunUnlocked(X::Value graphs,X::Value hidden,X::Val
     }
 #endif
     for(size_t i=0;i<layers.size();++i)layers[i]->RetireResidentDefaults(i==0);
+#ifdef GARNET_METAL_VERIFY_ATTENTION
+    if(verification)hidden_=verification->plan->allHidden;
+    else
+#endif
     if(hiddenShape_!=inputShape[0]) {
         const auto& slot=layers[0]->slots_[layers[0]->inputs_[0]];
         hidden_=gpu_->Allocate(slot.rows,slot.columns);
@@ -527,6 +544,9 @@ X::Value MetalDecoderSession::RunUnlocked(X::Value graphs,X::Value hidden,X::Val
 #endif
     kvInplaceUpdates_=0;constantHeadDispatches_=0;singleCoderHeadDispatches_=0;residualNormDispatches_=0;packedPrefillNormDispatches_=0;globalHalfAlphaDispatches_=0;wideBatchPrefillDispatches_=0;interleavedBodyDispatches_=0;coalescedBlockDispatches_=0;mlpGraphDispatches_=0;joinedGlobalMlpBlocks_=0;poisoned_=true;gpu_->Begin();
     try {
+#ifdef GARNET_METAL_VERIFY_ATTENTION
+        if(verification)EncodeVerificationBackups(*verification,layers);
+#endif
         auto current=layers[0]->slots_[layers[0]->inputs_[0]].matrix;
         for(size_t i=0;i<layers.size();++i) {
             auto graph=layers[i];std::array<MetalMatrix,3> saved;
@@ -558,7 +578,11 @@ X::Value MetalDecoderSession::RunUnlocked(X::Value graphs,X::Value hidden,X::Val
             };
             try {
 #if defined(GARNET_METAL_INDEXED_TOKEN_PROJECTIONS)||defined(GARNET_METAL_ACTIVE_DECODE_PROJECTIONS)
-                graph->Encode(*gpu_,false,nullptr,selectProjectionRows?&selectedTokenRows:nullptr);
+                graph->Encode(*gpu_,false,nullptr,selectProjectionRows?&selectedTokenRows:nullptr
+#ifdef GARNET_METAL_VERIFY_ATTENTION
+                    ,verification?&verification->bindings[i]:nullptr
+#endif
+                    );
 #else
                 graph->Encode(*gpu_,false);
 #endif
@@ -578,10 +602,13 @@ X::Value MetalDecoderSession::RunUnlocked(X::Value graphs,X::Value hidden,X::Val
 #endif
         }
 #ifdef GARNET_METAL_ROW_FINAL_HIDDEN
-        gpu_->EncodeLastActiveHidden(current,layers[0]->slots_[layers[0]->inputs_.back()].matrix,rowFinalHidden_,chunk);
+        if(!verification)gpu_->EncodeLastActiveHidden(current,layers[0]->slots_[layers[0]->inputs_.back()].matrix,rowFinalHidden_,chunk);
 #endif
         const size_t hiddenWidth=size_t(inputShape[0].back())*chunk;
         gpu_->EncodeSliceGroups(current,hidden_,1,hiddenWidth,0,hiddenWidth);
+#ifdef GARNET_METAL_VERIFY_ATTENTION
+        if(verification)EncodeVerificationHead(*verification,current);
+#endif
         if(predictionToken>=0) {
             auto& headInput=head_->slots_[head_->inputs_[0]];
             gpu_->EncodeSliceGroups(current,headInput.matrix,1,chunk*headInput.columns,
@@ -605,9 +632,18 @@ X::Value MetalDecoderSession::RunUnlocked(X::Value graphs,X::Value hidden,X::Val
         screenedHeadDispatches_=gpu_->LastScreenedHeadDispatches();screenedHeadSeedRows_=gpu_->LastScreenedHeadSeedRows();interleavedScreenDispatches_=gpu_->LastInterleavedScreenDispatches();
         fusedHeadArgmaxDispatches_=gpu_->LastFusedHeadArgmaxDispatches();bodyShapeDispatches_=gpu_->LastBodyShapeDispatches();bodyShapeMisses_=gpu_->LastBodyShapeMisses();
         deferredZeroBytes_=gpu_->LastDeferredZeroBytes();deferredZeroStates_=gpu_->LastDeferredZeroStates();
+#ifdef GARNET_METAL_VERIFY_ATTENTION
+        if(verification)CommitVerification(*verification,layers);
+#endif
         waitMs_=std::chrono::duration<double,std::milli>(std::chrono::steady_clock::now()-encoded).count();
     }catch(...){screenedHeadDispatches_=0;screenedHeadSeedRows_=0;interleavedScreenDispatches_=0;prefillPartialSubmissions_=0;fusedHeadArgmaxDispatches_=0;bodyShapeDispatches_=bodyShapeMisses_=0;deferredZeroBytes_=deferredZeroStates_=0;kvInplaceUpdates_=0;joinedPrefillPairs_=0;constantHeadDispatches_=0;singleCoderHeadDispatches_=0;residualNormDispatches_=0;packedPrefillNormDispatches_=0;globalHalfAlphaDispatches_=0;wideBatchPrefillDispatches_=0;interleavedBodyDispatches_=0;coalescedBlockDispatches_=0;mlpGraphDispatches_=0;joinedGlobalMlpBlocks_=0;gpu_->Abort();throw;}
     hiddenShape_=inputShape[0];
+#ifdef GARNET_METAL_VERIFY_ATTENTION
+    if(verification) {
+        hidden_=verification->plan->finalHidden;
+        hiddenShape_={int64_t(verification->plan->batch),int64_t(verification->plan->width)};
+    }
+#endif
     auto result=X::Value::List(Host());
     if(predictionToken>=0) {
 #ifdef GARNET_METAL_REQUEST_ROWS
@@ -625,7 +661,11 @@ X::Value MetalDecoderSession::RunUnlocked(X::Value graphs,X::Value hidden,X::Val
 #ifdef GARNET_METAL_TOKEN_PREFIX_CACHE
     if(tokenCache_) {
         X::Tensor flags(active);auto fl=flags.Acquire();const auto* data=static_cast<const float*>(flags.Info().data);
-        for(size_t row=0;row<states_[0].rows;++row)for(size_t token=0;token<chunk;++token)if(data[row*chunk+token]!=0) {
+        for(size_t row=0;row<states_[0].rows;++row)for(size_t token=0;token<chunk;++token)if(
+#ifdef GARNET_METAL_VERIFY_ATTENTION
+            verification?verification->accepted[row*chunk+token]!=0:
+#endif
+            data[row*chunk+token]!=0) {
             if(tokenIds)rowTokens_[row].push_back((*tokenIds)[row*chunk+token]);
             else rowTokensValid_[row]=0;
         }
@@ -807,6 +847,20 @@ std::vector<MetalResourceReference> MetalDecoderSession::MemoryReferences() {
 #ifdef GARNET_METAL_ROW_FINAL_HIDDEN
     if(rowFinalHidden_.Valid())append(rowFinalHidden_,SIZE_MAX,"last_active_hidden",{int64_t(states_[0].rows),int64_t(rowFinalWidth_)});
 #endif
-    append(hidden_,SIZE_MAX,"hidden",hiddenShape_);append(prediction_,SIZE_MAX,"prediction",{});return result;
+    append(hidden_,SIZE_MAX,"hidden",hiddenShape_);append(prediction_,SIZE_MAX,"prediction",{});
+#ifdef GARNET_METAL_VERIFY_ATTENTION
+    if(verification_) {
+        const auto& p=*verification_;
+        for(size_t i=0;i<p.layers.size();++i){const auto& b=p.layers[i];
+            append(b.qkv,i,"verification_retained_qkv",{});append(b.prepared,i,"verification_retained_prepared",{});
+            append(b.replayConv,i,"verification_replay_conv_scratch",{});append(b.replayDelta,i,"verification_replay_delta_scratch",{});
+            for(size_t k=0;k<2;++k)append(b.kvBackup[k],i,"verification_kv_backup"+std::to_string(k),{});}
+        append(p.allHidden,SIZE_MAX,"verification_all_hidden",{});append(p.flatHidden,SIZE_MAX,"verification_flat_hidden",{});
+        append(p.predictions,SIZE_MAX,"verification_predictions",{});append(p.packedPredictions,SIZE_MAX,"verification_packed_predictions",{});
+        append(p.acceptedMask,SIZE_MAX,"verification_accepted_mask",{});append(p.replayMask,SIZE_MAX,"verification_replay_mask",{});
+        append(p.finalHidden,SIZE_MAX,"verification_visible_hidden",{});
+    }
+#endif
+    return result;
 }
 }

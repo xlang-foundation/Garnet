@@ -11,6 +11,7 @@
 #include <vector>
 #include <mutex>
 #include <map>
+#include <array>
 namespace Garnet {
 #ifdef GARNET_METAL_SHARED_PREFILL_SCRATCH
 // Graphs retain this owner independently of the preparing session. Every
@@ -91,8 +92,17 @@ class MetalCompiledGraph {
     void MaterializeDefault(size_t slot);
     void Clear();
     void PrepareInputs(X::Value,const std::unordered_set<size_t>& skip={});
+    struct VerificationBindings;
+#ifdef GARNET_METAL_VERIFY_ATTENTION
+    struct VerificationBindings {
+        size_t conv=SIZE_MAX,prepare=SIZE_MAX,delta=SIZE_MAX;
+        MetalMatrix qkv,prepared,convS1,deltaS1,replayConv,replayDelta;
+        std::array<size_t,4> kvDimensions{}; // heads,dim,capacity,chunk
+        std::array<MetalMatrix,2> kvBackup;
+    };
+#endif
     void Encode(MetalContext&,bool packedOutput=true,const MetalMatrix* greedyOutput=nullptr,
-        const std::vector<size_t>* selectedTokenRows=nullptr);
+        const std::vector<size_t>* selectedTokenRows=nullptr,VerificationBindings* verification=nullptr);
     void EncodeGreedy(MetalContext&,const MetalMatrix& prediction,const std::vector<size_t>* selectedRows=nullptr);
     bool CanUpdateKVInPlace(size_t part) const;
     bool ComputeResetKVPrefix(size_t part) const;

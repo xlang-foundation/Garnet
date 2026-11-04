@@ -46,6 +46,33 @@ class MetalDecoderSession {
 #endif
     std::vector<X::Value> owners_;
     std::vector<State> states_;
+    struct VerificationRun;
+#ifdef GARNET_METAL_VERIFY_ATTENTION
+    struct VerificationWorkspace {
+        X::Value graphs,headOwner;
+        MetalCompiledGraph* head=nullptr;
+        uint64_t headGeneration=0;
+        size_t batch=0,chunk=0,width=0,vocab=0;
+        std::vector<uint64_t> generations,sourceGenerations;
+        std::vector<MetalCompiledGraph::VerificationBindings> layers;
+        MetalMatrix allHidden,flatHidden,predictions,packedPredictions,acceptedMask,replayMask,finalHidden;
+        size_t preparedMetalBytes=0;
+    };
+    struct VerificationRun {
+        VerificationWorkspace* plan=nullptr;
+        std::vector<int64_t> tokens,stops,remaining,consumed;
+        std::vector<float> active,accepted,replay;
+        std::vector<std::vector<int64_t>> emitted;
+        std::vector<bool> eos;
+        std::vector<MetalCompiledGraph::VerificationBindings> bindings;
+    };
+    std::unique_ptr<VerificationWorkspace> verification_;
+    std::string verificationStats_="{}";
+    void ValidateVerificationRun(VerificationRun&,const std::vector<MetalCompiledGraph*>&);
+    void EncodeVerificationBackups(VerificationRun&,const std::vector<MetalCompiledGraph*>&);
+    void EncodeVerificationHead(VerificationRun&,const MetalMatrix&);
+    void CommitVerification(VerificationRun&,const std::vector<MetalCompiledGraph*>&);
+#endif
 #ifdef GARNET_METAL_REUSED_ZERO_SOURCE
     std::vector<float> resetZeroSource_;
 #endif
@@ -98,7 +125,8 @@ class MetalDecoderSession {
     void ResetUnlocked();
     X::Value RunUnlocked(X::Value graphs,X::Value hidden,X::Value positions,
         X::Value slots,X::Value active,int64_t predictionToken,
-        const std::vector<uint64_t>* epochs=nullptr,const std::vector<int64_t>* tokenIds=nullptr);
+        const std::vector<uint64_t>* epochs=nullptr,const std::vector<int64_t>* tokenIds=nullptr,
+        VerificationRun* verification=nullptr);
 #ifdef GARNET_METAL_REQUEST_ROWS
     void ResetRowUnlocked(int64_t row);
 #endif
@@ -107,6 +135,12 @@ public:
     X::Value Run(X::Value graphs,X::Value hidden,X::Value positions,
         X::Value slots,X::Value active,int64_t predictionToken);
     void Reset();
+#ifdef GARNET_METAL_VERIFY_ATTENTION
+    bool PrepareVerification(X::Value graphs,X::Value head);
+    X::Value VerifyGreedy(X::Value hidden,X::Value positions,X::Value slots,X::Value active,
+        X::Value tokens,X::Value stops,X::Value remaining,X::Value epochs);
+    std::string VerificationStatsJson();
+#endif
 #ifdef GARNET_METAL_QWEN38_WIDE_PREFILL
     bool PreparePrefill(X::Value graph,int64_t layer);
 #endif
@@ -208,6 +242,11 @@ public:
     double GPUMs() const {return gpuMs_;}
     double WaitMs() const {return waitMs_;}
     BEGIN_PACKAGE(MetalDecoderSession)
+#ifdef GARNET_METAL_VERIFY_ATTENTION
+        APISET().AddFunc<2>("prepare_verification",&MetalDecoderSession::PrepareVerification);
+        APISET().AddFunc<8>("verify_greedy",&MetalDecoderSession::VerifyGreedy);
+        APISET().AddFunc<0>("verification_stats_json",&MetalDecoderSession::VerificationStatsJson);
+#endif
         APISET().AddFunc<2>("build",&MetalDecoderSession::Build);
         APISET().AddFunc<6>("run",&MetalDecoderSession::Run);
         APISET().AddFunc<0>("reset",&MetalDecoderSession::Reset);

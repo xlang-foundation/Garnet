@@ -63,8 +63,7 @@ mode now also passes a synthetic four-layer hybrid gate:396 checks and30,497,536
 FP32 words match separate decode steps, including all per-position logits,
 partial blocks and the final4K cache slot. It supports at most four physical
 token rows total and rejects invalid controls or mismatched source weights before
-advancing session state. Hybrid-state rollback and speculative generation remain
-unfinished. The trained27B target also matches ordinary decode for hidden/logit
+advancing session state. The trained27B target also matches ordinary decode for hidden/logit
 hashes and every layer's state hashes across twelve bounded four-token blocks at
 capacity64/4096, including partial and carried blocks. The4K test uses three seed
 slots with earlier cache entries zero; it does not qualify a full4K prompt.
@@ -73,17 +72,26 @@ verification speedup is admitted.
 
 Native first-token Conv/GDN checkpoint primitives and state-only prefix replay
 now also pass130 synthetic cases at bounded and actual27B recurrent geometry,
-with103,007,792 FP32 words matching separate decode steps. They remain separate
-from compiled verification graphs and do not yet implement model-level accepted
-prefix commit, KV restoration, EOS handling or MTP generation. The enabled/
+with103,007,792 FP32 words matching separate decode steps. These initially separate
+components are integrated in the native transaction gate below. The enabled/
 disabled native suites pass22/22 and19/19. No new trained checkpoint/replay or
 speed qualification is claimed for these component gates.
 
 Bounded native KV-slot backup/restore now passes188 cases and1.76billion exact
 FP32 word comparisons against whole-cache ordinary-prefix references. The27B
 four-token K/V span uses512KiB of logical backup storage across all sixteen full
-layers, compared with512MiB for the full4K cache. This remains a component gate;
-model-level acceptance, checkpoint binding and MTP generation are unfinished.
+layers, compared with512MiB for the full4K cache (logical sizes before alignment).
+
+The native greedy verification/accepted-prefix transaction now passes211
+synthetic cases, including EOS, epochs, prefix reuse and private-session bank
+swaps. The actual27B factory also matches ordinary emitted IDs, committed hidden
+state and every Conv/GDN/KV state hash in22 cases at capacity64/4096. The4K cases
+use seeded late positions, not a full4K prompt. Per-position heads, checkpoint/
+replay and exact KV restoration stay native; source output banks supply S1 under
+locks. Preparation initializes a prediction bank when predict-false prefill has
+not produced an earlier prediction. Auxiliary MTP, speculative serving/coding
+qualification and2x speed targets remain unfinished. The extension stays off by
+default.
 
 ## Entry points and limits
 

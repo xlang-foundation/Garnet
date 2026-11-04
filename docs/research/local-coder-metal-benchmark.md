@@ -2518,9 +2518,9 @@ build passes19. Sources and logs are under
 
 These component gates did not admit an integrated verifier. The subsequent
 compiled-graph gate is recorded below. Ordinary sparse prefill can select BF16
-operands and must not be relabeled as verification. Model-level Conv/GDN checkpoint/
-replay and accepted-prefix commit, lease/epoch/EOS/cancellation handling, and
-integration of the pinned auxiliary MTP parameters remain unfinished. No MTP
+operands and must not be relabeled as verification. The native greedy transaction
+gate below subsequently integrates checkpoint/replay, accepted-prefix commit and
+bounded EOS/lease/history handling. Integration of auxiliary MTP remains unfinished. No MTP
 acceptance, speculative coding gate or speed result is admitted. All2x targets
 remain unmet.
 
@@ -2528,7 +2528,10 @@ remain unmet.
 
 Under the same default-OFF extension, `build_verification_shared` explicitly
 compiles a packed decoder layer sharing all native weights with a ready ordinary
-six-input decoder layer. Hidden/state/control shapes must agree with that source.
+four-input linear or six-input decoder layer. Source projections are certified
+as actual affine FP32 operations; converted matrices can retain the factory's
+BF16 preference flag. New verification graphs still require six inputs with
+explicit position/slot/mask controls. Hidden/state shapes agree with the source.
 The current FP32 affine kernels support at most four physical token rows total:
 batch1 with1..4 tokens, batch2 with1..2, or batch4 with1. Batch2 with4 temporal
 tokens is rejected. This bound is kernel-specific, not an assertion that profile
@@ -2652,10 +2655,11 @@ words, and the ordinary mixed-layer alias/scratch regression passes. Evidence is
 `verification-recurrent-ordinary-alias-regression1.log`; initial failures are
 retained in `verification-recurrent-checkpoint-focused1.log` and `source2`.
 
-These are native component gates. Compiled verification graphs do not yet bind
+These were native component gates. At that milestone compiled graphs did not bind
 these checkpoints, retain replay operands per model layer, or commit an accepted
-prefix. Native per-position heads, bounded KV-slot backup/restore, acceptance/
-EOS/lease/history handling and auxiliary MTP integration remain required. The
+prefix. The following native transaction gate integrates per-position heads,
+KV-span restoration and acceptance/EOS/lease/history handling. Auxiliary MTP
+integration remains unfinished. The
 primitive tests use synthetic tensors at model geometry, not a trained27B
 checkpoint/replay run. No speculative coding or speed result is admitted, and
 all2x targets remain unmet.
@@ -2711,10 +2715,101 @@ ordinary mixed-layer alias/scratch regression passes. Their logs are
 `verification-kv-span-off-ctest1.log`,
 `verification-kv-span-compiled-forward-regression1.log`, and
 `verification-kv-span-ordinary-alias-regression1.log`.
-These are native component tests. Compiled verification/session paths
-do not yet bind the span backups or Conv/GDN checkpoints into a complete accepted
-prefix transaction. No trained model-level cache rollback, speculative coding
-gate, MTP generation or speed result is admitted for this component milestone.
+These were native component tests, before the session transaction below bound
+the span backups and Conv/GDN checkpoints. No speculative coding gate, MTP
+generation or speed result was admitted for that component milestone.
+
+### Native greedy verification and accepted-prefix commit
+
+The same default-OFF extension now exposes
+`session.prepare_verification(graphs, shared_position_head)` and
+`session.verify_greedy(hidden, positions, slots, active, input_ids, stop_ids,
+remaining_budgets, epochs)`. Preparation validates source/head weight identities,
+graph generations, state layouts and the four-physical-token-row bound, prepares
+retained QKV/GDN data and KV spans, and applies the native working-set guard.
+The existing xModel factory's four-input linear layers and converted-affine BF16
+preference are supported without changing model operations.
+
+One synchronous native call holds the session, source/verification/head graphs
+and shared-scratch locks through both GPU phases. Target inference and the
+per-position full-vocabulary head execute on the GPU. The CPU receives at most
+32 logical bytes of argmax IDs/status flags, then decides the greedy prefix.
+Rejected suffixes replay Conv/GDN state from S1 and restore their original KV
+slots; no target matrix projection is repeated. The accepted last hidden state
+and next prediction are selected on the GPU. Full hidden/logit CPU roundtrips
+from the earlier diagnostic are absent from this acceptance path.
+
+Each row returns `[new_output_ids, consumed_input_count, reached_eos]`. Input zero
+is the known last input; later inputs are proposed drafts. Emission starts with
+the target prediction after the known input. Matching non-EOS drafts advance
+the accepted input prefix; mismatch returns the authoritative correction. EOS
+ends emission without consuming the proposed EOS input. Submitted depth must
+fit the caller's remaining output budget. Rows may be inactive or have unequal
+prefix lengths. This is a greedy API; sampling verification is not implemented.
+
+S1 uses the current ordinary source graph's protected, independently written
+state-output banks. The native call resolves those banks again under graph locks
+on every invocation. Ordinary output/private-state swaps permute distinct banks;
+holding a borrowed bank across calls could capture another session's state.
+Borrowed banks are not retained in the persistent workspace. Runtime checks
+reject aliases with private state and verification outputs before execution.
+Retained projection data and replay scratch have explicit workspace ownership;
+the memory inventory records those roles. Prepared allocation snapshots include
+actual device allocation sizes; they are not peaks or a controlled memory A/B.
+
+Control tensors are copied into private immutable host snapshots. Epochs,
+budgets, masks and all layer controls are checked before GPU state advances.
+Closed/rebuilt source graphs or prepared heads reject. Invalid metadata leaves
+state unchanged; a failed GPU/prediction phase poisons the session and requires
+reset. Token-prefix history appends only accepted input IDs. The finite cache
+test rejects a draft, snapshots the accepted prefix, releases/reclaims the row,
+restores exactly that prefix and verifies its next prediction. Stale epochs on
+inactive rows reject too. Statistics describe the last successful transaction;
+target and commit GPU durations are separate, and their explicitly labeled sum
+excludes the CPU acceptance gap. Serving performance must use wall time.
+
+The final synthetic gate passes211 cases and2,633 checks, including every
+acceptance length and EOS position, batch1/2/4, unequal rows, whole Conv/GDN/KV
+hash parity, committed hidden state and continuation. Alternating private
+sessions force source output-bank swaps and verify the other session remains
+unchanged. Prefix reuse, missing/stale leases, nonfinite-output poison/reset,
+closed/rebuilt sources and closed prepared heads are covered. All four native
+owner counts return to zero. See `native-greedy-verification-fixture4.log`.
+
+The actual pinned27B factory passes eleven cases in each fresh, sequential
+batch1 process at capacities64 and4096: accepted depths1..4, active depths1..3,
+EOS, and a carried two-call transaction. All22 emitted sequences, committed
+hidden hashes and2,816 per-layer state hash pairs match ordinary decode. Target
+dispatch records show48 Conv and48 GDN checkpoints,32 KV span backups,16 full
+attention calls, zero prepared-affine misses and zero BF16/MPP prefill dispatches.
+Rejected cases replay48 recurrent layers and restore32 caches. All native owner
+counts return to zero. Prepared Metal snapshots are15,181,168,640 and
+16,245,964,800 bytes, within the configured guard. The4K cases seed three late
+positions with older cache entries zero and end at4095; they do not qualify a
+full4K prompt or its latency. Raw evidence is
+`native27b-greedy-verification64-2` and
+`native27b-greedy-verification4096-1`.
+
+The first trained64 run is retained as `native27b-greedy-verification64-1`.
+Predict-false seeding had left the prediction bank uninitialized; the final GPU
+selection rejected that bank. Preparation now initializes it when no prior
+prediction exists. Seven fresh-start cases were added to reproduce that path.
+No arithmetic, equality criteria or target assets changed. The failed source/
+library is retained in `native-greedy-verification-source2`.
+
+The final enabled native suite passes23/23 and the disabled compatibility suite
+19/19. Existing compiled-forward regression coverage also passes396 checks and
+30,497,536 exact FP32 words; the ordinary prefill-alias/session regression passes.
+The saved trained-result review checks provenance, all state/hidden hashes,
+accepted input counts, emitted IDs, EOS, dispatch counters and owner cleanup in
+`native-greedy-trained-review1.json`. Final sources and both libraries are archived
+in `native-greedy-verification-source3`.
+
+This is finite target acceptance/commit qualification. It does not supply an MTP
+draft model, qualify trained multi-request verification, integrate the serving
+worker's continuous speculative schedule, or pass a speculative coding/speed
+gate. Full multimodal admission and xMind integration remain unfinished. All2x
+decode/throughput and half-TTFT targets remain unmet.
 
 A source-backed planning estimate is retained in
 `evidence/27b-m5-decode-bandwidth-analysis1.json`:497 native affine projections
@@ -2722,7 +2817,8 @@ contain14,412,349,440 logical payload/coefficient bytes. Apple's published M5
 153GB/s implies about10.616tokens/s for an idealized full-weight pass per token,
 below the12.834tokens/s shortC1 target against vLLM. This is not measured DRAM
 traffic or an absolute hardware impossibility. It motivates weight-pass reuse
-across verified tokens; MTP/verification/state rollback remain unqualified.
+across verified tokens. Auxiliary MTP and speculative serving remain unqualified;
+the finite target acceptance/rollback gates above are not speed measurements.
 Published hardware source: https://support.apple.com/en-ph/125405 .
 
 ### Parent MTP asset discovery
@@ -2741,6 +2837,7 @@ is849,400,560bytes, SHA256
 `dec6630788d1ba4557230ca02b5df2db239f2b2bbcfff1c6742776e231e7540b`.
 Its manifest status is explicitly raw/not runtime-qualified. The fixed generator
 artifact is unchanged. A derived INT4 auxiliary package, target/head sharing,
-Metal MTP lowering, verification and hybrid-state commit/rollback all remain
-unimplemented/unqualified. Existing pinned vLLM `qwen3_5_mtp.py` and Garnet's
+Metal MTP lowering and complete speculative serving remain unfinished. Target
+greedy verification and hybrid-state commit have finite admission above.
+Existing pinned vLLM `qwen3_5_mtp.py` and Garnet's
 CUDA MTP/verifier are relevant implementation references, not Metal support.

@@ -705,6 +705,7 @@ if(GARNET_METAL_XMODEL)
     target_link_libraries(garnet_native_image PUBLIC JPEG::JPEG PNG::PNG)
     add_library(garnet SHARED src/entry/metal_main.cpp src/backends/metal/compiled_graph.cpp
         src/backends/metal/decoder_session.cpp
+        src/backends/metal/verification_session.cpp
         src/backends/metal/token_prefix_session.cpp
         src/tensor/garnet_tensor.cpp src/tensor/graph_capture.cpp src/core/lowering_context.cpp
         src/model/safetensors_index.cpp src/tokenizer/qwen_tokenizer.cpp)

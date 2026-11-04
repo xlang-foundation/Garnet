@@ -323,13 +323,21 @@ bool MetalCompiledGraph::BuildVerificationShared(X::Value graph,X::Value symbols
     auto peer=source.NativeData<MetalCompiledGraph>();
     if(!peer||peer==this)throw std::invalid_argument("Verification requires another compiled decoder graph");
     std::scoped_lock lock(mutex_,peer->mutex_);
-    if(!peer->ready_||peer->verificationTokens_||peer->bf16Projections_||peer->inputs_.size()!=6||
+    if(!peer->ready_||peer->verificationTokens_||(peer->inputs_.size()!=4&&peer->inputs_.size()!=6)||
        peer->inputShapes_[0].size()!=2||peer->outputParts_.size()!=3)
-        throw std::invalid_argument("Verification source must be a ready ordinary six-input decoder layer");
+        throw std::invalid_argument("Verification source must be a ready ordinary decoder layer");
     const auto batch=peer->inputShapes_[0][0];
-    if(peer->inputShapes_[3]!=std::vector<int64_t>{batch,3}||
-       peer->inputShapes_[4]!=std::vector<int64_t>{batch}||peer->inputShapes_[5]!=peer->inputShapes_[4])
+    const bool linearSource=peer->inputs_.size()==4&&peer->inputShapes_[1].size()==3&&peer->inputShapes_[2].size()==4&&
+        peer->inputShapes_[3]==std::vector<int64_t>{batch};
+    const bool sixSource=peer->inputs_.size()==6&&peer->inputShapes_[3]==std::vector<int64_t>{batch,3}&&
+        peer->inputShapes_[4]==std::vector<int64_t>{batch}&&peer->inputShapes_[5]==peer->inputShapes_[4];
+    if(!linearSource&&!sixSource)
         throw std::invalid_argument("Verification source control profile mismatch");
+    // The factory's BF16 preference does not affect converted affine matrices.
+    // Certify actual projection representations rather than that preference.
+    for(const auto& op:peer->ops_)if((op.kind==Kind::MatMul||op.kind==Kind::BF16MatVec)&&
+        (op.kind!=Kind::MatMul||!op.transpose||!peer->slots_[op.b].affineInt4.Valid()))
+        throw std::invalid_argument("Verification source projections must be affine FP32 decode");
     if(symbols.runtime()!=Host()->runtime||!symbols.IsList()||symbols.Size()!=6)
         throw std::invalid_argument("Verification requires six symbolic inputs");
     for(size_t i=0;i<3;++i) {
@@ -1292,7 +1300,12 @@ void MetalCompiledGraph::EncodeGreedy(MetalContext& gpu,const MetalMatrix& predi
 #endif
 }
 void MetalCompiledGraph::Encode(MetalContext& gpu,bool packedOutput,const MetalMatrix* greedyOutput,
-    const std::vector<size_t>* selectedTokenRows) {
+    const std::vector<size_t>* selectedTokenRows,VerificationBindings* verification) {
+#ifndef GARNET_METAL_VERIFY_ATTENTION
+    (void)verification;
+#else
+    if(verification&&!verificationTokens_)throw std::logic_error("Checkpoint bindings require a verification graph");
+#endif
 #if !defined(GARNET_METAL_INDEXED_TOKEN_PROJECTIONS)&&!defined(GARNET_METAL_ACTIVE_DECODE_PROJECTIONS)
     (void)selectedTokenRows;
 #endif
@@ -1414,10 +1427,26 @@ void MetalCompiledGraph::Encode(MetalContext& gpu,bool packedOutput,const MetalM
             auto& args=op.arguments;gpu.EncodeCausalConv(slots_[args[0]].matrix,slots_[args[1]].matrix,
                 slots_[args[2]].matrix,slots_[args[3]].matrix,out,op.dimensions[0]);
         }else if(op.kind==Kind::ConvChunk) {
-            auto& args=op.arguments;gpu.EncodeCausalConvChunk(slots_[args[0]].matrix,slots_[args[1]].matrix,
+            auto& args=op.arguments;
+#ifdef GARNET_METAL_VERIFY_ATTENTION
+            if(verification&&verification->conv==i) {
+                gpu.EncodeLayout(slots_[args[0]].matrix,slots_[args[0]].matrix,verification->qkv,0);
+                gpu.EncodeVerificationConvCheckpoint(slots_[args[0]].matrix,slots_[args[1]].matrix,
+                    slots_[args[2]].matrix,slots_[args[3]].matrix,out,slots_[op.auxiliaryOutput].matrix,
+                    verification->convS1,op.dimensions[0],op.dimensions[1]);
+            }else
+#endif
+            gpu.EncodeCausalConvChunk(slots_[args[0]].matrix,slots_[args[1]].matrix,
                 slots_[args[2]].matrix,slots_[args[3]].matrix,out,slots_[op.auxiliaryOutput].matrix,op.dimensions[0],op.dimensions[1]);
         }else if(op.kind==Kind::DeltaChunk) {
-            auto& args=op.arguments;gpu.EncodeGatedDeltaChunk(slots_[args[0]].matrix,slots_[args[1]].matrix,slots_[args[2]].matrix,
+            auto& args=op.arguments;
+#ifdef GARNET_METAL_VERIFY_ATTENTION
+            if(verification&&verification->delta==i)
+                gpu.EncodeVerificationDeltaCheckpoint(slots_[args[0]].matrix,slots_[args[1]].matrix,slots_[args[2]].matrix,
+                    out,slots_[op.auxiliaryOutput].matrix,verification->deltaS1,op.dimensions[0],op.dimensions[1],op.dimensions[2],op.dimensions[3]);
+            else
+#endif
+            gpu.EncodeGatedDeltaChunk(slots_[args[0]].matrix,slots_[args[1]].matrix,slots_[args[2]].matrix,
                 out,slots_[op.auxiliaryOutput].matrix,op.dimensions[0],op.dimensions[1],op.dimensions[2],op.dimensions[3]);
         }else if(op.kind==Kind::Delta) {
             auto& args=op.arguments;gpu.EncodeGatedDelta(slots_[args[0]].matrix,slots_[args[1]].matrix,slots_[args[2]].matrix,
@@ -1430,6 +1459,9 @@ void MetalCompiledGraph::Encode(MetalContext& gpu,bool packedOutput,const MetalM
         }else if(op.kind==Kind::Prepare) {
             auto& args=op.arguments;gpu.EncodeLinearPrepare(slots_[args[0]].matrix,slots_[args[1]].matrix,slots_[args[2]].matrix,
                 slots_[args[3]].matrix,slots_[args[4]].matrix,out,op.dimensions[0],op.dimensions[1],op.dimensions[2],op.dimensions[3],op.dimensions[4]);
+#ifdef GARNET_METAL_VERIFY_ATTENTION
+            if(verification&&verification->prepare==i)gpu.EncodeLayout(out,out,verification->prepared,0);
+#endif
         }else if(op.kind==Kind::GateNorm) {
             auto& args=op.arguments;gpu.EncodeGatedNorm(slots_[args[0]].matrix,slots_[args[1]].matrix,slots_[args[2]].matrix,
                 out,op.dimensions[0],op.dimensions[1],op.epsilon,op.dimensions.size()>2?op.dimensions[2]:0);

@@ -23,10 +23,14 @@ print('trained_verification_assets PASS',len(verified),flush=True)
 capacity=int(capacity);assert capacity in (64,4096)
 fixture=output/'fixture.json';fixture.write_text(json.dumps(dict(config=str(model/'config.json'),
     checkpoint=str(model/'model.safetensors.index.json'),capacity=capacity,output=str(output/'result.json'))))
-command=[runtime,'-B',str(Path(__file__).with_name('run_trained_verification_forward.py')),str(fixture),build,source]
+runner=Path(__file__).with_name(sys.argv[7] if len(sys.argv)>7 else 'run_trained_verification_forward.py')
+command=[runtime,'-B',str(runner),str(fixture),build,source]
 paths=[Path(build)/'libgarnet.dylib',Path(runtime),Path(source)/'src/backends/metal/compiled_graph.cpp',
        Path(source)/'src/backends/metal/compiled_graph.h',Path(source)/'src/backends/metal/decoder_session.cpp',
-       Path(source)/'src/tensor/model_tensor_io.h',Path(__file__).with_name('run_trained_verification_forward.py'),Path(__file__)]
+       Path(source)/'src/tensor/model_tensor_io.h',runner,Path(__file__)]
+for name in ['src/backends/metal/verification_session.cpp','src/backends/metal/decoder_session.h']:
+    path=Path(source)/name
+    if path.exists():paths.append(path)
 provenance=dict(asset_manifest_sha256=hashlib.sha256(raw).hexdigest(),files=verified,argv=command,
     sha256={str(p):hashlib.sha256(p.read_bytes()).hexdigest() for p in paths},benchmark=False)
 (output/'provenance.json').write_text(json.dumps(provenance,indent=2)+'\n')
