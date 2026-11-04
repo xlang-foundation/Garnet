@@ -1804,6 +1804,46 @@ establish a repeated speedup. No reference engine was rerun. Long-prompt
 prefill and queueing still dominate the batched overall rates, so further
 stage attribution is needed; all2x targets remain unmet.
 
+### Native stage attribution after bounded32-bit admission
+
+The optional, default-false `trace_stage_latency` observer reads existing
+native prepare/encode/wait/GPU timers, measures embedding and scheduler wall
+time, and measures standalone head wall time. It deliberately omits head GPU
+attribution because the session's aggregate timer belongs to the preceding
+body execution. GPU duration is nested in wait time; those columns must not
+be added together. No kernels, projection precision or scheduler policy change.
+
+`native27b-bounded-index32-stage-diagnostic1` uses the exact qualified native
+library with the explicit observer worker. Both complete128-token C1 sequences
+match the preceding admission byte-for-byte. Native accounting and12 corruption
+checks pass. `stage-summary1.json` verifies finite nonnegative durations,
+native component/wall consistency,276 execution/head records and the library/
+output identities. This is diagnostic attribution, not performance acceptance.
+
+| Prefill stage sum | Short260 tokens | Long2054 tokens |
+|---|---:|---:|
+| Embedding wall time |0.014s|0.044s|
+| Native preparation |0.003s|0.010s|
+| Native encoding |0.023s|0.057s|
+| Native wait, including GPU |14.982s|47.382s|
+| GPU duration within wait |14.975s|47.366s|
+
+The first short-prefill GPU chunk is12.476s, followed by1.808s for another128
+active tokens and0.690s for the four-token tail. This first-use outlier does
+not identify a private driver, paging, clock or compilation cause. It reinforces
+that single cold admissions cannot substitute for the reference warmup/cohort
+protocol. In the long prompt, full128-token chunk GPU duration grows from1.810s
+to4.141s as the visible context grows; the six-token tail takes0.837s. CPU
+embedding, preparation and encoding do not explain that growth.
+
+Source inspection identifies a concrete attention candidate: `attention_chunk`
+stores unnormalized exponentials and repeats `scratch[s]/denominator` inside
+each output-dimension loop. The same denominator/probability pair is therefore
+divided repeatedly. A future candidate can normalize each probability once,
+synchronize the threadgroup and keep the original ordered value accumulation.
+This candidate is not implemented or measured yet; the trace does not prove
+its eventual speedup or a complete per-operator attribution.
+
 ### Parent MTP asset discovery
 
 The converted pinned artifact contains no MTP parameters, but the original

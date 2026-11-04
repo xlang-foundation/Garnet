@@ -29,6 +29,8 @@ def main():
     prefill_schedule=profile.get('prefill_schedule','whole')
     if prefill_schedule not in ('whole','chunked'):raise ValueError('Explicit supported prefill scheduling mode required')
     chunked=prefill_schedule=='chunked'
+    trace_stages=profile.get('trace_stage_latency',False)
+    if type(trace_stages) is not bool:raise ValueError('Stage tracing requires an explicit boolean policy')
     mixed=profile.get('mixed_forward',False)
     if type(mixed) is not bool or (mixed and (not chunked or prefix)):
         raise ValueError('Mixed forward requires explicit uncached chunked scheduling')
@@ -170,9 +172,25 @@ def main():
                 pipeline_count=pipelines,index_bits=decoder.session.affine_profile_index_bits,pipeline_max_threads=max_threads,active_rows=valid,physical_rows=physical))
             if count!=expected or misses!=0 or not 0<pipelines<=512 or (thread_limit==128 and max_threads!=128) or decoder.session.affine_profile_index_bits!=index_bits:
                 raise ValueError('Bounded kernel profile '+stage+' projection coverage or fallback differs')
+        embedding_ms=[0.0]
+        def embedding(ids,packed):
+            started=time.monotonic() if trace_stages else 0
+            if packed:result=decoder.io.stack_tokens([decoder.io.embedding([ids[row*chunk+t] for row in range(batch)]) for t in range(chunk)])
+            else:result=decoder.io.embedding(ids)
+            if trace_stages:embedding_ms[0]=(time.monotonic()-started)*1000
+            return result
         def execute(graphs,hidden,positions,slots,active,prediction,epochs,ids):
+            started=time.monotonic() if trace_stages else 0
             if prefix:result=decoder.session.run_tokens(graphs,hidden,positions,slots,active,prediction,epochs,ids)
             else:result=decoder.session.run_leased(graphs,hidden,positions,slots,active,prediction,epochs)
+            if trace_stages:
+                elapsed=(time.monotonic()-started)*1000
+                emit(dict(event='native_stage_trace',stage='prefill' if len(ids)>batch else 'decode',
+                    embedding_wall_ms=embedding_ms[0],run_wall_ms=elapsed,
+                    prepare_ms=decoder.session.prepare_ms,encode_ms=decoder.session.encode_ms,
+                    wait_ms=decoder.session.wait_ms,gpu_ms=decoder.session.gpu_ms,
+                    native_inference_ms=decoder.session.last_inference_ms,
+                    physical_rows=len(ids),active_tokens=sum(1 for flag in active.tolist() if flag!=0)))
             if kernel_profiles:
                 stage='prefill' if len(ids)>batch else ('decode' if prediction>=0 else 'body')
                 record_kernel_profile(stage,len(ids),sum(1 for flag in active.tolist() if flag!=0))
@@ -200,7 +218,9 @@ def main():
                 if count!=expected:raise ValueError('Active FP32 '+stage+' projection coverage '+str(count)+' differs from expected '+str(expected))
             return result
         def predict_rows(epochs):
+            started=time.monotonic() if trace_stages else 0
             result=decoder.session.predict_rows(epochs)
+            if trace_stages:emit(dict(event='native_stage_trace',stage='head',run_wall_ms=(time.monotonic()-started)*1000))
             record_kernel_profile('head',batch,sum(1 for epoch in epochs if epoch!=0))
             if active_decode:
                 valid=sum(1 for epoch in epochs if epoch!=0);count=decoder.session.indexed_decode_affine_dispatches
@@ -239,7 +259,10 @@ def main():
                     except queue.Empty:break
             while not incoming.empty():admit(incoming.get_nowait())
             if not jobs:continue
+            started=time.monotonic() if trace_stages else 0
             tick=json.loads(policy.next_json());plans=tick['batches']
+            if trace_stages:emit(dict(event='native_stage_trace',stage='schedule',run_wall_ms=(time.monotonic()-started)*1000,
+                plan_stages=[plan['stage'] for plan in plans]))
             if not plans:raise ValueError('Native scheduler has live jobs but made no progress')
             if mixed and len(plans)==2 and {plan['stage'] for plan in plans}=={'decode','prefill'}:
                 # One existing masked chunk graph executes all physical rows.
@@ -269,7 +292,7 @@ def main():
                         ids.append(token);flags.append(float(valid));slots.append(float(position))
                 actual_tokens=sum(int(flag) for flag in flags)
                 if actual_tokens!=packed['token_count']:raise ValueError('Mixed input count disagrees with native packed plan')
-                hidden=decoder.io.stack_tokens([decoder.io.embedding([ids[row*chunk+t] for row in range(batch)]) for t in range(chunk)])
+                hidden=embedding(ids,True)
                 execute(graphs,hidden,f32([slot for slot in slots for axis in range(3)],[batch,chunk,3]),
                     f32(slots,[batch,chunk]),f32(flags,[batch,chunk]),-1,epochs,ids)
                 predicted=predict_rows(final_epochs)
@@ -300,7 +323,7 @@ def main():
                             position=request['prefill_offset']+t if valid else 0
                             ids.append(jobs[request['id']]['prompt'][position] if valid else 0)
                             flags.append(1.0 if valid else 0.0);slots.append(float(position))
-                    hidden=decoder.io.stack_tokens([decoder.io.embedding([ids[row*chunk+t] for row in range(batch)]) for t in range(chunk)])
+                    hidden=embedding(ids,True)
                     execute(graphs,hidden,f32([slot for slot in slots for axis in range(3)],[batch,chunk,3]),
                         f32(slots,[batch,chunk]),f32(flags,[batch,chunk]),-1,plan['epochs'],ids)
                     predicted=predict_rows(final_epochs) if any(final_epochs) else None
@@ -330,7 +353,7 @@ def main():
                                 valid=job is not None and position<len(job['prompt'])
                                 ids.append(by_token[t][row]);flags.append(1.0 if valid else 0.0);slots.append(float(position) if valid else 0.0)
                         positions=[slot for slot in slots for axis in range(3)]
-                        execute(graphs,decoder.io.stack_tokens([decoder.io.embedding(tokens) for tokens in by_token]),
+                        execute(graphs,embedding(ids,True),
                             f32(positions,[batch,chunk,3]),f32(slots,[batch,chunk]),f32(flags,[batch,chunk]),-1,plan['epochs'],ids)
                     if shutdown.is_set():break
                     predicted=predict_rows(plan['epochs'])
@@ -342,7 +365,7 @@ def main():
                     ids=[0]*batch;slots=[0.0]*batch
                     for request in plan['requests']:ids[request['row']]=request['token_id'];slots[request['row']]=float(request['slot'])
                     positions=[slot for slot in slots for axis in range(3)]
-                    predicted=execute([layer['graph'] for layer in decoder.layers],decoder.io.embedding(ids),f32(positions,[batch,3]),
+                    predicted=execute([layer['graph'] for layer in decoder.layers],embedding(ids,False),f32(positions,[batch,3]),
                         f32(slots,[batch]),f32([float(value) for value in plan['active_rows']],[batch]),0,plan['epochs'],ids)
                 for request in plan['requests']:deliver(request,predicted[request['row']],plan['stage'])
         if input_failure:raise ValueError(input_failure[0])
