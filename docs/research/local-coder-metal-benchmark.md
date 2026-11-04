@@ -10,14 +10,16 @@ with exact single-native token sequences. Native text-only input has no dummy
 image; bounded native vision parity and two image-grounding cases pass, while
 general VLM and reference multimodal qualification remain incomplete.
 
-The most recent end-to-end native performance evidence is a single-active,
-one-wave-per-cell admission, not a full repeated serving campaign. Short/long
-aggregate throughput is 3.250/1.034 output tokens/s; TTFT is 20.518/101.057s and
-decode is 6.732/5.582 tokens/s. Reference single-client medians are vLLM
-5.761/3.382 overall tokens/s and SGLang 5.502/3.275. Native batch correctness
-runs and synthetic projection timing do not fill the missing batch serving
-measurements. All 2x targets remain unproven; prefill is the largest measured
-gap. Reference results remain fixed and engines run sequentially.
+The earlier tall-FP32 single-active timing admission is one wave per cell,
+not a repeated serving campaign: short/long aggregate throughput3.250/1.034
+output tokens/s, TTFT20.518/101.057s and decode6.732/5.582 tokens/s. Reference
+single-client medians are vLLM5.761/3.382 overall tokens/s and SGLang5.502/3.275.
+The later batch2/wide64 FP32 timing admission preserves five completed cells and
+a four-client long-prompt600s timeout; it is a failed campaign. Native chunked
+scheduling passes full concurrent coding, but its serving performance remains
+unmeasured. All2x targets remain unmet. Reference results stay fixed and engines
+run sequentially. Full chunk-selection and isolated kernel diagnostics are
+recorded below; neither substitutes for matched serving performance.
 
 Order: Qwen3.8-27B, Qwen3.5-9B, Qwen3.5-4B. Current target is 27B.
 Hardware: Apple M5, 24 GiB unified memory. This is separate from historical
@@ -1239,3 +1241,15 @@ matrix/K/output tails (`mpp-bf16-registers-ctest2.log` plus expanded log). Backe
 metadata identifies strict BF16 operands, FP32 accumulation, register storage,
 outerK64 and tensorK16. Full-model coding and serving remain unqualified.
 Sequential operator timing against unchanged tall/staged controls is next.
+
+The strict BF16 register candidate completed three fresh-process operator
+cohorts against tall FP32 and staged N-major BF16 controls
+(`affine-registers-comparison1`):24 cells, all hashes/route/dtype/storage/extent
+audits and eleven tamper checks pass. Versus tall FP32, register speed ratios
+are1.53..1.86x at16 rows,1.33..1.58x at32,1.25..1.57x at64 and1.23..1.31x at128.
+These are explicit-precision operator measurements, not serving or physical-NAX
+proof. The next full-model coding run is
+`native27b-mpp-registers-chunk16-quality1`: batch2/context4096/chunk16, native
+chunk scheduling, prefixOFF, strict BF16 tensor operands and FP32 accumulator/
+output. Its profile requires actual native MPP dispatches, outerK64, tensorK16
+and register storage. No full-model quality or model speed result is assumed.
