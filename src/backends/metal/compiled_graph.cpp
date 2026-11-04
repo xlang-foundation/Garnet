@@ -69,6 +69,10 @@ size_t MetalCompiledGraph::Weight(const std::string& name) {
     auto found=weights_.find(name);if(found!=weights_.end())return found->second;
     auto entry=FindWeightMetadata(name);
     if(!entry)throw std::runtime_error("Metal checkpoint weight missing: "+name);
+    if(name.rfind("mtp.",0)==0) {
+        if(!mtpProgram_||entry->dataType!="BF16")throw std::invalid_argument("MTP weights require an explicit raw-BF16 MTP program");
+        if(entry->shape.size()==2)return BF16Weight(name);
+    }
 #ifdef GARNET_METAL_MLX_AFFINE_INT4
     if(entry->dataType=="U32")return AffineInt4Weight(name);
     const bool convertedConv=mlxCheckpoint_.ConvertedConvolution(name,*entry);
@@ -260,6 +264,7 @@ size_t MetalCompiledGraph::LowerVision(size_t input,const X::Value& attrs) {
     return output;
 }
 void MetalCompiledGraph::Clear() {
+    mtpProgram_=false;
 #ifdef GARNET_METAL_RETIRE_NONRESIDENT_PACKS
     nonresidentPackSlots_=0;
 #endif
@@ -288,13 +293,18 @@ bool MetalCompiledGraph::Build(X::Value graph,X::Value symbols,const std::string
 bool MetalCompiledGraph::BuildBF16(X::Value graph,X::Value symbols,const std::string& checkpoint) {
     std::lock_guard<std::mutex> lock(mutex_);return BuildInternal(graph,symbols,checkpoint,{},true);
 }
+#ifdef GARNET_METAL_MTP
+bool MetalCompiledGraph::BuildMTP(X::Value graph,X::Value symbols,const std::string& checkpoint) {
+    std::lock_guard<std::mutex> lock(mutex_);return BuildInternal(graph,symbols,checkpoint,{},true,false,true);
+}
+#endif
 bool MetalCompiledGraph::BuildShared(X::Value graph,X::Value symbols,const std::string& checkpoint,X::Value source) {
     if(source.runtime()!=Host()->runtime)throw std::invalid_argument("Shared Metal graph runtime mismatch");
     auto peer=source.NativeData<MetalCompiledGraph>();
     if(!peer||peer==this)throw std::invalid_argument("Shared Metal weights require another compiled graph");
     std::scoped_lock lock(mutex_,peer->mutex_);
     if(!peer->ready_)throw std::invalid_argument("Shared Metal weight source is closed");
-    return BuildInternal(graph,symbols,checkpoint,peer->weightRecords_,peer->bf16Projections_);
+    return BuildInternal(graph,symbols,checkpoint,peer->weightRecords_,peer->bf16Projections_,false,peer->mtpProgram_);
 }
 #ifdef GARNET_METAL_VERIFY_ATTENTION
 bool MetalCompiledGraph::SharesVerificationWeights(const MetalCompiledGraph& source) const {
@@ -353,16 +363,80 @@ bool MetalCompiledGraph::BuildVerificationShared(X::Value graph,X::Value symbols
 #endif
 }
 #endif
+void MetalCompiledGraph::ValidateMTPProgram(bool metadataOnly) const {
+    const auto width=inputShapes_[0][2],chunk=inputShapes_[0][1];
+    const auto kv=inputShapes_[2][1],dim=inputShapes_[2][3];
+    auto matrix=[&](const std::string& name,std::vector<long long> shape) {
+        if(metadataOnly) {
+            const auto* entry=index_.Find(name);
+            if(!entry||entry->dataType!="BF16"||entry->shape!=shape)
+                throw std::invalid_argument("MTP BF16 checkpoint dimensions mismatch: "+name);
+            return;
+        }
+        const auto found=weightRecords_.find(name+"|BF16");
+        if(found==weightRecords_.end()||found->second.metadata.dataType!="BF16"||found->second.metadata.shape!=shape||
+           !found->second.slot.bf16.Valid())throw std::invalid_argument("MTP BF16 projection contract mismatch: "+name);
+    };
+    auto metadata=[&](const char* name){const auto* entry=index_.Find(name);
+        if(!entry||entry->shape.size()!=2)return int64_t(0);return int64_t(entry->shape[0]);};
+    const auto q=metadata("mtp.layers.0.self_attn.q_proj.weight"),middle=metadata("mtp.layers.0.mlp.gate_proj.weight");
+    if(q<=0||q%(2*dim)||q/(2*dim)>32||q/(2*dim)%kv||middle<=0||middle>17408)
+        throw std::invalid_argument("MTP attention/MLP dimensions exceed the prepared profile");
+    matrix("mtp.fc.weight",{width,2*width});
+    for(auto name:{"k_proj","v_proj"})matrix(std::string("mtp.layers.0.self_attn.")+name+".weight",{kv*dim,width});
+    matrix("mtp.layers.0.self_attn.q_proj.weight",{q,width});
+    matrix("mtp.layers.0.self_attn.o_proj.weight",{width,q/2});
+    for(auto name:{"gate_proj","up_proj"})matrix(std::string("mtp.layers.0.mlp.")+name+".weight",{middle,width});
+    matrix("mtp.layers.0.mlp.down_proj.weight",{width,middle});
+    for(const auto& name:{"mtp.pre_fc_norm_embedding.weight","mtp.pre_fc_norm_hidden.weight","mtp.norm.weight",
+        "mtp.layers.0.input_layernorm.weight","mtp.layers.0.post_attention_layernorm.weight",
+        "mtp.layers.0.self_attn.q_norm.weight","mtp.layers.0.self_attn.k_norm.weight"}) {
+        const std::string key=name;const bool qk=key.find("self_attn.")!=std::string::npos;
+        const auto* entry=index_.Find(key);
+        if(!entry||entry->dataType!="BF16"||entry->shape!=std::vector<long long>{qk?dim:width})
+            throw std::invalid_argument("MTP raw checkpoint norm dimensions mismatch: "+key);
+    }
+    if(index_.TensorCount()!=15)throw std::invalid_argument("MTP requires a separate fifteen-tensor auxiliary checkpoint");
+    if(metadataOnly)return;
+    for(const auto& entry:weightRecords_)if(entry.first.find("|BF16")==std::string::npos) {
+        const auto& m=entry.second.metadata;
+        const bool qk=entry.first=="mtp.layers.0.self_attn.q_norm.weight"||entry.first=="mtp.layers.0.self_attn.k_norm.weight";
+        const bool norm=entry.first=="mtp.pre_fc_norm_embedding.weight"||entry.first=="mtp.pre_fc_norm_hidden.weight"||
+            entry.first=="mtp.layers.0.input_layernorm.weight"||entry.first=="mtp.layers.0.post_attention_layernorm.weight"||entry.first=="mtp.norm.weight";
+        if((!qk&&!norm)||m.dataType!="BF16"||m.shape!=std::vector<long long>{qk?dim:width})
+            throw std::invalid_argument("MTP raw norm contract mismatch: "+entry.first);
+    }
+    size_t projections=0,norms=0,ropes=0,attention=0,updates=0;
+    for(const auto& op:ops_) {
+        if(op.kind==Kind::MatMul||op.kind==Kind::BF16MatVec){
+            if(op.kind!=Kind::MatMul||!op.transpose||!slots_[op.b].bf16.Valid())throw std::invalid_argument("MTP requires eight native BF16 projections");++projections;}
+        if(op.kind==Kind::Norm){if(op.offset!=1)throw std::invalid_argument("MTP raw norms require +1 offsets");++norms;}
+        if(op.kind==Kind::NormRope){if(op.offset!=1||op.dimensions.back()!=1)throw std::invalid_argument("MTP Q/K raw norms require +1 offsets");++ropes;}
+        if(op.kind==Kind::AttentionChunk){if(op.dimensions.back()!=1)throw std::invalid_argument("MTP requires gated full attention");++attention;}
+        if(op.kind==Kind::KVChunk){
+            if(op.arguments[1]!=(updates?inputs_[3]:inputs_[2])||op.arguments[2]!=inputs_[5]||op.arguments[3]!=inputs_[6]||op.arguments[4]!=inputs_[4])
+                throw std::invalid_argument("MTP requires explicit independent K/V and controls");++updates;}
+    }
+    if(weightRecords_.size()!=15||projections!=8||norms!=5||ropes!=2||attention!=1||updates!=2||
+       outputParts_.size()!=3||slots_[outputParts_[0]].columns!=size_t(width*chunk)||
+       slots_[outputParts_[1]].columns!=size_t(kv*dim*inputShapes_[2][2])||slots_[outputParts_[2]].columns!=slots_[outputParts_[1]].columns)
+        throw std::invalid_argument("MTP must return normalized hidden plus K/V from exactly one complete auxiliary layer");
+}
 bool MetalCompiledGraph::BuildInternal(X::Value graph,X::Value symbols,const std::string& checkpoint,
-    std::unordered_map<std::string,SharedWeight> shared,bool bf16Projections,bool verification) {
+    std::unordered_map<std::string,SharedWeight> shared,bool bf16Projections,bool verification,bool mtp) {
     Clear();sharedWeights_=std::move(shared);bf16Projections_=bf16Projections;
     auto start=std::chrono::steady_clock::now();
     try {
+#ifndef GARNET_METAL_MTP
+        if(mtp)throw std::logic_error("MTP graph extension is disabled");
+#endif
+        mtpProgram_=mtp;
         if(graph.runtime()!=Host()->runtime||symbols.runtime()!=Host()->runtime||!symbols.IsList())
             throw std::runtime_error("Metal graph inputs must belong to this runtime");
         std::string error;if(!index_.Open(checkpoint,error))throw std::runtime_error(error);
 #ifdef GARNET_METAL_MLX_AFFINE_INT4
         mlxCheckpoint_.Open(index_);
+        if(mtp&&mlxCheckpoint_.Enabled())throw std::invalid_argument("MTP auxiliary checkpoint must retain raw BF16 norm offsets");
         if(verification&&!mlxCheckpoint_.Enabled())throw std::invalid_argument("Verification requires converted affine INT4/group64 weights");
 #endif
         if(verification) {
@@ -371,6 +445,24 @@ bool MetalCompiledGraph::BuildInternal(X::Value graph,X::Value symbols,const std
             if(info.rank!=3||info.shape[0]<1||info.shape[0]>4||info.shape[1]<1||info.shape[1]>4/info.shape[0])
                 throw std::invalid_argument("Verification supports at most four physical token rows");
             verificationTokens_=size_t(info.shape[1]);
+        }
+        if(mtpProgram_) {
+            if(symbols.Size()!=7)throw std::invalid_argument("MTP requires seven explicit inputs");
+            for(uint64_t i=0;i<symbols.Size();++i) {
+                X::Tensor symbol(symbols.Get(i));const auto info=symbol.Info();
+                if(!info.symbolic||info.dtype!=X3_TENSOR_FLOAT32||info.rank<1||info.rank>4)
+                    throw std::invalid_argument("MTP requires symbolic FP32 inputs");
+                inputShapes_.emplace_back(info.shape,info.shape+info.rank);
+                for(auto d:inputShapes_.back())if(d<=0)throw std::invalid_argument("MTP input dimensions must be positive");
+            }
+            const auto& h=inputShapes_[0];const auto& k=inputShapes_[2];
+            if(h.size()!=3||h[0]>4||h[1]>4/h[0]||h[2]>5120||inputShapes_[1]!=h||
+               k.size()!=4||k[0]!=h[0]||k[1]>8||k[2]>4096||k[3]>256||inputShapes_[3]!=k||
+               inputShapes_[4]!=std::vector<int64_t>{h[0],h[1],3}||
+               inputShapes_[5]!=std::vector<int64_t>{h[0],h[1]}||inputShapes_[6]!=inputShapes_[5])
+                throw std::invalid_argument("MTP profile requires up to four token rows and bounded FP32 KV/control inputs");
+            // Reject oversized auxiliary profiles/weights before any GPU allocation.
+            ValidateMTPProgram(true);
         }
         gpu_=std::make_unique<MetalContext>();
         for(uint64_t i=0;i<symbols.Size();++i) {
@@ -386,8 +478,8 @@ bool MetalCompiledGraph::BuildInternal(X::Value graph,X::Value symbols,const std
                     columns*=info.shape[axis];
                 }
             }
-            inputShapes_.emplace_back(info.shape,info.shape+info.rank);
-            const auto id=Allocate(info.shape[0],columns);inputs_.push_back(id);slots_[id].shape=inputShapes_.back();
+            if(!mtpProgram_)inputShapes_.emplace_back(info.shape,info.shape+info.rank);
+            const auto id=Allocate(info.shape[0],columns);inputs_.push_back(id);slots_[id].shape=inputShapes_[i];
             if(!tensors_.emplace(info.id,id).second)throw std::runtime_error("Duplicate Metal symbolic input");
         }
         if(verificationTokens_) {
@@ -854,6 +946,8 @@ bool MetalCompiledGraph::BuildInternal(X::Value graph,X::Value symbols,const std
                 if(mlxCheckpoint_.Enabled())offset=0;
 #endif
                 ops_.push_back({Kind::Norm,a,weight,out,float(node.attributes.Get("eps").ToDouble()),offset,false});
+            }else if(node.name=="qwen35_mtp_fc"&&mtpProgram_) {
+                out=matmul(a,Weight("mtp.fc.weight"));
             }else if(node.name=="qwen35_mlp") {
                 auto prefix=node.attributes.Get("weight_prefix").ToString();
                 auto gate=matmul(a,Weight(prefix+".gate_proj.weight"));
@@ -1119,6 +1213,11 @@ bool MetalCompiledGraph::BuildInternal(X::Value graph,X::Value symbols,const std
         for(const auto& op:ops_)if((op.kind==Kind::BF16MatVec||(op.kind==Kind::MatMul&&op.transpose))&&slots_[op.b].bf16.Valid())
             gpu_->PrepareBF16BodyShape(slots_[op.a].matrix,slots_[op.b].bf16,slots_[op.out].matrix);
 #endif
+        if(mtpProgram_) {
+            ValidateMTPProgram();const auto memory=MetalContext::MemoryStats();
+            if(memory.recommended<=256*1024*1024||memory.allocated>memory.recommended-256*1024*1024)
+                throw std::runtime_error("MTP graph exceeds the native working-set guard");
+        }
         sharedWeights_.clear();ready_=true;
 #ifdef GARNET_METAL_CHUNK_KV_INPLACE
         // Metadata is enough to construct private session state. Retire proved
@@ -1223,6 +1322,18 @@ void MetalCompiledGraph::PrepareInputs(X::Value inputs,const std::unordered_set<
             throw std::runtime_error("Metal runtime input shape/storage mismatch");
         auto lease=tensor.Acquire();auto data=static_cast<const float*>(info.data);
         if(controls.count(inputs_[i]))hostInputs[inputs_[i]]=std::vector<float>(data,data+slot.rows*slot.columns);
+    }
+    if(mtpProgram_) {
+        const auto& flags=hostInputs.at(inputs_[6]);const auto& slots=hostInputs.at(inputs_[5]);
+        const auto chunk=size_t(inputShapes_[0][1]);
+        for(size_t base=0;base<flags.size();base+=chunk) {
+            bool ended=false;
+            for(size_t t=0;t<chunk;++t) {
+                if(flags[base+t]==0)ended=true;
+                else if(ended||slots[base+t]!=slots[base]+float(t))
+                    throw std::invalid_argument("MTP requires contiguous active prefixes and increasing slots");
+            }
+        }
     }
     if(verificationTokens_) {
         // Validate linear layers too, before ANY layer is encoded by a session.

@@ -89,9 +89,18 @@ state and every Conv/GDN/KV state hash in22 cases at capacity64/4096. The4K case
 use seeded late positions, not a full4K prompt. Per-position heads, checkpoint/
 replay and exact KV restoration stay native; source output banks supply S1 under
 locks. Preparation initializes a prediction bank when predict-false prefill has
-not produced an earlier prediction. Auxiliary MTP, speculative serving/coding
-qualification and2x speed targets remain unfinished. The extension stays off by
+not produced an earlier prediction. Auxiliary MTP serving/coding integration
+and2x speed targets remain unfinished. The extension stays off by
 default.
+
+The separate default-OFF `GARNET_METAL_MTP` extension now supports a bounded
+seven-input raw-BF16 auxiliary graph. It preserves +1 norm offsets and shares
+all15 weight records between compiled profiles. Independent NumPy FP32 references
+pass38 synthetic cases and14 learned auxiliary cases at capacity64/4096,
+including carried caches and byte-identical untouched spans. It uses synthetic
+target/embedding inputs; target-hidden transfer, shared target vocabulary projection,
+shifted teacher correction and real speculative generation remain unfinished.
+See `metal_mtp.py` and the research record for the explicit numerical criterion.
 
 ## Entry points and limits
 

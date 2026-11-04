@@ -2835,9 +2835,85 @@ requires206/range/length agreement, preserves raw BF16 bits, checks every value
 for finiteness and records source/package hashes. The resulting MTP-only file
 is849,400,560bytes, SHA256
 `dec6630788d1ba4557230ca02b5df2db239f2b2bbcfff1c6742776e231e7540b`.
-Its manifest status is explicitly raw/not runtime-qualified. The fixed generator
-artifact is unchanged. A derived INT4 auxiliary package, target/head sharing,
-Metal MTP lowering and complete speculative serving remain unfinished. Target
+Its extraction manifest status is explicitly raw/not runtime-qualified; the later
+bounded auxiliary graph gate is recorded below. The fixed generator artifact is
+unchanged. A derived INT4 auxiliary package, target/head sharing and complete
+speculative serving remain unfinished. Target
 greedy verification and hybrid-state commit have finite admission above.
-Existing pinned vLLM `qwen3_5_mtp.py` and Garnet's
+Existing pinned SGLang `qwen3_5_mtp.py` and Garnet's
 CUDA MTP/verifier are relevant implementation references, not Metal support.
+
+### Native raw-BF16 MTP auxiliary graph
+
+The default-OFF `GARNET_METAL_MTP` extension exposes an explicit `build_mtp`
+compiled graph. `xModel/qwen38/vl_27b/metal_mtp.py` composes the auxiliary layer
+through existing native normalization, BF16 projection, gated full-attention,
+RoPE and MLP operations. It takes seven inputs: normalized target hidden,
+shifted embedding, independent K/V, positions, slots and active mask. Profiles
+bound batch/token rows to four total, hidden width to5120 and context to4096.
+Actual active prefixes may be shorter than the compiled token capacity.
+
+The raw auxiliary checkpoint uses +1 offsets on all seven norm vectors. It is
+kept separate from the target's converted zero-offset norms. Embedding and target
+state are separately normalized; concatenation places the embedding first.
+Teacher inputs pair target state at t with embedding/position t+1. The output is
+already MTP-normalized and must use only the target vocabulary projection.
+The source alignment/config audit is `native-mtp-source-alignment1.json`; pinned
+SGLang and Garnet CUDA are implementation references. The audit verifies eight
+architecture fields, not parent-to-conversion weight lineage. Frozen Apple
+reference serving engines are unchanged.
+
+Before allocating GPU buffers, native preparation validates raw BF16 metadata,
+projection/norm shapes and the complete seven-input profile. After lowering it
+also validates native weight representations,
+the +1 offsets, one gated attention block, three packed output parts and explicit
+cache/control identities. It applies the working-set reserve. Runtime rejects
+non-prefix occupancy, invalid masks/positions/slots before uploading inputs.
+`build_shared` preserves auxiliary mode and native weight identities. The finite
+test shares a one-token source into each larger token profile, then closes the
+source graph before running its child. Inventory proves that
+all15 weight records share buffers, including all eight BF16 matrices; there is
+no FP32 expansion of those matrices. The fifteen buffers have849,451,008 logical
+bytes and849,512,448 allocated bytes on this Mac, including expanded small norm
+vectors and allocation alignment. These are inventory sizes, not peaks.
+
+An independent NumPy FP32 oracle reads the raw BF16 tensors directly. It checks
+embedding-first concatenation, every normalization/projection, gated attention,
+interleaved partial RoPE and causal cache writes. Its fixed element criterion is
+`abs(error) <= 5e-4 + 5e-4*abs(reference)`; every untouched cache word must remain
+byte-identical. This draft-operator criterion does not weaken the exact target
+token/state verification gate. Mutation probes for reversed concatenation and
+missing norm offsets fail the same criterion by wide margins.
+
+`native-mtp-graph-fixture5` passes38 synthetic cases/825 checks across batch1/2/4,
+token capacities1/2/3/4 and contexts16/4096. It covers partial/zero occupancy,
+inactive NaNs, unequal rows, carried GPU cache state, source-owner closure,
+explicit-build guards and rejected control calls followed by identical valid
+execution. It checks3,758,336 untouched cache words exactly. The pinned learned
+auxiliary in `native27b-mtp-graph4` passes14 batch1/T4 cases/508 checks at
+capacities64/4096, checking59,580,416 untouched cache words exactly. The worst
+numeric error ratio is0.054722 of the fixed allowed element bound. All four
+native owner counts close to zero. Prepared snapshots while both shared graph
+owners exist are856,555,520 and958,365,696 Metal bytes. The boundary test uses
+synthetic target/embedding and old-cache inputs and reaches slot4095; it does
+not qualify a real4K prompt or target generation.
+
+Oversized native batch/token/context profiles reject before allocation; tests
+check the native error and unchanged device allocation. The move to earlier
+validation initially assigned the last symbolic input's shape to every slot;
+`native-mtp-graph-fixture4` failed at the first chunk mask. Slot shapes now use
+their corresponding input index. The failed source/library is retained in
+`native-mtp-graph-source1`. No arithmetic, oracle criterion or assets changed.
+
+The final enabled native suite passes23/23 and the disabled compatibility suite
+19/19. Existing native greedy verification still passes211 cases/2,633 checks.
+The saved353-check evidence review verifies current source/library provenance,
+oracle bounds, unchanged output hashes across the preparation repair, shared
+weight inventory, legal active slots and zero owner cleanup in
+`native-mtp-graph-evidence-review1.json`. Final sources and both libraries are
+archived in `native-mtp-graph-source2`.
+
+This is an auxiliary-only graph admission. Native target-hidden transfer,
+shared target output projection, shifted teacher prefill/correction, draft
+acceptance rates, complete coding/full-token parity and speculative serving
+performance remain unfinished. No model speedup is claimed.

@@ -81,6 +81,8 @@ class MetalCompiledGraph {
     size_t BF16Weight(const std::string&,bool visionPrefill=false);
     size_t Allocate(size_t,size_t);
     size_t LowerVision(size_t input,const X::Value& attributes);
+    bool mtpProgram_=false;
+    void ValidateMTPProgram(bool metadataOnly=false) const;
 #ifdef GARNET_METAL_LAZY_RESIDENT_DEFAULTS
     bool lazyDefaultPlanReady_=false;std::vector<size_t> lazyDefaultSlots_;
     size_t lazyRetiredBytes_=0,lazyRehydratedBytes_=0;
@@ -108,11 +110,14 @@ class MetalCompiledGraph {
     bool ComputeResetKVPrefix(size_t part) const;
     bool CanResetKVPrefix(size_t part) const {return part>=1&&part<=2&&resetKVPrefix_[part-1];}
     bool SwapOutputStorage(size_t part,MetalMatrix& replacement);
-    bool BuildInternal(X::Value,X::Value,const std::string&,std::unordered_map<std::string,SharedWeight>,bool bf16Projections=false,bool verification=false);
+    bool BuildInternal(X::Value,X::Value,const std::string&,std::unordered_map<std::string,SharedWeight>,bool bf16Projections=false,bool verification=false,bool mtp=false);
 #ifdef GARNET_METAL_VERIFY_ATTENTION
     bool SharesVerificationWeights(const MetalCompiledGraph&) const;
 #endif
 public:
+#ifdef GARNET_METAL_MTP
+    bool BuildMTP(X::Value,X::Value,const std::string&);
+#endif
     bool Build(X::Value graph,X::Value symbols,const std::string& checkpoint);
     bool BuildBF16(X::Value graph,X::Value symbols,const std::string& checkpoint);
     bool BuildShared(X::Value graph,X::Value symbols,const std::string& checkpoint,X::Value source);
@@ -162,6 +167,9 @@ public:
 #endif
         APISET().AddFunc<3>("build",&MetalCompiledGraph::Build);
         APISET().AddFunc<3>("build_bf16",&MetalCompiledGraph::BuildBF16);
+#ifdef GARNET_METAL_MTP
+        APISET().AddFunc<3>("build_mtp",&MetalCompiledGraph::BuildMTP);
+#endif
         APISET().AddFunc<4>("build_shared",&MetalCompiledGraph::BuildShared);
 #ifdef GARNET_METAL_VERIFY_ATTENTION
         APISET().AddFunc<4>("build_verification_shared",&MetalCompiledGraph::BuildVerificationShared);
