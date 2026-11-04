@@ -34,6 +34,7 @@ def summarize(root):
                 if not math.isfinite(row['sample_max_abs']) or row['sample_max_abs']<0:issues.append('Invalid numerical diagnostic')
                 wants_mpp=bool(meta and meta[0]['mpp_available'] and key[0]>4)
                 if row.get('mpp_n_major',False)!=(meta[0].get('mpp_n_major',False) if wants_mpp else False):issues.append('Per-cell staging layout differs from actual route')
+                if row.get('mpp_registers',False)!=(meta[0].get('mpp_registers',False) if wants_mpp else False):issues.append('Per-cell operand storage differs from actual route')
                 wanted_dtype=meta[0].get('operand_dtype','float32') if wants_mpp else 'float32'
                 if row.get('relaxed_precision',False)!=(meta[0].get('relaxed_precision',False) if wants_mpp else False):issues.append('Per-cell precision mode differs from actual route')
                 if row.get('operand_dtype','float32')!=wanted_dtype:issues.append('Per-cell operand type differs from actual route')
@@ -51,6 +52,11 @@ def summarize(root):
         if len(relaxed_values)!=1 or (meta and meta[0]['mpp_available'] and relaxed_values!={('GARNET_METAL_MPP_AFFINE_RELAXED:BOOL=ON' in cache)}):issues.append(variant+': tensor precision mode differs from build')
         layout_values={item.get('mpp_n_major',False) for item in metadata[variant]}
         if len(layout_values)!=1 or (meta and meta[0]['mpp_available'] and layout_values!={('GARNET_METAL_MPP_AFFINE_N_MAJOR:BOOL=ON' in cache)}):issues.append(variant+': staging layout differs from build')
+        register_values={item.get('mpp_registers',False) for item in metadata[variant]}
+        if len(register_values)!=1 or (meta and meta[0]['mpp_available'] and register_values!={('GARNET_METAL_MPP_AFFINE_REGISTERS:BOOL=ON' in cache)}):issues.append(variant+': operand storage metadata differs from build')
+        if meta and meta[0]['mpp_available']:
+            tensor_k=16 if meta[0].get('mpp_registers',False) else cache_tile
+            if any(item.get('mpp_tensor_k',cache_tile)!=tensor_k for item in metadata[variant]):issues.append(variant+': tensor reduction extent differs from build')
         data[variant]=cells
     for variant in manifest.get('required_mpp_variants',['mpp'] if 'mpp' in metadata else []):
         if not all(item['mpp_available'] for item in metadata[variant]):issues.append(variant+': MPP candidate was not available')

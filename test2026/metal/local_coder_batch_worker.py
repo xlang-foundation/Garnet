@@ -45,6 +45,11 @@ def main():
         layout=profile.get('mpp_n_major',False)
         if type(layout) is not bool or 'mpp_affine_n_major='+str(int(layout)) not in garnet.backend_info():
             raise ValueError('Frozen profile requires its explicit MPP weight layout')
+        registers=profile.get('mpp_registers',False)
+        if type(registers) is not bool or 'mpp_affine_registers='+str(int(registers)) not in garnet.backend_info():
+            raise ValueError('Frozen profile requires its explicit MPP operand storage')
+        tensor_k=16 if registers else tile
+        if 'mpp_affine_tensor_k='+str(tensor_k) not in garnet.backend_info():raise ValueError('Frozen profile requires its explicit MPP tensor reduction extent')
     width=config['text_config']['hidden_size'];vocab=config['text_config']['vocab_size']
     incoming=queue.Queue(maxsize=16);shutdown=threading.Event();input_failure=[]
     decoder=None;policy=None;jobs={};keys=set()

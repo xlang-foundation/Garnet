@@ -57,15 +57,15 @@ void Cell(MetalContext& gpu,size_t m,size_t n,size_t k,int warmups,int repetitio
         const auto error=std::abs(double(actual[sample[0]*n+sample[1]])-expected);maximum=std::max(maximum,error);
         Require(error<=std::max(1e-4,std::abs(expected)*3e-4),"Large-shape FP64 sample differs");
     }
-    bool relaxed=false,nMajor=false;
+    bool relaxed=false,nMajor=false,registers=false;
 #ifdef GARNET_METAL_MPP_AFFINE
-    if(m>4&&gpu.HasMPPAffine()){relaxed=GARNET_METAL_MPP_AFFINE_RELAXED_VALUE!=0;nMajor=GARNET_METAL_MPP_AFFINE_N_MAJOR_VALUE!=0;}
+    if(m>4&&gpu.HasMPPAffine()){relaxed=GARNET_METAL_MPP_AFFINE_RELAXED_VALUE!=0;nMajor=GARNET_METAL_MPP_AFFINE_N_MAJOR_VALUE!=0;registers=GARNET_METAL_MPP_AFFINE_REGISTERS_VALUE!=0;}
 #endif
     const char* operand="float32";
 #ifdef GARNET_METAL_MPP_AFFINE_BF16
     if(m>4&&gpu.HasMPPAffine())operand="bfloat16";
 #endif
-    std::cout<<"{\"kind\":\"cell\",\"relaxed_precision\":"<<(relaxed?"true":"false")<<",\"mpp_n_major\":"<<(nMajor?"true":"false")<<",\"operand_dtype\":"<<std::quoted(operand)<<",\"rows\":"<<m<<",\"outputs\":"<<n<<",\"inner\":"<<k
+    std::cout<<"{\"kind\":\"cell\",\"relaxed_precision\":"<<(relaxed?"true":"false")<<",\"mpp_n_major\":"<<(nMajor?"true":"false")<<",\"mpp_registers\":"<<(registers?"true":"false")<<",\"operand_dtype\":"<<std::quoted(operand)<<",\"rows\":"<<m<<",\"outputs\":"<<n<<",\"inner\":"<<k
              <<",\"warmups\":"<<warmups<<",\"repetitions\":"<<repetitions<<",\"mpp_dispatches_per_call\":"<<mppDispatches
              <<",\"sample_max_abs\":"<<maximum<<",\"gpu_ms\":";Array(gpuMs);std::cout<<",\"wall_ms\":";Array(wallMs);std::cout<<"}\n"<<std::flush;
 }
@@ -80,16 +80,16 @@ int main(int argc,char** argv) {
 #ifdef GARNET_METAL_MPP_AFFINE
         mpp=gpu.HasMPPAffine();
 #endif
-        int tileK=0;bool relaxed=false,nMajor=false;
+        int tileK=0;bool relaxed=false,nMajor=false,registers=false;
 #ifdef GARNET_METAL_MPP_AFFINE
-        if(mpp){tileK=GARNET_METAL_MPP_AFFINE_TILE_K;relaxed=GARNET_METAL_MPP_AFFINE_RELAXED_VALUE!=0;nMajor=GARNET_METAL_MPP_AFFINE_N_MAJOR_VALUE!=0;}
+        if(mpp){tileK=GARNET_METAL_MPP_AFFINE_TILE_K;relaxed=GARNET_METAL_MPP_AFFINE_RELAXED_VALUE!=0;nMajor=GARNET_METAL_MPP_AFFINE_N_MAJOR_VALUE!=0;registers=GARNET_METAL_MPP_AFFINE_REGISTERS_VALUE!=0;}
 #endif
         const char* operand="float32";
 #ifdef GARNET_METAL_MPP_AFFINE_BF16
         if(mpp)operand="bfloat16";
 #endif
         std::cout<<std::setprecision(12)<<"{\"kind\":\"metadata\",\"device\":"<<std::quoted(gpu.DeviceName())<<",\"mpp_available\":"<<(mpp?"true":"false")
-                 <<",\"relaxed_precision\":"<<(relaxed?"true":"false")<<",\"mpp_n_major\":"<<(nMajor?"true":"false")<<",\"maximum_rows\":"<<maximumRows<<",\"mpp_tile_k\":"<<tileK<<",\"operand_dtype\":"<<std::quoted(operand)<<",\"accumulator_dtype\":\"float32\",\"scope\":\"Synthetic affine projection GPU/wall latency; excludes loading, compilation and downloads; not model throughput\"}\n";
+                 <<",\"relaxed_precision\":"<<(relaxed?"true":"false")<<",\"mpp_n_major\":"<<(nMajor?"true":"false")<<",\"mpp_registers\":"<<(registers?"true":"false")<<",\"maximum_rows\":"<<maximumRows<<",\"mpp_tensor_k\":"<<(registers?16:tileK)<<",\"mpp_tile_k\":"<<tileK<<",\"operand_dtype\":"<<std::quoted(operand)<<",\"accumulator_dtype\":\"float32\",\"scope\":\"Synthetic affine projection GPU/wall latency; excludes loading, compilation and downloads; not model throughput\"}\n";
         for(size_t m:{1,2,4,8,16,32,64,128})if(m<=size_t(maximumRows))for(auto dimensions:std::array<std::array<size_t,2>,3>{{{5120,5120},{17408,5120},{5120,17408}}})
             Cell(gpu,m,dimensions[0],dimensions[1],warmups,repetitions);
         return 0;

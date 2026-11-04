@@ -1221,3 +1221,21 @@ operator archives remain auditable, and eleven metadata/timing tamper checks
 pass. This candidate has not been built or numerically qualified yet: builds
 and GPU tests must wait until the frozen chunk sweep exits. No physical NAX
 instruction use, model correctness or speedup is inferred from the tensor API.
+
+The chunk sweep is complete (`native27b-chunk-selection1/final-audit.json`):
+all eight fixed-shape probes, frozen input/library/config invariants and four
+tamper checks pass. Long paired-prefill first/repeat seconds are8:255.713/256.621,
+16:215.738/200.624,32:199.919/192.026,64:203.627/197.312. All preserve exact16-token
+outputs per row in both repeats. Chunk32 has the lowest observed repeat time in
+both regimes and uses408,633,344 fewer Metal bytes than64, but two observations
+are not a universal optimality or a repeated serving admission. Prefill remains
+far below reference serving performance; no2x target is established.
+
+The register tensor candidate's first shader attempt failed because `fragment`
+is a Metal stage keyword. The original shader/library/cache and failed test log
+are retained in `mpp-bf16-registers-attempt1`. Renaming that loop variable yields
+all12 CTests passing, including24 independent affine cases through512 rows and
+matrix/K/output tails (`mpp-bf16-registers-ctest2.log` plus expanded log). Backend
+metadata identifies strict BF16 operands, FP32 accumulation, register storage,
+outerK64 and tensorK16. Full-model coding and serving remain unqualified.
+Sequential operator timing against unchanged tall/staged controls is next.

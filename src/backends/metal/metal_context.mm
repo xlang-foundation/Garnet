@@ -1486,7 +1486,7 @@ kernel void bf16_native_dot_t128(device const float* a [[buffer(0)]],device cons
         if(@available(macOS 26.0,*))if([impl_->device supportsFamily:MTLGPUFamilyApple10]) {
             auto mppOptions=[MTLCompileOptions new];mppOptions.languageVersion=MTLLanguageVersion4_0;
             mppOptions.mathMode=MTLMathModeSafe;
-            NSString* mppSource=[[NSString stringWithFormat:@"#define GARNET_MPP_K %u\n#define GARNET_MPP_RELAXED %u\n#define GARNET_MPP_N_MAJOR %u\n",unsigned(GARNET_METAL_MPP_AFFINE_TILE_K),unsigned(GARNET_METAL_MPP_AFFINE_RELAXED_VALUE),unsigned(GARNET_METAL_MPP_AFFINE_N_MAJOR_VALUE)] stringByAppendingString:[NSString stringWithUTF8String:kAffineInt4MPPShader]];
+            NSString* mppSource=[[NSString stringWithFormat:@"#define GARNET_MPP_K %u\n#define GARNET_MPP_RELAXED %u\n#define GARNET_MPP_N_MAJOR %u\n#define GARNET_MPP_REGISTERS %u\n",unsigned(GARNET_METAL_MPP_AFFINE_TILE_K),unsigned(GARNET_METAL_MPP_AFFINE_RELAXED_VALUE),unsigned(GARNET_METAL_MPP_AFFINE_N_MAJOR_VALUE),unsigned(GARNET_METAL_MPP_AFFINE_REGISTERS_VALUE)] stringByAppendingString:[NSString stringWithUTF8String:kAffineInt4MPPShader]];
 #ifdef GARNET_METAL_MPP_AFFINE_BF16
             mppSource=[@"#define GARNET_MPP_BF16 1\n" stringByAppendingString:mppSource];
 #endif
@@ -1758,7 +1758,13 @@ void MetalContext::EncodeAffineInt4MatMul(const MetalMatrix& input,const MetalAf
 #endif
 #ifdef GARNET_METAL_MPP_AFFINE
         if(a.rows>4&&impl_->kernels->mppAffine) {
-            pipeline=impl_->kernels->mppAffine;tileRows=32;++impl_->mppAffineDispatches;
+            pipeline=impl_->kernels->mppAffine;
+#if GARNET_METAL_MPP_AFFINE_REGISTERS_VALUE
+            tileRows=64;
+#else
+            tileRows=32;
+#endif
+            ++impl_->mppAffineDispatches;
         }
 #endif
         [encoder setComputePipelineState:pipeline];
