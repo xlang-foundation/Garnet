@@ -232,6 +232,10 @@ void MetalDecoderSession::CommitVerification(VerificationRun& run,const std::vec
 X::Value MetalDecoderSession::VerifyGreedy(X::Value hidden,X::Value positions,X::Value slots,X::Value active,
     X::Value tokens,X::Value stops,X::Value remaining,X::Value epochs) {
     std::lock_guard<std::mutex> lock(mutex_);
+    return VerifyGreedyUnlocked(hidden,positions,slots,active,tokens,stops,remaining,epochs);
+}
+X::Value MetalDecoderSession::VerifyGreedyUnlocked(X::Value hidden,X::Value positions,X::Value slots,X::Value active,
+    X::Value tokens,X::Value stops,X::Value remaining,X::Value epochs) {
     if(!verification_||!gpu_||poisoned_)throw std::logic_error("Prepare a ready native verification workspace first");
     auto& p=*verification_;VerificationRun run;run.plan=&p;
     run.tokens=Integers(tokens,Host(),p.batch*p.chunk,"input tokens");run.remaining=Integers(remaining,Host(),p.batch,"remaining budgets");

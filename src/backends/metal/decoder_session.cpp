@@ -562,7 +562,17 @@ X::Value MetalDecoderSession::RunUnlocked(X::Value graphs,X::Value hidden,X::Val
     prefixFreshReset_=false;
 #endif
 #ifdef GARNET_METAL_MTP_BRIDGE
-    if(mtp_)gpu_->Update(mtp_->captures.at(chunk).active,mtpRunFlags);
+    if(mtp_) {
+        X::Tensor tensor(slots);auto lease=tensor.Acquire();const auto* values=static_cast<const float*>(tensor.Info().data);
+        for(size_t row=0;row<mtp_->batch;++row) {
+            size_t next=mtp_->targetLengths[row];bool ended=false;
+            for(size_t j=0;j<chunk;++j) {
+                if(mtpRunFlags[row*chunk+j]==0)ended=true;
+                else if(ended||values[row*chunk+j]!=float(next++))throw std::invalid_argument("MTP target requires contiguous native history");
+            }
+        }
+        gpu_->Update(mtp_->captures.at(chunk).active,mtpRunFlags);
+    }
 #endif
     kvInplaceUpdates_=0;constantHeadDispatches_=0;singleCoderHeadDispatches_=0;residualNormDispatches_=0;packedPrefillNormDispatches_=0;globalHalfAlphaDispatches_=0;wideBatchPrefillDispatches_=0;interleavedBodyDispatches_=0;coalescedBlockDispatches_=0;mlpGraphDispatches_=0;joinedGlobalMlpBlocks_=0;poisoned_=true;gpu_->Begin();
     try {
@@ -699,6 +709,17 @@ X::Value MetalDecoderSession::RunUnlocked(X::Value graphs,X::Value hidden,X::Val
     inferenceMs_=std::chrono::duration<double,std::milli>(std::chrono::steady_clock::now()-start).count();
 #ifdef GARNET_METAL_MTP_BRIDGE
     if(mtp_) {
+        for(size_t row=0;row<mtp_->batch;++row) {
+            size_t count=0;for(size_t j=0;j<chunk;++j)count+=size_t(mtpRunFlags[row*chunk+j]!=0);
+            if(verification) {
+                mtp_->targetLengths[row]+=size_t(verification->consumed[row]);
+                if(verification->consumed[row])mtp_->targetPredictionReady[row]=1;
+            }else {
+                mtp_->targetLengths[row]+=count;
+                if(predictionToken>=0)mtp_->targetPredictionReady[row]=uint8_t(count&&size_t(predictionToken)==count-1);
+                else if(count)mtp_->targetPredictionReady[row]=0;
+            }
+        }
         if(!verification)mtp_->captures.at(chunk).flags=std::move(mtpRunFlags);
         mtp_->currentCapture=chunk;
     }
@@ -747,6 +768,9 @@ X::Value MetalDecoderSession::PredictRows(X::Value epochs) {
             if(selected[row]&&values[row*2+1]!=0)throw std::runtime_error("Nonfinite row prediction logits");
             result.Append(X::Value(selected[row]?int64_t(values[row*2]):-1));
         }
+#ifdef GARNET_METAL_MTP_BRIDGE
+        if(mtp_)for(size_t row=0;row<selected.size();++row)mtp_->targetPredictionReady[row]=uint8_t(selected[row]);
+#endif
         poisoned_=false;return result;
     } catch(...) {gpu_->Abort();throw;}
 }
@@ -905,6 +929,7 @@ std::vector<MetalResourceReference> MetalDecoderSession::MemoryReferences() {
         for(size_t i=0;i<2;++i){append(m.cache[i],i,"mtp_private_cache",{});append(m.backup[i],i,"mtp_draft_backup",{});}
         append(m.lastTarget,SIZE_MAX,"mtp_normalized_target_last",{});append(m.lastHidden,SIZE_MAX,"mtp_last_hidden",{});
         append(m.prediction,SIZE_MAX,"mtp_prediction",{});append(m.baseHidden,SIZE_MAX,"mtp_base_hidden",{});append(m.basePrediction,SIZE_MAX,"mtp_base_prediction",{});
+        append(m.validation,SIZE_MAX,"mtp_validation_status",{});
         append(m.backupSlots,SIZE_MAX,"mtp_backup_slots",{});append(m.backupActive,SIZE_MAX,"mtp_backup_active",{});
         for(const auto& c:m.captures){append(c.second.flat,c.first,"mtp_target_flat",{});append(c.second.normalized,c.first,"mtp_target_normalized",{});append(c.second.packed,c.first,"mtp_target_packed",{});append(c.second.active,c.first,"mtp_target_active",{});}
         for(const auto& s:m.slices)append(s.second,s.first,"mtp_slice",{});

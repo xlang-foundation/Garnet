@@ -285,6 +285,7 @@ public:
 #endif
 #ifdef GARNET_METAL_MTP_BRIDGE
         info+="; native_mtp_target_bridge";
+        info+="; native_mtp_generation";
 #endif
 #ifdef GARNET_METAL_VERIFY_ATTENTION
         info+="; verification_attention_fp32";

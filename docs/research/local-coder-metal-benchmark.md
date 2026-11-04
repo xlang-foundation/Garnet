@@ -2998,9 +2998,83 @@ The final enabled native suite passes23/23, disabled compatibility passes19/19,
 and the existing greedy verifier still passes211 cases/2,633 checks. Final
 bridge sources and both libraries are retained in `native-mtp-bridge-source3`.
 
-These are native bridge primitives, called by a diagnostic driver. A combined
-native generation transaction, teacher prefill without unnecessary head calls,
-wide real-prompt admission, complete coding/full-token gates, continuous
+These bridge gates initially used a diagnostic driver; the native transaction
+and cache-only teacher gate follows below. Wide real-prompt admission,
+complete coding/full-token gates, continuous
 speculative scheduling and auxiliary prefix reuse remain unfinished. The
 earlier native target prefix/scheduler gates do not admit those combinations.
 All2x decode/throughput and half-TTFT targets remain unmet.
+
+### Native generation transaction and cache-only teacher
+
+The same default-OFF feature now exposes `prepare_mtp_embedding(checkpoint)`
+and `mtp_generate(known_ids, remaining_budgets, stop_ids, epochs)`. One session
+mutex covers recursive auxiliary proposals, exact target verification and
+teacher correction. Each GPU stage retains its existing graph/scratch locks;
+all state carried between stages is session-owned. Only a completed transaction returns
+new output IDs. A late error after a mutation poisons the session, so callers
+cannot observe or continue partially committed generation.
+
+The embedding reader privately owns read-only affine mappings from the target
+checkpoint. Preparation checks the index file identity, tensor file identities,
+offsets, shapes and vocabulary against the target. Lookup uses the existing
+group64/BF16-rounded row decoder and never expands the whole embedding table or
+adds a GPU table. External tensor-helper close/reopen does not affect the
+runtime mapping. Changed mapped checkpoint metadata rejects before reading;
+it does not silently bind a different model.
+
+The runtime tracks contiguous target and auxiliary histories separately,
+retains their actual three-axis next positions and validates the supplied known
+ID against the authoritative unconsumed target prediction. Per-row budgets,
+leases, EOS and context bounds are checked before mutation. The initial known
+token has already been emitted by prefill or the previous transaction; returned
+IDs are all new. Physical batch/token capacity still bounds four total token
+rows, with smaller per-row submissions supported. Inactive requests keep their
+state. Generation statistics describe the last nonempty completed transaction;
+their wall-time fields are diagnostic until a matched benchmark qualifies them.
+
+`mtp_teacher_cache` performs the teacher update without projecting the full
+vocabulary. A small hidden-vector argmax/status pass checks nonfinite results;
+it does not provide a vocabulary prediction. Updated rows are explicitly marked
+prediction-not-ready, and generation rejects until a predicting teacher call
+supplies the first draft. The combined call also uses this mode for its final
+correction when no request needs another prediction.
+
+`native-mtp-generation-fixture3` passes44 native transactions and the existing13
+bridge cases in1,336 checks. Physical batch1/2/4, ragged budgets, batch1 source
+capacity4096, nontrivial three-axis position offsets and eight generated EOS
+events are covered. Output IDs and complete target/auxiliary state match the
+ordinary/standalone oracles. Tests cover cache-only prefill, one-token tails,
+zero-work calls, authoritative-known-ID rejection, invalid budgets/stops,
+inactive stale epochs, changed embedding files and closed graph owners before
+shallow generation. The runtime still works while the external tensor helper
+is closed. The file-change fixture uses whole-second timestamps: its first
+nanosecond restore did not reproduce the recorded timestamp, so the correct
+native metadata guard rejected the next call. That failure and
+runner remain as `native-mtp-generation-fixture2`; no tolerance or native guard
+was weakened.
+
+`native27b-mtp-generation1` runs the actual pinned27B factory and auxiliary on
+the same nine-token coding completion. All16 output IDs and five committed
+target hidden/state sets match the earlier bridge result and ordinary decode.
+The five native calls consume3/2/4/4/2 inputs and accept10 of13 drafts. Saved
+evidence includes640 target-state hash pairs and42 auxiliary K/V/last-hidden
+hash pairs over14 stages. It passes383 checks and closes all four native owner
+counts to zero. Prepared Metal allocation is16,042,147,840 bytes, a snapshot
+within the reserve. Eight prefill head evaluations and the final unnecessary
+head evaluation are skipped: auxiliary vocabulary-head calls fall from22 to13,
+with nine small validation-only calls. These operation counts do not establish
+a model speedup. The references in this process are diagnostic, and the case
+does not qualify the frozen eight-task coding suite or trained batched serving.
+
+Wide real teacher profiles, complete coding/full-token gates, continuous
+speculative scheduling and auxiliary prefix snapshots remain unfinished.
+The frozen vLLM-Metal/SGLang measurements are unchanged. All2x decode/throughput
+and half-TTFT targets remain unmet.
+
+The final enabled native suite passes23/23 and disabled compatibility19/19.
+The existing greedy verifier passes211 cases/2,633 checks. The saved1,128-check
+review verifies current provenance, complete output IDs, target/auxiliary state
+hashes, budget/draft accounting, skipped-head routing, shared projection buffers
+and zero owner cleanup in `native-mtp-generation-review1.json`. Final sources
+and both libraries are retained in `native-mtp-generation-source1`.

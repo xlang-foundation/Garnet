@@ -10,6 +10,7 @@ with open(sys.argv[1]) as stream:f=json.load(stream)
 with open(f['config']) as stream:config=json.load(stream)
 with open(sys.argv[5]) as stream:prompt=json.load(stream)
 c=config['text_config'];w=c['hidden_size'];cap=f['capacity'];chunk=4;kv=c['num_key_value_heads'];dim=c['head_dim'];cache=kv*cap*dim
+generation=len(sys.argv)>6 and sys.argv[6]=='generation'
 decoder=None;reference=garnet.decoder_session();graphs=[];mtp=None;oracle=None;checks=0;records=[];mtp_records=[]
 def val(data,shape):return tensor.tensor(data,shape=shape,dtype=tensor.float32)
 def syms(shapes,name):return [tensor.input(name+str(i),shape=s,dtype=tensor.float32) for i,s in enumerate(shapes)]
@@ -34,7 +35,9 @@ try:
   g=garnet.compiled_graph();g.build_shared(head(*inputs),inputs,f['checkpoint'],decoder.head);graphs.append(g)
  verification_head,projection_head,normalizer=graphs[-3:]
  target.prepare_verification(verify,verification_head);mtp=MetalMTPProgram(sys.argv[4],c,1,cap,4);oracle=MetalMTPProgram(sys.argv[4],c,1,cap,4,source=mtp)
- target.prepare_mtp(mtp.graph,projection_head,[1,4]);prepared=json.loads(garnet.memory_stats_json());print('trained_mtp_bridge_prepared',json.dumps(prepared),flush=True)
+ target.prepare_mtp(mtp.graph,projection_head,[1,4])
+ if generation:target.prepare_mtp_embedding(f['checkpoint'])
+ prepared=json.loads(garnet.memory_stats_json());print('trained_mtp_bridge_prepared',json.dumps(prepared),flush=True)
  inventory_path=f['output']+'.inventory.json'
  with open(inventory_path,'w') as stream:stream.write(garnet.memory_inventory_json([{'tag':'target_head','object':decoder.head},{'tag':'mtp_head','object':projection_head},{'tag':'mtp','object':mtp.graph}],target))
  key=io.zeros([1,kv,cap,dim]);value=io.zeros([1,kv,cap,dim]);last=io.zeros([1,w]);predicted=[0]
@@ -54,31 +57,44 @@ try:
   generated=step(target,token,slot);equal(generated,step(reference,token,slot),'prefill prediction')
   next_token=prompt['ids'][slot+1] if slot+1<len(prompt['ids']) else generated
   normalized=normalizer.run([reference.hidden()]);packed=io.stack_tokens([normalized]+[io.zeros([1,w])]*3);embedding=stack([next_token,0,0,0]);ctl=controls(slot,1)
-  first_draft=target.mtp_teacher(embedding,*ctl,0,None)[0];equal([first_draft],oracle_step(packed,embedding,ctl,1),'shifted prefill MTP');compare('prefill')
+  wanted=oracle_step(packed,embedding,ctl,1)
+  if generation and slot+1<len(prompt['ids']):equal(target.mtp_teacher_cache(embedding,*ctl,0,None),[-1],'cache-only prefill');equal(json.loads(target.mtp_stats_json())['head_calls'],0,'no prefill vocabulary head')
+  else:first_draft=target.mtp_teacher(embedding,*ctl,0,None)[0];equal([first_draft],wanted,'shifted prefill MTP')
+  compare('prefill')
  output_ids=[generated];base_slot=len(prompt['ids']);stops=c.get('eos_token_id',[]);stops=stops if isinstance(stops,list) else [stops]
  while len(output_ids)<prompt['max_output'] and output_ids[-1] not in stops:
-  remaining=prompt['max_output']-len(output_ids);depth=min(3,remaining-1);proposals=[output_ids[-1]];draft=first_draft;base_key=key;base_value=value;base_last=last
-  for j in range(depth):
-   proposals.append(draft)
-   if j+1<depth:
-    embedding=stack([draft,0,0,0]);ctl=controls(base_slot+j,1);source=io.stack_tokens([last]+[io.zeros([1,w])]*3)
-    draft=target.mtp_draft(embedding,*ctl,None)[0];equal([draft],oracle_step(source,embedding,ctl,1),'real draft prediction');compare('draft')
+  remaining=prompt['max_output']-len(output_ids);depth=min(3,remaining-1);proposals=[output_ids[-1]];draft=first_draft;base_key=key;base_value=value;base_last=last;native_result=None;generation_stats=None
+  if generation:
+   native_result=target.mtp_generate([output_ids[-1]],[remaining],stops,None)[0];generation_stats=json.loads(target.mtp_generation_stats_json());proposals=generation_stats['proposals'][:generation_stats['submitted_lengths'][0]]
+   draft=predicted[0]
+   for j in range(1,len(proposals)):
+    equal(proposals[j],draft,'native real proposal')
+    if j+1<len(proposals):
+     embedding=stack([draft,0,0,0]);ctl=controls(base_slot+j-1,1);source=io.stack_tokens([last]+[io.zeros([1,w])]*3);draft=oracle_step(source,embedding,ctl,1)[0]
+  else:
+   for j in range(depth):
+    proposals.append(draft)
+    if j+1<depth:
+     embedding=stack([draft,0,0,0]);ctl=controls(base_slot+j,1);source=io.stack_tokens([last]+[io.zeros([1,w])]*3)
+     draft=target.mtp_draft(embedding,*ctl,None)[0];equal([draft],oracle_step(source,embedding,ctl,1),'real draft prediction');compare('draft')
   expected=[];normalized=[]
   for j,token in enumerate(proposals):
    prediction=step(reference,token,base_slot+j);expected.append(prediction);normalized.append(normalizer.run([reference.hidden()]))
    if prediction in stops or j+1==len(proposals) or prediction!=proposals[j+1]:break
   padded=proposals+[0]*(4-len(proposals));slots=[float(base_slot+j) for j in range(4)];length=len(proposals)
-  result=target.verify_greedy(stack(padded),val([s for s in slots for axis in range(3)],[1,4,3]),val(slots,[1,4]),val([float(j<length) for j in range(4)],[1,4]),padded,stops,[remaining],None)[0]
+  result=native_result if generation else target.verify_greedy(stack(padded),val([s for s in slots for axis in range(3)],[1,4,3]),val(slots,[1,4]),val([float(j<length) for j in range(4)],[1,4]),padded,stops,[remaining],None)[0]
   equal(result,[expected,len(expected),expected[-1] in stops],'real draft target acceptance')
   actual_hidden=io.verification_f32_sha256(target.hidden());reference_hidden=io.verification_f32_sha256(reference.hidden());equal(actual_hidden,reference_hidden,'committed target hidden')
   actual_state=[];reference_state=[]
   for i in range(64):
    actual_state.append([io.verification_f32_sha256(x) for x in target.snapshot(i)]);reference_state.append([io.verification_f32_sha256(x) for x in reference.snapshot(i)]);equal(actual_state[-1],reference_state[-1],'committed target layer'+str(i))
   key=base_key;value=base_value;last=base_last;count=len(expected);embedding=stack(expected+[0]*(4-count));ctl=controls(base_slot,count);packed=io.stack_tokens(normalized+[io.zeros([1,w])]*(4-count))
-  first_draft=target.mtp_teacher(embedding,*ctl,0,None)[0];equal([first_draft],oracle_step(packed,embedding,ctl,count),'real correction prediction');compare('correction')
-  record=dict(base_slot=base_slot,proposals=proposals,emitted=result[0],reference_emitted=expected,consumed=count,accepted_drafts=count-1,mtp_stats=json.loads(target.mtp_stats_json()),actual_hidden_sha256=actual_hidden,reference_hidden_sha256=reference_hidden,actual_state_sha256=actual_state,reference_state_sha256=reference_state)
+  wanted=oracle_step(packed,embedding,ctl,count)
+  if not generation:first_draft=target.mtp_teacher(embedding,*ctl,0,None)[0];equal([first_draft],wanted,'real correction prediction')
+  compare('correction')
+  record=dict(base_slot=base_slot,proposals=proposals,emitted=result[0],reference_emitted=expected,consumed=count,accepted_drafts=count-1,mtp_stats=json.loads(target.mtp_stats_json()),generation_stats=generation_stats,actual_hidden_sha256=actual_hidden,reference_hidden_sha256=reference_hidden,actual_state_sha256=actual_state,reference_state_sha256=reference_state)
   records.append(record);print('trained_mtp_bridge_iteration PASS',json.dumps({k:v for k,v in record.items() if k not in ['actual_state_sha256','reference_state_sha256']}),flush=True);output_ids+=result[0];base_slot+=count
- result=dict(passed=True,checks=checks,prompt=prompt,output_ids=output_ids,iterations=records,mtp_states=mtp_records,prepared_memory_snapshot=prepared,inventory=inventory_path,scope='Actual pinned target and auxiliary short coding completion parity; diagnostic oracle downloads, not8-task coding or speed admission')
+ result=dict(passed=True,checks=checks,prompt=prompt,output_ids=output_ids,iterations=records,mtp_states=mtp_records,prepared_memory_snapshot=prepared,inventory=inventory_path,native_generation=generation,scope='Actual pinned target and auxiliary short coding completion parity; diagnostic oracle downloads, not8-task coding or speed admission')
  with open(f['output'],'w') as stream:json.dump(result,stream,indent=2)
 finally:
  reference.close()

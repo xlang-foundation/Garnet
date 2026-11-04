@@ -98,8 +98,8 @@ seven-input raw-BF16 auxiliary graph. It preserves +1 norm offsets and shares
 all15 weight records between compiled profiles. Independent NumPy FP32 references
 pass38 synthetic cases and14 learned auxiliary cases at capacity64/4096,
 including carried caches and byte-identical untouched spans. It uses synthetic
-target/embedding inputs; target-hidden transfer, shared target vocabulary projection,
-shifted teacher correction and real speculative generation remain unfinished.
+target/embedding inputs; the later native bridge/generation gates below cover
+target-hidden transfer, shared projection and shifted teacher correction.
 See `metal_mtp.py` and the research record for the explicit numerical criterion.
 
 The opt-in native MTP target bridge now retains normalized target rows on the
@@ -109,8 +109,17 @@ unequal/inactive corrections, wide capture windows, leases and poison/reset.
 A real nine-token coding prompt produces16 IDs matching ordinary decoding;
 10 of13 actual MTP proposals are accepted across five verified blocks, with
 exact committed target and auxiliary state parity. This short diagnostic is not
-the eight-task coding gate or a speed measurement. The native combined driver,
-continuous speculative scheduling and auxiliary prefix reuse remain unfinished.
+the eight-task coding gate or a speed measurement.
+
+`mtp_generate` now owns proposal, target verification and teacher correction in
+one native transaction. It uses a private read-only target embedding mapping,
+actual three-axis positions and per-row budget/EOS/lease checks. Cache-only
+teacher updates skip the vocabulary projection while validating hidden state.
+The same real16-token completion passes through this call with exact target
+and auxiliary parity; auxiliary head evaluations fall from22 to13. Synthetic
+batch1/2/4 checks cover44 transactions, including eight EOS events. Full coding,
+wide real prefill, continuous speculative scheduling and auxiliary prefix reuse
+remain unfinished; no new speed admission is claimed.
 
 ## Entry points and limits
 

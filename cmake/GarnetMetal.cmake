@@ -714,6 +714,7 @@ if(GARNET_METAL_XMODEL)
         src/backends/metal/decoder_session.cpp
         src/backends/metal/verification_session.cpp
         src/backends/metal/mtp_session.cpp
+        src/backends/metal/mtp_generation.cpp
         src/backends/metal/token_prefix_session.cpp
         src/tensor/garnet_tensor.cpp src/tensor/graph_capture.cpp src/core/lowering_context.cpp
         src/model/safetensors_index.cpp src/tokenizer/qwen_tokenizer.cpp)

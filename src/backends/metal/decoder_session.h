@@ -48,6 +48,13 @@ class MetalDecoderSession {
     std::vector<State> states_;
     struct VerificationRun;
 #ifdef GARNET_METAL_MTP_BRIDGE
+    struct MTPEmbedding {
+        SafeTensorsIndex index;
+        MlxQwen35Checkpoint adapter;
+        AffineInt4Mapping mapping;
+        struct Dependency {std::filesystem::path path;std::filesystem::file_time_type modified;uintmax_t bytes;};
+        std::vector<Dependency> dependencies;
+    };
     struct MTPCapture {
         MetalMatrix flat,normalized,packed,active;
         std::vector<float> flags;
@@ -63,11 +70,18 @@ class MetalDecoderSession {
         std::map<size_t,MTPCapture> captures;
         std::map<size_t,MetalMatrix> slices,zeros;
         std::vector<size_t> committed,tentative;
+        std::vector<size_t> targetLengths;
+        std::vector<uint8_t> targetPredictionReady;
         std::vector<float> backupFlags;
+        std::vector<float> nextPositions;
+        std::vector<uint8_t> predictionReady,baseReady;
+        std::unique_ptr<MTPEmbedding> embedding;
+        MetalMatrix validation;
         float epsilon=0,offset=0;
         bool pending=false;
-        size_t teacherCalls=0,draftCalls=0,restoreCalls=0;
+        size_t teacherCalls=0,draftCalls=0,restoreCalls=0,headCalls=0,validationCalls=0;
         std::string stats="{}";
+        std::string generationStats="{}";
     };
     std::unique_ptr<MTPWorkspace> mtp_;
     void ResetMTP();
@@ -75,7 +89,9 @@ class MetalDecoderSession {
     void ValidateMTPTarget(size_t);
     void EncodeMTPTarget(const MetalMatrix&,size_t,bool verification);
     void CommitMTPTarget(const MetalMatrix&,const std::vector<float>&,size_t);
-    X::Value MTPStep(X::Value,X::Value,X::Value,X::Value,int64_t,X::Value,bool);
+    X::Value MTPStep(X::Value,X::Value,X::Value,X::Value,int64_t,X::Value,bool,bool predict=true);
+    X::Value MTPStepUnlocked(X::Value,X::Value,X::Value,X::Value,int64_t,X::Value,bool,bool);
+    X::Value MTPEmbed(const std::vector<int64_t>&);
 #endif
 #ifdef GARNET_METAL_VERIFY_ATTENTION
     struct VerificationWorkspace {
@@ -102,6 +118,7 @@ class MetalDecoderSession {
     void EncodeVerificationBackups(VerificationRun&,const std::vector<MetalCompiledGraph*>&);
     void EncodeVerificationHead(VerificationRun&,const MetalMatrix&);
     void CommitVerification(VerificationRun&,const std::vector<MetalCompiledGraph*>&);
+    X::Value VerifyGreedyUnlocked(X::Value,X::Value,X::Value,X::Value,X::Value,X::Value,X::Value,X::Value);
 #endif
 #ifdef GARNET_METAL_REUSED_ZERO_SOURCE
     std::vector<float> resetZeroSource_;
@@ -163,8 +180,12 @@ class MetalDecoderSession {
 public:
 #ifdef GARNET_METAL_MTP_BRIDGE
     bool PrepareMTP(X::Value graph,X::Value head,X::Value sourceChunks);
+    bool PrepareMTPEmbedding(const std::string& checkpoint);
     X::Value MTPTeacher(X::Value embedding,X::Value positions,X::Value slots,X::Value active,int64_t sourceOffset,X::Value epochs);
     X::Value MTPDraft(X::Value embedding,X::Value positions,X::Value slots,X::Value active,X::Value epochs);
+    X::Value MTPTeacherCache(X::Value embedding,X::Value positions,X::Value slots,X::Value active,int64_t sourceOffset,X::Value epochs);
+    X::Value MTPGenerate(X::Value known,X::Value remaining,X::Value stops,X::Value epochs);
+    std::string MTPGenerationStatsJson();
     X::Value MTPSnapshot();
     std::string MTPStatsJson();
 #endif
@@ -281,8 +302,12 @@ public:
     BEGIN_PACKAGE(MetalDecoderSession)
 #ifdef GARNET_METAL_MTP_BRIDGE
         APISET().AddFunc<3>("prepare_mtp",&MetalDecoderSession::PrepareMTP);
+        APISET().AddFunc<1>("prepare_mtp_embedding",&MetalDecoderSession::PrepareMTPEmbedding);
         APISET().AddFunc<6>("mtp_teacher",&MetalDecoderSession::MTPTeacher);
         APISET().AddFunc<5>("mtp_draft",&MetalDecoderSession::MTPDraft);
+        APISET().AddFunc<6>("mtp_teacher_cache",&MetalDecoderSession::MTPTeacherCache);
+        APISET().AddFunc<4>("mtp_generate",&MetalDecoderSession::MTPGenerate);
+        APISET().AddFunc<0>("mtp_generation_stats_json",&MetalDecoderSession::MTPGenerationStatsJson);
         APISET().AddFunc<0>("mtp_snapshot",&MetalDecoderSession::MTPSnapshot);
         APISET().AddFunc<0>("mtp_stats_json",&MetalDecoderSession::MTPStatsJson);
 #endif

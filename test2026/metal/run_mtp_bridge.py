@@ -1,12 +1,17 @@
 """Native MTP transfer/correction vs standalone MTP fed ordinary target states."""
-import json,sys
+import json,os,sys
 sys.path.insert(0,sys.argv[2]);sys.path.insert(0,sys.argv[3])
 import garnet,tensor
 from xModel.qwen35.vl_0_8b.decoder_layer import T,norm,Qwen35LinearDecoderLayer,Qwen35FullDecoderLayer
 from xModel.qwen35.vl_0_8b.prefill_layer import PrefillLayer
 from xModel.qwen38.vl_27b.metal_mtp import MetalMTPProgram
 with open(sys.argv[1]) as stream:f=json.load(stream)
-c=f['config'];w=c['hidden_size'];io=garnet.tensor_io();io.open(f['checkpoint']);checks=0;cases=0
+c=f['config'];w=c['hidden_size'];generation=len(sys.argv)>5 and sys.argv[5]=='generation'
+if generation:
+ # This synthetic fixture alone uses whole-second mtimes so the XLang/Python
+ # test bridge can restore timestamps without a nanosecond integer conversion.
+ stamp=os.stat(f['checkpoint']);os.utime(f['checkpoint'],(int(stamp.st_mtime),int(stamp.st_mtime)))
+io=garnet.tensor_io();io.open(f['checkpoint']);checks=0;cases=0;generation_cases=0;generation_eos=0
 def val(data,shape):return tensor.tensor(data,shape=shape,dtype=tensor.float32)
 def syms(shapes,name):return [tensor.input(name+str(i),shape=s,dtype=tensor.float32) for i,s in enumerate(shapes)]
 def equal(a,b,label):
@@ -16,8 +21,9 @@ def reject(call,label):
  global checks
  failed=False
  try:call()
- except Exception:failed=True
+ except Exception as error:failed=True;message=str(error)
  assert failed,'Missing rejection: '+label;checks+=1
+ return message
 def hashes(parts):return [io.verification_f32_sha256(x) for x in parts]
 for batch,chunk,capacity in [(1,4,16),(2,2,16),(4,1,16),(1,4,4096)]:
  base=[];verify=[];heads=[];extra=[];session=garnet.decoder_session();reference=garnet.decoder_session();mtp=None;oracle=None
@@ -58,6 +64,9 @@ for batch,chunk,capacity in [(1,4,16),(2,2,16),(4,1,16),(1,4,4096)]:
   capture_chunks=[1] if chunk==1 else [1,chunk]
   if batch==1 and capacity==16:capture_chunks.append(8)
   session.prepare_mtp(mtp.graph,projection_head,capture_chunks)
+  if generation:
+   reject(lambda:session.prepare_mtp_embedding(sys.argv[4]),label+' foreign embedding checkpoint')
+   session.prepare_mtp_embedding(f['checkpoint'])
   def stack_ids(rows):return io.stack_tokens([io.embedding([rows[row][j] for row in range(batch)]) for j in range(chunk)])
   def target_step(owner,ids,slot):return owner.run(base,io.embedding(ids),val([float(slot)]*(batch*3),[batch,3]),val([float(slot)]*batch,[batch]),val([1.]*batch,[batch]),0)
   def ctl(starts,lengths):
@@ -74,6 +83,87 @@ for batch,chunk,capacity in [(1,4,16),(2,2,16),(4,1,16),(1,4,4096)]:
   def compare(label):
    snap=session.mtp_snapshot();equal(hashes(snap[:3]),hashes([key,value,last]),label+' private caches/last')
    equal(io.argmax(projection_head.run([snap[2]])),predicted,label+' shared head')
+  if generation:
+   for mode in range(4):
+    session.reset();reference.reset();key=io.zeros([batch,2,capacity,32]);value=io.zeros([batch,2,capacity,32]);last=io.zeros([batch,w]);predicted=[0]*batch
+    epochs=None
+    if mode%2:
+     epochs=[session.claim_request_row(80+row)[1] for row in range(batch)]
+    delta=[.25,2.5,4.75]
+    for slot in range(3):
+     ids=[3+slot*17+row for row in range(batch)];pos=val([float(slot)+d for row in range(batch) for d in delta],[batch,3]);sl=val([float(slot)]*batch,[batch]);ac=val([1.]*batch,[batch]);embedding=io.embedding(ids)
+     known=session.run_leased(base,embedding,pos,sl,ac,0,epochs) if epochs is not None else session.run(base,embedding,pos,sl,ac,0)
+     equal(known,reference.run(base,embedding,pos,sl,ac,0),label+' native seed')
+     next_ids=[3+(slot+1)*17+row if slot<2 else known[row] for row in range(batch)]
+     embedding=stack_ids([[next_ids[row]]+[0]*(chunk-1) for row in range(batch)])
+     controls=list(ctl([slot]*batch,[1]*batch));controls[0]=val([float(slot+j+1)+d for row in range(batch) for j in range(chunk) for d in delta],[batch,chunk,3])
+     normalized=normalizer.run([reference.hidden()]);wanted=oracle_hidden_step(normalized,embedding,controls,[1]*batch)
+     if slot<2:
+      equal(session.mtp_teacher_cache(embedding,*controls,0,epochs),[-1]*batch,label+' cache-only teacher');equal(json.loads(session.mtp_stats_json())['head_calls'],0,label+' skipped vocabulary projection')
+      reject(lambda:session.mtp_generate(known,[1]*batch,[],epochs),label+' uninitialized draft prediction')
+     else:equal(session.mtp_teacher(embedding,*controls,0,epochs),wanted,label+' ready teacher')
+     compare(label+' native prefill')
+    ref_last_target=reference.hidden().tolist();budgets=[1+row for row in range(batch)] if mode==0 else [2+row for row in range(batch)] if mode==1 else [chunk+2]*batch
+    stops=[i for i in range(c['vocab_size']) if i not in known] if mode==3 else []
+    before=hashes(session.mtp_snapshot());wrong=list(known);wrong[0]=(wrong[0]+1)%c['vocab_size']
+    reject(lambda:session.mtp_generate(wrong,budgets,[],epochs),label+' wrong authoritative known token');equal(hashes(session.mtp_snapshot()),before,label+' generation preflight unchanged')
+    reject(lambda:session.mtp_generate(known,[-1]+budgets[1:],[],epochs),label+' negative generation budget')
+    reject(lambda:session.mtp_generate(known,[capacity+1]+budgets[1:],[],epochs),label+' excessive context budget')
+    reject(lambda:session.mtp_generate(known,budgets,[-1],epochs),label+' invalid generation stop ID')
+    reject(lambda:session.mtp_generate(known,budgets,[known[0]],epochs),label+' stopped known token')
+    if epochs is not None:
+     stale=list(epochs);stale[-1]+=1;inactive=list(budgets);inactive[-1]=0
+     reject(lambda:session.mtp_generate(known,inactive,[],stale),label+' stale inactive generation lease')
+    stamp=os.stat(f['checkpoint'])
+    try:
+     os.utime(f['checkpoint'],(stamp.st_atime,stamp.st_mtime+1))
+     message=reject(lambda:session.mtp_generate(known,budgets,[],epochs),label+' changed embedding checkpoint')
+     assert 'embedding checkpoint changed' in message,message
+    finally:os.utime(f['checkpoint'],(stamp.st_atime,stamp.st_mtime))
+    equal(hashes(session.mtp_snapshot()),before,label+' all generation preflight failures unchanged')
+    remaining=list(budgets);positions=[[3.+d for d in delta] for row in range(batch)];slots=[3]*batch
+    while any(remaining):
+     bases=list(slots);base_key=key;base_value=value;base_last=last;base_pred=list(predicted)
+     # Closing an external helper cannot close the runtime's private mapping.
+     io.close();result=session.mtp_generate(known,remaining,stops,epochs);io.open(f['checkpoint']);stats=json.loads(session.mtp_generation_stats_json())
+     proposals=stats['proposals'];lengths=stats['submitted_lengths'];counts=[x[1] for x in result]
+     def gctl(starts,sizes,shift):
+      s=[float(starts[row]+j) for row in range(batch) for j in range(chunk)];a=[float(j<sizes[row]) for row in range(batch) for j in range(chunk)]
+      p=[positions[row][axis]+shift+j for row in range(batch) for j in range(chunk) for axis in range(3)]
+      return val(p,[batch,chunk,3]),val(s,[batch,chunk]),val(a,[batch,chunk])
+     for row in range(batch):
+      if lengths[row]>1:equal(proposals[row*chunk+1],predicted[row],label+' native first draft')
+     for j in range(1,chunk-1):
+      advance=[int(j+1<lengths[row] and proposals[row*chunk+j] not in stops) for row in range(batch)]
+      if any(advance):
+       emb=stack_ids([[proposals[row*chunk+j]]+[0]*(chunk-1) for row in range(batch)]);source=last;oracle_hidden_step(source,emb,gctl([bases[row]+j-1 for row in range(batch)],advance,j),advance)
+       for row in range(batch):
+        if advance[row]:equal(proposals[row*chunk+j+1],predicted[row],label+' native recursive draft')
+     # The ordinary oracle consumes only the independent greedy accepted prefix.
+     expected=[[] for row in range(batch)];current=list(known);ended=[False]*batch;normalized=[]
+     for j in range(max(lengths)):
+      active=[float(j<lengths[row] and not ended[row]) for row in range(batch)]
+      if not any(active):break
+      pred=reference.run(base,io.embedding(current),val([positions[row][axis]+j for row in range(batch) for axis in range(3)],[batch,3]),val([float(bases[row]+j) for row in range(batch)],[batch]),val(active,[batch]),0)
+      hidden_values=reference.hidden().tolist();normalized.append(normalizer.run([reference.hidden()]))
+      for row in range(batch):
+       if active[row]:
+        equal(proposals[row*chunk+j],current[row],label+' target accepted input');ref_last_target[row*w:(row+1)*w]=hidden_values[row*w:(row+1)*w];expected[row].append(pred[row]);current[row]=pred[row]
+        ended[row]=pred[row] in stops or j+1==lengths[row] or pred[row]!=proposals[row*chunk+j+1]
+     equal([x[0] for x in result],expected,label+' native ordinary output IDs');equal(counts,[len(x) for x in expected],label+' native accepted count')
+     for i in range(4):equal(hashes(session.snapshot(i)),hashes(reference.snapshot(i)),label+' native target complete state')
+     equal(io.verification_f32_sha256(session.hidden()),io.verification_f32_sha256(val(ref_last_target,[batch,w])),label+' native final target hidden')
+     key=base_key;value=base_value;last=base_last;predicted=base_pred
+     emb=stack_ids([expected[row]+[0]*(chunk-counts[row]) for row in range(batch)]);source=io.stack_tokens(normalized+[io.zeros([batch,w])]*(chunk-len(normalized)))
+     oracle_step(source,emb,gctl(bases,counts,1),counts);compare(label+' native corrected auxiliary')
+     equal(stats['accepted_drafts'],sum(max(n-1,0) for n in counts),label+' native draft accounting')
+     for row in range(batch):
+      if counts[row]:known[row]=expected[row][-1]
+      generation_eos+=int(result[row][2])
+      remaining[row]=0 if result[row][2] else remaining[row]-counts[row];slots[row]+=counts[row];positions[row]=[x+counts[row] for x in positions[row]]
+     equal(stats['auxiliary_validation_calls'],int(not any(remaining)),label+' final vocabulary head skipped');generation_cases+=1
+    before=hashes(session.mtp_snapshot());equal(session.mtp_generate(known,[0]*batch,stops,epochs),[[[],0,False] for row in range(batch)],label+' idle generation');equal(hashes(session.mtp_snapshot()),before,label+' idle unchanged')
+   print('mtp_native_generation_profile PASS',label,'transactions',generation_cases,'checks',checks,flush=True)
   for requested in range(1,chunk+1):
    session.reset();reference.reset();key=io.zeros([batch,2,capacity,32]);value=io.zeros([batch,2,capacity,32]);last=io.zeros([batch,w]);predicted=[0]*batch
    for slot in range(3):
@@ -143,7 +233,11 @@ for batch,chunk,capacity in [(1,4,16),(2,2,16),(4,1,16),(1,4,4096)]:
   # Nonfinite model results poison both paths until full reset; caller metadata does not.
   session.reset();target_step(session,[3]*batch,0);bad=val([float('nan')]*(batch*chunk*w),[batch,chunk,w]);controls=ctl([0]*batch,[1]*batch)
   reject(lambda:session.mtp_teacher(bad,*controls,0,None),label+' nonfinite poison');reject(lambda:session.mtp_snapshot(),label+' poisoned snapshot');reject(lambda:session.hidden(),label+' poisoned target hidden')
-  session.reset();target_step(session,[3]*batch,0);session.mtp_teacher(embedding,*controls,0,None);checks+=1
+  session.reset();current=target_step(session,[3]*batch,0);session.mtp_teacher(embedding,*controls,0,None);checks+=1
+  if generation:
+   before=hashes(session.mtp_snapshot());mtp.graph.close();message=reject(lambda:session.mtp_generate(current,[1]*batch,[],None),label+' closed owner before shallow generation')
+   assert 'graph owner changed' in message,message
+   equal(hashes(session.mtp_snapshot()),before,label+' closed owner rejection unchanged')
   print('mtp_bridge_profile PASS',label,'cases',cases,'checks',checks,flush=True)
  finally:
   session.close();reference.close()
@@ -151,5 +245,6 @@ for batch,chunk,capacity in [(1,4,16),(2,2,16),(4,1,16),(1,4,4096)]:
   if oracle is not None:oracle.close()
   for graph in base+verify+heads+extra:graph.close()
 garnet.shutdown();memory=json.loads(garnet.memory_stats_json())
+if generation:assert generation_eos>0,'No actual generated EOS coverage'
 for name in ('garnet_live_matrix_owners','garnet_live_affine_weight_owners','garnet_live_bf16_weight_owners','garnet_live_pipeline_sets'):assert memory[name]==0,(name,memory[name])
-print('mtp_bridge PASS',json.dumps(dict(cases=cases,checks=checks,owners=memory,model_speed_claim=False)),flush=True)
+print('mtp_bridge PASS',json.dumps(dict(cases=cases,generation_transactions=generation_cases,generation_eos=generation_eos,checks=checks,owners=memory,model_speed_claim=False)),flush=True)
