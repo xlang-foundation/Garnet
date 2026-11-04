@@ -36,6 +36,9 @@ if baseline.get('prefill_alias_groups',False):
         alias_type='Native alias layout metadata invalid',
         alias_backend='Native prefill alias backend policy differs',
         alias_fault_backend='Correctness-only prefill alias fault backend present')
+if baseline.get('linear_chunk_active_only',False):
+    mutations+=['active_chunk_backend','active_chunk_dependencies']
+    expected.update(active_chunk_backend='Native active-only chunk backend policy differs',active_chunk_dependencies='Native active-only chunk dependencies differ')
 if baseline.get('cohorts'):
     mutations+=['cohort_argv','cohort_identity']
     expected.update(cohort_argv='Resolved native cohort argv differs',cohort_identity='Native cohorts do not have distinct fresh-process identities')
@@ -63,6 +66,8 @@ for mutation in mutations:
                 except json.JSONDecodeError:lines.append(line);continue
                 if isinstance(event,dict):
                     kind=event.get('event')
+                    if mutation=='active_chunk_backend' and kind=='ready':event['backend']=event['backend'].replace('linear_chunk_active_only','unqualified_active_chunk')
+                    if mutation=='active_chunk_dependencies' and kind=='ready':event['backend']=event['backend'].replace('linear_chunk_delta','unqualified_chunk_delta')
                     if mutation=='alias_missing' and kind=='native_prefill_alias_prepared':continue
                     if mutation=='alias_groups' and kind=='native_prefill_alias_prepared':event['layout'][0]['groups']+=1
                     if mutation=='alias_slots' and kind=='native_prefill_alias_prepared':event['layout'][0]['slots']+=1

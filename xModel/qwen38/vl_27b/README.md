@@ -45,6 +45,16 @@ outputs exactly match the original single-native control. Preparation saves
 not a peak measurement or a speedup. Detailed results, negative findings and
 evidence paths are in `docs/research/local-coder-metal-benchmark.md`.
 
+An additional default-OFF active-token chunk policy skips masked convolution
+arithmetic and recurrent barriers without changing storage or active-token math.
+It passes20 enabled/19 disabled native tests,238.8million original FP32 word
+comparisons, learned session references and all8 unchanged coding tasks with
+full token equality. Its isolated masked-convolution gains do not establish a
+model speedup: all six single-wave serving admissions pass accounting and full
+token equality, but five cells report lower overall output rates than the
+control. All2x targets remain unmet. The policy stays disabled by default and
+outside the production profile catalog.
+
 ## Entry points and limits
 
 Profile sizes are upper bounds. Actual input lengths and occupied request slots

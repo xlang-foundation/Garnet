@@ -1148,6 +1148,12 @@ kernel void causal_conv_chunk(device const float* tokens [[buffer(0)]],device co
     for(ulong j=0;j<p.kSize;++j)history[j]=state[row*p.sStride+col*p.kSize+j];
     for(ulong token=0;token<p.chunk;++token) {
         bool enabled=active[row*p.aStride+token]!=0.0f;
+#ifdef GARNET_LINEAR_CHUNK_ACTIVE_ONLY
+        if(!enabled) {
+            output[(row*p.chunk+token)*p.oStride+col]=0.0f;
+            continue;
+        }
+#endif
         float sum=0.0f;
         for(ulong j=0;j<p.kSize;++j) {
             float next=j+1==p.kSize?tokens[(row*p.chunk+token)*p.tStride+col]:history[j+1];
@@ -1317,10 +1323,18 @@ kernel void gated_delta_chunk(device const float* prepared [[buffer(0)]],device 
             }
             result=float4(simd_sum(result.x),simd_sum(result.y),simd_sum(result.z),simd_sum(result.w));
             if(lane==0)*(device float4*)(output+outputBase+column)=result;
+#ifdef GARNET_LINEAR_CHUNK_ACTIVE_ONLY
+            // The mask is identical for every thread in this group. Only an
+            // active token reads/writes the shared partial norms. Finish all
+            // such reads before the next active token can overwrite them.
+            threadgroup_barrier(mem_flags::mem_threadgroup);
+#endif
         }else if(lane==0)*(device float4*)(output+outputBase+column)=float4(0.0f);
+#ifndef GARNET_LINEAR_CHUNK_ACTIVE_ONLY
         // Every SIMD group must finish reading the partial norms before any
         // group can replace them for the next token.
         threadgroup_barrier(mem_flags::mem_threadgroup);
+#endif
     }
     for(uint j=0;j<4;++j)*(device float4*)(nextState+nextBase+(ulong(lane)+32*j)*p.valueDim+column)=memories[j];
 }
@@ -1620,6 +1634,9 @@ kernel void bf16_native_dot_t128(device const float* a [[buffer(0)]],device cons
 #endif
 #ifdef GARNET_METAL_CHUNK_ATTENTION_BUCKETS
         source=[@"#define GARNET_CHUNK_ATTENTION_BUCKETS 1\n" stringByAppendingString:source];
+#endif
+#ifdef GARNET_METAL_LINEAR_CHUNK_ACTIVE_ONLY
+        source=[@"#define GARNET_LINEAR_CHUNK_ACTIVE_ONLY 1\n" stringByAppendingString:source];
 #endif
         auto library=[impl_->device newLibraryWithSource:source options:compileOptions error:&error];
         if(!library)throw std::runtime_error(std::string(error.localizedDescription.UTF8String));

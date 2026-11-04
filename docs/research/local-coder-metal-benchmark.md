@@ -2379,6 +2379,96 @@ that passing the allocation guard alone does not establish a fast profile.
 six cells, complete request-window timings, pressure-sample intervals, limitations
 and input hashes. Its review script is `review_prefill_alias_chunk_sizes1.py`.
 
+### Skipping work on inactive chunk positions
+
+Default-OFF `GARNET_METAL_LINEAR_CHUNK_ACTIVE_ONLY` requires the existing native
+convolution/delta chunk extensions. It writes zero and skips convolution
+arithmetic for inactive tokens. In the recurrent kernel, the final partial-norm
+barrier executes inside the active branch. Every thread in a128-thread group
+reads the same row/token mask; inactive tokens never read or overwrite shared
+partial norms. Active-token math, reduction order, initialization, output-zero
+coverage and final private-state copying remain unchanged. Buffer shapes,
+lifetimes, index widths and KV representation do not change.
+
+The enabled build passes20 CTests; its disabled compatibility build passes19.
+An original-kernel reference copied exactly from527357dc2 verifies1,670 output/state checks
+and238,833,792 FP32 output/state words bit for bit. Coverage includes batch1/2/4,
+chunks1/4/64/128/256, K128 and value widths16/32/128, actual48-head recurrence
+and10,240-channel convolution, carried states, all-inactive rows, holes, partial
+prefixes, last-token-only activity and NaN-poisoned inactive inputs. Pending GPU
+mask producers and partial submissions pass; pending readback, abort/recovery,
+state alias, uninitialized-input and foreign-writer checks pass, and owners close
+to zero. Independent learned row/head references and mixed four-layer private
+session/alias-pool/standalone execution also pass.
+
+The isolated operator comparison freezes24 cells, three warmups and nine measured
+samples per cell in three fresh processes per policy. All six processes run
+sequentially, alternating policy order by cohort. All24 output/state SHA256
+pairs agree across policies and cohorts. Its1,296 measured samples pass the
+accounting audit and18 corruption checks. Ratios below use the median of the
+three cohort medians; every cell is retained in the archive.
+
+| Operator | Chunk | Mask | Control GPU ms | Candidate GPU ms | Control/candidate |
+|---|---:|---|---:|---:|---:|
+|Convolution |128 |Dense |0.461833 |0.487125 |0.948 |
+|Convolution |128 |One row,79 tokens |0.372000 |0.130625 |2.848 |
+|Convolution |256 |Rows79/145 |0.728792 |0.353500 |2.062 |
+|Convolution |256 |All inactive |0.732375 |0.138500 |5.288 |
+|Recurrence |128 |Dense |2.013500 |2.058625 |0.978 |
+|Recurrence |128 |One row,79 tokens |0.849750 |0.842875 |1.008 |
+|Recurrence |256 |All inactive |0.655667 |0.595708 |1.101 |
+
+Masked convolution ratios range1.368..5.288; recurrence ratios across all cells
+range0.978..1.116. Dense chunk128 convolution is slower in this comparison.
+These are operator GPU times, not model token speeds or a model-speed forecast.
+The archive is `evidence/linear-chunk-active-kernel-comparison1`. The initial
+benchmark build failed because a new target needed explicit CMake regeneration;
+its log remains preserved and no measurement occurred in that failed attempt.
+
+The batch2/4K/chunk128 full-model candidate passes all8 original sandbox coding
+contracts and all8 complete token sequences equal the original single-native
+control. Its accounting audit and55 corruption cases pass, with1,080 combined
+decode plans and3 prefill/decode interleavings. Worker profiles must explicitly
+declare `linear_chunk_active_only:true` and match the native backend; quality and
+serving audits reject a policy or dependency mismatch. Prepared Metal allocation
+remains17,297,309,696 bytes, the largest sampled completion allocation remains
+17,302,650,880, all4 owner counters close to zero and close allocation remains
+1,507,328 bytes. The worker exits0. Evidence is
+`evidence/native27b-linear-chunk-active-chunk128-quality1`.
+
+The subsequent C1 serving admission passes accounting,33 corruption cases and
+both complete128-token output comparisons. Short/long TTFT is12.030/33.213
+seconds, decode6.921/5.990 tokens/s and overall output4.210/2.351 tokens/s.
+The earlier alias-group control admission reports4.057/2.398 overall tokens/s.
+These are cold single waves without warmups or matched repetition; they show no
+clear model performance gain and meet none of the2x targets. Evidence is
+`evidence/native27b-linear-chunk-active-chunk128-http-admission1`. Concurrent
+serving admission also passes, with all12 complete output sequences equal to
+the alias-group control,481 combined decode plans,822 attention-bucket commands
+and33 corruption cases. Owners close to zero, allocation returns to1,507,328
+bytes and the worker exits0. Evidence is
+`evidence/native27b-linear-chunk-active-chunk128-batch-admission1`.
+
+| Prompt target | Clients | Control overall tokens/s | Active-only overall tokens/s |
+|---|---:|---:|---:|
+|256 |1 |4.057 |4.210 |
+|256 |2 |5.764 |5.382 |
+|256 |4 |8.255 |8.008 |
+|2048 |1 |2.398 |2.351 |
+|2048 |2 |2.356 |2.322 |
+|2048 |4 |2.664 |2.198 |
+
+One cold wave per cell, queueing and natural EOS retained: these observations
+show no consistent model gain and establish no repeatable speedup or causal
+kernel regression. Retain every result and keep the active-only policy disabled
+by default. `evidence/linear-chunk-active-vs-control-admission-comparison1.json`
+contains all cells, request timings, system-pressure intervals, input hashes and
+limitations. Frozen vLLM/SGLang references and the full prior matched native
+campaign remain unchanged. All2x targets remain unmet. Further decode work must
+investigate reusing weight passes across verified tokens; the bandwidth planning
+estimate above is a hypothesis guide, not a measured traffic bound or an MTP
+speed result.
+
 A source-backed planning estimate is retained in
 `evidence/27b-m5-decode-bandwidth-analysis1.json`:497 native affine projections
 contain14,412,349,440 logical payload/coefficient bytes. Apple's published M5

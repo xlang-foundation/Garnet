@@ -277,6 +277,9 @@ public:
 #ifdef GARNET_METAL_LINEAR_CHUNK_DELTA
         info+="; linear_chunk_delta";
 #endif
+#ifdef GARNET_METAL_LINEAR_CHUNK_ACTIVE_ONLY
+        info+="; linear_chunk_active_only";
+#endif
 #ifdef GARNET_METAL_BODY_SHAPE
         info+="; body_shape";
 #endif

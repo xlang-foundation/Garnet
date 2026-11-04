@@ -73,6 +73,14 @@ def profile_close_issues(profile,memory):
         if type(memory.get(key)) is not int or memory[key]!=0:issues.append('Native compiled profile resource owners remain or are unobserved')
     return issues
 
+def linear_chunk_active_issues(profile,backend):
+    issues=[];enabled=profile.get('linear_chunk_active_only',False)
+    if type(enabled) is not bool or enabled!=('linear_chunk_active_only' in backend):
+        issues.append('Native active-only chunk backend policy differs')
+    if enabled and (profile.get('prefill_schedule')!='chunked' or any(tag not in backend for tag in ('linear_chunk_conv','linear_chunk_delta'))):
+        issues.append('Native active-only chunk dependencies differ')
+    return issues
+
 def prefill_alias_issues(profile,events,backend):
     issues=[];enabled=profile.get('prefill_alias_groups',False)
     calls=[e for e in events if e.get('event')=='native_prefill_alias_prepared']
@@ -214,6 +222,7 @@ def audit(root,reference=None):
             if isinstance(candidate,dict) and 'profile_id' in candidate:profiles.append(candidate)
     if len(profiles)!=1:raise ValueError('Exactly one hash-verified frozen native profile required')
     profile=profiles[0]
+    issues.extend(linear_chunk_active_issues(profile,ready[0].get('backend','') if ready else ''))
     issues.extend(prefill_alias_issues(profile,events,ready[0].get('backend','') if ready else ''))
     issues.extend(chunk_attention_issues(profile,events,ready[0].get('backend','') if ready else '',
         sum(e['stage']=='prefill' for e in batch_plans),len(decode_events)-len(mixed_events)))
@@ -337,6 +346,7 @@ def audit(root,reference=None):
         chunk_attention_mps_calls=sum(e.get('event')=='native_chunk_attention_mps' for e in events),
         chunk_attention_bucket_calls=sum(e.get('event')=='native_chunk_attention_bucket' for e in events),
         prefill_alias_groups=profile.get('prefill_alias_groups',False),
+        linear_chunk_active_only=profile.get('linear_chunk_active_only',False),
         scope='Concurrent native frozen prompt/stream/HTTP accounting and row lifecycle; coding correctness requires separate sandbox evaluation',
         auditor_sha256=digest(Path(__file__)),reference_worker_log_sha256=digest(reference) if reference else None,
         artifacts_sha256=digest(root/'artifacts.json'),worker_log_sha256=digest(root/'server/worker-stdout.jsonl'))

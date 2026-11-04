@@ -5,7 +5,7 @@ Timing admission evidence is distinct from repeated performance qualification.
 import argparse,hashlib,json,math
 from pathlib import Path
 from summarize_local_coder_baseline import audit as baseline_audit
-from audit_local_coder_batch_quality import native_events,indexed_decode_issues,affine_profile_issues,profile_close_issues,chunk_attention_issues,prefill_alias_issues
+from audit_local_coder_batch_quality import native_events,indexed_decode_issues,affine_profile_issues,profile_close_issues,chunk_attention_issues,prefill_alias_issues,linear_chunk_active_issues
 
 def read(path):return json.loads(path.read_text())
 def digest(path):return hashlib.sha256(path.read_bytes()).hexdigest()
@@ -45,6 +45,7 @@ def audit(root,cohort_number=None,_base=None):
             cells=[dict(c,cohort=p['number']) for p in parts for c in p['report']['cells']],**totals,
             combined_decode_required=any(p.get('combined_decode_required') for p in reports),
             prefill_alias_groups=all(p.get('prefill_alias_groups',False) for p in reports) if reports else False,
+            linear_chunk_active_only=all(p.get('linear_chunk_active_only',False) for p in reports) if reports else False,
             indexed_decode_sparse_required=any(p.get('indexed_decode_sparse_required') for p in reports),
             shutdown=dict(mode='Sequential fresh native cohorts',native_close_observed=len(reports)==required and all(p['shutdown']['native_close_observed'] for p in reports),cohorts=[p['shutdown'] for p in reports]),
             baseline_accounting=base,auditor_sha256=digest(Path(__file__)),decode_auditor_sha256=digest(Path(__file__).with_name('audit_local_coder_batch_quality.py')))
@@ -56,6 +57,7 @@ def audit(root,cohort_number=None,_base=None):
     if len(ready)!=1 or ready[0].get('profile')!=profile:issues.append('Native ready profile differs')
     if profile['prefix_cache'] is not False:issues.append('Matched uncached policy required')
     issues.extend(prefill_alias_issues(profile,events,ready[0].get('backend','') if ready else ''))
+    issues.extend(linear_chunk_active_issues(profile,ready[0].get('backend','') if ready else ''))
     if any(e.get('event')=='error' for e in events):issues.append('Native error event present')
     indexed_decode=[e for e in events if e.get('event')=='native_indexed_decode']
     pure_decodes=sum(e.get('event')=='native_batch' and e.get('stage')=='decode' for e in events)-sum(e.get('event')=='native_mixed_forward' for e in events)
@@ -150,6 +152,7 @@ def audit(root,cohort_number=None,_base=None):
         chunk_attention_mps_calls=sum(e.get('event')=='native_chunk_attention_mps' for e in events),
         chunk_attention_bucket_calls=sum(e.get('event')=='native_chunk_attention_bucket' for e in events),
         prefill_alias_groups=profile.get('prefill_alias_groups',False),
+        linear_chunk_active_only=profile.get('linear_chunk_active_only',False),
         indexed_decode_sparse_required=require_sparse,baseline_accounting=base,worker_log_sha256=digest(server/'worker-stdout.jsonl'),
         auditor_sha256=digest(Path(__file__)),decode_auditor_sha256=digest(Path(__file__).with_name('audit_local_coder_batch_quality.py')))
 

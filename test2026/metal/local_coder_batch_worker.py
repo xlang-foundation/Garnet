@@ -29,6 +29,12 @@ def main():
     prefill_schedule=profile.get('prefill_schedule','whole')
     if prefill_schedule not in ('whole','chunked'):raise ValueError('Explicit supported prefill scheduling mode required')
     chunked=prefill_schedule=='chunked'
+    active_chunk=profile.get('linear_chunk_active_only',False)
+    backend=garnet.backend_info()
+    if type(active_chunk) is not bool or active_chunk!=('linear_chunk_active_only' in backend):
+        raise ValueError('Frozen profile requires its explicit native active-only chunk policy')
+    if active_chunk and (not chunked or any(tag not in backend for tag in ('linear_chunk_conv','linear_chunk_delta'))):
+        raise ValueError('Active-only chunk profile requires native chunked convolution/delta')
     alias_groups=profile.get('prefill_alias_groups',False)
     if type(alias_groups) is not bool or alias_groups!=('prefill_alias_groups' in garnet.backend_info()):
         raise ValueError('Frozen profile requires its explicit native prefill alias policy')
