@@ -15,8 +15,8 @@ if baseline.get('indexed_decode_calls',0):
         projection_head_missing='Required active FP32 head projection coverage missing',
         projection_count='Active FP32 decode projection route/coverage differs',projection_stage='Active FP32 decode projection route/coverage differs')
 if baseline.get('affine_profile_calls',0):
-    mutations+=['compiled_owner','compiled_missing','compiled_miss']
-    expected.update(compiled_owner='Native compiled profile resource owners remain or are unobserved',compiled_missing='Bounded affine profile decode command count differs from native plans',compiled_miss='Bounded affine profile route/coverage differs')
+    mutations+=['compiled_owner','compiled_missing','compiled_miss','compiled_index_width']
+    expected.update(compiled_index_width='Bounded affine profile index width differs',compiled_owner='Native compiled profile resource owners remain or are unobserved',compiled_missing='Bounded affine profile decode command count differs from native plans',compiled_miss='Bounded affine profile route/coverage differs')
 for mutation in mutations:
     with tempfile.TemporaryDirectory() as folder:
         path=Path(folder)
@@ -37,7 +37,8 @@ for mutation in mutations:
                 except json.JSONDecodeError:lines.append(line);continue
                 if isinstance(event,dict):
                     kind=event.get('event')
-                    if mutation=='compiled_owner' and kind=='closed':event['memory']['garnet_live_matrix_owners']=1
+                    if mutation=='compiled_index_width' and kind=='native_affine_profile' and not changed:event['index_bits']=17;changed=True
+                    elif mutation=='compiled_owner' and kind=='closed':event['memory']['garnet_live_matrix_owners']=1
                     elif mutation=='compiled_missing' and kind=='native_affine_profile' and event.get('stage')=='decode' and not changed:changed=True;continue
                     elif mutation=='compiled_miss' and kind=='native_affine_profile' and not changed:event['misses']=1;changed=True
                     elif mutation=='no_combined' and kind=='native_batch':event['active_rows']=[1,0]

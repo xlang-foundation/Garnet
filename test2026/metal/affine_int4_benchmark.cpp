@@ -89,7 +89,7 @@ void Cell(MetalContext& gpu,size_t m,size_t n,size_t k,int warmups,int repetitio
     std::cout<<"{\"kind\":\"cell\",\"relaxed_precision\":"<<(relaxed?"true":"false")<<",\"mpp_n_major\":"<<(nMajor?"true":"false")<<",\"mpp_registers\":"<<(registers?"true":"false")<<",\"operand_dtype\":"<<std::quoted(operand)<<",\"rows\":"<<m<<",\"outputs\":"<<n<<",\"inner\":"<<k
              <<",\"warmups\":"<<warmups<<",\"repetitions\":"<<repetitions<<",\"mpp_dispatches_per_call\":"<<mppDispatches<<",\"reuse64_dispatches_per_call\":"<<reuse64Dispatches
              <<",\"affine_profile_dispatches_per_call\":"<<profileDispatches<<",\"affine_profile_misses_per_call\":"<<profileMisses<<",\"affine_profile_pipeline_count\":"<<gpu.AffineProfilePipelineCount()
-             <<",\"affine_profile_pipeline_max_threads\":"<<profileMaxThreads<<",\"sample_max_abs\":"<<maximum<<",\"gpu_ms\":";Array(gpuMs);std::cout<<",\"wall_ms\":";Array(wallMs);std::cout<<"}\n"<<std::flush;
+             <<",\"affine_profile_index_bits\":"<<gpu.AffineProfileIndexBits()<<",\"affine_profile_pipeline_max_threads\":"<<profileMaxThreads<<",\"sample_max_abs\":"<<maximum<<",\"gpu_ms\":";Array(gpuMs);std::cout<<",\"wall_ms\":";Array(wallMs);std::cout<<"}\n"<<std::flush;
 }
 }
 int main(int argc,char** argv) {
@@ -129,7 +129,7 @@ int main(int argc,char** argv) {
         affineProfile=true;
 #endif
         std::cout<<std::setprecision(12)<<"{\"kind\":\"metadata\",\"device\":"<<std::quoted(gpu.DeviceName())<<",\"mpp_available\":"<<(mpp?"true":"false")
-                 <<",\"affine_profile_requested_max_threads\":"<<profileThreadLimit<<",\"affine_profile_available\":"<<(affineProfile?"true":"false")<<",\"affine_profile_maximum_rows\":"<<(affineProfile?maximumRows:0)<<",\"affine_profile_rows_are_upper_bound\":true"
+                 <<",\"affine_profile_index_bits\":"<<gpu.AffineProfileIndexBits()<<",\"affine_profile_requested_max_threads\":"<<profileThreadLimit<<",\"affine_profile_available\":"<<(affineProfile?"true":"false")<<",\"affine_profile_maximum_rows\":"<<(affineProfile?maximumRows:0)<<",\"affine_profile_rows_are_upper_bound\":true"
                  <<",\"shape_set\":"<<std::quoted(shapeSet)
                  <<",\"reuse64_available\":"<<(reuse64?"true":"false")<<",\"reuse64_relaxed\":"<<(reuse64Relaxed?"true":"false")<<",\"reuse64_min_outputs\":"<<(reuse64?5120:0)<<",\"reuse64_registers\":"<<(reuse64?"true":"false")<<",\"relaxed_precision\":"<<(relaxed?"true":"false")<<",\"mpp_n_major\":"<<(nMajor?"true":"false")<<",\"mpp_registers\":"<<(registers?"true":"false")<<",\"maximum_rows\":"<<maximumRows<<",\"mpp_tensor_k\":"<<(registers?16:tileK)<<",\"mpp_tile_k\":"<<tileK<<",\"operand_dtype\":"<<std::quoted(operand)<<",\"accumulator_dtype\":\"float32\",\"scope\":\"Synthetic affine projection GPU/wall latency; excludes loading, compilation and downloads; not model throughput\"}\n";
         for(size_t m:{1,2,4,8,16,32,64,128,256,512})if(m<=size_t(maximumRows))for(auto shape:dimensions)

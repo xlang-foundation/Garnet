@@ -1732,6 +1732,33 @@ useful improvement. Keep the compiler-bound option disabled. This candidate
 has no learned-model or serving admission. Source hashes and build commands
 are in `affine-profile-tgp128-sources1` and its configuration evidence.
 
+### Proved bounded32-bit projection indexes
+
+Default-OFF `GARNET_METAL_AFFINE_PROFILE_INDEX32` uses profile bounds to select
+uint32 element indexes in specialized affine kernels. Generic pipelines retain
+64-bit indexes; device pointers, KV/state layouts, packed parameters, precision,
+tile geometry and arithmetic order are unchanged. Preparation rejects a
+specialization unless the padded input/output row spans and packed-weight
+indexes fit uint32, with additional room for masked tile coordinates and loop
+increments. Division-based host checks avoid overflow in the proof itself.
+
+The portable range test covers72 Qwen row/shape profiles including the untied
+head, exact packed/stride boundaries and ten invalid cases. Both64-bit control
+and32-bit candidate pass all15 native tests with the original FP64 bounds,
+selected-row parity, upper-bound input and ownership-lifecycle requirements.
+Source hashes and commands are in `affine-profile-index32-sources1` and its
+configuration evidence.
+
+`affine-profile-index32-qwen-shapes1` passes all80 cells across three cohorts
+per variant and25 corruption checks. Median control/candidate GPU latency
+ratios across shapes at1/2/4/64/128/256/512 rows are
+1.095/1.232/1.318/1.666/1.681/1.660/1.658. Weighted body-projection sum ratios
+at2/128 rows are1.266/1.673. These sums exclude the head, state, activations,
+embedding, scheduler and transport; they are not tokens/s or whole-model
+speedups. The compiler128-thread option remains disabled, so index width is
+the only build-policy change in this study. Full coding and serving admission
+for `native27b-bounded-index32-chunk128-quality1` remain pending.
+
 ### Parent MTP asset discovery
 
 The converted pinned artifact contains no MTP parameters, but the original

@@ -28,27 +28,27 @@ kernel void affine_q4_indexed(device const float* input [[buffer(0)]],
     const uint quad=lane>>2;
     const uint fragmentRow=(quad&4)|((lane>>1)&3);
     const uint fragmentColumn=((quad&2)|(lane&1))*4;
-    const ulong firstRow=ulong(group.y)*64+ulong(simd)*16;
-    const ulong firstColumn=ulong(group.x)*32;
+    const AffineIndex firstRow=AffineIndex(group.y)*64+AffineIndex(simd)*16;
+    const AffineIndex firstColumn=AffineIndex(group.x)*32;
     if(firstRow>=p.rows)return;
-    for(ulong block=0;block<p.inner;block+=GARNET_INDEXED_K)
+    for(AffineIndex block=0;block<p.inner;block+=GARNET_INDEXED_K)
         for(uint local=0;local<GARNET_INDEXED_K;local+=16) {
         #pragma clang loop unroll(full)
         for(uint i=0;i<8;++i) {
-            const ulong k=block+local+fragmentColumn+i%4;
-            const ulong logical=firstRow+fragmentRow+(i/4)*8;
-            left[i]=bfloat((logical<p.rows&&k<p.inner)?input[ulong(indices[logical])*p.aStride+k]:0.0f);
+            const AffineIndex k=block+local+fragmentColumn+i%4;
+            const AffineIndex logical=firstRow+fragmentRow+(i/4)*8;
+            left[i]=bfloat((logical<p.rows&&k<p.inner)?input[AffineIndex(indices[logical])*p.aStride+k]:0.0f);
         }
         #pragma clang loop unroll(full)
         for(uint tilePart=0;tilePart<2;++tilePart) {
             #pragma clang loop unroll(full)
             for(uint rowPart=0;rowPart<2;++rowPart) {
-                const ulong n=firstColumn+fragmentRow+rowPart*8+tilePart*16;
-                const ulong k=block+local+fragmentColumn;
+                const AffineIndex n=firstColumn+fragmentRow+rowPart*8+tilePart*16;
+                const AffineIndex k=block+local+fragmentColumn;
                 uint word=0;float scale=0.0f,bias=0.0f;
                 if(n<p.columns&&k<p.inner) {
                     word=packed[n*(p.inner/8)+k/8];
-                    const ulong coefficient=n*(p.inner/64)+k/64;
+                    const AffineIndex coefficient=n*(p.inner/64)+k/64;
                     scale=as_type<float>(uint(scales[coefficient])<<16);
                     bias=as_type<float>(uint(biases[coefficient])<<16);
                 }
@@ -60,10 +60,10 @@ kernel void affine_q4_indexed(device const float* input [[buffer(0)]],
         multiply.run(left,right,accumulator);
     }
     for(uint tilePart=0;tilePart<2;++tilePart)for(uint i=0;i<8;++i) {
-        const ulong logical=firstRow+fragmentRow+(i/4)*8;
-        const ulong n=firstColumn+tilePart*16+fragmentColumn+i%4;
+        const AffineIndex logical=firstRow+fragmentRow+(i/4)*8;
+        const AffineIndex n=firstColumn+tilePart*16+fragmentColumn+i%4;
         if(logical<p.rows&&n<p.columns)
-            output[ulong(indices[logical])*p.oStride+n]=accumulator[tilePart*8+i];
+            output[AffineIndex(indices[logical])*p.oStride+n]=accumulator[tilePart*8+i];
     }
 }
 )METAL";

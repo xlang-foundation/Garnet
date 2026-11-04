@@ -198,7 +198,7 @@ public:
     info+="; active_decode_projections";
 #endif
 #ifdef GARNET_METAL_AFFINE_PROFILE
-    info+="; bounded_affine_kernel_profiles";
+    info+="; bounded_affine_kernel_profiles; affine_profile_index_bits="+std::to_string(MetalContext::AffineProfileIndexBits());
 #ifdef GARNET_METAL_AFFINE_PROFILE_TGP128
     info+="; affine_profile_max_threads=128";
 #else

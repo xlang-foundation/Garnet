@@ -45,14 +45,14 @@ kernel void affine_q4_mpp(device const float* input [[buffer(0)]],
     const uint quad=lane>>2;
     const uint fragmentRow=(quad&4)|((lane>>1)&3);
     const uint fragmentColumn=((quad&2)|(lane&1))*4;
-    const ulong firstRow=ulong(group.y)*64+ulong(simd)*16;
-    const ulong firstColumn=ulong(group.x)*32;
+    const AffineIndex firstRow=AffineIndex(group.y)*64+AffineIndex(simd)*16;
+    const AffineIndex firstColumn=AffineIndex(group.x)*32;
     // This condition is uniform within each independent SIMD group.
     if(firstRow>=p.rows)return;
-    for(ulong block=0;block<p.inner;block+=BK)for(uint local=0;local<BK;local+=16) {
+    for(AffineIndex block=0;block<p.inner;block+=BK)for(uint local=0;local<BK;local+=16) {
         #pragma clang loop unroll(full)
         for(uint i=0;i<8;++i) {
-            const ulong k=block+local+fragmentColumn+i%4;
+            const AffineIndex k=block+local+fragmentColumn+i%4;
             const uint row=fragmentRow+(i/4)*8;
             left[i]=Operand((firstRow+row<p.rows&&k<p.inner)?input[(firstRow+row)*p.aStride+k]:0.0f);
         }
@@ -61,12 +61,12 @@ kernel void affine_q4_mpp(device const float* input [[buffer(0)]],
         for(uint tilePart=0;tilePart<2;++tilePart) {
             #pragma clang loop unroll(full)
             for(uint rowPart=0;rowPart<2;++rowPart) {
-                const ulong n=firstColumn+fragmentRow+rowPart*8+tilePart*16;
-                const ulong k=block+local+fragmentColumn;
+                const AffineIndex n=firstColumn+fragmentRow+rowPart*8+tilePart*16;
+                const AffineIndex k=block+local+fragmentColumn;
                 uint word=0;float scale=0.0f,bias=0.0f;
                 if(n<p.columns&&k<p.inner) {
                     word=packed[n*(p.inner/8)+k/8];
-                    const ulong coefficient=n*(p.inner/64)+k/64;
+                    const AffineIndex coefficient=n*(p.inner/64)+k/64;
                     scale=as_type<float>(uint(scales[coefficient])<<16);
                     bias=as_type<float>(uint(biases[coefficient])<<16);
                 }
@@ -78,7 +78,7 @@ kernel void affine_q4_mpp(device const float* input [[buffer(0)]],
         multiply.run(left,right,accumulator);
     }
     for(uint tilePart=0;tilePart<2;++tilePart)for(uint i=0;i<8;++i) {
-        const ulong row=firstRow+fragmentRow+(i/4)*8,n=firstColumn+tilePart*16+fragmentColumn+i%4;
+        const AffineIndex row=firstRow+fragmentRow+(i/4)*8,n=firstColumn+tilePart*16+fragmentColumn+i%4;
         if(row<p.rows&&n<p.columns)output[row*p.oStride+n]=accumulator[tilePart*8+i];
     }
 }
@@ -109,9 +109,9 @@ kernel void affine_q4_mpp(device const float* input [[buffer(0)]],
     matmul2d<descriptor,execution_simdgroups<4>> multiply;
     auto accumulator=multiply.get_destination_cooperative_tensor<decltype(a),decltype(b),float>();
     for(ushort i=0;i<accumulator.get_capacity();++i)accumulator[i]=0.0f;
-    for(ulong base=0;base<p.inner;base+=BK) {
+    for(AffineIndex base=0;base<p.inner;base+=BK) {
         for(uint i=tid;i<32*BK;i+=128) {
-            const ulong row=ulong(group.y)*32+i/BK,k=base+i%BK;
+            const AffineIndex row=AffineIndex(group.y)*32+i/BK,k=base+i%BK;
             aTile[i]=Operand((row<p.rows&&k<p.inner)?input[row*p.aStride+k]:0.0f);
         }
 #if GARNET_MPP_N_MAJOR
@@ -123,10 +123,10 @@ kernel void affine_q4_mpp(device const float* input [[buffer(0)]],
         for(uint wave=0;wave<BK;wave+=32) {
             const uint localN=tid/4,localK=wave+(tid%4)*8;
 #endif
-            const ulong n=ulong(group.x)*32+localN,k=base+localK;
+            const AffineIndex n=AffineIndex(group.x)*32+localN,k=base+localK;
             uint values=0;float scale=0,bias=0;
             if(n<p.columns&&k<p.inner) {
-                const ulong coefficient=n*(p.inner/64)+k/64;
+                const AffineIndex coefficient=n*(p.inner/64)+k/64;
                 values=packed[n*(p.inner/8)+k/8];
                 scale=as_type<float>(uint(scales[coefficient])<<16);
                 bias=as_type<float>(uint(biases[coefficient])<<16);

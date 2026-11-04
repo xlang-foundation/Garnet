@@ -52,6 +52,9 @@ def affine_profile_issues(profile,calls,expected_counts):
         count=event.get('affine_dispatches');misses=event.get('misses');pipelines=event.get('pipeline_count')
         if stage not in coverage or any(type(value) is not int for value in (valid,physical,count,misses,pipelines)):
             issues.append('Bounded affine profile route/coverage differs');continue
+        index_bits=profile.get('affine_profile_index_bits',64)
+        if type(index_bits) is not int or index_bits not in (32,64) or event.get('index_bits',64)!=index_bits:
+            issues.append('Bounded affine profile index width differs')
         thread_limit=profile.get('affine_profile_max_threads',0)
         if type(thread_limit) is not int or thread_limit not in (0,128) or (thread_limit==128 and event.get('pipeline_max_threads')!=128):
             issues.append('Bounded affine profile compiler thread limit differs')
@@ -229,7 +232,7 @@ def audit(root,reference=None):
     return dict(status='passed' if not issues else 'failed',issues=issues,tasks=results,combined_decode_plans=combined,prefill_decode_interleavings=interleavings,
         context_capacity=ready[0]['capacity'] if ready else None,mpp_prefill_calls=len(mpp),mixed_forward_calls=len(mixed_events),
         indexed_prefill_calls=len(indexed_events),
-        reuse64_prefill_calls=len(reuse64_events),indexed_decode_calls=len(indexed_decode_events),affine_profile_calls=len(affine_profile_events),
+        reuse64_prefill_calls=len(reuse64_events),indexed_decode_calls=len(indexed_decode_events),affine_profile_calls=len(affine_profile_events),affine_profile_index_bits=profile.get('affine_profile_index_bits',64) if profile.get('bounded_affine_kernel_profiles') else 0,
         scope='Concurrent native frozen prompt/stream/HTTP accounting and row lifecycle; coding correctness requires separate sandbox evaluation',
         auditor_sha256=digest(Path(__file__)),reference_worker_log_sha256=digest(reference) if reference else None,
         artifacts_sha256=digest(root/'artifacts.json'),worker_log_sha256=digest(root/'server/worker-stdout.jsonl'))

@@ -148,6 +148,7 @@ public:
     size_t LastAffineProfileDispatches() const;
     size_t LastAffineProfileMisses() const;
     size_t LastAffineProfileMaxThreads() const;
+    static size_t AffineProfileIndexBits();
 #ifdef GARNET_METAL_INDEXED_DECODE
     void EncodeAffineInt4IndexedDecode(const MetalMatrix&,const MetalAffineInt4Weight&,
         const MetalMatrix&,const std::vector<size_t>& selectedRows);

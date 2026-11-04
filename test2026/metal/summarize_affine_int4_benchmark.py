@@ -50,6 +50,8 @@ def summarize(root):
                 wants_profile=bool(meta and meta[0].get('affine_profile_available',False))
                 if row.get('affine_profile_dispatches_per_call',0)!=int(wants_profile):issues.append('Bounded affine profile dispatch evidence differs')
                 if row.get('affine_profile_misses_per_call',0)!=0:issues.append('Bounded affine profile fell back during measurement')
+                index_bits=meta[0].get('affine_profile_index_bits',64 if wants_profile else 0) if meta else 0
+                if row.get('affine_profile_index_bits',64 if wants_profile else 0)!=index_bits:issues.append('Per-cell affine profile index width differs')
                 thread_limit=meta[0].get('affine_profile_requested_max_threads',0) if meta else 0
                 actual_threads=row.get('affine_profile_pipeline_max_threads',0)
                 if thread_limit not in (0,128) or (thread_limit==128 and actual_threads!=128):issues.append('Affine profile compiler thread bound differs')
@@ -62,6 +64,8 @@ def summarize(root):
         cache=(root/variant/'CMakeCache.txt').read_text()
         thread_limits={item.get('affine_profile_requested_max_threads',0) for item in metadata[variant]}
         if thread_limits!={128 if 'GARNET_METAL_AFFINE_PROFILE_TGP128:BOOL=ON' in cache else 0}:issues.append(variant+': compiler thread bound differs from build')
+        expected_bits=32 if 'GARNET_METAL_AFFINE_PROFILE_INDEX32:BOOL=ON' in cache else (64 if 'GARNET_METAL_AFFINE_PROFILE:BOOL=ON' in cache else 0)
+        if {item.get('affine_profile_index_bits',expected_bits if expected_bits!=32 else 64) for item in metadata[variant]}!={expected_bits}:issues.append(variant+': bounded affine index width differs from build')
         profile_values={item.get('affine_profile_available',False) for item in metadata[variant]}
         expected_profile='GARNET_METAL_AFFINE_PROFILE:BOOL=ON' in cache
         if profile_values!={expected_profile}:issues.append(variant+': bounded affine profile availability differs from build')
