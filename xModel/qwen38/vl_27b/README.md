@@ -26,18 +26,32 @@ image or vision encoder.
 | --- | --- | --- |
 | Text coding | Eight frozen sandboxed tasks pass for single-native and concurrent batch2 controls; full generated sequences match | Broader coding qualification and final optimized candidate |
 | Batch state | Native stable row/epoch leases, ragged batch2/4, row refill, cancellation and inactive-state preservation | Production integration and final serving performance |
-| Prefill scheduling | Optional native chunks interleave existing decode; batch2/4K/chunk64 passes8/8 coding tasks,1,058 combined decode plans and9 interleavings | Serving timing and restored-prefix integration with this optional schedule |
+| Prefill scheduling | Optional native chunks interleave existing decode; alias-group batch2/4K/chunk128 passes8/8 coding tasks,1,050 combined decode plans and3 interleavings | Repeated performance qualification of this memory candidate and restored-prefix integration |
 | Prefix reuse | Native token matching restores full-attention KV, convolution, recurrence and final hidden state; exact/append/edit/refill cases pass | Complete matched cache performance cohorts and chunked-schedule combination |
-| Memory | Batch2/4K/chunk64 allocates18,259,361,792 Metal bytes and returns to720,896 bytes after close on this M5 | Execution to every context boundary and other hardware profiles |
+| Memory | Opt-in alias-group/lifetime-reuse batch2/4K/chunk128 reports17,297,309,696 prepared Metal bytes and1,507,328 after close; all4 Garnet owners close to zero | Peak allocation, execution to every context boundary and other hardware profiles |
 | Vision | All333 artifact tensors mapped; native finite vision parity and two image-grounding cases pass | General VLM factory admission, reference VLM qualification and screenshot-to-code quality |
-| Performance | Repeated vLLM-Metal/SGLang text references frozen; native timing admissions and projection diagnostics preserved | Full repeated optimized Garnet campaign; all2x goals remain unmet |
+| Performance | Frozen vLLM-Metal/SGLang references and a complete native three-cohort campaign retained:90 measured waves/210 requests, accounting and full-token audits pass | All2x speed/throughput and half-TTFT goals remain unmet; repeat the new memory candidate separately |
 
-The latest FP32 batch2/wide64 timing admission has five completed cells and a
+The earlier FP32 batch2/wide64 timing admission has five completed cells and a
 failed four-client long-prompt cell: one queued request exceeded600s. Preserve
 that failure; it is not a passing campaign. Loaded native chunk-selection probes
 and serialized operator traces are not HTTP serving measurements.
 
+The completed native campaign uses strict BF16 prefill operands and FP32 decode,
+with prepared context buckets and chunk128. The newer memory candidate enables
+both lifetime reuse and proven same-layout storage alias groups. Its8 coding
+outputs exactly match the original single-native control. Preparation saves
+678,100,992 bytes relative to the campaign candidate; this is sampled allocation,
+not a peak measurement or a speedup. Detailed results, negative findings and
+evidence paths are in `docs/research/local-coder-metal-benchmark.md`.
+
 ## Entry points and limits
+
+Profile sizes are upper bounds. Actual input lengths and occupied request slots
+may be smaller. Prepared memory layouts and kernel variants support those
+lengths; input capacity, prefill chunk budget and total context capacity are
+separate limits. A512-token chunk budget permits a longer prompt to progress
+through several chunks when the context profile allows it.
 
 - `model.create_decoder` is the bounded batch1 Metal study factory, capacity64..4096.
 - `metal_batch_study.create_decoder` is a separate experimental batch2/4 factory.
@@ -46,10 +60,14 @@ and serialized operator traces are not HTTP serving measurements.
   support. Separate fixed-shape admissions do not admit all shapes resident at once.
   The default-off `qwen38_large_prefill` extension additionally exposes experimental
   batch2 chunks128/256 with signed16-bit attention indices and nonresident pack
-  retirement. The finite batch2/4K/chunk128 indexed/mixed coding study passes8/8
-  tasks with all full token sequences matching the single-request reference,
-  1,063 combined decode plans and13 audit corruption checks. Ready Metal
-  allocation is18,188,271,616bytes. Serving performance remains unmeasured.
+  retirement. The opt-in alias-group/lifetime-reuse batch2/4K/chunk128
+  indexed/mixed coding study passes8/8 tasks with all full token sequences
+  matching the single-request reference,1,050 combined decode plans and53 audit
+  corruption checks. Ready Metal allocation is17,297,309,696 bytes. Two cold C1
+  and four C2/C4 serving checks pass accounting and31 corruption checks per
+  archive. All14 serving outputs exactly match the preceding candidate, with498
+  combined decode plans in the concurrent archive. These single-wave checks do
+  not establish repeated performance or production admission.
   Each requested shape must still pass the native working-set guard; this does
   not guarantee that chunk256 fits this Mac or admit these shapes for production.
 - `garnet.continuous_scheduler()` owns allocation and lifecycle in native code.

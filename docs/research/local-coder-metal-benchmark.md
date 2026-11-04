@@ -2196,7 +2196,124 @@ launch. Per-cohort profiles differ only in inventory output paths; logs and
 restart identities are independently audited. Native request epochs are
 scoped per process. A CPU-only synthetic namespace fixture and26 corruption
 checks validate this audit plumbing; the temporary fixture is not GPU or
-performance evidence. Actual matched collection remains pending launch.
+performance evidence. Actual matched collection is now complete; the repeated results and retained limitations follow.
+
+
+The full `native27b-chunk-attention-buckets-phase1-campaign1` completes three
+fresh processes,90 measured waves/210 measured requests (294 including warmups).
+Accounting passes with no issues;27 distinct corruption checks pass, including
+cohort argv and process identity. All three native workers exit0 with no forced
+kill; all Garnet owner counters return to0 and final Metal allocation is
+1,507,328bytes. The final token review independently joins all210 measured
+requests to native completions, SSE token IDs and frozen prompts; identical
+requests have no full-token divergence across the collected repetitions. This
+is text/accounting/trace qualification, not completion of the broader27B goal.
+
+The archived library remains SHA256
+`0145d729e96b335fcf9ed4b9ceaf738b2fcd14d8c2ee54a0a9a40f7197cefe6a`.
+The prior eight-task coding/full-output-token gate is unchanged. Ready allocation
+is17,975,410,688bytes. The two reference campaigns were reused without rerunning.
+
+Overall output tokens/s below include prefill and queueing. Each value is the
+median of three cohort medians, each using all five measured waves. Actual
+prompts are260..263 and2054..2057tokens;256/2048 are workload targets, not required
+exact input lengths. Native physical batch2 queues clients4. Natural EOS and
+all paging/variance are retained.
+
+| Target input tokens | Clients | Garnet | vLLM-Metal | SGLang Apple |
+|---:|---:|---:|---:|---:|
+|256|1|3.843|5.761|5.502|
+|256|2|4.883|7.352|6.834|
+|256|4|5.391|9.935|7.546|
+|2048|1|1.479|3.382|3.275|
+|2048|2|1.811|3.525|3.281|
+|2048|4|2.073|3.479|3.789|
+
+Single-request results use the same aggregation. TTFT is seconds and decode
+is tokens/s, excluding prefill.
+
+| Actual prompt tokens | Garnet TTFT | Garnet decode | vLLM TTFT | vLLM decode | SGLang TTFT | SGLang decode |
+|---:|---:|---:|---:|---:|---:|---:|
+|260|6.131|4.675|2.450|6.417|2.389|6.094|
+|2054|55.469|4.093|15.228|6.278|14.633|5.843|
+
+Every2x decode/overall-throughput target and every half-TTFT target remains
+unmet. Preserve the vLLM cohort1 final longC4 missing trailing memory sample,
+automatic vLLM cache/active-limit differences, and SGLang active2/512MiB cache
+configuration. These limitations do not justify selecting favorable native
+cohorts or dropping slower waves. The full machine-readable comparison is
+`evidence/native27b-chunk-attention-buckets-phase1-comparison1.json`; accounting
+is in the campaign's `accounting-audit1.json`, and the final measured-token
+join is `evidence/native27b-chunk-attention-buckets-phase1-final-token-review1.json`.
+
+Read-only inventory review identifies623MiB of unpooled prefill storage with
+multiple same-storage graph views (320MiB hidden-shaped temporaries,288MiB
+recurrent state-shaped temporaries,15MiB convolution-state temporaries). These
+are candidates, not proven safe-free or achieved model savings. The separate
+default-OFF alias-group implementation stages the pool and all bindings before
+a nonthrowing commit. It preserves protected owners and requires shared scratch
+plus lifetime reuse; the qualified reference build has lifetime reuse OFF.
+
+The normal candidate passes19 CTests, including alias-group lifetime planning.
+An independent K128/V16-multiple row reference passes with and without a head;
+mixed four-layer execution preserves exact pre/post-sharing outputs and state,
+separate sessions, foreign-owner rejection, inactive rows, standalone calls and
+pool lifetime. A separate default-OFF fault build explicitly verifies its backend
+identity, injects rejection after staging but before commit, and preserves the
+seeded pool's resident storage aliases, both private states and exact standalone
+output before successful retry. The older small-state reference also passes.
+The generic row helper now derives all state and packed dimensions from the
+fixture; the two prior hard-coded-helper failures are retained. No numerical
+tolerance was changed. Source and normal/fault library hashes are archived in
+`evidence/prefill-alias-groups-source1/manifest.json`.
+
+The default-OFF compatibility build also passes19 CTests. The composite
+alias-group/lifetime-reuse candidate subsequently passes all8 frozen27B coding
+tasks, with all8 complete generated-token sequences equal to the original
+single-native control. Its independent accounting audit and53 corruption checks
+pass. These are bounded regression contracts, not a coding leaderboard score.
+The frozen archive is `evidence/native27b-prefill-alias-chunk128-quality1`.
+
+At batch2/context4096/chunk128, preparation and the quality worker both report
+17,297,309,696 allocated Metal bytes,678,100,992 bytes (646.6875MiB) below the
+previous qualified candidate. This comparison includes enabling lifetime reuse,
+which was OFF in that reference; it does not isolate alias grouping alone.
+The prepared64-layer layout contains160 alias groups and320 graph views and is
+checked exactly before worker readiness. The largest sampled quality completion
+allocation is17,302,650,880 bytes; samples are not a measured peak. Model close
+returns all4 Garnet owner counters to zero and Metal allocation to1,507,328
+bytes. The native worker exits0. Serving admission and performance qualification
+remain separate requirements; these results establish no speedup.
+
+The subsequent C1 serving admission passes native/HTTP accounting and31 distinct
+corruption checks. Both128-token outputs exactly equal the previous qualified
+candidate's full token sequences. At actual prompt lengths260 and2054, the cold
+waves report respectively13.126s/32.251s TTFT,6.902/6.026 decode tokens/s and
+4.057/2.398 overall output tokens/s. These are single unrepeated waves without
+warmups; they cannot replace the preceding matched three-cohort campaign or
+establish a speedup. All native owners close to zero, allocation returns to
+1,507,328 bytes and the native worker exits0. Evidence is
+`evidence/native27b-prefill-alias-chunk128-http-admission1`.
+
+The separate four-cell C2/C4 serving admission also passes:12 complete output
+token sequences exactly match the preceding candidate,498 combined decode plans
+and822 attention-bucket commands are joined, and31 distinct corruption checks
+pass. Short C2/C4 overall output rates are5.764/8.255 tokens/s; long C2/C4 rates
+are2.356/2.664. Each cell has one wave with no warmup. These observations retain
+queueing and natural EOS and establish no repeated throughput gain. The largest
+sampled allocation is17,302,650,880 bytes, all4 owner counters close to zero and
+the native worker exits0. Evidence is
+`evidence/native27b-prefill-alias-chunk128-batch-admission1`. The upgraded auditor
+also accepts the prior alias-disabled C1 archive without rerunning inference.
+
+A source-backed planning estimate is retained in
+`evidence/27b-m5-decode-bandwidth-analysis1.json`:497 native affine projections
+contain14,412,349,440 logical payload/coefficient bytes. Apple's published M5
+153GB/s implies about10.616tokens/s for an idealized full-weight pass per token,
+below the12.834tokens/s shortC1 target against vLLM. This is not measured DRAM
+traffic or an absolute hardware impossibility. It motivates weight-pass reuse
+across verified tokens; MTP/verification/state rollback remain unqualified.
+Published hardware source: https://support.apple.com/en-ph/125405 .
 
 ### Parent MTP asset discovery
 

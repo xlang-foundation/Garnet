@@ -5,8 +5,12 @@ import garnet,tensor
 from xModel.qwen35.vl_0_8b.decoder_layer import T,Qwen35LinearDecoderLayer,Qwen35FullDecoderLayer
 with open(sys.argv[1]) as stream:f=json.load(stream)
 c=f['config'];batch=f['batch'];width=c['hidden_size'];capacity=f['capacity']
-shapes=[[[batch,width],[batch,29,4],[batch,3,7,5],[batch]],
-        [[batch,width],[batch,1,capacity,6],[batch,1,capacity,6],[batch,3],[batch],[batch]]]
+channels=2*c['linear_num_key_heads']*c['linear_key_head_dim']+c['linear_num_value_heads']*c['linear_value_head_dim']
+linear_state=[batch,c['linear_num_value_heads'],c['linear_key_head_dim'],c['linear_value_head_dim']]
+cache=[batch,c['num_key_value_heads'],capacity,c['head_dim']]
+shapes=[[[batch,width],[batch,channels,c['linear_conv_kernel_dim']],linear_state,[batch]],
+        [[batch,width],cache,cache,[batch,3],[batch],[batch]]]
+state_elements=sum(math.prod(shape[1:]) for layer in shapes for shape in layer[1:3])
 graphs=[];session=garnet.decoder_session();head=None
 def close_enough(actual,expected):
     assert len(actual)==len(expected)
@@ -55,7 +59,7 @@ try:
                     for i,value in enumerate(actual[layer][part]):
                         assert value==(0 if i//columns==row else saved[layer][part][i])
             for i,value in enumerate(session.hidden().tolist()):assert value==(0 if i//width==row else hidden_saved[i])
-            assert session.row_reset_bytes==(29*4+3*7*5+2*capacity*6+width+(width if 'row_final_hidden' in garnet.backend_info() else 0)+(2 if f['with_head'] else 0))*4
+            assert session.row_reset_bytes==(state_elements+width+(width if 'row_final_hidden' in garnet.backend_info() else 0)+(2 if f['with_head'] else 0))*4
         hidden=tensor.tensor(step['hidden'],shape=[batch,width],dtype=tensor.float32)
         positions=tensor.tensor(step['positions'],shape=[batch,3],dtype=tensor.float32)
         slots=tensor.tensor(step['slots'],shape=[batch],dtype=tensor.float32)
@@ -108,19 +112,19 @@ try:
         step=f['steps'][0]
         hidden=tensor.tensor(step['hidden'],shape=[batch,width],dtype=tensor.float32)
         active=tensor.tensor(step['active'],shape=[batch],dtype=tensor.float32)
-        conv=tensor.tensor([0.0]*(batch*29*4),shape=shapes[0][1],dtype=tensor.float32)
-        state=tensor.tensor([0.0]*(batch*3*7*5),shape=shapes[0][2],dtype=tensor.float32)
+        conv=tensor.tensor([0.0]*math.prod(shapes[0][1]),shape=shapes[0][1],dtype=tensor.float32)
+        state=tensor.tensor([0.0]*math.prod(shapes[0][2]),shape=shapes[0][2],dtype=tensor.float32)
         linear=graphs[0].run([hidden,conv,state,active]).tolist()
-        packed=width+29*4+3*7*5
+        packed=width+sum(math.prod(shape[1:]) for shape in shapes[0][1:3])
         values=[]
         for row in range(batch):values+=linear[row*packed:row*packed+width]
         hidden=tensor.tensor(values,shape=[batch,width],dtype=tensor.float32)
-        key=tensor.tensor([0.0]*(batch*capacity*6),shape=shapes[1][1],dtype=tensor.float32)
-        value=tensor.tensor([0.0]*(batch*capacity*6),shape=shapes[1][2],dtype=tensor.float32)
+        key=tensor.tensor([0.0]*math.prod(shapes[1][1]),shape=shapes[1][1],dtype=tensor.float32)
+        value=tensor.tensor([0.0]*math.prod(shapes[1][2]),shape=shapes[1][2],dtype=tensor.float32)
         positions=tensor.tensor(step['positions'],shape=[batch,3],dtype=tensor.float32)
         slots=tensor.tensor(step['slots'],shape=[batch],dtype=tensor.float32)
         full=graphs[1].run([hidden,key,value,positions,slots,active]).tolist()
-        packed=width+2*capacity*6
+        packed=width+sum(math.prod(shape[1:]) for shape in shapes[1][1:3])
         values=[]
         for row in range(batch):values+=full[row*packed:row*packed+width]
         close_enough(values,step['expected_hidden'])

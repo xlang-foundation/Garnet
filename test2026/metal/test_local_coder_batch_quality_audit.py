@@ -17,6 +17,7 @@ if baseline.get('affine_profile_index_bits')==32:mutations+=['missing_affine_ind
 if baseline.get('chunk_attention_index32_calls',0):mutations+=['missing_attention_index32','bad_attention_index32_count','bad_attention_index32_stage']
 if baseline.get('chunk_attention_mps_calls',0):mutations+=['missing_attention_mps','bad_attention_mps_count','bad_attention_mps_stage','bad_attention_mps_plan','bad_attention_mps_bytes','missing_attention_mps_prepared']
 if baseline.get('chunk_attention_bucket_calls',0):mutations+=['missing_attention_bucket','bad_attention_bucket_extent','bad_attention_bucket_tail','bad_attention_bucket_unknown','bad_attention_bucket_tokens','missing_attention_buckets_prepared','bad_attention_bucket_count']
+if baseline.get('prefill_alias_groups',False):mutations+=['missing_alias_prepared','bad_alias_groups','bad_alias_slots','bad_alias_bytes','bad_alias_type','bad_alias_backend','alias_fault_backend']
 for mutation in mutations:
     with tempfile.TemporaryDirectory() as temporary:
         path=Path(temporary)/'study';shutil.copytree(root,path)
@@ -27,6 +28,13 @@ for mutation in mutations:
             except json.JSONDecodeError:lines.append(line);continue
             if isinstance(event,dict):
                 kind=event.get('event')
+                if mutation=='missing_alias_prepared' and kind=='native_prefill_alias_prepared':continue
+                if mutation=='bad_alias_groups' and kind=='native_prefill_alias_prepared':event['layout'][0]['groups']+=1
+                if mutation=='bad_alias_slots' and kind=='native_prefill_alias_prepared':event['layout'][0]['slots']+=1
+                if mutation=='bad_alias_bytes' and kind=='native_prefill_alias_prepared':event['layout'][0]['reused_bytes']+=1
+                if mutation=='bad_alias_type' and kind=='native_prefill_alias_prepared':event['layout'][0]['groups']=True
+                if mutation=='bad_alias_backend' and kind=='ready':event['backend']=event['backend'].replace('prefill_alias_groups','unqualified_alias_groups')
+                if mutation=='alias_fault_backend' and kind=='ready':event['backend']+='; prefill_alias_test_faults'
                 if mutation=='missing_attention_bucket' and kind=='native_chunk_attention_bucket':continue
                 if mutation=='bad_attention_bucket_extent' and kind=='native_chunk_attention_bucket':event['capacity']=-1
                 if mutation=='bad_attention_bucket_tail' and kind=='native_chunk_attention_bucket':event['tail_dispatches']+=1

@@ -1,5 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
 #include "compiled_graph.h"
+#ifdef GARNET_METAL_PREFILL_ALIAS_GROUPS
+#include "../../runtime/memory/scratch_alias_group_plan.h"
+#include <type_traits>
+#endif
 #include "graph_capture.h"
 #include "lowering_context.h"
 #ifdef GARNET_METAL_PREFILL_LIFETIME_REUSE
@@ -261,6 +265,12 @@ void MetalCompiledGraph::Clear() {
 #endif
 #ifdef GARNET_METAL_SHARED_PREFILL_SCRATCH
     prefillScratch_.reset();sharedPrefillScratchBytes_=0;
+#ifdef GARNET_METAL_PREFILL_ALIAS_GROUPS
+    sharedPrefillAliasGroups_=sharedPrefillAliasSlots_=0;
+#ifdef GARNET_METAL_PREFILL_ALIAS_TEST_FAULTS
+    prefillAliasFailNextCommit_=false;
+#endif
+#endif
 #endif
 #ifdef GARNET_METAL_LAZY_RESIDENT_DEFAULTS
     lazyDefaultPlanReady_=false;lazyDefaultSlots_.clear();lazyRetiredBytes_=lazyRehydratedBytes_=0;
@@ -1410,6 +1420,13 @@ std::vector<MetalResourceReference> MetalCompiledGraph::MemoryReferences() {
 
 #ifdef GARNET_METAL_SHARED_PREFILL_SCRATCH
 namespace Garnet {
+#ifdef GARNET_METAL_PREFILL_ALIAS_TEST_FAULTS
+bool MetalCompiledGraph::FailNextPrefillAliasCommit() {
+    std::lock_guard<std::mutex> lock(mutex_);
+    if(!ready_||prefillScratch_)return false;
+    prefillAliasFailNextCommit_=true;return true;
+}
+#endif
 void MetalCompiledGraph::SharePrefillScratch(const std::shared_ptr<MetalPrefillScratch>& owner) {
     if(!owner||!ready_||outputParts_.size()!=3||residentOps_.size()!=ops_.size())
         throw std::invalid_argument("Shared prefill scratch requires a ready resident graph");
@@ -1444,6 +1461,9 @@ void MetalCompiledGraph::SharePrefillScratch(const std::shared_ptr<MetalPrefillS
     std::vector<size_t> lastUse(slots_.size(),0);
 #endif
     std::vector<bool> residentWriter(slots_.size(),false),fullyInitialized(slots_.size(),false);
+#ifdef GARNET_METAL_PREFILL_ALIAS_GROUPS
+    std::vector<bool> residentFirstWrite(slots_.size(),false);
+#endif
     for(size_t i=0;i<ops_.size();++i) {
         const auto& op=ops_[i];
         const bool fullWrite=op.kind==Kind::MatMul||op.kind==Kind::BF16MatVec||op.kind==Kind::Norm||
@@ -1466,7 +1486,12 @@ void MetalCompiledGraph::SharePrefillScratch(const std::shared_ptr<MetalPrefillS
 #ifdef GARNET_METAL_PREFILL_LIFETIME_REUSE
             lastUse[id]=std::max(lastUse[id],i);
 #endif
-            if(firstWrite[id]==SIZE_MAX)fullyInitialized[id]=fullWrite;
+            if(firstWrite[id]==SIZE_MAX) {
+                fullyInitialized[id]=fullWrite;
+#ifdef GARNET_METAL_PREFILL_ALIAS_GROUPS
+                residentFirstWrite[id]=residentOps_[i];
+#endif
+            }
             firstWrite[id]=std::min(firstWrite[id],i);residentWriter[id]=residentWriter[id]||residentOps_[i];}};
         read(op.a);read(op.b);for(auto id:op.arguments)read(id);
         write(op.out);write(op.auxiliaryOutput);
@@ -1477,6 +1502,60 @@ void MetalCompiledGraph::SharePrefillScratch(const std::shared_ptr<MetalPrefillS
     std::map<std::pair<size_t,size_t>,size_t> next;
 #endif
     size_t reused=0;
+#ifdef GARNET_METAL_PREFILL_ALIAS_GROUPS
+    std::vector<ScratchAliasMember> members;
+    for(size_t id=0;id<slots_.size();++id) {
+        const auto& slot=slots_[id];const auto& info=infos[id];
+        if(!info.identity)continue;
+        const bool allowed=!protectedStorage.count(info.identity)&&
+            gpu_->IsDefaultLayout(slot.matrix,slot.rows,slot.columns);
+        members.push_back({id,info.identity,slot.rows,slot.columns,firstRead[id],firstWrite[id],lastUse[id],
+                           allowed,fullyInitialized[id],residentFirstWrite[id]});
+    }
+    const auto groups=PlanScratchAliasGroups(members);
+    std::unordered_map<size_t,const ScratchAliasGroup*> byRepresentative;
+    for(const auto& group:groups) {
+        lifetimes.push_back(group.lifetime);
+        byRepresentative.emplace(group.lifetime.slot,&group);
+    }
+    size_t aliasGroups=0,aliasSlots=0;
+    // Preparation is transactional: allocating vectors/maps or detecting an
+    // invalid view must leave BOTH graph slots and the existing pool intact.
+    auto stagedBuffers=owner->buffers;
+    std::vector<std::pair<size_t,MetalMatrix>> stagedBindings;
+    for(const auto& assignment:PlanScratchLifetimes(std::move(lifetimes))) {
+        const auto& group=*byRepresentative.at(assignment.slot);
+        auto& slot=slots_[assignment.slot];const auto& info=infos[assignment.slot];
+        const auto key=std::make_pair(slot.rows,slot.columns);const auto lane=assignment.lane;
+        auto& buffers=stagedBuffers[key];
+        if(lane>buffers.size())throw std::logic_error("Scratch alias lane allocation gap");
+        if(lane==buffers.size())buffers.push_back(slot.matrix);
+        else {
+            if(reused>SIZE_MAX-info.allocatedBytes)throw std::overflow_error("Scratch alias accounting overflow");
+            reused+=info.allocatedBytes;
+        }
+        // Validate every physical view before staging the shared Impl. All
+        // aliases must share initialization/pending ownership after commit.
+        for(auto id:group.slots)if(!slots_[id].matrix.CompatibleLayout(buffers[lane]))
+            throw std::logic_error("Scratch alias physical layout mismatch");
+        for(auto id:group.slots)stagedBindings.emplace_back(id,buffers[lane]);
+        if(group.slots.size()>1){++aliasGroups;aliasSlots+=group.slots.size();}
+    }
+#ifdef GARNET_METAL_PREFILL_ALIAS_TEST_FAULTS
+    if(prefillAliasFailNextCommit_) {
+        prefillAliasFailNextCommit_=false;
+        throw std::runtime_error("Injected prefill alias precommit failure");
+    }
+#endif
+    // No allocation or layout check remains after the first graph mutation.
+    // The preparing caller holds the graph lock and this pool's lock; existing
+    // execution paths retain the pool lease through GPU completion.
+    static_assert(std::is_nothrow_copy_assignable<MetalMatrix>::value,"Scratch binding commit must not throw");
+    static_assert(noexcept(owner->buffers.swap(stagedBuffers)),"Scratch pool commit must not throw");
+    for(const auto& binding:stagedBindings)slots_[binding.first].matrix=binding.second;
+    owner->buffers.swap(stagedBuffers);
+    sharedPrefillAliasGroups_=aliasGroups;sharedPrefillAliasSlots_=aliasSlots;
+#else
     for(size_t id=0;id<slots_.size();++id) {
         auto& slot=slots_[id];const auto& info=infos[id];
         if(!info.identity||counts[info.identity]!=1||protectedStorage.count(info.identity)||
@@ -1499,6 +1578,7 @@ void MetalCompiledGraph::SharePrefillScratch(const std::shared_ptr<MetalPrefillS
             reused+=info.allocatedBytes;slot.matrix=buffers[lane];
         }
     }
+#endif
     prefillScratch_=owner;sharedPrefillScratchBytes_=reused;
 }
 }

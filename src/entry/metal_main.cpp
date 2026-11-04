@@ -175,6 +175,12 @@ public:
         info+="; shared_prefill_scratch";
 #ifdef GARNET_METAL_PREFILL_LIFETIME_REUSE
         info+="; prefill_lifetime_reuse";
+#ifdef GARNET_METAL_PREFILL_ALIAS_GROUPS
+        info+="; prefill_alias_groups";
+#ifdef GARNET_METAL_PREFILL_ALIAS_TEST_FAULTS
+        info+="; prefill_alias_test_faults";
+#endif
+#endif
 #endif
 #endif
 #ifdef GARNET_METAL_RETIRE_INPLACE_DEFAULTS

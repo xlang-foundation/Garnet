@@ -29,6 +29,21 @@ def main():
     prefill_schedule=profile.get('prefill_schedule','whole')
     if prefill_schedule not in ('whole','chunked'):raise ValueError('Explicit supported prefill scheduling mode required')
     chunked=prefill_schedule=='chunked'
+    alias_groups=profile.get('prefill_alias_groups',False)
+    if type(alias_groups) is not bool or alias_groups!=('prefill_alias_groups' in garnet.backend_info()):
+        raise ValueError('Frozen profile requires its explicit native prefill alias policy')
+    if 'prefill_alias_test_faults' in garnet.backend_info():raise ValueError('Correctness-only fault build cannot serve a qualified profile')
+    if alias_groups:
+        expected_alias_layout=profile.get('expected_prefill_alias_layout')
+        if (profile.get('require_lifetime_reuse') is not True or not chunked or
+            type(expected_alias_layout) is not list or len(expected_alias_layout)!=len(config['text_config']['layer_types'])):
+            raise ValueError('Alias profile requires its complete prepared layer layout')
+        for row in expected_alias_layout:
+            if (type(row) is not dict or set(row)!=set(('groups','slots','reused_bytes')) or
+                any(type(row[k]) is not int or row[k]<0 for k in row) or
+                row['slots']<2*row['groups'] or (row['groups']==0 and row['slots']!=0)):
+                raise ValueError('Invalid frozen native alias layout')
+        if sum(row['groups'] for row in expected_alias_layout)==0:raise ValueError('Alias profile has no native alias coverage')
     probability_reuse=profile.get('chunk_probability_reuse',False)
     attention_index32=profile.get('chunk_attention_index32',False)
     attention_mps=profile.get('chunk_attention_mps',False)
@@ -148,6 +163,11 @@ def main():
             if 'native_hybrid_token_prefix' not in garnet.backend_info():raise ValueError('Native hybrid token prefix extension required')
             decoder.session.configure_token_prefix(profile['prefix_identity'],profile.get('prefix_entries',2),profile.get('prefix_host_bytes',384*1024*1024))
         graphs=decoder._resident_prefill_graphs(chunk)
+        if alias_groups:
+            alias_layout=[dict(groups=graph.shared_prefill_alias_groups,slots=graph.shared_prefill_alias_slots,
+                               reused_bytes=graph.shared_prefill_scratch_bytes) for graph in graphs]
+            emit(dict(event='native_prefill_alias_prepared',layout=alias_layout))
+            if alias_layout!=expected_alias_layout:raise ValueError('Native prefill alias layout differs from frozen profile')
         if retire_prefill_inputs and any(graph.retired_prefill_hidden_input_slots!=1 for graph in graphs):
             raise ValueError('Frozen prefill input retirement did not cover every layer')
         if 'memory_inventory_path' in profile:

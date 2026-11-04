@@ -27,6 +27,15 @@ if baseline.get('chunk_attention_mps_calls',0):
 if baseline.get('chunk_attention_bucket_calls',0):
     mutations+=['bucket_missing','bucket_extent','bucket_tail','bucket_unknown','bucket_prepared_missing']
     expected.update(bucket_missing='Attention bucket command coverage differs',bucket_extent='Attention bucket decision differs from native request plans',bucket_tail='Attention bucket decision differs from native request plans',bucket_unknown='Attention bucket decision differs from native request plans',bucket_prepared_missing='Compiled attention bucket preparation differs')
+if baseline.get('prefill_alias_groups',False):
+    mutations+=['alias_missing','alias_groups','alias_slots','alias_bytes','alias_type','alias_backend','alias_fault_backend']
+    expected.update(alias_missing='Native alias preparation differs from frozen layout',
+        alias_groups='Native alias preparation differs from frozen layout',
+        alias_slots='Native alias preparation differs from frozen layout',
+        alias_bytes='Native alias preparation differs from frozen layout',
+        alias_type='Native alias layout metadata invalid',
+        alias_backend='Native prefill alias backend policy differs',
+        alias_fault_backend='Correctness-only prefill alias fault backend present')
 if baseline.get('cohorts'):
     mutations+=['cohort_argv','cohort_identity']
     expected.update(cohort_argv='Resolved native cohort argv differs',cohort_identity='Native cohorts do not have distinct fresh-process identities')
@@ -54,6 +63,13 @@ for mutation in mutations:
                 except json.JSONDecodeError:lines.append(line);continue
                 if isinstance(event,dict):
                     kind=event.get('event')
+                    if mutation=='alias_missing' and kind=='native_prefill_alias_prepared':continue
+                    if mutation=='alias_groups' and kind=='native_prefill_alias_prepared':event['layout'][0]['groups']+=1
+                    if mutation=='alias_slots' and kind=='native_prefill_alias_prepared':event['layout'][0]['slots']+=1
+                    if mutation=='alias_bytes' and kind=='native_prefill_alias_prepared':event['layout'][0]['reused_bytes']+=1
+                    if mutation=='alias_type' and kind=='native_prefill_alias_prepared':event['layout'][0]['groups']=True
+                    if mutation=='alias_backend' and kind=='ready':event['backend']=event['backend'].replace('prefill_alias_groups','unqualified_alias_groups')
+                    if mutation=='alias_fault_backend' and kind=='ready':event['backend']+='; prefill_alias_test_faults'
                     if mutation=='bucket_missing' and kind=='native_chunk_attention_bucket' and not changed:changed=True;continue
                     if mutation=='bucket_extent' and kind=='native_chunk_attention_bucket' and not changed:event['capacity']=-1;changed=True
                     if mutation=='bucket_tail' and kind=='native_chunk_attention_bucket' and not changed:event['tail_dispatches']+=1;changed=True

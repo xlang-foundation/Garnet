@@ -61,6 +61,12 @@ class MetalCompiledGraph {
 #ifdef GARNET_METAL_SHARED_PREFILL_SCRATCH
     std::shared_ptr<MetalPrefillScratch> prefillScratch_;
     size_t sharedPrefillScratchBytes_=0;
+#ifdef GARNET_METAL_PREFILL_ALIAS_GROUPS
+    size_t sharedPrefillAliasGroups_=0,sharedPrefillAliasSlots_=0;
+#ifdef GARNET_METAL_PREFILL_ALIAS_TEST_FAULTS
+    bool prefillAliasFailNextCommit_=false;
+#endif
+#endif
     void SharePrefillScratch(const std::shared_ptr<MetalPrefillScratch>&);
 #endif
     SafeTensorsIndex index_;
@@ -108,6 +114,13 @@ public:
 #endif
 #ifdef GARNET_METAL_SHARED_PREFILL_SCRATCH
     size_t SharedPrefillScratchBytes() const {return sharedPrefillScratchBytes_;}
+#ifdef GARNET_METAL_PREFILL_ALIAS_GROUPS
+    size_t SharedPrefillAliasGroups() const {std::lock_guard<std::mutex> lock(mutex_);return sharedPrefillAliasGroups_;}
+    size_t SharedPrefillAliasSlots() const {std::lock_guard<std::mutex> lock(mutex_);return sharedPrefillAliasSlots_;}
+#ifdef GARNET_METAL_PREFILL_ALIAS_TEST_FAULTS
+    bool FailNextPrefillAliasCommit();
+#endif
+#endif
 #endif
     bool Ready() const {return ready_;}
     double CompileMs() const {return compileMs_;}
@@ -121,6 +134,13 @@ public:
     BEGIN_PACKAGE(MetalCompiledGraph)
 #ifdef GARNET_METAL_SHARED_PREFILL_SCRATCH
         APISET().AddProp("shared_prefill_scratch_bytes",&MetalCompiledGraph::SharedPrefillScratchBytes);
+#ifdef GARNET_METAL_PREFILL_ALIAS_GROUPS
+        APISET().AddProp("shared_prefill_alias_groups",&MetalCompiledGraph::SharedPrefillAliasGroups);
+        APISET().AddProp("shared_prefill_alias_slots",&MetalCompiledGraph::SharedPrefillAliasSlots);
+#ifdef GARNET_METAL_PREFILL_ALIAS_TEST_FAULTS
+        APISET().AddFunc<0>("test_fail_next_prefill_alias_commit",&MetalCompiledGraph::FailNextPrefillAliasCommit);
+#endif
+#endif
 #endif
         APISET().AddFunc<3>("build",&MetalCompiledGraph::Build);
         APISET().AddFunc<3>("build_bf16",&MetalCompiledGraph::BuildBF16);

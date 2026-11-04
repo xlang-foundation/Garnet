@@ -73,6 +73,32 @@ def profile_close_issues(profile,memory):
         if type(memory.get(key)) is not int or memory[key]!=0:issues.append('Native compiled profile resource owners remain or are unobserved')
     return issues
 
+def prefill_alias_issues(profile,events,backend):
+    issues=[];enabled=profile.get('prefill_alias_groups',False)
+    calls=[e for e in events if e.get('event')=='native_prefill_alias_prepared']
+    if type(enabled) is not bool or enabled!=('prefill_alias_groups' in backend):issues.append('Native prefill alias backend policy differs')
+    if 'prefill_alias_test_faults' in backend:issues.append('Correctness-only prefill alias fault backend present')
+    if not enabled:
+        if calls:issues.append('Unexpected native prefill alias preparation')
+        return issues
+    if any(tag not in backend for tag in ('prefill_lifetime_reuse','shared_prefill_scratch')):issues.append('Native alias backend dependencies differ')
+    if len(calls)==1 and any(e.get('event') in ('ready','native_batch','token') for e in events[:events.index(calls[0])]):issues.append('Native alias preparation recorded after execution/ready')
+    expected=profile.get('expected_prefill_alias_layout')
+    if profile.get('require_lifetime_reuse') is not True or profile.get('prefill_schedule')!='chunked':issues.append('Native alias profile dependencies differ')
+    if type(expected) is not list or len(expected)!=64:
+        issues.append('Native alias frozen layer coverage differs');return issues
+    for layout in [expected]+[e.get('layout') for e in calls]:
+        if type(layout) is not list or len(layout)!=64:
+            issues.append('Native alias prepared layer coverage differs');continue
+        for row in layout:
+            if (type(row) is not dict or set(row)!=set(('groups','slots','reused_bytes')) or
+                any(type(row[k]) is not int or row[k]<0 for k in row)):
+                issues.append('Native alias layout metadata invalid');continue
+            if row['slots']<2*row['groups'] or (row['groups']==0 and row['slots']!=0):issues.append('Native alias view coverage differs')
+        if not any(type(row) is dict and type(row.get('groups')) is int and row['groups']>0 for row in layout):issues.append('Native alias coverage absent')
+    if len(calls)!=1 or calls[0].get('layout')!=expected:issues.append('Native alias preparation differs from frozen layout')
+    return issues
+
 def chunk_attention_issues(profile,events,backend,prefill_calls,decode_calls):
     issues=[]
     buckets=profile.get('chunk_attention_buckets',False)
@@ -188,6 +214,7 @@ def audit(root,reference=None):
             if isinstance(candidate,dict) and 'profile_id' in candidate:profiles.append(candidate)
     if len(profiles)!=1:raise ValueError('Exactly one hash-verified frozen native profile required')
     profile=profiles[0]
+    issues.extend(prefill_alias_issues(profile,events,ready[0].get('backend','') if ready else ''))
     issues.extend(chunk_attention_issues(profile,events,ready[0].get('backend','') if ready else '',
         sum(e['stage']=='prefill' for e in batch_plans),len(decode_events)-len(mixed_events)))
     if profile.get('require_reuse64',False):
@@ -309,6 +336,7 @@ def audit(root,reference=None):
         chunk_attention_index32_calls=sum(e.get('event')=='native_chunk_attention_index32' for e in events),
         chunk_attention_mps_calls=sum(e.get('event')=='native_chunk_attention_mps' for e in events),
         chunk_attention_bucket_calls=sum(e.get('event')=='native_chunk_attention_bucket' for e in events),
+        prefill_alias_groups=profile.get('prefill_alias_groups',False),
         scope='Concurrent native frozen prompt/stream/HTTP accounting and row lifecycle; coding correctness requires separate sandbox evaluation',
         auditor_sha256=digest(Path(__file__)),reference_worker_log_sha256=digest(reference) if reference else None,
         artifacts_sha256=digest(root/'artifacts.json'),worker_log_sha256=digest(root/'server/worker-stdout.jsonl'))
