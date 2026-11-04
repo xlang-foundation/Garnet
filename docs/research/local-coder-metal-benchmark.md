@@ -1178,3 +1178,30 @@ uncached policy and the same native FP32 projection build. Kernel operator
 screening includes the actual16/32/64/128 packed row counts before expensive
 model admissions. Smaller tails and interleaving tradeoffs must be measured;
 no single chunk is assumed optimal for all prompt lengths or occupancy.
+
+The actual128-row projection campaign completed three strictly sequential
+cohorts for base/tall/strict-BF16/N-major-BF16 (`affine-packed128-comparison1`).
+All24 cells and nine tamper checks pass. At128 rows, tall FP32 versus base is
+1.30..1.35x and N-major BF16 versus tall is1.17..1.30x across the three major
+projection shapes. These are operator ratios, not achieved model speedups.
+
+The fixed tall-FP32 chunk-selection study is running as
+`native27b-chunk-selection1`. All four short cases pass both exact16-token-per-row
+repetitions and cleanup at4K allocation, using260/263-token prompts. First and
+repeat loaded-native paired-prefill times (seconds) are:
+
+| Chunk | First prefill | Repeat prefill | Metal bytes |
+| --- | --- | --- | --- |
+| 8 |41.648|25.289|17,544,396,800|
+|16 |28.279|20.776|17,646,501,888|
+|32 |26.595|20.308|17,850,728,448|
+|64 |26.932|20.837|18,259,361,792|
+
+The32/64 repeat difference is small with only two observations; do not promote
+one as a statistically established universal winner. These native-prefill probes
+exclude initialization/reset/HTTP and are not a serving-speed comparison. Long
+2054/2057-token cases remain in progress. The sweep summary verifies that the
+library, CMake flags, model factory, decoder and runner remain identical, and
+that only chunk size varies within each prompt regime. Partial summaries remain
+explicitly `in_progress` until all eight probes finish. No adaptive multi-shape
+resident profile is admitted merely by completing separate fixed-shape probes.
