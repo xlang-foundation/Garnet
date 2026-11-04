@@ -188,3 +188,15 @@ test and the Metal candidate await compilation/execution after the ongoing
 serving run. No memory saving or quality result has been measured. Qualify this
 flag separately from the default-OFF mixed-forward worker option so their
 correctness and performance effects remain distinguishable.
+
+The first real event in `native27b-registers-mixed-chunk16-quality1` confirms
+one mixed session execution containing a decode token at slot100 and a final
+prefill token at slot112, with distinct rows/epochs. Its trace reports2 valid
+tokens versus32 physical projection rows. The coding run remains live; this
+is execution evidence only, not quality or performance acceptance.
+
+A separate chunk16 lifetime-only coding profile is prepared with
+`require_lifetime_reuse: true` and `mixed_forward: false`. The worker validates
+that explicit policy against the native backend tag before loading model
+weights. This avoids accidentally qualifying the control build as the lifetime
+candidate. The profile has not yet been executed.

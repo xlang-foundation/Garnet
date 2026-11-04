@@ -34,6 +34,10 @@ def main():
         raise ValueError('Mixed forward requires explicit uncached chunked scheduling')
     if mixed and 'packed_token_plan' not in garnet.backend_info():
         raise ValueError('Mixed forward requires the native packed plan extension')
+    if 'require_lifetime_reuse' in profile:
+        lifetime=profile['require_lifetime_reuse']
+        if type(lifetime) is not bool or lifetime!=('prefill_lifetime_reuse' in garnet.backend_info()):
+            raise ValueError('Frozen profile requires its explicit scratch lifetime policy')
     if chunked and (prefix or 'chunked_prefill_scheduler' not in garnet.backend_info()):
         raise ValueError('Chunked prefill study requires native chunk scheduling and an uncached profile')
     if not profile.get('profile_id'):raise ValueError('Frozen profile identity required')
