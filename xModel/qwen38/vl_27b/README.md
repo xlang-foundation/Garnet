@@ -1,58 +1,66 @@
-# Qwen3.8-27B qualification
+# Qwen3.8-27B Metal qualification
 
-The existing CUDA factories and research gates remain separate from the new
-Metal bring-up. Initial full-model execution passes a bounded smoke;
-**production qualification is incomplete**. Do not register
-the qualification profile as a production catalog model or claim a speedup.
+Production qualification is incomplete. Keep these profiles out of the
+production catalog until their remaining gates pass. The current machine is an
+Apple M5 with24GiB unified memory; results do not admit other Apple hardware.
+CUDA factories remain separate.
 
-The draft Metal path consumes the pinned
-`mlx-community/Qwen3.8-27B-4bit` conversion directly: affine INT4, group64,
-eight low-nibble-first values per U32, with BF16 scales and additive biases.
-It keeps projection matrices compressed and decodes only requested embedding
-rows on the CPU. Native Metal kernels perform decode and tiled prefill
-contractions with FP32 accumulation; this is not bit-identical MLX arithmetic.
-Requested embedding rows round to BF16 before conversion to host FP32, matching
-the output dtype inferred by MLX's quantized embedding from BF16 coefficients.
-This rounding is separate from compressed projection accumulation. Boundary
-goldens are prepared; real-row numerical parity still requires execution.
+The Metal path consumes pinned `mlx-community/Qwen3.8-27B-4bit`, revision
+`10c35caafbb80f7dc6a7a432cdd11af10a6d4818`: affine INT4/group64, eight low-nibble-first
+values perU32, BF16 scales and additive biases. Native kernels keep projections
+compressed and use FP32 accumulation. The control uses FP32 activations/KV;
+optional BF16 tensor operands are separate experimental precision profiles.
+Requested embedding rows round to BF16 before host FP32 conversion, matching
+the artifact's quantized embedding output contract. Independent real-row parity,
+packing and shape references are retained in the research evidence.
 
-The conversion changes tensor names, convolution dimension order and certain
-normalization weights. The native checkpoint adapter checks that representation
-and uses zero normalization offset for its already shifted weights. Original
-HF checkpoints keep their existing offset. The 27B model has an untied
-`lm_head`; it must not project logits through the input embedding matrix.
+The adapter validates names, convolution dimension order and pre-shifted
+normalization weights. It uses zero additional norm offset for this conversion;
+original HF formats retain their existing offset. The untied `lm_head` must not
+project logits through the input embedding matrix. Text input allocates no dummy
+image or vision encoder.
 
-The draft vision adapter maps `vision_tower` names and explicitly transposes
-the small Conv3d patch projection from O,T,H,W,C to O,C,T,H,W. Header inspection
-matches all 333 vision tensors, but numerical and end-to-end validation remain
-pending and `create_vision` still rejects runtime admission. Text requests
-continue to allocate no image encoder or dummy image.
+## Current evidence
 
-Build integration is behind `GARNET_METAL_MLX_AFFINE_INT4=ON`, default OFF.
-The initial `metal-qualification-profile.json` uses batch1 and capacity512 to
-establish correctness without the current flat FP32 state's large capacity
-copies. This restricted smoke profile is not an equivalent arm of the frozen
-4096-context reference benchmark. The requested 4K/8K/16K profiles, continuous
-batching, native prefix reuse and multimodal execution remain required work.
+| Area | Verified scope | Remaining scope |
+| --- | --- | --- |
+| Text coding | Eight frozen sandboxed tasks pass for single-native and concurrent batch2 controls; full generated sequences match | Broader coding qualification and final optimized candidate |
+| Batch state | Native stable row/epoch leases, ragged batch2/4, row refill, cancellation and inactive-state preservation | Production integration and final serving performance |
+| Prefill scheduling | Optional native chunks interleave existing decode; batch2/4K/chunk64 passes8/8 coding tasks,1,058 combined decode plans and9 interleavings | Serving timing and restored-prefix integration with this optional schedule |
+| Prefix reuse | Native token matching restores full-attention KV, convolution, recurrence and final hidden state; exact/append/edit/refill cases pass | Complete matched cache performance cohorts and chunked-schedule combination |
+| Memory | Batch2/4K/chunk64 allocates18,259,361,792 Metal bytes and returns to720,896 bytes after close on this M5 | Execution to every context boundary and other hardware profiles |
+| Vision | All333 artifact tensors mapped; native finite vision parity and two image-grounding cases pass | General VLM factory admission, reference VLM qualification and screenshot-to-code quality |
+| Performance | Repeated vLLM-Metal/SGLang text references frozen; native timing admissions and projection diagnostics preserved | Full repeated optimized Garnet campaign; all2x goals remain unmet |
 
-The `garnet_affine_int4_test` covers independent packing goldens, grouped
-coefficients, matrix tails, batches1/2/4/8, prefill shapes, rejection and resource
-lifetime. These are component gates; full checkpoint parity, coding quality,
-memory measurements and frozen-baseline comparisons are separate. The native
-package compiles and all eight configured component tests pass on this M5.
-Seven benchmark/evaluator tests also pass, including sandbox containment and
-early-exit rejection. Independent original-format linear attention and decoder
-references pass for batches1/2/4, including inactive-row preservation and the
-three-to-one value/key head ratio. The INT4-disabled control package also builds
-and passes all seven configured component tests.
-The opt-in request-row build passes nine component tests. Two reset-separated
-79-input/four-output native runs produce identical token IDs, including after
-small-row projection specialization. That smoke uses capacity512 and is not
-the matched 4K benchmark, a coding-quality score, continuous batching, prefix
-reuse or vision qualification.
+The latest FP32 batch2/wide64 timing admission has five completed cells and a
+failed four-client long-prompt cell: one queued request exceeded600s. Preserve
+that failure; it is not a passing campaign. Loaded native chunk-selection probes
+and serialized operator traces are not HTTP serving measurements.
 
-`GARNET_METAL_REQUEST_ROWS=ON` adds synchronous native `reset_row` lifecycle
-support. An independent mixed linear/KV batch4 fixture verifies A-to-E row
-replacement while B/C/D retain their state, including pause/reactivation and
-optional head prediction. This is a prerequisite for continuous scheduling;
-the serving scheduler and native hybrid prefix capture/restore remain pending.
+## Entry points and limits
+
+- `model.create_decoder` is the bounded batch1 Metal study factory, capacity64..4096.
+- `metal_batch_study.create_decoder` is a separate experimental batch2/4 factory.
+  Batch2 permits chunks2/4/8/16/32/64; batch4 remains chunk<=8. Wider shapes require
+  native guarded workspace, shared scratch, in-place caches and per-row hidden
+  support. Separate fixed-shape admissions do not admit all shapes resident at once.
+- `garnet.continuous_scheduler()` owns allocation and lifecycle in native code.
+  The optional native chunk schedule retains leases while committing partial
+  prompt lengths. Python study transports supply inputs and route native events.
+- Native host prefix snapshots are bounded and identity-scoped. The current
+  chunked-prefill worker profile explicitly rejects prefix reuse until restored
+  progress is integrated; the whole-prompt prefix study remains available.
+- Current compact chunk attention is limited to4096 context positions.8K/16K,
+  paged or BF16 KV, and arbitrary larger batches are unsupported profiles.
+- `create_vision` still rejects general runtime admission. Finite grounding
+  evidence is not a general VLM qualification.
+
+`metal-qualification-profile.json` and `metal-context-study-profile.json` retain
+historical bring-up definitions; they are not production profiles or an assertion
+that all later gates are missing. Source, raw outputs, model hashes, frozen
+requests, audits and limitations are described in
+[the research record](../../../docs/research/local-coder-metal-benchmark.md).
+
+Build extensions default off. Register/staged Metal tensor candidates require
+explicit operand/layout identities and actual native dispatch evidence; API
+selection alone does not prove physical NAX instruction use or a model speedup.
