@@ -5,7 +5,7 @@ Timing admission evidence is distinct from repeated performance qualification.
 import argparse,hashlib,json,math
 from pathlib import Path
 from summarize_local_coder_baseline import audit as baseline_audit
-from audit_local_coder_batch_quality import native_events,indexed_decode_issues
+from audit_local_coder_batch_quality import native_events,indexed_decode_issues,affine_profile_issues,profile_close_issues
 
 def read(path):return json.loads(path.read_text())
 def digest(path):return hashlib.sha256(path.read_bytes()).hexdigest()
@@ -25,6 +25,12 @@ def audit(root):
     pure_decodes=sum(e.get('event')=='native_batch' and e.get('stage')=='decode' for e in events)-sum(e.get('event')=='native_mixed_forward' for e in events)
     require_sparse=profile['batch']>1 and any(len(read(campaign/'frozen'/plan['id']/'cases.json'))==1 for plan in manifest['plans'])
     issues.extend(indexed_decode_issues(profile,indexed_decode,pure_decodes,require_sparse))
+    affine_profiles=[e for e in events if e.get('event')=='native_affine_profile']
+    issues.extend(affine_profile_issues(profile,affine_profiles,dict(
+        prefill=sum(e.get('event')=='native_batch' and e.get('stage')=='prefill' for e in events) if profile.get('prefill_schedule')=='chunked' else None,
+        decode=pure_decodes,head=sum(e.get('stage')=='head' for e in indexed_decode) if profile.get('active_decode_projections') else None)))
+    if ready and profile.get('bounded_affine_kernel_profiles',False)!=('bounded_affine_kernel_profiles' in ready[0].get('backend','')):
+        issues.append('Bounded kernel compilation policy differs from native backend')
     streams={};completed={};batches=[]
     for e in events:
         kind=e.get('event');key=e.get('id')
@@ -94,10 +100,13 @@ def audit(root):
         exit_record=read(exit_path) if exit_path.exists() else {}
         if len(closed)!=1 or exit_record.get('returncode')!=0 or not exit_record.get('expected_close'):issues.append('Requested graceful native shutdown evidence missing')
     if not closed:shutdown['limitations'].append('No graceful native close snapshot; rely on separate coding cleanup gate and collector group termination evidence')
-    if any(e.get('memory',{}).get('metal_allocated_bytes',0)>1024*1024 for e in closed):issues.append('Observed native cleanup exceeds baseline')
+    if profile.get('bounded_affine_kernel_profiles',False):
+        if len(closed)!=1:issues.append('Compiled engine native cleanup evidence missing')
+        for event in closed:issues.extend(profile_close_issues(profile,event.get('memory',{})))
+    elif any(e.get('memory',{}).get('metal_allocated_bytes',0)>1024*1024 for e in closed):issues.append('Observed native cleanup exceeds baseline')
     return dict(status='passed' if not issues else 'failed',issues=issues,scope=manifest['scope'],requests=requests,cells=cells,
         combined_decode_plans=combined,combined_decode_required=combined_required,
-        shutdown=shutdown,indexed_decode_calls=len(indexed_decode),indexed_decode_command_calls=sum(e.get('stage')=='decode' for e in indexed_decode),
+        shutdown=shutdown,affine_profile_calls=len(affine_profiles),indexed_decode_calls=len(indexed_decode),indexed_decode_command_calls=sum(e.get('stage')=='decode' for e in indexed_decode),
         indexed_decode_sparse_required=require_sparse,baseline_accounting=base,worker_log_sha256=digest(root/'server/worker-stdout.jsonl'),
         auditor_sha256=digest(Path(__file__)),decode_auditor_sha256=digest(Path(__file__).with_name('audit_local_coder_batch_quality.py')))
 

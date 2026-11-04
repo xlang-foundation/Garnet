@@ -14,6 +14,9 @@ if baseline.get('indexed_decode_calls',0):
     expected.update(projection_missing='Indexed FP32 decode command count differs from native plans',
         projection_head_missing='Required active FP32 head projection coverage missing',
         projection_count='Active FP32 decode projection route/coverage differs',projection_stage='Active FP32 decode projection route/coverage differs')
+if baseline.get('affine_profile_calls',0):
+    mutations+=['compiled_owner','compiled_missing','compiled_miss']
+    expected.update(compiled_owner='Native compiled profile resource owners remain or are unobserved',compiled_missing='Bounded affine profile decode command count differs from native plans',compiled_miss='Bounded affine profile route/coverage differs')
 for mutation in mutations:
     with tempfile.TemporaryDirectory() as folder:
         path=Path(folder)
@@ -34,7 +37,10 @@ for mutation in mutations:
                 except json.JSONDecodeError:lines.append(line);continue
                 if isinstance(event,dict):
                     kind=event.get('event')
-                    if mutation=='no_combined' and kind=='native_batch':event['active_rows']=[1,0]
+                    if mutation=='compiled_owner' and kind=='closed':event['memory']['garnet_live_matrix_owners']=1
+                    elif mutation=='compiled_missing' and kind=='native_affine_profile' and event.get('stage')=='decode' and not changed:changed=True;continue
+                    elif mutation=='compiled_miss' and kind=='native_affine_profile' and not changed:event['misses']=1;changed=True
+                    elif mutation=='no_combined' and kind=='native_batch':event['active_rows']=[1,0]
                     elif mutation=='prompt' and kind=='completed' and not changed:event['prompt_ids'][0]+=1;changed=True
                     elif mutation=='completion' and kind=='completed' and not changed:changed=True;continue
                     elif mutation=='epoch' and kind=='completed':event['native_epoch']=1

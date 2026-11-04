@@ -31,8 +31,9 @@ struct MPPQ4Params {ulong rows,inner,columns,aStride,oStride;};
 kernel void affine_q4_mpp(device const float* input [[buffer(0)]],
  device const uint* packed [[buffer(1)]],device const ushort* scales [[buffer(2)]],
  device const ushort* biases [[buffer(3)]],device float* output [[buffer(4)]],
- constant MPPQ4Params& p [[buffer(5)]],uint2 group [[threadgroup_position_in_grid]],
+ constant MPPQ4Params& runtime [[buffer(5)]],uint2 group [[threadgroup_position_in_grid]],
  uint simd [[simdgroup_index_in_threadgroup]],uint lane [[thread_index_in_simdgroup]]) {
+    GARNET_AFFINE_PARAMETERS(MPPQ4Params);
     constexpr auto descriptor=matmul2d_descriptor(16,32,16,false,true,GARNET_MPP_RELAXED!=0,
         matmul2d_descriptor::mode::multiply_accumulate);
     matmul2d<descriptor,execution_simdgroup> multiply;
@@ -85,8 +86,9 @@ kernel void affine_q4_mpp(device const float* input [[buffer(0)]],
 kernel void affine_q4_mpp(device const float* input [[buffer(0)]],
  device const uint* packed [[buffer(1)]],device const ushort* scales [[buffer(2)]],
  device const ushort* biases [[buffer(3)]],device float* output [[buffer(4)]],
- constant MPPQ4Params& p [[buffer(5)]],uint2 group [[threadgroup_position_in_grid]],
+ constant MPPQ4Params& runtime [[buffer(5)]],uint2 group [[threadgroup_position_in_grid]],
  uint tid [[thread_index_in_threadgroup]]) {
+    GARNET_AFFINE_PARAMETERS(MPPQ4Params);
     // Dequantize one bounded tile, never a whole projection/checkpoint.
     // Operand type and tensor precision mode are explicit build profiles;
     // accumulator storage and output remain FP32.

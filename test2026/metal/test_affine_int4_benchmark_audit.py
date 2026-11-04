@@ -5,7 +5,7 @@ from summarize_affine_int4_benchmark import summarize
 root=Path(sys.argv[1]);assert summarize(root)['status']=='passed'
 manifest=json.loads((root/'manifest.json').read_text());candidates=manifest.get('required_mpp_variants',['mpp'] if 'mpp' in manifest['variant_order'] else [])
 assert candidates,'MPP archive required';candidate=candidates[0]
-mutations=['negative_gpu_time','missing_cell','missing_mpp','changed_binary','skipped_cohort','bad_precision','bad_tile','bad_layout','bad_rows','bad_registers','bad_tensor_k','bad_reuse64_availability','bad_reuse64_count','bad_shape_set','bad_reuse64_threshold','bad_reuse64_storage','bad_reuse64_precision']
+mutations=['negative_gpu_time','missing_cell','missing_mpp','changed_binary','skipped_cohort','bad_precision','bad_tile','bad_layout','bad_rows','bad_registers','bad_tensor_k','bad_reuse64_availability','bad_reuse64_count','bad_shape_set','bad_reuse64_threshold','bad_reuse64_storage','bad_reuse64_precision','bad_affine_profile_availability','bad_affine_profile_count','bad_affine_profile_misses','bad_affine_profile_bound']
 for mutation in mutations:
     with tempfile.TemporaryDirectory() as temporary:
         path=Path(temporary)/'study';shutil.copytree(root,path)
@@ -30,6 +30,10 @@ for mutation in mutations:
             elif mutation=='bad_reuse64_threshold':rows[0]['reuse64_min_outputs']=1
             elif mutation=='bad_reuse64_storage':rows[0]['reuse64_registers']=not rows[0].get('reuse64_registers',False)
             elif mutation=='bad_reuse64_precision':rows[0]['reuse64_relaxed']=not rows[0].get('reuse64_relaxed',False)
+            elif mutation=='bad_affine_profile_availability':rows[0]['affine_profile_available']=not rows[0].get('affine_profile_available',False)
+            elif mutation=='bad_affine_profile_count':rows[1]['affine_profile_dispatches_per_call']=99
+            elif mutation=='bad_affine_profile_misses':rows[1]['affine_profile_misses_per_call']=1
+            elif mutation=='bad_affine_profile_bound':rows[0]['affine_profile_maximum_rows']=0 if rows[0].get('affine_profile_available',False) else 1
             raw.write_text('\n'.join(json.dumps(row) for row in rows)+'\n')
         result=summarize(path);assert result['status']=='failed' and result['issues'],mutation
         print('affine_int4_benchmark_audit rejects',mutation)

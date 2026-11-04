@@ -12,6 +12,7 @@ if baseline.get('mixed_forward_calls',0):mutations+=['missing_mixed','bad_mixed_
 if baseline.get('indexed_prefill_calls',0):mutations+=['missing_indexed','bad_indexed_count']
 if baseline.get('reuse64_prefill_calls',0):mutations+=['missing_reuse64','bad_reuse64_count']
 if baseline.get('indexed_decode_calls',0):mutations+=['missing_indexed_decode','missing_indexed_decode_body','missing_indexed_decode_head','bad_indexed_decode_count','bad_indexed_decode_stage']
+if baseline.get('affine_profile_calls',0):mutations+=['missing_affine_profile','missing_affine_profile_decode','missing_affine_profile_head','bad_affine_profile_count','bad_affine_profile_miss','bad_affine_profile_stage','retained_profile_owner','missing_profile_owner']
 for mutation in mutations:
     with tempfile.TemporaryDirectory() as temporary:
         path=Path(temporary)/'study';shutil.copytree(root,path)
@@ -22,6 +23,14 @@ for mutation in mutations:
             except json.JSONDecodeError:lines.append(line);continue
             if isinstance(event,dict):
                 kind=event.get('event')
+                if mutation=='retained_profile_owner' and kind=='closed':event['memory']['garnet_live_matrix_owners']=1
+                if mutation=='missing_profile_owner' and kind=='closed':event['memory'].pop('garnet_live_pipeline_sets',None)
+                if mutation=='missing_affine_profile' and kind=='native_affine_profile':continue
+                if mutation=='missing_affine_profile_decode' and kind=='native_affine_profile' and event.get('stage')=='decode':continue
+                if mutation=='missing_affine_profile_head' and kind=='native_affine_profile' and event.get('stage')=='head':continue
+                if mutation=='bad_affine_profile_count' and kind=='native_affine_profile':event['affine_dispatches']=-1
+                if mutation=='bad_affine_profile_miss' and kind=='native_affine_profile':event['misses']=1
+                if mutation=='bad_affine_profile_stage' and kind=='native_affine_profile':event['stage']='unvalidated'
                 if mutation=='missing_reuse64' and kind=='native_reuse64':continue
                 if mutation=='bad_reuse64_count' and kind=='native_reuse64':event['affine_dispatches']=-1
                 if mutation=='missing_indexed_decode' and kind=='native_indexed_decode':continue

@@ -38,10 +38,16 @@ public:
     }
     std::string MemoryStatsJson() {
         const auto m=MetalContext::MemoryStats();
-        return nlohmann::json{{"metal_allocated_bytes",m.allocated},{"metal_recommended_working_set_bytes",m.recommended},
+        nlohmann::json result{{"metal_allocated_bytes",m.allocated},{"metal_recommended_working_set_bytes",m.recommended},
             {"metal_registry_id",m.registry},{"task_info_status",m.taskStatus},{"task_physical_footprint_bytes",m.physical},
             {"task_resident_bytes",m.resident},{"task_compressed_bytes",m.compressed},{"task_internal_bytes",m.internal},
-            {"task_virtual_bytes",m.virtualBytes},{"scope","process Metal device resources and current task; snapshots, not peak or system free RAM"}}.dump();
+            {"task_virtual_bytes",m.virtualBytes},{"scope","process Metal device resources and current task; snapshots, not peak or system free RAM"}};
+#ifdef GARNET_METAL_AFFINE_PROFILE
+        const auto owners=MetalContext::ProfileOwnerStats();
+        result["garnet_live_matrix_owners"]=owners.matrices;result["garnet_live_affine_weight_owners"]=owners.affineWeights;
+        result["garnet_live_bf16_weight_owners"]=owners.bf16Weights;result["garnet_live_pipeline_sets"]=owners.pipelineSets;
+#endif
+        return result.dump();
     }
     std::string MemoryInventoryJson(X::Value graphs,X::Value session) {
         if(!graphs.IsList())throw X::Error("Inventory graph descriptors must be a list");
@@ -190,6 +196,9 @@ public:
 #endif
 #ifdef GARNET_METAL_ACTIVE_DECODE_PROJECTIONS
     info+="; active_decode_projections";
+#endif
+#ifdef GARNET_METAL_AFFINE_PROFILE
+    info+="; bounded_affine_kernel_profiles";
 #endif
 #ifdef GARNET_METAL_RETIRE_PREFILL_INPUTS
     info+="; retired_prefill_hidden_inputs";

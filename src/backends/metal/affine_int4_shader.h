@@ -11,8 +11,9 @@ inline float q4_bf16(ushort value){return as_type<float>(uint(value)<<16);}
 kernel void affine_q4_decode(device const float* a [[buffer(0)]],
  device const uint* packed [[buffer(1)]],device const ushort* scales [[buffer(2)]],
  device const ushort* biases [[buffer(3)]],device float* out [[buffer(4)]],
- constant Q4Params& p [[buffer(5)]],uint group [[threadgroup_position_in_grid]],
+ constant Q4Params& runtime [[buffer(5)]],uint group [[threadgroup_position_in_grid]],
  uint lane [[thread_index_in_simdgroup]],uint simd [[simdgroup_index_in_threadgroup]]) {
+    GARNET_AFFINE_PARAMETERS(Q4Params);
     const ulong n=ulong(group)*4+simd;
     if(n>=p.columns)return;
     float sum0=0,sum1=0,sum2=0,sum3=0;
@@ -37,8 +38,9 @@ kernel void affine_q4_decode(device const float* a [[buffer(0)]],
 kernel void affine_q4_gemm(device const float* a [[buffer(0)]],
  device const uint* packed [[buffer(1)]],device const ushort* scales [[buffer(2)]],
  device const ushort* biases [[buffer(3)]],device float* out [[buffer(4)]],
- constant Q4Params& p [[buffer(5)]],uint2 group [[threadgroup_position_in_grid]],
+ constant Q4Params& runtime [[buffer(5)]],uint2 group [[threadgroup_position_in_grid]],
  uint tid [[thread_index_in_threadgroup]],uint simd [[simdgroup_index_in_threadgroup]]) {
+    GARNET_AFFINE_PARAMETERS(Q4Params);
     // The padded B stride distributes transposed stores across memory banks.
     // One thread owns one packed word (eight K values) of one output column.
     threadgroup float atile[16*32],btile[32*33],result[16*32];

@@ -91,10 +91,16 @@ void Case(MetalContext& gpu,size_t m,size_t n,size_t k) {
     Require(bytes==layout.weightBytes+2*layout.coefficientBytes&&owners.size()==3,
             "packed weights were expanded or storage aliased");
     auto a=gpu.Upload(input,m,k),out=gpu.Allocate(m,n);
+#ifdef GARNET_METAL_AFFINE_PROFILE
+    Require(gpu.PrepareAffineInt4Profile(a,weight,out,m),"Cannot prepare affine test profile");
+#endif
     gpu.Begin();gpu.EncodeAffineInt4MatMul(a,weight,out);
     // Encoded commands must retain their resources through submission.
     weight=MetalAffineInt4Weight();
     gpu.SubmitAndWait();const auto actual=gpu.Download(out);
+#ifdef GARNET_METAL_AFFINE_PROFILE
+    Require(gpu.LastAffineProfileDispatches()==1&&gpu.LastAffineProfileMisses()==0,"Prepared affine profile missed");
+#endif
 #ifdef GARNET_METAL_MPP_AFFINE
     Require(gpu.LastMPPAffineDispatches()==size_t(m>4&&gpu.HasMPPAffine()),"MPP affine route/counter mismatch");
 #endif
@@ -132,12 +138,18 @@ void IndexedCase(MetalContext& gpu,size_t m,size_t n,size_t k) {
     for(size_t i=0;i<input.size();++i)input[i]=float(std::sin(double(i)*.139)*.07);
     auto weight=gpu.UploadAffineInt4(packed.data(),layout.weightBytes,scales.data(),layout.coefficientBytes,biases.data(),layout.coefficientBytes,n,k);
     auto a=gpu.Upload(input,m,k),out=gpu.Upload(std::vector<float>(m*n,17.f),m,n);
+#ifdef GARNET_METAL_AFFINE_PROFILE
+    Require(gpu.PrepareAffineInt4Profile(a,weight,out,m),"Cannot prepare indexed affine test profile");
+#endif
     std::vector<size_t> all(m);for(size_t i=0;i<m;++i)all[i]=m-1-i;
     std::vector<std::vector<size_t>> selections={all,{m-1},{0},{},all,{}};
     if(m>4)selections.insert(selections.end()-1,{m-1,1,3});
     for(const auto& selected:selections) {
         gpu.Begin();gpu.EncodeAffineInt4IndexedMatMul(a,weight,out,selected);gpu.SubmitAndWait();
         Require(gpu.LastIndexedAffineDispatches()==size_t(!selected.empty()),"indexed affine route/counter mismatch");
+#ifdef GARNET_METAL_AFFINE_PROFILE
+        Require(gpu.LastAffineProfileDispatches()==size_t(!selected.empty())&&gpu.LastAffineProfileMisses()==0,"Prepared indexed affine profile missed");
+#endif
 #ifdef GARNET_METAL_MPP_AFFINE_REUSE64
         Require(gpu.LastReuse64AffineDispatches()==size_t(selected.size()>=64&&n>=5120&&gpu.HasReuse64Affine()),"indexed cooperative64 route mismatch");
 #endif
@@ -172,6 +184,9 @@ void IndexedDecodeCase(MetalContext& gpu,size_t m,size_t n,size_t k) {
     for(size_t row=0;row<n;++row)view.DecodeRow(row,decoded.data()+row*k,k);
     auto weight=gpu.UploadAffineInt4(packed.data(),layout.weightBytes,scales.data(),layout.coefficientBytes,biases.data(),layout.coefficientBytes,n,k);
     auto a=gpu.Upload(input,m,k),out=gpu.Upload(std::vector<float>(m*n,17.f),m,n),dense=gpu.Allocate(m,n);
+#ifdef GARNET_METAL_AFFINE_PROFILE
+    Require(gpu.PrepareAffineInt4Profile(a,weight,out,m),"Cannot prepare indexed decode test profile");
+#endif
     gpu.Begin();gpu.EncodeAffineInt4MatMul(a,weight,dense);gpu.SubmitAndWait();
     const auto reference=gpu.Download(dense);
     for(size_t mask=0;mask<(size_t(1)<<m);++mask) {
@@ -179,6 +194,9 @@ void IndexedDecodeCase(MetalContext& gpu,size_t m,size_t n,size_t k) {
         for(size_t row=m;row>0;--row)if(mask&(size_t(1)<<(row-1)))selected.push_back(row-1);
         gpu.Begin();gpu.EncodeAffineInt4IndexedDecode(a,weight,out,selected);gpu.SubmitAndWait();
         Require(gpu.LastIndexedDecodeAffineDispatches()==size_t(!selected.empty()),"Indexed FP32 decode route/counter mismatch");
+#ifdef GARNET_METAL_AFFINE_PROFILE
+        Require(gpu.LastAffineProfileDispatches()==size_t(!selected.empty())&&gpu.LastAffineProfileMisses()==0,"Prepared indexed decode profile missed");
+#endif
         const auto actual=gpu.Download(out);
         for(size_t row=0;row<m;++row)for(size_t column=0;column<n;++column) {
             double expected=0;const bool active=mask&(size_t(1)<<row);
@@ -200,6 +218,40 @@ void IndexedDecodeCase(MetalContext& gpu,size_t m,size_t n,size_t k) {
     std::cout<<"indexed_decode physical_rows="<<m<<" outputs="<<n<<" inner="<<k<<" masks="<<(size_t(1)<<m)<<" exact_dense=1\n";
 }
 #endif
+#ifdef GARNET_METAL_AFFINE_PROFILE
+void ProfileBoundsCase(MetalContext& gpu) {
+    constexpr size_t n=79,k=192;
+    const auto layout=AffineInt4Layout::Create(n,k);
+    std::vector<uint32_t> packed(layout.weightBytes/4,0x76543210u);
+    std::vector<uint16_t> scales(layout.coefficientBytes/2,BF16(.03125f)),biases(scales.size(),BF16(-.125f));
+    auto weight=gpu.UploadAffineInt4(packed.data(),layout.weightBytes,scales.data(),layout.coefficientBytes,biases.data(),layout.coefficientBytes,n,k);
+    auto first=gpu.Upload(std::vector<float>(k,.0625f),1,k),firstOut=gpu.Allocate(1,n);
+    gpu.Begin();gpu.EncodeAffineInt4MatMul(first,weight,firstOut);gpu.SubmitAndWait();
+    Require(gpu.LastAffineProfileDispatches()==0&&gpu.LastAffineProfileMisses()==1,"Unprepared profile did not use fallback");
+    const auto reference=gpu.Download(firstOut);const auto before=gpu.AffineProfilePipelineCount();
+    Require(gpu.PrepareAffineInt4Profile(first,weight,firstOut,128),"Cannot prepare up-to-128 profile from one actual row");
+    const auto prepared=gpu.AffineProfilePipelineCount();
+    Require(prepared>before,"Profile preparation did not compile pipelines");
+    Require(gpu.PrepareAffineInt4Profile(first,weight,firstOut,128)&&gpu.AffineProfilePipelineCount()==prepared,"Profile preparation was not idempotent");
+    Require(!gpu.PrepareAffineInt4Profile(first,weight,firstOut,0)&&!gpu.PrepareAffineInt4Profile(first,weight,firstOut,513),"Unsupported profile bounds were accepted");
+    gpu.Begin();bool rejected=false;
+    try{gpu.PrepareAffineInt4Profile(first,weight,firstOut,128);}catch(const std::logic_error&){rejected=true;}
+    gpu.Abort();Require(rejected,"Profile compilation was accepted inside an open command");
+    for(size_t rows:{1,2,4,5,63,127,128,129}) {
+        auto a=gpu.Upload(std::vector<float>(rows*k,.0625f),rows,k),out=gpu.Allocate(rows,n);
+        gpu.Begin();gpu.EncodeAffineInt4MatMul(a,weight,out);gpu.SubmitAndWait();
+        Require(gpu.LastAffineProfileDispatches()==size_t(rows<=128)&&gpu.LastAffineProfileMisses()==size_t(rows>128),"Actual rows did not respect the compiled upper bound");
+        for(float value:gpu.Download(out))Require(value==reference[0],"Bounded profile changed exact representable projection");
+        Require(gpu.AffineProfilePipelineCount()==prepared,"Encoding lazily compiled a pipeline");
+        if(rows==129) {
+            Require(gpu.PrepareAffineInt4Profile(a,weight,out,512),"Cannot widen the prepared profile bound");
+            gpu.Begin();gpu.EncodeAffineInt4MatMul(a,weight,out);gpu.SubmitAndWait();
+            Require(gpu.LastAffineProfileDispatches()==1&&gpu.LastAffineProfileMisses()==0,"Widened profile did not accept shorter input");
+        }
+    }
+    std::cout<<"affine_profile up_to_128 accepts=1,2,4,5,63,127,128 fallback=129 no_lazy_compile=1 widened_bound=512\n";
+}
+#endif
 int main() {
     try {
         Reject([]{AffineInt4Layout::Create(1,63);});
@@ -207,6 +259,9 @@ int main() {
         CodecGolden();
         VisionPatchGolden();
         MetalContext gpu;
+#ifdef GARNET_METAL_AFFINE_PROFILE
+        ProfileBoundsCase(gpu);
+#endif
 #ifdef GARNET_METAL_INDEXED_DECODE
         Require(gpu.HasIndexedDecodeAffine(),"Indexed FP32 decode pipeline unavailable");
         for(auto shape:std::array<std::array<size_t,3>,5>{{{1,37,64},{2,48,5120},{3,33,17408},{4,17408,64},{4,5127,128}}})

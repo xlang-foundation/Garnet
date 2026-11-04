@@ -14,9 +14,10 @@ struct Reuse64Params {ulong rows,inner,columns,aStride,oStride;};
 kernel void affine_q4_reuse64(device const float* input [[buffer(0)]],
  device const uint* packed [[buffer(1)]],device const ushort* scales [[buffer(2)]],
  device const ushort* biases [[buffer(3)]],device float* output [[buffer(4)]],
- constant Reuse64Params& p [[buffer(5)]],constant uint* indices [[buffer(6)]],
+ constant Reuse64Params& runtime [[buffer(5)]],constant uint* indices [[buffer(6)]],
  uint2 group [[threadgroup_position_in_grid]],uint tid [[thread_index_in_threadgroup]],
  uint simd [[simdgroup_index_in_threadgroup]],uint lane [[thread_index_in_simdgroup]]) {
+    GARNET_AFFINE_PARAMETERS(Reuse64Params);
     // Pad each64-element weight row by16 bytes to separate shared-memory banks.
     threadgroup bfloat weights[64*72];
     constexpr auto descriptor=matmul2d_descriptor(16,32,16,false,true,GARNET_REUSE64_RELAXED,

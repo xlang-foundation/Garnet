@@ -36,6 +36,37 @@ def indexed_decode_issues(profile,calls,expected_decode_calls=None,require_spars
             issues.append('Active FP32 decode projection route/coverage differs')
     return issues
 
+def affine_profile_issues(profile,calls,expected_counts):
+    if not profile.get('bounded_affine_kernel_profiles',False):
+        return ['Unexpected bounded affine kernel profile events'] if calls else []
+    coverage={stage:profile.get('expected_'+stage+'_affine_projections') for stage in ('body','head')}
+    if any(type(value) is not int or value<=0 for value in coverage.values()):return ['Invalid frozen bounded affine projection coverage']
+    coverage['prefill']=coverage.pop('body');coverage['decode']=coverage['prefill']+coverage['head']
+    issues=[]
+    if not calls or not any(e.get('stage')=='head' for e in calls):issues.append('Required bounded affine profile head evidence missing')
+    for stage,count in expected_counts.items():
+        if count is not None and sum(e.get('stage')==stage for e in calls)!=count:
+            issues.append('Bounded affine profile '+stage+' command count differs from native plans')
+    for event in calls:
+        stage=event.get('stage');valid=event.get('active_rows');physical=event.get('physical_rows')
+        count=event.get('affine_dispatches');misses=event.get('misses');pipelines=event.get('pipeline_count')
+        if stage not in coverage or any(type(value) is not int for value in (valid,physical,count,misses,pipelines)):
+            issues.append('Bounded affine profile route/coverage differs');continue
+        expected_rows=profile['batch']*(profile['prefill_chunk'] if stage=='prefill' else 1)
+        if (physical!=expected_rows or not 0<valid<=physical or count!=coverage[stage] or misses!=0 or not 0<pipelines<=512):
+            issues.append('Bounded affine profile route/coverage differs')
+    return issues
+
+def profile_close_issues(profile,memory):
+    if not profile.get('bounded_affine_kernel_profiles',False):return []
+    limit=profile.get('compiled_engine_close_bytes_limit');allocated=memory.get('metal_allocated_bytes')
+    issues=[]
+    if type(limit) is not int or not 0<limit<=4*1024*1024 or type(allocated) is not int or not 0<=allocated<=limit:
+        issues.append('Compiled engine post-close allocation exceeds its frozen limit')
+    for key in ('garnet_live_matrix_owners','garnet_live_affine_weight_owners','garnet_live_bf16_weight_owners','garnet_live_pipeline_sets'):
+        if type(memory.get(key)) is not int or memory[key]!=0:issues.append('Native compiled profile resource owners remain or are unobserved')
+    return issues
+
 def audit(root,reference=None):
     issues=[];artifacts=json.loads((root/'artifacts.json').read_text());collection=json.loads((root/'collection.json').read_text())
     for name,expected in artifacts['files'].items():
@@ -47,7 +78,7 @@ def audit(root,reference=None):
     if status['status']!='collected_pending_sandbox_evaluation' or status.get('parallel_tasks')!=8:issues.append('Concurrent coding collection differs')
     if status['tasks']!=[dict(id=plan['id'],client_exit_code=0) for plan in plans]:issues.append('Task set/status differs')
     ready=[];closed=[];completed={};streams={};batch_plans=[];prompt_counts={};mpp=[]
-    chunks={};decode_events=[];mixed_events=[];indexed_batches=[];indexed_events=[];reuse64_events=[];indexed_decode_events=[]
+    chunks={};decode_events=[];mixed_events=[];indexed_batches=[];indexed_events=[];reuse64_events=[];indexed_decode_events=[];affine_profile_events=[]
     for event_index,event in enumerate(native_events(root/'server/worker-stdout.jsonl')):
         kind=event.get('event');key=event.get('id')
         if kind=='ready':ready.append(event)
@@ -61,6 +92,7 @@ def audit(root,reference=None):
         elif kind=='native_indexed':indexed_events.append(event)
         elif kind=='native_reuse64':reuse64_events.append(event)
         elif kind=='native_indexed_decode':indexed_decode_events.append(event)
+        elif kind=='native_affine_profile':affine_profile_events.append(event)
         elif kind=='native_mixed_forward':mixed_events.append((event_index,event))
         elif kind=='error':issues.append('Native request/runtime error: '+event.get('error',''))
         elif kind=='token':
@@ -89,6 +121,12 @@ def audit(root,reference=None):
                 issues.append('Cooperative64 projection route/count differs')
     elif reuse64_events:issues.append('Unexpected cooperative64 projection in control profile')
     issues.extend(indexed_decode_issues(profile,indexed_decode_events,len(decode_events)-len(mixed_events)))
+    issues.extend(affine_profile_issues(profile,affine_profile_events,dict(
+        prefill=sum(e['stage']=='prefill' for e in batch_plans) if profile.get('prefill_schedule')=='chunked' else None,
+        decode=len(decode_events)-len(mixed_events),
+        head=sum(e.get('stage')=='head' for e in indexed_decode_events) if profile.get('active_decode_projections') else None)))
+    if ready and profile.get('bounded_affine_kernel_profiles',False)!=('bounded_affine_kernel_profiles' in ready[0].get('backend','')):
+        issues.append('Bounded kernel compilation policy differs from native backend')
     if profile.get('indexed_projections',False):
         if not indexed_events or not any(e.get('affine_dispatches',0)>0 for e in indexed_events):
             issues.append('Required indexed projection route missing')
@@ -124,7 +162,9 @@ def audit(root,reference=None):
     if profile.get('require_mpp',False) and (not mpp or any(event.get('affine_dispatches',0)<1 for event in mpp)):issues.append('Required native MPP route missing')
     if len(ready)==1 and (ready[0].get('profile')!=profile or ready[0].get('capacity')!=profile['capacity']):issues.append('Frozen context/profile differs from ready event')
     if len(ready)==1 and ready[0]['memory']['metal_allocated_bytes']>=ready[0]['memory']['metal_recommended_working_set_bytes']:issues.append('Ready device working set exceeded')
-    if len(closed)!=1 or closed[0]['memory']['metal_allocated_bytes']!=720896:issues.append('Native close allocation differs')
+    if len(closed)!=1:issues.append('Native close allocation differs')
+    elif profile.get('bounded_affine_kernel_profiles',False):issues.extend(profile_close_issues(profile,closed[0]['memory']))
+    elif closed[0]['memory']['metal_allocated_bytes']!=720896:issues.append('Native close allocation differs')
     exit_record=json.loads((root/'server/worker-exit.json').read_text())
     if exit_record.get('returncode')!=0 or exit_record.get('expected_close') is not True:issues.append('Native worker did not exit cleanly')
     if len(completed)!=len(plans) or set(completed)!=set(streams):issues.append('Native completion count/set differs')
@@ -186,7 +226,7 @@ def audit(root,reference=None):
     return dict(status='passed' if not issues else 'failed',issues=issues,tasks=results,combined_decode_plans=combined,prefill_decode_interleavings=interleavings,
         context_capacity=ready[0]['capacity'] if ready else None,mpp_prefill_calls=len(mpp),mixed_forward_calls=len(mixed_events),
         indexed_prefill_calls=len(indexed_events),
-        reuse64_prefill_calls=len(reuse64_events),indexed_decode_calls=len(indexed_decode_events),
+        reuse64_prefill_calls=len(reuse64_events),indexed_decode_calls=len(indexed_decode_events),affine_profile_calls=len(affine_profile_events),
         scope='Concurrent native frozen prompt/stream/HTTP accounting and row lifecycle; coding correctness requires separate sandbox evaluation',
         auditor_sha256=digest(Path(__file__)),reference_worker_log_sha256=digest(reference) if reference else None,
         artifacts_sha256=digest(root/'artifacts.json'),worker_log_sha256=digest(root/'server/worker-stdout.jsonl'))

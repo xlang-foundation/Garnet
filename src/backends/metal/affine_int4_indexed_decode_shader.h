@@ -12,9 +12,10 @@ inline float indexed_decode_bf16(ushort value){return as_type<float>(uint(value)
 kernel void affine_q4_indexed_decode(device const float* a [[buffer(0)]],
  device const uint* packed [[buffer(1)]],device const ushort* scales [[buffer(2)]],
  device const ushort* biases [[buffer(3)]],device float* out [[buffer(4)]],
- constant IndexedDecodeQ4Params& p [[buffer(5)]],constant uint* indices [[buffer(6)]],
+ constant IndexedDecodeQ4Params& runtime [[buffer(5)]],constant uint* indices [[buffer(6)]],
  uint group [[threadgroup_position_in_grid]],uint lane [[thread_index_in_simdgroup]],
  uint simd [[simdgroup_index_in_threadgroup]]) {
+    GARNET_AFFINE_PARAMETERS(IndexedDecodeQ4Params);
     const ulong n=ulong(group)*4+simd;
     if(n>=p.columns)return;
     const ulong r0=indices[0],r1=selected_decode_rows>1?indices[1]:0;

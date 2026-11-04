@@ -13,9 +13,10 @@ struct IndexedQ4Params {ulong rows,inner,columns,aStride,oStride;};
 kernel void affine_q4_indexed(device const float* input [[buffer(0)]],
  device const uint* packed [[buffer(1)]],device const ushort* scales [[buffer(2)]],
  device const ushort* biases [[buffer(3)]],device float* output [[buffer(4)]],
- constant IndexedQ4Params& p [[buffer(5)]],constant uint* indices [[buffer(6)]],
+ constant IndexedQ4Params& runtime [[buffer(5)]],constant uint* indices [[buffer(6)]],
  uint2 group [[threadgroup_position_in_grid]],uint simd [[simdgroup_index_in_threadgroup]],
  uint lane [[thread_index_in_simdgroup]]) {
+    GARNET_AFFINE_PARAMETERS(IndexedQ4Params);
     constexpr auto descriptor=matmul2d_descriptor(16,32,16,false,true,false,
         matmul2d_descriptor::mode::multiply_accumulate);
     matmul2d<descriptor,execution_simdgroup> multiply;

@@ -47,10 +47,21 @@ def summarize(root):
                 if row.get('operand_dtype','float32')!=wanted_dtype:issues.append('Per-cell operand type differs from actual route')
                 if row['mpp_dispatches_per_call']!=int(wants_mpp):issues.append('MPP dispatch evidence differs')
                 if row.get('reuse64_dispatches_per_call',0)!=int(wants_reuse64):issues.append('Reuse64 dispatch evidence differs')
+                wants_profile=bool(meta and meta[0].get('affine_profile_available',False))
+                if row.get('affine_profile_dispatches_per_call',0)!=int(wants_profile):issues.append('Bounded affine profile dispatch evidence differs')
+                if row.get('affine_profile_misses_per_call',0)!=0:issues.append('Bounded affine profile fell back during measurement')
+                pipelines=row.get('affine_profile_pipeline_count',0)
+                if type(pipelines) is not int or (wants_profile and not 1<=pipelines<=512) or (not wants_profile and pipelines!=0):issues.append('Invalid bounded affine pipeline inventory')
                 cells.setdefault(key,[]).append(dict(cohort=cohort,gpu_ms=statistics.median(row['gpu_ms']),wall_ms=statistics.median(row['wall_ms']),sample_max_abs=row['sample_max_abs']))
         types={item.get('operand_dtype','float32') for item in metadata[variant]}
         if len(types)!=1 or any(item.get('accumulator_dtype','float32')!='float32' for item in metadata[variant]):issues.append(variant+': operand/accumulator metadata changed')
         cache=(root/variant/'CMakeCache.txt').read_text()
+        profile_values={item.get('affine_profile_available',False) for item in metadata[variant]}
+        expected_profile='GARNET_METAL_AFFINE_PROFILE:BOOL=ON' in cache
+        if profile_values!={expected_profile}:issues.append(variant+': bounded affine profile availability differs from build')
+        for item in metadata[variant]:
+            if item.get('affine_profile_maximum_rows',0)!=(maximum_rows if expected_profile else 0):issues.append(variant+': bounded affine row limit differs from frozen plan')
+            if expected_profile and item.get('affine_profile_rows_are_upper_bound') is not True:issues.append(variant+': profile lost its upper-bound row semantics')
         expected_dtype='bfloat16' if 'GARNET_METAL_MPP_AFFINE_BF16:BOOL=ON' in cache else 'float32'
         if meta and meta[0]['mpp_available'] and types!={expected_dtype}:issues.append(variant+': precision profile differs from build')
         tile_values={item.get('mpp_tile_k',32 if item['mpp_available'] else 0) for item in metadata[variant]}

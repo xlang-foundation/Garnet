@@ -5,6 +5,7 @@
 #endif
 #ifdef GARNET_METAL_MLX_AFFINE_INT4
 #include "affine_int4_shader.h"
+#include "affine_int4_profile_shader.h"
 #ifdef GARNET_METAL_INDEXED_AFFINE
 #include "affine_int4_indexed_shader.h"
 #endif
@@ -47,7 +48,12 @@
 #endif
 #ifdef GARNET_METAL_BODY_SHAPE
 #include "body_shape_shader.h"
+#endif
+#if defined(GARNET_METAL_BODY_SHAPE)||defined(GARNET_METAL_AFFINE_PROFILE)
 #include <shared_mutex>
+#endif
+#ifdef GARNET_METAL_AFFINE_PROFILE
+#include <atomic>
 #endif
 #ifdef GARNET_METAL_FUSED_HEAD_ARGMAX
 #include "fused_head_argmax_shader.h"
@@ -83,7 +89,22 @@ void PrimaryMaybeFail(int stage){int expected=stage;if(primaryFailure.compare_ex
 #endif
 }
 #endif
+#ifdef GARNET_METAL_AFFINE_PROFILE
+namespace {
+std::atomic<size_t> profileMatrixOwners{0},profileAffineOwners{0},profileBF16Owners{0},profilePipelineOwners{0};
+struct ProfileOwnerTracker {
+    std::atomic<size_t>& count;
+    explicit ProfileOwnerTracker(std::atomic<size_t>& value):count(value){count.fetch_add(1);}
+    ~ProfileOwnerTracker(){count.fetch_sub(1);}
+    ProfileOwnerTracker(const ProfileOwnerTracker&)=delete;
+    ProfileOwnerTracker& operator=(const ProfileOwnerTracker&)=delete;
+};
+}
+#endif
 struct MetalMatrix::Impl {
+#ifdef GARNET_METAL_AFFINE_PROFILE
+    ProfileOwnerTracker profileOwner{profileMatrixOwners};
+#endif
     MPSMatrix* matrix;
 #ifdef GARNET_METAL_CACHED_MATRIX_METADATA
     // The MPSMatrix and its storage layout are assigned only in Allocate.
@@ -131,6 +152,9 @@ bool MetalMatrix::CompatibleLayout(const MetalMatrix& other) const {
 #endif
 }
 struct MetalBF16Weight::Impl {
+#ifdef GARNET_METAL_AFFINE_PROFILE
+    ProfileOwnerTracker profileOwner{profileBF16Owners};
+#endif
 #ifdef GARNET_METAL_SCREENED_HEAD
     std::mutex screenMutex;
     bool screenAttempted=false;
@@ -163,6 +187,9 @@ struct MetalBF16Weight::Impl {
 };
 #ifdef GARNET_METAL_MLX_AFFINE_INT4
 struct MetalAffineInt4Weight::Impl {
+#ifdef GARNET_METAL_AFFINE_PROFILE
+    ProfileOwnerTracker profileOwner{profileAffineOwners};
+#endif
     id<MTLBuffer> packed,scales,biases;
     size_t rows=0,columns=0;
 };
@@ -214,13 +241,30 @@ bool MetalBF16Weight::InterleavedBodyReady() const {
     return false;
 #endif
 }
+#ifdef GARNET_METAL_AFFINE_PROFILE
+namespace {
+enum class AffineProfileRoute:size_t {Decode,MPP,IndexedDecode,Indexed,Reuse64};
+// Route, K, N, input stride, output stride, decode-row variant. Prefill's actual
+// row count is runtime data. The entry records the largest prepared bound.
+using AffineProfileKey=std::array<size_t,6>;
+struct AffineProfilePipeline {id<MTLComputePipelineState> pipeline=nil;size_t maximumRows=0;};
+}
+#endif
 struct MetalPipelines {
+#ifdef GARNET_METAL_AFFINE_PROFILE
+    ProfileOwnerTracker profileOwner{profilePipelineOwners};
+#endif
 #ifdef GARNET_METAL_ROW_FINAL_HIDDEN
     id<MTLComputePipelineState> lastActiveHidden;
 #endif
     id<MTLLibrary> library;
 #ifdef GARNET_METAL_MLX_AFFINE_INT4
     id<MTLLibrary> affineInt4Library;
+#ifdef GARNET_METAL_AFFINE_PROFILE
+    std::shared_mutex affineProfileMutex;
+    std::map<AffineProfileKey,AffineProfilePipeline> affineProfiles;
+    std::array<id<MTLLibrary>,5> affineProfileLibraries{};
+#endif
     std::array<id<MTLComputePipelineState>,4> affineInt4Decode{};
 #ifdef GARNET_METAL_INDEXED_DECODE
     id<MTLLibrary> indexedDecodeAffineLibrary;
@@ -310,6 +354,19 @@ struct MetalPipelines {
 };
 static std::mutex pipelineMutex;
 static std::map<uint64_t,std::weak_ptr<MetalPipelines>> pipelineCache;
+#ifdef GARNET_METAL_AFFINE_PROFILE
+namespace {
+id<MTLComputePipelineState> SelectAffineProfile(MetalPipelines& kernels,AffineProfileRoute route,
+    size_t rows,size_t inner,size_t columns,size_t aStride,size_t oStride,size_t decodeRows,
+    id<MTLComputePipelineState> fallback,size_t& dispatches,size_t& misses) {
+    const AffineProfileKey key{size_t(route),inner,columns,aStride,oStride,decodeRows};
+    std::shared_lock<std::shared_mutex> lock(kernels.affineProfileMutex);
+    auto found=kernels.affineProfiles.find(key);
+    if(found==kernels.affineProfiles.end()||rows>found->second.maximumRows) {++misses;return fallback;}
+    ++dispatches;return found->second.pipeline;
+}
+}
+#endif
 struct MetalContext::Impl {
     size_t screenedHeadDispatches=0;
     size_t screenedHeadSeedRows=0;
@@ -332,6 +389,9 @@ struct MetalContext::Impl {
 #endif
     size_t fusedHeadArgmaxDispatches=0;
     size_t bodyShapeDispatches=0,bodyShapeMisses=0;
+#ifdef GARNET_METAL_AFFINE_PROFILE
+    size_t affineProfileDispatches=0,affineProfileMisses=0;
+#endif
 #ifdef GARNET_METAL_FUSED_HEAD_ARGMAX
     std::map<std::array<size_t,2>,MetalMatrix> fusedHeadScratch;
 #endif
@@ -1500,13 +1560,21 @@ kernel void bf16_native_dot_t128(device const float* a [[buffer(0)]],device cons
 #ifdef GARNET_METAL_MLX_AFFINE_INT4
         auto affineOptions=[MTLCompileOptions new];
         affineOptions.languageVersion=MTLLanguageVersion3_1;affineOptions.fastMathEnabled=NO;
-        NSString* affineSource=[NSString stringWithUTF8String:kAffineInt4Shader];
+        auto affineSourceWithProfile=[](NSString* source) {
+            return [[NSString stringWithUTF8String:kAffineInt4ProfilePrelude] stringByAppendingString:source];
+        };
+        NSString* affineSource=affineSourceWithProfile([NSString stringWithUTF8String:kAffineInt4Shader]);
 #ifdef GARNET_METAL_AFFINE_TALL_TILES
         affineSource=[affineSource stringByAppendingString:[NSString stringWithUTF8String:kAffineInt4TallShader]];
 #endif
         auto affineLibrary=[impl_->device newLibraryWithSource:affineSource options:affineOptions error:&error];
         if(!affineLibrary)throw std::runtime_error("Cannot compile affine INT4 kernels: "+std::string(error.localizedDescription.UTF8String));
         impl_->kernels->affineInt4Library=affineLibrary;
+#ifdef GARNET_METAL_AFFINE_PROFILE
+        {auto library=[impl_->device newLibraryWithSource:[@"#define GARNET_AFFINE_PROFILE 1\n" stringByAppendingString:affineSource] options:affineOptions error:&error];
+         if(!library)throw std::runtime_error("Cannot compile affine profile Decode library: "+std::string(error.localizedDescription.UTF8String));
+         impl_->kernels->affineProfileLibraries[size_t(AffineProfileRoute::Decode)]=library;}
+#endif
         for(uint32_t rows=1;rows<=4;++rows) {
             auto constants=[MTLFunctionConstantValues new];
             [constants setConstantValue:&rows type:MTLDataTypeUInt atIndex:0];
@@ -1518,9 +1586,15 @@ kernel void bf16_native_dot_t128(device const float* a [[buffer(0)]],device cons
             impl_->kernels->affineInt4Decode[rows-1]=pipeline;
         }
 #ifdef GARNET_METAL_INDEXED_DECODE
-        auto indexedDecodeLibrary=[impl_->device newLibraryWithSource:[NSString stringWithUTF8String:kAffineInt4IndexedDecodeShader] options:affineOptions error:&error];
+        auto indexedDecodeSource=affineSourceWithProfile([NSString stringWithUTF8String:kAffineInt4IndexedDecodeShader]);
+        auto indexedDecodeLibrary=[impl_->device newLibraryWithSource:indexedDecodeSource options:affineOptions error:&error];
         if(!indexedDecodeLibrary)throw std::runtime_error("Cannot compile indexed FP32 decode: "+std::string(error.localizedDescription.UTF8String));
         impl_->kernels->indexedDecodeAffineLibrary=indexedDecodeLibrary;
+#ifdef GARNET_METAL_AFFINE_PROFILE
+        {auto library=[impl_->device newLibraryWithSource:[@"#define GARNET_AFFINE_PROFILE 1\n" stringByAppendingString:indexedDecodeSource] options:affineOptions error:&error];
+         if(!library)throw std::runtime_error("Cannot compile affine profile IndexedDecode library: "+std::string(error.localizedDescription.UTF8String));
+         impl_->kernels->affineProfileLibraries[size_t(AffineProfileRoute::IndexedDecode)]=library;}
+#endif
         for(uint32_t rows=1;rows<=4;++rows) {
             auto constants=[MTLFunctionConstantValues new];
             [constants setConstantValue:&rows type:MTLDataTypeUInt atIndex:0];
@@ -1540,6 +1614,7 @@ kernel void bf16_native_dot_t128(device const float* a [[buffer(0)]],device cons
 #ifdef GARNET_METAL_MPP_AFFINE_BF16
             mppSource=[@"#define GARNET_MPP_BF16 1\n" stringByAppendingString:mppSource];
 #endif
+            mppSource=affineSourceWithProfile(mppSource);
             auto mppLibrary=[impl_->device newLibraryWithSource:mppSource options:mppOptions error:&error];
             if(!mppLibrary)throw std::runtime_error("Cannot compile affine MPP candidate: "+std::string(error.localizedDescription.UTF8String));
             auto pipeline=[impl_->device newComputePipelineStateWithFunction:[mppLibrary newFunctionWithName:@"affine_q4_mpp"] error:&error];
@@ -1547,9 +1622,15 @@ kernel void bf16_native_dot_t128(device const float* a [[buffer(0)]],device cons
                pipeline.staticThreadgroupMemoryLength>impl_->device.maxThreadgroupMemoryLength)
                 throw std::runtime_error("Affine MPP candidate exceeds device limits");
             impl_->kernels->mppAffineLibrary=mppLibrary;impl_->kernels->mppAffine=pipeline;
+#ifdef GARNET_METAL_AFFINE_PROFILE
+        {auto library=[impl_->device newLibraryWithSource:[@"#define GARNET_AFFINE_PROFILE 1\n" stringByAppendingString:mppSource] options:mppOptions error:&error];
+         if(!library)throw std::runtime_error("Cannot compile affine profile MPP library: "+std::string(error.localizedDescription.UTF8String));
+         impl_->kernels->affineProfileLibraries[size_t(AffineProfileRoute::MPP)]=library;}
+#endif
 #ifdef GARNET_METAL_INDEXED_AFFINE
             NSString* indexedSource=[[NSString stringWithFormat:@"#define GARNET_INDEXED_K %u\n",unsigned(GARNET_METAL_MPP_AFFINE_TILE_K)]
                 stringByAppendingString:[NSString stringWithUTF8String:kAffineInt4IndexedShader]];
+            indexedSource=affineSourceWithProfile(indexedSource);
             auto indexedLibrary=[impl_->device newLibraryWithSource:indexedSource options:mppOptions error:&error];
             if(!indexedLibrary)throw std::runtime_error("Cannot compile indexed affine candidate: "+std::string(error.localizedDescription.UTF8String));
             auto indexedPipeline=[impl_->device newComputePipelineStateWithFunction:[indexedLibrary newFunctionWithName:@"affine_q4_indexed"] error:&error];
@@ -1557,9 +1638,15 @@ kernel void bf16_native_dot_t128(device const float* a [[buffer(0)]],device cons
                indexedPipeline.staticThreadgroupMemoryLength>impl_->device.maxThreadgroupMemoryLength)
                 throw std::runtime_error("Indexed affine candidate exceeds device limits");
             impl_->kernels->indexedAffineLibrary=indexedLibrary;impl_->kernels->indexedAffine=indexedPipeline;
+#ifdef GARNET_METAL_AFFINE_PROFILE
+        {auto library=[impl_->device newLibraryWithSource:[@"#define GARNET_AFFINE_PROFILE 1\n" stringByAppendingString:indexedSource] options:mppOptions error:&error];
+         if(!library)throw std::runtime_error("Cannot compile affine profile Indexed library: "+std::string(error.localizedDescription.UTF8String));
+         impl_->kernels->affineProfileLibraries[size_t(AffineProfileRoute::Indexed)]=library;}
+#endif
 #ifdef GARNET_METAL_MPP_AFFINE_REUSE64
             NSString* reuseSource=[[NSString stringWithFormat:@"#define GARNET_REUSE64_RELAXED %u\n",unsigned(GARNET_METAL_REUSE64_RELAXED_VALUE)]
                 stringByAppendingString:[NSString stringWithUTF8String:kAffineInt4Reuse64Shader]];
+            reuseSource=affineSourceWithProfile(reuseSource);
             auto reuseLibrary=[impl_->device newLibraryWithSource:reuseSource options:mppOptions error:&error];
             if(!reuseLibrary)throw std::runtime_error("Cannot compile cooperative64 affine candidate: "+std::string(error.localizedDescription.UTF8String));
             auto reusePipeline=[impl_->device newComputePipelineStateWithFunction:[reuseLibrary newFunctionWithName:@"affine_q4_reuse64"] error:&error];
@@ -1567,6 +1654,11 @@ kernel void bf16_native_dot_t128(device const float* a [[buffer(0)]],device cons
                reusePipeline.staticThreadgroupMemoryLength>impl_->device.maxThreadgroupMemoryLength)
                 throw std::runtime_error("Cooperative64 affine candidate exceeds device limits");
             impl_->kernels->reuse64AffineLibrary=reuseLibrary;impl_->kernels->reuse64Affine=reusePipeline;
+#ifdef GARNET_METAL_AFFINE_PROFILE
+        {auto library=[impl_->device newLibraryWithSource:[@"#define GARNET_AFFINE_PROFILE 1\n" stringByAppendingString:reuseSource] options:mppOptions error:&error];
+         if(!library)throw std::runtime_error("Cannot compile affine profile Reuse64 library: "+std::string(error.localizedDescription.UTF8String));
+         impl_->kernels->affineProfileLibraries[size_t(AffineProfileRoute::Reuse64)]=library;}
+#endif
 #endif
 #endif
         }
@@ -1784,6 +1876,77 @@ MetalMatrix MetalContext::Allocate(size_t rows,size_t columns) {
     }
 }
 #ifdef GARNET_METAL_MLX_AFFINE_INT4
+bool MetalContext::PrepareAffineInt4Profile(const MetalMatrix& input,const MetalAffineInt4Weight& weight,
+    const MetalMatrix& output,size_t maximumRows) {
+#ifdef GARNET_METAL_AFFINE_PROFILE
+    @autoreleasepool {
+        if(impl_->command||impl_->submitted.count)throw std::logic_error("Affine profile preparation requires a closed, drained command batch");
+        if(!input.impl_||!weight.impl_||!output.impl_)return false;
+        const auto a=input.impl_->matrix,o=output.impl_->matrix;const auto& w=weight.impl_;
+        if(a.device!=impl_->device||o.device!=impl_->device||w->packed.device!=impl_->device||
+           w->scales.device!=impl_->device||w->biases.device!=impl_->device||
+           !maximumRows||maximumRows>512||!a.rows||a.rows>maximumRows||a.rows!=o.rows||
+           a.columns!=w->columns||o.columns!=w->rows||a.data==o.data||a.rowBytes%4||o.rowBytes%4||
+           a.columns>UINT32_MAX||o.columns>UINT32_MAX||a.rowBytes/4>UINT32_MAX||o.rowBytes/4>UINT32_MAX||
+           !HasMPPAffine()||!HasIndexedAffine()||!HasIndexedDecodeAffine())return false;
+        std::unique_lock<std::shared_mutex> lock(impl_->kernels->affineProfileMutex);
+        auto prepare=[&](AffineProfileRoute route,size_t decodeRows) {
+            const AffineProfileKey key{size_t(route),a.columns,o.columns,a.rowBytes/4,o.rowBytes/4,decodeRows};
+            auto& cache=impl_->kernels->affineProfiles;auto found=cache.find(key);
+            if(found!=cache.end()){found->second.maximumRows=std::max(found->second.maximumRows,maximumRows);return;}
+            if(cache.size()>=512)throw std::runtime_error("Bounded affine profile pipeline limit exceeded");
+            const uint32_t dimensions[4]{uint32_t(a.columns),uint32_t(o.columns),uint32_t(a.rowBytes/4),uint32_t(o.rowBytes/4)};
+            auto constants=[MTLFunctionConstantValues new];
+            for(NSUInteger i=0;i<4;++i)[constants setConstantValue:&dimensions[i] type:MTLDataTypeUInt atIndex:10+i];
+            uint32_t rows=uint32_t(decodeRows);
+            if(rows)[constants setConstantValue:&rows type:MTLDataTypeUInt atIndex:0];
+            const std::array<NSString*,5> names{@"affine_q4_decode",@"affine_q4_mpp",@"affine_q4_indexed_decode",@"affine_q4_indexed",@"affine_q4_reuse64"};
+            auto library=impl_->kernels->affineProfileLibraries[size_t(route)];NSError* error=nil;
+            auto function=[library newFunctionWithName:names[size_t(route)] constantValues:constants error:&error];
+            if(!function)throw std::runtime_error("Cannot specialize affine kernel profile: "+std::string(error.localizedDescription.UTF8String));
+            auto pipeline=[impl_->device newComputePipelineStateWithFunction:function error:&error];
+            if(!pipeline||pipeline.threadExecutionWidth!=32||pipeline.maxTotalThreadsPerThreadgroup<128||
+               pipeline.staticThreadgroupMemoryLength>impl_->device.maxThreadgroupMemoryLength)
+                throw std::runtime_error("Affine profile pipeline exceeds its execution limits");
+            cache.emplace(key,AffineProfilePipeline{pipeline,maximumRows});
+        };
+        // Compile every possible small decode occupancy before readiness. Larger
+        // prefill kernels retain dynamic row counts, bounded by this profile.
+        for(size_t rows=1;rows<=std::min(size_t(4),maximumRows);++rows) {
+            prepare(AffineProfileRoute::Decode,rows);prepare(AffineProfileRoute::IndexedDecode,rows);
+        }
+        if(maximumRows>4)prepare(AffineProfileRoute::MPP,0);
+        prepare(AffineProfileRoute::Indexed,0);
+#ifdef GARNET_METAL_MPP_AFFINE_REUSE64
+        if(maximumRows>=64&&o.columns>=5120&&HasReuse64Affine())prepare(AffineProfileRoute::Reuse64,0);
+#endif
+        return true;
+    }
+#else
+    (void)input;(void)weight;(void)output;(void)maximumRows;return false;
+#endif
+}
+size_t MetalContext::AffineProfilePipelineCount() const {
+#ifdef GARNET_METAL_AFFINE_PROFILE
+    std::shared_lock<std::shared_mutex> lock(impl_->kernels->affineProfileMutex);return impl_->kernels->affineProfiles.size();
+#else
+    return 0;
+#endif
+}
+size_t MetalContext::LastAffineProfileDispatches() const {
+#ifdef GARNET_METAL_AFFINE_PROFILE
+    return impl_->affineProfileDispatches;
+#else
+    return 0;
+#endif
+}
+size_t MetalContext::LastAffineProfileMisses() const {
+#ifdef GARNET_METAL_AFFINE_PROFILE
+    return impl_->affineProfileMisses;
+#else
+    return 0;
+#endif
+}
 MetalAffineInt4Weight MetalContext::UploadAffineInt4(const void* packed,size_t packedBytes,
     const void* scales,size_t scaleBytes,const void* biases,size_t biasBytes,size_t rows,size_t columns) {
     @autoreleasepool {
@@ -1847,6 +2010,11 @@ void MetalContext::EncodeAffineInt4MatMul(const MetalMatrix& input,const MetalAf
             ++impl_->mppAffineDispatches;
         }
 #endif
+#ifdef GARNET_METAL_AFFINE_PROFILE
+        pipeline=SelectAffineProfile(*impl_->kernels,a.rows<=4?AffineProfileRoute::Decode:AffineProfileRoute::MPP,
+            a.rows,a.columns,o.columns,a.rowBytes/4,o.rowBytes/4,a.rows<=4?a.rows:0,
+            pipeline,impl_->affineProfileDispatches,impl_->affineProfileMisses);
+#endif
         [encoder setComputePipelineState:pipeline];
         [encoder setBuffer:a.data offset:a.offset atIndex:0];[encoder setBuffer:w->packed offset:0 atIndex:1];
         [encoder setBuffer:w->scales offset:0 atIndex:2];[encoder setBuffer:w->biases offset:0 atIndex:3];
@@ -1898,7 +2066,13 @@ void MetalContext::EncodeAffineInt4IndexedDecode(const MetalMatrix& input,const 
             Params params{indices.size(),a.columns,o.columns,a.rowBytes/4,o.rowBytes/4};
             auto encoder=[impl_->command computeCommandEncoder];
             if(!encoder)throw std::runtime_error("Cannot encode indexed FP32 decode");
-            [encoder setComputePipelineState:impl_->kernels->indexedDecodeAffine[indices.size()-1]];
+            auto pipeline=impl_->kernels->indexedDecodeAffine[indices.size()-1];
+#ifdef GARNET_METAL_AFFINE_PROFILE
+            pipeline=SelectAffineProfile(*impl_->kernels,AffineProfileRoute::IndexedDecode,
+                a.rows,a.columns,o.columns,a.rowBytes/4,o.rowBytes/4,indices.size(),
+                pipeline,impl_->affineProfileDispatches,impl_->affineProfileMisses);
+#endif
+            [encoder setComputePipelineState:pipeline];
             [encoder setBuffer:a.data offset:a.offset atIndex:0];[encoder setBuffer:w->packed offset:0 atIndex:1];
             [encoder setBuffer:w->scales offset:0 atIndex:2];[encoder setBuffer:w->biases offset:0 atIndex:3];
             [encoder setBuffer:o.data offset:o.offset atIndex:4];[encoder setBytes:&params length:sizeof(params) atIndex:5];
@@ -1968,6 +2142,11 @@ void MetalContext::EncodeAffineInt4IndexedImpl(const MetalMatrix& input,const Me
 #ifdef GARNET_METAL_MPP_AFFINE_REUSE64
             const bool reuse=HasReuse64Affine()&&indices.size()>=64&&w->rows>=5120;
             if(reuse){pipeline=impl_->kernels->reuse64Affine;tileColumns=64;}
+#endif
+#ifdef GARNET_METAL_AFFINE_PROFILE
+            const auto route=tileColumns==64?AffineProfileRoute::Reuse64:AffineProfileRoute::Indexed;
+            pipeline=SelectAffineProfile(*impl_->kernels,route,a.rows,a.columns,o.columns,
+                a.rowBytes/4,o.rowBytes/4,0,pipeline,impl_->affineProfileDispatches,impl_->affineProfileMisses);
 #endif
             [encoder setComputePipelineState:pipeline];
             [encoder setBuffer:a.data offset:a.offset atIndex:0];[encoder setBuffer:w->packed offset:0 atIndex:1];
@@ -2444,6 +2623,13 @@ std::vector<MetalBufferInfo> MetalContext::WeightBufferInfo(const MetalBF16Weigh
         return result;
     }
 }
+MetalProfileOwnerStats MetalContext::ProfileOwnerStats() {
+#ifdef GARNET_METAL_AFFINE_PROFILE
+    return {profileMatrixOwners.load(),profileAffineOwners.load(),profileBF16Owners.load(),profilePipelineOwners.load()};
+#else
+    return {};
+#endif
+}
 MetalMemoryStats MetalContext::MemoryStats() {
     @autoreleasepool {
         id<MTLDevice> device=MTLCreateSystemDefaultDevice();
@@ -2914,6 +3100,9 @@ void MetalContext::Begin() {
 #endif
     impl_->partialSubmissions=0;
     impl_->bodyShapeDispatches=impl_->bodyShapeMisses=0;
+#ifdef GARNET_METAL_AFFINE_PROFILE
+    impl_->affineProfileDispatches=impl_->affineProfileMisses=0;
+#endif
     impl_->joinedPrefillPairs=0;
 #ifdef GARNET_METAL_INDEXED_DECODE
     impl_->indexedDecodeAffineDispatches=0;
@@ -3645,6 +3834,9 @@ void MetalContext::Abort() {
     for(id<MTLCommandBuffer> prior in impl_->submitted)[prior waitUntilCompleted];
     impl_->submitted=nil;impl_->partialSubmissions=0;
     impl_->bodyShapeDispatches=impl_->bodyShapeMisses=0;
+#ifdef GARNET_METAL_AFFINE_PROFILE
+    impl_->affineProfileDispatches=impl_->affineProfileMisses=0;
+#endif
     impl_->joinedPrefillPairs=0;
 #ifdef GARNET_METAL_INDEXED_DECODE
     impl_->indexedDecodeAffineDispatches=0;

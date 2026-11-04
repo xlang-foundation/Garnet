@@ -52,6 +52,14 @@ def main():
     if type(reuse64_relaxed) is not bool or reuse64_relaxed!=('mpp_affine_reuse64_relaxed=1' in garnet.backend_info()):
         raise ValueError('Frozen cooperative64 profile requires its explicit tensor precision mode')
     active_decode=profile.get('active_decode_projections',False)
+    kernel_profiles=profile.get('bounded_affine_kernel_profiles',False)
+    if type(kernel_profiles) is not bool or kernel_profiles!=('bounded_affine_kernel_profiles' in garnet.backend_info()):
+        raise ValueError('Frozen profile requires its explicit bounded kernel compilation policy')
+    if kernel_profiles:
+        close_limit=profile.get('compiled_engine_close_bytes_limit')
+        if type(close_limit) is not int or not 0<close_limit<=4*1024*1024:raise ValueError('Compiled engine requires its frozen bounded post-close driver allocation limit')
+        for key in ('expected_body_affine_projections','expected_head_affine_projections'):
+            if type(profile.get(key)) is not int or profile[key]<=0:raise ValueError('Compiled kernel profile requires explicit projection coverage')
     retire_prefill_inputs=profile.get('retire_prefill_hidden_inputs',False)
     if type(retire_prefill_inputs) is not bool or retire_prefill_inputs!=('retired_prefill_hidden_inputs' in garnet.backend_info()):
         raise ValueError('Frozen profile requires its explicit prefill hidden input retirement policy')
@@ -146,9 +154,22 @@ def main():
                 jobs[identity]=dict(id=key,prompt=ids,limit=limit,generated=[],text_ids=[],cached_tokens=0,began=time.monotonic())
                 keys.add(key)
             except Exception as error:emit(dict(event='error',id=key,error=str(error),fatal=False))
+        def record_kernel_profile(stage,physical,valid):
+            if not kernel_profiles:return
+            count=decoder.session.affine_profile_dispatches;misses=decoder.session.affine_profile_misses
+            pipelines=decoder.session.affine_profile_pipeline_count
+            expected=profile['expected_head_affine_projections'] if stage=='head' else profile['expected_body_affine_projections']
+            if stage=='decode':expected+=profile['expected_head_affine_projections']
+            emit(dict(event='native_affine_profile',stage=stage,affine_dispatches=count,misses=misses,
+                pipeline_count=pipelines,active_rows=valid,physical_rows=physical))
+            if count!=expected or misses!=0 or not 0<pipelines<=512:
+                raise ValueError('Bounded kernel profile '+stage+' projection coverage or fallback differs')
         def execute(graphs,hidden,positions,slots,active,prediction,epochs,ids):
             if prefix:result=decoder.session.run_tokens(graphs,hidden,positions,slots,active,prediction,epochs,ids)
             else:result=decoder.session.run_leased(graphs,hidden,positions,slots,active,prediction,epochs)
+            if kernel_profiles:
+                stage='prefill' if len(ids)>batch else ('decode' if prediction>=0 else 'body')
+                record_kernel_profile(stage,len(ids),sum(1 for flag in active.tolist() if flag!=0))
             if profile.get('require_mpp',False) and len(ids)>batch:
                 count=decoder.session.mpp_affine_dispatches
                 if count<1:raise ValueError('Required MPP prefill route was not exercised')
@@ -174,6 +195,7 @@ def main():
             return result
         def predict_rows(epochs):
             result=decoder.session.predict_rows(epochs)
+            record_kernel_profile('head',batch,sum(1 for epoch in epochs if epoch!=0))
             if active_decode:
                 valid=sum(1 for epoch in epochs if epoch!=0);count=decoder.session.indexed_decode_affine_dispatches
                 expected=profile['expected_head_indexed_decode_projections'] if valid<batch else 0

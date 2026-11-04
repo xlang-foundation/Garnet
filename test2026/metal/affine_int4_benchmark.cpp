@@ -20,7 +20,7 @@ void Require(bool value,const char* message){if(!value)throw std::runtime_error(
 void Array(const std::vector<double>& values) {
     std::cout<<"[";for(size_t i=0;i<values.size();++i){if(i)std::cout<<",";std::cout<<values[i];}std::cout<<"]";
 }
-void Cell(MetalContext& gpu,size_t m,size_t n,size_t k,int warmups,int repetitions) {
+void Cell(MetalContext& gpu,size_t m,size_t n,size_t k,int warmups,int repetitions,size_t maximumRows) {
     const auto layout=AffineInt4Layout::Create(n,k);
     std::vector<uint32_t> packed(layout.weightBytes/4);
     std::vector<uint16_t> scales(layout.coefficientBytes/2),biases(scales.size());
@@ -30,11 +30,19 @@ void Cell(MetalContext& gpu,size_t m,size_t n,size_t k,int warmups,int repetitio
     for(size_t i=0;i<input.size();++i)input[i]=float(std::sin(double(i)*.173)*.05);
     auto weight=gpu.UploadAffineInt4(packed.data(),layout.weightBytes,scales.data(),layout.coefficientBytes,biases.data(),layout.coefficientBytes,n,k);
     auto a=gpu.Upload(input,m,k),out=gpu.Allocate(m,n);
+#ifdef GARNET_METAL_AFFINE_PROFILE
+    Require(gpu.PrepareAffineInt4Profile(a,weight,out,maximumRows),"Cannot prepare bounded affine benchmark profile");
+#endif
     std::vector<double> gpuMs,wallMs;size_t mppDispatches=0,reuse64Dispatches=0;
+    size_t profileDispatches=0,profileMisses=0;
     for(int repeat=-warmups;repeat<repetitions;++repeat) {
         const auto start=std::chrono::steady_clock::now();
         gpu.Begin();gpu.EncodeAffineInt4MatMul(a,weight,out);gpu.SubmitAndWait();
         const auto finish=std::chrono::steady_clock::now();
+        profileDispatches=gpu.LastAffineProfileDispatches();profileMisses=gpu.LastAffineProfileMisses();
+#ifdef GARNET_METAL_AFFINE_PROFILE
+        Require(profileDispatches==1&&profileMisses==0,"Benchmark did not execute the prepared profile");
+#endif
 #ifdef GARNET_METAL_MPP_AFFINE
         mppDispatches=gpu.LastMPPAffineDispatches();
         Require(mppDispatches==size_t(m>4&&gpu.HasMPPAffine()),"Operator MPP route/counter mismatch");
@@ -76,6 +84,7 @@ void Cell(MetalContext& gpu,size_t m,size_t n,size_t k,int warmups,int repetitio
 #endif
     std::cout<<"{\"kind\":\"cell\",\"relaxed_precision\":"<<(relaxed?"true":"false")<<",\"mpp_n_major\":"<<(nMajor?"true":"false")<<",\"mpp_registers\":"<<(registers?"true":"false")<<",\"operand_dtype\":"<<std::quoted(operand)<<",\"rows\":"<<m<<",\"outputs\":"<<n<<",\"inner\":"<<k
              <<",\"warmups\":"<<warmups<<",\"repetitions\":"<<repetitions<<",\"mpp_dispatches_per_call\":"<<mppDispatches<<",\"reuse64_dispatches_per_call\":"<<reuse64Dispatches
+             <<",\"affine_profile_dispatches_per_call\":"<<profileDispatches<<",\"affine_profile_misses_per_call\":"<<profileMisses<<",\"affine_profile_pipeline_count\":"<<gpu.AffineProfilePipelineCount()
              <<",\"sample_max_abs\":"<<maximum<<",\"gpu_ms\":";Array(gpuMs);std::cout<<",\"wall_ms\":";Array(wallMs);std::cout<<"}\n"<<std::flush;
 }
 }
@@ -107,11 +116,16 @@ int main(int argc,char** argv) {
 #ifdef GARNET_METAL_MPP_AFFINE_BF16
         if(mpp)operand="bfloat16";
 #endif
+        bool affineProfile=false;
+#ifdef GARNET_METAL_AFFINE_PROFILE
+        affineProfile=true;
+#endif
         std::cout<<std::setprecision(12)<<"{\"kind\":\"metadata\",\"device\":"<<std::quoted(gpu.DeviceName())<<",\"mpp_available\":"<<(mpp?"true":"false")
+                 <<",\"affine_profile_available\":"<<(affineProfile?"true":"false")<<",\"affine_profile_maximum_rows\":"<<(affineProfile?maximumRows:0)<<",\"affine_profile_rows_are_upper_bound\":true"
                  <<",\"shape_set\":"<<std::quoted(shapeSet)
                  <<",\"reuse64_available\":"<<(reuse64?"true":"false")<<",\"reuse64_relaxed\":"<<(reuse64Relaxed?"true":"false")<<",\"reuse64_min_outputs\":"<<(reuse64?5120:0)<<",\"reuse64_registers\":"<<(reuse64?"true":"false")<<",\"relaxed_precision\":"<<(relaxed?"true":"false")<<",\"mpp_n_major\":"<<(nMajor?"true":"false")<<",\"mpp_registers\":"<<(registers?"true":"false")<<",\"maximum_rows\":"<<maximumRows<<",\"mpp_tensor_k\":"<<(registers?16:tileK)<<",\"mpp_tile_k\":"<<tileK<<",\"operand_dtype\":"<<std::quoted(operand)<<",\"accumulator_dtype\":\"float32\",\"scope\":\"Synthetic affine projection GPU/wall latency; excludes loading, compilation and downloads; not model throughput\"}\n";
         for(size_t m:{1,2,4,8,16,32,64,128,256,512})if(m<=size_t(maximumRows))for(auto shape:dimensions)
-            Cell(gpu,m,shape[0],shape[1],warmups,repetitions);
+            Cell(gpu,m,shape[0],shape[1],warmups,repetitions,size_t(maximumRows));
         return 0;
     }catch(const std::exception& error){std::cerr<<error.what()<<"\n";return 1;}
 }

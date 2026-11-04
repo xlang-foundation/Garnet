@@ -158,6 +158,11 @@ public:
 #ifdef GARNET_METAL_INDEXED_DECODE
     size_t LastIndexedDecodeAffineDispatches() {std::lock_guard<std::mutex> lock(mutex_);return gpu_?gpu_->LastIndexedDecodeAffineDispatches():0;}
 #endif
+#ifdef GARNET_METAL_AFFINE_PROFILE
+    size_t LastAffineProfileDispatches() {std::lock_guard<std::mutex> lock(mutex_);return gpu_?gpu_->LastAffineProfileDispatches():0;}
+    size_t LastAffineProfileMisses() {std::lock_guard<std::mutex> lock(mutex_);return gpu_?gpu_->LastAffineProfileMisses():0;}
+    size_t AffineProfilePipelineCount() {std::lock_guard<std::mutex> lock(mutex_);return gpu_?gpu_->AffineProfilePipelineCount():0;}
+#endif
     size_t LastJoinedPrefillPairs() const {return joinedPrefillPairs_;}
     size_t LastConstantHeadDispatches() const {return constantHeadDispatches_;}
     size_t LastSingleCoderHeadDispatches() const {return singleCoderHeadDispatches_;}
@@ -239,6 +244,11 @@ public:
         APISET().AddProp("kv_inplace_updates",&MetalDecoderSession::LastKVInplaceUpdates);
 #ifdef GARNET_METAL_INDEXED_DECODE
         APISET().AddProp("indexed_decode_affine_dispatches",&MetalDecoderSession::LastIndexedDecodeAffineDispatches);
+#endif
+#ifdef GARNET_METAL_AFFINE_PROFILE
+        APISET().AddProp("affine_profile_dispatches",&MetalDecoderSession::LastAffineProfileDispatches);
+        APISET().AddProp("affine_profile_misses",&MetalDecoderSession::LastAffineProfileMisses);
+        APISET().AddProp("affine_profile_pipeline_count",&MetalDecoderSession::AffineProfilePipelineCount);
 #endif
         APISET().AddProp("joined_prefill_pairs",&MetalDecoderSession::LastJoinedPrefillPairs);
         APISET().AddProp("constant_head_dispatches",&MetalDecoderSession::LastConstantHeadDispatches);

@@ -1614,9 +1614,88 @@ checks must agree before loading this research profile.
 The candidate passes13 native tests and the linear/full-attention standalone,
 three-cycle restoration, two-session/host-input isolation and native scheduler
 GPU fixtures (`retired-prefill-inputs-ctest1.log`, `...-restoration1.log`,
-`...-scheduler1.log`). Learned memory saving, full coding and any larger chunk
-admission remain pending. In particular, retiring an input does not prove that
-the corresponding output can be pooled or that chunk256 fits this Mac.
+`...-scheduler1.log`). `native27b-retired-prefill-inputs-chunk128-quality1` also
+passes all eight sandboxed coding tasks with all eight full token sequences
+equal to the single-native reference,1,019 combined decode plans, seven mixed
+forwards and20 corruption checks. Ready allocation is17,852,727,296bytes,
+335,544,320bytes (320MiB) below the prior profile. Completed-request samples
+are17,858,068,480bytes; these are snapshots, not peak measurements. Native
+close returns to720,896bytes and the worker exits0. Larger chunk admission
+remains pending. Retiring an input does not prove that the corresponding output
+can be pooled or that chunk256 fits this Mac.
+
+### Compiling bounded kernel profiles
+
+A profile specifies **upper bounds**, not mandatory actual input lengths or
+occupancy. For example, a512-row operator profile accepts1,2,4,8 through512
+actual rows without requiring padding to512. A serving profile additionally
+caps request slots, context and scheduler chunk budget. Model dimensions,
+quantized weight layout and buffer strides can be compiler constants while
+actual token counts, positions, selected-row maps and lease epochs remain
+runtime data. Compiling a kernel profile is distinct from merely allocating a
+fixed-size buffer or rejecting all shapes except one exact input length.
+
+The default-OFF `GARNET_METAL_AFFINE_PROFILE` is a first native implementation
+of that contract for affine projections. Preparation compiles K,N and both
+storage strides into Metal function constants for regular decode, register
+prefill, indexed FP32 decode, indexed BF16 prefill and cooperative64 routes.
+It prepares every possible1..4 decode occupancy within the bound; prefill row
+counts stay dynamic. Pipeline entries record the prepared row bound and their
+cache is capped at512 entries. Encoding performs lookup only, reports actual
+specialized dispatches and misses, and uses the original pipeline on a miss.
+The learned worker requires exact body/head coverage and zero misses.
+
+Both control and candidate pass13 native tests. A dedicated case prepares
+an up-to128 profile from a one-row input, accepts1,2,4,5,63,127,128 actual rows,
+uses fallback for129, and accepts129 after widening the prepared bound to512.
+It checks idempotence, rejects0/513 and compilation during an open command,
+and proves that encoding does not grow the pipeline cache. Existing FP64
+bounds, inactive-row and indexed-decode exact-parity tests remain unchanged.
+
+`affine-profile-qwen-shapes1` freezes80 Qwen body-projection cells, three
+fresh-process cohorts per variant, three warmups and nine measured calls.
+The only build difference is bounded profile specialization; tile and precision
+policies are unchanged. All80 cells pass route/precision accounting and21
+corruption checks. Median control/profile GPU latency ratios across eight
+shapes are1.154 at2 rows,1.122 at128,1.084 at256 and1.092 at512. One-row
+results regress in several shapes: median ratio0.964, with a weighted body
+projection sum ratio0.875. Thus this is not a uniform gain. The body sum is an
+operator diagnostic excluding the head, state, activations and serving costs.
+These results do not establish tokens/s, a vLLM speedup, or any2x target.
+
+Native sources and hashes are frozen in `affine-profile-sources1` and the
+coverage-instrumented `affine-profile-sources2`. The first eight-task run,
+`native27b-bounded-affine-profile-chunk128-quality1`, passes all eight sandboxed
+tasks with all full sequences equal to the single-native reference. Its1,221
+profile commands comprise1,201 combined body/head decode commands, ten
+prefills and ten standalone heads, with zero misses. However, its original
+audit fails the generic-engine720,896-byte close-allocation requirement:
+the candidate closes at1,507,328bytes with worker exit0. Preserve that failed
+audit; this run is not the qualified serving candidate.
+
+A dedicated lifecycle investigation preserves an initial failed assumption
+that all Metal driver allocation returns to the cold-device baseline. The
+owner-instrumented fixture then checks all Garnet matrix, affine weight, BF16
+weight and pipeline-set owners reach zero. Three complete context/profile
+create-destroy cycles return to the same737,280-byte warmed device allocation,
+without growth or retained Garnet owners. This supports bounded driver
+allocation; it does not identify a particular private driver allocation type.
+All14 native tests, including that lifecycle test, pass.
+
+`affine-profile-sources3` records native ownership instrumentation. The fresh
+`native27b-bounded-affine-profile-chunk128-quality2` profile declares a2MiB
+post-close allocation budget before loading the model and additionally requires
+all four Garnet ownership counters to be present and zero. The generic control
+keeps its original close requirement. This fresh gate passes all eight sandboxed
+tasks, all eight exact full token sequences and28 corruption checks. Its1,176
+profile commands comprise1,156 decode, ten prefill and ten standalone head
+commands, with zero misses;1,138 decode plans combine requests and nine
+forwards mix decode/prefill. Ready allocation is17,853,775,872bytes with497
+affine weight owners,2,737 matrix owners and one pipeline set. Native close
+reports all four owner counts zero,1,507,328 Metal bytes and worker exit0.
+Serving performance remains pending. The experiment does not yet constitute
+a complete compiled engine memory arena, tile autotuner or portable production
+xModel profile.
 
 ### Parent MTP asset discovery
 

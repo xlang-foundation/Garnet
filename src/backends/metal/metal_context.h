@@ -100,6 +100,7 @@ struct MetalMemoryStats {
 struct MetalPrimaryStats {
  uint64_t activeWeights=0,originalBytes=0,payloadBytes=0,metadataBytes=0,allocatedBytes=0,uploads=0,decodeEncoded=0,prefillEncoded=0,headEncoded=0,vectorDecodeEncoded=0,vectorHeadEncoded=0;
 };
+struct MetalProfileOwnerStats {size_t matrices=0,affineWeights=0,bf16Weights=0,pipelineSets=0;};
 class MetalContext {
     struct Impl;
     std::unique_ptr<Impl> impl_;
@@ -126,6 +127,7 @@ public:
     std::string DeviceName() const;
     static std::string AvailableDeviceName();
     static MetalMemoryStats MemoryStats();
+    static MetalProfileOwnerStats ProfileOwnerStats();
     // Correctness diagnostic only; deliberately queries live MPS properties.
     static bool MatrixMetadataMatchesLive(const MetalMatrix&);
     static MetalBufferInfo MatrixBufferInfo(const MetalMatrix&);
@@ -137,6 +139,14 @@ public:
         const void* scales,size_t scaleBytes,const void* biases,size_t biasBytes,
         size_t rows,size_t columns);
     void EncodeAffineInt4MatMul(const MetalMatrix&,const MetalAffineInt4Weight&,const MetalMatrix&);
+    // Preparation only: compile model dimensions/strides for every supported
+    // route up to maximumRows (1..512). Actual rows remain dynamic. Encoding
+    // never compiles; missing/unsupported profiles use the original pipelines.
+    bool PrepareAffineInt4Profile(const MetalMatrix&,const MetalAffineInt4Weight&,
+        const MetalMatrix&,size_t maximumRows);
+    size_t AffineProfilePipelineCount() const;
+    size_t LastAffineProfileDispatches() const;
+    size_t LastAffineProfileMisses() const;
 #ifdef GARNET_METAL_INDEXED_DECODE
     void EncodeAffineInt4IndexedDecode(const MetalMatrix&,const MetalAffineInt4Weight&,
         const MetalMatrix&,const std::vector<size_t>& selectedRows);

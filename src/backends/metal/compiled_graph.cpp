@@ -977,6 +977,14 @@ bool MetalCompiledGraph::BuildInternal(X::Value graph,X::Value symbols,const std
             if(eligible&&writer)outputStorageGroups_[part]=std::move(group);
         }
         resetKVPrefix_[0]=ComputeResetKVPrefix(1);resetKVPrefix_[1]=ComputeResetKVPrefix(2);
+#ifdef GARNET_METAL_AFFINE_PROFILE
+        // Profiles are upper bounds: valid row counts/masks vary at execution.
+        // Prepare before readiness and before singleton scratch is retired.
+        for(const auto& op:ops_)if(op.kind==Kind::MatMul&&slots_[op.b].affineInt4.Valid())
+            if(!gpu_->PrepareAffineInt4Profile(slots_[op.a].matrix,slots_[op.b].affineInt4,
+                slots_[op.out].matrix,slots_[op.a].rows))
+                throw std::runtime_error("Cannot prepare bounded affine kernel profile");
+#endif
 #ifdef GARNET_METAL_BODY_SHAPE
         // Prepare before readiness/compile timing ends. Decode never lazily compiles.
         for(const auto& op:ops_)if((op.kind==Kind::BF16MatVec||(op.kind==Kind::MatMul&&op.transpose))&&slots_[op.b].bf16.Valid())
