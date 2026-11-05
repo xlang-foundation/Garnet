@@ -48,6 +48,9 @@ def validate(events, clients, controls, profile, exit_status, expected_requests=
              'indexed_token_projections', 'active_decode_projections',
              'affine_coefficient_dtype=fp16'} <= backend, 'incorrect native backend')
     matrix_attention = profile.get('chunk_attention_mps', False)
+    attention_scratch = profile.get('chunk_attention_scratch', False)
+    require(type(attention_scratch) is bool and attention_scratch == ('chunk_attention_full_write_scratch' in backend)
+            and (not attention_scratch or matrix_attention), 'attention scratch policy differs from model/backend')
     flash_attention = profile.get('chunk_flash_attention', False)
     require(type(flash_attention) is bool and flash_attention == ('chunk_flash_attention_fp32_operands' in backend)
             and (not flash_attention or matrix_attention), 'flash attention policy differs from model/backend')
@@ -486,10 +489,15 @@ def main():
     if profile.get('wide_owner_prefill'):
         corruptions += ['wrong-wide-policy','wrong-wide-inventory','wrong-wide-bound',
                         'missing-profile-tick','wrong-tick-budget','wrong-prepared-chunk','wrong-tick-order']
+    if profile.get('chunk_attention_scratch'):
+        corruptions += ['wrong-attention-scratch-policy']
     for label in corruptions:
         es, cs, ct = copy.deepcopy(events), copy.deepcopy(clients), copy.deepcopy(controls)
         if label == 'wrong-bound':
             next(e for e in es if e['event'] == 'native_dense_schedule_bound')['global_token_budget'] = 1024
+        elif label == 'wrong-attention-scratch-policy':
+            ready = next(e for e in es if e['event'] == 'ready')
+            ready['backend'] = ready['backend'].replace('chunk_attention_full_write_scratch','chunk_attention_full_write_scratch_BAD')
         elif label == 'wrong-wide-policy':
             ready = next(e for e in es if e['event'] == 'ready')
             ready['backend'] = ready['backend'].replace('wide_owner_prefill','wide_owner_prefill_BAD')

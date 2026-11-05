@@ -1728,3 +1728,127 @@ harness, raw serving streams, opposite-order body runs and diagnostic logs
 remain separate. Comparator results are frozen and were not rerun. Remaining
 work includes projection efficiency, proved scratch/hidden reuse and M5-specific
 attention, with all performance/quality targets still open.
+
+### Reusing completely written attention output buffers
+
+The optional `GARNET_METAL_CHUNK_ATTENTION_SCRATCH` extension adds chunk
+attention to the native scratch planner's complete-write initialization proof.
+It defaults off and requires the existing shared scratch, MPS attention,
+index32 and context-bucket extensions. The backend tag is
+`chunk_attention_full_write_scratch`; a serving profile explicitly declares
+`"chunk_attention_scratch": true`. Layer operations, attention equations,
+precision, physical KV owners and cache capacity are unchanged.
+
+The planner previously omitted this producer even though its scalar kernel,
+MPS merge and optional fused kernel write every logical query/head/dimension,
+including zero for inactive queries. Other eligibility checks are retained:
+default physical layout, protected inputs/weights/returned parts, first full
+write before any read, unique storage in the non-alias path, and the scratch
+owner's serialization lease through GPU completion. Pool bindings are prepared
+before readiness. No new per-dispatch scratch allocation or graph compilation
+is introduced. This change reuses attention result storage across prepared
+layers; private KV never enters the scratch pool.
+
+The new native test poisons outputs with NaNs and a nonzero finite value before
+two executions of each of nine cases. It checks16,789,504 output words for full
+finite writes,3,037,824 inactive zero words and1,514 independent FP64 samples
+under the original `1e-5 + 2e-4*abs(expected)` bound. The largest observed error
+uses0.00414 of that bound. Cases include B1/T512 initial/cached attention,
+B2/T256 unequal lengths, B4/T128 gaps, scalar tails, all-inactive work,
+overwrites, pending controls and gating. KV remains read-only and native
+allocation owners/plans remain fixed. The first build caught a mixed-type
+`auto` declaration in this test; immutable source2 fixes only that test line
+relative to source1. Both the failure and corrected build remain available.
+
+The selected source2 library SHA256 is
+`c415b745410a5034a69bfef6b473df971278911b42061a9d8a76aff97b6eb4e8`.
+It passes all26 native tests. Enabling the optional Flash extension passes27
+native tests, including the poison checks and existing fused numerical gates;
+that combination has operator evidence only, not a new full-model admission.
+Disabling attention scratch passes all25 prior native tests. The actual model
+and serving gates below keep Flash off.
+
+At17 compact families, preparation falls from15,918,710,784 to14,332,182,528
+tracked Metal bytes, saving1,586,528,256 bytes. At the14-family compact128
+serving profile, ready-state allocation falls from12,824,494,080 to
+11,909,054,464 bytes, saving915,439,616 bytes. The latter still has21 MPS plans,
+1,044,162,560 MPS scratch bytes and126 context buckets. These are sampled
+resource allocations on this M5/24GiB host, not system free RAM or peak memory.
+The separate MPS attention scratch remains reserved.
+
+All nine real-weight full-state cases exactly match the previous immutable
+library's complete physical KV, hidden output and predictions, and also match
+their independent B1/B2 cache controls. Five invalid/stale dispatch cases retain
+unchanged KV. Dynamic scheduling again completes nine jobs/75 batch steps with
+162 frozen IDs, including E taking A's row and returned A overlapping three
+live survivors. Seven token-prefix cases preserve exact return, appended and
+changed continuations, including528 survivor IDs. These tests do not establish
+coding quality or serving speed.
+
+The unchanged uncached compact128 HTTP workload completes22 requests/4,844
+output tokens and passes37 corruption rejections. All22 complete generated-ID
+sequences match the prior compact128 collection. The auditor also checks the
+explicit compiled scratch policy. Strict coding remains0/8 by full output
+identity, without a new quality evaluation. No ANE work is involved.
+
+| Nominal input / concurrency | Prior compact128 Garnet tok/s | Attention scratch Garnet tok/s | Frozen vLLM-Metal tok/s | Frozen SGLang-MLX tok/s |2x target |
+|---|---:|---:|---:|---:|---:|
+|256 /1 |19.390 |16.724 |22.021 |22.042 |44.084 |
+|256 /2 |33.133 |31.694 |31.464 |32.127 |64.254 |
+|256 /4 |47.698 |42.889 |45.235 |42.194 |90.470 |
+|2048 /1 |7.729 |7.229 |12.345 |12.518 |25.036 |
+|2048 /2 |9.725 |9.162 |16.536 |14.482 |33.071 |
+|2048 /4 |10.288 |10.314 |21.179 |16.337 |42.358 |
+
+C1 TTFT is1.094s /8.259s and decode19.398 /13.466 tok/s. Native entries are
+separate one-cohort/no-warmup/one-wave observations under different system
+conditions; references remain frozen15-wave medians. Five native cells regress
+and one is essentially flat. These data do not establish a speed gain or
+isolated causal regression. The resource saving is independently measured;
+performance still needs a same-work comparison. All2x and half-TTFT targets
+remain unmet, and attention scratch remains optional/default off.
+
+A paired body study holds compact128 geometry, weights, inputs, context and
+owner identities fixed while changing the native library. Four serial processes
+run control/candidate/candidate/control. Each has one warmup and three measured
+complete2048-token prefills at one and four owners, for24 measured full
+prefills. Reset/claims, input construction, vocabulary head and hashes are
+outside timing. The independent audit requires complete KV/hidden/prediction
+identity across all four processes and sampled allocation stability within
+each group; both pass. Each candidate preparation saves915,439,616 bytes.
+
+| Active owners | Control / candidate cohorts | Control body s | Candidate body s |Control/candidate ratio |
+|---|---|---:|---:|---:|
+|1 |1 /2 |7.466 |9.158 |0.815 |
+|4 |1 /2 |35.495 |37.461 |0.948 |
+|1 |4 /3 |9.468 |9.351 |1.012 |
+|4 |4 /3 |33.963 |39.879 |0.852 |
+
+One-owner measurements vary with run order. Four-owner work regresses in both
+orders, by5.5% and17.4% in wall time. These data reject a consistent speed-win
+claim for the selected implementation. They do not independently isolate GPU
+resource hazards, clock behavior or system pressure. A single `pmset` snapshot
+reported no recorded thermal/performance warning and low-power mode disabled;
+it is not a frequency/temperature trace or evidence of constant conditions.
+The implementation remains an optional memory-capacity experiment, off by
+default. Reducing temporary allocation does not solve the projection bottleneck
+identified by the previous diagnostic.
+
+Evidence roots are `mistral-attention-scratch-draft1`, immutable source2/library2,
+`mistral-attention-scratch-native-parity1`,
+`mistral-attention-scratch-scheduler1`, `mistral-attention-scratch-prefix1`,
+`mistral-attention-scratch-native-http-admission1` and
+`mistral-attention-scratch-paired-stage1`. Enabled, Flash-combination and disabled
+native builds remain separate. Frozen comparators were neither rerun nor
+replaced. Further work must improve the quantized projection kernels and
+validate whole-model speed; no2x, half-TTFT, quality, ANE or renewed27B admission
+is established by this checkpoint.
+
+A separate next-step source prototype changes the quantized projection tile to
+reuse an unpacked weight block across128 rows with eight SIMD groups/256
+threads, retaining two strict FP32 accumulators per SIMD group and FP16
+operands. It passes offline Metal4 syntax/type compilation only. It has not
+been integrated into the native bounded dispatcher, launched on the GPU,
+numerically qualified or timed. Increasing the projection tile is distinct
+from the already-tested larger scheduler chunks; no gain is claimed for this
+prototype. Its local source/compile evidence is `mistral-reuse128-design2`.

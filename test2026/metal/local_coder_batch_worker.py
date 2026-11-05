@@ -66,6 +66,10 @@ def main():
         (attention_flash and (family!='mistral_7b' or not attention_mps or not attention_index32))):
         raise ValueError('Frozen profile requires its explicit native FP32 flash attention policy')
     attention_buckets=profile.get('chunk_attention_buckets',False)
+    attention_scratch=profile.get('chunk_attention_scratch',False)
+    if (type(attention_scratch) is not bool or attention_scratch!=('chunk_attention_full_write_scratch' in backend) or
+        (attention_scratch and (not attention_mps or not attention_buckets or not attention_index32))):
+        raise ValueError('Frozen profile requires its explicit native attention output scratch policy')
     mistral_decode_reuse=profile.get('mistral_decode_reuse',False)
     if (type(mistral_decode_reuse) is not bool or
         mistral_decode_reuse!=('mistral_decode_reuse_four_rows' in garnet.backend_info()) or

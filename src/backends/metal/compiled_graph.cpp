@@ -1925,6 +1925,14 @@ void MetalCompiledGraph::SharePrefillScratch(const std::shared_ptr<MetalPrefillS
     for(size_t i=0;i<ops_.size();++i) {
         const auto& op=ops_[i];
         const bool fullWrite=op.kind==Kind::MatMul||op.kind==Kind::BF16MatVec||op.kind==Kind::Norm||
+#ifdef GARNET_METAL_CHUNK_ATTENTION_SCRATCH
+            // All admitted chunk paths (MPS merge, scalar tails and optional
+            // fused tiles) overwrite every query/head/dimension, including
+            // zero for inactive tokens. Input/cache/output shape and alias
+            // checks remain in EncodeAttentionChunk. Existing first-write,
+            // protected-owner and scratch-lease proofs still apply here.
+            op.kind==Kind::AttentionChunk||
+#endif
             op.kind==Kind::Silu||op.kind==Kind::Add||op.kind==Kind::Bias||op.kind==Kind::Slice||
             op.kind==Kind::Concat||op.kind==Kind::NormRope||op.kind==Kind::Layout||
             op.kind==Kind::Mask||op.kind==Kind::Prepare||op.kind==Kind::ConvChunk||op.kind==Kind::DeltaChunk||

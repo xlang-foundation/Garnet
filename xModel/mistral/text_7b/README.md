@@ -168,3 +168,21 @@ The separate serving observation does not establish a performance improvement;
 long C1/C2/C4 aggregate rates are7.44/9.46/10.92 tok/s, below the frozen
 reference engines. Flash remains off in this admission. All2x/half-TTFT and
 coding-quality targets remain unmet; wider profiles are an experimental option.
+
+`GARNET_METAL_CHUNK_ATTENTION_SCRATCH=ON` optionally includes completely written
+attention results in the existing serialized shared scratch pool. It requires
+shared scratch, MPS attention, index32 and context buckets, and defaults off.
+The backend reports `chunk_attention_full_write_scratch`; serving profiles
+declare `chunk_attention_scratch: true`. Existing shape, first-write, protected
+owner and completion-lease checks remain in force. Layer APIs and attention
+arithmetic are unchanged. KV caches retain their private native ownership.
+
+On the tested M5, preparation saves1,586,528,256 Metal bytes with17 compact
+families and915,439,616 bytes in the compact128 serving profile. All nine
+old/new full-state cases are bit-exact. Poisoned-output operator checks,
+dynamic refill, prefix reuse and all22 serving output sequences pass. Native
+tests pass26 with this extension,27 with the optional Flash combination and25
+with it disabled. Flash remains off in the serving measurement. The separate
+serving observation does not establish a speed improvement; all2x/half-TTFT
+and coding-quality targets remain open. See the research document for paired
+timing results, exact scope and remaining projection work.
