@@ -18,11 +18,14 @@ class EngineGuardTest(unittest.TestCase):
 110 /build/garnet_coreml_state_runtime_test /build/garnet_coreml_state_runtime_test /state_fixture.mlmodelc
 111 /build/garnet_mistral_mlp_probe /build/garnet_mistral_mlp_probe metal /checkpoint /assets /newout 0
 112 /build/garnet_chunk_attention_active_rows_test /build/garnet_chunk_attention_active_rows_test --benchmark /newout
+113 /build/xlang3 /build/xlang3 -B /tools/run_mistral_greedy_verification.py /model /lib /src /fixture /out 4096
+114 /build/xlang3 /build/xlang3 -B /tools/run_mistral_medusa_probe.py /model /aux /lib /src /fixture /out
+115 /build/xlang3 /build/xlang3 -B /tools/run_mistral_medusa_generation.py /model /aux /lib /src /fixture /out
 '''
         commands = '\n'.join(' '.join(line.split()[:2]) for line in processes.splitlines() if line.strip())
         arguments = '\n'.join(line.split(None, 2)[0]+' '+line.split(None, 2)[2] for line in processes.splitlines() if line.strip())
         with patch('run_local_coder_baseline.subprocess.check_output', side_effect=[commands, arguments]):
-            self.assertEqual(len(engine_processes()), 12)
+            self.assertEqual(len(engine_processes()), 15)
 
     def test_unrelated_runtime_and_shell_diagnostics_are_ignored(self):
         processes = '''

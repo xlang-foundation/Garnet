@@ -798,3 +798,88 @@ comparators' FP16 path. At concurrency 1, native TTFT is 1.871s /12.767s and dec
 is 22.472 /13.737 tok/s for short /long prompts. All whole-model 2x decode,
 2x throughput and half-TTFT targets remain unmet. The operator gain must not be
 presented as achieving those targets.
+
+## Exact native verification and trained-head experiment
+
+Dense Mistral can now prepare native greedy verification without enabling the
+Qwen recurrent convolution/delta extensions. `prepare_verification(tokens=4)`
+prepares target graphs and shared FP32 projections before execution. The profile
+currently allows at most four physical token rows: B1/T4, B2/T2 or B4/T1. The
+native runtime owns KV span backups, target decisions and accepted-prefix
+commit/restore. This does not yet accelerate B4 serving or implement a tree.
+Recurrent verification still requires its recurrent extensions.
+
+`mistral-verification-qualification1` checks 24 cases at capacities 256 and 4096:
+accepted depths 1–4, partial active spans, first/last EOS, a carried second round,
+near-capacity positions, and two actual 256-token prompt states. Complete FP32
+KV hashes for all 32 layers and accepted hidden hashes match ordinary decode.
+The near-capacity tests seed cache positions; they are not full 4k prompt runs.
+Every round checks 225 prepared affine dispatches, no misses or FP16 prefill
+route, 64 KV backups, 32 attention dispatches, and the required restore count.
+All native owners close to zero, with 2,031,616 Metal bytes remaining. The clean
+verification and head-enabled builds each pass all 21 native tests.
+
+The optional explicit `medusa_residual_head` native IR operator supports one
+raw BF16 residual layer with FP32 inputs/arithmetic, hidden width 4096 and
+vocabulary 32768. It leaves target weights and state unchanged. A diagnostic
+feature output exposes the actual residual used by the vocabulary projection.
+`MistralMedusaDraft` loads up to three heads for the B1/T4 prototype. This uses
+the pinned `leptonai/Mistral-7B-Instruct-v0.3-4heads` artifact at revision
+`6e4b8a1a7b10167c7d52aba0c9badcdbd5edd944`, safetensors SHA256
+`af35f952136cdb12626cbc272d6ff3334f6e807d49cb53bf121a8fcac7cbacc1`.
+Its configuration names the training base as `N/A`; compatible dimensions and
+the observed acceptance below do not prove its training-base identity.
+The original BF16 activation path is not reproduced. Native target verification
+protects the accepted greedy token stream.
+
+`mistral-medusa-operator-probe2` independently checks 12,288 normalization words,
+36,864 actual residual features and 54 vocabulary dot samples against FP64
+calculations from the pinned weights. The original dot limits remain unchanged;
+the residual bound propagates that limit through bias rounding and SiLU.
+Maximum fractions of the allowed error are 0.03167, 0.00469 and 0.00304,
+respectively. Seven invalid head/profile combinations are rejected. This is
+arithmetic evidence, not model compatibility, coding quality or a speed claim.
+
+`mistral-medusa-generation1` then generates the full original budgets on all ten
+frozen coding/context cases using causal head predictions. Ordinary and
+single-path top-1 head modes alternate order by case, sequentially in one
+process. Both produce all 3,180 frozen native output IDs and identical final
+complete KV/hidden hashes, for 6,360 output tokens total. The profile is
+B1/context4096/prefill128/verifier4/prefix-off, which differs from the frozen B4
+HTTP serving profile. These are one-run diagnostics with no warmups; timings
+include host orchestration and trace capture. No reference engine was rerun.
+
+| Case | Ordinary decode tok/s | Single-path heads tok/s | Speed ratio | Committed inputs/round |
+|---|---:|---:|---:|---:|
+| Merge intervals |24.620 |18.133 |0.736 |1.783 |
+| Stable unique |24.778 |17.910 |0.723 |1.752 |
+| Toposort |24.023 |15.910 |0.662 |1.679 |
+| Half-open subtraction |24.073 |15.037 |0.625 |1.587 |
+| Incremental frames |23.900 |15.709 |0.657 |1.712 |
+| Bounded LRU |23.418 |16.129 |0.689 |1.844 |
+| JSON pointer |24.057 |15.208 |0.632 |1.684 |
+| Bisect repair |24.919 |15.683 |0.629 |1.667 |
+| Context 256 |24.415 |17.458 |0.715 |1.853 |
+| Context 2048 |14.256 |11.152 |0.782 |2.032 |
+
+Across 1,838 rounds, 1,332 of 5,508 proposed inputs commit (24.18%); including
+the known first input, 1.7247 inputs commit per round. Target plus commit GPU
+duration averages about 89–105ms per round for coding cases and 173ms for the
+long context case, versus about 40ms per ordinary short-context token. The
+remaining roughly 9.7ms per round includes draft work, host work and other
+unattributed costs; it is not an isolated draft GPU measurement. The four-row
+verification cost outweighs the accepted extra tokens. This prototype is slower
+and is not selected as a default optimization. It is not a Medusa tree
+implementation, so the result does not evaluate tree decoding.
+
+Reproduction tools are `run_mistral_greedy_verification.py`,
+`audit_mistral_greedy_verification.py`, `run_mistral_medusa_probe.py`,
+`audit_mistral_medusa_probe.py`, `run_mistral_medusa_generation.py` and
+`audit_mistral_medusa_generation.py`. The generation CLI audit binds the terminal
+collector, input paths and library SHA256, then checks the complete token/state
+contract and per-round GPU duration accounting. CPU-only
+`test_mistral_speculative_audits.py` rejects 39 corruptions of the retained real
+target/generation evidence. Raw inputs, outputs, failures, libraries and clean
+source snapshots remain under the external Mistral research directory. None of
+this establishes 2x serving speed, half TTFT or improved coding quality; the
+native frozen coding outputs retain the previously reported 0/8 strict result.

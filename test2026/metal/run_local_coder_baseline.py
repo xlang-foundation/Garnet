@@ -55,7 +55,8 @@ def engine_processes():
                    '/coreml/test_runtime_api.py' in arguments or
                    any(name in arguments for name in ('run_mistral_greedy.py',
                        'run_mistral_suite.py', 'run_mistral_teacher.py', 'run_mistral_embedding.py',
-                       'run_mistral_profile.py', 'run_mistral_stage_probe.py',
+                       'run_mistral_profile.py', 'run_mistral_greedy_verification.py', 'run_mistral_medusa_probe.py',
+                       'run_mistral_medusa_generation.py', 'run_mistral_stage_probe.py',
                        'run_mistral_prefill_op_probe.py', 'run_mistral_prefix_probe.py')) or
                    (executable == 'xlang3' and any(model in arguments for model in
                        ('Qwen3.8-27B', 'Mistral-7B')))))

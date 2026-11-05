@@ -324,13 +324,18 @@ public:
         info+="; verification_attention_fp32";
         info+="; verification_recurrent_checkpoint";
         info+="; verification_kv_span_checkpoint";
-#if defined(GARNET_METAL_MLX_AFFINE_INT4)&&defined(GARNET_METAL_INDEXED_TOKEN_PROJECTIONS)&&defined(GARNET_METAL_ACTIVE_DECODE_PROJECTIONS)&&defined(GARNET_METAL_INDEXED_DECODE)&&defined(GARNET_METAL_AFFINE_PROFILE)&&defined(GARNET_METAL_LINEAR_CHUNK_CONV)&&defined(GARNET_METAL_LINEAR_CHUNK_DELTA)
+#if defined(GARNET_METAL_MLX_AFFINE_INT4)&&defined(GARNET_METAL_INDEXED_TOKEN_PROJECTIONS)&&defined(GARNET_METAL_ACTIVE_DECODE_PROJECTIONS)&&defined(GARNET_METAL_INDEXED_DECODE)&&defined(GARNET_METAL_AFFINE_PROFILE)
         info+="; compiled_verification_fp32";
 #ifdef GARNET_METAL_ROW_FINAL_HIDDEN
         info+="; native_greedy_verification";
+        info+="; native_greedy_dense_verification";
+#if defined(GARNET_METAL_LINEAR_CHUNK_CONV)&&defined(GARNET_METAL_LINEAR_CHUNK_DELTA)
+        info+="; native_greedy_recurrent_verification";
 #endif
 #endif
 #endif
+#endif
+        info+="; medusa_residual_head_bf16";
 #ifdef GARNET_METAL_BODY_SHAPE
         info+="; body_shape";
 #endif

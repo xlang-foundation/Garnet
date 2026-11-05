@@ -20,6 +20,7 @@ class MistralMetalDecoder(DenseMetalDecoder):
         else:DenseMetalDecoder.reset(self)
 
     def __init__(self,checkpoint,config,batch=1,capacity=256,resident=True):
+        self.verification_graphs=[];self.verification_head=None;self.verification_tokens=0
         expected=dict(model_type='mistral',hidden_size=4096,intermediate_size=14336,
                       num_hidden_layers=32,num_attention_heads=32,num_key_value_heads=8,
                       vocab_size=32768)
@@ -53,3 +54,48 @@ class MistralMetalDecoder(DenseMetalDecoder):
         else:self._resident_prefill_graphs(chunk)
         self.profile_prepare_compile_ms=self.prefill_compile_ms
         return True
+
+    def prepare_verification(self,tokens=4):
+        # The native verifier retains ordinary FP32 decode math, owns K/V span
+        # backups and commits only the target-accepted prefix. This prepares
+        # target verification; it does not create a trained proposal model.
+        if self.session is None or 'native_greedy_dense_verification' not in garnet.backend_info():
+            raise ValueError('Prepared native dense verification extension required')
+        if type(tokens) is not int or tokens<1 or self.batch*tokens>4:
+            raise ValueError('Mistral verification supports up to four physical token rows')
+        if self.verification_tokens:
+            if self.verification_tokens!=tokens:raise ValueError('Verification profile already prepared')
+            return True
+        import tensor
+        from xModel.qwen.metal_dense.layers import T,DensePrefillLayer,norm
+        staged=[];head=None
+        try:
+            width=self.config['hidden_size']
+            for idx,layer in enumerate(self.layers):
+                shapes=[[self.batch,tokens,width]]+layer['shapes'][1:3]+[[self.batch,tokens,3],[self.batch,tokens],[self.batch,tokens]]
+                symbols=[tensor.input('mistral_verify_'+str(idx)+'_'+str(i),shape=s,dtype=tensor.float32) for i,s in enumerate(shapes)]
+                @T.fusion(name='mistral_verify_'+str(idx),boundary='required')
+                def forward(hidden,key,value,positions,slots,active):
+                    return DensePrefillLayer(hidden,key,value,positions,slots,active,self.config,idx,self.batch,tokens,self.capacity,'full_attention')
+                graph=garnet.compiled_graph();staged.append(graph)
+                graph.build_verification_shared(forward(*symbols),symbols,self.checkpoint,layer['graph'])
+            symbol=tensor.input('mistral_verify_head',shape=[self.batch*tokens,width],dtype=tensor.float32)
+            @T.fusion(name='mistral_verify_head',boundary='required')
+            def project(hidden):
+                return norm(hidden,'model.norm',self.config)*T.unary_op('qwen_text_head',weight_name='lm_head.weight',bf16_weight=1)
+            head=garnet.compiled_graph();head.build_shared(project(symbol),[symbol],self.checkpoint,self.head)
+            self.session.prepare_verification(staged,head)
+            self.verification_graphs=staged;self.verification_head=head;self.verification_tokens=tokens
+        except:
+            for graph in staged:graph.close()
+            if head is not None:head.close()
+            raise
+        return True
+
+    def close(self):
+        try:DenseMetalDecoder.close(self)
+        finally:
+            for graph in getattr(self,'verification_graphs',[]):graph.close()
+            head=getattr(self,'verification_head',None)
+            if head is not None:head.close()
+            self.verification_graphs=[];self.verification_head=None;self.verification_tokens=0

@@ -353,8 +353,8 @@ bool MetalCompiledGraph::SharesVerificationWeights(const MetalCompiledGraph& sou
     return !weightRecords_.empty();
 }
 bool MetalCompiledGraph::BuildVerificationShared(X::Value graph,X::Value symbols,const std::string& checkpoint,X::Value source) {
-#if !defined(GARNET_METAL_MLX_AFFINE_INT4)||!defined(GARNET_METAL_INDEXED_TOKEN_PROJECTIONS)||!defined(GARNET_METAL_ACTIVE_DECODE_PROJECTIONS)||!defined(GARNET_METAL_INDEXED_DECODE)||!defined(GARNET_METAL_AFFINE_PROFILE)||!defined(GARNET_METAL_LINEAR_CHUNK_CONV)||!defined(GARNET_METAL_LINEAR_CHUNK_DELTA)
-    throw std::logic_error("Compiled verification requires prepared FP32 affine and packed recurrent kernels");
+#if !defined(GARNET_METAL_MLX_AFFINE_INT4)||!defined(GARNET_METAL_INDEXED_TOKEN_PROJECTIONS)||!defined(GARNET_METAL_ACTIVE_DECODE_PROJECTIONS)||!defined(GARNET_METAL_INDEXED_DECODE)||!defined(GARNET_METAL_AFFINE_PROFILE)
+    throw std::logic_error("Compiled verification requires prepared FP32 affine kernels");
 #else
     if(source.runtime()!=Host()->runtime)throw std::invalid_argument("Shared Metal graph runtime mismatch");
     auto peer=source.NativeData<MetalCompiledGraph>();
@@ -370,6 +370,9 @@ bool MetalCompiledGraph::BuildVerificationShared(X::Value graph,X::Value symbols
         peer->inputShapes_[4]==std::vector<int64_t>{batch}&&peer->inputShapes_[5]==peer->inputShapes_[4];
     if(!linearSource&&!sixSource)
         throw std::invalid_argument("Verification source control profile mismatch");
+#if !defined(GARNET_METAL_LINEAR_CHUNK_CONV)||!defined(GARNET_METAL_LINEAR_CHUNK_DELTA)
+    if(linearSource)throw std::invalid_argument("Recurrent verification requires packed convolution and delta kernels");
+#endif
     // The factory's BF16 preference does not affect converted affine matrices.
     // Certify actual projection representations rather than that preference.
     for(const auto& op:peer->ops_)if((op.kind==Kind::MatMul||op.kind==Kind::BF16MatVec)&&
@@ -995,6 +998,41 @@ bool MetalCompiledGraph::BuildInternal(X::Value graph,X::Value symbols,const std
                 ops_.push_back({Kind::Norm,a,weight,out,float(node.attributes.Get("eps").ToDouble()),offset,false});
             }else if(node.name=="qwen35_mtp_fc"&&mtpProgram_) {
                 out=matmul(a,Weight("mtp.fc.weight"));
+            }else if(node.name=="medusa_residual_head") {
+                // Explicit raw-BF16 draft head. Target weights/state are not
+                // modified; accepted tokens still require target verification.
+                const auto head=node.attributes.Get("head_index").ToInt64();
+                const auto features=node.attributes.Get("emit_features").ToInt64();
+                if(head<0||head>=4||slots_[a].shape.size()!=2||!slots_[a].rows||slots_[a].rows>2||
+                   slots_[a].columns!=4096||mlxCheckpoint_.Enabled()||(features!=0&&features!=1))
+                    throw std::invalid_argument("Medusa head requires raw BF16 weights and a bounded1/2x4096 input");
+                const auto prefix=std::to_string(head);
+                auto check=[&](const std::string& name,const std::vector<long long>& shape) {
+                    const auto* metadata=FindWeightMetadata(name);
+                    if(!metadata||metadata->dataType!="BF16"||metadata->shape!=shape)
+                        throw std::invalid_argument("Medusa BF16 weight shape/type mismatch: "+name);
+                };
+                check(prefix+".0.linear.weight",{4096,4096});check(prefix+".0.linear.bias",{4096});
+                check(prefix+".1.weight",{32768,4096});
+                // Reserve a conservative bound for optional retained BF16
+                // layouts as well as raw weights and the small FP32 workspace.
+                const auto memory=MetalContext::MemoryStats();
+                constexpr uint64_t margin=256ull*1024*1024;
+                constexpr uint64_t extra=3ull*(4096*4096+32768*4096)*2+8ull*1024*1024;
+                if(memory.recommended<=margin+extra||memory.allocated>memory.recommended-margin-extra)
+                    throw std::runtime_error("Medusa head exceeds the native working-set guard");
+                auto linear=matmul(a,BF16Weight(prefix+".0.linear.weight"));
+                auto biased=Allocate(slots_[a].rows,4096),activated=Allocate(slots_[a].rows,4096),residual=Allocate(slots_[a].rows,4096);
+                ops_.push_back({Kind::Bias,linear,Weight(prefix+".0.linear.bias"),biased});
+                const auto ones=slots_.size();std::vector<float> values(slots_[a].rows*4096,1.f);
+                slots_.push_back({gpu_->Upload(values,slots_[a].rows,4096),slots_[a].rows,4096,{int64_t(slots_[a].rows),4096}});
+                ops_.push_back({Kind::Silu,biased,ones,activated});ops_.push_back({Kind::Add,a,activated,residual});
+                out=matmul(residual,BF16Weight(prefix+".1.weight"));
+                if(features) {
+                    auto packed=Allocate(slots_[a].rows,4096+32768);
+                    Op capture{Kind::Concat,residual,out,packed};capture.arguments={residual,out,out};
+                    ops_.push_back(std::move(capture));out=packed;
+                }
             }else if(node.name=="qwen35_mlp") {
                 auto prefix=node.attributes.Get("weight_prefix").ToString();
                 auto gate=matmul(a,Weight(prefix+".gate_proj.weight"));
