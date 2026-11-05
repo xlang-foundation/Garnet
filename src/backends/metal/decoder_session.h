@@ -13,6 +13,7 @@ namespace Garnet {
 // One synchronous request context. Graph owners are retained; request state is
 // private to this session, including when graphs are reused by another session.
 class MetalDecoderSession {
+    struct VerificationRun;
     struct State {
         std::array<MetalMatrix,2> matrix;
         std::array<std::vector<int64_t>,2> shape;
@@ -46,12 +47,36 @@ class MetalDecoderSession {
 #endif
     std::vector<X::Value> owners_;
     std::vector<State> states_;
+#ifdef GARNET_METAL_COMPACT_OWNER_PREFILL
+    struct CompactSpan {std::vector<State> states;MetalMatrix finalHidden,output;};
+    struct CompactFamily {
+        X::Value graphs,fallback;
+        size_t rows=0,chunk=0,width=0,capacity=0;
+        std::vector<uint64_t> generations,fallbackGenerations,baseGenerations;
+        std::vector<CompactSpan> spans;
+        MetalMatrix zero,hidden;
+        std::vector<int64_t> shape,physicalShape;
+    };
+    std::map<std::pair<size_t,size_t>,CompactFamily> compactFamilies_;
+    MetalMatrix compactDecodeHidden_;
+    CompactFamily* compactRunning_=nullptr;
+    size_t compactFirst_=0,compactLastRows_=0,compactLastFirst_=4;
+    bool compactSealed_=false;
+    bool TryCompactPrefill(X::Value,X::Value,X::Value,X::Value,X::Value,int64_t,
+        const std::vector<uint64_t>*,const std::vector<int64_t>*,VerificationRun*,X::Value&);
+#endif
+    size_t RunPhysicalRow(size_t row) const {
+#ifdef GARNET_METAL_COMPACT_OWNER_PREFILL
+        return compactRunning_?compactFirst_+row:row;
+#else
+        return row;
+#endif
+    }
 #ifdef GARNET_METAL_PREFILL_HIDDEN_POOL
     std::map<std::pair<size_t,size_t>,std::array<MetalMatrix,2>> prefillHiddenPool_;
     size_t hiddenPoolBindings_=0;
     void PrepareHiddenPool(const MetalCompiledGraph&);
 #endif
-    struct VerificationRun;
 #ifdef GARNET_METAL_MTP_BRIDGE
     struct MTPEmbedding {
         SafeTensorsIndex index;
@@ -211,6 +236,12 @@ public:
     std::string MTPStatsJson();
 #endif
     bool Build(X::Value graphs,X::Value head);
+#ifdef GARNET_METAL_COMPACT_OWNER_PREFILL
+    bool PrepareCompactPrefill(X::Value graphs,X::Value fallback);
+    size_t CompactPrefillFamilyCount(){std::lock_guard<std::mutex> lock(mutex_);return compactFamilies_.size();}
+    size_t LastCompactPrefillRows(){std::lock_guard<std::mutex> lock(mutex_);return compactLastRows_;}
+    size_t LastCompactPrefillFirst(){std::lock_guard<std::mutex> lock(mutex_);return compactLastFirst_;}
+#endif
     X::Value Run(X::Value graphs,X::Value hidden,X::Value positions,
         X::Value slots,X::Value active,int64_t predictionToken);
     void Reset();
@@ -351,6 +382,12 @@ public:
         APISET().AddFunc<0>("verification_stats_json",&MetalDecoderSession::VerificationStatsJson);
 #endif
         APISET().AddFunc<2>("build",&MetalDecoderSession::Build);
+#ifdef GARNET_METAL_COMPACT_OWNER_PREFILL
+        APISET().AddFunc<2>("prepare_compact_prefill",&MetalDecoderSession::PrepareCompactPrefill);
+        APISET().AddProp("compact_prefill_family_count",&MetalDecoderSession::CompactPrefillFamilyCount);
+        APISET().AddProp("compact_prefill_last_rows",&MetalDecoderSession::LastCompactPrefillRows);
+        APISET().AddProp("compact_prefill_last_first",&MetalDecoderSession::LastCompactPrefillFirst);
+#endif
         APISET().AddFunc<6>("run",&MetalDecoderSession::Run);
         APISET().AddFunc<0>("reset",&MetalDecoderSession::Reset);
 #if defined(GARNET_METAL_QWEN38_WIDE_PREFILL)||defined(GARNET_METAL_DENSE_PREFILL_MAX_TOKENS)

@@ -50,6 +50,13 @@ def validate(events, clients, controls, profile, exit_status, expected_requests=
     mistral_reuse = profile.get('mistral_decode_reuse', False)
     kv_scatter = profile.get('chunk_kv_scatter', False)
     vector_layout = profile.get('chunk_layout_vector4', False)
+    compact_owner = profile.get('compact_owner_prefill', False)
+    require(type(compact_owner) is bool and (not compact_owner or ('compact_owner_prefill' in backend
+            and profile.get('expected_compact_prefill_family_count') == 14)), 'compact owner policy differs from backend')
+    require(counts['native_compact_prefill_prepared'] == int(compact_owner), 'missing/unexpected compact family inventory')
+    if compact_owner:
+        require(next(i for i,e in enumerate(events) if e['event'] == 'native_compact_prefill_prepared') <
+                next(i for i,e in enumerate(events) if e['event'] == 'ready'), 'compact families prepared after readiness')
     require(type(vector_layout) is bool and vector_layout == ('chunk_layout_vector4' in backend)
             and (not vector_layout or profile.get('expected_chunk_layout_vector_dispatches') == 256),
             'vector layout policy differs from model/backend')
@@ -93,6 +100,9 @@ def validate(events, clients, controls, profile, exit_status, expected_requests=
     requests = []
     scatter_expected = None
     layout_expected = None
+    compact_expected = None
+    compact_rows = 0
+    physical_batch = 4
     for e in events:
         kind = e['event']
         if 'memory' in e:
@@ -100,6 +110,7 @@ def validate(events, clients, controls, profile, exit_status, expected_requests=
             require(0 <= m['metal_allocated_bytes'] <= m['metal_recommended_working_set_bytes']-256*1024*1024,
                     'sampled working-set bound exceeded')
         if kind == 'native_batch':
+            require(compact_expected is None, 'batch missing compact row route')
             require(layout_expected is None, 'batch missing vector layout coverage')
             require(scatter_expected is None, 'batch missing contiguous KV coverage')
             require(pending is None, 'batch missing affine coverage')
@@ -147,7 +158,14 @@ def validate(events, clients, controls, profile, exit_status, expected_requests=
             pending_fresh = stage != 'prefill' or any(r['prefill_tokens'] for r in requests)
             if stage == 'prefill' and pending_fresh:fresh_prefill_batches += 1
             if kv_scatter and pending_fresh:scatter_expected = (stage,64 if stage == 'prefill' else 0)
-            if vector_layout and pending_fresh:layout_expected = (stage,256 if stage == 'prefill' else 0)
+            compact_rows, compact_first = 0, 4
+            if compact_owner and pending_fresh:
+                live = sorted(r['row'] for r in requests if stage != 'prefill' or r['prefill_tokens'] > 0)
+                if stage == 'prefill' and len(live) in (1,2) and (len(live) == 1 or live[1] == live[0]+1):
+                    compact_rows, compact_first = len(live), live[0]
+                compact_expected = (stage,compact_rows,compact_first,maximum_chunk if stage == 'prefill' else 1)
+            physical_batch = compact_rows or 4
+            if vector_layout and pending_fresh:layout_expected = (stage,256+int(compact_rows>0) if stage == 'prefill' else 0)
             if matrix_attention and pending_fresh:
                 active = sum(r['prefill_tokens'] for r in requests) if stage == 'prefill' else len(requests)
                 tail = stage == 'prefill' and active <= 8
@@ -161,6 +179,11 @@ def validate(events, clients, controls, profile, exit_status, expected_requests=
                 attention_expected = (stage, active, tail, extent, active_owners)
                 attention_checks = set()
             stage_counts[stage] += 1
+        elif kind == 'native_compact_prefill_prepared':
+            require(compact_owner and e['families'] == 14, 'incorrect compact family inventory')
+        elif kind == 'native_compact_prefill':
+            require(compact_owner and compact_expected == (e['stage'],e['rows'],e['first'],e['chunk']), 'incorrect compact physical owner route')
+            compact_expected = None
         elif kind == 'native_chunk_attention_mps_prepared':
             require(matrix_attention and e['plan_count'] == profile['expected_attention_mps_plan_count']
                     and e['scratch_bytes'] == profile['expected_attention_mps_scratch_bytes'],
@@ -180,7 +203,7 @@ def validate(events, clients, controls, profile, exit_status, expected_requests=
             expected = 32 if stage == 'prefill' else 0
             if kind == 'native_chunk_attention_request_products':
                 products = (0 if tail else expected)*active_owners*8*4
-                skipped = (0 if tail else expected)*(4-active_owners)*8*4
+                skipped = (0 if tail else expected)*(physical_batch-active_owners)*8*4
                 require(active_requests and e['matrices'] == products and e['skipped_matrices'] == skipped
                         and e['active_request_rows'] == active_owners, 'incorrect physical request matrix ranges')
             elif kind == 'native_chunk_attention_mps':
@@ -219,7 +242,7 @@ def validate(events, clients, controls, profile, exit_status, expected_requests=
                 active = (sum(r['prefill_tokens'] for r in requests) if stage == 'prefill' else
                           len(requests) if stage == 'decode' else
                           sum(r['prefill_offset']+r['prefill_tokens'] == r['prompt_tokens'] for r in requests))
-                require(e['active_rows'] == active and e['physical_rows'] == (4*maximum_chunk if stage == 'prefill' else 4),
+                require(e['active_rows'] == active and e['physical_rows'] == (physical_batch*maximum_chunk if stage == 'prefill' else 4),
                         'Mistral reuse extent differs from native row leases')
                 expected_reuse = (161 if stage == 'decode' else 1) if active == 4 and stage != 'prefill' else 0
                 require(e['mistral_decode_reuse_dispatches'] == expected_reuse, 'incorrect Mistral reuse projection coverage')
@@ -227,10 +250,10 @@ def validate(events, clients, controls, profile, exit_status, expected_requests=
                 require(e.get('mistral_decode_reuse_dispatches',0) == 0, 'unexpected Mistral reuse dispatch')
             profile_counts[stage] += 1
         elif kind in ('native_mpp', 'native_indexed'):
-            expected = 224 if kind == 'native_mpp' or e['active_tokens'] < 4*maximum_chunk else 0
+            expected = 224 if kind == 'native_mpp' or e['active_tokens'] < physical_batch*maximum_chunk else 0
             require(e['affine_dispatches'] == expected, 'incorrect prefill projection route')
             if kind == 'native_indexed':
-                require(0 < e['active_tokens'] <= 4*maximum_chunk and e['physical_rows'] == 4*maximum_chunk,
+                require(0 < e['active_tokens'] <= physical_batch*maximum_chunk and e['physical_rows'] == physical_batch*maximum_chunk,
                         'invalid indexed prefill extent')
                 if reuse64:
                     require(reuse64_expected is None, 'missing prior cooperative64 event')
@@ -279,7 +302,8 @@ def validate(events, clients, controls, profile, exit_status, expected_requests=
                     'invalid completion state')
             completed[key] = e
             del rows[e['native_row']]
-    require(not rows and pending is None and reuse64_expected is None and scatter_expected is None and layout_expected is None and all(not c for c in chunks.values()), 'unfinished native work')
+    require(compact_expected is None and not rows and pending is None and reuse64_expected is None and scatter_expected is None and layout_expected is None and all(not c for c in chunks.values()), 'unfinished native work')
+    require(counts['native_compact_prefill'] == (fresh_prefill_batches+stage_counts['decode'] if compact_owner else 0), 'missing compact execution route')
     require(counts['native_chunk_layout_vector'] == (fresh_prefill_batches+stage_counts['decode'] if vector_layout else 0),
             'missing vector layout stage event')
     require(counts['native_chunk_kv_scatter'] == (fresh_prefill_batches+stage_counts['decode'] if kv_scatter else 0),
@@ -406,9 +430,12 @@ def main():
         corruptions += ['wrong-kv-scatter-policy', 'wrong-kv-scatter-count', 'missing-kv-scatter-event']
     if profile.get('chunk_layout_vector4'):
         corruptions += ['wrong-vector-layout-policy', 'wrong-vector-layout-count', 'missing-vector-layout-event']
+    if profile.get('compact_owner_prefill'):
+        corruptions += ['wrong-compact-policy','wrong-compact-inventory','wrong-compact-span','missing-compact-route','wrong-compact-footprint']
     for label in corruptions:
         es, cs, ct = copy.deepcopy(events), copy.deepcopy(clients), copy.deepcopy(controls)
-        if label == 'wrong-bound': es[0]['global_token_budget'] = 1024
+        if label == 'wrong-bound':
+            next(e for e in es if e['event'] == 'native_dense_schedule_bound')['global_token_budget'] = 1024
         elif label == 'stale-lease': next(e for e in es if e['event'] == 'native_batch')['requests'][0]['epoch'] = 0
         elif label == 'wrong-slot': next(e for e in es if e['event'] == 'native_batch')['requests'][0]['slot'] += 1
         elif label == 'oversized-chunk': next(e for e in es if e['event'] == 'native_batch')['requests'][0]['prefill_tokens'] = 129
@@ -439,6 +466,12 @@ def main():
         elif label == 'wrong-kv-scatter-policy':
             ready = next(e for e in es if e['event'] == 'ready')
             ready['backend'] = ready['backend'].replace('chunk_kv_scatter_contiguous','chunk_kv_scatter_contiguous_BAD')
+        elif label == 'wrong-compact-policy':
+            ready = next(e for e in es if e['event'] == 'ready');ready['backend'] = ready['backend'].replace('compact_owner_prefill','compact_owner_prefill_BAD')
+        elif label == 'wrong-compact-inventory': next(e for e in es if e['event'] == 'native_compact_prefill_prepared')['families'] = 0
+        elif label == 'wrong-compact-span': next(e for e in es if e['event'] == 'native_compact_prefill' and e['rows'])['first'] += 1
+        elif label == 'missing-compact-route': es.remove(next(e for e in es if e['event'] == 'native_compact_prefill'))
+        elif label == 'wrong-compact-footprint': next(e for e in es if e['event'] == 'native_affine_profile' and e['stage'] == 'prefill')['physical_rows'] *= 4
         elif label == 'wrong-vector-layout-policy':
             ready = next(e for e in es if e['event'] == 'ready')
             ready['backend'] = ready['backend'].replace('chunk_layout_vector4','chunk_layout_vector4_BAD')

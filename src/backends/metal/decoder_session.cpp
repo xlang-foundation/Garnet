@@ -21,6 +21,9 @@ X::Value TensorValue(X3PackageHost* host,MetalContext& gpu,const MetalMatrix& ma
 }
 }
 void MetalDecoderSession::Clear() {
+#ifdef GARNET_METAL_COMPACT_OWNER_PREFILL
+    compactFamilies_.clear();compactDecodeHidden_=MetalMatrix();compactRunning_=nullptr;compactFirst_=compactLastRows_=0;compactLastFirst_=4;compactSealed_=false;
+#endif
 #ifdef GARNET_METAL_LINEAR_CHUNK_STATE_INPLACE
     linearStateInplaceUpdates_=0;
 #endif
@@ -70,7 +73,14 @@ void MetalDecoderSession::ResetUnlocked() {
     rowTokens_.assign(states_.empty()?0:states_[0].rows,{});rowTokensValid_.assign(rowTokens_.size(),1);
 #endif
 #ifdef GARNET_METAL_ROW_FINAL_HIDDEN
+#ifdef GARNET_METAL_COMPACT_OWNER_PREFILL
+    if(!compactFamilies_.empty()&&rowFinalHidden_.Valid()) {
+        gpu_->Zero(rowFinalHidden_);std::fill(finalHiddenReady_.begin(),finalHiddenReady_.end(),0);
+    }else
+#endif
+    {
     rowFinalHidden_=MetalMatrix();rowFinalWidth_=0;finalHiddenReady_.clear();
+    }
 #endif
 #ifdef GARNET_METAL_CONTINUOUS_ROWS
     if(requestRows_)requestRows_->Clear();managedRows_=false;
@@ -329,16 +339,25 @@ bool MetalDecoderSession::PreparePrefill(X::Value value,int64_t layer) {
     std::vector<std::unique_lock<std::mutex>> locks;
     for(auto owner:ordered)locks.emplace_back(owner->mutex_);
     const auto& state=states_[size_t(layer)];
+    auto expectedKey=state.shape[0],expectedValue=state.shape[1];
+    size_t preparedRows=state.rows;
+#ifdef GARNET_METAL_COMPACT_OWNER_PREFILL
+    if(graph->inputShapes_.size()>=3&&graph->inputShapes_[0].size()==3&&state.rows==4&&
+       (graph->inputShapes_[0][0]==1||graph->inputShapes_[0][0]==2)) {
+        if(managedRows_||compactSealed_)throw std::invalid_argument("Prepare compact graph scratch before serving");
+        preparedRows=size_t(graph->inputShapes_[0][0]);expectedKey[0]=int64_t(preparedRows);expectedValue[0]=int64_t(preparedRows);
+    }
+#endif
     if(!original->ready_||original->inputShapes_.empty()||!graph->ready_||graph->outputParts_.size()!=3||
        graph->inputShapes_.size()<3||graph->inputShapes_[0].size()!=3||
-       graph->inputShapes_[0][0]!=int64_t(state.rows)||
+       graph->inputShapes_[0][0]!=int64_t(preparedRows)||
        graph->inputShapes_[0].back()!=original->inputShapes_[0].back()||
        graph->inputShapes_[0][1]<1||graph->inputShapes_[0][1]>int64_t(kMetalPrefillChunkLimit)||
-       graph->inputShapes_[1]!=state.shape[0]||graph->inputShapes_[2]!=state.shape[1])
+       graph->inputShapes_[1]!=expectedKey||graph->inputShapes_[2]!=expectedValue)
         throw std::invalid_argument("Prefill preparation does not match resident layer state");
 #ifdef GARNET_METAL_DENSE_PREFILL_MAX_TOKENS
     if(state.rows>4||original->inputShapes_[0].back()>4096||
-       state.rows*size_t(graph->inputShapes_[0][1])>GARNET_METAL_DENSE_PREFILL_MAX_TOKENS||
+       preparedRows*size_t(graph->inputShapes_[0][1])>GARNET_METAL_DENSE_PREFILL_MAX_TOKENS||
        !original->CanResetKVPrefix(1)||!original->CanResetKVPrefix(2)||
        state.shape[0].size()!=4||state.shape[1].size()!=4||
        state.shape[0][2]>4096||state.shape[1][2]>4096)
@@ -403,6 +422,13 @@ X::Value MetalDecoderSession::RunLeased(X::Value graphs,X::Value hidden,X::Value
 X::Value MetalDecoderSession::RunUnlocked(X::Value graphs,X::Value hidden,X::Value positions,
     X::Value slots,X::Value active,int64_t predictionToken,const std::vector<uint64_t>* epochs,const std::vector<int64_t>* tokenIds,
     VerificationRun* verification) {
+#ifdef GARNET_METAL_COMPACT_OWNER_PREFILL
+    if(!compactRunning_) {
+        compactSealed_=true;compactLastRows_=0;compactLastFirst_=4;
+        X::Value result;
+        if(TryCompactPrefill(graphs,hidden,positions,slots,active,predictionToken,epochs,tokenIds,verification,result))return result;
+    }
+#endif
 #ifndef GARNET_METAL_VERIFY_ATTENTION
     (void)verification;
 #endif
@@ -418,12 +444,17 @@ X::Value MetalDecoderSession::RunUnlocked(X::Value graphs,X::Value hidden,X::Val
     std::vector<MetalCompiledGraph*> layers,locked;
     for(uint64_t i=0;i<graphs.Size();++i)layers.push_back(Graph(graphs.Get(i),Host()));
     locked=layers;if(head_)locked.push_back(head_);
+#ifdef GARNET_METAL_COMPACT_OWNER_PREFILL
+    if(compactRunning_)for(uint64_t i=0;i<compactRunning_->fallback.Size();++i)
+        locked.push_back(Graph(compactRunning_->fallback.Get(i),Host()));
+#endif
 #ifdef GARNET_METAL_VERIFY_ATTENTION
     if(verification)locked.push_back(verification->plan->head);
 #endif
     std::sort(locked.begin(),locked.end(),std::less<MetalCompiledGraph*>());
-    if(std::adjacent_find(locked.begin(),locked.end())!=locked.end())throw std::invalid_argument("Metal session graphs must be distinct");
-#ifdef GARNET_METAL_VERIFY_ATTENTION
+    if(std::unordered_set<MetalCompiledGraph*>(layers.begin(),layers.end()).size()!=layers.size()||
+       (head_&&std::find(layers.begin(),layers.end(),head_)!=layers.end()))throw std::invalid_argument("Metal session graphs must be distinct");
+#if defined(GARNET_METAL_VERIFY_ATTENTION)||defined(GARNET_METAL_COMPACT_OWNER_PREFILL)
     // Verification may only advance state belonging to the exact source layer.
     // Lock those owners too so close/rebuild cannot race the family check.
     for(size_t i=0;i<states_.size();++i)locked.push_back(Graph(owners_[i],Host()));
@@ -432,6 +463,20 @@ X::Value MetalDecoderSession::RunUnlocked(X::Value graphs,X::Value hidden,X::Val
 #endif
     std::vector<std::unique_lock<std::mutex>> graphLocks;
     for(auto graph:locked)graphLocks.emplace_back(graph->mutex_);
+#ifdef GARNET_METAL_COMPACT_OWNER_PREFILL
+    if(!compactFamilies_.empty())for(size_t i=0;i<layers.size();++i) {
+        auto original=Graph(owners_[i],Host());
+        if(!original->ready_||!layers[i]->ready_||!layers[i]->SharesVerificationWeights(*original)||
+           !layers[i]->CanUpdateKVInPlace(1)||!layers[i]->CanUpdateKVInPlace(2))
+            throw std::invalid_argument("Prepared compact cache bindings require unchanged dense in-place graph owners");
+        if(compactRunning_) {
+            auto fallback=Graph(compactRunning_->fallback.Get(i),Host());
+            if(layers[i]->generation_!=compactRunning_->generations[i]||!fallback->ready_||
+               fallback->generation_!=compactRunning_->fallbackGenerations[i]||original->generation_!=compactRunning_->baseGenerations[i])
+                throw std::invalid_argument("Prepared compact graph family was closed or rebuilt");
+        }
+    }
+#endif
 #ifdef GARNET_METAL_TOKEN_PREFIX_CACHE
     if(tokenIds)for(size_t layer=0;layer<layers.size();++layer) {
         auto found=tokenGraphs_.find(layers[layer]);
@@ -528,9 +573,9 @@ X::Value MetalDecoderSession::RunUnlocked(X::Value graphs,X::Value hidden,X::Val
             const auto* slotData=static_cast<const float*>(slotInfo.data);
             const auto* positionData=static_cast<const float*>(positionInfo.data);
             for(size_t row=0;row<states_[0].rows;++row) {
-                size_t next=rowTokens_[row].size();
+                size_t next=rowTokens_[RunPhysicalRow(row)].size();
                 for(size_t token=0;token<chunk;++token)if(data[row*chunk+token]!=0) {
-                    if(!rowTokensValid_[row]||slotData[row*chunk+token]!=float(next))
+                    if(!rowTokensValid_[RunPhysicalRow(row)]||slotData[row*chunk+token]!=float(next))
                         throw std::invalid_argument("Tracked tokens require a contiguous native history");
                     for(size_t axis=0;axis<3;++axis)if(positionData[(row*chunk+token)*3+axis]!=float(next))
                         throw std::invalid_argument("Token-prefix positions do not match text policy");
@@ -538,15 +583,15 @@ X::Value MetalDecoderSession::RunUnlocked(X::Value graphs,X::Value hidden,X::Val
                 }
                 // Allocate before any GPU/state mutation so commit cannot fail.
                 if(next>tokenCapacity_)throw std::invalid_argument("Tracked history exceeds the native context profile");
-                rowTokens_[row].reserve(next);
+                rowTokens_[RunPhysicalRow(row)].reserve(next);
             }
         }
 #endif
 #ifdef GARNET_METAL_CONTINUOUS_ROWS
-        if(managedRows_)for(size_t i=0;i<count;++i)if(data[i]!=0&&!requestRows_->Owned(i/chunk))
+        if(managedRows_)for(size_t i=0;i<count;++i)if(data[i]!=0&&!requestRows_->Owned(RunPhysicalRow(i/chunk)))
             throw std::invalid_argument("Active Metal row has no native request lease");
         if(epochs)for(size_t i=0;i<count;++i)if(data[i]!=0&&
-            (!(*epochs)[i/chunk]||!requestRows_->Matches(i/chunk,(*epochs)[i/chunk])))
+            (!(*epochs)[RunPhysicalRow(i/chunk)]||!requestRows_->Matches(RunPhysicalRow(i/chunk),(*epochs)[RunPhysicalRow(i/chunk)])))
             throw std::invalid_argument("Active Metal row does not match the scheduled request epoch");
 #endif
     }
@@ -580,6 +625,16 @@ X::Value MetalDecoderSession::RunUnlocked(X::Value graphs,X::Value hidden,X::Val
 #endif
     if(hiddenShape_!=inputShape[0]) {
         const auto& slot=layers[0]->slots_[layers[0]->inputs_[0]];
+#ifdef GARNET_METAL_COMPACT_OWNER_PREFILL
+        if(!compactFamilies_.empty()&&!verification) {
+            if(chunk==1)hidden_=compactDecodeHidden_;
+            else {
+                auto found=compactFamilies_.find({1,chunk});if(found==compactFamilies_.end())found=compactFamilies_.find({2,chunk});
+                if(found==compactFamilies_.end())throw std::invalid_argument("Prepare the requested full/compact prefill hidden profile before execution");
+                hidden_=found->second.hidden;
+            }
+        }else
+#endif
         hidden_=gpu_->Allocate(slot.rows,slot.columns);
     }
     prefillPartialSubmissions_=0;fusedHeadArgmaxDispatches_=0;bodyShapeDispatches_=bodyShapeMisses_=0;deferredZeroBytes_=deferredZeroStates_=0;
@@ -640,6 +695,11 @@ X::Value MetalDecoderSession::RunUnlocked(X::Value graphs,X::Value hidden,X::Val
                 if(!graph->slots_[outputId].matrix.Valid()&&
                    std::find(graph->lazyDefaultSlots_.begin(),graph->lazyDefaultSlots_.end(),outputId)!=graph->lazyDefaultSlots_.end())
                     compatible=gpu_->IsDefaultLayout(states_[i].matrix[k],graph->slots_[outputId].rows,graph->slots_[outputId].columns);
+#ifdef GARNET_METAL_COMPACT_OWNER_PREFILL
+                if(compactRunning_&&!graph->slots_[outputId].matrix.Valid())
+                    compatible=graph->slots_[outputId].rows==states_[i].rows&&graph->slots_[outputId].columns==states_[i].columns[k]&&
+                        MetalContext::MatrixMetadataMatchesLive(states_[i].matrix[k]);
+#endif
 #endif
                 if(!compatible)
                     throw std::logic_error("Private KV cache layout mismatch");
@@ -700,6 +760,12 @@ X::Value MetalDecoderSession::RunUnlocked(X::Value graphs,X::Value hidden,X::Val
 #ifdef GARNET_METAL_MTP_BRIDGE
         if(mtp_)EncodeMTPTarget(current,chunk,verification!=nullptr);
 #endif
+#ifdef GARNET_METAL_COMPACT_OWNER_PREFILL
+        if(compactRunning_) {
+            gpu_->EncodeLayout(compactRunning_->zero,compactRunning_->zero,compactRunning_->hidden,0);
+            gpu_->EncodeSliceGroups(current,compactRunning_->spans.at(compactFirst_).output,1,hiddenWidth,0,hiddenWidth);
+        }else
+#endif
         gpu_->EncodeSliceGroups(current,hidden_,1,hiddenWidth,0,hiddenWidth);
 #ifdef GARNET_METAL_VERIFY_ATTENTION
         if(verification)EncodeVerificationHead(*verification,current);
@@ -751,7 +817,7 @@ X::Value MetalDecoderSession::RunUnlocked(X::Value graphs,X::Value hidden,X::Val
         }
     }
 #ifdef GARNET_METAL_ROW_FINAL_HIDDEN
-    for(size_t row=0;row<rowWillUpdate.size();++row)if(rowWillUpdate[row])finalHiddenReady_[row]=1;
+    for(size_t row=0;row<rowWillUpdate.size();++row)if(rowWillUpdate[row])finalHiddenReady_[RunPhysicalRow(row)]=1;
 #endif
 #ifdef GARNET_METAL_TOKEN_PREFIX_CACHE
     if(tokenCache_) {
@@ -761,8 +827,8 @@ X::Value MetalDecoderSession::RunUnlocked(X::Value graphs,X::Value hidden,X::Val
             verification?verification->accepted[row*chunk+token]!=0:
 #endif
             data[row*chunk+token]!=0) {
-            if(tokenIds)rowTokens_[row].push_back((*tokenIds)[row*chunk+token]);
-            else rowTokensValid_[row]=0;
+            if(tokenIds)rowTokens_[RunPhysicalRow(row)].push_back((*tokenIds)[row*chunk+token]);
+            else rowTokensValid_[RunPhysicalRow(row)]=0;
         }
     }
 #endif

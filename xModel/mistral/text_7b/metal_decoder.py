@@ -20,6 +20,7 @@ class MistralMetalDecoder(DenseMetalDecoder):
         else:DenseMetalDecoder.reset(self)
 
     def __init__(self,checkpoint,config,batch=1,capacity=256,resident=True):
+        self.compact_prefill_graphs={}
         self.verification_graphs=[];self.verification_head=None;self.verification_tokens=0
         expected=dict(model_type='mistral',hidden_size=4096,intermediate_size=14336,
                       num_hidden_layers=32,num_attention_heads=32,num_key_value_heads=8,
@@ -53,6 +54,38 @@ class MistralMetalDecoder(DenseMetalDecoder):
                 if size<=chunk:self._resident_prefill_graphs(size)
         else:self._resident_prefill_graphs(chunk)
         self.profile_prepare_compile_ms=self.prefill_compile_ms
+        return True
+
+    def prepare_compact_prefill(self,chunk=128):
+        if self.batch!=4 or self.session is None or 'compact_owner_prefill' not in garnet.backend_info():
+            raise ValueError('Compact owner prefill requires the native B4 dense profile extension')
+        self.prepare_prefill(chunk)
+        import tensor
+        from xModel.qwen.metal_dense.layers import T,DensePrefillLayer
+        width=self.config['hidden_size']
+        for size in reversed(self._prefill_profiles()):
+            if size>chunk:continue
+            fallback=self._resident_prefill_graphs(size)
+            for rows in (1,2):
+                graphs=[]
+                for idx,layer in enumerate(self.layers):
+                    key=str(rows)+'-'+str(size)+'-'+str(idx)
+                    graph=self.compact_prefill_graphs.get(key)
+                    if graph is None:
+                        states=[[rows]+list(shape[1:]) for shape in layer['shapes'][1:3]]
+                        shapes=[[rows,size,width]]+states+[[rows,size,3],[rows,size],[rows,size]]
+                        symbols=[tensor.input('mistral_compact_'+key+'_'+str(i),shape=shape,dtype=tensor.float32) for i,shape in enumerate(shapes)]
+                        @T.fusion(name='mistral_compact_prefill',boundary='required')
+                        def forward(hidden,key,value,positions,slots,active):
+                            return DensePrefillLayer(hidden,key,value,positions,slots,active,self.config,idx,rows,size,self.capacity,'full_attention')
+                        graph=garnet.compiled_graph()
+                        try:
+                            self._build_prefill_graph(graph,forward(*symbols),symbols,layer['graph'])
+                            self.session.prepare_prefill(graph,idx)
+                        except:graph.close();raise
+                        self.compact_prefill_graphs[key]=graph
+                    graphs.append(graph)
+                self.session.prepare_compact_prefill(graphs,fallback)
         return True
 
     def prepare_verification(self,tokens=4):
@@ -95,6 +128,8 @@ class MistralMetalDecoder(DenseMetalDecoder):
     def close(self):
         try:DenseMetalDecoder.close(self)
         finally:
+            for graph in getattr(self,'compact_prefill_graphs',{}).values():graph.close()
+            self.compact_prefill_graphs={}
             for graph in getattr(self,'verification_graphs',[]):graph.close()
             head=getattr(self,'verification_head',None)
             if head is not None:head.close()

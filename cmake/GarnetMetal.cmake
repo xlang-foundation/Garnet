@@ -124,6 +124,18 @@ if(GARNET_METAL_RETIRE_NONRESIDENT_PACKS)
     target_compile_definitions(garnet_metal PUBLIC GARNET_METAL_RETIRE_NONRESIDENT_PACKS=1)
 endif()
 option(GARNET_METAL_CONTINUOUS_ROWS "Native stable request row ownership and stale-release protection" OFF)
+option(GARNET_METAL_COMPACT_OWNER_PREFILL "Select prepared dense B1/B2 owner-span prefill families under native epochs" OFF)
+if(GARNET_METAL_COMPACT_OWNER_PREFILL)
+    if(NOT GARNET_METAL_PREPARED_KV_ROW_SPANS OR NOT GARNET_METAL_CONTINUOUS_ROWS OR
+       NOT GARNET_METAL_ROW_FINAL_HIDDEN OR NOT GARNET_METAL_SHARED_PREFILL_SCRATCH OR
+       NOT GARNET_METAL_DENSE_PREFILL_MAX_TOKENS)
+        message(FATAL_ERROR "Compact owner prefill requires prepared KV spans, row leases/hidden, shared scratch and bounded dense prefill")
+    endif()
+    if(GARNET_METAL_DIRTY_PREFIX_RESET OR GARNET_METAL_DEFERRED_STATE_ZERO OR GARNET_METAL_MTP)
+        message(FATAL_ERROR "Compact owner prefill has not qualified dirty/deferred reset or MTP")
+    endif()
+    target_compile_definitions(garnet_metal PUBLIC GARNET_METAL_COMPACT_OWNER_PREFILL=1)
+endif()
 option(GARNET_METAL_PREPARED_KV_ROW_SPANS "Prepare private contiguous cache-row views with shared backing readiness" OFF)
 if(GARNET_METAL_PREPARED_KV_ROW_SPANS)
     if(NOT GARNET_METAL_CHUNK_KV_INPLACE OR NOT GARNET_METAL_RESIDENT_KV_INPLACE)
@@ -853,6 +865,7 @@ if(GARNET_METAL_XMODEL)
     target_link_libraries(garnet_native_image PUBLIC JPEG::JPEG PNG::PNG)
     add_library(garnet SHARED src/entry/metal_main.cpp src/backends/metal/compiled_graph.cpp
         src/backends/metal/decoder_session.cpp
+        src/backends/metal/compact_prefill_session.cpp
         src/backends/metal/verification_session.cpp
         src/backends/metal/mtp_session.cpp
         src/backends/metal/mtp_generation.cpp

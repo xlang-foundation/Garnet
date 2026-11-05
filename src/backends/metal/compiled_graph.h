@@ -120,7 +120,7 @@ class MetalCompiledGraph {
     bool CanResetKVPrefix(size_t part) const {return part>=1&&part<=2&&resetKVPrefix_[part-1];}
     bool SwapOutputStorage(size_t part,MetalMatrix& replacement);
     bool BuildInternal(X::Value,X::Value,const std::string&,std::unordered_map<std::string,SharedWeight>,bool bf16Projections=false,bool verification=false,bool mtp=false,bool mtpPrefill=false);
-#ifdef GARNET_METAL_VERIFY_ATTENTION
+#if defined(GARNET_METAL_VERIFY_ATTENTION)||defined(GARNET_METAL_COMPACT_OWNER_PREFILL)
     bool SharesVerificationWeights(const MetalCompiledGraph&) const;
 #endif
 public:

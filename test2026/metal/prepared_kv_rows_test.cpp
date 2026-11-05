@@ -39,6 +39,22 @@ void Cell(MetalContext& gpu,size_t first,size_t rows,size_t h,size_t d,size_t c,
     gpu.Update(view,std::vector<float>(rows*width,7.f));std::fill(expected.begin()+first*width,expected.begin()+(first+rows)*width,7.f);Equal(gpu.Download(cache),expected,"Span host update crossed rows");
     gpu.Zero(view);std::fill(expected.begin()+first*width,expected.begin()+(first+rows)*width,0.f);Equal(gpu.Download(cache),expected,"Span zero crossed rows");
 }
+#ifdef GARNET_METAL_COMPACT_OWNER_PREFILL
+void LastHiddenRows(MetalContext& gpu) {
+    for(size_t first=0;first<4;++first)for(size_t rows=1;rows<=std::min(size_t(2),4-first);++rows) {
+        constexpr size_t width=16,chunk=8;std::vector<float> original(4*width,7.f),values(rows*chunk*width),flags(rows*chunk,1.f);
+        for(size_t i=0;i<values.size();++i)values[i]=float(i+1);
+        for(size_t row=0;row<rows;++row)flags[row*chunk+chunk-1]=0;
+        auto owner=gpu.Upload(original,4,width),view=View(gpu,owner,first,rows,1,width,1);
+        auto input=gpu.Upload(values,rows,chunk*width),active=gpu.Upload(flags,rows,chunk);
+        gpu.Begin();gpu.EncodeLastActiveHidden(input,active,view,chunk);gpu.SubmitAndWait();
+        for(size_t row=0;row<rows;++row)std::copy_n(values.data()+(row*chunk+chunk-2)*width,width,original.data()+(first+row)*width);
+        Equal(gpu.Download(owner),original,"Last-hidden row span changed physical row routing");
+        gpu.Update(active,std::vector<float>(rows*chunk,0.f));gpu.Begin();gpu.EncodeLastActiveHidden(input,active,view,chunk);gpu.SubmitAndWait();
+        Equal(gpu.Download(owner),original,"Paused compact owner changed its last-hidden bank");
+    }
+}
+#endif
 void Readiness(MetalContext& gpu) {
     constexpr size_t h=2,d=8,c=16,width=h*d*c;
     std::vector<float> original(4*width,3.f);
@@ -108,6 +124,9 @@ int main(){try{
      }
      Cell(gpu,3,1,8,128,4096,128,false);++cases;
      Readiness(gpu);
+#ifdef GARNET_METAL_COMPACT_OWNER_PREFILL
+     LastHiddenRows(gpu);
+#endif
 #ifdef GARNET_METAL_CHUNK_ATTENTION_MPS
      for(size_t first=0;first<4;++first)for(size_t rows=1;rows<=4-first;++rows)for(bool gated:{false,true}){Attention(gpu,first,rows,gated);++cases;}
 #endif

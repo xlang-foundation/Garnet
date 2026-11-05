@@ -333,7 +333,7 @@ bool MetalCompiledGraph::BuildShared(X::Value graph,X::Value symbols,const std::
     if(!peer->ready_)throw std::invalid_argument("Shared Metal weight source is closed");
     return BuildInternal(graph,symbols,checkpoint,peer->weightRecords_,peer->bf16Projections_,false,peer->mtpProgram_,peer->mtpPrefill_);
 }
-#ifdef GARNET_METAL_VERIFY_ATTENTION
+#if defined(GARNET_METAL_VERIFY_ATTENTION)||defined(GARNET_METAL_COMPACT_OWNER_PREFILL)
 bool MetalCompiledGraph::SharesVerificationWeights(const MetalCompiledGraph& source) const {
     if(weightRecords_.size()!=source.weightRecords_.size())return false;
     auto buffers=[](const Slot& slot) {
@@ -352,6 +352,8 @@ bool MetalCompiledGraph::SharesVerificationWeights(const MetalCompiledGraph& sou
     }
     return !weightRecords_.empty();
 }
+#endif
+#ifdef GARNET_METAL_VERIFY_ATTENTION
 bool MetalCompiledGraph::BuildVerificationShared(X::Value graph,X::Value symbols,const std::string& checkpoint,X::Value source) {
 #if !defined(GARNET_METAL_MLX_AFFINE_INT4)||!defined(GARNET_METAL_INDEXED_TOKEN_PROJECTIONS)||!defined(GARNET_METAL_ACTIVE_DECODE_PROJECTIONS)||!defined(GARNET_METAL_INDEXED_DECODE)||!defined(GARNET_METAL_AFFINE_PROFILE)
     throw std::logic_error("Compiled verification requires prepared FP32 affine kernels");

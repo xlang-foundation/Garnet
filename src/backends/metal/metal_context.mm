@@ -4027,8 +4027,12 @@ void MetalContext::EncodeLastActiveHidden(const MetalMatrix& input,const MetalMa
     if(!input.impl_||!active.impl_||!output.impl_||!chunk||chunk>kMetalPrefillChunkLimit)
         throw std::invalid_argument("Invalid last-active hidden arguments");
     auto i=input.impl_->matrix,a=active.impl_->matrix,o=output.impl_->matrix;
+    bool outputOffsetSupported=o.offset==0;
+#ifdef GARNET_METAL_COMPACT_OWNER_PREFILL
+    outputOffsetSupported=outputOffsetSupported||(output.impl_->spanOwner&&o.offset%4==0);
+#endif
     if(i.rows!=o.rows||a.rows!=o.rows||a.columns!=chunk||i.columns!=Elements(chunk,o.columns)||
-       !output.impl_->ready||i.offset||a.offset||o.offset)
+       !output.impl_->ready||i.offset||a.offset||!outputOffsetSupported)
         throw std::invalid_argument("Last-active hidden layout or initialized bank mismatch");
     struct Params {uint64_t rows,width,chunk,iStride,aStride,oStride;};
     Params p{o.rows,o.columns,chunk,i.rowBytes/4,a.rowBytes/4,o.rowBytes/4};

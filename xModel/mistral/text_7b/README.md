@@ -105,9 +105,27 @@ document for the complete table, numerical gates and limitations.
 
 The native-only `GARNET_METAL_PREPARED_KV_ROW_SPANS` option prepares private cache
 row views with shared backing readiness and offset-correct access. It requires
-resident/chunk in-place updates and defaults off. It currently supplies the
-cache-view foundation only: smaller-owner session graphs, native scheduler
-selection and physical-row result routing remain unimplemented. It does not
-change the xModel layer API or enable compact-owner serving. Native tests and
-the unchanged Mistral workload pass, but no new performance gain is established;
-see the research document for the slower retained regression measurements.
+resident/chunk in-place updates and defaults off. This is the private cache-view
+foundation; it does not change the xModel layer API. The earlier foundation-only
+HTTP regression was slower and remains recorded in the research document.
+
+`GARNET_METAL_COMPACT_OWNER_PREFILL=ON` additionally prepares native B1/B2 graph
+families over those same B4-owned caches. Call `prepare_compact_prefill(128)` on
+the decoder before any execution or request claim, or explicitly pass
+`compact=True` to the batch-study factory. Native leased execution selects a
+prepared contiguous one/two-owner span. Gapped, three/four-owner, small FP32,
+decode and unleased calls keep the B4 path. Output hidden tensors and predictions
+retain physical-row ownership. The extension defaults off and excludes dirty
+or deferred reset, MTP and speculative target workspaces in the same session.
+
+The qualified family has 14 shapes (B1/B2, chunks2..128), 21 MPS attention plans,
+1,044,162,560 scratch bytes and 126 context buckets. Families, cache views,
+physical hidden routing and scratch are prepared before readiness. This does
+not yet select B1/T512 or B2/T256, pack gapped owners, or fuse attention.
+
+Actual model checks preserve complete cache/hidden/prediction identity, prefix
+restore and running survivors. Two opposite-order same-session late-chunk
+studies show 1.18–1.30x body ratios for one owner and 1.11–1.16x for two. These
+are repeated identical chunk measurements, excluding embedding, head and HTTP.
+The separate single-wave HTTP result remains below the long-context references;
+all 2x/half-TTFT targets are unmet. See the research document for the full table.

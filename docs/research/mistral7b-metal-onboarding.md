@@ -1344,10 +1344,122 @@ rejections are retained. An initial cross-context diagnostic expected the input
 error before the existing output-pending guard; the corrected positive control
 requires both specific errors and successful completed transfers.
 
-Remaining integration must prepare shared-weight B1/B2 graph families and every
+At that foundation checkpoint, remaining integration needed shared-weight B1/B2 graph families and every
 permitted cache span before readiness, select them under native owner-epoch
 validation, and route final hidden values/predictions to physical rows. First
 prove exact owner compaction at the existing chunk size, then qualify wider
 chunks separately. Gapped owners, stale leases, release/reclaim, prefix reuse,
 running decode peers and allocation bounds still require full runtime tests.
 No xMind compact-owner serving or new ANE/model offload is claimed here.
+
+### Prepared compact-owner prefill families
+
+The optional `GARNET_METAL_COMPACT_OWNER_PREFILL` extension now integrates
+contiguous B1/B2 prefill families into native leased execution. It defaults off
+and requires prepared KV spans, continuous row leases, per-row final hidden,
+shared scratch and the bounded dense profile. Dirty/deferred reset and MTP
+configurations are rejected. Compact families and speculative target workspaces
+cannot coexist in one session. Eight invalid configuration checks preserve
+these restrictions, including earlier dependency guards.
+
+`MistralMetalDecoder.prepare_compact_prefill(128)` builds fourteen shared-weight
+families, B1/B2 at chunk2/4/8/16/32/64/128, before any execution or row claim.
+Native preparation retains graph generations and exact original weight-buffer
+identities, prepares every contiguous private KV span and physical last-hidden
+view, and reserves shared scratch/output storage. It does not copy weights or
+allocate another KV cache. The inventory is21 MPS plans, 1,044,162,560 scratch
+bytes and126 context buckets. No shape compilation occurs after readiness.
+
+Native `run_leased` validates physical controls and owner epochs, then selects
+the registered compact family for one/two contiguous active owners. Gapped,
+three/four-owner, decode, unleased and small FP32 cases keep the B4 path. The
+native context now permits last-hidden writes through private prepared spans
+with validated offsets. The complete output hidden retains B4 physical rows,
+with inactive rows zeroed. A compact prefill has257 vector-layout dispatches,
+including physical output routing; the fallback has256. Layer ops remain the
+same. Per-request token histories, prefix ownership and predictions use their
+original physical rows.
+
+This family stops at chunk128. B1/T512 and B2/T256 selection, packed gapped
+owners and fused FlashAttention remain unimplemented. The global512-token upper
+bound is therefore still underused when fewer than four requests prefill.
+The current MPS attention path separately computes QK, masked softmax and PV;
+it retains score/probability intermediates. The pinned vLLM-Metal source packs
+scheduled token counts and includes tiled online-softmax attention and an M5
+NAX path. Source support alone does not prove the selected kernel in every
+saved baseline step or attribute the complete measured gap to that kernel.
+
+`mistral-compact-prefill-source2` passes24 native tests with the extension on and
+24 with it off (private row spans remain on). The row-span test additionally
+checks last-hidden writes into every contiguous span with live/paused owners.
+The first actual-model trial failed a legacy zero-offset last-hidden guard;
+that failure is retained. The corrected private-span guard does not relax
+numerical checks. Library2 SHA256 is
+`f77445b21714e9663974a78b82f7652c41fe251e11f96de044f3d462be18ba96`.
+Source3 changes only the post-build Python batch-factory entry point.
+The same library also preserves all24 actual-model target-verification cases
+at capacities256/4096 without compact families prepared, including full cache,
+accepted hidden and rollback parity. This does not qualify simultaneous
+compact-family and speculative-target workspaces.
+
+The final twelve actual-model cases compare all32 layers of physical KV,
+complete hidden output and row predictions against a separate B4 control.
+They include row0/row3, adjacent pairs12/23, gaps, all owners, small fallback,
+tail, chunk128, release/reclaim and reset. Missing/stale epochs and late
+preparation are rejected. Seven tracked-prefix cases retain exact initial,
+returned, appended and changed-prompt continuations while B/C/D each produce
+176 unchanged survivor tokens. A row3 capture/restore compares302 tracked
+tokens, complete cache hashes and next prediction. All native owners close to
+zero. These tests do not establish a new coding-quality score.
+
+The unchanged22-request/4,844-output-token HTTP collection passes accounting and
+native route/identity checks, with all eight frozen coding outputs exact.
+Its first audit replay failed because the corruption injector changed the first
+log event instead of the scheduler-bound event after a new preparation event
+was introduced. The corrected auditor selects the named event and rejects all
+36 corruptions against the original raw collection; no engine rerun was needed.
+The initial failed audit and corrected frozen auditor remain preserved.
+
+| Nominal input / concurrency | Previous Garnet tok/s | Compact-owner Garnet tok/s | Frozen vLLM-Metal tok/s | Frozen SGLang-MLX tok/s | 2x target |
+|---|---:|---:|---:|---:|---:|
+|256 /1 |17.192 |19.390 |22.021 |22.042 |44.084 |
+|256 /2 |28.390 |33.133 |31.464 |32.127 |64.254 |
+|256 /4 |39.907 |47.698 |45.235 |42.194 |90.470 |
+|2048 /1 |6.101 |7.729 |12.345 |12.518 |25.036 |
+|2048 /2 |8.227 |9.725 |16.536 |14.482 |33.071 |
+|2048 /4 |10.131 |10.288 |21.179 |16.337 |42.358 |
+
+These native observations are separate single-cohort/no-warmup/one-wave runs;
+references remain the frozen15-wave medians. C1 TTFT is1.017s /7.496s and decode
+22.829 /14.032 tok/s. The unchanged B4 path also improves in this observation,
+so these separate runs cannot isolate compaction's causal effect. Native FP32
+decode/KV versus reference FP16 and system paging/compression remain material
+differences. All2x/half-TTFT targets are unmet. Strict coding remains0/8 by full
+output identity. No comparator was rerun, and no ANE acceleration is measured.
+
+`mistral-compact-prefill-paired-stage1` provides a separate paired body study:
+one session, same weights/cache/scratch, control via unleased B4 and candidate
+via leased compact selection. Each owner group seeds15 real chunks, then
+replays the same chunk at offset1920 three warmup and nine measured times per
+variant. Two fresh processes reverse variant order. All108 measured forwards
+complete with exact full-cache/hidden hashes across variants and cohorts;
+steady Metal allocations/owner counts remain fixed, and cleanup is below4MiB
+with zero owners. The independent auditor rejects seven evidence corruptions.
+
+| Active physical owners | Cohort | B4 control wall s | Compact wall s | Body ratio |
+|---|---:|---:|---:|---:|
+|0 |1 |0.695 |0.587 |1.184 |
+|0 |2 |0.778 |0.599 |1.298 |
+|3 |1 |0.763 |0.587 |1.299 |
+|3 |2 |0.774 |0.594 |1.304 |
+|1,2 |1 |1.319 |1.140 |1.157 |
+|1,2 |2 |1.313 |1.180 |1.113 |
+
+This timing includes the session call and GPU completion, excludes embedding,
+head, hashes, HTTP and scheduling, and replays identical inputs/slots. It proves
+a bounded body-work improvement under those conditions, not repeated serving
+superiority or the2x end-to-end target. The new driver and auditor are
+`run_mistral_compact_prefill_stage.py` and
+`audit_mistral_compact_prefill_stage.py`. Raw failed and passing trials,
+immutable sources, route traces, hashes and comparison reports are retained
+under the local Mistral evidence root.

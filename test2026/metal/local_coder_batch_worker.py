@@ -69,6 +69,11 @@ def main():
         raise ValueError('Frozen profile requires its explicit Mistral four-row decode reuse policy')
     attention_active_rows=profile.get('chunk_attention_active_rows',False)
     kv_scatter=profile.get('chunk_kv_scatter',False)
+    compact_owner=profile.get('compact_owner_prefill',False)
+    if (type(compact_owner) is not bool or (compact_owner and
+        (family!='mistral_7b' or batch!=4 or 'compact_owner_prefill' not in garnet.backend_info() or
+         profile.get('expected_compact_prefill_family_count')!=14))):
+        raise ValueError('Compact owner profile requires explicit prepared native dense families')
     vector_layout=profile.get('chunk_layout_vector4',False)
     if (type(vector_layout) is not bool or vector_layout!=('chunk_layout_vector4' in garnet.backend_info()) or
         (vector_layout and profile.get('expected_chunk_layout_vector_dispatches')!=256)):
@@ -203,9 +208,14 @@ def main():
     try:
         if family=='mistral_7b':
             from xModel.mistral.text_7b.metal_batch_study import create_decoder as create_mistral_decoder
-            decoder=create_mistral_decoder(folder+'/model.safetensors',config,capacity,batch,chunk)
+            decoder=(create_mistral_decoder(folder+'/model.safetensors',config,capacity,batch,chunk,True) if compact_owner else
+                     create_mistral_decoder(folder+'/model.safetensors',config,capacity,batch,chunk))
         else:decoder=create_qwen_decoder(folder+'/model.safetensors.index.json',config,capacity,batch,chunk)
         decoder.prefill_compile_ms=0
+        if compact_owner:
+            families=decoder.session.compact_prefill_family_count
+            if families!=profile['expected_compact_prefill_family_count']:raise ValueError('Compact family preparation incomplete')
+            emit(dict(event='native_compact_prefill_prepared',families=families))
         if prefix:
             if 'native_hybrid_token_prefix' not in garnet.backend_info():raise ValueError('Native hybrid token prefix extension required')
             decoder.session.configure_token_prefix(profile['prefix_identity'],profile.get('prefix_entries',2),profile.get('prefix_host_bytes',384*1024*1024))
@@ -293,6 +303,12 @@ def main():
             else:result=decoder.session.run_leased(graphs,hidden,positions,slots,active,prediction,epochs)
             elapsed=(time.monotonic()-started)*1000 if trace_stages else 0
             attention_valid=sum(1 for flag in active.tolist() if flag!=0) if attention_buckets else None
+            compact_rows=decoder.session.compact_prefill_last_rows if compact_owner else 0
+            physical_batch=compact_rows if compact_rows else batch
+            physical_tokens=(len(ids)//batch)*physical_batch
+            if compact_owner:
+                emit(dict(event='native_compact_prefill',stage='prefill' if len(ids)>batch else 'decode',
+                    rows=compact_rows,first=decoder.session.compact_prefill_last_first,chunk=len(ids)//batch))
             if probability_reuse:
                 count=decoder.session.chunk_probability_reuse_dispatches
                 expected=profile['expected_chunk_attention_dispatches'] if len(ids)>batch else 0
@@ -316,7 +332,7 @@ def main():
                     skipped=decoder.session.chunk_attention_mps_skipped_matrices
                     flags=active.tolist();row_width=len(flags)//batch
                     owners=sum(1 for row in range(batch) if any(flags[row*row_width:(row+1)*row_width]))
-                    full_products=expected*batch*text_config['num_key_value_heads']*4
+                    full_products=expected*physical_batch*text_config['num_key_value_heads']*4
                     active_products=expected*owners*text_config['num_key_value_heads']*4
                     emit(dict(event='native_chunk_attention_request_products',stage='prefill' if len(ids)>batch else 'decode',
                         matrices=products,skipped_matrices=skipped,active_request_rows=owners))
@@ -347,7 +363,7 @@ def main():
                     physical_rows=len(ids),active_tokens=sum(1 for flag in active.tolist() if flag!=0)))
             if kernel_profiles:
                 stage='prefill' if len(ids)>batch else ('decode' if prediction>=0 else 'body')
-                record_kernel_profile(stage,len(ids),sum(1 for flag in active.tolist() if flag!=0))
+                record_kernel_profile(stage,physical_tokens,sum(1 for flag in active.tolist() if flag!=0))
             if kv_scatter:
                 count=decoder.session.chunk_kv_scatter_dispatches
                 expected=profile['expected_chunk_kv_scatter_dispatches'] if len(ids)>batch else 0
@@ -355,7 +371,7 @@ def main():
                 if count!=expected:raise ValueError('Native contiguous KV scatter coverage differs from frozen profile')
             if vector_layout:
                 count=decoder.session.layout_vector_dispatches
-                expected=profile['expected_chunk_layout_vector_dispatches'] if len(ids)>batch else 0
+                expected=(profile['expected_chunk_layout_vector_dispatches']+int(compact_rows>0)) if len(ids)>batch else 0
                 emit(dict(event='native_chunk_layout_vector',stage='prefill' if len(ids)>batch else 'decode',dispatches=count))
                 if count!=expected:raise ValueError('Native vector layout coverage differs from frozen profile')
             if profile.get('require_mpp',False) and len(ids)>batch:
@@ -365,14 +381,14 @@ def main():
             if indexed and len(ids)>batch:
                 count=decoder.session.indexed_affine_dispatches
                 valid=sum(1 for flag in active.tolist() if flag!=0)
-                if valid<len(ids) and count<1:raise ValueError('Required sparse indexed projection route was not exercised')
-                emit(dict(event='native_indexed',affine_dispatches=count,active_tokens=valid,physical_rows=len(ids)))
+                if valid<physical_tokens and count<1:raise ValueError('Required sparse indexed projection route was not exercised')
+                emit(dict(event='native_indexed',affine_dispatches=count,active_tokens=valid,physical_rows=physical_tokens))
             if reuse64 and len(ids)>batch:
                 valid=sum(1 for flag in active.tolist() if flag!=0)
-                logical=valid if indexed else len(ids);count=decoder.session.mpp_reuse64_dispatches
+                logical=valid if indexed else physical_tokens;count=decoder.session.mpp_reuse64_dispatches
                 if (logical>=64 and count<1) or (logical<64 and count!=0):
                     raise ValueError('Cooperative64 route disagrees with native token count')
-                emit(dict(event='native_reuse64',affine_dispatches=count,logical_rows=logical,physical_rows=len(ids)))
+                emit(dict(event='native_reuse64',affine_dispatches=count,logical_rows=logical,physical_rows=physical_tokens))
             if active_decode and len(ids)==batch:
                 valid=sum(1 for flag in active.tolist() if flag!=0);count=decoder.session.indexed_decode_affine_dispatches
                 stage='decode' if prediction>=0 else 'body'

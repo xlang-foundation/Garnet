@@ -37,6 +37,9 @@ bool MetalDecoderSession::PrepareVerification(X::Value values,X::Value headValue
     throw std::logic_error("Native greedy verification requires prepared affine and row-hidden extensions");
 #else
     std::lock_guard<std::mutex> sessionLock(mutex_);
+#ifdef GARNET_METAL_COMPACT_OWNER_PREFILL
+    if(!compactFamilies_.empty())throw std::invalid_argument("Speculative workspaces with compact prefill families are not qualified");
+#endif
 #ifdef GARNET_METAL_MTP_BRIDGE
     if(mtp_)throw std::invalid_argument("Prepare verification before attaching MTP");
 #endif
