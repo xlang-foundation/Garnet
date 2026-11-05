@@ -149,7 +149,7 @@ public:
     static std::vector<MetalBufferInfo> AffineInt4BufferInfo(const MetalAffineInt4Weight&);
     MetalAffineInt4Weight UploadAffineInt4(const void* packed,size_t packedBytes,
         const void* scales,size_t scaleBytes,const void* biases,size_t biasBytes,
-        size_t rows,size_t columns);
+        size_t rows,size_t columns,bool coefficientsFP16=false);
     void EncodeAffineInt4MatMul(const MetalMatrix&,const MetalAffineInt4Weight&,const MetalMatrix&);
     // Preparation only: compile model dimensions/strides for every supported
     // route up to maximumRows (1..512). Actual rows remain dynamic. Encoding

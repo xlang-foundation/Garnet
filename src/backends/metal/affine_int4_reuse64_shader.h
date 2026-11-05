@@ -10,6 +10,11 @@ inline constexpr const char* kAffineInt4Reuse64Shader=R"METAL(
 #include <MetalPerformancePrimitives/MetalPerformancePrimitives.h>
 using namespace metal;
 using namespace mpp::tensor_ops;
+#ifdef GARNET_MPP_FP16
+using AffineOperand=half;
+#else
+using AffineOperand=bfloat;
+#endif
 struct Reuse64Params {ulong rows,inner,columns,aStride,oStride;};
 kernel void affine_q4_reuse64(device const float* input [[buffer(0)]],
  device const uint* packed [[buffer(1)]],device const ushort* scales [[buffer(2)]],
@@ -19,12 +24,12 @@ kernel void affine_q4_reuse64(device const float* input [[buffer(0)]],
  uint simd [[simdgroup_index_in_threadgroup]],uint lane [[thread_index_in_simdgroup]]) {
     GARNET_AFFINE_PARAMETERS(Reuse64Params);
     // Pad each64-element weight row by16 bytes to separate shared-memory banks.
-    threadgroup bfloat weights[64*72];
+    threadgroup AffineOperand weights[64*72];
     constexpr auto descriptor=matmul2d_descriptor(16,32,16,false,true,GARNET_REUSE64_RELAXED,
         matmul2d_descriptor::mode::multiply_accumulate);
     matmul2d<descriptor,execution_simdgroup> multiply;
-    auto left=multiply.get_left_input_cooperative_tensor<bfloat,bfloat,float>();
-    auto right=multiply.get_right_input_cooperative_tensor<bfloat,bfloat,float>();
+    auto left=multiply.get_left_input_cooperative_tensor<AffineOperand,AffineOperand,float>();
+    auto right=multiply.get_right_input_cooperative_tensor<AffineOperand,AffineOperand,float>();
     auto c0=multiply.get_destination_cooperative_tensor<
         metal::remove_addrspace_t<decltype(left)>,metal::remove_addrspace_t<decltype(right)>,float>();
     auto c1=multiply.get_destination_cooperative_tensor<
@@ -42,11 +47,11 @@ kernel void affine_q4_reuse64(device const float* input [[buffer(0)]],
             if(n<p.columns&&k<p.inner) {
                 values=packed[n*(p.inner/8)+k/8];
                 const AffineIndex coefficient=n*(p.inner/64)+k/64;
-                scale=as_type<float>(uint(scales[coefficient])<<16);
-                bias=as_type<float>(uint(biases[coefficient])<<16);
+                scale=garnet_affine_coefficient(scales[coefficient]);
+                bias=garnet_affine_coefficient(biases[coefficient]);
             }
             for(uint j=0;j<8;++j)weights[localN*72+localK+j]=
-                bfloat((n<p.columns&&k+j<p.inner)?fma(float((values>>(4*j))&15u),scale,bias):0.0f);
+                AffineOperand((n<p.columns&&k+j<p.inner)?fma(float((values>>(4*j))&15u),scale,bias):0.0f);
         }
         threadgroup_barrier(mem_flags::mem_threadgroup);
         for(uint local=0;local<64;local+=16) {
@@ -61,13 +66,13 @@ kernel void affine_q4_reuse64(device const float* input [[buffer(0)]],
             #pragma clang loop unroll(full)
             for(uint i=0;i<8;++i) {
                 const AffineIndex logical=firstRow+fragmentRow+(i/4)*8,k=base+local+fragmentColumn+i%4;
-                left[i]=bfloat((logical<p.rows&&k<p.inner)?input[AffineIndex(indices[logical])*p.aStride+k]:0.0f);
+                left[i]=AffineOperand((logical<p.rows&&k<p.inner)?input[AffineIndex(indices[logical])*p.aStride+k]:0.0f);
             }
             multiply.run(left,right,c0);
             #pragma clang loop unroll(full)
             for(uint i=0;i<8;++i) {
                 const AffineIndex logical=firstRow+16+fragmentRow+(i/4)*8,k=base+local+fragmentColumn+i%4;
-                left[i]=bfloat((logical<p.rows&&k<p.inner)?input[AffineIndex(indices[logical])*p.aStride+k]:0.0f);
+                left[i]=AffineOperand((logical<p.rows&&k<p.inner)?input[AffineIndex(indices[logical])*p.aStride+k]:0.0f);
             }
             multiply.run(left,right,c1);
         }

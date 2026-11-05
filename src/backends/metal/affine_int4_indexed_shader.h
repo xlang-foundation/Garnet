@@ -6,6 +6,11 @@ inline constexpr const char* kAffineInt4IndexedShader=R"METAL(
 #include <MetalPerformancePrimitives/MetalPerformancePrimitives.h>
 using namespace metal;
 using namespace mpp::tensor_ops;
+#ifdef GARNET_MPP_FP16
+using AffineOperand=half;
+#else
+using AffineOperand=bfloat;
+#endif
 struct IndexedQ4Params {ulong rows,inner,columns,aStride,oStride;};
 // Logical token rows are compact; storage remains in the request graph layout.
 // Strict BF16 operands match the register-prefill precision contract even for
@@ -20,8 +25,8 @@ kernel void affine_q4_indexed(device const float* input [[buffer(0)]],
     constexpr auto descriptor=matmul2d_descriptor(16,32,16,false,true,false,
         matmul2d_descriptor::mode::multiply_accumulate);
     matmul2d<descriptor,execution_simdgroup> multiply;
-    auto left=multiply.get_left_input_cooperative_tensor<bfloat,bfloat,float>();
-    auto right=multiply.get_right_input_cooperative_tensor<bfloat,bfloat,float>();
+    auto left=multiply.get_left_input_cooperative_tensor<AffineOperand,AffineOperand,float>();
+    auto right=multiply.get_right_input_cooperative_tensor<AffineOperand,AffineOperand,float>();
     auto accumulator=multiply.get_destination_cooperative_tensor<
         metal::remove_addrspace_t<decltype(left)>,metal::remove_addrspace_t<decltype(right)>,float>();
     for(ushort i=0;i<accumulator.get_capacity();++i)accumulator[i]=0.0f;
@@ -37,7 +42,7 @@ kernel void affine_q4_indexed(device const float* input [[buffer(0)]],
         for(uint i=0;i<8;++i) {
             const AffineIndex k=block+local+fragmentColumn+i%4;
             const AffineIndex logical=firstRow+fragmentRow+(i/4)*8;
-            left[i]=bfloat((logical<p.rows&&k<p.inner)?input[AffineIndex(indices[logical])*p.aStride+k]:0.0f);
+            left[i]=AffineOperand((logical<p.rows&&k<p.inner)?input[AffineIndex(indices[logical])*p.aStride+k]:0.0f);
         }
         #pragma clang loop unroll(full)
         for(uint tilePart=0;tilePart<2;++tilePart) {
@@ -49,12 +54,12 @@ kernel void affine_q4_indexed(device const float* input [[buffer(0)]],
                 if(n<p.columns&&k<p.inner) {
                     word=packed[n*(p.inner/8)+k/8];
                     const AffineIndex coefficient=n*(p.inner/64)+k/64;
-                    scale=as_type<float>(uint(scales[coefficient])<<16);
-                    bias=as_type<float>(uint(biases[coefficient])<<16);
+                    scale=garnet_affine_coefficient(scales[coefficient]);
+                    bias=garnet_affine_coefficient(biases[coefficient]);
                 }
                 #pragma clang loop unroll(full)
                 for(uint j=0;j<4;++j)right[tilePart*8+rowPart*4+j]=
-                    bfloat(fma(float((word>>(4*((k%8)+j)))&15u),scale,bias));
+                    AffineOperand(fma(float((word>>(4*((k%8)+j)))&15u),scale,bias));
             }
         }
         multiply.run(left,right,accumulator);

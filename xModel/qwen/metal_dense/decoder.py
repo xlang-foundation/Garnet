@@ -5,23 +5,28 @@ from xModel.qwen35.vl_0_8b.metal_decoder import MetalDecoder
 from .layers import T,DenseLayer,norm
 
 class DenseMetalDecoder(MetalDecoder):
-    def __init__(self,checkpoint,config,batch=1,capacity=256,bf16_head=True,resident=True,bf16_projections=True):
+    def __init__(self,checkpoint,config,batch=1,capacity=256,bf16_head=True,resident=True,bf16_projections=True,required_checkpoint_format=None):
         self.session=None;self.bf16_projections=bf16_projections
         backend=garnet.backend_info();self.joined_prefill_enabled='joined_mps_prefill' in backend
         self.packed_prefill_norm_enabled='packed_prefill_norm' in backend
         self.global_half_alpha_enabled='global_half_alpha' in backend
         self.joined_global_mlp_enabled='joined_global_mlp' in backend
         if not backend.startswith('Garnet Metal/MPS '):raise ValueError('Native Metal package required')
-        if config.get('model_type') not in ('qwen3','qwen2'):raise ValueError('Only dense Qwen3/Qwen2 supported')
+        if config.get('model_type') not in ('qwen3','qwen2','mistral'):raise ValueError('Only dense Qwen3/Qwen2/Mistral supported')
         if config.get('rope_scaling') is not None or config.get('use_sliding_window',False):raise ValueError('Scaled RoPE/sliding-window profiles are not implemented')
         if config.get('hidden_act','silu')!='silu':raise ValueError('Only SwiGLU dense MLP supported')
         if config['model_type']=='qwen3' and config.get('attention_bias',False):raise ValueError('Qwen3 projection bias is not implemented')
+        if config['model_type']=='mistral':
+            if config.get('sliding_window') is not None:raise ValueError('Mistral sliding-window attention is not implemented')
+            if config.get('attention_bias',False):raise ValueError('Mistral projection bias is not implemented')
         if batch not in (1,2) or capacity<1:raise ValueError('Fixed batch 1/2 and positive capacity required')
         self.config=dict(config);self.config['head_dim']=config.get('head_dim',config['hidden_size']//config['num_attention_heads'])
         config=self.config;self.batch=batch;self.capacity=capacity;self.checkpoint=checkpoint
         self.layers=[];self.head=None;self.io=garnet.tensor_io()
         try:
             self.io.open(checkpoint)
+            if required_checkpoint_format is not None and self.io.checkpoint_format!=required_checkpoint_format:
+                raise ValueError('Checkpoint representation does not match the selected dense Metal profile')
             for idx in range(config['num_hidden_layers']):
                 cache=[batch,config['num_key_value_heads'],capacity,config['head_dim']]
                 shapes=[[batch,config['hidden_size']],cache,cache,[batch,3],[batch],[batch]]

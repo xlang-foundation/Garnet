@@ -8,7 +8,7 @@ inline constexpr const char* kAffineInt4IndexedDecodeShader=R"METAL(
 using namespace metal;
 struct IndexedDecodeQ4Params {ulong rows,inner,columns,aStride,oStride;};
 constant uint selected_decode_rows [[function_constant(0)]];
-inline float indexed_decode_bf16(ushort value){return as_type<float>(uint(value)<<16);}
+inline float indexed_decode_bf16(ushort value){return garnet_affine_coefficient(value);}
 kernel void affine_q4_indexed_decode(device const float* a [[buffer(0)]],
  device const uint* packed [[buffer(1)]],device const ushort* scales [[buffer(2)]],
  device const ushort* biases [[buffer(3)]],device float* out [[buffer(4)]],

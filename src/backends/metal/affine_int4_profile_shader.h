@@ -5,6 +5,14 @@ namespace Garnet {
 // storage strides, while actual token/selected-row counts remain runtime data.
 // Decode already has the bounded one-to-four-row function-constant variants.
 inline constexpr const char* kAffineInt4ProfilePrelude=R"METAL(
+#include <metal_stdlib>
+inline float garnet_affine_coefficient(ushort value) {
+#ifdef GARNET_AFFINE_FP16_COEFFICIENTS
+    return float(as_type<half>(value));
+#else
+    return as_type<float>(uint(value)<<16);
+#endif
+}
 #if defined(GARNET_AFFINE_INDEX32) && !defined(GARNET_AFFINE_PROFILE)
 #error Bounded_indexes_require_specialized_profiles
 #endif

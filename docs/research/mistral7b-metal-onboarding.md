@@ -4,7 +4,7 @@ The user moved Mistral 7B onboarding, native tokenization and a Core ML/ANE
 plugin ahead of further Qwen27B performance work. Return to Qwen27B after Mistral
 performs better than vLLM in a matched benchmark. The existing Qwen27B targets
 and comparator evidence remain incomplete and preserved. This document records
-onboarding work, not a successful inference or performance qualification.
+onboarding and a small functional gate, not production or performance qualification.
 
 ## Candidate checkpoint
 
@@ -73,23 +73,68 @@ FP32-arithmetic path. The default FP16 dequantizer separately verifies actual
 embedding rounding. Neither comparison alone admits quantized matmul or full
 model precision. Earlier mismatch records remain preserved.
 
-The raw FP16 loader and embedding checks are prerequisites, not full FP16 quantized projection support.
-No Mistral generation, coding-quality result or speed comparison is admitted yet.
+Native Metal FP16 affine profiles and the text adapter now pass the small
+functional gate below. General coding quality and comparative speed remain
+unqualified.
+
+## FP16 native profile and small functional gate
+
+The explicit `GARNET_METAL_AFFINE_FP16_COEFFICIENTS` engine profile decodes
+original FP16 coefficient bits exactly. `GARNET_METAL_MPP_AFFINE_FP16` selects
+FP16 tensor operands and FP32 accumulation. Register, indexed and ordinary
+shader sources share typed coefficient decoding. The default BF16 profile is
+preserved; each compiled engine rejects incompatible coefficient payloads.
+Configuration rejects silently combining FP16 coefficients with BF16 tensor
+operands. These are engine representation/precision choices, not model names.
+
+An isolated source snapshot, excluding the pending Qwen blocked-projection
+experiment, builds successfully and passes 13/13 native tests. Its FP16 affine
+gate completes 749,002 checks over 478,835 FP32 output words. This includes every
+finite binary16 coefficient value (scale and bias), subnormals, FP16 tensor
+arithmetic, decode/prefill tails, sparse row masks, exact dense/indexed decode
+agreement, wrong-format/nonfinite rejection and zero native owners at close.
+Preparing an up-to-128-row profile from one actual row admits 1/2/4/5/63/127/128,
+uses noncompiling fallback at 129 and permits explicit widening to 512. Runtime
+encoding does not add pipelines. The existing BF16 affine regression also
+passes after the shader changes. Only tested feature combinations are admitted;
+the optional cooperative64 FP16 variant is not part of this gate.
+
+`xModel/mistral/text_7b/metal_decoder.py` validates the current Mistral7B shape
+and checkpoint representation, then reuses shared dense native GQA/RoPE/SwiGLU
+operators. `prepare_prefill(16)` builds that graph family before requests. The
+functional driver asserts no new prefill graph family or compile time appears
+during request execution. Native tokenization exactly matches the reference's
+rendered prompt IDs; no image input is used.
+
+An independently generated MLX 0.32.4 / mlx-lm 0.32.2 greedy reference supplies
+one 25-token coding prompt and 32 output tokens. The isolated native build
+matches all 32 output IDs with both ordinary and 16-token chunked prefill at
+batch 1. Batch 2 also matches when one row stops at 8 and the other reaches 32,
+for both prefill paths. The independent audit checks 144 emitted tokens across
+these repeated/prefix cases and rejects 10 corruptions; this is one unique
+32-token reference sequence, not 144 independent quality samples. All four
+native owner counters return to zero for each run.
+
+The tested context capacity is 256. KV and intermediate native state remain
+FP32; tensor operands use the explicitly selected FP16 path. This is not a
+claim that every operation has the same precision as MLX. No sandboxed coding
+suite, 4K context, batch 4, continuous admission, retained prefix reuse, ANE,
+production xMind binding or serving-performance comparison is qualified yet.
+The earlier greedy attempt that passed a whole chunk to the diagnostic head,
+the missing eager-setup counter, and an incomplete source snapshot remain as
+failed attempts; their results are not promoted to this gate.
 
 ## Remaining implementation and qualification
 
-1. Add typed FP16 scale/bias decoding to native Metal affine kernels, without
-   BF16 coefficient rounding. CPU selected-row embeddings and converted
-   checkpoint recognition are implemented; preserve the existing BF16 path.
-   Prepare coefficient-type-specific pipelines before encoding and include the
-   representation in profile/cache identity. Validate all active projection
-   paths; a decode-only kernel test cannot admit prefill.
-2. Extend selected-row embedding qualification as part of whole-model gates;
+1. Expand the initial FP16 profile admission to production workload shapes,
+   chunk-size alternatives, memory limits and exact checkpoint/profile identity.
+   Preserve the BF16 path and explicit coefficient/operand type matching.
+2. Extend embedding and full-model precision/quality qualification;
    matching coefficient expansion alone does not prove embedding semantics.
 3. Admit the Mistral text adapter with full GQA/RoPE/SwiGLU parity, explicit KV
    ownership, bounded prefill, batch/continuous scheduling and prefix reuse.
-   Existing dense Qwen operators provide reusable primitives, but the current
-   adapter guard rejects Mistral and has not been qualified for this checkpoint.
+   The small native adapter gate passes; long context, batch 4, continuous
+   scheduling and retained prefix reuse remain separate admissions.
 4. Establish new pinned Mistral comparator baselines and correctness gates,
    running vLLM-Metal, SGLang and Garnet sequentially. Qwen27B baseline numbers
    cannot substitute for Mistral results. Freeze artifacts, tokenizer/chat
@@ -133,6 +178,17 @@ Local root: `/Users/shawn/CantorAI/out/research/mistral7b-local-coder/`.
   guards and the unchanged BF16 affine regression suite.
 - `mistral-affine-embedding-provenance1.json`: source/binary/result hashes for
   this additional prerequisite qualification.
+- `mistral-fp16-clean-source2`, `native-mistral-fp16-clean-build2`,
+  `mistral-fp16-clean-ctest2.log`: isolated staged implementation and 13 native
+  test results, without the pending Qwen experiment.
+- `mistral-mlx-greedy1/reference.json`, `mistral-native-clean-greedy1.json`,
+  `mistral-native-clean-greedy-batch2-1.json`: frozen small functional reference
+  and native results, including complete first logits and prepared/cleanup
+  snapshots. They are not performance baselines.
+- `mistral-native-clean-functional-audit1.json`: independent exact-token audit
+  and 10 corruption checks.
+- `mistral-fp16-functional-provenance1.json`: immutable library/source/result
+  hashes for this functional gate.
 
 The first tokenizer runtime build directory was reused for FP16 loader work.
 Its original provenance retains the original hashes, but that build output path

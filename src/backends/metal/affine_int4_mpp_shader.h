@@ -8,6 +8,8 @@ using namespace metal;
 using namespace mpp::tensor_ops;
 #ifdef GARNET_MPP_BF16
 using Operand=bfloat;
+#elif defined(GARNET_MPP_FP16)
+using Operand=half;
 #else
 using Operand=float;
 #endif
@@ -67,8 +69,8 @@ kernel void affine_q4_mpp(device const float* input [[buffer(0)]],
                 if(n<p.columns&&k<p.inner) {
                     word=packed[n*(p.inner/8)+k/8];
                     const AffineIndex coefficient=n*(p.inner/64)+k/64;
-                    scale=as_type<float>(uint(scales[coefficient])<<16);
-                    bias=as_type<float>(uint(biases[coefficient])<<16);
+                    scale=garnet_affine_coefficient(scales[coefficient]);
+                    bias=garnet_affine_coefficient(biases[coefficient]);
                 }
                 #pragma clang loop unroll(full)
                 for(uint j=0;j<4;++j)right[tilePart*8+rowPart*4+j]=
@@ -128,8 +130,8 @@ kernel void affine_q4_mpp(device const float* input [[buffer(0)]],
             if(n<p.columns&&k<p.inner) {
                 const AffineIndex coefficient=n*(p.inner/64)+k/64;
                 values=packed[n*(p.inner/8)+k/8];
-                scale=as_type<float>(uint(scales[coefficient])<<16);
-                bias=as_type<float>(uint(biases[coefficient])<<16);
+                scale=garnet_affine_coefficient(scales[coefficient]);
+                bias=garnet_affine_coefficient(biases[coefficient]);
             }
             for(uint j=0;j<8;++j) {
 #if GARNET_MPP_N_MAJOR

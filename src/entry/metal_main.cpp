@@ -242,7 +242,11 @@ public:
         info+="; dense_prefix_cache";
 #endif
 #ifdef GARNET_METAL_MLX_AFFINE_INT4
+#ifdef GARNET_METAL_AFFINE_FP16_COEFFICIENTS
+        info+="; mlx_mistral_affine_int4_g64_fp16; affine_coefficient_dtype=fp16";
+#else
         info+="; mlx_qwen35_affine_int4_g64_bf16";
+#endif
 #ifdef GARNET_METAL_MPP_AFFINE
         info+="; mpp_affine_tile_k="+std::to_string(GARNET_METAL_MPP_AFFINE_TILE_K)+"; mpp_affine_relaxed="+std::to_string(GARNET_METAL_MPP_AFFINE_RELAXED_VALUE)+"; mpp_affine_n_major="+std::to_string(GARNET_METAL_MPP_AFFINE_N_MAJOR_VALUE)+"; mpp_affine_registers="+std::to_string(GARNET_METAL_MPP_AFFINE_REGISTERS_VALUE)+"; mpp_affine_tensor_k="+std::to_string(GARNET_METAL_MPP_AFFINE_REGISTERS_VALUE?16:GARNET_METAL_MPP_AFFINE_TILE_K);
 #endif
@@ -251,6 +255,9 @@ public:
 #endif
 #ifdef GARNET_METAL_MPP_AFFINE_BF16
         info+="; mpp_affine_bf16_optional";
+#endif
+#ifdef GARNET_METAL_MPP_AFFINE_FP16
+        info+="; mpp_affine_fp16_optional";
 #endif
 #endif
 #ifdef GARNET_METAL_REQUEST_ROWS

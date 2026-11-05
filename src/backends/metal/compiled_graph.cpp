@@ -33,8 +33,13 @@ size_t MetalCompiledGraph::AffineInt4Weight(const std::string& name) {
     auto found=weights_.find(name);if(found!=weights_.end())return found->second;
     const auto metadata=AffineInt4Metadata::Resolve(index_,mlxCheckpoint_,name);
     const auto& layout=metadata.layout;
+#ifdef GARNET_METAL_AFFINE_FP16_COEFFICIENTS
+    if(layout.coefficientType!=AffineInt4CoefficientType::FP16)
+        throw std::invalid_argument("This Metal affine engine requires FP16 coefficients; select the BF16 engine profile for this checkpoint");
+#else
     if(layout.coefficientType!=AffineInt4CoefficientType::BF16)
         throw std::invalid_argument("This Metal affine engine supports BF16 coefficients only; an FP16 kernel profile is required");
+#endif
     std::vector<CheckpointDependency> dependencies;
     for(const auto* tensor:metadata.tensors)
         dependencies.push_back({*tensor,std::filesystem::last_write_time(tensor->filePath),std::filesystem::file_size(tensor->filePath)});
@@ -54,7 +59,8 @@ size_t MetalCompiledGraph::AffineInt4Weight(const std::string& name) {
     }
     AffineInt4Mapping mapped;mapped.Open(metadata);
     auto weight=gpu_->UploadAffineInt4(mapped.Data(0),layout.weightBytes,mapped.Data(1),layout.coefficientBytes,
-                                      mapped.Data(2),layout.coefficientBytes,layout.rows,layout.columns);
+                                      mapped.Data(2),layout.coefficientBytes,layout.rows,layout.columns,
+                                      layout.coefficientType==AffineInt4CoefficientType::FP16);
     for(const auto& dependency:dependencies)
         if(dependency.modified!=std::filesystem::last_write_time(dependency.metadata.filePath)||
            dependency.bytes!=std::filesystem::file_size(dependency.metadata.filePath))

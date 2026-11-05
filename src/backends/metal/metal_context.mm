@@ -1682,7 +1682,14 @@ kernel void bf16_native_dot_t128(device const float* a [[buffer(0)]],device cons
         auto affineOptions=[MTLCompileOptions new];
         affineOptions.languageVersion=MTLLanguageVersion3_1;affineOptions.fastMathEnabled=NO;
         auto affineSourceWithProfile=[](NSString* source) {
-            return [[NSString stringWithUTF8String:kAffineInt4ProfilePrelude] stringByAppendingString:source];
+            NSString* prefix=[NSString stringWithUTF8String:kAffineInt4ProfilePrelude];
+#ifdef GARNET_METAL_AFFINE_FP16_COEFFICIENTS
+            prefix=[@"#define GARNET_AFFINE_FP16_COEFFICIENTS 1\n" stringByAppendingString:prefix];
+#endif
+#ifdef GARNET_METAL_MPP_AFFINE_FP16
+            prefix=[@"#define GARNET_MPP_FP16 1\n" stringByAppendingString:prefix];
+#endif
+            return [prefix stringByAppendingString:source];
         };
 #ifdef GARNET_METAL_AFFINE_PROFILE
         NSString* affineProfileDefines=@"#define GARNET_AFFINE_PROFILE 1\n";
@@ -2140,16 +2147,22 @@ size_t MetalContext::AffineProfileIndexBits() {
 #endif
 }
 MetalAffineInt4Weight MetalContext::UploadAffineInt4(const void* packed,size_t packedBytes,
-    const void* scales,size_t scaleBytes,const void* biases,size_t biasBytes,size_t rows,size_t columns) {
+    const void* scales,size_t scaleBytes,const void* biases,size_t biasBytes,size_t rows,size_t columns,bool coefficientsFP16) {
     @autoreleasepool {
-        const auto layout=AffineInt4Layout::Create(rows,columns);
+#ifdef GARNET_METAL_AFFINE_FP16_COEFFICIENTS
+        if(!coefficientsFP16)throw std::invalid_argument("FP16 Metal engine cannot interpret BF16 affine coefficients");
+#else
+        if(coefficientsFP16)throw std::invalid_argument("BF16 Metal engine cannot interpret FP16 affine coefficients");
+#endif
+        const auto type=coefficientsFP16?AffineInt4CoefficientType::FP16:AffineInt4CoefficientType::BF16;
+        const auto layout=AffineInt4Layout::Create(rows,columns,type);
         AffineInt4View checked(layout,packed,packedBytes,scales,scaleBytes,biases,biasBytes);
         (void)checked;
         if(packedBytes>impl_->device.maxBufferLength||scaleBytes>impl_->device.maxBufferLength||biasBytes>impl_->device.maxBufferLength)
             throw std::invalid_argument("Affine INT4 buffer exceeds device limit");
         for(size_t i=0;i<scaleBytes/2;++i) {
-            const float s=AffineInt4BF16(static_cast<const unsigned char*>(scales)+2*i);
-            const float b=AffineInt4BF16(static_cast<const unsigned char*>(biases)+2*i);
+            const float s=AffineInt4Coefficient(static_cast<const unsigned char*>(scales)+2*i,type);
+            const float b=AffineInt4Coefficient(static_cast<const unsigned char*>(biases)+2*i,type);
             if(!std::isfinite(s)||!std::isfinite(b)||!std::isfinite(std::fma(15.f,s,b)))
                 throw std::invalid_argument("Nonfinite/overflowing affine INT4 coefficient");
         }
