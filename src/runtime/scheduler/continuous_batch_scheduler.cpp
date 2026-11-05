@@ -265,6 +265,39 @@ namespace Garnet
             state.request.promptTokens + state.generatedTokens - 1);
     }
 
+    bool ContinuousBatchScheduler::DecodeProgress(std::uint64_t id,int& known,int& remaining) const
+    {
+        const auto found=m_requests.find(id);
+        if(found==m_requests.end()||found->second.stage!=RequestStage::Decode)return false;
+        const auto& state=found->second;
+        if(state.generatedTokens>=state.request.maxNewTokens)return false;
+        known=state.nextTokenId;remaining=state.request.maxNewTokens-state.generatedTokens;return true;
+    }
+
+    bool ContinuousBatchScheduler::CompleteDecodeTokens(std::uint64_t id,const std::vector<int>& tokens,
+        bool finished,KVSequenceAllocator& pool)
+    {
+        auto found=m_requests.find(id);
+        if(found==m_requests.end()||found->second.stage!=RequestStage::Decode||tokens.empty()||tokens.size()>4||
+           std::any_of(tokens.begin(),tokens.end(),[](int token){return token<0;}))return false;
+        auto& state=found->second;
+        if(tokens.size()>size_t(state.request.maxNewTokens-state.generatedTokens))return false;
+        const int generated=state.generatedTokens+int(tokens.size());
+        const int64_t length=int64_t(state.request.promptTokens)+generated-1;
+        if(length>INT32_MAX)return false;
+        finished=finished||generated==state.request.maxNewTokens;
+        // Publish counters only after allocation/lease validation succeeds.
+        if(!pool.EnsureCapacity(id,int(length)))return false;
+        if(finished) {if(!pool.Release(id))return false;}
+        else if(!pool.CommitLength(id,int(length)))return false;
+        state.generatedTokens=generated;state.nextTokenId=tokens.back();
+        if(finished) {
+            state.stage=RequestStage::Finished;
+            m_decode.erase(std::remove(m_decode.begin(),m_decode.end(),id),m_decode.end());
+        }
+        return true;
+    }
+
     RequestStage ContinuousBatchScheduler::Stage(
         std::uint64_t requestId) const
     {

@@ -46,6 +46,11 @@ class MetalDecoderSession {
 #endif
     std::vector<X::Value> owners_;
     std::vector<State> states_;
+#ifdef GARNET_METAL_PREFILL_HIDDEN_POOL
+    std::map<std::pair<size_t,size_t>,std::array<MetalMatrix,2>> prefillHiddenPool_;
+    size_t hiddenPoolBindings_=0;
+    void PrepareHiddenPool(const MetalCompiledGraph&);
+#endif
     struct VerificationRun;
 #ifdef GARNET_METAL_MTP_BRIDGE
     struct MTPEmbedding {
@@ -99,6 +104,7 @@ class MetalDecoderSession {
     X::Value MTPStep(X::Value,X::Value,X::Value,X::Value,int64_t,X::Value,bool,bool predict=true);
     X::Value MTPStepUnlocked(X::Value,X::Value,X::Value,X::Value,int64_t,X::Value,bool,bool);
     X::Value MTPEmbed(const std::vector<int64_t>&,size_t);
+    X::Value MTPGenerateUnlocked(X::Value,X::Value,X::Value,X::Value,bool);
 #endif
 #ifdef GARNET_METAL_VERIFY_ATTENTION
     struct VerificationWorkspace {
@@ -184,6 +190,9 @@ class MetalDecoderSession {
 #ifdef GARNET_METAL_REQUEST_ROWS
     void ResetRowUnlocked(int64_t row);
 #endif
+#ifdef GARNET_METAL_ROW_FINAL_HIDDEN
+    X::Value PredictRowsUnlocked(X::Value);
+#endif
 public:
 #ifdef GARNET_METAL_MTP_BRIDGE
     bool PrepareMTP(X::Value graph,X::Value head,X::Value sourceChunks);
@@ -193,6 +202,7 @@ public:
     X::Value MTPDraft(X::Value embedding,X::Value positions,X::Value slots,X::Value active,X::Value epochs);
     X::Value MTPTeacherCache(X::Value embedding,X::Value positions,X::Value slots,X::Value active,int64_t sourceOffset,X::Value epochs);
     X::Value MTPGenerate(X::Value known,X::Value remaining,X::Value stops,X::Value epochs);
+    X::Value MTPGenerateScheduled(X::Value known,X::Value remaining,X::Value stops,X::Value epochs);
     std::string MTPGenerationStatsJson();
     X::Value MTPSnapshot();
     std::string MTPStatsJson();
@@ -265,6 +275,9 @@ public:
     size_t LastChunkAttentionBucketCapacity() {std::lock_guard<std::mutex> lock(mutex_);return gpu_?gpu_->LastChunkAttentionBucketCapacity():0;}
     size_t LastChunkAttentionUnknownControls() {std::lock_guard<std::mutex> lock(mutex_);return gpu_?gpu_->LastChunkAttentionUnknownControls():0;}
     size_t LastKVInplaceUpdates() const {return kvInplaceUpdates_;}
+#ifdef GARNET_METAL_PREFILL_HIDDEN_POOL
+    size_t LastHiddenPoolBindings() const {return hiddenPoolBindings_;}
+#endif
 #ifdef GARNET_METAL_INDEXED_DECODE
     size_t LastIndexedDecodeAffineDispatches() {std::lock_guard<std::mutex> lock(mutex_);return gpu_?gpu_->LastIndexedDecodeAffineDispatches():0;}
 #endif
@@ -381,6 +394,9 @@ public:
         APISET().AddProp("chunk_attention_bucket_capacity",&MetalDecoderSession::LastChunkAttentionBucketCapacity);
         APISET().AddProp("chunk_attention_unknown_controls",&MetalDecoderSession::LastChunkAttentionUnknownControls);
         APISET().AddProp("kv_inplace_updates",&MetalDecoderSession::LastKVInplaceUpdates);
+#ifdef GARNET_METAL_PREFILL_HIDDEN_POOL
+        APISET().AddProp("prefill_hidden_pool_bindings",&MetalDecoderSession::LastHiddenPoolBindings);
+#endif
 #ifdef GARNET_METAL_INDEXED_DECODE
         APISET().AddProp("indexed_decode_affine_dispatches",&MetalDecoderSession::LastIndexedDecodeAffineDispatches);
 #endif

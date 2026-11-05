@@ -168,6 +168,49 @@ int64_t MetalContinuousScheduler::CompleteDecode(int64_t id,int64_t token,bool f
         return int64_t(stage);
     }catch(...){failed_=true;throw;}
 }
+#ifdef GARNET_METAL_MTP_BRIDGE
+std::string MetalContinuousScheduler::GenerateMTP(X::Value stops) {
+    std::lock_guard<std::mutex> lock(mutex_);Ready();
+    auto session=sessionOwner_.NativeData<MetalDecoderSession>();
+    auto known=X::Value::List(Host()),remaining=X::Value::List(Host()),epochs=X::Value::List(Host());
+    struct Item {uint64_t id;int row,token,budget;uint64_t epoch;std::vector<int> emitted;bool eos=false;};
+    std::vector<Item> items;std::vector<int> tokens(rows_,0),budgets(rows_,0);std::vector<uint64_t> leases(rows_,0);
+    for(const auto& entry:inflight_)if(entry.second==RequestStage::Decode) {
+        int token=0,budget=0;
+        if(!scheduler_->DecodeProgress(entry.first,token,budget))throw std::logic_error("MTP scheduler decode progress invalid");
+        auto placement=allocator_->Placement(entry.first);
+        if(placement.requestRow<0||size_t(placement.requestRow)>=rows_||!placement.rowEpoch||leases[size_t(placement.requestRow)])
+            throw std::logic_error("MTP scheduler row placement invalid");
+        const auto row=size_t(placement.requestRow);tokens[row]=token;budgets[row]=budget;leases[row]=placement.rowEpoch;
+        items.push_back({entry.first,placement.requestRow,token,budget,placement.rowEpoch,{}});
+    }
+    if(items.empty())throw std::invalid_argument("Schedule a native MTP decode batch first");
+    for(size_t row=0;row<rows_;++row){known.Append(X::Value(int64_t(tokens[row])));remaining.Append(X::Value(int64_t(budgets[row])));epochs.Append(X::Value(int64_t(leases[row])));}
+    try {
+        auto result=session->MTPGenerateScheduled(known,remaining,stops,epochs);
+        const auto statistics=nlohmann::json::parse(session->MTPGenerationStatsJson());
+        // Validate all native row results before publishing any scheduler progress.
+        for(auto& item:items) {
+            auto row=result.Get(uint64_t(item.row)),ids=row.Get(uint64_t(0));
+            const auto count=row.Get(uint64_t(1)).ToInt64();
+            if(count<1||count>4||count>item.budget||uint64_t(count)!=ids.Size())throw std::logic_error("Native MTP scheduler result budget mismatch");
+            for(uint64_t i=0;i<ids.Size();++i){auto token=ids.Get(i);if(!token.IsInt64()||token.ToInt64()<0||token.ToInt64()>INT_MAX)throw std::logic_error("Native MTP scheduler result token invalid");item.emitted.push_back(int(token.ToInt64()));}
+            auto eos=row.Get(uint64_t(2));if(eos.raw().tag!=X3_TAG_BOOL)throw std::logic_error("Native MTP scheduler EOS status invalid");item.eos=eos.ToInt64()!=0;
+        }
+        nlohmann::json completed=nlohmann::json::array();
+        for(const auto& item:items) {
+            if(!scheduler_->CompleteDecodeTokens(item.id,item.emitted,item.eos,*allocator_))throw std::logic_error("Native MTP scheduler commit failed");
+            const auto stage=scheduler_->Stage(item.id);inflight_.erase(item.id);
+            completed.push_back({{"id",item.id},{"row",item.row},{"epoch",item.epoch},{"known",item.token},
+                {"remaining_before",item.budget},{"emitted",item.emitted},{"consumed",item.emitted.size()},
+                {"eos",item.eos},{"finished",stage==RequestStage::Finished}});
+            if(stage==RequestStage::Finished)scheduler_->ForgetFinished(item.id);
+        }
+        return nlohmann::json{{"requests",completed},{"generation",statistics},
+            {"scope","Native scheduled MTP generation and exact per-request progress; no serving/speed admission"}}.dump();
+    }catch(...){failed_=true;throw;}
+}
+#endif
 bool MetalContinuousScheduler::Cancel(int64_t id) {
     std::lock_guard<std::mutex> lock(mutex_);Ready();if(id<=0)return false;
     try {

@@ -7,6 +7,7 @@ from xModel.qwen35.vl_0_8b.prefill_layer import PrefillLayer
 from xModel.qwen38.vl_27b.metal_mtp import MetalMTPProgram
 with open(sys.argv[1]) as stream:f=json.load(stream)
 profile_mode='profiles' in sys.argv[5:]
+scheduled_mode='scheduled' in sys.argv[5:]
 c=f['config'];w=c['hidden_size'];generation=len(sys.argv)>5 and sys.argv[5]=='generation'
 if generation:
  # This synthetic fixture alone uses whole-second mtimes so the XLang/Python
@@ -61,7 +62,15 @@ for batch,chunk,capacity in [(1,4,16),(2,2,16),(4,1,16),(1,4,4096)]:
   def normalize(h):return norm(h,'model.language_model.norm',c)
   normalizer=garnet.compiled_graph();normalizer.build_shared(normalize(*inputs),inputs,f['checkpoint'],heads[0]);extra.append(normalizer)
   session.build(base,heads[0]);reference.build(base,heads[0]);session.prepare_verification(verify,heads[1])
+  if 'native_prefill_hidden_pool' in garnet.backend_info():
+   hidden_inventory=json.loads(garnet.memory_inventory_json([],session))
+   pooled=[r for r in hidden_inventory['references'] if r['role']=='prefill_hidden_pingpong']
+   equal(len(pooled),2 if chunk>1 else 0,label+' two private hidden buffers per compiled chunk')
+   equal(len({r['buffer_id'] for r in pooled}),len(pooled),label+' independent hidden pingpong buffers')
   mtp=MetalMTPProgram(sys.argv[4],c,batch,capacity,chunk);oracle=MetalMTPProgram(sys.argv[4],c,batch,capacity,chunk,source=mtp)
+  if 'native_mtp_deferred_packs' in garnet.backend_info():
+   equal(mtp.graph.mtp_deferred_pack_slots>0,True,label+' native packed defaults deferred')
+   equal(oracle.graph.mtp_deferred_pack_slots>0,True,label+' standalone packed defaults deferred')
   capture_chunks=[1] if chunk==1 else [1,chunk]
   if batch==1 and capacity==16:capture_chunks.append(8)
   session.prepare_mtp(mtp.graph,projection_head,capture_chunks)
@@ -103,6 +112,7 @@ for batch,chunk,capacity in [(1,4,16),(2,2,16),(4,1,16),(1,4,4096)]:
   def compare(label):
    snap=session.mtp_snapshot();equal(hashes(snap[:3]),hashes([key,value,last]),label+' private caches/last')
    equal(io.argmax(projection_head.run([snap[2]])),predicted,label+' shared head')
+   if 'native_mtp_kv_inplace' in garnet.backend_info():equal(json.loads(session.mtp_stats_json())['kv_inplace_updates'],2,label+' private in-place auxiliary K/V')
   if generation:
    for mode in range(4):
     session.reset();reference.reset();key=io.zeros([batch,2,capacity,32]);value=io.zeros([batch,2,capacity,32]);last=io.zeros([batch,w]);predicted=[0]*batch
@@ -146,6 +156,7 @@ for batch,chunk,capacity in [(1,4,16),(2,2,16),(4,1,16),(1,4,4096)]:
      bases=list(slots);base_key=key;base_value=value;base_last=last;base_pred=list(predicted)
      # Closing an external helper cannot close the runtime's private mapping.
      io.close();result=session.mtp_generate(known,remaining,stops,epochs);io.open(f['checkpoint']);stats=json.loads(session.mtp_generation_stats_json())
+     if 'native_prefill_hidden_pool' in garnet.backend_info():equal(session.prefill_hidden_pool_bindings,4 if chunk>1 else 0,label+' every verifier layer uses hidden pool')
      if profile_mode:equal(stats['draft_profile_chunk'],1,label+' native T1 draft selection')
      proposals=stats['proposals'];lengths=stats['submitted_lengths'];counts=[x[1] for x in result]
      def gctl(starts,sizes,shift):
@@ -249,6 +260,63 @@ for batch,chunk,capacity in [(1,4,16),(2,2,16),(4,1,16),(1,4,4096)]:
     before=hashes(session.mtp_snapshot());reject(lambda:session.mtp_teacher(embedding,*ctl_w,1,None),label+' incomplete wide source window');equal(hashes(session.mtp_snapshot()),before,label+' incomplete source unchanged')
     equal(session.mtp_teacher(embedding,*ctl_w,0,None),predicted,label+' wide profile prediction');compare(label+' ragged wide profile')
     equal(json.loads(session.mtp_stats_json())['committed'],[valid],label+' actual wide length');equal(json.loads(session.mtp_stats_json())['profile_chunk'],8,label+' wide profile chosen');cases+=1
+  if scheduled_mode:
+   for stop_mode in (0,1):
+    session.reset();reference.reset();policy=garnet.continuous_scheduler();policy.initialize(session,16);policy.set_prefill_chunk(1)
+    reject(lambda:policy.mtp_generate_json([]),label+' unscheduled MTP')
+    jobs={};retired=0;frames=0;refreshes=0;stopped=0
+    for j in range(batch+2):
+     limit=3+j%4;identity=policy.submit(1,limit,0);jobs[identity]=dict(limit=limit,known=0,slot=1,row=-1,generated=1)
+    try:
+     while jobs:
+      tick=json.loads(policy.next_json())
+      assert tick['batches'],label+' scheduled progress stalled'
+      for plan in tick['batches']:
+       if plan['stage']=='prefill':
+        flags=[0.]*batch;ids=[0]*batch;epochs=[0]*batch
+        for request in plan['requests']:
+         row=request['row'];reference.reset_row(row);flags[row]=1.;ids[row]=3+request['id']%41;epochs[row]=request['epoch'];jobs[request['id']]['row']=row
+        actual=session.run_leased(base,io.embedding(ids),val([0.]*(batch*3),[batch,3]),val([0.]*batch,[batch]),val(flags,[batch]),-1,epochs)
+        first=session.predict_rows(epochs);wanted=reference.run(base,io.embedding(ids),val([0.]*(batch*3),[batch,3]),val([0.]*batch,[batch]),val(flags,[batch]),0)
+        embeddings=stack_ids([[first[row] if flags[row] else 0]+[0]*(chunk-1) for row in range(batch)]);controls=ctl([0]*batch,[int(x) for x in flags]);session.mtp_teacher(embeddings,*controls,0,epochs)
+        for request in plan['requests']:
+         row=request['row'];identity=request['id'];equal(first[row],wanted[row],label+' scheduled first token');jobs[identity]['known']=first[row]
+         equal(policy.complete_prefill(identity,first[row],False),2,label+' native prefill ownership')
+       else:
+        current={request['row']:request for request in plan['requests']};known_set=[jobs[r['id']]['known'] for r in plan['requests']]
+        stop_ids=[i for i in range(c['vocab_size']) if i not in known_set] if stop_mode else []
+        result=json.loads(policy.mtp_generate_json(stop_ids));frames+=1;refreshes+=int(result['generation']['target_prediction_refreshed'])
+        by_row={item['row']:item for item in result['requests']}
+        equal(set(by_row),set(current),label+' scheduled result ownership')
+        for item in result['requests']:
+         request=current[item['row']];job=jobs[item['id']]
+         equal((item['id'],item['epoch']),(request['id'],request['epoch']),label+' scheduled lease')
+         equal(item['known'],job['known'],label+' authoritative scheduled known')
+         equal(item['remaining_before'],job['limit']-job['generated'],label+' native output budget')
+        expected={row:[] for row in by_row}
+        for step_index in range(max(item['consumed'] for item in result['requests'])):
+         ids=[];flags=[];slots=[]
+         for row in range(batch):
+          item=by_row.get(row);valid=item is not None and step_index<item['consumed'];job=jobs[item['id']] if item is not None else None
+          ids.append((job['known'] if step_index==0 else item['emitted'][step_index-1]) if valid else 0);flags.append(float(valid));slots.append(float(job['slot']+step_index) if valid else 0.)
+         predictions=reference.run(base,io.embedding(ids),val([slot for slot in slots for axis in range(3)],[batch,3]),val(slots,[batch]),val(flags,[batch]),0)
+         for row in by_row:
+          if flags[row]:expected[row].append(predictions[row])
+        for item in result['requests']:
+         row=item['row'];job=jobs[item['id']];equal(item['emitted'],expected[row],label+' scheduled ordinary output IDs')
+         equal(item['eos'],item['emitted'][-1] in stop_ids,label+' scheduled EOS')
+         job['generated']+=item['consumed'];job['slot']+=item['consumed'];job['known']=item['emitted'][-1]
+         equal(item['finished'],item['eos'] or job['generated']==job['limit'],label+' scheduled completion')
+         if item['finished']:
+          reference.reset_row(row);jobs.pop(item['id']);retired+=1;stopped+=int(item['eos'])
+        for layer in range(4):equal(hashes(session.snapshot(layer)),hashes(reference.snapshot(layer)),label+' scheduled target state'+str(layer))
+     equal(retired,batch+2,label+' all queued jobs retired');equal(json.loads(policy.status_json())['tracked'],0,label+' no scheduler metadata leak')
+     if batch>1 and stop_mode==0:assert refreshes>0,label+' no interleaved prediction refresh'
+     if stop_mode:assert stopped>0,label+' no native scheduled EOS'
+     cases+=frames
+     print('mtp_native_scheduled PASS',label,'stop_mode',stop_mode,'frames',frames,'refreshes',refreshes,'EOS',stopped,'checks',checks,flush=True)
+    finally:policy.close()
+   session.reset();reference.reset()
   # Leases guard auxiliary history as well as target state, including inactive rows.
   session.reset();lease=session.claim_request_row(41);epochs=[0]*batch;epochs[lease[0]]=lease[1]
   flags=[0.]*batch;flags[lease[0]]=1.

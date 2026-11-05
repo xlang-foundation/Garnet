@@ -81,6 +81,30 @@ int main()
     Require(pool.Stats().sequenceCount == 1);
     Require(scheduler.Cancel(thirdId, pool));
     Require(pool.Stats().usedPages == 0);
+    // Verified blocks preserve the unconsumed final token and reject an entire
+    // invalid block before advancing counters or releasing its cache sequence.
+    Garnet::GenerationRequest block;block.promptTokens=19;block.maxNewTokens=7;
+    const auto blockId=scheduler.Submit(block);
+    scheduler.Schedule(pool);Require(scheduler.CompletePrefill(blockId,301,pool));
+    int known=0,remaining=0;
+    Require(scheduler.DecodeProgress(blockId,known,remaining)&&known==301&&remaining==6);
+    Require(!scheduler.CompleteDecodeTokens(blockId,{},false,pool));
+    Require(!scheduler.CompleteDecodeTokens(blockId,{1,2,3,4,5},false,pool));
+    Require(!scheduler.CompleteDecodeTokens(blockId,{302,-1},false,pool));
+    Require(scheduler.DecodeProgress(blockId,known,remaining)&&known==301&&remaining==6);
+    Require(pool.LogicalLength(blockId)==19);
+    Require(scheduler.CompleteDecodeTokens(blockId,{302,303,304,305},false,pool));
+    Require(scheduler.DecodeProgress(blockId,known,remaining)&&known==305&&remaining==2);
+    Require(pool.LogicalLength(blockId)==23);
+    Require(!scheduler.CompleteDecodeTokens(blockId,{306,307,308},false,pool));
+    Require(scheduler.DecodeProgress(blockId,known,remaining)&&known==305&&remaining==2);
+    Require(scheduler.CompleteDecodeTokens(blockId,{306,307},false,pool));
+    Require(scheduler.Stage(blockId)==Garnet::RequestStage::Finished&&pool.Stats().usedPages==0);
+    Require(!scheduler.DecodeProgress(blockId,known,remaining));
+    const auto early=scheduler.Submit(block);scheduler.Schedule(pool);
+    Require(scheduler.CompletePrefill(early,401,pool));
+    Require(scheduler.CompleteDecodeTokens(early,{402,403},true,pool));
+    Require(scheduler.Stage(early)==Garnet::RequestStage::Finished&&pool.Stats().usedPages==0);
     std::cout << "continuous batching and global paged KV lifecycle passed\n";
     return 0;
 }

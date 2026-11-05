@@ -57,8 +57,14 @@ X::Value MetalDecoderSession::MTPEmbed(const std::vector<int64_t>& ids,size_t ch
     return FloatTensor(Host(),values,{int64_t(p.batch),int64_t(chunk),int64_t(p.width)});
 }
 X::Value MetalDecoderSession::MTPGenerate(X::Value knownValue,X::Value remainingValue,X::Value stopsValue,X::Value epochsValue) {
+    std::lock_guard<std::mutex> lock(mutex_);return MTPGenerateUnlocked(knownValue,remainingValue,stopsValue,epochsValue,false);
+}
+X::Value MetalDecoderSession::MTPGenerateScheduled(X::Value known,X::Value remaining,X::Value stops,X::Value epochs) {
+    std::lock_guard<std::mutex> lock(mutex_);return MTPGenerateUnlocked(known,remaining,stops,epochs,true);
+}
+X::Value MetalDecoderSession::MTPGenerateUnlocked(X::Value knownValue,X::Value remainingValue,X::Value stopsValue,X::Value epochsValue,bool refreshTarget) {
     // One runtime transaction owns proposals, verification and teacher correction.
-    std::lock_guard<std::mutex> lock(mutex_);const auto started=std::chrono::steady_clock::now();
+    const auto started=std::chrono::steady_clock::now();
     if(!mtp_||!verification_||!gpu_||poisoned_||!mtp_->embedding||mtp_->pending)
         throw std::logic_error("Native generation requires prepared, committed target and auxiliary engines");
     auto& p=*mtp_;const auto b=p.batch,t=p.chunk;const auto vocab=verification_->vocab;
@@ -79,7 +85,7 @@ X::Value MetalDecoderSession::MTPGenerate(X::Value knownValue,X::Value remaining
     for(size_t row=0;row<b;++row) {
         if(known[row]<0||uint64_t(known[row])>=vocab||remaining[row]<0)throw std::invalid_argument("Native known token/output budget invalid");
         if(!remaining[row])continue;
-        if(isStop(known[row])||p.committed[row]==0||p.committed[row]!=p.targetLengths[row]||!p.predictionReady[row]||!p.targetPredictionReady[row])
+        if(isStop(known[row])||p.committed[row]==0||p.committed[row]!=p.targetLengths[row]||!p.predictionReady[row]||(!refreshTarget&&!p.targetPredictionReady[row]))
             throw std::invalid_argument("Native generation needs matching target/teacher history and current predictions");
         if(uint64_t(remaining[row])>p.capacity-p.committed[row])throw std::invalid_argument("Native generation output budget exceeds context capacity");
 #ifdef GARNET_METAL_CONTINUOUS_ROWS
@@ -107,6 +113,9 @@ X::Value MetalDecoderSession::MTPGenerate(X::Value knownValue,X::Value remaining
     // Even a caller-supplied known token must be the authoritative unconsumed
     // target prediction. No emitted token is fed twice or silently replaced.
     if(!any){auto result=X::Value::List(Host());for(size_t row=0;row<b;++row){auto item=X::Value::List(Host());item.Append(X::Value::List(Host()));item.Append(X::Value(int64_t(0)));item.Append(X::Value(false));result.Append(item);}return result;}
+    bool refreshed=false;
+    if(refreshTarget)for(size_t row=0;row<b;++row)if(lengths[row]&&!p.targetPredictionReady[row])refreshed=true;
+    if(refreshed)PredictRowsUnlocked(epochsValue);
     auto targetIds=gpu_->Download(prediction_),draftIds=gpu_->Download(p.prediction);
     for(size_t row=0;row<b;++row)if(lengths[row]&&(targetIds[row*2+1]!=0||targetIds[row*2]!=float(known[row])))
         throw std::invalid_argument("Native known token differs from target prediction");
@@ -124,7 +133,7 @@ X::Value MetalDecoderSession::MTPGenerate(X::Value knownValue,X::Value remaining
         proposals[row*t]=known[row];nextDraft[row]=int64_t(draftIds[row*2]);
     }
     const size_t draftChunk=p.profiles.count(1)?1:t;
-    bool mutated=false;size_t proposed=0;
+    bool mutated=false;size_t proposed=0,recursiveDraftCalls=0;
     const auto oldHeads=p.headCalls,oldValidation=p.validationCalls;
     try {
         for(size_t j=1;j<t;++j) {
@@ -136,7 +145,7 @@ X::Value MetalDecoderSession::MTPGenerate(X::Value knownValue,X::Value remaining
             }
             if(run) {
                 auto embedding=MTPEmbed(inputIds,draftChunk);auto ctl=controls(p.tentative,advance,j,draftChunk);
-                mutated=true;auto result=MTPStepUnlocked(embedding,ctl[0],ctl[1],ctl[2],-1,epochsValue,true,true);
+                mutated=true;auto result=MTPStepUnlocked(embedding,ctl[0],ctl[1],ctl[2],-1,epochsValue,true,true);++recursiveDraftCalls;
                 for(size_t row=0;row<b;++row)if(advance[row])nextDraft[row]=result.Get(uint64_t(row)).ToInt64();
             }
         }
@@ -151,7 +160,7 @@ X::Value MetalDecoderSession::MTPGenerate(X::Value knownValue,X::Value remaining
         auto embedding=MTPEmbed(teacherIds,t);ctl=controls(bases,consumed,1,t);
         MTPStepUnlocked(embedding,ctl[0],ctl[1],ctl[2],0,epochsValue,false,predict);
         p.generationStats=nlohmann::json{{"proposals",proposals},{"submitted_lengths",lengths},{"consumed",consumed},{"proposed_drafts",proposed},{"accepted_drafts",accepted},
-            {"draft_profile_chunk",draftChunk},{"correction_profile_chunk",t},{"auxiliary_head_calls",p.headCalls-oldHeads},{"auxiliary_validation_calls",p.validationCalls-oldValidation},
+            {"recursive_draft_calls",recursiveDraftCalls},{"target_prediction_refreshed",refreshed},{"draft_profile_chunk",draftChunk},{"correction_profile_chunk",t},{"auxiliary_head_calls",p.headCalls-oldHeads},{"auxiliary_validation_calls",p.validationCalls-oldValidation},
             {"wall_ms",std::chrono::duration<double,std::milli>(std::chrono::steady_clock::now()-started).count()},
             {"scope","One native generation transaction; no benchmark admission"}}.dump();return result;
     }catch(...){if(mutated)poisoned_=true;throw;}

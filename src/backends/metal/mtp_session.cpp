@@ -75,7 +75,7 @@ bool MetalDecoderSession::PrepareMTP(X::Value graphValue,X::Value headValue,X::V
     bool cacheMatch=false;for(const auto& state:states_)if(state.shape[0]==cacheShape&&state.shape[1]==cacheShape)cacheMatch=true;
     if(!cacheMatch)throw std::invalid_argument("MTP cache profile differs from the target full attention");
     p->generation=graph->generation_;p->headGeneration=head->generation_;
-    for(size_t i=0;i<7;++i)p->inputs[i]=gpu_->Allocate(graph->slots_[graph->inputs_[i]].rows,graph->slots_[graph->inputs_[i]].columns);
+    for(size_t i:{size_t(0),size_t(1),size_t(4),size_t(5),size_t(6)})p->inputs[i]=gpu_->Allocate(graph->slots_[graph->inputs_[i]].rows,graph->slots_[graph->inputs_[i]].columns);
     for(auto& cache:p->cache)cache=gpu_->Allocate(b,p->heads*p->capacity*p->dim);
     for(auto& backup:p->backup)backup=gpu_->Allocate(b*t,p->heads*p->dim);
     p->lastTarget=gpu_->Allocate(b,w);p->lastHidden=gpu_->Allocate(b,w);p->prediction=gpu_->Allocate(b,2);
@@ -127,7 +127,7 @@ bool MetalDecoderSession::PrepareMTPProfiles(X::Value values) {
 void MetalDecoderSession::ResetMTP() {
     if(!mtp_)return;auto& p=*mtp_;
     for(auto& m:p.cache)gpu_->Zero(m);
-    for(auto& m:p.inputs)gpu_->Zero(m);
+    for(size_t i:{size_t(0),size_t(1),size_t(4),size_t(5),size_t(6)})gpu_->Zero(p.inputs[i]);
     for(auto& item:p.profiles)for(size_t i:{size_t(0),size_t(1),size_t(4),size_t(5),size_t(6)})gpu_->Zero(item.second.inputs[i]);
     for(auto m:{p.lastTarget,p.lastHidden,p.prediction,p.baseHidden,p.basePrediction})gpu_->Zero(m);
     for(auto& entry:p.captures){gpu_->Zero(entry.second.packed);std::fill(entry.second.flags.begin(),entry.second.flags.end(),0);}
@@ -140,7 +140,7 @@ void MetalDecoderSession::ResetMTP() {
 void MetalDecoderSession::ResetMTPRow(size_t row) {
     if(!mtp_)return;auto& p=*mtp_;
     for(auto& m:p.cache)gpu_->ZeroRow(m,row);
-    for(auto& m:p.inputs)gpu_->ZeroRow(m,row);
+    for(size_t i:{size_t(0),size_t(1),size_t(4),size_t(5),size_t(6)})gpu_->ZeroRow(p.inputs[i],row);
     for(auto& item:p.profiles)for(size_t i:{size_t(0),size_t(1),size_t(4),size_t(5),size_t(6)})gpu_->ZeroRow(item.second.inputs[i],row);
     for(auto m:{p.lastTarget,p.lastHidden,p.prediction,p.baseHidden,p.basePrediction})gpu_->ZeroRow(m,row);
     for(auto& entry:p.captures){gpu_->ZeroRow(entry.second.packed,row);std::fill_n(entry.second.flags.begin()+row*entry.first,entry.first,0);}
@@ -236,16 +236,30 @@ X::Value MetalDecoderSession::MTPStepUnlocked(X::Value embedding,X::Value pos,X:
     }else if(managedRows_)throw std::invalid_argument("Managed MTP requires explicit row epochs");
 #endif
     auto args=X::Value::List(Host());args.Append(X::Value());args.Append(embedding);args.Append(X::Value());args.Append(X::Value());args.Append(pos);args.Append(slots);args.Append(active);
-    std::array<MetalMatrix,7> saved;for(size_t i=0;i<7;++i){auto& s=graph->slots_[graph->inputs_[i]];saved[i]=s.matrix;s.matrix=(i==2||i==3)?p.cache[i-2]:(*inputs)[i];}
-    auto restore=[&](){for(size_t i=0;i<7;++i)graph->slots_[graph->inputs_[i]].matrix=saved[i];};
-    try{graph->PrepareInputs(args,{0,2,3});}catch(...){restore();throw;}
-    const bool beginDraft=draft&&!p.pending;
-    if(beginDraft) {
-        std::vector<float> backupSlots(b*p.chunk);for(size_t row=0;row<b;++row)for(size_t j=0;j<p.chunk;++j){backupSlots[row*p.chunk+j]=float(p.committed[row]+j);p.backupFlags[row*p.chunk+j]=float(p.committed[row]+j<p.capacity);}
-        gpu_->Update(p.backupSlots,backupSlots);gpu_->Update(p.backupActive,p.backupFlags);
+    std::array<bool,2> inplace{false,false};
+    std::vector<std::pair<size_t,MetalMatrix>> savedOutputs;
+#ifdef GARNET_METAL_MTP_KV_INPLACE
+    for(size_t k=0;k<2;++k)if(graph->CanUpdateKVInPlace(k+1)) {
+        const auto id=graph->outputParts_[k+1];const auto& slot=graph->slots_[id];
+        const bool retired=!slot.matrix.Valid()&&std::find(graph->lazyDefaultSlots_.begin(),graph->lazyDefaultSlots_.end(),id)!=graph->lazyDefaultSlots_.end();
+        if(!(retired?gpu_->IsDefaultLayout(p.cache[k],slot.rows,slot.columns):p.cache[k].CompatibleLayout(slot.matrix)))
+            throw std::logic_error("Private auxiliary KV layout mismatch");
+        for(auto alias:graph->outputStorageGroups_[k+1])savedOutputs.emplace_back(alias,graph->slots_[alias].matrix);
+        inplace[k]=true;
     }
-    poisoned_=true;gpu_->Begin();
+#endif
+    // Stage and validate alias metadata before the reversible bindings.
+    for(size_t k=0;k<2;++k)if(inplace[k])for(auto id:graph->outputStorageGroups_[k+1])graph->slots_[id].matrix=p.cache[k];
+    std::array<MetalMatrix,7> saved;for(size_t i=0;i<7;++i){auto& s=graph->slots_[graph->inputs_[i]];saved[i]=s.matrix;s.matrix=(i==2||i==3)?p.cache[i-2]:(*inputs)[i];}
+    auto restore=[&](){for(size_t i=0;i<7;++i)graph->slots_[graph->inputs_[i]].matrix=saved[i];for(const auto& old:savedOutputs)graph->slots_[old.first].matrix=old.second;};
     try {
+        graph->PrepareInputs(args,{0,2,3});
+        const bool beginDraft=draft&&!p.pending;
+        if(beginDraft) {
+            std::vector<float> backupSlots(b*p.chunk);for(size_t row=0;row<b;++row)for(size_t j=0;j<p.chunk;++j){backupSlots[row*p.chunk+j]=float(p.committed[row]+j);p.backupFlags[row*p.chunk+j]=float(p.committed[row]+j<p.capacity);}
+            gpu_->Update(p.backupSlots,backupSlots);gpu_->Update(p.backupActive,p.backupFlags);
+        }
+        poisoned_=true;gpu_->Begin();
         if(beginDraft) {
             for(size_t i=0;i<2;++i)gpu_->EncodeVerificationKVBackup(p.cache[i],p.backupSlots,p.backupActive,p.backup[i],p.heads,p.dim,p.capacity,p.chunk);
             gpu_->EncodeLayout(p.lastHidden,p.lastHidden,p.baseHidden);gpu_->EncodeLayout(p.prediction,p.prediction,p.basePrediction);
@@ -258,7 +272,7 @@ X::Value MetalDecoderSession::MTPStepUnlocked(X::Value embedding,X::Value pos,X:
             gpu_->EncodeConcat(p.slices.at(count),p.zeros.at(count),p.zeros.at(count),(*inputs)[0],false);
         }
         graph->Encode(*gpu_,false);
-        for(size_t i=0;i<2;++i)gpu_->EncodeLayout(graph->slots_[graph->outputParts_[i+1]].matrix,graph->slots_[graph->outputParts_[i+1]].matrix,p.cache[i]);
+        for(size_t i=0;i<2;++i)if(!inplace[i])gpu_->EncodeLayout(graph->slots_[graph->outputParts_[i+1]].matrix,graph->slots_[graph->outputParts_[i+1]].matrix,p.cache[i]);
         if(!draft&&p.pending) {
             for(size_t i=0;i<2;++i)gpu_->EncodeVerificationKVRestore(p.backup[i],p.backupSlots,p.backupActive,(*inputs)[6],p.cache[i],p.heads,p.dim,p.capacity,t);
             gpu_->EncodeLastActiveHidden(graph->slots_[graph->outputParts_[0]].matrix,(*inputs)[6],p.baseHidden,t);
@@ -289,7 +303,7 @@ X::Value MetalDecoderSession::MTPStepUnlocked(X::Value embedding,X::Value pos,X:
         p.stats=nlohmann::json{{"committed",p.committed},{"tentative",p.tentative},{"pending",p.pending},{"teacher_calls",p.teacherCalls},
             {"draft_calls",p.draftCalls},{"corrections",p.restoreCalls},{"gpu_ms",gpu_->LastGPUMs()},
             {"head_calls",p.headCalls},{"validation_only_calls",p.validationCalls},{"prediction_ready",p.predictionReady},
-            {"profile_chunk",t},{"scope","Native MTP bridge; only argmax IDs/status read to CPU, no serving/speed qualification"}}.dump();
+            {"profile_chunk",t},{"kv_inplace_updates",size_t(inplace[0])+size_t(inplace[1])},{"scope","Native MTP bridge; only argmax IDs/status read to CPU, no serving/speed qualification"}}.dump();
         poisoned_=false;return result;
     }catch(...){restore();gpu_->Abort();throw;}
 }

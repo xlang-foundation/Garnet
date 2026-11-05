@@ -285,6 +285,9 @@ void MetalCompiledGraph::Clear() {
     resetKVPrefix_[0]=resetKVPrefix_[1]=false;
     verificationTokens_=0;
     visionGlobalAlphaDispatches_=0;++generation_;ready_=false;bf16Projections_=false;outputParts_.clear();outputStorageGroups_.clear();residentOps_.clear();controlSources_.clear();ops_.clear();inputs_.clear();inputShapes_.clear();tensors_.clear();weights_.clear();sharedWeights_.clear();weightRecords_.clear();bindings_.clear();slots_.clear();gpu_.reset();
+#ifdef GARNET_METAL_MTP_DEFER_PACKS
+    mtpDeferredPackSlots_=0;
+#endif
 }
 void MetalCompiledGraph::Close() {std::lock_guard<std::mutex> lock(mutex_);Clear();}
 bool MetalCompiledGraph::Build(X::Value graph,X::Value symbols,const std::string& checkpoint) {
@@ -506,6 +509,17 @@ bool MetalCompiledGraph::BuildInternal(X::Value graph,X::Value symbols,const std
             return found->second;};
         std::map<size_t,std::vector<size_t>> packedParts;
         std::map<size_t,size_t> aliases;
+        std::vector<size_t> deferredPacks, lazyPacks;
+        auto allocatePack=[&](size_t rows,size_t columns) {
+#ifdef GARNET_METAL_MTP_DEFER_PACKS
+            if(mtpProgram_) {
+                const auto id=slots_.size();
+                slots_.push_back({MetalMatrix(),rows,columns,{int64_t(rows),int64_t(columns)}});
+                deferredPacks.push_back(id);return id;
+            }
+#endif
+            return Allocate(rows,columns);
+        };
         auto slice=[&](size_t input,size_t groups,size_t sourceWidth,size_t start,size_t count,
             std::vector<int64_t> shape=std::vector<int64_t>{}) {
             if(!groups||!count||start>sourceWidth||count>sourceWidth-start||groups>std::numeric_limits<size_t>::max()/sourceWidth||
@@ -579,7 +593,7 @@ bool MetalCompiledGraph::BuildInternal(X::Value graph,X::Value symbols,const std
                     auto as=slots_[a].shape,bs=slots_[b].shape;
                     if(as.size()!=bs.size()||(as.size()!=2&&as.size()!=3)||as[0]!=bs[0]||(as.size()==3&&as[2]!=bs[2]))
                         throw std::runtime_error("Metal chunk concat shape mismatch");
-                    out=Allocate(slots_[a].rows,slots_[a].columns+slots_[b].columns);as[1]+=bs[1];slots_[out].shape=as;
+                    out=allocatePack(slots_[a].rows,slots_[a].columns+slots_[b].columns);as[1]+=bs[1];slots_[out].shape=as;
                     Op op{Kind::Concat,a,b,out};op.arguments={a,b,b};op.transpose=false;ops_.push_back(std::move(op));
                     for(auto part:{a,b}) {
                         auto parts=packedParts.find(part);
@@ -752,7 +766,7 @@ bool MetalCompiledGraph::BuildInternal(X::Value graph,X::Value symbols,const std
                 auto hidden=matmul(context,Weight(prefix+".o_proj.weight"));
                 if(slots_[hidden].columns!=width)throw std::runtime_error("Metal attention output projection shape mismatch");
                 if(isChunk) {auto packed=Allocate(batch,chunk*width);Op op{Kind::Layout,hidden,hidden,packed};op.dimensions={0};ops_.push_back(std::move(op));hidden=packed;}
-                out=Allocate(batch,chunk*width+2*cacheWidth);
+                out=allocatePack(batch,chunk*width+2*cacheWidth);
                 Op pack{Kind::Concat,hidden,nextKey,out};pack.arguments={hidden,nextKey,nextValue};pack.transpose=true;packedParts[out]=pack.arguments;ops_.push_back(std::move(pack));
             }else if(node.name=="qwen35_attention_output"||node.name=="qwen35_attention_key_cache"||node.name=="qwen35_attention_value_cache") {
                 auto dimension=[&](const char* name,size_t limit){auto n=node.attributes.Get(name).ToInt64();
@@ -1188,6 +1202,34 @@ bool MetalCompiledGraph::BuildInternal(X::Value graph,X::Value symbols,const std
         }
         for(auto id:inputs_)live.insert(canonical(id));
         for(size_t id=0;id<slots_.size();++id)if(!live.count(canonical(id)))slots_[id].matrix=MetalMatrix();
+#ifdef GARNET_METAL_MTP_DEFER_PACKS
+        for(auto id:deferredPacks) {
+            if(!live.count(canonical(id)))continue;
+            // Only independent complete concat buffers absent from every
+            // resident operation may stay unallocated. Native execution
+            // returns three independent parts; standalone Run rehydrates.
+            bool resident=outputParts_.size()!=3,aliased=false;size_t writers=0;
+            auto uses=[&](const Op& op){
+                if(op.a==id||op.b==id||op.out==id||op.auxiliaryOutput==id)return true;
+                return std::find(op.arguments.begin(),op.arguments.end(),id)!=op.arguments.end();
+            };
+            for(const auto& alias:aliases)if(canonical(alias.first)==id)aliased=true;
+            for(size_t i=0;i<ops_.size();++i) {
+                const auto& op=ops_[i];
+                if(op.out==id){if(op.kind!=Kind::Concat)resident=true;++writers;}
+                if(i<residentOps_.size()&&residentOps_[i]&&uses(op))resident=true;
+            }
+            if(!resident&&!aliased&&writers==1)lazyPacks.push_back(id);
+            else {
+                auto& slot=slots_[id];slot.matrix=gpu_->Allocate(slot.rows,slot.columns);
+                for(const auto& alias:aliases)if(canonical(alias.first)==id) {
+                    auto& view=slots_[alias.first];
+                    if(view.rows!=slot.rows||view.columns!=slot.columns)throw std::logic_error("Deferred pack alias layout mismatch");
+                    view.matrix=slot.matrix;
+                }
+            }
+        }
+#endif
         // Exchange only fresh, independently written output storage. Keep
         // aliases together and retain the copy path for inputs/constants or
         // storage shared by two returned parts.
@@ -1236,10 +1278,23 @@ bool MetalCompiledGraph::BuildInternal(X::Value graph,X::Value symbols,const std
         // model-wide construction peak. Standalone Run rehydrates the plan.
         RetireResidentDefaults();
 #endif
+#ifdef GARNET_METAL_MTP_DEFER_PACKS
+        if(!lazyPacks.empty()&&!lazyDefaultPlanReady_)throw std::logic_error("Deferred packs require standalone rehydration plan");
+        lazyDefaultSlots_.insert(lazyDefaultSlots_.end(),lazyPacks.begin(),lazyPacks.end());
+        mtpDeferredPackSlots_=lazyPacks.size();
+#endif
         compileMs_=std::chrono::duration<double,std::milli>(std::chrono::steady_clock::now()-start).count();
         return true;
     }catch(...){Clear();throw;}
 }
+#ifdef GARNET_METAL_PREFILL_HIDDEN_POOL
+bool MetalCompiledGraph::CanPoolResidentHidden() const {
+    return !mtpProgram_&&inputs_.size()==6&&inputShapes_[0].size()==3&&inputShapes_[0][1]>1&&
+        outputParts_.size()==3&&outputStorageGroups_.size()==3&&!outputStorageGroups_[0].empty()&&
+        slots_[outputParts_[0]].rows==size_t(inputShapes_[0][0])&&
+        slots_[outputParts_[0]].columns==size_t(inputShapes_[0][1])*size_t(inputShapes_[0][2]);
+}
+#endif
 bool MetalCompiledGraph::CanUpdateKVInPlace(size_t part) const {
 #ifdef GARNET_METAL_RESIDENT_KV_INPLACE
     if(inputShapes_.empty())return false;
@@ -1248,23 +1303,29 @@ bool MetalCompiledGraph::CanUpdateKVInPlace(size_t part) const {
 #ifdef GARNET_METAL_CHUNK_KV_INPLACE
     admitted=admitted||chunk;
 #endif
-    if(part<1||part>2||inputs_.size()!=6||!admitted||
+    size_t cacheInput=part;
+    bool inputCount=inputs_.size()==6;
+#ifdef GARNET_METAL_MTP_KV_INPLACE
+    // The validated raw auxiliary graph has two hidden inputs before K/V.
+    if(mtpProgram_&&inputs_.size()==7){inputCount=true;cacheInput=part+1;}
+#endif
+    if(part<1||part>2||!inputCount||!admitted||
         part>=outputStorageGroups_.size()||outputStorageGroups_[part].empty())return false;
     const auto& group=outputStorageGroups_[part];size_t writer=SIZE_MAX;
     auto member=[&](size_t id){return std::find(group.begin(),group.end(),id)!=group.end();};
     for(size_t i=0;i<ops_.size();++i)if(i<residentOps_.size()&&residentOps_[i]&&
         (member(ops_[i].out)||member(ops_[i].auxiliaryOutput))) {
         const auto& op=ops_[i];
-        if(writer!=SIZE_MAX||op.kind!=(chunk?Kind::KVChunk:Kind::KVUpdate)||op.arguments.size()!=5||op.arguments[1]!=inputs_[part])return false;
+        if(writer!=SIZE_MAX||op.kind!=(chunk?Kind::KVChunk:Kind::KVUpdate)||op.arguments.size()!=5||op.arguments[1]!=inputs_[cacheInput])return false;
         writer=i;
     }
     if(writer==SIZE_MAX)return false;
     // Later operations must consume the updated cache, not its old input view.
-    const auto& source=slots_[inputs_[part]].matrix;
+    const auto& source=slots_[inputs_[cacheInput]].matrix;
     for(size_t i=writer+1;i<ops_.size();++i)if(i<residentOps_.size()&&residentOps_[i]) {
         const auto& op=ops_[i];
-        if(op.a==inputs_[part]||op.b==inputs_[part]||source.SharesStorage(slots_[op.a].matrix)||source.SharesStorage(slots_[op.b].matrix))return false;
-        for(auto id:op.arguments)if(id==inputs_[part]||source.SharesStorage(slots_[id].matrix))return false;
+        if(op.a==inputs_[cacheInput]||op.b==inputs_[cacheInput]||source.SharesStorage(slots_[op.a].matrix)||source.SharesStorage(slots_[op.b].matrix))return false;
+        for(auto id:op.arguments)if(id==inputs_[cacheInput]||source.SharesStorage(slots_[id].matrix))return false;
     }
     return true;
 #else
@@ -1640,7 +1701,13 @@ X::Value MetalCompiledGraph::Run(X::Value inputs) {
 #ifdef GARNET_METAL_RETIRE_INPLACE_DEFAULTS
     // Standalone packed execution owns its outputs rather than receiving the
     // session's private KV bindings. Restore every retired default first.
-    for(size_t part=1;part<outputStorageGroups_.size();++part) {
+    for(size_t part=
+#ifdef GARNET_METAL_PREFILL_HIDDEN_POOL
+        0
+#else
+        1
+#endif
+        ;part<outputStorageGroups_.size();++part) {
         const auto& group=outputStorageGroups_[part];
         if(group.empty()||slots_[group.front()].matrix.Valid()||
            std::find(lazyDefaultSlots_.begin(),lazyDefaultSlots_.end(),group.front())==lazyDefaultSlots_.end())continue;
@@ -1906,7 +1973,11 @@ void MetalCompiledGraph::RetireResidentDefaults(bool preserveHiddenInput) {
             if(safe)plan.push_back(id);
         }
 #endif
-        for(size_t part=1;part<=2;++part){auto id=inputs_[part];if(inputShapes_[part].size()<3||std::find(outputParts_.begin(),outputParts_.end(),id)!=outputParts_.end())continue;if(eligible(id))plan.push_back(id);}
+        size_t cacheStart=1;
+#ifdef GARNET_METAL_MTP_KV_INPLACE
+        if(mtpProgram_&&inputs_.size()==7)cacheStart=2;
+#endif
+        for(size_t part=cacheStart;part<cacheStart+2;++part){auto id=inputs_[part];if(inputShapes_[part].size()<3||std::find(outputParts_.begin(),outputParts_.end(),id)!=outputParts_.end())continue;if(eligible(id))plan.push_back(id);}
         if(!ops_.empty()&&ops_.back().kind==Kind::Concat&&ops_.back().out==output_&&!residentOps_.back()&&std::find(inputs_.begin(),inputs_.end(),output_)==inputs_.end()&&std::find(outputParts_.begin(),outputParts_.end(),output_)==outputParts_.end()&&eligible(output_))plan.push_back(output_);
 #ifdef GARNET_METAL_RETIRE_NONRESIDENT_PACKS
         // Only fresh complete concat outputs, never arbitrary "unused" slots.
@@ -1940,14 +2011,18 @@ void MetalCompiledGraph::RetireResidentDefaults(bool preserveHiddenInput) {
         // In-place session execution binds every proven output alias to its
         // private cache. Retire only complete, exclusively owned alias groups;
         // hidden outputs, inputs and checkpoint owners must remain protected.
-        for(size_t part=1;part<=2;++part)if(CanUpdateKVInPlace(part)) {
+        for(size_t part=0;part<=2;++part)if((part>0&&CanUpdateKVInPlace(part))
+#ifdef GARNET_METAL_PREFILL_HIDDEN_POOL
+            ||(part==0&&CanPoolResidentHidden())
+#endif
+            ) {
             const auto& group=outputStorageGroups_[part];
             const auto identity=infos[group.front()].identity;
             std::unordered_set<size_t> unique(group.begin(),group.end());
             bool safe=identity&&unique.size()==group.size()&&counts[identity]==group.size()&&!protectedWeights.count(identity);
             for(auto id:group) {
                 const auto& slot=slots_[id];
-                safe=safe&&infos[id].identity==identity&&id!=output_&&id!=outputParts_[0]&&
+                safe=safe&&infos[id].identity==identity&&id!=output_&&(part==0||id!=outputParts_[0])&&
                     std::find(inputs_.begin(),inputs_.end(),id)==inputs_.end()&&
                     gpu_->IsDefaultLayout(slot.matrix,slot.rows,slot.columns);
             }

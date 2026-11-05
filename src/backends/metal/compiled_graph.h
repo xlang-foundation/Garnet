@@ -82,6 +82,9 @@ class MetalCompiledGraph {
     size_t Allocate(size_t,size_t);
     size_t LowerVision(size_t input,const X::Value& attributes);
     bool mtpProgram_=false,mtpPrefill_=false;
+#ifdef GARNET_METAL_MTP_DEFER_PACKS
+    size_t mtpDeferredPackSlots_=0;
+#endif
     void ValidateMTPProgram(bool metadataOnly=false) const;
 #ifdef GARNET_METAL_LAZY_RESIDENT_DEFAULTS
     bool lazyDefaultPlanReady_=false;std::vector<size_t> lazyDefaultSlots_;
@@ -107,6 +110,9 @@ class MetalCompiledGraph {
         const std::vector<size_t>* selectedTokenRows=nullptr,VerificationBindings* verification=nullptr);
     void EncodeGreedy(MetalContext&,const MetalMatrix& prediction,const std::vector<size_t>* selectedRows=nullptr);
     bool CanUpdateKVInPlace(size_t part) const;
+#ifdef GARNET_METAL_PREFILL_HIDDEN_POOL
+    bool CanPoolResidentHidden() const;
+#endif
     bool ComputeResetKVPrefix(size_t part) const;
     bool CanResetKVPrefix(size_t part) const {return part>=1&&part<=2&&resetKVPrefix_[part-1];}
     bool SwapOutputStorage(size_t part,MetalMatrix& replacement);
@@ -133,6 +139,9 @@ public:
     size_t RetiredPrefillHiddenInputSlots() const;
     size_t LazyRehydratedBytes() const;
     size_t LazyPlannedSlots() const;
+#ifdef GARNET_METAL_MTP_DEFER_PACKS
+    size_t MTPDeferredPackSlots() const {std::lock_guard<std::mutex> lock(mutex_);return mtpDeferredPackSlots_;}
+#endif
 #ifdef GARNET_METAL_RETIRE_NONRESIDENT_PACKS
     size_t NonresidentPackSlots() const {std::lock_guard<std::mutex> lock(mutex_);return nonresidentPackSlots_;}
 #endif
@@ -183,6 +192,9 @@ public:
         APISET().AddProp("retired_prefill_hidden_input_slots",&MetalCompiledGraph::RetiredPrefillHiddenInputSlots);
         APISET().AddProp("lazy_default_rehydrated_bytes",&MetalCompiledGraph::LazyRehydratedBytes);
         APISET().AddProp("lazy_default_planned_slots",&MetalCompiledGraph::LazyPlannedSlots);
+#ifdef GARNET_METAL_MTP_DEFER_PACKS
+        APISET().AddProp("mtp_deferred_pack_slots",&MetalCompiledGraph::MTPDeferredPackSlots);
+#endif
 #ifdef GARNET_METAL_RETIRE_NONRESIDENT_PACKS
         APISET().AddProp("nonresident_pack_slots",&MetalCompiledGraph::NonresidentPackSlots);
 #endif

@@ -288,6 +288,16 @@ public:
         info+="; native_mtp_target_bridge";
         info+="; native_mtp_generation";
         info+="; native_mtp_profile_family";
+        info+="; native_mtp_continuous_scheduler";
+#endif
+#ifdef GARNET_METAL_MTP_KV_INPLACE
+        info+="; native_mtp_kv_inplace";
+#endif
+#ifdef GARNET_METAL_MTP_DEFER_PACKS
+        info+="; native_mtp_deferred_packs";
+#endif
+#ifdef GARNET_METAL_PREFILL_HIDDEN_POOL
+        info+="; native_prefill_hidden_pool";
 #endif
 #ifdef GARNET_METAL_VERIFY_ATTENTION
         info+="; verification_attention_fp32";

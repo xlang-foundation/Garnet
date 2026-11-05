@@ -107,6 +107,9 @@ bool MetalDecoderSession::PrepareVerification(X::Value values,X::Value headValue
 #ifdef GARNET_METAL_SHARED_PREFILL_SCRATCH
         graph->SharePrefillScratch(prefillScratch_);
 #endif
+#ifdef GARNET_METAL_PREFILL_HIDDEN_POOL
+        PrepareHiddenPool(*graph);
+#endif
 #ifdef GARNET_METAL_TOKEN_PREFIX_CACHE
         if(!tokenGraphs_.count(graph))tokenGraphOwners_.push_back(staged->graphs.Get(uint64_t(i)));
         tokenGraphs_[graph]={i,graph->generation_};

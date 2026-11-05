@@ -114,6 +114,10 @@ namespace Garnet
             int nextTokenId,
             bool finished,
             KVSequenceAllocator& kvPool);
+        // Exact verified blocks; the final emitted token remains unconsumed.
+        bool DecodeProgress(std::uint64_t requestId, int& knownToken, int& remaining) const;
+        bool CompleteDecodeTokens(std::uint64_t requestId, const std::vector<int>& tokens,
+            bool finished, KVSequenceAllocator& kvPool);
 
         RequestStage Stage(std::uint64_t requestId) const;
         int ActiveRequestCount() const;

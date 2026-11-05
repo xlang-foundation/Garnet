@@ -21,6 +21,9 @@ X::Value TensorValue(X3PackageHost* host,MetalContext& gpu,const MetalMatrix& ma
 }
 }
 void MetalDecoderSession::Clear() {
+#ifdef GARNET_METAL_PREFILL_HIDDEN_POOL
+    prefillHiddenPool_.clear();hiddenPoolBindings_=0;
+#endif
 #ifdef GARNET_METAL_MTP_BRIDGE
     mtp_.reset();
 #endif
@@ -297,6 +300,20 @@ bool MetalDecoderSession::Build(X::Value graphs,X::Value head) {
         return true;
     }catch(...){Clear();throw;}
 }
+#ifdef GARNET_METAL_PREFILL_HIDDEN_POOL
+void MetalDecoderSession::PrepareHiddenPool(const MetalCompiledGraph& graph) {
+    if(!graph.CanPoolResidentHidden())return;
+    for(auto id:graph.outputStorageGroups_[0])
+        if(std::find(graph.lazyDefaultSlots_.begin(),graph.lazyDefaultSlots_.end(),id)==graph.lazyDefaultSlots_.end())
+            throw std::logic_error("Hidden output lacks a proven standalone rehydration plan");
+    const auto& slot=graph.slots_[graph.outputParts_[0]];
+    const auto key=std::make_pair(slot.rows,slot.columns);
+    if(prefillHiddenPool_.count(key))return;
+    std::array<MetalMatrix,2> staged;
+    for(auto& matrix:staged)matrix=gpu_->Allocate(slot.rows,slot.columns);
+    prefillHiddenPool_.emplace(key,std::move(staged));
+}
+#endif
 #ifdef GARNET_METAL_QWEN38_WIDE_PREFILL
 bool MetalDecoderSession::PreparePrefill(X::Value value,int64_t layer) {
     std::lock_guard<std::mutex> lock(mutex_);
@@ -339,6 +356,9 @@ bool MetalDecoderSession::PreparePrefill(X::Value value,int64_t layer) {
     tokenGraphs_[graph]={size_t(layer),graph->generation_};
 #endif
     graph->RetireResidentDefaults();
+#ifdef GARNET_METAL_PREFILL_HIDDEN_POOL
+    PrepareHiddenPool(*graph);
+#endif
 #ifdef GARNET_METAL_SHARED_PREFILL_SCRATCH
     graph->SharePrefillScratch(prefillScratch_);
 #endif
@@ -539,6 +559,10 @@ X::Value MetalDecoderSession::RunUnlocked(X::Value graphs,X::Value hidden,X::Val
     }
 #endif
     for(size_t i=0;i<layers.size();++i)layers[i]->RetireResidentDefaults(i==0);
+#ifdef GARNET_METAL_PREFILL_HIDDEN_POOL
+    hiddenPoolBindings_=0;
+    for(auto graph:layers)PrepareHiddenPool(*graph);
+#endif
 #ifdef GARNET_METAL_VERIFY_ATTENTION
     if(verification)hidden_=verification->plan->allHidden;
     else
@@ -584,6 +608,16 @@ X::Value MetalDecoderSession::RunUnlocked(X::Value graphs,X::Value hidden,X::Val
             auto graph=layers[i];std::array<MetalMatrix,3> saved;
             std::array<bool,2> inplace{false,false};
             std::vector<std::pair<size_t,MetalMatrix>> savedOutputs;
+#ifdef GARNET_METAL_PREFILL_HIDDEN_POOL
+            MetalMatrix pooledHidden;
+            if(graph->CanPoolResidentHidden()) {
+                const auto& slot=graph->slots_[graph->outputParts_[0]];
+                pooledHidden=prefillHiddenPool_.at({slot.rows,slot.columns})[i%2];
+                if(current.SharesStorage(pooledHidden)||!gpu_->IsDefaultLayout(pooledHidden,slot.rows,slot.columns))
+                    throw std::logic_error("Pooled hidden output aliases its input or has incompatible layout");
+                for(auto id:graph->outputStorageGroups_[0])savedOutputs.emplace_back(id,graph->slots_[id].matrix);
+            }
+#endif
             for(size_t k=0;k<2;++k)if(graph->CanUpdateKVInPlace(k+1)) {
                 const auto& group=graph->outputStorageGroups_[k+1];
                 const auto outputId=graph->outputParts_[k+1];
@@ -600,6 +634,9 @@ X::Value MetalDecoderSession::RunUnlocked(X::Value graphs,X::Value hidden,X::Val
             }
             for(size_t k=0;k<2;++k)if(inplace[k])for(auto id:graph->outputStorageGroups_[k+1])
                 graph->slots_[id].matrix=states_[i].matrix[k];
+#ifdef GARNET_METAL_PREFILL_HIDDEN_POOL
+            if(pooledHidden.Valid())for(auto id:graph->outputStorageGroups_[0])graph->slots_[id].matrix=pooledHidden;
+#endif
             for(size_t k=0;k<3;++k)saved[k]=graph->slots_[graph->inputs_[k]].matrix;
             graph->slots_[graph->inputs_[0]].matrix=current;
             graph->slots_[graph->inputs_[1]].matrix=states_[i].matrix[0];
@@ -620,9 +657,13 @@ X::Value MetalDecoderSession::RunUnlocked(X::Value graphs,X::Value hidden,X::Val
 #endif
             }
             catch(...){restore();throw;}
+            const auto nextHidden=graph->slots_[graph->outputParts_[0]].matrix;
             restore();
             kvInplaceUpdates_+=size_t(inplace[0])+size_t(inplace[1]);
-            current=graph->slots_[graph->outputParts_[0]].matrix;
+            current=nextHidden;
+#ifdef GARNET_METAL_PREFILL_HIDDEN_POOL
+            hiddenPoolBindings_+=size_t(pooledHidden.Valid());
+#endif
             // Keep the new state private to this session without copying it
             // back. The previous state becomes this graph's next output
             // storage; graph locks cover the exchange and GPU completion.
@@ -729,6 +770,9 @@ X::Value MetalDecoderSession::RunUnlocked(X::Value graphs,X::Value hidden,X::Val
 #ifdef GARNET_METAL_ROW_FINAL_HIDDEN
 X::Value MetalDecoderSession::PredictRows(X::Value epochs) {
     std::lock_guard<std::mutex> lock(mutex_);
+    return PredictRowsUnlocked(epochs);
+}
+X::Value MetalDecoderSession::PredictRowsUnlocked(X::Value epochs) {
     if(!gpu_||poisoned_||!head_||!requestRows_||!rowFinalHidden_.Valid()||
        epochs.runtime()!=Host()->runtime||!epochs.IsList()||epochs.Size()!=states_[0].rows)
         throw std::invalid_argument("Row prediction requires completed hidden states and request epochs");
@@ -905,6 +949,10 @@ std::vector<MetalResourceReference> MetalDecoderSession::MemoryReferences() {
     std::lock_guard<std::mutex> lock(mutex_);if(!gpu_)throw std::logic_error("Inventory requires an open session");std::vector<MetalResourceReference> result;
     auto append=[&](const MetalMatrix& matrix,size_t slot,const std::string& role,const std::vector<int64_t>& shape){auto info=MetalContext::MatrixBufferInfo(matrix);if(!info.identity)return;MetalResourceReference r;r.buffer=info;r.slot=slot;r.role=role;r.shape=shape;r.residentOperand=true;result.push_back(std::move(r));};
     for(size_t i=0;i<states_.size();++i)for(size_t k=0;k<2;++k)append(states_[i].matrix[k],i,"private_state"+std::to_string(k+1),states_[i].shape[k]);
+#ifdef GARNET_METAL_PREFILL_HIDDEN_POOL
+    for(const auto& profile:prefillHiddenPool_)for(size_t i=0;i<2;++i)
+        append(profile.second[i],i,"prefill_hidden_pingpong",{int64_t(profile.first.first),int64_t(profile.first.second)});
+#endif
 #ifdef GARNET_METAL_ROW_FINAL_HIDDEN
     if(rowFinalHidden_.Valid())append(rowFinalHidden_,SIZE_MAX,"last_active_hidden",{int64_t(states_[0].rows),int64_t(rowFinalWidth_)});
 #endif
@@ -925,7 +973,7 @@ std::vector<MetalResourceReference> MetalDecoderSession::MemoryReferences() {
 #ifdef GARNET_METAL_MTP_BRIDGE
     if(mtp_) {
         const auto& m=*mtp_;
-        for(size_t i=0;i<7;++i)append(m.inputs[i],i,"mtp_input",{});
+        for(size_t i:{size_t(0),size_t(1),size_t(4),size_t(5),size_t(6)})append(m.inputs[i],i,"mtp_input",{});
         for(const auto& profile:m.profiles)for(size_t i:{size_t(0),size_t(1),size_t(4),size_t(5),size_t(6)})append(profile.second.inputs[i],profile.first,"mtp_profile_input",{});
         for(size_t i=0;i<2;++i){append(m.cache[i],i,"mtp_private_cache",{});append(m.backup[i],i,"mtp_draft_backup",{});}
         append(m.lastTarget,SIZE_MAX,"mtp_normalized_target_last",{});append(m.lastHidden,SIZE_MAX,"mtp_last_hidden",{});

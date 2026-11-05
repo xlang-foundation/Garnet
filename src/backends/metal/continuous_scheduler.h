@@ -29,6 +29,9 @@ public:
     std::string NextJson();
     int64_t CompletePrefill(int64_t request,int64_t token,bool finished);
     int64_t CompleteDecode(int64_t request,int64_t token,bool finished);
+#ifdef GARNET_METAL_MTP_BRIDGE
+    std::string GenerateMTP(X::Value stops);
+#endif
     bool Cancel(int64_t request);
     std::string StatusJson();
     bool Close();
@@ -40,6 +43,9 @@ public:
         APISET().AddFunc<0>("next_json",&MetalContinuousScheduler::NextJson);
         APISET().AddFunc<3>("complete_prefill",&MetalContinuousScheduler::CompletePrefill);
         APISET().AddFunc<3>("complete_decode",&MetalContinuousScheduler::CompleteDecode);
+#ifdef GARNET_METAL_MTP_BRIDGE
+        APISET().AddFunc<1>("mtp_generate_json",&MetalContinuousScheduler::GenerateMTP);
+#endif
         APISET().AddFunc<1>("cancel",&MetalContinuousScheduler::Cancel);
         APISET().AddFunc<0>("status_json",&MetalContinuousScheduler::StatusJson);
         APISET().AddFunc<0>("close",&MetalContinuousScheduler::Close);
