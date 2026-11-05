@@ -1,6 +1,8 @@
 # SPDX-FileCopyrightText: 2024-2026 CantorAI Inc.
 # SPDX-License-Identifier: Apache-2.0
 
+"""SiLU text-projection ABI v2; invalidate cached graphs built with GELU."""
+
 import garnet
 
 T = garnet.tensor()

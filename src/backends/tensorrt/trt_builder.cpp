@@ -7081,11 +7081,16 @@ namespace Garnet {
                 return sum ? sum->getOutput(0) : nullptr;
             };
             text = project(text, "text_fc1_weight_name", "text_fc1_bias_name");
-            auto* gelu = text
-                ? network->addActivation(*text, ActivationType::kGELU_ERF)
+            // Qwen3-TTS text_projection uses talker.hidden_act = silu.
+            // GELU changes both the prompt and every autoregressive decode step.
+            auto* sigmoid = text
+                ? network->addActivation(*text, ActivationType::kSIGMOID)
+                : nullptr;
+            auto* silu = text && sigmoid
+                ? network->addElementWise(*text, *sigmoid->getOutput(0), ElementWiseOperation::kPROD)
                 : nullptr;
             text = project(
-                gelu ? gelu->getOutput(0) : nullptr,
+                silu ? silu->getOutput(0) : nullptr,
                 "text_fc2_weight_name", "text_fc2_bias_name");
             auto* combined = text && codec
                 ? network->addElementWise(
@@ -7174,10 +7179,15 @@ namespace Garnet {
                 return add ? add->getOutput(0) : nullptr;
             };
             text = project(text, "text_fc1_weight_name", "text_fc1_bias_name");
-            auto* gelu = text
-                ? network->addActivation(*text, ActivationType::kGELU_ERF)
+            // Qwen3-TTS text_projection uses talker.hidden_act = silu.
+            // GELU changes both the prompt and every autoregressive decode step.
+            auto* sigmoid = text
+                ? network->addActivation(*text, ActivationType::kSIGMOID)
                 : nullptr;
-            text = project(gelu ? gelu->getOutput(0) : nullptr,
+            auto* silu = text && sigmoid
+                ? network->addElementWise(*text, *sigmoid->getOutput(0), ElementWiseOperation::kPROD)
+                : nullptr;
+            text = project(silu ? silu->getOutput(0) : nullptr,
                 "text_fc2_weight_name", "text_fc2_bias_name");
             auto* combined = summed && text ? network->addElementWise(
                 *summed, *text, ElementWiseOperation::kSUM) : nullptr;
