@@ -746,7 +746,9 @@ if(GARNET_METAL_XMODEL)
         src/backends/metal/mtp_generation.cpp
         src/backends/metal/token_prefix_session.cpp
         src/tensor/garnet_tensor.cpp src/tensor/graph_capture.cpp src/core/lowering_context.cpp
-        src/model/safetensors_index.cpp src/tokenizer/qwen_tokenizer.cpp)
+        src/model/safetensors_index.cpp)
+    include("${CMAKE_CURRENT_LIST_DIR}/GarnetTokenizer.cmake")
+    garnet_configure_tokenizers(garnet)
     if(GARNET_METAL_CONTINUOUS_ROWS)
         target_sources(garnet PRIVATE src/backends/metal/continuous_scheduler.cpp
             src/runtime/scheduler/continuous_batch_scheduler.cpp)

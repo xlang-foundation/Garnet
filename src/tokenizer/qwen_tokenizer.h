@@ -33,10 +33,12 @@ namespace Garnet::Tokenization
         std::vector<int64_t> Encode(const std::string& text, bool addSpecialTokens = false) const override;
         std::string Decode(const std::vector<int64_t>& tokenIds, bool skipSpecialTokens = true) const override;
         int64_t TokenId(const std::string& token) const override;
+        TokenizerInfo Info() const override;
 
         bool IsSpecialId(int64_t id) const;
 
     private:
+        TokenizerInfo m_info;
         std::unordered_map<std::string, int64_t> m_tokenToId;
         std::unordered_map<int64_t, std::string> m_idToToken;
         std::unordered_set<std::string> m_addedTokens;

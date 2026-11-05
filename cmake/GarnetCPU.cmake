@@ -17,8 +17,9 @@ add_library(garnet SHARED
     src/core/lowering_context.cpp src/model/compiled_graph_capture.cpp
     src/backends/openvino/openvino_builder.cpp src/backends/cpu/gated_delta.cpp
     src/backends/cpu/q4q8_linear.cpp src/backends/cpu/qwen3_native_decode_engine.cpp
-    src/model/weight_quantization.cpp src/model/safetensors_index.cpp
-    src/tokenizer/qwen_tokenizer.cpp)
+    src/model/weight_quantization.cpp src/model/safetensors_index.cpp)
+include("${CMAKE_CURRENT_LIST_DIR}/GarnetTokenizer.cmake")
+garnet_configure_tokenizers(garnet)
 target_include_directories(garnet PRIVATE "${XLANG3_SDK_ROOT}" src/tensor src/core
     src/model src/tokenizer src/backends/cpu src/backends/openvino third_party)
 target_compile_definitions(garnet PRIVATE GARNET_CPU_ONLY=1 GARNET_WITH_OPENVINO=1 XLANG3_USE_SHARED=1)

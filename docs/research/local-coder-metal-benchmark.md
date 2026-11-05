@@ -1,6 +1,14 @@
 # Local coding Metal qualification
 
-Status: 27B qualification remains active. Frozen vLLM-Metal and SGLang Apple
+Priority update (2026-11-04): the user moved Mistral 7B onboarding and
+optimization, native tokenization, and an ANE/Core ML plugin ahead of further
+Qwen27B work. Return to Qwen27B after Mistral performs better than vLLM under
+a matched benchmark. Preserve the original Qwen27B targets and frozen results;
+they remain incomplete. Tokenizer scope now explicitly includes Qwen, Mistral,
+Gemma, Llama and DeepSeek, with C++ implementations and no Rust dependency.
+See [native tokenizers](native-tokenizers.md) for the pinned compatibility checks.
+
+Preserved 27B checkpoint: Frozen vLLM-Metal and SGLang Apple
 reference collections each contain three cohorts, 90 measured waves and 210
 requests. SGLang uses two active requests and queues four-client workloads;
 failed active4 admissions remain preserved. Native continuous batching, hybrid
@@ -23,7 +31,8 @@ All2x targets remain unmet. Reference results stay fixed and engines run
 sequentially. Full chunk-selection and isolated kernel diagnostics are recorded
 below; neither substitutes for matched serving performance.
 
-Order: Qwen3.8-27B, Qwen3.5-9B, Qwen3.5-4B. Current target is 27B.
+After the new Mistral/ANE priority, the remaining Qwen order is Qwen3.8-27B,
+Qwen3.5-9B, Qwen3.5-4B.
 Hardware: Apple M5, 24 GiB unified memory. This is separate from historical
 M4 experiments. Branch: feature/qwen-metal-local-coder.
 
