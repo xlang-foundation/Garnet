@@ -18,3 +18,11 @@ set(GARNET_COREML_STATE_TEST_MODEL "" CACHE PATH "Offline compiled Core ML state
 if(GARNET_COREML_STATE_TEST_MODEL)
     add_test(NAME coreml_native_state_reference COMMAND garnet_coreml_state_runtime_test "${GARNET_COREML_STATE_TEST_MODEL}")
 endif()
+# Linked after the Metal target is created; native calls remain serial.
+function(garnet_add_coreml_mlp_probe)
+    if(GARNET_METAL_MLX_AFFINE_INT4 AND GARNET_METAL_AFFINE_FP16_COEFFICIENTS AND GARNET_METAL_AFFINE_PROFILE AND GARNET_METAL_MPP_AFFINE_FP16)
+        add_executable(garnet_mistral_mlp_probe test2026/coreml/mistral_mlp_probe.cpp src/model/safetensors_index.cpp)
+        target_include_directories(garnet_mistral_mlp_probe PRIVATE third_party src/model)
+        target_link_libraries(garnet_mistral_mlp_probe PRIVATE garnet_coreml garnet_metal)
+    endif()
+endfunction()

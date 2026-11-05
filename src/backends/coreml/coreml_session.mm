@@ -40,14 +40,29 @@ void Copy(MLMultiArray* array,CoreMLTensor& tensor,bool toArray){
     for(size_t i=0;i<tensor.shape.size();++i){auto stride=array.strides[i].longLongValue;Require(stride>0,"Invalid Core ML stride");strides.push_back(size_t(stride));auto tail=Multiply(size_t(tensor.shape[i]-1),size_t(stride));Require(maximumOffset<=SIZE_MAX-tail,"Core ML stride sum overflow");maximumOffset+=tail;}
     Require(maximumOffset<SIZE_MAX/width&&array.dataPointer!=nullptr,"Invalid Core ML array storage");
     auto raw=static_cast<uint8_t*>(array.dataPointer);
+    bool contiguous=true;size_t expectedStride=1;
+    for(size_t axis=tensor.shape.size();axis>0;--axis){
+        if(tensor.shape[axis-1]>1&&strides[axis-1]!=expectedStride)contiguous=false;
+        expectedStride=Multiply(expectedStride,size_t(tensor.shape[axis-1]));
+    }
+    if(contiguous){
+        const size_t bytes=Multiply(count,width);
+        if(toArray)std::memcpy(raw,tensor.bytes.data(),bytes);
+        else std::memcpy(tensor.bytes.data(),raw,bytes);
+        return;
+    }
     for(size_t index=0;index<count;++index){size_t linear=index,offset=0;for(size_t axis=tensor.shape.size();axis>0;--axis){offset+=(linear%size_t(tensor.shape[axis-1]))*strides[axis-1];linear/=size_t(tensor.shape[axis-1]);}if(toArray)std::memcpy(raw+offset*width,tensor.bytes.data()+index*width,width);else std::memcpy(tensor.bytes.data()+index*width,raw+offset*width,width);}
 }
 void Descriptions(NSDictionary<NSString*,MLFeatureDescription*>* descriptions,const Specs& specs){
     Require(descriptions.count==specs.size(),"Core ML feature inventory differs from profile");
     for(const auto& item:specs){MLFeatureDescription* d=descriptions[Name(item.first)];Require(d!=nil&&d.type==MLFeatureTypeMultiArray&&!d.optional&&d.multiArrayConstraint.dataType==Type(item.second.dtype),"Core ML feature dtype/name/optionality differs from profile");}
 }
-void Placements(MLModelStructureProgramBlock* block,MLComputePlan* plan,JSON& counts){
-    for(MLModelStructureProgramOperation* op in block.operations){auto usage=[plan computeDeviceUsageForMLProgramOperation:op];auto device=usage.preferredComputeDevice;std::string name=[device isKindOfClass:MLNeuralEngineComputeDevice.class]?"neural_engine":[device isKindOfClass:MLGPUComputeDevice.class]?"gpu":[device isKindOfClass:MLCPUComputeDevice.class]?"cpu":"unknown";counts[name]=counts.value(name,size_t(0))+1;for(MLModelStructureProgramBlock* nested in op.blocks)Placements(nested,plan,counts);}
+std::string DeviceName(id<MLComputeDeviceProtocol> device){return [device isKindOfClass:MLNeuralEngineComputeDevice.class]?"neural_engine":[device isKindOfClass:MLGPUComputeDevice.class]?"gpu":[device isKindOfClass:MLCPUComputeDevice.class]?"cpu":"unknown";}
+void Placements(MLModelStructureProgramBlock* block,MLComputePlan* plan,JSON& counts,JSON& operations){
+    for(MLModelStructureProgramOperation* op in block.operations){auto usage=[plan computeDeviceUsageForMLProgramOperation:op];auto name=DeviceName(usage.preferredComputeDevice);counts[name]=counts.value(name,size_t(0))+1;
+        JSON supported=JSON::array(),outputs=JSON::array();for(id<MLComputeDeviceProtocol> device in usage.supportedComputeDevices)supported.push_back(DeviceName(device));for(MLModelStructureProgramNamedValueType* value in op.outputs)outputs.push_back(std::string(value.name.UTF8String));
+        operations.push_back(JSON{{"operator",std::string(op.operatorName.UTF8String)},{"outputs",outputs},{"preferred",name},{"supported",supported}});
+        for(MLModelStructureProgramBlock* nested in op.blocks)Placements(nested,plan,counts,operations);}
 }
 }
 struct CoreMLSession::Impl {
@@ -83,11 +98,11 @@ void CoreMLSession::Open(const std::string& path,const std::string& profileJSON)
         Require(dispatch_semaphore_wait(done,dispatch_time(DISPATCH_TIME_NOW,30*NSEC_PER_SEC))==0,"Core ML compute-plan inspection timeout");
         if(!plan)throw std::runtime_error(Failure(planError));Require(plan.modelStructure.program!=nil,"Core ML plugin currently requires an ML Program");
         auto selected=plan.modelStructure.program.functions[Name(function)];Require(selected!=nil,"Core ML compiled function missing");
-        JSON placement=JSON::object();Placements(selected.block,plan,placement);
+        JSON placement=JSON::object(),operations=JSON::array();Placements(selected.block,plan,placement,operations);
         Require(!profile.value("require_ane_plan",false)||placement.value("neural_engine",size_t(0))>0,"Core ML plan contains no preferred ANE operation");
         impl_->model=model;impl_->state=[model newState];impl_->inputs=std::move(inputs);impl_->outputs=std::move(outputs);impl_->states=std::move(states);impl_->poisoned=false;
         JSON stateSpecs=JSON::object();for(const auto& item:impl_->states)stateSpecs[item.first]=JSON{{"dtype",item.second.dtype},{"maximum_shape",item.second.shape}};
-        impl_->report=JSON{{"backend","coreml"},{"compute_units",units},{"function",function},{"path",disk.string()},{"declared_io_maximum_bytes",io},{"profile_io_budget_bytes",profile.at("maximum_io_bytes")},{"declared_state_bytes",stateBytes},{"state_tensors",stateSpecs},{"anticipated_operation_devices",placement},{"placement_scope","MLComputePlan anticipated/preferred devices, not observed hardware execution"},{"memory_scope","Declared tensor bounds only; excludes model weights/compiler/driver allocations"},{"predictions",0},{"stateful",!impl_->states.empty()}};
+        impl_->report=JSON{{"backend","coreml"},{"compute_units",units},{"function",function},{"path",disk.string()},{"declared_io_maximum_bytes",io},{"profile_io_budget_bytes",profile.at("maximum_io_bytes")},{"declared_state_bytes",stateBytes},{"state_tensors",stateSpecs},{"anticipated_operation_devices",placement},{"anticipated_operations",operations},{"placement_scope","MLComputePlan anticipated/preferred devices, not observed hardware execution"},{"memory_scope","Declared tensor bounds only; excludes model weights/compiler/driver allocations"},{"predictions",0},{"stateful",!impl_->states.empty()}};
     }
 }
 std::vector<CoreMLTensor> CoreMLSession::Predict(const std::vector<CoreMLTensor>& inputs){

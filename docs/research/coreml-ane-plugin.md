@@ -112,3 +112,89 @@ Apple references: [stateful models](https://apple.github.io/coremltools/docs-gui
 and [MLComputePlan](https://developer.apple.com/documentation/coreml/mlcomputeplan).
 The implementation was checked against the installed public Core ML SDK headers
 for state serialization, buffer lifetimes and anticipated device usage.
+
+## Actual-weight Mistral MLP study
+
+The optional `garnet_mistral_mlp_probe` now compares one layer0 MLP with native
+Metal and Core ML CPU / CPU+ANE policies. This is an operator study, not an
+end-to-end model result. It needs the affine INT4, FP16 coefficient, FP16 MPP
+and prepared affine profile build options. The Python exporter prepares offline
+artifacts; native C++ executes every timed prediction. No dummy image is used:
+the channel-first four-dimensional array holds text hidden values for1x1
+convolutions.
+
+Model: `mlx-community/Mistral-7B-Instruct-v0.3-4bit`, revision
+`a4b8f870474b0eb527f466a03fbc187830d271f5`, safetensors SHA256
+`d7182d886f93a9efa73d6d556ee33ffe839a4e09e15965eeef46f295ab5b503d`.
+All176,160,768 FP16 weight words across the three projections match the native
+dequantizer exactly. Full-K LUTs retain the original Q4 code and per64-element
+FP16 scale/bias through exact16-value palettes. Dense FP16 uses the same decoded
+weights. Tiled LUT6/K256 and LUT8/K64/output-group16 representations independently
+check the same entire weight set after index/palette remapping; they introduce
+no additional weight quantization.
+
+The128 input rows are frozen prompt embeddings, optionally RMS-normalized with
+the actual post-attention normalization weight. They are a proxy, not actual
+post-attention hidden activations. All formats use the same normalized input
+(RMS0.24167). Native Metal uses FP16 prefill operands and FP32 accumulation,
+intermediates and output. The ordinary Core ML graph uses FP16 intermediates and
+output with framework-selected accumulation. Host timing includes input/output
+layout and dtype conversion, prediction and native I/O; it excludes model open
+and compute-plan inspection. Three warmups and nine measurements run in each
+fresh process, with two serial cohorts in reversed engine order.
+
+Normalized-input results on this M5 /24GiB Mac:
+
+| Representation / compute policy | Host median, cohorts0 /1 (ms) | Relative RMS error vs Metal | Convolutions preferring ANE |
+|---|---:|---:|---:|
+| Metal |10.420 /10.396 | Reference | N/A |
+| Full-K LUT / CPU |20.943 /20.909 |2.097% |0 /3 |
+| Full-K LUT / CPU+ANE |21.165 /21.058 |2.512% |0 /3 |
+| Dense FP16 / CPU |21.156 /20.920 |2.097% |0 /3 |
+| Dense FP16 / CPU+ANE |16.685 /16.633 |7.236% |3 /3 |
+
+Every engine's output is bit-identical between its fresh cohorts. Full-K LUT
+and dense CPU outputs are also identical. A separate FP32 diagnostic graph
+keeps exact FP16 weights and down-projection operands, while computing the
+projections and activation in FP32. Its CPU result has0.0202% relative RMS error
+and a32.139ms host median (one process). This supports the weight/layout mapping
+and implicates arithmetic precision in the ordinary graph's larger error; it
+does not identify a specific framework accumulation implementation.
+
+Tiling the inner dimension to256 with balanced partial sums improved CPU
+relative RMS error to0.0939%, at18.884ms vs10.480ms for its Metal control. This
+is only a partial cohort. Its CPU+ANE child exited1 after906.97s with
+`Core ML compute-plan inspection timeout`; it produced no prediction result.
+The collector stopped and retained the failure. The second tiled representation
+and reversed cohort were not executed. The timeout is not a zero-latency sample
+or evidence that the tiled model is unsupported. Model load precedes the
+30-second asynchronous plan-inspection timeout and can itself take much longer.
+
+The earlier unnormalized embedding study is retained as an underflow stress
+case: Metal output RMS was4.44e-7 and Core ML relative RMS errors were25.9–33.7%.
+Its absolute errors were small, which is why relative error and input scale are
+reported together. No tested Core ML path has established useful Mistral speed
+or numerical quality. Anticipated device plans do not prove hardware execution;
+an observed ANE trace remains pending. A system ANE compiler service was active
+during this work, so these descriptive operator timings do not establish fully
+isolated hardware performance. No frozen vLLM-Metal or SGLang result was rerun.
+
+Evidence under the external `out/research/mistral7b-local-coder` directory:
+`mistral-coreml-mlp-lut128-campaign1`,
+`mistral-coreml-mlp-normalized-campaign1` (both complete),
+`mistral-coreml-mlp-fp32-control128-run1` (diagnostic only), and
+`mistral-coreml-mlp-tiled-campaign1` (failed partial collection). Their raw model
+artifacts, inputs, outputs, logs and process identities are preserved separately.
+`audit_mistral_mlp_probe.py` rejects incomplete collections, checks serial cohorts,
+artifact hashes, independent FP64 Metal samples, output finiteness and cohort
+repeatability. Its collection pass deliberately does not assert numerical
+quality, observed ANE execution or whole-model performance. Eight positive and
+tampered-evidence controls exercise those boundaries.
+
+Reproduce with `test2026/coreml/export_mistral_mlp.py`,
+`run_mistral_mlp_probe.py` and `audit_mistral_mlp_probe.py --help`. The exporter
+requires pinned native-decoder assets; the collector rejects concurrent engines
+and changed artifacts. `--comparison-export` compares two representations with
+one shared native Metal control per cohort. Runtime reports retain per-operation
+preferred/supported devices and use a contiguous memcpy fast path for matching
+MLMultiArray layouts, with a stride-aware fallback.

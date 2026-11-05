@@ -620,6 +620,9 @@ endif()
 target_link_libraries(garnet_metal PUBLIC
     "${GARNET_METAL_FRAMEWORK}" "${GARNET_MPS_FRAMEWORK}"
     "${GARNET_FOUNDATION_FRAMEWORK}")
+if(GARNET_APPLE_COREML)
+    garnet_add_coreml_mlp_probe()
+endif()
 enable_testing()
 if(GARNET_METAL_VERIFY_ATTENTION)
     add_executable(garnet_verification_kv_span_test test2026/metal/verification_kv_span_test.cpp)
