@@ -2,6 +2,7 @@
 #include "continuous_scheduler.h"
 #include "../../runtime/scheduler/packed_token_plan.h"
 #include "nlohmann/json.hpp"
+#include <algorithm>
 #include <limits>
 #include <climits>
 namespace Garnet {
@@ -82,9 +83,17 @@ bool MetalContinuousScheduler::Initialize(X::Value value,int64_t pending) {
     if(!layout.first||layout.first>64||layout.second>size_t(INT_MAX)/layout.first||
        pending<int64_t(layout.first)||pending>4096)
         throw std::invalid_argument("Native scheduler row/context/pending bounds exceeded");
+#ifdef GARNET_METAL_DENSE_PREFILL_MAX_TOKENS
+    if(layout.first>4||layout.second>4096||layout.first>kSchedulerPrefillChunkLimit)
+        throw std::invalid_argument("Native dense scheduler exceeds compiled row/context bounds");
+#endif
     ContinuousBatchSchedulerConfig config;
     config.decodeBuckets={int(layout.first)};config.maxPrefillBatch=int(layout.first);
     config.maxPrefillTokensPerTick=int(layout.first*layout.second);config.maxActiveRequests=int(pending);
+#ifdef GARNET_METAL_DENSE_PREFILL_MAX_TOKENS
+    config.maxPrefillTokensPerTick=int(kSchedulerPrefillChunkLimit);
+    config.prefillChunkTokens=int(std::min(layout.second,kSchedulerPrefillChunkLimit/layout.first));
+#endif
     auto policy=std::make_unique<ContinuousBatchScheduler>(config);
     auto allocator=std::make_unique<RowAllocator>(session,layout.first,layout.second);
     sessionOwner_=value;rows_=layout.first;capacity_=layout.second;
@@ -93,6 +102,12 @@ bool MetalContinuousScheduler::Initialize(X::Value value,int64_t pending) {
 bool MetalContinuousScheduler::SetPrefillChunk(int64_t tokens) {
     std::lock_guard<std::mutex> lock(mutex_);Ready();
     if(tokens<0||uint64_t(tokens)>kSchedulerPrefillChunkLimit||uint64_t(tokens)>capacity_||!inflight_.empty())return false;
+#ifdef GARNET_METAL_DENSE_PREFILL_MAX_TOKENS
+    // The compiled graph has all physical rows, even when only one is active.
+    // A per-request chunk must fit their shared token-row workspace. Zero would
+    // reenable unbounded whole-prompt scheduling in the portable policy.
+    if(!tokens||uint64_t(tokens)>kSchedulerPrefillChunkLimit/rows_)return false;
+#endif
     return scheduler_->SetPrefillChunkTokens(int(tokens));
 }
 bool MetalContinuousScheduler::CompletePrefillChunk(int64_t id,int64_t tokens) {

@@ -329,6 +329,118 @@ For planning only, full FP32 KV storage at B1/context4096 is
 = 1 GiB, before allocator padding, scratch, snapshots and additional batches.
 This is an analytical lower-bound payload, not measured allocation or admission.
 
+## Native HTTP admission and remaining performance gap
+
+`mistral-native-http-admission1` collected one fresh native process, zero warmup
+waves and one measured wave for each of six throughput cells and eight unchanged
+coding tasks. All 22 requests completed. The independent
+`audit_mistral_http_admission.py` checks frozen prompt IDs, streamed/native output
+IDs and text, row leases/epochs, prefill offsets, the global 512-token budget,
+projection route coverage, generation budgets and graceful cleanup. It rejected
+11 deliberate trace/control corruptions. All eight coding outputs exactly match
+the frozen native B1 controls; the unchanged sandboxed coding contracts still
+score **0/8**, with all eight outputs classified as invalid code.
+
+| Nominal input / concurrency | Garnet aggregate tok/s, one wave | vLLM-Metal median tok/s | SGLang median tok/s | 2x faster-reference target |
+|---|---:|---:|---:|---:|
+| 256 /1 | 16.110 | 22.021 | 22.042 | 44.084 |
+| 256 /2 | 25.796 | 31.464 | 32.127 | 64.254 |
+| 256 /4 | 29.320 | 45.235 | 42.194 | 90.470 |
+| 2048 /1 | 2.586 | 12.345 | 12.518 | 25.036 |
+| 2048 /2 | 2.916 | 16.536 | 14.482 | 33.071 |
+| 2048 /4 | 3.054 | 21.179 | 16.337 | 42.358 |
+
+Aggregate throughput includes prefill. Reference columns are the previously
+frozen 15-wave pooled medians across three cohorts per engine, not new runs.
+Native single-request decode was 22.988 tok/s for the short cell and 13.826 tok/s
+for the long cell; corresponding client TTFT was 2.408s and 40.269s. Native results
+are single-wave admission observations, not repeated speed qualification.
+Paging/compression remains in the evidence. All 2x targets remain unmet.
+
+The native trace reached four active rows; no wave submitted a replacement while
+another request was still running. Thus this collection does not establish
+dynamic row refill. Prefix reuse was disabled. All four native owner counters
+were zero after shutdown, with a 720,896-byte final Metal allocation snapshot.
+Neither that snapshot nor the sampled working-set checks establish peak memory.
+See `native-audit.json`, `quality.json`, `comparison.json` and `comparison.md`
+inside the admission directory for complete evidence and hashes.
+
+Separate native stage probes (`mistral-native-stage-probe1`) showed GPU execution
+dominating decode and prefill on the selected 84-token prompt. An isolated,
+default-off `GARNET_METAL_INDEXED_AFFINE_RELAXED` candidate now permits explicit
+FP16 relaxed tensor arithmetic in both regular and indexed prefill. The earlier
+indexed shader hardcoded strict arithmetic, and CMake rejected combining indexed
+projections with the regular relaxed flag. The candidate requires both explicit
+precision policies and exact FP16 coefficients; it preserves FP32 accumulation,
+decode and cache representation. Its 16 native tests passed without relaxing
+their numerical bounds; four inconsistent compile profiles were rejected.
+Three repetitions at B1 and B4 preserved all 32 selected control tokens per row
+(480 repeated token observations in total). Those short-prompt stage results
+differ in compiled serving features as well as precision policy, so they cannot
+isolate the effect of relaxed math. Full-output parity and serving speed remain
+pending. This is an experiment, not a qualified replacement.
+
+`mistral-prefill-op-diagnosis1` serialized operations in the strict serving
+engine's chunk at offset 1920, after populating real KV from the preceding
+tokens of the frozen 2056-token context prompt. Physical batch was four, with
+only row zero active and chunk capacity 128. Of 832 recorded operations,
+attention accounted for 3360.323ms (80.13%) of summed GPU time, versus
+545.073ms (13.00%) for matrix projections. Submission splitting changes timing;
+these shares identify a candidate bottleneck rather than establishing serving
+latency. This evidence prioritizes a separate test of the existing prepared
+FP32 attention matrix/context-bucket path, with strict projection precision.
+Native admission evidence is bound by
+`mistral-native-http-admission-provenance1.json` (796 artifacts), SHA256
+`f5383edc97f0e69772bcd846f00d8e097af0494a4557ff6c95419cba0a897336`.
+
+The first attention-matrix build passed 17/18 native tests; its full 512-token test
+exposed the old 256-token limit in the index proof. The corrected candidate
+passes the compiled chunk maximum explicitly to both the index proof and the
+context-bucket selector, retaining 256 as the helpers' legacy default. New CPU
+checks cover explicit 512-token admission, token-stride overflow, sparse tails and
+invalid/unrequested bounds. Encoder checks still enforce the global physical
+row budget. The corrected isolated source/build is
+`mistral-mps-attention-source2` / `native-mistral-mps-attention-build2`.
+
+All 18 native tests passed. The subsequent B4/chunk128 actual-weight collection
+passed all four existing profile-audit gates, without changing their limits:
+collection integrity, exact frozen native controls, sampled working set and
+post-close allocation. It generated 3308 token observations across 12 physical
+rows representing ten unique cases (the last context case repeats to fill B4).
+Prepared Metal allocation was 11,029,495,808 bytes; final allocation was 1,507,328
+bytes, below the existing 4MiB close limit, with all four native owner counts
+zero. This proves the recorded model/control and row-position checks, not
+continuous arrivals or HTTP performance. See
+`mistral-mps-attention-model-qualification1/audit.json`.
+The immutable candidate library SHA256 is
+`4aaf62f9df14043d67a78b2755232f14f5f878d068be873114fdbbc924764516`.
+
+The subsequent `mistral-mps-native-http-admission1` run replayed the same
+22 requests, with one native engine running at a time. All requests completed;
+accounting reported zero issues. The native/SSE auditor also checked every
+attention matrix/scalar-tail route, selected context extent, seven prepared
+plans, 42 buckets and 596,664,320 bytes of attention scratch. All eight coding
+outputs matched the frozen controls, and all 15 trace corruptions were rejected.
+Strict coding quality remains 0/8. Final native owner counts were zero and Metal
+allocation was 1,507,328 bytes after graceful shutdown.
+
+| Nominal input / concurrency | Prior Garnet tok/s | Prepared-attention Garnet tok/s | vLLM-Metal median tok/s | SGLang median tok/s |
+|---|---:|---:|---:|---:|
+| 256 /1 | 16.110 | 16.305 | 22.021 | 22.042 |
+| 256 /2 | 25.796 | 27.077 | 31.464 | 32.127 |
+| 256 /4 | 29.320 | 32.042 | 45.235 | 42.194 |
+| 2048 /1 | 2.586 | 4.962 | 12.345 | 12.518 |
+| 2048 /2 | 2.916 | 6.435 | 16.536 | 14.482 |
+| 2048 /4 | 3.054 | 7.639 | 21.179 | 16.337 |
+
+These are aggregate output tokens/s including prefill. Each native column is
+one wave; comparator columns retain the existing 15-wave medians. Native long
+single-request TTFT fell from 40.269s to 16.489s; decode was 13.668 tok/s, versus
+13.826 in the prior native wave. The improvement does not establish a decode
+gain or repeated speed qualification. All 2x comparator targets remain unmet.
+Dynamic arrival/refill while other requests remain active, prefix reuse, full
+4096-token requests and ANE remain pending.
+
 ## Evidence
 
 Local root: `/Users/shawn/CantorAI/out/research/mistral7b-local-coder/`.

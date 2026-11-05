@@ -36,5 +36,17 @@ int main(){try{
         try{SelectChunkAttentionPolicy(4096,2,128,slots.data(),136,active.data(),140);}catch(const std::invalid_argument&){rejected=true;}
         Need(rejected,"Invalid active flag was accepted");
     }
+    slots.resize(512);active.assign(512,1);
+    for(size_t t=0;t<512;++t)slots[t]=float(1536+t);
+    const auto dense=SelectChunkAttentionPolicy(4096,1,512,slots.data(),512,active.data(),512,512);
+    Need(dense.known&&!dense.scalar&&dense.capacity==2048&&dense.activeTokens==512,"Dense512 context bucket differs");
+    active.assign(512,0);active[511]=1;
+    const auto tail=SelectChunkAttentionPolicy(4096,1,512,slots.data(),512,active.data(),512,512);
+    Need(tail.known&&tail.scalar&&tail.capacity==2048&&tail.activeTokens==1,"Dense sparse tail read wrong controls");
+    for(size_t bound:{0,256,513}) {
+        bool rejected=false;
+        try{SelectChunkAttentionPolicy(4096,1,512,slots.data(),512,active.data(),512,bound);}catch(const std::invalid_argument&){rejected=true;}
+        Need(rejected,"Invalid/unrequested512 chunk envelope accepted");
+    }
     std::cout<<"Compiled context buckets:18 boundaries,13 actual token counts, padded strides, inactive future slots, unknown controls and invalid inputs PASS\n";return 0;
 }catch(const std::exception& error){std::cerr<<error.what()<<"\n";return 1;}}

@@ -16,12 +16,14 @@ class FixedRows final:public KVSequenceAllocator {
     struct State{RequestRowLease lease;int length=0;};
     RequestRowLeases rows_{4};
     std::unordered_map<uint64_t,State> states_;
+    int capacity_;
 public:
+    explicit FixedRows(int capacity=64):capacity_(capacity){}
     bool Reserve(uint64_t id,int capacity) override {
-        if(!id||capacity<0||capacity>64||states_.size()==4||states_.count(id))return false;
+        if(!id||capacity<0||capacity>capacity_||states_.size()==4||states_.count(id))return false;
         states_.emplace(id,State{rows_.Claim(id),0});return true;
     }
-    bool EnsureCapacity(uint64_t id,int capacity) override{return states_.count(id)&&capacity>=0&&capacity<=64;}
+    bool EnsureCapacity(uint64_t id,int capacity) override{return states_.count(id)&&capacity>=0&&capacity<=capacity_;}
     bool CommitLength(uint64_t id,int length) override {
         if(!EnsureCapacity(id,length))return false;states_.at(id).length=length;return true;
     }
@@ -134,5 +136,42 @@ int main() {
     Check(chunked.Cancel(longId,chunkStorage)&&chunkStorage.LogicalLength(longId)==-1);
     Check(!chunked.CompletePrefillChunk(longId,4,chunkStorage)&&!chunked.CompletePrefill(longId,1,chunkStorage));
     Check(chunked.ForgetFinished(longId)&&chunked.SetPrefillChunkTokens(0));
-    std::cout<<"portable_continuous_scheduler PASS stable rows, queued refill, cancellation, one-token budget, prefill EOS, invalid-token rejection and chunked prefill fairness/tail/lease lifecycle\n";
+    // Actual planning bounds of the dense Mistral profile. This is metadata
+    // scheduling, not model inference: five distinct jobs share four rows and
+    // a512-token global workspace; the fifth must reuse the first row's epoch.
+    FixedRows denseStorage(4096);
+    ContinuousBatchSchedulerConfig denseConfig;denseConfig.decodeBuckets={4};denseConfig.maxPrefillBatch=4;
+    denseConfig.maxPrefillTokensPerTick=512;denseConfig.prefillChunkTokens=128;
+    ContinuousBatchScheduler dense(denseConfig);
+    const int prompts[]={513,514,1025,2048,512},outputs[]={1,128,129,130,2};
+    std::vector<uint64_t> denseIds;std::unordered_map<uint64_t,KVSequencePlacement> leases;
+    for(size_t i=0;i<5;++i){GenerationRequest job;job.promptTokens=prompts[i];job.maxNewTokens=outputs[i];denseIds.push_back(dense.Submit(job));Check(denseIds.back()!=0);}
+    bool refilled=false,mixedTick=false;size_t finished=0,ticks=0;
+    while(finished<5) {
+        Check(++ticks<1000);const auto current=dense.Schedule(denseStorage);Check(!current.batches.empty());
+        const auto plan=BuildPackedTokenPlan(current,denseStorage,512,4096);Check(plan.tokenCount>0&&plan.tokenCount<=512);
+        mixedTick=mixedTick||current.batches.size()==2;
+        size_t prefillTokens=0;
+        for(const auto& batch:current.batches)for(const auto& job:batch.requests) {
+            const auto placement=denseStorage.Placement(job.id);auto found=leases.find(job.id);
+            if(found==leases.end()) {
+                leases.emplace(job.id,placement);
+                if(job.id==denseIds[4]) {
+                    Check(placement.requestRow==leases.at(denseIds[0]).requestRow&&placement.rowEpoch!=leases.at(denseIds[0]).rowEpoch);
+                    refilled=true;
+                }
+            } else Check(placement.requestRow==found->second.requestRow&&placement.rowEpoch==found->second.rowEpoch);
+            if(batch.stage==RequestStage::Prefill) {
+                Check(job.prefillTokens>0&&job.prefillTokens<=128);prefillTokens+=size_t(job.prefillTokens);
+                if(job.prefillOffset+job.prefillTokens==job.promptTokens)Check(dense.CompletePrefill(job.id,42,denseStorage));
+                else Check(dense.CompletePrefillChunk(job.id,job.prefillTokens,denseStorage));
+            } else {Check(batch.stage==RequestStage::Decode);Check(dense.CompleteDecode(job.id,42,false,denseStorage));}
+        }
+        Check(prefillTokens<=512);finished=0;
+        for(auto id:denseIds)if(dense.Stage(id)==RequestStage::Finished){++finished;Check(denseStorage.LogicalLength(id)==-1);}
+    }
+    Check(refilled&&mixedTick&&dense.Schedule(denseStorage).batches.empty());
+    for(auto id:denseIds)Check(dense.ForgetFinished(id));
+    Check(dense.TrackedRequestCount()==0);
+    std::cout<<"portable_continuous_scheduler PASS stable rows, queued refill, cancellation, one-token budget, prefill EOS, invalid-token rejection, chunked prefill lifecycle and4-row/512-token global scheduling\n";
 }

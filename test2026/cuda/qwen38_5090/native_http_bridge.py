@@ -74,6 +74,8 @@ def validate_body(body,model='qwen38-27b-nvfp4'):
 
 class Handler(BaseHTTPRequestHandler):
     def log_message(self,*args):pass
+    def validate_request(self,body):
+        validate_body(body,getattr(self.server,'model','qwen38-27b-nvfp4'))
     def reply(self,status,body):
         raw=json.dumps(body).encode();self.send_response(status);self.send_header('Content-Type','application/json');self.send_header('Content-Length',str(len(raw)));self.end_headers();self.wfile.write(raw)
     def do_GET(self):
@@ -87,7 +89,7 @@ class Handler(BaseHTTPRequestHandler):
         try:
             size=int(self.headers.get('Content-Length','0'))
             if not 1<=size<=2*1024*1024:raise ValueError('Request size outside study bounds')
-            body=json.loads(self.rfile.read(size));validate_body(body,getattr(self.server,'model','qwen38-27b-nvfp4'))
+            body=json.loads(self.rfile.read(size));self.validate_request(body)
             if not self.server.worker.healthy():self.reply(503,{'error':'Native worker not ready'});return
         except Exception as error:self.reply(400,{'error':str(error)});return
         key=uuid.uuid4().hex;stream=body.get('stream',False);previous='';count=0;prompt=None;tokens=[];disconnected=False;started=False

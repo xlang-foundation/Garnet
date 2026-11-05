@@ -26,6 +26,22 @@ int main(){try{
     bad=p;bad[5]=4097;Need(!ChunkAttentionIndex32Fits(bad),"Context beyond4K accepted");
     bad=p;bad[2]=23;Need(!ChunkAttentionIndex32Fits(bad),"Nonintegral grouped query heads accepted");
     bad=p;bad[15]=2;Need(!ChunkAttentionIndex32Fits(bad),"Invalid gate contract accepted");
+    // Mistral's dense profile admits at most512 physical token rows. Keep the
+    // legacy default envelope, and opt in explicitly to its larger chunk bound.
+    for(uint64_t b:{1,2,4}) {
+        const uint64_t t=512/b;
+        std::array<uint64_t,16> dense{b,t,32,8,128,4096,4096,1024,1024,4194304,4194304,t,t,4096,4096,0};
+        Need(ChunkAttentionIndex32Fits(dense,512),"Dense Mistral global512 profile rejected");
+        for(auto field:{6,7,8,13,14}) {
+            auto bound=dense;bound[field]=maximum/512;
+            Need(ChunkAttentionIndex32Fits(bound,512),"Dense token stride boundary rejected");
+            ++bound[field];Need(!ChunkAttentionIndex32Fits(bound,512),"Dense token stride overflow accepted");
+        }
+    }
+    auto wide=Profile(1,512);
+    Need(!ChunkAttentionIndex32Fits(wide)&&ChunkAttentionIndex32Fits(wide,512),"Explicit dense bound changed legacy default");
+    Need(!ChunkAttentionIndex32Fits(wide,0)&&!ChunkAttentionIndex32Fits(wide,513),"Invalid compiled envelope accepted");
+    wide[1]=513;Need(!ChunkAttentionIndex32Fits(wide,512),"Chunk beyond dense512 accepted");
     std::cout<<"Chunk attention uint32 bounds:35 Qwen profiles, nine stride boundaries, all16 wide fields and invalid geometry PASS\n";
     return 0;
 }catch(const std::exception& error){std::cerr<<error.what()<<"\n";return 1;}}

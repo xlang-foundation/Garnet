@@ -4192,7 +4192,7 @@ void MetalContext::PrepareAttentionChunk(const std::vector<MetalMatrix>& inputs,
     const size_t batch=kc.rows;
     std::array<uint64_t,16> fields{batch,chunk,heads,kvHeads,dim,capacity,q.rowBytes/4,k.rowBytes/4,v.rowBytes/4,
         kc.rowBytes/4,vc.rowBytes/4,s.rowBytes/4,a.rowBytes/4,g.rowBytes/4,q.rowBytes/4,0};
-    if(!ChunkAttentionIndex32Fits(fields)||q.rows!=batch*chunk||q.columns!=heads*dim||k.rows!=q.rows||v.rows!=q.rows||
+    if(!ChunkAttentionIndex32Fits(fields,kMetalPrefillChunkLimit)||q.rows!=batch*chunk||q.columns!=heads*dim||k.rows!=q.rows||v.rows!=q.rows||
        k.columns!=kvHeads*dim||v.columns!=k.columns||kc.columns!=kvHeads*capacity*dim||vc.rows!=batch||vc.columns!=kc.columns||
        kc.rowBytes!=kc.columns*4||vc.rowBytes!=kc.rowBytes||s.rows!=batch||s.columns!=chunk||a.rows!=batch||a.columns!=chunk||
        g.rows!=q.rows||g.columns!=q.columns)
@@ -4281,7 +4281,7 @@ void MetalContext::EncodeAttentionChunk(const std::vector<MetalMatrix>& inputs,c
     Params p{kc.rows,chunk,heads,kvHeads,dim,capacity,q.rowBytes/4,k.rowBytes/4,v.rowBytes/4,kc.rowBytes/4,vc.rowBytes/4,s.rowBytes/4,a.rowBytes/4,g.rowBytes/4,o.rowBytes/4,uint64_t(gated)};
 #ifdef GARNET_METAL_CHUNK_ATTENTION_INDEX32
     const std::array<uint64_t,16> fields{p.batch,p.chunk,p.heads,p.kvHeads,p.dim,p.capacity,p.qStride,p.kStride,p.vStride,p.kcStride,p.vcStride,p.sStride,p.aStride,p.gStride,p.oStride,p.gated};
-    if(!reference&&!ChunkAttentionIndex32Fits(fields))throw std::invalid_argument("Chunk attention profile exceeds proved32-bit indexes");
+    if(!reference&&!ChunkAttentionIndex32Fits(fields,kMetalPrefillChunkLimit))throw std::invalid_argument("Chunk attention profile exceeds proved32-bit indexes");
 #endif
 #ifdef GARNET_METAL_CHUNK_ATTENTION_MPS
     if(!reference) {
@@ -4302,7 +4302,7 @@ void MetalContext::EncodeAttentionChunk(const std::vector<MetalMatrix>& inputs,c
             s.data.storageMode==MTLStorageModeShared&&a.data.storageMode==MTLStorageModeShared&&s.data.contents&&a.data.contents;
         const auto policy=SelectChunkAttentionPolicy(capacity,size_t(p.batch),chunk,
             controlsReady?reinterpret_cast<const float*>(static_cast<const char*>(s.data.contents)+s.offset):nullptr,size_t(p.sStride),
-            controlsReady?reinterpret_cast<const float*>(static_cast<const char*>(a.data.contents)+a.offset):nullptr,size_t(p.aStride));
+            controlsReady?reinterpret_cast<const float*>(static_cast<const char*>(a.data.contents)+a.offset):nullptr,size_t(p.aStride),kMetalPrefillChunkLimit);
         if(policy.scalar) {
             // Tail inputs retain the same fixed layouts. Avoid packing and
             // dense matrix products when there are at most eight real tokens.

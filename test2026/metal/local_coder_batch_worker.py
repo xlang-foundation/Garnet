@@ -9,7 +9,7 @@ or bounded chunk scheduling; an optional mixed forward remains experimental.
 import sys,json,os,time,threading,queue
 sys.path.insert(0,sys.argv[1]);sys.path.insert(0,sys.argv[2])
 import garnet,tensor
-from xModel.qwen38.vl_27b.metal_batch_study import create_decoder
+from xModel.qwen38.vl_27b.metal_batch_study import create_decoder as create_qwen_decoder
 
 def emit(value):
     raw=(json.dumps(value,ensure_ascii=True,separators=(',',':'))+'\n').encode()
@@ -24,6 +24,9 @@ def main():
     folder=sys.argv[3]
     with open(sys.argv[4]) as stream:profile=json.load(stream)
     with open(folder+'/config.json') as stream:config=json.load(stream)
+    family=profile.get('model_family','qwen38_27b')
+    if family not in ('qwen38_27b','mistral_7b'):raise ValueError('Unsupported native batch model family')
+    text_config=config if family=='mistral_7b' else config['text_config']
     batch=profile['batch'];capacity=profile['capacity'];chunk=profile['prefill_chunk'];prefix=profile.get('prefix_cache',False)
     if type(prefix) is not bool:raise ValueError('Explicit boolean prefix policy required')
     prefill_schedule=profile.get('prefill_schedule','whole')
@@ -42,7 +45,7 @@ def main():
     if alias_groups:
         expected_alias_layout=profile.get('expected_prefill_alias_layout')
         if (profile.get('require_lifetime_reuse') is not True or not chunked or
-            type(expected_alias_layout) is not list or len(expected_alias_layout)!=len(config['text_config']['layer_types'])):
+            type(expected_alias_layout) is not list or len(expected_alias_layout)!=text_config['num_hidden_layers']):
             raise ValueError('Alias profile requires its complete prepared layer layout')
         for row in expected_alias_layout:
             if (type(row) is not dict or set(row)!=set(('groups','slots','reused_bytes')) or
@@ -127,7 +130,8 @@ def main():
     if not profile.get('profile_id'):raise ValueError('Frozen profile identity required')
     if 'row_final_hidden' not in garnet.backend_info():raise ValueError('Native per-row final hidden extension required')
     if profile.get('require_mpp',False):
-        tag={'float32':'mpp_affine_fp32_optional','bfloat16':'mpp_affine_bf16_optional'}.get(profile.get('mpp_operand_dtype','float32'))
+        tag={'float32':'mpp_affine_fp32_optional','bfloat16':'mpp_affine_bf16_optional',
+             'float16':'mpp_affine_fp16_optional'}.get(profile.get('mpp_operand_dtype','float32'))
         if tag is None or tag not in garnet.backend_info():raise ValueError('Frozen profile requires its explicit native MPP operand type')
         tile=profile.get('mpp_tile_k',32)
         if type(tile) is not int or tile not in (32,64,128) or 'mpp_affine_tile_k='+str(tile) not in garnet.backend_info():
@@ -143,7 +147,16 @@ def main():
             raise ValueError('Frozen profile requires its explicit MPP operand storage')
         tensor_k=16 if registers else tile
         if 'mpp_affine_tensor_k='+str(tensor_k) not in garnet.backend_info():raise ValueError('Frozen profile requires its explicit MPP tensor reduction extent')
-    width=config['text_config']['hidden_size'];vocab=config['text_config']['vocab_size']
+    if family=='mistral_7b':
+        dense_limit=profile.get('dense_prefill_max_tokens')
+        if (config.get('model_type')!='mistral' or not chunked or prefix or
+            type(dense_limit) is not int or dense_limit not in (16,32,64,128,256,512) or
+            profile.get('global_prefill_token_budget')!=dense_limit or
+            'dense_prefill_max_tokens='+str(dense_limit) not in backend or batch*chunk>dense_limit):
+            raise ValueError('Initial Mistral serving study requires uncached chunk scheduling within its dense token-row bound')
+        if profile.get('mpp_operand_dtype')!='float16' or profile.get('require_mpp') is not True:
+            raise ValueError('Mistral serving study requires its explicit FP16 coefficient/operand profile')
+    width=text_config['hidden_size'];vocab=text_config['vocab_size']
     incoming=queue.Queue(maxsize=16);shutdown=threading.Event();input_failure=[]
     decoder=None;policy=None;jobs={};keys=set()
     def read():
@@ -163,7 +176,10 @@ def main():
         except Exception as error:input_failure.append(str(error))
         finally:shutdown.set()
     try:
-        decoder=create_decoder(folder+'/model.safetensors.index.json',config,capacity,batch,chunk)
+        if family=='mistral_7b':
+            from xModel.mistral.text_7b.metal_batch_study import create_decoder as create_mistral_decoder
+            decoder=create_mistral_decoder(folder+'/model.safetensors',config,capacity,batch,chunk)
+        else:decoder=create_qwen_decoder(folder+'/model.safetensors.index.json',config,capacity,batch,chunk)
         decoder.prefill_compile_ms=0
         if prefix:
             if 'native_hybrid_token_prefix' not in garnet.backend_info():raise ValueError('Native hybrid token prefix extension required')
@@ -184,9 +200,17 @@ def main():
             descriptors.append(dict(tag='head',object=decoder.head))
             with open(path,'x') as stream:stream.write(garnet.memory_inventory_json(descriptors,decoder.session))
         policy=garnet.continuous_scheduler();policy.initialize(decoder.session,16)
+        if family=='mistral_7b':
+            if policy.set_prefill_chunk(dense_limit//batch+1) or policy.set_prefill_chunk(0):
+                raise ValueError('Native dense scheduler accepted an oversized or whole-prompt chunk policy')
+            emit(dict(event='native_dense_schedule_bound',physical_rows=batch,global_token_budget=dense_limit,
+                maximum_chunk=min(capacity,dense_limit//batch),oversized_chunk_rejected=True,whole_prompt_rejected=True))
         if chunked and not policy.set_prefill_chunk(chunk):raise ValueError('Native prefill chunk configuration rejected')
         tokenizer=garnet.tokenizer();tokenizer.open(folder)
-        stops=[tokenizer.token_id('<|im_end|>'),tokenizer.token_id('<|endoftext|>')]
+        if family=='mistral_7b':
+            stops=[config['eos_token_id']]
+            if stops!=[tokenizer.token_id('</s>')]:raise ValueError('Mistral native EOS identity differs from checkpoint')
+        else:stops=[tokenizer.token_id('<|im_end|>'),tokenizer.token_id('<|endoftext|>')]
         reader=threading.Thread(target=read,daemon=True);reader.start()
         if attention_mps:
             plans=decoder.session.chunk_attention_mps_plan_count;scratch=decoder.session.chunk_attention_mps_scratch_bytes
@@ -320,7 +344,7 @@ def main():
             if token<0 or token>=vocab:raise ValueError('Native batch output outside vocabulary')
             job['generated'].append(token)
             if token not in stops:job['text_ids'].append(token)
-            text=tokenizer.decode(job['text_ids']).encode('utf8').decode('utf8','replace')
+            text=(tokenizer.decode_ex(job['text_ids'],True) if family=='mistral_7b' else tokenizer.decode(job['text_ids'])).encode('utf8').decode('utf8','replace')
             emit(dict(event='token',id=job['id'],token_id=token,sampled_tokens=len(job['generated']),
                 prompt_tokens=len(job['prompt']),cached_tokens=job['cached_tokens'],text=text))
             finished=token in stops or len(job['generated'])>=job['limit']

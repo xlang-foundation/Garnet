@@ -20,10 +20,12 @@ struct ChunkAttentionPolicy {
 // Only completed host-readable control buffers may be supplied. GPU-produced
 // pending controls use null pointers and retain the maximum compiled extent.
 inline ChunkAttentionPolicy SelectChunkAttentionPolicy(size_t capacity,size_t batch,size_t chunk,
-    const float* slots,size_t slotStride,const float* active,size_t activeStride) {
+    const float* slots,size_t slotStride,const float* active,size_t activeStride,size_t maximumChunk=256) {
     const auto buckets=ChunkAttentionContextBuckets(capacity);
+    if(!maximumChunk||maximumChunk>512||!chunk||chunk>maximumChunk)
+        throw std::invalid_argument("Invalid compiled attention chunk bound");
     if(!slots&&!active)return {capacity,0,false,false};
-    if(!slots||!active||!batch||batch>64||!chunk||chunk>256||slotStride<chunk||activeStride<chunk)
+    if(!slots||!active||!batch||batch>64||slotStride<chunk||activeStride<chunk)
         throw std::invalid_argument("Invalid attention control layout");
     size_t visible=1,count=0;
     for(size_t b=0;b<batch;++b)for(size_t t=0;t<chunk;++t) {
