@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 #include "compiled_graph.h"
+#include "float16_codec.h"
 #ifdef GARNET_METAL_PREFILL_ALIAS_GROUPS
 #include "../../runtime/memory/scratch_alias_group_plan.h"
 #include <type_traits>
@@ -123,6 +124,10 @@ size_t MetalCompiledGraph::Weight(const std::string& name) {
         if(entry->dataSize!=data.size()*2)throw std::runtime_error("Invalid BF16 weight length");
         for(size_t i=0;i<data.size();++i){uint16_t half;std::memcpy(&half,static_cast<const char*>(raw)+2*i,2);
             uint32_t bits=uint32_t(half)<<16;std::memcpy(&data[i],&bits,4);}
+    }else if(entry->dataType=="F16") {
+        if(entry->dataSize!=data.size()*2)throw std::runtime_error("Invalid FP16 weight length");
+        for(size_t i=0;i<data.size();++i){uint16_t half;std::memcpy(&half,static_cast<const char*>(raw)+2*i,2);
+            data[i]=Float16ToFloat32(half);}
     }else if(entry->dataType=="F32") {
         if(entry->dataSize!=data.size()*4)throw std::runtime_error("Invalid FP32 weight length");
         std::memcpy(data.data(),raw,entry->dataSize);

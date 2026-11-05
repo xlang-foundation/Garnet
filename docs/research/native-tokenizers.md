@@ -96,6 +96,12 @@ Successful suite: `native-tokenizer-parity4/*/report.json` and `cases.jsonl`.
 Runtime API: `native-tokenizer-runtime-api1.log` and `runtime-api-fixtures.json`.
 Unsupported-format checks: `native-tokenizer-rejections1/report.json`.
 Source and build provenance are retained in `native-tokenizer-provenance1.json`.
+The original Metal build directory was later reused for raw FP16 loader work;
+its output-library path is mutable. Use the immutable copied library under
+`tokenizer-runtime-final-library1` and the fresh 120-check runtime API result
+`native-tokenizer-runtime-api2.log` for current runtime qualification. The
+five-family reference probe and case records remain unchanged. See
+`mistral7b-metal-onboarding.md` for the additional loader work and provenance.
 
 ## Reproduce
 
