@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include "qwen_tokenizer.h"
+#include "tokenizer_assets.h"
 #include "qwen_unicode_categories.h"
 #include "qwen_unicode_normalization.h"
 
@@ -197,6 +198,7 @@ namespace Garnet::Tokenization
         m_mergeRanks.clear();
         m_maxAddedTokenLength = 0;
         m_normalizeNfc = false;
+        m_info = {};
 
         std::string jsonText;
         std::string path = modelDir + "/tokenizer.json";
@@ -209,6 +211,12 @@ namespace Garnet::Tokenization
 
         std::string fallbackMergesText;
         try {
+            const auto family = Assets::Family(Assets::Read(modelDir, "config.json"),
+                                               Assets::Read(modelDir, "tokenizer_config.json"));
+            if (!family.empty() && family != "qwen") {
+                if (error) *error = "Qwen-only tokenizer API cannot load " + family + "; use the generic tokenizer API";
+                return false;
+            }
             nlohmann::json root;
             if (!jsonText.empty()) {
                 root = nlohmann::json::parse(jsonText);
@@ -244,6 +252,29 @@ namespace Garnet::Tokenization
             if (!root.contains("model") || !root["model"].is_object()) {
                 if (error) *error = "tokenizer.json missing model object";
                 return false;
+            }
+            if (!jsonText.empty()) {
+                // Protect legacy Qwen-only C entry points from other families.
+                const auto& model = root["model"];
+                if (model.value("type", std::string()) != "BPE" ||
+                    model.value("byte_fallback", false)) {
+                    if (error) *error = "Qwen tokenizer requires byte-level BPE without byte fallback; use the generic tokenizer API for Mistral/Gemma";
+                    return false;
+                }
+                const auto pre = root.find("pre_tokenizer");
+                bool byteLevel = false;
+                if (pre != root.end() && pre->is_object()) {
+                    byteLevel = pre->value("type", std::string()) == "ByteLevel";
+                    if (pre->value("type", std::string()) == "Sequence" &&
+                        pre->contains("pretokenizers") && (*pre)["pretokenizers"].is_array()) {
+                        for (const auto& stage : (*pre)["pretokenizers"])
+                            byteLevel |= stage.is_object() && stage.value("type", std::string()) == "ByteLevel";
+                    }
+                }
+                if (!byteLevel) {
+                    if (error) *error = "Qwen tokenizer requires a ByteLevel pre-tokenizer; unsupported tokenizer pipeline";
+                    return false;
+                }
             }
             if (root.contains("normalizer") && !root["normalizer"].is_null()) {
                 const auto& normalizer=root["normalizer"];
@@ -371,7 +402,25 @@ namespace Garnet::Tokenization
             return false;
         }
 
+        try {
+            const auto config = Assets::Read(modelDir, "config.json");
+            const auto tc = Assets::Read(modelDir, "tokenizer_config.json");
+            m_info.family = "qwen";
+            m_info.implementation = "garnet-qwen-cpp";
+            m_info.vocabularySize = m_idToToken.size();
+            m_info.bosTokenId = Assets::SpecialId(*this, config, tc, "bos_token");
+            m_info.eosTokenId = Assets::SpecialId(*this, config, tc, "eos_token");
+            m_info.padTokenId = Assets::SpecialId(*this, config, tc, "pad_token");
+            m_info.unkTokenId = Assets::SpecialId(*this, config, tc, "unk_token");
+        } catch (const std::exception& e) {
+            if (error) *error = e.what(); return false;
+        }
         return !m_tokenToId.empty();
+    }
+
+    TokenizerInfo QwenTokenizer::Info() const
+    {
+        return m_info;
     }
 
     int64_t QwenTokenizer::TokenId(const std::string& token) const

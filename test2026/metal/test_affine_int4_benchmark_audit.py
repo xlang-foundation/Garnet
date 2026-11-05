@@ -1,0 +1,44 @@
+"""CPU-only corruption checks for archived synthetic projection cohorts."""
+import json,shutil,sys,tempfile
+from pathlib import Path
+from summarize_affine_int4_benchmark import summarize
+root=Path(sys.argv[1]);assert summarize(root)['status']=='passed'
+manifest=json.loads((root/'manifest.json').read_text());candidates=manifest.get('required_mpp_variants',['mpp'] if 'mpp' in manifest['variant_order'] else [])
+assert candidates,'MPP archive required';candidate=candidates[0]
+mutations=['negative_gpu_time','missing_cell','missing_mpp','changed_binary','skipped_cohort','bad_precision','bad_tile','bad_layout','bad_rows','bad_registers','bad_tensor_k','bad_reuse64_availability','bad_reuse64_count','bad_shape_set','bad_reuse64_threshold','bad_reuse64_storage','bad_reuse64_precision','bad_affine_profile_availability','bad_affine_profile_count','bad_affine_profile_misses','bad_affine_profile_bound','bad_profile_thread_bound','bad_profile_pipeline_threads','bad_profile_index_width','bad_cell_index_width']
+for mutation in mutations:
+    with tempfile.TemporaryDirectory() as temporary:
+        path=Path(temporary)/'study';shutil.copytree(root,path)
+        if mutation=='changed_binary':
+            with (path/candidate/'garnet_affine_int4_benchmark').open('ab') as stream:stream.write(b'x')
+        elif mutation=='skipped_cohort':
+            report=json.loads((path/'status.json').read_text());report['runs'].pop();(path/'status.json').write_text(json.dumps(report))
+        else:
+            raw=path/f'{candidate}-cohort1.jsonl';rows=[json.loads(line) for line in raw.read_text().splitlines()]
+            if mutation=='negative_gpu_time':rows[1]['gpu_ms'][0]=-1
+            elif mutation=='missing_cell':rows.pop()
+            elif mutation=='missing_mpp':rows[0]['mpp_available']=False
+            elif mutation=='bad_precision':rows[0]['relaxed_precision']=not rows[0].get('relaxed_precision',False)
+            elif mutation=='bad_tile':rows[0]['mpp_tile_k']=99
+            elif mutation=='bad_registers':rows[0]['mpp_registers']=not rows[0].get('mpp_registers',False)
+            elif mutation=='bad_tensor_k':rows[0]['mpp_tensor_k']=99
+            elif mutation=='bad_rows':rows[0]['maximum_rows']=0
+            elif mutation=='bad_layout':rows[0]['mpp_n_major']=not rows[0].get('mpp_n_major',False)
+            elif mutation=='bad_reuse64_availability':rows[0]['reuse64_available']=not rows[0].get('reuse64_available',False)
+            elif mutation=='bad_reuse64_count':rows[1]['reuse64_dispatches_per_call']=99
+            elif mutation=='bad_shape_set':rows[0]['shape_set']='invalid'
+            elif mutation=='bad_reuse64_threshold':rows[0]['reuse64_min_outputs']=1
+            elif mutation=='bad_reuse64_storage':rows[0]['reuse64_registers']=not rows[0].get('reuse64_registers',False)
+            elif mutation=='bad_reuse64_precision':rows[0]['reuse64_relaxed']=not rows[0].get('reuse64_relaxed',False)
+            elif mutation=='bad_affine_profile_availability':rows[0]['affine_profile_available']=not rows[0].get('affine_profile_available',False)
+            elif mutation=='bad_affine_profile_count':rows[1]['affine_profile_dispatches_per_call']=99
+            elif mutation=='bad_affine_profile_misses':rows[1]['affine_profile_misses_per_call']=1
+            elif mutation=='bad_affine_profile_bound':rows[0]['affine_profile_maximum_rows']=0 if rows[0].get('affine_profile_available',False) else 1
+            elif mutation=='bad_profile_thread_bound':rows[0]['affine_profile_requested_max_threads']=99
+            elif mutation=='bad_profile_pipeline_threads':rows[0]['affine_profile_requested_max_threads']=128;rows[1]['affine_profile_pipeline_max_threads']=64
+            elif mutation=='bad_profile_index_width':rows[0]['affine_profile_index_bits']=17
+            elif mutation=='bad_cell_index_width':rows[1]['affine_profile_index_bits']=17
+            raw.write_text('\n'.join(json.dumps(row) for row in rows)+'\n')
+        result=summarize(path);assert result['status']=='failed' and result['issues'],mutation
+        print('affine_int4_benchmark_audit rejects',mutation)
+print('affine_int4_benchmark_audit PASS baseline and',len(mutations),'tamper cases')

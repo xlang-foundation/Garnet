@@ -2,6 +2,66 @@
 """Exact Qwen3.8-27B VLM contract. Runtime admission requires separate GPU gates."""
 
 
+def create_decoder(checkpoint,config,capacity,linear_chunk=False):
+    """Bounded first Metal qualification profile; not general serving admission.
+
+    Capacity above512 requires the explicit chunk-recurrence and compact-index
+    extensions before allocation. Batch4, full-length 4K execution, longer
+    contexts and vision remain separate qualification gates.
+    """
+    validate_config(config)
+    quant=config.get('quantization',{})
+    if quant.get('bits')!=4 or quant.get('group_size')!=64 or quant.get('mode')!='affine':
+        raise ValueError('Qwen3.8 Metal qualification requires the pinned affine INT4/group64 conversion')
+    text=config['text_config']
+    if text.get('hidden_act')!='silu' or text.get('attention_bias') is not False:
+        raise ValueError('Native Metal profile requires SiLU MLP and bias-free text projections')
+    if type(capacity) is not int or capacity<64 or capacity>4096:
+        raise ValueError('Qwen3.8 Metal study requires capacity64..4096')
+    import garnet
+    backend=garnet.backend_info()
+    if 'mlx_qwen35_affine_int4_g64_bf16' not in backend:
+        raise ValueError('Native Metal affine INT4 extension is required')
+    if capacity>512:
+        required=['compact_attention_index','lazy_resident_defaults','resident_kv_inplace',
+                  'linear_chunk_conv','linear_chunk_delta']
+        if not linear_chunk or any(flag not in backend for flag in required):
+            raise ValueError('Extended Metal context requires bounded chunk attention, shared resident state and chunk recurrence')
+    from xModel.qwen35.vl_0_8b.metal_decoder import MetalDecoder
+    return MetalDecoder(checkpoint,text,1,capacity,
+                        required_checkpoint_format='mlx_qwen35_affine_int4_g64_bf16')
+
+
+def create_vision(checkpoint,config,gh,gw,shared_encoder=None):
+    raise ValueError('Qwen3.8 MLX vision layout and end-to-end Metal qualification are pending')
+
+
+def create_metal_vision_study(checkpoint,config,gh,gw):
+    """Standalone 256px learned vision gate; stage before text on the 24GiB Mac.
+
+    The pinned build allocated2.90GB for this exact tower/grid. Reserve3.5GB
+    before construction and reject an unexpectedly larger allocation afterward.
+    This does not admit general grids, simultaneous text/vision or VLM serving.
+    """
+    validate_config(config)
+    if (gh,gw)!=(16,16):
+        raise ValueError('Qwen3.8 Metal vision study requires the verified16x16 patch grid')
+    import garnet,json
+    if 'mlx_qwen35_affine_int4_g64_bf16' not in garnet.backend_info():
+        raise ValueError('Qwen3.8 converted vision requires its native checkpoint extension')
+    before=json.loads(garnet.memory_stats_json())
+    reserve=3500000000
+    if before['metal_allocated_bytes']+reserve>before['metal_recommended_working_set_bytes']:
+        raise ValueError('Stage Qwen3.8 vision before text; insufficient native vision working-set reserve')
+    from xModel.qwen35.vl_0_8b.metal_vision import MetalImageEncoder
+    encoder=MetalImageEncoder(checkpoint,config['vision_config'],gh,gw,1)
+    after=json.loads(garnet.memory_stats_json())
+    if after['metal_allocated_bytes']>min(before['metal_allocated_bytes']+reserve,before['metal_recommended_working_set_bytes']):
+        encoder.close()
+        raise ValueError('Qwen3.8 vision study exceeded its measured allocation envelope')
+    return encoder
+
+
 def validate_config(config):
     if config.get('architectures') != ['Qwen3_5ForConditionalGeneration'] or config.get('model_type') != 'qwen3_5':
         raise ValueError('Qwen3.8-27B requires the Qwen3.5 conditional-generation architecture')

@@ -16,7 +16,12 @@ int main(int argc,char** argv){try{
  auto run=[&](size_t rows,size_t inner,size_t columns){
   std::vector<float> input(rows*inner),weights(columns*inner);std::vector<uint16_t> bits(weights.size());
   for(size_t i=0;i<bits.size();++i){int exponent=int((i*13+i/inner)%8)-5;bits[i]=uint16_t(((i*7+i/inner)%2?0x8000:0)|((127+exponent)<<7)|((i*17+i/inner)%128));weights[i]=fromBits(uint32_t(bits[i])<<16);}
-  auto a=gpu.Allocate(rows,inner),out=gpu.Allocate(rows,columns);auto w=gpu.UploadBF16(bits.data(),bits.size()*2,columns,inner);bool prepared=gpu.PrepareBF16BodyShape(a,w,out);require(prepared==(rows<=2&&columns<100000),"Unexpected shape preparation admission");
+  auto a=gpu.Allocate(rows,inner),out=gpu.Allocate(rows,columns);auto w=gpu.UploadBF16(bits.data(),bits.size()*2,columns,inner);bool prepared=gpu.PrepareBF16BodyShape(a,w,out);
+#ifdef GARNET_METAL_BODY_SHAPE
+  require(prepared==(rows<=2&&columns<100000),"Unexpected shape preparation admission");
+#else
+  require(!prepared,"Disabled body-shape policy admitted a pipeline");
+#endif
   bool eligible=false;
 #ifdef GARNET_METAL_PRIMARY_BF16_BLOCKS
   eligible=columns>256&&columns%4==0&&inner%128==0;
@@ -37,7 +42,12 @@ int main(int argc,char** argv){try{
   }
   if(rows==1&&inner==6144&&columns==257){
    gpu.Begin();gpu.EncodeBF16MatVec(a,w,out);gpu.Abort();bool rejected=false;try{gpu.Download(out);}catch(...){rejected=true;}require(rejected,"Aborted output readable");gpu.Begin();gpu.EncodeBF16MatVec(a,w,out);gpu.SubmitAndWait();auto value=gpu.Download(out);require(std::memcmp(saved.data(),value.data(),saved.size()*4)==0,"Abort recovery differs");
-   gpu.Begin();rejected=false;try{gpu.PrepareBF16BodyShape(a,w,out);}catch(...){rejected=true;}gpu.Abort();require(rejected,"Prepared pipeline during active encoding");
+   gpu.Begin();rejected=false;bool admitted=false;try{admitted=gpu.PrepareBF16BodyShape(a,w,out);}catch(...){rejected=true;}gpu.Abort();
+#ifdef GARNET_METAL_BODY_SHAPE
+   require(rejected,"Prepared pipeline during active encoding");
+#else
+   require(!rejected&&!admitted,"Disabled body-shape policy changed active encoding");
+#endif
   }
   ++cases;
  };

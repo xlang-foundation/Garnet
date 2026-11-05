@@ -190,7 +190,6 @@ FILE(GLOB_RECURSE Runtime_SRC "${CMAKE_CURRENT_SOURCE_DIR}/src/runtime/*.cpp")
 FILE(GLOB Tensor_SRC "${CMAKE_CURRENT_SOURCE_DIR}/src/tensor/*.cpp")
 FILE(GLOB Log_SRC "${CMAKE_CURRENT_SOURCE_DIR}/src/log/*.cpp")
 FILE(GLOB_RECURSE Image_SRC "${CMAKE_CURRENT_SOURCE_DIR}/src/image/*.cpp")
-FILE(GLOB_RECURSE Tokenizer_SRC "${CMAKE_CURRENT_SOURCE_DIR}/src/tokenizer/*.cpp")
 FILE(GLOB_RECURSE Cuda_SRC "${CMAKE_CURRENT_SOURCE_DIR}/src/cuda/*.cu")
 list(FILTER Cuda_SRC EXCLUDE REGEX ".*/test\\.cu$")
 FILE(GLOB_RECURSE Backend_SRC "${CMAKE_CURRENT_SOURCE_DIR}/src/backends/*.cpp")
@@ -245,7 +244,6 @@ add_library(${PROJECT_NAME}
     ${Runtime_SRC}
     ${Log_SRC}
     ${Image_SRC}
-    ${Tokenizer_SRC}
     ${Backend_SRC}
 )
 if(GARNET_QWEN35_WHOLE_PROGRAM_CUDA)
@@ -274,6 +272,8 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE GARNET_SERVING_EXPORTS=1)
 target_compile_definitions(${PROJECT_NAME} PRIVATE XLANG3_USE_SHARED)
 target_compile_definitions(${PROJECT_NAME} PRIVATE NOMINMAX)
 target_link_libraries(${PROJECT_NAME} xlang3_runtime)
+include(cmake/GarnetTokenizer.cmake)
+garnet_configure_tokenizers(${PROJECT_NAME})
 
 if(OpenVINO_FOUND)
     target_compile_definitions(${PROJECT_NAME} PRIVATE GARNET_WITH_OPENVINO=1)

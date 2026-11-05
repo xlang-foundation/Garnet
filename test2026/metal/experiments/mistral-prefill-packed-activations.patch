@@ -1,0 +1,178 @@
+--- a/cmake/GarnetMetal.cmake
++++ b/cmake/GarnetMetal.cmake
+@@ -215,0 +216,7 @@
++endif()
++option(GARNET_METAL_MPP_REUSE64_PACK_HALF "Prepare bounded compact FP16 activation scratch for cooperative64" OFF)
++if(GARNET_METAL_MPP_REUSE64_PACK_HALF)
++    if(NOT GARNET_METAL_MPP_AFFINE_REUSE64 OR NOT GARNET_METAL_MPP_AFFINE_FP16 OR NOT GARNET_METAL_AFFINE_FP16_COEFFICIENTS OR NOT GARNET_METAL_AFFINE_PROFILE)
++        message(FATAL_ERROR "Packed cooperative activations require prepared FP16 operand/coefficient profiles and cooperative64")
++    endif()
++    target_compile_definitions(garnet_metal PUBLIC GARNET_METAL_REUSE64_PACK_HALF=1)
+--- a/src/backends/metal/affine_int4_reuse64_shader.h
++++ b/src/backends/metal/affine_int4_reuse64_shader.h
+@@ -23,0 +24,17 @@
++#ifdef GARNET_REUSE64_PACK_HALF
++// Pack only selected logical rows. This cast is the same FP16 operand cast
++// performed by the original multiplication, moved before repeated tile loads.
++kernel void affine_q4_pack_half(device const float* input [[buffer(0)]],
++ constant Reuse64Params& runtime [[buffer(5)]],constant uint* indices [[buffer(6)]],
++ device half* compactInput [[buffer(7)]],uint index [[thread_position_in_grid]]) {
++    GARNET_AFFINE_PARAMETERS(Reuse64Params);
++    const AffineIndex vectors=p.inner/4;
++    if(index>=p.rows*vectors)return;
++    const AffineIndex logical=index/vectors,k=(index%vectors)*4;
++    const float4 values=float4(*reinterpret_cast<device const packed_float4*>(input+AffineIndex(indices[logical])*p.aStride+k));
++    reinterpret_cast<device packed_half4*>(compactInput)[index]=packed_half4(half4(values));
++}
++#define GARNET_REUSE64_A(row,k) compactInput[(row)*p.inner+(k)]
++#else
++#define GARNET_REUSE64_A(row,k) input[AffineIndex(indices[row])*p.aStride+(k)]
++#endif
+@@ -27,0 +45,3 @@
++#ifdef GARNET_REUSE64_PACK_HALF
++ device const half* compactInput [[buffer(7)]],
++#endif
+@@ -75 +95 @@
+-                left[i]=AffineOperand((logical<p.rows&&k<p.inner)?input[AffineIndex(indices[logical])*p.aStride+k]:0.0f);
++                left[i]=AffineOperand((logical<p.rows&&k<p.inner)?GARNET_REUSE64_A(logical,k):0.0f);
+@@ -81 +101 @@
+-                left[i]=AffineOperand((logical<p.rows&&k<p.inner)?input[AffineIndex(indices[logical])*p.aStride+k]:0.0f);
++                left[i]=AffineOperand((logical<p.rows&&k<p.inner)?GARNET_REUSE64_A(logical,k):0.0f);
+@@ -92,0 +113 @@
++#undef GARNET_REUSE64_A
+--- a/src/backends/metal/decoder_session.h
++++ b/src/backends/metal/decoder_session.h
+@@ -269,0 +270,4 @@
++#ifdef GARNET_METAL_REUSE64_PACK_HALF
++    size_t LastReuse64PackDispatches() {std::lock_guard<std::mutex> lock(mutex_);return gpu_?gpu_->LastReuse64PackDispatches():0;}
++    size_t Reuse64HalfScratchBytes() {std::lock_guard<std::mutex> lock(mutex_);return gpu_?gpu_->Reuse64HalfScratchBytes():0;}
++#endif
+@@ -394,0 +399,4 @@
++#ifdef GARNET_METAL_REUSE64_PACK_HALF
++        APISET().AddProp("mpp_reuse64_pack_dispatches",&MetalDecoderSession::LastReuse64PackDispatches);
++        APISET().AddProp("mpp_reuse64_half_scratch_bytes",&MetalDecoderSession::Reuse64HalfScratchBytes);
++#endif
+--- a/src/backends/metal/metal_context.h
++++ b/src/backends/metal/metal_context.h
+@@ -189,0 +190,4 @@
++#ifdef GARNET_METAL_REUSE64_PACK_HALF
++    size_t LastReuse64PackDispatches() const;
++    size_t Reuse64HalfScratchBytes() const;
++#endif
+--- a/src/backends/metal/metal_context.mm
++++ b/src/backends/metal/metal_context.mm
+@@ -264 +264 @@
+-enum class AffineProfileRoute:size_t {Decode,MPP,IndexedDecode,Indexed,Reuse64};
++enum class AffineProfileRoute:size_t {Decode,MPP,IndexedDecode,Indexed,Reuse64,PackHalf};
+@@ -296 +296 @@
+-    std::array<id<MTLLibrary>,5> affineProfileLibraries{};
++    std::array<id<MTLLibrary>,6> affineProfileLibraries{};
+@@ -503,0 +504,4 @@
++#ifdef GARNET_METAL_REUSE64_PACK_HALF
++    id<MTLBuffer> reuse64HalfScratch;
++    size_t reuse64PackDispatches=0;
++#endif
+@@ -1822,0 +1827,3 @@
++#ifdef GARNET_METAL_REUSE64_PACK_HALF
++            reuseSource=[@"#define GARNET_REUSE64_PACK_HALF 1\n" stringByAppendingString:reuseSource];
++#endif
+@@ -1833 +1840,5 @@
+-         impl_->kernels->affineProfileLibraries[size_t(AffineProfileRoute::Reuse64)]=library;}
++         impl_->kernels->affineProfileLibraries[size_t(AffineProfileRoute::Reuse64)]=library;
++#ifdef GARNET_METAL_REUSE64_PACK_HALF
++         impl_->kernels->affineProfileLibraries[size_t(AffineProfileRoute::PackHalf)]=library;
++#endif
++        }
+@@ -2107,0 +2119,17 @@
++#ifdef GARNET_METAL_REUSE64_PACK_HALF
++        if(maximumRows>=64&&o.columns>=GARNET_METAL_REUSE64_MIN_OUTPUTS) {
++            if(a.columns>SIZE_MAX/2/maximumRows)throw std::overflow_error("Packed activation scratch overflow");
++            const size_t bytes=maximumRows*a.columns*2;
++            if(bytes>impl_->device.maxBufferLength)throw std::runtime_error("Packed activations exceed device buffer bound");
++            if(!impl_->reuse64HalfScratch||impl_->reuse64HalfScratch.length<bytes) {
++                constexpr size_t reserve=256*1024*1024,alignment=64*1024;
++                const size_t used=impl_->device.currentAllocatedSize,limit=impl_->device.recommendedMaxWorkingSetSize;
++                const size_t charge=(bytes+alignment-1)&~(alignment-1);
++                if(limit<=reserve||used>limit-reserve||charge>limit-reserve-used)
++                    throw std::runtime_error("Packed activations exceed recommended working set minus256MiB");
++                auto buffer=[impl_->device newBufferWithLength:bytes options:MTLResourceStorageModeShared];
++                if(!buffer)throw std::runtime_error("Cannot allocate prepared compact FP16 activations");
++                impl_->reuse64HalfScratch=buffer;
++            }
++        }
++#endif
+@@ -2120 +2148 @@
+-            std::array<NSString*,5> names{@"affine_q4_decode",@"affine_q4_mpp",@"affine_q4_indexed_decode",@"affine_q4_indexed",@"affine_q4_reuse64"};
++            std::array<NSString*,6> names{@"affine_q4_decode",@"affine_q4_mpp",@"affine_q4_indexed_decode",@"affine_q4_indexed",@"affine_q4_reuse64",@"affine_q4_pack_half"};
+@@ -2154,0 +2183,3 @@
++#ifdef GARNET_METAL_REUSE64_PACK_HALF
++        if(maximumRows>=64&&o.columns>=GARNET_METAL_REUSE64_MIN_OUTPUTS&&HasReuse64Affine())prepare(AffineProfileRoute::PackHalf,0);
++#endif
+@@ -2361,0 +2393,4 @@
++#ifdef GARNET_METAL_REUSE64_PACK_HALF
++size_t MetalContext::LastReuse64PackDispatches() const {return impl_->reuse64PackDispatches;}
++size_t MetalContext::Reuse64HalfScratchBytes() const {return impl_->reuse64HalfScratch?impl_->reuse64HalfScratch.length:0;}
++#endif
+@@ -2398,0 +2434,21 @@
++#ifdef GARNET_METAL_REUSE64_PACK_HALF
++        const bool packHalf=HasReuse64Affine()&&indices.size()>=64&&w->rows>=GARNET_METAL_REUSE64_MIN_OUTPUTS;
++        if(packHalf) {
++            const size_t bytes=indices.size()*a.columns*2;
++            if(!impl_->reuse64HalfScratch||impl_->reuse64HalfScratch.length<bytes)
++                throw std::logic_error("Compact FP16 activations must be prepared before execution");
++            size_t dispatches=0,misses=0,threads=0;
++            auto pipeline=SelectAffineProfile(*impl_->kernels,AffineProfileRoute::PackHalf,a.rows,a.columns,o.columns,
++                a.rowBytes/4,o.rowBytes/4,0,nil,dispatches,misses,threads);
++            if(!pipeline||misses)throw std::logic_error("Compact FP16 activation profile was not prepared");
++            struct Params {uint64_t rows,inner,columns,aStride,oStride;};
++            Params params{indices.size(),a.columns,o.columns,a.rowBytes/4,o.rowBytes/4};
++            auto encoder=[impl_->command computeCommandEncoder];
++            if(!encoder)throw std::runtime_error("Cannot encode compact FP16 activation packing");
++            [encoder setComputePipelineState:pipeline];[encoder setBuffer:a.data offset:a.offset atIndex:0];
++            [encoder setBytes:&params length:sizeof(params) atIndex:5];[encoder setBytes:indices.data() length:indices.size()*4 atIndex:6];
++            [encoder setBuffer:impl_->reuse64HalfScratch offset:0 atIndex:7];
++            [encoder dispatchThreadgroups:MTLSizeMake((indices.size()*a.columns/4+127)/128,1,1) threadsPerThreadgroup:MTLSizeMake(128,1,1)];
++            [encoder endEncoding];++impl_->reuse64PackDispatches;
++        }
++#endif
+@@ -2423,0 +2480,3 @@
++#ifdef GARNET_METAL_REUSE64_PACK_HALF
++            if(reuse)[encoder setBuffer:impl_->reuse64HalfScratch offset:0 atIndex:7];
++#endif
+@@ -3391,0 +3451,3 @@
++#ifdef GARNET_METAL_REUSE64_PACK_HALF
++    impl_->reuse64PackDispatches=0;
++#endif
+@@ -4732,0 +4795,3 @@
++#ifdef GARNET_METAL_REUSE64_PACK_HALF
++    impl_->reuse64PackDispatches=0;
++#endif
+--- a/src/entry/metal_main.cpp
++++ b/src/entry/metal_main.cpp
+@@ -207,0 +208,3 @@
++#ifdef GARNET_METAL_REUSE64_PACK_HALF
++    info+="; mpp_affine_reuse64_pack_half";
++#endif
+--- a/test2026/metal/affine_fp16_projection_benchmark.cpp
++++ b/test2026/metal/affine_fp16_projection_benchmark.cpp
+@@ -43 +43,4 @@
+-    std::vector<double> gpuMs,wallMs;size_t reuseDispatches=0;
++    std::vector<double> gpuMs,wallMs;size_t reuseDispatches=0,packDispatches=0,packScratch=0;
++#ifdef GARNET_METAL_REUSE64_PACK_HALF
++    packScratch=gpu.Reuse64HalfScratchBytes();
++#endif
+@@ -54,0 +58,4 @@
++#endif
++#ifdef GARNET_METAL_REUSE64_PACK_HALF
++        packDispatches=gpu.LastReuse64PackDispatches();
++        Require(packDispatches==reuseDispatches&&gpu.Reuse64HalfScratchBytes()==packScratch,"Unprepared/missing compact FP16 activation work");
+@@ -92,0 +100 @@
++        <<",\"pack_half_dispatches\":"<<packDispatches<<",\"pack_half_scratch_bytes\":"<<packScratch
+@@ -111 +119,4 @@
+-            int minimumOutputs=0,tileK=64;bool relaxed=false;
++            int minimumOutputs=0,tileK=64;bool relaxed=false,packHalf=false;
++#ifdef GARNET_METAL_REUSE64_PACK_HALF
++            packHalf=true;
++#endif
+@@ -122,0 +134 @@
++                <<",\"reuse64_pack_half\":"<<(packHalf?"true":"false")

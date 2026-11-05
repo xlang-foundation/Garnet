@@ -5,7 +5,7 @@ from .cpu_decoder import CPUDecoder
 from .decoder_layer import T,norm,Qwen35LinearDecoderLayer,Qwen35FullDecoderLayer
 
 class MetalDecoder(CPUDecoder):
-    def __init__(self,checkpoint,config,batch=1,capacity=256,bf16_head=True,resident=True,bf16_projections=True):
+    def __init__(self,checkpoint,config,batch=1,capacity=256,bf16_head=True,resident=True,bf16_projections=True,required_checkpoint_format=None):
         self.session=None;self.bf16_projections=bf16_projections
         backend=garnet.backend_info();self.joined_prefill_enabled='joined_mps_prefill' in backend
         self.packed_prefill_norm_enabled='packed_prefill_norm' in backend
@@ -13,13 +13,16 @@ class MetalDecoder(CPUDecoder):
         self.joined_global_mlp_enabled='joined_global_mlp' in backend
         if not backend.startswith('Garnet Metal/MPS '):
             raise ValueError('MetalDecoder requires the native Garnet Metal package')
-        CPUDecoder.__init__(self,checkpoint,config,batch,capacity)
+        CPUDecoder.__init__(self,checkpoint,config,batch,capacity,required_checkpoint_format)
         try:
             self.head.close()
             symbol=tensor.input('metal_final_hidden',shape=[batch,config['hidden_size']],dtype=tensor.float32)
-            @T.fusion(name='qwen35_metal_tied_head',boundary='required')
+            @T.fusion(name='qwen35_metal_tied_head' if config.get('tie_word_embeddings',True) else 'qwen35_metal_untied_head',boundary='required')
             def head(hidden):
-                return norm(hidden,'model.language_model.norm',config) * T.unary_op('qwen35_tied_head',bf16_weight=1 if bf16_head else 0)
+                normalized=norm(hidden,'model.language_model.norm',config)
+                if config.get('tie_word_embeddings',True):
+                    return normalized * T.unary_op('qwen35_tied_head',bf16_weight=1 if bf16_head else 0)
+                return normalized * T.unary_op('qwen_text_head',weight_name='lm_head.weight',bf16_weight=1 if bf16_head else 0)
             self.head=garnet.compiled_graph();self.head.build(head(symbol),[symbol],checkpoint)
             if resident:self.enable_resident()
         except:
@@ -63,20 +66,38 @@ class MetalDecoder(CPUDecoder):
         self.poisoned=False
         return prediction if predict else None
 
+    def reset_row(self,row):
+        if self.session is None or 'request_row_reset' not in garnet.backend_info():
+            raise ValueError('Native request-row lifecycle extension is required')
+        if self.poisoned:raise ValueError('full reset required after failed inference')
+        if type(row) is not int or row<0 or row>=self.batch:raise ValueError('invalid request row')
+        self.session.reset_row(row)
+        self.slots[row]=0
+
     def _prefill_profiles(self):
         if 'qwen35_extended_prefill' in garnet.backend_info():return (2,4,8,16,32,40,64,80)
         return (2,4,8,16,32,64)
 
     def _prefill_chunk_size(self,remaining,maximum):
+        # A second tail-shape graph family duplicates large hybrid defaults.
+        # Keep one bounded shape for the 27B study and mask its final padding.
+        if self.config['hidden_size']==5120 and 'qwen38_wide_prefill' in garnet.backend_info():
+            return maximum
         chunk=maximum
         if maximum>16 and remaining<maximum:
             chunk=2
             while chunk<remaining:chunk*=2
         return min(chunk,maximum)
 
+    def _wide_prefill_batches(self):return (1,)
+
     def enable_prefill(self,chunk=16,projection='shared',linear_chunk=False):
         if chunk not in self._prefill_profiles():raise ValueError('Unsupported Metal prefill chunk')
         if projection not in ('shared','mps'):raise ValueError('Prefill projection must be shared or mps')
+        if self.config['hidden_size']==5120 and chunk>8:
+            if ('qwen38_wide_prefill' not in garnet.backend_info() or projection!='shared' or
+                not linear_chunk or self.session is None or self.batch not in self._wide_prefill_batches()):
+                raise ValueError('27B wide prefill requires its bounded native extension, admitted batch and resident shared chunk recurrence')
         wide_batch=self.batch==2 and chunk==80 and 'qwen35_wide_batch_prefill' in garnet.backend_info()
         if chunk in (40,80) and (projection!='shared' or not linear_chunk or self.session is None or (self.batch*chunk>128 and not wide_batch) or self.config['hidden_size']>1024):
             raise ValueError('Extended Qwen3.5 chunks require resident shared chunk recurrence, an admitted row count, and hidden size <= 1024')
@@ -95,7 +116,8 @@ class MetalDecoder(CPUDecoder):
 
     def _prefill_layer(self,hidden,state1,state2,positions,slots,active,config,idx,batch,chunk,capacity,kind):
         from .prefill_layer import PrefillLayer
-        return PrefillLayer(hidden,state1,state2,positions,slots,active,config,idx,batch,chunk,capacity,kind,parallel_attention=True,parallel_linear=self.linear_chunk)
+        limit=4096 if 'compact_attention_index' in garnet.backend_info() else 2048
+        return PrefillLayer(hidden,state1,state2,positions,slots,active,config,idx,batch,chunk,capacity,kind,parallel_attention=True,parallel_linear=self.linear_chunk,attention_capacity_limit=limit)
 
     def prefill_sequence(self,hidden_tokens,positions,predict=True):
         if self.session is not None:return self._resident_prefill(hidden_tokens,positions,predict)
@@ -153,7 +175,11 @@ class MetalDecoder(CPUDecoder):
                 def forward(hidden,state1,state2,position,slots,active):
                     return self._prefill_layer(hidden,state1,state2,position,slots,active,config,idx,batch,chunk,capacity,kind)
                 graph=garnet.compiled_graph()
-                try:self._build_prefill_graph(graph,forward(*symbols),symbols,layer['graph'])
+                try:
+                    self._build_prefill_graph(graph,forward(*symbols),symbols,layer['graph'])
+                    if ((self.config['hidden_size']==5120 and 'qwen38_wide_prefill' in garnet.backend_info()) or
+                        'prepared_dense_prefill' in garnet.backend_info()):
+                        self.session.prepare_prefill(graph,idx)
                 except:graph.close();raise
                 self.prefill_graphs[key]=graph;self.prefill_compile_ms+=graph.compile_ms
             graphs.append(graph)
