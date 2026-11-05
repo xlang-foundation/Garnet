@@ -1,0 +1,217 @@
+# Qwen3.8-27B Metal qualification
+
+Production qualification is incomplete. Keep these profiles out of the
+production catalog until their remaining gates pass. The current machine is an
+Apple M5 with24GiB unified memory; results do not admit other Apple hardware.
+CUDA factories remain separate.
+
+The Metal path consumes pinned `mlx-community/Qwen3.8-27B-4bit`, revision
+`10c35caafbb80f7dc6a7a432cdd11af10a6d4818`: affine INT4/group64, eight low-nibble-first
+values perU32, BF16 scales and additive biases. Native kernels keep projections
+compressed and use FP32 accumulation. The control uses FP32 activations/KV;
+optional BF16 tensor operands are separate experimental precision profiles.
+Requested embedding rows round to BF16 before host FP32 conversion, matching
+the artifact's quantized embedding output contract. Independent real-row parity,
+packing and shape references are retained in the research evidence.
+
+The adapter validates names, convolution dimension order and pre-shifted
+normalization weights. It uses zero additional norm offset for this conversion;
+original HF formats retain their existing offset. The untied `lm_head` must not
+project logits through the input embedding matrix. Text input allocates no dummy
+image or vision encoder.
+
+## Current evidence
+
+| Area | Verified scope | Remaining scope |
+| --- | --- | --- |
+| Text coding | Eight frozen sandboxed tasks pass for single-native and concurrent batch2 controls; full generated sequences match | Broader coding qualification and final optimized candidate |
+| Batch state | Native stable row/epoch leases, ragged batch2/4, row refill, cancellation and inactive-state preservation | Production integration and final serving performance |
+| Prefill scheduling | Optional native chunks interleave existing decode; alias-group batch2/4K/chunk128 passes8/8 coding tasks,1,050 combined decode plans and3 interleavings | Repeated performance qualification of this memory candidate and restored-prefix integration |
+| Prefix reuse | Native token matching restores full-attention KV, convolution, recurrence and final hidden state; exact/append/edit/refill cases pass | Complete matched cache performance cohorts and chunked-schedule combination |
+| Memory | Opt-in alias-group/lifetime-reuse batch2/4K/chunk128 reports17,297,309,696 prepared Metal bytes and1,507,328 after close; all4 Garnet owners close to zero | Peak allocation, execution to every context boundary and other hardware profiles |
+| Vision | All333 artifact tensors mapped; native finite vision parity and two image-grounding cases pass | General VLM factory admission, reference VLM qualification and screenshot-to-code quality |
+| Performance | Frozen vLLM-Metal/SGLang references and a complete native three-cohort campaign retained:90 measured waves/210 requests, accounting and full-token audits pass | All2x speed/throughput and half-TTFT goals remain unmet; repeat the new memory candidate separately |
+
+The earlier FP32 batch2/wide64 timing admission has five completed cells and a
+failed four-client long-prompt cell: one queued request exceeded600s. Preserve
+that failure; it is not a passing campaign. Loaded native chunk-selection probes
+and serialized operator traces are not HTTP serving measurements.
+
+The completed native campaign uses strict BF16 prefill operands and FP32 decode,
+with prepared context buckets and chunk128. The newer memory candidate enables
+both lifetime reuse and proven same-layout storage alias groups. Its8 coding
+outputs exactly match the original single-native control. Preparation saves
+678,100,992 bytes relative to the campaign candidate; this is sampled allocation,
+not a peak measurement or a speedup. Detailed results, negative findings and
+evidence paths are in `docs/research/local-coder-metal-benchmark.md`.
+
+An additional default-OFF active-token chunk policy skips masked convolution
+arithmetic and recurrent barriers without changing storage or active-token math.
+It passes20 enabled/19 disabled native tests,238.8million original FP32 word
+comparisons, learned session references and all8 unchanged coding tasks with
+full token equality. Its isolated masked-convolution gains do not establish a
+model speedup: all six single-wave serving admissions pass accounting and full
+token equality, but five cells report lower overall output rates than the
+control. All2x targets remain unmet. The policy stays disabled by default and
+outside the production profile catalog.
+
+The default-OFF native FP32 verification-attention primitive now matches repeated
+ordinary decode for probabilities, outputs and full KV contents in226 cases.
+Existing dense/selected four-row FP32 projections also match separate one-row
+decodes, including the full vocabulary head. An explicit compiled FP32 graph
+mode now also passes a synthetic four-layer hybrid gate:396 checks and30,497,536
+FP32 words match separate decode steps, including all per-position logits,
+partial blocks and the final4K cache slot. It supports at most four physical
+token rows total and rejects invalid controls or mismatched source weights before
+advancing session state. The trained27B target also matches ordinary decode for hidden/logit
+hashes and every layer's state hashes across twelve bounded four-token blocks at
+capacity64/4096, including partial and carried blocks. The4K test uses three seed
+slots with earlier cache entries zero; it does not qualify a full4K prompt.
+Its per-position heads still use a diagnostic hidden download/upload. No
+verification speedup is admitted.
+
+Native first-token Conv/GDN checkpoint primitives and state-only prefix replay
+now also pass130 synthetic cases at bounded and actual27B recurrent geometry,
+with103,007,792 FP32 words matching separate decode steps. These initially separate
+components are integrated in the native transaction gate below. The enabled/
+disabled native suites pass22/22 and19/19. No new trained checkpoint/replay or
+speed qualification is claimed for these component gates.
+
+Bounded native KV-slot backup/restore now passes188 cases and1.76billion exact
+FP32 word comparisons against whole-cache ordinary-prefix references. The27B
+four-token K/V span uses512KiB of logical backup storage across all sixteen full
+layers, compared with512MiB for the full4K cache (logical sizes before alignment).
+
+The native greedy verification/accepted-prefix transaction now passes211
+synthetic cases, including EOS, epochs, prefix reuse and private-session bank
+swaps. The actual27B factory also matches ordinary emitted IDs, committed hidden
+state and every Conv/GDN/KV state hash in22 cases at capacity64/4096. The4K cases
+use seeded late positions, not a full4K prompt. Per-position heads, checkpoint/
+replay and exact KV restoration stay native; source output banks supply S1 under
+locks. Preparation initializes a prediction bank when predict-false prefill has
+not produced an earlier prediction. Auxiliary MTP serving integration
+and2x speed targets remain unfinished. The extension stays off by
+default.
+
+The separate default-OFF `GARNET_METAL_MTP` extension now supports a bounded
+seven-input raw-BF16 auxiliary graph. It preserves +1 norm offsets and shares
+all15 weight records between compiled profiles. Independent NumPy FP32 references
+pass38 synthetic cases and14 learned auxiliary cases at capacity64/4096,
+including carried caches and byte-identical untouched spans. It uses synthetic
+target/embedding inputs; the later native bridge/generation gates below cover
+target-hidden transfer, shared projection and shifted teacher correction.
+See `metal_mtp.py` and the research record for the explicit numerical criterion.
+
+The opt-in native MTP target bridge now retains normalized target rows on the
+GPU, shares the target vocabulary projection and owns auxiliary caches, draft
+span rollback and teacher correction. Synthetic batch1/2/4 cases include
+unequal/inactive corrections, wide capture windows, leases and poison/reset.
+A real nine-token coding prompt produces16 IDs matching ordinary decoding;
+10 of13 actual MTP proposals are accepted across five verified blocks, with
+exact committed target and auxiliary state parity. This short diagnostic is not
+the eight-task coding gate or a speed measurement.
+
+`mtp_generate` now owns proposal, target verification and teacher correction in
+one native transaction. It uses a private read-only target embedding mapping,
+actual three-axis positions and per-row budget/EOS/lease checks. Cache-only
+teacher updates skip the vocabulary projection while validating hidden state.
+The same real16-token completion passes through this call with exact target
+and auxiliary parity; auxiliary head evaluations fall from22 to13. Synthetic
+batch1/2/4 checks cover44 transactions, including eight EOS events.
+
+Explicit profile families now use a T1 auxiliary draft, T4 corrector and up to
+128 total auxiliary teacher rows, sharing all15 raw weight records. The original
+decode builder retains its four-total-row bound; `build_mtp_prefill` explicitly
+prepares the wider teacher graph. Native `prepare_mtp_profiles` validates shared
+weights and cache/capture bounds before allocating fixed input workspaces.
+Generation chooses the prepared T1 draft automatically. Wide auxiliary graphs
+still compute masked physical projection rows; skipping these unused BF16 rows
+remains an optimization. Actual input lengths need not equal the compiled bound.
+
+The B1 `MetalMTPStudy` helper in `metal_mtp_study.py` now passes all eight frozen
+coding tasks and their complete reference token sequences with the pinned27B
+target, T128 target/teacher prefill and native generation transactions. All2,311
+output IDs and decoded text match the original control; all eight sandboxed
+contracts pass. The655 transactions accept1,648 of1,956 proposed draft tokens.
+Prepared Metal allocation is17,262,231,552 bytes, a snapshot within the reserve,
+and all native owner counts close to zero. Independent wide auxiliary references
+pass76 synthetic and34 learned cases, including actual73-token masks, carried
+caches and capacity4096. The numerical criterion is unchanged.
+
+This is a bounded B1 coding gate, with prompts71..145 tokens. Full4K prompt
+execution, continuous speculative scheduling, auxiliary prefix reuse and matched
+speed qualification remain unfinished. The existing non-speculative batch and
+prefix studies retain their separate qualifications.
+
+The B1 MTP path now also passes the native HTTP admission: all eight sandboxed
+coding tasks, all six canonical256/2048-token cells at client concurrency1/2/4,
+and a valid request after an isolated profile rejection. All23 complete prompt/
+output sequences agree with their frozen references. CPU transport queues clients;
+this worker does not claim native speculative continuous batching or prefix reuse.
+The native ledger, streamed IDs and cumulative usage agree in25,556 checks;
+14 corruption checks and seven transport/evaluator regressions pass. All tracked
+native owners close to zero. See `local_coder_mtp_worker.py` and its explicit
+profile fields for the fixed compiled bounds and actual runtime input counts.
+
+Initial single-run admission observations remain below the speed targets:
+C1 short/long TTFT4.485/30.857 seconds and decode9.403/7.717 tokens/s. These are
+diagnostics after coding work, not repeated campaign medians. The complete
+three-cohort MTP campaign plan is prepared; fresh repeated measurements and
+performance admission remain pending. Phase costs and native B2 speculative
+scheduling are the next optimization candidates.
+
+## Entry points and limits
+
+Profile sizes are upper bounds. Actual input lengths and occupied request slots
+may be smaller. Prepared memory layouts and kernel variants support those
+lengths; input capacity, prefill chunk budget and total context capacity are
+separate limits. An input bound512 accepts a73-token prompt; a separate128-token
+prefill chunk bound permits that prompt to execute in one partial chunk. Longer
+prompts use several chunks when both the input and context profiles admit them.
+
+- `model.create_decoder` is the bounded batch1 Metal study factory, capacity64..4096.
+- `metal_batch_study.create_decoder` is a separate experimental batch2/4 factory.
+  Batch2 permits chunks2/4/8/16/32/64; batch4 remains chunk<=8. Wider shapes require
+  native guarded workspace, shared scratch, in-place caches and per-row hidden
+  support. Separate fixed-shape admissions do not admit all shapes resident at once.
+  The default-off `qwen38_large_prefill` extension additionally exposes experimental
+  batch2 chunks128/256 with signed16-bit attention indices and nonresident pack
+  retirement. The opt-in alias-group/lifetime-reuse batch2/4K/chunk128
+  indexed/mixed coding study passes8/8 tasks with all full token sequences
+  matching the single-request reference,1,050 combined decode plans and53 audit
+  corruption checks. Ready Metal allocation is17,297,309,696 bytes. Two cold C1
+  and four C2/C4 serving checks pass accounting and31 corruption checks per
+  archive. All14 serving outputs exactly match the preceding candidate, with498
+  combined decode plans in the concurrent archive. These single-wave checks do
+  not establish repeated performance or production admission.
+  A separate alias-group/lifetime-reuse chunk256 profile also passes the unchanged
+  eight coding contracts and full token equality. Its short coding prompts fit
+  in one chunk, so their original audit retains two missing-coverage failures.
+  Eight additional canonical short/long requests supply the missing multi-chunk
+  and sparse-head coverage, with full token equality,16 interleavings and53
+  corruption checks. A combined qualification audit requires identical native
+  libraries, implementations and runtime profiles and passes18 more corruption
+  checks. Prepared allocation is18,027,708,416 bytes; largest sampled allocation
+  is18,038,292,480 bytes, within the configured guard. Each requested profile must
+  still pass its native working-set guard. Repeated performance and production
+  admission remain incomplete.
+- `garnet.continuous_scheduler()` owns allocation and lifecycle in native code.
+  The optional native chunk schedule retains leases while committing partial
+  prompt lengths. Python study transports supply inputs and route native events.
+- Native host prefix snapshots are bounded and identity-scoped. The current
+  chunked-prefill worker profile explicitly rejects prefix reuse until restored
+  progress is integrated; the whole-prompt prefix study remains available.
+- Current compact chunk attention is limited to4096 context positions.8K/16K,
+  paged or BF16 KV, and arbitrary larger batches are unsupported profiles.
+- `create_vision` still rejects general runtime admission. Finite grounding
+  evidence is not a general VLM qualification.
+
+`metal-qualification-profile.json` and `metal-context-study-profile.json` retain
+historical bring-up definitions; they are not production profiles or an assertion
+that all later gates are missing. Source, raw outputs, model hashes, frozen
+requests, audits and limitations are described in
+[the research record](../../../docs/research/local-coder-metal-benchmark.md).
+
+Build extensions default off. Register/staged Metal tensor candidates require
+explicit operand/layout identities and actual native dispatch evidence; API
+selection alone does not prove physical NAX instruction use or a model speedup.

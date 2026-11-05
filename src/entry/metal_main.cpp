@@ -3,6 +3,9 @@
 #include "garnet_tensor.h"
 #include "../backends/metal/compiled_graph.h"
 #include "../backends/metal/decoder_session.h"
+#ifdef GARNET_METAL_CONTINUOUS_ROWS
+#include "../backends/metal/continuous_scheduler.h"
+#endif
 #include "model_tensor_io.h"
 #include "tokenizer_api.h"
 #include "../image/native_image.h"
@@ -35,10 +38,16 @@ public:
     }
     std::string MemoryStatsJson() {
         const auto m=MetalContext::MemoryStats();
-        return nlohmann::json{{"metal_allocated_bytes",m.allocated},{"metal_recommended_working_set_bytes",m.recommended},
+        nlohmann::json result{{"metal_allocated_bytes",m.allocated},{"metal_recommended_working_set_bytes",m.recommended},
             {"metal_registry_id",m.registry},{"task_info_status",m.taskStatus},{"task_physical_footprint_bytes",m.physical},
             {"task_resident_bytes",m.resident},{"task_compressed_bytes",m.compressed},{"task_internal_bytes",m.internal},
-            {"task_virtual_bytes",m.virtualBytes},{"scope","process Metal device resources and current task; snapshots, not peak or system free RAM"}}.dump();
+            {"task_virtual_bytes",m.virtualBytes},{"scope","process Metal device resources and current task; snapshots, not peak or system free RAM"}};
+#ifdef GARNET_METAL_AFFINE_PROFILE
+        const auto owners=MetalContext::ProfileOwnerStats();
+        result["garnet_live_matrix_owners"]=owners.matrices;result["garnet_live_affine_weight_owners"]=owners.affineWeights;
+        result["garnet_live_bf16_weight_owners"]=owners.bf16Weights;result["garnet_live_pipeline_sets"]=owners.pipelineSets;
+#endif
+        return result.dump();
     }
     std::string MemoryInventoryJson(X::Value graphs,X::Value session) {
         if(!graphs.IsList())throw X::Error("Inventory graph descriptors must be a list");
@@ -154,6 +163,77 @@ public:
 #ifdef GARNET_METAL_QWEN35_4B_WIDE_PREFILL
         info+="; qwen35_4b_wide_prefill";
 #endif
+#if defined(GARNET_METAL_QWEN38_WIDE_PREFILL)||defined(GARNET_METAL_DENSE_PREFILL_MAX_TOKENS)
+#ifdef GARNET_METAL_DENSE_PREFILL_MAX_TOKENS
+        info+="; prepared_dense_prefill; bounded_prefill_workspace; dense_prefill_max_tokens="+std::to_string(GARNET_METAL_DENSE_PREFILL_MAX_TOKENS);
+        if(kMetalAttentionIndexBytes==2)info+="; attention_index_i16";
+#else
+        info+="; qwen38_wide_prefill; bounded_prefill_workspace";
+#ifdef GARNET_METAL_QWEN38_LARGE_PREFILL
+        info+="; qwen38_large_prefill; attention_index_i16";
+#endif
+#endif
+#ifdef GARNET_METAL_AFFINE_TALL_TILES
+        info+="; affine_q4_tall_tiles";
+#endif
+#ifdef GARNET_METAL_SHARED_PREFILL_SCRATCH
+        info+="; shared_prefill_scratch";
+#ifdef GARNET_METAL_PREFILL_LIFETIME_REUSE
+        info+="; prefill_lifetime_reuse";
+#ifdef GARNET_METAL_PREFILL_ALIAS_GROUPS
+        info+="; prefill_alias_groups";
+#ifdef GARNET_METAL_PREFILL_ALIAS_TEST_FAULTS
+        info+="; prefill_alias_test_faults";
+#endif
+#endif
+#endif
+#endif
+#ifdef GARNET_METAL_RETIRE_INPLACE_DEFAULTS
+        info+="; retired_inplace_defaults";
+#endif
+#endif
+#ifdef GARNET_METAL_INDEXED_AFFINE
+    info+="; indexed_affine_primitive";
+#endif
+#ifdef GARNET_METAL_INDEXED_TOKEN_PROJECTIONS
+    info+="; indexed_token_projections";
+#endif
+#ifdef GARNET_METAL_MPP_AFFINE_REUSE64
+    info+="; mpp_affine_reuse64_optional; mpp_affine_reuse64_min_outputs="+std::to_string(int(GARNET_METAL_REUSE64_MIN_OUTPUTS));
+    info+="; mpp_affine_reuse64_relaxed="+std::to_string(int(GARNET_METAL_REUSE64_RELAXED_VALUE));
+#endif
+#ifdef GARNET_METAL_INDEXED_DECODE
+    info+="; indexed_fp32_decode_primitive";
+#endif
+#ifdef GARNET_METAL_ACTIVE_DECODE_PROJECTIONS
+    info+="; active_decode_projections";
+#endif
+#ifdef GARNET_METAL_AFFINE_PROFILE
+    info+="; bounded_affine_kernel_profiles; affine_profile_index_bits="+std::to_string(MetalContext::AffineProfileIndexBits());
+#ifdef GARNET_METAL_AFFINE_PROFILE_TGP128
+    info+="; affine_profile_max_threads=128";
+#else
+    info+="; affine_profile_max_threads=0";
+#endif
+#endif
+#ifdef GARNET_METAL_CHUNK_PROBABILITY_REUSE
+    info+="; chunk_probability_reuse";
+#endif
+#ifdef GARNET_METAL_CHUNK_ATTENTION_INDEX32
+    info+="; chunk_attention_index32";
+#endif
+#ifdef GARNET_METAL_CHUNK_ATTENTION_MPS
+    info+="; chunk_attention_mps";
+#endif
+#ifdef GARNET_METAL_CHUNK_ATTENTION_BUCKETS
+    info+="; chunk_attention_buckets";
+#endif
+#ifdef GARNET_METAL_RETIRE_PREFILL_INPUTS
+    info+="; retired_prefill_hidden_inputs";
+#endif
+#ifdef GARNET_METAL_RETIRE_NONRESIDENT_PACKS
+    info+="; retired_nonresident_packs";
+#endif
 #ifdef GARNET_METAL_CACHED_MATRIX_METADATA
     info += " cached_matrix_metadata";
 #endif
@@ -165,6 +245,85 @@ public:
 #endif
 #ifdef GARNET_METAL_DENSE_PREFIX_CACHE
         info+="; dense_prefix_cache";
+#endif
+#ifdef GARNET_METAL_MLX_AFFINE_INT4
+#ifdef GARNET_METAL_AFFINE_FP16_COEFFICIENTS
+        info+="; mlx_mistral_affine_int4_g64_fp16; affine_coefficient_dtype=fp16";
+#else
+        info+="; mlx_qwen35_affine_int4_g64_bf16";
+#endif
+#ifdef GARNET_METAL_MPP_AFFINE
+        info+="; mpp_affine_tile_k="+std::to_string(GARNET_METAL_MPP_AFFINE_TILE_K)+"; mpp_affine_relaxed="+std::to_string(GARNET_METAL_MPP_AFFINE_RELAXED_VALUE)+"; mpp_affine_n_major="+std::to_string(GARNET_METAL_MPP_AFFINE_N_MAJOR_VALUE)+"; mpp_affine_registers="+std::to_string(GARNET_METAL_MPP_AFFINE_REGISTERS_VALUE)+"; mpp_affine_tensor_k="+std::to_string(GARNET_METAL_MPP_AFFINE_REGISTERS_VALUE?16:GARNET_METAL_MPP_AFFINE_TILE_K);
+#endif
+#ifdef GARNET_METAL_MPP_AFFINE_FP32
+        info+="; mpp_affine_fp32_optional";
+#endif
+#ifdef GARNET_METAL_MPP_AFFINE_BF16
+        info+="; mpp_affine_bf16_optional";
+#endif
+#ifdef GARNET_METAL_MPP_AFFINE_FP16
+        info+="; mpp_affine_fp16_optional";
+#endif
+#endif
+#ifdef GARNET_METAL_REQUEST_ROWS
+        info+="; request_row_reset";
+#ifdef GARNET_METAL_CONTINUOUS_ROWS
+        info+="; native_request_row_leases; native_continuous_scheduler; chunked_prefill_scheduler; packed_token_plan";
+#ifdef GARNET_METAL_ROW_FINAL_HIDDEN
+        info+="; row_final_hidden";
+#ifdef GARNET_METAL_TOKEN_PREFIX_CACHE
+        info+="; native_hybrid_token_prefix; native_cached_prefill_scheduler";
+#endif
+#endif
+#endif
+#ifdef GARNET_METAL_CHUNK_KV_INPLACE
+        info+="; chunk_kv_inplace";
+#endif
+#endif
+#ifdef GARNET_METAL_COMPACT_ATTENTION_INDEX
+        info+="; compact_attention_index";
+#endif
+#ifdef GARNET_METAL_LINEAR_CHUNK_CONV
+        info+="; linear_chunk_conv";
+#endif
+#ifdef GARNET_METAL_LINEAR_CHUNK_DELTA
+        info+="; linear_chunk_delta";
+#endif
+#ifdef GARNET_METAL_LINEAR_CHUNK_ACTIVE_ONLY
+        info+="; linear_chunk_active_only";
+#endif
+#ifdef GARNET_METAL_MTP
+        info+="; raw_bf16_mtp_graph";
+        info+="; raw_bf16_mtp_prefill_profiles";
+#endif
+#ifdef GARNET_METAL_MTP_BRIDGE
+        info+="; native_mtp_target_bridge";
+        info+="; native_mtp_generation";
+        info+="; native_mtp_profile_family";
+        info+="; native_mtp_continuous_scheduler";
+#endif
+#ifdef GARNET_METAL_MTP_KV_INPLACE
+        info+="; native_mtp_kv_inplace";
+#endif
+#ifdef GARNET_METAL_MTP_DEFER_PACKS
+        info+="; native_mtp_deferred_packs";
+#endif
+#ifdef GARNET_METAL_PREFILL_HIDDEN_POOL
+        info+="; native_prefill_hidden_pool";
+#endif
+#ifdef GARNET_METAL_LINEAR_CHUNK_STATE_INPLACE
+        info+="; linear_chunk_state_inplace";
+#endif
+#ifdef GARNET_METAL_VERIFY_ATTENTION
+        info+="; verification_attention_fp32";
+        info+="; verification_recurrent_checkpoint";
+        info+="; verification_kv_span_checkpoint";
+#if defined(GARNET_METAL_MLX_AFFINE_INT4)&&defined(GARNET_METAL_INDEXED_TOKEN_PROJECTIONS)&&defined(GARNET_METAL_ACTIVE_DECODE_PROJECTIONS)&&defined(GARNET_METAL_INDEXED_DECODE)&&defined(GARNET_METAL_AFFINE_PROFILE)&&defined(GARNET_METAL_LINEAR_CHUNK_CONV)&&defined(GARNET_METAL_LINEAR_CHUNK_DELTA)
+        info+="; compiled_verification_fp32";
+#ifdef GARNET_METAL_ROW_FINAL_HIDDEN
+        info+="; native_greedy_verification";
+#endif
+#endif
 #endif
 #ifdef GARNET_METAL_BODY_SHAPE
         info+="; body_shape";
@@ -226,6 +385,9 @@ public:
         APISET().AddClass<0,GarnetTensor>("tensor");
         APISET().AddClass<0,MetalCompiledGraph>("compiled_graph");
         APISET().AddClass<0,MetalDecoderSession>("decoder_session");
+#ifdef GARNET_METAL_CONTINUOUS_ROWS
+        APISET().AddClass<0,MetalContinuousScheduler>("continuous_scheduler");
+#endif
         APISET().AddClass<0,ModelTensorIO>("tensor_io");
         APISET().AddClass<0,CPUTokenizer>("tokenizer");
         APISET().AddFunc<2>("prepare_image",&GarnetMetalAPI::PrepareImage);

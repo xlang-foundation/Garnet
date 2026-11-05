@@ -1,7 +1,15 @@
 // SPDX-License-Identifier: Apache-2.0
 #include "compiled_graph.h"
+#include "float16_codec.h"
+#ifdef GARNET_METAL_PREFILL_ALIAS_GROUPS
+#include "../../runtime/memory/scratch_alias_group_plan.h"
+#include <type_traits>
+#endif
 #include "graph_capture.h"
 #include "lowering_context.h"
+#ifdef GARNET_METAL_PREFILL_LIFETIME_REUSE
+#include "../../runtime/memory/scratch_lifetime_plan.h"
+#endif
 #include <chrono>
 #include <cstring>
 #include <stdexcept>
@@ -13,13 +21,74 @@
 #include <cstdlib>
 #include <cstdio>
 namespace Garnet {
+const SafeTensorMetadata* MetalCompiledGraph::FindWeightMetadata(const std::string& name) const {
+#ifdef GARNET_METAL_MLX_AFFINE_INT4
+    return mlxCheckpoint_.Find(index_,name);
+#else
+    return index_.Find(name);
+#endif
+}
+#ifdef GARNET_METAL_MLX_AFFINE_INT4
+size_t MetalCompiledGraph::AffineInt4Weight(const std::string& name) {
+    auto found=weights_.find(name);if(found!=weights_.end())return found->second;
+    const auto metadata=AffineInt4Metadata::Resolve(index_,mlxCheckpoint_,name);
+    const auto& layout=metadata.layout;
+#ifdef GARNET_METAL_AFFINE_FP16_COEFFICIENTS
+    if(layout.coefficientType!=AffineInt4CoefficientType::FP16)
+        throw std::invalid_argument("This Metal affine engine requires FP16 coefficients; select the BF16 engine profile for this checkpoint");
+#else
+    if(layout.coefficientType!=AffineInt4CoefficientType::BF16)
+        throw std::invalid_argument("This Metal affine engine supports BF16 coefficients only; an FP16 kernel profile is required");
+#endif
+    std::vector<CheckpointDependency> dependencies;
+    for(const auto* tensor:metadata.tensors)
+        dependencies.push_back({*tensor,std::filesystem::last_write_time(tensor->filePath),std::filesystem::file_size(tensor->filePath)});
+    auto unchanged=[](const CheckpointDependency& a,const CheckpointDependency& b){
+        return a.metadata.filePath==b.metadata.filePath&&a.metadata.dataType==b.metadata.dataType&&
+            a.metadata.shape==b.metadata.shape&&a.metadata.dataOffset==b.metadata.dataOffset&&
+            a.metadata.dataSize==b.metadata.dataSize&&a.modified==b.modified&&a.bytes==b.bytes;
+    };
+    auto shared=sharedWeights_.find(name);
+    if(shared!=sharedWeights_.end()) {
+        const auto& record=shared->second;
+        if(!record.slot.affineInt4.Valid()||record.dependencies.size()!=dependencies.size())
+            throw std::runtime_error("Shared affine INT4 representation mismatch");
+        for(size_t i=0;i<dependencies.size();++i)
+            if(!unchanged(record.dependencies[i],dependencies[i]))throw std::runtime_error("Shared affine INT4 checkpoint changed");
+        const auto id=slots_.size();slots_.push_back(record.slot);weights_[name]=id;weightRecords_[name]=record;return id;
+    }
+    AffineInt4Mapping mapped;mapped.Open(metadata);
+    auto weight=gpu_->UploadAffineInt4(mapped.Data(0),layout.weightBytes,mapped.Data(1),layout.coefficientBytes,
+                                      mapped.Data(2),layout.coefficientBytes,layout.rows,layout.columns,
+                                      layout.coefficientType==AffineInt4CoefficientType::FP16);
+    for(const auto& dependency:dependencies)
+        if(dependency.modified!=std::filesystem::last_write_time(dependency.metadata.filePath)||
+           dependency.bytes!=std::filesystem::file_size(dependency.metadata.filePath))
+            throw std::runtime_error("Affine INT4 checkpoint changed during upload");
+    const auto id=slots_.size();
+    slots_.push_back({MetalMatrix(),layout.rows,layout.columns,{int64_t(layout.rows),int64_t(layout.columns)},MetalBF16Weight(),std::move(weight)});
+    weightRecords_[name]={slots_[id],*metadata.tensors[0],dependencies[0].modified,dependencies[0].bytes,std::move(dependencies)};
+    weights_[name]=id;return id;
+}
+#endif
 size_t MetalCompiledGraph::Allocate(size_t rows,size_t columns) {
     auto id=slots_.size();slots_.push_back({gpu_->Allocate(rows,columns),rows,columns,{int64_t(rows),int64_t(columns)}});return id;
 }
 size_t MetalCompiledGraph::Weight(const std::string& name) {
     auto found=weights_.find(name);if(found!=weights_.end())return found->second;
-    auto entry=index_.Find(name);
+    auto entry=FindWeightMetadata(name);
     if(!entry)throw std::runtime_error("Metal checkpoint weight missing: "+name);
+    if(name.rfind("mtp.",0)==0) {
+        if(!mtpProgram_||entry->dataType!="BF16")throw std::invalid_argument("MTP weights require an explicit raw-BF16 MTP program");
+        if(entry->shape.size()==2)return BF16Weight(name);
+    }
+#ifdef GARNET_METAL_MLX_AFFINE_INT4
+    if(entry->dataType=="U32")return AffineInt4Weight(name);
+    const bool convertedConv=mlxCheckpoint_.ConvertedConvolution(name,*entry);
+    const bool convertedPatch=mlxCheckpoint_.ConvertedVisionPatch(name,*entry);
+#else
+    const bool convertedConv=false;
+#endif
 #ifdef GARNET_METAL_VISION_GLOBAL_ALPHA
     auto ends=[&](const std::string& suffix){return name.size()>=suffix.size()&&name.compare(name.size()-suffix.size(),suffix.size(),suffix)==0;};
     const bool visionProjection=name.rfind("model.visual.blocks.",0)==0&&
@@ -44,11 +113,11 @@ size_t MetalCompiledGraph::Weight(const std::string& name) {
     }
     const bool patch=entry&&name=="model.visual.patch_embed.proj.weight"&&entry->shape.size()==5;
     if(!entry||entry->shape.empty()||(!patch&&(entry->shape.size()>3||
-        (entry->shape.size()==3&&entry->shape[1]!=1))))
+        (entry->shape.size()==3&&entry->shape[1]!=1&&!convertedConv))))
         throw std::runtime_error("Metal matrix weight missing/invalid: "+name);
     for(auto dim:entry->shape)if(dim<=0)throw std::runtime_error("Invalid Metal checkpoint dimension");
     const size_t rows=entry->shape.size()==1?1:entry->shape[0];
-    size_t columns=entry->shape.back();
+    size_t columns=convertedConv?size_t(entry->shape[1]):size_t(entry->shape.back());
     if(patch){columns=1;for(size_t i=1;i<entry->shape.size();++i){
         if(uint64_t(entry->shape[i])>std::numeric_limits<size_t>::max()/columns)throw std::runtime_error("Metal patch dimension overflow");
         columns*=entry->shape[i];}}
@@ -63,12 +132,24 @@ size_t MetalCompiledGraph::Weight(const std::string& name) {
         if(entry->dataSize!=data.size()*2)throw std::runtime_error("Invalid BF16 weight length");
         for(size_t i=0;i<data.size();++i){uint16_t half;std::memcpy(&half,static_cast<const char*>(raw)+2*i,2);
             uint32_t bits=uint32_t(half)<<16;std::memcpy(&data[i],&bits,4);}
+    }else if(entry->dataType=="F16") {
+        if(entry->dataSize!=data.size()*2)throw std::runtime_error("Invalid FP16 weight length");
+        for(size_t i=0;i<data.size();++i){uint16_t half;std::memcpy(&half,static_cast<const char*>(raw)+2*i,2);
+            data[i]=Float16ToFloat32(half);}
     }else if(entry->dataType=="F32") {
         if(entry->dataSize!=data.size()*4)throw std::runtime_error("Invalid FP32 weight length");
         std::memcpy(data.data(),raw,entry->dataSize);
     }else throw std::runtime_error("Unsupported initial Metal weight dtype: "+entry->dataType);
-    const auto id=slots_.size();slots_.push_back({gpu_->Upload(data,rows,columns),rows,columns,
-        std::vector<int64_t>(entry->shape.begin(),entry->shape.end())});
+    auto logicalShape=std::vector<int64_t>(entry->shape.begin(),entry->shape.end());
+    if(convertedConv)logicalShape={int64_t(rows),1,int64_t(columns)};
+#ifdef GARNET_METAL_MLX_AFFINE_INT4
+    if(convertedPatch) {
+        data=MlxVisionPatchToCanonical(data,rows,size_t(entry->shape[1]),size_t(entry->shape[2]),
+                                        size_t(entry->shape[3]),size_t(entry->shape[4]));
+        logicalShape={int64_t(rows),entry->shape[4],entry->shape[1],entry->shape[2],entry->shape[3]};
+    }
+#endif
+    const auto id=slots_.size();slots_.push_back({gpu_->Upload(data,rows,columns),rows,columns,std::move(logicalShape)});
     if(modified!=std::filesystem::last_write_time(entry->filePath)||bytes!=std::filesystem::file_size(entry->filePath))
         throw std::runtime_error("Metal checkpoint changed while loading weights");
     weightRecords_[name]={slots_[id],*entry,modified,bytes};
@@ -76,7 +157,10 @@ size_t MetalCompiledGraph::Weight(const std::string& name) {
 }
 size_t MetalCompiledGraph::BF16Weight(const std::string& name,bool visionPrefill) {
     const auto key=name+(visionPrefill?"|VisionGlobalBF16":"|BF16");auto found=weights_.find(key);if(found!=weights_.end())return found->second;
-    auto entry=index_.Find(name);
+    auto entry=FindWeightMetadata(name);
+#ifdef GARNET_METAL_MLX_AFFINE_INT4
+    if(entry&&entry->dataType=="U32")return AffineInt4Weight(name);
+#endif
     if(!entry||entry->shape.size()!=2||entry->shape[0]<=0||entry->shape[1]<=0)
         throw std::runtime_error("Invalid vocabulary checkpoint matrix");
     // F32 fixtures retain their exact original representation through MPS.
@@ -193,13 +277,30 @@ size_t MetalCompiledGraph::LowerVision(size_t input,const X::Value& attrs) {
     return output;
 }
 void MetalCompiledGraph::Clear() {
+    mtpProgram_=mtpPrefill_=false;
+#ifdef GARNET_METAL_RETIRE_NONRESIDENT_PACKS
+    nonresidentPackSlots_=0;
+#endif
+#ifdef GARNET_METAL_SHARED_PREFILL_SCRATCH
+    prefillScratch_.reset();sharedPrefillScratchBytes_=0;
+#ifdef GARNET_METAL_PREFILL_ALIAS_GROUPS
+    sharedPrefillAliasGroups_=sharedPrefillAliasSlots_=0;
+#ifdef GARNET_METAL_PREFILL_ALIAS_TEST_FAULTS
+    prefillAliasFailNextCommit_=false;
+#endif
+#endif
+#endif
 #ifdef GARNET_METAL_LAZY_RESIDENT_DEFAULTS
     lazyDefaultPlanReady_=false;lazyDefaultSlots_.clear();lazyRetiredBytes_=lazyRehydratedBytes_=0;
 #endif
     visionParallelDispatches_=0;
     visionPrefetchDispatches_=0;visionVectorDispatches_=0;mlpGraphDispatches_=0;
     resetKVPrefix_[0]=resetKVPrefix_[1]=false;
+    verificationTokens_=0;
     visionGlobalAlphaDispatches_=0;++generation_;ready_=false;bf16Projections_=false;outputParts_.clear();outputStorageGroups_.clear();residentOps_.clear();controlSources_.clear();ops_.clear();inputs_.clear();inputShapes_.clear();tensors_.clear();weights_.clear();sharedWeights_.clear();weightRecords_.clear();bindings_.clear();slots_.clear();gpu_.reset();
+#ifdef GARNET_METAL_MTP_DEFER_PACKS
+    mtpDeferredPackSlots_=0;
+#endif
 }
 void MetalCompiledGraph::Close() {std::lock_guard<std::mutex> lock(mutex_);Clear();}
 bool MetalCompiledGraph::Build(X::Value graph,X::Value symbols,const std::string& checkpoint) {
@@ -208,22 +309,188 @@ bool MetalCompiledGraph::Build(X::Value graph,X::Value symbols,const std::string
 bool MetalCompiledGraph::BuildBF16(X::Value graph,X::Value symbols,const std::string& checkpoint) {
     std::lock_guard<std::mutex> lock(mutex_);return BuildInternal(graph,symbols,checkpoint,{},true);
 }
+#ifdef GARNET_METAL_MTP
+bool MetalCompiledGraph::BuildMTP(X::Value graph,X::Value symbols,const std::string& checkpoint) {
+    std::lock_guard<std::mutex> lock(mutex_);return BuildInternal(graph,symbols,checkpoint,{},true,false,true);
+}
+bool MetalCompiledGraph::BuildMTPPrefill(X::Value graph,X::Value symbols,const std::string& checkpoint,X::Value source) {
+    if(!source.IsValid()||source.IsNone()) {
+        std::lock_guard<std::mutex> lock(mutex_);return BuildInternal(graph,symbols,checkpoint,{},true,false,true,true);
+    }
+    if(source.runtime()!=Host()->runtime)throw std::invalid_argument("MTP prefill source runtime mismatch");
+    auto peer=source.NativeData<MetalCompiledGraph>();
+    if(!peer||peer==this)throw std::invalid_argument("MTP prefill requires another raw MTP source");
+    std::scoped_lock lock(mutex_,peer->mutex_);
+    if(!peer->ready_||!peer->mtpProgram_)throw std::invalid_argument("MTP prefill source must be ready raw MTP");
+    return BuildInternal(graph,symbols,checkpoint,peer->weightRecords_,true,false,true,true);
+}
+#endif
 bool MetalCompiledGraph::BuildShared(X::Value graph,X::Value symbols,const std::string& checkpoint,X::Value source) {
     if(source.runtime()!=Host()->runtime)throw std::invalid_argument("Shared Metal graph runtime mismatch");
     auto peer=source.NativeData<MetalCompiledGraph>();
     if(!peer||peer==this)throw std::invalid_argument("Shared Metal weights require another compiled graph");
     std::scoped_lock lock(mutex_,peer->mutex_);
     if(!peer->ready_)throw std::invalid_argument("Shared Metal weight source is closed");
-    return BuildInternal(graph,symbols,checkpoint,peer->weightRecords_,peer->bf16Projections_);
+    return BuildInternal(graph,symbols,checkpoint,peer->weightRecords_,peer->bf16Projections_,false,peer->mtpProgram_,peer->mtpPrefill_);
+}
+#ifdef GARNET_METAL_VERIFY_ATTENTION
+bool MetalCompiledGraph::SharesVerificationWeights(const MetalCompiledGraph& source) const {
+    if(weightRecords_.size()!=source.weightRecords_.size())return false;
+    auto buffers=[](const Slot& slot) {
+        std::vector<uintptr_t> ids;
+        auto add=[&](const MetalBufferInfo& info){if(info.identity)ids.push_back(info.identity);};
+        add(MetalContext::MatrixBufferInfo(slot.matrix));
+        for(const auto& info:MetalContext::WeightBufferInfo(slot.bf16))add(info);
+#ifdef GARNET_METAL_MLX_AFFINE_INT4
+        for(const auto& info:MetalContext::AffineInt4BufferInfo(slot.affineInt4))add(info);
+#endif
+        return ids;
+    };
+    for(const auto& entry:weightRecords_) {
+        auto found=source.weightRecords_.find(entry.first);
+        if(found==source.weightRecords_.end()||buffers(entry.second.slot)!=buffers(found->second.slot))return false;
+    }
+    return !weightRecords_.empty();
+}
+bool MetalCompiledGraph::BuildVerificationShared(X::Value graph,X::Value symbols,const std::string& checkpoint,X::Value source) {
+#if !defined(GARNET_METAL_MLX_AFFINE_INT4)||!defined(GARNET_METAL_INDEXED_TOKEN_PROJECTIONS)||!defined(GARNET_METAL_ACTIVE_DECODE_PROJECTIONS)||!defined(GARNET_METAL_INDEXED_DECODE)||!defined(GARNET_METAL_AFFINE_PROFILE)||!defined(GARNET_METAL_LINEAR_CHUNK_CONV)||!defined(GARNET_METAL_LINEAR_CHUNK_DELTA)
+    throw std::logic_error("Compiled verification requires prepared FP32 affine and packed recurrent kernels");
+#else
+    if(source.runtime()!=Host()->runtime)throw std::invalid_argument("Shared Metal graph runtime mismatch");
+    auto peer=source.NativeData<MetalCompiledGraph>();
+    if(!peer||peer==this)throw std::invalid_argument("Verification requires another compiled decoder graph");
+    std::scoped_lock lock(mutex_,peer->mutex_);
+    if(!peer->ready_||peer->verificationTokens_||(peer->inputs_.size()!=4&&peer->inputs_.size()!=6)||
+       peer->inputShapes_[0].size()!=2||peer->outputParts_.size()!=3)
+        throw std::invalid_argument("Verification source must be a ready ordinary decoder layer");
+    const auto batch=peer->inputShapes_[0][0];
+    const bool linearSource=peer->inputs_.size()==4&&peer->inputShapes_[1].size()==3&&peer->inputShapes_[2].size()==4&&
+        peer->inputShapes_[3]==std::vector<int64_t>{batch};
+    const bool sixSource=peer->inputs_.size()==6&&peer->inputShapes_[3]==std::vector<int64_t>{batch,3}&&
+        peer->inputShapes_[4]==std::vector<int64_t>{batch}&&peer->inputShapes_[5]==peer->inputShapes_[4];
+    if(!linearSource&&!sixSource)
+        throw std::invalid_argument("Verification source control profile mismatch");
+    // The factory's BF16 preference does not affect converted affine matrices.
+    // Certify actual projection representations rather than that preference.
+    for(const auto& op:peer->ops_)if((op.kind==Kind::MatMul||op.kind==Kind::BF16MatVec)&&
+        (op.kind!=Kind::MatMul||!op.transpose||!peer->slots_[op.b].affineInt4.Valid()))
+        throw std::invalid_argument("Verification source projections must be affine FP32 decode");
+    if(symbols.runtime()!=Host()->runtime||!symbols.IsList()||symbols.Size()!=6)
+        throw std::invalid_argument("Verification requires six symbolic inputs");
+    for(size_t i=0;i<3;++i) {
+        X::Tensor symbol(symbols.Get(i));auto info=symbol.Info();const auto& expected=peer->inputShapes_[i];
+        if(!info.symbolic||info.dtype!=X3_TENSOR_FLOAT32||info.rank!=(i?expected.size():3)||
+           (i?!std::equal(expected.begin(),expected.end(),info.shape):
+                (info.shape[0]!=expected[0]||info.shape[2]!=expected[1])))
+            throw std::invalid_argument("Verification source hidden/state profile mismatch");
+    }
+    const bool built=BuildInternal(graph,symbols,checkpoint,peer->weightRecords_,false,true);
+    if(!SharesVerificationWeights(*peer)){Clear();throw std::invalid_argument("Verification must share all source decoder weights");}
+    return built;
+#endif
+}
+#endif
+void MetalCompiledGraph::ValidateMTPProgram(bool metadataOnly) const {
+    const auto width=inputShapes_[0][2],chunk=inputShapes_[0][1];
+    const auto kv=inputShapes_[2][1],dim=inputShapes_[2][3];
+    auto matrix=[&](const std::string& name,std::vector<long long> shape) {
+        if(metadataOnly) {
+            const auto* entry=index_.Find(name);
+            if(!entry||entry->dataType!="BF16"||entry->shape!=shape)
+                throw std::invalid_argument("MTP BF16 checkpoint dimensions mismatch: "+name);
+            return;
+        }
+        const auto found=weightRecords_.find(name+"|BF16");
+        if(found==weightRecords_.end()||found->second.metadata.dataType!="BF16"||found->second.metadata.shape!=shape||
+           !found->second.slot.bf16.Valid())throw std::invalid_argument("MTP BF16 projection contract mismatch: "+name);
+    };
+    auto metadata=[&](const char* name){const auto* entry=index_.Find(name);
+        if(!entry||entry->shape.size()!=2)return int64_t(0);return int64_t(entry->shape[0]);};
+    const auto q=metadata("mtp.layers.0.self_attn.q_proj.weight"),middle=metadata("mtp.layers.0.mlp.gate_proj.weight");
+    if(q<=0||q%(2*dim)||q/(2*dim)>32||q/(2*dim)%kv||middle<=0||middle>17408)
+        throw std::invalid_argument("MTP attention/MLP dimensions exceed the prepared profile");
+    matrix("mtp.fc.weight",{width,2*width});
+    for(auto name:{"k_proj","v_proj"})matrix(std::string("mtp.layers.0.self_attn.")+name+".weight",{kv*dim,width});
+    matrix("mtp.layers.0.self_attn.q_proj.weight",{q,width});
+    matrix("mtp.layers.0.self_attn.o_proj.weight",{width,q/2});
+    for(auto name:{"gate_proj","up_proj"})matrix(std::string("mtp.layers.0.mlp.")+name+".weight",{middle,width});
+    matrix("mtp.layers.0.mlp.down_proj.weight",{width,middle});
+    for(const auto& name:{"mtp.pre_fc_norm_embedding.weight","mtp.pre_fc_norm_hidden.weight","mtp.norm.weight",
+        "mtp.layers.0.input_layernorm.weight","mtp.layers.0.post_attention_layernorm.weight",
+        "mtp.layers.0.self_attn.q_norm.weight","mtp.layers.0.self_attn.k_norm.weight"}) {
+        const std::string key=name;const bool qk=key.find("self_attn.")!=std::string::npos;
+        const auto* entry=index_.Find(key);
+        if(!entry||entry->dataType!="BF16"||entry->shape!=std::vector<long long>{qk?dim:width})
+            throw std::invalid_argument("MTP raw checkpoint norm dimensions mismatch: "+key);
+    }
+    if(index_.TensorCount()!=15)throw std::invalid_argument("MTP requires a separate fifteen-tensor auxiliary checkpoint");
+    if(metadataOnly)return;
+    for(const auto& entry:weightRecords_)if(entry.first.find("|BF16")==std::string::npos) {
+        const auto& m=entry.second.metadata;
+        const bool qk=entry.first=="mtp.layers.0.self_attn.q_norm.weight"||entry.first=="mtp.layers.0.self_attn.k_norm.weight";
+        const bool norm=entry.first=="mtp.pre_fc_norm_embedding.weight"||entry.first=="mtp.pre_fc_norm_hidden.weight"||
+            entry.first=="mtp.layers.0.input_layernorm.weight"||entry.first=="mtp.layers.0.post_attention_layernorm.weight"||entry.first=="mtp.norm.weight";
+        if((!qk&&!norm)||m.dataType!="BF16"||m.shape!=std::vector<long long>{qk?dim:width})
+            throw std::invalid_argument("MTP raw norm contract mismatch: "+entry.first);
+    }
+    size_t projections=0,norms=0,ropes=0,attention=0,updates=0;
+    for(const auto& op:ops_) {
+        if(op.kind==Kind::MatMul||op.kind==Kind::BF16MatVec){
+            if(op.kind!=Kind::MatMul||!op.transpose||!slots_[op.b].bf16.Valid())throw std::invalid_argument("MTP requires eight native BF16 projections");++projections;}
+        if(op.kind==Kind::Norm){if(op.offset!=1)throw std::invalid_argument("MTP raw norms require +1 offsets");++norms;}
+        if(op.kind==Kind::NormRope){if(op.offset!=1||op.dimensions.back()!=1)throw std::invalid_argument("MTP Q/K raw norms require +1 offsets");++ropes;}
+        if(op.kind==Kind::AttentionChunk){if(op.dimensions.back()!=1)throw std::invalid_argument("MTP requires gated full attention");++attention;}
+        if(op.kind==Kind::KVChunk){
+            if(op.arguments[1]!=(updates?inputs_[3]:inputs_[2])||op.arguments[2]!=inputs_[5]||op.arguments[3]!=inputs_[6]||op.arguments[4]!=inputs_[4])
+                throw std::invalid_argument("MTP requires explicit independent K/V and controls");++updates;}
+    }
+    if(weightRecords_.size()!=15||projections!=8||norms!=5||ropes!=2||attention!=1||updates!=2||
+       outputParts_.size()!=3||slots_[outputParts_[0]].columns!=size_t(width*chunk)||
+       slots_[outputParts_[1]].columns!=size_t(kv*dim*inputShapes_[2][2])||slots_[outputParts_[2]].columns!=slots_[outputParts_[1]].columns)
+        throw std::invalid_argument("MTP must return normalized hidden plus K/V from exactly one complete auxiliary layer");
 }
 bool MetalCompiledGraph::BuildInternal(X::Value graph,X::Value symbols,const std::string& checkpoint,
-    std::unordered_map<std::string,SharedWeight> shared,bool bf16Projections) {
+    std::unordered_map<std::string,SharedWeight> shared,bool bf16Projections,bool verification,bool mtp,bool mtpPrefill) {
     Clear();sharedWeights_=std::move(shared);bf16Projections_=bf16Projections;
     auto start=std::chrono::steady_clock::now();
     try {
+#ifndef GARNET_METAL_MTP
+        if(mtp)throw std::logic_error("MTP graph extension is disabled");
+#endif
+        mtpProgram_=mtp;mtpPrefill_=mtpPrefill;
         if(graph.runtime()!=Host()->runtime||symbols.runtime()!=Host()->runtime||!symbols.IsList())
             throw std::runtime_error("Metal graph inputs must belong to this runtime");
         std::string error;if(!index_.Open(checkpoint,error))throw std::runtime_error(error);
+#ifdef GARNET_METAL_MLX_AFFINE_INT4
+        mlxCheckpoint_.Open(index_);
+        if(mtp&&mlxCheckpoint_.Enabled())throw std::invalid_argument("MTP auxiliary checkpoint must retain raw BF16 norm offsets");
+        if(verification&&!mlxCheckpoint_.Enabled())throw std::invalid_argument("Verification requires converted affine INT4/group64 weights");
+#endif
+        if(verification) {
+            if(symbols.Size()!=6)throw std::invalid_argument("Verification requires six symbolic inputs");
+            X::Tensor hidden(symbols.Get(uint64_t(0)));auto info=hidden.Info();
+            if(info.rank!=3||info.shape[0]<1||info.shape[0]>4||info.shape[1]<1||info.shape[1]>4/info.shape[0])
+                throw std::invalid_argument("Verification supports at most four physical token rows");
+            verificationTokens_=size_t(info.shape[1]);
+        }
+        if(mtpProgram_) {
+            if(symbols.Size()!=7)throw std::invalid_argument("MTP requires seven explicit inputs");
+            for(uint64_t i=0;i<symbols.Size();++i) {
+                X::Tensor symbol(symbols.Get(i));const auto info=symbol.Info();
+                if(!info.symbolic||info.dtype!=X3_TENSOR_FLOAT32||info.rank<1||info.rank>4)
+                    throw std::invalid_argument("MTP requires symbolic FP32 inputs");
+                inputShapes_.emplace_back(info.shape,info.shape+info.rank);
+                for(auto d:inputShapes_.back())if(d<=0)throw std::invalid_argument("MTP input dimensions must be positive");
+            }
+            const auto& h=inputShapes_[0];const auto& k=inputShapes_[2];
+            if(h.size()!=3||h[0]>4||h[1]>(mtpPrefill_?128:4)/h[0]||h[2]>5120||inputShapes_[1]!=h||
+               k.size()!=4||k[0]!=h[0]||k[1]>8||k[2]>4096||k[3]>256||inputShapes_[3]!=k||
+               inputShapes_[4]!=std::vector<int64_t>{h[0],h[1],3}||
+               inputShapes_[5]!=std::vector<int64_t>{h[0],h[1]}||inputShapes_[6]!=inputShapes_[5])
+                throw std::invalid_argument("MTP profile requires bounded FP32 KV/control inputs and at most four decode or128 explicit prefill rows");
+            // Reject oversized auxiliary profiles/weights before any GPU allocation.
+            ValidateMTPProgram(true);
+        }
         gpu_=std::make_unique<MetalContext>();
         for(uint64_t i=0;i<symbols.Size();++i) {
             X::Tensor symbol(symbols.Get(i));auto info=symbol.Info();
@@ -238,16 +505,34 @@ bool MetalCompiledGraph::BuildInternal(X::Value graph,X::Value symbols,const std
                     columns*=info.shape[axis];
                 }
             }
-            inputShapes_.emplace_back(info.shape,info.shape+info.rank);
-            const auto id=Allocate(info.shape[0],columns);inputs_.push_back(id);slots_[id].shape=inputShapes_.back();
+            if(!mtpProgram_)inputShapes_.emplace_back(info.shape,info.shape+info.rank);
+            const auto id=Allocate(info.shape[0],columns);inputs_.push_back(id);slots_[id].shape=inputShapes_[i];
             if(!tensors_.emplace(info.id,id).second)throw std::runtime_error("Duplicate Metal symbolic input");
         }
+        if(verificationTokens_) {
+            const auto batch=inputShapes_[0][0],chunk=int64_t(verificationTokens_);
+            if(inputShapes_[3]!=std::vector<int64_t>{batch,chunk,3}||
+               inputShapes_[4]!=std::vector<int64_t>{batch,chunk}||inputShapes_[5]!=inputShapes_[4])
+                throw std::invalid_argument("Verification control profile mismatch");
+        }
+        size_t verificationBlocks=0;
         TensorGraphCapture capture(graph);
         auto lookup=[&](const X::Value& value){auto found=tensors_.find(TensorId(value));
             if(found==tensors_.end())throw std::runtime_error("Unknown Metal graph operand");
             return found->second;};
         std::map<size_t,std::vector<size_t>> packedParts;
         std::map<size_t,size_t> aliases;
+        std::vector<size_t> deferredPacks, lazyPacks;
+        auto allocatePack=[&](size_t rows,size_t columns) {
+#ifdef GARNET_METAL_MTP_DEFER_PACKS
+            if(mtpProgram_) {
+                const auto id=slots_.size();
+                slots_.push_back({MetalMatrix(),rows,columns,{int64_t(rows),int64_t(columns)}});
+                deferredPacks.push_back(id);return id;
+            }
+#endif
+            return Allocate(rows,columns);
+        };
         auto slice=[&](size_t input,size_t groups,size_t sourceWidth,size_t start,size_t count,
             std::vector<int64_t> shape=std::vector<int64_t>{}) {
             if(!groups||!count||start>sourceWidth||count>sourceWidth-start||groups>std::numeric_limits<size_t>::max()/sourceWidth||
@@ -321,7 +606,7 @@ bool MetalCompiledGraph::BuildInternal(X::Value graph,X::Value symbols,const std
                     auto as=slots_[a].shape,bs=slots_[b].shape;
                     if(as.size()!=bs.size()||(as.size()!=2&&as.size()!=3)||as[0]!=bs[0]||(as.size()==3&&as[2]!=bs[2]))
                         throw std::runtime_error("Metal chunk concat shape mismatch");
-                    out=Allocate(slots_[a].rows,slots_[a].columns+slots_[b].columns);as[1]+=bs[1];slots_[out].shape=as;
+                    out=allocatePack(slots_[a].rows,slots_[a].columns+slots_[b].columns);as[1]+=bs[1];slots_[out].shape=as;
                     Op op{Kind::Concat,a,b,out};op.arguments={a,b,b};op.transpose=false;ops_.push_back(std::move(op));
                     for(auto part:{a,b}) {
                         auto parts=packedParts.find(part);
@@ -370,8 +655,26 @@ bool MetalCompiledGraph::BuildInternal(X::Value graph,X::Value symbols,const std
                     else{if(d<=0||uint64_t(d)>total/known)throw std::runtime_error("Invalid Metal reshape dimension");known*=size_t(d);}}
                 if(inferred>=0){if(total%known)throw std::runtime_error("Indivisible Metal reshape");shape[inferred]=total/known;}
                 else if(known!=total)throw std::runtime_error("Metal reshape element count mismatch");
-                out=Allocate(shape[0],total/size_t(shape[0]));slots_[out].shape=shape;
-                Op op{Kind::Layout,a,a,out};op.dimensions={0};ops_.push_back(std::move(op));
+                bool aliasCache=false;size_t root=a;
+#ifdef GARNET_METAL_CHUNK_KV_INPLACE
+                while(aliases.count(root))root=aliases.at(root);
+                // Only complete row-preserving views of a fresh chunk-cache
+                // writer can share storage. Inputs and arbitrary reshapes keep
+                // the existing copy path and immutable host-input contract.
+                if(slots_[a].rows==size_t(shape[0])&&slots_[a].columns==total/size_t(shape[0])&&
+                   gpu_->IsDefaultLayout(slots_[a].matrix,slots_[a].rows,slots_[a].columns))
+                    for(const auto& producer:ops_) {
+                        if(producer.kind==Kind::KVChunk&&producer.out==root)aliasCache=true;
+#ifdef GARNET_METAL_LINEAR_CHUNK_STATE_INPLACE
+                        if((producer.kind==Kind::ConvChunk||producer.kind==Kind::DeltaChunk)&&producer.auxiliaryOutput==root)aliasCache=true;
+#endif
+                    }
+#endif
+                if(aliasCache){auto view=slots_[a];view.shape=shape;out=slots_.size();slots_.push_back(std::move(view));aliases[out]=root;}
+                else {
+                    out=Allocate(shape[0],total/size_t(shape[0]));slots_[out].shape=shape;
+                    Op op{Kind::Layout,a,a,out};op.dimensions={0};ops_.push_back(std::move(op));
+                }
             }else if(node.name=="qwen35_chunk_token") {
                 auto shape=slots_[a].shape;auto index=node.attributes.Get("index").ToInt64();
                 if((shape.size()!=2&&shape.size()!=3)||index<0||index>=shape[1])throw std::runtime_error("Invalid Metal chunk token");
@@ -399,17 +702,28 @@ bool MetalCompiledGraph::BuildInternal(X::Value graph,X::Value symbols,const std
                 auto key=require("qwen35_attention_bind_key"),value=require("qwen35_attention_bind_value"),positions=require("qwen35_attention_bind_positions"),
                     slot=require("qwen35_attention_bind_slots"),active=require("qwen35_attention_bind_active");
                 const bool isChunk=node.name=="qwen35_attention_chunk"||node.name=="qwen_text_attention_chunk";
+                if(verificationTokens_) {
+                    if(!isChunk||heads>32||kv>8||dim>256)
+                        throw std::invalid_argument("Verification requires one bounded packed attention block");
+                    ++verificationBlocks;
+                }
                 const auto hs=slots_[a].shape,cs=slots_[key].shape;
                 const size_t chunk=isChunk&&hs.size()==3?size_t(hs[1]):1;
                 if(hs.size()!=(isChunk?3:2)||cs.size()!=4||cs[0]!=hs[0]||uint64_t(cs[1])!=kv||cs[2]<=0||cs[2]>8192||uint64_t(cs[3])!=dim||
                     slots_[value].shape!=cs||slots_[positions].shape!=(isChunk?std::vector<int64_t>{hs[0],int64_t(chunk),3}:std::vector<int64_t>{hs[0],3})||
                     slots_[slot].shape!=(isChunk?std::vector<int64_t>{hs[0],int64_t(chunk)}:std::vector<int64_t>{hs[0]})||slots_[active].shape!=slots_[slot].shape||
-                    (isChunk&&(chunk>kMetalPrefillChunkLimit||cs[2]>2048)))
+                    (isChunk&&(chunk>kMetalPrefillChunkLimit||cs[2]>int64_t(kMetalAttentionChunkCapacityLimit))))
                     throw std::runtime_error("Metal full attention state shapes invalid");
                 // Control tensors must be explicit host inputs for pre-dispatch bounds checks.
                 for(auto control:{positions,slot,active})if(std::find(inputs_.begin(),inputs_.end(),control)==inputs_.end()&&!controlSources_.count(control))
                     throw std::runtime_error("Metal attention control tensors must be graph inputs");
                 const size_t batch=hs[0],capacity=cs[2],cacheWidth=kv*capacity*dim,rows=batch*chunk,width=hs.back();
+#ifdef GARNET_METAL_DENSE_PREFILL_MAX_TOKENS
+                if(isChunk&&(batch>4||width>4096||rows>GARNET_METAL_DENSE_PREFILL_MAX_TOKENS))
+                    throw std::invalid_argument("Dense prefill exceeds the compiled physical token-row profile");
+#endif
+                if(verificationTokens_&&(chunk!=verificationTokens_||rows>4||capacity>4096))
+                    throw std::invalid_argument("Verification attention exceeds prepared bounds");
                 auto flatten=[&](size_t input,size_t columns){auto output=Allocate(rows,columns);Op op{Kind::Layout,input,input,output};op.dimensions={0};ops_.push_back(std::move(op));return output;};
                 if(isChunk)a=flatten(a,width);
                 const auto ropePositions=isChunk?flatten(positions,3):positions;
@@ -436,17 +750,36 @@ bool MetalCompiledGraph::BuildInternal(X::Value graph,X::Value symbols,const std
                 }
                 auto freq=slots_.size();slots_.push_back({gpu_->Upload(frequencies,2,rotary/2),2,rotary/2,{2,int64_t(rotary/2)}});
                 auto qr=Allocate(rows,heads*dim),kr=Allocate(rows,kv*dim);
-                Op qrope{Kind::NormRope,q,qw,qr,float(epsilon)};qrope.arguments={q,qw,ropePositions,freq};qrope.dimensions={heads,dim,rotary,size_t(normalize)};qrope.offset=text?0:1;ops_.push_back(std::move(qrope));
-                Op krope{Kind::NormRope,kp,kw,kr,float(epsilon)};krope.arguments={kp,kw,ropePositions,freq};krope.dimensions={kv,dim,rotary,size_t(normalize)};krope.offset=text?0:1;ops_.push_back(std::move(krope));
+                float normOffset=text?0.f:1.f;
+#ifdef GARNET_METAL_MLX_AFFINE_INT4
+                if(mlxCheckpoint_.Enabled())normOffset=0;
+#endif
+                Op qrope{Kind::NormRope,q,qw,qr,float(epsilon)};qrope.arguments={q,qw,ropePositions,freq};qrope.dimensions={heads,dim,rotary,size_t(normalize)};qrope.offset=normOffset;ops_.push_back(std::move(qrope));
+                Op krope{Kind::NormRope,kp,kw,kr,float(epsilon)};krope.arguments={kp,kw,ropePositions,freq};krope.dimensions={kv,dim,rotary,size_t(normalize)};krope.offset=normOffset;ops_.push_back(std::move(krope));
                 auto nextKey=Allocate(batch,cacheWidth),nextValue=Allocate(batch,cacheWidth);
-                for(auto pair:{std::make_pair(kr,std::make_pair(key,nextKey)),std::make_pair(vp,std::make_pair(value,nextValue))}) {
-                    Op update{isChunk?Kind::KVChunk:Kind::KVUpdate,pair.first,pair.second.first,pair.second.second};
-                    update.arguments={pair.first,pair.second.first,slot,active,positions};update.dimensions={kv,dim,capacity,chunk};ops_.push_back(std::move(update));
-                }
+                auto updateCaches=[&]() {
+                    for(auto pair:{std::make_pair(kr,std::make_pair(key,nextKey)),std::make_pair(vp,std::make_pair(value,nextValue))}) {
+                        Op update{isChunk?Kind::KVChunk:Kind::KVUpdate,pair.first,pair.second.first,pair.second.second};
+                        update.arguments={pair.first,pair.second.first,slot,active,positions};update.dimensions={kv,dim,capacity,chunk};ops_.push_back(std::move(update));
+                    }
+                };
+#ifdef GARNET_METAL_CHUNK_KV_INPLACE
+                if(!isChunk)updateCaches();
+#else
+                updateCaches();
+#endif
                 auto context=Allocate(rows,heads*dim);
                 if(isChunk) {
-                    Op attend{Kind::AttentionChunk,qr,key,context};attend.arguments={qr,kr,vp,key,value,slot,active,gate};
+                    Op attend{verificationTokens_?Kind::VerificationAttention:Kind::AttentionChunk,qr,key,context};
+                    attend.arguments={qr,kr,vp,key,value,slot,active,gate};
+                    if(verificationTokens_)attend.auxiliaryOutput=Allocate(rows,heads*capacity);
                     attend.dimensions={heads,kv,dim,capacity,chunk,size_t(!text)};ops_.push_back(std::move(attend));
+#ifdef GARNET_METAL_CHUNK_KV_INPLACE
+                    // Attention must see the old cache for earlier queries if
+                    // a later token overwrites that slot. Commit updates only
+                    // after all queries have consumed old-cache + chunk K/V.
+                    updateCaches();
+#endif
                 } else {
                     auto probabilities=Allocate(batch,heads*capacity);
                     Op scores{Kind::Scores,qr,nextKey,probabilities};scores.arguments={qr,nextKey,slot,active};scores.dimensions={heads,kv,dim,capacity};ops_.push_back(std::move(scores));
@@ -455,7 +788,7 @@ bool MetalCompiledGraph::BuildInternal(X::Value graph,X::Value symbols,const std
                 auto hidden=matmul(context,Weight(prefix+".o_proj.weight"));
                 if(slots_[hidden].columns!=width)throw std::runtime_error("Metal attention output projection shape mismatch");
                 if(isChunk) {auto packed=Allocate(batch,chunk*width);Op op{Kind::Layout,hidden,hidden,packed};op.dimensions={0};ops_.push_back(std::move(op));hidden=packed;}
-                out=Allocate(batch,chunk*width+2*cacheWidth);
+                out=allocatePack(batch,chunk*width+2*cacheWidth);
                 Op pack{Kind::Concat,hidden,nextKey,out};pack.arguments={hidden,nextKey,nextValue};pack.transpose=true;packedParts[out]=pack.arguments;ops_.push_back(std::move(pack));
             }else if(node.name=="qwen35_attention_output"||node.name=="qwen35_attention_key_cache"||node.name=="qwen35_attention_value_cache") {
                 auto dimension=[&](const char* name,size_t limit){auto n=node.attributes.Get(name).ToInt64();
@@ -475,6 +808,10 @@ bool MetalCompiledGraph::BuildInternal(X::Value graph,X::Value symbols,const std
                 if(vh%kh)throw std::runtime_error("Metal linear head grouping mismatch");
                 const auto hiddenShape=slots_[a].shape;
                 const bool isChunk=node.name=="qwen35_linear_chunk";
+                if(verificationTokens_) {
+                    if(!isChunk)throw std::invalid_argument("Verification requires one packed recurrent block");
+                    ++verificationBlocks;
+                }
                 const size_t chunk=isChunk&&hiddenShape.size()==3?size_t(hiddenShape[1]):1;
                 const auto bound=bindings_[TensorId(node.inputs[0])];
                 auto require=[&](const char* name){auto it=bound.find(name);
@@ -536,6 +873,8 @@ bool MetalCompiledGraph::BuildInternal(X::Value graph,X::Value symbols,const std
                     Op gate{Kind::GateNorm,cores,z,gatedFlat,epsilon};gate.arguments={cores,z,norm};gate.dimensions={vh,vd};ops_.push_back(std::move(gate));
                 }
 #endif
+                if(verificationTokens_&&(!chunkConv||!chunkDelta||chunk!=verificationTokens_||batch*chunk>4))
+                    throw std::invalid_argument("Verification recurrent block requires packed convolution and delta kernels");
                 size_t accumulated=0;
                 bool directWrite=false;
 #ifdef GARNET_METAL_LINEAR_CHUNK_DIRECT_WRITE
@@ -649,7 +988,13 @@ bool MetalCompiledGraph::BuildInternal(X::Value graph,X::Value symbols,const std
                 if(slots_[weight].rows!=1||slots_[weight].columns!=slots_[a].columns)
                     throw std::runtime_error("Metal normalization shape mismatch");
                 out=Allocate(slots_[a].rows,slots_[a].columns);
-                ops_.push_back({Kind::Norm,a,weight,out,float(node.attributes.Get("eps").ToDouble()),node.name=="qwen_text_norm"?0.0f:1.0f,false});
+                float offset=node.name=="qwen_text_norm"?0.f:1.f;
+#ifdef GARNET_METAL_MLX_AFFINE_INT4
+                if(mlxCheckpoint_.Enabled())offset=0;
+#endif
+                ops_.push_back({Kind::Norm,a,weight,out,float(node.attributes.Get("eps").ToDouble()),offset,false});
+            }else if(node.name=="qwen35_mtp_fc"&&mtpProgram_) {
+                out=matmul(a,Weight("mtp.fc.weight"));
             }else if(node.name=="qwen35_mlp") {
                 auto prefix=node.attributes.Get("weight_prefix").ToString();
                 auto gate=matmul(a,Weight(prefix+".gate_proj.weight"));
@@ -665,7 +1010,11 @@ bool MetalCompiledGraph::BuildInternal(X::Value graph,X::Value symbols,const std
 #ifdef GARNET_METAL_SCREENED_HEAD
                 if(bf16&&slots_[weight].bf16.Valid())gpu_->PrepareScreenedHead(slots_[weight].bf16);
 #endif
-                if(bf16&&index_.Find(name)->dataType=="BF16") {
+#ifdef GARNET_METAL_MLX_AFFINE_INT4
+                if(slots_[weight].affineInt4.Valid())out=matmul(a,weight);
+                else
+#endif
+                if(bf16&&FindWeightMetadata(name)->dataType=="BF16") {
                     if(slots_[a].columns!=slots_[weight].columns||slots_[a].rows>2)throw std::runtime_error("BF16 vocabulary profile requires batch 1/2");
                     out=Allocate(slots_[a].rows,slots_[weight].rows);ops_.push_back({Kind::BF16MatVec,a,weight,out});
                 }else out=matmul(a,weight);
@@ -679,9 +1028,150 @@ bool MetalCompiledGraph::BuildInternal(X::Value graph,X::Value symbols,const std
         if(!IsTensor(output))throw std::runtime_error("Initial Metal graph requires one tensor output");
         output_=lookup(output);
         if(packedParts.count(output_))outputParts_=packedParts.at(output_);
+        if(verificationTokens_) {
+            if(verificationBlocks!=1||outputParts_.size()!=3||
+               slots_[outputParts_[0]].rows!=size_t(inputShapes_[0][0])||
+               slots_[outputParts_[0]].columns!=verificationTokens_*size_t(inputShapes_[0][2])||
+               slots_[outputParts_[1]].columns!=slots_[inputs_[1]].columns||
+               slots_[outputParts_[2]].columns!=slots_[inputs_[2]].columns)
+                throw std::invalid_argument("Verification must return one complete decoder layer");
+            // Every weight must have been shared from this layer's source;
+            // another layer with coincidentally equal shapes is not its verifier.
+            for(const auto& entry:weightRecords_)if(!sharedWeights_.count(entry.first))
+                throw std::invalid_argument("Verification used a weight outside its source decoder layer");
+        }
         // All operations write fresh slots. Trace only matrices needed by the
         // returned value, resolving storage aliases before removing unused packs.
         auto canonical=[&](size_t id){while(aliases.count(id))id=aliases.at(id);return id;};
+#ifdef GARNET_METAL_ACTIVE_DECODE_PROJECTIONS
+        // Propagate request-row identity from a 2D decoder/head hidden input.
+        // Stateful operations must use this graph's active controls; unrelated
+        // matrices with the same row count do not establish that identity.
+        if(!inputShapes_.empty()&&inputShapes_[0].size()==2) {
+            const auto rows=size_t(inputShapes_[0][0]);size_t activeId=SIZE_MAX;
+            const bool head=inputs_.size()==1;
+            if(inputs_.size()==4&&inputShapes_[3]==std::vector<int64_t>{int64_t(rows)})activeId=canonical(inputs_[3]);
+            if(inputs_.size()==6&&inputShapes_[3]==std::vector<int64_t>{int64_t(rows),3}&&
+               inputShapes_[4]==std::vector<int64_t>{int64_t(rows)}&&inputShapes_[5]==inputShapes_[4])activeId=canonical(inputs_[5]);
+            if(rows&&rows<=4&&(head||activeId!=SIZE_MAX)) {
+                std::vector<bool> layout(slots_.size(),false);layout[canonical(inputs_[0])]=true;
+                auto rowwise=[&](size_t id){return id<slots_.size()&&layout[canonical(id)]&&slots_[id].rows==rows;};
+                auto active=[&](size_t id){return activeId!=SIZE_MAX&&canonical(id)==activeId;};
+                for(auto& op:ops_) {
+                    bool known=false;
+                    switch(op.kind) {
+                    case Kind::MatMul:
+                    case Kind::BF16MatVec:
+                        known=rowwise(op.a);
+                        if(known&&op.kind==Kind::MatMul&&op.transpose&&slots_[op.b].affineInt4.Valid())op.indexedDecodeProjection=true;
+                        break;
+                    case Kind::Norm:case Kind::Bias:case Kind::Mask:case Kind::NormRope:case Kind::Slice:
+                        known=rowwise(op.a);break;
+                    case Kind::Layout:
+                        known=rowwise(op.a)&&op.dimensions.size()==1&&slots_[op.out].columns==slots_[op.a].columns&&
+                            (!op.dimensions[0]||(active(op.b)&&op.dimensions[0]==slots_[op.a].columns));break;
+                    case Kind::Add:case Kind::Silu:
+                        known=rowwise(op.a)&&rowwise(op.b);break;
+                    case Kind::Conv:
+                        known=rowwise(op.a)&&op.arguments.size()==4&&active(op.arguments[3]);break;
+                    case Kind::Prepare:
+                        known=op.arguments.size()==5&&rowwise(op.arguments[0])&&rowwise(op.arguments[1])&&rowwise(op.arguments[2]);break;
+                    case Kind::Delta:
+                        known=op.arguments.size()==7&&rowwise(op.arguments[0])&&rowwise(op.arguments[1])&&rowwise(op.arguments[2])&&
+                            rowwise(op.arguments[3])&&rowwise(op.arguments[4])&&active(op.arguments[6]);break;
+                    case Kind::GateNorm:
+                        known=rowwise(op.a)&&rowwise(op.b)&&op.dimensions.size()==2&&slots_[op.out].columns==op.dimensions[0]*op.dimensions[1];break;
+                    case Kind::Scores:
+                        known=rowwise(op.a)&&op.arguments.size()==4&&active(op.arguments[3]);break;
+                    case Kind::AttentionContext:
+                        known=op.arguments.size()>=3&&rowwise(op.arguments[0])&&rowwise(op.arguments[2]);break;
+                    default:break;
+                    }
+                    if(known&&slots_[op.out].rows==rows)layout[canonical(op.out)]=true;
+                }
+            }
+        }
+#endif
+#ifdef GARNET_METAL_INDEXED_TOKEN_PROJECTIONS
+        // Prove token-row order from the hidden input through known lowering
+        // operations. Shape coincidence alone never enables indexed dispatch.
+        if(inputs_.size()==6&&inputShapes_[0].size()==3) {
+            const auto batch=size_t(inputShapes_[0][0]),chunk=size_t(inputShapes_[0][1]);
+            if(batch&&batch<=512&&(chunk>1||verificationTokens_)&&chunk<=512/batch&&
+               inputShapes_[3]==std::vector<int64_t>{int64_t(batch),int64_t(chunk),3}&&
+               inputShapes_[4]==std::vector<int64_t>{int64_t(batch),int64_t(chunk)}&&inputShapes_[5]==inputShapes_[4]) {
+                const size_t rows=batch*chunk;
+                // A one-token block has both physical layouts. Retain both
+                // proven identities instead of arbitrarily dropping one.
+                std::vector<unsigned char> layout(slots_.size(),0); // bit1 flat,bit2 packed;0 unknown/state.
+                layout[canonical(inputs_[0])]=2;
+                auto flat=[&](size_t id){return id<slots_.size()&&(layout[canonical(id)]&1)&&slots_[id].rows==rows;};
+                auto packed=[&](size_t id){return id<slots_.size()&&(layout[canonical(id)]&2)&&slots_[id].rows==batch&&slots_[id].columns%chunk==0;};
+                auto active=[&](size_t id){return canonical(id)==canonical(inputs_[5]);};
+                for(auto& op:ops_) {
+                    bool outFlat=false,outPacked=false;
+                    switch(op.kind) {
+                    case Kind::Layout:
+                        if(op.dimensions.size()==1&&!op.dimensions[0]) {
+                            outFlat=(flat(op.a)&&slots_[op.out].columns==slots_[op.a].columns)||
+                                (packed(op.a)&&slots_[op.out].columns==slots_[op.a].columns/chunk);
+                            outPacked=(packed(op.a)&&slots_[op.out].columns==slots_[op.a].columns)||
+                                (flat(op.a)&&slots_[op.out].columns/chunk==slots_[op.a].columns&&slots_[op.out].columns%chunk==0);
+                        }else if(op.dimensions.size()==1&&packed(op.a)&&active(op.b)&&
+                            op.dimensions[0]==slots_[op.a].columns/chunk&&slots_[op.out].columns==slots_[op.a].columns)
+                            outPacked=true;
+                        break;
+                    case Kind::MatMul:
+                    case Kind::BF16MatVec:
+                        outFlat=flat(op.a);
+                        if(outFlat&&op.kind==Kind::MatMul&&op.transpose&&slots_[op.b].affineInt4.Valid())
+                            {op.indexedTokenProjection=!verificationTokens_;op.indexedDecodeProjection=verificationTokens_!=0;}
+                        break;
+                    case Kind::Norm:
+                    case Kind::Bias:
+                    case Kind::Mask:
+                    case Kind::NormRope:
+                    case Kind::Slice:
+                        outFlat=flat(op.a);break;
+                    case Kind::Add:
+                    case Kind::Silu:
+                        outFlat=flat(op.a)&&flat(op.b);
+                        outPacked=packed(op.a)&&packed(op.b)&&slots_[op.a].columns==slots_[op.b].columns;
+                        break;
+                    case Kind::ConvChunk:
+                        outFlat=flat(op.a)&&op.arguments.size()==4&&active(op.arguments[3])&&
+                            op.dimensions.size()==2&&op.dimensions[0]==chunk;break;
+                    case Kind::Prepare:
+                        outFlat=op.arguments.size()==5&&flat(op.arguments[0])&&flat(op.arguments[1])&&flat(op.arguments[2]);break;
+                    case Kind::DeltaChunk:
+                        outFlat=flat(op.a)&&op.arguments.size()==3&&active(op.arguments[2])&&
+                            op.dimensions.size()==4&&op.dimensions[0]==chunk;break;
+                    case Kind::GateNorm:
+                        outFlat=flat(op.a)&&flat(op.b)&&op.dimensions.size()>=2&&
+                            (op.dimensions.size()==2||op.dimensions[2]==0)&&
+                            slots_[op.out].columns==op.dimensions[0]*op.dimensions[1];break;
+                    case Kind::AttentionChunk:
+                    case Kind::VerificationAttention:
+                        outFlat=op.arguments.size()==8&&flat(op.arguments[0])&&flat(op.arguments[1])&&flat(op.arguments[2])&&
+                            active(op.arguments[6])&&op.dimensions.size()==6&&op.dimensions[4]==chunk;break;
+                    default:break;
+                    }
+                    unsigned char proven=0;
+                    if(outFlat&&slots_[op.out].rows==rows)proven|=1;
+                    if(outPacked&&slots_[op.out].rows==batch)proven|=2;
+                    if(proven)layout[canonical(op.out)]=proven;
+                }
+            }
+        }
+#endif
+        if(verificationTokens_)for(const auto& op:ops_)if(op.kind==Kind::MatMul||op.kind==Kind::BF16MatVec) {
+#ifdef GARNET_METAL_MLX_AFFINE_INT4
+            if(op.kind!=Kind::MatMul||!op.transpose||!slots_[op.b].affineInt4.Valid()||
+               !op.indexedDecodeProjection||op.indexedTokenProjection||
+               slots_[op.a].rows!=size_t(inputShapes_[0][0])*verificationTokens_)
+#endif
+                throw std::invalid_argument("Verification projection lacks proven FP32 token-row identity at slot "+std::to_string(op.a));
+        }
         // A delta temporary consumed only by its complete output/state slices
         // can write those independent matrices directly, without packing/copying.
         std::unordered_set<size_t> removedSlices;
@@ -734,6 +1224,34 @@ bool MetalCompiledGraph::BuildInternal(X::Value graph,X::Value symbols,const std
         }
         for(auto id:inputs_)live.insert(canonical(id));
         for(size_t id=0;id<slots_.size();++id)if(!live.count(canonical(id)))slots_[id].matrix=MetalMatrix();
+#ifdef GARNET_METAL_MTP_DEFER_PACKS
+        for(auto id:deferredPacks) {
+            if(!live.count(canonical(id)))continue;
+            // Only independent complete concat buffers absent from every
+            // resident operation may stay unallocated. Native execution
+            // returns three independent parts; standalone Run rehydrates.
+            bool resident=outputParts_.size()!=3,aliased=false;size_t writers=0;
+            auto uses=[&](const Op& op){
+                if(op.a==id||op.b==id||op.out==id||op.auxiliaryOutput==id)return true;
+                return std::find(op.arguments.begin(),op.arguments.end(),id)!=op.arguments.end();
+            };
+            for(const auto& alias:aliases)if(canonical(alias.first)==id)aliased=true;
+            for(size_t i=0;i<ops_.size();++i) {
+                const auto& op=ops_[i];
+                if(op.out==id){if(op.kind!=Kind::Concat)resident=true;++writers;}
+                if(i<residentOps_.size()&&residentOps_[i]&&uses(op))resident=true;
+            }
+            if(!resident&&!aliased&&writers==1)lazyPacks.push_back(id);
+            else {
+                auto& slot=slots_[id];slot.matrix=gpu_->Allocate(slot.rows,slot.columns);
+                for(const auto& alias:aliases)if(canonical(alias.first)==id) {
+                    auto& view=slots_[alias.first];
+                    if(view.rows!=slot.rows||view.columns!=slot.columns)throw std::logic_error("Deferred pack alias layout mismatch");
+                    view.matrix=slot.matrix;
+                }
+            }
+        }
+#endif
         // Exchange only fresh, independently written output storage. Keep
         // aliases together and retain the copy path for inputs/constants or
         // storage shared by two returned parts.
@@ -751,35 +1269,122 @@ bool MetalCompiledGraph::BuildInternal(X::Value graph,X::Value symbols,const std
             if(eligible&&writer)outputStorageGroups_[part]=std::move(group);
         }
         resetKVPrefix_[0]=ComputeResetKVPrefix(1);resetKVPrefix_[1]=ComputeResetKVPrefix(2);
+#ifdef GARNET_METAL_CHUNK_ATTENTION_MPS
+        for(const auto& op:ops_)if(op.kind==Kind::AttentionChunk) {
+            std::vector<MetalMatrix> args;for(auto id:op.arguments)args.push_back(slots_[id].matrix);
+            gpu_->PrepareAttentionChunk(args,op.dimensions[0],op.dimensions[1],op.dimensions[2],op.dimensions[3],op.dimensions[4]);
+        }
+#endif
+#ifdef GARNET_METAL_AFFINE_PROFILE
+        // Profiles are upper bounds: valid row counts/masks vary at execution.
+        // Prepare before readiness and before singleton scratch is retired.
+        for(const auto& op:ops_)if(op.kind==Kind::MatMul&&slots_[op.b].affineInt4.Valid())
+            if(!gpu_->PrepareAffineInt4Profile(slots_[op.a].matrix,slots_[op.b].affineInt4,
+                slots_[op.out].matrix,slots_[op.a].rows))
+                throw std::runtime_error("Cannot prepare bounded affine kernel profile");
+#endif
 #ifdef GARNET_METAL_BODY_SHAPE
         // Prepare before readiness/compile timing ends. Decode never lazily compiles.
         for(const auto& op:ops_)if((op.kind==Kind::BF16MatVec||(op.kind==Kind::MatMul&&op.transpose))&&slots_[op.b].bf16.Valid())
             gpu_->PrepareBF16BodyShape(slots_[op.a].matrix,slots_[op.b].bf16,slots_[op.out].matrix);
 #endif
+        if(mtpProgram_) {
+            ValidateMTPProgram();const auto memory=MetalContext::MemoryStats();
+            if(memory.recommended<=256*1024*1024||memory.allocated>memory.recommended-256*1024*1024)
+                throw std::runtime_error("MTP graph exceeds the native working-set guard");
+        }
         sharedWeights_.clear();ready_=true;
+#ifdef GARNET_METAL_CHUNK_KV_INPLACE
+        // Metadata is enough to construct private session state. Retire proved
+        // resident-unused defaults before the next layer is built, avoiding a
+        // model-wide construction peak. Standalone Run rehydrates the plan.
+        RetireResidentDefaults();
+#endif
+#ifdef GARNET_METAL_MTP_DEFER_PACKS
+        if(!lazyPacks.empty()&&!lazyDefaultPlanReady_)throw std::logic_error("Deferred packs require standalone rehydration plan");
+        lazyDefaultSlots_.insert(lazyDefaultSlots_.end(),lazyPacks.begin(),lazyPacks.end());
+        mtpDeferredPackSlots_=lazyPacks.size();
+#endif
         compileMs_=std::chrono::duration<double,std::milli>(std::chrono::steady_clock::now()-start).count();
         return true;
     }catch(...){Clear();throw;}
 }
+#ifdef GARNET_METAL_PREFILL_HIDDEN_POOL
+bool MetalCompiledGraph::CanPoolResidentHidden() const {
+    return !mtpProgram_&&inputs_.size()==6&&inputShapes_[0].size()==3&&inputShapes_[0][1]>1&&
+        outputParts_.size()==3&&outputStorageGroups_.size()==3&&!outputStorageGroups_[0].empty()&&
+        slots_[outputParts_[0]].rows==size_t(inputShapes_[0][0])&&
+        slots_[outputParts_[0]].columns==size_t(inputShapes_[0][1])*size_t(inputShapes_[0][2]);
+}
+#endif
+#ifdef GARNET_METAL_LINEAR_CHUNK_STATE_INPLACE
+bool MetalCompiledGraph::CanUpdateLinearStateInPlace(size_t part) const {
+    if(part<1||part>2||mtpProgram_||inputs_.size()!=6||inputShapes_[0].size()!=3||inputShapes_[0][1]<=1||
+       outputStorageGroups_.size()!=3||outputStorageGroups_[part].empty()||
+       inputShapes_[1].size()!=3||inputShapes_[2].size()!=4)return false;
+    const auto batch=inputShapes_[0][0],chunk=inputShapes_[0][1];
+    if(inputShapes_[5]!=std::vector<int64_t>{batch,chunk})return false;
+    const auto& group=outputStorageGroups_[part];size_t writer=SIZE_MAX;
+    auto member=[&](size_t id){return std::find(group.begin(),group.end(),id)!=group.end();};
+    for(size_t i=0;i<ops_.size();++i)if(i<residentOps_.size()&&residentOps_[i]&&
+        (member(ops_[i].out)||member(ops_[i].auxiliaryOutput))) {
+        const auto& op=ops_[i];
+        if(writer!=SIZE_MAX||!member(op.auxiliaryOutput)||op.dimensions.empty()||op.dimensions[0]!=size_t(chunk))return false;
+        if(part==1) {
+            if(op.kind!=Kind::ConvChunk||op.arguments.size()!=4||op.arguments[2]!=inputs_[1]||op.arguments[3]!=inputs_[5]||
+               op.dimensions.size()!=2||op.dimensions[1]<1||op.dimensions[1]>8||
+               inputShapes_[1][2]!=int64_t(op.dimensions[1]))return false;
+        }else {
+            if(op.kind!=Kind::DeltaChunk||op.arguments.size()!=3||op.arguments[1]!=inputs_[2]||op.arguments[2]!=inputs_[5]||
+               op.dimensions.size()!=4||op.dimensions[2]!=128||!op.dimensions[3]||op.dimensions[3]>4096||op.dimensions[3]%16||
+               inputShapes_[2]!=std::vector<int64_t>{batch,int64_t(op.dimensions[1]),128,int64_t(op.dimensions[3])})return false;
+        }
+        writer=i;
+    }
+    if(writer==SIZE_MAX)return false;
+    const auto& source=slots_[inputs_[part]].matrix;
+    for(size_t i=writer+1;i<ops_.size();++i)if(i<residentOps_.size()&&residentOps_[i]) {
+        const auto& op=ops_[i];
+        if(op.a==inputs_[part]||op.b==inputs_[part]||source.SharesStorage(slots_[op.a].matrix)||source.SharesStorage(slots_[op.b].matrix))return false;
+        for(auto id:op.arguments)if(id==inputs_[part]||source.SharesStorage(slots_[id].matrix))return false;
+    }
+    return true;
+}
+#endif
 bool MetalCompiledGraph::CanUpdateKVInPlace(size_t part) const {
+#ifdef GARNET_METAL_LINEAR_CHUNK_STATE_INPLACE
+    if(CanUpdateLinearStateInPlace(part))return true;
+#endif
 #ifdef GARNET_METAL_RESIDENT_KV_INPLACE
-    if(part<1||part>2||inputs_.size()!=6||inputShapes_[0].size()!=2||
+    if(inputShapes_.empty())return false;
+    const bool chunk=inputShapes_[0].size()==3;
+    bool admitted=inputShapes_[0].size()==2;
+#ifdef GARNET_METAL_CHUNK_KV_INPLACE
+    admitted=admitted||chunk;
+#endif
+    size_t cacheInput=part;
+    bool inputCount=inputs_.size()==6;
+#ifdef GARNET_METAL_MTP_KV_INPLACE
+    // The validated raw auxiliary graph has two hidden inputs before K/V.
+    if(mtpProgram_&&inputs_.size()==7){inputCount=true;cacheInput=part+1;}
+#endif
+    if(part<1||part>2||!inputCount||!admitted||
         part>=outputStorageGroups_.size()||outputStorageGroups_[part].empty())return false;
     const auto& group=outputStorageGroups_[part];size_t writer=SIZE_MAX;
     auto member=[&](size_t id){return std::find(group.begin(),group.end(),id)!=group.end();};
     for(size_t i=0;i<ops_.size();++i)if(i<residentOps_.size()&&residentOps_[i]&&
         (member(ops_[i].out)||member(ops_[i].auxiliaryOutput))) {
         const auto& op=ops_[i];
-        if(writer!=SIZE_MAX||op.kind!=Kind::KVUpdate||op.arguments.size()!=5||op.arguments[1]!=inputs_[part])return false;
+        if(writer!=SIZE_MAX||op.kind!=(chunk?Kind::KVChunk:Kind::KVUpdate)||op.arguments.size()!=5||op.arguments[1]!=inputs_[cacheInput])return false;
         writer=i;
     }
     if(writer==SIZE_MAX)return false;
     // Later operations must consume the updated cache, not its old input view.
-    const auto& source=slots_[inputs_[part]].matrix;
+    const auto& source=slots_[inputs_[cacheInput]].matrix;
     for(size_t i=writer+1;i<ops_.size();++i)if(i<residentOps_.size()&&residentOps_[i]) {
         const auto& op=ops_[i];
-        if(op.a==inputs_[part]||op.b==inputs_[part]||source.SharesStorage(slots_[op.a].matrix)||source.SharesStorage(slots_[op.b].matrix))return false;
-        for(auto id:op.arguments)if(id==inputs_[part]||source.SharesStorage(slots_[id].matrix))return false;
+        if(op.a==inputs_[cacheInput]||op.b==inputs_[cacheInput]||source.SharesStorage(slots_[op.a].matrix)||source.SharesStorage(slots_[op.b].matrix))return false;
+        for(auto id:op.arguments)if(id==inputs_[cacheInput]||source.SharesStorage(slots_[id].matrix))return false;
     }
     return true;
 #else
@@ -828,8 +1433,15 @@ bool MetalCompiledGraph::ComputeResetKVPrefix(size_t part) const {
 void MetalCompiledGraph::PrepareInputs(X::Value inputs,const std::unordered_set<size_t>& skip) {
     if(!ready_||inputs.runtime()!=Host()->runtime||!inputs.IsList()||inputs.Size()!=inputs_.size())
         throw std::runtime_error("Metal graph not ready or input count invalid");
+    const char* profile=std::getenv("GARNET_METAL_PROFILE_OPS");
+    if(verificationTokens_&&profile&&std::strcmp(profile,"1")==0)
+        throw std::invalid_argument("Verification does not support serialized operation profiling");
     std::unordered_map<size_t,std::vector<float>> hostInputs;
     std::unordered_set<size_t> controls;
+    if(verificationTokens_)for(size_t i=3;i<6;++i) {
+        if(skip.count(i))throw std::invalid_argument("Verification controls must be validated host inputs");
+        controls.insert(inputs_[i]);
+    }
     for(const auto& op:ops_)if(op.kind==Kind::KVUpdate||op.kind==Kind::KVChunk)
         for(auto i:{2,3,4}){auto id=op.arguments[i];controls.insert(controlSources_.count(id)?controlSources_.at(id).first:id);}
     for(const auto& op:ops_)if(op.kind==Kind::Layout&&op.dimensions[0])controls.insert(op.b);
@@ -841,6 +1453,38 @@ void MetalCompiledGraph::PrepareInputs(X::Value inputs,const std::unordered_set<
             throw std::runtime_error("Metal runtime input shape/storage mismatch");
         auto lease=tensor.Acquire();auto data=static_cast<const float*>(info.data);
         if(controls.count(inputs_[i]))hostInputs[inputs_[i]]=std::vector<float>(data,data+slot.rows*slot.columns);
+    }
+    if(mtpProgram_) {
+        const auto& flags=hostInputs.at(inputs_[6]);const auto& slots=hostInputs.at(inputs_[5]);
+        const auto chunk=size_t(inputShapes_[0][1]);
+        for(size_t base=0;base<flags.size();base+=chunk) {
+            bool ended=false;
+            for(size_t t=0;t<chunk;++t) {
+                if(flags[base+t]==0)ended=true;
+                else if(ended||slots[base+t]!=slots[base]+float(t))
+                    throw std::invalid_argument("MTP requires contiguous active prefixes and increasing slots");
+            }
+        }
+    }
+    if(verificationTokens_) {
+        // Validate linear layers too, before ANY layer is encoded by a session.
+        // Partial blocks occupy a contiguous prefix of each physical row.
+        const auto& active=hostInputs.at(inputs_[5]);const auto& slots=hostInputs.at(inputs_[4]);
+        const auto& positions=hostInputs.at(inputs_[3]);
+        for(size_t base=0;base<active.size();base+=verificationTokens_) {
+            bool ended=false;
+            for(size_t t=0;t<verificationTokens_;++t) {
+                const auto i=base+t;
+                if(!std::isfinite(active[i])||(active[i]!=0&&active[i]!=1)||
+                   !std::isfinite(slots[i])||slots[i]<0||std::floor(slots[i])!=slots[i])
+                    throw std::invalid_argument("Invalid verification active mask/slot");
+                for(size_t axis=0;axis<3;++axis)if(!std::isfinite(positions[i*3+axis]))
+                    throw std::invalid_argument("Verification positions must be finite");
+                if(active[i]==0)ended=true;
+                else if(ended||slots[i]>=4096||slots[i]!=slots[base]+float(t))
+                    throw std::invalid_argument("Verification requires contiguous active prefixes and increasing slots");
+            }
+        }
     }
     for(const auto& op:ops_)if(op.kind==Kind::Layout&&op.dimensions[0]) {
         const auto& flags=hostInputs.at(op.b);
@@ -890,20 +1534,29 @@ bool MetalCompiledGraph::SwapOutputStorage(size_t part,MetalMatrix& replacement)
     for(auto id:outputStorageGroups_[part])slots_[id].matrix=replacement;
     replacement=finished;return true;
 }
-void MetalCompiledGraph::EncodeGreedy(MetalContext& gpu,const MetalMatrix& prediction) {
+void MetalCompiledGraph::EncodeGreedy(MetalContext& gpu,const MetalMatrix& prediction,const std::vector<size_t>* selectedRows) {
 #if defined(GARNET_METAL_FUSED_HEAD_ARGMAX)||defined(GARNET_METAL_SCREENED_HEAD)
-    Encode(gpu,true,&prediction);
+    Encode(gpu,true,&prediction,selectedRows);
 #else
-    Encode(gpu);gpu.EncodeArgmax(slots_[output_].matrix,prediction);
+    Encode(gpu,true,nullptr,selectedRows);gpu.EncodeArgmax(slots_[output_].matrix,prediction);
 #endif
 }
-void MetalCompiledGraph::Encode(MetalContext& gpu,bool packedOutput,const MetalMatrix* greedyOutput) {
+void MetalCompiledGraph::Encode(MetalContext& gpu,bool packedOutput,const MetalMatrix* greedyOutput,
+    const std::vector<size_t>* selectedTokenRows,VerificationBindings* verification) {
+#ifndef GARNET_METAL_VERIFY_ATTENTION
+    (void)verification;
+#else
+    if(verification&&!verificationTokens_)throw std::logic_error("Checkpoint bindings require a verification graph");
+#endif
+#if !defined(GARNET_METAL_INDEXED_TOKEN_PROJECTIONS)&&!defined(GARNET_METAL_ACTIVE_DECODE_PROJECTIONS)
+    (void)selectedTokenRows;
+#endif
     bool greedyEncoded=false;
     // Opt-in isolated-operation diagnostics deliberately split submissions.
     // They identify expensive kernels; their latency is not a serving metric.
     const char* profile=std::getenv("GARNET_METAL_PROFILE_OPS");
     const bool profileOps=profile&&std::strcmp(profile,"1")==0;
-    static const char* names[]={"MatMul","BF16MatVec","Norm","Silu","Add","Bias","Mask","Conv","Delta","Slice","Prepare","GateNorm","Concat","NormRope","KVUpdate","KVChunk","AttentionChunk","Scores","AttentionContext","Vision","Layout","DeltaSplit","ConvChunk","DeltaChunk"};
+    static const char* names[]={"MatMul","BF16MatVec","Norm","Silu","Add","Bias","Mask","Conv","Delta","Slice","Prepare","GateNorm","Concat","NormRope","KVUpdate","KVChunk","AttentionChunk","Scores","AttentionContext","Vision","Layout","DeltaSplit","ConvChunk","DeltaChunk","VerificationAttention"};
     for(size_t i=0;i<ops_.size();++i) {
         if(!packedOutput&&!residentOps_[i])continue;
         const auto& op=ops_[i];
@@ -986,6 +1639,22 @@ void MetalCompiledGraph::Encode(MetalContext& gpu,bool packedOutput,const MetalM
         }
 #endif
         if(op.kind==Kind::MatMul) {
+#ifdef GARNET_METAL_MLX_AFFINE_INT4
+            if(slots_[op.b].affineInt4.Valid()){
+                if(!op.transpose)throw std::logic_error("Affine INT4 projection must transpose checkpoint rows");
+#ifdef GARNET_METAL_ACTIVE_DECODE_PROJECTIONS
+                if(selectedTokenRows&&op.indexedDecodeProjection&&selectedTokenRows->size()<slots_[op.a].rows)
+                    gpu.EncodeAffineInt4IndexedDecode(a,slots_[op.b].affineInt4,out,*selectedTokenRows);
+                else
+#endif
+#ifdef GARNET_METAL_INDEXED_TOKEN_PROJECTIONS
+                if(selectedTokenRows&&op.indexedTokenProjection&&selectedTokenRows->size()<slots_[op.a].rows)
+                    gpu.EncodeAffineInt4IndexedMatMul(a,slots_[op.b].affineInt4,out,*selectedTokenRows);
+                else
+#endif
+                    gpu.EncodeAffineInt4MatMul(a,slots_[op.b].affineInt4,out);
+            }else
+#endif
             if(slots_[op.b].bf16.Valid()){if(!op.transpose)throw std::logic_error("BF16 projection must transpose checkpoint rows");gpu.EncodeBF16MatVec(a,slots_[op.b].bf16,out);}
             else gpu.EncodeMatMul(a,b,out,op.transpose);
         }
@@ -1000,10 +1669,26 @@ void MetalCompiledGraph::Encode(MetalContext& gpu,bool packedOutput,const MetalM
             auto& args=op.arguments;gpu.EncodeCausalConv(slots_[args[0]].matrix,slots_[args[1]].matrix,
                 slots_[args[2]].matrix,slots_[args[3]].matrix,out,op.dimensions[0]);
         }else if(op.kind==Kind::ConvChunk) {
-            auto& args=op.arguments;gpu.EncodeCausalConvChunk(slots_[args[0]].matrix,slots_[args[1]].matrix,
+            auto& args=op.arguments;
+#ifdef GARNET_METAL_VERIFY_ATTENTION
+            if(verification&&verification->conv==i) {
+                gpu.EncodeLayout(slots_[args[0]].matrix,slots_[args[0]].matrix,verification->qkv,0);
+                gpu.EncodeVerificationConvCheckpoint(slots_[args[0]].matrix,slots_[args[1]].matrix,
+                    slots_[args[2]].matrix,slots_[args[3]].matrix,out,slots_[op.auxiliaryOutput].matrix,
+                    verification->convS1,op.dimensions[0],op.dimensions[1]);
+            }else
+#endif
+            gpu.EncodeCausalConvChunk(slots_[args[0]].matrix,slots_[args[1]].matrix,
                 slots_[args[2]].matrix,slots_[args[3]].matrix,out,slots_[op.auxiliaryOutput].matrix,op.dimensions[0],op.dimensions[1]);
         }else if(op.kind==Kind::DeltaChunk) {
-            auto& args=op.arguments;gpu.EncodeGatedDeltaChunk(slots_[args[0]].matrix,slots_[args[1]].matrix,slots_[args[2]].matrix,
+            auto& args=op.arguments;
+#ifdef GARNET_METAL_VERIFY_ATTENTION
+            if(verification&&verification->delta==i)
+                gpu.EncodeVerificationDeltaCheckpoint(slots_[args[0]].matrix,slots_[args[1]].matrix,slots_[args[2]].matrix,
+                    out,slots_[op.auxiliaryOutput].matrix,verification->deltaS1,op.dimensions[0],op.dimensions[1],op.dimensions[2],op.dimensions[3]);
+            else
+#endif
+            gpu.EncodeGatedDeltaChunk(slots_[args[0]].matrix,slots_[args[1]].matrix,slots_[args[2]].matrix,
                 out,slots_[op.auxiliaryOutput].matrix,op.dimensions[0],op.dimensions[1],op.dimensions[2],op.dimensions[3]);
         }else if(op.kind==Kind::Delta) {
             auto& args=op.arguments;gpu.EncodeGatedDelta(slots_[args[0]].matrix,slots_[args[1]].matrix,slots_[args[2]].matrix,
@@ -1016,6 +1701,9 @@ void MetalCompiledGraph::Encode(MetalContext& gpu,bool packedOutput,const MetalM
         }else if(op.kind==Kind::Prepare) {
             auto& args=op.arguments;gpu.EncodeLinearPrepare(slots_[args[0]].matrix,slots_[args[1]].matrix,slots_[args[2]].matrix,
                 slots_[args[3]].matrix,slots_[args[4]].matrix,out,op.dimensions[0],op.dimensions[1],op.dimensions[2],op.dimensions[3],op.dimensions[4]);
+#ifdef GARNET_METAL_VERIFY_ATTENTION
+            if(verification&&verification->prepare==i)gpu.EncodeLayout(out,out,verification->prepared,0);
+#endif
         }else if(op.kind==Kind::GateNorm) {
             auto& args=op.arguments;gpu.EncodeGatedNorm(slots_[args[0]].matrix,slots_[args[1]].matrix,slots_[args[2]].matrix,
                 out,op.dimensions[0],op.dimensions[1],op.epsilon,op.dimensions.size()>2?op.dimensions[2]:0);
@@ -1030,6 +1718,12 @@ void MetalCompiledGraph::Encode(MetalContext& gpu,bool packedOutput,const MetalM
         }else if(op.kind==Kind::AttentionChunk) {
             std::vector<MetalMatrix> args;for(auto id:op.arguments)args.push_back(slots_[id].matrix);
             gpu.EncodeAttentionChunk(args,out,op.dimensions[0],op.dimensions[1],op.dimensions[2],op.dimensions[3],op.dimensions[4],op.dimensions[5]!=0);
+#ifdef GARNET_METAL_VERIFY_ATTENTION
+        }else if(op.kind==Kind::VerificationAttention) {
+            std::vector<MetalMatrix> args;for(auto id:op.arguments)args.push_back(slots_[id].matrix);
+            gpu.EncodeVerificationAttention(args,slots_[op.auxiliaryOutput].matrix,out,
+                op.dimensions[0],op.dimensions[1],op.dimensions[2],op.dimensions[3],op.dimensions[4],op.dimensions[5]!=0);
+#endif
         }else if(op.kind==Kind::KVUpdate) {
             auto& args=op.arguments;gpu.EncodeKVUpdate(slots_[args[0]].matrix,slots_[args[1]].matrix,slots_[args[2]].matrix,
                 slots_[args[3]].matrix,out,op.dimensions[0],op.dimensions[1],op.dimensions[2]);
@@ -1059,6 +1753,28 @@ void MetalCompiledGraph::Encode(MetalContext& gpu,bool packedOutput,const MetalM
 }
 X::Value MetalCompiledGraph::Run(X::Value inputs) {
     std::lock_guard<std::mutex> lock(mutex_);
+#ifdef GARNET_METAL_SHARED_PREFILL_SCRATCH
+    std::unique_lock<std::mutex> scratchLock;
+    if(prefillScratch_)scratchLock=std::unique_lock<std::mutex>(prefillScratch_->mutex);
+#endif
+#ifdef GARNET_METAL_RETIRE_INPLACE_DEFAULTS
+    // Standalone packed execution owns its outputs rather than receiving the
+    // session's private KV bindings. Restore every retired default first.
+    for(size_t part=
+#ifdef GARNET_METAL_PREFILL_HIDDEN_POOL
+        0
+#else
+        1
+#endif
+        ;part<outputStorageGroups_.size();++part) {
+        const auto& group=outputStorageGroups_[part];
+        if(group.empty()||slots_[group.front()].matrix.Valid()||
+           std::find(lazyDefaultSlots_.begin(),lazyDefaultSlots_.end(),group.front())==lazyDefaultSlots_.end())continue;
+        MaterializeDefault(group.front());
+        for(auto id:group)slots_[id].matrix=slots_[group.front()].matrix;
+    }
+    for(auto id:lazyDefaultSlots_)MaterializeDefault(id);
+#endif
     visionParallelDispatches_=0;
     visionPrefetchDispatches_=0;visionVectorDispatches_=0;mlpGraphDispatches_=0;
     visionGlobalAlphaDispatches_=0;
@@ -1098,28 +1814,290 @@ std::vector<MetalResourceReference> MetalCompiledGraph::MemoryReferences() {
     auto append=[&](const Slot& slot,size_t i,const std::string& role,const std::string& name,bool weight,bool in,bool out,bool resident,bool legacy){
         auto emit=[&](const MetalBufferInfo& info){if(!info.identity)return;MetalResourceReference r;r.buffer=info;r.slot=i;r.role=role;r.name=name;r.shape=slot.shape;r.weight=weight;r.input=in;r.outputPart=out;r.residentOperand=resident;r.anyWriter=i<anyWriter.size()&&anyWriter[i];r.residentWriter=i<residentWriter.size()&&residentWriter[i];r.legacyOutput=legacy;result.push_back(std::move(r));};
         emit(MetalContext::MatrixBufferInfo(slot.matrix));for(const auto& info:MetalContext::WeightBufferInfo(slot.bf16))emit(info);
+#ifdef GARNET_METAL_MLX_AFFINE_INT4
+        for(const auto& info:MetalContext::AffineInt4BufferInfo(slot.affineInt4))emit(info);
+#endif
     };
     for(size_t i=0;i<slots_.size();++i)append(slots_[i],i,"slot",names[i],!names[i].empty(),input[i],output[i],active[i],i==output_);
     auto held=[&](const auto& records,const char* role){std::vector<std::string> keys;for(const auto& entry:records)keys.push_back(entry.first);std::sort(keys.begin(),keys.end());for(const auto& key:keys)append(records.at(key).slot,SIZE_MAX,role,key,true,false,false,false,false);};
-    held(sharedWeights_,"shared_weight_record");held(weightRecords_,"weight_record");return result;
+    held(sharedWeights_,"shared_weight_record");held(weightRecords_,"weight_record");
+#ifdef GARNET_METAL_SHARED_PREFILL_SCRATCH
+    if(prefillScratch_) {
+        std::lock_guard<std::mutex> scratchLock(prefillScratch_->mutex);
+        for(const auto& entry:prefillScratch_->buffers)for(const auto& matrix:entry.second) {
+            MetalResourceReference reference;reference.buffer=MetalContext::MatrixBufferInfo(matrix);
+            reference.slot=SIZE_MAX;reference.role="shared_prefill_scratch_pool";
+            reference.shape={int64_t(entry.first.first),int64_t(entry.first.second)};
+            result.push_back(std::move(reference));
+        }
+    }
+#endif
+    return result;
 }
 }
 
+#ifdef GARNET_METAL_SHARED_PREFILL_SCRATCH
 namespace Garnet {
-void MetalCompiledGraph::RetireResidentDefaults() {
+#ifdef GARNET_METAL_PREFILL_ALIAS_TEST_FAULTS
+bool MetalCompiledGraph::FailNextPrefillAliasCommit() {
+    std::lock_guard<std::mutex> lock(mutex_);
+    if(!ready_||prefillScratch_)return false;
+    prefillAliasFailNextCommit_=true;return true;
+}
+#endif
+void MetalCompiledGraph::SharePrefillScratch(const std::shared_ptr<MetalPrefillScratch>& owner) {
+    if(!owner||!ready_||outputParts_.size()!=3||residentOps_.size()!=ops_.size())
+        throw std::invalid_argument("Shared prefill scratch requires a ready resident graph");
+    if(prefillScratch_==owner)return;
+    if(prefillScratch_)throw std::logic_error("Prefill graph already belongs to another scratch owner");
+    std::lock_guard<std::mutex> scratchLock(owner->mutex);
+    std::vector<MetalBufferInfo> infos;
+    std::unordered_map<uintptr_t,size_t> counts;
+    std::unordered_set<uintptr_t> protectedStorage;
+    auto protect=[&](const Slot& slot) {
+        auto info=MetalContext::MatrixBufferInfo(slot.matrix);
+        if(info.identity)protectedStorage.insert(info.identity);
+        for(const auto& buffer:MetalContext::WeightBufferInfo(slot.bf16))protectedStorage.insert(buffer.identity);
+#ifdef GARNET_METAL_MLX_AFFINE_INT4
+        for(const auto& buffer:MetalContext::AffineInt4BufferInfo(slot.affineInt4))protectedStorage.insert(buffer.identity);
+#endif
+    };
+    for(const auto& slot:slots_) {
+        auto info=MetalContext::MatrixBufferInfo(slot.matrix);infos.push_back(info);
+        if(info.identity)++counts[info.identity];
+    }
+    for(auto id:inputs_)protect(slots_[id]);
+    protect(slots_[output_]);
+    for(auto id:outputParts_)protect(slots_[id]);
+    for(const auto& entry:weights_)protect(slots_[entry.second]);
+    for(const auto& entry:weightRecords_)protect(entry.second.slot);
+    for(const auto& entry:sharedWeights_)protect(entry.second.slot);
+    // Prove initialization for both resident and standalone packed execution.
+    // A prior read (including a same-op read/write) rejects the buffer.
+    std::vector<size_t> firstRead(slots_.size(),SIZE_MAX),firstWrite(slots_.size(),SIZE_MAX);
+#ifdef GARNET_METAL_PREFILL_LIFETIME_REUSE
+    std::vector<size_t> lastUse(slots_.size(),0);
+#endif
+    std::vector<bool> residentWriter(slots_.size(),false),fullyInitialized(slots_.size(),false);
+#ifdef GARNET_METAL_PREFILL_ALIAS_GROUPS
+    std::vector<bool> residentFirstWrite(slots_.size(),false);
+#endif
+    for(size_t i=0;i<ops_.size();++i) {
+        const auto& op=ops_[i];
+        const bool fullWrite=op.kind==Kind::MatMul||op.kind==Kind::BF16MatVec||op.kind==Kind::Norm||
+            op.kind==Kind::Silu||op.kind==Kind::Add||op.kind==Kind::Bias||op.kind==Kind::Slice||
+            op.kind==Kind::Concat||op.kind==Kind::NormRope||op.kind==Kind::Layout||
+            op.kind==Kind::Mask||op.kind==Kind::Prepare||op.kind==Kind::ConvChunk||op.kind==Kind::DeltaChunk||
+            op.kind==Kind::VerificationAttention||
+            (op.kind==Kind::GateNorm&&op.dimensions.size()>=2&&
+             (op.dimensions.size()==2||op.dimensions[2]==0)&&op.out<slots_.size()&&
+             slots_[op.out].columns==op.dimensions[0]*op.dimensions[1]);
+        // Chunk kernels write every logical output element, including zeros
+        // for inactive tokens. GateNorm may instead write a slice, so only its
+        // zero-offset, whole-width form can initialize shared scratch.
+        auto read=[&](size_t id){if(id<slots_.size()){
+            firstRead[id]=std::min(firstRead[id],i);
+#ifdef GARNET_METAL_PREFILL_LIFETIME_REUSE
+            lastUse[id]=std::max(lastUse[id],i);
+#endif
+        }};
+        auto write=[&](size_t id){if(id<slots_.size()){
+#ifdef GARNET_METAL_PREFILL_LIFETIME_REUSE
+            lastUse[id]=std::max(lastUse[id],i);
+#endif
+            if(firstWrite[id]==SIZE_MAX) {
+                fullyInitialized[id]=fullWrite;
+#ifdef GARNET_METAL_PREFILL_ALIAS_GROUPS
+                residentFirstWrite[id]=residentOps_[i];
+#endif
+            }
+            firstWrite[id]=std::min(firstWrite[id],i);residentWriter[id]=residentWriter[id]||residentOps_[i];}};
+        read(op.a);read(op.b);for(auto id:op.arguments)read(id);
+        write(op.out);write(op.auxiliaryOutput);
+    }
+#ifdef GARNET_METAL_PREFILL_LIFETIME_REUSE
+    std::vector<ScratchLifetime> lifetimes;
+#else
+    std::map<std::pair<size_t,size_t>,size_t> next;
+#endif
+    size_t reused=0;
+#ifdef GARNET_METAL_PREFILL_ALIAS_GROUPS
+    std::vector<ScratchAliasMember> members;
+    for(size_t id=0;id<slots_.size();++id) {
+        const auto& slot=slots_[id];const auto& info=infos[id];
+        if(!info.identity)continue;
+        const bool allowed=!protectedStorage.count(info.identity)&&
+            gpu_->IsDefaultLayout(slot.matrix,slot.rows,slot.columns);
+        members.push_back({id,info.identity,slot.rows,slot.columns,firstRead[id],firstWrite[id],lastUse[id],
+                           allowed,fullyInitialized[id],residentFirstWrite[id]});
+    }
+    const auto groups=PlanScratchAliasGroups(members);
+    std::unordered_map<size_t,const ScratchAliasGroup*> byRepresentative;
+    for(const auto& group:groups) {
+        lifetimes.push_back(group.lifetime);
+        byRepresentative.emplace(group.lifetime.slot,&group);
+    }
+    size_t aliasGroups=0,aliasSlots=0;
+    // Preparation is transactional: allocating vectors/maps or detecting an
+    // invalid view must leave BOTH graph slots and the existing pool intact.
+    auto stagedBuffers=owner->buffers;
+    std::vector<std::pair<size_t,MetalMatrix>> stagedBindings;
+    for(const auto& assignment:PlanScratchLifetimes(std::move(lifetimes))) {
+        const auto& group=*byRepresentative.at(assignment.slot);
+        auto& slot=slots_[assignment.slot];const auto& info=infos[assignment.slot];
+        const auto key=std::make_pair(slot.rows,slot.columns);const auto lane=assignment.lane;
+        auto& buffers=stagedBuffers[key];
+        if(lane>buffers.size())throw std::logic_error("Scratch alias lane allocation gap");
+        if(lane==buffers.size())buffers.push_back(slot.matrix);
+        else {
+            if(reused>SIZE_MAX-info.allocatedBytes)throw std::overflow_error("Scratch alias accounting overflow");
+            reused+=info.allocatedBytes;
+        }
+        // Validate every physical view before staging the shared Impl. All
+        // aliases must share initialization/pending ownership after commit.
+        for(auto id:group.slots)if(!slots_[id].matrix.CompatibleLayout(buffers[lane]))
+            throw std::logic_error("Scratch alias physical layout mismatch");
+        for(auto id:group.slots)stagedBindings.emplace_back(id,buffers[lane]);
+        if(group.slots.size()>1){++aliasGroups;aliasSlots+=group.slots.size();}
+    }
+#ifdef GARNET_METAL_PREFILL_ALIAS_TEST_FAULTS
+    if(prefillAliasFailNextCommit_) {
+        prefillAliasFailNextCommit_=false;
+        throw std::runtime_error("Injected prefill alias precommit failure");
+    }
+#endif
+    // No allocation or layout check remains after the first graph mutation.
+    // The preparing caller holds the graph lock and this pool's lock; existing
+    // execution paths retain the pool lease through GPU completion.
+    static_assert(std::is_nothrow_copy_assignable<MetalMatrix>::value,"Scratch binding commit must not throw");
+    static_assert(noexcept(owner->buffers.swap(stagedBuffers)),"Scratch pool commit must not throw");
+    for(const auto& binding:stagedBindings)slots_[binding.first].matrix=binding.second;
+    owner->buffers.swap(stagedBuffers);
+    sharedPrefillAliasGroups_=aliasGroups;sharedPrefillAliasSlots_=aliasSlots;
+#else
+    for(size_t id=0;id<slots_.size();++id) {
+        auto& slot=slots_[id];const auto& info=infos[id];
+        if(!info.identity||counts[info.identity]!=1||protectedStorage.count(info.identity)||
+           !residentWriter[id]||!fullyInitialized[id]||firstWrite[id]==SIZE_MAX||firstRead[id]<=firstWrite[id]||
+           !gpu_->IsDefaultLayout(slot.matrix,slot.rows,slot.columns))continue;
+#ifdef GARNET_METAL_PREFILL_LIFETIME_REUSE
+        lifetimes.push_back({id,slot.rows,slot.columns,firstWrite[id],lastUse[id]});
+    }
+    for(const auto& assignment:PlanScratchLifetimes(std::move(lifetimes))) {
+        const auto id=assignment.slot;auto& slot=slots_[id];const auto& info=infos[id];
+        const auto key=std::make_pair(slot.rows,slot.columns);const auto lane=assignment.lane;
+#else
+        const auto key=std::make_pair(slot.rows,slot.columns);const auto lane=next[key]++;
+#endif
+        auto& buffers=owner->buffers[key];
+        if(lane==buffers.size())buffers.push_back(slot.matrix);
+        else {
+            if(!slot.matrix.CompatibleLayout(buffers[lane]))throw std::logic_error("Shared prefill scratch layout mismatch");
+            if(reused>SIZE_MAX-info.allocatedBytes)throw std::overflow_error("Shared prefill scratch accounting overflow");
+            reused+=info.allocatedBytes;slot.matrix=buffers[lane];
+        }
+    }
+#endif
+    prefillScratch_=owner;sharedPrefillScratchBytes_=reused;
+}
+}
+#endif
+
+namespace Garnet {
+void MetalCompiledGraph::RetireResidentDefaults(bool preserveHiddenInput) {
+#ifndef GARNET_METAL_RETIRE_PREFILL_INPUTS
+    (void)preserveHiddenInput;
+#endif
 #ifdef GARNET_METAL_LAZY_RESIDENT_DEFAULTS
     if(!lazyDefaultPlanReady_) {
         if(!ready_||outputParts_.size()!=3||inputs_.size()<3||residentOps_.size()!=ops_.size())return;
         std::vector<MetalBufferInfo> infos;std::unordered_map<uintptr_t,size_t> counts;std::unordered_set<uintptr_t> protectedWeights;
-        for(const auto& slot:slots_){auto info=MetalContext::MatrixBufferInfo(slot.matrix);infos.push_back(info);if(info.identity)++counts[info.identity];for(const auto& b:MetalContext::WeightBufferInfo(slot.bf16))protectedWeights.insert(b.identity);}
-        for(const auto& record:weightRecords_){auto info=MetalContext::MatrixBufferInfo(record.second.slot.matrix);if(info.identity)protectedWeights.insert(info.identity);for(const auto& b:MetalContext::WeightBufferInfo(record.second.slot.bf16))protectedWeights.insert(b.identity);}
+        auto protect=[&](const Slot& slot){
+            for(const auto& b:MetalContext::WeightBufferInfo(slot.bf16))protectedWeights.insert(b.identity);
+#ifdef GARNET_METAL_MLX_AFFINE_INT4
+            for(const auto& b:MetalContext::AffineInt4BufferInfo(slot.affineInt4))protectedWeights.insert(b.identity);
+#endif
+        };
+        for(const auto& slot:slots_){auto info=MetalContext::MatrixBufferInfo(slot.matrix);infos.push_back(info);if(info.identity)++counts[info.identity];protect(slot);}
+        for(const auto& record:weightRecords_){auto info=MetalContext::MatrixBufferInfo(record.second.slot.matrix);if(info.identity)protectedWeights.insert(info.identity);protect(record.second.slot);}
         auto eligible=[&](size_t id){const auto& slot=slots_[id];const auto& info=infos[id];return info.identity&&counts[info.identity]==1&&!protectedWeights.count(info.identity)&&gpu_->IsDefaultLayout(slot.matrix,slot.rows,slot.columns);};
         std::vector<size_t> plan;
-        for(size_t part=1;part<=2;++part){auto id=inputs_[part];if(inputShapes_[part].size()<3||std::find(outputParts_.begin(),outputParts_.end(),id)!=outputParts_.end())continue;if(eligible(id))plan.push_back(id);}
+#ifdef GARNET_METAL_RETIRE_PREFILL_INPUTS
+        if(inputs_.size()==6&&inputShapes_[0].size()==3) {
+            const auto batch=inputShapes_[0][0],chunk=inputShapes_[0][1];const auto id=inputs_[0];
+            bool safe=batch>0&&chunk>1&&inputShapes_[3]==std::vector<int64_t>{batch,chunk,3}&&
+                inputShapes_[4]==std::vector<int64_t>{batch,chunk}&&inputShapes_[5]==inputShapes_[4]&&
+                id!=output_&&std::find(outputParts_.begin(),outputParts_.end(),id)==outputParts_.end()&&eligible(id);
+            for(const auto& op:ops_)if(op.out==id||op.auxiliaryOutput==id)safe=false;
+            if(safe)plan.push_back(id);
+        }
+#endif
+        size_t cacheStart=1;
+#ifdef GARNET_METAL_MTP_KV_INPLACE
+        if(mtpProgram_&&inputs_.size()==7)cacheStart=2;
+#endif
+        for(size_t part=cacheStart;part<cacheStart+2;++part){auto id=inputs_[part];if(inputShapes_[part].size()<3||std::find(outputParts_.begin(),outputParts_.end(),id)!=outputParts_.end())continue;if(eligible(id))plan.push_back(id);}
         if(!ops_.empty()&&ops_.back().kind==Kind::Concat&&ops_.back().out==output_&&!residentOps_.back()&&std::find(inputs_.begin(),inputs_.end(),output_)==inputs_.end()&&std::find(outputParts_.begin(),outputParts_.end(),output_)==outputParts_.end()&&eligible(output_))plan.push_back(output_);
+#ifdef GARNET_METAL_RETIRE_NONRESIDENT_PACKS
+        // Only fresh complete concat outputs, never arbitrary "unused" slots.
+        // Resolve ownership by storage identity so resident aliases protect the
+        // same allocation even when the writer uses another slot number.
+        std::unordered_set<uintptr_t> residentStorage;
+        auto mark=[&](size_t id){if(id<infos.size()&&infos[id].identity)residentStorage.insert(infos[id].identity);};
+        for(size_t i=0;i<ops_.size();++i)if(residentOps_[i]) {
+            const auto& op=ops_[i];mark(op.a);mark(op.b);mark(op.out);mark(op.auxiliaryOutput);
+            for(auto id:op.arguments)mark(id);
+        }
+        for(size_t i=0;i<ops_.size();++i) {
+            const auto& op=ops_[i];const auto id=op.out;
+            if(residentOps_[i]||op.kind!=Kind::Concat||id==output_||!eligible(id)||
+               residentStorage.count(infos[id].identity)||
+               std::find(inputs_.begin(),inputs_.end(),id)!=inputs_.end()||
+               std::find(outputParts_.begin(),outputParts_.end(),id)!=outputParts_.end()||
+               std::find(plan.begin(),plan.end(),id)!=plan.end())continue;
+            // Build lowers concats into fresh output allocations. Reconfirm
+            // that this is the only writer and no prior op consumes it.
+            bool safe=true;
+            for(size_t j=0;j<ops_.size();++j) {
+                const auto& other=ops_[j];
+                if(j!=i&&(other.out==id||other.auxiliaryOutput==id))safe=false;
+                if(j<=i&&(other.a==id||other.b==id||std::find(other.arguments.begin(),other.arguments.end(),id)!=other.arguments.end()))safe=false;
+            }
+            if(safe){plan.push_back(id);++nonresidentPackSlots_;}
+        }
+#endif
+#ifdef GARNET_METAL_RETIRE_INPLACE_DEFAULTS
+        // In-place session execution binds every proven output alias to its
+        // private cache. Retire only complete, exclusively owned alias groups;
+        // hidden outputs, inputs and checkpoint owners must remain protected.
+        for(size_t part=0;part<=2;++part)if((part>0&&CanUpdateKVInPlace(part))
+#ifdef GARNET_METAL_PREFILL_HIDDEN_POOL
+            ||(part==0&&CanPoolResidentHidden())
+#endif
+            ) {
+            const auto& group=outputStorageGroups_[part];
+            const auto identity=infos[group.front()].identity;
+            std::unordered_set<size_t> unique(group.begin(),group.end());
+            bool safe=identity&&unique.size()==group.size()&&counts[identity]==group.size()&&!protectedWeights.count(identity);
+            for(auto id:group) {
+                const auto& slot=slots_[id];
+                safe=safe&&infos[id].identity==identity&&id!=output_&&(part==0||id!=outputParts_[0])&&
+                    std::find(inputs_.begin(),inputs_.end(),id)==inputs_.end()&&
+                    gpu_->IsDefaultLayout(slot.matrix,slot.rows,slot.columns);
+            }
+            if(safe)plan.insert(plan.end(),group.begin(),group.end());
+        }
+#endif
         lazyDefaultSlots_=std::move(plan);lazyDefaultPlanReady_=true;
     }
-    for(auto id:lazyDefaultSlots_)if(slots_[id].matrix.Valid()) {auto info=MetalContext::MatrixBufferInfo(slots_[id].matrix);lazyRetiredBytes_+=info.allocatedBytes;slots_[id].matrix=MetalMatrix();}
+    for(auto id:lazyDefaultSlots_)if(slots_[id].matrix.Valid()) {
+#ifdef GARNET_METAL_RETIRE_PREFILL_INPUTS
+        // The first layer just uploaded its host hidden input. Subsequent
+        // layers skip that upload and borrow their predecessor's hidden output.
+        if(preserveHiddenInput&&id==inputs_[0])continue;
+#endif
+        auto info=MetalContext::MatrixBufferInfo(slots_[id].matrix);lazyRetiredBytes_+=info.allocatedBytes;slots_[id].matrix=MetalMatrix();
+    }
 #endif
 }
 void MetalCompiledGraph::MaterializeDefault(size_t id) {
@@ -1129,6 +2107,14 @@ void MetalCompiledGraph::MaterializeDefault(size_t id) {
     auto matrix=gpu_->Allocate(slots_[id].rows,slots_[id].columns);auto info=MetalContext::MatrixBufferInfo(matrix);slots_[id].matrix=std::move(matrix);lazyRehydratedBytes_+=info.allocatedBytes;
 #else
     (void)id;
+#endif
+}
+size_t MetalCompiledGraph::RetiredPrefillHiddenInputSlots() const {
+#if defined(GARNET_METAL_RETIRE_PREFILL_INPUTS)&&defined(GARNET_METAL_LAZY_RESIDENT_DEFAULTS)
+    std::lock_guard<std::mutex> lock(mutex_);
+    return !inputs_.empty()&&std::find(lazyDefaultSlots_.begin(),lazyDefaultSlots_.end(),inputs_[0])!=lazyDefaultSlots_.end()?1:0;
+#else
+    return 0;
 #endif
 }
 size_t MetalCompiledGraph::LazyRetiredBytes() const {

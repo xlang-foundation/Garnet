@@ -58,11 +58,15 @@ int main(){try{
   auto packed=gpu.UploadBF16(bits.data(),bits.size()*2,n,k);auto rawControl=gpu.UploadBF16(bits.data(),bits.size()*2,n,k,true);
   std::vector<float> values(batch*k);for(size_t i=0;i<values.size();++i)values[i]=float(int(i%29)-14)*.017f;
   auto input=gpu.Upload(values,batch,k),out=gpu.Allocate(batch,n),reference=gpu.Allocate(batch,n);auto count=gpu.BodyShapePipelineCount();
+#ifdef GARNET_METAL_BODY_SHAPE
   need(gpu.PrepareBF16BodyShape(input,packed,out)&&gpu.PrepareBF16BodyShape(input,rawControl,reference),"Same-shape PSO preparation failed");
 #ifdef GARNET_METAL_PRIMARY_BF16_BLOCKS
   need(gpu.BodyShapePipelineCount()==count+2,"Raw/packed pipeline keys collided");
 #else
   need(gpu.BodyShapePipelineCount()==count+1,"Raw duplicate pipeline entry");
+#endif
+#else
+  need(!gpu.PrepareBF16BodyShape(input,packed,out)&&!gpu.PrepareBF16BodyShape(input,rawControl,reference)&&gpu.BodyShapePipelineCount()==count,"Disabled body-shape policy admitted a pipeline");
 #endif
   gpu.Begin();gpu.EncodeBF16MatVec(input,rawControl,reference);gpu.SubmitAndWait();auto wanted=gpu.Download(reference);
   gpu.Begin();gpu.EncodeBF16MatVec(input,packed,out);bool rejected=false;try{gpu.Download(out);}catch(...){rejected=true;}need(rejected,"Pending packed output readable");

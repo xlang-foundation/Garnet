@@ -74,6 +74,8 @@ def validate_body(body,model='qwen38-27b-nvfp4'):
 
 class Handler(BaseHTTPRequestHandler):
     def log_message(self,*args):pass
+    def validate_request(self,body):
+        validate_body(body,getattr(self.server,'model','qwen38-27b-nvfp4'))
     def reply(self,status,body):
         raw=json.dumps(body).encode();self.send_response(status);self.send_header('Content-Type','application/json');self.send_header('Content-Length',str(len(raw)));self.end_headers();self.wfile.write(raw)
     def do_GET(self):
@@ -87,7 +89,7 @@ class Handler(BaseHTTPRequestHandler):
         try:
             size=int(self.headers.get('Content-Length','0'))
             if not 1<=size<=2*1024*1024:raise ValueError('Request size outside study bounds')
-            body=json.loads(self.rfile.read(size));validate_body(body,getattr(self.server,'model','qwen38-27b-nvfp4'))
+            body=json.loads(self.rfile.read(size));self.validate_request(body)
             if not self.server.worker.healthy():self.reply(503,{'error':'Native worker not ready'});return
         except Exception as error:self.reply(400,{'error':str(error)});return
         key=uuid.uuid4().hex;stream=body.get('stream',False);previous='';count=0;prompt=None;tokens=[];disconnected=False;started=False
@@ -107,19 +109,21 @@ class Handler(BaseHTTPRequestHandler):
                     if not text.startswith(previous):raise ValueError('Tokenizer prefix revision cannot be streamed losslessly')
                     delta=text[len(previous):];previous=text
                     if stream:send({'id':key,'object':'chat.completion.chunk','choices':[{'index':0,'delta':{'content':delta},'finish_reason':None}],
-                        'usage':{'prompt_tokens':prompt,'completion_tokens':count,'total_tokens':prompt+count},'token_id':event['token_id']})
+                        'usage':{'prompt_tokens':prompt,'completion_tokens':count,'total_tokens':prompt+count,'prompt_tokens_details':{'cached_tokens':event.get('cached_tokens',0)}},'token_id':event['token_id']})
                 else:
                     if tokens!=event['generated_ids'] or len(event['prompt_ids'])!=prompt:raise ValueError('Worker final IDs disagree with streamed events')
                     full_text=event['text']
                     if not full_text.startswith(previous):raise ValueError('Final tokenizer text revises streamed prefix')
-                    usage={'prompt_tokens':prompt,'completion_tokens':count,'total_tokens':prompt+count}
+                    usage={'prompt_tokens':prompt,'completion_tokens':count,'total_tokens':prompt+count,'prompt_tokens_details':{'cached_tokens':event.get('cached_tokens',0)}}
                     if stream:
                         send({'id':key,'choices':[{'index':0,'delta':{'content':full_text[len(previous):]},'finish_reason':event['finish_reason']}],'usage':usage,
                             'prompt_token_ids':event['prompt_ids'],'response_token_ids':tokens,'study':{'generation_mode':event.get('generation_mode'),'speculative_metrics':event.get('speculative_metrics')}});send('[DONE]')
                     else:self.reply(200,{'id':key,'choices':[{'index':0,'message':{'role':'assistant','content':full_text},'finish_reason':event['finish_reason'],
                         'prompt_token_ids':event['prompt_ids'],'response_token_ids':tokens}],'usage':usage,'study':{'generation_mode':event.get('generation_mode'),'speculative_metrics':event.get('speculative_metrics')}})
         except Exception as error:
-            self.server.worker.ready=False
+            hook=getattr(self.server.worker,'request_failed',None)
+            if hook is not None:hook(error)
+            else:self.server.worker.ready=False
             if started:send({'error':repr(error)})
             else:self.reply(500,{'error':repr(error)})
 

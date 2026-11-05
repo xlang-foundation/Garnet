@@ -5,23 +5,36 @@ from xModel.qwen35.vl_0_8b.metal_decoder import MetalDecoder
 from .layers import T,DenseLayer,norm
 
 class DenseMetalDecoder(MetalDecoder):
-    def __init__(self,checkpoint,config,batch=1,capacity=256,bf16_head=True,resident=True,bf16_projections=True):
+    def __init__(self,checkpoint,config,batch=1,capacity=256,bf16_head=True,resident=True,bf16_projections=True,required_checkpoint_format=None):
         self.session=None;self.bf16_projections=bf16_projections
         backend=garnet.backend_info();self.joined_prefill_enabled='joined_mps_prefill' in backend
         self.packed_prefill_norm_enabled='packed_prefill_norm' in backend
         self.global_half_alpha_enabled='global_half_alpha' in backend
         self.joined_global_mlp_enabled='joined_global_mlp' in backend
+        self.dense_prefill_limit=0
+        for field in backend.split(';'):
+            if field.strip().startswith('dense_prefill_max_tokens='):
+                self.dense_prefill_limit=int(field.strip().split('=')[1])
+                if self.dense_prefill_limit not in (16,32,64,128,256,512):
+                    raise ValueError('Invalid compiled dense prefill token-row profile')
+        if self.dense_prefill_limit and (config['hidden_size']>4096 or capacity>4096):
+            raise ValueError('Compiled dense prefill profile requires width/capacity at most4096')
         if not backend.startswith('Garnet Metal/MPS '):raise ValueError('Native Metal package required')
-        if config.get('model_type') not in ('qwen3','qwen2'):raise ValueError('Only dense Qwen3/Qwen2 supported')
+        if config.get('model_type') not in ('qwen3','qwen2','mistral'):raise ValueError('Only dense Qwen3/Qwen2/Mistral supported')
         if config.get('rope_scaling') is not None or config.get('use_sliding_window',False):raise ValueError('Scaled RoPE/sliding-window profiles are not implemented')
         if config.get('hidden_act','silu')!='silu':raise ValueError('Only SwiGLU dense MLP supported')
         if config['model_type']=='qwen3' and config.get('attention_bias',False):raise ValueError('Qwen3 projection bias is not implemented')
-        if batch not in (1,2) or capacity<1:raise ValueError('Fixed batch 1/2 and positive capacity required')
+        if config['model_type']=='mistral':
+            if config.get('sliding_window') is not None:raise ValueError('Mistral sliding-window attention is not implemented')
+            if config.get('attention_bias',False):raise ValueError('Mistral projection bias is not implemented')
+        if batch not in self._profile_batches() or capacity<1:raise ValueError('Unsupported dense batch or nonpositive capacity')
         self.config=dict(config);self.config['head_dim']=config.get('head_dim',config['hidden_size']//config['num_attention_heads'])
         config=self.config;self.batch=batch;self.capacity=capacity;self.checkpoint=checkpoint
         self.layers=[];self.head=None;self.io=garnet.tensor_io()
         try:
             self.io.open(checkpoint)
+            if required_checkpoint_format is not None and self.io.checkpoint_format!=required_checkpoint_format:
+                raise ValueError('Checkpoint representation does not match the selected dense Metal profile')
             for idx in range(config['num_hidden_layers']):
                 cache=[batch,config['num_key_value_heads'],capacity,config['head_dim']]
                 shapes=[[batch,config['hidden_size']],cache,cache,[batch,3],[batch],[batch]]
@@ -43,7 +56,11 @@ class DenseMetalDecoder(MetalDecoder):
             if resident:self.enable_resident()
         except:self.close();raise
 
+    def _profile_batches(self):return (1,2)
+
     def _prefill_profiles(self):
+        if self.dense_prefill_limit:
+            return tuple(n for n in (2,4,8,16,32,64,128,256,512) if n*self.batch<=self.dense_prefill_limit)
         if self.config['hidden_size']<=1024 and 'dense_key_split_k' in garnet.backend_info():
             return (2,4,8,16,22,24,26,32,48,64)
         return (2,4,8,16)
@@ -57,6 +74,12 @@ class DenseMetalDecoder(MetalDecoder):
         raise ValueError('No supported dense tail profile')
 
     def enable_prefill(self,chunk=16,projection='shared',linear_chunk=False,finer_chunks=False,exact_tail=False):
+        if self.dense_prefill_limit:
+            if projection!='shared' or self.session is None or chunk not in self._prefill_profiles() or linear_chunk or finer_chunks or exact_tail:
+                raise ValueError('Compiled dense prefill requires resident shared projection and an up-to token-row profile')
+            MetalDecoder.enable_prefill(self,chunk,projection,False)
+            self.finer_chunks=False;self.exact_tail=False
+            return
         capable=self.config['hidden_size']<=1024 and 'dense_key_split_k' in garnet.backend_info()
         extended=(chunk in (24,32,48,64) or (exact_tail and chunk in (22,26))) and projection=='shared' and capable
         if chunk not in (2,4,8,16) and not extended:

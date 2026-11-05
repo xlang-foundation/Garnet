@@ -61,16 +61,24 @@ class Model:
         self.checkpoint = checkpoint
         cls = MetalDecoder if self.visual else DenseMetalDecoder
         packed_limit = 64 * 2560 if self.visual and self.xmodel == 'vl_4b' and 'qwen35_4b_wide_prefill' in garnet.backend_info() else 65536
+        if self.visual and self.xmodel=='vl_27b' and 'qwen38_wide_prefill' in garnet.backend_info():
+            packed_limit=64*5120
         if self.visual and self.prefill_chunk * self.text_config['hidden_size'] > packed_limit:
             raise ValueError('Metal prefill chunk times hidden size exceeds the packed width limit')
         self.model_factory = None
-        if self.visual and self.xmodel in ('vl_2b','vl_4b'):
+        if self.visual and self.xmodel in ('vl_2b','vl_4b','vl_27b'):
             if self.xmodel == 'vl_2b':
                 from xModel.qwen35.vl_2b import model
-            else:
+            elif self.xmodel == 'vl_4b':
                 from xModel.qwen35.vl_4b import model
+            else:
+                from xModel.qwen38.vl_27b import model
             self.model_factory = model
-            self.decoder = model.create_decoder(checkpoint, self.config, self.capacity)
+            if self.xmodel == 'vl_27b':
+                self.decoder = model.create_decoder(checkpoint, self.config, self.capacity,
+                    linear_chunk=bool(profile.get('linearChunk', False)))
+            else:
+                self.decoder = model.create_decoder(checkpoint, self.config, self.capacity)
         else:
             if self.visual and self.text_config.get('hidden_size') == 2560:
                 raise ValueError('Qwen3.5-4B requires xmodelRoot xModel/qwen35/vl_4b')

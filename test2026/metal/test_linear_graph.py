@@ -13,7 +13,7 @@ names=dict(qkv='linear_attn.in_proj_qkv.weight',z='linear_attn.in_proj_z.weight'
 common=dict(input_norm='input_layernorm.weight',post_norm='post_attention_layernorm.weight',
  mlp_gate='mlp.gate_proj.weight',mlp_up='mlp.up_proj.weight',mlp_down='mlp.down_proj.weight')
 for batch in ((int(sys.argv[4]),) if len(sys.argv)>4 else (1,2)):
- for kh,vh in ((2,2),(1,2)):
+ for kh,vh in ((2,2),(1,2),(1,3)):
   for decoder in (False,True):
    kd,vd,d,kernel=7,5,11,4;channels=2*kh*kd+vh*vd
    shapes=dict(qkv=(channels,d),z=(vh*vd,d),b_proj=(vh,d),a_proj=(vh,d),conv=(channels,1,kernel),
@@ -31,7 +31,7 @@ for batch in ((int(sys.argv[4]),) if len(sys.argv)>4 else (1,2)):
     steps=[]
     for i in range(7):
      x=rng.normal(size=(batch,d)).astype(np.float32);active=np.ones(batch,np.float32)
-     if batch==2 and 2<=i<=4:active[1]=0
+     if batch>=2 and 2<=i<=4:active[-1]=0
      inputs=[a.ravel().tolist() for a in (x,conv,state,active)]
      reference=linear_block if decoder else step_linear
      out,next_conv,next_state=reference(x,conv,state,active,weights,kh,vh,kd,vd)
