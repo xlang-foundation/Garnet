@@ -683,7 +683,7 @@ Both native columns are one cohort, no warmups and one measured wave per cell;
 comparator columns retain the frozen15-wave medians and were not rerun. These
 descriptive values do not establish a causal or uniform serving gain. Arithmetic
 differs and paging/compression remains. Single-request performance did not
-improve; all2x/half-TTFT targets remain unmet. Core ML/ANE is still unimplemented;
+improve; all2x/half-TTFT targets remain unmet. At that checkpoint Core ML/ANE was unimplemented;
 none of this evidence uses ANE execution.
 
 ## Core ML plugin bring-up after the Metal checkpoint
@@ -693,6 +693,108 @@ The optional native plugin now has a functional state/API prototype described in
 owns persistent state, supports native typed/FP32 transport and checks anticipated
 device plans. The19-test native build and3,079-check API fixture pass. This tiny
 fixture prefers CPU even under CPU+ANE policy; it is not evidence of ANE
-acceleration. Mistral conversion, actual ANE placement, compiled profile families
+acceleration. Whole-model Mistral conversion, actual ANE placement, compiled profile families
 and continuous-batch/prefix integration for this backend remain pending. The
 Metal benchmark table above is unchanged by this plugin work.
+
+## Prepared physical request spans for MPS attention
+
+`GARNET_METAL_CHUNK_ATTENTION_ACTIVE_ROWS=ON` is an optional candidate alongside
+the existing context buckets. The serving profile must explicitly set
+`chunk_attention_active_rows=true`. The default is OFF. Preparation constructs
+every contiguous physical request span for profiles with at most four request
+owners, at every existing context bucket. A missing span cannot compile or
+allocate GPU workspace during a request. Larger generic batches and pending
+GPU-produced controls retain the full schedule.
+
+Each span has bounded MPS matrix descriptors and fixed buffer offsets for the
+existing query, live key/value, score, probability and result workspace. The
+cache descriptor also contains only that span's physical KV owners. Runtime
+binds those prepared layouts to the current private cache buffers. It never
+compacts or copies KV state, changes a row lease, pads a short request to its
+maximum length, or changes attention arithmetic. Nonadjacent owners use separate
+spans. Full-batch execution reuses the original products. The original pack,
+softmax and unpack kernels retain zero-output behavior for inactive tokens and
+owners. At most eight actual tokens still use the existing scalar-tail route.
+
+This distinction matters on this Mac: the first implementation changed only
+MPS `batchStart` / `batchSize` while retaining full matrix descriptors. It
+preserved outputs but gave effectively no speedup; separated spans were slower.
+The retained gapped/overwrite study is `mistral-active-attention-operator1`, and
+the contiguous-prefix repetition is `mistral-active-attention-operator2`.
+The bounded-descriptor implementation is `mistral-active-attention-source3` /
+`native-mistral-active-attention-build3`. No unsupported claim about MPS internals
+is needed to explain the next experiment: it changes the actual operand-view
+bounds as well as the requested batch range.
+
+`mistral-active-attention-operator3` runs two fresh native processes in serial,
+with alternating full/selected schedules, three warmups and nine measurements.
+The fixed profile is B4/T128, Q32/KV8/D128, FP32 operands, context 4096. Inputs are
+deterministic synthetic text-attention values with contiguous live prefixes.
+The following GPU medians use the second cohort; both cohorts retain all raw
+samples and outputs:
+
+| Active physical owners | Prefix length | Full schedule (ms) | Bounded views (ms) | Operator speedup |
+|---|---:|---:|---:|---:|
+| Row0 |0 |1.1755 |0.6997 |1.680x |
+| Row0 |3968 |13.9774 |6.5558 |2.132x |
+| Row3 |3968 |13.9726 |6.5526 |2.132x |
+| Rows0,2 |3968 |15.8244 |10.9587 |1.444x |
+| Rows0,1 |3968 |15.8179 |10.8699 |1.455x |
+| All four |3968 |19.5405 |19.5373 |1.000x |
+
+These are attention operator latencies, not generated token rates or full-model
+speedups. Every one of 41,943,040 compared output words is bit-identical to the
+full schedule, with 480 independent FP64 dot/softmax/value samples across the two
+cohorts. All inactive outputs are zero, cohort outputs repeat exactly, and native
+owners return to zero. The counters report logical MPS matrix ranges encoded;
+they do not establish observed hardware FLOPs. Prepared GPU scratch stays at
+596,664,320 bytes across the seven graph families, as in the previous profile.
+All 19 native tests pass, including every four-owner subset, token gaps and
+overwrites, gated/ungated attention, nonzero starting owner, GPU-produced control
+fallback, stale populated scratch, read-only KV and shared-plan lifetime checks.
+
+The actual-weight model check in `mistral-active-attention-model-qualification1`
+matches the frozen native outputs on all 12 rows (ten unique cases), with 3,308
+generated tokens. It checks actual product-range counters and completed controls
+at every prefill step; the existing profile auditor passes collection integrity,
+exact control parity, sampled working-set and close-allocation gates. Native
+owners close to zero, with 1,769,472 Metal bytes remaining. This preserves the
+known native control behavior; it does not establish new coding quality or exact
+agreement with the independent MLX path.
+
+Reproduction tools are `run_chunk_attention_active_rows.py`,
+`audit_chunk_attention_active_rows.py`, and the native
+`garnet_chunk_attention_active_rows_test` executable (`--benchmark NEW_DIRECTORY`
+for the large serial operator study). `local_coder_batch_worker.py` rejects a
+profile/backend policy mismatch and verifies the encoded matrix counts against
+actual owners. `audit_mistral_http_admission.py` also validates those ranges
+against native request leases and rejects missing or changed schedule events.
+
+The serving admission in `mistral-active-attention-native-http-admission1`
+completes the same 22 frozen requests, including 4,844 generated output tokens,
+with no accounting issues and exact frozen native output IDs on all eight
+coding cases. Its audit rejects 22 corrupted evidence cases, including changed
+matrix counts, wrong active owners and missing request-schedule events. All
+native owners close to zero; remaining Metal allocation is 1,769,472 bytes.
+Strict coding quality is still 0/8. The earlier native, MPS and cooperative64
+collections also pass the extended auditor.
+
+| Nominal input / concurrency | Prior Garnet tok/s | Bounded-view Garnet tok/s | vLLM-Metal tok/s | SGLang-MLX tok/s | 2x target |
+|---|---:|---:|---:|---:|---:|
+| 256 /1 |15.072 |16.969 |22.021 |22.042 |44.084 |
+| 256 /2 |26.350 |29.733 |31.464 |32.127 |64.254 |
+| 256 /4 |33.248 |36.464 |45.235 |42.194 |90.470 |
+| 2048 /1 |4.935 |5.811 |12.345 |12.518 |25.036 |
+| 2048 /2 |7.052 |8.068 |16.536 |14.482 |33.071 |
+| 2048 /4 |8.510 |9.646 |21.179 |16.337 |42.358 |
+
+Both Garnet columns are one cohort with no warmups and one wave per cell;
+reference columns remain the frozen 15-wave medians. They are descriptive
+comparisons under different system conditions, with paging/compression retained,
+and do not establish the isolated cause of whole-model differences. No reference
+engine was rerun. Native FP32 decode/KV/intermediates still differ from the
+comparators' FP16 path. At concurrency 1, native TTFT is 1.871s /12.767s and decode
+is 22.472 /13.737 tok/s for short /long prompts. All whole-model 2x decode,
+2x throughput and half-TTFT targets remain unmet. The operator gain must not be
+presented as achieving those targets.

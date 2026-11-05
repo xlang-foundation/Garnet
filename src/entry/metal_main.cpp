@@ -231,6 +231,9 @@ public:
 #ifdef GARNET_METAL_CHUNK_ATTENTION_BUCKETS
     info+="; chunk_attention_buckets";
 #endif
+#ifdef GARNET_METAL_CHUNK_ATTENTION_ACTIVE_ROWS
+    info+="; chunk_attention_active_rows";
+#endif
 #ifdef GARNET_METAL_RETIRE_PREFILL_INPUTS
     info+="; retired_prefill_hidden_inputs";
 #endif

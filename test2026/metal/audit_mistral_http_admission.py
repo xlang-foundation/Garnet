@@ -46,6 +46,9 @@ def validate(events, clients, controls, profile, exit_status, expected_requests=
              'indexed_token_projections', 'active_decode_projections',
              'affine_coefficient_dtype=fp16'} <= backend, 'incorrect native backend')
     matrix_attention = profile.get('chunk_attention_mps', False)
+    active_requests = profile.get('chunk_attention_active_rows', False)
+    require(type(active_requests) is bool and active_requests == ('chunk_attention_active_rows' in backend)
+            and (not active_requests or matrix_attention), 'physical request schedule differs from backend')
     reuse64 = profile.get('require_reuse64', False)
     require(type(reuse64) is bool and reuse64 == ('mpp_affine_reuse64_optional' in backend),
             'cooperative64 policy differs from backend')
@@ -136,7 +139,8 @@ def validate(events, clients, controls, profile, exit_status, expected_requests=
                     extent = 128
                     while extent < visible:
                         extent *= 2
-                attention_expected = (stage, active, tail, extent)
+                active_owners = sum(r['prefill_tokens'] > 0 for r in requests) if stage == 'prefill' else len(requests)
+                attention_expected = (stage, active, tail, extent, active_owners)
                 attention_checks = set()
             stage_counts[stage] += 1
         elif kind == 'native_chunk_attention_mps_prepared':
@@ -146,14 +150,22 @@ def validate(events, clients, controls, profile, exit_status, expected_requests=
         elif kind == 'native_chunk_attention_buckets_prepared':
             require(matrix_attention and e['bucket_count'] == profile['expected_attention_mps_bucket_count'],
                     'changed prepared attention buckets')
-        elif kind in ('native_chunk_attention_mps', 'native_chunk_attention_index32', 'native_chunk_attention_bucket'):
+        elif kind in ('native_chunk_attention_mps', 'native_chunk_attention_index32', 'native_chunk_attention_bucket',
+                      'native_chunk_attention_request_products'):
             require(matrix_attention and pending is not None and pending_fresh and kind not in attention_checks,
                     'unexpected/duplicate attention dispatch event')
             attention_checks.add(kind)
-            stage, active, tail, extent = attention_expected
-            require(e['stage'] == stage and e['active_tokens'] == active, 'attention stage/count mismatch')
+            stage, active, tail, extent, active_owners = attention_expected
+            require(e['stage'] == stage, 'attention stage/count mismatch')
+            if kind != 'native_chunk_attention_request_products':
+                require(e['active_tokens'] == active, 'attention stage/count mismatch')
             expected = 32 if stage == 'prefill' else 0
-            if kind == 'native_chunk_attention_mps':
+            if kind == 'native_chunk_attention_request_products':
+                products = (0 if tail else expected)*active_owners*8*4
+                skipped = (0 if tail else expected)*(4-active_owners)*8*4
+                require(active_requests and e['matrices'] == products and e['skipped_matrices'] == skipped
+                        and e['active_request_rows'] == active_owners, 'incorrect physical request matrix ranges')
+            elif kind == 'native_chunk_attention_mps':
                 require(e['dispatches'] == (0 if tail else expected)
                         and e['plan_count'] == profile['expected_attention_mps_plan_count']
                         and e['scratch_bytes'] == profile['expected_attention_mps_scratch_bytes'],
@@ -170,7 +182,7 @@ def validate(events, clients, controls, profile, exit_status, expected_requests=
             require(stage in ('prefill', 'decode', 'head'), 'unknown affine stage')
             if stage != 'head':
                 require(pending == stage and pending_fresh, 'affine stage mismatch')
-                require(not matrix_attention or len(attention_checks) == 3, 'missing attention route coverage')
+                require(not matrix_attention or len(attention_checks) == 3+int(active_requests), 'missing attention route coverage')
                 pending = None
             elif pending == 'prefill' and not pending_fresh:
                 pending = None # Restored final hidden state; no prefill body ran.
@@ -346,6 +358,8 @@ def main():
         corruptions += ['changed-attention-storage', 'wrong-context', 'wrong-tail', 'missing-attention-route']
     if profile.get('require_reuse64'):
         corruptions += ['wrong-reuse-threshold', 'wrong-reuse-rows', 'wrong-reuse-count', 'missing-reuse-event']
+    if profile.get('chunk_attention_active_rows'):
+        corruptions += ['wrong-request-matrices', 'wrong-request-owners', 'missing-request-schedule']
     for label in corruptions:
         es, cs, ct = copy.deepcopy(events), copy.deepcopy(clients), copy.deepcopy(controls)
         if label == 'wrong-bound': es[0]['global_token_budget'] = 1024
@@ -370,6 +384,9 @@ def main():
         elif label == 'wrong-reuse-rows': next(e for e in es if e['event'] == 'native_reuse64')['logical_rows'] += 1
         elif label == 'wrong-reuse-count': next(e for e in es if e['event'] == 'native_reuse64' and e['affine_dispatches'])['affine_dispatches'] = 0
         elif label == 'missing-reuse-event': es.remove(next(e for e in es if e['event'] == 'native_reuse64'))
+        elif label == 'wrong-request-matrices': next(e for e in es if e['event'] == 'native_chunk_attention_request_products')['matrices'] += 1
+        elif label == 'wrong-request-owners': next(e for e in es if e['event'] == 'native_chunk_attention_request_products')['active_request_rows'] += 1
+        elif label == 'missing-request-schedule': es.remove(next(e for e in es if e['event'] == 'native_chunk_attention_request_products'))
         else: es[-1]['memory'][OWNERS[0]] = 1
         try:
             validate(es, cs, ct, profile, exit_status)

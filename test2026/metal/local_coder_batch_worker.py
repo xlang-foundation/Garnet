@@ -62,6 +62,10 @@ def main():
     attention_index32=profile.get('chunk_attention_index32',False)
     attention_mps=profile.get('chunk_attention_mps',False)
     attention_buckets=profile.get('chunk_attention_buckets',False)
+    attention_active_rows=profile.get('chunk_attention_active_rows',False)
+    if type(attention_active_rows) is not bool or attention_active_rows!=('chunk_attention_active_rows' in garnet.backend_info()):
+        raise ValueError('Frozen profile requires its explicit physical request attention schedule')
+    if attention_active_rows and not attention_buckets:raise ValueError('Physical request schedules require prepared context buckets')
     if type(attention_buckets) is not bool or attention_buckets!=('chunk_attention_buckets' in garnet.backend_info()):
         raise ValueError('Frozen profile requires its explicit native context-bucket policy')
     if attention_buckets and not attention_mps:raise ValueError('Context buckets require the prepared native matrix profile')
@@ -285,6 +289,17 @@ def main():
                 plans=decoder.session.chunk_attention_mps_plan_count;scratch=decoder.session.chunk_attention_mps_scratch_bytes
                 emit(dict(event='native_chunk_attention_mps',stage='prefill' if len(ids)>batch else 'decode',dispatches=count,
                     plan_count=plans,scratch_bytes=scratch,active_tokens=attention_valid))
+                if attention_active_rows:
+                    products=decoder.session.chunk_attention_mps_matrices
+                    skipped=decoder.session.chunk_attention_mps_skipped_matrices
+                    flags=active.tolist();row_width=len(flags)//batch
+                    owners=sum(1 for row in range(batch) if any(flags[row*row_width:(row+1)*row_width]))
+                    full_products=expected*batch*text_config['num_key_value_heads']*4
+                    active_products=expected*owners*text_config['num_key_value_heads']*4
+                    emit(dict(event='native_chunk_attention_request_products',stage='prefill' if len(ids)>batch else 'decode',
+                        matrices=products,skipped_matrices=skipped,active_request_rows=owners))
+                    if products!=active_products or skipped!=full_products-active_products:
+                        raise ValueError('Prepared MPS physical request schedules differ from active owners')
                 if (count!=expected or plans!=profile['expected_attention_mps_plan_count'] or scratch!=profile['expected_attention_mps_scratch_bytes']):
                     raise ValueError('Native MPS attention coverage/storage differ from the profile')
             if attention_buckets:

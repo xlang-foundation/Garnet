@@ -26,6 +26,24 @@ int main(){try{
     Need(SelectChunkAttentionPolicy(4096,2,128,slots.data(),136,active.data(),140).scalar,"Inactive future slot rejected");
     const auto unknown=SelectChunkAttentionPolicy(4096,2,128,nullptr,0,nullptr,0);
     Need(!unknown.known&&!unknown.scalar&&unknown.capacity==4096,"Unknown GPU controls narrowed the profile");
+    Need(unknown.activeRequestSpans.empty(),"Unknown controls claimed physical request spans");
+    // Exhaust every physical-owner subset. Token gaps do not move the KV row.
+    std::vector<float> spanSlots(4*136),spanActive(4*140);
+    for(size_t mask=0;mask<16;++mask) {
+        std::fill(spanActive.begin(),spanActive.end(),0);
+        std::vector<std::pair<size_t,size_t>> expected;
+        size_t activeOwners=0;
+        for(size_t b=0;b<4;++b)if(mask&(size_t(1)<<b)) {
+            spanActive[b*140+17]=1;spanSlots[b*136+17]=1024;
+            spanActive[b*140+127]=1;spanSlots[b*136+127]=1025;
+            if(!expected.empty()&&expected.back().first+expected.back().second==b)++expected.back().second;
+            else expected.emplace_back(b,1);
+            ++activeOwners;
+        }
+        const auto p=SelectChunkAttentionPolicy(4096,4,128,spanSlots.data(),136,spanActive.data(),140);
+        Need(p.known&&p.activeTokens==activeOwners*2&&p.activeRequestSpans==expected,
+            "Request spans compacted owners, lost holes or read padding");
+    }
     for(float bad:{-1.f,.5f,4096.f,std::numeric_limits<float>::infinity(),std::numeric_limits<float>::quiet_NaN()}) {
         slots[0]=bad;active[0]=1;bool rejected=false;
         try{SelectChunkAttentionPolicy(4096,2,128,slots.data(),136,active.data(),140);}catch(const std::invalid_argument&){rejected=true;}
