@@ -1,10 +1,35 @@
 # Mistral 7B native onboarding
 
 The user moved Mistral 7B onboarding, native tokenization and a Core ML/ANE
-plugin ahead of further Qwen27B performance work. Return to Qwen27B after Mistral
-performs better than vLLM in a matched benchmark. The existing Qwen27B targets
+plugin ahead of further Qwen27B performance work. The Mistral target is at least
+2x single-request decode speed and 2x aggregate throughput against both
+vLLM-Metal and SGLang in matched benchmarks, while retaining correctness and
+coding-quality gates. The existing Qwen27B targets
 and comparator evidence remain incomplete and preserved. This document records
 onboarding and a small functional gate, not production or performance qualification.
+
+## Follow-on model scope
+
+The user added both **Gemma 4 E4B and Gemma 4 E2B** after Mistral, in that order,
+before returning to Qwen27B, then Qwen9B and Qwen4B. Start Gemma with text coding;
+multimodal model membership does not require dummy image inputs for text requests.
+Each Gemma size needs its own pinned checkpoint, quantization, native C++
+tokenizer parity, architecture implementation, KV ownership, batch/continuous
+scheduling checks and matched serving baselines. Earlier Gemma tokenizer checks
+do not establish Gemma 4 tokenizer or inference support.
+
+Gemma profiles remain upper bounds chosen for the machine's memory budget;
+initial planning uses context up to 4096 and batch up to four. Those are intended
+profiles, not qualified configurations. Compare each size against the same size
+and weight representation in supported vLLM-Metal and SGLang backends, one engine
+at a time. Preserve valid comparator results across Garnet iterations. Unsupported
+backend/model combinations must be reported rather than substituted silently.
+
+Gemma 4 E4B has 4.5B effective parameters and 8B including embeddings; E2B has
+2.3B effective and 5.1B including embeddings. Effective compute size does not
+determine weight residency or the KV-cache budget. See the
+[official model architecture](https://ai.google.dev/gemma/docs/core/model_card_4)
+and [memory guidance](https://ai.google.dev/gemma/docs/core).
 
 ## Candidate checkpoint
 
