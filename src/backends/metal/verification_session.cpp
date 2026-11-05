@@ -172,6 +172,7 @@ void MetalDecoderSession::CommitVerification(VerificationRun& run,const std::vec
     auto& p=*run.plan;const auto predictions=gpu_->Download(p.predictions);
     const double targetGPU=gpu_->LastGPUMs();
     nlohmann::json stats{{"target_affine_dispatches",gpu_->LastAffineProfileDispatches()},{"target_affine_misses",gpu_->LastAffineProfileMisses()},
+        {"target_affine_decode_block_dispatches",gpu_->LastAffineDecodeBlockDispatches()},
         {"target_indexed_decode_dispatches",gpu_->LastIndexedDecodeAffineDispatches()},{"target_conv_checkpoints",gpu_->LastVerificationConvCheckpoints()},
         {"target_delta_checkpoints",gpu_->LastVerificationDeltaCheckpoints()},{"target_kv_backups",gpu_->LastVerificationKVBackups()},
         {"target_attention_dispatches",gpu_->LastVerificationAttentionDispatches()},{"prepared_metal_bytes",p.preparedMetalBytes},{"target_gpu_ms",targetGPU},

@@ -39,6 +39,9 @@ def validate(status, capacity):
         require(re.fullmatch('[0-9a-f]{64}', record['hidden_sha256'])
                 and record['hidden_sha256'] == record['reference_hidden_sha256'], 'accepted hidden differs')
         stats = record['metrics']
+        if 'mistral_decode_reuse_four_rows' in status['backend']:
+            require(stats['target_affine_decode_block_dispatches'] == (161 if length == 4 else 1),
+                    'Mistral four-row projection reuse route differs')
         for key, wanted in [('target_affine_dispatches',225), ('target_affine_misses',0), ('target_kv_backups',64),
                             ('target_attention_dispatches',32), ('target_conv_checkpoints',0), ('target_delta_checkpoints',0),
                             ('target_mpp_affine_dispatches',0), ('target_indexed_prefill_dispatches',0),

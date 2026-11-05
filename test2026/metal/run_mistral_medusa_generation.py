@@ -69,6 +69,10 @@ try:
      emitted=list(result[0]);consumed=result[1]
      assert consumed==len(emitted) and 1<=consumed<=length and result[2]==(emitted[-1] in fixture['stops'])
      stats=json.loads(decoder.session.verification_stats_json())
+     if 'mistral_decode_reuse_four_rows' in garnet.backend_info():
+      # The target head evaluates all four prepared rows; body projections
+      # select only active token rows on a clipped tail.
+      assert stats['target_affine_decode_block_dispatches']==(161 if length==4 else 1),('wrong reuse route',length,stats)
      for key,wanted in [('target_affine_dispatches',225),('target_affine_misses',0),('target_mpp_affine_dispatches',0),
       ('target_indexed_prefill_dispatches',0),('target_reuse64_prefill_dispatches',0),('target_kv_backups',64),
       ('target_attention_dispatches',32),('commit_kv_restores',64 if consumed<length else 0)]:assert stats[key]==wanted,(key,stats)

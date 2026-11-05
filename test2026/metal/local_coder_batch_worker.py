@@ -62,6 +62,11 @@ def main():
     attention_index32=profile.get('chunk_attention_index32',False)
     attention_mps=profile.get('chunk_attention_mps',False)
     attention_buckets=profile.get('chunk_attention_buckets',False)
+    mistral_decode_reuse=profile.get('mistral_decode_reuse',False)
+    if (type(mistral_decode_reuse) is not bool or
+        mistral_decode_reuse!=('mistral_decode_reuse_four_rows' in garnet.backend_info()) or
+        (mistral_decode_reuse and family!='mistral_7b')):
+        raise ValueError('Frozen profile requires its explicit Mistral four-row decode reuse policy')
     attention_active_rows=profile.get('chunk_attention_active_rows',False)
     if type(attention_active_rows) is not bool or attention_active_rows!=('chunk_attention_active_rows' in garnet.backend_info()):
         raise ValueError('Frozen profile requires its explicit physical request attention schedule')
@@ -252,10 +257,17 @@ def main():
             if not kernel_profiles:return
             count=decoder.session.affine_profile_dispatches;misses=decoder.session.affine_profile_misses
             pipelines=decoder.session.affine_profile_pipeline_count;max_threads=decoder.session.affine_profile_max_threads
+            reuse_dispatches=decoder.session.affine_decode_block_dispatches if mistral_decode_reuse else 0
+            expected_reuse=0
+            if mistral_decode_reuse and physical==valid==4 and stage!='prefill':
+                expected_reuse=1 if stage=='head' else (161 if stage=='decode' else 160)
+            if reuse_dispatches!=expected_reuse:
+                raise ValueError('Mistral exact FP32 reuse coverage differs from active physical rows')
             expected=profile['expected_head_affine_projections'] if stage=='head' else profile['expected_body_affine_projections']
             if stage=='decode':expected+=profile['expected_head_affine_projections']
             emit(dict(event='native_affine_profile',stage=stage,affine_dispatches=count,misses=misses,
-                pipeline_count=pipelines,index_bits=decoder.session.affine_profile_index_bits,pipeline_max_threads=max_threads,active_rows=valid,physical_rows=physical))
+                pipeline_count=pipelines,index_bits=decoder.session.affine_profile_index_bits,pipeline_max_threads=max_threads,active_rows=valid,physical_rows=physical,
+                mistral_decode_reuse_dispatches=reuse_dispatches))
             if count!=expected or misses!=0 or not 0<pipelines<=512 or (thread_limit==128 and max_threads!=128) or decoder.session.affine_profile_index_bits!=index_bits:
                 raise ValueError('Bounded kernel profile '+stage+' projection coverage or fallback differs')
         embedding_ms=[0.0]

@@ -62,6 +62,8 @@ if __name__ == '__main__':
         'negative-memory': lambda s:s['prepared'].update(metal_allocated_bytes=-1),
         'working-set-overflow': lambda s:s['prepared'].update(metal_allocated_bytes=10**15),
     }
+    if 'mistral_decode_reuse_four_rows' in target['backend']:
+        target_corruptions['wrong-mistral-reuse-count'] = lambda s:target_case(s)['metrics'].update(target_affine_decode_block_dispatches=0)
     for label, mutate in target_corruptions.items():
         check_rejected(target,target_check,mutate);rejected.append('target:'+label)
     fixture = read(args.fixture)
@@ -97,6 +99,8 @@ if __name__ == '__main__':
         'live-owner': lambda s:s['cleanup'].update(garnet_live_matrix_owners=1),
         'allocation-after-close': lambda s:s['cleanup'].update(metal_allocated_bytes=5*1024*1024),
     }
+    if 'mistral_decode_reuse_four_rows' in generation['backend']:
+        generation_corruptions['wrong-mistral-reuse-count'] = lambda s:round0(s)['metrics'].update(target_affine_decode_block_dispatches=0)
     for label, mutate in generation_corruptions.items():
         check_rejected(generation,generation_check,mutate);rejected.append('generation:'+label)
     for name in ('audit_mistral_greedy_verification.py','audit_mistral_medusa_generation.py',Path(__file__).name):

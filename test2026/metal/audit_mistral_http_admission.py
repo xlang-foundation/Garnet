@@ -47,6 +47,9 @@ def validate(events, clients, controls, profile, exit_status, expected_requests=
              'affine_coefficient_dtype=fp16'} <= backend, 'incorrect native backend')
     matrix_attention = profile.get('chunk_attention_mps', False)
     active_requests = profile.get('chunk_attention_active_rows', False)
+    mistral_reuse = profile.get('mistral_decode_reuse', False)
+    require(type(mistral_reuse) is bool and mistral_reuse == ('mistral_decode_reuse_four_rows' in backend),
+            'Mistral four-row decode reuse policy differs from backend')
     require(type(active_requests) is bool and active_requests == ('chunk_attention_active_rows' in backend)
             and (not active_requests or matrix_attention), 'physical request schedule differs from backend')
     reuse64 = profile.get('require_reuse64', False)
@@ -79,6 +82,7 @@ def validate(events, clients, controls, profile, exit_status, expected_requests=
     attention_checks, attention_expected = set(), None
     maximum_active = 0
     reuse64_expected = None
+    requests = []
     for e in events:
         kind = e['event']
         if 'memory' in e:
@@ -189,6 +193,16 @@ def validate(events, clients, controls, profile, exit_status, expected_requests=
             require(e['affine_dispatches'] == dict(prefill=224, decode=225, head=1)[stage]
                     and e['misses'] == 0 and 0 < e['pipeline_count'] <= 512
                     and e['index_bits'] == 32, 'incomplete affine dispatch coverage')
+            if mistral_reuse:
+                active = (sum(r['prefill_tokens'] for r in requests) if stage == 'prefill' else
+                          len(requests) if stage == 'decode' else
+                          sum(r['prefill_offset']+r['prefill_tokens'] == r['prompt_tokens'] for r in requests))
+                require(e['active_rows'] == active and e['physical_rows'] == (4*maximum_chunk if stage == 'prefill' else 4),
+                        'Mistral reuse extent differs from native row leases')
+                expected_reuse = (161 if stage == 'decode' else 1) if active == 4 and stage != 'prefill' else 0
+                require(e['mistral_decode_reuse_dispatches'] == expected_reuse, 'incorrect Mistral reuse projection coverage')
+            else:
+                require(e.get('mistral_decode_reuse_dispatches',0) == 0, 'unexpected Mistral reuse dispatch')
             profile_counts[stage] += 1
         elif kind in ('native_mpp', 'native_indexed'):
             expected = 224 if kind == 'native_mpp' or e['active_tokens'] < 4*maximum_chunk else 0
@@ -360,6 +374,8 @@ def main():
         corruptions += ['wrong-reuse-threshold', 'wrong-reuse-rows', 'wrong-reuse-count', 'missing-reuse-event']
     if profile.get('chunk_attention_active_rows'):
         corruptions += ['wrong-request-matrices', 'wrong-request-owners', 'missing-request-schedule']
+    if profile.get('mistral_decode_reuse'):
+        corruptions += ['wrong-mistral-reuse-policy', 'wrong-mistral-reuse-count', 'wrong-mistral-reuse-owners']
     for label in corruptions:
         es, cs, ct = copy.deepcopy(events), copy.deepcopy(clients), copy.deepcopy(controls)
         if label == 'wrong-bound': es[0]['global_token_budget'] = 1024
@@ -387,6 +403,11 @@ def main():
         elif label == 'wrong-request-matrices': next(e for e in es if e['event'] == 'native_chunk_attention_request_products')['matrices'] += 1
         elif label == 'wrong-request-owners': next(e for e in es if e['event'] == 'native_chunk_attention_request_products')['active_request_rows'] += 1
         elif label == 'missing-request-schedule': es.remove(next(e for e in es if e['event'] == 'native_chunk_attention_request_products'))
+        elif label == 'wrong-mistral-reuse-policy':
+            ready = next(e for e in es if e['event'] == 'ready')
+            ready['backend'] = ready['backend'].replace('mistral_decode_reuse_four_rows','mistral_decode_reuse_four_rows_BAD')
+        elif label == 'wrong-mistral-reuse-count': next(e for e in es if e['event'] == 'native_affine_profile' and e['mistral_decode_reuse_dispatches'])['mistral_decode_reuse_dispatches'] = 0
+        elif label == 'wrong-mistral-reuse-owners': next(e for e in es if e['event'] == 'native_affine_profile' and e['mistral_decode_reuse_dispatches'])['active_rows'] = 3
         else: es[-1]['memory'][OWNERS[0]] = 1
         try:
             validate(es, cs, ct, profile, exit_status)

@@ -29,6 +29,9 @@
 #endif
 #ifdef GARNET_METAL_INDEXED_DECODE
 #include "affine_int4_indexed_decode_shader.h"
+#ifdef GARNET_METAL_MISTRAL_DECODE_REUSE
+#include "affine_int4_blocked_decode_shader.h"
+#endif
 #endif
 #ifdef GARNET_METAL_MPP_AFFINE
 #include "affine_int4_mpp_shader.h"
@@ -262,7 +265,19 @@ enum class AffineProfileRoute:size_t {Decode,MPP,IndexedDecode,Indexed,Reuse64};
 // Route, K, N, input stride, output stride, decode-row variant. Prefill's actual
 // row count is runtime data. The entry records the largest prepared bound.
 using AffineProfileKey=std::array<size_t,6>;
-struct AffineProfilePipeline {id<MTLComputePipelineState> pipeline=nil;size_t maximumRows=0;};
+struct AffineProfilePipeline {id<MTLComputePipelineState> pipeline=nil;size_t maximumRows=0;size_t decodeColumns=1;};
+#ifdef GARNET_METAL_MISTRAL_DECODE_REUSE
+size_t AffineDecodeColumns(size_t inner,size_t columns,size_t rows) {
+#ifdef GARNET_METAL_MISTRAL_DECODE_REUSE
+    // Admit only four-row shapes that improve in both serial operator cohorts.
+    // KV projections, smaller occupancies and all other shapes keep the control.
+    if(rows==4&&((inner==4096&&(columns==4096||columns==14336||columns==32768))||
+                 (inner==14336&&columns==4096)))return 4;
+#endif
+
+    return 1;
+}
+#endif
 }
 #endif
 struct MetalPipelines {
@@ -414,12 +429,15 @@ static std::map<uint64_t,std::weak_ptr<MetalPipelines>> pipelineCache;
 namespace {
 id<MTLComputePipelineState> SelectAffineProfile(MetalPipelines& kernels,AffineProfileRoute route,
     size_t rows,size_t inner,size_t columns,size_t aStride,size_t oStride,size_t decodeRows,
-    id<MTLComputePipelineState> fallback,size_t& dispatches,size_t& misses,size_t& maxThreads) {
+    id<MTLComputePipelineState> fallback,size_t& dispatches,size_t& misses,size_t& maxThreads,size_t* decodeColumns=nullptr) {
+    if(decodeColumns)*decodeColumns=1;
     const AffineProfileKey key{size_t(route),inner,columns,aStride,oStride,decodeRows};
     std::shared_lock<std::shared_mutex> lock(kernels.affineProfileMutex);
     auto found=kernels.affineProfiles.find(key);
     if(found==kernels.affineProfiles.end()||rows>found->second.maximumRows) {++misses;maxThreads=fallback.maxTotalThreadsPerThreadgroup;return fallback;}
-    ++dispatches;maxThreads=found->second.pipeline.maxTotalThreadsPerThreadgroup;return found->second.pipeline;
+    ++dispatches;maxThreads=found->second.pipeline.maxTotalThreadsPerThreadgroup;
+    if(decodeColumns)*decodeColumns=found->second.decodeColumns;
+    return found->second.pipeline;
 }
 }
 #endif
@@ -459,6 +477,7 @@ struct MetalContext::Impl {
 #endif
 #ifdef GARNET_METAL_AFFINE_PROFILE
     size_t affineProfileDispatches=0,affineProfileMisses=0,affineProfileMaxThreads=0;
+    size_t affineDecodeBlockDispatches=0;
 #endif
 #ifdef GARNET_METAL_FUSED_HEAD_ARGMAX
     std::map<std::array<size_t,2>,MetalMatrix> fusedHeadScratch;
@@ -1709,6 +1728,11 @@ kernel void bf16_native_dot_t128(device const float* a [[buffer(0)]],device cons
 #endif
 #endif
         NSString* affineSource=affineSourceWithProfile([NSString stringWithUTF8String:kAffineInt4Shader]);
+#ifdef GARNET_METAL_MISTRAL_DECODE_REUSE
+constexpr unsigned decodeColumns=4;
+        affineSource=[affineSource stringByAppendingString:[NSString stringWithFormat:@"\n#define GARNET_BLOCKED_COLUMNS %u\n#define GARNET_BLOCKED_ROWS affine_decode_rows\n",decodeColumns]];
+        affineSource=[affineSource stringByAppendingString:[NSString stringWithUTF8String:kAffineInt4BlockedDecodeShader]];
+#endif
 #ifdef GARNET_METAL_AFFINE_TALL_TILES
         affineSource=[affineSource stringByAppendingString:[NSString stringWithUTF8String:kAffineInt4TallShader]];
 #endif
@@ -1732,6 +1756,10 @@ kernel void bf16_native_dot_t128(device const float* a [[buffer(0)]],device cons
         }
 #ifdef GARNET_METAL_INDEXED_DECODE
         auto indexedDecodeSource=affineSourceWithProfile([NSString stringWithUTF8String:kAffineInt4IndexedDecodeShader]);
+#ifdef GARNET_METAL_MISTRAL_DECODE_REUSE
+        indexedDecodeSource=[indexedDecodeSource stringByAppendingString:[NSString stringWithFormat:@"\n#define GARNET_BLOCKED_COLUMNS %u\n#define GARNET_BLOCKED_ROWS selected_decode_rows\n#define GARNET_BLOCKED_INDEXED 1\n",decodeColumns]];
+        indexedDecodeSource=[indexedDecodeSource stringByAppendingString:[NSString stringWithUTF8String:kAffineInt4BlockedDecodeShader]];
+#endif
         auto indexedDecodeLibrary=[impl_->device newLibraryWithSource:indexedDecodeSource options:affineOptions error:&error];
         if(!indexedDecodeLibrary)throw std::runtime_error("Cannot compile indexed FP32 decode: "+std::string(error.localizedDescription.UTF8String));
         impl_->kernels->indexedDecodeAffineLibrary=indexedDecodeLibrary;
@@ -2088,7 +2116,14 @@ bool MetalContext::PrepareAffineInt4Profile(const MetalMatrix& input,const Metal
             for(NSUInteger i=0;i<4;++i)[constants setConstantValue:&dimensions[i] type:MTLDataTypeUInt atIndex:10+i];
             uint32_t rows=uint32_t(decodeRows);
             if(rows)[constants setConstantValue:&rows type:MTLDataTypeUInt atIndex:0];
-            const std::array<NSString*,5> names{@"affine_q4_decode",@"affine_q4_mpp",@"affine_q4_indexed_decode",@"affine_q4_indexed",@"affine_q4_reuse64"};
+            size_t decodeColumns=1;
+            std::array<NSString*,5> names{@"affine_q4_decode",@"affine_q4_mpp",@"affine_q4_indexed_decode",@"affine_q4_indexed",@"affine_q4_reuse64"};
+#ifdef GARNET_METAL_MISTRAL_DECODE_REUSE
+            if(route==AffineProfileRoute::Decode||route==AffineProfileRoute::IndexedDecode) {
+                decodeColumns=AffineDecodeColumns(a.columns,o.columns,decodeRows);
+                if(decodeColumns>1)names[size_t(route)]=@"affine_q4_blocked";
+            }
+#endif
             auto library=impl_->kernels->affineProfileLibraries[size_t(route)];NSError* error=nil;
             auto function=[library newFunctionWithName:names[size_t(route)] constantValues:constants error:&error];
             if(!function)throw std::runtime_error("Cannot specialize affine kernel profile: "+std::string(error.localizedDescription.UTF8String));
@@ -2106,7 +2141,7 @@ bool MetalContext::PrepareAffineInt4Profile(const MetalMatrix& input,const Metal
             if(!pipeline||pipeline.threadExecutionWidth!=32||pipeline.maxTotalThreadsPerThreadgroup<128||
                pipeline.staticThreadgroupMemoryLength>impl_->device.maxThreadgroupMemoryLength)
                 throw std::runtime_error("Affine profile pipeline exceeds its execution limits");
-            cache.emplace(key,AffineProfilePipeline{pipeline,maximumRows});
+            cache.emplace(key,AffineProfilePipeline{pipeline,maximumRows,decodeColumns});
         };
         // Compile every possible small decode occupancy before readiness. Larger
         // prefill kernels retain dynamic row counts, bounded by this profile.
@@ -2141,6 +2176,13 @@ size_t MetalContext::LastAffineProfileDispatches() const {
 size_t MetalContext::LastAffineProfileMisses() const {
 #ifdef GARNET_METAL_AFFINE_PROFILE
     return impl_->affineProfileMisses;
+#else
+    return 0;
+#endif
+}
+size_t MetalContext::LastAffineDecodeBlockDispatches() const {
+#ifdef GARNET_METAL_AFFINE_PROFILE
+    return impl_->affineDecodeBlockDispatches;
 #else
     return 0;
 #endif
@@ -2230,16 +2272,19 @@ void MetalContext::EncodeAffineInt4MatMul(const MetalMatrix& input,const MetalAf
             ++impl_->mppAffineDispatches;
         }
 #endif
+        size_t decodeColumns=1;
 #ifdef GARNET_METAL_AFFINE_PROFILE
         pipeline=SelectAffineProfile(*impl_->kernels,a.rows<=4?AffineProfileRoute::Decode:AffineProfileRoute::MPP,
             a.rows,a.columns,o.columns,a.rowBytes/4,o.rowBytes/4,a.rows<=4?a.rows:0,
-            pipeline,impl_->affineProfileDispatches,impl_->affineProfileMisses,impl_->affineProfileMaxThreads);
+            pipeline,impl_->affineProfileDispatches,impl_->affineProfileMisses,impl_->affineProfileMaxThreads,&decodeColumns);
+        impl_->affineDecodeBlockDispatches+=size_t(decodeColumns>1);
 #endif
         [encoder setComputePipelineState:pipeline];
         [encoder setBuffer:a.data offset:a.offset atIndex:0];[encoder setBuffer:w->packed offset:0 atIndex:1];
         [encoder setBuffer:w->scales offset:0 atIndex:2];[encoder setBuffer:w->biases offset:0 atIndex:3];
         [encoder setBuffer:o.data offset:o.offset atIndex:4];[encoder setBytes:&params length:sizeof(params) atIndex:5];
-        const auto groups=a.rows<=4?MTLSizeMake((o.columns+3)/4,1,1):MTLSizeMake((o.columns+31)/32,(a.rows+tileRows-1)/tileRows,1);
+        const size_t decodeOutputs=4*decodeColumns;
+        const auto groups=a.rows<=4?MTLSizeMake((o.columns+decodeOutputs-1)/decodeOutputs,1,1):MTLSizeMake((o.columns+31)/32,(a.rows+tileRows-1)/tileRows,1);
         [encoder dispatchThreadgroups:groups threadsPerThreadgroup:MTLSizeMake(128,1,1)];[encoder endEncoding];
         output.impl_->ready=false;output.impl_->pending=true;
         if(impl_->pendingOutputs.insert(output.impl_.get()).second)impl_->outputs.push_back(output.impl_);
@@ -2287,17 +2332,20 @@ void MetalContext::EncodeAffineInt4IndexedDecode(const MetalMatrix& input,const 
             auto encoder=[impl_->command computeCommandEncoder];
             if(!encoder)throw std::runtime_error("Cannot encode indexed FP32 decode");
             auto pipeline=impl_->kernels->indexedDecodeAffine[indices.size()-1];
+            size_t decodeColumns=1;
 #ifdef GARNET_METAL_AFFINE_PROFILE
             pipeline=SelectAffineProfile(*impl_->kernels,AffineProfileRoute::IndexedDecode,
                 a.rows,a.columns,o.columns,a.rowBytes/4,o.rowBytes/4,indices.size(),
-                pipeline,impl_->affineProfileDispatches,impl_->affineProfileMisses,impl_->affineProfileMaxThreads);
+                pipeline,impl_->affineProfileDispatches,impl_->affineProfileMisses,impl_->affineProfileMaxThreads,&decodeColumns);
+            impl_->affineDecodeBlockDispatches+=size_t(decodeColumns>1);
 #endif
             [encoder setComputePipelineState:pipeline];
             [encoder setBuffer:a.data offset:a.offset atIndex:0];[encoder setBuffer:w->packed offset:0 atIndex:1];
             [encoder setBuffer:w->scales offset:0 atIndex:2];[encoder setBuffer:w->biases offset:0 atIndex:3];
             [encoder setBuffer:o.data offset:o.offset atIndex:4];[encoder setBytes:&params length:sizeof(params) atIndex:5];
             [encoder setBytes:indices.data() length:indices.size()*sizeof(uint32_t) atIndex:6];
-            [encoder dispatchThreadgroups:MTLSizeMake((o.columns+3)/4,1,1) threadsPerThreadgroup:MTLSizeMake(128,1,1)];
+            const size_t decodeOutputs=4*decodeColumns;
+            [encoder dispatchThreadgroups:MTLSizeMake((o.columns+decodeOutputs-1)/decodeOutputs,1,1) threadsPerThreadgroup:MTLSizeMake(128,1,1)];
             [encoder endEncoding];++impl_->indexedDecodeAffineDispatches;
         }
         output.impl_->ready=false;output.impl_->pending=true;
@@ -3329,6 +3377,7 @@ void MetalContext::Begin() {
     impl_->chunkAttentionMPSMatrices=impl_->chunkAttentionMPSSkippedMatrices=0;
 #ifdef GARNET_METAL_AFFINE_PROFILE
     impl_->affineProfileDispatches=impl_->affineProfileMisses=impl_->affineProfileMaxThreads=0;
+    impl_->affineDecodeBlockDispatches=0;
 #endif
     impl_->joinedPrefillPairs=0;
 #ifdef GARNET_METAL_INDEXED_DECODE
@@ -4669,6 +4718,7 @@ void MetalContext::Abort() {
     impl_->chunkAttentionMPSMatrices=impl_->chunkAttentionMPSSkippedMatrices=0;
 #ifdef GARNET_METAL_AFFINE_PROFILE
     impl_->affineProfileDispatches=impl_->affineProfileMisses=impl_->affineProfileMaxThreads=0;
+    impl_->affineDecodeBlockDispatches=0;
 #endif
     impl_->joinedPrefillPairs=0;
 #ifdef GARNET_METAL_INDEXED_DECODE

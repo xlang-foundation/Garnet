@@ -65,6 +65,9 @@ def validate(status, fixture, controls):
                 if count < length and run['emitted_ids'][-1] not in fixture['stops']:
                     require(run['emitted_ids'][-1] != run['submitted_ids'][count], 'rejected an accepted proposal')
                 stats = run['metrics']
+                if 'mistral_decode_reuse_four_rows' in status['backend']:
+                    require(stats['target_affine_decode_block_dispatches'] == (161 if length == 4 else 1),
+                            'Mistral four-row projection reuse route differs')
                 require(all(type(stats[key]) in (int, float) and math.isfinite(stats[key]) and stats[key] >= 0
                             for key in ('target_gpu_ms', 'commit_gpu_ms', 'sequential_gpu_duration_sum_ms'))
                         and stats['target_gpu_ms'] > 0

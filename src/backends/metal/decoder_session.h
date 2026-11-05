@@ -293,6 +293,7 @@ public:
 #ifdef GARNET_METAL_AFFINE_PROFILE
     size_t LastAffineProfileDispatches() {std::lock_guard<std::mutex> lock(mutex_);return gpu_?gpu_->LastAffineProfileDispatches():0;}
     size_t LastAffineProfileMisses() {std::lock_guard<std::mutex> lock(mutex_);return gpu_?gpu_->LastAffineProfileMisses():0;}
+    size_t LastAffineDecodeBlockDispatches() {std::lock_guard<std::mutex> lock(mutex_);return gpu_?gpu_->LastAffineDecodeBlockDispatches():0;}
     size_t AffineProfileIndexBits() {return MetalContext::AffineProfileIndexBits();}
     size_t LastAffineProfileMaxThreads() {std::lock_guard<std::mutex> lock(mutex_);return gpu_?gpu_->LastAffineProfileMaxThreads():0;}
     size_t AffineProfilePipelineCount() {std::lock_guard<std::mutex> lock(mutex_);return gpu_?gpu_->AffineProfilePipelineCount():0;}
@@ -417,6 +418,7 @@ public:
 #ifdef GARNET_METAL_AFFINE_PROFILE
         APISET().AddProp("affine_profile_dispatches",&MetalDecoderSession::LastAffineProfileDispatches);
         APISET().AddProp("affine_profile_misses",&MetalDecoderSession::LastAffineProfileMisses);
+        APISET().AddProp("affine_decode_block_dispatches",&MetalDecoderSession::LastAffineDecodeBlockDispatches);
         APISET().AddProp("affine_profile_index_bits",&MetalDecoderSession::AffineProfileIndexBits);
         APISET().AddProp("affine_profile_max_threads",&MetalDecoderSession::LastAffineProfileMaxThreads);
         APISET().AddProp("affine_profile_pipeline_count",&MetalDecoderSession::AffineProfilePipelineCount);

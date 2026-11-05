@@ -167,6 +167,7 @@ public:
     size_t AffineProfilePipelineCount() const;
     size_t LastAffineProfileDispatches() const;
     size_t LastAffineProfileMisses() const;
+    size_t LastAffineDecodeBlockDispatches() const;
     size_t LastAffineProfileMaxThreads() const;
     static size_t AffineProfileIndexBits();
 #ifdef GARNET_METAL_INDEXED_DECODE

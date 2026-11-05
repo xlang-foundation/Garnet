@@ -44,3 +44,30 @@ Metal4 tensor path requires the actual compatible Apple GPU. Only the current
 M5 profile has this functional evidence; other chips and feature combinations
 remain unqualified. Larger prefill chunks, batch 4 and fuller context/batching
 coverage require their own numerical, memory and workload admissions.
+
+The later B4/context4096/chunk128/global-budget512 admission now completes 22
+frozen HTTP requests and 4,844 output tokens with native scheduling, exact frozen
+native coding IDs, and no retained native owners. It remains one cohort with no
+warmups, uses no prefix cache, and does not establish repeated performance or
+the 2x targets. See the research document for all timings, regressions and scope.
+
+`GARNET_METAL_MISTRAL_DECODE_REUSE=ON` is an optional compiled profile for exact
+FP32 four-row projection reuse. It requires FP16 affine coefficients, bounded
+affine profiles and indexed decode. The serving profile must also declare
+`"mistral_decode_reuse": true`. Only measured Mistral Q/O, MLP and head shapes at
+four active rows use the new tile; K/V and smaller occupancies keep the control.
+It defaults off. The observed short B4 end-to-end rate is 40.45 tok/s, versus
+36.46 in the prior native admission and frozen 45.24 /42.19 reference medians;
+different system conditions limit this comparison. Long-prompt performance
+remains dominated by other work.
+
+With `GARNET_METAL_VERIFY_ATTENTION=ON` and the existing prepared FP32 projection
+extensions, engine setup can call `decoder.prepare_verification(tokens=4)`.
+This prepares the native target verifier, including its KV backups and accepted
+state commit. Dense Mistral does not require the recurrent Qwen extensions.
+The current bound is four physical token rows total: B1/T4, B2/T2 or B4/T1.
+This API alone does not supply draft tokens or add speculative serving.
+`medusa_draft.py` provides the separately qualified raw-BF16-weight/FP32-math
+single-path head experiment. It preserves tested greedy outputs but is slower
+than ordinary decode, is not a tree implementation, and is not selected by
+default. The auxiliary artifact's training-base identity remains unverified.

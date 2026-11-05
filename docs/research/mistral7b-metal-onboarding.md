@@ -883,3 +883,107 @@ target/generation evidence. Raw inputs, outputs, failures, libraries and clean
 source snapshots remain under the external Mistral research directory. None of
 this establishes 2x serving speed, half TTFT or improved coding quality; the
 native frozen coding outputs retain the previously reported 0/8 strict result.
+
+## Exact FP32 four-row projection reuse
+
+The next opt-in engine profile, `GARNET_METAL_MISTRAL_DECODE_REUSE=ON`, shares
+each FP32 input vector across four adjacent output channels. Each output keeps
+the existing packed-word order, dequantization FMA, per-lane accumulation order
+and SIMD sum. Prepared pipeline entries retain the output tile width and encode
+the matching dispatch grid. All occupancy variants prepare before readiness;
+actual row counts and strides remain bounded runtime data. This does not change
+KV ownership, attention, weights, precision or scratch layout.
+
+The admitted policy uses four-column reuse only for four active rows and these
+Mistral projection shapes: K4096/N4096, K4096/N14336, K14336/N4096 and
+K4096/N32768. K/V projections (K4096/N1024), smaller occupancies and other shapes
+retain the control kernel. The option defaults off and requires native affine
+FP16 coefficients, prepared profiles and indexed FP32 decode. Serving profiles
+must explicitly set `mistral_decode_reuse: true`; the worker checks backend
+agreement before loading the model and validates dispatch counts per stage.
+
+`mistral-decode-reuse-operator2` explores two- and four-column tiles across all
+five model projection shapes and four small/padded shapes, dense rows 1–4 and
+every four-owner subset. Six processes run serially in forward then reverse
+order, with three warmups and nine measured samples per cell. All 20,859,860
+compared FP32 words match the control byte for byte; 6,804 independent FP64
+samples pass the unchanged original dot bound. Owners close to zero in all six
+processes. Some early small-occupancy cases in the first cohort are much slower
+than their second-cohort counterparts; the cause was not isolated. All samples
+remain in the collection. The policy admits only large four-row shapes with a
+gain in both cohorts, and leaves the first-cohort K/V regression on the control.
+
+| Four active rows, dense projection | First-cohort operator ratio | Second-cohort operator ratio |
+|---|---:|---:|
+| K4096/N4096 |1.476x |1.419x |
+| K4096/N14336 |1.474x |1.540x |
+| K14336/N4096 |1.578x |1.593x |
+| K4096/N32768 |1.546x |1.550x |
+
+These are projection GPU ratios, not generated token rates. The actual admitted
+allowlist then matches all 4,171,972 output words in the same 180-case suite
+(`mistral-decode-reuse-runtime-operator3`). The clean source snapshot is
+`mistral-decode-reuse-source3`; its native library SHA256 is
+`3ae950bbf3944f19d5e64a961d4799ed5135b56f18c733d01afca9de42f2a16f`.
+All 21 native tests pass with the option on and again with it off. A configuration
+without FP16 coefficients is rejected. All 24 actual-weight target-verification
+cases preserve complete KV/hidden state against ordinary decode. The dispatcher
+reports 161 reuse operations for a full four-token round. Clipped tails retain
+control body projections; the four-row target head still reports one reuse
+operation. This is prepared four-row head work, not an extra accepted token.
+
+`mistral-decode-reuse-generation3` repeats every original full-budget causal
+case. All 6,360 output tokens and final KV/hidden witnesses again match frozen
+ordinary-native controls, and all reuse counters match the actual active body
+rows. The extended structural audits reject 41 corruptions. Native owners close
+to zero with 2,031,616 Metal bytes remaining. The raw BF16 head artifact and its
+unverified training-base identity are unchanged.
+
+| Case | Prior single-path heads tok/s | Reuse single-path heads tok/s | Same-run ordinary tok/s | Reuse / ordinary |
+|---|---:|---:|---:|---:|
+| Merge intervals |18.133 |22.329 |24.735 |0.903 |
+| Stable unique |17.910 |22.036 |25.033 |0.880 |
+| Toposort |15.910 |19.334 |24.144 |0.801 |
+| Half-open subtraction |15.037 |18.371 |24.123 |0.762 |
+| Incremental frames |15.709 |19.155 |24.092 |0.795 |
+| Bounded LRU |16.129 |20.281 |23.541 |0.862 |
+| JSON pointer |15.208 |18.894 |24.186 |0.781 |
+| Bisect repair |15.683 |19.603 |25.063 |0.782 |
+| Context 256 |17.458 |21.596 |24.454 |0.883 |
+| Context 2048 |11.152 |12.433 |14.283 |0.870 |
+
+Target plus commit GPU duration falls to about 70–81ms per coding round and
+154ms for the long-context case. The single-path prototype still trails
+ordinary decode in every case and remains unselected. Prior/new columns are
+separate one-run diagnostics under different system conditions, not an isolated
+whole-model causal experiment. No reference baseline was rerun or replaced.
+
+The ordinary continuous-batch serving admission is
+`mistral-decode-reuse-native-http-admission1`. It completes all 22 unchanged
+requests and 4,844 output tokens, with no accounting issues and exact frozen
+native coding IDs on all eight cases. Native owners close to zero with
+1,769,472 Metal bytes remaining. The audit validates 40,734 reuse dispatches
+across 254 stage events against actual row leases, including fallback for
+smaller active batches, and rejects 25 evidence corruptions. Scratch remains
+596,664,320 bytes across seven prefill graph families. This checks the ordinary
+continuous-batch path; it does not add B4 speculative decoding.
+
+| Nominal input / concurrency | Prior Garnet tok/s | Reuse Garnet tok/s | vLLM-Metal tok/s | SGLang-MLX tok/s | 2x target |
+|---|---:|---:|---:|---:|---:|
+| 256 /1 |16.969 |16.655 |22.021 |22.042 |44.084 |
+| 256 /2 |29.733 |28.161 |31.464 |32.127 |64.254 |
+| 256 /4 |36.464 |40.447 |45.235 |42.194 |90.470 |
+| 2048 /1 |5.811 |5.551 |12.345 |12.518 |25.036 |
+| 2048 /2 |8.068 |7.658 |16.536 |14.482 |33.071 |
+| 2048 /4 |9.646 |9.615 |21.179 |16.337 |42.358 |
+
+These are aggregate end-to-end output token rates. Garnet columns are separate
+single-cohort, no-warmup admissions; reference columns remain the frozen
+15-wave medians. System conditions, paging/compression and the FP32-versus-FP16
+decode difference remain material limitations. The short four-request cell is
+10.9% higher, while several other cells are lower; these runs do not isolate
+whole-model causation. Single-request short/long TTFT is 2.011s /13.634s and
+decode is 22.421 /13.503 tok/s. All 2x decode/throughput and half-TTFT targets
+remain unmet. The long-prompt result still calls for prefill work. The option
+stays off by default, and the trained-head path remains slower than ordinary
+decode. Strict coding quality is unchanged at 0/8 by exact output identity.
