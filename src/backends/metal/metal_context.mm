@@ -2105,7 +2105,7 @@ bool MetalContext::PrepareAffineInt4Profile(const MetalMatrix& input,const Metal
         if(maximumRows>4)prepare(AffineProfileRoute::MPP,0);
         prepare(AffineProfileRoute::Indexed,0);
 #ifdef GARNET_METAL_MPP_AFFINE_REUSE64
-        if(maximumRows>=64&&o.columns>=5120&&HasReuse64Affine())prepare(AffineProfileRoute::Reuse64,0);
+        if(maximumRows>=64&&o.columns>=GARNET_METAL_REUSE64_MIN_OUTPUTS&&HasReuse64Affine())prepare(AffineProfileRoute::Reuse64,0);
 #endif
         return true;
     }
@@ -2182,7 +2182,7 @@ void MetalContext::EncodeAffineInt4MatMul(const MetalMatrix& input,const MetalAf
     @autoreleasepool {
 #ifdef GARNET_METAL_MPP_AFFINE_REUSE64
         if(input.impl_&&weight.impl_&&input.impl_->matrix.rows>=64&&input.impl_->matrix.rows<=512&&
-           weight.impl_->rows>=5120&&HasReuse64Affine()) {
+           weight.impl_->rows>=GARNET_METAL_REUSE64_MIN_OUTPUTS&&HasReuse64Affine()) {
             std::vector<size_t> identity(input.impl_->matrix.rows);
             for(size_t i=0;i<identity.size();++i)identity[i]=i;
             EncodeAffineInt4IndexedImpl(input,weight,output,identity,false);return;
@@ -2349,7 +2349,7 @@ void MetalContext::EncodeAffineInt4IndexedImpl(const MetalMatrix& input,const Me
             if(!encoder)throw std::runtime_error("Cannot encode indexed affine projection");
             auto pipeline=impl_->kernels->indexedAffine;size_t tileColumns=32;
 #ifdef GARNET_METAL_MPP_AFFINE_REUSE64
-            const bool reuse=HasReuse64Affine()&&indices.size()>=64&&w->rows>=5120;
+            const bool reuse=HasReuse64Affine()&&indices.size()>=64&&w->rows>=GARNET_METAL_REUSE64_MIN_OUTPUTS;
             if(reuse){pipeline=impl_->kernels->reuse64Affine;tileColumns=64;}
 #endif
 #ifdef GARNET_METAL_AFFINE_PROFILE

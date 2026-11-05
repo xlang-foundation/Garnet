@@ -112,6 +112,9 @@ void Dense(MetalContext& gpu,size_t m,size_t n,size_t k) {
     Require(gpu.LastAffineProfileDispatches()==1&&gpu.LastAffineProfileMisses()==0,"dense FP16 prepared profile missed");
     Require(gpu.AffineProfilePipelineCount()==count,"dense FP16 encode compiled a pipeline");
     if(m>4)Require(gpu.LastMPPAffineDispatches()==1,"FP16 tensor path was not used");
+#ifdef GARNET_METAL_MPP_AFFINE_REUSE64
+    Require(gpu.LastReuse64AffineDispatches()==size_t(m>=64&&n>=GARNET_METAL_REUSE64_MIN_OUTPUTS),"dense FP16 cooperative64 threshold mismatch");
+#endif
     f.Compare(gpu.Download(f.dense),all,m>4);
     std::cout<<"fp16_dense rows="<<m<<" columns="<<n<<" inner="<<k<<'\n';
 }
@@ -133,6 +136,9 @@ void Indexed(MetalContext& gpu,size_t m,size_t n,size_t k,bool decode) {
         gpu.SubmitAndWait();
         Require(gpu.LastAffineProfileDispatches()==size_t(!selected.empty())&&gpu.LastAffineProfileMisses()==0,"indexed FP16 profile dispatch/miss mismatch");
         Require(gpu.AffineProfilePipelineCount()==count,"indexed FP16 encode compiled a pipeline");
+#ifdef GARNET_METAL_MPP_AFFINE_REUSE64
+        Require(gpu.LastReuse64AffineDispatches()==size_t(!decode&&selected.size()>=64&&n>=GARNET_METAL_REUSE64_MIN_OUTPUTS),"indexed FP16 cooperative64 threshold mismatch");
+#endif
         auto actual=gpu.Download(f.out);f.Compare(actual,selected,!decode);
         if(decode)for(auto row:selected)for(size_t col=0;col<n;++col)
             Require(actual[row*n+col]==dense[row*n+col],"FP16 indexed decode differs bitwise from dense decode");
@@ -156,6 +162,14 @@ int main() {
             Dense(gpu,4,1024,4096);Dense(gpu,16,1024,4096);Dense(gpu,4,37,14336);Dense(gpu,16,37,14336);
             for(size_t m=1;m<=4;++m){Indexed(gpu,m,37,128,true);Indexed(gpu,m,37,128,false);}
             Indexed(gpu,512,48,128,false);
+#ifdef GARNET_METAL_MPP_AFFINE_REUSE64
+            Require(gpu.HasReuse64Affine(),"actual FP16 cooperative64 pipeline required");
+            // Output threshold and64-row boundary; ragged final row/output tiles.
+            for(size_t m:{size_t(63),size_t(64),size_t(65)})
+                for(size_t n:{size_t(GARNET_METAL_REUSE64_MIN_OUTPUTS-1),size_t(GARNET_METAL_REUSE64_MIN_OUTPUTS),size_t(GARNET_METAL_REUSE64_MIN_OUTPUTS+1)})
+                    Dense(gpu,m,n,128);
+            Indexed(gpu,129,GARNET_METAL_REUSE64_MIN_OUTPUTS+1,64,false);
+#endif
         }
         const auto owners=MetalContext::ProfileOwnerStats();
         Require(!owners.matrices&&!owners.affineWeights&&!owners.bf16Weights&&!owners.pipelineSets,"FP16 profile leaked native owners");

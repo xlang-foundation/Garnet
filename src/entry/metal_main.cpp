@@ -199,7 +199,7 @@ public:
     info+="; indexed_token_projections";
 #endif
 #ifdef GARNET_METAL_MPP_AFFINE_REUSE64
-    info+="; mpp_affine_reuse64_optional; mpp_affine_reuse64_min_outputs=5120";
+    info+="; mpp_affine_reuse64_optional; mpp_affine_reuse64_min_outputs="+std::to_string(int(GARNET_METAL_REUSE64_MIN_OUTPUTS));
     info+="; mpp_affine_reuse64_relaxed="+std::to_string(int(GARNET_METAL_REUSE64_RELAXED_VALUE));
 #endif
 #ifdef GARNET_METAL_INDEXED_DECODE

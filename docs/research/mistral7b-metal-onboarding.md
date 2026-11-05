@@ -618,3 +618,70 @@ and a fresh 120-check `native-tokenizer-runtime-api2.log` supersede that runtime
 artifact. The original five-family reference probe and per-case records remain
 unchanged. The protected Qwen27B qualified library still has its original SHA256
 `69491581eb6ff7a659dcfc065231823b3827e8a15c603fec4756a1a2dfdbcb34`.
+
+## Strict cooperative64 projection candidate
+
+The late-prefill trace in `mistral-prepared-attention-op-diagnosis1` attributed
+48.96% of serialized GPU time to projections, 22.13% to attention and 13.11% to
+layout work. These per-operation submissions are diagnostic, not serving time.
+The existing cooperative64 kernel now has a compiled output threshold:
+`GARNET_METAL_MPP_REUSE64_MIN_OUTPUTS=4096` admits Mistral Q/O, gate/up and down
+projections. The default remains5120 and the candidate remains OFF by default.
+Preparation, dense dispatch, indexed dispatch and backend/profile metadata use
+the same constant. The only allowed thresholds are4096/5120; a nondefault value
+requires explicitly enabling the candidate. FP16 coefficients/operands, strict
+tensor arithmetic and FP32 accumulation remain unchanged.
+
+`mistral-reuse64-draft1` records isolated control/candidate builds, each passing
+all18 native tests. The candidate reference test checked8,123,261 output words,
+including independent full FP64 dots at reduced dimensions, thresholds +/-1,
+63/64/65 active rows, ragged output tiles, reverse indexed masks and inactive
+zeros. Four invalid compile policies were rejected. The preserved source and
+library are `mistral-reuse64-source1` and `mistral-reuse64-library1`; library SHA256
+is `bb25ddbf4d71ecc7815871051980eef293fd6390911d66409e5c0ec4781a325d`.
+
+`mistral-reuse64-operator-campaign1` ran eight processes sequentially: two
+cohorts, dense/indexed routes and strict control/candidate, with reversed engine
+order in the second cohort. Each of256 cells used three warmups/nine samples,
+real Mistral projection dimensions and synthetic inputs/weights. All128 paired
+output files matched bitwise (143,478,784 observed output words across runs).
+The FP64 samples passed14,400 checks and49,459,200 inactive words were zero.
+At128 active indexed rows, Q/O were1.16–1.18x, gate/up1.38–1.41x and down1.68–1.69x
+faster. These operator results are not model quality or serving throughput.
+The auditor rejects overlapping processes, changed binaries, missing cells,
+wrong routes, runtime compilation, nonfinite timings and differing word hashes.
+
+`mistral-reuse64-model-qualification2` passed all four profile gates:12 rows,
+10 unique cases and3,308 output tokens matched frozen native controls. Owner
+counts returned to zero; close Metal allocation was1,769,472 bytes. Attempt1
+failed prompt tokenization before inference because a runner-added
+`DYLD_LIBRARY_PATH` selected the older installed library. A direct probe proved
+the loaded-path difference; attempt2 removed all DYLD overrides and recorded the
+actual intended library. This is native-control parity, not independent MLX
+parity or an improved coding-quality result.
+
+`mistral-reuse64-native-http-admission1` completed22 requests with no accounting
+issues. All eight coding outputs matched the frozen native controls; the strict
+coding suite still passed0/8. SSE/native identities, row epochs, positions,
+cleanup and all70 prefill projection traces passed. Eligible chunks executed
+exactly160 cooperative projections across32 layers; chunks below64 active tokens
+executed zero. The HTTP auditor rejected19 corruptions, including missing or
+incorrect cooperative routing. The earlier two HTTP collections still pass the
+updated auditor. The new operator benchmark also participates in the serial
+engine guard.
+
+| Nominal input / concurrency | Prior Garnet tok/s | New Garnet tok/s | vLLM-Metal tok/s | SGLang tok/s | 2x target |
+|---|---:|---:|---:|---:|---:|
+| 256 /1 |16.305|15.072|22.021|22.042|44.084|
+| 256 /2 |27.077|26.350|31.464|32.127|64.254|
+| 256 /4 |32.042|33.248|45.235|42.194|90.470|
+| 2048 /1 |4.962|4.935|12.345|12.518|25.036|
+| 2048 /2 |6.435|7.052|16.536|14.482|33.071|
+| 2048 /4 |7.639|8.510|21.179|16.337|42.358|
+
+Both native columns are one cohort, no warmups and one measured wave per cell;
+comparator columns retain the frozen15-wave medians and were not rerun. These
+descriptive values do not establish a causal or uniform serving gain. Arithmetic
+differs and paging/compression remains. Single-request performance did not
+improve; all2x/half-TTFT targets remain unmet. Core ML/ANE is still unimplemented;
+none of this evidence uses ANE execution.

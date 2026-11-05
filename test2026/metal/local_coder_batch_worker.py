@@ -94,7 +94,8 @@ def main():
     reuse64=profile.get('require_reuse64',False)
     if type(reuse64) is not bool or reuse64!=('mpp_affine_reuse64_optional' in garnet.backend_info()):
         raise ValueError('Frozen profile requires its explicit cooperative64 projection policy')
-    if reuse64 and (profile.get('reuse64_min_outputs')!=5120 or 'mpp_affine_reuse64_min_outputs=5120' not in garnet.backend_info()):
+    reuse64_min_outputs=profile.get('reuse64_min_outputs')
+    if reuse64 and (type(reuse64_min_outputs) is not int or reuse64_min_outputs not in (4096,5120) or f'mpp_affine_reuse64_min_outputs={reuse64_min_outputs}' not in garnet.backend_info()):
         raise ValueError('Frozen cooperative64 profile requires its measured large-output threshold')
     reuse64_relaxed=profile.get('reuse64_relaxed',False)
     if type(reuse64_relaxed) is not bool or reuse64_relaxed!=('mpp_affine_reuse64_relaxed=1' in garnet.backend_info()):

@@ -46,6 +46,16 @@ def validate(events, clients, controls, profile, exit_status, expected_requests=
              'indexed_token_projections', 'active_decode_projections',
              'affine_coefficient_dtype=fp16'} <= backend, 'incorrect native backend')
     matrix_attention = profile.get('chunk_attention_mps', False)
+    reuse64 = profile.get('require_reuse64', False)
+    require(type(reuse64) is bool and reuse64 == ('mpp_affine_reuse64_optional' in backend),
+            'cooperative64 policy differs from backend')
+    if reuse64:
+        threshold = profile.get('reuse64_min_outputs')
+        require(type(threshold) is int and threshold in (4096, 5120)
+                and f'mpp_affine_reuse64_min_outputs={threshold}' in backend
+                and profile.get('reuse64_relaxed') is False and 'mpp_affine_reuse64_relaxed=0' in backend
+                and profile.get('expected_body_reuse64_projections') == (160 if threshold == 4096 else 64),
+                'incorrect compiled cooperative64 profile')
     if prefix_policy:
         require(profile.get('native_cached_chunks') is True and 'native_cached_prefill_scheduler' in backend,
                 'native cached-progress extension/profile missing')
@@ -65,6 +75,7 @@ def validate(events, clients, controls, profile, exit_status, expected_requests=
     fresh_prefill_batches = 0
     attention_checks, attention_expected = set(), None
     maximum_active = 0
+    reuse64_expected = None
     for e in events:
         kind = e['event']
         if 'memory' in e:
@@ -73,6 +84,7 @@ def validate(events, clients, controls, profile, exit_status, expected_requests=
                     'sampled working-set bound exceeded')
         if kind == 'native_batch':
             require(pending is None, 'batch missing affine coverage')
+            require(reuse64_expected is None, 'batch missing cooperative64 coverage')
             stage = e['stage']
             require(stage in ('prefill', 'decode'), 'unexpected schedule stage')
             requests = e['requests']
@@ -172,6 +184,16 @@ def validate(events, clients, controls, profile, exit_status, expected_requests=
             if kind == 'native_indexed':
                 require(0 < e['active_tokens'] <= 4*maximum_chunk and e['physical_rows'] == 4*maximum_chunk,
                         'invalid indexed prefill extent')
+                if reuse64:
+                    require(reuse64_expected is None, 'missing prior cooperative64 event')
+                    reuse64_expected = (e['active_tokens'], e['physical_rows'])
+        elif kind == 'native_reuse64':
+            require(reuse64 and reuse64_expected == (e['logical_rows'], e['physical_rows']),
+                    'cooperative64 extent differs from active native rows')
+            require(e['affine_dispatches'] == (profile['expected_body_reuse64_projections']
+                                             if e['logical_rows'] >= 64 else 0),
+                    'incorrect cooperative64 projection coverage')
+            reuse64_expected = None
         elif kind == 'native_indexed_decode':
             require(e['stage'] in ('decode', 'head') and 0 < e['active_rows'] <= 4
                     and e['physical_rows'] == 4, 'invalid indexed decode extent')
@@ -209,7 +231,9 @@ def validate(events, clients, controls, profile, exit_status, expected_requests=
                     'invalid completion state')
             completed[key] = e
             del rows[e['native_row']]
-    require(not rows and pending is None and all(not c for c in chunks.values()), 'unfinished native work')
+    require(not rows and pending is None and reuse64_expected is None and all(not c for c in chunks.values()), 'unfinished native work')
+    require(counts['native_reuse64'] == (fresh_prefill_batches if reuse64 else 0),
+            'missing/unexpected cooperative64 event')
     require(profile_counts['prefill'] == fresh_prefill_batches == counts['native_mpp'] == counts['native_indexed']
             and profile_counts['decode'] == stage_counts['decode']
             and counts['native_indexed_decode'] == profile_counts['decode']+profile_counts['head'],
@@ -320,6 +344,8 @@ def main():
                    'wrong-token', 'changed-prompt', 'wrong-stream', 'wrong-control', 'cache-hit', 'live-owner']
     if profile.get('chunk_attention_mps'):
         corruptions += ['changed-attention-storage', 'wrong-context', 'wrong-tail', 'missing-attention-route']
+    if profile.get('require_reuse64'):
+        corruptions += ['wrong-reuse-threshold', 'wrong-reuse-rows', 'wrong-reuse-count', 'missing-reuse-event']
     for label in corruptions:
         es, cs, ct = copy.deepcopy(events), copy.deepcopy(clients), copy.deepcopy(controls)
         if label == 'wrong-bound': es[0]['global_token_budget'] = 1024
@@ -336,6 +362,14 @@ def main():
         elif label == 'wrong-context': next(e for e in es if e['event'] == 'native_chunk_attention_bucket')['capacity'] = 4096
         elif label == 'wrong-tail': next(e for e in es if e['event'] == 'native_chunk_attention_bucket')['tail_dispatches'] = 32
         elif label == 'missing-attention-route': es.remove(next(e for e in es if e['event'] == 'native_chunk_attention_mps'))
+        elif label == 'wrong-reuse-threshold':
+            ready = next(e for e in es if e['event'] == 'ready')
+            threshold = str(profile['reuse64_min_outputs'])
+            ready['backend'] = ready['backend'].replace('mpp_affine_reuse64_min_outputs='+threshold,
+                                                       'mpp_affine_reuse64_min_outputs=0')
+        elif label == 'wrong-reuse-rows': next(e for e in es if e['event'] == 'native_reuse64')['logical_rows'] += 1
+        elif label == 'wrong-reuse-count': next(e for e in es if e['event'] == 'native_reuse64' and e['affine_dispatches'])['affine_dispatches'] = 0
+        elif label == 'missing-reuse-event': es.remove(next(e for e in es if e['event'] == 'native_reuse64'))
         else: es[-1]['memory'][OWNERS[0]] = 1
         try:
             validate(es, cs, ct, profile, exit_status)
