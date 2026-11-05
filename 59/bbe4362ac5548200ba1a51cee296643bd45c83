@@ -1,0 +1,766 @@
+src/backends/metal/compiled_graph.cpp
+  s_00e70661811b7a::t_d3a96e40904fa3 7,12,25,29,31,42,73,85,91,145,151,161,163,283,290-292,303,327,344,346,355,377,395,397,464,469,473,538,675,677,729,759,761,775,787,997,999,1009-1013,1057,1060,1138,1210,1212,1216,1298,1321,1329,1346,1351,1363,1397,1401,1408,1414,1594,1686,1693,1698,1701,1724,1734,1750,1770,1803,1812,1821,1861,1863,1878,1891,1905,1907,1924,1928,1939,1954,1959,1964,1974,2020,2043,2052,2056,2062,2069,2071,2086,2090,2120,2128,2142,2150,2170
+  s_00e70661811b7a::t_88e851a7ad1779 4-6
+  s_00e70661811b7a::t_a4df89947ac141 10-11
+  s_00e70661811b7a::t_76d445721a5b0b 24
+  s_00e70661811b7a::t_68ea6bed2da4fd 26-28
+  s_00e70661811b7a::t_60bb5f30387cf7 30
+  s_00e70661811b7a::t_e76cbdb81c7f09 32-34,39-41
+  s_00e70661811b7a::t_433ff5fed21705 43-45,70-72
+  s_00e70661811b7a::t_04496b051fd4b3 82-84
+  s_00e70661811b7a::t_c47ec6b5667b1f 86-90
+  s_00e70661811b7a::t_0b02cac20b61d2 143-144
+  s_00e70661811b7a::t_cb51a1aac19a7d 146-150
+  s_00e70661811b7a::t_4fb9625b935183 152
+  s_00e70661811b7a::t_e69463aa5a35ad 160
+  s_00e70661811b7a::t_d423f796a5090c 162
+  s_00e70661811b7a::t_6e2d55fbef5d32 280-282
+  s_00e70661811b7a::t_82c674e257317c 284-289
+  s_00e70661811b7a::t_f125c44f65b004 300-302
+  s_00e70661811b7a::t_9cdf62d33f3042 324-326
+  s_00e70661811b7a::t_19f8878af82c8d 341-343
+  s_00e70661811b7a::t_b105bd261cb15b 345
+  s_00e70661811b7a::t_f4a9fd5de60c6b 347-349
+  s_00e70661811b7a::t_c700e88f9b6197 356-358
+  s_00e70661811b7a::t_45a89a9f4be9d3 374-376
+  s_00e70661811b7a::t_18166ca92f4a0c 378-380,392-394
+  s_00e70661811b7a::t_12071380a3b6b4 398-400
+  s_00e70661811b7a::t_bcd45aef9e0c9d 462-463
+  s_00e70661811b7a::t_08d82648ac52ef 465
+  s_00e70661811b7a::t_7eabda5baee5c2 470-472
+  s_00e70661811b7a::t_1d2bfb9c728312 474-476
+  s_00e70661811b7a::t_a69915a06e2a19 535-537
+  s_00e70661811b7a::t_3b04b0b1f88f81 539-540
+  s_00e70661811b7a::t_ee0549facc6278 672-674
+  s_00e70661811b7a::t_37e0d45c3ba850 676
+  s_00e70661811b7a::t_93b30fa3319684 678-680
+  s_00e70661811b7a::t_07ea73a83dfe33 726-728
+  s_00e70661811b7a::t_c34c6e698b34a6 730-731
+  s_00e70661811b7a::t_7194c81aa1f5c6 758
+  s_00e70661811b7a::t_5989056734e860 760
+  s_00e70661811b7a::t_c3ec1f357ab528 762-763
+  s_00e70661811b7a::t_aa42f5e3547bb8 772-774
+  s_00e70661811b7a::t_b7a12f192b4d73 784-786
+  s_00e70661811b7a::t_4d9d188904328a 996
+  s_00e70661811b7a::t_add356e504542c 998
+  s_00e70661811b7a::t_c95d70cae97a1d 1000-1002,1006-1008
+  s_00e70661811b7a::t_bc58fc9fcef566 1014-1016
+  s_00e70661811b7a::t_f0885cbd625b15 1058-1059
+  s_00e70661811b7a::t_12f1fd6cd0f6c7 1061
+  s_00e70661811b7a::t_1b7f5bb7742b2e 1135-1137
+  s_00e70661811b7a::t_545a7b79a6c2fe 1139-1141,1207-1209
+  s_00e70661811b7a::t_f2732b52f81eab 1211
+  s_00e70661811b7a::t_66f5fa5135978f 1213-1215
+  s_00e70661811b7a::t_97fe91fb5e9b8c 1217-1218
+  s_00e70661811b7a::t_5a5e7f72ad160b 1318-1320
+  s_00e70661811b7a::t_768dd18831eeaf 1322-1324,1326-1328
+  s_00e70661811b7a::t_7ef06a15be533a 1343-1345
+  s_00e70661811b7a::t_2146a2fcce2cc3 1347-1350
+  s_00e70661811b7a::t_ef221cc2d8490d 1360-1362
+  s_00e70661811b7a::t_ae39cd5c138c7d 1364-1366,1394-1396
+  s_00e70661811b7a::t_e91346aa794fdb 1399-1400
+  s_00e70661811b7a::t_72d9924597e03d 1405-1407
+  s_00e70661811b7a::t_1d6bbd9956898a 1409-1413
+  s_00e70661811b7a::t_133c40c8d27641 1415
+  s_00e70661811b7a::t_e518f1651ce3fe 1593
+  s_00e70661811b7a::t_b83c7fd7b48645 1595-1596
+  s_00e70661811b7a::t_4ceb23db820b32 1687-1692
+  s_00e70661811b7a::t_f196c8f29c3462 1694-1697
+  s_00e70661811b7a::t_9264e449398084 1699-1700
+  s_00e70661811b7a::t_74895b30589838 1721-1723
+  s_00e70661811b7a::t_3cfd49d3665519 1725
+  s_00e70661811b7a::t_5e1aaa3350fe60 1731-1733
+  s_00e70661811b7a::t_29d4fbaa856a22 1735
+  s_00e70661811b7a::t_58476122ae1ebd 1748-1749
+  s_00e70661811b7a::t_cef277d73196d5 1767-1769
+  s_00e70661811b7a::t_6011de25bb9533 1800-1802
+  s_00e70661811b7a::t_501a90642dffd2 1804-1806,1809-1811
+  s_00e70661811b7a::t_aa9eed817a68d6 1813-1815,1818-1820
+  s_00e70661811b7a::t_843a0a9ddb19ad 1862
+  s_00e70661811b7a::t_032d59f4bcb1f3 1875-1877
+  s_00e70661811b7a::t_1b662aab77a500 1879-1881,1888-1890
+  s_00e70661811b7a::t_8d129886b49871 1892-1894,1902-1904
+  s_00e70661811b7a::t_25744837e3bd67 1906
+  s_00e70661811b7a::t_e2f5fca6d3c353 1908-1910,1921-1923
+  s_00e70661811b7a::t_2a5cfb31ed1fb5 1925-1927
+  s_00e70661811b7a::t_2f739651180a3d 1929-1931,1936-1938
+  s_00e70661811b7a::t_2767f30e01d586 1940-1942,1951-1953
+  s_00e70661811b7a::t_b6b6e9f1d18c9a 1955-1958
+  s_00e70661811b7a::t_d12ef38325850b 1960-1963
+  s_00e70661811b7a::t_875c6edb696bec 1965-1967,1971-1973
+  s_00e70661811b7a::t_17ef84eef46b7f 1975-1977,2017-2019
+  s_00e70661811b7a::t_4a514a1353ff18 2021-2023,2040-2042
+  s_00e70661811b7a::t_9a40b8e67c9178 2044-2046,2049-2051
+  s_00e70661811b7a::t_68be2d98788d5a 2053
+  s_00e70661811b7a::t_983a56ce93ec4e 2059-2061
+  s_00e70661811b7a::t_a918c11bd0fd3a 2067-2068
+  s_00e70661811b7a::t_3accc72b73a9f6 2070
+  s_00e70661811b7a::t_07cf14429d2a91 2072-2074
+  s_00e70661811b7a::t_339b15b346c6cf 2083-2085
+  s_00e70661811b7a::t_9b02ee20198895 2087-2089
+  s_00e70661811b7a::t_ddf8a6eab1a1c0 2091
+  s_00e70661811b7a::t_5a59cb32018285 2117-2119
+  s_00e70661811b7a::t_f2c53cb6f31860 2121-2123,2125-2127
+  s_00e70661811b7a::t_8ad36233908002 2129-2131,2139-2141
+  s_00e70661811b7a::t_fe43dc9934c98f 2147-2149
+  s_00e70661811b7a::t_6e447a3d764d7f 2151-2152
+  s_00e70661811b7a::t_38d1d4e05ac99c 2167-2169
+  s_00e70661811b7a::t_889dbfc1f4a819 2171
+  s_00e70661811b7a::t_a807c5ae3b2ee9 3,35-38,46-69,79,81,116,120,135-138,189,299,312-323,334,336-340,350-353,359-360,363,365-373,381-391,401-455,458,477-498,513-514,517-521,523,530-534,614,663-671,681-682,710-714,720,765-771,778,780,782-783,796,816-819,881-882,1003-1005,1017-1041,1075-1086,1090-1134,1142-1206,1271-1280,1282-1286,1288-1294,1316-1317,1325,1335-1339,1341-1342,1356-1359,1367-1393,1403-1404,1422,1427,1430-1431,1480-1482,1485-1488,1501-1532,1581,1583,1585,1588-1591,1603,1622,1637,1647,1661,1669,1675,1679,1706,1716-1720,1728-1730,1765-1766,1807-1808,1816-1817,1867-1874,1882-1887,1895-1901,1911-1920,1932-1935,1943-1950,1968-1970,1978-2016,2024-2039,2047-2048,2077-2082,2093-2116,2124,2132-2138,2145-2146,2164-2166
+src/backends/metal/compiled_graph.h
+  s_00e70661811b7a::t_3a0574897ac2fc 6-8,13-14,16-23,26-29,31,33-34,42,44-46,61,63-73,75-79,84-88,92-93,95-96,100-111,113-118,122-125,127-130,134-137,142,145-160,171-180,183-186,188-191,195,198-203
+src/backends/metal/decoder_session.cpp
+  s_00e70661811b7a::t_4552bfc9ddd29e 24-54,66,72-90,98,100-102,141-143,150-246,253-255,281-285,300-313,316-331,333-395,397,401-440,447-460,462-463,466-496,502-505,508-510,514-522,532-550,557-596,617-625,628-637,642-648,654-667,669-674,680-689,692-704,711-713,722-732,734,737-745,753,756-758,760-768,770-772,783-785,787,791,796-798,800,802-807,810-812,819-834,836-852,855-906,949-951,956,958,960,965,976-978,985,987,991-992,1037-1073
+src/backends/metal/decoder_session.h
+  s_00e70661811b7a::t_7c89bb478b58d8 6-11,16,22-25,35-47,50-160,169-173,176-178,195-198,201-204,214-223,225-237,239-249,253-286,298-321,323-339,373-389,391-399,402-424,435-458,460-476
+src/backends/metal/metal_context.mm
+  s_00e70661811b7a::t_b3c42b9b510e16 3-4,6-51,79-80,82-83,119-130,132-134,143-152,155-164,202-204,235-243,291-311,313-321,323-350,385,393,397,400,408-412,414-416,422-460,466-481,504-521,535-546,559-560,564,994-1007,1011-1012,1015-1021,1023-1024,1031,1036,1049-1050,1055,1058,1064,1068-1074,1076,1236-1241,1411-1416,1418,1422,1565-1570,1604,1710-1738,1743-1908,1976,2006,2036-2052,2070-2094,2096-2100,2125-2139,2157-2160,2162-2191,2193-2222,2224-2226,2228-2232,2234-2239,2241-2246,2248-2253,2255-2260,2262-2557,2602-2604,2641,2657,2659,2667,2670,2693,2695,2703,2715-2716,2718,2724-2725,2728-2729,2745-2746,2750,2753-2754,2756,2762,2764-2765,2767,2770-2773,2782,2790,2792,2794-2795,2798,2800-2803,2809,2819,2822,2824,2832,2835,2842,2844,2847-2848,2861,2865,2868-2871,2873,2875-2878,2880-2882,2889-2891,2960-2966,3044,3057,3059,3072-3073,3077,3080,3085,3096-3098,3117-3118,3121-3122,3192,3205,3214,3217-3247,3271,3276,3284-3363,3377,3381,3403,3422,3440,3451-3453,3464-3468,3477-3484,3487-3498,3501,3511,3533,3539,3551-3552,3566,3573,3581-3582,3590-3591,3611,3616,3626,3630-3631,3655,3660,3670,3673-3674,3694-3695,3702,3709,3713-3720,3725-3727,3732,3735-3744,3746,3748-3763,3770-3781,3783-3816,3888-3890,3912,3914,3916-3919,3933-3942,3955-3958,3963-3965,3968,4039-4058,4121-4283,4368-4491,4493,4495-4505,4508,4513-4525,4527-4602,4604-4682,4685-4687,4689-4772,4774-4810,4870-4872,4878-4882,4894-4901,4904-4915,4922,4925-4927,4945
+src/entry/metal_main.cpp
+  s_00e70661811b7a::t_8f4f62dcfe7de8 6-8,11-13,44,47-53,169-251,264-359,411-412,420-422,426-428
+xModel/mistral/__init__.py
+  s_00e70661811b7a::t_1a597ac86adf5c 1
+xModel/qwen/metal_dense/layers.py
+  s_00e70661811b7a::t_d548b7a90d0ee9 3,38-39
+CMakeLists.txt
+  s_00e70661811b7a::t_07357ac9d57ad0 275-276
+cmake/GarnetCPU.cmake
+  s_00e70661811b7a::t_f89336f2b14190 20-22
+cmake/GarnetCoreML.cmake
+  s_00e70661811b7a::t_ec9ade50fd2cac 1-28
+cmake/GarnetMetal.cmake
+  s_00e70661811b7a::t_9a394d20c3846d 9-12,14-41,48-407,421,423-425,548,619-661,700,708-710,712-789,804,817-846,866,871,906-910,912-918,925-928,944-946,968-973
+cmake/GarnetTokenizer.cmake
+  s_00e70661811b7a::t_4d5b51a9f4d35f 1-52
+docs/investigations/qwen3-tts-projection-20261104.md
+  s_00e70661811b7a::t_b1318618bdcb60 1-42
+docs/research/coreml-ane-plugin.md
+  s_00e70661811b7a::t_280468cffeb6b8 1-200
+docs/research/local-coder-metal-benchmark.md
+  s_00e70661811b7a::t_4c1a04a3c004c2 1-3560
+docs/research/metal-packed-hybrid-execution.md
+  s_00e70661811b7a::t_009597eb46cda4 1-216
+docs/research/mistral7b-metal-baselines.md
+  s_00e70661811b7a::t_a0cac53003d51c 1-196
+docs/research/mistral7b-metal-onboarding.md
+  s_00e70661811b7a::t_e35d8896d8818f 1-1854
+docs/research/native-tokenizers.md
+  s_00e70661811b7a::t_249fc0bec2daa0 1-130
+runtime/metal_serving.py
+  s_00e70661811b7a::t_059b2490a5e51f 64-65,69,72,74-75,77-81
+src/backends/coreml/coreml_api.h
+  s_00e70661811b7a::t_aaaab9778a753c 1-54
+src/backends/coreml/coreml_session.h
+  s_00e70661811b7a::t_3d064ab0f5635a 1-33
+src/backends/coreml/coreml_session.mm
+  s_00e70661811b7a::t_808acde85806c2 1-137
+src/backends/cpu/tokenizer_api.h
+  s_00e70661811b7a::t_0076b137d81a79 4,7-8,11-14,17-19,21,24-26,29-40,47-49
+src/backends/metal/affine_int4_blocked_decode_shader.h
+  s_00e70661811b7a::t_0e0ed62bccdb9b 1-66
+src/backends/metal/affine_int4_indexed_decode_shader.h
+  s_00e70661811b7a::t_99edf2b68659a7 1-43
+src/backends/metal/affine_int4_indexed_shader.h
+  s_00e70661811b7a::t_84baa89867f25d 1-75
+src/backends/metal/affine_int4_mpp_shader.h
+  s_00e70661811b7a::t_212b2b9d022187 1-155
+src/backends/metal/affine_int4_profile_shader.h
+  s_00e70661811b7a::t_3edabc574bfa90 1-40
+src/backends/metal/affine_int4_reuse64_shader.h
+  s_00e70661811b7a::t_9cc4480cb26528 1-88
+src/backends/metal/affine_int4_shader.h
+  s_00e70661811b7a::t_9d73f1893e0968 1-79
+src/backends/metal/affine_int4_tall_shader.h
+  s_00e70661811b7a::t_743421825a0ed7 1-64
+src/backends/metal/affine_profile_index_bounds.h
+  s_00e70661811b7a::t_db61ca3251dc85 1-21
+src/backends/metal/chunk_attention_index_bounds.h
+  s_00e70661811b7a::t_928b849bece3e1 1-27
+src/backends/metal/chunk_attention_mps_shader.h
+  s_00e70661811b7a::t_71e4e0f50e7e23 1-101
+src/backends/metal/chunk_attention_policy.h
+  s_00e70661811b7a::t_28cece1a59d854 1-49
+src/backends/metal/chunk_flash_attention_shader.h
+  s_00e70661811b7a::t_ee0991787138bd 1-140
+src/backends/metal/chunk_kv_scatter_shader.h
+  s_00e70661811b7a::t_0053fa108b8274 1-24
+src/backends/metal/chunk_layout_vector_shader.h
+  s_00e70661811b7a::t_427e54c8561507 1-19
+src/backends/metal/compact_prefill_session.cpp
+  s_00e70661811b7a::t_a885e40674a038 1-191
+src/backends/metal/continuous_scheduler.cpp
+  s_00e70661811b7a::t_d3772912d9b632 1-388
+src/backends/metal/continuous_scheduler.h
+  s_00e70661811b7a::t_86c402fb5775bb 1-67
+src/backends/metal/metal_context.h
+  s_00e70661811b7a::t_817386633551c4 10-34,38,42,45-51,79-89,111,115-118,122-134,136-143,158,164-199,202-220,254,315-337,355-382,387
+src/backends/metal/mtp_generation.cpp
+  s_00e70661811b7a::t_f468586665001b 1-170
+src/backends/metal/mtp_session.cpp
+  s_00e70661811b7a::t_2f35b882f44a34 1-320
+src/backends/metal/prefill_profile_policy.h
+  s_00e70661811b7a::t_912b9b81354ab8 1-44
+src/backends/metal/row_final_hidden_shader.h
+  s_00e70661811b7a::t_bd8d768fd1c810 1-17
+src/backends/metal/token_prefix_session.cpp
+  s_00e70661811b7a::t_bb7d3f5128087c 1-184
+src/backends/metal/verification_attention_shader.h
+  s_00e70661811b7a::t_68c24d7fdf8bdc 1-73
+src/backends/metal/verification_kv_span_shader.h
+  s_00e70661811b7a::t_b12379b0c8143d 1-40
+src/backends/metal/verification_recurrent_shader.h
+  s_00e70661811b7a::t_541d767997dc28 1-78
+src/backends/metal/verification_session.cpp
+  s_00e70661811b7a::t_b536084a5c825b 1-284
+src/backends/tensorrt/trt_builder.cpp
+  s_00e70661811b7a::t_7c9017d4195c8d 7084-7090,7093,7182-7188,7190
+src/model/affine_int4_codec.h
+  s_00e70661811b7a::t_f1820229bdc7ec 1-101
+src/model/float16_codec.h
+  s_00e70661811b7a::t_7c3528a9aaacb9 1-43
+src/model/mlx_qwen35_checkpoint.h
+  s_00e70661811b7a::t_2c67c1d5a0a275 1-159
+src/model/mlx_vision_patch.h
+  s_00e70661811b7a::t_1ac8aba301a170 1-26
+src/runtime/executor/compiled_decode_batch_executor.h
+  s_00e70661811b7a::t_7f9ed22e199ad3 8
+src/runtime/kv/kv_sequence_allocator.h
+  s_00e70661811b7a::t_29d91cb2cf9313 1-28
+src/runtime/kv/paged_kv_pool.h
+  s_00e70661811b7a::t_de7b3a91e6f22b 5,38,59,67-70,72-73
+src/runtime/kv/prefix_cache.h
+  s_00e70661811b7a::t_a29f7c42871200 1-136
+src/runtime/memory/scratch_alias_group_plan.h
+  s_00e70661811b7a::t_af079f03654ae3 1-58
+src/runtime/memory/scratch_lifetime_plan.h
+  s_00e70661811b7a::t_3552b901ed79f8 1-40
+src/runtime/scheduler/continuous_batch_scheduler.cpp
+  s_00e70661811b7a::t_7137c5e551c710 8,16-17,47,81,123,126-127,146,150-153,159-162,166-177,179-180,184-188,191-192,194,197-228,233-255,259-260,263,265-266,272-274,277-282,291,294,316-348,358-366
+src/runtime/scheduler/continuous_batch_scheduler.h
+  s_00e70661811b7a::t_860ef71c33b9c7 6,10,44-46,48-49,59,73-76,90-93,111-114,118-119,124-128,133-134
+src/runtime/scheduler/packed_token_plan.h
+  s_00e70661811b7a::t_8a0dfefb7d0651 1-70
+src/runtime/scheduler/request_row_leases.h
+  s_00e70661811b7a::t_1420d09acc993a 1-64
+src/tensor/model_tensor_io.h
+  s_00e70661811b7a::t_e1cd55d881cd70 6-8,13-17,24-29,47-81,84-91,99,103,105-113,134-145,189-191,194,198
+src/tokenizer/json_bpe_tokenizer.cpp
+  s_00e70661811b7a::t_d145d5da1861b1 1-412
+src/tokenizer/json_bpe_tokenizer.h
+  s_00e70661811b7a::t_4c64900f9fbdeb 1-20
+src/tokenizer/qwen_tokenizer.cpp
+  s_00e70661811b7a::t_3e29538b57090e 5,201,214-219,256-278,405-417,421-425
+src/tokenizer/qwen_tokenizer.h
+  s_00e70661811b7a::t_1c5c7e755be10c 36,41
+src/tokenizer/tokenizer.h
+  s_00e70661811b7a::t_b5dfb1bb351b45 7-8,14-24,34,36-39
+src/tokenizer/tokenizer_assets.h
+  s_00e70661811b7a::t_bf17c3418551c0 1-47
+src/tokenizer/tokenizer_factory.cpp
+  s_00e70661811b7a::t_e24cebf7fa7ec0 1-53
+src/tokenizer/tokenizer_utf8.h
+  s_00e70661811b7a::t_383f1fd41dd8ac 1-34
+test/xlang3/models/tts_projection_fixture.py
+  s_00e70661811b7a::t_6961b38420433e 1-27
+test/xlang3/tts_projection_checks.py
+  s_00e70661811b7a::t_6f7f1054c77f07 1-55
+test2026/coreml/audit_mistral_mlp_probe.py
+  s_00e70661811b7a::t_2f5589bca84b38 1-155
+test2026/coreml/build_state_fixture.py
+  s_00e70661811b7a::t_b24fb4d020a3d2 1-47
+test2026/coreml/export_mistral_mlp.py
+  s_00e70661811b7a::t_49efb8c8fff980 1-218
+test2026/coreml/mistral_mlp_probe.cpp
+  s_00e70661811b7a::t_aa452804c84ac7 1-68
+test2026/coreml/run_mistral_mlp_probe.py
+  s_00e70661811b7a::t_361ddbab1702f2 1-84
+test2026/coreml/state_runtime_test.cpp
+  s_00e70661811b7a::t_35434d96f1a731 1-44
+test2026/coreml/test_mistral_mlp_audit.py
+  s_00e70661811b7a::t_fdf94dac2db513 1-89
+test2026/coreml/test_runtime_api.py
+  s_00e70661811b7a::t_9f778602fac8f4 1-57
+test2026/cuda/qwen38_5090/native_http_bridge.py
+  s_00e70661811b7a::t_024e3728ad1b76 77-78,92,112,117,124-126
+test2026/metal/affine_fp16_projection_benchmark.cpp
+  s_00e70661811b7a::t_bad40b4b8dec16 1-129
+test2026/metal/affine_fp16_test.cpp
+  s_00e70661811b7a::t_1503cb400e1c00 1-178
+test2026/metal/affine_int4_benchmark.cpp
+  s_00e70661811b7a::t_799b57f40511f7 1-140
+test2026/metal/affine_int4_test.cpp
+  s_00e70661811b7a::t_12d55fc1b996f6 1-314
+test2026/metal/affine_profile_bounds_test.cpp
+  s_00e70661811b7a::t_699ca590097034 1-29
+test2026/metal/affine_profile_lifecycle_test.mm
+  s_00e70661811b7a::t_24dce253e4723e 1-40
+test2026/metal/analyze_mistral_teacher.py
+  s_00e70661811b7a::t_166ab4c1cd2fc1 1-63
+test2026/metal/audit_affine_fp16_projection_benchmark.py
+  s_00e70661811b7a::t_627cbb0b5bfff6 1-121
+test2026/metal/audit_chunk_attention_active_rows.py
+  s_00e70661811b7a::t_d0a0f860476a6e 1-114
+test2026/metal/audit_chunk_kv_scatter.py
+  s_00e70661811b7a::t_8db91a7a566835 1-75
+test2026/metal/audit_chunk_layout.py
+  s_00e70661811b7a::t_7f5f01ee63bd61 1-109
+test2026/metal/audit_local_coder_batch_campaign.py
+  s_00e70661811b7a::t_eda67ceab6d54b 1-164
+test2026/metal/audit_local_coder_batch_http_study.py
+  s_00e70661811b7a::t_e2365d7f972e83 1-75
+test2026/metal/audit_local_coder_batch_quality.py
+  s_00e70661811b7a::t_d233907c460b0a 1-360
+test2026/metal/audit_local_coder_batch_study.py
+  s_00e70661811b7a::t_0dc6ea12fcbb3a 1-57
+test2026/metal/audit_local_coder_mtp_campaign.py
+  s_00e70661811b7a::t_89916070a21910 1-162
+test2026/metal/audit_local_coder_mtp_http.py
+  s_00e70661811b7a::t_2d40e4f1c31fef 1-196
+test2026/metal/audit_local_coder_native_quality.py
+  s_00e70661811b7a::t_7ff58ae89b161b 1-113
+test2026/metal/audit_local_coder_profile_qualification.py
+  s_00e70661811b7a::t_22eb3ed331dcd6 1-141
+test2026/metal/audit_local_coder_scheduled_mtp_http.py
+  s_00e70661811b7a::t_f19bf86a12619d 1-309
+test2026/metal/audit_mistral_attention_scratch_stage.py
+  s_00e70661811b7a::t_0e0d9d1638aad8 1-43
+test2026/metal/audit_mistral_cached_http.py
+  s_00e70661811b7a::t_ea7dd45d8ee07e 1-132
+test2026/metal/audit_mistral_compact_prefill.py
+  s_00e70661811b7a::t_5762fe09254f19 1-106
+test2026/metal/audit_mistral_compact_prefill_stage.py
+  s_00e70661811b7a::t_f9de0e284c6901 1-112
+test2026/metal/audit_mistral_continuous_http.py
+  s_00e70661811b7a::t_2707e31a2bfbf1 1-144
+test2026/metal/audit_mistral_decode_reuse.py
+  s_00e70661811b7a::t_3c34df3da652b8 1-101
+test2026/metal/audit_mistral_flash_attention.py
+  s_00e70661811b7a::t_070b81bb8129d6 1-128
+test2026/metal/audit_mistral_flash_stage.py
+  s_00e70661811b7a::t_de33c87b0fb50e 1-83
+test2026/metal/audit_mistral_functional.py
+  s_00e70661811b7a::t_45ec230cf46fa6 1-62
+test2026/metal/audit_mistral_greedy_verification.py
+  s_00e70661811b7a::t_e892157a58e02b 1-100
+test2026/metal/audit_mistral_http_admission.py
+  s_00e70661811b7a::t_000a1fc63d9147 1-588
+test2026/metal/audit_mistral_layout_chunk.py
+  s_00e70661811b7a::t_09759bc1fbf448 1-99
+test2026/metal/audit_mistral_medusa_generation.py
+  s_00e70661811b7a::t_ec7bf510b05b84 1-148
+test2026/metal/audit_mistral_medusa_probe.py
+  s_00e70661811b7a::t_cea4c520b13b96 1-138
+test2026/metal/audit_mistral_prefill_cost_probe.py
+  s_00e70661811b7a::t_6ffcb7d5e53789 1-51
+test2026/metal/audit_mistral_prefill_operand_study.py
+  s_00e70661811b7a::t_6d1ad0fd8c0e48 1-92
+test2026/metal/audit_mistral_prefill_tiles.py
+  s_00e70661811b7a::t_bdf97c68dadd77 1-105
+test2026/metal/audit_mistral_prefix_probe.py
+  s_00e70661811b7a::t_8ae08da719c6de 1-178
+test2026/metal/audit_mistral_profile.py
+  s_00e70661811b7a::t_bc5be18bc2f80f 1-200
+test2026/metal/audit_mistral_suite.py
+  s_00e70661811b7a::t_646ca03d488542 1-144
+test2026/metal/audit_mistral_wide_owner_stage.py
+  s_00e70661811b7a::t_27c849a8f89844 1-46
+test2026/metal/audit_native_mtp_coding.py
+  s_00e70661811b7a::t_44fcec957d7abe 1-114
+test2026/metal/audit_scheduled_mtp_coding.py
+  s_00e70661811b7a::t_8796e6e928aa85 1-176
+test2026/metal/audit_serving_prompt_ids.py
+  s_00e70661811b7a::t_ee44c456c72c9b 1-102
+test2026/metal/chunk_attention_active_rows_test.cpp
+  s_00e70661811b7a::t_131b14de98a44b 1-155
+test2026/metal/chunk_attention_bounds_test.cpp
+  s_00e70661811b7a::t_2208610be1d168 1-47
+test2026/metal/chunk_attention_mps_plan_test.mm
+  s_00e70661811b7a::t_e4e383ef772320 1-89
+test2026/metal/chunk_attention_policy_test.cpp
+  s_00e70661811b7a::t_b530b47c65e1e4 1-70
+test2026/metal/chunk_attention_write_test.cpp
+  s_00e70661811b7a::t_5f3d2ea778fde2 1-77
+test2026/metal/chunk_flash_attention_test.cpp
+  s_00e70661811b7a::t_67e84bcb80b504 1-134
+test2026/metal/chunk_kv_scatter_test.cpp
+  s_00e70661811b7a::t_e5269bdb95b0a1 1-84
+test2026/metal/chunk_layout_test.cpp
+  s_00e70661811b7a::t_d7ca076a768bf6 1-98
+test2026/metal/chunk_probability_benchmark.cpp
+  s_00e70661811b7a::t_77f6d05459b447 1-88
+test2026/metal/compact_attention_index_test.cpp
+  s_00e70661811b7a::t_9e2ca4d879d85b 1-153
+test2026/metal/diagnose_local_coder_blocks.py
+  s_00e70661811b7a::t_7039a8ff37323c 1-60
+test2026/metal/download_pinned_hf_checkpoint.py
+  s_00e70661811b7a::t_37f77922a496a1 1-84
+test2026/metal/evaluate_local_coder_quality.py
+  s_00e70661811b7a::t_7b593bc27227b4 1-161
+test2026/metal/experiments/README.md
+  s_00e70661811b7a::t_26f6bc58929e70 1-50
+test2026/metal/experiments/mistral-prefill-packed-activations.patch
+  s_00e70661811b7a::t_20a552922d1677 1-178
+test2026/metal/experiments/mistral-prefill-tile-width.patch
+  s_00e70661811b7a::t_99189b218895db 1-64
+test2026/metal/fetch_qwen_parent_mtp.py
+  s_00e70661811b7a::t_2d3583f64c4ba2 1-77
+test2026/metal/linear_chunk_active_test.mm
+  s_00e70661811b7a::t_34f8637cb18ac8 1-190
+test2026/metal/linear_chunk_benchmark.cpp
+  s_00e70661811b7a::t_59bc0d36ee092b 1-101
+test2026/metal/linear_chunk_original_shader.h
+  s_00e70661811b7a::t_bbd0e9745bf3a5 1-69
+test2026/metal/local_coder_batch_http.py
+  s_00e70661811b7a::t_d2436d8ebd5dcb 1-78
+test2026/metal/local_coder_batch_transport.py
+  s_00e70661811b7a::t_9dc5f9b11d6562 1-115
+test2026/metal/local_coder_batch_worker.py
+  s_00e70661811b7a::t_d524eafa42ba91 1-600
+test2026/metal/local_coder_mtp_worker.py
+  s_00e70661811b7a::t_88c6e539660f12 1-139
+test2026/metal/local_coder_native_http.py
+  s_00e70661811b7a::t_8492f383a1f42f 1-48
+test2026/metal/local_coder_native_worker.py
+  s_00e70661811b7a::t_60e39e0442985d 1-85
+test2026/metal/local_coder_quality_suite.json
+  s_00e70661811b7a::t_65f6e73bdb9f49 1-47
+test2026/metal/local_coder_scheduled_mtp_worker.py
+  s_00e70661811b7a::t_4dbc6e7763125f 1-244
+test2026/metal/local_coder_stream_benchmark.py
+  s_00e70661811b7a::t_4c91322bffa6e9 1-163
+test2026/metal/mistral_decode_reuse_benchmark.cpp
+  s_00e70661811b7a::t_d6f02a1f288810 1-88
+test2026/metal/prepare_chunk_kv_vector_fixture.py
+  s_00e70661811b7a::t_344aa6987d5f3b 1-47
+test2026/metal/prepare_local_coder_cases.py
+  s_00e70661811b7a::t_6316a4ba7049c2 1-94
+test2026/metal/prepare_local_coder_embedding_parity.py
+  s_00e70661811b7a::t_d86a391f4b3a09 1-70
+test2026/metal/prepare_local_coder_multimodal.py
+  s_00e70661811b7a::t_114e20d4d61c40 1-125
+test2026/metal/prepare_local_coder_quality.py
+  s_00e70661811b7a::t_20997bf0440e52 1-63
+test2026/metal/prepare_local_coder_vision_reference.py
+  s_00e70661811b7a::t_dac4e1b54169dc 1-82
+test2026/metal/prepare_mistral_benchmark.py
+  s_00e70661811b7a::t_c1d1a26520063d 1-111
+test2026/metal/prepare_mistral_suite.py
+  s_00e70661811b7a::t_2d903e81f62955 1-70
+test2026/metal/prepared_kv_rows_test.cpp
+  s_00e70661811b7a::t_c09548c54b1a77 1-136
+test2026/metal/primary_projection_test.cpp
+  s_00e70661811b7a::t_159f72390f9b11 19-24,45-50
+test2026/metal/primary_storage_test.cpp
+  s_00e70661811b7a::t_a5431296879b70 61,67-69
+test2026/metal/probe_mlx_affine_projection.py
+  s_00e70661811b7a::t_5f662cb37efa02 1-75
+test2026/metal/reference_mistral_greedy.py
+  s_00e70661811b7a::t_6986de70ae6412 1-28
+test2026/metal/reference_mistral_suite.py
+  s_00e70661811b7a::t_0ff986a76648c4 1-65
+test2026/metal/reference_mistral_teacher.py
+  s_00e70661811b7a::t_efd44abf8e0fae 1-52
+test2026/metal/request_row_test.cpp
+  s_00e70661811b7a::t_f5278c953eb35e 1-79
+test2026/metal/run_affine_int4_benchmark.py
+  s_00e70661811b7a::t_8325c29faf70e4 1-60
+test2026/metal/run_batch_study_admission.py
+  s_00e70661811b7a::t_78e31297b65bce 1-24
+test2026/metal/run_chunk_attention_active_rows.py
+  s_00e70661811b7a::t_0fce9626fbcdca 1-50
+test2026/metal/run_chunk_kv_inplace.py
+  s_00e70661811b7a::t_08389df8986f01 1-84
+test2026/metal/run_chunk_probability_benchmark.py
+  s_00e70661811b7a::t_97327961f62cc7 1-83
+test2026/metal/run_compiled_verification.py
+  s_00e70661811b7a::t_4c1f1fbfa04430 1-188
+test2026/metal/run_continuous_scheduler.py
+  s_00e70661811b7a::t_d8dd26cf77922d 1-138
+test2026/metal/run_fp16_weight_loading.py
+  s_00e70661811b7a::t_cb48635c60c7c3 1-30
+test2026/metal/run_hybrid_token_prefix.py
+  s_00e70661811b7a::t_32dbc77b6faa15 1-174
+test2026/metal/run_local_coder_27b_batch_study.py
+  s_00e70661811b7a::t_64d8110c31b1d8 1-118
+test2026/metal/run_local_coder_27b_prefix_study.py
+  s_00e70661811b7a::t_06916109073eda 1-101
+test2026/metal/run_local_coder_27b_smoke.py
+  s_00e70661811b7a::t_62f9c77f731eb0 1-71
+test2026/metal/run_local_coder_baseline.py
+  s_00e70661811b7a::t_e98a39c7fd7e51 1-253
+test2026/metal/run_local_coder_batch_http_study.py
+  s_00e70661811b7a::t_14657caa73b599 1-86
+test2026/metal/run_local_coder_batch_probe.py
+  s_00e70661811b7a::t_bf4973a3bc714e 1-34
+test2026/metal/run_local_coder_batch_quality.py
+  s_00e70661811b7a::t_5e017e1cf532f1 1-54
+test2026/metal/run_local_coder_embedding_parity.py
+  s_00e70661811b7a::t_8e5458e9c209dd 1-29
+test2026/metal/run_local_coder_mtp_campaign.py
+  s_00e70661811b7a::t_aa2f03e616b9b0 1-134
+test2026/metal/run_local_coder_mtp_http_study.py
+  s_00e70661811b7a::t_da14a6f2a982ef 1-185
+test2026/metal/run_local_coder_native_campaign.py
+  s_00e70661811b7a::t_349091a7e5ded7 1-91
+test2026/metal/run_local_coder_quality.py
+  s_00e70661811b7a::t_a0396a3cf8af90 1-103
+test2026/metal/run_local_coder_reference_sequence.py
+  s_00e70661811b7a::t_5dd9c8263a0134 1-137
+test2026/metal/run_local_coder_scheduled_mtp_http_study.py
+  s_00e70661811b7a::t_fa340e0eee9b81 1-221
+test2026/metal/run_local_coder_vision_reference.py
+  s_00e70661811b7a::t_1af47aa8b4ac46 1-57
+test2026/metal/run_local_coder_vlm_grounding.py
+  s_00e70661811b7a::t_9322b3adaf93fd 1-77
+test2026/metal/run_metal_mtp.py
+  s_00e70661811b7a::t_425c79e4ee8fd3 1-117
+test2026/metal/run_mistral_attention_scratch_stage.py
+  s_00e70661811b7a::t_6290a142eb1aad 1-63
+test2026/metal/run_mistral_cached_http.py
+  s_00e70661811b7a::t_0b397544c8f799 1-105
+test2026/metal/run_mistral_compact_prefill.py
+  s_00e70661811b7a::t_9b543ba4264522 1-99
+test2026/metal/run_mistral_compact_prefill_stage.py
+  s_00e70661811b7a::t_8b3dd9d506d8c6 1-85
+test2026/metal/run_mistral_continuous_http.py
+  s_00e70661811b7a::t_35756c088a3848 1-135
+test2026/metal/run_mistral_embedding.py
+  s_00e70661811b7a::t_dfc4d4471d518b 1-38
+test2026/metal/run_mistral_flash_stage.py
+  s_00e70661811b7a::t_3a79fdd727cfaf 1-63
+test2026/metal/run_mistral_greedy.py
+  s_00e70661811b7a::t_1569fc486ecce1 1-66
+test2026/metal/run_mistral_greedy_verification.py
+  s_00e70661811b7a::t_5031b8144245f0 1-106
+test2026/metal/run_mistral_layout_chunk_probe.py
+  s_00e70661811b7a::t_26f2ea8f57b405 1-54
+test2026/metal/run_mistral_medusa_generation.py
+  s_00e70661811b7a::t_59ea267606e51e 1-101
+test2026/metal/run_mistral_medusa_probe.py
+  s_00e70661811b7a::t_b77658419fba28 1-72
+test2026/metal/run_mistral_prefill_op_diagnostic.py
+  s_00e70661811b7a::t_bc169545b17fca 1-43
+test2026/metal/run_mistral_prefill_op_probe.py
+  s_00e70661811b7a::t_7de4a003294e7c 1-52
+test2026/metal/run_mistral_prefix_probe.py
+  s_00e70661811b7a::t_47c9f4ccf95586 1-140
+test2026/metal/run_mistral_profile.py
+  s_00e70661811b7a::t_3261376035c757 1-131
+test2026/metal/run_mistral_stage_probe.py
+  s_00e70661811b7a::t_9ef1791f86084f 1-69
+test2026/metal/run_mistral_suite.py
+  s_00e70661811b7a::t_0576de0b987a23 1-84
+test2026/metal/run_mistral_teacher.py
+  s_00e70661811b7a::t_2019db93fbb933 1-40
+test2026/metal/run_mistral_wide_owner_parity.py
+  s_00e70661811b7a::t_5b146a01174957 1-124
+test2026/metal/run_mistral_wide_owner_scheduler.py
+  s_00e70661811b7a::t_40152fff534295 1-108
+test2026/metal/run_mistral_wide_owner_stage.py
+  s_00e70661811b7a::t_bc4b3aa2568a09 1-70
+test2026/metal/run_mtp_bridge.py
+  s_00e70661811b7a::t_d63a4d62e881a5 1-354
+test2026/metal/run_mtp_phase_costs.py
+  s_00e70661811b7a::t_a4781a0b4e8ea4 1-27
+test2026/metal/run_native_greedy_verification.py
+  s_00e70661811b7a::t_7d1d582fb6a4d3 1-209
+test2026/metal/run_native_mtp_coding.py
+  s_00e70661811b7a::t_bd9cb45f144283 1-75
+test2026/metal/run_nonresident_pack_reference.py
+  s_00e70661811b7a::t_6a3ab5dfd02a03 1-68
+test2026/metal/run_request_row_session.py
+  s_00e70661811b7a::t_62a4c148967a9a 1-142
+test2026/metal/run_row_final_hidden.py
+  s_00e70661811b7a::t_029c980f144b45 1-80
+test2026/metal/run_scheduled_mtp_coding.py
+  s_00e70661811b7a::t_3944648f78051a 1-75
+test2026/metal/run_shared_prefill_scratch.py
+  s_00e70661811b7a::t_d50d0f660919a6 1-128
+test2026/metal/run_trained_greedy_verification.py
+  s_00e70661811b7a::t_05f19e95199cde 1-91
+test2026/metal/run_trained_mtp_bridge.py
+  s_00e70661811b7a::t_88feb965e2fcf8 1-107
+test2026/metal/run_trained_verification_forward.py
+  s_00e70661811b7a::t_3cacd6a0530d55 1-106
+test2026/metal/sample_local_coder_memory.py
+  s_00e70661811b7a::t_8f3c5cd4e85215 1-59
+test2026/metal/summarize_affine_int4_benchmark.py
+  s_00e70661811b7a::t_21537935a481d6 1-118
+test2026/metal/summarize_local_coder_baseline.py
+  s_00e70661811b7a::t_339f5c6e4b5e36 1-159
+test2026/metal/summarize_local_coder_chunk_selection.py
+  s_00e70661811b7a::t_b3cb27422d67cd 1-47
+test2026/metal/summarize_local_coder_op_probe.py
+  s_00e70661811b7a::t_d64b36c211cffc 1-28
+test2026/metal/summarize_local_coder_reference_pair.py
+  s_00e70661811b7a::t_7ac2212cbfacf1 1-96
+test2026/metal/summarize_scheduled_mtp_http.py
+  s_00e70661811b7a::t_cfd42951604640 1-83
+test2026/metal/test_affine_int4_benchmark_audit.py
+  s_00e70661811b7a::t_1b7049c39bd3d5 1-44
+test2026/metal/test_chunk_probability_benchmark_audit.py
+  s_00e70661811b7a::t_cffb647a6db0e1 1-33
+test2026/metal/test_compiled_verification.py
+  s_00e70661811b7a::t_780487641a64db 1-91
+test2026/metal/test_host_tensor_rows.py
+  s_00e70661811b7a::t_3d1e3de57cc87c 1-27
+test2026/metal/test_linear_graph.py
+  s_00e70661811b7a::t_02a181901b0a84 16,34
+test2026/metal/test_local_coder_batch_campaign_audit.py
+  s_00e70661811b7a::t_158b26f8650ced 1-107
+test2026/metal/test_local_coder_batch_http.py
+  s_00e70661811b7a::t_fe86752eb23162 1-39
+test2026/metal/test_local_coder_batch_http_audit.py
+  s_00e70661811b7a::t_5bda05e41f6460 1-38
+test2026/metal/test_local_coder_batch_quality_audit.py
+  s_00e70661811b7a::t_42e069e45cbc01 1-92
+test2026/metal/test_local_coder_batch_study_audit.py
+  s_00e70661811b7a::t_6e03dc9f031538 1-25
+test2026/metal/test_local_coder_batch_transport.py
+  s_00e70661811b7a::t_e59eedc8ec9f0a 1-61
+test2026/metal/test_local_coder_chunk_selection_audit.py
+  s_00e70661811b7a::t_8dd2263a934263 1-26
+test2026/metal/test_local_coder_engine_guard.py
+  s_00e70661811b7a::t_d428eecbe5c26e 1-62
+test2026/metal/test_local_coder_mtp_http_audit.py
+  s_00e70661811b7a::t_8f5b75d987ec16 1-98
+test2026/metal/test_local_coder_owned_shutdown.py
+  s_00e70661811b7a::t_2650d18e9b804f 1-34
+test2026/metal/test_local_coder_profile_qualification.py
+  s_00e70661811b7a::t_85d09abbe92d6b 1-157
+test2026/metal/test_local_coder_quality.py
+  s_00e70661811b7a::t_cf7f33cc4d3c32 1-60
+test2026/metal/test_local_coder_scheduled_mtp_http_audit.py
+  s_00e70661811b7a::t_5228bcccafe03d 1-91
+test2026/metal/test_local_coder_stream_benchmark.py
+  s_00e70661811b7a::t_a3cf3ebe89bac7 1-173
+test2026/metal/test_metal_mtp.py
+  s_00e70661811b7a::t_3aa3ad159066e0 1-134
+test2026/metal/test_mistral_speculative_audits.py
+  s_00e70661811b7a::t_958b4f06803cbc 1-112
+test2026/metal/test_mtp_bridge.py
+  s_00e70661811b7a::t_4a0b16360494e6 1-24
+test2026/metal/test_mtp_phase_costs.py
+  s_00e70661811b7a::t_2aa87a56ae3a62 1-30
+test2026/metal/test_native_campaign_cohorts.py
+  s_00e70661811b7a::t_02eb28c612b155 1-48
+test2026/metal/test_native_mtp_coding.py
+  s_00e70661811b7a::t_8ef4da638d1f95 1-54
+test2026/metal/test_native_mtp_coding_audit.py
+  s_00e70661811b7a::t_bd1da75e283b3a 1-86
+test2026/metal/test_native_quality_audit.py
+  s_00e70661811b7a::t_0c115123097141 1-59
+test2026/metal/test_prefill_alias_groups.py
+  s_00e70661811b7a::t_93e5e042adcf5b 1-103
+test2026/metal/test_request_row_session.py
+  s_00e70661811b7a::t_1d2c24b5da3269 1-93
+test2026/metal/test_scheduled_mtp_coding.py
+  s_00e70661811b7a::t_58404472774668 1-24
+test2026/metal/test_scheduled_mtp_coding_audit.py
+  s_00e70661811b7a::t_ec180967b4a3c4 1-88
+test2026/metal/test_trained_mtp_bridge.py
+  s_00e70661811b7a::t_2b1ee760e3cb7c 1-14
+test2026/metal/test_trained_verification_forward.py
+  s_00e70661811b7a::t_f3e059105e3654 1-38
+test2026/metal/verification_affine_test.cpp
+  s_00e70661811b7a::t_5b0297ccb05d93 1-70
+test2026/metal/verification_attention_test.cpp
+  s_00e70661811b7a::t_3fb5124354cd6a 1-141
+test2026/metal/verification_kv_span_test.cpp
+  s_00e70661811b7a::t_989abd418dd519 1-185
+test2026/metal/verification_recurrent_test.cpp
+  s_00e70661811b7a::t_9e5b292eca6996 1-238
+test2026/metal/verify_local_coder_mlx_layout.py
+  s_00e70661811b7a::t_49182d3a376aff 1-121
+test2026/metal/verify_mistral_affine_rows.py
+  s_00e70661811b7a::t_5ca721672f71dc 1-49
+test2026/metal/verify_mistral_http_rendering.py
+  s_00e70661811b7a::t_cc12fe57070f88 1-92
+test2026/metal/verify_serving_prompt_ids.py
+  s_00e70661811b7a::t_fe045ed5c2be89 1-71
+test2026/native/continuous_batch_scheduler_test.cpp
+  s_00e70661811b7a::t_95b88819ac27ac 5,84-107
+test2026/native/float16_codec_test.cpp
+  s_00e70661811b7a::t_e0c165e34cc621 1-40
+test2026/native/mistral_affine_rows.cpp
+  s_00e70661811b7a::t_343088047faaf1 1-44
+test2026/native/prefix_cache_test.cpp
+  s_00e70661811b7a::t_622549d7db9d8f 1-72
+test2026/native/request_row_leases_test.cpp
+  s_00e70661811b7a::t_49ddde0b7c8180 1-22
+test2026/native/scheduler_fixed_rows_test.cpp
+  s_00e70661811b7a::t_6b42f01e119b9c 1-232
+test2026/native/scratch_alias_group_plan_test.cpp
+  s_00e70661811b7a::t_81c163d08c8efb 1-48
+test2026/native/scratch_lifetime_plan_test.cpp
+  s_00e70661811b7a::t_4fa4c960b5836b 1-32
+test2026/native/test_mistral_affine_metadata.py
+  s_00e70661811b7a::t_87339fdc6d663a 1-42
+test2026/native/tokenizer/CMakeLists.txt
+  s_00e70661811b7a::t_340afff6f98a4a 1-8
+test2026/native/tokenizer/compare_reference.py
+  s_00e70661811b7a::t_e8e135886abcbd 1-116
+test2026/native/tokenizer/test_rejections.py
+  s_00e70661811b7a::t_7c2c934510d56b 1-34
+test2026/native/tokenizer/test_runtime_api.py
+  s_00e70661811b7a::t_bd14f6922c7402 1-27
+test2026/native/tokenizer/tokenizer_probe.cpp
+  s_00e70661811b7a::t_192763eb898bc0 1-34
+test2026/native/verify_float16_codec.py
+  s_00e70661811b7a::t_b76b94f2ff863f 1-36
+test2026/native/wide_owner_prefill_policy_test.cpp
+  s_00e70661811b7a::t_a5c2ed51f894b9 1-107
+third_party/licenses/PCRE2-LICENCE.txt
+  s_00e70661811b7a::t_d3a51e0ff4dd23 1-103
+xModel/mistral/text_7b/README.md
+  s_00e70661811b7a::t_b9a49e7870e789 1-188
+xModel/mistral/text_7b/__init__.py
+  s_00e70661811b7a::t_a91e81e959d829 1
+xModel/mistral/text_7b/medusa_draft.py
+  s_00e70661811b7a::t_388e8c27e8c127 1-54
+xModel/mistral/text_7b/metal_batch_study.py
+  s_00e70661811b7a::t_59f4d29e2a33da 1-34
+xModel/mistral/text_7b/metal_decoder.py
+  s_00e70661811b7a::t_f96f1f01e68b1a 1-156
+xModel/qwen/metal_dense/decoder.py
+  s_00e70661811b7a::t_aa27a47eddc8e5 8,14-21,23,27-30,36-37,59-60,62-63,77-82
+xModel/qwen3/tts_12hz_0_6b_custom_voice/talker_common.py
+  s_00e70661811b7a::t_bdf0c6c09bc7c7 4-6
+xModel/qwen3/tts_12hz_1_7b_custom_voice/talker_common.py
+  s_00e70661811b7a::t_94a7fb827054f6 4-6
+xModel/qwen35/vl_0_8b/cpu_decoder.py
+  s_00e70661811b7a::t_cd2c1cdbc8c2ae 13-16,19-21
+xModel/qwen35/vl_0_8b/metal_decoder.py
+  s_00e70661811b7a::t_d342310d53ea58 8,16,20,22-25,69-76,82-85,92-93,97-100,119-120,178-182
+xModel/qwen35/vl_0_8b/prefill_layer.py
+  s_00e70661811b7a::t_4fcb267f8d2f8f 12,22
+xModel/qwen38/vl_27b/README.md
+  s_00e70661811b7a::t_05421d7513cd90 1-217
+xModel/qwen38/vl_27b/metal-context-study-profile.json
+  s_00e70661811b7a::t_3e94a3ecb478e6 1-24
+xModel/qwen38/vl_27b/metal-qualification-profile.json
+  s_00e70661811b7a::t_5817b5e3a8f1ea 1-19
+xModel/qwen38/vl_27b/metal_batch_study.py
+  s_00e70661811b7a::t_c19b69331bbb4c 1-60
+xModel/qwen38/vl_27b/metal_mtp.py
+  s_00e70661811b7a::t_0d9fb0db0c6023 1-85
+xModel/qwen38/vl_27b/metal_mtp_study.py
+  s_00e70661811b7a::t_007fc8261f0369 1-239
+xModel/qwen38/vl_27b/model.py
+  s_00e70661811b7a::t_a90c47a31a434f 5-64
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "59bbe4362ac5548200ba1a51cee296643bd45c83",
+  "prompts": {},
+  "sessions": {
+    "s_00e70661811b7a": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "c47303a6-2ada-4741-a06d-ac87dac169ba",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Shawn Xiong <W521496_wexinc@users.noreply.github.com>"
+    }
+  }
+}
