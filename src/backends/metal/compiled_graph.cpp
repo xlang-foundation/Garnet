@@ -650,7 +650,12 @@ bool MetalCompiledGraph::BuildInternal(X::Value graph,X::Value symbols,const std
                 // the existing copy path and immutable host-input contract.
                 if(slots_[a].rows==size_t(shape[0])&&slots_[a].columns==total/size_t(shape[0])&&
                    gpu_->IsDefaultLayout(slots_[a].matrix,slots_[a].rows,slots_[a].columns))
-                    for(const auto& producer:ops_)if(producer.kind==Kind::KVChunk&&producer.out==root)aliasCache=true;
+                    for(const auto& producer:ops_) {
+                        if(producer.kind==Kind::KVChunk&&producer.out==root)aliasCache=true;
+#ifdef GARNET_METAL_LINEAR_CHUNK_STATE_INPLACE
+                        if((producer.kind==Kind::ConvChunk||producer.kind==Kind::DeltaChunk)&&producer.auxiliaryOutput==root)aliasCache=true;
+#endif
+                    }
 #endif
                 if(aliasCache){auto view=slots_[a];view.shape=shape;out=slots_.size();slots_.push_back(std::move(view));aliases[out]=root;}
                 else {
@@ -1295,7 +1300,44 @@ bool MetalCompiledGraph::CanPoolResidentHidden() const {
         slots_[outputParts_[0]].columns==size_t(inputShapes_[0][1])*size_t(inputShapes_[0][2]);
 }
 #endif
+#ifdef GARNET_METAL_LINEAR_CHUNK_STATE_INPLACE
+bool MetalCompiledGraph::CanUpdateLinearStateInPlace(size_t part) const {
+    if(part<1||part>2||mtpProgram_||inputs_.size()!=6||inputShapes_[0].size()!=3||inputShapes_[0][1]<=1||
+       outputStorageGroups_.size()!=3||outputStorageGroups_[part].empty()||
+       inputShapes_[1].size()!=3||inputShapes_[2].size()!=4)return false;
+    const auto batch=inputShapes_[0][0],chunk=inputShapes_[0][1];
+    if(inputShapes_[5]!=std::vector<int64_t>{batch,chunk})return false;
+    const auto& group=outputStorageGroups_[part];size_t writer=SIZE_MAX;
+    auto member=[&](size_t id){return std::find(group.begin(),group.end(),id)!=group.end();};
+    for(size_t i=0;i<ops_.size();++i)if(i<residentOps_.size()&&residentOps_[i]&&
+        (member(ops_[i].out)||member(ops_[i].auxiliaryOutput))) {
+        const auto& op=ops_[i];
+        if(writer!=SIZE_MAX||!member(op.auxiliaryOutput)||op.dimensions.empty()||op.dimensions[0]!=size_t(chunk))return false;
+        if(part==1) {
+            if(op.kind!=Kind::ConvChunk||op.arguments.size()!=4||op.arguments[2]!=inputs_[1]||op.arguments[3]!=inputs_[5]||
+               op.dimensions.size()!=2||op.dimensions[1]<1||op.dimensions[1]>8||
+               inputShapes_[1][2]!=int64_t(op.dimensions[1]))return false;
+        }else {
+            if(op.kind!=Kind::DeltaChunk||op.arguments.size()!=3||op.arguments[1]!=inputs_[2]||op.arguments[2]!=inputs_[5]||
+               op.dimensions.size()!=4||op.dimensions[2]!=128||!op.dimensions[3]||op.dimensions[3]>4096||op.dimensions[3]%16||
+               inputShapes_[2]!=std::vector<int64_t>{batch,int64_t(op.dimensions[1]),128,int64_t(op.dimensions[3])})return false;
+        }
+        writer=i;
+    }
+    if(writer==SIZE_MAX)return false;
+    const auto& source=slots_[inputs_[part]].matrix;
+    for(size_t i=writer+1;i<ops_.size();++i)if(i<residentOps_.size()&&residentOps_[i]) {
+        const auto& op=ops_[i];
+        if(op.a==inputs_[part]||op.b==inputs_[part]||source.SharesStorage(slots_[op.a].matrix)||source.SharesStorage(slots_[op.b].matrix))return false;
+        for(auto id:op.arguments)if(id==inputs_[part]||source.SharesStorage(slots_[id].matrix))return false;
+    }
+    return true;
+}
+#endif
 bool MetalCompiledGraph::CanUpdateKVInPlace(size_t part) const {
+#ifdef GARNET_METAL_LINEAR_CHUNK_STATE_INPLACE
+    if(CanUpdateLinearStateInPlace(part))return true;
+#endif
 #ifdef GARNET_METAL_RESIDENT_KV_INPLACE
     if(inputShapes_.empty())return false;
     const bool chunk=inputShapes_[0].size()==3;

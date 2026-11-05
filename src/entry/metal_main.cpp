@@ -299,6 +299,9 @@ public:
 #ifdef GARNET_METAL_PREFILL_HIDDEN_POOL
         info+="; native_prefill_hidden_pool";
 #endif
+#ifdef GARNET_METAL_LINEAR_CHUNK_STATE_INPLACE
+        info+="; linear_chunk_state_inplace";
+#endif
 #ifdef GARNET_METAL_VERIFY_ATTENTION
         info+="; verification_attention_fp32";
         info+="; verification_recurrent_checkpoint";

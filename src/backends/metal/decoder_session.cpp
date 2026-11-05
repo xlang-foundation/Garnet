@@ -21,6 +21,9 @@ X::Value TensorValue(X3PackageHost* host,MetalContext& gpu,const MetalMatrix& ma
 }
 }
 void MetalDecoderSession::Clear() {
+#ifdef GARNET_METAL_LINEAR_CHUNK_STATE_INPLACE
+    linearStateInplaceUpdates_=0;
+#endif
 #ifdef GARNET_METAL_PREFILL_HIDDEN_POOL
     prefillHiddenPool_.clear();hiddenPoolBindings_=0;
 #endif
@@ -603,6 +606,9 @@ X::Value MetalDecoderSession::RunUnlocked(X::Value graphs,X::Value hidden,X::Val
 #ifdef GARNET_METAL_VERIFY_ATTENTION
         if(verification)EncodeVerificationBackups(*verification,layers);
 #endif
+#ifdef GARNET_METAL_LINEAR_CHUNK_STATE_INPLACE
+        linearStateInplaceUpdates_=0;
+#endif
         auto current=layers[0]->slots_[layers[0]->inputs_[0]].matrix;
         for(size_t i=0;i<layers.size();++i) {
             auto graph=layers[i];std::array<MetalMatrix,3> saved;
@@ -660,6 +666,11 @@ X::Value MetalDecoderSession::RunUnlocked(X::Value graphs,X::Value hidden,X::Val
             const auto nextHidden=graph->slots_[graph->outputParts_[0]].matrix;
             restore();
             kvInplaceUpdates_+=size_t(inplace[0])+size_t(inplace[1]);
+#ifdef GARNET_METAL_LINEAR_CHUNK_STATE_INPLACE
+            for(size_t k=0;k<2;++k)if(inplace[k]&&graph->CanUpdateLinearStateInPlace(k+1)) {
+                ++linearStateInplaceUpdates_;--kvInplaceUpdates_;
+            }
+#endif
             current=nextHidden;
 #ifdef GARNET_METAL_PREFILL_HIDDEN_POOL
             hiddenPoolBindings_+=size_t(pooledHidden.Valid());

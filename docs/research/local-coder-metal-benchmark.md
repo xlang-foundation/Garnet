@@ -3304,6 +3304,37 @@ does not establish an exhaustive kernel/scheduler audit. Read-only review of
 the exact baseline revisions (`vllm-metal` a44be487 and `sglang`57abc8a8) found
 the following concrete mechanisms. No comparator was restarted or modified.
 
+Follow-up activation check: `vllm_metal/envs.py` lines121/171 makes
+`VLLM_METAL_COMPILED_MLP` defaultOFF. The frozen `vllm-engine.json` environment
+does not explicitly enable it, and the three saved baseline server logs have
+no compiled-MLP wrapper installation message. Its target policy includes the
+resolved Qwen3.5 MLP class, but eligibility is not activation. Do not attribute
+the frozen speed to this optional feature. The saved environment is a launch
+override rather than a complete inherited-environment dump, so absence alone
+is not conclusive proof of its runtime value.
+
+The vLLM cohort1 startup does confirm that M5 NAX prefill and native paged
+attention libraries loaded. `metal/paged_attention.cpp` lines293–300 admits
+BF16/FP16 head256 with block sizes8/16/32; lines721–807 distinguishes ordinary
+prefill, speculative verification windows, and sufficiently expensive mixed
+decode/prefill work. Complete64-query tiles can use a separate pipeline without
+their inner bounds checks; tails keep guarded execution. This is directly
+relevant to upper-bound profiles: compile tile/pipeline variants and select
+using actual lengths. A loaded library and eligible shape still do not prove
+the selected pipeline for every frozen call. Dispatch traces and separate A/B
+measurements remain open. No CUDA graph speedup is implied on this Mac.
+
+NAX kernel arithmetic also needs explicit treatment: the pinned
+`metal/kernels_v2/pagedattention_nax.metal` header and `nax_mma` descriptor
+use MPP16x32x16 register-fragment matrix operations with
+`relaxed_precision=true`; the header notes truncation of the FP32 probability
+operand in PV. Q/K/V go directly from device memory to register fragments,
+without threadgroup staging. Thus its performance cannot be described simply
+as better scheduling of Garnet's existing exact FP32 attention. Library-loaded
+evidence is retained separately from actual-dispatch proof, and Garnet's
+numerical gates remain unchanged. Any alternative arithmetic requires its own
+explicit quality/numerical qualification.
+
 |Mechanism|Inspected primary source|Relevance and remaining proof|
 |---|---|---|
 |Quantized input reuse across output channels|Installed MLX0.32.4 `mlx/backend/metal/kernels/quantized.h`, `qmv_fast_impl`, lines850–920: one input-vector load feeds four output-channel accumulators per SIMD group|Garnet's indexed decode currently uses one output channel per SIMD group and reuses weights across up to four token rows. Investigate output-channel blocking and explicit vector loads while preserving the required FP32 FMA/reduction order. The exact MLX kernel selected by each frozen workload has not been traced.|
@@ -3312,7 +3343,9 @@ the following concrete mechanisms. No comparator was restarted or modified.
 |True hybrid batching and per-request state|SGLang MLX `model_runner.py`, lines1331–1486|Full attention uses batched hidden states; compatible Qwen linear layers merge native `ArraysCache` state and extract it afterward, with per-request fallback for unsupported layers. Radix being disabled does not imply that hybrid decode is entirely serial. Garnet's physical-row approach should preserve independent histories without repeated state concatenation; actual B2 qualification is pending.|
 |Paged full-attention and recurrent-state ownership|vLLM-Metal `v1/cache_policy.py` and `attention/runtime/hybrid.py`|The frozen vLLM startup reports a hybrid shared KV/state cache (17blocks/0.81GiB in cohort1; other cohorts retained separately). Garnet's current MTP row cache is dense and is not a paged-cache qualification.|
 |Radix reuse with auxiliary-state snapshots|SGLang MLX `kv_cache/auxiliary_state.py`, lines66–86 and195–216, plus unified radix component near328|Restoring full-attention KV alone is insufficient for this hybrid model. Native auxiliary cache state/meta-state is also snapshotted/restored. Prefix/radix caching is explicitly OFF in both frozen baselines, so it cannot explain their current cold-prefix timing advantage. Garnet MTP auxiliary-prefix snapshots remain unimplemented.|
-|Bounded compiled MLP dispatch|vLLM-Metal `compiled_mlp.py`, lines3–20 and39–48, installation in `v1/model_lifecycle.py` near237|The source supports stateless decode-shaped traces up to four token positions and leaves larger prefill eager. Exact class eligibility and installation in this27B baseline need confirmation; source availability alone does not prove activation.|
+|Bounded compiled MLP dispatch|vLLM-Metal `compiled_mlp.py`, lines3–20 and39–48, installation in `v1/model_lifecycle.py` near237|The source supports stateless decode-shaped traces up to four token positions and leaves larger prefill eager. Its policy includes Qwen3.5 MLP, but the option defaultsOFF and the frozen launch has no explicit enable or installation message. Activation is not established.|
+|Hybrid speculative state commit/rollback|vLLM-Metal `attention/impls/gdn_spec.py`, lines1–16 and139–164|The verification forward leaves span-final recurrent state pending while preserving depth0. Fully accepted requests keep it; rejected requests re-scan only the accepted prefix using compact saved projections. Convolution history is sliced to the accepted depth. This is useful design evidence for avoiding full layer replay. Speculation was not enabled in the frozen comparator baseline; it is not an explanation of that baseline's timings.|
+|Hardware/occupancy-aware tile choice|vLLM-Metal `metal/paged_attention_kernels.h`, `select_nax_config` and `should_split_decode`; `attention/nax_split.py`|Grouped-query tiles use a shape/work score and GPU core count; split-KV decode is gated by available parallel work. Full/tail prefill thresholds in the Python helper were calibrated on M5 Max. This Mac's base M5 and other Air/Pro chips need their own measurement; copying a threshold does not establish a gain.|
 
 Installed SGLang dependencies inspected are MLX0.32.4 and mlx-lm0.32.2.
 Its frozen profile permits two GPU-active requests and caps the recycled-buffer
@@ -3411,3 +3444,96 @@ admission. The earlier pending records describe their capture-time state; the
 completed audit and qualification provenance supersede that pending status for
 this exact native B2 gate. All speed/TTFT targets and the full27B goal remain
 open;9B/4B have not started.
+
+### Private recurrent chunk state: finite native qualification
+
+New defaultOFF `GARNET_METAL_LINEAR_CHUNK_STATE_INPLACE` permits complete,
+exclusive convolution/recurrent state output alias groups to bind their private
+input state. It applies only to proved chunk graphs: the writer owns disjoint
+state elements, loads them before updating, and has no later reader of the old
+state. Checkpoint S1 remains separate. Ordinary2D decode output banks remain
+available for verification checkpoint use. No shader arithmetic, precision,
+profile upper bound or target comparison bound changed.
+
+`native27b-scheduled-mtp-linear-state-coding1` passed all10 full frozen
+sequences/2,501 tokens and sandbox8/8. Its753 native frames include529 combined
+frames, six interleaved prediction refreshes,1,209/1,281 accepted/proposed drafts,
+and96 proved private linear-state updates per frame. Prepared allocation is
+17,800,511,488bytes,642,056,192 below the previous qualified B2 plan. All four
+owner counts closed to zero. The independent audit passed16,077 checks and all
+22 corruptions were rejected. These are finite correctness/allocation results;
+neither this snapshot nor task compression counters establish peak memory,
+paging-free operation or a speedup.
+
+Both feature-ON and feature-OFF builds passed23 native tests. The recurrent
+checkpoint gate checked223,503,920 bitwise FP32 words; the bridge passed67
+cases/2,488 checks and the compiled verifier396 checks/30,497,536 FP32 words.
+Source archive `native-mtp-linear-state-source1` contains151 verified files,
+manifest SHA256 `4a223fa227c33740ed2cccc2e98980715497867f7e5e743983ad35aa48052109`.
+Qualified library SHA256 is
+`69491581eb6ff7a659dcfc065231823b3827e8a15c603fec4756a1a2dfdbcb34`;
+qualification provenance SHA256 is
+`9a32c379f953738db38a6b351ac16da51f7a7fe37a3604d1c87430fc4c02f1cf`.
+The archive retains its capture-time pending status; the separately written
+qualification provenance records the completed gate for that exact source and
+library. HTTP prototypes are frozen separately rather than covered by this
+native qualification.
+
+The first B2 HTTP diagnostic with the previous18.443GB library was stopped
+after severe active paging and no completed coding responses. Its failed
+collection, paging snapshots and partial native log remain preserved in
+`native27b-scheduled-mtp-http-admission1`; no canonical performance or orderly
+owner-zero claim is made for it. A fresh `native27b-scheduled-mtp-http-admission2`
+uses the newly qualified17.801GB layout, eight parallel client coding tasks,
+six canonical cells once, profile rejection/recovery and a2-second process-tree
+and system-paging sampler. That serving gate is currently pending, runs alone,
+and does not rerun either frozen comparator. The full27B goal remains active.
+
+### Native B2 HTTP admission completed, performance targets still unmet
+
+`native27b-scheduled-mtp-http-admission2` completed with23 full reference
+sequences/3,967 output tokens, sandbox8/8,55,692 independent audit checks and22
+rejected corruptions. Native policy owned1,207 generation frames,831 with two
+requests, and10 prediction refreshes after interleaved prefill. Accepted drafts
+were1,906/2,028. Every frame exercised the qualified in-place auxiliary KV,
+hidden pool and96 private linear-state updates. Profile rejection remained
+isolated and a subsequent valid request completed. The worker exited0 after
+orderly close with all four native owner counts zero; the HTTP parent exited
+through its expected SIGINT shutdown without a forced kill. The memory sampler
+exited0 and bracketed every complete coding/canonical interval.
+
+These are single-wave admission observations after the eight coding tasks,
+not matched repeated performance. TTFT and per-request decode columns use the
+median of the clients in each cell. Aggregate TPS includes queueing/prefill
+and all successful output tokens in the complete wave. Comparator columns
+retain the original median of three cohort medians and have not been rerun.
+
+|Cell|B2 TTFT s|B2 request decode tok/s|B2 aggregate tok/s|Frozen vLLM aggregate|Frozen SGLang aggregate|
+|---|---:|---:|---:|---:|---:|
+|short C1|5.638|8.698|6.324|5.761|5.502|
+|short C2|8.681|6.123|6.847|7.352|6.834|
+|short C4|18.822|5.025|6.862|9.935|7.546|
+|long C1|46.339|6.436|1.937|3.382|3.275|
+|long C2|62.548|5.228|2.240|3.526|3.281|
+|long C4|108.891|4.628|2.487|3.479|3.789|
+
+The B2 gate establishes actual continuous serving correctness and the smaller
+memory plan. It does not establish a performance gain over the old B1 MTP
+admission; C1 is slower and aggregate C2/C4 is broadly unchanged or lower.
+B2 verification is two tokens per active row while B1 can verify four for its
+one row, so this is not an isolated arithmetic comparison. All2x/half-TTFT
+targets remain unmet. No repeated campaign is justified as a success claim.
+The next isolated experiment targets output-channel reuse in the exact FP32
+small-row INT4 projection kernels, preserving complete baseline output bytes
+before accepting any operator speed measurement.
+
+Bracketed system counter differences show nonzero paging: shortC1 about54.5MB
+in/0out, shortC4 about168.5MBin/281.5MBout, longC1 about95.9MBin/103.0MBout.
+These are global system counters with sample edges, not per-process attribution
+or evidence of paging-free operation. Raw2-second samples and exact windows
+are retained. `admission-observations.json` binds its summarizer and evidence
+hashes; post-run summarizer source is saved alongside the original frozen
+implementation. HTTP qualification provenance SHA256 is
+`566949603b3d8b6c4e5fa34cfd9119d41128f604014f6c02c5f4625e570a2cf7`.
+Prefix/MTP auxiliary snapshots, repeated speed,
+general multimodal/xMind admission and full27B completion remain open.

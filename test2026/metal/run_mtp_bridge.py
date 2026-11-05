@@ -157,6 +157,7 @@ for batch,chunk,capacity in [(1,4,16),(2,2,16),(4,1,16),(1,4,4096)]:
      # Closing an external helper cannot close the runtime's private mapping.
      io.close();result=session.mtp_generate(known,remaining,stops,epochs);io.open(f['checkpoint']);stats=json.loads(session.mtp_generation_stats_json())
      if 'native_prefill_hidden_pool' in garnet.backend_info():equal(session.prefill_hidden_pool_bindings,4 if chunk>1 else 0,label+' every verifier layer uses hidden pool')
+     if 'linear_chunk_state_inplace' in garnet.backend_info():equal(session.linear_state_inplace_updates,4 if chunk>1 else 0,label+' convolution and recurrent state updated privately in place')
      if profile_mode:equal(stats['draft_profile_chunk'],1,label+' native T1 draft selection')
      proposals=stats['proposals'];lengths=stats['submitted_lengths'];counts=[x[1] for x in result]
      def gctl(starts,sizes,shift):

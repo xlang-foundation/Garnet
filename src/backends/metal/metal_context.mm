@@ -3550,8 +3550,18 @@ void MetalContext::EncodeStateKernel(unsigned operation,const std::vector<MetalM
         if(second->pending&&impl_->pendingOutputs.count(second.get())==0)
             throw std::logic_error("Metal secondary output is in another command batch");
         if(second->matrix.data==c.data)throw std::invalid_argument("Metal outputs overlap");
-        for(const auto& input:inputs)if(second->matrix.data==input.impl_->matrix.data)
+        for(size_t inputIndex=0;inputIndex<inputs.size();++inputIndex)if(second->matrix.data==inputs[inputIndex].impl_->matrix.data) {
+#ifdef GARNET_METAL_LINEAR_CHUNK_STATE_INPLACE
+            // A convolution thread owns one channel's complete history. A
+            // delta SIMD lane owns four key positions of one value-column
+            // tile. Both kernels load those elements into registers before
+            // writing the same disjoint elements after the complete chunk.
+            const bool conv=(operation==18||operation==24)&&inputs.size()==4&&inputIndex==2;
+            const bool delta=(operation==19||operation==25)&&inputs.size()==3&&inputIndex==1;
+            if((conv||delta)&&secondOutput->CompatibleLayout(inputs[inputIndex]))continue;
+#endif
             throw std::invalid_argument("In-place secondary state output is unsupported");
+        }
     }
     if(thirdOutput) {
         if(!thirdOutput->impl_||thirdOutput->impl_->matrix.device!=impl_->device)
@@ -3903,7 +3913,10 @@ void MetalContext::EncodeGatedDeltaChunk(const MetalMatrix& prepared,const Metal
 }
 #ifdef GARNET_METAL_VERIFY_ATTENTION
 void MetalContext::ValidateVerificationRecurrent(const std::vector<MetalMatrix>& inputs,
-    const MetalMatrix& output,const MetalMatrix& nextState,const MetalMatrix& firstState) const {
+    const MetalMatrix& output,const MetalMatrix& nextState,const MetalMatrix& firstState,size_t stateInput) const {
+#ifndef GARNET_METAL_LINEAR_CHUNK_STATE_INPLACE
+    (void)stateInput;
+#endif
     if(!impl_->command)throw std::logic_error("Begin a verification checkpoint batch first");
     const MetalMatrix* outputs[]={&output,&nextState,&firstState};
     for(size_t i=0;i<3;++i) {
@@ -3915,15 +3928,20 @@ void MetalContext::ValidateVerificationRecurrent(const std::vector<MetalMatrix>&
         for(size_t j=0;j<i;++j)if(target->matrix.data==outputs[j]->impl_->matrix.data)
             throw std::invalid_argument("Verification checkpoint outputs overlap");
     }
-    for(const auto& input:inputs) {
+    for(size_t inputIndex=0;inputIndex<inputs.size();++inputIndex) {
+        const auto& input=inputs[inputIndex];
         const auto& source=input.impl_;
         if(!source||source->matrix.device!=impl_->device||source->matrix.dataType!=MPSDataTypeFloat32||source->matrix.offset)
             throw std::invalid_argument("Verification checkpoint input device/type/layout mismatch");
         if((source->pending&&!impl_->pendingOutputs.count(source.get()))||
            (!source->ready&&!(source->pending&&impl_->pendingOutputs.count(source.get()))))
             throw std::logic_error("Verification checkpoint input is uninitialized or owned by another batch");
-        for(const auto* target:outputs)if(source->matrix.data==target->impl_->matrix.data)
+        for(const auto* target:outputs)if(source->matrix.data==target->impl_->matrix.data) {
+#ifdef GARNET_METAL_LINEAR_CHUNK_STATE_INPLACE
+            if(target==&nextState&&inputIndex==stateInput&&nextState.CompatibleLayout(input))continue;
+#endif
             throw std::invalid_argument("Verification checkpoint input/output alias");
+        }
     }
     const auto& mask=inputs.back().impl_;const auto a=mask->matrix;
     if(!mask->ready||mask->pending||a.data.storageMode!=MTLStorageModeShared||!a.data.contents)
@@ -3952,7 +3970,7 @@ void MetalContext::EncodeVerificationConvCheckpoint(const MetalMatrix& tokens,co
        w.rows!=t.columns||w.columns!=kernel||s.columns!=stateWidth||a.rows!=batch||a.columns!=chunk||
        o.rows!=t.rows||o.columns!=t.columns||n.rows!=batch||n.columns!=stateWidth||c.rows!=batch||c.columns!=stateWidth)
         throw std::invalid_argument("Verification convolution checkpoint profile mismatch");
-    ValidateVerificationRecurrent({tokens,weight,state,active},output,nextState,firstState);
+    ValidateVerificationRecurrent({tokens,weight,state,active},output,nextState,firstState,2);
     struct Params {uint64_t batch,chunk,channels,kSize,tStride,wStride,sStride,aStride,oStride,nStride,cStride;};
     Params p{batch,chunk,t.columns,kernel,t.rowBytes/4,w.rowBytes/4,s.rowBytes/4,a.rowBytes/4,o.rowBytes/4,n.rowBytes/4,c.rowBytes/4};
     EncodeStateKernel(24,{tokens,weight,state,active},output,&p,sizeof(p),Elements(batch,t.columns),&nextState,false,&firstState);
@@ -3971,7 +3989,7 @@ void MetalContext::EncodeVerificationDeltaCheckpoint(const MetalMatrix& prepared
        mask.rows!=batch||mask.columns!=chunk||o.rows!=a.rows||o.columns!=vw||n.rows!=batch||n.columns!=stateWidth||
        c.rows!=batch||c.columns!=stateWidth||a.rowBytes%16||s.rowBytes%16||o.rowBytes%16||n.rowBytes%16||c.rowBytes%16)
         throw std::invalid_argument("Verification delta checkpoint profile mismatch");
-    ValidateVerificationRecurrent({prepared,state,active},output,nextState,firstState);
+    ValidateVerificationRecurrent({prepared,state,active},output,nextState,firstState,1);
     struct Params {uint64_t batch,chunk,heads,keyDim,valueDim,pStride,sStride,aStride,oStride,nextStride,cStride;};
     Params p{batch,chunk,heads,keyDim,valueDim,a.rowBytes/4,s.rowBytes/4,mask.rowBytes/4,o.rowBytes/4,n.rowBytes/4,c.rowBytes/4};
     EncodeStateKernel(25,{prepared,state,active},output,&p,sizeof(p),Elements(Elements(batch,heads),valueDim/16),&nextState,false,&firstState);

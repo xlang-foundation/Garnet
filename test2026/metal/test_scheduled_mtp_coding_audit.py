@@ -43,6 +43,8 @@ with tempfile.TemporaryDirectory(prefix='mtp-scheduled-audit-') as temporary:
         ('over-budget memory', lambda d: d['prepared_memory'].__setitem__('metal_allocated_bytes', 2**40)),
         ('missing deferred packs', lambda d: d.__setitem__('deferred_auxiliary_pack_slots', [0, 0])),
     ]
+    if 'linear_chunk_state_inplace' in baseline.get('native_backend', ''):
+        changes.append(('missing private recurrent updates', lambda d: d['frames'][0].__setitem__('linear_state_inplace_updates', 0)))
     for label, change in changes:
         changed = copy.deepcopy(baseline)
         change(changed)

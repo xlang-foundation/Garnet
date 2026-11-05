@@ -115,7 +115,7 @@ class MetalContext {
         bool referenceAttention=false,const MetalMatrix* thirdOutput=nullptr);
 #ifdef GARNET_METAL_VERIFY_ATTENTION
     void ValidateVerificationRecurrent(const std::vector<MetalMatrix>&,
-        const MetalMatrix&,const MetalMatrix&,const MetalMatrix&) const;
+        const MetalMatrix&,const MetalMatrix&,const MetalMatrix&,size_t stateInput=SIZE_MAX) const;
     struct VerificationKVSpanParams {
         uint64_t batch,chunk,heads,dim,capacity,cacheStride,slotStride,
             submittedStride,acceptedStride,backupStride;

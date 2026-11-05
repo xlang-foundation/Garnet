@@ -110,6 +110,9 @@ class MetalCompiledGraph {
         const std::vector<size_t>* selectedTokenRows=nullptr,VerificationBindings* verification=nullptr);
     void EncodeGreedy(MetalContext&,const MetalMatrix& prediction,const std::vector<size_t>* selectedRows=nullptr);
     bool CanUpdateKVInPlace(size_t part) const;
+#ifdef GARNET_METAL_LINEAR_CHUNK_STATE_INPLACE
+    bool CanUpdateLinearStateInPlace(size_t part) const;
+#endif
 #ifdef GARNET_METAL_PREFILL_HIDDEN_POOL
     bool CanPoolResidentHidden() const;
 #endif

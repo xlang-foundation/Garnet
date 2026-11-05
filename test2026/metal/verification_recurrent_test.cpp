@@ -73,6 +73,9 @@ void Case(MetalContext& gpu,const Job& j,size_t variant) {
         al=gpu.Upload(j.alog,1,j.h),dt=gpu.Upload(j.dt,1,j.h),mask=gpu.Upload(j.mask,j.b,j.t);
     auto co=gpu.Allocate(j.b*j.t,j.c),nc=gpu.Allocate(j.b,j.c*j.kernel),c1=gpu.Allocate(j.b,j.c*j.kernel),
         prepared=gpu.Allocate(j.b*j.t,j.pw),cores=gpu.Allocate(j.b*j.t,j.vw),ns=gpu.Allocate(j.b,j.sw),s1=gpu.Allocate(j.b,j.sw);
+#ifdef GARNET_METAL_LINEAR_CHUNK_STATE_INPLACE
+    if(variant==3){nc=cs;ns=state;}
+#endif
     std::vector<MetalMatrix> rc,rs,rm,rcScratch,rsScratch;std::vector<std::vector<float>> ec,es;
     auto zero=gpu.Upload(std::vector<float>(j.b*j.t*j.c,0),j.b*j.t,j.c),pending=gpu.Allocate(j.b*j.t,j.c);
     // Every mask and workspace is prepared while the command batch is closed.
@@ -113,6 +116,19 @@ void Case(MetalContext& gpu,const Job& j,size_t variant) {
     Equal(gpu.Download(nc),expected.conv.back(),"full convolution state");Equal(gpu.Download(ns),expected.state.back(),"full GDN state");
     Equal(gpu.Download(c1),expected.conv[0],"S1 convolution state");Equal(gpu.Download(s1),expected.state[0],"S1 GDN state");
     for(size_t i=0;i<rc.size();++i){Equal(gpu.Download(rc[i]),ec[i],"accepted convolution prefix");Equal(gpu.Download(rs[i]),es[i],"accepted GDN prefix");}
+#ifdef GARNET_METAL_LINEAR_CHUNK_STATE_INPLACE
+    if(variant==3) {
+        auto normalConv=gpu.Upload(j.conv,j.b,j.c*j.kernel),normalState=gpu.Upload(j.state,j.b,j.sw),
+            normalCo=gpu.Allocate(j.b*j.t,j.c),normalPrepared=gpu.Allocate(j.b*j.t,j.pw),normalCores=gpu.Allocate(j.b*j.t,j.vw);
+        gpu.Begin();gpu.EncodeCausalConvChunk(originalTokens,weights,normalConv,mask,normalCo,normalConv,j.t,j.kernel);
+        gpu.EncodeLinearPrepare(normalCo,ap,bp,al,dt,normalPrepared,j.kh,j.h,128,j.vd,0);
+        gpu.EncodeGatedDeltaChunk(normalPrepared,normalState,mask,normalCores,normalState,j.t,j.h,128,j.vd);gpu.SubmitAndWait();
+        Equal(gpu.Download(normalCo),expected.convOut,"normal in-place convolution outputs");
+        Equal(gpu.Download(normalCores),expected.cores,"normal in-place recurrent outputs");
+        Equal(gpu.Download(normalConv),expected.conv.back(),"normal in-place convolution state");
+        Equal(gpu.Download(normalState),expected.state.back(),"normal in-place recurrent state");
+    }
+#endif
     ++cases;
 }
 void ConvTail(MetalContext& gpu) {
@@ -150,9 +166,15 @@ void Invalid(MetalContext& gpu) {
         Equal(gpu.Download(c1),std::vector<float>(j.c*4,-99),"rejected S1 conv unchanged");Equal(gpu.Download(s1),std::vector<float>(j.sw,-99),"rejected S1 GDN unchanged");
     }
     gpu.Begin();
-    Reject([&]{conv(tok,mask,tok,nc,c1);},"conv input alias");Reject([&]{conv(tok,mask,co,cs,c1);},"conv state alias");
+    Reject([&]{conv(tok,mask,tok,nc,c1);},"conv input alias");
+#ifndef GARNET_METAL_LINEAR_CHUNK_STATE_INPLACE
+    Reject([&]{conv(tok,mask,co,cs,c1);},"conv state alias");
+#endif
     Reject([&]{conv(tok,mask,co,nc,nc);},"conv output alias");Reject([&]{conv(tok,mask,co,nc,cs);},"conv checkpoint alias");
-    Reject([&]{delta(prepared,mask,out,state,s1);},"delta state alias");Reject([&]{delta(prepared,mask,out,ns,ns);},"delta output alias");
+#ifndef GARNET_METAL_LINEAR_CHUNK_STATE_INPLACE
+    Reject([&]{delta(prepared,mask,out,state,s1);},"delta state alias");
+#endif
+    Reject([&]{delta(prepared,mask,out,ns,ns);},"delta output alias");
     Reject([&]{delta(prepared,mask,out,ns,state);},"delta checkpoint alias");
     for(size_t t:{0,5,8}){Reject([&]{conv(tok,mask,co,nc,c1,t);},"conv temporal bound");Reject([&]{delta(prepared,mask,out,ns,s1,t);},"delta temporal bound");}
     for(size_t k:{0,9})Reject([&]{conv(tok,mask,co,nc,c1,4,k);},"conv kernel bound");
@@ -201,6 +223,13 @@ int main(){try{
         for(size_t t:{1,2,3,4})for(size_t mode=0;mode<t+3;++mode)
             Case(gpu,Job(1,t,16,48,128,4,mode),mode%3);
         for(size_t k:{1,8})Case(gpu,Job(1,4,1,1,16,k,3),2);
+#ifdef GARNET_METAL_LINEAR_CHUNK_STATE_INPLACE
+        for(auto shape:std::vector<std::pair<size_t,size_t>>{{1,1},{1,2},{1,3},{1,4},{2,1},{2,2},{4,1}})
+            for(size_t mode=0;mode<shape.second+3;++mode)
+                Case(gpu,Job(shape.first,shape.second,1,3,128,4,mode),3);
+        for(size_t t:{1,2,3,4})for(size_t mode=0;mode<t+3;++mode)
+            Case(gpu,Job(1,t,16,48,128,4,mode),3);
+#endif
         ConvTail(gpu);
         Invalid(gpu);
     }

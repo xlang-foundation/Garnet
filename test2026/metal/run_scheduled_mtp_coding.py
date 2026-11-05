@@ -17,7 +17,7 @@ try:
  with open(f['output']+'.inventory.json','w') as stream:stream.write(study.inventory())
  os.mkdir(tasks['responses'])
  def save(passed):
-  with open(f['output'],'w') as stream:json.dump(dict(passed=passed,tasks=records,frames=frames,prefills=prefills,prepared_memory=prepared,deferred_auxiliary_pack_slots=profile_packs,combined_frames=combined,prediction_refreshes=refreshes,scope='B2 native scheduled coding/full IDs and real2K prompts; no HTTP or repeated performance admission'),stream,indent=2)
+  with open(f['output'],'w') as stream:json.dump(dict(passed=passed,native_backend=garnet.backend_info(),tasks=records,frames=frames,prefills=prefills,prepared_memory=prepared,deferred_auxiliary_pack_slots=profile_packs,combined_frames=combined,prediction_refreshes=refreshes,scope='B2 native scheduled coding/full IDs and real2K prompts; no HTTP or repeated performance admission'),stream,indent=2)
  def finish(identity,job):
   generated=job['generated'];plan=job['plan'];equal=generated==plan['expected']
   text=tokenizer.decode(generated[:-1] if generated[-1] in stops else generated).encode('utf8').decode('utf8','replace')
@@ -49,6 +49,9 @@ try:
       else:assert policy.complete_prefill_chunk(identity,request['prefill_tokens'])
     else:
      result=json.loads(policy.mtp_generate_json(stops));result['auxiliary']=json.loads(study.session.mtp_stats_json());result['hidden_pool_bindings']=study.session.prefill_hidden_pool_bindings if 'native_prefill_hidden_pool' in garnet.backend_info() else 0;frames.append(result);combined+=int(len(result['requests'])==2);refreshes+=int(result['generation']['target_prediction_refreshed'])
+     if 'linear_chunk_state_inplace' in garnet.backend_info():
+      result['linear_state_inplace_updates']=study.session.linear_state_inplace_updates
+      assert result['linear_state_inplace_updates']==96
      if len(frames)%32==0:print('scheduled_mtp_progress',json.dumps(dict(frames=len(frames),completed=len(records),active_ids=[item['id'] for item in result['requests']])),flush=True)
      if 'native_mtp_kv_inplace' in garnet.backend_info():assert result['auxiliary']['kv_inplace_updates']==2
      assert result['generation']['recursive_draft_calls']==0,'B2 should not run recursive auxiliary drafts'

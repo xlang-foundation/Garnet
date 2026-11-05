@@ -148,6 +148,9 @@ class MetalDecoderSession {
 #endif
     std::vector<int64_t> hiddenShape_;
     size_t kvInplaceUpdates_=0;
+#ifdef GARNET_METAL_LINEAR_CHUNK_STATE_INPLACE
+    size_t linearStateInplaceUpdates_=0;
+#endif
     size_t joinedPrefillPairs_=0;
     size_t constantHeadDispatches_=0;
     size_t singleCoderHeadDispatches_=0;
@@ -275,6 +278,9 @@ public:
     size_t LastChunkAttentionBucketCapacity() {std::lock_guard<std::mutex> lock(mutex_);return gpu_?gpu_->LastChunkAttentionBucketCapacity():0;}
     size_t LastChunkAttentionUnknownControls() {std::lock_guard<std::mutex> lock(mutex_);return gpu_?gpu_->LastChunkAttentionUnknownControls():0;}
     size_t LastKVInplaceUpdates() const {return kvInplaceUpdates_;}
+#ifdef GARNET_METAL_LINEAR_CHUNK_STATE_INPLACE
+    size_t LastLinearStateInplaceUpdates() const {return linearStateInplaceUpdates_;}
+#endif
 #ifdef GARNET_METAL_PREFILL_HIDDEN_POOL
     size_t LastHiddenPoolBindings() const {return hiddenPoolBindings_;}
 #endif
@@ -394,6 +400,9 @@ public:
         APISET().AddProp("chunk_attention_bucket_capacity",&MetalDecoderSession::LastChunkAttentionBucketCapacity);
         APISET().AddProp("chunk_attention_unknown_controls",&MetalDecoderSession::LastChunkAttentionUnknownControls);
         APISET().AddProp("kv_inplace_updates",&MetalDecoderSession::LastKVInplaceUpdates);
+#ifdef GARNET_METAL_LINEAR_CHUNK_STATE_INPLACE
+        APISET().AddProp("linear_state_inplace_updates",&MetalDecoderSession::LastLinearStateInplaceUpdates);
+#endif
 #ifdef GARNET_METAL_PREFILL_HIDDEN_POOL
         APISET().AddProp("prefill_hidden_pool_bindings",&MetalDecoderSession::LastHiddenPoolBindings);
 #endif

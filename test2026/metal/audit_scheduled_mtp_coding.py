@@ -77,6 +77,8 @@ def audit(root, coding_root, http_root):
                 stats['draft_profile_chunk'] == 2 and aux['profile_chunk'] == 2, 'Prepared B2T2 auxiliary profile')
         require(aux['kv_inplace_updates'] == 2, 'Both auxiliary KV outputs use private caches')
         require(frame['hidden_pool_bindings'] == 64, 'All target verifier layers use private hidden pool')
+        if 'linear_chunk_state_inplace' in result.get('native_backend', ''):
+            require(frame['linear_state_inplace_updates'] == 96, 'All48 target recurrent layers update both states in place')
         require(all(len(stats[k]) == n for k, n in (('proposals', 4), ('submitted_lengths', 2), ('consumed', 2))), 'B2 native statistics shape')
         active = {item['row'] for item in items}
         for row in set(range(2))-active:
@@ -142,6 +144,10 @@ def audit(root, coding_root, http_root):
             'Exactly two independent hidden buffers per verifier/prefill profile')
     pool_ids = {r['buffer_id'] for r in pools}
     require(all(r['role'] == 'prefill_hidden_pingpong' for r in inventory['references'] if r['buffer_id'] in pool_ids), 'Hidden pool cannot alias private cache or graph defaults')
+    if 'linear_chunk_state_inplace' in result.get('native_backend', ''):
+        require(not any(r['tag'].startswith('target_profile_') and r['output_part'] and
+                        tuple(r['shape']) in ((2,40960),(2,786432)) for r in inventory['references']),
+                'No retained default convolution/recurrent state output banks')
     weights = {}
     for ref in inventory['references']:
         if ref['tag'].startswith('auxiliary_') and ref['role'] == 'weight_record':
