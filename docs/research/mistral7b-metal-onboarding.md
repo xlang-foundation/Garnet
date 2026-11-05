@@ -191,6 +191,11 @@ serving measurements and are not vLLM/SGLang baselines or performance wins.
 
 ## Remaining implementation and qualification
 
+Fresh Mistral vLLM-Metal and SGLang profiles now have matched admission,
+full serving prompt-ID checks and preserved strict coding failures. See
+[comparator admission and fixed reference plan](mistral7b-metal-baselines.md).
+Repeated baseline completion still requires the full campaign and its audit.
+
 1. Expand the initial FP16 profile admission to production workload shapes,
    chunk-size alternatives, memory limits and exact checkpoint/profile identity.
    Preserve the BF16 path and explicit coefficient/operand type matching.

@@ -25,11 +25,25 @@ class EngineGuardTest(unittest.TestCase):
 201 /build/xlang3 /build/xlang3 -B package_runtime.py start
 202 /bin/zsh /bin/zsh -c rg local_coder_native_http.py
 203 /env/bin/python /env/bin/python run_local_coder_baseline.py --engine-spec native.json
+204 /bin/zsh /bin/zsh -c rg run_mistral_suite.py
 '''
         commands = '\n'.join(' '.join(line.split()[:2]) for line in processes.splitlines() if line.strip())
         arguments = '\n'.join(line.split(None, 2)[0]+' '+line.split(None, 2)[2] for line in processes.splitlines() if line.strip())
         with patch('run_local_coder_baseline.subprocess.check_output', side_effect=[commands, arguments]):
             self.assertEqual(engine_processes(), [])
+
+    def test_mistral_native_work_blocks_reference_overlap(self):
+        processes = '''
+301 /build/xlang3 /build/xlang3 -B /evidence/run_mistral_suite.py /lib /src /fixture.json
+302 /build/xlang3 /build/xlang3 -B /evidence/run_mistral_greedy.py /lib /src /ref.json
+303 /build/xlang3 /build/xlang3 -B /evidence/run_mistral_teacher.py /lib /src /ref.json
+304 /build/xlang3 /build/xlang3 -B /evidence/run_mistral_embedding.py /lib /model
+305 /build/xlang3 /build/xlang3 -B future_driver.py /models/Mistral-7B-Instruct-v0.3-MLX-4bit
+'''
+        commands = '\n'.join(' '.join(line.split()[:2]) for line in processes.splitlines() if line.strip())
+        arguments = '\n'.join(line.split(None, 2)[0]+' '+line.split(None, 2)[2] for line in processes.splitlines() if line.strip())
+        with patch('run_local_coder_baseline.subprocess.check_output', side_effect=[commands, arguments]):
+            self.assertEqual(len(engine_processes()), 5)
 
 
 if __name__ == '__main__':

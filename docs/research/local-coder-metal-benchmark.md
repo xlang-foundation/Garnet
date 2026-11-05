@@ -15,6 +15,11 @@ complete coding sequences match MLX; both engines fail the unchanged strict
 code-only gate (0/8). These functional runs are not Mistral vLLM/SGLang baselines
 or performance qualification. See [Mistral onboarding](mistral7b-metal-onboarding.md).
 
+Fresh Mistral comparator profiles have passed six-cell admission and full
+serving prompt-ID audits. Their fixed repeated plan is documented in
+[Mistral baselines](mistral7b-metal-baselines.md); admission observations are
+not repeated baseline medians.
+
 Preserved 27B checkpoint: Frozen vLLM-Metal and SGLang Apple
 reference collections each contain three cohorts, 90 measured waves and 210
 requests. SGLang uses two active requests and queues four-client workloads;
