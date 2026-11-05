@@ -46,6 +46,9 @@ def validate(events, clients, controls, profile, exit_status, expected_requests=
              'indexed_token_projections', 'active_decode_projections',
              'affine_coefficient_dtype=fp16'} <= backend, 'incorrect native backend')
     matrix_attention = profile.get('chunk_attention_mps', False)
+    flash_attention = profile.get('chunk_flash_attention', False)
+    require(type(flash_attention) is bool and flash_attention == ('chunk_flash_attention_fp32_operands' in backend)
+            and (not flash_attention or matrix_attention), 'flash attention policy differs from model/backend')
     active_requests = profile.get('chunk_attention_active_rows', False)
     mistral_reuse = profile.get('mistral_decode_reuse', False)
     kv_scatter = profile.get('chunk_kv_scatter', False)
@@ -191,7 +194,7 @@ def validate(events, clients, controls, profile, exit_status, expected_requests=
         elif kind == 'native_chunk_attention_buckets_prepared':
             require(matrix_attention and e['bucket_count'] == profile['expected_attention_mps_bucket_count'],
                     'changed prepared attention buckets')
-        elif kind in ('native_chunk_attention_mps', 'native_chunk_attention_index32', 'native_chunk_attention_bucket',
+        elif kind in ('native_chunk_flash_attention', 'native_chunk_attention_mps', 'native_chunk_attention_index32', 'native_chunk_attention_bucket',
                       'native_chunk_attention_request_products'):
             require(matrix_attention and pending is not None and pending_fresh and kind not in attention_checks,
                     'unexpected/duplicate attention dispatch event')
@@ -202,15 +205,17 @@ def validate(events, clients, controls, profile, exit_status, expected_requests=
                 require(e['active_tokens'] == active, 'attention stage/count mismatch')
             expected = 32 if stage == 'prefill' else 0
             if kind == 'native_chunk_attention_request_products':
-                products = (0 if tail else expected)*active_owners*8*4
-                skipped = (0 if tail else expected)*(physical_batch-active_owners)*8*4
+                products = (0 if tail or flash_attention else expected)*active_owners*8*4
+                skipped = (0 if tail or flash_attention else expected)*(physical_batch-active_owners)*8*4
                 require(active_requests and e['matrices'] == products and e['skipped_matrices'] == skipped
                         and e['active_request_rows'] == active_owners, 'incorrect physical request matrix ranges')
             elif kind == 'native_chunk_attention_mps':
-                require(e['dispatches'] == (0 if tail else expected)
+                require(e['dispatches'] == (0 if tail or flash_attention else expected)
                         and e['plan_count'] == profile['expected_attention_mps_plan_count']
                         and e['scratch_bytes'] == profile['expected_attention_mps_scratch_bytes'],
                         'incorrect attention matrix route/storage')
+            elif kind == 'native_chunk_flash_attention':
+                require(flash_attention and e['dispatches'] == (0 if tail else expected), 'incorrect fused flash attention route')
             elif kind == 'native_chunk_attention_index32':
                 require(e['dispatches'] == (32 if tail else 0), 'incorrect attention scalar-tail route')
             else:
@@ -231,7 +236,7 @@ def validate(events, clients, controls, profile, exit_status, expected_requests=
             require(stage in ('prefill', 'decode', 'head'), 'unknown affine stage')
             if stage != 'head':
                 require(pending == stage and pending_fresh, 'affine stage mismatch')
-                require(not matrix_attention or len(attention_checks) == 3+int(active_requests), 'missing attention route coverage')
+                require(not matrix_attention or len(attention_checks) == 3+int(active_requests)+int(flash_attention), 'missing attention route coverage')
                 pending = None
             elif pending == 'prefill' and not pending_fresh:
                 pending = None # Restored final hidden state; no prefill body ran.
@@ -304,6 +309,7 @@ def validate(events, clients, controls, profile, exit_status, expected_requests=
             del rows[e['native_row']]
     require(compact_expected is None and not rows and pending is None and reuse64_expected is None and scatter_expected is None and layout_expected is None and all(not c for c in chunks.values()), 'unfinished native work')
     require(counts['native_compact_prefill'] == (fresh_prefill_batches+stage_counts['decode'] if compact_owner else 0), 'missing compact execution route')
+    require(counts['native_chunk_flash_attention'] == (fresh_prefill_batches+stage_counts['decode'] if flash_attention else 0), 'missing fused attention stage event')
     require(counts['native_chunk_layout_vector'] == (fresh_prefill_batches+stage_counts['decode'] if vector_layout else 0),
             'missing vector layout stage event')
     require(counts['native_chunk_kv_scatter'] == (fresh_prefill_batches+stage_counts['decode'] if kv_scatter else 0),
@@ -432,6 +438,8 @@ def main():
         corruptions += ['wrong-vector-layout-policy', 'wrong-vector-layout-count', 'missing-vector-layout-event']
     if profile.get('compact_owner_prefill'):
         corruptions += ['wrong-compact-policy','wrong-compact-inventory','wrong-compact-span','missing-compact-route','wrong-compact-footprint']
+    if profile.get('chunk_flash_attention'):
+        corruptions += ['wrong-flash-policy','wrong-flash-dispatch','missing-flash-route']
     for label in corruptions:
         es, cs, ct = copy.deepcopy(events), copy.deepcopy(clients), copy.deepcopy(controls)
         if label == 'wrong-bound':
@@ -472,6 +480,10 @@ def main():
         elif label == 'wrong-compact-span': next(e for e in es if e['event'] == 'native_compact_prefill' and e['rows'])['first'] += 1
         elif label == 'missing-compact-route': es.remove(next(e for e in es if e['event'] == 'native_compact_prefill'))
         elif label == 'wrong-compact-footprint': next(e for e in es if e['event'] == 'native_affine_profile' and e['stage'] == 'prefill')['physical_rows'] *= 4
+        elif label == 'wrong-flash-policy':
+            ready = next(e for e in es if e['event'] == 'ready');ready['backend'] = ready['backend'].replace('chunk_flash_attention_fp32_operands','chunk_flash_attention_fp32_operands_BAD')
+        elif label == 'wrong-flash-dispatch': next(e for e in es if e['event'] == 'native_chunk_flash_attention' and e['dispatches'])['dispatches'] = 0
+        elif label == 'missing-flash-route': es.remove(next(e for e in es if e['event'] == 'native_chunk_flash_attention'))
         elif label == 'wrong-vector-layout-policy':
             ready = next(e for e in es if e['event'] == 'ready')
             ready['backend'] = ready['backend'].replace('chunk_layout_vector4','chunk_layout_vector4_BAD')

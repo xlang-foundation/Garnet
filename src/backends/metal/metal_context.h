@@ -366,6 +366,7 @@ public:
     size_t LastLayoutVectorDispatches() const;
     size_t LastChunkAttentionOptimizedDispatches() const;
     size_t LastChunkAttentionMPSDispatches() const;
+    size_t LastChunkFlashAttentionDispatches() const;
     size_t LastChunkAttentionMPSMatrices() const;
     size_t LastChunkAttentionMPSSkippedMatrices() const;
     size_t ChunkAttentionMPSPlanCount() const;

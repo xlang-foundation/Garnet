@@ -61,6 +61,10 @@ def main():
     probability_reuse=profile.get('chunk_probability_reuse',False)
     attention_index32=profile.get('chunk_attention_index32',False)
     attention_mps=profile.get('chunk_attention_mps',False)
+    attention_flash=profile.get('chunk_flash_attention',False)
+    if (type(attention_flash) is not bool or attention_flash!=('chunk_flash_attention_fp32_operands' in backend) or
+        (attention_flash and (family!='mistral_7b' or not attention_mps or not attention_index32))):
+        raise ValueError('Frozen profile requires its explicit native FP32 flash attention policy')
     attention_buckets=profile.get('chunk_attention_buckets',False)
     mistral_decode_reuse=profile.get('mistral_decode_reuse',False)
     if (type(mistral_decode_reuse) is not bool or
@@ -324,6 +328,12 @@ def main():
                 count=decoder.session.chunk_attention_mps_dispatches
                 expected=profile['expected_chunk_attention_dispatches'] if len(ids)>batch else 0
                 if attention_buckets and attention_valid<=8:expected=0
+                if attention_flash:
+                    flash_count=decoder.session.chunk_flash_attention_dispatches
+                    emit(dict(event='native_chunk_flash_attention',stage='prefill' if len(ids)>batch else 'decode',
+                        dispatches=flash_count,active_tokens=attention_valid))
+                    if flash_count!=expected:raise ValueError('Native flash attention coverage differs from the profile')
+                    expected=0
                 plans=decoder.session.chunk_attention_mps_plan_count;scratch=decoder.session.chunk_attention_mps_scratch_bytes
                 emit(dict(event='native_chunk_attention_mps',stage='prefill' if len(ids)>batch else 'decode',dispatches=count,
                     plan_count=plans,scratch_bytes=scratch,active_tokens=attention_valid))

@@ -1,5 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 #include "metal_context.h"
+#ifdef GARNET_METAL_CHUNK_FLASH_ATTENTION
+#include "chunk_flash_attention_shader.h"
+#endif
 #ifdef GARNET_METAL_LAYOUT_VECTOR4
 #include "chunk_layout_vector_shader.h"
 #endif
@@ -307,6 +310,9 @@ size_t AffineDecodeColumns(size_t inner,size_t columns,size_t rows) {
 }
 #endif
 struct MetalPipelines {
+#ifdef GARNET_METAL_CHUNK_FLASH_ATTENTION
+    id<MTLComputePipelineState> chunkFlashAttention;
+#endif
 #ifdef GARNET_METAL_AFFINE_PROFILE
     ProfileOwnerTracker profileOwner{profilePipelineOwners};
 #endif
@@ -501,7 +507,7 @@ struct MetalContext::Impl {
     size_t verificationConvCheckpoints=0,verificationDeltaCheckpoints=0;
     size_t verificationKVBackups=0,verificationKVRestores=0;
 #endif
-    size_t chunkAttentionMPSDispatches=0;
+    size_t chunkAttentionMPSDispatches=0,chunkFlashAttentionDispatches=0;
     size_t chunkAttentionMPSMatrices=0,chunkAttentionMPSSkippedMatrices=0;
     size_t chunkKVScatterDispatches=0;
     size_t layoutVectorDispatches=0;
@@ -1712,6 +1718,9 @@ kernel void bf16_native_dot_t128(device const float* a [[buffer(0)]],device cons
 #ifdef GARNET_METAL_CHUNK_ATTENTION_MPS
         source=[source stringByAppendingString:[NSString stringWithUTF8String:kChunkAttentionMPSShader]];
 #endif
+#ifdef GARNET_METAL_CHUNK_FLASH_ATTENTION
+        source=[source stringByAppendingString:[NSString stringWithUTF8String:kChunkFlashAttentionShader]];
+#endif
 #ifdef GARNET_METAL_CHUNK_KV_SCATTER
         source=[source stringByAppendingString:[NSString stringWithUTF8String:kChunkKVScatterShader]];
 #endif
@@ -1743,6 +1752,13 @@ kernel void bf16_native_dot_t128(device const float* a [[buffer(0)]],device cons
         impl_->kernels->chunkMPSSoftmax=mpsChunkPipeline(@"chunk_mps_softmax");
 #endif
         impl_->kernels->chunkMPSUnpack=mpsChunkPipeline(@"chunk_mps_unpack");
+#endif
+#ifdef GARNET_METAL_CHUNK_FLASH_ATTENTION
+        impl_->kernels->chunkFlashAttention=[impl_->device newComputePipelineStateWithFunction:[library newFunctionWithName:@"chunk_flash_attention_f32"] error:&error];
+        if(!impl_->kernels->chunkFlashAttention||impl_->kernels->chunkFlashAttention.threadExecutionWidth!=32||
+           impl_->kernels->chunkFlashAttention.maxTotalThreadsPerThreadgroup<128||
+           impl_->kernels->chunkFlashAttention.staticThreadgroupMemoryLength>impl_->device.maxThreadgroupMemoryLength)
+            throw std::runtime_error("Cannot compile FP32 tiled flash attention profile");
 #endif
 #ifdef GARNET_METAL_ROW_FINAL_HIDDEN
         impl_->kernels->lastActiveHidden=[impl_->device newComputePipelineStateWithFunction:[library newFunctionWithName:@"gather_last_active_hidden"] error:&error];
@@ -3458,7 +3474,7 @@ void MetalContext::Begin() {
     impl_->screenDiagnosticReady=false;
 #endif
     impl_->partialSubmissions=0;
-    impl_->bodyShapeDispatches=impl_->bodyShapeMisses=0;impl_->chunkProbabilityReuseDispatches=impl_->chunkAttentionIndex32Dispatches=impl_->chunkAttentionMPSDispatches=0;
+    impl_->bodyShapeDispatches=impl_->bodyShapeMisses=0;impl_->chunkProbabilityReuseDispatches=impl_->chunkAttentionIndex32Dispatches=impl_->chunkAttentionMPSDispatches=impl_->chunkFlashAttentionDispatches=0;
     impl_->chunkAttentionBucketDispatches=impl_->chunkAttentionTailDispatches=impl_->chunkAttentionBucketCapacity=impl_->chunkAttentionUnknownControls=0;
     impl_->chunkAttentionMPSMatrices=impl_->chunkAttentionMPSSkippedMatrices=0;
     impl_->chunkKVScatterDispatches=0;
@@ -4531,6 +4547,45 @@ void MetalContext::EncodeAttentionChunk(const std::vector<MetalMatrix>& inputs,c
             ++impl_->chunkAttentionBucketDispatches;++impl_->chunkAttentionTailDispatches;
             return;
         }
+#ifdef GARNET_METAL_CHUNK_FLASH_ATTENTION
+        // Only completed controls can establish the contiguous active-prefix
+        // overlay. Unknown, ragged and overwrite inputs retain the old path.
+        struct FlashControls {uint32_t first[4]{},count[4]{};} controls;
+        bool flash=policy.known&&!fullRequestRows&&p.batch<=4&&dim==128&&heads<=32&&kvHeads<=8&&chunk>=8&&chunk%8==0;
+        if(flash) {
+            const auto* positions=reinterpret_cast<const float*>(static_cast<const char*>(s.data.contents)+s.offset);
+            const auto* flags=reinterpret_cast<const float*>(static_cast<const char*>(a.data.contents)+a.offset);
+            for(size_t b=0;b<p.batch;++b) {
+                size_t count=0;while(count<chunk&&flags[b*p.aStride+count]!=0)++count;
+                for(size_t t=count;t<chunk;++t)if(flags[b*p.aStride+t]!=0)flash=false;
+                if(count) {
+                    controls.first[b]=uint32_t(positions[b*p.sStride]);
+                    for(size_t t=0;t<count;++t)if(positions[b*p.sStride+t]!=float(controls.first[b]+t))flash=false;
+                }
+                controls.count[b]=uint32_t(count);
+            }
+        }
+        if(flash) {
+            if(!impl_->chunkMPSLock.owns_lock())impl_->chunkMPSLock=std::unique_lock<std::mutex>(impl_->kernels->chunkMPSMutex);
+            if(!impl_->kernels->chunkMPSPlans.count({size_t(p.batch),heads,kvHeads,dim,capacity,chunk}))
+                throw std::logic_error("Flash attention fallback profile must be prepared before encoding");
+            auto encoder=[impl_->command computeCommandEncoder];
+            if(!encoder)throw std::runtime_error("Cannot encode tiled flash attention");
+            [encoder setComputePipelineState:impl_->kernels->chunkFlashAttention];
+            const size_t binding[]={0,1,2,3,4,7};
+            for(size_t i=0;i<6;++i){auto matrix=inputs[binding[i]].impl_->matrix;[encoder setBuffer:matrix.data offset:matrix.offset atIndex:i];}
+            [encoder setBuffer:o.data offset:o.offset atIndex:6];
+            [encoder setBytes:&p length:sizeof(p) atIndex:7];[encoder setBytes:&controls length:sizeof(controls) atIndex:8];
+            [encoder dispatchThreadgroups:MTLSizeMake(heads,(chunk+31)/32,p.batch) threadsPerThreadgroup:MTLSizeMake(128,1,1)];
+            [encoder endEncoding];
+            output.impl_->ValidateSpanWrite(impl_->pendingOutputs.count(output.impl_->PendingKey()));
+            output.impl_->ready=false;output.impl_->pending=true;
+            if(impl_->pendingOutputs.insert(output.impl_->PendingKey()).second)impl_->outputs.push_back(output.impl_);
+            ++impl_->chunkFlashAttentionDispatches;++impl_->chunkAttentionBucketDispatches;
+            impl_->chunkAttentionBucketCapacity=std::max(impl_->chunkAttentionBucketCapacity,policy.capacity);
+            return;
+        }
+#endif
 #endif
         if(!impl_->chunkMPSLock.owns_lock())impl_->chunkMPSLock=std::unique_lock<std::mutex>(impl_->kernels->chunkMPSMutex);
         auto found=impl_->kernels->chunkMPSPlans.find({size_t(p.batch),heads,kvHeads,dim,capacity,chunk});
@@ -4702,6 +4757,7 @@ size_t MetalContext::LastChunkAttentionIndex32Dispatches() const {return impl_->
 size_t MetalContext::LastChunkKVScatterDispatches() const {return impl_->chunkKVScatterDispatches;}
 size_t MetalContext::LastLayoutVectorDispatches() const {return impl_->layoutVectorDispatches;}
 size_t MetalContext::LastChunkAttentionMPSDispatches() const {return impl_->chunkAttentionMPSDispatches;}
+size_t MetalContext::LastChunkFlashAttentionDispatches() const {return impl_->chunkFlashAttentionDispatches;}
 size_t MetalContext::LastChunkAttentionMPSMatrices() const {return impl_->chunkAttentionMPSMatrices;}
 size_t MetalContext::LastChunkAttentionMPSSkippedMatrices() const {return impl_->chunkAttentionMPSSkippedMatrices;}
 size_t MetalContext::LastChunkAttentionBucketDispatches() const {return impl_->chunkAttentionBucketDispatches;}
@@ -4835,7 +4891,7 @@ void MetalContext::Abort() {
     // for reset/reuse; the uncommitted continuation is discarded.
     for(id<MTLCommandBuffer> prior in impl_->submitted)[prior waitUntilCompleted];
     impl_->submitted=nil;impl_->partialSubmissions=0;
-    impl_->bodyShapeDispatches=impl_->bodyShapeMisses=0;impl_->chunkProbabilityReuseDispatches=impl_->chunkAttentionIndex32Dispatches=impl_->chunkAttentionMPSDispatches=0;
+    impl_->bodyShapeDispatches=impl_->bodyShapeMisses=0;impl_->chunkProbabilityReuseDispatches=impl_->chunkAttentionIndex32Dispatches=impl_->chunkAttentionMPSDispatches=impl_->chunkFlashAttentionDispatches=0;
     impl_->chunkAttentionBucketDispatches=impl_->chunkAttentionTailDispatches=impl_->chunkAttentionBucketCapacity=impl_->chunkAttentionUnknownControls=0;
     impl_->chunkAttentionMPSMatrices=impl_->chunkAttentionMPSSkippedMatrices=0;
     impl_->chunkKVScatterDispatches=0;

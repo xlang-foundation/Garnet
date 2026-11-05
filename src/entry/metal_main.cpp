@@ -230,6 +230,9 @@ public:
 #endif
 #ifdef GARNET_METAL_CHUNK_ATTENTION_MPS
     info+="; chunk_attention_mps";
+#ifdef GARNET_METAL_CHUNK_FLASH_ATTENTION
+    info+="; chunk_flash_attention_fp32_operands";
+#endif
 #endif
 #ifdef GARNET_METAL_CHUNK_ATTENTION_BUCKETS
     info+="; chunk_attention_buckets";

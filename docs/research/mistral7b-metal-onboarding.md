@@ -1463,3 +1463,130 @@ superiority or the2x end-to-end target. The new driver and auditor are
 `audit_mistral_compact_prefill_stage.py`. Raw failed and passing trials,
 immutable sources, route traces, hashes and comparison reports are retained
 under the local Mistral evidence root.
+
+### Experimental fused FP32 attention
+
+`GARNET_METAL_CHUNK_FLASH_ATTENTION` now supplies an optional fused tiled
+online-softmax implementation for the Metal path. It defaults off. The pinned
+vLLM-Metal tiled kernel informed register query/output tiling, online softmax
+and the8x8 fragment lane mapping. This is a FP32 SIMD-group implementation,
+not vLLM's M5 NAX implementation. No FP16 conversion is introduced in attention.
+The backend tag is `chunk_flash_attention_fp32_operands` and the native session
+exposes `chunk_flash_attention_dispatches`. A serving profile must explicitly
+declare `"chunk_flash_attention": true` to use the compiled extension.
+
+The32-query/16-key/D128 tile keeps queries, running output, maxima and
+denominators in registers. It reuses the initial shared query storage for
+key/value tiles, using16,896 bytes of threadgroup storage. It reads existing
+private KV before the chunk's first slot and the appropriate live-token values
+after that boundary. Per-query causal masking excludes future live values.
+Inactive physical owners and padded queries write zero. Cache/view bindings
+honor descriptor offsets and retain existing native readiness/abort rules.
+
+Only completed host controls proving a contiguous active prefix per owner
+select the new path. Its native envelope is up to4 owners, D128, heads<=32,
+KV heads<=8, chunk8..512 in multiples of8, and the existing global token-row,
+context and index32 bounds. Tiny tails, gaps, overwrites, other dimensions and
+GPU-pending controls retain MPS/scalar execution. The current compact serving
+family still stops at chunk128. Shader pipelines are created during context
+construction, and the registered fallback profile must exist before encoding.
+There are no per-dispatch GPU allocations. MPS fallback score buffers remain
+allocated: the existing21-plan/1,044,162,560-byte scratch inventory is retained.
+This experiment removes their traffic on eligible calls, not their reservation.
+
+FP32 reduction order changes, so bit identity against the old MPS policy is
+not claimed. The existing independent finite-input FP64 bound remains
+`1e-5 + 2e-4*abs(expected)`. Source2 passes all25 native tests. Source3 changes
+only the native test, adding unprepared-profile, output-alias, uninitialized
+query, pending-read and abort/recovery coverage. Its final15 operator cases
+check228,376 FP64 samples and preserve read-only KV; full-profile tests also
+check every output word finite and every inactive word zero. The largest
+observed error uses0.027 of the fixed bound. The off build passes all24 original
+tests. Invalid dependency combinations are rejected by configuration guards.
+
+The selected source2 library SHA256 is
+`19bd5f3346bb3e32b5d3a6e004da1bfa0fdc6a11b84d478947cdb7db55ec3d38`.
+The expanded source3 test uses byte-identical runtime C++/shader sources. The
+initial build lacked the native test's third-party include directory; the
+corrected target builds without changing numerical policy.
+
+The actual small greedy control remains exact, and12 compact-owner cases
+compare complete physical KV, hidden output and predictions against a B4
+control using the same new policy. Seven tracked-prefix cases preserve the
+returned/appended/changed continuation checks,528 survivor tokens and a302-token
+nonzero-owner restore. Full state and predictions remain exact within that
+policy. These checks do not assert equality to old MPS floating-point state.
+
+The unchanged HTTP workload completes22 requests/4,844 tokens and passes39
+corruption rejections. All22 complete generated ID sequences, including the
+performance requests, exactly match the previous pinned compact128 native run.
+The66 non-tail prefill forwards dispatch2,112 fused layer calls; four tails
+retain128 scalar calls, and all3,808 ordinary decode forwards have zero fused
+attention calls. Strict coding remains0/8 by full output identity; this is not
+a new quality score or high-quality-coder admission. No ANE work is involved.
+
+The isolated synthetic operator alternates variants with three warmups and
+nine measurements per variant. Examples of median GPU durations follow:
+
+| Owners / cached prefix | MPS ms | Fused FP32 ms | Operator ratio |
+|---|---:|---:|---:|
+|1 /0 |0.567 |0.137 |4.139 |
+|1 /1920 |2.211 |1.948 |1.135 |
+|1 /3968 |4.924 |3.954 |1.245 |
+|4 /0 |1.972 |0.470 |4.194 |
+|4 /1920 |8.837 |6.885 |1.283 |
+|4 /3968 |19.973 |14.384 |1.389 |
+
+These operator gains do not establish a whole-model improvement. The separate
+paired body study runs eight sequential processes in opposite variant orders,
+with the same compact128 families/weights/inputs,15 real seed chunks and
+three warmup/nine measured replays of the chunk at offset1920. Across all72
+measured forwards, allocations/owners remain fixed; all processes close cleanly.
+Complete state hashes are deterministic across cohorts within each policy,
+but differ between MPS and fused policies. Post-prefill token predictions match.
+
+| Active owners | Cohort | MPS body wall s | Fused body wall s | Body ratio |
+|---|---:|---:|---:|---:|
+|1 |0 |0.617 |0.610 |1.011 |
+|1 |1 |0.576 |0.568 |1.015 |
+|4 |0 |2.326 |2.394 |0.972 |
+|4 |1 |2.388 |2.611 |0.915 |
+
+This is repeated identical chunk work, excluding embedding, head, hashes,
+HTTP and scheduling. The one-owner benefit is about1%; four-owner body work
+regresses. The result does not justify enabling this implementation by default.
+Actual model execution includes projection/layout/cache traffic and interactions
+not represented by an isolated attention microbenchmark. Their individual
+contributions to this regression have not been causally isolated.
+
+| Nominal input / concurrency | Previous compact Garnet tok/s | Fused FP32 Garnet tok/s | Frozen vLLM-Metal tok/s | Frozen SGLang-MLX tok/s | 2x target |
+|---|---:|---:|---:|---:|---:|
+|256 /1 |19.390 |17.579 |22.021 |22.042 |44.084 |
+|256 /2 |33.133 |30.057 |31.464 |32.127 |64.254 |
+|256 /4 |47.698 |41.843 |45.235 |42.194 |90.470 |
+|2048 /1 |7.729 |6.969 |12.345 |12.518 |25.036 |
+|2048 /2 |9.725 |8.864 |16.536 |14.482 |33.071 |
+|2048 /4 |10.288 |9.780 |21.179 |16.337 |42.358 |
+
+The fused HTTP observation is slower in every cell. C1 TTFT is1.212s /8.275s;
+decode is20.969 /12.603 tok/s. These are separate one-cohort/no-warmup/one-wave
+observations under different system conditions; unchanged ordinary decode also
+slows, so the entire difference cannot be assigned to attention from these
+data alone. Reference columns remain frozen15-wave medians. All2x and half-TTFT
+targets remain unmet. The selected extension stays experimental/default-off.
+
+Evidence roots are `mistral-flash-attention-draft1`, immutable source2/3 and
+library2, `mistral-flash-attention-admission2`,
+`mistral-flash-attention-native-http-admission2`,
+`mistral-flash-attention-native-parity3`, `mistral-flash-attention-prefix3` and
+`mistral-flash-attention-paired-stage1`. Their independent auditors bind raw
+results, native source/library identities, full output sequences and process
+ordering. Comparator binaries/results were not rerun or replaced.
+
+Remaining work includes prepared B1/T512 and B2/T256 selection under the same
+four-owner/global512 upper bound, projection/layout traffic and M5-specific
+attention execution. A wider compact input must not require a padded B4/T512
+GPU graph, which would exceed that global bound. Native scheduling must select
+an admitted family from current owner spans and remaining token budget, while
+retaining the existing narrow fallback for gapped or mixed work. No speed gain
+or correctness admission for those future profiles is established here.

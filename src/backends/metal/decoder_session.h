@@ -304,6 +304,7 @@ public:
     size_t LastChunkKVScatterDispatches() {std::lock_guard<std::mutex> lock(mutex_);return gpu_?gpu_->LastChunkKVScatterDispatches():0;}
     size_t LastLayoutVectorDispatches() {std::lock_guard<std::mutex> lock(mutex_);return gpu_?gpu_->LastLayoutVectorDispatches():0;}
     size_t LastChunkAttentionMPSDispatches() {std::lock_guard<std::mutex> lock(mutex_);return gpu_?gpu_->LastChunkAttentionMPSDispatches():0;}
+    size_t LastChunkFlashAttentionDispatches() {std::lock_guard<std::mutex> lock(mutex_);return gpu_?gpu_->LastChunkFlashAttentionDispatches():0;}
     size_t LastChunkAttentionMPSMatrices() {std::lock_guard<std::mutex> lock(mutex_);return gpu_?gpu_->LastChunkAttentionMPSMatrices():0;}
     size_t LastChunkAttentionMPSSkippedMatrices() {std::lock_guard<std::mutex> lock(mutex_);return gpu_?gpu_->LastChunkAttentionMPSSkippedMatrices():0;}
     size_t ChunkAttentionMPSPlanCount() {std::lock_guard<std::mutex> lock(mutex_);return gpu_?gpu_->ChunkAttentionMPSPlanCount():0;}
@@ -437,6 +438,7 @@ public:
         APISET().AddProp("chunk_kv_scatter_dispatches",&MetalDecoderSession::LastChunkKVScatterDispatches);
         APISET().AddProp("layout_vector_dispatches",&MetalDecoderSession::LastLayoutVectorDispatches);
         APISET().AddProp("chunk_attention_mps_dispatches",&MetalDecoderSession::LastChunkAttentionMPSDispatches);
+        APISET().AddProp("chunk_flash_attention_dispatches",&MetalDecoderSession::LastChunkFlashAttentionDispatches);
         APISET().AddProp("chunk_attention_mps_matrices",&MetalDecoderSession::LastChunkAttentionMPSMatrices);
         APISET().AddProp("chunk_attention_mps_skipped_matrices",&MetalDecoderSession::LastChunkAttentionMPSSkippedMatrices);
         APISET().AddProp("chunk_attention_mps_plan_count",&MetalDecoderSession::ChunkAttentionMPSPlanCount);

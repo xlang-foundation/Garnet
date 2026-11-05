@@ -121,7 +121,8 @@ or deferred reset, MTP and speculative target workspaces in the same session.
 The qualified family has 14 shapes (B1/B2, chunks2..128), 21 MPS attention plans,
 1,044,162,560 scratch bytes and 126 context buckets. Families, cache views,
 physical hidden routing and scratch are prepared before readiness. This does
-not yet select B1/T512 or B2/T256, pack gapped owners, or fuse attention.
+not yet select B1/T512 or B2/T256 or pack gapped owners. Fused attention requires
+the separate experimental extension below.
 
 Actual model checks preserve complete cache/hidden/prediction identity, prefix
 restore and running survivors. Two opposite-order same-session late-chunk
@@ -129,3 +130,21 @@ studies show 1.18–1.30x body ratios for one owner and 1.11–1.16x for two. Th
 are repeated identical chunk measurements, excluding embedding, head and HTTP.
 The separate single-wave HTTP result remains below the long-context references;
 all 2x/half-TTFT targets are unmet. See the research document for the full table.
+
+`GARNET_METAL_CHUNK_FLASH_ATTENTION=ON` experimentally fuses chunk attention
+using FP32 SIMD-group matrix tiles and online softmax. It defaults off and
+requires the prepared MPS/index32/context-bucket paths for fallbacks. Completed
+contiguous active-prefix controls, head dimension128, up to4 owners and bounded
+chunks8..512 select the kernel; other inputs retain MPS or scalar execution.
+The current compact serving family still stops at chunk128. The backend reports
+`chunk_flash_attention_fp32_operands`, and serving profiles must explicitly set
+`"chunk_flash_attention": true`. Native counters report actual fused dispatches.
+
+FP32 inputs are retained, but reduction order changes. Full KV/hidden hashes
+therefore differ from the original MPS policy. Independent FP64 checks, unchanged
+complete output sequences for22 requests and same-policy cache/prefix parity
+pass. Operator gains do not translate into a qualified serving win: paired
+late-chunk body work improves about1% for one owner and regresses3–9% for four.
+The separate HTTP observation is slower in every cell. This implementation is
+an experimental comparison path, not an enabled performance improvement. See
+the research document for exact scope, evidence and remaining targets.
