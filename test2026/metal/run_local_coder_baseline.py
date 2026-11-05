@@ -52,13 +52,14 @@ def engine_processes():
                    'local_coder_batch_http.py' in arguments or
                    'local_coder_batch_worker.py' in arguments or
                    'local_coder_mtp_worker.py' in arguments or
+                   '/coreml/test_runtime_api.py' in arguments or
                    any(name in arguments for name in ('run_mistral_greedy.py',
                        'run_mistral_suite.py', 'run_mistral_teacher.py', 'run_mistral_embedding.py',
                        'run_mistral_profile.py', 'run_mistral_stage_probe.py',
                        'run_mistral_prefill_op_probe.py', 'run_mistral_prefix_probe.py')) or
                    (executable == 'xlang3' and any(model in arguments for model in
                        ('Qwen3.8-27B', 'Mistral-7B')))))
-        if reference or native or executable in ('garnet_affine_int4_benchmark','garnet_affine_fp16_projection_benchmark','garnet_chunk_probability_benchmark','garnet_chunk_attention_mps_plan_test') or command.endswith('/bin/Cantor'):
+        if reference or native or executable in ('garnet_affine_int4_benchmark','garnet_affine_fp16_projection_benchmark','garnet_chunk_probability_benchmark','garnet_chunk_attention_mps_plan_test','garnet_coreml_state_runtime_test') or command.endswith('/bin/Cantor'):
             result.append(line.strip())
     return result
 

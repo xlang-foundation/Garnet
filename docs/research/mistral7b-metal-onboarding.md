@@ -685,3 +685,14 @@ descriptive values do not establish a causal or uniform serving gain. Arithmetic
 differs and paging/compression remains. Single-request performance did not
 improve; all2x/half-TTFT targets remain unmet. Core ML/ANE is still unimplemented;
 none of this evidence uses ANE execution.
+
+## Core ML plugin bring-up after the Metal checkpoint
+
+The optional native plugin now has a functional state/API prototype described in
+[coreml-ane-plugin.md](coreml-ane-plugin.md). It loads precompiled ML Programs,
+owns persistent state, supports native typed/FP32 transport and checks anticipated
+device plans. The19-test native build and3,079-check API fixture pass. This tiny
+fixture prefers CPU even under CPU+ANE policy; it is not evidence of ANE
+acceleration. Mistral conversion, actual ANE placement, compiled profile families
+and continuous-batch/prefix integration for this backend remain pending. The
+Metal benchmark table above is unchanged by this plugin work.

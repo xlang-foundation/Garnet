@@ -8,6 +8,9 @@
 #endif
 #include "model_tensor_io.h"
 #include "tokenizer_api.h"
+#ifdef GARNET_APPLE_COREML
+#include "../backends/coreml/coreml_api.h"
+#endif
 #include "../image/native_image.h"
 #include "nlohmann/json.hpp"
 #include <filesystem>
@@ -376,12 +379,18 @@ public:
 #ifdef GARNET_METAL_JOINED_GLOBAL_MLP
         info+="; joined_global_mlp";
 #endif
+#ifdef GARNET_APPLE_COREML
+        info+="; coreml_stateful_optional";
+#endif
         return info;
     }
     // Graphs own synchronous queues and release them through close(). There
     // is no package-global executor to drain, unlike asynchronous backends.
     bool Shutdown() const {return true;}
     BEGIN_PACKAGE(GarnetMetalAPI)
+#ifdef GARNET_APPLE_COREML
+        APISET().AddClass<0,CoreMLAPI>("coreml_session");
+#endif
         APISET().AddClass<0,GarnetTensor>("tensor");
         APISET().AddClass<0,MetalCompiledGraph>("compiled_graph");
         APISET().AddClass<0,MetalDecoderSession>("decoder_session");

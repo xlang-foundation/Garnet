@@ -15,11 +15,12 @@ class EngineGuardTest(unittest.TestCase):
 107 /build/xlang3 /build/xlang3 local_coder_batch_worker.py /profile.json
 108 /build/garnet_affine_int4_benchmark /build/garnet_affine_int4_benchmark 9 3
 109 /build/garnet_affine_fp16_projection_benchmark /build/garnet_affine_fp16_projection_benchmark 9 3 128 dense /words
+110 /build/garnet_coreml_state_runtime_test /build/garnet_coreml_state_runtime_test /state_fixture.mlmodelc
 '''
         commands = '\n'.join(' '.join(line.split()[:2]) for line in processes.splitlines() if line.strip())
         arguments = '\n'.join(line.split(None, 2)[0]+' '+line.split(None, 2)[2] for line in processes.splitlines() if line.strip())
         with patch('run_local_coder_baseline.subprocess.check_output', side_effect=[commands, arguments]):
-            self.assertEqual(len(engine_processes()), 9)
+            self.assertEqual(len(engine_processes()), 10)
 
     def test_unrelated_runtime_and_shell_diagnostics_are_ignored(self):
         processes = '''
@@ -44,11 +45,12 @@ class EngineGuardTest(unittest.TestCase):
 307 /build/xlang3 /build/xlang3 -B /evidence/run_mistral_stage_probe.py /lib /src /fixture.json
 308 /build/xlang3 /build/xlang3 -B /evidence/run_mistral_prefill_op_probe.py /lib /src /fixture.json
 309 /build/xlang3 /build/xlang3 -B /evidence/run_mistral_prefix_probe.py /lib /src /fixture.json
+310 /build/xlang3 /build/xlang3 -B /repo/test2026/coreml/test_runtime_api.py /lib /src /fixture.mlmodelc
 '''
         commands = '\n'.join(' '.join(line.split()[:2]) for line in processes.splitlines() if line.strip())
         arguments = '\n'.join(line.split(None, 2)[0]+' '+line.split(None, 2)[2] for line in processes.splitlines() if line.strip())
         with patch('run_local_coder_baseline.subprocess.check_output', side_effect=[commands, arguments]):
-            self.assertEqual(len(engine_processes()), 9)
+            self.assertEqual(len(engine_processes()), 10)
 
 
 if __name__ == '__main__':
