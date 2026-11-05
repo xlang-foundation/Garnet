@@ -133,6 +133,14 @@ class MetalContext {
         const MetalMatrix& backup,size_t heads,size_t dim,size_t capacity,size_t chunk) const;
 #endif
     std::vector<uint32_t> PrimaryReadWordsInternal(const MetalBF16Weight&,size_t start,size_t count,bool vector);
+#ifdef GARNET_METAL_PREPARED_KV_ROW_SPANS
+    friend class MetalDecoderSession;
+    friend struct MetalPreparedKVRowsTestAccess;
+    // Native preparation only. No XLang view API: scheduler/session integration
+    // must retain physical ownership/epoch validation around these cache views.
+    MetalMatrix PrepareKVRowSpan(const MetalMatrix&,size_t first,size_t rows,
+        size_t heads,size_t dim,size_t capacity) const;
+#endif
 public:
     static MetalPrimaryStats PrimaryStats();
     std::vector<uint32_t> PrimaryReadWords(const MetalBF16Weight&,size_t start,size_t count);

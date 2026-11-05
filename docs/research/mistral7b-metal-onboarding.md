@@ -1275,3 +1275,79 @@ replay conditions. It does not remove the single-wave HTTP B4 regression or
 establish the broader performance targets. `run_mistral_layout_chunk_probe.py`
 and `audit_mistral_layout_chunk.py` retain the reproduction and structural
 checks; the raw collection preserves its frozen driver and hashes.
+
+### Private cache row-span foundation
+
+`GARNET_METAL_PREPARED_KV_ROW_SPANS` is an optional native preparation primitive,
+off by default. It requires resident and chunk in-place cache updates. A private
+session-facing helper prepares contiguous spans of an initialized cache's
+physical rows using MPS descriptors over the same buffer. It retains the backing
+owner, checks geometry/device/storage bounds, and creates no GPU buffer. It is
+not exposed as an XLang view API and does not yet activate smaller-owner
+prefill graphs or scheduler decisions.
+
+Views share the backing owner's readiness and pending-command identity. A write
+through one view makes the parent and sibling views unreadable until completion.
+The same command may consume its pending aliases; another context must wait.
+Aborting invalidates the complete backing owner and every view. Partial host
+updates, zeros or GPU writes cannot recover an aborted owner; complete backing
+storage must be restored. Nested views retain the original owner and their
+correct relative byte offset. Deferred clears of individual views are rejected.
+Custom matrix bindings and host update/read/zero/prefix operations now account
+for descriptor offsets, and in-place single-slot KV aliasing requires identical
+offsets as well as compatible dimensions/strides.
+
+`mistral-owner-spans-source4` passes 24 native tests with the option on, 23 off,
+and 24 with both the option and cached matrix metadata on. The row-span test has
+61 cases: 41 complete-cache CPU comparisons across every contiguous subset,
+scalar/vector and gap/overwrite paths, and 20 MPS attention cases. Attention is
+bit-identical to independently allocated compact cache copies, with 480 sampled
+FP64 oracle values. The tests cover the final physical owner, a full
+8-KV-head/D128/context4096/chunk128 cache, unchanged rows, host offsets, nested
+lifetimes, shared pending state, abort/recovery, and invalid preparation.
+Native owners close to zero. A separate positive control confirms completed
+cross-context reads/writes succeed and pending input/output rejection follows
+the intended readiness checks, rather than an unrelated device/layout error.
+
+The selected native library SHA256 is
+`c310501db049737638a5d72e14c95a23678a57a739f6d443b4d540575a543017`.
+`mistral-owner-spans-verification4` preserves all 24 complete KV/accepted-hidden
+cases. `mistral-owner-spans-native-http-regression4` completes the unchanged
+22-request /4,844-token serving workload with exact frozen native coding IDs on
+all eight tasks, 31 corruption rejections and zero retained native owners.
+Cleanup allocation is 1,769,472 bytes. This remains the existing B4/T128 engine;
+the new private views are exercised by native tests, not by compact-owner
+serving. No speed gain follows from this regression admission.
+
+| Nominal input / concurrency | Prior vector-layout tok/s | Row-readiness regression tok/s | Frozen vLLM-Metal tok/s | Frozen SGLang-MLX tok/s |
+|---|---:|---:|---:|---:|
+|256 /1 |18.093 |17.192 |22.021 |22.042 |
+|256 /2 |30.696 |28.390 |31.464 |32.127 |
+|256 /4 |43.746 |39.907 |45.235 |42.194 |
+|2048 /1 |6.462 |6.101 |12.345 |12.518 |
+|2048 /2 |8.515 |8.227 |16.536 |14.482 |
+|2048 /4 |10.469 |10.131 |21.179 |16.337 |
+
+Both native observations are separate single-wave runs under different system
+conditions. This regression run is slower in every cell; it does not isolate
+the effect of readiness bookkeeping. C1 short/long TTFT is 1.554s /11.384s and
+decode is 21.603 /13.257 tok/s. Strict coding quality remains unchanged at0/8.
+All throughput/decode/TTFT targets remain unmet and comparator processes were
+not rerun. The new option stays off by default.
+
+The final `mistral-owner-spans-source5` differs only by a CMake dependency guard.
+Both missing-prerequisite configurations are rejected; the valid profile's
+native compile flags match the tested source4 profile after source-include-path
+normalization. Runtime C++/headers/tests are byte-identical. The first guard-log
+checker mishandled CMake's wrapped whitespace; the corrected checker and its
+rejections are retained. An initial cross-context diagnostic expected the input
+error before the existing output-pending guard; the corrected positive control
+requires both specific errors and successful completed transfers.
+
+Remaining integration must prepare shared-weight B1/B2 graph families and every
+permitted cache span before readiness, select them under native owner-epoch
+validation, and route final hidden values/predictions to physical rows. First
+prove exact owner compaction at the existing chunk size, then qualify wider
+chunks separately. Gapped owners, stale leases, release/reclaim, prefix reuse,
+running decode peers and allocation bounds still require full runtime tests.
+No xMind compact-owner serving or new ANE/model offload is claimed here.

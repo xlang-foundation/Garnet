@@ -137,8 +137,28 @@ struct MetalMatrix::Impl {
     size_t rows=0,columns=0,rowBytes=0,offset=0;
     uint64_t allocatedBytes=0,lengthBytes=0;
 #endif
+#ifdef GARNET_METAL_PREPARED_KV_ROW_SPANS
+    std::shared_ptr<Impl> spanOwner;
+    bool ownedReady=false,ownedPending=false;
+    bool& ready;
+    bool& pending;
+    Impl():ready(ownedReady),pending(ownedPending) {}
+    explicit Impl(const std::shared_ptr<Impl>& owner):spanOwner(owner->spanOwner?owner->spanOwner:owner),
+        ready(spanOwner->ready),pending(spanOwner->pending) {}
+    const Impl* PendingKey() const {return spanOwner?spanOwner.get():this;}
+#else
     bool ready=false;
     bool pending=false;
+    const Impl* PendingKey() const {return this;}
+#endif
+    void ValidateSpanWrite(bool ownPending) const {
+#ifdef GARNET_METAL_PREPARED_KV_ROW_SPANS
+        if(spanOwner&&!ready&&!(pending&&ownPending))
+            throw std::logic_error("Restore the complete backing cache before writing a row span");
+#else
+        (void)ownPending;
+#endif
+    }
 };
 bool MetalMatrix::SharesStorage(const MetalMatrix& other) const {
 #ifdef GARNET_METAL_CACHED_MATRIX_METADATA
@@ -2278,9 +2298,9 @@ void MetalContext::EncodeAffineInt4MatMul(const MetalMatrix& input,const MetalAf
            w->scales.device!=impl_->device||w->biases.device!=impl_->device||
            !a.rows||a.rows>512||a.columns!=w->columns||o.rows!=a.rows||o.columns!=w->rows||a.data==o.data)
             throw std::invalid_argument("Affine INT4 projection shape/device mismatch");
-        if(!input.impl_->ready&&!(input.impl_->pending&&impl_->pendingOutputs.count(input.impl_.get())))
+        if(!input.impl_->ready&&!(input.impl_->pending&&impl_->pendingOutputs.count(input.impl_->PendingKey())))
             throw std::logic_error("Uninitialized affine INT4 input");
-        if(output.impl_->pending&&!impl_->pendingOutputs.count(output.impl_.get()))
+        if(output.impl_->pending&&!impl_->pendingOutputs.count(output.impl_->PendingKey()))
             throw std::logic_error("Affine INT4 output belongs to another command");
         struct Params {uint64_t rows,inner,columns,aStride,oStride;};
         Params params{a.rows,a.columns,o.columns,a.rowBytes/4,o.rowBytes/4};
@@ -2316,8 +2336,8 @@ void MetalContext::EncodeAffineInt4MatMul(const MetalMatrix& input,const MetalAf
         const size_t decodeOutputs=4*decodeColumns;
         const auto groups=a.rows<=4?MTLSizeMake((o.columns+decodeOutputs-1)/decodeOutputs,1,1):MTLSizeMake((o.columns+31)/32,(a.rows+tileRows-1)/tileRows,1);
         [encoder dispatchThreadgroups:groups threadsPerThreadgroup:MTLSizeMake(128,1,1)];[encoder endEncoding];
-        output.impl_->ready=false;output.impl_->pending=true;
-        if(impl_->pendingOutputs.insert(output.impl_.get()).second)impl_->outputs.push_back(output.impl_);
+        output.impl_->ValidateSpanWrite(impl_->pendingOutputs.count(output.impl_->PendingKey()));output.impl_->ready=false;output.impl_->pending=true;
+        if(impl_->pendingOutputs.insert(output.impl_->PendingKey()).second)impl_->outputs.push_back(output.impl_);
     }
 }
 #ifdef GARNET_METAL_INDEXED_DECODE
@@ -2337,9 +2357,9 @@ void MetalContext::EncodeAffineInt4IndexedDecode(const MetalMatrix& input,const 
            !a.rows||a.rows>4||a.columns!=w->columns||o.rows!=a.rows||o.columns!=w->rows||
            a.data==o.data||selectedRows.size()>a.rows||a.rowBytes%4||o.rowBytes%4)
             throw std::invalid_argument("Indexed FP32 decode shape/device mismatch");
-        if(!input.impl_->ready&&!(input.impl_->pending&&impl_->pendingOutputs.count(input.impl_.get())))
+        if(!input.impl_->ready&&!(input.impl_->pending&&impl_->pendingOutputs.count(input.impl_->PendingKey())))
             throw std::logic_error("Uninitialized indexed FP32 decode input");
-        if(output.impl_->pending&&!impl_->pendingOutputs.count(output.impl_.get()))
+        if(output.impl_->pending&&!impl_->pendingOutputs.count(output.impl_->PendingKey()))
             throw std::logic_error("Indexed FP32 decode output belongs to another command");
         std::vector<uint32_t> indices;indices.reserve(selectedRows.size());std::array<bool,4> unique{};
         for(auto row:selectedRows) {
@@ -2378,8 +2398,8 @@ void MetalContext::EncodeAffineInt4IndexedDecode(const MetalMatrix& input,const 
             [encoder dispatchThreadgroups:MTLSizeMake((o.columns+decodeOutputs-1)/decodeOutputs,1,1) threadsPerThreadgroup:MTLSizeMake(128,1,1)];
             [encoder endEncoding];++impl_->indexedDecodeAffineDispatches;
         }
-        output.impl_->ready=false;output.impl_->pending=true;
-        if(impl_->pendingOutputs.insert(output.impl_.get()).second)impl_->outputs.push_back(output.impl_);
+        output.impl_->ValidateSpanWrite(impl_->pendingOutputs.count(output.impl_->PendingKey()));output.impl_->ready=false;output.impl_->pending=true;
+        if(impl_->pendingOutputs.insert(output.impl_->PendingKey()).second)impl_->outputs.push_back(output.impl_);
     }
 }
 #endif
@@ -2405,9 +2425,9 @@ void MetalContext::EncodeAffineInt4IndexedImpl(const MetalMatrix& input,const Me
            !a.rows||a.rows>512||a.columns!=w->columns||o.rows!=a.rows||o.columns!=w->rows||a.data==o.data||
            selectedRows.size()>a.rows||a.rowBytes%4||o.rowBytes%4)
             throw std::invalid_argument("Indexed affine shape/device mismatch");
-        if(!input.impl_->ready&&!(input.impl_->pending&&impl_->pendingOutputs.count(input.impl_.get())))
+        if(!input.impl_->ready&&!(input.impl_->pending&&impl_->pendingOutputs.count(input.impl_->PendingKey())))
             throw std::logic_error("Uninitialized indexed affine input");
-        if(output.impl_->pending&&!impl_->pendingOutputs.count(output.impl_.get()))
+        if(output.impl_->pending&&!impl_->pendingOutputs.count(output.impl_->PendingKey()))
             throw std::logic_error("Indexed affine output belongs to another command");
         std::vector<uint32_t> indices;indices.reserve(selectedRows.size());
         std::array<bool,512> unique{};
@@ -2459,8 +2479,8 @@ void MetalContext::EncodeAffineInt4IndexedImpl(const MetalMatrix& input,const Me
 #endif
             ++impl_->mppAffineDispatches;
         }
-        output.impl_->ready=false;output.impl_->pending=true;
-        if(impl_->pendingOutputs.insert(output.impl_.get()).second)impl_->outputs.push_back(output.impl_);
+        output.impl_->ValidateSpanWrite(impl_->pendingOutputs.count(output.impl_->PendingKey()));output.impl_->ready=false;output.impl_->pending=true;
+        if(impl_->pendingOutputs.insert(output.impl_->PendingKey()).second)impl_->outputs.push_back(output.impl_);
     }
 }
 #endif
@@ -2618,9 +2638,9 @@ void MetalContext::EncodeArgmax(const MetalMatrix& input,const MetalMatrix& outp
         auto a=input.impl_->matrix,o=output.impl_->matrix;
         if(a.device!=impl_->device||o.device!=impl_->device||o.rows!=a.rows||o.columns!=2||a.columns>16777216||a.data==o.data)
             throw std::invalid_argument("GPU argmax shape/device mismatch");
-        if(!input.impl_->ready&&!(input.impl_->pending&&impl_->pendingOutputs.count(input.impl_.get())!=0))
+        if(!input.impl_->ready&&!(input.impl_->pending&&impl_->pendingOutputs.count(input.impl_->PendingKey())!=0))
             throw std::logic_error("Uninitialized GPU argmax input");
-        if(output.impl_->pending&&impl_->pendingOutputs.count(output.impl_.get())==0)
+        if(output.impl_->pending&&impl_->pendingOutputs.count(output.impl_->PendingKey())==0)
             throw std::logic_error("GPU argmax output belongs to another command batch");
         auto pipeline=impl_->kernels->argmax;
         if(pipeline.threadExecutionWidth!=32||pipeline.maxTotalThreadsPerThreadgroup<128)
@@ -2628,10 +2648,10 @@ void MetalContext::EncodeArgmax(const MetalMatrix& input,const MetalMatrix& outp
         struct Params{uint64_t rows,columns,iStride,oStride;};Params p{a.rows,a.columns,a.rowBytes/4,o.rowBytes/4};
         auto encoder=[impl_->command computeCommandEncoder];
         if(!encoder)throw std::runtime_error("Cannot create GPU argmax encoder");
-        [encoder setComputePipelineState:pipeline];[encoder setBuffer:a.data offset:0 atIndex:0];[encoder setBuffer:o.data offset:0 atIndex:1];
+        [encoder setComputePipelineState:pipeline];[encoder setBuffer:a.data offset:a.offset atIndex:0];[encoder setBuffer:o.data offset:o.offset atIndex:1];
         [encoder setBytes:&p length:sizeof(p) atIndex:2];
         [encoder dispatchThreadgroups:MTLSizeMake(a.rows,1,1) threadsPerThreadgroup:MTLSizeMake(128,1,1)];
-        [encoder endEncoding];output.impl_->ready=false;output.impl_->pending=true;if(impl_->pendingOutputs.insert(output.impl_.get()).second)impl_->outputs.push_back(output.impl_);
+        [encoder endEncoding];output.impl_->ValidateSpanWrite(impl_->pendingOutputs.count(output.impl_->PendingKey()));output.impl_->ready=false;output.impl_->pending=true;if(impl_->pendingOutputs.insert(output.impl_->PendingKey()).second)impl_->outputs.push_back(output.impl_);
     }
 }
 #include "screened_head_native_impl.h"
@@ -2654,9 +2674,9 @@ bool MetalContext::EncodeBF16Argmax(const MetalMatrix& input,const MetalBF16Weig
         if(a.device!=impl_->device||o.device!=impl_->device||w->buffer.device!=impl_->device||
             a.columns!=w->columns||o.rows!=a.rows||o.columns!=2||a.data==o.data||w->buffer==o.data)
             throw std::invalid_argument("Fused greedy head shape/device mismatch");
-        if(!input.impl_->ready&&!(input.impl_->pending&&impl_->pendingOutputs.count(input.impl_.get())))
+        if(!input.impl_->ready&&!(input.impl_->pending&&impl_->pendingOutputs.count(input.impl_->PendingKey())))
             throw std::logic_error("Uninitialized fused greedy head input");
-        if(output.impl_->pending&&!impl_->pendingOutputs.count(output.impl_.get()))
+        if(output.impl_->pending&&!impl_->pendingOutputs.count(output.impl_->PendingKey()))
             throw std::logic_error("Fused prediction belongs to another command batch");
         if(debugLogits) {
             if(!debugLogits->impl_)throw std::invalid_argument("Empty fused debug logits");
@@ -2664,7 +2684,7 @@ bool MetalContext::EncodeBF16Argmax(const MetalMatrix& input,const MetalBF16Weig
             if(debug.device!=impl_->device||debug.rows!=a.rows||debug.columns!=w->rows||
                 debug.data==a.data||debug.data==o.data||debug.data==w->buffer)
                 throw std::invalid_argument("Fused debug logits shape/device mismatch");
-            if(debugLogits->impl_->pending&&!impl_->pendingOutputs.count(debugLogits->impl_.get()))
+            if(debugLogits->impl_->pending&&!impl_->pendingOutputs.count(debugLogits->impl_->PendingKey()))
                 throw std::logic_error("Fused debug output belongs to another command batch");
         }
         const size_t groups=(w->rows+15)/16;
@@ -2676,21 +2696,21 @@ bool MetalContext::EncodeBF16Argmax(const MetalMatrix& input,const MetalBF16Weig
         const uint32_t debugEnabled=debugLogits?1:0;
         auto encoder=[impl_->command computeCommandEncoder];
         if(!encoder)throw std::runtime_error("Cannot create fused projection encoder");
-        [encoder setComputePipelineState:projection];[encoder setBuffer:a.data offset:0 atIndex:0];
-        [encoder setBuffer:w->buffer offset:0 atIndex:1];[encoder setBuffer:parts.data offset:0 atIndex:2];
+        [encoder setComputePipelineState:projection];[encoder setBuffer:a.data offset:a.offset atIndex:0];
+        [encoder setBuffer:w->buffer offset:0 atIndex:1];[encoder setBuffer:parts.data offset:parts.offset atIndex:2];
         [encoder setBytes:&p length:sizeof(p) atIndex:3];
-        [encoder setBuffer:debugLogits?debugLogits->impl_->matrix.data:o.data offset:0 atIndex:4];
+        [encoder setBuffer:debugLogits?debugLogits->impl_->matrix.data:o.data offset:debugLogits?debugLogits->impl_->matrix.offset:o.offset atIndex:4];
         [encoder setBytes:&debugEnabled length:sizeof(debugEnabled) atIndex:5];
         [encoder dispatchThreadgroups:MTLSizeMake(groups,1,1) threadsPerThreadgroup:MTLSizeMake(128,1,1)];[encoder endEncoding];
         struct ReduceParams{uint64_t rows,columns,iStride,oStride;};ReduceParams rp{a.rows,groups,parts.rowBytes/4,o.rowBytes/4};
         encoder=[impl_->command computeCommandEncoder];
         if(!encoder)throw std::runtime_error("Cannot create fused argmax reduction encoder");
-        [encoder setComputePipelineState:reduction];[encoder setBuffer:parts.data offset:0 atIndex:0];
-        [encoder setBuffer:o.data offset:0 atIndex:1];[encoder setBytes:&rp length:sizeof(rp) atIndex:2];
+        [encoder setComputePipelineState:reduction];[encoder setBuffer:parts.data offset:parts.offset atIndex:0];
+        [encoder setBuffer:o.data offset:o.offset atIndex:1];[encoder setBytes:&rp length:sizeof(rp) atIndex:2];
         [encoder dispatchThreadgroups:MTLSizeMake(a.rows,1,1) threadsPerThreadgroup:MTLSizeMake(128,1,1)];[encoder endEncoding];
         for(const auto& target:{scratch->second.impl_,output.impl_,debugLogits?debugLogits->impl_:std::shared_ptr<MetalMatrix::Impl>()}) {
-            if(!target)continue;target->ready=false;target->pending=true;
-            if(impl_->pendingOutputs.insert(target.get()).second)impl_->outputs.push_back(target);
+            if(!target)continue;target->ValidateSpanWrite(impl_->pendingOutputs.count(target->PendingKey()));target->ready=false;target->pending=true;
+            if(impl_->pendingOutputs.insert(target->PendingKey()).second)impl_->outputs.push_back(target);
         }
         ++impl_->fusedHeadArgmaxDispatches;return true;
     }
@@ -2715,9 +2735,9 @@ bool MetalContext::EncodeJoinedBF16Prefill(const MetalMatrix& input,const MetalB
             a.columns!=w0->columns||x.rows!=a.rows||y.rows!=a.rows||x.columns!=w0->rows||y.columns!=w1->rows)
             throw std::invalid_argument("Joined prefill shape/device mismatch");
         if(x.data==y.data||x.data==a.data||y.data==a.data||x.rowBytes!=y.rowBytes)return false;
-        auto usable=[&](const MetalMatrix& m){return m.impl_->ready||(m.impl_->pending&&impl_->pendingOutputs.count(m.impl_.get())!=0);};
+        auto usable=[&](const MetalMatrix& m){return m.impl_->ready||(m.impl_->pending&&impl_->pendingOutputs.count(m.impl_->PendingKey())!=0);};
         if(!usable(input))throw std::logic_error("Uninitialized joined prefill input");
-        for(const auto* output:{&firstOutput,&secondOutput})if(output->impl_->pending&&impl_->pendingOutputs.count(output->impl_.get())==0)
+        for(const auto* output:{&firstOutput,&secondOutput})if(output->impl_->pending&&impl_->pendingOutputs.count(output->impl_->PendingKey())==0)
             throw std::logic_error("Joined prefill output belongs to another batch");
         const auto identity=std::make_pair(static_cast<const void*>(w0.get()),static_cast<const void*>(w1.get()));
         auto found=impl_->joinedWeights.find(identity);
@@ -2761,10 +2781,10 @@ bool MetalContext::EncodeJoinedBF16Prefill(const MetalMatrix& input,const MetalB
         [product->second encodeToCommandBuffer:impl_->command leftMatrix:a rightMatrix:found->second.view resultMatrix:temporary];
         struct Params{uint64_t rows,columns,iStride,oStride;};Params p{a.rows,x.columns,temporary.rowBytes/4,x.rowBytes/4};
         auto encoder=[impl_->command computeCommandEncoder];if(!encoder)throw std::runtime_error("Joined prefill encoder unavailable");
-        [encoder setComputePipelineState:impl_->kernels->joinedSplitRescale];[encoder setBuffer:temporary.data offset:0 atIndex:0];
-        [encoder setBuffer:found->second.scales offset:0 atIndex:1];[encoder setBuffer:x.data offset:0 atIndex:2];[encoder setBuffer:y.data offset:0 atIndex:3];[encoder setBytes:&p length:sizeof(p) atIndex:4];
+        [encoder setComputePipelineState:impl_->kernels->joinedSplitRescale];[encoder setBuffer:temporary.data offset:temporary.offset atIndex:0];
+        [encoder setBuffer:found->second.scales offset:0 atIndex:1];[encoder setBuffer:x.data offset:x.offset atIndex:2];[encoder setBuffer:y.data offset:y.offset atIndex:3];[encoder setBytes:&p length:sizeof(p) atIndex:4];
         [encoder dispatchThreads:MTLSizeMake(a.rows*x.columns*2,1,1) threadsPerThreadgroup:MTLSizeMake(128,1,1)];[encoder endEncoding];
-        for(const auto* output:{&firstOutput,&secondOutput}){output->impl_->ready=false;output->impl_->pending=true;if(impl_->pendingOutputs.insert(output->impl_.get()).second)impl_->outputs.push_back(output->impl_);}
+        for(const auto* output:{&firstOutput,&secondOutput}){output->impl_->ValidateSpanWrite(impl_->pendingOutputs.count(output->impl_->PendingKey()));output->impl_->ready=false;output->impl_->pending=true;if(impl_->pendingOutputs.insert(output->impl_->PendingKey()).second)impl_->outputs.push_back(output->impl_);}
         ++impl_->joinedPrefillPairs;return true;
     }
 #endif
@@ -2793,10 +2813,10 @@ bool MetalContext::EncodeJoinedGlobalMlp(const MetalMatrix& input,const MetalBF1
         // output allocation independent and materialize all three results.
         if(a.offset||g.offset||u.offset||o.offset||g.data==u.data||g.data==o.data||u.data==o.data||
             a.data==g.data||a.data==u.data||a.data==o.data)return false;
-        if(!input.impl_->ready&&!(input.impl_->pending&&impl_->pendingOutputs.count(input.impl_.get())))
+        if(!input.impl_->ready&&!(input.impl_->pending&&impl_->pendingOutputs.count(input.impl_->PendingKey())))
             throw std::logic_error("Uninitialized joined global input");
         for(const auto* out:{&gateOutput,&upOutput,&activated})
-            if(out->impl_->pending&&!impl_->pendingOutputs.count(out->impl_.get()))
+            if(out->impl_->pending&&!impl_->pendingOutputs.count(out->impl_->PendingKey()))
                 throw std::logic_error("Joined global output belongs to another command batch");
         const auto identity=std::make_pair(static_cast<const void*>(w0.get()),static_cast<const void*>(w1.get()));
         auto found=impl_->joinedGlobalWeights.find(identity);
@@ -2837,13 +2857,13 @@ bool MetalContext::EncodeJoinedGlobalMlp(const MetalMatrix& input,const MetalBF1
         Params p{a.rows,w0->rows,temporary.rowBytes/4,g.rowBytes/4,u.rowBytes/4,o.rowBytes/4};
         auto encoder=[impl_->command computeCommandEncoder];if(!encoder)throw std::runtime_error("Joined global split-SiLU encoder unavailable");
         [encoder setComputePipelineState:impl_->kernels->joinedGlobalSilu];
-        [encoder setBuffer:temporary.data offset:0 atIndex:0];[encoder setBuffer:g.data offset:0 atIndex:1];
-        [encoder setBuffer:u.data offset:0 atIndex:2];[encoder setBuffer:o.data offset:0 atIndex:3];
+        [encoder setBuffer:temporary.data offset:temporary.offset atIndex:0];[encoder setBuffer:g.data offset:g.offset atIndex:1];
+        [encoder setBuffer:u.data offset:u.offset atIndex:2];[encoder setBuffer:o.data offset:o.offset atIndex:3];
         [encoder setBytes:&p length:sizeof(p) atIndex:4];
         [encoder dispatchThreads:MTLSizeMake(a.rows*w0->rows,1,1) threadsPerThreadgroup:MTLSizeMake(128,1,1)];[encoder endEncoding];
         for(const auto* out:{&gateOutput,&upOutput,&activated}) {
-            out->impl_->ready=false;out->impl_->pending=true;
-            if(impl_->pendingOutputs.insert(out->impl_.get()).second)impl_->outputs.push_back(out->impl_);
+            out->impl_->ValidateSpanWrite(impl_->pendingOutputs.count(out->impl_->PendingKey()));out->impl_->ready=false;out->impl_->pending=true;
+            if(impl_->pendingOutputs.insert(out->impl_->PendingKey()).second)impl_->outputs.push_back(out->impl_);
         }
         ++impl_->joinedGlobalMlpBlocks;++impl_->globalHalfAlphaDispatches;return true;
     }
@@ -3018,9 +3038,9 @@ void MetalContext::EncodeBF16MatVec(const MetalMatrix& input,const MetalBF16Weig
             (w->visionPrefill?a.rows>32768:!supportedDecoderRows)||o.data==a.data)
             throw std::invalid_argument("BF16 projection shape/device mismatch or unsupported row count");
         auto usable=[&](const MetalMatrix& m){return m.impl_->ready||(m.impl_->pending&&
-            impl_->pendingOutputs.count(m.impl_.get())!=0);};
+            impl_->pendingOutputs.count(m.impl_->PendingKey())!=0);};
         if(!usable(input))throw std::logic_error("Uninitialized BF16 projection input");
-        if(output.impl_->pending&&impl_->pendingOutputs.count(output.impl_.get())==0)
+        if(output.impl_->pending&&impl_->pendingOutputs.count(output.impl_->PendingKey())==0)
             throw std::logic_error("BF16 output belongs to another command batch");
         if(!w->visionPrefill&&a.rows==160)++impl_->wideBatchPrefillDispatches;
 #ifdef GARNET_METAL_FLOAT_DENSE_KEY_PREFILL
@@ -3033,15 +3053,15 @@ void MetalContext::EncodeBF16MatVec(const MetalMatrix& input,const MetalBF16Weig
             Params p{a.rows,a.columns,o.columns,a.rowBytes/4,partial.rowBytes/4,parts};
             auto encoder=[impl_->command computeCommandEncoder];
             if(!encoder)throw std::runtime_error("Cannot create split key projection encoder");
-            [encoder setComputePipelineState:impl_->kernels->bf16Split];[encoder setBuffer:a.data offset:0 atIndex:0];
-            [encoder setBuffer:w->buffer offset:0 atIndex:1];[encoder setBuffer:partial.data offset:0 atIndex:2];[encoder setBytes:&p length:sizeof(p) atIndex:3];
+            [encoder setComputePipelineState:impl_->kernels->bf16Split];[encoder setBuffer:a.data offset:a.offset atIndex:0];
+            [encoder setBuffer:w->buffer offset:0 atIndex:1];[encoder setBuffer:partial.data offset:partial.offset atIndex:2];[encoder setBytes:&p length:sizeof(p) atIndex:3];
             [encoder dispatchThreadgroups:MTLSizeMake((o.columns+31)/32,(a.rows+15)/16,parts) threadsPerThreadgroup:MTLSizeMake(128,1,1)];[encoder endEncoding];
             struct Reduce{uint64_t rows,columns,iStride,oStride,parts;};Reduce r{a.rows,o.columns,partial.rowBytes/4,o.rowBytes/4,parts};
             encoder=[impl_->command computeCommandEncoder];if(!encoder)throw std::runtime_error("Cannot create split key reduction encoder");
-            [encoder setComputePipelineState:impl_->kernels->bf16SplitReduce];[encoder setBuffer:partial.data offset:0 atIndex:0];[encoder setBuffer:o.data offset:0 atIndex:1];
+            [encoder setComputePipelineState:impl_->kernels->bf16SplitReduce];[encoder setBuffer:partial.data offset:partial.offset atIndex:0];[encoder setBuffer:o.data offset:o.offset atIndex:1];
             [encoder setBytes:&r length:sizeof(r) atIndex:2];
             const auto total=Elements(o.rows,o.columns);[encoder dispatchThreads:MTLSizeMake(total,1,1) threadsPerThreadgroup:MTLSizeMake(std::min(total,size_t(impl_->kernels->bf16SplitReduce.maxTotalThreadsPerThreadgroup)),1,1)];[encoder endEncoding];
-            output.impl_->ready=false;output.impl_->pending=true;if(impl_->pendingOutputs.insert(output.impl_.get()).second)impl_->outputs.push_back(output.impl_);
+            output.impl_->ValidateSpanWrite(impl_->pendingOutputs.count(output.impl_->PendingKey()));output.impl_->ready=false;output.impl_->pending=true;if(impl_->pendingOutputs.insert(output.impl_->PendingKey()).second)impl_->outputs.push_back(output.impl_);
             return;
         }
 #endif
@@ -3058,8 +3078,8 @@ void MetalContext::EncodeBF16MatVec(const MetalMatrix& input,const MetalBF16Weig
                     found=impl_->globalHalfMatmul.emplace(key,product).first;
                 }
                 [found->second encodeToCommandBuffer:impl_->command leftMatrix:a rightMatrix:w->exactHalf resultMatrix:o];
-                output.impl_->ready=false;output.impl_->pending=true;
-                if(impl_->pendingOutputs.insert(output.impl_.get()).second)impl_->outputs.push_back(output.impl_);
+                output.impl_->ValidateSpanWrite(impl_->pendingOutputs.count(output.impl_->PendingKey()));output.impl_->ready=false;output.impl_->pending=true;
+                if(impl_->pendingOutputs.insert(output.impl_->PendingKey()).second)impl_->outputs.push_back(output.impl_);
                 ++impl_->globalHalfAlphaDispatches;if(w->visionPrefill)++impl_->visionGlobalAlphaDispatches;return;
             }
 #endif
@@ -3078,12 +3098,12 @@ void MetalContext::EncodeBF16MatVec(const MetalMatrix& input,const MetalBF16Weig
             auto encoder=[impl_->command computeCommandEncoder];
             if(!encoder)throw std::runtime_error("Cannot create exact half rescale encoder");
             [encoder setComputePipelineState:impl_->kernels->halfRescale];
-            [encoder setBuffer:temporary.data offset:0 atIndex:0];[encoder setBuffer:w->halfScales offset:w->halfScalesOffset atIndex:1];
-            [encoder setBuffer:o.data offset:0 atIndex:2];[encoder setBytes:&p length:sizeof(p) atIndex:3];
+            [encoder setBuffer:temporary.data offset:temporary.offset atIndex:0];[encoder setBuffer:w->halfScales offset:w->halfScalesOffset atIndex:1];
+            [encoder setBuffer:o.data offset:o.offset atIndex:2];[encoder setBytes:&p length:sizeof(p) atIndex:3];
             const auto total=Elements(o.rows,o.columns);
             [encoder dispatchThreads:MTLSizeMake(total,1,1) threadsPerThreadgroup:MTLSizeMake(std::min(total,size_t(impl_->kernels->halfRescale.maxTotalThreadsPerThreadgroup)),1,1)];
-            [encoder endEncoding];output.impl_->ready=false;output.impl_->pending=true;
-            if(impl_->pendingOutputs.insert(output.impl_.get()).second)impl_->outputs.push_back(output.impl_);
+            [encoder endEncoding];output.impl_->ValidateSpanWrite(impl_->pendingOutputs.count(output.impl_->PendingKey()));output.impl_->ready=false;output.impl_->pending=true;
+            if(impl_->pendingOutputs.insert(output.impl_->PendingKey()).second)impl_->outputs.push_back(output.impl_);
             return;
         }
 #endif
@@ -3153,7 +3173,7 @@ void MetalContext::EncodeBF16MatVec(const MetalMatrix& input,const MetalBF16Weig
         Params p{a.rows,a.columns,o.columns,a.rowBytes/4,o.rowBytes/4};
         auto encoder=[impl_->command computeCommandEncoder];
         if(!encoder)throw std::runtime_error("Cannot create BF16 projection encoder");
-        [encoder setComputePipelineState:pipeline];[encoder setBuffer:a.data offset:0 atIndex:0];
+        [encoder setComputePipelineState:pipeline];[encoder setBuffer:a.data offset:a.offset atIndex:0];
 #ifdef GARNET_METAL_INTERLEAVED_BF16_BODY
         [encoder setBuffer:interleaved?w->interleavedBody:w->buffer offset:0 atIndex:1];
         if(interleaved)++impl_->interleavedBodyDispatches;
@@ -3166,7 +3186,7 @@ void MetalContext::EncodeBF16MatVec(const MetalMatrix& input,const MetalBF16Weig
         if(primary){[encoder setBuffer:w->primaryMetadata offset:0 atIndex:4];if(a.rows>2)primaryCounters.prefill.fetch_add(1);else if(o.columns>=100000){primaryCounters.head.fetch_add(1);primaryCounters.vectorHead.fetch_add(1);}else{primaryCounters.decode.fetch_add(1);primaryCounters.vectorDecode.fetch_add(1);}}
 #endif
 #endif
-        [encoder setBuffer:o.data offset:0 atIndex:2];
+        [encoder setBuffer:o.data offset:o.offset atIndex:2];
         [encoder setBytes:&p length:sizeof(p) atIndex:3];
         [encoder dispatchThreadgroups:a.rows<=2?MTLSizeMake((o.columns+decodeColumns-1)/decodeColumns,1,1):MTLSizeMake((o.columns+tileColumns-1)/tileColumns,(o.rows+tileRows-1)/tileRows,1) threadsPerThreadgroup:MTLSizeMake(threads,1,1)];
 #ifdef GARNET_METAL_CONSTANT_BF16_HEAD
@@ -3175,9 +3195,40 @@ void MetalContext::EncodeBF16MatVec(const MetalMatrix& input,const MetalBF16Weig
 #ifdef GARNET_METAL_SINGLE_CODER_HEAD
         if(singleCoderHead)++impl_->singleCoderHeadDispatches;
 #endif
-        [encoder endEncoding];output.impl_->ready=false;output.impl_->pending=true;if(impl_->pendingOutputs.insert(output.impl_.get()).second)impl_->outputs.push_back(output.impl_);
+        [encoder endEncoding];output.impl_->ValidateSpanWrite(impl_->pendingOutputs.count(output.impl_->PendingKey()));output.impl_->ready=false;output.impl_->pending=true;if(impl_->pendingOutputs.insert(output.impl_->PendingKey()).second)impl_->outputs.push_back(output.impl_);
     }
 }
+#ifdef GARNET_METAL_PREPARED_KV_ROW_SPANS
+MetalMatrix MetalContext::PrepareKVRowSpan(const MetalMatrix& owner,size_t first,size_t rows,
+    size_t heads,size_t dim,size_t capacity) const {
+    @autoreleasepool {
+    if(impl_->command||impl_->submitted.count)throw std::logic_error("Prepare cache row spans before execution");
+    if(!owner.impl_||owner.impl_->matrix.device!=impl_->device)
+        throw std::invalid_argument("Invalid private cache row-span owner/device");
+    const auto source=owner.impl_->matrix;
+    if(!owner.impl_->ready||owner.impl_->pending)
+        throw std::logic_error("Cache row spans require completed initialized backing storage");
+    if(!rows||rows>4||source.rows>4||first>=source.rows||rows>source.rows-first||!heads||!dim||!capacity||
+       source.columns!=Elements(Elements(heads,dim),capacity)||source.dataType!=MPSDataTypeFloat32||
+       source.offset>source.data.length||source.rowBytes>(source.data.length-source.offset)/source.rows)
+        throw std::invalid_argument("Private cache row-span bounds/layout mismatch");
+    const size_t offset=source.offset+first*source.rowBytes;
+    auto descriptor=[MPSMatrixDescriptor matrixDescriptorWithRows:rows columns:source.columns
+        rowBytes:source.rowBytes dataType:MPSDataTypeFloat32];
+    auto storage=std::make_shared<MetalMatrix::Impl>(owner.impl_);
+    storage->matrix=[[MPSMatrix alloc] initWithBuffer:source.data offset:offset descriptor:descriptor];
+    if(!storage->matrix)throw std::runtime_error("Cannot prepare private cache row-span descriptor");
+#ifdef GARNET_METAL_CACHED_MATRIX_METADATA
+    const auto matrix=storage->matrix;
+    storage->bufferIdentity=reinterpret_cast<uintptr_t>((__bridge void*)matrix.data);
+    storage->deviceIdentity=reinterpret_cast<uintptr_t>((__bridge void*)matrix.device);
+    storage->rows=matrix.rows;storage->columns=matrix.columns;storage->rowBytes=matrix.rowBytes;storage->offset=matrix.offset;
+    storage->allocatedBytes=matrix.data.allocatedSize;storage->lengthBytes=matrix.data.length;
+#endif
+    return MetalMatrix(storage);
+    }
+}
+#endif
 MetalMatrix MetalContext::Upload(const std::vector<float>& values,size_t rows,size_t columns) {
     if(values.size()!=Elements(rows,columns))throw std::invalid_argument("Metal matrix input size mismatch");
     auto result=Allocate(rows,columns);
@@ -3201,11 +3252,12 @@ void MetalContext::Update(const MetalMatrix& matrix,const float* values,size_t c
 #endif
     auto native=matrix.impl_->matrix;
     if(!values||count!=Elements(native.rows,native.columns))throw std::invalid_argument("Metal update size mismatch");
+    matrix.impl_->ValidateSpanWrite(false);
 #ifdef GARNET_METAL_DEFERRED_STATE_ZERO
     if(impl_->zeroQueued.erase(matrix.impl_.get()))matrix.impl_->pending=false;
 #endif
     for(size_t i=0;i<native.rows;++i)
-        std::memcpy(static_cast<char*>(native.data.contents)+i*native.rowBytes,
+        std::memcpy(static_cast<char*>(native.data.contents)+native.offset+i*native.rowBytes,
             values+i*native.columns,native.columns*sizeof(float));
     matrix.impl_->ready=true;
 
@@ -3306,10 +3358,11 @@ void MetalContext::Zero(const MetalMatrix& matrix) {
 #else
     if(matrix.impl_->pending)throw std::logic_error("Cannot zero pending Metal output");
 #endif
+    matrix.impl_->ValidateSpanWrite(false);
     auto native=matrix.impl_->matrix;
     // Match Update: change logical columns only, preserving row padding.
     for(size_t i=0;i<native.rows;++i)
-        std::memset(static_cast<char*>(native.data.contents)+i*native.rowBytes,
+        std::memset(static_cast<char*>(native.data.contents)+native.offset+i*native.rowBytes,
             0,native.columns*sizeof(float));
     matrix.impl_->ready=true;
 
@@ -3331,7 +3384,7 @@ std::vector<float> MetalContext::ReadPrefixGroups(const MetalMatrix& matrix,size
     std::vector<float> result(Elements(native.rows,groups*tokens*width));
     for(size_t row=0;row<native.rows;++row)for(size_t group=0;group<groups;++group)
         std::memcpy(result.data()+(row*groups+group)*tokens*width,
-            static_cast<const char*>(native.data.contents)+row*native.rowBytes+group*capacity*width*sizeof(float),tokens*width*sizeof(float));
+            static_cast<const char*>(native.data.contents)+native.offset+row*native.rowBytes+group*capacity*width*sizeof(float),tokens*width*sizeof(float));
     return result;
 
 #ifdef GARNET_METAL_LAZY_RESIDENT_DEFAULTS
@@ -3350,7 +3403,7 @@ void MetalContext::WritePrefixGroups(const MetalMatrix& matrix,size_t groups,siz
        groups>SIZE_MAX/(capacity*width)||groups*capacity*width!=native.columns||!native.data.contents||
        values.size()!=Elements(native.rows,groups*tokens*width))throw std::invalid_argument("Prefix write layout/bounds mismatch");
     for(size_t row=0;row<native.rows;++row)for(size_t group=0;group<groups;++group)
-        std::memcpy(static_cast<char*>(native.data.contents)+row*native.rowBytes+group*capacity*width*sizeof(float),
+        std::memcpy(static_cast<char*>(native.data.contents)+native.offset+row*native.rowBytes+group*capacity*width*sizeof(float),
             values.data()+(row*groups+group)*tokens*width,tokens*width*sizeof(float));
     matrix.impl_->ready=true;
 
@@ -3368,7 +3421,7 @@ void MetalContext::ZeroPrefixGroups(const MetalMatrix& matrix,size_t groups,size
         groups>SIZE_MAX/(capacity*width)||groups*capacity*width!=native.columns)
         throw std::invalid_argument("Metal prefix zero layout/bounds mismatch");
     for(size_t row=0;row<native.rows;++row)for(size_t group=0;group<groups;++group)
-        std::memset(static_cast<char*>(native.data.contents)+row*native.rowBytes+group*capacity*width*sizeof(float),
+        std::memset(static_cast<char*>(native.data.contents)+native.offset+row*native.rowBytes+group*capacity*width*sizeof(float),
             0,dirtyTokens*width*sizeof(float));
 }
 size_t MetalContext::LastDeferredZeroBytes() const {return impl_->deferredZeroBytes;}
@@ -3379,6 +3432,9 @@ void MetalContext::DeferZero(const MetalMatrix& matrix) {
 #else
     if(impl_->command||impl_->submitted.count)throw std::logic_error("Deferred reset requires a closed, drained command batch");
     if(!matrix.impl_||matrix.impl_->matrix.device!=impl_->device)throw std::invalid_argument("Invalid deferred reset matrix/device");
+#ifdef GARNET_METAL_PREPARED_KV_ROW_SPANS
+    if(matrix.impl_->spanOwner)throw std::logic_error("Defer reset of the complete backing cache, not a row span");
+#endif
     if(matrix.impl_->pending&&!impl_->zeroQueued.count(matrix.impl_.get()))throw std::logic_error("Cannot defer reset of pending GPU work");
     impl_->zeroQueued.emplace(matrix.impl_.get(),matrix.impl_);
     // Pending/readability checks keep other contexts from stale physical state.
@@ -3436,7 +3492,7 @@ void MetalContext::Begin() {
             if(!encoder)throw std::runtime_error("Cannot create deferred state clear encoder");
             for(const auto& entry:impl_->zeroQueued) {
                 const auto& target=entry.second;auto matrix=target->matrix;
-                if(impl_->pendingOutputs.insert(target.get()).second)impl_->outputs.push_back(target);
+                if(impl_->pendingOutputs.insert(target->PendingKey()).second)impl_->outputs.push_back(target);
                 for(size_t row=0;row<matrix.rows;++row)
                     [encoder fillBuffer:matrix.data range:NSMakeRange(row*matrix.rowBytes,matrix.columns*sizeof(float)) value:0];
                 impl_->deferredZeroBytes+=matrix.rows*matrix.columns*sizeof(float);++impl_->deferredZeroStates;
@@ -3458,13 +3514,13 @@ void MetalContext::EncodeMatMul(const MetalMatrix& left,const MetalMatrix& right
         throw std::invalid_argument("Metal matrices belong to another device");
     auto usable=[&](const MetalMatrix& matrix){
         return matrix.impl_->ready || (matrix.impl_->pending &&
-            impl_->pendingOutputs.count(matrix.impl_.get())!=0);
+            impl_->pendingOutputs.count(matrix.impl_->PendingKey())!=0);
     };
     if(!usable(left)||!usable(right))throw std::logic_error("Uninitialized Metal input");
     if(a.columns!=(transposeRight?b.columns:b.rows)||c.rows!=a.rows||
         c.columns!=(transposeRight?b.rows:b.columns))throw std::invalid_argument("Metal matmul shape mismatch");
     if(c.data==a.data||c.data==b.data)throw std::invalid_argument("In-place Metal matmul is unsupported");
-    if(output.impl_->pending && impl_->pendingOutputs.count(output.impl_.get())==0)
+    if(output.impl_->pending && impl_->pendingOutputs.count(output.impl_->PendingKey())==0)
         throw std::logic_error("Metal output is in another command batch");
     const std::array<size_t,4> key{c.rows,c.columns,a.columns,size_t(transposeRight)};
     auto found=impl_->matmul.find(key);
@@ -3476,8 +3532,8 @@ void MetalContext::EncodeMatMul(const MetalMatrix& left,const MetalMatrix& right
     }
     auto op=found->second;
     [op encodeToCommandBuffer:impl_->command leftMatrix:a rightMatrix:b resultMatrix:c];
-    output.impl_->ready=false;output.impl_->pending=true;
-    if(impl_->pendingOutputs.insert(output.impl_.get()).second)impl_->outputs.push_back(output.impl_);
+    output.impl_->ValidateSpanWrite(impl_->pendingOutputs.count(output.impl_->PendingKey()));output.impl_->ready=false;output.impl_->pending=true;
+    if(impl_->pendingOutputs.insert(output.impl_->PendingKey()).second)impl_->outputs.push_back(output.impl_);
     }
 }
 void MetalContext::EncodePointwise(const MetalMatrix& left,const MetalMatrix& right,
@@ -3491,14 +3547,14 @@ void MetalContext::EncodePointwise(const MetalMatrix& left,const MetalMatrix& ri
     if(a.device!=impl_->device||b.device!=impl_->device||c.device!=impl_->device)
         throw std::invalid_argument("Metal matrices belong to another device");
     auto usable=[&](const MetalMatrix& matrix){return matrix.impl_->ready ||
-        (matrix.impl_->pending && impl_->pendingOutputs.count(matrix.impl_.get())!=0);};
+        (matrix.impl_->pending && impl_->pendingOutputs.count(matrix.impl_->PendingKey())!=0);};
     if(!usable(left)||!usable(right))throw std::logic_error("Uninitialized Metal input");
     if(a.rows!=c.rows||a.columns!=c.columns||b.columns!=(mask?1:a.columns)||b.rows!=((rms||bias)?1:a.rows))
         throw std::invalid_argument("Qwen Metal operation shape mismatch");
     if(rms && (!(epsilon>0)||!std::isfinite(epsilon)||!std::isfinite(offset)))
         throw std::invalid_argument("Invalid RMS normalization parameters");
     if(c.data==a.data||c.data==b.data)throw std::invalid_argument("In-place operation is unsupported");
-    if(output.impl_->pending && impl_->pendingOutputs.count(output.impl_.get())==0)
+    if(output.impl_->pending && impl_->pendingOutputs.count(output.impl_->PendingKey())==0)
         throw std::logic_error("Metal output is in another command batch");
     struct Params {uint64_t rows,columns,aStride,bStride,cStride;float epsilon,offset;};
     Params p{a.rows,a.columns,a.rowBytes/4,b.rowBytes/4,c.rowBytes/4,epsilon,offset};
@@ -3506,8 +3562,8 @@ void MetalContext::EncodePointwise(const MetalMatrix& left,const MetalMatrix& ri
     id<MTLComputeCommandEncoder> encoder=[impl_->command computeCommandEncoder];
     if(!encoder)throw std::runtime_error("Cannot create Metal compute encoder");
     [encoder setComputePipelineState:pipeline];
-    [encoder setBuffer:a.data offset:0 atIndex:0];[encoder setBuffer:b.data offset:0 atIndex:1];
-    [encoder setBuffer:c.data offset:0 atIndex:2];[encoder setBytes:&p length:sizeof(p) atIndex:3];
+    [encoder setBuffer:a.data offset:a.offset atIndex:0];[encoder setBuffer:b.data offset:b.offset atIndex:1];
+    [encoder setBuffer:c.data offset:c.offset atIndex:2];[encoder setBytes:&p length:sizeof(p) atIndex:3];
     const size_t count=rms?a.rows:Elements(a.rows,a.columns);
     const size_t width=std::min(size_t(pipeline.maxTotalThreadsPerThreadgroup),count);
     if(rms) {
@@ -3515,8 +3571,8 @@ void MetalContext::EncodePointwise(const MetalMatrix& left,const MetalMatrix& ri
             throw std::runtime_error("Parallel RMS requires 32-lane SIMD groups");
         [encoder dispatchThreadgroups:MTLSizeMake(a.rows,1,1) threadsPerThreadgroup:MTLSizeMake(128,1,1)];
     }else [encoder dispatchThreads:MTLSizeMake(count,1,1) threadsPerThreadgroup:MTLSizeMake(width,1,1)];
-    [encoder endEncoding];output.impl_->ready=false;output.impl_->pending=true;
-    if(impl_->pendingOutputs.insert(output.impl_.get()).second)impl_->outputs.push_back(output.impl_);
+    [encoder endEncoding];output.impl_->ValidateSpanWrite(impl_->pendingOutputs.count(output.impl_->PendingKey()));output.impl_->ready=false;output.impl_->pending=true;
+    if(impl_->pendingOutputs.insert(output.impl_->PendingKey()).second)impl_->outputs.push_back(output.impl_);
     }
 }
 void MetalContext::EncodeRMSNorm(const MetalMatrix& input,const MetalMatrix& weight,
@@ -3536,12 +3592,12 @@ void MetalContext::EncodeResidualRMSNorm(const MetalMatrix& left,const MetalMatr
         w.rows!=1||w.columns!=a.columns||!(epsilon>0)||!std::isfinite(epsilon)||!std::isfinite(offset))
         throw std::invalid_argument("Residual normalization shape/layout/parameters mismatch");
     for(size_t i=0;i<3;++i)if(!matrices[i].impl_->ready&&
-        !(matrices[i].impl_->pending&&impl_->pendingOutputs.count(matrices[i].impl_.get())))
+        !(matrices[i].impl_->pending&&impl_->pendingOutputs.count(matrices[i].impl_->PendingKey())))
         throw std::logic_error("Uninitialized residual normalization input");
     for(size_t i=3;i<5;++i) {
         for(size_t j=0;j<i;++j)if(matrices[i].SharesStorage(matrices[j]))
             throw std::invalid_argument("Aliased residual normalization output");
-        if(matrices[i].impl_->pending&&!impl_->pendingOutputs.count(matrices[i].impl_.get()))
+        if(matrices[i].impl_->pending&&!impl_->pendingOutputs.count(matrices[i].impl_->PendingKey()))
             throw std::logic_error("Residual normalization output belongs to another batch");
     }
     auto pipeline=impl_->kernels->residualNorm;
@@ -3551,12 +3607,12 @@ void MetalContext::EncodeResidualRMSNorm(const MetalMatrix& left,const MetalMatr
     Params p{a.rows,a.columns,a.rowBytes/4,w.rowBytes/4,a.rowBytes/4,epsilon,offset};
     auto encoder=[impl_->command computeCommandEncoder];if(!encoder)throw std::runtime_error("Cannot create residual normalization encoder");
     [encoder setComputePipelineState:pipeline];
-    for(size_t i=0;i<5;++i)[encoder setBuffer:matrices[i].impl_->matrix.data offset:0 atIndex:i];
+    for(size_t i=0;i<5;++i)[encoder setBuffer:matrices[i].impl_->matrix.data offset:matrices[i].impl_->matrix.offset atIndex:i];
     [encoder setBytes:&p length:sizeof(p) atIndex:5];
     [encoder dispatchThreadgroups:MTLSizeMake(a.rows,1,1) threadsPerThreadgroup:MTLSizeMake(128,1,1)];
     [encoder endEncoding];
-    for(size_t i=3;i<5;++i){auto state=matrices[i].impl_;state->ready=false;state->pending=true;
-        if(impl_->pendingOutputs.insert(state.get()).second)impl_->outputs.push_back(state);}
+    for(size_t i=3;i<5;++i){auto state=matrices[i].impl_;state->ValidateSpanWrite(impl_->pendingOutputs.count(state->PendingKey()));state->ready=false;state->pending=true;
+        if(impl_->pendingOutputs.insert(state->PendingKey()).second)impl_->outputs.push_back(state);}
     ++impl_->residualNormDispatches;
     }
 #else
@@ -3580,12 +3636,12 @@ void MetalContext::EncodePackedPrefillNorm(const MetalMatrix& left,const MetalMa
     if(chunk<2||chunk>kMetalPrefillChunkLimit||n.rows!=Elements(a.rows,chunk))
         throw std::invalid_argument("Packed prefill normalization chunk mismatch");
     for(size_t i=0;i<3;++i)if(!matrices[i].impl_->ready&&
-        !(matrices[i].impl_->pending&&impl_->pendingOutputs.count(matrices[i].impl_.get())))
+        !(matrices[i].impl_->pending&&impl_->pendingOutputs.count(matrices[i].impl_->PendingKey())))
         throw std::logic_error("Uninitialized packed prefill normalization input");
     for(size_t i=3;i<6;++i) {
         for(size_t j=0;j<i;++j)if(matrices[i].SharesStorage(matrices[j]))
             throw std::invalid_argument("Aliased packed prefill normalization output");
-        if(matrices[i].impl_->pending&&!impl_->pendingOutputs.count(matrices[i].impl_.get()))
+        if(matrices[i].impl_->pending&&!impl_->pendingOutputs.count(matrices[i].impl_->PendingKey()))
             throw std::logic_error("Packed prefill normalization output belongs to another batch");
     }
     auto pipeline=impl_->kernels->packedPrefillNorm;
@@ -3595,11 +3651,11 @@ void MetalContext::EncodePackedPrefillNorm(const MetalMatrix& left,const MetalMa
     Params p{n.rows,n.columns,a.rowBytes/4,n.rowBytes/4,chunk,epsilon,offset};
     auto encoder=[impl_->command computeCommandEncoder];if(!encoder)throw std::runtime_error("Cannot create packed prefill normalization encoder");
     [encoder setComputePipelineState:pipeline];
-    for(size_t i=0;i<6;++i)[encoder setBuffer:matrices[i].impl_->matrix.data offset:0 atIndex:i];
+    for(size_t i=0;i<6;++i)[encoder setBuffer:matrices[i].impl_->matrix.data offset:matrices[i].impl_->matrix.offset atIndex:i];
     [encoder setBytes:&p length:sizeof(p) atIndex:6];
     [encoder dispatchThreadgroups:MTLSizeMake(n.rows,1,1) threadsPerThreadgroup:MTLSizeMake(128,1,1)];[encoder endEncoding];
-    for(size_t i=3;i<6;++i){auto state=matrices[i].impl_;state->ready=false;state->pending=true;
-        if(impl_->pendingOutputs.insert(state.get()).second)impl_->outputs.push_back(state);}
+    for(size_t i=3;i<6;++i){auto state=matrices[i].impl_;state->ValidateSpanWrite(impl_->pendingOutputs.count(state->PendingKey()));state->ready=false;state->pending=true;
+        if(impl_->pendingOutputs.insert(state->PendingKey()).second)impl_->outputs.push_back(state);}
     ++impl_->packedPrefillNormDispatches;
     }
 #else
@@ -3627,18 +3683,18 @@ void MetalContext::EncodeStateKernel(unsigned operation,const std::vector<MetalM
         throw std::invalid_argument("Invalid Metal state kernel output/grid");
     auto c=output.impl_->matrix;
     if(c.device!=impl_->device)throw std::invalid_argument("Metal output belongs to another device");
-    if(output.impl_->pending && impl_->pendingOutputs.count(output.impl_.get())==0)
+    if(output.impl_->pending && impl_->pendingOutputs.count(output.impl_->PendingKey())==0)
         throw std::logic_error("Metal output is in another command batch");
     for(size_t inputIndex=0;inputIndex<inputs.size();++inputIndex) {
         const auto& input=inputs[inputIndex];
         if(!input.impl_||input.impl_->matrix.device!=impl_->device)
             throw std::invalid_argument("Invalid Metal state kernel input/device");
         if(!input.impl_->ready && !(input.impl_->pending &&
-            impl_->pendingOutputs.count(input.impl_.get())!=0))
+            impl_->pendingOutputs.count(input.impl_->PendingKey())!=0))
             throw std::logic_error("Uninitialized Metal state kernel input");
         if(c.data==input.impl_->matrix.data) {
 #ifdef GARNET_METAL_RESIDENT_KV_INPLACE
-            if(operation==20&&inputs.size()==4&&inputIndex==1&&output.CompatibleLayout(inputs[1]))continue;
+            if(operation==20&&inputs.size()==4&&inputIndex==1&&c.offset==input.impl_->matrix.offset&&output.CompatibleLayout(inputs[1]))continue;
 #ifdef GARNET_METAL_CHUNK_KV_INPLACE
             // Each chunk-update thread owns one cache element/vector. Its
             // fallback reads exactly the element it writes; chunk token data
@@ -3657,7 +3713,7 @@ void MetalContext::EncodeStateKernel(unsigned operation,const std::vector<MetalM
         if(!secondOutput->impl_||secondOutput->impl_->matrix.device!=impl_->device)
             throw std::invalid_argument("Invalid Metal secondary output/device");
         const auto& second=secondOutput->impl_;
-        if(second->pending&&impl_->pendingOutputs.count(second.get())==0)
+        if(second->pending&&impl_->pendingOutputs.count(second->PendingKey())==0)
             throw std::logic_error("Metal secondary output is in another command batch");
         if(second->matrix.data==c.data)throw std::invalid_argument("Metal outputs overlap");
         for(size_t inputIndex=0;inputIndex<inputs.size();++inputIndex)if(second->matrix.data==inputs[inputIndex].impl_->matrix.data) {
@@ -3677,7 +3733,7 @@ void MetalContext::EncodeStateKernel(unsigned operation,const std::vector<MetalM
         if(!thirdOutput->impl_||thirdOutput->impl_->matrix.device!=impl_->device)
             throw std::invalid_argument("Invalid Metal checkpoint output/device");
         const auto& third=thirdOutput->impl_;
-        if(third->pending&&!impl_->pendingOutputs.count(third.get()))
+        if(third->pending&&!impl_->pendingOutputs.count(third->PendingKey()))
             throw std::logic_error("Metal checkpoint output is in another command batch");
         if(third->matrix.data==c.data||third->matrix.data==secondOutput->impl_->matrix.data)
             throw std::invalid_argument("Metal checkpoint outputs overlap");
@@ -3813,9 +3869,9 @@ void MetalContext::EncodeStateKernel(unsigned operation,const std::vector<MetalM
         auto pack=[impl_->command computeCommandEncoder];
         if(!pack)throw std::runtime_error("Cannot create vision Q/K packing encoder");
         [pack setComputePipelineState:impl_->kernels->visionPackQK];
-        [pack setBuffer:inputs[0].impl_->matrix.data offset:0 atIndex:0];
-        [pack setBuffer:item.query.impl_->matrix.data offset:0 atIndex:1];
-        [pack setBuffer:item.key.impl_->matrix.data offset:0 atIndex:2];
+        [pack setBuffer:inputs[0].impl_->matrix.data offset:inputs[0].impl_->matrix.offset atIndex:0];
+        [pack setBuffer:item.query.impl_->matrix.data offset:item.query.impl_->matrix.offset atIndex:1];
+        [pack setBuffer:item.key.impl_->matrix.data offset:item.key.impl_->matrix.offset atIndex:2];
         [pack setBytes:mpsFields.data() length:sizeof(mpsFields) atIndex:3];
         const size_t count=Elements(rows,hidden);
         [pack dispatchThreads:MTLSizeMake(count,1,1) threadsPerThreadgroup:MTLSizeMake(std::min(count,size_t(impl_->kernels->visionPackQK.maxTotalThreadsPerThreadgroup)),1,1)];
@@ -3837,13 +3893,13 @@ void MetalContext::EncodeStateKernel(unsigned operation,const std::vector<MetalM
     auto encoder=[impl_->command computeCommandEncoder];
     if(!encoder)throw std::runtime_error("Cannot create Metal state kernel encoder");
     [encoder setComputePipelineState:pipeline];
-    for(size_t i=0;i<inputs.size();++i)[encoder setBuffer:inputs[i].impl_->matrix.data offset:0 atIndex:i];
+    for(size_t i=0;i<inputs.size();++i)[encoder setBuffer:inputs[i].impl_->matrix.data offset:inputs[i].impl_->matrix.offset atIndex:i];
 #ifdef GARNET_METAL_MPS_VISION_SCORES
-    if(mpsVisionScores)[encoder setBuffer:mpsScores.impl_->matrix.data offset:0 atIndex:1];
+    if(mpsVisionScores)[encoder setBuffer:mpsScores.impl_->matrix.data offset:mpsScores.impl_->matrix.offset atIndex:1];
 #endif
-    [encoder setBuffer:c.data offset:0 atIndex:inputs.size()];
-    if(secondOutput)[encoder setBuffer:secondOutput->impl_->matrix.data offset:0 atIndex:inputs.size()+1];
-    if(thirdOutput)[encoder setBuffer:thirdOutput->impl_->matrix.data offset:0 atIndex:inputs.size()+2];
+    [encoder setBuffer:c.data offset:c.offset atIndex:inputs.size()];
+    if(secondOutput)[encoder setBuffer:secondOutput->impl_->matrix.data offset:secondOutput->impl_->matrix.offset atIndex:inputs.size()+1];
+    if(thirdOutput)[encoder setBuffer:thirdOutput->impl_->matrix.data offset:thirdOutput->impl_->matrix.offset atIndex:inputs.size()+2];
     [encoder setBytes:parameters length:parameterBytes atIndex:inputs.size()+1+(secondOutput?1:0)+(thirdOutput?1:0)];
     if(serialVisionPrefetch) {
         const size_t count=vectorVisionContext?threads/4:threads;
@@ -3888,9 +3944,9 @@ void MetalContext::EncodeStateKernel(unsigned operation,const std::vector<MetalM
         }
     } else [encoder dispatchThreads:MTLSizeMake(threads,1,1)
         threadsPerThreadgroup:MTLSizeMake(std::min(threads,size_t(pipeline.maxTotalThreadsPerThreadgroup)),1,1)];
-    [encoder endEncoding];output.impl_->ready=false;output.impl_->pending=true;if(impl_->pendingOutputs.insert(output.impl_.get()).second)impl_->outputs.push_back(output.impl_);
-    if(secondOutput){const auto& second=secondOutput->impl_;second->ready=false;second->pending=true;if(impl_->pendingOutputs.insert(second.get()).second)impl_->outputs.push_back(second);}
-    if(thirdOutput){const auto& third=thirdOutput->impl_;third->ready=false;third->pending=true;if(impl_->pendingOutputs.insert(third.get()).second)impl_->outputs.push_back(third);}
+    [encoder endEncoding];output.impl_->ValidateSpanWrite(impl_->pendingOutputs.count(output.impl_->PendingKey()));output.impl_->ready=false;output.impl_->pending=true;if(impl_->pendingOutputs.insert(output.impl_->PendingKey()).second)impl_->outputs.push_back(output.impl_);
+    if(secondOutput){const auto& second=secondOutput->impl_;second->ValidateSpanWrite(impl_->pendingOutputs.count(second->PendingKey()));second->ready=false;second->pending=true;if(impl_->pendingOutputs.insert(second->PendingKey()).second)impl_->outputs.push_back(second);}
+    if(thirdOutput){const auto& third=thirdOutput->impl_;third->ValidateSpanWrite(impl_->pendingOutputs.count(third->PendingKey()));third->ready=false;third->pending=true;if(impl_->pendingOutputs.insert(third->PendingKey()).second)impl_->outputs.push_back(third);}
     }
 }
 void MetalContext::EncodeLayout(const MetalMatrix& input,const MetalMatrix& flags,const MetalMatrix& output,size_t tokenWidth) {
@@ -4054,7 +4110,7 @@ void MetalContext::ValidateVerificationRecurrent(const std::vector<MetalMatrix>&
         const auto& target=outputs[i]->impl_;
         if(!target||target->matrix.device!=impl_->device||target->matrix.dataType!=MPSDataTypeFloat32||target->matrix.offset)
             throw std::invalid_argument("Verification checkpoint output device/type/layout mismatch");
-        if(target->pending&&!impl_->pendingOutputs.count(target.get()))
+        if(target->pending&&!impl_->pendingOutputs.count(target->PendingKey()))
             throw std::logic_error("Verification checkpoint output is pending in another batch");
         for(size_t j=0;j<i;++j)if(target->matrix.data==outputs[j]->impl_->matrix.data)
             throw std::invalid_argument("Verification checkpoint outputs overlap");
@@ -4064,8 +4120,8 @@ void MetalContext::ValidateVerificationRecurrent(const std::vector<MetalMatrix>&
         const auto& source=input.impl_;
         if(!source||source->matrix.device!=impl_->device||source->matrix.dataType!=MPSDataTypeFloat32||source->matrix.offset)
             throw std::invalid_argument("Verification checkpoint input device/type/layout mismatch");
-        if((source->pending&&!impl_->pendingOutputs.count(source.get()))||
-           (!source->ready&&!(source->pending&&impl_->pendingOutputs.count(source.get()))))
+        if((source->pending&&!impl_->pendingOutputs.count(source->PendingKey()))||
+           (!source->ready&&!(source->pending&&impl_->pendingOutputs.count(source->PendingKey()))))
             throw std::logic_error("Verification checkpoint input is uninitialized or owned by another batch");
         for(const auto* target:outputs)if(source->matrix.data==target->impl_->matrix.data) {
 #ifdef GARNET_METAL_LINEAR_CHUNK_STATE_INPLACE
@@ -4148,10 +4204,10 @@ MetalContext::VerificationKVSpanParams MetalContext::ValidateVerificationKVSpan(
         const auto& owner=value->impl_;const auto matrix=owner->matrix;
         if(matrix.device!=impl_->device||matrix.dataType!=MPSDataTypeFloat32||matrix.offset)
             throw std::invalid_argument("Verification KV-span device/type/layout mismatch");
-        if(owner->pending&&!impl_->pendingOutputs.count(owner.get()))
+        if(owner->pending&&!impl_->pendingOutputs.count(owner->PendingKey()))
             throw std::logic_error("Verification KV-span operand is pending in another batch");
         // Restore is a partial writer and requires an initialized cache bank.
-        if((value!=output||accepted)&&!owner->ready&&!(owner->pending&&impl_->pendingOutputs.count(owner.get())))
+        if((value!=output||accepted)&&!owner->ready&&!(owner->pending&&impl_->pendingOutputs.count(owner->PendingKey())))
             throw std::logic_error("Verification KV-span input or restore cache is uninitialized");
     }
     if(c.data==b.data)throw std::invalid_argument("Verification KV backup/cache alias");
@@ -4449,12 +4505,12 @@ void MetalContext::EncodeAttentionChunk(const std::vector<MetalMatrix>& inputs,c
         @autoreleasepool {
         if(!impl_->command)throw std::logic_error("Begin a Metal command batch first");
         if(o.device!=impl_->device||o.dataType!=MPSDataTypeFloat32)throw std::invalid_argument("Invalid MPS chunk attention output/device");
-        if(output.impl_->pending&&!impl_->pendingOutputs.count(output.impl_.get()))throw std::logic_error("Output is pending in another command batch");
+        if(output.impl_->pending&&!impl_->pendingOutputs.count(output.impl_->PendingKey()))throw std::logic_error("Output is pending in another command batch");
         for(const auto& input:inputs) {
             auto matrix=input.impl_->matrix;
             if(matrix.device!=impl_->device||matrix.dataType!=MPSDataTypeFloat32||matrix.data==o.data)
                 throw std::invalid_argument("MPS attention input device/type or output alias differs");
-            if(!input.impl_->ready&&!(input.impl_->pending&&impl_->pendingOutputs.count(input.impl_.get())))
+            if(!input.impl_->ready&&!(input.impl_->pending&&impl_->pendingOutputs.count(input.impl_->PendingKey())))
                 throw std::logic_error("Uninitialized MPS attention input");
         }
         if(kc.rowBytes!=kc.columns*4||vc.rowBytes!=vc.columns*4)throw std::invalid_argument("MPS attention cache stride differs from prepared layout");
@@ -4556,8 +4612,8 @@ void MetalContext::EncodeAttentionChunk(const std::vector<MetalMatrix>& inputs,c
         bind(unpack,plan.query,0);bind(unpack,plan.livePart,1);bind(unpack,inputs[7],2);bind(unpack,inputs[6],3);bind(unpack,output,4);
         [unpack setBytes:&p length:sizeof(p) atIndex:5];[unpack setBytes:plan.pitches.data() length:sizeof(plan.pitches) atIndex:6];
         [unpack dispatchThreads:MTLSizeMake(count,1,1) threadsPerThreadgroup:MTLSizeMake(128,1,1)];[unpack endEncoding];
-        output.impl_->ready=false;output.impl_->pending=true;
-        if(impl_->pendingOutputs.insert(output.impl_.get()).second)impl_->outputs.push_back(output.impl_);
+        output.impl_->ValidateSpanWrite(impl_->pendingOutputs.count(output.impl_->PendingKey()));output.impl_->ready=false;output.impl_->pending=true;
+        if(impl_->pendingOutputs.insert(output.impl_->PendingKey()).second)impl_->outputs.push_back(output.impl_);
         ++impl_->chunkAttentionMPSDispatches;
 #ifdef GARNET_METAL_CHUNK_ATTENTION_BUCKETS
         ++impl_->chunkAttentionBucketDispatches;
@@ -4597,13 +4653,13 @@ void MetalContext::EncodeVerificationAttention(const std::vector<MetalMatrix>& i
     // Probabilities are an explicit, separately owned prepared resource.
     if(p.device!=impl_->device||o.device!=impl_->device||p.dataType!=MPSDataTypeFloat32||o.dataType!=MPSDataTypeFloat32||p.offset||o.offset||p.data==o.data)
         throw std::invalid_argument("Verification output device/type or alias mismatch");
-    for(const auto* target:{&probabilities,&output})if(target->impl_->pending&&!impl_->pendingOutputs.count(target->impl_.get()))
+    for(const auto* target:{&probabilities,&output})if(target->impl_->pending&&!impl_->pendingOutputs.count(target->impl_->PendingKey()))
         throw std::logic_error("Verification output is pending in another batch");
     for(const auto& input:inputs) {
         const auto matrix=input.impl_->matrix;
         if(matrix.device!=impl_->device||matrix.dataType!=MPSDataTypeFloat32||matrix.offset||matrix.data==p.data||matrix.data==o.data)
             throw std::invalid_argument("Verification input device/type or output alias mismatch");
-        if(!input.impl_->ready&&!(input.impl_->pending&&impl_->pendingOutputs.count(input.impl_.get())))
+        if(!input.impl_->ready&&!(input.impl_->pending&&impl_->pendingOutputs.count(input.impl_->PendingKey())))
             throw std::logic_error("Uninitialized verification attention input");
     }
     if(!inputs[5].impl_->ready||inputs[5].impl_->pending||!inputs[6].impl_->ready||inputs[6].impl_->pending||
@@ -4826,7 +4882,7 @@ std::vector<float> MetalContext::Download(const MetalMatrix& value) const {
     if(matrix.device!=impl_->device)throw std::invalid_argument("Metal matrix belongs to another device");
     std::vector<float> result(Elements(matrix.rows,matrix.columns));
     for(size_t i=0;i<matrix.rows;++i)
-        std::memcpy(result.data()+i*matrix.columns,static_cast<char*>(matrix.data.contents)+i*matrix.rowBytes,
+        std::memcpy(result.data()+i*matrix.columns,static_cast<char*>(matrix.data.contents)+matrix.offset+i*matrix.rowBytes,
             matrix.columns*sizeof(float));
     return result;
 

@@ -102,3 +102,12 @@ Short B4 regresses from the prior 46.20 tok/s observation. Separate runs have
 different system conditions and do not establish repeated performance or
 isolated causation. All 2x and half-TTFT targets remain unmet; see the research
 document for the complete table, numerical gates and limitations.
+
+The native-only `GARNET_METAL_PREPARED_KV_ROW_SPANS` option prepares private cache
+row views with shared backing readiness and offset-correct access. It requires
+resident/chunk in-place updates and defaults off. It currently supplies the
+cache-view foundation only: smaller-owner session graphs, native scheduler
+selection and physical-row result routing remain unimplemented. It does not
+change the xModel layer API or enable compact-owner serving. Native tests and
+the unchanged Mistral workload pass, but no new performance gain is established;
+see the research document for the slower retained regression measurements.
