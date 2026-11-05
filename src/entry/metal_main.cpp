@@ -296,6 +296,9 @@ public:
 #endif
 #ifdef GARNET_METAL_COMPACT_OWNER_PREFILL
         info+="; compact_owner_prefill";
+#ifdef GARNET_METAL_WIDE_OWNER_PREFILL
+    info+="; wide_owner_prefill";
+#endif
 #endif
 #ifdef GARNET_METAL_LAYOUT_VECTOR4
         info+="; chunk_layout_vector4";

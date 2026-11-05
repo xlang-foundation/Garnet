@@ -51,7 +51,7 @@ class MetalDecoderSession {
     struct CompactSpan {std::vector<State> states;MetalMatrix finalHidden,output;};
     struct CompactFamily {
         X::Value graphs,fallback;
-        size_t rows=0,chunk=0,width=0,capacity=0;
+        size_t rows=0,chunk=0,width=0,capacity=0,fallbackChunk=0;
         std::vector<uint64_t> generations,fallbackGenerations,baseGenerations;
         std::vector<CompactSpan> spans;
         MetalMatrix zero,hidden;
@@ -238,6 +238,11 @@ public:
     bool Build(X::Value graphs,X::Value head);
 #ifdef GARNET_METAL_COMPACT_OWNER_PREFILL
     bool PrepareCompactPrefill(X::Value graphs,X::Value fallback);
+#ifdef GARNET_METAL_WIDE_OWNER_PREFILL
+    size_t SelectPreparedPrefillChunk(const std::vector<size_t>& rows,const std::vector<uint64_t>& epochs,
+        const std::vector<size_t>& remaining,size_t maximum,size_t budget);
+    size_t MaximumPreparedPrefillChunk();
+#endif
     size_t CompactPrefillFamilyCount(){std::lock_guard<std::mutex> lock(mutex_);return compactFamilies_.size();}
     size_t LastCompactPrefillRows(){std::lock_guard<std::mutex> lock(mutex_);return compactLastRows_;}
     size_t LastCompactPrefillFirst(){std::lock_guard<std::mutex> lock(mutex_);return compactLastFirst_;}
@@ -388,6 +393,9 @@ public:
         APISET().AddProp("compact_prefill_family_count",&MetalDecoderSession::CompactPrefillFamilyCount);
         APISET().AddProp("compact_prefill_last_rows",&MetalDecoderSession::LastCompactPrefillRows);
         APISET().AddProp("compact_prefill_last_first",&MetalDecoderSession::LastCompactPrefillFirst);
+#ifdef GARNET_METAL_WIDE_OWNER_PREFILL
+        APISET().AddProp("compact_prefill_max_chunk",&MetalDecoderSession::MaximumPreparedPrefillChunk);
+#endif
 #endif
         APISET().AddFunc<6>("run",&MetalDecoderSession::Run);
         APISET().AddFunc<0>("reset",&MetalDecoderSession::Reset);

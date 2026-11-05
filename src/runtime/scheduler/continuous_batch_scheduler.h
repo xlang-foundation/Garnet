@@ -7,6 +7,7 @@
 
 #include <cstdint>
 #include <deque>
+#include <functional>
 #include <unordered_map>
 #include <vector>
 
@@ -55,6 +56,7 @@ namespace Garnet
         int scheduledTokens = 0;
         std::vector<ScheduledRequest> requests;
         std::vector<int> activeMask;
+        int prefillChunkTokens = 0; // Optional prepared input shape; zero is legacy.
     };
 
     struct SchedulerTick
@@ -69,6 +71,9 @@ namespace Garnet
         int maxPrefillTokensPerTick = 2048;
         int maxActiveRequests = 256;
         int prefillChunkTokens = 0; // Zero retains whole-prompt scheduling.
+        // Optional backend profile choice after row placement/prefix restore.
+        // The second argument is the budget left after actual decode tokens.
+        std::function<int(const BatchPlan&,int)> prefillChunkSelector;
     };
 
     // Backend-neutral policy engine. It creates tensor-ready batch metadata;

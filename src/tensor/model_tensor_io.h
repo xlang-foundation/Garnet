@@ -131,6 +131,18 @@ public:
         for(size_t b=0;b<size_t(shape[0]);++b)std::memcpy(values.data()+b*width,input+b*info.shape[1]+start,width*4);
         return X::Tensor::Create(Host(),X3_TENSOR_FLOAT32,shape,values.data(),values.size()*4);
     }
+    // Copy contiguous physical host rows without Python float-list expansion.
+    // This is transport only: no alias, GPU execution or cache ownership change.
+    X::Value Rows(X::Value source,int64_t first,int64_t rows) {
+        X::Tensor tensor(source);auto lease=tensor.Acquire();RequireHost(tensor);auto info=tensor.Info();
+        if(info.rank<1||first<0||rows<1||first>info.shape[0]||rows>info.shape[0]-first)
+            throw X::Error("host tensor row bounds invalid");
+        std::vector<int64_t> shape(info.shape,info.shape+info.rank);const size_t count=Count(shape);
+        if(count>info.byte_size/sizeof(float))throw X::Error("host tensor rows exceed storage");
+        const size_t width=count/size_t(shape[0]);shape[0]=rows;
+        return X::Tensor::Create(Host(),X3_TENSOR_FLOAT32,shape,
+            static_cast<const float*>(info.data)+size_t(first)*width,size_t(rows)*width*sizeof(float));
+    }
     X::Value ReadF32(const std::string& path,X::Value dimensions) {
         auto shape=Shape(dimensions);std::vector<float> values(Count(shape));
         std::ifstream file(path,std::ios::binary|std::ios::ate);
@@ -183,6 +195,7 @@ public:
         APISET().AddFunc<1>("embedding",&ModelTensorIO::Embedding);
         APISET().AddFunc<1>("zeros",&ModelTensorIO::Zeros);
         APISET().AddFunc<3>("slice",&ModelTensorIO::Slice);
+        APISET().AddFunc<3>("rows",&ModelTensorIO::Rows);
         APISET().AddFunc<2>("read_f32",&ModelTensorIO::ReadF32);
         APISET().AddFunc<1>("stack_tokens",&ModelTensorIO::StackTokens);
         APISET().AddFunc<2>("visual_token",&ModelTensorIO::VisualToken);

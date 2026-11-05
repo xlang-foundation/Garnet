@@ -145,15 +145,39 @@ bool MetalContinuousScheduler::Initialize(X::Value value,int64_t pending) {
     config.maxPrefillTokensPerTick=int(kSchedulerPrefillChunkLimit);
     config.prefillChunkTokens=int(std::min(layout.second,kSchedulerPrefillChunkLimit/layout.first));
 #endif
+#ifdef GARNET_METAL_WIDE_OWNER_PREFILL
+    const bool adaptive=session->MaximumPreparedPrefillChunk()>128;
+    if(adaptive)config.prefillChunkSelector=[this,session](const BatchPlan& plan,int budget) {
+        std::vector<size_t> rows,remaining;std::vector<uint64_t> epochs;
+        for(const auto& request:plan.requests) {
+            if(request.requestRow<0||request.prefillOffset<0||request.prefillOffset>request.promptTokens)
+                throw std::logic_error("Invalid prepared prefill request geometry");
+            rows.push_back(size_t(request.requestRow));epochs.push_back(request.rowEpoch);
+            remaining.push_back(size_t(request.promptTokens-request.prefillOffset));
+        }
+        return int(session->SelectPreparedPrefillChunk(rows,epochs,remaining,maximumPrefillChunk_,size_t(budget)));
+    };
+#endif
     auto policy=std::make_unique<ContinuousBatchScheduler>(config);
     auto allocator=std::make_unique<RowAllocator>(session,layout.first,layout.second);
     sessionOwner_=value;rows_=layout.first;capacity_=layout.second;
+#ifdef GARNET_METAL_WIDE_OWNER_PREFILL
+    adaptiveProfiles_=adaptive;maximumPrefillChunk_=std::min(size_t(128),capacity_);
+#endif
     scheduler_=std::move(policy);allocator_=std::move(allocator);failed_=false;return true;
 }
 bool MetalContinuousScheduler::SetPrefillChunk(int64_t tokens) {
     std::lock_guard<std::mutex> lock(mutex_);Ready();
     if(tokens<0||uint64_t(tokens)>kSchedulerPrefillChunkLimit||uint64_t(tokens)>capacity_||!inflight_.empty())return false;
 #ifdef GARNET_METAL_DENSE_PREFILL_MAX_TOKENS
+#ifdef GARNET_METAL_WIDE_OWNER_PREFILL
+    if(adaptiveProfiles_) {
+        auto session=sessionOwner_.NativeData<MetalDecoderSession>();
+        if(tokens<2||(uint64_t(tokens)&(uint64_t(tokens)-1))||uint64_t(tokens)>session->MaximumPreparedPrefillChunk())return false;
+        if(!scheduler_->SetPrefillChunkTokens(int(std::min(tokens,int64_t(128)))))return false;
+        maximumPrefillChunk_=size_t(tokens);return true;
+    }
+#endif
     // The compiled graph has all physical rows, even when only one is active.
     // A per-request chunk must fit their shared token-row workspace. Zero would
     // reenable unbounded whole-prompt scheduling in the portable policy.
@@ -240,8 +264,10 @@ std::string MetalContinuousScheduler::NextJson() {
                 if(allocator_->Tracked(request.id))trackedExpected_[request.id]=request.contextLength;
 #endif
             }
-            batches.push_back({{"stage",batch.stage==RequestStage::Prefill?"prefill":"decode"},
-                {"bucket_size",rows_},{"active_rows",mask},{"epochs",epochs},{"requests",requests}});
+            nlohmann::json body={{"stage",batch.stage==RequestStage::Prefill?"prefill":"decode"},
+                {"bucket_size",rows_},{"active_rows",mask},{"epochs",epochs},{"requests",requests}};
+            if(batch.prefillChunkTokens)body["prefill_chunk"]=batch.prefillChunkTokens;
+            batches.push_back(std::move(body));
         }
         return nlohmann::json{{"batches",batches},
             {"packed",{{"token_count",packed.tokenCount},{"segments",segments},{"execution","metadata_only"}}},

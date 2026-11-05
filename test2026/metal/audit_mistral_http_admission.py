@@ -32,7 +32,9 @@ def validate(events, clients, controls, profile, exit_status, expected_requests=
     require(events[-1]['event'] == 'closed', 'events after close')
     require(not counts['error'], 'native error')
     bound = next(e for e in events if e['event'] == 'native_dense_schedule_bound')
-    require((bound['physical_rows'], bound['global_token_budget'], bound['maximum_chunk']) == (4, 512, 128)
+    wide_owner = profile.get('wide_owner_prefill', False)
+    require(type(wide_owner) is bool, 'invalid owner profile policy')
+    require((bound['physical_rows'], bound['global_token_budget'], bound['maximum_chunk']) == (4, 512, 512 if wide_owner else 128)
             and bound['oversized_chunk_rejected'] is True and bound['whole_prompt_rejected'] is True,
             'incorrect compiled scheduler bound')
     ready = next(e for e in events if e['event'] == 'ready')
@@ -54,8 +56,11 @@ def validate(events, clients, controls, profile, exit_status, expected_requests=
     kv_scatter = profile.get('chunk_kv_scatter', False)
     vector_layout = profile.get('chunk_layout_vector4', False)
     compact_owner = profile.get('compact_owner_prefill', False)
+    require(not wide_owner or (compact_owner and 'wide_owner_prefill' in backend and
+            profile.get('maximum_owner_prefill_chunk')==512 and bound.get('owner_adaptive') is True),
+            'wide owner profile differs from native preparation')
     require(type(compact_owner) is bool and (not compact_owner or ('compact_owner_prefill' in backend
-            and profile.get('expected_compact_prefill_family_count') == 14)), 'compact owner policy differs from backend')
+            and profile.get('expected_compact_prefill_family_count') == (17 if wide_owner else 14))), 'compact owner policy differs from backend')
     require(counts['native_compact_prefill_prepared'] == int(compact_owner), 'missing/unexpected compact family inventory')
     if compact_owner:
         require(next(i for i,e in enumerate(events) if e['event'] == 'native_compact_prefill_prepared') <
@@ -106,13 +111,49 @@ def validate(events, clients, controls, profile, exit_status, expected_requests=
     compact_expected = None
     compact_rows = 0
     physical_batch = 4
+    current_chunk = maximum_chunk
+    tick_batches = []
+    tick_decode_tokens = 0
     for e in events:
         kind = e['event']
         if 'memory' in e:
             m = e['memory']
             require(0 <= m['metal_allocated_bytes'] <= m['metal_recommended_working_set_bytes']-256*1024*1024,
                     'sampled working-set bound exceeded')
-        if kind == 'native_batch':
+        if kind == 'native_profile_tick':
+            require(wide_owner and not tick_batches and pending is None, 'unfinished/overlapping native profile tick')
+            tick_batches = list(e['batches'])
+            stages = [b['stage'] for b in tick_batches]
+            require(stages in (['decode'],['prefill'],['decode','prefill']), 'invalid native tick stage order')
+            tick_decode_tokens = sum(len(b['requests']) for b in tick_batches if b['stage']=='decode')
+            total = tick_decode_tokens + sum(r['prefill_tokens'] for b in tick_batches if b['stage']=='prefill' for r in b['requests'])
+            require(total == e['token_count'] and 0<=total<=512, 'native profile tick exceeds global token budget')
+        elif kind == 'native_batch':
+            stage = e['stage']
+            current_chunk = e.get('prefill_chunk',maximum_chunk) if stage=='prefill' else 1
+            if wide_owner:
+                require(bool(tick_batches), 'native batch missing prepared tick')
+                planned = tick_batches.pop(0)
+                require((e['stage'],e['requests'],e['active_rows'])==(planned['stage'],planned['requests'],planned['active_rows'])
+                        and current_chunk==(planned['prefill_chunk'] if stage=='prefill' else 1), 'native batch differs from prepared tick')
+                if stage=='prefill':
+                    left = [r['prompt_tokens']-r['prefill_offset'] for r in e['requests']]
+                    live = sorted(r['row'] for r,n in zip(e['requests'],left) if n)
+                    longest = max(left);wanted = 2
+                    if longest<=128:
+                        while wanted<longest:wanted*=2
+                    else:
+                        while wanted*2<=min(longest,512):wanted*=2
+                    expected_chunk = 0
+                    while wanted>=2:
+                        span = len(live)==1 or (len(live)==2 and live[1]==live[0]+1)
+                        admissible = wanted<=128 or (span and len(live)*wanted<=512)
+                        if admissible and sum(min(n,wanted) for n in left)<=512-tick_decode_tokens:
+                            expected_chunk=wanted;break
+                        wanted//=2
+                    require(current_chunk==expected_chunk and current_chunk in (2,4,8,16,32,64,128,256,512),
+                            'wrong prepared owner-prefill shape selection')
+            else:require(current_chunk==(maximum_chunk if stage=='prefill' else 1), 'unexpected variable legacy chunk')
             require(compact_expected is None, 'batch missing compact row route')
             require(layout_expected is None, 'batch missing vector layout coverage')
             require(scatter_expected is None, 'batch missing contiguous KV coverage')
@@ -144,7 +185,7 @@ def validate(events, clients, controls, profile, exit_status, expected_requests=
                         'row identity/epoch changed')
                 if stage == 'prefill':
                     cached_head = prefix_policy and r['prefill_tokens'] == 0 and cached == r['prompt_tokens']
-                    require((0 < r['prefill_tokens'] <= maximum_chunk or cached_head) and r['prefill_offset'] == progress[identity]
+                    require((0 < r['prefill_tokens'] <= current_chunk or cached_head) and r['prefill_offset'] == progress[identity]
                             and r['slot'] == r['prefill_offset'] and r['generated_tokens'] == 0
                             and r['prefill_offset']+r['prefill_tokens'] <= r['prompt_tokens'],
                             'invalid prefill position/chunk')
@@ -164,9 +205,9 @@ def validate(events, clients, controls, profile, exit_status, expected_requests=
             compact_rows, compact_first = 0, 4
             if compact_owner and pending_fresh:
                 live = sorted(r['row'] for r in requests if stage != 'prefill' or r['prefill_tokens'] > 0)
-                if stage == 'prefill' and len(live) in (1,2) and (len(live) == 1 or live[1] == live[0]+1):
+                if stage == 'prefill' and len(live) in (1,2) and len(live)*current_chunk>4 and (len(live) == 1 or live[1] == live[0]+1):
                     compact_rows, compact_first = len(live), live[0]
-                compact_expected = (stage,compact_rows,compact_first,maximum_chunk if stage == 'prefill' else 1)
+                compact_expected = (stage,compact_rows,compact_first,current_chunk if stage == 'prefill' else 1)
             physical_batch = compact_rows or 4
             if vector_layout and pending_fresh:layout_expected = (stage,256+int(compact_rows>0) if stage == 'prefill' else 0)
             if matrix_attention and pending_fresh:
@@ -183,7 +224,8 @@ def validate(events, clients, controls, profile, exit_status, expected_requests=
                 attention_checks = set()
             stage_counts[stage] += 1
         elif kind == 'native_compact_prefill_prepared':
-            require(compact_owner and e['families'] == 14, 'incorrect compact family inventory')
+            require(compact_owner and e['families'] == (17 if wide_owner else 14)
+                    and (not wide_owner or e.get('maximum_chunk')==512), 'incorrect compact family inventory')
         elif kind == 'native_compact_prefill':
             require(compact_owner and compact_expected == (e['stage'],e['rows'],e['first'],e['chunk']), 'incorrect compact physical owner route')
             compact_expected = None
@@ -247,7 +289,7 @@ def validate(events, clients, controls, profile, exit_status, expected_requests=
                 active = (sum(r['prefill_tokens'] for r in requests) if stage == 'prefill' else
                           len(requests) if stage == 'decode' else
                           sum(r['prefill_offset']+r['prefill_tokens'] == r['prompt_tokens'] for r in requests))
-                require(e['active_rows'] == active and e['physical_rows'] == (physical_batch*maximum_chunk if stage == 'prefill' else 4),
+                require(e['active_rows'] == active and e['physical_rows'] == (physical_batch*current_chunk if stage == 'prefill' else 4),
                         'Mistral reuse extent differs from native row leases')
                 expected_reuse = (161 if stage == 'decode' else 1) if active == 4 and stage != 'prefill' else 0
                 require(e['mistral_decode_reuse_dispatches'] == expected_reuse, 'incorrect Mistral reuse projection coverage')
@@ -255,10 +297,10 @@ def validate(events, clients, controls, profile, exit_status, expected_requests=
                 require(e.get('mistral_decode_reuse_dispatches',0) == 0, 'unexpected Mistral reuse dispatch')
             profile_counts[stage] += 1
         elif kind in ('native_mpp', 'native_indexed'):
-            expected = 224 if kind == 'native_mpp' or e['active_tokens'] < physical_batch*maximum_chunk else 0
+            expected = 224 if kind == 'native_mpp' or e['active_tokens'] < physical_batch*current_chunk else 0
             require(e['affine_dispatches'] == expected, 'incorrect prefill projection route')
             if kind == 'native_indexed':
-                require(0 < e['active_tokens'] <= physical_batch*maximum_chunk and e['physical_rows'] == physical_batch*maximum_chunk,
+                require(0 < e['active_tokens'] <= physical_batch*current_chunk and e['physical_rows'] == physical_batch*current_chunk,
                         'invalid indexed prefill extent')
                 if reuse64:
                     require(reuse64_expected is None, 'missing prior cooperative64 event')
@@ -307,9 +349,10 @@ def validate(events, clients, controls, profile, exit_status, expected_requests=
                     'invalid completion state')
             completed[key] = e
             del rows[e['native_row']]
-    require(compact_expected is None and not rows and pending is None and reuse64_expected is None and scatter_expected is None and layout_expected is None and all(not c for c in chunks.values()), 'unfinished native work')
+    require(not tick_batches and compact_expected is None and not rows and pending is None and reuse64_expected is None and scatter_expected is None and layout_expected is None and all(not c for c in chunks.values()), 'unfinished native work')
     require(counts['native_compact_prefill'] == (fresh_prefill_batches+stage_counts['decode'] if compact_owner else 0), 'missing compact execution route')
     require(counts['native_chunk_flash_attention'] == (fresh_prefill_batches+stage_counts['decode'] if flash_attention else 0), 'missing fused attention stage event')
+    require(wide_owner or counts['native_profile_tick']==0, 'unexpected adaptive profile tick')
     require(counts['native_chunk_layout_vector'] == (fresh_prefill_batches+stage_counts['decode'] if vector_layout else 0),
             'missing vector layout stage event')
     require(counts['native_chunk_kv_scatter'] == (fresh_prefill_batches+stage_counts['decode'] if kv_scatter else 0),
@@ -440,13 +483,36 @@ def main():
         corruptions += ['wrong-compact-policy','wrong-compact-inventory','wrong-compact-span','missing-compact-route','wrong-compact-footprint']
     if profile.get('chunk_flash_attention'):
         corruptions += ['wrong-flash-policy','wrong-flash-dispatch','missing-flash-route']
+    if profile.get('wide_owner_prefill'):
+        corruptions += ['wrong-wide-policy','wrong-wide-inventory','wrong-wide-bound',
+                        'missing-profile-tick','wrong-tick-budget','wrong-prepared-chunk','wrong-tick-order']
     for label in corruptions:
         es, cs, ct = copy.deepcopy(events), copy.deepcopy(clients), copy.deepcopy(controls)
         if label == 'wrong-bound':
             next(e for e in es if e['event'] == 'native_dense_schedule_bound')['global_token_budget'] = 1024
+        elif label == 'wrong-wide-policy':
+            ready = next(e for e in es if e['event'] == 'ready')
+            ready['backend'] = ready['backend'].replace('wide_owner_prefill','wide_owner_prefill_BAD')
+        elif label == 'wrong-wide-inventory':
+            next(e for e in es if e['event'] == 'native_compact_prefill_prepared')['maximum_chunk'] = 128
+        elif label == 'wrong-wide-bound':
+            next(e for e in es if e['event'] == 'native_dense_schedule_bound')['owner_adaptive'] = False
+        elif label == 'missing-profile-tick':
+            es.remove(next(e for e in es if e['event'] == 'native_profile_tick'))
+        elif label == 'wrong-tick-budget':
+            next(e for e in es if e['event'] == 'native_profile_tick')['token_count'] = 513
+        elif label == 'wrong-prepared-chunk':
+            # Change both copies to test the independent policy calculation,
+            # rather than merely testing equality of the tick/batch records.
+            tick = next(e for e in es if e['event'] == 'native_profile_tick' and any(b['stage']=='prefill' for b in e['batches']))
+            batch = next(b for b in tick['batches'] if b['stage']=='prefill')
+            event = next(e for e in es if e['event']=='native_batch' and e['stage']=='prefill')
+            batch['prefill_chunk'] = event['prefill_chunk'] = 2 if event['prefill_chunk']!=2 else 4
+        elif label == 'wrong-tick-order':
+            next(e for e in es if e['event'] == 'native_profile_tick')['batches'][0]['stage'] = 'invalid'
         elif label == 'stale-lease': next(e for e in es if e['event'] == 'native_batch')['requests'][0]['epoch'] = 0
         elif label == 'wrong-slot': next(e for e in es if e['event'] == 'native_batch')['requests'][0]['slot'] += 1
-        elif label == 'oversized-chunk': next(e for e in es if e['event'] == 'native_batch')['requests'][0]['prefill_tokens'] = 129
+        elif label == 'oversized-chunk': next(e for e in es if e['event'] == 'native_batch')['requests'][0]['prefill_tokens'] = 513 if profile.get('wide_owner_prefill') else 129
         elif label == 'missing-projection': next(e for e in es if e['event'] == 'native_affine_profile')['affine_dispatches'] = 0
         elif label == 'wrong-token': next(e for e in es if e['event'] == 'completed')['generated_ids'][0] ^= 1
         elif label == 'changed-prompt': cs[0]['expected_prompt_ids'][0] ^= 1

@@ -194,6 +194,38 @@ namespace Garnet
             prefill.scheduledTokens += count;
             prefill.requests.push_back(std::move(item));
         }
+        if (!prefill.requests.empty() && m_config.prefillChunkSelector) {
+            int decodeTokens=0;
+            for(const auto& batch:tick.batches)if(batch.stage==RequestStage::Decode)decodeTokens+=int(batch.requests.size());
+            const int budget=std::max(0,m_config.maxPrefillTokensPerTick-decodeTokens);
+            const int chunk=m_config.prefillChunkSelector(prefill,budget);
+            if(chunk<0||chunk>m_config.maxPrefillTokensPerTick)
+                throw std::logic_error("Prepared prefill selector exceeds token workspace");
+            if(!chunk) {
+                for(const auto& request:prefill.requests) {
+                    auto& state=m_requests.at(request.id);state.prefillScheduled=0;state.cachedHeadScheduled=false;
+                    m_prefillQueue.push_back(request.id);
+                }
+                prefill.requests.clear();
+            }else {
+                int total=0;
+                for(const auto& request:prefill.requests) {
+                    const auto& state=m_requests.at(request.id);
+                    const int count=std::min(chunk,state.request.promptTokens-state.prefillProcessed);
+                    if(count<0||count>budget-total)throw std::logic_error("Prepared prefill work exceeds remaining global budget");
+                    if(count&&!kvPool.EnsureCapacity(request.id,state.prefillProcessed+count))
+                        throw std::logic_error("Prepared prefill cannot retain its reserved KV capacity");
+                    total+=count;
+                }
+                prefill.scheduledTokens=total;prefill.prefillChunkTokens=chunk;
+                for(auto& request:prefill.requests) {
+                    auto& state=m_requests.at(request.id);
+                    const int count=std::min(chunk,state.request.promptTokens-state.prefillProcessed);
+                    state.prefillScheduled=count;state.cachedHeadScheduled=count==0;
+                    request.prefillTokens=count;request.contextLength=state.prefillProcessed+count;
+                }
+            }
+        }
         if (!prefill.requests.empty()) tick.batches.push_back(std::move(prefill));
         return tick;
     }

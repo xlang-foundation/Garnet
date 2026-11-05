@@ -18,6 +18,10 @@ class MetalContinuousScheduler {
     std::map<uint64_t,int> trackedExpected_;
 #endif
     size_t rows_=0,capacity_=0;
+#ifdef GARNET_METAL_WIDE_OWNER_PREFILL
+    bool adaptiveProfiles_=false;
+    size_t maximumPrefillChunk_=128;
+#endif
     bool failed_=false;
     std::mutex mutex_;
     void Ready() const;

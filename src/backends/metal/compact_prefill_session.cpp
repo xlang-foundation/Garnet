@@ -2,6 +2,9 @@
 #include "decoder_session.h"
 #ifdef GARNET_METAL_COMPACT_OWNER_PREFILL
 #include "lowering_context.h"
+#ifdef GARNET_METAL_WIDE_OWNER_PREFILL
+#include "prefill_profile_policy.h"
+#endif
 #include <algorithm>
 #include <chrono>
 #include <cmath>
@@ -42,19 +45,29 @@ bool MetalDecoderSession::PrepareCompactPrefill(X::Value values,X::Value fallbac
     std::sort(ordered.begin(),ordered.end(),std::less<MetalCompiledGraph*>());ordered.erase(std::unique(ordered.begin(),ordered.end()),ordered.end());
     std::vector<std::unique_lock<std::mutex>> locks;for(auto graph:ordered)locks.emplace_back(graph->mutex_);
     const auto& shape=graphs[0]->inputShapes_;
-    if(shape.empty()||shape[0].size()!=3||(shape[0][0]!=1&&shape[0][0]!=2)||shape[0][1]<2||shape[0][1]>128||shape[0][2]!=4096)
-        throw std::invalid_argument("Compact prefill currently qualifies B1/B2, chunk2..128 and width4096");
+    constexpr size_t maximumChunk=
+#ifdef GARNET_METAL_WIDE_OWNER_PREFILL
+        512;
+#else
+        128;
+#endif
+    if(shape.empty()||shape[0].size()!=3||(shape[0][0]!=1&&shape[0][0]!=2)||shape[0][1]<2||
+       size_t(shape[0][1])>maximumChunk||(size_t(shape[0][1])&(size_t(shape[0][1])-1))||
+       size_t(shape[0][0])*size_t(shape[0][1])>512||shape[0][2]!=4096)
+        throw std::invalid_argument("Compact prefill family exceeds its B1/B2 dense profile envelope");
     CompactFamily family;family.graphs=X::Value::List(Host());family.fallback=X::Value::List(Host());
     for(size_t i=0;i<graphs.size();++i){family.graphs.Append(values.Get(i));family.fallback.Append(fallbackValues.Get(i));}
     family.shape=shape[0];family.physicalShape=shape[0];family.physicalShape[0]=4;
     family.rows=size_t(shape[0][0]);family.chunk=size_t(shape[0][1]);family.width=size_t(shape[0][2]);
+    family.fallbackChunk=std::min(family.chunk,size_t(128));
+    auto fallbackShape=family.physicalShape;fallbackShape[1]=int64_t(family.fallbackChunk);
     if(compactFamilies_.count({family.rows,family.chunk}))throw std::invalid_argument("Compact family already prepared");
     for(size_t i=0;i<graphs.size();++i) {
         auto graph=graphs[i],source=base[i],full=fallback[i];const auto& state=states_[i];
         if(graph==source||graph==full||!graph->ready_||!source->ready_||!full->ready_||
            graph->inputShapes_.size()!=6||full->inputShapes_.size()!=6||source->inputShapes_.size()<3||
            graph->outputParts_.size()!=3||graph->inputShapes_[0]!=family.shape||
-           full->inputShapes_[0]!=family.physicalShape||source->inputShapes_[0]!=std::vector<int64_t>{4,4096}||
+           full->inputShapes_[0]!=fallbackShape||source->inputShapes_[0]!=std::vector<int64_t>{4,4096}||
            !graph->SharesVerificationWeights(*source)||!full->SharesVerificationWeights(*source)||
            !graph->CanUpdateKVInPlace(1)||!graph->CanUpdateKVInPlace(2)||
            !full->CanUpdateKVInPlace(1)||!full->CanUpdateKVInPlace(2)||
@@ -71,6 +84,7 @@ bool MetalDecoderSession::PrepareCompactPrefill(X::Value values,X::Value fallbac
         }
         family.generations.push_back(graph->generation_);family.fallbackGenerations.push_back(full->generation_);family.baseGenerations.push_back(source->generation_);
     }
+    if(family.chunk>family.capacity)throw std::invalid_argument("Compact chunk exceeds its prepared context capacity");
     if(!rowFinalHidden_.Valid()) {
         rowFinalHidden_=gpu_->Upload(std::vector<float>(4*family.width,0),4,family.width);
         rowFinalWidth_=family.width;finalHiddenReady_.assign(4,0);
@@ -107,8 +121,14 @@ bool MetalDecoderSession::TryCompactPrefill(X::Value graphs,X::Value hidden,X::V
     int64_t predictionToken,const std::vector<uint64_t>* epochs,const std::vector<int64_t>* tokenIds,VerificationRun* verification,X::Value& result) {
     if(compactFamilies_.empty()||!epochs||!managedRows_||predictionToken!=-1||verification||!gpu_||poisoned_)return false;
     X::Tensor mask(active);auto lease=mask.Acquire();auto info=mask.Info();
+    constexpr size_t maximumChunk=
+#ifdef GARNET_METAL_WIDE_OWNER_PREFILL
+        512;
+#else
+        128;
+#endif
     if(active.runtime()!=Host()->runtime||info.symbolic||info.device_type||info.dtype!=X3_TENSOR_FLOAT32||info.rank!=2||
-       info.shape[0]!=4||info.shape[1]<2||info.shape[1]>128||!info.data||!IsContiguousTensor(mask)||info.byte_size!=size_t(info.shape[1])*16)
+       info.shape[0]!=4||info.shape[1]<2||size_t(info.shape[1])>maximumChunk||!info.data||!IsContiguousTensor(mask)||info.byte_size!=size_t(info.shape[1])*16)
         return false;
     const size_t chunk=size_t(info.shape[1]);const auto* flags=static_cast<const float*>(info.data);std::vector<size_t> rows;
     for(size_t row=0;row<4;++row) {
@@ -149,5 +169,23 @@ bool MetalDecoderSession::TryCompactPrefill(X::Value graphs,X::Value hidden,X::V
         inferenceMs_=std::chrono::duration<double,std::milli>(std::chrono::steady_clock::now()-started).count();return true;
     }catch(...){restore();hidden_=previousHidden;hiddenShape_=previousShape;throw;}
 }
+#ifdef GARNET_METAL_WIDE_OWNER_PREFILL
+size_t MetalDecoderSession::MaximumPreparedPrefillChunk() {
+    std::lock_guard<std::mutex> lock(mutex_);size_t result=0;
+    for(const auto& item:compactFamilies_)result=std::max(result,item.first.second);
+    return result;
+}
+size_t MetalDecoderSession::SelectPreparedPrefillChunk(const std::vector<size_t>& rows,const std::vector<uint64_t>& epochs,
+    const std::vector<size_t>& remaining,size_t maximum,size_t budget) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    if(!gpu_||poisoned_||!requestRows_||rows.size()!=epochs.size()||rows.size()!=remaining.size())
+        throw std::invalid_argument("Prepared scheduler profile requires a ready leased session");
+    for(size_t i=0;i<rows.size();++i)if(!epochs[i]||!requestRows_->Matches(rows[i],epochs[i]))
+        throw std::invalid_argument("Prepared scheduler profile has stale physical row epochs");
+    std::vector<DenseOwnerPrefillFamily> families;
+    for(const auto& item:compactFamilies_)families.push_back({item.second.rows,item.second.chunk,item.second.fallbackChunk});
+    return SelectDenseOwnerPrefillChunk(rows,remaining,maximum,budget,families);
+}
+#endif
 }
 #endif

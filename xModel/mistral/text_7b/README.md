@@ -148,3 +148,23 @@ late-chunk body work improves about1% for one owner and regresses3–9% for four
 The separate HTTP observation is slower in every cell. This implementation is
 an experimental comparison path, not an enabled performance improvement. See
 the research document for exact scope, evidence and remaining targets.
+
+`GARNET_METAL_WIDE_OWNER_PREFILL=ON` adds optional prepared B1/T512 and B2/T256
+families under the same global512-token bound. It requires compact owner
+families and defaults off. Prepare with `decoder.prepare_compact_prefill(512)`
+before execution or row claims. `prefill_profile_graphs(chunk)` only retrieves
+prepared fallback handles; it never builds a padded B4/T256 or B4/T512 GPU graph.
+The layer operators and physical KV owners stay unchanged. Native scheduling
+selects a prepared width from remaining lengths, contiguous live owners and
+the tick budget after decode tokens. Gapped or three/four-owner spans retain
+up-to128 fallback profiles. Width is a maximum; short tails use smaller shapes.
+
+The explicit serving profile uses `wide_owner_prefill: true`,
+`maximum_owner_prefill_chunk: 512` and17 compact families. Native tick/route
+traces are independently audited. All22 complete output ID sequences match
+the earlier compact128 collection. Full KV/hidden/prediction comparisons,
+dynamic A/E/A-return refill and exact/appended/changed prefix checks pass.
+The separate serving observation does not establish a performance improvement;
+long C1/C2/C4 aggregate rates are7.44/9.46/10.92 tok/s, below the frozen
+reference engines. Flash remains off in this admission. All2x/half-TTFT and
+coding-quality targets remain unmet; wider profiles are an experimental option.

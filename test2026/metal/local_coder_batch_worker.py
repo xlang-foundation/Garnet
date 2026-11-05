@@ -74,9 +74,13 @@ def main():
     attention_active_rows=profile.get('chunk_attention_active_rows',False)
     kv_scatter=profile.get('chunk_kv_scatter',False)
     compact_owner=profile.get('compact_owner_prefill',False)
+    wide_owner=profile.get('wide_owner_prefill',False)
+    if (type(wide_owner) is not bool or (wide_owner and (not compact_owner or family!='mistral_7b' or
+        'wide_owner_prefill' not in backend or chunk!=128 or profile.get('maximum_owner_prefill_chunk')!=512))):
+        raise ValueError('Wide owner profile requires explicit prepared native512-token families')
     if (type(compact_owner) is not bool or (compact_owner and
         (family!='mistral_7b' or batch!=4 or 'compact_owner_prefill' not in garnet.backend_info() or
-         profile.get('expected_compact_prefill_family_count')!=14))):
+         profile.get('expected_compact_prefill_family_count')!=(17 if wide_owner else 14)))):
         raise ValueError('Compact owner profile requires explicit prepared native dense families')
     vector_layout=profile.get('chunk_layout_vector4',False)
     if (type(vector_layout) is not bool or vector_layout!=('chunk_layout_vector4' in garnet.backend_info()) or
@@ -106,6 +110,7 @@ def main():
     trace_stages=profile.get('trace_stage_latency',False)
     if type(trace_stages) is not bool:raise ValueError('Stage tracing requires an explicit boolean policy')
     mixed=profile.get('mixed_forward',False)
+    if mixed and wide_owner:raise ValueError('Wide owner profiles use separate prepared prefill/decode plans')
     if type(mixed) is not bool or (mixed and (not chunked or prefix)):
         raise ValueError('Mixed forward requires explicit uncached chunked scheduling')
     if mixed and 'packed_token_plan' not in garnet.backend_info():
@@ -212,14 +217,16 @@ def main():
     try:
         if family=='mistral_7b':
             from xModel.mistral.text_7b.metal_batch_study import create_decoder as create_mistral_decoder
-            decoder=(create_mistral_decoder(folder+'/model.safetensors',config,capacity,batch,chunk,True) if compact_owner else
+            decoder=(create_mistral_decoder(folder+'/model.safetensors',config,capacity,batch,chunk,True,512) if wide_owner else
+                     create_mistral_decoder(folder+'/model.safetensors',config,capacity,batch,chunk,True) if compact_owner else
                      create_mistral_decoder(folder+'/model.safetensors',config,capacity,batch,chunk))
         else:decoder=create_qwen_decoder(folder+'/model.safetensors.index.json',config,capacity,batch,chunk)
         decoder.prefill_compile_ms=0
         if compact_owner:
             families=decoder.session.compact_prefill_family_count
             if families!=profile['expected_compact_prefill_family_count']:raise ValueError('Compact family preparation incomplete')
-            emit(dict(event='native_compact_prefill_prepared',families=families))
+            emit(dict(event='native_compact_prefill_prepared',families=families,
+                maximum_chunk=decoder.session.compact_prefill_max_chunk if wide_owner else chunk))
         if prefix:
             if 'native_hybrid_token_prefix' not in garnet.backend_info():raise ValueError('Native hybrid token prefix extension required')
             decoder.session.configure_token_prefix(profile['prefix_identity'],profile.get('prefix_entries',2),profile.get('prefix_host_bytes',384*1024*1024))
@@ -240,11 +247,13 @@ def main():
             with open(path,'x') as stream:stream.write(garnet.memory_inventory_json(descriptors,decoder.session))
         policy=garnet.continuous_scheduler();policy.initialize(decoder.session,16)
         if family=='mistral_7b':
-            if policy.set_prefill_chunk(dense_limit//batch+1) or policy.set_prefill_chunk(0):
+            native_maximum=512 if wide_owner else dense_limit//batch
+            if policy.set_prefill_chunk(native_maximum+1) or policy.set_prefill_chunk(0):
                 raise ValueError('Native dense scheduler accepted an oversized or whole-prompt chunk policy')
             emit(dict(event='native_dense_schedule_bound',physical_rows=batch,global_token_budget=dense_limit,
-                maximum_chunk=min(capacity,dense_limit//batch),oversized_chunk_rejected=True,whole_prompt_rejected=True))
-        if chunked and not policy.set_prefill_chunk(chunk):raise ValueError('Native prefill chunk configuration rejected')
+                maximum_chunk=min(capacity,native_maximum),oversized_chunk_rejected=True,whole_prompt_rejected=True,
+                owner_adaptive=wide_owner))
+        if chunked and not policy.set_prefill_chunk(512 if wide_owner else chunk):raise ValueError('Native prefill chunk configuration rejected')
         tokenizer=garnet.tokenizer();tokenizer.open(folder)
         if family=='mistral_7b':
             stops=[config['eos_token_id']]
@@ -297,7 +306,9 @@ def main():
         embedding_ms=[0.0]
         def embedding(ids,packed):
             started=time.monotonic() if trace_stages else 0
-            if packed:result=decoder.io.stack_tokens([decoder.io.embedding([ids[row*chunk+t] for row in range(batch)]) for t in range(chunk)])
+            if packed:
+                input_chunk=len(ids)//batch
+                result=decoder.io.stack_tokens([decoder.io.embedding([ids[row*input_chunk+t] for row in range(batch)]) for t in range(input_chunk)])
             else:result=decoder.io.embedding(ids)
             if trace_stages:embedding_ms[0]=(time.monotonic()-started)*1000
             return result
@@ -453,6 +464,7 @@ def main():
             if not jobs:continue
             started=time.monotonic() if trace_stages else 0
             tick=json.loads(policy.next_json());plans=tick['batches']
+            if wide_owner:emit(dict(event='native_profile_tick',batches=plans,token_count=tick['packed']['token_count']))
             if trace_stages:emit(dict(event='native_stage_trace',stage='schedule',run_wall_ms=(time.monotonic()-started)*1000,
                 plan_stages=[plan['stage'] for plan in plans]))
             if not plans:raise ValueError('Native scheduler has live jobs but made no progress')
@@ -500,7 +512,10 @@ def main():
                 continue
             for plan in plans:
                 if shutdown.is_set():break
-                emit(dict(event='native_batch',stage=plan['stage'],active_rows=plan['active_rows'],requests=plan['requests']))
+                plan_chunk=plan.get('prefill_chunk',chunk) if plan['stage']=='prefill' else 1
+                if wide_owner and (type(plan_chunk) is not int or plan_chunk not in (1,2,4,8,16,32,64,128,256,512)):
+                    raise ValueError('Native owner-prefill shape is outside prepared profiles')
+                emit(dict(event='native_batch',stage=plan['stage'],active_rows=plan['active_rows'],requests=plan['requests'],prefill_chunk=plan_chunk))
                 if plan['stage']=='prefill' and chunked:
                     requests={request['row']:request for request in plan['requests']}
                     ids=[];flags=[];slots=[];final_epochs=[0]*batch
@@ -510,17 +525,18 @@ def main():
                             offset=request['prefill_offset'];count=request['prefill_tokens'];job=jobs[request['id']]
                             if cached_chunks:job['cached_tokens']=request['cached_tokens']
                             head_only=(cached_chunks and count==0 and offset==len(job['prompt'])==request['cached_tokens'])
-                            if not (0<count<=chunk or head_only) or offset<0 or offset+count>len(job['prompt']):raise ValueError('Native prefill chunk plan out of bounds')
+                            if not (0<count<=plan_chunk or head_only) or offset<0 or offset+count>len(job['prompt']):raise ValueError('Native prefill chunk plan out of bounds')
                             if offset+count==len(job['prompt']):final_epochs[row]=request['epoch']
-                        for t in range(chunk):
+                        for t in range(plan_chunk):
                             valid=request is not None and t<request['prefill_tokens']
                             position=request['prefill_offset']+t if valid else 0
                             ids.append(jobs[request['id']]['prompt'][position] if valid else 0)
                             flags.append(1.0 if valid else 0.0);slots.append(float(position))
                     if any(flags):
                         hidden=embedding(ids,True)
-                        execute(graphs,hidden,f32([slot for slot in slots for axis in range(3)],[batch,chunk,3]),
-                            f32(slots,[batch,chunk]),f32(flags,[batch,chunk]),-1,plan['epochs'],ids)
+                        chosen=decoder.prefill_profile_graphs(plan_chunk) if wide_owner else graphs
+                        execute(chosen,hidden,f32([slot for slot in slots for axis in range(3)],[batch,plan_chunk,3]),
+                            f32(slots,[batch,plan_chunk]),f32(flags,[batch,plan_chunk]),-1,plan['epochs'],ids)
                     predicted=predict_rows(final_epochs) if any(final_epochs) else None
                     for request in plan['requests']:
                         final=final_epochs[request['row']]!=0

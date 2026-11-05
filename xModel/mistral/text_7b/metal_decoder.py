@@ -59,14 +59,19 @@ class MistralMetalDecoder(DenseMetalDecoder):
     def prepare_compact_prefill(self,chunk=128):
         if self.batch!=4 or self.session is None or 'compact_owner_prefill' not in garnet.backend_info():
             raise ValueError('Compact owner prefill requires the native B4 dense profile extension')
-        self.prepare_prefill(chunk)
+        if type(chunk) is not int or chunk not in (2,4,8,16,32,64,128,256,512) or chunk>self.capacity:
+            raise ValueError('Compact owner maximum chunk exceeds its context/profile bounds')
+        if chunk>128 and 'wide_owner_prefill' not in garnet.backend_info():
+            raise ValueError('Wide owner families require the compiled native extension')
+        self.prepare_prefill(min(chunk,128))
         import tensor
         from xModel.qwen.metal_dense.layers import T,DensePrefillLayer
         width=self.config['hidden_size']
-        for size in reversed(self._prefill_profiles()):
+        for size in reversed((2,4,8,16,32,64,128,256,512)):
             if size>chunk:continue
-            fallback=self._resident_prefill_graphs(size)
+            fallback=self._resident_prefill_graphs(min(size,128))
             for rows in (1,2):
+                if rows*size>self.dense_prefill_limit:continue
                 graphs=[]
                 for idx,layer in enumerate(self.layers):
                     key=str(rows)+'-'+str(size)+'-'+str(idx)
@@ -87,6 +92,21 @@ class MistralMetalDecoder(DenseMetalDecoder):
                     graphs.append(graph)
                 self.session.prepare_compact_prefill(graphs,fallback)
         return True
+
+    def prefill_profile_graphs(self,chunk):
+        # Wide physical controls route through the registered narrow fallback
+        # list; native execution chooses its prepared B1/B2 family before GPU
+        # shape binding. Never compile a padded B4/T512 graph on this path.
+        if type(chunk) is not int or chunk not in (2,4,8,16,32,64,128,256,512):
+            raise ValueError('Invalid prepared owner-prefill input shape')
+        if chunk>128 and not any(str(rows)+'-'+str(chunk)+'-0' in self.compact_prefill_graphs for rows in (1,2)):
+            raise ValueError('Owner-prefill input family was not prepared')
+        result=[]
+        for idx in range(len(self.layers)):
+            graph=self.prefill_graphs.get(str(min(chunk,128))+'-'+str(idx))
+            if graph is None:raise ValueError('Owner-prefill fallback was not prepared')
+            result.append(graph)
+        return result
 
     def prepare_verification(self,tokens=4):
         # The native verifier retains ordinary FP32 decode math, owns K/V span

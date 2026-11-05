@@ -1590,3 +1590,141 @@ GPU graph, which would exceed that global bound. Native scheduling must select
 an admitted family from current owner spans and remaining token budget, while
 retaining the existing narrow fallback for gapped or mixed work. No speed gain
 or correctness admission for those future profiles is established here.
+
+### Prepared wider owner profiles and native adaptive chunk selection
+
+The subsequent optional `GARNET_METAL_WIDE_OWNER_PREFILL` extension now prepares
+B1/T512 and B2/T256 without constructing a B4/T256 or B4/T512 GPU model graph.
+It requires compact owner families and a compiled dense512-token upper bound;
+it defaults off. The unchanged four physical KV owners remain native runtime
+state. Contiguous one/two-owner spans select their prepared compact programs;
+gapped and three/four-owner work retain up-to128 fallback programs. A wide
+physical host input is copied to the selected compact row span before dispatch.
+The fallback graph still has B4/min(chunk,128) GPU geometry, so unsupported
+wide spans are rejected before execution rather than silently overrun it.
+
+Native `set_prefill_chunk(512)` supplies an upper bound. After reserving stable
+row leases, the scheduler selects a registered width using remaining prompt
+lengths, physical contiguity and the global512-token tick budget minus actual
+decode tokens. For example, one long prefill with three decodes uses256 rather
+than512. Long remainders choose a power-of-two width no larger than the
+remainder/maximum; tails up to128 choose the smallest covering prepared width.
+Head-only prefix hits contribute no live prefill rows. Deferral retains leases.
+The portable scheduler's selector is optional; existing callers keep their
+previous policy. Layer operations are unchanged and execution performs no new
+graph compilation. `prefill_profile_graphs(chunk)` retrieves prepared handles.
+
+The wider inventory is17 compact families,24 MPS attention plans,
+1,885,120,512 scratch bytes and144 context buckets, compared with14/21/
+1,044,162,560/126 for compact128. Preparation reports15,918,710,784 tracked
+Metal bytes on the M5/24GiB test host. These are device-resource snapshots,
+not peak memory or system free RAM. The selected immutable source2 library
+SHA256 is `e49ad5d051d0f828c96f653d826e39cc53602dbb40aa15530bf65199e784dfb4`.
+Flash attention is off throughout this admission. INT4g64 coefficients/prefill
+projection operands remain FP16; attention/KV/decode remain FP32. Reference
+engines use FP16 state. Different chunk boundaries can reassociate arithmetic.
+
+The enabled build passes25 native tests; disabling only the wider extension
+passes all24 legacy tests. The new CPU policy test covers30 planning/lifecycle
+cases. The checked C++ host `tensor_io.rows(source,first,count)` helper preserves
+contiguous FP32 bytes without Python list expansion:31 positive cases and18
+invalid bounds checks pass. This helper copies transport data and does not
+change GPU ownership or expose an alias into private KV.
+
+Nine actual-model cases compare every physical KV word through hashes, hidden
+output and routed predictions against independent B1/B2 native caches using
+the same immutable programs/weights. They cover rows0/3 at512, appended256,
+a short tail, reclamation/reset, adjacent rows1/2 and2/3 at256, and unequal
+valid lengths. All match exactly within each selected program. Five negative
+cases reject stale reclaimed epochs, gapped wide work, two512-token owners,
+unleased wide execution and preparation after execution, with unchanged caches.
+The first parity attempt failed in its host slice harness before inference;
+the corrected row-copy probe and its failed predecessor are both retained.
+
+The real-weight native scheduler test completes nine jobs across75 batch
+steps. A/B/C/D start together, E waits for A's row, and returned A reuses that
+row with another fresh epoch while B/C/D still decode. It also exercises
+solo512 and adjacent-pair256 scheduling, checks the global budget including
+decode, and hashes inactive physical KV rows before/after each prefill. All
+162 emitted IDs match frozen native controls. The seven-case prefix probe
+also preserves exact return, appended/changed continuation and528 survivor
+tokens. Neither test establishes serving speed or coding quality.
+
+The unchanged HTTP workload completes22 requests/4,844 output tokens, matches
+all22 prior compact128 generated-ID sequences and passes43 corruption
+rejections. The auditor independently checks prepared width choice and the
+combined decode/prefill tick budget. Strict coding remains0/8 by full output
+identity; matching IDs is not a new quality score. No ANE work is involved.
+
+| Nominal input / concurrency | Compact128 Garnet tok/s | Adaptive Garnet tok/s | Frozen vLLM-Metal tok/s | Frozen SGLang-MLX tok/s | 2x target |
+|---|---:|---:|---:|---:|---:|
+|256 /1 |19.390 |19.230 |22.021 |22.042 |44.084 |
+|256 /2 |33.133 |32.710 |31.464 |32.127 |64.254 |
+|256 /4 |47.698 |46.594 |45.235 |42.194 |90.470 |
+|2048 /1 |7.729 |7.443 |12.345 |12.518 |25.036 |
+|2048 /2 |9.725 |9.459 |16.536 |14.482 |33.071 |
+|2048 /4 |10.288 |10.916 |21.179 |16.337 |42.358 |
+
+C1 TTFT is0.919s /7.924s and decode22.188 /13.724 tok/s. The native columns
+are separate one-cohort/no-warmup/one-wave observations; reference columns are
+the unchanged15-wave medians. Five cells regress from the earlier native run
+and one improves under different system conditions. These data do not establish
+an isolated causal benefit or repeated superiority. All2x and half-TTFT targets
+remain unmet. Wider shapes are a tested scheduling option, not a demonstrated
+performance improvement.
+
+The paired full-prefill study uses one prepared engine per process, the same
+first2048 prompt tokens, the same weights/physical owners and all17 families.
+Two serial processes reverse variant order. Each group/variant has one warmup
+and three complete cold-cache prefills, for24 measured full prefills. Reset,
+row claims, input construction, vocabulary head and hashing are outside timing.
+Sampled Metal allocation remains fixed. Full KV hashes are deterministic across
+both cohorts within each width; final predictions agree across widths. Chunk
+boundaries can change FP32 state, so cross-width bit identity is not claimed.
+
+| Active owners | Cohort | Compact128 body s | Wider body s |128/wider ratio |
+|---|---:|---:|---:|---:|
+|1, wider512 |1 |7.880 |8.052 |0.979 |
+|1, wider512 |2 |8.181 |8.301 |0.986 |
+|2, wider256 |1 |15.522 |16.143 |0.962 |
+|2, wider256 |2 |15.950 |16.197 |0.985 |
+
+Wider profiles regress1.5–4.0% in this bounded body study. In the first cohort,
+GPU time accounts for7.805 of7.880 seconds at one owner and15.432 of15.522
+seconds at two owners for compact128. The measured gap is primarily inside GPU
+execution, rather than scheduler/HTTP overhead. This does not identify the
+individual cause or establish performance on other profiles/devices.
+
+A separate `GARNET_METAL_PROFILE_OPS=1` diagnostic instruments only the final
+chunk in the same2048-token prefill, at widths128 and512. Their cached-prefix
+lengths are1920 and1536 respectively. Both retain the paired
+control's post-prefill predictions. This existing mode serializes operations,
+adds waits and disables several fusions. Its times describe that diagnostic
+policy; they are not an ordinary production trace or serving measurement.
+
+| Diagnostic width | Projection GPU ms | Attention GPU ms | Total diagnostic GPU ms | Projection fraction |
+|---|---:|---:|---:|---:|
+|128 |371.69 |71.92 |470.91 |78.9% |
+|512 |1467.73 |442.51 |2047.08 |71.7% |
+
+Each diagnostic observes224 matrix projections and32 chunk-attention calls.
+These results make quantized projections a priority alongside attention;
+they do not prove an attention-only change can meet the2x whole-model target.
+The deduplicated prepared resource inventory also exposes13,830,839,840 bytes
+through declared graph/session owners:4,002,430,976 weight bytes,
+4,294,967,296 private KV bytes and5,533,441,568 other declared bytes. Of the
+latter,4,922,081,280 bytes are graph-only FP32 writer slots without a shared
+scratch-pool reference. Context scratch/driver resources may be absent from
+this inventory. Conservative resident references are not proof that these
+buffers can safely be freed or aliased; their producer/consumer lifetimes need
+a native proof before further memory reuse.
+
+Evidence roots are `mistral-wide-owner-draft1`, immutable source2/library2,
+`mistral-host-tensor-rows1`, `mistral-wide-owner-native-parity2`,
+`mistral-wide-owner-native-http-admission1`, `mistral-wide-owner-scheduler1`,
+`mistral-wide-owner-prefix1`, `mistral-wide-owner-paired-stage1` and
+`mistral-wide-owner-op-diagnostic1`. The enabled/disabled builds, failed earlier
+harness, raw serving streams, opposite-order body runs and diagnostic logs
+remain separate. Comparator results are frozen and were not rerun. Remaining
+work includes projection efficiency, proved scratch/hidden reuse and M5-specific
+attention, with all performance/quality targets still open.
