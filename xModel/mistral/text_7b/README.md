@@ -71,3 +71,19 @@ This API alone does not supply draft tokens or add speculative serving.
 single-path head experiment. It preserves tested greedy outputs but is slower
 than ordinary decode, is not a tree implementation, and is not selected by
 default. The auxiliary artifact's training-base identity remains unverified.
+
+The optional `GARNET_METAL_CHUNK_KV_SCATTER=ON` profile updates only a validated
+contiguous token span in each identical private KV cache view. It requires the
+resident/chunk in-place extensions and a cache capacity within the compiled
+attention limit. A serving profile declares
+`"chunk_kv_scatter": true` and
+`"expected_chunk_kv_scatter_dispatches": 64`; the native session exposes
+`chunk_kv_scatter_dispatches` for route checks. Gaps, overwrites, unknown controls
+and separate output caches use the existing path. The interface to xModel
+layers stays the same. It defaults off.
+
+The corresponding single-cohort admission preserves all 22 frozen requests and
+4,844 output tokens. Short B4 aggregate throughput is 46.20 tok/s and long B4
+is 10.43 tok/s; short/long C1 TTFT is 1.802s /11.620s. Native output/state checks
+pass, but all 2x and half-TTFT targets remain unmet. These observations have not
+established repeated superiority over the frozen reference engines.

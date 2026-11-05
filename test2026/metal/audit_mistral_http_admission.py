@@ -48,6 +48,10 @@ def validate(events, clients, controls, profile, exit_status, expected_requests=
     matrix_attention = profile.get('chunk_attention_mps', False)
     active_requests = profile.get('chunk_attention_active_rows', False)
     mistral_reuse = profile.get('mistral_decode_reuse', False)
+    kv_scatter = profile.get('chunk_kv_scatter', False)
+    require(type(kv_scatter) is bool and kv_scatter == ('chunk_kv_scatter_contiguous' in backend)
+            and (not kv_scatter or profile.get('expected_chunk_kv_scatter_dispatches') == 64),
+            'contiguous KV update policy differs from model/backend')
     require(type(mistral_reuse) is bool and mistral_reuse == ('mistral_decode_reuse_four_rows' in backend),
             'Mistral four-row decode reuse policy differs from backend')
     require(type(active_requests) is bool and active_requests == ('chunk_attention_active_rows' in backend)
@@ -83,6 +87,7 @@ def validate(events, clients, controls, profile, exit_status, expected_requests=
     maximum_active = 0
     reuse64_expected = None
     requests = []
+    scatter_expected = None
     for e in events:
         kind = e['event']
         if 'memory' in e:
@@ -90,6 +95,7 @@ def validate(events, clients, controls, profile, exit_status, expected_requests=
             require(0 <= m['metal_allocated_bytes'] <= m['metal_recommended_working_set_bytes']-256*1024*1024,
                     'sampled working-set bound exceeded')
         if kind == 'native_batch':
+            require(scatter_expected is None, 'batch missing contiguous KV coverage')
             require(pending is None, 'batch missing affine coverage')
             require(reuse64_expected is None, 'batch missing cooperative64 coverage')
             stage = e['stage']
@@ -134,6 +140,7 @@ def validate(events, clients, controls, profile, exit_status, expected_requests=
             pending = stage
             pending_fresh = stage != 'prefill' or any(r['prefill_tokens'] for r in requests)
             if stage == 'prefill' and pending_fresh:fresh_prefill_batches += 1
+            if kv_scatter and pending_fresh:scatter_expected = (stage,64 if stage == 'prefill' else 0)
             if matrix_attention and pending_fresh:
                 active = sum(r['prefill_tokens'] for r in requests) if stage == 'prefill' else len(requests)
                 tail = stage == 'prefill' and active <= 8
@@ -181,6 +188,10 @@ def validate(events, clients, controls, profile, exit_status, expected_requests=
                         and e['capacity'] == extent and e['unknown_controls'] == 0
                         and e['bucket_count'] == profile['expected_attention_mps_bucket_count'],
                         'incorrect prepared attention context/tail decision')
+        elif kind == 'native_chunk_kv_scatter':
+            require(kv_scatter and scatter_expected == (e['stage'],e['dispatches']),
+                    'incorrect/unexpected contiguous KV dispatch coverage')
+            scatter_expected = None
         elif kind == 'native_affine_profile':
             stage = e['stage']
             require(stage in ('prefill', 'decode', 'head'), 'unknown affine stage')
@@ -257,7 +268,9 @@ def validate(events, clients, controls, profile, exit_status, expected_requests=
                     'invalid completion state')
             completed[key] = e
             del rows[e['native_row']]
-    require(not rows and pending is None and reuse64_expected is None and all(not c for c in chunks.values()), 'unfinished native work')
+    require(not rows and pending is None and reuse64_expected is None and scatter_expected is None and all(not c for c in chunks.values()), 'unfinished native work')
+    require(counts['native_chunk_kv_scatter'] == (fresh_prefill_batches+stage_counts['decode'] if kv_scatter else 0),
+            'missing contiguous KV stage event')
     require(counts['native_reuse64'] == (fresh_prefill_batches if reuse64 else 0),
             'missing/unexpected cooperative64 event')
     require(profile_counts['prefill'] == fresh_prefill_batches == counts['native_mpp'] == counts['native_indexed']
@@ -376,6 +389,8 @@ def main():
         corruptions += ['wrong-request-matrices', 'wrong-request-owners', 'missing-request-schedule']
     if profile.get('mistral_decode_reuse'):
         corruptions += ['wrong-mistral-reuse-policy', 'wrong-mistral-reuse-count', 'wrong-mistral-reuse-owners']
+    if profile.get('chunk_kv_scatter'):
+        corruptions += ['wrong-kv-scatter-policy', 'wrong-kv-scatter-count', 'missing-kv-scatter-event']
     for label in corruptions:
         es, cs, ct = copy.deepcopy(events), copy.deepcopy(clients), copy.deepcopy(controls)
         if label == 'wrong-bound': es[0]['global_token_budget'] = 1024
@@ -406,6 +421,11 @@ def main():
         elif label == 'wrong-mistral-reuse-policy':
             ready = next(e for e in es if e['event'] == 'ready')
             ready['backend'] = ready['backend'].replace('mistral_decode_reuse_four_rows','mistral_decode_reuse_four_rows_BAD')
+        elif label == 'wrong-kv-scatter-policy':
+            ready = next(e for e in es if e['event'] == 'ready')
+            ready['backend'] = ready['backend'].replace('chunk_kv_scatter_contiguous','chunk_kv_scatter_contiguous_BAD')
+        elif label == 'wrong-kv-scatter-count': next(e for e in es if e['event'] == 'native_chunk_kv_scatter' and e['dispatches'])['dispatches'] = 0
+        elif label == 'missing-kv-scatter-event': es.remove(next(e for e in es if e['event'] == 'native_chunk_kv_scatter'))
         elif label == 'wrong-mistral-reuse-count': next(e for e in es if e['event'] == 'native_affine_profile' and e['mistral_decode_reuse_dispatches'])['mistral_decode_reuse_dispatches'] = 0
         elif label == 'wrong-mistral-reuse-owners': next(e for e in es if e['event'] == 'native_affine_profile' and e['mistral_decode_reuse_dispatches'])['active_rows'] = 3
         else: es[-1]['memory'][OWNERS[0]] = 1

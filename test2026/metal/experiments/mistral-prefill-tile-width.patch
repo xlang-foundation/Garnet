@@ -1,0 +1,64 @@
+--- a/cmake/GarnetMetal.cmake
++++ b/cmake/GarnetMetal.cmake
+@@ -204,0 +205,11 @@
++endif()
++set(GARNET_METAL_MPP_REUSE64_TILE_K "64" CACHE STRING "Prepared cooperative64 reduction tile:32/64/128")
++set_property(CACHE GARNET_METAL_MPP_REUSE64_TILE_K PROPERTY STRINGS 32 64 128)
++if(NOT GARNET_METAL_MPP_REUSE64_TILE_K MATCHES "^(32|64|128)$")
++    message(FATAL_ERROR "Cooperative64 reduction tile must be32,64 or128")
++endif()
++if(NOT GARNET_METAL_MPP_AFFINE_REUSE64 AND NOT GARNET_METAL_MPP_REUSE64_TILE_K STREQUAL "64")
++    message(FATAL_ERROR "A nondefault cooperative reduction tile requires cooperative64")
++endif()
++if(GARNET_METAL_MPP_AFFINE_REUSE64)
++    target_compile_definitions(garnet_metal PUBLIC GARNET_METAL_REUSE64_TILE_K=${GARNET_METAL_MPP_REUSE64_TILE_K})
+--- a/src/backends/metal/affine_int4_reuse64_shader.h
++++ b/src/backends/metal/affine_int4_reuse64_shader.h
+@@ -18,0 +19,5 @@
++#ifndef GARNET_REUSE64_TILE_K
++#define GARNET_REUSE64_TILE_K 64
++#endif
++static_assert(GARNET_REUSE64_TILE_K==32||GARNET_REUSE64_TILE_K==64||GARNET_REUSE64_TILE_K==128,
++              "Cooperative reduction tile must be32/64/128");
+@@ -26,2 +31,3 @@
+-    // Pad each64-element weight row by16 bytes to separate shared-memory banks.
+-    threadgroup AffineOperand weights[64*72];
++    // Pad each prepared reduction tile by16 bytes to separate memory banks.
++    constexpr uint reductionTile=GARNET_REUSE64_TILE_K,weightStride=reductionTile+8;
++    threadgroup AffineOperand weights[64*weightStride];
+@@ -42,3 +48,3 @@
+-    for(AffineIndex base=0;base<p.inner;base+=64) {
+-        for(uint word=tid;word<64*8;word+=128) {
+-            const uint localN=word/8,localK=(word%8)*8;
++    for(AffineIndex base=0;base<p.inner;base+=reductionTile) {
++        for(uint word=tid;word<64*(reductionTile/8);word+=128) {
++            const uint localN=word/(reductionTile/8),localK=(word%(reductionTile/8))*8;
+@@ -53 +59 @@
+-            for(uint j=0;j<8;++j)weights[localN*72+localK+j]=
++            for(uint j=0;j<8;++j)weights[localN*weightStride+localK+j]=
+@@ -57 +63 @@
+-        for(uint local=0;local<64;local+=16) {
++        for(uint local=0;local<reductionTile;local+=16) {
+@@ -63 +69 @@
+-                    right[tilePart*8+i]=weights[n*72+local+fragmentColumn+i%4];
++                    right[tilePart*8+i]=weights[n*weightStride+local+fragmentColumn+i%4];
+--- a/src/backends/metal/metal_context.mm
++++ b/src/backends/metal/metal_context.mm
+@@ -1820 +1820 @@
+-            NSString* reuseSource=[[NSString stringWithFormat:@"#define GARNET_REUSE64_RELAXED %u\n",unsigned(GARNET_METAL_REUSE64_RELAXED_VALUE)]
++            NSString* reuseSource=[[NSString stringWithFormat:@"#define GARNET_REUSE64_RELAXED %u\n#define GARNET_REUSE64_TILE_K %u\n",unsigned(GARNET_METAL_REUSE64_RELAXED_VALUE),unsigned(GARNET_METAL_REUSE64_TILE_K)]
+--- a/src/entry/metal_main.cpp
++++ b/src/entry/metal_main.cpp
+@@ -206,0 +207 @@
++    info+="; mpp_affine_reuse64_tile_k="+std::to_string(GARNET_METAL_REUSE64_TILE_K);
+--- a/test2026/metal/affine_fp16_projection_benchmark.cpp
++++ b/test2026/metal/affine_fp16_projection_benchmark.cpp
+@@ -111 +111 @@
+-            int minimumOutputs=0;bool relaxed=false;
++            int minimumOutputs=0,tileK=64;bool relaxed=false;
+@@ -114,0 +115,3 @@
++#ifdef GARNET_METAL_REUSE64_TILE_K
++            tileK=GARNET_METAL_REUSE64_TILE_K;
++#endif
+@@ -118,0 +122 @@
++                <<",\"reuse64_tile_k\":"<<tileK

@@ -39,6 +39,8 @@ def validate(status, capacity):
         require(re.fullmatch('[0-9a-f]{64}', record['hidden_sha256'])
                 and record['hidden_sha256'] == record['reference_hidden_sha256'], 'accepted hidden differs')
         stats = record['metrics']
+        if 'chunk_kv_scatter_contiguous' in status['backend']:
+            require(stats['target_kv_scatter_dispatches'] == 64, 'target contiguous KV scatter route differs')
         if 'mistral_decode_reuse_four_rows' in status['backend']:
             require(stats['target_affine_decode_block_dispatches'] == (161 if length == 4 else 1),
                     'Mistral four-row projection reuse route differs')

@@ -987,3 +987,185 @@ decode is 22.421 /13.503 tok/s. All 2x decode/throughput and half-TTFT targets
 remain unmet. The long-prompt result still calls for prefill work. The option
 stays off by default, and the trained-head path remains slower than ordinary
 decode. Strict coding quality is unchanged at 0/8 by exact output identity.
+
+## Prefill diagnosis and retained negative experiments
+
+The next operator studies preserve the frozen reference engines and original
+FP64 bounds. `mistral-prefill-tile-operator1` varies only cooperative reduction
+staging width (K32/64/128) while retaining the K16 multiplication sequence.
+Twelve serial processes cover two cohorts, dense/indexed layouts and 384 cells.
+All 215,218,176 output words match the historical native control, including
+143,478,784 candidate/control compared words; 21,600 FP64 samples pass. K32 is
+generally slower. K128 offers only about 1% at 128 rows for large up projections,
+and regresses several 64-row Q/O/down cases to roughly 0.64–0.70x control speed.
+K64 remains selected.
+
+`mistral-prefill-pack-operator2` converts selected activations once to compact
+FP16 storage before repeated output-tile loads. Eight serial processes cover
+256 cells. All 71,739,392 candidate/control words are bit-identical, with 14,400
+FP64 samples passing. At 128 logical rows, Q/O and down projections show roughly
+1.09–1.16x operator ratios, while up projections and 64-row cases regress. The
+prototype is retained as an operator-only patch: its scratch belongs to the
+preparing MetalContext, while resident sessions execute through another
+context. Shared graph/session scratch ownership and binding are unimplemented;
+no model or serving qualification follows. It is not part of the selected
+runtime.
+
+The locally installed MLX0.32.4 NAX implementation sets the tensor descriptor's
+relaxed-precision flag. The installed Apple SDK documents that flag as allowing
+accuracy/performance tradeoffs. `mistral-prefill-relaxed-operator3` tests Garnet's
+existing explicit cooperative-only setting with strict fallback. In eight
+serial processes /256 cells, all 71,739,392 candidate/control words remain
+bit-identical and 14,400 original FP64 samples pass. The large model shapes show
+essentially unchanged GPU medians in both cohorts. It is not selected as a
+performance optimization. The inspected SDK/MLX file paths and hashes are
+retained in `mistral-prefill-tile-draft1/primary-source-inspection.json`.
+
+The two experimental source patches and reproduction notes are preserved under
+`test2026/metal/experiments/`. Applying them to clean commit `85667ff7f` reproduces
+all seven changed experimental files byte for byte. Their audit tools are
+`audit_mistral_prefill_tiles.py` and
+`audit_mistral_prefill_operand_study.py`. Keeping these experiments outside the
+selected runtime avoids presenting small or negative operator findings as
+model gains.
+
+`mistral-prefill-cost-probe1` then uses the qualified native library on a real
+late chunk of the frozen 2,056-token context prompt. Only row0 is active in the
+B4/context4096/chunk128 engine. Earlier chunks populate KV normally; the chunk
+at offset1920 splits operations into individual submissions. This changes the
+execution schedule and cannot establish serving latency, quality or production
+time fractions. The audit checks all 832 operations (26 per layer), the complete
+16-chunk sequence, terminal collector/library bindings and zero native owners.
+
+| Operation family | Calls | Sum of isolated GPU durations (ms) |
+|---|---:|---:|
+| MatMul |224 |378.033 |
+| Layout |288 |131.153 |
+| AttentionChunk |32 |98.041 |
+| KVChunk |64 |63.822 |
+| Silu |32 |53.629 |
+| Add |64 |20.949 |
+| NormRope |64 |11.999 |
+| Norm |64 |7.322 |
+
+The total is 764.946ms of isolated GPU durations. Unprofiled chunks in that same
+process take about 0.697–0.768s, excluding embedding setup. Inspection confirms
+that in-place chunk KV updates still dispatch over the full cache and copy
+unwritten cache positions. Layout and elementwise operations also retain the
+physical B4 token footprint for a lone active request. This motivates bounded
+KV writes and, next, adapting prepared owner/chunk profiles to actual active
+requests. The cost probe and `audit_mistral_prefill_cost_probe.py` are diagnostic
+evidence, not a new baseline.
+
+## Contiguous private KV span updates
+
+`GARNET_METAL_CHUNK_KV_SCATTER=ON` adds an optional native update for identical
+private cache views with a validated contiguous active prefix in each owner.
+Each token/vector then owns a unique cache destination. The encoder dispatches
+over the prepared chunk's token vectors rather than every cache position, and
+leaves all other cache bytes untouched. Host-completed controls establish the
+contiguous-prefix property; unknown controls, gaps, overwrites and separate
+output caches retain the existing scan/copy path. The kernel also checks slot
+bounds before forming a destination. It does not change dtype or KV ownership.
+
+The option defaults off and requires native resident/chunk in-place updates.
+The serving profile explicitly declares `chunk_kv_scatter: true` and
+`expected_chunk_kv_scatter_dispatches: 64`. A native counter checks actual
+per-stage routing; ordinary one-token decode uses its existing update path.
+At B4/H8/D128/C4096/T128, the eligible grid contains 131,072 vectors, versus
+4,194,304 vectors in the original cache-wide grid. These are logical dispatch
+counts, not measured hardware memory traffic.
+
+`mistral-kv-scatter-operator3` runs control/candidate, then candidate/control,
+in four serial processes. Each case has three warmups and nine measurements.
+Nine cases cover all four owners, row0, row3, rows0/2, clipped tails, all paused,
+gaps/overwrites, separate output caches and untrusted-control fallback. All
+603,979,776 full-cache words match an independent CPU reconstruction; the
+candidate/control comparisons cover 301,989,888 words. All native owners close
+to zero. The second-cohort medians are:
+
+| KV update case | Original GPU ms | Span-update GPU ms | Operator ratio |
+|---|---:|---:|---:|
+| Four active owners |1.8034 |0.0529 |34.11x |
+| Row0 |1.8331 |0.0384 |47.77x |
+| Row3 |1.8142 |0.0409 |44.39x |
+| Rows0/2 |2.3255 |0.0483 |48.20x |
+| Clipped tail |1.3596 |0.0790 |17.20x |
+| All paused |1.5657 |0.0281 |55.75x |
+| Gaps/overwrites fallback |4.7066 |4.7067 |1.00x |
+| Separate output fallback |1.0175 |1.0929 |0.93x |
+| Untrusted controls fallback |4.8827 |4.8825 |1.00x |
+
+These large ratios apply only to the KV update operator. Both complete cohorts,
+including fallback variation, remain in the raw collection. All 22 native tests
+pass with the option on and off; the reduced native reference includes 27 cases
+and scalar fallback. Two isolated unsupported CMake configurations are rejected.
+`mistral-kv-scatter-verification3` also preserves complete KV and accepted hidden
+state on all 24 trained-model target-verification cases, including rollback,
+partial spans, EOS and carried state. Every target reports 64 span updates.
+Native owners close to zero with 2,031,616 Metal bytes remaining. The clean
+library SHA256 is
+`8c4074c18e7895041307889a433e95429a927e1d155a67009122d7883819b12e`.
+
+The serving admission `mistral-kv-scatter-native-http-admission1` completes all
+22 frozen requests and 4,844 output tokens, with exact frozen native coding IDs
+on all eight tasks and no accounting issues. It validates 4,480 span updates in
+70 prefill forwards and zero span updates in ordinary decode, across 3,878
+stage events. The audit rejects 28 corruptions, including changed KV policy,
+wrong dispatch count and missing stage coverage. The extended target structural
+audit rejects 42 corruptions while rechecking the prior unchanged causal
+generation evidence. Serving owners close to zero with 1,507,328 Metal bytes
+remaining; the seven prefill families retain 596,664,320 scratch bytes.
+
+| Nominal input / concurrency | Prior Garnet tok/s | Span-update Garnet tok/s | vLLM-Metal tok/s | SGLang-MLX tok/s | 2x target |
+|---|---:|---:|---:|---:|---:|
+| 256 /1 |16.655 |17.304 |22.021 |22.042 |44.084 |
+| 256 /2 |28.161 |30.712 |31.464 |32.127 |64.254 |
+| 256 /4 |40.447 |46.553 |45.235 |42.194 |90.470 |
+| 2048 /1 |5.551 |6.185 |12.345 |12.518 |25.036 |
+| 2048 /2 |7.658 |8.478 |16.536 |14.482 |33.071 |
+| 2048 /4 |9.615 |10.048 |21.179 |16.337 |42.358 |
+
+These are aggregate end-to-end output token rates. Both native columns are
+separate one-cohort, no-warmup, single-wave admissions; references remain the
+frozen 15-wave medians. System-condition variation, paging/compression and the
+native FP32-versus-reference FP16 decode difference limit the comparison. The
+short C4 value exceeds the reference medians in this run but overlaps their
+retained variability; it does not establish repeated superiority or isolated
+causation. Other cells remain below the references. Single-request short/long
+TTFT is 1.780s /11.567s and decode is 22.650 /13.937 tok/s. All 2x throughput,
+2x decode and half-TTFT targets remain unmet. Strict coding quality is unchanged
+at 0/8 by complete output identity. The option remains off by default. Further
+prefill work must address the active-owner layout and prepared chunk schedule.
+
+The final selected source, `mistral-kv-scatter-source4`, additionally requires
+cache capacity to stay within `kMetalAttentionChunkCapacityLimit` before taking
+the span path. Larger low-level caches retain the original implementation.
+The reduced reference now covers 28 cases, including an above-profile cache.
+All 22 tests pass again with the option on and off, and
+`mistral-kv-scatter-verification4` repeats all 24 complete state-parity cases.
+The selected library SHA256 is
+`850c5d4cb7c7b2b67e20d0085d79beecfa98297cb0e77ac1c431cb57ebd8cec6`.
+This guard preserves the qualified <=4k kernel and dispatch behavior; it does
+not enable larger contexts.
+
+`mistral-kv-scatter-native-http-admission2` rechecks the selected build on all
+22 requests /4,844 tokens, exact frozen coding outputs, 4,480 span updates and
+28 corruption rejections. Owners again close to zero with 1,507,328 Metal bytes
+remaining. Its single-wave rates are retained separately:
+
+| Nominal input / concurrency | Prior Garnet tok/s | Final span-update Garnet tok/s | vLLM-Metal tok/s | SGLang-MLX tok/s | 2x target |
+|---|---:|---:|---:|---:|---:|
+| 256 /1 |16.655 |17.182 |22.021 |22.042 |44.084 |
+| 256 /2 |28.161 |30.691 |31.464 |32.127 |64.254 |
+| 256 /4 |40.447 |46.196 |45.235 |42.194 |90.470 |
+| 2048 /1 |5.551 |6.157 |12.345 |12.518 |25.036 |
+| 2048 /2 |7.658 |8.418 |16.536 |14.482 |33.071 |
+| 2048 /4 |9.615 |10.431 |21.179 |16.337 |42.358 |
+
+Both span-update collections are single-cohort admissions. They do not replace
+the frozen 15-wave reference distributions or establish repeated superiority.
+The selected build's short/long C1 TTFT is 1.802s /11.620s and decode is
+22.557 /13.875 tok/s. The earlier source3 observation and final guard check both
+remain available; the small timing differences do not measure the guard's
+effect. All speed/TTFT goals remain unmet, with unchanged strict coding quality.

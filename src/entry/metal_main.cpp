@@ -288,6 +288,9 @@ public:
 #ifdef GARNET_METAL_CHUNK_KV_INPLACE
         info+="; chunk_kv_inplace";
 #endif
+#ifdef GARNET_METAL_CHUNK_KV_SCATTER
+        info+="; chunk_kv_scatter_contiguous";
+#endif
 #endif
 #ifdef GARNET_METAL_COMPACT_ATTENTION_INDEX
         info+="; compact_attention_index";

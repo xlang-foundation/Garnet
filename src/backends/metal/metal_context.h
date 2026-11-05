@@ -120,7 +120,7 @@ class MetalContext {
         unsigned operation, float epsilon, float offset);
     void EncodeStateKernel(unsigned operation,const std::vector<MetalMatrix>&,
         const MetalMatrix&,const void* parameters,size_t parameterBytes,size_t threads,const MetalMatrix* secondOutput=nullptr,
-        bool referenceAttention=false,const MetalMatrix* thirdOutput=nullptr);
+        bool referenceAttention=false,const MetalMatrix* thirdOutput=nullptr,bool scatterKV=false);
 #ifdef GARNET_METAL_VERIFY_ATTENTION
     void ValidateVerificationRecurrent(const std::vector<MetalMatrix>&,
         const MetalMatrix&,const MetalMatrix&,const MetalMatrix&,size_t stateInput=SIZE_MAX) const;
@@ -354,6 +354,7 @@ public:
 #endif
     size_t LastChunkProbabilityReuseDispatches() const;
     size_t LastChunkAttentionIndex32Dispatches() const;
+    size_t LastChunkKVScatterDispatches() const;
     size_t LastChunkAttentionOptimizedDispatches() const;
     size_t LastChunkAttentionMPSDispatches() const;
     size_t LastChunkAttentionMPSMatrices() const;

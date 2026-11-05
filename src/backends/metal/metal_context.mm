@@ -1,5 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 #include "metal_context.h"
+#ifdef GARNET_METAL_CHUNK_KV_SCATTER
+#include "chunk_kv_scatter_shader.h"
+#endif
 #ifdef GARNET_METAL_VERIFY_ATTENTION
 #include "verification_attention_shader.h"
 #include "verification_recurrent_shader.h"
@@ -387,6 +390,9 @@ struct MetalPipelines {
     id<MTLComputePipelineState> concat;
     id<MTLComputePipelineState> normRope,kvUpdate,kvUpdateVector,scores,scoresSerial,attentionContext;
     id<MTLComputePipelineState> vision,visionNorm,visionScores,layout,kvChunk,kvChunkVector,attentionChunk;
+#ifdef GARNET_METAL_CHUNK_KV_SCATTER
+    id<MTLComputePipelineState> kvChunkScatter;
+#endif
 #ifdef GARNET_METAL_CHUNK_ATTENTION_MPS
     id<MTLComputePipelineState> chunkMPSPack,chunkMPSSoftmax,chunkMPSUnpack;
 #endif
@@ -471,6 +477,7 @@ struct MetalContext::Impl {
 #endif
     size_t chunkAttentionMPSDispatches=0;
     size_t chunkAttentionMPSMatrices=0,chunkAttentionMPSSkippedMatrices=0;
+    size_t chunkKVScatterDispatches=0;
     size_t chunkAttentionBucketDispatches=0,chunkAttentionTailDispatches=0,chunkAttentionBucketCapacity=0,chunkAttentionUnknownControls=0;
 #ifdef GARNET_METAL_CHUNK_ATTENTION_MPS
     std::unique_lock<std::mutex> chunkMPSLock;
@@ -1678,6 +1685,9 @@ kernel void bf16_native_dot_t128(device const float* a [[buffer(0)]],device cons
 #ifdef GARNET_METAL_CHUNK_ATTENTION_MPS
         source=[source stringByAppendingString:[NSString stringWithUTF8String:kChunkAttentionMPSShader]];
 #endif
+#ifdef GARNET_METAL_CHUNK_KV_SCATTER
+        source=[source stringByAppendingString:[NSString stringWithUTF8String:kChunkKVScatterShader]];
+#endif
 #ifdef GARNET_METAL_CHUNK_ATTENTION_INDEX32
         NSString* referenceAttentionSource=source;
         source=[@"#define GARNET_CHUNK_ATTENTION_INDEX32 1\n" stringByAppendingString:source];
@@ -2011,6 +2021,11 @@ constexpr unsigned decodeColumns=4;
         impl_->kernels->vision=[impl_->device newComputePipelineStateWithFunction:[library newFunctionWithName:@"vision_op"] error:&error];
         impl_->kernels->kvChunk=[impl_->device newComputePipelineStateWithFunction:[library newFunctionWithName:@"kv_chunk"] error:&error];
         impl_->kernels->kvChunkVector=[impl_->device newComputePipelineStateWithFunction:[library newFunctionWithName:@"kv_chunk_vector4"] error:&error];
+#ifdef GARNET_METAL_CHUNK_KV_SCATTER
+        impl_->kernels->kvChunkScatter=[impl_->device newComputePipelineStateWithFunction:[library newFunctionWithName:@"kv_chunk_scatter4"] error:&error];
+        if(!impl_->kernels->kvChunkScatter||impl_->kernels->kvChunkScatter.maxTotalThreadsPerThreadgroup<128)
+            throw std::runtime_error("Cannot prepare bounded chunk KV scatter pipeline");
+#endif
         auto attentionPipeline=[&](id<MTLLibrary> attentionLibrary,bool reuse) {
             auto constants=[MTLFunctionConstantValues new];[constants setConstantValue:&reuse type:MTLDataTypeBool atIndex:30];
             auto function=[attentionLibrary newFunctionWithName:@"attention_chunk" constantValues:constants error:&error];
@@ -3375,6 +3390,7 @@ void MetalContext::Begin() {
     impl_->bodyShapeDispatches=impl_->bodyShapeMisses=0;impl_->chunkProbabilityReuseDispatches=impl_->chunkAttentionIndex32Dispatches=impl_->chunkAttentionMPSDispatches=0;
     impl_->chunkAttentionBucketDispatches=impl_->chunkAttentionTailDispatches=impl_->chunkAttentionBucketCapacity=impl_->chunkAttentionUnknownControls=0;
     impl_->chunkAttentionMPSMatrices=impl_->chunkAttentionMPSSkippedMatrices=0;
+    impl_->chunkKVScatterDispatches=0;
 #ifdef GARNET_METAL_AFFINE_PROFILE
     impl_->affineProfileDispatches=impl_->affineProfileMisses=impl_->affineProfileMaxThreads=0;
     impl_->affineDecodeBlockDispatches=0;
@@ -3588,7 +3604,7 @@ void MetalContext::EncodeMaskRows(const MetalMatrix& a,const MetalMatrix& mask,c
 }
 void MetalContext::EncodeStateKernel(unsigned operation,const std::vector<MetalMatrix>& inputs,
     const MetalMatrix& output,const void* parameters,size_t parameterBytes,size_t threads,const MetalMatrix* secondOutput,bool referenceAttention,
-    const MetalMatrix* thirdOutput) {
+    const MetalMatrix* thirdOutput,bool scatterKV) {
     @autoreleasepool {
     if(!impl_->command)throw std::logic_error("Begin a Metal command batch first");
     if(!output.impl_||!threads||threads>std::numeric_limits<uint32_t>::max())
@@ -3676,6 +3692,14 @@ void MetalContext::EncodeStateKernel(unsigned operation,const std::vector<MetalM
 #endif
     };
     auto pipeline=pipelines[operation];
+#ifdef GARNET_METAL_CHUNK_KV_SCATTER
+    if(scatterKV) {
+        if(operation!=17||!impl_->kernels->kvChunkScatter)throw std::invalid_argument("KV scatter requires vector chunk update");
+        pipeline=impl_->kernels->kvChunkScatter;++impl_->chunkKVScatterDispatches;
+    }
+#else
+    if(scatterKV)throw std::invalid_argument("Chunk KV scatter extension is disabled");
+#endif
     if(referenceAttention&&operation!=13)throw std::invalid_argument("Reference attention requires the chunk attention operation");
 #if defined(GARNET_METAL_CHUNK_PROBABILITY_REUSE)||defined(GARNET_METAL_CHUNK_ATTENTION_INDEX32)
     if(operation==13) {
@@ -4236,7 +4260,14 @@ void MetalContext::EncodeKVChunk(const MetalMatrix& token,const MetalMatrix& cac
     const bool vector=dim%4==0&&t.rowBytes%16==0&&c.rowBytes%16==0&&o.rowBytes%16==0&&count<=limit&&
         p.tStride<=limit/t.rows&&p.cStride<=limit/c.rows&&p.oStride<=limit/o.rows&&
         p.sStride<=limit/s.rows&&p.aStride<=limit/a.rows&&impl_->kernels->kvChunkVector;
-    EncodeStateKernel(vector?17:12,{token,cache,slots,active},output,&p,sizeof(p),vector?count/4:count);
+    bool scatter=false;
+#ifdef GARNET_METAL_CHUNK_KV_SCATTER
+    scatter=vector&&contiguousSlots&&capacity<=kMetalAttentionChunkCapacityLimit&&
+        c.data==o.data&&c.offset==o.offset&&output.CompatibleLayout(cache)&&
+        t.offset%16==0&&c.offset%16==0&&o.offset%16==0;
+#endif
+    const size_t threads=scatter?Elements(t.rows,t.columns)/4:(vector?count/4:count);
+    EncodeStateKernel(vector?17:12,{token,cache,slots,active},output,&p,sizeof(p),threads,nullptr,false,nullptr,scatter);
 }
 void MetalContext::PrepareAttentionChunk(const std::vector<MetalMatrix>& inputs,size_t heads,size_t kvHeads,
     size_t dim,size_t capacity,size_t chunk) {
@@ -4579,6 +4610,7 @@ size_t MetalContext::LastVerificationAttentionDispatches() const {return impl_->
 #endif
 size_t MetalContext::LastChunkProbabilityReuseDispatches() const {return impl_->chunkProbabilityReuseDispatches;}
 size_t MetalContext::LastChunkAttentionIndex32Dispatches() const {return impl_->chunkAttentionIndex32Dispatches;}
+size_t MetalContext::LastChunkKVScatterDispatches() const {return impl_->chunkKVScatterDispatches;}
 size_t MetalContext::LastChunkAttentionMPSDispatches() const {return impl_->chunkAttentionMPSDispatches;}
 size_t MetalContext::LastChunkAttentionMPSMatrices() const {return impl_->chunkAttentionMPSMatrices;}
 size_t MetalContext::LastChunkAttentionMPSSkippedMatrices() const {return impl_->chunkAttentionMPSSkippedMatrices;}
@@ -4716,6 +4748,7 @@ void MetalContext::Abort() {
     impl_->bodyShapeDispatches=impl_->bodyShapeMisses=0;impl_->chunkProbabilityReuseDispatches=impl_->chunkAttentionIndex32Dispatches=impl_->chunkAttentionMPSDispatches=0;
     impl_->chunkAttentionBucketDispatches=impl_->chunkAttentionTailDispatches=impl_->chunkAttentionBucketCapacity=impl_->chunkAttentionUnknownControls=0;
     impl_->chunkAttentionMPSMatrices=impl_->chunkAttentionMPSSkippedMatrices=0;
+    impl_->chunkKVScatterDispatches=0;
 #ifdef GARNET_METAL_AFFINE_PROFILE
     impl_->affineProfileDispatches=impl_->affineProfileMisses=impl_->affineProfileMaxThreads=0;
     impl_->affineDecodeBlockDispatches=0;

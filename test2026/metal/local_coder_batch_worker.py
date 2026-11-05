@@ -68,6 +68,12 @@ def main():
         (mistral_decode_reuse and family!='mistral_7b')):
         raise ValueError('Frozen profile requires its explicit Mistral four-row decode reuse policy')
     attention_active_rows=profile.get('chunk_attention_active_rows',False)
+    kv_scatter=profile.get('chunk_kv_scatter',False)
+    if type(kv_scatter) is not bool or kv_scatter!=('chunk_kv_scatter_contiguous' in garnet.backend_info()):
+        raise ValueError('Frozen profile requires its explicit contiguous in-place KV update policy')
+    if kv_scatter and (type(profile.get('expected_chunk_kv_scatter_dispatches')) is not int or
+                       profile['expected_chunk_kv_scatter_dispatches']<=0):
+        raise ValueError('KV scatter profile requires explicit dense-cache update coverage')
     if type(attention_active_rows) is not bool or attention_active_rows!=('chunk_attention_active_rows' in garnet.backend_info()):
         raise ValueError('Frozen profile requires its explicit physical request attention schedule')
     if attention_active_rows and not attention_buckets:raise ValueError('Physical request schedules require prepared context buckets')
@@ -338,6 +344,11 @@ def main():
             if kernel_profiles:
                 stage='prefill' if len(ids)>batch else ('decode' if prediction>=0 else 'body')
                 record_kernel_profile(stage,len(ids),sum(1 for flag in active.tolist() if flag!=0))
+            if kv_scatter:
+                count=decoder.session.chunk_kv_scatter_dispatches
+                expected=profile['expected_chunk_kv_scatter_dispatches'] if len(ids)>batch else 0
+                emit(dict(event='native_chunk_kv_scatter',stage='prefill' if len(ids)>batch else 'decode',dispatches=count))
+                if count!=expected:raise ValueError('Native contiguous KV scatter coverage differs from frozen profile')
             if profile.get('require_mpp',False) and len(ids)>batch:
                 count=decoder.session.mpp_affine_dispatches
                 if count<1:raise ValueError('Required MPP prefill route was not exercised')

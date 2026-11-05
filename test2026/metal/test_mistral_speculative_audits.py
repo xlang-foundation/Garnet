@@ -64,6 +64,8 @@ if __name__ == '__main__':
     }
     if 'mistral_decode_reuse_four_rows' in target['backend']:
         target_corruptions['wrong-mistral-reuse-count'] = lambda s:target_case(s)['metrics'].update(target_affine_decode_block_dispatches=0)
+    if 'chunk_kv_scatter_contiguous' in target['backend']:
+        target_corruptions['wrong-kv-scatter-count'] = lambda s:target_case(s)['metrics'].update(target_kv_scatter_dispatches=0)
     for label, mutate in target_corruptions.items():
         check_rejected(target,target_check,mutate);rejected.append('target:'+label)
     fixture = read(args.fixture)
