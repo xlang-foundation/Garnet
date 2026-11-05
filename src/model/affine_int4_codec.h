@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 #pragma once
+#include "float16_codec.h"
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
@@ -9,17 +10,23 @@
 
 namespace Garnet {
 // MLX affine Q4: eight low-nibble-first values per little-endian uint32;
-// BF16 scale and additive bias per 64 input columns. This is not signed INT4.
+// Typed BF16/FP16 scale and additive bias per64 input columns; unsigned INT4.
+enum class AffineInt4CoefficientType {BF16,FP16};
 struct AffineInt4Layout {
     size_t rows=0,columns=0,groupsPerRow=0,weightBytes=0,coefficientBytes=0;
+    AffineInt4CoefficientType coefficientType=AffineInt4CoefficientType::BF16;
 
-    static AffineInt4Layout Create(size_t rows,size_t columns) {
+    static AffineInt4Layout Create(size_t rows,size_t columns,
+                                  AffineInt4CoefficientType type=AffineInt4CoefficientType::BF16) {
         if(!rows||!columns||columns%64||rows>SIZE_MAX/columns)
             throw std::invalid_argument("Affine INT4 requires nonempty rows and group64 columns");
+        if(type!=AffineInt4CoefficientType::BF16&&type!=AffineInt4CoefficientType::FP16)
+            throw std::invalid_argument("Unsupported affine INT4 coefficient type");
         const size_t elements=rows*columns;
         AffineInt4Layout result;
         result.rows=rows;result.columns=columns;result.groupsPerRow=columns/64;
         result.weightBytes=elements/2;result.coefficientBytes=elements/32;
+        result.coefficientType=type;
         return result;
     }
 };
@@ -27,6 +34,12 @@ struct AffineInt4Layout {
 inline float AffineInt4BF16(const unsigned char* bytes) {
     const uint32_t bits=(uint32_t(bytes[0])|uint32_t(bytes[1])<<8)<<16;
     float result;std::memcpy(&result,&bits,sizeof(result));return result;
+}
+
+inline float AffineInt4Coefficient(const unsigned char* bytes,AffineInt4CoefficientType type) {
+    if(type==AffineInt4CoefficientType::BF16)return AffineInt4BF16(bytes);
+    if(type!=AffineInt4CoefficientType::FP16)throw std::invalid_argument("Unknown affine coefficient type");
+    return Float16ToFloat32(uint16_t(bytes[0])|(uint16_t(bytes[1])<<8));
 }
 
 inline float AffineInt4RoundBF16(float value) {
@@ -44,7 +57,7 @@ class AffineInt4View {
 public:
     AffineInt4View(AffineInt4Layout layout,const void* weights,size_t weightBytes,
                   const void* scales,size_t scaleBytes,const void* biases,size_t biasBytes)
-        :layout_(AffineInt4Layout::Create(layout.rows,layout.columns)),
+        :layout_(AffineInt4Layout::Create(layout.rows,layout.columns,layout.coefficientType)),
          weights_(static_cast<const unsigned char*>(weights)),
          scales_(static_cast<const unsigned char*>(scales)),
          biases_(static_cast<const unsigned char*>(biases)) {
@@ -58,8 +71,8 @@ public:
             throw std::invalid_argument("Affine INT4 embedding row/width out of bounds");
         for(size_t group=0;group<layout_.groupsPerRow;++group) {
             const size_t coefficient=row*layout_.groupsPerRow+group;
-            const float scale=AffineInt4BF16(scales_+2*coefficient);
-            const float bias=AffineInt4BF16(biases_+2*coefficient);
+            const float scale=AffineInt4Coefficient(scales_+2*coefficient,layout_.coefficientType);
+            const float bias=AffineInt4Coefficient(biases_+2*coefficient,layout_.coefficientType);
             if(!std::isfinite(scale)||!std::isfinite(bias))
                 throw std::invalid_argument("Nonfinite affine INT4 coefficient");
             const size_t begin=group*64;
@@ -75,9 +88,14 @@ public:
     void DecodeEmbeddingRow(size_t row,float* output,size_t count) const {
         DecodeRow(row,output,count);
         // MLX QuantizedEmbedding invokes dequantize without a dtype override:
-        // BF16 scale/bias inputs produce BF16 embedding values. Keep that
-        // rounding before exposing the row as Garnet's host FP32 tensor.
-        for(size_t i=0;i<count;++i)output[i]=AffineInt4RoundBF16(output[i]);
+        // Output storage follows coefficient dtype, before host FP32 exposure.
+        for(size_t i=0;i<count;++i) {
+            if(layout_.coefficientType==AffineInt4CoefficientType::BF16)output[i]=AffineInt4RoundBF16(output[i]);
+            else {
+                output[i]=Float16ToFloat32(Float32ToFloat16RNE(output[i]));
+                if(!std::isfinite(output[i]))throw std::invalid_argument("Affine embedding exceeds FP16 range");
+            }
+        }
     }
 };
 }

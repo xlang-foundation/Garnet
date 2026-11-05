@@ -33,6 +33,8 @@ size_t MetalCompiledGraph::AffineInt4Weight(const std::string& name) {
     auto found=weights_.find(name);if(found!=weights_.end())return found->second;
     const auto metadata=AffineInt4Metadata::Resolve(index_,mlxCheckpoint_,name);
     const auto& layout=metadata.layout;
+    if(layout.coefficientType!=AffineInt4CoefficientType::BF16)
+        throw std::invalid_argument("This Metal affine engine supports BF16 coefficients only; an FP16 kernel profile is required");
     std::vector<CheckpointDependency> dependencies;
     for(const auto* tensor:metadata.tensors)
         dependencies.push_back({*tensor,std::filesystem::last_write_time(tensor->filePath),std::filesystem::file_size(tensor->filePath)});

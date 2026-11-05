@@ -53,32 +53,51 @@ all 29,708 output words match. All four instrumented native owner counts are
 zero after close. The residual Metal device allocation snapshot includes other
 device/driver resources and is not claimed to be zero or a peak measurement.
 
-The raw FP16 loader is a prerequisite, not full FP16 quantized projection support.
+The checkpoint adapter now recognizes canonical Mistral packed roots and
+validates typed coefficient layouts. Selected-row CPU decoding supports FP16
+coefficients and rounds embedding values to FP16 before exposing host FP32.
+Four actual checkpoint matrices (embedding, head, layer0 Q projection and MLP
+down projection), with eight selected rows each, match MLX 0.32.4 in two separate
+checks: 212,992 FP32-arithmetic words and 212,992 FP16-rounded words. Native
+runtime embedding calls at batch sizes 1/2/4/8 match 61,440 reference words;
+invalid token IDs and attempts to use FP16 coefficients in the BF16 Metal
+engine are rejected. Twelve metadata fixtures cover valid FP16/BF16 payloads,
+mixed/unsupported coefficient types, layout errors and architecture guards.
+The existing BF16 affine numerical/tail/ownership/rejection suite also passes.
+
+An important precision distinction is retained in the failed first MLX row
+comparison: with FP16 scale/bias inputs, asking `dequantize(dtype=float32)`
+still preserved FP16 intermediate rounding in this probe. Explicitly casting
+the original coefficient values to FP32 before dequantization verifies the
+FP32-arithmetic path. The default FP16 dequantizer separately verifies actual
+embedding rounding. Neither comparison alone admits quantized matmul or full
+model precision. Earlier mismatch records remain preserved.
+
+The raw FP16 loader and embedding checks are prerequisites, not full FP16 quantized projection support.
 No Mistral generation, coding-quality result or speed comparison is admitted yet.
 
 ## Remaining implementation and qualification
 
-1. Generalize converted checkpoint recognition to canonical Mistral tensor names
-   while preserving Qwen's prefix translation and norm-offset rules.
-2. Add typed FP16 scale/bias decoding to CPU selected-row embeddings and native
-   Metal affine kernels, without BF16 rounding. Preserve the existing BF16 path.
+1. Add typed FP16 scale/bias decoding to native Metal affine kernels, without
+   BF16 coefficient rounding. CPU selected-row embeddings and converted
+   checkpoint recognition are implemented; preserve the existing BF16 path.
    Prepare coefficient-type-specific pipelines before encoding and include the
    representation in profile/cache identity. Validate all active projection
    paths; a decode-only kernel test cannot admit prefill.
-3. Verify embedding output rounding against the actual MLX dequantizer. Matching
-   coefficient expansion alone does not prove embedding semantics.
-4. Admit the Mistral text adapter with full GQA/RoPE/SwiGLU parity, explicit KV
+2. Extend selected-row embedding qualification as part of whole-model gates;
+   matching coefficient expansion alone does not prove embedding semantics.
+3. Admit the Mistral text adapter with full GQA/RoPE/SwiGLU parity, explicit KV
    ownership, bounded prefill, batch/continuous scheduling and prefix reuse.
    Existing dense Qwen operators provide reusable primitives, but the current
    adapter guard rejects Mistral and has not been qualified for this checkpoint.
-5. Establish new pinned Mistral comparator baselines and correctness gates,
+4. Establish new pinned Mistral comparator baselines and correctness gates,
    running vLLM-Metal, SGLang and Garnet sequentially. Qwen27B baseline numbers
    cannot substitute for Mistral results. Freeze artifacts, tokenizer/chat
    rendering, prompt IDs, quantization, context, cache policy, concurrency,
    generation budgets, warmups and repetitions. Record precision differences
    and unsupported settings explicitly. Keep quality and prefix/batching tests
    alongside TTFT, prefill, decode and aggregate throughput measurements.
-6. Add and measure the ANE/Core ML plugin separately. Core ML usage alone does
+5. Add and measure the ANE/Core ML plugin separately. Core ML usage alone does
    not prove ANE placement or a speed improvement; preserve native Metal as a
    measured comparator and inspect actual placement and state-transfer cost.
 
@@ -106,6 +125,14 @@ Local root: `/Users/shawn/CantorAI/out/research/mistral7b-local-coder/`.
   `native2.log` preserve earlier driver failures (wrong tensor factory and a
   build lacking owner-counter capability). Configure failures are retained.
 - `mistral-fp16-onboarding-provenance1.json`: frozen source/build/result hashes.
+- `mistral-affine-rows-native1`, `mistral-affine-rows-mlx2`: complete native and
+  MLX selected-row outputs. `mistral-affine-rows-mlx1` preserves the precision
+  assumption failure described above.
+- `mistral-embedding-runtime1.log`, `mistral-affine-metadata-tests1/report.json`,
+  `mistral-affine-bf16-regression1.log`: runtime embedding checks, representation
+  guards and the unchanged BF16 affine regression suite.
+- `mistral-affine-embedding-provenance1.json`: source/binary/result hashes for
+  this additional prerequisite qualification.
 
 The first tokenizer runtime build directory was reused for FP16 loader work.
 Its original provenance retains the original hashes, but that build output path

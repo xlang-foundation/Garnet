@@ -13,10 +13,30 @@ namespace Garnet {
 // names stay unchanged; packed dimensions never masquerade as logical shapes.
 class MlxQwen35Checkpoint {
     bool enabled_=false;
+    bool denseMistral_=false;
+    AffineInt4CoefficientType coefficientType_=AffineInt4CoefficientType::BF16;
 public:
     void Open(const SafeTensorsIndex& index) {
-        enabled_=false;
+        enabled_=false;denseMistral_=false;coefficientType_=AffineInt4CoefficientType::BF16;
         const auto* embedding=index.Find("language_model.model.embed_tokens.weight");
+        const auto* dense=index.Find("model.embed_tokens.weight");
+        if(!embedding&&dense&&dense->dataType=="U32") {
+            std::ifstream stream(index.FilePath().parent_path()/"config.json");nlohmann::json config;
+            if(!stream)throw std::invalid_argument("Packed dense checkpoint requires config.json");
+            stream>>config;
+            if(config.value("model_type","")!="mistral"||!config.contains("quantization"))
+                throw std::invalid_argument("Unsupported packed dense architecture/quantization");
+            const auto& quant=config.at("quantization");
+            if(quant.value("bits",0)!=4||quant.value("group_size",0)!=64||quant.value("mode","affine")!="affine")
+                throw std::invalid_argument("Native Mistral requires affine INT4/group64");
+            const auto* scales=index.Find("model.embed_tokens.scales");
+            if(!scales||(scales->dataType!="F16"&&scales->dataType!="BF16"))
+                throw std::invalid_argument("Mistral affine coefficient type is unsupported");
+            if(index.Find("model.language_model.embed_tokens.weight"))
+                throw std::invalid_argument("Ambiguous dense/hybrid checkpoint roots");
+            coefficientType_=scales->dataType=="F16"?AffineInt4CoefficientType::FP16:AffineInt4CoefficientType::BF16;
+            denseMistral_=true;enabled_=true;return;
+        }
         if(!embedding)return;
         if(index.Find("model.language_model.embed_tokens.weight"))
             throw std::invalid_argument("Ambiguous original/MLX Qwen checkpoint roots");
@@ -37,9 +57,15 @@ public:
         enabled_=true;
     }
     bool Enabled() const {return enabled_;}
+    bool DenseMistral() const {return enabled_&&denseMistral_;}
+    AffineInt4CoefficientType CoefficientType() const {return coefficientType_;}
     std::string PhysicalName(const std::string& canonical) const {
         if(!enabled_)return canonical;
         const std::string prefix="model.language_model.";
+        if(denseMistral_) {
+            if(canonical.compare(0,prefix.size(),prefix)==0)return "model."+canonical.substr(prefix.size());
+            return canonical;
+        }
         if(canonical.compare(0,prefix.size(),prefix)==0)
             return "language_model.model."+canonical.substr(prefix.size());
         if(canonical.compare(0,8,"lm_head.")==0)return "language_model."+canonical;
@@ -52,12 +78,12 @@ public:
     }
     bool ConvertedConvolution(const std::string& name,const SafeTensorMetadata& metadata) const {
         const std::string suffix=".linear_attn.conv1d.weight";
-        return enabled_&&name.size()>=suffix.size()&&
+        return enabled_&&!denseMistral_&&name.size()>=suffix.size()&&
             name.compare(name.size()-suffix.size(),suffix.size(),suffix)==0&&
             metadata.shape.size()==3&&metadata.shape[1]==4&&metadata.shape[2]==1;
     }
     bool ConvertedVisionPatch(const std::string& name,const SafeTensorMetadata& metadata) const {
-        if(!enabled_||name!="model.visual.patch_embed.proj.weight")return false;
+        if(!enabled_||denseMistral_||name!="model.visual.patch_embed.proj.weight")return false;
         if(metadata.dataType!="BF16"||metadata.shape.size()!=5||metadata.shape[0]<=0||
            metadata.shape[1]!=2||metadata.shape[2]!=16||metadata.shape[3]!=16||metadata.shape[4]!=3)
             throw std::invalid_argument("Unsupported converted Qwen vision patch layout");
@@ -85,16 +111,17 @@ struct AffineInt4Metadata {
            packed->shape[1]>INT64_MAX/8||
            uint64_t(packed->shape[0])>SIZE_MAX)
             throw std::invalid_argument("Invalid affine INT4 packed matrix");
-        result.layout=AffineInt4Layout::Create(size_t(packed->shape[0]),size_t(packed->shape[1])*8);
+        result.layout=AffineInt4Layout::Create(size_t(packed->shape[0]),size_t(packed->shape[1])*8,adapter.CoefficientType());
         if(packed->dataSize!=result.layout.weightBytes)
             throw std::invalid_argument("Affine INT4 packed byte count mismatch");
         for(size_t i=1;i<3;++i) {
             const auto* coefficient=result.tensors[i];
-            if(!coefficient||coefficient->dataType!="BF16"||coefficient->shape.size()!=2||
+            const auto expected=result.layout.coefficientType==AffineInt4CoefficientType::FP16?"F16":"BF16";
+            if(!coefficient||coefficient->dataType!=expected||coefficient->shape.size()!=2||
                coefficient->shape[0]!=packed->shape[0]||
                uint64_t(coefficient->shape[1])!=result.layout.groupsPerRow||
                coefficient->dataSize!=result.layout.coefficientBytes)
-                throw std::invalid_argument("Affine INT4 BF16 scale/bias contract mismatch");
+                throw std::invalid_argument("Affine INT4 typed scale/bias contract mismatch");
         }
         return result;
     }
