@@ -1495,7 +1495,7 @@ kernel void vision_op(device const float* a [[buffer(0)]],device const float* b 
 #ifdef GARNET_METAL_COMPACT_ATTENTION_INDEX
         source=[@"#define GARNET_COMPACT_ATTENTION_INDEX 1\n" stringByAppendingString:source];
 #endif
-#ifdef GARNET_METAL_QWEN38_LARGE_PREFILL
+#if defined(GARNET_METAL_QWEN38_LARGE_PREFILL)||(defined(GARNET_METAL_DENSE_PREFILL_MAX_TOKENS)&&GARNET_METAL_DENSE_PREFILL_MAX_TOKENS>127)
         source=[@"#define GARNET_ATTENTION_INDEX_I16 1\n" stringByAppendingString:source];
 #endif
 #ifdef GARNET_METAL_FUSED_VISION_CONTEXT
@@ -2017,8 +2017,8 @@ MetalMatrix MetalContext::Allocate(size_t rows,size_t columns) {
     if(stride>std::numeric_limits<size_t>::max()/rows)
         throw std::overflow_error("Metal matrix storage overflow");
     if(rows*stride>impl_->device.maxBufferLength)throw std::runtime_error("Metal matrix exceeds device buffer limit");
-#ifdef GARNET_METAL_QWEN38_WIDE_PREFILL
-    // Only this opt-in study uses a live workspace envelope. Shared compressed
+#if defined(GARNET_METAL_QWEN38_WIDE_PREFILL)||defined(GARNET_METAL_DENSE_PREFILL_MAX_TOKENS)
+    // These opt-in profiles use a live workspace envelope. Shared compressed
     // weights already exist before wider prefill graphs allocate their slots.
     // Keep a 256MiB driver margin and conservatively round the next allocation.
     constexpr size_t reserve=256*1024*1024,alignment=64*1024;
@@ -2026,7 +2026,11 @@ MetalMatrix MetalContext::Allocate(size_t rows,size_t columns) {
     if(bytes>SIZE_MAX-(alignment-1))throw std::overflow_error("Wide prefill allocation charge overflow");
     const size_t charge=(bytes+alignment-1)&~(alignment-1);
     if(limit<=reserve||used>limit-reserve||charge>limit-reserve-used)
+#ifdef GARNET_METAL_DENSE_PREFILL_MAX_TOKENS
+        throw std::runtime_error("Dense prefill workspace exceeds recommended working set minus256MiB");
+#else
         throw std::runtime_error("27B wide prefill workspace exceeds recommended working set minus256MiB");
+#endif
 #endif
     id<MTLBuffer> buffer=[impl_->device newBufferWithLength:rows*stride options:MTLResourceStorageModeShared];
     if(!buffer)throw std::runtime_error("Metal matrix allocation failed");
@@ -4269,6 +4273,10 @@ void MetalContext::EncodeAttentionChunk(const std::vector<MetalMatrix>& inputs,c
     if(q.rows!=kc.rows*chunk||q.columns!=Elements(heads,dim)||k.rows!=q.rows||k.columns!=Elements(kvHeads,dim)||v.rows!=k.rows||v.columns!=k.columns||
         kc.columns!=cacheWidth||vc.rows!=kc.rows||vc.columns!=cacheWidth||s.rows!=kc.rows||s.columns!=chunk||a.rows!=s.rows||a.columns!=chunk||
         g.rows!=q.rows||g.columns!=q.columns||o.rows!=q.rows||o.columns!=q.columns)throw std::invalid_argument("Chunk attention layout mismatch");
+#ifdef GARNET_METAL_DENSE_PREFILL_MAX_TOKENS
+    if(kc.rows>4||q.rows>GARNET_METAL_DENSE_PREFILL_MAX_TOKENS)
+        throw std::invalid_argument("Chunk attention exceeds dense physical token-row profile");
+#endif
     struct Params {uint64_t batch,chunk,heads,kvHeads,dim,capacity,qStride,kStride,vStride,kcStride,vcStride,sStride,aStride,gStride,oStride,gated;};
     Params p{kc.rows,chunk,heads,kvHeads,dim,capacity,q.rowBytes/4,k.rowBytes/4,v.rowBytes/4,kc.rowBytes/4,vc.rowBytes/4,s.rowBytes/4,a.rowBytes/4,g.rowBytes/4,o.rowBytes/4,uint64_t(gated)};
 #ifdef GARNET_METAL_CHUNK_ATTENTION_INDEX32

@@ -9,7 +9,7 @@
 namespace Garnet {
 #ifdef GARNET_METAL_COMPACT_ATTENTION_INDEX
 inline constexpr size_t kMetalAttentionChunkCapacityLimit=4096;
-#ifdef GARNET_METAL_QWEN38_LARGE_PREFILL
+#if defined(GARNET_METAL_QWEN38_LARGE_PREFILL)||(defined(GARNET_METAL_DENSE_PREFILL_MAX_TOKENS)&&GARNET_METAL_DENSE_PREFILL_MAX_TOKENS>127)
 inline constexpr size_t kMetalAttentionIndexBytes=sizeof(int16_t);
 #else
 inline constexpr size_t kMetalAttentionIndexBytes=1;
@@ -18,7 +18,13 @@ inline constexpr size_t kMetalAttentionIndexBytes=1;
 inline constexpr size_t kMetalAttentionChunkCapacityLimit=2048;
 inline constexpr size_t kMetalAttentionIndexBytes=sizeof(int32_t);
 #endif
-#ifdef GARNET_METAL_QWEN38_WIDE_PREFILL
+#ifdef GARNET_METAL_DENSE_PREFILL_MAX_TOKENS
+static_assert(GARNET_METAL_DENSE_PREFILL_MAX_TOKENS==16||GARNET_METAL_DENSE_PREFILL_MAX_TOKENS==32||
+    GARNET_METAL_DENSE_PREFILL_MAX_TOKENS==64||GARNET_METAL_DENSE_PREFILL_MAX_TOKENS==128||
+    GARNET_METAL_DENSE_PREFILL_MAX_TOKENS==256||GARNET_METAL_DENSE_PREFILL_MAX_TOKENS==512,"Invalid dense prefill profile");
+inline constexpr size_t kMetalPrefillChunkLimit=GARNET_METAL_DENSE_PREFILL_MAX_TOKENS;
+inline constexpr size_t kMetalPrefillPackedHiddenLimit=kMetalPrefillChunkLimit*4096;
+#elif defined(GARNET_METAL_QWEN38_WIDE_PREFILL)
 #ifdef GARNET_METAL_QWEN38_LARGE_PREFILL
 inline constexpr size_t kMetalPrefillChunkLimit=256;
 #else
@@ -36,7 +42,9 @@ inline constexpr size_t kMetalPrefillPackedHiddenLimit=64*2560;
 inline constexpr size_t kMetalPrefillPackedHiddenLimit=65536;
 #endif
 #endif
-#ifdef GARNET_METAL_QWEN38_LARGE_PREFILL
+#ifdef GARNET_METAL_DENSE_PREFILL_MAX_TOKENS
+inline constexpr size_t kMetalAttentionChunkTokenLimit=GARNET_METAL_DENSE_PREFILL_MAX_TOKENS;
+#elif defined(GARNET_METAL_QWEN38_LARGE_PREFILL)
 inline constexpr size_t kMetalAttentionChunkTokenLimit=256;
 #else
 inline constexpr size_t kMetalAttentionChunkTokenLimit=127;

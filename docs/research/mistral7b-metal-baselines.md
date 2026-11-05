@@ -107,16 +107,27 @@ vLLM and 29.919/27.831 for SGLang. Corresponding TTFT is 0.444/3.147 seconds and
 0.417/2.993 seconds. Actual incremental usage timestamps supply decode timing;
 SSE event counts are not treated as token counts.
 
-## Completed repeated vLLM observations; SGLang pending
+## Completed repeated reference observations
 
-The first full repeated vLLM collection has finished all three fresh-process
-cohorts: 90 measured waves / 210 requests, plus 36 warmup waves / 84 requests.
-Its independent accounting/bracketing audit has zero issues, and the postflight
-source, package, native binary and checkpoint guards pass. SGLang's corresponding
-campaign is still running sequentially; its admission values above must not be
-presented as repeated results. Garnet has no matched Mistral serving result yet.
+Both full reference collections finished all three fresh-process cohorts, one
+engine at a time. Each has 90 measured waves / 210 requests, plus 36 warmup waves /
+84 requests. Both independent accounting/bracketing audits have zero issues, and
+both postflight source, package, native binary and checkpoint guards pass.
+Every measured request produces 128 output tokens. Garnet has no matched Mistral
+serving result yet. Reuse these fixed references across Garnet iterations.
 
-These are aggregate output tokens/s, including prefill/queue time. The pooled
+| Nominal prompt / clients | vLLM-Metal | SGLang MLX | Garnet aggregate 2x point target |
+|---|---:|---:|---:|
+| 256 / 1 | 22.021 | 22.042 | 44.084 |
+| 256 / 2 | 31.464 | 32.127 | 64.254 |
+| 256 / 4 | 45.235 | 42.194 | 90.470 |
+| 2048 / 1 | 12.345 | 12.518 | 25.036 |
+| 2048 / 2 | 16.536 | 14.482 | 33.071 |
+| 2048 / 4 | 21.179 | 16.337 | 42.358 |
+
+These are aggregate output tokens/s, including prefill/queue time. The target is
+twice the faster reference median in each cell; it does not establish statistical
+confidence, native correctness or coding quality. The pooled
 median uses all 15 measured waves per cell. Cohort medians and the complete
 observed range are shown to retain substantial variation rather than selecting
 a slower reference cohort for the eventual Garnet ratio.
@@ -130,18 +141,26 @@ a slower reference cohort for the eventual Garnet ratio.
 | 2048 / 2 | 16.536 | 19.147 / 16.536 / 15.518 | 15.389–19.464 |
 | 2048 / 4 | 21.179 | 21.431 / 21.179 / 18.134 | 16.888–21.469 |
 
-Single-client short/long decode medians are 24.871 / 20.751 tokens/s; TTFT
-medians are 0.687 / 4.219 seconds. These differ from the earlier single-wave
-admission values. Measured windows include page-ins, page-outs, swap-ins and
-decompression; no measured-window swap-out/compression increase is observed.
-Those counters include system activity. A later AC-power/no-recorded-thermal-
+Single-client short/long decode medians are 24.871 / 20.751 tokens/s for vLLM and
+25.067 / 20.737 for SGLang. TTFT medians are 0.687 / 4.219 seconds and 0.732 / 4.159,
+respectively. Thus the single-request decode 2x point targets are 50.134 / 41.502
+tokens/s; half-TTFT point targets are 0.344 / 2.079 seconds. These differ from the
+earlier single-wave admission values. All point summaries retain every cohort.
+
+Measured windows include page-ins, page-outs, swap-ins and decompression. Neither
+engine has a measured-window swap-out increase. SGLang's long cells also include
+compression increases, despite the earlier capped admission's zero increases;
+the cap does not establish paging-free operation. Bracketed counter sums can
+overlap sample boundaries and include system activity. A later AC-power/no-recorded-thermal-
 warning observation does not establish historical thermal conditions or explain
 the drift. Do not attribute this variation solely to kernel execution or use
 these results alone to qualify a 2x win. All raw cohorts remain frozen.
 
-Evidence: `reference-campaign1/vllm-metal.audit.json`, its raw cohort directories,
-and `vllm-repeated-reference-summary1.json` under the local evidence root below.
-The summary includes the audit SHA256 and explicitly defines its aggregation.
+Evidence: `reference-campaign1/*audit.json`, both raw cohort trees,
+`vllm-repeated-reference-summary1.json`, and `repeated-reference-comparison1/`
+under the local evidence root below. The pair-summary tool requires both complete
+three-cohort audits, binds their hashes to the sequence's successful postflight,
+and preserves ranges, cohort medians and paging alongside its pooled summaries.
 Strict coding remains 0/8; successful performance accounting does not promote
 this checkpoint's coding quality.
 

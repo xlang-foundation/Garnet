@@ -291,7 +291,7 @@ bool MetalDecoderSession::Build(X::Value graphs,X::Value head) {
         requestRows_=std::make_unique<RequestRowLeases>(states_[0].rows);
 #endif
         ResetUnlocked();
-#ifdef GARNET_METAL_QWEN38_WIDE_PREFILL
+#if defined(GARNET_METAL_QWEN38_WIDE_PREFILL)||defined(GARNET_METAL_DENSE_PREFILL_MAX_TOKENS)
         // Private resident state is initialized. Retire only the defaults
         // proved unused by resident execution before compiling wider graphs.
         for(size_t i=0;i<states_.size();++i) {
@@ -317,7 +317,7 @@ void MetalDecoderSession::PrepareHiddenPool(const MetalCompiledGraph& graph) {
     prefillHiddenPool_.emplace(key,std::move(staged));
 }
 #endif
-#ifdef GARNET_METAL_QWEN38_WIDE_PREFILL
+#if defined(GARNET_METAL_QWEN38_WIDE_PREFILL)||defined(GARNET_METAL_DENSE_PREFILL_MAX_TOKENS)
 bool MetalDecoderSession::PreparePrefill(X::Value value,int64_t layer) {
     std::lock_guard<std::mutex> lock(mutex_);
     if(!gpu_||poisoned_||layer<0||uint64_t(layer)>=states_.size())
@@ -336,6 +336,14 @@ bool MetalDecoderSession::PreparePrefill(X::Value value,int64_t layer) {
        graph->inputShapes_[0][1]<1||graph->inputShapes_[0][1]>int64_t(kMetalPrefillChunkLimit)||
        graph->inputShapes_[1]!=state.shape[0]||graph->inputShapes_[2]!=state.shape[1])
         throw std::invalid_argument("Prefill preparation does not match resident layer state");
+#ifdef GARNET_METAL_DENSE_PREFILL_MAX_TOKENS
+    if(state.rows>4||original->inputShapes_[0].back()>4096||
+       state.rows*size_t(graph->inputShapes_[0][1])>GARNET_METAL_DENSE_PREFILL_MAX_TOKENS||
+       !original->CanResetKVPrefix(1)||!original->CanResetKVPrefix(2)||
+       state.shape[0].size()!=4||state.shape[1].size()!=4||
+       state.shape[0][2]>4096||state.shape[1][2]>4096)
+        throw std::invalid_argument("Dense prefill profile requires at most4 rows, width4096 and full KV capacity4096");
+#endif
 #ifdef GARNET_METAL_TOKEN_PREFIX_CACHE
     // Prefix histories may only execute graph families sharing the base weights.
     if(original->generation_!=state.tokenOwnerGeneration||graph->weightRecords_.size()!=original->weightRecords_.size())

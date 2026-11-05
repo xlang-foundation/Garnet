@@ -177,7 +177,8 @@ class MetalDecoder(CPUDecoder):
                 graph=garnet.compiled_graph()
                 try:
                     self._build_prefill_graph(graph,forward(*symbols),symbols,layer['graph'])
-                    if self.config['hidden_size']==5120 and 'qwen38_wide_prefill' in garnet.backend_info():
+                    if ((self.config['hidden_size']==5120 and 'qwen38_wide_prefill' in garnet.backend_info()) or
+                        'prepared_dense_prefill' in garnet.backend_info()):
                         self.session.prepare_prefill(graph,idx)
                 except:graph.close();raise
                 self.prefill_graphs[key]=graph;self.prefill_compile_ms+=graph.compile_ms

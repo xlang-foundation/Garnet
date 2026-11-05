@@ -214,12 +214,92 @@ prefix is tested here. The strict coding gate fails, and full MLX output parity
 fails on three coding tasks. These functional/diagnostic runs have no repeated
 serving measurements and are not vLLM/SGLang baselines or performance wins.
 
+## Prepared dense profile and memory control
+
+The opt-in `GARNET_METAL_DENSE_PREFILL_MAX_TOKENS=512` profile decouples bounded
+dense prefill from the Qwen27B-specific flags. It prepares native kernel families,
+private in-place KV updates, retired resident defaults/packs and shared prefill
+scratch. The 512 physical token rows are global: batch1/chunk512,
+batch2/chunk256, or batch4/chunk128. Width/context remain bounded at 4096.
+Only this compiled 512 feature combination is qualified by the initial gate;
+the other selectable maxima are not thereby tested or admitted.
+
+An isolated source excludes the preserved Qwen blocked-projection experiment.
+The build passes 15/15 native CTests and rejects four invalid configurations:
+token bound 513, missing compact indexes, missing shared scratch and mixed legacy
+wide flags. The expanded GQA operator oracle includes full 512-token chunks,
+high slots and ragged batch4/chunk128, including a completely inactive row.
+Direct K/V commits compare every stored word with independent latest-active-write
+results, separately from the FP64 attention-read oracle.
+
+At batch1/capacity4096/chunk16, the new memory profile matches all ten frozen
+native control sequences exactly: 3,180 output tokens across eight coding tasks
+and two controlled-context probes. Every prefill/decode frame reports 64 private
+KV updates across 32 layers; request execution adds no graph family. A separate
+auditor checks trace/ID integrity, exact control parity, sampled working-set
+bounds and the unchanged 4 MiB close-allocation gate; it rejects 14 corruptions.
+Native driver traces do not substitute for independent GPU state checks.
+
+Prepared Metal allocation is 5,166,120,960 bytes, compared with the earlier
+13,422,149,632-byte snapshot at the same batch/context/chunk. The new engine has
+four eagerly prepared chunk families rather than one. These are allocation
+snapshots, not measured peaks or proof of a serving speedup. All four native
+owner counters reach zero; post-close Metal allocation is 720,896 bytes. Process
+footprint/compression remains nonzero, so this is not a claim that all process
+memory is released or that the run is paging-free.
+
+The resident adapter also avoids creating host K/V arrays that native session
+construction never consumes. This applies only during construction of the
+prepared native resident profile; ordinary reset still clears native state,
+and the legacy/nonresident path retains its host arrays. With the same immutable
+native library, a separate batch1/chunk16 run again matches all ten controls
+(3,180 tokens), passes working-set/close gates and records the actual loaded
+library path. This proves observed control parity; no constructor peak or
+startup speedup is claimed from these single runs.
+
+The existing three MLX coding divergences and strict 0/8 coding results are
+preserved. Exact agreement with the native controls does not remove them.
+The subsequent actual-model wide-profile campaign also passes all five serial
+checks below with the same native library. Every listed row matches its frozen
+native control (or the declared shorter output prefix), every recorded frame
+has the 64 required KV updates, no request creates a graph family, all sampled
+working-set bounds pass, and every process closes with zero native owners and
+720,896 Metal bytes. Each independent audit rejects 14 corruptions.
+
+| Batch / maximum chunk | Collection | Observed rows | Prepared Metal GiB |
+|---|---|---:|---:|
+| 1 / 16 | Host-construction control, all ten cases | 10 | 4.811 |
+| 1 / 512 | Eight coding + two context cases | 10 | 6.647 |
+| 2 / 256 | Eight coding + two context cases | 10 | 7.670 |
+| 4 / 128 | Same cases; final context group repeats its last row | 12 | 9.715 |
+| 4 / 128 | Coding; first row stops at 8 in each group | 8 | 9.715 |
+
+These are repetitions/prefixes of the same ten unique control sequences, not 50
+independent quality cases. The batch4 long-context group keeps one row inactive
+after its 256-token prefill while three 2056-token rows continue; the staggered
+coding run also stops rows during decode. Final hidden vectors are gathered on
+the host for this diagnostic driver, so its timings are not serving results.
+The context tests still do not exercise a complete 4096-token request.
+
+This establishes the observed fixed/ragged batch behavior, not continuous
+arrival/admission or retained prefix reuse. The Mistral serving adapter, native
+scheduler global-budget extension and actual HTTP measurements remain separate
+qualifications; the 2x speed/throughput targets remain unmet.
+
+Evidence under the local root: `dense-prefill-clean-source3`,
+`dense-prefill-qualification1`, `mistral-dense-memory-control1`, and the immutable
+`mistral-dense-prefill-library1` (SHA256
+`a7354b4fb00e7fa13c35799b5e8d46a52a5f94df89db4046beae4c5efa2efabe`).
+The construction and wide-profile checks use `mistral-resident-host-source1`
+and the completed `mistral-dense-wide-qualification1` campaign.
+
 ## Remaining implementation and qualification
 
 Fresh Mistral vLLM-Metal and SGLang profiles now have matched admission,
 full serving prompt-ID checks and preserved strict coding failures. See
 [comparator admission and fixed reference plan](mistral7b-metal-baselines.md).
-Repeated baseline completion still requires the full campaign and its audit.
+Both repeated reference campaigns and their accounting/postflight audits have
+now completed; preserve them across native optimization iterations.
 
 1. Expand the initial FP16 profile admission to production workload shapes,
    chunk-size alternatives, memory limits and exact checkpoint/profile identity.

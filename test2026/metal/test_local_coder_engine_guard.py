@@ -39,11 +39,12 @@ class EngineGuardTest(unittest.TestCase):
 303 /build/xlang3 /build/xlang3 -B /evidence/run_mistral_teacher.py /lib /src /ref.json
 304 /build/xlang3 /build/xlang3 -B /evidence/run_mistral_embedding.py /lib /model
 305 /build/xlang3 /build/xlang3 -B future_driver.py /models/Mistral-7B-Instruct-v0.3-MLX-4bit
+306 /build/xlang3 /build/xlang3 -B /evidence/run_mistral_profile.py /lib /src /fixture.json
 '''
         commands = '\n'.join(' '.join(line.split()[:2]) for line in processes.splitlines() if line.strip())
         arguments = '\n'.join(line.split(None, 2)[0]+' '+line.split(None, 2)[2] for line in processes.splitlines() if line.strip())
         with patch('run_local_coder_baseline.subprocess.check_output', side_effect=[commands, arguments]):
-            self.assertEqual(len(engine_processes()), 5)
+            self.assertEqual(len(engine_processes()), 6)
 
 
 if __name__ == '__main__':

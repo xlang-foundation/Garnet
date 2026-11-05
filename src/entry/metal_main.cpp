@@ -163,10 +163,15 @@ public:
 #ifdef GARNET_METAL_QWEN35_4B_WIDE_PREFILL
         info+="; qwen35_4b_wide_prefill";
 #endif
-#ifdef GARNET_METAL_QWEN38_WIDE_PREFILL
+#if defined(GARNET_METAL_QWEN38_WIDE_PREFILL)||defined(GARNET_METAL_DENSE_PREFILL_MAX_TOKENS)
+#ifdef GARNET_METAL_DENSE_PREFILL_MAX_TOKENS
+        info+="; prepared_dense_prefill; bounded_prefill_workspace; dense_prefill_max_tokens="+std::to_string(GARNET_METAL_DENSE_PREFILL_MAX_TOKENS);
+        if(kMetalAttentionIndexBytes==2)info+="; attention_index_i16";
+#else
         info+="; qwen38_wide_prefill; bounded_prefill_workspace";
 #ifdef GARNET_METAL_QWEN38_LARGE_PREFILL
         info+="; qwen38_large_prefill; attention_index_i16";
+#endif
 #endif
 #ifdef GARNET_METAL_AFFINE_TALL_TILES
         info+="; affine_q4_tall_tiles";

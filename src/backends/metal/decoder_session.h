@@ -220,7 +220,7 @@ public:
         X::Value tokens,X::Value stops,X::Value remaining,X::Value epochs);
     std::string VerificationStatsJson();
 #endif
-#ifdef GARNET_METAL_QWEN38_WIDE_PREFILL
+#if defined(GARNET_METAL_QWEN38_WIDE_PREFILL)||defined(GARNET_METAL_DENSE_PREFILL_MAX_TOKENS)
     bool PreparePrefill(X::Value graph,int64_t layer);
 #endif
 #ifdef GARNET_METAL_REQUEST_ROWS
@@ -347,7 +347,7 @@ public:
         APISET().AddFunc<2>("build",&MetalDecoderSession::Build);
         APISET().AddFunc<6>("run",&MetalDecoderSession::Run);
         APISET().AddFunc<0>("reset",&MetalDecoderSession::Reset);
-#ifdef GARNET_METAL_QWEN38_WIDE_PREFILL
+#if defined(GARNET_METAL_QWEN38_WIDE_PREFILL)||defined(GARNET_METAL_DENSE_PREFILL_MAX_TOKENS)
         APISET().AddFunc<2>("prepare_prefill",&MetalDecoderSession::PreparePrefill);
 #endif
 #ifdef GARNET_METAL_REQUEST_ROWS

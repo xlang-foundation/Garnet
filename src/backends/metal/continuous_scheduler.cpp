@@ -5,7 +5,9 @@
 #include <limits>
 #include <climits>
 namespace Garnet {
-#ifdef GARNET_METAL_QWEN38_LARGE_PREFILL
+#ifdef GARNET_METAL_DENSE_PREFILL_MAX_TOKENS
+static constexpr size_t kSchedulerPrefillChunkLimit=GARNET_METAL_DENSE_PREFILL_MAX_TOKENS;
+#elif defined(GARNET_METAL_QWEN38_LARGE_PREFILL)
 static constexpr size_t kSchedulerPrefillChunkLimit=256;
 #else
 static constexpr size_t kSchedulerPrefillChunkLimit=64;

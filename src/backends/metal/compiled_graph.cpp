@@ -718,6 +718,10 @@ bool MetalCompiledGraph::BuildInternal(X::Value graph,X::Value symbols,const std
                 for(auto control:{positions,slot,active})if(std::find(inputs_.begin(),inputs_.end(),control)==inputs_.end()&&!controlSources_.count(control))
                     throw std::runtime_error("Metal attention control tensors must be graph inputs");
                 const size_t batch=hs[0],capacity=cs[2],cacheWidth=kv*capacity*dim,rows=batch*chunk,width=hs.back();
+#ifdef GARNET_METAL_DENSE_PREFILL_MAX_TOKENS
+                if(isChunk&&(batch>4||width>4096||rows>GARNET_METAL_DENSE_PREFILL_MAX_TOKENS))
+                    throw std::invalid_argument("Dense prefill exceeds the compiled physical token-row profile");
+#endif
                 if(verificationTokens_&&(chunk!=verificationTokens_||rows>4||capacity>4096))
                     throw std::invalid_argument("Verification attention exceeds prepared bounds");
                 auto flatten=[&](size_t input,size_t columns){auto output=Allocate(rows,columns);Op op{Kind::Layout,input,input,output};op.dimensions={0};ops_.push_back(std::move(op));return output;};
