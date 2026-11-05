@@ -69,6 +69,10 @@ def main():
         raise ValueError('Frozen profile requires its explicit Mistral four-row decode reuse policy')
     attention_active_rows=profile.get('chunk_attention_active_rows',False)
     kv_scatter=profile.get('chunk_kv_scatter',False)
+    vector_layout=profile.get('chunk_layout_vector4',False)
+    if (type(vector_layout) is not bool or vector_layout!=('chunk_layout_vector4' in garnet.backend_info()) or
+        (vector_layout and profile.get('expected_chunk_layout_vector_dispatches')!=256)):
+        raise ValueError('Frozen profile requires its explicit aligned vector layout policy')
     if type(kv_scatter) is not bool or kv_scatter!=('chunk_kv_scatter_contiguous' in garnet.backend_info()):
         raise ValueError('Frozen profile requires its explicit contiguous in-place KV update policy')
     if kv_scatter and (type(profile.get('expected_chunk_kv_scatter_dispatches')) is not int or
@@ -349,6 +353,11 @@ def main():
                 expected=profile['expected_chunk_kv_scatter_dispatches'] if len(ids)>batch else 0
                 emit(dict(event='native_chunk_kv_scatter',stage='prefill' if len(ids)>batch else 'decode',dispatches=count))
                 if count!=expected:raise ValueError('Native contiguous KV scatter coverage differs from frozen profile')
+            if vector_layout:
+                count=decoder.session.layout_vector_dispatches
+                expected=profile['expected_chunk_layout_vector_dispatches'] if len(ids)>batch else 0
+                emit(dict(event='native_chunk_layout_vector',stage='prefill' if len(ids)>batch else 'decode',dispatches=count))
+                if count!=expected:raise ValueError('Native vector layout coverage differs from frozen profile')
             if profile.get('require_mpp',False) and len(ids)>batch:
                 count=decoder.session.mpp_affine_dispatches
                 if count<1:raise ValueError('Required MPP prefill route was not exercised')

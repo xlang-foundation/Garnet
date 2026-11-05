@@ -291,6 +291,9 @@ public:
 #ifdef GARNET_METAL_CHUNK_KV_SCATTER
         info+="; chunk_kv_scatter_contiguous";
 #endif
+#ifdef GARNET_METAL_LAYOUT_VECTOR4
+        info+="; chunk_layout_vector4";
+#endif
 #endif
 #ifdef GARNET_METAL_COMPACT_ATTENTION_INDEX
         info+="; compact_attention_index";

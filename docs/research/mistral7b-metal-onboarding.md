@@ -1169,3 +1169,109 @@ The selected build's short/long C1 TTFT is 1.802s /11.620s and decode is
 22.557 /13.875 tok/s. The earlier source3 observation and final guard check both
 remain available; the small timing differences do not measure the guard's
 effect. All speed/TTFT goals remain unmet, with unchanged strict coding quality.
+
+### Bounded vector layout candidate
+
+The next opt-in extension is `GARNET_METAL_LAYOUT_VECTOR4` (default off).
+The original chunk layout transfers one FP32 word per thread with 64-bit
+division. The candidate transfers four adjacent words with 32-bit indexing.
+Eligibility proves source/output column and stride alignment, one mask token
+per vector, zero buffer offsets, and bounded address products. Incompatible
+columns, token widths or strides retain the scalar path. It preserves reshape
+order, padding semantics, and zeroing of inactive tokens. It changes neither
+the cache representation nor the xModel layer interface.
+
+The pipeline is compiled during Metal context construction, before engine
+readiness. Dispatch adds no buffer, scratch or pipeline allocation. The native
+session exposes `layout_vector_dispatches`; a serving profile selects
+`"chunk_layout_vector4": true` and
+`"expected_chunk_layout_vector_dispatches": 256`. Decode retains zero layout
+dispatches in the qualified ordinary Mistral graph. This extension accelerates
+transfers; it does not introduce zero-copy reshape aliases or active-owner
+prefill graphs.
+
+`mistral-layout-vector-source1` builds pass all 23 native tests with the option
+on and off. The new test covers 29 reduced cases per build: reshape directions,
+padded rows, all/first/last/gapped/paused masks, GPU-produced masks in the same
+command, non-vector fallbacks, alias rejection, uninitialized inputs and abort
+recovery. Complete CPU comparisons include signed zeros, subnormals, infinities
+and NaN payloads. `mistral-layout-vector-operator1` runs two serial paired cohorts
+in opposite variant orders, with three warmups and nine measurements per case.
+All 76 cases /111,164,352 words match the independent CPU oracle; candidate and
+control compare 55,582,176 words. Owners close to zero.
+
+Example second-cohort isolated GPU medians follow. The retained complete table
+includes all scenarios and both cohorts. The synthetic operator results vary
+substantially between cases and do not establish model throughput or repeated
+serving performance.
+
+| Layout / live mask | Scalar ms | Vector ms | Operator ratio |
+|---|---:|---:|---:|
+| B4/T128/H4096 unpack /all |1.819 |0.336 |5.42 |
+| B4/T128/H4096 unpack /row0 |0.731 |0.310 |2.36 |
+| 512x4096 pack /unmasked |0.557 |0.097 |5.72 |
+| B4/T128/H1024 unpack /row0 |0.187 |0.015 |12.20 |
+| 512x3 scalar fallback |0.007 |0.007 |1.02 |
+| B4/T128/H4096 /GPU-produced gapped mask |0.733 |0.079 |9.23 |
+
+`mistral-layout-vector-verification1` passes all 24 native target cases, including
+complete KV and accepted-hidden parity with ordinary FP32 decode. A separate
+ordinary prefill route probe confirms 256 vector layout dispatches for the
+B4/T128 graph with only physical row0 active. This probe is route/cleanup
+evidence; the reused diagnostic driver's chosen-offset marker does not mean
+that per-operation profiling was enabled. The selected library SHA256 is
+`f2d3069b119eb135232edb8a8c7ef879feb763e97efcb3db4ad7a02ec5e4f2a5`.
+
+The corresponding `mistral-layout-vector-native-http-admission1` completes all
+22 requests /4,844 tokens with exact frozen native coding IDs on all eight
+tasks. It checks 17,920 vector layout dispatches in 70 prefill forwards and zero
+in ordinary decode across 3,878 stage events. All 31 injected corruptions are
+rejected, including policy, dispatch-count and missing-stage changes for this
+extension. Native owners close to zero with 1,769,472 Metal bytes remaining;
+the seven prefill scratch families still use 596,664,320 bytes.
+
+| Nominal input / concurrency | Prior KV-span Garnet tok/s | Vector-layout Garnet tok/s | vLLM-Metal tok/s | SGLang-MLX tok/s | 2x target |
+|---|---:|---:|---:|---:|---:|
+| 256 /1 |17.182 |18.093 |22.021 |22.042 |44.084 |
+| 256 /2 |30.691 |30.696 |31.464 |32.127 |64.254 |
+| 256 /4 |46.196 |43.746 |45.235 |42.194 |90.470 |
+| 2048 /1 |6.157 |6.462 |12.345 |12.518 |25.036 |
+| 2048 /2 |8.418 |8.515 |16.536 |14.482 |33.071 |
+| 2048 /4 |10.431 |10.469 |21.179 |16.337 |42.358 |
+
+These remain separate single-cohort, no-warmup, one-wave admissions. Short B4
+throughput regresses relative to the prior observation, while C1 TTFT changes
+from 1.802s /11.620s to 1.389s /10.449s for short/long prompts. C1 decode is
+22.423 /13.592 tok/s. System conditions differ; these observations alone do not
+isolate layout's effect. All 2x throughput/decode and half-TTFT targets remain
+unmet. Strict coding quality remains 0/8 by complete output identity. The
+reference engines were not rerun, and the new extension remains off by default.
+
+To examine layout's effect without HTTP/decode dilution,
+`mistral-layout-vector-actual-chunk1` runs eight sequential native processes in
+two opposite-order cohorts. Each prepares the same B4/C4096/T128 graph, seeds
+15 real prompt chunks, then replays the identical late chunk at offset1920
+with three warmups and nine measurements. One or four physical owners are live.
+Timing includes the native session call and GPU completion, but excludes
+embedding, head, token emission, full-state hashing and request scheduling.
+This is a steady body-work experiment, not a prompt-latency distribution or
+serving throughput benchmark. The first 2,048 tokens of the frozen 2,056-token
+context case supply the input; this does not claim complete prompt generation.
+
+| Active owners | Cohort | Control wall s | Vector wall s | Body ratio |
+|---|---:|---:|---:|---:|
+|1 |0 |0.749 |0.666 |1.125 |
+|1 |1 |0.844 |0.729 |1.158 |
+|4 |0 |2.231 |2.122 |1.052 |
+|4 |1 |2.304 |2.160 |1.066 |
+
+All 72 measured forwards complete. The full 32-layer KV hashes and final hidden
+hash match the original native control across both variants and cohorts for
+each occupancy. Candidate forwards record exactly 256 vector transfers; the
+control records zero. Metal allocations and native owner counts remain stable
+during replay, and every process closes with zero owners and less than4MiB
+Metal allocation. This supports a bounded prefill improvement under the tested
+replay conditions. It does not remove the single-wave HTTP B4 regression or
+establish the broader performance targets. `run_mistral_layout_chunk_probe.py`
+and `audit_mistral_layout_chunk.py` retain the reproduction and structural
+checks; the raw collection preserves its frozen driver and hashes.

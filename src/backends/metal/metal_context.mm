@@ -1,5 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 #include "metal_context.h"
+#ifdef GARNET_METAL_LAYOUT_VECTOR4
+#include "chunk_layout_vector_shader.h"
+#endif
 #ifdef GARNET_METAL_CHUNK_KV_SCATTER
 #include "chunk_kv_scatter_shader.h"
 #endif
@@ -390,6 +393,9 @@ struct MetalPipelines {
     id<MTLComputePipelineState> concat;
     id<MTLComputePipelineState> normRope,kvUpdate,kvUpdateVector,scores,scoresSerial,attentionContext;
     id<MTLComputePipelineState> vision,visionNorm,visionScores,layout,kvChunk,kvChunkVector,attentionChunk;
+#ifdef GARNET_METAL_LAYOUT_VECTOR4
+    id<MTLComputePipelineState> layoutVector;
+#endif
 #ifdef GARNET_METAL_CHUNK_KV_SCATTER
     id<MTLComputePipelineState> kvChunkScatter;
 #endif
@@ -478,6 +484,7 @@ struct MetalContext::Impl {
     size_t chunkAttentionMPSDispatches=0;
     size_t chunkAttentionMPSMatrices=0,chunkAttentionMPSSkippedMatrices=0;
     size_t chunkKVScatterDispatches=0;
+    size_t layoutVectorDispatches=0;
     size_t chunkAttentionBucketDispatches=0,chunkAttentionTailDispatches=0,chunkAttentionBucketCapacity=0,chunkAttentionUnknownControls=0;
 #ifdef GARNET_METAL_CHUNK_ATTENTION_MPS
     std::unique_lock<std::mutex> chunkMPSLock;
@@ -1688,6 +1695,9 @@ kernel void bf16_native_dot_t128(device const float* a [[buffer(0)]],device cons
 #ifdef GARNET_METAL_CHUNK_KV_SCATTER
         source=[source stringByAppendingString:[NSString stringWithUTF8String:kChunkKVScatterShader]];
 #endif
+#ifdef GARNET_METAL_LAYOUT_VECTOR4
+        source=[source stringByAppendingString:[NSString stringWithUTF8String:kChunkLayoutVectorShader]];
+#endif
 #ifdef GARNET_METAL_CHUNK_ATTENTION_INDEX32
         NSString* referenceAttentionSource=source;
         source=[@"#define GARNET_CHUNK_ATTENTION_INDEX32 1\n" stringByAppendingString:source];
@@ -2047,6 +2057,11 @@ constexpr unsigned decodeColumns=4;
         impl_->kernels->attentionChunk=attentionPipeline(library,false);
 #endif
         impl_->kernels->layout=[impl_->device newComputePipelineStateWithFunction:[library newFunctionWithName:@"chunk_layout"] error:&error];
+#ifdef GARNET_METAL_LAYOUT_VECTOR4
+        impl_->kernels->layoutVector=[impl_->device newComputePipelineStateWithFunction:[library newFunctionWithName:@"chunk_layout_vector4"] error:&error];
+        if(!impl_->kernels->layoutVector||impl_->kernels->layoutVector.maxTotalThreadsPerThreadgroup<128)
+            throw std::runtime_error("Cannot prepare bounded vector chunk layout pipeline");
+#endif
         if(!impl_->kernels->argmax||!impl_->kernels->bf16Decode||!impl_->kernels->bf16Gemm||!impl_->kernels->rms||!impl_->kernels->silu||!impl_->kernels->add||!impl_->kernels->mask||!impl_->kernels->conv||!impl_->kernels->delta||!impl_->kernels->slice||
             !impl_->kernels->prepare||!impl_->kernels->gatedNorm||!impl_->kernels->concat||!impl_->kernels->normRope||!impl_->kernels->kvUpdate||!impl_->kernels->kvUpdateVector||!impl_->kernels->scores||!impl_->kernels->scoresSerial||!impl_->kernels->attentionContext||!impl_->kernels->vision||!impl_->kernels->visionNorm||!impl_->kernels->visionScores||!impl_->kernels->layout||!impl_->kernels->kvChunk||!impl_->kernels->attentionChunk)
             throw std::runtime_error("Cannot create Qwen Metal pipelines");
@@ -3391,6 +3406,7 @@ void MetalContext::Begin() {
     impl_->chunkAttentionBucketDispatches=impl_->chunkAttentionTailDispatches=impl_->chunkAttentionBucketCapacity=impl_->chunkAttentionUnknownControls=0;
     impl_->chunkAttentionMPSMatrices=impl_->chunkAttentionMPSSkippedMatrices=0;
     impl_->chunkKVScatterDispatches=0;
+    impl_->layoutVectorDispatches=0;
 #ifdef GARNET_METAL_AFFINE_PROFILE
     impl_->affineProfileDispatches=impl_->affineProfileMisses=impl_->affineProfileMaxThreads=0;
     impl_->affineDecodeBlockDispatches=0;
@@ -3692,6 +3708,19 @@ void MetalContext::EncodeStateKernel(unsigned operation,const std::vector<MetalM
 #endif
     };
     auto pipeline=pipelines[operation];
+#ifdef GARNET_METAL_LAYOUT_VECTOR4
+    if(operation==11) {
+        const auto* p=static_cast<const uint64_t*>(parameters);
+        constexpr uint64_t limit=std::numeric_limits<uint32_t>::max();
+        const auto a=inputs[0].impl_->matrix,b=inputs[1].impl_->matrix;
+        // Four words stay in one source/output row and one mask token. Every
+        // address product and the logical element count fit a 32-bit index.
+        const bool vector=p[1]%4==0&&p[5]%4==0&&p[2]%4==0&&p[6]%4==0&&p[7]%4==0&&
+            !a.offset&&!b.offset&&!c.offset&&p[0]&&p[4]&&b.rows&&
+            p[2]<=limit/p[0]&&p[6]<=limit/p[4]&&p[3]<=limit/b.rows&&threads%4==0;
+        if(vector){pipeline=impl_->kernels->layoutVector;threads/=4;++impl_->layoutVectorDispatches;}
+    }
+#endif
 #ifdef GARNET_METAL_CHUNK_KV_SCATTER
     if(scatterKV) {
         if(operation!=17||!impl_->kernels->kvChunkScatter)throw std::invalid_argument("KV scatter requires vector chunk update");
@@ -4611,6 +4640,7 @@ size_t MetalContext::LastVerificationAttentionDispatches() const {return impl_->
 size_t MetalContext::LastChunkProbabilityReuseDispatches() const {return impl_->chunkProbabilityReuseDispatches;}
 size_t MetalContext::LastChunkAttentionIndex32Dispatches() const {return impl_->chunkAttentionIndex32Dispatches;}
 size_t MetalContext::LastChunkKVScatterDispatches() const {return impl_->chunkKVScatterDispatches;}
+size_t MetalContext::LastLayoutVectorDispatches() const {return impl_->layoutVectorDispatches;}
 size_t MetalContext::LastChunkAttentionMPSDispatches() const {return impl_->chunkAttentionMPSDispatches;}
 size_t MetalContext::LastChunkAttentionMPSMatrices() const {return impl_->chunkAttentionMPSMatrices;}
 size_t MetalContext::LastChunkAttentionMPSSkippedMatrices() const {return impl_->chunkAttentionMPSSkippedMatrices;}
@@ -4749,6 +4779,7 @@ void MetalContext::Abort() {
     impl_->chunkAttentionBucketDispatches=impl_->chunkAttentionTailDispatches=impl_->chunkAttentionBucketCapacity=impl_->chunkAttentionUnknownControls=0;
     impl_->chunkAttentionMPSMatrices=impl_->chunkAttentionMPSSkippedMatrices=0;
     impl_->chunkKVScatterDispatches=0;
+    impl_->layoutVectorDispatches=0;
 #ifdef GARNET_METAL_AFFINE_PROFILE
     impl_->affineProfileDispatches=impl_->affineProfileMisses=impl_->affineProfileMaxThreads=0;
     impl_->affineDecodeBlockDispatches=0;

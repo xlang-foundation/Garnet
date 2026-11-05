@@ -49,6 +49,10 @@ def validate(events, clients, controls, profile, exit_status, expected_requests=
     active_requests = profile.get('chunk_attention_active_rows', False)
     mistral_reuse = profile.get('mistral_decode_reuse', False)
     kv_scatter = profile.get('chunk_kv_scatter', False)
+    vector_layout = profile.get('chunk_layout_vector4', False)
+    require(type(vector_layout) is bool and vector_layout == ('chunk_layout_vector4' in backend)
+            and (not vector_layout or profile.get('expected_chunk_layout_vector_dispatches') == 256),
+            'vector layout policy differs from model/backend')
     require(type(kv_scatter) is bool and kv_scatter == ('chunk_kv_scatter_contiguous' in backend)
             and (not kv_scatter or profile.get('expected_chunk_kv_scatter_dispatches') == 64),
             'contiguous KV update policy differs from model/backend')
@@ -88,6 +92,7 @@ def validate(events, clients, controls, profile, exit_status, expected_requests=
     reuse64_expected = None
     requests = []
     scatter_expected = None
+    layout_expected = None
     for e in events:
         kind = e['event']
         if 'memory' in e:
@@ -95,6 +100,7 @@ def validate(events, clients, controls, profile, exit_status, expected_requests=
             require(0 <= m['metal_allocated_bytes'] <= m['metal_recommended_working_set_bytes']-256*1024*1024,
                     'sampled working-set bound exceeded')
         if kind == 'native_batch':
+            require(layout_expected is None, 'batch missing vector layout coverage')
             require(scatter_expected is None, 'batch missing contiguous KV coverage')
             require(pending is None, 'batch missing affine coverage')
             require(reuse64_expected is None, 'batch missing cooperative64 coverage')
@@ -141,6 +147,7 @@ def validate(events, clients, controls, profile, exit_status, expected_requests=
             pending_fresh = stage != 'prefill' or any(r['prefill_tokens'] for r in requests)
             if stage == 'prefill' and pending_fresh:fresh_prefill_batches += 1
             if kv_scatter and pending_fresh:scatter_expected = (stage,64 if stage == 'prefill' else 0)
+            if vector_layout and pending_fresh:layout_expected = (stage,256 if stage == 'prefill' else 0)
             if matrix_attention and pending_fresh:
                 active = sum(r['prefill_tokens'] for r in requests) if stage == 'prefill' else len(requests)
                 tail = stage == 'prefill' and active <= 8
@@ -192,6 +199,10 @@ def validate(events, clients, controls, profile, exit_status, expected_requests=
             require(kv_scatter and scatter_expected == (e['stage'],e['dispatches']),
                     'incorrect/unexpected contiguous KV dispatch coverage')
             scatter_expected = None
+        elif kind == 'native_chunk_layout_vector':
+            require(vector_layout and layout_expected == (e['stage'],e['dispatches']),
+                    'incorrect/unexpected vector layout dispatch coverage')
+            layout_expected = None
         elif kind == 'native_affine_profile':
             stage = e['stage']
             require(stage in ('prefill', 'decode', 'head'), 'unknown affine stage')
@@ -268,7 +279,9 @@ def validate(events, clients, controls, profile, exit_status, expected_requests=
                     'invalid completion state')
             completed[key] = e
             del rows[e['native_row']]
-    require(not rows and pending is None and reuse64_expected is None and scatter_expected is None and all(not c for c in chunks.values()), 'unfinished native work')
+    require(not rows and pending is None and reuse64_expected is None and scatter_expected is None and layout_expected is None and all(not c for c in chunks.values()), 'unfinished native work')
+    require(counts['native_chunk_layout_vector'] == (fresh_prefill_batches+stage_counts['decode'] if vector_layout else 0),
+            'missing vector layout stage event')
     require(counts['native_chunk_kv_scatter'] == (fresh_prefill_batches+stage_counts['decode'] if kv_scatter else 0),
             'missing contiguous KV stage event')
     require(counts['native_reuse64'] == (fresh_prefill_batches if reuse64 else 0),
@@ -391,6 +404,8 @@ def main():
         corruptions += ['wrong-mistral-reuse-policy', 'wrong-mistral-reuse-count', 'wrong-mistral-reuse-owners']
     if profile.get('chunk_kv_scatter'):
         corruptions += ['wrong-kv-scatter-policy', 'wrong-kv-scatter-count', 'missing-kv-scatter-event']
+    if profile.get('chunk_layout_vector4'):
+        corruptions += ['wrong-vector-layout-policy', 'wrong-vector-layout-count', 'missing-vector-layout-event']
     for label in corruptions:
         es, cs, ct = copy.deepcopy(events), copy.deepcopy(clients), copy.deepcopy(controls)
         if label == 'wrong-bound': es[0]['global_token_budget'] = 1024
@@ -424,6 +439,11 @@ def main():
         elif label == 'wrong-kv-scatter-policy':
             ready = next(e for e in es if e['event'] == 'ready')
             ready['backend'] = ready['backend'].replace('chunk_kv_scatter_contiguous','chunk_kv_scatter_contiguous_BAD')
+        elif label == 'wrong-vector-layout-policy':
+            ready = next(e for e in es if e['event'] == 'ready')
+            ready['backend'] = ready['backend'].replace('chunk_layout_vector4','chunk_layout_vector4_BAD')
+        elif label == 'wrong-vector-layout-count': next(e for e in es if e['event'] == 'native_chunk_layout_vector' and e['dispatches'])['dispatches'] = 0
+        elif label == 'missing-vector-layout-event': es.remove(next(e for e in es if e['event'] == 'native_chunk_layout_vector'))
         elif label == 'wrong-kv-scatter-count': next(e for e in es if e['event'] == 'native_chunk_kv_scatter' and e['dispatches'])['dispatches'] = 0
         elif label == 'missing-kv-scatter-event': es.remove(next(e for e in es if e['event'] == 'native_chunk_kv_scatter'))
         elif label == 'wrong-mistral-reuse-count': next(e for e in es if e['event'] == 'native_affine_profile' and e['mistral_decode_reuse_dispatches'])['mistral_decode_reuse_dispatches'] = 0

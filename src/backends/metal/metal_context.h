@@ -355,6 +355,7 @@ public:
     size_t LastChunkProbabilityReuseDispatches() const;
     size_t LastChunkAttentionIndex32Dispatches() const;
     size_t LastChunkKVScatterDispatches() const;
+    size_t LastLayoutVectorDispatches() const;
     size_t LastChunkAttentionOptimizedDispatches() const;
     size_t LastChunkAttentionMPSDispatches() const;
     size_t LastChunkAttentionMPSMatrices() const;

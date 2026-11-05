@@ -87,3 +87,18 @@ The corresponding single-cohort admission preserves all 22 frozen requests and
 is 10.43 tok/s; short/long C1 TTFT is 1.802s /11.620s. Native output/state checks
 pass, but all 2x and half-TTFT targets remain unmet. These observations have not
 established repeated superiority over the frozen reference engines.
+
+`GARNET_METAL_LAYOUT_VECTOR4=ON` optionally compiles aligned float4 chunk
+transfers with bounded 32-bit addressing. It preserves exact FP32 words and
+retains scalar layout fallbacks. A serving profile declares
+`"chunk_layout_vector4": true` and
+`"expected_chunk_layout_vector_dispatches": 256`; the native session exposes
+`layout_vector_dispatches`. Compilation occurs before readiness, without new
+per-run scratch. It defaults off and preserves the xModel layer API.
+
+Its one-cohort 22-request admission preserves frozen outputs. Short/long C1
+TTFT is 1.389s /10.449s; short/long B4 aggregate rates are 43.75 /10.47 tok/s.
+Short B4 regresses from the prior 46.20 tok/s observation. Separate runs have
+different system conditions and do not establish repeated performance or
+isolated causation. All 2x and half-TTFT targets remain unmet; see the research
+document for the complete table, numerical gates and limitations.

@@ -57,7 +57,8 @@ def engine_processes():
                        'run_mistral_suite.py', 'run_mistral_teacher.py', 'run_mistral_embedding.py',
                        'run_mistral_profile.py', 'run_mistral_greedy_verification.py', 'run_mistral_medusa_probe.py',
                        'run_mistral_medusa_generation.py', 'run_mistral_stage_probe.py',
-                       'run_mistral_prefill_op_probe.py', 'run_mistral_prefix_probe.py')) or
+                       'run_mistral_prefill_op_probe.py', 'run_mistral_layout_chunk_probe.py',
+                       'run_mistral_prefix_probe.py')) or
                    (executable == 'xlang3' and any(model in arguments for model in
                        ('Qwen3.8-27B', 'Mistral-7B')))))
         if reference or native or executable in ('garnet_affine_int4_benchmark','garnet_affine_fp16_projection_benchmark','garnet_chunk_probability_benchmark','garnet_chunk_attention_mps_plan_test','garnet_chunk_attention_active_rows_test','garnet_coreml_state_runtime_test','garnet_mistral_mlp_probe') or command.endswith('/bin/Cantor'):
