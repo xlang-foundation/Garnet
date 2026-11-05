@@ -23,7 +23,7 @@ def require(value, message):
         raise ValueError(message)
 
 
-def validate(events, clients, controls, profile, exit_status):
+def validate(events, clients, controls, profile, exit_status, expected_requests=22, control_prefixes=False):
     require(exit_status == dict(returncode=0, expected_close=True), 'unclean worker exit')
     counts = collections.Counter(e['event'] for e in events)
     require(counts['ready'] == counts['closed'] == counts['native_dense_schedule_bound'] == 1,
@@ -192,7 +192,7 @@ def validate(events, clients, controls, profile, exit_status):
             and profile_counts['decode'] == stage_counts['decode']
             and counts['native_indexed_decode'] == profile_counts['decode']+profile_counts['head'],
             'missing projection event')
-    require(maximum_active == 4 and len(completed) == len(clients) == 22, 'missing B4/request coverage')
+    require(maximum_active == 4 and len(completed) == len(clients) == expected_requests, 'missing B4/request coverage')
     require(set(completed) == {c['id'] for c in clients}, 'HTTP/native identity mismatch')
     require(set(tokens) == set(completed), 'orphan native token stream')
     details = []
@@ -211,8 +211,10 @@ def validate(events, clients, controls, profile, exit_status):
                 and len(e['prompt_ids'])+body['max_tokens'] <= 4096, 'generation budget mismatch')
         control = controls.get(c['plan'])
         if control:
+            expected = control['generated_ids'][:body['max_tokens']] if control_prefixes else control['generated_ids']
             require(control['status'] == 'completed' and control['prompt_ids'] == e['prompt_ids']
-                    and control['generated_ids'] == e['generated_ids'] and control['text'] == e['text'],
+                    and expected == e['generated_ids']
+                    and (control_prefixes or control['text'] == e['text']),
                     'frozen native coding control divergence')
         details.append(dict(plan=c['plan'], request=c['id'], native_request=e['native_request'],
                             row=e['native_row'], epoch=e['native_epoch'], output_tokens=len(e['generated_ids']),
@@ -222,6 +224,25 @@ def validate(events, clients, controls, profile, exit_status):
             'native cleanup failed')
     return dict(requests=details, maximum_active_rows=maximum_active, event_counts=dict(counts),
                 close_allocation_bytes=close['metal_allocated_bytes'])
+
+
+def load_client(prefix, plan, body, expected_prompt_ids, read, raw):
+    """Bind a saved request/result to its raw stream; caller records file hashes."""
+    require(read(prefix.with_suffix('.request.json')) == body, 'changed HTTP request')
+    wire = [json.loads(line) for line in raw(prefix.with_suffix('.events.jsonl')).splitlines()]
+    require(wire and wire[-1]['data'] == '[DONE]', 'unterminated SSE')
+    data = [json.loads(w['data']) for w in wire if w['data'] != '[DONE]']
+    identities = {d['id'] for d in data}
+    require(len(identities) == 1, 'invalid stream identity')
+    finals = [d for d in data if 'response_token_ids' in d]
+    require(len(finals) == 1, 'missing/duplicate final token arrays')
+    return dict(plan=plan, id=next(iter(identities)), body=body,
+        result=read(prefix.with_suffix('.result.json')), expected_prompt_ids=expected_prompt_ids,
+        sse_ids=[d['token_id'] for d in data if 'token_id' in d],
+        sse_done=sum(w['data'] == '[DONE]' for w in wire),
+        sse_text=''.join(c.get('delta', {}).get('content', '') for d in data for c in d.get('choices', [])),
+        sse_finish=finals[0]['choices'][0]['finish_reason'],
+        final_prompt_ids=finals[0]['prompt_token_ids'], final_response_ids=finals[0]['response_token_ids'])
 
 
 def main():
@@ -264,23 +285,10 @@ def main():
         bodies, workload = read(Path(plan['cases'])), read(Path(plan['workload']))
         require(files[str(Path(plan['cases']).resolve())] == plan['cases_sha256'] == workload['cases_sha256'],
                 'changed frozen request bodies')
+        require(len(bodies) == len(workload['requests']), 'invalid wave length')
         for i, (body, expected) in enumerate(zip(bodies, workload['requests'])):
             prefix = root/'campaign/cohort-1'/(plan['id']+'-measured-0')/('request-'+str(i))
-            require(read(prefix.with_suffix('.request.json')) == body, 'changed HTTP request')
-            wire = [json.loads(line) for line in raw(prefix.with_suffix('.events.jsonl')).splitlines()]
-            require(wire[-1]['data'] == '[DONE]', 'unterminated SSE')
-            data = [json.loads(w['data']) for w in wire if w['data'] != '[DONE]']
-            identities = {d['id'] for d in data}
-            require(len(identities) == 1 and len(bodies) == len(workload['requests']), 'invalid wave/stream identity')
-            finals = [d for d in data if 'response_token_ids' in d]
-            require(len(finals) == 1, 'missing/duplicate final token arrays')
-            clients.append(dict(plan=plan['id'], id=next(iter(identities)), body=body,
-                result=read(prefix.with_suffix('.result.json')), expected_prompt_ids=expected['token_ids'],
-                sse_ids=[d['token_id'] for d in data if 'token_id' in d],
-                sse_done=sum(w['data'] == '[DONE]' for w in wire),
-                sse_text=''.join(c.get('delta', {}).get('content', '') for d in data for c in d.get('choices', [])),
-                sse_finish=finals[0]['choices'][0]['finish_reason'],
-                final_prompt_ids=finals[0]['prompt_token_ids'], final_response_ids=finals[0]['response_token_ids']))
+            clients.append(load_client(prefix, plan['id'], body, expected['token_ids'], read, raw))
     report = validate(events, clients, controls, profile, exit_status)
     rejected = []
     corruptions = ['wrong-bound', 'stale-lease', 'wrong-slot', 'oversized-chunk', 'missing-projection',

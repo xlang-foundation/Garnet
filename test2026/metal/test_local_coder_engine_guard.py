@@ -42,11 +42,12 @@ class EngineGuardTest(unittest.TestCase):
 306 /build/xlang3 /build/xlang3 -B /evidence/run_mistral_profile.py /lib /src /fixture.json
 307 /build/xlang3 /build/xlang3 -B /evidence/run_mistral_stage_probe.py /lib /src /fixture.json
 308 /build/xlang3 /build/xlang3 -B /evidence/run_mistral_prefill_op_probe.py /lib /src /fixture.json
+309 /build/xlang3 /build/xlang3 -B /evidence/run_mistral_prefix_probe.py /lib /src /fixture.json
 '''
         commands = '\n'.join(' '.join(line.split()[:2]) for line in processes.splitlines() if line.strip())
         arguments = '\n'.join(line.split(None, 2)[0]+' '+line.split(None, 2)[2] for line in processes.splitlines() if line.strip())
         with patch('run_local_coder_baseline.subprocess.check_output', side_effect=[commands, arguments]):
-            self.assertEqual(len(engine_processes()), 8)
+            self.assertEqual(len(engine_processes()), 9)
 
 
 if __name__ == '__main__':

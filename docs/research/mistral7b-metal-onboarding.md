@@ -438,8 +438,66 @@ one wave; comparator columns retain the existing 15-wave medians. Native long
 single-request TTFT fell from 40.269s to 16.489s; decode was 13.668 tok/s, versus
 13.826 in the prior native wave. The improvement does not establish a decode
 gain or repeated speed qualification. All 2x comparator targets remain unmet.
-Dynamic arrival/refill while other requests remain active, prefix reuse, full
-4096-token requests and ANE remain pending.
+The later studies below address dynamic arrival/refill and direct native prefix
+reuse. Cached chunked HTTP scheduling, full 4096-token requests and ANE remain
+pending.
+
+## Actual continuous arrivals and native prefix reuse
+
+`mistral-continuous-http1` exercised the prepared-attention engine through real
+HTTP requests: A/B/C/D started together, A finished after eight output tokens,
+then E arrived for 16 tokens, followed by A returning for 32 tokens. B/C/D had
+budgets of 256/320/384 and continued decoding through both replacements. The
+independent auditor requires a native batch containing all four initial jobs,
+both replacements before any survivor finishes, survivor decode frames across
+both lifetimes, fresh row epochs and exact frozen token-prefix parity.
+
+All six requests passed, with 1016 generated tokens. A's physical row was 1,
+reused at epochs 2 -> 5 -> 6; surviving rows retained their leases. All four
+native owner counters closed, with 1,507,328 Metal bytes after graceful shutdown.
+Four overlap/epoch/row/trigger corruptions were rejected. The generic native/SSE
+auditor was refactored to share parsing and accept this explicitly bounded
+prefix-control study; its default 22-request/full-control gate still passed on
+both earlier native HTTP collections. This test used prefix caching OFF and
+separate native decode/prefill forwards (`mixed_forward=false`). It establishes
+actual refill/interleaving, not a fused mixed kernel or a performance result.
+
+Enabling the existing C++ token-prefix API on the same strict MPS source passed
+all 18 native tests. `mistral-native-prefix-probe1` then tested actual Mistral
+weights through that runtime API, with B/C/D kept alive while row 0 was reused.
+The host cache was bounded to 96MiB and three owning checkpoints; observed
+accounting reached 69,001,479 bytes. Stored boundaries were 64, 84 and 115 tokens.
+
+| Direct native query | Returned checkpoint | Fresh input after restore | Observed output gate |
+|---|---:|---:|---|
+| E replacement | 0 | 120 | Frozen native control prefix |
+| Exact A return | 84 | 0 | Frozen native control prefix |
+| A plus 32 generated tokens | 115 | 1 | Same 32 output tokens as fresh execution |
+| A with token 70 changed | 64 | 20 | Same 16 output tokens as fresh execution |
+
+The 115-token checkpoint contains A's 84 prompt tokens plus 31 consumed decode
+inputs; the last emitted token remains unconsumed and is the next fresh input
+for the 116-token appended prompt. The changed prompt uses a stored checkpoint
+before the edit. This does not establish arbitrary common-prefix truncation.
+
+The probe produced 704 token observations: 608 checked against existing frozen
+native controls, and 96 across independent fresh/restored runs of the two new
+prompts. B/C/D each produced 176 unchanged control tokens. Stale restore and
+capture epochs were rejected. The independent auditor checks identities,
+token arrays, cold/warm parity, hit/miss/accounting progression, row positions,
+leases and cleanup, and rejects 12 deliberately corrupted records. Final native
+owners were zero and Metal allocation was 1,507,328 bytes. Restored checkpoint
+counts are assertions executed by the frozen native API driver; trace positions
+are driver observations, not independent GPU KV snapshots.
+
+This is direct native runtime qualification. Mistral's chunked HTTP worker still
+requires `prefix_cache=false`; native cached-progress scheduling and its serving
+integration remain to be implemented. Longer prefixes still face the existing
+512MiB maximum host-cache budget: a 2048-token Mistral FP32 KV payload alone is
+512MiB before hidden/history/accounting overhead. No full 4K reuse, prefix speed,
+general coding-quality or xMind production claim follows from these studies.
+The immutable prefix-enabled library SHA256 is
+`15a50423252ccb7c106ac04592813610fa21f285cd30041ec3b64383961550db`.
 
 ## Evidence
 
