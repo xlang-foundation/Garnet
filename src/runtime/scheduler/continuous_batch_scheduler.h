@@ -42,6 +42,7 @@ namespace Garnet
         int positionDelta = 0;
         int prefillOffset = 0;
         int prefillTokens = 0;
+        int cachedTokens = 0;
         std::vector<int> pageTable;
         int requestRow = -1;
         std::uint64_t rowEpoch = 0;
@@ -83,6 +84,8 @@ namespace Garnet
             int nextTokenId = 0;
             int prefillProcessed = 0;
             int prefillScheduled = 0;
+            int cachedPrefix = 0;
+            bool cachedHeadScheduled = false;
         };
 
         ContinuousBatchSchedulerConfig m_config;

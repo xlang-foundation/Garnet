@@ -14,10 +14,17 @@ static constexpr size_t kSchedulerPrefillChunkLimit=256;
 static constexpr size_t kSchedulerPrefillChunkLimit=64;
 #endif
 class MetalContinuousScheduler::RowAllocator final:public KVSequenceAllocator {
-    struct Sequence {int64_t row=0,epoch=0;int length=0;};
+    struct Sequence {int64_t row=0,epoch=0;int length=0,cached=0;
+#ifdef GARNET_METAL_TOKEN_PREFIX_CACHE
+        X::Value prompt;
+#endif
+    };
     MetalDecoderSession* session_;
     size_t rows_,capacity_;
     std::map<uint64_t,Sequence> sequences_;
+#ifdef GARNET_METAL_TOKEN_PREFIX_CACHE
+    std::map<uint64_t,X::Value> pendingTokens_;
+#endif
     void Validate(const Sequence& sequence) const {
         if(!session_->RequestRowMatches(size_t(sequence.row),uint64_t(sequence.epoch)))
             throw std::logic_error("Native scheduler lost its Metal request row lease");
@@ -32,7 +39,18 @@ public:
         try {
             auto lease=session_->ClaimRequestRow(int64_t(id));
             entry->second.row=lease.Get(uint64_t(0)).ToInt64();entry->second.epoch=lease.Get(uint64_t(1)).ToInt64();
-        }catch(...){sequences_.erase(entry);throw;}
+#ifdef GARNET_METAL_TOKEN_PREFIX_CACHE
+            auto pending=pendingTokens_.find(id);
+            if(pending!=pendingTokens_.end()) {
+                entry->second.prompt=pending->second;
+                entry->second.cached=int(session_->RestoreTokenPrefix(entry->second.row,entry->second.epoch,pending->second));
+                entry->second.length=entry->second.cached;pendingTokens_.erase(pending);
+            }
+#endif
+        }catch(...){
+            if(entry->second.epoch>0)try{session_->ReleaseRequestRow(entry->second.row,entry->second.epoch);}catch(...){}
+            sequences_.erase(entry);throw;
+        }
         return true;
     }
     bool EnsureCapacity(uint64_t id,int capacity) override {
@@ -45,6 +63,9 @@ public:
         sequences_.at(id).length=length;return true;
     }
     bool Release(uint64_t id) override {
+#ifdef GARNET_METAL_TOKEN_PREFIX_CACHE
+        pendingTokens_.erase(id);
+#endif
         auto found=sequences_.find(id);if(found==sequences_.end())return false;
         if(!session_->ReleaseRequestRow(found->second.row,found->second.epoch))
             throw std::logic_error("Native scheduler cannot release a stale request row");
@@ -59,13 +80,43 @@ public:
         auto found=sequences_.find(id);if(found==sequences_.end())return {};
         Validate(found->second);return {int(found->second.row),uint64_t(found->second.epoch)};
     }
+    int RestoredPrefixTokens(uint64_t id) const override {
+        auto found=sequences_.find(id);if(found==sequences_.end())return 0;
+        Validate(found->second);return found->second.cached;
+    }
+    bool PrefixPredictionReady(uint64_t id) const override {return RestoredPrefixTokens(id)>0;}
+#ifdef GARNET_METAL_TOKEN_PREFIX_CACHE
+    void Track(uint64_t id,X::Value tokens) {
+        if(!pendingTokens_.emplace(id,std::move(tokens)).second)throw std::logic_error("Duplicate tracked request identity");
+    }
+    bool Tracked(uint64_t id) const {
+        auto found=sequences_.find(id);return found!=sequences_.end()&&found->second.prompt.IsList();
+    }
+    bool ProgressValid(uint64_t id,int expected) const {
+        if(!Tracked(id))return true;
+        const auto& sequence=sequences_.at(id);
+        return session_->TrackedTokenCount(sequence.row,sequence.epoch)==expected;
+    }
+    void Capture(uint64_t id,int expected,bool intermediate=false) {
+        if(!Tracked(id))return;
+        const auto& sequence=sequences_.at(id);
+        if(expected==sequence.cached)return; // Exact head-only hit retains the owning checkpoint.
+        if(intermediate&&(expected<64||(expected&(expected-1))))return;
+        // Budget rejection is a miss policy, not a generation failure.
+        session_->CacheTokenPrefix(sequence.row,sequence.epoch);
+    }
+#endif
     bool Clear() noexcept {
         bool result=true;
         for(const auto& entry:sequences_) {
             try {result=session_->ReleaseRequestRow(entry.second.row,entry.second.epoch)&&result;}
             catch(...){result=false;}
         }
-        sequences_.clear();return result;
+        sequences_.clear();
+#ifdef GARNET_METAL_TOKEN_PREFIX_CACHE
+        pendingTokens_.clear();
+#endif
+        return result;
     }
 };
 MetalContinuousScheduler::MetalContinuousScheduler()=default;
@@ -115,7 +166,14 @@ bool MetalContinuousScheduler::CompletePrefillChunk(int64_t id,int64_t tokens) {
     auto found=inflight_.find(uint64_t(id));
     if(id<=0||tokens<1||uint64_t(tokens)>kSchedulerPrefillChunkLimit||found==inflight_.end()||found->second!=RequestStage::Prefill)return false;
     try {
+#ifdef GARNET_METAL_TOKEN_PREFIX_CACHE
+        const auto expected=trackedExpected_.find(uint64_t(id));
+        if(expected!=trackedExpected_.end()&&!allocator_->ProgressValid(uint64_t(id),expected->second))return false;
+#endif
         if(!scheduler_->CompletePrefillChunk(uint64_t(id),int(tokens),*allocator_))return false;
+#ifdef GARNET_METAL_TOKEN_PREFIX_CACHE
+        if(expected!=trackedExpected_.end()){allocator_->Capture(uint64_t(id),expected->second,true);trackedExpected_.erase(expected);}
+#endif
         inflight_.erase(found);return true;
     }catch(...){failed_=true;throw;}
 }
@@ -128,6 +186,29 @@ int64_t MetalContinuousScheduler::Submit(int64_t prompt,int64_t output,int64_t p
     if(id>uint64_t(INT64_MAX)){failed_=true;throw std::overflow_error("Native scheduler request identities exhausted");}
     return int64_t(id);
 }
+#ifdef GARNET_METAL_TOKEN_PREFIX_CACHE
+int64_t MetalContinuousScheduler::SubmitTokens(X::Value tokens,int64_t output,int64_t priority) {
+    std::lock_guard<std::mutex> lock(mutex_);Ready();
+    if(tokens.runtime()!=Host()->runtime||!tokens.IsList()||!tokens.Size()||tokens.Size()>capacity_||
+       output<1||uint64_t(output)>capacity_-tokens.Size()||priority<INT_MIN||priority>INT_MAX)
+        throw std::invalid_argument("Tracked scheduler request exceeds its token/context bounds");
+    auto immutable=X::Value::List(Host());
+    for(uint64_t i=0;i<tokens.Size();++i) {
+        auto token=tokens.Get(i);
+        if(!token.IsInt64()||token.ToInt64()<0||token.ToInt64()>INT_MAX)
+            throw std::invalid_argument("Tracked scheduler requires integer token IDs");
+        immutable.Append(X::Value(token.ToInt64()));
+    }
+    auto session=sessionOwner_.NativeData<MetalDecoderSession>();
+    session->TokenPrefixStatsJson(); // Configuration must precede queue admission.
+    GenerationRequest request;request.promptTokens=int(tokens.Size());request.maxNewTokens=int(output);request.priority=int(priority);
+    const auto id=scheduler_->Submit(request);if(!id)return 0;
+    try{allocator_->Track(id,std::move(immutable));}
+    catch(...){scheduler_->Cancel(id,*allocator_);scheduler_->ForgetFinished(id);throw;}
+    if(id>uint64_t(INT64_MAX)){failed_=true;throw std::overflow_error("Native scheduler request identities exhausted");}
+    return int64_t(id);
+}
+#endif
 std::string MetalContinuousScheduler::NextJson() {
     std::lock_guard<std::mutex> lock(mutex_);Ready();
     if(!inflight_.empty())throw std::logic_error("Complete or cancel the prior native scheduler tick before scheduling again");
@@ -152,8 +233,12 @@ std::string MetalContinuousScheduler::NextJson() {
                 requests.push_back({{"id",request.id},{"row",row},{"epoch",request.rowEpoch},{"token_id",request.tokenId},
                     {"slot",request.slotPosition},{"context_length",request.contextLength},{"prompt_tokens",request.promptTokens},
                     {"generated_tokens",request.generatedTokens},{"position_delta",request.positionDelta},
-                    {"prefill_offset",request.prefillOffset},{"prefill_tokens",request.prefillTokens}});
+                    {"prefill_offset",request.prefillOffset},{"prefill_tokens",request.prefillTokens},
+                    {"cached_tokens",request.cachedTokens}});
                 if(!inflight_.emplace(request.id,batch.stage).second)throw std::logic_error("Duplicate request in native scheduler tick");
+#ifdef GARNET_METAL_TOKEN_PREFIX_CACHE
+                if(allocator_->Tracked(request.id))trackedExpected_[request.id]=request.contextLength;
+#endif
             }
             batches.push_back({{"stage",batch.stage==RequestStage::Prefill?"prefill":"decode"},
                 {"bucket_size",rows_},{"active_rows",mask},{"epochs",epochs},{"requests",requests}});
@@ -168,7 +253,17 @@ int64_t MetalContinuousScheduler::CompletePrefill(int64_t id,int64_t token,bool 
     auto found=inflight_.find(uint64_t(id));
     if(id<=0||token<0||token>INT_MAX||found==inflight_.end()||found->second!=RequestStage::Prefill)return -1;
     try {
+#ifdef GARNET_METAL_TOKEN_PREFIX_CACHE
+        const auto expected=trackedExpected_.find(uint64_t(id));
+        if(expected!=trackedExpected_.end()) {
+            if(!allocator_->ProgressValid(uint64_t(id),expected->second))return -1;
+            allocator_->Capture(uint64_t(id),expected->second);
+        }
+#endif
         if(!scheduler_->CompletePrefill(uint64_t(id),int(token),*allocator_,finished))return -1;
+#ifdef GARNET_METAL_TOKEN_PREFIX_CACHE
+        trackedExpected_.erase(uint64_t(id));
+#endif
         const auto stage=scheduler_->Stage(uint64_t(id));inflight_.erase(found);
         if(stage==RequestStage::Finished)scheduler_->ForgetFinished(uint64_t(id));
         return int64_t(stage);
@@ -179,7 +274,19 @@ int64_t MetalContinuousScheduler::CompleteDecode(int64_t id,int64_t token,bool f
     auto found=inflight_.find(uint64_t(id));
     if(id<=0||token<0||token>INT_MAX||found==inflight_.end()||found->second!=RequestStage::Decode)return -1;
     try {
+#ifdef GARNET_METAL_TOKEN_PREFIX_CACHE
+        const auto expected=trackedExpected_.find(uint64_t(id));
+        if(expected!=trackedExpected_.end()) {
+            if(!allocator_->ProgressValid(uint64_t(id),expected->second))return -1;
+            int known=0,remaining=0;
+            if(!scheduler_->DecodeProgress(uint64_t(id),known,remaining))return -1;
+            if(finished||remaining==1)allocator_->Capture(uint64_t(id),expected->second);
+        }
+#endif
         if(!scheduler_->CompleteDecode(uint64_t(id),int(token),finished,*allocator_))return -1;
+#ifdef GARNET_METAL_TOKEN_PREFIX_CACHE
+        trackedExpected_.erase(uint64_t(id));
+#endif
         const auto stage=scheduler_->Stage(uint64_t(id));inflight_.erase(found);
         if(stage==RequestStage::Finished)scheduler_->ForgetFinished(uint64_t(id));
         return int64_t(stage);
@@ -232,6 +339,9 @@ bool MetalContinuousScheduler::Cancel(int64_t id) {
     std::lock_guard<std::mutex> lock(mutex_);Ready();if(id<=0)return false;
     try {
         if(!scheduler_->Cancel(uint64_t(id),*allocator_))return false;
+#ifdef GARNET_METAL_TOKEN_PREFIX_CACHE
+        trackedExpected_.erase(uint64_t(id));
+#endif
         inflight_.erase(uint64_t(id));scheduler_->ForgetFinished(uint64_t(id));return true;
     }catch(...){failed_=true;throw;}
 }
@@ -243,6 +353,9 @@ std::string MetalContinuousScheduler::StatusJson() {
 bool MetalContinuousScheduler::CloseUnlocked() {
     bool result=!allocator_||allocator_->Clear();
     inflight_.clear();scheduler_.reset();allocator_.reset();sessionOwner_=X::Value();
+#ifdef GARNET_METAL_TOKEN_PREFIX_CACHE
+    trackedExpected_.clear();
+#endif
     rows_=capacity_=0;failed_=false;return result;
 }
 bool MetalContinuousScheduler::Close(){std::lock_guard<std::mutex> lock(mutex_);return CloseUnlocked();}

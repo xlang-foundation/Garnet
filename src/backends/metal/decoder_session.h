@@ -244,6 +244,7 @@ public:
         X::Value active,int64_t predictionToken,X::Value epochs,X::Value tokens);
     bool CacheTokenPrefix(int64_t row,int64_t epoch);
     int64_t RestoreTokenPrefix(int64_t row,int64_t epoch,X::Value tokens);
+    int64_t TrackedTokenCount(int64_t row,int64_t epoch);
     std::string TokenPrefixStatsJson();
     bool ClearTokenPrefixes();
 #endif

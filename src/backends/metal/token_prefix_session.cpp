@@ -86,6 +86,13 @@ X::Value MetalDecoderSession::RunTokens(X::Value graphs,X::Value hidden,X::Value
     }
     return RunUnlocked(graphs,hidden,positions,slots,active,predictionToken,&expected,&ids);
 }
+int64_t MetalDecoderSession::TrackedTokenCount(int64_t row,int64_t epoch) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    if(!gpu_||poisoned_||!tokenCache_||!requestRows_||row<0||epoch<=0||size_t(row)>=rowTokens_.size()||
+       size_t(row)>=finalHiddenReady_.size()||!requestRows_->Matches(size_t(row),uint64_t(epoch))||
+       !rowTokensValid_[size_t(row)]||!finalHiddenReady_[size_t(row)])return -1;
+    return int64_t(rowTokens_[size_t(row)].size());
+}
 bool MetalDecoderSession::CacheTokenPrefix(int64_t row,int64_t epoch) {
     std::lock_guard<std::mutex> lock(mutex_);
     if(!gpu_||poisoned_||!tokenCache_||row<0||epoch<=0||!requestRows_->Matches(size_t(row),uint64_t(epoch))||

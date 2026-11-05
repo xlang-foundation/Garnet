@@ -23,7 +23,8 @@ def require(value, message):
         raise ValueError(message)
 
 
-def validate(events, clients, controls, profile, exit_status, expected_requests=22, control_prefixes=False):
+def validate(events, clients, controls, profile, exit_status, expected_requests=22, control_prefixes=False,
+             maximum_chunk=128,prefix_policy=False,required_active_rows=4):
     require(exit_status == dict(returncode=0, expected_close=True), 'unclean worker exit')
     counts = collections.Counter(e['event'] for e in events)
     require(counts['ready'] == counts['closed'] == counts['native_dense_schedule_bound'] == 1,
@@ -37,14 +38,17 @@ def validate(events, clients, controls, profile, exit_status, expected_requests=
     ready = next(e for e in events if e['event'] == 'ready')
     require(ready['profile'] == profile and profile['model_family'] == 'mistral_7b'
             and profile['capacity'] == 4096 and profile['batch'] == 4
-            and profile['prefill_chunk'] == 128 and profile['prefix_cache'] is False
-            and ready['prefix_cache'] is False and ready['multimodal'] is False,
+            and profile['prefill_chunk'] == maximum_chunk and profile['prefix_cache'] is prefix_policy
+            and ready['prefix_cache'] is prefix_policy and ready['multimodal'] is False,
             'incorrect serving profile')
     backend = {p.strip() for p in ready['backend'].split(';')}
     require({'prepared_dense_prefill', 'dense_prefill_max_tokens=512',
              'indexed_token_projections', 'active_decode_projections',
              'affine_coefficient_dtype=fp16'} <= backend, 'incorrect native backend')
     matrix_attention = profile.get('chunk_attention_mps', False)
+    if prefix_policy:
+        require(profile.get('native_cached_chunks') is True and 'native_cached_prefill_scheduler' in backend,
+                'native cached-progress extension/profile missing')
     require(matrix_attention == ('chunk_attention_mps' in backend), 'attention policy differs from backend')
     if matrix_attention:
         require(profile.get('chunk_attention_buckets') is True and profile.get('chunk_attention_index32') is True
@@ -53,9 +57,12 @@ def validate(events, clients, controls, profile, exit_status, expected_requests=
                 'missing prepared attention inventory')
     leases, rows, epochs, progress = {}, {}, [0]*4, {}
     chunks, tokens, completed = collections.defaultdict(list), collections.defaultdict(list), {}
+    cached_prefixes,token_cached = {},{}
     stage_counts = collections.Counter()
     profile_counts = collections.Counter()
     pending = None
+    pending_fresh = False
+    fresh_prefill_batches = 0
     attention_checks, attention_expected = set(), None
     maximum_active = 0
     for e in events:
@@ -78,15 +85,21 @@ def validate(events, clients, controls, profile, exit_status, expected_requests=
                 require(sum(r['prefill_tokens'] for r in requests) <= 512, 'global prefill budget exceeded')
             for r in requests:
                 identity, row, epoch = r['id'], r['row'], r['epoch']
+                cached = r.get('cached_tokens',0)
+                require(type(cached) is int and 0 <= cached <= r['prompt_tokens'] and (prefix_policy or cached == 0),
+                        'invalid native restored prefix')
                 if identity not in leases:
-                    require(stage == 'prefill' and r['prefill_offset'] == 0
+                    require(stage == 'prefill' and r['prefill_offset'] == cached
                             and row not in rows and epoch > epochs[row], 'stale/overlapping row lease')
                     leases[identity] = (row, epoch)
-                    rows[row], epochs[row], progress[identity] = identity, epoch, 0
+                    rows[row], epochs[row], progress[identity] = identity, epoch, cached
+                    cached_prefixes[identity] = cached
+                require(cached_prefixes[identity] == cached, 'native reused prefix changed')
                 require(leases[identity] == (row, epoch) and rows.get(row) == identity,
                         'row identity/epoch changed')
                 if stage == 'prefill':
-                    require(0 < r['prefill_tokens'] <= 128 and r['prefill_offset'] == progress[identity]
+                    cached_head = prefix_policy and r['prefill_tokens'] == 0 and cached == r['prompt_tokens']
+                    require((0 < r['prefill_tokens'] <= maximum_chunk or cached_head) and r['prefill_offset'] == progress[identity]
                             and r['slot'] == r['prefill_offset'] and r['generated_tokens'] == 0
                             and r['prefill_offset']+r['prefill_tokens'] <= r['prompt_tokens'],
                             'invalid prefill position/chunk')
@@ -100,7 +113,9 @@ def validate(events, clients, controls, profile, exit_status, expected_requests=
                             'invalid decode position')
                     progress[identity] += 1
             pending = stage
-            if matrix_attention:
+            pending_fresh = stage != 'prefill' or any(r['prefill_tokens'] for r in requests)
+            if stage == 'prefill' and pending_fresh:fresh_prefill_batches += 1
+            if matrix_attention and pending_fresh:
                 active = sum(r['prefill_tokens'] for r in requests) if stage == 'prefill' else len(requests)
                 tail = stage == 'prefill' and active <= 8
                 extent = 0
@@ -120,7 +135,7 @@ def validate(events, clients, controls, profile, exit_status, expected_requests=
             require(matrix_attention and e['bucket_count'] == profile['expected_attention_mps_bucket_count'],
                     'changed prepared attention buckets')
         elif kind in ('native_chunk_attention_mps', 'native_chunk_attention_index32', 'native_chunk_attention_bucket'):
-            require(matrix_attention and pending is not None and kind not in attention_checks,
+            require(matrix_attention and pending is not None and pending_fresh and kind not in attention_checks,
                     'unexpected/duplicate attention dispatch event')
             attention_checks.add(kind)
             stage, active, tail, extent = attention_expected
@@ -142,18 +157,20 @@ def validate(events, clients, controls, profile, exit_status, expected_requests=
             stage = e['stage']
             require(stage in ('prefill', 'decode', 'head'), 'unknown affine stage')
             if stage != 'head':
-                require(pending == stage, 'affine stage mismatch')
+                require(pending == stage and pending_fresh, 'affine stage mismatch')
                 require(not matrix_attention or len(attention_checks) == 3, 'missing attention route coverage')
                 pending = None
+            elif pending == 'prefill' and not pending_fresh:
+                pending = None # Restored final hidden state; no prefill body ran.
             require(e['affine_dispatches'] == dict(prefill=224, decode=225, head=1)[stage]
                     and e['misses'] == 0 and 0 < e['pipeline_count'] <= 512
                     and e['index_bits'] == 32, 'incomplete affine dispatch coverage')
             profile_counts[stage] += 1
         elif kind in ('native_mpp', 'native_indexed'):
-            expected = 224 if kind == 'native_mpp' or e['active_tokens'] < 512 else 0
+            expected = 224 if kind == 'native_mpp' or e['active_tokens'] < 4*maximum_chunk else 0
             require(e['affine_dispatches'] == expected, 'incorrect prefill projection route')
             if kind == 'native_indexed':
-                require(0 < e['active_tokens'] <= 512 and e['physical_rows'] == 512,
+                require(0 < e['active_tokens'] <= 4*maximum_chunk and e['physical_rows'] == 4*maximum_chunk,
                         'invalid indexed prefill extent')
         elif kind == 'native_indexed_decode':
             require(e['stage'] in ('decode', 'head') and 0 < e['active_rows'] <= 4
@@ -169,7 +186,12 @@ def validate(events, clients, controls, profile, exit_status, expected_requests=
         elif kind == 'token':
             require(e['id'] not in completed, 'token after completion')
             ts = tokens[e['id']]
-            require(e['sampled_tokens'] == len(ts)+1 and e['cached_tokens'] == 0,
+            cached = e['cached_tokens']
+            require(type(cached) is int and 0 <= cached <= e['prompt_tokens'] and (prefix_policy or cached == 0),
+                    'invalid token cache count')
+            require(e['id'] not in token_cached or token_cached[e['id']] == cached, 'token cache count changed')
+            token_cached[e['id']] = cached
+            require(e['sampled_tokens'] == len(ts)+1,
                     'incorrect incremental token count/cache policy')
             ts.append(e['token_id'])
         elif kind == 'completed':
@@ -181,18 +203,18 @@ def validate(events, clients, controls, profile, exit_status, expected_requests=
             require(ids == tokens[key] and ids and all(type(i) is int and 0 <= i < 32768 for i in ids)
                     and not any(i == 2 for i in ids[:-1]), 'invalid output IDs/EOS')
             require(e['finish_reason'] == ('stop' if ids[-1] == 2 else 'length')
-                    and e['cached_tokens'] == 0 and e['profile_id'] == profile['profile_id']
+                    and e['cached_tokens'] == cached_prefixes[identity] == token_cached[key] and e['profile_id'] == profile['profile_id']
                     and e['generation_mode'] == 'native_metal_continuous_batch'
                     and progress[identity] == len(e['prompt_ids'])+len(ids)-1,
                     'invalid completion state')
             completed[key] = e
             del rows[e['native_row']]
     require(not rows and pending is None and all(not c for c in chunks.values()), 'unfinished native work')
-    require(profile_counts['prefill'] == stage_counts['prefill'] == counts['native_mpp'] == counts['native_indexed']
+    require(profile_counts['prefill'] == fresh_prefill_batches == counts['native_mpp'] == counts['native_indexed']
             and profile_counts['decode'] == stage_counts['decode']
             and counts['native_indexed_decode'] == profile_counts['decode']+profile_counts['head'],
             'missing projection event')
-    require(maximum_active == 4 and len(completed) == len(clients) == expected_requests, 'missing B4/request coverage')
+    require(maximum_active == required_active_rows and len(completed) == len(clients) == expected_requests, 'missing B4/request coverage')
     require(set(completed) == {c['id'] for c in clients}, 'HTTP/native identity mismatch')
     require(set(tokens) == set(completed), 'orphan native token stream')
     details = []
@@ -203,7 +225,8 @@ def validate(events, clients, controls, profile, exit_status, expected_requests=
                 and c['final_response_ids'] == e['generated_ids'], 'HTTP/frozen/native token mismatch')
         require(result['status'] == 'completed' and result['text'] == c['sse_text'] == e['text']
                 and result['generated_tokens'] == len(e['generated_ids'])
-                and result['prompt_tokens'] == len(e['prompt_ids']) and result['cached_prompt_tokens'] == 0
+                and result['prompt_tokens'] == len(e['prompt_ids']) and result['cached_prompt_tokens'] == e['cached_tokens']
+                and c['stream_cached_counts'] == [e['cached_tokens']]
                 and result['finish_reason'] == c['sse_finish'] == e['finish_reason'],
                 'HTTP result mismatch')
         require(len(e['generated_ids']) <= body['max_tokens']
@@ -223,6 +246,7 @@ def validate(events, clients, controls, profile, exit_status, expected_requests=
     require(all(close[k] == 0 for k in OWNERS) and 0 <= close['metal_allocated_bytes'] <= 4*1024*1024,
             'native cleanup failed')
     return dict(requests=details, maximum_active_rows=maximum_active, event_counts=dict(counts),
+                head_only_prefill_batches=stage_counts['prefill']-fresh_prefill_batches,
                 close_allocation_bytes=close['metal_allocated_bytes'])
 
 
@@ -242,6 +266,7 @@ def load_client(prefix, plan, body, expected_prompt_ids, read, raw):
         sse_done=sum(w['data'] == '[DONE]' for w in wire),
         sse_text=''.join(c.get('delta', {}).get('content', '') for d in data for c in d.get('choices', [])),
         sse_finish=finals[0]['choices'][0]['finish_reason'],
+        stream_cached_counts=sorted({(d['usage'].get('prompt_tokens_details') or {}).get('cached_tokens',0) for d in data if d.get('usage')}),
         final_prompt_ids=finals[0]['prompt_token_ids'], final_response_ids=finals[0]['response_token_ids'])
 
 

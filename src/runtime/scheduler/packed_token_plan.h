@@ -37,11 +37,14 @@ inline PackedTokenPlan BuildPackedTokenPlan(const SchedulerTick& tick,
                 const int position=stage==RequestStage::Decode?
                     request.slotPosition:request.prefillOffset;
                 const auto placement=storage.Placement(request.id);
+                const bool cachedHead=stage==RequestStage::Prefill&&count==0&&
+                    request.cachedTokens==request.promptTokens&&position==request.promptTokens&&
+                    storage.RestoredPrefixTokens(request.id)==request.cachedTokens&&storage.PrefixPredictionReady(request.id);
                 if(!request.id||request.requestRow<0||!request.rowEpoch||
                     placement.requestRow!=request.requestRow||placement.rowEpoch!=request.rowEpoch||
                     !requests.insert(request.id).second||!rows.insert(request.requestRow).second)
                     throw std::invalid_argument("Invalid or repeated packed row lease");
-                if(count<=0||position<0||position>contextCapacity||count>contextCapacity-position||
+                if(count<0||(count==0&&!cachedHead)||position<0||position>contextCapacity||count>contextCapacity-position||
                     count>maximumTokens-result.tokenCount||
                     request.contextLength!=position+count||request.slotPosition!=position||
                     storage.LogicalLength(request.id)!=position)

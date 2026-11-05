@@ -438,8 +438,8 @@ one wave; comparator columns retain the existing 15-wave medians. Native long
 single-request TTFT fell from 40.269s to 16.489s; decode was 13.668 tok/s, versus
 13.826 in the prior native wave. The improvement does not establish a decode
 gain or repeated speed qualification. All 2x comparator targets remain unmet.
-The later studies below address dynamic arrival/refill and direct native prefix
-reuse. Cached chunked HTTP scheduling, full 4096-token requests and ANE remain
+The later studies below address dynamic arrival/refill, direct native prefix
+reuse and cached chunked HTTP scheduling. Full 4096-token requests and ANE remain
 pending.
 
 ## Actual continuous arrivals and native prefix reuse
@@ -490,14 +490,77 @@ owners were zero and Metal allocation was 1,507,328 bytes. Restored checkpoint
 counts are assertions executed by the frozen native API driver; trace positions
 are driver observations, not independent GPU KV snapshots.
 
-This is direct native runtime qualification. Mistral's chunked HTTP worker still
-requires `prefix_cache=false`; native cached-progress scheduling and its serving
-integration remain to be implemented. Longer prefixes still face the existing
+This study is direct native runtime qualification; the subsequent integration
+below adds cached chunked HTTP scheduling. Longer prefixes still face the existing
 512MiB maximum host-cache budget: a 2048-token Mistral FP32 KV payload alone is
 512MiB before hidden/history/accounting overhead. No full 4K reuse, prefix speed,
 general coding-quality or xMind production claim follows from these studies.
 The immutable prefix-enabled library SHA256 is
 `15a50423252ccb7c106ac04592813610fa21f285cd30041ec3b64383961550db`.
+
+## Native cached-progress scheduling and HTTP integration
+
+The prefix-enabled native scheduler now exposes
+`submit_tokens(token_ids, output_budget, priority)`. It copies the token IDs
+before queue admission and performs content lookup/restoration when a physical
+row is allocated. The allocator reports the actual restored count and whether
+retained hidden state can resume the output head. The portable policy uses that
+count for its prefill offset and KV cursor. Its existing length-only submit API
+and allocator defaults retain uncached behavior.
+
+An exact prompt hit is an explicit zero-token prefill plan, admitted only with a
+full restored prompt and ready hidden state. Packed metadata preserves that
+row/epoch without claiming GPU token work. The Mistral bridge skips embeddings
+and body execution for an entirely cached plan, then calls the native row head.
+Before callbacks commit progress, the native bridge checks the actual tracked
+token count. Native capture retains power-of-two intermediate checkpoints from
+64 tokens onward, complete prompts, and consumed generation history before row
+release. Budget rejection leaves a miss rather than failing generation. Python
+transports token IDs and plan metadata; it does not match prefixes or choose
+the restored position. Cached mixed-forward fusion remains disabled.
+
+`mistral-cached-scheduler-draft1` passed all 18 native tests, including cached
+heads, partial hits, duplicate callbacks, packed zero-token ranges, invalid
+restored counts, missing hidden state, cancellation and row refill. The actual
+Mistral session additionally rejected integer/token-contract violations and
+callbacks acknowledging prefill before execution; cancelling queued/in-flight
+requests left no tracked policy state. Native source and artifacts are isolated
+from the pending blocked-decode and relaxed tensor experiments.
+
+The HTTP profile is B4/context4096/chunk64 with a compiled global 512-token upper
+bound, six prepared MPS plans (290,480,128 scratch bytes), 36 context buckets,
+16 prefix entries and a 512MiB accounted host-cache limit. The two phases in
+`mistral-cached-http1` ran sequentially on the same pinned library: two fresh
+controls for new single-user prompt edits, then eight cached requests with
+survivor overlap. No vLLM-Metal or SGLang baseline was rerun.
+
+| Cached HTTP request | Reused tokens | Observed behavior |
+|---|---:|---|
+| Initial A/B/C/D and replacement E | 0 | Frozen native control prefixes |
+| Exact A return | 84 | Head only; no prefill-body dispatch |
+| User message with an appended instruction | 64 | Remaining suffix executed; outputs equal fresh control |
+| User message with edited final wording | 64 | Remaining suffix executed; outputs equal fresh control |
+
+All 1080 token observations passed: 1016 against existing frozen controls, plus
+64 across the two new fresh/cached pairs. B/C/D remained active through every
+return. Row 0 was reused at epochs 1 -> 5 -> 6 -> 7 -> 8. The independent auditor
+checks native cursor/lease/route coverage, full native/SSE token identity,
+constant cached-token usage, actual survivor overlap and cache accounting. It
+rejects eight lifecycle/head/body/usage corruptions. Both earlier 22-request
+native static collections still pass its unchanged default full-control gate.
+
+Maximum accounted host-cache storage was 531,847,789 bytes (507.21MiB), below
+536,870,912 bytes. Native sampled Metal allocation respected the existing
+working-set bound. Both phases closed all four native owner counters with
+1,507,328 Metal bytes after shutdown. Host accounting and task/device snapshots
+are not peak or unique physical-memory measurements; fresh-phase task
+compression was nonzero. Exact-hitting or partially reused work must not be
+compared as an uncached speed gain against the frozen prefix-OFF comparators.
+
+This establishes the checked cached HTTP lifecycle, not arbitrary common-prefix
+truncation, full 4K snapshots, multimodal prefix reuse, production xMind binding,
+new coding quality or a 2x speed qualification. The immutable library SHA256 is
+`97b0bb9b1eca46da69e78caaee436f34d52a9f87bfe509332c6ef28ab9cc7f61`.
 
 ## Evidence
 

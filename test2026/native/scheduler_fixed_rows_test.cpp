@@ -13,15 +13,18 @@ void Check(bool value){if(!value)throw std::runtime_error("Portable scheduler ro
 // Test-only metadata allocator. Actual Metal admission must bind its claims to
 // the native session's state-clearing callbacks; this fixture allocates no GPU KV.
 class FixedRows final:public KVSequenceAllocator {
-    struct State{RequestRowLease lease;int length=0;};
+    struct State{RequestRowLease lease;int length=0,cached=0;bool ready=false;};
     RequestRowLeases rows_{4};
     std::unordered_map<uint64_t,State> states_;
+    std::unordered_map<uint64_t,std::pair<int,bool>> restored_;
     int capacity_;
 public:
     explicit FixedRows(int capacity=64):capacity_(capacity){}
+    void SeedPrefix(uint64_t id,int tokens,bool ready=true){restored_[id]={tokens,ready};}
     bool Reserve(uint64_t id,int capacity) override {
         if(!id||capacity<0||capacity>capacity_||states_.size()==4||states_.count(id))return false;
-        states_.emplace(id,State{rows_.Claim(id),0});return true;
+        auto restored=restored_.count(id)?restored_.at(id):std::make_pair(0,false);
+        states_.emplace(id,State{rows_.Claim(id),restored.first,restored.first,restored.second});return true;
     }
     bool EnsureCapacity(uint64_t id,int capacity) override{return states_.count(id)&&capacity>=0&&capacity<=capacity_;}
     bool CommitLength(uint64_t id,int length) override {
@@ -37,6 +40,8 @@ public:
         auto it=states_.find(id);return it==states_.end()?KVSequencePlacement{}:
             KVSequencePlacement{int(it->second.lease.row),it->second.lease.epoch};
     }
+    int RestoredPrefixTokens(uint64_t id) const override {auto it=states_.find(id);return it==states_.end()?0:it->second.cached;}
+    bool PrefixPredictionReady(uint64_t id) const override {auto it=states_.find(id);return it!=states_.end()&&it->second.ready;}
 };
 int main() {
     FixedRows storage;
@@ -173,5 +178,55 @@ int main() {
     Check(refilled&&mixedTick&&dense.Schedule(denseStorage).batches.empty());
     for(auto id:denseIds)Check(dense.ForgetFinished(id));
     Check(dense.TrackedRequestCount()==0);
+    FixedRows cachedStorage(4096);
+    ContinuousBatchSchedulerConfig cachedConfig;cachedConfig.decodeBuckets={4};cachedConfig.maxPrefillBatch=4;
+    cachedConfig.maxPrefillTokensPerTick=256;cachedConfig.prefillChunkTokens=64;
+    ContinuousBatchScheduler cached(cachedConfig);
+    std::vector<uint64_t> cachedIds;
+    for(int prompt:{128,130,65,64}) {
+        GenerationRequest job;job.promptTokens=prompt;job.maxNewTokens=4;
+        cachedIds.push_back(cached.Submit(job));
+    }
+    cachedStorage.SeedPrefix(cachedIds[0],128);cachedStorage.SeedPrefix(cachedIds[1],64);
+    cachedStorage.SeedPrefix(cachedIds[3],32);
+    tick=cached.Schedule(cachedStorage);
+    Check(tick.batches.size()==1&&tick.batches[0].scheduledTokens==160);
+    const auto exactHead=tick.batches[0].requests[0];
+    Check(exactHead.prefillTokens==0&&exactHead.prefillOffset==128&&exactHead.cachedTokens==128);
+    const auto cachedPacked=BuildPackedTokenPlan(tick,cachedStorage,256,4096);
+    Check(cachedPacked.tokenCount==160&&cachedPacked.segments.size()==4&&cachedPacked.segments[0].tokenCount==0);
+    Check(cached.Schedule(cachedStorage).batches.empty()); // Includes the zero-token in-flight head.
+    Check(!cached.CompletePrefillChunk(cachedIds[0],0,cachedStorage));
+    Check(cached.CompletePrefill(cachedIds[0],42,cachedStorage));
+    Check(!cached.CompletePrefill(cachedIds[0],42,cachedStorage));
+    Check(cached.CompletePrefillChunk(cachedIds[1],64,cachedStorage));
+    Check(cached.CompletePrefillChunk(cachedIds[2],64,cachedStorage));
+    Check(cached.CompletePrefill(cachedIds[3],42,cachedStorage));
+    tick=cached.Schedule(cachedStorage);
+    Check(tick.batches.size()==2&&tick.batches[1].scheduledTokens==3);
+    Check(BuildPackedTokenPlan(tick,cachedStorage,5,4096).tokenCount==5);
+    Check(cached.CompleteDecode(cachedIds[0],43,true,cachedStorage));
+    Check(cached.CompleteDecode(cachedIds[3],43,false,cachedStorage));
+    Check(cached.CompletePrefill(cachedIds[1],43,cachedStorage));
+    Check(cached.CompletePrefill(cachedIds[2],43,cachedStorage));
+    GenerationRequest returned;returned.promptTokens=128;returned.maxNewTokens=1;
+    auto returnedId=cached.Submit(returned);cachedStorage.SeedPrefix(returnedId,128);
+    tick=cached.Schedule(cachedStorage);
+    Check(tick.batches.size()==2&&tick.batches[1].scheduledTokens==0);
+    const auto refill=tick.batches[1].requests[0];
+    Check(refill.requestRow==exactHead.requestRow&&refill.rowEpoch!=exactHead.rowEpoch);
+    Check(BuildPackedTokenPlan(tick,cachedStorage,3,4096).tokenCount==3);
+    auto forged=tick;forged.batches[1].requests[0].cachedTokens=127;bool rejected=false;
+    try{BuildPackedTokenPlan(forged,cachedStorage,3,4096);}catch(const std::invalid_argument&){rejected=true;}Check(rejected);
+    Check(cached.CompletePrefill(returnedId,44,cachedStorage)&&cached.Stage(returnedId)==RequestStage::Finished);
+    for(auto id:cachedIds)if(cached.Stage(id)!=RequestStage::Finished)Check(cached.Cancel(id,cachedStorage));
+    // A full cache boundary without final hidden state cannot bypass prefill.
+    for(auto invalid:std::vector<std::pair<int,bool>>{{128,false},{129,true},{-1,true}}) {
+        FixedRows invalidStorage(4096);ContinuousBatchScheduler invalidPolicy(cachedConfig);
+        auto id=invalidPolicy.Submit(returned);invalidStorage.SeedPrefix(id,invalid.first,invalid.second);
+        rejected=false;
+        try{invalidPolicy.Schedule(invalidStorage);}catch(const std::logic_error&){rejected=true;}
+        Check(rejected&&invalidStorage.LogicalLength(id)==-1);
+    }
     std::cout<<"portable_continuous_scheduler PASS stable rows, queued refill, cancellation, one-token budget, prefill EOS, invalid-token rejection, chunked prefill lifecycle and4-row/512-token global scheduling\n";
 }

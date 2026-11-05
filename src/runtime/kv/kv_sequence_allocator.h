@@ -20,5 +20,9 @@ public:
     virtual int LogicalLength(uint64_t sequence) const=0;
     virtual std::vector<int> PageTable(uint64_t sequence) const=0;
     virtual KVSequencePlacement Placement(uint64_t) const {return {};}
+    // Report only state actually restored while reserving this sequence. A
+    // complete prompt also needs its retained final hidden state for the head.
+    virtual int RestoredPrefixTokens(uint64_t) const {return 0;}
+    virtual bool PrefixPredictionReady(uint64_t) const {return false;}
 };
 }

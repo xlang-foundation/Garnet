@@ -32,6 +32,11 @@ def main():
     prefill_schedule=profile.get('prefill_schedule','whole')
     if prefill_schedule not in ('whole','chunked'):raise ValueError('Explicit supported prefill scheduling mode required')
     chunked=prefill_schedule=='chunked'
+    cached_chunks=profile.get('native_cached_chunks',False)
+    if type(cached_chunks) is not bool or (cached_chunks and (not prefix or not chunked or family!='mistral_7b')):
+        raise ValueError('Native cached chunks require an explicit Mistral token-prefix/chunked profile')
+    if cached_chunks and 'native_cached_prefill_scheduler' not in garnet.backend_info():
+        raise ValueError('Native cached-progress scheduler extension required')
     active_chunk=profile.get('linear_chunk_active_only',False)
     backend=garnet.backend_info()
     if type(active_chunk) is not bool or active_chunk!=('linear_chunk_active_only' in backend):
@@ -125,7 +130,7 @@ def main():
         lifetime=profile['require_lifetime_reuse']
         if type(lifetime) is not bool or lifetime!=('prefill_lifetime_reuse' in garnet.backend_info()):
             raise ValueError('Frozen profile requires its explicit scratch lifetime policy')
-    if chunked and (prefix or 'chunked_prefill_scheduler' not in garnet.backend_info()):
+    if chunked and ((prefix and not cached_chunks) or 'chunked_prefill_scheduler' not in garnet.backend_info()):
         raise ValueError('Chunked prefill study requires native chunk scheduling and an uncached profile')
     if not profile.get('profile_id'):raise ValueError('Frozen profile identity required')
     if 'row_final_hidden' not in garnet.backend_info():raise ValueError('Native per-row final hidden extension required')
@@ -149,11 +154,11 @@ def main():
         if 'mpp_affine_tensor_k='+str(tensor_k) not in garnet.backend_info():raise ValueError('Frozen profile requires its explicit MPP tensor reduction extent')
     if family=='mistral_7b':
         dense_limit=profile.get('dense_prefill_max_tokens')
-        if (config.get('model_type')!='mistral' or not chunked or prefix or
+        if (config.get('model_type')!='mistral' or not chunked or (prefix and not cached_chunks) or
             type(dense_limit) is not int or dense_limit not in (16,32,64,128,256,512) or
             profile.get('global_prefill_token_budget')!=dense_limit or
             'dense_prefill_max_tokens='+str(dense_limit) not in backend or batch*chunk>dense_limit):
-            raise ValueError('Initial Mistral serving study requires uncached chunk scheduling within its dense token-row bound')
+            raise ValueError('Mistral serving requires bounded chunk scheduling and an explicit cached-progress policy')
         if profile.get('mpp_operand_dtype')!='float16' or profile.get('require_mpp') is not True:
             raise ValueError('Mistral serving study requires its explicit FP16 coefficient/operand profile')
     width=text_config['hidden_size'];vocab=text_config['vocab_size']
@@ -233,7 +238,7 @@ def main():
                     raise ValueError('Native batch request contract invalid')
                 ids=list(tokenizer.encode(prompt))
                 if not ids or len(ids)+limit>capacity:raise ValueError('Request exceeds the frozen native context profile')
-                identity=policy.submit(len(ids),limit,0)
+                identity=policy.submit_tokens(ids,limit,0) if cached_chunks else policy.submit(len(ids),limit,0)
                 if identity<=0:raise ValueError('Native scheduler queue or context profile full')
                 jobs[identity]=dict(id=key,prompt=ids,limit=limit,generated=[],text_ids=[],cached_tokens=0,began=time.monotonic())
                 keys.add(key)
@@ -351,6 +356,8 @@ def main():
             fn=policy.complete_prefill if stage=='prefill' else policy.complete_decode
             result=fn(identity,token,finished)
             if result!=(3 if finished else 2):raise ValueError('Native scheduler completion disagrees with output budget')
+            if cached_chunks and (finished or stage=='prefill'):
+                emit(dict(event='native_prefix_stats',native_request=identity,stats=json.loads(decoder.session.token_prefix_stats_json())))
             if finished:
                 emit(dict(event='completed',id=job['id'],generated_ids=job['generated'],prompt_ids=job['prompt'],text=text,
                     cached_tokens=job['cached_tokens'],finish_reason='stop' if token in stops else 'length',
@@ -427,16 +434,19 @@ def main():
                         request=requests.get(row)
                         if request is not None:
                             offset=request['prefill_offset'];count=request['prefill_tokens'];job=jobs[request['id']]
-                            if not 0<count<=chunk or offset<0 or offset+count>len(job['prompt']):raise ValueError('Native prefill chunk plan out of bounds')
+                            if cached_chunks:job['cached_tokens']=request['cached_tokens']
+                            head_only=(cached_chunks and count==0 and offset==len(job['prompt'])==request['cached_tokens'])
+                            if not (0<count<=chunk or head_only) or offset<0 or offset+count>len(job['prompt']):raise ValueError('Native prefill chunk plan out of bounds')
                             if offset+count==len(job['prompt']):final_epochs[row]=request['epoch']
                         for t in range(chunk):
                             valid=request is not None and t<request['prefill_tokens']
                             position=request['prefill_offset']+t if valid else 0
                             ids.append(jobs[request['id']]['prompt'][position] if valid else 0)
                             flags.append(1.0 if valid else 0.0);slots.append(float(position))
-                    hidden=embedding(ids,True)
-                    execute(graphs,hidden,f32([slot for slot in slots for axis in range(3)],[batch,chunk,3]),
-                        f32(slots,[batch,chunk]),f32(flags,[batch,chunk]),-1,plan['epochs'],ids)
+                    if any(flags):
+                        hidden=embedding(ids,True)
+                        execute(graphs,hidden,f32([slot for slot in slots for axis in range(3)],[batch,chunk,3]),
+                            f32(slots,[batch,chunk]),f32(flags,[batch,chunk]),-1,plan['epochs'],ids)
                     predicted=predict_rows(final_epochs) if any(final_epochs) else None
                     for request in plan['requests']:
                         final=final_epochs[request['row']]!=0

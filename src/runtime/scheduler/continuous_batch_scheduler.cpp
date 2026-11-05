@@ -120,6 +120,7 @@ namespace Garnet
                 item.slotPosition = contextLength - 1;
                 item.promptTokens = state->request.promptTokens;
                 item.generatedTokens = state->generatedTokens;
+                item.cachedTokens = state->cachedPrefix;
                 item.positionDelta = state->request.positionDelta;
                 item.pageTable = kvPool.PageTable(state->request.id);
                 const auto placement=kvPool.Placement(state->request.id);
@@ -146,9 +147,9 @@ namespace Garnet
                 continue;
             }
             State& state = found->second;
-            if (state.prefillScheduled) continue;
-            const int remaining = state.request.promptTokens - state.prefillProcessed;
-            const int count = m_config.prefillChunkTokens ? std::min(remaining, m_config.prefillChunkTokens) : remaining;
+            if (state.prefillScheduled || state.cachedHeadScheduled) continue;
+            int remaining = state.request.promptTokens - state.prefillProcessed;
+            int count = m_config.prefillChunkTokens ? std::min(remaining, m_config.prefillChunkTokens) : remaining;
             if (int64_t(prefill.scheduledTokens) + count >
                     m_config.maxPrefillTokensPerTick &&
                 !prefill.requests.empty()) {
@@ -162,8 +163,21 @@ namespace Garnet
                 m_prefillQueue.push_back(id);
                 continue;
             }
+            if (state.stage == RequestStage::Queued) {
+                const int restored = kvPool.RestoredPrefixTokens(id);
+                if (restored < 0 || restored > state.request.promptTokens ||
+                    kvPool.LogicalLength(id) != restored ||
+                    (restored == state.request.promptTokens && !kvPool.PrefixPredictionReady(id))) {
+                    kvPool.Release(id);
+                    throw std::logic_error("Allocator reported an invalid restored prefix");
+                }
+                state.prefillProcessed = state.cachedPrefix = restored;
+                remaining = state.request.promptTokens - restored;
+                count = m_config.prefillChunkTokens ? std::min(remaining,m_config.prefillChunkTokens) : remaining;
+            }
             state.stage = RequestStage::Prefill;
             state.prefillScheduled = count;
+            state.cachedHeadScheduled = count == 0;
             ScheduledRequest item;
             item.id = id;
             item.promptTokens = state.request.promptTokens;
@@ -171,6 +185,7 @@ namespace Garnet
             item.slotPosition = state.prefillProcessed;
             item.prefillOffset = state.prefillProcessed;
             item.prefillTokens = count;
+            item.cachedTokens = state.cachedPrefix;
             item.positionDelta = state.request.positionDelta;
             item.pageTable = kvPool.PageTable(id);
             const auto placement=kvPool.Placement(id);
@@ -215,7 +230,7 @@ namespace Garnet
         auto found = m_requests.find(requestId);
         if (firstTokenId < 0 || found == m_requests.end() ||
             found->second.stage != RequestStage::Prefill ||
-            found->second.prefillScheduled <= 0 ||
+            (found->second.prefillScheduled <= 0 && !found->second.cachedHeadScheduled) ||
             found->second.prefillProcessed + found->second.prefillScheduled != found->second.request.promptTokens ||
             !kvPool.CommitLength(
                 requestId, found->second.request.promptTokens)) {
@@ -224,6 +239,7 @@ namespace Garnet
         State& state = found->second;
         state.prefillProcessed = state.request.promptTokens;
         state.prefillScheduled = 0;
+        state.cachedHeadScheduled = false;
         state.nextTokenId = firstTokenId;
         state.generatedTokens = 1;
         if (finished || state.request.maxNewTokens == 1) {
