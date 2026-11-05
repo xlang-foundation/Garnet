@@ -115,14 +115,79 @@ these repeated/prefix cases and rejects 10 corruptions; this is one unique
 32-token reference sequence, not 144 independent quality samples. All four
 native owner counters return to zero for each run.
 
-The tested context capacity is 256. KV and intermediate native state remain
+The initial tested context capacity is 256. KV and intermediate native state remain
 FP32; tensor operands use the explicitly selected FP16 path. This is not a
-claim that every operation has the same precision as MLX. No sandboxed coding
+claim that every operation has the same precision as MLX. At this initial gate,
+no sandboxed coding
 suite, 4K context, batch 4, continuous admission, retained prefix reuse, ANE,
 production xMind binding or serving-performance comparison is qualified yet.
 The earlier greedy attempt that passed a whole chunk to the diagnostic head,
 the missing eager-setup counter, and an incomplete source snapshot remain as
 failed attempts; their results are not promoted to this gate.
+
+## Expanded coding and bounded 4K-capacity checks
+
+The dense adapter now uses parallel chunk attention up to capacity 4096 when
+the compiled engine advertises `compact_attention_index`. Other engines retain
+the previous 2048 bound and serial fallback. This reuses existing native compact
+indexes without changing numeric policy. An isolated FP16 engine enables only
+that additional extension and passes 15/15 native tests. Added ungated Mistral
+GQA cases use 32 query heads, 8 KV heads and dimension 128, covering empty and
+2048-token prefixes, high cache slots, overwritten positions and inactive rows.
+
+The frozen fixture retains all eight original coding prompts/contracts and
+their greedy 1024-token budget. Two separate controlled-context probes have 256
+and 2056 actual prompt tokens and 64-token output budgets. The nominal 2048 target
+becomes 2056 after deterministic filler; manifests record actual IDs/counts.
+Offline preparation uses Transformers 4.57.6. MLX 0.32.4 / mlx-lm 0.32.2 /
+Transformers 5.19.0 and the native C++ tokenizer agree on every prompt ID.
+
+| Check | MLX reference | Garnet native Metal |
+|---|---|---|
+| Unchanged strict code-only contracts | 0/8 | 0/8 |
+| Complete coding output-ID sequences equal to MLX | Reference | 5/8 |
+| 256-token context, 64 outputs | Reference | All 64 IDs equal |
+| 2056-token context, 64 outputs | Reference | All 64 IDs equal |
+| Native owner counters at close | Not instrumented here | All four zero |
+
+All coding answers finish naturally at EOS. Their explanations/examples
+violate the strict complete-code output contract, so the unchanged evaluator
+reports zero passes. A secondary single-Python-fence diagnosis identifies one
+unambiguous contract pass per engine; multiple-block outputs are not guessed
+or stitched together, and other extracted implementations fail contracts.
+It does not replace the strict score or establish general quality equivalence.
+
+Three coding answers diverge after 3, 61 and 140 matching tokens. An eight-step
+teacher-forced diagnosis of the earliest case captures complete logits from
+ordinary and chunk16 native prefill. Both native modes choose identical tokens
+at all inspected steps; their largest logit difference is 0.005864. At step 3 MLX
+has an exact top-logit tie between its chosen token 1032 and native token 1040.
+Native FP32 logits favor 1040 by 0.012589 / 0.014336 for ordinary/chunk16. Their
+maximum absolute error against MLX at that step is 0.014937 / 0.014661. This
+supports a precision/tie-breaking explanation for this early divergence; it
+does not prove all discrepancies harmless. No output is altered to force parity.
+
+Native requests use batch 1, capacity 4096 and eagerly prepared chunk 16 graphs.
+The driver rejects request-time graph creation and checks final KV positions.
+Two independent collection audits validate all IDs, finite first logits,
+finish reasons/counts and owner cleanup, each rejecting nine corruptions. The
+initial auditor assumed native `Tensor.tolist()` retained a batch dimension;
+the corrected auditor explicitly checks flat native storage against MLX's
+`[1,32768]`. Inference outputs were not rerun or rewritten.
+
+Prepared Metal allocation is 13,422,149,632 bytes, versus a 1 GiB analytical FP32
+KV payload. Sampled maximum RSS is about 5.49 GiB for native coding and 6.85 GiB for
+native context; these are samples, not unique GPU memory or measured peaks.
+System samples contain compression, page-ins/page-outs and nonzero swap-ins,
+despite unchanged total swap usage. Owner counters reach zero while residual
+Metal device allocations remain nonzero before process exit. These runs are
+not paging-free and do not establish complete device-memory release.
+
+Only the observed bounded context cases are admitted; no complete 4096-token
+request, batch 2 at this capacity, batch 4, continuous admission or retained
+prefix is tested here. The strict coding gate fails, and full MLX output parity
+fails on three coding tasks. These functional/diagnostic runs have no repeated
+serving measurements and are not vLLM/SGLang baselines or performance wins.
 
 ## Remaining implementation and qualification
 
@@ -189,6 +254,19 @@ Local root: `/Users/shawn/CantorAI/out/research/mistral7b-local-coder/`.
   and 10 corruption checks.
 - `mistral-fp16-functional-provenance1.json`: immutable library/source/result
   hashes for this functional gate.
+- `mistral-fp16-4k-source1`, `native-mistral-fp16-4k-build1`,
+  `mistral-fp16-4k-ctest1.log`: isolated compact-index build and 15 native tests.
+- `mistral-coding-context-fixture1`, `mistral-mlx-coding-context1`,
+  `mistral-native-4k-coding1`, `mistral-native-4k-context1`: frozen prompts,
+  complete IDs/text/logits, raw logs and sampled memory.
+- `mistral-native-4k-coding-audit2.json`,
+  `mistral-native-4k-context-audit1.json`: observed parity/corruption checks.
+- `mistral-mlx-coding-quality1.json`, `mistral-native-4k-coding-quality1.json`:
+  strict failures; separate `coding-block-diagnosis1.json` files are secondary.
+- `mistral-mlx-teacher1`, `mistral-native-teacher1.json`,
+  `mistral-teacher-analysis1.json`: fixed-continuation logits and diagnosis.
+- `mistral-fp16-4k-provenance1.json`, `mistral-fp16-4k-library1`:
+  expanded source/binary/result bindings and immutable built artifacts.
 
 The first tokenizer runtime build directory was reused for FP16 loader work.
 Its original provenance retains the original hashes, but that build output path

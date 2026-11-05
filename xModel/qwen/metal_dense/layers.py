@@ -1,5 +1,6 @@
 # SPDX-License-Identifier: Apache-2.0
 """Dense Qwen3 and Qwen2.5 decoder graphs for native Garnet Metal."""
+import garnet
 from xModel.qwen35.vl_0_8b.tensor_compat import tensor
 from xModel.qwen35.vl_0_8b.decoder_layer import add,mlp,replace
 from xModel.qwen35.vl_0_8b.full_attention import unpack
@@ -34,7 +35,8 @@ def DensePrefillLayer(hidden,key,value,positions,slots,active,config,idx,batch,c
     hidden=hidden * T.binary_op('qwen35_mask_chunk') * active
     normalized=reshape(norm(reshape(hidden,[batch*chunk,width]),prefix+'.input_layernorm',config),[batch,chunk,width])
     outputs=None
-    if capacity<=2048:
+    attention_limit=4096 if 'compact_attention_index' in garnet.backend_info() else 2048
+    if capacity<=attention_limit:
         packed=attention(normalized,key,value,positions,slots,active,config,idx,chunk=True)
         packed_config=dict(config);packed_config['hidden_size']=chunk*width
         outputs,key,value=unpack(packed,packed_config,capacity)

@@ -29,10 +29,18 @@ match the frozen MLX 32-token reference. This is one reference case, not general
 coding-quality, long-context, continuous-admission, prefix-reuse, multimodal,
 ANE, xMind production integration or comparative speed qualification.
 
+An expanded batch 1 check enables `GARNET_METAL_COMPACT_ATTENTION_INDEX` and
+prepares capacity 4096/chunk 16. Actual 256- and 2056-token context probes each
+match 64 MLX output IDs; a complete 4096-token request is not tested. The eight
+unchanged coding tasks match five complete MLX sequences, but both engines
+score 0/8 under the strict code-only contract. The earliest divergence occurs
+at an exact MLX logit tie; ordinary and chunked native paths choose the same
+alternative. These results do not establish coding-quality or speed admission.
+
 The initial engine enables `GARNET_METAL_AFFINE_FP16_COEFFICIENTS`,
 `GARNET_METAL_MPP_AFFINE_FP16`, strict register MPP, indexed projections/decode,
 bounded affine profiles and 32-bit proven profile indexes. The underlying
 Metal4 tensor path requires the actual compatible Apple GPU. Only the current
 M5 profile has this functional evidence; other chips and feature combinations
-remain unqualified. Larger prefill chunks, batch 4 and 4K context require their
-own numerical, memory and workload admissions.
+remain unqualified. Larger prefill chunks, batch 4 and fuller context/batching
+coverage require their own numerical, memory and workload admissions.

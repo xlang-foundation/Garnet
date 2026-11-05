@@ -97,6 +97,11 @@ int main(int argc,char** argv){try{
     strictBitwise=argc==2;
     MetalContext gpu;
     Case(gpu,2,8,64,true);Case(gpu,2,8,4096,true);Case(gpu,1,64,4096,false);
+    // Mistral7B GQA, ungated text attention: beginning, long prefix and
+    // high-slot overwrite/inactive-row behavior in the bounded 4K profile.
+    Case(gpu,1,16,4096,false,true,32,8,128,0);
+    Case(gpu,1,16,4096,false,true,32,8,128,2048);
+    Case(gpu,2,16,4096,false,false,32,8,128);
 #ifdef GARNET_METAL_QWEN38_LARGE_PREFILL
     static_assert(kMetalAttentionIndexBytes==2&&kMetalPrefillChunkLimit==256,"Large chunks require the signed 16-bit profile");
     Case(gpu,1,128,4096,true,true);Case(gpu,1,256,4096,false);Case(gpu,2,256,512,true);
