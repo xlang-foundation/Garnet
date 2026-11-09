@@ -59,6 +59,15 @@ class CPUDecoder:
         for layer in self.layers:
             layer['state1']=self.io.zeros(layer['shapes'][1]);layer['state2']=self.io.zeros(layer['shapes'][2])
 
+    def keep_prefix(self,tokens):
+        # Rewind every row to its first `tokens` cached positions; the next prefill continues there.
+        # Rows past the cursor are overwritten or masked. Recurrent state cannot be shortened.
+        if self.poisoned:raise ValueError('reset after failed inference before reusing a prefix')
+        if type(tokens) is not int or tokens<0 or any(tokens>slot for slot in self.slots):raise ValueError('prefix exceeds cached tokens')
+        if any(tokens!=slot for slot in self.slots) and any(layer.get('kind')!='full_attention' for layer in self.layers):
+            raise ValueError('recurrent layer state cannot be rewound to a shorter prefix')
+        self.slots=[tokens for i in range(self.batch)]
+
     def enable_prefill(self,chunk=4):
         if chunk not in (2,4,8):raise ValueError('prefill chunk must be 2, 4 or 8')
         self.chunk=chunk

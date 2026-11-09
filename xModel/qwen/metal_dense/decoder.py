@@ -69,6 +69,10 @@ class DenseMetalDecoder(MetalDecoder):
         return (2,4,8,16)
 
     def _prefill_chunk_size(self,remaining,maximum):
+        if self.dense_prefill_limit and not getattr(self,'finer_chunks',False):
+            # Padded rows leave the fast attention path; cover the length with exact profiles.
+            fit=[p for p in self._prefill_profiles() if p<=min(remaining,maximum)]
+            return max(fit) if fit else min(self._prefill_profiles())
         if not getattr(self,'finer_chunks',False):return MetalDecoder._prefill_chunk_size(self,remaining,maximum)
         required=min(remaining,maximum)
         for profile in self._prefill_profiles():
