@@ -480,6 +480,12 @@ public:
 #ifdef GARNET_METAL_GLOBAL_HALF_ALPHA
         info+="; global_half_alpha";
 #endif
+#ifdef GARNET_METAL_EXACT_HALF_PREFILL
+        info+="; exact_half_prefill_max_mib="+std::to_string(GARNET_METAL_EXACT_HALF_MAX_MIB);
+#endif
+#ifdef GARNET_METAL_MLX_STEEL_ATTENTION
+        info+="; mlx_steel_attention";
+#endif
 #ifdef GARNET_METAL_SCREENED_HEAD
         info+="; screened_head";
 #endif

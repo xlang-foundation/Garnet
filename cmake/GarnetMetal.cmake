@@ -263,6 +263,43 @@ if(GARNET_METAL_CHUNK_KV_SCATTER)
     endif()
     target_compile_definitions(garnet_metal PUBLIC GARNET_METAL_CHUNK_KV_SCATTER=1)
 endif()
+option(GARNET_METAL_MLX_STEEL_ATTENTION
+    "Use the MLX Steel tiled causal attention kernel for aligned 32-to-512-token Mistral prefill chunks" OFF)
+if(GARNET_METAL_MLX_STEEL_ATTENTION)
+    if(NOT GARNET_METAL_CHUNK_KV_INPLACE)
+        message(FATAL_ERROR "MLX Steel attention requires GARNET_METAL_CHUNK_KV_INPLACE")
+    endif()
+    set(GARNET_MLX_SOURCE_DIR "" CACHE PATH "MLX source tree for Steel attention; empty downloads the pinned release")
+    if(NOT GARNET_MLX_SOURCE_DIR)
+        include(FetchContent)
+        # Sources only: the kernel text is embedded, MLX itself is not built.
+        FetchContent_Declare(garnet_mlx
+            URL https://codeload.github.com/ml-explore/mlx/tar.gz/c69303b00f5f61860436e832f23fa8c34b96f93a
+            URL_HASH SHA256=d5ff3045a3d1d41d6262b5a7c15f6460eca9979169221e79dfe1850433bfd323
+            SOURCE_SUBDIR garnet-sources-only)
+        FetchContent_MakeAvailable(garnet_mlx)
+        set(GARNET_MLX_STEEL_SOURCE "${garnet_mlx_SOURCE_DIR}")
+    else()
+        set(GARNET_MLX_STEEL_SOURCE "${GARNET_MLX_SOURCE_DIR}")
+    endif()
+    if(NOT EXISTS "${GARNET_MLX_STEEL_SOURCE}/mlx/backend/metal/kernels/steel/attn/kernels/steel_attention.metal")
+        message(FATAL_ERROR "MLX source tree does not contain Steel attention kernels: ${GARNET_MLX_STEEL_SOURCE}")
+    endif()
+    file(GLOB_RECURSE GARNET_MLX_STEEL_HEADERS CONFIGURE_DEPENDS
+        "${GARNET_MLX_STEEL_SOURCE}/mlx/backend/metal/kernels/*.h"
+        "${GARNET_MLX_STEEL_SOURCE}/mlx/backend/metal/kernels/*.metal")
+    set(GARNET_MLX_STEEL_GENERATED "${CMAKE_CURRENT_BINARY_DIR}/generated/mlx_steel_attention_source.cpp")
+    add_custom_command(
+        OUTPUT "${GARNET_MLX_STEEL_GENERATED}"
+        COMMAND "${CMAKE_COMMAND}" -E make_directory "${CMAKE_CURRENT_BINARY_DIR}/generated"
+        COMMAND "${CMAKE_COMMAND}" "-DMLX_SOURCE_DIR=${GARNET_MLX_STEEL_SOURCE}" "-DOUTPUT=${GARNET_MLX_STEEL_GENERATED}"
+            -P "${CMAKE_CURRENT_LIST_DIR}/embed_mlx_steel_attention.cmake"
+        DEPENDS "${CMAKE_CURRENT_LIST_DIR}/embed_mlx_steel_attention.cmake" ${GARNET_MLX_STEEL_HEADERS}
+        VERBATIM)
+    target_sources(garnet_metal PRIVATE "${GARNET_MLX_STEEL_GENERATED}")
+    target_include_directories(garnet_metal PRIVATE "${CMAKE_CURRENT_LIST_DIR}/../src/backends/metal")
+    target_compile_definitions(garnet_metal PUBLIC GARNET_METAL_MLX_STEEL_ATTENTION=1)
+endif()
 option(GARNET_METAL_PREFIX_SHARED_BLOCKS "Immutable shared dense-KV host blocks with exact checkpoint states" OFF)
 if(GARNET_METAL_PREFIX_SHARED_BLOCKS)
     if(NOT GARNET_METAL_TOKEN_PREFIX_CACHE OR NOT DEFINED GARNET_METAL_TOKEN_PREFIX_HOST_MIB OR GARNET_METAL_TOKEN_PREFIX_HOST_MIB STREQUAL "512")
@@ -675,6 +712,14 @@ endif()
 option(GARNET_METAL_EXACT_HALF_PREFILL "Test exact scaled FP16 storage for mixed FP32 MPS prefill" OFF)
 if(GARNET_METAL_EXACT_HALF_PREFILL)
     target_compile_definitions(garnet_metal PUBLIC GARNET_METAL_EXACT_HALF_PREFILL=1)
+endif()
+set(GARNET_METAL_EXACT_HALF_MAX_MIB "16" CACHE STRING
+    "Largest BF16 projection, in MiB, that exact-half prefill re-encodes as FP16 (1-1024)")
+if(NOT GARNET_METAL_EXACT_HALF_MAX_MIB MATCHES "^[1-9][0-9]*$" OR GARNET_METAL_EXACT_HALF_MAX_MIB GREATER 1024)
+    message(FATAL_ERROR "GARNET_METAL_EXACT_HALF_MAX_MIB must be an integer from 1 through 1024")
+endif()
+if(GARNET_METAL_EXACT_HALF_PREFILL)
+    target_compile_definitions(garnet_metal PUBLIC GARNET_METAL_EXACT_HALF_MAX_MIB=${GARNET_METAL_EXACT_HALF_MAX_MIB})
 endif()
 option(GARNET_METAL_JOINED_PREFILL "Test bounded exact-half joined body prefill projections" OFF)
 option(GARNET_METAL_COMPACT_JOINED_PREFILL "Share joined half weight storage with individual projections" OFF)

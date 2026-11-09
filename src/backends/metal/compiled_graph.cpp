@@ -1041,7 +1041,11 @@ bool MetalCompiledGraph::BuildInternal(X::Value graph,X::Value symbols,const std
                 const auto head=node.attributes.Get("head_index").ToInt64();
                 const auto features=node.attributes.Get("emit_features").ToInt64();
                 if(head<0||head>=4||slots_[a].shape.size()!=2||!slots_[a].rows||slots_[a].rows>2||
-                   slots_[a].columns!=4096||mlxCheckpoint_.Enabled()||(features!=0&&features!=1))
+                   slots_[a].columns!=4096||
+#ifdef GARNET_METAL_MLX_AFFINE_INT4
+                   mlxCheckpoint_.Enabled()||
+#endif
+                   (features!=0&&features!=1))
                     throw std::invalid_argument("Medusa head requires raw BF16 weights and a bounded1/2x4096 input");
                 const auto prefix=std::to_string(head);
                 auto check=[&](const std::string& name,const std::vector<long long>& shape) {

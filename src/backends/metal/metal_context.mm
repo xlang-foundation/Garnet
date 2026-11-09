@@ -161,6 +161,9 @@
 #ifdef GARNET_METAL_AFFINE_PROFILE
 #include <atomic>
 #endif
+#ifdef GARNET_METAL_MLX_STEEL_ATTENTION
+#include "mlx_steel_attention_source.h"
+#endif
 #ifdef GARNET_METAL_FUSED_HEAD_ARGMAX
 #include "fused_head_argmax_shader.h"
 #endif
@@ -397,6 +400,10 @@ size_t AffineDecodeColumns(size_t inner,size_t columns,size_t rows) {
 }
 #endif
 struct MetalPipelines {
+#ifdef GARNET_METAL_MLX_STEEL_ATTENTION
+    id<MTLLibrary> steelAttentionLibrary=nil;
+    id<MTLComputePipelineState> steelAttention=nil;
+#endif
 #ifdef GARNET_METAL_LOOKAHEAD_PROJECTIONS
     id<MTLLibrary> lookaheadProjectionLibrary=nil;
     std::shared_mutex lookaheadProjectionMutex;
@@ -2049,6 +2056,34 @@ kernel void bf16_native_dot_t128(device const float* a [[buffer(0)]],device cons
         auto library=[impl_->device newLibraryWithSource:source options:compileOptions error:&error];
         if(!library)throw std::runtime_error(std::string(error.localizedDescription.UTF8String));
         impl_->kernels->library=library;
+#ifdef GARNET_METAL_MLX_STEEL_ATTENTION
+        {
+            auto steelOptions=[MTLCompileOptions new];
+            steelOptions.languageVersion=MTLLanguageVersion3_1;
+            auto steelLibrary=[impl_->device newLibraryWithSource:[NSString stringWithUTF8String:MLXSteelAttentionSource()]
+                options:steelOptions error:&error];
+            if(!steelLibrary)throw std::runtime_error(std::string("Cannot compile MLX Steel attention: ")+error.localizedDescription.UTF8String);
+            bool alignQ=true,alignK=true,hasMask=false,causal=true,hasSinks=false,saveLSE=false;
+            int window=0;
+            auto constants=[MTLFunctionConstantValues new];
+            [constants setConstantValue:&alignQ type:MTLDataTypeBool atIndex:200];
+            [constants setConstantValue:&alignK type:MTLDataTypeBool atIndex:201];
+            [constants setConstantValue:&hasMask type:MTLDataTypeBool atIndex:300];
+            [constants setConstantValue:&causal type:MTLDataTypeBool atIndex:301];
+            [constants setConstantValue:&hasSinks type:MTLDataTypeBool atIndex:302];
+            [constants setConstantValue:&saveLSE type:MTLDataTypeBool atIndex:303];
+            [constants setConstantValue:&window type:MTLDataTypeInt atIndex:304];
+            auto function=[steelLibrary newFunctionWithName:@"steel_attention_float32_bq32_bk16_bd128_bv128_wm4_wn1_maskfloat32"
+                constantValues:constants error:&error];
+            if(!function)throw std::runtime_error(std::string("Cannot specialize MLX Steel attention: ")+error.localizedDescription.UTF8String);
+            auto pipeline=[impl_->device newComputePipelineStateWithFunction:function error:&error];
+            if(!pipeline||pipeline.threadExecutionWidth!=32||pipeline.maxTotalThreadsPerThreadgroup<128)
+                throw std::runtime_error(std::string("Cannot create MLX Steel attention pipeline: ")+
+                    (error?error.localizedDescription.UTF8String:"invalid pipeline geometry"));
+            impl_->kernels->steelAttentionLibrary=steelLibrary;
+            impl_->kernels->steelAttention=pipeline;
+        }
+#endif
 #ifdef GARNET_METAL_CHUNK_ATTENTION_MPS
         auto mpsChunkPipeline=[&](NSString* name) {
             auto pipeline=[impl_->device newComputePipelineStateWithFunction:[library newFunctionWithName:name] error:&error];
@@ -3708,9 +3743,10 @@ MetalBF16Weight MetalContext::UploadBF16(const void* data,size_t bytes,size_t ro
         }
 #endif
 #ifdef GARNET_METAL_EXACT_HALF_PREFILL
-        // Preserve original BF16 decode storage. Pack only modest body matrices;
-        // a single nonexact value disables the optional representation entirely.
-        if(!floatPrefill&&bytes<=16*1024*1024&&impl_->kernels->halfRescale) {
+        // Preserve original BF16 decode storage. The configured cap bounds the extra
+        // FP16 prefill footprint; a single nonexact value disables the representation.
+        constexpr size_t exactHalfMaxBytes=size_t(GARNET_METAL_EXACT_HALF_MAX_MIB)*1024*1024;
+        if(!floatPrefill&&bytes<=exactHalfMaxBytes&&impl_->kernels->halfRescale) {
             const auto stride=[MPSMatrixDescriptor rowBytesFromColumns:columns dataType:MPSDataTypeFloat16];
             if(stride<=impl_->device.maxBufferLength/rows) {
                 id<MTLBuffer> encoded=[impl_->device newBufferWithLength:rows*stride options:MTLResourceStorageModeShared];
@@ -4180,6 +4216,10 @@ void MetalContext::EncodeBF16MatVec(const MetalMatrix& input,const MetalBF16Weig
         primary=w->primaryCharged;if(primary)storage=w->primaryPayload;
 #endif
         bool supportedDecoderRows=a.rows<=128;
+#ifdef GARNET_METAL_EXACT_HALF_PREFILL
+        // The exact FP16 product is an MPS GEMM and has no decoder row bound.
+        if(w->exactHalf&&w->halfScales&&a.rows<=kMetalPrefillChunkLimit*4)supportedDecoderRows=true;
+#endif
 #ifdef GARNET_METAL_QWEN35_WIDE_BATCH_PREFILL
         supportedDecoderRows=supportedDecoderRows||a.rows==160;
 #endif
@@ -6141,6 +6181,66 @@ void MetalContext::EncodeAttentionChunkInternal(const std::vector<MetalMatrix>& 
 #ifdef GARNET_METAL_DENSE_PREFILL_MAX_TOKENS
     if(kc.rows>4||q.rows>GARNET_METAL_DENSE_PREFILL_MAX_TOKENS)
         throw std::invalid_argument("Chunk attention exceeds dense physical token-row profile");
+#endif
+#ifdef GARNET_METAL_MLX_STEEL_ATTENTION
+    if(!reference&&!committedKV&&!halfKV&&!gated&&heads==32&&kvHeads==8&&dim==128&&
+       chunk>=32&&chunk<=512&&chunk%32==0&&impl_->kernels->steelAttention&&
+       inputs[5].impl_->ready&&inputs[6].impl_->ready&&!inputs[5].impl_->pending&&!inputs[6].impl_->pending&&
+       s.data.storageMode==MTLStorageModeShared&&a.data.storageMode==MTLStorageModeShared&&s.data.contents&&a.data.contents) {
+        // Steel reads keys/values from the resident cache, so it applies only when every
+        // row writes one contiguous span ending on a 16-token boundary at the same length.
+        bool steel=true;size_t visible=0;
+        for(size_t row=0;steel&&row<kc.rows;++row) {
+            const auto* slot=reinterpret_cast<const float*>(static_cast<const char*>(s.data.contents)+s.offset+row*s.rowBytes);
+            const auto* active=reinterpret_cast<const float*>(static_cast<const char*>(a.data.contents)+a.offset+row*a.rowBytes);
+            if(!std::isfinite(slot[0])||slot[0]<0||slot[0]!=std::floor(slot[0])){steel=false;break;}
+            for(size_t token=0;token<chunk;++token)
+                if(active[token]!=1.0f||slot[token]!=slot[0]+float(token)){steel=false;break;}
+            const size_t rowVisible=size_t(slot[chunk-1])+1;
+            if(!steel||rowVisible>capacity||rowVisible%16||(row&&rowVisible!=visible))steel=false;
+            visible=rowVisible;
+        }
+        if(steel) {
+            if(!impl_->command)throw std::logic_error("Begin a Metal command batch first");
+            // In-place chunk commits run after attention; committing the identical span
+            // first lets Steel attend over cache[0, visible) in one causal pass.
+            EncodeKVChunk(inputs[1],inputs[3],inputs[5],inputs[6],inputs[3],kvHeads,dim,capacity,chunk,true);
+            EncodeKVChunk(inputs[2],inputs[4],inputs[5],inputs[6],inputs[4],kvHeads,dim,capacity,chunk,true);
+            if(!inputs[0].impl_->ready&&!(inputs[0].impl_->pending&&impl_->pendingOutputs.count(inputs[0].impl_->PendingKey())))
+                throw std::logic_error("Uninitialized MLX Steel attention query");
+            if(output.impl_->pending&&impl_->pendingOutputs.count(output.impl_->PendingKey())==0)
+                throw std::logic_error("MLX Steel attention output belongs to another command batch");
+            struct AttnParams {
+                int B,H,D,qL,kL,gqaFactor;float scale;
+                int NQ,NK,NQAligned,NKAligned,qLRem,kLRem,qLOffset;
+                int64_t qStrides[3],kStrides[3],vStrides[3],oStrides[3];
+            };
+            constexpr int bq=32,bk=16;
+            const int queryLength=int(chunk),keyLength=int(visible);
+            AttnParams params{
+                int(kc.rows),int(heads),int(dim),queryLength,keyLength,int(heads/kvHeads),float(1.0/std::sqrt(double(dim))),
+                (queryLength+bq-1)/bq,(keyLength+bk-1)/bk,queryLength/bq,keyLength/bk,queryLength%bq,keyLength%bk,keyLength-queryLength,
+                {int64_t(q.rowBytes/4*chunk),int64_t(dim),int64_t(q.rowBytes/4)},
+                {int64_t(kc.rowBytes/4),int64_t(capacity*dim),int64_t(dim)},
+                {int64_t(vc.rowBytes/4),int64_t(capacity*dim),int64_t(dim)},
+                {int64_t(o.rowBytes/4*chunk),int64_t(dim),int64_t(o.rowBytes/4)}
+            };
+            auto encoder=impl_->ComputeEncoder(__func__);
+            if(!encoder)throw std::runtime_error("Cannot create MLX Steel attention encoder");
+            [encoder setComputePipelineState:impl_->kernels->steelAttention];
+            [encoder setBuffer:q.data offset:q.offset atIndex:0];
+            [encoder setBuffer:kc.data offset:kc.offset atIndex:1];
+            [encoder setBuffer:vc.data offset:vc.offset atIndex:2];
+            [encoder setBuffer:o.data offset:o.offset atIndex:3];
+            [encoder setBytes:&params length:sizeof(params) atIndex:4];
+            [encoder dispatchThreadgroups:MTLSizeMake(params.NQ,heads,kc.rows) threadsPerThreadgroup:MTLSizeMake(128,1,1)];
+            [encoder endEncoding];
+            output.impl_->ValidateSpanWrite(impl_->pendingOutputs.count(output.impl_->PendingKey()));
+            output.impl_->ready=false;output.impl_->pending=true;
+            if(impl_->pendingOutputs.insert(output.impl_->PendingKey()).second)impl_->outputs.push_back(output.impl_);
+            return;
+        }
+    }
 #endif
     struct Params {uint64_t batch,chunk,heads,kvHeads,dim,capacity,qStride,kStride,vStride,kcStride,vcStride,sStride,aStride,gStride,oStride,gated;};
     Params p{kc.rows,chunk,heads,kvHeads,dim,capacity,q.rowBytes/4,k.rowBytes/4,v.rowBytes/4,kc.rowBytes/4,vc.rowBytes/4,s.rowBytes/4,a.rowBytes/4,g.rowBytes/4,o.rowBytes/4,uint64_t(gated)};
